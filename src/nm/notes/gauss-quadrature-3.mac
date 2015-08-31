@@ -1,0 +1,13 @@
+/* Maxima computation of 3-point Gauss quadrature coefficients */
+/* Mech3750 demo by Peter J. 29-July-2013 */
+fpprec:20;
+
+/* The defining equations are set up for three sample points: x0 = -x2, x1 = 0 */
+/* unknowns x0, w0=w2, w1 */
+eq0: integrate(x^0, x, -1, 1) = 2 * w0 + w1;
+eq2: integrate(x^2, x, -1, 1) = 2 * w0 * x0^2;
+eq4: integrate(x^4, x, -1, 1) = 2 * w0 * x0^4;
+solve([eq0, eq2, eq4], [w0, w1, x0]);
+/* The decimal approximations are easier to read. */
+%, bfloat;
+

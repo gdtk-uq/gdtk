@@ -1,0 +1,140 @@
+\chapter{Introduction}
+\label{chap:intro}
+
+The \dlang gas module provides services and data structures that model
+the behaviour of a continuum gas.
+This module is used primarily as a service module in application codes that require
+modelling of complex gases.
+
+This document describes the source code in the gas module.
+We will describe what is in the module (the layout of code),
+why things are the way they are (the code design), 
+and give hints on how to add new models and features.
+The module itself was designed in a top-down manner and
+it seems logical to organise this descriptive document
+in that manner also.
+The remainder of this Introduction describes the two
+centrepiece structures with which the calling code interacts.
+In other words, this first chapter serves as a mini API documentation,
+if you will.
+The two centrepiece structures are the \type{GasState}  
+and the \type{GasModel}.
+The remainder of the document is for developers who want
+to understand the internals of the module.
+
+\section{Overview of source code layout}
+
+\section{GasState data structure}
+\label{sec:GasState}
+
+The \type{GasState}\index{GasState} data structure, as its name implies,
+holds data members related to describing the state of the gas.
+The data members included \type{GasState} are all set as \type{public}
+members so that they may be freely manipulated by the owner of a 
+\type{GasState} object. This is a deliberate choice; the \type{GasState}
+is meant to function as a simple container for data related to the
+gas.
+The particular members and their units are shown in the source code
+snippet included in Listing~\ref{lst:GasState} which has been extracted
+from the source file \type{gasmodel.d}.
+
+\begin{Listing}
+\lstinputlisting{listings/gasstate.txt}
+\caption{Excerpt from \type{gasmodel.d} showing member data in \type{GasState} struct.}
+\label{lst:GasState}
+\end{Listing}
+
+If you are wondering why the energy, temperature and thermal conductivity are
+vector fields it is because the \type{GasState} is designed to suit a 
+general multi-temperature hypersonic flow solver.
+Note that we omit certain common thermodynamic values from the \type{GasState} struct such as enthalpy and entropy.
+One could also make an argument for including Gibbs free energy, and the list
+could go on.
+Our choice to limit the number of members in the data struct is motivated
+by memory concerns.
+The \type{GasState} struct is used many times in out CFD application code:
+it is an embedded member of our FlowState object.
+Thus, each additional member variable in the \type{GasState} incurs a direct
+memory cost proportional to the number of grid points in a CFD mesh.
+Our loose criterion for including certain members is based on those values
+that are used most frequently by our CFD code.
+For all other values, like entropy and enthalpy, we choose to compute them
+as needed.
+Bear this reasoning in mind if you think the \type{GasState} could benefit
+from another data member in the structure.
+
+We provide five constructors for a \type{GasState} object
+as shown in Listing~\ref{lst:GasState-cons}.
+Ths first requires the caller to explicitly pass
+the number of species and number of energy modes so
+that the internal arrays can be set.
+The next two constructors are both passed a \type{GasModel}
+object and get the information about number of species
+and modes from that object.
+These constructors are the most commonly used from calling
+code when a \type{GasModel} has already been initialised.
+Additionally these constructors require that an initial
+pressure and temperature(s) be given.
+The difference between the second and third constructor
+is that the \type{T\_init} parameter is an array in the
+second constructor, whereas it is a single value in the third.
+When using the third constructor for a \type{GasState} with multiple
+modes, all modes are initialised to the value \type{T\_init}.
+The fourth constructor is a copy constructor.
+The final constructor is the postblit constructor.
+This is provided so that proper value semantics are behaved 
+when one \type{GasState} object is assigned to another.
+The postblit constructor correctly provides a deep copy
+by making duplicates of the internal arrays.
+
+\begin{Listing}
+\lstinputlisting{listings/gasstate-cons.txt}
+\caption{Constructors for a \type{GasState} object. Source code from \type{gasmodel.d}.}
+\label{lst:GasState-cons}
+\end{Listing}
+
+\section{GasModel class}
+Objects of type \type{GasModel} are the primary means for interacting
+with the gas module.
+The \type{GasModel} class is an all-encompassing class that provides
+a large number of services to the caller.
+Those services include: thermodynamic state and derivative evaluations;
+calculation of diffusion coefficients; and providing property information
+about the gas model.
+The public methods of the \type{GasModel} class are shown in Listing~\ref{lst:GasModel}.
+The services provided by the \type{GasModel} are not exhaustive.
+However, we have found that they are sufficient for us when building
+CFD and chemical kinetic applications.
+
+\begin{Listing}
+\lstinputlisting{listings/gasstate-cons.txt}
+\caption{Services offered by \type{GasModel} object via its public methods. Source code from \type{gasmodel.d}.}
+\label{lst:GasModel}
+\end{Listing}
+
+A large number of methods in the \type{GasModel} object are passed a reference
+to a \type{GasState} object.
+In the \type{void}-returning methods, the caller can expect that some
+or all of the values in the \type{GasState} object are modified during
+the method call.
+For example, the method \type{update\_thermo\_from\_pT} will use the 
+values present in the pressure and temperature fields of the
+\type{GasState} and from that update the density and energy fields
+to a consistent thermodynamic state.
+So on return from the call, the density field (\type{rho}) and
+the energy vector (\type{e[]}) will have been updated.
+The \type{double}-returning methods use the values in
+the \type{GasState} object to compute and return the double
+associated with the method name.
+
+\subsection{GasModel derived classes}
+
+Mention that a \type{GasModel} is abstract.
+
+Talk about building specific models by composition.
+
+
+
+
+
+

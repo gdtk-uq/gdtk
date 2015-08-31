@@ -1,0 +1,20 @@
+NM_DIR := ../../nm
+NM_FILES := $(NM_DIR)/ridder.d
+
+GAS_DIR := ../../gas
+LIBGAS := ${GAS_DIR}/libgas.a
+
+LIBKINETICS := ../libkinetics.a
+
+LUA_DIR := ../../../extern/lua-5.1.4
+LIBLUA := ${LUA_DIR}/lib/liblua.a
+LIBLUAPATH := ${LUA_DIR}/lib
+LUAD_DIR := ../../extern/LuaD
+LUAD_FILES := ${LUAD_DIR}/luad/*.d \
+	${LUAD_DIR}/luad/c/*.d \
+	${LUAD_DIR}/luad/conversions/*.d
+
+DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl
+
+rkf_verify: rkf_verify.d
+	dmd rkf_verify.d -I../.. ${LIBGAS} ${LIBKINETICS} ${LIBLUA} $(LUAD_FILES) ${NM_FILES} $(DLINKFLAGS)

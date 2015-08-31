@@ -1,0 +1,775 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<title>Design Proposals for Boundary Condition Implementation in Eilmer4</title>
+<meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1"/>
+<meta name="title" content="Design Proposals for Boundary Condition Implementation in Eilmer4"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="11-Mar-2015"/>
+<meta name="author" content="Rowan J. Gollan"/>
+<meta name="description" content=""/>
+<meta name="keywords" content=""/>
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  html { font-family: Times, serif; font-size: 12pt; }
+  .title  { text-align: center; }
+  .todo   { color: red; }
+  .done   { color: green; }
+  .tag    { background-color: #add8e6; font-weight:normal }
+  .target { }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .right  {margin-left:auto; margin-right:0px;  text-align:right;}
+  .left   {margin-left:0px;  margin-right:auto; text-align:left;}
+  .center {margin-left:auto; margin-right:auto; text-align:center;}
+  p.verse { margin-left: 3% }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+        overflow:auto;
+  }
+  table { border-collapse: collapse; }
+  td, th { vertical-align: top;  }
+  th.right  { text-align:center;  }
+  th.left   { text-align:center;   }
+  th.center { text-align:center; }
+  td.right  { text-align:right;  }
+  td.left   { text-align:left;   }
+  td.center { text-align:center; }
+  dt { font-weight: bold; }
+  div.figure { padding: 0.5em; }
+  div.figure p { text-align: center; }
+  div.inlinetask {
+    padding:10px;
+    border:2px solid gray;
+    margin:10px;
+    background: #ffffcc;
+  }
+  textarea { overflow-x: auto; }
+  .linenr { font-size:smaller }
+  .code-highlighted {background-color:#ffff00;}
+  .org-info-js_info-navigation { border-style:none; }
+  #org-info-js_console-label { font-size:10px; font-weight:bold;
+                               white-space:nowrap; }
+  .org-info-js_search-highlight {background-color:#ffff00; color:#000000;
+                                 font-weight:bold; }
+  /*]]>*/-->
+</style>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+
+</head>
+<body>
+
+<div id="preamble">
+
+</div>
+
+<div id="content">
+<h1 class="title">Design Proposals for Boundary Condition Implementation in Eilmer4</h1>
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Eilmer3 implementation &mdash; background for discussion</a>
+<ul>
+<li><a href="#sec-1-1">1.1 Strength of the present design</a></li>
+<li><a href="#sec-1-2">1.2 Weaknesses of the present design</a></li>
+<li><a href="#sec-1-3">1.3 Why it's like this</a></li>
+</ul>
+</li>
+<li><a href="#sec-2">2 A proposal for boundary condition implementation in Eilmer4</a>
+<ul>
+<li><a href="#sec-2-1">2.1 Specialisation on <i>when</i> the boundary condition action takes place</a></li>
+<li><a href="#sec-2-2">2.2 Specialisation on <i>what</i> items a boundary condition affects</a></li>
+</ul>
+</li>
+<li><a href="#sec-3">3 Discussion of the design proposal: pros and cons</a>
+<ul>
+<li><a href="#sec-3-1">3.1 Pro: extensibility</a></li>
+<li><a href="#sec-3-2">3.2 Pro: flexible</a></li>
+<li><a href="#sec-3-3">3.3 Con: overly complex, difficult to debug</a></li>
+<li><a href="#sec-3-4">3.4 Con: series of actions might be put in wrong order or clobber each other</a></li>
+<li><a href="#sec-3-5">3.5 Con: Users will be thoroughly confused.</a></li>
+</ul>
+</li>
+<li><a href="#sec-4">4 Closing thoughts</a>
+<ul>
+<li><a href="#sec-4-1">4.1 Simplification</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1"><span class="section-number-2">1</span> Eilmer3 implementation &mdash; background for discussion</h2>
+<div class="outline-text-2" id="text-1">
+
+<p>In Eilmer3, the implementation of boundary conditions accounts
+for a little over 6% of the total lines of code written in C++.
+In the Python code, the percentage of lines of code just dedicated
+to the boundary conditions is about 10%.<sup><a class="footref" name="fnr-.1" href="#fn-.1">1</a></sup>
+However, these relatively small numbers belie the amount
+of effort that is spent on the boundary condition portion
+of the code.
+By effort, I'm talking about discussion, planning,
+re-implementation, refactoring and other code development
+activities that have focused on the boundary conditions.
+As we move forward with Eilmer4 development, it's clear
+that we've outgrown the approach we used for boundary
+conditions with Eilmer3.
+For Eilmer4, we would like to implement an improved design.
+It's useful, therefore, to dissect the implementation in
+Eilmer3 and see where and how there might be room for improvement.
+</p>
+<p>
+In our approach to numerically solving the Navier-Stokes
+equations, we separate the update of flow physics into
+an update for convective processes and an update for
+diffusive processes.
+Thus, in terms of boundary conditions, we need to apply
+the special handling at the boundary at least twice:
+once for the convective update, and once for the diffusive update.
+Also, what the boundary condition needs to do for the convective update
+and then later for the diffusive update is not likely to be
+the same for both updates.
+This distinction between convective and diffusive updates
+is reflected in the code implementation.
+In Eilmer3, boundary conditions are implemented as
+classes.
+The base class is the aptly named <code>BoundaryCondition</code>.
+The two workhorse public methods it provides are
+<code>apply_convective()</code> and <code>apply_viscous()</code>.
+These are called at the appropriate points in the code
+before undertaking the convective or diffusive update.
+</p>
+
+</div>
+
+<div id="outline-container-1-1" class="outline-3">
+<h3 id="sec-1-1"><span class="section-number-3">1.1</span> Strength of the present design</h3>
+<div class="outline-text-3" id="text-1-1">
+
+<p>The present design provides a very neat entry point
+into the code.
+When one wants to inspect what an <b>Adiabatic</b> boundary condition
+does, that is, how it is implemented, then one can
+open the <code>bc_adiabatic.cxx</code> and the code is in one place.
+It would probably be necessary to see where
+<code>apply_convective()</code> and <code>apply_viscous()</code> are called also
+to get full context.
+But basically, that's it for understanding the implementation.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-1-2" class="outline-3">
+<h3 id="sec-1-2"><span class="section-number-3">1.2</span> Weaknesses of the present design</h3>
+<div class="outline-text-3" id="text-1-2">
+
+<p>From a modularity standpoint, there are hints in this design
+that a given boundary condition object does too much.
+That hint is the fact that it applies two different behaviours
+in different contexts.
+What this leads to is code repetition.
+Say you have a list of possible behaviours labelled
+<i>A</i>, <i>B</i>, <i>C</i>, and <i>D</i> that could apply to the convective portion of the
+update.
+At the same time, you have behaviours <i>w</i>, <i>x</i>, <i>y</i>, and <i>z</i> that
+apply to the diffusive part of the update.
+The problem is that our single <code>BoundaryCondition</code> class needs to
+provide the implementation for the combined behaviour of
+say <i>A-w</i>, <i>A-x</i>, <i>B-w</i>, <i>B-y</i>, <i>B-z</i> and so on.
+Not all combinations are valid, that is, physically reasonable
+for our flow solver but you can see how the combinations
+quickly multiply.
+A design technique fix for this is composition.
+We could decompose the <code>BoundaryCondition</code> object into
+a convective flux component, and a diffusive flux component.
+We'll explore this idea, or an extension of it, in the design
+proposals to follow.
+</p>
+<p>
+The other hint that the present <code>BoundaryCondition</code> object does too
+much is the fact that certain classes rely on the base class
+implementation.
+This implies that a particular class doesn't really care
+about interacting with the convective terms, or, vice versa,
+doesn't really care about interacting with the diffusive terms.
+(This reliance on base class implementation also
+detracts from the single-point-of-entry strength mentioned above.
+For these boundary conditions, the implementation is no longer in one
+place, and one has to go looking elsewhere.)
+</p>
+<p>
+Finally, although the <code>BoundaryCondition</code> object does too much,
+the total implementation of boundary effects actually doesn't
+do enough, or rather, there is a lack of flexibility.
+We have come across a number of boundary condition behaviours
+that don't fall neatly into the pattern of "apply this just now before the
+convective update" and then "apply this just now before the diffusive
+update".
+For these cases, the code has extra switches and flags that intercept
+the general behaviour based on special conditions.
+These "special conditions" are related to boundary effects and
+so should be treated somewhere else.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-1-3" class="outline-3">
+<h3 id="sec-1-3"><span class="section-number-3">1.3</span> Why it's like this</h3>
+<div class="outline-text-3" id="text-1-3">
+
+<p>Rather than finish this section beating up on poor old Eilmer3,
+I'd like to mention why we've outgrown this boundary condition
+implementation.
+The primary reason is that Eilmer's multiphysics capability
+has grown.
+The boundary condition implementation is a very serviceable
+arrangement if you restrict yourself to a pure fluid.
+However, the extension to multi-component fluids, coupled
+heat transfer at the boundaries, MHD effects,
+surfaces that ablate and pyrolise, moving boundaries and radiating
+flow fields has put a large amount of strain on our boundary
+condition implementation.
+Mentioning this here also helps inform the discussion of
+what we need to support in Eilmer4.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2"><span class="section-number-2">2</span> A proposal for boundary condition implementation in Eilmer4</h2>
+<div class="outline-text-2" id="text-2">
+
+<p>I'm going to begin by just stating the proposed implementation.
+Then I'll give some arguments for and against its use.
+Also, bear in mind, this first part of the design proposal concerns
+the developer of the internal numerics in D.
+As you read this, there might be a few WTF moments when you
+think about this design as a user.
+I will discuss later how the user never need know about the
+internal design.
+</p>
+<p>
+Let's summarise the limitations in the Eilmer3 design that
+were getting difficult to work around:
+</p><ol>
+<li>the boundary conditions were only applied at two
+   points in time in the code: first, in the
+   convective update before reconstruction,
+   and second, in the diffusive update just
+   before computing spatial derivatives; and 
+</li>
+<li>when they were applied, they had to exert their
+   effect on <i>all</i> governing equations.
+</li>
+</ol>
+
+<p>Regarding point 1, this lead to a number of special cases
+in the code to get certain boundary condition effects.
+That number of "special" cases was growing to the
+point that they weren't so special anymore.
+Regarding point 2, this is what potentially leads
+to requiring a combinatorial amount of boundary conditions.
+We want to avoid this.
+</p>
+<p>
+These limitations point directly to a design solution.
+We need to be able to specialise the boundary condition
+code is two distinct ways:
+</p><ol>
+<li>We need specialisation based on <i>when</i> in the code
+   the boundary conditions are called.
+</li>
+<li>We need specialisation of action based on <i>what</i>
+   flow properties are affected, or more specifically, which governing
+   equations the boundary condition interacts with.
+</li>
+</ol>
+
+
+<p>
+I'll now present the proposed design for boundary conditions
+as a top-down design.
+Let's consider the major steps the code does in a time step:
+</p><ol>
+<li>Convective update
+<ul>
+<li>a. Reconstruction
+</li>
+<li>b. Convective flux calculation
+</li>
+<li>c. Time derivative estimate
+</li>
+<li>d. Cell properties update
+</li>
+</ul>
+
+</li>
+<li>Diffusive update
+<ul>
+<li>a. Spatial derivative calculation
+</li>
+<li>b. Diffusive flux assembly
+</li>
+<li>c. Time derivative estimate
+</li>
+<li>d. Cell properties update
+</li>
+</ul>
+
+</li>
+</ol>
+
+<p>In my current thinking, we want four points of special
+boundary condition action.
+Those actions are:
+</p><ol>
+<li>Before reconstruction (1a.), <b>set ghost cell properties.</b>
+</li>
+<li>After convective flux calculation (1b.), <b>intercept and possibly override certain boundary fluxes.</b>
+</li>
+<li>Before spatial derivative calculation (2a.), <b>set boundary interface values.</b>
+</li>
+<li>After diffusive dlux assembly (2b.), <b>intercept and possibly override certain boundary fluxes.</b>
+</li>
+</ol>
+
+
+<p>
+Amongst those four actions, we have three different classes of boundary condition:
+</p><ol>
+<li>those that set ghost cells;
+</li>
+<li>those that set fluxes; and
+</li>
+<li>those that set interface values.
+</li>
+</ol>
+
+<p>So the design proposal calls for three distinct boundary conditions classes:
+</p><ol>
+<li><code>GhostCellBC</code>,
+</li>
+<li><code>FluxBC</code>, and
+</li>
+<li><code>InterfaceBC</code>.
+</li>
+</ol>
+
+<p>These are all separate types. I can't at the moment see any reason they
+would need to share a common base type.
+</p>
+<p>
+Returning a little higher to our view on the design, each <code>Block</code> needs
+to keep four lists. In each of those lists is a set of appropriate
+boundary conditions to be applied in order.
+The proposed four lists are:
+</p><ol>
+<li><code>preReconActions = [...., ...., ...]</code>;
+</li>
+<li><code>postConvFluxActions = [...., ...., ...., ...]</code>;
+</li>
+<li><code>preSpatialDerivActions = [..., ..., ..., ...]</code>; and
+</li>
+<li><code>postDiffFluxActions = [..., ..., ..., ...]</code>.
+</li>
+</ol>
+
+<p>Why a list of actions and not just a single item?
+Well this addresses our problem of combinatorial
+explosion of repeated code.
+I might have a boundary condition action that is only
+interested in setting properties related to the
+energy equation.
+However, this is not enough information to specify the
+complete boundary behaviour.
+So in that case, I would also have to apply a boundary condition
+object that gives information to satisfy the continuity
+and momentum conservation equations also.
+</p>
+<p>
+If one still wants a <code>BoundaryCondition</code> object, then it could be a
+container for these items.
+It would contain the four action lists, and each of those lists
+has the sequence of boundary conditions to apply.
+Note that a list can contain multiple actions (obviously, it's a list!)
+but all the actions are the same <i>class</i> of action.<sup><a class="footref" name="fnr-.2" href="#fn-.2">2</a></sup>
+So, for example, it only makes sense for the <code>preReconActions</code> to be
+of type <code>GhostCellBC</code>.
+If you want to set the flux at the boundary with a <code>FluxBC</code>, then put that action
+in the <code>postConvFluxActions</code>.
+In a similar vein, the list of <code>preSpatialDerivActions</code> will all be of
+type <code>InterfaceBC</code>.
+</p>
+
+</div>
+
+<div id="outline-container-2-1" class="outline-3">
+<h3 id="sec-2-1"><span class="section-number-3">2.1</span> Specialisation on <i>when</i> the boundary condition action takes place</h3>
+<div class="outline-text-3" id="text-2-1">
+
+<p>Perhaps it's not necessary to belabour this point.
+I'll elaborate here in any case as this document might become useful
+as part of a developer guide for the code.
+</p>
+<p>
+Referring to the list of possible boundary condition actions,
+we use action 1 (pre-reconstruction event)
+when it's natural for us to specify a boundary condition as ghost cells.
+In this case, we don't treat the boundary interfaces as special.
+Our looping machinery runs all the way out to the edge interfaces doing reconstruction
+and flux calculation. Thus, the effect at the boundary is obtained by the
+appropriate setting of ghost cell properties.
+</p>
+<p>
+We use action 2 (post convective flux calculation) 
+when it's more natural to set convective fluxes at
+a boundary edge.
+In this case, we let Eilmer do a reconstruction and flux calculation
+with dummy values.<sup><a class="footref" name="fnr-.3" href="#fn-.3">3</a></sup>
+After this, we intercept that dummy flux with our desired boundary flux.
+</p>
+<p>
+Action 3 (pre spatial derivative calculation) can be used
+to set certain flow properties at the interface.
+These are then used when the code computes the spatial derivatives
+and the diffusive fluxes that follow.
+</p>
+<p>
+Finally, action 4 (post diffusive flux calculation) can be
+used to override certain diffusive flux values after they have
+been computed by the regular eilmer machinery for diffusive flux.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2-2" class="outline-3">
+<h3 id="sec-2-2"><span class="section-number-3">2.2</span> Specialisation on <i>what</i> items a boundary condition affects</h3>
+<div class="outline-text-3" id="text-2-2">
+
+<p>The motivation for splitting the boundary condition behaviour into
+three types &mdash; ghost cell, flux and interface &mdash; is just to make
+it very explicit about what behaviour a certain boundary condition 
+applies.
+I can't think of any easy way to guarantee that a FluxBC doesn't touch
+a ghost cell value.<sup><a class="footref" name="fnr-.4" href="#fn-.4">4</a></sup>
+However, by putting them in distinct classes, we can at least
+prevent the placement of a <code>FluxBC</code> where a GhostCellBC is expected.
+</p>
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3"><span class="section-number-2">3</span> Discussion of the design proposal: pros and cons</h2>
+<div class="outline-text-2" id="text-3">
+
+<p>I am biased and do favour this design.
+However, I'll try to list the pros and cons as they occur to me.
+</p>
+
+</div>
+
+<div id="outline-container-3-1" class="outline-3">
+<h3 id="sec-3-1"><span class="section-number-3">3.1</span> Pro: extensibility</h3>
+<div class="outline-text-3" id="text-3-1">
+
+<p>I think this design future-proofs us (to an extent) against 
+unforeseen new developments.
+For example, I'm not sure that the four hook points cover all
+of the points we'd like to call a boundary action in the future.
+However, I think this design is extensible: we add a new hook point.
+(Of course, if that balloons out to many new hook points, then
+we would need to rethink how we do that.)
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3-2" class="outline-3">
+<h3 id="sec-3-2"><span class="section-number-3">3.2</span> Pro: flexible</h3>
+<div class="outline-text-3" id="text-3-2">
+
+<p>This design leverages the Unix design philosophy of building small
+components that do one thing well and interact in predictable ways.
+I'm advocating breaking down the boundary condition actions
+into very small components that only do one or two
+things and only at very specific points in time.
+Complex boundary behaviour is then derived by chaining
+these small actions together.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3-3" class="outline-3">
+<h3 id="sec-3-3"><span class="section-number-3">3.3</span> Con: overly complex, difficult to debug</h3>
+<div class="outline-text-3" id="text-3-3">
+
+<p>This design approach could become difficult to debug.
+The developer will have to look across many pieces of
+code to see who could have changed a value. I think this
+can be mitigated by good coding. If a boundary condition
+object has a well-defined scope, then it limits the place
+one needs to look.
+</p>
+<p>
+Also, it might become difficult for the human to reason about the code.
+There's no denying that. Good design is a series of compromises.
+However, I think a big part of this objection could be ameliorated
+with good developer docs. Perhaps this note would be enough
+to give new developers the philosophy behind this design and make
+it easier to understand.<sup><a class="footref" name="fnr-.5" href="#fn-.5">5</a></sup>
+</p>
+<p>
+Finally, I appeal to Larry Wall's waterbed theory to defend the
+percevied complexity in this approach.
+The waterbed theory states that certain systems contain a minimum
+amount of complexity. Just like a waterbed, when you try to "push
+down" the complexity in one part, it "pops up" in another.
+What complexities have we traded off here?
+We've traded the complexity of combinatorial explosion
+and ever-growing special cases with the complexity of
+potentially many small objects that when linked
+could look like "action at a distance."
+So, we need to pick our poison.
+</p>
+
+</div>
+
+</div>
+
+<div id="outline-container-3-4" class="outline-3">
+<h3 id="sec-3-4"><span class="section-number-3">3.4</span> Con: series of actions might be put in wrong order or clobber each other</h3>
+<div class="outline-text-3" id="text-3-4">
+
+<p>There's no safeguard to prevent a chain of actions from doing something
+silly.
+That being said, there's no safeguard to prevent me from doing any number
+of amazingly silly things in the code.
+I think this is a weak objection.
+Those who develop CFD code require a highly-developed sense of
+attention to detail.
+If our developers have that, they'll cope with assembling
+the appropriate actions in the correct order.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3-5" class="outline-3">
+<h3 id="sec-3-5"><span class="section-number-3">3.5</span> Con: Users will be thoroughly confused.</h3>
+<div class="outline-text-3" id="text-3-5">
+
+<p>The users never need to be aware of this implementation.
+If a user selects <code>SupersonicInBC</code>, this gets translated
+for the D code as:
+</p>
+
+
+<pre class="example">  preReconActions ~= SupersonicGhostCellsBC(inflow);
+  postConvFluxActions.length = 0;
+  preSpatialDerivActions.length = 0;
+  postDiffFluxActions.length = 0;
+</pre>
+
+<p>
+The users who write user-defined boundary conditions will need
+some awareness of how the boundary conditions work. That's true
+of the present implementation too. There's no avoiding that.
+I'm thinking of providing the following hooks:
+</p>
+<ul>
+<li><code>UserDefinedGhostCellBC</code>
+</li>
+<li><code>UserDefinedConvFluxBC</code>
+</li>
+<li><code>UserDefinedInterfaceValBC</code>
+</li>
+<li><code>UserDefinedDiffFluxBC</code>
+</li>
+</ul>
+
+
+<p>
+Documentation will be required to explain what expectations
+are associated with each of those boundary condition types.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4"><span class="section-number-2">4</span> Closing thoughts</h2>
+<div class="outline-text-2" id="text-4">
+
+<p>I've actually listed more cons than pros. However, I do believe
+the pros outweight the cons in this case.
+I won't justify my position further as it's an individual conclusion
+one must come to examining the arguments for and against.
+</p>
+
+</div>
+
+<div id="outline-container-4-1" class="outline-3">
+<h3 id="sec-4-1"><span class="section-number-3">4.1</span> Simplification</h3>
+<div class="outline-text-3" id="text-4-1">
+
+<p>I haven't had the time to think about how this design might
+be simplified.
+I think this design proposal has merit but perhaps there's
+away of achieving the same objectives but through some
+simplification.
+</p>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+<p class="footnote"><sup><a class="footnum" name="fn-.1" href="#fnr-.1">1</a></sup> The portion of code dedicated to boundary conditions
+was assumed to be that found in files that matched <code>bc_*.cxx</code>
+and <code>exch_*</code>. It might seem odd to include the files related
+to data exchange but they are just a boundary condition that's
+given some special status. The percentage can be computed
+with the following set of command line instructions issued
+in the Eilmer3 source area:
+</p><pre class="example">
+echo "$(wc -l bc*.cxx exch*.cxx | grep total)" "$(wc -l *.cxx | grep total)" | awk '{print $1/$3*100}'
+</pre>
+
+<p>For the Python code, the code in <code>bc_defs.py</code> was taken as representative
+of the lines of code dedicated to boundary condition implementation.
+The Python code exclusively deals with user configuration and not numerical implementation per se. 
+</p><pre class="example">
+echo "$(wc -l bc_defs.py)" "$(wc -l *.py | grep total)" "$(wc -l libprep3.py)" | awk '{print $1*100/($3 - $5)}'
+</pre>
+
+<p>Note that the SWIG-generated <code>libprep3.py</code> file is removed from the accounting.
+</p>
+
+
+<p class="footnote"><sup><a class="footnum" name="fn-.2" href="#fnr-.2">2</a></sup> At least, that's my present thinking. I can't think of why you
+would need to mix and match the type of action within a list of actions.
+</p>
+
+
+<p class="footnote"><sup><a class="footnum" name="fn-.3" href="#fnr-.3">3</a></sup> It's probably not worth the effort of
+trying to specialise the looping routines when they do <i>not</i>
+need to go all the way to the edge.
+There is little efficiency gain (as we are only talking about edge interfaces)
+and only added complexity.
+An objection to this approach might be that the dummy values cause issues
+for the reconstructor (or more likely the thermo calls in the reconstructor).
+My suggestion would be to set the ghost cells with valid dummy values
+for all time.
+For example, take the initial condition for the nearest interior cell and
+keep that state constant in the ghost cells.
+The assumption is that the initial condition is valid in a thermodynamic sense.
+</p>
+
+
+<p class="footnote"><sup><a class="footnum" name="fn-.4" href="#fnr-.4">4</a></sup> Well, we could only pass a list of interfaces to the <code>FluxBC</code> object.
+However, I think that will be overly restrictive and prevent
+access to some information that the <code>FluxBC</code> might reasonably need.
+</p>
+
+
+<p class="footnote"><sup><a class="footnum" name="fn-.5" href="#fnr-.5">5</a></sup> In the future, there will be an editor that makes this point
+moot. I don't know who is going to build it or when it will be
+ready. The sufficiently awesome editor would be able to expand all
+our method calls and function calls at the point in the code
+where we use them and in proper context. (So this editor would have to
+be a half-implemented compiler.) Much like using org mode, I would be able
+to hover my cursor over a function, hit SHIFT+tab and have that
+function unfold in place.
+</p>
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<div id="postamble">
+<p class="date">Date: 11-Mar-2015</p>
+<p class="author">Author: Rowan J. Gollan</p>
+<p class="creator"><a href="http://orgmode.org">Org</a> version 7.9.3f with <a href="http://www.gnu.org/software/emacs/">Emacs</a> version 24</p>
+<a href="http://validator.w3.org/check?uri=referer">Validate XHTML 1.0</a>
+
+</div>
+</body>
+</html>

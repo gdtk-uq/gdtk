@@ -1,0 +1,83 @@
+\documentclass[a4paper,11pt,twoside,onecolumn]{memoir}
+
+% The style of this LaTeX document unashamedly borrows
+% inspiration from the book Programming in Lua by
+% Roberto Ierusalimschy. My only defence is that
+% 'imitation is the sincerest form of flattery.'
+%
+% Rowan J. Gollan, 03-Sep-2014 
+
+% page layout
+\semiisopage[12]
+\checkandfixthelayout
+
+% font selection
+\usepackage{palatino}
+
+% formatting of section headings
+\usepackage[bf,sf,compact]{titlesec}
+\titleformat{\chapter}[display]
+{\bfseries\sffamily\LARGE}
+{\filleft\bfseries\sffamily\Huge\thechapter}
+{1ex}
+{\vspace{1ex}%
+\filleft}
+
+\titleformat{\section}
+{\bfseries\sffamily\large}
+{\thesection}
+{1ex}
+{\vspace{0.5ex}}
+
+\titlespacing{\section}{0pt}{2.0ex}{0.5ex}
+
+% To have listings as a float
+\usepackage{listings}
+\lstset{basicstyle=\footnotesize\ttfamily}
+\usepackage{float}
+\floatstyle{boxed}
+\newfloat{Listing}{h}{lol}
+
+% Some convenient macros
+\usepackage{xspace}
+\newcommand{\dlang}{\texttt{dlang}\xspace}
+\newcommand{\type}[1]{\texttt{#1}}
+
+% Use lower case in headers and add a rule
+\nouppercaseheads
+\makeheadrule{headings}{\textwidth}{\normalrulethickness}
+
+\begin{document}
+
+\frontmatter
+
+\begin{titlingpage}
+\aliaspagestyle{titlingpage}{empty}
+\raggedleft
+\vspace*{\baselineskip}
+{\Large\sffamily Rowan J. Gollan and Peter A. Jacobs}\\[0.2\textheight]
+{\bfseries\sffamily The Developer's Guide to the}\\[\baselineskip]
+{\Huge\sffamily \texttt{dlang} Gas Library}\par
+\vspace*{0.1\textheight}
+{\Large\sffamily September 2014}
+\vfill
+\centering
+{\large School of Mechanical \& Mining Engineering\\The University of Queensland}
+\end{titlingpage}
+
+\chapter{Preface}
+
+\tableofcontents
+
+\mainmatter
+
+\include{intro}
+
+\chapter{Thermodynamics and Equations of State}
+
+\chapter{Diffusion Coefficients}
+
+\chapter{Chemical Kinetics}
+
+
+\end{document}

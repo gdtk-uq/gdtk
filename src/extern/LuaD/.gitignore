@@ -1,0 +1,12 @@
+/test
+/lib
+/*.lst
+
+/docs
+/gh-pages
+
+*.build.lnkarg
+*.build.rsp
+
+# Dub
+.dub

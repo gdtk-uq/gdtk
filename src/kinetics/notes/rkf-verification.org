@@ -1,0 +1,289 @@
+#+Author: Rowan J. Gollan
+#+Date: 03-Mar-2015
+#+Title: Verification of the Runge-Kutta-Fehlberg ODE update
+#+Options: ^:{}
+
+* The Runge-Kutta-Fehlberg method
+The family of Runge-Kutta methods for the numerical
+solution of ordinary differential equations are self-starting
+single-step methods.
+They can be constructed for an arbitrary order of
+accuracy.
+They achieve their high order of accuracy by using
+multiple function evaluations in the update.
+The classical 4th order update formula of Runge-Kutta is considered
+one of the best "bang-for-buck" update formulas in terms
+of trade-off between accuracy and computational cost.
+
+When deriving the Runge-Kutta formulas, the coefficients
+for the update are not unique for a given order of accuracy.
+There are some free parameters, and depending on the choice
+of those parameters, different update formulas result.
+In 1969, Fehlberg cite:fehlberg-1969-low discovered a set of Runge-Kutta formulas
+of 5th order accuracy that contained a 4th order formula
+embedded in the evaluations.
+The power of this discovery is that one gets both a 4th order estimate
+and a 5th order estimate of the update for the same cost as
+compared to a 5th order formula without the embedded 4th order update.
+Fehlberg used this approach to devise an update strategy
+with adaptive timestep control.
+His idea was to take the result of the 4th order estimate as the
+predicted result and use the 5th order estimate as a measure of
+the error.
+If the error is small (within some user-chosen tolerance), then
+the better 5th order estimate is chosen and the integration proceeds.
+If the error is large, then the update is repeated with a smaller timestep.
+Information from the 4th and 5th order updates may be used to
+make some estimate about an appropriate new step size.
+Press et al cite:press-2007-numerical discuss two step size strategies:
+a simple approach (and the one I have used here); and a more elaborate
+approach based on using a PI controller, but this requires the
+storage of solutions at previous time increments.
+
+Over the years since Fehlberg's work, a number of variations on
+the sets of coefficients for the update formula have been suggested.
+The set of coefficients recommended in Press et al.'s Numerical
+Recipes book is those by Cash and Karp (1990) cite:cash-1990-variable.
+These are used here in the kinetics module.
+
+* Verification of implementation
+When using the Runge-Kutta-Fehlberg method, we take the fifth-order
+accurate estimate as our new update.
+Our verification will involve testing that the result of our
+numerical update does indeed converge towards the true solution
+at a rate that is dependent on the step size rasied to the fifth power.
+
+** Test problem
+A constant temperature reaction of hydrogen and iodine will
+be used for the test.
+The details of this are in Section 4.4.1 of my thesis cite:gollan-2008-thesis.
+
+*** Analytical solution
+We require the analytical solution so that the error in our numerical
+solution may be computed.
+Let's begin by building a module that will allow us to compute the
+analytical solution.
+The analytical solution for the concentration of
+the product HI is written implicitly in terms of time $t$.
+Assuming that the initial concentrations of hydrogen and iodine
+are equal at $C_0$, then the analytical solution is:
+\[  \sqrt{ k_f k_b} = \frac{1}{4 C_0 t} \ln \left[ \frac{2C_0 + C_{HI}\left( 2\sqrt{k_b/k_f} - 1\right)}{2C_0 - C_{HI}\left( 2\sqrt{k_b/k_f} + 1\right)} \right] \]
+
+#+BEGIN_SRC d :tangle h2i2_system.d
+import std.stdio;
+import std.conv;
+import std.math;
+import ridder;
+
+void main()
+{
+    double k_f = 3.1080121901939430e-05;
+    double k_b = 5.4707058051099997e-07;
+    double tMax = 60000.0;
+    double c_0 = 4.54;
+
+    auto zeroFun = delegate (double c_HI) {
+        double tmp_a = sqrt(k_f * k_b);
+	double tmp_b = 1.0 / (4.0* c_0 * tMax);
+	double tmp_c = 2.0*c_0 + c_HI * (2.0*sqrt(k_b/k_f) - 1);
+	double tmp_d = 2.0*c_0 - c_HI * (2.0*sqrt(k_b/k_f) + 1);
+        return tmp_a - tmp_b * to!double(log(tmp_c/tmp_d));
+    };
+
+    double C0 = 7.0;
+    double C1 = 7.15;
+    double C_HI = solve!zeroFun(C0, C1);
+    writefln("%16.16f", C_HI);
+}
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :results silent :exports none
+(org-babel-tangle)
+#+END_SRC
+
+Compile and run this program by doing the following:
+#+BEGIN_SRC sh :results output scalar raw replace :exports code
+dmd h2i2_system.d ../../nm/ridder.d
+./h2i2_system
+#+END_SRC
+
+
+*** Numerical solution
+We will write a small D program that computes the numerical solution
+using a range of timestep sizes.
+Our verification will involve checking that the error reduces at the
+rate we expect for a 5th order accurate numerical method.
+
+We being our D program by importing some useful modules.
+#+BEGIN_SRC d :tangle rkf_verify.d 
+import std.stdio;
+import std.string;
+import std.math;
+import gas;
+import gas.therm_perf_gas;
+import kinetics.reaction_mechanism;
+import kinetics.chemistry_update;
+import std.algorithm;
+#+END_SRC
+
+Next we'll build a little function that performs the
+time stepping up to the final time =tMax= given an
+input timestep =dt=.
+We abstract this into a function because we want to
+be able to use this for several different value of =dt=.
+The output of this function is the concentration of HI (=conc1[2]=)
+at the final time.
+This is the value we will compare to the analytical result.
+
+#+BEGIN_SRC d :tangle rkf_verify.d
+double numericalEstimate(double dt, double tMax, double[] conc0, RKFStep step)
+{
+    double t = 0.0;
+    double[] conc1;
+    conc1.length = conc0.length;
+    double dtDummy;
+    while ( (tMax - t) > 1.0e-9 ) {
+	dt = min(dt, tMax - t);
+	step(conc0, dt, conc1, dtDummy);
+	t += dt;
+	conc0 = conc1.dup;
+    }
+    return conc1[2];
+}
+#+END_SRC 
+
+Now we'll build the main routine.
+It needs to some set up of the problem.
+Then perform the calcualtions for each of the chosen timesteps.
+Finaly, we need to write the results out.
+We will make both a data file and table to be captured in this
+document.
+
+First, set up the gas model, reaction mechanism and the Runge-Kutta-Fehlberg
+step.
+We then set the gas state at T = 700.0K and initial composition.
+Finally, we need to evaluate the rate constants once so that
+they are available for use.
+#+BEGIN_SRC d :tangle rkf_verify.d
+void main()
+{
+    auto gm = new ThermallyPerfectGas("../sample-input/H2-I2-HI.lua");
+    auto rmech = createReactionMechanism("../sample-input/H2-I2-inp.lua", gm);
+    auto rkfStep = new RKFStep(gm, rmech, 1.0e-3);
+
+    auto gd = new GasState(3, 1);
+    gd.T[0] = 700.0;
+    double c0 = 4.54;
+    gd.p = 2.0*c0*R_universal*gd.T[0];
+    double[] molef = [0.5, 0.5, 0.0];
+    gm.molef2massf(molef, gd);
+    gm.update_thermo_from_pT(gd);
+    double[] conc0 = [c0, c0, 0.0];
+    rmech.eval_rate_constants(gd);
+#+END_SRC
+
+Next we'll set a final time =tMax= and select which different
+timesteps we'll attempt.
+We'll start with a timestep size of 4000.0.
+Let's game the timestep size selections so that we get a reduction
+in error by a factor of 4 for each subsequent timestep.
+To do this, we'll need to reduce each timestep by 4.0^{-1/5} which
+is approximately 0.7579.
+We use a loop to set up the list of dt values.
+This reduction factor on the timestep size appears there.
+
+#+BEGIN_SRC d :tangle rkf_verify.d
+    double tMax = 60000.0;
+    double dtInit = 4000.0;
+    double[] dtVals = [dtInit];
+    // To get an error ratio reduction of a factor
+    // of 4, we would reduce the timestep by: pow(4.0, -1./5.);
+    foreach ( i; 0..11 ) dtVals ~= pow(4.0, -1./5.)*dtVals[$-1];
+#+END_SRC
+
+Now the fun part: we can actually perform the test.
+We will try each stepsize =dt= in turn and keep a record of the 
+final concentration value for HI.
+We can compute the error as the difference between the analytical
+result and the numerical result.
+Thus, we'll need to copy our analytical result from above into here.
+
+#+BEGIN_SRC d :tangle rkf_verify.d 
+
+    double analyticalVal = 7.1420197868416215;
+    double[] numVals;
+    double[] err;
+
+    foreach ( dt; dtVals ) {
+	numVals ~= numericalEstimate(dt, tMax, conc0, rkfStep);
+	err ~= analyticalVal - numVals[$-1];
+    }
+#+END_SRC
+
+Finally, we'll write to stdout and let org-mode babel capture
+that as a table.
+We'll also keep the results in a data file: =rkf-verification-results.dat=.
+
+#+BEGIN_SRC d :tangle rkf_verify.d
+    writeln("|    dt    |  numerical value  |         error         |       ratio       |");
+    writeln("|----------+-------------------+-----------------------+-------------------+");
+    writefln("| %8.3f | %16.14f  | % 16.14e |                   |", dtVals[0], numVals[0], err[0]);
+    foreach ( i; 1..dtVals.length ) {
+	writefln("| %8.3f | %16.14f  | % 16.14e | % 16.14f |", dtVals[i], numVals[i], err[i], err[i-1]/err[i]);
+    }
+
+    auto f = File("rkf-verification-results.dat", "w");
+    f.writeln("# dt   value    error    error-ratio");
+    foreach ( i; 1..dtVals.length ) {
+	f.writefln("%12.6f  %20.16e  %20.16e %20.16e", dtVals[i], numVals[i], err[i], err[i-1]/err[i]);
+    }
+    f.close();
+}
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :results silent :exports none
+(org-babel-tangle)
+#+END_SRC
+
+The makefile is a little complicated because of the dependencies.
+It has been prepared earlier.
+Here we build our program and execute it.
+#+BEGIN_SRC sh :results output table raw :exports both
+make -f make.rkf > /dev/null
+./rkf_verify
+#+END_SRC
+
+#+RESULTS:
+|       dt |  numerical value |                 error |             ratio |
+|----------+------------------+-----------------------+-------------------|
+| 4000.000 | 7.14201970276497 |  8.40766505305623e-08 |                   |
+| 3031.433 | 7.14201984264246 | -5.58008368400920e-08 | -1.50672741291497 |
+| 2297.397 | 7.14201980890689 | -2.20652642823893e-08 |  2.52889954663392 |
+| 1741.101 | 7.14201979352400 | -6.68238264722731e-09 |  3.30200550421110 |
+| 1319.508 | 7.14201978871738 | -1.87575466270573e-09 |  3.56250355128433 |
+| 1000.000 | 7.14201978734879 | -5.07164976681906e-10 |  3.69850985172070 |
+|  757.858 | 7.14201978697541 | -1.33788091716269e-10 |  3.79080806203197 |
+|  574.349 | 7.14201978687637 | -3.47499806707674e-11 |  3.85001916932907 |
+|  435.275 | 7.14201978685055 | -8.93063401008476e-12 |  3.89109895574341 |
+|  329.877 | 7.14201978684389 | -2.27284857601262e-12 |  3.92926924579914 |
+|  250.000 | 7.14201978684220 | -5.77315972805081e-13 |  3.93692307692308 |
+|  189.465 | 7.14201978684176 | -1.42996725571720e-13 |  4.03726708074534 |
+
+This result is pleasing: the ratio of the error between subsequent value of dt
+converges to 4.
+Note that the first result with a negative value indicates that
+the timestep size was so large that we were outside of the region
+of convergence.
+The slight deviation from a precise value of 4 is due to roundoff error,
+not truncation error.
+
+Let's see this as a plot also.
+
+
+#+BEGIN_SRC sh :results value file :file rkf-vrfcn-results.png :exports results
+convert -density 150 rkf-vrfcn-results.eps rkf-vrfcn-results.png
+#+END_SRC
+
+#+RESULTS:
+[[file:rkf-vrfcn-results.png]]
+

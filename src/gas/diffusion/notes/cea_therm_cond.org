@@ -1,0 +1,129 @@
+#+Author: Rowan J. Gollan
+#+Date: 19-Jan-2015
+#+OPTIONS: ^:{}
+
+* Thermal conductivity computed with CEA curve form
+** Description
+This thermal conductivity calculation makes use of the form used in the CEA program [cite:gordon-1994-CEA, cite:mcbride-1996-CEA].
+The thermal conductivity data for many species have been fit using least-squares to the equation
+\[ \ln(\lambda) = A \ln(T) + \frac{B}{T} + \frac{C}{T^2} + D \]
+This expression gives the thermal conductivity in \mu W/(cm.K).
+This is converted to S.I. units of W/(m.K) by muliplying by 1.0e-4.
+The implementation is shown here: [[file:../cea_therm_cond.d::46]].
+The coefficients A, B, C, and D are taken from the transport
+property data that accompanies the CEA program, specifically
+from the file =trans.inp= ([[file:../../../../extern/cea2/trans.inp]]).
+
+The form of this curve is adopted from that used for
+viscosity.
+Further details are noted in [[file:cea_viscosity.org]].
+
+Note that Gordon and McBride use the symbol \lambda for viscosity.
+Our local preference is to use k.
+I will use k from hereon in.
+
+** Example calculations
+This example is the same as the unit test that is exercised as
+part of the module =cea_therm_cond.d=.
+
+*Evaluate the thermal conductivity of Ar at T = 7200.0 K.*
+
+The coefficients can be taken from the CEA =trans.inp= file.
+The coefficients for N2 at this temperature are (from [[file:../../../../extern/trans.inp::395]]):
+\[
+A = 0.76269502; B = 0.62341752e3; C = -0.71899552e6; D = 0.56927918 
+\]
+
+Evaluated, this gives $$k = 0.1662583 $$ W/(m.K).
+
+*Plot the viscosity of CO_{2} over the range 500K to 11000K.*
+
+We will write a small D program to output the viscosity of CO_{2} as a function
+of temperature in increments of 100K over the range 500K to 11000K.
+
+#+BEGIN_SRC d :tangle plot_CO2_tc.d
+  import std.stdio;
+  import std.string;
+  import gasmodel;
+  import cea_therm_cond;
+  
+  void main()
+  {
+      // Enter parameters for CO2 viscosity by hand
+      double[string] params = ["T_lower":200.0, "T_upper":1000.0,
+                               "A":0.48056568, "B":-0.50786720e3,
+			       "C":0.35088811e5, "D":0.36747794e1];
+      CEAThermCondCurve[] curves;
+      curves ~= CEAThermCondCurve(params);
+      params["T_lower"] = 1000.0; params["T_upper"] = 5000.0;
+      params["A"] = 0.69857277; params["B"] = -0.11830477e3;
+      params["C"] = -0.50688859e5; params["D"] = 0.18650551e1;
+      curves ~= CEAThermCondCurve(params);
+      params["T_lower"] = 5000.0; params["T_upper"] = 10000.0;
+      params["A"] = 0.10518358e1; params["B"] = -0.42555944e4;
+      params["C"] = 0.14288688e8; params["D"] = -0.88950473;
+      curves ~= CEAThermCondCurve(params);
+  
+      auto co2_therm_cond = new CEAThermalConductivity(curves);
+      auto fout = File("CO2-therm-cond.dat", "w");
+      fout.writeln("# T[K]         k[W/(m.K)]");
+      double T = 500.0;
+      double Tmax = 11000.0;
+      double dT = 100.0;
+      auto Q = GasState(1, 1);
+      while ( T <= Tmax ) {
+          Q.T[0] = T;
+          auto k = co2_therm_cond.eval(Q, 0);
+          fout.writeln(format("%12.6e  %12.6e", T, k)); 
+          T += dT;
+      }
+      fout.close();
+  }
+#+END_SRC
+
+#+BEGIN_SRC makefile :tangle makefile
+UTIL_DIR := ../../../util
+UTIL_FILES := $(UTIL_DIR)/lua_service.d
+
+LUA := ../../../../extern/lua-5.1.4
+LIBLUA := $(LUA)/lib/liblua.a
+LIBLUAPATH := $(LUA)/lib
+LUAD_DIR := ../../../extern/LuaD
+LUAD_FILES := $(LUAD_DIR)/luad/*.d \
+	$(LUAD_DIR)/luad/c/*.d \
+	$(LUAD_DIR)/luad/conversions/*.d
+
+plot_CO2_tc : plot_CO2_tc.d ../cea_therm_cond.d ../therm_cond.d ../../gasmodel.d
+	dmd plot_CO2_tc.d ../cea_therm_cond.d ../therm_cond.d ../../gasmodel.d -I../ -I../../ $(UTIL_FILES) ${LUAD_FILES} -L-L$(LIBLUAPATH) -L-llua -L-ldl
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :results silent
+(org-babel-tangle)
+#+END_SRC
+
+#+BEGIN_SRC sh :results silent
+make plot_CO2_tc
+./plot_CO2_tc
+#+END_SRC
+
+#+BEGIN_SRC gnuplot :file CO2-therm-cond.eps
+set term postscript eps enhanced 20 "Palatino"
+set xlabel "T, K"
+set ylabel "k, W/(m.K)"
+set xrange [0:12000]
+set yrange [0:0.6]
+plot 'CO2-therm-cond.dat' notitle w l lw 2
+#+END_SRC
+
+#+RESULTS:
+[[file:CO2-therm-cond.eps]]
+
+#+BEGIN_SRC sh :results value file :file CO2-therm-cond.png
+convert -density 150 CO2-therm-cond.eps CO2-therm-cond.png
+#+END_SRC
+
+#+RESULTS:
+[[file:CO2-therm-cond.png]]
+
+
+** Implementation

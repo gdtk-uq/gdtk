@@ -1,0 +1,20 @@
+struct GasState {
+public:
+    /// Thermodynamic properties.
+    double rho;  /// density, kg/m**3
+    double p;    /// presure, Pa
+    double p_e;  /// electron pressure
+    double a;    /// sound speed, m/s
+    double[] e;  /// specific internal energies, J/kg
+    double[] T;  /// temperatures, K
+    /// Transport properties
+    double mu;   /// viscosity, Pa.s
+    double[] k;  /// thermal conductivities, W/(m.k)
+    // double[][] D_AB; /// binary diffusion coefficients
+    double sigma;    /// electrical conductivity, S/m
+    /// Composition
+    double[] massf;  /// species mass fractions
+    double quality;  /// vapour quality
+
+    // --- abbreviated at this point; methods follow
+}

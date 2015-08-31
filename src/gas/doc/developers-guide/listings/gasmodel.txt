@@ -1,0 +1,27 @@
+class GasModel {
+public:
+    @property const uint n_species() { return _n_species; }
+    @property const uint n_modes() { return _n_modes; }
+    const string species_name(int i) { return _species_names[i]; }
+
+    const void update_thermo_from_pT(ref GasState Q) {}
+    const void update_thermo_from_rhoe(ref GasState Q) {}
+    const void update_thermo_from_rhoT(ref GasState Q) {}
+    const void update_thermo_from_rhop(ref GasState Q) {}
+    const void update_thermo_from_ps(ref GasState Q, double s) {}
+    const void update_thermo_from_hs(ref GasState Q, double s) {}
+    const void update_sound_speed(ref GasState Q) {}
+    const void update_trans_coeffs(ref GasState Q) {}
+
+    const double dedT_const_v(in GasState Q) { return 0.0; }
+    const double dhdT_const_p(in GasState Q) { return 0.0; }
+    const double gas_constant(in GasState Q) { return 0.0; }
+    const double internal_energy(in GasState Q) { return 0.0; }
+    const double enthalpy(in GasState Q) { return 0.0; }
+    const double entropy(in GasState Q) { return 0.0; }
+    
+    final const double Cv(in GasState Q) { return dedT_const_v(Q); }
+    final const double Cp(in GasState Q) { return dhdT_const_p(Q); }
+    final const double R(in GasState Q) { return gas_constant(Q); }
+    final const double gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
+}

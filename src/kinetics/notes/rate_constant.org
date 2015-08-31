@@ -1,0 +1,88 @@
+#+Author: Rowan J. Gollan
+#+Date: 16-Feb-2015
+#+OPTIONS: ^:{}
+
+* Rate constant
+If we know the order of a reaction (how its rate proceeds based
+on the concentration of the reactants), then we can usually
+write the rate of species concentration change in terms
+of a proportionality constant multiplied by the dependency
+on concentration.
+That proportionality constant is called the rate constant
+and is usually given the symbol $$k$$.
+
+There are various models for computing the rate constant as
+a function of the thermodynamic conditions.
+These are described below.
+
+* Generalised Arrhenius form
+** Description
+Arrhenius used arguments from kinetic theory to derive an expression
+for the rate constant $$k$$.
+The model is called the collision theory because it starts with the
+idea that molecules need to collide in order for there to be a chance
+of a chemical reaction between them, that is,
+a rearrangment of bonds and bond partners.
+Arrhenius first assumed there would be a minimum activation
+energy for a reaction to proceed or `get over the hill'.
+This activation energy is labelled $$E_a$$.
+One can then use the kinetic theory of gases to compute compute the fraction
+of collisions that exceed this minimum energy.
+This fraction increases exponentially with temperature and is expressed
+as $$e^{-E_a/R_u T}$$.
+However, it turns out that even when collisions contain enough energy
+to exceed the reaction barrier, that still does not guarantee a reaction.
+The orientation of molecules during the collision also has some bearing
+on whether the reaction will take place.
+The fraction of collisions with the correct orientation is the product
+of the collision frequency $$z$$ and the steric factor $$p$$ which is always
+less than 1.0 and accounts for which collision directions are favourable.
+So we can then represent the rate constant as the product of the fraction
+of collisions that have a favourable direction and the fraction of collisions
+that have a favourable amount of energy:
+\[ k = zpe^{-E_a/R_u T} \]
+Usually this is written with $$A$$, the frequency factor, replacing $$zp$$ to
+give the Arrhenius equation:
+\[ k = A e^{-E_a/R_u T } \]
+The theories that exist to determine $$A$$ and $$E_a$$ seem to vary
+from moderately successful to practically worthless.
+In other words, $$A$$ and $$E_a$$ are most frequently determined by
+experiment.
+
+A further refinement to the expression is use of a temperature-depdendent
+pre-exponential term of the form $$T^n$$.
+This has been called the modified or generalised Arrhenius equation.
+Also, it is very common in literature to just print the term
+$$E_a/R_u$$ as a single parameter.
+We will call that parameter $C$ and it has units of Kelvin.
+We have chosen to use this as input because it reduces confusion
+when users are transcribing reaction rate parameters from the literature.
+It is simply the activation energy given as an equivalent temperature.
+\[ k = A T^n e^{-C/T} \]
+The source code implements this form of the equation in the
+=ArrheniusRateConstant= class.
+The exact implementation is here: [[file:../rate_constant::58]]
+
+** Example calculations
+
+*Evaluate the rate constant for the bimolecular reaction of H_{2} and I_{2} at T = 700 K*
+
+This example calculation is the first unit test found
+in module =rate_constant.d=.
+
+The expression for the rate constant is taken from 
+Baulch et al.[cite:baulch-1981-kinetic]:
+\[ k = 1.94 \times 10^14 \exp(-20620.0/T) \]
+
+In the notation used by the kinetics module,
+$$A = 1.94 \times 10^14$$, $$n = 0$$ and $$C = 20620.0$$.
+
+At $$T = 700 K$$, the calculation gives $$k = 31.24116 cm^3/(mole.s)$$.
+
+*Evaluate the rate constant for the dissociation of nitrogen in the reaction N_{2} + N_{2} at T = 4000 K*
+
+Let's use the dissociation rate parameters given by Gupta et al. [cite:gupta-1990-review]
+\[ A = 1.92 \times 10^17; \quad n = -0.5; \quad C = 1.131 \times 10^5 \].
+
+At $$T = 4000 K$, the value for $$k$$ is: $$1594.39 cm^3/(mole.s)$$.
+

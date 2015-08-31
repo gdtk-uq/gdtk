@@ -1,0 +1,16 @@
+*.pdb
+*.exe
+*.exe_cv
+*.dll
+*.dll_cv
+*.map
+*.obj
+*.o
+*.json
+*.html
+*.build
+*.cmd
+*.dep
+/hello
+/phonebook
+/precompiled

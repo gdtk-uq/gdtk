@@ -1,0 +1,16 @@
+struct GasState {
+public:
+    this(uint n_species, uint n_modes)
+
+    this(in GasModel gm, in double p_init, in double[] T_init, 
+	 in double[] massf_init=[1.0,], in double quality_init=1.0,
+	 in double sigma_init=0.0)
+
+    this(in GasModel gm, in double p_init, in double T_init, 
+	 in double[] massf_init=[1.0,], in double quality_init=1.0,
+	 in double sigma_init=0.0)
+
+    this(in GasState other) 
+
+    this(this)
+}

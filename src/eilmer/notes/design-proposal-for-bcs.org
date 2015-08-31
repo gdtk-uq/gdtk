@@ -1,0 +1,408 @@
+#+Author: Rowan J. Gollan
+#+Date: 11-Mar-2015
+#+Title: Design Proposals for Boundary Condition Implementation in Eilmer4
+
+* Eilmer3 implementation --- background for discussion
+In Eilmer3, the implementation of boundary conditions accounts
+for a little over 6% of the total lines of code written in C++.
+In the Python code, the percentage of lines of code just dedicated
+to the boundary conditions is about 10%.[fn:1]
+However, these relatively small numbers belie the amount
+of effort that is spent on the boundary condition portion
+of the code.
+By effort, I'm talking about discussion, planning,
+re-implementation, refactoring and other code development
+activities that have focused on the boundary conditions.
+As we move forward with Eilmer4 development, it's clear
+that we've outgrown the approach we used for boundary
+conditions with Eilmer3.
+For Eilmer4, we would like to implement an improved design.
+It's useful, therefore, to dissect the implementation in
+Eilmer3 and see where and how there might be room for improvement.
+
+
+[fn:1] The portion of code dedicated to boundary conditions
+was assumed to be that found in files that matched ~bc_*.cxx~
+and ~exch_*~. It might seem odd to include the files related
+to data exchange but they are just a boundary condition that's
+given some special status. The percentage can be computed
+with the following set of command line instructions issued
+in the Eilmer3 source area:
+   : echo "$(wc -l bc*.cxx exch*.cxx | grep total)" "$(wc -l *.cxx | grep total)" | awk '{print $1/$3*100}'
+For the Python code, the code in ~bc_defs.py~ was taken as representative
+of the lines of code dedicated to boundary condition implementation.
+The Python code exclusively deals with user configuration and not numerical implementation per se. 
+   : echo "$(wc -l bc_defs.py)" "$(wc -l *.py | grep total)" "$(wc -l libprep3.py)" | awk '{print $1*100/($3 - $5)}'
+Note that the SWIG-generated ~libprep3.py~ file is removed from the accounting.
+
+In our approach to numerically solving the Navier-Stokes
+equations, we separate the update of flow physics into
+an update for convective processes and an update for
+diffusive processes.
+Thus, in terms of boundary conditions, we need to apply
+the special handling at the boundary at least twice:
+once for the convective update, and once for the diffusive update.
+Also, what the boundary condition needs to do for the convective update
+and then later for the diffusive update is not likely to be
+the same for both updates.
+This distinction between convective and diffusive updates
+is reflected in the code implementation.
+In Eilmer3, boundary conditions are implemented as
+classes.
+The base class is the aptly named ~BoundaryCondition~.
+The two workhorse public methods it provides are
+~apply_convective()~ and ~apply_viscous()~.
+These are called at the appropriate points in the code
+before undertaking the convective or diffusive update.
+
+** Strength of the present design
+The present design provides a very neat entry point
+into the code.
+When one wants to inspect what an *Adiabatic* boundary condition
+does, that is, how it is implemented, then one can
+open the ~bc_adiabatic.cxx~ and the code is in one place.
+It would probably be necessary to see where
+~apply_convective()~ and ~apply_viscous()~ are called also
+to get full context.
+But basically, that's it for understanding the implementation.
+
+** Weaknesses of the present design
+From a modularity standpoint, there are hints in this design
+that a given boundary condition object does too much.
+That hint is the fact that it applies two different behaviours
+in different contexts.
+What this leads to is code repetition.
+Say you have a list of possible behaviours labelled
+/A/, /B/, /C/, and /D/ that could apply to the convective portion of the
+update.
+At the same time, you have behaviours /w/, /x/, /y/, and /z/ that
+apply to the diffusive part of the update.
+The problem is that our single ~BoundaryCondition~ class needs to
+provide the implementation for the combined behaviour of
+say /A-w/, /A-x/, /B-w/, /B-y/, /B-z/ and so on.
+Not all combinations are valid, that is, physically reasonable
+for our flow solver but you can see how the combinations
+quickly multiply.
+A design technique fix for this is composition.
+We could decompose the ~BoundaryCondition~ object into
+a convective flux component, and a diffusive flux component.
+We'll explore this idea, or an extension of it, in the design
+proposals to follow.
+
+The other hint that the present ~BoundaryCondition~ object does too
+much is the fact that certain classes rely on the base class
+implementation.
+This implies that a particular class doesn't really care
+about interacting with the convective terms, or, vice versa,
+doesn't really care about interacting with the diffusive terms.
+(This reliance on base class implementation also
+detracts from the single-point-of-entry strength mentioned above.
+For these boundary conditions, the implementation is no longer in one
+place, and one has to go looking elsewhere.)
+
+Finally, although the ~BoundaryCondition~ object does too much,
+the total implementation of boundary effects actually doesn't
+do enough, or rather, there is a lack of flexibility.
+We have come across a number of boundary condition behaviours
+that don't fall neatly into the pattern of "apply this just now before the
+convective update" and then "apply this just now before the diffusive
+update".
+For these cases, the code has extra switches and flags that intercept
+the general behaviour based on special conditions.
+These "special conditions" are related to boundary effects and
+so should be treated somewhere else.
+
+** Why it's like this
+Rather than finish this section beating up on poor old Eilmer3,
+I'd like to mention why we've outgrown this boundary condition
+implementation.
+The primary reason is that Eilmer's multiphysics capability
+has grown.
+The boundary condition implementation is a very serviceable
+arrangement if you restrict yourself to a pure fluid.
+However, the extension to multi-component fluids, coupled
+heat transfer at the boundaries, MHD effects,
+surfaces that ablate and pyrolise, moving boundaries and radiating
+flow fields has put a large amount of strain on our boundary
+condition implementation.
+Mentioning this here also helps inform the discussion of
+what we need to support in Eilmer4.
+
+* A proposal for boundary condition implementation in Eilmer4 
+I'm going to begin by just stating the proposed implementation.
+Then I'll give some arguments for and against its use.
+Also, bear in mind, this first part of the design proposal concerns
+the developer of the internal numerics in D.
+As you read this, there might be a few WTF moments when you
+think about this design as a user.
+I will discuss later how the user never need know about the
+internal design.
+
+Let's summarise the limitations in the Eilmer3 design that
+were getting difficult to work around:
+1. the boundary conditions were only applied at two
+   points in time in the code: first, in the
+   convective update before reconstruction,
+   and second, in the diffusive update just
+   before computing spatial derivatives; and 
+2. when they were applied, they had to exert their
+   effect on /all/ governing equations.
+Regarding point 1, this lead to a number of special cases
+in the code to get certain boundary condition effects.
+That number of "special" cases was growing to the
+point that they weren't so special anymore.
+Regarding point 2, this is what potentially leads
+to requiring a combinatorial amount of boundary conditions.
+We want to avoid this.
+
+These limitations point directly to a design solution.
+We need to be able to specialise the boundary condition
+code is two distinct ways:
+1. We need specialisation based on /when/ in the code
+   the boundary conditions are called.
+2. We need specialisation of action based on /what/
+   flow properties are affected, or more specifically, which governing
+   equations the boundary condition interacts with.
+
+I'll now present the proposed design for boundary conditions
+as a top-down design.
+Let's consider the major steps the code does in a time step:
+1. Convective update
+   + a. Reconstruction
+   + b. Convective flux calculation
+   + c. Time derivative estimate
+   + d. Cell properties update
+2. Diffusive update
+   + a. Spatial derivative calculation
+   + b. Diffusive flux assembly
+   + c. Time derivative estimate
+   + d. Cell properties update
+In my current thinking, we want four points of special
+boundary condition action.
+Those actions are:
+1. Before reconstruction (1a.), *set ghost cell properties.*
+2. After convective flux calculation (1b.), *intercept and possibly override certain boundary fluxes.*
+3. Before spatial derivative calculation (2a.), *set boundary interface values.*
+4. After diffusive dlux assembly (2b.), *intercept and possibly override certain boundary fluxes.*
+
+Amongst those four actions, we have three different classes of boundary condition:
+1. those that set ghost cells;
+2. those that set fluxes; and
+3. those that set interface values.
+So the design proposal calls for three distinct boundary conditions classes:
+1. ~GhostCellBC~,
+2. ~FluxBC~, and
+3. ~InterfaceBC~.
+These are all separate types. I can't at the moment see any reason they
+would need to share a common base type.
+
+Returning a little higher to our view on the design, each ~Block~ needs
+to keep four lists. In each of those lists is a set of appropriate
+boundary conditions to be applied in order.
+The proposed four lists are:
+1. ~preReconActions = [...., ...., ...]~;
+2. ~postConvFluxActions = [...., ...., ...., ...]~;
+3. ~preSpatialDerivActions = [..., ..., ..., ...]~; and
+4. ~postDiffFluxActions = [..., ..., ..., ...]~.
+Why a list of actions and not just a single item?
+Well this addresses our problem of combinatorial
+explosion of repeated code.
+I might have a boundary condition action that is only
+interested in setting properties related to the
+energy equation.
+However, this is not enough information to specify the
+complete boundary behaviour.
+So in that case, I would also have to apply a boundary condition
+object that gives information to satisfy the continuity
+and momentum conservation equations also.
+
+If one still wants a ~BoundaryCondition~ object, then it could be a
+container for these items.
+It would contain the four action lists, and each of those lists
+has the sequence of boundary conditions to apply.
+Note that a list can contain multiple actions (obviously, it's a list!)
+but all the actions are the same /class/ of action.[fn:2]
+So, for example, it only makes sense for the ~preReconActions~ to be
+of type ~GhostCellBC~.
+If you want to set the flux at the boundary with a ~FluxBC~, then put that action
+in the ~postConvFluxActions~.
+In a similar vein, the list of ~preSpatialDerivActions~ will all be of
+type ~InterfaceBC~.
+
+[fn:2] At least, that's my present thinking. I can't think of why you
+would need to mix and match the type of action within a list of actions.
+
+** Specialisation on /when/ the boundary condition action takes place
+Perhaps it's not necessary to belabour this point.
+I'll elaborate here in any case as this document might become useful
+as part of a developer guide for the code.
+
+Referring to the list of possible boundary condition actions,
+we use action 1 (pre-reconstruction event)
+when it's natural for us to specify a boundary condition as ghost cells.
+In this case, we don't treat the boundary interfaces as special.
+Our looping machinery runs all the way out to the edge interfaces doing reconstruction
+and flux calculation. Thus, the effect at the boundary is obtained by the
+appropriate setting of ghost cell properties.
+
+We use action 2 (post convective flux calculation) 
+when it's more natural to set convective fluxes at
+a boundary edge.
+In this case, we let Eilmer do a reconstruction and flux calculation
+with dummy values.[fn:3]
+After this, we intercept that dummy flux with our desired boundary flux.
+
+Action 3 (pre spatial derivative calculation) can be used
+to set certain flow properties at the interface.
+These are then used when the code computes the spatial derivatives
+and the diffusive fluxes that follow.
+
+Finally, action 4 (post diffusive flux calculation) can be
+used to override certain diffusive flux values after they have
+been computed by the regular eilmer machinery for diffusive flux.
+
+[fn:3] It's probably not worth the effort of
+trying to specialise the looping routines when they do /not/
+need to go all the way to the edge.
+There is little efficiency gain (as we are only talking about edge interfaces)
+and only added complexity.
+An objection to this approach might be that the dummy values cause issues
+for the reconstructor (or more likely the thermo calls in the reconstructor).
+My suggestion would be to set the ghost cells with valid dummy values
+for all time.
+For example, take the initial condition for the nearest interior cell and
+keep that state constant in the ghost cells.
+The assumption is that the initial condition is valid in a thermodynamic sense.
+
+** Specialisation on /what/ items a boundary condition affects
+The motivation for splitting the boundary condition behaviour into
+three types --- ghost cell, flux and interface --- is just to make
+it very explicit about what behaviour a certain boundary condition 
+applies.
+I can't think of any easy way to guarantee that a FluxBC doesn't touch
+a ghost cell value.[fn:4]
+However, by putting them in distinct classes, we can at least
+prevent the placement of a ~FluxBC~ where a GhostCellBC is expected.
+
+[fn:4]
+Well, we could only pass a list of interfaces to the ~FluxBC~ object.
+However, I think that will be overly restrictive and prevent
+access to some information that the ~FluxBC~ might reasonably need.
+
+
+* Discussion of the design proposal: pros and cons
+I am biased and do favour this design.
+However, I'll try to list the pros and cons as they occur to me.
+
+** Pro: extensibility
+I think this design future-proofs us (to an extent) against 
+unforeseen new developments.
+For example, I'm not sure that the four hook points cover all
+of the points we'd like to call a boundary action in the future.
+However, I think this design is extensible: we add a new hook point.
+(Of course, if that balloons out to many new hook points, then
+we would need to rethink how we do that.)
+
+** Pro: flexible
+This design leverages the Unix design philosophy of building small
+components that do one thing well and interact in predictable ways.
+I'm advocating breaking down the boundary condition actions
+into very small components that only do one or two
+things and only at very specific points in time.
+Complex boundary behaviour is then derived by chaining
+these small actions together.
+
+** Con: overly complex, difficult to debug
+This design approach could become difficult to debug.
+The developer will have to look across many pieces of
+code to see who could have changed a value. I think this
+can be mitigated by good coding. If a boundary condition
+object has a well-defined scope, then it limits the place
+one needs to look.
+
+Also, it might become difficult for the human to reason about the code.
+There's no denying that. Good design is a series of compromises.
+However, I think a big part of this objection could be ameliorated
+with good developer docs. Perhaps this note would be enough
+to give new developers the philosophy behind this design and make
+it easier to understand.[fn:5]
+
+Finally, I appeal to Larry Wall's waterbed theory to defend the
+percevied complexity in this approach.
+The waterbed theory states that certain systems contain a minimum
+amount of complexity. Just like a waterbed, when you try to "push
+down" the complexity in one part, it "pops up" in another.
+What complexities have we traded off here?
+We've traded the complexity of combinatorial explosion
+and ever-growing special cases with the complexity of
+potentially many small objects that when linked
+could look like "action at a distance."
+So, we need to pick our poison.
+
+[fn:5] In the future, there will be an editor that makes this point
+moot. I don't know who is going to build it or when it will be
+ready. The sufficiently awesome editor would be able to expand all
+our method calls and function calls at the point in the code
+where we use them and in proper context. (So this editor would have to
+be a half-implemented compiler.) Much like using org mode, I would be able
+to hover my cursor over a function, hit SHIFT+tab and have that
+function unfold in place.
+
+
+** Con: series of actions might be put in wrong order or clobber each other
+There's no safeguard to prevent a chain of actions from doing something
+silly.
+That being said, there's no safeguard to prevent me from doing any number
+of amazingly silly things in the code.
+I think this is a weak objection.
+Those who develop CFD code require a highly-developed sense of
+attention to detail.
+If our developers have that, they'll cope with assembling
+the appropriate actions in the correct order.
+
+** Con: Users will be thoroughly confused.
+The users never need to be aware of this implementation.
+If a user selects ~SupersonicInBC~, this gets translated
+for the D code as:
+#+BEGIN_EXAMPLE
+  preReconActions ~= SupersonicGhostCellsBC(inflow);
+  postConvFluxActions.length = 0;
+  preSpatialDerivActions.length = 0;
+  postDiffFluxActions.length = 0;
+#+END_EXAMPLE
+The users who write user-defined boundary conditions will need
+some awareness of how the boundary conditions work. That's true
+of the present implementation too. There's no avoiding that.
+I'm thinking of providing the following hooks:
+
+ + ~UserDefinedGhostCellBC~
+ + ~UserDefinedConvFluxBC~
+ + ~UserDefinedInterfaceValBC~
+ + ~UserDefinedDiffFluxBC~
+
+Documentation will be required to explain what expectations
+are associated with each of those boundary condition types.
+
+* Closing thoughts
+I've actually listed more cons than pros. However, I do believe
+the pros outweight the cons in this case.
+I won't justify my position further as it's an individual conclusion
+one must come to examining the arguments for and against.
+
+** Simplification
+I haven't had the time to think about how this design might
+be simplified.
+I think this design proposal has merit but perhaps there's
+away of achieving the same objectives but through some
+simplification.
+
+
+
+
+
+
+
+
+
+
+

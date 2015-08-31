@@ -1,0 +1,34 @@
+peterj@helmholtz ~/cfcfd3/dlang/nm $ maxima
+
+Maxima 5.32.1 http://maxima.sourceforge.net
+using Lisp GNU Common Lisp (GCL) GCL 2.6.10 (a.k.a. GCL)
+Distributed under the GNU Public License. See the file COPYING.
+Dedicated to the memory of William Schelter.
+The function bug_report() provides bug reporting information.
+(%i1) batch("gauss-quadrature-3.mac");
+
+read and interpret file: #p/home/peterj/cfcfd3/dlang/nm/gauss-quadrature-3.mac
+(%i2) fpprec:20
+(%o2)                                 20
+(%i3) eq0:integrate(x^0,x,-1,1) = w1+2*w0
+(%o3)                            2 = w1 + 2 w0
+(%i4) eq2:integrate(x^2,x,-1,1) = 2*w0*x0^2
+                                 2          2
+(%o4)                            - = 2 w0 x0
+                                 3
+(%i5) eq4:integrate(x^4,x,-1,1) = 2*w0*x0^4
+                                 2          4
+(%o5)                            - = 2 w0 x0
+                                 5
+(%i6) solve([eq0,eq2,eq4],[w0,w1,x0])
+             5       8       sqrt(3)         5       8         sqrt(3)
+(%o6) [[w0 = -, w1 = -, x0 = -------], [w0 = -, w1 = -, x0 = - -------]]
+             9       9       sqrt(5)         9       9         sqrt(5)
+(%i7) ev(%,bfloat)
+(%o7) [[w0 = 5.5555555555555555556b-1, w1 = 8.8888888888888888889b-1, 
+x0 = 7.7459666924148337704b-1], [w0 = 5.5555555555555555556b-1, 
+w1 = 8.8888888888888888889b-1, x0 = - 7.7459666924148337704b-1]]
+(%o7)                       gauss-quadrature-3.mac
+(%i8) quit();
+peterj@helmholtz ~/cfcfd3/dlang/nm $ 
+
