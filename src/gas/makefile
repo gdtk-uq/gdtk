@@ -4,6 +4,7 @@
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
 INSTALL_DIR ?= $(HOME)/e3bin
+BUILD_DIR ?= ../../build
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo CO2_model_demo
 UNITTEST_FILES := therm_perf_gas_test \
@@ -83,8 +84,11 @@ clean:
 	- rm ${DEMO_PROGRAMS} *.o *.a
 	- cd $(LUA); make clean
 
-install-prep-gas: prep_gas.lua
-	cp prep_gas.lua $(INSTALL_DIR)/prep-gas; chmod +x $(INSTALL_DIR)/prep-gas
+build-prep-gas: prep_gas.lua
+	- mkdir -p $(BUILD_DIR)/bin
+	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
+	- mkdir -p $(BUILD_DIR)/data
+	cp species-database/species-database.lua $(BUILD_DIR)/data/
 
 $(LIBLUA):
 	cd $(LUA); make linux local
@@ -98,7 +102,7 @@ ideal_gas_demo: ideal_gas_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
-		
+
 CO2_model_demo: CO2_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) CO2_model_demo.d $(OF)CO2_model_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \

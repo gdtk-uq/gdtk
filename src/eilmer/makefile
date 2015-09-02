@@ -1,4 +1,4 @@
-# makefile for Eilmer4
+# makefile for Eilmer
 # Builds main simulation program by default.
 
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
@@ -102,6 +102,9 @@ LIBLUAPATH := $(LUA_DIR)/lib
 # The install destination the same as Eilmer3, for now.
 INSTALL_DIR ?= $(HOME)/e3bin
 
+# The build destination sits locally for present
+BUILD_DIR := ../../build
+
 REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
 ifeq ($(DMD), dmd)
@@ -135,10 +138,13 @@ default: $(PROGRAMS)
 	@echo "Eilmer4 simulation code built."
 
 install: $(PROGRAMS) prep.lua prep-gas prep-chem
+	- mkdir -p $(INSTALL_DIR)
+	- mkdir -p $(BUILD_DIR)/bin
+	cp $(PROGRAMS) $(BUILD_DIR)/bin
+	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
+	cp prep.lua $(BUILD_DIR)/bin
 	@echo "Installing to $(INSTALL_DIR)"
-	cp $(PROGRAMS) $(INSTALL_DIR)
-	cp prep.lua $(INSTALL_DIR)
-	cp $(LUA_DIR)/bin/* $(INSTALL_DIR)
+	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 demo: $(DEMO_PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
@@ -154,10 +160,10 @@ clean:
 	- cd $(GAS_DIR); make clean; rm libgas.a
 
 prep-gas:
-	cd $(GAS_DIR); make INSTALL_DIR=$(INSTALL_DIR) install-prep-gas 
+	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-gas 
 
 prep-chem:
-	cd $(KINETICS_DIR); make INSTALL_DIR=$(INSTALL_DIR) install-prep-chem
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
 
 $(LIBLUA):
 	cd $(LUA_DIR); make linux local

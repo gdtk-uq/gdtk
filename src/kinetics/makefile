@@ -3,6 +3,7 @@
 # and build stand-alone programs.
 
 INSTALL_DIR ?= $(HOME)/e3bin
+BUILD_DIR ?= ../../build
 
 UNITTEST_FILES := rate_constant_test \
 	reaction_test
@@ -32,9 +33,11 @@ KINETICS_FILES := \
 DFLAGS := -main -unittest -gc -wi -I../ 
 DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl
 
-install-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
-	cp reaction.lua lex_elems.lua $(INSTALL_DIR)
-	cp prep_chem.lua $(INSTALL_DIR)/prep-chem; chmod +x $(INSTALL_DIR)/prep-chem
+build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
+	- mkdir -p $(BUILD_DIR)/bin
+	- mkdir -p $(BUILD_DIR)/lib
+	cp reaction.lua lex_elems.lua $(BUILD_DIR)/lib/
+	cp prep_chem.lua $(BUILD_DIR)/bin/prep-chem; chmod +x $(BUILD_DIR)/bin/prep-chem
 
 unittests: $(UNITTEST_FILES)
 
