@@ -66,8 +66,8 @@
 @* checks for initialization code.
 ** CHANGE them if you want different names.
 */
-#define LUA_PATH        "LUA_PATH"
-#define LUA_CPATH       "LUA_CPATH"
+#define LUA_PATH        "DGD_LUA_PATH"
+#define LUA_CPATH       "DGD_LUA_CPATH"
 #define LUA_INIT	"LUA_INIT"
 
 

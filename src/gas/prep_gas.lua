@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+#!/usr/bin/env dgd-lua
 -- Author: Rowan J. Gollan
 -- Date: 08-Mar-2015
 -- 
@@ -206,8 +206,8 @@ function main()
    end
    
    -- Locate species database and load
-   CFDSRC = os.getenv("CFCFD_SRC") or os.getenv("HOME").."/cfcfd3"
-   dir = CFDSRC.."/dlang/gas/species-database/"
+   DGDSRC = os.getenv("DGD_SRC")
+   dir = DGDSRC.."/src/gas/species-database/"
    dbName = dir.."species-database.lua"
    dofile(dbName)
    print("Species database loaded from: ", dbName)

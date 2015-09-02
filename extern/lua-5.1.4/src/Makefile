@@ -29,10 +29,14 @@ CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
 LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
 	lstrlib.o loadlib.o linit.o lpeg.o
 
-LUA_T=	lua
+# RJG 2015-09-02
+# Make executable name dgd-lua to avoid clashing with any system-installed Lua
+LUA_T=	dgd-lua
 LUA_O=	lua.o
 
-LUAC_T=	luac
+# RJG 2015-09-02
+# # As above, change luac to dgd-luac
+LUAC_T=	dgd-luac
 LUAC_O=	luac.o print.o
 
 ALL_O= $(CORE_O) $(LIB_O) $(LUA_O) $(LUAC_O)

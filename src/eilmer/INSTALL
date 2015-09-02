@@ -1,0 +1,36 @@
+Quick installation guide
+========================
+:Author: Rowan J. Gollan
+:Date: 2015-09-02
+
+First-time setup
+----------------
+
+Make a directory to house the eilmer executables and support files.
+In this example, I've called the install directory 'dgdinst' under my
+$HOME area.
+
+> mkdir $HOME/dgdinst
+
+Configure your environment to use eilmer. You will need to set the
+DGD_SRC variable to point to the top of this source tree and also
+add the 'dgdexec' directory to $PATH, $DGD_LUA_PATH and $DGD_LUA_CPATH.
+Some example lines from a .bashrc file are::
+
+   export DGD_SRC=$HOME/dgd
+   export PATH=$PATH:$HOME/dgdinst
+   export DGD_LUA_PATH=$HOME/dgdinst/?.lua
+   export DGD_LUA_CPATH=$HOME/dgdinst/?.so
+
+Remember to refresh your current shell (or log out and log back in) so
+that your newly configured environment is available.
+
+Compilation and installation
+----------------------------
+
+To install to your chosen directory, issue the following command
+from within this directory:
+
+> make INSTALL_DIR=$HOME/dgdinst install
+
+

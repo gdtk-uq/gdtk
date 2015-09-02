@@ -324,8 +324,8 @@ public:
 		if ( scale > maxscale )
 		    scale = maxscale;
 	    }
-	hSuggest = scale*h;
-	return ResultOfStep.success;
+	    hSuggest = scale*h;
+	    return ResultOfStep.success;
 	}
 	// else, failed step
 	scale = max(safe*pow(err, -alpha), minscale);

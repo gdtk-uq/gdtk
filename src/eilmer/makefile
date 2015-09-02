@@ -138,6 +138,7 @@ install: $(PROGRAMS) prep.lua prep-gas prep-chem
 	@echo "Installing to $(INSTALL_DIR)"
 	cp $(PROGRAMS) $(INSTALL_DIR)
 	cp prep.lua $(INSTALL_DIR)
+	cp $(LUA_DIR)/bin/* $(INSTALL_DIR)
 
 demo: $(DEMO_PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"

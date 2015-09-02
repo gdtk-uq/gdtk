@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+#!/usr/bin/env dgd-lua
 -- Author: Rowan J. Gollan
 -- Date: 03-Mar-2009
 --
