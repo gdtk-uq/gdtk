@@ -99,8 +99,8 @@ LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
 
-# The install destination the same as Eilmer3, for now.
-INSTALL_DIR ?= $(HOME)/e3bin
+# The install destination.
+INSTALL_DIR ?= $(HOME)/dgdinst
 
 # The build destination sits locally for present
 BUILD_DIR := ../../build
@@ -153,6 +153,7 @@ demo: $(DEMO_PROGRAMS)
 clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS) $(PROGRAMS)
+	- rm -r $(BUILD_DIR)/*
 	- rm test-grid.txt.gz test-flow.txt.gz trace.log trace.def
 	- rm -r plot/ flow/ grid/
 	- rm main_with_rev_string.d
