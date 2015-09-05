@@ -2046,9 +2046,9 @@ public:
 		    case Face.south:
 			final switch (src_orientation) {
 			case 0: i_src = i; k_src = k; break;
-			case 1: i_src = k; k_src = src_blk.nkcell - i - 1; break;
+			case 1: i_src = src_blk.nicell - k - 1; k_src = i; break;
 			case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - k - 1; break;
-			case 3: i_src = src_blk.nicell - k - 1; k_src = i;
+			case 3: i_src = k; k_src = src_blk.nkcell - i - 1;
 			} // end switch (src_orientation)
 			j_src = src_blk.jmin; 
 			i_src += src_blk.imin; k_src += src_blk.kmin;
@@ -2083,7 +2083,7 @@ public:
 			final switch (src_orientation) {
 			case 0: i_src = src_blk.nicell - i - 1; j_src = k; break;
 			case 1: i_src = k; j_src = i; break;
-			case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - k - 1; break;
+			case 2: i_src = i; j_src = src_blk.njcell - k - 1; break;
 			case 3: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - i - 1;
 			} // end switch (src_orientation)
 			k_src = src_blk.kmin; 
@@ -2120,8 +2120,8 @@ public:
 			final switch (src_orientation) {
 			case 0: j_src = src_blk.njcell - j - 1; k_src = k; break;
 			case 1: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - j - 1; break;
-			case 2: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - k - 1; break;
-			case 3: j_src = j; k_src = src_blk.nkcell - k - 1;
+			case 2: j_src = j; k_src = src_blk.nkcell - k - 1; break;
+			case 3: j_src = k; k_src = j;
 			}
 			i_src = src_blk.imax; 
 			j_src += src_blk.jmin; k_src += src_blk.kmin;
@@ -2162,19 +2162,19 @@ public:
 			k_src = src_blk.kmax; 
 			i_src += src_blk.imin; j_src += src_blk.jmin;
 			src0 = src_blk.get_cell(i_src,j_src,k_src);
-			src1 = src_blk.get_cell(i_src,j_src+1,k_src-1);
+			src1 = src_blk.get_cell(i_src,j_src,k_src-1);
 			break;
 		    case Face.bottom:
 			final switch (src_orientation) {
 			case 0: i_src = j; j_src = k; break;
 			case 1: i_src = k; j_src = src_blk.njcell - j - 1; break;
 			case 2: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - k - 1; break;
-			case 3: i_src = k; j_src = j;
+			case 3: i_src = src_blk.nicell - k - 1; j_src = j;
 			}
 			k_src = src_blk.kmin; 
 			i_src += src_blk.imin; j_src += src_blk.jmin;
 			src0 = src_blk.get_cell(i_src,j_src,k_src);
-			src1 = src_blk.get_cell(i_src,j_src+1,k_src+1);
+			src1 = src_blk.get_cell(i_src,j_src,k_src+1);
 		    } // end switch (src_face)
 		    dest0 = get_cell(i_dest+1,j_dest,k_dest);
 		    dest1 = get_cell(i_dest+2,j_dest,k_dest);
@@ -2241,7 +2241,7 @@ public:
 			final switch (src_orientation) {
 			case 0: i_src = src_blk.nicell - i - 1; j_src = k; break;
 			case 1: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - i - 1; break;
-			case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - k - 1; break;
+			case 2: i_src = i; j_src = src_blk.njcell - k - 1; break;
 			case 3: i_src = k; j_src = i;
 			} // end switch (src_orientation)
 			k_src = src_blk.kmax; 
@@ -2312,7 +2312,7 @@ public:
 			break;
 		    case Face.west:
 			final switch (src_orientation) {
-			case 0: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - k - 1; break;
+			case 0: j_src = src_blk.njcell - j - 1; k_src = k; break;
 			case 1: j_src = k; k_src = j; break;
 			case 2: j_src = j; k_src = src_blk.nkcell - k - 1; break;
 			case 3: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - j - 1;
@@ -2410,7 +2410,7 @@ public:
 		    case Face.top:
 			final switch (src_orientation) {
 			case 0: i_src = src_blk.nicell - i - 1; j_src = j; break;
-			case 1: i_src = j; j_src = src_blk.njcell - i - 1; break;
+			case 1: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - i - 1; break;
 			case 2: i_src = i; j_src = src_blk.njcell - j - 1; break;
 			case 3: i_src = j; j_src = i;
 			} // end switch (src_orientation)
@@ -2470,7 +2470,7 @@ public:
 			break;
 		    case Face.south:
 			final switch (src_orientation) {
-			case 0: i_src = src_blk.nicell - i - 1; k_src = j; break;
+			case 0: i_src = i; k_src = j; break;
 			case 1: i_src = src_blk.nicell - j - 1; k_src = i; break;
 			case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - j - 1; break;
 			case 3: i_src = j; k_src = src_blk.nkcell - i - 1;

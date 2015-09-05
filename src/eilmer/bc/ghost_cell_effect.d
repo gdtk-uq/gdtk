@@ -1006,8 +1006,6 @@ public:
 
     override void apply(double t, int gtl, int ftl)
     {
-	// TODO Check me!  This is a work-around.
-	// We should be able to directly reference the BCs block as blk.
 	blk.copy_into_ghost_cells(which_boundary, 
 				  neighbourBlock,
 				  neighbourFace, neighbourOrientation,
