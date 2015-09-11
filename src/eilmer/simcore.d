@@ -92,7 +92,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	mySolidBlk.assembleArrays();
 	mySolidBlk.bindFacesAndVerticesToCells();
 	writeln("mySolidBlk= ", mySolidBlk);
-	mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, tindx));
+	mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0)); // tindx==0 fixed grid
 	mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx));
     }
     foreach (ref mySolidBlk; solidBlocks) {
