@@ -228,8 +228,11 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    //
-	    auto solidSoln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
-	    if (luaRefSoln.length > 0) solidSoln.subtract_ref_soln(luaRefSoln);
+	    SolidSolution solidSoln;
+	    if ( GlobalConfig.nSolidBlocks > 0 ) {
+		solidSoln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
+		if (luaRefSoln.length > 0) solidSoln.subtract_ref_soln(luaRefSoln);
+	    }
 	    //
 	    // Work on flow blocks first
 	    writeln("normsStr= ", normsStr);
@@ -247,20 +250,22 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		write("\n");
 	    } // end foreach varName
 	    // Then work on solid blocks
-	    writeln("normsStr= ", normsStr);
-	    foreach (varName; normsStr.split(",")) {
-		writeln("solid: varName= ", varName);
-		if (!canFind(solidSoln.solidBlocks[0].variableNames, varName)) {
-		    writeln(format("Requested variable name \"%s\" not in list of solid variables.", varName));
-		    continue;
-		}
-		auto norms = solidSoln.compute_volume_weighted_norms(varName, regionStr);
-		write("    variable= ", varName, "\n");
-		write(format(" L1= %14.12e L2= %12.12e Linf= %14.12e\n",
-			     norms[0], norms[1], norms[2]));
-		write(" x= ", norms[3], " y= ", norms[4], " z= ", norms[5]);
-		write("\n");
-	    } // end foreach varName
+	    if ( GlobalConfig.nSolidBlocks > 0 ) {
+		writeln("normsStr= ", normsStr);
+		foreach (varName; normsStr.split(",")) {
+		    writeln("solid: varName= ", varName);
+		    if (!canFind(solidSoln.solidBlocks[0].variableNames, varName)) {
+			writeln(format("Requested variable name \"%s\" not in list of solid variables.", varName));
+			continue;
+		    }
+		    auto norms = solidSoln.compute_volume_weighted_norms(varName, regionStr);
+		    write("    variable= ", varName, "\n");
+		    write(format(" L1= %14.12e L2= %12.12e Linf= %14.12e\n",
+				 norms[0], norms[1], norms[2]));
+		    write(" x= ", norms[3], " y= ", norms[4], " z= ", norms[5]);
+		    write("\n");
+		} // end foreach varName
+	    } // end if nSolidBlocks > 0
 	} // end foreach tindx
     } // end if normsStr
     //
