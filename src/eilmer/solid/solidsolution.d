@@ -225,10 +225,11 @@ public:
 		    // Call back to the Lua function to get a table of values.
 		    // function refSolidSoln(x, y, z)
 		    lua_getglobal(L, luaFnName.toStringz);
+		    lua_pushnumber(L, sim_time);
 		    lua_pushnumber(L, _data[i][j][k][variableIndex["pos.x"]]);
 		    lua_pushnumber(L, _data[i][j][k][variableIndex["pos.y"]]);
 		    lua_pushnumber(L, _data[i][j][k][variableIndex["pos.z"]]);
-		    if ( lua_pcall(L, 3, 1, 0) != 0 ) {
+		    if ( lua_pcall(L, 4, 1, 0) != 0 ) {
 			string errMsg = "Error in call to " ~ luaFnName ~ 
 			    " from LuaFnPath:opCall(): " ~ 
 			    to!string(lua_tostring(L, -1));
