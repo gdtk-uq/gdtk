@@ -127,6 +127,12 @@ extern(C) int configSetFromTable(lua_State* L)
     lua_getfield(L, 1, "viscous");
     if (!lua_isnil(L, -1)) GlobalConfig.viscous = to!bool(lua_toboolean(L, -1));
     lua_pop(L, 1);
+    lua_getfield(L, 1, "spatial_deriv_calc");
+    if (!lua_isnil(L, -1)) {
+	string name = to!string(luaL_checkstring(L, -1));
+	GlobalConfig.spatial_deriv_calc = spatial_deriv_calc_from_name(name);
+    }
+    lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_factor");
     if (!lua_isnil(L, -1))
 	GlobalConfig.viscous_factor = to!double(luaL_checknumber(L, -1));
@@ -355,6 +361,10 @@ extern(C) int configGet(lua_State* L)
 
     case "viscous":
 	lua_pushboolean(L, GlobalConfig.viscous);
+	break;
+    case "spatial_deriv_calc":
+	string name = spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc);
+	lua_pushstring(L, name.toStringz);
 	break;
     case "viscous_factor":
 	lua_pushnumber(L, GlobalConfig.viscous_factor);

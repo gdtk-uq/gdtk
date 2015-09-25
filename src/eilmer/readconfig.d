@@ -133,6 +133,12 @@ void read_config_file()
     // Parameters controlling viscous/molecular transport
     //
     GlobalConfig.viscous = getJSONbool(jsonData, "viscous", false);
+    try {
+	string name = jsonData["spatial_deriv_calc"].str;
+	GlobalConfig.spatial_deriv_calc = spatial_deriv_calc_from_name(name);
+    } catch (Exception e) {
+	GlobalConfig.spatial_deriv_calc = SpatialDerivCalc.least_squares;
+    }
     GlobalConfig.viscous_delay = getJSONdouble(jsonData, "viscous_delay", 0.0);
     GlobalConfig.viscous_factor_increment = 
 	getJSONdouble(jsonData, "viscous_factor_increment", 0.01);
@@ -151,6 +157,7 @@ void read_config_file()
     GlobalConfig.transient_mu_t_factor = getJSONdouble(jsonData, "transient_mu_t_factor", 1.0);
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  viscous: ", GlobalConfig.viscous);
+	writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
 	writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);

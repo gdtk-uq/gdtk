@@ -1780,10 +1780,15 @@ public:
 	    for ( size_t i = imin; i <= imax+1; ++i ) {
 		for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		    FVVertex vtx = get_vtx(i,j);
-		    // gradients_xy_leastsq(vtx, myConfig.diffusion);
-		    gradients_xy_div(vtx, myConfig.diffusion);
-		}
-	    }
+		    final switch ( myConfig.spatial_deriv_calc ) {
+		    case SpatialDerivCalc.least_squares:
+			gradients_xy_leastsq(vtx, myConfig.diffusion);
+			break;
+		    case SpatialDerivCalc.divergence:
+			gradients_xy_div(vtx, myConfig.diffusion);
+		    } // switch
+		} // for j
+	    } // for i
 	} else {
 	    // Flow quantity derivatives for 3D.
 	    for ( size_t i = imin; i <= imax+1; ++i ) {
@@ -1791,9 +1796,9 @@ public:
 		    for ( size_t k = kmin; k <= kmax+1; ++k ) {
 			FVVertex vtx = get_vtx(i,j,k);
 			gradients_xyz_leastsq(vtx, myConfig.diffusion);
-		    }
-		}
-	    }
+		    } // for k
+		} // for j
+	    } // for i
 	} // end if (myConfig.dimensions
     } // end flow_property_derivatives()
 
