@@ -319,9 +319,9 @@ function to_eilmer_axis_map(gridpro_ijk)
       os.exit(-1)
    end
    eilmer_ijk = axis_map[tonumber(string.sub(gridpro_ijk, 1, 1))] ..
-      axis_axis_map[tonumber(string.sub(gridpro_ijk, 2, 2))] ..
-      map[tonumber(string.sub(gridpro_ijk, 3, 3))]
-   return other_ijk
+      axis_map[tonumber(string.sub(gridpro_ijk, 2, 2))] ..
+      axis_map[tonumber(string.sub(gridpro_ijk, 3, 3))]
+   return eilmer_ijk
 end
 
 -- -----------------------------------------------------------------------
