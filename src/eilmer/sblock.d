@@ -1091,21 +1091,19 @@ public:
 		FVVertex vtx = get_vtx(i,j);
 		FVInterface A = get_ifi(i,j-1);
 		FVInterface B = get_ifj(i-1,j);
-		FVInterface C = get_ifj(i-1,j);
-		FVCell D = get_cell(i-1,j-1);
-		vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos[gtl]];
-		vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
+		FVCell C = get_cell(i-1,j-1);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos[gtl]];
+		vtx.cloud_fs = [A.fs, B.fs, C.fs];
 	    }
 	    // South-east corner
 	    {
 		i = imax+1; j = jmin;
 		FVVertex vtx = get_vtx(i,j);
 		FVInterface A = get_ifi(i,j);
-		FVInterface B = get_ifi(i,j);
-		FVCell C = get_cell(i-1,j);
-		FVInterface D = get_ifj(i-1,j);
-		vtx.cloud_pos = [A.pos, B.pos, C.pos[gtl], D.pos];
-		vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
+		FVCell B = get_cell(i-1,j);
+		FVInterface C = get_ifj(i-1,j);
+		vtx.cloud_pos = [A.pos, B.pos[gtl], C.pos];
+		vtx.cloud_fs = [A.fs, B.fs, C.fs];
 	    }
 	    // South-west corner
 	    {
@@ -1114,9 +1112,8 @@ public:
 		FVInterface A = get_ifj(i,j);
 		FVCell B = get_cell(i,j);
 		FVInterface C = get_ifi(i,j);
-		FVInterface D = A;
-		vtx.cloud_pos = [A.pos, B.pos[gtl], C.pos, D.pos];
-		vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
+		vtx.cloud_pos = [A.pos, B.pos[gtl], C.pos];
+		vtx.cloud_fs = [A.fs, B.fs, C.fs];
 	    }
 	    // North-west corner
 	    {
@@ -1124,10 +1121,9 @@ public:
 		FVVertex vtx = get_vtx(i,j);
 		FVCell A = get_cell(i,j-1);
 		FVInterface B = get_ifj(i,j);
-		FVInterface C = B;
-		FVInterface D = get_ifi(i,j-1);
-		vtx.cloud_pos = [A.pos[gtl], B.pos, C.pos, D.pos];
-		vtx.cloud_fs = [A.fs, B.fs, C.fs, D.fs];
+		FVInterface C = get_ifi(i,j-1);
+		vtx.cloud_pos = [A.pos[gtl], B.pos, C.pos];
+		vtx.cloud_fs = [A.fs, B.fs, C.fs];
 	    }
 	} else { // Flow quantity derivatives for 3D.
 	    // Internal secondary cell geometry information
