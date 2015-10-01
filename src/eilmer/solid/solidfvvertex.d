@@ -16,5 +16,7 @@ public:
     double areaxy;
     double dTdx;
     double dTdy;
+    Vector3[] cloud_pos;
+    double*[] cloud_T;
 
 }

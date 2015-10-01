@@ -42,7 +42,7 @@ void computeFluxesAndTemperatures(int ftl, double kS, FVCell[] gasCells, FVInter
 	kG_dnG = gasCells[i].fs.gas.k[0] / dnG;
 	kS_dnS = kS / dnS;
 
-	T = (gasCells[i].fs.gas.T[0]*kG_dnG + solidCells[i].T[ftl]*kS_dnS) / (kG_dnG + kS_dnS);
+	T = (gasCells[i].fs.gas.T[0]*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
 	q = -kG_dnG * (T - gasCells[i].fs.gas.T[0]);
 	// Finally update properties in interfaces
 	gasIFaces[i].fs.gas.T[0] = T;

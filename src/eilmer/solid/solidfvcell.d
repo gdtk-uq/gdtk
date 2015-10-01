@@ -28,7 +28,7 @@ public:
     double areaxy;
     Vector3 pos;
     // Cell state
-    double[] T;
+    double T;
     double[] e;
     double[] dedt;
     // Cell source term
@@ -39,7 +39,6 @@ public:
 
     this()
     {
-	T.length = n_time_levels;
 	e.length = n_time_levels;
 	dedt.length = n_time_levels;
     }
@@ -52,14 +51,14 @@ public:
 	pos.refz = to!double(items.front); items.popFront();
 	volume = to!double(items.front); items.popFront();
 	e[0] = to!double(items.front); items.popFront();
-	T[0] = to!double(items.front); items.popFront();
+	T = to!double(items.front); items.popFront();
     }
 
     string writeValuesToString() const
     {
 	auto writer = appender!string();
 	formattedWrite(writer, "%.16e %.16e %.16e %.16e %.16e %.16e",
-		       pos.x, pos.y, pos.z, volume, e[0], T[0]);
+		       pos.x, pos.y, pos.z, volume, e[0], T);
 	return writer.data;
     }
 

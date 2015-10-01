@@ -382,16 +382,6 @@ public:
 
     } // end compute_primary_cell_geometric_data()
 
-    override void computeSecondaryCellGeometricData()
-    {
-	if ( GlobalConfig.dimensions == 2 ) {
-	    secondaryAreas2D();
-	    return;
-	}
-	throw new Error("SSolidBlock.computeSecondaryCellGeometryData() not implemented for 3D.");
-
-    }
-
     void calcVolumes2D()
     {
 	size_t i, j;
@@ -536,169 +526,120 @@ public:
 	} // i loop
     } // end calc_faces_2D()
 
-    void secondaryAreas2D()
-    // Compute the secondary cell cell areas in the (x,y)-plane.
-    //
-    // The secondary cells are centred on the vertices of the 
-    // primary cells and have primary cell centres as their corners.
-    // For this particular secondary cell, centred on a vertex v (i,j),
-    // the near-by primary cell i,j is centred on B'.
-    //
-    //          +-----+
-    //          |     |
-    //       C'-+--B' |
-    //       |  |  |  |
-    //       |  v--+--+
-    //       |     |
-    //       D'----A'
-    //
+    override void assignVtxLocationsForDerivCalc()
     {
-	size_t i, j;
-	double xA, yA, xB, yB, xC, yC, xD, yD;
-	double xyarea, max_area, min_area;
-
-	max_area = 0.0;
-	min_area = 1.0e6;   // arbitrarily large
-	// First, do all of the internal secondary cells.
-	// i.e. The ones centred on primary vertices which 
-	// are not on a boundary.
-	for (i = imin+1; i <= imax; ++i) {
+	// This code should follow very closesly the equivalent
+	// code in sblock.d.
+	size_t i, j, k;
+	if (GlobalConfig.dimensions == 2) {
+	    // First, do all of the internal secondary cells
+	    for ( i = imin+1; i <= imax; ++i ) {
+		for ( j = jmin+1; j <= jmax; ++j ) {
+		    // Secondary-cell centre IS a primary-cell vertex
+		    // We are going to take a reference to this vertex
+		    // and store some information there in it's role
+		    // as a secondary-cell centre
+		    SolidFVVertex vtx = getVtx(i, j);
+		    // These are the corners of the secondary cell
+		    SolidFVCell A = getCell(i, j-1);
+		    SolidFVCell B = getCell(i, j);
+		    SolidFVCell C = getCell(i-1, j);
+		    SolidFVCell D = getCell(i-1, j-1);
+		    // Retain locations and pointers to cell temperature for later
+		    vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
+		    vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
+		} // j loop
+	    } // i loop
+	    // Half-cells along the edges of the block.
+	    // East boundary
+	    i = imax+1;
 	    for (j = jmin+1; j <= jmax; ++j) {
-		// These are the corners.
-		xA = getCell(i,j-1).pos.x;
-		yA = getCell(i,j-1).pos.y;
-		xB = getCell(i,j).pos.x;
-		yB = getCell(i,j).pos.y;
-		xC = getCell(i-1,j).pos.x;
-		yC = getCell(i-1,j).pos.y;
-		xD = getCell(i-1,j-1).pos.x;
-		yD = getCell(i-1,j-1).pos.y;
-		// Cell area in the (x,y)-plane.
-		xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
-				(xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
-		if (xyarea < 0.0) {
-		    throw new Error(text("Negative secondary-cell area: Block ", id,
-					 " vtx[", i, " ,", j, "]= ", xyarea));
-		}
-		if (xyarea > max_area) max_area = xyarea;
-		if (xyarea < min_area) min_area = xyarea;
-		getVtx(i,j).areaxy = xyarea;
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVInterface A = getIfi(i, j-1);
+		SolidFVInterface B = getIfi(i, j);
+		SolidFVCell C = getCell(i-1, j);
+		SolidFVCell D = getCell(i-1, j-1);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
 	    } // j loop
-	} // i loop
-
-	// Note that the secondary cells along block boundaries are HALF cells.
-	//
-	// East boundary.
-	i = imax+1;
-	for (j = jmin+1; j <= jmax; ++j) {
-	    xA = getIfi(i,j-1).pos.x;
-	    yA = getIfi(i,j-1).pos.y;
-	    xB = getIfi(i,j).pos.x;
-	    yB = getIfi(i,j).pos.y;
-	    xC = getCell(i-1,j).pos.x;
-	    yC = getCell(i-1,j).pos.y;
-	    xD = getCell(i-1,j-1).pos.x;
-	    yD = getCell(i-1,j-1).pos.y;
-	    // Cell area in the (x,y)-plane.
-	    xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
-			    (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
-	    if (xyarea < 0.0) {
-		throw new Error(text("Negative secondary-cell area: Block ", id,
-				     " vtx[", i, " ,", j, "]= ", xyarea));
+	    // West boundary
+	    i = imin;
+	    for (j = jmin+1; j <= jmax; ++j ) {
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVCell A = getCell(i, j-1);
+		SolidFVCell B = getCell(i, j);
+		SolidFVInterface C = getIfi(i, j);
+		SolidFVInterface D = getIfi(i, j-1);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
+	    } // j loop
+	    // North boundary
+	    j = jmax + 1;
+	    for (i = imin+1; i <= imax; ++i) {
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVCell A = getCell(i, j-1);
+		SolidFVInterface B = getIfj(i, j);
+		SolidFVInterface C = getIfj(i-1, j);
+		SolidFVCell D = getCell(i-1, j-1);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
+	    } // i loop
+	    // South boundary
+	    j = jmin;
+	    for (i = imin+1; i <= imax; ++i) {
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVInterface A = getIfj(i, j);
+		SolidFVCell B = getCell(i, j);
+		SolidFVCell C = getCell(i-1, j);
+		SolidFVInterface D = getIfj(i-1, j);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos, D.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T), &(D.T)];
+	    } // i loop
+	    // For the corners, we are going to use the same divergence-theorem-based
+	    // gradient calculator and let one edge collapse to a point, thus giving
+	    // it a triangle to compute over.  This should be fine. 
+	    // North-east corner
+	    {
+		i = imax+1; j = jmax+1;
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVInterface A = getIfi(i, j-1);
+		SolidFVInterface B = getIfj(i-1, j);
+		SolidFVCell C = getCell(i-1, j-1);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
 	    }
-	    if (xyarea > max_area) max_area = xyarea;
-	    if (xyarea < min_area) min_area = xyarea;
-	    getVtx(i,j).areaxy = xyarea;
-	} // j loop 
-
-	// Fudge corners -- not expecting to use this data.
-	getVtx(i,jmin).areaxy = 0.5 * getVtx(i,jmin+1).areaxy;
-	getVtx(i,jmax+1).areaxy = 0.5 * getVtx(i,jmax).areaxy;
-    
-	// West boundary.
-	i = imin;
-	for (j = jmin+1; j <= jmax; ++j) {
-	    xA = getCell(i,j-1).pos.x;
-	    yA = getCell(i,j-1).pos.y;
-	    xB = getCell(i,j).pos.x;
-	    yB = getCell(i,j).pos.y;
-	    xC = getIfi(i,j).pos.x;
-	    yC = getIfi(i,j).pos.y;
-	    xD = getIfi(i,j-1).pos.x;
-	    yD = getIfi(i,j-1).pos.y;
-	    // Cell area in the (x,y)-plane.
-	    xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
-			    (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
-	    if (xyarea < 0.0) {
-		throw new Error(text("Negative secondary-cell area: Block ", id,
-				     " vtx[", i, " ,", j, "]= ", xyarea));
+	    // South-east corner
+	    {
+		i = imax+1; j = jmin;
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVInterface A = getIfi(i, j);
+		SolidFVCell B = getCell(i-1, j);
+		SolidFVInterface C = getIfj(i-1, j);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
 	    }
-	    if (xyarea > max_area) max_area = xyarea;
-	    if (xyarea < min_area) min_area = xyarea;
-	    getVtx(i,j).areaxy = xyarea;
-	} // j loop 
-
-	// Fudge corners.
-	getVtx(i,jmin).areaxy = 0.5 * getVtx(i,jmin+1).areaxy;
-	getVtx(i,jmax+1).areaxy = 0.5 * getVtx(i,jmax).areaxy;
-
-	// North boundary.
-	j = jmax+1;
-	for (i = imin+1; i <= imax; ++i) {
-	    // These are the corners.
-	    xA = getCell(i,j-1).pos.x;
-	    yA = getCell(i,j-1).pos.y;
-	    xB = getIfj(i,j).pos.x;
-	    yB = getIfj(i,j).pos.y;
-	    xC = getIfj(i-1,j).pos.x;
-	    yC = getIfj(i-1,j).pos.y;
-	    xD = getCell(i-1,j-1).pos.x;
-	    yD = getCell(i-1,j-1).pos.y;
-	    // Cell area in the (x,y)-plane.
-	    xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
-			    (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
-	    if (xyarea < 0.0) {
-		throw new Error(text("Negative secondary-cell area: Block ", id,
-				     " vtx[", i, " ,", j, "]= ", xyarea));
+	    // South-west corner
+	    {
+		i = imin; j = jmin;
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVInterface A = getIfj(i, j);
+		SolidFVCell B = getCell(i, j);
+		SolidFVInterface C = getIfi(i, j);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
 	    }
-	    if (xyarea > max_area) max_area = xyarea;
-	    if (xyarea < min_area) min_area = xyarea;
-	    getVtx(i,j).areaxy = xyarea;
-	} // i loop 
-
-	// Fudge corners.
-	getVtx(imin,j).areaxy = 0.5 * getVtx(imin+1,j).areaxy;
-	getVtx(imax+1,j).areaxy = 0.5 * getVtx(imax,j).areaxy;
-
-	// South boundary.
-	j = jmin;
-	for (i = imin+1; i <= imax; ++i) {
-	    xA = getIfj(i,j).pos.x;
-	    yA = getIfj(i,j).pos.y;
-	    xB = getCell(i,j).pos.x;
-	    yB = getCell(i,j).pos.y;
-	    xC = getCell(i-1,j).pos.x;
-	    yC = getCell(i-1,j).pos.y;
-	    xD = getIfj(i-1,j).pos.x;
-	    yD = getIfj(i-1,j).pos.y;
-	    // Cell area in the (x,y)-plane.
-	    xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
-			    (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
-	    if (xyarea < 0.0) {
-		throw new Error(text("Negative secondary-cell area: Block ", id,
-				     " vtx[", i, " ,", j, "]= ", xyarea));
+	    // North-west corner
+	    {
+		i = imin; j = jmax+1;
+		SolidFVVertex vtx = getVtx(i, j);
+		SolidFVCell A = getCell(i, j-1);
+		SolidFVInterface B = getIfj(i, j);
+		SolidFVInterface C = getIfi(i, j-1);
+		vtx.cloud_pos = [A.pos, B.pos, C.pos];
+		vtx.cloud_T = [&(A.T), &(B.T), &(C.T)];
 	    }
-	    if (xyarea > max_area) max_area = xyarea;
-	    if (xyarea < min_area) min_area = xyarea;
-	    getVtx(i,j).areaxy = xyarea;
-	} // i loop
-
-	// Fudge corners.
-	getVtx(imin,j).areaxy = 0.5 * getVtx(imin+1,j).areaxy;
-	getVtx(imax+1,j).areaxy = 0.5 * getVtx(imax,j).areaxy;
-
-    } // end secondary_areas_2D()
-
+	} // end if 2D
+    }
 
     override void applyPreSpatialDerivAction(double t, int tLevel)
     {
@@ -726,229 +667,17 @@ public:
 
     override void computeSpatialDerivatives(int ftl)
     {
-	// NOTE: This presently uses the Eilmer3 2D formulation for
-	// computing spatial derivatives. We might move this to the
-	// 3D formulation at some point in the future.
-	// [2015-25-04]
-
 	if ( GlobalConfig.dimensions == 3 ) {
 	    throw new Error("computeSpatialDerivatives() not implemented for 3D yet.");
 	}
-	size_t i, j;
-	SolidFVVertex vtx;
-	SolidFVCell cell;
-	SolidFVInterface a, b;
-	double xA, xB, xC, xD;
-	double yA, yB, yC, yD;
-	double TA, TB, TC, TD;
-	double areaInv;
-
-	// Work on all internal secondary cells.
-	for ( j = jmin+1; j <= jmax; ++j ) {
-	    for ( i = imin+1; i <= imax; ++i ) {
-		vtx = getVtx(i,j);
-		areaInv = 1.0/vtx.areaxy;
-		// Corners of secondary cells
-		xA = getCell(i,j-1).pos.x;
-		yA = getCell(i,j-1).pos.y;
-		xB = getCell(i,j).pos.x;
-		yB = getCell(i,j).pos.y;
-		xC = getCell(i-1,j).pos.x;
-		yC = getCell(i-1,j).pos.y;
-		xD = getCell(i-1,j-1).pos.x;
-		yD = getCell(i-1,j-1).pos.y;
-		// Temperature at the corners of the secondary cells
-		TA = getCell(i,j-1).T[ftl];
-		TB = getCell(i,j).T[ftl];
-		TC = getCell(i-1,j).T[ftl];
-		TD = getCell(i-1,j-1).T[ftl];
-		// Compute derivative using Gauss-Green theorem
-		vtx.dTdx = 0.5 * areaInv * 
-		    ((TB + TA) * (yB - yA) + (TC + TB) * (yC - yB) +
-		     (TD + TC) * (yD - yC) + (TA + TD) * (yA - yD)); 
-		vtx.dTdy = -0.5 * areaInv *
-		    ((TB + TA) * (xB - xA) + (TC + TB) * (xC - xB) +
-		     (TD + TC) * (xD - xC) + (TA + TD) * (xA - xD));
-	    } // end for j
-	} // end for i
-
-	// Next, work on the edges.
-	// EAST boundary.
-	i = imax + 1;
-	for ( j = jmin+1; j <= jmax; ++j ) {
-	    vtx = getVtx(i,j);
-	    areaInv = 1.0 / vtx.areaxy;
-	    // Corners for the secondary cell
-	    xA = getIfi(i, j-1).pos.x;
-	    yA = getIfi(i, j-1).pos.y;
-	    xB = getIfi(i,j).pos.x;
-	    yB = getIfi(i,j).pos.y;
-	    xC = getCell(i-1,j).pos.x;
-	    yC = getCell(i-1,j).pos.y;
-	    xD = getCell(i-1,j-1).pos.x;
-	    yD = getCell(i-1,j-1).pos.y;
-	    // Temperatures
-	    TA = getIfi(i, j-1).T;
-	    TB = getIfi(i, j).T;
-	    TC = getCell(i-1,j).T[ftl];
-	    TD = getCell(i-1,j-1).T[ftl];
-	    // Compute derivative using Gauss-Green theorem
-	    vtx.dTdx = 0.5 * areaInv * 
-		((TB + TA) * (yB - yA) + (TC + TB) * (yC - yB) +
-		 (TD + TC) * (yD - yC) + (TA + TD) * (yA - yD)); 
-	    vtx.dTdy = -0.5 * areaInv *
-		((TB + TA) * (xB - xA) + (TC + TB) * (xC - xB) +
-		 (TD + TC) * (xD - xC) + (TA + TD) * (xA - xD));
-
-	}
-	// WEST boundary
-	i = imin;
-	for ( j = jmin+1; j <= jmax; ++j ) {
-	    vtx = getVtx(i, j);
-	    areaInv = 1.0 / vtx.areaxy;
-	    // Corners of the secondary cell
-	    xA = getCell(i, j-1).pos.x;
-	    yA = getCell(i, j-1).pos.y;
-	    xB = getCell(i, j).pos.x;
-	    yB = getCell(i, j).pos.y;
-	    xC = getIfi(i, j).pos.x;
-	    yC = getIfi(i, j).pos.y;
-	    xD = getIfi(i, j-1).pos.x;
-	    yD = getIfi(i, j-1).pos.y;
-	    // Temperatures
-	    TA = getCell(i, j-1).T[ftl];
-	    TB = getCell(i, j).T[ftl];
-	    TC = getIfi(i, j).T;
-	    TD = getIfi(i, j-1).T;
-	    // Compute derivative using Gauss-Green theorem
-	    vtx.dTdx = 0.5 * areaInv * 
-		    ((TB + TA) * (yB - yA) + (TC + TB) * (yC - yB) +
-		     (TD + TC) * (yD - yC) + (TA + TD) * (yA - yD)); 
-	    vtx.dTdy = -0.5 * areaInv *
-		((TB + TA) * (xB - xA) + (TC + TB) * (xC - xB) +
-		 (TD + TC) * (xD - xC) + (TA + TD) * (xA - xD));
-
-	}
-	// NORTH boundary
-	j = jmax + 1;
-	for ( i = imin+1; i <= imax; ++i ) {
-	    vtx = getVtx(i, j);
-	    areaInv = 1.0 / vtx.areaxy;
-	    // Corners of the secondary cell
-	    xA = getCell(i, j-1).pos.x;
-	    yA = getCell(i, j-1).pos.y;
-	    xB = getIfj(i, j).pos.x;
-	    yB = getIfj(i, j).pos.y;
-	    xC = getIfj(i-1, j).pos.x;
-	    yC = getIfj(i-1, j).pos.y;
-	    xD = getCell(i-1, j-1).pos.x;
-	    yD = getCell(i-1, j-1).pos.y;
-	    // Temperatures
-	    TA = getCell(i, j-1).T[ftl];
-	    TB = getIfj(i, j).T;
-	    TC = getIfj(i-1, j).T;
-	    TD = getCell(i-1, j-1).T[ftl];
-	    // Compute derivative using Gauss-Green theorem
-	    vtx.dTdx = 0.5 * areaInv * 
-		((TB + TA) * (yB - yA) + (TC + TB) * (yC - yB) +
-		 (TD + TC) * (yD - yC) + (TA + TD) * (yA - yD)); 
-	    vtx.dTdy = -0.5 * areaInv *
-		((TB + TA) * (xB - xA) + (TC + TB) * (xC - xB) +
-		 (TD + TC) * (xD - xC) + (TA + TD) * (xA - xD));
-	}
-	// SOUTH boundary
-	j = jmin;
-	for ( i = imin+1; i <= imax; ++i ) {
-	    vtx = getVtx(i, j);
-	    areaInv = 1.0 / vtx.areaxy;
-	    // Corners of the secondary cell
-	    xA = getIfj(i, j).pos.x;
-	    yA = getIfj(i, j).pos.y;
-	    xB = getCell(i, j).pos.x;
-	    yB = getCell(i, j).pos.y;
-	    xC = getCell(i-1, j).pos.x;
-	    yC = getCell(i-1, j).pos.y;
-	    xD = getIfj(i-1, j).pos.x;
-	    yD = getIfj(i-1, j).pos.y;
-	    // Temperatures
-	    TA = getIfj(i, j).T;
-	    TB = getCell(i, j).T[ftl];
-	    TC = getCell(i-1, j).T[ftl];
-	    TD = getIfj(i-1, j).T;
-	    // Compute derivative using Gauss-Green theorem
-	    vtx.dTdx = 0.5 * areaInv * 
-		    ((TB + TA) * (yB - yA) + (TC + TB) * (yC - yB) +
-		     (TD + TC) * (yD - yC) + (TA + TD) * (yA - yD));
-	    vtx.dTdy = -0.5 * areaInv *
-		((TB + TA) * (xB - xA) + (TC + TB) * (xC - xB) +
-		 (TD + TC) * (xD - xC) + (TA + TD) * (xA - xD));
-	}
-
-	// Finally, derivatives at corners
-	// NORTH-EAST corner
-	i = imax;
-	j = jmax;
-	vtx = getVtx(i+1, j+1);
-	cell = getCell(i, j);
-	a = getIfj(i, j+1);
-	b = getIfi(i+1, j);
-	xA = a.pos.x; yA = a.pos.y;
-	xB = b.pos.x; yB = b.pos.y;
-	xC = cell.pos.x; yC = cell.pos.y;
-	double denom = (xC - xA)*(yB - yA) - (xB - xA)*(yC - yA);
-	TA = a.T;
-	TB = b.T;
-	TC = cell.T[ftl];
-	vtx.dTdx = ((TC-TA)*(yB-yA) - (TB-TA)*(yC-yA))/denom;
-	vtx.dTdy = ((TB-TA)*(xC-xA) - (TC-TA)*(xB-xA))/denom;
-	// SOUTH-EAST corner
-	i = imax;
-	j = jmin;
-	vtx = getVtx(i+1, j);
-	cell = getCell(i, j);
-	a = getIfj(i, j);
-	b = getIfi(i+1, j);
-	xA = a.pos.x; yA = a.pos.y;
-	xB = b.pos.x; yB = b.pos.y;
-	xC = cell.pos.x; yC = cell.pos.y;
-	denom = (xC - xA)*(yB - yA) - (xB - xA)*(yC - yA);
-	TA = a.T;
-	TB = b.T;
-	TC = cell.T[ftl];
-	vtx.dTdx = ((TC-TA)*(yB-yA) - (TB-TA)*(yC-yA))/denom;
-	vtx.dTdy = ((TB-TA)*(xC-xA) - (TC-TA)*(xB-xA))/denom;
-	// SOUTH-WEST corner
-	i = imin;
-	j = jmin;
-	vtx = getVtx(i, j);
-	cell = getCell(i, j);
-	a = getIfj(i, j);
-	b = getIfi(i, j);
-	xA = a.pos.x; yA = a.pos.y;
-	xB = b.pos.x; yB = b.pos.y;
-	xC = cell.pos.x; yC = cell.pos.y;
-	denom = (xC - xA)*(yB - yA) - (xB - xA)*(yC - yA);
-	TA = a.T;
-	TB = b.T;
-	TC = cell.T[ftl];
-	vtx.dTdx = ((TC-TA)*(yB-yA) - (TB-TA)*(yC-yA))/denom;
-	vtx.dTdy = ((TB-TA)*(xC-xA) - (TC-TA)*(xB-xA))/denom;
-	// NORTH-WEST corner
-	i = imin;
-	j = jmax;
-	vtx = getVtx(i, j+1);
-	cell = getCell(i, j);
-	a = getIfj(i, j+1);
-	b = getIfi(i, j);
-	xA = a.pos.x; yA = a.pos.y;
-	xB = b.pos.x; yB = b.pos.y;
-	xC = cell.pos.x; yC = cell.pos.y;
-	denom = (xC - xA)*(yB - yA) - (xB - xA)*(yC - yA);
-	TA = a.T;
-	TB = b.T;
-	TC = cell.T[ftl];
-	vtx.dTdx = ((TC-TA)*(yB-yA) - (TB-TA)*(yC-yA))/denom;
-	vtx.dTdy = ((TB-TA)*(xC-xA) - (TC-TA)*(xB-xA))/denom;
+	
+	size_t k = 0;
+	for ( size_t i = imin; i <= imax+1; ++i ) {
+	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
+		SolidFVVertex vtx = getVtx(i, j);
+		gradients_T_div(vtx);
+	    } // j loop
+	} // i loop
     }
 
     override void computeFluxes()
@@ -998,4 +727,41 @@ public:
     {
 	foreach ( cell; activeCells ) cell.Q = 0.0;
     }
+}
+
+@nogc
+void gradients_T_div(SolidFVVertex vtx)
+{
+    // Number of corners in our polygon.
+    size_t n = vtx.cloud_pos.length;
+    // Compute our own estimate of *twice* the area in xy plane here.
+    // We can work with *twice* the area since it will cancel with
+    // factor of 1/2 that appears in the contour integral.
+    // Start with the contribution from the final segment of the bounding contour.
+    double areaxy = (vtx.cloud_pos[0].x + vtx.cloud_pos[n-1].x) *
+	(vtx.cloud_pos[0].y - vtx.cloud_pos[n-1].y);
+    // Accumulate the contributions from the other segments.
+    foreach (i; 0 .. n-1) {
+	areaxy += (vtx.cloud_pos[i+1].x + vtx.cloud_pos[i].x) *
+	    (vtx.cloud_pos[i+1].y - vtx.cloud_pos[i].y);
+    }
+    double areaInv = 1.0 / areaxy;
+
+    // Apply the divergence theorem to flow properties.
+    //
+    // Start with the contribution from the final segment of the bounding contour.
+    double gradient_x = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
+	(vtx.cloud_pos[0].y - vtx.cloud_pos[n-1].y);
+    double gradient_y = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
+	(vtx.cloud_pos[0].x - vtx.cloud_pos[n-1].x);
+    // Accumulate the contributions from the other segments.
+    foreach (i; 0 .. n-1) {
+	gradient_x += (*(vtx.cloud_T[i+1]) + *(vtx.cloud_T[i])) *
+	    (vtx.cloud_pos[i+1].y - vtx.cloud_pos[i].y);
+	gradient_y += (*(vtx.cloud_T[i+1]) + *(vtx.cloud_T[i])) *
+	    (vtx.cloud_pos[i+1].x - vtx.cloud_pos[i].x);
+    }
+
+    vtx.dTdx = gradient_x * areaInv;
+    vtx.dTdy = -gradient_y * areaInv;
 }

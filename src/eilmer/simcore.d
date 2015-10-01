@@ -91,13 +91,13 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     foreach (ref mySolidBlk; solidBlocks) {
 	mySolidBlk.assembleArrays();
 	mySolidBlk.bindFacesAndVerticesToCells();
+	mySolidBlk.assignVtxLocationsForDerivCalc();
 	writeln("mySolidBlk= ", mySolidBlk);
 	mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0)); // tindx==0 fixed grid
 	mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx));
     }
     foreach (ref mySolidBlk; solidBlocks) {
 	mySolidBlk.computePrimaryCellGeometricData();
-	mySolidBlk.computeSecondaryCellGeometricData();
     }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
@@ -498,7 +498,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 	    scell.stage1Update(dt_global);
-	    scell.T[ftl+1] = updateTemperature(sblk.sp, scell.e[ftl+1]);
+	    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
 	} // end foreach scell
     } // end foreach sblk
 
@@ -598,7 +598,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 		scell.stage2Update(dt_global);
-		scell.T[ftl+1] = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
 	    } // end foreach cell
 	} // end foreach blk
     } // end if number_of_stages_for_update_scheme >= 2 
@@ -698,7 +698,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 		scell.stage2Update(dt_global);
-		scell.T[ftl+1] = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
 	    } // end foreach cell
 	} // end foreach blk
     } // end if number_of_stages_for_update_scheme >= 3
@@ -733,7 +733,6 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	}
 	foreach (scell; sblk.activeCells) {
 	    scell.e[0] = scell.e[end_indx];
-	    scell.T[0] = scell.T[end_indx];
 	} 
     } // end foreach sblk
     //

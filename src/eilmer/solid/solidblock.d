@@ -50,12 +50,12 @@ public:
     abstract void initLuaGlobals();
     abstract void initBoundaryConditions(JSONValue jsonData);
     abstract void bindFacesAndVerticesToCells();
+    abstract void assignVtxLocationsForDerivCalc();
     abstract void readGrid(string filename);
     abstract void writeGrid(string filename, double sim_time);
     abstract void readSolution(string filename);
     abstract void writeSolution(string fileName, double simTime);
     abstract void computePrimaryCellGeometricData();
-    abstract void computeSecondaryCellGeometricData();
 
     abstract void applyPreSpatialDerivAction(double t, int tLevel);
     abstract void applyPostFluxAction(double t, int tLevel);
