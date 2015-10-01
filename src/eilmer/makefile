@@ -29,6 +29,10 @@ SOLID_FILES := solid/solidbc.d \
 	solid/solid_udf_source_terms.d \
 	solid/luasolidprops.d
 
+LUA_MODULES := blk_conn.lua \
+	bc.lua \
+	gridpro.lua
+
 GAS_DIR := ../gas
 
 GAS_MODEL_FILES := \
@@ -137,12 +141,14 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
-install: $(PROGRAMS) prep.lua prep-gas prep-chem
+install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
+	- mkdir -p $(BUILD_DIR)/lib
 	cp $(PROGRAMS) $(BUILD_DIR)/bin
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp prep.lua $(BUILD_DIR)/bin
+	cp $(LUA_MODULES) $(BUILD_DIR)/lib
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
