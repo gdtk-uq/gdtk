@@ -42,8 +42,10 @@ GAS_MODEL_FILES := \
 	$(GAS_DIR)/ideal_gas.d \
 	$(GAS_DIR)/physical_constants.d \
 	$(GAS_DIR)/therm_perf_gas.d \
-        $(GAS_DIR)/very_viscous_air.d\
-	$(GAS_DIR)/CO2Gas.d
+    $(GAS_DIR)/very_viscous_air.d\
+	$(GAS_DIR)/CO2Gas.d\
+	$(GAS_DIR)/CO2GasSW.d\
+	$(GAS_DIR)/SF6Virial.d
 
 THERMO_FILES := \
 	$(GAS_DIR)/thermo/cea_thermo_curves.d \
@@ -80,7 +82,8 @@ UTIL_FILES := $(UTIL_DIR)/lua.d \
 
 NM_DIR := ../nm
 NM_FILES := $(NM_DIR)/ridder.d \
-	$(NM_DIR)/bbla.d
+	$(NM_DIR)/bbla.d \
+	$(NM_DIR)/tree_patch.d
 
 GEOM_DIR := ../geom
 GEOM_FILES := $(GEOM_DIR)/geom.d \

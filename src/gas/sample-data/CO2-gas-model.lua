@@ -1,7 +1,7 @@
 model = "CO2Gas"
 
 CO2Gas = {
-  speciesName = 'CO2',
+  speciesName = 'CO2Gas',
   mMass = 0.02896,
   gamma = 1.4,
   entropyRefValues = { 
