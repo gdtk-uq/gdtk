@@ -42,7 +42,7 @@ GAS_MODEL_FILES := \
 	$(GAS_DIR)/ideal_gas.d \
 	$(GAS_DIR)/physical_constants.d \
 	$(GAS_DIR)/therm_perf_gas.d \
-        $(GAS_DIR)/very_viscous_air.d\
+    $(GAS_DIR)/very_viscous_air.d\
 	$(GAS_DIR)/CO2Gas.d\
 	$(GAS_DIR)/CO2GasSW.d\
 	$(GAS_DIR)/SF6Virial.d
