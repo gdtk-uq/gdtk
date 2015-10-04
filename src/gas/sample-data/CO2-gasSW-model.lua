@@ -23,5 +23,6 @@ CO2GasSW= {
     p_rhoe_file = 'LUT/P_rhoe_Tree.dat',
     a_rhoe_file = 'LUT/a_rhoe_Tree.dat',
     T_rhoe_file = 'LUT/T_rhoe_Tree.dat',
+    e_rho_sat_file = 'LUT/e_rho_sat_table.dat',
   },
 }

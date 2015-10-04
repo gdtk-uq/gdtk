@@ -84,7 +84,8 @@ UTIL_FILES := $(UTIL_DIR)/lua.d \
 NM_DIR := ../nm
 NM_FILES := $(NM_DIR)/ridder.d \
 	$(NM_DIR)/bbla.d \
-	$(NM_DIR)/tree_patch.d
+	$(NM_DIR)/tree_patch.d\
+	$(NM_DIR)/univariate_lut.d
 
 GEOM_DIR := ../geom
 GEOM_FILES := $(GEOM_DIR)/geom.d \

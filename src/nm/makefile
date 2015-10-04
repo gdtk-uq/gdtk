@@ -3,7 +3,7 @@
 # includes make for build_tree which demonstrates the tree_patch
 
 DEMO_PROGRAMS := ridder_demo linesearch_demo nelmin_demo rungekutta_demo \
-	newtoncotes_demo gaussquad_demo bbla_demo build_tree
+	newtoncotes_demo gaussquad_demo bbla_demo build_tree univariate_lut_demo
 
 UTIL_DIR := ../util
 UTIL_FILES := $(UTIL_DIR)/lua.d \
@@ -11,7 +11,9 @@ UTIL_FILES := $(UTIL_DIR)/lua.d \
 	$(UTIL_DIR)/msg_service.d
 
 NM_DIR := .
-NM_FILES := $(NM_DIR)/ridder.d $(NM_DIR)/tree_patch.d
+NM_FILES := $(NM_DIR)/ridder.d\
+			$(NM_DIR)/tree_patch.d\
+			$(NM_DIR)/univariate_lut.d 
 
 
 LUA := ../../extern/lua-5.1.4
@@ -49,9 +51,6 @@ DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/viscosity.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_therm_cond.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d
-
-NM_DIR := .
-NM_FILES := $(NM_DIR)/ridder.d 
 
 GAS_FILES := $(GAS_MODEL_FILES) $(THERMO_FILES) $(DIFFUSION_FILES)
 
@@ -92,6 +91,10 @@ gaussquad_demo: gaussquad_demo.d gaussquad.d
 bbla_demo: bbla_demo.d bbla.d
 	dmd -unittest -g bbla_demo.d bbla.d
 
-build_tree: build_tree.d tree_patch.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
-	dmd build_tree.d tree_patch.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
+build_tree: build_tree.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+	dmd build_tree.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
+		$(DLINKFLAGS)
+
+univariate_lut_demo:  univariate_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+	dmd -debug univariate_lut_demo.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
 		$(DLINKFLAGS)

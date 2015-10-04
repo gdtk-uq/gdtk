@@ -15,7 +15,9 @@ UTIL_FILES := $(UTIL_DIR)/lua.d \
 	$(UTIL_DIR)/msg_service.d
 
 NM_DIR := ../nm
-NM_FILES := $(NM_DIR)/ridder.d $(NM_DIR)/tree_patch.d
+NM_FILES := $(NM_DIR)/ridder.d\
+		$(NM_DIR)/tree_patch.d\
+		$(NM_DIR)/univariate_lut.d
 
 
 LUA := ../../extern/lua-5.1.4

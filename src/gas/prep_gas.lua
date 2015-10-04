@@ -168,6 +168,7 @@ function writeCO2GasSW(f, sp, db)
    f:write(string.format("      p_rhoe_file = '%s',\n", "../LUT/P_rhoe_Tree.dat"))
    f:write(string.format("      a_rhoe_file = '%s',\n", "../LUT/a_rhoe_Tree.dat"))
    f:write(string.format("      T_rhoe_file = '%s',\n", "../LUT/T_rhoe_Tree.dat"))
+   f:write(string.format("      e_rho_sat_file = '%s',\n", "../LUT/e_rho_sat_table.dat"))
    f:write("   }\n")
    f:write("}\n")
 end

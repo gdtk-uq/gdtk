@@ -289,10 +289,10 @@ class Tree {
 	//had to use pointers as it was const
 	const(TreeNode)* currentNode = &Nodes[0];//start at first node
 		if ((x<currentNode.nodePatch.x_lo)||(x>currentNode.nodePatch.x_hi)){
-			throw new Exception(format("x not bounded properly by look up table, x: %s is not in the bracket [%s, %s]",x,currentNode.nodePatch.x_lo,currentNode.nodePatch.x_hi));
+			throw new Exception(format("x (probably re-parameterized internal energy) not bounded properly by look up table, x: %s is not in the bracket [%s, %s]",x,currentNode.nodePatch.x_lo,currentNode.nodePatch.x_hi));
 		}
 		if ((y<currentNode.nodePatch.y_lo)||(y>currentNode.nodePatch.y_hi)){
-			throw new Exception(format("y not bounded properly by look up table, y: %s is not in the bracket [%s, %s]",y,currentNode.nodePatch.y_lo,currentNode.nodePatch.y_hi));
+			throw new Exception(format("y (probably re-parametrized density) not bounded properly by look up table, y: %s is not in the bracket [%s, %s]",y,currentNode.nodePatch.y_lo,currentNode.nodePatch.y_hi));
 		}
 		while((*currentNode).splitID != 'N') {
 			if (currentNode.splitID == 'X'){

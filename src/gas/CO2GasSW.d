@@ -24,6 +24,7 @@ import util.msg_service;
 import std.c.stdlib : exit;
 import ridder;
 import tree_patch;
+import univariate_lut;
 
 class CO2GasSW: GasModel {
 public:
@@ -67,6 +68,7 @@ public:
 	string p_rhoe_filename = getString(L, -1, "p_rhoe_file");
 	string a_rhoe_filename = getString(L, -1, "a_rhoe_file");
 	string T_rhoe_filename = getString(L, -1, "T_rhoe_file");
+	string e_rho_sat_table_filename = getString(L, -1, "e_rho_sat_file");
 	lua_pop(L,1);
 	// Compute derived parameters
 	//_Rgas = R_universal/_mol_masses[0];
@@ -75,6 +77,13 @@ public:
 	P_rhoe_Tree = buildTree_fromFile(p_rhoe_filename);
 	a_rhoe_Tree = buildTree_fromFile(a_rhoe_filename);
 	T_rhoe_Tree = buildTree_fromFile(T_rhoe_filename);
+	e_rho_sat_table = new uni_lut(e_rho_sat_table_filename);
+    }
+
+    this(string e_rho_sat_table_filename){
+    	//a special constructor used to make a gas model just with the sat-vap table
+    	//used to build_tree
+    	this.e_rho_sat_table = new uni_lut(e_rho_sat_table_filename);
     }
 
     override string toString() const
@@ -106,17 +115,17 @@ public:
     override void update_thermo_from_rhoe(GasState Q) const
     {
 	assert(Q.e.length == 1, "incorrect length of energy array");
-	Q.T[0] = updateTemperature_rhoe(Q.rho, Q.e[0]);
+	//Q.T[0] = updateTemperature_rhoe(Q.rho, Q.e[0]);
+	//Q.p = updatePressure_rhoT(Q.rho,Q.T[0]);
 	//following line assumes that both T and P trees constructed with same bounds
-	/*double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
+	double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
 						T_rhoe_Tree.X_min,
 						T_rhoe_Tree.X_max,
 						T_rhoe_Tree.Y_min,
 						T_rhoe_Tree.Y_max);
-	Q.T[0] = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);*/
+	Q.T[0] = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+	Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
 	//Q.T[0] = T_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
-	Q.p = updatePressure_rhoT(Q.rho,Q.T[0]);
-	//Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
 	//Q.p = P_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
     }
     override void update_thermo_from_rhoT(GasState Q) const//DONE
@@ -133,7 +142,7 @@ public:
     override void update_thermo_from_rhop(GasState Q) const
     {
 	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.T[0] = updateT_Prho(Q.p, Q.rho);//might want to fix the order that this solves in
+	Q.T[0] = updateT_Prho(Q.p, Q.rho);
 	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
 	
     }
@@ -148,13 +157,13 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T[0]);
-	/*double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
+	//Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T[0]);
+	double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
 						a_rhoe_Tree.X_min,
 						a_rhoe_Tree.X_max,
 						a_rhoe_Tree.Y_min,
 						a_rhoe_Tree.Y_max);
-	Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);*/
+	Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
 	//Q.a = a_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
     }
     override void update_trans_coeffs(GasState Q) const
@@ -243,8 +252,8 @@ public:
 	const double[2] get_uv_rhoe(double rho, double e, double rho_min, double rho_max, double e_min, double e_max){
 		double v = (rho - rho_min)/(rho_max - rho_min);
 		double e_sat;
-		if (rho > _rhoc) e_sat = updateEnergy_rhoT(rho,getT_satliq(rho));
-			else e_sat = updateEnergy_rhoT(rho,getT_satvap(rho));
+		e_sat = e_rho_sat_table.quadlookup(rho);
+		//e_sat = get_esat_rho(rho);
 		e_sat = max(e_sat,e_min); //added to prevent mapping outside the domain if an different T_min is set
 		double u;
 		if (e > e_sat) u = (e - e_sat)/(e_max - e_sat)*0.5 + 0.5;
@@ -254,8 +263,8 @@ public:
 	const double[2] get_rhoe_uv(double u, double v, double rho_min, double rho_max, double e_min, double e_max){
 		double rho = v*rho_max + (1-v)*rho_min;
 		double e_sat;
-		if (rho > _rhoc) e_sat = updateEnergy_rhoT(rho,getT_satliq(rho));
-			else e_sat = updateEnergy_rhoT(rho,getT_satvap(rho));
+		e_sat = e_rho_sat_table.quadlookup(rho);
+		//e_sat = get_esat_rho(rho);
 		e_sat = max(e_sat,e_min); //added to prevent mapping outside the domain if an different e_min is set too high
 		double e;
 		if (u > 0.5){	
@@ -268,14 +277,12 @@ public:
 			}
 		return [rho, e];
 		}
-    
+    const double get_esat_rho(double rho){
+		if (rho > _rhoc) return updateEnergy_rhoT(rho, getT_satliq(rho));
+			else return updateEnergy_rhoT(rho, getT_satvap(rho));
+	}
 
 private:
-	//Bounds on rho,e used in look up table - these will need to be added as members of the table
-	double rho_min = 0.05;
-	double rho_max = 1500;
-	double e_min = -5.5e5;
-	double e_max = 5.0e5;
     // Thermodynamic constants
 	double _Rgas = 188.9241;
 	double _u0 = 3.2174105e5-74841;
@@ -330,6 +337,7 @@ private:
 	Tree T_rhoe_Tree;
 	Tree P_rhoe_Tree;
 	Tree a_rhoe_Tree;
+	uni_lut e_rho_sat_table;
     
     //define some functions that will be available to the functions in the private area  
     const double extrapolate_rhoT_function(alias f)(double rho, double T,string extrapType = "constant")

@@ -39,47 +39,48 @@ double rho_min = 0.05;
 double rho_max = 1500;
 double e_min = -5.5e5;
 double e_max = 5.0e5;
-
-/*static double F(double x, double y){
-	CO2GasSW gm = new CO2GasSW();
+//-----------------------------REMAP------------------------------
+static double F(double u, double v){
+	CO2GasSW gm = new CO2GasSW;
 	auto gd = new GasState(1,1);//initializes using constructor of nspecies, n modes
-	double[2] rhoe = gm.get_rhoe_uv(x,y,rho_min,rho_max,e_min,e_max);
+	double[2] rhoe = gm.get_rhoe_uv(u,v,rho_min,rho_max,e_min,e_max);
 	double rho = rhoe[0];
 	double e = rhoe[1];
 	gd.rho = rho;
 	gd.e[0] = e;
 	gm.update_thermo_from_rhoe(gd);
-	gm.update_sound_speed(gd);
-	return gd.a;
+	//gm.update_sound_speed(gd);
+	return gd.T[0];
 	}
 static double[2] F_transform(double x, double y){
 	CO2GasSW gm = new CO2GasSW();
 	return gm.get_rhoe_uv(x,y,rho_min,rho_max,e_min,e_max);
-}*/
-static double F(double x, double y){
+}
+//--------------NO REMAP-----------------------------
+/*static double F(double rho, double e){
 	CO2GasSW gm = new CO2GasSW();
 	auto gd = new GasState(1,1);//initializes using constructor of nspecies, n modes
-	gd.rho = x;
-	gd.e[0] = y;
+	gd.rho = rho;
+	gd.e[0] = e;
 	gm.update_thermo_from_rhoe(gd);
 	//gm.update_sound_speed(gd);
 	return gd.T[0];
 	}
 static double[2] F_transform(double x, double y){
 	return [x,y];
-}
+}*/
 
 
 
 void main(){
-	/*double x_lo = 0.0;
+	double x_lo = 0.0;
 	double x_hi = 1.0;
 	double y_lo = 0.0;
-	double y_hi = 1.0;*/
-	double x_lo = rho_min;
+	double y_hi = 1.0;
+	/*double x_lo = rho_min;
 	double x_hi = rho_max;
 	double y_lo = e_min;
-	double y_hi = e_max;
+	double y_hi = e_max;*/
 	immutable int n = 100;
 	Tree myTree = new Tree(x_lo, x_hi, y_lo, y_hi);
 	myTree.globalMaxError = 0.0001;
