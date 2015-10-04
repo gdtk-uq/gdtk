@@ -1,7 +1,7 @@
-model = "CO2Gas"
+model = "SF6Virial"
 
-CO2Gas = {
-  speciesName = 'CO2Gas',
+SF6Virial = {
+  speciesName = 'SF6Virial',
   mMass = 0.02896,
   gamma = 1.4,
   entropyRefValues = { 

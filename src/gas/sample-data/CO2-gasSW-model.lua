@@ -1,8 +1,8 @@
-model = "CO2Gas"
+model = "CO2GasSW"
 
-CO2Gas = {
-  speciesName = 'CO2Gas',
-  mMass = 0.02896,
+CO2GasSW= {
+  speciesName = 'CO2',
+  mMass = 0.04401121121333065,
   gamma = 1.4,
   entropyRefValues = { 
      s1 = 0.0,
@@ -18,5 +18,10 @@ CO2Gas = {
      T_ref = 273.0, 
      k_ref = 0.0241, 
      S = 194.0
-  }
+  },
+  LUTfilenames = {
+    p_rhoe_file = 'LUT/P_rhoe_Tree.dat',
+    a_rhoe_file = 'LUT/a_rhoe_Tree.dat',
+    T_rhoe_file = 'LUT/T_rhoe_Tree.dat',
+  },
 }

@@ -13,6 +13,8 @@ import gas.ideal_gas;
 import gas.therm_perf_gas;
 import gas.very_viscous_air;
 import gas.CO2Gas;
+import gas.CO2GasSW;
+import gas.SF6Virial;
 import std.file;
 import std.stdio;
 import util.lua;
@@ -66,6 +68,12 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
     case "CO2Gas":
 	gm = new CO2Gas(L);
 	break;
+    case "CO2GasSW":
+	gm = new CO2GasSW(L);
+	break;
+    case "SF6Virial":
+    	gm = new SF6Virial(L);
+    	break;
     default:
 	gm = new IdealGas();
     }

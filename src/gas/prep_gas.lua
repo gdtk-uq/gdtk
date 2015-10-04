@@ -106,7 +106,7 @@ function writeThermPerfGas(f, species, db)
    end
 end
 function writeCO2Gas(f, sp, db)
-   -- We can only deal with one species for an ideal gas.
+   -- This is the Bender Model, entropy Ref values, viscosity etc. are not needed
    if ( #sp > 1 ) then
       print("WARNING: More than one species is listed while trying to prepare")
       print("WARNING: an ideal gas model.")
@@ -115,6 +115,73 @@ function writeCO2Gas(f, sp, db)
    end
    local s = sp[1]
    f:write("CO2Gas = {\n")
+   f:write(string.format("   speciesName = '%s',\n", s))
+   f:write(string.format("   mMass = %.8f,\n", db[s].M.value))
+   f:write(string.format("   gamma = %.8f,\n", db[s].gamma.value))
+   f:write("   entropyRefValues = {\n")
+   f:write(string.format("      s1 = %.8e,\n", db[s].entropyRefValues.s1))
+   f:write(string.format("      T1 = %.8f,\n", db[s].entropyRefValues.T1))
+   f:write(string.format("      p1 = %.8e,\n", db[s].entropyRefValues.p1))
+   f:write("   },\n")
+   f:write("   sutherlandVisc = {\n")
+   f:write(string.format("      mu_ref = %.8e,\n", db[s].sutherlandVisc.mu_ref))
+   f:write(string.format("      T_ref = %.8f,\n", db[s].sutherlandVisc.T_ref))
+   f:write(string.format("      S = %.8f,\n", db[s].sutherlandVisc.S))
+   f:write("   },\n")
+   f:write("   sutherlandThermCond = {\n")
+   f:write(string.format("      k_ref = %.8e,\n", db[s].sutherlandThermCond.k_ref))
+   f:write(string.format("      T_ref = %.8f,\n", db[s].sutherlandThermCond.T_ref))
+   f:write(string.format("      S = %.8f,\n", db[s].sutherlandThermCond.S))
+   f:write("   }\n")
+   f:write("}\n")
+end
+
+function writeCO2GasSW(f, sp, db)
+   -- This is the Span Wagner Model
+   if ( #sp > 1 ) then
+      print("WARNING: More than one species is listed while trying to prepare")
+      print("WARNING: an ideal gas model.")
+      print("WARNING: Presently, the ideal gas model is limited to a single species")
+      print("WARNING: We will build a file with the first species listed and ignore the rest.")
+   end
+   local s = sp[1]
+   f:write("CO2GasSW = {\n")
+   f:write(string.format("   speciesName = '%s',\n", s))
+   f:write(string.format("   mMass = %.8f,\n", db[s].M.value))
+   f:write(string.format("   gamma = %.8f,\n", db[s].gamma.value))
+   f:write("   entropyRefValues = {\n")
+   f:write(string.format("      s1 = %.8e,\n", db[s].entropyRefValues.s1))
+   f:write(string.format("      T1 = %.8f,\n", db[s].entropyRefValues.T1))
+   f:write(string.format("      p1 = %.8e,\n", db[s].entropyRefValues.p1))
+   f:write("   },\n")
+   f:write("   sutherlandVisc = {\n")
+   f:write(string.format("      mu_ref = %.8e,\n", db[s].sutherlandVisc.mu_ref))
+   f:write(string.format("      T_ref = %.8f,\n", db[s].sutherlandVisc.T_ref))
+   f:write(string.format("      S = %.8f,\n", db[s].sutherlandVisc.S))
+   f:write("   },\n")
+   f:write("   sutherlandThermCond = {\n")
+   f:write(string.format("      k_ref = %.8e,\n", db[s].sutherlandThermCond.k_ref))
+   f:write(string.format("      T_ref = %.8f,\n", db[s].sutherlandThermCond.T_ref))
+   f:write(string.format("      S = %.8f,\n", db[s].sutherlandThermCond.S))
+   f:write("   },\n")
+   f:write("   LUTfilenames = {\n")
+   f:write(string.format("      p_rhoe_file = '%s',\n", "../LUT/P_rhoe_Tree.dat"))
+   f:write(string.format("      a_rhoe_file = '%s',\n", "../LUT/a_rhoe_Tree.dat"))
+   f:write(string.format("      T_rhoe_file = '%s',\n", "../LUT/T_rhoe_Tree.dat"))
+   f:write("   }\n")
+   f:write("}\n")
+end
+
+function writeSF6Virial(f, sp, db)
+   -- This is the Bender Model
+   if ( #sp > 1 ) then
+      print("WARNING: More than one species is listed while trying to prepare")
+      print("WARNING: an ideal gas model.")
+      print("WARNING: Presently, the ideal gas model is limited to a single species")
+      print("WARNING: We will build a file with the first species listed and ignore the rest.")
+   end
+   local s = sp[1]
+   f:write("SF6Virial = {\n")
    f:write(string.format("   speciesName = '%s',\n", s))
    f:write(string.format("   mMass = %.8f,\n", db[s].M.value))
    f:write(string.format("   gamma = %.8f,\n", db[s].gamma.value))
@@ -145,6 +212,9 @@ gasModels["THERMALLYPERFECTGAS"] = {writeFn=writeThermPerfGas, DName="ThermallyP
 gasModels["THERMALLY PERFECT GAS"] = gasModels["THERMALLYPERFECTGAS"]
 -- CO2
 gasModels["CO2GAS"] = {writeFn=writeCO2Gas, DName = "CO2Gas"}
+gasModels["CO2GASSW"] = {writeFn = writeCO2GasSW, DName = "CO2GasSW"}
+--SF6
+gasModels["SF6VIRIAL"] = {writeFn = writeSF6Virial, DName = "SF6Virial"}
 
 function printHelp()
    print("prep-gas --- Prepares a gas model input file for Eilmer4.")
@@ -206,8 +276,8 @@ function main()
    end
    
    -- Locate species database and load
-   DGD = os.getenv("DGD")
-   dir = DGD.."/data/"
+   DGD = os.getenv("dgd")or os.getenv("HOME").."/cfcfd3" --NOT REALLY WORKING
+   dir = DGD.."/dgd/src/gas/species-database/"
    dbName = dir.."species-database.lua"
    dofile(dbName)
    print("Species database loaded from: ", dbName)

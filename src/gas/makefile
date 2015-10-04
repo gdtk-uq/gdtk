@@ -4,9 +4,8 @@
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
 INSTALL_DIR ?= $(HOME)/e3bin
-BUILD_DIR ?= ../../build
 
-DEMO_PROGRAMS := gas_model_demo ideal_gas_demo CO2_model_demo
+DEMO_PROGRAMS := gas_model_demo ideal_gas_demo CO2_model_demo CO2SW_model_demo SF6_model_demo
 UNITTEST_FILES := therm_perf_gas_test \
 	ideal_gas_test
 
@@ -16,7 +15,8 @@ UTIL_FILES := $(UTIL_DIR)/lua.d \
 	$(UTIL_DIR)/msg_service.d
 
 NM_DIR := ../nm
-NM_FILES := $(NM_DIR)/ridder.d
+NM_FILES := $(NM_DIR)/ridder.d $(NM_DIR)/tree_patch.d
+
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
@@ -31,7 +31,9 @@ GAS_MODEL_FILES := \
 	$(GAS_DIR)/physical_constants.d \
 	$(GAS_DIR)/therm_perf_gas.d \
 	$(GAS_DIR)/very_viscous_air.d\
-	$(GAS_DIR)/CO2Gas.d
+	$(GAS_DIR)/CO2Gas.d\
+	$(GAS_DIR)/CO2GasSW.d\
+	$(GAS_DIR)/SF6Virial.d
 
 THERMO_FILES := \
 	$(GAS_DIR)/thermo/cea_thermo_curves.d \
@@ -95,16 +97,26 @@ $(LIBLUA):
 
 gas_model_demo: gas_model_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) gas_model_demo.d $(OF)gas_model_demo \
-		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
 		$(DLINKFLAGS)
 
 ideal_gas_demo: ideal_gas_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
-
-CO2_model_demo: CO2_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+		
+CO2_model_demo: CO2_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES) 
 	$(DMD) -g $(DFLAGS) CO2_model_demo.d $(OF)CO2_model_demo \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(DLINKFLAGS)
+
+CO2SW_model_demo: CO2SW_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+	$(DMD) -g $(DFLAGS) CO2SW_model_demo.d $(OF)CO2SW_model_demo \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(DLINKFLAGS)
+		
+SF6_model_demo: SF6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+	$(DMD) -g $(DFLAGS) SF6_model_demo.d $(OF)SF6_model_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
