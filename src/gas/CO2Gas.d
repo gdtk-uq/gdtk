@@ -190,6 +190,8 @@ private:
     double _T_k = 273.0; // degrees K
     double _S_k = 194.0; // degrees K
     
+    
+    
     //define some functions that will be available to the functions in the private area    
     const double updatePressure_rhoT(double rho, double T){
 	double gamma = _As[20];
@@ -248,7 +250,7 @@ private:
 			+ _G[1]/T + _G[2] + _G[3]*T + _G[4]*T^^2 + _G[5]*T^^3 + _G[6]*T^^4;
 	
    }
-   const double updateEnergy_Prho(double P, double rho, double[2] Tbracket = [300, 1300], double tol = 0.001){
+   const double updateEnergy_Prho(double P, double rho, double[2] Tbracket = [295, 1300], double tol = 0.001){
 	//will get Temperature based on Riddler's Method - see PJ's notes
 	//double e = min(max(getSpecificEnergy(rho,P/rho/Gas.R,Gas),Gas.u0*0.6),2.5e6);//estimate energy based on temperature, don't go too high or too low
 	//writeln("Temperature guess", P/rho/Gas.R);
@@ -259,7 +261,7 @@ private:
 	assert(!isNaN(e), errorString);
 	//WORKS WELL FOR SUPERCRITICAL
    return e;}
-   const double updateRho_PT(double P, double T, double[2] bracket = [2, 1000], double tol = 0.1){
+   const double updateRho_PT(double P, double T, double[2] bracket = [0.1, 1000], double tol = 0.1){
 	//when temperature is close to 	critical temperature be very careful
 	assert(T > 305, "Temperature too low and close to critical point (305K)");
 	double rho = RidderSolverXYZ(P, &updatePressure_Trho, T, bracket, tol);
