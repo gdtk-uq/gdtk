@@ -91,13 +91,11 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     foreach (ref mySolidBlk; solidBlocks) {
 	mySolidBlk.assembleArrays();
 	mySolidBlk.bindFacesAndVerticesToCells();
-	mySolidBlk.assignVtxLocationsForDerivCalc();
 	writeln("mySolidBlk= ", mySolidBlk);
 	mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0)); // tindx==0 fixed grid
 	mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx));
-    }
-    foreach (ref mySolidBlk; solidBlocks) {
 	mySolidBlk.computePrimaryCellGeometricData();
+	mySolidBlk.assignVtxLocationsForDerivCalc();
     }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
