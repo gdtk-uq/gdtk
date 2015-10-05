@@ -24,6 +24,7 @@ immutable string Arc3MT = "Arc3";
 immutable string BezierMT = "Bezier";
 immutable string PolylineMT = "Polyline";
 immutable string SplineMT = "Spline";
+immutable string Spline2MT = "Spline2";
 immutable string LuaFnPathMT = "LuaFnPath";
 immutable string ArcLengthParameterizedPathMT = "ArcLengthParameterizedPath";
 immutable string SubRangedPathMT = "SubRangedPath";
@@ -348,7 +349,7 @@ A table containing arguments is expected, but no table was found.`;
  * p3 = Vector3:new{ 1,  0, 0}
  * p4 = Vector3:new{ 0, -1, 0}
  * -- For an arbitrary number of points in the table.
- * bez = Spline:new{points={p0, p1, p2, p3, p4}}
+ * spl = Spline:new{points={p0, p1, p2, p3, p4}}
  * ---------------------------------
  */
 extern(C) int newSpline(lua_State* L)
@@ -387,6 +388,38 @@ A table containing Vector3 points is expected, but no table was found.`;
     pathStore ~= pushObj!(Polyline, PolylineMT)(L, spline);
     return 1;
 } // end newSpline()
+
+
+/**
+ * The Lua constructor for a Spline2 (Polyline).
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * spl = Spline:new{filename="something.dat"}
+ * -- Expecting 3 numbers per line, space-separated.
+ * ---------------------------------
+ */
+extern(C) int newSpline2(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+	string errMsg = `Error in call to Spline2:new{}.;
+A table containing arguments is expected, but no table was found.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_getfield(L, 1, "filename".toStringz());
+    if ( !lua_isstring(L, -1) ) {
+	string errMsg = `Error in call to Spline2:new{}.;
+A string containing the file name is expected, but no string was found.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    auto fileName = to!string(lua_tostring(L, -1));
+    lua_pop(L, 1); // dispose of filename string
+    auto spline = new Polyline(fileName);
+    pathStore ~= pushObj!(Polyline, PolylineMT)(L, spline);
+    return 1;
+} // end newSpline2()
 
 
 /**
@@ -874,6 +907,26 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "copy");
 
     lua_setglobal(L, SplineMT.toStringz);
+
+    // Register the Spline2 object which is also a Polyline in Dlang.
+    luaL_newmetatable(L, Spline2MT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newSpline2);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(Polyline, Spline2MT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(Polyline, Spline2MT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(Polyline, Spline2MT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(Polyline, Spline2MT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, Spline2MT.toStringz);
 
     // Register the LuaFnPath object
     luaL_newmetatable(L, LuaFnPathMT.toStringz);

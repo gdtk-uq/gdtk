@@ -13,6 +13,7 @@ module gpath;
 import std.conv;
 import std.math;
 import std.stdio;
+import std.string;
 import geom;
 import bbla;
 //import numeric : findRoot;
@@ -476,6 +477,28 @@ public:
 	}
 	// and pack them away.
 	this(seg);
+    } // end spline constructor
+
+    // Contructs a spline from a file containing x(,y(,z)) coordinates.
+    this(string fileName)
+    {
+	// This function takes a filename and processes it assuming that each
+	// line contains (x,y,z) triples (space-delimited).  If any values are
+	// missing on a given line, they are assumed to be 0.0.  The x,y,z-triples
+	// are gathered and used to create the Spline.
+	// Ported Python code Spline2 from libgeom2.i 2015-10-05 by PJ
+	Vector3[] points;
+	auto f = File(fileName, "r");
+	foreach (line; f.byLine) {
+	    auto tokens = line.strip().split();
+	    if (tokens.length == 0) continue; // ignore blank lines
+	    if (tokens[0] == "#") continue; // ignote comment lines
+	    double x = to!double(tokens[0]);
+	    double y = 0.0; if (tokens.length > 1) { y = to!double(tokens[1]); }
+	    double z = 0.0; if (tokens.length > 2) { z = to!double(tokens[2]); }
+	    points ~= Vector3(x, y, z);
+	}
+	this(points);
     } // end spline constructor
     
     this(ref const(Polyline) other)

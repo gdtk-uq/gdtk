@@ -1,0 +1,6 @@
+# Test Spline2 construction from a file. 
+ 0.0 -1.0  0.0
+-1.0  0.0  0.0
+ 0.0  1.0  0.0
+ 1.0  0.0  0.0
+ 0.0 -1.0  0.0

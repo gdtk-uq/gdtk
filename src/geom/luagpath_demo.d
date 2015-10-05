@@ -112,6 +112,11 @@ circle = Spline:new{points=pnts}
 print("circle=", circle)
 print("circle(5.0/8)=", circle(5.0/8))
 --
+print("Spline2 (Polyline)")
+circle2 = Spline2:new{filename="test-spline2.dat"}
+print("circle2=", circle2)
+print("circle2(5.0/8)=", circle2(5.0/8))
+--
 print("TranslatedPath")
 a = Vector3:new{2.0, 0.0, 0.0}
 b = Vector3:new{0.0, 2.0, 0.0}
