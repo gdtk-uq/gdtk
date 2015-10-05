@@ -1,0 +1,16 @@
+ 3 blocks
+#B bid b-pty b-lbid f_i-pty f_i-lbid f_I-pty f_I-lbid ..
+B  1  1 -1    8 -1  8 -1  1 -1  5 -1  6 -1  6 -1
+B  2  1 -1    1 -1  8 -1  1 -1  8 -1  6 -1  6 -1
+B  3  1 -1    8 -1  8 -1  1 -1  4 -1  6 -1  6 -1
+ 0 labels
+ 6 64 2D properties (used, max-id) 'CFX4   '
+  0 unused (pdc:DEFAULT)
+  1 INTERBLK (pdc:INTERBLK)
+  4 SUP_IN (pdc:EILMER1)
+  5 SUP_OUT (pdc:EILMER2)
+  6 SLIP_WALL (pdc:EILMER3)
+  8 FIXED_T (pdc:EILMER5)
+ 2 64 3D properties(used, max-id)
+  0 unused (pdc:DEFAULT)
+  1 DEFAULT (pdc:BULK)

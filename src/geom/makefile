@@ -40,6 +40,7 @@ demo: $(DEMO_PROGRAMS)
 clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS)
+	- rm gpgrid*.vtk test*.vtk
 	- cd $(LUA_DIR); make clean
 
 $(LIBLUA):

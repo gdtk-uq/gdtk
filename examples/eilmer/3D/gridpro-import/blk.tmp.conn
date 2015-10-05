@@ -1,0 +1,8 @@
+#Version: GridPro-v5.1(Jul  5 10:32 2011) 	 Topology: ..uqrgehre/GridPro/Eilmer_test/_az.fra
+#Start  : Thu Aug 16 14:28:33 2012	 Current : Thu Aug 16 14:30:52 2012
+3        blocks
+B 1   s  7  0 000 s  6  0 000 b  0  2 243 s  5  0 000 s  9  0 000 s  8  0 000  -1
+B 2   b  0  1 513 s  4  0 000 s 10  3 453 s  6  0 000 s  9  0 000 s  8  0 000  -1
+B 3   s  1  0 000 s  2  0 000 s -10  2 453 s  3  0 000 s  9  0 000 s  8  0 000   1
+0        block labels (lbl bid)
+0        surf labels (lbl sid)

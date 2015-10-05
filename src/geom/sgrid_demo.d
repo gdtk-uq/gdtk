@@ -41,7 +41,7 @@ void main()
     my_3Dgrid.write_to_text_file("test_3Dgrid.vtk", true);
 
     writeln("Import GridPro grid...");
-    auto gpgrid = import_gridpro_grid("../../examples/eilmer3/3D/gridpro-import/blk.tmp");
+    auto gpgrid = import_gridpro_grid("../../examples/eilmer/3D/gridpro-import/blk.tmp");
     foreach (i; 0 .. gpgrid.length) {
 	gpgrid[i].write_to_text_file("gpgrid-"~to!string(i)~".vtk", true);
     }

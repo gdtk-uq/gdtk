@@ -1,0 +1,18 @@
+Gridpro import example
+======================
+:Author: Rowan J. Gollan
+
+This directory contains dummy example to test that Gridpro
+grids and boundary condition (what they call property information)
+can be imported into Eilmer.
+
+To test:
+> e3prep.py --job=test
+
+Further information about setting up the GridPro gui 'az' to
+work with Eilmer3 can be found in::
+
+   cfcfd3/app/eilmer3/utilities/README.gridpro-integration
+
+
+
