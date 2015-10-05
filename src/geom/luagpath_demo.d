@@ -111,6 +111,24 @@ pnts = {Vector3:new{0.0, -1.0, 0.0},
 circle = Spline:new{points=pnts}
 print("circle=", circle)
 print("circle(5.0/8)=", circle(5.0/8))
+--
+print("TranslatedPath")
+a = Vector3:new{2.0, 0.0, 0.0}
+b = Vector3:new{0.0, 2.0, 0.0}
+c = Vector3:new{0.0, 0.0, 0.0}
+abc = Arc:new{a, b, c}
+abc_translated = TranslatedPath:new{abc, shift=Vector3:new{0,0,0.33333}}
+print("abc_translated=", abc_translated)
+print("abc_translated(0.5)=", abc_translated(0.5))
+--
+print("RotatedAboutZAxisPath")
+a = Vector3:new{2.0, 0.0, 0.0}
+b = Vector3:new{0.0, 2.0, 0.0}
+c = Vector3:new{0.0, 0.0, 0.0}
+abc = Arc:new{a, b, c}
+abc_rotated = RotatedAboutZAxisPath:new{abc, angle=math.pi/4}
+print("abc_rotated=", abc_rotated)
+print("abc_rotated(1.0)=", abc_rotated(1.0))
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
 	writeln("There was a problem interpreting the test code.");

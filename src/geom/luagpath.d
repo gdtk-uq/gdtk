@@ -28,6 +28,8 @@ immutable string LuaFnPathMT = "LuaFnPath";
 immutable string ArcLengthParameterizedPathMT = "ArcLengthParameterizedPath";
 immutable string SubRangedPathMT = "SubRangedPath";
 immutable string ReversedPathMT = "ReversedPath";
+immutable string TranslatedPathMT = "TranslatedPath";
+immutable string RotatedAboutZAxisPathMT = "RotatedAboutZAxisPath";
 
 // A place to hang on to references to objects that are pushed into the Lua domain.
 // We don't want the D garbage collector to prematurely dispose of said objects.
@@ -61,6 +63,12 @@ Path checkPath(lua_State* L, int index) {
     }
     if ( isObjType(L, index, ReversedPathMT) ) {
 	return checkObj!(ReversedPath, ReversedPathMT)(L, index);
+    }
+    if ( isObjType(L, index, TranslatedPathMT) ) {
+	return checkObj!(TranslatedPath, TranslatedPathMT)(L, index);
+    }
+    if ( isObjType(L, index, RotatedAboutZAxisPathMT) ) {
+	return checkObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, index);
     }
     // if all else fails
     return null;
@@ -653,6 +661,95 @@ A table containing arguments is expected, but no table was found.`;
 } // end newReversedPath()
 
 
+/**
+ * The Lua constructor for an TranslatedPath.
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * p0 = Vector3:new{1, 0}
+ * p1 = Vector3:new{0.7071, 0.7071}
+ * p2 = Vector3:new{0, 1}
+ * original_path = Bezier:new{points={p0, p1, p2}}
+ * tr_path = TranslatedPath:new{original_path, shift=Vector3:new{0.5, 0.5}}
+ * ---------------------------------
+ */
+extern(C) int newTranslatedPath(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+	string errMsg = `Error in call to TranslatedPath:new{}.;
+A table containing arguments is expected, but no table was found.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Expect a Path object at the first array position in the table.
+    lua_rawgeti(L, 1, 1);
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = `Error in call to TranslatedPath:new{}. No table entry found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto original_path = checkPath(L, -1);
+    lua_pop(L, 1);
+    if ( original_path is null ) {
+	string errMsg = `Error in call to TranslatedPath:new{}. No valid Path object found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    // Expect Vector3 for key "shift".
+    lua_getfield(L, 1, "shift".toStringz());
+    auto shift = checkVector3(L, -1);
+    if ( shift is null ) {
+	string errMsg = `Error in call to TranslatedPath:new{}.
+A Vector3 object is expected at key shift. No valid Vector3 was found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1);
+    auto tr_path = new TranslatedPath(original_path, *shift);
+    pathStore ~= pushObj!(TranslatedPath, TranslatedPathMT)(L, tr_path);
+    return 1;
+} // end newTranslatedPath()
+
+/**
+ * The Lua constructor for an RotatedAboutZAxisPath.
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * p0 = Vector3:new{1, 0}
+ * p1 = Vector3:new{0.7071, 0.7071}
+ * p2 = Vector3:new{0, 1}
+ * original_path = Bezier:new{points={p0, p1, p2}}
+ * raza_path = RotatedAboutZAxisPath:new{original_path, angle=math.pi/4}
+ * ---------------------------------
+ */
+extern(C) int newRotatedAboutZAxisPath(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+	string errMsg = `Error in call to RotatedAboutZAxisPath:new{}.;
+A table containing arguments is expected, but no table was found.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Expect a Path object at the first array position in the table.
+    lua_rawgeti(L, 1, 1);
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = `Error in call to RotatedAboutZAxisPath:new{}. No table entry found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto original_path = checkPath(L, -1);
+    lua_pop(L, 1);
+    if ( original_path is null ) {
+	string errMsg = `Error in call to RotatedAboutZAxisPath:new{}. No valid Path object found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    string errMsgTmplt = `Error in call to RotatedAboutZAxisPath:new{}.
+A valid value for '%s' was not found in list of arguments.
+The value, if present, should be a number.`;
+    double angle = getNumberFromTable(L, 1, "angle", false, 0.0, true, format(errMsgTmplt, "angle"));
+    auto raza_path = new RotatedAboutZAxisPath(original_path, angle);
+    pathStore ~= pushObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, raza_path);
+    return 1;
+} // end newRotatedAboutZAxisPath()
+
 //-------------------------------------------------------------------------------------
 
 void registerPaths(lua_State* L)
@@ -869,6 +966,46 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "t1");
 
     lua_setglobal(L, ReversedPathMT.toStringz);
+
+    // Register the TranslatedPath object
+    luaL_newmetatable(L, TranslatedPathMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newTranslatedPath);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(TranslatedPath, TranslatedPathMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(TranslatedPath, TranslatedPathMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(TranslatedPath, TranslatedPathMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(TranslatedPath, TranslatedPathMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, TranslatedPathMT.toStringz);
+
+    // Register the RotatedAboutZAxisPath object
+    luaL_newmetatable(L, RotatedAboutZAxisPathMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newRotatedAboutZAxisPath);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, RotatedAboutZAxisPathMT.toStringz);
 } // end registerPaths()
     
 

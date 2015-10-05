@@ -12,6 +12,7 @@ module gpath;
 
 import std.conv;
 import std.math;
+import std.stdio;
 import geom;
 import bbla;
 //import numeric : findRoot;
@@ -749,3 +750,87 @@ unittest {
     assert(approxEqualVectors(r_acb.d2pdt2(0.5), Vector3(2,0,2)), "ReversedPath");
 }
 
+
+class TransformedPath : Path {
+public:
+    Path original_path;
+    this(const Path other)
+    {
+	original_path = other.dup();
+    }
+    override Vector3 opCall(double t) const 
+    {
+	Vector3 p = original_path(t);
+	return apply_transform(p);
+    }
+    abstract override string toString() const
+    {
+	return "TransformedPath(original_path=" ~ to!string(original_path) ~ ")";
+    }
+
+protected:
+    abstract Vector3 apply_transform(ref Vector3 p) const;
+
+} // end class TransformedPath
+
+
+class TranslatedPath : TransformedPath {
+    Vector3 shift;
+    this(const Path other, const Vector3 shift)
+    {
+	super(other);
+	this.shift = shift; 
+    }
+    override TranslatedPath dup() const
+    {
+	return new TranslatedPath(this.original_path, this.shift);
+    }
+    override string toString() const
+    {
+	return "TranslatedPath(original_path=" ~ to!string(original_path) 
+	    ~ ", shift=" ~ to!string(shift) ~ ")";
+    }
+
+protected:
+    override Vector3 apply_transform(ref Vector3 p) const
+    {
+	return p+shift;
+    }
+} // end class TranslatedPath
+
+
+class RotatedAboutZAxisPath : TransformedPath {
+    double dtheta; // in radians
+    this(const Path other, double angle)
+    {
+	super(other);
+	dtheta = angle; 
+    }
+    override RotatedAboutZAxisPath dup() const
+    {
+	return new RotatedAboutZAxisPath(this.original_path, this.dtheta);
+    }
+    override string toString() const
+    {
+	return "RotatedAboutZAxisPath(original_path=" ~ to!string(original_path) 
+	    ~ ", angle=" ~ to!string(dtheta) ~ ")";
+    }
+
+protected:
+    override Vector3 apply_transform(ref Vector3 p) const
+    {
+	return p.rotate_about_zaxis(dtheta);
+    }
+} // end class RotatedAboutZAxisPath
+
+
+unittest {
+    auto a = Vector3([2.0, 0.0, 0.0]);
+    auto b = Vector3([0.0, 2.0, 0.0]);
+    auto c = Vector3([0.0, 0.0, 0.0]);
+    auto abc = new Arc(a, b, c);
+    auto abc_rotated = new RotatedAboutZAxisPath(abc, PI/4);
+    // writeln("abc_rotated(1.0)=", abc_rotated(1.0));
+    assert(approxEqualVectors(abc_rotated(1.0), sqrt(2.0)*Vector3(-1, 1, 0)),
+			      "RotatedAboutZAxisPath");
+}

@@ -55,7 +55,7 @@ subgrid3D = grid3D:subgrid(5,3,10,3,5,3)
 print("same point in subgrid=", subgrid3D:get_vtx(0,0,0))
 --
 print("Try Gridpro import")
-grids = importGridproGrid("../../examples/eilmer3/3D/gridpro-import/blk.tmp", 0.001)
+grids = importGridproGrid("../../examples/eilmer/3D/gridpro-import/blk.tmp", 0.001)
 print("no. of grids read= ", #grids)
 print("size of grid 1= ", grids[1]:get_niv(), grids[1]:get_njv())
     `;
