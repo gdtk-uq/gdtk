@@ -291,6 +291,39 @@ struct Vector3 {
 	_p[1] = v_y;
 	_p[2] = v_z;
     }
+
+    /**
+     * Compute mirror-image location for plane defined by point and normal.
+     */
+    @nogc ref Vector3 mirror_image(ref const(Vector3) point,
+				   ref const(Vector3) normal)
+    {
+	Vector3 n = Vector3(normal.x, normal.y, normal.z); n.normalize();
+	// Construct tangents to the plane.
+	Vector3 different = n + Vector3(1.0, 1.0, 1.0);
+	Vector3 t1; cross!t1(n, different); t1.normalize();
+	Vector3 t2; cross!t2(n, t1); t2.normalize();
+	// Mirror image the vector in a frame local to the plane.
+	transform_to_local_frame(n, t1, t2, point);
+	_p[0] = -_p[0];
+	transform_to_global_frame(n, t1, t2, point);
+	return this;
+    }
+
+    /**
+     * Rotate point about the z-axis by angle dtheta, in radians.
+     */
+    @nogc ref Vector3 rotate_about_zaxis(double dtheta)
+    {
+	double x = _p[0];
+	double y = _p[1];
+	double theta = atan2(y,x) + dtheta;
+	double r = sqrt(x*x + y*y);
+	_p[0] = r * cos(theta);
+	_p[1] = r * sin(theta);
+	return this;
+    }
+
 } // end class Vector3
 
 
@@ -324,15 +357,25 @@ Vector3 unit(in Vector3 v)
 }
 
 /**
- * Vector cross product.
+ * Vector cross product as a macro.
+ */
+@nogc
+void cross(alias v3)(ref const(Vector3) v1, ref const(Vector3) v2)
+    if (is(typeof(v3) == Vector3))
+{
+    v3._p[0] = v1._p[1] * v2._p[2] - v2._p[1] * v1._p[2];
+    v3._p[1] = v2._p[0] * v1._p[2] - v1._p[0] * v2._p[2];
+    v3._p[2] = v1._p[0] * v2._p[1] - v2._p[0] * v1._p[1];
+}
+
+/**
+ * Vector cross product for use in Vector3 expressions.
  */
 @nogc
 Vector3 cross(in Vector3 v1, in Vector3 v2)
 {
     Vector3 v3;
-    v3._p[0] = v1._p[1] * v2._p[2] - v2._p[1] * v1._p[2];
-    v3._p[1] = v2._p[0] * v1._p[2] - v1._p[0] * v2._p[2];
-    v3._p[2] = v1._p[0] * v2._p[1] - v2._p[0] * v1._p[1];
+    cross!v3(v1, v2);
     return v3;
 }
 
@@ -383,6 +426,16 @@ unittest {
     assert(g.z == 10.0, "plus-assign");
     g /= 2.0;
     assert(g.z == 5.0, "divide-assign");
+
+    a = Vector3(1.0, 0.0, 0.0);
+    a.rotate_about_zaxis(PI/4);
+    assert(approxEqualVectors(a, Vector3(0.7071, 0.7071, 0)), "rotate_about_zaxis");
+
+    a = Vector3(1.0, 0.0, 0.0);
+    Vector3 point = Vector3(0.0, 1.0, 0.0);
+    Vector3 normal = Vector3(0.0, 1.0, 0.0);
+    a.mirror_image(point, normal);
+    assert(approxEqualVectors(a, Vector3(1.0, 2.0, 0)), "mirror_image");
 
     Vector3 u = unit(g);
     assert(approxEqual(abs(u), 1.0), "unit, dot, abs");
