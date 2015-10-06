@@ -51,6 +51,9 @@ j = dot(g, f)
 print("j= ", j)
 k = cross(g, f)
 print("k= ", k)
+m = Vector3:new{1.0,0.0,0.0}
+m:rotateAboutZAxis(math.pi/2)
+print("rotated m=", m, "expected Vector3([0.0, 1.0, 0.0])")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
 	writeln("There was a problem interpreting the test code.");
