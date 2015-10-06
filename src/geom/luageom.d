@@ -19,6 +19,7 @@ module luageom;
 import util.lua;
 import std.stdio;
 import std.string;
+import util.lua_service;
 import geom;
 
 immutable string Vector3MT = "Vector3"; // Name of Vector3 metatable
@@ -347,6 +348,45 @@ extern(C) int toStringVector3(lua_State* L)
     lua_pushstring(L, a.toString.toStringz);
     return 1;
 }
+/**
+ * Returns the Vector3 that is rotated about the z-axis by an angle theta
+ *
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * p0 = Vector3:new{1, 0}
+ *raza_p0 = Vector3:rotatedAboutZAxisPoint:new{p0, angle=math.pi/4}
+ * ---------------------------------
+ */
+extern(C) int rotatedAboutZAxisPointVector3(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+    string errMsg = `Error in call to RotatedAboutZAxisPoint:new{}.;
+A table containing arguments is expected, but no table was found.`;
+    luaL_error(L, errMsg.toStringz);
+    }
+    // Expect a Vector3 object at the first array position in the table.
+    lua_rawgeti(L, 1, 1);
+    if ( lua_isnil(L, -1) ) {
+    string errMsg = `Error in call to RotatedAboutZAxisPoint:new{}. No table entry found.`;
+    luaL_error(L, errMsg.toStringz());
+    }
+    auto original_point = checkVector3(L, -1);
+    lua_pop(L, 1);
+    if ( original_point is null ) {
+    string errMsg = `Error in call to RotatedAboutZAxisPoint:new{}. No valid Vector3 object found.`;
+    luaL_error(L, errMsg.toStringz());
+    }
+    string errMsgTmplt = `Error in call to RotatedAboutZAxisPoint:new{}.
+A valid value for '%s' was not found in list of arguments.
+The value, if present, should be a number.`;
+    double angle = getNumberFromTable(L, 1, "angle", false, 0.0, true, format(errMsgTmplt, "angle"));
+    auto b = *original_point;//don't modify original point
+    b.rotate_about_zaxis(angle);
+    return pushVector3(L, b); 
+} // end newRotatedAboutZAxisPoint()
 
 void registerVector3(lua_State* L)
 {
@@ -385,6 +425,8 @@ void registerVector3(lua_State* L)
     lua_setfield(L, -2, "abs");
     lua_pushcfunction(L, &unitVector3);
     lua_setfield(L, -2, "unit");
+    lua_pushcfunction(L, &rotatedAboutZAxisPointVector3);
+    lua_setfield(L, -2, "rotatedAboutZAxisPoint");
 
     lua_setglobal(L, Vector3MT.toStringz);
 
