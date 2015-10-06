@@ -43,6 +43,8 @@ int FS = 0; // current flow state to work in
 class FlowState
 {
     GasState gas; // gas state
+    // [TODO] Momar, I prefer the default D initialization of nan for doubles. PJ
+    // [TODO] If they get used uninitialized, it' clear because the nans propagate.
     double theta=0.0; // flow angle, radians
     double V=0.0; // velocity, m/s
     //
@@ -72,15 +74,16 @@ class FlowState
     //	
     this()
     {
-	this.gas = new GasState;
+	this.gas = new GasState(1, 1); // PJ single-species gas, 1 internal energy mode
+	// [TODO] We should construct this gas state with the knowledge of the gas model.
 	this.gas.p = 0.0;
 	this.gas.rho = 0.0;
-	this.gas.T ~= [0.0];
+	// this.gas.T ~= [0.0]; // [TODO] don't like this; it makes the array bigger.
     } // end this()
     //
     this(GasState gas,double theta,double V)
     {
-	this.gas = gas.dup;
+	this.gas = new GasState(gas);
 	this.theta = theta;
 	this.V = V;
     } // end this()
@@ -93,7 +96,7 @@ class FlowState
     //
     this(FlowState other)
     {
-	this.gas = other.gas.dup;
+	this.gas = new GasState(other.gas);
 	this.theta = other.theta;
 	this.V = other.V;
     } // end this()
@@ -107,7 +110,7 @@ class FlowState
     //
     FlowState opAssign(GasState gas)
     {
-	this.gas = gas.dup;
+	this.gas = new GasState(gas);
 	return this;
     } // end opAssign()
     //

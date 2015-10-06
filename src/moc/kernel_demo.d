@@ -30,12 +30,10 @@ void main(){
     writeln("Default AxiFlag = ",GetAxiFlag());
     int axiflag = 1;
     SetAxiFlag(axiflag);
-    writefln("axiflag = %d, SetAxiFlag = %d (0=OK),GetAxiFlag = %d",
-	     axiflag,GetAxiFlag());
+    writefln("axiflag = %d, GetAxiFlag = %d", axiflag, GetAxiFlag());
     axiflag = 2;
-    SetAxiFlag(axiflag);
-    writefln("axiflag = %d, SetAxiFlag = %d (0=OK),GetAxiFlag = %d",
-	     axiflag,GetAxiFlag());
+    // SetAxiFlag(axiflag); [TODO] need to catch the Error
+    writefln("axiflag = %d, GetAxiFlag = %d", axiflag, GetAxiFlag());
     writeln("...done");
     writeln();
 		
@@ -68,6 +66,7 @@ void main(){
     writeln("Create nodes at (1,0) (5,2) (15,34) (7,3)");
     CreateNode(-1),CreateNode(-1),CreateNode(-1),CreateNode(-1);
     writefln("There are now %d nodes",GetNumberOfNodes());
+/+ [TODO] Errors need to be caught for this code to execute cleanly in your demo.
     id = GetNextNodeId(-1);
     SetNodeData(id,"X",1.0);SetNodeData(id,"Y",0.0,1);
     id = GetNextNodeId(id);
@@ -81,6 +80,7 @@ void main(){
     SetNodeData(id,"V",600.0);
     WriteNodeData(id);
     writeln("Nodes created");
++/
     double tol = 10.0;
     int[] theids;
     int nearcount = 2;
@@ -100,7 +100,10 @@ void main(){
     foreach(int j;0 .. 10){DeleteNode(j);}
     writefln("There are now %d nodes",GetNumberOfNodes());
     writeln("Reload node data from saved file...");
+/+ [TODO] can probably reactivate this call once your node creation code above is
+   [TODO] working again.
     LoadNodes("kernel_demo.txt");
++/
     writefln("There are now %d nodes",GetNumberOfNodes());
     writeln("...done");
     writeln();

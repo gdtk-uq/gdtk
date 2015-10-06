@@ -22,7 +22,8 @@ import linesearch;
 enum int NWALL = 2; //max number of possible walls
 enum int MAX_POINT = 20; //max number of points on each wall
 int[NWALL] usable; //flag: 1/0 usable/nonusable Wall
-Vector3 WallPoints[NWALL][]; //class from bezier.d
+Vector3[][NWALL] WallPoints; //class from bezier.d 
+// [TODO] Momar, check that I have the line above the right way around.
 Path[NWALL] WallPath; //class from bezier.d
 
 int WallIsPresent(int iw)

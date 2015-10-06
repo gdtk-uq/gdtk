@@ -13,7 +13,6 @@ PROGRAMS := moc
 
 DEMO_PROGRAMS := kernel_demo \
 		wall_demo \
-		shock_demo \
 		anderson_example_11_1
 
 MOC_DIR := .
@@ -94,6 +93,7 @@ clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS) $(PROGRAMS)
 	- rm trace.log trace.def
+	- rm anderson_11_1.txt kernel_demo.txt moc_wall_demo.txt
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 
