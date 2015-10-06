@@ -277,8 +277,8 @@ function main()
    end
    
    -- Locate species database and load
-   DGD = os.getenv("dgd")or os.getenv("HOME").."/cfcfd3" --NOT REALLY WORKING
-   dir = DGD.."/dgd/src/gas/species-database/"
+   DGD = os.getenv("DGD")
+   dir = DGD.."/data/"
    dbName = dir.."species-database.lua"
    dofile(dbName)
    print("Species database loaded from: ", dbName)
