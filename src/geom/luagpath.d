@@ -511,6 +511,10 @@ A number was expected in position 2, for y.`;
     {
 	return "LuaFnPath(luaFnName=\"" ~ luaFnName ~ "\")";
     }
+    override string classString() const
+    {
+	return "LuaFnPath";
+    }
 } // end class LuaFnPath
 
 extern(C) int newLuaFnPath(lua_State* L)

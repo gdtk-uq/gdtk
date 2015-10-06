@@ -109,6 +109,7 @@ public:
 	return p1;
     }
     abstract override string toString() const;
+    abstract string classString() const;
 } // end class Path
 
 
@@ -143,6 +144,10 @@ public:
     override string toString() const
     {
 	return "Line(p0=" ~ to!string(p0) ~ ", p1=" ~ to!string(p1) ~ ")";
+    }
+    override string classString() const
+    {
+	return "Line";
     }
     override double partial_length(double ta, double tb) const
     {
@@ -196,6 +201,10 @@ public:
     override string toString() const
     {
 	return "Arc(a=" ~ to!string(a) ~ ", b=" ~ to!string(b) ~ ", c=" ~ to!string(c) ~ ")";
+    }
+    override string classString() const
+    {
+	return "Arc";
     }
     override double length() const
     {
@@ -300,6 +309,14 @@ class Arc3 : Arc {
     {
 	return new Arc3(a, m, b);
     }
+    override string toString() const
+    {
+	return "Arc3(a=" ~ to!string(a) ~ ", m=" ~ to!string(m) ~ ", b=" ~ to!string(b) ~ ")";
+    }
+    override string classString() const
+    {
+	return "Arc3";
+    }
 } // end class Arc3
 
 unittest {
@@ -352,6 +369,10 @@ public:
     override string toString() const
     {
 	return "Bezier(B=" ~ to!string(B) ~ ")";
+    }
+    override string classString() const
+    {
+	return "Bezier";
     }
 
 protected:
@@ -409,6 +430,116 @@ unittest {
     assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1)), "Bezier");
     assert(approxEqualVectors(acb.d2pdt2(0.5), Vector3(2,0,2)), "Bezier");
 }
+
+
+class Polynomial : Path {
+    // polynomial in the form y = sum(c_i * x^^i)|i=0..n
+public:
+    Vector3[] P; // array of control points to interpolate
+    double[] C; // array of coefficients
+	
+    this(in Vector3[] P)
+    {
+	if (P.length == 0) {
+	    throw new Error(text("Polynomial() No control points present."));
+	} // end if
+	if (P.length == 1) {
+	    throw new Error(text("Polynomial() Only one control point, not enough for a curve."));
+	} // end if
+	this.P = P.dup();
+	evaluate_coefficients();
+    }
+    this(in double[] C,double x0,double x1)
+    {
+    	if (C.length == 0) {
+	    throw new Error(text("Polynomial() No coefficients provided."));
+	} // end if
+	this.C = C.dup();
+	this.P.length = 2;
+	this.P[0] = evaluate_polynomial(x0);
+	this.P[1] = evaluate_polynomial(x1);
+    }
+    this(in Vector3[] P,in double[] C)
+    {
+    	if (C.length == 0) {
+	    throw new Error(text("Polynomial() No coefficients provided."));
+	} // end if
+	this.C = C.dup();
+	foreach(point;P){
+	    if(point.y != evaluate_polynomial(point.x).y){
+		throw new Error(text("Polynomial() points and coefficients do not match."));
+	    } // end if
+	} // end foreach
+	this.P = P.dup();
+    }
+    this(ref const(Polynomial) other)
+    {
+	this.P = other.P.dup();
+	this.C = other.C.dup();
+    }
+    override Polynomial dup() const
+    {
+	return new Polynomial(P,C);
+    } // end dup()
+    override Vector3 opCall(double t) const
+    {
+	// Evaluate P(t)
+	double xt = P[0].x + t*(P[$-1].x-P[0].x);
+	return evaluate_polynomial(xt);
+    } // end opCall()
+    override Vector3 dpdt(double t) const
+    {
+	// Evaluate P(t)
+	double xt;
+	xt = P[0].x + t*(P[$-1].x-P[0].x);
+	return derivative_polynomial(xt);
+    }
+    override string toString() const
+    {
+	return "Polynomial(P=" ~ to!string(P) ~ ")";
+    }
+    override string classString() const
+    {
+	return "Polynomial";
+    }
+
+protected:    
+    void evaluate_coefficients()
+    {
+    	size_t n = P.length;
+    	auto A = new Matrix(n);
+    	auto b = new Matrix(n,1);
+    	foreach(i;0 .. n){
+	    b[i,0] = P[i].y;
+	    foreach(j;0 .. n+1){
+		A[i,j] = P[i].x^^j;
+	    } // end foreach
+    	} // end foreach
+    	auto x = lsqsolve(A,b);
+    	foreach(i;0 .. n){
+	    C[i] = x[i,0];
+    	} // end foreach
+    } // end evaluate_coefficients ()
+    
+    Vector3 evaluate_polynomial(double x) const
+    {
+    	double y=0.0;
+	foreach(i;0 .. C.length){
+	    y += C[i] * x^^i;
+	} // end foreach
+	return Vector3(x,y);
+    } // end evaluate_polynomial ()
+
+    Vector3 derivative_polynomial(double x) const
+    {
+    	double dy=0.0;
+	foreach(i;0 .. C.length){
+	    dy += C[i] * i * x^^(i-1);
+	} // end foreach
+	return Vector3(1.0,dy);
+    } // end evaluate_polynomial ()
+
+} // end class Polynomial
 
 
 class Polyline : Path {
@@ -537,6 +668,10 @@ public:
     {
 	return "Polyline(segments=" ~ to!string(segments) ~ ")";
     }
+    override string classString() const
+    {
+	return "Polyline";
+    }
 
 private:
     void reset_breakpoints()
@@ -587,6 +722,10 @@ public:
     {
 	return "ReParameterizedPath(underlying_path=" ~ to!string(underlying_path) ~ ")";
     }
+    override string classString() const
+    {
+	return "ReParameterizedPath";
+    }
 
 protected:
     abstract double underlying_t(double t) const;
@@ -613,6 +752,10 @@ public:
     override string toString() const
     {
 	return "ArcLengthParameterizedPath(underlying_path=" ~ to!string(underlying_path) ~ ")";
+    }
+    override string classString() const
+    {
+	return "ArcLengthParametrizedPath";
     }
 
 protected:
@@ -728,6 +871,10 @@ public:
 	return "SubRangedPath(underlying_path=" ~ to!string(underlying_path) 
 	    ~ ", t0=" ~ to!string(t0) ~ " t1=" ~ to!string(t1) ~ ")";
     }
+    override string classString() const
+    {
+	return "SubRangedPath";
+    }
 protected:
     override double underlying_t(double t) const
     {
@@ -790,6 +937,10 @@ public:
     {
 	return "TransformedPath(original_path=" ~ to!string(original_path) ~ ")";
     }
+    override string classString() const
+    {
+	return "TransformedPath";
+    }
 
 protected:
     abstract Vector3 apply_transform(ref Vector3 p) const;
@@ -812,6 +963,10 @@ class TranslatedPath : TransformedPath {
     {
 	return "TranslatedPath(original_path=" ~ to!string(original_path) 
 	    ~ ", shift=" ~ to!string(shift) ~ ")";
+    }
+    override string classString() const
+    {
+	return "TranslatedPath";
     }
 
 protected:
@@ -837,6 +992,10 @@ class RotatedAboutZAxisPath : TransformedPath {
     {
 	return "RotatedAboutZAxisPath(original_path=" ~ to!string(original_path) 
 	    ~ ", angle=" ~ to!string(dtheta) ~ ")";
+    }
+    override string classString() const
+    {
+	return "RotatedAboutZAxisPath";
     }
 
 protected:

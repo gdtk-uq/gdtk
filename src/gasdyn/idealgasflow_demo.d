@@ -1,5 +1,5 @@
 /*
- * file: gasdynamic_demo.d
+ * file: idealgasflow_demo.d
  * author: Momar Hughes
  * date: 5 Apr 2015 initial code
  */
@@ -23,6 +23,7 @@ void main(){
     writeln("Test: NuFromM...");
     writeln("...returns nu = ",PM1(M,g));
     writeln("Literature value = 0.6413");
+    // [TODO] These tests for subsonic values should go into the unittest.
     writeln("...provided M=0.8:");
     try {
 	PM1(0.8,g);
@@ -38,7 +39,7 @@ void main(){
     try {
 	PM2(-0.5,g);
     } catch (Error e) {
-	writeln("Caught negative value.");
+	writeln("Caught subsonic value.");
     }
 	
     writeln("Test: MachAngle...");
@@ -50,16 +51,6 @@ void main(){
     } catch (Error e) {
 	writeln("Caught subsonic value.");
     }
-/+	
-    writeln("Test: ThetaFromBeta, BetaFromTheta...");
-    M = 5.0;
-    double beta = -50.0*PI/180.;
-    double theta = ThetaFromBeta(M,beta,g);
-    writefln("use beta=%g",beta*180./PI);
-    writefln("...returns theta = %g",theta*180./PI);
-    double beta2 = BetaFromTheta(M,theta,g);
-    writeln("using this value of theta:");
-    writefln("...returns beta = %g",beta2*180./PI);
-+/	
+	
     writeln("Finished gasdynamic demo.");
 } // end main()
