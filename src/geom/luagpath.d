@@ -30,6 +30,7 @@ immutable string ArcLengthParameterizedPathMT = "ArcLengthParameterizedPath";
 immutable string SubRangedPathMT = "SubRangedPath";
 immutable string ReversedPathMT = "ReversedPath";
 immutable string TranslatedPathMT = "TranslatedPath";
+immutable string MirrorImagePathMT = "MirrorImagePath";
 immutable string RotatedAboutZAxisPathMT = "RotatedAboutZAxisPath";
 
 // A place to hang on to references to objects that are pushed into the Lua domain.
@@ -746,6 +747,63 @@ A Vector3 object is expected at key shift. No valid Vector3 was found.`;
 } // end newTranslatedPath()
 
 /**
+ * The Lua constructor for an MirrorImagePath.
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * p0 = Vector3:new{1, 0}
+ * p1 = Vector3:new{0.7071, 0.7071}
+ * p2 = Vector3:new{0, 1}
+ * original_path = Bezier:new{points={p0, p1, p2}}
+ * mi_path = MirrorImagePath:new{original_path, point=Vector3:new{1.0, 0.0},
+ *                               normal=Vector3:new{1.0, 0.0}}
+ * ---------------------------------
+ */
+extern(C) int newMirrorImagePath(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+	string errMsg = `Error in call to MirrorImagePath:new{}.;
+A table containing arguments is expected, but no table was found.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Expect a Path object at the first array position in the table.
+    lua_rawgeti(L, 1, 1);
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = `Error in call to MirrorImagePath:new{}. No table entry found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto original_path = checkPath(L, -1);
+    lua_pop(L, 1);
+    if ( original_path is null ) {
+	string errMsg = `Error in call to MirrorImagePath:new{}. No valid Path object found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    // Expect Vector3 for key "point".
+    lua_getfield(L, 1, "point".toStringz());
+    auto point = checkVector3(L, -1);
+    if ( point is null ) {
+	string errMsg = `Error in call to MirrorImagePath:new{}.
+A Vector3 object is expected at key point. No valid Vector3 was found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1);
+    // Expect Vector3 for key "normal".
+    lua_getfield(L, 1, "normal".toStringz());
+    auto normal = checkVector3(L, -1);
+    if ( normal is null ) {
+	string errMsg = `Error in call to MirrorImagePath:new{}.
+A Vector3 object is expected at key normal. No valid Vector3 was found.`;
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1);
+    auto mi_path = new MirrorImagePath(original_path, *point, *normal);
+    pathStore ~= pushObj!(MirrorImagePath, MirrorImagePathMT)(L, mi_path);
+    return 1;
+} // end newMirrorImagePath()
+
+/**
  * The Lua constructor for an RotatedAboutZAxisPath.
  *
  * Example construction in Lua:
@@ -1043,6 +1101,26 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "copy");
 
     lua_setglobal(L, TranslatedPathMT.toStringz);
+
+    // Register the MirrorImagePath object
+    luaL_newmetatable(L, MirrorImagePathMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newMirrorImagePath);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(MirrorImagePath, MirrorImagePathMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(MirrorImagePath, MirrorImagePathMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(MirrorImagePath, MirrorImagePathMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(MirrorImagePath, MirrorImagePathMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, MirrorImagePathMT.toStringz);
 
     // Register the RotatedAboutZAxisPath object
     luaL_newmetatable(L, RotatedAboutZAxisPathMT.toStringz);

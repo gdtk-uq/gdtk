@@ -307,6 +307,20 @@ extern(C) int rotateAboutZAxisVector3(lua_State* L)
 }
 
 /**
+ * Mirror-image a Vector3 object through a given plane that is
+ * defined by a point and a normal. 
+ * Exposes geom.Vector3.mirror_image(point, normal)
+ */
+extern(C) int mirrorImageVector3(lua_State* L)
+{
+    auto a = checkVector3(L, 1);
+    auto point = checkVector3(L, 2);
+    auto normal = checkVector3(L, 3);
+    a.mirror_image(*point, *normal);
+    return 0;
+}
+
+/**
  * Computes the dot product of two Vector3s.
  *
  * Note that this Lua function can service
@@ -400,6 +414,8 @@ void registerVector3(lua_State* L)
     lua_setfield(L, -2, "unit");
     lua_pushcfunction(L, &rotateAboutZAxisVector3);
     lua_setfield(L, -2, "rotateAboutZAxis");
+    lua_pushcfunction(L, &mirrorImageVector3);
+    lua_setfield(L, -2, "mirrorImage");
 
     lua_setglobal(L, Vector3MT.toStringz);
 

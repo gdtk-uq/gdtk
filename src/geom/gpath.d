@@ -977,6 +977,37 @@ protected:
 } // end class TranslatedPath
 
 
+class MirrorImagePath : TransformedPath {
+    Vector3 point;
+    Vector3 normal;
+    this(const Path other, const Vector3 point, const Vector3 normal)
+    {
+	super(other);
+	this.point = point;
+	this.normal = normal;
+    }
+    override MirrorImagePath dup() const
+    {
+	return new MirrorImagePath(this.original_path, this.point, this.normal);
+    }
+    override string toString() const
+    {
+	return "MirrorImagePath(original_path=" ~ to!string(original_path) 
+	    ~ ", point=" ~ to!string(point) ~ ", normal=" ~ to!string(normal) ~ ")";
+    }
+    override string classString() const
+    {
+	return "MirrorImagePath";
+    }
+
+protected:
+    override Vector3 apply_transform(ref Vector3 p) const
+    {
+	return p.mirror_image(point, normal);
+    }
+} // end class MirrorImagePath
+
+
 class RotatedAboutZAxisPath : TransformedPath {
     double dtheta; // in radians
     this(const Path other, double angle)

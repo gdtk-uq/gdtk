@@ -54,6 +54,9 @@ print("k= ", k)
 m = Vector3:new{1.0,0.0,0.0}
 m:rotateAboutZAxis(math.pi/2)
 print("rotated m=", m, "expected Vector3([0.0, 1.0, 0.0])")
+n = Vector3:new{1.0,0.0,0.0}
+n:mirrorImage(Vector3:new{2.0,0.0,0.0}, Vector3:new{1.0,0.0,0.0})
+print("mirror-image n=", n, "expected Vector3([3.0, 0.0, 0.0])")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
 	writeln("There was a problem interpreting the test code.");

@@ -126,6 +126,17 @@ abc_translated = TranslatedPath:new{abc, shift=Vector3:new{0,0,0.33333}}
 print("abc_translated=", abc_translated)
 print("abc_translated(0.5)=", abc_translated(0.5))
 --
+print("MirrorImagePath")
+p0 = Vector3:new{1, 0}
+p1 = Vector3:new{0.7071, 0.7071}
+p2 = Vector3:new{0, 1}
+original_path = Bezier:new{points={p0, p1, p2}}
+mi_path = MirrorImagePath:new{original_path, point=Vector3:new{1.0, 0.0},
+                              normal=Vector3:new{1.0, 0.0}}
+print("mi_path=", mi_path)
+print("original_path(0.5)=", original_path(0.5))
+print("mi_path(0.5)=", mi_path(0.5))
+--
 print("RotatedAboutZAxisPath")
 a = Vector3:new{2.0, 0.0, 0.0}
 b = Vector3:new{0.0, 2.0, 0.0}
