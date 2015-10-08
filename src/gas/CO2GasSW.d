@@ -453,7 +453,7 @@ private:
 		dDeltab_dtau = -2*theta*_b[j]*Delta^^(_b[j] - 1);
 		
 		//writefln("delta: %f, tau: %f, theta: %f", delta, tau, theta);
-		//d_alphar_d_tau += _n[i]*delta*(dDeltab_dtau*Psi + Delta^^_b[j]*dPsi_dtau);
+		d_alphar_d_tau += _n[i]*delta*(dDeltab_dtau*Psi + Delta^^_b[j]*dPsi_dtau);
 		}
 		//----------------------------------------------------
 	//Add on the ideal part of the equation
