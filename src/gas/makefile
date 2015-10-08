@@ -5,7 +5,7 @@
 DMD ?= dmd
 INSTALL_DIR ?= $(HOME)/e3bin
 
-DEMO_PROGRAMS := gas_model_demo ideal_gas_demo CO2_model_demo CO2SW_model_demo SF6_model_demo
+DEMO_PROGRAMS := gas_model_demo ideal_gas_demo CO2_model_demo CO2SW_model_demo SF6_model_demo luagas_model_demo
 UNITTEST_FILES := therm_perf_gas_test \
 	ideal_gas_test
 
@@ -106,7 +106,7 @@ ideal_gas_demo: ideal_gas_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
-		
+
 CO2_model_demo: CO2_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES) 
 	$(DMD) -g $(DFLAGS) CO2_model_demo.d $(OF)CO2_model_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
@@ -116,7 +116,7 @@ CO2SW_model_demo: CO2SW_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) CO2SW_model_demo.d $(OF)CO2SW_model_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
-		
+
 SF6_model_demo: SF6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) SF6_model_demo.d $(OF)SF6_model_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
@@ -135,4 +135,11 @@ therm_perf_gas_test : therm_perf_gas.d libgas.a $(LIBLUA) $(UTIL_FILES) $(NM_FIL
 very_viscous_air_test : very_viscous_air.d libgas.a $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -main -unittest $(DFLAGS) very_viscous_air.d $(OF)very_viscous_air_test \
 		libgas.a $(UTIL_FILES) $(NM_FILES) \
+		$(DLINKFLAGS)
+
+luagas_model_demo: luagas_model_demo.d luagas_model.d \
+	$(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+	$(DMD) -g $(DFLAGS) luagas_model_demo.d luagas_model.d \
+		$(OF)luagas_model_demo \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
 		$(DLINKFLAGS)
