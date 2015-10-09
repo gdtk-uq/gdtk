@@ -8,6 +8,7 @@
 import std.stdio;
 import gas.gas_model;
 import gas.gas_model_util;
+import std.datetime;
 
 void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes using CO2 Span Wagner...");
@@ -15,19 +16,40 @@ void main() {
     foreach(i; 0 .. gm.n_species) {
 	writeln("species[", i, "] name=", gm.species_name(i));
     }
-    auto gd = new GasState(gm, 6.0e6, 600.0);
-    writefln("R= %s, pressure= %.16f, temperature= %s", gm.R(gd), gd.p, gd.T[0]);
+    auto gd = new GasState(gm, 6.0e6, 300.0);
+    writefln("R= %s, pressure= %.8f, temperature= %.8f", gm.R(gd), gd.p, gd.T[0]);
     gm.update_thermo_from_pT(gd);
     gm.update_sound_speed(gd);
-    writefln("rho= %s, e= %s, a= %s", gd.rho, gd.e[0], gd.a); 
-    gm.update_thermo_from_rhoe(gd);
+    double s = gm.entropy(gd);
+    writefln("rho= %.8f, e= %.8f, a= %.8f, s=%.8f", gd.rho, gd.e[0], gd.a, s); 
+    writeln("------------------------------------------");
+    writeln("Update again from p, s");
+    writeln("------------------------------------------");
+    int ncycles = 100;
+    StopWatch sw;
+    sw.start();
+    for(int i = 0; i != ncycles; i++) gm.update_thermo_from_ps(gd,s);
+    sw.stop();
     gm.update_sound_speed(gd);
+    long t_eval_ps = sw.peek().usecs;
+    writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.T[0]);
+    writefln("rho= %.8f, e= %.8f, a= %.8f, s=%.8f", gd.rho, gd.e[0], gd.a, s); 
     writeln("------------------------------------------");
     writeln("Using LUT to update again from rho, e");
     writeln("------------------------------------------");
-    writefln("R= %s, pressure= %.16f, temperature= %s", gm.R(gd), gd.p, gd.T[0]);
-    writefln("rho= %s, e= %s, a= %s", gd.rho, gd.e[0], gd.a); 
+    sw.start();
+    for(int i = 0; i != ncycles; i++) gm.update_thermo_from_rhoe(gd);
+    sw.stop();
+    long t_lut = sw.peek().usecs - t_eval_ps;
+    gm.update_sound_speed(gd);
+    writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.T[0]);
+    writefln("rho= %.8f, e= %.8f, a= %.8f", gd.rho, gd.e[0], gd.a); 
     writeln("gd= ", gd);
+    writeln("-------------------------------");
+    writefln("Time taken for %s evaluations:", ncycles);
+    writefln("Update_ps: %s usecs; LUT_rhoe: %s usecs;", t_eval_ps, t_lut);
+    writefln("Update_ps is %s times slower", t_eval_ps/t_lut);
+    writeln("-------------------------------");
     auto gd2 = new GasState(gm, 200.0e3, 400.0);
     writeln("gd2=", gd2);
     auto gd3 = new GasState(gm, 100.0e3, 300.0);

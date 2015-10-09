@@ -149,7 +149,9 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+	Q.rho = getRho_EntropyP(s,Q.p);
+	Q.T[0] = getT_p_rho(Q.p,Q.rho);//potential here to modify getRho_EntropyP so it spits out T
+	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
@@ -186,9 +188,8 @@ public:
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	double R = gas_constant(Q);
-	return R*Q.T[0];
-    }
+	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+	}
     override double gas_constant(in GasState Q) const
     {
 	return R_universal/_mol_masses[0];
@@ -203,7 +204,7 @@ public:
     }
     override double entropy(in GasState Q) const
     {
-	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+	return updateEntropy_rhoT(Q.rho, Q.T[0]);
     }
     //------A function that re-maps the rho, T domain according to the liquid-vapour line------------
     //placed in public so it is available for building Tables
@@ -684,6 +685,77 @@ private:
 	
 	return sqrt(w2_RT * _Rgas * T);
    	}
+const double updateEntropy_rhoT(double rho, double T){
+	string extrapType = "quality";
+	return extrapolate_rhoT_function!updateEntropy_rhoT_original(rho, T,extrapType);
+}
+const double updateEntropy_rhoT_original(double rho, double T){
+	double delta = rho/_rhoc;
+	double tau = _Tc/T;
+	double alpha0 = getalpha0(delta,tau);
+	double alphaR = getalphaR(delta,tau);	
+	double d_alpha0_d_tau = _a0[2] + _a0[3]/tau;
+	for(int i = 4; i != 9; i++){
+		d_alpha0_d_tau += _a0[i]*_theta0[i]*(1.0/(1.0-exp(-_theta0[i]*tau)) -1);
+	}
+	return updateEnergy_rhoT(rho, T)/T - (alpha0 + alphaR)*_Rgas;
+}
+const double getalpha0(double delta, double tau){
+	double alpha0 = log(delta) + _a0[1] + _a0[2]*tau + _a0[3]*log(tau);//ideal part of helmholtz energy
+	for(int i = 4; i != 9; i++){
+		alpha0 += _a0[i]*log(1 - exp(-_theta0[i]*tau));
+		}
+	return alpha0;
+}
+const double getalphaR(double delta, double tau){
+	double alphaR = 0;
+	for(int i = 1; i != 8; i++){
+		alphaR += _n[i]*delta^^_d[i]*tau^^_t[i];
+	}
+	for(int i = 8; i != 35; i++){
+		alphaR += _n[i]*delta^^_d[i]*tau^^_t[i]*exp(-delta^^_c[i]);
+	}
+	int j;
+	for(int i = 35; i != 40; i++){
+		j = i - 35;
+		alphaR += _n[i]*delta^^_d[i]*tau^^_t[i]*
+							exp(-_alpha[j]*(delta-_epsilon[j])^^2 - _beta[j]*(tau - _gamma[j])^^2);
+							
+	}
+	double Psi;
+	double theta;
+	double Delta;
+	for (int i = 40; i != 43; i++){
+		j = i - 40;
+		Psi = exp(-_C[j]*(delta - 1)^^2 - _D[j]*(tau - 1)^^2);
+		theta = (1 - tau) + _A[j]*((delta-1)^^2)^^(0.5/_beta2[j]);
+		Delta = theta*theta + _B[j]*((delta - 1)^^2)^^_a[j];
+		alphaR += _n[i]*Delta^^_b[j]*delta*Psi;
+		
+		}
+	return alphaR;
+}
+const double getT_p_rho(double p, double rho, double tol = 0.001){
+	auto zeroPressure_T = delegate (double T){
+		return p - updatePressure_rhoT(rho, T);};
+	double T_max;
+	if (rho < 10) T_max = 1.1*p/rho/_Rgas; //if low density, Temperature may be high -- need to extend bracket
+		else T_max = 6000;
+	double T = solve!zeroPressure_T(80,max(T_max,6000), tol);
+	assert(!isNaN(T), format("T is NaN, P: %s, rho: %s", p, rho));
+	return T;
+
+} 
+const double getEntropy_prho(double p, double rho){
+	double T = getT_p_rho(p,rho);
+	return updateEntropy_rhoT(rho, T);
+}
+const double getRho_EntropyP(double s, double P){
+	auto zeroEntropy_rho = delegate (double rho){
+		return s-getEntropy_prho(P, rho);
+	};
+	return solve!zeroEntropy_rho(0.1,1600,0.0001);
+}
 const double get_d_alphar_d_delta(double tau, double delta){
 	double d_alphar_d_delta = 0;
 	for(int i = 1; i != 8; i++){
