@@ -30,6 +30,12 @@ print("list of mol masses:")
 for i, m in ipairs(gm:molMasses()) do
    print("i, mMass= ", i, m)
 end
+Q = GasState(gm)
+print("Q.p= ", Q.p)
+Q.p = 1.0e5
+Q.T[1] = 300.0
+gm:updateThermoFromPT(Q)
+print("Q.e[1]= ", Q.e[1])
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
 	writeln("There was a problem interpreting the test code.");
