@@ -464,7 +464,7 @@ private:
 	for(int i = 4; i != 9; i++){
 		d_alpha0_d_tau += _a0[i]*_theta0[i]*(1.0/(1.0-exp(-_theta0[i]*tau)) -1);
 	}
-	return _Tc*(d_alpha0_d_tau + d_alphar_d_tau)*_Rgas + _Rgas*_T0; 
+	return _Tc*(d_alpha0_d_tau + d_alphar_d_tau)*_Rgas; 
 	}
    
    const double updateTemperature_rhoe_newtonCotes(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
