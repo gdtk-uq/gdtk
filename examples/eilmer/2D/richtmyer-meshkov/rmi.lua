@@ -38,10 +38,10 @@ grid2 = StructuredGrid:new{psurface=region2, niv=10*nx+1, njv=2*nx+1}
 -- Define the boundary conditions that we care about 
 -- and the flow-solution blocks.
 bcList1 = {north=nil, east=nil, south=nil,
-	   west=SupInBC:new{flowCondition=state2, label="inflow-boundary"}}
+	   west=InFlowBC_Supersonic:new{flowCondition=state2, label="inflow-boundary"}}
 blk1 = SBlockArray{grid=grid1, nib=2, njb=2,
 		   fillCondition=state1, bcList=bcList1, label="BLOCK-1"}
-bcList2 = {north=nil, east=ExtrapolateOutBC:new{label="outflow-boundary"},
+bcList2 = {north=nil, east=OutFlowBC_Simple:new{label="outflow-boundary"},
 	   south=nil, west=nil}
 blk2 = SBlockArray{grid=grid2, nib=10, njb=2,
 		   fillCondition=state3, bcList=bcList2, label="BLOCK-2"}

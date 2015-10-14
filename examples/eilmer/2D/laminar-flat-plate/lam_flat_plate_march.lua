@@ -17,6 +17,7 @@
 config.title = "Schetz's Mach 4 laminar flow over a flat plate"
 print(config.title)
 config.viscous = true
+config.spatial_deriv_calc = "least_squares"
 config.flux_calc = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
 config.max_time = 2.4e-3  -- will allow 3 flow lengths   
@@ -67,10 +68,10 @@ grd = StructuredGrid:new{psurface=makePatch{nth, est, sth, wst},
 -- Assemble the block from the grid and boundary data.
 blks = SBlockArray{grid=grd, nib=22, njb=2, 
 		   fillCondition=inflow,
-		   bcList={north=FixedTWallBC:new{Twall=300.0},
-			   east=ExtrapolateOutBC:new{},
-			   south=SupInBC:new{flowCondition=inflow},
-			   west=SupInBC:new{flowCondition=inflow}}}
+		   bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
+			   east=OutFlowBC_Simple:new{},
+			   south=InFlowBC_Supersonic:new{flowCondition=inflow},
+			   west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 
 config.block_marching = true
 config.nib = 22

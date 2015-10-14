@@ -46,9 +46,9 @@ blk0 = SBlock:new{grid=grid, fillCondition=initial, label="blk-0"}
 -- grid = importGridproGrid(gproName)
 -- blk0 = SBlock:new{grid=grid[0], fillCondition=initial, label="blk-0"}
 
--- We can leave east and south as SlipWalls
-blk0.bcList[west] = SupInBC:new{flowCondition=inflow}
-blk0.bcList[north] = ExtrapolateOutBC:new{}
+-- We can leave east and south as slip-walls
+blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
+blk0.bcList[north] = OutFlowBC_Simple:new{}
 
 -- Set a few more config options
 config.flux_calc = ADAPTIVE

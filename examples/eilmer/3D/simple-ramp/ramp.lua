@@ -56,8 +56,8 @@ grid1 = StructuredGrid:new{pvolume=TFIVolume:new{vertices=blk1Corners},
 			   niv=31, njv=5, nkv=41, cfList=cflist}
 
 blk0 = SBlock:new{label="first-block", grid=grid0, fillCondition=initial}
-blk0.bcList[west] = SupInBC:new{flowCondition=inflow}
+blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
 blk1 = SBlock:new{label="second-block", grid=grid1, fillCondition=initial,
 		  hcellList={{1,1,2},{20,1,1}}}
-blk1.bcList[east] = ExtrapolateOutBC:new{}
+blk1.bcList[east] = OutFlowBC_Simple:new{}
 identifyBlockConnections()

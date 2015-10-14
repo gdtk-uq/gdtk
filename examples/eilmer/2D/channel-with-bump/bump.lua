@@ -51,10 +51,10 @@ grid2 = StructuredGrid:new{psurface=patch2,
 			   niv=ni0+1, njv=nj0+1}
 -- Define the flow-solution blocks and set boundary conditions.
 blk0 = SBlockArray{grid=grid0, fillCondition=inflow, nib=16, njb=2,
-		   bcList={west=SupInBC:new{flowCondition=inflow}}}
+		   bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 blk1 = SBlockArray{grid=grid1, fillCondition=inflow, nib=16, njb=2}
 blk2 = SBlockArray{grid=grid2, fillCondition=inflow, nib=16, njb=2,
-		   bcList={east=ExtrapolateOutBC:new{}}}
+		   bcList={east=OutFlowBC_Simple:new{}}}
 identifyBlockConnections()
 
 config.block_marching = true

@@ -75,12 +75,12 @@ vol = TFIVolume:new{vertices={p000,p100,p110,p010,p001,p101,p111,p011}}
 grd = StructuredGrid:new{pvolume=vol, cfList=cflist, niv=221, njv=193, nkv=3}
 
 -- Assemble the block from the grid and boundary data.
-bcList={north=FixedTWallBC:new{Twall=300.0},
-	east=ExtrapolateOutBC:new{},
-	south=SupInBC:new{flowCondition=inflow},
-	west=SupInBC:new{flowCondition=inflow},
-	bottom=SlipWallBC:new{},
-	top=SlipWallBC:new{}}
+bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
+	east=OutFlowBC_Simple:new{},
+	south=InFlowBC_Supersonic:new{flowCondition=inflow},
+	west=InFlowBC_Supersonic:new{flowCondition=inflow},
+	bottom=WallBC_WithSlip:new{},
+	top=WallBC_WithSlip:new{}}
 blks = SBlockArray{grid=grd, nib=22, njb=2, nkb=1,
 		   bcList=bcList, fillCondition=inflow}
 
