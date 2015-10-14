@@ -9,7 +9,7 @@ module(..., package.seeall)
 
 -- -----------------------------------------------------------------------
 -- Classes for constructing boundary conditions.
--- Each boundary condition is composed of lists of actions to do
+-- Each "complete" boundary condition is composed of lists of actions to do
 -- at specific points in the superloop of the main simulation code.
 
 -- For the classes below, we just follow the prototype pattern
@@ -167,7 +167,7 @@ function EnergyFluxFromAdjacentSolid:tojson()
    return str
 end
 
--- Class for BoundaryCondition
+-- Class for (complete) BoundaryCondition
 
 BoundaryCondition = {
    label = "",
@@ -211,18 +211,18 @@ function BoundaryCondition:tojson()
    return str
 end
 
-SlipWallBC = BoundaryCondition:new()
-SlipWallBC.type = "SlipWall"
-function SlipWallBC:new(o)
+WallBC_WithSlip = BoundaryCondition:new()
+WallBC_WithSlip.type = "wall_with_slip"
+function WallBC_WithSlip:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end
 
-FixedTWallBC = BoundaryCondition:new()
-FixedTWallBC.type = "FixedTWall"
-function FixedTWallBC:new(o)
+WallBC_NoSlip_FixedT = BoundaryCondition:new()
+WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
+function WallBC_NoSlip_FixedT:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
@@ -232,9 +232,9 @@ function FixedTWallBC:new(o)
    return o
 end
 
-AdiabaticWallBC = BoundaryCondition:new()
-AdiabaticWallBC.type = "FixedTWall"
-function AdiabaticWallBC:new(o)
+WallBC_NoSlip_Adiabatic = BoundaryCondition:new()
+WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
+function WallBC_NoSlip_Adiabatic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
@@ -242,27 +242,36 @@ function AdiabaticWallBC:new(o)
    return o
 end
 
-SupInBC = BoundaryCondition:new()
-SupInBC.type = "SupIn"
-function SupInBC:new(o)
+InFlowBC_Supersonic = BoundaryCondition:new()
+InFlowBC_Supersonic.type = "inflow_supersonic"
+function InFlowBC_Supersonic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end
 
-ExtrapolateOutBC = BoundaryCondition:new()
-ExtrapolateOutBC.type = "ExtrapolateOut"
-function ExtrapolateOutBC:new(o)
+InFlowBC_FixedStagnationPT = BoundaryCondition:new()
+InFlowBC_FixedStagnationPT.type = "inflow_fixed_stagnation_p_and_t"
+function InFlowBC_FixedStagnationPT:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} } -- FIX-ME
+   o.preSpatialDerivAction = { CopyCellData:new() }
+   return o
+end
+
+OutFlowBC_Simple = BoundaryCondition:new()
+OutFlowBC_Simple.type = "outflow_simple_extrapolate"
+function OutFlowBC_Simple:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end
 
-FixedPTOutBC = BoundaryCondition:new()
-FixedPTOutBC.type = "FixedPTOut"
-function FixedPTOutBC:new(o)
+OutFlowBC_FixedPT = BoundaryCondition:new()
+OutFlowBC_FixedPT.type = "outflow_fixed_p_and_t"
+function OutFlowBC_FixedPT:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedPT:new{p_out=o.p_out, T_out=o.T_out} }
@@ -270,9 +279,9 @@ function FixedPTOutBC:new(o)
    return o
 end
 
-FullFaceExchangeBC = BoundaryCondition:new()
-FullFaceExchangeBC.type = "FullFaceExchange"
-function FullFaceExchangeBC:new(o)
+ExchangeBC_FullFace = BoundaryCondition:new()
+ExchangeBC_FullFace.type = "exchange_over_full_face"
+function ExchangeBC_FullFace:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { FullFaceExchangeCopy:new{otherBlock=o.otherBlock,
 						 otherFace=o.otherFace,
@@ -282,7 +291,7 @@ function FullFaceExchangeBC:new(o)
 end
 
 UserDefinedBC = BoundaryCondition:new()
-UserDefinedBC.type = "UserDefined"
+UserDefinedBC.type = "user_defined"
 function UserDefinedBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
@@ -290,9 +299,9 @@ function UserDefinedBC:new(o)
    return o
 end
 
-AdjacentToSolidBC = BoundaryCondition:new()
-AdjacentToSolidBC.type = "AdjacentToSolid"
-function AdjacentToSolidBC:new(o)
+WallBC_AdjacentToSolid = BoundaryCondition:new()
+WallBC_AdjacentToSolid.type = "wall_adjacent_to_solid"
+function WallBC_AdjacentToSolid:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
@@ -305,6 +314,21 @@ function AdjacentToSolidBC:new(o)
 							    orientation=o.orientation }
    }
    return o
+end
+
+-- Retain the old BC names as aliases, for now.
+-- They are deprecated.
+allowOldBCNames = true
+if allowOldBCNames then
+   print("Old boundary condition names are available.")
+   SlipWallBC = WallBC_WithSlip
+   FixedTWallBC = WallBC_NoSlip_FixedT
+   AdiabaticWallBC = WallBC_NoSlip_Adiabatic
+   SupInBC = InFlowBC_Supersonic
+   ExtrapolateOutBC = OutFlowBC_Simple
+   FixedPTOutBC = OutFlowBC_FixedPT
+   FullFaceExchangeBC = ExchangeBC_FullFace
+   AdjacentToSolidBC = WallBC_AdjacentToSolid
 end
 
 -- ---------------------------------------------------------------------------
