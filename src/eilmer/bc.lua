@@ -171,7 +171,8 @@ end
 
 BoundaryCondition = {
    label = "",
-   myType = "",
+   type = "",
+   group = "",
    preReconAction = {},
    preSpatialDerivAction = {},
    postDiffFluxAction = {}
@@ -185,6 +186,8 @@ end
 function BoundaryCondition:tojson()
    local str = '{'
    str = str .. string.format('"label": "%s", \n', self.label)
+   str = str .. string.format('        "type": "%s", \n', self.type)
+   str = str .. string.format('        "group": "%s", \n', self.group)
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
       str = str .. effect:tojson()
@@ -209,7 +212,7 @@ function BoundaryCondition:tojson()
 end
 
 SlipWallBC = BoundaryCondition:new()
-SlipWallBC.myType = "SlipWall"
+SlipWallBC.type = "SlipWall"
 function SlipWallBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -218,7 +221,7 @@ function SlipWallBC:new(o)
 end
 
 FixedTWallBC = BoundaryCondition:new()
-FixedTWallBC.myType = "FixedTWall"
+FixedTWallBC.type = "FixedTWall"
 function FixedTWallBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -230,7 +233,7 @@ function FixedTWallBC:new(o)
 end
 
 AdiabaticWallBC = BoundaryCondition:new()
-AdiabaticWallBC.myType = "FixedTWall"
+AdiabaticWallBC.type = "FixedTWall"
 function AdiabaticWallBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -240,7 +243,7 @@ function AdiabaticWallBC:new(o)
 end
 
 SupInBC = BoundaryCondition:new()
-SupInBC.myType = "SupIn"
+SupInBC.type = "SupIn"
 function SupInBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
@@ -249,7 +252,7 @@ function SupInBC:new(o)
 end
 
 ExtrapolateOutBC = BoundaryCondition:new()
-ExtrapolateOutBC.myType = "ExtrapolateOut"
+ExtrapolateOutBC.type = "ExtrapolateOut"
 function ExtrapolateOutBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
@@ -258,7 +261,7 @@ function ExtrapolateOutBC:new(o)
 end
 
 FixedPTOutBC = BoundaryCondition:new()
-FixedPTOutBC.myType = "FixedPTOut"
+FixedPTOutBC.type = "FixedPTOut"
 function FixedPTOutBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
@@ -268,7 +271,7 @@ function FixedPTOutBC:new(o)
 end
 
 FullFaceExchangeBC = BoundaryCondition:new()
-FullFaceExchangeBC.myType = "FullFaceExchange"
+FullFaceExchangeBC.type = "FullFaceExchange"
 function FullFaceExchangeBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { FullFaceExchangeCopy:new{otherBlock=o.otherBlock,
@@ -279,7 +282,7 @@ function FullFaceExchangeBC:new(o)
 end
 
 UserDefinedBC = BoundaryCondition:new()
-UserDefinedBC.myType = "UserDefined"
+UserDefinedBC.type = "UserDefined"
 function UserDefinedBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
@@ -288,7 +291,7 @@ function UserDefinedBC:new(o)
 end
 
 AdjacentToSolidBC = BoundaryCondition:new()
-AdjacentToSolidBC.myType = "AdjacentToSolid"
+AdjacentToSolidBC.type = "AdjacentToSolid"
 function AdjacentToSolidBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -339,7 +342,8 @@ end
 -- lower-level operators.
 SolidBoundaryCondition = {
    label = "",
-   myType = "",
+   type = "",
+   group = "",
    setsFluxDirectly = false,
    preSpatialDerivAction = {}
 }
@@ -352,6 +356,8 @@ end
 function SolidBoundaryCondition:tojson()
    local str = '{'
    str = str .. string.format('"label": "%s", \n', self.label)
+   str = str .. string.format('        "type": "%s", \n', self.type)
+   str = str .. string.format('        "group": "%s", \n', self.group)
    str = str .. string.format('        "sets_flux_directly": %s,\n', tostring(self.setsFluxDirectly))
    str = str .. '        "pre_spatial_deriv_action": [\n'
    for i,effect in ipairs(self.preSpatialDerivAction) do
@@ -364,7 +370,7 @@ function SolidBoundaryCondition:tojson()
 end
 
 SolidFixedTBC = SolidBoundaryCondition:new()
-SolidFixedTBC.myType = "SolidFixedT"
+SolidFixedTBC.type = "SolidFixedT"
 function SolidFixedTBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.preSpatialDerivAction = { SolidBIE_FixedT:new{Twall=o.Twall} }
@@ -372,7 +378,7 @@ function SolidFixedTBC:new(o)
 end
 
 SolidUserDefinedBC = SolidBoundaryCondition:new()
-SolidUserDefinedBC.myType = "SolidUserDefined"
+SolidUserDefinedBC.type = "SolidUserDefined"
 function SolidUserDefinedBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.preSpatialDerivAction = { SolidBIE_UserDefined:new{fileName=o.fileName} }
@@ -380,7 +386,7 @@ function SolidUserDefinedBC:new(o)
 end
 
 SolidAdjacentToGasBC = SolidBoundaryCondition:new()
-SolidAdjacentToGasBC.myType = "SolidAdjacentToGas"
+SolidAdjacentToGasBC.type = "SolidAdjacentToGas"
 function SolidAdjacentToGasBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.setsFluxDirectly = true

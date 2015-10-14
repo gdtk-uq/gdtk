@@ -31,6 +31,9 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
 				    size_t nicell, size_t njcell, size_t nkcell)
 {
     auto newBC = new BoundaryCondition(blk_id, boundary);
+    newBC.label = to!string(jsonData["label"]);
+    newBC.type = to!string(jsonData["type"]);
+    newBC.group = to!string(jsonData["group"]);
     // Assemble list of preReconAction effects
     auto preReconActionList = jsonData["pre_recon_action"].array;
     foreach ( jsonObj; preReconActionList ) {
@@ -56,10 +59,16 @@ public:
     // Location of the boundary condition.
     SBlock blk; // the block to which this BC is applied
     int which_boundary; // identity/index of the relevant boundary
-
+    // We may have a label for this specific boundary.
+    string label;
+    // We have a symbolic name for the type of boundary condition
+    // when thinking about the flow problem conceptually. 
+    string type;
+    // Sometimes it is convenient to think of individual boundaries
+    // grouped together.
+    string group;
     // Nature of the boundary condition that may be checked 
     // by other parts of the CFD code.
-    // BCCode type_code = BCCode.slip_wall;
     bool is_wall = true;
     bool ghost_cell_data_available = true;
     double emissivity = 0.0;
@@ -68,6 +77,8 @@ public:
     {
 	blk = gasBlocks[id];  // pick the relevant block out of the collection
 	which_boundary = boundary;
+	type = "";
+	group = "";
 	is_wall = isWall;
 	ghost_cell_data_available = ghostCellDataAvailable;
 	emissivity = _emissivity;
@@ -94,6 +105,7 @@ public:
     {
 	char[] repr;
 	repr ~= "BoundaryCondition(";
+	repr ~= "label= " ~ label ~ ", type= " ~ type ~ ", group= " ~ group ~ ", ";
 	if ( preReconAction.length > 0 ) {
 	    repr ~= "preReconAction=[" ~ to!string(preReconAction[0]);
 	    foreach (i; 1 .. preReconAction.length) {
