@@ -72,7 +72,7 @@ function SBlock:new(o)
    o.omegaz = o.omegaz or 0.0
    o.bcList = o.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
-      o.bcList[face] = o.bcList[face] or SlipWallBC:new()
+      o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
    end
    o.hcellList = o.hcellList or {}
    o.xforceList = o.xforceList or {}
@@ -149,9 +149,9 @@ end
 function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    print("connectBlocks: blkA=", blkA.id, "faceA=", faceA, 
 	 "blkB=", blkB.id, "faceB=", faceB, "orientation=", orientation)
-   blkA.bcList[faceA] = FullFaceExchangeBC:new{otherBlock=blkB.id, otherFace=faceB,
+   blkA.bcList[faceA] = ExchangeBC_FullFace:new{otherBlock=blkB.id, otherFace=faceB,
 					       orientation=orientation}
-   blkB.bcList[faceB] = FullFaceExchangeBC:new{otherBlock=blkA.id, otherFace=faceA,
+   blkB.bcList[faceB] = ExchangeBC_FullFace:new{otherBlock=blkA.id, otherFace=faceA,
 					       orientation=orientation}
    -- [TODO] need to test for matching corner locations and 
    -- consistent numbers of cells
@@ -238,7 +238,7 @@ function SBlockArray(t)
    t.omegaz = t.omegaz or 0.0
    t.bcList = t.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
-      t.bcList[face] = t.bcList[face] or SlipWallBC:new()
+      t.bcList[face] = t.bcList[face] or WallBC_WithSlip:new()
    end
    t.xforceList = t.xforceList or {}
    -- Numbers of subblocks in each coordinate direction
@@ -277,8 +277,8 @@ function SBlockArray(t)
 	 if config.dimensions == 2 then
 	    -- 2D flow
 	    local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1)
-	    local bcList = {north=SlipWallBC:new(), east=SlipWallBC:new(),
-			    south=SlipWallBC:new(), west=SlipWallBC:new()}
+	    local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
+			    south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new()}
 	    if ib == 1 then
 	       bcList[west] = t.bcList[west]
 	    end
@@ -304,9 +304,9 @@ function SBlockArray(t)
 		  dnkc = nkc_total - k0
 	       end
 	       local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1,k0,dnkc+1)
-	       local bcList = {north=SlipWallBC:new(), east=SlipWallBC:new(),
-			       south=SlipWallBC:new(), west=SlipWallBC:new(),
-			       top=SlipWallBC:new(), bottom=SlipWallBC:new()}
+	       local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
+			       south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new(),
+			       top=WallBC_WithSlip:new(), bottom=WallBC_WithSlip:new()}
 	       if ib == 1 then
 		  bcList[west] = t.bcList[west]
 	       end

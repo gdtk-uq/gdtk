@@ -51,8 +51,8 @@ blk0 = SBlock:new{grid=grid0, fillCondition=inflow}
 blk1 = SBlock:new{grid=grid1, fillCondition=initial}
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = SupInBC:new{flowCondition=inflow}
-blk1.bcList[east] = ExtrapolateOutBC:new{}
+blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
+blk1.bcList[east] = OutFlowBC_Simple:new{}
 
 config.max_time = 15.0e-3  -- seconds
 config.max_step = 2500

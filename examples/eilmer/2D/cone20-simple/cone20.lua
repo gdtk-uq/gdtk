@@ -37,8 +37,8 @@ blk1 = SBlock:new{grid=grid1, fillCondition=initial, label="BLOCK-1",
 		  hcellList={{9,0}}, xforceList={0,0,1,0}}
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = SupInBC:new{flowCondition=inflow, label="inflow-boundary"}
-blk1.bcList[east] = ExtrapolateOutBC:new{label="outflow-boundary"}
+blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}
+blk1.bcList[east] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
 -- Do a little more setting of global data.
 config.max_time = 5.0e-3  -- seconds
