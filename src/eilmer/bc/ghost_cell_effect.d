@@ -61,9 +61,15 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 	newGCE = new GhostCellExtrapolateCopy(blk_id, boundary, xOrder);
 	break;
     case "fixed_pressure_temperature":
-	double POut = getJSONdouble(jsonData, "p_out", 1.0e5);
-	double TOut = getJSONdouble(jsonData, "T_out", 300.0);
-	newGCE = new GhostCellFixedPT(blk_id, boundary, POut, TOut);
+	double p_outside = getJSONdouble(jsonData, "p_outside", 1.0e5);
+	double T_outside = getJSONdouble(jsonData, "T_outside", 300.0);
+	newGCE = new GhostCellFixedPT(blk_id, boundary, p_outside, T_outside);
+	break;
+    case "from_stagnation_condition":
+	auto stagnation_condition = new FlowState(jsonData["stagnation_condition"], gmodel);
+	string direction_type = getJSONstring(jsonData, "direction_type", "normal");
+	newGCE = new GhostCellFromStagnation(blk_id, boundary, stagnation_condition,
+					     direction_type);
 	break;
     case "full_face_exchange_copy":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
@@ -861,19 +867,19 @@ public:
 
 class GhostCellFixedPT : GhostCellEffect {
 public:
-    double Pout;
-    double Tout;
+    double p_outside;
+    double T_outside;
     
-    this(int id, int boundary, double Pout, double Tout)
+    this(int id, int boundary, double p_outside, double T_outside)
     {
 	super(id, boundary, "FixedPT");
-	this.Pout = Pout;
-	this.Tout = Tout;
+	this.p_outside = p_outside;
+	this.T_outside = T_outside;
     }
 
     override string toString() const 
     {
-	return "FixedPT(p_out=" ~ to!string(Pout) ~ ", T_out=" ~ to!string(Tout) ~")";
+	return "FixedPT(p_outside=" ~ to!string(p_outside) ~ ", T_outside=" ~ to!string(T_outside) ~")";
     }
     
     override void apply(double t, int gtl, int ftl)
@@ -889,12 +895,12 @@ public:
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j+1,k);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j+2,k);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
 	    } // for k
@@ -905,12 +911,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i+1,j,k);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i+2,j,k);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for k
@@ -921,11 +927,12 @@ public:
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j-1,k);
-		    dest_cell.fs.gas.p = Pout;
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j-2,k);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
 	    } // for k
@@ -936,12 +943,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i-1,j,k);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i-2,j,k);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for k
@@ -952,12 +959,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j,k+1);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k+2);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for i
@@ -968,12 +975,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j,k-1);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k-2);
-		    dest_cell.fs.gas.p = Pout;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = Tout; 
+		    dest_cell.fs.gas.p = p_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for i
@@ -981,6 +988,174 @@ public:
 	} // end switch
     } // end apply()
 } // end class GhostCellFixedPT
+
+class GhostCellFromStagnation : GhostCellEffect {
+public:
+    FlowState stagnation_condition;
+    string direction_type;
+private:
+    FlowState inflow_condition;
+    double stagnation_entropy;
+    double stagnation_enthalpy;
+
+public:    
+    this(int id, int boundary, in FlowState stagnation_condition,
+	 string direction_type)
+    {
+	super(id, boundary, "FromStagnation");
+	this.stagnation_condition = new FlowState(stagnation_condition);
+	this.direction_type = direction_type;
+	auto gmodel = blk.myConfig.gmodel;
+	stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+	stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+	inflow_condition = new FlowState(stagnation_condition);
+    }
+
+    override string toString() const 
+    {
+	return "FromStagnation(stagnation_condition=" ~ to!string(stagnation_condition) ~ 
+	    ", direction_type=" ~ direction_type ~ ")";
+    }
+
+    void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face)
+    {
+	// [TODO] implement other cases "uniform", "radial", "normal"
+	switch ( direction_type ) {
+	case "normal":
+	default:
+	    vel.refx = speed * face.n.x;
+   	    vel.refy = speed * face.n.y;
+	    vel.refz = speed * face.n.z;
+	}
+    } // end set_velocity_components()
+
+    override void apply(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	FVCell src_cell, dest_cell;
+	FVInterface face;
+	auto gmodel = blk.myConfig.gmodel;
+
+	double p_stag = 0.0;
+	double T_stag = 0.0; // temporary
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    src_cell = blk.get_cell(i,j,k);
+		    dest_cell = blk.get_cell(i,j+1,k);
+		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		    dest_cell = blk.get_cell(i,j+2,k);
+		    dest_cell.fs.gas.p = p_stag;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		} // end i loop
+	    } // for k
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    src_cell = blk.get_cell(i,j,k);
+		    dest_cell = blk.get_cell(i+1,j,k);
+		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		    dest_cell = blk.get_cell(i+2,j,k);
+		    dest_cell.fs.gas.p = p_stag;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		} // end j loop
+	    } // for k
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    src_cell = blk.get_cell(i,j,k);
+		    dest_cell = blk.get_cell(i,j-1,k);
+		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		    dest_cell = blk.get_cell(i,j-2,k);
+		    dest_cell.fs.gas.p = p_stag;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		} // end i loop
+	    } // for k
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    // First, estimate the current bulk inflow condition.
+	    double area = 0.0;
+	    double rhoUA = 0.0; // current mass_flux through boundary
+	    double rhoA = 0.0;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    src_cell = blk.get_cell(i,j,k);
+		    face = src_cell.iface[Face.west];
+		    area += face.area[0];
+		    rhoA += src_cell.fs.gas.rho * face.area[0];
+		    rhoUA += src_cell.fs.gas.rho * dot(src_cell.fs.vel, face.n) * face.area[0];
+		} // end j loop
+	    } // for k
+	    double bulk_speed = rhoUA/rhoA;
+	    // Assume an isentropic process from a known total enthalpy.
+	    double enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
+	    gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
+	    // Now, apply the ghost-cell conditions
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    src_cell = blk.get_cell(i,j,k);
+		    face = src_cell.iface[Face.west];
+		    // Velocity components may vary with position on the block face.
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+		    dest_cell = blk.get_cell(i-1,j,k);
+		    dest_cell.fs.copy_values_from(inflow_condition);
+		    dest_cell = blk.get_cell(i-2,j,k);
+		    dest_cell.fs.copy_values_from(inflow_condition);
+		} // end j loop
+	    } // for k
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    src_cell = blk.get_cell(i,j,k);
+		    dest_cell = blk.get_cell(i,j,k+1);
+		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		    dest_cell = blk.get_cell(i,j,k+2);
+		    dest_cell.fs.gas.p = p_stag;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		} // end j loop
+	    } // for i
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    src_cell = blk.get_cell(i,j,k);
+		    dest_cell = blk.get_cell(i,j,k-1);
+		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		    dest_cell = blk.get_cell(i,j,k-2);
+		    dest_cell.fs.gas.p = p_stag;
+		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+		} // end j loop
+	    } // for i
+	    break;
+	} // end switch
+    } // end apply()
+} // end class GhostCellFixedStagnationPT
 
 class GhostCellFullFaceExchangeCopy : GhostCellEffect {
 public:

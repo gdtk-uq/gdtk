@@ -114,11 +114,14 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+	Q.T[0] = _T1 * exp((s - _s1) / _Cp + _Rgas * log(Q.p/_p1));
+	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+	Q.T[0] = h / _Cp;
+	Q.p = _p1 * exp(_Cp/_Rgas*log(Q.T[0]/_T1) - (s - _s1)/_Rgas);
+	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
     {

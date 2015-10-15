@@ -49,11 +49,24 @@ function ExtrapolateCopy:tojson()
    return str
 end
 
-FixedPT = GhostCellEffect:new{p_out=1.0e5, T_out=300.0}
+FixedPT = GhostCellEffect:new{p_outside=1.0e5, T_outside=300.0}
 FixedPT.type = "fixed_pressure_temperature"
 function FixedPT:tojson()
-   local str = string.format('          {"type": "%s", "p_out": %f, "T_out": %f}',
-			     self.type, self.p_out, self.T_out)
+   local str = string.format('          {"type": "%s", "p_outside": %f, "T_outside": %f}',
+			     self.type, self.p_outside, self.T_outside)
+   return str
+end
+
+FromStagnation = GhostCellEffect:new{stagCondition=nil,
+				     direction_type="normal"}
+-- other options for direction type: uniform, radial, axial
+FromStagnation.type = "from_stagnation_condition"
+function FromStagnation:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "stagnation_condition": %s,',
+			      self.stagCondition:toJSONString())
+   str = str .. string.format(' "direction_type": "%s"', self.direction_type)
+   str = str .. '}'
    return str
 end
 
@@ -251,11 +264,12 @@ function InFlowBC_Supersonic:new(o)
    return o
 end
 
-InFlowBC_FixedStagnationPT = BoundaryCondition:new()
-InFlowBC_FixedStagnationPT.type = "inflow_fixed_stagnation_p_and_t"
-function InFlowBC_FixedStagnationPT:new(o)
+InFlowBC_FromStagnation = BoundaryCondition:new()
+InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
+function InFlowBC_FromStagnation:new(o)
    o = BoundaryCondition.new(self, o)
-   o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} } -- FIX-ME
+   o.preReconAction = { FromStagnation:new{stagCondition=o.stagCondition,
+					   direction_type="normal"} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end
@@ -274,7 +288,7 @@ OutFlowBC_FixedPT.type = "outflow_fixed_p_and_t"
 function OutFlowBC_FixedPT:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
-			FixedPT:new{p_out=o.p_out, T_out=o.T_out} }
+			FixedPT:new{p_outside=o.p_outside, T_outside=o.T_outside} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end
