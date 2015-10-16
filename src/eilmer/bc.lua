@@ -58,14 +58,19 @@ function FixedPT:tojson()
 end
 
 FromStagnation = GhostCellEffect:new{stagCondition=nil,
-				     direction_type="normal"}
+				     direction_type="normal",
+                                     direction_x=1.0, direction_y=0.0, direction_z=0.0,
+                                     alpha=0.0, beta=0.0}
 -- other options for direction type: uniform, radial, axial
 FromStagnation.type = "from_stagnation_condition"
 function FromStagnation:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "stagnation_condition": %s,',
 			      self.stagCondition:toJSONString())
-   str = str .. string.format(' "direction_type": "%s"', self.direction_type)
+   str = str .. string.format(' "direction_type": "%s",', self.direction_type)
+   str = str .. string.format(' "direction_x": %f, "direction_y": %f, "direction_z": %f,',
+			      self.direction_x, self.direction_y, self.direction_z)
+   str = str .. string.format(' "alpha": %f, "beta": %f', self.alpha, self.beta)
    str = str .. '}'
    return str
 end
@@ -269,7 +274,11 @@ InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
 function InFlowBC_FromStagnation:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { FromStagnation:new{stagCondition=o.stagCondition,
-					   direction_type="normal"} }
+					   direction_type=o.direction_type,
+					   direction_x=o.direction_x,
+					   direction_y=o.direction_y,
+					   direction_z=o.direction_z,
+					   alpha=o.alpha, beta=o.beta} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end

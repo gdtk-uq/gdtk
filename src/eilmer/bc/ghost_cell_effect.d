@@ -6,6 +6,7 @@ import std.json;
 import std.string;
 import std.conv;
 import std.stdio;
+import std.math;
 
 import geom;
 import json_helper;
@@ -68,8 +69,15 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
     case "from_stagnation_condition":
 	auto stagnation_condition = new FlowState(jsonData["stagnation_condition"], gmodel);
 	string direction_type = getJSONstring(jsonData, "direction_type", "normal");
+	double direction_x = getJSONdouble(jsonData, "direction_x", 1.0);
+	double direction_y = getJSONdouble(jsonData, "direction_y", 0.0);
+	double direction_z = getJSONdouble(jsonData, "direction_z", 0.0);
+	double alpha = getJSONdouble(jsonData, "alpha", 0.0);
+	double beta = getJSONdouble(jsonData, "beta", 0.0);
 	newGCE = new GhostCellFromStagnation(blk_id, boundary, stagnation_condition,
-					     direction_type);
+					     direction_type, 
+					     Vector3(direction_x, direction_y, direction_z),
+					     alpha, beta);
 	break;
     case "full_face_exchange_copy":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
@@ -993,6 +1001,9 @@ class GhostCellFromStagnation : GhostCellEffect {
 public:
     FlowState stagnation_condition;
     string direction_type;
+    Vector3 direction_vector;
+    double alpha;
+    double beta;
 private:
     FlowState inflow_condition;
     double stagnation_entropy;
@@ -1000,11 +1011,15 @@ private:
 
 public:    
     this(int id, int boundary, in FlowState stagnation_condition,
-	 string direction_type)
+	 string direction_type, in Vector3 vec, double alpha, double beta)
     {
 	super(id, boundary, "FromStagnation");
 	this.stagnation_condition = new FlowState(stagnation_condition);
 	this.direction_type = direction_type;
+	this.direction_vector = vec;
+	this.direction_vector.normalize();
+	this.alpha = alpha;
+	this.beta = beta;
 	auto gmodel = blk.myConfig.gmodel;
 	stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
 	stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
@@ -1014,13 +1029,38 @@ public:
     override string toString() const 
     {
 	return "FromStagnation(stagnation_condition=" ~ to!string(stagnation_condition) ~ 
-	    ", direction_type=" ~ direction_type ~ ")";
+	    ", direction_type=" ~ direction_type ~ 
+	    ", direction_vector=" ~ to!string(direction_vector) ~
+	    ", alpha=" ~ to!string(alpha) ~ ", beta=" ~ to!string(beta) ~ ")";
     }
 
     void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face)
     {
 	// [TODO] implement other cases "uniform", "radial", "normal"
 	switch ( direction_type ) {
+	case "uniform":
+	    // Given a flow direction.
+	    vel.refx = speed * direction_vector.x;
+   	    vel.refy = speed * direction_vector.y;
+	    vel.refz = speed * direction_vector.z;
+	    break;
+	case "axial":
+	    // Axial-flow through a presumably circular surface.
+	    // [TODO] 27-Feb-2014 through 16-Oct-2015 PJ:
+	    // check that this fall-through is OK.
+	case "radial":
+	    // For turbo inflow, beta sets the axial flow.
+	    double vz = speed * sin(beta);
+	    // ...and alpha sets the angle of the flow in the plane of rotation.
+	    double vt = speed * cos(beta) * sin(alpha);
+	    double vr = -speed * cos(beta) * cos(alpha);
+	    double x = face.pos.x;
+	    double y = face.pos.y;
+	    double rxy = sqrt(x*x + y*y);
+	    vel.refx = vr * x/rxy - vt * y/rxy;
+   	    vel.refy = vt * x/rxy + vr * y/rxy;
+	    vel.refz = vz;
+	    break;
 	case "normal":
 	default:
 	    vel.refx = speed * face.n.x;
@@ -1093,17 +1133,25 @@ public:
 	    // First, estimate the current bulk inflow condition.
 	    double area = 0.0;
 	    double rhoUA = 0.0; // current mass_flux through boundary
+	    double rhovxA = 0.0; // mass-weighted x-velocity
+	    double rhovyA = 0.0;
+	    double rhovzA = 0.0;
 	    double rhoA = 0.0;
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    src_cell = blk.get_cell(i,j,k);
-		    face = src_cell.iface[Face.west];
+		    auto cell = blk.get_cell(i,j,k);
+		    face = cell.iface[Face.west];
 		    area += face.area[0];
-		    rhoA += src_cell.fs.gas.rho * face.area[0];
-		    rhoUA += src_cell.fs.gas.rho * dot(src_cell.fs.vel, face.n) * face.area[0];
+		    double local_rhoA = cell.fs.gas.rho * face.area[0];
+		    rhoA += local_rhoA;
+		    rhoUA += local_rhoA * dot(cell.fs.vel, face.n);
+		    rhovxA += local_rhoA * cell.fs.vel.x;
+		    rhovyA += local_rhoA * cell.fs.vel.y;
+		    rhovzA += local_rhoA * cell.fs.vel.z;
 		} // end j loop
 	    } // for k
-	    double bulk_speed = rhoUA/rhoA;
+	    // double bulk_speed = rhoUA/rhoA; // for mass flux calc
+	    double bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
 	    // Assume an isentropic process from a known total enthalpy.
 	    double enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
 	    gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
