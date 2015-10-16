@@ -43,8 +43,8 @@ final class ReactionUpdateScheme {
 	rmech = createReactionMechanism(L, gmodel);
 	lua_close(L);
 	// Just hard code selection of RKF for present.
-	//cstep = new RKFStep(gmodel, rmech, 1.0e-3);
-	cstep = new AlphaQssStep(gmodel, rmech);
+	cstep = new RKFStep(gmodel, rmech, 1.0e-3);
+	// cstep = new AlphaQssStep(gmodel, rmech);
 	tightTempCoupling = false;
 	maxSubcycles = MAX_SUBCYCLES;
 	maxAttempts = MAX_STEP_ATTEMPTS;
@@ -82,9 +82,9 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
     double t = 0.0;
     double h;
     if ( dtSuggest > tInterval )
-	h = dtSuggest;
+	h = tInterval;
     else if ( dtSuggest <= 0.0 )
-	h = rmech.estimateStepSize(conc0);
+        h = rmech.estimateStepSize(conc0);
     else
 	h = dtSuggest;
     double dtSave = h;
@@ -108,7 +108,7 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 		 * so increment the total time.
 		 */       
 		t += h;
-		foreach ( i; 0..conc0.length ) conc0[i] = concOut[i];
+		 foreach ( i; 0..conc0.length ) conc0[i] = concOut[i];
 		/* We can now make some decision about how to
 		 * increase the timestep. We will take some
 		 * guidance from the ODE step, but also check
@@ -355,7 +355,6 @@ private:
     double[] _k1, _k2, _k3, _k4, _k5, _k6;
 }
 
-
 /++
  + The Alpha-QSS method, specialised to work
  + with a chemical kinetic ODE.
@@ -453,7 +452,7 @@ public:
         hSuggest = step_suggest(h, _yc, _yp0);
 	return ResultOfStep.failure;
     }
-    
+
 private:
     int _ndim;
     double[] _yTmp, _yp, _yp0,  _yc, _q0, _L0, _p0, _pp, _qtilda, _pbar, _qp, _Lp, _alpha, _alphabar;
