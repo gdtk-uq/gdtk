@@ -155,7 +155,9 @@ public:
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+	Q.rho = getRho_sh(s,h);
+	Q.T[0] = getT_hrho(h,Q.rho);
+	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
     }
     override void update_sound_speed(GasState Q) const
     {
@@ -200,7 +202,7 @@ public:
     }
     override double enthalpy(in GasState Q) const
     {
-	return Q.e[0] + Q.p/Q.rho;
+	return updateEnthalpy_rhoT_original(Q.rho, Q.T[0]);
     }
     override double entropy(in GasState Q) const
     {
@@ -393,7 +395,6 @@ private:
 	}
 	return f(rho, T);
 	}
-
     const double updatePressure_rhoT(double rho, double T){
     	string extrapType = "pressure";
 		return extrapolate_rhoT_function!updatePressure_rhoT_original(rho, T,extrapType);
@@ -410,7 +411,13 @@ private:
    	string extrapType = "quality";
 	return extrapolate_rhoT_function!updateEnergy_rhoT_original(rho, T,extrapType);
    }
-   
+   const double updateEnthalpy_rhoT(double rho, double T){
+   	string extrapType = "quality";
+   	return extrapolate_rhoT_function!updateEnthalpy_rhoT_original(rho, T, extrapType);
+   }
+   const double updateEnthalpy_rhoT_original(double rho, double T){
+   	return updateEnergy_rhoT_original(rho, T) + updatePressure_rhoT_original(rho, T)/rho;
+   }
    const double updateEnergy_rhoT_original(double rho, double T){
 	//Derivatives of Helmholtz energy w.r.t. reduced temperature give internal energy
 	//See p867 of Sengers et al. EQUATIONS of STATE for FLUIDS and FLUID MIXTURES
@@ -754,8 +761,28 @@ const double getRho_EntropyP(double s, double P){
 	auto zeroEntropy_rho = delegate (double rho){
 		return s-getEntropy_prho(P, rho);
 	};
-	return solve!zeroEntropy_rho(0.1,1600,0.0001);
+	return solve!zeroEntropy_rho(0.009,1600,0.0001);
 }
+
+//-----------FUNCTIONS TO UPDATE FROM H, S
+const double getT_hrho(double h, double rho, double tol = 0.001){
+	auto zeroEnthalpy_T = delegate (double T){
+		return updateEnthalpy_rhoT(rho, T) - h;};
+	return solve!zeroEnthalpy_T(80,4000,tol);
+	}
+
+const double getEntropy_hrho(double h, double rho){
+	double T = getT_hrho(h,rho);
+	return updateEntropy_rhoT(rho,T);
+}
+
+const double getRho_sh(double s, double h){
+	auto zeroEntropy_rho = delegate(double rho){
+		return getEntropy_hrho(h,rho)-s;
+	};
+	return solve!zeroEntropy_rho(0.0009,1600,0.0001);
+}
+
 const double get_d_alphar_d_delta(double tau, double delta){
 	double d_alphar_d_delta = 0;
 	for(int i = 1; i != 8; i++){
