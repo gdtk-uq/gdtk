@@ -25,107 +25,170 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     // Look for fields that may be present.
     lua_getfield(L, 1, "base_file_name");
-    if (!lua_isnil(L, -1)) GlobalConfig.base_file_name = to!string(luaL_checkstring(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.base_file_name = to!string(luaL_checkstring(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "base_file_name");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "title");
-    if (!lua_isnil(L, -1)) GlobalConfig.title = to!string(luaL_checkstring(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.title = to!string(luaL_checkstring(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "title");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "gas_model_file");
-    if (!lua_isnil(L, -1)) GlobalConfig.gas_model_file = to!string(luaL_checkstring(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.gas_model_file = to!string(luaL_checkstring(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "gas_model_file");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "nBlocks");
-    if (!lua_isnil(L, -1)) GlobalConfig.nBlocks = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.nBlocks = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "nBlocks");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "dimensions");
-    if (!lua_isnil(L, -1)) GlobalConfig.dimensions = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.dimensions = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "dimensions");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "axisymmetric");
-    if (!lua_isnil(L, -1)) GlobalConfig.axisymmetric = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.axisymmetric = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "axisymmetric");
+    }
     lua_pop(L, 1);
     
     lua_getfield(L, 1, "MHD");
-    if (!lua_isnil(L, -1)) GlobalConfig.MHD = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.MHD = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "MHD");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "gasdynamic_update_scheme");
     if (!lua_isnil(L, -1)) {
 	string name = to!string(luaL_checkstring(L, -1));
 	GlobalConfig.gasdynamic_update_scheme = update_scheme_from_name(name);
+	lua_pushnil(L); lua_setfield(L, 1, "gasdynamic_update_scheme");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "separate_update_for_viscous_terms");
-    if (!lua_isnil(L, -1)) 
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.separate_update_for_viscous_terms = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "separate_update_for_viscous_terms");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "separate_update_for_k_omega_source");
-    if (!lua_isnil(L, -1)) 
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.separate_update_for_k_omega_source = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "separate_update_for_k_omega_source");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "apply_bcs_in_parallel");
-    if (!lua_isnil(L, -1)) 
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.apply_bcs_in_parallel = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "apply_bcs_in_parallel");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "adjust_invalid_cell_data");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.adjust_invalid_cell_data = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "adjust_invalid_cell_data");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "max_invalid_cells");
-    if (!lua_isnil(L, -1)) GlobalConfig.max_invalid_cells = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.max_invalid_cells = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "max_invalid_cells");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "dt_reduction_factor");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.dt_reduction_factor = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "dt_reduction_factor");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "interpolation_order");
-    if (!lua_isnil(L, -1)) GlobalConfig.interpolation_order = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.interpolation_order = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "interpolation_order");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "thermo_interpolator");
     if (!lua_isnil(L, -1)) {
 	string name = to!string(luaL_checkstring(L, -1));
 	GlobalConfig.thermo_interpolator = thermo_interpolator_from_name(name);
+	lua_pushnil(L); lua_setfield(L, 1, "thermo_interpolator");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "apply_limiter");
-    if (!lua_isnil(L, -1)) GlobalConfig.apply_limiter = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.apply_limiter = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "apply_limiter");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "extrema_clipping");
-    if (!lua_isnil(L, -1)) GlobalConfig.extrema_clipping = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.extrema_clipping = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "extrema_clipping");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "interpolate_in_local_frame");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.interpolate_in_local_frame = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "interpolate_in_local_frame");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "flux_calculator");
     if (!lua_isnil(L, -1)) {
 	string name = to!string(luaL_checkstring(L, -1));
 	GlobalConfig.flux_calculator = flux_calculator_from_name(name);
+	lua_pushnil(L); lua_setfield(L, 1, "flux_calculator");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "shear_tolerance");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.shear_tolerance = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "shear_tolerance");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "M_inf");
-    if (!lua_isnil(L, -1)) GlobalConfig.M_inf = to!double(luaL_checknumber(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.M_inf = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "M_inf");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "compression_tolerance");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.compression_tolerance = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "compression_tolerance");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "moving_grid");
-    if (!lua_isnil(L, -1)) GlobalConfig.moving_grid = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.moving_grid = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "moving_grid");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "write_vertex_velocities");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.write_vertex_velocities = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "write_vertex_velocities");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "viscous");
-    if (!lua_isnil(L, -1)) GlobalConfig.viscous = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.viscous = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "viscous");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "spatial_deriv_calc");
     if (!lua_isnil(L, -1)) {
@@ -134,136 +197,245 @@ extern(C) int configSetFromTable(lua_State* L)
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_factor");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.viscous_factor = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "viscous_factor");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_factor_increment");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.viscous_factor_increment = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "viscous_factor_increment");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_delay");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.viscous_delay = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "viscous_delay");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_signal_factor");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.viscous_signal_factor = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "viscous_signal_factor");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "diffusion");
-    if (!lua_isnil(L, -1)) GlobalConfig.diffusion = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.diffusion = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "diffusion");
+    }
     lua_pop(L, 1);
     // [TODO] other diffusion control parameters
-
 
     lua_getfield(L, 1, "turbulence_model");
     if (!lua_isnil(L, -1)) {
 	string name = to!string(luaL_checkstring(L, -1));
 	GlobalConfig.turbulence_model = turbulence_model_from_name(name);
+	lua_pushnil(L); lua_setfield(L, 1, "turbulence_model");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "turbulence_prandtl_number");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.turbulence_prandtl_number = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "turbulence_prandtl_number");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "turbulence_schmidt_number");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.turbulence_schmidt_number = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "turbulence_schmidt_number");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "max_mu_t_factor");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.max_mu_t_factor = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "max_mu_t_factor");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "transient_mu_t_factor");
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
 	GlobalConfig.transient_mu_t_factor = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "transient_mu_t_factor");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "reacting");
-    if (!lua_isnil(L, -1)) GlobalConfig.reacting = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.reacting = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "reacting");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "reactions_file");
-    if (!lua_isnil(L, -1)) GlobalConfig.reactions_file = to!string(luaL_checkstring(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.reactions_file = to!string(luaL_checkstring(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "reactions_file");
+    }
     lua_pop(L, 1);
 
 
     lua_getfield(L, 1, "max_step");
-    if (!lua_isnil(L, -1)) GlobalConfig.max_step = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.max_step = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "max_step");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "halt_now");
-    if (!lua_isnil(L, -1)) GlobalConfig.halt_now = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.halt_now = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "halt_now");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "print_count");
-    if (!lua_isnil(L, -1)) GlobalConfig.print_count = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.print_count = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "print_count");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "control_count");
-    if (!lua_isnil(L, -1)) GlobalConfig.control_count = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.control_count = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "control_count");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "verbosity_level");
-    if (!lua_isnil(L, -1)) GlobalConfig.verbosity_level = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.verbosity_level = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "verbosity_level");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "max_time");
-    if (!lua_isnil(L, -1)) GlobalConfig.max_time = to!double(luaL_checknumber(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.max_time = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "max_time");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "dt_init");
-    if (!lua_isnil(L, -1)) GlobalConfig.dt_init = to!double(luaL_checknumber(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.dt_init = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "dt_init");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "dt_max");
-    if (!lua_isnil(L, -1)) GlobalConfig.dt_max = to!double(luaL_checknumber(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.dt_max = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "dt_max");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "cfl_value");
-    if (!lua_isnil(L, -1)) GlobalConfig.cfl_value = to!double(luaL_checknumber(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.cfl_value = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "cfl_value");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "stringent_cfl");
-    if (!lua_isnil(L, -1)) GlobalConfig.stringent_cfl = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.stringent_cfl = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "stringent_cfl");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "cfl_count");
-    if (!lua_isnil(L, -1)) GlobalConfig.cfl_count = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.cfl_count = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "cfl_count");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "fixed_time_step");
-    if (!lua_isnil(L, -1)) GlobalConfig.fixed_time_step = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.fixed_time_step = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "fixed_time_step");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "write_at_step");
-    if (!lua_isnil(L, -1)) GlobalConfig.write_at_step = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.write_at_step = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "write_at_step");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "dt_plot");
-    if (!lua_isnil(L, -1)) GlobalConfig.dt_plot = to!double(luaL_checknumber(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.dt_plot = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "dt_plot");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "dt_history");
-    if (!lua_isnil(L, -1)) GlobalConfig.dt_history = to!double(luaL_checknumber(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.dt_history = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "dt_history");
+    }
     lua_pop(L, 1);
     //
     lua_getfield(L, 1, "udf_source_terms_file");
-    if (!lua_isnil(L, -1)) GlobalConfig.udf_source_terms_file = to!string(luaL_checkstring(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.udf_source_terms_file = to!string(luaL_checkstring(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "udf_source_terms_file");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "udf_source_terms");
-    if (!lua_isnil(L, -1)) GlobalConfig.udf_source_terms = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.udf_source_terms = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "udf_source_terms");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "block_marching");
-    if (!lua_isnil(L, -1)) GlobalConfig.block_marching = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.block_marching = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "block_marching");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "nib");
-    if (!lua_isnil(L, -1)) GlobalConfig.nib = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.nib = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "nib");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "njb");
-    if (!lua_isnil(L, -1)) GlobalConfig.njb = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.njb = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "njb");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "nkb");
-    if (!lua_isnil(L, -1)) GlobalConfig.nkb = luaL_checkint(L, -1);
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.nkb = luaL_checkint(L, -1);
+	lua_pushnil(L); lua_setfield(L, 1, "nkb");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "propagate_inflow_data");
-    if (!lua_isnil(L, -1)) GlobalConfig.propagate_inflow_data = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.propagate_inflow_data = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "propagate_inflow_data");
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, 1, "udf_solid_source_terms_file");
-    if (!lua_isnil(L, -1)) GlobalConfig.udfSolidSourceTermsFile = to!string(luaL_checkstring(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.udfSolidSourceTermsFile = to!string(luaL_checkstring(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "udf_solid_source_terms_file");
+    }
     lua_pop(L, 1);
     lua_getfield(L, 1, "udf_solid_source_terms");
-    if (!lua_isnil(L, -1)) GlobalConfig.udfSolidSourceTerms = to!bool(lua_toboolean(L, -1));
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.udfSolidSourceTerms = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "udf_solid_source_terms");
+    }
     lua_pop(L, 1);
 
+    // Look for unused keys. These are unsupported keys that the user
+    // has supplied. Give a warning.
+    // PJ: Should we error at this point so that the user can't
+    //     ignore the error?
+    lua_pushnil(L);
+    while ( lua_next(L, 1) != 0 ) {
+	string key = to!string(lua_tostring(L, -2));
+	writeln("WARNING: -----------------------------------------------------------------------------");
+	writeln(format("WARNING: The configuration option '%s' is not supported. It has been ignored.", key));
+	writeln("WARNING: -----------------------------------------------------------------------------");
+	lua_pop(L, 1);
+    }
 
     return 0;
 } // end configSetFromTable()
