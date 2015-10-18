@@ -1,4 +1,4 @@
--- swbli-cht.lua
+-- swbli.lua
 -- Anand V, 10-October-2015
 -- Adapted PJ's script of the model of Hakkinen et al's 1959 experiment
 

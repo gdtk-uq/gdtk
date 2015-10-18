@@ -140,5 +140,8 @@ class GzipOut {
   void finish() {
     auto compressed = compressObj.flush();
     f.rawWrite(compressed);
+    // 2015-Oct-18 PJ Let's force the clean-up in the file system.
+    f.flush();
+    f.close();
   }
 }
