@@ -179,7 +179,7 @@ const(T) pushObj(T, string metatableName)(lua_State* L, T obj)
  * This function looks for an object of type T
  * at the specified index in lua_State. A error is
  * raised by luaL_checkudata is the object is not of type
- * FlowState.
+ * metaTableName.
  */
 
 T checkObj(T, string metatableName)(lua_State* L, int index)

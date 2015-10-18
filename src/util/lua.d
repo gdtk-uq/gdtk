@@ -10,6 +10,8 @@ const LUA_TBOOLEAN = 1;
 const LUA_TTABLE = 5;
 const LUA_TFUNCTION = 6;
 
+
+
 struct lua_State {}
 alias int function(lua_State* L) lua_CFunction;
 alias double lua_Number;
@@ -43,6 +45,7 @@ int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc);
 
 
 int lua_setmetatable(lua_State* L, int idx);
+int lua_next(lua_State *L, int idx);
 
 int lua_isnumber(lua_State* L, int idx);
 int lua_isstring(lua_State* L, int idx);
