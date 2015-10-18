@@ -58,7 +58,7 @@ identifyBlockConnections()
 config.gasdynamic_update_scheme = "classic-rk3"
 config.flux_calculator = 'adaptive'
 config.viscous = true
-config.cfl = 1.0
+config.cfl_value = 1.0
 config.max_time = 5.0*L2/u_inf -- time in flow lengths
 config.max_step = 200000
 config.dt_init = 1.0e-8
