@@ -30,6 +30,7 @@ import luaunifunction;
 import luasgrid;
 import luasolidprops;
 import postprocess;
+import luaflowsolution;
 
 void main(string[] args)
 {
@@ -63,6 +64,9 @@ void main(string[] args)
     msg       ~= "         [--norms=\"varName,varName,...\"] report L1,L2,Linf norms\n";
     msg       ~= "         [--region=\"x0,y0,z0,x1,y1,z1\"]  limit norms calculation to a box\n";
     msg       ~= "\n";
+    msg       ~= "         [--custom-post]             run custom post-processing script\n";
+    msg       ~= "         [--script-file=<string>]    defaults to post.lua\n";
+    msg       ~= "\n";
     msg       ~= "         [--help]                    writes this message\n";
     if ( args.length < 2 ) {
 	writeln("Too few arguments.");
@@ -90,6 +94,8 @@ void main(string[] args)
     string probeStr = "";
     string normsStr = "";
     string regionStr = "";
+    bool customPostFlag = false;
+    string scriptFile = "post.lua";
     bool helpWanted = false;
     try {
 	getopt(args,
@@ -114,6 +120,8 @@ void main(string[] args)
 	       "probe", &probeStr,
 	       "norms", &normsStr,
 	       "region", &regionStr,
+	       "custom-post", &customPostFlag,
+	       "script-file", &scriptFile,
 	       "help", &helpWanted
 	       );
     } catch (Exception e) {
@@ -218,6 +226,22 @@ void main(string[] args)
 		     normsStr, regionStr);
 	writeln("Done postprocessing.");
     } // end if postFlag
+
+    if (customPostFlag) {
+	writeln("Begin custom post-processing using user-supplied script.");
+	writeln("Start lua connection.");
+	auto L = luaL_newstate();
+	luaL_openlibs(L);
+	registerVector3(L);
+	registerGlobalConfig(L);
+	registerFlowSolution(L);
+	if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
+	    writeln("There was a problem in the user-supplied input lua script: ", scriptFile);
+	    string errMsg = to!string(lua_tostring(L, -1));
+	    throw new Error(errMsg);
+	}
+	writeln("Done custom postprocessing.");
+    } // end if customPostFlag
 } // end main()
 
 
