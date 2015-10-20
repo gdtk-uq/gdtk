@@ -25,7 +25,7 @@ import gas.gas_model;
 import gas.physical_constants;
 import gas.thermo.evt_eos;
 import gas.thermo.cea_thermo_curves;
-import ridder;
+import brent; //ridder
 import util.lua;
 import util.lua_service;
 
