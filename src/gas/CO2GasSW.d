@@ -69,15 +69,25 @@ public:
 	string a_rhoe_filename = getString(L, -1, "a_rhoe_file");
 	string T_rhoe_filename = getString(L, -1, "T_rhoe_file");
 	string e_rho_sat_table_filename = getString(L, -1, "e_rho_sat_file");
+	string rho_sh_filename = getString(L, -1, "rho_sh_file");
+	string T_sh_filename = getString(L, -1, "T_sh_file");
+	lookup_hsFlag = getInt(L,-1, "lookup_hsFlag");
+	lookup_rhoeFlag = getInt(L,-1, "lookup_rhoeFlag");
 	lua_pop(L,1);
 	// Compute derived parameters
 	//_Rgas = R_universal/_mol_masses[0];
 	//_Cv = _Rgas / (_gamma - 1.0);
 	//_Cp = _Rgas*_gamma/(_gamma - 1.0);
-	P_rhoe_Tree = buildTree_fromFile(p_rhoe_filename);
-	a_rhoe_Tree = buildTree_fromFile(a_rhoe_filename);
-	T_rhoe_Tree = buildTree_fromFile(T_rhoe_filename);
-	e_rho_sat_table = new uni_lut(e_rho_sat_table_filename);
+	if (lookup_rhoeFlag){
+		P_rhoe_Tree = buildTree_fromFile(p_rhoe_filename);
+		a_rhoe_Tree = buildTree_fromFile(a_rhoe_filename);
+		T_rhoe_Tree = buildTree_fromFile(T_rhoe_filename);
+		e_rho_sat_table = new uni_lut(e_rho_sat_table_filename);
+	}
+	if (lookup_hsFlag){
+		rho_sh_Tree = buildTree_fromFile(rho_sh_filename);
+		T_sh_Tree = buildTree_fromFile(T_sh_filename);
+	}
     }
 
     this(string e_rho_sat_table_filename){
@@ -115,16 +125,21 @@ public:
     override void update_thermo_from_rhoe(GasState Q) const
     {
 	assert(Q.e.length == 1, "incorrect length of energy array");
-	//Q.T[0] = updateTemperature_rhoe(Q.rho, Q.e[0]);
-	//Q.p = updatePressure_rhoT(Q.rho,Q.T[0]);
-	//following line assumes that both T and P trees constructed with same bounds
-	double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
+	if (lookup_rhoeFlag){
+		//following line assumes that both T and P trees constructed with same bounds
+		double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
 						T_rhoe_Tree.X_min,
 						T_rhoe_Tree.X_max,
 						T_rhoe_Tree.Y_min,
 						T_rhoe_Tree.Y_max);
-	Q.T[0] = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
-	Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+		Q.T[0] = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+		Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+	}
+	else{
+		Q.T[0] = updateTemperature_rhoe(Q.rho, Q.e[0]);
+		Q.p = updatePressure_rhoT(Q.rho,Q.T[0]);
+	}
+	
 	//Q.T[0] = T_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
 	//Q.p = P_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
     }
@@ -149,25 +164,32 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	Q.rho = getRho_EntropyP(s,Q.p);
-	Q.T[0] = getT_p_rho(Q.p,Q.rho);//potential here to modify getRho_EntropyP so it spits out T
+	Q.rho = getRho_EntropyP(s,Q.p, Q.T[0]);//Q.T[0] is modified by function
 	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	Q.rho = getRho_sh(s,h);
-	Q.T[0] = getT_hrho(h,Q.rho);
+	if (lookup_hsFlag){
+		Q.rho = rho_sh_Tree.search(s,h).interpolateF(s,h);
+		Q.T[0] = T_sh_Tree.search(s,h).interpolateF(s,h);}
+	else{
+		Q.rho = getRho_sh(s,h, Q.T[0]);
+		}
 	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
     }
     override void update_sound_speed(GasState Q) const
     {
-	//Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T[0]);
-	double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
+	if (lookup_rhoeFlag){
+		double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
 						a_rhoe_Tree.X_min,
 						a_rhoe_Tree.X_max,
 						a_rhoe_Tree.Y_min,
 						a_rhoe_Tree.Y_max);
-	Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+		Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+	}	
+	else {
+		Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T[0]);
+	}
 	//Q.a = a_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
     }
     override void update_trans_coeffs(GasState Q) const
@@ -194,7 +216,7 @@ public:
 	}
     override double gas_constant(in GasState Q) const
     {
-	return R_universal/_mol_masses[0];
+	return _Rgas;
     }
     override double internal_energy(in GasState Q) const
     {
@@ -340,13 +362,16 @@ private:
 	Tree T_rhoe_Tree;
 	Tree P_rhoe_Tree;
 	Tree a_rhoe_Tree;
+	Tree rho_sh_Tree;
+	Tree T_sh_Tree;
+	int lookup_hsFlag = 1;
+	int lookup_rhoeFlag = 1;
 	uni_lut e_rho_sat_table;
     
     //define some functions that will be available to the functions in the private area  
     const double extrapolate_rhoT_function(alias f)(double rho, double T,string extrapType = "constant")
-	if (is(typeof(f(400.0, 400.0))==double))
-	//extrapoaltes a function mapped on rho, T, default is constant F along T, other option is 'linear'
-	{
+	if (is(typeof(f(400.0, 400.0))==double)){
+	//extrapoaltes a function mapped on rho, T
 	double rho_satvap;
 	double rho_satliq;
 	if (T < _Tc){
@@ -753,13 +778,13 @@ const double getT_p_rho(double p, double rho, double tol = 0.001){
 	return T;
 
 } 
-const double getEntropy_prho(double p, double rho){
-	double T = getT_p_rho(p,rho);
+const double getEntropy_prho(double p, double rho, ref double T){
+	T = getT_p_rho(p,rho);
 	return updateEntropy_rhoT(rho, T);
 }
-const double getRho_EntropyP(double s, double P){
+const double getRho_EntropyP(double s, double P, ref double T){
 	auto zeroEntropy_rho = delegate (double rho){
-		return s-getEntropy_prho(P, rho);
+		return s-getEntropy_prho(P, rho,T);
 	};
 	return solve!zeroEntropy_rho(0.009,1600,0.0001);
 }
@@ -771,14 +796,14 @@ const double getT_hrho(double h, double rho, double tol = 0.001){
 	return solve!zeroEnthalpy_T(80,4000,tol);
 	}
 
-const double getEntropy_hrho(double h, double rho){
-	double T = getT_hrho(h,rho);
+const double getEntropy_hrho(double h, double rho, ref double T){
+	T = getT_hrho(h,rho);
 	return updateEntropy_rhoT(rho,T);
 }
 
-const double getRho_sh(double s, double h){
+const double getRho_sh(double s, double h, ref double T){
 	auto zeroEntropy_rho = delegate(double rho){
-		return getEntropy_hrho(h,rho)-s;
+		return getEntropy_hrho(h,rho,T)-s;
 	};
 	return solve!zeroEntropy_rho(0.0009,1600,0.0001);
 }
