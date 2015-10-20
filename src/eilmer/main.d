@@ -136,14 +136,14 @@ void main(string[] args)
 	write(msg);
 	exit(0);
     }
-    if (jobName.length == 0) {
-	writeln("Need to specify a job name.");
-	write(msg);
-	exit(1);
-    }
 
     if (prepFlag) {
 	writeln("Begin preparation stage for a simulation.");
+	if (jobName.length == 0) {
+	    writeln("Need to specify a job name.");
+	    write(msg);
+	    exit(1);
+	}
 	writeln("Start lua connection.");
 	auto L = luaL_newstate();
 	luaL_openlibs(L);
@@ -175,6 +175,11 @@ void main(string[] args)
     } // end if prepFlag
 
     if (runFlag) {
+	if (jobName.length == 0) {
+	    writeln("Need to specify a job name.");
+	    write(msg);
+	    exit(1);
+	}
 	GlobalConfig.base_file_name = jobName;
 	GlobalConfig.verbosity_level = verbosityLevel;
 	maxCPUs = min(max(maxCPUs, 1), totalCPUs); // don't ask for more than available
@@ -199,6 +204,11 @@ void main(string[] args)
     } // end if runFlag
 
     if (postFlag) {
+	if (jobName.length == 0) {
+	    writeln("Need to specify a job name.");
+	    write(msg);
+	    exit(1);
+	}
 	GlobalConfig.base_file_name = jobName;
 	GlobalConfig.verbosity_level = verbosityLevel;
 	if (verbosityLevel > 0) {
@@ -229,6 +239,9 @@ void main(string[] args)
 
     if (customPostFlag) {
 	writeln("Begin custom post-processing using user-supplied script.");
+	// For this case, there is very little job context loaded and
+	// after loading a couple of libraries, we pretty much hand over
+	// to a Lua file to do everything.
 	writeln("Start lua connection.");
 	auto L = luaL_newstate();
 	luaL_openlibs(L);
@@ -236,7 +249,7 @@ void main(string[] args)
 	registerGlobalConfig(L);
 	registerFlowSolution(L);
 	if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
-	    writeln("There was a problem in the user-supplied input lua script: ", scriptFile);
+	    writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
 	    string errMsg = to!string(lua_tostring(L, -1));
 	    throw new Error(errMsg);
 	}

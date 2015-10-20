@@ -2,7 +2,7 @@
  * luaflowsolution.d
  * Lua interface to the FlowSolution object for use in postprocessing.
  *
- * Authors: Peter Ja dna Rowan G.
+ * Authors: Peter J and Rowan G.
  * Version: 2015-10-20 Initial cut.
  */
 
@@ -16,8 +16,9 @@ import std.conv;
 import std.traits;
 import util.lua;
 import util.lua_service;
-import globalconfig;
-import luaglobalconfig;
+import geom;
+import luageom;
+import sgrid;
 import flowsolution;
 
 /// name for FlowSolution object in Lua scripts.
@@ -38,17 +39,10 @@ FlowSolution checkFlowSolution(lua_State* L, int index)
  */
 extern(C) int newFlowSolution(lua_State* L)
 {
-    auto managedGasModel = GlobalConfig.gmodel_master;
-    if ( managedGasModel is null ) {
-	string errMsg = `Error in call to FlowSolution:new.
-It appears that you have not yet set the GasModel.
-Be sure to call setGasModel(fname) before using a FlowSolution object.`;
-	luaL_error(L, errMsg.toStringz);
-    }
-
     lua_remove(L, 1); // Remove first argument "this".
     if ( !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to FlowSolution:new. A table is expected as first argument.";
+	string errMsg = "Error in call to FlowSolution:new.";
+	errMsg ~= " A table is expected as first (and only) argument.";
 	luaL_error(L, errMsg.toStringz);
     }
 
@@ -117,6 +111,262 @@ Be sure to call setGasModel(fname) before using a FlowSolution object.`;
 } // end newFlowSolution()
 
 
+extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if ( !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to FlowSolution:find_nearest_cell_centre.";
+	errMsg ~= " A table is expected as first (and only) argument to the method.";
+	luaL_error(L, errMsg.toStringz);
+    }
+
+    double x;
+    lua_getfield(L, 2, "x");
+    if ( lua_isnil(L, -1) ) {
+	x = 0.0;
+    } else if ( lua_isnumber(L, -1) ) {
+	x = to!double(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:find_nearest_cell_centre.";
+	errMsg ~= " A field for x was found, but the content was not valid.";
+	errMsg ~= " The x field, if given, should be a double.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    double y;
+    lua_getfield(L, 2, "y");
+    if ( lua_isnil(L, -1) ) {
+	y = 0.0;
+    } else if ( lua_isnumber(L, -1) ) {
+	y = to!double(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:find_nearest_cell_centre.";
+	errMsg ~= " A field for y was found, but the content was not valid.";
+	errMsg ~= " The y field, if given, should be a double.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    double z;
+    lua_getfield(L, 2, "z");
+    if ( lua_isnil(L, -1) ) {
+	z = 0.0;
+    } else if ( lua_isnumber(L, -1) ) {
+	z = to!double(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:find_nearest_cell_centre.";
+	errMsg ~= " A field for z was found, but the content was not valid.";
+	errMsg ~= " The z field, if given, should be a double.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    auto indices = fsol.find_nearest_cell_centre(x, y, z);
+
+    lua_settop(L, 0); // clear stack
+    lua_newtable(L); // anonymous table { }
+    auto tblIndx = lua_gettop(L);
+    lua_pushnumber(L, indices[0]);
+    lua_setfield(L, tblIndx, "ib");
+    lua_pushnumber(L, indices[1]);
+    lua_setfield(L, tblIndx, "i");
+    lua_pushnumber(L, indices[2]);
+    lua_setfield(L, tblIndx, "j");
+    lua_pushnumber(L, indices[3]);
+    lua_setfield(L, tblIndx, "k");
+    return 1; // Just the table of indices is left on the stack.
+} // end find_nearest_cell_centre_from_lua()
+
+
+extern(C) int get_nic(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    int ib = to!int(luaL_checknumber(L, 2));
+    lua_settop(L, 0);
+    lua_pushnumber(L, fsol.flowBlocks[ib].nic);
+    return 1;
+}
+
+extern(C) int get_njc(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    int ib = to!int(luaL_checknumber(L, 2));
+    lua_settop(L, 0);
+    lua_pushnumber(L, fsol.flowBlocks[ib].njc);
+    return 1;
+}
+
+extern(C) int get_nkc(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    int ib = to!int(luaL_checknumber(L, 2));
+    lua_settop(L, 0);
+    lua_pushnumber(L, fsol.flowBlocks[ib].nkc);
+    return 1;
+}
+
+
+extern(C) int get_vtx_pos(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if ( !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
+	errMsg ~= " A table is expected as first (and only) argument to the method.";
+	luaL_error(L, errMsg.toStringz);
+    }
+
+    int ib;
+    lua_getfield(L, 2, "ib");
+    if ( lua_isnil(L, -1) ) {
+	ib = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	ib = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
+	errMsg ~= " A field for ib was found, but the content was not valid.";
+	errMsg ~= " The ib field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    int i;
+    lua_getfield(L, 2, "i");
+    if ( lua_isnil(L, -1) ) {
+	i = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	i = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
+	errMsg ~= " A field for i was found, but the content was not valid.";
+	errMsg ~= " The i field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    int j;
+    lua_getfield(L, 2, "j");
+    if ( lua_isnil(L, -1) ) {
+	j = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	j = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
+	errMsg ~= " A field for j was found, but the content was not valid.";
+	errMsg ~= " The j field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    int k;
+    lua_getfield(L, 2, "k");
+    if ( lua_isnil(L, -1) ) {
+	k = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	k = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_vtx_pos.";
+	errMsg ~= " A field for k was found, but the content was not valid.";
+	errMsg ~= " The k field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+    Vector3 vtx = fsol.gridBlocks[ib][i, j, k];
+    lua_settop(L, 0);
+    return pushVector3(L, vtx);
+} // end get_vtx_pos()
+
+
+extern(C) int get_var_names(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    lua_settop(L, 0); // clear stack
+    lua_newtable(L); // anonymous table { }
+    auto tblIndx = lua_gettop(L);
+    foreach (ivar; 0 .. fsol.flowBlocks[0].variableNames.length) {
+	lua_pushstring(L, fsol.flowBlocks[0].variableNames[ivar].toStringz);
+	lua_rawseti(L, tblIndx, to!int(ivar+1)); // Lua table indexing starts from 1
+    }
+    return 1; // Just the table of indices is left on the stack.
+} // end get_var_names()
+
+
+extern(C) int get_cell_data(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if ( !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to FlowSolution:get_cell_data.";
+	errMsg ~= " A table is expected as first (and only) argument to the method.";
+	luaL_error(L, errMsg.toStringz);
+    }
+
+    int ib;
+    lua_getfield(L, 2, "ib");
+    if ( lua_isnil(L, -1) ) {
+	ib = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	ib = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_cell_data.";
+	errMsg ~= " A field for ib was found, but the content was not valid.";
+	errMsg ~= " The ib field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    int i;
+    lua_getfield(L, 2, "i");
+    if ( lua_isnil(L, -1) ) {
+	i = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	i = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_cell_data.";
+	errMsg ~= " A field for i was found, but the content was not valid.";
+	errMsg ~= " The i field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    int j;
+    lua_getfield(L, 2, "j");
+    if ( lua_isnil(L, -1) ) {
+	j = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	j = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_cell_data.";
+	errMsg ~= " A field for j was found, but the content was not valid.";
+	errMsg ~= " The j field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    int k;
+    lua_getfield(L, 2, "k");
+    if ( lua_isnil(L, -1) ) {
+	k = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	k = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_cell_data.";
+	errMsg ~= " A field for k was found, but the content was not valid.";
+	errMsg ~= " The k field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    lua_settop(L, 0); // clear stack
+    lua_newtable(L); // anonymous table { }
+    auto tblIndx = lua_gettop(L);
+    foreach (varName; fsol.flowBlocks[ib].variableNames) {
+	lua_pushnumber(L, fsol.flowBlocks[ib][varName,i,j,k]);
+	lua_setfield(L, tblIndx, varName.toStringz);
+    }
+    return 1; // Just the table of indices is left on the stack.
+} // end get_cell_data()
+
+
 void registerFlowSolution(lua_State* L)
 {
     luaL_newmetatable(L, FlowSolutionMT.toStringz);
@@ -129,10 +379,20 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "new");
     lua_pushcfunction(L, &toStringObj!(FlowSolution, FlowSolutionMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &find_nearest_cell_centre_from_lua);
+    lua_setfield(L, -2, "find_nearest_cell_centre");
+    lua_pushcfunction(L, &get_nic);
+    lua_setfield(L, -2, "get_nic");
+    lua_pushcfunction(L, &get_njc);
+    lua_setfield(L, -2, "get_njc");
+    lua_pushcfunction(L, &get_nkc);
+    lua_setfield(L, -2, "get_nkc");
+    lua_pushcfunction(L, &get_vtx_pos);
+    lua_setfield(L, -2, "get_vtx");
+    lua_pushcfunction(L, &get_var_names);
+    lua_setfield(L, -2, "get_var_names");
+    lua_pushcfunction(L, &get_cell_data);
+    lua_setfield(L, -2, "get_cell_data");
     // Make class visible
     lua_setglobal(L, FlowSolutionMT.toStringz);
-
-    // [TODO]
-    // lua_pushcfunction(L, &write_initial_flow_file_from_lua);
-    // lua_setglobal(L, "write_initial_flow_file");
 } // end registerFlowSolution()

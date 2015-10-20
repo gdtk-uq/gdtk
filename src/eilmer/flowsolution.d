@@ -38,6 +38,7 @@ class FlowSolution {
     // The collection of flow blocks and grid blocks that define the flow
     // and the domain at one particular instant in time.
 public:
+    string jobName;
     double sim_time;
     size_t nBlocks;
     SBlockFlow[] flowBlocks;
@@ -58,9 +59,19 @@ public:
 	    fileName = dir ~ "/" ~ fileName;
 	    flowBlocks ~= new SBlockFlow(fileName);
 	} // end foreach ib
+	this.jobName = jobName;
 	this.nBlocks = nBlocks;
 	sim_time = flowBlocks[0].sim_time;
     } // end constructor
+
+    override string toString()
+    {
+	string str = "FlowSolution(";
+	str ~= "jobName=" ~ jobName ~ ", sim_time=" ~ to!string(sim_time);
+	str ~= ", nBlocks=" ~ to!string(nBlocks);
+	str ~= ")";
+	return str;
+    }
 
     void add_aux_variables(string[] addVarsList)
     {
