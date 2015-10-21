@@ -23,6 +23,7 @@ import util.lua_service;
 import util.msg_service;
 import std.c.stdlib : exit;
 import ridder;
+import bracketing;
 import tree_patch;
 import univariate_lut;
 
