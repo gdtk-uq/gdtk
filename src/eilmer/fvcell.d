@@ -301,8 +301,11 @@ public:
 	    fs.B.refy = to!double(items.front); items.popFront();
 	    fs.B.refz = to!double(items.front); items.popFront();
 	}
-	if ( myConfig.include_quality ) 
+	if ( myConfig.include_quality ) {
 	    fs.gas.quality = to!double(items.front); items.popFront();
+	} else {
+	    fs.gas.quality = 1.0;
+	}
 	fs.gas.p = to!double(items.front); items.popFront();
 	fs.gas.a = to!double(items.front); items.popFront();
 	fs.gas.mu = to!double(items.front); items.popFront();
