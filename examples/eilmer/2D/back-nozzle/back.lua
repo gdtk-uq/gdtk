@@ -32,9 +32,9 @@ intersect_point = centre_B + Vector3:new{fraction*base, fraction*height}
 -- Assemble nodes from coordinates.
 z0 = Vector3:new{-L_subsonic, 0.0}
 p0 = Vector3:new{-L_subsonic, R_tube}
-z1 = Vector3:new{centre_B:x(), centre_B:y()} -- initialize from a previously defined Node
+z1 = Vector3:new{centre_B} -- initialize from a previously defined Node
 p1 = centre_B + Vector3:new{0.0, R_tube}
-p2 = Vector3:new{intersect_point:x(), intersect_point:y()}
+p2 = Vector3:new{intersect_point}
 z2 = Vector3:new{p2:x(), 0.0}  -- on the axis, below p2
 z3 = Vector3:new{0.0, 0.0}
 p3 = Vector3:new{0.0, R_throat}
