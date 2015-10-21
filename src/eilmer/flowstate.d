@@ -91,7 +91,7 @@ public:
 	double p = getJSONdouble(json_data, "p", 100.0e3);
 	double[] T = getJSONdoublearray(json_data, "T", [300.0,]);
 	double[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
-	double quality = 1.0;
+	double quality = getJSONdouble(json_data, "quality", 1.0);
 	gas = new GasState(gm, p, T, massf, quality);
 	double velx = getJSONdouble(json_data, "velx", 0.0);
 	double vely = getJSONdouble(json_data, "vely", 0.0);
@@ -222,7 +222,7 @@ public:
 	    formattedWrite(writer, ", %.12e", gas.massf[i]);
 	}
 	formattedWrite(writer, "]");
-	// double quality = 1.0;
+	formattedWrite(writer, ", \"quality\": %.12e", gas.quality);
 	formattedWrite(writer, ", \"velx\": %.12e", vel.x);
 	formattedWrite(writer, ", \"vely\": %.12e", vel.y);
 	formattedWrite(writer, ", \"velz\": %.12e", vel.z);
@@ -238,10 +238,6 @@ public:
 	return writer.data;
     } // end toJSONString()
 
-/+ [TODO]
-    double * copy_values_to_buffer(double *buf) const;
-    double * copy_values_from_buffer(double *buf);
-+/
 } // end class FlowState
 
 void write_initial_flow_file(string fileName, ref StructuredGrid grid,
@@ -277,7 +273,9 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
 		       pos.x, pos.y, pos.z, volume, fs.gas.rho,
 		       fs.vel.x, fs.vel.y, fs.vel.z);
 	if (GlobalConfig.MHD)
-	    formattedWrite(writer, " %.12e %.12e %.12e", fs.B.x, fs.B.y, fs.B.z); 
+	    formattedWrite(writer, " %.12e %.12e %.12e", fs.B.x, fs.B.y, fs.B.z);
+	if (GlobalConfig.include_quality)
+	    formattedWrite(writer, " %.12e", fs.gas.quality);
 	formattedWrite(writer, " %.12e %.12e %.12e", fs.gas.p, fs.gas.a, fs.gas.mu);
 	foreach (kvalue; fs.gas.k) formattedWrite(writer, " %.12e", kvalue); 
 	int S = 0;  // zero for shock detector

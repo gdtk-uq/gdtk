@@ -97,6 +97,7 @@ final class GlobalConfig {
     // Presumably, we won't be accessing this particular gas model from the 
     // individual block computations, so that parallel computations for the blocks
     // don't trip over each other.
+    shared static bool include_quality = false; // if true, we include quality in the solution file  
 
     shared static int nBlocks; // Number of blocks in the overall simulation.
     shared static int nSolidBlocks; // Number of solid blocks in the overall simulation.
@@ -365,6 +366,7 @@ public:
     double viscous_signal_factor;
 
     GasModel gmodel;
+    bool include_quality;
     ReactionUpdateScheme reaction_update;
 
     int verbosity_level;
@@ -423,6 +425,7 @@ public:
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
 
 	gmodel = init_gas_model(GlobalConfig.gas_model_file);
+	include_quality = GlobalConfig.include_quality;
 	if (GlobalConfig.reacting)
 	    reaction_update = new ReactionUpdateScheme(GlobalConfig.reactions_file, gmodel);
 

@@ -301,6 +301,8 @@ public:
 	    fs.B.refy = to!double(items.front); items.popFront();
 	    fs.B.refz = to!double(items.front); items.popFront();
 	}
+	if ( myConfig.include_quality ) 
+	    fs.gas.quality = to!double(items.front); items.popFront();
 	fs.gas.p = to!double(items.front); items.popFront();
 	fs.gas.a = to!double(items.front); items.popFront();
 	fs.gas.mu = to!double(items.front); items.popFront();
@@ -343,6 +345,8 @@ public:
 		       fs.vel.x, fs.vel.y, fs.vel.z);
 	if ( myConfig.MHD ) 
 	    formattedWrite(writer, " %.12e %.12e %.12e", fs.B.x, fs.B.y, fs.B.z); 
+	if ( myConfig.include_quality ) 
+	    formattedWrite(writer, " %.12e", fs.gas.quality);
 	formattedWrite(writer, " %.12e %.12e %.12e", fs.gas.p, fs.gas.a, fs.gas.mu);
 	foreach(i; 0 .. fs.gas.k.length) formattedWrite(writer, " %.12e", fs.gas.k[i]); 
 	formattedWrite(writer, " %.12e %.12e %d", fs.mu_t, fs.k_t, fs.S);
@@ -1650,6 +1654,7 @@ string[] variable_list_for_cell(GasModel gmodel)
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["rho", "vel.x", "vel.y", "vel.z"];
     if ( GlobalConfig.MHD ) list ~= ["B.x", "B.y", "B.z"];
+    if ( GlobalConfig.include_quality ) list ~= ["quality"];
     list ~= ["p", "a", "mu"];
     foreach(i; 0 .. gmodel.n_modes) list ~= "k[" ~ to!string(i) ~ "]";
     list ~= ["mu_t", "k_t", "S"];

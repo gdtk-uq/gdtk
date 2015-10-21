@@ -42,6 +42,12 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "gas_model_file");
     }
     lua_pop(L, 1);
+    lua_getfield(L, 1, "include_quality");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.include_quality = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "include_quality");
+    }
+    lua_pop(L, 1);
 
     lua_getfield(L, 1, "nBlocks");
     if (!lua_isnil(L, -1)) {
@@ -454,6 +460,9 @@ extern(C) int configGet(lua_State* L)
 	break;
     case "gas_model_file":
 	lua_pushstring(L, GlobalConfig.gas_model_file.toStringz);
+	break;
+    case "include_quality":
+	lua_pushboolean(L, GlobalConfig.include_quality);
 	break;
 
     case "nBlocks":

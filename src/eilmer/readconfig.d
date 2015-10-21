@@ -52,11 +52,13 @@ void read_config_file()
     GlobalConfig.title = jsonData["title"].str;
     GlobalConfig.gas_model_file = jsonData["gas_model_file"].str;
     GlobalConfig.gmodel_master = init_gas_model(GlobalConfig.gas_model_file);
+    GlobalConfig.include_quality = getJSONbool(jsonData, "include_quality", false);
     GlobalConfig.dimensions = getJSONint(jsonData, "dimensions", 2);
     GlobalConfig.axisymmetric = getJSONbool(jsonData, "axisymmetric", false);
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  title: ", to!string(GlobalConfig.title));
 	writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
+	writeln("  include_quality: ", GlobalConfig.include_quality);
 	writeln("  dimensions: ", GlobalConfig.dimensions);
 	writeln("  axisymmetric: ", GlobalConfig.axisymmetric);
     }
