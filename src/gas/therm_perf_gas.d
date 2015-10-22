@@ -24,7 +24,8 @@ import std.stdio;
 import std.string;
 import util.lua;
 import util.lua_service;
-import ridder;
+import brent; //ridder
+import bracketing;
 import std.c.stdlib : exit;
 
 class ThermallyPerfectGas: GasModel {
