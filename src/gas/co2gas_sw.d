@@ -6,7 +6,7 @@
  * Version: 2015-09-17: initial cut, to explore options. Incorporated additional functions for extrapolation
  */
 
-module gas.CO2GasSW;
+module gas.co2gas_sw;
 import gas.gas_model;
 import gas.physical_constants;
 import gas.diffusion.sutherland_viscosity;
@@ -22,10 +22,10 @@ import util.lua;
 import util.lua_service;
 import util.msg_service;
 import std.c.stdlib : exit;
-import ridder;
-import bracketing;
-import tree_patch;
-import univariate_lut;
+import nm.ridder;
+import nm.bracketing;
+import nm.tree_patch;
+import nm.univariate_lut;
 
 class CO2GasSW: GasModel {
 public:

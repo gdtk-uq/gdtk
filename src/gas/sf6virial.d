@@ -6,7 +6,7 @@
  * Version: 2015-08-25: initial cut, to explore options.
  */
 
-module gas.SF6Virial;
+module gas.sf6virial;
 
 import gas.gas_model;
 import gas.physical_constants;
@@ -22,7 +22,7 @@ import util.lua;
 import util.lua_service;
 import util.msg_service;
 import std.c.stdlib : exit;
-import ridder;
+import nm.ridder;
 
 class SF6Virial:GasModel {
 public:

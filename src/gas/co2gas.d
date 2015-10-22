@@ -6,7 +6,7 @@
  * Version: 2015-07-27: initial cut, to explore options.
  */
 
-module gas.CO2Gas;
+module gas.co2gas;
 
 import gas.gas_model;
 import gas.physical_constants;

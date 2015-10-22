@@ -8,7 +8,7 @@
  * D version 16-Oct-2015
  * Bracketing taken from ridder.d
  */
-module brent;
+module nm.brent;
 import std.math;
 import std.algorithm;
 /**

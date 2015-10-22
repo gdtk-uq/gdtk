@@ -14,7 +14,7 @@
  * On return (x1, x2) should bracketing the root.
  */
 
-module bracket;
+module nm.bracketing;
 import std.math;
 import std.algorithm;
 

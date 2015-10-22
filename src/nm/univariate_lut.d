@@ -1,5 +1,5 @@
 //A module for doing look up on a univariate function
-module univariate_lut;
+module nm.univariate_lut;
 import std.stdio;
 import std.math;
 import std.mathspecial;

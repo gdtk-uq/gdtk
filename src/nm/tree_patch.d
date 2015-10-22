@@ -10,7 +10,7 @@
  * Author: Jonathan Ho
  * Date: 17-09-2015
  */
-module tree_patch;
+module nm.tree_patch;
 import std.stdio;
 import std.math;
 import std.mathspecial;
