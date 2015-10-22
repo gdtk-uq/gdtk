@@ -1,0 +1,100 @@
+# back.test
+#
+# This exercises the SubsonicInBC that forms the upstream boundary for
+# the simulation of the Back et al. nozzle.
+#
+# PJ, 03-Mar-2014
+#     2015-10-22 ported to Eilmer4
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test run-preprocessor {Run the preprocessing stage.} -body {
+    exec e4shared --prep --job=back > LOGFILE_PREP
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the parallel simulation code.} -body {
+    exec e4shared --run --job=back --verbosity=1 --max-cpus=2 > LOGFILE_MAIN
+} -result {} -returnCodes {0}
+
+test number-of-steps {Iteration of the final block in a certain number of steps.} -body {
+    set fp [open LOGFILE_MAIN r]
+    set contents [read $fp]
+    close $fp
+    set final_steps 0
+    foreach line [split $contents "\n"] {
+	if {[string first "final-t=" $line] >= 0} {
+	    set final_steps [lindex [split $line] 1]
+	}
+    }
+    expr abs($final_steps - 5401) < 3
+} -result {1}
+
+test subsonic-region {Subsonic region should have a small positive Mach number.} -body {
+    # The following values were extracted from the solution
+    # as it was computed on PJ's computer 03-Mar-2014.
+    set rho_ref 5.743503e+00
+    set p_ref 4.927381e+05
+    set T_ref 2.988554e+02
+    set Mach_ref 1.384033e-01
+    # Probe the solution near the centreline of the upstream boundary
+    # and pull a few values from the line of data that is produced by e3post.
+    if { [catch {exec e4shared --post --job=back --tindx-plot=last --add-vars="mach" --probe=-0.075,0.0,0.0 } results] } {
+        puts "postprocessing probe command failed"
+        puts $results
+	set rho 0
+	set p 0
+	set T 0
+	set Mach 0
+    } else {
+	set line_of_data [string trim [lindex [split $results "\n"] 5]]
+	# puts $line_of_data
+	set items [split $line_of_data]
+	set rho [lindex $items 4]; # remember that index starts at 0
+	set p [lindex $items 8]
+	set T [lindex $items 19]
+	set Mach [lindex $items 20]
+	# puts "rho=$rho p=$p T=$T Mach=$Mach"
+    }
+    # The differences with respect to the reference values should be small. 
+    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-3] \
+    	 [expr abs($p - $p_ref)/$p_ref < 1.0e-3] \
+    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-3] \
+    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 1.0e-3]
+} -result {1 1 1 1}
+
+test supersonic-region {Supersonic exit should be a bit over Mach 3.} -body {
+    # The following values were extracted from the solution
+    # as it was computed on PJ's computer 03-Mar-2014.
+    set rho_ref 3.904117e-01
+    set p_ref 1.142634e+04
+    set T_ref 1.019545e+02
+    set Mach_ref 3.116296e+00
+    # Probe the solution near the centre of the nozzle exit
+    # and pull a few values from the line of data that is produced by e3post.
+    if { [catch {exec e4shared --post --job=back --tindx-plot=last --add-vars="mach" --probe=0.075,0.0,0.0 } results] } {
+        puts "postprocessing probe command failed"
+        puts $results
+	set rho 0
+	set p 0
+	set T 0
+	set Mach 0
+    } else {
+	set line_of_data [string trim [lindex [split $results "\n"] 5]]
+	# puts $line_of_data
+	set items [split $line_of_data]
+	set rho [lindex $items 4]; # remember that index starts at 0
+	set p [lindex $items 8]
+	set T [lindex $items 19]
+	set Mach [lindex $items 20]
+	# puts "rho=$rho p=$p T=$T Mach=$Mach"
+    }
+    # The differences with respect to the reference values should be small. 
+    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-3] \
+    	 [expr abs($p - $p_ref)/$p_ref < 1.0e-3] \
+    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-3] \
+    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 1.0e-3]
+} -result {1 1 1 1}
+
+cleanupTests
