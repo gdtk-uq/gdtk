@@ -9,7 +9,7 @@
  *
  */
 
-module rungekutta;
+module nm.rungekutta;
 import std.math;
 
 /**

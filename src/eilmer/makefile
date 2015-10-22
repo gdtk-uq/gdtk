@@ -33,39 +33,18 @@ LUA_MODULES := blk_conn.lua \
 	bc.lua \
 	gridpro.lua
 
+
+UTIL_DIR := ../util
+include $(UTIL_DIR)/util_files.mk
+DFLAGS += -I$(UTIL_DIR)
+
+NM_DIR := ../nm
+include $(NM_DIR)/nm_files.mk
+DFLAGS += -I$(NM_DIR)
+
 GAS_DIR := ../gas
-
-GAS_MODEL_FILES := \
-	$(GAS_DIR)/package.d \
-	$(GAS_DIR)/gas_model.d \
-	$(GAS_DIR)/gas_model_util.d \
-	$(GAS_DIR)/ideal_gas.d \
-	$(GAS_DIR)/physical_constants.d \
-	$(GAS_DIR)/therm_perf_gas.d \
-    $(GAS_DIR)/very_viscous_air.d\
-	$(GAS_DIR)/CO2Gas.d\
-	$(GAS_DIR)/CO2GasSW.d\
-	$(GAS_DIR)/SF6Virial.d
-
-
-THERMO_FILES := \
-	$(GAS_DIR)/thermo/cea_thermo_curves.d \
-	$(GAS_DIR)/thermo/evt_eos.d \
-	$(GAS_DIR)/thermo/perf_gas_mix_eos.d \
-	$(GAS_DIR)/thermo/pvt_eos.d \
-	$(GAS_DIR)/thermo/therm_perf_gas_mix_eos.d
-
-DIFFUSION_FILES := \
-	$(GAS_DIR)/diffusion/cea_therm_cond.d \
-	$(GAS_DIR)/diffusion/cea_viscosity.d \
-	$(GAS_DIR)/diffusion/sutherland_therm_cond.d \
-	$(GAS_DIR)/diffusion/sutherland_viscosity.d \
-	$(GAS_DIR)/diffusion/therm_cond.d \
-	$(GAS_DIR)/diffusion/viscosity.d \
-	$(GAS_DIR)/diffusion/wilke_mixing_therm_cond.d \
-	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d
-
-GAS_FILES := $(GAS_MODEL_FILES) $(THERMO_FILES) $(DIFFUSION_FILES)
+include $(GAS_DIR)/gas_files.mk
+DFLAGS += -I$(GAS_DIR)
 
 KINETICS_DIR := ../kinetics
 
@@ -75,17 +54,6 @@ KINETICS_FILES := \
 	$(KINETICS_DIR)/rate_constant.d \
 	$(KINETICS_DIR)/reaction.d \
 	$(KINETICS_DIR)/reaction_mechanism.d
-
-UTIL_DIR := ../util
-UTIL_FILES := $(UTIL_DIR)/lua.d \
-	$(UTIL_DIR)/lua_service.d \
-	$(UTIL_DIR)/msg_service.d
-
-NM_DIR := ../nm
-NM_FILES := $(NM_DIR)/ridder.d \
-	$(NM_DIR)/bbla.d \
-	$(NM_DIR)/tree_patch.d\
-	$(NM_DIR)/univariate_lut.d
 
 GEOM_DIR := ../geom
 GEOM_FILES := $(GEOM_DIR)/geom.d \
@@ -275,7 +243,7 @@ e4shared: main.d simcore.d fileutil.d readconfig.d json_helper.d \
 	lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
 	postprocess.d flowsolution.d luaflowsolution.d \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) 
+	$(KINETICS_FILES) $(NM_FILES) $(UTIL_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4shared \
 		main_with_rev_string.d simcore.d fileutil.d readconfig.d json_helper.d \

@@ -26,7 +26,7 @@ import std.algorithm;
 import std.string;
 import std.conv;
 import std.datetime;
-import tree_patch;
+import nm.tree_patch;
 import gas.gas_model;
 import gas.gas_model_util;
 import gas.CO2GasSW;

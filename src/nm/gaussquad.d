@@ -7,6 +7,7 @@
  * Version: 2014-06-21: adapted from newtoncotes.d
  */
 
+module nm.gaussquad;
 import std.math;
 
 // Rule coefficients computed by Maxima. 

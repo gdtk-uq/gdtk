@@ -7,7 +7,7 @@
  * Author: PJ, 14-Jun-2014 
 */
 
-module linesearch;
+module nm.linesearch;
 import std.stdio;
 
 /**

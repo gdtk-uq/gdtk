@@ -6,7 +6,7 @@
  * Author: PA Jacobs, School of Mechanical and Mining Engineering, UQ
  * Version: 2014-06-20, Adapted from MECH2700 demonstration code written back in 2003.
  */
-
+module nm.newtoncotes;
 import std.math;
 
 /**

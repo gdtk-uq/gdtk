@@ -29,7 +29,7 @@
  * The programming interface is via the minimize() function; see below.
  */
 
-module nelmin;
+module nm.nelmin;
 import std.math;
 import std.stdio;
 

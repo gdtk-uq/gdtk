@@ -7,7 +7,7 @@
  *          2015-05-30, added least-squares solver
  */
 
-module bbla;
+module nm.bbla;
 
 import std.conv;
 import std.algorithm;

@@ -15,7 +15,7 @@ import std.math;
 import std.stdio;
 import std.string;
 import geom;
-import bbla;
+import nm.bbla;
 //import numeric : findRoot;
 
 class Path {
