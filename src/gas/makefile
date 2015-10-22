@@ -5,6 +5,9 @@
 DMD ?= dmd
 INSTALL_DIR ?= $(HOME)/dgdinst
 
+DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo sf6_model_demo luagas_model_demo
+TEST_PROGRAMS := gas_model_test
+
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
 LIBLUAPATH := $(LUA)/lib
@@ -24,11 +27,6 @@ ifeq ($(DMD), gdc)
     OF := -o
     DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
 endif
-
-
-DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo sf6_model_demo luagas_model_demo
-UNITTEST_FILES := therm_perf_gas_test \
-	ideal_gas_test
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -102,3 +100,7 @@ sf6_model_demo: sf6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 #		$(OF)luagas_model_demo \
 #		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
 #		$(DLINKFLAGS)
+
+gas_model_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -ofgas_model_test -debug -gc -w -version=gas_model_test \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)

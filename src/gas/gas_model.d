@@ -190,16 +190,6 @@ public:
 	quality = other.quality;
     }
 
-    // Postblit constructor for struct
-    // Not needed for class
-    // this(this)
-    // {
-    // 	massf = massf.dup;
-    // 	e = e.dup;
-    // 	T = T.dup;
-    // 	k = k.dup;
-    // }
-
     @nogc void copy_values_from(ref const(GasState) other) 
     {
 	rho = other.rho;
@@ -407,12 +397,13 @@ body {
     foreach ( i; 0..massf.length ) massf[i] = molef[i] * mol_masses[i] / mixMolMass;
 }
 
-
-
-unittest {
-    auto gd = new GasState(2, 1);
-    gd.massf[0] = 0.8;
-    gd.massf[1] = 0.2;
-    double[] phi = [9.0, 16.0];
-    assert(approxEqual(10.4, mass_average(gd, phi)));
+version(gas_model_test) {
+    int main() {
+	auto gd = new GasState(2, 1);
+	gd.massf[0] = 0.8;
+	gd.massf[1] = 0.2;
+	double[] phi = [9.0, 16.0];
+	assert(approxEqual(10.4, mass_average(gd, phi), 1.0e-6));
+	return 0;
+    }
 }
