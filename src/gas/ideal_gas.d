@@ -20,7 +20,6 @@ import std.json;
 import std.conv;
 import util.lua;
 import util.lua_service;
-import util.msg_service;
 import std.c.stdlib : exit;
 
 class IdealGas: GasModel {
@@ -187,43 +186,49 @@ private:
 
 } // end class Ideal_gas
 
-unittest {
+version(ideal_gas_test) {
     import std.stdio;
-    auto gm = new IdealGas();
-    assert(gm.species_name(0) == "ideal air", "species name list");
-    auto gd = new GasState(gm, 100.0e3, 300.0);
-    assert(approxEqual(gm.R(gd), 287.086), failedUnitTest());
-    assert(gm.n_modes == 1, failedUnitTest());
-    assert(gm.n_species == 1, failedUnitTest());
-    assert(approxEqual(gd.p, 1.0e5), failedUnitTest());
-    assert(approxEqual(gd.T[0], 300.0), failedUnitTest());
-    assert(approxEqual(gd.massf[0], 1.0), failedUnitTest());
+    import util.msg_service;
 
-    gm.update_thermo_from_pT(gd);
-    gm.update_sound_speed(gd);
-    assert(approxEqual(gd.rho, 1.16109), failedUnitTest());
-    assert(approxEqual(gd.e[0], 215314.0), failedUnitTest());
-    assert(approxEqual(gd.a, 347.241), failedUnitTest());
-    gm.update_trans_coeffs(gd);
-    assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
-    assert(approxEqual(gd.k[0], 0.0262449), failedUnitTest());
+    int main() {
+	auto gm = new IdealGas();
+	assert(gm.species_name(0) == "ideal air", failedUnitTest());
+	auto gd = new GasState(gm, 100.0e3, 300.0);
+	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
+	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_species == 1, failedUnitTest());
+	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
-    lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
-    gm = new IdealGas(L);
-    lua_close(L);
-    assert(approxEqual(gm.R(gd), 287.086), failedUnitTest());
-    assert(gm.n_modes == 1, failedUnitTest());
-    assert(gm.n_species == 1, failedUnitTest());
-    assert(approxEqual(gd.p, 1.0e5), failedUnitTest());
-    assert(approxEqual(gd.T[0], 300.0), failedUnitTest());
-    assert(approxEqual(gd.massf[0], 1.0), failedUnitTest());
+	gm.update_thermo_from_pT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
 
-    gm.update_thermo_from_pT(gd);
-    gm.update_sound_speed(gd);
-    assert(approxEqual(gd.rho, 1.16109), failedUnitTest());
-    assert(approxEqual(gd.e[0], 215314.0), failedUnitTest());
-    assert(approxEqual(gd.a, 347.241), failedUnitTest());
-    gm.update_trans_coeffs(gd);
-    assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
-    assert(approxEqual(gd.k[0], 0.0262449), failedUnitTest());
+	lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
+	gm = new IdealGas(L);
+	lua_close(L);
+	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
+	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_species == 1, failedUnitTest());
+	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+
+	gm.update_thermo_from_pT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+
+	return 0;
+    }
 }
