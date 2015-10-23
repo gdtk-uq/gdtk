@@ -26,7 +26,7 @@ void main()
     writeln("flow3=", flow3);
 
     writeln("-----------------------");
-    auto Q = new ConservedQuantities(gm);
+    auto Q = new ConservedQuantities(gm.n_species, gm.n_modes);
     Q.mass = 99.0;
     Q.energies[0] = 301.0;
     writeln("Q=", Q);
@@ -47,9 +47,11 @@ void main()
     writeln("vtx=", vtx);
 
     writeln("-----------------------");
-    auto cell = new FVCell(gm);
-    GlobalConfig.gmodel = gm; // The following call needs the gas model in place.
-    writeln("variable_list_for_cell=", variable_list_for_cell());
+    // The following calls need the gas model in place.
+    GlobalConfig.gas_model_file = "sample-data/ideal-air-gas-model.lua"; 
+    LocalConfig myConfig = new LocalConfig();
+    auto cell = new FVCell(myConfig);
+    writeln("variable_list_for_cell=", variable_list_for_cell(myConfig.gmodel));
     string sample = "1.0 2.0 3.0 0.000999 0.1 1.1 1.2 1.3 100.0e3 345.0 1.8e-5 "
 	~ "0.0123 0.999 0.0888 1 0.05 1.009 1.0 2.65e5 311";
     cell.scan_values_from_string(sample);
@@ -61,7 +63,7 @@ void main()
     writeln("sample=", sample);
 
     writeln("------------------------");
-    adaptive_flux(flow, flow2, iface);
+    adaptive_flux(flow, flow2, iface, myConfig.gmodel);
     writeln("iface=", iface);
 
     writeln("done.");

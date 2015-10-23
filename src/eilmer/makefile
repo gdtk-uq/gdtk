@@ -10,6 +10,15 @@ PROGRAMS := e4shared
 DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo block_demo \
 	luaflowstate_demo luaglobalconfig_demo
 
+EILMER_FILES := simcore.d fileutil.d readconfig.d json_helper.d \
+		fvcore.d fvcell.d fvvertex.d fvinterface.d \
+		fluxcalc.d onedinterp.d viscousflux.d \
+		conservedquantities.d flowstate.d luaflowstate.d \
+		globalconfig.d luaglobalconfig.d globaldata.d \
+		block.d sblock.d ublock.d \
+		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
+		postprocess.d flowsolution.d luaflowsolution.d
+
 BC_FILES := bc/bc.d \
 	bc/ghost_cell_effect.d \
 	bc/user_defined_effects.d \
@@ -179,81 +188,37 @@ flowstate_demo: flowstate_demo.d flowstate.d \
 		$(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS)
 
-luaflowstate_demo: luaflowstate_demo.d luaflowstate.d flowstate.d \
-	fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
-	globalconfig.d luaglobalconfig.d json_helper.d \
-	$(GEOM_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
+luaflowstate_demo: luaflowstate_demo.d $(EILMER_FILES) \
+	$(GEOM_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) \
+	$(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
 	$(KINETICS_FILES) $(GZIP_FILES)
-	$(DMD) $(DFLAGS) $(OF)luaflowstate_demo \
-		luaflowstate_demo.d luaflowstate.d flowstate.d \
-		fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
-		globalconfig.d luaglobalconfig.d json_helper.d \
+	$(DMD) $(DFLAGS) $(OF)luaflowstate_demo luaflowstate_demo.d \
+		$(EILMER_FILES) \
 		$(GEOM_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS)
 
-fv_demo: fv_demo.d fvcore.d fvcell.d fvvertex.d fvinterface.d onedinterp.d fluxcalc.d \
-	conservedquantities.d flowstate.d luaflowstate.d \
-	globalconfig.d globaldata.d \
-	block.d sblock.d ublock.d \
-	json_helper.d lua_helper.d user_defined_source_terms.d \
-	simcore.d fileutil.d readconfig.d luaglobalconfig.d \
+fv_demo: fv_demo.d $(EILMER_FILES) $(SOLID_FILES) \
 	$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) 
-	$(DMD) $(DFLAGS) $(OF)fv_demo \
-		fv_demo.d \
-		fvcore.d fvcell.d fvvertex.d fvinterface.d \
-		conservedquantities.d flowstate.d luaflowstate.d onedinterp.d fluxcalc.d \
-		globalconfig.d globaldata.d \
-		block.d sblock.d ublock.d \
-		json_helper.d lua_helper.d user_defined_source_terms.d \
-		simcore.d fileutil.d readconfig.d luaglobalconfig.d \
+	$(DMD) $(DFLAGS) $(OF)fv_demo fv_demo.d \
+		$(EILMER_FILES) $(SOLID_FILES) \
 		$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS)
 
-block_demo: block_demo.d \
-	block.d sblock.d ublock.d \
-	fvcore.d fvcell.d fvvertex.d fvinterface.d \
-	fluxcalc.d onedinterp.d viscousflux.d \
-	conservedquantities.d flowstate.d luaflowstate.d \
-	globalconfig.d globaldata.d \
-	block.d sblock.d ublock.d \
-	json_helper.d lua_helper.d user_defined_source_terms.d \
-	simcore.d fileutil.d readconfig.d luaglobalconfig.d \
+block_demo: block_demo.d $(EILMER_FILES) $(SOLID_FILES) \
 	$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) 
-	$(DMD) $(DFLAGS) $(OF)block_demo \
-		block_demo.d \
-		fvcore.d fvcell.d fvvertex.d fvinterface.d \
-		fluxcalc.d onedinterp.d viscousflux.d \
-		conservedquantities.d flowstate.d luaflowstate.d \
-		globalconfig.d globaldata.d \
-		block.d sblock.d ublock.d \
-		json_helper.d lua_helper.d user_defined_source_terms.d \
-		simcore.d fileutil.d readconfig.d luaglobalconfig.d \
+	$(DMD) $(DFLAGS) $(OF)block_demo block_demo.d \
+		$(EILMER_FILES) $(SOLID_FILES) \
 		$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS)
 
-e4shared: main.d simcore.d fileutil.d readconfig.d json_helper.d \
-	block.d sblock.d ublock.d \
-	fluxcalc.d onedinterp.d viscousflux.d \
-	fvcore.d fvcell.d fvvertex.d fvinterface.d \
-	conservedquantities.d flowstate.d luaflowstate.d \
-	globalconfig.d luaglobalconfig.d globaldata.d \
-	block.d sblock.d ublock.d \
-	lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
-	postprocess.d flowsolution.d luaflowsolution.d \
+e4shared: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(NM_FILES) $(UTIL_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4shared \
-		main_with_rev_string.d simcore.d fileutil.d readconfig.d json_helper.d \
-		fvcore.d fvcell.d fvvertex.d fvinterface.d \
-		fluxcalc.d onedinterp.d viscousflux.d \
-		conservedquantities.d flowstate.d luaflowstate.d \
-		globalconfig.d luaglobalconfig.d globaldata.d \
-		block.d sblock.d ublock.d \
-		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
-		postprocess.d flowsolution.d luaflowsolution.d \
+		main_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS)
 
