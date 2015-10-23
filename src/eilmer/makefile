@@ -45,24 +45,15 @@ LUA_MODULES := blk_conn.lua \
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
-DFLAGS += -I$(UTIL_DIR)
 
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
-DFLAGS += -I$(NM_DIR)
 
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
-DFLAGS += -I$(GAS_DIR)
 
 KINETICS_DIR := ../kinetics
-
-KINETICS_FILES := \
-	$(KINETICS_DIR)/package.d \
-	$(KINETICS_DIR)/chemistry_update.d \
-	$(KINETICS_DIR)/rate_constant.d \
-	$(KINETICS_DIR)/reaction.d \
-	$(KINETICS_DIR)/reaction_mechanism.d
+include $(KINETICS_DIR)/kinetics_files.mk
 
 GEOM_DIR := ../geom
 GEOM_FILES := $(GEOM_DIR)/geom.d \

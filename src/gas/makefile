@@ -32,11 +32,9 @@ endif
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
-DFLAGS += -I$(UTIL_DIR)
 
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
-DFLAGS += -I$(NM_DIR)
 
 include gas_files.mk
 
