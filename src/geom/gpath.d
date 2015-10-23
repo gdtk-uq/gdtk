@@ -434,6 +434,7 @@ unittest {
 
 class Polynomial : Path {
     // polynomial in the form y = sum(c_i * x^^i)|i=0..n
+    // Momar Hughes, 4th-year thesis, October 2015
 public:
     Vector3[] P; // array of control points to interpolate
     double[] C; // array of coefficients
@@ -506,19 +507,19 @@ public:
 protected:    
     void evaluate_coefficients()
     {
-    	size_t n = P.length;
-    	auto A = new Matrix(n);
-    	auto b = new Matrix(n,1);
-    	foreach(i;0 .. n){
+	size_t n = P.length;
+	auto A = new Matrix(n);
+	auto b = new Matrix(n,1);
+	foreach(i;0 .. n){
 	    b[i,0] = P[i].y;
-	    foreach(j;0 .. n+1){
+	    foreach(j;0 .. n){
 		A[i,j] = P[i].x^^j;
 	    } // end foreach
-    	} // end foreach
-    	auto x = lsqsolve(A,b);
-    	foreach(i;0 .. n){
-	    C[i] = x[i,0];
-    	} // end foreach
+	} // end foreach
+	auto x = lsqsolve(A,b);
+	foreach(i;0 .. n){
+	    C ~= x[i,0];
+	} // end foreach
     } // end evaluate_coefficients ()
     
     Vector3 evaluate_polynomial(double x) const
