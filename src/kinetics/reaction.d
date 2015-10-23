@@ -232,21 +232,24 @@ Reaction createReaction(lua_State* L, size_t n_species)
 }
 
 
-
-unittest {
-    // Find rate of forward production for H2 + I2 reaction at 700 K.
-    double[] conc = [4.54, 4.54, 0.0];
-    auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
-    auto gd = new GasState(3, 1);
-    gd.T[0] = 700.0;
-    auto reaction = new ElementaryReaction(rc, rc, [0, 1], [1, 1],
+version(reaction_test) {
+    int main() {
+	// Find rate of forward production for H2 + I2 reaction at 700 K.
+	double[] conc = [4.54, 4.54, 0.0];
+	auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
+	auto gd = new GasState(3, 1);
+	gd.T[0] = 700.0;
+	auto reaction = new ElementaryReaction(rc, rc, [0, 1], [1, 1],
 					   [2], [2], 3);
-    reaction.eval_rate_constants(gd);
-    reaction.eval_rates(conc);
-    assert(approxEqual(0.0, reaction.production(0)), failedUnitTest());
-    assert(approxEqual(0.0, reaction.production(1)), failedUnitTest());
-    assert(approxEqual(1287.8606, reaction.production(2)), failedUnitTest());
-    assert(approxEqual(643.9303, reaction.loss(0)), failedUnitTest());
-    assert(approxEqual(643.9303, reaction.loss(1)), failedUnitTest());
-    assert(approxEqual(0.0, reaction.loss(2)), failedUnitTest());
+	reaction.eval_rate_constants(gd);
+	reaction.eval_rates(conc);
+	assert(approxEqual(0.0, reaction.production(0)), failedUnitTest());
+	assert(approxEqual(0.0, reaction.production(1)), failedUnitTest());
+	assert(approxEqual(1287.8606, reaction.production(2), 1.0e-6), failedUnitTest());
+	assert(approxEqual(643.9303, reaction.loss(0), 1.0e-6), failedUnitTest());
+	assert(approxEqual(643.9303, reaction.loss(1), 1.0e-6), failedUnitTest());
+	assert(approxEqual(0.0, reaction.loss(2)), failedUnitTest());
+
+	return 0;
+    }
 }

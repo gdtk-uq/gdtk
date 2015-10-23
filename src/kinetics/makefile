@@ -5,32 +5,23 @@
 INSTALL_DIR ?= $(HOME)/e3bin
 BUILD_DIR ?= ../../build
 
-UNITTEST_FILES := rate_constant_test \
-	reaction_test
+TEST_PROGRAMS := chemistry_update_test rate_constant_test reaction_test reaction_mechanism_test
 
 UTIL_DIR := ../util
-UTIL_FILES := $(UTIL_DIR)/lua.d \
-	$(UTIL_DIR)/lua_service.d \
-	$(UTIL_DIR)/msg_service.d
+include $(UTIL_DIR)/util_files.mk
 
 NM_DIR := ../nm
-NM_FILES := $(NM_DIR)/ridder.d
+include $(NM_DIR)/nm_files.mk
 
 GAS_DIR := ../gas
-LIBGAS := ${GAS_DIR}/libgas.a
+include $(GAS_DIR)/gas_files.mk
+
+include kinetics_files.mk
 
 LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := ${LUA_DIR}/lib/liblua.a
 LIBLUAPATH := ${LUA_DIR}/lib
 
-KINETICS_FILES := \
-	chemistry_update.d \
-	rate_constant.d \
-	reaction.d \
-	reaction_mechanism.d
-
-
-DFLAGS := -main -unittest -gc -wi -I../ 
 DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl
 
 build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
@@ -39,27 +30,31 @@ build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 	cp reaction.lua lex_elems.lua $(BUILD_DIR)/lib/
 	cp prep_chem.lua $(BUILD_DIR)/bin/prep-chem; chmod +x $(BUILD_DIR)/bin/prep-chem
 
-unittests: $(UNITTEST_FILES)
-
-${LIBGAS}:
-	cd ${GAS_DIR}; make libgas.a
+test: $(TEST_PROGRAMS)
+	tclsh kinetics-package-test.tcl
 
 ${LIBLUA}:
 	cd ${LUA_DIR}; make linux local
 
-libkinetics.a : $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) 
-	dmd -lib -oflibkinetics.a $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DFLAGS)
+chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -version=$@ \
+		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBLUA) $(DLINKFLAGS)
 
-chemistry_update_test: chemistry_update.d libkinetics.a $(LIBGAS) $(LIBLUA) $(NM_FILES)
-	dmd $(DFLAGS) -ofchemistry_update_test chemistry_update.d libkinetics.a ${LIBGAS} ${LIBLUA} $(NM_FILES) $(DLINKFLAGS)
+rate_constant_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -version=$@ \
+		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBLUA) $(DLINKFLAGS)
 
-rate_constant_test: rate_constant.d $(LIBGAS) $(LIBLUA) 
-	dmd $(DFLAGS) -ofrate_constant_test rate_constant.d ${LIBGAS} $(NM_FILES) ${LIBLUA} $(DLINKFLAGS)
+reaction_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -version=$@ \
+		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBLUA) $(DLINKFLAGS)
 
-reaction_test: reaction.d $(LIBGAS) $(LIBLUA) 
-	dmd $(DFLAGS) -ofreaction_test reaction.d rate_constant.d ${LIBGAS} $(NM_FILES) ${LIBLUA} $(DLINKFLAGS)
+reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -version=$@ \
+		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBLUA) $(DLINKFLAGS)
 
-reaction_mechanism_test: reaction_mechanism.d libkinetics.a $(LIBGAS) $(LIBLUA) 
-	dmd $(DFLAGS) -ofreaction_mechanism_test reaction.d rate_constant.d $(NM_FILES) ${LIBGAS} ${LIBLUA} $(DLINKFLAGS)
 
 

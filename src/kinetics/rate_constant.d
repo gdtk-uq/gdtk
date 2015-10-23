@@ -91,19 +91,22 @@ RateConstant createRateConstant(lua_State* L)
 }
 
 
-unittest {
+version(rate_constant_test) {
     import util.msg_service;
-    // Test 1. Rate constant for H2 + I2 reaction.
-    auto rc = new ArrheniusRateConstant(1.94e14*1e-6, 0.0, 20620.0);
-    auto gd = new GasState(1, 1);
-    gd.T[0] = 700.0;
-    assert(approxEqual(3.10850956e-5, rc.eval(gd)), failedUnitTest());
-    // Test 2. Read rate constant parameters for nitrogen dissociation
-    // from Lua input and compute rate constant at 4000.0 K
-    auto L = init_lua_State("sample-input/N2-diss.lua");
-    lua_getglobal(L, "rate");
-    auto rc2 = new ArrheniusRateConstant(L);
-    gd.T[0] = 4000.0;
-    assert(approxEqual(0.00159439, rc2.eval(gd)), failedUnitTest());
+    int main() {
+	// Test 1. Rate constant for H2 + I2 reaction.
+	auto rc = new ArrheniusRateConstant(1.94e14*1e-6, 0.0, 20620.0);
+	auto gd = new GasState(1, 1);
+	gd.T[0] = 700.0;
+	assert(approxEqual(3.10850956e-5, rc.eval(gd), 1.0e-6), failedUnitTest());
+	// Test 2. Read rate constant parameters for nitrogen dissociation
+	// from Lua input and compute rate constant at 4000.0 K
+	auto L = init_lua_State("sample-input/N2-diss.lua");
+	lua_getglobal(L, "rate");
+	auto rc2 = new ArrheniusRateConstant(L);
+	gd.T[0] = 4000.0;
+	assert(approxEqual(0.00159439, rc2.eval(gd), 1.0e-6), failedUnitTest());
 
+	return 0;
+    }
 }

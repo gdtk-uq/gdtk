@@ -271,11 +271,11 @@ public:
 	// 0. Set up the constants associated with the update formula
 	// We place them in here for visibility reasons... no one else
 	// needs to be using the coefficients a21, a31, etc.
-	static immutable double a21=1./5., a31=3./40., a32=9./40.,
+	immutable double a21=1./5., a31=3./40., a32=9./40.,
 	    a41=3./10., a42=-9./10., a43 = 6./5.,
 	    a51=-11./54., a52=5./2., a53=-70./27., a54=35./27.,
 	    a61=1631./55296., a62=175./512., a63=575./13824., a64=44275./110592., a65=253./4096.;
-	static immutable double b51=37./378., b53=250./621., b54=125./594., b56=512./1771.,
+	immutable double b51=37./378., b53=250./621., b54=125./594., b56=512./1771.,
 	    b41=2825./27648., b43=18575./48384., b44=13525./55296., b45=277./14336., b46=1.0/4.0;
 	
 	// 1. Apply the formula to evaluate intermediate points
@@ -526,42 +526,45 @@ private:
     }
 }
 
-unittest
-{
+version(chemistry_update_test) {
     import std.stdio;
     import util.msg_service;
     import kinetics.rate_constant;
     import kinetics.reaction;
     import gas.therm_perf_gas;
-    /* This might be stretching a bit what a *unit* is.
-     * In this test, we'll exercise the chemistry update
-     * routine by solving the complete hydrogen-iodine system.
-     */
-    auto kf = new ArrheniusRateConstant(1.94e8, 0.0, 20620.0);
-    auto kb = new ArrheniusRateConstant(5.47070580511e-07, 0.0, 0.0);
-    auto reaction = new ElementaryReaction(kf, kb, [0, 1], [1, 1],
-					   [2], [2], 3);
-    auto reacMech = new ReactionMechanism([reaction], 3);
-    auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
-    auto cstep = new RKFStep(gmodel, reacMech, 1.0e-3);
-    auto gd = new GasState(3, 1);
-    gd.T[0] = 700.0;
-    double c0 = 4.54;
-    gd.p = 2.0*c0*R_universal*gd.T[0];
-    double[] molef = [0.5, 0.5, 0.0];
-    gmodel.molef2massf(molef, gd);
-    gmodel.update_thermo_from_pT(gd);
-    double tInterval = 60000.0;
-    double dtSuggest = 200.0;
+    int main() {
+	/* This might be stretching a bit what a *unit* is.
+	 * In this test, we'll exercise the chemistry update
+	 * routine by solving the complete hydrogen-iodine system.
+	 */
+	auto kf = new ArrheniusRateConstant(1.94e8, 0.0, 20620.0);
+	auto kb = new ArrheniusRateConstant(5.47070580511e-07, 0.0, 0.0);
+	auto reaction = new ElementaryReaction(kf, kb, [0, 1], [1, 1],
+					       [2], [2], 3);
+	auto reacMech = new ReactionMechanism([reaction], 3);
+	auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
+	auto cstep = new RKFStep(gmodel, reacMech, 1.0e-3);
+	auto gd = new GasState(3, 1);
+	gd.T[0] = 700.0;
+	double c0 = 4.54;
+	gd.p = 2.0*c0*R_universal*gd.T[0];
+	double[] molef = [0.5, 0.5, 0.0];
+	gmodel.molef2massf(molef, gd);
+	gmodel.update_thermo_from_pT(gd);
+	double tInterval = 60000.0;
+	double dtSuggest = 200.0;
 
-    // The actual test
-    int result = update_chemistry(gd, tInterval, dtSuggest,
-				  gmodel, reacMech, cstep,
-				  false, 50, 2);
-    double[] conc;
-    conc.length = 3;
-    gmodel.massf2conc(gd, conc);
-    assert(approxEqual(7.14215400423, conc[2]), failedUnitTest());
+	// The actual test
+	int result = update_chemistry(gd, tInterval, dtSuggest,
+				      gmodel, reacMech, cstep,
+				      false, 50, 2);
+	double[] conc;
+	conc.length = 3;
+	gmodel.massf2conc(gd, conc);
+	assert(approxEqual(7.14215400423, conc[2], 1.0e-3), failedUnitTest());
+
+	return 0;
+    }
 }
 
 
