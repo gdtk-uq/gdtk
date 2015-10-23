@@ -156,17 +156,21 @@ private:
 
 } // end class Very_viscous_air
 
-unittest {
-    auto gm = new VeryViscousAir();
-    auto gs = new GasState(gm, 100.0e3, 300.0);
-    assert(approxEqual(gm.R(gs), 287.0), failedUnitTest());
+version(very_viscous_air_test) {
+    int main() {
+	auto gm = new VeryViscousAir();
+	auto gs = new GasState(gm, 100.0e3, 300.0);
+	assert(approxEqual(gm.R(gs), 287.0, 1.0e-6), failedUnitTest());
 
-    gm.update_thermo_from_pT(gs);
-    gm.update_sound_speed(gs);
-    assert(approxEqual(gs.rho, 1.16144), failedUnitTest());
-    assert(approxEqual(gs.e[0], 215250), failedUnitTest());
-    assert(approxEqual(gs.a, 347.189), failedUnitTest());
-    gm.update_trans_coeffs(gs);
-    assert(approxEqual(gs.mu, 10.0), failedUnitTest());
-    assert(approxEqual(gs.k[0], 10045), failedUnitTest());
+	gm.update_thermo_from_pT(gs);
+	gm.update_sound_speed(gs);
+	assert(approxEqual(gs.rho, 1.16144, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gs.e[0], 215250, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gs.a, 347.189, 1.0e-6), failedUnitTest());
+	gm.update_trans_coeffs(gs);
+	assert(approxEqual(gs.mu, 10.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gs.k[0], 10045, 1.0e-6), failedUnitTest());
+
+	return 0;
+    }
 }

@@ -81,23 +81,27 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
 }
 
 
-unittest {
-    import std.math;
-    auto gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
-    auto gd = GasState(gm, 100.0e3, 300.0);
-    assert(approxEqual(gm.R(gd), 287.086), "gas constant");
-    assert(gm.n_modes == 1, "number of energy modes");
-    assert(gm.n_species == 1, "number of species");
-    assert(approxEqual(gd.p, 1.0e5), "pressure");
-    assert(approxEqual(gd.T[0], 300.0), "static temperature");
-    assert(approxEqual(gd.massf[0], 1.0), "massf[0]");
+version(gas_model_util_test) {
+    int main() {
+	import std.math;
+	auto gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
+	auto gd = new GasState(gm, 100.0e3, 300.0);
+	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), "gas constant");
+	assert(gm.n_modes == 1, "number of energy modes");
+	assert(gm.n_species == 1, "number of species");
+	assert(approxEqual(gd.p, 1.0e5), "pressure");
+	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), "static temperature");
+	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), "massf[0]");
 
-    gm.update_thermo_from_pT(gd);
-    gm.update_sound_speed(gd);
-    assert(approxEqual(gd.rho, 1.16109), "density");
-    assert(approxEqual(gd.e[0], 215314.0), "internal energy");
-    assert(approxEqual(gd.a, 347.241), "density");
-    gm.update_trans_coeffs(gd);
-    assert(approxEqual(gd.mu, 1.84691e-05), "viscosity");
-    assert(approxEqual(gd.k[0], 0.0262449), "conductivity");
+	gm.update_thermo_from_pT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), "density");
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), "internal energy");
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), "sound speed");
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), "viscosity");
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), "conductivity");
+
+	return 0;
+    }
 }
