@@ -15,6 +15,10 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {start body error}
 
+test prepare-gas-model {Prepare gas model.} -body {
+    exec prep-gas ideal-air.inp ideal-air-gas-model.lua > LOGFILE_PREP_GAS
+} -result {} -returnCodes {0}
+
 test run-preprocessor {Run the preprocessing stage.} -body {
     exec e4shared --prep --job=cone20 > LOGFILE_PREP
 } -result {} -returnCodes {0}
