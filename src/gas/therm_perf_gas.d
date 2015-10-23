@@ -316,56 +316,60 @@ private:
     double[] _Cp, _Cv, _h, _s;
 } // end class Ideal_gas
 
-unittest 
-{
-    import util.msg_service;
 
-    auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
-    auto gd = new GasState(5, 1);
-    gd.p = 1.0e6;
-    gd.T[0] = 2000.0;
-    gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];
-    gm.update_thermo_from_pT(gd);
-    assert(approxEqual(11801825.6, gd.e[0]), failedUnitTest());
-    assert(approxEqual(1.2840117, gd.rho), failedUnitTest());
+version(therm_perf_gas_test) {
+    int main() {
+	import util.msg_service;
 
-    gd.rho = 2.0;
-    gd.e[0] = 14.0e6;
-    gm.update_thermo_from_rhoe(gd);
-    assert(approxEqual(3373757.4, gd.p), failedUnitTest());
-    assert(approxEqual(4331.944, gd.T[0]), failedUnitTest());
+	auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
+	auto gd = new GasState(5, 1);
+	gd.p = 1.0e6;
+	gd.T[0] = 2000.0;
+	gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];
+	gm.update_thermo_from_pT(gd);
+	assert(approxEqual(11801825.6, gd.e[0], 1.0e-6), failedUnitTest());
+	assert(approxEqual(1.2840117, gd.rho, 1.0e-6), failedUnitTest());
+
+	gd.rho = 2.0;
+	gd.e[0] = 14.0e6;
+	gm.update_thermo_from_rhoe(gd);
+	assert(approxEqual(3373757.4, gd.p, 1.0e-6), failedUnitTest());
+	assert(approxEqual(4331.944, gd.T[0], 1.0e-6), failedUnitTest());
     
-    gd.T[0] = 10000.0;
-    gd.rho = 1.5;
-    gm.update_thermo_from_rhoT(gd);
-    assert(approxEqual(5841068.3, gd.p), failedUnitTest());
-    assert(approxEqual(20340105.9, gd.e[0]), failedUnitTest());
+	gd.T[0] = 10000.0;
+	gd.rho = 1.5;
+	gm.update_thermo_from_rhoT(gd);
+	assert(approxEqual(5841068.3, gd.p, 1.0e-6), failedUnitTest());
+	assert(approxEqual(20340105.9, gd.e[0], 1.0e-6), failedUnitTest());
 
-    gd.rho = 10.0;
-    gd.p = 5.0e6;
-    gm.update_thermo_from_rhop(gd);
-    assert(approxEqual(11164648.5, gd.e[0]), failedUnitTest());
-    assert(approxEqual(1284.012, gd.T[0]), failedUnitTest());
+	gd.rho = 10.0;
+	gd.p = 5.0e6;
+	gm.update_thermo_from_rhop(gd);
+	assert(approxEqual(11164648.5, gd.e[0], 1.0e-6), failedUnitTest());
+	assert(approxEqual(1284.012, gd.T[0], 1.0e-6), failedUnitTest());
 
-    gd.p = 1.0e6;
-    double s = 10000.0;
-    gm.update_thermo_from_ps(gd, s);
-    assert(approxEqual(2560.118, gd.T[0]), failedUnitTest());
-    assert(approxEqual(12313952.52, gd.e[0]), failedUnitTest());
-    assert(approxEqual(1.00309, gd.rho), failedUnitTest());
+	gd.p = 1.0e6;
+	double s = 10000.0;
+	gm.update_thermo_from_ps(gd, s);
+	assert(approxEqual(2560.118, gd.T[0], 1.0e-6), failedUnitTest());
+	assert(approxEqual(12313952.52, gd.e[0], 1.0e-6), failedUnitTest());
+	assert(approxEqual(1.00309, gd.rho, 1.0e-6), failedUnitTest());
 
-    s = 11000.0;
-    double h = 17.0e6;
-    gm.update_thermo_from_hs(gd, h, s);
-    assert(approxEqual(5273.103, gd.T[0]), failedUnitTest());
-    assert(approxEqual(14946629.7, gd.e[0]), failedUnitTest());
-    assert(approxEqual(0.4603513, gd.rho), failedUnitTest());
-    assert(approxEqual(945271.84, gd.p), failedUnitTest());
+	s = 11000.0;
+	double h = 17.0e6;
+	gm.update_thermo_from_hs(gd, h, s);
+	assert(approxEqual(5273.103, gd.T[0], 1.0e-6), failedUnitTest());
+	assert(approxEqual(14946629.7, gd.e[0], 1.0e-6), failedUnitTest());
+	assert(approxEqual(0.4603513, gd.rho, 1.0e-6), failedUnitTest());
+	assert(approxEqual(945271.84, gd.p, 1.0e-4), failedUnitTest());
 
-    gd.T[0] = 4000.0;
-    gm.update_trans_coeffs(gd);
-    assert(approxEqual(0.00012591, gd.mu), failedUnitTest());
-    assert(approxEqual(0.2448263, gd.k[0]), failedUnitTest());
-
-    // TODO: entropy, enthalpy tests.
+	gd.T[0] = 4000.0;
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(0.00012591, gd.mu, 1.0e-6), failedUnitTest());
+	assert(approxEqual(0.2448263, gd.k[0], 1.0e-6), failedUnitTest());
+	
+	// [TODO]
+	// entropy, enthalpy and sound speed tests
+	return 0;
+    }
 }

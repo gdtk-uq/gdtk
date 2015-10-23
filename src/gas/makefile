@@ -6,7 +6,8 @@ DMD ?= dmd
 INSTALL_DIR ?= $(HOME)/dgdinst
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo sf6_model_demo luagas_model_demo
-TEST_PROGRAMS := gas_model_test
+TEST_PROGRAMS := gas_model_test gas_model_util_test ideal_gas_test \
+	therm_perf_gas_test very_viscous_air_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
@@ -44,6 +45,9 @@ demo: ${DEMO_PROGRAMS}
 clean:
 	- rm ${DEMO_PROGRAMS}  
 	- cd $(LUA); make clean
+
+test: $(TEST_PROGRAMS)
+	tclsh gas-package-test.tcl
 
 build-prep-gas: prep_gas.lua
 	- mkdir -p $(BUILD_DIR)/bin
@@ -102,5 +106,22 @@ sf6_model_demo: sf6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 #		$(DLINKFLAGS)
 
 gas_model_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -ofgas_model_test -debug -gc -w -version=gas_model_test \
+	dmd -of$@ -debug -gc -w -version=$@ \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+gas_model_util_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+ideal_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+therm_perf_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+very_viscous_air_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
