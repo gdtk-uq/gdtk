@@ -128,26 +128,29 @@ ThermallyPerfectGasMixEOS createThermallyPerfectGasMixEOS(string[] species, lua_
     return new ThermallyPerfectGasMixEOS(R, curves);
 }
 
-unittest
-{
+version(therm_perf_gas_mix_eos_test) {
     import std.math;
     import util.msg_service;
-    auto L = init_lua_State("sample-data/O2-N2-H2.lua");
-    string[] species;
-    getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", species);
-    ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);
-    auto Q = new GasState(3, 1);
-    Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;
-    Q.T[0] = 1000.0;
-    tpgm.update_energy(Q);
-    assert(approxEqual(1031849.875, Q.e[0]), failedUnitTest(__LINE__, __FILE__));
-    // Now set T[0] a little off, say 1500.0.
-    // Using Newton iterations, finding a temperature near the
-    // CEA polynomial breaks was problematic. Ridder's method
-    // should do better.
-    Q.T[0] = 1500.0;
-    tpgm.update_temperature(Q);
-    assert(approxEqual(1000.0, Q.T[0]), failedUnitTest(__LINE__, __FILE__));
+    int main() {
+	auto L = init_lua_State("sample-data/O2-N2-H2.lua");
+	string[] species;
+	getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", species);
+	ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);
+	auto Q = new GasState(3, 1);
+	Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;
+	Q.T[0] = 1000.0;
+	tpgm.update_energy(Q);
+	assert(approxEqual(1031849.875, Q.e[0], 1.0e-6), failedUnitTest());
+	// Now set T[0] a little off, say 1500.0.
+	// Using Newton iterations, finding a temperature near the
+	// CEA polynomial breaks was problematic. Brent's method
+	// should do better.
+	Q.T[0] = 1500.0;
+	tpgm.update_temperature(Q);
+	assert(approxEqual(1000.0, Q.T[0], 1.0e-6), failedUnitTest());
+
+	return 0;
+    }
 }
 
 
