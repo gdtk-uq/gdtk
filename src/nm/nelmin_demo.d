@@ -8,7 +8,7 @@
 
 import std.stdio;
 import std.math;
-import nelmin;
+import nm.nelmin;
 
 /** Test objective function 1.
  *  x is expected to be a list of ccordinates.

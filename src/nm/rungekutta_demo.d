@@ -8,7 +8,7 @@
 
 import std.stdio;
 import std.math;
-import rungekutta;
+import nm.rungekutta;
 
 /** Test system 1 
  * Third-order system with a simple analytic solution.

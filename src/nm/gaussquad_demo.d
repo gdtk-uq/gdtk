@@ -14,7 +14,7 @@
 
 import std.stdio;
 import std.math;
-import gaussquad;
+import nm.gaussquad;
 
 static uint count1 = 0;
 static uint count2 = 0;

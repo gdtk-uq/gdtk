@@ -81,7 +81,4 @@ unittest {
     double my_a = 3.0;
     auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
     assert( abs(solve!test_fun_3(0, 1) - 0.3604217) < 1.0e-5 );
-    double x1 = 0.4;
-    double x2 = 0.5;
-    assert( bracket!test_fun_3(x1, x2) == 0 );
 }

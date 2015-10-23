@@ -5,7 +5,8 @@
 
 import std.stdio;
 import std.math;
-import ridder;
+import nm.ridder;
+import nm.bracketing;
 
 double test_fun_1(double x) {
     return pow(x,3) + pow(x,2) - 3*x - 3;

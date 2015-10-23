@@ -12,7 +12,7 @@
 
 import std.stdio;
 import std.math;
-import newtoncotes;
+import nm.newtoncotes;
 
 static uint count1 = 0;
 static uint count2 = 0;

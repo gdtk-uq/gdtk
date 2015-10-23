@@ -41,3 +41,14 @@ int bracket(alias f)(ref double x1, ref double x2,
     // If we leave the loop here, we were unsuccessful.
     return -1;
  } // end bracket()
+
+unittest {
+    double test_fun_2(double x, double a) {
+	return a*x + sin(x) - exp(x);
+    }
+    double my_a = 3.0;
+    auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
+    double x1 = 0.4;
+    double x2 = 0.5;
+    assert( bracket!test_fun_3(x1, x2) == 0 );
+}

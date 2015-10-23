@@ -15,7 +15,7 @@
 
 import std.stdio;
 import std.math;
-import linesearch;
+import nm.linesearch;
 
 void main() {
     writeln("Begin demonstration of line search.");

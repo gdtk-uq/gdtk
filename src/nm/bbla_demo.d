@@ -1,7 +1,7 @@
 // bbla_demo.d
 
 import std.stdio;
-import bbla;
+import nm.bbla;
 
 void main()
 {
