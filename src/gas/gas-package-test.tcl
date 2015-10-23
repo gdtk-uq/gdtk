@@ -56,6 +56,26 @@ test therm-perf-gas-mix-eos-test {Testing thermo/therm_perf_gas_mix_eos.d} -body
     exec ./therm_perf_gas_mix_eos_test
 } -result {} -returnCodes {0}
 
+puts "-------------------------------------"
+puts "   diffusion/ tests"
+puts "-------------------------------------"
+
+test cea-therm-cond-test {Testing diffusion/cea_therm_cond.d} -body {
+    exec ./cea_therm_cond_test
+} -result {} -returnCodes {0}
+
+test cea-viscosity-test {Testing diffusion/cea_viscosity.d} -body {
+    exec ./cea_viscosity_test
+} -result {} -returnCodes {0}
+
+test sutherland-therm-cond-test {Testing diffusion/sutherland_therm_cone.d} -body {
+    exec ./sutherland_therm_cond_test
+} -result {} -returnCodes {0}
+
+test sutherland-viscosity-test {Testing diffusion/sutherland_viscosity.d} -body {
+    exec ./sutherland_viscosity_test
+} -result {} -returnCodes {0}
+
 puts ""
 puts "=====================================  SUMMARY  ====================================="
 cleanupTests

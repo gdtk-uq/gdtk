@@ -67,17 +67,21 @@ private:
     double _S;
 }
 
-unittest {
-    double T = 300.0;
-    double T_ref = 273.0; 
-    double k_ref = 0.0241;
-    double S = 194.0;
-    assert(approxEqual(sutherland_thermal_conductivity(T, T_ref, k_ref, S), 0.0262449), failedUnitTest(__LINE__, __FILE__));
+version(sutherland_therm_cond_test) {
+    int main() {
+	double T = 300.0;
+	double T_ref = 273.0; 
+	double k_ref = 0.0241;
+	double S = 194.0;
+	assert(approxEqual(sutherland_thermal_conductivity(T, T_ref, k_ref, S), 0.0262449, 1.0e-6), failedUnitTest());
 
-    auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
-    auto gd = new GasState(1, 1);
-    gd.T[0] = 300.0;
-    gd.k[0] = 0.0;
-    tcm.update_thermal_conductivity(gd);
-    assert(approxEqual(gd.k[0], 0.0262449), failedUnitTest(__LINE__, __FILE__));
+	auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
+	auto gd = new GasState(1, 1);
+	gd.T[0] = 300.0;
+	gd.k[0] = 0.0;
+	tcm.update_thermal_conductivity(gd);
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+
+	return 0;
+    }
 }
