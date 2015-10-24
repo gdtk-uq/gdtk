@@ -49,6 +49,14 @@ function ExtrapolateCopy:tojson()
    return str
 end
 
+FixedP = GhostCellEffect:new{p_outside=1.0e5}
+FixedP.type = "fixed_pressure"
+function FixedP:tojson()
+   local str = string.format('          {"type": "%s", "p_outside": %f}',
+			     self.type, self.p_outside)
+   return str
+end
+
 FixedPT = GhostCellEffect:new{p_outside=1.0e5, T_outside=300.0}
 FixedPT.type = "fixed_pressure_temperature"
 function FixedPT:tojson()
@@ -288,6 +296,16 @@ OutFlowBC_Simple.type = "outflow_simple_extrapolate"
 function OutFlowBC_Simple:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
+   o.preSpatialDerivAction = { CopyCellData:new() }
+   return o
+end
+
+OutFlowBC_FixedP = BoundaryCondition:new()
+OutFlowBC_FixedP.type = "outflow_fixed_p"
+function OutFlowBC_FixedP:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
+			FixedP:new{p_outside=o.p_outside} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end
