@@ -49,15 +49,20 @@ void minimize(alias f)(ref double a, ref double b, double tol=1.0e-4)
  } // end minimize()
 
 
-unittest {
+version(linesearch_test) {
     import std.math;
-    double fdemo(double x) {
-        return exp(x) + 2.0 - cos(x);
+    import util.msg_service;
+    int main() {
+	double fdemo(double x) {
+	    return exp(x) + 2.0 - cos(x);
+	}
+	double a = -3;
+	double b = 1;
+	minimize!fdemo(a, b, 1.0e-6);
+	double xminimum = -0.588534;
+	assert(abs(a - xminimum) < 1.0e-4, failedUnitTest());
+	assert(abs(b - xminimum) < 1.0e-4, failedUnitTest());
+
+	return 0;
     }
-    double a = -3;
-    double b = 1;
-    minimize!fdemo(a, b, 1.0e-6);
-    double xminimum = -0.588534;
-    assert( abs(a - xminimum) < 1.0e-4 );
-    assert( abs(b - xminimum) < 1.0e-4 );
 }

@@ -76,12 +76,15 @@ double integrate(alias f)(double a, double b, double tol=1.0e-5)
     return I;
 }
 
-
-unittest{
-    import std.math;
-    double fun1(double x) { return abs(x) < 1.0 ? sqrt(1.0 - x*x): 0.0; }
-    double fun2(double x) { return 1.0 / (1.0 + x * x); }
-    assert(approxEqual(PI/4, integrate!fun1(0.0, 1.0)), "integrate fun1"); 
-    assert(approxEqual(PI/4, integrate!fun2(0.0, 1.0)), "integrate fun2"); 
+version(gaussquad_test) {
+    import util.msg_service;
+    int main() {
+	double fun1(double x) { return abs(x) < 1.0 ? sqrt(1.0 - x*x): 0.0; }
+	double fun2(double x) { return 1.0 / (1.0 + x * x); }
+	assert(approxEqual(PI/4, integrate!fun1(0.0, 1.0), 1.0e-6), failedUnitTest()); 
+	assert(approxEqual(PI/4, integrate!fun2(0.0, 1.0), 1.0e-6), failedUnitTest());
+	
+	return 0;
+    }
 }
 

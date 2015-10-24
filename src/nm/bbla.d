@@ -345,30 +345,35 @@ Matrix dot(in Matrix a, in Matrix b)
     return c;
 }
 
-unittest {
-    Matrix a = eye(3);
-    assert(approxEqualMatrix(a, new Matrix([[1,0,0],[0,1,0],[0,0,1]])),
-	   "eye(), indentity matrix");
-    Matrix b = zeros(2,3);
-    Matrix c = transpose(b);
-    b[1,2] = 99.0;
-    c[0,0] = 1.0; c[1,1] = 1.0;
-    assert(approxEqualMatrix(b, new Matrix([[0,0,0],[0,0,99]])),
-	   "zeros and assign");
-    assert(approxEqualMatrix(c, new Matrix([[1,0],[0,1],[0,0]])),
-	   "transpose and assign");
+version(bbla_test) {
+    import util.msg_service;
+    int test_basic_operations() {
+	Matrix a = eye(3);
+	assert(approxEqualMatrix(a, new Matrix([[1,0,0],[0,1,0],[0,0,1]])),
+	       failedUnitTest());
+	Matrix b = zeros(2,3);
+	Matrix c = transpose(b);
+	b[1,2] = 99.0;
+	c[0,0] = 1.0; c[1,1] = 1.0;
+	assert(approxEqualMatrix(b, new Matrix([[0,0,0],[0,0,99]])),
+	       failedUnitTest());
+	assert(approxEqualMatrix(c, new Matrix([[1,0],[0,1],[0,0]])),
+	       failedUnitTest());
 
-    Matrix e = new Matrix([1.0, 2.0, 3.0]);
-    assert(approxEqualMatrix(e, new Matrix([[1],[2],[3]])),
-	   "column vector entered as array");
-    Matrix e2 = new Matrix([1, 2, 3], "row");
-    assert(approxEqualMatrix(e2, new Matrix([[1,2,3]])),
-	   "row vector entered as array of int");
+	Matrix e = new Matrix([1.0, 2.0, 3.0]);
+	assert(approxEqualMatrix(e, new Matrix([[1],[2],[3]])),
+	       failedUnitTest());
+	Matrix e2 = new Matrix([1, 2, 3], "row");
+	assert(approxEqualMatrix(e2, new Matrix([[1,2,3]])),
+	       failedUnitTest());
+	
+	Matrix f = new Matrix([[1.0,2.0,3.0],[4.0,5.0,6.0]]);
+	Matrix g = dot(f,c);
+	assert(approxEqualMatrix(g, new Matrix([[1,2],[4,5]])),
+	       failedUnitTest());
 
-    Matrix f = new Matrix([[1.0,2.0,3.0],[4.0,5.0,6.0]]);
-    Matrix g = dot(f,c);
-    assert(approxEqualMatrix(g, new Matrix([[1,2],[4,5]])),
-	   "dot product");
+	return 0;
+    }
 }
 
 
@@ -404,24 +409,28 @@ void gaussJordanElimination(ref Matrix c, double very_small_value=1.0e-16)
     } // end foreach j
 } // end gaussJordanElimination()
 
-unittest {
-    Matrix A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-			   [2.0,  2.0,  3.0,  2.0],
-			   [4.0, -3.0,  0.0,  1.0],
-			   [6.0,  1.0, -6.0, -5.0]]);
-    Matrix b = new Matrix([0.0, -2.0, -7.0, 6.0], "column");
-    Matrix Ab = hstack([A,b]);
-    Matrix Aonly = Ab.sliceDup(0, 4, 0, 4);
-    Matrix bonly = Ab.sliceDup(0, 4, 4, 5);
-    gaussJordanElimination(Ab);
-    assert(approxEqualMatrix(Ab, new Matrix([[1,0,0,0,-0.5],[0,1.0,0,0,1],
+version(bbla_test) {
+    int test_elimination() {
+	Matrix A = new Matrix([[0.0,  2.0,  0.0,  1.0],
+			       [2.0,  2.0,  3.0,  2.0],
+			       [4.0, -3.0,  0.0,  1.0],
+			       [6.0,  1.0, -6.0, -5.0]]);
+	Matrix b = new Matrix([0.0, -2.0, -7.0, 6.0], "column");
+	Matrix Ab = hstack([A,b]);
+	Matrix Aonly = Ab.sliceDup(0, 4, 0, 4);
+	Matrix bonly = Ab.sliceDup(0, 4, 4, 5);
+	gaussJordanElimination(Ab);
+	assert(approxEqualMatrix(Ab, new Matrix([[1,0,0,0,-0.5],[0,1.0,0,0,1],
 					     [0,0,1,0,1.0/3],[0,0,0,1,-2.0]])),
-	   "Gauss-Jordan elimination with partial pivoting");
-    double[] x = Ab.getColumn(4);
-    Matrix new_rhs = dot(Aonly, new Matrix(x));
-    assert(approxEqualMatrix(new_rhs, bonly), "check rhs");
-    Matrix residual = new_rhs - b;
-    assert(approxEqualMatrix(residual, new Matrix([0,0,0,0])), "zero residual");
+	       failedUnitTest());
+	double[] x = Ab.getColumn(4);
+	Matrix new_rhs = dot(Aonly, new Matrix(x));
+	assert(approxEqualMatrix(new_rhs, bonly), failedUnitTest());
+	Matrix residual = new_rhs - b;
+	assert(approxEqualMatrix(residual, new Matrix([0,0,0,0])), failedUnitTest());
+
+	return 0;
+    }
 }
 
 /**
@@ -523,21 +532,25 @@ Matrix inverse(in Matrix a)
     return x;
 }
 
-unittest {
-    auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-			 [2.0,  2.0,  3.0,  2.0],
-			 [4.0, -3.0,  0.0,  1.0],
-			 [6.0,  1.0, -6.0, -5.0]]);
-    auto b = new Matrix([0.0, -2.0, -7.0, 6.0], "column");
-    auto c = new Matrix(A);
-    auto perm = decomp(c);
-    auto x = new Matrix(b);
-    solve(c, x, perm);
-    auto residual = b - dot(A,x);
-    assert(approxEqualMatrix(residual, new Matrix([0,0,0,0])), "zero residual");
+version(bbla_test) {
+    int test_decomp_and_inverse() {
+	auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
+			     [2.0,  2.0,  3.0,  2.0],
+			     [4.0, -3.0,  0.0,  1.0],
+			     [6.0,  1.0, -6.0, -5.0]]);
+	auto b = new Matrix([0.0, -2.0, -7.0, 6.0], "column");
+	auto c = new Matrix(A);
+	auto perm = decomp(c);
+	auto x = new Matrix(b);
+	solve(c, x, perm);
+	auto residual = b - dot(A,x);
+	assert(approxEqualMatrix(residual, new Matrix([0,0,0,0])), failedUnitTest());
 
-    auto y = inverse(A);
-    assert(approxEqualMatrix(dot(A,y), eye(4)), "inverse calculation");
+	auto y = inverse(A);
+	assert(approxEqualMatrix(dot(A,y), eye(4)), failedUnitTest());
+
+	return 0;
+    }
 }
 
 /**
@@ -579,20 +592,36 @@ Matrix lsqsolve(const Matrix c, const Matrix rhs)
     return x;
 } // end lsqsolve()
 
-unittest {
-    auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-			 [2.0,  2.0,  3.0,  2.0],
-			 [4.0,  4.0,  6.0,  4.0],
-			 [4.0, -3.0,  0.0,  1.0],
-			 [4.0, -3.0,  0.0,  1.0],
-			 [6.0,  1.0, -6.0, -5.0]]);
-    auto b = new Matrix([[ 0.0],
-			 [-2.0],
-			 [-4.0],
-			 [-7.0],
-			 [-7.0],
-			 [ 6.0]]);
-    auto xx = lsqsolve(A, b);
-    auto expected_xx = new Matrix([-0.5, 1, 1.0/3, -2], "column");
-    assert(approxEqualMatrix(xx, expected_xx), "least-squares solve");
+version(bbla_test) {
+    int test_lsqsolve() {
+	auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
+			     [2.0,  2.0,  3.0,  2.0],
+			     [4.0,  4.0,  6.0,  4.0],
+			     [4.0, -3.0,  0.0,  1.0],
+			     [4.0, -3.0,  0.0,  1.0],
+			     [6.0,  1.0, -6.0, -5.0]]);
+	auto b = new Matrix([[ 0.0],
+			     [-2.0],
+			     [-4.0],
+			     [-7.0],
+			     [-7.0],
+			     [ 6.0]]);
+	auto xx = lsqsolve(A, b);
+	auto expected_xx = new Matrix([-0.5, 1, 1.0/3, -2], "column");
+	assert(approxEqualMatrix(xx, expected_xx), failedUnitTest());
+	return 0;
+    }
+
+    int main() {
+	if ( test_basic_operations() != 0 )
+	    return 1;
+	if ( test_elimination() != 0 )
+	    return 1;
+	if ( test_decomp_and_inverse() != 0 )
+	    return 1;
+	if ( test_lsqsolve() != 0 )
+	    return 1;
+
+	return 0;
+    }
 }
