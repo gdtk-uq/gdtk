@@ -280,32 +280,25 @@ public:
 	
 	// 1. Apply the formula to evaluate intermediate points
 	_rmech.eval_rates(y0, _k1);
-	foreach ( i; 0.._ndim )
-	    _yTmp[i] = y0[i] + h*(a21*_k1[i]);
+	_yTmp[] = y0[] + h*(a21*_k1[]);
 
 	_rmech.eval_rates(_yTmp, _k2);
-	foreach ( i; 0.._ndim )
-	    _yTmp[i] = y0[i] + h*(a31*_k1[i] + a32*_k2[i]);
+	_yTmp[] = y0[] + h*(a31*_k1[] + a32*_k2[]);
 
 	_rmech.eval_rates(_yTmp, _k3);
-	foreach ( i; 0.._ndim )
-	    _yTmp[i] = y0[i] + h*(a41*_k1[i] + a42*_k2[i] + a43*_k3[i]);
+	_yTmp[] = y0[] + h*(a41*_k1[] + a42*_k2[] + a43*_k3[]);
 
 	_rmech.eval_rates(_yTmp, _k4);
-	foreach ( i; 0.._ndim )
-	    _yTmp[i] = y0[i] + h*(a51*_k1[i] + a52*_k2[i] + a53*_k3[i] + a54*_k4[i]);
+	_yTmp[] = y0[] + h*(a51*_k1[] + a52*_k2[] + a53*_k3[] + a54*_k4[]);
 
 	_rmech.eval_rates(_yTmp, _k5);
-	foreach ( i; 0.._ndim ) 
-	    _yTmp[i] = y0[i] + h*(a61*_k1[i] + a62*_k2[i] + a63*_k3[i] + a64*_k4[i] + a65*_k5[i]);
+	_yTmp[] = y0[] + h*(a61*_k1[] + a62*_k2[] + a63*_k3[] + a64*_k4[] + a65*_k5[]);
 
 	_rmech.eval_rates(_yTmp, _k6);
 	
 	// 2. Compute new value and error esimate
-	foreach ( i; 0.._ndim ) {
-	    yOut[i] = y0[i] + h*(b51*_k1[i] + b53*_k3[i] + b54*_k4[i] + b56*_k6[i]);
-	    _yErr[i] = yOut[i] - (y0[i] + h*(b41*_k1[i] + b43*_k3[i] + b44*_k4[i] + b45*_k5[i] + b46*_k6[i]));
-	}
+	yOut[] = y0[] + h*(b51*_k1[] + b53*_k3[] + b54*_k4[] + b56*_k6[]);
+	_yErr[] = yOut[] - (y0[] + h*(b41*_k1[] + b43*_k3[] + b44*_k4[] + b45*_k5[] + b46*_k6[]));
 
 	// 3. Lastly, use error estimate as a means to suggest
 	//    a new timestep.
