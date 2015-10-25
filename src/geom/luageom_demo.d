@@ -65,6 +65,15 @@ print("rotated m=", m, "expected Vector3([0.0, 1.0, 0.0])")
 n = Vector3:new{1.0,0.0,0.0}
 n:mirrorImage(Vector3:new{2.0,0.0,0.0}, Vector3:new{1.0,0.0,0.0})
 print("mirror-image n=", n, "expected Vector3([3.0, 0.0, 0.0])")
+print("Try calling cell geometry calculation functions.")
+t = quadProperties{p0=Vector3:new{0.0, 0.0}, p1=Vector3:new{1.0, 0.0},
+                   p2=Vector3:new{1.0, 1.0}, p3=Vector3:new{0.0, 1.0}}
+print("area=", t.area, "centroid=", t.centroid, "n=", t.n, "t1=", t.t1, "t2=", t.t2)
+t = hexCellProperties{p0=Vector3:new{0.0, 0.0, 0.0}, p1=Vector3:new{1.0, 0.0, 0.0},
+                      p2=Vector3:new{1.0, 1.0, 0.0}, p3=Vector3:new{0.0, 1.0, 0.0},
+                      p4=Vector3:new{0.0, 0.0, 1.0}, p5=Vector3:new{1.0, 0.0, 1.0},
+                      p6=Vector3:new{1.0, 1.0, 1.0}, p7=Vector3:new{0.0, 1.0, 1.0}}
+print("volume=", t.volume, "centroid=", t.centroid, "iLen=", t.iLen, "jLen=", t.jLen, "kLen=", t.kLen)
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
 	writeln("There was a problem interpreting the test code.");

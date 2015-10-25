@@ -389,6 +389,113 @@ extern(C) int crossVector3(lua_State* L)
     return pushVector3(L, cross(*a, *b));
 }
 
+/**
+ * Returns a table containing the named properties.
+ * Expects a table of names corners.
+ */
+extern(C) int quadProperties(lua_State* L)
+{
+    if ( lua_istable(L, 1) ) {
+	lua_getfield(L, 1, "p0");
+	Vector3 p0 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p1");
+	Vector3 p1 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p2");
+	Vector3 p2 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p3");
+        Vector3 p3 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_settop(L, 0); // clear stack
+
+	Vector3 centroid;
+	Vector3 n;
+	Vector3 t1;
+	Vector3 t2;
+	double area;
+	quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
+
+	lua_newtable(L); // anonymous table { }
+	auto tblIndx = lua_gettop(L);
+	pushVector3(L, centroid);
+	lua_setfield(L, tblIndx, "centroid");
+	pushVector3(L, n);
+	lua_setfield(L, tblIndx, "n");
+	pushVector3(L, t1);
+	lua_setfield(L, tblIndx, "t1");
+	pushVector3(L, t2);
+	lua_setfield(L, tblIndx, "t2");
+	lua_pushnumber(L, area);
+	lua_setfield(L, tblIndx, "area");
+	return 1;
+    } else {
+	string errMsg = "quadProperties enpected a table with names corners.";
+	luaL_error(L, errMsg.toStringz);
+	return 0;
+    }
+} // end quadProperties()
+
+/**
+ * Returns a table containing the named properties.
+ * Expects a table of names corners.
+ */
+extern(C) int hexCellProperties(lua_State* L)
+{
+    if ( lua_istable(L, 1) ) {
+	lua_getfield(L, 1, "p0");
+	Vector3 p0 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p1");
+	Vector3 p1 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p2");
+	Vector3 p2 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p3");
+        Vector3 p3 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p4");
+	Vector3 p4 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p5");
+	Vector3 p5 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p6");
+	Vector3 p6 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "p7");
+        Vector3 p7 = *checkVector3(L, -1);
+	lua_pop(L, 1);
+	lua_settop(L, 0); // clear stack
+
+	Vector3 centroid;
+	double volume;
+	double iLen, jLen, kLen;
+	hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, 
+			    centroid, volume, iLen, jLen, kLen);
+
+	lua_newtable(L); // anonymous table { }
+	auto tblIndx = lua_gettop(L);
+	pushVector3(L, centroid);
+	lua_setfield(L, tblIndx, "centroid");
+	lua_pushnumber(L, volume);
+	lua_setfield(L, tblIndx, "volume");
+	lua_pushnumber(L, iLen);
+	lua_setfield(L, tblIndx, "iLen");
+	lua_pushnumber(L, jLen);
+	lua_setfield(L, tblIndx, "jLen");
+	lua_pushnumber(L, kLen);
+	lua_setfield(L, tblIndx, "kLen");
+	return 1;
+    } else {
+	string errMsg = "hexCellProperties enpected a table with names corners.";
+	luaL_error(L, errMsg.toStringz);
+	return 0;
+    }
+} // end hexCellProperties()
+
 extern(C) int toStringVector3(lua_State* L)
 {
     auto a = checkVector3(L, 1);
@@ -451,5 +558,8 @@ void registerVector3(lua_State* L)
     lua_setglobal(L, "unit");
     lua_pushcfunction(L, &crossVector3);
     lua_setglobal(L, "cross");
-}
-    
+    lua_pushcfunction(L, &quadProperties);
+    lua_setglobal(L, "quadProperties");
+    lua_pushcfunction(L, &hexCellProperties);
+    lua_setglobal(L, "hexCellProperties");
+} // end registerVector3()
