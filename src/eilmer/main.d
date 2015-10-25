@@ -17,6 +17,7 @@ import std.algorithm;
 
 import geom;
 import gas;
+import gas.luagas_model;
 import globalconfig;
 import simcore;
 import util.lua;
@@ -156,6 +157,7 @@ void main(string[] args)
 	registerUnivariateFunctions(L);
 	registerStructuredGrid(L);
 	registerSolidProps(L);
+	registerGasModel(L, LUA_GLOBALSINDEX);
 	if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
 	    writeln("There was a problem in the Eilmer Lua code: prep.lua");
 	    string errMsg = to!string(lua_tostring(L, -1));

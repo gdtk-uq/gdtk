@@ -13,6 +13,7 @@ import util.lua;
 import util.lua_service;
 
 import gas;
+import gas.luagas_model;
 import fvcore;
 import globalconfig;
 
@@ -713,10 +714,12 @@ extern(C) int setGasModel(lua_State* L)
     GlobalConfig.gmodel_master = init_gas_model(fname);
     lua_pushinteger(L, GlobalConfig.gmodel_master.n_species);
     lua_pushinteger(L, GlobalConfig.gmodel_master.n_modes);
-    return 2;
+    GasModelStore ~= pushObj!(GasModel, GasModelMT)(L, GlobalConfig.gmodel_master);
+    return 3;
     
 }
 
+/* [DEPRECATED]
 extern(C) int get_nspecies(lua_State* L)
 {
     lua_pushinteger(L, GlobalConfig.gmodel_master.n_species);
@@ -735,6 +738,7 @@ extern(C) int species_name(lua_State* L)
     lua_pushstring(L, GlobalConfig.gmodel_master.species_name(i).toStringz);
     return 1;
 }
+*/
 
 //-----------------------------------------------------------------------
 // Call the following function from the main program to get the
@@ -768,10 +772,12 @@ void registerGlobalConfig(lua_State* L)
     // Register other global functions related to the managed gas model.
     lua_pushcfunction(L, &setGasModel);
     lua_setglobal(L, "setGasModel");
+    /* [DEPRECATED]
     lua_pushcfunction(L, &get_nspecies);
     lua_setglobal(L, "get_nspecies");
     lua_pushcfunction(L, &get_nmodes);
     lua_setglobal(L, "get_nmodes");
     lua_pushcfunction(L, &species_name);
     lua_setglobal(L, "species_name");
+    */
 } // end registerGlobalConfig()

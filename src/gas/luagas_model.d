@@ -148,6 +148,16 @@ extern(C) int thermoHS(lua_State* L)
     return 0;
 }
 
+extern(C) int soundSpeed(lua_State* L)
+{
+   auto gm = checkGasModel(L, 1);
+   auto Q = new GasState(gm.n_species, gm.n_modes);
+   getGasStateFromTable(L, 2, Q); 
+   gm.update_sound_speed(Q);
+   setGasStateInTable(L, 2, Q);
+   return 0;
+}
+
 // We don't wrap dedT_const_v as we do Cv in its place.
 // We don't wrap dhdT_const_p as we do Cp in its place.
 
@@ -322,6 +332,19 @@ extern(C) int conc2massf(lua_State* L)
 extern(C) int createTableForGasState(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
+    auto Q = new GasState(gm.n_species, gm.n_modes);
+    lua_newtable(L);
+    int idx = lua_gettop(L);
+    setGasStateInTable(L, idx, Q);
+    return 1;
+}
+
+extern(C) int newTableForGasState(lua_State* L)
+{
+    lua_remove(L, 1); // Remove first argument this
+    lua_rawgeti(L, 1, 1);
+    auto gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
     lua_newtable(L);
     int idx = lua_gettop(L);
@@ -510,6 +533,8 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "updateThermoFromPS");
     lua_pushcfunction(L, &thermoHS);
     lua_setfield(L, -2, "updateThermoFromHS");
+    lua_pushcfunction(L, &soundSpeed);
+    lua_setfield(L, -2, "updateSoundSpeed");
     lua_pushcfunction(L, &dpdrhoConstT);
     lua_setfield(L, -2, "dpdrhoConstT");
     lua_pushcfunction(L, &intEnergy);
@@ -546,9 +571,19 @@ void registerGasModel(lua_State* L, int tblIdx)
     // Make class visible
     lua_setfield(L, tblIdx, GasModelMT.toStringz);
 
-    // Global functions
-    lua_pushcfunction(L, &createTableForGasState);
+    // Make initialisation of GasState table look like a class constructor
+    luaL_newmetatable(L, "GasState");
+
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates current metatable
+    lua_setfield(L, -2, "__index");
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newTableForGasState);
+    lua_setfield(L, -2, "new");
+
+    // Make GasState constructor visible
     lua_setfield(L, tblIdx, "GasState");
+
 }
 
 version(gas_calc) {

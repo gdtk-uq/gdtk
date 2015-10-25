@@ -58,7 +58,7 @@ build-prep-gas: prep_gas.lua
 
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(NM_FILES) $(UTIL_FILES)
 	dmd -ofgas-calc -version=gas_calc \
-		luagas_model.d $(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS)
+		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS)
 
 install: gas-calc
 	cp gas-calc $(INSTALL_DIR)/bin/

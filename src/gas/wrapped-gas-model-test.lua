@@ -5,7 +5,7 @@ assert(gm:nSpecies() == 1)
 assert(gm:nModes() == 1)
 assert(gm:speciesName(1) == 'air')
 -- Test thermo evaluations....
-Q = GasState(gm)
+Q = GasState:new{gm}
 Q.p = 1.0e5
 Q.T = { 300.0 }
 gm:updateThermoFromPT(Q)

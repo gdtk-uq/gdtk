@@ -11,10 +11,19 @@ config.dimensions = 2
 config.title = job_title
 config.axisymmetric = true
 
-nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
+nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
 initial = FlowState:new{p=5955.0, T=304.0, velx=0.0, vely=0.0}
 inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0, vely=0.0}
+
+-- Demo: Verify Mach number of inflow.
+Q = GasState:new{gm}
+Q.p = 95.84e3
+Q.T = {1103.0}
+Q.massf = {1.0}
+gm:updateSoundSpeed(Q)
+print("Sound speed= ", Q.a)
+print("Inflow Mach number= ", 1000.0/Q.a)
 
 -- Set up two quadrilaterals in the (x,y)-plane by first defining
 -- the corner nodes, then the lines between those corners.
