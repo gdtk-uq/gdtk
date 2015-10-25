@@ -30,6 +30,7 @@ test: ${TEST_PROGRAMS}
 clean:
 	- rm *.o
 	- rm ${DEMO_PROGRAMS}
+	- rm ${TEST_PROGRAMS}
 
 ridder_demo: ridder_demo.d ridder.d bracketing.d
 	dmd -g ridder_demo.d ridder.d bracketing.d
@@ -51,17 +52,6 @@ gaussquad_demo: gaussquad_demo.d gaussquad.d
 
 bbla_demo: bbla_demo.d bbla.d
 	dmd -g bbla_demo.d bbla.d
-
-# [TODO] Jonathan's programs probably belong is with the gas model files
-# if they cannot be made general enough to be independent of that module.
-
-# build_tree: build_tree.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
-# 	dmd build_tree.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
-# 		$(DLINKFLAGS)
-
-# univariate_lut_demo:  univariate_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
-# 	dmd -debug univariate_lut_demo.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
-# 		$(DLINKFLAGS)
 
 bbla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -gc -w -version=$@ \

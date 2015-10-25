@@ -5,7 +5,8 @@
 DMD ?= dmd
 INSTALL_DIR ?= $(HOME)/dgdinst
 
-DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo sf6_model_demo luagas_model_demo
+DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo sf6_model_demo luagas_model_demo \
+	univariate_lut_demo build_tree
 TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test gas_model_test gas_model_util_test ideal_gas_test \
 	perf_gas_mix_eos_test sutherland_therm_cond_test sutherland_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_mix_eos_test very_viscous_air_test
@@ -42,9 +43,11 @@ demo: ${DEMO_PROGRAMS}
 	echo "Demo programs built."
 
 clean:
+	- rm *.o
 	- rm ${DEMO_PROGRAMS}
 	- rm ${TEST_PROGRAMS}
 	- rm gas.so
+	- rm gas-calc
 	- cd $(LUA); make clean
 
 test: $(TEST_PROGRAMS) gas-calc
@@ -88,6 +91,23 @@ co2_sw_model_demo: co2_sw_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 
 sf6_model_demo: sf6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) sf6_model_demo.d $(OF)sf6_model_demo \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(DLINKFLAGS)
+
+luagas_model_demo: luagas_model_demo.d $(LIBLUA) 
+	$(DMD) -g $(DFLAGS) luagas_model_demo.d $(OF)luagas_model_demo \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(DLINKFLAGS) 
+
+# Jonathan's programs that were moved out of nm.
+
+build_tree: build_tree.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+	$(DMD) build_tree.d $(OF)build_tree \
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(DLINKFLAGS)
+
+univariate_lut_demo: univariate_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+	$(DMD) -debug univariate_lut_demo.d $(OF)univariate_lut_demo \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 

@@ -8,10 +8,10 @@ import std.string;
 import std.conv;
 import std.datetime;
 
-import univariate_lut;
+import nm.univariate_lut;
 import gas.gas_model;
 import gas.gas_model_util;
-import gas.CO2GasSW;
+import gas.co2gas_sw;
 
 
 static double F(double rho){
