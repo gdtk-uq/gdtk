@@ -476,7 +476,7 @@ void setGasStateInTable(lua_State* L, int idx, GasState Q)
     lua_setfield(L, idx, "quality");
 }
 
-void registerGasModel(lua_State* L)
+void registerGasModel(lua_State* L, int tblIdx)
 {
     luaL_newmetatable(L, GasModelMT.toStringz);
 
@@ -544,11 +544,31 @@ void registerGasModel(lua_State* L)
     lua_setfield(L, -2, "conc2massf");
 
     // Make class visible
-    lua_setglobal(L, GasModelMT.toStringz);
+    lua_setfield(L, tblIdx, GasModelMT.toStringz);
 
     // Global functions
     lua_pushcfunction(L, &createTableForGasState);
-    lua_setglobal(L, "GasState");
+    lua_setfield(L, tblIdx, "GasState");
+}
 
+version(gas_calc) {
+    int main(string[] args) {
+	if ( args.length != 2 ) {
+	    writeln("ERROR: Wrong number of arguments.");
+	    writeln("");
+	    writeln("Usage: ");
+	    writeln("  gas-calc inputFile");
+	    return 1;
+	}
+	auto L = luaL_newstate();
+	luaL_openlibs(L);
+	registerGasModel(L, LUA_GLOBALSINDEX);
+
+	if ( luaL_dofile(L, toStringz(args[1])) != 0 ) {
+	    writeln(to!string(lua_tostring(L, -1)));
+	    return 1;
+	}
+	return 0;
+    }
 }
 

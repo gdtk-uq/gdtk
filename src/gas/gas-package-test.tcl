@@ -76,6 +76,14 @@ test sutherland-viscosity-test {Testing diffusion/sutherland_viscosity.d} -body 
     exec ./sutherland_viscosity_test
 } -result {} -returnCodes {0}
 
+puts "-----------------------------------------"
+puts "   Lua wrapped functions (gas-calc) test "
+puts "-----------------------------------------"
+
+test gas-calc-test {Testing gas-calc} -body {
+    exec ./gas-calc wrapped-gas-model-test.lua
+} -result {} -returnCodes {0}
+
 puts ""
 puts "=====================================  SUMMARY  ====================================="
 cleanupTests

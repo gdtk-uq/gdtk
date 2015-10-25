@@ -44,9 +44,10 @@ demo: ${DEMO_PROGRAMS}
 clean:
 	- rm ${DEMO_PROGRAMS}
 	- rm ${TEST_PROGRAMS}
+	- rm gas.so
 	- cd $(LUA); make clean
 
-test: $(TEST_PROGRAMS)
+test: $(TEST_PROGRAMS) gas-calc
 	tclsh gas-package-test.tcl
 
 build-prep-gas: prep_gas.lua
@@ -54,6 +55,13 @@ build-prep-gas: prep_gas.lua
 	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
 	- mkdir -p $(BUILD_DIR)/data
 	cp species-database/species-database.lua $(BUILD_DIR)/data/
+
+gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(NM_FILES) $(UTIL_FILES)
+	dmd -ofgas-calc -version=gas_calc \
+		luagas_model.d $(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS)
+
+install: gas-calc
+	cp gas-calc $(INSTALL_DIR)/bin/
 
 $(LIBLUA):
 	cd $(LUA); make linux local
@@ -96,13 +104,6 @@ sf6_model_demo: sf6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 #very_viscous_air_test : very_viscous_air.d libgas.a $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 #	$(DMD) -main -unittest $(DFLAGS) very_viscous_air.d $(OF)very_viscous_air_test \
 #		libgas.a $(UTIL_FILES) $(NM_FILES) \
-#		$(DLINKFLAGS)
-
-#luagas_model_demo: luagas_model_demo.d luagas_model.d \
-#	$(LIBLUA) $(UTIL_FILES) $(NM_FILES)
-#	$(DMD) -g $(DFLAGS) luagas_model_demo.d luagas_model.d \
-#		$(OF)luagas_model_demo \
-#		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES)\
 #		$(DLINKFLAGS)
 
 cea_therm_cond_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
