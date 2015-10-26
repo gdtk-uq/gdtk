@@ -8,6 +8,7 @@
 module kinetics.chemistry_update;
 
 import std.stdio;
+import std.string;
 import std.math;
 import std.algorithm;
 import util.lua;
@@ -525,36 +526,79 @@ version(chemistry_update_test) {
     import kinetics.rate_constant;
     import kinetics.reaction;
     import gas.therm_perf_gas;
+
+    double numericalEstimate(double dt, double tMax, double[] conc0, ChemODEStep step)
+    {
+	double t = 0.0;
+	double[] conc1;
+	conc1.length = conc0.length;
+	double dtDummy;
+	int count = 0;
+	while ( (tMax - t) > 1.0e-9 ) {
+	    dt = min(dt, tMax - t);
+	    step(conc0, dt, conc1, dtDummy);
+	    t += dt;
+	    conc0 = conc1.dup;
+	    count++;
+	}
+	return conc1[2];
+    }
+
     int main() {
-	/* This might be stretching a bit what a *unit* is.
-	 * In this test, we'll exercise the chemistry update
-	 * routine by solving the complete hydrogen-iodine system.
-	 */
-	auto kf = new ArrheniusRateConstant(1.94e8, 0.0, 20620.0);
-	auto kb = new ArrheniusRateConstant(5.47070580511e-07, 0.0, 0.0);
-	auto reaction = new ElementaryReaction(kf, kb, [0, 1], [1, 1],
-					       [2], [2], 3);
-	auto reacMech = new ReactionMechanism([reaction], 3);
+
 	auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
-	auto cstep = new RKFStep(gmodel, reacMech, 1.0e-3);
+	auto rmech = createReactionMechanism("sample-input/H2-I2-inp.lua", gmodel);
+
 	auto gd = new GasState(3, 1);
 	gd.T[0] = 700.0;
 	double c0 = 4.54;
+	double[] conc0 = [c0, c0, 0.0];
 	gd.p = 2.0*c0*R_universal*gd.T[0];
 	double[] molef = [0.5, 0.5, 0.0];
 	gmodel.molef2massf(molef, gd);
 	gmodel.update_thermo_from_pT(gd);
+	rmech.eval_rate_constants(gd);
 	double tInterval = 60000.0;
-	double dtSuggest = 200.0;
+	double analyticalVal = 7.1420197868416215;
 
-	// The actual test
+	/* 1. Test RKFStep
+	 * We'll check that the order of accuracy for the method
+	 * is as expected. We'll choose a timestep and run the problem
+	 * once and compare the numerical result to an analytical
+	 * calculation. Then we'll run the problem with a reduced
+	 * timestep h*pow(2.0, -1/5). For this 5th-order accurate
+	 * method, we should expect to see the error drop by a factor
+	 * of 2.0 if we reduce the timestep by 2.0**(-1/5).
+	 */
+	auto rkfStep = new RKFStep(gmodel, rmech, 1.0e-3);
+	double dt = 287.175;
+	double numVal0 = numericalEstimate(dt, tInterval, conc0, rkfStep);
+	double err0 = analyticalVal - numVal0;
+	// Reduce timestep and repeat test
+	dt *= 2.0^^(-1./5.);
+	conc0 = [c0, c0, 0.0];
+	double numVal1 = numericalEstimate(dt, tInterval, conc0, rkfStep);
+	double err1 = analyticalVal - numVal1;
+	assert(approxEqual(1.96809, err0/err1, 1.0e-4), failedUnitTest());
+
+	/* 2. alpha-QSS step
+	 * [TODO] : Kyle, fix me please.
+	 */
+
+	/* 3. Test the complete update algorithm as used
+	 *    by the flow solver. This might be stretching a
+	 *    bit what a *unit* is. In this test, we'll exercise
+	 *    the chemistry update routine by solving the
+	 *    complete hydrogen-iodine system.
+	 */
+	double dtSuggest = 200.0;
 	int result = update_chemistry(gd, tInterval, dtSuggest,
-				      gmodel, reacMech, cstep,
+				      gmodel, rmech, rkfStep,
 				      false, 50, 2);
 	double[] conc;
 	conc.length = 3;
 	gmodel.massf2conc(gd, conc);
-	assert(approxEqual(7.14215400423, conc[2], 1.0e-3), failedUnitTest());
+	assert(approxEqual(7.14201983840, conc[2], 1.0e-9), failedUnitTest());
 
 	return 0;
     }
