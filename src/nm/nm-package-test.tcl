@@ -32,6 +32,10 @@ test ridder-test {Testing ridder.d} -body {
     exec ./ridder_test
 } -result {} -returnCodes {0}
 
+test brent-test {Testing brent.d} -body {
+    exec ./brent_test
+} -result {} -returnCodes {0}
+
 test rungekutta-test {Testing rungekutta.d} -body {
     exec ./rungekutta_test
 } -result {} -returnCodes {0}

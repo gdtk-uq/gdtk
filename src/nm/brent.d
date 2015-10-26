@@ -95,18 +95,22 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
 	throw new Exception("Maximum number of iterations exceeded in brent.d");
     }
 
-unittest {
-    double test_fun_1(double x) {
-	return pow(x,3) + pow(x,2) - 3*x - 3;
+
+version(brent_test) {
+    import util.msg_service;
+    int main() {
+	double test_fun_1(double x) {
+	    return pow(x,3) + pow(x,2) - 3*x - 3;
+	}
+	double test_fun_2(double x, double a) {
+	    return a*x + sin(x) - exp(x);
+	}
+	assert(abs(solve!test_fun_1(1, 2) - 1.732051) < 1.0e-5, failedUnitTest());
+	double my_a = 3.0;
+	auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
+	assert(abs(solve!test_fun_3(0, 1) - 0.3604217) < 1.0e-5, failedUnitTest());
+
+	return 0;
     }
-    double test_fun_2(double x, double a) {
-	return a*x + sin(x) - exp(x);
-    }
-    assert( abs(solve!test_fun_1(1, 2) - 1.732051) < 1.0e-5 );
-    double my_a = 3.0;
-    auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
-    assert( abs(solve!test_fun_3(0, 1) - 0.3604217) < 1.0e-5 );
-    double x1 = 0.4;
-    double x2 = 0.5;
-    assert( bracket!test_fun_3(x1, x2) == 0 );
 }
+

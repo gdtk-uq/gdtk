@@ -19,6 +19,7 @@ TEST_PROGRAMS := bbla_test \
 	linesearch_test \
 	newtoncotes_test \
 	ridder_test \
+	brent_test \
 	rungekutta_test
 
 demo: ${DEMO_PROGRAMS}
@@ -78,6 +79,10 @@ ridder_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rungekutta_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+brent_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -gc -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
