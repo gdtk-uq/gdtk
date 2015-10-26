@@ -1,0 +1,86 @@
+# ramp.test
+# Functional test for a 3D, inviscid flow.
+#
+# This exercises quite a few of the basic functions of the 3D code.
+#
+# PJ, 2015-10-26 adapted from cone20.test
+#
+# Can be run manually with the command:
+# $ tclsh ramp.test
+#
+# Note that later tests below depend on earlier ones,
+# just as we shouldn't do.  Should fix this some day.
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test prepare-gas-model {Prepare gas model.} -body {
+    exec prep-gas ideal-air.inp ideal-air-gas-model.lua > LOGFILE_PREP_GAS
+} -result {} -returnCodes {0}
+
+test run-preprocessor {Run the preprocessing stage.} -body {
+    exec e4shared --prep --job=ramp > LOGFILE_PREP
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the shared-memory simulation code.} -body {
+    exec e4shared --run --job=ramp --verbosity=1 --max-cpus=2 > LOGFILE_MAIN
+} -result {} -returnCodes {0}
+
+test number-of-steps {The main simulation takes a certain number of steps.} -body {
+    set fp [open LOGFILE_MAIN r]
+    set contents [read $fp]
+    close $fp
+    set final_steps 0
+    foreach line [split $contents "\n"] {
+	if {[string first "final-t=" $line] >= 0} {
+	    set final_steps [lindex [split $line] 1]
+	}
+    }
+    list [expr abs($final_steps - 854) < 3]
+} -result {1}
+
+test shock-angle {The shock angle should be close to 57 degrees.} -body {
+    set shock_angle 0
+    set average_deviation 0
+    if { [catch {exec e4shared --custom-post --script-file=estimate_shock_angle.lua} results] } {
+        puts "specialized postprocessing command failed"
+        puts $results
+    } else {
+	foreach line [split $results "\n"] {
+	    if {[string first shock_angle_deg $line] >= 0} {
+		set shock_angle [lindex [split $line] 1]
+	    }
+	    if {[string first average_deviation_metres $line] >= 0} {
+		set average_deviation [lindex [split $line] 1]
+	    }
+	}
+    }
+    # The shock wave angle should be within 1 degree of expected
+    # and average deviation of points should be less than 2mm. 
+    list [expr abs($shock_angle - 57) < 1.0] [expr $average_deviation < 0.002]
+} -result {1 1}
+
+test estimated-forces {The forces are approximately 2210,0,-12540 Newtons.} -body {
+    set f_x dont_know
+    set f_y dont_know
+    set f_z dont_know
+    if { [catch {exec e4shared --custom-post --script-file=estimate_ramp_force.lua} results] } {
+        puts "specialized postprocessing command failed"
+        puts $results
+    } else {
+	foreach line [split $results "\n"] {
+	    if {[string first force= $line] >= 0} {
+		# extract the numbers from the Vector3 value string
+		set line [lindex [split $line "\[\]"] 1]
+		scan $line "%f,%f,%f" f_x f_y f_z
+	    }
+	}
+    }
+    # The shock wave angle should be within 1 degree of expected
+    # and average deviation of points should be less than 2mm. 
+    list [expr abs($f_x - 2215)/2215 < 0.003] [expr abs($f_y) < 0.001] \
+	[expr abs($f_z + 12560)/12560 < 0.002]
+} -result {1 1 1}
+
+cleanupTests
