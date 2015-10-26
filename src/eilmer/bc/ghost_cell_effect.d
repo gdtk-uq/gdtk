@@ -78,10 +78,13 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 	double direction_z = getJSONdouble(jsonData, "direction_z", 0.0);
 	double alpha = getJSONdouble(jsonData, "alpha", 0.0);
 	double beta = getJSONdouble(jsonData, "beta", 0.0);
+	double mass_flux = getJSONdouble(jsonData, "mass_flux", 0.0);
+	double relax_factor = getJSONdouble(jsonData, "relax_factor", 0.05);
 	newGCE = new GhostCellFromStagnation(blk_id, boundary, stagnation_condition,
 					     direction_type, 
 					     Vector3(direction_x, direction_y, direction_z),
-					     alpha, beta);
+					     alpha, beta,
+					     mass_flux, relax_factor);
 	break;
     case "full_face_exchange_copy":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
@@ -1118,14 +1121,19 @@ public:
     Vector3 direction_vector;
     double alpha;
     double beta;
+    double mass_flux;
+    double relax_factor;
 private:
     FlowState inflow_condition;
     double stagnation_entropy;
     double stagnation_enthalpy;
+    double p0_min;
+    double p0_max;
 
 public:    
     this(int id, int boundary, in FlowState stagnation_condition,
-	 string direction_type, in Vector3 vec, double alpha, double beta)
+	 string direction_type, in Vector3 vec, double alpha, double beta,
+	 double mass_flux, double relax_factor)
     {
 	super(id, boundary, "FromStagnation");
 	this.stagnation_condition = new FlowState(stagnation_condition);
@@ -1134,10 +1142,18 @@ public:
 	this.direction_vector.normalize();
 	this.alpha = alpha;
 	this.beta = beta;
+	this.mass_flux = mass_flux;
+	this.relax_factor = relax_factor;
 	auto gmodel = blk.myConfig.gmodel;
 	stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
 	stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
 	inflow_condition = new FlowState(stagnation_condition);
+	// The following limits are used when adjusting the stagnation pressure
+	// to achieve a fixed mass flow per unit area.
+	// The initially-specified stagnation condition needs to be a reasonable guess
+	// because T0 will be held fixed and p0 adjusted within the following bounds.
+	p0_min = 0.1 * stagnation_condition.gas.p;
+	p0_max = 10.0 * stagnation_condition.gas.p;
     }
 
     override string toString() const 
@@ -1145,12 +1161,13 @@ public:
 	return "FromStagnation(stagnation_condition=" ~ to!string(stagnation_condition) ~ 
 	    ", direction_type=" ~ direction_type ~ 
 	    ", direction_vector=" ~ to!string(direction_vector) ~
-	    ", alpha=" ~ to!string(alpha) ~ ", beta=" ~ to!string(beta) ~ ")";
+	    ", alpha=" ~ to!string(alpha) ~ ", beta=" ~ to!string(beta) ~ 
+	    ", mass_flux=" ~ to!string(mass_flux) ~
+	    ", relax_factor=" ~ to!string(relax_factor) ~ ")";
     }
 
     void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face)
     {
-	// [TODO] implement other cases "uniform", "radial", "normal"
 	switch ( direction_type ) {
 	case "uniform":
 	    // Given a flow direction.
@@ -1251,6 +1268,7 @@ public:
 	    double rhovyA = 0.0;
 	    double rhovzA = 0.0;
 	    double rhoA = 0.0;
+	    double pA = 0.0;
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    auto cell = blk.get_cell(i,j,k);
@@ -1262,9 +1280,21 @@ public:
 		    rhovxA += local_rhoA * cell.fs.vel.x;
 		    rhovyA += local_rhoA * cell.fs.vel.y;
 		    rhovzA += local_rhoA * cell.fs.vel.z;
+		    pA += cell.fs.gas.p * face.area[0];
 		} // end j loop
 	    } // for k
-	    // double bulk_speed = rhoUA/rhoA; // for mass flux calc
+	    if ( mass_flux > 0.0 ) {
+		// Adjust the stagnation pressure to better achieve the specified mass flux.
+		double p = pA / area;
+		double dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
+		    (mass_flux*mass_flux - rhoUA*rhoUA/(area*area)) / p;
+		stagnation_condition.gas.p *= 1.0 + dp_over_p;
+		stagnation_condition.gas.p = fmax(stagnation_condition.gas.p, p0_min);
+		stagnation_condition.gas.p = fmin(stagnation_condition.gas.p, p0_max);
+		gmodel.update_thermo_from_pT(stagnation_condition.gas);
+		stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
+		stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
+	    }
 	    double bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
 	    // Assume an isentropic process from a known total enthalpy.
 	    double enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;

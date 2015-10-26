@@ -68,7 +68,8 @@ end
 FromStagnation = GhostCellEffect:new{stagCondition=nil,
 				     direction_type="normal",
                                      direction_x=1.0, direction_y=0.0, direction_z=0.0,
-                                     alpha=0.0, beta=0.0}
+                                     alpha=0.0, beta=0.0,
+                                     mass_flux=0.0, relax_factor=0.05}
 -- other options for direction type: uniform, radial, axial
 FromStagnation.type = "from_stagnation_condition"
 function FromStagnation:tojson()
@@ -78,7 +79,9 @@ function FromStagnation:tojson()
    str = str .. string.format(' "direction_type": "%s",', self.direction_type)
    str = str .. string.format(' "direction_x": %f, "direction_y": %f, "direction_z": %f,',
 			      self.direction_x, self.direction_y, self.direction_z)
-   str = str .. string.format(' "alpha": %f, "beta": %f', self.alpha, self.beta)
+   str = str .. string.format(' "alpha": %f, "beta": %f,', self.alpha, self.beta)
+   str = str .. string.format(' "mass_flux": %f, "relax_factor": %f',
+			      self.mass_flux, self.relax_factor)
    str = str .. '}'
    return str
 end
