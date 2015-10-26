@@ -1,0 +1,20 @@
+NM_DIR := ../../nm
+include $(NM_DIR)/nm_files.mk
+
+GAS_DIR := ../../gas
+include $(GAS_DIR)/gas_files.mk
+
+KINETICS_DIR := ../../kinetics
+include $(KINETICS_DIR)/kinetics_files.mk
+
+LUA_DIR := ../../../extern/lua-5.1.4
+LIBLUA := ${LUA_DIR}/lib/liblua.a
+LIBLUAPATH := ${LUA_DIR}/lib
+
+UTIL_DIR := ../../util
+include $(UTIL_DIR)/util_files.mk
+
+DLINKFLAGS :=  -w -L-L${LIBLUAPATH} -L-llua -L-ldl
+
+alpha_verify: alpha_verification.d
+	dmd alpha_verification.d -I../.. $(GAS_FILES) $(KINETICS_FILES) ${LIBLUA} ${UTIL_FILES} ${NM_FILES} $(DLINKFLAGS)
