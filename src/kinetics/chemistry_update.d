@@ -581,10 +581,27 @@ version(chemistry_update_test) {
 	double err1 = analyticalVal - numVal1;
 	assert(approxEqual(1.96809, err0/err1, 1.0e-4), failedUnitTest());
 
-	/* 2. alpha-QSS step
-	 * [TODO] : Kyle, fix me please.
+	/* 2. Test alpha-QSS step
+	 * We'll check that the order of accuracy for the method
+	 * is as expected. We'll choose a timestep and run the problem
+	 * once and compare the numerical result to an analytical
+	 * calculation. Then we'll run the problem with a reduced
+	 * timestep h*0.5. For this 2nd-order accurate
+	 * method, we should expect to see the error drop by a factor
+	 * of 4.0 if we halve the timestep.
 	 */
-
+	auto alphaStep = new AlphaQssStep(gmodel, rmech);
+	dt = 2.0;
+	numVal0 = numericalEstimate(dt, tInterval, conc0, alphaStep);
+	err0 = analyticalVal - numVal0;
+	// Reduce timestep and repeat test
+	dt *= 0.5;
+	conc0 = [c0, c0, 0.0];
+	numVal1 = numericalEstimate(dt, tInterval, conc0, alphaStep);
+	err1 = analyticalVal - numVal1;
+	assert(approxEqual(7.1420197868416215, numVal1, 1.0e-4), failedUnitTest());
+	assert(approxEqual(4.001, err0/err1, 1.0e-4), failedUnitTest());
+	
 	/* 3. Test the complete update algorithm as used
 	 *    by the flow solver. This might be stretching a
 	 *    bit what a *unit* is. In this test, we'll exercise
