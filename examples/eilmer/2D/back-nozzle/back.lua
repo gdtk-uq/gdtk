@@ -1,13 +1,22 @@
 -- back.py
 -- Conical nozzle from Back, Massier and Gier (1965)
 -- Peter J. 2015-10-21 adpated from the Python version.
+--          
 config.title = "Flow through a conical nozzle."
 print(config.title)
 
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
--- The stagnation gas represents a reservoir condition.
-stagnation_gas = FlowState:new{p=500.0e3, T=300.0}
+fixed_pressure = false
+if fixed_pressure then
+   -- The stagnation gas represents a reservoir condition.
+   stagnation_gas = FlowState:new{p=500.0e3, T=300.0}
+else
+   -- We'll specify a mass_flux and let the pressure be adjusted.
+   -- We still need a stagnation condition and the temperature is fixed.
+   stagnation_gas = FlowState:new{p=400.0e3, T=300.0}
+   -- Note that we start with a known wrong stagnation pressure.
+end
 low_pressure_gas = FlowState:new{p=30.0, T=300.0}
 
 -- Define geometry.
@@ -66,8 +75,16 @@ supersonic_region = SBlock:new{grid=grid1, fillCondition=low_pressure_gas,
 			       hcellList={{1,1},{nx1-1,1}}}
 -- History locations near throat and exit
 identifyBlockConnections()
-subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas,
-							   label="inflow-boundary"}
+if fixed_pressure then
+   -- Directly specify the stagnation conditions for the subsonic inflow.
+   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas,
+							      label="inflow-boundary"}
+else
+   -- Specify the inflow mass_flux (kg/s/m^^2) across inlet and guess the stagnation condition.
+   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas,
+							      mass_flux=275.16, relax_factor=0.2,
+							      label="inflow-boundary"}
+end
 supersonic_region.bcList[east] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
 -- Do a little more setting of global data.

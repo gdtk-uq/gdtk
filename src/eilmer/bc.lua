@@ -69,7 +69,7 @@ FromStagnation = GhostCellEffect:new{stagCondition=nil,
 				     direction_type="normal",
                                      direction_x=1.0, direction_y=0.0, direction_z=0.0,
                                      alpha=0.0, beta=0.0,
-                                     mass_flux=0.0, relax_factor=0.05}
+                                     mass_flux=0.0, relax_factor=0.10}
 -- other options for direction type: uniform, radial, axial
 FromStagnation.type = "from_stagnation_condition"
 function FromStagnation:tojson()
@@ -289,7 +289,9 @@ function InFlowBC_FromStagnation:new(o)
 					   direction_x=o.direction_x,
 					   direction_y=o.direction_y,
 					   direction_z=o.direction_z,
-					   alpha=o.alpha, beta=o.beta} }
+					   alpha=o.alpha, beta=o.beta,
+					   mass_flux=o.mass_flux,
+					   relax_factor=o.relax_factor} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end

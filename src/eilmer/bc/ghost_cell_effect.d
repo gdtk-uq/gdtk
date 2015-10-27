@@ -79,7 +79,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 	double alpha = getJSONdouble(jsonData, "alpha", 0.0);
 	double beta = getJSONdouble(jsonData, "beta", 0.0);
 	double mass_flux = getJSONdouble(jsonData, "mass_flux", 0.0);
-	double relax_factor = getJSONdouble(jsonData, "relax_factor", 0.05);
+	double relax_factor = getJSONdouble(jsonData, "relax_factor", 0.1);
 	newGCE = new GhostCellFromStagnation(blk_id, boundary, stagnation_condition,
 					     direction_type, 
 					     Vector3(direction_x, direction_y, direction_z),
@@ -1282,15 +1282,17 @@ public:
 		    rhovzA += local_rhoA * cell.fs.vel.z;
 		    pA += cell.fs.gas.p * face.area[0];
 		} // end j loop
-	    } // for k
-	    if ( mass_flux > 0.0 ) {
+	    } // end k loop
+	    if ( mass_flux > 0.0 && ftl == 0 ) {
 		// Adjust the stagnation pressure to better achieve the specified mass flux.
+		// Note that we only do this adjustment once, at the start of a
+		// multi-level gas-dynamic update.
 		double p = pA / area;
 		double dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
 		    (mass_flux*mass_flux - rhoUA*rhoUA/(area*area)) / p;
-		stagnation_condition.gas.p *= 1.0 + dp_over_p;
-		stagnation_condition.gas.p = fmax(stagnation_condition.gas.p, p0_min);
-		stagnation_condition.gas.p = fmin(stagnation_condition.gas.p, p0_max);
+		double new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
+		new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
+		stagnation_condition.gas.p = new_p0;
 		gmodel.update_thermo_from_pT(stagnation_condition.gas);
 		stagnation_enthalpy = gmodel.enthalpy(stagnation_condition.gas);
 		stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
@@ -1311,7 +1313,7 @@ public:
 		    dest_cell = blk.get_cell(i-2,j,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		} // end j loop
-	    } // for k
+	    } // end k loop
 	    break;
 	case Face.top:
 	    k = blk.kmax;

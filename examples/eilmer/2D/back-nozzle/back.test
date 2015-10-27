@@ -5,6 +5,7 @@
 #
 # PJ, 03-Mar-2014
 #     2015-10-22 ported to Eilmer4
+#     2015-10-27 relax tolerance to accommodate the less steady mass-flux solution.
 
 package require tcltest 2.0
 namespace import ::tcltest::*
@@ -32,7 +33,7 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 5401) < 3
+    expr abs($final_steps - 5400) < 100
 } -result {1}
 
 test subsonic-region {Subsonic region should have a small positive Mach number.} -body {
@@ -62,10 +63,10 @@ test subsonic-region {Subsonic region should have a small positive Mach number.}
 	# puts "rho=$rho p=$p T=$T Mach=$Mach"
     }
     # The differences with respect to the reference values should be small. 
-    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-3] \
-    	 [expr abs($p - $p_ref)/$p_ref < 1.0e-3] \
-    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-3] \
-    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 1.0e-3]
+    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-2] \
+    	 [expr abs($p - $p_ref)/$p_ref < 1.0e-2] \
+    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-2] \
+    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 1.0e-2]
 } -result {1 1 1 1}
 
 test supersonic-region {Supersonic exit should be a bit over Mach 3.} -body {
@@ -95,10 +96,10 @@ test supersonic-region {Supersonic exit should be a bit over Mach 3.} -body {
 	# puts "rho=$rho p=$p T=$T Mach=$Mach"
     }
     # The differences with respect to the reference values should be small. 
-    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-3] \
-    	 [expr abs($p - $p_ref)/$p_ref < 1.0e-3] \
-    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-3] \
-    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 1.0e-3]
+    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-2] \
+    	 [expr abs($p - $p_ref)/$p_ref < 1.0e-2] \
+    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-2] \
+    	 [expr abs($Mach - $Mach_ref)/$Mach_ref < 1.0e-2]
 } -result {1 1 1 1}
 
 cleanupTests
