@@ -64,8 +64,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     writeln("Running with ", maxCPUs, " CPUs available for threads.");
     foreach (myblk; parallel(gasBlocks,1)) {
 	myblk.assemble_arrays();
-	myblk.bind_interfaces_and_vertices_to_cells();
-	myblk.bind_vertices_and_cells_to_interfaces();
+	myblk.bind_interfaces_vertices_and_cells();
 	writeln("myblk=", myblk);
 	myblk.read_grid(make_file_name!"grid"(job_name, myblk.id, 0), 0); // tindx==0 fixed-grid
 	// I don't mind if blocks write over sim_time.  

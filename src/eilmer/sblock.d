@@ -250,10 +250,10 @@ public:
 	}
     } // end of assemble_arrays()
 
-    override void bind_interfaces_and_vertices_to_cells()
-    // There is a fixed order of faces and vertices for each cell.
-    // Refer to fvcore.d
+    override void bind_interfaces_vertices_and_cells()
     {
+	// There is a fixed order of faces and vertices for each cell.
+	// Refer to fvcore.d
 	size_t kstart, kend;
 	if ( myConfig.dimensions == 3 ) {
 	    kstart = kmin - 1;
@@ -262,22 +262,22 @@ public:
 	    kstart = 0;
 	    kend = 0;
 	}
-	// With these ranges, we also do the first layer of ghost cells.
+	// With the ranges above, we also do the first layer of ghost cells.
 	for ( size_t k = kstart; k <= kend; ++k ) {
 	    for ( size_t j = jmin-1; j <= jmax+1; ++j ) {
 		for ( size_t i = imin-1; i <= imax+1; ++i ) {
 		    FVCell cell = get_cell(i,j,k);
-		    cell.iface ~= get_ifj(i,j+1,k); // north
-		    cell.iface ~= get_ifi(i+1,j,k); // east
-		    cell.iface ~= get_ifj(i,j,k); // south
-		    cell.iface ~= get_ifi(i,j,k); // west
+		    cell.iface ~= get_ifj(i,j+1,k); cell.outsign ~= 1.0; // north
+		    cell.iface ~= get_ifi(i+1,j,k); cell.outsign ~= 1.0; // east
+		    cell.iface ~= get_ifj(i,j,k); cell.outsign ~= -1.0; // south
+		    cell.iface ~= get_ifi(i,j,k); cell.outsign ~= -1.0; // west
 		    cell.vtx ~= get_vtx(i,j,k);
 		    cell.vtx ~= get_vtx(i+1,j,k);
 		    cell.vtx ~= get_vtx(i+1,j+1,k);
 		    cell.vtx ~= get_vtx(i,j+1,k);
 		    if ( myConfig.dimensions == 3 ) {
-			cell.iface ~= get_ifk(i,j,k+1); // top
-			cell.iface ~= get_ifk(i,j,k); // bottom
+			cell.iface ~= get_ifk(i,j,k+1); cell.outsign ~= 1.0; // top
+			cell.iface ~= get_ifk(i,j,k); cell.outsign ~= -1.0; // bottom
 			cell.vtx ~= get_vtx(i,j,k+1);
 			cell.vtx ~= get_vtx(i+1,j,k+1);
 			cell.vtx ~= get_vtx(i+1,j+1,k+1);
@@ -286,13 +286,11 @@ public:
 		} // for i
 	    } // for j
 	} // for k
-    } // end bind_faces_and_vertices_to_cells()
-
-    override void bind_vertices_and_cells_to_interfaces()
-    // Sometimes it is convenient for an interface to come complete 
-    // with information about the vertices that define it and the cells
-    // that adjoin it.
-    {
+	//
+	// Sometimes it is convenient for an interface to come complete 
+	// with information about the vertices that define it and also
+	// the cells that adjoin it.
+	//
 	// ifi interfaces are East-facing interfaces.
 	// In 2D, vtx0==p11, vtx1==p10.
 	// In 3D, the cycle [vtx0,vtx1,vtx2,vtx3] progresses counter-clockwise around 
@@ -362,7 +360,7 @@ public:
 	    } // j loop
 	} // i loop
 	return;
-    } // end bind_vertices_and_cells_to_interfaces()
+    } // end bind_interfaces_vertices_and_cells()
 
     override int count_invalid_cells(int gtl)
     // Returns the number of cells that contain invalid data,

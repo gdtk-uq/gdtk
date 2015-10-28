@@ -61,6 +61,7 @@ public:
     FVCell cell_at_nearest_wall;   // ditto
     // Connections
     FVInterface[] iface;  // references to defining interfaces of cell
+    double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
     FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
     // Flow
     FlowState fs; // Flow properties
@@ -337,7 +338,7 @@ public:
 	if ( gm.n_modes > 1 ) {
 	    dt_therm = to!double(items.front); items.popFront(); 
 	}
-    }
+    } // end scan_values_from_string()
 
     string write_values_to_string() const
     {
@@ -362,7 +363,7 @@ public:
 	    formattedWrite(writer, " %.12e %.12e", fs.gas.e[i], fs.gas.T[i]); 
 	if ( fs.gas.e.length > 1 ) formattedWrite(writer, " %.12e", dt_therm);
 	return writer.data;
-    }
+    } // end write_values_to_string()
 
     @nogc
     void encode_conserved(int gtl, int ftl, double omegaz)

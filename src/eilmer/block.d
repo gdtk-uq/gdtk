@@ -64,8 +64,7 @@ public:
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
     abstract void assemble_arrays();
-    abstract void bind_interfaces_and_vertices_to_cells();
-    abstract void bind_vertices_and_cells_to_interfaces();
+    abstract void bind_interfaces_vertices_and_cells();
     abstract int count_invalid_cells(int gtl);
     abstract void compute_primary_cell_geometric_data(int gtl);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
