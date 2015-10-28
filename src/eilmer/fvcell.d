@@ -541,18 +541,7 @@ public:
     //       1: End of stage-1.
     //       2: End of stage-2.
     {
-	FVInterface IFn = iface[Face.north];
-	FVInterface IFe = iface[Face.east];
-	FVInterface IFs = iface[Face.south];
-	FVInterface IFw = iface[Face.west];
-	FVInterface IFt, IFb;
-	auto dimensions = myConfig.dimensions;
-	if (dimensions == 3) {
-	    IFt = iface[Face.top];
-	    IFb = iface[Face.bottom];
-	}
-	// Cell volume (inverted).
-	double vol_inv = 1.0 / volume[gtl];
+	double vol_inv = 1.0 / volume[gtl]; // Cell volume (inverted).
 	double integral;
     
 	// Time-derivative for Mass/unit volume.
@@ -560,59 +549,41 @@ public:
 	// such that the unit normals for the east, north and top faces
 	// are outward and the unit normals for the south, west and
 	// bottom faces are inward.
-	integral = -IFe.F.mass * IFe.area[gtl] - IFn.F.mass * IFn.area[gtl]
-	    + IFw.F.mass * IFw.area[gtl] + IFs.F.mass * IFs.area[gtl];
-	if (dimensions == 3)
-	    integral += IFb.F.mass * IFb.area[gtl] - IFt.F.mass * IFt.area[gtl];
+	integral = 0.0;
+	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.mass * iface[i].area[gtl];
 	dUdt[ftl].mass = vol_inv * integral + Q.mass;
 
 	// Time-derivative for X-Momentum/unit volume.
-	integral = -IFe.F.momentum.x * IFe.area[gtl] - IFn.F.momentum.x * IFn.area[gtl]
-	    + IFw.F.momentum.x * IFw.area[gtl] + IFs.F.momentum.x * IFs.area[gtl];
-	if (dimensions == 3)
-	    integral += IFb.F.momentum.x * IFb.area[gtl] - IFt.F.momentum.x * IFt.area[gtl];
+	integral = 0.0;
+	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.momentum.x * iface[i].area[gtl];
 	dUdt[ftl].momentum.refx = vol_inv * integral + Q.momentum.x;
 	// Time-derivative for Y-Momentum/unit volume.
-	integral = -IFe.F.momentum.y * IFe.area[gtl] - IFn.F.momentum.y * IFn.area[gtl]
-	    + IFw.F.momentum.y * IFw.area[gtl] + IFs.F.momentum.y * IFs.area[gtl];
-	if (dimensions == 3)
-	    integral += IFb.F.momentum.y * IFb.area[gtl] - IFt.F.momentum.y * IFt.area[gtl];
+	integral = 0.0;
+	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.momentum.y * iface[i].area[gtl];
 	dUdt[ftl].momentum.refy = vol_inv * integral + Q.momentum.y;
     
 	// we require the z-momentum for MHD even in 2D
-	if ((dimensions == 3) || ( myConfig.MHD )) {
+	if ((myConfig.dimensions == 3) || ( myConfig.MHD )) {
 	    // Time-derivative for Z-Momentum/unit volume.
-	    integral = -IFe.F.momentum.z * IFe.area[gtl] - IFn.F.momentum.z * IFn.area[gtl]
-		+ IFw.F.momentum.z * IFw.area[gtl] + IFs.F.momentum.z * IFs.area[gtl];
-	}
-	if (dimensions == 3) {
-	    integral += IFb.F.momentum.z * IFb.area[gtl] - IFt.F.momentum.z * IFt.area[gtl];
-	}
-	if ((dimensions == 3) || ( myConfig.MHD )) {
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.momentum.z * iface[i].area[gtl];
 	    dUdt[ftl].momentum.refz = vol_inv * integral + Q.momentum.z;
 	} else {
 	    dUdt[ftl].momentum.refz = 0.0;
 	}
     
-	if ( myConfig.MHD ) {
+	if (myConfig.MHD) {
 	    // Time-derivative for X-Magnetic Field/unit volume.
-	    integral = -IFe.F.B.x * IFe.area[gtl] - IFn.F.B.x * IFn.area[gtl]
-		+ IFw.F.B.x * IFw.area[gtl] + IFs.F.B.x * IFs.area[gtl];
-	    if (dimensions == 3)
-		integral += IFb.F.B.x * IFb.area[gtl] - IFt.F.B.x * IFt.area[gtl];
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.x * iface[i].area[gtl];
 	    dUdt[ftl].B.refx = vol_inv * integral + Q.B.x;
 	    // Time-derivative for Y-Magnetic Field/unit volume.
-	    integral = -IFe.F.B.y * IFe.area[gtl] - IFn.F.B.y * IFn.area[gtl]
-		+ IFw.F.B.y * IFw.area[gtl] + IFs.F.B.y * IFs.area[gtl];
-	    if (dimensions == 3)
-		integral += IFb.F.B.y * IFb.area[gtl] - IFt.F.B.y * IFt.area[gtl];
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.y * iface[i].area[gtl];
 	    dUdt[ftl].B.refy = vol_inv * integral + Q.B.y;
 	    // Time-derivative for Z-Magnetic Field/unit volume.
-	    integral = -IFe.F.B.z * IFe.area[gtl] - IFn.F.B.z * IFn.area[gtl]
-		+ IFw.F.B.z * IFw.area[gtl] + IFs.F.B.z * IFs.area[gtl];
-	    if (dimensions == 3) {
-		integral += IFb.F.B.z * IFb.area[gtl] - IFt.F.B.z * IFt.area[gtl];
-	    }
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.z * iface[i].area[gtl];
 	    dUdt[ftl].B.refz = vol_inv * integral + Q.B.z;
 	} else {
 	    dUdt[ftl].B.refx = 0.0;
@@ -621,23 +592,16 @@ public:
 	}
 
 	// Time-derivative for Total Energy/unit volume.
-	integral = -IFe.F.total_energy * IFe.area[gtl] - IFn.F.total_energy * IFn.area[gtl]
-	    + IFw.F.total_energy * IFw.area[gtl] + IFs.F.total_energy * IFs.area[gtl];
-	if ( dimensions == 3 )
-	    integral += IFb.F.total_energy * IFb.area[gtl] - IFt.F.total_energy * IFt.area[gtl];
+	integral = 0.0;
+	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.total_energy * iface[i].area[gtl];
 	dUdt[ftl].total_energy = vol_inv * integral + Q.total_energy;
     
 	if (with_k_omega) {
-	    integral = -IFe.F.tke * IFe.area[gtl] - IFn.F.tke * IFn.area[gtl]
-		+ IFw.F.tke * IFw.area[gtl] + IFs.F.tke * IFs.area[gtl];
-	    if (dimensions == 3)
-		integral += IFb.F.tke * IFb.area[gtl] - IFt.F.tke * IFt.area[gtl];
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.tke * iface[i].area[gtl];
 	    dUdt[ftl].tke = vol_inv * integral + Q.tke;
-	
-	    integral = -IFe.F.omega * IFe.area[gtl] - IFn.F.omega * IFn.area[gtl]
-		+ IFw.F.omega * IFw.area[gtl] + IFs.F.omega * IFs.area[gtl];
-	    if (dimensions == 3)
-		integral += IFb.F.omega * IFb.area[gtl] - IFt.F.omega * IFt.area[gtl];
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.omega * iface[i].area[gtl];
 	    dUdt[ftl].omega = vol_inv * integral + Q.omega;
 	} else {
 	    dUdt[ftl].tke = 0.0;
@@ -648,27 +612,17 @@ public:
 	// volume of species isp and
 	// the fluxes are mass/unit-time/unit-area.
 	// Units of DmassfDt are 1/sec.
-	foreach(isp; 0 .. IFe.F.massf.length) {
-	    integral =
-		-IFe.F.massf[isp] * IFe.area[gtl]
-		- IFn.F.massf[isp] * IFn.area[gtl]
-		+ IFw.F.massf[isp] * IFw.area[gtl]
-		+ IFs.F.massf[isp] * IFs.area[gtl];
-	    if ( dimensions == 3 )
-		integral += IFb.F.massf[isp] * IFb.area[gtl] - IFt.F.massf[isp] * IFt.area[gtl];
+	foreach(isp; 0 .. iface[0].F.massf.length) {
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.massf[isp] * iface[i].area[gtl];
 	    dUdt[ftl].massf[isp] = vol_inv * integral + Q.massf[isp];
 	}
 	// Individual energies.
 	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
 	// Instead we get this from the conservation of total energy
-	foreach(imode; 1 .. IFe.F.energies.length) {
-	    integral =
-		-IFe.F.energies[imode] * IFe.area[gtl]
-		- IFn.F.energies[imode] * IFn.area[gtl]
-		+ IFw.F.energies[imode] * IFw.area[gtl]
-		+ IFs.F.energies[imode] * IFs.area[gtl];
-	    if (dimensions == 3)
-		integral += IFb.F.energies[imode] * IFb.area[gtl] - IFt.F.energies[imode] * IFt.area[gtl];
+	foreach(imode; 1 .. iface[0].F.energies.length) {
+	    integral = 0.0;
+	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.energies[imode] * iface[i].area[gtl];
 	    dUdt[ftl].energies[imode] = vol_inv * integral + Q.energies[imode];
 	}
     } // end time_derivatives()
