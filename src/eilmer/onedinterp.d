@@ -145,7 +145,7 @@ public:
 	}
     } // end of interp_right_scalar()
 
-    // @nogc // TODO put this annotation back on once the GasModel methods are @nogc
+    // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_both(in FVInterface IFace,
 			   ref FVCell cL1, ref FVCell cL0, 
 			   ref FVCell cR0, ref FVCell cR1, 
@@ -299,7 +299,7 @@ public:
 	} // end of high-order reconstruction
     } // end interp_both()
 
-    // @nogc // TODO put this annotation back on once the GasModel methods are @nogc
+    // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_left(in FVInterface IFace,
 		     ref FVCell cL1, ref FVCell cL0, ref FVCell cR0,
 		     in double cL1Length, in double cL0Length, in double cR0Length,
@@ -407,7 +407,7 @@ public:
 	} // end of high-order reconstruction
     } // end interp_left()
 
-    // @nogc // TODO put this annotation back on once the GasModel methods are @nogc
+    // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_right(in FVInterface IFace,
 		      ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
 		      in double cL0Length, in double cR0Length, in double cR1Length,

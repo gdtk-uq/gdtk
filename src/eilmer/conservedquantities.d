@@ -23,8 +23,6 @@ public:
     double[] energies;   // modal energies (mode 0 is usually transrotational)
     double tke;          // turbulent kinetic energy
     double omega;        // omega from k-omega turbulence model
-    // [TODO] double[] G;          // velocity dist. partial densities, kg/m**3
-    // [TODO] double[] H;          // velocity dist. partial densities, (kg*s**2)/(m**5)
 
     this(int n_species, int n_modes)
     {

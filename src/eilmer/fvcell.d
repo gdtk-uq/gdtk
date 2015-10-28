@@ -77,7 +77,6 @@ public:
                           // value for all of the update stages.
     // Data for computing residuals.
     double rho_at_start_of_step, rE_at_start_of_step;
-    // [TODO] implicit variables
 
 private:
     LocalConfig myConfig;
@@ -251,18 +250,6 @@ public:
 	    return true;
 	} // end dimensions != 2
     } // end point_is_inside()
-
-    @nogc
-    void copy_values_to_buffer(ref double[] buf, int type_of_copy, int gtl) const
-    {
-	assert(false, "[TODO] FVCell.copy_values_to_buffer() not yet implemented");
-    }
-
-    @nogc
-    void copy_values_from_buffer(in double buf, int type_of_copy, int gtl) 
-    {
-	assert(false, "[TODO] FVCell.copy_values_from_buffer() not yet implemented");
-    }
 
     void replace_flow_data_with_average(in FVCell[] others) 
     {
@@ -840,7 +827,7 @@ public:
 	foreach(imode; 1 .. U1.energies.length) {
 	    U1.energies[imode] = vr * (U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode]);
 	}
-	assert(false, "[TODO] not yet ready for use");
+	assert(false, "[TODO] stage_1_update_for_flow_on_moving_grid() not yet ready for use");
     } // end stage_1_update_for_flow_on_moving_grid()
 
     @nogc
@@ -893,7 +880,7 @@ public:
 					    dt * (gamma_1 * dUdt0.energies[imode] + 
 						  gamma_2 * dUdt1.energies[imode]));
 	}
-	assert(false, "[TODO] not yet ready for use");
+	assert(false, "[TODO] stage_2_update_for_flow_on_moving_grid() not yet ready for use");
     } // end stage_2_update_for_flow_on_moving_grid()
 
     void chemical_increment(double dt, double T_frozen) 
@@ -945,8 +932,8 @@ public:
     // and that the current conserved quantities are held in U[0].
     {
 	if ( !fr_reactions_allowed || fs.gas.T[0] <= T_frozen_energy ) return;
-	// [TODO] auto eeupdate = myConfig.energy_exchange_update_scheme;
-	// [TODO] eeupdate.update_state(fs.gas, dt, dt_therm, gmodel);
+	// auto eeupdate = myConfig.energy_exchange_update_scheme;
+	// eeupdate.update_state(fs.gas, dt, dt_therm, gmodel);
 	// The update only changes modal energies, we need to impose
 	// a thermodynamic constraint based on a call to the equation
 	// of state.
@@ -954,14 +941,14 @@ public:
 	// If we are doing a viscous sim, we'll need to ensure
 	// viscous properties are up-to-date
 	if ( myConfig.viscous ) gmodel.update_trans_coeffs(fs.gas);
-	// [TODO] if ( myConfig.diffusion ) gmodel.update_diff_coeffs(fs.gas);
+	// if ( myConfig.diffusion ) gmodel.update_diff_coeffs(fs.gas);
 	// Finally, we have to manually update the conservation quantities
 	// for the gas-dynamics time integration.
 	// Independent energies energy: Joules per unit volume.
 	foreach(imode; 0 .. U[0].energies.length) {
 	    U[0].energies[imode] = fs.gas.rho * fs.gas.e[imode];
 	}
-	assert(false, "[TODO] not yet ready for use");
+	assert(false, "[TODO] thermal_increment() not yet ready for use");
     } // end thermal_increment()
 
     double signal_frequency()
@@ -1298,7 +1285,7 @@ public:
     // Jul 2014: Port to D by PJ
     {
 	if ( myConfig.turbulence_model != TurbulenceModel.k_omega ) {
-	    // [TODO] may need to do something better is another turbulence model is active.
+	    // [TODO] may need to do something better if another turbulence model is active.
 	    Q_rtke = 0.0;
 	    Q_romega = 0.0;
 	    return;
@@ -1593,13 +1580,6 @@ public:
 
 } // end class FVCell
 
-
-int number_of_values_in_cell_copy(int type_of_copy)
-// This function must match the copy-to/from-buffer methods above.
-// The buffers are used for communication between worker processes.
-{
-    return 0; // [TODO] something sensible, eventually.
-} // end number_of_values_in_cell_copy()
 
 string[] variable_list_for_cell(GasModel gmodel)
 {
