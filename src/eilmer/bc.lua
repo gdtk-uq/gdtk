@@ -7,6 +7,21 @@
 
 module(..., package.seeall)
 
+-- Helper function to check arguments for BC construction
+function checkForInvalidArgs(tab, allowedArgs, funcName)
+   -- allowedArgs is in array form build a reverse mapping.
+   -- We'll put the args in as keys and set those values to true.
+   argsTruthTable = {}
+   for _,k in ipairs(allowedArgs) do
+      argsTruthTable[k] = true
+   end
+   for k,_ in pairs(tab) do
+      if not argsTruthTable[k] then
+	 print(string.format("WARNING: %s is an INVALID argument in function: %s\n", k, funcName))
+      end
+   end 
+end
+
 -- -----------------------------------------------------------------------
 -- Classes for constructing boundary conditions.
 -- Each "complete" boundary condition is composed of lists of actions to do
@@ -282,8 +297,18 @@ end
 
 InFlowBC_FromStagnation = BoundaryCondition:new()
 InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
+InFlowBC_FromStagnation.allowedArgs = {'type', 'label', 'group',
+				       'stagCondition',
+				       'direction_type',
+				       'direction_x',
+				       'direction_y',
+				       'direction_z',
+				       'alpha',
+				       'mass_flux',
+				       'relax_factor'}
 function InFlowBC_FromStagnation:new(o)
    o = BoundaryCondition.new(self, o)
+   checkForInvalidArgs(o, self.allowedArgs, "InFlowBC_FromStagnation:new{}")
    o.preReconAction = { FromStagnation:new{stagCondition=o.stagCondition,
 					   direction_type=o.direction_type,
 					   direction_x=o.direction_x,
