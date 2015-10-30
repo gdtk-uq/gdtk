@@ -201,6 +201,7 @@ extern(C) int configSetFromTable(lua_State* L)
     if (!lua_isnil(L, -1)) {
 	string name = to!string(luaL_checkstring(L, -1));
 	GlobalConfig.spatial_deriv_calc = spatial_deriv_calc_from_name(name);
+	lua_pushnil(L); lua_setfield(L, 1, "spatial_deriv_calc");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_factor");

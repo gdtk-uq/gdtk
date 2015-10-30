@@ -18,13 +18,13 @@ config.title = "Schetz's Mach 4 laminar flow over a flat plate"
 print(config.title)
 config.viscous = true
 config.spatial_deriv_calc = "least_squares"
-config.flux_calc = "ausmdv"
+config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
 config.max_time = 2.4e-3  -- will allow 3 flow lengths   
 config.dt_plot =  0.4e-3
 config.dt_history = 1.0e-5
 config.max_step = 300000
-config.cfl_target = 0.4
+config.cfl_value = 0.4
 config.cfl_count = 3
 config.dt_init = 1.0e-9  -- only an initial guess - the simulation will take over
 
