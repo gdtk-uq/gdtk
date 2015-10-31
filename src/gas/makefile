@@ -4,6 +4,7 @@
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
 INSTALL_DIR ?= $(HOME)/dgdinst
+BUILD_DIR := ../../build
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo sf6_model_demo luagas_model_demo \
 	univariate_lut_demo build_tree
@@ -63,8 +64,11 @@ gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(NM_FILES) $(UTIL_FILES)
 	dmd -ofgas-calc -version=gas_calc \
 		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS)
 
-install: gas-calc
-	cp gas-calc $(INSTALL_DIR)/bin/
+install: gas-calc build-prep-gas
+	- mkdir -p $(INSTALL_DIR)
+	cp gas-calc $(BUILD_DIR)/bin/
+	@echo "Installing to $(INSTALL_DIR)"
+	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
 $(LIBLUA):
 	cd $(LUA); make linux local
