@@ -24,21 +24,23 @@ import fvvertex;
 import fvinterface;
 import globalconfig;
 
-// The following two functions are used at compile time.
-// They generate a string formula for averaging some quantity
-// over the set of cell vertices. 
-string avg_over_vtx_2D(string name)
+// The following functions are used at compile time.
+// Look for mixin statements further down in the file. 
+string avg_over_vtx_list(string quantity, string result)
 {
-    return "0.25 * (vtx[0]." ~ name ~ " + vtx[1]." ~ name ~
-	" + vtx[2]." ~ name ~ " + vtx[3]." ~ name ~ ")";
+    string code = result ~ " = 0.0; ";
+    code ~= "foreach(v; vtx) { " ~ result ~ " += v." ~ quantity ~ "; } ";
+    code ~= result ~ " /= vtx.length;";
+    return code;
 }
-string avg_over_vtx_3D(string name)
+string avg_over_iface_list(string quantity, string result)
 {
-    return "0.125 * (vtx[0]." ~ name ~ " + vtx[1]." ~ name ~
-	" + vtx[2]." ~ name ~ " + vtx[3]." ~ name ~ 
-	" + vtx[4]." ~ name ~ " + vtx[5]." ~ name ~ 
-	" + vtx[6]." ~ name ~ " + vtx[7]." ~ name ~ ")";
+    string code = result ~ " = 0.0; ";
+    code ~= "foreach(face; iface) { " ~ result ~ " += face." ~ quantity ~ "; } ";
+    code ~= result ~ " /= iface.length;";
+    return code;
 }
+
 
 class FVCell {
 public:
@@ -1121,20 +1123,24 @@ public:
 	    fs.k_t = 0.0;
 	    return;
 	}
-	double dudx, dudy, dvdx, dvdy;
 	double S_bar_squared;
 	double C_lim = 0.875;
 	double beta_star = 0.09;
+
+	double grad_vel_avg_over_vtx_list(int i, int j)() 
+	    if ( is(typeof(vtx[0].grad_vel[i][j]) == double) )
+	{
+	    double result = 0.0;
+	    foreach (v; vtx) { result += v.grad_vel[i][j]; }
+	    return result / vtx.length;
+	}
+
+	double dudx = grad_vel_avg_over_vtx_list!(0,0)();
+	double dudy = grad_vel_avg_over_vtx_list!(0,1)();
+	double dvdx = grad_vel_avg_over_vtx_list!(1,0)();
+	double dvdy = grad_vel_avg_over_vtx_list!(1,1)();
 	if ( myConfig.dimensions == 2 ) {
 	    // 2D cartesian or 2D axisymmetric
-	    double avg2D(int i, int j)() 
-		if ( is(typeof(vtx[0].grad_vel[i][j]) == double) )
-	    {
-		return 0.25 * (vtx[0].grad_vel[i][j] + vtx[1].grad_vel[i][j] + 
-			       vtx[2].grad_vel[i][j] + vtx[3].grad_vel[i][j]);
-	    }
-	    dudx = avg2D!(0,0)(); dudy = avg2D!(0,1)();
-	    dvdx = avg2D!(1,0)(); dvdy = avg2D!(1,1)();
 	    if ( myConfig.axisymmetric ) {
 		// 2D axisymmetric
 		double v_over_y = fs.vel.y / pos[0].y;
@@ -1150,18 +1156,11 @@ public:
 	    }
 	} else {
 	    // 3D cartesian
-	    double dudz, dvdz, dwdx, dwdy, dwdz;
-	    double avg3D(int i, int j)() 
-		if ( is(typeof(vtx[0].grad_vel[i][j]) == double) )
-	    {
-		return 0.125 * (vtx[0].grad_vel[i][j] + vtx[1].grad_vel[i][j] + 
-				vtx[2].grad_vel[i][j] + vtx[3].grad_vel[i][j] +
-				vtx[4].grad_vel[i][j] + vtx[5].grad_vel[i][j] + 
-				vtx[6].grad_vel[i][j] + vtx[7].grad_vel[i][j]);
-	    }
-	    dudx = avg3D!(0,0)(); dudy = avg3D!(0,1)(); dudz = avg3D!(0,2)();
-	    dvdx = avg3D!(1,0)(); dvdy = avg3D!(1,1)(); dvdz = avg3D!(1,2)();
-	    dwdx = avg3D!(2,0)(); dwdy = avg3D!(2,1)(); dwdz = avg3D!(2,2)();
+	    double dudz = grad_vel_avg_over_vtx_list!(0,2)();
+	    double dvdz = grad_vel_avg_over_vtx_list!(1,2)();
+	    double dwdx = grad_vel_avg_over_vtx_list!(2,0)();
+	    double dwdy = grad_vel_avg_over_vtx_list!(2,1)();
+	    double dwdz = grad_vel_avg_over_vtx_list!(2,2)();
 	    S_bar_squared =  dudx*dudx + dvdy*dvdy + dwdz*dwdz
 		- 1.0/3.0*(dudx + dvdy + dwdz)*(dudx + dvdy + dwdz)
 		+ 0.5 * (dudy + dvdx) * (dudy + dvdx)
@@ -1300,19 +1299,16 @@ public:
 	double cross_diff;
 	double sigma_d = 0.0;
 	double WWS, X_w, f_beta;
+	mixin(avg_over_vtx_list("grad_vel[0][0]", "dudx"));
+	mixin(avg_over_vtx_list("grad_vel[0][1]", "dudy"));
+	mixin(avg_over_vtx_list("grad_vel[1][0]", "dvdx"));
+	mixin(avg_over_vtx_list("grad_vel[1][1]", "dvdy"));
+	mixin(avg_over_vtx_list("grad_tke.x", "dtkedx"));
+	mixin(avg_over_vtx_list("grad_tke.y", "dtkedy"));
+	mixin(avg_over_vtx_list("grad_omega.x", "domegadx"));
+	mixin(avg_over_vtx_list("grad_omega.y", "domegady"));
 	if ( myConfig.dimensions == 2 ) {
 	    // 2D cartesian or 2D axisymmetric
-	    // The following compile-time function is more complicated 
-	    // than the resulting 2D code and actually take up just as much space, 
-	    // however, it's practice for the main event (3D code, below).
-	    dudx = mixin(avg_over_vtx_2D("grad_vel[0][0]"));
-	    dudy = mixin(avg_over_vtx_2D("grad_vel[0][1]"));
-	    dvdx = mixin(avg_over_vtx_2D("grad_vel[1][0]"));
-	    dvdy = mixin(avg_over_vtx_2D("grad_vel[1][1]"));
-	    dtkedx = mixin(avg_over_vtx_2D("grad_tke.x"));
-	    dtkedy = mixin(avg_over_vtx_2D("grad_tke.y"));
-	    domegadx = mixin(avg_over_vtx_2D("grad_omega.x"));
-	    domegady = mixin(avg_over_vtx_2D("grad_omega.y"));
 	    if ( myConfig.axisymmetric ) {
 		// 2D axisymmetric
 		double v_over_y = fs.vel.y / pos[0].y;
@@ -1338,21 +1334,13 @@ public:
 	    // 3D cartesian
 	    double dudz, dvdz, dwdx, dwdy, dwdz;
 	    double dtkedz, domegadz;
-	    dudx = mixin(avg_over_vtx_3D("grad_vel[0][0]"));
-	    dudy = mixin(avg_over_vtx_3D("grad_vel[0][1]"));
-	    dudz = mixin(avg_over_vtx_3D("grad_vel[0][2]"));
-	    dvdx = mixin(avg_over_vtx_3D("grad_vel[1][0]"));
-	    dvdy = mixin(avg_over_vtx_3D("grad_vel[1][1]"));
-	    dvdz = mixin(avg_over_vtx_3D("grad_vel[1][2]"));
-	    dwdx = mixin(avg_over_vtx_3D("grad_vel[2][0]"));
-	    dwdy = mixin(avg_over_vtx_3D("grad_vel[2][1]"));
-	    dwdz = mixin(avg_over_vtx_3D("grad_vel[2][2]"));
-	    dtkedx = mixin(avg_over_vtx_3D("grad_tke.x"));
-	    dtkedy = mixin(avg_over_vtx_3D("grad_tke.y"));
-	    dtkedz = mixin(avg_over_vtx_3D("grad_tke.z"));
-	    domegadx = mixin(avg_over_vtx_3D("grad_omega.x"));
-	    domegady = mixin(avg_over_vtx_3D("grad_omega.y"));
-	    domegadz = mixin(avg_over_vtx_3D("grad_omega.z"));
+	    mixin(avg_over_vtx_list("grad_vel[0][2]", "dudz"));
+	    mixin(avg_over_vtx_list("grad_vel[1][2]", "dvdz"));
+	    mixin(avg_over_vtx_list("grad_vel[2][0]", "dwdx"));
+	    mixin(avg_over_vtx_list("grad_vel[2][1]", "dwdy"));
+	    mixin(avg_over_vtx_list("grad_vel[2][2]", "dwdz"));
+	    mixin(avg_over_vtx_list("grad_tke.z", "dtkedz"));
+	    mixin(avg_over_vtx_list("grad_omega.z", "domegadz"));
 	    P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy + dwdz*dwdz)
 		- 2.0/3.0 * fs.mu_t * (dudx + dvdy + dwdz) * (dudx + dvdy + dwdz)
 		- 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + dwdz)
@@ -1366,7 +1354,7 @@ public:
 		+ 0.25 * (dudy - dvdx) * (dvdz - dwdy) * (dwdx + dudz)
 		+ 0.25 * (dudz - dwdx) * (dwdy - dvdz) * (dudy + dvdx)
 		+ 0.25 * (dvdx - dudy) * (dudz - dwdx) * (dwdy + dvdx) ;
-	}
+	} // end if myConfig.dimensions
 
 	D_K = beta_star * fs.gas.rho * tke * omega;
     
@@ -1454,13 +1442,11 @@ public:
 	if (myConfig.axisymmetric) {
 	    // For viscous, axisymmetric flow:
 	    double v_over_y = fs.vel.y / pos[0].y;
-	    double dudx = mixin(avg_over_vtx_2D("grad_vel[0][0]"));
-	    double dvdy = mixin(avg_over_vtx_2D("grad_vel[1][1]"));
-	    double mu = 
-		0.25 * (iface[Face.east].fs.gas.mu + iface[Face.west].fs.gas.mu +
-			iface[Face.north].fs.gas.mu + iface[Face.south].fs.gas.mu) +
-		0.25 * (iface[Face.east].fs.mu_t + iface[Face.west].fs.mu_t +
-			iface[Face.north].fs.mu_t + iface[Face.south].fs.mu_t);
+	    double dudx; mixin(avg_over_vtx_list("grad_vel[0][0]", "dudx"));
+	    double dvdy; mixin(avg_over_vtx_list("grad_vel[1][1]", "dvdy"));
+	    double mu; mixin(avg_over_iface_list("fs.gas.mu", "mu"));
+	    double mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));
+	    mu += mu_t;
 	    mu *= myConfig.viscous_factor;
 	    double lmbda = -2.0/3.0 * mu;
 	    double tau_00 = 2.0 * mu * v_over_y + lmbda * (dudx + dvdy + v_over_y);
@@ -1484,19 +1470,17 @@ public:
 	    // on scales less than the Debye length
 	    // FIXME: Only consistent with ambipolar diffusion. Currently this is up to
 	    //        the user to enforce.
-	    double udivpe = 0.0;
+	    // Estimate electron pressure gradient as average of all vertices then
+	    // use approximation for work done on electrons: u dot div(pe)
+	    double udivpe, dpedx, dpedy, dpedz;
 	    if ( myConfig.dimensions == 2 ) {
-		// Estimate electron pressure gradient as average of all vertices
-		double dpedx = mixin(avg_over_vtx_2D("grad_pe.x"));
-		double dpedy = mixin(avg_over_vtx_2D("grad_pe.y"));
-		// Approximation for work done on electrons: u dot div(pe)
+		mixin(avg_over_vtx_list("grad_pe.x", "dpedx"));
+		mixin(avg_over_vtx_list("grad_pe.y", "dpedy"));
 		udivpe = fs.vel.x * dpedx + fs.vel.y * dpedy;
 	    } else {
-		// Estimate electron pressure gradient as average of all vertices
-		double dpedx = mixin(avg_over_vtx_3D("grad_pe.x"));
-		double dpedy = mixin(avg_over_vtx_3D("grad_pe.y"));
-		double dpedz = mixin(avg_over_vtx_3D("grad_pe.z"));
-		// Approximation for work done on electrons: u dot div(pe)
+		mixin(avg_over_vtx_list("grad_pe.x", "dpedx"));
+		mixin(avg_over_vtx_list("grad_pe.y", "dpedy"));
+		mixin(avg_over_vtx_list("grad_pe.z", "dpedz"));
 		udivpe = fs.vel.x * dpedx + fs.vel.y * dpedy + fs.vel.z * dpedz;
 	    }
 	    // [TODO] FIXME: Assuming the free electron energy is included in the last mode
