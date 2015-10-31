@@ -204,25 +204,26 @@ public:
     // Returns true if the point p is inside or on the cell surface.
     {
 	if ( dimensions == 2 ) {
-	    // In 2 dimensions,
-	    // we split the x,y-plane into half-planes and check which side p is on.
-	    double xA = vtx[1].pos[gtl].x; double yA = vtx[1].pos[gtl].y;
-	    double xB = vtx[1].pos[gtl].x; double yB = vtx[2].pos[gtl].y;
-	    double xC = vtx[3].pos[gtl].x; double yC = vtx[3].pos[gtl].y;
-	    double xD = vtx[0].pos[gtl].x; double yD = vtx[0].pos[gtl].y;
-	    // Now, check to see if the specified point is on the
-	    // left of (or on) each bloundary line AB, BC, CD and DA.
-	    if ((p.x - xB) * (yA - yB) >= (p.y - yB) * (xA - xB) &&
-		(p.x - xC) * (yB - yC) >= (p.y - yC) * (xB - xC) &&
-		(p.x - xD) * (yC - yD) >= (p.y - yD) * (xC - xD) &&
-		(p.x - xA) * (yD - yA) >= (p.y - yA) * (xD - xA)) {
-		return true;
-	    } else {
-		return false;
+	    // In 2 dimensions, we split the x,y-plane into half-planes and check which side p is on.
+	    // We assume that the vertices are numbered clockwise around the edges of the cell.
+	    uint count_on_left = 0;
+	    foreach (i; 1 .. vtx.length) {
+		// Now, check to see if the specified point is on the
+		// left of (or on) each boundary line AB.
+		double xA = vtx[i-1].pos[gtl].x; double yA = vtx[i-1].pos[gtl].y;
+		double xB = vtx[i].pos[gtl].x; double yB = vtx[i].pos[gtl].y;
+		if ( (p.x - xB) * (yA - yB) >= (p.y - yB) * (xA - xB) ) count_on_left += 1;
 	    }
+	    return (count_on_left == vtx.length);
 	} else {
-	    // In 3 dimensions,
-	    // the test consists of dividing the 6 cell faces into triangular facets
+	    // In 3 dimensions, we are presently assuming a hexahedron.
+	    // [TODO] unstructured-grid adaption.
+	    // [TODO] if the faces are not already triangles, they need to be split into
+	    // triangles about the mid point.  The current arrangement of choosing a
+	    // diagonal for the splitting may lead to points not being consistently 
+	    // being identified for cells with twisted faces.
+	    //
+	    // The test consists of dividing the 6 cell faces into triangular facets
 	    // with outwardly-facing normals and then computing the volumes of the
 	    // tetrahedra formed by these facets and the sample point p.
 	    // If any of the tetrahedra volumes are positive
@@ -534,10 +535,6 @@ public:
 	double integral;
     
 	// Time-derivative for Mass/unit volume.
-	// Note that the unit normals for the interfaces are oriented
-	// such that the unit normals for the east, north and top faces
-	// are outward and the unit normals for the south, west and
-	// bottom faces are inward.
 	integral = 0.0;
 	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.mass * iface[i].area[gtl];
 	dUdt[ftl].mass = vol_inv * integral + Q.mass;
@@ -954,6 +951,10 @@ public:
     } // end thermal_increment()
 
     double signal_frequency()
+    // [TODO] unstructured-grid adaption to be done.
+    // The current direction-by-direction checking assumes a structured grid.
+    // For the moment, things should work OK for an unstructured grid if 
+    // the stringent_cfl is true.
     {
 	auto gmodel = myConfig.gmodel;
 	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
@@ -1490,6 +1491,9 @@ public:
     } // end add_viscous_source_vector()
 
     double calculate_wall_Reynolds_number(int which_boundary, GasModel gmodel)
+    // [TODO] unstructured-grid adaption to be done, however,
+    // this function is not presently used because we have not ported the
+    // writing of boundary flow and heat-transfer conditions.
     {
 	FVInterface IFace = iface[which_boundary];
 	gmodel.update_thermo_from_rhoT(IFace.fs.gas); // Note that we adjust IFace here.
