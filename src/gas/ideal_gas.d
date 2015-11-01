@@ -113,13 +113,13 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	Q.T[0] = _T1 * exp((s - _s1) / _Cp + _Rgas * log(Q.p/_p1));
+	Q.T[0] = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
 	Q.T[0] = h / _Cp;
-	Q.p = _p1 * exp(_Cp/_Rgas*log(Q.T[0]/_T1) - (s - _s1)/_Rgas);
+	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T[0]/_T1)));
 	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
