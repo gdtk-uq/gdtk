@@ -1,5 +1,5 @@
 -- Initialise an ideal gas model
-gm = GasModel:new('sample-data/ideal-air-gas-model.lua')
+gm = GasModel:new{'sample-data/ideal-air-gas-model.lua'}
 -- Try out some of the service functions
 assert(gm:nSpecies() == 1)
 assert(gm:nModes() == 1)

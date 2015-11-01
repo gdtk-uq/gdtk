@@ -44,8 +44,10 @@ GasModel checkGasModel(lua_State* L, int index)
 extern(C) int newGasModel(lua_State* L)
 {
     lua_remove(L, 1); // Remove first argument this
-    
-    string fname = to!string(luaL_checkstring(L, 1));
+
+    lua_rawgeti(L, 1, 1);
+    string fname = to!string(luaL_checkstring(L, -1));
+    lua_pop(L, 1);
     GasModel gm = init_gas_model(fname);
     GasModelStore ~= pushObj!(GasModel, GasModelMT)(L, gm);
     return 1;
