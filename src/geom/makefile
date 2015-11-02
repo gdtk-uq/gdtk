@@ -5,7 +5,7 @@ DEMO_PROGRAMS := geom_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
 	luaunifunction_demo \
-	sgrid_demo luasgrid_demo
+	sgrid_demo luasgrid_demo usgrid_demo
 
 GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
@@ -71,6 +71,14 @@ sgrid_demo: sgrid_demo.d sgrid.d volume.d surface.d gpath.d geom.d \
 	$(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) sgrid_demo.d $(OF)sgrid_demo \
 		sgrid.d volume.d surface.d gpath.d geom.d \
+		univariatefunctions.d \
+		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+usgrid_demo: usgrid_demo.d usgrid.d sgrid.d volume.d surface.d gpath.d geom.d \
+	univariatefunctions.d \
+	$(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) usgrid_demo.d $(OF)usgrid_demo \
+		usgrid.d sgrid.d volume.d surface.d gpath.d geom.d \
 		univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
