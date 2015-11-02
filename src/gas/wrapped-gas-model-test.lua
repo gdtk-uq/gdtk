@@ -6,11 +6,14 @@ assert(gm:nModes() == 1)
 assert(gm:speciesName(1) == 'air')
 -- Test thermo evaluations....
 Q = GasState:new{gm}
+assert(Q.massf.air == 0)
 Q.p = 1.0e5
 Q.T = { 300.0 }
+Q.massf = {air=1.0}
 gm:updateThermoFromPT(Q)
 assert(math.abs(Q.e[1] - 215327.43439227) < 1.0e-6)
 gm:updateThermoFromRHOE(Q)
 assert(math.abs(Q.T[1] - 300.0) < 1.0e-6)
 assert(math.abs(Q.p - 1.0e5) < 1.0e-6)
+assert(Q.massf.air == 1)
 

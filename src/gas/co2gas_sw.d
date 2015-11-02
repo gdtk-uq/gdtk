@@ -36,7 +36,7 @@ public:
 	_n_modes = 1;
 	_species_names ~= "CO2";
 	_mol_masses ~= 0.04401121121333065;// value for CO2
-
+	create_species_reverse_lookup();
     }
 	
     this(lua_State *L) {
@@ -89,12 +89,14 @@ public:
 		rho_sh_Tree = buildTree_fromFile(rho_sh_filename);
 		T_sh_Tree = buildTree_fromFile(T_sh_filename);
 	}
+	create_species_reverse_lookup();
     }
 
     this(string e_rho_sat_table_filename){
     	//a special constructor used to make a gas model just with the sat-vap table
     	//used to build_tree
     	this.e_rho_sat_table = new uni_lut(e_rho_sat_table_filename);
+	create_species_reverse_lookup();
     }
 
     override string toString() const

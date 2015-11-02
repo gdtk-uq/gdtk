@@ -36,6 +36,7 @@ public:
 	_mu = 10.0;
 	double Pr = 1.0;
 	_k = _mu * _Cp / Pr;
+	create_species_reverse_lookup();
     }
 
     this(lua_State* L)

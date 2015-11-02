@@ -32,6 +32,7 @@ public:
 	_n_modes = 1;
 	_species_names ~= "SF6";
 	_mol_masses ~= 0.146055;// value for sea-level air
+	create_species_reverse_lookup();
     }
 	//NOT EXACTLY SURE HOW TO DEAL WITH THIS PART YET -- I am pretty sure it is used for selecting a certain gas model
     this(lua_State *L) {
@@ -64,6 +65,7 @@ public:
 	_Rgas = R_universal/_mol_masses[0];
 	//_Cv = _Rgas / (_gamma - 1.0);
 	//_Cp = _Rgas*_gamma/(_gamma - 1.0);
+	create_species_reverse_lookup();
     }
 
     override string toString() const

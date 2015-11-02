@@ -28,7 +28,14 @@ public:
     @nogc @property uint n_modes() const { return _n_modes; }
     @property ref double[] mol_masses() { return _mol_masses; }
     final string species_name(int i) const { return _species_names[i]; }
+    final int species_index(string spName) const { return _species_indices.get(spName, -1); }
 
+    void create_species_reverse_lookup()
+    {
+	foreach ( int isp; 0 .. _n_species ) {
+	    _species_indices[_species_names[isp]] = isp;
+	}
+    }
     // Methods to be overridden.
     abstract void update_thermo_from_pT(GasState Q);
     abstract void update_thermo_from_rhoe(GasState Q);
@@ -100,6 +107,7 @@ protected:
     uint _n_species;
     uint _n_modes;
     string[] _species_names;
+    int[string] _species_indices;
     double[] _mol_masses;
 }
 

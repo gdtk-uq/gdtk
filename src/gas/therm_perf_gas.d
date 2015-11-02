@@ -82,6 +82,7 @@ public:
 
 	}
 	_thermCondModel = new WilkeMixingThermCond(tcms, _mol_masses);
+	create_species_reverse_lookup();
     }
 
     this(in string fname)
@@ -89,6 +90,7 @@ public:
 	auto L = init_lua_State(fname);
 	this(L);
 	lua_close(L);
+	create_species_reverse_lookup();
     }
 
     override string toString() const

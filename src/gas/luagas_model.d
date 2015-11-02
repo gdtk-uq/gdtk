@@ -91,9 +91,9 @@ extern(C) int thermoPT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_pT(Q);
-    setGasStateInTable(L, 2, Q);
+    setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 
@@ -101,9 +101,9 @@ extern(C) int thermoRHOE(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_rhoe(Q);
-    setGasStateInTable(L, 2, Q);
+    setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 
@@ -111,9 +111,9 @@ extern(C) int thermoRHOT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_rhoT(Q);
-    setGasStateInTable(L, 2, Q);
+    setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 
@@ -121,9 +121,9 @@ extern(C) int thermoRHOP(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_rhop(Q);
-    setGasStateInTable(L, 2, Q);
+    setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 
@@ -131,10 +131,10 @@ extern(C) int thermoPS(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto s = lua_tonumber(L, 3);
     gm.update_thermo_from_ps(Q, s);
-    setGasStateInTable(L, 2, Q);
+    setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 
@@ -142,11 +142,11 @@ extern(C) int thermoHS(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto h = lua_tonumber(L, 3);
     auto s = lua_tonumber(L, 4);
     gm.update_thermo_from_hs(Q, h, s);
-    setGasStateInTable(L, 2, Q);
+    setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
 
@@ -154,9 +154,9 @@ extern(C) int soundSpeed(lua_State* L)
 {
    auto gm = checkGasModel(L, 1);
    auto Q = new GasState(gm.n_species, gm.n_modes);
-   getGasStateFromTable(L, 2, Q); 
+   getGasStateFromTable(L, gm, 2, Q); 
    gm.update_sound_speed(Q);
-   setGasStateInTable(L, 2, Q);
+   setGasStateInTable(L, gm, 2, Q);
    return 0;
 }
 
@@ -167,7 +167,7 @@ extern(C) int dpdrhoConstT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto dpdrho = gm.dpdrho_const_T(Q);
     lua_pushnumber(L, dpdrho);
     return 1;
@@ -179,7 +179,7 @@ extern(C) int intEnergy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto e = gm.internal_energy(Q);
     lua_pushnumber(L, e);
     return 1;
@@ -189,7 +189,7 @@ extern(C) int enthalpy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto h = gm.enthalpy(Q);
     lua_pushnumber(L, h);
     return 1;
@@ -199,7 +199,7 @@ extern(C) int entropy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto s = gm.entropy(Q);
     lua_pushnumber(L, s);
     return 1;
@@ -209,7 +209,7 @@ extern(C) int Cv(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto Cv = gm.Cv(Q);
     lua_pushnumber(L, Cv);
     return 1;
@@ -219,7 +219,7 @@ extern(C) int Cp(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto Cp = gm.Cp(Q);
     lua_pushnumber(L, Cp);
     return 1;
@@ -229,7 +229,7 @@ extern(C) int R(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto R = gm.R(Q);
     lua_pushnumber(L, R);
     return 1;
@@ -239,7 +239,7 @@ extern(C) int gamma(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto gamma = gm.gamma(Q);
     lua_pushnumber(L, gamma);
     return 1;
@@ -249,7 +249,7 @@ extern(C) int molMass(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 2, Q);
+    getGasStateFromTable(L, gm, 2, Q);
     auto molMass = gm.molecular_mass(Q);
     lua_pushnumber(L, molMass);
     return 1;
@@ -259,19 +259,23 @@ extern(C) int massf2molef(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
+    getGasStateFromTable(L, gm, 2, Q);
     double[] molef; molef.length = gm.n_species;
     gm.massf2molef(Q, molef);
     // Place molef in an array and leave at at
     // top-of-stack as a return to the caller.
     lua_newtable(L);
     foreach ( int i, mf; molef ) {
-	lua_pushnumber(L, mf); lua_rawseti(L, -2, i+1);
+	lua_pushnumber(L, mf);
+	lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
     return 1;
 }
 
 extern(C) int molef2massf(lua_State* L)
 {
+    // [TODO] Handle molef table like massf table
+    /*
     auto gm = checkGasModel(L, 1);
     double[] molef;
     auto n = to!int(lua_objlen(L, 2));
@@ -291,25 +295,31 @@ extern(C) int molef2massf(lua_State* L)
 	lua_pushnumber(L, mf); lua_rawseti(L, -2, i+1);
     }
     return 1;
+    */
+    return 0;
 }
 
 extern(C) int massf2conc(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
+    getGasStateFromTable(L, gm, 2, Q);
     double[] conc; conc.length = gm.n_species;
     gm.massf2conc(Q, conc);
     // Place conc in an array and leave at at
     // top-of-stack as a return to the caller.
     lua_newtable(L);
     foreach ( int i, c; conc ) {
-	lua_pushnumber(L, c); lua_rawseti(L, -2, i+1);
+	lua_pushnumber(L, c);
+	lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
     return 1;
 }
 
 extern(C) int conc2massf(lua_State* L)
 {
+    // [TODO] Handle conc table like massf
+    /*
     auto gm = checkGasModel(L, 1);
     double[] conc;
     auto n = to!int(lua_objlen(L, 2));
@@ -329,15 +339,18 @@ extern(C) int conc2massf(lua_State* L)
 	lua_pushnumber(L, mf); lua_rawseti(L, -2, i+1);
     }
     return 1;
+    */
+    return 0;
 }
 
 extern(C) int createTableForGasState(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
+    Q.massf[] = 0.0;
     lua_newtable(L);
     int idx = lua_gettop(L);
-    setGasStateInTable(L, idx, Q);
+    setGasStateInTable(L, gm, idx, Q);
     return 1;
 }
 
@@ -348,17 +361,26 @@ extern(C) int newTableForGasState(lua_State* L)
     auto gm = checkGasModel(L, -1);
     lua_pop(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
+    Q.massf[] = 0.0;
     lua_newtable(L);
     int idx = lua_gettop(L);
-    setGasStateInTable(L, idx, Q);
+    setGasStateInTable(L, gm, idx, Q);
     return 1;
 }
 
-void getGasStateFromTable(lua_State* L, int idx, GasState Q)
+void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
 {
     lua_getfield(L, idx, "rho");
     if ( lua_isnumber(L, -1) ) {
 	Q.rho = lua_tonumber(L, -1);
+    }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'rho' is not a number.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
     }
     lua_pop(L, 1);
 
@@ -366,11 +388,27 @@ void getGasStateFromTable(lua_State* L, int idx, GasState Q)
     if ( lua_isnumber(L, -1) ) {
 	Q.p = lua_tonumber(L, -1);
     }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'p' is not a number.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, idx, "p_e");
     if ( lua_isnumber(L, -1) ) {
 	Q.p_e = lua_tonumber(L, -1);
+    }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'p_e' is not a number.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
     }
     lua_pop(L, 1);
     
@@ -383,7 +421,15 @@ void getGasStateFromTable(lua_State* L, int idx, GasState Q)
 	    throw new Error(errMsg);
 	}
 	foreach ( i; 1..n+1 ) {
-	    lua_rawgeti(L, -1, i); Q.e[i-1] = lua_tonumber(L, -1);
+	    lua_rawgeti(L, -1, i);
+	    if ( lua_isnumber(L, -1) ) {
+		Q.e[i-1] = lua_tonumber(L, -1);
+	    }
+	    else {
+		string errMsg = format("The value for 'e[%d]' is not a number.\n", i);
+		lua_pop(L, 1);
+		throw new Error(errMsg);
+	    }
 	    lua_pop(L, 1);
 	}
     }
@@ -398,7 +444,15 @@ void getGasStateFromTable(lua_State* L, int idx, GasState Q)
 	    throw new Error(errMsg);
 	}
 	foreach ( i; 1..n+1 ) {
-	    lua_rawgeti(L, -1, i); Q.T[i-1] = lua_tonumber(L, -1);
+	    lua_rawgeti(L, -1, i);
+	    if ( lua_isnumber(L, -1) ) {
+		Q.T[i-1] = lua_tonumber(L, -1);
+	    }
+	    else {
+		string errMsg = format("The value for 'T[%d]' is not a number.\n", i);
+		lua_pop(L, 1);
+		throw new Error(errMsg);
+	    }
 	    lua_pop(L, 1);
 	}
     }
@@ -407,6 +461,14 @@ void getGasStateFromTable(lua_State* L, int idx, GasState Q)
     lua_getfield(L, idx, "mu");
     if ( lua_isnumber(L, -1) ) {
 	Q.mu = lua_tonumber(L, -1);
+    }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'mu' is not a number.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
     }
     lua_pop(L, 1);
 
@@ -419,7 +481,15 @@ void getGasStateFromTable(lua_State* L, int idx, GasState Q)
 	    throw new Error(errMsg);
 	}
 	foreach ( i; 1..n+1 ) {
-	    lua_rawgeti(L, -1, i); Q.k[i-1] = lua_tonumber(L, -1);
+	    lua_rawgeti(L, -1, i);
+	    if ( lua_isnumber(L, -1) ) {
+		Q.k[i-1] = lua_tonumber(L, -1);
+	    }
+	    else {
+		string errMsg = format("The value for 'k[%d]' is not a number.\n", i);
+		lua_pop(L, 1);
+		throw new Error(errMsg);
+	    }
 	    lua_pop(L, 1);
 	}
     }
@@ -429,18 +499,47 @@ void getGasStateFromTable(lua_State* L, int idx, GasState Q)
     if ( lua_isnumber(L, -1) ) {
 	Q.sigma = lua_tonumber(L, -1);
     }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'sigma' is not a number.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, idx, "massf");
     if ( lua_istable(L, -1) ) {
-	auto n = to!int(lua_objlen(L, -1));
-	if ( n != Q.massf.length ) {
-	    string errMsg = format("Wrong number of mass fraction values in GasState table.\n Expected: %d, Given: %d\n", Q.massf.length, n);
+	// 1. Check all keys are valid species names.
+	lua_pushnil(L);
+	while ( lua_next(L, -2) != 0 ) {
+	    string key = to!string(lua_tostring(L, -2));
+	    auto isp = gm.species_index(key);
+	    if ( isp == -1 ) {
+		string errMsg = format("Species name used in massf table does not exist: %s\n", key);
+		lua_pop(L, 1);
+		throw new Error(errMsg);
+	    }
 	    lua_pop(L, 1);
-	    throw new Error(errMsg);
 	}
-	foreach ( i; 1..n+1 ) {
-	    lua_rawgeti(L, -1, i); Q.massf[i-1] = lua_tonumber(L, -1);
+	// 2. Now set all mass fraction values to 0.0
+	//    (then we'll correct that in the next step)
+	Q.massf[] = 0.0;
+	// 3. Now find those values that we have explicitly set
+	foreach ( isp; 0 .. gm.n_species() ) {
+	    lua_getfield(L, -1, toStringz(gm.species_name(isp)));
+	    if ( lua_isnumber(L, -1) ) {
+		Q.massf[isp] = lua_tonumber(L, -1);
+	    }
+	    else if ( lua_isnil(L, -1) ) {
+		Q.massf[isp] = 0.0;
+	    }
+	    else {
+		string errMsg = format("The value for species '%s' in the mass fraction table is not a number.\n", gm.species_name(isp));
+		lua_pop(L, 1);
+		throw new Error(errMsg);
+	    }
 	    lua_pop(L, 1);
 	}
     }
@@ -450,10 +549,18 @@ void getGasStateFromTable(lua_State* L, int idx, GasState Q)
     if ( lua_isnumber(L, -1) ) {
 	Q.quality = lua_tonumber(L, -1);
     }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'quality' is not a number.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
+    }
     lua_pop(L, 1);
 }
 
-void setGasStateInTable(lua_State* L, int idx, GasState Q)
+void setGasStateInTable(lua_State* L, GasModel gm, int idx, GasState Q)
 {
     lua_pushnumber(L, Q.rho);
     lua_setfield(L, idx, "rho");
@@ -493,7 +600,8 @@ void setGasStateInTable(lua_State* L, int idx, GasState Q)
 
     lua_newtable(L);
     foreach ( int i, mf; Q.massf ) {
-	lua_pushnumber(L, mf); lua_rawseti(L, -2, i+1);
+	lua_pushnumber(L, mf);
+	lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
     lua_setfield(L, idx, "massf");
 
