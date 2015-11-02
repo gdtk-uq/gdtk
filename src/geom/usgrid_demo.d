@@ -23,7 +23,7 @@ void main()
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     auto usg = new UnstructuredGrid(my_grid, 2);
-    // usg.write_to_text_file("test_grid.vtk", true);
+    usg.write_to_vtk_file("test_grid.vtk");
 
     writeln("3D grid");
     Vector3[8] p;
@@ -41,7 +41,7 @@ void main()
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
     writeln("grid point 5 5 5 at p=", my_3Dgrid[5,5,5]);
     auto usg3D = new UnstructuredGrid(my_3Dgrid, 3);
-    // usg.write_to_text_file("test_3Dgrid.vtk", true);
+    usg3D.write_to_vtk_file("test_3Dgrid.vtk");
 
     writeln("Done.");
 }

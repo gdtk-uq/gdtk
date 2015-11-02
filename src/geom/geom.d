@@ -39,10 +39,27 @@ uint face_index(string name)
     case "top": return Face.top;
     case "bottom": return Face.bottom;
     default:
-	throw new Error(text("Invalid face name:", name));
+	throw new Error(text("Invalid face name: ", name));
     }
 } // end face_index
 
+// VTK cell types, for use when writing and reading VTK files.
+enum VTKElement {
+    vertex = 1,
+    polyvertex = 2,
+    line = 3,
+    polyline = 4,
+    triangle = 5,
+    triangle_strip = 6,
+    polygon = 7,
+    pixel = 8,
+    quad = 9,
+    tetra = 10,
+    voxel = 11,
+    hexahedron = 12
+}
+
+//---------------------------------------------------------------------
 
 // Vector3 is the geometric primitive object that we use in all of our
 // higher-order objects.

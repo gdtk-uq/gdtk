@@ -24,6 +24,36 @@ import sgrid;
 
 //-----------------------------------------------------------------
 
+enum USGCell_type {
+    none = 0,
+    triangle = 1,
+    quad = 2,
+    polygon = 3,
+    tetra = 4,
+    prism = 5,
+    hexahedron = 6
+}
+string[] cell_names = ["none", "triangle", "quad", "polygon",
+		       "tetra", "prism", "hexahedron"];
+
+int[] cell_type_for_vtk = [0, VTKElement.triangle, VTKElement.quad, VTKElement.polygon,
+			   VTKElement.tetra, 0, VTKElement.hexahedron];
+
+USGCell_type cell_type_from_name(string name)
+{
+    switch (name) {
+    case "none": return USGCell_type.none;
+    case "triangle": return USGCell_type.triangle;
+    case "quad": return USGCell_type.quad;
+    case "polygon": return USGCell_type.polygon;
+    case "tetra": return USGCell_type.tetra;
+    case "prism": return USGCell_type.prism;
+    case "hexahedron": return USGCell_type.hexahedron;
+    default:
+	throw new Error(text("Invalid USGCell type name: ", name));
+    }
+}
+    
 class USGFace {
 public:
     int[] vtx_id_list;
@@ -32,19 +62,35 @@ public:
     {
 	this.vtx_id_list = vtx_id_list.dup();
     }
+
+    this(const USGFace other)
+    {
+	vtx_id_list = other.vtx_id_list.dup();
+    }
 } // end class USGFace
 
 class USGCell {
 public:
+    USGCell_type cell_type;
     int[] vtx_id_list;
     int[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
-    this(int[] vtx_id_list, int[] face_id_list, int[] outsign_list)
+    this(USGCell_type cell_type, int[] vtx_id_list,
+	 int[] face_id_list, int[] outsign_list)
     {
+	this.cell_type = cell_type;
 	this.vtx_id_list = vtx_id_list.dup();
 	this.face_id_list = face_id_list.dup();
 	this.outsign_list = outsign_list.dup();
+    }
+
+    this(const USGCell other)
+    {
+	cell_type = other.cell_type;
+	vtx_id_list = other.vtx_id_list.dup();
+	face_id_list = other.face_id_list.dup();
+	outsign_list = other.outsign_list.dup();
     }
 } // end class USGCell
 
@@ -54,21 +100,35 @@ public:
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
     this() {}
+    
+    this(const BoundaryFaceSet other)
+    {
+	face_id_list = other.face_id_list.dup();
+	outsign_list = other.outsign_list.dup();
+    }
 } // end class BoundaryFaceSet
 
 class UnstructuredGrid {
 public:
     int dimensions;
-    int nvtx, ncell, nface;
-    Vector3[] vtx;
-    USGFace[] face;
-    USGCell[] cell;
-    BoundaryFaceSet[] bndry;
+    int nvertices, ncells, nfaces;
+    Vector3[] vertices;
+    USGFace[] faces;
+    USGCell[] cells;
+    BoundaryFaceSet[] boundaries;
     string label;
 
     this(const UnstructuredGrid other)
     {
-	// [TODO] implement
+	dimensions = other.dimensions;
+	nvertices = other.nvertices;
+	ncells = other.ncells;
+	nfaces = other.nfaces;
+	foreach(v; other.vertices) { vertices ~= Vector3(v); }
+	foreach(f; other.faces) { faces ~= new USGFace(f); }
+	foreach(c; other.cells) { cells ~= new USGCell(c); }
+	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
+	label = other.label;
     }
 
     this(const StructuredGrid sg, int dimensions)
@@ -79,18 +139,19 @@ public:
 	    if (sg.nkv != 1) {
 		throw new Error("UnstructuredGrid(): 2D structured grid has nkv!=1");
 	    }
-	    nvtx = sg.niv * sg.njv;
-	    nface = (sg.niv)*(sg.njv-1) + (sg.niv-1)*(sg.njv);
-	    ncell = (sg.niv-1)*(sg.njv-1);
-	    bndry.length = 4; // 0=north, 1=east, 2=south, 3=west
+	    nvertices = sg.niv * sg.njv;
+	    nfaces = (sg.niv)*(sg.njv-1) + (sg.niv-1)*(sg.njv);
+	    ncells = (sg.niv-1)*(sg.njv-1);
+	    foreach(ib; 0 .. 4) { boundaries ~= new BoundaryFaceSet(); }
+	    // 0=north, 1=east, 2=south, 3=west
 	    // vertices
 	    int[][] vtx_id;
 	    vtx_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		vtx_id[i].length = sg.njv;
 		foreach (j; 0 .. sg.njv) {
-		    vtx ~= Vector3(sg.grid[i][j][0]);
-		    vtx_id[i][j] = vtx.length - 1;
+		    vertices ~= Vector3(sg.grid[i][j][0]);
+		    vtx_id[i][j] = vertices.length - 1;
 		}
 	    }
 	    // i-faces
@@ -99,15 +160,15 @@ public:
 	    foreach (i; 0 .. sg.niv) {
 		iface_id[i].length = sg.njv-1;
 		foreach (j; 0 .. sg.njv-1) {
-		    face ~= new USGFace([vtx_id[i][j], vtx_id[i][j+1]]);
-		    iface_id[i][j] = face.length - 1;
-		    if (i == 0) { // west
-			bndry[3].face_id_list ~= iface_id[i][j];
-			bndry[3].outsign_list ~= -1;
+		    faces ~= new USGFace([vtx_id[i][j], vtx_id[i][j+1]]);
+		    iface_id[i][j] = faces.length - 1;
+		    if (i == 0) {
+			boundaries[Face.west].face_id_list ~= iface_id[i][j];
+			boundaries[Face.west].outsign_list ~= -1;
 		    }
-		    if (i == sg.niv-1) { // east
-			bndry[1].face_id_list ~= iface_id[i][j];
-			bndry[1].outsign_list ~= +1;
+		    if (i == sg.niv-1) {
+			boundaries[Face.east].face_id_list ~= iface_id[i][j];
+			boundaries[Face.east].outsign_list ~= +1;
 		    }
 		}
 	    }
@@ -117,15 +178,15 @@ public:
 	    foreach (i; 0 .. sg.niv-1) {
 		jface_id[i].length = sg.njv;
 		foreach (j; 0 .. sg.njv) {
-		    face ~= new USGFace([vtx_id[i][j], vtx_id[i+1][j]]);
-		    jface_id[i][j] = face.length - 1;
-		    if (j == 0) { // south
-			bndry[2].face_id_list ~= jface_id[i][j];
-			bndry[2].outsign_list ~= -1;
+		    faces ~= new USGFace([vtx_id[i][j], vtx_id[i+1][j]]);
+		    jface_id[i][j] = faces.length - 1;
+		    if (j == 0) {
+			boundaries[Face.south].face_id_list ~= jface_id[i][j];
+			boundaries[Face.south].outsign_list ~= -1;
 		    }
-		    if (j == sg.njv-1) { // north
-			bndry[0].face_id_list ~= jface_id[i][j];
-			bndry[0].outsign_list ~= +1;
+		    if (j == sg.njv-1) {
+			boundaries[Face.north].face_id_list ~= jface_id[i][j];
+			boundaries[Face.north].outsign_list ~= +1;
 		    }
 		}
 	    }
@@ -139,17 +200,19 @@ public:
 				       jface_id[i][j], // south
 				       iface_id[i][j]]; // west
 		    auto outsigns = [+1, +1, -1, -1];
-		    cell ~= new USGCell(cell_vertices, cell_faces, outsigns);
+		    cells ~= new USGCell(USGCell_type.quad, cell_vertices,
+					 cell_faces, outsigns);
 		}
 	    }
 	} else {
 	    // Assume dimensions == 3
-	    nvtx = sg.niv * sg.njv * sg.nkv;
-	    nface = (sg.niv)*(sg.njv-1)*(sg.nkv-1) +
+	    nvertices = sg.niv * sg.njv * sg.nkv;
+	    nfaces = (sg.niv)*(sg.njv-1)*(sg.nkv-1) +
 		(sg.niv-1)*(sg.njv)*(sg.nkv-1) +
 		(sg.niv-1)*(sg.njv-1)*(sg.nkv);
-	    ncell = (sg.niv-1)*(sg.njv-1)*(sg.nkv-1);
-	    bndry.length = 6;
+	    ncells = (sg.niv-1)*(sg.njv-1)*(sg.nkv-1);
+	    foreach(ib; 0 .. 6) { boundaries ~= new BoundaryFaceSet(); }
+	    // 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
 	    // vertices
 	    int[][][] vtx_id;
 	    vtx_id.length = sg.niv;
@@ -158,8 +221,8 @@ public:
 		foreach (j; 0 .. sg.njv) {
 		    vtx_id[i][j].length = sg.nkv;
 		    foreach (k; 0 .. sg.nkv) {
-			vtx ~= Vector3(sg.grid[i][j][k]);
-			vtx_id[i][j][k] = vtx.length - 1;
+			vertices ~= Vector3(sg.grid[i][j][k]);
+			vtx_id[i][j][k] = vertices.length - 1;
 		    }
 		}
 	    }
@@ -171,16 +234,16 @@ public:
 		foreach (j; 0 .. sg.njv-1) {
 		    iface_id[i][j].length = sg.nkv-1;
 		    foreach (k; 0 .. sg.nkv-1) {
-			face ~= new USGFace([vtx_id[i][j][k], vtx_id[i][j+1][k],
-					     vtx_id[i][j+1][k+1], vtx_id[i][j][k+1]]);
-			iface_id[i][j][k] = face.length - 1;
-			if (i == 0) { // west
-			    bndry[3].face_id_list ~= iface_id[i][j][k];
-			    bndry[3].outsign_list ~= -1;
+			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i][j+1][k],
+					      vtx_id[i][j+1][k+1], vtx_id[i][j][k+1]]);
+			iface_id[i][j][k] = faces.length - 1;
+			if (i == 0) {
+			    boundaries[Face.west].face_id_list ~= iface_id[i][j][k];
+			    boundaries[Face.west].outsign_list ~= -1;
 			}
-			if (i == sg.niv-1) { // east
-			    bndry[1].face_id_list ~= iface_id[i][j][k];
-			    bndry[1].outsign_list ~= +1;
+			if (i == sg.niv-1) {
+			    boundaries[Face.east].face_id_list ~= iface_id[i][j][k];
+			    boundaries[Face.east].outsign_list ~= +1;
 			}
 		    }
 		}
@@ -193,16 +256,16 @@ public:
 		foreach (j; 0 .. sg.njv) {
 		    jface_id[i][j].length = sg.nkv-1;
 		    foreach (k; 0 .. sg.nkv-1) {
-			face ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
-					     vtx_id[i+1][j][k+1], vtx_id[i][j][k+1]]);
-			jface_id[i][j][k] = face.length - 1;
-			if (j == 0) { // south
-			    bndry[2].face_id_list ~= jface_id[i][j][k];
-			    bndry[2].outsign_list ~= -1;
+			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
+					      vtx_id[i+1][j][k+1], vtx_id[i][j][k+1]]);
+			jface_id[i][j][k] = faces.length - 1;
+			if (j == 0) {
+			    boundaries[Face.south].face_id_list ~= jface_id[i][j][k];
+			    boundaries[Face.south].outsign_list ~= -1;
 			}
-			if (j == sg.njv-1) { // north
-			    bndry[0].face_id_list ~= jface_id[i][j][k];
-			    bndry[0].outsign_list ~= +1;
+			if (j == sg.njv-1) {
+			    boundaries[Face.north].face_id_list ~= jface_id[i][j][k];
+			    boundaries[Face.north].outsign_list ~= +1;
 			}
 		    }
 		}
@@ -212,19 +275,19 @@ public:
 	    kface_id.length = sg.niv-1;
 	    foreach (i; 0 .. sg.niv-1) {
 		kface_id[i].length = sg.njv-1;
-		foreach (j; 0 .. sg.njv) {
+		foreach (j; 0 .. sg.njv-1) {
 		    kface_id[i][j].length = sg.nkv;
 		    foreach (k; 0 .. sg.nkv) {
-			face ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
-					     vtx_id[i+1][j+1][k], vtx_id[i][j+1][k]]);
-			kface_id[i][j][k] = face.length - 1;
-			if (k == 0) { // bottom
-			    bndry[5].face_id_list ~= kface_id[i][j][k];
-			    bndry[5].outsign_list ~= -1;
+			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
+					      vtx_id[i+1][j+1][k], vtx_id[i][j+1][k]]);
+			kface_id[i][j][k] = faces.length - 1;
+			if (k == 0) {
+			    boundaries[Face.bottom].face_id_list ~= kface_id[i][j][k];
+			    boundaries[Face.bottom].outsign_list ~= -1;
 			}
-			if (k == sg.nkv-1) { // top
-			    bndry[4].face_id_list ~= kface_id[i][j][k];
-			    bndry[4].outsign_list ~= +1;
+			if (k == sg.nkv-1) {
+			    boundaries[Face.top].face_id_list ~= kface_id[i][j][k];
+			    boundaries[Face.top].outsign_list ~= +1;
 			}
 		    }
 		}
@@ -244,12 +307,15 @@ public:
 					   kface_id[i][j][k+1], // top
 					   kface_id[i][j][k]]; // bottom
 			auto outsigns = [+1, +1, -1, -1, +1, -1];
-			cell ~= new USGCell(cell_vertices, cell_faces, outsigns);
+			cells ~= new USGCell(USGCell_type.hexahedron, cell_vertices,
+					     cell_faces, outsigns);
 		    }
 		}
 	    }
 	} // end if dimensions
-	// [TODO] assert numbers of faces and vertices are correct
+	assert(nvertices == vertices.length, "mismatch in number of vertices");
+	assert(nfaces == faces.length, "mismatch in number of faces");
+	assert(ncells == cells.length, "mismatch in number of cells");
     } // end constructor from StructuredGrid object
 
     // Imported grid.
@@ -333,29 +399,31 @@ public:
 	// } // foreach k
     } // end read_grid_from_gzip_file()
 
-    void write_to_text_file(string fileName, bool vtkHeader=true)
+    void write_to_vtk_file(string fileName)
     {
 	auto f = File(fileName, "w");
-	// if (vtkHeader) {
-	//     f.writeln("# vtk DataFile Version 2.0");
-	//     f.writeln(label);
-	//     f.writeln("ASCII");
-	//     f.writeln("");
-	//     f.writeln("DATASET STRUCTURED_GRID");
-	//     f.writefln("DIMENSIONS %d %d %d", niv, njv, nkv);
-	//     f.writefln("POINTS %d float", (niv * njv * nkv));
-	// } else {
-	//     f.writefln("%d %d %d  # ni nj nk", niv, njv, nkv);
-	// }
-	// foreach (k; 0 .. nkv) {
-	//     foreach (j; 0 .. njv) {
-	// 	foreach (i; 0 .. niv) {
-	// 	    f.writefln("%20.16e %20.16e %20.16e", 
-	// 		       grid[i][j][k].x, grid[i][j][k].y, grid[i][j][k].z);
-	// 	}
-	//     }
-	// }
-    } // end write_to_text_file()
+	f.writeln("# vtk DataFile Version 2.0");
+	f.writeln(label);
+	f.writeln("ASCII");
+	f.writeln("");
+	f.writeln("DATASET UNSTRUCTURED_GRID");
+	f.writefln("POINTS %d float", nvertices);
+	foreach (v; vertices) { f.writefln("%20.16e %20.16e %20.16e", v.x, v.y, v.z); }
+	f.writeln("");
+	int n_ints = 0; // number of integers to describe connections
+	foreach (c; cells) { n_ints += 1 + c.vtx_id_list.length; }
+	f.writefln("CELLS %d %d", ncells, n_ints);
+	foreach (c; cells) {
+	    f.write(c.vtx_id_list.length);
+	    foreach (vtx_id; c.vtx_id_list) { f.write(" ", vtx_id); }
+	    f.writeln();
+	}
+	f.writefln("CELL_TYPES %d", ncells);
+	foreach (c; cells) {
+	    f.writeln(cell_type_for_vtk[c.cell_type]);
+	}
+	f.close();
+    } // end write_to_vtk_file()
 
     void write_to_gzip_file(string fileName)
     // This function essentially defines the Eilmer4 native format.
