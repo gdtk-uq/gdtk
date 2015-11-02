@@ -229,6 +229,8 @@ function printHelp()
    print("   input    : a gas input file with user selections")
    print("   output   : detailed gas file in format ready for Eilmer4.")
    print("")
+   print(" > prep-gas --list-available-species")
+   print("")
    os.exit(1)
 end
 
@@ -265,16 +267,16 @@ function prepareGasFile(inpFname, outFname)
 end
 
 function main()
+   local listSpecies = false
    if ( arg[1] == "--help" or arg[1] == "-h" ) then
       printHelp()
-   end
-   if ( #arg < 2 ) then
+   elseif ( arg[1] == "--list-available-species" ) then
+      listSpecies = true
+   elseif ( #arg < 2 ) then
       print("Not enough arguments or unknown option.")
       print("Exiting program without doing anything.")
       printHelp()
-   end
-   
-   if ( #arg > 2 ) then
+   elseif ( #arg > 2 ) then
       print("Two many arguments.")
       print("Exiting program without doing anything.")
       printHelp()
@@ -287,6 +289,22 @@ function main()
    dofile(dbName)
    print("Species database loaded from: ", dbName)
    
+   if listSpecies then
+      spList = {}
+      for sp,_ in pairs(db) do
+	 if sp ~= 'default' then
+	    spList[#spList+1] = sp
+	 end
+      end
+      table.sort(spList)
+      print("")
+      for _,sp in ipairs(spList) do
+	 print(sp)
+      end
+      print("")
+      return 0
+   end
+
    inpFname = arg[1]
    outFname = arg[2]
    prepareGasFile(inpFname, outFname)
