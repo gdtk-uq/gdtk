@@ -13,7 +13,7 @@ setGasModel('nitrogen-2sp.lua')
 config.reacting = true
 config.reactions_file = 'chem.lua'
 
-initial = FlowState:new{p=1.0e5, T=4000.0, massf={0.8, 0.2}}
+initial = FlowState:new{p=1.0e5, T=4000.0, massf={N2=0.8, N=0.2}}
 
 -- Geometry is a square
 a = Vector3:new{0.0, 0.0}
