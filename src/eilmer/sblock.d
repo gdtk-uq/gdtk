@@ -192,7 +192,16 @@ public:
     @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0) { return _ifk[to_global_index(i,j,k)]; }
     @nogc ref FVVertex get_vtx(size_t i, size_t j, size_t k=0) { return _vtx[to_global_index(i,j,k)]; }
 
-    override void assemble_arrays()
+    override void init_grid_and_flow_arrays(string gridFileName)
+    {
+	assemble_arrays();
+	bind_interfaces_vertices_and_cells();
+	read_grid(gridFileName, 0);
+	compute_primary_cell_geometric_data(0);
+	assign_flow_locations_for_derivative_calc(0);
+    }
+
+    void assemble_arrays()
     // We shouldn't be calling this until the essential bits of the GlobalConfig
     // have been set up.
     {
@@ -250,7 +259,7 @@ public:
 	}
     } // end of assemble_arrays()
 
-    override void bind_interfaces_vertices_and_cells()
+    void bind_interfaces_vertices_and_cells()
     {
 	// There is a fixed order of faces and vertices for each cell.
 	// Refer to fvcore.d
@@ -413,7 +422,7 @@ public:
 	return number_of_invalid_cells;
     } // end count_invalid_cells()
 
-    override void compute_primary_cell_geometric_data(int gtl)
+    void compute_primary_cell_geometric_data(int gtl)
     // Compute cell and interface geometric properties.
     {
 	size_t i, j, k;
@@ -1014,7 +1023,7 @@ public:
 	}
     } // end calc_ghost_cell_geom_2D()
 
-    override void assign_flow_locations_for_derivative_calc(size_t gtl)
+    void assign_flow_locations_for_derivative_calc(size_t gtl)
     {
 	size_t i, j, k;
 	if (myConfig.dimensions == 2) {
@@ -1582,7 +1591,7 @@ public:
 	outfile.finish();
     } // end write_grid()
 
-    override double read_solution(string filename)
+    override double read_solution(string filename, bool overwrite_geometry_data)
     // Note that the position data is read into grid-time-level 0
     // by scan_values_from_string(). 
     // Returns sim_time from file.
@@ -1609,7 +1618,7 @@ public:
 	    for ( size_t j = jmin; j <= jmax; ++j ) {
 		for ( size_t i = imin; i <= imax; ++i ) {
 		    line = byLine.front; byLine.popFront();
-		    get_cell(i,j,k).scan_values_from_string(line);
+		    get_cell(i,j,k).scan_values_from_string(line, overwrite_geometry_data);
 		} // for i
 	    } // for j
 	} // for k

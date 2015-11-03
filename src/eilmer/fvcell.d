@@ -274,15 +274,15 @@ public:
 	Q_rE_rad /= n;
     }
 
-    void scan_values_from_string(string buffer)
+    void scan_values_from_string(string buffer, bool overwrite_geometry_data)
     // Note that the position data is read into grid_time_level 0.
     {
 	auto gm = myConfig.gmodel;
 	auto items = split(buffer);
-	pos[0].refx = to!double(items.front); items.popFront();
-	pos[0].refy = to!double(items.front); items.popFront();
-	pos[0].refz = to!double(items.front); items.popFront();
-	volume[0] = to!double(items.front); items.popFront();
+	if (overwrite_geometry_data) { pos[0].refx = to!double(items.front); } items.popFront();
+	if (overwrite_geometry_data) { pos[0].refy = to!double(items.front); } items.popFront();
+	if (overwrite_geometry_data) { pos[0].refz = to!double(items.front); } items.popFront();
+	if (overwrite_geometry_data) { volume[0] = to!double(items.front); } items.popFront();
 	fs.gas.rho = to!double(items.front); items.popFront();
 	fs.vel.refx = to!double(items.front); items.popFront();
 	fs.vel.refy = to!double(items.front); items.popFront();

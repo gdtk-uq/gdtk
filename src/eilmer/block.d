@@ -63,15 +63,12 @@ public:
 
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
-    abstract void assemble_arrays();
-    abstract void bind_interfaces_vertices_and_cells();
+    abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract int count_invalid_cells(int gtl);
-    abstract void compute_primary_cell_geometric_data(int gtl);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
-    abstract void assign_flow_locations_for_derivative_calc(size_t gtl);
     abstract void read_grid(string filename, size_t gtl=0);
     abstract void write_grid(string filename, double sim_time, size_t gtl=0);
-    abstract double read_solution(string filename);
+    abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
     abstract void convective_flux();
     abstract void flow_property_derivatives(int gtl);

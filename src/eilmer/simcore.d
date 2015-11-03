@@ -63,20 +63,14 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     defaultPoolThreads(maxCPUs-1); // total = main thread + threads-in-Pool
     writeln("Running with ", maxCPUs, " CPUs available for threads.");
     foreach (myblk; parallel(gasBlocks,1)) {
-	myblk.assemble_arrays();
-	myblk.bind_interfaces_vertices_and_cells();
 	writeln("myblk=", myblk);
-	myblk.read_grid(make_file_name!"grid"(job_name, myblk.id, 0), 0); // tindx==0 fixed-grid
-	// I don't mind if blocks write over sim_time.  
-	// They should all have the same value for it.
-	sim_time = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, tindx));
-    }
-    foreach (myblk; parallel(gasBlocks,1)) {
-	myblk.compute_primary_cell_geometric_data(0);
+	myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0)); // tindx==0
 	myblk.compute_distance_to_nearest_wall_for_all_cells(0);
-	myblk.assign_flow_locations_for_derivative_calc(0);
 	myblk.identify_reaction_zones(0);
 	myblk.identify_turbulent_zones(0);
+	// I don't mind if blocks write over sim_time.  
+	// They should all have the same value for it.
+	sim_time = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, tindx), false);
 	myblk.set_grid_velocities(sim_time);
 	foreach (cell; myblk.active_cells) {
 	    cell.encode_conserved(0, 0, myblk.omegaz);
