@@ -68,6 +68,13 @@ public:
 	vtx_id_list = other.vtx_id_list.dup();
     }
 
+    this(string str)
+    {
+	auto tokens = str.strip().split();
+	vtx_id_list.length = to!int(tokens[0]);
+	foreach(i; 0 .. vtx_id_list.length) { vtx_id_list[i] = to!int(tokens[i+1]); }
+    }
+
     string toIOString()
     {
 	string str = to!string(vtx_id_list.length);
@@ -100,6 +107,28 @@ public:
 	outsign_list = other.outsign_list.dup();
     }
 
+    this(string str)
+    {
+	auto tokens = str.strip().split();
+	int itok = 0;
+	cell_type = cell_type_from_name(tokens[itok++]);
+        auto junk = tokens[itok++]; // "vtx"
+	vtx_id_list.length = to!int(tokens[itok++]);
+	foreach(i; 0 .. vtx_id_list.length) {
+	    vtx_id_list[i] = to!int(tokens[itok++]);
+	}
+	junk = tokens[itok++]; // "faces"
+	face_id_list.length = to!int(tokens[itok++]);
+	foreach(i; 0 .. face_id_list.length) {
+	    face_id_list[i] = to!int(tokens[itok++]);
+	}
+	junk = tokens[itok++]; // "outsigns"
+	outsign_list.length = to!int(tokens[itok++]);
+	foreach(i; 0 .. outsign_list.length) {
+	    outsign_list[i] = to!int(tokens[itok++]);
+	}
+    }
+
     string toIOString()
     {
 	string str = cell_names[cell_type];
@@ -119,9 +148,26 @@ public:
     int[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
-    this(string tag) 
+    this(string str) 
     {
-	this.tag = tag;
+	auto tokens = str.strip().split();
+	if (tokens.length == 1) {
+	    this.tag = tokens[0];
+	} else {
+	    // We have more information so try to use it.
+	    int itok = 0;
+	    this.tag = tokens[itok++];
+	    auto junk = tokens[itok++]; // "faces"
+	    face_id_list.length = to!int(tokens[itok++]);
+	    foreach(i; 0 .. face_id_list.length) {
+		face_id_list[i] = to!int(tokens[itok++]);
+	    }
+	    junk = tokens[itok++]; // "outsigns"
+	    outsign_list.length = to!int(tokens[itok++]);
+	    foreach(i; 0 .. outsign_list.length) {
+		outsign_list[i] = to!int(tokens[itok++]);
+	    }
+	}
     }
     
     this(const BoundaryFaceSet other)
@@ -145,7 +191,7 @@ public:
 class UnstructuredGrid {
 public:
     int dimensions;
-    int nvertices, ncells, nfaces;
+    int nvertices, ncells, nfaces, nboundaries;
     Vector3[] vertices;
     USGFace[] faces;
     USGCell[] cells;
@@ -158,6 +204,7 @@ public:
 	nvertices = other.nvertices;
 	ncells = other.ncells;
 	nfaces = other.nfaces;
+	nboundaries = other.nboundaries;
 	foreach(v; other.vertices) { vertices ~= Vector3(v); }
 	foreach(f; other.faces) { faces ~= new USGFace(f); }
 	foreach(c; other.cells) { cells ~= new USGCell(c); }
@@ -176,8 +223,11 @@ public:
 	    nvertices = sg.niv * sg.njv;
 	    nfaces = (sg.niv)*(sg.njv-1) + (sg.niv-1)*(sg.njv);
 	    ncells = (sg.niv-1)*(sg.njv-1);
-	    foreach(ib; 0 .. 4) { boundaries ~= new BoundaryFaceSet(face_name[ib]); }
-	    // 0=north, 1=east, 2=south, 3=west
+	    nboundaries = 4;
+	    foreach(ib; 0 .. nboundaries) {
+		boundaries ~= new BoundaryFaceSet(face_name[ib]);
+		// 0=north, 1=east, 2=south, 3=west
+	    }
 	    // vertices
 	    int[][] vtx_id;
 	    vtx_id.length = sg.niv;
@@ -245,8 +295,11 @@ public:
 		(sg.niv-1)*(sg.njv)*(sg.nkv-1) +
 		(sg.niv-1)*(sg.njv-1)*(sg.nkv);
 	    ncells = (sg.niv-1)*(sg.njv-1)*(sg.nkv-1);
-	    foreach(ib; 0 .. 6) { boundaries ~= new BoundaryFaceSet(face_name[ib]); }
-	    // 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
+	    nboundaries = 6;
+	    foreach(ib; 0 .. nboundaries) {
+		boundaries ~= new BoundaryFaceSet(face_name[ib]);
+		// 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
+	    }
 	    // vertices
 	    int[][][] vtx_id;
 	    vtx_id.length = sg.niv;
@@ -385,52 +438,49 @@ public:
 	    read_VTK_header_line("vtk", f);
 	    label = f.readln().strip();
 	    read_VTK_header_line("ASCII", f);
-	    read_VTK_header_line("STRUCTURED_GRID", f);
-	    tokens = read_VTK_header_line("DIMENSIONS", f);
+	    read_VTK_header_line("USTRUCTURED_GRID", f);
 	} else {
 	    tokens = f.readln().strip().split();
 	}
-	// niv = to!int(tokens[0]);
-	// njv = to!int(tokens[1]);
-	// nkv = to!int(tokens[2]);
-	// resize_array();
-	// foreach (k; 0 .. nkv) {
-	//     foreach (j; 0 .. njv) {
-	// 	foreach (i; 0 .. niv) {
-	// 	    tokens = f.readln().strip().split();
-	// 	    try {
-	// 		grid[i][j][k].refx = to!double(tokens[0]);
-	// 		grid[i][j][k].refy = to!double(tokens[1]);
-	// 		grid[i][j][k].refz = to!double(tokens[2]);
-	// 	    } catch (Exception e) {
-	// 		throw new Error(text("Failed to read grid file at "
-	// 				     "i=", i, " j=", j, " k=", k,
-	// 				     "tokens=", tokens, "exception=", e));
-	// 	    }
-	// 	} // foreach i
-	//     } // foreach j
-	// } // foreach k
+	throw new Error("read_from_text_file() is not implemented, yet.");
     } // end read_from_text_file()
 
     void read_from_gzip_file(string fileName)
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
-	// formattedRead(line, "%d %d %d", &niv, &njv, &nkv);
-	// resize_array();
-	// double x, y, z;
-	// foreach (k; 0 .. nkv) {
-	//     foreach (j; 0 .. njv) {
-	// 	foreach (i; 0 .. niv) {
-	// 	    line = byLine.front; byLine.popFront();
-	// 	    // Note that the line starts with whitespace.
-	// 	    formattedRead(line, " %g %g %g", &x, &y, &z);
-	// 	    grid[i][j][k].refx = x;
-	// 	    grid[i][j][k].refy = y;
-	// 	    grid[i][j][k].refz = z;
-	// 	} // foreach i
-	//     } // foreach j
-	// } // foreach k
+	formattedRead(line, "label %s", &label);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "vertices %d", &nvertices);
+	double x, y, z;
+	vertices.length = 0;
+	foreach (i; 0 .. nvertices) {
+	    line = byLine.front; byLine.popFront();
+	    // Note that the line starts with whitespace.
+	    formattedRead(line, " %g %g %g", &x, &y, &z);
+	    vertices ~= Vector3(x, y, z);
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "faces %d", &nfaces);
+	faces.length = 0;
+	foreach (i; 0 .. nfaces) {
+	    line = byLine.front; byLine.popFront();
+	    faces ~= new USGFace(line);
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "cells %d", &ncells);
+	cells.length = 0;
+	foreach (i; 0 .. ncells) {
+	    line = byLine.front; byLine.popFront();
+	    cells ~= new USGCell(line);
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "boundaries %d", &nboundaries);
+	boundaries.length = 0;
+	foreach (i; 0 .. nboundaries) {
+	    line = byLine.front; byLine.popFront();
+	    boundaries ~= new BoundaryFaceSet(line);
+	}
     } // end read_from_gzip_file()
 
     void write_to_vtk_file(string fileName)
