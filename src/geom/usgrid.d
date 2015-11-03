@@ -67,6 +67,13 @@ public:
     {
 	vtx_id_list = other.vtx_id_list.dup();
     }
+
+    string toIOString()
+    {
+	string str = to!string(vtx_id_list.length);
+	foreach (vtx_id; vtx_id_list) { str ~= " " ~ to!string(vtx_id); }
+	return str;
+    }
 } // end class USGFace
 
 class USGCell {
@@ -92,19 +99,46 @@ public:
 	face_id_list = other.face_id_list.dup();
 	outsign_list = other.outsign_list.dup();
     }
+
+    string toIOString()
+    {
+	string str = cell_names[cell_type];
+	str ~= " vtx " ~ to!string(vtx_id_list.length);
+	foreach (vtx_id; vtx_id_list) { str ~= " " ~ to!string(vtx_id); }
+	str ~= " faces " ~ to!string(face_id_list.length);
+	foreach (face_id; face_id_list) { str ~= " " ~ to!string(face_id); }
+	str ~= " outsigns " ~ to!string(outsign_list.length);
+	foreach (outsign; outsign_list) { str ~= " " ~ to!string(outsign); }
+	return str;
+    }
 } // end class USGCell
 
 class BoundaryFaceSet {
 public:
+    string tag;
     int[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
-    this() {}
+    this(string tag) 
+    {
+	this.tag = tag;
+    }
     
     this(const BoundaryFaceSet other)
     {
+	tag = other.tag;
 	face_id_list = other.face_id_list.dup();
 	outsign_list = other.outsign_list.dup();
+    }
+
+    string toIOString()
+    {
+	string str = tag;
+	str ~= " faces " ~ to!string(face_id_list.length);
+	foreach (face_id; face_id_list) { str ~= " " ~ to!string(face_id); }
+	str ~= " outsigns " ~ to!string(outsign_list.length);
+	foreach (outsign; outsign_list) { str ~= " " ~ to!string(outsign); }
+	return str;
     }
 } // end class BoundaryFaceSet
 
@@ -142,7 +176,7 @@ public:
 	    nvertices = sg.niv * sg.njv;
 	    nfaces = (sg.niv)*(sg.njv-1) + (sg.niv-1)*(sg.njv);
 	    ncells = (sg.niv-1)*(sg.njv-1);
-	    foreach(ib; 0 .. 4) { boundaries ~= new BoundaryFaceSet(); }
+	    foreach(ib; 0 .. 4) { boundaries ~= new BoundaryFaceSet(face_name[ib]); }
 	    // 0=north, 1=east, 2=south, 3=west
 	    // vertices
 	    int[][] vtx_id;
@@ -211,7 +245,7 @@ public:
 		(sg.niv-1)*(sg.njv)*(sg.nkv-1) +
 		(sg.niv-1)*(sg.njv-1)*(sg.nkv);
 	    ncells = (sg.niv-1)*(sg.njv-1)*(sg.nkv-1);
-	    foreach(ib; 0 .. 6) { boundaries ~= new BoundaryFaceSet(); }
+	    foreach(ib; 0 .. 6) { boundaries ~= new BoundaryFaceSet(face_name[ib]); }
 	    // 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
 	    // vertices
 	    int[][][] vtx_id;
@@ -325,13 +359,13 @@ public:
 	this.label = label;
 	final switch (fmt) {
 	case GridFileFormat.text:
-	    read_grid_from_text_file(fileName);
+	    read_from_text_file(fileName);
 	    break;
 	case GridFileFormat.gziptext:
-	    read_grid_from_gzip_file(fileName);
+	    read_from_gzip_file(fileName);
 	    break;
 	case GridFileFormat.vtk:
-	    read_grid_from_text_file(fileName, true);
+	    read_from_text_file(fileName, true);
 	    break;
 	case GridFileFormat.vtkxml:
 	    throw new Error("Reading from VTK XML format not implemented.");
@@ -343,7 +377,7 @@ public:
 	return new UnstructuredGrid(this);
     }
 
-    void read_grid_from_text_file(string fileName, bool vtkHeader=true)
+    void read_from_text_file(string fileName, bool vtkHeader=true)
     {
 	string[] tokens;
 	auto f = File(fileName, "r");
@@ -376,9 +410,9 @@ public:
 	// 	} // foreach i
 	//     } // foreach j
 	// } // foreach k
-    } // end read_grid_from_text_file()
+    } // end read_from_text_file()
 
-    void read_grid_from_gzip_file(string fileName)
+    void read_from_gzip_file(string fileName)
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
@@ -397,7 +431,7 @@ public:
 	// 	} // foreach i
 	//     } // foreach j
 	// } // foreach k
-    } // end read_grid_from_gzip_file()
+    } // end read_from_gzip_file()
 
     void write_to_vtk_file(string fileName)
     {
@@ -428,22 +462,20 @@ public:
     void write_to_gzip_file(string fileName)
     // This function essentially defines the Eilmer4 native format.
     {
-	auto f = new GzipOut(fileName);
-	auto writer = appender!string();
-	// formattedWrite(writer, "%d %d %d  # ni nj nk\n", niv, njv, nkv);
-	// f.compress(writer.data);
-	// foreach (k; 0 .. nkv) {
-	//     foreach (j; 0 .. njv) {
-	// 	foreach (i; 0 .. niv) {
-	// 	    writer = appender!string();
-	// 	    formattedWrite(writer, "%20.16e %20.16e %20.16e\n", 
-	// 			   grid[i][j][k].x, grid[i][j][k].y, grid[i][j][k].z);
-	// 	    f.compress(writer.data);
-	// 	}
-	//     }
-	// }
-	f.finish();
-    } // end write_grid_to_gzip_file()
+	auto fout = new GzipOut(fileName);
+	fout.compress(format("label %s\n", label));
+	fout.compress(format("vertices %d\n", nvertices));
+	foreach (v; vertices) {
+	    fout.compress(format("%20.16e %20.16e %20.16e\n", v.x, v.y, v.z));
+	}
+	fout.compress(format("faces %d\n", nfaces));
+	foreach (f; faces) { fout.compress(f.toIOString ~ "\n"); }
+	fout.compress(format("cells %d\n", ncells));
+	foreach (c; cells) { fout.compress(c.toIOString ~ "\n"); }
+	fout.compress(format("boundaries %d\n", boundaries.length));
+	foreach (b; boundaries) { fout.compress(b.toIOString ~ "\n"); }
+	fout.finish();
+    } // end write_to_gzip_file()
 
 } // end class UnstructuredGrid
 
