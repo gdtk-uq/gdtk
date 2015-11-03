@@ -72,9 +72,6 @@ public:
     abstract void write_solution(string filename, double sim_time);
     abstract void convective_flux();
     abstract void flow_property_derivatives(int gtl);
-    abstract void applyPreReconAction(double t, int gtl, int ftl);
-    abstract void applyPreSpatialDerivAction(double t, int gtl, int ftl);
-    abstract void applyPostDiffFluxAction(double t, int gtl, int ftl);
 
     void identify_reaction_zones(int gtl)
     // Set the reactions-allowed flag for cells in this block.
@@ -334,4 +331,18 @@ public:
 	throw new Error("[TODO] Block.write_history() not implemented yet.");
     }
 
+    void applyPreReconAction(double t, int gtl, int ftl)
+    {
+	foreach(boundary; bc) { boundary.applyPreReconAction(t, gtl, ftl); }
+    }
+
+    void applyPreSpatialDerivAction(double t, int gtl, int ftl)
+    {
+	foreach(boundary; bc) { boundary.applyPreSpatialDerivAction(t, gtl, ftl); }
+    }
+
+    void applyPostDiffFluxAction(double t, int gtl, int ftl)
+    {
+	foreach(boundary; bc) { boundary.applyPostDiffFluxAction(t, gtl, ftl); }
+    }
 } // end class Block

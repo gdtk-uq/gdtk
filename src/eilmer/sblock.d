@@ -47,7 +47,6 @@ public:
     size_t kmin, kmax;
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     size_t[] micell, mjcell, mkcell; // locations of monitor cells
-    BoundaryCondition[6] bc;
 
 private:
     // Total number of cells in each direction for this block.
@@ -144,8 +143,7 @@ public:
 	foreach (boundary; 0 .. (myConfig.dimensions == 3 ? 6 : 4)) {
 	    string json_key = "face_" ~ face_name[boundary];
 	    auto bc_json_data = json_data[json_key];
-	    bc[boundary] = make_BC_from_json(bc_json_data, id, boundary,
-					     nicell, njcell, nkcell);
+	    bc ~= make_BC_from_json(bc_json_data, id, boundary, nicell, njcell, nkcell);
 	}
     } // end init_boundary_conditions()
 
@@ -1804,42 +1802,6 @@ public:
 	    } // for i
 	} // end if (myConfig.dimensions
     } // end flow_property_derivatives()
-
-    override void applyPreReconAction(double t, int gtl, int ftl)
-    {
-	bc[Face.north].applyPreReconAction(t, gtl, ftl);
-	bc[Face.east].applyPreReconAction(t, gtl, ftl);
-	bc[Face.south].applyPreReconAction(t, gtl, ftl);
-	bc[Face.west].applyPreReconAction(t, gtl, ftl);
-	if ( myConfig.dimensions == 3 ) {
-	    bc[Face.top].applyPreReconAction(t, gtl, ftl);
-	    bc[Face.bottom].applyPreReconAction(t, gtl, ftl);
-	}
-    } // end applyPreReconAction()
-
-    override void applyPreSpatialDerivAction(double t, int gtl, int ftl)
-    {
-	bc[Face.north].applyPreSpatialDerivAction(t, gtl, ftl);
-	bc[Face.east].applyPreSpatialDerivAction(t, gtl, ftl);
-	bc[Face.south].applyPreSpatialDerivAction(t, gtl, ftl);
-	bc[Face.west].applyPreSpatialDerivAction(t, gtl, ftl);
-	if ( myConfig.dimensions == 3 ) {
-	    bc[Face.top].applyPreSpatialDerivAction(t, gtl, ftl);
-	    bc[Face.bottom].applyPreSpatialDerivAction(t, gtl, ftl);
-	}
-    } // end applyPreSpatialDerivAction()
-
-    override void applyPostDiffFluxAction(double t, int gtl, int ftl)
-    {
-	bc[Face.north].applyPostDiffFluxAction(t, gtl, ftl);
-	bc[Face.east].applyPostDiffFluxAction(t, gtl, ftl);
-	bc[Face.south].applyPostDiffFluxAction(t, gtl, ftl);
-	bc[Face.west].applyPostDiffFluxAction(t, gtl, ftl);
-	if ( myConfig.dimensions == 3 ) {
-	    bc[Face.top].applyPostDiffFluxAction(t, gtl, ftl);
-	    bc[Face.bottom].applyPostDiffFluxAction(t, gtl, ftl);
-	}
-    } // end applyPreSpatialDerivAction()
 
     @nogc
     void copy_into_ghost_cells(int destination_face,
