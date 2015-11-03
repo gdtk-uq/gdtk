@@ -281,8 +281,8 @@ extern(C) int molef2massf(lua_State* L)
 	getSpeciesValsFromTable(L, gm, 2, molef, "molef");
     }
     else {
-	string errMsg = "Error in call to molef2massf():\n" ~
-	    "The value for 'molef' is not a table of key-val pairs.\n";
+	string errMsg = "Error in call to molef2massf():\n";
+	errMsg ~= "The value for 'molef' is not a table of key-val pairs.\n";
 	lua_pop(L, 1);
 	throw new Error(errMsg);
     }
@@ -326,8 +326,8 @@ extern(C) int conc2massf(lua_State* L)
 	getSpeciesValsFromTable(L, gm, 2, conc, "conc");
     }
     else {
-	string errMsg = "Error in call to conc2massf():\n" ~
-	    "The value for 'conc' is not a table of key-val pairs.\n";
+	string errMsg = "Error in call to conc2massf():\n";
+	errMsg ~= "The value for 'conc' is not a table of key-val pairs.\n";
 	lua_pop(L, 1);
 	throw new Error(errMsg);
     }
@@ -356,7 +356,7 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
 	if ( isp == -1 ) {
 	    string errMsg = format("Species name used in %s table does not exist: %s\n", tabName, key);
 	    lua_pop(L, 1);
-	    throw new Error(errMsg);
+	    throw new LuaInputException(errMsg);
 	}
 	lua_pop(L, 1);
     }
@@ -375,7 +375,7 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
 	else {
 	    string errMsg = format("The value for species '%s' in the %s table is not a number.\n", gm.species_name(isp), tabName);
 	    lua_pop(L, 1);
-	    throw new Error(errMsg);
+	    throw new LuaInputException(errMsg);
 	}
 	lua_pop(L, 1);
     }

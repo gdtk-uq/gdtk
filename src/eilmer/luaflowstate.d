@@ -17,6 +17,7 @@ import std.traits;
 import util.lua;
 import util.lua_service;
 import gas;
+import gas.luagas_model;
 import flowstate;
 import geom;
 import luageom;
@@ -134,18 +135,13 @@ The value should be a number.`;
 	massf ~= 1.0; // Nothing set, so massf = [1.0]
     }
     else if ( lua_istable(L, -1) ) {
-	getArrayOfDoubles(L, 1, "massf", massf);
-	if ( massf.length != managedGasModel.n_species ) {
-	    errMsg = "Error in call to FlowState:new.";
-	    errMsg ~= "Length of massf vector does not match number of species in gas model.";
-	    errMsg ~= format("massf.length= %d; n_species= %d\n", massf.length, managedGasModel.n_species);
-	    throw new LuaInputException(errMsg);
-	}
+	int massfIdx = lua_gettop(L);
+	getSpeciesValsFromTable(L, managedGasModel, massfIdx, massf, "massf");
     }
     else  {
 	errMsg = "Error in call to FlowState:new.";
 	errMsg ~= "A field for mass fractions was found, but the contents are not valid.";
-	errMsg ~= "The mass fraction should be given as a list of values.";
+	errMsg ~= "The mass fraction should be given as a table of key-value pairs { speciesName=val }.";
 	throw new LuaInputException(errMsg);
     }
     lua_pop(L, 1);
@@ -225,11 +221,19 @@ lua_setfield(L, tblIdx, "`~var~`z");`;
  */
 void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs)
 {
+    auto managedGasModel = GlobalConfig.gmodel_master;
     mixin(pushGasVar("p"));
     mixin(pushGasVarArray("T"));
     mixin(pushGasVarArray("e"));
     mixin(pushGasVar("quality"));
-    mixin(pushGasVarArray("massf"));
+    // -- massf as key-val table
+    lua_newtable(L);
+    foreach ( int isp, mf; fs.gas.massf ) {
+	lua_pushnumber(L, mf);
+	lua_setfield(L, -2, toStringz(managedGasModel.species_name(isp)));
+    }
+    lua_setfield(L, tblIdx, "massf");
+    // -- done setting massf
     mixin(pushGasVar("a"));
     mixin(pushGasVar("rho"));
     mixin(pushGasVar("mu"));
@@ -288,6 +292,7 @@ lua_pop(L, 1);`;
 
 extern(C) int fromTable(lua_State* L)
 {
+    auto managedGasModel = GlobalConfig.gmodel_master;
     auto fs = checkFlowState(L, 1);
     if ( !lua_istable(L, 2) ) {
 	return 0;
@@ -295,15 +300,14 @@ extern(C) int fromTable(lua_State* L)
     // Look for gas variables: "p" and "qaulity"
     mixin(checkGasVar("p"));
     mixin(checkGasVar("quality"));
-    // Look for arrays of gas variables: "massf" and "T"
-    mixin(checkGasVarArray("massf"));
-    if ( fs.gas.massf.length != GlobalConfig.gmodel_master.n_species ) {
-	string errMsg = "The mass fraction array ('massf') did not contain"~
-	    " the correct number of entries.\n";
-	errMsg ~= format("massf.length= %d; n_species= %d\n", fs.gas.massf.length,
-			 GlobalConfig.gmodel_master.n_species);
-	luaL_error(L, errMsg.toStringz);
+    // Look for a table with mass fraction info
+    lua_getfield(L, 2, "massf");
+    if ( lua_istable(L, -1) ) {
+	int massfIdx = lua_gettop(L);
+	getSpeciesValsFromTable(L, managedGasModel, massfIdx, fs.gas.massf, "massf");
     }
+    lua_pop(L, 1);
+    // Look for an array of temperatures.
     mixin(checkGasVarArray("T"));
     if ( fs.gas.T.length != GlobalConfig.gmodel_master.n_modes ) {
 	string errMsg = "The temperature array ('T') did not contain"~
