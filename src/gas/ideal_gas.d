@@ -211,9 +211,60 @@ version(ideal_gas_test) {
 	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
 
+	gm.update_thermo_from_rhoe(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+
+	gm.update_thermo_from_rhoT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+
+	gm.update_thermo_from_rhop(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+
+	gm.update_thermo_from_ps(gd, 9.994366066);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+
+	gm.update_thermo_from_hs(gd, 301458.408149171, 9.994366066);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.p, 1.0e5, 1.0e-5), failedUnitTest()); 
+	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+
+
 	lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
 	gm = new IdealGas(L);
 	lua_close(L);
+	gd.p = 1.0e5;
+	gd.T[0] = 300.0;
 	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
 	assert(gm.n_modes == 1, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
