@@ -15,8 +15,9 @@ import kinetics;
 import globalconfig;
 import globaldata;
 import fvcore;
-import fvcell;
+import fvvertex;
 import fvinterface;
+import fvcell;
 import viscousflux;
 import bc;
 import user_defined_source_terms;
@@ -45,6 +46,7 @@ public:
     double[] initial_T_value; // for monitor cells to check against
     FVCell[] active_cells; // collection of references to be used in foreach statements.
     FVInterface[] active_ifaces; // collection of references to all in-use interfaces
+    FVVertex[] active_vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
 
     this(int id, string label)
@@ -71,7 +73,6 @@ public:
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
     abstract void convective_flux();
-    abstract void flow_property_derivatives(int gtl);
 
     void identify_reaction_zones(int gtl)
     // Set the reactions-allowed flag for cells in this block.
@@ -203,6 +204,22 @@ public:
 	    }
 	}
     } // end detect_shock_points()
+
+    @nogc
+    void flow_property_derivatives(int gtl)
+    {
+	if (myConfig.dimensions == 2) {
+	    final switch ( myConfig.spatial_deriv_calc ) {
+	    case SpatialDerivCalc.least_squares:
+		foreach(vtx; active_vertices) { gradients_xy_leastsq(vtx, myConfig.diffusion); }
+		break;
+	    case SpatialDerivCalc.divergence:
+		foreach(vtx; active_vertices) { gradients_xy_div(vtx, myConfig.diffusion); }
+	    } // end switch
+	} else {
+	    foreach(vtx; active_vertices) { gradients_xyz_leastsq(vtx, myConfig.diffusion); }
+	} // end if (myConfig.dimensions
+    } // end flow_property_derivatives()
 
     @nogc
     void clear_fluxes_of_conserved_quantities()

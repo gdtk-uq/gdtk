@@ -242,6 +242,12 @@ public:
 		    }
 		}
 		_vtx ~= new FVVertex(myConfig.gmodel); _vtx[gid].id = gid;
+		// The following should work for both 2D and 3D.
+		if ( ijk[0] >= imin && ijk[0] <= imax+1 && 
+		     ijk[1] >= jmin && ijk[1] <= jmax+1 && 
+		     ijk[2] >= kmin && ijk[2] <= kmax+1 ) {
+		    active_vertices ~= _vtx[gid];
+		}
 	    } // gid loop
 	} catch (Error err) {
 	    writeln("Crapped out while assembling block arrays.");
@@ -1772,36 +1778,6 @@ public:
 	} // i loop
 	return;
     } // end convective_flux()
-
-    @nogc
-    override void flow_property_derivatives(int gtl)
-    {
-	if (myConfig.dimensions == 2) {
-	    size_t k = 0;
-	    for ( size_t i = imin; i <= imax+1; ++i ) {
-		for ( size_t j = jmin; j <= jmax+1; ++j ) {
-		    FVVertex vtx = get_vtx(i,j);
-		    final switch ( myConfig.spatial_deriv_calc ) {
-		    case SpatialDerivCalc.least_squares:
-			gradients_xy_leastsq(vtx, myConfig.diffusion);
-			break;
-		    case SpatialDerivCalc.divergence:
-			gradients_xy_div(vtx, myConfig.diffusion);
-		    } // switch
-		} // for j
-	    } // for i
-	} else {
-	    // Flow quantity derivatives for 3D.
-	    for ( size_t i = imin; i <= imax+1; ++i ) {
-		for ( size_t j = jmin; j <= jmax+1; ++j ) {
-		    for ( size_t k = kmin; k <= kmax+1; ++k ) {
-			FVVertex vtx = get_vtx(i,j,k);
-			gradients_xyz_leastsq(vtx, myConfig.diffusion);
-		    } // for k
-		} // for j
-	    } // for i
-	} // end if (myConfig.dimensions
-    } // end flow_property_derivatives()
 
     @nogc
     void copy_into_ghost_cells(int destination_face,
