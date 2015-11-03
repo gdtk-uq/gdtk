@@ -274,29 +274,30 @@ extern(C) int massf2molef(lua_State* L)
 
 extern(C) int molef2massf(lua_State* L)
 {
-    // [TODO] Handle molef table like massf table
-    /*
     auto gm = checkGasModel(L, 1);
     double[] molef;
-    auto n = to!int(lua_objlen(L, 2));
-    foreach ( isp; 1 .. n+1 ) {
-	lua_rawgeti(L, 2, isp);
-	molef ~= lua_tonumber(L, -1);
+    molef.length = gm.n_species;
+    if ( lua_istable(L, 2) ) {
+	getSpeciesValsFromTable(L, gm, 2, molef, "molef");
+    }
+    else {
+	string errMsg = "Error in call to molef2massf():\n" ~
+	    "The value for 'molef' is not a table of key-val pairs.\n";
 	lua_pop(L, 1);
+	throw new Error(errMsg);
     }
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 3, Q);
+    getGasStateFromTable(L, gm, 3, Q);
     gm.molef2massf(molef, Q);
     // Update table with new mass fractions
-    setGasStateInTable(L, 3, Q);
+    setGasStateInTable(L, gm, 3, Q);
     // and return a table to the caller.
     lua_newtable(L);
     foreach ( int i, mf; Q.massf ) {
-	lua_pushnumber(L, mf); lua_rawseti(L, -2, i+1);
+	lua_pushnumber(L, mf);
+	lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
     return 1;
-    */
-    return 0;
 }
 
 extern(C) int massf2conc(lua_State* L)
@@ -318,29 +319,66 @@ extern(C) int massf2conc(lua_State* L)
 
 extern(C) int conc2massf(lua_State* L)
 {
-    // [TODO] Handle conc table like massf
-    /*
     auto gm = checkGasModel(L, 1);
     double[] conc;
-    auto n = to!int(lua_objlen(L, 2));
-    foreach ( isp; 1 .. n+1 ) {
-	lua_rawgeti(L, 2, isp);
-	conc ~= lua_tonumber(L, -1);
+    conc.length = gm.n_species();
+    if ( lua_istable(L, 2) ) {
+	getSpeciesValsFromTable(L, gm, 2, conc, "conc");
+    }
+    else {
+	string errMsg = "Error in call to conc2massf():\n" ~
+	    "The value for 'conc' is not a table of key-val pairs.\n";
 	lua_pop(L, 1);
+	throw new Error(errMsg);
     }
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, 3, Q);
+    getGasStateFromTable(L, gm, 3, Q);
     gm.conc2massf(conc, Q);
     // Update table with new mass fractions
-    setGasStateInTable(L, 3, Q);
+    setGasStateInTable(L, gm, 3, Q);
     // and return a table to the caller.
     lua_newtable(L);
     foreach ( int i, mf; Q.massf ) {
-	lua_pushnumber(L, mf); lua_rawseti(L, -2, i+1);
+	lua_pushnumber(L, mf);
+	lua_setfield(L, -2, toStringz(gm.species_name(i)));
     }
     return 1;
-    */
-    return 0;
+}
+
+void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
+			     double[] vals, string tabName)
+{
+    // 1. Check all keys are valid species names.
+    lua_pushnil(L);
+    while ( lua_next(L, idx) != 0 ) {
+	string key = to!string(lua_tostring(L, -2));
+	auto isp = gm.species_index(key);
+	if ( isp == -1 ) {
+	    string errMsg = format("Species name used in %s table does not exist: %s\n", tabName, key);
+	    lua_pop(L, 1);
+	    throw new Error(errMsg);
+	}
+	lua_pop(L, 1);
+    }
+    // 2. Now set all values to 0.0
+    //    (then we'll correct that in the next step)
+    vals[] = 0.0;
+    // 3. Now find those values that we have explicitly set
+    foreach ( isp; 0 .. gm.n_species() ) {
+	lua_getfield(L, -1, toStringz(gm.species_name(isp)));
+	if ( lua_isnumber(L, -1) ) {
+	    vals[isp] = lua_tonumber(L, -1);
+	}
+	else if ( lua_isnil(L, -1) ) {
+	    vals[isp] = 0.0;
+	}
+	else {
+	    string errMsg = format("The value for species '%s' in the %s table is not a number.\n", gm.species_name(isp), tabName);
+	    lua_pop(L, 1);
+	    throw new Error(errMsg);
+	}
+	lua_pop(L, 1);
+    }
 }
 
 extern(C) int createTableForGasState(lua_State* L)
@@ -433,6 +471,14 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
 	    lua_pop(L, 1);
 	}
     }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'e' is not an array of numbers.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, idx, "T");
@@ -455,6 +501,14 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
 	    }
 	    lua_pop(L, 1);
 	}
+    }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'T' is not an array of numbers.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
     }
     lua_pop(L, 1);
 
@@ -493,6 +547,14 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
 	    lua_pop(L, 1);
 	}
     }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'k' is not an array of numbers.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
+    }
     lua_pop(L, 1);
 
     lua_getfield(L, idx, "sigma");
@@ -511,37 +573,16 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
 
     lua_getfield(L, idx, "massf");
     if ( lua_istable(L, -1) ) {
-	// 1. Check all keys are valid species names.
-	lua_pushnil(L);
-	while ( lua_next(L, -2) != 0 ) {
-	    string key = to!string(lua_tostring(L, -2));
-	    auto isp = gm.species_index(key);
-	    if ( isp == -1 ) {
-		string errMsg = format("Species name used in massf table does not exist: %s\n", key);
-		lua_pop(L, 1);
-		throw new Error(errMsg);
-	    }
-	    lua_pop(L, 1);
-	}
-	// 2. Now set all mass fraction values to 0.0
-	//    (then we'll correct that in the next step)
-	Q.massf[] = 0.0;
-	// 3. Now find those values that we have explicitly set
-	foreach ( isp; 0 .. gm.n_species() ) {
-	    lua_getfield(L, -1, toStringz(gm.species_name(isp)));
-	    if ( lua_isnumber(L, -1) ) {
-		Q.massf[isp] = lua_tonumber(L, -1);
-	    }
-	    else if ( lua_isnil(L, -1) ) {
-		Q.massf[isp] = 0.0;
-	    }
-	    else {
-		string errMsg = format("The value for species '%s' in the mass fraction table is not a number.\n", gm.species_name(isp));
-		lua_pop(L, 1);
-		throw new Error(errMsg);
-	    }
-	    lua_pop(L, 1);
-	}
+	int massfIdx = lua_gettop(L);
+	getSpeciesValsFromTable(L, gm, massfIdx, Q.massf, "massf");
+    }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'massf' is not a table of key-val pairs.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
     }
     lua_pop(L, 1);
 

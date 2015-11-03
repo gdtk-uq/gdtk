@@ -277,7 +277,7 @@ function main()
       print("Exiting program without doing anything.")
       printHelp()
    elseif ( #arg > 2 ) then
-      print("Two many arguments.")
+      print("Too many arguments.")
       print("Exiting program without doing anything.")
       printHelp()
    end
