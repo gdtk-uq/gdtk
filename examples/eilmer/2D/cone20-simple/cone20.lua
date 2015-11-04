@@ -21,7 +21,7 @@ Q = GasState:new{gm}
 Q.p = 95.84e3
 Q.T = {1103.0}
 print("T", Q.T[1])
-Q.massf = {{air=1.0}}
+Q.massf = {air=1.0}
 gm:updateSoundSpeed(Q)
 print("Sound speed= ", Q.a)
 print("Inflow Mach number= ", 1000.0/Q.a)
