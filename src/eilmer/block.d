@@ -66,7 +66,6 @@ public:
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
     abstract void init_grid_and_flow_arrays(string gridFileName);
-    abstract int count_invalid_cells(int gtl);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
     abstract void read_grid(string filename, size_t gtl=0);
     abstract void write_grid(string filename, double sim_time, size_t gtl=0);
@@ -204,6 +203,48 @@ public:
 	    }
 	}
     } // end detect_shock_points()
+
+    int count_invalid_cells(int gtl)
+    // Returns the number of cells that contain invalid data,
+    // optionally patching bad cell data as it goes.
+    //
+    // This data can be identified by the density of internal energy 
+    // being on the minimum limit or the velocity being very large.
+    {
+	int number_of_invalid_cells = 0;
+	foreach(FVCell cell; active_cells) {
+	    if ( cell.check_flow_data() == false ) {
+		++number_of_invalid_cells;
+		writefln("count_invalid_cells: block_id = %d, cell at %g,%g,%g\n",
+			 id, cell.pos[0].x, cell.pos[0].y, cell.pos[0].z);
+		writeln(cell);
+		if ( myConfig.adjust_invalid_cell_data ) {
+		    // We shall set the cell data to something that
+		    // is valid (and self consistent).
+		    FVCell other_cell;
+		    FVCell[] neighbours;
+		    printf( "Adjusting cell data to a local average.\n" );
+		    foreach (i; 0 .. cell.iface.length) {
+			auto face = cell.iface[i];
+			other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
+			if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
+		    }
+		    if ( neighbours.length == 0 ) {
+			throw new Error(text("Block::count_invalid_cells(): " ~
+					     "There were no valid neighbours " ~
+					     "to replace cell data."));
+		    }
+		    cell.replace_flow_data_with_average(neighbours);
+		    cell.encode_conserved(gtl, 0, omegaz);
+		    cell.decode_conserved(gtl, 0, omegaz);
+		    writefln("after flow-data replacement: block_id = %d, cell @ %g,%g,%g\n",
+			     id, cell.pos[0].x, cell.pos[0].y, cell.pos[0].z);
+		    writeln(cell);
+		} // end adjust_invalid_cell_data 
+	    } // end of if invalid data...
+	} // foreach cell
+	return number_of_invalid_cells;
+    } // end count_invalid_cells()
 
     @nogc
     void flow_property_derivatives(int gtl)

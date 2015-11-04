@@ -375,57 +375,6 @@ public:
 	return;
     } // end bind_interfaces_vertices_and_cells()
 
-    override int count_invalid_cells(int gtl)
-    // Returns the number of cells that contain invalid data,
-    // optionally patching bad cell data as it goes.
-    //
-    // This data can be identified by the density of internal energy 
-    // being on the minimum limit or the velocity being very large.
-    {
-	int number_of_invalid_cells = 0;
-	foreach(FVCell cell; active_cells) {
-	    if ( cell.check_flow_data() == false ) {
-		++number_of_invalid_cells;
-		auto ijk = to_ijk_indices(cell.id);
-		size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2];
-		writefln("count_invalid_cells: block_id = %d, cell[%d,%d,%d]\n", id, i, j, k);
-		writeln(cell);
-		if ( myConfig.adjust_invalid_cell_data ) {
-		    // We shall set the cell data to something that
-		    // is valid (and self consistent).
-		    FVCell other_cell;
-		    FVCell[] neighbours;
-		    printf( "Adjusting cell data to a local average.\n" );
-		    other_cell = get_cell(i-1,j,k);
-		    if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
-		    other_cell = get_cell(i+1,j,k);
-		    if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
-		    other_cell = get_cell(i,j-1,k);
-		    if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
-		    other_cell = get_cell(i,j+1,k);
-		    if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
-		    if ( myConfig.dimensions == 3 ) {
-			other_cell = get_cell(i,j,k-1);
-			if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
-			other_cell = get_cell(i,j,k+1);
-			if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
-		    }
-		    if ( neighbours.length == 0 ) {
-			throw new Error(text("Block::count_invalid_cells(): "
-					     "There were no valid neighbours to replace cell data."));
-		    }
-		    cell.replace_flow_data_with_average(neighbours);
-		    cell.encode_conserved(gtl, 0, omegaz);
-		    cell.decode_conserved(gtl, 0, omegaz);
-		    writefln("after flow-data replacement: block_id = %d, cell[%d,%d,%d]\n",
-			     id, i, j, k);
-		    writeln(cell);
-		} // end adjust_invalid_cell_data 
-	    } // end of if invalid data...
-	} // foreach cell
-	return number_of_invalid_cells;
-    } // end count_invalid_cells()
-
     void compute_primary_cell_geometric_data(int gtl)
     // Compute cell and interface geometric properties.
     {
