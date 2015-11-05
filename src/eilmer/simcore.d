@@ -72,7 +72,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	// They should all have the same value for it.
 	sim_time = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, tindx), false);
 	myblk.set_grid_velocities(sim_time);
-	foreach (cell; myblk.active_cells) {
+	foreach (cell; myblk.cells) {
 	    cell.encode_conserved(0, 0, myblk.omegaz);
 	    // Even though the following call appears redundant at this point,
 	    // fills in some gas properties such as Prandtl number that is
@@ -257,7 +257,7 @@ void integrate_in_time(double target_time)
 	    foreach (blk; parallel(gasBlocks,1)) {
 		if (!blk.active) continue;
 		double local_dt_global = dt_global;
-		foreach (cell; blk.active_cells) {
+		foreach (cell; blk.cells) {
 		    cell.chemical_increment(local_dt_global, 300.0);
 		}
 	    }
@@ -390,7 +390,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     foreach (blk; parallel(gasBlocks,1)) {
 	if (!blk.active) continue;
 	blk.clear_fluxes_of_conserved_quantities();
-	foreach (cell; blk.active_cells) cell.clear_source_vector();
+	foreach (cell; blk.cells) cell.clear_source_vector();
     }
     // First-stage of gas-dynamic update.
     shared int ftl = 0; // time-level within the overall convective-update
@@ -460,7 +460,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	bool local_with_k_omega = with_k_omega;
 	double local_dt_global = dt_global;
 	double local_sim_time = sim_time;
-	foreach (cell; blk.active_cells) {
+	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
 	    if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
 		cell.add_viscous_source_vector(local_with_k_omega);
@@ -500,7 +500,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (!blk.active ) continue;
 	    blk.clear_fluxes_of_conserved_quantities();
-	    foreach (cell; blk.active_cells) cell.clear_source_vector();
+	    foreach (cell; blk.cells) cell.clear_source_vector();
 	}
 	// Second stage of gas-dynamic update.
 	ftl = 1;
@@ -562,7 +562,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    bool local_with_k_omega = with_k_omega;
 	    double local_dt_global = dt_global;
 	    double local_sim_time = sim_time;
-	    foreach (cell; blk.active_cells) {
+	    foreach (cell; blk.cells) {
 		cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
 		if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
 		    cell.add_viscous_source_vector(local_with_k_omega);
@@ -600,7 +600,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (!blk.active ) continue;
 	    blk.clear_fluxes_of_conserved_quantities();
-	    foreach (cell; blk.active_cells) cell.clear_source_vector();
+	    foreach (cell; blk.cells) cell.clear_source_vector();
 	}
 	// Third stage of gas-dynamic update.
 	ftl = 2;
@@ -662,7 +662,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    bool local_with_k_omega = with_k_omega;
 	    double local_dt_global = dt_global;
 	    double local_sim_time = sim_time;
-	    foreach (cell; blk.active_cells) {
+	    foreach (cell; blk.cells) {
 		cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
 		if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
 		    cell.add_viscous_source_vector(local_with_k_omega);
@@ -706,7 +706,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	case GasdynamicUpdate.classic_rk3:
 	case GasdynamicUpdate.denman_rk3: end_indx = 3; break;
 	} // end switch
-	foreach (cell; blk.active_cells) {
+	foreach (cell; blk.cells) {
 	    swap(cell.U[0], cell.U[end_indx]);
 	}
     } // end foreach blk

@@ -219,26 +219,26 @@ public:
 		if ( ijk[0] >= imin && ijk[0] <= imax && 
 		     ijk[1] >= jmin && ijk[1] <= jmax && 
 		     ijk[2] >= kmin && ijk[2] <= kmax ) {
-		    active_cells ~= _ctr[gid];
+		    cells ~= _ctr[gid];
 		}
 		_ifi ~= new FVInterface(myConfig.gmodel); _ifi[gid].id = gid;
 		if ( ijk[0] >= imin && ijk[0] <= imax+1 && 
 		     ijk[1] >= jmin && ijk[1] <= jmax && 
 		     ijk[2] >= kmin && ijk[2] <= kmax ) {
-		    active_ifaces ~= _ifi[gid];
+		    faces ~= _ifi[gid];
 		}
 		_ifj ~= new FVInterface(myConfig.gmodel); _ifj[gid].id = gid;
 		if ( ijk[0] >= imin && ijk[0] <= imax && 
 		     ijk[1] >= jmin && ijk[1] <= jmax+1 && 
 		     ijk[2] >= kmin && ijk[2] <= kmax ) {
-		    active_ifaces ~= _ifj[gid];
+		    faces ~= _ifj[gid];
 		}
 		if ( myConfig.dimensions == 3 ) {
 		    _ifk ~= new FVInterface(myConfig.gmodel); _ifk[gid].id = gid;
 		    if ( ijk[0] >= imin && ijk[0] <= imax && 
 			 ijk[1] >= jmin && ijk[1] <= jmax && 
 			 ijk[2] >= kmin && ijk[2] <= kmax+1 ) {
-			active_ifaces ~= _ifk[gid];
+			faces ~= _ifk[gid];
 		    }
 		}
 		_vtx ~= new FVVertex(myConfig.gmodel); _vtx[gid].id = gid;
@@ -246,7 +246,7 @@ public:
 		if ( ijk[0] >= imin && ijk[0] <= imax+1 && 
 		     ijk[1] >= jmin && ijk[1] <= jmax+1 && 
 		     ijk[2] >= kmin && ijk[2] <= kmax+1 ) {
-		    active_vertices ~= _vtx[gid];
+		    vertices ~= _vtx[gid];
 		}
 	    } // gid loop
 	} catch (Error err) {
@@ -588,7 +588,7 @@ public:
 	double[6] dist, half_width;
 	FVInterface face_at_wall;
 
-	foreach(ref FVCell cell; active_cells) {
+	foreach(ref FVCell cell; cells) {
 	    auto ijk = to_ijk_indices(cell.id);
 	    size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2];
 	    // Step 1: get distances to all boundaries along all index directions.

@@ -58,7 +58,7 @@ void main(string[] args)
 	auto sim_time = gblk.read_solution(make_file_name!"flow"(jobName, gblk.id, tindx));
 	auto lua2 = initLuaState(luafname2);
 	auto lfunc2 = lua2.get!LuaFunction("T");
-	foreach (cell; gblk.active_cells) {
+	foreach (cell; gblk.cells) {
 	    double T_ex = T_analytical(lfunc2, cell.pos[0].x, cell.pos[0].y);
 	    double abs_diff = fabs(cell.fs.gas.T[0] - T_ex);
 	    double volume = cell.volume[0];

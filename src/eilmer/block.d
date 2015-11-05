@@ -44,9 +44,9 @@ public:
     int hncell;                 // number of sample cells
     int mncell;                 // number of monitor cells
     double[] initial_T_value; // for monitor cells to check against
-    FVCell[] active_cells; // collection of references to be used in foreach statements.
-    FVInterface[] active_ifaces; // collection of references to all in-use interfaces
-    FVVertex[] active_vertices;
+    FVCell[] cells; // collection of references to be used in foreach statements.
+    FVInterface[] faces; // collection of references to all in-use interfaces
+    FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
 
     this(int id, string label)
@@ -78,7 +78,7 @@ public:
     {
 	size_t total_cells_in_reaction_zones = 0;
 	size_t total_cells = 0;
-	foreach(cell; active_cells) {
+	foreach(cell; cells) {
 	    if ( myConfig.reaction_zones.length > 0 ) {
 		cell.fr_reactions_allowed = false;
 		foreach(rz; myConfig.reaction_zones) {
@@ -108,7 +108,7 @@ public:
     {
 	size_t total_cells_in_turbulent_zones = 0;
 	size_t total_cells = 0;
-	foreach(cell; active_cells) {
+	foreach(cell; cells) {
 	    if ( myConfig.turbulent_zones.length > 0 ) {
 		cell.in_turbulent_zone = false;
 		foreach(tz; myConfig.turbulent_zones) {
@@ -138,17 +138,17 @@ public:
     {
 	final switch (myConfig.turbulence_model) {
 	case TurbulenceModel.none:
-	    foreach (cell; active_cells) cell.turbulence_viscosity_zero();
+	    foreach (cell; cells) cell.turbulence_viscosity_zero();
 	    return;
 	case TurbulenceModel.baldwin_lomax:
 	    throw new Error("need to port baldwin_lomax_turbulence_model");
 	case TurbulenceModel.spalart_allmaras:
 	    throw new Error("Should implement Spalart-Allmaras some day.");
 	case TurbulenceModel.k_omega:
-	    foreach (cell; active_cells) cell.turbulence_viscosity_k_omega();
+	    foreach (cell; cells) cell.turbulence_viscosity_k_omega();
 	    break;
 	}
-	foreach (cell; active_cells) {
+	foreach (cell; cells) {
 	    cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
 	    cell.turbulence_viscosity_limit(myConfig.max_mu_t_factor);
 	    cell.turbulence_viscosity_zero_if_not_in_zone();
@@ -161,14 +161,14 @@ public:
 	    throw new Error("Block.set_grid_velocities(): moving grid is not yet implemented.");
 	    // [TODO] Insert the moving-grid code some day...
 	}
-	foreach (iface; active_ifaces) iface.gvel = Vector3(0.0, 0.0, 0.0);
+	foreach (iface; faces) iface.gvel = Vector3(0.0, 0.0, 0.0);
 	return;
     } // end set_grid_velocities()
 
     @nogc
     void set_cell_dt_chem(double dt_chem)
     {
-	foreach ( cell; active_cells ) cell.dt_chem = dt_chem;
+	foreach ( cell; cells ) cell.dt_chem = dt_chem;
     }
 
     @nogc
@@ -185,7 +185,7 @@ public:
 	// viscous effects are important.
 	double tol = myConfig.compression_tolerance;
 	// First, work across interfaces and locate shocks using the (local) normal velocity.
-	foreach (iface; active_ifaces) {
+	foreach (iface; faces) {
 	    FVCell cL = iface.left_cell;
 	    FVCell cR = iface.right_cell;
 	    double uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
@@ -196,7 +196,7 @@ public:
 	    iface.fs.S = ((uR - uL) / a_min < tol);
 	}
 	// Finally, mark cells as shock points if any of their interfaces are shock points.
-	foreach (cell; active_cells) {
+	foreach (cell; cells) {
 	    cell.fs.S = false;
 	    foreach (face; cell.iface) {
 		if (face.fs.S) cell.fs.S = true;
@@ -212,7 +212,7 @@ public:
     // being on the minimum limit or the velocity being very large.
     {
 	int number_of_invalid_cells = 0;
-	foreach(FVCell cell; active_cells) {
+	foreach(FVCell cell; cells) {
 	    if ( cell.check_flow_data() == false ) {
 		++number_of_invalid_cells;
 		writefln("count_invalid_cells: block_id = %d, cell at %g,%g,%g\n",
@@ -252,26 +252,26 @@ public:
 	if (myConfig.dimensions == 2) {
 	    final switch ( myConfig.spatial_deriv_calc ) {
 	    case SpatialDerivCalc.least_squares:
-		foreach(vtx; active_vertices) { gradients_xy_leastsq(vtx, myConfig.diffusion); }
+		foreach(vtx; vertices) { gradients_xy_leastsq(vtx, myConfig.diffusion); }
 		break;
 	    case SpatialDerivCalc.divergence:
-		foreach(vtx; active_vertices) { gradients_xy_div(vtx, myConfig.diffusion); }
+		foreach(vtx; vertices) { gradients_xy_div(vtx, myConfig.diffusion); }
 	    } // end switch
 	} else {
-	    foreach(vtx; active_vertices) { gradients_xyz_leastsq(vtx, myConfig.diffusion); }
+	    foreach(vtx; vertices) { gradients_xyz_leastsq(vtx, myConfig.diffusion); }
 	} // end if (myConfig.dimensions
     } // end flow_property_derivatives()
 
     @nogc
     void clear_fluxes_of_conserved_quantities()
     {
-	foreach (iface; active_ifaces) iface.F.clear_values();
+	foreach (iface; faces) iface.F.clear_values();
     }
 
     void viscous_flux()
     {
 	auto vfwork = new ViscousFluxData(myConfig);
-	foreach (iface; active_ifaces) {
+	foreach (iface; faces) {
 	    vfwork.average_vertex_values(iface);
 	    vfwork.viscous_flux_calc(iface);
 	}
@@ -285,7 +285,7 @@ public:
 	mass_residual_loc = Vector3(0.0, 0.0, 0.0);
 	energy_residual = 0.0;
 	energy_residual_loc = Vector3(0.0, 0.0, 0.0);
-	foreach(FVCell cell; active_cells) {
+	foreach(FVCell cell; cells) {
 	    cell.rho_at_start_of_step = cell.fs.gas.rho;
 	    cell.rE_at_start_of_step = cell.U[0].total_energy;
 	}
@@ -308,7 +308,7 @@ public:
 	mass_residual_loc = Vector3(0.0, 0.0, 0.0);
 	energy_residual = 0.0;
 	energy_residual_loc = Vector3(0.0, 0.0, 0.0);
-	foreach(FVCell cell; active_cells) {
+	foreach(FVCell cell; cells) {
 	    double local_residual = (cell.fs.gas.rho - cell.rho_at_start_of_step) 
 		/ cell.fs.gas.rho;
 	    local_residual = fabs(local_residual);
@@ -354,7 +354,7 @@ public:
 	default: cfl_allow = 0.9;
 	}
 	bool first = true;
-	foreach(FVCell cell; active_cells) {
+	foreach(FVCell cell; cells) {
 	    signal = cell.signal_frequency();
 	    cfl_local = dt_current * signal; // Current (Local) CFL number
 	    dt_local = cfl_value / signal; // Recommend a time step size.
