@@ -15,6 +15,7 @@ module geom;
 import std.conv;
 import std.stdio;
 import std.math;
+import std.string;
 
 // Nomenclature that we try to use consistently through the 3D code.
 // Symbolic names and indices for the cells' faces.
@@ -226,11 +227,15 @@ struct Vector3 {
     {
         double magnitude = sqrt(this.dot(this));
 	if ( magnitude > 0.0 ) {
-	    this /= magnitude;
+	    this._p[] /= magnitude; // need to do the divide on the _p[] array for DMD 2.069.0
 	} else {
 	    // Clean up, in case dot() underflows.
 	    this._p[0] = this._p[1] = this._p[2] = 0.0;
 	}
+	// Flush small components to zero.
+	if (fabs(this._p[0]) < 1.0e-14) { this._p[0] = 0.0; }
+	if (fabs(this._p[1]) < 1.0e-14) { this._p[1] = 0.0; }
+	if (fabs(this._p[2]) < 1.0e-14) { this._p[2] = 0.0; }
 	return this;
     }
 
@@ -601,7 +606,10 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 	throw new Exception("Effectively zero area quadrilateral.");
     }
     if ( fabs(abs(n)-1.0) > tol || fabs(abs(t1)-1.0) > tol || fabs(abs(t2)-1.0) > tol ) {
-	throw new Exception("Failed to produce unit vectors properly.");
+	string details = text(" p0=", p0, " p1=", p1, " p2=", p2, " p3=", p3,
+			      " n=", n, " t1=", t1, " t2=", t2,
+			      " area=", area, " centroid=", centroid);
+	throw new Exception(text("Failed to produce unit vectors properly.", details));
     }
 } // end quad_properties()
 
