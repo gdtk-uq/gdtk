@@ -39,7 +39,7 @@ StructuredGrid checkStructuredGrid(lua_State* L, int index) {
 
 extern(C) int copyStructuredGrid(T, string MTname)(lua_State* L)
 {
-    // Sometimes it's convenient to get a copy of a function.
+    // Sometimes it's convenient to get a copy of a grid.
     auto grid = checkObj!(T, MTname)(L, 1);
     structuredGridStore ~= pushObj!(T, MTname)(L, grid);
     return 1;

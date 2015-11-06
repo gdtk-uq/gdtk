@@ -198,7 +198,7 @@ public:
     BoundaryFaceSet[] boundaries;
     string label;
 
-    this(const UnstructuredGrid other)
+    this(const UnstructuredGrid other, const string new_label="")
     {
 	dimensions = other.dimensions;
 	nvertices = other.nvertices;
@@ -209,17 +209,22 @@ public:
 	foreach(f; other.faces) { faces ~= new USGFace(f); }
 	foreach(c; other.cells) { cells ~= new USGCell(c); }
 	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
-	label = other.label;
+	if (new_label == "") {
+	    label = other.label;
+	} else {
+	    label = new_label;
+	}
     }
 
-    this(const StructuredGrid sg, int dimensions)
+    this(const StructuredGrid sg, const string new_label="")
     {
-	this.dimensions = dimensions;
-	label = sg.label;
+	this.dimensions = (sg.nkv == 1) ? 2 : 3; // topological dimensions
+	if (new_label == "") {
+	    label = sg.label;
+	} else {
+	    label = new_label;
+	}
 	if (dimensions == 2) {
-	    if (sg.nkv != 1) {
-		throw new Error("UnstructuredGrid(): 2D structured grid has nkv!=1");
-	    }
 	    nvertices = sg.niv * sg.njv;
 	    nfaces = (sg.niv)*(sg.njv-1) + (sg.niv-1)*(sg.njv);
 	    ncells = (sg.niv-1)*(sg.njv-1);
@@ -406,23 +411,24 @@ public:
     } // end constructor from StructuredGrid object
 
     // Imported grid.
-    this(string fileName, int dimensions, GridFileFormat fmt, string label="empty-label")
+    this(string fileName, string fmt, string new_label="")
     {
-	this.dimensions = dimensions;
-	this.label = label;
-	final switch (fmt) {
-	case GridFileFormat.text:
-	    read_from_text_file(fileName);
+	switch (fmt) {
+	case "text":
+	    read_from_text_file(fileName, false);
 	    break;
-	case GridFileFormat.gziptext:
+	case "gziptext":
 	    read_from_gzip_file(fileName);
 	    break;
-	case GridFileFormat.vtk:
+	case "vtk":
 	    read_from_text_file(fileName, true);
 	    break;
-	case GridFileFormat.vtkxml:
+	case "vtkxml":
 	    throw new Error("Reading from VTK XML format not implemented.");
+	default:
+	    throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
 	}
+	if (new_label != "") { label = new_label; }
     }
 
     UnstructuredGrid dup() const
@@ -432,6 +438,12 @@ public:
 
     void read_from_text_file(string fileName, bool vtkHeader=true)
     {
+	// [TODO] It may be convenient to import grids from other preprocessing
+	// programs via their generic text format.
+	// We've left this function here as a place-holder.
+	// For VTK files, we need to work out how to extract 
+	// the topological dimensions for the incoming grid.
+	// Maybe all cell types being triangle or quad for 2-dimensional grids.
 	string[] tokens;
 	auto f = File(fileName, "r");
 	if (vtkHeader) {
@@ -450,6 +462,8 @@ public:
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
 	formattedRead(line, "label %s", &label);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "dimensions %d", &dimensions);
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "vertices %d", &nvertices);
 	double x, y, z;
@@ -514,6 +528,7 @@ public:
     {
 	auto fout = new GzipOut(fileName);
 	fout.compress(format("label %s\n", label));
+	fout.compress(format("dimensions %d\n", dimensions));
 	fout.compress(format("vertices %d\n", nvertices));
 	foreach (v; vertices) {
 	    fout.compress(format("%20.16e %20.16e %20.16e\n", v.x, v.y, v.z));

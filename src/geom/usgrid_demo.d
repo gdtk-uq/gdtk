@@ -22,10 +22,10 @@ void main()
 	       new LinearFunction(), new LinearFunction()];
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
-    auto usg = new UnstructuredGrid(my_grid, 2);
+    auto usg = new UnstructuredGrid(my_grid);
     usg.write_to_vtk_file("test_grid.vtk");
     usg.write_to_gzip_file("test_grid.gz");
-    auto usg2 = new UnstructuredGrid("test_grid.gz", 2, GridFileFormat.gziptext);
+    auto usg2 = new UnstructuredGrid("test_grid.gz", "gziptext");
     usg2.write_to_vtk_file("test_grid_2.vtk");
 
     writeln("3D grid");
@@ -43,10 +43,10 @@ void main()
     auto simple_box = new TFIVolume(p);
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
     writeln("grid point 5 5 5 at p=", my_3Dgrid[5,5,5]);
-    auto usg3D = new UnstructuredGrid(my_3Dgrid, 3);
+    auto usg3D = new UnstructuredGrid(my_3Dgrid);
     usg3D.write_to_vtk_file("test_3Dgrid.vtk");
     usg3D.write_to_gzip_file("test_3Dgrid.gz");
-    auto usg3 = new UnstructuredGrid("test_3Dgrid.gz", 3, GridFileFormat.gziptext);
+    auto usg3 = new UnstructuredGrid("test_3Dgrid.gz", "gziptext");
     usg3.write_to_vtk_file("test_3Dgrid_2.vtk");
 
     writeln("Done.");
