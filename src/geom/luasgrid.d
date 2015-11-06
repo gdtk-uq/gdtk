@@ -7,7 +7,6 @@
 
 module luasgrid;
 
-// We cheat to get the C Lua headers by using LuaD.
 import std.stdio;
 import std.string;
 import std.conv;

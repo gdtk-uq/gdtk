@@ -7,7 +7,6 @@
 
 module luausgrid;
 
-// We cheat to get the C Lua headers by using LuaD.
 import std.stdio;
 import std.string;
 import std.conv;
@@ -37,7 +36,7 @@ UnstructuredGrid checkUnstructuredGrid(lua_State* L, int index) {
     if ( isObjType(L, index, UnstructuredGridMT) ) {
 	return checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, index);
     }
-    // if all else fails
+    // all else fails
     return null;
 }
 

@@ -8,7 +8,6 @@
 
 module luagpath;
 
-// We cheat to get the C Lua headers by using LuaD.
 import util.lua;
 import std.stdio;
 import std.string;
