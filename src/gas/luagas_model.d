@@ -362,7 +362,11 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
     }
     // 2. Now set all values to 0.0
     //    (then we'll correct that in the next step)
-    vals[] = 0.0;
+    //    [Or to 1.0 in the case of a n_species = 1]
+    if ( gm.n_species() == 1 )
+	vals[0] = 1.0;
+    else 
+	vals[] = 0.0;
     // 3. Now find those values that we have explicitly set
     foreach ( isp; 0 .. gm.n_species() ) {
 	lua_getfield(L, -1, toStringz(gm.species_name(isp)));
@@ -385,7 +389,19 @@ extern(C) int createTableForGasState(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    Q.massf[] = 0.0;
+    // For the special case of n_species = 1, it's quite likely
+    // that the user might never consider the massf array.
+    // In which case, we'll just set that value to 1.0.
+    // For all other cases, we take the default action of
+    // setting all mass fractions to 0.0.
+    // For a multi-component gas, we expect the user to 
+    // take care with setting mass fraction values.
+    if ( gm.n_species == 1 ) {
+	Q.massf[0] = 1.0;
+    }
+    else {
+	Q.massf[] = 0.0;
+    }
     lua_newtable(L);
     int idx = lua_gettop(L);
     setGasStateInTable(L, gm, idx, Q);
@@ -399,7 +415,19 @@ extern(C) int newTableForGasState(lua_State* L)
     auto gm = checkGasModel(L, -1);
     lua_pop(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    Q.massf[] = 0.0;
+    // For the special case of n_species = 1, it's quite likely
+    // that the user might never consider the massf array.
+    // In which case, we'll just set that value to 1.0.
+    // For all other cases, we take the default action of
+    // setting all mass fractions to 0.0.
+    // For a multi-component gas, we expect the user to 
+    // take care with setting mass fraction values.
+    if ( gm.n_species == 1 ) {
+	Q.massf[0] = 1.0;
+    }
+    else {
+	Q.massf[] = 0.0;
+    }
     lua_newtable(L);
     int idx = lua_gettop(L);
     setGasStateInTable(L, gm, idx, Q);
