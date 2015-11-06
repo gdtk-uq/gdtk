@@ -8,6 +8,7 @@
 
 module luaflowstate;
 
+import std.algorithm;
 import std.array;
 import std.format;
 import std.stdio;
@@ -44,7 +45,7 @@ FlowState checkFlowState(lua_State* L, int index)
  *
  * Construction of a FlowState object from in Lua will accept:
  * -----------------
- * fs = FlowState:new{p=1.0e5, T=300.0, u=1000.0, v=200.0, massf={1.0}}
+ * fs = FlowState:new{p=1.0e5, T=300.0, velx=1000.0, vely=200.0, massf={spName=1.0}}
  * fs = FlowState:new{p=1.0e7, T={300.0}}
  * fs = FlowState:new()
  * fs = FlowState:new{}
@@ -83,10 +84,30 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
 	string errMsg = "Error in call to FlowState:new. A table is expected as first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
+    // At this point we have a table at idx=1. Let's check that all
+    // fields in the table are valid.
+    string[] validFields = ["p", "T", "p_e", "quality", "massf",
+			    "velx", "vely", "velz",
+			    "Bx", "By", "Bz",
+			    "tke", "omega", "mu_t", "k_t"];
+    bool allFieldsAreValid = true;
+    string errMsg;
+    lua_pushnil(L);
+    while ( lua_next(L, 1) != 0 ) {
+	string key = to!string(lua_tostring(L, -2));
+	if ( find(validFields, key).empty ) {
+	    allFieldsAreValid = false;
+	    errMsg ~= format("ERROR: '%s' is not a valid input in FlowState:new{}\n", key);
+	}
+	lua_pop(L, 1);
+    }
+    if ( !allFieldsAreValid ) {
+	luaL_error(L, errMsg.toStringz);
+    }
     // Now we are committed to using the first constructor
     // in class FlowState. So we have to find at least
     // a pressure and temperature(s).
-    string errMsg = `Error in call to FlowState:new.
+    errMsg = `Error in call to FlowState:new.
 A valid pressure value 'p' is not found in arguments.
 The value should be a number.`;
     double p = getNumberFromTable(L, 1, "p", true, double.init, true, errMsg);
