@@ -90,7 +90,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
 	string otherFaceName = getJSONstring(jsonData, "other_face", "none");
 	
-	int neighbourOrientation = getJSONint(jsonData, "neighbour_orientation", 0);
+	int neighbourOrientation = getJSONint(jsonData, "orientation", 0);
 	newGCE = new GhostCellFullFaceExchangeCopy(blk_id, boundary,
 						   otherBlock, face_index(otherFaceName),
 						   neighbourOrientation);
