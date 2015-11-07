@@ -23,13 +23,6 @@ import univariatefunctions;
 
 //-----------------------------------------------------------------
 
-enum GridFileFormat {
-    text,
-    gziptext,
-    vtk,
-    vtkxml
-}
-
 class StructuredGrid {
 public:
     int niv, njv, nkv;
@@ -71,21 +64,23 @@ public:
     }
 
     // Imported grid.
-    this(string fileName, GridFileFormat fmt, string label="empty-label")
+    this(string fileName, string fmt, string label="empty-label")
     {
 	this.label = label;
-	final switch (fmt) {
-	case GridFileFormat.text:
+	switch (fmt) {
+	case "text":
 	    read_grid_from_text_file(fileName);
 	    break;
-	case GridFileFormat.gziptext:
+	case "gziptext":
 	    read_grid_from_gzip_file(fileName);
 	    break;
-	case GridFileFormat.vtk:
+	case "vtk":
 	    read_grid_from_text_file(fileName, true);
 	    break;
-	case GridFileFormat.vtkxml:
+	case "vtkxml":
 	    throw new Error("Reading from VTK XML format not implemented.");
+	default:
+	    throw new Error("Reading StructuredGrid, unknown format: " ~ fmt);
 	}
     }
 

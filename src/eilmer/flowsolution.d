@@ -54,7 +54,7 @@ public:
 		fileName = make_file_name!"grid"(jobName, to!int(ib), 0);
 	    }
 	    fileName = dir ~ "/" ~ fileName;
-	    gridBlocks ~= new StructuredGrid(fileName, GridFileFormat.gziptext);
+	    gridBlocks ~= new StructuredGrid(fileName, "gziptext");
 	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx);
 	    fileName = dir ~ "/" ~ fileName;
 	    flowBlocks ~= new SBlockFlow(fileName);

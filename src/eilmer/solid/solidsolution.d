@@ -43,7 +43,7 @@ public:
 	    // so tindx is always 0 for solid-grid
 	    fileName = make_file_name!"solid-grid"(jobName, to!int(ib), 0);
 	    fileName = dir ~ "/" ~ fileName;
-	    gridBlocks ~= new StructuredGrid(fileName, GridFileFormat.gziptext);
+	    gridBlocks ~= new StructuredGrid(fileName, "gziptext");
 	    fileName = make_file_name!"solid"(jobName, to!int(ib), tindx);
 	    fileName = dir ~ "/" ~ fileName;
 	    solidBlocks ~= new SBlockSolid(fileName);
