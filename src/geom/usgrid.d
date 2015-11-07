@@ -56,9 +56,9 @@ USGCell_type cell_type_from_name(string name)
     
 class USGFace {
 public:
-    int[] vtx_id_list;
+    size_t[] vtx_id_list;
 
-    this(int[] vtx_id_list) 
+    this(size_t[] vtx_id_list) 
     {
 	this.vtx_id_list = vtx_id_list.dup();
     }
@@ -86,12 +86,12 @@ public:
 class USGCell {
 public:
     USGCell_type cell_type;
-    int[] vtx_id_list;
-    int[] face_id_list;
+    size_t[] vtx_id_list;
+    size_t[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
-    this(USGCell_type cell_type, int[] vtx_id_list,
-	 int[] face_id_list, int[] outsign_list)
+    this(USGCell_type cell_type, size_t[] vtx_id_list,
+	 size_t[] face_id_list, int[] outsign_list)
     {
 	this.cell_type = cell_type;
 	this.vtx_id_list = vtx_id_list.dup();
@@ -145,7 +145,7 @@ public:
 class BoundaryFaceSet {
 public:
     string tag;
-    int[] face_id_list;
+    size_t[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
     this(string str) 
@@ -234,7 +234,7 @@ public:
 		// 0=north, 1=east, 2=south, 3=west
 	    }
 	    // vertices
-	    int[][] vtx_id;
+	    size_t[][] vtx_id;
 	    vtx_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		vtx_id[i].length = sg.njv;
@@ -244,7 +244,7 @@ public:
 		}
 	    }
 	    // i-faces
-	    int[][] iface_id;
+	    size_t[][] iface_id;
 	    iface_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		iface_id[i].length = sg.njv-1;
@@ -262,7 +262,7 @@ public:
 		}
 	    }
 	    // j-faces
-	    int[][] jface_id;
+	    size_t[][] jface_id;
 	    jface_id.length = sg.niv - 1;
 	    foreach (i; 0 .. sg.niv-1) {
 		jface_id[i].length = sg.njv;
@@ -306,7 +306,7 @@ public:
 		// 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
 	    }
 	    // vertices
-	    int[][][] vtx_id;
+	    size_t[][][] vtx_id;
 	    vtx_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		vtx_id[i].length = sg.njv;
@@ -319,7 +319,7 @@ public:
 		}
 	    }
 	    // i-faces
-	    int[][][] iface_id;
+	    size_t[][][] iface_id;
 	    iface_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		iface_id[i].length = sg.njv-1;
@@ -341,7 +341,7 @@ public:
 		}
 	    }
 	    // j-faces
-	    int[][][] jface_id;
+	    size_t[][][] jface_id;
 	    jface_id.length = sg.niv-1;
 	    foreach (i; 0 .. sg.niv-1) {
 		jface_id[i].length = sg.njv;
@@ -363,7 +363,7 @@ public:
 		}
 	    }
 	    // k-faces
-	    int[][][] kface_id;
+	    size_t[][][] kface_id;
 	    kface_id.length = sg.niv-1;
 	    foreach (i; 0 .. sg.niv-1) {
 		kface_id[i].length = sg.njv-1;
