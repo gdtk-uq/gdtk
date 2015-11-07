@@ -21,6 +21,7 @@ import json_helper;
 import lua_helper;
 import gzip;
 import geom;
+import sgrid;
 import gas;
 import kinetics;
 import globalconfig;
@@ -48,6 +49,7 @@ public:
     size_t[] micell, mjcell, mkcell; // locations of monitor cells
 
 private:
+    StructuredGrid grid; // for reading and writing
     // Total number of cells in each direction for this block.
     // these will be used in the array allocation routines.
     size_t _nidim;
@@ -1465,34 +1467,15 @@ public:
 
     override void read_grid(string filename, size_t gtl=0)
     // Read the grid vertices from a gzip file.
-    // This function needs to match StructuredGrid.read_from_gzip_file().
-    // [TODO] We should probably replace the guts of this function,
-    // reusing the StructuredGrid method.
+    // We delegate the actual file reading to the StructuredGrid class.
     {
 	size_t nivtx, njvtx, nkvtx;
 	double x, y, z;
 	if (myConfig.verbosity_level >= 1) {
 	    writeln("read_grid(): Start block ", id);
 	}
-	auto byLine = new GzipByLine(filename);
-	auto line = byLine.front; byLine.popFront();
-	string format_version;
-	formattedRead(line, "structured_grid %s", &format_version);
-	if (format_version != "1.0") {
-	    throw new Error("SBlock.read_grid(): format version found: " ~ format_version); 
-	}
-	line = byLine.front; byLine.popFront();
-	string grid_label;
-	formattedRead(line, "label: %s", &grid_label);
-	line = byLine.front; byLine.popFront();
-	int grid_dimensions;
-	formattedRead(line, "dimensions: %d", &grid_dimensions);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "niv: %d", &nivtx);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "njv: %d", &njvtx);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "nkv: %d", &nkvtx);
+	grid = new StructuredGrid(filename, "gziptext");
+	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
 	if ( myConfig.dimensions == 3 ) {
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
 		throw new Error(text("For block[", id, "] we have a mismatch in 3D grid size.",
@@ -1502,13 +1485,11 @@ public:
 	    for ( size_t k = kmin; k <= kmax+1; ++k ) {
 		for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		    for ( size_t i = imin; i <= imax+1; ++i ) {
-			line = byLine.front; byLine.popFront();
-			// Note that the line starts with whitespace.
-			formattedRead(line, " %g %g %g", &x, &y, &z);
 			auto vtx = get_vtx(i,j,k);
-			vtx.pos[gtl].refx = x;
-			vtx.pos[gtl].refy = y;
-			vtx.pos[gtl].refz = z;
+			auto src_vtx = grid.vtx[i-imin][j-jmin][k-kmin];
+			vtx.pos[gtl].refx = src_vtx.x;
+			vtx.pos[gtl].refy = src_vtx.y;
+			vtx.pos[gtl].refz = src_vtx.z;
 		    } // for i
 		} // for j
 	    } // for k
@@ -1520,12 +1501,10 @@ public:
 	    }
 	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
-		    line = byLine.front; byLine.popFront();
-		    // Note that the line starts with whitespace.
-		    formattedRead(line, " %g %g", &x, &y);
 		    auto vtx = get_vtx(i,j);
-		    vtx.pos[gtl].refx = x;
-		    vtx.pos[gtl].refy = y;
+		    auto src_vtx = grid.vtx[i-imin][j-jmin][0];
+		    vtx.pos[gtl].refx = src_vtx.x;
+		    vtx.pos[gtl].refy = src_vtx.y;
 		    vtx.pos[gtl].refz = 0.0;
 		} // for i
 	    } // for j
@@ -1533,41 +1512,30 @@ public:
     } // end read_grid()
 
     override void write_grid(string filename, double sim_time, size_t gtl=0)
-    // This function needs to match StructuredGrid.write_to_gzip_file().
-    // [TODO] We should probably replace the guts of this function,
-    // reusing the StructuredGrid method.
+    // Note that we reuse the StructuredGrid object that was created on the
+    // use of read_grid().
     {
 	if (myConfig.verbosity_level >= 1) {
 	    writeln("write_grid(): Start block ", id);
 	}
 	size_t kmaxrange;
-	auto outfile = new GzipOut(filename);
-	auto writer = appender!string();
-	formattedWrite(writer, "structured_grid 1.0\n");
-	formattedWrite(writer, "label: %s\n", "");
-	formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
-	formattedWrite(writer, "niv: %d\n", nicell+1);
-	formattedWrite(writer, "njv: %d\n", njcell+1);
 	if ( myConfig.dimensions == 3 ) {
-	    formattedWrite(writer, "nkv: %d\n", nkcell+1);
 	    kmaxrange = kmax + 1;
 	} else { // 2D case
-	    formattedWrite(writer, "nkv: %d\n", nkcell);
 	    kmaxrange = kmax;
 	}
-	outfile.compress(writer.data);
 	for ( size_t k = kmin; k <= kmaxrange; ++k ) {
 	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
 		    auto vtx = get_vtx(i,j,k);
-		    writer = appender!string();
-		    formattedWrite(writer, "%20.12e %20.12e %20.12e\n", vtx.pos[gtl].x,
-				   vtx.pos[gtl].y, vtx.pos[gtl].z);
-		    outfile.compress(writer.data);
+		    auto dest_vtx = grid.vtx[i-imin][j-jmin][k-kmin];
+		    dest_vtx.refx = vtx.pos[gtl].x;
+		    dest_vtx.refy = vtx.pos[gtl].y;
+		    dest_vtx.refz = vtx.pos[gtl].z;
 		} // for i
 	    } // for j
 	} // for k
-	outfile.finish();
+	grid.write_to_gzip_file(filename);
     } // end write_grid()
 
     override double read_solution(string filename, bool overwrite_geometry_data)
