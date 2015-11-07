@@ -15,7 +15,6 @@ import std.format;
 import std.string;
 import std.array;
 import std.math;
-import std.json;
 
 import util.lua;
 import json_helper;

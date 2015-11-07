@@ -67,7 +67,9 @@ GEOM_FILES := $(GEOM_DIR)/geom.d \
 	$(GEOM_DIR)/luasurface.d \
 	$(GEOM_DIR)/luavolume.d \
 	$(GEOM_DIR)/sgrid.d \
-	$(GEOM_DIR)/luasgrid.d
+	$(GEOM_DIR)/luasgrid.d \
+	$(GEOM_DIR)/usgrid.d \
+	$(GEOM_DIR)/luausgrid.d
 
 GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
