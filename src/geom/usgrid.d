@@ -188,19 +188,18 @@ public:
     }
 } // end class BoundaryFaceSet
 
-class UnstructuredGrid {
+class UnstructuredGrid : Grid {
 public:
-    int dimensions;
     int nvertices, ncells, nfaces, nboundaries;
     Vector3[] vertices;
     USGFace[] faces;
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
-    string label;
 
     this(const UnstructuredGrid other, const string new_label="")
     {
-	dimensions = other.dimensions;
+	super("unstructured_grid", other.dimensions,
+	      ((new_label == "")? other.label : new_label));
 	nvertices = other.nvertices;
 	ncells = other.ncells;
 	nfaces = other.nfaces;
@@ -209,21 +208,12 @@ public:
 	foreach(f; other.faces) { faces ~= new USGFace(f); }
 	foreach(c; other.cells) { cells ~= new USGCell(c); }
 	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
-	if (new_label == "") {
-	    label = other.label;
-	} else {
-	    label = new_label;
-	}
     }
 
     this(const StructuredGrid sg, const string new_label="")
     {
-	this.dimensions = (sg.nkv == 1) ? 2 : 3; // topological dimensions
-	if (new_label == "") {
-	    label = sg.label;
-	} else {
-	    label = new_label;
-	}
+	super("unstructured_grid", sg.dimensions,
+	      ((new_label == "")? sg.label : new_label));
 	if (dimensions == 2) {
 	    nvertices = sg.niv * sg.njv;
 	    nfaces = (sg.niv)*(sg.njv-1) + (sg.niv-1)*(sg.njv);
@@ -239,7 +229,7 @@ public:
 	    foreach (i; 0 .. sg.niv) {
 		vtx_id[i].length = sg.njv;
 		foreach (j; 0 .. sg.njv) {
-		    vertices ~= Vector3(sg.grid[i][j][0]);
+		    vertices ~= Vector3(sg.vtx[i][j][0]);
 		    vtx_id[i][j] = vertices.length - 1;
 		}
 	    }
@@ -313,7 +303,7 @@ public:
 		foreach (j; 0 .. sg.njv) {
 		    vtx_id[i][j].length = sg.nkv;
 		    foreach (k; 0 .. sg.nkv) {
-			vertices ~= Vector3(sg.grid[i][j][k]);
+			vertices ~= Vector3(sg.vtx[i][j][k]);
 			vtx_id[i][j][k] = vertices.length - 1;
 		    }
 		}
@@ -413,6 +403,7 @@ public:
     // Imported grid.
     this(string fileName, string fmt, string new_label="")
     {
+	super("unstructured_grid", 0, new_label); // dimensions will be reset on reading grid
 	switch (fmt) {
 	case "text":
 	    read_from_text_file(fileName, false);
@@ -457,15 +448,22 @@ public:
 	throw new Error("read_from_text_file() is not implemented, yet.");
     } // end read_from_text_file()
 
-    void read_from_gzip_file(string fileName)
+    override void read_from_gzip_file(string fileName)
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
-	formattedRead(line, "label %s", &label);
+	string format_version;
+	formattedRead(line, "unstructured_grid %s", &format_version);
+	if (format_version != "1.0") {
+	    throw new Error("UnstructuredGrid.read_from_gzip_file(): " ~
+			    "format version found: " ~ format_version); 
+	}
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "dimensions %d", &dimensions);
+	formattedRead(line, "label: %s", &label);
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "vertices %d", &nvertices);
+	formattedRead(line, "dimensions: %d", &dimensions);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "vertices: %d", &nvertices);
 	double x, y, z;
 	vertices.length = 0;
 	foreach (i; 0 .. nvertices) {
@@ -475,21 +473,21 @@ public:
 	    vertices ~= Vector3(x, y, z);
 	}
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "faces %d", &nfaces);
+	formattedRead(line, "faces: %d", &nfaces);
 	faces.length = 0;
 	foreach (i; 0 .. nfaces) {
 	    line = byLine.front; byLine.popFront();
 	    faces ~= new USGFace(line);
 	}
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "cells %d", &ncells);
+	formattedRead(line, "cells: %d", &ncells);
 	cells.length = 0;
 	foreach (i; 0 .. ncells) {
 	    line = byLine.front; byLine.popFront();
 	    cells ~= new USGCell(line);
 	}
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "boundaries %d", &nboundaries);
+	formattedRead(line, "boundaries: %d", &nboundaries);
 	boundaries.length = 0;
 	foreach (i; 0 .. nboundaries) {
 	    line = byLine.front; byLine.popFront();
@@ -497,7 +495,27 @@ public:
 	}
     } // end read_from_gzip_file()
 
-    void write_to_vtk_file(string fileName)
+    override void write_to_gzip_file(string fileName)
+    // This function essentially defines the Eilmer4 native format.
+    {
+	auto fout = new GzipOut(fileName);
+	fout.compress("unstructured_grid 1.0\n");
+	fout.compress(format("label: %s\n", label));
+	fout.compress(format("dimensions: %d\n", dimensions));
+	fout.compress(format("vertices: %d\n", nvertices));
+	foreach (v; vertices) {
+	    fout.compress(format("%20.16e %20.16e %20.16e\n", v.x, v.y, v.z));
+	}
+	fout.compress(format("faces: %d\n", nfaces));
+	foreach (f; faces) { fout.compress(f.toIOString ~ "\n"); }
+	fout.compress(format("cells: %d\n", ncells));
+	foreach (c; cells) { fout.compress(c.toIOString ~ "\n"); }
+	fout.compress(format("boundaries: %d\n", boundaries.length));
+	foreach (b; boundaries) { fout.compress(b.toIOString ~ "\n"); }
+	fout.finish();
+    } // end write_to_gzip_file()
+
+    override void write_to_vtk_file(string fileName)
     {
 	auto f = File(fileName, "w");
 	f.writeln("# vtk DataFile Version 2.0");
@@ -522,25 +540,6 @@ public:
 	}
 	f.close();
     } // end write_to_vtk_file()
-
-    void write_to_gzip_file(string fileName)
-    // This function essentially defines the Eilmer4 native format.
-    {
-	auto fout = new GzipOut(fileName);
-	fout.compress(format("label %s\n", label));
-	fout.compress(format("dimensions %d\n", dimensions));
-	fout.compress(format("vertices %d\n", nvertices));
-	foreach (v; vertices) {
-	    fout.compress(format("%20.16e %20.16e %20.16e\n", v.x, v.y, v.z));
-	}
-	fout.compress(format("faces %d\n", nfaces));
-	foreach (f; faces) { fout.compress(f.toIOString ~ "\n"); }
-	fout.compress(format("cells %d\n", ncells));
-	foreach (c; cells) { fout.compress(c.toIOString ~ "\n"); }
-	fout.compress(format("boundaries %d\n", boundaries.length));
-	foreach (b; boundaries) { fout.compress(b.toIOString ~ "\n"); }
-	fout.finish();
-    } // end write_to_gzip_file()
 
 } // end class UnstructuredGrid
 

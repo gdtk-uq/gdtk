@@ -554,9 +554,8 @@ function build_job_files(job)
    for i = 1, #blocks do
       local id = blocks[i].id
       print("Block id=", id)
-      local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000", id)
-      blocks[i].grid:write_to_text_file(fileName)
-      os.execute("gzip -f " .. fileName)
+      local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000.gz", id)
+      blocks[i].grid:write_to_gzip_file(fileName)
       local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000", id)
       write_initial_flow_file(fileName, blocks[i].grid, blocks[i].fillCondition, 0.0)
       os.execute("gzip -f " .. fileName)
@@ -564,9 +563,8 @@ function build_job_files(job)
    for i = 1, #solidBlocks do
       local id = solidBlocks[i].id
       print("SolidBlock id=", id)
-      local fileName = "solid-grid/t0000/" .. job .. string.format(".solid-grid.b%04d.t0000", id)
-      solidBlocks[i].grid:write_to_text_file(fileName)
-      os.execute("gzip -f " .. fileName)
+      local fileName = "solid-grid/t0000/" .. job .. string.format(".solid-grid.b%04d.t0000.gz", id)
+      solidBlocks[i].grid:write_to_gzip_file(fileName)
       local fileName = "solid/t0000/" .. job .. string.format(".solid.b%04d.t0000", id)
       writeInitialSolidFile(fileName, solidBlocks[i].grid,
 			    solidBlocks[i].initTemperature, solidBlocks[i].properties, 0.0)

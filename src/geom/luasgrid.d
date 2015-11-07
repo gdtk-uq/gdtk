@@ -109,12 +109,21 @@ extern(C) int subgrid(T, string MTname)(lua_State* L)
     return 1;
 } // end subgrid()
 
-extern(C) int write_to_text_file(T, string MTname)(lua_State* L)
+extern(C) int write_to_vtk_file(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 2;
     auto grid = checkObj!(T, MTname)(L, 1);
     auto fileName = to!string(luaL_checkstring(L, 2));
-    grid.write_to_text_file(fileName, false);
+    grid.write_to_vtk_file(fileName);
+    return 0;
+}
+
+extern(C) int write_to_gzip_file(T, string MTname)(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 2;
+    auto grid = checkObj!(T, MTname)(L, 1);
+    auto fileName = to!string(luaL_checkstring(L, 2));
+    grid.write_to_gzip_file(fileName);
     return 0;
 }
 
@@ -269,8 +278,10 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &subgrid!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "subgrid");
-    lua_pushcfunction(L, &write_to_text_file!(StructuredGrid, StructuredGridMT));
-    lua_setfield(L, -2, "write_to_text_file");
+    lua_pushcfunction(L, &write_to_vtk_file!(StructuredGrid, StructuredGridMT));
+    lua_setfield(L, -2, "write_to_vtk_file");
+    lua_pushcfunction(L, &write_to_gzip_file!(StructuredGrid, StructuredGridMT));
+    lua_setfield(L, -2, "write_to_gzip_file");
 
     lua_setglobal(L, StructuredGridMT.toStringz);
 

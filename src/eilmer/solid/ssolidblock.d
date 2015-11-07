@@ -242,7 +242,23 @@ public:
 	}
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
-	formattedRead(line, "%d %d %d", &nivtx, &njvtx, &nkvtx);
+	string format_version;
+	formattedRead(line, "structured_grid %s", &format_version);
+	if (format_version != "1.0") {
+	    throw new Error("SBlock.read_grid(): format version found: " ~ format_version); 
+	}
+	line = byLine.front; byLine.popFront();
+	string grid_label;
+	formattedRead(line, "label: %s", &grid_label);
+	line = byLine.front; byLine.popFront();
+	int grid_dimensions;
+	formattedRead(line, "dimensions: %d", &grid_dimensions);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "niv: %d", &nivtx);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "njv: %d", &njvtx);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "nkv: %d", &nkvtx);
 	if ( GlobalConfig.dimensions == 3 ) {
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
 		throw new Error(text("For solid_block[", id, "] we have a mismatch in 3D grid size.",
@@ -290,11 +306,16 @@ public:
 	size_t kmaxrange;
 	auto outfile = new GzipOut(filename);
 	auto writer = appender!string();
+	formattedWrite(writer, "structured_grid 1.0\n");
+	formattedWrite(writer, "label: %s\n", "");
+	formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+	formattedWrite(writer, "niv: %d\n", nicell+1);
+	formattedWrite(writer, "njv: %d\n", njcell+1);
 	if ( GlobalConfig.dimensions == 3 ) {
-	    formattedWrite(writer, "%d %d %d  # ni nj nk\n", nicell+1, njcell+1, nkcell+1);
+	    formattedWrite(writer, "nkv: %d\n", nkcell+1);
 	    kmaxrange = kmax + 1;
 	} else { // 2D case
-	    formattedWrite(writer, "%d %d %d  # ni nj nk\n", nicell+1, njcell+1, nkcell);
+	    formattedWrite(writer, "nkv: %d\n", nkcell);
 	    kmaxrange = kmax;
 	}
 	outfile.compress(writer.data);

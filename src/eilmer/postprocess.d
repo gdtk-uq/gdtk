@@ -505,9 +505,9 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
         foreach (j; 0 .. njv) {
             foreach (i; 0 .. niv) {
                 vtx_id[i][j][k] = vtx_number;
-                float x = uflowz(grid.grid[i][j][k].x);
-		float y = uflowz(grid.grid[i][j][k].y);
-		float z = uflowz(grid.grid[i][j][k].z);
+                float x = uflowz(grid.vtx[i][j][k].x);
+		float y = uflowz(grid.vtx[i][j][k].y);
+		float z = uflowz(grid.vtx[i][j][k].z);
                 if (binary_format) {
 		    binary_data ~= nativeToBigEndian(x);
 		    binary_data ~= nativeToBigEndian(y);
@@ -824,9 +824,9 @@ void write_VTK_XML_unstructured_file(SolidSolution soln, size_t jb,
         foreach (j; 0 .. njv) {
             foreach (i; 0 .. niv) {
                 vtx_id[i][j][k] = vtx_number;
-                float x = uflowz(grid.grid[i][j][k].x);
-		float y = uflowz(grid.grid[i][j][k].y);
-		float z = uflowz(grid.grid[i][j][k].z);
+                float x = uflowz(grid.vtx[i][j][k].x);
+		float y = uflowz(grid.vtx[i][j][k].y);
+		float z = uflowz(grid.vtx[i][j][k].z);
                 if (binary_format) {
 		    binary_data ~= nativeToBigEndian(x);
 		    binary_data ~= nativeToBigEndian(y);

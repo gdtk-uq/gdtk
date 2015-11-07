@@ -23,59 +23,72 @@ import univariatefunctions;
 
 //-----------------------------------------------------------------
 
-class StructuredGrid {
+class Grid {
+    string grid_type; // "unstructured_grid" or "structured_grid"
+    int dimensions; // 2 or 3
+    string label;
+    
+    this(string grid_type, int dimensions, string label="")
+    {
+	this.grid_type = grid_type;
+	this.dimensions = dimensions;
+	this.label = label;
+    }
+
+    abstract void read_from_gzip_file(string fileName);
+    abstract void write_to_gzip_file(string fileName);
+    abstract void write_to_vtk_file(string fileName);
+}
+
+//-----------------------------------------------------------------
+
+class StructuredGrid : Grid {
 public:
     int niv, njv, nkv;
-    Vector3[][][] grid;
-    string label;
+    Vector3[][][] vtx;
 
     // Blank grid, ready for import of data.
-    this(int niv, int njv, int nkv=1, string label="empty-label")
+    this(int niv, int njv, int nkv=1, string label="")
     {
+	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
+	super("structured_grid", dim, label);
 	this.niv = niv; this.njv = njv; this.nkv = nkv;
-	this.label = label;
 	resize_array();
     }
 
     // 2D grid, built on Parametric surface.
     this(const ParametricSurface surf, int niv, int njv,
-	 const(UnivariateFunction)[] clusterf,
-	 string label="empty-label")
+	 const(UnivariateFunction)[] clusterf, string label="")
     {
-	this.niv = niv; this.njv = njv; this.nkv = 1;
-	this.label = label;
+	this(niv, njv, 1, label);
 	// Any unspecified clustering functions default to the linear identity.
 	while (clusterf.length < 4) clusterf ~= new LinearFunction(0.0, 1.0);
-	resize_array();
 	make_grid_from_surface(surf, clusterf);
     }
 
     // 3D grid, built on ParametricVolume.
     this(const ParametricVolume pvolume, int niv, int njv, int nkv,
-	 const(UnivariateFunction)[] clusterf,
-	 string label="empty-label")
+	 const(UnivariateFunction)[] clusterf, string label="")
     {
-	this.niv = niv; this.njv = njv; this.nkv = nkv;
-	this.label = label;
+	this(niv, njv, nkv, label);
 	// Any unspecified clustering functions default to the linear identity.
 	while (clusterf.length < 12) clusterf ~= new LinearFunction(0.0, 1.0);
-	resize_array();
 	make_grid_from_volume(pvolume, clusterf);
     }
 
     // Imported grid.
-    this(string fileName, string fmt, string label="empty-label")
+    this(string fileName, string fmt, string label="")
     {
-	this.label = label;
+	this(0, 0, 0, label); // these settings will be reset on actually reading the data file
 	switch (fmt) {
 	case "text":
-	    read_grid_from_text_file(fileName);
+	    read_from_text_file(fileName);
 	    break;
 	case "gziptext":
-	    read_grid_from_gzip_file(fileName);
+	    read_from_gzip_file(fileName);
 	    break;
 	case "vtk":
-	    read_grid_from_text_file(fileName, true);
+	    read_from_text_file(fileName, true);
 	    break;
 	case "vtkxml":
 	    throw new Error("Reading from VTK XML format not implemented.");
@@ -86,17 +99,13 @@ public:
 
     this(const StructuredGrid other)
     {
-	niv = other.niv;
-	njv = other.njv;
-	nkv = other.nkv;
-	label = other.label;
-	resize_array();
-	foreach (i; 0 .. grid.length) {
-	    foreach (j; 0 .. grid[i].length) {
-		foreach (k; 0 .. grid[i][j].length) {
-		    grid[i][j][k].refx = other.grid[i][j][k].x;
-		    grid[i][j][k].refy = other.grid[i][j][k].y;
-		    grid[i][j][k].refz = other.grid[i][j][k].z;
+	this(other.niv, other.njv, nkv = other.nkv, other.label);
+	foreach (i; 0 .. vtx.length) {
+	    foreach (j; 0 .. vtx[i].length) {
+		foreach (k; 0 .. vtx[i][j].length) {
+		    vtx[i][j][k].refx = other.vtx[i][j][k].x;
+		    vtx[i][j][k].refy = other.vtx[i][j][k].y;
+		    vtx[i][j][k].refz = other.vtx[i][j][k].z;
 		}
 	    }
 	}
@@ -109,11 +118,11 @@ public:
 
     void resize_array()
     {
-	grid.length = niv;
+	vtx.length = niv;
 	foreach (i; 0 .. niv) {
-	    grid[i].length = njv;
+	    vtx[i].length = njv;
 	    foreach (j; 0 .. njv) {
-		grid[i][j].length = nkv;
+		vtx[i][j].length = nkv;
 	    }
 	}
     } // end resize_array
@@ -125,7 +134,7 @@ public:
 	assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
     }
     body {
-	return grid[i][j][k];
+	return vtx[i][j][k];
     }
 
     StructuredGrid subgrid(size_t i0, size_t ni,
@@ -143,9 +152,9 @@ public:
 	foreach (i; 0 .. ni) {
 	    foreach (j; 0 .. nj) {
 		foreach (k; 0 .. nk) {
-		    new_grd.grid[i][j][k].refx = grid[i0+i][j0+j][k0+k].x;
-		    new_grd.grid[i][j][k].refy = grid[i0+i][j0+j][k0+k].y;
-		    new_grd.grid[i][j][k].refz = grid[i0+i][j0+j][k0+k].z;
+		    new_grd.vtx[i][j][k].refx = vtx[i0+i][j0+j][k0+k].x;
+		    new_grd.vtx[i][j][k].refy = vtx[i0+i][j0+j][k0+k].y;
+		    new_grd.vtx[i][j][k].refz = vtx[i0+i][j0+j][k0+k].z;
 		}
 	    }
 	}
@@ -171,9 +180,9 @@ public:
                 double sdash = (1.0-r) * sWest[j] + r * sEast[j]; 
                 double rdash = (1.0-s) * rSouth[i] + s * rNorth[i];
                 Vector3 p = surf(rdash, sdash);
-                grid[i][j][k].refx = p.x;
-                grid[i][j][k].refy = p.y;
-                grid[i][j][k].refz = p.z;
+                vtx[i][j][k].refx = p.x;
+                vtx[i][j][k].refy = p.y;
+                vtx[i][j][k].refz = p.z;
 	    }
 	}
     } // end make_grid_from_surface()
@@ -216,15 +225,15 @@ public:
                     double rdash = (1.0-s)*(1.0-t)*r01[i] + s*t*r76[i] + 
 			(1.0-s)*t*r45[i] + s*(1.0-t)*r32[i];
 			Vector3 p = pvolume(rdash, sdash, tdash);
-		    grid[i][j][k].refx = p.x;
-		    grid[i][j][k].refy = p.y;
-		    grid[i][j][k].refz = p.z;
+		    vtx[i][j][k].refx = p.x;
+		    vtx[i][j][k].refy = p.y;
+		    vtx[i][j][k].refz = p.z;
 		} // i
 	    } // j
 	} // k
     } // end make_grid_from_volume()
 
-    void read_grid_from_text_file(string fileName, bool vtkHeader=true)
+    void read_from_text_file(string fileName, bool vtkHeader=true)
     {
 	string[] tokens;
 	auto f = File(fileName, "r");
@@ -246,9 +255,9 @@ public:
 		foreach (i; 0 .. niv) {
 		    tokens = f.readln().strip().split();
 		    try {
-			grid[i][j][k].refx = to!double(tokens[0]);
-			grid[i][j][k].refy = to!double(tokens[1]);
-			grid[i][j][k].refz = to!double(tokens[2]);
+			vtx[i][j][k].refx = to!double(tokens[0]);
+			vtx[i][j][k].refy = to!double(tokens[1]);
+			vtx[i][j][k].refz = to!double(tokens[2]);
 		    } catch (Exception e) {
 			throw new Error(text("Failed to read grid file at "
 					     "i=", i, " j=", j, " k=", k,
@@ -259,11 +268,26 @@ public:
 	} // foreach k
     } // end read_grid_from_text_file()
 
-    void read_grid_from_gzip_file(string fileName)
+    override void read_from_gzip_file(string fileName)
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
-	formattedRead(line, "%d %d %d", &niv, &njv, &nkv);
+	string format_version;
+	formattedRead(line, "structured_grid %s", &format_version);
+	if (format_version != "1.0") {
+	    throw new Error("StructuredGrid.read_from_gzip_file(): " ~
+			    "format version found: " ~ format_version); 
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "label: %s", &label);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "dimensions: %d", &dimensions);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "niv: %d", &niv);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "njv: %d", &njv);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "nkv: %d", &nkv);
 	resize_array();
 	double x, y, z;
 	foreach (k; 0 .. nkv) {
@@ -272,57 +296,58 @@ public:
 		    line = byLine.front; byLine.popFront();
 		    // Note that the line starts with whitespace.
 		    formattedRead(line, " %g %g %g", &x, &y, &z);
-		    grid[i][j][k].refx = x;
-		    grid[i][j][k].refy = y;
-		    grid[i][j][k].refz = z;
+		    vtx[i][j][k].refx = x;
+		    vtx[i][j][k].refy = y;
+		    vtx[i][j][k].refz = z;
 		} // foreach i
 	    } // foreach j
 	} // foreach k
     } // end read_grid_from_gzip_file()
 
-    void write_to_text_file(string fileName, bool vtkHeader=true)
-    {
-	auto f = File(fileName, "w");
-	if (vtkHeader) {
-	    f.writeln("# vtk DataFile Version 2.0");
-	    f.writeln(label);
-	    f.writeln("ASCII");
-	    f.writeln("");
-	    f.writeln("DATASET STRUCTURED_GRID");
-	    f.writefln("DIMENSIONS %d %d %d", niv, njv, nkv);
-	    f.writefln("POINTS %d float", (niv * njv * nkv));
-	} else {
-	    f.writefln("%d %d %d  # ni nj nk", niv, njv, nkv);
-	}
-	foreach (k; 0 .. nkv) {
-	    foreach (j; 0 .. njv) {
-		foreach (i; 0 .. niv) {
-		    f.writefln("%20.16e %20.16e %20.16e", 
-			       grid[i][j][k].x, grid[i][j][k].y, grid[i][j][k].z);
-		}
-	    }
-	}
-    } // end write_to_text_file()
-
-    void write_to_gzip_file(string fileName)
+    override void write_to_gzip_file(string fileName)
     // This function essentially defines the Eilmer4 native format.
     {
 	auto f = new GzipOut(fileName);
 	auto writer = appender!string();
-	formattedWrite(writer, "%d %d %d  # ni nj nk\n", niv, njv, nkv);
+	formattedWrite(writer, "structured_grid 1.0\n");
+	formattedWrite(writer, "label: %s\n", label);
+	formattedWrite(writer, "dimensions: %d\n", dimensions);
+	formattedWrite(writer, "niv: %d\n", niv);
+	formattedWrite(writer, "njv: %d\n", njv);
+	formattedWrite(writer, "nkv: %d\n", nkv);
 	f.compress(writer.data);
 	foreach (k; 0 .. nkv) {
 	    foreach (j; 0 .. njv) {
 		foreach (i; 0 .. niv) {
 		    writer = appender!string();
 		    formattedWrite(writer, "%20.16e %20.16e %20.16e\n", 
-				   grid[i][j][k].x, grid[i][j][k].y, grid[i][j][k].z);
+				   vtx[i][j][k].x, vtx[i][j][k].y, vtx[i][j][k].z);
 		    f.compress(writer.data);
 		}
 	    }
 	}
 	f.finish();
     } // end write_grid_to_gzip_file()
+
+    override void write_to_vtk_file(string fileName)
+    {
+	auto f = File(fileName, "w");
+	f.writeln("# vtk DataFile Version 2.0");
+	f.writeln(label);
+	f.writeln("ASCII");
+	f.writeln("");
+	f.writeln("DATASET STRUCTURED_GRID");
+	f.writefln("DIMENSIONS %d %d %d", niv, njv, nkv);
+	f.writefln("POINTS %d float", (niv * njv * nkv));
+	foreach (k; 0 .. nkv) {
+	    foreach (j; 0 .. njv) {
+		foreach (i; 0 .. niv) {
+		    f.writefln("%20.16e %20.16e %20.16e", 
+			       vtx[i][j][k].x, vtx[i][j][k].y, vtx[i][j][k].z);
+		}
+	    }
+	}
+    } // end write_to_vtk_file()
 
 } // end class StructuredGrid
 

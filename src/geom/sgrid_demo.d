@@ -21,7 +21,10 @@ void main()
 	       new LinearFunction(), new LinearFunction()];
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
-    my_grid.write_to_text_file("test_grid.vtk", true);
+    my_grid.write_to_vtk_file("test_grid.vtk");
+    my_grid.write_to_gzip_file("test_grid.gz");
+    auto my_grid2 = new StructuredGrid("test_grid.gz", "gziptext");
+    my_grid2.write_to_vtk_file("test_grid2.vtk");
 
     writeln("3D grid");
     Vector3[8] p;
@@ -38,12 +41,12 @@ void main()
     auto simple_box = new TFIVolume(p);
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
     writeln("grid point 5 5 5 at p=", my_3Dgrid[5,5,5]);
-    my_3Dgrid.write_to_text_file("test_3Dgrid.vtk", true);
+    my_3Dgrid.write_to_vtk_file("test_3Dgrid.vtk");
 
     writeln("Import GridPro grid...");
     auto gpgrid = import_gridpro_grid("../../examples/eilmer/3D/gridpro-import/blk.tmp");
     foreach (i; 0 .. gpgrid.length) {
-	gpgrid[i].write_to_text_file("gpgrid-"~to!string(i)~".vtk", true);
+	gpgrid[i].write_to_vtk_file("gpgrid-"~to!string(i)~".vtk");
     }
     writeln("Done.");
 }
