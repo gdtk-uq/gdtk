@@ -25,6 +25,8 @@ import geom;
 import luageom;
 import sgrid;
 import luasgrid;
+import usgrid;
+import luausgrid;
 import globalconfig;
 import luaglobalconfig;
 import fvcell;
@@ -388,10 +390,10 @@ extern(C) int toJSONString(lua_State* L)
     return 1;
 }
 
-extern(C) int write_initial_flow_file_from_lua(lua_State* L)
+extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 {
     auto fname = to!string(luaL_checkstring(L, 1));
-    auto grid = checkStructuredGrid(L, 2);
+    auto grid = checkStructuredGrid(L, 2); 
     double t0 = luaL_checknumber(L, 4);
     FlowState fs;
     // Test if we have a simple flow state or something more exotic
@@ -477,7 +479,77 @@ extern(C) int write_initial_flow_file_from_lua(lua_State* L)
 	return 0;
     } // end if lua_isfunction
     return -1;
-} // end write_initial_flow_file_from_lua()
+} // end write_initial_sg_flow_file_from_lua()
+
+extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
+{
+    auto fname = to!string(luaL_checkstring(L, 1));
+    auto grid = checkUnstructuredGrid(L, 2); 
+    double t0 = luaL_checknumber(L, 4);
+    FlowState fs;
+    // Test if we have a simple flow state or something more exotic
+    if ( isObjType(L, 3, "FlowState") ) {
+	fs = checkFlowState(L, 3);
+	write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
+	return 0;
+    }
+    // Else, we might have a callable lua function
+    if ( lua_isfunction(L, 3) ) {
+	// Assume we can use the function then.
+	// A lot of code borrowed from flowstate.d
+	// Keep in sync with write_initial_flow_file() function in that file.
+	//
+	// Numbers of cells derived from numbers of vertices in grid.
+	int ncells = grid.ncells;
+	//	
+	// Write the data for the whole structured block.
+	auto outfile = new GzipOut(fname);
+	auto writer = appender!string();
+	formattedWrite(writer, "ustructured_grid_flow 1.0\n");
+	formattedWrite(writer, "label: %s\n", grid.label);
+	formattedWrite(writer, "sim_time: %20.12e\n", t0);
+	auto gmodel = GlobalConfig.gmodel_master;
+	auto variable_list = variable_list_for_cell(gmodel);
+	formattedWrite(writer, "variables: %d\n", variable_list.length);
+	// Variable list for cell on one line.
+	foreach(varname; variable_list) {
+	    formattedWrite(writer, " \"%s\"", varname);
+	}
+	formattedWrite(writer, "\n");
+	// Numbers of cells
+	formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+	formattedWrite(writer, "ncells: %d\n", ncells);
+	outfile.compress(writer.data);
+	// The actual cell data.
+	foreach (i; 0 .. ncells) {
+	    Vector3 pos = Vector3(0.0, 0.0, 0.0);
+	    foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
+	    pos /= grid.cells[i].vtx_id_list.length;
+	    double volume = 0.0; 
+	    // Now grab flow state via Lua function call
+	    lua_pushvalue(L, 3);
+	    lua_pushnumber(L, pos.x);
+	    lua_pushnumber(L, pos.y);
+	    lua_pushnumber(L, pos.z);
+	    if ( lua_pcall(L, 3, 1, 0) != 0 ) {
+		string errMsg = "Error in Lua function call for setting FlowState\n";
+		errMsg ~= "as a function of postion (x, y, z).\n";
+		luaL_error(L, errMsg.toStringz);
+	    }
+	    fs = checkFlowState(L, -1);
+	    if ( !fs ) {
+		string errMsg = "Error in from Lua function call for setting FlowState\n";
+		errMsg ~= "as a function of postion (x, y, z).\n";
+		errMsg ~= "The returned object is not a proper FlowState object.";
+		luaL_error(L, errMsg.toStringz);
+	    }
+	    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs) ~ "\n");
+	} // end foreach i
+	outfile.finish();
+	return 0;
+    } // end if lua_isfunction
+    return -1;
+} // end write_initial_usg_flow_file_from_lua()
 
 void registerFlowState(lua_State* L)
 {
@@ -500,7 +572,9 @@ void registerFlowState(lua_State* L)
     // Make class visible
     lua_setglobal(L, FlowStateMT.toStringz);
 
-    lua_pushcfunction(L, &write_initial_flow_file_from_lua);
-    lua_setglobal(L, "write_initial_flow_file");
+    lua_pushcfunction(L, &write_initial_sg_flow_file_from_lua);
+    lua_setglobal(L, "write_initial_sg_flow_file");
+    lua_pushcfunction(L, &write_initial_usg_flow_file_from_lua);
+    lua_setglobal(L, "write_initial_usg_flow_file");
 }
 

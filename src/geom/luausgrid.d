@@ -80,6 +80,14 @@ extern(C) int get_nfaces(T, string MTname)(lua_State* L)
     return 1;
 }
 
+extern(C) int get_nboundaries(T, string MTname)(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 1; This is a getter
+    auto grid = checkObj!(T, MTname)(L, 1);
+    lua_pushnumber(L, grid.nboundaries);
+    return 1;
+}
+
 extern(C) int get_vtx(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L);
@@ -187,6 +195,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_ncells");
     lua_pushcfunction(L, &get_nfaces!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "get_nfaces");
+    lua_pushcfunction(L, &get_nboundaries!(UnstructuredGrid, UnstructuredGridMT));
+    lua_setfield(L, -2, "get_nboundaries");
     lua_pushcfunction(L, &get_vtx!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &write_to_gzip_file!(UnstructuredGrid, UnstructuredGridMT));

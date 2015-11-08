@@ -20,6 +20,7 @@ import geom;
 import gas;
 import fvcell;
 import sgrid;
+import usgrid;
 import globalconfig;
 
 class FlowState {
@@ -326,4 +327,40 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     }
     outfile.finish();
     return;
-} // end write_initial_flow_file()
+} // end write_initial_flow_file() StructuredGrid version
+ 
+void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
+			     in FlowState fs, double t0, GasModel gmodel)
+// Keep in sync with UBlock.write_solution.
+{
+    // Numbers of cells derived from numbers of vertices in grid.
+    int ncells = grid.ncells;
+    //	
+    // Write the data for the whole unstructured block.
+    auto outfile = new GzipOut(fileName);
+    auto writer = appender!string();
+    formattedWrite(writer, "unstructured_grid_flow 1.0\n");
+    formattedWrite(writer, "label: %s\n", grid.label);
+    formattedWrite(writer, "sim_time: %20.12e\n", t0);
+    auto variable_list = variable_list_for_cell(gmodel);
+    formattedWrite(writer, "variables: %d\n", variable_list.length);
+    // Variable list for cell on one line.
+    foreach(varname; variable_list) {
+	formattedWrite(writer, " \"%s\"", varname);
+    }
+    formattedWrite(writer, "\n");
+    // Numbers of cells
+    formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+    formattedWrite(writer, "ncells: %d\n", ncells);
+    outfile.compress(writer.data);
+    // The actual cell data.
+    foreach (i; 0 .. ncells) {
+	Vector3 pos = Vector3(0.0, 0.0, 0.0);
+	foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
+	pos /= grid.cells[i].vtx_id_list.length;
+	double volume = 0.0; 
+	outfile.compress(" " ~ cell_data_as_string(pos, volume, fs) ~ "\n");
+    }
+    outfile.finish();
+    return;
+} // end write_initial_flow_file() UnstructuredGrid version

@@ -138,6 +138,70 @@ function SBlock:tojson()
    return str
 end
 
+-- -----------------------------------------------------------------------
+
+-- Class for Block construction (based on an UnstructuredGrid).
+UBlock = {
+   myType = "UBlock" -- unstructured_grid block for gas dynamics
+} -- end Block
+
+function UBlock:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new block, for later construction of the config file.
+   -- Note that we want block id to start at zero for the D code.
+   o.id = #(blocks)
+   blocks[#(blocks)+1] = o
+   -- Must have a grid and fillCondition
+   assert(o.grid, "need to supply a grid")
+   assert(o.fillCondition, "need to supply a fillCondition")
+   -- Extract some information from the UnstructuredGrid
+   o.ncells = o.grid:get_ncells()
+   o.nvertices = o.grid:get_nvertices()
+   o.nfaces = o.grid:get_nfaces()
+   o.nboundaries = o.grid:get_nboundaries()
+   -- Fill in default values, if already not set
+   if o.active == nil then
+      o.active = true
+   end
+   o.label = o.label or string.format("BLOCK-%d", o.id)
+   o.omegaz = o.omegaz or 0.0
+   o.bcList = o.bcList or {} -- boundary conditions
+   -- [TODO] think about attaching boundary conditions via boundary labels or tags.
+   for i = 0, o.nboundaries-1 do
+      o.bcList[i] = o.bcList[i] or WallBC_WithSlip:new()
+   end
+   o.hcellList = o.hcellList or {}
+   o.xforceList = o.xforceList or {}
+   return o
+end
+
+function UBlock:tojson()
+   local str = string.format('"block_%d": {\n', self.id)
+   str = str .. string.format('    "type": "%s",\n', self.myType)
+   str = str .. string.format('    "label": "%s",\n', self.label)
+   str = str .. string.format('    "active": %s,\n', tostring(self.active))
+   str = str .. string.format('    "ncells": %d,\n', self.ncells)
+   str = str .. string.format('    "nvertices": %d,\n', self.nvertices)
+   str = str .. string.format('    "nfaces": %d,\n', self.nfaces)
+   str = str .. string.format('    "nboundaries": %d,\n', self.nboundaries)
+   str = str .. string.format('    "omegaz": %f,\n', self.omegaz)
+   str = str .. string.format('    "nhcell": %d,\n', #(self.hcellList))
+   for i = 1, #(self.hcellList) do
+      local hcell = self.hcellList[i]
+      str = str .. string.format('    "history-cell-%d": %d,\n', i-1, hcell)
+   end
+   -- Boundary conditions
+   for i = 0, self.nboundaries-1 do
+      str = str .. string.format('    "boundary_%d": ', i) ..
+	 self.bcList[i]:tojson() .. ',\n'
+   end
+   str = str .. '    "dummy_entry_without_trailing_comma": 0\n'
+   str = str .. '},\n'
+   return str
+end
+
 -- ---------------------------------------------------------------------------
 
 function closeEnough(vA, vB, tolerance)
@@ -193,6 +257,11 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    -- tolerance: spatial tolerance for the colocation of vertices
    blockList = blockList or blocks
    excludeList = excludeList or {}
+   -- Put UBlock objects into the exclude list because they don't
+   -- have a simple topology that can always be matched to an SBlock.
+   for _,A in ipairs(blockList) do
+      if A.myType == "UBlock" then excludeList[#excludeList+1] = A end
+   end
    tolerance = tolerance or 1.0e-6
    for _,A in ipairs(blockList) do
       for _,B in ipairs(blockList) do
@@ -558,7 +627,11 @@ function build_job_files(job)
       local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000.gz", id)
       blocks[i].grid:write_to_gzip_file(fileName)
       local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000.gz", id)
-      write_initial_flow_file(fileName, blocks[i].grid, blocks[i].fillCondition, 0.0)
+      if blocks[i].myType == "SBlock" then
+	 write_initial_sg_flow_file(fileName, blocks[i].grid, blocks[i].fillCondition, 0.0)
+      else
+	 write_initial_usg_flow_file(fileName, blocks[i].grid, blocks[i].fillCondition, 0.0)
+      end
    end
    for i = 1, #solidBlocks do
       local id = solidBlocks[i].id
