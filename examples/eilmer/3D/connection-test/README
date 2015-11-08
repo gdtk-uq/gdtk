@@ -23,3 +23,9 @@ grep for 'FAILED' in the results file to give us nothing.
 
 > grep FAILED test-results.txt
 
+How the test works
+------------------
+There is a large amount of commenting available in the
+file connection-test.lua in this directory that describes
+the ideas and implementation of the test.
+
