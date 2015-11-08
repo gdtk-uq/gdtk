@@ -57,7 +57,7 @@ class BoundaryCondition {
     // Boundary condition is built from composable pieces.
 public:
     // Location of the boundary condition.
-    SBlock blk; // the block to which this BC is applied
+    Block blk; // the block to which this BC is applied
     int which_boundary; // identity/index of the relevant boundary
     // We may have a label for this specific boundary.
     string label;

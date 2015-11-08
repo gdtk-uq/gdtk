@@ -39,12 +39,6 @@ import bc;
 
 class SBlock: Block {
 public:
-    size_t nicell;
-    size_t njcell;
-    size_t nkcell;
-    size_t imin, imax;
-    size_t jmin, jmax;
-    size_t kmin, kmax;
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     size_t[] micell, mjcell, mkcell; // locations of monitor cells
 
@@ -185,7 +179,11 @@ public:
 	return [i, j, k];
     } // end to_ijk_indices()
 
-    @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0) { return _ctr[to_global_index(i,j,k)]; }
+    @nogc
+    override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
+    {
+	return _ctr[to_global_index(i,j,k)];
+    }
     @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) { return _ifi[to_global_index(i,j,k)]; }
     @nogc ref FVInterface get_ifj(size_t i, size_t j, size_t k=0) { return _ifj[to_global_index(i,j,k)]; }
     @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0) { return _ifk[to_global_index(i,j,k)]; }
@@ -1602,6 +1600,20 @@ public:
 	outfile.finish();
     } // end write_solution()
 
+    override void propagate_inflow_data_west_to_east()
+    {
+	// Assume that the west-face ghost cells have appropriate data.
+	for ( size_t k = kmin; k <= kmax; ++k ) {
+	    for ( size_t j = jmin; j <= jmax; ++j ) {
+		auto src_cell = get_cell(imin-1,j,k);
+		for ( size_t i = imin; i <= imax; ++i ) {
+		    auto dest_cell = get_cell(i,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.all_flow);
+		}
+	    }
+	}
+    } // end propagate_inflow_data_west_to_east()
+
     override void convective_flux()
     {
 	FVCell cL1, cL0, cR0, cR1;
@@ -1722,9 +1734,9 @@ public:
     } // end convective_flux()
 
     @nogc
-    void copy_into_ghost_cells(int destination_face,
-			       ref SBlock src_blk, int src_face, int src_orientation,
-			       int type_of_copy, bool with_encode)
+    override void copy_into_ghost_cells(int destination_face,
+					ref Block src_blk, int src_face, int src_orientation,
+					int type_of_copy, bool with_encode)
     {
 	size_t i_dest, i_src, j_dest, j_src, k_dest, k_src, i, j, k;
 	FVCell src0, dest0, src1, dest1;
@@ -2411,20 +2423,6 @@ public:
 	    } // j loop
 	} // end switch destination_face
     } // end copy_to_ghost_cells()
-
-    void propagate_inflow_data_west_to_east()
-    {
-	// Assume that the west-face ghost cells have appropriate data.
-	for ( size_t k = kmin; k <= kmax; ++k ) {
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		auto src_cell = get_cell(imin-1,j,k);
-		for ( size_t i = imin; i <= imax; ++i ) {
-		    auto dest_cell = get_cell(i,j,k);
-		    dest_cell.copy_values_from(src_cell, CopyDataOption.all_flow);
-		}
-	    }
-	}
-    } // end propagate_inflow_data_west_to_east()
 
 } // end class SBlock
 

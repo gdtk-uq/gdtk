@@ -35,7 +35,12 @@ public:
 	return "UserDefinedGhostCellEffect(fname=" ~ luafname ~ ")";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("UserDefinedGhostCell.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell ghostCell0, ghostCell1;
@@ -205,7 +210,12 @@ public:
 	return "UserDefined(fname=" ~ luafname ~ ")";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_UserDefined.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell cell;

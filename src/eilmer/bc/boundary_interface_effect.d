@@ -14,6 +14,7 @@ import std.conv;
 import std.stdio;
 
 import geom;
+import sgrid;
 import json_helper;
 import globalconfig;
 import globaldata;
@@ -74,7 +75,7 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
 
 class BoundaryInterfaceEffect {
 public:
-    SBlock blk;
+    Block blk;
     int which_boundary;
     string type;
 
@@ -88,7 +89,18 @@ public:
     {
 	return "BoundaryInterfaceEffect()";
     }
-    abstract void apply(double t, int gtl, int ftl);
+    void apply(double t, int gtl, int ftl)
+    {
+	final switch (blk.grid_type) {
+	case Grid_t.unstructured_grid: 
+	    apply_unstructured_grid(t, gtl, ftl);
+	    break;
+	case Grid_t.structured_grid:
+	    apply_structured_grid(t, gtl, ftl);
+	}
+    }
+    abstract void apply_unstructured_grid(double t, int gtl, int ftl);
+    abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class BoundaryInterfaceEffect
 
 
@@ -103,7 +115,12 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 	return "CopyCellData()";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_CopyCellData.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell cell;
@@ -193,7 +210,12 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
 	return "ZeroVelocity()";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_ZeroVelocity.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell cell;
@@ -287,7 +309,12 @@ public:
 	return "FixedT(Twall=" ~ to!string(Twall) ~ ")";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_FixedT.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell cell;
@@ -377,7 +404,12 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
 	return "UpdateThermoTransCoeffs()";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_UpdateThermoTransCoeffs.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell cell;
@@ -479,7 +511,12 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 	return "WallKOmega()";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_WallKOmega.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell cell;
@@ -615,7 +652,12 @@ public:
 	return "TemperatureFromGasSolidInterface()";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_TemperatureFromGasSolidInterface.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	double kS = solidBlocks[neighbourSolidBlk].sp.k;
 	computeFluxesAndTemperatures(ftl, kS,

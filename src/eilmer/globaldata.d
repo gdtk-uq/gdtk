@@ -9,13 +9,13 @@
 module globaldata;
 
 import globalconfig;
-import sblock;
+import block;
 import ssolidblock;
 
 // Collections of blocks that we can iterate over in parallel.
 // The current (shared-memory) parallel code is based on having one SBlock object
 // or SSolidBlock object per thread.
-static SBlock[] gasBlocks;  
+static Block[] gasBlocks;  
 static SSolidBlock[] solidBlocks;
 
 // We also need to have a dedicated set of configuration parameters for each thread

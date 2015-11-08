@@ -50,7 +50,7 @@ end
 
 -- Class for Block construction (based on a StructuredGrid).
 SBlock = {
-   myType = "SBlock"
+   myType = "SBlock" -- structured_grid block for gas dynamics
 } -- end Block
 
 function SBlock:new(o)
@@ -110,6 +110,7 @@ end
 
 function SBlock:tojson()
    local str = string.format('"block_%d": {\n', self.id)
+   str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
    str = str .. string.format('    "nic": %d,\n', self.nic)

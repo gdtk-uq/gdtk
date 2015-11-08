@@ -12,12 +12,13 @@ import std.json;
 import std.string;
 import std.conv;
 
+import geom;
+import sgrid;
+import json_helper;
 import globalconfig;
 import globaldata;
 import block;
 import sblock;
-import geom;
-import json_helper;
 import fvcore;
 import fvcell;
 import fvinterface;
@@ -49,7 +50,7 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
 
 class BoundaryFluxEffect {
 public:
-    SBlock blk;
+    Block blk;
     int which_boundary;
     string type;
     
@@ -63,7 +64,18 @@ public:
     {
 	return "BoundaryFluxEffect()";
     }
-    abstract void apply(double t, int gtl, int ftl);
+    void apply(double t, int gtl, int ftl)
+    {
+	final switch (blk.grid_type) {
+	case Grid_t.unstructured_grid: 
+	    apply_unstructured_grid(t, gtl, ftl);
+	    break;
+	case Grid_t.structured_grid:
+	    apply_structured_grid(t, gtl, ftl);
+	}
+    }
+    abstract void apply_unstructured_grid(double t, int gtl, int ftl);
+    abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class BoundaryFluxEffect()
 
 // NOTE: This GAS DOMAIN boundary effect has a large
@@ -90,8 +102,12 @@ public:
     {
 	return "BFE_EnergyFluxFromAdjacentSolid()";
     }
-    
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BFE_EnergyFluxFromAdjacentSolid.apply_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	double kS = solidBlocks[neighbourSolidBlk].sp.k;
 	computeFluxesAndTemperatures(ftl, kS,

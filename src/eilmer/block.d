@@ -51,6 +51,18 @@ public:
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
 
+    // Although the following limits are for the structured grid, 
+    // the boundary condition objects need to see them through
+    // references to objects of this Block class.
+    // They should be unused for unstructured-grid blocks but
+    // the SBlock constructor should set appropriate values.
+    size_t nicell;
+    size_t njcell;
+    size_t nkcell;
+    size_t imin, imax; 
+    size_t jmin, jmax;
+    size_t kmin, kmax;
+
     this(int id, Grid_t grid_type, string label)
     {
 	this.id = id;
@@ -68,13 +80,19 @@ public:
 
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
+    @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
     abstract void read_grid(string filename, size_t gtl=0);
     abstract void write_grid(string filename, double sim_time, size_t gtl=0);
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
+    abstract void propagate_inflow_data_west_to_east();
     abstract void convective_flux();
+    @nogc
+    abstract void copy_into_ghost_cells(int destination_face,
+					ref Block src_blk, int src_face, int src_orientation,
+					int type_of_copy, bool with_encode);
 
     void identify_reaction_zones(int gtl)
     // Set the reactions-allowed flag for cells in this block.

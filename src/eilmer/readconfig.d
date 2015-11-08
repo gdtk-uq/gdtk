@@ -23,6 +23,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import sblock;
+import ublock;
 import ssolidblock;
 import bc;
 import user_defined_source_terms;
@@ -217,7 +218,19 @@ void read_config_file()
 	dedicatedConfig ~= new LocalConfig();
     }
     foreach (i; 0 .. GlobalConfig.nBlocks) {
-	gasBlocks ~= new SBlock(i, jsonData["block_" ~ to!string(i)]);
+	auto jsonDataForBlock = jsonData["block_" ~ to!string(i)];
+	string blockType = getJSONstring(jsonDataForBlock, "type", "");
+	switch (blockType) {
+	case "SBlock": 
+	    gasBlocks ~= new SBlock(i, jsonDataForBlock);
+	    break;
+	case "UBlock":
+	    gasBlocks ~= new UBlock(i, jsonDataForBlock);
+	    break;
+	default:
+	    throw new Error(format("Construction of block[%d], unknown type: %s",
+				   i, blockType));
+	} // end switch blockType
 	if (GlobalConfig.verbosity_level > 1) {
 	    writeln("  Block[", i, "]: ", gasBlocks[i]);
 	}

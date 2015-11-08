@@ -101,6 +101,12 @@ public:
 	return to!string(repr);
     }
 
+    @nogc 
+    override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
+    {
+	return cells[i]; // j, k ignored
+    }
+
     override void init_grid_and_flow_arrays(string gridFileName)
     {
 	grid = new UnstructuredGrid(gridFileName, "gziptext");
@@ -168,10 +174,47 @@ public:
 	outfile.finish();
     } // end write_solution()
 
+    override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
+    // Used for the turbulence modelling.
+    {
+	throw new Error("compute_distance_to_nearest_wall_for_all_cells function not yet implemented for unstructured grid.");
+	// [TODO]
+    } // end compute_distance_to_nearest_wall_for_all_cells()
+
+    override void read_grid(string filename, size_t gtl=0)
+    // Read the grid vertices from a gzip file.
+    // We delegate the actual file reading to the UnstructuredGrid class.
+    {
+	throw new Error("read_grid function not yet implemented for unstructured grid.");
+	// [TODO]
+    } // end read_grid()
+
+    override void write_grid(string filename, double sim_time, size_t gtl=0)
+    // Note that we reuse the StructuredGrid object that was created on the
+    // use of read_grid().
+    {
+	throw new Error("write_grid function not yet implemented for unstructured grid.");
+	// [TODO]
+    } // end write_grid()
+
+    override void propagate_inflow_data_west_to_east()
+    {
+	throw new Error("propagate_inflow_data_west_to_east() function not implemented for unstructured grid.");
+     }
+
     override void convective_flux()
     {
 	throw new Error("convective_flux function not yet implemented for unstructured grid.");
 	// [TODO]
-    } // end convective_flux()
+    }
+
+    @nogc
+    override void copy_into_ghost_cells(int destination_face,
+					ref Block src_blk, int src_face, int src_orientation,
+					int type_of_copy, bool with_encode)
+    {
+	assert(false, "copy_into_ghost_cells function not implemented for unstructured grid.");
+	// [TODO]
+    }
 
 } // end class UBlock

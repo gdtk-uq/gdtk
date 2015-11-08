@@ -25,7 +25,7 @@ import globalconfig;
 import readconfig;
 import globaldata;
 import flowstate;
-import sblock;
+import block;
 import ssolidblock;
 import solidprops;
 import bc;
@@ -149,7 +149,7 @@ void march_over_blocks()
 			     "    nib=", nib);
 	throw new Error(errMsg);
     }
-    SBlock[][][] gasBlockArray;
+    Block[][][] gasBlockArray;
     gasBlockArray.length = nib;
     foreach (i; 0 .. nib) {
 	gasBlockArray[i].length = njb;

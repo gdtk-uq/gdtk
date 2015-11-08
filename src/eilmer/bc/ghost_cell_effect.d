@@ -9,6 +9,7 @@ import std.stdio;
 import std.math;
 
 import geom;
+import sgrid;
 import json_helper;
 import globalconfig;
 import globaldata;
@@ -112,7 +113,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 
 class GhostCellEffect {
 public:
-    SBlock blk;
+    Block blk;
     int which_boundary;
     string type;
 
@@ -126,7 +127,18 @@ public:
     {
 	return "GhostCellEffect()";
     }
-    abstract void apply(double t, int gtl, int ftl);
+    void apply(double t, int gtl, int ftl)
+    {
+	final switch (blk.grid_type) {
+	case Grid_t.unstructured_grid: 
+	    apply_unstructured_grid(t, gtl, ftl);
+	    break;
+	case Grid_t.structured_grid:
+	    apply_structured_grid(t, gtl, ftl);
+	}
+    }
+    abstract void apply_unstructured_grid(double t, int gtl, int ftl);
+    abstract void apply_structured_grid(double t, int gtl, int ftl);
 } // end class GhostCellEffect
 
 class GhostCellInternalCopyThenReflect : GhostCellEffect {
@@ -142,7 +154,12 @@ public:
 	return "InternalCopyThenReflect()";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellInternalCopyThenReflect.apply_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
@@ -313,7 +330,12 @@ public:
 	return "flowStateCopy(fstate=" ~ to!string(fstate) ~ ")";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellFlowStateCopy.apply_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
     	// Fill ghost cells with data from just inside the boundary
 	// using zero-order extrapolation (i.e. just copy the data).
@@ -407,8 +429,13 @@ public:
     {
 	return "ExtrapolateCopy(x_order=" ~ to!string(xOrder) ~ ")";
     }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellExtrapolateCopy.apply_unstructured_grid() not yet implemented");
+    }
     
-    override void apply(double t, int gtl, int ftl)
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	// Fill ghost cells with data from just inside the boundary
 	// using zero-order extrapolation (i.e. just copy the data).
@@ -894,8 +921,13 @@ public:
     {
 	return "FixedP(p_outside=" ~ to!string(p_outside) ~ ")";
     }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellFixedP.apply_unstructured_grid() not yet implemented");
+    }
     
-    override void apply(double t, int gtl, int ftl)
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
@@ -1006,8 +1038,13 @@ public:
     {
 	return "FixedPT(p_outside=" ~ to!string(p_outside) ~ ", T_outside=" ~ to!string(T_outside) ~")";
     }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellFixedPT.apply_unstructured_grid() not yet implemented");
+    }
     
-    override void apply(double t, int gtl, int ftl)
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
@@ -1200,7 +1237,12 @@ public:
 	}
     } // end set_velocity_components()
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellFromStagnation.apply_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
@@ -1353,7 +1395,7 @@ public:
 
 class GhostCellFullFaceExchangeCopy : GhostCellEffect {
 public:
-    SBlock neighbourBlock;
+    Block neighbourBlock;
     int neighbourFace;
     int neighbourOrientation;
 
@@ -1373,7 +1415,12 @@ public:
 	    ", orient=" ~ to!string(neighbourOrientation) ~ ")";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellFullFaceExchangeCopy.apply_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	blk.copy_into_ghost_cells(which_boundary, 
 				  neighbourBlock,
@@ -1405,8 +1452,14 @@ public:
 	return "MappedCellExchangeCopy(" ~ ")";
     }
 
-    override void apply(double t, int gtl, int ftl)
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
+	throw new Error("GhostCellMappedCellExchangeCopy.apply_unstructured_grid() not yet implemented");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("GhostCellMappedCellExchangeCopy.apply_structured_grid() not yet implemented");
     }
 } // end class GhostCellMappedCellExchangeCopy
 
