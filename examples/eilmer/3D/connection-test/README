@@ -1,0 +1,25 @@
+Notes on running the 3D connection test
+=======================================
+:Author: Rowan J. Gollan
+:Date: 2015-11-08
+
+How to run the test
+-------------------
+
+1. Generate the reference case.
+
+> python generate-ref-result.py
+
+[THIS ASSUMES THE EAST-WEST-0 CONNECTION IS GOOD! Let's hope so.]
+
+2. Run the tests for all 144 connections.
+
+> python run-cases.py
+
+3. The test results are written to: test-results.txt
+If all passes, we should get not the word 'FAILED' anywhere
+in the results file. For a succesful test, e would like the
+grep for 'FAILED' in the results file to give us nothing.
+
+> grep FAILED test-results.txt
+
