@@ -1539,24 +1539,53 @@ public:
     // Note that the position data is read into grid-time-level 0
     // by scan_values_from_string(). 
     // Returns sim_time from file.
+    // Keep in sync with write_initial_flow_file() in flowstate.d
+    // and write_solution below.
     {
-	size_t ni, nj, nk;
-	double sim_time;
 	if (myConfig.verbosity_level >= 1) {
 	    writeln("read_solution(): Start block ", id);
 	}
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
-	formattedRead(line, " %g", &sim_time);
+	string format_version;
+	formattedRead(line, "structured_grid_flow %s", &format_version);
+	if (format_version != "1.0") {
+	    throw new Error("SBlock.read_solution(): " ~
+			    "format version found: " ~ format_version); 
+	}
 	line = byLine.front; byLine.popFront();
-	// ignore second line; it should be just the names of the variables
+	string myLabel;
+	formattedRead(line, "label: %s", &myLabel);
+	line = byLine.front; byLine.popFront();
+	double sim_time;
+	formattedRead(line, "sim_time: %g", &sim_time);
+	line = byLine.front; byLine.popFront();
+	size_t nvariables;
+	formattedRead(line, "variables: %d", &nvariables);
+	line = byLine.front; byLine.popFront();
+	auto variable_list = line.strip().split();
+	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel);
+	if (variable_list.length != expected_variable_list.length) {
+	    throw new Error("SBlock.read_solution(): mismatch in variable lists");
+	}
 	// [TODO] We should test the incoming strings against the current variable names.
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "%d %d %d", &ni, &nj, &nk);
-	if ( ni != nicell || nj != njcell || 
-	     nk != ((myConfig.dimensions == 3) ? nkcell : 1) ) {
+	size_t my_dimensions, nic, njc, nkc;
+	formattedRead(line, "dimensions: %d", &my_dimensions);
+	if (my_dimensions != myConfig.dimensions) {
+	    throw new Error("SBlock.read_solution(): " ~
+			    "dimensions found: " ~ to!string(my_dimensions));
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "nicell: %d", &nic);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "njcell: %d", &njc);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "nkcell: %d", &nkc);
+	if (nic != nicell || njc != njcell || 
+	    nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
 	    throw new Error(text("For block[", id, "] we have a mismatch in solution size.",
-				 " Have read ni=", ni, " nj=", nj, " nk=", nk));
+				 " Have read nic=", nic, " njc=", njc, " nkc=", nkc));
 	}	
 	for ( size_t k = kmin; k <= kmax; ++k ) {
 	    for ( size_t j = jmin; j <= jmax; ++j ) {
@@ -1573,22 +1602,27 @@ public:
     // Write the flow solution (i.e. the primary variables at the cell centers)
     // for a single block.
     // This is almost Tecplot POINT format.
+    // Keep in sync with write_initial_flow_file() in flowstate.d
+    // and read_solution above.
     {
 	if (myConfig.verbosity_level >= 1) {
 	    writeln("write_solution(): Start block ", id);
 	}
 	auto outfile = new GzipOut(filename);
 	auto writer = appender!string();
-	formattedWrite(writer, "%20.12e\n", sim_time);
-	outfile.compress(writer.data);
-	writer = appender!string();
-	foreach(varname; variable_list_for_cell(myConfig.gmodel)) {
+	formattedWrite(writer, "structured_grid_flow 1.0\n");
+	formattedWrite(writer, "label: %s\n", label);
+	formattedWrite(writer, "sim_time: %20.12e\n", sim_time);
+	auto variable_list = variable_list_for_cell(myConfig.gmodel);
+	formattedWrite(writer, "variables: %d\n", variable_list.length);
+	foreach(varname; variable_list) {
 	    formattedWrite(writer, " \"%s\"", varname);
 	}
 	formattedWrite(writer, "\n");
-	outfile.compress(writer.data);
-	writer = appender!string();
-	formattedWrite(writer, "%d %d %d\n", nicell, njcell, nkcell);
+	formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
+	formattedWrite(writer, "nicell: %d\n", nicell);
+	formattedWrite(writer, "njcell: %d\n", njcell);
+	formattedWrite(writer, "nkcell: %d\n", nkcell);
 	outfile.compress(writer.data);
 	for ( size_t k = kmin; k <= kmax; ++k ) {
 	    for ( size_t j = jmin; j <= jmax; ++j ) {

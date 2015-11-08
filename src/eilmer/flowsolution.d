@@ -173,7 +173,14 @@ class SBlockFlow {
     // Much like the Python library for postprocessing in Eilmer3,
     // we are going to handle the data as a big chunk of numbers,
     // with the label for each variable coming the top of the file.
+    //
+    // Note that this class is like the SBlock class but does not 
+    // have all of the data space needed for a simulation.
+    // The intention is that it is "lighter weight" and so allow
+    // postprocessing of workstations that may be considerably smaller
+    // than the computer used for generating the simulation data.
 public:
+    size_t dimensions;
     size_t nic;
     size_t njc;
     size_t nkc;
@@ -184,16 +191,37 @@ public:
     this(string filename)
     {
 	// Read in the flow data for a single structured block.
+	// Keep in sync with SBlock.read_solution() and SBlock.write_solution().
 	string[] tokens;
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
-	formattedRead(line, " %g", &sim_time);
+	string format_version;
+	formattedRead(line, "structured_grid_flow %s", &format_version);
+	if (format_version != "1.0") {
+	    throw new Error("SBlock.read_solution(): " ~
+			    "format version found: " ~ format_version); 
+	}
+	line = byLine.front; byLine.popFront();
+	string myLabel;
+	formattedRead(line, "label: %s", &myLabel);
+	line = byLine.front; byLine.popFront();
+	double sim_time;
+	formattedRead(line, "sim_time: %g", &sim_time);
+	line = byLine.front; byLine.popFront();
+	size_t nvariables;
+	formattedRead(line, "variables: %d", &nvariables);
 	line = byLine.front; byLine.popFront();
 	variableNames = line.strip().split();
 	foreach (ref var; variableNames) { var = removechars(var, "\""); }
 	foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "%d %d %d", &nic, &njc, &nkc);
+	formattedRead(line, "dimensions: %d", &dimensions);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "nicell: %d", &nic);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "njcell: %d", &njc);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "nkcell: %d", &nkc);
 	_data.length = nic;
 	// Resize the storage for our block of data.
 	foreach (i; 0 .. nic) {

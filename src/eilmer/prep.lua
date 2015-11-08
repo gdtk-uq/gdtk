@@ -557,9 +557,8 @@ function build_job_files(job)
       print("Block id=", id)
       local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000.gz", id)
       blocks[i].grid:write_to_gzip_file(fileName)
-      local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000", id)
+      local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000.gz", id)
       write_initial_flow_file(fileName, blocks[i].grid, blocks[i].fillCondition, 0.0)
-      os.execute("gzip -f " .. fileName)
    end
    for i = 1, #solidBlocks do
       local id = solidBlocks[i].id
