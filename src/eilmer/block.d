@@ -10,6 +10,7 @@ import std.math;
 import std.json;
 import util.lua;
 import geom;
+import sgrid;
 import gas;
 import kinetics;
 import globalconfig;
@@ -29,6 +30,7 @@ enum
 class Block {
 public:
     int id; // block identifier: assumed to be the same as the block number.
+    Grid_t grid_type; // structured or unstructured
     string label;
     LocalConfig myConfig;
     lua_State* myL;
@@ -49,9 +51,10 @@ public:
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
 
-    this(int id, string label)
+    this(int id, Grid_t grid_type, string label)
     {
 	this.id = id;
+	this.grid_type = grid_type;
 	this.label = label;
 	myConfig = dedicatedConfig[id];
 	myL = luaL_newstate();

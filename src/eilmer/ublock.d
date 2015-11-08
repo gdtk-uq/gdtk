@@ -18,6 +18,7 @@ import json_helper;
 import lua_helper;
 import gzip;
 import geom;
+import sgrid;
 import usgrid;
 import gas;
 import kinetics;
@@ -46,7 +47,7 @@ public:
     this(in int id, JSONValue json_data)
     {
 	label = getJSONstring(json_data, "label", "");
-	super(id, label);
+	super(id, Grid_t.unstructured_grid, label);
 	ncells = getJSONint(json_data, "ncells", 0);
 	nvertices = getJSONint(json_data, "nvertices", 0);
 	nfaces = getJSONint(json_data, "nfaces", 0);
@@ -83,7 +84,7 @@ public:
     override string toString() const
     {
 	char[] repr;
-	repr ~= "UBlock(";
+	repr ~= "UBlock(unstructured_grid, ";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= " label=\"" ~ label ~ "\"";
 	repr ~= ", active=" ~ to!string(active);

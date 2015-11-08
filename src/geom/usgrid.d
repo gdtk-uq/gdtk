@@ -198,7 +198,7 @@ public:
 
     this(const UnstructuredGrid other, const string new_label="")
     {
-	super("unstructured_grid", other.dimensions,
+	super(Grid_t.unstructured_grid, other.dimensions,
 	      ((new_label == "")? other.label : new_label));
 	nvertices = other.nvertices;
 	ncells = other.ncells;
@@ -212,7 +212,7 @@ public:
 
     this(const StructuredGrid sg, const string new_label="")
     {
-	super("unstructured_grid", sg.dimensions,
+	super(Grid_t.unstructured_grid, sg.dimensions,
 	      ((new_label == "")? sg.label : new_label));
 	if (dimensions == 2) {
 	    nvertices = sg.niv * sg.njv;
@@ -403,7 +403,8 @@ public:
     // Imported grid.
     this(string fileName, string fmt, string new_label="")
     {
-	super("unstructured_grid", 0, new_label); // dimensions will be reset on reading grid
+	super(Grid_t.unstructured_grid, 0, new_label);
+	// dimensions will be reset on reading grid
 	switch (fmt) {
 	case "text":
 	    read_from_text_file(fileName, false);
