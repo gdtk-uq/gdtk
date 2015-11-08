@@ -2126,9 +2126,9 @@ public:
 		    case Face.north:
 			final switch (src_orientation) {
 			case 0: i_src = i; k_src = k; break;
-			case 1: i_src = src_blk.nicell - k - 1; k_src = i; break;
+			case 1: i_src = k; k_src = src_blk.nkcell - i - 1; break;
 			case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - k - 1; break;
-			case 3: i_src = k; k_src = src_blk.nkcell - i - 1;
+			case 3: i_src = src_blk.nicell - k - 1; k_src = i;
 			} // end switch (src_orientation)
 			j_src = src_blk.jmax; 
 			i_src += src_blk.imin; k_src += src_blk.kmin;
