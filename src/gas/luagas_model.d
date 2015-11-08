@@ -8,6 +8,8 @@
 
 module gas.luagas_model;
 
+import std.math;
+import std.algorithm;
 import std.stdio;
 import std.conv;
 import std.string;
@@ -16,7 +18,6 @@ import util.lua_service;
 
 import gas.gas_model;
 import gas.gas_model_util;
-
 
 // name for GasModel class in Lua scripts
 immutable string GasModelMT = "GasModel";
@@ -385,6 +386,19 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
     }
 }
 
+void checkAndScaleMassFractions(double[] massf, double tol)
+{
+    auto massfSum = sum(massf);
+    if ( fabs(massfSum - 1.0) > tol ) {
+	string errMsg = "The given mass fraction values do not sum to 1.0.\n";
+	errMsg ~= format("The sum value is: %e\n", massfSum);
+	errMsg ~= format("The error in the sum is larger than tolerance= %e \n", tol);
+	throw new Error(errMsg);
+    }
+    // otherwise, do scaling based on normalising by sum
+    massf[] /= massfSum;
+}
+
 extern(C) int createTableForGasState(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
@@ -603,6 +617,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     if ( lua_istable(L, -1) ) {
 	int massfIdx = lua_gettop(L);
 	getSpeciesValsFromTable(L, gm, massfIdx, Q.massf, "massf");
+	checkAndScaleMassFractions(Q.massf, MASSF_ERROR_TOL);
     }
     else if ( lua_isnil(L, -1) ) {
 	// leave untouched
