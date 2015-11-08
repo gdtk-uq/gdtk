@@ -1470,7 +1470,6 @@ public:
     // We delegate the actual file reading to the StructuredGrid class.
     {
 	size_t nivtx, njvtx, nkvtx;
-	double x, y, z;
 	if (myConfig.verbosity_level >= 1) {
 	    writeln("read_grid(): Start block ", id);
 	}

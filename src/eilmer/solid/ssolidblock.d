@@ -17,6 +17,7 @@ import util.lua;
 import json_helper;
 import gzip;
 import geom;
+import sgrid;
 import globalconfig;
 import block;
 import solidblock;
@@ -38,6 +39,8 @@ public:
     SolidBoundaryCondition[6] bc;
 
 private:
+    StructuredGrid grid; // for reading and writing
+
     size_t _nidim;
     size_t _njdim;
     size_t _nkdim;
@@ -236,29 +239,11 @@ public:
     override void readGrid(string filename)
     {
 	size_t nivtx, njvtx, nkvtx;
-	double x, y, z;
 	if ( GlobalConfig.verbosity_level >= 1 && id == 0 ) {
 	    writeln("SSolidBlock.readGrid(): Start block ", id);
 	}
-	auto byLine = new GzipByLine(filename);
-	auto line = byLine.front; byLine.popFront();
-	string format_version;
-	formattedRead(line, "structured_grid %s", &format_version);
-	if (format_version != "1.0") {
-	    throw new Error("SBlock.read_grid(): format version found: " ~ format_version); 
-	}
-	line = byLine.front; byLine.popFront();
-	string grid_label;
-	formattedRead(line, "label: %s", &grid_label);
-	line = byLine.front; byLine.popFront();
-	int grid_dimensions;
-	formattedRead(line, "dimensions: %d", &grid_dimensions);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "niv: %d", &nivtx);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "njv: %d", &njvtx);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "nkv: %d", &nkvtx);
+	grid = new StructuredGrid(filename, "gziptext");
+	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
 	if ( GlobalConfig.dimensions == 3 ) {
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
 		throw new Error(text("For solid_block[", id, "] we have a mismatch in 3D grid size.",
@@ -268,13 +253,11 @@ public:
 	    for ( size_t k = kmin; k <= kmax+1; ++k ) {
 		for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		    for ( size_t i = imin; i <= imax+1; ++i ) {
-			line = byLine.front; byLine.popFront();
-			// Note that the line starts with whitespace.
-			formattedRead(line, " %g %g %g", &x, &y, &z);
+			auto src_vtx = grid.vtx[i-imin][j-jmin][k-kmin];
 			auto vtx = getVtx(i,j,k);
-			vtx.pos.refx = x;
-			vtx.pos.refy = y;
-			vtx.pos.refz = z;
+			vtx.pos.refx = src_vtx.x;
+			vtx.pos.refy = src_vtx.y;
+			vtx.pos.refz = src_vtx.z;
 		    } // for i
 		} // for j
 	    } // for k
@@ -286,12 +269,10 @@ public:
 	    }
 	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
-		    line = byLine.front; byLine.popFront();
-		    // Note that the line starts with whitespace.
-		    formattedRead(line, " %g %g", &x, &y);
 		    auto vtx = getVtx(i,j);
-		    vtx.pos.refx = x;
-		    vtx.pos.refy = y;
+		    auto src_vtx = grid.vtx[i-imin][j-jmin][0];
+		    vtx.pos.refx = src_vtx.x;
+		    vtx.pos.refy = src_vtx.y;
 		    vtx.pos.refz = 0.0;
 		} // for i
 	    } // for j
@@ -304,33 +285,23 @@ public:
 	    writeln("SSolidBlock.writeGrid(): Start block ", id);
 	}
 	size_t kmaxrange;
-	auto outfile = new GzipOut(filename);
-	auto writer = appender!string();
-	formattedWrite(writer, "structured_grid 1.0\n");
-	formattedWrite(writer, "label: %s\n", "");
-	formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
-	formattedWrite(writer, "niv: %d\n", nicell+1);
-	formattedWrite(writer, "njv: %d\n", njcell+1);
 	if ( GlobalConfig.dimensions == 3 ) {
-	    formattedWrite(writer, "nkv: %d\n", nkcell+1);
 	    kmaxrange = kmax + 1;
 	} else { // 2D case
-	    formattedWrite(writer, "nkv: %d\n", nkcell);
 	    kmaxrange = kmax;
 	}
-	outfile.compress(writer.data);
 	for ( size_t k = kmin; k <= kmaxrange; ++k ) {
 	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
 		    auto vtx = getVtx(i,j,k);
-		    writer = appender!string();
-		    formattedWrite(writer, "%20.12e %20.12e %20.12e\n",
-				   vtx.pos.x, vtx.pos.y, vtx.pos.z);
-		    outfile.compress(writer.data);
+		    auto dest_vtx = grid.vtx[i-imin][j-jmin][k-kmin];
+		    dest_vtx.refx = vtx.pos.x;
+		    dest_vtx.refy = vtx.pos.y;
+		    dest_vtx.refz = vtx.pos.z;
 		} // for i
 	    } // for j
 	} // for k
-	outfile.finish();
+	grid.write_to_gzip_file(filename);
     } // end write_grid()
 
     override void readSolution(string filename)
