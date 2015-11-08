@@ -23,12 +23,14 @@ import univariatefunctions;
 
 //-----------------------------------------------------------------
 
+enum Grid_t {structured_grid, unstructured_grid}
+
 class Grid {
-    string grid_type; // "unstructured_grid" or "structured_grid"
+    Grid_t grid_type;
     int dimensions; // 2 or 3
     string label;
     
-    this(string grid_type, int dimensions, string label="")
+    this(Grid_t grid_type, int dimensions, string label="")
     {
 	this.grid_type = grid_type;
 	this.dimensions = dimensions;
@@ -51,7 +53,7 @@ public:
     this(int niv, int njv, int nkv=1, string label="")
     {
 	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
-	super("structured_grid", dim, label);
+	super(Grid_t.structured_grid, dim, label);
 	this.niv = niv; this.njv = njv; this.nkv = nkv;
 	resize_array();
     }

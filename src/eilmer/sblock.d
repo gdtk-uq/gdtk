@@ -80,7 +80,7 @@ private:
 public:
     this(int id, size_t nicell, size_t njcell, size_t nkcell, string label)
     {
-	super(id, label);
+	super(id, Grid_t.structured_grid, label);
 	this.nicell = nicell;
 	this.njcell = njcell;
 	this.nkcell = nkcell;
@@ -151,7 +151,7 @@ public:
     override string toString() const
     {
 	char[] repr;
-	repr ~= "SBlock(";
+	repr ~= "SBlock(structured_grid, ";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= " label=\"" ~ label ~ "\"";
 	repr ~= ", active=" ~ to!string(active);
