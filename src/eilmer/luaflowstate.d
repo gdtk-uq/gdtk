@@ -15,6 +15,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.traits;
+import gzip;
 import util.lua;
 import util.lua_service;
 import gas;
@@ -403,98 +404,80 @@ extern(C) int write_initial_flow_file_from_lua(lua_State* L)
     if ( lua_isfunction(L, 3) ) {
 	// Assume we can use the function then.
 	// A lot of code borrowed from flowstate.d
-	// [TODO] Refactor this somehow.
-	int nic = grid.niv - 1;
-	int njc = grid.njv - 1;
-	int nkc = grid.nkv - 1;
-	if (GlobalConfig.dimensions == 2) nkc = 1;
-	
-	string cell_data_as_string(int i, int j, int k)
-	{
-	    auto p000 = grid[i,j,k];
-	    auto p100 = grid[i+1,j,k];
-	    auto p110 = grid[i+1,j+1,k];
-	    auto p010 = grid[i,j+1,k];
-	    // [TODO] provide better calculation using geom module.
-	    // For the moment, it doesn't matter greatly because the solver 
-	    // will compute it's own approximations
-	    auto pos = 0.25*(p000 + p100 + p110 + p010);
-	    auto volume = 0.0;
-	    if (GlobalConfig.dimensions == 3) {
-		auto p001 = grid[i,j,k+1];
-		auto p101 = grid[i+1,j,k+1];
-		auto p111 = grid[i+1,j+1,k+1];
-		auto p011 = grid[i,j+1,k+1];
-		pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
-	    }
-	    // Now grab flow state via Lua function call
-	    lua_pushvalue(L, 3);
-	    lua_pushnumber(L, pos.x);
-	    lua_pushnumber(L, pos.y);
-	    lua_pushnumber(L, pos.z);
-	    if ( lua_pcall(L, 3, 1, 0) != 0 ) {
-		string errMsg = "Error in Lua function call for setting FlowState\n";
-		errMsg ~= "as a function of postion (x, y, z).\n";
-		luaL_error(L, errMsg.toStringz);
-	    }
-	    fs = checkFlowState(L, -1);
-	    if ( !fs ) {
-		string errMsg = "Error in from Lua function call for setting FlowState\n";
-		errMsg ~= "as a function of postion (x, y, z).\n";
-		errMsg ~= "The returned object is not a proper FlowState object.";
-		luaL_error(L, errMsg.toStringz);
-	    }
-	    // Should match FVCell.write_values_to_string()
-	    auto writer = appender!string();
-	    formattedWrite(writer, "%.12e %.12e %.12e %.12e %.12e %.12e %.12e %.12e",
-			   pos.x, pos.y, pos.z, volume, fs.gas.rho,
-			   fs.vel.x, fs.vel.y, fs.vel.z);
-	    if (GlobalConfig.MHD)
-		formattedWrite(writer, " %.12e %.12e %.12e", fs.B.x, fs.B.y, fs.B.z); 
-	    formattedWrite(writer, " %.12e %.12e %.12e", fs.gas.p, fs.gas.a, fs.gas.mu);
-	    foreach (kvalue; fs.gas.k) formattedWrite(writer, " %.12e", kvalue); 
-	    int S = 0;  // zero for shock detector
-	    formattedWrite(writer, " %.12e %.12e %d", fs.mu_t, fs.k_t, S);
-	    if (GlobalConfig.radiation) {
-		double Q_rad_org = 0.0; double f_rad_org = 0.0; double Q_rE_rad = 0.0;
-		formattedWrite(writer, " %.12e %.12e %.12e", Q_rad_org, f_rad_org, Q_rE_rad);
-	    }
-	    formattedWrite(writer, " %.12e %.12e", fs.tke, fs.omega);
-	    foreach (massfvalue; fs.gas.massf) formattedWrite(writer, " %.12e", massfvalue); 
-	    double dt_chem = -1.0;
-	    if (fs.gas.massf.length > 1) formattedWrite(writer, " %.12e", dt_chem); 
-	    foreach (imode; 0 .. fs.gas.e.length) 
-		formattedWrite(writer, " %.12e %.12e", fs.gas.e[imode], fs.gas.T[imode]); 
-	    double dt_therm = -1.0;
-	    if (fs.gas.e.length > 1) formattedWrite(writer, " %.12e", dt_therm); 
-	    lua_pop(L, 1);
-	    return writer.data;
-	} // end  cell_data_as_string()
+	// Keep in sync with write_initial_flow_file() function in that file.
+	//
+	// Numbers of cells derived from numbers of vertices in grid.
+	int nicell = grid.niv - 1;
+	int njcell = grid.njv - 1;
+	int nkcell = grid.nkv - 1;
+	if (GlobalConfig.dimensions == 2) nkcell = 1;
+	//	
 	// Write the data for the whole structured block.
-	auto gmodel = GlobalConfig.gmodel_master;
-	auto f = File(fname, "w");
-	f.writefln("%20.12e", t0);
-	// Variable list for cell on one line.
+	auto outfile = new GzipOut(fname);
 	auto writer = appender!string();
-	foreach(varname; variable_list_for_cell(gmodel)) {
+	formattedWrite(writer, "structured_grid_flow 1.0\n");
+	formattedWrite(writer, "label: %s\n", grid.label);
+	formattedWrite(writer, "sim_time: %20.12e\n", t0);
+	auto gmodel = GlobalConfig.gmodel_master;
+	auto variable_list = variable_list_for_cell(gmodel);
+	formattedWrite(writer, "variables: %d\n", variable_list.length);
+	// Variable list for cell on one line.
+	foreach(varname; variable_list) {
 	    formattedWrite(writer, " \"%s\"", varname);
 	}
-	f.writeln(writer.data);
-	// Numbers of cells.
-	f.writefln("%d %d %d", nic, njc, nkc);
+	formattedWrite(writer, "\n");
+	// Numbers of cells
+	formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+	formattedWrite(writer, "nicell: %d\n", nicell);
+	formattedWrite(writer, "njcell: %d\n", njcell);
+	formattedWrite(writer, "nkcell: %d\n", nkcell);
+	outfile.compress(writer.data);
 	// The actual cell data.
-	foreach (k; 0 .. nkc) {
-	    foreach (j; 0 .. njc) {
-		foreach (i; 0 .. nic) {
-		    f.writefln(" %s", cell_data_as_string(i,j,k));
-		}
-	    }
-	}
-	f.close();
+	foreach (k; 0 .. nkcell) {
+	    foreach (j; 0 .. njcell) {
+		foreach (i; 0 .. nicell) {
+		    auto p000 = grid[i,j,k];
+		    auto p100 = grid[i+1,j,k];
+		    auto p110 = grid[i+1,j+1,k];
+		    auto p010 = grid[i,j+1,k];
+		    // [TODO] provide better calculation using geom module.
+		    // For the moment, it doesn't matter greatly because the solver 
+		    // will compute it's own approximations
+		    auto pos = 0.25*(p000 + p100 + p110 + p010);
+		    auto volume = 0.0;
+		    if (GlobalConfig.dimensions == 3) {
+			auto p001 = grid[i,j,k+1];
+			auto p101 = grid[i+1,j,k+1];
+			auto p111 = grid[i+1,j+1,k+1];
+			auto p011 = grid[i,j+1,k+1];
+			pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+		    }
+		    // Now grab flow state via Lua function call
+		    lua_pushvalue(L, 3);
+		    lua_pushnumber(L, pos.x);
+		    lua_pushnumber(L, pos.y);
+		    lua_pushnumber(L, pos.z);
+		    if ( lua_pcall(L, 3, 1, 0) != 0 ) {
+			string errMsg = "Error in Lua function call for setting FlowState\n";
+			errMsg ~= "as a function of postion (x, y, z).\n";
+			luaL_error(L, errMsg.toStringz);
+		    }
+		    fs = checkFlowState(L, -1);
+		    if ( !fs ) {
+			string errMsg = "Error in from Lua function call for setting FlowState\n";
+			errMsg ~= "as a function of postion (x, y, z).\n";
+			errMsg ~= "The returned object is not a proper FlowState object.";
+			luaL_error(L, errMsg.toStringz);
+		    }
+		    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs) ~ "\n");
+		} // end foreach i
+	    } // end foreach j
+	} // end foreach k
+	outfile.finish();
 	return 0;
-    }
+    } // end if lua_isfunction
     return -1;
-}
+} // end write_initial_flow_file_from_lua()
 
 void registerFlowState(lua_State* L)
 {
