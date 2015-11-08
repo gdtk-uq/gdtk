@@ -82,7 +82,7 @@ grid1 = StructuredGrid:new{psurface=makePatch{Line:new{e,f}, Line:new{d,f}, Line
 
 blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
 
-blk0.bcList[north] = WallBC_AdjacentToSolidBC:new{otherBlock=0,
+blk0.bcList[north] = WallBC_AdjacentToSolid:new{otherBlock=0,
 						  otherFace="south",
 						  orientation=-1}
 blk0.bcList[east] = BoundaryCondition:new{
