@@ -40,6 +40,10 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
 	newBC.preReconAction ~= make_GCE_from_json(jsonObj, blk_id, boundary);
 	newBC.ghost_cell_data_available = true;
     }
+    auto postConvFluxActionList = jsonData["post_conv_flux_action"].array;
+    foreach ( jsonObj; postConvFluxActionList ) {
+	newBC.postConvFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
+    }
     auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
     foreach ( jsonObj; preSpatialDerivActionList ) {
 	newBC.preSpatialDerivAction ~= make_BIE_from_json(jsonObj, blk_id, boundary);
@@ -97,7 +101,7 @@ public:
     // with the end goal to leave the boundary values in an appropriate
     // state. We will call this series of effects an action.
     GhostCellEffect[] preReconAction;
-    //    BoundaryFluxEffect[] postConvFluxAction;
+    BoundaryFluxEffect[] postConvFluxAction;
     BoundaryInterfaceEffect[] preSpatialDerivAction;
     BoundaryFluxEffect[] postDiffFluxAction;
 
@@ -114,6 +118,14 @@ public:
 	    repr ~= "]";
 	}
 	repr ~= ", ";
+	if ( postConvFluxAction.length > 0 ) {
+	    repr ~= "postConvFluxAction=[" ~ to!string(postConvFluxAction[0]);
+	    foreach (i; 1 .. postConvFluxAction.length) {
+		repr ~= ", " ~ to!string(postConvFluxAction[i]);
+	    }
+	    repr ~= "]";
+	}
+	repr ~= ")";
 	if ( preSpatialDerivAction.length > 0 ) {
 	    repr ~= "preSpatialDerivAction=[" ~ to!string(preSpatialDerivAction[0]);
 	    foreach (i; 1 .. preSpatialDerivAction.length) {
@@ -137,12 +149,12 @@ public:
     {
 	foreach ( gce; preReconAction ) gce.apply(t, gtl, ftl);
     }
-    /*
-    final void applyPostConvFluxAction(double t)
+
+    final void applyPostConvFluxAction(double t, int gtl, int ftl)
     {
-	foreach ( bfe; postConvFluxAction ) bfe.apply(t);
+	foreach ( bfe; postConvFluxAction ) bfe.apply(t, gtl, ftl);
     }
-    */
+    
     final void applyPreSpatialDerivAction(double t, int gtl, int ftl)
     {
 	foreach ( bie; preSpatialDerivAction ) bie.apply(t, gtl, ftl);

@@ -25,13 +25,19 @@ import fvinterface;
 import solidfvcell;
 import solidfvinterface;
 import gas_solid_interface;
+import flowstate;
 
 BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
     string bfeType = jsonData["type"].str;
     BoundaryFluxEffect newBFE;
+    auto gmodel = GlobalConfig.gmodel_master;
     
     switch ( bfeType ) {
+    case "const_flux":
+	auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
+	newBFE = new BFE_ConstFlux(blk_id, boundary, flowstate);
+	break;
     case "energy_flux_from_adjacent_solid":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
 	string otherFaceName = getJSONstring(jsonData, "other_face", "none");
@@ -160,6 +166,67 @@ public:
 	    break;
 	default:
 	    throw new Error("initGasCellsAndIFaces() only implemented for NORTH gas face.");
+	}
+    }
+}
+class BFE_ConstFlux : BoundaryFluxEffect {
+private:
+    double[] _massf;
+    double _e, _rho, _p, _u, _v;
+    int _nsp;
+
+public:  
+    this(int id, int boundary, in FlowState fstate)
+    {
+	auto gmodel = blk.myConfig.gmodel;
+	super(id, boundary, "Const_Flux");
+	_u = fstate.vel.x;
+	_v = fstate.vel.y;
+	// [TODO]: Kyle, think about z component.
+	_p = fstate.gas.p;
+	_rho = fstate.gas.rho;
+	_e = gmodel.internal_energy(fstate.gas);
+	_nsp = gmodel.n_species;
+	for (int _isp; _isp <= _nsp; _isp++) {
+	    _massf[_isp] = fstate.gas.massf[_isp];
+	}
+    }
+
+    override string toString() const 
+    {
+	return "BFE_ConstFlux";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BFE_ConstFlux.apply_unstructured_grid() not yet implemented");
+    }
+    
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	FVInterface IFace;
+	size_t i, j, k;
+        switch(which_boundary){
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    IFace = blk.get_cell(i,j,k).iface[Face.west];
+		    IFace.F.mass = _rho * (_u*IFace.n.x + _v*IFace.n.y);
+		    IFace.F.momentum.refx = _p * IFace.n.x + _u*IFace.F.mass;
+		    IFace.F.momentum.refy = _p * IFace.n.y + _v*IFace.F.mass;
+		    IFace.F.momentum.refz = 0.0;
+		    // [TODO]: Kyle, think about z component.
+		    IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v) + _p/_rho);
+		    for ( int _isp = 0; _isp <= _nsp; _isp++ ){
+			IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
+		    }
+		    // [TODO]: Kyle, separate energy modes for multi-species simulations.
+		} // end j loop
+	    } // end k loop
+	    break;
+	default:
+	    throw new Error("Const_Flux only implemented for WEST gas face.");
 	}
     }
 }

@@ -415,6 +415,11 @@ public:
 	foreach(boundary; bc) { boundary.applyPreReconAction(t, gtl, ftl); }
     }
 
+    void applyPostConvFluxAction(double t, int gtl, int ftl)
+    {
+	foreach(boundary; bc) { boundary.applyPostConvFluxAction(t, gtl, ftl); }
+    }
+
     void applyPreSpatialDerivAction(double t, int gtl, int ftl)
     {
 	foreach(boundary; bc) { boundary.applyPreSpatialDerivAction(t, gtl, ftl); }

@@ -423,6 +423,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	if (!blk.active) continue;
 	blk.convective_flux();
     }
+    if (GlobalConfig.apply_bcs_in_parallel) {
+        foreach (blk; parallel(gasBlocks,1)) {
+	    if (!blk.active) continue;
+	    blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	}
+    }
+    else {
+	foreach (blk; gasBlocks) {
+	    if (!blk.active) continue;
+	    blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	}
+    }
     if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(gasBlocks,1)) {
@@ -525,6 +537,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    if (!blk.active) continue;
 	    blk.convective_flux();
 	}
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (blk; parallel(gasBlocks,1)) {
+		if (!blk.active) continue;
+		blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	    }
+	}
+	else {
+	    foreach (blk; gasBlocks) {
+		if (!blk.active) continue;
+		blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	    }
+	}
 	if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	    if (GlobalConfig.apply_bcs_in_parallel) {
 		foreach (blk; parallel(gasBlocks,1)) {
@@ -624,6 +648,18 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (!blk.active) continue;
 	    blk.convective_flux();
+	}
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (blk; parallel(gasBlocks,1)) {
+		if (!blk.active) continue;
+		blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	    }
+	}
+	else {
+	    foreach (blk; gasBlocks) {
+		if (!blk.active) continue;
+		blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	    }
 	}
 	if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	    if (GlobalConfig.apply_bcs_in_parallel) {

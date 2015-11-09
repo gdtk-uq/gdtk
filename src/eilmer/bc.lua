@@ -199,7 +199,14 @@ function BoundaryFluxEffect:new(o)
    self.__index = self
    return o
 end
-
+ConstFlux = BoundaryFluxEffect:new{flowCondition=nil}
+ConstFlux.type = "const_flux"
+function ConstFlux:tojson()
+   local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format(' "flowstate": %s', self.flowCondition:toJSONString())
+   str = str .. '}'
+   return str
+end
 EnergyFluxFromAdjacentSolid = BoundaryFluxEffect:new{otherBlock=nil, otherFace=nil, orientation=-1}
 EnergyFluxFromAdjacentSolid.type = "energy_flux_from_adjacent_solid"
 function EnergyFluxFromAdjacentSolid:tojson()
@@ -218,6 +225,7 @@ BoundaryCondition = {
    type = "",
    group = "",
    preReconAction = {},
+   postConvFluxAction = {},
    preSpatialDerivAction = {},
    postDiffFluxAction = {}
 }
@@ -237,6 +245,12 @@ function BoundaryCondition:tojson()
       str = str .. effect:tojson()
       -- Extra code to deal with annoying JSON trailing comma deficiency
       if i ~= #self.preReconAction then str = str .. "," end
+   end
+   str = str .. '\n        ],\n'
+   str = str .. '        "post_conv_flux_action": [\n'
+   for i,effect in ipairs(self.postConvFluxAction) do
+      str = str .. effect:tojson()
+      if i ~= #self.postConvFluxAction then str = str .. "," end
    end
    str = str .. '\n        ],\n'
    str = str .. '        "pre_spatial_deriv_action": [\n'
@@ -291,6 +305,15 @@ InFlowBC_Supersonic.type = "inflow_supersonic"
 function InFlowBC_Supersonic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
+   o.preSpatialDerivAction = { CopyCellData:new() }
+   return o
+end
+
+InFlowBC_ConstFlux = BoundaryCondition:new()
+InFlowBC_ConstFlux.type = "inflow_const_flux"
+function InFlowBC_ConstFlux:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
 end
