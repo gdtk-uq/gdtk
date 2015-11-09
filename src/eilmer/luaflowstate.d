@@ -154,16 +154,26 @@ The value should be a number.`;
 
     // Values related to mass fractions.
     double[] massf;
+    auto nsp = managedGasModel.n_species();
+    massf.length = nsp;
     lua_getfield(L, 1, "massf");
     if ( lua_isnil(L, -1) ) {
-	massf ~= 1.0; // Nothing set, so massf = [1.0]
+	if ( nsp == 1 ) {
+	    massf[0] = 1.0;
+	}
+	else {
+	    errMsg = "ERROR: in call to FlowState:new{}.\n";
+	    errMsg ~= format("You are using a multi-component gas with n_species= %d\n", nsp);
+	    errMsg ~= "However, you have not set any mass fraction values.\n";
+	    throw new Error(errMsg);
+	}
     }
     else if ( lua_istable(L, -1) ) {
 	int massfIdx = lua_gettop(L);
 	getSpeciesValsFromTable(L, managedGasModel, massfIdx, massf, "massf");
     }
     else  {
-	errMsg = "Error in call to FlowState:new.";
+	errMsg = "Error in call to FlowState:new{}.\n";
 	errMsg ~= "A field for mass fractions was found, but the contents are not valid.";
 	errMsg ~= "The mass fraction should be given as a table of key-value pairs { speciesName=val }.";
 	throw new LuaInputException(errMsg);
