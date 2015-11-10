@@ -546,6 +546,10 @@ function write_config_file(fileName)
    f:write(string.format('"shear_tolerance": %e,\n', config.shear_tolerance))
    f:write(string.format('"M_inf": %e,\n', config.M_inf))
 
+   f:write(string.format('"moving_grid": %s,\n', tostring(config.moving_grid)));
+   f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)));
+   f:write(string.format('"shock_fitting": %s,\n', tostring(config.shock_fitting)));
+
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
    f:write(string.format('"spatial_deriv_calc": "%s",\n', config.spatial_deriv_calc))
    f:write(string.format('"viscous_signal_factor": %e,\n', config.viscous_signal_factor))

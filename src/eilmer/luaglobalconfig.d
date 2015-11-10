@@ -190,6 +190,12 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "write_vertex_velocities");
     }
     lua_pop(L, 1);
+    lua_getfield(L, 1, "shock_fitting");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.shock_fitting = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "shock_fitting");
+    }
+    lua_pop(L, 1);
 
     lua_getfield(L, 1, "viscous");
     if (!lua_isnil(L, -1)) {
@@ -477,7 +483,7 @@ extern(C) int configGet(lua_State* L)
 	lua_pushboolean(L, GlobalConfig.axisymmetric);
 	break;
 	
-	case "MHD":
+    case "MHD":
 	lua_pushboolean(L, GlobalConfig.MHD);
 	break;
 
@@ -540,6 +546,9 @@ extern(C) int configGet(lua_State* L)
 	break;
     case "write_vertex_velocities":
 	lua_pushboolean(L, GlobalConfig.write_vertex_velocities);
+	break;
+    case "shock_fitting":
+	lua_pushboolean(L, GlobalConfig.shock_fitting);
 	break;
 
     case "viscous":

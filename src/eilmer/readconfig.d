@@ -106,7 +106,8 @@ void read_config_file()
     GlobalConfig.moving_grid = getJSONbool(jsonData, "moving_grid", false);
     GlobalConfig.write_vertex_velocities = 
 	getJSONbool(jsonData, "write_vertex_velocities", false);
-	GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
+    GlobalConfig.shock_fitting = getJSONbool(jsonData, "shock_fitting", false);
+    GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
 
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);

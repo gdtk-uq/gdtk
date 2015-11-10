@@ -176,6 +176,7 @@ final class GlobalConfig {
 
     shared static bool moving_grid = false;
     shared static bool write_vertex_velocities = false;
+    shared static bool shock_fitting = false;
 
     // Parameters controlling viscous/molecular transport
     //
