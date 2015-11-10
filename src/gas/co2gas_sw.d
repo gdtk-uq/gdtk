@@ -423,6 +423,23 @@ private:
 	}
 	return f(rho, T);
 	}
+	const double updateQuality_rhoT(double rho, double T){
+	double rho_satvap;
+	double rho_satliq;
+	if (T < _Tc){
+		rho_satvap = getrho_satvap(T);
+		rho_satliq = getrho_satliq(T);
+		if((rho <= rho_satliq)&&(rho >= rho_satvap)){
+			double v_f = 1.0/rho_satliq;
+			double v_g = 1.0/rho_satvap;
+			double v = 1/rho;
+			return (v-v_f)/(v_g-v_f);
+		}
+
+	}
+	return 1.0;
+	}
+
     const double updatePressure_rhoT(double rho, double T){
     	string extrapType = "pressure";
 		return extrapolate_rhoT_function!updatePressure_rhoT_original(rho, T,extrapType);
@@ -897,7 +914,7 @@ const double getT_satliq(double rho, double[2] bracket = [0.0, 304.1282], double
 
 
 } // end class CO2GasSW
-
+//OLD UNIT TEST FROM IDEAL GAS, YET TO UPDATE
 unittest {
     import std.stdio;
     auto gm = new IdealGas();
