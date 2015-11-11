@@ -233,7 +233,6 @@ end
 --          reacCoeffs = {1, 1},
 --          prodIdx = {2},
 --          prodCoeffs = {2},
---          anonymousCollider = false,
 --          pressureDependent = false,
 --          efficiencies = {}
 -- }
@@ -244,7 +243,7 @@ function transformReaction(t, species, suppress_warnings)
    r.type = "elementary"
 
    rs = parseReactionString(t[1])
-   r.anonymousCollider = false
+   anonymousCollider = false
    -- deal with forward elements
 
    reactants = {}
@@ -253,7 +252,7 @@ function transformReaction(t, species, suppress_warnings)
 	 coeff = tonumber(p[1]) or 1
 	 p[2] = transformSpeciesStr(p[2])
 	 if p[2] == "M" then
-	    r.anonymousCollider = true
+	    anonymousCollider = true
 	 else 
 	    spIdx = species[p[2]]
 	    if spIdx == nil then
@@ -294,7 +293,7 @@ function transformReaction(t, species, suppress_warnings)
 	 coeff = tonumber(p[1]) or 1
 	 p[2] = transformSpeciesStr(p[2])
 	 if p[2] == "M" then
-	    r.anonymousCollider = true
+	    anonymousCollider = true
 	 else 
 	    spIdx = species[p[2]]
 	    if spIdx == nil then
@@ -343,8 +342,8 @@ function transformReaction(t, species, suppress_warnings)
    end
 
    -- Deal with efficiencies
-   if r.anonymousCollider then
-      r.type = "withAnonymousCollider"
+   if anonymousCollider then
+      r.type = "anonymous_collider"
       -- All efficiencies are set to 1.0
       r.efficiencies = {}
       for i=1,#species do
@@ -370,6 +369,17 @@ function transformReaction(t, species, suppress_warnings)
 	    end
 	 end
       end
+      local essentially_zero = 1.0e-9
+      for i=#r.efficiencies,1,-1 do
+	 if r.efficiencies[i] <= essentially_zero then
+	    table.remove(r.efficiencies, i)
+	 end
+      end
+      -- table.remove can't handle index i=0
+      if r.efficiencies[0] <= essentially_zero then
+	 r.efficiencies[0] = nil
+      end
+
    end
 
    -- Look for presence of pressure dependent reaction
@@ -470,8 +480,19 @@ function reacToLuaStr(r, i)
    rstr = rstr .. string.format("  reacCoeffs = %s,\n", arrayIntsToStr(r.reacCoeffs))
    rstr = rstr .. string.format("  prodIdx = %s,\n", arrayIntsToStr(r.prodIdx))
    rstr = rstr .. string.format("  prodCoeffs = %s,\n", arrayIntsToStr(r.prodCoeffs))
-   rstr = rstr .. string.format("  anonymousCollider = %s,\n", tostring(r.anonymousCollider))
-   rstr = rstr .. "}"
+   if r.efficiencies then
+      rstr = rstr .. string.format("  efficiencies = {\n")
+      -- Sort indices
+      spIdx = {}
+      for i,_ in pairs(r.efficiencies) do spIdx[#spIdx+1] = i end
+      table.sort(spIdx)
+      -- Write out efficiencies in species sorted order
+      for _,i in ipairs(spIdx) do
+	 rstr = rstr .. string.format("    [%d]=%12.6e,\n", i, r.efficiencies[i])
+      end
+      rstr = rstr .. "  },\n"
+   end
+   rstr = rstr .. "}\n"
    return rstr
 end
 

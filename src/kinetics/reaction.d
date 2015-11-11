@@ -8,6 +8,7 @@
 
 module kinetics.reaction;
 
+import std.conv;
 import std.math;
 import std.string;
 import std.typecons;
@@ -52,15 +53,15 @@ public:
     abstract double loss(int isp) const;
 
 protected:
-    abstract double eval_forward_rate(in double[] conc) const;
-    abstract double eval_backward_rate(in double[] conc) const;
+    abstract double eval_forward_rate(in double[] conc);
+    abstract double eval_backward_rate(in double[] conc);
 	    
 private:
     RateConstant _forward, _backward;
     double _k_f, _k_b; // Storage of computed rate constants
     double _w_f, _w_b; // Storage of computed rates of change
-    int [] _participants; // Storage of indices of species that
-                          // participate in this reaction
+    int[] _participants; // Storage of indices of species that
+                         // participate in this reaction
     double eval_forward_rate_constant(in GasState Q) const
     {
 	return _forward.eval(Q);
@@ -92,17 +93,17 @@ public:
 	       brokenPreCondition("prod_spdix and prod_coeffs arrays are not of equal length"));
 	super(forward, backward);
 	bool[int] pmap;
-	foreach ( i; 0..reac_spidx.length ) {
+	foreach ( i; 0 .. reac_spidx.length ) {
 	    _reactants ~= tuple(reac_spidx[i], reac_coeffs[i]);
 	    pmap[reac_spidx[i]] = true;
 	}
-	foreach ( i; 0..prod_spidx.length ) {
+	foreach ( i; 0 .. prod_spidx.length ) {
 	    _products ~= tuple(prod_spidx[i], prod_coeffs[i]);
 	    pmap[prod_spidx[i]] = true;
 	}
 	_participants = pmap.keys.dup();
 	sort(_participants);
-	foreach ( isp; 0..n_species ) {
+	foreach ( isp; 0 .. n_species ) {
 	    int nu1 = 0;
 	    foreach ( ref r; _reactants ) {
 		if ( r[0] == isp ) {
@@ -154,7 +155,7 @@ public:
 	    return 0.0;
     }
 protected:
-    override double eval_forward_rate(in double[] conc) const
+    override double eval_forward_rate(in double[] conc)
     {
 	double val = _k_f;
 	foreach ( ref r; _reactants ) {
@@ -165,7 +166,7 @@ protected:
 	return val;
     }
 
-    override double eval_backward_rate(in double[] conc) const
+    override double eval_backward_rate(in double[] conc)
     {
 	double val = _k_b;
 	foreach ( ref p; _products ) {
@@ -183,6 +184,130 @@ private:
 }
 
 /++
+ An AnonymousColliderReaction is a reaction that involves collision
+ with a so-called anonymous partner. In reaction mechanisms, this
+ is typically indicated with a partner "M".
++/
+class AnonymousColliderReaction : Reaction
+{
+public:
+    this(in RateConstant forward, in RateConstant backward,
+	 int[] reac_spidx, int[] reac_coeffs, int[] prod_spidx, int[] prod_coeffs,
+	 Tuple!(int,double)[] efficiencies, size_t n_species)
+    {
+	assert(reac_spidx.length == reac_coeffs.length,
+	       brokenPreCondition("reac_spidx and reac_coeffs arrays not of equal length"));
+	assert(prod_spidx.length == prod_coeffs.length,
+	       brokenPreCondition("prod_spdix and prod_coeffs arrays are not of equal length"));
+	super(forward, backward);
+	bool[int] pmap;
+	foreach ( i; 0 .. reac_spidx.length ) {
+	    _reactants ~= tuple(reac_spidx[i], reac_coeffs[i]);
+	    pmap[reac_spidx[i]] = true;
+	}
+	foreach ( i; 0 .. prod_spidx.length ) {
+	    _products ~= tuple(prod_spidx[i], prod_coeffs[i]);
+	    pmap[prod_spidx[i]] = true;
+	}
+	_participants = pmap.keys.dup();
+	sort(_participants);
+	foreach ( isp; 0 .. n_species ) {
+	    int nu1 = 0;
+	    foreach ( ref r; _reactants ) {
+		if ( r[0] == isp ) {
+		    nu1 = r[1];
+		    break;
+		}
+	    }
+	    int nu2 = 0;
+	    foreach ( ref p; _products ) {
+		if ( p[0] == isp ) {
+		    nu2 = p[1];
+		    break;
+		}
+	    }
+	    _nu ~= nu2 - nu1;
+	}
+	_efficiencies = efficiencies.dup();
+    }
+    this(in RateConstant forward, in RateConstant backward, in int[] participants,
+	 in Tuple!(int, int)[] reactants, in Tuple!(int, int)[] products, in int[] nu, in Tuple!(int, double)[] efficiencies)
+    {
+	super(forward, backward);
+	_participants = participants.dup();
+	_reactants = reactants.dup();
+	_products = products.dup();
+	_nu = nu.dup();
+	_efficiencies = efficiencies.dup();
+    }
+    override AnonymousColliderReaction dup() const
+    {
+	return new AnonymousColliderReaction(_forward, _backward, _participants,
+					     _reactants, _products, _nu, _efficiencies);
+    }
+    override double production(int isp) const
+    {
+	if ( _nu[isp] >  0 )
+	    return _nu[isp]*_w_f;
+	else if ( _nu[isp] < 0 )
+	    return -_nu[isp]*_w_b;
+	else
+	    return 0.0;
+    }
+    
+    override double loss(int isp) const
+    {
+	if ( _nu[isp] > 0 ) 
+	    return _nu[isp]*_w_b;
+	else if ( _nu[isp] < 0 )
+	    return -_nu[isp]*_w_f;
+	else 
+	    return 0.0;
+    }
+protected:
+    override double eval_forward_rate(in double[] conc)
+    {
+	// eval_forward_rate() needs to be called before
+	// eval_backward_rate() so that _anaonymousColliderTerm is up-to-date.
+	computeAnonymousColliderTerm(conc);
+	double val = _k_f*_anonymousColliderTerm;
+	foreach ( ref r; _reactants ) {
+	    int isp = r[0];
+	    int coeff = r[1];
+	    val *= pow(conc[isp], coeff);
+	}
+	return val;
+    }
+
+    override double eval_backward_rate(in double[] conc)
+    {
+	double val = _k_b*_anonymousColliderTerm;
+	foreach ( ref p; _products ) {
+	    int isp = p[0];
+	    int coeff = p[1];
+	    val *= pow(conc[isp], coeff);
+	}
+	return val;
+    }
+
+private:
+    Tuple!(int, int)[] _reactants;
+    Tuple!(int, int)[] _products;
+    int[] _nu;
+    Tuple!(int, double)[] _efficiencies;
+    double _anonymousColliderTerm;
+
+    void computeAnonymousColliderTerm(in double[] conc)
+    {
+	_anonymousColliderTerm = 0.0;
+	foreach ( ref c; _efficiencies ) {
+	    _anonymousColliderTerm += c[1] * conc[c[0]];
+	}
+    }
+}
+
+
+/++
  + Creates a Reaction object from information in a Lua table.
  +
  + The table format mirrors that created by reaction.lua::transformReaction()
@@ -196,7 +321,6 @@ private:
  +          reacCoeffs = {1, 1},
  +          prodIdx = {2},
  +          prodCoeffs = {2},
- +          anonymousCollider = false,
  +          pressureDependent = false,
  +          efficiencies = {}
  + }
@@ -225,6 +349,22 @@ Reaction createReaction(lua_State* L, size_t n_species)
     case "elementary":
 	return new ElementaryReaction(frc, brc, reacIdx, reacCoeffs,
 				      prodIdx, prodCoeffs, n_species);
+    case "anonymous_collider":
+	// We need to get table of efficiencies also
+	Tuple!(int, double)[] efficiencies;
+	lua_getfield(L, -1, "efficiencies");
+	lua_pushnil(L);
+	while ( lua_next(L, -2) != 0 ) {
+	    int spIdx = to!int(lua_tointeger(L, -2));
+	    double efficiency = lua_tonumber(L, -1);
+	    efficiencies ~= tuple(spIdx, efficiency);
+	    lua_pop(L, 1);
+	}
+	lua_pop(L, 1);
+	return new AnonymousColliderReaction(frc, brc,
+					     reacIdx, reacCoeffs,
+					     prodIdx, prodCoeffs,
+					     efficiencies, n_species);
     default:
 	string msg = format("The reaction type: %s is not known.", type);
 	throw new Exception(msg);
@@ -249,6 +389,11 @@ version(reaction_test) {
 	assert(approxEqual(643.9303, reaction.loss(0), 1.0e-6), failedUnitTest());
 	assert(approxEqual(643.9303, reaction.loss(1), 1.0e-6), failedUnitTest());
 	assert(approxEqual(0.0, reaction.loss(2)), failedUnitTest());
+
+	auto reaction2 = new AnonymousColliderReaction(rc, rc, [0, 1], [1, 1],
+						       [2], [2], [tuple(1, 1.0)], 3);
+	reaction2.eval_rate_constants(gd);
+	reaction2.eval_rates(conc);
 
 	return 0;
     }
