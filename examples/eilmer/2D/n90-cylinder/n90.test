@@ -13,6 +13,10 @@ test prepare-gas-model {Prepare gas model.} -body {
     exec prep-gas nitrogen-2sp.inp nitrogen-2sp.lua > LOGFILE_PREP_GAS
 } -result {} -returnCodes {0}
 
+test prepare-chem-file {Prepare chemistry file.} -body {
+    exec prep-chem nitrogen-2sp.lua nitrogen-2sp-2r.lua e4-chem.lua > LOGFILE_PREP_CHEM
+} -result {} -returnCodes {0}
+
 test run-preprocessor {Run the preprocessing stage.} -body {
     exec e4shared --prep --job=n90 > LOGFILE_PREP
 } -result {} -returnCodes {0}
