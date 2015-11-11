@@ -178,7 +178,7 @@ public:
 
     void set_grid_velocities(double sim_time)
     {
-	if (myConfig.moving_grid) {
+	if (myConfig.grid_motion != GridMotion.none) {
 	    throw new Error("Block.set_grid_velocities(): moving grid is not yet implemented.");
 	    // [TODO] Insert the moving-grid code some day...
 	}

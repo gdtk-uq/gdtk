@@ -178,10 +178,11 @@ extern(C) int configSetFromTable(lua_State* L)
     }
     lua_pop(L, 1);
 
-    lua_getfield(L, 1, "moving_grid");
+    lua_getfield(L, 1, "grid_motion");
     if (!lua_isnil(L, -1)) {
-	GlobalConfig.moving_grid = to!bool(lua_toboolean(L, -1));
-	lua_pushnil(L); lua_setfield(L, 1, "moving_grid");
+	string method = to!string(luaL_checkstring(L, -1));
+	GlobalConfig.grid_motion = grid_motion_from_name(method);
+	lua_pushnil(L); lua_setfield(L, 1, "grid_motion");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "write_vertex_velocities");
@@ -190,10 +191,10 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "write_vertex_velocities");
     }
     lua_pop(L, 1);
-    lua_getfield(L, 1, "shock_fitting");
+    lua_getfield(L, 1, "udf_grid_motion_file");
     if (!lua_isnil(L, -1)) {
-	GlobalConfig.shock_fitting = to!bool(lua_toboolean(L, -1));
-	lua_pushnil(L); lua_setfield(L, 1, "shock_fitting");
+	GlobalConfig.udf_grid_motion_file = to!string(luaL_checkstring(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "udf_grid_motion_file");
     }
     lua_pop(L, 1);
 
@@ -541,14 +542,15 @@ extern(C) int configGet(lua_State* L)
 	lua_pushnumber(L, GlobalConfig.compression_tolerance);
 	break;
 
-    case "moving_grid":
-	lua_pushboolean(L, GlobalConfig.moving_grid);
+    case "grid_motion":
+	string method = grid_motion_name(GlobalConfig.grid_motion);
+	lua_pushstring(L, method.toStringz);
 	break;
     case "write_vertex_velocities":
 	lua_pushboolean(L, GlobalConfig.write_vertex_velocities);
 	break;
-    case "shock_fitting":
-	lua_pushboolean(L, GlobalConfig.shock_fitting);
+    case "udf_grid_motion_file":
+	lua_pushstring(L, toStringz(GlobalConfig.udf_grid_motion_file));
 	break;
 
     case "viscous":

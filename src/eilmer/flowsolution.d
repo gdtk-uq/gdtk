@@ -48,7 +48,7 @@ public:
     {
 	foreach (ib; 0 .. nBlocks) {
 	    string fileName;
-	    if (GlobalConfig.moving_grid) {
+	    if (GlobalConfig.grid_motion != GridMotion.none) {
 		fileName = make_file_name!"grid"(jobName, to!int(ib), tindx);
 	    } else {
 		fileName = make_file_name!"grid"(jobName, to!int(ib), 0);

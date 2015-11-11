@@ -40,6 +40,27 @@ TurbulenceModel turbulence_model_from_name(string name)
     }
 } // end turbulence_model_from_name()
 
+// Symbolic names for grid motion types
+enum GridMotion { none, user_defined, shock_fitting }
+string grid_motion_name(GridMotion i)
+{
+    final switch (i) {
+    case GridMotion.none: return "none";
+    case GridMotion.user_defined: return "user_defined";
+    case GridMotion.shock_fitting: return "shock_fitting";
+    }
+}
+
+GridMotion grid_motion_from_name(string name)
+{
+    switch (name) {
+    case "none": return GridMotion.none;
+    case "user_defined": return GridMotion.user_defined;
+    case "shock_fitting": return GridMotion.shock_fitting;
+    default: return GridMotion.none;
+    }
+}
+
 class BlockZone {
     // Note that these data are not shared across threads
     // because we will want to access them frequently at the lower levels of the code.
@@ -174,9 +195,10 @@ final class GlobalConfig {
     // viscous effects are important.
     shared static double compression_tolerance = -0.30;
 
-    shared static bool moving_grid = false;
+    // Parameters related to possible motion of the grid.
+    shared static grid_motion = GridMotion.none;
     shared static bool write_vertex_velocities = false;
-    shared static bool shock_fitting = false;
+    shared static string udf_grid_motion_file = "dummy-grid-motion-file.txt";
 
     // Parameters controlling viscous/molecular transport
     //
@@ -330,7 +352,8 @@ public:
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
-    bool moving_grid;
+    GridMotion grid_motion;
+    string udf_grid_motion_file;
     bool viscous;
     SpatialDerivCalc spatial_deriv_calc;
     double viscous_factor;
@@ -389,7 +412,8 @@ public:
 	shear_tolerance = GlobalConfig.shear_tolerance;
 	M_inf = GlobalConfig.M_inf;
 	compression_tolerance = GlobalConfig.compression_tolerance;
-	moving_grid = GlobalConfig.moving_grid;
+	grid_motion = GlobalConfig.grid_motion;
+	udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
 	viscous = GlobalConfig.viscous;
 	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
 	viscous_factor = GlobalConfig.viscous_factor;

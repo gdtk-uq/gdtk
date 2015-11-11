@@ -103,10 +103,15 @@ void read_config_file()
     GlobalConfig.M_inf = getJSONdouble(jsonData, "M_inf", 0.01);
     GlobalConfig.compression_tolerance = 
 	getJSONdouble(jsonData, "compression_tolerance", -0.30);
-    GlobalConfig.moving_grid = getJSONbool(jsonData, "moving_grid", false);
+    try {
+	string name = jsonData["grid_motion"].str;
+	GlobalConfig.grid_motion = grid_motion_from_name(name);
+    } catch (Exception e) {
+	GlobalConfig.grid_motion = GridMotion.none;
+    }
     GlobalConfig.write_vertex_velocities = 
 	getJSONbool(jsonData, "write_vertex_velocities", false);
-    GlobalConfig.shock_fitting = getJSONbool(jsonData, "shock_fitting", false);
+    GlobalConfig.udf_grid_motion_file = jsonData["udf_grid_motion_file"].str;
     GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
 
     if (GlobalConfig.verbosity_level > 1) {
@@ -130,8 +135,10 @@ void read_config_file()
 	writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
 	writeln("  M_inf: ", GlobalConfig.M_inf);
 	writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
-	writeln("  moving_grid: ", GlobalConfig.moving_grid);
+	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
 	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
+	writeln("  udf_grid_motion_file: ", GlobalConfig.udf_grid_motion_file);
+	writeln("  MHD: ", GlobalConfig.MHD);
     }
 
     // Parameters controlling viscous/molecular transport
