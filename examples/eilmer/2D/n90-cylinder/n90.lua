@@ -39,16 +39,12 @@ n_path = Bezier:new{points={i, j, k, e}}
 
 psurf = makePatch{n_path, e_path, s_path, w_path}
 grid = StructuredGrid:new{psurface=psurf, niv=61, njv=41}
-blk0 = SBlock:new{grid=grid, fillCondition=initial, label="blk-0"}
-
--- Grid has been built earlier in GridPro
--- gproName = 'n90.gpro'
--- grid = importGridproGrid(gproName)
--- blk0 = SBlock:new{grid=grid[0], fillCondition=initial, label="blk-0"}
 
 -- We can leave east and south as slip-walls
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
-blk0.bcList[north] = OutFlowBC_Simple:new{}
+blk0 = SBlockArray{grid=grid, fillCondition=initial, label="blk",
+		   bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			   north=OutFlowBC_Simple:new{}}, 
+		   nib=1, njb=4}
 
 -- Set a few more config options
 config.flux_calc = ADAPTIVE
