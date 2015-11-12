@@ -22,7 +22,7 @@ test run-preprocessor {Run the preprocessing stage.} -body {
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the parallel simulation code.} -body {
-    exec e4shared --run --job=n90 --verbosity=1 --max-cpus=1 > LOGFILE_MAIN
+    exec e4shared --run --job=n90 --verbosity=1 --max-cpus=4 > LOGFILE_MAIN
 } -result {} -returnCodes {0}
 
 test number-of-steps {Iteration of the final block in a certain number of steps.} -body {
