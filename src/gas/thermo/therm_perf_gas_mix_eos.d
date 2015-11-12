@@ -18,6 +18,7 @@
 
 module gas.thermo.therm_perf_gas_mix_eos;
 
+import std.math;
 import std.stdio;
 import std.string;
 import std.c.stdlib : exit;
@@ -25,7 +26,9 @@ import gas.gas_model;
 import gas.physical_constants;
 import gas.thermo.evt_eos;
 import gas.thermo.cea_thermo_curves;
+// For testing, use solve from either brent or ridder.
 import nm.brent;
+// import nm.ridder;
 import nm.bracketing;
 import util.lua;
 import util.lua_service;
@@ -56,22 +59,24 @@ public:
     }
     override void update_temperature(ref GasState Q)
     {
-	double TOL = 1.0e-6;
+	double Tsave = Q.T[0]; // Keep a copy for diagnostics purpose.
+	// We'll adjust the temperature estimate until the energy is within TOL Joules.
+	// Surely 1/100 of a Joule is sufficient precision when we are talking of megaJoules.
+	double TOL = 1.0e-2;
 	// The "target" energy is the value we will iterate to find.
 	// We search (via a numerical method) for the temperature
 	// value that gives this target energy.
 	double e_tgt = Q.e[0];
 	// delT is the initial guess for a bracket size.
-	// We set this quite agressivley at 100 K hoping to
+	// We set this quite agressivley at 10 K hoping to
 	// keep the number of iterations required to a small
 	// value. In general, we are taking small timesteps
 	// so the value of temperature from the previous step
 	// should not change too much. If it does, there should
-	// be enough robustness in the bracketing and Ridder's
-	// method to handle this.
-	double delT = 100.0;
-	double T1 = Q.T[0];
-	double Tsave = T1; // Keep a copy for diagnostics purpose.
+	// be enough robustness in the bracketing and
+	// the function-solving method to handle this.
+	double delT = 10.0;
+	double T1 = fmax(Q.T[0] - delT/2, T_MIN);
 	double T2 = T1 + delT;
 
 	auto zeroFun = delegate (double T) {
@@ -80,16 +85,16 @@ public:
 	    return e_tgt - Q.e[0];
 	};
 
-	if ( bracket!zeroFun(T1, T2) == -1 ) {
+	if ( bracket!zeroFun(T1, T2, T_MIN) == -1 ) {
 	    string msg = "The 'bracket' function failed to find temperature values\n";
 	    msg ~= "that bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
 	    msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+	    msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
+	    msg ~= format("The target energy value was: %12.6f\n", e_tgt);
+	    msg ~= format("The GasState is currently:\n");
+	    msg ~= Q.toString() ~ "\n";
 	    throw new Exception(msg);
 	}
-
-	if ( T1 < T_MIN )
-	    T1 = T_MIN;
-	
 	try {
 	    Q.T[0] = solve!zeroFun(T1, T2, TOL);
 	}
@@ -99,8 +104,8 @@ public:
 	    msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
 	    msg ~= format("The target energy value was: %12.6f\n", e_tgt);
 	    msg ~= format("The GasState is currently:\n");
-	    msg ~= Q.toString();
-	    msg ~= "The message from the ridder.solve function is:\n";
+	    msg ~= Q.toString() ~ "\n";
+	    msg ~= "The message from the solve function is:\n";
 	    msg ~= e.msg;
 	    throw new Exception(msg);
 	}

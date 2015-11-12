@@ -544,8 +544,8 @@ private:
 		int max_try = 50;
 		double factor = 0.05;
 		double T1 = 400; double T2 = 600; 
-		double T1_min = 80;
-		int bracketFlag = bracket!zeroSpecificEnergy_T(T1,T2,max_try,factor,T1_min);
+		double T1_min = 80; double T2_max = 50000.0;
+		int bracketFlag = bracket!zeroSpecificEnergy_T(T1,T2,T1_min,T2_max,max_try,factor);
 		if (bracketFlag == -1) throw new Exception(format("bracketing getTemperature failed at e: %s, rho: %s, bracket: [%s, %s]", e, rho, T1, T2));
 		double T = solve!zeroSpecificEnergy_T(T1,T2, Ttol);
 		assert(!isNaN(T), format("T is NaN at rho: %s, e: %s", rho, e));

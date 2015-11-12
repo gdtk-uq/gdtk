@@ -19,7 +19,8 @@ import std.math;
 import std.algorithm;
 
 int bracket(alias f)(ref double x1, ref double x2,
-                     int max_try=50, double factor=1.6, double x1_min = -1.0e99)
+		     double x1_min = -1.0e99, double x2_max = +1.0e99,
+                     int max_try=50, double factor=1.6)
     if ( is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float) )
 {
     if ( x1 == x2 ) {
@@ -32,10 +33,11 @@ int bracket(alias f)(ref double x1, ref double x2,
 	if ( abs(f1) < abs(f2) ) {
 	    x1 += factor * (x1 - x2);
 	    //prevent the bracket from being expanded beyond a specified domain
-	    x1 = max(x1_min, x1);
+	    x1 = fmax(x1_min, x1);
 	    f1 = f(x1);
 	} else {
 	    x2 += factor * (x2 - x1);
+	    x2 = fmin(x2_max, x2);
 	    f2 = f(x2);
 	}
     }

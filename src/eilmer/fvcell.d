@@ -901,10 +901,10 @@ public:
 		fs.gas.T[0] = T_save;
 	    }
 	} catch(Exception err) {
-	    writefln("catch %s", err.msg);
-	    writeln("The chemical_increment() failed for cell: ", id);
-	    writeln("The gas state after the failed update is:");
-	    writefln("fs.gas %s", fs.gas);
+	    string msg = format("catch %s", err.msg);
+	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
+	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+	    throw new Error(msg);
 	}
 
 	// The update only changes mass fractions; we need to impose

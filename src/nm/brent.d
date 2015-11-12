@@ -9,6 +9,8 @@
  * Bracketing taken from ridder.d
  */
 module nm.brent;
+
+import std.string;
 import std.math;
 import std.algorithm;
 /**
@@ -30,13 +32,22 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
     if ( is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float) ) {
         const int ITMAX = 100;           // maximum allowed number of iterations
         const double EPS=double.epsilon; // Machine floating-point precision
-        double a = x1, b = x2, c = x2, d, e, fa = f(a), fb = f(b), fc, p, q, r, s, tol1, xm;
+        double a = x1;
+	double b = x2;
+	double fa = f(a);
+	double fb = f(b);
 	if ( abs(fa) == 0.0 ) return a;
         if ( abs(fb) == 0.0 ) return b;
-	if ( fa * fb > 0.0 )
-     	    throw new Exception("Root must be bracketed by x1 and x2");  //brackets do not encompass zero
-	fc = fb;
+	if ( fa * fb > 0.0 ) {
+	    // Supplied bracket does not encompass zero of the function.
+	    string msg = "Root must be bracketed by x1 and x2\n";
+	    msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
+     	    throw new Exception(msg);
+	}
+	double c = b;
+	double fc = fb;
         for ( int iter=0; iter<ITMAX; iter++ ) {
+	    double d, e, tol1, xm;
             if ( (fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0) ) {
                 c = a;
 		fc = fa;
@@ -54,6 +65,7 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
 	    xm = 0.5*(c-b);
 	    if ( abs(xm) <= tol1 || fb == 0.0 ) return b;   // if converged let's return the best estimate
 	    if ( abs(e) >= tol1 && abs(fa) > abs(fb) ) {
+		double p, q, r, s;
 	        s = fb/fa;         // Attempt inverse quadratic interpolation for new bound
 	        if ( a == c ) {
 	            p = 2.0*xm*s;
