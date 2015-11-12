@@ -134,9 +134,9 @@ public:
 private:
     Reaction[] _reactions;
     // Working array space
-    static bool _work_arrays_initialised = false;
-    static double[] _q;
-    static double[] _L;
+    bool _work_arrays_initialised = false;
+    double[] _q;
+    double[] _L;
 }
 
 /++
