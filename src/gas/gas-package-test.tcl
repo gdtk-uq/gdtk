@@ -41,7 +41,7 @@ test very-viscous-air-test {Testing very_viscous_air.d} -body {
 } -result {} -returnCodes {0}
 
 test co2gas-sw-test {Testing co2gas_sw.d} -body {
-    exec ./co2gas_sw_test
+    exec ./co2gas_sw_test > LOGFILE_CO2GAS_SW_TEST
 } -result {} -returnCodes {0}
 
 puts "-------------------------------------"
