@@ -212,45 +212,80 @@ public:
 	}
 	size_t ntot = _nidim * _njdim * _nkdim;
 	try {
-	    // Create the cell and interface objects for the entire block.
+	    // Create the cell and interface objects for the entire structured block.
+	    // This includes the layer of surrounding ghost cells.
 	    foreach (gid; 0 .. ntot) {
 		_ctr ~= new FVCell(myConfig); _ctr[gid].id = to!int(gid);
 		auto ijk = to_ijk_indices(gid);
-		if ( ijk[0] >= imin && ijk[0] <= imax && 
-		     ijk[1] >= jmin && ijk[1] <= jmax && 
-		     ijk[2] >= kmin && ijk[2] <= kmax ) {
-		    cells ~= _ctr[gid];
-		}
 		_ifi ~= new FVInterface(myConfig.gmodel); _ifi[gid].id = gid;
-		if ( ijk[0] >= imin && ijk[0] <= imax+1 && 
-		     ijk[1] >= jmin && ijk[1] <= jmax && 
-		     ijk[2] >= kmin && ijk[2] <= kmax ) {
-		    faces ~= _ifi[gid];
-		}
 		_ifj ~= new FVInterface(myConfig.gmodel); _ifj[gid].id = gid;
-		if ( ijk[0] >= imin && ijk[0] <= imax && 
-		     ijk[1] >= jmin && ijk[1] <= jmax+1 && 
-		     ijk[2] >= kmin && ijk[2] <= kmax ) {
-		    faces ~= _ifj[gid];
-		}
 		if ( myConfig.dimensions == 3 ) {
 		    _ifk ~= new FVInterface(myConfig.gmodel); _ifk[gid].id = gid;
-		    if ( ijk[0] >= imin && ijk[0] <= imax && 
-			 ijk[1] >= jmin && ijk[1] <= jmax && 
-			 ijk[2] >= kmin && ijk[2] <= kmax+1 ) {
-			faces ~= _ifk[gid];
-		    }
 		}
 		_vtx ~= new FVVertex(myConfig.gmodel); _vtx[gid].id = gid;
-		// The following should work for both 2D and 3D.
-		if ( ijk[0] >= imin && ijk[0] <= imax+1 && 
-		     ijk[1] >= jmin && ijk[1] <= jmax+1 && 
-		     ijk[2] >= kmin && ijk[2] <= kmax+1 ) {
-		    vertices ~= _vtx[gid];
-		}
 	    } // gid loop
+	    // Now, assemble the lists of references to the cells, vertices and faces
+	    // in standard order for a structured grid.
+	    if (myConfig.dimensions == 2 ) {
+		foreach (j; jmin .. jmax+1) {
+		    foreach (i; imin .. imax+1) {
+			cells ~= get_cell(i, j);
+		    }
+		}
+		foreach (j; jmin .. jmax+2) {
+		    foreach (i; imin .. imax+2) {
+			vertices ~= get_vtx(i, j);
+		    }
+		}
+		foreach (j; jmin .. jmax+1) {
+		    foreach (i; imin .. imax+2) {
+			faces ~= get_ifi(i, j);
+		    }
+		}
+		foreach (j; jmin .. jmax+2) {
+		    foreach (i; imin .. imax+1) {
+			faces ~= get_ifj(i, j);
+		    }
+		}
+	    } else { // assume 3D
+		foreach (k; kmin .. kmax+1) {
+		    foreach (j; jmin .. jmax+1) {
+			foreach (i; imin .. imax+1) {
+			    cells ~= get_cell(i, j, k);
+			}
+		    }
+		}
+		foreach (k; kmin .. kmax+2) {
+		    foreach (j; jmin .. jmax+2) {
+			foreach (i; imin .. imax+2) {
+			    vertices ~= get_vtx(i, j, k);
+			}
+		    }
+		}
+		foreach (k; kmin .. kmax+1) {
+		    foreach (j; jmin .. jmax+1) {
+			foreach (i; imin .. imax+2) {
+			    faces ~= get_ifi(i, j, k);
+			}
+		    }
+		}
+		foreach (k; kmin .. kmax+1) {
+		    foreach (j; jmin .. jmax+2) {
+			foreach (i; imin .. imax+1) {
+			    faces ~= get_ifj(i, j, k);
+			}
+		    }
+		}
+		foreach (k; kmin .. kmax+2) {
+		    foreach (j; jmin .. jmax+1) {
+			foreach (i; imin .. imax+1) {
+			    faces ~= get_ifk(i, j, k);
+			}
+		    }
+		}
+	    } // end if dimensions
 	} catch (Error err) {
-	    writeln("Crapped out while assembling block arrays.");
+	    writeln("Failed while assembling block arrays.");
 	    writefln("nicell=%d njcell=%d nkcell=%d", nicell, njcell, nkcell);
 	    writefln("nidim=%d njdim=%d nkdim=%d", _nidim, _njdim, _nkdim);
 	    writeln("Probably ran out of memory.");
