@@ -1,5 +1,5 @@
 /**
- * CO2GasSW.d
+ * co2gas_sw.d
  * Span Wagner gas model for use in the CFD codes.
  *
  * Author: Jonathan H.
@@ -75,10 +75,6 @@ public:
 	lookup_hsFlag = getInt(L,-1, "lookup_hsFlag");
 	lookup_rhoeFlag = getInt(L,-1, "lookup_rhoeFlag");
 	lua_pop(L,1);
-	// Compute derived parameters
-	//_Rgas = R_universal/_mol_masses[0];
-	//_Cv = _Rgas / (_gamma - 1.0);
-	//_Cp = _Rgas*_gamma/(_gamma - 1.0);
 	if (lookup_rhoeFlag){
 		P_rhoe_Tree = buildTree_fromFile(p_rhoe_filename);
 		a_rhoe_Tree = buildTree_fromFile(a_rhoe_filename);
@@ -142,17 +138,12 @@ public:
 		Q.T[0] = updateTemperature_rhoe(Q.rho, Q.e[0]);
 		Q.p = updatePressure_rhoT(Q.rho,Q.T[0]);
 	}
-	
-	//Q.T[0] = T_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
-	//Q.p = P_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
     }
     override void update_thermo_from_rhoT(GasState Q) const//DONE
     {
 	assert(Q.T.length == 1, "incorrect length of temperature array");
-	//Calculating Pressure	
 	Q.p = updatePressure_rhoT(Q.rho, Q.T[0]);
-	//Calculate Energy
-	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.e[0]);
+	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
 
     }
 
@@ -193,7 +184,6 @@ public:
 	else {
 		Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T[0]);
 	}
-	//Q.a = a_rhoe_Tree.search(Q.rho, Q.e[0]).interpolateF(Q.rho, Q.e[0]);
     }
     override void update_trans_coeffs(GasState Q) const
     {
@@ -367,8 +357,8 @@ private:
 	Tree a_rhoe_Tree;
 	Tree rho_sh_Tree;
 	Tree T_sh_Tree;
-	int lookup_hsFlag = 1;
-	int lookup_rhoeFlag = 1;
+	int lookup_hsFlag = 0;
+	int lookup_rhoeFlag = 0;
 	uni_lut e_rho_sat_table;
     
     //define some functions that will be available to the functions in the private area  
@@ -466,23 +456,18 @@ private:
    const double updateEnergy_rhoT_original(double rho, double T){
 	//Derivatives of Helmholtz energy w.r.t. reduced temperature give internal energy
 	//See p867 of Sengers et al. EQUATIONS of STATE for FLUIDS and FLUID MIXTURES
-	//T = max(T, 280);
-	
 	double d_alphar_d_tau = 0;
 	double delta = rho/_rhoc;
 	double tau = _Tc/T;
 	for(int i = 1; i != 8; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d_alphar_d_tau += _n[i]*_t[i]*delta^^_d[i]*tau^^(_t[i]-1);
 	}
 	for(int i = 8; i != 35; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d_alphar_d_tau += _n[i]*_t[i]*delta^^_d[i]*tau^^(_t[i]-1)*exp(-delta^^_c[i]);
 	}
 	int j;
 	for(int i = 35; i != 40; i++){
 		j = i - 35;
-		//writefln("i: %d; epsilon: %e, gamma: %e",i,_epsilon[j], _gamma[j]);
 		d_alphar_d_tau += _n[i]*delta^^_d[i]*tau^^_t[i]*
 							exp(-_alpha[j]*(delta-_epsilon[j])^^2 - _beta[j]*(tau - _gamma[j])^^2)*
 							(_t[i]/tau - 2*_beta[j]*(tau-_gamma[j]));
@@ -493,19 +478,13 @@ private:
 	double dPsi_dtau;
 	double dDeltab_dtau;
 	for (int i = 40; i != 43; i++){
-		//MAKE SURE YOU SQUARE THINGS - DON'T SIMPLY THE EXPRESSION OTHERWISE IT WILL HAVE A FIT
-		//DON'T TURN (X^2)^A INTO X^(2A)
-		//be careful of the 1/2 = 0 truncation
-		//writefln("i: %d; n: %e",i, _n[i]);
 		j = i - 40;
 		Psi = exp(-_C[j]*(delta - 1)^^2 - _D[j]*(tau - 1)^^2);
 		
 		theta = (1 - tau) + _A[j]*((delta-1)^^2)^^(0.5/_beta2[j]);
 		Delta = theta*theta + _B[j]*((delta - 1)^^2)^^_a[j];
-		dPsi_dtau = -2*_D[j]*(tau - 1)*Psi;//these calculated by hand
+		dPsi_dtau = -2*_D[j]*(tau - 1)*Psi;
 		dDeltab_dtau = -2*theta*_b[j]*Delta^^(_b[j] - 1);
-		
-		//writefln("delta: %f, tau: %f, theta: %f", delta, tau, theta);
 		d_alphar_d_tau += _n[i]*delta*(dDeltab_dtau*Psi + Delta^^_b[j]*dPsi_dtau);
 		}
 		//----------------------------------------------------
@@ -520,17 +499,11 @@ private:
 	}
    
    const double updateTemperature_rhoe_newtonCotes(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
-	//MAY WISH TO CHANGE THIS TO BRACKETING
-   	   //assert(e >= 0.8*gas.u0, "energy below 80% of reference");//make sure you are above the reference point
 	double T = (e +383334.16+191.86*rho)/1030.1886; // using a dodgy linear thing
 	T = max(310, T); //don't go too low; // originally worked well with T = 270 - but not so well once i included the bracketing
 	for(int i = 0; i != maxIterations; i++){
 		double deltaT = (updateEnergy_rhoT(rho,T)-e)/get_de_dT(rho,T);
-		/* writeln("deltaT: ", deltaT);
-		writeln("Energy(T): ", getSpecificEnergy(rho,T,gas)-e);
-		writeln("dE/dT: ", get_de_dT(rho,T,gas)); */
 		if (abs(deltaT) < Ttol){
-			//writeln("tolerance for T met");
 			break;
 		}
 		T -= deltaT;
@@ -555,37 +528,23 @@ private:
    const double get_de_dT(double rho, double T) {
 	//Gets derivative of specific energy w.r.t. Temperature for evaluating T as a function of e, rho based on Newton's method
 	//conveniently de_dT is c_V
-	//Setup variables
-	double tau = _Tc/T;//actual zeta
+	double tau = _Tc/T;
 	double delta = rho/_rhoc;
 	//---------------------------------------d2_alphar_d_tau2
 	double d2_alphar_d_tau2 = 0;
-	//LAST THING IS TO DO THIS
 	for(int i = 1; i != 8; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d2_alphar_d_tau2 += _n[i]*_t[i]*(_t[i]-1)*delta^^_d[i]*tau^^(_t[i]-2);
-		//appears to do nothing
 	}
 	for(int i = 8; i != 35; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d2_alphar_d_tau2 += _n[i]*_t[i]*(_t[i]-1)*delta^^_d[i]*tau^^(_t[i]-2)*exp(-delta^^_c[i]);
-		//appears to do nothing
 	}
 	
 	int j;
 	for(int i = 35; i != 40; i++){
-		//writefln("i: %d; tau: %e",i, tau);
 		j = i - 35;
 		d2_alphar_d_tau2 += _n[i]*delta^^_d[i]*tau^^_t[i]*
 							exp(-_alpha[j]*(delta-_epsilon[j])^^2 - _beta[j]*(tau - _gamma[j])^^2)*
 							((_t[i]/tau - 2*_beta[j]*(tau-_gamma[j]))^^2-_t[i]/tau/tau-2*_beta[j]);
-		/* //first derivative
-		d2_alphar_d_tau2 += _n[i]*delta^^_d[i]*tau^^_t[i]*
-							exp(-_alpha[j]*(delta-_epsilon[j])^^2 - _beta[j]*(tau - _gamma[j])^^2)*
-							(_t[i]/tau - 2*_beta[j]*(tau-_gamma[j]));
-		//original
-		d2_alphar_d_tau2 += _n[i]*delta^^_d[i]*tau^^_t[i]*
-							exp(-_alpha[j]*(delta-_epsilon[j])^^2 - _beta[j]*(tau - _gamma[j])^^2)*0; */
 	}	
 	double Psi;
 	double theta;
@@ -595,20 +554,15 @@ private:
 	double d2Psi_dtau2;
 	double d2Deltab_dtau2;
 	for (int i = 40; i != 43; i++){
-		//MAKE SURE YOU SQUARE THINGS - DON'T SIMPLY THE EXPRESSION OTHERWISE IT WILL HAVE A FIT
-		//DON'T TURN (X^2)^A INTO X^(2A)
-		//be careful of the 1/2 = 0 truncation
-		//writefln("i: %d; n: %e",i, _n[i]);
 		j = i - 40;
 		Psi = exp(-_C[j]*(delta - 1)^^2 - _D[j]*(tau - 1)^^2);
 		
 		theta = (1 - tau) + _A[j]*((delta-1)^^2)^^(0.5/_beta2[j]);
 		Delta = theta*theta + _B[j]*((delta - 1)^^2)^^_a[j];
-		dPsi_dtau = -2*_D[j]*(tau - 1)*Psi;//these calculated by hand
+		dPsi_dtau = -2*_D[j]*(tau - 1)*Psi;
 		dDeltab_dtau = -2*theta*_b[j]*Delta^^(_b[j] - 1);
 		d2Psi_dtau2 = (2*_D[j]*(tau - 1)*(tau - 1) - 1)*2*_D[j]*Psi;
 		d2Deltab_dtau2 = 2*_b[j]*Delta^^(_b[j]-1) + 4*theta*theta*_b[j]*(_b[j]-1)*Delta^^(_b[j]-2);
-		//writefln("delta: %f, tau: %f, theta: %f", delta, tau, theta);
 		d2_alphar_d_tau2 += _n[i]*delta*(d2Deltab_dtau2*Psi + 2*dDeltab_dtau*dPsi_dtau + Delta^^_b[j]*d2Psi_dtau2);
 	}
 	//----------------------------------------------------
@@ -619,24 +573,16 @@ private:
 	for(int i = 4; i != 9; i++){
 		d2_alpha0_d_tau2 -= _a0[i]*_theta0[i]*_theta0[i]*exp(-_theta0[i]*tau)*(1.0-exp(-_theta0[i]*tau))^^-2;
 	}
-	
-	//if(T<280){d2_alphar_d_tau2=0;}
 	return -tau*tau*(d2_alphar_d_tau2 + d2_alpha0_d_tau2)*_Rgas;
    	}
-   const double updateT_Prho(double P, double rho, double[2] Tbracket = [0.0, 2000], double tol = 0.001){
-	//will get Temperature based on Riddler's Method - see PJ's notes
-	//double e = min(max(getSpecificEnergy(rho,P/rho/_Rgas),_u0*0.6),2.5e6);//estimate energy based on temperature, don't go too high or too low
-	//writeln("Temperature guess", P/rho/_Rgas);
-	//writeln("first guess at e: ", e);
+   const double updateT_Prho(double P, double rho, double[2] Tbracket = [150, 2000], double tol = 0.001){
+	//will get Temperature based on Ridder's Method - see PJ's notes
 	auto zeroPressure_T = delegate (double T){
 		return P - updatePressure_rhoT(rho, T);};
 	double T = solve!zeroPressure_T(Tbracket[0], Tbracket[1], tol);
 	assert(!isNaN(T), format("T is NaN at P: %s, rho: %s", P, rho));
-	//WORKS WELL FOR SUPERCRITICAL
    	return T;}
    const double updateRho_PT(double P, double T, double[2] bracket = [0.0001, 2000], double tol = 1e-6){
-	//when temperature is close to 	critical temperature be very careful
-	//assert(T > 305, "Temperature too low and close to critical point (305K)");
 	auto zeroPressure_rho = delegate (double rho){
 		return P - updatePressure_rhoT(rho, T);};
 	double rho = solve!zeroPressure_rho(bracket[0], bracket[1], tol);
@@ -652,28 +598,22 @@ private:
 	double delta = rho/_rhoc;
 	double d_alphar_d_delta = get_d_alphar_d_delta(tau,delta);
 	
-	//---------------------------------------d2_alphar_d_delta2----------------------------------------------
 	double d2_alphar_d_delta2 = 0;
 	double d2_alphar_d_delta_d_tau = 0;
 	for(int i = 1; i != 8; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d2_alphar_d_delta2 += _n[i]*_d[i]*(_d[i]-1)*delta^^(_d[i]-2)*tau^^_t[i];
 		
 		d2_alphar_d_delta_d_tau += _n[i]*_d[i]*_t[i]*delta^^(_d[i]-1)*tau^^(_t[i]-1);
 	}
-	//writeln("NO. 1: d2_alphar_d_delta2: ", d2_alphar_d_delta2);
 	for(int i = 8; i != 35; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d2_alphar_d_delta2 += _n[i]*exp(-delta^^_c[i])*
 		(delta^^(_d[i]-2)*tau^^_t[i]*((_d[i]-_c[i]*delta^^_c[i])*(_d[i]-1.0-_c[i]*delta^^_c[i])-_c[i]^^2*delta^^_c[i]));
 		
 		d2_alphar_d_delta_d_tau += _n[i]*exp(-delta^^_c[i])*_t[i]*tau^^(_t[i] - 1.0)*
 				     delta^^(_d[i]-1)*(_d[i]-_c[i]*delta^^_c[i]);
 	}
-	//writeln("NO. 2: d2_alphar_d_delta2: ", d2_alphar_d_delta2);
 	int j;
 	for(int i = 35; i != 40; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		j = i - 35;
 		d2_alphar_d_delta2 += _n[i]*tau^^_t[i]*
 							exp(-_alpha[j]*(delta-_epsilon[j])^^2 - _beta[j]*(tau - _gamma[j])^^2)*
@@ -687,7 +627,6 @@ private:
 							(_d[i]/delta - 2*_alpha[j]*(delta - _epsilon[j]))*
 							(_t[i]/tau - 2*_beta[j]*(tau - _gamma[j]));
 	}
-	//writeln("NO. 3: d2_alphar_d_delta2: ", d2_alphar_d_delta2);
 	double Psi;
 	double theta;
 	double Delta;
@@ -706,10 +645,10 @@ private:
 		Psi = exp(-_C[j]*(delta - 1)^^2 - _D[j]*(tau - 1)^^2);
 		theta = (1 - tau) + _A[j]*((delta-1)^^2)^^(0.5/_beta2[j]);
 		Delta = theta*theta + _B[j]*((delta - 1)^^2)^^_a[j];
-		dPsi_ddelta = -2*_C[j]*(delta - 1)*Psi;//these calculated by hand
+		dPsi_ddelta = -2*_C[j]*(delta - 1)*Psi;
 		dDelta_ddelta = (delta - 1)*(2*theta*_A[j]/_beta2[j]*((delta - 1)^^2)^^(0.5/_beta2[j] - 1) + 2*_B[j]*_a[j]*((delta - 1)^^2)^^(_a[j] - 1));//potential to simplify the process for d2Delta_ddelta2 -- a part was factorised out here
 		dDeltab_ddelta = _b[j]*Delta^^(_b[j] - 1)*dDelta_ddelta;
-		dPsi_dtau = -2*_D[j]*(tau - 1)*Psi;//these calculated by hand
+		dPsi_dtau = -2*_D[j]*(tau - 1)*Psi;
 		dDeltab_dtau = -2*theta*_b[j]*Delta^^(_b[j] - 1);
 		d2Psi_ddelta2 = (2*_C[j]*(delta-1)^^2-1)*2*_C[j]*Psi;
 		d2Deltab_ddelta_dtau = -_A[j]*_b[j]*2/_beta2[j]*Delta^^(_b[j] - 1)*(delta - 1)*((delta - 1)^^2)^^(0.5/_beta2[j] - 1)
@@ -730,8 +669,7 @@ private:
 											+ d2Deltab_ddelta_dtau*delta*Psi);
 		}
 		
-	//-------------------Return the answer
-	double w2_RT =  1+2*delta*d_alphar_d_delta + delta^^2*d2_alphar_d_delta2
+		double w2_RT =  1+2*delta*d_alphar_d_delta + delta^^2*d2_alphar_d_delta2
 			-(1 + delta*d_alphar_d_delta - delta*tau*d2_alphar_d_delta_d_tau)^^2
 			/(-get_de_dT(rho,T)/_Rgas);//note de_dT is equivalent to c_V
 	
@@ -831,16 +769,13 @@ const double getRho_sh(double s, double h, ref double T){
 const double get_d_alphar_d_delta(double tau, double delta){
 	double d_alphar_d_delta = 0;
 	for(int i = 1; i != 8; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d_alphar_d_delta += _n[i]*_d[i]*delta^^(_d[i]-1)*tau^^_t[i];
 	}
 	for(int i = 8; i != 35; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		d_alphar_d_delta += _n[i]*exp(-delta^^_c[i])*(delta^^(_d[i]-1)*tau^^_t[i]*(_d[i]-_c[i]*delta^^_c[i]));
 	}
 	int j;
 	for(int i = 35; i != 40; i++){
-		//writefln("i: %d; n: %e",i, _n[i]);
 		j = i - 35;
 		d_alphar_d_delta += _n[i]*delta^^_d[i]*tau^^_t[i]*
 							exp(-_alpha[j]*(delta-_epsilon[j])^^2 - _beta[j]*(tau - _gamma[j])^^2)*
@@ -852,19 +787,14 @@ const double get_d_alphar_d_delta(double tau, double delta){
 	double dPsi_ddelta;
 	double dDeltab_ddelta;
 	for (int i = 40; i != 43; i++){
-		//MAKE SURE YOU SQUARE THINGS - DON'T SIMPLY THE EXPRESSION OTHERWISE IT WILL HAVE A FIT
-		//DON'T TURN (X^2)^A INTO X^(2A)
-		//be careful of the 1/2 = 0 truncation
-		//writefln("i: %d; n: %e",i, _n[i]);
 		j = i - 40;
 		Psi = exp(-_C[j]*(delta - 1)^^2 - _D[j]*(tau - 1)^^2);
 		
 		theta = (1 - tau) + _A[j]*((delta-1)^^2)^^(0.5/_beta2[j]);
 		Delta = theta*theta + _B[j]*((delta - 1)^^2)^^_a[j];
-		dPsi_ddelta = -2*_C[j]*(delta - 1)*Psi;//these calculated by hand
+		dPsi_ddelta = -2*_C[j]*(delta - 1)*Psi;
 		dDeltab_ddelta = _b[j]*Delta^^(_b[j] - 1)*(delta - 1)*
 						(2*theta*_A[j]/_beta2[j]*((delta - 1)^^2)^^(0.5/_beta2[j] - 1) + 2*_B[j]*_a[j]*((delta - 1)^^2)^^(_a[j] - 1));//fuck me;
-		//writefln("delta: %f, tau: %f, theta: %f", delta, tau, theta);
 		d_alphar_d_delta += _n[i]*(Delta^^_b[j]*(Psi + delta*dPsi_ddelta) + dDeltab_ddelta*delta*Psi);
 		
 		}
@@ -874,10 +804,7 @@ const double getP_sat(double T){
 		//calculates saturated Pressure for a given temperature equation 3.13 on p16
 		double summation = 0.0;
 		for(int i = 1; i != 5; i++){
-			//writeln("i: ", i);
-			//writeln("a: ", a[i], "t: ", t[i], "T: ", T, "Tc: ", _Tc);
 			summation += _a_Psat[i]*(1.0 - T/_Tc)^^_t_Psat[i];
-			//writeln("sum: ", summation);
 			}
 		return exp(summation*_Tc/T)*_Pc;
 	}
@@ -888,9 +815,6 @@ const double getrho_satvap(double T){
 	return exp(summation)*_rhoc;
 	}
 const double getT_satvap(double rho, double[2] bracket = [0.0, 304.1282], double tol = 1e-3){
-	//Inverse function of the above
-	//writeln("The bracket is: ", bracket);
-	//writeln("rho: ", rho);
 	if (fabs(rho - _rhoc) < 0.0001) return _Tc;
 	auto zeroRhosatvap_T = delegate (double T){
 		return rho - getrho_satvap(T);};
@@ -902,9 +826,6 @@ const double getrho_satliq(double T){
 			summation += _a_rhosatliq[i]*(1.0 - T/_Tc)^^_t_rhosatliq[i];}
 		return exp(summation)*_rhoc;}
 const double getT_satliq(double rho, double[2] bracket = [0.0, 304.1282], double tol = 1e-3){
-	//Inverse function of the above
-	//writeln("The bracket is: ", bracket);
-	//writeln("rho: ", rho);
 	if (fabs(rho - _rhoc) < 0.0001) return _Tc;
 	auto zeroRhosatliq_T = delegate (double T){
 		return rho - getrho_satliq(T);};
@@ -914,44 +835,90 @@ const double getT_satliq(double rho, double[2] bracket = [0.0, 304.1282], double
 
 
 } // end class CO2GasSW
-//OLD UNIT TEST FROM IDEAL GAS, YET TO UPDATE
-unittest {
+
+
+version(co2gas_sw_test) {
     import std.stdio;
-    auto gm = new IdealGas();
-    assert(gm.species_name(0) == "ideal air", "species name list");
-    auto gd = new GasState(gm, 100.0e3, 300.0);
-    assert(approxEqual(gm.R(gd), 287.086), failedUnitTest());
-    assert(gm.n_modes == 1, failedUnitTest());
-    assert(gm.n_species == 1, failedUnitTest());
-    assert(approxEqual(gd.p, 1.0e5), failedUnitTest());
-    assert(approxEqual(gd.T[0], 300.0), failedUnitTest());
-    assert(approxEqual(gd.massf[0], 1.0), failedUnitTest());
+    import util.msg_service;
 
-    gm.update_thermo_from_pT(gd);
-    gm.update_sound_speed(gd);
-    assert(approxEqual(gd.rho, 1.16109), failedUnitTest());
-    assert(approxEqual(gd.e[0], 215314.0), failedUnitTest());
-    assert(approxEqual(gd.a, 347.241), failedUnitTest());
-    gm.update_trans_coeffs(gd);
-    assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
-    assert(approxEqual(gd.k[0], 0.0262449), failedUnitTest());
+    int main() {
+	auto gm = new CO2GasSW();
+	assert(gm.species_name(0) == "CO2", failedUnitTest());
+	auto gd = new GasState(gm, 7.38e6, 304.5);//point chosen close to critical point
+	assert(approxEqual(gm.R(gd), 188.924, 1.0e-4), failedUnitTest());
+	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_species == 1, failedUnitTest());
+	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
-    lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
-    gm = new IdealGas(L);
-    lua_close(L);
-    assert(approxEqual(gm.R(gd), 287.086), failedUnitTest());
-    assert(gm.n_modes == 1, failedUnitTest());
-    assert(gm.n_species == 1, failedUnitTest());
-    assert(approxEqual(gd.p, 1.0e5), failedUnitTest());
-    assert(approxEqual(gd.T[0], 300.0), failedUnitTest());
-    assert(approxEqual(gd.massf[0], 1.0), failedUnitTest());
 
-    gm.update_thermo_from_pT(gd);
-    gm.update_sound_speed(gd);
-    assert(approxEqual(gd.rho, 1.16109), failedUnitTest());
-    assert(approxEqual(gd.e[0], 215314.0), failedUnitTest());
-    assert(approxEqual(gd.a, 347.241), failedUnitTest());
-    gm.update_trans_coeffs(gd);
-    assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
-    assert(approxEqual(gd.k[0], 0.0262449), failedUnitTest());
+
+	gm.update_thermo_from_pT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
+
+	gm.update_thermo_from_rhoe(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T, 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
+
+	gm.update_thermo_from_rhoT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
+
+	gm.update_thermo_from_rhop(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
+
+	gm.update_thermo_from_ps(gd, -1183.950027);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
+	gm.update_thermo_from_hs(gd, -137587.549656, -1183.950027);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
+
+
+	
+	lua_State* L = init_lua_State("sample-data/co2sw-gas-model.lua");
+	gm = new CO2GasSW(L);
+	lua_close(L);
+	gd.p = 7.38e6;
+	gd.T[0] = 304.5;
+	assert(approxEqual(gm.R(gd), 188.9241, 1.0e-4), failedUnitTest());
+	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_species == 1, failedUnitTest());
+	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.massf[0], 1.0, 1.0e-4), failedUnitTest());
+
+	gm.update_thermo_from_pT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
+	//looser tolerances on the updates below as they are using LuT
+	gm.update_thermo_from_rhoe(gd);
+	gm.update_sound_speed(gd);
+
+	assert(approxEqual(gd.p, 7.38e6, 1.0e-2), failedUnitTest());
+	assert(approxEqual(gd.T, 304.5, 1.0e-2), failedUnitTest());
+	assert(approxEqual(gd.a, 178.562447, 1.0e-2), failedUnitTest());
+	return 0;
+    }
 }
+	//writeln(gd.rho, " ,", gd.e[0], " ,",gd.T[0]," ,", gd.p, " ,",gd.a);

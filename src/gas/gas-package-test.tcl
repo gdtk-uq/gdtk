@@ -40,6 +40,10 @@ test very-viscous-air-test {Testing very_viscous_air.d} -body {
     exec ./very_viscous_air_test
 } -result {} -returnCodes {0}
 
+test co2gas-sw-test {Testing co2gas_sw.d} -body {
+    exec ./co2gas_sw_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"
