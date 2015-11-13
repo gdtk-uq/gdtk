@@ -75,7 +75,7 @@ public:
     // because we want access to the full collection of valid block references.
     {
 	foreach (boundary; 0 .. nboundaries) {
-	    string json_key = format("face_%d", boundary);
+	    string json_key = format("boundary_%d", boundary);
 	    auto bc_json_data = json_data[json_key];
 	    // [TODO] bc ~= make_BC_from_json(bc_json_data, id, boundary);
 	}
@@ -88,6 +88,7 @@ public:
 	repr ~= "id=" ~ to!string(id);
 	repr ~= " label=\"" ~ label ~ "\"";
 	repr ~= ", active=" ~ to!string(active);
+	repr ~= ", grid_type=\"" ~ gridTypeName(grid_type) ~ "\"";
 	repr ~= ", omegaz=" ~ to!string(omegaz);
 	repr ~= ", ncells=" ~ to!string(ncells);
 	repr ~= ", nvertices=" ~ to!string(nvertices);

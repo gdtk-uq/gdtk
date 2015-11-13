@@ -48,9 +48,10 @@ end
 
 -- -----------------------------------------------------------------------
 
--- Class for Block construction (based on a StructuredGrid).
+-- Class for gas dynamics Block construction (based on a StructuredGrid).
 SBlock = {
-   myType = "SBlock" -- structured_grid block for gas dynamics
+   myType = "SBlock",
+   gridType = "structured_grid"
 } -- end Block
 
 function SBlock:new(o)
@@ -113,6 +114,7 @@ function SBlock:tojson()
    str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
+   str = str .. string.format('    "grid_type": "%s",\n', self.gridType)
    str = str .. string.format('    "nic": %d,\n', self.nic)
    str = str .. string.format('    "njc": %d,\n', self.njc)
    str = str .. string.format('    "nkc": %d,\n', self.nkc)
@@ -130,7 +132,7 @@ function SBlock:tojson()
    end
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
-      str = str .. string.format('    "face_%s": ', face) ..
+      str = str .. string.format('    "boundary_%s": ', face) ..
 	 self.bcList[face]:tojson() .. ',\n'
    end
    str = str .. '    "dummy_entry_without_trailing_comma": 0\n'
@@ -140,9 +142,10 @@ end
 
 -- -----------------------------------------------------------------------
 
--- Class for Block construction (based on an UnstructuredGrid).
+-- Class for gas dynamics Block construction (based on an UnstructuredGrid).
 UBlock = {
-   myType = "UBlock" -- unstructured_grid block for gas dynamics
+   myType = "UBlock",
+   gridType = "unstructured_grid"
 } -- end Block
 
 function UBlock:new(o)
@@ -182,6 +185,7 @@ function UBlock:tojson()
    str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
+   str = str .. string.format('    "grid_type": "%s",\n', self.gridType)
    str = str .. string.format('    "ncells": %d,\n', self.ncells)
    str = str .. string.format('    "nvertices": %d,\n', self.nvertices)
    str = str .. string.format('    "nfaces": %d,\n', self.nfaces)
@@ -414,7 +418,8 @@ end
 
 -- Class for SolidBlock construction (based on a StructuredGrid)
 SSolidBlock = {
-   myType = "SSolidBlock"
+   myType = "SSolidBlock",
+   gridType = "structured_grid"
 } -- end SSolidBlock
 
 function SSolidBlock:new(o)
@@ -606,9 +611,9 @@ end
 
 function write_block_list_file(fileName)
    local f = assert(io.open(fileName, "w"))
-   f:write("# indx label\n")
+   f:write("# indx type label\n")
    for i = 1, #(blocks) do
-      f:write(string.format("%4d %s\n", blocks[i].id, blocks[i].label))
+      f:write(string.format("%4d %s %s\n", blocks[i].id, blocks[i].gridType, blocks[i].label))
    end
    f:close()
 end

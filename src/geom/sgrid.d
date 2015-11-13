@@ -25,6 +25,23 @@ import univariatefunctions;
 
 enum Grid_t {structured_grid, unstructured_grid}
 
+string gridTypeName(Grid_t gt)
+{
+    final switch (gt) {
+    case Grid_t.structured_grid: return "structured_grid";
+    case Grid_t.unstructured_grid: return "unstructured_grid";
+    }
+}
+
+Grid_t gridTypeFromName(string name)
+{
+    switch (name) {
+    case "structured_grid": return Grid_t.structured_grid;
+    case "unstructured_grid": return Grid_t.unstructured_grid;
+    default: throw new Error("Unknown type of grid: " ~ name);
+    }
+}
+
 class Grid {
     Grid_t grid_type;
     int dimensions; // 2 or 3

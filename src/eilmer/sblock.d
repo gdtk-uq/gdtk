@@ -136,7 +136,7 @@ public:
     // because we want access to the full collection of valid block references.
     {
 	foreach (boundary; 0 .. (myConfig.dimensions == 3 ? 6 : 4)) {
-	    string json_key = "face_" ~ face_name[boundary];
+	    string json_key = "boundary_" ~ face_name[boundary];
 	    auto bc_json_data = json_data[json_key];
 	    bc ~= make_BC_from_json(bc_json_data, id, boundary, nicell, njcell, nkcell);
 	}
@@ -145,10 +145,11 @@ public:
     override string toString() const
     {
 	char[] repr;
-	repr ~= "SBlock(structured_grid, ";
+	repr ~= "SBlock(";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= " label=\"" ~ label ~ "\"";
 	repr ~= ", active=" ~ to!string(active);
+	repr ~= ", grid_type=\"" ~ gridTypeName(grid_type) ~ "\"";
 	repr ~= ", omegaz=" ~ to!string(omegaz);
 	repr ~= ", nicell=" ~ to!string(nicell);
 	repr ~= ", njcell=" ~ to!string(njcell);

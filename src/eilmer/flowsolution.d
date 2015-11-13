@@ -30,6 +30,7 @@ import fileutil;
 import util.lua;
 import geom;
 import sgrid;
+import usgrid;
 import gas;
 import globalconfig;
 
@@ -46,7 +47,20 @@ public:
     
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
+	// [TODO] generalize to read both structured- and unstructured-grid blocks.
+	// Use job.list to get a hint of the type of each block.
+	auto listFile = File(dir ~ "/" ~ jobName ~ ".list");
+	auto listFileLine = listFile.readln().chomp(); // only comments on the first line
 	foreach (ib; 0 .. nBlocks) {
+	    listFileLine = listFile.readln().chomp();
+	    int ib_chk;
+	    string gridTypeName;
+	    string label;
+	    formattedRead(listFileLine, " %d %s %s", &ib_chk, &gridTypeName, &label);
+	    if (ib != ib_chk) {
+		throw new Error(format("Reading .list file ib=%d ib_chk=%d", ib, ib_chk));
+	    }
+	    auto gridType = gridTypeFromName(gridTypeName);
 	    string fileName;
 	    if (GlobalConfig.grid_motion != GridMotion.none) {
 		fileName = make_file_name!"grid"(jobName, to!int(ib), tindx);
@@ -54,10 +68,16 @@ public:
 		fileName = make_file_name!"grid"(jobName, to!int(ib), 0);
 	    }
 	    fileName = dir ~ "/" ~ fileName;
-	    gridBlocks ~= new StructuredGrid(fileName, "gziptext");
+	    final switch (gridType) {
+	    case Grid_t.structured_grid:
+		gridBlocks ~= new StructuredGrid(fileName, "gziptext");
+		break;
+	    case Grid_t.unstructured_grid:
+		// gridBlocks ~= new UnstructuredGrid(fineName, "gziptext");
+	    }
 	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx);
 	    fileName = dir ~ "/" ~ fileName;
-	    flowBlocks ~= new SBlockFlow(fileName);
+	    flowBlocks ~= new SBlockFlow(fileName, gridType);
 	} // end foreach ib
 	this.jobName = jobName;
 	this.nBlocks = nBlocks;
@@ -181,6 +201,7 @@ class SBlockFlow {
     // than the computer used for generating the simulation data.
 public:
     size_t dimensions;
+    Grid_t gridType;
     size_t nic;
     size_t njc;
     size_t nkc;
@@ -188,8 +209,9 @@ public:
     size_t[string] variableIndex;
     double sim_time;
 
-    this(string filename)
+    this(string filename, Grid_t gridType)
     {
+	this.gridType = gridType;
 	// Read in the flow data for a single structured block.
 	// Keep in sync with SBlock.read_solution() and SBlock.write_solution().
 	string[] tokens;
@@ -198,7 +220,7 @@ public:
 	string format_version;
 	formattedRead(line, "structured_grid_flow %s", &format_version);
 	if (format_version != "1.0") {
-	    throw new Error("SBlock.read_solution(): " ~
+	    throw new Error("BlockFlow.read_solution(): " ~
 			    "format version found: " ~ format_version); 
 	}
 	line = byLine.front; byLine.popFront();
