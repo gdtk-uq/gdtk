@@ -42,7 +42,7 @@ public:
     string jobName;
     double sim_time;
     size_t nBlocks;
-    SBlockFlow[] flowBlocks;
+    BlockFlow[] flowBlocks;
     Grid[] gridBlocks;
     
     this(string jobName, string dir, int tindx, size_t nBlocks)
@@ -77,7 +77,7 @@ public:
 	    }
 	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx);
 	    fileName = dir ~ "/" ~ fileName;
-	    flowBlocks ~= new SBlockFlow(fileName, gridType);
+	    flowBlocks ~= new BlockFlow(fileName, gridType);
 	} // end foreach ib
 	this.jobName = jobName;
 	this.nBlocks = nBlocks;
@@ -100,27 +100,23 @@ public:
 
     size_t[] find_nearest_cell_centre(double x, double y, double z=0.0)
     {
-	size_t[] nearest = [0, 0, 0, 0]; // blk_id, i, j, k
-	double dx = x - flowBlocks[0]["pos.x", 0, 0, 0];
-	double dy = y - flowBlocks[0]["pos.y", 0, 0, 0];
-	double dz = z - flowBlocks[0]["pos.z", 0, 0, 0];
+	size_t[] nearest = [0, 0]; // blk_id, i
+	double dx = x - flowBlocks[0]["pos.x", 0];
+	double dy = y - flowBlocks[0]["pos.y", 0];
+	double dz = z - flowBlocks[0]["pos.z", 0];
 	double minDist = sqrt(dx*dx + dy*dy + dz*dz);
 	foreach (ib; 0 .. nBlocks) {
 	    auto flow = flowBlocks[ib];
-	    foreach (k; 0 .. flow.nkc) {
-		foreach (j; 0 .. flow.njc) {
-		    foreach (i; 0 .. flow.nic) {
-			dx = x - flowBlocks[ib]["pos.x", i, j, k];
-			dy = y - flowBlocks[ib]["pos.y", i, j, k];
-			dz = z - flowBlocks[ib]["pos.z", i, j, k];
-			double dist = sqrt(dx*dx + dy*dy + dz*dz);
-			if (dist < minDist) {
-			    minDist = dist;
-			    nearest = [ib, i, j, k];
-			}
-		    } // foreach i
-		} // foreach j
-	    } // foreach k
+	    foreach (i; 0 .. flow.ncells) {
+		dx = x - flowBlocks[ib]["pos.x", i];
+		dy = y - flowBlocks[ib]["pos.y", i];
+		dz = z - flowBlocks[ib]["pos.z", i];
+		double dist = sqrt(dx*dx + dy*dy + dz*dz);
+		if (dist < minDist) {
+		    minDist = dist;
+		    nearest = [ib, i];
+		}
+	    } // foreach i
 	} // foreach ib
 	return nearest;
     } // end find_nearest_cell_centre()
@@ -160,27 +156,23 @@ public:
 	double volume_sum = 0.0;
 	foreach (ib; 0 .. nBlocks) {
 	    auto flow = flowBlocks[ib];
-	    foreach (k; 0 .. flow.nkc) {
-		foreach (j; 0 .. flow.njc) {
-		    foreach (i; 0 .. flow.nic) {
-			double x = flowBlocks[ib]["pos.x", i, j, k];
-			double y = flowBlocks[ib]["pos.y", i, j, k];
-			double z = flowBlocks[ib]["pos.z", i, j, k];
-			if (limitRegion && 
-			    (x < x0 || y < y0 || z < z0 ||
-			     x > x1 || y > y1 || z > z1)) continue;
-			double volume = flowBlocks[ib]["volume", i, j, k];
-			double value = flowBlocks[ib][varName, i, j, k];
-			volume_sum += volume;
-			L1 += volume * abs(value);
-			L2 += volume * value * value;
-			if (abs(value) > Linf) {
-			    Linf = abs(value);
-			    peak_pos[0] = x; peak_pos[1] = y; peak_pos[2] = z;
-			}
-		    } // foreach i
-		} // foreach j
-	    } // foreach k
+	    foreach (i; 0 .. flow.ncells) {
+		double x = flowBlocks[ib]["pos.x", i];
+		double y = flowBlocks[ib]["pos.y", i];
+		double z = flowBlocks[ib]["pos.z", i];
+		if (limitRegion && 
+		    (x < x0 || y < y0 || z < z0 ||
+		     x > x1 || y > y1 || z > z1)) continue;
+		double volume = flowBlocks[ib]["volume", i];
+		double value = flowBlocks[ib][varName, i];
+		volume_sum += volume;
+		L1 += volume * abs(value);
+		L2 += volume * value * value;
+		if (abs(value) > Linf) {
+		    Linf = abs(value);
+		    peak_pos[0] = x; peak_pos[1] = y; peak_pos[2] = z;
+		}
+	    } // foreach i
 	} // foreach ib
 	L1 /= volume_sum;
 	L2 = sqrt(L2/volume_sum);
@@ -189,7 +181,7 @@ public:
 
 } // end class FlowSolution
 
-class SBlockFlow {
+class BlockFlow {
     // Much like the Python library for postprocessing in Eilmer3,
     // we are going to handle the data as a big chunk of numbers,
     // with the label for each variable coming the top of the file.
@@ -202,12 +194,24 @@ class SBlockFlow {
 public:
     size_t dimensions;
     Grid_t gridType;
+    size_t ncells;
     size_t nic;
     size_t njc;
     size_t nkc;
     string[] variableNames;
     size_t[string] variableIndex;
     double sim_time;
+
+    size_t single_index(size_t i, size_t j, size_t k=0) const
+    in {
+	assert (gridType == Grid_t.structured_grid, "invalid index operation for grid");
+	assert (i < nic, text("index i=", i, " is invalid, nic=", nic));
+	assert (j < njc, text("index j=", j, " is invalid, njc=", njc));
+	assert (k < nkc, text("index k=", k, " is invalid, nkc=", nkc));
+    }
+    body {
+	return i + nic*(j + njc*k);
+    }
 
     this(string filename, Grid_t gridType)
     {
@@ -218,19 +222,25 @@ public:
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
 	string format_version;
-	formattedRead(line, "structured_grid_flow %s", &format_version);
+	string myLabel;
+	double sim_time;
+	size_t nvariables;
+	final switch (gridType) {
+	case Grid_t.structured_grid:
+	    formattedRead(line, "structured_grid_flow %s", &format_version);
+	    break;
+	case Grid_t.unstructured_grid:
+	    formattedRead(line, "unstructured_grid_flow %s", &format_version);
+	}
 	if (format_version != "1.0") {
 	    throw new Error("BlockFlow.read_solution(): " ~
 			    "format version found: " ~ format_version); 
 	}
 	line = byLine.front; byLine.popFront();
-	string myLabel;
 	formattedRead(line, "label: %s", &myLabel);
 	line = byLine.front; byLine.popFront();
-	double sim_time;
 	formattedRead(line, "sim_time: %g", &sim_time);
 	line = byLine.front; byLine.popFront();
-	size_t nvariables;
 	formattedRead(line, "variables: %d", &nvariables);
 	line = byLine.front; byLine.popFront();
 	variableNames = line.strip().split();
@@ -238,41 +248,44 @@ public:
 	foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "dimensions: %d", &dimensions);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "nicell: %d", &nic);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "njcell: %d", &njc);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "nkcell: %d", &nkc);
-	_data.length = nic;
-	// Resize the storage for our block of data.
-	foreach (i; 0 .. nic) {
-	    _data[i].length = njc;
-	    foreach (j; 0 .. njc) {
-		_data[i][j].length = nkc;
-		foreach (k; 0 .. nkc) {
-		    _data[i][j][k].length = variableNames.length;
-		} // foreach k
-	    } // foreach j
-	} // foreach i
+	final switch (gridType) {
+	case Grid_t.structured_grid:
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "nicell: %d", &nic);
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "njcell: %d", &njc);
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "nkcell: %d", &nkc);
+	    ncells = nic*njc*nkc;
+	    break;
+	case Grid_t.unstructured_grid:
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "ncells: %d", &ncells);
+	}
+
 	// Scan the remainder of the file, extracting our data.
-	foreach (k; 0 .. nkc) {
-	    foreach (j; 0 .. njc) {
-		foreach (i; 0 .. nic) {
-		    line = byLine.front; byLine.popFront();
-		    tokens = line.strip().split();
-		    assert(tokens.length == variableNames.length, "wrong number of items");
-		    foreach (ivar; 0 .. variableNames.length) {
-			_data[i][j][k][ivar] = to!double(tokens[ivar]);
-		    }
-		} // foreach i
-	    } // foreach j
-	} // foreach k
+	// Assume it is in standard cell order.
+	_data.length = ncells;
+	foreach (i; 0 .. ncells) {
+	    line = byLine.front; byLine.popFront();
+	    tokens = line.strip().split();
+	    assert(tokens.length == variableNames.length,
+		   "wrong number of items for variable data");
+	    _data[i].length = variableNames.length;
+	    foreach (ivar; 0 .. variableNames.length) {
+		_data[i][ivar] = to!double(tokens[ivar]);
+	    }
+	} // foreach i
     } // end constructor from file
+
+    ref double opIndex(string varName, size_t i)
+    {
+	return _data[i][variableIndex[varName]];
+    }
 
     ref double opIndex(string varName, size_t i, size_t j, size_t k=0)
     {
-	return _data[i][j][k][variableIndex[varName]];
+	return _data[single_index(i,j,k)][variableIndex[varName]];
     }
 
     string variable_names_as_string()
@@ -285,14 +298,19 @@ public:
 	return writer.data;
     }
 
-    string values_as_string(size_t i, size_t j, size_t k)
+    string values_as_string(size_t i)
     {
 	auto writer = appender!string();
-	formattedWrite(writer, "%e", _data[i][j][k][0]);
+	formattedWrite(writer, "%e", _data[i][0]);
 	foreach (ivar; 1 .. variableNames.length) {
-	    formattedWrite(writer, " %e", _data[i][j][k][ivar]);
+	    formattedWrite(writer, " %e", _data[i][ivar]);
 	}
 	return writer.data;
+    }
+
+    string values_as_string(size_t i, size_t j, size_t k)
+    {
+	return values_as_string(single_index(i,j,k));
     }
 
     void add_aux_variables(string[] addVarsList)
@@ -305,7 +323,7 @@ public:
 	    if (!canFind(variableNames, name)) { ok_to_proceed = false; }
 	}
 	if (!ok_to_proceed) {
-	    writeln("SBlockFlow.add_aux_variables(): Some essential variables not found.");
+	    writeln("BlockFlow.add_aux_variables(): Some essential variables not found.");
 	    return;
 	}
 	bool add_mach = canFind(addVarsList, "mach");
@@ -333,97 +351,88 @@ public:
 	// Be careful to add auxiliary variable values in the code below 
 	// in the same order as the list of variable names in the code above.
 	//
-	foreach (k; 0 .. nkc) {
-	    foreach (j; 0 .. njc) {
-		foreach (i; 0 .. nic) {
-		    double a = _data[i][j][k][variableIndex["a"]];
-		    double p = _data[i][j][k][variableIndex["p"]];
-		    double rho = _data[i][j][k][variableIndex["rho"]];
-                    double g = a*a*rho/p; // approximation for gamma
-                    // Velocity in the block frame of reference that
-		    // may be rotating for turbomachinery calculations.
-		    double wx = _data[i][j][k][variableIndex["vel.x"]];
-		    double wy = _data[i][j][k][variableIndex["vel.y"]];
-		    double wz = _data[i][j][k][variableIndex["vel.z"]];
-                    double w = sqrt(wx*wx + wy*wy + wz*wz);
-                    double M = w/a;
- 		    if (add_mach) { _data[i][j][k] ~= M; }
-                    if (add_pitot_p) {
-                        // Rayleigh Pitot formula
-			double pitot_p;
-                        if (M > 1.0) {
-                            // Go through the shock and isentropic compression.
-                            double t1 = (g+1)*M*M/2;
-                            double t2 = (g+1)/(2*g*M*M - (g-1));
-                            pitot_p = p * pow(t1,(g/(g-1))) * pow(t2,(1/(g-1)));
-                        } else {
-                            // Isentropic compression only.
-                            double t1 = 1 + 0.5*(g-1)*M*M;
-                            pitot_p = p * pow(t1,(g/(g-1)));
-			}
-                        _data[i][j][k] ~= pitot_p;
-		    }
-                    if (add_total_p) {
-                        // Isentropic process only.
-                        double t1 = 1 + 0.5*(g-1)*M*M;
-                        double total_p = p * pow(t1,(g/(g-1)));
-                        _data[i][j][k] ~= total_p;
-		    }
-                    if (add_total_h) {
-                        double e0 = _data[i][j][k][variableIndex["e[0]"]];
-                        double tke = _data[i][j][k][variableIndex["tke"]];
-                        // Sum up the bits of energy,
-                        // forgetting the multiple energy modes, for the moment.
-                        double total_h = p/rho + e0 + 0.5*w*w + tke;
-                        _data[i][j][k] ~= total_h;
-		    }
- 		} // foreach i
-	    } // foreach j
-	} // foreach k
-	
+	foreach (i; 0 .. ncells) {
+	    double a = _data[i][variableIndex["a"]];
+	    double p = _data[i][variableIndex["p"]];
+	    double rho = _data[i][variableIndex["rho"]];
+	    double g = a*a*rho/p; // approximation for gamma
+	    // Velocity in the block frame of reference that
+	    // may be rotating for turbomachinery calculations.
+	    double wx = _data[i][variableIndex["vel.x"]];
+	    double wy = _data[i][variableIndex["vel.y"]];
+	    double wz = _data[i][variableIndex["vel.z"]];
+	    double w = sqrt(wx*wx + wy*wy + wz*wz);
+	    double M = w/a;
+	    if (add_mach) { _data[i] ~= M; }
+	    if (add_pitot_p) {
+		// Rayleigh Pitot formula
+		double pitot_p;
+		if (M > 1.0) {
+		    // Go through the shock and isentropic compression.
+		    double t1 = (g+1)*M*M/2;
+		    double t2 = (g+1)/(2*g*M*M - (g-1));
+		    pitot_p = p * pow(t1,(g/(g-1))) * pow(t2,(1/(g-1)));
+		} else {
+		    // Isentropic compression only.
+		    double t1 = 1 + 0.5*(g-1)*M*M;
+		    pitot_p = p * pow(t1,(g/(g-1)));
+		}
+		_data[i] ~= pitot_p;
+	    }
+	    if (add_total_p) {
+		// Isentropic process only.
+		double t1 = 1 + 0.5*(g-1)*M*M;
+		double total_p = p * pow(t1,(g/(g-1)));
+		_data[i] ~= total_p;
+	    }
+	    if (add_total_h) {
+		double e0 = _data[i][variableIndex["e[0]"]];
+		double tke = _data[i][variableIndex["tke"]];
+		// Sum up the bits of energy,
+		// forgetting the multiple energy modes, for the moment.
+		double total_h = p/rho + e0 + 0.5*w*w + tke;
+		_data[i] ~= total_h;
+	    }
+	} // foreach i
     } // end add_aux_variables()
 
 
     void subtract_ref_soln(lua_State* L)
     {
 	string luaFnName = "refSoln";
-	foreach (k; 0 .. nkc) {
-	    foreach (j; 0 .. njc) {
-		foreach (i; 0 .. nic) {
-		    // Call back to the Lua function to get a table of values.
-		    // function refSoln(x, y, z)
-		    lua_getglobal(L, luaFnName.toStringz);
-		    lua_pushnumber(L, sim_time);
-		    lua_pushnumber(L, _data[i][j][k][variableIndex["pos.x"]]);
-		    lua_pushnumber(L, _data[i][j][k][variableIndex["pos.y"]]);
-		    lua_pushnumber(L, _data[i][j][k][variableIndex["pos.z"]]);
-		    if ( lua_pcall(L, 4, 1, 0) != 0 ) {
-			string errMsg = "Error in call to " ~ luaFnName ~ 
-			    " from LuaFnPath:opCall(): " ~ 
-			    to!string(lua_tostring(L, -1));
-			luaL_error(L, errMsg.toStringz);
-		    }
-		    // We are expecting a table, containing labelled values.
-		    if ( !lua_istable(L, -1) ) {
-			string errMsg = `Error in FlowSolution.subtract_ref_soln().;
+	foreach (i; 0 .. nic) {
+	    // Call back to the Lua function to get a table of values.
+	    // function refSoln(x, y, z)
+	    lua_getglobal(L, luaFnName.toStringz);
+	    lua_pushnumber(L, sim_time);
+	    lua_pushnumber(L, _data[i][variableIndex["pos.x"]]);
+	    lua_pushnumber(L, _data[i][variableIndex["pos.y"]]);
+	    lua_pushnumber(L, _data[i][variableIndex["pos.z"]]);
+	    if ( lua_pcall(L, 4, 1, 0) != 0 ) {
+		string errMsg = "Error in call to " ~ luaFnName ~ 
+		    " from LuaFnPath:opCall(): " ~ 
+		    to!string(lua_tostring(L, -1));
+		luaL_error(L, errMsg.toStringz);
+	    }
+	    // We are expecting a table, containing labelled values.
+	    if ( !lua_istable(L, -1) ) {
+		string errMsg = `Error in FlowSolution.subtract_ref_soln().;
 A table containing values is expected, but no table was found.`;
-			luaL_error(L, errMsg.toStringz);
-			return;
-		    }
-		    // Subtract the ones that are common to the table and the cell.
-		    foreach (ivar; 0 .. variableNames.length) {
-			lua_getfield(L, -1, variableNames[ivar].toStringz);
-			double value = 0.0;
-			if ( lua_isnumber(L, -1) ) value = lua_tonumber(L, -1);
-			lua_pop(L, 1);
-			_data[i][j][k][ivar] -= value;
-		    }
-		    lua_settop(L, 0); // clear the stack
-		} // foreach i
-	    } // foreach j
-	} // foreach k
+		luaL_error(L, errMsg.toStringz);
+		return;
+	    }
+	    // Subtract the ones that are common to the table and the cell.
+	    foreach (ivar; 0 .. variableNames.length) {
+		lua_getfield(L, -1, variableNames[ivar].toStringz);
+		double value = 0.0;
+		if ( lua_isnumber(L, -1) ) value = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+		_data[i][ivar] -= value;
+	    }
+	    lua_settop(L, 0); // clear the stack
+	} // foreach i
     } // end subtract_ref_soln()
 
 private:
-    double[][][][] _data;
-} // end class SBlockFlow
+    double[][] _data;
+} // end class BlockFlow

@@ -475,14 +475,9 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     ubyte[] binary_data_string;
     ubyte[] binary_data;
     int binary_data_offset = 0;
-    // Temporarily, get number of vertices from numbers of cells.
-    // [TODO] move to consistently use an unstructured grid.
-    size_t niv = flow.nic+1; size_t njv = flow.njc+1;
-    size_t nkv = 1;
-    if (grid.dimensions == 3) nkv = flow.nkc+1;
     size_t nic = flow.nic; size_t njc = flow.njc; size_t nkc = flow.nkc;
-    bool two_D = (nkv == 1);
-    size_t NumberOfPoints = niv * njv * nkv;
+    bool two_D = (grid.dimensions == 2);
+    size_t NumberOfPoints = grid.nvertices;
     size_t NumberOfCells = nic * njc * nkc;
     fp.write("<VTKFile type=\"UnstructuredGrid\" byte_order=\"BigEndian\">\n");
     fp.write("<UnstructuredGrid>");
@@ -497,31 +492,16 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     } else {
         fp.write(" format=\"ascii\">\n");
     }
-    size_t[][][] vtx_id;
-    vtx_id.length = niv;
-    foreach (i; 0 .. niv) {
-	vtx_id[i].length = njv;
-	foreach (j; 0 .. njv) {
-	    vtx_id[i][j].length = nkv;
-	}
-    }
-    size_t vtx_number = 0;
-    foreach (k; 0 .. nkv) {
-        foreach (j; 0 .. njv) {
-            foreach (i; 0 .. niv) {
-                vtx_id[i][j][k] = vtx_number;
-                float x = uflowz(grid[i,j,k].x);
-		float y = uflowz(grid[i,j,k].y);
-		float z = uflowz(grid[i,j,k].z);
-                if (binary_format) {
-		    binary_data ~= nativeToBigEndian(x);
-		    binary_data ~= nativeToBigEndian(y);
-		    binary_data ~= nativeToBigEndian(z);
-                } else {
-                    fp.writef(" %e %e %e\n", x,y,z);
-		}
-                vtx_number += 1;
-	    }
+    foreach (i; 0 .. grid.nvertices) {
+	float x = uflowz(grid[i].x);
+	float y = uflowz(grid[i].y);
+	float z = uflowz(grid[i].z);
+	if (binary_format) {
+	    binary_data ~= nativeToBigEndian(x);
+	    binary_data ~= nativeToBigEndian(y);
+	    binary_data ~= nativeToBigEndian(z);
+	} else {
+	    fp.writef(" %e %e %e\n", x,y,z);
 	}
     }
     fp.write(" </DataArray>\n");
@@ -544,25 +524,12 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     foreach (k; 0 .. nkc) {
         foreach (j; 0 .. njc) {
             foreach (i; 0 .. nic) {
-                if (two_D) {
-                    auto ids = [vtx_id[i][j][k], vtx_id[i+1][j][k],
-				vtx_id[i+1][j+1][k], vtx_id[i][j+1][k]];
-                    if (binary_format) {
-			foreach (id; ids) { binary_data ~= nativeToBigEndian(to!int32_t(id)); }
-                    } else {
-                        fp.writef(" %d %d %d %d\n", ids[0], ids[1], ids[2], ids[3]);
-		    }
-                } else {
-                    auto ids = [vtx_id[i][j][k], vtx_id[i+1][j][k], 
-				vtx_id[i+1][j+1][k], vtx_id[i][j+1][k],
-				vtx_id[i][j][k+1], vtx_id[i+1][j][k+1], 
-				vtx_id[i+1][j+1][k+1], vtx_id[i][j+1][k+1]];
-                    if (binary_format) {
-			foreach (id; ids) { binary_data ~= nativeToBigEndian(to!int32_t(id)); }
-                    } else {
-                        fp.writef(" %d %d %d %d %d %d %d %d\n", ids[0], ids[1], ids[2],
-				  ids[3], ids[4], ids[5], ids[6], ids[7]);
-		    }
+		auto ids = grid.get_vtx_id_list_for_cell(i,j,k);
+		if (binary_format) {
+		    foreach (id; ids) { binary_data ~= nativeToBigEndian(to!int32_t(id)); }
+		} else {
+		    foreach (id; ids) { fp.writef(" %d", id); }
+		    fp.write("\n");
 		}
 	    } // end foreach i
 	} // end foreach j
@@ -618,9 +585,9 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     }
     int type_value;
     if (two_D) {
-        type_value = 9; // VTK_QUAD
+        type_value = VTKElement.quad;
     } else {
-        type_value = 12; // VTK_HEXAHEDRON
+        type_value = VTKElement.hexahedron;
     }
     foreach (k; 0 .. nkc) {
         foreach (j; 0 .. njc) {
