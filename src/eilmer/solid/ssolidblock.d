@@ -253,7 +253,7 @@ public:
 	    for ( size_t k = kmin; k <= kmax+1; ++k ) {
 		for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		    for ( size_t i = imin; i <= imax+1; ++i ) {
-			auto src_vtx = grid.vtx[i-imin][j-jmin][k-kmin];
+			auto src_vtx = grid[i-imin,j-jmin,k-kmin];
 			auto vtx = getVtx(i,j,k);
 			vtx.pos.refx = src_vtx.x;
 			vtx.pos.refy = src_vtx.y;
@@ -270,7 +270,7 @@ public:
 	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
 		    auto vtx = getVtx(i,j);
-		    auto src_vtx = grid.vtx[i-imin][j-jmin][0];
+		    auto src_vtx = grid[i-imin,j-jmin];
 		    vtx.pos.refx = src_vtx.x;
 		    vtx.pos.refy = src_vtx.y;
 		    vtx.pos.refz = 0.0;
@@ -294,7 +294,7 @@ public:
 	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
 		    auto vtx = getVtx(i,j,k);
-		    auto dest_vtx = grid.vtx[i-imin][j-jmin][k-kmin];
+		    auto dest_vtx = grid[i-imin,j-jmin,k-kmin];
 		    dest_vtx.refx = vtx.pos.x;
 		    dest_vtx.refy = vtx.pos.y;
 		    dest_vtx.refz = vtx.pos.z;

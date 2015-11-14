@@ -43,7 +43,7 @@ public:
     double sim_time;
     size_t nBlocks;
     SBlockFlow[] flowBlocks;
-    StructuredGrid[] gridBlocks;
+    Grid[] gridBlocks;
     
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
@@ -73,7 +73,7 @@ public:
 		gridBlocks ~= new StructuredGrid(fileName, "gziptext");
 		break;
 	    case Grid_t.unstructured_grid:
-		// gridBlocks ~= new UnstructuredGrid(fineName, "gziptext");
+		gridBlocks ~= new UnstructuredGrid(fileName, "gziptext");
 	    }
 	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx);
 	    fileName = dir ~ "/" ~ fileName;

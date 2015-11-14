@@ -126,23 +126,24 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     } // end if vtkxml
     //
     if (tecplotFlag) {
-	writeln("writing Tecplot file(s) to directory \"", plotDir, "\"");
-	foreach (tindx; tindx_list_to_plot) {
-	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
-	    soln.add_aux_variables(addVarsList);
-	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    write_Tecplot_file(jobName, plotDir, soln, tindx);
-	} // foreach tindx
-	if ( GlobalConfig.nSolidBlocks > 0 ) {
-	    writeln("writing solid Tecplot file(s) to directory \"", plotDir, "\"");
-	    foreach (tindx; tindx_list_to_plot) {
-		writeln("  tindx= ", tindx);
-		auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
-		if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-		write_Tecplot_file(jobName, plotDir, soln, tindx);
-	    } // foreach tindx
-	} // end if nSolidBlocks > 0
+	throw new Error("Tecplot output not currently available.");
+	// writeln("writing Tecplot file(s) to directory \"", plotDir, "\"");
+	// foreach (tindx; tindx_list_to_plot) {
+	//     writeln("  tindx= ", tindx);
+	//     auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	//     soln.add_aux_variables(addVarsList);
+	//     if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+	//     write_Tecplot_file(jobName, plotDir, soln, tindx);
+	// } // foreach tindx
+	// if ( GlobalConfig.nSolidBlocks > 0 ) {
+	//     writeln("writing solid Tecplot file(s) to directory \"", plotDir, "\"");
+	//     foreach (tindx; tindx_list_to_plot) {
+	// 	writeln("  tindx= ", tindx);
+	// 	auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
+	// 	if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+	// 	write_Tecplot_file(jobName, plotDir, soln, tindx);
+	//     } // foreach tindx
+	// } // end if nSolidBlocks > 0
     } // end if tecplot
     //
     if (probeStr.length > 0) {
@@ -474,7 +475,11 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     ubyte[] binary_data_string;
     ubyte[] binary_data;
     int binary_data_offset = 0;
-    size_t niv = grid.niv; size_t njv = grid.njv; size_t nkv = grid.nkv;
+    // Temporarily, get number of vertices from numbers of cells.
+    // [TODO] move to consistently use an unstructured grid.
+    size_t niv = flow.nic+1; size_t njv = flow.njc+1;
+    size_t nkv = 1;
+    if (grid.dimensions == 3) nkv = flow.nkc+1;
     size_t nic = flow.nic; size_t njc = flow.njc; size_t nkc = flow.nkc;
     bool two_D = (nkv == 1);
     size_t NumberOfPoints = niv * njv * nkv;
@@ -492,7 +497,6 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     } else {
         fp.write(" format=\"ascii\">\n");
     }
-    size_t vtx_number = 0;
     size_t[][][] vtx_id;
     vtx_id.length = niv;
     foreach (i; 0 .. niv) {
@@ -501,13 +505,14 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
 	    vtx_id[i][j].length = nkv;
 	}
     }
+    size_t vtx_number = 0;
     foreach (k; 0 .. nkv) {
         foreach (j; 0 .. njv) {
             foreach (i; 0 .. niv) {
                 vtx_id[i][j][k] = vtx_number;
-                float x = uflowz(grid.vtx[i][j][k].x);
-		float y = uflowz(grid.vtx[i][j][k].y);
-		float z = uflowz(grid.vtx[i][j][k].z);
+                float x = uflowz(grid[i,j,k].x);
+		float y = uflowz(grid[i,j,k].y);
+		float z = uflowz(grid[i,j,k].z);
                 if (binary_format) {
 		    binary_data ~= nativeToBigEndian(x);
 		    binary_data ~= nativeToBigEndian(y);
@@ -824,9 +829,9 @@ void write_VTK_XML_unstructured_file(SolidSolution soln, size_t jb,
         foreach (j; 0 .. njv) {
             foreach (i; 0 .. niv) {
                 vtx_id[i][j][k] = vtx_number;
-                float x = uflowz(grid.vtx[i][j][k].x);
-		float y = uflowz(grid.vtx[i][j][k].y);
-		float z = uflowz(grid.vtx[i][j][k].z);
+                float x = uflowz(grid[i,j,k].x);
+		float y = uflowz(grid[i,j,k].y);
+		float z = uflowz(grid[i,j,k].z);
                 if (binary_format) {
 		    binary_data ~= nativeToBigEndian(x);
 		    binary_data ~= nativeToBigEndian(y);
@@ -999,156 +1004,3 @@ void write_VTK_XML_unstructured_file(SolidSolution soln, size_t jb,
     fp.close();
     return;
 } // end write_VTK_XML_unstructured_file()
-
-//-----------------------------------------------------------------------
-
-void write_Tecplot_file(string jobName, string plotDir,
-			FlowSolution soln, int tindx)
-{
-    ensure_directory_is_present(plotDir);
-    string fileName = plotDir~"/"~jobName~format(".t%04d", tindx)~".tec";
-    auto fp = File(fileName, "w");
-    fp.writef("TITLE=\"Job=%s time=%e\"\n", jobName, soln.sim_time);
-    fp.write("VARIABLES= \"X\", \"Y\", \"Z\"");
-    size_t n_centered_vars = 0;
-    foreach (var; soln.flowBlocks[0].variableNames) {
-        if (var == "pos.x" || var == "pos.y" || var == "pos.z") continue;
-        fp.writef(", \"%s\"", var);
-        n_centered_vars += 1;
-    }
-    fp.write("\n");
-    //centered_list_str = str(range(4,4+n_centered_vars))
-    foreach (jb; 0 .. soln.nBlocks) {
-	auto flow = soln.flowBlocks[jb];
-	auto grid = soln.gridBlocks[jb];
-        size_t nic = flow.nic; size_t njc = flow.njc; size_t nkc = flow.nkc;
-        size_t niv = grid.niv; size_t njv = grid.njv; size_t nkv = grid.nkv;
-        fp.writef("ZONE I=%d J=%d K=%d DATAPACKING=BLOCK", niv, njv, nkv);
-        fp.writef(" SOLUTIONTIME=%e", soln.sim_time);
-        fp.write(" VARLOCATION=([4");
-	foreach(i; 5 .. 4+n_centered_vars) { fp.writef(",%d", i); }
-	fp.writef("]=CELLCENTERED) T=\"block-%d\"\n", jb);
-        fp.write("# cell-vertex pos.x\n");
-        foreach (k; 0 .. nkv) {
-            foreach (j; 0 .. njv) {
-                foreach (i; 0 .. niv) { 
-		    fp.writef(" %e", uflowz(grid[i,j,k].x));
-		    // New line after every 10 values.
-		    if (i > 0 && i < niv-1 && ((i+1)%10 == 0)) fp.write("\n");
-		}
-                fp.write("\n");
-	    } // j
-	} // k
-	fp.write("# cell-vertex pos.y\n");
-        foreach (k; 0 .. nkv) {
-            foreach (j; 0 .. njv) {
-                foreach (i; 0 .. niv) { 
-		    fp.writef(" %e", uflowz(grid[i,j,k].y));
-		    if (i > 0 && i < niv-1 && ((i+1)%10 == 0)) fp.write("\n");
-		}
-                fp.write("\n");
-	    } // j
-	} // k
-	fp.write("# cell-vertex pos.z\n");
-        foreach (k; 0 .. nkv) {
-            foreach (j; 0 .. njv) {
-                foreach (i; 0 .. niv) { 
-		    fp.writef(" %e", uflowz(grid[i,j,k].z));
-		    if (i > 0 && i < niv-1 && ((i+1)%10 == 0)) fp.write("\n");
-		}
-                fp.write("\n");
-	    } // j
-	} // k
-	foreach (var; soln.flowBlocks[0].variableNames) {
-	    if (var == "pos.x" || var == "pos.y" || var == "pos.z") continue;
-            fp.writef("# cell-centre %s\n", var);
-	    foreach (k; 0 .. nkc) {
-		foreach (j; 0 .. njc) {
-		    foreach (i; 0 .. nic) { 
-			fp.writef(" %e", uflowz(flow[var,i,j,k]));
-			if (i > 0 && i < nic-1 && ((i+1)%10 == 0)) fp.write("\n");
-		    }
-		    fp.write("\n");
-		} // j
-	    } // k
-	} // var
-    } // jb
-    fp.close();
-    return;
-} // end write_Tecplot_file()
-
-// This is the solid domain version.
-void write_Tecplot_file(string jobName, string plotDir,
-			SolidSolution soln, int tindx)
-{
-    ensure_directory_is_present(plotDir);
-    string fileName = plotDir~"/"~jobName~format(".t%04d", tindx)~".tec";
-    auto fp = File(fileName, "w");
-    fp.writef("TITLE=\"Job=%s time=%e\"\n", jobName, soln.sim_time);
-    fp.write("VARIABLES= \"X\", \"Y\", \"Z\"");
-    size_t n_centered_vars = 0;
-    foreach (var; soln.solidBlocks[0].variableNames) {
-        if (var == "pos.x" || var == "pos.y" || var == "pos.z") continue;
-        fp.writef(", \"%s\"", var);
-        n_centered_vars += 1;
-    }
-    fp.write("\n");
-    //centered_list_str = str(range(4,4+n_centered_vars))
-    foreach (jb; 0 .. soln.nBlocks) {
-	auto solid = soln.solidBlocks[jb];
-	auto grid = soln.gridBlocks[jb];
-        size_t nic = solid.nic; size_t njc = solid.njc; size_t nkc = solid.nkc;
-        size_t niv = grid.niv; size_t njv = grid.njv; size_t nkv = grid.nkv;
-        fp.writef("ZONE I=%d J=%d K=%d DATAPACKING=BLOCK", niv, njv, nkv);
-        fp.writef(" SOLUTIONTIME=%e", soln.sim_time);
-        fp.write(" VARLOCATION=([4");
-	foreach(i; 5 .. 4+n_centered_vars) { fp.writef(",%d", i); }
-	fp.writef("]=CELLCENTERED) T=\"block-%d\"\n", jb);
-        fp.write("# cell-vertex pos.x\n");
-        foreach (k; 0 .. nkv) {
-            foreach (j; 0 .. njv) {
-                foreach (i; 0 .. niv) { 
-		    fp.writef(" %e", uflowz(grid[i,j,k].x));
-		    // New line after every 10 values.
-		    if (i > 0 && i < niv-1 && ((i+1)%10 == 0)) fp.write("\n");
-		}
-                fp.write("\n");
-	    } // j
-	} // k
-	fp.write("# cell-vertex pos.y\n");
-        foreach (k; 0 .. nkv) {
-            foreach (j; 0 .. njv) {
-                foreach (i; 0 .. niv) { 
-		    fp.writef(" %e", uflowz(grid[i,j,k].y));
-		    if (i > 0 && i < niv-1 && ((i+1)%10 == 0)) fp.write("\n");
-		}
-                fp.write("\n");
-	    } // j
-	} // k
-	fp.write("# cell-vertex pos.z\n");
-        foreach (k; 0 .. nkv) {
-            foreach (j; 0 .. njv) {
-                foreach (i; 0 .. niv) { 
-		    fp.writef(" %e", uflowz(grid[i,j,k].z));
-		    if (i > 0 && i < niv-1 && ((i+1)%10 == 0)) fp.write("\n");
-		}
-                fp.write("\n");
-	    } // j
-	} // k
-	foreach (var; soln.solidBlocks[0].variableNames) {
-	    if (var == "pos.x" || var == "pos.y" || var == "pos.z") continue;
-            fp.writef("# cell-centre %s\n", var);
-	    foreach (k; 0 .. nkc) {
-		foreach (j; 0 .. njc) {
-		    foreach (i; 0 .. nic) { 
-			fp.writef(" %e", uflowz(solid[var,i,j,k]));
-			if (i > 0 && i < nic-1 && ((i+1)%10 == 0)) fp.write("\n");
-		    }
-		    fp.write("\n");
-		} // j
-	    } // k
-	} // var
-    } // jb
-    fp.close();
-    return;
-} // end write_Tecplot_file()

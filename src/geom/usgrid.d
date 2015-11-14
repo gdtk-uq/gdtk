@@ -190,8 +190,7 @@ public:
 
 class UnstructuredGrid : Grid {
 public:
-    int nvertices, ncells, nfaces, nboundaries;
-    Vector3[] vertices;
+    size_t ncells, nfaces, nboundaries;
     USGFace[] faces;
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
@@ -223,13 +222,16 @@ public:
 		boundaries ~= new BoundaryFaceSet(face_name[ib]);
 		// 0=north, 1=east, 2=south, 3=west
 	    }
-	    // vertices
+	    // vertex index array
 	    size_t[][] vtx_id;
 	    vtx_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		vtx_id[i].length = sg.njv;
-		foreach (j; 0 .. sg.njv) {
-		    vertices ~= Vector3(sg.vtx[i][j][0]);
+	    }
+	    // vertex list in standard order, indexed
+	    foreach (j; 0 .. sg.njv) {
+		foreach (i; 0 .. sg.niv) {
+		    vertices ~= Vector3(sg.vertices[sg.single_index(i,j)]);
 		    vtx_id[i][j] = vertices.length - 1;
 		}
 	    }
@@ -238,7 +240,9 @@ public:
 	    iface_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		iface_id[i].length = sg.njv-1;
-		foreach (j; 0 .. sg.njv-1) {
+	    }
+	    foreach (j; 0 .. sg.njv-1) {
+		foreach (i; 0 .. sg.niv) {
 		    faces ~= new USGFace([vtx_id[i][j], vtx_id[i][j+1]]);
 		    iface_id[i][j] = faces.length - 1;
 		    if (i == 0) {
@@ -256,7 +260,9 @@ public:
 	    jface_id.length = sg.niv - 1;
 	    foreach (i; 0 .. sg.niv-1) {
 		jface_id[i].length = sg.njv;
-		foreach (j; 0 .. sg.njv) {
+	    }
+	    foreach (j; 0 .. sg.njv) {
+		foreach (i; 0 .. sg.niv-1) {
 		    faces ~= new USGFace([vtx_id[i][j], vtx_id[i+1][j]]);
 		    jface_id[i][j] = faces.length - 1;
 		    if (j == 0) {
@@ -270,8 +276,8 @@ public:
 		}
 	    }
 	    // cells
-	    foreach (i; 0 .. sg.niv-1) {
-		foreach (j; 0 .. sg.njv-1) {
+	    foreach (j; 0 .. sg.njv-1) {
+		foreach (i; 0 .. sg.niv-1) {
 		    auto cell_vertices = [vtx_id[i][j], vtx_id[i+1][j],
 					  vtx_id[i+1][j+1], vtx_id[i][j+1]];
 		    auto cell_faces = [jface_id[i][j+1], // north
@@ -295,15 +301,20 @@ public:
 		boundaries ~= new BoundaryFaceSet(face_name[ib]);
 		// 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
 	    }
-	    // vertices
+	    // vertex index array
 	    size_t[][][] vtx_id;
 	    vtx_id.length = sg.niv;
 	    foreach (i; 0 .. sg.niv) {
 		vtx_id[i].length = sg.njv;
 		foreach (j; 0 .. sg.njv) {
 		    vtx_id[i][j].length = sg.nkv;
-		    foreach (k; 0 .. sg.nkv) {
-			vertices ~= Vector3(sg.vtx[i][j][k]);
+		}
+	    }
+	    // vertex list in standard order, indexed
+	    foreach (k; 0 .. sg.nkv) {
+		foreach (j; 0 .. sg.njv) {
+		    foreach (i; 0 .. sg.niv) {
+			vertices ~= Vector3(sg.vertices[sg.single_index(i,j,k)]);
 			vtx_id[i][j][k] = vertices.length - 1;
 		    }
 		}
@@ -315,7 +326,11 @@ public:
 		iface_id[i].length = sg.njv-1;
 		foreach (j; 0 .. sg.njv-1) {
 		    iface_id[i][j].length = sg.nkv-1;
-		    foreach (k; 0 .. sg.nkv-1) {
+		}
+	    }
+	    foreach (k; 0 .. sg.nkv-1) {
+		foreach (j; 0 .. sg.njv-1) {
+		    foreach (i; 0 .. sg.niv) {
 			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i][j+1][k],
 					      vtx_id[i][j+1][k+1], vtx_id[i][j][k+1]]);
 			iface_id[i][j][k] = faces.length - 1;
@@ -337,7 +352,11 @@ public:
 		jface_id[i].length = sg.njv;
 		foreach (j; 0 .. sg.njv) {
 		    jface_id[i][j].length = sg.nkv-1;
-		    foreach (k; 0 .. sg.nkv-1) {
+		}
+	    }
+	    foreach (k; 0 .. sg.nkv-1) {
+		foreach (j; 0 .. sg.njv) {
+		    foreach (i; 0 .. sg.niv-1) {
 			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
 					      vtx_id[i+1][j][k+1], vtx_id[i][j][k+1]]);
 			jface_id[i][j][k] = faces.length - 1;
@@ -359,7 +378,11 @@ public:
 		kface_id[i].length = sg.njv-1;
 		foreach (j; 0 .. sg.njv-1) {
 		    kface_id[i][j].length = sg.nkv;
-		    foreach (k; 0 .. sg.nkv) {
+		}
+	    }
+	    foreach (k; 0 .. sg.nkv) {
+		foreach (j; 0 .. sg.njv-1) {
+		    foreach (i; 0 .. sg.niv-1) {
 			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
 					      vtx_id[i+1][j+1][k], vtx_id[i][j+1][k]]);
 			kface_id[i][j][k] = faces.length - 1;
@@ -375,9 +398,9 @@ public:
 		}
 	    }
 	    // cells
-	    foreach (i; 0 .. sg.niv-1) {
+	    foreach (k; 0 .. sg.nkv-1) {
 		foreach (j; 0 .. sg.njv-1) {
-		    foreach (k; 0 .. sg.nkv-1) {
+		    foreach (i; 0 .. sg.niv-1) {
 			auto cell_vertices = [vtx_id[i][j][k], vtx_id[i+1][j][k],
 					      vtx_id[i+1][j+1][k], vtx_id[i][j+1][k],
 					      vtx_id[i][j][k+1], vtx_id[i+1][j][k+1],
@@ -426,6 +449,44 @@ public:
     UnstructuredGrid dup() const
     {
 	return new UnstructuredGrid(this);
+    }
+
+    override ref Vector3 opIndex(size_t i, size_t j, size_t k=0)
+    in {
+	assert (i < nvertices, text("index i=", i, " is invalid, nvertices=", nvertices));
+	assert (j == 0, text("index j=", j, " is invalid for unstructured grid"));
+	assert (k == 0, text("index k=", k, " is invalid for unstructured grid"));
+    }
+    body {
+	return vertices[i];
+    }
+
+    override ref Vector3 opIndex(size_t indx)
+    in {
+	assert (indx < nvertices,
+		text("index indx=", indx, " is invalid, nvertices=", nvertices));
+    }
+    body {
+	return vertices[indx];
+    }
+
+    override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
+    in {
+	assert (i < ncells, text("index i=", i, " is invalid, ncells=", ncells));
+	assert (j == 0, text("index j=", j, " is invalid for unstructured grid"));
+	assert (k == 0, text("index k=", k, " is invalid for unstructured grid"));
+    }
+    body {
+	return cells[i].vtx_id_list.dup();
+    }
+
+    override size_t[] get_vtx_id_list_for_cell(size_t indx) const
+    in {
+	assert (indx < ncells,
+		text("index indx=", indx, " is invalid, ncells=", ncells));
+    }
+    body {
+	return cells[indx].vtx_id_list.dup();
     }
 
     void read_from_text_file(string fileName, bool vtkHeader=true)

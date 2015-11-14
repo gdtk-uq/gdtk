@@ -46,6 +46,9 @@ class Grid {
     Grid_t grid_type;
     int dimensions; // 2 or 3
     string label;
+    size_t nvertices;
+    Vector3[] vertices;
+    size_t[] vtx_id;
     
     this(Grid_t grid_type, int dimensions, string label="")
     {
@@ -54,6 +57,10 @@ class Grid {
 	this.label = label;
     }
 
+    abstract ref Vector3 opIndex(size_t i, size_t j, size_t k=0);
+    abstract ref Vector3 opIndex(size_t indx);
+    abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const; 
+    abstract size_t[] get_vtx_id_list_for_cell(size_t indx) const;
     abstract void read_from_gzip_file(string fileName);
     abstract void write_to_gzip_file(string fileName);
     abstract void write_to_vtk_file(string fileName);
@@ -64,7 +71,16 @@ class Grid {
 class StructuredGrid : Grid {
 public:
     int niv, njv, nkv;
-    Vector3[][][] vtx;
+
+    size_t single_index(size_t i, size_t j, size_t k=0) const
+    in {
+	assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
+	assert (j < njv, text("index j=", j, " is invalid, njv=", njv));
+	assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
+    }
+    body {
+	return i + niv*(j + njv*k);
+    }
 
     // Blank grid, ready for import of data.
     this(int niv, int njv, int nkv=1, string label="")
@@ -72,7 +88,19 @@ public:
 	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
 	super(Grid_t.structured_grid, dim, label);
 	this.niv = niv; this.njv = njv; this.nkv = nkv;
-	resize_array();
+	nvertices = niv*njv*nkv;
+	vertices.length = nvertices;
+	vtx_id.length = nvertices;
+	// Standard order of vertices.
+	size_t ivtx = 0;
+	foreach (k; 0 .. nkv) {
+	    foreach (j; 0 .. njv) {
+		foreach (i; 0 .. niv) {
+		    vtx_id[single_index(i,j,k)] = ivtx;
+		    ivtx++;
+		}
+	    }
+	}
     }
 
     // 2D grid, built on Parametric surface.
@@ -119,14 +147,10 @@ public:
     this(const StructuredGrid other)
     {
 	this(other.niv, other.njv, nkv = other.nkv, other.label);
-	foreach (i; 0 .. vtx.length) {
-	    foreach (j; 0 .. vtx[i].length) {
-		foreach (k; 0 .. vtx[i][j].length) {
-		    vtx[i][j][k].refx = other.vtx[i][j][k].x;
-		    vtx[i][j][k].refy = other.vtx[i][j][k].y;
-		    vtx[i][j][k].refz = other.vtx[i][j][k].z;
-		}
-	    }
+	foreach (i; 0 .. vertices.length) {
+	    vertices[i].refx = other.vertices[i].x;
+	    vertices[i].refy = other.vertices[i].y;
+	    vertices[i].refz = other.vertices[i].z;
 	}
     }
 
@@ -134,26 +158,70 @@ public:
     {
 	return new StructuredGrid(this);
     }
-
-    void resize_array()
-    {
-	vtx.length = niv;
-	foreach (i; 0 .. niv) {
-	    vtx[i].length = njv;
-	    foreach (j; 0 .. njv) {
-		vtx[i][j].length = nkv;
-	    }
-	}
-    } // end resize_array
-
-    ref Vector3 opIndex(size_t i, size_t j, size_t k=0)
+	
+    override ref Vector3 opIndex(size_t i, size_t j, size_t k=0)
     in {
 	assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
 	assert (j < njv, text("index j=", j, " is invalid, njv=", njv));
 	assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
     }
     body {
-	return vtx[i][j][k];
+	return vertices[single_index(i,j,k)];
+    }
+
+    override ref Vector3 opIndex(size_t indx)
+    in {
+	assert (indx < niv*njv*nkv,
+		text("index indx=", indx, " is invalid, niv*njv*nkv=", niv*njv*nkv));
+    }
+    body {
+	return vertices[indx];
+    }
+
+    override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
+    in {
+	size_t nic = niv - 1;
+	assert (i < nic, text("index i=", i, " is invalid, nic=", nic));
+	size_t njc = njv - 1;
+	assert (j < njc, text("index j=", j, " is invalid, njc=", njc));
+	if (dimensions == 2) {
+	    assert (k == 0, text("index k=", k, " is invalid for 2D grid"));
+	} else {
+	    size_t nkc = nkv - 1;
+	    assert (k < nkc, text("index k=", k, " is invalid, nkc=", nkc));
+	}
+    }
+    body {
+	if (dimensions == 2) {
+	    return [vtx_id[single_index(i,j,k)],
+		    vtx_id[single_index(i+1,j,k)],
+		    vtx_id[single_index(i+1,j+1,k)],
+		    vtx_id[single_index(i,j+1,k)]];
+	} else {
+	    return [vtx_id[single_index(i,j,k)],
+		    vtx_id[single_index(i+1,j,k)], 
+		    vtx_id[single_index(i+1,j+1,k)],
+		    vtx_id[single_index(i,j+1,k)],
+		    vtx_id[single_index(i,j,k+1)],
+		    vtx_id[single_index(i+1,j,k+1)], 
+		    vtx_id[single_index(i+1,j+1,k+1)],
+		    vtx_id[single_index(i,j+1,k+1)]];
+	}
+    }
+
+    override size_t[] get_vtx_id_list_for_cell(size_t indx) const
+    {
+	size_t nic = niv - 1;
+	size_t njc = njv - 1;
+	size_t nkc = 1;
+	if (dimensions == 3) {
+	    nkc = nkv - 1;
+	}
+	size_t k = indx / (nic*njc);
+	indx -= k * (nic * njc);
+	size_t j = indx / nic;
+	indx -= j * nic;
+	return get_vtx_id_list_for_cell(indx, j, k);
     }
 
     StructuredGrid subgrid(size_t i0, size_t ni,
@@ -167,13 +235,13 @@ public:
 	    throw new Error(text("Sgrid.subgrid overrun j0=",j0,", nj=",nj,", njv=",njv));
 	if (k0+nk > nkv)
 	    throw new Error(text("Sgrid.subgrid overrun k0=",k0,", nk=",nk,", nkv=",nkv));
-	auto new_grd = new StructuredGrid(to!int(ni), to!int(nj), to!int(nk));
+	auto new_grd = new StructuredGrid(ni, nj, nk);
 	foreach (i; 0 .. ni) {
 	    foreach (j; 0 .. nj) {
 		foreach (k; 0 .. nk) {
-		    new_grd.vtx[i][j][k].refx = vtx[i0+i][j0+j][k0+k].x;
-		    new_grd.vtx[i][j][k].refy = vtx[i0+i][j0+j][k0+k].y;
-		    new_grd.vtx[i][j][k].refz = vtx[i0+i][j0+j][k0+k].z;
+		    new_grd[i,j,k].refx = vertices[single_index(i0+i,j0+j,k0+k)].x;
+		    new_grd[i,j,k].refy = vertices[single_index(i0+i,j0+j,k0+k)].y;
+		    new_grd[i,j,k].refz = vertices[single_index(i0+i,j0+j,k0+k)].z;
 		}
 	    }
 	}
@@ -199,9 +267,9 @@ public:
                 double sdash = (1.0-r) * sWest[j] + r * sEast[j]; 
                 double rdash = (1.0-s) * rSouth[i] + s * rNorth[i];
                 Vector3 p = surf(rdash, sdash);
-                vtx[i][j][k].refx = p.x;
-                vtx[i][j][k].refy = p.y;
-                vtx[i][j][k].refz = p.z;
+                this[i,j,k].refx = p.x;
+                this[i,j,k].refy = p.y;
+                this[i,j,k].refz = p.z;
 	    }
 	}
     } // end make_grid_from_surface()
@@ -243,10 +311,10 @@ public:
 			(1.0-t)*r*s12[j] + t*(1-r)*s47[j];
                     double rdash = (1.0-s)*(1.0-t)*r01[i] + s*t*r76[i] + 
 			(1.0-s)*t*r45[i] + s*(1.0-t)*r32[i];
-			Vector3 p = pvolume(rdash, sdash, tdash);
-		    vtx[i][j][k].refx = p.x;
-		    vtx[i][j][k].refy = p.y;
-		    vtx[i][j][k].refz = p.z;
+		    Vector3 p = pvolume(rdash, sdash, tdash);
+		    this[i,j,k].refx = p.x;
+		    this[i,j,k].refy = p.y;
+		    this[i,j,k].refz = p.z;
 		} // i
 	    } // j
 	} // k
@@ -268,20 +336,26 @@ public:
 	niv = to!int(tokens[0]);
 	njv = to!int(tokens[1]);
 	nkv = to!int(tokens[2]);
-	resize_array();
+	nvertices = niv*njv*nkv;
+	vertices.length = nvertices;
+	vtx_id.length = nvertices;
+	// Standard order of vertices.
+	size_t ivtx = 0;
 	foreach (k; 0 .. nkv) {
 	    foreach (j; 0 .. njv) {
 		foreach (i; 0 .. niv) {
 		    tokens = f.readln().strip().split();
 		    try {
-			vtx[i][j][k].refx = to!double(tokens[0]);
-			vtx[i][j][k].refy = to!double(tokens[1]);
-			vtx[i][j][k].refz = to!double(tokens[2]);
+			this[i,j,k].refx = to!double(tokens[0]);
+			this[i,j,k].refy = to!double(tokens[1]);
+			this[i,j,k].refz = to!double(tokens[2]);
 		    } catch (Exception e) {
 			throw new Error(text("Failed to read grid file at "
 					     "i=", i, " j=", j, " k=", k,
 					     "tokens=", tokens, "exception=", e));
 		    }
+		    vtx_id[single_index(i,j,k)] = ivtx;
+		    ivtx++;
 		} // foreach i
 	    } // foreach j
 	} // foreach k
@@ -307,7 +381,11 @@ public:
 	formattedRead(line, "njv: %d", &njv);
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "nkv: %d", &nkv);
-	resize_array();
+	nvertices = niv*njv*nkv;
+	vertices.length = nvertices;
+	vtx_id.length = nvertices;
+	// Standard order of vertices.
+	size_t ivtx = 0;
 	double x, y, z;
 	foreach (k; 0 .. nkv) {
 	    foreach (j; 0 .. njv) {
@@ -315,9 +393,11 @@ public:
 		    line = byLine.front; byLine.popFront();
 		    // Note that the line starts with whitespace.
 		    formattedRead(line, " %g %g %g", &x, &y, &z);
-		    vtx[i][j][k].refx = x;
-		    vtx[i][j][k].refy = y;
-		    vtx[i][j][k].refz = z;
+		    this[i,j,k].refx = x;
+		    this[i,j,k].refy = y;
+		    this[i,j,k].refz = z;
+		    vtx_id[single_index(i,j,k)] = ivtx;
+		    ivtx++;
 		} // foreach i
 	    } // foreach j
 	} // foreach k
@@ -340,7 +420,7 @@ public:
 		foreach (i; 0 .. niv) {
 		    writer = appender!string();
 		    formattedWrite(writer, "%20.16e %20.16e %20.16e\n", 
-				   vtx[i][j][k].x, vtx[i][j][k].y, vtx[i][j][k].z);
+				   this[i,j,k].x, this[i,j,k].y, this[i,j,k].z);
 		    f.compress(writer.data);
 		}
 	    }
@@ -362,7 +442,7 @@ public:
 	    foreach (j; 0 .. njv) {
 		foreach (i; 0 .. niv) {
 		    f.writefln("%20.16e %20.16e %20.16e", 
-			       vtx[i][j][k].x, vtx[i][j][k].y, vtx[i][j][k].z);
+			       this[i,j,k].x, this[i,j,k].y, this[i,j,k].z);
 		}
 	    }
 	}
