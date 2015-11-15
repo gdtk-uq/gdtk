@@ -71,7 +71,7 @@ class Grid {
 
 class StructuredGrid : Grid {
 public:
-    int niv, njv, nkv;
+    size_t niv, njv, nkv;
 
     size_t single_index(size_t i, size_t j, size_t k=0) const
     in {
@@ -84,7 +84,7 @@ public:
     }
 
     // Blank grid, ready for import of data.
-    this(int niv, int njv, int nkv=1, string label="")
+    this(size_t niv, size_t njv, size_t nkv=1, string label="")
     {
 	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
 	super(Grid_t.structured_grid, dim, label);
@@ -110,7 +110,7 @@ public:
     }
 
     // 2D grid, built on Parametric surface.
-    this(const ParametricSurface surf, int niv, int njv,
+    this(const ParametricSurface surf, size_t niv, size_t njv,
 	 const(UnivariateFunction)[] clusterf, string label="")
     {
 	this(niv, njv, 1, label);
@@ -120,7 +120,7 @@ public:
     }
 
     // 3D grid, built on ParametricVolume.
-    this(const ParametricVolume pvolume, int niv, int njv, int nkv,
+    this(const ParametricVolume pvolume, size_t niv, size_t njv, size_t nkv,
 	 const(UnivariateFunction)[] clusterf, string label="")
     {
 	this(niv, njv, nkv, label);
@@ -265,7 +265,7 @@ public:
 	// Now, work through the mesh, one point at a time,
         // blending the stretched parameter values
         // and creating the actual vertex coordinates in Cartesian space.
-        int k = 0;
+        size_t k = 0;
         foreach (j; 0 .. njv) {
             double s = to!double(j) / (njv - 1);
 	    foreach (i; 0 .. niv) {

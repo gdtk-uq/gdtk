@@ -41,12 +41,12 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
     if ( lua_isfunction(L, 3) ) {
 	// We'll assume the function is good to use.
 	// Numbers of cells derived from numbers of vertices.
-	int nic = grid.niv - 1;
-	int njc = grid.njv - 1;
-	int nkc = grid.nkv - 1;
+	auto nic = grid.niv - 1;
+	auto njc = grid.njv - 1;
+	auto nkc = grid.nkv - 1;
 	if (GlobalConfig.dimensions == 2) nkc = 1;
 	
-	string cellDataToString(int i, int j, int k)
+	string cellDataToString(size_t i, size_t j, size_t k)
 	{
 	    auto p000 = grid[i,j,k];
 	    auto p100 = grid[i+1,j,k];

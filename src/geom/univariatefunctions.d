@@ -21,7 +21,7 @@ public:
     {
 	return "UnivariateFunction()";
     }
-    double[] distribute_parameter_values(int n, double t0=0.0, double t1=1.0) const
+    double[] distribute_parameter_values(size_t n, double t0=0.0, double t1=1.0) const
     // Returns an array of parameter values, distributed from t0 though t1.
     // The subclass determines the form of distribution.
     {

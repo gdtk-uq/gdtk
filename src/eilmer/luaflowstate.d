@@ -419,9 +419,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 	// Keep in sync with write_initial_flow_file() function in that file.
 	//
 	// Numbers of cells derived from numbers of vertices in grid.
-	int nicell = grid.niv - 1;
-	int njcell = grid.njv - 1;
-	int nkcell = grid.nkv - 1;
+	auto nicell = grid.niv - 1;
+	auto njcell = grid.njv - 1;
+	auto nkcell = grid.nkv - 1;
 	if (GlobalConfig.dimensions == 2) nkcell = 1;
 	//	
 	// Write the data for the whole structured block.
@@ -510,7 +510,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 	// Keep in sync with write_initial_flow_file() function in that file.
 	//
 	// Numbers of cells derived from numbers of vertices in grid.
-	int ncells = grid.ncells;
+	auto ncells = grid.ncells;
 	//	
 	// Write the data for the whole structured block.
 	auto outfile = new GzipOut(fname);

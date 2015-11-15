@@ -60,15 +60,15 @@ void writeInitialSolidFile(string fileName, ref StructuredGrid grid,
 			   double initTemperature, ref SolidProps sp, double t0)
 {
     // Numbers of cells derived from numbers of vertices.
-    int nic = grid.niv - 1;
-    int njc = grid.njv - 1;
-    int nkc = grid.nkv - 1;
+    auto nic = grid.niv - 1;
+    auto njc = grid.njv - 1;
+    auto nkc = grid.nkv - 1;
     if (GlobalConfig.dimensions == 2) nkc = 1;
 
     double T = initTemperature;
     double e = updateEnergy(sp, T);
 
-    string cellDataToString(int i, int j, int k)
+    string cellDataToString(size_t i, size_t j, size_t k)
     {
 	auto p000 = grid[i,j,k];
 	auto p100 = grid[i+1,j,k];
