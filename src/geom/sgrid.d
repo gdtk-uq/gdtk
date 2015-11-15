@@ -46,6 +46,7 @@ class Grid {
     Grid_t grid_type;
     int dimensions; // 2 or 3
     string label;
+    size_t ncells;
     size_t nvertices;
     Vector3[] vertices;
     size_t[] vtx_id;
@@ -88,6 +89,11 @@ public:
 	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
 	super(Grid_t.structured_grid, dim, label);
 	this.niv = niv; this.njv = njv; this.nkv = nkv;
+	if (dim == 2) {
+	    ncells = (niv-1)*(njv-1);
+	} else {
+	    ncells = (niv-1)*(njv-1)*(nkv-1);
+	}
 	nvertices = niv*njv*nkv;
 	vertices.length = nvertices;
 	vtx_id.length = nvertices;
@@ -336,6 +342,11 @@ public:
 	niv = to!int(tokens[0]);
 	njv = to!int(tokens[1]);
 	nkv = to!int(tokens[2]);
+	if (nkv == 1) {
+	    ncells = (niv-1)*(njv-1);
+	} else {
+	    ncells = (niv-1)*(njv-1)*(nkv-1);
+	}
 	nvertices = niv*njv*nkv;
 	vertices.length = nvertices;
 	vtx_id.length = nvertices;
@@ -381,6 +392,11 @@ public:
 	formattedRead(line, "njv: %d", &njv);
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "nkv: %d", &nkv);
+	if (nkv == 1) {
+	    ncells = (niv-1)*(njv-1);
+	} else {
+	    ncells = (niv-1)*(njv-1)*(nkv-1);
+	}
 	nvertices = niv*njv*nkv;
 	vertices.length = nvertices;
 	vtx_id.length = nvertices;

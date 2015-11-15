@@ -190,7 +190,7 @@ public:
 
 class UnstructuredGrid : Grid {
 public:
-    size_t ncells, nfaces, nboundaries;
+    size_t nfaces, nboundaries;
     USGFace[] faces;
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;

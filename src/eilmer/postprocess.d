@@ -475,10 +475,13 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     ubyte[] binary_data_string;
     ubyte[] binary_data;
     int binary_data_offset = 0;
-    size_t nic = flow.nic; size_t njc = flow.njc; size_t nkc = flow.nkc;
     bool two_D = (grid.dimensions == 2);
     size_t NumberOfPoints = grid.nvertices;
-    size_t NumberOfCells = nic * njc * nkc;
+    if (flow.ncells != grid.ncells) {
+	throw new Error(text("Mismatch between grid and flow grid.ncells=",
+			     grid.ncells, " flow.ncells=", flow.ncells));
+    }
+    size_t NumberOfCells = flow.ncells;
     fp.write("<VTKFile type=\"UnstructuredGrid\" byte_order=\"BigEndian\">\n");
     fp.write("<UnstructuredGrid>");
     fp.writef("<Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n",
@@ -521,19 +524,15 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     } else {
         fp.write(" format=\"ascii\">\n");
     }
-    foreach (k; 0 .. nkc) {
-        foreach (j; 0 .. njc) {
-            foreach (i; 0 .. nic) {
-		auto ids = grid.get_vtx_id_list_for_cell(i,j,k);
-		if (binary_format) {
-		    foreach (id; ids) { binary_data ~= nativeToBigEndian(to!int32_t(id)); }
-		} else {
-		    foreach (id; ids) { fp.writef(" %d", id); }
-		    fp.write("\n");
-		}
-	    } // end foreach i
-	} // end foreach j
-    } // end foreach k
+    foreach (i; 0 .. grid.ncells) {
+	auto ids = grid.get_vtx_id_list_for_cell(i);
+	if (binary_format) {
+	    foreach (id; ids) { binary_data ~= nativeToBigEndian(to!int32_t(id)); }
+	} else {
+	    foreach (id; ids) { fp.writef(" %d", id); }
+	    fp.write("\n");
+	}
+    } // end foreach i
     fp.write(" </DataArray>\n");
     if (binary_format) {
         uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
@@ -551,23 +550,19 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     }
     // Since all of the point-lists are concatenated, these offsets into the connectivity
     // array specify the end of each cell.
-    foreach (k; 0 .. nkc) {
-        foreach (j; 0 .. njc) {
-            foreach (i; 0 .. nic) {
-		size_t conn_offset;
-                if (two_D) {
-                    conn_offset = 4*(1+i+j*nic);
-                } else {
-                    conn_offset = 8*(1+i+j*nic+k*(nic*njc));
-		}
-		if (binary_format) {
-                    binary_data ~= nativeToBigEndian(to!int32_t(conn_offset));
-                } else {
-                    fp.writef(" %d\n", conn_offset);
-		}
-	    } // end foreach i
-	} // end foreach j
-    } // end foreach k
+    foreach (i; 0 .. grid.ncells) {
+	size_t conn_offset;
+	if (two_D) {
+	    conn_offset = 4*(1+i);
+	} else {
+	    conn_offset = 8*(1+i);
+	}
+	if (binary_format) {
+	    binary_data ~= nativeToBigEndian(to!int32_t(conn_offset));
+	} else {
+	    fp.writef(" %d\n", conn_offset);
+	}
+    } // end foreach i
     fp.write(" </DataArray>\n");
     if (binary_format) {
         uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
@@ -589,17 +584,13 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     } else {
         type_value = VTKElement.hexahedron;
     }
-    foreach (k; 0 .. nkc) {
-        foreach (j; 0 .. njc) {
-            foreach (i; 0 .. nic) {
-                if (binary_format) {
-                    binary_data ~= nativeToBigEndian(to!uint8_t(type_value));
-                } else {
-                    fp.writef(" %d\n", type_value);
-		}
-	    } // end foreach i
-	} // end foreach j
-    } // end foreach k
+    foreach (i; 0 .. grid.ncells) {
+	if (binary_format) {
+	    binary_data ~= nativeToBigEndian(to!uint8_t(type_value));
+	} else {
+	    fp.writef(" %d\n", type_value);
+	}
+    } // end foreach i
     fp.write(" </DataArray>\n");
     if (binary_format) {
         uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
@@ -619,17 +610,13 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
         } else {
             fp.write(" format=\"ascii\">\n");
 	}
-        foreach (k; 0 .. nkc) {
-            foreach (j; 0 .. njc) {
-                foreach (i; 0 .. nic) {
-                    if (binary_format) {
-                        binary_data ~= nativeToBigEndian(to!float(uflowz(flow[var,i,j,k])));
-                    } else {
-                        fp.writef(" %e\n", uflowz(flow[var,i,j,k]));
-		    }
-		} // end foreach i
-	    } // end foreach j
-	} // end foreach k
+	foreach (i; 0 .. flow.ncells) {
+	    if (binary_format) {
+		binary_data ~= nativeToBigEndian(to!float(uflowz(flow[var,i])));
+	    } else {
+		fp.writef(" %e\n", uflowz(flow[var,i]));
+	    }
+	} // end foreach i
 	fp.write(" </DataArray>\n");
         if (binary_format) {
 	    uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
@@ -648,22 +635,18 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     } else {
         fp.write(" format=\"ascii\">\n");
     }
-    foreach (k; 0 .. nkc) {
-        foreach (j; 0 .. njc) {
-            foreach (i; 0 .. nic) {
-                float x = uflowz(flow["vel.x",i,j,k]);
-                float y = uflowz(flow["vel.y",i,j,k]);
-                float z = uflowz(flow["vel.z",i,j,k]);
-                if (binary_format) {
-		    binary_data ~= nativeToBigEndian(x);
-		    binary_data ~= nativeToBigEndian(y);
-		    binary_data ~= nativeToBigEndian(z);
-                } else {
-                    fp.writef(" %e %e %e\n", x, y, z);
-		}
-	    } // end foreach i
-	} // end foreach j
-    } // end foreach k
+    foreach (i; 0 .. flow.ncells) {
+	float x = uflowz(flow["vel.x",i]);
+	float y = uflowz(flow["vel.y",i]);
+	float z = uflowz(flow["vel.z",i]);
+	if (binary_format) {
+	    binary_data ~= nativeToBigEndian(x);
+	    binary_data ~= nativeToBigEndian(y);
+	    binary_data ~= nativeToBigEndian(z);
+	} else {
+	    fp.writef(" %e %e %e\n", x, y, z);
+	}
+    } // end foreach i
     fp.write(" </DataArray>\n");
     if (binary_format) {
         uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
@@ -680,22 +663,18 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
         } else {
             fp.write(" format=\"ascii\">\n");
 	}
-        foreach (k; 0 .. nkc) {
-            foreach (j; 0 .. njc) {
-                foreach (i; 0 .. nic) {
-		    float x = uflowz(flow["c.x",i,j,k]);
-		    float y = uflowz(flow["c.y",i,j,k]);
-		    float z = uflowz(flow["c.z",i,j,k]);
-		    if (binary_format) {
-			binary_data ~= nativeToBigEndian(x);
-			binary_data ~= nativeToBigEndian(y);
-			binary_data ~= nativeToBigEndian(z);
-		    } else {
-			fp.writef(" %e %e %e\n", x, y, z);
-		    }
-		} // end foreach i
-	    } // end foreach j
-	} // end foreach k
+	foreach (i; 0 .. flow.ncells) {
+	    float x = uflowz(flow["c.x",i]);
+	    float y = uflowz(flow["c.y",i]);
+	    float z = uflowz(flow["c.z",i]);
+	    if (binary_format) {
+		binary_data ~= nativeToBigEndian(x);
+		binary_data ~= nativeToBigEndian(y);
+		binary_data ~= nativeToBigEndian(z);
+	    } else {
+		fp.writef(" %e %e %e\n", x, y, z);
+	    }
+	} // end foreach i
 	fp.write(" </DataArray>\n");
 	if (binary_format) {
 	    uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes
@@ -713,22 +692,18 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
         } else {
             fp.write(" format=\"ascii\">\n");
 	}
-        foreach (k; 0 .. nkc) {
-            foreach (j; 0 .. njc) {
-                foreach (i; 0 .. nic) {
-		    float x = uflowz(flow["B.x",i,j,k]);
-		    float y = uflowz(flow["B.y",i,j,k]);
-		    float z = uflowz(flow["B.z",i,j,k]);
-		    if (binary_format) {
-			binary_data ~= nativeToBigEndian(x);
-			binary_data ~= nativeToBigEndian(y);
-			binary_data ~= nativeToBigEndian(z);
-		    } else {
-			fp.writef(" %e %e %e\n", x, y, z);
-		    }
-		} // end foreach i
-	    } // end foreach j
-	} // end foreach k
+	foreach (i; 0 .. flow.ncells) {
+	    float x = uflowz(flow["B.x",i]);
+	    float y = uflowz(flow["B.y",i]);
+	    float z = uflowz(flow["B.z",i]);
+	    if (binary_format) {
+		binary_data ~= nativeToBigEndian(x);
+		binary_data ~= nativeToBigEndian(y);
+		binary_data ~= nativeToBigEndian(z);
+	    } else {
+		fp.writef(" %e %e %e\n", x, y, z);
+	    }
+	} // end foreach i
 	fp.write(" </DataArray>\n");
 	if (binary_format) {
 	    uint32_t binary_data_count = to!uint32_t(binary_data.length); // 4-byte count of bytes

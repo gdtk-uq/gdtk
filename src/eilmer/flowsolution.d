@@ -222,9 +222,6 @@ public:
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
 	string format_version;
-	string myLabel;
-	double sim_time;
-	size_t nvariables;
 	final switch (gridType) {
 	case Grid_t.structured_grid:
 	    formattedRead(line, "structured_grid_flow %s", &format_version);
@@ -236,10 +233,12 @@ public:
 	    throw new Error("BlockFlow.read_solution(): " ~
 			    "format version found: " ~ format_version); 
 	}
+	string myLabel;
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "label: %s", &myLabel);
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "sim_time: %g", &sim_time);
+	size_t nvariables;
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "variables: %d", &nvariables);
 	line = byLine.front; byLine.popFront();
@@ -262,6 +261,7 @@ public:
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "ncells: %d", &ncells);
 	}
+	writeln("BlockFlow sim_time=", sim_time, " ncells=", ncells);
 
 	// Scan the remainder of the file, extracting our data.
 	// Assume it is in standard cell order.
