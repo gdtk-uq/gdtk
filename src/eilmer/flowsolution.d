@@ -261,8 +261,6 @@ public:
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "ncells: %d", &ncells);
 	}
-	writeln("BlockFlow sim_time=", sim_time, " ncells=", ncells);
-
 	// Scan the remainder of the file, extracting our data.
 	// Assume it is in standard cell order.
 	_data.length = ncells;

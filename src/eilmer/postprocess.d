@@ -174,8 +174,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    foreach (ip; 0 .. xp.length) {
 		auto nearest = soln.find_nearest_cell_centre(xp[ip], yp[ip], zp[ip]);
 		size_t ib = nearest[0]; size_t i = nearest[1];
-		size_t j = nearest[2]; size_t k = nearest[3];
-		outFile.writeln(soln.flowBlocks[ib].values_as_string(i,j,k));
+		outFile.writeln(soln.flowBlocks[ib].values_as_string(i));
 	    }
 	} // end foreach tindx
     } // end if probeStr
