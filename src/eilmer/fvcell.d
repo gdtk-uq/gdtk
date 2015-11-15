@@ -41,17 +41,25 @@ string avg_over_iface_list(string quantity, string result)
     return code;
 }
 
-
-class FVCell {
+class BasicCell {
 public:
     uint id;  // allows us to work out where, in the block, the cell is
+    Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
+    FlowState fs; // Flow properties
+    // Connections
+    FVInterface[] iface;  // references to defining interfaces of cell
+    double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
+    FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
+} // end class BasicCell
+
+class FVCell : BasicCell {
+public:
     bool fr_reactions_allowed; // if true, will call chemical_increment (also thermal_increment)
     double dt_chem; // acceptable time step for finite-rate chemistry
     double dt_therm; // acceptable time step for thermal relaxation
     bool in_turbulent_zone; // if true, we will keep the turbulence viscosity
     double base_qdot; // base-level of heat addition to cell, W/m**3
     // Geometry
-    Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
     double[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
     double[] areaxy; // (x,y)-plane area for time-levels, m**2
     double iLength; // length in the i-index direction
@@ -61,12 +69,7 @@ public:
     double distance_to_nearest_wall; // for turbulence model correction.
     double half_cell_width_at_wall;  // ditto
     FVCell cell_at_nearest_wall;   // ditto
-    // Connections
-    FVInterface[] iface;  // references to defining interfaces of cell
-    double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
-    FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
     // Flow
-    FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
