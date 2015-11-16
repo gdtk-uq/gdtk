@@ -114,9 +114,17 @@ public:
 	throw new Error("init_grid_and_flow_arrays not yet implemented for unstructured grid.");
 	// [TODO] assemble_arrays();
 	// [TODO] bind_interfaces_vertices_and_cells();
-	// [TODO] compute_primary_cell_geometric_data(0);
 	// [TODO] compute ghost-cell details for boundaries
-	// [TODO] assign_flow_locations_for_derivative_calc(0);
+    }
+
+    override void compute_primary_cell_geometric_data(int gtl)
+    {
+	throw new Error("compute_primary_cell_geometric_data() not implemented yet");
+    }
+
+    override void assign_flow_locations_for_derivative_calc(size_t gtl)
+    {
+	throw new Error("assign_flow_locations_for_derivative_calc() not implemented yet");
     }
 
     override double read_solution(string filename, bool overwrite_geometry_data)

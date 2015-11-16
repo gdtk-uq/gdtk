@@ -195,8 +195,6 @@ public:
 	assemble_arrays();
 	bind_interfaces_vertices_and_cells();
 	read_grid(gridFileName, 0);
-	compute_primary_cell_geometric_data(0);
-	assign_flow_locations_for_derivative_calc(0);
     }
 
     void assemble_arrays()
@@ -410,7 +408,7 @@ public:
 	return;
     } // end bind_interfaces_vertices_and_cells()
 
-    void compute_primary_cell_geometric_data(int gtl)
+    override void compute_primary_cell_geometric_data(int gtl)
     // Compute cell and interface geometric properties.
     {
 	size_t i, j, k;
@@ -1011,7 +1009,7 @@ public:
 	}
     } // end calc_ghost_cell_geom_2D()
 
-    void assign_flow_locations_for_derivative_calc(size_t gtl)
+    override void assign_flow_locations_for_derivative_calc(size_t gtl)
     {
 	size_t i, j, k;
 	if (myConfig.dimensions == 2) {

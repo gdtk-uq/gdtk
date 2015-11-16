@@ -82,6 +82,8 @@ public:
     abstract void init_boundary_conditions(JSONValue json_data);
     @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0);
     abstract void init_grid_and_flow_arrays(string gridFileName);
+    abstract void compute_primary_cell_geometric_data(int gtl);
+    abstract void assign_flow_locations_for_derivative_calc(size_t gtl);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
     abstract void read_grid(string filename, size_t gtl=0);
     abstract void write_grid(string filename, double sim_time, size_t gtl=0);
