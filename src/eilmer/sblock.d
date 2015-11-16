@@ -194,6 +194,7 @@ public:
     {
 	assemble_arrays();
 	bind_interfaces_vertices_and_cells();
+	store_references_for_derivative_calc(0);
 	read_grid(gridFileName, 0);
     }
 
@@ -1009,7 +1010,7 @@ public:
 	}
     } // end calc_ghost_cell_geom_2D()
 
-    override void assign_flow_locations_for_derivative_calc(size_t gtl)
+    void store_references_for_derivative_calc(size_t gtl)
     {
 	size_t i, j, k;
 	if (myConfig.dimensions == 2) {

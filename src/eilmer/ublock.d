@@ -115,17 +115,30 @@ public:
 	// [TODO] assemble_arrays();
 	// [TODO] bind_interfaces_vertices_and_cells();
 	// [TODO] compute ghost-cell details for boundaries
+	// [TODO] store references for derivative calc
     }
 
     override void compute_primary_cell_geometric_data(int gtl)
     {
 	throw new Error("compute_primary_cell_geometric_data() not implemented yet");
+	// [TODO] position ghost-cell centres
     }
 
-    override void assign_flow_locations_for_derivative_calc(size_t gtl)
+    override void read_grid(string filename, size_t gtl=0)
+    // Read the grid vertices from a gzip file.
+    // We delegate the actual file reading to the UnstructuredGrid class.
     {
-	throw new Error("assign_flow_locations_for_derivative_calc() not implemented yet");
-    }
+	throw new Error("read_grid function not yet implemented for unstructured grid.");
+	// [TODO]
+    } // end read_grid()
+
+    override void write_grid(string filename, double sim_time, size_t gtl=0)
+    // Note that we reuse the StructuredGrid object that was created on the
+    // use of read_grid().
+    {
+	throw new Error("write_grid function not yet implemented for unstructured grid.");
+	// [TODO]
+    } // end write_grid()
 
     override double read_solution(string filename, bool overwrite_geometry_data)
     // Note that the position data is read into grid-time-level 0
@@ -189,22 +202,6 @@ public:
 	throw new Error("compute_distance_to_nearest_wall_for_all_cells function not yet implemented for unstructured grid.");
 	// [TODO]
     } // end compute_distance_to_nearest_wall_for_all_cells()
-
-    override void read_grid(string filename, size_t gtl=0)
-    // Read the grid vertices from a gzip file.
-    // We delegate the actual file reading to the UnstructuredGrid class.
-    {
-	throw new Error("read_grid function not yet implemented for unstructured grid.");
-	// [TODO]
-    } // end read_grid()
-
-    override void write_grid(string filename, double sim_time, size_t gtl=0)
-    // Note that we reuse the StructuredGrid object that was created on the
-    // use of read_grid().
-    {
-	throw new Error("write_grid function not yet implemented for unstructured grid.");
-	// [TODO]
-    } // end write_grid()
 
     override void propagate_inflow_data_west_to_east()
     {
