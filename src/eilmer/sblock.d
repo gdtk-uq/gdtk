@@ -185,10 +185,26 @@ public:
     {
 	return _ctr[to_global_index(i,j,k)];
     }
-    @nogc ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) { return _ifi[to_global_index(i,j,k)]; }
-    @nogc ref FVInterface get_ifj(size_t i, size_t j, size_t k=0) { return _ifj[to_global_index(i,j,k)]; }
-    @nogc ref FVInterface get_ifk(size_t i, size_t j, size_t k=0) { return _ifk[to_global_index(i,j,k)]; }
-    @nogc ref FVVertex get_vtx(size_t i, size_t j, size_t k=0) { return _vtx[to_global_index(i,j,k)]; }
+    @nogc 
+    override ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
+    {
+	return _ifi[to_global_index(i,j,k)];
+    }
+    @nogc
+    override ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
+    {
+	return _ifj[to_global_index(i,j,k)];
+    }
+    @nogc
+    override ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
+    {
+	return _ifk[to_global_index(i,j,k)];
+    }
+    @nogc
+    override ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
+    {
+	return _vtx[to_global_index(i,j,k)];
+    }
 
     override void init_grid_and_flow_arrays(string gridFileName)
     {

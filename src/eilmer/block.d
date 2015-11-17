@@ -80,7 +80,11 @@ public:
 
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
-    @nogc ref FVCell get_cell(size_t i, size_t j, size_t k=0);
+    @nogc abstract ref FVCell get_cell(size_t i, size_t j, size_t k=0);
+    @nogc abstract ref FVInterface get_ifi(size_t i, size_t j, size_t k=0);
+    @nogc abstract ref FVInterface get_ifj(size_t i, size_t j, size_t k=0);
+    @nogc abstract ref FVInterface get_ifk(size_t i, size_t j, size_t k=0);
+    @nogc abstract ref FVVertex get_vtx(size_t i, size_t j, size_t k=0);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract void compute_primary_cell_geometric_data(int gtl);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);

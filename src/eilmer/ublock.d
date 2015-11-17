@@ -102,10 +102,32 @@ public:
 	return to!string(repr);
     }
 
+    // The following 5 access methods are here to match the structured-grid API
+    // but they're really not intended for serious use on the unstructured-grid.
     @nogc 
     override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
     {
 	return cells[i]; // j, k ignored
+    }
+    @nogc 
+    override ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
+    {
+	return faces[i];
+    }
+    @nogc
+    override ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
+    {
+	return faces[i];
+    }
+    @nogc
+    override ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
+    {
+	return faces[i];
+    }
+    @nogc
+    override ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
+    {
+	return vertices[i];
     }
 
     override void init_grid_and_flow_arrays(string gridFileName)
