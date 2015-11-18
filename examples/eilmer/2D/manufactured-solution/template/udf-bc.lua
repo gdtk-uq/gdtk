@@ -64,13 +64,13 @@ function p(x, y)
           + S(x,y)*pxy*sin(apxy*pi*x*y/(L*L))
 end
 
-function refSoln(x, y, z)
-   t = {}
-   t.p = p(x, y)
-   t.rho = rho(x, y)
-   t["vel.x"] = u(x, y)
-   t["vel.y"] = v(x, y)
-   return t
+function refSoln(t, x, y, z)
+   tab = {}
+   tab.p = p(x, y)
+   tab.rho = rho(x, y)
+   tab["vel.x"] = u(x, y)
+   tab["vel.y"] = v(x, y)
+   return tab
 end
 
 function fillTable(t, x, y)
