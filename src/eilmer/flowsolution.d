@@ -408,7 +408,7 @@ public:
 	    lua_pushnumber(L, _data[i][variableIndex["pos.z"]]);
 	    if ( lua_pcall(L, 4, 1, 0) != 0 ) {
 		string errMsg = "Error in call to " ~ luaFnName ~ 
-		    " from LuaFnPath:opCall(): " ~ 
+		    " from FlowSolution.subtract_ref_soln(): " ~ 
 		    to!string(lua_tostring(L, -1));
 		luaL_error(L, errMsg.toStringz);
 	    }
