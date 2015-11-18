@@ -398,7 +398,7 @@ public:
     void subtract_ref_soln(lua_State* L)
     {
 	string luaFnName = "refSoln";
-	foreach (i; 0 .. nic) {
+	foreach (i; 0 .. ncells) {
 	    // Call back to the Lua function to get a table of values.
 	    // function refSoln(x, y, z)
 	    lua_getglobal(L, luaFnName.toStringz);
