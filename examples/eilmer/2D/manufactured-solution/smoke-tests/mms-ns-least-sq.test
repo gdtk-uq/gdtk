@@ -1,0 +1,62 @@
+# mms-ns-least-sq.test
+#
+# Run the method of manufactured solutions test case to exercise
+# various options in the code. These cases are all run on a single
+# grid. Our tests involve checking the density norms against
+# known good values. These known good values come from an order
+# of accuracy test.
+#
+# RJG, 2015-11-19
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test copy-ns-least-sq-case {Copy N-S least squares theorem case.} -body {
+   exec cp case-ns-least-sq.txt case.txt
+} -result {} -returnCodes {0}
+
+test prepare-source-terms {Prepare manufactured source terms.} -body {
+    exec python make_source_terms.py > LOGFILE_NS_LEAST_SQ_SOURCE_TERMS
+} -result {} -returnCodes {0}
+
+test run-preprocessor {Prepare N-S least squares case.} -body {
+    exec e4shared --job=mms --prep > LOGFILE_PREP_NS_LEAST_SQ
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the case.} -body {
+    exec e4shared --job=mms --run --max-cpus=1 > LOGFILE_MAIN_NS_LEAST_SQ
+} -result {} -returnCodes {0}
+
+test number-of-steps {Iteration of the final block in a certain number of steps.} -body {
+    set fp [open LOGFILE_MAIN_NS_LEAST_SQ r]
+    set contents [read $fp]
+    close $fp
+    set final_steps 0
+    foreach line [split $contents "\n"] {
+	if {[string first "final-t=" $line] >= 0} {
+	    set final_steps [lindex [split $line] 1]
+	}
+    }
+    expr abs($final_steps - 1618) < 3
+} -result {1}
+
+test computed-norms {Check the density norms.} -body {
+    set L1_ref 1.471398727973e-03
+    set L2_ref 1.773676824915e-03
+    set Linf_ref 4.094873754700e-03
+    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua --norms="rho" | tail -3 > rho-norms.txt
+    set fp [open rho-norms.txt r]
+    set contents [read $fp]
+    close $fp
+    set line [lindex [split $contents "\n"] 0]
+    set tks [split $line]
+    set L1 [lindex $tks 2]
+    set L2 [lindex $tks 4]
+    set Linf [lindex $tks 6]
+    list [expr abs($L1 - $L1_ref)/$L1_ref < 1.0e-3] \
+         [expr abs($L2 - $L2_ref)/$L2_ref < 1.0e-3] \
+         [expr abs($Linf - $Linf_ref)/$Linf_ref < 1.0e-3]
+} -result {1 1 1}
+
+cleanupTests
