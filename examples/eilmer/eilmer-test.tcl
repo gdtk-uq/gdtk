@@ -35,7 +35,7 @@ set test_scripts [list "2D/cone20-simple/cone20.test"]
 lappend test_scripts "2D/back-nozzle/back.test"
 # lappend test_scripts "2D/methane-reactor/psr.test"
 lappend test_scripts "2D/channel-with-bump/bump.test"
-# lappend test_scripts "2D/mms_euler/mms_euler.test"
+lappend test_scripts "2D/manufactured-solution/smoke-tests/mms.test"
 # lappend test_scripts "2D/odw/odw.test"
 # lappend test_scripts "2D/sawada_sphere/ss3.test"
 # lappend test_scripts "2D/bittker-hydrogen-combustion/hydrogen.test"

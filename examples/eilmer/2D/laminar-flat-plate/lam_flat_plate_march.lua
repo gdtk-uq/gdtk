@@ -73,6 +73,6 @@ blks = SBlockArray{grid=grd, nib=22, njb=2,
 			   south=InFlowBC_Supersonic:new{flowCondition=inflow},
 			   west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 
-config.block_marching = true
+config.block_marching = false
 config.nib = 22
 config.njb = 2
