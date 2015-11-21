@@ -93,7 +93,7 @@ ifeq ($(DMD), dmd)
     #     DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off
     # (3) For releasing a fast code.
     #     DFLAGS := -w -O -release -inline -boundscheck=off
-    DFLAGS := -w -O -release -inline -boundscheck=off \
+    DFLAGS := -g -w -O -release -inline -boundscheck=off \
 	-I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GZIP_DIR)
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl

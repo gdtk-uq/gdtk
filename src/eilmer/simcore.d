@@ -60,7 +60,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     read_control_file(); // some of the configuration is in here
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
-    defaultPoolThreads(maxCPUs-1); // total = main thread + threads-in-Pool
+    auto nThreads = min(maxCPUs-1, GlobalConfig.nBlocks-1); // no need to have more task threads than blocks
+    defaultPoolThreads(nThreads); // total = main thread + threads-in-Pool
     writeln("Running with ", maxCPUs, " CPUs available for threads.");
     foreach (myblk; parallel(gasBlocks,1)) {
 	writeln("myblk=", myblk);
