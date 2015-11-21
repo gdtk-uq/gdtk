@@ -55,6 +55,7 @@ afterwards.
   case = 1
   ncellsList = [8, 16, 32, 64]
   fluxCalc = 'ausmdv'
+  derivCalc = 'divergence'
   blocking = 'single'
   threading = 'multi'
 
@@ -80,6 +81,15 @@ fluxCalc : string
   This value is used to select which flux calculator is tested.
   The available flux calculators are (at the time of writing):
   'ausmdv', 'efm', 'ausm_plus_up', 'adaptive', and 'hlle'.
+
+derivCalc : string
+  This value is used to select the method for computing the spatial
+  derivatives for the viscous flux calculation. It only has meaning
+  for a viscous simulation but it has to be included for the Euler
+  cases (because I didn't make the scripting intelligent enough
+  to ignore it). The available spatial derivative calculation
+  options are:
+  'divergence' and 'least_squares'
 
 blocking : 'string'
   This value indicates how the domain will be split with the allowable

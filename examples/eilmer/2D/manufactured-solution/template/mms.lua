@@ -14,6 +14,7 @@ config.dimensions = 2
 file = io.open("case.txt", "r")
 case = tonumber(file:read("*line"))
 fluxCalc = tostring(file:read("*line"))
+derivCalc = tostring(file:read("*line"))
 xOrder = tonumber(file:read("*line"))
 blocking = tostring(file:read("*line"))
 ncells = tonumber(file:read("*line"))
@@ -81,6 +82,7 @@ end
 config.interpolation_order = xOrder
 config.gasdynamic_update_scheme = "predictor-corrector"
 config.flux_calculator = fluxCalc
+config.spatial_deriv_calc = derivCalc
 config.udf_source_terms = true
 config.udf_source_terms_file = 'udf-source-terms.lua'
 if case == 1 or case == 3 then
@@ -94,8 +96,8 @@ else
 end
 config.dt_plot = config.max_time/20.0
 config.max_step = 3000000
-config.cfl = 0.5
-config.stringent_cfl = 1
+config.cfl_value = 0.5
+config.stringent_cfl = true
 -- Do NOT use the limiters for the verification tests
 config.apply_limiter = false
 config.extrema_clipping = false

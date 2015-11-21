@@ -29,9 +29,10 @@ simFiles = ['mms.lua',
 
 tmpltDir = 'template'
 
-def buildCaseStr(case, ncells, fluxCalc, blocking):
+def buildCaseStr(case, ncells, fluxCalc, derivCalc, blocking):
     str = "%d\n" % case
     str += "%s\n" % fluxCalc
+    str += "%s\n" % derivCalc
     str += "2\n" # xOrder = 2
     str += "%s\n" % blocking
     str += "%d\n" % ncells
@@ -47,7 +48,7 @@ def buildRunStr(threading):
     str += 'e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua  --norms="rho" | tail -3 > rho-norms.txt\n'
     return str
 
-def prepareCases(case, ncellsList, fluxCalc, blocking, threading):
+def prepareCases(case, ncellsList, fluxCalc, derivCalc, blocking, threading):
     cwd = os.getcwd()
     for ncells in ncellsList:
         subDir = "%dx%d" % (ncells, ncells)
@@ -57,7 +58,7 @@ def prepareCases(case, ncellsList, fluxCalc, blocking, threading):
             pass
         os.chdir(subDir)
         f = open('case.txt', 'w')
-        f.write(buildCaseStr(case, ncells, fluxCalc, blocking))
+        f.write(buildCaseStr(case, ncells, fluxCalc, derivCalc, blocking))
         f.close()
         f = open('run.sh', 'w')
         f.write(buildRunStr(threading))
@@ -119,7 +120,7 @@ if __name__ == "__main__":
     import sys
     caseOptFile = sys.argv[1]
     execfile(caseOptFile)
-    prepareCases(case, ncellsList, fluxCalc, blocking, threading)
+    prepareCases(case, ncellsList, fluxCalc, derivCalc, blocking, threading)
     runCases(ncellsList)
     gatherResults(ncellsList)
     
