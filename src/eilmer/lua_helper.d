@@ -9,6 +9,8 @@
 // RG & PJ 2015-03-17 -- First hack (with Guiness in hand)
 import std.stdio;
 import util.lua;
+
+import gas;
 import fvcell;
 import luaflowstate;
 import globaldata;
@@ -33,7 +35,7 @@ extern(C) int luafn_sampleFlow(lua_State *L)
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushCellToTable(L, tblIdx, cell, 0);
+    pushCellToTable(L, tblIdx, cell, 0, gasBlocks[blkId].myConfig.gmodel);
     return 1;
 }
 
@@ -44,13 +46,13 @@ extern(C) int luafn_sampleFlow(lua_State *L)
  * Push the interesting data from a cell to a Lua table
  *
  */
-void pushCellToTable(lua_State* L, int tblIdx, in FVCell cell, size_t gtl)
+void pushCellToTable(lua_State* L, int tblIdx, in FVCell cell, size_t gtl, GasModel gmodel)
 {
     lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");
     lua_pushnumber(L, cell.pos[gtl].y); lua_setfield(L, tblIdx, "y");
     lua_pushnumber(L, cell.pos[gtl].z); lua_setfield(L, tblIdx, "z");
     lua_pushnumber(L, cell.volume[gtl]); lua_setfield(L, tblIdx, "vol");
-    pushFlowStateToTable(L, tblIdx, cell.fs);
+    pushFlowStateToTable(L, tblIdx, cell.fs, gmodel);
 }
 
 

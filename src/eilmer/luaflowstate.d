@@ -253,9 +253,8 @@ lua_setfield(L, tblIdx, "`~var~`z");`;
 /**
  * Push FlowState values to a table at TOS in lua_State.
  */
-void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs)
+void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gmodel)
 {
-    auto managedGasModel = GlobalConfig.gmodel_master;
     mixin(pushGasVar("p"));
     mixin(pushGasVarArray("T"));
     mixin(pushGasVarArray("e"));
@@ -264,7 +263,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs)
     lua_newtable(L);
     foreach ( int isp, mf; fs.gas.massf ) {
 	lua_pushnumber(L, mf);
-	lua_setfield(L, -2, toStringz(managedGasModel.species_name(isp)));
+	lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
     }
     lua_setfield(L, tblIdx, "massf");
     // -- done setting massf
@@ -289,10 +288,11 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs)
  */
 extern(C) int toTable(lua_State* L)
 {
+    auto gmodel = GlobalConfig.gmodel_master;
     auto fs = checkFlowState(L, 1);
     lua_newtable(L); // anonymous table { }
     int tblIdx = lua_gettop(L);
-    pushFlowStateToTable(L, tblIdx, fs);
+    pushFlowStateToTable(L, tblIdx, fs, gmodel);
     return 1;
 }
 
