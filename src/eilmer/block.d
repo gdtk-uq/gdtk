@@ -76,6 +76,11 @@ public:
 	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_modes); lua_setglobal(myL, "n_modes");
     }
 
+    ~this()
+    {
+	lua_close(myL);
+    }
+
     override string toString() const { return "Block(id=" ~ to!string(id) ~ ")"; }
 
     abstract void init_lua_globals();

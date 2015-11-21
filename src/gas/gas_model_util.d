@@ -77,6 +77,7 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
     default:
 	gm = new IdealGas();
     }
+    lua_close(L);
     return gm;
 }
 
