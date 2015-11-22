@@ -17,7 +17,7 @@ EILMER_FILES := simcore.d fileutil.d readconfig.d json_helper.d \
 		globalconfig.d luaglobalconfig.d globaldata.d \
 		block.d sblock.d ublock.d \
 		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
-		postprocess.d flowsolution.d luaflowsolution.d
+		postprocess.d flowsolution.d luaflowsolution.d grid_motion.d
 
 BC_FILES := bc/bc.d \
 	bc/ghost_cell_effect.d \

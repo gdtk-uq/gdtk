@@ -12,6 +12,7 @@ import std.conv;
 import std.stdio;
 import std.string;
 
+import util.lua;
 import gas;
 import kinetics;
 import geom;
@@ -199,6 +200,7 @@ final class GlobalConfig {
     shared static grid_motion = GridMotion.none;
     shared static bool write_vertex_velocities = false;
     shared static string udf_grid_motion_file = "dummy-grid-motion-file.txt";
+    static lua_State* master_lua_State;
 
     // Parameters controlling viscous/molecular transport
     //
@@ -328,6 +330,11 @@ final class GlobalConfig {
     // Parameters related to the solid domain and conjugate coupling
     shared static bool udfSolidSourceTerms = false;
     shared static string udfSolidSourceTermsFile = "dummy-solid-source-terms.txt";
+
+    ~this()
+    {
+	lua_close(master_lua_State);
+    }
 
 } // end class GlobalConfig
 

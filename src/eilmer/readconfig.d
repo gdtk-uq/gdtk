@@ -28,6 +28,7 @@ import ssolidblock;
 import bc;
 import user_defined_source_terms;
 import solid_udf_source_terms;
+import grid_motion;
 
 void read_config_file()
 {
@@ -112,6 +113,13 @@ void read_config_file()
     GlobalConfig.write_vertex_velocities = 
 	getJSONbool(jsonData, "write_vertex_velocities", false);
     GlobalConfig.udf_grid_motion_file = jsonData["udf_grid_motion_file"].str;
+    // If we have user-defined grid motion, we'll need to initialise
+    // the lua_State that holds the user's function. But we can't
+    // do that initialisation just yet. We have to wait until all
+    // of the blocks are configured since we set that information
+    // as global information available to the user. Hence, you'll
+    // find that step at the very end of this function.
+
     GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
 
     if (GlobalConfig.verbosity_level > 1) {
@@ -272,6 +280,14 @@ void read_config_file()
 	if ( GlobalConfig.udfSolidSourceTerms ) {
 	    initUDFSolidSourceTerms(sblk.myL, GlobalConfig.udfSolidSourceTermsFile);
 	}
+    }
+
+    // Now that the blocks are configured, we can set up the
+    // lua_State for a user-defined moving grid, if needed.
+    if ( GlobalConfig.grid_motion == GridMotion.user_defined ) {
+	// We'll need to initialise the lua_State that holds the
+	// user's function for defining grid motion.
+	init_master_lua_State(GlobalConfig.udf_grid_motion_file);
     }
 } // end read_config_file()
 
