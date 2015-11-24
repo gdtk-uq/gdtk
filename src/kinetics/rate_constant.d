@@ -84,6 +84,8 @@ RateConstant createRateConstant(lua_State* L)
     switch (model) {
     case "Arrhenius":
 	return new ArrheniusRateConstant(L);
+    case "fromEqConst":
+	return null;
     default:
 	string msg = format("The rate constant model: %s could not be created.", model);
 	throw new Exception(msg);

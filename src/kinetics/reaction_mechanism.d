@@ -22,7 +22,7 @@ class ReactionMechanism
 {
 public:
     @property ulong n_reactions() const { return _reactions.length; }
-    this(in Reaction[] reactions, size_t n_species)
+    this(Reaction[] reactions, size_t n_species)
     {
 	foreach ( ref r; reactions) {
 	    _reactions ~= r.dup();
@@ -34,7 +34,7 @@ public:
 	    _work_arrays_initialised = true;
 	}
     }
-    ReactionMechanism dup() const
+    ReactionMechanism dup()
     {
 	return new ReactionMechanism(_reactions, _q.length);
     }
@@ -149,20 +149,20 @@ private:
  +         [n]={... reaction n info ...}
  +       }
  +/ 
-ReactionMechanism createReactionMechanism(lua_State* L, in GasModel gmodel)
+ReactionMechanism createReactionMechanism(lua_State* L, GasModel gmodel)
 {
     auto n_species = gmodel.n_species;
     auto n_reactions = to!int(lua_objlen(L, -1));
     Reaction[] reactions;
     foreach ( i; 1..n_reactions+1 ) {
 	lua_rawgeti(L, -1, i);
-	reactions ~= createReaction(L, n_species);
+	reactions ~= createReaction(L, gmodel);
 	lua_pop(L, 1);
     }
     return new ReactionMechanism(reactions, n_species);
 }
 
-ReactionMechanism createReactionMechanism(string fname, in GasModel gmodel)
+ReactionMechanism createReactionMechanism(string fname, GasModel gmodel)
 {
     auto L = init_lua_State(fname);
     lua_getglobal(L, "reaction");

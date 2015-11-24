@@ -45,6 +45,11 @@ function rateConstantToLuaStr(rc)
    local str = ""
    if rc.model == 'Arrhenius' then
       str = string.format("{model='Arrhenius', A=%16.12e, n=%f, C=%16.12e }", rc.A, rc.n, rc.C)
+   elseif rc.model == 'fromEqConst' then
+      str = "{model='fromEqConst'}"
+   else
+      print(string.format("ERROR: rate constant model '%s' is not known.", rc.model))
+      os.exit(1)
    end
    return str
 end
@@ -327,12 +332,12 @@ function transformReaction(t, species, suppress_warnings)
    if t.fr then
       r.frc = transformRateConstant(t.fr, r.reacCoeffs, anonymousCollider)
    else
-      r.frc = {model="from equilibrium constant"}
+      r.frc = {model="fromEqConst"}
    end
    if t.br then
       r.brc = transformRateConstant(t.br, r.prodCoeffs, anonymousCollider)
    else
-      r.brc = {model="from equilibrium constant"}
+      r.brc = {model="fromEqConst"}
    end
    if t.ec then
       r.ec = t.ec
