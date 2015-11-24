@@ -25,7 +25,7 @@ test run-preprocessor {Prepare N-S least squares case.} -body {
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the case.} -body {
-    exec e4shared --job=mms --run --max-cpus=1 > LOGFILE_MAIN_NS_LEAST_SQ
+    exec e4shared --job=mms --run > LOGFILE_MAIN_NS_LEAST_SQ
 } -result {} -returnCodes {0}
 
 test number-of-steps {Iteration of the final block in a certain number of steps.} -body {

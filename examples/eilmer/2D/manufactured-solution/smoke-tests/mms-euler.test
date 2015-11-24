@@ -29,7 +29,7 @@ test run-preprocessor {Prepare Euler case.} -body {
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the Euler case.} -body {
-    exec e4shared --job=mms --run --max-cpus=1 > LOGFILE_MAIN_EULER
+    exec e4shared --job=mms --run > LOGFILE_MAIN_EULER
 } -result {} -returnCodes {0}
 
 test number-of-steps {Iteration of the final block in a certain number of steps.} -body {
