@@ -50,6 +50,7 @@ clean:
 	- rm ${TEST_PROGRAMS}
 	- rm gas.so
 	- rm gas-calc
+	- rm species-database/species-database.lua
 	- cd $(LUA); make clean
 
 test: $(TEST_PROGRAMS) gas-calc
