@@ -58,8 +58,8 @@ class Grid {
 	this.label = label;
     }
 
-    abstract ref Vector3 opIndex(size_t i, size_t j, size_t k=0);
-    abstract ref Vector3 opIndex(size_t indx);
+    abstract Vector3* opIndex(size_t i, size_t j, size_t k=0);
+    abstract Vector3* opIndex(size_t indx);
     abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const; 
     abstract size_t[] get_vtx_id_list_for_cell(size_t indx) const;
     abstract void read_from_gzip_file(string fileName);
@@ -165,23 +165,23 @@ public:
 	return new StructuredGrid(this);
     }
 	
-    override ref Vector3 opIndex(size_t i, size_t j, size_t k=0)
+    override Vector3* opIndex(size_t i, size_t j, size_t k=0)
     in {
 	assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
 	assert (j < njv, text("index j=", j, " is invalid, njv=", njv));
 	assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
     }
     body {
-	return vertices[single_index(i,j,k)];
+	return &(vertices[single_index(i,j,k)]);
     }
 
-    override ref Vector3 opIndex(size_t indx)
+    override Vector3* opIndex(size_t indx)
     in {
 	assert (indx < niv*njv*nkv,
 		text("index indx=", indx, " is invalid, niv*njv*nkv=", niv*njv*nkv));
     }
     body {
-	return vertices[indx];
+	return &(vertices[indx]);
     }
 
     override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
@@ -512,10 +512,10 @@ unittest {
     auto cf = [new LinearFunction(), new LinearFunction(), 
 	       new LinearFunction(), new LinearFunction()];
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
-    assert(approxEqualVectors(my_grid[5,5], Vector3(0.5, 0.35, 0.0)),
+    assert(approxEqualVectors(*my_grid[5,5], Vector3(0.5, 0.35, 0.0)),
 			      "StructuredGrid sample point");
     auto my_subgrid = my_grid.subgrid(4, 3, 4, 5);
-    assert(approxEqualVectors(my_subgrid[1,1], Vector3(0.5, 0.35, 0.0)),
+    assert(approxEqualVectors(*my_subgrid[1,1], Vector3(0.5, 0.35, 0.0)),
 			      "subgrid sample point");    
 }
 

@@ -42,7 +42,7 @@ void main()
     //
     auto simple_box = new TFIVolume(p);
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
-    writeln("grid point 5 5 5 at p=", my_3Dgrid[5,5,5]);
+    writeln("grid point 5 5 5 at p=", *my_3Dgrid[5,5,5]);
     auto usg3D = new UnstructuredGrid(my_3Dgrid);
     usg3D.write_to_vtk_file("test_3Dgrid.vtk");
     usg3D.write_to_gzip_file("test_3Dgrid.gz");

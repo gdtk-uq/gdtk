@@ -451,23 +451,23 @@ public:
 	return new UnstructuredGrid(this);
     }
 
-    override ref Vector3 opIndex(size_t i, size_t j, size_t k=0)
+    override Vector3* opIndex(size_t i, size_t j, size_t k=0)
     in {
 	assert (i < nvertices, text("index i=", i, " is invalid, nvertices=", nvertices));
 	assert (j == 0, text("index j=", j, " is invalid for unstructured grid"));
 	assert (k == 0, text("index k=", k, " is invalid for unstructured grid"));
     }
     body {
-	return vertices[i];
+	return &(vertices[i]);
     }
 
-    override ref Vector3 opIndex(size_t indx)
+    override Vector3* opIndex(size_t indx)
     in {
 	assert (indx < nvertices,
 		text("index indx=", indx, " is invalid, nvertices=", nvertices));
     }
     body {
-	return vertices[indx];
+	return &(vertices[indx]);
     }
 
     override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const

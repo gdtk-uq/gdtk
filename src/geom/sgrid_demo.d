@@ -40,7 +40,7 @@ void main()
     //
     auto simple_box = new TFIVolume(p);
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
-    writeln("grid point 5 5 5 at p=", my_3Dgrid[5,5,5]);
+    writeln("grid point 5 5 5 at p=", *my_3Dgrid[5,5,5]);
     my_3Dgrid.write_to_vtk_file("test_3Dgrid.vtk");
 
     writeln("Import GridPro grid...");

@@ -80,8 +80,8 @@ extern(C) int get_vtx(T, string MTname)(lua_State* L)
     } else {
 	k = 0; // Assume 2D grid
     }
-    Vector3 vtx = grid[i,j,k];
-    return pushVector3(L, vtx);
+    Vector3* vtx = grid[i,j,k];
+    return pushVector3(L, *vtx);
 }
 
 extern(C) int subgrid(T, string MTname)(lua_State* L)

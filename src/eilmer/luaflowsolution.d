@@ -271,7 +271,7 @@ extern(C) int get_vtx_pos(lua_State* L)
 	throw new LuaInputException(errMsg);
     }
     lua_pop(L, 1);
-    Vector3 vtx = fsol.gridBlocks[ib][i, j, k];
+    Vector3 vtx = *(fsol.gridBlocks[ib][i, j, k]);
     lua_settop(L, 0);
     return pushVector3(L, vtx);
 } // end get_vtx_pos()
