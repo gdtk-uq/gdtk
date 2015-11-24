@@ -55,7 +55,7 @@ clean:
 test: $(TEST_PROGRAMS) gas-calc
 	tclsh gas-package-test.tcl
 
-build-prep-gas: prep_gas.lua
+build-prep-gas: prep_gas.lua species-database.lua
 	- mkdir -p $(BUILD_DIR)/bin
 	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
 	- mkdir -p $(BUILD_DIR)/data
@@ -73,6 +73,9 @@ install: gas-calc build-prep-gas
 
 $(LIBLUA):
 	cd $(LUA); make linux local
+
+species-database.lua :
+	cd species-database; make species-database.lua
 
 gas_model_demo: gas_model_demo.d $(LIBLUA) 
 	$(DMD) -g $(DFLAGS) gas_model_demo.d $(OF)gas_model_demo \

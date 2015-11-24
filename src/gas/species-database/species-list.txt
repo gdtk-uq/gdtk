@@ -1,0 +1,6 @@
+# file     : symbol   : name  
+air.lua    : air      : CEA-air
+CO2.lua    : CO2      : carbon dioxide
+N.lua      : N        : monatomic nitrogen
+N2.lua     : N2       : diatomic nitrogen
+SF6.lua    : SF6      : sulphur hexafluorane
