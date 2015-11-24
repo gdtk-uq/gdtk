@@ -55,7 +55,27 @@ public:
     abstract double gas_constant(in GasState Q);
     abstract double internal_energy(in GasState Q);
     abstract double enthalpy(in GasState Q);
+    double enthalpy(in GasState Q, int isp)
+    {
+	// For the single-species gases, provide a default implementation
+	// but we need to be careful to override this for multi-component gases.
+	return enthalpy(Q);
+    }
     abstract double entropy(in GasState Q);
+    double entropy(in GasState Q, int isp)
+    {
+	// For the single-species gases, provide a default implementation
+	// but we need to be carefule to override this for multi-component gases.
+	return entropy(Q);
+    }
+
+    double gibbs_free_energy(GasState Q, int isp)
+    {
+	double h = enthalpy(Q, isp);
+	double s = entropy(Q, isp);
+	double g = h - Q.T[0]*s;
+	return g;
+    }
     
     final double Cv(in GasState Q) { return dedT_const_v(Q); }
     final double Cp(in GasState Q) { return dhdT_const_p(Q); }
@@ -137,6 +157,11 @@ public:
 	e.length = n_modes;
 	T.length = n_modes;
 	k.length = n_modes;
+    }
+
+    this(GasModel gm)
+    {
+	this(gm.n_species, gm.n_modes);
     }
 
     this(GasModel gm, in double p_init, in double[] T_init, 

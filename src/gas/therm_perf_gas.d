@@ -299,12 +299,20 @@ public:
 	}
 	return mass_average(Q, _h);
     }
+    override double enthalpy(in GasState Q, int isp)
+    {
+	return _curves[isp].eval_h(Q.T[0]);
+    }
     override double entropy(in GasState Q)
     {
 	foreach ( isp; 0.._n_species ) {
 	    _s[isp] = _curves[isp].eval_s(Q.T[0]) - _R[isp]*log(Q.p/P_atm);
 	}
 	return mass_average(Q, _s);
+    }
+    override double entropy(in GasState Q, int isp)
+    {
+	return _curves[isp].eval_s(Q.T[0]);
     }
 
 private:
