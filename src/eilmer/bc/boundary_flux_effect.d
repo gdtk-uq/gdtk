@@ -3,6 +3,8 @@
  *
  * Authors: RG and PJ
  * Date: 2015-05-07
+ * Author: KD added ConstFlux
+ * Date: 2015-11-10
  **/
 
 module boundary_flux_effect;
@@ -26,6 +28,7 @@ import solidfvcell;
 import solidfvinterface;
 import gas_solid_interface;
 import flowstate;
+import gas;
 
 BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -174,11 +177,17 @@ private:
     double[] _massf;
     double _e, _rho, _p, _u, _v;
     int _nsp;
-
+   
 public:  
     this(int id, int boundary, in FlowState fstate)
     {
-	auto gmodel = blk.myConfig.gmodel;
+	/+ We only need to gather the freestream values once at
+	 + the start of simulation since we are interested in
+	 + applying a constant flux as the incoming boundary
+	 + condition.
+	+/
+	//auto gmodel = blk.myConfig.gmodel;
+	auto gmodel = GlobalConfig.gmodel_master;
 	super(id, boundary, "Const_Flux");
 	_u = fstate.vel.x;
 	_v = fstate.vel.y;
@@ -187,7 +196,8 @@ public:
 	_rho = fstate.gas.rho;
 	_e = gmodel.internal_energy(fstate.gas);
 	_nsp = gmodel.n_species;
-	for (int _isp; _isp <= _nsp; _isp++) {
+	_massf.length = _nsp;
+	for (int _isp=0; _isp <= _nsp; _isp++) {
 	    _massf[_isp] = fstate.gas.massf[_isp];
 	}
     }
@@ -211,6 +221,7 @@ public:
 	    i = blk.imin;
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    // Flux equations
 		    IFace = blk.get_cell(i,j,k).iface[Face.west];
 		    IFace.F.mass = _rho * (_u*IFace.n.x + _v*IFace.n.y);
 		    IFace.F.momentum.refx = _p * IFace.n.x + _u*IFace.F.mass;

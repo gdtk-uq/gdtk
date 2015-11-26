@@ -178,6 +178,7 @@ public:
 	case TurbulenceModel.k_omega:
 	    foreach (cell; cells) cell.turbulence_viscosity_k_omega();
 	    break;
+
 	}
 	foreach (cell; cells) {
 	    cell.turbulence_viscosity_factor(myConfig.transient_mu_t_factor);
@@ -185,16 +186,6 @@ public:
 	    cell.turbulence_viscosity_zero_if_not_in_zone();
 	}
     } // end estimate_turbulence_viscosity()
-
-    void set_grid_velocities(double sim_time)
-    {
-	if (myConfig.grid_motion != GridMotion.none) {
-	    throw new Error("Block.set_grid_velocities(): moving grid is not yet implemented.");
-	    // [TODO] Insert the moving-grid code some day...
-	}
-	foreach (iface; faces) iface.gvel = Vector3(0.0, 0.0, 0.0);
-	return;
-    } // end set_grid_velocities()
 
     @nogc
     void set_cell_dt_chem(double dt_chem)

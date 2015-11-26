@@ -800,7 +800,6 @@ public:
 	ConservedQuantities U1 = U[1];
 	double gamma_1 = 1.0;
 	double vr = volume[0] / volume[1];
-
 	U1.mass = vr * (U0.mass + dt * gamma_1 * dUdt0.mass);
 	U1.momentum.refx = vr * (U0.momentum.x + dt * gamma_1 * dUdt0.momentum.x);
 	U1.momentum.refy = vr * (U0.momentum.y + dt * gamma_1 * dUdt0.momentum.y);
@@ -829,7 +828,7 @@ public:
 	foreach(imode; 1 .. U1.energies.length) {
 	    U1.energies[imode] = vr * (U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode]);
 	}
-	assert(false, "[TODO] stage_1_update_for_flow_on_moving_grid() not yet ready for use");
+	return;
     } // end stage_1_update_for_flow_on_moving_grid()
 
     @nogc
