@@ -2,6 +2,7 @@
 // Date: 2015-11-20
 
 import std.string;
+import std.conv;
 
 import util.lua;
 import util.lua_service;
@@ -11,12 +12,14 @@ import globaldata;
 import luageom;
 import sgrid;
 import block;
+import std.stdio;
 
 void init_master_lua_State(string fname)
 {
     GlobalConfig.master_lua_State = init_lua_State(fname);
     // Give me a conveniently-named pointer for use in this function.
     auto L = GlobalConfig.master_lua_State;
+    registerVector3(L);
     // Set some globally available constants for the
     // Lua state.
     lua_pushnumber(L, GlobalConfig.nBlocks);
@@ -59,16 +62,16 @@ void init_master_lua_State(string fname)
     // Now set some helper functions
     lua_pushcfunction(L, &luafn_sampleFlow);
     lua_setglobal(L, "sampleFlow");
-    lua_pushcfunction(L, &luafn_setVtxVelocityForDomain);
-    lua_setglobal(L, "setVtxVelocityForDomain");
-    lua_pushcfunction(L, &luafn_setVtxVelocityForBlock);
-    lua_setglobal(L, "setVtxVelocityForBlock");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesForDomain);
+    lua_setglobal(L, "setVtxVelocitiesForDomain");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesForBlock);
+    lua_setglobal(L, "setVtxVelocitiesForBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocity);
     lua_setglobal(L, "setVtxVelocity");
 
 }
 
-extern(C) int luafn_setVtxVelocityForDomain(lua_State* L)
+extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
 {
     // Expect a single argument: a Vector3 object
     auto vel = checkVector3(L, 1);
@@ -90,7 +93,7 @@ extern(C) int luafn_setVtxVelocityForDomain(lua_State* L)
     return 0;
 }
 
-extern(C) int luafn_setVtxVelocityForBlock(lua_State* L)
+extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
 {
     // Expect two arguments: 1. a Vector3 object
     //                       2. a block id
@@ -171,6 +174,8 @@ void assign_vertex_velocities_via_udf(double sim_time)
     int number_results = 0;
 
     if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-	luaL_error(L, "error running user-defined function assignVtxVelocities()");
+        string errMsg = "ERROR: while running user-defined function assignVtxVelocities()\n";
+	errMsg ~= to!string(lua_tostring(L, -1));
+	throw new Error(errMsg);
     }
 }
