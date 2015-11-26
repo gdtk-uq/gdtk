@@ -3,6 +3,15 @@ Quick installation guide
 :Author: Rowan J. Gollan
 :Date: 2015-09-02
 
+Prerequisite software
+---------------------
+To build eilmer, you will require:
+
+  + A C compiler (GNU compiler is a good option and standard on most systems)
+  + A D compiler (The DMD compiler is a good choice)
+  + readline development package
+  + ncurses development package
+
 First-time setup
 ----------------
 
