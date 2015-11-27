@@ -157,10 +157,11 @@ private:
 	lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
 	lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
 	lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
+	// Geometric information for the face.
 	lua_pushnumber(L, IFace.pos.x); lua_setfield(L, -2, "x");
 	lua_pushnumber(L, IFace.pos.y); lua_setfield(L, -2, "y");
 	lua_pushnumber(L, IFace.pos.z); lua_setfield(L, -2, "z");
-	lua_pushnumber(L, IFace.n.x); lua_setfield(L, -2, "csX");
+	lua_pushnumber(L, IFace.n.x); lua_setfield(L, -2, "csX"); // unit-normal, cosine x-coordinate
 	lua_pushnumber(L, IFace.n.y); lua_setfield(L, -2, "csY");
 	lua_pushnumber(L, IFace.n.z); lua_setfield(L, -2, "csZ");
 	lua_pushnumber(L, IFace.t1.x); lua_setfield(L, -2, "csX1");
@@ -169,10 +170,18 @@ private:
 	lua_pushnumber(L, IFace.t2.x); lua_setfield(L, -2, "csX2");
 	lua_pushnumber(L, IFace.t2.y); lua_setfield(L, -2, "csY2");
 	lua_pushnumber(L, IFace.t2.z); lua_setfield(L, -2, "csZ2");
+	// Structured-grid indices for the cell just inside the boundary.
 	lua_pushinteger(L, i); lua_setfield(L, -2, "i");
 	lua_pushinteger(L, j); lua_setfield(L, -2, "j");
 	lua_pushinteger(L, k); lua_setfield(L, -2, "k");
-	
+	// Geometric information for the ghost cells (just outside the boundary).
+	lua_pushnumber(L, ghostCell0.pos[0].x); lua_setfield(L, -2, "gc0x"); // ghostcell0 x-coordinate
+	lua_pushnumber(L, ghostCell0.pos[0].y); lua_setfield(L, -2, "gc0y");
+	lua_pushnumber(L, ghostCell0.pos[0].z); lua_setfield(L, -2, "gc0z");
+	lua_pushnumber(L, ghostCell1.pos[0].x); lua_setfield(L, -2, "gc1x");
+	lua_pushnumber(L, ghostCell1.pos[0].y); lua_setfield(L, -2, "gc1y");
+	lua_pushnumber(L, ghostCell1.pos[0].z); lua_setfield(L, -2, "gc1z");
+
 	// 2. Call LuaFunction and expect two tables of ghost cell flow state
 	int number_args = 1;
 	int number_results = 2; // expecting two table of ghostCells
