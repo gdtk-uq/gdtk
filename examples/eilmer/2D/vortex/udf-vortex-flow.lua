@@ -17,9 +17,11 @@ T_i   = p_i / (Rgas * rho_i)     -- K
 a_i   = math.sqrt(g * Rgas * T_i)     -- m/s
 u_i   = M_i * a_i                -- m/s
 
--- print("Set up inviscid vortex")
--- print("    p_i=", p_i, "M_i=", M_i, "rho_i=", rho_i, 
---       "T_i=", T_i, "a_i=", a_i, "u_i=", u_i)
+if false then
+   print("Set up inviscid vortex")
+   print("    p_i=", p_i, "M_i=", M_i, "rho_i=", rho_i, 
+	 "T_i=", T_i, "a_i=", a_i, "u_i=", u_i)
+end
 
 function vortex_flow(r)
    u   = u_i * r_i / r
@@ -44,39 +46,41 @@ function fillTable(t, x, y)
    return t
 end
 
-function ghostCells(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
+function twoGhostCells(args)
    ghost0 = fillTable({}, args.gc0x, args.gc0y)
    ghost1 = fillTable({}, args.gc1x, args.gc1y)
    return ghost0, ghost1
 end
 
+-- The following functions are expected by the boundary-condition
+-- interpreter.  It will call them up at run time, at the appropriate
+-- stage of the time-step calculation.
+
+-- Functions that return the flow states for the ghost cells on
+-- each boundary. For use in the convective flux calculations.
+
 function ghostCells_north(args)
-   return ghostCells(args)
+   return twoGhostCells(args)
 end
 
 function ghostCells_south(args)
-   return ghostCells(args)
+   return twoGhostCells(args)
 end
 
 function ghostCells_west(args)
-   return ghostCells(args)
+   return twoGhostCells(args)
 end
 
+-- Functions for the pre-spatial-derivative part of the calculation.
 
-function interface(args)
+function interface_north(args)
    return fillTable({}, args.x, args.y)
 end
 
-function interface_north(args)
-   return interface(args)
-end
-
 function interface_south(args)
-   return interface(args)
+   return fillTable({}, args.x, args.y)
 end
 
 function interface_west(args)
-   return interface(args)
+   return fillTable({}, args.x, args.y)
 end
