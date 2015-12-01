@@ -146,16 +146,18 @@ public:
     } // end of interp_right_scalar()
 
     // cannot use @nogc because the GasModel methods may allocate internal data
-    void interp_both(in FVInterface IFace,
-			   ref FVCell cL1, ref FVCell cL0, 
-			   ref FVCell cR0, ref FVCell cR1, 
-			   in double cL1Length, in double cL0Length, 
-			   in double cR0Length, in double cR1Length, 
-			   ref FlowState Lft, ref FlowState Rght)
+    void interp_both(ref FVInterface IFace,
+		     double cL1Length, double cL0Length, 
+		     double cR0Length, double cR1Length, 
+		     ref FlowState Lft, ref FlowState Rght)
     {
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
 	auto nmodes = gmodel.n_modes;
+	auto cL1 = IFace.left_cells[1];
+	auto cL0 = IFace.left_cells[0];
+	auto cR0 = IFace.right_cells[0];
+	auto cR1 = IFace.right_cells[1];
 	// Low-order reconstruction just copies data from adjacent FV_Cell.
 	// Even for high-order reconstruction, we depend upon this copy for
 	// the viscous-transport and diffusion coefficients.
@@ -300,14 +302,16 @@ public:
     } // end interp_both()
 
     // cannot use @nogc because the GasModel methods may allocate internal data
-    void interp_left(in FVInterface IFace,
-		     ref FVCell cL1, ref FVCell cL0, ref FVCell cR0,
-		     in double cL1Length, in double cL0Length, in double cR0Length,
+    void interp_left(ref FVInterface IFace,
+		     double cL1Length, double cL0Length, double cR0Length,
 		     ref FlowState Lft, ref FlowState Rght)
     {
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
 	auto nmodes = gmodel.n_modes;
+	auto cL1 = IFace.left_cells[1];
+	auto cL0 = IFace.left_cells[0];
+	auto cR0 = IFace.right_cells[0];
 	// Low-order reconstruction just copies data from adjacent FV_Cell.
 	// Even for high-order reconstruction, we depend upon this copy for
 	// the viscous-transport and diffusion coefficients.
@@ -408,9 +412,8 @@ public:
     } // end interp_left()
 
     // cannot use @nogc because the GasModel methods may allocate internal data
-    void interp_right(in FVInterface IFace,
-		      ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
-		      in double cL0Length, in double cR0Length, in double cR1Length,
+    void interp_right(ref FVInterface IFace,
+		      double cL0Length, double cR0Length, double cR1Length,
 		      ref FlowState Lft, ref FlowState Rght)
     // Reconstruct flow properties at an interface from cells L0,R0,R1.
     //
@@ -420,6 +423,9 @@ public:
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
 	auto nmodes = gmodel.n_modes;
+	auto cL0 = IFace.left_cells[0];
+	auto cR0 = IFace.right_cells[0];
+	auto cR1 = IFace.right_cells[1];
 	// Low-order reconstruction just copies data from adjacent FV_Cell.
 	// Even for high-order reconstruction, we depend upon this copy for
 	// the viscous-transport and diffusion coefficients.

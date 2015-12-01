@@ -45,6 +45,10 @@ class BasicCell {
 public:
     uint id;  // allows us to work out where, in the block, the cell is
     Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
+    double iLength; // length in the i-index direction
+    double jLength; // length in the j-index direction
+    double kLength; // length in the k-index direction
+    double L_min;   // minimum length scale for cell
     FlowState fs; // Flow properties
     // Connections
     FVInterface[] iface;  // references to defining interfaces of cell
@@ -62,10 +66,6 @@ public:
     // Geometry
     double[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
     double[] areaxy; // (x,y)-plane area for time-levels, m**2
-    double iLength; // length in the i-index direction
-    double jLength; // length in the j-index direction
-    double kLength; // length in the k-index direction
-    double L_min;   // minimum length scale for cell
     double distance_to_nearest_wall; // for turbulence model correction.
     double half_cell_width_at_wall;  // ditto
     FVCell cell_at_nearest_wall;   // ditto
