@@ -17,6 +17,9 @@ import gas;
 import kinetics;
 import geom;
 import fvcore;
+version (gpu_chem) {
+    import gpu_chem;
+}
 
 // Symbolic names for turbulence models.
 enum TurbulenceModel { none, baldwin_lomax, k_omega, spalart_allmaras }
@@ -330,6 +333,12 @@ final class GlobalConfig {
     // Parameters related to the solid domain and conjugate coupling
     shared static bool udfSolidSourceTerms = false;
     shared static string udfSolidSourceTermsFile = "dummy-solid-source-terms.txt";
+
+    version (gpu_chem) {
+	static ReactionUpdateScheme reaction_update;
+	static GPUChem gpuChem;
+	static string gpuChemFile = "dummy-gpu-chem-file.txt";
+    }
 
     ~this()
     {

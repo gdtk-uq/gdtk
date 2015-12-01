@@ -1,0 +1,45 @@
+{
+	"name": "opencl",
+	"description": "D binding for OpenCL cl.h",
+	"copyright": "Copyright © 2014, yusuke",
+	"license" : "Boost Software License, Version 1.0",
+	"authors": ["Yusuke Suzuki"],
+
+	"dependencies": {
+	},
+	
+	"libs-linux" : ["OpenCL"],
+	"lflags-osx" : ["-framework", "OpenCL"],
+	
+	"configurations" : [
+		{
+			"name" : "debug",
+			"buildType" : "debug",
+			"targetType" : "library",
+			"sourcePaths" : ["source"],
+		},
+		{
+			"name" : "release",
+			"buildType" : "release",
+			"targetType" : "library",
+			"sourcePaths" : ["source"],
+		},
+		{
+			"name" : "test",
+			"targetType" : "executable",
+			"buildType" : "debug",
+			"sourcePaths" : ["source", "test"],
+			"importPaths" : ["source"],
+		},
+		{
+			"name" : "sample",
+			"targetType" : "executable",
+			"buildType" : "debug",
+			"sourcePaths" : ["source", "sample"],
+			"importPaths" : ["source"],
+		},
+	],
+
+	"targetPath" : "target"
+}
+

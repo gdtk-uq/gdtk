@@ -35,6 +35,9 @@ import boundary_flux_effect;
 import solid_udf_source_terms;
 import block_moving_grid;
 import grid_motion;
+version (gpu_chem) {
+    import gpu_chem;
+}
 
 // State data for simulation.
 // Needs to be seen by all of the coordination functions.
@@ -84,6 +87,9 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	    cell.decode_conserved(0, 0, myblk.omegaz);
 	}
 	myblk.set_cell_dt_chem(-1.0);
+    }
+    version (gpu_chem) {
+	initGPUChem();
     }
     foreach (ref mySolidBlk; solidBlocks) {
 	mySolidBlk.assembleArrays();
@@ -273,12 +279,18 @@ void integrate_in_time(double target_time)
 	// 2d. Increment because of viscous effects may be done
 	//     separately to the convective terms.
         // 2e. Chemistry step. 
+	// [TODO]: Set T_frozen from config.
 	if ( GlobalConfig.reacting ) {
-	    foreach (blk; parallel(gasBlocks,1)) {
-		if (!blk.active) continue;
-		double local_dt_global = dt_global;
-		foreach (cell; blk.cells) {
-		    cell.chemical_increment(local_dt_global, 300.0);
+	    version (gpu_chem) {
+		GlobalConfig.gpuChem.chemical_increment(dt_global, 300.0);
+	    }
+	    else { // without GPU accelerator
+		foreach (blk; parallel(gasBlocks,1)) {
+		    if (!blk.active) continue;
+		    double local_dt_global = dt_global;
+		    foreach (cell; blk.cells) {
+			cell.chemical_increment(local_dt_global, 300.0);
+		    }
 		}
 	    }
 	}

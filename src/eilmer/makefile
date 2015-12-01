@@ -4,8 +4,13 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
+WITH_GPU_CHEM ?= 0
 
 PROGRAMS := e4shared
+
+ifeq ($(WITH_GPU_CHEM),1)
+    PROGRAMS += eilmer-gpu-chem
+endif
 
 DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo block_demo \
 	luaflowstate_demo luaglobalconfig_demo
@@ -74,6 +79,9 @@ GEOM_FILES := $(GEOM_DIR)/geom.d \
 
 GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
+
+OPENCL_DIR := ../extern/opencl.d/source
+OPENCL_FILES := $(OPENCL_DIR)/cl.d
 
 LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
@@ -215,6 +223,16 @@ e4shared: main.d $(EILMER_FILES) \
 		main_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS)
+
+eilmer-gpu-chem: main.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(OPENCL_FILES) \
+	$(KINETICS_FILES) $(NM_FILES) $(UTIL_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
+	$(DMD) -version=gpu_chem $(DFLAGS) $(OF)eilmer-gpu-chem \
+		main_with_rev_string.d $(EILMER_FILES) gpu_chem.d \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS) -I$(OPENCL_DIR) -L-L/usr/local/cuda/lib64 -L-lOpenCL
+
 
 compute-error: compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \
 	block.d sblock.d ublock.d \
