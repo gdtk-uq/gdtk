@@ -77,7 +77,7 @@ public:
 	foreach (boundary; 0 .. nboundaries) {
 	    string json_key = format("boundary_%d", boundary);
 	    auto bc_json_data = json_data[json_key];
-	    bc ~= make_BC_from_json(bc_json_data, id, boundary);
+	    bc ~= make_BC_from_json(bc_json_data, id, to!int(boundary));
 	}
     } // end init_boundary_conditions()
 
