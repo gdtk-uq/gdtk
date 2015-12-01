@@ -77,7 +77,7 @@ public:
 	foreach (boundary; 0 .. nboundaries) {
 	    string json_key = format("boundary_%d", boundary);
 	    auto bc_json_data = json_data[json_key];
-	    // [TODO] bc ~= make_BC_from_json(bc_json_data, id, boundary);
+	    bc ~= make_BC_from_json(bc_json_data, id, boundary);
 	}
     } // end init_boundary_conditions()
 
@@ -133,8 +133,9 @@ public:
     override void init_grid_and_flow_arrays(string gridFileName)
     {
 	grid = new UnstructuredGrid(gridFileName, "gziptext");
-	throw new Error("init_grid_and_flow_arrays not yet implemented for unstructured grid.");
-	// [TODO] assemble_arrays();
+	// Assemble array storage for finite-volume cells, etc.
+	// [TODO]
+	throw new Error("init_grid_and_flow_arrays not yet finished for unstructured grid.");
 	// [TODO] bind_interfaces_vertices_and_cells();
 	// [TODO] compute ghost-cell details for boundaries
 	// [TODO] store references for derivative calc
@@ -147,12 +148,9 @@ public:
     }
 
     override void read_grid(string filename, size_t gtl=0)
-    // Read the grid vertices from a gzip file.
-    // We delegate the actual file reading to the UnstructuredGrid class.
     {
-	throw new Error("read_grid function not yet implemented for unstructured grid.");
-	// [TODO]
-    } // end read_grid()
+	throw new Error("read_grid function NOT implemented for unstructured grid.");
+    }
 
     override void write_grid(string filename, double sim_time, size_t gtl=0)
     // Note that we reuse the StructuredGrid object that was created on the

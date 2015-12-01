@@ -27,8 +27,7 @@ import boundary_interface_effect;
 import boundary_flux_effect;
 import user_defined_effects;
 
-BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary,
-				    size_t nicell, size_t njcell, size_t nkcell)
+BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
     auto newBC = new BoundaryCondition(blk_id, boundary);
     newBC.label = to!string(jsonData["label"]);
