@@ -20,6 +20,5 @@ function sourceTerms(t, cell)
    src.momentum_y = fymom
    src.momentum_z = 0.0
    src.total_energy = fe
-   src.species = {src.mass}
    return src
 end
