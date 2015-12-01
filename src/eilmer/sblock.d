@@ -370,13 +370,13 @@ public:
 			IFace.vtx ~= get_vtx(i+1,j+1,k);
 			IFace.vtx ~= get_vtx(i+1,j+1,k+1);
 			IFace.vtx ~= get_vtx(i+1,j,k+1);
-			IFace.left_cell = get_cell(i,j,k);
-			IFace.right_cell = get_cell(i+1,j,k);
+			IFace.left_cells ~= get_cell(i,j,k);
+			IFace.right_cells ~= get_cell(i+1,j,k);
 		    } else {
 			IFace.vtx ~= get_vtx(i+1,j+1);
 			IFace.vtx ~= get_vtx(i+1,j);
-			IFace.left_cell = get_cell(i,j);
-			IFace.right_cell = get_cell(i+1,j);
+			IFace.left_cells ~= get_cell(i,j);
+			IFace.right_cells ~= get_cell(i+1,j);
 		    }
 		} // i loop
 	    } // j loop
@@ -394,13 +394,13 @@ public:
 			IFace.vtx ~= get_vtx(i,j+1,k+1);
 			IFace.vtx ~= get_vtx(i+1,j+1,k+1);
 			IFace.vtx ~= get_vtx(i+1,j+1,k);
-			IFace.left_cell = get_cell(i,j,k);
-			IFace.right_cell = get_cell(i,j+1,k);
+			IFace.left_cells ~= get_cell(i,j,k);
+			IFace.right_cells ~= get_cell(i,j+1,k);
 		    } else {
 			IFace.vtx ~= get_vtx(i,j+1);
 			IFace.vtx ~= get_vtx(i+1,j+1);
-			IFace.left_cell = get_cell(i,j);
-			IFace.right_cell = get_cell(i,j+1);
+			IFace.left_cells ~= get_cell(i,j);
+			IFace.right_cells ~= get_cell(i,j+1);
 		    }
 		} // j loop
 	    } // i loop
@@ -417,8 +417,8 @@ public:
 		    IFace.vtx ~= get_vtx(i+1,j,k+1);
 		    IFace.vtx ~= get_vtx(i+1,j+1,k+1);
 		    IFace.vtx ~= get_vtx(i,j+1,k+1);
-		    IFace.left_cell = get_cell(i,j,k);
-		    IFace.right_cell = get_cell(i,j,k+1);
+		    IFace.left_cells ~= get_cell(i,j,k);
+		    IFace.right_cells ~= get_cell(i,j,k+1);
 		} // for k 
 	    } // j loop
 	} // i loop

@@ -34,8 +34,8 @@ public:
     Vector3 t1;            // tangent vector 1 (aka p)
     Vector3 t2;            // tangent vector 2 (aka q)
     FVVertex[] vtx;        // references to vertices for line (2D) and quadrilateral (3D) faces
-    BasicCell left_cell;      // interface normal points out of this adjoining cell
-    BasicCell right_cell;     // interface normal points into this adjoining cell
+    BasicCell[] left_cells;      // interface normal points out of this adjoining cell
+    BasicCell[] right_cells;     // interface normal points into this adjoining cell
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
