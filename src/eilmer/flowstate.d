@@ -14,6 +14,7 @@ import std.json;
 import std.array;
 import std.format;
 import std.stdio;
+import std.math;
 import json_helper;
 import gzip;
 import geom;
@@ -240,6 +241,36 @@ public:
 	return writer.data;
     } // end toJSONString()
 
+
+    bool check_data(ref Vector3 pos) const
+    {
+	bool is_data_valid = gas.check_values(true);
+	const double MAXVEL = 30000.0;
+	if (fabs(vel.x) > MAXVEL || fabs(vel.y) > MAXVEL || fabs(vel.z) > MAXVEL) {
+	    writeln("Velocity too high ", vel.x, " ", vel.y, " ", vel.z);
+	    is_data_valid = false;
+	}
+	if (!isFinite(tke)) {
+	    writeln("Turbulence KE invalid number ", tke);
+	    is_data_valid = false;
+	}
+	if (tke < 0.0) {
+	    writeln("Turbulence KE negative ", tke);
+	    is_data_valid = false;
+	}
+	if (!isFinite(omega)) {
+	    writeln("Turbulence frequency invalid number ", omega);
+	    is_data_valid = false;
+	}
+	if (omega <= 0.0) {
+	    writeln("Turbulence frequency nonpositive ", omega);
+	    is_data_valid = false;
+	}
+	if (!is_data_valid) {
+	    writeln("   at position", pos);
+	}
+	return is_data_valid;
+    } // end check_data()
 } // end class FlowState
 
 string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) fs)

@@ -16,6 +16,7 @@ import kinetics;
 import globalconfig;
 import globaldata;
 import fvcore;
+import flowstate;
 import fvvertex;
 import fvinterface;
 import fvcell;
@@ -208,8 +209,8 @@ public:
 	double tol = myConfig.compression_tolerance;
 	// First, work across interfaces and locate shocks using the (local) normal velocity.
 	foreach (iface; faces) {
-	    FVCell cL = iface.left_cell;
-	    FVCell cR = iface.right_cell;
+	    auto cL = iface.left_cell;
+	    auto cR = iface.right_cell;
 	    double uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
 	    double uR = cR.fs.vel.x * iface.n.x + cR.fs.vel.y * iface.n.y + cR.fs.vel.z * iface.n.z;
 	    double aL = cL.fs.gas.a;
@@ -234,8 +235,8 @@ public:
     // being on the minimum limit or the velocity being very large.
     {
 	int number_of_invalid_cells = 0;
-	foreach(FVCell cell; cells) {
-	    if ( cell.check_flow_data() == false ) {
+	foreach(cell; cells) {
+	    if ( cell.fs.check_data(cell.pos[0]) == false ) {
 		++number_of_invalid_cells;
 		writefln("count_invalid_cells: block_id = %d, cell at %g,%g,%g\n",
 			 id, cell.pos[0].x, cell.pos[0].y, cell.pos[0].z);
@@ -243,20 +244,19 @@ public:
 		if ( myConfig.adjust_invalid_cell_data ) {
 		    // We shall set the cell data to something that
 		    // is valid (and self consistent).
-		    FVCell other_cell;
-		    FVCell[] neighbours;
+		    FlowState[] neighbour_flows;
 		    printf( "Adjusting cell data to a local average.\n" );
 		    foreach (i; 0 .. cell.iface.length) {
 			auto face = cell.iface[i];
-			other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
-			if ( other_cell.check_flow_data() ) neighbours ~= other_cell;
+			auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
+			if (other_cell.fs.check_data(other_cell.pos[0])) neighbour_flows ~= other_cell.fs;
 		    }
-		    if ( neighbours.length == 0 ) {
+		    if (neighbour_flows.length == 0) {
 			throw new Error(text("Block::count_invalid_cells(): " ~
 					     "There were no valid neighbours " ~
-					     "to replace cell data."));
+					     "to replace flow data in cell."));
 		    }
-		    cell.replace_flow_data_with_average(neighbours);
+		    cell.fs.copy_average_values_from(neighbour_flows, myConfig.gmodel);
 		    cell.encode_conserved(gtl, 0, omegaz);
 		    cell.decode_conserved(gtl, 0, omegaz);
 		    writefln("after flow-data replacement: block_id = %d, cell @ %g,%g,%g\n",

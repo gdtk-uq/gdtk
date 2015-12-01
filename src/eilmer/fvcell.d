@@ -493,38 +493,6 @@ public:
 	return;
     } // end decode_conserved()
 
-    bool check_flow_data() const
-    {
-	bool is_data_valid = fs.gas.check_values(true);
-	const double MAXVEL = 30000.0;
-	if (fabs(fs.vel.x) > MAXVEL || fabs(fs.vel.y) > MAXVEL || fabs(fs.vel.z) > MAXVEL) {
-	    writeln("Velocity too high ", fs.vel.x, " ", fs.vel.y, " ", fs.vel.z);
-	    is_data_valid = false;
-	}
-	if ( !isFinite(fs.tke) ) {
-	    writeln("Turbulence KE invalid number ", fs.tke);
-	    is_data_valid = false;
-	}
-	if ( fs.tke < 0.0 ) {
-	    writeln("Turbulence KE negative ", fs.tke);
-	    is_data_valid = false;
-	}
-	if ( !isFinite(fs.omega) ) {
-	    writeln("Turbulence frequency invalid number ", fs.omega);
-	    is_data_valid = false;
-	}
-	if ( fs.omega <= 0.0 ) {
-	    writeln("Turbulence frequency nonpositive ", fs.omega);
-	    is_data_valid = false;
-	}
-	if ( !is_data_valid ) {
-	    writeln("cell pos=", pos[0]);
-	    writeln(fs);
-	    writeln("----------------------------------------------------------");
-	}
-	return is_data_valid;
-    } // end check_flow_data()
-
     @nogc
     void time_derivatives(int gtl, int ftl, bool with_k_omega) 
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
