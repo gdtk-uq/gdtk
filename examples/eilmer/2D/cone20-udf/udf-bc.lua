@@ -1,34 +1,35 @@
--- udf-bc-in.lua
--- Lua script for the user-defined functions 
--- called by the UserDefinedGhostCell BC.
+-- udf-bc.lua
+-- Lua script for the user-defined boundary conditions.
 --
--- This particular example contains multiple boundary conditions.
--- They are specialised by determining which boundary is in effect.
+-- The ghostCells_xxxx functions are defined at initialization and
+-- later called by the UserDefinedGhostCell boundary condition at 
+-- the start of each time step.
 --
 -- RG & PJ 2015-03-14 : ported from PJs eilmer3 example
 
 function ghostCells_west(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
-   --
-   -- args contains t, timeStep, timeLevel, dt, x, y, z, csX, csY, csZ, i, j, k
-   -- but we don't happen to us any of them.
-   --
-   -- Supersonic inflow
+   -- For a supersonic inflow, just set the properties directly.
    ghost = {}
    ghost.p = 95.84e3 -- pressure, Pa
    ghost.T = {1103.0}  -- temperatures, K (as a table)
    ghost.massf = {air=1.0} -- mass fractions to be provided as a table
+   -- or, if working with a single-species gas model, omitted.
    ghost.velx = 1000.0  -- x-velocity, m/s
    ghost.vely = 0.0     -- y-velocity, m/s
    ghost.velz = 0.0
    return ghost, ghost
 end
 
-
 function ghostCells_east(args)
-   -- Because we are using sampleFlow to read the cell state at teh boundary,
-   -- we have to apply these boundary conditions serially.
+   -- A simple outflow boundary condition can be implemented by looking at
+   -- the flow condition for the cell just inside the boundary.
+   -- Notes:
+   -- (1) This shows the use of some of the global data set in the Lua
+   -- interpreter for this boundary condition, as well as the use of
+   -- some of the elements of the args table that is given to this function.
+   -- (2) Because we are using sampleFlow to read the cell state,
+   -- we should apply these boundary conditions serially,
+   -- to avoid a race condition.
    cell = sampleFlow(blkId, args.i, args.j, args.k)
    return cell, cell
 end

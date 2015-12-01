@@ -42,7 +42,7 @@ function fillTable(t, x, y)
    t.vely = -math.cos(theta) * speed
    t.velz = 0.0
    t.T = {TKelvin,} -- Temperatures as a table
-   t.massf = {1.0} -- mass fractions to be provided as a table
+   -- omit mass fractions; we have a single species gas model
    return t
 end
 
