@@ -18,7 +18,7 @@ function ghostCells_west(args)
    ghost = {}
    ghost.p = 95.84e3 -- pressure, Pa
    ghost.T = {1103.0}  -- temperatures, K (as a table)
-   ghost.massf = {1.0} -- mass fractions to be provided as a table
+   ghost.massf = {air=1.0} -- mass fractions to be provided as a table
    ghost.velx = 1000.0  -- x-velocity, m/s
    ghost.vely = 0.0     -- y-velocity, m/s
    ghost.velz = 0.0

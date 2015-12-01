@@ -7,6 +7,7 @@ import std.string;
 import std.stdio;
 import util.lua;
 import util.lua_service;
+import gas.luagas_model;
 
 import geom;
 import simcore;
@@ -125,7 +126,25 @@ private:
 	try {
 	    ghostCell.fs.gas.p = getDouble(L, tblIdx, "p");
 	    getArrayOfDoubles(L, tblIdx, "T", ghostCell.fs.gas.T);
-	    getArrayOfDoubles(L, tblIdx, "massf", ghostCell.fs.gas.massf);
+	    lua_getfield(L, tblIdx, "massf");
+	    if ( lua_istable(L, -1) ) {
+		int massfIdx = lua_gettop(L);
+		getSpeciesValsFromTable(L, gmodel, massfIdx, ghostCell.fs.gas.massf, "massf");
+	    }
+	    else {
+		if ( gmodel.n_species() == 1 ) {
+		    ghostCell.fs.gas.massf[0] = 1.0;
+		}
+		else {
+		    // There's no clear choice for multi-species.
+		    // Maybe best to set everything to zero to 
+		    // trigger some bad behaviour rather than
+		    // one value to 1.0 and have the calculation
+		    // proceed but not follow the users' intent.
+		    ghostCell.fs.gas.massf[] = 0.0;
+		}
+	    }
+	    lua_pop(L, 1);
 	}
 	catch (Exception e) {
 	    string errMsg = "There was an error trying to read p, T or massf in user-supplied table.\n";
@@ -301,6 +320,7 @@ private:
 	// effect to do some work.
 	// So we need to test every possibility and only set
 	// the non-nil values.
+	auto gmodel = blk.myConfig.gmodel;
 	FlowState fs = iface.fs;
 	
 	lua_getfield(L, tblIdx, "p");
@@ -318,8 +338,8 @@ private:
 
 	lua_getfield(L, tblIdx, "massf");
 	if ( !lua_isnil(L, -1) ) {
-	    // mass fractions should be provided as an array
-	    getArrayOfDoubles(L, tblIdx, "massf", fs.gas.massf);
+	    int massfIdx = lua_gettop(L);
+	    getSpeciesValsFromTable(L, gmodel, massfIdx, fs.gas.massf, "massf");
 	}
 	lua_pop(L, 1);
 
