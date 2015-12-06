@@ -334,10 +334,10 @@ final class GlobalConfig {
     shared static bool udfSolidSourceTerms = false;
     shared static string udfSolidSourceTermsFile = "dummy-solid-source-terms.txt";
 
+    // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
 	static ReactionUpdateScheme reaction_update;
 	static GPUChem gpuChem;
-	static string gpuChemFile = "dummy-gpu-chem-file.txt";
     }
 
     ~this()

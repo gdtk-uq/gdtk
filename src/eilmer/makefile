@@ -136,6 +136,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
+
 demo: $(DEMO_PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Demo codes built."
@@ -224,14 +225,14 @@ e4shared: main.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS)
 
-eilmer-gpu-chem: main.d $(EILMER_FILES) \
+eilmer-gpu-chem: main.d gpu_chem.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(OPENCL_FILES) \
 	$(KINETICS_FILES) $(NM_FILES) $(UTIL_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
 	$(DMD) -version=gpu_chem $(DFLAGS) $(OF)eilmer-gpu-chem \
 		main_with_rev_string.d $(EILMER_FILES) gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS) -I$(OPENCL_DIR) -L-L/usr/local/cuda/lib64 -L-lOpenCL
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(DLINKFLAGS) -I$(OPENCL_DIR) -L-L/usr/lib64/nvidia -L-lOpenCL
 
 
 compute-error: compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \

@@ -2,6 +2,7 @@
 //
 
 import core.stdc.stdlib;
+import core.stdc.stdio;
 import std.file;
 import std.stdio;
 import std.string;
@@ -13,6 +14,9 @@ import fvcell;
 import cl;
 import gas;
 import kinetics;
+
+immutable string openCLProgName = "alpha_qss_kernel.cl";
+immutable int MAX_SOURCE_SIZE = 0x100000;
 
 struct OpenCLContainer {
     cl_int status;
@@ -40,9 +44,9 @@ struct OpenCLContainer {
 
     this(size_t ncells, size_t nreacElements, size_t nspElements, size_t debugNum)
     {
-	nreac_datasize = nreacElements;
-	datasize = nspElements;
-	this.ncell = ncell;
+	nreac_datasize = double.sizeof*nreacElements;
+	datasize = double.sizeof*nspElements;
+	this.ncell = ncells;
 	debugnum = debugNum;
     }
 
@@ -74,9 +78,9 @@ struct OpenCLContainer {
 
 class GPUChem {
 public:
-    this(string fname)
+    this()
     {
-	auto programSource = readText(fname);
+	writeln("GPUChem:this()");
 	_gmodel = GlobalConfig.gmodel_master;
 	_rmech = GlobalConfig.reaction_update.rmech;
 	size_t nsp = _gmodel.n_species();
@@ -89,11 +93,14 @@ public:
 	_nspElements = _ncell*nsp;
 	int numDebug = 0;
 
+	writeln("Init opencl container.");
 	_oc = OpenCLContainer(_ncell, _nreacElements, _nspElements, numDebug);
 	
+	writeln("Init work arrays...");
 	initWorkArrays();
 
-	configureOpenCLContainer(programSource);
+	writeln("Configure opencl container");
+	configureOpenCLContainer();
 
     }
 
@@ -122,34 +129,34 @@ public:
 	_kf = cast(double*)malloc(_oc.nreac_datasize);
 	_kb = cast(double*)malloc(_oc.nreac_datasize);
 	_Y = cast(double*)malloc(_oc.datasize);
-	_h = cast(double*)malloc(_oc.ncell);
+	_h = cast(double*)malloc(_oc.ncell*double.sizeof);
     }
 
-    void configureOpenCLContainer(string programSource)
+    void configureOpenCLContainer()
     {
 	//Find available devices----------------------------------------------------------------------------
 	//retrieve number of platforms
 	_oc.status = clGetPlatformIDs(0, null, &(_oc.numPlatforms));
- 
+	
 	//allocate enough space for each platform
-	_oc.platforms = cast(cl_platform_id*)malloc(_oc.numPlatforms*cl_platform_id.sizeof);
- 
-	//fill in platforms 
+	_oc.platforms = cast(cl_platform_id*) malloc(_oc.numPlatforms*cl_platform_id.sizeof);
+	
+	//fill in platforms
 	_oc.status = clGetPlatformIDs(_oc.numPlatforms, _oc.platforms, null);
- 
+
 	//retrieve number of devices, note for GPU change CPU to GPU
 	_oc.status = clGetDeviceIDs(_oc.platforms[0], CL_DEVICE_TYPE_GPU, 0, null, &(_oc.numDevices));
- 
+
 	//allocate enough space for each device
 	_oc.devices = cast(cl_device_id*)malloc(_oc.numDevices*cl_device_id.sizeof);
- 
+
 	//fill in the devices, for for GPU change CPU to GPU
 	_oc.status=clGetDeviceIDs(_oc.platforms[0], CL_DEVICE_TYPE_GPU, _oc.numDevices, _oc.devices, null);
 
 	//D. Create Context and Command Queue for each device for use---------------------------------------------
 	_oc.context = clCreateContext(null, _oc.numDevices, _oc.devices, null, null, &(_oc.status));
 	_oc.cmdQueue = clCreateCommandQueue(_oc.context, _oc.devices[0], 0, &(_oc.status));
-	
+
 	//E. Create buffers which will contain data on device-----------------------------------------------------
 	_oc.bufkf = clCreateBuffer(_oc.context, CL_MEM_READ_ONLY, _oc.nreac_datasize, null, &(_oc.status));
 	_oc.bufkb = clCreateBuffer(_oc.context, CL_MEM_READ_ONLY, _oc.nreac_datasize, null, &(_oc.status));
@@ -158,7 +165,7 @@ public:
 	_oc.bufYp = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
 	_oc.bufYpo = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
 	_oc.bufYc = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
-	_oc.bufh = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.ncell, null, &(_oc.status));
+	_oc.bufh = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.ncell*double.sizeof, null, &(_oc.status));
 	_oc.bufalpha = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
 	_oc.bufq = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
 	_oc.bufp = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
@@ -167,17 +174,23 @@ public:
 	_oc.bufq_bar = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
 	_oc.bufp_bar = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
 	_oc.bufalpha_bar = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.datasize, null, &(_oc.status));
-	_oc.bufdebugging = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.debugnum, null, &(_oc.status));
+	_oc.bufdebugging = clCreateBuffer(_oc.context, CL_MEM_READ_WRITE, _oc.debugnum*double.sizeof, null, &(_oc.status));
 
 	//create a program with source code
-	auto pSourceCStyle = programSource.toStringz;
-	size_t pSourceLength = programSource.length;
-	_oc.program = clCreateProgramWithSource(_oc.context, 1, cast(const char**)(pSourceCStyle),
-						cast(const size_t *)(&pSourceLength), &(_oc.status));
-     
+	string fname = openCLProgName;
+	FILE *fp = fopen(fname.toStringz, "r");
+	if ( fp == null ) {
+	    throw new Error("ERROR: Failed to open gpu chemistry kernel.");
+	}
+	char* programSource = cast(char*) malloc(MAX_SOURCE_SIZE);
+	size_t sourceSize = fread(programSource, 1, MAX_SOURCE_SIZE, fp);
+	fclose(fp);
+
+	_oc.program = clCreateProgramWithSource(_oc.context, 1, cast(const char**)&programSource,
+						cast(const size_t *)&sourceSize, &(_oc.status));
 	//build (compile) the program for the device
 	_oc.status = clBuildProgram(_oc.program, _oc.numDevices, _oc.devices, null, null, null);
-     
+
 	//create the kernel
 	_oc.kernel = clCreateKernel(_oc.program, "new_qss", &(_oc.status));
 
@@ -197,16 +210,18 @@ public:
 
 	cl_char[1024] name;
 	clGetDeviceInfo(_oc.devices[0], CL_DEVICE_NAME, name.sizeof, &name, null);
-	writeln("name= ", name);
+	//writeln("name= ", name);
     
 	cl_char[1024]  vendor;
 	clGetDeviceInfo(_oc.devices[0], CL_DEVICE_VENDOR, vendor.sizeof, &vendor, null);
-	writeln("vendor= ", vendor);
+	//writeln("vendor= ", vendor);
     }
 
     void chemical_increment(double dt_flow, double T_frozen)
     {
 	size_t nsp = _gmodel.n_species();
+	size_t nreac = _rmech.n_reactions();
+
 	prepareDataForGPU();
 	writeDataToGPUBuffers();
 	prepareKernelArgsForGPU(dt_flow);
@@ -216,10 +231,9 @@ public:
 
 	// Execute the kernel
 	_oc.status = clEnqueueNDRangeKernel(_oc.cmdQueue, _oc.kernel, 1, null, &globalWorkSize, null, 0 , null, null);
-
 	// Read data from GPU
 	clEnqueueReadBuffer(_oc.cmdQueue, _oc.bufY, CL_TRUE, 0, _oc.datasize, cast(void *)_Y, 0, null, null);
-	clEnqueueReadBuffer(_oc.cmdQueue, _oc.bufh, CL_TRUE, 0, _oc.ncell, cast(void *)_h, 0, null, null);
+	clEnqueueReadBuffer(_oc.cmdQueue, _oc.bufh, CL_TRUE, 0, _oc.ncell*double.sizeof, cast(void *)_h, 0, null, null);
 
 	// Now use the new concentrations to update the rest of the gas state
 	foreach ( i, cell; _cells ) {
@@ -263,7 +277,7 @@ public:
 	_oc.status = clEnqueueWriteBuffer(_oc.cmdQueue, _oc.bufkf, CL_FALSE, 0, _oc.nreac_datasize, cast(void *)_kf, 0, null, null);
 	_oc.status = clEnqueueWriteBuffer(_oc.cmdQueue, _oc.bufkb, CL_FALSE, 0, _oc.nreac_datasize, cast(void *)_kb, 0, null, null);
 	_oc.status = clEnqueueWriteBuffer(_oc.cmdQueue, _oc.bufY, CL_FALSE, 0, _oc.datasize, cast(void *)_Y, 0, null, null);
-	_oc.status = clEnqueueWriteBuffer(_oc.cmdQueue, _oc.bufh, CL_FALSE, 0, _oc.ncell, cast(void*)_h, 0, null, null);
+	_oc.status = clEnqueueWriteBuffer(_oc.cmdQueue, _oc.bufh, CL_FALSE, 0, _oc.ncell*double.sizeof, cast(void*)_h, 0, null, null);
     }
     
     void prepareKernelArgsForGPU(double dt_global)
@@ -286,10 +300,10 @@ public:
 	_oc.status = clSetKernelArg(_oc.kernel, 13, cl_mem.sizeof, cast(void *)&(_oc.bufp_bar));
 	_oc.status = clSetKernelArg(_oc.kernel, 14, cl_mem.sizeof, cast(void *)&(_oc.bufalpha_bar));
 	_oc.status = clSetKernelArg(_oc.kernel, 15, cl_mem.sizeof, cast(void *)&(_oc.bufYpo));
-	_oc.status = clSetKernelArg(_oc.kernel, 16, cl_mem.sizeof, cast(void *)&nsp);
-	_oc.status = clSetKernelArg(_oc.kernel, 17, cl_mem.sizeof, cast(void *)&nreac);
-	_oc.status = clSetKernelArg(_oc.kernel, 18, cl_mem.sizeof, cast(void *)&_ncell);
-	_oc.status = clSetKernelArg(_oc.kernel, 19, cl_mem.sizeof, cast(void *)&dt_global);
+	_oc.status = clSetKernelArg(_oc.kernel, 16, cl_int.sizeof, cast(void *)&nsp);
+	_oc.status = clSetKernelArg(_oc.kernel, 17, cl_int.sizeof, cast(void *)&nreac);
+	_oc.status = clSetKernelArg(_oc.kernel, 18, cl_int.sizeof, cast(void *)&_ncell);
+	_oc.status = clSetKernelArg(_oc.kernel, 19, cl_double.sizeof, cast(void *)&dt_global);
 	_oc.status = clSetKernelArg(_oc.kernel, 20, cl_mem.sizeof, cast(void *)&(_oc.bufdebugging));
     }
 
@@ -312,5 +326,5 @@ private:
 void initGPUChem()
 {
     GlobalConfig.reaction_update = new ReactionUpdateScheme(GlobalConfig.reactions_file, GlobalConfig.gmodel_master);
-    GlobalConfig.gpuChem = new GPUChem(GlobalConfig.gpuChemFile);
+    GlobalConfig.gpuChem = new GPUChem();
 }
