@@ -43,7 +43,9 @@ string avg_over_iface_list(string quantity, string result)
 
 class BasicCell {
 public:
-    uint id;  // allows us to work out where, in the block, the cell is
+    size_t id;  // allows us to work out where, in the block, the cell is
+    // For the StructuredGrid block, there is a mapping from id 
+    // back to the i,j,k indices that is sometimes handy.
     Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
     double iLength; // length in the i-index direction
     double jLength; // length in the j-index direction

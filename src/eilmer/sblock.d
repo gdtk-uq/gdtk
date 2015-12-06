@@ -226,7 +226,7 @@ public:
 	    // Create the cell and interface objects for the entire structured block.
 	    // This includes the layer of surrounding ghost cells.
 	    foreach (gid; 0 .. ntot) {
-		_ctr ~= new FVCell(myConfig); _ctr[gid].id = to!int(gid);
+		_ctr ~= new FVCell(myConfig); _ctr[gid].id = gid;
 		auto ijk = to_ijk_indices(gid);
 		_ifi ~= new FVInterface(myConfig.gmodel); _ifi[gid].id = gid;
 		_ifj ~= new FVInterface(myConfig.gmodel); _ifj[gid].id = gid;

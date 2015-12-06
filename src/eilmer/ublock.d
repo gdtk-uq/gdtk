@@ -137,13 +137,13 @@ public:
 	    throw new Error(format("UnstructuredGrid: incoming grid has %d vertices " ~
 				   "but expected %d vertices.", grid.nvertices, nvertices));
 	}
-	if (grid.ncells != ncells) {
-	    throw new Error(format("UnstructuredGrid: incoming grid has %d cells " ~
-				   "but expected %d cells.", grid.ncells, ncells));
-	}
 	if (grid.nfaces != nfaces) {
 	    throw new Error(format("UnstructuredGrid: incoming grid has %d faces " ~
 				   "but expected %d faces.", grid.nfaces, nfaces));
+	}
+	if (grid.ncells != ncells) {
+	    throw new Error(format("UnstructuredGrid: incoming grid has %d cells " ~
+				   "but expected %d cells.", grid.ncells, ncells));
 	}
 	// Assemble array storage for finite-volume cells, etc.
 	foreach (i, v; grid.vertices) {
@@ -162,8 +162,14 @@ public:
 	    new_cell.id = i;
 	    cells ~= new_cell;
 	}
+	// Bind the interfaces, vertices and cells together, 
+	// using the indices stored in the unstructured grid.
+	foreach (i, f; faces) {
+	    foreach (j; grid.faces[i].vtx_id_list) {
+		f.vtx ~= vertices[j];
+	    }
+	}
 	throw new Error("init_grid_and_flow_arrays not yet finished for unstructured grid.");
-	// [TODO] bind_interfaces_vertices_and_cells();
 	// [TODO] compute ghost-cell details for boundaries
 	// [TODO] store references for derivative calc
     }
