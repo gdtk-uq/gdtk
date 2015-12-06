@@ -56,6 +56,19 @@ public:
     FVInterface[] iface;  // references to defining interfaces of cell
     double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
     FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
+
+private:
+    LocalConfig myConfig;
+
+public:
+    this(LocalConfig myConfig, int id_init=0)
+    {
+	this.myConfig = myConfig;
+	auto gmodel = myConfig.gmodel;
+	id = id_init;
+	pos.length = n_time_levels;
+	fs = new FlowState(gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
+    }
 } // end class BasicCell
 
 class FVCell : BasicCell {
@@ -85,21 +98,15 @@ public:
     // Data for computing residuals.
     double rho_at_start_of_step, rE_at_start_of_step;
 
-private:
-    LocalConfig myConfig;
-
 public:
     this(LocalConfig myConfig, int id_init=0)
     {
-	this.myConfig = myConfig;
+	super(myConfig, id_init);
 	auto gmodel = myConfig.gmodel;
 	int n_species = gmodel.n_species;
 	int n_modes = gmodel.n_modes;
-	id = id_init;
-	pos.length = n_time_levels;
 	volume.length = n_time_levels;
 	areaxy.length = n_time_levels;
-	fs = new FlowState(gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
 	foreach(i; 0 .. n_time_levels) {
 	    U ~= new ConservedQuantities(n_species, n_modes);
 	    dUdt ~= new ConservedQuantities(n_species, n_modes);

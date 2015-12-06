@@ -169,10 +169,64 @@ public:
 		f.vtx ~= vertices[j];
 	    }
 	}
-	throw new Error("init_grid_and_flow_arrays not yet finished for unstructured grid.");
-	// [TODO] compute ghost-cell details for boundaries
-	// [TODO] store references for derivative calc
-    }
+	foreach (i, c; cells) {
+	    foreach (j; grid.cells[i].vtx_id_list) {
+		c.vtx ~= vertices[j];
+	    }
+	    auto nf = grid.cells[i].face_id_list.length;
+	    if (nf != grid.cells[i].outsign_list.length) {
+		throw new Error(format("Mismatch in face_id_list, outsign_list lengths: %d %d",
+				       grid.cells[i].face_id_list.length,
+				       grid.cells[i].outsign_list.length));
+	    }
+	    foreach (j; 0 .. nf) {
+		auto my_face = faces[grid.cells[i].face_id_list[j]];
+		auto my_outsign = grid.cells[i].outsign_list[j];
+		c.iface ~= my_face;
+		c.outsign ~= to!double(my_outsign);
+		if (my_outsign == 1) {
+		    my_face.left_cells ~= c;
+		} else {
+		    my_face.right_cells ~= c;
+		}
+	    }
+	} // end foreach cells
+	// Presently, no face should have more than one cell on its left or right side.
+	foreach (f; faces) {
+	    if (f.left_cells.length > 1 || f.right_cells.length > 1) {
+		string msg = format("Face id= %d too many attached cells: left_cells= ", f.id);
+		foreach (c; f.left_cells) { msg ~= to!string(c.id); }
+		msg ~= " right_cells= ";
+		foreach (c; f.right_cells) { msg ~= to!string(c.id); }
+		throw new Error(msg);
+	    }
+	}
+	// Work through the faces on the boundaries and add ghost cells.
+	if (nboundaries != grid.nboundaries) {
+	    throw new Error(format("Mismatch in number of boundaries: %d %d",
+				   nboundaries, grid.nboundaries));
+	}
+	foreach (bndry; grid.boundaries) {
+	    auto nf = bndry.face_id_list.length;
+	    if (nf != bndry.outsign_list.length) {
+		throw new Error(format("Mismatch in face_id_list, outsign_list lengths: %d %d",
+				       bndry.face_id_list.length,
+				       bndry.outsign_list.length));
+	    }
+	    foreach (j; 0 .. nf) {
+		auto my_face = faces[bndry.face_id_list[j]];
+		auto my_outsign = bndry.outsign_list[j];
+		if (my_outsign == 1) {
+		    my_face.right_cells ~= new BasicCell(myConfig);
+		    my_face.right_cells ~= new BasicCell(myConfig);
+		} else {
+		    my_face.left_cells ~= new BasicCell(myConfig);
+		    my_face.left_cells ~= new BasicCell(myConfig);
+		}
+	    }
+	}
+	// [TODO] store references into the FVVertex objects for derivative calc
+    } // end init_grid_and_flow_arrays()
 
     override void compute_primary_cell_geometric_data(int gtl)
     {
