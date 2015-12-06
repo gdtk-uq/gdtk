@@ -133,8 +133,35 @@ public:
     override void init_grid_and_flow_arrays(string gridFileName)
     {
 	grid = new UnstructuredGrid(gridFileName, "gziptext");
+	if (grid.nvertices != nvertices) {
+	    throw new Error(format("UnstructuredGrid: incoming grid has %d vertices " ~
+				   "but expected %d vertices.", grid.nvertices, nvertices));
+	}
+	if (grid.ncells != ncells) {
+	    throw new Error(format("UnstructuredGrid: incoming grid has %d cells " ~
+				   "but expected %d cells.", grid.ncells, ncells));
+	}
+	if (grid.nfaces != nfaces) {
+	    throw new Error(format("UnstructuredGrid: incoming grid has %d faces " ~
+				   "but expected %d faces.", grid.nfaces, nfaces));
+	}
 	// Assemble array storage for finite-volume cells, etc.
-	// [TODO]
+	foreach (i, v; grid.vertices) {
+	    auto new_vtx = new FVVertex(myConfig.gmodel);
+	    new_vtx.pos[0] = v;
+	    new_vtx.id = i;
+	    vertices ~= new_vtx;
+	}
+	foreach (i, f; grid.faces) {
+	    auto new_face = new FVInterface(myConfig.gmodel);
+	    new_face.id = i;
+	    faces ~= new_face;
+	}
+	foreach (i, c; grid.cells) {
+	    auto new_cell = new FVCell(myConfig);
+	    new_cell.id = i;
+	    cells ~= new_cell;
+	}
 	throw new Error("init_grid_and_flow_arrays not yet finished for unstructured grid.");
 	// [TODO] bind_interfaces_vertices_and_cells();
 	// [TODO] compute ghost-cell details for boundaries

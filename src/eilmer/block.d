@@ -64,17 +64,29 @@ public:
     size_t jmin, jmax;
     size_t kmin, kmax;
 
+    // Work-space that gets reused.
+    // The following objects are used in the convective_flux method.
+    FlowState Lft;
+    FlowState Rght;
+
     this(int id, Grid_t grid_type, string label)
     {
 	this.id = id;
 	this.grid_type = grid_type;
 	this.label = label;
 	myConfig = dedicatedConfig[id];
+	// Workspace for flux_calc method.
+	Lft = new FlowState(dedicatedConfig[id].gmodel);
+	Rght = new FlowState(dedicatedConfig[id].gmodel);
+	// Lua interpreter for the block. 
+	// It will be available for computing user-defined source terms, etc.
 	myL = luaL_newstate();
 	luaL_openlibs(myL);
 	lua_pushinteger(myL, id); lua_setglobal(myL, "blkId");
-	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_species); lua_setglobal(myL, "n_species");
-	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_modes); lua_setglobal(myL, "n_modes");
+	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_species);
+	lua_setglobal(myL, "n_species");
+	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_modes);
+	lua_setglobal(myL, "n_modes");
     }
 
     ~this()

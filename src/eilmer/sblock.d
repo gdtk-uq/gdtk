@@ -67,8 +67,6 @@ private:
     FVInterface[] _sifk;
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
-    FlowState Lft;
-    FlowState Rght;
     OneDInterpolator one_d;
 
 public:
@@ -101,8 +99,6 @@ public:
 	    kmin = nghost; kmax = kmin + nkcell - 1;
 	}
 	// Workspace for flux_calc method.
-	Lft = new FlowState(dedicatedConfig[id].gmodel);
-	Rght = new FlowState(dedicatedConfig[id].gmodel);
 	one_d = new OneDInterpolator(dedicatedConfig[id]);
     } // end constructor
 
