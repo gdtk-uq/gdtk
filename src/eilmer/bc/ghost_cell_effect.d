@@ -21,26 +21,27 @@ import block;
 import sblock;
 import gas;
 import user_defined_effects;
+import bc;
 
 @nogc
-void reflect_normal_velocity(ref FVCell cell, in FVInterface IFace)
-// Reflects normal velocity with respect to the cell interface.
+void reflect_normal_velocity(ref FlowState fs, in FVInterface IFace)
+// Reflects normal velocity with respect to the supplied interface.
 //
 // The process is to rotate the velocity vector into the local frame of
 // the interface, negate the normal (local x-component) velocity and
 // rotate back to the global frame.
 {
-    cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    cell.fs.vel.refx = -(cell.fs.vel.x);
-    cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    fs.vel.refx = -(fs.vel.x);
+    fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 }
 
 @nogc
-void reflect_normal_magnetic_field(ref FVCell cell, in FVInterface IFace)
+void reflect_normal_magnetic_field(ref FlowState fs, in FVInterface IFace)
 {
-    cell.fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    cell.fs.B.refx = -(cell.fs.B.x);
-    cell.fs.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    fs.B.refx = -(fs.B.x);
+    fs.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 }
 
 GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
@@ -156,8 +157,28 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("GhostCellInternalCopyThenReflect.apply_unstructured_grid() not yet implemented");
-    }
+	BasicCell src_cell, ghost0, ghost1;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		src_cell = f.left_cells[0];
+		ghost0 = f.right_cells[0];
+		ghost1 = f.right_cells[1];
+	    } else {
+		src_cell = f.right_cells[0];
+		ghost0 = f.left_cells[0];
+		ghost1 = f.left_cells[1];
+	    }
+	    ghost0.fs.copy_values_from(src_cell.fs);
+	    reflect_normal_velocity(ghost0.fs, f);
+	    ghost1.fs.copy_values_from(src_cell.fs);
+	    reflect_normal_velocity(ghost1.fs, f);
+	    if (GlobalConfig.MHD) { // [TODO] maybe use blk.myConfig.MHD
+		reflect_normal_magnetic_field(ghost0.fs, f);
+		reflect_normal_magnetic_field(ghost1.fs, f);
+	    }
+	} // end foreach face
+    } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -176,17 +197,17 @@ public:
 		    IFace = src_cell.iface[Face.north];
 		    dest_cell = blk.get_cell(i,j+1,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
 		    src_cell = blk.get_cell(i,j-1,k);
 		    dest_cell = blk.get_cell(i,j+2,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end i loop
 	    } // for k
@@ -200,17 +221,17 @@ public:
 		    IFace = src_cell.iface[Face.east];
 		    dest_cell = blk.get_cell(i+1,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
 		    src_cell = blk.get_cell(i-1,j,k);
 		    dest_cell = blk.get_cell(i+2,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
 	    } // for k
@@ -224,17 +245,17 @@ public:
 		    IFace = src_cell.iface[Face.south];
 		    dest_cell = blk.get_cell(i,j-1,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
 		    src_cell = blk.get_cell(i,j+1,k);
 		    dest_cell = blk.get_cell(i,j-2,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end i loop
 	    } // for k
@@ -248,17 +269,17 @@ public:
 		    IFace = src_cell.iface[Face.west];
 		    dest_cell = blk.get_cell(i-1,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
 		    src_cell = blk.get_cell(i+1,j,k);
 		    dest_cell = blk.get_cell(i-2,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
 	    } // for k
@@ -272,17 +293,17 @@ public:
 		    IFace = src_cell.iface[Face.top];
 		    dest_cell = blk.get_cell(i,j,k+1);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
 		    src_cell = blk.get_cell(i,j,k-1);
 		    dest_cell = blk.get_cell(i,j,k+2);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
 	    } // for i
@@ -296,23 +317,23 @@ public:
 		    IFace = src_cell.iface[Face.bottom];
 		    dest_cell = blk.get_cell(i,j,k-1);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
 		    src_cell = blk.get_cell(i,j,k+1);
 		    dest_cell = blk.get_cell(i,j,k-2);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
-		    reflect_normal_velocity(dest_cell, IFace);
+		    reflect_normal_velocity(dest_cell.fs, IFace);
 		    if (GlobalConfig.MHD) {
-			reflect_normal_magnetic_field(dest_cell, IFace);
+			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
 	    } // for i
 	    break;
 	} // end switch which_boundary
-    } // end apply()
+    } // end apply_structured_grid()
 } // end class GhostCellInternalCopyThenReflect
 
 class GhostCellFlowStateCopy : GhostCellEffect {
@@ -332,8 +353,20 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("GhostCellFlowStateCopy.apply_unstructured_grid() not yet implemented");
-    }
+	BasicCell ghost0, ghost1;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		ghost0 = f.right_cells[0];
+		ghost1 = f.right_cells[1];
+	    } else {
+		ghost0 = f.left_cells[0];
+		ghost1 = f.left_cells[1];
+	    }
+	    ghost0.fs.copy_values_from(fstate);
+	    ghost1.fs.copy_values_from(fstate);
+	} // end foreach face
+    } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -411,7 +444,7 @@ public:
 	    } // for i
 	    break;
 	} // end switch
-    } // end apply()
+    } // end apply_structured_grid()
 
 } // end class GhostCellFlowStateCopy
 
@@ -432,8 +465,27 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("GhostCellExtrapolateCopy.apply_unstructured_grid() not yet implemented");
-    }
+	BasicCell src_cell, ghost0, ghost1;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		src_cell = f.left_cells[0];
+		ghost0 = f.right_cells[0];
+		ghost1 = f.right_cells[1];
+	    } else {
+		src_cell = f.right_cells[0];
+		ghost0 = f.left_cells[0];
+		ghost1 = f.left_cells[1];
+	    }
+	    if (xOrder == 1) {
+		throw new Error("First order extrapolation not implemented.");
+	    } else {
+		// Zero-order extrapolation.
+		ghost0.fs.copy_values_from(src_cell.fs);
+		ghost1.fs.copy_values_from(src_cell.fs);
+	    }
+	} // end foreach face
+    } // end apply_unstructured_grid()
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -904,7 +956,7 @@ public:
 	    } // for i
 	    break;
 	} // end switch
-    } // end apply()
+    } // end apply_structured_grid()
 } // end class GhostCellExtrapolateCopy
 
 class GhostCellFixedP : GhostCellEffect {
@@ -924,8 +976,27 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("GhostCellFixedP.apply_unstructured_grid() not yet implemented");
-    }
+	BasicCell src_cell, ghost0, ghost1;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	auto gmodel = blk.myConfig.gmodel;
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		src_cell = f.left_cells[0];
+		ghost0 = f.right_cells[0];
+		ghost1 = f.right_cells[1];
+	    } else {
+		src_cell = f.right_cells[0];
+		ghost0 = f.left_cells[0];
+		ghost1 = f.left_cells[1];
+	    }
+	    ghost0.fs.copy_values_from(src_cell.fs);
+	    ghost0.fs.gas.p = p_outside;
+	    gmodel.update_thermo_from_pT(ghost0.fs.gas);
+	    ghost1.fs.copy_values_from(src_cell.fs);
+	    ghost1.fs.gas.p = p_outside;
+	    gmodel.update_thermo_from_pT(ghost1.fs.gas);
+	} // end foreach face
+    } // end apply_unstructured_grid()
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -940,9 +1011,11 @@ public:
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j+1,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j+2,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
@@ -954,9 +1027,11 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i+1,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i+2,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
@@ -968,9 +1043,11 @@ public:
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j-1,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j-2,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
@@ -982,9 +1059,11 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i-1,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i-2,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
@@ -996,9 +1075,11 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j,k+1);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k+2);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
@@ -1010,16 +1091,18 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j,k-1);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k-2);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for i
 	    break;
 	} // end switch
-    } // end apply()
+    } // end apply_structured_grid()
 } // end class GhostCellFixedP
 
 class GhostCellFixedPT : GhostCellEffect {
@@ -1041,8 +1124,29 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("GhostCellFixedPT.apply_unstructured_grid() not yet implemented");
-    }
+	BasicCell src_cell, ghost0, ghost1;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	auto gmodel = blk.myConfig.gmodel;
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		src_cell = f.left_cells[0];
+		ghost0 = f.right_cells[0];
+		ghost1 = f.right_cells[1];
+	    } else {
+		src_cell = f.right_cells[0];
+		ghost0 = f.left_cells[0];
+		ghost1 = f.left_cells[1];
+	    }
+	    ghost0.fs.copy_values_from(src_cell.fs);
+	    ghost0.fs.gas.p = p_outside;
+	    foreach(ref elem; ghost0.fs.gas.T) elem = T_outside; 
+	    gmodel.update_thermo_from_pT(ghost0.fs.gas);
+	    ghost1.fs.copy_values_from(src_cell.fs);
+	    ghost1.fs.gas.p = p_outside;
+	    foreach(ref elem; ghost1.fs.gas.T) elem = T_outside; 
+	    gmodel.update_thermo_from_pT(ghost1.fs.gas);
+	} // end foreach face
+    } // end apply_unstructured_grid()
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -1057,10 +1161,12 @@ public:
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j+1,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j+2,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
@@ -1073,10 +1179,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i+1,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i+2,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
@@ -1089,10 +1197,12 @@ public:
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j-1,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j-2,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
@@ -1105,10 +1215,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i-1,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i-2,j,k);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
@@ -1121,10 +1233,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j,k+1);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k+2);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
@@ -1137,10 +1251,12 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    src_cell = blk.get_cell(i,j,k);
 		    dest_cell = blk.get_cell(i,j,k-1);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k-2);
+		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
@@ -1148,7 +1264,7 @@ public:
 	    } // for i
 	    break;
 	} // end switch
-    } // end apply()
+    } // end apply_structured_grid()
 } // end class GhostCellFixedPT
 
 class GhostCellFromStagnation : GhostCellEffect {
@@ -1254,53 +1370,59 @@ public:
 
 	final switch (which_boundary) {
 	case Face.north:
-	    j = blk.jmax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    src_cell = blk.get_cell(i,j,k);
-		    dest_cell = blk.get_cell(i,j+1,k);
-		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		    dest_cell = blk.get_cell(i,j+2,k);
-		    dest_cell.fs.gas.p = p_stag;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		} // end i loop
-	    } // for k
-	    break;
+	    throw new Error("GhostCellFromStagnation.apply_structured_grid() " ~
+			    "not yet implemented for north boundary");
+	    // j = blk.jmax;
+	    // for (k = blk.kmin; k <= blk.kmax; ++k) {
+	    // 	for (i = blk.imin; i <= blk.imax; ++i) {
+	    // 	    src_cell = blk.get_cell(i,j,k);
+	    // 	    dest_cell = blk.get_cell(i,j+1,k);
+	    // 	    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	    dest_cell = blk.get_cell(i,j+2,k);
+	    // 	    dest_cell.fs.gas.p = p_stag;
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	} // end i loop
+	    // } // for k
+	    // break;
 	case Face.east:
-	    i = blk.imax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    src_cell = blk.get_cell(i,j,k);
-		    dest_cell = blk.get_cell(i+1,j,k);
-		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		    dest_cell = blk.get_cell(i+2,j,k);
-		    dest_cell.fs.gas.p = p_stag;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		} // end j loop
-	    } // for k
-	    break;
+	    throw new Error("GhostCellFromStagnation.apply_structured_grid() " ~
+			    "not yet implemented for east boundary");
+	    // i = blk.imax;
+	    // for (k = blk.kmin; k <= blk.kmax; ++k) {
+	    // 	for (j = blk.jmin; j <= blk.jmax; ++j) {
+	    // 	    src_cell = blk.get_cell(i,j,k);
+	    // 	    dest_cell = blk.get_cell(i+1,j,k);
+	    // 	    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	    dest_cell = blk.get_cell(i+2,j,k);
+	    // 	    dest_cell.fs.gas.p = p_stag;
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	} // end j loop
+	    // } // for k
+	    // break;
 	case Face.south:
-	    j = blk.jmin;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    src_cell = blk.get_cell(i,j,k);
-		    dest_cell = blk.get_cell(i,j-1,k);
-		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		    dest_cell = blk.get_cell(i,j-2,k);
-		    dest_cell.fs.gas.p = p_stag;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		} // end i loop
-	    } // for k
-	    break;
+	    throw new Error("GhostCellFromStagnation.apply_structured_grid() " ~
+			    "not yet implemented for south boundary");
+	    // j = blk.jmin;
+	    // for (k = blk.kmin; k <= blk.kmax; ++k) {
+	    // 	for (i = blk.imin; i <= blk.imax; ++i) {
+	    // 	    src_cell = blk.get_cell(i,j,k);
+	    // 	    dest_cell = blk.get_cell(i,j-1,k);
+	    // 	    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	    dest_cell = blk.get_cell(i,j-2,k);
+	    // 	    dest_cell.fs.gas.p = p_stag;
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	} // end i loop
+	    // } // for k
+	    // break;
 	case Face.west:
 	    i = blk.imin;
 	    // First, estimate the current bulk inflow condition.
@@ -1358,37 +1480,41 @@ public:
 	    } // end k loop
 	    break;
 	case Face.top:
-	    k = blk.kmax;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    src_cell = blk.get_cell(i,j,k);
-		    dest_cell = blk.get_cell(i,j,k+1);
-		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		    dest_cell = blk.get_cell(i,j,k+2);
-		    dest_cell.fs.gas.p = p_stag;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		} // end j loop
-	    } // for i
-	    break;
+	    throw new Error("GhostCellFromStagnation.apply_structured_grid() " ~
+			    "not yet implemented for top boundary");
+	    // k = blk.kmax;
+	    // for (i = blk.imin; i <= blk.imax; ++i) {
+	    // 	for (j = blk.jmin; j <= blk.jmax; ++j) {
+	    // 	    src_cell = blk.get_cell(i,j,k);
+	    // 	    dest_cell = blk.get_cell(i,j,k+1);
+	    // 	    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	    dest_cell = blk.get_cell(i,j,k+2);
+	    // 	    dest_cell.fs.gas.p = p_stag;
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	} // end j loop
+	    // } // for i
+	    // break;
 	case Face.bottom:
-	    k = blk.kmin;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    src_cell = blk.get_cell(i,j,k);
-		    dest_cell = blk.get_cell(i,j,k-1);
-		    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		    dest_cell = blk.get_cell(i,j,k-2);
-		    dest_cell.fs.gas.p = p_stag;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
-		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
-		} // end j loop
-	    } // for i
-	    break;
+	    throw new Error("GhostCellFromStagnation.apply_structured_grid() " ~
+			    "not yet implemented for bottom boundary");
+	    // k = blk.kmin;
+	    // for (i = blk.imin; i <= blk.imax; ++i) {
+	    // 	for (j = blk.jmin; j <= blk.jmax; ++j) {
+	    // 	    src_cell = blk.get_cell(i,j,k);
+	    // 	    dest_cell = blk.get_cell(i,j,k-1);
+	    // 	    dest_cell.fs.gas.p = p_stag; // [TODO] FIX-ME
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	    dest_cell = blk.get_cell(i,j,k-2);
+	    // 	    dest_cell.fs.gas.p = p_stag;
+	    // 	    foreach(ref elem; dest_cell.fs.gas.T) elem = T_stag; 
+	    // 	    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
+	    // 	} // end j loop
+	    // } // for i
+	    // break;
 	} // end switch
     } // end apply()
 } // end class GhostCellFixedStagnationPT

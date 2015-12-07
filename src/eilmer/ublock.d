@@ -206,7 +206,7 @@ public:
 	    throw new Error(format("Mismatch in number of boundaries: %d %d",
 				   nboundaries, grid.nboundaries));
 	}
-	foreach (bndry; grid.boundaries) {
+	foreach (i, bndry; grid.boundaries) {
 	    auto nf = bndry.face_id_list.length;
 	    if (nf != bndry.outsign_list.length) {
 		throw new Error(format("Mismatch in face_id_list, outsign_list lengths: %d %d",
@@ -214,18 +214,30 @@ public:
 				       bndry.outsign_list.length));
 	    }
 	    foreach (j; 0 .. nf) {
-		auto my_face = faces[bndry.face_id_list[j]];
-		auto my_outsign = bndry.outsign_list[j];
+		FVInterface my_face = faces[bndry.face_id_list[j]];
+		int my_outsign = bndry.outsign_list[j];
+		BasicCell ghost0 = new BasicCell(myConfig);
+		BasicCell ghost1 = new BasicCell(myConfig);
+		bc[i].faces ~= my_face;
+		bc[i].outsigns ~= my_outsign;
+		bc[i].ghostcells ~= ghost0;
+		bc[i].ghostcells ~= ghost1;
 		if (my_outsign == 1) {
-		    my_face.right_cells ~= new BasicCell(myConfig);
-		    my_face.right_cells ~= new BasicCell(myConfig);
+		    my_face.right_cells ~= ghost0;
+		    my_face.right_cells ~= ghost1;
 		} else {
-		    my_face.left_cells ~= new BasicCell(myConfig);
-		    my_face.left_cells ~= new BasicCell(myConfig);
+		    my_face.left_cells ~= ghost0;
+		    my_face.left_cells ~= ghost1;
 		}
 	    }
 	}
-	// [TODO] store references into the FVVertex objects for derivative calc
+	//
+	// [TODO] for each face, work arround the faces in the attached cell to
+	// accumulate a cloud of cells for field reconstruction prior to
+	// computing the convective fluxes. (If we want high-order reconstruction.)
+	// 
+	// [TODO] store references into the FVVertex objects for derivative calc.
+	//
     } // end init_grid_and_flow_arrays()
 
     override void compute_primary_cell_geometric_data(int gtl)

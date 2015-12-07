@@ -75,6 +75,9 @@ public:
     bool is_wall = true;
     bool ghost_cell_data_available = true;
     double emissivity = 0.0;
+    FVInterface[] faces;
+    BasicCell[] ghostcells;
+    int[] outsigns;
 
     this(int id, int boundary, bool isWall=true, bool ghostCellDataAvailable=true, double _emissivity=0.0)
     {
