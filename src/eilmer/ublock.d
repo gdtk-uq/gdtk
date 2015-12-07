@@ -460,7 +460,7 @@ public:
 	}
 	auto outfile = new GzipOut(filename);
 	auto writer = appender!string();
-	formattedWrite(writer, "ustructured_grid_flow 1.0\n");
+	formattedWrite(writer, "unstructured_grid_flow 1.0\n");
 	formattedWrite(writer, "label: %s\n", label);
 	formattedWrite(writer, "sim_time: %20.12e\n", sim_time);
 	auto gmodel = myConfig.gmodel;
@@ -517,14 +517,20 @@ public:
 
     override void propagate_inflow_data_west_to_east()
     {
-	throw new Error("propagate_inflow_data_west_to_east() function not implemented for unstructured grid.");
-     }
+	throw new Error("propagate_inflow_data_west_to_east() " ~ 
+			"function not implemented for unstructured grid.");
+    }
 
     override void convective_flux()
     {
-	throw new Error("convective_flux function not yet implemented for unstructured grid.");
-	// [TODO]
-    }
+	foreach (f; faces) {
+	    // For now, copy flow states without high-order (any) reconstruction.
+	    Lft.copy_values_from(f.left_cells[0].fs);
+	    Rght.copy_values_from(f.right_cells[0].fs);
+	    f.fs.copy_average_values_from(Lft, Rght);
+	    compute_interface_flux(Lft, Rght, f, myConfig.gmodel, omegaz);
+	} // end foreach face
+    } // end convective_flux()
 
     @nogc
     override void copy_into_ghost_cells(int destination_face,
