@@ -230,7 +230,61 @@ public:
 
     override void compute_primary_cell_geometric_data(int gtl)
     {
-	throw new Error("compute_primary_cell_geometric_data() not implemented yet");
+	if (myConfig.dimensions == 2) {
+	    foreach (i, cell; cells) {
+		double vol, xyplane_area;
+		switch (cell.vtx.length) {
+		case 4:
+		    xyplane_quad_cell_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+						 cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
+						 cell.pos[gtl], xyplane_area,
+						 cell.iLength, cell.jLength, cell.L_min);
+		    break;
+		default:
+		    string msg = "compute_primary_cell_geometric_data(): ";
+		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
+		    throw new Error(msg);
+		} // end switch
+		// Cell Volume.
+		if ( myConfig.axisymmetric ) {
+		    // Volume per radian = centroid y-ordinate * cell area
+		    vol = xyplane_area * cell.pos[gtl].y;
+		} else {
+		    // Assume unit depth in the z-direction.
+		    vol = xyplane_area;
+		}
+		if (vol < 0.0) {
+		    throw new Error(text("Negative cell volume: Block ", id,
+					 " vol for cell[", i, "]= ", vol));
+		}
+		cell.volume[gtl] = vol;
+		cell.areaxy[gtl] = xyplane_area;
+		cell.kLength = 0.0;
+	    }
+	    // [TODO] face geometries
+	} else {
+	    foreach (i, cell; cells) {
+		switch (cell.vtx.length) {
+		case 8:
+		    hex_cell_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+					cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
+					cell.vtx[4].pos[gtl], cell.vtx[5].pos[gtl],
+					cell.vtx[6].pos[gtl], cell.vtx[7].pos[gtl],
+					cell.pos[gtl], cell.volume[gtl],
+					cell.iLength, cell.jLength, cell.kLength);
+		    cell.L_min = cell.iLength;
+		    if (cell.jLength < cell.L_min) cell.L_min = cell.jLength;
+		    if (cell.kLength < cell.L_min) cell.L_min = cell.kLength;
+		    break;
+		default:
+		    string msg = "compute_primary_cell_geometric_data(): ";
+		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
+		    throw new Error(msg);
+		} // end switch
+	    }
+	    // [TODO] face geometries
+	}
+	throw new Error("compute_primary_cell_geometric_data() completely not implemented yet");
 	// [TODO] position ghost-cell centres
     }
 

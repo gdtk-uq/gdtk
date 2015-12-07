@@ -613,11 +613,81 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     }
 } // end quad_properties()
 
+void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
+		     ref Vector3 n, ref Vector3 t1, ref Vector3 t2,
+		     ref double area,
+		     double tol=1.0e-12, double area_tol=1.0e-20)
+{
+    quad_properties(p[0], p[1], p[2], p[3], centroid, n, t1, t2, area, tol, area_tol);
+}
+
 double tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 			  ref const(Vector3) p2, ref const(Vector3) p3)
 {
     return dot(p3-p0, cross(p1-p0, p2-p0)) / 6.0;
 } // end tetrahedron_volume()
+
+void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+				  ref const(Vector3) p2, ref const(Vector3) p3,
+				  ref Vector3 centroid, ref double xyplane_area,
+				  ref double iLen, ref double jLen, ref double minLen)
+// Cell layout goes back to cns4u notation.
+// C-----B     3-----2
+// |     |     |     |    j
+// |  c  |     |  c  |    ^
+// |     |     |     |    |
+// D-----A     0-----1    O-->i
+{
+    // These are the corners.
+    double xA = p1.x; double yA = p1.y;
+    double xB = p2.x; double yB = p2.y;
+    double xC = p3.x; double yC = p3.y;
+    double xD = p0.x; double yD = p0.y;
+    //
+    xyplane_area = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
+			  (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
+    //
+    centroid.refx = 1.0 / (xyplane_area * 6.0) * 
+	((yB - yA) * (xA * xA + xA * xB + xB * xB) + 
+	 (yC - yB) * (xB * xB + xB * xC + xC * xC) +
+	 (yD - yC) * (xC * xC + xC * xD + xD * xD) + 
+	 (yA - yD) * (xD * xD + xD * xA + xA * xA));
+    centroid.refy = -1.0 / (xyplane_area * 6.0) * 
+	((xB - xA) * (yA * yA + yA * yB + yB * yB) + 
+	 (xC - xB) * (yB * yB + yB * yC + yC * yC) +
+	 (xD - xC) * (yC * yC + yC * yD + yD * yD) + 
+	 (xA - xD) * (yD * yD + yD * yA + yA * yA));
+    centroid.refz = 0.0;
+    //
+    // Check cell length scale using North and East boundaries.
+    // Also, save the minimum length for later use in the CFL checking routine.
+    double dxN = xC - xB; double dyN = yC - yB;
+    double dxE = xA - xB; double dyE = yA - yB;
+    double lengthN = sqrt(dxN * dxN + dyN * dyN);
+    double lengthE = sqrt(dxE * dxE + dyE * dyE);
+    double length_cross = xyplane_area / fmax(lengthN, lengthE); 
+    // estimate of minimum width of cell
+    minLen = fmin(lengthN, lengthE);
+    if (length_cross < minLen) minLen = length_cross;
+
+    // Record the cell widths in the i- and j-index directions.
+    // The widths are measured between corresponding midpoints of the bounding interfaces.
+    // This data is used by the high-order reconstruction.
+    double xN = 0.5 * (xC + xB);
+    double yN = 0.5 * (yC + yB);
+    double xS = 0.5 * (xD + xA);
+    double yS = 0.5 * (yD + yA);
+    double xE = 0.5 * (xA + xB);
+    double yE = 0.5 * (yA + yB);
+    double xW = 0.5 * (xD + xC);
+    double yW = 0.5 * (yD + yC);
+    double dx = xN - xS;
+    double dy = yN - yS;
+    jLen = sqrt(dx * dx + dy * dy);
+    dx = xE - xW;
+    dy = yE - yW;
+    iLen = sqrt(dx * dx + dy * dy);
+} // end xyplane_quad_cell_properties()
 
 void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			    ref const(Vector3) p2, ref const(Vector3) p3,
@@ -626,6 +696,12 @@ void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     volume = tetrahedron_volume(p0, p1, p2, p3);
     centroid = 0.25 * (p0 + p1 + p2 + p3);
 } // end tetrahedron_properties()
+
+void tetrahedron_properties(ref const(Vector3)[] p,
+			    ref Vector3 centroid, ref double volume)
+{
+    tetrahedron_properties(p[0], p[1], p[2], p[4], centroid, volume);
+}
 
 // Because of the way we lose precision when reading and writing files,
 // it may be that the vertices are not quite in their ideal position.
@@ -660,6 +736,12 @@ void wedge_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2,
     // Weight the tetrahedral centroids with their volumes.
     centroid = (c1*v1 + c2*v2 + c3*v3) / volume;
 } // end wedge_properties()
+
+void wedge_properties(ref const(Vector3)[] p,
+		      ref Vector3 centroid, ref double volume)
+{
+    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
+}
 
 double tetragonal_dipyramid_volume(in Vector3 p0, in Vector3 p1, 
 				   in Vector3 p2, in Vector3 p3, 
@@ -731,6 +813,14 @@ void hex_cell_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2, in Vector3
     return; 
 } // end hex_cell_properties()
 
+
+void hex_cell_properties(ref const(Vector3)[] p,
+			 ref Vector3 centroid, ref double volume,
+			 ref double iLen, ref double jLen, ref double kLen)
+{
+    hex_cell_properties(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+			centroid, volume, iLen, jLen, kLen);
+}
 
 unittest {
     Vector3 p0 = Vector3(0.0, 0.0, 1.0);

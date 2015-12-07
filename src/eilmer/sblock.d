@@ -723,107 +723,26 @@ public:
     //
     // Determine minimum length and aspect ratio, also.
     {
-	size_t i, j;
-	double xA, yA, xB, yB, xC, yC, xD, yD;
-	double xN, yN, xS, yS, xE, yE, xW, yW;
-	double vol, max_vol, min_vol, xyarea;
-	double dx, dy, dxN, dyN, dxE, dyE;
-	double lengthN, lengthE, length_max, length_min, length_cross;
-	double max_aspect, aspect_ratio;
-	FVCell cell, source_cell, target_cell;
-
-	// Cell layout
-	// C-----B     3-----2
-	// |     |     |     |
-	// |  c  |     |  c  |
-	// |     |     |     |
-	// D-----A     0-----1
-    
-	max_vol = 0.0;
-	min_vol = 1.0e30;    /* arbitrarily large */
-	max_aspect = 0.0;
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( j = jmin; j <= jmax; ++j ) {
-		cell = get_cell(i,j);
-		// These are the corners.
-		xA = cell.vtx[1].pos[gtl].x;
-		yA = cell.vtx[1].pos[gtl].y;
-		xB = cell.vtx[2].pos[gtl].x;
-		yB = cell.vtx[2].pos[gtl].y;
-		xC = cell.vtx[3].pos[gtl].x;
-		yC = cell.vtx[3].pos[gtl].y;
-		xD = cell.vtx[0].pos[gtl].x;
-		yD = cell.vtx[0].pos[gtl].y;
-		// Cell area in the (x,y)-plane.
-		xyarea = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
-				(xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
-		// Cell Centroid.
-		cell.pos[gtl].refx = 1.0 / (xyarea * 6.0) * 
-		    ((yB - yA) * (xA * xA + xA * xB + xB * xB) + 
-		     (yC - yB) * (xB * xB + xB * xC + xC * xC) +
-		     (yD - yC) * (xC * xC + xC * xD + xD * xD) + 
-		     (yA - yD) * (xD * xD + xD * xA + xA * xA));
-		cell.pos[gtl].refy = -1.0 / (xyarea * 6.0) * 
-		    ((xB - xA) * (yA * yA + yA * yB + yB * yB) + 
-		     (xC - xB) * (yB * yB + yB * yC + yC * yC) +
-		     (xD - xC) * (yC * yC + yC * yD + yD * yD) + 
-		     (xA - xD) * (yD * yD + yD * yA + yA * yA));
-		cell.pos[gtl].refz = 0.0;
+	for (size_t i = imin; i <= imax; ++i) {
+	    for (size_t j = jmin; j <= jmax; ++j) {
+		FVCell cell = get_cell(i,j);
+		double vol, xyplane_area;
+		xyplane_quad_cell_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+					     cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
+					     cell.pos[gtl], xyplane_area,
+					     cell.iLength, cell.jLength, cell.L_min);
 		// Cell Volume.
 		if ( myConfig.axisymmetric ) {
-		    // Volume per radian = centroid y-ordinate * cell area
-		    vol = xyarea * cell.pos[gtl].y;
+		    vol = xyplane_area * cell.pos[gtl].y; // Volume per radian
 		} else {
-		    // Assume unit depth in the z-direction.
-		    vol = xyarea;
+		    vol = xyplane_area; // Assume unit depth in the z-direction.
 		}
 		if (vol < 0.0) {
 		    throw new Error(text("Negative cell volume: Block ", id,
-					 " vol[", i, " ,", j, "]= ", vol));
+					 " vol for cell[", i, " ,", j, "]= ", vol));
 		}
-		if (vol > max_vol) max_vol = vol;
-		if (vol < min_vol) min_vol = vol;
 		cell.volume[gtl] = vol;
-		cell.areaxy[gtl] = xyarea;
-		// Check cell length scale using North and East boundaries.
-		// Also, save the minimum length for later use in the CFL
-		// checking routine.  Record max aspect ratio over all cells.
-		dxN = xC - xB;
-		dyN = yC - yB;
-		dxE = xA - xB;
-		dyE = yA - yB;
-		lengthN = sqrt(dxN * dxN + dyN * dyN);
-		lengthE = sqrt(dxE * dxE + dyE * dyE);
-
-		length_max = lengthN;
-		if (lengthE > length_max) length_max = lengthE;
-		length_cross = xyarea / length_max; 
-		// estimate of minimum width of cell
-		length_min = lengthN;
-		if (lengthE < length_min) length_min = lengthE;
-		if (length_cross < length_min) length_min = length_cross;
-		cell.L_min = length_min;
-		aspect_ratio = length_max / length_min;
-		if (aspect_ratio > max_aspect) max_aspect = aspect_ratio;
-
-		// Record the cell widths in the i- and j-index directions.
-		// The widths are measured between corresponding midpoints of
-		// the bounding interfaces.
-		// This data is later used by the high-order reconstruction.
-		xN = 0.5 * (xC + xB);
-		yN = 0.5 * (yC + yB);
-		xS = 0.5 * (xD + xA);
-		yS = 0.5 * (yD + yA);
-		xE = 0.5 * (xA + xB);
-		yE = 0.5 * (yA + yB);
-		xW = 0.5 * (xD + xC);
-		yW = 0.5 * (yD + yC);
-		dx = xN - xS;
-		dy = yN - yS;
-		cell.jLength = sqrt(dx * dx + dy * dy);
-		dx = xE - xW;
-		dy = yE - yW;
-		cell.iLength = sqrt(dx * dx + dy * dy);
+		cell.areaxy[gtl] = xyplane_area;
 		cell.kLength = 0.0;
 	    } // j loop
 	} // i loop
@@ -832,9 +751,10 @@ public:
 	// around the boundaries.
 	// Those boundaries that are adjacent to another block
 	// will be updated later with the other-block's cell lengths.
-	for ( i = imin; i <= imax; ++i ) {
+	FVCell source_cell, target_cell;
+	for (size_t i = imin; i <= imax; ++i) {
 	    // North boundary
-	    j = jmax;
+	    size_t j = jmax;
 	    source_cell = get_cell(i,j);
 	    target_cell = get_cell(i,j+1);
 	    target_cell.iLength = source_cell.iLength;
@@ -859,9 +779,9 @@ public:
 	    target_cell.kLength = 0.0;
 	} // end for i
 
-	for ( j = jmin; j <= jmax; ++j ) {
+	for (size_t j = jmin; j <= jmax; ++j) {
 	    // East boundary
-	    i = imax;
+	    size_t i = imax;
 	    source_cell = get_cell(i,j);
 	    target_cell = get_cell(i+1,j);
 	    target_cell.iLength = source_cell.iLength;
