@@ -217,7 +217,11 @@ public:
     {
 	this.gridType = gridType;
 	// Read in the flow data for a single structured block.
-	// Keep in sync with SBlock.read_solution() and SBlock.write_solution().
+	//
+	// Keep in sync with SBlock.write_solution(), UBlock.write_solution()
+	// and write_initial_sg_flow_file_from_lua() in luaflowstate.d
+	// and write_initial_usg_flow_file_from_lua() in luaflowstate.d.
+	//
 	string[] tokens;
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();

@@ -392,23 +392,39 @@ public:
     } // end write_grid()
 
     override double read_solution(string filename, bool overwrite_geometry_data)
-    // Note that the position data is read into grid-time-level 0
-    // by scan_values_from_string(). 
+    // Note that this function needs to be kept in sync with the BlockFlow class
+    // over in flowsolution.d and with write_solution() below and with
+    // write_initial_usg_flow_file_from_lua() in luaflowstate.d. 
     // Returns sim_time from file.
     {
-	size_t nc;
-	double sim_time;
 	if (myConfig.verbosity_level >= 1) {
 	    writeln("read_solution(): Start block ", id);
 	}
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
-	formattedRead(line, " %g", &sim_time);
+	string format_version;
+	formattedRead(line, "unstructured_grid_flow %s", &format_version);
+	if (format_version != "1.0") {
+	    throw new Error("UBlock.read_solution(): " ~
+			    "format version found: " ~ format_version); 
+	}
+	string myLabel;
 	line = byLine.front; byLine.popFront();
-	// ignore second line; it should be just the names of the variables
-	// [TODO] We should test the incoming strings against the current variable names.
+	formattedRead(line, "label: %s", &myLabel);
+	double sim_time;
 	line = byLine.front; byLine.popFront();
-	formattedRead(line, "%d", &nc);
+	formattedRead(line, "sim_time: %g", &sim_time);
+	size_t nvariables;
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "variables: %d", &nvariables);
+	line = byLine.front; byLine.popFront();
+	// ingore variableNames = line.strip().split();
+	line = byLine.front; byLine.popFront();
+	int my_dimensions;
+	formattedRead(line, "dimensions: %d", &my_dimensions);
+	line = byLine.front; byLine.popFront();
+	size_t nc;
+	formattedRead(line, "ncells: %d", &nc);
 	if (nc != ncells) {
 	    throw new Error(text("For block[", id, "] we have a mismatch in solution size.",
 				 " Have read nc=", nc, " ncells=", ncells));
@@ -423,25 +439,32 @@ public:
     override void write_solution(string filename, double sim_time)
     // Write the flow solution (i.e. the primary variables at the cell centers)
     // for a single block.
-    // This is almost Tecplot POINT format.
+    // Keep this function in sync with
+    // write_initial_usg_flow_file_from_lua() from luaflowstate.d and
+    // write_initial_flow_file() from flowstate.d.
     {
 	if (myConfig.verbosity_level >= 1) {
 	    writeln("write_solution(): Start block ", id);
 	}
 	auto outfile = new GzipOut(filename);
 	auto writer = appender!string();
-	formattedWrite(writer, "%20.12e\n", sim_time);
-	outfile.compress(writer.data);
-	writer = appender!string();
-	foreach(varname; variable_list_for_cell(myConfig.gmodel)) {
+	formattedWrite(writer, "ustructured_grid_flow 1.0\n");
+	formattedWrite(writer, "label: %s\n", label);
+	formattedWrite(writer, "sim_time: %20.12e\n", sim_time);
+	auto gmodel = myConfig.gmodel;
+	auto variable_list = variable_list_for_cell(gmodel);
+	formattedWrite(writer, "variables: %d\n", variable_list.length);
+	// Variable list for cell on one line.
+	foreach(varname; variable_list) {
 	    formattedWrite(writer, " \"%s\"", varname);
 	}
 	formattedWrite(writer, "\n");
+	// Numbers of cells
+	formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
+	formattedWrite(writer, "ncells: %d\n", ncells);
 	outfile.compress(writer.data);
-	writer = appender!string();
-	formattedWrite(writer, "%d\n", ncells);
-	outfile.compress(writer.data);
-	foreach(i, cell; cells) {
+	// The actual cell data.
+	foreach(cell; cells) {
 	    outfile.compress(" " ~ cell.write_values_to_string() ~ "\n");
 	}
 	outfile.finish();
