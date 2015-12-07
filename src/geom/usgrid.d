@@ -213,6 +213,10 @@ public:
     {
 	super(Grid_t.unstructured_grid, sg.dimensions,
 	      ((new_label == "")? sg.label : new_label));
+	vertices.length = 0;
+	faces.length = 0;
+	cells.length = 0;
+	boundaries.length = 0;
 	if (dimensions == 2) {
 	    nvertices = sg.niv * sg.njv;
 	    nfaces = (sg.niv)*(sg.njv-1) + (sg.niv-1)*(sg.njv);
@@ -263,7 +267,7 @@ public:
 	    }
 	    foreach (j; 0 .. sg.njv) {
 		foreach (i; 0 .. sg.niv-1) {
-		    faces ~= new USGFace([vtx_id[i][j], vtx_id[i+1][j]]);
+		    faces ~= new USGFace([vtx_id[i+1][j], vtx_id[i][j]]);
 		    jface_id[i][j] = faces.length - 1;
 		    if (j == 0) {
 			boundaries[Face.south].face_id_list ~= jface_id[i][j];
