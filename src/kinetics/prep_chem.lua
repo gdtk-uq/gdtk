@@ -47,9 +47,11 @@ local effToStr = reaction.effToStr
 reactions = {}
 -- Set the defaults here.
 configHidden = { -- hidden from user
-   errTol = 1.0e-3,
    tempLimits = {lower=300.0, upper=50000.0},
-   odeStep = {method='rkf'},
+   odeStep = {method='rkf', errTol=1.0e-3},
+   tightTempCoupling = false,
+   maxSubcycles = 10000,
+   maxAttempts = 3,
    __index = function (t, k) 
       return configHidden[k]
    end,
@@ -71,7 +73,21 @@ config = {}
 setmetatable(config, configHidden)
 
 function odeStepToStr(o)
-   return "{method='rkf'}"
+   if o.method == 'rkf' then
+      errTol = o.errTol or 1.0e-3
+      return string.format("{method='rkf', errTol=%.6e}", errTol)
+   elseif o.method == 'alpha-qss' then
+      eps1 = o.eps1 or 0.001
+      eps2 = o.eps2 or eps1/2.0
+      delta = o.delta or 1.0e-10
+      maxIters = o.maxIters or 10
+      str = "{method='alpha-qss', "
+      str = str .. string.format("eps1= %.6e, eps2= %.6e, delta= %.6e, maxIters=%d}", eps1, eps2, delta, maxIters)
+      return str
+   else
+      print(string.format("ERROR: The ode method name '%s' is unknown.", o.method))
+      os.exit(1)
+   end
 end
 
 
@@ -220,11 +236,12 @@ function buildVerboseLuaFile(fName)
    f = assert(io.open(fName, 'w'))
    -- Write out configuration settings
    f:write(string.format("config = {\n"))
-   f:write(string.format("  errTol = %e,\n", configHidden.errTol))
    f:write(string.format("  tempLimits = {lower=%f, upper=%f},\n",
 			 configHidden.tempLimits.lower,
 			 configHidden.tempLimits.upper))
    f:write(string.format("  odeStep = %s,\n", odeStepToStr(configHidden.odeStep)))
+   f:write(string.format("  maxSubcycles = %d,\n", configHidden.maxSubcycles))
+   f:write(string.format("  maxAttempts = %d\n", configHidden.maxAttempts))
    f:write("}\n")
    f:write("\n")
    f:write("reaction = {}\n")
