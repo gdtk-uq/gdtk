@@ -231,6 +231,7 @@ public:
     override void compute_primary_cell_geometric_data(int gtl)
     {
 	if (myConfig.dimensions == 2) {
+	    // Primary cell geometry in the xy-plane.
 	    foreach (i, cell; cells) {
 		double vol, xyplane_area;
 		switch (cell.vtx.length) {
@@ -261,8 +262,39 @@ public:
 		cell.areaxy[gtl] = xyplane_area;
 		cell.kLength = 0.0;
 	    }
-	    // [TODO] face geometries
+	    // Face geometry in the xy-plane.
+	    foreach (f; faces) {
+		double xA = f.vtx[0].pos[gtl].x;
+		double yA = f.vtx[0].pos[gtl].y;
+		double xB = f.vtx[1].pos[gtl].x;
+		double yB = f.vtx[1].pos[gtl].y;
+		double LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
+		// Direction cosines for the unit normal and two tangential directions.
+		if (LAB > 1.0e-12) {
+		    f.n.refx = (yB - yA) / LAB;
+		    f.n.refy = -(xB - xA) / LAB;
+		    f.n.refz = 0.0; // normal purely in xy-plane
+		    f.t2 = Vector3(0.0, 0.0, 1.0);
+		    f.t1 = cross(f.n, f.t2);
+		    f.length = LAB; // Length in the XY-plane.
+		} else {
+		    f.n = Vector3(1.0, 0.0, 0.0); // Arbitrary direction
+		    f.t2 = Vector3(0.0, 0.0, 1.0);
+		    f.t1 = Vector3(0.0, 1.0, 0.0);
+		    f.length = 0.0; // Zero length in the xy-plane
+		}
+		// Mid-point and area.
+		// [TODO] think about using a better estimate for Ybar.
+		f.Ybar = 0.5 * (yA + yB);
+		if ( myConfig.axisymmetric ) {
+		    f.area[gtl] = LAB * f.Ybar; // Face area per radian.
+		} else {
+		    f.area[gtl] = LAB; // Assume unit depth in the Z-direction.
+		}
+		f.pos = (f.vtx[0].pos[gtl] + f.vtx[1].pos[gtl])/2.0;
+	    } // end foreach f
 	} else {
+	    // Primary cell geometry in 3D.
 	    foreach (i, cell; cells) {
 		switch (cell.vtx.length) {
 		case 8:
@@ -277,16 +309,74 @@ public:
 		    if (cell.kLength < cell.L_min) cell.L_min = cell.kLength;
 		    break;
 		default:
-		    string msg = "compute_primary_cell_geometric_data(): ";
+		    string msg = "compute_primary_cell_geometric_data() cells: ";
 		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
 		    throw new Error(msg);
 		} // end switch
-	    }
-	    // [TODO] face geometries
-	}
-	throw new Error("compute_primary_cell_geometric_data() completely not implemented yet");
-	// [TODO] position ghost-cell centres
-    }
+	    } // end foreach cell
+	    // Face geometry in 3D.
+	    foreach (f; faces) {
+		switch (f.vtx.length) {
+		case 4:
+		    quad_properties(f.vtx[0].pos[gtl], f.vtx[1].pos[gtl],
+				    f.vtx[2].pos[gtl], f.vtx[2].pos[gtl],
+				    f.pos, f.n, f.t1, f.t2, f.area[gtl]);
+		    break;
+		default:
+		    string msg = "compute_primary_cell_geometric_data(), faces: ";
+		    msg ~= format("Unhandled number of vertices: %d", f.vtx.length);
+		    throw new Error(msg);
+		} // end switch	    
+	    } // end foreach f
+	} // end if myConfig.dimensions
+	//
+	// Position ghost-cell centres and copy cross-cell lengths.
+	// Copy without linear extrapolation for the moment.
+	//
+	// 25-Feb-2014 Note copied from Eilmer3
+	// Jason Qin and Paul Petrie-Repar have identified the lack of exact symmetry in
+	// the reconstruction process at the wall as being a cause of the leaky wall
+	// boundary conditions.  Note that the symmetry is not consistent with the 
+	// linear extrapolation used for the positions and volumes in Eilmer3.
+	foreach (bndry; grid.boundaries) {
+	    auto nf = bndry.face_id_list.length;
+	    foreach (j; 0 .. nf) {
+		auto my_face = faces[bndry.face_id_list[j]];
+		auto my_outsign = bndry.outsign_list[j];
+		if (my_outsign == 1) {
+		    auto inside0 = my_face.left_cells[0];
+		    Vector3 delta = my_face.pos - inside0.pos[gtl];
+		    auto ghost0 = my_face.right_cells[0];
+		    ghost0.pos[gtl] = my_face.pos + delta;
+		    ghost0.iLength = inside0.iLength;
+		    ghost0.iLength = inside0.jLength;
+		    ghost0.iLength = inside0.kLength;
+		    ghost0.iLength = inside0.L_min;
+		    auto ghost1 = my_face.right_cells[1];
+		    ghost1.pos[gtl] = my_face.pos + 3.0*delta;
+		    ghost1.iLength = inside0.iLength;
+		    ghost1.iLength = inside0.jLength;
+		    ghost1.iLength = inside0.kLength;
+		    ghost1.iLength = inside0.L_min;
+		} else {
+		    auto inside0 = my_face.right_cells[0];
+		    Vector3 delta = my_face.pos - inside0.pos[gtl];
+		    auto ghost0 = my_face.left_cells[0];
+		    ghost0.pos[gtl] = my_face.pos + delta;
+		    ghost0.iLength = inside0.iLength;
+		    ghost0.iLength = inside0.jLength;
+		    ghost0.iLength = inside0.kLength;
+		    ghost0.iLength = inside0.L_min;
+		    auto ghost1 = my_face.left_cells[1];
+		    ghost1.pos[gtl] = my_face.pos + 3.0*delta;
+		    ghost1.iLength = inside0.iLength;
+		    ghost1.iLength = inside0.jLength;
+		    ghost1.iLength = inside0.kLength;
+		    ghost1.iLength = inside0.L_min;
+		} // end if my_outsign
+	    } // end foreach j
+	} // end foreach bndry
+    } // end compute_primary_cell_geometric_data()
 
     override void read_grid(string filename, size_t gtl=0)
     {
@@ -351,8 +441,8 @@ public:
 	writer = appender!string();
 	formattedWrite(writer, "%d\n", ncells);
 	outfile.compress(writer.data);
-	foreach(i; 0 .. ncells) {
-	    outfile.compress(" " ~ cells[i].write_values_to_string() ~ "\n");
+	foreach(i, cell; cells) {
+	    outfile.compress(" " ~ cell.write_values_to_string() ~ "\n");
 	}
 	outfile.finish();
     } // end write_solution()
@@ -360,8 +450,34 @@ public:
     override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
     // Used for the turbulence modelling.
     {
-	throw new Error("compute_distance_to_nearest_wall_for_all_cells function not yet implemented for unstructured grid.");
-	// [TODO]
+	foreach (cell; cells) {
+	    double min_distance = 1.0e30; // something arbitrarily large; will be replaced
+	    double cell_half_width = 1.0;
+	    size_t cell_id_at_nearest_wall = 0; 
+	    foreach (bndry; grid.boundaries) {
+		auto nf = bndry.face_id_list.length;
+		foreach (j; 0 .. nf) {
+		    auto my_face = faces[bndry.face_id_list[j]];
+		    double distance = abs(cell.pos[gtl] - my_face.pos);
+		    if (distance < min_distance) {
+			min_distance =  distance;
+			auto my_outsign = bndry.outsign_list[j];
+			if (my_outsign == 1) {
+			    auto inside0 = my_face.left_cells[0];
+			    cell_half_width = abs(inside0.pos[gtl] - my_face.pos);
+			    cell_id_at_nearest_wall = inside0.id;
+			} else {
+			    auto inside0 = my_face.right_cells[0];
+			    cell_half_width = abs(inside0.pos[gtl] - my_face.pos);
+			    cell_id_at_nearest_wall = inside0.id;
+			}
+		    }
+		}
+	    } // end foreach bndry
+	    cell.distance_to_nearest_wall = min_distance;
+	    cell.half_cell_width_at_wall = cell_half_width;
+	    cell.cell_at_nearest_wall = cells[cell_id_at_nearest_wall];
+	} // end foreach cell
     } // end compute_distance_to_nearest_wall_for_all_cells()
 
     override void propagate_inflow_data_west_to_east()
