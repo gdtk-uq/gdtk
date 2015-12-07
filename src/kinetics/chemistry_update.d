@@ -7,6 +7,7 @@
 
 module kinetics.chemistry_update;
 
+import std.conv;
 import std.stdio;
 import std.string;
 import std.math;
@@ -16,8 +17,6 @@ import util.lua_service;
 import gas;
 import kinetics.reaction_mechanism;
 
-immutable int MAX_SUBCYCLES = 10000; // maximum number of subcycles to perform over tInterval
-immutable int MAX_STEP_ATTEMPTS = 3; // maximum number of attempts on any one step
 immutable double DT_INCREASE_PERCENT = 10.0; // allowable percentage increase on succesful step
 immutable double DT_DECREASE_PERCENT = 50.0; // allowable percentage decrease on succesful step
 immutable double DT_REDUCTION_FACTOR = 2.0; // factor by which to reduce timestep
@@ -40,15 +39,69 @@ final class ReactionUpdateScheme {
     this(string fname, GasModel gmodel)
     {
 	auto L = init_lua_State(fname);
-	lua_getglobal(L, "reaction");
-	rmech = createReactionMechanism(L, gmodel);
+
+	lua_getglobal(L, "config");
+	lua_getfield(L, -1, "tempLimits");
+	lua_getfield(L, -1, "lower");
+	double T_lower_limit = lua_tonumber(L, -1);
+	lua_pop(L, 1);
+	lua_getfield(L, -1, "upper");
+	double T_upper_limit = lua_tonumber(L, -1);
+	lua_pop(L, 1);
+	lua_pop(L, 1);
+	lua_pop(L, 1);
+
+	lua_getglobal(L, "reaction");	
+	rmech = createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
+	lua_pop(L, 1);
+
+	lua_getglobal(L, "config");
+	lua_getfield(L, -1, "odeStep");
+	lua_getfield(L, -1, "method");
+	string ode_method = to!string(lua_tostring(L, -1));
+	lua_pop(L, 1);
+	switch (ode_method) {
+	case "rkf":
+	     lua_getfield(L, -1, "errTol");
+	     double err_tol = lua_tonumber(L, -1);
+	     lua_pop(L, 1);
+	     cstep = new RKFStep(gmodel, rmech, err_tol);
+	     break;
+	case "alpha-qss":
+	     lua_getfield(L, -1, "eps1");
+	     double eps1 = lua_tonumber(L, -1);
+	     lua_pop(L, 1);
+	     lua_getfield(L, -1, "eps2");
+	     double eps2 = lua_tonumber(L, -1);
+	     lua_pop(L, 1);
+	     lua_getfield(L, -1, "delta");
+	     double delta = lua_tonumber(L, -1);
+	     lua_pop(L, 1);
+	     lua_getfield(L, -1, "maxIters");
+	     int max_iters = to!int(lua_tointeger(L, -1));
+	     lua_pop(L, 1);
+	     cstep = new AlphaQssStep(gmodel, rmech, eps1, eps2, delta, max_iters);
+	     break;
+	default:
+	     string errMsg = format("ERROR: The odeStep '%s' is unknown.\n", ode_method);
+	     throw new Error(errMsg);
+	}
+	lua_pop(L, 1); // pops 'odeStep'
+
+	lua_getfield(L, -1, "tightTempCoupling");
+	tightTempCoupling = lua_toboolean(L, -1);
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "maxSubcycles");
+	maxSubcycles = to!int(lua_tointeger(L, -1));
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "maxAttempts");
+	maxAttempts = to!int(lua_tointeger(L, -1));
+	lua_pop(L, 1);
+
+	lua_pop(L, 1); // pops 'config'
 	lua_close(L);
-	// Just hard code selection of RKF for present.
-	cstep = new RKFStep(gmodel, rmech, 1.0e-3);
-	// cstep = new AlphaQssStep(gmodel, rmech);
-	tightTempCoupling = false;
-	maxSubcycles = MAX_SUBCYCLES;
-	maxAttempts = MAX_STEP_ATTEMPTS;
     }
 
     void update_state(GasState Q, double tInterval, ref double dtSuggest, GasModel gmodel)
@@ -64,7 +117,7 @@ final class ReactionUpdateScheme {
 
 int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 		     GasModel gmodel, ReactionMechanism rmech, ChemODEStep cstep,
-		     bool tightTempCoupling, int maxSubcycles=MAX_SUBCYCLES, int maxAttempts=MAX_STEP_ATTEMPTS)
+		     bool tightTempCoupling, int maxSubcycles, int maxAttempts)
 {
     // 0. On entry take a copy of the GasState in case we bugger it up.
     if ( !working_memory_allocated ) {
@@ -155,7 +208,7 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 		}
 	    }
 	} // end attempts at single step.
-	if ( attempt == MAX_STEP_ATTEMPTS ) {
+	if ( attempt == maxAttempts ) {
 	    writeln("WARNING: hit max step attempts within a subcycle.");
 	    // We did poorly. Let the outside world know by returning -1.
 	    // But put the original GasState back in place.
@@ -371,9 +424,13 @@ private:
 
 class AlphaQssStep : ChemODEStep {
 public:
-  this(in GasModel gmodel, ReactionMechanism rmech)
+  this(in GasModel gmodel, ReactionMechanism rmech, double eps1, double eps2, double delta, int max_iters)
     {
 	super(rmech);
+	_eps1 = eps1;
+	_eps2 = eps2;
+	_delta = delta;
+	_max_iter = max_iters;
 	// Allocate working arrays
 	_ndim = gmodel.n_species;
 	_yp.length = _ndim;
@@ -393,13 +450,6 @@ public:
 
     override ResultOfStep opCall(double[] y0, double h, double[] yOut, ref double hSuggest)
     {
-	// 0. Alpha-QSS Constant parameters (currently hard-coded)
-        static immutable double _EPS1 = 0.001;
-        static immutable double _EPS2 = _EPS1/2.0;
-        static immutable int _MAX_ITER = 10;
-        static immutable double _ZERO_EPS = 1.0e-50;
-	static immutable double _delta = 1.0e-10;
-	
 	// 1. Predictor Step
 	_rmech.eval_split_rates(y0, _q0, _L0);
 	p_on_y(_L0, y0, _p0);
@@ -407,11 +457,11 @@ public:
 	update_conc(_yp, y0, _q0, _p0, _alpha, h);
 	// put aside the first predictor values for
 	// later use in the convergence test
-	foreach ( i; 0.._ndim )
+	foreach ( i; 0 .. _ndim )
 	  _yp0[i] = _yp[i];
 
 	// 2. Corrector Step
-	foreach ( corr; 0.._MAX_ITER) {
+	foreach ( corr; 0 .. _max_iter ) {
 	    _rmech.eval_split_rates(_yp, _qp, _Lp);
 	    p_on_y(_Lp, _yp, _pp);
 	    alpha_compute(_pp, _alphabar, h);
@@ -437,7 +487,7 @@ public:
 		return ResultOfStep.success;
 	    }
 	    // if we haven't converged yet make the corrector the new predictor and try again
-	    foreach ( i; 0.._ndim ) {
+	    foreach ( i; 0 .. _ndim ) {
 		_yp[i] = _yc[i];
 	    }
 	}
@@ -449,13 +499,13 @@ public:
 
 private:
     int _ndim;
-    double[] _yTmp, _yp, _yp0,  _yc, _q0, _L0, _p0, _pp, _qtilda, _pbar, _qp, _Lp, _alpha, _alphabar;
-    immutable double _EPS1 = 0.001;
-    immutable double _EPS2 = _EPS1/2.0;
-    immutable int _MAX_ITER = 10;
+    double _eps1;
+    double _eps2;
+    double _delta;
+    int _max_iter;
     immutable double _ZERO_EPS = 1.0e-50;
-    immutable double _delta = 1.0e-10;
-    
+    double[] _yTmp, _yp, _yp0,  _yc, _q0, _L0, _p0, _pp, _qtilda, _pbar, _qp, _Lp, _alpha, _alphabar;
+
     // Private functions.
     void p_on_y(double[] L, double[] y, double[] p_y) {
 	foreach( i; 0.._ndim) 
@@ -483,7 +533,7 @@ private:
 		continue;
 	    test = fabs(yc[i] - yp[i]);
 	    // +delta from Qureshi and Prosser (2007)
-	    if ( test >= (_EPS1 * (yc[i] + _delta)) )
+	    if ( test >= (_eps1 * (yc[i] + _delta)) )
 	      ++flag;
 	}
 	if ( flag == 0 )
@@ -501,7 +551,7 @@ private:
 	foreach (i; 0.._ndim) {
 	    if ( yc[i] < _ZERO_EPS )
 		continue;
-	    test = fabs( yc[i] - yp[i]) / (_EPS2*(yc[i]+ _delta));
+	    test = fabs( yc[i] - yp[i]) / (_eps2*(yc[i]+ _delta));
 	    if ( test > sigma )
 		sigma = test;
 	}

@@ -22,7 +22,7 @@ class ReactionMechanism
 {
 public:
     @property ulong n_reactions() const { return _reactions.length; }
-    this(Reaction[] reactions, size_t n_species)
+    this(Reaction[] reactions, size_t n_species, double T_lower_limit, double T_upper_limit)
     {
 	foreach ( ref r; reactions) {
 	    _reactions ~= r.dup();
@@ -33,15 +33,26 @@ public:
 	    _L.length = n_species;
 	    _work_arrays_initialised = true;
 	}
+	_T_lower_limit = T_lower_limit;
+	_T_upper_limit = T_upper_limit;
     }
     ReactionMechanism dup()
     {
-	return new ReactionMechanism(_reactions, _q.length);
+	return new ReactionMechanism(_reactions, _q.length, _T_lower_limit, _T_upper_limit);
     }
     
-    final void eval_rate_constants(in GasState Q)
+    final void eval_rate_constants(GasState Q)
     {
+	double T_save = Q.T[0];
+	if ( Q.T[0] < _T_lower_limit ) {
+	    Q.T[0] = _T_lower_limit;
+	}
+	if ( Q.T[0] > _T_upper_limit ) {
+	    Q.T[0] = _T_upper_limit;
+        }
 	foreach ( ref r; _reactions ) r.eval_rate_constants(Q);
+	// Always reset Q.T[0] on exit
+	Q.T[0] = T_save;
     }
 
     final void eval_rates(in double[] conc, double[] rates)
@@ -137,6 +148,8 @@ private:
     bool _work_arrays_initialised = false;
     double[] _q;
     double[] _L;
+    double _T_lower_limit;
+    double _T_upper_limit;
 }
 
 /++
@@ -149,7 +162,7 @@ private:
  +         [n]={... reaction n info ...}
  +       }
  +/ 
-ReactionMechanism createReactionMechanism(lua_State* L, GasModel gmodel)
+ReactionMechanism createReactionMechanism(lua_State* L, GasModel gmodel, double T_lower_limit, double T_upper_limit)
 {
     auto n_species = gmodel.n_species;
     auto n_reactions = to!int(lua_objlen(L, -1));
@@ -159,15 +172,17 @@ ReactionMechanism createReactionMechanism(lua_State* L, GasModel gmodel)
 	reactions ~= createReaction(L, gmodel);
 	lua_pop(L, 1);
     }
-    return new ReactionMechanism(reactions, n_species);
+    return new ReactionMechanism(reactions, n_species, T_lower_limit, T_upper_limit);
 }
 
+/*
 ReactionMechanism createReactionMechanism(string fname, GasModel gmodel)
 {
     auto L = init_lua_State(fname);
     lua_getglobal(L, "reaction");
     return createReactionMechanism(L, gmodel);
 }
+*/
 
 version(reaction_mechanism_test) {
     import std.math;
