@@ -173,7 +173,7 @@ public:
 	    reflect_normal_velocity(ghost0.fs, f);
 	    ghost1.fs.copy_values_from(src_cell.fs);
 	    reflect_normal_velocity(ghost1.fs, f);
-	    if (GlobalConfig.MHD) { // [TODO] maybe use blk.myConfig.MHD
+	    if (blk.myConfig.MHD) {
 		reflect_normal_magnetic_field(ghost0.fs, f);
 		reflect_normal_magnetic_field(ghost1.fs, f);
 	    }
@@ -198,7 +198,7 @@ public:
 		    dest_cell = blk.get_cell(i,j+1,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
@@ -206,7 +206,7 @@ public:
 		    dest_cell = blk.get_cell(i,j+2,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end i loop
@@ -222,7 +222,7 @@ public:
 		    dest_cell = blk.get_cell(i+1,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
@@ -230,7 +230,7 @@ public:
 		    dest_cell = blk.get_cell(i+2,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
@@ -246,7 +246,7 @@ public:
 		    dest_cell = blk.get_cell(i,j-1,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
@@ -254,7 +254,7 @@ public:
 		    dest_cell = blk.get_cell(i,j-2,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end i loop
@@ -270,7 +270,7 @@ public:
 		    dest_cell = blk.get_cell(i-1,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
@@ -278,7 +278,7 @@ public:
 		    dest_cell = blk.get_cell(i-2,j,k);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
@@ -294,7 +294,7 @@ public:
 		    dest_cell = blk.get_cell(i,j,k+1);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
@@ -302,7 +302,7 @@ public:
 		    dest_cell = blk.get_cell(i,j,k+2);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
@@ -318,7 +318,7 @@ public:
 		    dest_cell = blk.get_cell(i,j,k-1);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		    // ghost cell 2.
@@ -326,7 +326,7 @@ public:
 		    dest_cell = blk.get_cell(i,j,k-2);
 		    dest_cell.copy_values_from(src_cell, copy_opt);
 		    reflect_normal_velocity(dest_cell.fs, IFace);
-		    if (GlobalConfig.MHD) {
+		    if (blk.myConfig.MHD) {
 			reflect_normal_magnetic_field(dest_cell.fs, IFace);
 		    }
 		} // end j loop
