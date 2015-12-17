@@ -14,6 +14,7 @@ To build eilmer, you will require:
 
 Additionally, if you want to run the test suite, you will require:
 
+  + TCL package
   + the Python sympy package
 
 First-time setup
