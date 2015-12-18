@@ -43,6 +43,15 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
     case "zero_velocity":
 	newBIE = new BIE_ZeroVelocity(blk_id, boundary);
 	break;
+    case "translating_surface":
+	Vector3 v_trans = getJSONVector3(jsonData, "v_trans", Vector3(0.0,0.0,0.0));
+	newBIE = new BIE_TranslatingSurface(blk_id, boundary, v_trans);
+	break;
+    case "rotating_surface":
+	Vector3 r_omega = getJSONVector3(jsonData, "r_omega", Vector3(0.0,0.0,0.0));
+	Vector3 centre = getJSONVector3(jsonData, "centre", Vector3(0.0,0.0,0.0));
+	newBIE = new BIE_RotatingSurface(blk_id, boundary, r_omega, centre);
+	break;
     case "fixed_temperature":
 	double Twall = getJSONdouble(jsonData, "Twall", 300.0);
 	newBIE = new BIE_FixedT(blk_id, boundary, Twall);
@@ -292,6 +301,208 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
 	} // end switch which_boundary
     } // end apply()
 } // end class BIE_ZeroVelocity
+
+
+class BIE_TranslatingSurface : BoundaryInterfaceEffect {
+    // The boundary surface is translating with fixed velocity v_trans.
+    Vector3 v_trans;
+
+    this(int id, int boundary, Vector3 v_trans)
+    {
+	super(id, boundary, "TranslatingSurface");
+	this.v_trans = v_trans;
+    }
+
+    override string toString() const 
+    {
+	return "TranslatingSurface(v_trans=" ~ to!string(v_trans) ~ ")";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_TranslatingSurface.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	FVCell cell;
+	FVInterface IFace;
+	auto gmodel = blk.myConfig.gmodel;
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.north];
+		    FlowState fs = IFace.fs;
+		    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.east];
+		    FlowState fs = IFace.fs;
+		    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.south];
+		    FlowState fs = IFace.fs;
+		    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.west];
+		    FlowState fs = IFace.fs;
+		    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.top];
+		    FlowState fs = IFace.fs;
+		    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+		} // end j loop
+	    } // end for i
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.bottom];
+		    FlowState fs = IFace.fs;
+		    fs.vel.refx = v_trans.x; fs.vel.refy = v_trans.y; fs.vel.refz = v_trans.z;
+		} // end j loop
+	    } // end for i
+	    break;
+	} // end switch which_boundary
+    } // end apply()
+} // end class BIE_TranslatingSurface
+
+
+class BIE_RotatingSurface : BoundaryInterfaceEffect {
+    // The boundary surface is rotating with fixed angular velocity r_omega
+    // about centre.
+    Vector3 r_omega;
+    Vector3 centre;
+
+    this(int id, int boundary, Vector3 r_omega, Vector3 centre)
+    {
+	super(id, boundary, "RotatingSurface");
+	this.r_omega = r_omega;
+	this.centre = centre;
+    }
+
+    override string toString() const 
+    {
+	return "RotatingSurface(r_omega=" ~ to!string(r_omega) ~ 
+	    ", centre=" ~ to!string(centre) ~ ")";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BIE_RotatingSurface.apply_unstructured_grid() not implemented yet");
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	FVCell cell;
+	FVInterface IFace;
+	auto gmodel = blk.myConfig.gmodel;
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.north];
+		    FlowState fs = IFace.fs;
+		    fs.vel = cross(r_omega, IFace.pos-centre);
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.east];
+		    FlowState fs = IFace.fs;
+		    fs.vel = cross(r_omega, IFace.pos-centre);
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.south];
+		    FlowState fs = IFace.fs;
+		    fs.vel = cross(r_omega, IFace.pos-centre);
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.west];
+		    FlowState fs = IFace.fs;
+		    fs.vel = cross(r_omega, IFace.pos-centre);
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.top];
+		    FlowState fs = IFace.fs;
+		    fs.vel = cross(r_omega, IFace.pos-centre);
+		} // end j loop
+	    } // end for i
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.bottom];
+		    FlowState fs = IFace.fs;
+		    fs.vel = cross(r_omega, IFace.pos-centre);
+		} // end j loop
+	    } // end for i
+	    break;
+	} // end switch which_boundary
+    } // end apply()
+} // end class BIE_RotatingSurface
 
 
 class BIE_FixedT : BoundaryInterfaceEffect {

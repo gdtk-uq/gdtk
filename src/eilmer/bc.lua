@@ -146,6 +146,30 @@ function ZeroVelocity:tojson()
    return str
 end
 
+TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
+-- Note that we are expecting v_trans as a table of 3 floats.
+TranslatingSurface.type = "translating_surface"
+function TranslatingSurface:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "v_trans": [%f, %f, %f]', self.v_trans.x, 
+			      self.v_trans.y, self.v_trans.z)
+   str = str .. '}'
+   return str
+end
+
+RotatingSurface = BoundaryInterfaceEffect:new{centre=nil, r_omega=nil}
+-- Note that we are expecting tables, each with three floats.
+RotatingSurface.type = "rotating_surface"
+function RotatingSurface:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "centre": [%f, %f, %f],', self.centre.x, 
+			      self.centre.y, self.centre.z)
+   str = str .. string.format(' "r_omega": [%f, %f, %f]', self.r_omega.x, 
+			      self.r_omega.y, self.r_omega.z)
+   str = str .. '}'
+   return str
+end
+
 FixedT = BoundaryInterfaceEffect:new{Twall=nil}
 FixedT.type = "fixed_temperature"
 function FixedT:tojson()
@@ -296,6 +320,54 @@ function WallBC_NoSlip_Adiabatic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
+			       WallKOmega:new() }
+   return o
+end
+
+WallBC_TranslatingSurface_FixedT = BoundaryCondition:new()
+WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
+function WallBC_TranslatingSurface_FixedT:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preSpatialDerivAction = { CopyCellData:new(),
+			       TranslatingSurface:new{v_trans=o.v_trans},
+			       FixedT:new{Twall=o.Twall},
+			       UpdateThermoTransCoeffs:new(),
+			       WallKOmega:new() }
+   return o
+end
+
+WallBC_TranslatingSurface_Adiabatic = BoundaryCondition:new()
+WallBC_TranslatingSurface_Adiabatic.type = "wall_translating_surface_adiabatic"
+function WallBC_TranslatingSurface_Adiabatic:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preSpatialDerivAction = { CopyCellData:new(),
+			       TranslatingSurface:new{v_trans=o.v_trans},
+			       WallKOmega:new() }
+   return o
+end
+
+WallBC_RotatingSurface_FixedT = BoundaryCondition:new()
+WallBC_RotatingSurface_FixedT.type = "wall_rotating_surface_fixed_t"
+function WallBC_RotatingSurface_FixedT:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preSpatialDerivAction = { CopyCellData:new(),
+			       RotatingSurface:new{r_omega=o.r_omega, centre=o.centre},
+			       FixedT:new{Twall=o.Twall},
+			       UpdateThermoTransCoeffs:new(),
+			       WallKOmega:new() }
+   return o
+end
+
+WallBC_RotatingSurface_Adiabatic = BoundaryCondition:new()
+WallBC_RotatingSurface_Adiabatic.type = "wall_rotating_surface_adiabatic"
+function WallBC_RotatingSurface_Adiabatic:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preSpatialDerivAction = { CopyCellData:new(),
+			       TranslatingSurface:new{r_omega=o.r_omega, centre=o.centre},
 			       WallKOmega:new() }
    return o
 end
