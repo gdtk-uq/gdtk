@@ -20,7 +20,8 @@ TEST_PROGRAMS := bbla_test \
 	newtoncotes_test \
 	ridder_test \
 	brent_test \
-	rungekutta_test
+	rungekutta_test \
+	smla_test
 
 demo: ${DEMO_PROGRAMS}
 	echo "Demo codes built."
@@ -86,3 +87,6 @@ brent_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -gc -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
+smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d

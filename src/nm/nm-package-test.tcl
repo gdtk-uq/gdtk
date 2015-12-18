@@ -40,6 +40,10 @@ test rungekutta-test {Testing rungekutta.d} -body {
     exec ./rungekutta_test
 } -result {} -returnCodes {0}
 
+test smla-test {Testing smla.d} -body {
+    exec ./smla_test
+} -result {} -returnCodes {0}
+
 puts ""
 puts "=======================================  SUMMARY  ======================================="
 cleanupTests
