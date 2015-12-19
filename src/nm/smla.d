@@ -14,6 +14,14 @@ import std.conv;
 import std.math;
 
 /**
+ * References used in this module:
+ *
+ * Saad (2003)
+ * Iterative Methods for Sparse Linear Systems, 2nd ed.
+ * SIAM, Philaldelphia
+ */
+
+/**
  * This class is used to store and work with a sparse matrix.
  * The data is stored in Compressed Sparse Row format.
  * Usually a class is used to hide details of implementation
@@ -21,10 +29,6 @@ import std.math;
  * items as public method data since the algorithms to manipulate
  * sparse matrices rely on the representation of the data.
  *
- * Reference:
- * Saad (2003)
- * Iterative Methods for Sparse Linear Systems, 2nd ed.
- * SIAM, Philaldelphia
  */
 class SMatrix {
 public:
@@ -65,6 +69,20 @@ public:
 	}
 	// else search failed, so we have a 0.0 entry
 	return 0.0;
+    }
+    
+    // Presently we allow assignment if and only if the element
+    // is already non-zero. Otherwise, we'd have to shuffle all
+    // the elements around.
+    ref double opIndexAssign(double c, size_t row, size_t col) {
+	foreach ( j; ia[row] .. ia[row+1] ) {
+	    if ( ja[j] == col ) {
+		aa[j] = c;
+		return aa[j];
+	    }
+	}
+	// If we get here, we tried to assign to a zero value.
+	throw new Error("ERROR: Tried to assign a value to a zero entry in sparse matrix.");
     }
 
     override string toString() {
@@ -109,9 +127,64 @@ void multiply(SMatrix a, double[] b, double[] c)
     }
 }
 
+/**
+ * An ILU(0) decomposition.
+ *
+ * This algorithm changes the matrix a in place leaving
+ * an L/U matrix. The algorithm is an IKJ variant that
+ * is useful for row contiguous data storage as is
+ * used here.
+ *
+ * This implements Algorithm 10.4 in Saad (2003)
+ */
+
+void decompILU0(SMatrix a)
+{
+    size_t n = a.ia.length-1;
+    foreach ( i; 1 .. n ) { // Begin from 2nd row
+	foreach ( k; a.ja[a.ia[i] .. a.ia[i+1]] ) {
+	    // Only work on columns k < i-1
+	    if ( k >= i ) break;
+	    a[i,k] = a[i,k]/a[k,k];
+	    foreach ( j; a.ja[a.ia[i] .. a.ia[i+1]] ) {
+		//Only work with columns j >= k+1
+		if ( j <= k ) continue;
+		a[i,j] = a[i,j] - a[i,k]*a[k,j];
+	    }
+	}
+    }
+}
+
+void solve(SMatrix LU, double[] b)
+{
+    size_t n = LU.ia.length-1;
+    assert(b.length == n);
+    // Forward elimination
+    foreach ( i; 1 .. n ) {
+	foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
+	    // Only work up to i
+	    if ( j >= i ) break;
+	    double multiplier = LU[i,j];
+	    b[i] -= multiplier * b[j];
+	}
+    }
+    // Back substitution
+    b[n-1] /= LU[n-1,n-1];
+    for ( int i = to!int(n-2); i >= 0; --i ) {
+	double sum = b[i];
+	foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
+	    // Only work with j >= i+1
+	    if ( j <= i ) continue;
+	    sum -= LU[i,j] * b[j];
+	}
+	b[i] = sum/LU[i,i];
+    }
+}
+
 version(smla_test) {
     import util.msg_service;
     int main() {
+	// This example matrix is from Saad (2003), Sec. 3.4
 	auto a = new SMatrix([1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
 			     [0, 3, 0, 1, 3, 0, 2, 3, 4, 2, 3, 4],
 			     [0, 2, 5, 9, 11, 12]);
@@ -124,13 +197,58 @@ version(smla_test) {
 	b.addRow([12.], [4]);
 	assert(approxEqualMatrix(a, b), failedUnitTest());
 	// Test matrix multiply
-	double[] v = [1., 1., 1., 1., 1.];
+	double[] v = [1., 2., 3., 4., 5.];
 	double[] c;
 	c.length = v.length;
 	multiply(a, v, c);
-	double[] expected_c = [3., 12., 30., 21., 12.];
+	double[] expected_c = [9., 31., 104., 74., 60.];
 	foreach ( i; 0 .. c.length ) {
 	    assert(approxEqual(c[i], expected_c[i]), failedUnitTest());
+	}
+	// Test decompILU0
+	// This example matrix and decomposition is from Gerard and Wheatley, 6th ed, Sec. 2.4
+	auto d = new SMatrix();
+	d.addRow([-4., 2.], [0, 1]);
+	d.addRow([1., -4., 1.], [0, 1, 2]);
+	d.addRow([1., -4., 1.], [1, 2, 3]);
+	d.addRow([1., -4., 1.], [2, 3, 4]);
+	d.addRow([2., -4.], [3, 4]);
+	decompILU0(d);
+	auto dLU = new SMatrix();
+	dLU.addRow([-4., 2.], [0, 1]);
+	dLU.addRow([-0.25, -3.5, 1.], [0, 1, 2]);
+	dLU.addRow([-0.2857, -3.7143, 1.], [1, 2, 3]);
+	dLU.addRow([-0.2692, -3.7308, 1.], [2, 3, 4]);
+	dLU.addRow([-0.5361, -3.4639], [3, 4]);
+	assert(approxEqualMatrix(d, dLU), failedUnitTest());
+	// Test solve.
+	// Let's give the ILU(0) method a triangular matrix that is can solve exactly.
+	// This example is taken from Faires and Burden (1993), Sec. 6.6, example 3. 
+	auto e = new SMatrix();
+	e.addRow([2., -1.], [0, 1]);
+	e.addRow([-1., 2., -1.], [0, 1, 2]);
+	e.addRow([-1., 2., -1.], [1, 2, 3]);
+	e.addRow([-1., 2.], [2, 3]);
+	decompILU0(e);
+	double[] B = [1., 0., 0., 1.];
+	solve(e, B);
+	double[] B_exp = [1., 1., 1., 1.];
+	foreach ( i; 0 .. B.length ) {
+	    assert(approxEqual(B[i], B_exp[i]), failedUnitTest());
+	}
+	// Now let's see how we go at an approximate solve by using a non-triangular matrix.
+	// This is example 2.2 from Gerard and Wheatley, 6th edition
+	auto f = new SMatrix();
+	f.addRow([3., 2., -1., 2.], [0, 1, 2, 3]);
+	f.addRow([1., 4., 2.], [0, 1, 3]);
+	f.addRow([2., 1., 2., -1.], [0, 1, 2, 3]);
+	f.addRow([1., 1., -1., 3.], [0, 1, 2, 3]);
+	decompILU0(f);
+	double[] C = [2., 2., 0., 0.];
+	solve(f, C);
+	double[] C_exp = [0.333333, 0.666667, -1, -0.666667];
+	foreach ( i; 0 .. C.length ) {
+	    assert(approxEqual(C[i], C_exp[i]), failedUnitTest());
 	}
 
 	return 0;
