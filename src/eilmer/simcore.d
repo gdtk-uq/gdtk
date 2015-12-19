@@ -30,6 +30,7 @@ import sblock;
 import ssolidblock;
 import solidprops;
 import bc;
+import ghost_cell_effect;
 import user_defined_source_terms;
 import boundary_flux_effect;
 import solid_udf_source_terms;
@@ -87,6 +88,19 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	    cell.decode_conserved(0, 0, myblk.omegaz);
 	}
 	myblk.set_cell_dt_chem(-1.0);
+    }
+    // Now that the cells for all gas blocks have been initialized,
+    // we can sift through the boundary condition effects and
+    // set up the ghost-cell mapping for the appropriate boundaries.
+    foreach (myblk; parallel(gasBlocks,1)) {
+	foreach (bc; myblk.bc) {
+	    foreach (gce; bc.preReconAction) {
+		if (gce.type == "MappedCellExchangeCopy") {
+		    auto mygce = cast(GhostCellMappedCellExchangeCopy)gce;
+		    mygce.set_up_cell_mapping();
+		}
+	    }
+	}
     }
     version (gpu_chem) {
 	initGPUChem();

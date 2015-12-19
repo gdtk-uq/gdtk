@@ -1586,9 +1586,8 @@ public:
     // For each ghost cell associated with the boundary,
     // we will have a corresponding "mapped cell" from which we will copy
     // the flow conditions.
-    // We keep a record of the block and the cell index within that block.
-    size_t[] other_block_index;
-    size_t[] other_cell_index;
+    BasicCell[] ghost_cells;
+    BasicCell[] mapped_cells;
     // Parameters for the calculation of the mapped-cell location.
     Vector3 c0 = Vector3(0.0, 0.0, 0.0); // default origin
     Vector3 n = Vector3(0.0, 0.0, 1.0); // z-axis
@@ -1631,23 +1630,115 @@ public:
 
     void set_up_cell_mapping()
     {
-	// stage_2_construction for this boundary condition
-	//
+	// Stage-2 construction for this boundary condition.
 	// Needs to be called after the cell geometries have been computed.
-	// To actually call this function from a BoundaryCondition reference,
-	// we might have to put it into the base class as an abstract method
-	// and override it here.  We could also use a cast.  To be decided...
-	throw new Error("GhostCellMappedCellExchangeCopy.set_up_cell_mapping() not yet implemented");
-    }
+	final switch (blk.grid_type) {
+	case Grid_t.unstructured_grid: 
+	    writeln("Set up mapping to unstructured-grid ghost cells");
+	    BoundaryCondition bc = blk.bc[which_boundary];
+	    foreach (i, f; bc.faces) {
+		if (bc.outsigns[i] == 1) {
+		    ghost_cells ~= f.right_cells[0];
+		    ghost_cells ~= f.right_cells[1];
+		} else {
+		    ghost_cells ~= f.left_cells[0];
+		    ghost_cells ~= f.left_cells[1];
+		}
+	    } // end foreach face
+	    break;
+	case Grid_t.structured_grid:
+	    writeln("Set up mapping to structured-grid ghost cells");
+	    size_t i, j, k;
+	    final switch (which_boundary) {
+	    case Face.north:
+		j = blk.jmax;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (i = blk.imin; i <= blk.imax; ++i) {
+			ghost_cells ~= blk.get_cell(i,j+1,k);
+			ghost_cells ~= blk.get_cell(i,j+2,k);
+		    } // end i loop
+		} // for k
+		break;
+	    case Face.east:
+		i = blk.imax;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			ghost_cells ~= blk.get_cell(i+1,j,k);
+			ghost_cells ~= blk.get_cell(i+2,j,k);
+		    } // end j loop
+		} // for k
+		break;
+	    case Face.south:
+		j = blk.jmin;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (i = blk.imin; i <= blk.imax; ++i) {
+			ghost_cells ~= blk.get_cell(i,j-1,k);
+			ghost_cells ~= blk.get_cell(i,j-2,k);
+		    } // end i loop
+		} // for k
+		break;
+	    case Face.west:
+		i = blk.imin;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			ghost_cells ~= blk.get_cell(i-1,j,k);
+			ghost_cells ~= blk.get_cell(i-2,j,k);
+		    } // end j loop
+		} // for k
+		break;
+	    case Face.top:
+		k = blk.kmax;
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			ghost_cells ~= blk.get_cell(i,j,k+1);
+			ghost_cells ~= blk.get_cell(i,j,k+2);
+		    } // end j loop
+		} // for i
+		break;
+	    case Face.bottom:
+		k = blk.kmin;
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			ghost_cells ~= blk.get_cell(i,j,k-1);
+			ghost_cells ~= blk.get_cell(i,j,k-2);
+		    } // end j loop
+		} // for i
+		break;
+	    } // end switch
+	} // end switch blk.grid_type
+	// Now that we have a collection of the local ghost cells,
+	// locate the corresponding active cell so that we can later
+	// copy that cell's flow state.
+	foreach (mygc; ghost_cells) {
+	    Vector3 mypos = mygc.pos[0]; // [TODO] apply transformation
+	    BasicCell closest_cell = gasBlocks[0].cells[0];
+	    Vector3 cellpos = closest_cell.pos[0];
+	    double min_distance = abs(cellpos - mypos);
+	    foreach (b; gasBlocks) {
+		foreach (cell; b.cells) {
+		    double distance = abs(cell.pos[0] - mypos);
+		    if (distance < min_distance) {
+			closest_cell = cell;
+			min_distance = distance;
+		    }
+		}
+	    }
+	    mapped_cells ~= closest_cell;
+	} // end foreach mygc
+    } // end set_up_cell_mapping()
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("GhostCellMappedCellExchangeCopy.apply_unstructured_grid() not yet implemented");
+	foreach (i; 0 .. ghost_cells.length) {
+	    ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+	}
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("GhostCellMappedCellExchangeCopy.apply_structured_grid() not yet implemented");
+	foreach (i; 0 .. ghost_cells.length) {
+	    ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+	}
     }
 } // end class GhostCellMappedCellExchangeCopy
 

@@ -39,20 +39,20 @@ fe = Line:new{f, e}; ed = Line:new{e, d} -- upper boundary
 af = Line:new{a, f}; be = Line:new{b, e}; cd = Line:new{c, d} -- vertical lines
 -- Mesh the patches, with particular discretisation.
 nx0 = 10; nx1 = 30; ny = 40
--- grid0 = StructuredGrid:new{psurface=makePatch{fe, be, ab, af}, niv=nx0+1, njv=ny+1}
+grid0 = StructuredGrid:new{psurface=makePatch{fe, be, ab, af}, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=makePatch{ed, cd, bc, be, gridType="ao"}, niv=nx1+1, njv=ny+1}
--- Define the flow-solution blocks. JUST 1 FOR THE MOMENT
---[[
-   blk0 = UBlock:new{grid=UnstructuredGrid:new{sgrid=grid0},
-   fillCondition=inflow, label="BLOCK-0"}
---]]
+-- Define the flow-solution blocks.
+blk0 = UBlock:new{grid=UnstructuredGrid:new{sgrid=grid0},
+		  fillCondition=inflow, label="BLOCK-0"}
 blk1 = UBlock:new{grid=UnstructuredGrid:new{sgrid=grid1}, 
 		  fillCondition=initial,
 		  label="BLOCK-1",
 		  hcellList={9,0}}
 -- Set boundary conditions.
 -- identifyBlockConnections()
-blk1.bcList[3] = InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}
+blk0.bcList[3] = InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}
+blk0.bcList[1] = ExchangeBC_MappedCell:new{}
+blk1.bcList[3] = ExchangeBC_MappedCell:new{}
 blk1.bcList[1] = OutFlowBC_Simple:new{label="outflow-boundary"}
 
 -- Do a little more setting of global data.
