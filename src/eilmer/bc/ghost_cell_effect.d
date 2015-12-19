@@ -91,11 +91,14 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
     case "full_face_exchange_copy":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
 	string otherFaceName = getJSONstring(jsonData, "other_face", "none");
-	
 	int neighbourOrientation = getJSONint(jsonData, "orientation", 0);
+	bool rvq = getJSONbool(jsonData, "reorient_vector_quantities", false);
+	double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
+					      [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
 	newGCE = new GhostCellFullFaceExchangeCopy(blk_id, boundary,
 						   otherBlock, face_index(otherFaceName),
-						   neighbourOrientation);
+						   neighbourOrientation,
+						   rvq, Rmatrix);
 	break;
     case "mapped_cell_exchange_copy":
 	int[][] mapped_cells;
@@ -1524,21 +1527,35 @@ public:
     Block neighbourBlock;
     int neighbourFace;
     int neighbourOrientation;
+    bool reorient_vector_quantities;
+    double[] Rmatrix;
 
     this(int id, int boundary,
-	 int otherBlock, int otherFace, int orient)
+	 int otherBlock, int otherFace, int orient,
+	 bool reorient_vector_quantities,
+	 ref const(double[]) Rmatrix)
     {
 	super(id, boundary, "FullFaceExchangeCopy");
 	neighbourBlock = gasBlocks[otherBlock];
 	neighbourFace = otherFace;
 	neighbourOrientation = orient;
+	this.reorient_vector_quantities = reorient_vector_quantities;
+	this.Rmatrix = Rmatrix.dup();
     }
 
     override string toString() const
     { 
-	return "FullFaceExchangeCopy(otherBlock=" ~ to!string(neighbourBlock.id) ~ 
+	string str = "FullFaceExchangeCopy(otherBlock=" ~ to!string(neighbourBlock.id) ~ 
 	    ", otherFace=" ~ to!string(neighbourFace) ~ 
-	    ", orient=" ~ to!string(neighbourOrientation) ~ ")";
+	    ", orient=" ~ to!string(neighbourOrientation) ~
+	    ", reorient_vector_quantities=" ~ to!string(reorient_vector_quantities) ~
+	    ", Rmatrix=[";
+	foreach(i, v; Rmatrix) {
+	    str ~= to!string(v);
+	    str ~= (i < Rmatrix.length-1) ? ", " : "]";
+	}
+	str ~= ")";
+	return str;
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -1551,7 +1568,8 @@ public:
 	blk.copy_into_ghost_cells(which_boundary, 
 				  neighbourBlock,
 				  neighbourFace, neighbourOrientation,
-				  CopyDataOption.all, true);
+				  CopyDataOption.all, true,
+				  reorient_vector_quantities, Rmatrix);
     }
 } // end class GhostCellFullFaceExchangeCopy
 

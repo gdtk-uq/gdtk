@@ -271,6 +271,13 @@ public:
 	}
 	return is_data_valid;
     } // end check_data()
+
+    @nogc
+    void reorient_vector_quantities(const(double[]) Rmatrix)
+    {
+	vel.apply_matrix_transform(Rmatrix);
+	B.apply_matrix_transform(Rmatrix);
+    }
 } // end class FlowState
 
 string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) fs)

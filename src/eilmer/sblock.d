@@ -1739,7 +1739,9 @@ public:
     @nogc
     override void copy_into_ghost_cells(int destination_face,
 					ref Block src_blk, int src_face, int src_orientation,
-					int type_of_copy, bool with_encode)
+					int type_of_copy, bool with_encode,
+					bool reorient_vector_quantities,
+					ref const(double[]) Rmatrix)
     {
 	size_t i_dest, i_src, j_dest, j_src, k_dest, k_src, i, j, k;
 	FVCell src0, dest0, src1, dest1;
@@ -1747,13 +1749,18 @@ public:
 	//
 	@nogc
 	void copy_pair_of_cells(FVCell src0, FVCell dest0, 
-				FVCell src1, FVCell dest1,
-				bool with_encode)
+				FVCell src1, FVCell dest1)
 	{
 	    dest0.copy_values_from(src0, type_of_copy);
-	    if (with_encode) dest0.encode_conserved(gtl, 0, omegaz);
 	    dest1.copy_values_from(src1, type_of_copy);
-	    if (with_encode) dest1.encode_conserved(gtl, 0, omegaz);
+	    if (reorient_vector_quantities) {
+		dest0.fs.reorient_vector_quantities(Rmatrix);
+		dest1.fs.reorient_vector_quantities(Rmatrix);
+	    }
+	    if (with_encode) {
+		dest0.encode_conserved(gtl, 0, omegaz);
+		dest1.encode_conserved(gtl, 0, omegaz);
+	    }
 	}
 	//
 	if (myConfig.dimensions == 2) {
@@ -1793,7 +1800,7 @@ public:
 		    } // end switch src_face
 		    dest0 = get_cell(i_dest,j_dest+1);
 		    dest1 = get_cell(i_dest,j_dest+2);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // i loop
 		break;
 	    case Face.east:
@@ -1830,7 +1837,7 @@ public:
 		    } // end switch src_face
 		    dest0 = get_cell(i_dest+1,j_dest);
 		    dest1 = get_cell(i_dest+2,j_dest);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // j loop
 		break;
 	    case Face.south:
@@ -1867,7 +1874,7 @@ public:
 		    } // end switch src_face
 		    dest0 = get_cell(i_dest,j_dest-1);
 		    dest1 = get_cell(i_dest,j_dest-2);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // i loop
 		break;
 	    case Face.west:
@@ -1904,7 +1911,7 @@ public:
 		    } // end switch src_face
 		    dest0 = get_cell(i_dest-1,j_dest);
 		    dest1 = get_cell(i_dest-2,j_dest);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // j loop
 		break;
 	    default:
@@ -1996,7 +2003,7 @@ public:
 		    } // end switch (src_face)
 		    dest0 = get_cell(i_dest,j_dest+1,k_dest);
 		    dest1 = get_cell(i_dest,j_dest+2,k_dest);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // k loop
 	    } // i loop
 	    break;
@@ -2081,7 +2088,7 @@ public:
 		    } // end switch (src_face)
 		    dest0 = get_cell(i_dest+1,j_dest,k_dest);
 		    dest1 = get_cell(i_dest+2,j_dest,k_dest);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // k loop
 	    } // j loop
 	    break;
@@ -2166,7 +2173,7 @@ public:
 		    } // end switch (src_face)
 		    dest0 = get_cell(i_dest,j_dest-1,k_dest);
 		    dest1 = get_cell(i_dest,j_dest-2,k_dest);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // k loop
 	    } // i loop
 	    break;
@@ -2251,7 +2258,7 @@ public:
 		    } // end switch (src_face)
 		    dest0 = get_cell(i_dest-1,j_dest,k_dest);
 		    dest1 = get_cell(i_dest-2,j_dest,k_dest);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // k loop
 	    } // j loop
 	    break;
@@ -2336,7 +2343,7 @@ public:
 		    } // end switch (src_face)
 		    dest0 = get_cell(i_dest,j_dest,k_dest+1);
 		    dest1 = get_cell(i_dest,j_dest,k_dest+2);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // i loop
 	    } // j loop
 	    break;
@@ -2421,7 +2428,7 @@ public:
 		    } // end switch src_face
 		    dest0 = get_cell(i_dest,j_dest,k_dest-1);
 		    dest1 = get_cell(i_dest,j_dest,k_dest-2);
-		    copy_pair_of_cells(src0, dest0, src1, dest1, with_encode);
+		    copy_pair_of_cells(src0, dest0, src1, dest1);
 		} // i loop
 	    } // j loop
 	} // end switch destination_face

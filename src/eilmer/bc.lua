@@ -101,14 +101,24 @@ function FromStagnation:tojson()
    return str
 end
 
-FullFaceExchangeCopy = GhostCellEffect:new{otherBlock=nil, otherFace=nil, orientation=-1}
+FullFaceExchangeCopy = GhostCellEffect:new{otherBlock=nil, otherFace=nil, orientation=-1,
+					   reorient_vector_quantities=false,
+					   Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}
 FullFaceExchangeCopy.type = "full_face_exchange_copy"
 function FullFaceExchangeCopy:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
    str = str .. string.format('"other_block": %d, ', self.otherBlock)
    str = str .. string.format('"other_face": "%s", ', self.otherFace)
-   str = str .. string.format('"orientation": %d', self.orientation)
-   str = str .. '}'
+   str = str .. string.format('"orientation": %d, ', self.orientation)
+   str = str .. string.format('"reorient_vector_quantities": "%s", ',
+			      tostring(self.reorient_vector_quantities))
+   str = str .. string.format('"Rmatrix": [')
+   for i,v in ipairs(self.Rmatrix) do
+      str = str .. string.format('%f', v)
+      if i < #self.Rmatrix then str = str .. ', ' end
+   end
+   str = str .. ']' -- end of Rmatrix
+   str = str .. '}' -- end of JSON value
    return str
 end
 

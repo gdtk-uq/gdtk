@@ -315,6 +315,20 @@ struct Vector3 {
     }
 
     /**
+     * General matrix transformation (used when rotating flowstate vectors).
+     */
+    @nogc void apply_matrix_transform(ref const(double[]) Rmatrix)
+    {
+	// Write out the matrix multiplication, long-hand.
+	double old_p0 = _p[0];
+	double old_p1 = _p[1];
+	double old_p2 = _p[2];
+	_p[0] = Rmatrix[0]*old_p0 + Rmatrix[1]*old_p1 + Rmatrix[2]*old_p2;
+	_p[1] = Rmatrix[3]*old_p0 + Rmatrix[4]*old_p1 + Rmatrix[5]*old_p2;
+	_p[2] = Rmatrix[6]*old_p0 + Rmatrix[7]*old_p1 + Rmatrix[8]*old_p2;
+    }
+
+    /**
      * Compute mirror-image location for plane defined by point and normal.
      */
     @nogc ref Vector3 mirror_image(ref const(Vector3) point,
