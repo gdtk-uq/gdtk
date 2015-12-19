@@ -95,8 +95,8 @@ Vector3 getJSONVector3(JSONValue jsonData, string key, Vector3 defaultValue)
 	foreach (i, json_val; json_values) {
 	    switch (i) {
 	    case 0: value.refx = to!double(json_val.floating); break;
-	    case 1: value.refx = to!double(json_val.floating); break;
-	    case 2: value.refx = to!double(json_val.floating); break;
+	    case 1: value.refy = to!double(json_val.floating); break;
+	    case 2: value.refz = to!double(json_val.floating); break;
 	    default:
 	    }
 	}

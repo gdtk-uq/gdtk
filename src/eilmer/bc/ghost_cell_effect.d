@@ -101,8 +101,16 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 						   rvq, Rmatrix);
 	break;
     case "mapped_cell_exchange_copy":
-	int[][] mapped_cells;
-	newGCE = new GhostCellMappedCellExchangeCopy(blk_id, boundary, mapped_cells);
+	Vector3 c0 = getJSONVector3(jsonData, "c0", Vector3(0.0,0.0,0.0));
+	Vector3 n = getJSONVector3(jsonData, "n", Vector3(0.0,0.0,1.0));
+	double alpha = getJSONdouble(jsonData, "alpha", 0.0);
+	Vector3 delta = getJSONVector3(jsonData, "delta", Vector3(0.0,0.0,0.0));
+	bool rvq = getJSONbool(jsonData, "reorient_vector_quantities", false);
+	double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
+					      [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
+	newGCE = new GhostCellMappedCellExchangeCopy(blk_id, boundary,
+						     c0, n, alpha, delta,
+						     rvq, Rmatrix);
 	break;
     case "user_defined":
 	string fname = getJSONstring(jsonData, "filename", "none");
@@ -1575,25 +1583,61 @@ public:
 
 class GhostCellMappedCellExchangeCopy : GhostCellEffect {
 public:
-    // For each ghost cell associated with the boundary.
-    // the following data structure stores 4 integers,
-    // specifying the mapped-cell block and its ijk-indices,
-    int[][] mapped_cells;
-    // These data are (i,j,k)-triples indexed by [other_block][other_face]
-    // and are used by the distributed-memory mapped-cell copying functions
-    // to marshall and send the requested data.
-    int[][][] incoming_mapped_cells; 
-    int[][][] outgoing_mapped_cells;
+    // For each ghost cell associated with the boundary,
+    // we will have a corresponding "mapped cell" from which we will copy
+    // the flow conditions.
+    // We keep a record of the block and the cell index within that block.
+    size_t[] other_block_index;
+    size_t[] other_cell_index;
+    // Parameters for the calculation of the mapped-cell location.
+    Vector3 c0 = Vector3(0.0, 0.0, 0.0); // default origin
+    Vector3 n = Vector3(0.0, 0.0, 1.0); // z-axis
+    double alpha = 0.0; // rotation angle (radians) about specified axis vector
+    Vector3 delta = Vector3(0.0, 0.0, 0.0); // default zero translation
+    // Parameters for the optional rotation of copied vector data.
+    bool reorient_vector_quantities;
+    double[] Rmatrix;
 
-    this(int id, int boundary, int[][] mapped_cells)
+    this(int id, int boundary,
+	 ref const(Vector3) c0, ref const(Vector3) n, double alpha,
+	 ref const(Vector3) delta,
+	 bool reorient_vector_quantities,
+	 ref const(double[]) Rmatrix)
     {
 	super(id, boundary, "MappedCellExchangeCopy");
-	assert(false, "Not implemented yet");
+	this.c0 = c0;
+	this.n = n;
+	this.alpha = alpha;
+	this.delta = delta;
+	this.reorient_vector_quantities = reorient_vector_quantities;
+	this.Rmatrix = Rmatrix.dup();
     }
 
     override string toString() const
     { 
-	return "MappedCellExchangeCopy(" ~ ")";
+	string str = "MappedCellExchangeCopy(c0=" ~ to!string(c0) ~ 
+	    ", n=" ~ to!string(n) ~ 
+	    ", alpha=" ~ to!string(alpha) ~
+	    ", delta=" ~ to!string(delta) ~
+	    ", reorient_vector_quantities=" ~ to!string(reorient_vector_quantities) ~
+	    ", Rmatrix=[";
+	foreach(i, v; Rmatrix) {
+	    str ~= to!string(v);
+	    str ~= (i < Rmatrix.length-1) ? ", " : "]";
+	}
+	str ~= ")";
+	return str;
+    }
+
+    void set_up_cell_mapping()
+    {
+	// stage_2_construction for this boundary condition
+	//
+	// Needs to be called after the cell geometries have been computed.
+	// To actually call this function from a BoundaryCondition reference,
+	// we might have to put it into the base class as an abstract method
+	// and override it here.  We could also use a cast.  To be decided...
+	throw new Error("GhostCellMappedCellExchangeCopy.set_up_cell_mapping() not yet implemented");
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)

@@ -122,6 +122,31 @@ function FullFaceExchangeCopy:tojson()
    return str
 end
 
+MappedCellExchangeCopy = GhostCellEffect:new{c0=Vector3:new{0.0,0.0,0.0},
+					     n=Vector3:new{0.0,0.0,1.0},
+					     alpha=0.0,
+					     delta=Vector3:new{0.0,0.0,0.0},
+					     reorient_vector_quantities=false,
+					     Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}
+MappedCellExchangeCopy.type = "mapped_cell_exchange_copy"
+function MappedCellExchangeCopy:tojson()
+   local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format('"c0": [%f, %f, %f], ', self.c0:x(), self.c0:y(), self.c0:z())
+   str = str .. string.format('"n": [%f, %f, %f], ', self.n:x(), self.n:y(), self.n:z())
+   str = str .. string.format('"alpha": %f, ', self.alpha)
+   str = str .. string.format('"delta": [%f, %f, %f], ', self.delta:x(), self.delta:y(), self.delta:z())
+   str = str .. string.format('"reorient_vector_quantities": "%s", ',
+			      tostring(self.reorient_vector_quantities))
+   str = str .. string.format('"Rmatrix": [')
+   for i,v in ipairs(self.Rmatrix) do
+      str = str .. string.format('%f', v)
+      if i < #self.Rmatrix then str = str .. ', ' end
+   end
+   str = str .. ']' -- end of Rmatrix
+   str = str .. '}' -- end of JSON value
+   return str
+end
+
 UserDefinedGhostCell = GhostCellEffect:new{fileName='user-defined-bc.lua'}
 UserDefinedGhostCell.type = "user_defined"
 function UserDefinedGhostCell:tojson()
@@ -161,8 +186,8 @@ TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
 TranslatingSurface.type = "translating_surface"
 function TranslatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "v_trans": [%f, %f, %f]', self.v_trans.x, 
-			      self.v_trans.y, self.v_trans.z)
+   str = str .. string.format(' "v_trans": [%f, %f, %f]', self.v_trans:x(), 
+			      self.v_trans:y(), self.v_trans:z())
    str = str .. '}'
    return str
 end
@@ -172,10 +197,10 @@ RotatingSurface = BoundaryInterfaceEffect:new{centre=nil, r_omega=nil}
 RotatingSurface.type = "rotating_surface"
 function RotatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "centre": [%f, %f, %f],', self.centre.x, 
-			      self.centre.y, self.centre.z)
-   str = str .. string.format(' "r_omega": [%f, %f, %f]', self.r_omega.x, 
-			      self.r_omega.y, self.r_omega.z)
+   str = str .. string.format(' "centre": [%f, %f, %f],', self.centre:x(), 
+			      self.centre:y(), self.centre:z())
+   str = str .. string.format(' "r_omega": [%f, %f, %f]', self.r_omega:x(), 
+			      self.r_omega:y(), self.r_omega:z())
    str = str .. '}'
    return str
 end
@@ -253,6 +278,8 @@ function EnergyFluxFromAdjacentSolid:tojson()
 end
 
 -- Class for (complete) BoundaryCondition
+-- BoundaryConditions consist of lists of actions to be done
+-- at particular stages of the gas-dynamic update.
 
 BoundaryCondition = {
    label = "",
@@ -461,7 +488,20 @@ function ExchangeBC_FullFace:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { FullFaceExchangeCopy:new{otherBlock=o.otherBlock,
 						 otherFace=o.otherFace,
-						 orientation=o.orientation} }
+						 orientation=o.orientation,
+						 reorient_vector_quantities=o.reorient_vector_quantities,
+						 Rmatrix=o.Rmatrix} }
+   o.preSpatialDerivAction = { UpdateThermoTransCoeffs:new() }
+   return o
+end
+
+ExchangeBC_MappedCell = BoundaryCondition:new()
+ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
+function ExchangeBC_MappedCell:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { MappedCellExchangeCopy:new{c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
+						   reorient_vector_quantities=o.reorient_vector_quantities,
+						   Rmatrix=o.Rmatrix} }
    o.preSpatialDerivAction = { UpdateThermoTransCoeffs:new() }
    return o
 end

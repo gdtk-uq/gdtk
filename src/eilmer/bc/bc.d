@@ -111,33 +111,30 @@ public:
     {
 	char[] repr;
 	repr ~= "BoundaryCondition(";
-	repr ~= "label= " ~ label ~ ", type= " ~ type ~ ", group= " ~ group ~ ", ";
+	repr ~= "label= " ~ label ~ ", type= " ~ type ~ ", group= " ~ group;
 	if ( preReconAction.length > 0 ) {
-	    repr ~= "preReconAction=[" ~ to!string(preReconAction[0]);
+	    repr ~= ", preReconAction=[" ~ to!string(preReconAction[0]);
 	    foreach (i; 1 .. preReconAction.length) {
 		repr ~= ", " ~ to!string(preReconAction[i]);
 	    }
 	    repr ~= "]";
 	}
-	repr ~= ", ";
 	if ( postConvFluxAction.length > 0 ) {
-	    repr ~= "postConvFluxAction=[" ~ to!string(postConvFluxAction[0]);
+	    repr ~= ", postConvFluxAction=[" ~ to!string(postConvFluxAction[0]);
 	    foreach (i; 1 .. postConvFluxAction.length) {
 		repr ~= ", " ~ to!string(postConvFluxAction[i]);
 	    }
 	    repr ~= "]";
 	}
-	repr ~= ")";
 	if ( preSpatialDerivAction.length > 0 ) {
-	    repr ~= "preSpatialDerivAction=[" ~ to!string(preSpatialDerivAction[0]);
+	    repr ~= ", preSpatialDerivAction=[" ~ to!string(preSpatialDerivAction[0]);
 	    foreach (i; 1 .. preSpatialDerivAction.length) {
 		repr ~= ", " ~ to!string(preSpatialDerivAction[i]);
 	    }
 	    repr ~= "]";
 	}
-	repr ~= ", ";
 	if ( postDiffFluxAction.length > 0 ) {
-	    repr ~= "postDiffFluxAction=[" ~ to!string(postDiffFluxAction[0]);
+	    repr ~= ", postDiffFluxAction=[" ~ to!string(postDiffFluxAction[0]);
 	    foreach (i; 1 .. postDiffFluxAction.length) {
 		repr ~= ", " ~ to!string(postDiffFluxAction[i]);
 	    }
