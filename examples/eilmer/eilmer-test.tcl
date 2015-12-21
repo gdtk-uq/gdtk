@@ -31,6 +31,7 @@ for {set i 0} {$i < $argc} {incr i} {
     }
 }
 set test_scripts [list "2D/cone20-simple/cone20.test"]
+lappend test_scripts "2D/cone20-usg/cone20-usg.test"
 # lappend test_scripts "2D/sod/N2-O2/sod.test"
 lappend test_scripts "2D/back-nozzle/back.test"
 # lappend test_scripts "2D/methane-reactor/psr.test"
