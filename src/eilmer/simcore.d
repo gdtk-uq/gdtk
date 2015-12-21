@@ -92,7 +92,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.
-    foreach (myblk; parallel(gasBlocks,1)) {
+    // Serial loop because the cell-mapping function searches across all blocks
+    foreach (myblk; gasBlocks) {
 	foreach (bc; myblk.bc) {
 	    foreach (gce; bc.preReconAction) {
 		if (gce.type == "MappedCellExchangeCopy") {

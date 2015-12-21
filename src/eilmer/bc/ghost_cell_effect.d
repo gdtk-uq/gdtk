@@ -1711,6 +1711,10 @@ public:
 	// copy that cell's flow state.
 	foreach (mygc; ghost_cells) {
 	    Vector3 mypos = mygc.pos[0]; // [TODO] apply transformation
+	    // Because we need to access all of the gas blocks in the following search,
+	    // we have to run this set_up_cell_mapping function from a serial loop.
+	    // In parallel code, threads other than the main thread get uninitialized
+	    // gersions of the gasBlocks array.
 	    BasicCell closest_cell = gasBlocks[0].cells[0];
 	    Vector3 cellpos = closest_cell.pos[0];
 	    double min_distance = abs(cellpos - mypos);
