@@ -110,7 +110,7 @@ function FullFaceExchangeCopy:tojson()
    str = str .. string.format('"other_block": %d, ', self.otherBlock)
    str = str .. string.format('"other_face": "%s", ', self.otherFace)
    str = str .. string.format('"orientation": %d, ', self.orientation)
-   str = str .. string.format('"reorient_vector_quantities": "%s", ',
+   str = str .. string.format('"reorient_vector_quantities": %s, ',
 			      tostring(self.reorient_vector_quantities))
    str = str .. string.format('"Rmatrix": [')
    for i,v in ipairs(self.Rmatrix) do
@@ -122,20 +122,26 @@ function FullFaceExchangeCopy:tojson()
    return str
 end
 
-MappedCellExchangeCopy = GhostCellEffect:new{c0=Vector3:new{0.0,0.0,0.0},
+MappedCellExchangeCopy = GhostCellEffect:new{transform_position=false,
+					     c0=Vector3:new{0.0,0.0,0.0},
 					     n=Vector3:new{0.0,0.0,1.0},
 					     alpha=0.0,
 					     delta=Vector3:new{0.0,0.0,0.0},
+					     list_mapped_cells=false,
 					     reorient_vector_quantities=false,
 					     Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}
 MappedCellExchangeCopy.type = "mapped_cell_exchange_copy"
 function MappedCellExchangeCopy:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format('"transform_position": %s, ',
+			      tostring(self.transform_position))
    str = str .. string.format('"c0": [%f, %f, %f], ', self.c0:x(), self.c0:y(), self.c0:z())
    str = str .. string.format('"n": [%f, %f, %f], ', self.n:x(), self.n:y(), self.n:z())
    str = str .. string.format('"alpha": %f, ', self.alpha)
    str = str .. string.format('"delta": [%f, %f, %f], ', self.delta:x(), self.delta:y(), self.delta:z())
-   str = str .. string.format('"reorient_vector_quantities": "%s", ',
+   str = str .. string.format('"list_mapped_cells": %s, ',
+			      tostring(self.list_mapped_cells))
+   str = str .. string.format('"reorient_vector_quantities": %s, ',
 			      tostring(self.reorient_vector_quantities))
    str = str .. string.format('"Rmatrix": [')
    for i,v in ipairs(self.Rmatrix) do
@@ -499,7 +505,9 @@ ExchangeBC_MappedCell = BoundaryCondition:new()
 ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
    o = BoundaryCondition.new(self, o)
-   o.preReconAction = { MappedCellExchangeCopy:new{c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
+   o.preReconAction = { MappedCellExchangeCopy:new{transform_position=o.transform_position,
+						   c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
+						   list_mapped_cells=o.list_mapped_cells,
 						   reorient_vector_quantities=o.reorient_vector_quantities,
 						   Rmatrix=o.Rmatrix} }
    o.preSpatialDerivAction = { UpdateThermoTransCoeffs:new() }

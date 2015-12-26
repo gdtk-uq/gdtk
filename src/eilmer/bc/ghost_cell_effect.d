@@ -101,15 +101,17 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 						   rvq, Rmatrix);
 	break;
     case "mapped_cell_exchange_copy":
+	bool transform_pos = getJSONbool(jsonData, "transform_position", false);
 	Vector3 c0 = getJSONVector3(jsonData, "c0", Vector3(0.0,0.0,0.0));
 	Vector3 n = getJSONVector3(jsonData, "n", Vector3(0.0,0.0,1.0));
 	double alpha = getJSONdouble(jsonData, "alpha", 0.0);
 	Vector3 delta = getJSONVector3(jsonData, "delta", Vector3(0.0,0.0,0.0));
+	bool lmc = getJSONbool(jsonData, "list_mapped_cells", false);
 	bool rvq = getJSONbool(jsonData, "reorient_vector_quantities", false);
 	double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
 					      [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
 	newGCE = new GhostCellMappedCellExchangeCopy(blk_id, boundary,
-						     c0, n, alpha, delta,
+						     transform_pos, c0, n, alpha, delta, lmc,
 						     rvq, Rmatrix);
 	break;
     case "user_defined":
@@ -1589,35 +1591,44 @@ public:
     BasicCell[] ghost_cells;
     BasicCell[] mapped_cells;
     // Parameters for the calculation of the mapped-cell location.
+    bool transform_position;
     Vector3 c0 = Vector3(0.0, 0.0, 0.0); // default origin
     Vector3 n = Vector3(0.0, 0.0, 1.0); // z-axis
     double alpha = 0.0; // rotation angle (radians) about specified axis vector
     Vector3 delta = Vector3(0.0, 0.0, 0.0); // default zero translation
+    bool list_mapped_cells;
     // Parameters for the optional rotation of copied vector data.
     bool reorient_vector_quantities;
     double[] Rmatrix;
 
     this(int id, int boundary,
+	 bool transform_pos,
 	 ref const(Vector3) c0, ref const(Vector3) n, double alpha,
 	 ref const(Vector3) delta,
+	 bool list_mapped_cells,
 	 bool reorient_vector_quantities,
 	 ref const(double[]) Rmatrix)
     {
 	super(id, boundary, "MappedCellExchangeCopy");
+	this.transform_position = transform_pos;
 	this.c0 = c0;
-	this.n = n;
+	this.n = n; this.n.normalize();
 	this.alpha = alpha;
 	this.delta = delta;
+	this.list_mapped_cells = list_mapped_cells;
 	this.reorient_vector_quantities = reorient_vector_quantities;
 	this.Rmatrix = Rmatrix.dup();
     }
 
     override string toString() const
     { 
-	string str = "MappedCellExchangeCopy(c0=" ~ to!string(c0) ~ 
+	string str = "MappedCellExchangeCopy(" ~
+	    "transform_position=" ~ to!string(transform_position) ~
+	    ", c0=" ~ to!string(c0) ~ 
 	    ", n=" ~ to!string(n) ~ 
 	    ", alpha=" ~ to!string(alpha) ~
 	    ", delta=" ~ to!string(delta) ~
+	    ", list_mapped_cells=" ~ to!string(list_mapped_cells) ~
 	    ", reorient_vector_quantities=" ~ to!string(reorient_vector_quantities) ~
 	    ", Rmatrix=[";
 	foreach(i, v; Rmatrix) {
@@ -1632,6 +1643,7 @@ public:
     {
 	// Stage-2 construction for this boundary condition.
 	// Needs to be called after the cell geometries have been computed.
+	write("GhostCellMappedCellExchangeCopy: ");
 	final switch (blk.grid_type) {
 	case Grid_t.unstructured_grid: 
 	    writeln("Set up mapping to unstructured-grid ghost cells");
@@ -1709,8 +1721,20 @@ public:
 	// Now that we have a collection of the local ghost cells,
 	// locate the corresponding active cell so that we can later
 	// copy that cell's flow state.
+	if (list_mapped_cells) {
+	    writefln("Mapped cells for block[%d] boundary[%d]:", blk.id, which_boundary);
+	}
 	foreach (mygc; ghost_cells) {
-	    Vector3 mypos = mygc.pos[0]; // [TODO] apply transformation
+	    Vector3 ghostpos = mygc.pos[0];
+	    Vector3 mypos = ghostpos;
+	    if (transform_position) {
+		Vector3 c1 = c0 + dot(n, (ghostpos - c0)) * n;
+		Vector3 t1 = (ghostpos - c1);
+		t1.normalize();
+		Vector3 t2 = cross(n, t1);
+		mypos = c1 + cos(alpha) * t1 + sin(alpha) * t2;
+		mypos += delta;
+	    }
 	    // Because we need to access all of the gas blocks in the following search,
 	    // we have to run this set_up_cell_mapping function from a serial loop.
 	    // In parallel code, threads other than the main thread get uninitialized
@@ -1728,6 +1752,10 @@ public:
 		}
 	    }
 	    mapped_cells ~= closest_cell;
+	    if (list_mapped_cells) {
+		writeln("    ghost-cell-pos=", to!string(mygc.pos[0]), 
+			" mapped-cell-pos=", to!string(closest_cell.pos[0]));
+	    }
 	} // end foreach mygc
     } // end set_up_cell_mapping()
 
@@ -1735,6 +1763,9 @@ public:
     {
 	foreach (i; 0 .. ghost_cells.length) {
 	    ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+	    if (reorient_vector_quantities) {
+		ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
+	    }
 	}
     }
 
@@ -1742,6 +1773,9 @@ public:
     {
 	foreach (i; 0 .. ghost_cells.length) {
 	    ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+	    if (reorient_vector_quantities) {
+		ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
+	    }
 	}
     }
 } // end class GhostCellMappedCellExchangeCopy
