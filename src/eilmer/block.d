@@ -20,7 +20,7 @@ import flowstate;
 import fvvertex;
 import fvinterface;
 import fvcell;
-import viscousflux;
+import flowgradients;
 import bc;
 import user_defined_source_terms;
 

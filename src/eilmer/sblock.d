@@ -28,7 +28,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fluxcalc;
-import viscousflux;
+import flowgradients;
 import fvcore;
 import fvvertex;
 import fvinterface;

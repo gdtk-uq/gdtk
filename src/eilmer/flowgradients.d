@@ -1,13 +1,15 @@
 /**
- * viscousflux.d
- * Viscous-Flux calculation, where the fluxes are driven by molecular-transport effects.
+ * flowgradients.d
+ * Flow-gradient calculation, for use in the viscous fluxes, 
+ * that are driven by molecular-transport effects.
  *
  * Author: Peter J. and Rowan G.
  * Version: 2015-05-02: port essentials from Eilmer3 and refactor (a lot).
  *          2015-05-03: added gradient estimation for 2D flow
+ *          2015-12-27: viscous flux calculation sent to the FVInterface class
  */
 
-module viscousflux;
+module flowgradients;
 
 import std.math;
 import std.stdio;

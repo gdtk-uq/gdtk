@@ -17,7 +17,7 @@ DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo block_demo \
 
 EILMER_FILES := simcore.d fileutil.d readconfig.d json_helper.d \
 		fvcore.d fvcell.d fvvertex.d fvinterface.d \
-		fluxcalc.d onedinterp.d viscousflux.d \
+		fluxcalc.d onedinterp.d flowgradients.d \
 		conservedquantities.d flowstate.d luaflowstate.d \
 		globalconfig.d luaglobalconfig.d globaldata.d \
 		block.d sblock.d ublock.d \
@@ -237,7 +237,7 @@ eilmer-gpu-chem: main.d gpu_chem.d $(EILMER_FILES) \
 
 compute-error: compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \
 	block.d sblock.d ublock.d \
-	fluxcalc.d onedinterp.d viscousflux.d \
+	fluxcalc.d onedinterp.d flowgradients.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d \
 	conservedquantities.d flowstate.d luaflowstate.d \
 	globalconfig.d luaglobalconfig.d globaldata.d \
@@ -248,7 +248,7 @@ compute-error: compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \
 	$(DMD) $(DFLAGS) $(OF)compute-error \
 		compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \
 		fvcore.d fvcell.d fvvertex.d fvinterface.d \
-		fluxcalc.d onedinterp.d viscousflux.d \
+		fluxcalc.d onedinterp.d flowgradients.d \
 		conservedquantities.d flowstate.d luaflowstate.d \
 		globalconfig.d luaglobalconfig.d globaldata.d \
 		block.d sblock.d ublock.d \
