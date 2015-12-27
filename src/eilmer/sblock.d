@@ -954,6 +954,20 @@ public:
 
     void store_references_for_derivative_calc(size_t gtl)
     {
+	if (myConfig.deriv_calc_at_vertices) {
+	    store_references_for_derivative_calc_at_vertices(gtl);
+	} else {
+	    store_references_for_derivative_calc_at_faces(gtl);
+	}
+    }
+
+    void store_references_for_derivative_calc_at_faces(size_t gtl)
+    {
+	throw new Error("Oops, store_references_for_derivative_calc_at_faces() not implemented yet.");
+    }
+
+    void store_references_for_derivative_calc_at_vertices(size_t gtl)
+    {
 	size_t i, j, k;
 	if (myConfig.dimensions == 2) {
 	    // First, do all of the internal secondary cells.
@@ -1450,7 +1464,7 @@ public:
 		vtx.cloud_fs = [c0.fs, c1.fs, c2.fs, c3.fs];
 	    }
 	} // end if (myConfig.dimensions
-    } // end assign_flow_locations_for_derivative_calc()
+    } // end store_references_for_derivative_calc_at_vertices()
 
     override void read_grid(string filename, size_t gtl=0)
     // Read the grid vertices from a gzip file.

@@ -158,6 +158,7 @@ void read_config_file()
     } catch (Exception e) {
 	GlobalConfig.spatial_deriv_calc = SpatialDerivCalc.least_squares;
     }
+    GlobalConfig.deriv_calc_at_vertices = getJSONbool(jsonData, "deriv_calc_at_vertices", true);
     GlobalConfig.viscous_delay = getJSONdouble(jsonData, "viscous_delay", 0.0);
     GlobalConfig.viscous_factor_increment = 
 	getJSONdouble(jsonData, "viscous_factor_increment", 0.01);

@@ -285,17 +285,25 @@ public:
     @nogc
     void flow_property_derivatives(int gtl)
     {
-	if (myConfig.dimensions == 2) {
-	    final switch ( myConfig.spatial_deriv_calc ) {
-	    case SpatialDerivCalc.least_squares:
-		foreach(vtx; vertices) { gradients_xy_leastsq(vtx, myConfig.diffusion); }
-		break;
-	    case SpatialDerivCalc.divergence:
-		foreach(vtx; vertices) { gradients_xy_div(vtx, myConfig.diffusion); }
-	    } // end switch
+	if (myConfig.deriv_calc_at_vertices) {
+	    if (myConfig.dimensions == 2) {
+		final switch ( myConfig.spatial_deriv_calc ) {
+		case SpatialDerivCalc.least_squares:
+		    foreach(vtx; vertices) { gradients_xy_leastsq(vtx, myConfig.diffusion); }
+		    break;
+		case SpatialDerivCalc.divergence:
+		    foreach(vtx; vertices) { gradients_xy_div(vtx, myConfig.diffusion); }
+		} // end switch
+	    } else {
+		foreach(vtx; vertices) { gradients_xyz_leastsq(vtx, myConfig.diffusion); }
+	    } // end if (myConfig.dimensions
+	    foreach (iface; faces) {
+		iface.average_vertex_deriv_values(myConfig);
+	    }
 	} else {
-	    foreach(vtx; vertices) { gradients_xyz_leastsq(vtx, myConfig.diffusion); }
-	} // end if (myConfig.dimensions
+	    // [TODO]
+	    assert(false, "gradients at cell interfaces not implemented");
+	}
     } // end flow_property_derivatives()
 
     @nogc
@@ -306,11 +314,7 @@ public:
 
     void viscous_flux()
     {
-	auto vfwork = new ViscousFluxData(myConfig);
-	foreach (iface; faces) {
-	    vfwork.average_vertex_values(iface);
-	    vfwork.viscous_flux_calc(iface);
-	}
+	foreach (iface; faces) iface.viscous_flux_calc(myConfig); 
     }
 
     @nogc

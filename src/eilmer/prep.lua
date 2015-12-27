@@ -551,12 +551,13 @@ function write_config_file(fileName)
    f:write(string.format('"shear_tolerance": %e,\n', config.shear_tolerance))
    f:write(string.format('"M_inf": %e,\n', config.M_inf))
 
-   f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)));
-   f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)));
-   f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)));
+   f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
+   f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)))
+   f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))
 
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
    f:write(string.format('"spatial_deriv_calc": "%s",\n', config.spatial_deriv_calc))
+   f:write(string.format('"deriv_calc_at_vertices": %s,\n', tostring(config.deriv_calc_at_vertices)))
    f:write(string.format('"viscous_signal_factor": %e,\n', config.viscous_signal_factor))
 
    f:write(string.format('"turbulence_model": "%s",\n',
