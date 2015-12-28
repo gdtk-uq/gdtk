@@ -1108,10 +1108,10 @@ public:
 	double beta_star = 0.09;
 
 	double grad_vel_avg_over_vtx_list(int i, int j)() 
-	    if ( is(typeof(vtx[0].grad_vel[i][j]) == double) )
+	    if ( is(typeof(vtx[0].grad.vel[i][j]) == double) )
 	{
 	    double result = 0.0;
-	    foreach (v; vtx) { result += v.grad_vel[i][j]; }
+	    foreach (v; vtx) { result += v.grad.vel[i][j]; }
 	    return result / vtx.length;
 	}
 
@@ -1279,14 +1279,14 @@ public:
 	double cross_diff;
 	double sigma_d = 0.0;
 	double WWS, X_w, f_beta;
-	mixin(avg_over_vtx_list("grad_vel[0][0]", "dudx"));
-	mixin(avg_over_vtx_list("grad_vel[0][1]", "dudy"));
-	mixin(avg_over_vtx_list("grad_vel[1][0]", "dvdx"));
-	mixin(avg_over_vtx_list("grad_vel[1][1]", "dvdy"));
-	mixin(avg_over_vtx_list("grad_tke.x", "dtkedx"));
-	mixin(avg_over_vtx_list("grad_tke.y", "dtkedy"));
-	mixin(avg_over_vtx_list("grad_omega.x", "domegadx"));
-	mixin(avg_over_vtx_list("grad_omega.y", "domegady"));
+	mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
+	mixin(avg_over_vtx_list("grad.vel[0][1]", "dudy"));
+	mixin(avg_over_vtx_list("grad.vel[1][0]", "dvdx"));
+	mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
+	mixin(avg_over_vtx_list("grad.tke.x", "dtkedx"));
+	mixin(avg_over_vtx_list("grad.tke.y", "dtkedy"));
+	mixin(avg_over_vtx_list("grad.omega.x", "domegadx"));
+	mixin(avg_over_vtx_list("grad.omega.y", "domegady"));
 	if ( myConfig.dimensions == 2 ) {
 	    // 2D cartesian or 2D axisymmetric
 	    if ( myConfig.axisymmetric ) {
@@ -1314,13 +1314,13 @@ public:
 	    // 3D cartesian
 	    double dudz, dvdz, dwdx, dwdy, dwdz;
 	    double dtkedz, domegadz;
-	    mixin(avg_over_vtx_list("grad_vel[0][2]", "dudz"));
-	    mixin(avg_over_vtx_list("grad_vel[1][2]", "dvdz"));
-	    mixin(avg_over_vtx_list("grad_vel[2][0]", "dwdx"));
-	    mixin(avg_over_vtx_list("grad_vel[2][1]", "dwdy"));
-	    mixin(avg_over_vtx_list("grad_vel[2][2]", "dwdz"));
-	    mixin(avg_over_vtx_list("grad_tke.z", "dtkedz"));
-	    mixin(avg_over_vtx_list("grad_omega.z", "domegadz"));
+	    mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
+	    mixin(avg_over_vtx_list("grad.vel[1][2]", "dvdz"));
+	    mixin(avg_over_vtx_list("grad.vel[2][0]", "dwdx"));
+	    mixin(avg_over_vtx_list("grad.vel[2][1]", "dwdy"));
+	    mixin(avg_over_vtx_list("grad.vel[2][2]", "dwdz"));
+	    mixin(avg_over_vtx_list("grad.tke.z", "dtkedz"));
+	    mixin(avg_over_vtx_list("grad.omega.z", "domegadz"));
 	    P_K = 2.0 * fs.mu_t * (dudx*dudx + dvdy*dvdy + dwdz*dwdz)
 		- 2.0/3.0 * fs.mu_t * (dudx + dvdy + dwdz) * (dudx + dvdy + dwdz)
 		- 2.0/3.0 * fs.gas.rho * tke * (dudx + dvdy + dwdz)
@@ -1422,8 +1422,8 @@ public:
 	if (myConfig.axisymmetric) {
 	    // For viscous, axisymmetric flow:
 	    double v_over_y = fs.vel.y / pos[0].y;
-	    double dudx; mixin(avg_over_vtx_list("grad_vel[0][0]", "dudx"));
-	    double dvdy; mixin(avg_over_vtx_list("grad_vel[1][1]", "dvdy"));
+	    double dudx; mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
+	    double dvdy; mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
 	    double mu; mixin(avg_over_iface_list("fs.gas.mu", "mu"));
 	    double mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));
 	    mu += mu_t;
@@ -1452,19 +1452,19 @@ public:
 	    //        the user to enforce.
 	    // Estimate electron pressure gradient as average of all vertices then
 	    // use approximation for work done on electrons: u dot div(pe)
-	    double udivpe, dpedx, dpedy, dpedz;
-	    if ( myConfig.dimensions == 2 ) {
-		mixin(avg_over_vtx_list("grad_pe.x", "dpedx"));
-		mixin(avg_over_vtx_list("grad_pe.y", "dpedy"));
-		udivpe = fs.vel.x * dpedx + fs.vel.y * dpedy;
-	    } else {
-		mixin(avg_over_vtx_list("grad_pe.x", "dpedx"));
-		mixin(avg_over_vtx_list("grad_pe.y", "dpedy"));
-		mixin(avg_over_vtx_list("grad_pe.z", "dpedz"));
-		udivpe = fs.vel.x * dpedx + fs.vel.y * dpedy + fs.vel.z * dpedz;
-	    }
-	    // [TODO] FIXME: Assuming the free electron energy is included in the last mode
-	    Q.energies.back() += udivpe * myConfig.diffusion_factor;
+	    // double udivpe, dpedx, dpedy, dpedz;
+	    // if ( myConfig.dimensions == 2 ) {
+	    // 	mixin(avg_over_vtx_list("grad.pe.x", "dpedx"));
+	    // 	mixin(avg_over_vtx_list("grad.pe.y", "dpedy"));
+	    // 	udivpe = fs.vel.x * dpedx + fs.vel.y * dpedy;
+	    // } else {
+	    // 	mixin(avg_over_vtx_list("grad.pe.x", "dpedx"));
+	    // 	mixin(avg_over_vtx_list("grad.pe.y", "dpedy"));
+	    // 	mixin(avg_over_vtx_list("grad.pe.z", "dpedz"));
+	    // 	udivpe = fs.vel.x * dpedx + fs.vel.y * dpedy + fs.vel.z * dpedz;
+	    // }
+	    // // [TODO] FIXME: Assuming the free electron energy is included in the last mode
+	    // Q.energies.back() += udivpe * myConfig.diffusion_factor;
 	} // end if ( myConfig.electric_field_work )
 	return;
     } // end add_viscous_source_vector()

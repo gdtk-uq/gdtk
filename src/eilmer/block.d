@@ -289,16 +289,22 @@ public:
 	    if (myConfig.dimensions == 2) {
 		final switch ( myConfig.spatial_deriv_calc ) {
 		case SpatialDerivCalc.least_squares:
-		    foreach(vtx; vertices) { gradients_xy_leastsq(vtx, myConfig.diffusion); }
+		    foreach(vtx; vertices) { 
+			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
+		    }
 		    break;
 		case SpatialDerivCalc.divergence:
-		    foreach(vtx; vertices) { gradients_xy_div(vtx, myConfig.diffusion); }
+		    foreach(vtx; vertices) {
+			vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
+		    }
 		} // end switch
 	    } else {
-		foreach(vtx; vertices) { gradients_xyz_leastsq(vtx, myConfig.diffusion); }
+		foreach(vtx; vertices) {
+		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
+		}
 	    } // end if (myConfig.dimensions
 	    foreach (iface; faces) {
-		iface.average_vertex_deriv_values(myConfig);
+		iface.average_vertex_deriv_values();
 	    }
 	} else {
 	    // [TODO]
