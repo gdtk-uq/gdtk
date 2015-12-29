@@ -35,12 +35,16 @@ public:
 	grad = new FlowGradients(gm.n_species);
     }
 
-    this(in FVVertex other)
+    this(FVVertex other)
     {
 	id = other.id;
 	pos = other.pos.dup;
 	vel = other.vel.dup;
 	grad = new FlowGradients(other.grad);
+	// Because we copy the following pointers and references,
+	// we cannot have const (or "in") qualifier on other.
+	cloud_pos = other.cloud_pos.dup();
+	cloud_fs = other.cloud_fs.dup();
     }
 
     @nogc 
@@ -77,6 +81,8 @@ public:
 	repr ~= ", pos=" ~ to!string(pos);
 	repr ~= ", vel=" ~ to!string(vel);
 	repr ~= ", grad=" ~ to!string(grad);
+	repr ~= ", cloud_pos=" ~ to!string(cloud_pos);
+	repr ~= ", cloud_fs=" ~ to!string(cloud_fs);
 	repr ~= ")";
 	return to!string(repr);
     }

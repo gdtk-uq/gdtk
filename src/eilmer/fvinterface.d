@@ -42,6 +42,8 @@ public:
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
     FlowGradients grad;
+    Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
+    FlowState[] cloud_fs; // References to flow states at those points.
 
     this(GasModel gm, size_t id_init=0)
     {
@@ -53,7 +55,7 @@ public:
 	grad = new FlowGradients(gm.n_species);
     }
 
-    this(in FVInterface other, GasModel gm)
+    this(FVInterface other, GasModel gm)
     {
 	id = other.id;
 	pos = other.pos;
@@ -67,6 +69,10 @@ public:
 	fs = new FlowState(other.fs, gm);
 	F = new ConservedQuantities(other.F);
 	grad = new FlowGradients(other.grad);
+	// Because we copy the following pointers and references,
+	// we cannot have const (or "in") qualifier on other.
+	cloud_pos = other.cloud_pos.dup();
+	cloud_fs = other.cloud_fs.dup();
     }
 
     @nogc
@@ -127,6 +133,8 @@ public:
 	repr ~= ", fs=" ~ to!string(fs);
 	repr ~= ", F=" ~ to!string(F);
 	repr ~= ", grad=" ~ to!string(grad);
+	repr ~= ", cloud_pos=" ~ to!string(cloud_pos);
+	repr ~= ", cloud_fs=" ~ to!string(cloud_fs);
 	repr ~= ")";
 	return to!string(repr);
     }

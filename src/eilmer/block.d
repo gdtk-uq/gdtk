@@ -299,6 +299,7 @@ public:
 		    }
 		} // end switch
 	    } else {
+		// Have only least-squares in 3D.
 		foreach(vtx; vertices) {
 		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
 		}
@@ -306,9 +307,25 @@ public:
 	    foreach (iface; faces) {
 		iface.average_vertex_deriv_values();
 	    }
-	} else {
-	    // [TODO]
-	    assert(false, "gradients at cell interfaces not implemented");
+	} else { // evaluate gradients at interfaces
+	    if (myConfig.dimensions == 2) {
+		final switch ( myConfig.spatial_deriv_calc ) {
+		case SpatialDerivCalc.least_squares:
+		    foreach(iface; faces) { 
+			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
+		    }
+		    break;
+		case SpatialDerivCalc.divergence:
+		    foreach(iface; faces) {
+			iface.grad.gradients_xy_div(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
+		    }
+		} // end switch
+	    } else {
+		// Have only least-squares in 3D.
+		foreach(iface; faces) {
+		    iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
+		}
+	    } // end if (myConfig.dimensions
 	}
     } // end flow_property_derivatives()
 

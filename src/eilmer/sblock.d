@@ -963,8 +963,89 @@ public:
 
     void store_references_for_derivative_calc_at_faces(size_t gtl)
     {
-	throw new Error("Oops, store_references_for_derivative_calc_at_faces() not implemented yet.");
-    }
+	size_t i, j, k;
+	if (myConfig.dimensions == 2) {
+	    // First, i-faces
+	    for (i = imin; i <= imax+1; ++i) {
+		for (j = jmin; j <= jmax; ++j) {
+		    FVInterface face = get_ifi(i,j);
+		    // Points nearby.
+		    if (i==imin) {
+			// west boundary
+			FVInterface self = get_ifi(i,j);
+			FVInterface D = get_ifj(i,j);
+			FVCell E = get_cell(i,j);
+			FVInterface F = get_ifj(i,j+1);
+			// Retain locations and references to flow states for later.
+			face.cloud_pos = [&(self.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			face.cloud_fs = [self.fs, D.fs, E.fs, F.fs];
+		    } else if (i == imax+1) {
+			// east boundary
+			FVInterface A = get_ifj(i-1,j+1);
+			FVCell B = get_cell(i-1,j);
+			FVInterface C = get_ifj(i-1,j);
+			FVInterface self = get_ifi(i,j);
+			// Retain locations and references to flow states for later.
+			face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(self.pos)];
+			face.cloud_fs = [A.fs, B.fs, C.fs, self.fs];
+		    } else {
+			// interior face
+			FVInterface A = get_ifj(i-1,j+1);
+			FVCell B = get_cell(i-1,j);
+			FVInterface C = get_ifj(i-1,j);
+			FVInterface D = get_ifj(i,j);
+			FVCell E = get_cell(i,j);
+			FVInterface F = get_ifj(i,j+1);
+			// Retain locations and references to flow states for later.
+			face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), 
+					  &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+		    }
+		} // j loop
+	    } // i loop
+	    // Now, j-faces
+	    for (i = imin; i <= imax; ++i) {
+		for (j = jmin; j <= jmax+1; ++j) {
+		    FVInterface face = get_ifj(i,j);
+		    // Points nearby.
+		    if (j == jmin) {
+			// south boundary
+			FVInterface self = get_ifj(i,j);
+			FVInterface D = get_ifi(i+1,j);
+			FVCell E = get_cell(i,j);
+			FVInterface F = get_ifi(i,j);
+			// Retain locations and references to flow states for later.
+			face.cloud_pos = [&(self.pos), &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			face.cloud_fs = [self.fs, D.fs, E.fs, F.fs];
+		    } else if (j == jmax+1) {
+			// north boundary
+			FVInterface A = get_ifi(i,j-1);
+			FVCell B = get_cell(i,j-1);
+			FVInterface C = get_ifi(i+1,j-1);
+			FVInterface self = get_ifj(i,j);
+			// Retain locations and references to flow states for later.
+			face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(self.pos)];
+			face.cloud_fs = [A.fs, B.fs, C.fs, self.fs];
+		    } else {
+			// interior face
+			FVInterface A = get_ifi(i,j-1);
+			FVCell B = get_cell(i,j-1);
+			FVInterface C = get_ifi(i+1,j-1);
+			FVInterface D = get_ifi(i+1,j);
+			FVCell E = get_cell(i,j);
+			FVInterface F = get_ifi(i,j);
+			// Retain locations and references to flow states for later.
+			face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), 
+					  &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+		    }
+		} // j loop
+	    } // i loop
+	} else { // for 3D.
+	    throw new Error("Oops, store_references_for_derivative_calc_at_faces()" ~
+			    " not implemented yet for 3D.");
+	}
+    } // end store_references_for_derivative_calc_at_faces()
 
     void store_references_for_derivative_calc_at_vertices(size_t gtl)
     {
