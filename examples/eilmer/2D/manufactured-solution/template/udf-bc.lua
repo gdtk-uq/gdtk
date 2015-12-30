@@ -81,7 +81,6 @@ function fillTable(t, x, y)
    t.velz = 0.0
    t.T = {}
    t.T[1] = t.p/(t_rho*R)      -- temperature, K
-   t.massf = {1.0}     -- mass fractions to be provided as a table
    return t
 end
 
