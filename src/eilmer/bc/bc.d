@@ -42,6 +42,7 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     auto postConvFluxActionList = jsonData["post_conv_flux_action"].array;
     foreach ( jsonObj; postConvFluxActionList ) {
 	newBC.postConvFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
+	newBC.ghost_cell_data_available = false;
     }
     auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
     foreach ( jsonObj; preSpatialDerivActionList ) {
