@@ -1,6 +1,6 @@
 // block_moving_grid.d
-// Module (collection) of functions for implementing a moving grid in Eilmer4.
-// Kyle D. original implmentation (udf moving grid, shock fitting) Nov 2015.
+// Module for implementing a moving grid in Eilmer4.
+// Kyle D. original implmentation (moving grid, shock fitting) Nov 2015.
 
 module block_moving_grid;
 
@@ -24,17 +24,18 @@ import bc;
 import block;
 import sblock;
 import geom;
+import boundary_flux_effect;
 
 int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
     size_t i, j, k;
     FVVertex vtx1, vtx2;
     FVInterface IFace;
     Vector3 pos1, pos2, temp;
-    Vector3 averaged_ivel;
+    Vector3 averaged_ivel, vol;
     k = blk.kmin;
     // loop over i-interfaces and compute interface velocity wif'.
     for (j = blk.jmin; j <= blk.jmax; ++j) {
-	for (i = blk.imin; i <= blk.imax+1; ++i) {
+	for (i = blk.imin; i <= blk.imax+1; ++i) {//  i <= blk.imax+1
 	    vtx1 = blk.get_vtx(i,j,k);
 	    vtx2 = blk.get_vtx(i,j+1,k);
 	    IFace = blk.get_ifi(i,j,k);   	
@@ -45,7 +46,9 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	    // Reference: D. Ambrosi, L. Gasparini and L. Vigenano
 	    // Full Potential and Euler solutions for transonic unsteady flow
 	    // Aeronautical Journal November 1994 Eqn 25
-	    temp = 0.5 * cross( pos1, pos2 ) / ( dt * IFace.area[0] );
+	    if ( blk.myConfig.axisymmetric == false ) vol = 0.5 * cross( pos1, pos2 );
+	    else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) /4.0 );
+	    temp = vol / ( dt * IFace.area[0] );
 	    // temp is the interface velocity (W_if) from the GCL
 	    // interface area determined at gtl 0 since GCL formulation
 	    // recommends using initial interfacial area in calculation.
@@ -59,7 +62,7 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	}
     }
     // loop over j-interfaces and compute interface velocity wif'.
-    for (j = blk.jmin; j <= blk.jmax+1; ++j) {
+    for (j = blk.jmin; j <= blk.jmax+1; ++j) { //j <= blk.jmax+
 	for (i = blk.imin; i <= blk.imax; ++i) {
 	    vtx1 = blk.get_vtx(i,j,k);
 	    vtx2 = blk.get_vtx(i+1,j,k);
@@ -67,16 +70,25 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	    pos1 = vtx2.pos[gtl] - vtx1.pos[0];
 	    pos2 = vtx1.pos[gtl] - vtx2.pos[0];
 	    averaged_ivel = (vtx1.vel[0] + vtx2.vel[0]) / 2.0;
-	    temp = 0.5 * cross( pos1, pos2 ) / ( dt * IFace.area[0] );
+	    if ( blk.myConfig.axisymmetric == false ) vol = 0.5 * cross( pos1, pos2 );
+	    else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) /4.0 );
+	    temp = vol / ( dt * IFace.area[0] );
 	    IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
 	    averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);	    
 	    IFace.gvel.refx = temp.z;
 	    IFace.gvel.refy = averaged_ivel.y;
-	    IFace.gvel.refz = averaged_ivel.z;	    
+	    IFace.gvel.refz = averaged_ivel.z;
+	    if ( blk.myConfig.axisymmetric && j == blk.jmin ) {
+		// For axis symmetric cases the cells along the axis of symmetry have 0 interface area,
+		// this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
+		// We choose to set the y and z directions to 0, but take an averaged value for the
+		// x-direction so as to not force the grid to be stationary, defeating the moving grid's purpose.
+		IFace.gvel.refx = averaged_ivel.x; IFace.gvel.refy = 0.0; IFace.gvel.refz = 0.0;
+	    }
 	    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);	    
-	    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);	  		       	
+	    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 	}
-    }
+    } 
     return 0;
 }
 
@@ -93,3 +105,135 @@ void predict_vertex_positions(Block blk, size_t dimensions, double dt) {
     return;
 }
 
+void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step) {
+    /++ for a given block, loop through cell vertices and update the vertex
+      + velocities. The boundary vertex velocities are set via the methodology laid out
+      + in Ian Johnston's thesis available on the cfcfd website. The internal velocities
+      + are then assigned based off the boundary velocity and a user chosen weighting.
+      + NB: the current implementation is hard coded for a moving WEST boundary
+      + NB: Only for Euler stepping currently (i.e. gtl = 0 for velocities/positions)
+      +
+      +               O----------vtx_top-----------O
+      +               |             |              |
+      +		      | cell_toplft | cell_toprght |
+      +		      |             |              |
+      +		      |             |              |
+      +		    vtx_left------ vtx----------vtx_right
+      +		      |             |              |
+      +		      | cell_botrght|  cell_botlft |
+      +		      |             |              |
+      +		      |             |              |
+      +		      O----------vtx_bottom--------O
+      +
+      +
+      ++/
+    auto constFluxEffect = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
+    auto inflow = constFluxEffect.fstate; // inflow is a reference to a duplicated flow state,
+                                          // it should be treated as read-only (do not alter)
+    size_t krangemax = ( dimensions == 2 ) ? blk.kmax : blk.kmax+1;
+    // Let's make sure all the vertices are given a velocity to begin with
+    for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
+	for ( size_t j = blk.jmin; j <= blk.jmax+2; ++j ) {    
+	    for ( size_t i = blk.imin; i <= blk.imax+2; ++i ) {
+		FVVertex vtx = blk.get_vtx(i,j,k);
+		vtx.vel[0] =  Vector3(0.0, 0.0, 0.0);
+	    }
+	}
+    }
+    if (step < 1000) return; // let's give the shock some time to form before searching for it
+                             // no real art to setting this, give at least 1 flow length
+    // #####-------------------------- SHOCK SEARCH --------------------------##### //
+    Vector3 temp_vel;
+    for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
+	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
+	    for ( size_t i = blk.imin; i <= blk.imax+1; ++i ) {
+		// refer above for illustration of structure
+		FVVertex vtx = blk.get_vtx(i,j,k);                          // current vertex
+		FVVertex vtx_left = blk.get_vtx(i-1,j,k);                   // left vertex
+		FVVertex vtx_right = blk.get_vtx(i+1,j,k);                  // right vertex
+		FVVertex vtx_top = blk.get_vtx(i,j+1,k);                    // top vertex
+		FVVertex vtx_bottom = blk.get_vtx(i,j-1,k);                 // bottom vertex
+		FVCell cell_toplft = blk.get_cell(i-1, j, k);               // top left cell
+		FVCell cell_toprght = blk.get_cell(i, j, k);                // top right cell
+		FVCell cell_botlft = blk.get_cell(i-1, j-1, k);             // bottom left cell
+		FVCell cell_botrght = blk.get_cell(i, j-1, k);              // bottom right cell
+		if (i == blk.imin ) { // if current vertex is on WEST boundary
+		    double rho = 0.5*(cell_toprght.fs.gas.rho+cell_botrght.fs.gas.rho);
+		    if (j == blk.jmin) rho = cell_toprght.fs.gas.rho;   // if on an outer boundary just take
+		    if (j == blk.jmax+1) rho = cell_botrght.fs.gas.rho; // the first inernal cell
+		    double shock_detect = abs(inflow.gas.rho - rho)/fmax(inflow.gas.rho, rho);
+		    if (shock_detect < 0.2) { // no shock across boundary set  vertex velocity to u+a
+			temp_vel.refx = (inflow.vel.x + inflow.gas.a);
+			temp_vel.refy = -1.0*(inflow.vel.y + inflow.gas.a);
+			temp_vel.refz = 0.0;
+		    }
+		    else { // shock_detect > 0.2 thus shock detected across boundary
+			// loop over cells which neighbour current vertex and calculate wave speed at interfaces
+		        Vector3[] interface_ws; // store wave speed estimates at interfaces
+		        double[] w; // weighting factor
+			interface_ws.length = 2; // for 2D: interface_ws_top, interface_ws_bottom
+			w.length = 2; // currently set for 2D i.e. vtx has 2 neighbouring cells (3D would be 4)
+			Vector3 u_lft, u_rght, ns, tav;
+			double temp1, temp2, ws1, ws2, rho_lft, rho_rght,  p_lft, p_rght, M;
+			// left of the boundary is the constant flux condition
+			rho_lft = inflow.gas.rho;                    // density in left cell
+			u_lft = inflow.vel;                          // velocity vector in left cell
+			p_lft = inflow.gas.p;                        // pressure in left cell
+			// loop over neighbouring interfaces
+			for (int face = 0; face < 2; face++) {
+			    FVCell cell =  blk.get_cell(i, j-face, k);
+			    FVVertex vtx_neighbour = blk.get_vtx(i,j+1-2*face,k);
+			    rho_rght = cell.fs.gas.rho;         // density in top right cell
+			    u_rght = cell.fs.vel;               // velocity vector in right cell
+			    p_rght = cell.fs.gas.p;             // pressure in right cell 
+			    ns =  cell.iface[Face.west].n;      // normal to the shock front (taken to be WEST face normal of right cell)
+			    ws1 = (rho_lft*dot(u_lft, ns) - rho_rght*dot(u_rght, ns))/(rho_lft - rho_rght);
+			    temp1 = ((p_rght - p_lft)/(abs(p_rght - p_lft)))/rho_lft; // just need the sign of p_rght - p_lft
+			    temp2 =  sqrt(abs((p_rght - p_lft)/(1/rho_lft - 1/rho_rght)));
+			    ws2 = dot(u_lft, ns) - temp1 * temp2;
+			    interface_ws[face] = (0.5*ws1 + (1-0.5)*ws2)*ns;
+			    // Ian Johnston uses a unit vector in the direction from the interfacial center to the current vertex
+			    // this requires getting the position of the interface, alternately we have just taken the unit vector
+			    // in the direction from the vertex above our current vertex (i.e. j + 1 position), since a cell face
+			    // is linear this will be the same vector and requires less fiddling.
+			    tav = (vtx.pos[0]-vtx_neighbour.pos[0])/sqrt(dot(vtx.pos[0] - vtx_neighbour.pos[0], vtx.pos[0] - vtx_neighbour.pos[0]));
+			    M = dot(0.5*(u_rght+u_lft), tav)/cell.fs.gas.a; // equation explained in Ian Johnston's thesis on page 77, note...
+			    // we are currently just using the right cell (i.e. first non-ghost cell) as the "post-shock" value, for higher accuracy
+			    // we will need to update this with the right hand side reconstructed value.
+			    //w[face] = ( M + abs(M) ) / 2;  // alternate weighting 
+			    if (M <= 1.0) w[face] = ((M+1)*(M+1)+(M+1)*abs(M+1))/8.0;
+			    else w[face] = M;
+			    if (j == blk.jmin) w[1] = 0.0, interface_ws[1] = Vector3(0.0, 0.0, 0.0);  // north boundary vertex has no left neighbour
+			    if (j == blk.jmax+1) w[0] = 0.0, interface_ws[0] = Vector3(0.0, 0.0, 0.0); // south boundary vertex has no right neighbour
+			}
+			// now that we have the surrounding interface velocities, let's combine them to approximate the central vertex velocity
+			if (w[0] == 0.0 && w[1] == 0.0) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average
+			temp_vel = 0.8*(w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, damped to 80% for stability
+		    }
+		}
+		else { // else if vertex is not on WEST boundary (i.e. internal vertex)
+		    temp_vel = weighting_function(blk.get_vtx(blk.imin, j, k).vel[0],blk.imax+1,i);
+		}
+		// as Ian Johnston recommends in his thesis, let's force the vertices to move along "rails" which are the radial lines
+		// originating from the EAST boundary spanning to the west
+		Vector3 lft_temp;
+		Vector3 rght_temp;
+		Vector3 unit_d; // this will be a unit vector which points along a radial line toward the EAST boundary
+		lft_temp = (vtx.pos[0]-vtx_left.pos[0])/sqrt(dot(vtx_left.pos[0] - vtx.pos[0], vtx_left.pos[0] - vtx.pos[0]));
+		rght_temp = (vtx_right.pos[0]-vtx.pos[0])/sqrt(dot(vtx_right.pos[0]-vtx.pos[0], vtx_right.pos[0]-vtx.pos[0]));
+		unit_d = 0.5 * (lft_temp + rght_temp); // take an average of the left and right unit vectors
+		if (i == blk.imin) unit_d = rght_temp;  // west boundary vertex has no left neighbour
+		if (i == blk.imax+1) unit_d = lft_temp; // east boundary vertex has no right neighbour
+		temp_vel = dot(temp_vel, unit_d)*unit_d;
+		vtx.vel[0] = temp_vel;
+	    }
+	}
+    }
+    return;
+}
+
+Vector3 weighting_function(Vector3 vel_max, ulong imax, ulong i) {
+    // TODO: user chooses weighting function. Currently just linear.
+    Vector3 vel = -(vel_max/(imax-2)) * (i-2) + vel_max; // y = mx + c
+    return vel;
+}

@@ -173,9 +173,13 @@ public:
     }
 }
 class BFE_ConstFlux : BoundaryFluxEffect {
+public:
+    FlowState fstate;
+
 private:
     double[] _massf;
     double _e, _rho, _p, _u, _v;
+    FlowState _fstate;
     int _nsp;
    
 public:  
@@ -200,6 +204,7 @@ public:
 	for (int _isp=0; _isp <= _nsp; _isp++) {
 	    _massf[_isp] = fstate.gas.massf[_isp];
 	}
+	this.fstate = fstate.dup();
     }
 
     override string toString() const 

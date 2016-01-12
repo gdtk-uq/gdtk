@@ -271,6 +271,13 @@ void integrate_in_time(double target_time)
 	// 2a. Moving Grid - let's start by calculating vertex velocties
 	//     if GridMotion.none then set_grid_velocities to 0 m/s
 	//     else moving grid vertex velocities will be set.
+	
+	// apply boundary conditions here: shockfitting algorithm requires ghost cells to be up to date.
+	foreach (blk; gasBlocks) {
+	    if (!blk.active) continue;
+	    blk.applyPreReconAction(sim_time, 0, 0);
+	}
+	
 	set_grid_velocities(sim_time, step, 0, dt_global);
 	// 2b.
 	// explicit or implicit update of the convective terms.
@@ -282,7 +289,7 @@ void integrate_in_time(double target_time)
 	}
 	// 2c. Moving Grid - Recalculate all geometry, note that in the gas dynamic
 	//     update gtl level 2 is copied to gtl level 0 for the next step thus
-	//     we actually do want to calculate geometry at gtl 0.
+	//     we actually do want to calculate geometry at gtl 0 here.
 	if (GlobalConfig.grid_motion != GridMotion.none) {
 	    foreach (blk; gasBlocks) {
 		if (!blk.active) {
@@ -441,11 +448,16 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 	    break;
 	case GridMotion.user_defined:
 	    assign_vertex_velocities_via_udf(sim_time);
-       	    break;
+	    break;
 	case GridMotion.shock_fitting:
-	    throw new Error("GridMotion.shock_fitting not yet implemented.");
+	    foreach (blk; gasBlocks) {
+		if (!blk.active) continue;
+		shock_fitting_vertex_velocities(blk, GlobalConfig.dimensions, step);
+	    }
+	    break;		
     }
 }
+
 
 //----------------------------------------------------------------------------
 void gasdynamic_explicit_increment_with_fixed_grid()
@@ -847,7 +859,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 
 void gasdynamic_explicit_increment_with_moving_grid()
 {
-    // CURRENTLY ONLY FOR EULER STEPPING (i.e. ONE UPDATE STAGE)
+    // TODO: ONLY IMPLEMENTED FOR EULER STEPPING.
     shared double t0 = sim_time;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
 	!GlobalConfig.separate_update_for_k_omega_source;
@@ -862,16 +874,18 @@ void gasdynamic_explicit_increment_with_moving_grid()
     case GasdynamicUpdate.tvd_rk3: c2 = 1.0; c3 = 0.5; break;
     case GasdynamicUpdate.denman_rk3: c2 = 1.0; c3 = 0.5; break; 
     }
+   
     // Moving Grid - predict new vertex positions for moving grid              
     foreach (blk; gasBlocks) {
 	if (!blk.active) continue;
 	// move vertices
 	predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global);
-	// recalculate cell geometry with new vertext positions
+	// recalculate cell geometry with new vertex positions
 	blk.compute_primary_cell_geometric_data(1);
 	// determine interface velocities using GCL
 	set_gcl_interface_properties(blk, 1, dt_global);
     }
+    
     // Preparation for the predictor-stage of inviscid gas-dynamic flow update.
     foreach (blk; parallel(gasBlocks,1)) {
 	if (!blk.active) continue;
@@ -880,7 +894,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     }
     // First-stage of gas-dynamic update.
     shared int ftl = 0; // time-level within the overall convective-update
-    shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
+    shared int gtl = 1; // grid time-level
     if (GlobalConfig.apply_bcs_in_parallel) {
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (!blk.active) continue;
@@ -989,11 +1003,43 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
 	} // end foreach scell
     } // end foreach sblk
-    // update grid level 2 to the new grid level 1
+     // Get the end conserved data into U[0] for next step.
+    foreach (blk; parallel(gasBlocks,1)) {
+	if (!blk.active) continue;
+	size_t end_indx = 2;
+	final switch (GlobalConfig.gasdynamic_update_scheme) {
+	case GasdynamicUpdate.euler: end_indx = 1; break;
+	case GasdynamicUpdate.pc: 
+	case GasdynamicUpdate.midpoint: end_indx = 2; break;
+	case GasdynamicUpdate.tvd_rk3:
+	case GasdynamicUpdate.classic_rk3:
+	case GasdynamicUpdate.denman_rk3: end_indx = 3; break;
+	} // end switch
+	foreach (cell; blk.cells) {
+	    swap(cell.U[0], cell.U[end_indx]);
+	}
+    } // end foreach blk
+    
+    foreach (sblk; solidBlocks) {
+	if (!sblk.active) continue;
+	size_t end_indx = 2;
+	final switch (GlobalConfig.gasdynamic_update_scheme) {
+	case GasdynamicUpdate.euler: end_indx = 1; break;
+	case GasdynamicUpdate.pc: 
+	case GasdynamicUpdate.midpoint: end_indx = 2; break;
+	case GasdynamicUpdate.tvd_rk3:
+	case GasdynamicUpdate.classic_rk3:
+	case GasdynamicUpdate.denman_rk3: end_indx = 3; break;
+	}
+	foreach (scell; sblk.activeCells) {
+	    scell.e[0] = scell.e[end_indx];
+	} 
+    } // end foreach sblk
+    // update grid level 2 to the new grid level 0
     foreach (blk; gasBlocks) {
 	if ( !blk.active ) continue;
 	foreach ( cell; blk.cells ) {
-	    swap(cell.U[0], cell.U[1]);
+	    //swap(cell.U[0], cell.U[1]);
 	    cell.copy_grid_level_to_level(1, 0);
 	}
     }

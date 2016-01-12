@@ -41,7 +41,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     // we want the velocity of the flow relative to the interface.
     Lft.vel.refx -= IFace.gvel.x; Lft.vel.refy -= IFace.gvel.y; Lft.vel.refz -= IFace.gvel.z;
     Rght.vel.refx -= IFace.gvel.x; Rght.vel.refy -= IFace.gvel.y; Rght.vel.refz -= IFace.gvel.z;
-    
+   
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Lft.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Rght.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
