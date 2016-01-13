@@ -13,7 +13,7 @@ import gas.diffusion.viscosity;
 import std.math;
 import util.lua;
 import util.lua_service;
-import std.c.stdlib : exit;
+import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
 

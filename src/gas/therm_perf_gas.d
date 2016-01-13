@@ -26,7 +26,7 @@ import util.lua;
 import util.lua_service;
 import nm.brent; 
 import nm.bracketing;
-import std.c.stdlib : exit;
+import core.stdc.stdlib : exit;
 
 class ThermallyPerfectGas: GasModel {
 public:

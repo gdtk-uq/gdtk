@@ -20,7 +20,7 @@ import std.json;
 import std.conv;
 import util.lua;
 import util.lua_service;
-import std.c.stdlib : exit;
+import core.stdc.stdlib : exit;
 
 class IdealGas: GasModel {
 public:

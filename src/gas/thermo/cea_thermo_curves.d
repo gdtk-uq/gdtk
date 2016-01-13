@@ -10,7 +10,7 @@ module gas.thermo.cea_thermo_curves;
 
 import std.math;
 import std.stdio;
-import std.c.stdlib : exit;
+import core.stdc.stdlib : exit;
 import std.string;
 import util.lua;
 import util.lua_service;

@@ -1,8 +1,8 @@
 import std.array;
 import std.stdio;
 import std.conv;
-import std.c.stdlib;
-import std.c.stdio;
+import core.stdc.stdlib;
+import core.stdc.stdio;
 import core.memory;
 import cl;
 

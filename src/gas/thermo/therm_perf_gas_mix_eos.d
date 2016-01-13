@@ -21,7 +21,7 @@ module gas.thermo.therm_perf_gas_mix_eos;
 import std.math;
 import std.stdio;
 import std.string;
-import std.c.stdlib : exit;
+import core.stdc.stdlib : exit;
 import gas.gas_model;
 import gas.physical_constants;
 import gas.thermo.evt_eos;
