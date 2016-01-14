@@ -158,35 +158,32 @@ public:
 	}
 	double area_inv = 1.0 / areaxy;
 	//
-	// Apply the divergence theorem to flow properties.
+	// Apply the divergence theorem to flow variables, generating code for each.
 	//
-	// Start with the contribution from the final segment of the bounding contour.
-	double gradient_x = (cloud_fs[0].vel.x + cloud_fs[n-1].vel.x) *
-	    (cloud_pos[0].y - cloud_pos[n-1].y);
-	double gradient_y = (cloud_fs[0].vel.x + cloud_fs[n-1].vel.x) *
-	    (cloud_pos[0].x - cloud_pos[n-1].x);
-	// Accumulate the contributions from the other segments.
-	foreach (i; 0 .. n-1) {
-	    gradient_x += (cloud_fs[i+1].vel.x + cloud_fs[i].vel.x) *
-		(cloud_pos[i+1].y - cloud_pos[i].y);
-	    gradient_y += (cloud_fs[i+1].vel.x + cloud_fs[i].vel.x) *
-		(cloud_pos[i+1].x - cloud_pos[i].x);
+	double gradient_x, gradient_y;
+	string codeForGradients(string qname)
+	{
+	    string code = "
+            // Start with the contribution from the final segment of the bounding contour.
+            gradient_x = (cloud_fs[0]."~qname~" + cloud_fs[n-1]."~qname~") *
+                (cloud_pos[0].y - cloud_pos[n-1].y);
+	    gradient_y = (cloud_fs[0]."~qname~" + cloud_fs[n-1]."~qname~") *
+                (cloud_pos[0].x - cloud_pos[n-1].x);
+            // Accumulate the contributions from the other segments.
+	    foreach (i; 0 .. n-1) {
+                gradient_x += (cloud_fs[i+1]."~qname~" + cloud_fs[i]."~qname~") *
+      	            (cloud_pos[i+1].y - cloud_pos[i].y);
+                gradient_y += (cloud_fs[i+1]."~qname~" + cloud_fs[i]."~qname~") *
+                    (cloud_pos[i+1].x - cloud_pos[i].x);
+	    }";
+	    return code;
 	}
-	// Compute average gradient and pack away.
+	mixin(codeForGradients("vel.x"));
 	vel[0][0] = gradient_x * area_inv;
 	vel[0][1] = -gradient_y * area_inv;
 	vel[0][2] = 0.0;
 	//
-	gradient_x = (cloud_fs[0].vel.y + cloud_fs[n-1].vel.y) *
-	    (cloud_pos[0].y - cloud_pos[n-1].y);
-	gradient_y = (cloud_fs[0].vel.y + cloud_fs[n-1].vel.y) *
-	    (cloud_pos[0].x - cloud_pos[n-1].x);
-	foreach (i; 0 .. n-1) {
-	    gradient_x += (cloud_fs[i+1].vel.y + cloud_fs[i].vel.y) *
-		(cloud_pos[i+1].y - cloud_pos[i].y);
-	    gradient_y += (cloud_fs[i+1].vel.y + cloud_fs[i].vel.y) *
-		(cloud_pos[i+1].x - cloud_pos[i].x);
-	}
+	mixin(codeForGradients("vel.y"));
 	vel[1][0] = gradient_x * area_inv;
 	vel[1][1] = -gradient_y * area_inv;
 	vel[1][2] = 0.0;
@@ -195,16 +192,7 @@ public:
 	vel[2][1] = 0.0;
 	vel[2][2] = 0.0;
 	//
-	gradient_x = (cloud_fs[0].gas.T[0] + cloud_fs[n-1].gas.T[0]) *
-	    (cloud_pos[0].y - cloud_pos[n-1].y);
-	gradient_y = (cloud_fs[0].gas.T[0] + cloud_fs[n-1].gas.T[0]) *
-	    (cloud_pos[0].x - cloud_pos[n-1].x);
-	foreach (i; 0 .. n-1) {
-	    gradient_x += (cloud_fs[i+1].gas.T[0] + cloud_fs[i].gas.T[0]) *
-		(cloud_pos[i+1].y - cloud_pos[i].y);
-	    gradient_y += (cloud_fs[i+1].gas.T[0] + cloud_fs[i].gas.T[0]) *
-		(cloud_pos[i+1].x - cloud_pos[i].x);
-	}
+	mixin(codeForGradients("gas.T[0]"));
 	T.refx = gradient_x * area_inv;
 	T.refy = -gradient_y * area_inv;
 	T.refz = 0.0;
@@ -212,16 +200,7 @@ public:
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
-		gradient_x = (cloud_fs[0].gas.massf[isp] + cloud_fs[n-1].gas.massf[isp]) *
-		    (cloud_pos[0].y - cloud_pos[n-1].y);
-		gradient_y = (cloud_fs[0].gas.massf[isp] + cloud_fs[n-1].gas.massf[isp]) *
-		    (cloud_pos[0].x - cloud_pos[n-1].x);
-		foreach (i; 0 .. n-1) {
-		    gradient_x += (cloud_fs[i+1].gas.massf[isp] + cloud_fs[i].gas.massf[isp]) *
-			(cloud_pos[i+1].y - cloud_pos[i].y);
-		    gradient_y += (cloud_fs[i+1].gas.massf[isp] + cloud_fs[i].gas.massf[isp]) *
-			(cloud_pos[i+1].x - cloud_pos[i].x);
-		}
+		mixin(codeForGradients("gas.massf[isp]"));
 		massf[isp].refx = gradient_x * area_inv;
 		massf[isp].refy = -gradient_y * area_inv;
 		massf[isp].refz = 0.0;
@@ -234,30 +213,12 @@ public:
 	    }
 	}
 	//
-	gradient_x = (cloud_fs[0].tke + cloud_fs[n-1].tke) *
-	    (cloud_pos[0].y - cloud_pos[n-1].y);
-	gradient_y = (cloud_fs[0].tke + cloud_fs[n-1].tke) *
-	    (cloud_pos[0].x - cloud_pos[n-1].x);
-	foreach (i; 0 .. n-1) {
-	    gradient_x += (cloud_fs[i+1].tke + cloud_fs[i].tke) *
-		(cloud_pos[i+1].y - cloud_pos[i].y);
-	    gradient_y += (cloud_fs[i+1].tke + cloud_fs[i].tke) *
-		(cloud_pos[i+1].x - cloud_pos[i].x);
-	}
+	mixin(codeForGradients("tke"));
 	tke.refx = gradient_x * area_inv;
 	tke.refy = -gradient_y * area_inv;
 	tke.refz = 0.0;
 	//
-	gradient_x = (cloud_fs[0].omega + cloud_fs[n-1].omega) *
-	    (cloud_pos[0].y - cloud_pos[n-1].y);
-	gradient_y = (cloud_fs[0].omega + cloud_fs[n-1].omega) *
-	    (cloud_pos[0].x - cloud_pos[n-1].x);
-	foreach (i; 0 .. n-1) {
-	    gradient_x += (cloud_fs[i+1].omega + cloud_fs[i].omega) *
-		(cloud_pos[i+1].y - cloud_pos[i].y);
-	    gradient_y += (cloud_fs[i+1].omega + cloud_fs[i].omega) *
-		(cloud_pos[i+1].x - cloud_pos[i].x);
-	}
+	mixin(codeForGradients("omega"));
 	omega.refx = gradient_x * area_inv;
 	omega.refy = -gradient_y * area_inv;
 	omega.refz = 0.0;
@@ -424,36 +385,31 @@ public:
 	xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = 0.0; xTx[1][3] = 1.0;
 	computeInverse!2(xTx);
 	// x-velocity
-	double vx_mid = 0.0;
-	foreach (i; 0 .. n) {
-	    vx_mid += cloud_fs[i].vel.x;
+	double q_mid;
+	string codeForGradients(string qname)
+	{
+	    string code = "
+            q_mid = 0.0;
+	    foreach (i; 0 .. n) {
+	        q_mid += cloud_fs[i]."~qname~";
+	    }
+	    q_mid /= n;
+	    rhs[0] = 0.0; rhs[1] = 0.0;
+	    foreach (i; 0 .. n) {
+	        double dq = cloud_fs[i]."~qname~" - q_mid;
+	        double dx = cloud_pos[i].x - x_mid;
+	        double dy = cloud_pos[i].y - y_mid;
+	        rhs[0] += dx*dq; rhs[1] += dy*dq;
+	    }
+	    solveGradients!2(xTx, rhs, gradients);";
+	    return code;
 	}
-	vx_mid /= n;
-	rhs[0] = 0.0; rhs[1] = 0.0;
-	foreach (i; 0 .. n) {
-	    double dvx = cloud_fs[i].vel.x - vx_mid;
-	    double dx = cloud_pos[i].x - x_mid;
-	    double dy = cloud_pos[i].y - y_mid;
-	    rhs[0] += dx*dvx; rhs[1] += dy*dvx;
-	}
-	solveGradients!2(xTx, rhs, gradients);
+	mixin(codeForGradients("vel.x"));
 	vel[0][0] = gradients[0];
 	vel[0][1] = gradients[1];
 	vel[0][2] = 0.0;
 	// y-velocity
-	double vy_mid = 0.0;
-	foreach (i; 0 .. n) {
-	    vy_mid += cloud_fs[i].vel.y;
-	}
-	vy_mid /= n;
-	rhs[0] = 0.0; rhs[1] = 0.0;
-	foreach (i; 0 .. n) {
-	    double dvy = cloud_fs[i].vel.y - vy_mid;
-	    double dx = cloud_pos[i].x - x_mid;
-	    double dy = cloud_pos[i].y - y_mid;
-	    rhs[0] += dx*dvy; rhs[1] += dy*dvy;
-	}
-	solveGradients!2(xTx, rhs, gradients);
+	mixin(codeForGradients("vel.y"));
 	vel[1][0] = gradients[0];
 	vel[1][1] = gradients[1];
 	vel[1][2] = 0.0;
@@ -462,19 +418,7 @@ public:
 	vel[2][1] = 0.0;
 	vel[2][2] = 0.0;
 	// T[0]
-	double T_mid = 0.0;
-	foreach (i; 0 .. n) {
-	    T_mid += cloud_fs[i].gas.T[0];
-	}
-	T_mid /= n;
-	rhs[0] = 0.0; rhs[1] = 0.0;
-	foreach (i; 0 .. n) {
-	    double dT = cloud_fs[i].gas.T[0] - T_mid;
-	    double dx = cloud_pos[i].x - x_mid;
-	    double dy = cloud_pos[i].y - y_mid;
-	    rhs[0] += dx*dT; rhs[1] += dy*dT;
-	}
-	solveGradients!2(xTx, rhs, gradients);
+	mixin(codeForGradients("gas.T[0]"));
 	T.refx = gradients[0];
 	T.refy = gradients[1];
 	T.refz = 0.0;
@@ -482,19 +426,7 @@ public:
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
-		double massf_mid = 0.0;
-		foreach (i; 0 .. n) {
-		    massf_mid += cloud_fs[i].gas.massf[isp];
-		}
-		massf_mid /= n;
-		rhs[0] = 0.0; rhs[1] = 0.0;
-		foreach (i; 0 .. n) {
-		    double df = cloud_fs[i].gas.massf[isp] - massf_mid;
-		    double dx = cloud_pos[i].x - x_mid;
-		    double dy = cloud_pos[i].y - y_mid;
-		    rhs[0] += dx*df; rhs[1] += dy*df;
-		}
-		solveGradients!2(xTx, rhs, gradients);
+		mixin(codeForGradients("gas.massf[isp]"));
 		massf[isp].refx = gradients[0];
 		massf[isp].refy = gradients[1];
 		massf[isp].refz = 0.0;
@@ -507,36 +439,12 @@ public:
 	    } // foreach isp
 	}
 	// tke
-	double tke_mid = 0.0;
-	foreach (i; 0 .. n) {
-	    tke_mid += cloud_fs[i].tke;
-	}
-	tke_mid /= n;
-	rhs[0] = 0.0; rhs[1] = 0.0;
-	foreach (i; 0 .. n) {
-	    double dtke = cloud_fs[i].tke - tke_mid;
-	    double dx = cloud_pos[i].x - x_mid;
-	    double dy = cloud_pos[i].y - y_mid;
-	    rhs[0] += dx*dtke; rhs[1] += dy*dtke;
-	}
-	solveGradients!2(xTx, rhs, gradients);
+	mixin(codeForGradients("tke"));
 	tke.refx = gradients[0];
 	tke.refy = gradients[1];
 	tke.refz = 0.0;
 	// omega
-	double omega_mid = 0.0;
-	foreach (i; 0 .. n) {
-	    omega_mid += cloud_fs[i].omega;
-	}
-	omega_mid /= n;
-	rhs[0] = 0.0; rhs[1] = 0.0;
-	foreach (i; 0 .. n) {
-	    double domega = cloud_fs[i].omega - omega_mid;
-	    double dx = cloud_pos[i].x - x_mid;
-	    double dy = cloud_pos[i].y - y_mid;
-	    rhs[0] += dx*domega; rhs[1] += dy*domega;
-	}
-	solveGradients!2(xTx, rhs, gradients);
+	mixin(codeForGradients("omega"));
 	omega.refx = gradients[0];
 	omega.refy = gradients[1];
 	omega.refz = 0.0;
