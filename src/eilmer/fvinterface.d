@@ -25,6 +25,8 @@ import globalconfig;
 class FVInterface {
 public:
     size_t id;  // allows us to work out where, in the block, the interface is
+    bool is_on_boundary = false;  // by default, assume not on boundary
+    size_t bc_id;  // if the face is on a block boundary, which one
     // Geometry
     Vector3 pos;           // position of the (approx) midpoint
     Vector3 gvel;          // grid velocity at interface, m/s
@@ -36,6 +38,8 @@ public:
     Vector3 t1;            // tangent vector 1 (aka p)
     Vector3 t2;            // tangent vector 2 (aka q)
     FVVertex[] vtx;        // references to vertices for line (2D) and quadrilateral (3D) faces
+    // The following two arrays will contain references to the nearby cells,
+    // starting with the adjoining cell, and moving out in each direction.
     BasicCell[] left_cells;      // interface normal points out of this adjoining cell
     BasicCell[] right_cells;     // interface normal points into this adjoining cell
     // Flow

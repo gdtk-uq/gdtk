@@ -195,9 +195,9 @@ public:
 	foreach (f; faces) {
 	    if (f.left_cells.length > 1 || f.right_cells.length > 1) {
 		string msg = format("Face id= %d too many attached cells: left_cells= ", f.id);
-		foreach (c; f.left_cells) { msg ~= to!string(c.id); }
+		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
 		msg ~= " right_cells= ";
-		foreach (c; f.right_cells) { msg ~= to!string(c.id); }
+		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
 		throw new Error(msg);
 	    }
 	}
@@ -206,6 +206,7 @@ public:
 	    throw new Error(format("Mismatch in number of boundaries: %d %d",
 				   nboundaries, grid.nboundaries));
 	}
+	size_t ghost_cell_count = 0;
 	foreach (i, bndry; grid.boundaries) {
 	    auto nf = bndry.face_id_list.length;
 	    if (nf != bndry.outsign_list.length) {
@@ -215,9 +216,15 @@ public:
 	    }
 	    foreach (j; 0 .. nf) {
 		FVInterface my_face = faces[bndry.face_id_list[j]];
+		my_face.is_on_boundary = true;
+		my_face.bc_id = i; // note which boundary this face is on
 		int my_outsign = bndry.outsign_list[j];
 		BasicCell ghost0 = new BasicCell(myConfig);
+		// Make ghost-cell id values distinct from FVCell ids so that
+		// the warning/error messages are somewhat informative. 
+		ghost0.id = 100000 + ghost_cell_count++;
 		BasicCell ghost1 = new BasicCell(myConfig);
+		ghost1.id = 100000 + ghost_cell_count++;
 		bc[i].faces ~= my_face;
 		bc[i].outsigns ~= my_outsign;
 		bc[i].ghostcells ~= ghost0;
@@ -231,13 +238,95 @@ public:
 		}
 	    }
 	}
-	//
-	// [TODO] for each face, work arround the faces in the attached cell to
-	// accumulate a cloud of cells for field reconstruction prior to
-	// computing the convective fluxes. (If we want high-order reconstruction.)
-	// 
-	// [TODO] store references into the FVVertex objects for derivative calc.
-	//
+	// At this point, all faces should have either one finite-volume cell
+	// or two ghost cells attached to a side -- check that this is true.
+	foreach (f; faces) {
+	    bool ok = true;
+	    string msg = "";
+	    if (f.is_on_boundary) {
+		if ((f.left_cells.length == 2 && f.right_cells.length == 1) ||
+		    (f.left_cells.length == 1 && f.right_cells.length == 2)) {
+		    ok = true;
+		} else {
+		    ok = false;
+		    msg ~= "Boundary face does not have correct number of cells per side.";
+		}
+	    } else {
+		// not on a boundary, should have one cell only per side.
+		if (f.left_cells.length != 1 || f.right_cells.length != 1) {
+		    ok = false;
+		    msg ~= "Non-boundary face does not have correct number of cells per side.";
+		}
+	    }
+	    if (!ok) {
+		msg = format("After adding ghost cells to face %d: ", f.id) ~ msg;
+		msg ~= " left_cells= ";
+		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
+		msg ~= " right_cells= ";
+		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
+		throw new Error(msg);
+	    }
+	} // end foreach f
+	// For each side of a face with a single attached finite-volume cell,
+	// work around the faces of the attached cell to accumulate 
+	// a cloud of cells for field reconstruction prior to computing
+	// the convective fluxes, if we want high-order reconstruction.
+	foreach (f; faces) {
+	    if (f.left_cells.length == 1) {
+		auto cell = f.left_cells[0];
+		foreach (i, other_face; cell.iface) {
+		    if (other_face.id == f.id) continue;
+		    if (cell.outsign[i] > 0) {
+			f.left_cells ~= other_face.right_cells[0];
+		    } else {
+			f.left_cells ~= other_face.left_cells[0];
+		    }
+		}
+	    }
+	    if (f.right_cells.length == 1) {
+		auto cell = f.right_cells[0];
+		foreach (i, other_face; cell.iface) {
+		    if (other_face.id == f.id) continue;
+		    if (cell.outsign[i] > 0) {
+			f.right_cells ~= other_face.right_cells[0];
+		    } else {
+			f.right_cells ~= other_face.left_cells[0];
+		    }
+		}
+	    }
+	} // end foreach f
+	// Finally, all faces should have either a cloud of finite-volume cells
+	// or two ghost cells attached to a side -- check that this is true.
+	// For 2D triangular cells, expect 3 in a cloud. Quads will have 4
+	// For 2D tetrahedral cells, expect 4 in a cloud. Hex cells will have 6.
+	size_t min_count = (myConfig.dimensions == 2) ? 3 : 4;
+	foreach (f; faces) {
+	    bool ok = true;
+	    string msg = "";
+	    if (f.is_on_boundary) {
+		if ((f.left_cells.length == 2 && f.right_cells.length >= min_count) ||
+		    (f.left_cells.length >= min_count && f.right_cells.length == 2)) {
+		    ok = true;
+		} else {
+		    ok = false;
+		    msg ~= "Boundary face does not have correct number of cells per side.";
+		}
+	    } else {
+		// not on a boundary, should have a cloud on both sides.
+		if (f.left_cells.length < min_count || f.right_cells.length < min_count) {
+		    ok = false;
+		    msg ~= "Non-boundary face does not have correct number of cells per side.";
+		}
+	    }
+	    if (!ok) {
+		msg = format("After adding clouds of cells to face %d: ", f.id) ~ msg;
+		msg ~= " left_cells= ";
+		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
+		msg ~= " right_cells= ";
+		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
+		throw new Error(msg);
+	    }
+	} // end foreach f
     } // end init_grid_and_flow_arrays()
 
     override void compute_primary_cell_geometric_data(int gtl)
