@@ -433,6 +433,15 @@ function InFlowBC_ConstFlux:new(o)
    return o
 end
 
+InFlowBC_ShockFitting = BoundaryCondition:new()
+InFlowBC_ShockFitting.type = "inflow_shock_fitting"
+function InFlowBC_ShockFitting:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
+   o.preSpatialDerivAction = { CopyCellData:new() }
+   return o
+end
+
 InFlowBC_FromStagnation = BoundaryCondition:new()
 InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
 InFlowBC_FromStagnation.allowedArgs = {'type', 'label', 'group',
