@@ -229,22 +229,34 @@ public:
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 3D
+    // As for 2D, take differences about a middle point/value.
     {
 	double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
 	double[3] rhs, gradients;
 	// Assemble and invert the normal matrix.
 	// We'll reuse the resulting inverse for each flow-field quantity.
 	size_t n = cloud_pos.length;
+	double x_mid = 0.0;
+	double y_mid = 0.0;
+	double z_mid = 0.0;
+	foreach (i; 0 .. n) {
+	    x_mid += cloud_pos[i].x;
+	    y_mid += cloud_pos[i].y;
+	    z_mid += cloud_pos[i].z;
+	}
+	x_mid /= n;
+	y_mid /= n;
+	z_mid /= n;
 	double xx = 0.0;
 	double xy = 0.0;
 	double xz = 0.0;
 	double yy = 0.0;
 	double yz = 0.0;
 	double zz = 0.0;
-	foreach (i; 1 .. n) {
-	    double dx = cloud_pos[i].x - cloud_pos[0].x;
-	    double dy = cloud_pos[i].y - cloud_pos[0].y;
-	    double dz = cloud_pos[i].z - cloud_pos[0].z;
+	foreach (i; 0 .. n) {
+	    double dx = cloud_pos[i].x - x_mid;
+	    double dy = cloud_pos[i].y - y_mid;
+	    double dz = cloud_pos[i].z - z_mid;
 	    xx += dx*dx; xy += dx*dy; xz += dx*dz;
 	    yy += dy*dy; yz += dy*dz; zz += dz*dz;
 	}
@@ -256,48 +268,36 @@ public:
 	xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
 	computeInverse!3(xTx);
 	// x-velocity
-	foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-	foreach (i; 1 .. n) {
-	    double dvx = cloud_fs[i].vel.x - cloud_fs[0].vel.x;
-	    double dx = cloud_pos[i].x - cloud_pos[0].x;
-	    double dy = cloud_pos[i].y - cloud_pos[0].y;
-	    double dz = cloud_pos[i].z - cloud_pos[0].z;
-	    rhs[0] += dx*dvx; rhs[1] += dy*dvx; rhs[2] += dz*dvx;
+	double q_mid;
+	string codeForGradients(string qname)
+	{
+	    string code = "
+            q_mid = 0.0;
+	    foreach (i; 0 .. n) {
+	        q_mid += cloud_fs[i]."~qname~";
+	    }
+	    q_mid /= n;
+            foreach (j; 0 .. 3) { rhs[j] = 0.0; }
+            foreach (i; 0 .. n) {
+                double dq = cloud_fs[i]."~qname~" - q_mid;
+                double dx = cloud_pos[i].x - x_mid;
+                double dy = cloud_pos[i].y - y_mid;
+                double dz = cloud_pos[i].z - z_mid;
+                rhs[0] += dx*dq; rhs[1] += dy*dq; rhs[2] += dz*dq;
+	    }
+	    solveGradients!3(xTx, rhs, gradients);";
+	    return code;
 	}
-	solveGradients!3(xTx, rhs, gradients);
+	mixin(codeForGradients("vel.x"));
 	foreach (j; 0 .. 3) { vel[0][j] = gradients[j]; }
 	// y-velocity
-	foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-	foreach (i; 1 .. n) {
-	    double dvy = cloud_fs[i].vel.y - cloud_fs[0].vel.y;
-	    double dx = cloud_pos[i].x - cloud_pos[0].x;
-	    double dy = cloud_pos[i].y - cloud_pos[0].y;
-	    double dz = cloud_pos[i].z - cloud_pos[0].z;
-	    rhs[0] += dx*dvy; rhs[1] += dy*dvy; rhs[2] += dz*dvy;
-	}
-	solveGradients!3(xTx, rhs, gradients);
+	mixin(codeForGradients("vel.y"));
 	foreach (j; 0 .. 3) { vel[1][j] = gradients[j]; }
 	// z-velocity
-	foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-	foreach (i; 1 .. n) {
-	    double dvz = cloud_fs[i].vel.z - cloud_fs[0].vel.z;
-	    double dx = cloud_pos[i].x - cloud_pos[0].x;
-	    double dy = cloud_pos[i].y - cloud_pos[0].y;
-	    double dz = cloud_pos[i].z - cloud_pos[0].z;
-	    rhs[0] += dx*dvz; rhs[1] += dy*dvz; rhs[2] += dz*dvz;
-	}
-	solveGradients!3(xTx, rhs, gradients);
+	mixin(codeForGradients("vel.z"));
 	foreach (j; 0 .. 3) { vel[2][j] = gradients[j]; }
 	// T[0]
-	foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-	foreach (i; 1 .. n) {
-	    double dT = cloud_fs[i].gas.T[0] - cloud_fs[0].gas.T[0];
-	    double dx = cloud_pos[i].x - cloud_pos[0].x;
-	    double dy = cloud_pos[i].y - cloud_pos[0].y;
-	    double dz = cloud_pos[i].z - cloud_pos[0].z;
-	    rhs[0] += dx*dT; rhs[1] += dy*dT; rhs[2] += dz*dT;
-	}
-	solveGradients!3(xTx, rhs, gradients);
+	mixin(codeForGradients("gas.T[0]"));
 	T.refx = gradients[0];
 	T.refy = gradients[1];
 	T.refz = gradients[2];
@@ -305,15 +305,7 @@ public:
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
-		foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-		foreach (i; 1 .. n) {
-		    double df = cloud_fs[i].gas.massf[isp] - cloud_fs[0].gas.massf[isp];
-		    double dx = cloud_pos[i].x - cloud_pos[0].x;
-		    double dy = cloud_pos[i].y - cloud_pos[0].y;
-		    double dz = cloud_pos[i].z - cloud_pos[0].z;
-		    rhs[0] += dx*df; rhs[1] += dy*df; rhs[2] += dz*df;
-		}
-		solveGradients!3(xTx, rhs, gradients);
+		mixin(codeForGradients("gas.massf[isp]"));
 		massf[isp].refx = gradients[0];
 		massf[isp].refy = gradients[1];
 		massf[isp].refz = gradients[2];
@@ -326,28 +318,12 @@ public:
 	    } // foreach isp
 	}
 	// tke
-	foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-	foreach (i; 1 .. n) {
-	    double dtke = cloud_fs[i].tke - cloud_fs[0].tke;
-	    double dx = cloud_pos[i].x - cloud_pos[0].x;
-	    double dy = cloud_pos[i].y - cloud_pos[0].y;
-	    double dz = cloud_pos[i].z - cloud_pos[0].z;
-	    rhs[0] += dx*dtke; rhs[1] += dy*dtke; rhs[2] += dz*dtke;
-	}
-	solveGradients!3(xTx, rhs, gradients);
+	mixin(codeForGradients("tke"));
 	tke.refx = gradients[0];
 	tke.refy = gradients[1];
 	tke.refz = gradients[2];
 	// omega
-	foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-	foreach (i; 1 .. n) {
-	    double domega = cloud_fs[i].omega - cloud_fs[0].omega;
-	    double dx = cloud_pos[i].x - cloud_pos[0].x;
-	    double dy = cloud_pos[i].y - cloud_pos[0].y;
-	    double dz = cloud_pos[i].z - cloud_pos[0].z;
-	    rhs[0] += dx*domega; rhs[1] += dy*domega; rhs[2] += dz*domega;
-	}
-	solveGradients!3(xTx, rhs, gradients);
+	mixin(codeForGradients("omega"));
 	omega.refx = gradients[0];
 	omega.refy = gradients[1];
 	omega.refz = gradients[2];
