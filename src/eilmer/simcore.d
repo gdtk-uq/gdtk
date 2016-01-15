@@ -452,7 +452,7 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 	case GridMotion.shock_fitting:
 	    foreach (blk; gasBlocks) {
 		if (!blk.active) continue;
-		shock_fitting_vertex_velocities(blk, GlobalConfig.dimensions, step);
+		shock_fitting_vertex_velocities(blk, GlobalConfig.dimensions, step, dt_global);
 	    }
 	    break;		
     }
