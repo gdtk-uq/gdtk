@@ -8,41 +8,18 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
-test bbla-test {Testing bbla.d} -body {
-    exec ./bbla_test
-} -result {} -returnCodes {0}
+set module_names [list bbla bracketing gaussquad linesearch newtoncotes \
+		      ridder brent rungekutta rsla smla]
 
-test bracketing-test {Testing bracketing.d} -body {
-    exec ./bracketing_test
-} -result {} -returnCodes {0}
+foreach name $module_names {
+    test $name-test "Testing $name.d" \
+	-body "exec [join [list ./ $name _test] {}]" \
+	-result {} -returnCodes {0}
+}
 
-test gaussquad-test {Testing gaussquad.d} -body {
-    exec ./gaussquad_test
-} -result {} -returnCodes {0}
-
-test linesearch-test {Testing linesearch.d} -body {
-    exec ./linesearch_test
-} -result {} -returnCodes {0}
-
-test newtoncotes-test {Testing newtoncotes.d} -body {
-    exec ./newtoncotes_test
-} -result {} -returnCodes {0}
-
-test ridder-test {Testing ridder.d} -body {
-    exec ./ridder_test
-} -result {} -returnCodes {0}
-
-test brent-test {Testing brent.d} -body {
-    exec ./brent_test
-} -result {} -returnCodes {0}
-
-test rungekutta-test {Testing rungekutta.d} -body {
-    exec ./rungekutta_test
-} -result {} -returnCodes {0}
-
-test smla-test {Testing smla.d} -body {
-    exec ./smla_test
-} -result {} -returnCodes {0}
+# test bbla-test {Testing bbla.d} -body {
+#     exec ./bbla_test
+# } -result {} -returnCodes {0}
 
 puts ""
 puts "=======================================  SUMMARY  ======================================="

@@ -14,6 +14,7 @@ module flowgradients;
 import std.math;
 import std.stdio;
 import std.conv;
+import nm.rsla;
 import geom;
 import gas;
 import flowstate;
@@ -285,7 +286,7 @@ public:
                 double dz = cloud_pos[i].z - z_mid;
                 rhs[0] += dx*dq; rhs[1] += dy*dq; rhs[2] += dz*dq;
 	    }
-	    solveGradients!3(xTx, rhs, gradients);";
+	    solveWithInverse!3(xTx, rhs, gradients);";
 	    return code;
 	}
 	mixin(codeForGradients("vel.x"));
@@ -377,7 +378,7 @@ public:
 	        double dy = cloud_pos[i].y - y_mid;
 	        rhs[0] += dx*dq; rhs[1] += dy*dq;
 	    }
-	    solveGradients!2(xTx, rhs, gradients);";
+	    solveWithInverse!2(xTx, rhs, gradients);";
 	    return code;
 	}
 	mixin(codeForGradients("vel.x"));
@@ -427,46 +428,3 @@ public:
     } // end gradients_xy_leastsq()
 
 } // end class FlowGradients
-
-
-@nogc
-void computeInverse(int N)(ref double[2*N][N] c, double very_small_value=1.0e-16)
-// Perform Gauss-Jordan elimination on an augmented matrix.
-// c = [A|b] such that the mutated matrix becomes [I|x]
-// where x is the solution vector(s) to A.x = b
-{
-    foreach(j; 0 .. N) {
-	// Select pivot.
-	size_t p = j;
-	foreach(i; j+1 .. N) {
-	    if ( abs(c[i][j]) > abs(c[p][j]) ) p = i;
-	}
-	assert(abs(c[p][j]) > very_small_value, "matrix is essentially singular");
-	if ( p != j ) { // Swap rows
-	    foreach(col; 0 .. 2*N) {
-		double tmp = c[p][col]; c[p][col] = c[j][col]; c[j][col] = tmp;
-	    }
-	}
-	// Scale row j to get unity on the diagonal.
-	double cjj = c[j][j];
-	foreach(col; 0 .. 2*N) c[j][col] /= cjj;
-	// Do the elimination to get zeros in all off diagonal values in column j.
-	foreach(i; 0 .. N) {
-	    if ( i == j ) continue;
-	    double cij = c[i][j];
-	    foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
-	}
-    } // end foreach j
-} // end gaussJordanElimination()()
-
-@nogc
-void solveGradients(int N)(ref double[2*N][N] c, ref double[N] rhs, ref double[N] qgrad)
-// Multiply right-hand-side by the inverse part of the augmented matrix.
-{
-    foreach(i; 0 .. N) {
-	qgrad[i] = 0.0;
-	foreach(j; 0 .. N) {
-	    qgrad[i] += c[i][N+j] * rhs[j];
-	}
-    }
-} // end solveGradients()()
