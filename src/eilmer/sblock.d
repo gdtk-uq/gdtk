@@ -1898,34 +1898,35 @@ public:
     } // end propagate_inflow_data_west_to_east()
 
     override void convective_flux()
+    // Compute the flux from data on either-side of the interface.
     {
+	// Barring exceptions at the block boundaries, the general process is:
+	// (1) interpolate LEFT and RIGHT interface states from cell-center properties.
+	// (2) save u, v, w, T for the viscous flux calculation by making a local average.
+	// The values for u, v and T may be updated subsequently by the interface-flux function.
+	// (3) Apply the flux calculator to the Lft,Rght flow states.
+	//
 	// ifi interfaces are East-facing interfaces.
 	for ( size_t k = kmin; k <= kmax; ++k ) {
 	    for ( size_t j = jmin; j <= jmax; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
 		    auto IFace = get_ifi(i,j,k);
-		    auto cL1 = IFace.left_cells[1];
-		    auto cL0 = IFace.left_cells[0];
-		    auto cR0 = IFace.right_cells[0];
-		    auto cR1 = IFace.right_cells[1];
-		    // Compute the flux from data on either-side of the interface.
-		    // First, interpolate LEFT and RIGHT interface states from cell-center properties.
-		    if ( (i == imin+1) && (bc[Face.west].ghost_cell_data_available == false) ) {
+		    auto cL0 = IFace.left_cells[0]; auto cL1 = IFace.left_cells[1];
+		    auto cR0 = IFace.right_cells[0]; auto cR1 = IFace.right_cells[1];
+		    if ((i == imin) && (bc[Face.west].ghost_cell_data_available == false)) {
+			Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
+		    } else if ((i == imin+1) && (bc[Face.west].ghost_cell_data_available == false)) {
 			one_d.interp_right(IFace, cL0.iLength, cR0.iLength, cR1.iLength, Lft, Rght);
-		    } else if ( (i == imax) && (bc[Face.east].ghost_cell_data_available == false) ) {
+		    } else if ((i == imax) && (bc[Face.east].ghost_cell_data_available == false)) {
 			one_d.interp_left(IFace, cL1.iLength, cL0.iLength, cR0.iLength, Lft, Rght);
+		    } else if ((i == imax+1) && (bc[Face.east].ghost_cell_data_available == false)) {
+			Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
 		    } else { // General symmetric reconstruction.
 			one_d.interp_both(IFace, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, Lft, Rght);
 		    }
-		    // Second, save u, v, w, T for the viscous flux calculation by making a local average.
-		    // The values for u, v and T may be updated subsequently by the interface-flux function.
-		    if ( (i == imin) && (bc[Face.west].ghost_cell_data_available == false) ) {
-			IFace.fs.copy_average_values_from(Rght, Rght);
-		    } else if ( (i == imax+1) && (bc[Face.east].ghost_cell_data_available == false) ) {
-			IFace.fs.copy_average_values_from(Lft, Lft);
-		    } else {
-			IFace.fs.copy_average_values_from(Lft, Rght);
-		    }
+		    IFace.fs.copy_average_values_from(Lft, Rght);
+		    if ((i == imin) && (bc[Face.west].convective_flux_computed_in_bc == true)) continue;
+		    if ((i == imax+1) && (bc[Face.east].convective_flux_computed_in_bc == true)) continue;
 		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
 		} // i loop
 	    } // j loop
@@ -1935,27 +1936,22 @@ public:
 	    for ( size_t i = imin; i <= imax; ++i ) {
 		for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		    auto IFace = get_ifj(i,j,k);
-		    auto cL1 = IFace.left_cells[1];
-		    auto cL0 = IFace.left_cells[0];
-		    auto cR0 = IFace.right_cells[0];
-		    auto cR1 = IFace.right_cells[1];
-		    // Interpolate LEFT and RIGHT interface states from the cell-center properties.
-		    if ( (j == jmin+1) && (bc[Face.south].ghost_cell_data_available == false) ) {
+		    auto cL0 = IFace.left_cells[0]; auto cL1 = IFace.left_cells[1];
+		    auto cR0 = IFace.right_cells[0]; auto cR1 = IFace.right_cells[1];
+		    if ((j == jmin) && (bc[Face.south].ghost_cell_data_available == false)) {
+			Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
+		    } else if ((j == jmin+1) && (bc[Face.south].ghost_cell_data_available == false)) {
 			one_d.interp_right(IFace, cL0.jLength, cR0.jLength, cR1.jLength, Lft, Rght);
-		    } else if ( (j == jmax) && (bc[Face.north].ghost_cell_data_available == false) ) {
+		    } else if ((j == jmax) && (bc[Face.north].ghost_cell_data_available == false)) {
 			one_d.interp_left(IFace, cL1.jLength, cL0.jLength, cR0.jLength, Lft, Rght);
+		    } else if ((j == jmax+1) && (bc[Face.north].ghost_cell_data_available == false)) {
+			Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
 		    } else { // General symmetric reconstruction.
 			one_d.interp_both(IFace, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, Lft, Rght);
 		    }
-		    // Second, save u, v, w, T for the viscous flux calculation by making a local average.
-		    // The values for u, v and T may be updated subsequently by the interface-flux function.
-		    if ( (j == jmin) && (bc[Face.south].ghost_cell_data_available == false) ) {
-			IFace.fs.copy_average_values_from(Rght, Rght);
-		    } else if ( (j == jmax+1) && (bc[Face.north].ghost_cell_data_available == false) ) {
-			IFace.fs.copy_average_values_from(Lft, Lft);
-		    } else {
-			IFace.fs.copy_average_values_from(Lft, Rght);
-		    }
+		    IFace.fs.copy_average_values_from(Lft, Rght);
+		    if ((j == jmin) && (bc[Face.south].convective_flux_computed_in_bc == true)) continue;
+		    if ((j == jmax+1) && (bc[Face.north].convective_flux_computed_in_bc == true)) continue;
 		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
 		} // j loop
 	    } // i loop
@@ -1968,27 +1964,22 @@ public:
 	    for ( size_t j = jmin; j <= jmax; ++j ) {
 		for ( size_t k = kmin; k <= kmax+1; ++k ) {
 		    auto IFace = get_ifk(i,j,k);
-		    auto cL1 = IFace.left_cells[1];
-		    auto cL0 = IFace.left_cells[0];
-		    auto cR0 = IFace.right_cells[0];
-		    auto cR1 = IFace.right_cells[1];
-		    // Interpolate LEFT and RIGHT interface states from the cell-center properties.
-		    if ( (k == kmin+1) && (bc[Face.bottom].ghost_cell_data_available == false) ) {
+		    auto cL0 = IFace.left_cells[0]; auto cL1 = IFace.left_cells[1];
+		    auto cR0 = IFace.right_cells[0]; auto cR1 = IFace.right_cells[1];
+		    if ((k == kmin) && (bc[Face.bottom].ghost_cell_data_available == false)) {
+			Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
+		    } else if ((k == kmin+1) && (bc[Face.bottom].ghost_cell_data_available == false)) {
 			one_d.interp_right(IFace, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght);
-		    } else if ( (k == kmax) && (bc[Face.top].ghost_cell_data_available == false) ) {
+		    } else if ((k == kmax) && (bc[Face.top].ghost_cell_data_available == false)) {
 			one_d.interp_left(IFace, cL1.kLength, cL0.kLength, cR0.kLength, Lft, Rght);
+		    } else if ((k == kmax+1) && (bc[Face.top].ghost_cell_data_available == false)) {
+			Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
 		    } else { // General symmetric reconstruction.
 			one_d.interp_both(IFace, cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght);
 		    }
-		    // Second, save u, v, w, T for the viscous flux calculation by making a local average.
-		    // The values for u, v and T may be updated subsequently by the interface-flux function.
-		    if ( (k == kmin) && (bc[Face.bottom].ghost_cell_data_available == false) ) {
-			IFace.fs.copy_average_values_from(Rght, Rght);
-		    } else if ( (k == kmax+1) && (bc[Face.top].ghost_cell_data_available == false) ) {
-			IFace.fs.copy_average_values_from(Lft, Lft);
-		    } else {
-			IFace.fs.copy_average_values_from(Lft, Rght);
-		    }
+		    IFace.fs.copy_average_values_from(Lft, Rght);
+		    if ((k == kmin) && (bc[Face.bottom].convective_flux_computed_in_bc == true)) continue;
+		    if ((k == kmax+1) && (bc[Face.top].convective_flux_computed_in_bc == true)) continue;
 		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
 		} // for k 
 	    } // j loop

@@ -441,6 +441,8 @@ InFlowBC_ConstFlux.type = "inflow_const_flux"
 function InFlowBC_ConstFlux:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
+   o.convective_flux_computed_in_bc = true
+   o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
@@ -451,7 +453,8 @@ InFlowBC_ShockFitting.type = "inflow_shock_fitting"
 function InFlowBC_ShockFitting:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
-   o.convective_flux_computed_in_bc = false
+   o.convective_flux_computed_in_bc = true
+   o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
