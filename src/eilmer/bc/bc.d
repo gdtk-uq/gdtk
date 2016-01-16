@@ -33,16 +33,18 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     newBC.label = to!string(jsonData["label"]);
     newBC.type = to!string(jsonData["type"]);
     newBC.group = to!string(jsonData["group"]);
+    newBC.is_wall = getJSONbool(jsonData, "is_wall", true);
+    newBC.ghost_cell_data_available = getJSONbool(jsonData, "ghost_cell_data_available", true);
+    newBC.convective_flux_computed_in_bc = getJSONbool(jsonData, "convective_flux_computed_in_bc", false);
+    newBC.viscous_flux_computed_in_bc = getJSONbool(jsonData, "viscous_flux_computed_in_bc", false);
     // Assemble list of preReconAction effects
     auto preReconActionList = jsonData["pre_recon_action"].array;
     foreach ( jsonObj; preReconActionList ) {
 	newBC.preReconAction ~= make_GCE_from_json(jsonObj, blk_id, boundary);
-	newBC.ghost_cell_data_available = true;
     }
     auto postConvFluxActionList = jsonData["post_conv_flux_action"].array;
     foreach ( jsonObj; postConvFluxActionList ) {
 	newBC.postConvFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
-	newBC.ghost_cell_data_available = false;
     }
     auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
     foreach ( jsonObj; preSpatialDerivActionList ) {
@@ -75,20 +77,19 @@ public:
     // by other parts of the CFD code.
     bool is_wall = true;
     bool ghost_cell_data_available = true;
+    bool convective_flux_computed_in_bc = false;
+    bool viscous_flux_computed_in_bc = false;
     double emissivity = 0.0;
     FVInterface[] faces;
     BasicCell[] ghostcells;
     int[] outsigns;
 
-    this(int id, int boundary, bool isWall=true, bool ghostCellDataAvailable=true, double _emissivity=0.0)
+    this(int id, int boundary) 
     {
 	blk = gasBlocks[id];  // pick the relevant block out of the collection
 	which_boundary = boundary;
 	type = "";
 	group = "";
-	is_wall = isWall;
-	ghost_cell_data_available = ghostCellDataAvailable;
-	emissivity = _emissivity;
     }
 
     // Action lists.
@@ -113,6 +114,10 @@ public:
 	char[] repr;
 	repr ~= "BoundaryCondition(";
 	repr ~= "label= " ~ label ~ ", type= " ~ type ~ ", group= " ~ group;
+	repr ~= ", is_wall= " ~ to!string(is_wall);
+	repr ~= ", ghost_cell_data_available= " ~ to!string(ghost_cell_data_available);
+	repr ~= ", convective_flux_computed_in_bc= " ~ to!string(convective_flux_computed_in_bc);
+	repr ~= ", viscous_flux_computed_in_bc= " ~ to!string(viscous_flux_computed_in_bc);
 	if ( preReconAction.length > 0 ) {
 	    repr ~= ", preReconAction=[" ~ to!string(preReconAction[0]);
 	    foreach (i; 1 .. preReconAction.length) {

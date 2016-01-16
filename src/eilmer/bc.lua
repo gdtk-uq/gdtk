@@ -291,6 +291,10 @@ BoundaryCondition = {
    label = "",
    type = "",
    group = "",
+   is_wall = true,
+   ghost_cell_data_available = true,
+   convective_flux_computed_in_bc = false,
+   viscous_flux_computed_in_bc = false,
    preReconAction = {},
    postConvFluxAction = {},
    preSpatialDerivAction = {},
@@ -307,6 +311,13 @@ function BoundaryCondition:tojson()
    str = str .. string.format('"label": "%s", \n', self.label)
    str = str .. string.format('        "type": "%s", \n', self.type)
    str = str .. string.format('        "group": "%s", \n', self.group)
+   str = str .. string.format('"is_wall": %s, ', tostring(self.is_wall))
+   str = str .. string.format('"ghost_cell_data_available": %s, ',
+			      tostring(self.ghost_cell_data_available))
+   str = str .. string.format('"convective_flux_computed_in_bc": %s, ',
+			      tostring(self.convective_flux_computed_in_bc))
+   str = str .. string.format('"viscous_flux_computed_in_bc": %s, ',
+			      tostring(self.viscous_flux_computed_in_bc))
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
       str = str .. effect:tojson()
@@ -419,6 +430,7 @@ InFlowBC_Supersonic = BoundaryCondition:new()
 InFlowBC_Supersonic.type = "inflow_supersonic"
 function InFlowBC_Supersonic:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
@@ -428,6 +440,7 @@ InFlowBC_ConstFlux = BoundaryCondition:new()
 InFlowBC_ConstFlux.type = "inflow_const_flux"
 function InFlowBC_ConstFlux:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
@@ -437,6 +450,8 @@ InFlowBC_ShockFitting = BoundaryCondition:new()
 InFlowBC_ShockFitting.type = "inflow_shock_fitting"
 function InFlowBC_ShockFitting:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
+   o.convective_flux_computed_in_bc = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
@@ -445,6 +460,9 @@ end
 InFlowBC_FromStagnation = BoundaryCondition:new()
 InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
 InFlowBC_FromStagnation.allowedArgs = {'type', 'label', 'group',
+				       'is_wall', 'ghost_cell_data_available',
+				       'convective_flux_computed_in_bc', 
+				       'viscous_flux_computed_in_bc',
 				       'stagCondition',
 				       'direction_type',
 				       'direction_x',
@@ -456,6 +474,7 @@ InFlowBC_FromStagnation.allowedArgs = {'type', 'label', 'group',
 function InFlowBC_FromStagnation:new(o)
    o = BoundaryCondition.new(self, o)
    checkForInvalidArgs(o, self.allowedArgs, "InFlowBC_FromStagnation:new{}")
+   o.is_wall = false
    o.preReconAction = { FromStagnation:new{stagCondition=o.stagCondition,
 					   direction_type=o.direction_type,
 					   direction_x=o.direction_x,
@@ -472,6 +491,7 @@ OutFlowBC_Simple = BoundaryCondition:new()
 OutFlowBC_Simple.type = "outflow_simple_extrapolate"
 function OutFlowBC_Simple:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    return o
@@ -481,6 +501,7 @@ OutFlowBC_FixedP = BoundaryCondition:new()
 OutFlowBC_FixedP.type = "outflow_fixed_p"
 function OutFlowBC_FixedP:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedP:new{p_outside=o.p_outside} }
    o.preSpatialDerivAction = { CopyCellData:new() }
@@ -491,6 +512,7 @@ OutFlowBC_FixedPT = BoundaryCondition:new()
 OutFlowBC_FixedPT.type = "outflow_fixed_p_and_t"
 function OutFlowBC_FixedPT:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedPT:new{p_outside=o.p_outside, T_outside=o.T_outside} }
    o.preSpatialDerivAction = { CopyCellData:new() }
@@ -501,6 +523,7 @@ ExchangeBC_FullFace = BoundaryCondition:new()
 ExchangeBC_FullFace.type = "exchange_over_full_face"
 function ExchangeBC_FullFace:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
    o.preReconAction = { FullFaceExchangeCopy:new{otherBlock=o.otherBlock,
 						 otherFace=o.otherFace,
 						 orientation=o.orientation,
@@ -514,6 +537,7 @@ ExchangeBC_MappedCell = BoundaryCondition:new()
 ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = false
    o.preReconAction = { MappedCellExchangeCopy:new{transform_position=o.transform_position,
 						   c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
 						   list_mapped_cells=o.list_mapped_cells,
@@ -536,6 +560,8 @@ WallBC_AdjacentToSolid = BoundaryCondition:new()
 WallBC_AdjacentToSolid.type = "wall_adjacent_to_solid"
 function WallBC_AdjacentToSolid:new(o)
    o = BoundaryCondition.new(self, o)
+   o.is_wall = true
+   o.viscous_flux_computed_in_bc = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
 			       TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
