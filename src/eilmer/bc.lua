@@ -294,7 +294,6 @@ BoundaryCondition = {
    is_wall = true,
    ghost_cell_data_available = true,
    convective_flux_computed_in_bc = false,
-   viscous_flux_computed_in_bc = false,
    preReconAction = {},
    postConvFluxAction = {},
    preSpatialDerivAction = {},
@@ -316,8 +315,6 @@ function BoundaryCondition:tojson()
 			      tostring(self.ghost_cell_data_available))
    str = str .. string.format('"convective_flux_computed_in_bc": %s, ',
 			      tostring(self.convective_flux_computed_in_bc))
-   str = str .. string.format('"viscous_flux_computed_in_bc": %s, ',
-			      tostring(self.viscous_flux_computed_in_bc))
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
       str = str .. effect:tojson()
@@ -465,7 +462,6 @@ InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
 InFlowBC_FromStagnation.allowedArgs = {'type', 'label', 'group',
 				       'is_wall', 'ghost_cell_data_available',
 				       'convective_flux_computed_in_bc', 
-				       'viscous_flux_computed_in_bc',
 				       'stagCondition',
 				       'direction_type',
 				       'direction_x',
@@ -564,7 +560,6 @@ WallBC_AdjacentToSolid.type = "wall_adjacent_to_solid"
 function WallBC_AdjacentToSolid:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = true
-   o.viscous_flux_computed_in_bc = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
 			       TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,

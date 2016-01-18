@@ -36,7 +36,6 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     newBC.is_wall = getJSONbool(jsonData, "is_wall", true);
     newBC.ghost_cell_data_available = getJSONbool(jsonData, "ghost_cell_data_available", true);
     newBC.convective_flux_computed_in_bc = getJSONbool(jsonData, "convective_flux_computed_in_bc", false);
-    newBC.viscous_flux_computed_in_bc = getJSONbool(jsonData, "viscous_flux_computed_in_bc", false);
     // Assemble list of preReconAction effects
     auto preReconActionList = jsonData["pre_recon_action"].array;
     foreach ( jsonObj; preReconActionList ) {
@@ -78,7 +77,6 @@ public:
     bool is_wall = true;
     bool ghost_cell_data_available = true;
     bool convective_flux_computed_in_bc = false;
-    bool viscous_flux_computed_in_bc = false;
     double emissivity = 0.0;
     FVInterface[] faces;
     BasicCell[] ghostcells;
@@ -117,7 +115,6 @@ public:
 	repr ~= ", is_wall= " ~ to!string(is_wall);
 	repr ~= ", ghost_cell_data_available= " ~ to!string(ghost_cell_data_available);
 	repr ~= ", convective_flux_computed_in_bc= " ~ to!string(convective_flux_computed_in_bc);
-	repr ~= ", viscous_flux_computed_in_bc= " ~ to!string(viscous_flux_computed_in_bc);
 	if ( preReconAction.length > 0 ) {
 	    repr ~= ", preReconAction=[" ~ to!string(preReconAction[0]);
 	    foreach (i; 1 .. preReconAction.length) {
