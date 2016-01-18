@@ -291,6 +291,7 @@ BoundaryCondition = {
    label = "",
    type = "",
    group = "",
+   is_gas_domain_bc = true,
    is_wall = true,
    ghost_cell_data_available = true,
    convective_flux_computed_in_bc = false,
@@ -625,6 +626,7 @@ SolidBoundaryCondition = {
    label = "",
    type = "",
    group = "",
+   is_solid_domain_bc = true,
    setsFluxDirectly = false,
    preSpatialDerivAction = {}
 }

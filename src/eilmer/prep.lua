@@ -132,6 +132,13 @@ function SBlock:tojson()
    end
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
+      if not self.bcList[face].is_gas_domain_bc then
+	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
+	 errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
+	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
+	 print(errMsg)
+	 os.exit(1)
+      end
       str = str .. string.format('    "boundary_%s": ', face) ..
 	 self.bcList[face]:tojson() .. ',\n'
    end
@@ -198,6 +205,13 @@ function UBlock:tojson()
    end
    -- Boundary conditions
    for i = 0, self.nboundaries-1 do
+      if not self.bcList[i].is_gas_domain_bc then
+	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%s\n", self.id, i)
+	 errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
+	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
+	 print(errMsg)
+	 os.exit(1)
+      end
       str = str .. string.format('    "boundary_%d": ', i) ..
 	 self.bcList[i]:tojson() .. ',\n'
    end
@@ -485,7 +499,14 @@ function SSolidBlock:tojson()
    str = str .. string.format('       "Cp": %.6e\n', self.properties.Cp)
    str = str .. '    },\n'
    -- Boundary conditions
-      for _,face in ipairs(faceList(config.dimensions)) do
+   for _,face in ipairs(faceList(config.dimensions)) do
+      if not self.bcList[i].is_solid_domain_bc then
+	 errMsg = string.format("ERROR: Boundary condition problem for solid block:%d, boundary:%s\n", self.id, i)
+	 errMsg = errMsg .. "       This boundary condition should be a solid domain b.c.\n"
+	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
+	 print(errMsg)
+	 os.exit(1)
+      end
       str = str .. string.format('    "face_%s": ', face) ..
 	 self.bcList[face]:tojson() .. ',\n'
    end
