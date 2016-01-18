@@ -573,6 +573,7 @@ function write_config_file(fileName)
    f:write(string.format('"M_inf": %e,\n', config.M_inf))
 
    f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
+   f:write(string.format('"shock_fitting_delay": %e,\n', config.shock_fitting_delay))
    f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)))
    f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))
 

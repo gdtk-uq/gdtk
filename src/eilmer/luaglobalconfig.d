@@ -100,6 +100,10 @@ extern(C) int configSetFromTable(lua_State* L)
 	GlobalConfig.apply_bcs_in_parallel = to!bool(lua_toboolean(L, -1));
 	lua_pushnil(L); lua_setfield(L, 1, "apply_bcs_in_parallel");
     }
+    if ( GridMotion.shock_fitting && GlobalConfig.apply_bcs_in_parallel ) {
+	writeln("WARNING: config.apply_bcs_in_parallel is set to false when shock_fitting is used.");
+	GlobalConfig.apply_bcs_in_parallel = false;
+    } 
     lua_pop(L, 1);
     lua_getfield(L, 1, "adjust_invalid_cell_data");
     if (!lua_isnil(L, -1)) {
@@ -183,6 +187,12 @@ extern(C) int configSetFromTable(lua_State* L)
 	string method = to!string(luaL_checkstring(L, -1));
 	GlobalConfig.grid_motion = grid_motion_from_name(method);
 	lua_pushnil(L); lua_setfield(L, 1, "grid_motion");
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "shock_fitting_delay");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.shock_fitting_delay = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "shock_fitting_delay");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "write_vertex_velocities");
@@ -558,7 +568,9 @@ extern(C) int configGet(lua_State* L)
     case "udf_grid_motion_file":
 	lua_pushstring(L, toStringz(GlobalConfig.udf_grid_motion_file));
 	break;
-
+    case "shock_fitting_delay":
+	lua_pushnumber(L, GlobalConfig.shock_fitting_delay);
+	break;
     case "viscous":
 	lua_pushboolean(L, GlobalConfig.viscous);
 	break;

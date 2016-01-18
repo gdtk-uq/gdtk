@@ -142,7 +142,7 @@ final class GlobalConfig {
     // Some of the user-defined functionality depends on having access to all blocks
     // from a single thread.  For safety, in those cases, do not use parallel loops. 
     shared static bool apply_bcs_in_parallel = true;
-
+    
     /// When decoding the array of conserved quantities, 
     /// the temperature or the density may try to go negative.  
     /// If it does and adjust_invalid_cell_data == true, the cell data
@@ -219,7 +219,8 @@ final class GlobalConfig {
     // The amount by which to increment the viscous factor during soft-start.
     shared static double viscous_factor_increment = 0.01;
     shared static double viscous_delay = 0.0;
-
+    // The amount of time by which to delay the shock fitting.
+    shared static double shock_fitting_delay = 1.5e-3;
     // When the diffusion is calculated is treated as part of the viscous calculation:
     //   false for neglecting multicomponent diffusion, 
     //   true when considering the diffusion 

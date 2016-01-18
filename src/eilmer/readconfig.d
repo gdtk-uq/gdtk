@@ -80,6 +80,10 @@ void read_config_file()
 	getJSONbool(jsonData, "separate_update_for_k_omega_source", false);
     GlobalConfig.apply_bcs_in_parallel =
 	getJSONbool(jsonData, "apply_bcs_in_parallel", true);
+    if ( GridMotion.shock_fitting && GlobalConfig.apply_bcs_in_parallel ) {
+	writeln("WARNING: config.apply_bcs_in_parallel is set to false when shock_fitting is used.");
+	GlobalConfig.apply_bcs_in_parallel = false;
+    } 
     GlobalConfig.stringent_cfl = getJSONbool(jsonData, "stringent_cfl", false);
     GlobalConfig.adjust_invalid_cell_data =
 	getJSONbool(jsonData, "adjust_invalid_cell_data", false);
@@ -120,6 +124,10 @@ void read_config_file()
     // as global information available to the user. Hence, you'll
     // find that step at the very end of this function.
 
+
+    // Parameters controlling shock fitting
+    GlobalConfig.shock_fitting_delay = getJSONdouble(jsonData, "shock_fitting_delay", 1.5e-3);
+    
     GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
 
     if (GlobalConfig.verbosity_level > 1) {
@@ -144,6 +152,7 @@ void read_config_file()
 	writeln("  M_inf: ", GlobalConfig.M_inf);
 	writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
+	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
 	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
 	writeln("  udf_grid_motion_file: ", GlobalConfig.udf_grid_motion_file);
 	writeln("  MHD: ", GlobalConfig.MHD);
