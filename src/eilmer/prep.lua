@@ -500,8 +500,8 @@ function SSolidBlock:tojson()
    str = str .. '    },\n'
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
-      if not self.bcList[i].is_solid_domain_bc then
-	 errMsg = string.format("ERROR: Boundary condition problem for solid block:%d, boundary:%s\n", self.id, i)
+      if not self.bcList[face].is_solid_domain_bc then
+	 errMsg = string.format("ERROR: Boundary condition problem for solid block:%d, face:%s\n", self.id, face)
 	 errMsg = errMsg .. "       This boundary condition should be a solid domain b.c.\n"
 	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
 	 print(errMsg)
