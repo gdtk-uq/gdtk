@@ -47,7 +47,6 @@ public:
     
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
-	// [TODO] generalize to read both structured- and unstructured-grid blocks.
 	// Use job.list to get a hint of the type of each block.
 	auto listFile = File(dir ~ "/" ~ jobName ~ ".list");
 	auto listFileLine = listFile.readln().chomp(); // only comments on the first line
