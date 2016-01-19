@@ -1,6 +1,7 @@
--- n90.lua -- Cylinder in dissociating nitrogen flow
--- Rg & PJ  2015-03-09
---          2015-04-22 build an original grid in this script
+-- cyl-sf.lua
+-- Shock fitting boundary condition example simulation:
+-- Cylinder in ideal air flow
+-- Kyle Damm Jan 2015
 
 job_title = "Cylinder in ideal air flow with shock fitting boundary."
 print(job_title)
