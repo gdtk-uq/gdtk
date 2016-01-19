@@ -66,7 +66,11 @@ gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(NM_FILES) $(UTIL_FILES)
 	dmd -ofgas-calc -version=gas_calc \
 		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS)
 
-install: gas-calc build-prep-gas
+species-data-converter: species_data_converter.lua
+	- mkdir -p $(BUILD_DIR)/bin
+	cp species_data_converter.lua $(BUILD_DIR)/bin/species-data-converter; chmod +x $(BUILD_DIR)/bin/species-data-converter
+
+install: gas-calc build-prep-gas species-data-converter
 	- mkdir -p $(INSTALL_DIR)
 	cp gas-calc $(BUILD_DIR)/bin/
 	@echo "Installing to $(INSTALL_DIR)"

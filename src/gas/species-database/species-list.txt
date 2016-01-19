@@ -3,4 +3,7 @@ air.lua    : air      : CEA-air
 CO2.lua    : CO2      : carbon dioxide
 N.lua      : N        : monatomic nitrogen
 N2.lua     : N2       : diatomic nitrogen
+NO.lua     : NO       : nitrogen oxide
+O.lua      : O        : monatomic oxygen
+O2.lua     : O2       : diatomic oxygen
 SF6.lua    : SF6      : sulphur hexafluorane
