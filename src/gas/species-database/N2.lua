@@ -14,9 +14,11 @@ db.N2.gamma = {
    reference = 'diatomic molecule at low temperatures, gamma = 7/5'
 }
 db.N2.entropyRefValues = {
-   s1 = 0.0,
+   s1 = 6839.91,
    T1 = 298.15,
-   p1 = 101.325e3
+   p1 = 101.325e3,
+   description = 'Standard state entropy at 1 bar',
+   reference = 'NIST Chemistry WebBook: http://webbook.nist.gov/chemistry/'
 }
 db.N2.sutherlandVisc = {
    mu_ref = 1.663e-05,
