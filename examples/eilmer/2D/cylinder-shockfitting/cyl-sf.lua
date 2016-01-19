@@ -38,8 +38,8 @@ blk0.bcList[north] =  OutFlowBC_Simple:new{label="outflow-boundary"}
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
-config.max_time = 5.0e-2
-config.max_step = 400000
+config.max_time = 15.0e-3
+config.max_step = 100000
 config.dt_init = 1.0e-9
 config.cfl_value = 0.25 
 config.dt_plot = 5.0e-4
