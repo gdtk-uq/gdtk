@@ -25,6 +25,7 @@ import block;
 import sblock;
 import geom;
 import boundary_flux_effect;
+import ghost_cell_effect;
 
 immutable double SHOCK_DETECT_THRESHOLD = 0.2;
 
@@ -171,10 +172,24 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 		for (int face = 0; face < 2; face++) {
 		    cell =  blk.get_cell(i, j-face, k);
 		    iface_neighbour = blk.get_ifi(i,j-face,k);
-		    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"" && face == 1)  cell = gasBlocks[0].get_cell(gasBlocks[0].imin, gasBlocks[0].jmax+1-1, k);
-		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"" && face == 0) cell = gasBlocks[1].get_cell(gasBlocks[1].imin, gasBlocks[1].jmin, k);
-		    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"" && face == 1)  iface_neighbour = gasBlocks[0].get_ifi(gasBlocks[0].imin, gasBlocks[0].jmax+1-1, k);
-		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"" && face == 0) iface_neighbour = gasBlocks[1].get_ifi(gasBlocks[1].imin, gasBlocks[1].jmin+1, k);
+		    
+		    // For the case where two blocks connect (either on the south or north faces) we need to reach across to the neighbour block and
+		    // retrieve the neighbouring vertex and interface to ensure the vertices on the connecting interface move together and
+		    // do not move independently
+		    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"" && face == 1) {
+			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
+			int neighbourBlock =  ffeBC.neighbourBlock.id;
+			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
+			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
+		    }
+
+		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"" && face == 0) {
+			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
+			int neighbourBlock =  ffeBC.neighbourBlock.id;
+			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
+			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
+		    }
+		    
 		    rho_rght = cell.fs.gas.rho;         // density in top right cell
 		    u_rght = cell.fs.vel;               // velocity vector in right cell
 		    p_rght = cell.fs.gas.p;             // pressure in right cell 
@@ -197,7 +212,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 		}
 		// now that we have the surrounding interface velocities, let's combine them to approximate the central vertex velocity
 		if (w[0] == 0.0 && w[1] == 0.0) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average
-		temp_vel = 0.8*(w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, dampened to 80% for stabilit
+		temp_vel = 0.8*(w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, dampened to 80% for stability
 	    }
 	    unit_d = correct_direction(unit_d, vtx.pos[0], vtx_left.pos[0], vtx_right.pos[0], i, blk.imin, blk.imax);
 	    temp_vel = dot(temp_vel, unit_d)*unit_d;
