@@ -20,11 +20,13 @@ import gpath;
 import surface;
 import luageom;
 import luagpath;
+import luasgrid;
 
 // Name of metatables -- these are the Lua access names.
 immutable string CoonsPatchMT = "CoonsPatch";
 immutable string AOPatchMT = "AOPatch";
 immutable string ChannelPatchMT = "ChannelPatch";
+immutable string MeshPatchMT = "MeshPatch";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
 
 static const(ParametricSurface)[] surfaceStore;
@@ -36,6 +38,12 @@ ParametricSurface checkSurface(lua_State* L, int index) {
 	return checkObj!(CoonsPatch, CoonsPatchMT)(L, index);
     if ( isObjType(L, index, AOPatchMT ) )
 	return checkObj!(AOPatch, AOPatchMT)(L, index);
+    if ( isObjType(L, index, ChannelPatchMT ) )
+	return checkObj!(ChannelPatch, ChannelPatchMT)(L, index);
+    if ( isObjType(L, index, MeshPatchMT ) )
+	return checkObj!(MeshPatch, MeshPatchMT)(L, index);
+    if ( isObjType(L, index, SubRangedSurfaceMT ) )
+	return checkObj!(SubRangedSurface, SubRangedSurfaceMT)(L, index);
     // if no match found then
     return null;
 }
@@ -297,6 +305,43 @@ The value, if present, should be boolean (true or false).`;
 
 
 /**
+ * This is the constructor for a MeshPatch to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new MeshPatch object
+ * is pushed onto the Lua stack.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * patch0 = MeshPatch:new{sgrid=myStructuredGrid}
+ * --------------------------
+ */
+
+extern(C) int newMeshPatch(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    
+    if ( !lua_istable(L, 1) ) {
+	string errMsg = `Error in constructor MeshPatch:new.
+A table with input parameters is expected as the first argument.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Look for the StructuredGrid object.
+    lua_getfield(L, 1, "sgrid");
+    auto grid = checkStructuredGrid(L, -1);
+    if ( grid is null ) {
+	string errMsg = `Error in constructor MeshPatch:new.
+Couldn't find StructuredGrid object in sgrid field.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Construct the actual surface.
+    auto mpatch = new MeshPatch(grid);
+    surfaceStore ~= pushObj!(MeshPatch, MeshPatchMT)(L, mpatch);
+    return 1;
+} // end newMeshPatch()
+
+
+/**
  * This is constructor for a SubRangedSurface object
  * to be used from the Lua interface.
  *
@@ -443,6 +488,25 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, ChannelPatchMT.toStringz);
+
+    // Register the MeshPatch object
+    luaL_newmetatable(L, MeshPatchMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newMeshPatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(MeshPatch, MeshPatchMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(MeshPatch, MeshPatchMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(MeshPatch, MeshPatchMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, MeshPatchMT.toStringz);
 
     // Register the SubRangedSurface object
     luaL_newmetatable(L, SubRangedSurfaceMT.toStringz);
