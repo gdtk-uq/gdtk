@@ -19,6 +19,7 @@ import util.lua_service;
 import geom;
 import luageom;
 import sgrid;
+import luasgrid;
 import flowsolution;
 
 /// name for FlowSolution object in Lua scripts.
@@ -367,6 +368,34 @@ extern(C) int get_cell_data(lua_State* L)
 } // end get_cell_data()
 
 
+extern(C) int get_sgrid(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if ( !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to FlowSolution:get_sgrid.";
+	errMsg ~= " A table is expected as first (and only) argument to the method.";
+	luaL_error(L, errMsg.toStringz);
+    }
+
+    int ib;
+    lua_getfield(L, 2, "ib");
+    if ( lua_isnil(L, -1) ) {
+	ib = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	ib = to!int(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:get_grid.";
+	errMsg ~= " A field for ib was found, but the content was not valid.";
+	errMsg ~= " The ib field, if given, should be an integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, cast(StructuredGrid) fsol.gridBlocks[ib]);
+    return 1;
+
+}
+
 void registerFlowSolution(lua_State* L)
 {
     luaL_newmetatable(L, FlowSolutionMT.toStringz);
@@ -393,6 +422,8 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "get_var_names");
     lua_pushcfunction(L, &get_cell_data);
     lua_setfield(L, -2, "get_cell_data");
+    lua_pushcfunction(L, &get_sgrid);
+    lua_setfield(L, -2, "get_sgrid");
     // Make class visible
     lua_setglobal(L, FlowSolutionMT.toStringz);
 } // end registerFlowSolution()

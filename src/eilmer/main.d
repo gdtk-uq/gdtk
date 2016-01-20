@@ -23,6 +23,7 @@ import simcore;
 import util.lua;
 import luaglobalconfig;
 import luaflowstate;
+import luaflowsolution;
 import luageom;
 import luagpath;
 import luasurface;
@@ -151,6 +152,7 @@ void main(string[] args)
 	luaL_openlibs(L);
 	registerVector3(L);
 	registerGlobalConfig(L);
+	registerFlowSolution(L);
 	registerFlowState(L);
 	registerPaths(L);
 	registerSurfaces(L);
