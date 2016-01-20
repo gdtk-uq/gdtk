@@ -7,6 +7,8 @@ DEMO_PROGRAMS := geom_demo gpath_demo surface_demo volume_demo \
 	luaunifunction_demo \
 	sgrid_demo luasgrid_demo usgrid_demo luausgrid_demo
 
+include geom_files.mk
+
 GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
 
@@ -54,13 +56,17 @@ gpath_demo: gpath_demo.d gpath.d geom.d $(NM_FILES)
 	dmd $(DFLAGS) gpath_demo.d $(OF)gpath_demo \
 		gpath.d geom.d $(NM_FILES) $(DLINKFLAGS)
 
-surface_demo: surface_demo.d surface.d gpath.d geom.d $(NM_FILES)
+surface_demo: surface_demo.d volume.d sgrid.d surface.d gpath.d geom.d \
+	univariatefunctions.d $(NM_FILES)
 	dmd $(DFLAGS) surface_demo.d $(OF)surface_demo \
-		surface.d gpath.d geom.d $(NM_FILES) $(DLINKFLAGS)
+		sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
+		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-volume_demo: volume_demo.d volume.d surface.d gpath.d geom.d $(NM_FILES)
+volume_demo: volume_demo.d sgrid.d volume.d surface.d gpath.d geom.d \
+	univariatefunctions.d $(NM_FILES)
 	dmd $(DFLAGS) volume_demo.d $(OF)volume_demo \
-		volume.d surface.d gpath.d geom.d $(NM_FILES) $(DLINKFLAGS)
+		sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
+		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 univariatefunctions_demo: univariatefunctions_demo.d univariatefunctions.d
 	dmd $(DFLAGS) univariatefunctions_demo.d $(OF)univariatefunctions_demo \
@@ -92,21 +98,13 @@ luagpath_demo: luagpath_demo.d luagpath.d luageom.d geom.d gpath.d \
 		luagpath.d luageom.d geom.d gpath.d \
 		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luasurface_demo: luasurface_demo.d luasurface.d luagpath.d luageom.d \
-	geom.d gpath.d surface.d \
-	$(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+luasurface_demo: luasurface_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	dmd $(DFLAGS_LUA) luasurface_demo.d $(OF)luasurface_demo \
-		luasurface.d luagpath.d luageom.d \
-		surface.d geom.d gpath.d \
-		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luavolume_demo: luavolume_demo.d luavolume.d luasurface.d luagpath.d luageom.d \
-	geom.d gpath.d surface.d volume.d \
-	$(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+luavolume_demo: luavolume_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	dmd $(DFLAGS_LUA) luavolume_demo.d $(OF)luavolume_demo \
-		luavolume.d luasurface.d luagpath.d luageom.d \
-		volume.d surface.d geom.d gpath.d \
-		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 luaunifunction_demo: luaunifunction_demo.d luaunifunction.d univariatefunctions.d \
 	$(UTIL_FILES) $(LIBLUA)
@@ -114,27 +112,11 @@ luaunifunction_demo: luaunifunction_demo.d luaunifunction.d univariatefunctions.
 		luaunifunction.d univariatefunctions.d \
 		$(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luasgrid_demo: luasgrid_demo.d sgrid.d volume.d surface.d gpath.d geom.d \
-	univariatefunctions.d \
-	luasgrid.d luavolume.d luasurface.d luagpath.d luageom.d \
-	luaunifunction.d \
-	$(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
+luasgrid_demo: luasgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
 	dmd $(DFLAGS_LUA) luasgrid_demo.d $(OF)luasgrid_demo \
-		sgrid.d volume.d surface.d gpath.d geom.d \
-		univariatefunctions.d \
-		luasgrid.d luavolume.d luasurface.d luagpath.d luageom.d \
-		luaunifunction.d \
-		$(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luausgrid_demo: luausgrid_demo.d usgrid.d sgrid.d volume.d surface.d gpath.d geom.d \
-	univariatefunctions.d \
-	luausgrid.d luasgrid.d luavolume.d luasurface.d luagpath.d luageom.d \
-	luaunifunction.d \
-	$(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
+luausgrid_demo: luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
 	dmd $(DFLAGS_LUA) luausgrid_demo.d $(OF)luausgrid_demo \
-		usgrid.d sgrid.d volume.d surface.d gpath.d geom.d \
-		univariatefunctions.d \
-		luausgrid.d luasgrid.d luavolume.d luasurface.d luagpath.d luageom.d \
-		luaunifunction.d \
-		$(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
