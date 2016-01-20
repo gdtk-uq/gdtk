@@ -2,6 +2,7 @@
 air.lua    : air      : CEA-air
 Ar.lua     : Ar       : argon
 CO2.lua    : CO2      : carbon dioxide
+Kr.lua     : Kr       : krypton
 N.lua      : N        : monatomic nitrogen
 N2.lua     : N2       : diatomic nitrogen
 NO.lua     : NO       : nitrogen oxide
