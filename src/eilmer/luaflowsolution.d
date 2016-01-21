@@ -172,10 +172,6 @@ extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
     lua_setfield(L, tblIndx, "ib");
     lua_pushnumber(L, indices[1]);
     lua_setfield(L, tblIndx, "i");
-    lua_pushnumber(L, indices[2]);
-    lua_setfield(L, tblIndx, "j");
-    lua_pushnumber(L, indices[3]);
-    lua_setfield(L, tblIndx, "k");
     return 1; // Just the table of indices is left on the stack.
 } // end find_nearest_cell_centre_from_lua()
 
@@ -329,11 +325,29 @@ extern(C) int get_cell_data(lua_State* L)
     }
     lua_pop(L, 1);
 
+    // We make a decision at this point. If the "j" field is nil,
+    // then we assume that the caller is using single-index (unstructured)
+    // access to the cell data. In this case, we delegate the work,
+    // return the result, and clean-up and leave.
+    //
+    // Otherwise we go onto gather the "j" and possibly "k" fields.
+
     int j;
     lua_getfield(L, 2, "j");
     if ( lua_isnil(L, -1) ) {
-	j = 0;
-    } else if ( lua_isnumber(L, -1) ) {
+	lua_pop(L, 1);
+	lua_settop(L, 0); // clear stack
+	lua_newtable(L); // anonymous table { }
+	auto tblIndx = lua_gettop(L);
+	foreach (varName; fsol.flowBlocks[ib].variableNames) {
+	    lua_pushnumber(L, fsol.flowBlocks[ib][varName,i]);
+	    lua_setfield(L, tblIndx, varName.toStringz);
+	}
+	return 1; // Just the table of indices is left on the stack.
+    }
+
+    // otherwise, assume structured-grid type access.
+    if ( lua_isnumber(L, -1) ) {
 	j = to!int(luaL_checknumber(L, -1));
     } else {
 	string errMsg = "Error in call to FlowSolution:get_cell_data.";
