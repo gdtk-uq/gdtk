@@ -7,7 +7,7 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 
 DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo sf6_model_demo luagas_model_demo \
-	univariate_lut_demo build_tree
+	univariate_lut_demo build_tree uniform_lut_demo
 TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test gas_model_test gas_model_util_test ideal_gas_test \
 	perf_gas_mix_eos_test sutherland_therm_cond_test sutherland_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_mix_eos_test very_viscous_air_test\
@@ -112,6 +112,10 @@ luagas_model_demo: luagas_model_demo.d $(LIBLUA)
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS) 
 
+uniform_lut_demo: uniform_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES) $(GAS_FILES)
+	$(DMD) -g $(DFLAGS) uniform_lut_demo.d $(OF)uniform_lut_demo $(LIBLUA) $(UTIL_FILES)\
+		 $(NM_FILES) $(GAS_FILES)
+
 # Jonathan's programs that were moved out of nm.
 
 build_tree: build_tree.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
@@ -190,3 +194,5 @@ very_viscous_air_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 co2gas_sw_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	dmd -of$@ -debug -gc -w -version=$@ \
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+

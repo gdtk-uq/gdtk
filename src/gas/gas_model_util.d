@@ -15,11 +15,12 @@ import gas.very_viscous_air;
 import gas.co2gas;
 import gas.co2gas_sw;
 import gas.sf6virial;
+import gas.uniform_lut;
 import std.file;
 import std.stdio;
 import util.lua;
 import util.lua_service;
-import core.stdc.stdlib : exit;
+import std.c.stdlib : exit;
 
 /**
  * We get the instructions for setting up the GasModel object
@@ -35,6 +36,7 @@ import core.stdc.stdlib : exit;
  */
 GasModel init_gas_model(in string file_name="gas-model.lua") {
     lua_State* L;
+   
     try { 
         L = init_lua_State(file_name);
     } catch (Exception e) {
@@ -45,6 +47,9 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
  	exit(1);
     }
     string gas_model_name;
+
+    
+
     try {
     	gas_model_name = getString(L, LUA_GLOBALSINDEX, "model");
     } catch (Exception e) {
@@ -58,7 +63,7 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
     switch ( gas_model_name ) {
     case "IdealGas":
 	gm = new IdealGas(L);
-		break;
+	break;
     case "ThermallyPerfectGas":
 	gm = new ThermallyPerfectGas(L);
 	break;
@@ -72,8 +77,11 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
 	gm = new CO2GasSW(L);
 	break;
     case "SF6Virial":
-    	gm = new SF6Virial(L);
-    	break;
+	gm = new SF6Virial(L);
+	break;
+    case "look-up table":  
+	gm = new  UniformLUT(L);
+	break;
     default:
 	gm = new IdealGas();
     }

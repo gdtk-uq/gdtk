@@ -13,6 +13,7 @@ module gas.gas_model;
 import std.conv;
 import std.math;
 import std.stdio;
+import std.string;
 
 import util.msg_service;
 import gas.physical_constants;
@@ -131,8 +132,6 @@ protected:
     int[string] _species_indices;
     double[] _mol_masses;
 }
-
-
 class GasState {
 public:
     /// Thermodynamic properties.
@@ -431,13 +430,796 @@ body {
     foreach ( i; 0..massf.length ) massf[i] = molef[i] * mol_masses[i] / mixMolMass;
 }
 
+
+/* The following functions:
+   update_thermo_state_pT(), update_thermo_state_rhoT(), update_thermo_state_rhop() 
+   are for updating the thermo state from when  the gas model does not  have a method
+   for doing so with those variables, but does have a defined method for
+   update_thermo_from_rhoe(). (e.g. in the UniformLUT class)
+   A guess is made for rho & e and that guess is iterated using the  Newton-Raphson 
+   method.
+   A GasModel object is a function parameter so that the update method from rho,e for
+   that gas model can be called.
+   The funcions:
+   update_thermo_state_ps(), and update_thermo_state_hs() actually iterate on the update
+   update_thermo_from_pT(), as  called from the gas model (though the p,T update can be
+   defined as the function defined here that itself iterates on the update method for
+   rho,e)
+*/
+
+immutable MAX_RELATIVE_STEP = 0.1;
+immutable MAX_STEPS = 20;
+
+void update_thermo_state_pT(GasModel gmodel, GasState Q)
+{
+    double drho, rho_old, rho_new, e_old, e_new, de;
+    double drho_sign, de_sign;
+    double Cv_eff, R_eff, T_old;
+    double fp_old, fT_old, fp_new, fT_new;
+    double dfp_drho, dfT_drho, dfp_de, dfT_de, det;
+    int converged, count;
+
+    double p_given = Q.p;
+    double T_given = Q.T[0];
+    // When using single-sided finite-differences on the
+    // curve-fit EOS functions, we really cannot expect 
+    // much more than 0.1% tolerance here.
+    // However, we want a tighter tolerance so that the starting values
+    // don't get shifted noticeably.
+ 
+    double fT_tol = 1.0e-6 * T_given;
+    double fp_tol = 1.0e-6 * p_given;
+    double fp_tol_fail = 0.02 * p_given;
+    double fT_tol_fail = 0.02 * T_given;
+
+    // Get an idea of the gas properties by calling the original
+    // equation of state with some dummy values for density
+    // and internal energy.
+    Q.rho = 1.0; // kg/m**3 
+    Q.e[0] = 2.0e5; // J/kg 
+    gmodel.update_thermo_from_rhoe(Q);
+    
+    T_old = Q.T[0];
+    R_eff = Q.p / (Q.rho * T_old);
+    de = 0.01 * Q.e[0];
+    Q.e[0] += de;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+    Cv_eff = de / (Q.T[0] - T_old);
+    // Now, get a better guess for the appropriate density and
+    // internal energy.
+    e_old = Q.e[0] + (T_given - Q.T[0]) * Cv_eff;
+    rho_old = p_given / (R_eff * T_given);
+
+    // Evaluate state variables using this guess.
+    Q.rho = rho_old;
+    Q.e[0] = e_old;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+    fp_old = p_given - Q.p;
+    fT_old = T_given - Q.T[0];
+    // Update the guess using Newton iterations
+    // with the partial derivatives being estimated
+    // via finite differences.
+    converged = (fabs(fp_old) < fp_tol) && (fabs(fT_old) < fT_tol);
+    count = 0;
+    while ( !converged && count < MAX_STEPS ) {
+	// Perturb first dimension to get derivatives.
+	rho_new = rho_old * 1.001;
+	e_new = e_old;
+	Q.rho = rho_new;
+	Q.e[0] = e_new;
+	try { gmodel.update_thermo_from_rhoe(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__); 
+	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	fp_new = p_given - Q.p;
+	fT_new = T_given - Q.T[0];
+	dfp_drho = (fp_new - fp_old) / (rho_new - rho_old);
+	dfT_drho = (fT_new - fT_old) / (rho_new - rho_old);
+	// Perturb other dimension to get derivatives.
+	rho_new = rho_old;
+	e_new = e_old * 1.001;
+	Q.rho = rho_new;
+	Q.e[0] = e_new;
+
+	try { gmodel.update_thermo_from_rhoe(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed at call B in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+
+	fp_new = p_given - Q.p;
+	fT_new = T_given - Q.T[0];
+	dfp_de = (fp_new - fp_old) / (e_new - e_old);
+	dfT_de = (fT_new - fT_old) / (e_new - e_old);
+	det = dfp_drho * dfT_de - dfT_drho * dfp_de;
+       	if( fabs(det) < 1.0e-12 ) {
+	    string msg;
+	    msg ~= format("Error in function %s\n", __FUNCTION__);
+	    msg ~= format("    Nearly zero determinant, det = ", det);
+	    throw new Exception(msg);
+	}
+	drho = (-dfT_de * fp_old + dfp_de * fT_old) / det;
+	de = (dfT_drho * fp_old - dfp_drho * fT_old) / det;
+	if( fabs(drho) > MAX_RELATIVE_STEP * rho_old ) {
+	    // move a little toward the goal 
+	    drho_sign = (drho > 0.0 ? 1.0 : -1.0);
+	    drho = drho_sign * MAX_RELATIVE_STEP * rho_old;
+	} 
+	if( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
+	    // move a little toward the goal
+	    de_sign = (de > 0.0 ? 1.0 : -1.0);
+	    de = de_sign * MAX_RELATIVE_STEP * e_old;
+	} 
+	rho_old += drho;
+	e_old += de;
+	// Make sure of consistent thermo state.
+	Q.rho = rho_old;
+	Q.e[0] = e_old;
+	try { gmodel.update_thermo_from_rhoe(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed in %s\n", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	// Prepare for next iteration.
+	fp_old = p_given - Q.p;
+	fT_old = T_given - Q.T[0];
+	converged = (fabs(fp_old) < fp_tol) && (fabs(fT_old) < fT_tol);
+	++count;
+    } // end while 
+
+    if ( count >= MAX_STEPS ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
+	msg ~= "  Supplied Q:" ~ Q.toString();
+	throw new Exception(msg);
+
+    }
+
+    if( (fabs(fp_old) > fp_tol_fail) || (fabs(fT_old) > fT_tol_fail) ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations failed badly.\n");
+	msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
+	msg ~= "  Supplied Q:" ~ Q.toString();
+	throw new Exception(msg);
+    }
+}
+   
+
+
+void update_thermo_state_rhoT(GasModel gmodel, GasState Q)  
+{
+    // This method can be applied to single-species models only
+    double e_old, e_new, de, tmp, de_sign;
+    double Cv_eff, T_old;
+    double dfT_de, fT_old, fT_new;
+    int converged, count;
+
+    double rho_given = Q.rho;
+    double T_given = Q.T[0];
+    // When using single-sided finite-differences on the
+    // curve-fit EOS functions, we really cannot expect 
+    // much more than 0.1% tolerance here.
+    // However, we want a tighter tolerance so that the starting values
+    // don't get shifted noticeably.
+    double fT_tol = 1.0e-6 * T_given;
+    double fT_tol_fail = 0.02 * T_given;
+
+    // Get an idea of the gas properties by calling the original
+    // equation of state with some dummy values for density
+    // and internal energy.
+       
+    Q.rho = rho_given; // kg/m**3 
+    Q.e[0] = 2.0e5; // J/kg 
+    gmodel.update_thermo_from_rhoe(Q);
+
+    T_old = Q.T[0];
+    de = 0.01 * Q.e[0];
+    Q.e[0] += de;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 0 failed in %s", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+   
+   
+    Cv_eff = de / (Q.T[0] - T_old);
+    // Now, get a better guess for the appropriate density and internal energy.
+    e_old = Q.e[0] + (T_given - Q.T[0]) * Cv_eff;
+    // Evaluate state variables using this guess.
+    Q.rho = rho_given;
+    Q.e[0] = e_old;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Starting guess at iteration 1 failed in %s", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+   
+    fT_old = T_given - Q.T[0];
+    // Perturb to get derivative.
+    e_new = e_old * 1.001;
+    Q.rho = rho_given;
+    Q.e[0] = e_new;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Starting guess at iteration 2 failed in %s", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+    fT_new = T_given - Q.T[0];
+    dfT_de = (fT_new - fT_old) / (e_new - e_old);
+
+    // At the start of iteration, we want *_old to be the best guess.
+    if ( fabs(fT_new) < fabs(fT_old) ) {
+	tmp = fT_new; fT_new = fT_old; fT_old = tmp;
+	tmp = e_new; e_new = e_old; e_old = tmp;
+    }
+    // Update the guess using Newton iterations
+    // with the partial derivatives being estimated
+    // via finite differences.
+    converged = (fabs(fT_old) < fT_tol);
+    count = 0;
+    while ( !converged && count < MAX_STEPS ) {
+	de = -fT_old / dfT_de;
+	if ( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
+	    // move a little toward the goal 
+	    de_sign = (de > 0.0 ? 1.0 : -1.0);
+	    de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
+	} 
+	e_new = e_old + de;
+	Q.rho = rho_given;
+	Q.e[0] = e_new;
+	try { gmodel.update_thermo_from_rhoe(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	fT_new = T_given - Q.T[0];
+	dfT_de = (fT_new - fT_old) / (e_new - e_old);
+	// Prepare for the next iteration.
+	++count;
+	fT_old = fT_new;
+	e_old = e_new;
+	converged = fabs(fT_old) < fT_tol;
+    }   // end while 
+    // Ensure that we have the current data for all EOS variables.
+    Q.rho = rho_given;
+    Q.e[0] = e_old;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+     if ( count >= MAX_STEPS ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString;
+	throw new Exception(msg);
+
+    }
+    if ( fabs(fT_old) > fT_tol_fail ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations failed badly.\n");
+	msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
+	msg ~= "  Supplied Q:" ~ Q.toString();
+	throw new Exception(msg);
+    }  
+}
+
+void update_thermo_state_rhop(GasModel gmodel, GasState Q)
+{
+    double e_old, e_new, de, dedp, tmp, de_sign;
+    double p_old;
+    double dfp_de, fp_old, fp_new;
+    int converged, count;
+
+    double rho_given = Q.rho;
+    double p_given = Q.p;
+    // When using single-sided finite-differences on the
+    // curve-fit EOS functions, we really cannot expect 
+    // much more than 0.1% tolerance here.
+    // However, we want a tighter tolerance so that the starting values
+    // don't get shifted noticeably.
+    double fp_tol = 1.0e-6 * p_given;
+    double fp_tol_fail = 0.02 * p_given;
+
+    // Get an idea of the gas properties by calling the original
+    // equation of state with some dummy values for density
+    // and internal energy.
+    Q.rho = rho_given; // kg/m**3
+    Q.e[0] = 2.0e5; // J/kg 
+    gmodel.update_thermo_from_rhoe(Q);
+    p_old = Q.p;
+    de = 0.01 * Q.e[0];
+    Q.e[0] += de;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 0 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+    dedp = de / (Q.p - p_old);
+    // Now, get a better guess for the appropriate internal energy.
+    e_old = Q.e[0] + (p_given - Q.p) * dedp;
+    //     printf( "Initial guess e_old= %g dedp= %g\n", e_old, dedp );
+    // Evaluate state variables using this guess.
+    Q.rho = rho_given;
+    Q.e[0] = e_old;
+
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+    fp_old = p_given - Q.p;
+    // Perturb to get derivative.
+    e_new = e_old * 1.001;
+    Q.rho = rho_given;
+    Q.e[0] = e_new;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+    fp_new = p_given - Q.p;
+    dfp_de = (fp_new - fp_old) / (e_new - e_old);
+
+    // At the start of iteration, we want *_old to be the best guess.
+    if ( fabs(fp_new) < fabs(fp_old) ) {
+	tmp = fp_new; fp_new = fp_old; fp_old = tmp;
+	tmp = e_new; e_new = e_old; e_old = tmp;
+    }
+    // Update the guess using Newton iterations
+    // with the partial derivatives being estimated
+    // via finite differences.
+    converged = (fabs(fp_old) < fp_tol);
+    count = 0;
+    while ( !converged && count < MAX_STEPS ) {
+	de = -fp_old / dfp_de;
+	if ( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
+	    // move a little toward the goal
+	    de_sign = (de > 0.0 ? 1.0 : -1.0);
+	    de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
+	} 
+	e_new = e_old + de;
+	Q.rho = rho_given;
+	Q.e[0] = e_new;
+
+	try { gmodel.update_thermo_from_rhoe(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+
+	fp_new = p_given - Q.p;
+	dfp_de = (fp_new - fp_old) / (e_new - e_old);
+	// Prepare for next iteration.
+	++count;
+	fp_old = fp_new;
+	e_old = e_new;
+	converged = fabs(fp_old) < fp_tol;
+    }   // end while 
+    // Ensure that we have the current data for all EOS variables.
+    Q.rho = rho_given;
+    Q.e[0] = e_old;
+
+    try { gmodel.update_thermo_from_rhoe(Q); }
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+
+      if ( count >= MAX_STEPS ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    rho_given = %.5s, p_given, %.8s\n", rho_given, p_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString;
+	throw new Exception(msg);
+    }
+
+    if ( fabs(fp_old) > fp_tol_fail ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations failed badly.\n");
+	msg ~= format("    rho_given = %.5s, T_given, %.8s\n", rho_given, p_given); 
+	msg ~= "  Supplied Q:" ~ Q.toString();
+	throw new Exception(msg);
+    }
+}
+
+
+void update_thermo_state_ps(GasModel gmodel, GasState Q, double s) 
+{
+    double T_old, T_new, dT, tmp, dT_sign;
+    double dfs_dT, fs_old, fs_new;
+    int converged, count;
+
+    double s_given = s;
+    double p_given = Q.p;
+   
+    // When using single-sided finite-differences on the
+    // curve-fit EOS functions, we really cannot expect 
+    // much more than 0.1% tolerance here.
+    // However, we want a tighter tolerance so that the starting values
+    // don't get shifted noticeably.
+    double fs_tol = 1.0e-6 * s_given;
+    double fs_tol_fail = 0.02 * s_given;
+
+    // Guess the thermo state assuming that T is a good guess.
+    T_old = Q.T[0];
+    try { gmodel.update_thermo_from_pT(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 0 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+    ////**** Need to check this is the correct method - is called 2 more times*****/////
+    double s_old = gmodel.entropy(Q);   
+    fs_old = s_given - s_old;
+    // Perturb T to get a derivative estimate
+    T_new = T_old * 1.001;
+    Q.T[0] = T_new;
+
+    try { gmodel.update_thermo_from_pT(Q); }
+    catch (Exception caughtException) {
+  	string msg;
+	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+    double s_new = gmodel.entropy(Q);
+    fs_new = s_given - s_new;
+    dfs_dT = (fs_new - fs_old)/(T_new - T_old);
+    // At the start of iteration, we want *_old to be the best guess.
+    if ( fabs(fs_new) < fabs(fs_old) ) {
+	tmp = fs_new; fs_new = fs_old; fs_old = tmp;
+	tmp = s_new; s_new = s_old; s_old = tmp;
+    }
+    // Update the guess using Newton iterations
+    // with the partial derivatives being estimated
+    // via finite differences.
+    converged = (fabs(fs_old) < fs_tol);
+    count = 0;
+    while ( !converged && count < MAX_STEPS ) {
+	dT = -fs_old / dfs_dT;
+	if ( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
+	    // move a little toward the goal
+	    dT_sign = (dT > 0.0 ? 1.0 : -1.0);
+	    dT = dT_sign * MAX_RELATIVE_STEP * fabs(T_old);
+	} 
+	T_new = T_old + dT;
+	Q.T[0] = T_new;
+	try { gmodel.update_thermo_from_pT(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	s_new = gmodel.entropy(Q);
+	fs_new = s_given - s_new;
+	dfs_dT = (fs_new - fs_old) / (T_new - T_old);
+	// Prepare for next iteration.
+	++count;
+	fs_old = fs_new;
+	T_old = T_new;
+	converged = (fabs(fs_old) < fs_tol);
+    }   // end while 
+    // Ensure that we have the current data for all EOS variables.
+    Q.T[0] = T_old;
+
+
+    try { gmodel.update_thermo_from_pT(Q); }
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+    if ( count >= MAX_STEPS ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString;
+	throw new Exception(msg);
+    }
+
+    if ( fabs(fs_old) > fs_tol_fail ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations failed badly.\n");
+	msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
+	msg ~= "  Supplied Q:" ~ Q.toString();
+	throw new Exception(msg);
+    }
+}
+
+void update_thermo_state_hs(GasModel gmodel, GasState Q, double h, double s)
+{
+double dp, p_old, p_new, T_old, T_new, dT;
+    double dp_sign, dT_sign;
+    double fh_old, fs_old, fh_new, fs_new;
+    double dfh_dp, dfs_dp, dfh_dT, dfs_dT, det;
+    int converged, count;
+
+    double h_given = h;
+    double s_given = s;
+    // When using single-sided finite-differences on the
+    // curve-fit EOS functions, we really cannot expect 
+    // much more than 0.1% tolerance here.
+    // However, we want a tighter tolerance so that the starting values
+    // don't get shifted noticeably.
+    double fh_tol = 1.0e-6 * h_given;
+    double fs_tol = 1.0e-6 * s_given;
+    double fh_tol_fail = 0.02 * h_given;
+    double fs_tol_fail = 0.02 * s_given;
+
+    // Use current gas state as guess
+    p_old = Q.p;
+    T_old = Q.T[0];
+    double h_new = gmodel.enthalpy(Q);
+    double s_new = gmodel.entropy(Q);
+    fh_old = h_given - h_new;
+    fs_old = s_given - s_new;
+
+    // Update the guess using Newton iterations
+    // with the partial derivatives being estimated
+    // via finite differences.
+    converged = (fabs(fh_old) < fh_tol) && (fabs(fs_old) < fs_tol);
+    count = 0;
+    while ( !converged && count < MAX_STEPS ) {
+	// Perturb first dimension to get derivatives.
+	p_new = p_old * 1.001;
+	T_new = T_old;
+	Q.p = p_new;
+	Q.T[0] = T_new;
+	try { gmodel.update_thermo_from_pT(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s at call A failed in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	h_new = gmodel.enthalpy(Q);
+	s_new = gmodel.entropy(Q);
+	fh_new = h_given - h_new;
+	fs_new = s_given - s_new;
+	dfh_dp = (fh_new - fh_old) / (p_new - p_old);
+	dfs_dp = (fs_new - fs_old) / (p_new - p_old);
+	// Perturb other dimension to get derivatives.
+	p_new = p_old;
+	T_new = T_old * 1.001;
+	Q.p = p_new;
+	Q.T[0] = T_new;
+	try { gmodel.update_thermo_from_pT(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s at call B failed in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	h_new = gmodel.enthalpy(Q);
+	s_new = gmodel.entropy(Q);
+	fh_new = h_given - h_new;
+	fs_new = s_given - s_new;
+	dfh_dT = (fh_new - fh_old) / (T_new - T_old);
+	dfs_dT = (fs_new - fs_old) / (T_new - T_old);
+
+	det = dfh_dp * dfs_dT - dfs_dp * dfh_dT;
+      
+       	if( fabs(det) < 1.0e-12 ) {
+	    string msg;
+	    msg ~= format("Error in function %s\n", __FUNCTION__);
+	    msg ~= format("    Nearly zero determinant, det = ", det);
+	    throw new Exception(msg);
+	}
+	dp = (-dfs_dT * fh_old + dfh_dT * fs_old) / det;
+	dT = (dfs_dp * fh_old - dfh_dp * fs_old) / det;
+	if( fabs(dp) > MAX_RELATIVE_STEP * p_old ) {
+	    // move a little toward the goal 
+	    dp_sign = (dp > 0.0 ? 1.0 : -1.0);
+	    dp = dp_sign * MAX_RELATIVE_STEP * p_old;
+	} 
+	if( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
+	    // move a little toward the goal
+	    dT_sign = (dT > 0.0 ? 1.0 : -1.0);
+	    dT = dT_sign * MAX_RELATIVE_STEP * T_old;
+	} 
+	p_old += dp;
+	T_old += dT;
+	// Make sure of consistent thermo state.
+	Q.p = p_old;
+	Q.T[0] = T_old;
+	try { gmodel.update_thermo_from_pT(Q); }
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s at call C failed in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	h_new = gmodel.enthalpy(Q);
+	s_new = gmodel.entropy(Q);
+	// Prepare for next iteration.
+	fh_old = h_given - h_new;
+	fs_old = s_given - s_new;
+	converged = (fabs(fh_old) < fh_tol) && (fabs(fs_old) < fs_tol);
+	++count;
+    } // end while 
+
+    if ( count >= MAX_STEPS ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given); 
+	msg ~= "  Supplied Q:" ~ Q.toString();
+	throw new Exception(msg);
+    }
+
+    if( (fabs(fh_old) > fh_tol_fail) || (fabs(fs_old) > fs_tol_fail) ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations failed badly.\n");
+	msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given); 	
+	msg ~= "  Supplied Q:" ~ Q.toString();
+	throw new Exception(msg);
+    }
+
+}
+
+
+
+
 version(gas_model_test) {
     int main() {
+	// Methods for testing gas state
 	auto gd = new GasState(2, 1);
 	gd.massf[0] = 0.8;
 	gd.massf[1] = 0.2;
 	double[] phi = [9.0, 16.0];
 	assert(approxEqual(10.4, mass_average(gd, phi), 1.0e-6));
+	
+
+	// Iterative methods test using idealgas single species model
+	// These assume IdealGas class methods are working properly
+	import gas.ideal_gas;
+	import gas.gas_model_util; 
+	GasModel gm;
+	try { gm = init_gas_model("sample-data/ideal-air-gas-model.lua"); }
+	catch {
+	    string msg;
+	    msg ~= "Test of iterative methods in gas_model.d require file:";
+	    msg ~= " ideal-air-gas-model.lua in sub-directory: ./sample_data";
+	    throw new Exception(msg);
+	    }
+
+	// Select arbitrary energy and density and establish a set of 
+	// variables that are thermodynamically consistent
+	double e_given = 1.0e7;
+	double rho_given = 2.0;
+	auto Q = new GasState(gm);
+	Q.e = [e_given];
+	Q.rho = rho_given;
+	gm.update_thermo_from_rhoe(Q);
+	double p_given = Q.p;
+	double T_given = Q.T[0];
+	
+	// Initialise the same state from the different property combinations
+	// Test pT iterative update
+	Q.p = p_given;
+	Q.T[0] = T_given;
+     	update_thermo_state_pT(gm, Q); 
+	assert(approxEqual(Q.rho, rho_given, 1.0e-6));
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
+	// Test rhoT iterative update
+	Q.rho = rho_given;
+	Q.T[0] = T_given;
+	update_thermo_state_rhoT(gm, Q);
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
+	assert(approxEqual(Q.p, p_given, 1.0e-6));
+	// Test rhop iterative update
+	Q.rho = rho_given;
+	Q.p = p_given;
+	assert(approxEqual(Q.T[0], T_given, 1.0e-6));
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
+	// Test  ps iterative update
+	double s_given = gm.entropy(Q);
+	Q.p = p_given;
+	update_thermo_state_ps(gm, Q, s_given);	
+	assert(approxEqual(Q.T[0], T_given, 1.0e-6));
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
+	assert(approxEqual(Q.rho, rho_given, 1.0e-6));
+	// Test hs iterative update
+	double h_given = gm.enthalpy(Q);
+	assert(approxEqual(Q.T[0], T_given, 1.0e-6));
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
+	assert(approxEqual(Q.rho, rho_given, 1.0e-6));
+	assert(approxEqual(Q.p, p_given, 1.0e-6));
+
 	return 0;
+
     }
 }
+
