@@ -20,7 +20,7 @@ import std.file;
 import std.stdio;
 import util.lua;
 import util.lua_service;
-import std.c.stdlib : exit;
+import core.stdc.stdlib : exit;
 
 /**
  * We get the instructions for setting up the GasModel object

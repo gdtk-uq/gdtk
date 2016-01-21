@@ -72,7 +72,7 @@ public:
 	    throw new Exception(msg);
 	}
 
-	ulong ne = lua_objlen(L, -1); 
+	size_t ne = lua_objlen(L, -1); 
 	if ( ne != _iesteps + 1) {
 	    string msg;
 	    msg ~= format("Look_up_table():\n");
@@ -93,7 +93,7 @@ public:
     
 	// Determine the required j-length of data
 	lua_rawgeti(L, -1, 1);
-	ulong nr = lua_objlen(L, -1);
+	size_t nr = lua_objlen(L, -1);
 	lua_pop(L, 1);
     
 	if ( nr != _irsteps +1) {
