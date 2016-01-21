@@ -16,6 +16,7 @@ import std.conv;
 import std.traits;
 import util.lua;
 import util.lua_service;
+import globalconfig;
 import geom;
 import luageom;
 import sgrid;
@@ -288,6 +289,52 @@ extern(C) int get_var_names(lua_State* L)
 } // end get_var_names()
 
 
+void plottingTableToFlowStateTable(lua_State *L)
+{
+    // Assume that table is at top-of-stack.
+    // We are going to massage the contents of the table
+    // such that it is sutiable to pass to
+    // luaFlowState:fromTable()
+    int tblIdx = lua_gettop(L);
+    auto managedGasModel = GlobalConfig.gmodel_master;
+    auto n_species = managedGasModel.n_species;
+    auto n_modes = managedGasModel.n_modes;
+    // 1. Convert velocities
+    lua_getfield(L, tblIdx, "vel.x");
+    lua_setfield(L, tblIdx, "velx");
+    lua_getfield(L, tblIdx, "vel.y");
+    lua_setfield(L, tblIdx, "vely");
+    lua_getfield(L, tblIdx, "vel.z");
+    lua_setfield(L, tblIdx, "velz");
+
+    // 2. Convert magnetic field components
+    lua_getfield(L, tblIdx, "B.x");
+    lua_setfield(L, tblIdx, "Bx");
+    lua_getfield(L, tblIdx, "B.y");
+    lua_setfield(L, tblIdx, "By");
+    lua_getfield(L, tblIdx, "B.z");
+    lua_setfield(L, tblIdx, "Bz");
+
+    // 3. Convert temperatures
+    lua_newtable(L);
+    foreach ( i; 0 .. n_modes ) {
+	string key = format("T[%d]", i);
+	lua_getfield(L, tblIdx, toStringz(key));
+	lua_rawseti(L, -2, i+1);
+    }
+    lua_setfield(L, tblIdx, "T");
+
+    // 4. Convert mass fractions
+    lua_newtable(L);
+    foreach ( isp; 0 .. n_species ) {
+	string spName = managedGasModel.species_name(isp);
+	string key = format("massf[%d]-%s", isp, spName);
+	lua_getfield(L, tblIdx, toStringz(key));
+	lua_setfield(L, -2, toStringz(spName));
+    }
+    lua_setfield(L, tblIdx, "massf");
+}
+
 extern(C) int get_cell_data(lua_State* L)
 {
     auto fsol = checkFlowSolution(L, 1);
@@ -296,6 +343,28 @@ extern(C) int get_cell_data(lua_State* L)
 	errMsg ~= " A table is expected as first (and only) argument to the method.";
 	luaL_error(L, errMsg.toStringz);
     }
+
+    string fmt;
+    lua_getfield(L, 2, "fmt");
+    if ( lua_isnil(L, -1) ) {
+	fmt = "Plotting";
+    }
+    else if ( lua_isstring(L, -1) ) {
+	fmt = to!string(luaL_checkstring(L, -1));
+	if ( (fmt != "Plotting") && (fmt != "FlowState") ) {
+	    string errMsg = "Error in call to FlowSolution:get_cell_data.";
+	    errMsg ~= " The fmt field should be one of 'Plotting' or 'FlowState'.";
+	    errMsg ~= " The fmt string received was: " ~ fmt;
+	    throw new LuaInputException(errMsg);
+	}
+    }
+    else {
+	string errMsg = "Error in call to FlowSolution:get_cell_data.";
+	errMsg ~= " A field for fmt was found, but the content was not valid.";
+	errMsg ~= " A string was expected. Either 'Plotting' or 'FlowState' are acceptable strings.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
 
     int ib;
     lua_getfield(L, 2, "ib");
@@ -343,6 +412,9 @@ extern(C) int get_cell_data(lua_State* L)
 	    lua_pushnumber(L, fsol.flowBlocks[ib][varName,i]);
 	    lua_setfield(L, tblIndx, varName.toStringz);
 	}
+	if ( fmt == "FlowState" ) {
+	    plottingTableToFlowStateTable(L);
+	}
 	return 1; // Just the table of indices is left on the stack.
     }
 
@@ -378,6 +450,10 @@ extern(C) int get_cell_data(lua_State* L)
 	lua_pushnumber(L, fsol.flowBlocks[ib][varName,i,j,k]);
 	lua_setfield(L, tblIndx, varName.toStringz);
     }
+    if ( fmt == "FlowState" ) {
+	plottingTableToFlowStateTable(L);
+    }
+
     return 1; // Just the table of indices is left on the stack.
 } // end get_cell_data()
 

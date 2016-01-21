@@ -32,8 +32,11 @@ import luaglobalconfig;
 import fvcell;
 
 /// name for FlowState object in Lua scripts.
-immutable string FlowStateMT = "FlowState"; 
-
+immutable string FlowStateMT = "FlowState";
+immutable string[] validFlowStateFields = ["p", "T", "p_e", "quality", "massf",
+					   "velx", "vely", "velz",
+					   "Bx", "By", "Bz",
+					   "tke", "omega", "mu_t", "k_t"];
 static const(FlowState)[] flowStateStore;
 
 // Makes it a little more consistent to make this
@@ -89,16 +92,12 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
     }
     // At this point we have a table at idx=1. Let's check that all
     // fields in the table are valid.
-    string[] validFields = ["p", "T", "p_e", "quality", "massf",
-			    "velx", "vely", "velz",
-			    "Bx", "By", "Bz",
-			    "tke", "omega", "mu_t", "k_t"];
     bool allFieldsAreValid = true;
     string errMsg;
     lua_pushnil(L);
     while ( lua_next(L, 1) != 0 ) {
 	string key = to!string(lua_tostring(L, -2));
-	if ( find(validFields, key).empty ) {
+	if ( find(validFlowStateFields, key).empty ) {
 	    allFieldsAreValid = false;
 	    errMsg ~= format("ERROR: '%s' is not a valid input in FlowState:new{}\n", key);
 	}
