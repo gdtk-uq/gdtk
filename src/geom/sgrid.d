@@ -510,14 +510,14 @@ public:
 	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
 	    if ( njv != gridToJoin.njv ) {
 		string errMsg = "Error in StructureGrid.joinGrid.\n";
-		errMsg ~= "The number of vertices in the j-direction do not match when attempting a east-west join.\n";
+		errMsg ~= "The number of vertices in the j-direction do not match when attempting an east-west join.\n";
 		errMsg ~= format("The parent grid has njv= %d\n", njv);
 		errMsg ~= format("The grid to be joined has njv= %d\n", gridToJoin.njv);
 		throw new Error(errMsg);
 	    }
 	    if ( nkv != gridToJoin.nkv ) {
 		string errMsg = "Error in StructureGrid.joinGrid.\n";
-		errMsg ~= "The number of vertices in the k-direction do not match when attempting a east-west join.\n";
+		errMsg ~= "The number of vertices in the k-direction do not match when attempting an east-west join.\n";
 		errMsg ~= format("The parent grid has nkv= %d\n", nkv);
 		errMsg ~= format("The grid to be joined has nkv= %d\n", gridToJoin.nkv);
 		throw new Error(errMsg);
@@ -551,7 +551,7 @@ public:
 		}
 	    }
 	}
-	if ( (joinLocation == "west") || (joinLocation == "jmax") ) {
+	if ( (joinLocation == "north") || (joinLocation == "jmax") ) {
 	    foreach ( i; 0 .. niv ) {
 		if ( !approxEqualVectors(*(this[i,njv-1]), *(gridToJoin[i,0])) ) {
 		    string errMsg = "Error in StructuredGrid.joinGrid.\n";
