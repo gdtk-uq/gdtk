@@ -127,6 +127,16 @@ extern(C) int write_to_gzip_file(T, string MTname)(lua_State* L)
     return 0;
 }
 
+extern(C) int joinGrid(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 3;
+    auto selfGrid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    auto otherGrid = checkObj!(StructuredGrid, StructuredGridMT)(L, 2);
+    auto joinLocation = to!string(luaL_checkstring(L, 3));
+    selfGrid.joinGrid(otherGrid, joinLocation);
+    return 0;
+}
+
 /**
  * The Lua constructor for a StructuredGrid.
  *
@@ -282,6 +292,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "write_to_vtk_file");
     lua_pushcfunction(L, &write_to_gzip_file!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "write_to_gzip_file");
+    lua_pushcfunction(L, &joinGrid);
+    lua_setfield(L, -2, "joinGrid");
 
     lua_setglobal(L, StructuredGridMT.toStringz);
 

@@ -7,6 +7,7 @@
 
 module sgrid;
 
+import std.algorithm;
 import std.string;
 import std.array;
 import std.conv;
@@ -463,6 +464,140 @@ public:
 	    }
 	}
     } // end write_to_vtk_file()
+
+    /**
+     * joinGrid is used to join a supplied grid with
+     * the current grid.
+     * 
+     * Parameters:
+     *   gridToJoin   : the supplied grid to be joined with "this" (parent grid)
+     *   joinLocation :  is w.r.t "this" grid.
+     *                   eg. joinLocation == "north" then that means
+     *                   that the gridToJoin is added at the north
+     *                   boundary of "this" grid.
+     *
+     * Notes:
+     * + Not all join combinations are possible.
+     *   I've only implemented those that are of
+     *   immediate use to me. (RJG, 2016-01-22)
+     *
+     * + Some joins can be achieved by switching
+     *   which grid we treat as the parent.
+     *   For example, if we want to join the west
+     *   of block A to the east of block B, we might
+     *   want: A.joinGrid(B, "west") but that option isn't
+     *   available. Instead, treat block B as the parent:
+     *      B.joinGrid(A, "east").
+     *   Some creative thinking like this cuts down on a
+     *   lot of implementation code.
+     */
+    void joinGrid(StructuredGrid gridToJoin, string joinLocation)
+    {
+	string[] allowedJoins = ["east", "imax",
+				 "north", "jmax"];
+	if ( find(allowedJoins, joinLocation).empty ) {
+	    string errMsg = "Error in StructuredGrid.joinGrid.\n";
+	    errMsg ~= "The specified joinLocation = " ~ joinLocation ~ " is not supported.\n";
+	    throw new Error(errMsg);
+	}
+	    
+	// Begin by testing if this join is possible
+	// First we test the dimensions of the grids to be joined.
+	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
+	if ( dim == 3 ) {
+	    throw new Error("StructuredGrid.joinGrid not implemented yet for 3D grids.");
+	}
+	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
+	    if ( njv != gridToJoin.njv ) {
+		string errMsg = "Error in StructureGrid.joinGrid.\n";
+		errMsg ~= "The number of vertices in the j-direction do not match when attempting a east-west join.\n";
+		errMsg ~= format("The parent grid has njv= %d\n", njv);
+		errMsg ~= format("The grid to be joined has njv= %d\n", gridToJoin.njv);
+		throw new Error(errMsg);
+	    }
+	    if ( nkv != gridToJoin.nkv ) {
+		string errMsg = "Error in StructureGrid.joinGrid.\n";
+		errMsg ~= "The number of vertices in the k-direction do not match when attempting a east-west join.\n";
+		errMsg ~= format("The parent grid has nkv= %d\n", nkv);
+		errMsg ~= format("The grid to be joined has nkv= %d\n", gridToJoin.nkv);
+		throw new Error(errMsg);
+	    }
+	}
+	if ( (joinLocation == "north") || (joinLocation == "jmax") ) {
+	    if ( niv != gridToJoin.niv ) {
+		string errMsg = "Error in StructureGrid.joinGrid.\n";
+		errMsg ~= "The number of vertices in the i-direction do not match when attempting a north-south join.\n";
+		errMsg ~= format("The parent grid has niv= %d\n", niv);
+		errMsg ~= format("The grid to be joined has niv= %d\n", gridToJoin.niv);
+		throw new Error(errMsg);
+	    }
+	    if ( nkv != gridToJoin.nkv ) {
+		string errMsg = "Error in StructureGrid.joinGrid.\n";
+		errMsg ~= "The number of vertices in the k-direction do not match when attempting a north-south join.\n";
+		errMsg ~= format("The parent grid has nkv= %d\n", nkv);
+		errMsg ~= format("The grid to be joined has nkv= %d\n", gridToJoin.nkv);
+		throw new Error(errMsg);
+	    }
+	}
+	// Next we test that the vertices of the joined grids physically coincide (to within some tolerance)
+	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
+	    foreach ( j; 0 .. njv ) {
+		if ( !approxEqualVectors(*(this[niv-1,j]), *(gridToJoin[0,j])) ) {
+		    string errMsg = "Error in StructuredGrid.joinGrid.\n";
+		    errMsg ~= "At least one of vertices in the join do not coincide.";
+		    errMsg ~= "Parent grid vertex: " ~ (*this[niv-1,j]).toString() ~ "\n";
+		    errMsg ~= "Join grid vertex: " ~ (*gridToJoin[0,j]).toString() ~ "\n";
+		    throw new Error(errMsg);
+		}
+	    }
+	}
+	if ( (joinLocation == "west") || (joinLocation == "jmax") ) {
+	    foreach ( i; 0 .. niv ) {
+		if ( !approxEqualVectors(*(this[i,njv-1]), *(gridToJoin[i,0])) ) {
+		    string errMsg = "Error in StructuredGrid.joinGrid.\n";
+		    errMsg ~= "At least one of vertices in the join do not coincide.";
+		    errMsg ~= "Parent grid vertex: " ~ (*this[i,njv-1]).toString() ~ "\n";
+		    errMsg ~= "Join grid vertex: " ~ (*gridToJoin[i,0]).toString() ~ "\n";
+		    throw new Error(errMsg);
+		}
+	    }
+	}
+	// If the join appears valid, then we can resize the storage
+	auto orig_niv = niv;
+	auto orig_njv = njv;
+	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
+	    niv += gridToJoin.niv;
+	}
+	if ( (joinLocation == "north") || (joinLocation == "jmax") ) {
+	    njv += gridToJoin.njv;
+	}
+
+	if ( dim == 2 ) {
+	    ncells = (niv-1)*(njv-1);
+	}
+	else {
+	    ncells = (niv-1)*(njv-1)*(nkv-1);
+	}
+	nvertices = niv*njv*nkv;
+	vertices.length = nvertices;
+	vtx_id.length = nvertices;
+	// Now we need to add the new vertices.
+	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
+	    foreach ( j; 0 .. gridToJoin.njv ) {
+		foreach ( i; 0 .. gridToJoin.niv ) {
+		    *(this[i+orig_niv,j]) = *(gridToJoin[i,j]);
+		}
+	    }
+	}
+	if ( (joinLocation == "north") || (joinLocation == "jmax") ) {
+	    foreach ( j; 0 .. gridToJoin.njv ) {
+		foreach ( i; 0 .. gridToJoin.niv ) {
+		    *(this[i,j+orig_njv]) = *(gridToJoin[i,j]);
+		}
+	    }
+	}
+    } // end joinGrid
+
 
 } // end class StructuredGrid
 
