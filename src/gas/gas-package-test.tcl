@@ -44,6 +44,10 @@ test co2gas-sw-test {Testing co2gas_sw.d} -body {
     exec ./co2gas_sw_test > LOGFILE_CO2GAS_SW_TEST
 } -result {} -returnCodes {0}
 
+test uniform-lut-test {Testing uniform_lut.d} -body {
+    exec ./uniform_lut_test > LOGFILE_UNIFORM_LUT_TEST
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"

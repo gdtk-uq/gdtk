@@ -14,6 +14,8 @@ import std.conv;
 import std.math;
 import std.stdio;
 import std.string;
+import util.lua;
+import util.lua_service;
 
 import util.msg_service;
 import gas.physical_constants;
@@ -1154,24 +1156,25 @@ double dp, p_old, p_new, T_old, T_new, dT;
 
 version(gas_model_test) {
     int main() {
-	// Methods for testing gas state
+	// Methods for testing gas state class
 	auto gd = new GasState(2, 1);
 	gd.massf[0] = 0.8;
 	gd.massf[1] = 0.2;
 	double[] phi = [9.0, 16.0];
 	assert(approxEqual(10.4, mass_average(gd, phi), 1.0e-6));
 	
-
 	// Iterative methods test using idealgas single species model
-	// These assume IdealGas class methods are working properly
+	// These assume IdealGas class is working properly
 	import gas.ideal_gas;
-	import gas.gas_model_util; 
+	
 	GasModel gm;
-	try { gm = init_gas_model("sample-data/ideal-air-gas-model.lua"); }
+	try { lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
+	    gm = new IdealGas(L);
+	}
 	catch {
 	    string msg;
 	    msg ~= "Test of iterative methods in gas_model.d require file:";
-	    msg ~= " ideal-air-gas-model.lua in sub-directory: ./sample_data";
+	    msg ~= " ideal-air-gas-model.lua in directory: gas/sample_data";
 	    throw new Exception(msg);
 	    }
 
@@ -1191,35 +1194,35 @@ version(gas_model_test) {
 	Q.p = p_given;
 	Q.T[0] = T_given;
      	update_thermo_state_pT(gm, Q); 
-	assert(approxEqual(Q.rho, rho_given, 1.0e-6));
-	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
+	// Determine correct entropy/enthalpy for updates that use them
+	double s_given = gm.entropy(Q); 
+	double h_given = gm.enthalpy(Q);
+	assert(approxEqual(Q.rho, rho_given, 1.0e-6),  failedUnitTest());
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6), failedUnitTest());
 	// Test rhoT iterative update
 	Q.rho = rho_given;
 	Q.T[0] = T_given;
 	update_thermo_state_rhoT(gm, Q);
-	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
-	assert(approxEqual(Q.p, p_given, 1.0e-6));
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.p, p_given, 1.0e-6),  failedUnitTest());
 	// Test rhop iterative update
 	Q.rho = rho_given;
 	Q.p = p_given;
-	assert(approxEqual(Q.T[0], T_given, 1.0e-6));
-	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
+	assert(approxEqual(Q.T[0], T_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6), failedUnitTest());
 	// Test  ps iterative update
-	double s_given = gm.entropy(Q);
-	Q.p = p_given;
+  	Q.p = p_given;
 	update_thermo_state_ps(gm, Q, s_given);	
-	assert(approxEqual(Q.T[0], T_given, 1.0e-6));
-	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
-	assert(approxEqual(Q.rho, rho_given, 1.0e-6));
+	assert(approxEqual(Q.T[0], T_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
 	// Test hs iterative update
-	double h_given = gm.enthalpy(Q);
-	assert(approxEqual(Q.T[0], T_given, 1.0e-6));
-	assert(approxEqual(Q.e[0], e_given, 1.0e-6));
-	assert(approxEqual(Q.rho, rho_given, 1.0e-6));
-	assert(approxEqual(Q.p, p_given, 1.0e-6));
+	assert(approxEqual(Q.T[0], T_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.e[0], e_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.p, p_given, 1.0e-6), failedUnitTest());
 
 	return 0;
-
     }
 }
 

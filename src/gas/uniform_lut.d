@@ -11,19 +11,19 @@
  */
 module gas.uniform_lut;
 
-import gas.gas_model;
-import gas.physical_constants;
-import util.lua;
-import util.lua_service;
-
 import std.stdio;
 import std.math;
 import std.algorithm;
 import std.string;
 import std.conv;
 
+import gas.gas_model;
+import gas.physical_constants;
+import util.lua;
+import util.lua_service;
+
 /* Output from the CEA lookuptable is : 
- * {cv_hat, cv, R_hat, cp_hat, gamma_hat, mu, k }  */
+   {cv_hat, cv, R_hat, cp_hat, gamma_hat, mu, k }  */
 
 class UniformLUT: GasModel{
 public:
@@ -35,8 +35,7 @@ public:
 	_species_names ~= "LUT";
 	assert(_species_names.length == 1);
 	create_species_reverse_lookup();
-        // _mol_masses is defined at the end of the constructor
-        
+        // _mol_masses is defined at the end of the constructor  
     }
 
     this(lua_State *L) {
@@ -52,7 +51,7 @@ public:
 	    with_entropy = 0;
 	    writeln("Look_up_table(): No entropy data available");
 	}
-		
+	
 	_iesteps = getInt(L, LUA_GLOBALSINDEX, "iesteps");
 	_irsteps = getInt(L, LUA_GLOBALSINDEX, "irsteps");
 	_emin = getDouble(L, LUA_GLOBALSINDEX, "emin");
@@ -222,6 +221,7 @@ public:
 
     override void update_thermo_from_rhoe(GasState Q) const
     {
+	assert(Q.e.length == 1, "incorrect length of energy array");
 	double efrac, lrfrac, Cv_eff, R_eff, g_eff;
 	int    ir, ie;
    
@@ -510,10 +510,12 @@ public:
     // Remaining functions must call numerical method solution defined in gas_model.d
     override void update_thermo_from_pT(GasState Q) 
     {
+	assert(Q.T.length == 1, "incorrect length of temperature array");
 	update_thermo_state_pT(this, Q);
     }
     override void update_thermo_from_rhoT(GasState Q)  
     {
+	assert(Q.T.length == 1, "incorrect length of temperature array");
 	update_thermo_state_rhoT(this, Q);
     }
     override void update_thermo_from_rhop(GasState Q) 
@@ -575,15 +577,63 @@ private:
 
 } // End of uniformLUT class
 
-
-
-version(uniform_lut_demo) 
+version(uniform_lut_test) 
 {
+    import util.msg_service;
     int main() {
-	// The following gas state is imported from CEA 
-	string file_name = "sample-dat/cea-lut-air-ions.lua";
-	
+	GasModel gm;
+	try { lua_State* L = init_lua_State("sample-data/cea-lut-air-version-test.lua");
+	    gm = new UniformLUT(L);
+	}
+	catch {
+	    string msg;
+	    msg ~= "Test of look up table in uniform_lut.d require file:";
+	    msg ~= " cea-lut-air-version-test.lua ";
+	    msg ~= " in directory: gas/sample_data";
+	    throw new Exception(msg);
+	}
 
+	// An arbitrary state was defined for 'Air', massf=1, in CEA2
+	// using the utility cea2_gas.py
+	double p_given = 1.0e6; // Pa
+	double T_given = 1.0e3; // K
+	double rho_given = 3.4837; // kg/m^^3
+	// CEA uses a reference temperature of 298K (Eilmer uses 0K) so the
+	// temperature was offset by amount e_offset 
+	double e_CEA =  456600; // J/kg
+	double e_offset = 303949.904; // J/kg
+	double e_given = e_CEA + e_offset; // J/kg
+	double h_CEA = 743650; // J/kg
+	double h_given = h_CEA + e_offset; // J/kg 
+	double a_given = 619.2; // m/s
+	double s_given = 7475.7; // J(kg.K)
+	double R_given = 287.036; // J/(kg.K)
+	double gamma_given = 1.3866;
+	double Cp_given = 1141; // J/(kg.K)
+	double mu_given = 4.3688e-05; // Pa.s
+	double k_given = 0.0662; // W/(m.K)
+	double Cv_given = e_given / T_given; // J/(kg.K)
+		
+	auto Q = new GasState(gm, p_given, T_given);
+	// Return values not stored in the GasState
+	double Cv = gm.dedT_const_v(Q);
+	double Cp = gm.dhdT_const_p(Q);
+	double R = gm.gas_constant(Q);
+	double h = gm.enthalpy(Q);
+	double s = gm.entropy(Q);
+
+	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_species == 1, failedUnitTest());
+	assert(approxEqual(e_given, Q.e[0], 1.0e-4), failedUnitTest());
+	assert(approxEqual(rho_given, Q.rho, 1.0e-4), failedUnitTest());
+	assert(approxEqual(a_given, Q.a, 1.0e-4), failedUnitTest());
+	assert(approxEqual(Cp_given, Cp, 1.0e-3), failedUnitTest());
+	assert(approxEqual(h_given, h, 1.0e-4), failedUnitTest());
+	assert(approxEqual(mu_given, Q.mu, 1.0e-4), failedUnitTest());
+	assert(approxEqual(k_given, Q.k[0], 1.0e-3), failedUnitTest());
+	assert(approxEqual(s_given, s, 1.0e-4), failedUnitTest());
+	assert(approxEqual(R_given, R, 1.0e-4), failedUnitTest());
+	
 	return 0;
     }
 }
