@@ -566,10 +566,12 @@ public:
 	auto orig_niv = niv;
 	auto orig_njv = njv;
 	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
-	    niv += gridToJoin.niv;
+	    // -1 because we don't duplicate the coincident vertices at the join
+	    niv += gridToJoin.niv - 1;
 	}
 	if ( (joinLocation == "north") || (joinLocation == "jmax") ) {
-	    njv += gridToJoin.njv;
+	    // -1 because we don't duplicate the coincident vertices at the join
+	    njv += gridToJoin.njv - 1; 
 	}
 
 	if ( dim == 2 ) {
@@ -584,15 +586,15 @@ public:
 	// Now we need to add the new vertices.
 	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
 	    foreach ( j; 0 .. gridToJoin.njv ) {
-		foreach ( i; 0 .. gridToJoin.niv ) {
-		    *(this[i+orig_niv,j]) = *(gridToJoin[i,j]);
+		foreach ( i; 1 .. gridToJoin.niv ) {
+		    *(this[(i-1)+orig_niv,j]) = *(gridToJoin[i,j]);
 		}
 	    }
 	}
 	if ( (joinLocation == "north") || (joinLocation == "jmax") ) {
-	    foreach ( j; 0 .. gridToJoin.njv ) {
+	    foreach ( j; 1 .. gridToJoin.njv ) {
 		foreach ( i; 0 .. gridToJoin.niv ) {
-		    *(this[i,j+orig_njv]) = *(gridToJoin[i,j]);
+		    *(this[i,(j-1)+orig_njv]) = *(gridToJoin[i,j]);
 		}
 	    }
 	}
