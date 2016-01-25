@@ -242,7 +242,7 @@ end
 --          efficiencies = {}
 -- }
 --
-function transformReaction(t, species, suppress_warnings)
+function transformReaction(t, species, suppressWarnings)
    r = {}
    r.equation = t[1]
    r.type = "elementary"

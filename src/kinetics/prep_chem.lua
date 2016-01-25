@@ -69,8 +69,8 @@ configHidden = { -- hidden from user
    end
 }
 
-config = {}
-setmetatable(config, configHidden)
+Config = {}
+setmetatable(Config, configHidden)
 
 function odeStepToStr(o)
    if o.method == 'rkf' then
