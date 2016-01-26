@@ -319,5 +319,49 @@ from the completely joined `oldGrid`.
 Post-processing to extract shock location
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+In these simulations, our metric of interest for comparing to the experimental results is the
+distance between the body and the edge of the shock along the stagnation streamline. This is
+called the shock detachment or shock standoff distance. To determine this value, on a fixed grid,
+we would usually extract the line of data along the stagnation streamline. Then then search along
+the line of data from the free stream working towards the body looking for the shock location as
+a certain jump in flow values from that of the free stream. In a shock-fitting simulation, as
+we have here, the shock location actually comes directly from the calculation and is represented
+by the edge of the grid. This actually makes it easier to determine the shock detachment distance.
+We need only find the location of the grid vertex at the edge of the grid. To do that, we use a 
+custom post-processing script that makes use of the `FlowSolution` object to peek at the data
+and grab the vertex value that represents the shock detachment distance. This custom script is 
+shown in full here ::
+
+   config.grid_motion = "shock_fitting"
+   jobName = "lobb"
+   Db = 0.5 * 0.0254 -- diameter (in m) of ball bearing
+   -- Pick up flow solution at final time
+   fsol = FlowSolution:new{jobName=jobName, dir=".", tindx="last", nBlocks=4}
+   vtx = fsol:get_vtx{ib=0, i=0, j=0}
+   delta = -vtx:x()
+   d_D = delta/Db
+   f = io.open("shock-detachment.txt", 'w')
+   f:write(string.format("%20.12e %20.12e\n", delta, d_D))
+   f:close()
+   print("shock-detachment= ", delta)
+   print("delta/D= ", d_D)
+
+We begin by setting the `grid_motion` configuration option to *shock_fitting*. This ensures that
+eilmer is aware that we are working with a moving grid simulation. If we don't do that, eilmer
+would assume a fixed grid and would pick up the grid associated with *tindx=0* rather than the
+actual grid we need. The main trick in this custom post-processing script are the lines::
+   fsol = FlowSolution:new{jobName=jobName, dir=".", tindx="last", nBlocks=4}
+   vtx = fsol:get_vtx{ib=0, i=0, j=0}
+With these, we pick up the final flow solution and then use the `get_vtx` method to retrieve
+the vtx value at the bottom left corner of the grid. The x-ordinate of that location corresponds
+to the shock detachment distance. The remainder of the script is used to prettify the output and
+convert it to a non-dimensional form (by dividing by the sphere diameter).
+
+We can run this customised script using the `custom-post` option in eilmer::
+
+   e4shared --jobb=lobb --custom-post --script-file=shock-detachment.lua
+
+
+
 
  

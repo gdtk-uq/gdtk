@@ -12,15 +12,8 @@
 config.grid_motion = "shock_fitting"
 jobName = "lobb"
 Db = 0.5 * 0.0254 -- diameter (in m) of ball bearing
--- Find out which is the final time.
-timesFile = jobName..".times"
-os.execute("tail -1 "..timesFile.." > tmp")
-f = io.open("tmp", 'r')
-final_tindx = f:read("*number")
-f:close()
-os.execute("rm tmp")
 -- Pick up flow solution at final time
-fsol = FlowSolution:new{jobName=jobName, dir=".", tindx=final_tindx, nBlocks=4}
+fsol = FlowSolution:new{jobName=jobName, dir=".", tindx="last", nBlocks=4}
 vtx = fsol:get_vtx{ib=0, i=0, j=0}
 delta = -vtx:x()
 d_D = delta/Db
