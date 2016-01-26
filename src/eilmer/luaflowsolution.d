@@ -8,6 +8,7 @@
 
 module luaflowsolution;
 
+import std.algorithm;
 import std.array;
 import std.format;
 import std.stdio;
@@ -22,6 +23,7 @@ import luageom;
 import sgrid;
 import luasgrid;
 import flowsolution;
+import postprocess;
 
 /// name for FlowSolution object in Lua scripts.
 immutable string FlowSolutionMT = "FlowSolution"; 
@@ -79,16 +81,32 @@ extern(C) int newFlowSolution(lua_State* L)
     }
     lua_pop(L, 1);
 
+    // Let's read the times file so that we can support the use
+    // of 'last' as an option to 'tindx'
+    auto times_dict = readTimesFile(jobName);
+    auto tindx_list = times_dict.keys;
+    sort(tindx_list);
+
     int tindx;
     lua_getfield(L, 1, "tindx");
     if ( lua_isnil(L, -1) ) {
 	tindx = 0;
     } else if ( lua_isnumber(L, -1) ) {
 	tindx = to!int(luaL_checknumber(L, -1));
+    } else if ( lua_isstring(L, -1) ) {
+	string tindxStr = to!string(luaL_checkstring(L, -1));
+	if ( tindxStr == "last" ) {
+	    tindx = tindx_list[$-1];
+	} else {
+	    string errMsg = "Error in call to FlowSolution:new.\n";
+	    errMsg ~= " A string value was passed to the field 'tindx', but the content was not valid.\n";
+	    errMsg ~= " The only valid string field is 'last'.\n";
+	    throw new LuaInputException(errMsg);
+	}
     } else {
 	string errMsg = "Error in call to FlowSolution:new.";
 	errMsg ~= " A field for tindx was found, but the content was not valid.";
-	errMsg ~= " The tindx field, if given, should be an integer.";
+	errMsg ~= " The tindx field, if given, should be an integer or the string 'last'.";
 	throw new LuaInputException(errMsg);
     }
     lua_pop(L, 1);
