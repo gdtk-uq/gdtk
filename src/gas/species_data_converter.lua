@@ -91,6 +91,8 @@ function main()
       print("Two arguments expected:")
       print("  1. old species database file")
       print("  2. the name of a new species database file")
+      print("Exiting without doing anything.")
+      os.exit(1)
    end
 
    dofile(arg[1])
