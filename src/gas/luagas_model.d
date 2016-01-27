@@ -275,6 +275,7 @@ extern(C) int massf2molef(lua_State* L)
 
 extern(C) int molef2massf(lua_State* L)
 {
+    int narg = lua_gettop(L);
     auto gm = checkGasModel(L, 1);
     double[] molef;
     molef.length = gm.n_species;
@@ -288,10 +289,14 @@ extern(C) int molef2massf(lua_State* L)
 	throw new Error(errMsg);
     }
     auto Q = new GasState(gm.n_species, gm.n_modes);
-    getGasStateFromTable(L, gm, 3, Q);
+    if ( narg == 3 ) {
+	getGasStateFromTable(L, gm, 3, Q);
+    }
     gm.molef2massf(molef, Q);
     // Update table with new mass fractions
-    setGasStateInTable(L, gm, 3, Q);
+    if ( narg == 3 ) {
+	setGasStateInTable(L, gm, 3, Q);
+    }
     // and return a table to the caller.
     lua_newtable(L);
     foreach ( int i, mf; Q.massf ) {
