@@ -293,6 +293,7 @@ BoundaryCondition = {
    group = "",
    is_gas_domain_bc = true,
    is_wall = true,
+   is_configured = false,
    ghost_cell_data_available = true,
    convective_flux_computed_in_bc = false,
    preReconAction = {},
@@ -304,6 +305,10 @@ function BoundaryCondition:new(o)
    o = o or {}
    setmetatable(o, self)
    self.__index = self
+   -- If any of the actions are set, then we assume the boundary condition is configured.
+   if ( #o.preReconAction > 0 or #o.postConvFluxAction > 0 or #o.preSpatialDerivAction > 0 or #o.postDiffFluxAction > 0 ) then
+      o.is_configured = true
+   end
    return o
 end
 function BoundaryCondition:tojson()
@@ -351,6 +356,7 @@ function WallBC_WithSlip:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -363,6 +369,7 @@ function WallBC_NoSlip_FixedT:new(o)
 			       FixedT:new{Twall=o.Twall},
 			       UpdateThermoTransCoeffs:new(),
 			       WallKOmega:new() }
+   o.is_configured = true
    return o
 end
 
@@ -373,6 +380,7 @@ function WallBC_NoSlip_Adiabatic:new(o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
 			       WallKOmega:new() }
+   o.is_configured = true
    return o
 end
 
@@ -386,6 +394,7 @@ function WallBC_TranslatingSurface_FixedT:new(o)
 			       FixedT:new{Twall=o.Twall},
 			       UpdateThermoTransCoeffs:new(),
 			       WallKOmega:new() }
+   o.is_configured = true
    return o
 end
 
@@ -397,6 +406,7 @@ function WallBC_TranslatingSurface_Adiabatic:new(o)
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       TranslatingSurface:new{v_trans=o.v_trans},
 			       WallKOmega:new() }
+   o.is_configured = true
    return o
 end
 
@@ -410,6 +420,7 @@ function WallBC_RotatingSurface_FixedT:new(o)
 			       FixedT:new{Twall=o.Twall},
 			       UpdateThermoTransCoeffs:new(),
 			       WallKOmega:new() }
+   o.is_configured = true
    return o
 end
 
@@ -421,6 +432,7 @@ function WallBC_RotatingSurface_Adiabatic:new(o)
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       TranslatingSurface:new{r_omega=o.r_omega, centre=o.centre},
 			       WallKOmega:new() }
+   o.is_configured = true
    return o
 end
 
@@ -431,6 +443,7 @@ function InFlowBC_Supersonic:new(o)
    o.is_wall = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -443,6 +456,7 @@ function InFlowBC_ConstFlux:new(o)
    o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -455,6 +469,7 @@ function InFlowBC_ShockFitting:new(o)
    o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -484,6 +499,7 @@ function InFlowBC_FromStagnation:new(o)
 					   mass_flux=o.mass_flux,
 					   relax_factor=o.relax_factor} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -494,6 +510,7 @@ function OutFlowBC_Simple:new(o)
    o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -505,6 +522,7 @@ function OutFlowBC_FixedP:new(o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedP:new{p_outside=o.p_outside} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -516,6 +534,7 @@ function OutFlowBC_FixedPT:new(o)
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedPT:new{p_outside=o.p_outside, T_outside=o.T_outside} }
    o.preSpatialDerivAction = { CopyCellData:new() }
+   o.is_configured = true
    return o
 end
 
@@ -530,6 +549,7 @@ function ExchangeBC_FullFace:new(o)
 						 reorient_vector_quantities=o.reorient_vector_quantities,
 						 Rmatrix=o.Rmatrix} }
    o.preSpatialDerivAction = { UpdateThermoTransCoeffs:new() }
+   o.is_configured = true
    return o
 end
 
@@ -544,6 +564,7 @@ function ExchangeBC_MappedCell:new(o)
 						   reorient_vector_quantities=o.reorient_vector_quantities,
 						   Rmatrix=o.Rmatrix} }
    o.preSpatialDerivAction = { UpdateThermoTransCoeffs:new() }
+   o.is_configured = true
    return o
 end
 
@@ -553,6 +574,7 @@ function UserDefinedBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
    o.preSpatialDerivAction = { UserDefinedInterface:new{fileName=o.fileName} } 
+   o.is_configured = true
    return o
 end
 
@@ -571,6 +593,7 @@ function WallBC_AdjacentToSolid:new(o)
 							    otherFace=o.otherFace,
 							    orientation=o.orientation }
    }
+   o.is_configured = true
    return o
 end
 

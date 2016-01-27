@@ -139,6 +139,16 @@ function SBlock:tojson()
 	 print(errMsg)
 	 os.exit(1)
       end
+      if not self.bcList[face].is_configured then
+	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
+	 errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
+	 errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
+	 errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
+	 errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
+	 errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
+	 print(errMsg)
+	 os.exit(1)
+      end
       str = str .. string.format('    "boundary_%s": ', face) ..
 	 self.bcList[face]:tojson() .. ',\n'
    end
@@ -206,9 +216,19 @@ function UBlock:tojson()
    -- Boundary conditions
    for i = 0, self.nboundaries-1 do
       if not self.bcList[i].is_gas_domain_bc then
-	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%s\n", self.id, i)
+	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
 	 errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
 	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
+	 print(errMsg)
+	 os.exit(1)
+      end
+      if not self.bcList[i].is_configured then
+	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
+	 errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
+	 errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
+	 errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
+	 errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
+	 errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
 	 print(errMsg)
 	 os.exit(1)
       end
