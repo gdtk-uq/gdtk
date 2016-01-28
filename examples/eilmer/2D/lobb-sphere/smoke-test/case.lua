@@ -1,2 +1,2 @@
 ncells = 30
-no_flow_times = 15.0
+no_flow_times = 10.0
