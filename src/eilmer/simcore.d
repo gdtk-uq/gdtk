@@ -47,6 +47,7 @@ shared static double sim_time;  // present simulation time, tracked by code
 shared static int step;
 shared static double dt_global;     // simulation time step determined by code
 shared static double dt_allow;      // allowable global time step determined by code
+shared static double[] local_dt_allow; // each block will put its result into this array
 shared static double t_plot;        // time to write next soln
 shared static bool output_just_written = true;
 shared static double t_history;     // time to write next sample
@@ -225,6 +226,7 @@ void integrate_in_time(double target_time)
     // Overall iteration count.
     step = 0;
     shared bool do_cfl_check_now = false;
+    local_dt_allow.length = gasBlocks.length; // prepare array for use
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
     shared bool finished_time_stepping = 
@@ -246,14 +248,20 @@ void integrate_in_time(double target_time)
 	    do_cfl_check_now = true;
 	} // end if step == 0
 	if (do_cfl_check_now) {
-	    // Adjust the time step  
-	    shared double dt_allow = 1.0e9; // Start with too large a guess to ensure it is replaced.
-	    foreach (myblk; parallel(gasBlocks,1)) {
+	    // Adjust the time step...
+	    //
+	    // First, check what each block thinks should be the allowable step size.
+	    foreach (i, myblk; parallel(gasBlocks,1)) {
 		if (!myblk.active) continue;
-		double local_dt_allow = myblk.determine_time_step_size(dt_global);
-		dt_allow = min(dt_allow, local_dt_allow); 
+	        local_dt_allow[i] = myblk.determine_time_step_size(dt_global);
 	    }
-	    // Change the actual time step, as needed.
+	    // Second, reduce this estimate across all blocks.
+	    dt_allow = double.max; // to be sure it is replaced.
+	    foreach (i, myblk; gasBlocks) { // serial loop
+		if (!myblk.active) continue;
+		dt_allow = min(dt_allow, local_dt_allow[i]); 
+	    }
+	    // Now, change the actual time step, as needed.
 	    if (dt_allow <= dt_global) {
 		// If we need to reduce the time step, do it immediately.
 		dt_global = dt_allow;
