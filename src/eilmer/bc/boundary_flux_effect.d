@@ -201,7 +201,7 @@ public:
 	_e = gmodel.internal_energy(fstate.gas);
 	_nsp = gmodel.n_species;
 	_massf.length = _nsp;
-	for (int _isp=0; _isp <= _nsp; _isp++) {
+	for (int _isp=0; _isp < _nsp; _isp++) {
 	    _massf[_isp] = fstate.gas.massf[_isp];
 	}
 	this.fstate = fstate.dup();
@@ -234,7 +234,7 @@ public:
 		    IFace.F.momentum.refz = 0.0;
 		    // [TODO]: Kyle, think about z component.
 		    IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v) + _p/_rho);
-		    for ( int _isp = 0; _isp <= _nsp; _isp++ ){
+		    for ( int _isp = 0; _isp < _nsp; _isp++ ){
 			IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
 		    }
 		    // [TODO]: Kyle, separate energy modes for multi-species simulations.

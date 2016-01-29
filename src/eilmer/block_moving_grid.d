@@ -81,7 +81,7 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	    IFace.gvel.refx = temp.z;
 	    IFace.gvel.refy = averaged_ivel.y;
 	    IFace.gvel.refz = averaged_ivel.z;
-	    if ( blk.myConfig.axisymmetric && j == blk.jmin ) {
+	    if ( blk.myConfig.axisymmetric && j == blk.jmin) {
 		// For axis symmetric cases the cells along the axis of symmetry have 0 interface area,
 		// this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
 		// We choose to set the y and z directions to 0, but take an averaged value for the
@@ -95,13 +95,16 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
     return 0;
 }
 
-void predict_vertex_positions(Block blk, size_t dimensions, double dt) {
+void predict_vertex_positions(Block blk, size_t dimensions, double dt, int gtl) {
     size_t krangemax = ( dimensions == 2 ) ? blk.kmax : blk.kmax+1;
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
 	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
 	    for ( size_t i = blk.imin; i <= blk.imax+1; ++i ) {
 		FVVertex vtx = blk.get_vtx(i,j,k);
-		vtx.pos[1] = vtx.pos[0] + dt *  vtx.vel[0];
+		if (gtl == 0) // if this is the predictor/sole step update grid
+		    vtx.pos[1] = vtx.pos[0] + dt *  vtx.vel[0];
+		else   // else if this is the corrector step keep grid fixed
+		    vtx.pos[2] = vtx.pos[1];
 	    }
 	}
     }
@@ -112,7 +115,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
     /++ for a given block, loop through cell vertices and update the vertex
       + velocities. The boundary vertex velocities are set via the methodology laid out
       + in Ian Johnston's thesis available on the cfcfd website. The internal velocities
-      + are then assigned based off the boundary velocity and a user chosen weighting.
+      + are then assigned based on the boundary velocity and a user chosen weighting.
       + NB: the current implementation is hard coded for a moving WEST boundary
       + NB: Only for Euler stepping currently (i.e. gtl = 0 for velocities/positions)
       ++/
@@ -126,7 +129,6 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 	    }
 	}
     }
-
     // let's give the shock some time to form before searching for it
     if (sim_time < GlobalConfig.shock_fitting_delay || blk.bc[Face.west].type != "\"inflow_shock_fitting\"") return;
     
@@ -144,6 +146,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
     Vector3[4] interface_ws;
     double[4] w;
     Vector3 u_lft, u_rght, ns, tav;
+    bool reconstruction_1st_order = true; // if false code reverts to 0th order interpolation
     // First update all the WEST boundary vertex velocities (these are the masters)
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
 	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
@@ -153,66 +156,97 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 	    vtx_right = blk.get_vtx(i+1,j,k);
 	    cell_toprght = blk.get_cell(i, j, k);            
 	    cell_botrght = blk.get_cell(i, j-1, k);
-	    rho = 0.5*(cell_toprght.fs.gas.rho+cell_botrght.fs.gas.rho);
-	    if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"") rho = cell_toprght.fs.gas.rho;   // if on an outer boundary just take
-	    if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"") rho = cell_botrght.fs.gas.rho; // the first internal cell
+	    if (reconstruction_1st_order) {
+		double rho_recon_top = scalar_reconstruction(cell_toprght.fs.gas.rho,  blk.get_cell(i+1, j, k).fs.gas.rho,
+							     blk.get_cell(i+2, j, k).fs.gas.rho, cell_toprght.iLength,
+							     blk.get_cell(i+1, j, k).iLength,  blk.get_cell(i+2, j, k).iLength);
+		double rho_recon_bottom = scalar_reconstruction(cell_botrght.fs.gas.rho,  blk.get_cell(i+1, j-1, k).fs.gas.rho,
+								blk.get_cell(i+2, j-1, k).fs.gas.rho, cell_botrght.iLength,
+								blk.get_cell(i+1, j-1, k).iLength,  blk.get_cell(i+2, j-1, k).iLength);
+		rho = 0.5*(rho_recon_top + rho_recon_bottom);
+	    }
+	    else
+		rho = 0.5*(cell_toprght.fs.gas.rho+cell_botrght.fs.gas.rho);
+	    // if on an outer boundary just take the first internal cell
+	    if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"")
+		rho = cell_toprght.fs.gas.rho;
+	    if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"")
+		rho = cell_botrght.fs.gas.rho;
 	    shock_detect = abs(inflow.gas.rho - rho)/fmax(inflow.gas.rho, rho);
 	    if (shock_detect < SHOCK_DETECT_THRESHOLD) { // no shock across boundary set vertex velocity to wave speed (u+a)
 		temp_vel.refx = (inflow.vel.x + inflow.gas.a);
 		temp_vel.refy = -1.0*(inflow.vel.y + inflow.gas.a);
 		temp_vel.refz = 0.0;
 	    }
-	    else { // shock_detect > 0.2  shock detected across boundary
+	    else { // shock detected across boundary
 		// loop over cells which neighbour current vertex and calculate wave speed at interfaces
 		// left of the boundary is the constant flux condition
-		rho_lft = inflow.gas.rho;       // density in left cell
-		u_lft = inflow.vel;             // velocity vector in left cell
-		p_lft = inflow.gas.p;           // pressure in left cell
+		rho_lft = inflow.gas.rho;       // density
+		u_lft = inflow.vel;             // velocity vector
+		p_lft = inflow.gas.p;           // pressure
 		// loop over neighbouring interfaces (above vtx first, then below vtx)
-		for (int face = 0; face < 2; face++) {
-		    cell =  blk.get_cell(i, j-face, k);
-		    iface_neighbour = blk.get_ifi(i,j-face,k);
-		    
+		foreach (int jOffSet; [0, 1]) {
+		    cell =  blk.get_cell(i, j-jOffSet, k);
+		    iface_neighbour = blk.get_ifi(i,j-jOffSet,k);
 		    // For the case where two blocks connect (either on the south or north faces) we need to reach across to the neighbour block and
 		    // retrieve the neighbouring vertex and interface to ensure the vertices on the connecting interface move together and
 		    // do not move independently
-		    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"" && face == 1) {
+		    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"" && jOffSet == 1) {
 			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
 			int neighbourBlock =  ffeBC.neighbourBlock.id;
 			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
 			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
 		    }
-
-		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"" && face == 0) {
+		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"" && jOffSet == 0) {
 			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
 			int neighbourBlock =  ffeBC.neighbourBlock.id;
 			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
 			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
 		    }
-		    
-		    rho_rght = cell.fs.gas.rho;         // density in top right cell
-		    u_rght = cell.fs.vel;               // velocity vector in right cell
-		    p_rght = cell.fs.gas.p;             // pressure in right cell 
+		    if (reconstruction_1st_order) {
+			rho_rght = scalar_reconstruction(cell.fs.gas.rho,  blk.get_cell(i+1, j-jOffSet, k).fs.gas.rho,
+							 blk.get_cell(i+2, j-jOffSet, k).fs.gas.rho, cell.iLength,
+							 blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
+			u_rght.refx = scalar_reconstruction(cell.fs.vel.x,  blk.get_cell(i+1, j-jOffSet, k).fs.vel.x,
+							    blk.get_cell(i+2, j-jOffSet, k).fs.vel.x, cell.iLength,
+							    blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
+			u_rght.refy = scalar_reconstruction(cell.fs.vel.y,  blk.get_cell(i+1, j-jOffSet, k).fs.vel.y,
+							    blk.get_cell(i+2, j-jOffSet, k).fs.vel.y, cell.iLength,
+							    blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
+			u_rght.refz = scalar_reconstruction(cell.fs.vel.z,  blk.get_cell(i+1, j-jOffSet, k).fs.vel.z,
+							    blk.get_cell(i+2, j-jOffSet, k).fs.vel.z, cell.iLength,
+							    blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
+			p_rght = scalar_reconstruction(cell.fs.gas.p,  blk.get_cell(i+1, j-jOffSet, k).fs.gas.p,
+						       blk.get_cell(i+2, j-jOffSet, k).fs.gas.p, cell.iLength,
+						       blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
+		    }
+		    else {
+			rho_rght = cell.fs.gas.rho;         // density in top right cell
+			u_rght = cell.fs.vel;               // velocity vector in right cell
+			p_rght = cell.fs.gas.p;             // pressure in right cell 
+		    }
 		    ns =  cell.iface[Face.west].n;      // normal to the shock front (taken to be WEST face normal of right cell)
 		    ws1 = (rho_lft*dot(u_lft, ns) - rho_rght*dot(u_rght, ns))/(rho_lft - rho_rght);
 		    temp1 = ((p_rght - p_lft)/(abs(p_rght - p_lft)))/rho_lft; // just need the sign of p_rght - p_lft
 		    temp2 =  sqrt(abs((p_rght - p_lft)/(1/rho_lft - 1/rho_rght)));
 		    ws2 = dot(u_lft, ns) - temp1 * temp2;
-		    interface_ws[face] = (0.5*ws1 + (1-0.5)*ws2)*ns;
+		    interface_ws[jOffSet] = (0.5*ws1 + (1-0.5)*ws2)*ns;
 		    // tav is a unit vector which points from the neighbouring interface to the current vertex
 		    tav = (vtx.pos[0]-iface_neighbour.pos)/sqrt(dot(vtx.pos[0] - iface_neighbour.pos, vtx.pos[0] - iface_neighbour.pos));
 		    M = dot(0.5*(u_rght+u_lft), tav)/cell.fs.gas.a; // equation explained in Ian Johnston's thesis on page 77, note...
 		    // we are currently just using the right cell (i.e. first non-ghost cell) as the "post-shock" value, for higher accuracy
 		    // we will need to update this with the right hand side reconstructed value.
-		    //w[face] = ( M + abs(M) ) / 2;  // alternate weighting 
-		    if (M <= 1.0) w[face] = ((M+1)*(M+1)+(M+1)*abs(M+1))/8.0;
-		    else w[face] = M;
-		    if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"") w[1] = 0.0, interface_ws[1] = Vector3(0.0, 0.0, 0.0); // south boundary vertex has no bottom neighbour
-		    if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"") w[0] = 0.0, interface_ws[0] = Vector3(0.0, 0.0, 0.0); // north boundary vertex has no top neighbour
+		    //w[jOffSet] = ( M + abs(M) ) / 2;  // alternate weighting 
+		    if (M <= 1.0) w[jOffSet] = ((M+1)*(M+1)+(M+1)*abs(M+1))/8.0;
+		    else w[jOffSet] = M;
+		    if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"") // south boundary vertex has no bottom neighbour
+			w[1] = 0.0, interface_ws[1] = Vector3(0.0, 0.0, 0.0);
+		    if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"") // north boundary vertex has no top neighbour
+			w[0] = 0.0, interface_ws[0] = Vector3(0.0, 0.0, 0.0);
 		}
 		// now that we have the surrounding interface velocities, let's combine them to approximate the central vertex velocity
 		if (w[0] == 0.0 && w[1] == 0.0) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average
-		temp_vel = 0.8*(w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, dampened to 80% for stability
+		temp_vel = 0.8*(w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, 80% for stability
 	    }
 	    unit_d = correct_direction(unit_d, vtx.pos[0], vtx_left.pos[0], vtx_right.pos[0], i, blk.imin, blk.imax);
 	    temp_vel = dot(temp_vel, unit_d)*unit_d;
@@ -253,4 +287,15 @@ Vector3 weighting_function(Vector3 vel_max, size_t imax, size_t i) {
     // TODO: user chooses weighting function. Currently just linear.
     Vector3 vel = -(vel_max/(imax-2)) * (i-2) + vel_max; // y = mx + c
     return vel;
+}
+
+double scalar_reconstruction(double x1, double x2, double x3, double h1, double h2, double h3) {
+    // This is a special one sided reconstruction presented in Ian Johnston's thesis. 
+    double delta_theta = 2*(x2-x1)/(h1+h2);
+    double delta_cross = 2*(x3-x2)/(h2+h3);
+    double kappa = 0.5; // blending parameter
+    double eps = 1e-12; // prevents division by zero
+    double s = (2*(x3-x2)*(x2-x1)+eps)/((x3-x2)*(x3-x2)+(x2-x1)*(x2-x1)+eps);
+    double delta_1 = s/2 * ((1-s*kappa)*delta_cross + (1+s*kappa)*delta_theta);
+    return x1 - (delta_1 * 0.5*h1);
 }

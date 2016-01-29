@@ -867,7 +867,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 
 void gasdynamic_explicit_increment_with_moving_grid()
 {
-    // TODO: ONLY IMPLEMENTED FOR EULER STEPPING.
+    // For moving grid simulations we move the grid on the first predictor step and then
+    // leave it fixed in this position for the corrector steps.
     shared double t0 = sim_time;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
 	!GlobalConfig.separate_update_for_k_omega_source;
@@ -882,17 +883,6 @@ void gasdynamic_explicit_increment_with_moving_grid()
     case GasdynamicUpdate.tvd_rk3: c2 = 1.0; c3 = 0.5; break;
     case GasdynamicUpdate.denman_rk3: c2 = 1.0; c3 = 0.5; break; 
     }
-   
-    // Moving Grid - predict new vertex positions for moving grid              
-    foreach (blk; gasBlocks) {
-	if (!blk.active) continue;
-	// move vertices
-	predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global);
-	// recalculate cell geometry with new vertex positions
-	blk.compute_primary_cell_geometric_data(1);
-	// determine interface velocities using GCL
-	set_gcl_interface_properties(blk, 1, dt_global);
-    }
     
     // Preparation for the predictor-stage of inviscid gas-dynamic flow update.
     foreach (blk; parallel(gasBlocks,1)) {
@@ -902,7 +892,18 @@ void gasdynamic_explicit_increment_with_moving_grid()
     }
     // First-stage of gas-dynamic update.
     shared int ftl = 0; // time-level within the overall convective-update
-    shared int gtl = 1; // grid time-level
+    shared int gtl = 0; // grid time-level
+    // Moving Grid - predict new vertex positions for moving grid              
+    foreach (blk; gasBlocks) {
+	if (!blk.active) continue;
+	// move vertices
+	predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global, gtl);
+	// recalculate cell geometry with new vertex positions @ gtl = 1
+	blk.compute_primary_cell_geometric_data(gtl+1);
+	// determine interface velocities using GCL for gtl = 1
+	set_gcl_interface_properties(blk, gtl+1, dt_global);
+    }
+    gtl = 1; // update gtl now that grid has moved
     if (GlobalConfig.apply_bcs_in_parallel) {
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (!blk.active) continue;
@@ -1011,7 +1012,131 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
 	} // end foreach scell
     } // end foreach sblk
-     // Get the end conserved data into U[0] for next step.
+    /////
+    if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2 ) {
+	// Preparation for second-stage of gas-dynamic update.
+	sim_time = t0 + c2 * dt_global;
+	foreach (blk; parallel(gasBlocks,1)) {
+	    if (!blk.active ) continue;
+	    blk.clear_fluxes_of_conserved_quantities();
+	    foreach (cell; blk.cells) cell.clear_source_vector();
+	}
+	// Second stage of gas-dynamic update.
+	// Moving Grid - update geometry to gtl 2
+	foreach (blk; gasBlocks) {
+	    if (!blk.active) continue;
+	    // move vertices - this is a formality since pos[2] = pos[1]
+	    predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global, gtl);
+	    // recalculate cell geometry with new vertex positions
+	    blk.compute_primary_cell_geometric_data(gtl+1);
+	    // grid remains at pos[gtl=1], thus let's use old interface velocities
+	    // thus no need to set_gcl_interface_properties(blk, 2, dt_global);
+	}
+	ftl = 1;
+	gtl = 2;
+	// We are relying on exchanging boundary data as a pre-reconstruction activity.
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (blk; parallel(gasBlocks,1)) {
+		if (!blk.active) continue;
+		blk.applyPreReconAction(sim_time, gtl, ftl);
+	    }
+	} else {
+	    foreach (blk; gasBlocks) {
+		if (!blk.active) continue;
+		blk.applyPreReconAction(sim_time, gtl, ftl);
+	    }
+	}
+	// Let's set up solid domain bc's also before changing any flow properties.
+	foreach (sblk; solidBlocks) {
+	    if (!sblk.active) continue;
+	    sblk.applyPreSpatialDerivAction(sim_time, ftl);
+	}
+	foreach (blk; parallel(gasBlocks,1)) {
+	    if (!blk.active) continue;
+	    blk.convective_flux();
+	}
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (blk; parallel(gasBlocks,1)) {
+		if (!blk.active) continue;
+		blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	    }
+	}
+	else {
+	    foreach (blk; gasBlocks) {
+		if (!blk.active) continue;
+		blk.applyPostConvFluxAction(sim_time, gtl, ftl);
+	    }
+	}
+	if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
+	    if (GlobalConfig.apply_bcs_in_parallel) {
+		foreach (blk; parallel(gasBlocks,1)) {
+		    if (!blk.active) continue;
+		    blk.applyPreSpatialDerivAction(sim_time, gtl, ftl);
+		}
+	    } else {
+		foreach (blk; gasBlocks) {
+		    if (!blk.active) continue;
+		    blk.applyPreSpatialDerivAction(sim_time, gtl, ftl);
+		}
+	    }
+	    foreach (blk; parallel(gasBlocks,1)) {
+		if (!blk.active) continue;
+		blk.flow_property_derivatives(gtl); 
+		blk.estimate_turbulence_viscosity();
+		blk.viscous_flux();
+	    }
+	    if (GlobalConfig.apply_bcs_in_parallel) {
+		foreach (blk; parallel(gasBlocks,1)) {
+		    if (!blk.active) continue;
+		    blk.applyPostDiffFluxAction(sim_time, gtl, ftl);
+		}
+	    } else {
+		foreach (blk; gasBlocks) {
+		    if (!blk.active) continue;
+		    blk.applyPostDiffFluxAction(sim_time, gtl, ftl);
+		}
+	    }
+	} // end if viscous
+	foreach (blk; parallel(gasBlocks,1)) {
+	    if (!blk.active) continue;
+	    int local_ftl = ftl;
+	    int local_gtl = gtl;
+	    bool local_with_k_omega = with_k_omega;
+	    double local_dt_global = dt_global;
+	    double local_sim_time = sim_time;
+	    foreach (cell; blk.cells) {
+		cell.add_inviscid_source_vector(local_gtl, blk.omegaz);
+		if (blk.myConfig.viscous && !blk.myConfig.separate_update_for_viscous_terms) {
+		    cell.add_viscous_source_vector(local_with_k_omega);
+		}
+		if (blk.myConfig.udf_source_terms) {
+		    addUDFSourceTermsToCell(blk.myL, cell, local_gtl,
+					    local_sim_time, blk.myConfig.gmodel);
+		}
+		cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+		cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
+		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
+	    } // end foreach cell
+	} // end foreach blk
+	// Do solid domain update IMMEDIATELY after at same flow time level
+	foreach (sblk; solidBlocks) {
+	    if (!sblk.active) continue;
+	    sblk.clearSources();
+	    sblk.computeSpatialDerivatives(ftl);
+	    sblk.applyPostFluxAction(sim_time, ftl);
+	    sblk.computeFluxes();
+	    foreach (scell; sblk.activeCells) {
+		if (GlobalConfig.udfSolidSourceTerms) {
+		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+		}
+		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+		scell.stage2Update(dt_global);
+		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+	    } // end foreach cell
+	} // end foreach blk
+    } // end if number_of_stages_for_update_scheme >= 2 
+    //
+    // Get the end conserved data into U[0] for next step.
     foreach (blk; parallel(gasBlocks,1)) {
 	if (!blk.active) continue;
 	size_t end_indx = 2;
@@ -1043,12 +1168,13 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    scell.e[0] = scell.e[end_indx];
 	} 
     } // end foreach sblk
-    // update grid level 2 to the new grid level 0
+    // update grid level 2 (since we only move the grid once this is really gtl 1)
+    // to the new grid level 0
     foreach (blk; gasBlocks) {
 	if ( !blk.active ) continue;
 	foreach ( cell; blk.cells ) {
 	    //swap(cell.U[0], cell.U[1]);
-	    cell.copy_grid_level_to_level(1, 0);
+	    cell.copy_grid_level_to_level(gtl, 0);
 	}
     }
     // Finally, update the globally known simulation time for the whole step.

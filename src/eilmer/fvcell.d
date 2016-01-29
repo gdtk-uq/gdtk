@@ -858,7 +858,7 @@ public:
 					    dt * (gamma_1 * dUdt0.energies[imode] + 
 						  gamma_2 * dUdt1.energies[imode]));
 	}
-	assert(false, "[TODO] stage_2_update_for_flow_on_moving_grid() not yet ready for use");
+	return;
     } // end stage_2_update_for_flow_on_moving_grid()
 
     void chemical_increment(double dt, double T_frozen) 
