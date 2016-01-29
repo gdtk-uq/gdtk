@@ -37,17 +37,17 @@ config.axisymmetric = true
 config.grid_motion = "shock_fitting"
 config.flux_calc = AUSMDV
 body_flow_time = Db/u_inf
-config.gasdynamic_update_scheme = "euler"
+config.gasdynamic_update_scheme = "predictor-corrector"
 config.max_time = no_flow_times*body_flow_time
 if useOldSoln then
    config.shock_fitting_delay = 0.0
 else
    config.shock_fitting_delay = body_flow_time
 end
-config.max_step = 40000
+config.max_step = 80000
 config.dt_init = 1.0e-11
 config.cfl_value = 0.25
-config.dt_plot = config.max_time/5
+config.dt_plot = config.max_time/200
 
 -- The initial condition may be one of:
 -- (a) the inflow state applied everywhere; or
