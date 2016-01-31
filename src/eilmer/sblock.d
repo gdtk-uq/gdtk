@@ -39,7 +39,6 @@ import bc;
 
 class SBlock: Block {
 public:
-    size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     size_t[] micell, mjcell, mkcell; // locations of monitor cells
 
 private:

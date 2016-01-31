@@ -36,6 +36,7 @@ import boundary_flux_effect;
 import solid_udf_source_terms;
 import block_moving_grid;
 import grid_motion;
+import history;
 version (gpu_chem) {
     import gpu_chem;
 }
@@ -66,6 +67,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
+    init_history_cell_files();
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
     auto nThreadsInPool = min(maxCPUs-1, GlobalConfig.nBlocks-1); // no need to have more task threads than blocks
@@ -368,6 +370,13 @@ void integrate_in_time(double target_time)
             t_plot = t_plot + GlobalConfig.dt_plot;
         }
 
+        // 4a. (Occasionally) Write out the cell history data
+        if ( (sim_time >= t_history) && !history_just_written ) {
+	    write_history_cells_to_files(sim_time);
+	    history_just_written = true;
+            t_history = t_history + GlobalConfig.dt_history;
+        }
+
         // 5. For steady-state approach, check the residuals for mass and energy.
 
 	// 6. Spatial filter may be applied occasionally.
@@ -439,6 +448,9 @@ void finalize_simulation()
 	    }
 	}
 	update_times_file();
+    }
+    if (!history_just_written) {
+	write_history_cells_to_files(sim_time);
     }
     writeln("Step= ", step, " final-t= ", sim_time);
     if (GlobalConfig.verbosity_level > 0) writeln("Done finalize_simulation.");

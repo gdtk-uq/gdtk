@@ -12,6 +12,7 @@ import std.conv;
 import std.array;
 import std.format;
 import std.string;
+import std.typecons;
 
 import util.lua;
 import json_helper;
@@ -231,6 +232,12 @@ void read_config_file()
 	writeln("  propagate_inflow_data: ", GlobalConfig.propagate_inflow_data);
     }
 
+    int nhcell = getJSONint(jsonData, "nhcell", 0);
+    foreach (i; 0 .. nhcell) {
+	string jsonKey = format("history-cell-%d", i);
+	auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
+	GlobalConfig.hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
+    }
     // TODO -- still have other entries such as nheatzone, nreactionzone, ...
 
     // Now, configure blocks that make up the flow domain.

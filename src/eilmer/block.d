@@ -44,7 +44,6 @@ public:
                    // There is only one component, about the z-axis.
     double mass_residual, energy_residual; // monitor these for steady state
     Vector3 mass_residual_loc, energy_residual_loc; // locations of worst case
-    int hncell;                 // number of sample cells
     int mncell;                 // number of monitor cells
     double[] initial_T_value; // for monitor cells to check against
     FVCell[] cells; // collection of references to be used in foreach statements.
@@ -446,11 +445,6 @@ public:
 	}
 	return dt_allow;
     } // end determine_time_step_size()
-
-    void write_history(string filename, double sim_time, bool write_header=false)
-    {
-	throw new Error("[TODO] Block.write_history() not implemented yet.");
-    }
 
     void applyPreReconAction(double t, int gtl, int ftl)
     {

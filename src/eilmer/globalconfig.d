@@ -11,6 +11,7 @@ module globalconfig;
 import std.conv;
 import std.stdio;
 import std.string;
+import std.typecons;
 
 import util.lua;
 import gas;
@@ -310,7 +311,8 @@ final class GlobalConfig {
     shared static size_t write_at_step = 0; // update step at which to write a solution, 0=don't do it
     shared static double dt_plot = 1.0e-3; // interval for writing soln
     shared static double dt_history = 1.0e-3; // interval for writing sample
-
+    shared static Tuple!(size_t, size_t)[] hcells;
+    
     shared static double energy_residual;      // to be monitored for steady state
     shared static Vector3 energy_residual_loc; // location of largest value
     shared static double mass_residual;

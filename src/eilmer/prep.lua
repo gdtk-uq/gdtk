@@ -26,6 +26,8 @@ blocks = {}
 -- Storgage for later definitions of SolidBlock objects
 solidBlocks = {}
 
+-- Storage for history cells
+historyCells = {}
 
 function to_eilmer_axis_map(gridpro_ijk)
    -- Convert from GridPro axis_map string to Eilmer3 axis_map string.
@@ -119,17 +121,6 @@ function SBlock:tojson()
    str = str .. string.format('    "njc": %d,\n', self.njc)
    str = str .. string.format('    "nkc": %d,\n', self.nkc)
    str = str .. string.format('    "omegaz": %f,\n', self.omegaz)
-   str = str .. string.format('    "nhcell": %d,\n', #(self.hcellList))
-   for i = 1, #(self.hcellList) do
-      local hcell = self.hcellList[i]
-      if config.dimensions == 3 then
-	 str = str .. string.format('    "history-cell-%d": [%d, %d, %d],\n', 
-				    i-1, hcell[1], hcell[2], hcell[3])
-      else
-	 str = str .. string.format('    "history-cell-%d": [%d, %d],\n',
-				    i-1, hcell[1], hcell[2])
-      end
-   end
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
       if not self.bcList[face].is_gas_domain_bc then
@@ -208,11 +199,6 @@ function UBlock:tojson()
    str = str .. string.format('    "nfaces": %d,\n', self.nfaces)
    str = str .. string.format('    "nboundaries": %d,\n', self.nboundaries)
    str = str .. string.format('    "omegaz": %f,\n', self.omegaz)
-   str = str .. string.format('    "nhcell": %d,\n', #(self.hcellList))
-   for i = 1, #(self.hcellList) do
-      local hcell = self.hcellList[i]
-      str = str .. string.format('    "history-cell-%d": %d,\n', i-1, hcell)
-   end
    -- Boundary conditions
    for i = 0, self.nboundaries-1 do
       if not self.bcList[i].is_gas_domain_bc then
@@ -535,6 +521,41 @@ function SSolidBlock:tojson()
    return str
 end
 
+function setHistoryPoint(args)
+   -- Accepts a variety of arguments:
+   --  1. x, y, z coordinates
+   --  setHistoryPoint{x=7.9, y=8.2, z=0.0}
+   --  2. block and single-index for cell
+   --  setHistoryPoint{ib=2, i=102}
+   --  3. block and structured grid indices
+   --  setHistoryPoint{ib=0, i=20, j=10, k=0}
+   
+   -- First look for x,y,z
+   if ( args.x ) then
+      x = args.x
+      y = args.y
+      z = args.z or 0.0
+      -- [TODO] provide a search function
+      print("ERROR: setHistoryPoint search for (x,y,z) point not implemented.")
+      print("Bailing out!")
+      os.exit(1)
+   end
+   
+   if ( args.j ) then
+      ib = args.ib
+      i = args.i
+      j = args.j
+      k = args.k or 0
+      -- [TODO] provide a conversion function from structured indices to single index
+      print("ERROR: setHistoryPoint conversion from structured grid indices not implemented.")
+      print("Bailing out!")
+      os.exit(1)
+   end
+
+   historyCells[#historyCells+1] = {ib=args.ib, i=args.i}
+
+end
+
 -- --------------------------------------------------------------------
 
 function write_control_file(fileName)
@@ -627,7 +648,11 @@ function write_config_file(fileName)
    f:write(string.format('"nkb": %d,\n', config.nkb))
    f:write(string.format('"propagate_inflow_data": %s,\n',
 			 tostring(config.propagate_inflow_data)))
- 
+   f:write(string.format('"nhcell": %d,\n', #historyCells))
+   for i,hcell in ipairs(historyCells) do
+      f:write(string.format('"history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))
+   end
+
    f:write(string.format('"udf_solid_source_terms_file": "%s",\n', config.udf_solid_source_terms_file))
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
