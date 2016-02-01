@@ -542,7 +542,6 @@ function setHistoryPoint(args)
       cell_id = 0
       for ib,blk in ipairs(blocks) do
 	 indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
-	 print("indx, dist= ", indx, dist)
 	 if ( dist < minDist ) then
 	    minDist = dist
 	    blkId = ib

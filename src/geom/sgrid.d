@@ -632,9 +632,6 @@ public:
 	    }
 	} // foreach i
 
-	writeln("nearest vtx= ", nearestVtx);
-	writeln("minDist= ", minDist);
-
 	// Now we'll construct the cells that neighbour
 	// the vertex and pick the closest.
 	minDist = 1.0e9; // something large to get us started
@@ -660,7 +657,6 @@ public:
 	    Vector3 centroid, n, t1, t2;
 	    double area;
 
-	    writeln("i= ", i, " j=", j);
 	    // Cell A:
 	    if ( i != (niv-1) && j != 0 ) {
 		auto vtxIds = get_vtx_id_list_for_cell(i, j-1);
