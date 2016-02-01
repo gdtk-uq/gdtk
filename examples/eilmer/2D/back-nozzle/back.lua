@@ -71,9 +71,10 @@ grid1 = StructuredGrid:new{psurface=makePatch{north1, east1, south1, east0west1}
 subsonic_region = SBlock:new{grid=grid0, fillCondition=stagnation_gas,
 			     label="subsonic-region"}
 supersonic_region = SBlock:new{grid=grid1, fillCondition=low_pressure_gas,
-			       label="supersonic-region", 
-			       hcellList={{1,1},{nx1-1,1}}}
+			       label="supersonic-region"} 
 -- History locations near throat and exit
+setHistoryPoint{ib=1, i=1, j=1}
+setHistoryPoint{ib=1, i=nx1-1, j=1}
 identifyBlockConnections()
 if fixed_pressure then
    -- Directly specify the stagnation conditions for the subsonic inflow.

@@ -57,7 +57,8 @@ grid1 = StructuredGrid:new{pvolume=TFIVolume:new{vertices=blk1Corners},
 
 blk0 = SBlock:new{label="first-block", grid=grid0, fillCondition=initial}
 blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
-blk1 = SBlock:new{label="second-block", grid=grid1, fillCondition=initial,
-		  hcellList={{1,1,2},{20,1,1}}}
+blk1 = SBlock:new{label="second-block", grid=grid1, fillCondition=initial}
 blk1.bcList[east] = OutFlowBC_Simple:new{}
 identifyBlockConnections()
+setHistoryPoint{ib=1, i=1, j=1, k=2}
+setHistoryPoint{ib=1, i=20, j=1, k=2}

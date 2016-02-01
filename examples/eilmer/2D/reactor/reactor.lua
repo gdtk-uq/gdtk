@@ -23,8 +23,8 @@ d = Vector3:new{0.01, 0.01}
 
 grid0 = StructuredGrid:new{psurface=makePatch{Line:new{b, d}, Line:new{c, d}, Line:new{a, c}, Line:new{a, b}},
 			   niv=3, njv=3}
-blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="blk0", hcellList={{0,0}}}
-
+blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
+setHistoryPoint{ib=0, i=0, j=0}
 -- Finish off config
 config.max_time = 2.0e-4
 config.max_step = 100000
