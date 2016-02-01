@@ -67,7 +67,6 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
-    init_history_cell_files();
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
     auto nThreadsInPool = min(maxCPUs-1, GlobalConfig.nBlocks-1); // no need to have more task threads than blocks
@@ -92,6 +91,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	}
 	myblk.set_cell_dt_chem(-1.0);
     }
+    init_history_cell_files();
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.

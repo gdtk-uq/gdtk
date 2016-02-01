@@ -26,6 +26,12 @@ void init_history_cell_files()
     foreach ( hcell; GlobalConfig.hcells ) {
 	auto blkId = hcell[0];
 	auto cellId = hcell[1];
+	if ( cellId >= gasBlocks[blkId].cells.length ) {
+	    string errMsg = "ERROR: init_history_cells()\n";
+	    errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
+	    errMsg ~= format("This block only has %d cells.\n", gasBlocks[blkId].cells.length);
+	    throw new Error(errMsg);
+	}
 	string fname = format("%s/%s-blk-%d-cell-%d.dat", 
 			      histDir, GlobalConfig.base_file_name, blkId, cellId);
 	auto f = File(fname, "w");

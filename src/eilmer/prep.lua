@@ -538,8 +538,8 @@ function setHistoryPoint(args)
       y = args.y
       z = args.z or 0.0
       minDist = 1.0e9 -- something very large
-      blk_id = 0
-      cell_id = 0
+      blkId = 0
+      cellId = 0
       for ib,blk in ipairs(blocks) do
 	 indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
 	 if ( dist < minDist ) then
@@ -548,28 +548,6 @@ function setHistoryPoint(args)
 	    cellId = indx
 	 end
       end
-      -- The 'indx' value was determined from a grid and so
-      -- has no ghost cells. First we'll convert to i,j,k in
-      -- a grid with no ghost cells. Second, we'll find the
-      -- i,j,k including ghost cells. Third, we'll convert
-      -- back to a single index
-      nic = blocks[blkId].nic
-      njc = blocks[blkId].njc
-      k = math.floor(cellId / (nic*njc));
-      cellId = cellId - k * (nic * njc);
-      j = math.floor(indx / nic);
-      i = cellId - j * nic;
-      -- Add ghost cell offsets
-      i = i + NGHOST
-      j = j + NGHOST
-      if config.dimensions == 3 then
-	 k = k + NGHOST
-      end
-      -- Find global index in grid with ghost cells
-      nidim = nic + 2 * NGHOST
-      njdim = njc + 2 * NGHOST
-      -- Convert back to single_index
-      cellId = k * (njdim * nidim) + j * nidim + i
       -- Convert blkId to 0-offset
       blkId = blkId - 1
       historyCells[#historyCells+1] = {ib=blkId, i=cellId}
@@ -581,19 +559,10 @@ function setHistoryPoint(args)
       i = args.i
       j = args.j
       k = args.k or 0
-      -- Add ghost cell offsets
-      i = i + NGHOST
-      j = j + NGHOST
-      if config.dimensions == 3 then
-	 k = k + NGHOST
-      end
-      -- Find global index in grid with ghost cells
+      -- Convert back to single_index
       nic = blocks[ib+1].nic
       njc = blocks[ib+1].njc
-      nidim = nic + 2 * NGHOST
-      njdim = njc + 2 * NGHOST
-      -- Convert back to single_index
-      cellId = k * (njdim * nidim) + j * nidim + i
+      cellId = k * (njc * nic) + j * nic + i
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       return
    end
