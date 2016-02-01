@@ -3,6 +3,8 @@
 -- 
 print("Loading prep.lua...")
 
+NGHOST = 2
+
 require 'blk_conn'
 -- Let's pull the symbols out of the blk_conn module
 -- and make them global in this namespace
@@ -535,10 +537,44 @@ function setHistoryPoint(args)
       x = args.x
       y = args.y
       z = args.z or 0.0
-      -- [TODO] provide a search function
-      print("ERROR: setHistoryPoint search for (x,y,z) point not implemented.")
-      print("Bailing out!")
-      os.exit(1)
+      minDist = 1.0e9 -- something very large
+      blk_id = 0
+      cell_id = 0
+      for ib,blk in ipairs(blocks) do
+	 indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
+	 print("indx, dist= ", indx, dist)
+	 if ( dist < minDist ) then
+	    minDist = dist
+	    blkId = ib
+	    cellId = indx
+	 end
+      end
+      -- The 'indx' value was determined from a grid and so
+      -- has no ghost cells. First we'll convert to i,j,k in
+      -- a grid with no ghost cells. Second, we'll find the
+      -- i,j,k including ghost cells. Third, we'll convert
+      -- back to a single index
+      nic = blocks[blkId].nic
+      njc = blocks[blkId].njc
+      k = math.floor(cellId / (nic*njc));
+      cellId = cellId - k * (nic * njc);
+      j = math.floor(indx / nic);
+      i = cellId - j * nic;
+      -- Add ghost cell offsets
+      i = i + NGHOST
+      j = j + NGHOST
+      if config.dimensions == 3 then
+	 k = k + NGHOST
+      end
+      -- Find global index in grid with ghost cells
+      nidim = nic + 2 * NGHOST
+      njdim = njc + 2 * NGHOST
+      -- Convert back to single_index
+      cellId = k * (njdim * nidim) + j * nidim + i
+      -- Convert blkId to 0-offset
+      blkId = blkId - 1
+      historyCells[#historyCells+1] = {ib=blkId, i=cellId}
+      return
    end
    
    if ( args.j ) then
@@ -546,14 +582,31 @@ function setHistoryPoint(args)
       i = args.i
       j = args.j
       k = args.k or 0
-      -- [TODO] provide a conversion function from structured indices to single index
-      print("ERROR: setHistoryPoint conversion from structured grid indices not implemented.")
+      -- Add ghost cell offsets
+      i = i + NGHOST
+      j = j + NGHOST
+      if config.dimensions == 3 then
+	 k = k + NGHOST
+      end
+      -- Find global index in grid with ghost cells
+      nic = blocks[ib+1].nic
+      njc = blocks[ib+1].njc
+      nidim = nic + 2 * NGHOST
+      njdim = njc + 2 * NGHOST
+      -- Convert back to single_index
+      cellId = k * (njdim * nidim) + j * nidim + i
+      historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
+      return
+   end
+
+   if ( args.ib or args.i ) then
+      print("No valid arguments found for setHistoryPoint.")
       print("Bailing out!")
       os.exit(1)
    end
 
    historyCells[#historyCells+1] = {ib=args.ib, i=args.i}
-
+   return
 end
 
 -- --------------------------------------------------------------------

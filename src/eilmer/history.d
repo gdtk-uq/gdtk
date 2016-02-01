@@ -32,7 +32,7 @@ void init_history_cell_files()
 	auto cellVars = variable_list_for_cell(GlobalConfig.gmodel_master);
 	f.write("# 1:t ");
 	foreach ( i, var; cellVars ) {
-	    f.write("%d:%s ", i, var);
+	    f.write(format("%d:%s ", i+2, var));
 	}
 	f.write("\n");
 	f.close();
