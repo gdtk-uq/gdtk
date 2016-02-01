@@ -44,7 +44,7 @@ grid1 = StructuredGrid:new{psurface=makePatch{ed, cd, bc, be, gridType="ao"}, ni
 -- Define the flow-solution blocks.
 blk0 = SBlock:new{grid=grid0, fillCondition=inflow, label="BLOCK-0"}
 blk1 = SBlock:new{grid=grid1, fillCondition=initial, label="BLOCK-1",
-		  hcellList={{9,0}}, xforceList={0,0,1,0}}
+		  xforceList={0,0,1,0}}
 -- Set boundary conditions.
 identifyBlockConnections()
 blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}
@@ -58,3 +58,8 @@ config.cfl_value = 0.5
 -- config.dt_max = 10.0e-6
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
+
+-- add history point at nose of cone
+setHistoryPoint{x=b:x(), y=b:y()}
+-- add history point at base of cone
+setHistoryPoint{ib=1, i=nx1, j=0}
