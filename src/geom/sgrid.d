@@ -84,6 +84,19 @@ public:
 	return i + niv*(j + njv*k);
     }
 
+    size_t[] ijk_indices(size_t indx) const
+    in {
+	assert ( indx < vertices.length );
+    }
+    body {
+	size_t k = indx / (niv*njv);
+	indx -= k * (niv * njv);
+	size_t j = indx / niv;
+	indx -= j * niv;
+	return [indx, j, k];
+    }
+	    
+
     // Blank grid, ready for import of data.
     this(size_t niv, size_t njv, size_t nkv=1, string label="")
     {
@@ -600,6 +613,122 @@ public:
 	}
     } // end joinGrid
 
+    void find_nearest_cell_centre(double x, double y, double z,
+				  ref size_t indx, ref double dist)
+    {
+	double dx = x - vertices[0].x;
+	double dy = y - vertices[0].y;
+	double dz = z - vertices[0].z;
+	double minDist = sqrt(dx*dx + dy*dy + dz*dz);
+	size_t nearestVtx = 0;
+	foreach ( i; 1 .. vertices.length ) {
+	    dx = x - vertices[i].x;
+	    dy = y - vertices[i].y;
+	    dz = z - vertices[i].z;
+	    double d = sqrt(dx*dx + dy*dy + dz*dz);
+	    if ( d < minDist ) {
+		minDist = d;
+		nearestVtx = i;
+	    }
+	} // foreach i
+
+	writeln("nearest vtx= ", nearestVtx);
+	writeln("minDist= ", minDist);
+
+	// Now we'll construct the cells that neighbour
+	// the vertex and pick the closest.
+	minDist = 1.0e9; // something large to get us started
+	size_t i, j, k;
+	k = 0;
+	size_t nearest_i, nearest_j, nearest_k;
+	nearest_k = 0;
+
+	if ( dimensions == 2 ) {
+	    // In 2D, we'll temporarily construct cells
+	    // A, B, C and D around vertex "x" as shown
+	    // in the ASCII art here.
+	    //
+	    //   o-------o-------o
+	    //   |   C   |   B   |
+	    //   o-------x-------o
+	    //   |   D   |   A   |
+	    //   o-------o-------o
+	    //
+	    auto ijk = ijk_indices(nearestVtx);
+	    i = ijk[0];
+	    j = ijk[1];
+	    Vector3 centroid, n, t1, t2;
+	    double area;
+
+	    writeln("i= ", i, " j=", j);
+	    // Cell A:
+	    if ( i != (niv-1) && j != 0 ) {
+		auto vtxIds = get_vtx_id_list_for_cell(i, j-1);
+		quad_properties(vertices[vtxIds[0]], vertices[vtxIds[1]],
+				vertices[vtxIds[2]], vertices[vtxIds[3]],
+				centroid, n, t1, t2, area);
+		dx = x - centroid.x;
+		dy = y - centroid.y;
+		double d = sqrt(dx*dx + dy*dy);
+		if ( d < minDist ) {
+		    minDist = d;
+		    nearest_i = i;
+		    nearest_j = j-1;
+		}
+	    }
+	    // Cell B:
+	    if ( i != (niv-1) && j != (njv-1) ) {
+		auto vtxIds = get_vtx_id_list_for_cell(i, j);
+		quad_properties(vertices[vtxIds[0]], vertices[vtxIds[1]],
+				vertices[vtxIds[2]], vertices[vtxIds[3]],
+				centroid, n, t1, t2, area);
+		dx = x - centroid.x;
+		dy = y - centroid.y;
+		double d = sqrt(dx*dx + dy*dy);
+		if ( d < minDist ) {
+		    minDist = d;
+		    nearest_i = i;
+		    nearest_j = j;
+		}
+	    }
+	    // Cell C:
+	    if ( i != 0 && j != (njv-1) ) {
+		auto vtxIds = get_vtx_id_list_for_cell(i-1, j);
+		quad_properties(vertices[vtxIds[0]], vertices[vtxIds[1]],
+				vertices[vtxIds[2]], vertices[vtxIds[3]],
+				centroid, n, t1, t2, area);
+		dx = x - centroid.x;
+		dy = y - centroid.y;
+		double d = sqrt(dx*dx + dy*dy);
+		if ( d < minDist ) {
+		    minDist = d;
+		    nearest_i = i-1;
+		    nearest_j = j;
+		}
+	    }
+	    // Cell D:
+	    if ( i != 0 && j != 0 ) {
+		auto vtxIds = get_vtx_id_list_for_cell(i-1, j-1);
+		quad_properties(vertices[vtxIds[0]], vertices[vtxIds[1]],
+				vertices[vtxIds[2]], vertices[vtxIds[3]],
+				centroid, n, t1, t2, area);
+		dx = x - centroid.x;
+		dy = y - centroid.y;
+		double d = sqrt(dx*dx + dy*dy);
+		if ( d < minDist ) {
+		    minDist = d;
+		    nearest_i = i-1;
+		    nearest_j = j-1;
+		}
+	    }
+	} // end dimension == 2
+	else {
+	    throw new Error("find_nearest_cell_centre not implemented in 3D yet.");
+	}
+	    
+	indx = nearest_i + (niv-1)*(nearest_j + (njv-1)*nearest_k);
+	dist = minDist;
+    } // end find_nearest_cell_centre
 
 } // end class StructuredGrid
 
@@ -653,7 +782,7 @@ unittest {
 			      "StructuredGrid sample point");
     auto my_subgrid = my_grid.subgrid(4, 3, 4, 5);
     assert(approxEqualVectors(*my_subgrid[1,1], Vector3(0.5, 0.35, 0.0)),
-			      "subgrid sample point");    
+			      "subgrid sample point");
 }
 
 //-----------------------------------------------------------------
