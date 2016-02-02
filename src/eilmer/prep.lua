@@ -567,7 +567,7 @@ function setHistoryPoint(args)
       return
    end
 
-   if ( args.ib or args.i ) then
+   if ( not args.ib or not args.i ) then
       print("No valid arguments found for setHistoryPoint.")
       print("Bailing out!")
       os.exit(1)
