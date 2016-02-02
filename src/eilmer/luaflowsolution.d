@@ -83,7 +83,7 @@ extern(C) int newFlowSolution(lua_State* L)
 
     // Let's read the times file so that we can support the use
     // of 'last' as an option to 'tindx'
-    auto times_dict = readTimesFile(jobName);
+    auto times_dict = readTimesFile(dir~"/"~jobName);
     auto tindx_list = times_dict.keys;
     sort(tindx_list);
 
