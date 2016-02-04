@@ -495,7 +495,16 @@ public:
 	    fs.gas.e[0] = e;
 	}
 	// Fill out the other variables: P, T, a, and viscous transport coefficients.
-	gmodel.update_thermo_from_rhoe(fs.gas);
+	try {
+	    gmodel.update_thermo_from_rhoe(fs.gas);
+	}
+	catch (Exception err) {
+	    string msg = format("caught %s", err.msg);
+	    msg ~= format("The decode_conserved() failed for cell: %d\n", id);
+	    msg ~= format("This cell is located at: %s\n", pos[0]);
+	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+	    throw new Error(msg);
+	}
 	gmodel.update_sound_speed(fs.gas);
 	if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
 	// if (myConfig.diffusion) gmodel.update_diff_coeffs(fs.gas);
@@ -880,7 +889,7 @@ public:
 		fs.gas.T[0] = T_save;
 	    }
 	} catch(Exception err) {
-	    string msg = format("catch %s", err.msg);
+	    string msg = format("caught %s", err.msg);
 	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
 	    throw new Error(msg);
@@ -888,7 +897,18 @@ public:
 
 	// The update only changes mass fractions; we need to impose
 	// a thermodynamic constraint based on a call to the equation of state.
-	myConfig.gmodel.update_thermo_from_rhoe(fs.gas);
+	try {
+	    myConfig.gmodel.update_thermo_from_rhoe(fs.gas);
+	}
+	catch (Exception err) {
+	    string msg = format("caught %s", err.msg);
+	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
+	    msg ~= format("This cell is located at: %s\n", pos[0]);
+	    msg ~= "This failure occurred when trying to update the thermo state after\n";
+	    msg ~= "computing the species change due to chemical reactions.\n";
+	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+	    throw new Error(msg);
+	}
 
 	// If we are doing a viscous sim, we'll need to ensure
 	// viscous properties are up-to-date
