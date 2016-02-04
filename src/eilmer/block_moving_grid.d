@@ -204,21 +204,33 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
 		    }
 		    if (reconstruction_1st_order) {
-			rho_rght = scalar_reconstruction(cell.fs.gas.rho,  blk.get_cell(i+1, j-jOffSet, k).fs.gas.rho,
-							 blk.get_cell(i+2, j-jOffSet, k).fs.gas.rho, cell.iLength,
-							 blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
-			u_rght.refx = scalar_reconstruction(cell.fs.vel.x,  blk.get_cell(i+1, j-jOffSet, k).fs.vel.x,
-							    blk.get_cell(i+2, j-jOffSet, k).fs.vel.x, cell.iLength,
-							    blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
-			u_rght.refy = scalar_reconstruction(cell.fs.vel.y,  blk.get_cell(i+1, j-jOffSet, k).fs.vel.y,
-							    blk.get_cell(i+2, j-jOffSet, k).fs.vel.y, cell.iLength,
-							    blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
-			u_rght.refz = scalar_reconstruction(cell.fs.vel.z,  blk.get_cell(i+1, j-jOffSet, k).fs.vel.z,
-							    blk.get_cell(i+2, j-jOffSet, k).fs.vel.z, cell.iLength,
-							    blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
-			p_rght = scalar_reconstruction(cell.fs.gas.p,  blk.get_cell(i+1, j-jOffSet, k).fs.gas.p,
-						       blk.get_cell(i+2, j-jOffSet, k).fs.gas.p, cell.iLength,
-						       blk.get_cell(i+1, j-jOffSet, k).iLength,  blk.get_cell(i+2, j-jOffSet, k).iLength);
+			FVCell cell_1_right = blk.get_cell(i+1, j-jOffSet, k);
+			FVCell cell_2_right =  blk.get_cell(i+2, j-jOffSet, k);
+			// As suggested in onedinterp.d we are transforming all cells velocities to a local reference frame relative to the
+			// interface where the reconstruction is taking place
+			cell.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			cell_1_right.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			cell_2_right.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			rho_rght = scalar_reconstruction(cell.fs.gas.rho,  cell_1_right.fs.gas.rho,
+							 cell_2_right.fs.gas.rho, cell.iLength,
+							 cell_1_right.iLength,  cell_2_right.iLength);
+			u_rght.refx = scalar_reconstruction(cell.fs.vel.x,  cell_1_right.fs.vel.x,
+							    cell_2_right.fs.vel.x, cell.iLength,
+							    cell_1_right.iLength, cell_2_right.iLength);
+			u_rght.refy = scalar_reconstruction(cell.fs.vel.y,  cell_1_right.fs.vel.y,
+							    cell_2_right.fs.vel.y, cell.iLength,
+							    cell_1_right.iLength,  cell_2_right.iLength);
+			u_rght.refz = scalar_reconstruction(cell.fs.vel.z,  cell_1_right.fs.vel.z,
+							    cell_2_right.fs.vel.z, cell.iLength,
+							    cell_1_right.iLength, cell_2_right.iLength);
+			p_rght = scalar_reconstruction(cell.fs.gas.p, cell_1_right.fs.gas.p,
+						       cell_2_right.fs.gas.p, cell.iLength,
+						       cell_1_right.iLength, cell_2_right.iLength);
+			// here we are transforming the cell velocities back to the global reference frame
+			u_rght.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			cell.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			cell_1_right.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			cell_2_right.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);	
 		    }
 		    else {
 			rho_rght = cell.fs.gas.rho;         // density in top right cell
