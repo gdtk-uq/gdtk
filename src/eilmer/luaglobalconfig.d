@@ -304,7 +304,12 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "reactions_file");
     }
     lua_pop(L, 1);
-
+    lua_getfield(L, 1, "reaction_time_delay");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.reaction_time_delay = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "reaction_time_delay");
+    }
+    lua_pop(L, 1);
 
     lua_getfield(L, 1, "max_step");
     if (!lua_isnil(L, -1)) {
@@ -620,6 +625,9 @@ extern(C) int configGet(lua_State* L)
 	break;
     case "reactions_file":
 	lua_pushstring(L, GlobalConfig.reactions_file.toStringz);
+	break;
+    case "reaction_time_delay":
+	lua_pushnumber(L, GlobalConfig.reaction_time_delay);
 	break;
 
     case "max_step":

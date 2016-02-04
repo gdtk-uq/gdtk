@@ -256,7 +256,7 @@ final class GlobalConfig {
     // chemical update function call.
     shared static bool reacting = false;
     shared static string reactions_file = "chemistry.lua";
-    shared static double reaction_time_start = 0.0;
+    shared static double reaction_time_delay = 0.0;
     shared static double T_frozen; // temperature (in K) below which reactions are frozen
     shared static double T_frozen_energy; // temperature (in K) below which energy exchanges are skipped
     static BlockZone[] reaction_zones;
@@ -393,7 +393,7 @@ public:
     bool udf_source_terms;
 
     bool reacting;
-    double reaction_time_start;
+    double reaction_time_delay;
     double T_frozen;
     double T_frozen_energy;
     BlockZone[] reaction_zones;
@@ -454,7 +454,7 @@ public:
 	udf_source_terms = GlobalConfig.udf_source_terms;
 
 	reacting = GlobalConfig.reacting;
-	reaction_time_start = GlobalConfig.reaction_time_start;
+	reaction_time_delay = GlobalConfig.reaction_time_delay;
 	T_frozen = GlobalConfig.T_frozen;
 	T_frozen_energy = GlobalConfig.T_frozen_energy;
 	foreach (rz; GlobalConfig.reaction_zones) reaction_zones ~= new BlockZone(rz);

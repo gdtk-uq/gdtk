@@ -127,7 +127,7 @@ void read_config_file()
 
 
     // Parameters controlling shock fitting
-    GlobalConfig.shock_fitting_delay = getJSONdouble(jsonData, "shock_fitting_delay", 1.5e-3);
+    GlobalConfig.shock_fitting_delay = getJSONdouble(jsonData, "shock_fitting_delay", 0.0);
     
     GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
 
@@ -210,9 +210,11 @@ void read_config_file()
     //
     GlobalConfig.reacting = getJSONbool(jsonData, "reacting", false);
     GlobalConfig.reactions_file = jsonData["reactions_file"].str;
+    GlobalConfig.reaction_time_delay = getJSONdouble(jsonData, "reaction_time_delay", 0.0);
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  reacting: ", GlobalConfig.reacting);
 	writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
+	writeln("  reaction_time_delay: ", GlobalConfig.reaction_time_delay);
     }
 
     // Parameters controlling other simulation options

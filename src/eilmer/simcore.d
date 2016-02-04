@@ -312,7 +312,7 @@ void integrate_in_time(double target_time)
 	//     separately to the convective terms.
         // 2e. Chemistry step. 
 	// [TODO]: Set T_frozen from config.
-	if ( GlobalConfig.reacting ) {
+	if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
 	    version (gpu_chem) {
 		GlobalConfig.gpuChem.chemical_increment(dt_global, 300.0);
 	    }

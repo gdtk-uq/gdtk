@@ -658,6 +658,7 @@ function write_config_file(fileName)
 
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))
    f:write(string.format('"reactions_file": "%s",\n', config.reactions_file))
+   f:write(string.format('"reaction_time_delay": %e,\n', config.reaction_time_delay))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nblock": %d,\n', #(blocks)))
