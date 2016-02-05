@@ -30,24 +30,26 @@ u_inf = 4825.0 -- m/s
 
 inflow = FlowState:new{p=p_inf, T=T_inf, velx=u_inf, massf={N2=0.78,O2=0.22}}
 
+body_flow_time = Db/u_inf
 config.reacting = true
 config.reactions_file = 'air-5sp-6r.lua'
+config.reaction_time_delay = 0.6*no_flow_times*body_flow_time
 config.dimensions = 2
 config.axisymmetric = true
 config.grid_motion = "shock_fitting"
 config.flux_calc = AUSMDV
-body_flow_time = Db/u_inf
+config.interpolation_order = 2
 config.gasdynamic_update_scheme = "predictor-corrector"
 config.max_time = no_flow_times*body_flow_time
 if useOldSoln then
    config.shock_fitting_delay = 0.0
 else
-   config.shock_fitting_delay = body_flow_time
+   config.shock_fitting_delay = 2.0*body_flow_time
 end
 config.max_step = 80000
 config.dt_init = 1.0e-11
-config.cfl_value = 0.25
-config.dt_plot = config.max_time/200
+config.cfl_value = 0.2
+config.dt_plot = config.max_time/10
 
 -- The initial condition may be one of:
 -- (a) the inflow state applied everywhere; or
@@ -83,10 +85,10 @@ else
    a = Vector3:new{Rc,      0.0}
    b = Vector3:new{0.0,     0.0}
    c = Vector3:new{Rc,      Rc}
-   d = Vector3:new{-Rc,     0.0}
-   e = Vector3:new{-Rc,     Rc}
-   f = Vector3:new{0.0,     3*Rc}
-   g = Vector3:new{Rc,      3*Rc}
+   d = Vector3:new{-0.25*Rc, 0.0}
+   e = Vector3:new{-0.25*Rc, Rc}
+   f = Vector3:new{0.5*Rc,  2*Rc}
+   g = Vector3:new{Rc,      2*Rc}
 
    bc = Arc:new{b, c, a}
    dg = Bezier:new{points={d, e, f, g}}
@@ -104,5 +106,11 @@ blk = SBlockArray{grid=grid, fillCondition=initial, label='blk',
 			  north=OutFlowBC_Simple:new{}},
 		  nib=1, njb=njb}
 print "Done constructing block."
+
+-- Set some recording points to capture flow data
+setHistoryPoint{x=0.0, y=0.0}
+setHistoryPoint{x=Rc, y=Rc}
+setHistoryPoint{ib=0, i=0, j=0} -- at shock boundary (Which we expect to move)
+config.dt_history = 1.0e-7
 
 
