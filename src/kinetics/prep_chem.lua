@@ -240,6 +240,7 @@ function buildVerboseLuaFile(fName)
 			 configHidden.tempLimits.lower,
 			 configHidden.tempLimits.upper))
    f:write(string.format("  odeStep = %s,\n", odeStepToStr(configHidden.odeStep)))
+   f:write(string.format("  tightTempCoupling = %s,\n", tostring(configHidden.tightTempCoupling)))
    f:write(string.format("  maxSubcycles = %d,\n", configHidden.maxSubcycles))
    f:write(string.format("  maxAttempts = %d\n", configHidden.maxAttempts))
    f:write("}\n")
