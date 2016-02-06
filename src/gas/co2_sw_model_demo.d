@@ -12,7 +12,7 @@ import std.datetime;
 
 void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes using CO2 Span Wagner...");
-    auto gm = init_gas_model("sample-data/CO2SW-Gas-Model.lua");
+    auto gm = init_gas_model("sample-data/co2sw-gas-model.lua");
     foreach(i; 0 .. gm.n_species) {
 	writeln("species[", i, "] name=", gm.species_name(i));
     }
