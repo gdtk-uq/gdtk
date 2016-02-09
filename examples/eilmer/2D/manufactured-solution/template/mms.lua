@@ -30,10 +30,10 @@ else
 end
 initial = FlowState:new{p=p0, T=T0, velx=u0, vely=v0}
 
-p00 = Vector3:new{0.0, 0.0}
-p10 = Vector3:new{1.0, 0.0}
-p01 = Vector3:new{0.0, 1.0}
-p11 = Vector3:new{1.0, 1.0}
+p00 = Vector3:new{x=0.0, y=0.0}
+p10 = Vector3:new{x=1.0, y=0.0}
+p01 = Vector3:new{x=0.0, y=1.0}
+p11 = Vector3:new{x=1.0, y=1.0}
 nicell = ncells; njcell = ncells
 grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01=p01},
 			  niv=nicell+1, njv=njcell+1}

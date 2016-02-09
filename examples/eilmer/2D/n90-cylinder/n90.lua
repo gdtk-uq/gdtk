@@ -17,27 +17,26 @@ config.reacting = true
 config.reactions_file = 'e4-chem.lua'
 
 print "Building grid."
-a = Vector3:new{0.045,    0.0}
-b = Vector3:new{0.0,      0.0}
-c = Vector3:new{0.013181, 0.031820}
-d = Vector3:new{0.045,    0.045}
-e = Vector3:new{0.0675,   0.038972}
-f = Vector3:new{-0.020,    0.0}
-g = Vector3:new{-0.020,    0.050625}
-h = Vector3:new{-0.016875, 0.106875}
-i = Vector3:new{ 0.045,    0.135}
-j = Vector3:new{ 0.07875,  0.095625}
-k = Vector3:new{ 0.084375, 0.0675}
+a = Vector3:new{x=0.045, y=0.0}
+b = Vector3:new{x=0.0, y=0.0}
+c = Vector3:new{x=0.013181, y=0.031820}
+d = Vector3:new{x=0.045, y=0.045}
+e = Vector3:new{x=0.0675, y=0.038972}
+f = Vector3:new{x=-0.020, y=0.0}
+g = Vector3:new{x=-0.020, y=0.050625}
+h = Vector3:new{x=-0.016875, y=0.106875}
+i = Vector3:new{x=0.045, y=0.135}
+j = Vector3:new{x=0.07875, y=0.095625}
+k = Vector3:new{x=0.084375, y=0.0675}
 
-bc = Arc:new{b, c, a}
-cd = Arc:new{c, d, a}
-de = Arc:new{d, e, a}
-e_path = Polyline:new{bc, cd, de}
-w_path = Bezier:new{points={f, g, h, i}}
-s_path = Line:new{f, b}
-n_path = Bezier:new{points={i, j, k, e}}
+bc = Arc:new{p0=b, p1=c, centre=a}
+cd = Arc:new{p0=c, p1=d, centre=a}
+de = Arc:new{p0=d, p1=e, centre=a}
 
-psurf = makePatch{n_path, e_path, s_path, w_path}
+psurf = makePatch{north=Bezier:new{points={i, j, k, e}},
+		  east=Polyline:new{segments={bc, cd, de}},
+		  south=Line:new{p0=f, p1=b},
+		  west=Bezier:new{points={f, g, h, i}}}
 grid = StructuredGrid:new{psurface=psurf, niv=61, njv=41}
 
 -- We can leave east and south as slip-walls

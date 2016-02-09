@@ -28,10 +28,10 @@ c0 = Vector3:new{x=1.5*L,y=h}
 d0 = Vector3:new{x=2.0*L}; d1 = Vector3:new{x=2.0*L,y=L}
 e0 = Vector3:new{x=3.0*L}; e1 = Vector3:new{x=3.0*L,y=L}
 patch0 = CoonsPatch:new{p00=a0, p10=b0, p11=b1, p01=a1}
-patch1 = makePatch{Line:new{p0=b1,p1=d1},
-		   Line:new{p0=d0,p1=d1},
-		   Arc3:new{p0=b0,pmid=c0,p1=d0},
-		   Line:new{p0=b0,p1=b1}}
+patch1 = makePatch{north=Line:new{p0=b1,p1=d1},
+		   east=Line:new{p0=d0,p1=d1},
+		   south=Arc3:new{p0=b0,pmid=c0,p1=d0},
+		   west=Line:new{p0=b0,p1=b1}}
 patch2 = CoonsPatch:new{p00=d0, p10=e0, p11=e1, p01=d1}
 
 -- Mesh the patches, with particular discretisation.
@@ -43,13 +43,13 @@ ni0 = 64; nj0 = 64 -- We'll scale discretization off these values
 factor = 1.0
 ni0 = math.floor(ni0*factor); nj0 = math.floor(nj0*factor)
 grid0 = StructuredGrid:new{psurface=patch0,
-			   cfList={rcfx0,rcfy,rcfx0,rcfy},
+			   cfList={north=rcfx0,east=rcfy,south=rcfx0,west=rcfy},
 			   niv=ni0+1, njv=nj0+1}
 grid1 = StructuredGrid:new{psurface=patch1,
-			   cfList={rcfx1,rcfy,rcfx1,rcfy},
+			   cfList={north=rcfx1,east=rcfy,south=rcfx1,west=rcfy},
 			   niv=ni0+1, njv=nj0+1}
 grid2 = StructuredGrid:new{psurface=patch2,
-			   cfList={rcfx2,rcfy,rcfx2,rcfy},
+			   cfList={north=rcfx2,east=rcfy,south=rcfx2,west=rcfy},
 			   niv=ni0+1, njv=nj0+1}
 -- Define the flow-solution blocks and set boundary conditions.
 blk0 = SBlockArray{grid=grid0, fillCondition=inflow, nib=16, njb=2,

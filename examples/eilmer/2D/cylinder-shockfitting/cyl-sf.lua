@@ -15,18 +15,18 @@ inflow = FlowState:new{p=100.0e3, T=300.0, velx=2430.0, vely=0.0}
 print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
 
 print "Building grid."
-a = Vector3:new{-3.0,    0.0}
-b = Vector3:new{-1.0,    0.0}
-c = Vector3:new{0.0,     3.0}
-d = Vector3:new{0.0,     1.0}
-p = Vector3:new{0.0,     0.0}
+a = Vector3:new{x=-3.0, y=0.0}
+b = Vector3:new{x=-1.0, y=0.0}
+c = Vector3:new{ x=0.0, y=3.0}
+d = Vector3:new{ x=0.0, y=1.0}
+p = Vector3:new{ x=0.0, y=0.0}
 
-ac = Arc:new{a, c, p}
-bd = Arc:new{b, d, p}
-ab = Line:new{a, b}
-cd = Line:new{c, d}
+ac = Arc:new{p0=a, p1=c, centre=p}
+bd = Arc:new{p0=b, p1=d, centre=p}
+ab = Line:new{p0=a, p1=b}
+cd = Line:new{p0=c, p1=d}
 
-psurf = makePatch{cd, bd, ab, ac}
+psurf = makePatch{north=cd, east=bd, south=ab, west=ac}
 grid = StructuredGrid:new{psurface=psurf, niv=25, njv=30}
 
 -- We can leave east and south as slip-walls
