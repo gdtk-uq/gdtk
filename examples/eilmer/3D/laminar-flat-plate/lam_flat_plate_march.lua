@@ -69,7 +69,7 @@ clustery_e = RobertsFunction:new{end0=false, end1=true, beta=1.016}
 clustery_w = RobertsFunction:new{end0=false, end1=true, beta=1.05}
 clusterz = LinearFunction:new{}
 cflist = {edge01=clusterx, edge12=clustery_e, edge32=clusterx, edge03=clustery_w,
-	  edge45=clusterx, edge56=clustery_e, edge76=clusterx, edge47clustery_w,
+	  edge45=clusterx, edge56=clustery_e, edge76=clusterx, edge47=clustery_w,
 	  edge04=clusterz, edge15=clusterz,   edge26=clusterz, edge37=clusterz}
 vol = TFIVolume:new{vertices={p000,p100,p110,p010,p001,p101,p111,p011}}
 grd = StructuredGrid:new{pvolume=vol, cfList=cflist, niv=221, njv=193, nkv=3}
