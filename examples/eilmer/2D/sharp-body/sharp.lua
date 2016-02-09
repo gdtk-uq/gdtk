@@ -24,18 +24,22 @@ function xypath(t)
    if yval < 0.0 then
       yval = 0.0
    end
-   return {x, yval, 0.0}
+   return {x=x, y=yval}
 end
 
-a = Vector3:new{-1.0, 0.0}
-b = Vector3:new{ 0.0, 0.0}
-c = Vector3:new{10.0, 1.0}
-d = Vector3:new{10.0, 7.0}
-e = Vector3:new{ 0.0, 7.0}
-f = Vector3:new{-1.0, 7.0}
-ab = Line:new{a, b}; bc = LuaFnPath:new{"xypath"} -- lower boundary including body surface
-fe = Line:new{f, e}; ed = Line:new{e, d} -- upper boundary
-af = Line:new{a, f}; be = Line:new{b, e}; cd = Line:new{c, d} -- vertical lines
+a = Vector3:new{x=-1.0, y=0.0}
+b = Vector3:new{ x=0.0, y=0.0}
+c = Vector3:new{x=10.0, y=1.0}
+d = Vector3:new{x=10.0, y=7.0}
+e = Vector3:new{ x=0.0, y=7.0}
+f = Vector3:new{x=-1.0, y=7.0}
+-- lower boundary including body surface
+ab = Line:new{p0=a, p1=b}; bc = LuaFnPath:new{luaFnName="xypath"} 
+-- upper boundary
+fe = Line:new{p0=f, p1=e}; ed = Line:new{p0=e, p1=d}
+-- vertical lines
+af = Line:new{p0=a, p1=f}; be = Line:new{p0=b, p1=e}
+cd = Line:new{p0=c, p1=d} 
 -- Mesh the patches, with particular discretisation.
 ny = 60
 clustery = RobertsFunction:new{end0=true, end1=false, beta=1.3}

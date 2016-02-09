@@ -27,14 +27,14 @@ function simpleBoxCorners(values)
    local xSize = values.xSize or 1.0
    local ySize = values.ySize or 1.0
    local zSize = values.zSize or 1.0
-   p0 = Vector3:new{xPos,       yPos,       zPos}
-   p1 = Vector3:new{xPos+xSize, yPos,       zPos}
-   p2 = Vector3:new{xPos+xSize, yPos+ySize, zPos}
-   p3 = Vector3:new{xPos,       yPos+ySize, zPos}
-   p4 = Vector3:new{xPos,       yPos,       zPos+zSize}
-   p5 = Vector3:new{xPos+xSize, yPos,       zPos+zSize}
-   p6 = Vector3:new{xPos+xSize, yPos+ySize, zPos+zSize}
-   p7 = Vector3:new{xPos,       yPos+ySize, zPos+zSize}
+   p0 = Vector3:new{x=xPos,       y=yPos,       z=zPos}
+   p1 = Vector3:new{x=xPos+xSize, y=yPos,       z=zPos}
+   p2 = Vector3:new{x=xPos+xSize, y=yPos+ySize, z=zPos}
+   p3 = Vector3:new{x=xPos,       y=yPos+ySize, z=zPos}
+   p4 = Vector3:new{x=xPos,       y=yPos,       z=zPos+zSize}
+   p5 = Vector3:new{x=xPos+xSize, y=yPos,       z=zPos+zSize}
+   p6 = Vector3:new{x=xPos+xSize, y=yPos+ySize, z=zPos+zSize}
+   p7 = Vector3:new{x=xPos,       y=yPos+ySize, z=zPos+zSize}
    return {p0, p1, p2, p3, p4, p5, p6, p7}
 end
 

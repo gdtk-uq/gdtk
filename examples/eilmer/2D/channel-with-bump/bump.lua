@@ -22,14 +22,16 @@ inflow = FlowState:new{p=p_inf, T=T_inf, velx=u_inf, vely=0.0}
 -- Geometry of flow domain.
 L = 1.0 -- will use for both length and height of domain
 h = 0.04 * L -- height of bump
-a0 = Vector3:new{0.0,0.0}; a1 = Vector3:new{0.0,L}
-b0 = Vector3:new{L,0.0}; b1 = Vector3:new{L,L}
-c0 = Vector3:new{1.5*L,h}
-d0 = Vector3:new{2.0*L,0.0}; d1 = Vector3:new{2.0*L,L}
-e0 = Vector3:new{3.0*L,0.0}; e1 = Vector3:new{3.0*L,L}
+a0 = Vector3:new{x=0.0}; a1 = Vector3:new{y=L}
+b0 = Vector3:new{x=L}; b1 = Vector3:new{x=L,y=L}
+c0 = Vector3:new{x=1.5*L,y=h}
+d0 = Vector3:new{x=2.0*L}; d1 = Vector3:new{x=2.0*L,y=L}
+e0 = Vector3:new{x=3.0*L}; e1 = Vector3:new{x=3.0*L,y=L}
 patch0 = CoonsPatch:new{p00=a0, p10=b0, p11=b1, p01=a1}
-patch1 = makePatch{Line:new{b1,d1}, Line:new{d0,d1},
-		   Arc3:new{b0,c0,d0}, Line:new{b0,b1}}
+patch1 = makePatch{Line:new{p0=b1,p1=d1},
+		   Line:new{p0=d0,p1=d1},
+		   Arc3:new{p0=b0,pmid=c0,p1=d0},
+		   Line:new{p0=b0,p1=b1}}
 patch2 = CoonsPatch:new{p00=d0, p10=e0, p11=e1, p01=d1}
 
 -- Mesh the patches, with particular discretisation.
