@@ -32,12 +32,12 @@ void main()
     registerUnstructuredGrid(L);
     string test_code = `
 print("2D grid")
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.0, 1.0}
-c = Vector3:new{1.0, 0.2}
-d = Vector3:new{1.0, 1.0}
-surf = CoonsPatch:new{north=Line:new{b, d}, east=Line:new{c, d},
-                      south=Line:new{a, c}, west=Line:new{a, b}}
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.0, y=1.0}
+c = Vector3:new{x=1.0, y=0.2}
+d = Vector3:new{x=1.0, y=1.0}
+surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},
+                      south=Line:new{p0=a, p1=c}, west=Line:new{p0=a, p1=b}}
 print("CoonsPatch representation: ", surf)
 my_grid = StructuredGrid:new{psurface=surf, niv=10, njv=20}
 my_usg = UnstructuredGrid:new{sgrid=my_grid} 
@@ -47,10 +47,10 @@ my_usg_2 = UnstructuredGrid:new{filename="test_grid.gz"}
 my_usg_2:write_to_vtk_file("test_grid_2.vtk")
 
 print("3D grid")
-pArray = {Vector3:new{0.0, 0.1, 0.0}, Vector3:new{1.0, 0.1, 0.0},
-          Vector3:new{1.0, 1.1, 0.0}, Vector3:new{0.0, 1.1, 0.0},
-          Vector3:new{0.0, 0.1, 3.0}, Vector3:new{1.0, 0.1, 3.0},
-          Vector3:new{1.0, 1.1, 3.0}, Vector3:new{0.0, 1.1, 3.0}}
+pArray = {Vector3:new{x=0.0, y=0.1, z=0.0}, Vector3:new{x=1.0, y=0.1, z=0.0},
+          Vector3:new{x=1.0, y=1.1, z=0.0}, Vector3:new{x=0.0, y=1.1, z=0.0},
+          Vector3:new{x=0.0, y=0.1, z=3.0}, Vector3:new{x=1.0, y=0.1, z=3.0},
+          Vector3:new{x=1.0, y=1.1, z=3.0}, Vector3:new{x=0.0, y=1.1, z=3.0}}
 volume = TFIVolume:new{vertices=pArray}
 my_grid3D = StructuredGrid:new{pvolume=volume, niv=11, njv=21, nkv=11}
 my_usg3D = UnstructuredGrid:new{sgrid=my_grid3D} 

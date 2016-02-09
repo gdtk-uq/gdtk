@@ -30,12 +30,12 @@ void main()
     registerStructuredGrid(L);
     string test_code = `
 print("2D grid")
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.0, 1.0}
-c = Vector3:new{1.0, 0.0}
-d = Vector3:new{1.0, 1.0}
-surf = CoonsPatch:new{north=Line:new{b, d}, east=Line:new{c, d},
-                      south=Line:new{a, c}, west=Line:new{a, b}}
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.0, y=1.0}
+c = Vector3:new{x=1.0, y=0.0}
+d = Vector3:new{x=1.0, y=1.0}
+surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},
+                      south=Line:new{p0=a, p1=c}, west=Line:new{p0=a, p1=b}}
 print("CoonsPatch representation: ", surf)
 print("surf(0.5,0.5)= ", surf(0.5, 0.5))
 
@@ -51,10 +51,10 @@ surf2 = MeshPatch:new{sgrid=grid}
 print("mid-point on MeshPatch surface p= ", surf2(0.5, 0.5))
 
 print("3D grid")
-pArray = {Vector3:new{0.0, 0.1, 0.0}, Vector3:new{1.0, 0.1, 0.0},
-          Vector3:new{1.0, 1.1, 0.0}, Vector3:new{0.0, 1.1, 0.0},
-          Vector3:new{0.0, 0.1, 3.0}, Vector3:new{1.0, 0.1, 3.0},
-          Vector3:new{1.0, 1.1, 3.0}, Vector3:new{0.0, 1.1, 3.0}}
+pArray = {Vector3:new{x=0.0, y=0.1, z=0.0}, Vector3:new{x=1.0, y=0.1, z=0.0},
+          Vector3:new{x=1.0, y=1.1, z=0.0}, Vector3:new{x=0.0, y=1.1, z=0.0},
+          Vector3:new{x=0.0, y=0.1, z=3.0}, Vector3:new{x=1.0, y=0.1, z=3.0},
+          Vector3:new{x=1.0, y=1.1, z=3.0}, Vector3:new{x=0.0, y=1.1, z=3.0}}
 volume = TFIVolume:new{vertices=pArray}
 grid3D = StructuredGrid:new{pvolume=volume, niv=11, njv=21, nkv=11}
 print("somewhere in the middle=", grid3D:get_vtx(5,10,5))

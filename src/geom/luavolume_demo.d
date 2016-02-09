@@ -25,14 +25,14 @@ void main()
     registerSurfaces(L);
     registerVolumes(L);
     string test_code = `
-p000 = Vector3:new{0.0, 0.1, 0.0}
-p100 = Vector3:new{1.0, 0.1, 0.0}
-p110 = Vector3:new{1.0, 1.1, 0.0}
-p010 = Vector3:new{0.0, 1.1, 0.0}
-p001 = Vector3:new{0.0, 0.1, 3.0}
-p101 = Vector3:new{1.0, 0.1, 3.0}
-p111 = Vector3:new{1.0, 1.1, 3.0}
-p011 = Vector3:new{0.0, 1.1, 3.0}
+p000 = Vector3:new{x=0.0, y=0.1, z=0.0}
+p100 = Vector3:new{x=1.0, y=0.1, z=0.0}
+p110 = Vector3:new{x=1.0, y=1.1, z=0.0}
+p010 = Vector3:new{x=0.0, y=1.1, z=0.0}
+p001 = Vector3:new{x=0.0, y=0.1, z=3.0}
+p101 = Vector3:new{x=1.0, y=0.1, z=3.0}
+p111 = Vector3:new{x=1.0, y=1.1, z=3.0}
+p011 = Vector3:new{x=0.0, y=1.1, z=3.0}
 my_volume = TFIVolume:new{vertices={p000,p100,p110,p010,p001,p101,p111,p011}}
 print("my_volume=", my_volume)
 p = my_volume(0.1, 0.1, 0.5);

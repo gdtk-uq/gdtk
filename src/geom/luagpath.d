@@ -99,8 +99,8 @@ extern(C) int copyPath(T, string MTname)(lua_State* L)
  * Example construction in Lua:
  * ---------------------------------
  * a = Vector3:new{}
- * b = Vector3:new{1, 1}
- * ab = Line:new{a, b}
+ * b = Vector3:new{x=1, y=1}
+ * ab = Line:new{p0=a, p1=b}
  * ---------------------------------
  */
 extern(C) int newLine(lua_State* L)
@@ -108,30 +108,40 @@ extern(C) int newLine(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to Line:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to Line:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect Vector3 at position 1.
-    lua_rawgeti(L, 1, 1);
-    auto a = checkVector3(L, -1);
-    if ( a is null ) {
-	string errMsg = `Error in call to Line:new{}.
-A Vector3 object is expected as the first argument. No valid Vector3 was found.`;
+    // Expect Vector3 for starting point.
+    lua_getfield(L, 1, "p0");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Line:new{}. No p0 entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto p0 = checkVector3(L, -1);
+    if ( p0 is null ) {
+	string errMsg = "Error in call to Line:new{}. " ~
+	    "A Vector3 object is expected as the p0 argument. " ~ 
+	    "No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    // Expect Vector3 at position 2.
-    lua_rawgeti(L, 1, 2);
-    auto b = checkVector3(L, -1);
-    if ( b is null ) {
-	string errMsg = `Error in call to Line:new{}.
-A Vector3 object is expected as the second argument. No valid Vector3 was found.`;
+    // Expect Vector3 for end point.
+    lua_getfield(L, 1, "p1");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Line:new{}. No p1 entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto p1 = checkVector3(L, -1);
+    if ( p1 is null ) {
+	string errMsg = "Error in call to Line:new{}. " ~
+	    "A Vector3 object is expected as the p1 argument. " ~
+	    "No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    auto ab = new Line(*a, *b);
-    pathStore ~= pushObj!(Line, LineMT)(L, ab);
+    auto my_line = new Line(*p0, *p1);
+    pathStore ~= pushObj!(Line, LineMT)(L, my_line);
     return 1;
 } // end newLine()
 
@@ -141,10 +151,10 @@ A Vector3 object is expected as the second argument. No valid Vector3 was found.
  *
  * Example construction in Lua:
  * ---------------------------------
- * a = Vector3:new{1, 0}
- * b = Vector3:new{0, 1}
- * c = Vector3:new{0, 0}
- * abc = Arc:new{a, b, c}
+ * a = Vector3:new{x=1}
+ * b = Vector3:new{y=1}
+ * c = Vector3:new{}
+ * abc = Arc:new{p0=a, p1=b, centre=c}
  * ---------------------------------
  */
 extern(C) int newArc(lua_State* L)
@@ -152,39 +162,54 @@ extern(C) int newArc(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to Arc:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to Arc:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect Vector3 at position 1.
-    lua_rawgeti(L, 1, 1);
-    auto a = checkVector3(L, -1);
-    if ( a is null ) {
-	string errMsg = `Error in call to Arc:new{}.
-A Vector3 object is expected as the first argument. No valid Vector3 was found.`;
+    // Expect Vector3 for starting point.
+    lua_getfield(L, 1, "p0");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Arc:new{}. No p0 entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto p0 = checkVector3(L, -1);
+    if ( p0 is null ) {
+	string errMsg = "Error in call to Arc:new{}. " ~
+	    "A Vector3 object is expected as the p0 argument. " ~ 
+	    "No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    // Expect Vector3 at position 2.
-    lua_rawgeti(L, 1, 2);
-    auto b = checkVector3(L, -1);
-    if ( b is null ) {
-	string errMsg = `Error in call to Arc:new{}.
-A Vector3 object is expected as the second argument. No valid Vector3 was found.`;
+    // Expect Vector3 for end point.
+    lua_getfield(L, 1, "p1");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Arc:new{}. No p1 entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto p1 = checkVector3(L, -1);
+    if ( p1 is null ) {
+	string errMsg = "Error in call to Arc:new{}. " ~
+	    "A Vector3 object is expected as the p1 argument." ~ 
+	    " No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    // Expect Vector3 at position 3.
-    lua_rawgeti(L, 1, 3);
-    auto c = checkVector3(L, -1);
-    if ( c is null ) {
-	string errMsg = `Error in call to Arc:new{}.
-A Vector3 object is expected as the third argument. No valid Vector3 was found.`;
+    // Expect Vector3 at centre.
+    lua_getfield(L, 1, "centre");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Arc:new{}. No centre entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto centre = checkVector3(L, -1);
+    if ( centre is null ) {
+	string errMsg = "Error in call to Arc:new{}. " ~
+	    "A Vector3 object is expected as the centre argument. " ~ 
+	    "No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    auto abc = new Arc(*a, *b, *c);
-    pathStore ~= pushObj!(Arc, ArcMT)(L, abc);
+    auto my_arc = new Arc(*p0, *p1, *centre);
+    pathStore ~= pushObj!(Arc, ArcMT)(L, my_arc);
     return 1;
 } // end newArc()
 
@@ -194,10 +219,10 @@ A Vector3 object is expected as the third argument. No valid Vector3 was found.`
  *
  * Example construction in Lua:
  * ---------------------------------
- * a = Vector3:new{1, 0}
- * m = Vector3:new{0.707107, 0.707107}
- * b = Vector3:new{0, 1}
- * amb = Arc:new{a, m, b}
+ * a = Vector3:new{x=1}
+ * m = Vector3:new{x=0.707107, y=0.707107}
+ * b = Vector3:new{y=1}
+ * amb = Arc3:new{p0=a, pmid=m, p1=b}
  * ---------------------------------
  */
 extern(C) int newArc3(lua_State* L)
@@ -205,39 +230,51 @@ extern(C) int newArc3(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to Arc3:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to Arc3:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect Vector3 at position 1.
-    lua_rawgeti(L, 1, 1);
-    auto a = checkVector3(L, -1);
-    if ( a is null ) {
-	string errMsg = `Error in call to Arc3:new{}.
-A Vector3 object is expected as the first argument. No valid Vector3 was found.`;
+    // Expect Vector3 for start point p0.
+    lua_getfield(L, 1, "p0");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Arc3:new{}. No p0 entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto p0 = checkVector3(L, -1);
+    if ( p0 is null ) {
+	string errMsg = "Error in call to Arc3:new{}. " ~
+	    "A Vector3 object is expected as the p0 argument. No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    // Expect Vector3 at position 2.
-    lua_rawgeti(L, 1, 2);
-    auto m = checkVector3(L, -1);
-    if ( m is null ) {
-	string errMsg = `Error in call to Arc3:new{}.
-A Vector3 object is expected as the second argument. No valid Vector3 was found.`;
+    // Expect Vector3 at mid-point pmid.
+    lua_getfield(L, 1, "pmid");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Arc3:new{}. No pmid entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto pmid = checkVector3(L, -1);
+    if ( pmid is null ) {
+	string errMsg = "Error in call to Arc3:new{}. " ~
+	    "A Vector3 object is expected as the pmid argument. No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    // Expect Vector3 at position 3.
-    lua_rawgeti(L, 1, 3);
-    auto b = checkVector3(L, -1);
-    if ( b is null ) {
-	string errMsg = `Error in call to Arc3:new{}.
-A Vector3 object is expected as the third argument. No valid Vector3 was found.`;
+    // Expect Vector3 at end point p1.
+    lua_getfield(L, 1, "p1");
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Arc3:new{}. No p1 entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto p1 = checkVector3(L, -1);
+    if ( p1 is null ) {
+	string errMsg = "Error in call to Arc3:new{}. " ~
+	    "A Vector3 object is expected as the p1 argument. No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
-    auto amb = new Arc3(*a, *m, *b);
-    pathStore ~= pushObj!(Arc3, Arc3MT)(L, amb);
+    auto my_arc = new Arc3(*p0, *pmid, *p1);
+    pathStore ~= pushObj!(Arc3, Arc3MT)(L, my_arc);
     return 1;
 } // end newArc3()
 
@@ -247,9 +284,9 @@ A Vector3 object is expected as the third argument. No valid Vector3 was found.`
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
  * -- For an arbitrary number of points in the table.
  * bez = Bezier:new{points={p0, p1, p2}}
  * ---------------------------------
@@ -259,14 +296,18 @@ extern(C) int newBezier(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to Bezier:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to Bezier:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "points".toStringz());
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Bezier:new{}. No points entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
     if ( !lua_istable(L, -1) ) {
-	string errMsg = `Error in call to Bezier:new{}.;
-A table containing Vector3 points is expected, but no table was found.`;
+	string errMsg = "Error in call to Bezier:new{}.; " ~
+	    "A table containing Vector3 points is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 objects at array positions within that table.
@@ -283,7 +324,7 @@ A table containing Vector3 points is expected, but no table was found.`;
     }
     lua_pop(L, 1); // dispose of points table
     if ( B.length == 0 ) {
-	string errMsg = `Error in call to Bezier:new{}. No valid Vector3 objects found.`;
+	string errMsg = "Error in call to Bezier:new{}. No valid Vector3 objects found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto bez = new Bezier(B);
@@ -297,14 +338,14 @@ A table containing Vector3 points is expected, but no table was found.`;
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
  * -- A couple of paths to combine.
- * line1 = Line:new{p0, p1}
- * line2 = Line:new{p1, p2}
+ * line1 = Line:new{p0=p0, p1=p1}
+ * line2 = Line:new{p0=p1, p1=p2}
  * -- An arbitrary number of Path objects in the table.
- * poly = Polyline:new{line1, line2}
+ * poly = Polyline:new{segments={line1, line2}}
  * ---------------------------------
  */
 extern(C) int newPolyline(lua_State* L)
@@ -312,15 +353,25 @@ extern(C) int newPolyline(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to Polyline:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to Polyline:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect Path objects at array positions.
+    lua_getfield(L, 1, "segments".toStringz());
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Polyline:new{}. No segments entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    if ( !lua_istable(L, -1) ) {
+	string errMsg = "Error in call to Polyline:new{}.; " ~
+	    "A table containing Vector3 points is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Expect Path objects at array positions within the segments table.
     Path[] segments;
     int position = 1;
     while ( true ) {
-	lua_rawgeti(L, 1, position);
+	lua_rawgeti(L, -1, position);
 	if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
 	auto seg = checkPath(L, -1);
 	lua_pop(L, 1);
@@ -328,8 +379,9 @@ A table containing arguments is expected, but no table was found.`;
 	segments ~= seg;
 	++position;
     }
+    lua_pop(L, 1); // dispose of segments table
     if ( segments.length == 0 ) {
-	string errMsg = `Error in call to Polyline:new{}. No valid Path objects found.`;
+	string errMsg = "Error in call to Polyline:new{}. No valid Path objects found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto poly = new Polyline(segments);
@@ -343,11 +395,11 @@ A table containing arguments is expected, but no table was found.`;
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{ 0, -1, 0}
- * p1 = Vector3:new{-1,  0, 0}
- * p2 = Vector3:new{ 0,  1, 0}
- * p3 = Vector3:new{ 1,  0, 0}
- * p4 = Vector3:new{ 0, -1, 0}
+ * p0 = Vector3:new{ x=0, y=-1, z=0}
+ * p1 = Vector3:new{x=-1,  y=0, z=0}
+ * p2 = Vector3:new{ x=0,  y=1, z=0}
+ * p3 = Vector3:new{ x=1,  y=0, z=0}
+ * p4 = Vector3:new{ x=0, y=-1, z=0}
  * -- For an arbitrary number of points in the table.
  * spl = Spline:new{points={p0, p1, p2, p3, p4}}
  * ---------------------------------
@@ -357,14 +409,18 @@ extern(C) int newSpline(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to Spline:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to Spline:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "points".toStringz());
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to Spline:new{}. No points entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
     if ( !lua_istable(L, -1) ) {
-	string errMsg = `Error in call to Spline:new{}.;
-A table containing Vector3 points is expected, but no table was found.`;
+	string errMsg = "Error in call to Spline:new{}.; " ~
+	    "A table containing Vector3 points is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 objects at array positions.
@@ -381,7 +437,7 @@ A table containing Vector3 points is expected, but no table was found.`;
     }
     lua_pop(L, 1); // dispose of points table
     if ( B.length == 0 ) {
-	string errMsg = `Error in call to Spline:new{}. No valid Vector3 objects found.`;
+	string errMsg = "Error in call to Spline:new{}. No valid Vector3 objects found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto spline = new Polyline(B);
@@ -404,14 +460,14 @@ extern(C) int newSpline2(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to Spline2:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to Spline2:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "filename".toStringz());
     if ( !lua_isstring(L, -1) ) {
-	string errMsg = `Error in call to Spline2:new{}.;
-A string containing the file name is expected, but no string was found.`;
+	string errMsg = "Error in call to Spline2:new{}.; " ~
+	    "A string containing the file name is expected, but no string was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     auto fileName = to!string(lua_tostring(L, -1));
@@ -430,9 +486,9 @@ A string containing the file name is expected, but no string was found.`;
  * Example:
  * function myLuaFunction(t)
  *    -- Straight line from 0,0,0 to 1.0,2.0,3.0
- *    return {t, 2*t, 3*t}
+ *    return {x=t, y=2*t, z=3*t}
  * end
- * myPath = LuaFnPath:new{"myLuaFunction"}
+ * myPath = LuaFnPath:new{fname="myLuaFunction"}
  */
 
 class LuaFnPath : Path {
@@ -474,31 +530,24 @@ public:
 	}
 	// We are expecting a table to be returned, containing three numbers.
 	if ( !lua_istable(cast(lua_State*)L, -1) ) {
-	    string errMsg = `Error in call to LuaFnPath:opCall().;
-A table containing arguments is expected, but no table was found.`;
+	    string errMsg = "Error in call to LuaFnPath:opCall().; " ~
+		"A table containing arguments is expected, but no table was found.";
 	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
 	}
-	// Expect a number at position 1 for x.
-	lua_rawgeti(cast(lua_State*)L, -1, 1);
-	if ( !lua_isnumber(cast(lua_State*)L, -1) ) {
-	    string errMsg = `Error in call to LuaFnPath:opCall().;
-A number was expected in position 1, for x.`;
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
+	double x = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "x".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    x = to!double(lua_tonumber(cast(lua_State*)L, -1));
 	}
-	double x = to!double(lua_tonumber(cast(lua_State*)L, -1));
 	lua_pop(cast(lua_State*)L, 1);
-	// Expect a number at position 2 for y.
-	lua_rawgeti(cast(lua_State*)L, -1, 2);
-	if ( !lua_isnumber(cast(lua_State*)L, -1) ) {
-	    string errMsg = `Error in call to LuaFnPath:opCall().;
-A number was expected in position 2, for y.`;
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
+	double y = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "y".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    y = to!double(lua_tonumber(cast(lua_State*)L, -1));
 	}
-	double y = to!double(lua_tonumber(cast(lua_State*)L, -1));
 	lua_pop(cast(lua_State*)L, 1);
-	// Expect a number at position 3 for z.
 	double z = 0.0; // default value
-	lua_rawgeti(cast(lua_State*)L, -1, 3);
+	lua_getfield(cast(lua_State*)L, -1, "z".toStringz());
 	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
 	    z = to!double(lua_tonumber(cast(lua_State*)L, -1));
 	}
@@ -522,19 +571,23 @@ extern(C) int newLuaFnPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to LuaFnPath:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to LuaFnPath:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect function name at array position 1.
     string fnName = "";
-    lua_rawgeti(L, 1, 1);
+    lua_getfield(L, 1, "luaFnName".toStringz());
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to LuaFnPath:new{}. No luaFnName entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
     if ( lua_isstring(L, -1) ) {
 	fnName ~= to!string(lua_tostring(L, -1));
     }
     lua_pop(L, 1);
     if ( fnName == "" ) {
-	string errMsg = `Error in call to LuaFnPath:new{}. No function name found.`;
+	string errMsg = "Error in call to LuaFnPath:new{}. No function name found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto lfp = new LuaFnPath(L, fnName);
@@ -548,11 +601,11 @@ A table containing arguments is expected, but no table was found.`;
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{x=0, y=1}
  * original_path = Bezier:new{points={p0, p1, p2}}
- * alp_path = ArcLengthParameterizedPath:new{original_path}
+ * alp_path = ArcLengthParameterizedPath:new{underlying_path=original_path}
  * ---------------------------------
  */
 extern(C) int newArcLengthParameterizedPath(lua_State* L)
@@ -560,23 +613,25 @@ extern(C) int newArcLengthParameterizedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to ArcLengthParameterizedPath:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to ArcLengthParameterizedPath:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect a Path object at the first array position in the table.
-    lua_rawgeti(L, 1, 1);
+    // Expect the underlying_path object in the table.
+    lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to ArcLengthParameterizedPath:new{}. No table entry found.`;
+	string errMsg = "Error in call to ArcLengthParameterizedPath:new{}." ~
+	    " No underlying_path entry found.";
 	luaL_error(L, errMsg.toStringz());
     }
-    auto original_path = checkPath(L, -1);
+    auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
-    if ( original_path is null ) {
-	string errMsg = `Error in call to ArcLengthParameterizedPath:new{}. No valid Path object found.`;
+    if ( underlying_path is null ) {
+	string errMsg = "Error in call to ArcLengthParameterizedPath:new{};" ~ 
+	    " Not a valid Path object.";
 	luaL_error(L, errMsg.toStringz());
     }
-    auto alp_path = new ArcLengthParameterizedPath(original_path);
+    auto alp_path = new ArcLengthParameterizedPath(underlying_path);
     pathStore ~= pushObj!(ArcLengthParameterizedPath,
 			  ArcLengthParameterizedPathMT)(L, alp_path);
     return 1;
@@ -588,11 +643,11 @@ A table containing arguments is expected, but no table was found.`;
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
  * original_path = Bezier:new{points={p0, p1, p2}}
- * sr_path = SubRangedPath:new{original_path, t0=0.1, t1=0.9}
+ * sr_path = SubRangedPath:new{underlying_path=original_path, t0=0.1, t1=0.9}
  * ---------------------------------
  */
 extern(C) int newSubRangedPath(lua_State* L)
@@ -600,28 +655,30 @@ extern(C) int newSubRangedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to SubRangedPath:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to SubRangedPath:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect a Path object at the first array position in the table.
-    lua_rawgeti(L, 1, 1);
+    // Expect the underlying_path object in the table.
+    lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to SubRangedPath:new{}. No table entry found.`;
+	string errMsg = "Error in call to SubRangedPath:new{}." ~
+	    " No underlying_path entry found.";
 	luaL_error(L, errMsg.toStringz());
     }
-    auto original_path = checkPath(L, -1);
+    auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
-    if ( original_path is null ) {
-	string errMsg = `Error in call to SubRangedPath:new{}. No valid Path object found.`;
+    if ( underlying_path is null ) {
+	string errMsg = "Error in call to SubRangedPath:new{};" ~ 
+	    " Not a valid Path object.";
 	luaL_error(L, errMsg.toStringz());
     }
-    string errMsgTmplt = `Error in call to SubRangedPath:new{}.
-A valid value for '%s' was not found in list of arguments.
-The value, if present, should be a number.`;
+    string errMsgTmplt = "Error in call to SubRangedPath:new{}. " ~
+	"A valid value for '%s' was not found in list of arguments. " ~
+	"The value, if present, should be a number.";
     double t0 = getNumberFromTable(L, 1, "t0", false, 0.0, true, format(errMsgTmplt, "t0"));
     double t1 = getNumberFromTable(L, 1, "t1", false, 1.0, true, format(errMsgTmplt, "t1"));
-    auto alp_path = new SubRangedPath(original_path, t0, t1);
+    auto alp_path = new SubRangedPath(underlying_path, t0, t1);
     pathStore ~= pushObj!(SubRangedPath, SubRangedPathMT)(L, alp_path);
     return 1;
 } // end newSubRangedPath()
@@ -664,11 +721,11 @@ extern(C) int t1Path(T, string MTname)(lua_State* L)
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
  * original_path = Bezier:new{points={p0, p1, p2}}
- * r_path = ReversedPath:new{original_path}
+ * r_path = ReversedPath:new{underlying_path=original_path}
  * ---------------------------------
  */
 extern(C) int newReversedPath(lua_State* L)
@@ -676,23 +733,25 @@ extern(C) int newReversedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to ReversedPath:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to ReversedPath:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect a Path object at the first array position in the table.
-    lua_rawgeti(L, 1, 1);
+    // Expect the underlying_path object in the table.
+    lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to ReversedPath:new{}. No table entry found.`;
+	string errMsg = "Error in call to ReversedPath:new{}." ~
+	    " No underlying_path entry found.";
 	luaL_error(L, errMsg.toStringz());
     }
-    auto original_path = checkPath(L, -1);
+    auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
-    if ( original_path is null ) {
-	string errMsg = `Error in call to ReversedPath:new{}. No valid Path object found.`;
+    if ( underlying_path is null ) {
+	string errMsg = "Error in call to ReversedPath:new{};" ~ 
+	    " Not a valid Path object.";
 	luaL_error(L, errMsg.toStringz());
     }
-    auto alp_path = new ReversedPath(original_path);
+    auto alp_path = new ReversedPath(underlying_path);
     pathStore ~= pushObj!(ReversedPath, ReversedPathMT)(L, alp_path);
     return 1;
 } // end newReversedPath()
@@ -703,11 +762,11 @@ A table containing arguments is expected, but no table was found.`;
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
- * original_path = Bezier:new{points={p0, p1, p2}}
- * tr_path = TranslatedPath:new{original_path, shift=Vector3:new{0.5, 0.5}}
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
+ * opath = Bezier:new{points={p0, p1, p2}}
+ * tr_path = TranslatedPath:new{original_path=opath, shift=Vector3:new{0.5, 0.5}}
  * ---------------------------------
  */
 extern(C) int newTranslatedPath(lua_State* L)
@@ -715,28 +774,30 @@ extern(C) int newTranslatedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to TranslatedPath:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to TranslatedPath:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect a Path object at the first array position in the table.
-    lua_rawgeti(L, 1, 1);
+    // Expect the original_path object in the table.
+    lua_getfield(L, 1, "original_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to TranslatedPath:new{}. No table entry found.`;
+	string errMsg = "Error in call to TranslatedPath:new{}." ~
+	    " No original_path entry found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto original_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( original_path is null ) {
-	string errMsg = `Error in call to TranslatedPath:new{}. No valid Path object found.`;
+	string errMsg = "Error in call to TranslatedPath:new{};" ~ 
+	    " Not a valid Path object.";
 	luaL_error(L, errMsg.toStringz());
     }
     // Expect Vector3 for key "shift".
     lua_getfield(L, 1, "shift".toStringz());
     auto shift = checkVector3(L, -1);
     if ( shift is null ) {
-	string errMsg = `Error in call to TranslatedPath:new{}.
-A Vector3 object is expected at key shift. No valid Vector3 was found.`;
+	string errMsg = "Error in call to TranslatedPath:new{}. " ~
+	    "A Vector3 object is expected at key shift. No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
@@ -750,11 +811,12 @@ A Vector3 object is expected at key shift. No valid Vector3 was found.`;
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
- * original_path = Bezier:new{points={p0, p1, p2}}
- * mi_path = MirrorImagePath:new{original_path, point=Vector3:new{1.0, 0.0},
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
+ * opath = Bezier:new{points={p0, p1, p2}}
+ * mi_path = MirrorImagePath:new{original_path=opath,
+ *                               point=Vector3:new{1.0, 0.0},
  *                               normal=Vector3:new{1.0, 0.0}}
  * ---------------------------------
  */
@@ -763,28 +825,29 @@ extern(C) int newMirrorImagePath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to MirrorImagePath:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to MirrorImagePath:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect a Path object at the first array position in the table.
-    lua_rawgeti(L, 1, 1);
+    // Expect the original_path object in the table.
+    lua_getfield(L, 1, "original_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to MirrorImagePath:new{}. No table entry found.`;
+	string errMsg = "Error in call to MirrorImagePath:new{}." ~
+	    " No original_path entry found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto original_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( original_path is null ) {
-	string errMsg = `Error in call to MirrorImagePath:new{}. No valid Path object found.`;
+	string errMsg = "Error in call to MirrorImagePath:new{}. Not a valid Path object.";
 	luaL_error(L, errMsg.toStringz());
     }
     // Expect Vector3 for key "point".
     lua_getfield(L, 1, "point".toStringz());
     auto point = checkVector3(L, -1);
     if ( point is null ) {
-	string errMsg = `Error in call to MirrorImagePath:new{}.
-A Vector3 object is expected at key point. No valid Vector3 was found.`;
+	string errMsg = "Error in call to MirrorImagePath:new{}. " ~
+	    "A Vector3 object is expected at key point. No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
@@ -792,8 +855,8 @@ A Vector3 object is expected at key point. No valid Vector3 was found.`;
     lua_getfield(L, 1, "normal".toStringz());
     auto normal = checkVector3(L, -1);
     if ( normal is null ) {
-	string errMsg = `Error in call to MirrorImagePath:new{}.
-A Vector3 object is expected at key normal. No valid Vector3 was found.`;
+	string errMsg = "Error in call to MirrorImagePath:new{}. " ~
+	    "A Vector3 object is expected at key normal. No valid Vector3 was found.";
 	luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
@@ -807,11 +870,11 @@ A Vector3 object is expected at key normal. No valid Vector3 was found.`;
  *
  * Example construction in Lua:
  * ---------------------------------
- * p0 = Vector3:new{1, 0}
- * p1 = Vector3:new{0.7071, 0.7071}
- * p2 = Vector3:new{0, 1}
- * original_path = Bezier:new{points={p0, p1, p2}}
- * raza_path = RotatedAboutZAxisPath:new{original_path, angle=math.pi/4}
+ * p0 = Vector3:new{x=1}
+ * p1 = Vector3:new{x=0.7071, y=0.7071}
+ * p2 = Vector3:new{y=1}
+ * opath = Bezier:new{points={p0, p1, p2}}
+ * raza_path = RotatedAboutZAxisPath:new{original_path=opath, angle=math.pi/4}
  * ---------------------------------
  */
 extern(C) int newRotatedAboutZAxisPath(lua_State* L)
@@ -819,26 +882,28 @@ extern(C) int newRotatedAboutZAxisPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to RotatedAboutZAxisPath:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect a Path object at the first array position in the table.
-    lua_rawgeti(L, 1, 1);
+    // Expect the original_path object in the table.
+    lua_getfield(L, 1, "original_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to RotatedAboutZAxisPath:new{}. No table entry found.`;
+	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}." ~
+	    " No original_path entry found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto original_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( original_path is null ) {
-	string errMsg = `Error in call to RotatedAboutZAxisPath:new{}. No valid Path object found.`;
+	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}. Not a valid Path object.";
 	luaL_error(L, errMsg.toStringz());
     }
-    string errMsgTmplt = `Error in call to RotatedAboutZAxisPath:new{}.
-A valid value for '%s' was not found in list of arguments.
-The value, if present, should be a number.`;
-    double angle = getNumberFromTable(L, 1, "angle", false, 0.0, true, format(errMsgTmplt, "angle"));
+    string errMsgTmplt = "Error in call to RotatedAboutZAxisPath:new{}. " ~
+	"A valid value for '%s' was not found in list of arguments. " ~
+	"The value, if present, should be a number.";
+    double angle = getNumberFromTable(L, 1, "angle", false, 0.0, true, 
+				      format(errMsgTmplt, "angle"));
     auto raza_path = new RotatedAboutZAxisPath(original_path, angle);
     pathStore ~= pushObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, raza_path);
     return 1;

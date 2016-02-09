@@ -123,10 +123,10 @@ function FullFaceExchangeCopy:tojson()
 end
 
 MappedCellExchangeCopy = GhostCellEffect:new{transform_position=false,
-					     c0=Vector3:new{0.0,0.0,0.0},
-					     n=Vector3:new{0.0,0.0,1.0},
+					     c0=Vector3:new{x=0.0,y=0.0,z=0.0},
+					     n=Vector3:new{x=0.0,y=0.0,z=1.0},
 					     alpha=0.0,
-					     delta=Vector3:new{0.0,0.0,0.0},
+					     delta=Vector3:new{x=0.0,y=0.0,z=0.0},
 					     list_mapped_cells=false,
 					     reorient_vector_quantities=false,
 					     Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}

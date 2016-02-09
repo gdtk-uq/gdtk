@@ -23,25 +23,28 @@ void main()
 print("Test some constructors.")
 a = Vector3:new()
 print("a= ", a)
-b = Vector3:new(7.0, 3.0, -2.5)
+b = Vector3:new{x=7.0, y=3.0, z=-2.5}
 print("b= ", b)
 bb = Vector3:new(b)
 print("bb=", bb)
-bbb = Vector3:new(7.0)
+bbb = Vector3:new{x=7.0}
 print("bbb=", bbb)
-bbbb = Vector3:new{7.0}
-print("bbbb=", bbbb)
-c = Vector3:new{4.0, 1.2, 17}
+c = Vector3:new{x=4.0, y=1.2, z=17}
 print("c= ", c)
 cc = Vector3:new{c}
 print("cc=", cc)
 d = Vector3:new{x=5, z="9", y=78.6, label="some crap"}
 print("d= ", d)
-e = Vector3:new(1.0, 0.0)
+e = Vector3:new{x=1.0, y=0.0}
 print("e= ", e)
-f = Vector3:new(true, nil, 6.0)
+function bad_fn() 
+   f = Vector3:new{true}
+end
+if pcall(bad_fn) then
+   print("Sorry, you gave me a value I couldn't use.")
+end
+f = Vector3:new{}
 print("f= ", f)
-print("Sorry, you gave me values I couldn't use in slots 0 and 1.")
 print("Change the x value of f.")
 f:x(5.4)
 print("f= ", f)
@@ -59,20 +62,24 @@ j = dot(g, f)
 print("j= ", j)
 k = cross(g, f)
 print("k= ", k)
-m = Vector3:new{1.0,0.0,0.0}
+m = Vector3:new{x=1.0}
 m:rotateAboutZAxis(math.pi/2)
 print("rotated m=", m, "expected Vector3([0.0, 1.0, 0.0])")
-n = Vector3:new{1.0,0.0,0.0}
-n:mirrorImage(Vector3:new{2.0,0.0,0.0}, Vector3:new{1.0,0.0,0.0})
+n = Vector3:new{x=1.0,y=0.0,z=0.0}
+n:mirrorImage(Vector3:new{x=2.0}, Vector3:new{x=1.0})
 print("mirror-image n=", n, "expected Vector3([3.0, 0.0, 0.0])")
 print("Try calling cell geometry calculation functions.")
-t = quadProperties{p0=Vector3:new{0.0, 0.0}, p1=Vector3:new{1.0, 0.0},
-                   p2=Vector3:new{1.0, 1.0}, p3=Vector3:new{0.0, 1.0}}
+t = quadProperties{p0=Vector3:new{x=0.0, y=0.0}, p1=Vector3:new{x=1.0, y=0.0},
+                   p2=Vector3:new{x=1.0, y=1.0}, p3=Vector3:new{x=0.0, y=1.0}}
 print("area=", t.area, "centroid=", t.centroid, "n=", t.n, "t1=", t.t1, "t2=", t.t2)
-t = hexCellProperties{p0=Vector3:new{0.0, 0.0, 0.0}, p1=Vector3:new{1.0, 0.0, 0.0},
-                      p2=Vector3:new{1.0, 1.0, 0.0}, p3=Vector3:new{0.0, 1.0, 0.0},
-                      p4=Vector3:new{0.0, 0.0, 1.0}, p5=Vector3:new{1.0, 0.0, 1.0},
-                      p6=Vector3:new{1.0, 1.0, 1.0}, p7=Vector3:new{0.0, 1.0, 1.0}}
+t = hexCellProperties{p0=Vector3:new{x=0.0, y=0.0, z=0.0},
+                      p1=Vector3:new{x=1.0, y=0.0, z=0.0},
+                      p2=Vector3:new{x=1.0, y=1.0, z=0.0},
+                      p3=Vector3:new{x=0.0, y=1.0, z=0.0},
+                      p4=Vector3:new{x=0.0, y=0.0, z=1.0},
+                      p5=Vector3:new{x=1.0, y=0.0, z=1.0},
+                      p6=Vector3:new{x=1.0, y=1.0, z=1.0},
+                      p7=Vector3:new{x=0.0, y=1.0, z=1.0}}
 print("volume=", t.volume, "centroid=", t.centroid, "iLen=", t.iLen, "jLen=", t.jLen, "kLen=", t.kLen)
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {

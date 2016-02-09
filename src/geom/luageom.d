@@ -50,71 +50,32 @@ Vector3* checkVector3(lua_State *L, int index)
  * This function will serve as our "constructor"
  * in the Lua script.
  *
- * Construction from Lua can be any of:
+ * Construction from Lua can be one of:
  * ----------------------
- * a = Vector3:new(0.0, 1.0, 2.0)
- * b = Vector3:new{0.0, 1.0, 2.0}
- * c = Vector3:new{x=0.0, y=1.0, z=2.0}
- * d = Vector3:new{1.0, 3.0, x=5.0, z=8.0}
- * assert(d:x() == 1.0); assert(d:y() == 3.0); assert(d:z() == 0.0)
- * e = Vector3:new(otherVector3)
- * f = Vector3:new{otherVector3}
- * g = Vector3:new() -- zero coordinates
- * h = Vector3:new{}
+ * a = Vector3:new{otherVector3}
+ * b = Vector3:new(otherVector3)
+ * c = Vector3:new{x=1.0, y=1.0, z=2.0}
+ * assert(c:x() == 1.0); assert(c:y() == 3.0); assert(c:z() == 2.0)
  * ----------------------
  * When a single argument is given, it may be another Vector3 object.
- * For any of the lists of coordinates, missing values are assumed to be 0.0.
- * If you try to mix-n-match in the table, then the array-style of setting wins.
- * This constructor is fairly robust to bad parameters.
- * What will happen is that they are ignored and you get a 0.0.
+ * For the table of coordinates, missing values are assumed to be 0.0.
  */
 extern(C) int newVector3(lua_State *L)
 {
     auto vec = Vector3(0.0, 0.0, 0.0);
-    /* This is where we decide how the user will instantiate
-     * an object in Lua-land.
-     */
     lua_remove(L, 1); // remove first argument "this".
-
     int narg = lua_gettop(L);
-    if ( narg == 1 ) {	// Could be a table or a single double value or a Vector3 object
-	if ( lua_isnumber(L, 1) ) {
-	    vec.refx = lua_tonumber(L, 1);
-	} 
-	else if ( lua_istable(L, 1) ) {
-	    // If it has a length > 0, then it's been populated array style.
+    if ( narg == 1 ) {	// Could be a table or a single Vector3 object
+	if ( lua_istable(L, 1) ) {
+	    // If it has a length >= 1, then it's been populated array style.
 	    // This style of setting beats any fields that are present.
-	    size_t n = lua_objlen(L, 1);
-	    if ( n == 1 ) {
-		// A single item may be a number or a Vector3 object already.
+	    if ( lua_objlen(L, 1) >= 1 ) {
+		// A single item may be a Vector3 object already.
 		lua_rawgeti(L, 1, 1);
-		if ( lua_isnumber(L, -1) ) {
-		    vec.refx = lua_tonumber(L, -1);
-		}
-		else {
-		    vec = *checkVector3(L, -1);
-		}
+		vec = *checkVector3(L, -1);
 		lua_pop(L, 1);
-	    }
-	    else {
-		// We have more than one item in the table, assumed to be coordinates.
-		if ( n >= 1 ) {
-		    lua_rawgeti(L, 1, 1);
-		    if ( lua_isnumber(L, -1) ) vec.refx = lua_tonumber(L, -1);
-		    lua_pop(L, 1);
-		}
-		if ( n >= 2 ) {
-		    lua_rawgeti(L, 1, 2);
-		    if ( lua_isnumber(L, -1) ) vec.refy = lua_tonumber(L, -1);
-		    lua_pop(L, 1);
-		}
-		if ( n >= 3 ) {
-		    lua_rawgeti(L, 1, 3);
-		    if ( lua_isnumber(L, -1) ) vec.refz = lua_tonumber(L, -1);
-		    lua_pop(L, 1);
-		}
-	    }
-	    if ( n == 0 ) { // then field based table, containing coordinates.
+	    } else {
+		// Look for named fields containing coordinate values.
 		lua_getfield(L, 1, "x");
 		if ( lua_isnumber(L, -1) ) vec.refx = lua_tonumber(L, -1);
 		lua_pop(L, 1);
@@ -125,26 +86,14 @@ extern(C) int newVector3(lua_State *L)
 		if ( lua_isnumber(L, -1) ) vec.refz = lua_tonumber(L, -1);
 		lua_pop(L, 1);
 	    }
+	} else {
+	    vec = *checkVector3(L, -1);
 	}
-	else {
-	    // Wasn't a double or a table, so try a Vector3 object.
-	    vec = *checkVector3(L, 1);
-	}
-    }
-    else if ( narg == 2 ) {
-	if ( lua_isnumber(L, 1) )  vec.refx = luaL_checknumber(L, 1);
-	if ( lua_isnumber(L, 2) )  vec.refy = luaL_checknumber(L, 2);
-    }
-    else if ( narg >= 3 ) {
-	if ( lua_isnumber(L, 1) )  vec.refx = luaL_checknumber(L, 1);
-	if ( lua_isnumber(L, 2) )  vec.refy = luaL_checknumber(L, 2);
-	if ( lua_isnumber(L, 3) )  vec.refz = luaL_checknumber(L, 3);
-    }
-
-    /* Regardless of how we filled in vec. We are now
-     * ready to grab a piece of the lua stack and
-     * place our new Vector3 there as userdata.
-     */
+    } else {
+	// Just leave the zero-filled values.
+    } 
+    // Regardless of how we filled in vec, we are now ready 
+    // to place our new Vector3 on the stack as userdata.
     return pushVector3(L, vec);
 } // end newVector3()
 

@@ -24,8 +24,8 @@ void main()
     string test_code = `
 -- Add a couple of points and alter their data.
 a = Vector3:new{x=1.0, y=2.0}
-b = Vector3:new(0.0, 5.0, 4.0)
-ab = Line:new{a, b}
+b = Vector3:new{x=0.0, y=5.0, z=4.0}
+ab = Line:new{p0=a, p1=b}
 print("ab= ", ab)
 print("Try evaluating a point midway on the line.")
 pt = ab(0.5)
@@ -35,54 +35,54 @@ pt2 = ab:eval(0.5)
 print("pt2= ", pt2)
 --
 print("Arc")
-a = Vector3:new(2.0, 2.0, 0.0)
-b = Vector3:new(1.0, 2.0, 1.0)
-c = Vector3:new(1.0, 2.0, 0.0)
-abc = Arc:new{a, b, c}
+a = Vector3:new{x=2.0, y=2.0, z=0.0}
+b = Vector3:new{x=1.0, y=2.0, z=1.0}
+c = Vector3:new{x=1.0, y=2.0, z=0.0}
+abc = Arc:new{p0=a, p1=b, centre=c}
 d = abc(0.5)
-print("d=", d, "expected approximately Vector3(1.7071068, 2.0, 0.7071068)")
+print("d=", d, "expected approximately Vector3([1.7071068, 2.0, 0.7071068])")
 --
 print("Arc3")
-a = Vector3:new(2.0, 2.0, 0.0)
-b = Vector3:new(1.0, 2.0, 1.0)
-m = Vector3:new(1.7071068, 2.0, 0.7071068)
-amb = Arc3:new{a, m, b}
+a = Vector3:new{x=2.0, y=2.0, z=0.0}
+b = Vector3:new{x=1.0, y=2.0, z=1.0}
+m = Vector3:new{x=1.7071068, y=2.0, z=0.7071068}
+amb = Arc3:new{p0=a, pmid=m, p1=b}
 dd = amb(0.5)
-print("dd=", dd, "expected approximately Vector3(1.7071068, 2.0, 0.7071068)")
+print("dd=", dd, "expected approximately Vector3([1.7071068, 2.0, 0.7071068])")
 --
 print("Bezier")
 adb = Bezier:new{points={a, d, b}}
 e = adb(0.5)
-print("e=", e, "expected approximately Vector3(1.60355, 2, 0.603553)")
+print("e=", e, "expected approximately Vector3([1.60355, 2, 0.603553])")
 --
 print("Polyline")
-polyline = Polyline:new{abc, Line:new{b,c}}
+polyline = Polyline:new{segments={abc, Line:new{p0=b,p1=c}}}
 print("polyline= ", polyline)
 f = polyline(0.5)
 print("polyline(0.25)= ", polyline(0.25))
-print("polyline(0.5)= ", f, "expected approximately Vector3(1.28154, 2, 0.95955)")
+print("polyline(0.5)= ", f, "expected approximately Vector3([1.28154, 2, 0.95955])")
 print("polyline(0.75)= ", polyline(0.75))
 --
 print("LuaFnPath")
 function myLuaFunction(t)
    -- Straight line from 0,0,0 to 1.0,2.0,3.0
-   return {t, 2*t, 3*t}
+   return {x=t, y=2*t, z=3*t}
 end
-myPath = LuaFnPath:new{"myLuaFunction"}
+myPath = LuaFnPath:new{luaFnName="myLuaFunction"}
 print("myLine= ", myPath)
 g = myPath(0.5)
 print("myPath(0.5)= ", g)
 --
 print("ArcLengthParameterizedPath")
-p0 = Vector3:new(0.0, 0.0, 0.0)
-p1 = Vector3:new(1.0, 1.0, 1.0)
-p2 = Vector3:new(4.0, 4.0, 4.0)
-alpp = ArcLengthParameterizedPath:new{Bezier:new{points={p0, p1, p2}}}
+p0 = Vector3:new{x=0.0, y=0.0, z=0.0}
+p1 = Vector3:new{x=1.0, y=1.0, z=1.0}
+p2 = Vector3:new{x=4.0, y=4.0, z=4.0}
+alpp = ArcLengthParameterizedPath:new{underlying_path=Bezier:new{points={p0, p1, p2}}}
 print("alpp=", alpp)
 print("alpp(0.5)=", alpp(0.5))
 --
 print("SubrangedPath")
-srp = SubRangedPath:new{polyline, t0=1.0, t1=0.0} -- effectively reversed
+srp = SubRangedPath:new{underlying_path=polyline, t0=1.0, t1=0.0} -- effectively reversed
 print("srp=", srp)
 print("srp(0.25)=", srp(0.25))
 print("srp(0.50)=", srp(0.50))
@@ -96,18 +96,18 @@ print("srp:t0()= ", srp:t0(), "srp:t1()= ", srp:t1())
 print("srp2:t0()= ", srp2:t0(), "srp2:t1()= ", srp2:t1())
 --
 print("ReversedPath")
-rp = ReversedPath:new{polyline}
+rp = ReversedPath:new{underlying_path=polyline}
 print("rp=", rp)
 print("rp(0.25)=", rp(0.25))
 print("rp(0.50)=", rp(0.50))
 print("rp(0.75)=", rp(0.75))
 --
 print("Spline (Polyline)")
-pnts = {Vector3:new{0.0, -1.0, 0.0},
-	Vector3:new{-1.0, 0.0, 0.0},
-	Vector3:new{0.0, 1.0, 0.0},
-	Vector3:new{1.0, 0.0, 0.0},
-	Vector3:new{0.0, -1.0, 0.0}}
+pnts = {Vector3:new{ x=0.0, y=-1.0},
+	Vector3:new{x=-1.0,  y=0.0},
+	Vector3:new{ x=0.0,  y=1.0},
+	Vector3:new{ x=1.0,  y=0.0},
+	Vector3:new{ x=0.0, y=-1.0}}
 circle = Spline:new{points=pnts}
 print("circle=", circle)
 print("circle(5.0/8)=", circle(5.0/8))
@@ -118,31 +118,32 @@ print("circle2=", circle2)
 print("circle2(5.0/8)=", circle2(5.0/8))
 --
 print("TranslatedPath")
-a = Vector3:new{2.0, 0.0, 0.0}
-b = Vector3:new{0.0, 2.0, 0.0}
-c = Vector3:new{0.0, 0.0, 0.0}
-abc = Arc:new{a, b, c}
-abc_translated = TranslatedPath:new{abc, shift=Vector3:new{0,0,0.33333}}
+a = Vector3:new{x=2.0, y=0.0}
+b = Vector3:new{x=0.0, y=2.0}
+c = Vector3:new{x=0.0, y=0.0}
+abc = Arc:new{p0=a, p1=b, centre=c}
+abc_translated = TranslatedPath:new{original_path=abc, shift=Vector3:new{z=0.33333}}
 print("abc_translated=", abc_translated)
 print("abc_translated(0.5)=", abc_translated(0.5))
 --
 print("MirrorImagePath")
-p0 = Vector3:new{1, 0}
-p1 = Vector3:new{0.7071, 0.7071}
-p2 = Vector3:new{0, 1}
+p0 = Vector3:new{x=1, y=0}
+p1 = Vector3:new{x=0.7071, y=0.7071}
+p2 = Vector3:new{x=0, y=1}
 original_path = Bezier:new{points={p0, p1, p2}}
-mi_path = MirrorImagePath:new{original_path, point=Vector3:new{1.0, 0.0},
-                              normal=Vector3:new{1.0, 0.0}}
+mi_path = MirrorImagePath:new{original_path=original_path,
+                              point=Vector3:new{x=1.0, y=0.0},
+                              normal=Vector3:new{x=1.0, y=0.0}}
 print("mi_path=", mi_path)
 print("original_path(0.5)=", original_path(0.5))
 print("mi_path(0.5)=", mi_path(0.5))
 --
 print("RotatedAboutZAxisPath")
-a = Vector3:new{2.0, 0.0, 0.0}
-b = Vector3:new{0.0, 2.0, 0.0}
-c = Vector3:new{0.0, 0.0, 0.0}
-abc = Arc:new{a, b, c}
-abc_rotated = RotatedAboutZAxisPath:new{abc, angle=math.pi/4}
+a = Vector3:new{x=2.0, y=0.0}
+b = Vector3:new{x=0.0, y=2.0}
+c = Vector3:new{x=0.0, y=0.0}
+abc = Arc:new{p0=a, p1=b, centre=c}
+abc_rotated = RotatedAboutZAxisPath:new{original_path=abc, angle=math.pi/4}
 print("abc_rotated=", abc_rotated)
 print("abc_rotated(1.0)=", abc_rotated(1.0))
     `;

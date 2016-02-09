@@ -24,12 +24,12 @@ void main()
     registerSurfaces(L);
     string test_code = `
 print("Construct from edges")
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.0, 1.0}
-c = Vector3:new{1.0, 0.0}
-d = Vector3:new{1.0, 1.0}
-surf = CoonsPatch:new{north=Line:new{b, d}, east=Line:new{c, d},
-                      south=Line:new{a, c}, west=Line:new{a, b}}
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.0, y=1.0}
+c = Vector3:new{x=1.0, y=0.0}
+d = Vector3:new{x=1.0, y=1.0}
+surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},
+                      south=Line:new{p0=a, p1=c}, west=Line:new{p0=a, p1=b}}
 print("CoonsPatch representation: ", surf)
 print("surf(0.5,0.5)= ", surf(0.5, 0.5))
 --
@@ -39,10 +39,10 @@ p = surf2:eval(0.5, 0.5)
 print("same point p= ", p)
 --
 print("AO patch")
-p00 = Vector3:new{0.0, 0.1, 3.0}
-p10 = Vector3:new{1.0, 0.4, 3.0}
-p11 = Vector3:new{1.0, 1.1, 3.0}
-p01 = Vector3:new{0.0, 1.1, 3.0}
+p00 = Vector3:new{x=0.0, y=0.1, z=3.0}
+p10 = Vector3:new{x=1.0, y=0.4, z=3.0}
+p11 = Vector3:new{x=1.0, y=1.1, z=3.0}
+p01 = Vector3:new{x=0.0, y=1.1, z=3.0}
 my_aopatch = AOPatch:new{p00=p00, p10=p10, p11=p11, p01=p01}
 p = my_aopatch(0.1, 0.1);
 print("my_aopatch(0.1, 0.1)= ", p)
@@ -52,8 +52,8 @@ srs = SubRangedSurface:new{my_aopatch, r0=0.0, r1=0.5, s0=0.0, s1=0.5}
 print("srs(0.2,0.2)=", srs(0.2,0.2))
 --
 print("ChannelPatch")
-cA = Line:new{Vector3:new{0.0,0.0}, Vector3:new{1.0,0.0}}
-cB = Line:new{Vector3:new{0.0,0.25}, Vector3:new{1.0,1.0}}
+cA = Line:new{p0=Vector3:new{x=0.0,y=0.0}, p1=Vector3:new{x=1.0,y=0.0}}
+cB = Line:new{p0=Vector3:new{x=0.0,y=0.25}, p1=Vector3:new{x=1.0,y=1.0}}
 chanp = ChannelPatch:new{south=cA, north=cB}
 print("chanp= ", chanp)
 print("chanp(0.5,0.5)= ", chanp(0.5, 0.5))
@@ -62,10 +62,10 @@ print("Utility functions")
 print("isSurface(my_aopatch)= ", isSurface(my_aopatch))
 print("isSurface(surf2)= ", isSurface(surf2));
 print("isSurface(a)= ", isSurface(a));
-north = Line:new{b, d}
-east = Line:new{c, d}
-south = Line:new{a, c}
-west = Line:new{a, b}
+north = Line:new{p0=b, p1=d}
+east = Line:new{p0=c, p1=d}
+south = Line:new{p0=a, p1=c}
+west = Line:new{p0=a, p1=b}
 surf3 = makePatch{north, east, south, west, gridType="ao"}
 print("surf3= ", surf3)
 print("Done luasurface_demo.")

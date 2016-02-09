@@ -33,34 +33,37 @@ theta = 15.0 * math.pi / 180.0 -- radians
 height = R_throat + R_curve
 hypot = R_tube + R_curve
 base = math.sqrt(hypot*hypot - height*height)
-centre_A = Vector3:new{0.0, height}
-centre_B = Vector3:new{-base, 0.0}
+centre_A = Vector3:new{x=0.0, y=height}
+centre_B = Vector3:new{x=-base, y=0.0}
 fraction = R_tube/hypot
-intersect_point = centre_B + Vector3:new{fraction*base, fraction*height}
+intersect_point = centre_B + Vector3:new{x=fraction*base, y=fraction*height}
 
 -- Assemble nodes from coordinates.
-z0 = Vector3:new{-L_subsonic, 0.0}
-p0 = Vector3:new{-L_subsonic, R_tube}
+z0 = Vector3:new{x=-L_subsonic, y=0.0}
+p0 = Vector3:new{x=-L_subsonic, y=R_tube}
 z1 = Vector3:new{centre_B} -- initialize from a previously defined Node
-p1 = centre_B + Vector3:new{0.0, R_tube}
+p1 = centre_B + Vector3:new{x=0.0, y=R_tube}
 p2 = Vector3:new{intersect_point}
-z2 = Vector3:new{p2:x(), 0.0}  -- on the axis, below p2
-z3 = Vector3:new{0.0, 0.0}
-p3 = Vector3:new{0.0, R_throat}
+z2 = Vector3:new{x=p2:x(), y=0.0}  -- on the axis, below p2
+z3 = Vector3:new{x=0.0, y=0.0}
+p3 = Vector3:new{x=0.0, y=R_throat}
 -- Compute the details of the conical nozzle
-p4 = Vector3:new{R_curve*math.sin(theta), height - R_curve*math.cos(theta)}
-z4 = Vector3:new{p4:x(), 0.0}
+p4 = Vector3:new{x=R_curve*math.sin(theta), y=height-R_curve*math.cos(theta)}
+z4 = Vector3:new{x=p4:x(), y=0.0}
 L_cone = L_nozzle - p4:x()
-p5 = p4 + Vector3:new{L_cone, L_cone*math.tan(theta)}
-z5 = Vector3:new{p5:x(), 0.0}
+p5 = p4 + Vector3:new{x=L_cone, y=L_cone*math.tan(theta)}
+z5 = Vector3:new{x=p5:x(), y=0.0}
 
-north0 = Polyline:new{Line:new{p0,p1},Arc:new{p1,p2,centre_B},Arc:new{p2,p3,centre_A}}
-east0west1 = Line:new{z3, p3}
-south0 = Line:new{z0, z3}
-west0 = Line:new{z0, p0}
-north1 = Polyline:new{Arc:new{p3,p4,centre_A}, Line:new{p4,p5}}
-east1 = Line:new{z5, p5}
-south1 = Line:new{z3, z5}
+north0 = Polyline:new{segments={Line:new{p0=p0,p1=p1},
+				Arc:new{p0=p1,p1=p2,centre=centre_B},
+				Arc:new{p0=p2,p1=p3,centre=centre_A}}}
+east0west1 = Line:new{p0=z3, p1=p3}
+south0 = Line:new{p0=z0, p1=z3}
+west0 = Line:new{p0=z0, p1=p0}
+north1 = Polyline:new{segments={Arc:new{p0=p3,p1=p4,centre=centre_A},
+				Line:new{p0=p4,p1=p5}}}
+east1 = Line:new{p0=z5, p1=p5}
+south1 = Line:new{p0=z3, p1=z5}
 
 -- Define the blocks, boundary conditions and set the discretisation.
 nx0 = 50; nx1 = 60; ny = 30

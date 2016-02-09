@@ -28,15 +28,15 @@ print("Inflow Mach number= ", 1000.0/Q.a)
 
 -- Set up two quadrilaterals in the (x,y)-plane by first defining
 -- the corner nodes, then the lines between those corners.
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.2, 0.0}
-c = Vector3:new{1.0, 0.29118}
-d = Vector3:new{1.0, 1.0}
-e = Vector3:new{0.2, 1.0}
-f = Vector3:new{0.0, 1.0}
-ab = Line:new{a, b}; bc = Line:new{b, c} -- lower boundary including cone surface
-fe = Line:new{f, e}; ed = Line:new{e, d} -- upper boundary
-af = Line:new{a, f}; be = Line:new{b, e}; cd = Line:new{c, d} -- vertical lines
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.2, y=0.0}
+c = Vector3:new{x=1.0, y=0.29118}
+d = Vector3:new{x=1.0, y=1.0}
+e = Vector3:new{x=0.2, y=1.0}
+f = Vector3:new{x=0.0, y=1.0}
+ab = Line:new{p0=a, p1=b}; bc = Line:new{p0=b, p1=c} -- lower boundary including cone surface
+fe = Line:new{p0=f, p1=e}; ed = Line:new{p0=e, p1=d} -- upper boundary
+af = Line:new{p0=a, p1=f}; be = Line:new{p0=b, p1=e}; cd = Line:new{p0=c, p1=d} -- vertical lines
 -- Mesh the patches, with particular discretisation.
 nx0 = 10; nx1 = 30; ny = 40
 grid0 = StructuredGrid:new{psurface=makePatch{fe, be, ab, af}, niv=nx0+1, njv=ny+1}
