@@ -54,15 +54,16 @@ H = 0.4 * L   -- Height of flow domain (in metres)
 --    flow=>    -\- |
 --        0         a ----> x
 -- 
-a = Vector3:new{L, 0.0}; b = Vector3:new{L, H}
-c = Vector3:new{0.0, H}; d = Vector3:new{0.0, 3.0*H/4.0}
-nth = Line:new{c,b}; est = Line:new{a,b}; 
-sth = Line:new{d,a}; wst = Line:new{d,c}
+a = Vector3:new{x=L}; b = Vector3:new{x=L, y=H}
+c = Vector3:new{y=H}; d = Vector3:new{y=3.0*H/4.0}
+patch = makePatch{north=Line:new{p0=c, p1=b}, east=Line:new{p0=a, p1=b},
+		  south=Line:new{p0=d, p1=a}, west=Line:new{p0=d, p1=c}}
 clusterx = RobertsFunction:new{end0=true,end1=false,beta=1.05}
 clustery_e = RobertsFunction:new{end0=false,end1=true,beta=1.016}
 clustery_w = RobertsFunction:new{end0=false,end1=true,beta=1.05}
-grd = StructuredGrid:new{psurface=makePatch{nth, est, sth, wst},
-			 cfList = {clusterx, clustery_e, clusterx, clustery_w},
+grd = StructuredGrid:new{psurface=patch,
+			 cfList = {north=clusterx, east=clustery_e,
+				   south=clusterx, west=clustery_w},
 			 niv=221, njv=193}
 
 -- Assemble the block from the grid and boundary data.

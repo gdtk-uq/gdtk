@@ -16,13 +16,16 @@ config.reactions_file = 'chem.lua'
 initial = FlowState:new{p=1.0e5, T=4000.0, massf={N2=0.8, N=0.2}}
 
 -- Geometry is a square
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.0, 0.01}
-c = Vector3:new{0.01, 0.0}
-d = Vector3:new{0.01, 0.01}
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.0, y=0.01}
+c = Vector3:new{x=0.01, y=0.0}
+d = Vector3:new{x=0.01, y=0.01}
+patch0 = makePatch{north = Line:new{p0=b, p1=d},
+		   east = Line:new{p0=c, p1=d},
+		   south = Line:new{p0=a, p1=c},
+		   west = Line:new{p0=a, p1=b}}
 
-grid0 = StructuredGrid:new{psurface=makePatch{Line:new{b, d}, Line:new{c, d}, Line:new{a, c}, Line:new{a, b}},
-			   niv=3, njv=3}
+grid0 = StructuredGrid:new{psurface=patch0, niv=3, njv=3}
 blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
 setHistoryPoint{ib=0, i=0, j=0}
 -- Finish off config

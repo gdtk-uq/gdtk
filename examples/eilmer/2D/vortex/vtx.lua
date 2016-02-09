@@ -18,26 +18,26 @@ initial = FlowState:new{p=1000.0, T=348.43, velx=0.0, vely=0.0}
 -- Geometry
 R_inner = 1.0
 R_outer = 1.384
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.0, R_inner}
-c = Vector3:new{0.0, R_outer}
-d = Vector3:new{R_inner, 0.0}
-e = Vector3:new{R_outer, 0.0}
-north0 = Arc:new{c, e, a}
-east0 = Line:new{d, e}
-south0 = Arc:new{b, d, a}
-west0 = Line:new{b, c}
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.0, y=R_inner}
+c = Vector3:new{x=0.0, y=R_outer}
+d = Vector3:new{x=R_inner, y=0.0}
+e = Vector3:new{x=R_outer, y=0.0}
+patch = makePatch{north=Arc:new{p0=c, p1=e, centre=a},
+		  east=Line:new{p0=d, p1=e},
+		  south=Arc:new{p0=b, p1=d, centre=a},
+		  west=Line:new{p0=b, p1=c}}
 
 -- Mesh the patches, with particular discretisation.
 nx = 80; ny = 40
-grid0 = StructuredGrid:new{psurface=makePatch{north0, east0, south0, west0},
-			   niv=nx+1, njv=ny+1}
+grid0 = StructuredGrid:new{psurface=patch, niv=nx+1, njv=ny+1}
 -- Define the flow-solution block.
 bcList = {north=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  east=OutFlowBC_Simple:new{},
 	  south=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
-blk0 = SBlock:new{grid=grid0, fillCondition=initial, bcList=bcList, label="Duct"}
+blk0 = SBlock:new{grid=grid0, fillCondition=initial, bcList=bcList,
+		  label="Duct"}
 
 -- Do a little more setting of global data.
 config.max_time = 20.0e-3  -- seconds

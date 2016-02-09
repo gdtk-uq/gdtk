@@ -17,19 +17,19 @@ setGasModel('ideal-air-gas-model.lua')
 initial = FlowState:new{p=5955.0, T=304.0, velx=0.0, vely=0.0}
 
 -- Set geometry: a rectangle in the (x,y)-plane
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.1, 0.0}
-c = Vector3:new{0.0, 0.02}
-d = Vector3:new{0.1, 0.02}
-ab = Line:new{a, b}
-ac = Line:new{a, c}
-bd = Line:new{b, d}
-cd = Line:new{c, d}
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.1, y=0.0}
+c = Vector3:new{x=0.0, y=0.02}
+d = Vector3:new{x=0.1, y=0.02}
+ab = Line:new{p0=a, p1=b}
+ac = Line:new{p0=a, p1=c}
+bd = Line:new{p0=b, p1=d}
+cd = Line:new{p0=c, p1=d}
+patch0 = makePatch{north=cd, east=bd, south=ab, west=ac}
 
 -- Create a grid for the plate
 nx = 100; ny = 20
-grid0 = StructuredGrid:new{psurface=makePatch{cd, bd, ab, ac},
-			   niv=nx+1, njv=ny+1}
+grid0 = StructuredGrid:new{psurface=patch0, niv=nx+1, njv=ny+1}
 
 -- Define the solution block
 -- Physical properties are those of copper

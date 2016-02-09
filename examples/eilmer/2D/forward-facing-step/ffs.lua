@@ -15,9 +15,14 @@ print("sound speed=", sspeed)
 inflow = FlowState:new{p=101.325e3, T=300.0, velx=3.0*sspeed, vely=0.0}
 
 -- Geometry of the flow domain.
-a0 = Vector3:new{0.0,0.0}; a1 = Vector3:new{0.0,0.2}; a2 = Vector3:new{0.0,1.0}
-b0 = Vector3:new{0.6,0.0}; b1 = Vector3:new{0.6,0.2}; b2 = Vector3:new{0.6,1.0}
-c1 = Vector3:new{3.0,0.2}; c2 = Vector3:new{3.0,1.0}
+a0 = Vector3:new{x=0.0, y=0.0};
+a1 = Vector3:new{x=0.0, y=0.2};
+a2 = Vector3:new{x=0.0, y=1.0}
+b0 = Vector3:new{x=0.6, y=0.0};
+b1 = Vector3:new{x=0.6, y=0.2};
+b2 = Vector3:new{x=0.6, y=1.0}
+c1 = Vector3:new{x=3.0, y=0.2};
+c2 = Vector3:new{x=3.0, y=1.0}
 surf0 = CoonsPatch:new{p00=a0, p10=b0, p11=b1, p01=a1}
 surf1 = CoonsPatch:new{p00=a1, p10=b1, p11=b2, p01=a2}
 surf2 = CoonsPatch:new{p00=b1, p10=c1, p11=c2, p01=b2}

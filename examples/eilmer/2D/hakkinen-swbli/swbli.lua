@@ -20,10 +20,10 @@ L1 = 10.0*mm; L2 = 90.0*mm; L3 = 67*mm
 H1 = 37.36*mm
 alpha = 3.09*math.pi/180.0 -- angle of inviscid shock generator
 tan_alpha = math.tan(alpha)
-a0 = Vector3:new{-L1, 0.0}; a1 = a0+Vector3:new{0.0,H1} -- leading edge of shock generator
-b0 = Vector3:new{0.0, 0.0}; b1 = b0+Vector3:new{0.0,H1-L1*tan_alpha} -- start plate
-c0 = Vector3:new{L3, 0.0}; c1 = c0+Vector3:new{0.0,H1-(L1+L3)*tan_alpha} -- end shock generator
-d0 = Vector3:new{L2, 0.0}; d1 = d0+Vector3:new{0.0,H1} -- end plate
+a0 = Vector3:new{x=-L1, y=0.0}; a1 = a0+Vector3:new{x=0.0,y=H1} -- leading edge of shock generator
+b0 = Vector3:new{x=0.0, y=0.0}; b1 = b0+Vector3:new{x=0.0,y=H1-L1*tan_alpha} -- start plate
+c0 = Vector3:new{x=L3, y=0.0}; c1 = c0+Vector3:new{x=0.0,y=H1-(L1+L3)*tan_alpha} -- end shock generator
+d0 = Vector3:new{x=L2, y=0.0}; d1 = d0+Vector3:new{x=0.0,y=H1} -- end plate
 
 -- Number of cells, blocks and clustering
 rcf = RobertsFunction:new{end0=true,end1=true,beta=1.1}

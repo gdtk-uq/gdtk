@@ -55,22 +55,22 @@ dz = 0.010    -- depth in z-direction (also k-index direction)
 --    flow=>    -\- |
 --        0        p10 ----> x
 -- 
-p000 = Vector3:new{0.0, 3.0*H/4.0, 0.0}
-p100 = Vector3:new{L, 0.0, 0.0}
-p110 = Vector3:new{L, H, 0.0}
-p010 = Vector3:new{0.0, H, 0.0}
-p001 = Vector3:new{0.0, 3.0*H/4.0, dz}
-p101 = Vector3:new{L, 0.0, dz}
-p111 = Vector3:new{L, H, dz}
-p011 = Vector3:new{0.0, H, dz}
+p000 = Vector3:new{x=0.0, y=3.0*H/4.0, z=0.0}
+p100 = Vector3:new{x=L,   y=0.0,       z=0.0}
+p110 = Vector3:new{x=L,   y=H,         z=0.0}
+p010 = Vector3:new{x=0.0, y=H,         z=0.0}
+p001 = Vector3:new{x=0.0, y=3.0*H/4.0, z=dz}
+p101 = Vector3:new{x=L,   y=0.0,       z=dz}
+p111 = Vector3:new{x=L,   y=H,         z=dz}
+p011 = Vector3:new{x=0.0, y=H,         z=dz}
 
-clusterx = RobertsFunction:new{end0=true,end1=false,beta=1.05}
-clustery_e = RobertsFunction:new{end0=false,end1=true,beta=1.016}
-clustery_w = RobertsFunction:new{end0=false,end1=true,beta=1.05}
+clusterx = RobertsFunction:new{end0=true, end1=false, beta=1.05}
+clustery_e = RobertsFunction:new{end0=false, end1=true, beta=1.016}
+clustery_w = RobertsFunction:new{end0=false, end1=true, beta=1.05}
 clusterz = LinearFunction:new{}
-cflist = {clusterx, clustery_e, clusterx, clustery_w,
-	  clusterx, clustery_e, clusterx, clustery_w,
-	  clusterz, clusterz, clusterz, clusterz}
+cflist = {edge01=clusterx, edge12=clustery_e, edge32=clusterx, edge03=clustery_w,
+	  edge45=clusterx, edge56=clustery_e, edge76=clusterx, edge47clustery_w,
+	  edge04=clusterz, edge15=clusterz,   edge26=clusterz, edge37=clusterz}
 vol = TFIVolume:new{vertices={p000,p100,p110,p010,p001,p101,p111,p011}}
 grd = StructuredGrid:new{pvolume=vol, cfList=cflist, niv=221, njv=193, nkv=3}
 

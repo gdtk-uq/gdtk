@@ -18,19 +18,24 @@ inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0, vely=0.0}
 
 -- Set up two quadrilaterals in the (x,y)-plane by first defining
 -- the corner nodes, then the lines between those corners.
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{0.2, 0.0}
-c = Vector3:new{1.0, 0.29118}
-d = Vector3:new{1.0, 1.0}
-e = Vector3:new{0.2, 1.0}
-f = Vector3:new{0.0, 1.0}
-ab = Line:new{a, b}; bc = Line:new{b, c} -- lower boundary including cone surface
-fe = Line:new{f, e}; ed = Line:new{e, d} -- upper boundary
-af = Line:new{a, f}; be = Line:new{b, e}; cd = Line:new{c, d} -- vertical lines
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=0.2, y=0.0}
+c = Vector3:new{x=1.0, y=0.29118}
+d = Vector3:new{x=1.0, y=1.0}
+e = Vector3:new{x=0.2, y=1.0}
+f = Vector3:new{x=0.0, y=1.0}
+-- lower boundary including cone surface
+ab = Line:new{p0=a, p1=b}; bc = Line:new{p0=b, p1=c}
+-- upper boundary
+fe = Line:new{p0=f, p1=e}; ed = Line:new{p0=e, p1=d}
+-- vertical lines
+af = Line:new{p0=a, p1=f}; be = Line:new{p0=b, p1=e}; cd = Line:new{p0=c, p1=d}
+quad0 = makePatch{north=fe, east=be, south=ab, west=af}
+quad1 = makePatch{north=ed, east=cd, south=bc, west=be, gridType="ao"}
 -- Mesh the patches, with particular discretisation.
 nx0 = 10; nx1 = 30; ny = 40
-grid0 = StructuredGrid:new{psurface=makePatch{fe, be, ab, af}, niv=nx0+1, njv=ny+1}
-grid1 = StructuredGrid:new{psurface=makePatch{ed, cd, bc, be, gridType="ao"}, niv=nx1+1, njv=ny+1}
+grid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
+grid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
 -- Define the flow-solution blocks.
 blk0 = SBlock:new{grid=grid0, fillCondition=inflow, label="BLOCK-0"}
 blk1 = SBlock:new{grid=grid1, fillCondition=initial, label="BLOCK-1",

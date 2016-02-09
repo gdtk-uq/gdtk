@@ -91,17 +91,23 @@ end
 nx = ncells
 ny = math.floor(ncells/2)
 
-c = Vector3:new{0.0, L}
-d = Vector3:new{L, L}
-e = Vector3:new{0.0, 1.5*L}
-f = Vector3:new{L, 1.5*L}
+c = Vector3:new{x=0.0, y=L}
+d = Vector3:new{x=L, y=L}
+e = Vector3:new{x=0.0, y=1.5*L}
+f = Vector3:new{x=L, y=1.5*L}
+patch0 = makePatch{north=Line:new{p0=e, p1=f},
+		   east=Line:new{p0=d, p1=f},
+		   south=Line:new{p0=c, p1=d},
+		   west=Line:new{p0=c, p1=e}}
+patch1 = makePatch{north=Line:new{p0=e, p1=f},
+		   east=Line:new{p0=d, p1=f},
+		   south=Line:new{p0=c, p1=d},
+		   west=Line:new{p0=c, p1=e}}
 
 -- Yes grid0 appears to lie on top of grid1
 -- grid0 is a dummy grid with 2x2 cells to support the dummy flow domain.
-grid0 = StructuredGrid:new{psurface=makePatch{Line:new{e,f}, Line:new{d,f}, Line:new{c,d}, Line:new{c, e}},
-			   niv=3, njv=3}
-grid1 = StructuredGrid:new{psurface=makePatch{Line:new{e,f}, Line:new{d,f}, Line:new{c,d}, Line:new{c, e}},
-			   niv=nx+1, njv=ny+1}
+grid0 = StructuredGrid:new{psurface=patch0, niv=3, njv=3}
+grid1 = StructuredGrid:new{psurface=patch1, niv=nx+1, njv=ny+1}
 
 blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
 

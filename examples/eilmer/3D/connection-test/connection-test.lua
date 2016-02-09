@@ -141,14 +141,14 @@ end
 --]]
 function cube(origin, length)
    x0 = origin:x(); y0 = origin:y(); z0 = origin:z()
-   A = Vector3:new{x0, y0, z0}
-   B = Vector3:new{x0+length, y0, z0}
-   C = Vector3:new{x0+length, y0+length, z0}
-   D = Vector3:new{x0, y0+length, z0}
-   E = Vector3:new{x0, y0, z0+length}
-   F = Vector3:new{x0+length, y0, z0+length}
-   G = Vector3:new{x0+length, y0+length, z0+length}
-   H = Vector3:new{x0, y0+length, z0+length}
+   A = Vector3:new{x=x0, y=y0, z=z0}
+   B = Vector3:new{x=x0+length, y=y0, z=z0}
+   C = Vector3:new{x=x0+length, y=y0+length, z=z0}
+   D = Vector3:new{x=x0, y=y0+length, z=z0}
+   E = Vector3:new{x=x0, y=y0, z=z0+length}
+   F = Vector3:new{x=x0+length, y=y0, z=z0+length}
+   G = Vector3:new{x=x0+length, y=y0+length, z=z0+length}
+   H = Vector3:new{x=x0, y=y0+length, z=z0+length}
    return {A=A, B=B, C=C, D=D, E=E, F=F, G=G, H=H}
 end
 
@@ -157,8 +157,8 @@ end
 -- physical location (alphabetic labels) 
 -- in 'cL' (corners of left cube)
 -- and 'cR' (corners of right cube)
-cL = cube(Vector3:new{0.0, 0.0, 0.0}, 1.0)
-cR = cube(Vector3:new{1.0, 0.0, 0.0}, 1.0)
+cL = cube(Vector3:new{x=0.0, y=0.0, z=0.0}, 1.0)
+cR = cube(Vector3:new{x=1.0, y=0.0, z=0.0}, 1.0)
 
 -- Now we consider the logical arrangement of the corners (vertices) 
 -- depending on which face of the left block is being used in the

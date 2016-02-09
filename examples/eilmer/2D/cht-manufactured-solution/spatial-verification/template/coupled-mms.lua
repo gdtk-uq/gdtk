@@ -64,21 +64,27 @@ end
 initT = 350.0
 initial = FlowState:new{p=1.0e5, T=initT, velx=0.0, vely=0.0}
 
-a = Vector3:new{0.0, 0.0}
-b = Vector3:new{L, 0.0}
-c = Vector3:new{0.0, L}
-d = Vector3:new{L, L}
-e = Vector3:new{0.0, 1.5*L}
-f = Vector3:new{L, 1.5*L}
+a = Vector3:new{x=0.0, y=0.0}
+b = Vector3:new{x=L, y=0.0}
+c = Vector3:new{x=0.0, y=L}
+d = Vector3:new{x=L, y=L}
+e = Vector3:new{x=0.0, y=1.5*L}
+f = Vector3:new{x=L, y=1.5*L}
+patch0 = makePatch{north=Line:new{p0=c, p1=d},
+		   east=Line:new{p0=b, p1=d},
+		   south=Line:new{p0=a, p1=b},
+		   west=Line:new{p0=a, p1=c}}
+patch1 = makePatch{north=Line:new{p0=e, p1=f},
+		   east=Line:new{p0=d, p1=f},
+		   south=Line:new{p0=c, p1=d},
+		   west=Line:new{p0=c, p1=e}}
 
 nx0 = ncells
 ny0 = ncells
 ny1 = math.floor(ny0/2)
 
-grid0 = StructuredGrid:new{psurface=makePatch{Line:new{c,d}, Line:new{b,d}, Line:new{a,b}, Line:new{a,c}},
-			  niv=nx0+1, njv=ny0+1}
-grid1 = StructuredGrid:new{psurface=makePatch{Line:new{e,f}, Line:new{d,f}, Line:new{c,d}, Line:new{c, e}},
-			   niv=nx0+1, njv=ny1+1}
+grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny0+1}
+grid1 = StructuredGrid:new{psurface=patch1, niv=nx0+1, njv=ny1+1}
 
 blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
 

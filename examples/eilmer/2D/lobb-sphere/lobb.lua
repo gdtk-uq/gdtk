@@ -79,20 +79,20 @@ if useOldSoln then
    psurf = MeshPatch:new{sgrid=oldGrid}
 else
    print("Building new geometry.")
-   a = Vector3:new{Rc,      0.0}
-   b = Vector3:new{0.0,     0.0}
-   c = Vector3:new{Rc,      Rc}
-   d = Vector3:new{-Rc,     0.0}
-   e = Vector3:new{-Rc,     Rc}
-   f = Vector3:new{0.0,     3*Rc}
-   g = Vector3:new{Rc,      3*Rc}
+   a = Vector3:new{x=Rc,  y=0.0}
+   b = Vector3:new{x=0.0, y=0.0}
+   c = Vector3:new{x=Rc,  y=Rc}
+   d = Vector3:new{x=-Rc, y=0.0}
+   e = Vector3:new{x=-Rc, y=Rc}
+   f = Vector3:new{x=0.0, y=3*Rc}
+   g = Vector3:new{x=Rc,  y=3*Rc}
 
-   bc = Arc:new{b, c, a}
+   bc = Arc:new{p0=b, p1=c, centre=a}
    dg = Bezier:new{points={d, e, f, g}}
-   db = Line:new{d, b}
-   gc = Line:new{g, c}
+   db = Line:new{p0=d, p1=b}
+   gc = Line:new{p0=g, p1=c}
 
-   psurf = makePatch{gc, bc, db, dg}
+   psurf = makePatch{north=gc, east=bc, south=db, west=dg}
 end
 grid = StructuredGrid:new{psurface=psurf, niv=ncells+1, njv=ncells+1}
 print "Done building grid."
