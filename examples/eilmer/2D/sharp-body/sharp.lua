@@ -44,11 +44,11 @@ cd = Line:new{p0=c, p1=d}
 ny = 60
 clustery = RobertsFunction:new{end0=true, end1=false, beta=1.3}
 clusterx = RobertsFunction:new{end0=true, end1=false, beta=1.2}
-grid0 = StructuredGrid:new{psurface=makePatch{fe, be, ab, af},
-			   cfList={nil,clustery,nil,clustery},
+grid0 = StructuredGrid:new{psurface=makePatch{north=fe, east=be, south=ab, west=af},
+			   cfList={east=clustery, west=clustery},
 			   niv=17, njv=ny+1}
-grid1 = StructuredGrid:new{psurface=makePatch{ed, cd, bc, be},
-			   cfList={clusterx,nil,clusterx,clustery},
+grid1 = StructuredGrid:new{psurface=makePatch{north=ed, east=cd, south=bc, west=be},
+			   cfList={north=clusterx,south=clusterx,west=clustery},
 			   niv=81, njv=ny+1}
 -- Define the flow-solution blocks.
 blk0 = SBlock:new{grid=grid0, fillCondition=inflow}

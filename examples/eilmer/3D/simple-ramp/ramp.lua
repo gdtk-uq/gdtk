@@ -42,8 +42,7 @@ end
 -- cluster down, toward the wedge surface
 cluster_k = RobertsFunction:new{end0=true, end1=false, beta=1.2}
 nocf = LinearFunction:new{}
-cflist = {nocf, nocf, nocf, nocf, nocf, nocf, nocf, nocf,
-	  cluster_k, cluster_k, cluster_k, cluster_k}
+cflist = {edge04=cluster_k, edge15=cluster_k, edge26=cluster_k, edge37=cluster_k}
 vol0 = TFIVolume:new{vertices=simpleBoxCorners{xSize=0.2,ySize=0.1}}
 grid0 = StructuredGrid:new{pvolume=vol0, niv=11, njv=5, nkv=41, cfList=cflist}
 -- For the grid over the ramp, start with a regular box... 30x40(x4)

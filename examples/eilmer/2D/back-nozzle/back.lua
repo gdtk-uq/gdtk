@@ -64,17 +64,15 @@ north1 = Polyline:new{segments={Arc:new{p0=p3,p1=p4,centre=centre_A},
 				Line:new{p0=p4,p1=p5}}}
 east1 = Line:new{p0=z5, p1=p5}
 south1 = Line:new{p0=z3, p1=z5}
+patch0 = makePatch{north=north0, east=east0west1, south=south0, west=west0}
+patch1 = makePatch{north=north1, east=east1, south=south1, west=east0west1}
 
 -- Define the blocks, boundary conditions and set the discretisation.
 nx0 = 50; nx1 = 60; ny = 30
-grid0 = StructuredGrid:new{psurface=makePatch{north0, east0west1, south0, west0},
-			   niv=nx0+1, njv=ny+1}
-grid1 = StructuredGrid:new{psurface=makePatch{north1, east1, south1, east0west1},
-			   niv=nx1+1, njv=ny+1}
-subsonic_region = SBlock:new{grid=grid0, fillCondition=stagnation_gas,
-			     label="subsonic-region"}
-supersonic_region = SBlock:new{grid=grid1, fillCondition=low_pressure_gas,
-			       label="supersonic-region"} 
+grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny+1}
+grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
+subsonic_region = SBlock:new{grid=grid0, fillCondition=stagnation_gas, label="subsonic-region"}
+supersonic_region = SBlock:new{grid=grid1, fillCondition=low_pressure_gas, label="supersonic-region"} 
 -- History locations near throat and exit
 setHistoryPoint{ib=1, i=1, j=1}
 setHistoryPoint{ib=1, i=nx1-1, j=1}

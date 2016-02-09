@@ -39,7 +39,8 @@ p = my_volume(0.1, 0.1, 0.5);
 print("my_volume(0.1, 0.1, 0.5)= ", p)
 --
 print("SubRangedVolume demo")
-srv = SubRangedVolume:new{my_volume,r0=0.0,r1=0.5,s0=0.0,s1=0.5,t0=0.0,t1=0.5}
+srv = SubRangedVolume:new{underlying_pvolume=my_volume,
+                          r0=0.0,r1=0.5,s0=0.0,s1=0.5,t0=0.0,t1=0.5}
 print("srv(0.2,0.2,1.0)=", srv(0.2,0.2,1.0))
 --
 print("isVolume(my_volume)= ", isVolume(my_volume))

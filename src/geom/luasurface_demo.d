@@ -48,7 +48,8 @@ p = my_aopatch(0.1, 0.1);
 print("my_aopatch(0.1, 0.1)= ", p)
 --
 print("SubRangedSurface")
-srs = SubRangedSurface:new{my_aopatch, r0=0.0, r1=0.5, s0=0.0, s1=0.5}
+srs = SubRangedSurface:new{underlying_surface=my_aopatch,
+                           r0=0.0, r1=0.5, s0=0.0, s1=0.5}
 print("srs(0.2,0.2)=", srs(0.2,0.2))
 --
 print("ChannelPatch")
@@ -62,11 +63,11 @@ print("Utility functions")
 print("isSurface(my_aopatch)= ", isSurface(my_aopatch))
 print("isSurface(surf2)= ", isSurface(surf2));
 print("isSurface(a)= ", isSurface(a));
-north = Line:new{p0=b, p1=d}
-east = Line:new{p0=c, p1=d}
-south = Line:new{p0=a, p1=c}
-west = Line:new{p0=a, p1=b}
-surf3 = makePatch{north, east, south, west, gridType="ao"}
+surf3 = makePatch{north=Line:new{p0=b, p1=d},
+                  east=Line:new{p0=c, p1=d},
+                  south=Line:new{p0=a, p1=c},
+                  west=Line:new{p0=a, p1=b},
+                  gridType="ao"}
 print("surf3= ", surf3)
 print("Done luasurface_demo.")
     `;

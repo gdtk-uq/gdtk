@@ -63,14 +63,15 @@ extern(C) int opCallVolume(T, string MTname)(lua_State* L)
 ParametricSurface[] get6Surfaces(lua_State *L, string ctorName)
 {
     // Assume that table containing the Surfaces is at top of stack.
-    string errMsgTmplt = `Error in call to %s:new.
-The value set for the face[%d] was not of ParametricSurface type.`;
+    string errMsgTmplt = "Error in call to %s:new. " ~
+	"The value set for the face[%s] was not of ParametricSurface type.";
+    string[] face_names = ["north", "east", "south", "west", "top", "bottom"];
     ParametricSurface[] faces;
-    foreach(i; 0 .. 6) {
-	lua_rawgeti(L, -1, i+1);
+    foreach(i, name; face_names) {
+	lua_getfield(L, -1, name.toStringz());
 	faces ~= checkSurface(L, -1);
 	if ( faces[i] is null ) {
-	    luaL_error(L, toStringz(format(errMsgTmplt, ctorName, i)));
+	    luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
 	}
 	lua_pop(L, 1);
     }
@@ -80,8 +81,8 @@ The value set for the face[%d] was not of ParametricSurface type.`;
 Vector3[] get8Vector3s(lua_State *L, string ctorName)
 {
     // Assume that table containing the Vector3 objects is at top of stack.
-    string errMsgTmplt = `Error in call to %s:new.
-The value set for the corner[%d] was not of Vector3 type.`;
+    string errMsgTmplt = "Error in call to %s:new. " ~
+	"The value set for the corner[%d] was not of Vector3 type.";
     Vector3[] corners;
     foreach(i; 0 .. 8) {
 	lua_rawgeti(L, -1, i+1);
@@ -100,29 +101,31 @@ The value set for the corner[%d] was not of Vector3 type.`;
 // Constructor for the TFIVolume, to be used from the Lua domain.
 //
 // Supported forms are:
-// vol0 = TFIVolume:new{faces={nFace, eFace, sFace, wFace, tFace, bFace}}
+// vol0 = TFIVolume:new{north=nFace, east=eFace, south=sFace, west=wFace,
+//                      top=tFace, bottom=bFace}
 // vol1 = TFIVolume:new{vertices={p0, p1, p2, p3, p4, p5, p6, p7}}
 //
 // Notes:
 // 1. See PJs diagram at top of geom.volume.d for ordering and labelling of
 //    paths and corners.
 // 2. No mix-n-match of constructors allowed.
-//    It is one of: 6 faces OR 8 corner points.
-//    If the faces table is found first, that constructor wins.
+//    It is one of: 6 named faces OR 8 corner points.
+//    If the north face is found first, that constructor wins.
 
 extern(C) int newTFIVolume(lua_State* L)
 {
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = `Error in constructor TFIVolume:new.
-A table with input parameters is expected as the first argument.`;
+	string errMsg = "Error in constructor TFIVolume:new. " ~
+	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Look for an array of ParametricSurfaces. 
+    // Look for named ParametricSurfaces. 
     // If found, proceed with construction from these faces.
-    lua_getfield(L, 1, "faces");
-    if ( lua_istable(L, -1) ) {
+    lua_getfield(L, 1, "north"); // test item
+    if ( !lua_isnil(L, -1) ) {
+	lua_pop(L, 1); // discard the test item
 	auto faces = get6Surfaces(L, "TFIVolume");
 	lua_pop(L, 1);
 	auto tfivolume = new TFIVolume(faces);
@@ -142,8 +145,8 @@ A table with input parameters is expected as the first argument.`;
     }
     lua_pop(L, 1);
     // If we make it here, there's been an error in construction.
-    string errMsg = `There's a problem in call to TFIVolume.new.
-Neither the array of 6 surfaces nor a list of 8 vertices was found.`;
+    string errMsg = "There's a problem in call to TFIVolume.new. " ~
+	"Neither the set of 6 named surfaces nor a list of 8 vertices was found.";
     luaL_error(L, errMsg.toStringz);
     return 0;
 } // end newTFIVolume()
@@ -175,20 +178,20 @@ extern(C) int newSubRangedVolume(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = `Error in constructor SubRangeVolume:new.
-A table with input parameters is expected as the first argument.`;
+	string errMsg = "Error in constructor SubRangeVolume:new. " ~
+	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Look for the original ParametricVolume in the first array position. 
-    lua_rawgeti(L, 1, 1);
+    // Look for the underlying ParametricVolume.
+    lua_getfield(L, 1, "underlying_pvolume");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to SubRangedVolume:new{}. No table entry found.`;
+	string errMsg = "Error in call to SubRangedVolume:new{}. No underlying_pvolume field found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto pvolume = checkVolume(L, -1);
     lua_pop(L, 1);
     if ( pvolume is null ) {
-	string errMsg = `Error in call to SubRangedVolume:new{}. No valid Surface object found.`;
+	string errMsg = "Error in call to SubRangedVolume:new{}. No valid Volume object found.";
 	luaL_error(L, errMsg.toStringz());
     }
     double r0, r1, s0, s1, t0, t1;

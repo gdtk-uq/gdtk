@@ -69,46 +69,36 @@ extern(C) int opCallSurface(T, string MTname)(lua_State* L)
 
 // Helper functions for constructors.
 
-string getPathFromTable(string pName)
-{
-    return `lua_getfield(L, index, "`~pName~`");
-    paths["`~pName~`"] = checkPath(L, -1);
-    if ( paths["`~pName~`"] is null ) luaL_error(L, toStringz(format(errMsgTmplt, ctorName, "`~pName~`")));
-    lua_pop(L, 1);`;
-}
-
 void getPaths(lua_State *L, string ctorName, out Path[string] paths)
 {
-    // Assume that table is at index 1.
-    string errMsgTmplt = `Error in call to %s:new.
-The value set for the '%s' path was not of Path type.`; 
-    int index = 1;
-    mixin(getPathFromTable("north"));
-    mixin(getPathFromTable("east"));
-    mixin(getPathFromTable("south"));
-    mixin(getPathFromTable("west"));
+    string errMsgTmplt = "Error in call to %s:new. " ~
+	"The value set for the '%s' path was not of Path type."; 
+    int index = 1;  // Assume that table is at index 1.
+    string[] path_names = ["north", "east", "south", "west"];
+    foreach (name; path_names) {
+	lua_getfield(L, index, name.toStringz());
+	paths[name] = checkPath(L, -1);
+	if (paths[name] is null) luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
+	lua_pop(L, 1);
+    }
 }
 
-string getVecFromTable(string vName)
+void getVector3s(lua_State *L, string ctorName, out Vector3[string] corners)
 {
-    return `lua_getfield(L, index, "`~vName~`");
-auto `~vName~`Ptr = checkVector3(L, -1);
-if ( `~vName~`Ptr is null ) luaL_error(L, toStringz(format(errMsgTmplt, ctorName, "`~vName~`")));
-    else `~vName~` = *`~vName~`Ptr;
-    lua_pop(L, 1);`;
-}
-
-void getVector3s(lua_State *L, string ctorName,
-		 out Vector3 p00, out Vector3 p10, out Vector3 p11, out Vector3 p01)
-{
-    // Assume that table is at index 1.
-    string errMsgTmplt = `Error in call to %s:new.
-The value set for the '%s' corner was not of Vector3 type.`; 
-    int index = 1;
-    mixin(getVecFromTable("p00"));
-    mixin(getVecFromTable("p10"));
-    mixin(getVecFromTable("p11"));
-    mixin(getVecFromTable("p01"));
+    string errMsgTmplt = "Error in call to %s:new. " ~
+	"The value set for the '%s' corner was not of Vector3 type."; 
+    int index = 1;  // Assume that table is at index 1.
+    string[] corner_names = ["p00", "p10", "p11", "p01"];
+    foreach (name; corner_names) {
+	lua_getfield(L, index, name.toStringz());
+	auto p = checkVector3(L, -1);
+	if (p is null) {
+	    luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
+	} else {
+	    corners[name] = *p;
+	}
+	lua_pop(L, 1);
+    }
 }
 
 void getRandS(lua_State* L, string ctorName,
@@ -139,7 +129,8 @@ void getRandS(lua_State* L, string ctorName,
  * Notes:
  * 1. See PJs diagram at top of geom.surface.d for ordering and labelling of
  *    paths and corners.
- * 2. No mix-n-match of constructors allowed. It is one of: 4 paths OR 4 corner points. If a path is found first, that constructor wins.
+ * 2. No mix-n-match of constructors allowed. It is one of: 4 paths OR 4 corner points. 
+ *    If a path is found first, that constructor wins.
  *
  */
 
@@ -148,8 +139,8 @@ extern(C) int newCoonsPatch(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = `Error in constructor CoonPatch:new.
-A table with input parameters is expected as the first argument.`;
+	string errMsg = "Error in constructor CoonPatch:new. " ~
+	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Look for a path. If found, proceed with construction from paths.
@@ -169,18 +160,18 @@ A table with input parameters is expected as the first argument.`;
     lua_getfield(L, 1, "p00");
     if ( ! lua_isnil(L, -1) ) {
 	lua_pop(L, 1);
-	Vector3 p00, p10, p11, p01;
-	getVector3s(L, "CoonsPatch", p00, p10, p11, p01);
-	writeln("p00= ", p00, " p10= ", p10, " p11= ", p11, " p01= ", p01);
-	auto cpatch = new CoonsPatch(p00, p10, p11, p01);
+	Vector3[string] corners;
+	getVector3s(L, "CoonsPatch", corners);
+	auto cpatch = new CoonsPatch(corners["p00"], corners["p10"],
+				     corners["p11"], corners["p01"]);
 	surfaceStore ~= pushObj!(CoonsPatch, CoonsPatchMT)(L, cpatch);
 	return 1;
     }
     lua_pop(L, 1);
     // If we make it here, there's been an error in construction.
-    string errMsg = `There's a problem in call to CoonsPatch.new.
-Neither a list of named paths ('north', 'east', 'south', 'west')
-nor a list of named corners ('p00', 'p10', 'p11', 'p01') were found.`;
+    string errMsg = "There's a problem in call to CoonsPatch.new. " ~
+	"Neither a list of named paths ('north', 'east', 'south', 'west') " ~
+	"nor a list of named corners ('p00', 'p10', 'p11', 'p01') were found.";
     luaL_error(L, errMsg.toStringz);
     return 0;
 } // end newCoonsPatch()
@@ -200,7 +191,8 @@ nor a list of named corners ('p00', 'p10', 'p11', 'p01') were found.`;
  * Notes:
  * 1. See PJs diagram at top of geom.surface.d for ordering and labelling of
  *    paths and corners.
- * 2. No mix-n-match of constructors allowed. It is one of: 4 paths OR 4 corner points. If a path is found first, that constructor wins.
+ * 2. No mix-n-match of constructors allowed. It is one of: 4 paths OR 4 corner points.
+ *    If a path is found first, that constructor wins.
  *
  */
 extern(C) int newAOPatch(lua_State* L)
@@ -208,8 +200,8 @@ extern(C) int newAOPatch(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = `Error in constructor AOPatch:new.
-A table with input parameters is expected as the first argument.`;
+	string errMsg = "Error in constructor AOPatch:new. " ~
+	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
     string errMsgTmplt = "Error in call to AOPatch:new.\n";
@@ -223,9 +215,7 @@ A table with input parameters is expected as the first argument.`;
 	lua_pop(L, 1);
 	Path[string] paths;
 	getPaths(L, "AOPatch", paths);
-	auto aopatch = new AOPatch(paths["south"], paths["north"],
-				   paths["west"], paths["east"],
-				   nx, ny);
+	auto aopatch = new AOPatch(paths["south"], paths["north"], paths["west"], paths["east"], nx, ny);
 	surfaceStore ~= pushObj!(AOPatch, AOPatchMT)(L, aopatch);
 	return 1;
     } else {
@@ -235,18 +225,17 @@ A table with input parameters is expected as the first argument.`;
     lua_getfield(L, 1, "p00");
     if ( ! lua_isnil(L, -1) ) {
 	lua_pop(L, 1);
-	Vector3 p00, p10, p11, p01;
-	getVector3s(L, "AOPatch", p00, p10, p11, p01);
-	writeln("p00= ", p00, " p10= ", p10, " p11= ", p11, " p01= ", p01);
-	auto aopatch = new AOPatch(p00, p10, p11, p01, nx, ny);
+	Vector3[string] corners;
+	getVector3s(L, "AOPatch", corners);
+	auto aopatch = new AOPatch(corners["p00"], corners["p10"], corners["p11"], corners["p01"], nx, ny);
 	surfaceStore ~= pushObj!(AOPatch, AOPatchMT)(L, aopatch);
 	return 1;
     }
     lua_pop(L, 1);
     // If we make it here, there's been an error in construction.
-    string errMsg = `There's a problem in call to AOPatch.new.
-Neither a list of named paths ('north', 'east', 'south', 'west')
-nor a list of named corners ('p00', 'p10', 'p11', 'p01') were found.`;
+    string errMsg = "There's a problem in call to AOPatch.new. " ~
+	"Neither a list of named paths ('north', 'east', 'south', 'west') " ~
+	"nor a list of named corners ('p00', 'p10', 'p11', 'p01') were found.";
     luaL_error(L, errMsg.toStringz);
     return 0;
 } // end newAOPatch()
@@ -270,31 +259,29 @@ extern(C) int newChannelPatch(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = `Error in constructor ChannelPatch:new.
-A table with input parameters is expected as the first argument.`;
+	string errMsg = "Error in constructor ChannelPatch:new. " ~
+	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Look for south and north paths.
     lua_getfield(L, 1, "south");
     auto south = checkPath(L, -1);
     if ( south is null ) {
-	string errMsg = `Error in constructor ChannelPatch:new.
-Couldn't find south Path.`;
+	string errMsg = "Error in constructor ChannelPatch:new. Couldn't find south Path.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "north");
     auto north = checkPath(L, -1);
     if ( north is null ) {
-	string errMsg = `Error in constructor ChannelPatch:new.
-Couldn't find north Path.`;
+	string errMsg = "Error in constructor ChannelPatch:new. Couldn't find north Path.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Optional parameters
-    string errMsgTmpltBool = `Error in call to ChannelPatch:new{}.
-A valid value for '%s' was not found in list of arguments.
-The value, if present, should be boolean (true or false).`;
+    string errMsgTmpltBool = "Error in call to ChannelPatch:new{}. " ~
+	"A valid value for '%s' was not found in list of arguments. " ~
+	"The value, if present, should be boolean (true or false).";
     bool ruled = getBooleanFromTable(L, 1, "ruled", false, false, true, format(errMsgTmpltBool, "ruled"));
     bool pure2D = getBooleanFromTable(L, 1, "pure2D", false, false, true, format(errMsgTmpltBool, "pure2D"));
     // Construct the actual surface.
@@ -321,16 +308,16 @@ extern(C) int newMeshPatch(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = `Error in constructor MeshPatch:new.
-A table with input parameters is expected as the first argument.`;
+	string errMsg = "Error in constructor MeshPatch:new. " ~
+	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Look for the StructuredGrid object.
     lua_getfield(L, 1, "sgrid");
     auto grid = checkStructuredGrid(L, -1);
     if ( grid is null ) {
-	string errMsg = `Error in constructor MeshPatch:new.
-Couldn't find StructuredGrid object in sgrid field.`;
+	string errMsg = "Error in constructor MeshPatch:new. " ~
+	    "Couldn't find StructuredGrid object in sgrid field.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
@@ -363,15 +350,15 @@ A table with input parameters is expected as the first argument.`;
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect a Surface object at the first array position in the table.
-    lua_rawgeti(L, 1, 1);
+    lua_getfield(L, 1, "underlying_psurface");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = `Error in call to SubRangedSurface:new{}. No table entry found.`;
+	string errMsg = "Error in call to SubRangedSurface:new{}. No underlying_psurface field found.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto psurf = checkSurface(L, -1);
     lua_pop(L, 1);
     if ( psurf is null ) {
-	string errMsg = `Error in call to SubRangedSurface:new{}. No valid Surface object found.`;
+	string errMsg = "Error in call to SubRangedSurface:new{}. No valid Surface object found.";
 	luaL_error(L, errMsg.toStringz());
     }
     double r0, r1, s0, s1;
@@ -383,50 +370,41 @@ A table with input parameters is expected as the first argument.`;
 
 /* ---------- convenience functions -------------- */
 
-string getPath(string path, string pos)
-{
-    return `lua_rawgeti(L, 1, `~pos~`);
-auto `~path~` = checkPath(L, -1);
-if ( `~path~` is null ) luaL_error(L, toStringz(format(errMsgTmpl, "`~path~`")));
-lua_pop(L, 1);`;
-}
 extern(C) int makePatch(lua_State* L)
 {
     if ( !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to makePatch.
-A table is expected as the first argument. No table was found.`;
+	string errMsg = "Error in call to makePatch. " ~
+	    "A table is expected as the first argument. No table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    size_t n = lua_objlen(L, 1);
-    if ( n != 4 ) {
-	string errMsg = `Error in call to makePatch.
-There should be four values listed first in the table.
-These are Paths listed in the orded North, East, South, West.`;
-	luaL_error(L, errMsg.toStringz);
+    // Get boundary paths.
+    string[] edges = ["north", "east", "south", "west"];
+    Path[string] paths;
+    string errMsgTmpl = "Error in call to makePatch. The %s path is not a valid Path object.";
+    foreach (edge_name; edges) {
+	lua_getfield(L, 1, edge_name.toStringz());
+	auto my_path = checkPath(L, -1);
+	if (my_path is null) {
+	    luaL_error(L, toStringz(format(errMsgTmpl, edge_name)));
+	} else {
+	    paths[edge_name] = my_path;
+	}
+	lua_pop(L, 1);
     }
-    string errMsgTmpl = `Error in call to makePatch.
-The %s path is not a valid Path object.`;
-    mixin(getPath("north", "1"));
-    mixin(getPath("east", "2"));
-    mixin(getPath("south", "3"));
-    mixin(getPath("west", "4"));
-
     string gridType = "TFI";
     lua_getfield(L, 1, "gridType");
     if ( !lua_isnil(L, -1) ) {
 	gridType = to!string(luaL_checkstring(L, -1));
     }
     lua_pop(L, 1);
-    
     gridType = toUpper(gridType);
     if ( gridType == "AO" ) {
-	auto patch = new AOPatch(south, north, west, east);
+	auto patch = new AOPatch(paths["south"], paths["north"], paths["west"], paths["east"]);
 	surfaceStore ~= pushObj!(AOPatch, AOPatchMT)(L, patch);
-	return 1;
+    } else { // Default to CoonsPatch
+	auto patch = new CoonsPatch(paths["south"], paths["north"], paths["west"], paths["east"]);
+	surfaceStore ~= pushObj!(CoonsPatch, CoonsPatchMT)(L, patch);
     }
-    // else
-    auto patch = new CoonsPatch(south, north, west, east);
-    surfaceStore ~= pushObj!(CoonsPatch, CoonsPatchMT)(L, patch);
     return 1;
 } // end makePatch()
 

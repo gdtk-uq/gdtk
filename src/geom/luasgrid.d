@@ -145,24 +145,21 @@ extern(C) int find_nearest_cell_centre(lua_State *L)
     lua_getfield(L, 2, "x");
     if ( !lua_isnil(L, -1) ) {
 	x = luaL_checknumber(L, -1);
-    }
-    else {
+    } else {
 	x = 0.0;
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "y");
     if ( !lua_isnil(L, -1) ) {
 	y = luaL_checknumber(L, -1);
-    }
-    else {
+    } else {
 	y = 0.0;
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "z");
     if ( !lua_isnil(L, -1) ) {
 	z = luaL_checknumber(L, -1);
-    }
-    else {
+    } else {
 	z = 0.0;
     }
     lua_pop(L, 1);
@@ -172,7 +169,7 @@ extern(C) int find_nearest_cell_centre(lua_State *L)
     lua_pushinteger(L, indx);
     lua_pushnumber(L, dist);
     return 2;
-}
+} // end find_nearest_cell_centre()
 
 /**
  * The Lua constructor for a StructuredGrid.
@@ -191,8 +188,8 @@ extern(C) int newStructuredGrid(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to StructuredGrid:new{}.;
-A table containing arguments is expected, but no table was found.`;
+	string errMsg = "Error in call to StructuredGrid:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
     ParametricSurface psurface;
@@ -232,9 +229,17 @@ A table containing arguments is expected, but no table was found.`;
     int number_of_edges = (dimensions == 2) ? 4 : 12;
     lua_getfield(L, 1, "cfList".toStringz);
     if ( lua_istable(L, -1) ) {
-	// Extract the cluster functions from the table at top of stack. 
-	foreach (i; 0 .. number_of_edges) {
-	    lua_rawgeti(L, -1, i+1);
+	string[] edges;
+	// Extract the cluster functions from the table at top of stack.
+	if (dimensions == 2) {
+	    edges = ["north", "east", "south", "west"];
+	} else {
+	    edges = ["edge01", "edge12", "edge32", "edge03",
+		     "edge45", "edge56", "edge76", "edge47",
+		     "edge04", "edge15", "edge26", "edge37"];
+	}
+	foreach (edge_name; edges) {
+	    lua_getfield(L, -1, edge_name.toStringz);
 	    if ( lua_isnil(L, -1) ) {
 		cfList ~= new LinearFunction();
 	    } else {
@@ -255,9 +260,9 @@ A table containing arguments is expected, but no table was found.`;
     }
     lua_pop(L, 1);
 
-    string errMsgTmplt = `Error in StructuredGrid:new{}.
-A valid value for '%s' was not found in list of arguments.
-The value, if present, should be a number.`;
+    string errMsgTmplt = "Error in StructuredGrid:new{}. " ~
+	"A valid value for '%s' was not found in list of arguments. " ~
+	"The value, if present, should be a number.";
     int niv = getIntegerFromTable(L, 1, "niv", true, 0, true, format(errMsgTmplt, "niv"));
     int njv = getIntegerFromTable(L, 1, "njv", true, 0, true, format(errMsgTmplt, "njv"));
     int nkv = 1;
@@ -280,8 +285,8 @@ extern(C) int importGridproGrid(lua_State *L)
 {
     int narg = lua_gettop(L);
     if ( narg == 0 ) {
-	string errMsg = `Error in call to importGridproGrid().
-At least one argument is required: the name of the Gridpro file.`;
+	string errMsg = "Error in call to importGridproGrid(). " ~
+	    "At least one argument is required: the name of the Gridpro file.";
 	luaL_error(L, errMsg.toStringz);
     }
     auto fname = to!string(luaL_checkstring(L, 1));
@@ -296,7 +301,7 @@ At least one argument is required: the name of the Gridpro file.`;
 	lua_rawseti(L, -2, i+1);
     }
     return 1;
-}
+} // end importGridproGrid()
 
 
 void registerStructuredGrid(lua_State* L)
