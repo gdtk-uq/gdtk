@@ -44,15 +44,15 @@ p0 = Vector3:new{x=-L_subsonic, y=R_tube}
 z1 = Vector3:new{centre_B} -- initialize from a previously defined Node
 p1 = centre_B + Vector3:new{x=0.0, y=R_tube}
 p2 = Vector3:new{intersect_point}
-z2 = Vector3:new{x=p2:x(), y=0.0}  -- on the axis, below p2
+z2 = Vector3:new{x=p2.x, y=0.0}  -- on the axis, below p2
 z3 = Vector3:new{x=0.0, y=0.0}
 p3 = Vector3:new{x=0.0, y=R_throat}
 -- Compute the details of the conical nozzle
 p4 = Vector3:new{x=R_curve*math.sin(theta), y=height-R_curve*math.cos(theta)}
-z4 = Vector3:new{x=p4:x(), y=0.0}
-L_cone = L_nozzle - p4:x()
+z4 = Vector3:new{x=p4.x, y=0.0}
+L_cone = L_nozzle - p4.x
 p5 = p4 + Vector3:new{x=L_cone, y=L_cone*math.tan(theta)}
-z5 = Vector3:new{x=p5:x(), y=0.0}
+z5 = Vector3:new{x=p5.x, y=0.0}
 
 north0 = Polyline:new{segments={Line:new{p0=p0,p1=p1},
 				Arc:new{p0=p1,p1=p2,centre=centre_B},

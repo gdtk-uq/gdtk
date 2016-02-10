@@ -18,6 +18,7 @@ module luageom;
 import util.lua;
 import std.stdio;
 import std.string;
+import std.conv;
 import util.lua_service;
 import geom;
 
@@ -97,72 +98,56 @@ extern(C) int newVector3(lua_State *L)
     return pushVector3(L, vec);
 } // end newVector3()
 
-/*-------- exposed Vector3 methods ------------ */
 
-// The x(), y(), z() methods are a little funny
-// because they act as both getters and setters.
-// We are faking data access in a sense.
-/**
- * Acts as both getter and setter for x component of Vector3.
- *
- * Example:
- * -------------------------------
- * a = Vector3()
- * a:x(0.8) -- used as a setter
- * b = a:x() -- used as a getter
- * -------------------------------
- */
-extern(C) int xVector3(lua_State* L)
+extern(C) int indexVector3(lua_State* L)
 {
-    int narg = lua_gettop(L);
     auto a = checkVector3(L, 1);
-    if ( narg == 1 ) { // This is a getter
+    string key = to!string(luaL_checkstring(L, 2));
+    // If we find an "x", "y" or "z", get value and return
+    if ( key == "x" ) {
 	lua_pushnumber(L, a.x);
 	return 1;
     }
-    // else: treat as a setter.
-    a.refx = luaL_checknumber(L, 2);
-    return 0;
-}
-
-/**
- * Acts as both a getter and setter for y component of Vector3.
- *
- * See example for xVector3()
- */
-extern(C) int yVector3(lua_State* L)
-{
-    int narg = lua_gettop(L);
-    auto a = checkVector3(L, 1);
-    if( narg == 1 ) { // This is a getter
+    if ( key == "y" ) {
 	lua_pushnumber(L, a.y);
 	return 1;
     }
-    // else: treat as a setter.
-    a.refy = luaL_checknumber(L, 2);
-    return 0;
-}
-
-/**
- * Acts as both a getter and setter for y component of Vector3.
- *
- * See example for xVector3()
- */
-extern(C) int zVector3(lua_State* L)
-{
-    int narg = lua_gettop(L);
-    auto a = checkVector3(L, 1);
-    if( narg == 1 ) { // This is a getter
+    if ( key == "z") {
 	lua_pushnumber(L, a.z);
 	return 1;
     }
-    // else: treat as a setter.
-    a.refz = luaL_checknumber(L, 2);
+    // else forward through to the metatable
+    lua_getmetatable(L, 1);
+    lua_getfield(L, -1, toStringz(key));
+    return 1;
+}
+
+extern(C) int newindexVector3(lua_State* L)
+{
+    auto a = checkVector3(L, 1);
+    string key = to!string(luaL_checkstring(L, 2));
+    double val = luaL_checknumber(L, 3);
+    // If we find an "x", "y" or "z", get value and return
+    if ( key == "x" ) {
+	a.refx = val;
+	return 0;
+    }
+    if ( key == "y" ) {
+	a.refy = val;
+	return 0;
+    }
+    if ( key == "z") {
+	a.refz = val;
+	return 0;
+    }
+    // else just ignore the setter
     return 0;
 }
 
+/*-------- exposed Vector3 methods ------------ */
+
 /**
- * This provied the unary minus operator for Lua.
+ * This provides the unary minus operator for Lua.
  */
 extern(C) int opUnaryMinVector3(lua_State* L)
 {
@@ -456,18 +441,16 @@ void registerVector3(lua_State* L)
     luaL_newmetatable(L, Vector3MT.toStringz);
     
     /* metatable.__index = metatable */
-    lua_pushvalue(L, -1); // duplicates the current metatable
+    //    lua_pushvalue(L, -1); // duplicates the current metatable
+    //    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, &indexVector3);
     lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, &newindexVector3);
+    lua_setfield(L, -2, "__newindex");
 
     /* Register methods for use. */
     lua_pushcfunction(L, &newVector3);
     lua_setfield(L, -2, "new");
-    lua_pushcfunction(L, &xVector3);
-    lua_setfield(L, -2, "x");
-    lua_pushcfunction(L, &yVector3);
-    lua_setfield(L, -2, "y");
-    lua_pushcfunction(L, &zVector3);
-    lua_setfield(L, -2, "z");
     lua_pushcfunction(L, &toStringVector3);
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &opUnaryMinVector3);

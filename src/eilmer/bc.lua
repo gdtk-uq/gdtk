@@ -135,10 +135,10 @@ function MappedCellExchangeCopy:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
    str = str .. string.format('"transform_position": %s, ',
 			      tostring(self.transform_position))
-   str = str .. string.format('"c0": [%f, %f, %f], ', self.c0:x(), self.c0:y(), self.c0:z())
-   str = str .. string.format('"n": [%f, %f, %f], ', self.n:x(), self.n:y(), self.n:z())
+   str = str .. string.format('"c0": [%f, %f, %f], ', self.c0.x, self.c0.y, self.c0.z)
+   str = str .. string.format('"n": [%f, %f, %f], ', self.n.x, self.n.y, self.n.z)
    str = str .. string.format('"alpha": %f, ', self.alpha)
-   str = str .. string.format('"delta": [%f, %f, %f], ', self.delta:x(), self.delta:y(), self.delta:z())
+   str = str .. string.format('"delta": [%f, %f, %f], ', self.delta.x, self.delta.y, self.delta.z)
    str = str .. string.format('"list_mapped_cells": %s, ',
 			      tostring(self.list_mapped_cells))
    str = str .. string.format('"reorient_vector_quantities": %s, ',

@@ -62,6 +62,6 @@ config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
 
 -- add history point at nose of cone
-setHistoryPoint{x=b:x(), y=b:y()}
+setHistoryPoint{x=b.x, y=b.y}
 -- add history point at base of cone
 setHistoryPoint{ib=1, i=nx1, j=0}

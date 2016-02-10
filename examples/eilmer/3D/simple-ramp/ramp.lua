@@ -49,8 +49,8 @@ grid0 = StructuredGrid:new{pvolume=vol0, niv=11, njv=5, nkv=41, cfList=cflist}
 blk1Corners = simpleBoxCorners{xPos=0.2,xSize=0.8,ySize=0.1}
 -- Now, raise the end of the ramp.
 -- Remember that Lua indexing starts at 1.
-blk1Corners[2]:z(0.8 * math.tan(math.pi * 10.0/180.0))
-blk1Corners[3]:z(blk1Corners[2]:z())
+blk1Corners[2].z = 0.8 * math.tan(math.pi * 10.0/180.0)
+blk1Corners[3].z = blk1Corners[2].z
 grid1 = StructuredGrid:new{pvolume=TFIVolume:new{vertices=blk1Corners}, 
 			   niv=31, njv=5, nkv=41, cfList=cflist}
 

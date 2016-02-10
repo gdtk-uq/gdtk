@@ -25,6 +25,8 @@ a = Vector3:new()
 print("a= ", a)
 b = Vector3:new{x=7.0, y=3.0, z=-2.5}
 print("b= ", b)
+print("Get the 'z' value of b")
+print("b.z= ", b.z)
 bb = Vector3:new(b)
 print("bb=", bb)
 bbb = Vector3:new{x=7.0}
@@ -46,17 +48,17 @@ end
 f = Vector3:new{}
 print("f= ", f)
 print("Change the x value of f.")
-f:x(5.4)
+f.x = 5.4
 print("f= ", f)
 g = -f
 print("g= ", g)
-assert(g:x() == -f:x()); assert(g:y() == -f:y()); assert(g:z() == -f:z())
+assert(g.x == -f.x); assert(g.y == -f.y); assert(g.z == -f.z)
 h = a + b
-assert(h:x() == a:x() + b:x()); assert(h:y() == a:y() + b:y()); assert(h:z() == a:z() + b:z())
+assert(h.x == a.x + b.x); assert(h.y == a.y + b.y); assert(h.z == a.z + b.z)
 i = unit(h)
 h:normalize()
 print("After normalizing, h=", h)
-assert(h:x() == i:x()); assert(h:y() == i:y()); assert(h:z() == i:z())
+assert(h.x == i.x); assert(h.y == i.y); assert(h.z == i.z)
 assert(vabs(i) == 1.0)
 j = dot(g, f)
 print("j= ", j)
