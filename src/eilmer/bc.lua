@@ -192,8 +192,8 @@ TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
 TranslatingSurface.type = "translating_surface"
 function TranslatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "v_trans": [%f, %f, %f]', self.v_trans:x(), 
-			      self.v_trans:y(), self.v_trans:z())
+   str = str .. string.format(' "v_trans": [%f, %f, %f]', self.v_trans.x, 
+			      self.v_trans.y, self.v_trans.z)
    str = str .. '}'
    return str
 end
@@ -203,10 +203,10 @@ RotatingSurface = BoundaryInterfaceEffect:new{centre=nil, r_omega=nil}
 RotatingSurface.type = "rotating_surface"
 function RotatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "centre": [%f, %f, %f],', self.centre:x(), 
-			      self.centre:y(), self.centre:z())
-   str = str .. string.format(' "r_omega": [%f, %f, %f]', self.r_omega:x(), 
-			      self.r_omega:y(), self.r_omega:z())
+   str = str .. string.format(' "centre": [%f, %f, %f],', self.centre.x, 
+			      self.centre.y, self.centre.z)
+   str = str .. string.format(' "r_omega": [%f, %f, %f]', self.r_omega.x, 
+			      self.r_omega.y, self.r_omega.z)
    str = str .. '}'
    return str
 end

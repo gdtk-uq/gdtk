@@ -56,7 +56,7 @@ Vector3* checkVector3(lua_State *L, int index)
  * a = Vector3:new{otherVector3}
  * b = Vector3:new(otherVector3)
  * c = Vector3:new{x=1.0, y=1.0, z=2.0}
- * assert(c:x() == 1.0); assert(c:y() == 3.0); assert(c:z() == 2.0)
+ * assert(c.x == 1.0); assert(c.y == 3.0); assert(c.z == 2.0)
  * ----------------------
  * When a single argument is given, it may be another Vector3 object.
  * For the table of coordinates, missing values are assumed to be 0.0.
