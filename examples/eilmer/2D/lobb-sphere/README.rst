@@ -338,7 +338,7 @@ shown in full here ::
    -- Pick up flow solution at final time
    fsol = FlowSolution:new{jobName=jobName, dir=".", tindx="last", nBlocks=4}
    vtx = fsol:get_vtx{ib=0, i=0, j=0}
-   delta = -vtx:x()
+   delta = -vtx.x
    d_D = delta/Db
    f = io.open("shock-detachment.txt", 'w')
    f:write(string.format("%20.12e %20.12e\n", delta, d_D))

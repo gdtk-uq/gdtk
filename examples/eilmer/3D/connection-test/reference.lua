@@ -40,7 +40,7 @@ end
 
 --]]
 function cube(origin, length)
-   x0 = origin:x(); y0 = origin:y(); z0 = origin:z()
+   x0 = origin.x; y0 = origin.y; z0 = origin.z
    A = Vector3:new{x=x0, y=y0, z=z0}
    B = Vector3:new{x=x0+length, y=y0, z=z0}
    C = Vector3:new{x=x0+length, y=y0+length, z=z0}
