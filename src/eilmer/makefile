@@ -4,6 +4,7 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
+PLATFORM ?= linux
 WITH_GPU_CHEM ?= 0
 
 PROGRAMS := e4shared
@@ -145,7 +146,7 @@ prep-chem:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
 
 $(LIBLUA):
-	cd $(LUA_DIR); make linux local
+	cd $(LUA_DIR); make $(PLATFORM) local
 
 globalconfig_demo: globalconfig_demo.d globalconfig.d fvcore.d \
 	$(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \

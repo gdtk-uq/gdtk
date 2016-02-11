@@ -1,6 +1,8 @@
 # makefile for the geometry package
 # Builds all of the demonstration programs.
 
+PLATFORM ?= linux
+
 DEMO_PROGRAMS := geom_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
@@ -46,7 +48,7 @@ clean:
 	- cd $(LUA_DIR); make clean
 
 $(LIBLUA):
-	cd $(LUA_DIR); make linux local
+	cd $(LUA_DIR); make $(PLATFORM) local
 
 geom_demo: geom_demo.d geom.d
 	dmd $(DFLAGS) geom_demo.d $(OF)geom_demo \

@@ -1,7 +1,7 @@
 # makefile for kinetics module
 # Can be used to perform unit tests
 # and build stand-alone programs.
-
+PLATFORM ?= linux
 INSTALL_DIR ?= $(HOME)/e3bin
 BUILD_DIR ?= ../../build
 

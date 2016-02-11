@@ -47,4 +47,7 @@ from within this directory:
 
 > make INSTALL_DIR=$HOME/dgdinst install
 
+On Mac, we need to give the make command an extra hint:
+
+> make PLATFORM=macosx INSTALL_DIR=$HOME/dgdinst install
 
