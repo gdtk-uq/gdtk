@@ -34,7 +34,7 @@ test: $(TEST_PROGRAMS)
 	tclsh kinetics-package-test.tcl
 
 ${LIBLUA}:
-	cd ${LUA_DIR}; make linux local
+	cd ${LUA_DIR}; make $(PLATFORM) local
 
 chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	dmd -of$@ -debug -gc -version=$@ \
