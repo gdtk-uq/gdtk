@@ -9,16 +9,20 @@ print(job_title)
 config.dimensions = 2
 config.title = job_title
 
+-- problem parameters
+u_inf = 2430.0  -- m/s
+radius = 1.0    -- m
+
 nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 initial = FlowState:new{p=100.0e3/3.0, T=200.0, velx=0.0, vely=0.0}
-inflow = FlowState:new{p=100.0e3, T=300.0, velx=2430.0, vely=0.0}
+inflow = FlowState:new{p=100.0e3, T=300.0, velx=u_inf, vely=0.0}
 print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
 
 print "Building grid."
-a = Vector3:new{x=-3.0, y=0.0}
-b = Vector3:new{x=-1.0, y=0.0}
-c = Vector3:new{ x=0.0, y=3.0}
-d = Vector3:new{ x=0.0, y=1.0}
+a = Vector3:new{x=-3.0*radius, y=0.0}
+b = Vector3:new{x=-radius, y=0.0}
+c = Vector3:new{ x=0.0, y=3.0*radius}
+d = Vector3:new{ x=0.0, y=radius}
 p = Vector3:new{ x=0.0, y=0.0}
 
 ac = Arc:new{p0=a, p1=c, centre=p}
@@ -27,7 +31,7 @@ ab = Line:new{p0=a, p1=b}
 cd = Line:new{p0=c, p1=d}
 
 psurf = makePatch{north=cd, east=bd, south=ab, west=ac}
-grid = StructuredGrid:new{psurface=psurf, niv=25, njv=30}
+grid = StructuredGrid:new{psurface=psurf, niv=30, njv=30}
 
 -- We can leave east and south as slip-walls
 blk0 = SBlock:new{grid=grid, fillCondition=initial}
@@ -38,12 +42,12 @@ blk0.bcList[north] =  OutFlowBC_Simple:new{label="outflow-boundary"}
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
-config.max_time = 15.0e-3
-config.max_step = 100000
+config.max_time = (radius*2)/u_inf * 16 -- 16 flow lengths
+config.max_step = 400000
 config.dt_init = 1.0e-9
 config.cfl_value = 0.25 
-config.dt_plot = 5.0e-4
+config.dt_plot = config.max_time/16
 
 -- moving grid flag
 config.grid_motion = "shock_fitting"
-config.shock_fitting_delay = 1.383e-03
+config.shock_fitting_delay = (radius*2)/u_inf  -- allow for one flow length
