@@ -27,8 +27,6 @@ import geom;
 import boundary_flux_effect;
 import ghost_cell_effect;
 
-immutable double SHOCK_DETECT_THRESHOLD = 0.2;
-
 int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
     size_t i, j, k;
     FVVertex vtx1, vtx2;
@@ -50,7 +48,7 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	    // Full Potential and Euler solutions for transonic unsteady flow
 	    // Aeronautical Journal November 1994 Eqn 25
 	    if ( blk.myConfig.axisymmetric == false ) vol = 0.5 * cross( pos1, pos2 );
-	    else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) /4.0 );
+	    else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) / 4.0 );
 	    temp = vol / ( dt * IFace.area[0] );
 	    // temp is the interface velocity (W_if) from the GCL
 	    // interface area determined at gtl 0 since GCL formulation
@@ -74,7 +72,7 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	    pos2 = vtx1.pos[gtl] - vtx2.pos[0];
 	    averaged_ivel = (vtx1.vel[0] + vtx2.vel[0]) / 2.0;
 	    if ( blk.myConfig.axisymmetric == false ) vol = 0.5 * cross( pos1, pos2 );
-	    else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) /4.0 );
+	    else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) / 4.0 );
 	    temp = vol / ( dt * IFace.area[0] );
 	    IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
 	    averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);	    
@@ -101,9 +99,9 @@ void predict_vertex_positions(Block blk, size_t dimensions, double dt, int gtl) 
 	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
 	    for ( size_t i = blk.imin; i <= blk.imax+1; ++i ) {
 		FVVertex vtx = blk.get_vtx(i,j,k);
-		if (gtl == 0) // if this is the predictor/sole step update grid
+		if (gtl == 0) // if this is the predictor/sole step then update grid
 		    vtx.pos[1] = vtx.pos[0] + dt *  vtx.vel[0];
-		else   // else if this is the corrector step keep grid fixed
+		else   // else if this is the corrector step keep then grid fixed
 		    vtx.pos[2] = vtx.pos[1];
 	    }
 	}
@@ -116,15 +114,25 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
       + velocities. The boundary vertex velocities are set via the methodology laid out
       + in Ian Johnston's thesis available on the cfcfd website. The internal velocities
       + are then assigned based on the boundary velocity and a user chosen weighting.
-      + NB: the current implementation is hard coded for a moving WEST boundary
-      + NB: Only for Euler stepping currently (i.e. gtl = 0 for velocities/positions)
+      + NB: Implementation is hard coded for a moving WEST boundary
       ++/
+    FVVertex vtx, vtx_left, vtx_right;
+    FVInterface iface_neighbour;
+    FVCell cell_toprght, cell_botrght, cell, cell_R1, cell_R2;
+    Vector3 temp_vel, unit_d, u_lft, u_rght, ns, tav; 
+    double U_plus_a, rho, shock_detect, temp1, temp2, ws1, ws2, rho_lft, rho_rght,  p_lft, p_rght, M, rho_recon_top, rho_recon_bottom;
+    Vector3[4] interface_ws;
+    double[4] w;
+    bool reconstruction_higher_order = false; // if false code reverts to 0th order interpolation
+    immutable double SHOCK_DETECT_THRESHOLD = 0.2;
+    immutable double VTX_VEL_SCALING_FACTOR = 0.5;
     size_t krangemax = ( dimensions == 2 ) ? blk.kmax : blk.kmax+1;
+
     // make sure all the vertices are given a velocity to begin with
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
 	for ( size_t j = blk.jmin; j <= blk.jmax+2; ++j ) {    
 	    for ( size_t i = blk.imin; i <= blk.imax+2; ++i ) {
-		FVVertex vtx = blk.get_vtx(i,j,k);
+		vtx = blk.get_vtx(i,j,k);
 		vtx.vel[0] =  Vector3(0.0, 0.0, 0.0);
 	    }
 	}
@@ -135,47 +143,96 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
     // inflow is a reference to a duplicated flow state, it should be treated as read-only (do not alter)
     auto constFluxEffect = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     auto inflow = constFluxEffect.fstate;
-    
+    U_plus_a = sqrt(dot(inflow.vel, inflow.vel)) + inflow.gas.a; // inflow gas wave speed
     // #####-------------------------- SHOCK SEARCH --------------------------##### //
-    FVVertex vtx, vtx_left, vtx_right;
-    FVInterface iface_neighbour;
-    FVCell cell_toprght, cell_botrght, cell;
-    Vector3 temp_vel;
-    Vector3 unit_d;    // this will be a unit vector which points along a radial line toward the EAST boundary
-    double rho, shock_detect, temp1, temp2, ws1, ws2, rho_lft, rho_rght,  p_lft, p_rght, M;
-    Vector3[4] interface_ws;
-    double[4] w;
-    Vector3 u_lft, u_rght, ns, tav;
-    bool reconstruction_1st_order = true; // if false code reverts to 0th order interpolation
-    // First update all the WEST boundary vertex velocities (these are the masters)
+    // First update all the WEST boundary vertex velocities
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
 	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
 	    size_t i = blk.imin;
 	    vtx = blk.get_vtx(i,j,k);
 	    vtx_left = blk.get_vtx(i-1,j,k);
 	    vtx_right = blk.get_vtx(i+1,j,k);
-	    cell_toprght = blk.get_cell(i, j, k);            
-	    cell_botrght = blk.get_cell(i, j-1, k);
-	    if (reconstruction_1st_order) {
-		double rho_recon_top = scalar_reconstruction(cell_toprght.fs.gas.rho,  blk.get_cell(i+1, j, k).fs.gas.rho,
-							     blk.get_cell(i+2, j, k).fs.gas.rho, cell_toprght.iLength,
-							     blk.get_cell(i+1, j, k).iLength,  blk.get_cell(i+2, j, k).iLength);
-		double rho_recon_bottom = scalar_reconstruction(cell_botrght.fs.gas.rho,  blk.get_cell(i+1, j-1, k).fs.gas.rho,
-								blk.get_cell(i+2, j-1, k).fs.gas.rho, cell_botrght.iLength,
-								blk.get_cell(i+1, j-1, k).iLength,  blk.get_cell(i+2, j-1, k).iLength);
-		rho = 0.5*(rho_recon_top + rho_recon_bottom);
+	    /++ the next several lines are necessarily bulky, what we are doing here is estimating
+	     ++ a density value (rho) to compare with the inflow density for the shock detector.
+	     ++ This estimation can take on many different forms depending on whether the current
+	     ++ vertex is 1. on the flow domain boundary, 2. on a block edge, 3. neither (typical vertex). 
+	     ++ The following code determines the vertex position and then applies the necessary method.
+	     ++/
+	    // if vtx is on block edge then grab cell data from neighbour block
+	    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"") {
+	        auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
+	        int neighbourBlock =  ffeBC.neighbourBlock.id;
+		cell_botrght =
+		    gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
 	    }
-	    else
-		rho = 0.5*(cell_toprght.fs.gas.rho+cell_botrght.fs.gas.rho);
-	    // if on an outer boundary just take the first internal cell
-	    if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"")
-		rho = cell_toprght.fs.gas.rho;
-	    if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"")
-		rho = cell_botrght.fs.gas.rho;
+	    else // else grab data from neighbour cell in current block
+		cell_botrght = blk.get_cell(i, j-1, k);
+	    // if vtx is on block edge then grab cell data from neighbour block
+	    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"") {
+		auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
+		int neighbourBlock =  ffeBC.neighbourBlock.id;
+		cell_toprght =
+		    gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
+	    }
+	    else // else grab data from neighbour cell in current block
+		cell_toprght = blk.get_cell(i, j, k);            
+	    if (reconstruction_higher_order) { 
+		if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"") {
+		    // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
+		    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
+		    int neighbourBlock =  ffeBC.neighbourBlock.id;
+		    cell_R1 =
+			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+1, gasBlocks[neighbourBlock].jmax, k);
+		    cell_R2 =
+			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+2, gasBlocks[neighbourBlock].jmax, k);
+		}
+		else { // else if reconstruction is true and vtx is not on block edge
+		    cell_R1 = blk.get_cell(i+1, j-1, k);
+		    cell_R2 = blk.get_cell(i+2, j-1, k);
+		}
+		if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"") {
+		    // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
+		    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
+		    int neighbourBlock =  ffeBC.neighbourBlock.id;
+		    cell_R1 =
+			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+1, gasBlocks[neighbourBlock].jmin, k);
+		    cell_R2 =
+			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+2, gasBlocks[neighbourBlock].jmin, k);
+		}
+		else { // else if reconstruction is true and vtx is not on block edge
+		    cell_R1 = blk.get_cell(i+1, j, k);
+		    cell_R2 = blk.get_cell(i+2, j, k);
+		}
+		// perform reconstruction
+ 		rho_recon_top = scalar_reconstruction(cell_toprght.fs.gas.rho,  cell_R1.fs.gas.rho,
+							     cell_R2.fs.gas.rho, cell_toprght.iLength,
+							     cell_R1.iLength,  cell_R2.iLength);
+		rho_recon_bottom = scalar_reconstruction(cell_botrght.fs.gas.rho,  cell_R1.fs.gas.rho,
+								cell_R2.fs.gas.rho, cell_botrght.iLength,
+								cell_R1.iLength,  cell_R2.iLength);
+	    }
+	    // using stored data estimate a value for rho
+	    // NB: if on flow domain boundary then just use the first internal cell to estimate rho
+	    if (reconstruction_higher_order) { // use reconstruction
+		if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"")
+		    rho = rho_recon_top;
+		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"")
+		    rho = rho_recon_bottom;
+		else
+		    rho = 0.5*(rho_recon_top + rho_recon_bottom);
+	    }
+	    else { // use 0th order
+		if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"")
+		    rho = cell_toprght.fs.gas.rho;
+		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"")
+		    rho = cell_botrght.fs.gas.rho;
+		else
+		    rho = 0.5*(cell_toprght.fs.gas.rho+cell_botrght.fs.gas.rho);
+	    }
 	    shock_detect = abs(inflow.gas.rho - rho)/fmax(inflow.gas.rho, rho);
 	    if (shock_detect < SHOCK_DETECT_THRESHOLD) { // no shock across boundary set vertex velocity to wave speed (u+a)
-		temp_vel.refx = (inflow.vel.x + inflow.gas.a);
-		temp_vel.refy = -1.0*(inflow.vel.y + inflow.gas.a);
+		temp_vel.refx = U_plus_a;
+		temp_vel.refy = -1.0*U_plus_a;
 		temp_vel.refz = 0.0;
 	    }
 	    else { // shock detected across boundary
@@ -203,34 +260,34 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
 			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
 		    }
-		    if (reconstruction_1st_order) {
-			FVCell cell_1_right = blk.get_cell(i+1, j-jOffSet, k);
-			FVCell cell_2_right =  blk.get_cell(i+2, j-jOffSet, k);
+		    if (reconstruction_higher_order) {
+			cell_R1 = blk.get_cell(i+1, j-jOffSet, k);
+			cell_R2 =  blk.get_cell(i+2, j-jOffSet, k);
 			// As suggested in onedinterp.d we are transforming all cells velocities to a local reference frame relative to the
 			// interface where the reconstruction is taking place
 			cell.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
-			cell_1_right.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
-			cell_2_right.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
-			rho_rght = scalar_reconstruction(cell.fs.gas.rho,  cell_1_right.fs.gas.rho,
-							 cell_2_right.fs.gas.rho, cell.iLength,
-							 cell_1_right.iLength,  cell_2_right.iLength);
-			u_rght.refx = scalar_reconstruction(cell.fs.vel.x,  cell_1_right.fs.vel.x,
-							    cell_2_right.fs.vel.x, cell.iLength,
-							    cell_1_right.iLength, cell_2_right.iLength);
-			u_rght.refy = scalar_reconstruction(cell.fs.vel.y,  cell_1_right.fs.vel.y,
-							    cell_2_right.fs.vel.y, cell.iLength,
-							    cell_1_right.iLength,  cell_2_right.iLength);
-			u_rght.refz = scalar_reconstruction(cell.fs.vel.z,  cell_1_right.fs.vel.z,
-							    cell_2_right.fs.vel.z, cell.iLength,
-							    cell_1_right.iLength, cell_2_right.iLength);
-			p_rght = scalar_reconstruction(cell.fs.gas.p, cell_1_right.fs.gas.p,
-						       cell_2_right.fs.gas.p, cell.iLength,
-						       cell_1_right.iLength, cell_2_right.iLength);
+			cell_R1.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			cell_R2.fs.vel.transform_to_local_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			rho_rght = scalar_reconstruction(cell.fs.gas.rho,  cell_R1.fs.gas.rho,
+							 cell_R2.fs.gas.rho, cell.iLength,
+							 cell_R1.iLength,  cell_R2.iLength);
+			u_rght.refx = scalar_reconstruction(cell.fs.vel.x,  cell_R1.fs.vel.x,
+							    cell_R2.fs.vel.x, cell.iLength,
+							    cell_R1.iLength, cell_R2.iLength);
+			u_rght.refy = scalar_reconstruction(cell.fs.vel.y,  cell_R1.fs.vel.y,
+							    cell_R2.fs.vel.y, cell.iLength,
+							    cell_R1.iLength,  cell_R2.iLength);
+			u_rght.refz = scalar_reconstruction(cell.fs.vel.z,  cell_R1.fs.vel.z,
+							    cell_R2.fs.vel.z, cell.iLength,
+							    cell_R1.iLength, cell_R2.iLength);
+			p_rght = scalar_reconstruction(cell.fs.gas.p, cell_R1.fs.gas.p,
+						       cell_R2.fs.gas.p, cell.iLength,
+						       cell_R1.iLength, cell_R2.iLength);
 			// here we are transforming the cell velocities back to the global reference frame
 			u_rght.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
 			cell.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
-			cell_1_right.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
-			cell_2_right.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);	
+			cell_R1.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);
+			cell_R2.fs.vel.transform_to_global_frame(cell.iface[Face.west].n, cell.iface[Face.west].t1, cell.iface[Face.west].t2);	
 		    }
 		    else {
 			rho_rght = cell.fs.gas.rho;         // density in top right cell
@@ -242,10 +299,10 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 		    temp1 = ((p_rght - p_lft)/(abs(p_rght - p_lft)))/rho_lft; // just need the sign of p_rght - p_lft
 		    temp2 =  sqrt(abs((p_rght - p_lft)/(1/rho_lft - 1/rho_rght)));
 		    ws2 = dot(u_lft, ns) - temp1 * temp2;
-		    interface_ws[jOffSet] = (0.5*ws1 + (1-0.5)*ws2)*ns;
+		    interface_ws[jOffSet] = (0.75*ws1 + (1-0.75)*ws2)*ns;
 		    // tav is a unit vector which points from the neighbouring interface to the current vertex
 		    tav = (vtx.pos[0]-iface_neighbour.pos)/sqrt(dot(vtx.pos[0] - iface_neighbour.pos, vtx.pos[0] - iface_neighbour.pos));
-		    M = dot(0.5*(u_rght+u_lft), tav)/cell.fs.gas.a; // equation explained in Ian Johnston's thesis on page 77, note...
+		    M = dot(u_rght, tav)/cell.fs.gas.a; // equation explained in Ian Johnston's thesis on page 77, note...
 		    // we are currently just using the right cell (i.e. first non-ghost cell) as the "post-shock" value, for higher accuracy
 		    // we will need to update this with the right hand side reconstructed value.
 		    //w[jOffSet] = ( M + abs(M) ) / 2;  // alternate weighting 
@@ -257,12 +314,17 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 			w[0] = 0.0, interface_ws[0] = Vector3(0.0, 0.0, 0.0);
 		}
 		// now that we have the surrounding interface velocities, let's combine them to approximate the central vertex velocity
-		if (w[0] == 0.0 && w[1] == 0.0) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average
-		temp_vel = 0.8*(w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, 80% for stability
+		if (abs(w[0]) < 1.0e-10 && abs(w[1]) < 1.0e-10) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average
+		temp_vel = (w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, 80% for stability		
+		if (abs(temp_vel) > abs(inflow.vel) + inflow.gas.a) { // safety catch: if an extreme velocity has been assigned let's just use u+a
+		  temp_vel.refx = U_plus_a;
+		  temp_vel.refy = -1.0*U_plus_a;
+		  temp_vel.refz = 0.0;
+		}
 	    }
 	    unit_d = correct_direction(unit_d, vtx.pos[0], vtx_left.pos[0], vtx_right.pos[0], i, blk.imin, blk.imax);
 	    temp_vel = dot(temp_vel, unit_d)*unit_d;
-	    vtx.vel[0] = temp_vel;
+	    vtx.vel[0] = VTX_VEL_SCALING_FACTOR*temp_vel;
 	}
     }
     // Next update the internal vertex velocities (these are slaves dervied from the WEST boundary master velocities) 
