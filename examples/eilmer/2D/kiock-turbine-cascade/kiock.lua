@@ -113,9 +113,9 @@ clust_surf = 1.01 -- clustering normal to surface
 -----------------------------------------------------
 -- Full suction and pressure surface paths
 suct_surface = Spline2:new{filename="suct_surface.dat"}
-suct_surface = RotatedAboutZAxisPath:new{underlying_path=suct_surface, angle=-STAGGER_ANGLE}
+suct_surface = RotatedAboutZAxisPath:new{original_path=suct_surface, angle=-STAGGER_ANGLE}
 pres_surface = Spline2:new{filename="press_surface.dat"}
-pres_surface = RotatedAboutZAxisPath:new{underlying_path=pres_surface,angle=-STAGGER_ANGLE}
+pres_surface = RotatedAboutZAxisPath:new{original_path=pres_surface,angle=-STAGGER_ANGLE}
 
 --Chord is line of which blade "sits" on, starting at (0, 0)
 chord_vector = Vector3:new{x=1.0, y=0.0}
@@ -220,7 +220,7 @@ pres_front_west = Spline:new{points={LE_down, mid_2, mid_1, LE_up}}
 
 pres_front_south = Line:new{p0=pres_front_west(0), p1=pres_front_surface(0)}
 
-patch = makePatch{north=ReversedPath:new{suct_front_west}, east=pres_front_surface,
+patch = makePatch{north=ReversedPath:new{underlying_path=suct_front_west}, east=pres_front_surface,
 		  south=pres_front_south, west=pres_front_west}
 cflist = {north=RobertsFunction:new{end0=false, end1=true, beta=clust_surf},
           south=RobertsFunction:new{end0=false, end1=true, beta=clust_surf}}
@@ -231,7 +231,7 @@ pres_front_block.bcList[east] = WallBC_NoSlip_Adiabatic:new{}
 ---------------------------------------------------
 -- Middle block on pressure surface
 ---------------------------------------------------
-pres_mid_surface = SubRangedPath:new{pres_surface,t0=pres_div1,t1=pres_div2}
+pres_mid_surface = SubRangedPath:new{underlying_path=pres_surface,t0=pres_div1,t1=pres_div2}
 
 --Spline for south path of block
 TE_down = pres_mid_surface(1) - 0.04*chord_normal
@@ -401,7 +401,7 @@ out3_block.bcList[east] = OutFlowBC_FixedP:new{p_outside=p_exit, label="OUTLET"}
 -----------------------------------------------------
 mid_1 = in1_top_right + Vector3:new{x=0.44, y=0.01}
 top_north = Spline:new{points={in1_top_right, mid_1, out1_top_left}}
-top1_north = SubRangedPath:new{top_north,t0=0.0,t1=pres_div2-0.1}
+top1_north = SubRangedPath:new{underlying_path=top_north,t0=0.0,t1=pres_div2-0.1}
 top1_east = Line:new{p0=suct_front1_north(1), p1=top1_north(1)}
 patch = makePatch{north=top1_north, east=top1_east, south=suct_front1_north, west=in1_east}
 
