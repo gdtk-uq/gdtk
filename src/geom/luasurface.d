@@ -377,6 +377,13 @@ extern(C) int makePatch(lua_State* L)
 	    "A table is expected as the first argument. No table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    // Do some error checking of arguments.
+    if ( lua_objlen(L, 1) != 0 ) {
+	// It appears that the caller has tried to set arguments as an array
+	string errMsg = "Error in call to makePatch. " ~
+	    "Name parameters are expected. An array style of parameters was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Get boundary paths.
     string[] edges = ["north", "east", "south", "west"];
     Path[string] paths;

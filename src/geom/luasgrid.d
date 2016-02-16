@@ -176,7 +176,7 @@ extern(C) int find_nearest_cell_centre(lua_State *L)
  *
  * Example construction in Lua:
  * grid = StructuredGrid:new{psurface=someParametricSurface, niv=10, njv=10,
- *                           cfList={cf_north, cf_east, cf_south, cf_west},
+ *                           cfList={north=cf_north, east=cf_east, south=cf_south, west=cf_west},
  *                           label="A-2D-Grid"}
  * grid3D = StructuredGrid:new{pvolume=someParametricVolume,
  *                             niv=11, njv=21, nkv=11,
@@ -229,6 +229,15 @@ extern(C) int newStructuredGrid(lua_State* L)
     int number_of_edges = (dimensions == 2) ? 4 : 12;
     lua_getfield(L, 1, "cfList".toStringz);
     if ( lua_istable(L, -1) ) {
+	// Before going on, check the caller gave us named parameters.
+	if ( lua_objlen(L, -1) != 0 ) {
+	    // It appears that the caller has tried to set arguments as an array
+	    string errMsg = "Error in StructuredGrid:new{}. " ~
+		"A table of named parameters is expected for the cfList. " ~
+		"An array style of parameters was found.";
+	    luaL_error(L, errMsg.toStringz);
+	}
+
 	string[] edges;
 	// Extract the cluster functions from the table at top of stack.
 	if (dimensions == 2) {
