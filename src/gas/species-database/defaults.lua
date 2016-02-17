@@ -11,35 +11,35 @@
 
 db = {}
 
-db.defaults = {}
-db.defaults.atomicConstituents = {}
-db.defaults.charge = 0
-db.defaults.M = {
+db.default = {}
+db.default.atomicConstituents = {}
+db.default.charge = 0
+db.default.M = {
    value = 28.96e-3,
    units = 'kg/mol',
 }
-db.defaults.gamma = {
+db.default.gamma = {
    value = 1.4,
    note = "valid at low temperatures"
 }
-db.defaults.entropyRefValues = {
+db.default.entropyRefValues = {
    s1 = 0.0,
    T1 = 298.15,
    p1 = 101.325e3
 }
-db.defaults.sutherlandVisc = {
+db.default.sutherlandVisc = {
    mu_ref = 1.716e-5, 
    T_ref = 273.0,
    S = 111.0,
    reference = "Table 1-2, White (2006)"
 }
-db.defaults.sutherlandThermCond = {
+db.default.sutherlandThermCond = {
    T_ref = 273.0, 
    k_ref = 0.0241, 
    S = 194.0,
    reference = "Table 1-3, White (2006)"
 }
-db.defaults.ceaThermoCoeffs = {
+db.default.ceaThermoCoeffs = {
    nsegments = 2,
    segment0 = {
       T_lower = 200.0,
@@ -68,3 +68,61 @@ db.defaults.ceaThermoCoeffs = {
                  -8.147411905e+00 }
   }
 }
+-- CEA viscosity uses N2 values
+db.default.ceaViscosity = {
+   nsegments = 3,
+   segment0 = {
+      T_lower = 200,
+      T_upper = 1000,
+      A = 0.62526577,
+      B = -31.779652,
+      C = -1640.7983,
+      D = 1.7454992,
+    },
+   segment1 = {
+      T_lower = 1000,
+      T_upper = 5000,
+      A = 0.87395209,
+      B = 561.52222,
+      C = -173948.09,
+      D = -0.39335958,
+    },
+   segment2 = {
+      T_lower = 5000,
+      T_upper = 15000,
+      A = 0.88503551,
+      B = 909.02171,
+      C = -731290.61,
+      D = -0.53503838,
+    },
+}
+-- CEA thermal conductivity uses N2 values
+db.default.ceaThermCond = {
+   nsegments = 3,
+   segment0 = {
+      T_lower = 200,
+      T_upper = 1000,
+      A = 0.85439436,
+      B = 105.73224,
+      C = -12347.848,
+      D = 0.47793128,
+    },
+    segment1 =  {
+      T_lower = 1000,
+      T_upper = 5000,
+      A = 0.88407146,
+      B = 133.57293,
+      C = -11429.64,
+      D = 0.24417019,
+    },
+    segment2 = {
+      T_lower = 5000,
+      T_upper = 15000,
+      A = 2.4176185,
+      B = 8047.7749,
+      C = 3105580.2,
+      D = -14.517761,
+    },
+}
+
+

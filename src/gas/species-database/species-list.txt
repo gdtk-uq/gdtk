@@ -5,6 +5,7 @@ CO2.lua    : CO2      : carbon dioxide
 H.lua      : H        : monatomic hydrogen
 H2.lua     : H2       : diatomic hydrogen
 H2O.lua    : H2O      : water
+HO2.lua    : HO2      : hydroperoxyl
 Kr.lua     : Kr       : krypton
 N.lua      : N        : monatomic nitrogen
 N2.lua     : N2       : diatomic nitrogen
