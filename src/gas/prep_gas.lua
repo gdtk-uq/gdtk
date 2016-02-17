@@ -69,10 +69,13 @@ end
 function writeCeaTransCoeffs(f, sp, db, name)
    secName = "cea"..name
    if ( not db[sp][secName] ) then
-      print(string.format("ERROR: The table of CEA coefficients to compute diffusion property: %s", secName))
-      print("ERROR: could not be found for species: ", sp)
-      print("ERROR: Bailing out!")
-      os.exit(1)
+      print("")
+      print("------------------------------------------------------------------------------------------")
+      print(string.format("WARNING: The table of CEA coefficients to compute diffusion property: %s", secName))
+      print("WARNING: could not be found for species: ", sp)
+      print("WARNING: As a substitute the values from 'defaults.lua' will be used.")
+      print("------------------------------------------------------------------------------------------")
+      db[sp][secName] = db.default[secName]
    end
    t = db[sp][secName]
    f:write(string.format("%s.%s = {\n", sp, secName))

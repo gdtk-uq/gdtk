@@ -48,7 +48,7 @@ function writeSpeciesData(f, spData, spName)
    end
    f:write("}\n")
    -- write out viscosity data
-   if ( spData.viscosity.model == "CEA" ) then
+   if ( spData.viscosity and spData.viscosity.model == "CEA" ) then
       f:write("db."..spName..".ceaViscosity = {\n")
       f:write(string.format("   nsegments = %d,\n", #spData.viscosity.parameters))
       for i,tab in ipairs(spData.viscosity.parameters) do
@@ -66,7 +66,7 @@ function writeSpeciesData(f, spData, spName)
       print("WARNING: No CEA viscosity data for species: ", spName)
    end
    -- write out thermal conductivity
-   if ( spData.thermal_conductivity.model == "CEA" ) then
+   if ( spData.thermal_conductivity and spData.thermal_conductivity.model == "CEA" ) then
       f:write("db."..spName..".ceaThermCond = {\n")
       f:write(string.format("   nsegments = %d,\n", #spData.thermal_conductivity.parameters))
       for i,tab in ipairs(spData.thermal_conductivity.parameters) do
