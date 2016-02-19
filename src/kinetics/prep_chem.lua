@@ -51,7 +51,7 @@ configHidden = { -- hidden from user
    odeStep = {method='rkf', errTol=1.0e-3},
    tightTempCoupling = false,
    maxSubcycles = 10000,
-   maxAttempts = 3,
+   maxAttempts = 4,
    __index = function (t, k) 
       return configHidden[k]
    end,
