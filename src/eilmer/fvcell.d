@@ -891,6 +891,7 @@ public:
 	} catch(Exception err) {
 	    string msg = format("caught %s", err.msg);
 	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
+	    msg ~= format("This cell is located at: %s\n", pos[0]);
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
 	    throw new Error(msg);
 	}
