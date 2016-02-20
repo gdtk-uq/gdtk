@@ -7,6 +7,7 @@
 
 module simcore;
 
+import std.math;
 import std.stdio;
 import std.file;
 import std.conv;
@@ -1004,29 +1005,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    }
 	    cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
 	    bool force_euler = false;
-	    debug {
-		if (cell.id == 702 && (cell.pos[local_gtl].x + 0.567581) < 0.1) {
-		    writeln("Before stage-1-update.");
-		    auto fs = cell.fs;
-		    auto myU = cell.U[local_ftl];
-		    auto pos = cell.pos[local_gtl];
-		    writeln("  cell.id= ", cell.id, " x= ", pos.x, " y= ", pos.y, " z= ", pos.z);
-		    writeln("  gas= ", fs.gas);
-		    writeln("  U= ", myU);
-		}
-	    }
 	    cell.stage_1_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
-	    debug {
-		if (cell.id == 702 && (cell.pos[local_gtl].x + 0.567581) < 0.1) {
-		    writeln("After stage-1-update.");
-		    auto fs = cell.fs;
-		    auto myU = cell.U[local_ftl+1];
-		    auto pos = cell.pos[local_gtl];
-		    writeln("  cell.id= ", cell.id, " x= ", pos.x, " y= ", pos.y, " z= ", pos.z);
-		    writeln("  gas= ", fs.gas);
-		    writeln("  U= ", myU);
-		}
-	    }
 	    cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	} // end foreach cell
     } // end foreach blk

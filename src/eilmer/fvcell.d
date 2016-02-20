@@ -112,6 +112,7 @@ public:
 	    dUdt ~= new ConservedQuantities(n_species, n_modes);
 	}
 	Q = new ConservedQuantities(n_species, n_modes);
+	Q.clear_values();
     }
 
     @nogc
@@ -299,12 +300,14 @@ public:
 	fs.vel.refx = to!double(items.front); items.popFront();
 	fs.vel.refy = to!double(items.front); items.popFront();
 	fs.vel.refz = to!double(items.front); items.popFront();
-	if ( myConfig.MHD ) {
+	if (myConfig.MHD) {
 	    fs.B.refx = to!double(items.front); items.popFront();
 	    fs.B.refy = to!double(items.front); items.popFront();
 	    fs.B.refz = to!double(items.front); items.popFront();
+	} else {
+	    fs.B.refx = 0.0; fs.B.refy = 0.0; fs.B.refz = 0.0;
 	}
-	if ( myConfig.include_quality ) {
+	if (myConfig.include_quality) {
 	    fs.gas.quality = to!double(items.front); items.popFront();
 	} else {
 	    fs.gas.quality = 1.0;
@@ -330,14 +333,14 @@ public:
 	foreach(i; 0 .. gm.n_species) {
 	    fs.gas.massf[i] = to!double(items.front); items.popFront();
 	}
-	if ( gm.n_species > 1 ) {
+	if (gm.n_species > 1) {
 	    dt_chem = to!double(items.front); items.popFront();
 	}
 	foreach(i; 0 .. gm.n_modes) {
 	    fs.gas.e[i] = to!double(items.front); items.popFront();
 	    fs.gas.T[i] = to!double(items.front); items.popFront();
 	}
-	if ( gm.n_modes > 1 ) {
+	if (gm.n_modes > 1) {
 	    dt_therm = to!double(items.front); items.popFront(); 
 	}
     } // end scan_values_from_string()
@@ -409,7 +412,6 @@ public:
 	foreach(imode; 0 .. myU.energies.length) {
 	    myU.energies[imode] = fs.gas.rho * fs.gas.e[imode];
 	}
-    
 	if (omegaz != 0.0) {
 	    // Rotating frame.
 	    // Finally, we adjust the total energy to make rothalpy.
@@ -595,6 +597,7 @@ public:
 	// Individual energies.
 	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
 	// Instead we get this from the conservation of total energy
+	dUdt[ftl].energies[0] = 0.0;
 	foreach(imode; 1 .. iface[0].F.energies.length) {
 	    integral = 0.0;
 	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.energies[imode] * iface[i].area[gtl];
@@ -636,6 +639,8 @@ public:
 	    U1.B.refx = U0.B.x + dt * gamma_1 * dUdt0.B.x;
 	    U1.B.refy = U0.B.y + dt * gamma_1 * dUdt0.B.y;
 	    U1.B.refz = U0.B.z + dt * gamma_1 * dUdt0.B.z;
+	} else {
+	    U1.B.refx = 0.0; U1.B.refy = 0.0; U1.B.refz = 0.0;
 	}
 	U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
 	if (with_k_omega) {
@@ -661,6 +666,7 @@ public:
 	}
 	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
 	// Instead we get this from the conservation of total energy
+	U1.energies[0] = U0.energies[0];
 	foreach(imode; 1 .. U1.energies.length) {
 	    U1.energies[imode] = U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode];
 	}
@@ -694,6 +700,8 @@ public:
 	    U2.B.refx = U_old.B.x + dt * (gamma_1 * dUdt0.B.x + gamma_2 * dUdt1.B.x);
 	    U2.B.refy = U_old.B.y + dt * (gamma_1 * dUdt0.B.y + gamma_2 * dUdt1.B.y);
 	    U2.B.refz = U_old.B.z + dt * (gamma_1 * dUdt0.B.z + gamma_2 * dUdt1.B.z);
+	} else {
+	    U2.B.refx = 0.0; U2.B.refy = 0.0; U2.B.refz = 0.0;
 	}
 	U2.total_energy = U_old.total_energy + 
 	    dt * (gamma_1 * dUdt0.total_energy + gamma_2 * dUdt1.total_energy);
@@ -711,6 +719,7 @@ public:
 	}
 	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
 	// Instead we get this from the conservation of total energy
+	U2.energies[0] = U_old.energies[0];
 	foreach(imode; 1 .. U2.energies.length) {
 	    U2.energies[imode] = U_old.energies[imode] + 
 		dt * (gamma_1 * dUdt0.energies[imode] + gamma_2 * dUdt1.energies[imode]);
@@ -752,6 +761,8 @@ public:
 	    U3.B.refx = U_old.B.x + dt * (gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x + gamma_3*dUdt2.B.x);
 	    U3.B.refy = U_old.B.y + dt * (gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y + gamma_3*dUdt2.B.y);
 	    U3.B.refz = U_old.B.z + dt * (gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z + gamma_3*dUdt2.B.z);
+	} else {
+	    U3.B.refx = 0.0; U3.B.refy = 0.0; U3.B.refz = 0.0;
 	}
 	U3.total_energy = U_old.total_energy + 
 	    dt * (gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
@@ -770,6 +781,7 @@ public:
 	}
 	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
 	// Instead we get this from the conservation of total energy
+	U3.energies[0] = U_old.energies[0];
 	foreach(imode; 1 .. U3.energies.length) {
 	    U3.energies[imode] = U_old.energies[imode] +
 		dt * (gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode] +
@@ -795,6 +807,8 @@ public:
 	    U1.B.refx = vr * (U0.B.x + dt * gamma_1 * dUdt0.B.x);
 	    U1.B.refy = vr * (U0.B.y + dt * gamma_1 * dUdt0.B.y);
 	    U1.B.refz = vr * (U0.B.z + dt * gamma_1 * dUdt0.B.z);
+	} else {
+	    U1.B.refx = 0.0; U1.B.refy = 0.0; U1.B.refz = 0.0;
 	}
 	U1.total_energy = vr * (U0.total_energy + dt * gamma_1 * dUdt0.total_energy);
 	if (with_k_omega) {
@@ -811,6 +825,7 @@ public:
 	}
 	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
 	// Instead we get this from the conservation of total energy
+	U1.energies[0] = U0.energies[0];
 	foreach(imode; 1 .. U1.energies.length) {
 	    U1.energies[imode] = vr * (U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode]);
 	}
@@ -838,15 +853,17 @@ public:
 				      dt * (gamma_1 * dUdt0.momentum.y + gamma_2 * dUdt1.momentum.y));
 	U2.momentum.refz = vol_inv * (v_old * U0.momentum.z + 
 				      dt * (gamma_1 * dUdt0.momentum.z + gamma_2 * dUdt1.momentum.z));
-	if ( myConfig.MHD ) {
+	if (myConfig.MHD) {
 	    // Magnetic field
 	    U2.B.refx = vol_inv * (v_old * U0.B.x + dt * (gamma_1 * dUdt0.B.x + gamma_2 * dUdt1.B.x));
 	    U2.B.refy = vol_inv * (v_old * U0.B.y + dt * (gamma_1 * dUdt0.B.y + gamma_2 * dUdt1.B.y));
 	    U2.B.refz = vol_inv * (v_old * U0.B.z + dt * (gamma_1 * dUdt0.B.z + gamma_2 * dUdt1.B.z));
+	} else {
+	    U2.B.refx = 0.0; U2.B.refy = 0.0; U2.B.refz = 0.0;
 	}
 	U2.total_energy = vol_inv * (v_old * U0.total_energy + 
 				     dt * (gamma_1 * dUdt0.total_energy + gamma_2 * dUdt1.total_energy));
-	if ( with_k_omega ) {
+	if (with_k_omega) {
 	    U2.tke = vol_inv * (v_old * U0.tke + dt * (gamma_1 * dUdt0.tke + gamma_2 * dUdt1.tke));
 	    U2.tke = fmax(U2.tke, 0.0);
 	    U2.omega = vol_inv * (v_old * U0.omega + dt * (gamma_1 * dUdt0.omega + gamma_2 * dUdt1.omega));
@@ -862,6 +879,7 @@ public:
 	}
 	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
 	// Instead we get this from the conservation of total energy
+	U2.energies[0] = U0.energies[0];
 	foreach(imode; 1 .. U2.energies.length) {
 	    U2.energies[imode] = vol_inv * (v_old * U0.energies[imode] +
 					    dt * (gamma_1 * dUdt0.energies[imode] + 
