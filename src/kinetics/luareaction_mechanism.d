@@ -94,7 +94,9 @@ extern(C) int newReactionMechanism(lua_State* L)
     lua_pop(L, 1);
 
     auto L2 = init_lua_State(fname);
+    lua_getglobal(L2, "reaction");
     auto myReacMech = createReactionMechanism(L2, gmodel, T_lower, T_upper);
+    lua_close(L2);
     ReactionMechanismStore ~= pushObj!(ReactionMechanism, ReactionMechanismMT)(L, myReacMech);
     return 1;
 } // end newReactionMechanism()
@@ -102,6 +104,14 @@ extern(C) int newReactionMechanism(lua_State* L)
 // ----------------------------------------------------
 // Exposed methods of the ReactionMechanism class
 // ----------------------------------------------------
+extern(C) int nReactions(lua_State* L)
+{
+    auto rmech = checkReactionMechanism(L, 1);
+    writeln("n_reactions= ", rmech.n_reactions);
+    lua_pushinteger(L, rmech.n_reactions);
+    return 1;
+}
+
 extern(C) int evalRateConstants(lua_State* L)
 {
     auto rmech = checkReactionMechanism(L, 1);
@@ -163,6 +173,8 @@ void registerReactionMechanism(lua_State* L, int tblIdx)
     // Register methods for use
     lua_pushcfunction(L, &newReactionMechanism);
     lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &nReactions);
+    lua_setfield(L, -2, "nReactions");
     lua_pushcfunction(L, &evalRateConstants);
     lua_setfield(L, -2, "evalRateConstants");
     lua_pushcfunction(L, &evalRates);

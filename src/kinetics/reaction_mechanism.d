@@ -21,7 +21,7 @@ import kinetics.reaction;
 class ReactionMechanism
 {
 public:
-    @property ulong n_reactions() const { return _reactions.length; }
+    @property size_t n_reactions() const { return _reactions.length; }
     this(Reaction[] reactions, size_t n_species, double T_lower_limit, double T_upper_limit)
     {
 	foreach ( ref r; reactions) {
