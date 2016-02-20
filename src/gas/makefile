@@ -40,6 +40,9 @@ include $(UTIL_DIR)/util_files.mk
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
 
+KINETICS_DIR := ../kinetics
+include $(KINETICS_DIR)/kinetics_files.mk
+
 include gas_files.mk
 
 demo: ${DEMO_PROGRAMS}
@@ -64,9 +67,9 @@ build-prep-gas: prep_gas.lua species-database.lua
 	- mkdir -p $(BUILD_DIR)/data
 	cp species-database/species-database.lua $(BUILD_DIR)/data/
 
-gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(NM_FILES) $(UTIL_FILES)
+gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	dmd -ofgas-calc -version=gas_calc \
-		$(GAS_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS)
+		$(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) $(DLINKFLAGS)
 
 species-data-converter: species_data_converter.lua
 	- mkdir -p $(BUILD_DIR)/bin
@@ -109,9 +112,9 @@ sf6_model_demo: sf6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
-luagas_model_demo: luagas_model_demo.d $(LIBLUA) 
+luagas_model_demo: luagas_model_demo.d $(GAS_LUA_FILES) $(LIBLUA) 
 	$(DMD) -g $(DFLAGS) luagas_model_demo.d $(OF)luagas_model_demo \
-		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(GAS_FILES) $(GAS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS) 
 
 

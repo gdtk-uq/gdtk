@@ -15,9 +15,11 @@ import std.conv;
 import std.string;
 import util.lua;
 import util.lua_service;
+import kinetics.luareaction_mechanism;
 
 import gas.gas_model;
 import gas.gas_model_util;
+
 
 // name for GasModel class in Lua scripts
 immutable string GasModelMT = "GasModel";
@@ -424,6 +426,10 @@ extern(C) int createTableForGasState(lua_State* L)
     lua_newtable(L);
     int idx = lua_gettop(L);
     setGasStateInTable(L, gm, idx, Q);
+    // It's convenient in the Lua code to put a reference
+    // to the gas model in the GasState table.
+    pushObj!(GasModel, GasModelMT)(L, gm);
+    lua_setfield(L, idx, "gasmodel");
     return 1;
 }
 
@@ -450,6 +456,10 @@ extern(C) int newTableForGasState(lua_State* L)
     lua_newtable(L);
     int idx = lua_gettop(L);
     setGasStateInTable(L, gm, idx, Q);
+    // It's convenient in the Lua code to put a reference
+    // to the gas model in the GasState table.
+    pushObj!(GasModel, GasModelMT)(L, gm);
+    lua_setfield(L, idx, "gasmodel");
     return 1;
 }
 
@@ -797,6 +807,7 @@ version(gas_calc) {
 	auto L = luaL_newstate();
 	luaL_openlibs(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
+	registerReactionMechanism(L, LUA_GLOBALSINDEX);
 
 	if ( luaL_dofile(L, toStringz(args[1])) != 0 ) {
 	    writeln(to!string(lua_tostring(L, -1)));

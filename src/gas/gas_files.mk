@@ -5,7 +5,6 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/gas_model.d \
 	$(GAS_DIR)/gas_model_util.d \
 	$(GAS_DIR)/ideal_gas.d \
-	$(GAS_DIR)/luagas_model.d \
 	$(GAS_DIR)/physical_constants.d \
 	$(GAS_DIR)/sf6virial.d \
 	$(GAS_DIR)/therm_perf_gas.d \
@@ -30,3 +29,5 @@ DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d
 
 GAS_FILES := $(GAS_MODEL_FILES) $(THERMO_FILES) $(DIFFUSION_FILES)
+
+GAS_LUA_FILES := $(GAS_DIR)/luagas_model.d
