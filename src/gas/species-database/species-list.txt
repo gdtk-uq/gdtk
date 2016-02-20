@@ -4,8 +4,10 @@ Ar.lua     : Ar       : argon
 CO2.lua    : CO2      : carbon dioxide
 H.lua      : H        : monatomic hydrogen
 H2.lua     : H2       : diatomic hydrogen
+HI.lua     : HI       : hydrogen iodide
 H2O.lua    : H2O      : water
 HO2.lua    : HO2      : hydroperoxyl
+I2.lua     : I2       : iodine
 Kr.lua     : Kr       : krypton
 N.lua      : N        : monatomic nitrogen
 N2.lua     : N2       : diatomic nitrogen
