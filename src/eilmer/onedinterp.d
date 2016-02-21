@@ -1,5 +1,5 @@
 // onedinterp.d
-// One-dimensional reconstruction of a scalar quantity.
+// One-dimensional interpolation/reconstruction of flow field.
 //
 // See MBCNS workbook 2000/2 page 36 (26-Jan-2001) for formulation.
 // and MBCNS workbook 2005/Apr page 36 for new index labels

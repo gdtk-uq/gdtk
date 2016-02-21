@@ -31,7 +31,7 @@ import fvcore;
 import fvvertex;
 import fvinterface;
 import fvcell;
-import onedinterp;
+import lsqinterp;
 import block;
 import bc;
 
@@ -42,6 +42,9 @@ public:
     size_t nfaces;
     size_t nboundaries;
     UnstructuredGrid grid;
+    // Work-space that gets reused.
+    // The following objects are used in the convective_flux method.
+    LsqInterpolator lsq;
 
 public:
     this(in int id, JSONValue json_data)
@@ -54,6 +57,8 @@ public:
 	nboundaries = getJSONint(json_data, "nboundaries", 0);
 	active = getJSONbool(json_data, "active", true);
 	omegaz = getJSONdouble(json_data, "omegaz", 0.0);
+	// Workspace for flux_calc method.
+	lsq = new LsqInterpolator(dedicatedConfig[id]);
     } // end constructor from json
 
     override void init_lua_globals()
@@ -613,9 +618,7 @@ public:
     override void convective_flux()
     {
 	foreach (f; faces) {
-	    // For now, copy flow states without high-order (any) reconstruction.
-	    Lft.copy_values_from(f.left_cells[0].fs);
-	    Rght.copy_values_from(f.right_cells[0].fs);
+	    lsq.interp_both(f, 0, Lft, Rght); // gtl assumed 0
 	    f.fs.copy_average_values_from(Lft, Rght);
 	    compute_interface_flux(Lft, Rght, f, myConfig.gmodel, omegaz);
 	} // end foreach face
