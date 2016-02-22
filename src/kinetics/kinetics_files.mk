@@ -5,4 +5,5 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/reaction.d \
 	$(KINETICS_DIR)/reaction_mechanism.d
 
-KINETICS_LUA_FILES := $(KINETICS_DIR)/luareaction_mechanism.d
+KINETICS_LUA_FILES := $(KINETICS_DIR)/luachemistry_update.d \
+	$(KINETICS_DIR)/luareaction_mechanism.d

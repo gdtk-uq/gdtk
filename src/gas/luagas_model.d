@@ -16,9 +16,11 @@ import std.string;
 import util.lua;
 import util.lua_service;
 import kinetics.luareaction_mechanism;
+import kinetics.luachemistry_update;
 
 import gas.gas_model;
 import gas.gas_model_util;
+import gas.physical_constants;
 
 
 // name for GasModel class in Lua scripts
@@ -793,6 +795,12 @@ void registerGasModel(lua_State* L, int tblIdx)
     // Make GasState constructor visible
     lua_setfield(L, tblIdx, "GasState");
 
+    // Set some of the physical constants as global
+    lua_pushnumber(L, P_atm);
+    lua_setglobal(L, "P_atm");
+    lua_pushnumber(L, R_universal);
+    lua_setglobal(L, "R_universal");
+
 }
 
 version(gas_calc) {
@@ -808,6 +816,7 @@ version(gas_calc) {
 	luaL_openlibs(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	registerReactionMechanism(L, LUA_GLOBALSINDEX);
+	registerReactionUpdateScheme(L, LUA_GLOBALSINDEX);
 
 	if ( luaL_dofile(L, toStringz(args[1])) != 0 ) {
 	    writeln(to!string(lua_tostring(L, -1)));

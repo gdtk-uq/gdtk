@@ -32,11 +32,14 @@ ReactionMechanism checkReactionMechanism(lua_State* L, int index)
  * This function implements the constructor for a ReactionMechanism
  * from the Lua interface.
  *
- * Construction of a ReactionMechanism is from a filename and
- * a previously-constructed GasModel.
- * -------------------------------
- * rmech = ReactionMechanism:new{filename='fname', gasmodel=gmodel}
- * -------------------------------
+ * Construction of a ReactionMechanism is from a filename,
+ * a previously-constructed GasModel, and, optionally,
+ * values for T_lower and T_upper for limits for evaluating the reaction
+ * rate constants.
+ * --------------------------------------------------------------------
+ * rmech = ReactionMechanism:new{filename='fname', gasmodel=gmodel,
+ *                               T_lower=300.0, T_upper=30000.0}
+ * ---------------------------------------------------------------------
  */
 extern(C) int newReactionMechanism(lua_State* L)
 {
@@ -127,20 +130,21 @@ extern(C) int evalRateConstants(lua_State* L)
 extern(C) int evalRates(lua_State* L)
 {
     auto rmech = checkReactionMechanism(L, 1);
+    lua_getfield(L, 2, "gasmodel");
+    auto gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+    auto Q = new GasState(gm.n_species, gm.n_modes);
+    getGasStateFromTable(L, gm, 2, Q);
     double[] conc;
-    auto nsp = to!int(lua_objlen(L, 2));
-    foreach (int isp; 1 .. nsp+1) {
-	lua_rawgeti(L, 2, isp);
-	conc ~= luaL_checknumber(L, -1);
-	lua_pop(L, 1);
-    }
+    conc.length = gm.n_species;
+    gm.massf2conc(Q, conc);
     double[] rates;
-    rates.length = conc.length;
+    rates.length = gm.n_species;
     rmech.eval_rates(conc, rates);
     lua_newtable(L);
-    foreach (int isp; 1 .. nsp+1) {
+    foreach (int isp; 1 .. gm.n_species+1) {
 	lua_pushnumber(L, rates[isp-1]);
-	lua_rawseti(L, -1, isp);
+	lua_rawseti(L, -2, isp);
     }
     return 1;
 }
