@@ -73,6 +73,7 @@ public:
 		xx += dr.x*dr.x; xy += dr.x*dr.y; xz += dr.x*dr.z;
 		yy += dr.y*dr.y; yz += dr.y*dr.z; zz += dr.z*dr.z;
 	    }
+	    assert (fabs(xx) > 1.0e-12, "left_cells xx essentially zero");
 	    string directionsL = "x";
 	    if (yy/xx > 0.01) directionsL ~= "y";
 	    if (zz/xx > 0.01) directionsL ~= "z";
@@ -101,16 +102,17 @@ public:
 	    xTxL[0][3] = 1.0; xTxL[0][4] = 0.0; xTxL[0][5] = 0.0;
 	    xTxL[1][3] = 0.0; xTxL[1][4] = 1.0; xTxL[1][5] = 0.0;
 	    xTxL[2][3] = 0.0; xTxL[2][4] = 0.0; xTxL[2][5] = 1.0;
-	    debug {
-		writeln("IFace.pos[gtl]=", IFace.pos, " nL=", nL);
-		writeln("xTxL=", xTxL);
-	    }
-	    try {
-		computeInverse!3(xTxL);
-	    } catch (Exception e) {
-		writeln("catch %s", e.msg);
-		writeln("IFace.pos[gtl]=", IFace.pos, " nL=", nL);
-		writeln("xTxL=", xTxL);
+	    if (0 != computeInverse!3(xTxL)) {
+		// Assume that the rows are linearly dependent 
+		// because the sample points are colinear.
+		// Proceed by working as a single-dimensional interpolation.
+		directionsL = "x";
+		xTxL[0][0] = 1.0; xTxL[0][1] = 0.0; xTxL[0][2] = 0.0;
+		xTxL[1][0] = 0.0; xTxL[1][1] = 1.0; xTxL[1][2] = 0.0;
+		xTxL[2][0] = 0.0; xTxL[2][1] = 0.0; xTxL[2][2] = 1.0;
+		xTxL[0][3] = 1.0/xx; xTxL[0][4] = 0.0; xTxL[0][5] = 0.0;
+		xTxL[1][3] = 0.0; xTxL[1][4] = 1.0; xTxL[1][5] = 0.0;
+		xTxL[2][3] = 0.0; xTxL[2][4] = 0.0; xTxL[2][5] = 1.0;
 	    }
 	    //
 	    double[6][3] xTxR; // normal matrix Right, augmented to give 6 entries per row
@@ -125,6 +127,7 @@ public:
 		xx += dr.x*dr.x; xy += dr.x*dr.y; xz += dr.x*dr.z;
 		yy += dr.y*dr.y; yz += dr.y*dr.z; zz += dr.z*dr.z;
 	    }
+	    assert (fabs(xx) > 1.0e-12, "right_cells xx essentially zero");
 	    string directionsR = "x";
 	    if (yy/xx > 0.01) directionsR ~= "y";
 	    if (zz/xx > 0.01) directionsR ~= "z";
@@ -153,16 +156,17 @@ public:
 	    xTxR[0][3] = 1.0; xTxR[0][4] = 0.0; xTxR[0][5] = 0.0;
 	    xTxR[1][3] = 0.0; xTxR[1][4] = 1.0; xTxR[1][5] = 0.0;
 	    xTxR[2][3] = 0.0; xTxR[2][4] = 0.0; xTxR[2][5] = 1.0;
-	    debug {
-		writeln("IFace.pos[gtl]=", IFace.pos, " nR=", nR);
-		writeln("xTxR=", xTxR);
-	    }
-	    try {
-		computeInverse!3(xTxR);
-	    } catch (Exception e) {
-		writeln("catch %s", e.msg);
-		writeln("IFace.pos[gtl]=", IFace.pos, " nR=", nR);
-		writeln("xTxR=", xTxR);
+	    if (0 != computeInverse!3(xTxR)) {
+		// Assume that the rows are linearly dependent 
+		// because the sample points are colinear.
+		// Proceed by working as a single-dimensional interpolation.
+		directionsR = "x";
+		xTxR[0][0] = 1.0; xTxR[0][1] = 0.0; xTxR[0][2] = 0.0;
+		xTxR[1][0] = 0.0; xTxR[1][1] = 1.0; xTxR[1][2] = 0.0;
+		xTxR[2][0] = 0.0; xTxR[2][1] = 0.0; xTxR[2][2] = 1.0;
+		xTxR[0][3] = 1.0/xx; xTxR[0][4] = 0.0; xTxR[0][5] = 0.0;
+		xTxR[1][3] = 0.0; xTxR[1][4] = 1.0; xTxR[1][5] = 0.0;
+		xTxR[2][3] = 0.0; xTxR[2][4] = 0.0; xTxR[2][5] = 1.0;
 	    }
 	    // x-velocity
 	    string codeForReconstruction(string qname, string tname)
@@ -199,10 +203,16 @@ public:
 		// TODO limiting of gradients.
                 dr = IFace.pos - IFace.left_cells[0].pos[gtl];
 		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-                Lft."~tname~" = dr.x * gradientsL[0] + dr.y * gradientsL[1] + dr.z * gradientsL[2];
+                Lft."~tname~" = IFace.left_cells[0].fs."~qname~";
+                Lft."~tname~" += dr.x * gradientsL[0] + dr.y * gradientsL[1] + dr.z * gradientsL[2];
+                Lft."~tname~" = clip_to_limits(Lft."~tname~", IFace.left_cells[0].fs."~qname~",
+                                               IFace.right_cells[0].fs."~qname~");
                 dr = IFace.pos - IFace.right_cells[0].pos[gtl];
 		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-                Rght."~tname~" = dr.x * gradientsR[0] + dr.y * gradientsR[1] + dr.z * gradientsR[2];
+                Rght."~tname~" = IFace.right_cells[0].fs."~qname~";
+                Rght."~tname~" += dr.x * gradientsR[0] + dr.y * gradientsR[1] + dr.z * gradientsR[2];
+                Rght."~tname~" = clip_to_limits(Rght."~tname~", IFace.left_cells[0].fs."~qname~",
+                                                IFace.right_cells[0].fs."~qname~");
                 ";
 		return code;
 	    }
