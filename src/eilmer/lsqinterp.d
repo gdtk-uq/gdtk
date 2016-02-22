@@ -13,10 +13,18 @@ import flowstate;
 import fvinterface;
 import fvcell;
 
+// Symbolic names for the reconstruction directions.
+enum Directions { x, xy, xz, xyz }
+
 class LsqInterpolator {
 
 private:
     LocalConfig myConfig;
+    double dxFaceL, dyFaceL, dzFaceL;
+    double dxFaceR, dyFaceR, dzFaceR;
+    immutable size_t MaxNPoints = 10;
+    double[MaxNPoints] dxL, dyL, dzL;
+    double[MaxNPoints] dxR, dyR, dzR;
 
 public:
     this(LocalConfig myConfig) 
@@ -53,48 +61,72 @@ public:
 	    foreach (cell; IFace.right_cells) {
 		cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
 	    }
-	    // Prepare the normal matrix for each cloud and invert it.
 	    // Since we are working in the interface-local frame, having the
 	    // local x-direction aligned with the unit normal for the interface,
 	    // we always expect good distribition of points in that direction.
+	    Vector3 dr = IFace.pos; dr -= IFace.left_cells[0].pos[gtl];
+	    dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+	    dxFaceL = dr.x; dyFaceL = dr.y; dzFaceL = dr.z;
+	    dr = IFace.pos; dr -= IFace.right_cells[0].pos[gtl];
+	    dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+	    dxFaceR = dr.x; dyFaceR = dr.y; dzFaceR = dr.z;
+	    //
+	    size_t nL = IFace.left_cells.length;
+	    assert(nL <= MaxNPoints, "too many left_cells");
+	    foreach (i; 1 .. nL) {
+		dr = IFace.left_cells[i].pos[gtl]; dr -= IFace.left_cells[0].pos[gtl];
+		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+		dxL[i] = dr.x; dyL[i] = dr.y; dzL[i] = dr.z;
+	    }	    
+	    size_t nR = IFace.right_cells.length;
+	    assert(nR < MaxNPoints, "too many right_cells");
+	    foreach (i; 1 .. nR) {
+		dr = IFace.right_cells[i].pos[gtl]; dr -= IFace.right_cells[0].pos[gtl];
+		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+		dxR[i] = dr.x; dyR[i] = dr.y; dzR[i] = dr.z;
+	    }	    
+	    // Prepare the normal matrix for each cloud and invert it.
 	    // Depending on how aligned the points are, there may be insufficient
 	    // variation in the local y- or z-positions to make a sensible 3D matrix.
 	    // We will form the sums and look at their relative sizes.
-	    Vector3 dr;
 	    double[6][3] xTxL; // normal matrix Left, augmented to give 6 entries per row
 	    double[3] rhsL, gradientsL;
-	    size_t nL = IFace.left_cells.length;
 	    double xx = 0.0; double xy = 0.0; double xz = 0.0;
 	    double yy = 0.0; double yz = 0.0;
 	    double zz = 0.0;
 	    foreach (i; 1 .. nL) {
-		dr = IFace.left_cells[i].pos[gtl] - IFace.left_cells[0].pos[gtl];
-		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-		xx += dr.x*dr.x; xy += dr.x*dr.y; xz += dr.x*dr.z;
-		yy += dr.y*dr.y; yz += dr.y*dr.z; zz += dr.z*dr.z;
+		xx += dxL[i]*dxL[i]; xy += dxL[i]*dyL[i]; xz += dxL[i]*dzL[i];
+		yy += dyL[i]*dyL[i]; yz += dyL[i]*dzL[i]; zz += dzL[i]*dzL[i];
 	    }
 	    assert (fabs(xx) > 1.0e-12, "left_cells xx essentially zero");
-	    string directionsL = "x";
-	    if (yy/xx > 0.01) directionsL ~= "y";
-	    if (zz/xx > 0.01) directionsL ~= "z";
-	    switch (directionsL) {
-	    case "xyz":
+	    immutable double small = 0.01;
+	    auto directionsL = Directions.xyz;
+	    if (yy/xx > small && zz/xx > small) {
+		directionsL = Directions.xyz;
+	    } else if (yy/xx > small && zz/xx <= small) {
+		directionsL = Directions.xy;
+	    } else if (yy/xx <= small && zz/xx > small) {
+		directionsL = Directions.xz;
+	    } else {
+		directionsL = Directions.x;
+	    }
+	    final switch (directionsL) {
+	    case Directions.xyz:
 		xTxL[0][0] = xx; xTxL[0][1] = xy; xTxL[0][2] = xz;
 		xTxL[1][0] = xy; xTxL[1][1] = yy; xTxL[1][2] = yz;
 		xTxL[2][0] = xz; xTxL[2][1] = yz; xTxL[2][2] = zz;
 		break;
-	    case "xy":
+	    case Directions.xy:
 		xTxL[0][0] =  xx; xTxL[0][1] =  xy; xTxL[0][2] = 0.0;
 		xTxL[1][0] =  xy; xTxL[1][1] =  yy; xTxL[1][2] = 0.0;
 		xTxL[2][0] = 0.0; xTxL[2][1] = 0.0; xTxL[2][2] = 1.0;
 		break;
-	    case "xz":
+	    case Directions.xz:
 		xTxL[0][0] =  xx; xTxL[0][1] = 0.0; xTxL[0][2] =  xz;
 		xTxL[1][0] = 0.0; xTxL[1][1] = 1.0; xTxL[1][2] = 0.0;
 		xTxL[2][0] =  xz; xTxL[2][1] = 0.0; xTxL[2][2] =  zz;
 		break;
-	    case "x":
-	    default:
+	    case Directions.x:
 		xTxL[0][0] =  xx; xTxL[0][1] = 0.0; xTxL[0][2] = 0.0;
 		xTxL[1][0] = 0.0; xTxL[1][1] = 1.0; xTxL[1][2] = 0.0;
 		xTxL[2][0] = 0.0; xTxL[2][1] = 0.0; xTxL[2][2] = 1.0;
@@ -106,7 +138,7 @@ public:
 		// Assume that the rows are linearly dependent 
 		// because the sample points are colinear.
 		// Proceed by working as a single-dimensional interpolation.
-		directionsL = "x";
+		directionsL = Directions.x;
 		xTxL[0][0] = 1.0; xTxL[0][1] = 0.0; xTxL[0][2] = 0.0;
 		xTxL[1][0] = 0.0; xTxL[1][1] = 1.0; xTxL[1][2] = 0.0;
 		xTxL[2][0] = 0.0; xTxL[2][1] = 0.0; xTxL[2][2] = 1.0;
@@ -117,38 +149,41 @@ public:
 	    //
 	    double[6][3] xTxR; // normal matrix Right, augmented to give 6 entries per row
 	    double[3] rhsR, gradientsR;
-	    size_t nR = IFace.right_cells.length;
 	    xx = 0.0; xy = 0.0; xz = 0.0;
 	    yy = 0.0; yz = 0.0;
 	    zz = 0.0;
 	    foreach (i; 1 .. nR) {
-		dr = IFace.right_cells[i].pos[gtl] - IFace.right_cells[0].pos[gtl];
-		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-		xx += dr.x*dr.x; xy += dr.x*dr.y; xz += dr.x*dr.z;
-		yy += dr.y*dr.y; yz += dr.y*dr.z; zz += dr.z*dr.z;
+		xx += dxR[i]*dxR[i]; xy += dxR[i]*dyR[i]; xz += dxR[i]*dzR[i];
+		yy += dyR[i]*dyR[i]; yz += dyR[i]*dzR[i]; zz += dzR[i]*dzR[i];
 	    }
 	    assert (fabs(xx) > 1.0e-12, "right_cells xx essentially zero");
-	    string directionsR = "x";
-	    if (yy/xx > 0.01) directionsR ~= "y";
-	    if (zz/xx > 0.01) directionsR ~= "z";
-	    switch (directionsR) {
-	    case "xyz":
+	    auto directionsR = Directions.xyz;
+	    if (yy/xx > small && zz/xx > small) {
+		directionsR = Directions.xyz;
+	    } else if (yy/xx > small && zz/xx <= small) {
+		directionsR = Directions.xy;
+	    } else if (yy/xx <= small && zz/xx > small) {
+		directionsR = Directions.xz;
+	    } else {
+		directionsR = Directions.x;
+	    }
+	    final switch (directionsR) {
+	    case Directions.xyz:
 		xTxR[0][0] = xx; xTxR[0][1] = xy; xTxR[0][2] = xz;
 		xTxR[1][0] = xy; xTxR[1][1] = yy; xTxR[1][2] = yz;
 		xTxR[2][0] = xz; xTxR[2][1] = yz; xTxR[2][2] = zz;
 		break;
-	    case "xy":
+	    case Directions.xy:
 		xTxR[0][0] =  xx; xTxR[0][1] =  xy; xTxR[0][2] = 0.0;
 		xTxR[1][0] =  xy; xTxR[1][1] =  yy; xTxR[1][2] = 0.0;
 		xTxR[2][0] = 0.0; xTxR[2][1] = 0.0; xTxR[2][2] = 1.0;
 		break;
-	    case "xz":
+	    case Directions.xz:
 		xTxR[0][0] =  xx; xTxR[0][1] = 0.0; xTxR[0][2] =  xz;
 		xTxR[1][0] = 0.0; xTxR[1][1] = 1.0; xTxR[1][2] = 0.0;
 		xTxR[2][0] =  xz; xTxR[2][1] = 0.0; xTxR[2][2] =  zz;
 		break;
-	    case "x":
-	    default:
+	    case Directions.x:
 		xTxR[0][0] =  xx; xTxR[0][1] = 0.0; xTxR[0][2] = 0.0;
 		xTxR[1][0] = 0.0; xTxR[1][1] = 1.0; xTxR[1][2] = 0.0;
 		xTxR[2][0] = 0.0; xTxR[2][1] = 0.0; xTxR[2][2] = 1.0;
@@ -160,7 +195,7 @@ public:
 		// Assume that the rows are linearly dependent 
 		// because the sample points are colinear.
 		// Proceed by working as a single-dimensional interpolation.
-		directionsR = "x";
+		directionsR = Directions.x;
 		xTxR[0][0] = 1.0; xTxR[0][1] = 0.0; xTxR[0][2] = 0.0;
 		xTxR[1][0] = 0.0; xTxR[1][1] = 1.0; xTxR[1][2] = 0.0;
 		xTxR[2][0] = 0.0; xTxR[2][1] = 0.0; xTxR[2][2] = 1.0;
@@ -171,49 +206,41 @@ public:
 	    // x-velocity
 	    string codeForReconstruction(string qname, string tname)
 	    {
-		string code = "
+		string code = "{
+                double qL0 = IFace.left_cells[0].fs."~qname~";
                 foreach (j; 0 .. 3) { rhsL[j] = 0.0; }
                 foreach (i; 1 .. nL) {
-                    double dq = IFace.left_cells[i].fs."~qname~" - IFace.left_cells[0].fs."~qname~";
-		    dr = IFace.left_cells[i].pos[gtl] - IFace.left_cells[0].pos[gtl];
-		    dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-                    rhsL[0] += dr.x*dq; rhsL[1] += dr.y*dq; rhsL[2] += dr.z*dq;
+                    double dq = IFace.left_cells[i].fs."~qname~" - qL0;
+                    rhsL[0] += dxL[i]*dq; rhsL[1] += dyL[i]*dq; rhsL[2] += dzL[i]*dq;
 	        }
 	        solveWithInverse!3(xTxL, rhsL, gradientsL);
-		switch (directionsL) {
-		case `xyz`: break;
-		case `xy`: gradientsL[2] = 0.0; break;
-		case `xz`: gradientsL[1] = 0.0; break;
-		case `x`: default: gradientsL[1] = 0.0; gradientsL[2] = 0.0;
+		final switch (directionsL) {
+		case Directions.xyz: break;
+		case Directions.xy: gradientsL[2] = 0.0; break;
+		case Directions.xz: gradientsL[1] = 0.0; break;
+		case Directions.x: gradientsL[1] = 0.0; gradientsL[2] = 0.0;
                 }
+                double qR0 = IFace.right_cells[0].fs."~qname~";
                 foreach (j; 0 .. 3) { rhsR[j] = 0.0; }
                 foreach (i; 1 .. nR) {
-                    double dq = IFace.right_cells[i].fs."~qname~" - IFace.right_cells[0].fs."~qname~";
- 		    dr = IFace.right_cells[i].pos[gtl] - IFace.right_cells[0].pos[gtl];
-		    dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-                    rhsR[0] += dr.x*dq; rhsR[1] += dr.y*dq; rhsR[2] += dr.z*dq;
+                    double dq = IFace.right_cells[i].fs."~qname~" - qR0;
+                    rhsR[0] += dxR[i]*dq; rhsR[1] += dyR[i]*dq; rhsR[2] += dzR[i]*dq;
 	        }
-	        solveWithInverse!3(xTxR, rhsR, gradientsR);
-		switch (directionsR) {
-		case `xyz`: break;
-		case `xy`: gradientsR[2] = 0.0; break;
-		case `xz`: gradientsR[1] = 0.0; break;
-		case `x`: default: gradientsR[1] = 0.0; gradientsR[2] = 0.0;
+                solveWithInverse!3(xTxR, rhsR, gradientsR);
+		final switch (directionsR) {
+		case Directions.xyz: break;
+		case Directions.xy: gradientsR[2] = 0.0; break;
+		case Directions.xz: gradientsR[1] = 0.0; break;
+		case Directions.x: gradientsR[1] = 0.0; gradientsR[2] = 0.0;
                 }
-		// TODO limiting of gradients.
-                dr = IFace.pos - IFace.left_cells[0].pos[gtl];
-		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-                Lft."~tname~" = IFace.left_cells[0].fs."~qname~";
-                Lft."~tname~" += dr.x * gradientsL[0] + dr.y * gradientsL[1] + dr.z * gradientsL[2];
-                Lft."~tname~" = clip_to_limits(Lft."~tname~", IFace.left_cells[0].fs."~qname~",
-                                               IFace.right_cells[0].fs."~qname~");
-                dr = IFace.pos - IFace.right_cells[0].pos[gtl];
-		dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-                Rght."~tname~" = IFace.right_cells[0].fs."~qname~";
-                Rght."~tname~" += dr.x * gradientsR[0] + dr.y * gradientsR[1] + dr.z * gradientsR[2];
-                Rght."~tname~" = clip_to_limits(Rght."~tname~", IFace.left_cells[0].fs."~qname~",
-                                                IFace.right_cells[0].fs."~qname~");
-                ";
+		// TODO limiting of gradients, maybe.
+                double qL = qL0 + dxFaceL * gradientsL[0] + 
+                            dyFaceL * gradientsL[1] + dzFaceL * gradientsL[2];
+                Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
+                double qR = qR0 + dxFaceR * gradientsR[0] + 
+                            dyFaceR * gradientsR[1] + dzFaceR * gradientsR[2];
+                Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
+                }";
 		return code;
 	    }
 	    mixin(codeForReconstruction("vel.x", "vel.refx"));
@@ -235,12 +262,14 @@ public:
 		}
 		try {
 		    scale_mass_fractions(Lft.gas.massf); 
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Lft.gas.massf[] = IFace.left_cells[0].fs.gas.massf[];
 		}
 		try {
 		    scale_mass_fractions(Rght.gas.massf);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Rght.gas.massf[] = IFace.right_cells[0].fs.gas.massf[];
 		}
 	    } else {
@@ -260,12 +289,14 @@ public:
 		}
 		try {
 		    gmodel.update_thermo_from_pT(Lft.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Lft.copy_values_from(IFace.left_cells[0].fs);
 		}
 		try {
 		    gmodel.update_thermo_from_pT(Rght.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Rght.copy_values_from(IFace.right_cells[0].fs);
 		}
 		break;
@@ -276,12 +307,14 @@ public:
 		}
 		try {
 		    gmodel.update_thermo_from_rhoe(Lft.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Lft.copy_values_from(IFace.left_cells[0].fs);
 		}
 		try {
 		    gmodel.update_thermo_from_rhoe(Rght.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Rght.copy_values_from(IFace.right_cells[0].fs);
 		}
 		break;
@@ -290,12 +323,14 @@ public:
 		mixin(codeForReconstruction("gas.p", "gas.p"));
 		try {
 		    gmodel.update_thermo_from_rhop(Lft.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Lft.copy_values_from(IFace.left_cells[0].fs);
 		}
 		try {
 		    gmodel.update_thermo_from_rhop(Rght.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Rght.copy_values_from(IFace.right_cells[0].fs);
 		}
 		break;
@@ -306,12 +341,14 @@ public:
 		}
 		try {
 		    gmodel.update_thermo_from_rhoT(Lft.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Lft.copy_values_from(IFace.left_cells[0].fs);
 		}
 		try {
 		    gmodel.update_thermo_from_rhoT(Rght.gas);
-		} catch {
+		} catch (Exception e) {
+		    writeln(e.msg);
 		    Rght.copy_values_from(IFace.right_cells[0].fs);
 		}
 		break;
