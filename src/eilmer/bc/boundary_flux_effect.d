@@ -221,6 +221,7 @@ public:
     {
 	FVInterface IFace;
 	size_t i, j, k;
+	double _u_rel, _v_rel;
         switch(which_boundary){
 	case Face.west:
 	    i = blk.imin;
@@ -228,12 +229,25 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    // Flux equations
 		    IFace = blk.get_cell(i,j,k).iface[Face.west];
-		    IFace.F.mass = _rho * (_u*IFace.n.x + _v*IFace.n.y);
+		    // for a moving grid we need vel relative to the interface
+		    _u_rel = _u - IFace.gvel.x;
+		    _v_rel = _v - IFace.gvel.y;
+		    IFace.F.mass = _rho * ( _u_rel*IFace.n.x + _v_rel*IFace.n.y );
+		    /++ when the boundary is moving we use the relative velocity
+		      + between the fluid and the boundary interface to determine
+		      + the amount of mass flux across the cell face (above). 
+		      + Alternatively momentum is a fluid property hence we use the 
+		      + fluid velocity in determining the momentum flux -- this is 
+		      + akin to saying we know how much mass flux is crossing 
+		      + the cell face of which this mass has a momentum dependant 
+		      + on its velocity. Since we we want this momentum flux in global 
+		      + coordinates there is no need to rotate the velocity.
+		      ++/
 		    IFace.F.momentum.refx = _p * IFace.n.x + _u*IFace.F.mass;
 		    IFace.F.momentum.refy = _p * IFace.n.y + _v*IFace.F.mass;
 		    IFace.F.momentum.refz = 0.0;
 		    // [TODO]: Kyle, think about z component.
-		    IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v) + _p/_rho);
+		    IFace.F.total_energy = IFace.F.mass * (_e + 0.5*(_u*_u+_v*_v)) + _p*(_u*IFace.n.x+_v*IFace.n.y);
 		    for ( int _isp = 0; _isp < _nsp; _isp++ ){
 			IFace.F.massf[_isp] = IFace.F.mass * _massf[_isp];
 		    }
@@ -246,4 +260,3 @@ public:
 	}
     }
 }
-
