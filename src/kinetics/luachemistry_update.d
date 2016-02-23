@@ -104,6 +104,8 @@ extern(C) int updateState(lua_State* L)
 	    "Caught exception: " ~ to!string(e);
 	luaL_error(L, errMsg.toStringz);
     }
+    // Update gas table
+    setGasStateInTable(L, gm, 2, Q);
     
     // Return new dtSuggest
     lua_pushnumber(L, dtSuggest);
