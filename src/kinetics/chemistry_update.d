@@ -144,28 +144,27 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
         h = rmech.estimateStepSize(conc0);
     else
 	h = dtSuggest;
-    double dtSave = h;
+    double dtSave;
     // 2. Now do the interesting stuff, increment species change
-    //writeln("THIS IS THE FIRST dt = ", h);
     int cycle = 0;
     int attempt = 0;
     for ( ; cycle < maxSubcycles; ++cycle ) {
-	/* Copy the last good timestep before moving on.
+	/* Copy the last good timestep suggestion before moving on.
 	 * If we're near the end of the interval, we want
 	 * the penultimate step. In other words, we don't
 	 * want to store the fractional step of (tInterval - t)
 	 * that is taken as the last step.
 	 */
-	dtSave = h;
+	dtSave = dtSuggest;
 	h = min(h, tInterval - t);
 	attempt= 0;
       	for ( ; attempt < maxAttempts; ++attempt ) {
 	    if ( cstep(conc0, h, concOut, dtSuggest) == ResultOfStep.success ) {
 		/* We succesfully took a step of size h
 		 * so increment the total time.
-		 */       
+		 */   
 		t += h;
-		 foreach ( i; 0..conc0.length ) conc0[i] = concOut[i];
+		foreach ( i; 0..conc0.length ) conc0[i] = concOut[i];
 		/* We can now make some decision about how to
 		 * increase the timestep. We will take some
 		 * guidance from the ODE step, but also check
@@ -242,6 +241,12 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 	}
 
 	if ( t >= tInterval ) { // We've done enough work.
+	    // If we've only take one cycle, then we would like to use
+	    // dtSuggest rather than using the dtSuggest from the
+	    // penultimate step.
+	    if (cycle == 0) {
+		dtSave = dtSuggest;
+	    }
 	    break;
 	}
     }
