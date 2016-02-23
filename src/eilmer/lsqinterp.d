@@ -42,7 +42,7 @@ public:
     } // end clip_to_limits()
 
     @nogc void min_mod_limit(ref double a, ref double b)
-    // Try a bit of a rough limiter on the slopes.
+    // A rough slope limiter.
     {
 	if (a * b < 0.0) {
 	    a = 0.0; b = 0.0;
@@ -50,6 +50,15 @@ public:
 	}
 	a = copysign(fmin(fabs(a), fabs(b)), a);
 	b = a;
+    }
+
+    @nogc void van_albada_limit(ref double a, ref double b)
+    // A smooth slope limiter.
+    {
+	immutable double eps = 1.0e-12;
+	double s = (a*b + fabs(a*b))/(a*a + b*b + eps);
+	a *= s;
+	b *= s;
     }
     
     void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght)
@@ -244,7 +253,7 @@ public:
 		case Directions.xz: gradientsR[1] = 0.0; break;
 		case Directions.x: gradientsR[1] = 0.0; gradientsR[2] = 0.0;
                 }
-		min_mod_limit(gradientsL[0], gradientsR[0]);
+		van_albada_limit(gradientsL[0], gradientsR[0]);
                 double qL = qL0 + dxFaceL * gradientsL[0] + 
                             dyFaceL * gradientsL[1] + dzFaceL * gradientsL[2];
                 Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
