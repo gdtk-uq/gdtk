@@ -41,6 +41,17 @@ public:
 	return fmin(upper_limit, fmax(lower_limit, q));
     } // end clip_to_limits()
 
+    @nogc void min_mod_limit(ref double a, ref double b)
+    // Try a bit of a rough limiter on the slopes.
+    {
+	if (a * b < 0.0) {
+	    a = 0.0; b = 0.0;
+	    return;
+	}
+	a = copysign(fmin(fabs(a), fabs(b)), a);
+	b = a;
+    }
+    
     void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght)
     {
 	auto gmodel = myConfig.gmodel;
@@ -233,7 +244,7 @@ public:
 		case Directions.xz: gradientsR[1] = 0.0; break;
 		case Directions.x: gradientsR[1] = 0.0; gradientsR[2] = 0.0;
                 }
-		// TODO limiting of gradients, maybe.
+		min_mod_limit(gradientsL[0], gradientsR[0]);
                 double qL = qL0 + dxFaceL * gradientsL[0] + 
                             dyFaceL * gradientsL[1] + dzFaceL * gradientsL[2];
                 Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
