@@ -185,6 +185,7 @@ extern(C) int intEnergy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
+    int narg = lua_gettop(L);
     auto e = gm.internal_energy(Q);
     lua_pushnumber(L, e);
     return 1;
@@ -195,7 +196,15 @@ extern(C) int enthalpy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
-    auto h = gm.enthalpy(Q);
+    int narg = lua_gettop(L);
+    double h;
+    if ( narg >= 3 ) { // Call species-specific version
+	int isp = luaL_checkint(L, 3);
+	h = gm.enthalpy(Q, isp);
+    }
+    else { // Call total gas mix version
+	h = gm.enthalpy(Q);
+    }
     lua_pushnumber(L, h);
     return 1;
 }
@@ -205,7 +214,15 @@ extern(C) int entropy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
-    auto s = gm.entropy(Q);
+    int narg = lua_gettop(L);
+    double s;
+    if ( narg >= 3 ) { // Call species-specific version
+	int isp = luaL_checkint(L, 3);
+	s = gm.entropy(Q, isp);
+    }
+    else {
+	s = gm.entropy(Q);
+    }
     lua_pushnumber(L, s);
     return 1;
 }
