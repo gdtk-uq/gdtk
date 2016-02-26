@@ -27,6 +27,7 @@ immutable string CoonsPatchMT = "CoonsPatch";
 immutable string AOPatchMT = "AOPatch";
 immutable string ChannelPatchMT = "ChannelPatch";
 immutable string MeshPatchMT = "MeshPatch";
+immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
 
 static const(ParametricSurface)[] surfaceStore;
@@ -42,6 +43,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
 	return checkObj!(ChannelPatch, ChannelPatchMT)(L, index);
     if ( isObjType(L, index, MeshPatchMT ) )
 	return checkObj!(MeshPatch, MeshPatchMT)(L, index);
+    if ( isObjType(L, index, LuaFnSurfaceMT ) )
+	return checkObj!(LuaFnSurface, LuaFnSurfaceMT)(L, index);
     if ( isObjType(L, index, SubRangedSurfaceMT ) )
 	return checkObj!(SubRangedSurface, SubRangedSurfaceMT)(L, index);
     // if no match found then
@@ -329,6 +332,121 @@ extern(C) int newMeshPatch(lua_State* L)
 
 
 /**
+ * LuaFnSurface class and it's Lua constructor.
+ *
+ * This is hangs onto a Lua call-back function that is invoked from the D domain.
+ *
+ * Example:
+ * function myLuaFunction(r, s)
+ *    -- Simple plane
+ *    return {x=r, y=s, z=0.0}
+ * end
+ * myPath = LuaFnSurface:new{luaFnName="myLuaFunction"}
+ */
+
+class LuaFnSurface : ParametricSurface {
+public:
+    lua_State* L; // a pointer to the Lua interpreter's state.
+    // Even though some of the class methods claim that they don't change
+    // the object state, we have to get the Lua interpreter to evaluate
+    // things and that diddles with the Lua interpreter's internal state.
+    // So the const on the lua_State pointer is more a statement that
+    // "I'm not going to switch interpreters on you."
+    // Hence the ugly but (hopefully safe) casts where ever we get 
+    // the Lua interpreter to do something.
+    // This is the best I can do for the moment.  PJ, 2014-04-22, 2015-02-27
+    string luaFnName;
+    this(const lua_State* L, string luaFnName)
+    {
+	this.L = cast(lua_State*)L;
+	this.luaFnName = luaFnName;
+    }
+    this(ref const(LuaFnSurface) other)
+    {
+	L = cast(lua_State*)other.L;
+	luaFnName = other.luaFnName;
+    }
+    override LuaFnSurface dup() const
+    {
+	return new LuaFnSurface(L, luaFnName);
+    }
+    override Vector3 opCall(double r, double s) const 
+    {
+	// Call back to the Lua function.
+	lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
+	lua_pushnumber(cast(lua_State*)L, r);
+	lua_pushnumber(cast(lua_State*)L, s);
+	if ( lua_pcall(cast(lua_State*)L, 2, 1, 0) != 0 ) {
+	    string errMsg = "Error in call to " ~ luaFnName ~ 
+		" from LuaFnSurface:opCall(): " ~ 
+		to!string(lua_tostring(cast(lua_State*)L, -1));
+	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
+	}
+	// We are expecting a table to be returned, containing three numbers.
+	if ( !lua_istable(cast(lua_State*)L, -1) ) {
+	    string errMsg = "Error in call to LuaFnSurface:opCall().; " ~
+		"A table containing arguments is expected, but no table was found.";
+	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
+	}
+	double x = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "x".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    x = to!double(lua_tonumber(cast(lua_State*)L, -1));
+	}
+	lua_pop(cast(lua_State*)L, 1);
+	double y = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "y".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    y = to!double(lua_tonumber(cast(lua_State*)L, -1));
+	}
+	lua_pop(cast(lua_State*)L, 1);
+	double z = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "z".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    z = to!double(lua_tonumber(cast(lua_State*)L, -1));
+	}
+	lua_pop(cast(lua_State*)L, 1);
+	//
+	lua_settop(cast(lua_State*)L, 0); // clear the stack
+	return Vector3(x, y, z);
+    } // end opCall()
+    override string toString() const
+    {
+	return "LuaFnSurface(luaFnName=\"" ~ luaFnName ~ "\")";
+    }
+} // end class LuaFnSurface
+
+extern(C) int newLuaFnSurface(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+	string errMsg = "Error in call to LuaFnSurface:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Expect function name in table.
+    string fnName = "";
+    lua_getfield(L, 1, "luaFnName".toStringz());
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to LuaFnSurface:new{}. No luaFnName entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    if ( lua_isstring(L, -1) ) {
+	fnName ~= to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+    if ( fnName == "" ) {
+	string errMsg = "Error in call to LuaFnSurface:new{}. No function name found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto lfp = new LuaFnSurface(L, fnName);
+    surfaceStore ~= pushObj!(LuaFnSurface, LuaFnSurfaceMT)(L, lfp);
+    return 1;
+} // end newLuaFnSurface()
+
+
+/**
  * This is constructor for a SubRangedSurface object
  * to be used from the Lua interface.
  *
@@ -492,6 +610,25 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, MeshPatchMT.toStringz);
+
+    // Register the LuaFnSurface object
+    luaL_newmetatable(L, LuaFnSurfaceMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newLuaFnSurface);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(LuaFnSurface, LuaFnSurfaceMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(LuaFnSurface, LuaFnSurfaceMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(LuaFnSurface, LuaFnSurfaceMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, LuaFnSurfaceMT.toStringz);
 
     // Register the SubRangedSurface object
     luaL_newmetatable(L, SubRangedSurfaceMT.toStringz);

@@ -488,7 +488,7 @@ extern(C) int newSpline2(lua_State* L)
  *    -- Straight line from 0,0,0 to 1.0,2.0,3.0
  *    return {x=t, y=2*t, z=3*t}
  * end
- * myPath = LuaFnPath:new{fname="myLuaFunction"}
+ * myPath = LuaFnPath:new{luaFnName="myLuaFunction"}
  */
 
 class LuaFnPath : Path {
@@ -575,7 +575,7 @@ extern(C) int newLuaFnPath(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect function name at array position 1.
+    // Expect function name in table.
     string fnName = "";
     lua_getfield(L, 1, "luaFnName".toStringz());
     if ( lua_isnil(L, -1) ) {

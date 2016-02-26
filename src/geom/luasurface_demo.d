@@ -47,8 +47,17 @@ my_aopatch = AOPatch:new{p00=p00, p10=p10, p11=p11, p01=p01}
 p = my_aopatch(0.1, 0.1);
 print("my_aopatch(0.1, 0.1)= ", p)
 --
+print("LuaFnSurface")
+function myLuaFunction(r, s)
+   -- Simple plane
+   return {x=r, y=s, z=0.0}
+end
+myFnSurface = LuaFnSurface:new{luaFnName="myLuaFunction"}
+print("myFnSurface= ", myFnSurface)
+print("myFnSurface(0.3,0.4)= ", myFnSurface(0.3, 0.4))
+--
 print("SubRangedSurface")
-srs = SubRangedSurface:new{underlying_surface=my_aopatch,
+srs = SubRangedSurface:new{underlying_psurface=my_aopatch,
                            r0=0.0, r1=0.5, s0=0.0, s1=0.5}
 print("srs(0.2,0.2)=", srs(0.2,0.2))
 --
