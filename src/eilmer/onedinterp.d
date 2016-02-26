@@ -5,6 +5,7 @@
 // and MBCNS workbook 2005/Apr page 36 for new index labels
  
 import std.math;
+import std.stdio;
 import gas;
 import fvcore;
 import globalconfig;
@@ -69,7 +70,7 @@ public:
 	delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
 	del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
 	delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
-	if ( myConfig.apply_limiter ) {
+	if (myConfig.apply_limiter) {
 	    // val Albada limiter as per Ian Johnston's thesis.
 	    sL = (delLminus*del + fabs(delLminus*del)) / 
 		(delLminus*delLminus + del*del + epsilon_van_albada);
@@ -81,9 +82,9 @@ public:
 	    sR = 1.0;
 	}
 	// The actual high-order reconstruction, possibly limited.
-	qL = qL0 + sL * aL0 * ( del * two_lenL0_plus_lenL1 + delLminus * lenR0_ );
-	qR = qR0 - sR * aR0 * ( delRplus * lenL0_ + del * two_lenR0_plus_lenR1 );
-	if ( myConfig.extrema_clipping ) {
+	qL = qL0 + sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
+	qR = qR0 - sR * aR0 * (delRplus * lenL0_ + del * two_lenR0_plus_lenR1);
+	if (myConfig.extrema_clipping) {
 	    // An extra limiting filter to ensure that we do not compute new extreme values.
 	    // This was introduced to deal with very sharp transitions in species.
 	    qL = clip_to_limits(qL, qL0, qR0);
@@ -106,14 +107,14 @@ public:
 	double delLminus, del, sL;
 	delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
 	del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
-	if ( myConfig.apply_limiter ) {
+	if (myConfig.apply_limiter) {
 	    sL = (delLminus*del + fabs(delLminus*del)) /
 		(delLminus*delLminus + del*del + epsilon_van_albada);
 	} else {
 	    sL = 1.0;
 	}
-	qL = qL0 + sL * aL0 * ( del * two_lenL0_plus_lenL1 + delLminus * lenR0_ );
-	if ( myConfig.extrema_clipping ) {
+	qL = qL0 + sL * aL0 * (del * two_lenL0_plus_lenL1 + delLminus * lenR0_);
+	if (myConfig.extrema_clipping) {
 	    qL = clip_to_limits(qL, qL0, qR0);
 	}
     } // end of interp_left_scalar()
@@ -133,17 +134,18 @@ public:
 	double del, delRplus, sR;
 	del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
 	delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
-	if ( myConfig.apply_limiter ) {
+	if (myConfig.apply_limiter) {
 	    sR = (del*delRplus + fabs(del*delRplus)) /
 		(del*del + delRplus*delRplus + epsilon_van_albada);
 	} else {
 	    sR = 1.0;
 	}
-	qR = qR0 - sR * aR0 * ( delRplus * lenL0_ + del * two_lenR0_plus_lenR1 );
-	if ( myConfig.extrema_clipping ) {
+	qR = qR0 - sR * aR0 * (delRplus * lenL0_ + del * two_lenR0_plus_lenR1);
+	if (myConfig.extrema_clipping) {
 	    qR = clip_to_limits(qR, qL0, qR0);
 	}
     } // end of interp_right_scalar()
+
 
     // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_both(ref FVInterface IFace,
@@ -163,9 +165,9 @@ public:
 	// the viscous-transport and diffusion coefficients.
 	Lft.copy_values_from(cL0.fs);
 	Rght.copy_values_from(cR0.fs);
-	if ( myConfig.interpolation_order > 1 ) {
+	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
-	    if ( myConfig.interpolate_in_local_frame ) {
+	    if (myConfig.interpolate_in_local_frame) {
 		// Paul Petrie-Repar and Jason Qin have noted that the velocity needs
 		// to be reconstructed in the interface-local frame of reference so that
 		// the normal velocities are not messed up for mirror-image at walls.
@@ -182,7 +184,7 @@ public:
 			       Lft.vel.refy, Rght.vel.refy);
 	    interp_both_scalar(cL1.fs.vel.z, cL0.fs.vel.z, cR0.fs.vel.z, cR1.fs.vel.z,
 			       Lft.vel.refz, Rght.vel.refz);
-	    if ( myConfig.MHD ) {
+	    if (myConfig.MHD) {
 		interp_both_scalar(cL1.fs.B.x, cL0.fs.B.x, cR0.fs.B.x, cR1.fs.B.x,
 				   Lft.B.refx, Rght.B.refx);
 		interp_both_scalar(cL1.fs.B.y, cL0.fs.B.y, cR0.fs.B.y, cR1.fs.B.y,
@@ -190,7 +192,7 @@ public:
 		interp_both_scalar(cL1.fs.B.z, cL0.fs.B.z, cR0.fs.B.z, cR1.fs.B.z,
 				   Lft.B.refz, Rght.B.refz);
 	    }
-	    if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
+	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
 		interp_both_scalar(cL1.fs.tke, cL0.fs.tke, cR0.fs.tke, cR1.fs.tke,
 				   Lft.tke, Rght.tke);
 		interp_both_scalar(cL1.fs.omega, cL0.fs.omega, cR0.fs.omega, cR1.fs.omega,
@@ -200,9 +202,9 @@ public:
 	    auto gL0 = &(cL0.fs.gas);
 	    auto gR0 = &(cR0.fs.gas);
 	    auto gR1 = &(cR1.fs.gas);
-	    if ( nsp > 1 ) {
+	    if (nsp > 1) {
 		// Multiple species.
-		for ( size_t isp = 0; isp < nsp; ++isp ) {
+		foreach (isp; 0 .. nsp) {
 		    interp_both_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], gR1.massf[isp],
 				       Lft.gas.massf[isp], Rght.gas.massf[isp]);
 		}
@@ -225,71 +227,53 @@ public:
 	    // and fill in the rest based on an EOS call. 
 	    // If an EOS call fails, fall back to just copying cell-centre data.
 	    // This does presume that the cell-centre data is valid. 
-	    final switch ( myConfig.thermo_interpolator ) {
+	    string codeForThermoUpdateBoth(string funname)
+	    {
+		string code = "
+	        try {
+	            gmodel.update_thermo_from_"~funname~"(Lft.gas);
+	        } catch (Exception e) {
+	            writeln(e.msg);
+	            Lft.copy_values_from(cL0.fs);
+	        }
+	        try {
+	            gmodel.update_thermo_from_"~funname~"(Rght.gas);
+	        } catch (Exception e) {
+	            writeln(e.msg);
+	            Rght.copy_values_from(cR0.fs);
+	        }
+                ";
+		return code;
+	    }
+	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_both_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_both_scalar(gL1.T[i], gL0.T[i], gR0.T[i], gR1.T[i], Lft.gas.T[i], Rght.gas.T[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_pT(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
-		try {
-		    gmodel.update_thermo_from_pT(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateBoth("pT"));
 		break;
 	    case InterpolateOption.rhoe:
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_both_scalar(gL1.e[i], gL0.e[i], gR0.e[i], gR1.e[i], Lft.gas.e[i], Rght.gas.e[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_rhoe(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
-		try {
-		    gmodel.update_thermo_from_rhoe(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateBoth("rhoe"));
 		break;
 	    case InterpolateOption.rhop:
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
 		interp_both_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
-		try {
-		    gmodel.update_thermo_from_rhop(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
-		try {
-		    gmodel.update_thermo_from_rhop(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateBoth("rhop"));
 		break;
 	    case InterpolateOption.rhot: 
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_both_scalar(gL1.T[i], gL0.T[i], gR0.T[i], gR1.T[i], Lft.gas.T[i], Rght.gas.T[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_rhoT(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
-		try {
-		    gmodel.update_thermo_from_rhoT(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateBoth("rhoT"));
 		break;
 	    } // end switch thermo_interpolator
-	    if ( myConfig.interpolate_in_local_frame ) {
+	    if (myConfig.interpolate_in_local_frame) {
 		// Undo the transformation made earlier. PJ 21-feb-2012
 		Lft.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 		Rght.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
@@ -317,9 +301,9 @@ public:
 	// the viscous-transport and diffusion coefficients.
 	Lft.copy_values_from(cL0.fs);
 	Rght.copy_values_from(cR0.fs);
-	if ( myConfig.interpolation_order > 1 ) {
+	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
-	    if ( myConfig.interpolate_in_local_frame ) {
+	    if (myConfig.interpolate_in_local_frame) {
 		// In the interface-local frame.
 		cL1.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
 		cL0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
@@ -329,7 +313,7 @@ public:
 	    interp_left_scalar(cL1.fs.vel.x, cL0.fs.vel.x, cR0.fs.vel.x, Lft.vel.refx);
 	    interp_left_scalar(cL1.fs.vel.y, cL0.fs.vel.y, cR0.fs.vel.y, Lft.vel.refy);
 	    interp_left_scalar(cL1.fs.vel.z, cL0.fs.vel.z, cR0.fs.vel.z, Lft.vel.refz);
-	    if ( myConfig.MHD ) {
+	    if (myConfig.MHD) {
 		interp_left_scalar(cL1.fs.B.x, cL0.fs.B.x, cR0.fs.B.x, Lft.B.refx);
 		interp_left_scalar(cL1.fs.B.y, cL0.fs.B.y, cR0.fs.B.y, Lft.B.refy);
 		interp_left_scalar(cL1.fs.B.z, cL0.fs.B.z, cR0.fs.B.z, Lft.B.refz);
@@ -339,9 +323,9 @@ public:
 		interp_left_scalar(cL1.fs.omega, cL0.fs.omega, cR0.fs.omega, Lft.omega);
 	    }
 	    auto gL1 = &(cL1.fs.gas); auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas);
-	    if ( nsp > 1 ) {
+	    if (nsp > 1) {
 		// Multiple species.
-		for ( size_t isp = 0; isp < nsp; ++isp ) {
+		foreach (isp; 0 .. nsp) {
 		    interp_left_scalar(gL1.massf[isp], gL0.massf[isp], gR0.massf[isp], Lft.gas.massf[isp]);
 		}
 		try {
@@ -357,51 +341,47 @@ public:
 	    // and fill in the rest based on an EOS call. 
 	    // If an EOS call fails, fall back to just copying cell-centre data.
 	    // This does presume that the cell-centre data is valid. 
-	    final switch ( myConfig.thermo_interpolator ) {
+	    string codeForThermoUpdateLft(string funname)
+	    {
+		string code = "
+	        try {
+	            gmodel.update_thermo_from_"~funname~"(Lft.gas);
+	        } catch (Exception e) {
+	            writeln(e.msg);
+	            Lft.copy_values_from(cL0.fs);
+	        }
+                ";
+		return code;
+	    }
+	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_left_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_left_scalar(gL1.T[i], gL0.T[i], gR0.T[i], Lft.gas.T[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_pT(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
+		mixin(codeForThermoUpdateLft("pT"));
 		break;
 	    case InterpolateOption.rhoe:
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_left_scalar(gL1.e[i], gL0.e[i], gR0.e[i], Lft.gas.e[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_rhoe(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
+		mixin(codeForThermoUpdateLft("rhoe"));
 		break;
 	    case InterpolateOption.rhop:
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
 		interp_left_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p);
-		try {
-		    gmodel.update_thermo_from_rhop(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
+		mixin(codeForThermoUpdateLft("rhop"));
 		break;
 	    case InterpolateOption.rhot: 
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_left_scalar(gL1.T[i], gL0.T[i], gR0.T[i], Lft.gas.T[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_rhoT(Lft.gas);
-		} catch {
-		    Lft.copy_values_from(cL0.fs);
-		}
+		mixin(codeForThermoUpdateLft("rhoT"));
 		break;
 	    } // end switch thermo_interpolator
-	    if ( myConfig.interpolate_in_local_frame ) {
+	    if (myConfig.interpolate_in_local_frame) {
 		// Undo the transformation made earlier.
 		Lft.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 		cL1.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
@@ -431,9 +411,9 @@ public:
 	// the viscous-transport and diffusion coefficients.
 	Lft.copy_values_from(cL0.fs);
 	Rght.copy_values_from(cR0.fs);
-	if ( myConfig.interpolation_order > 1 ) {
+	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
-	    if ( myConfig.interpolate_in_local_frame ) {
+	    if (myConfig.interpolate_in_local_frame) {
 		// In the interface-local frame.
 		cL0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
 		cR0.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
@@ -443,19 +423,19 @@ public:
 	    interp_right_scalar(cL0.fs.vel.x, cR0.fs.vel.x, cR1.fs.vel.x, Rght.vel.refx);
 	    interp_right_scalar(cL0.fs.vel.y, cR0.fs.vel.y, cR1.fs.vel.y, Rght.vel.refy);
 	    interp_right_scalar(cL0.fs.vel.z, cR0.fs.vel.z, cR1.fs.vel.z, Rght.vel.refz);
-	    if ( myConfig.MHD ) {
+	    if (myConfig.MHD) {
 		interp_right_scalar(cL0.fs.B.x, cR0.fs.B.x, cR1.fs.B.x, Rght.B.refx);
 		interp_right_scalar(cL0.fs.B.y, cR0.fs.B.y, cR1.fs.B.y, Rght.B.refy);
 		interp_right_scalar(cL0.fs.B.z, cR0.fs.B.z, cR1.fs.B.z, Rght.B.refz);
 	    }
-	    if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
+	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
 		interp_right_scalar(cL0.fs.tke, cR0.fs.tke, cR1.fs.tke, Rght.tke);
 		interp_right_scalar(cL0.fs.omega, cR0.fs.omega, cR1.fs.omega, Rght.omega);
 	    }
 	    auto gL0 = &(cL0.fs.gas); auto gR0 = &(cR0.fs.gas); auto gR1 = &(cR1.fs.gas);
-	    if ( nsp > 1 ) {
+	    if (nsp > 1) {
 		// Multiple species.
-		for ( size_t isp = 0; isp < nsp; ++isp ) {
+		foreach (isp; 0 .. nsp) {
 		    interp_right_scalar(gL0.massf[isp], gR0.massf[isp], gR1.massf[isp], Rght.gas.massf[isp]);
 		}
 		try {
@@ -471,51 +451,47 @@ public:
 	    // and fill in the rest based on an EOS call. 
 	    // If an EOS call fails, fall back to just copying cell-centre data.
 	    // This does presume that the cell-centre data is valid. 
-	    final switch ( myConfig.thermo_interpolator ) {
+	    string codeForThermoUpdateRght(string funname)
+	    {
+		string code = "
+	        try {
+	            gmodel.update_thermo_from_"~funname~"(Rght.gas);
+	        } catch (Exception e) {
+	            writeln(e.msg);
+	            Rght.copy_values_from(cR0.fs);
+	        }
+                ";
+		return code;
+	    }
+	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_right_scalar(gL0.p, gR0.p, gR1.p, Rght.gas.p);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_right_scalar(gL0.T[i], gR0.T[i], gR1.T[i], Rght.gas.T[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_pT(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateRght("pT"));
 		break;
 	    case InterpolateOption.rhoe:
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_right_scalar(gL0.e[i], gR0.e[i], gR1.e[i], Rght.gas.e[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_rhoe(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateRght("rhoe"));
 		break;
 	    case InterpolateOption.rhop:
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);
 		interp_right_scalar(gL0.p, gR0.p, gR1.p, Rght.gas.p);
-		try {
-		    gmodel.update_thermo_from_rhop(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateRght("rhop"));
 		break;
 	    case InterpolateOption.rhot: 
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);
-		for ( size_t i = 0; i < nmodes; ++i ) {
+		foreach (i; 0 .. nmodes) {
 		    interp_right_scalar(gL0.T[i], gR0.T[i], gR1.T[i], Rght.gas.T[i]);
 		}
-		try {
-		    gmodel.update_thermo_from_rhoT(Rght.gas);
-		} catch {
-		    Rght.copy_values_from(cR0.fs);
-		}
+		mixin(codeForThermoUpdateRght("rhoT"));
 		break;
 	    } // end switch thermo_interpolator
-	    if ( myConfig.interpolate_in_local_frame ) {
+	    if (myConfig.interpolate_in_local_frame) {
 		// Undo the transformation made earlier.
 		Rght.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 		cL0.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);

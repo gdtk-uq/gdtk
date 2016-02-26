@@ -71,7 +71,7 @@ public:
 	// the viscous-transport and diffusion coefficients.
 	Lft.copy_values_from(IFace.left_cells[0].fs);
 	Rght.copy_values_from(IFace.right_cells[0].fs);
-	if ( myConfig.interpolation_order > 1 ) {
+	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
 	    //
 	    // Always reconstruct in the interface-local frame of reference.
@@ -253,13 +253,17 @@ public:
 		case Directions.xz: gradientsR[1] = 0.0; break;
 		case Directions.x: gradientsR[1] = 0.0; gradientsR[2] = 0.0;
                 }
-		van_albada_limit(gradientsL[0], gradientsR[0]);
+                if (myConfig.apply_limiter) {
+		    van_albada_limit(gradientsL[0], gradientsR[0]);
+                }
                 double qL = qL0 + dxFaceL * gradientsL[0] + 
                             dyFaceL * gradientsL[1] + dzFaceL * gradientsL[2];
-                Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
                 double qR = qR0 + dxFaceR * gradientsR[0] + 
                             dyFaceR * gradientsR[1] + dzFaceR * gradientsR[2];
-                Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
+                if (myConfig.extrema_clipping) {
+                    Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
+                    Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
+                }
                 }";
 		return code;
 	    }
@@ -277,7 +281,7 @@ public:
 	    }
 	    if (nsp > 1) {
 		// Multiple species.
-		for ( size_t isp = 0; isp < nsp; ++isp ) {
+		foreach (isp; 0 .. nsp) {
 		    mixin(codeForReconstruction("gas.massf[isp]", "gas.massf[isp]"));
 		}
 		try {
@@ -301,76 +305,50 @@ public:
 	    // and fill in the rest based on an EOS call. 
 	    // If an EOS call fails, fall back to just copying cell-centre data.
 	    // This does presume that the cell-centre data is valid. 
+	    string codeForThermoUpdate(string funname)
+	    {
+		string code = "
+		try {
+		    gmodel.update_thermo_from_"~funname~"(Lft.gas);
+		} catch (Exception e) {
+		    writeln(e.msg);
+		    Lft.copy_values_from(IFace.left_cells[0].fs);
+		}
+		try {
+		    gmodel.update_thermo_from_"~funname~"(Rght.gas);
+		} catch (Exception e) {
+		    writeln(e.msg);
+		    Rght.copy_values_from(IFace.right_cells[0].fs);
+		}
+                ";
+		return code;
+	    }
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		mixin(codeForReconstruction("gas.p", "gas.p"));
 		foreach (imode; 0 .. nmodes) {
 		    mixin(codeForReconstruction("gas.T[imode]", "gas.T[imode]"));
 		}
-		try {
-		    gmodel.update_thermo_from_pT(Lft.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Lft.copy_values_from(IFace.left_cells[0].fs);
-		}
-		try {
-		    gmodel.update_thermo_from_pT(Rght.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Rght.copy_values_from(IFace.right_cells[0].fs);
-		}
+		mixin(codeForThermoUpdate("pT"));
 		break;
 	    case InterpolateOption.rhoe:
 		mixin(codeForReconstruction("gas.rho", "gas.rho"));
 		foreach (imode; 0 .. nmodes) {
 		    mixin(codeForReconstruction("gas.e[imode]", "gas.e[imode]"));
 		}
-		try {
-		    gmodel.update_thermo_from_rhoe(Lft.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Lft.copy_values_from(IFace.left_cells[0].fs);
-		}
-		try {
-		    gmodel.update_thermo_from_rhoe(Rght.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Rght.copy_values_from(IFace.right_cells[0].fs);
-		}
+		mixin(codeForThermoUpdate("rhoe"));
 		break;
 	    case InterpolateOption.rhop:
 		mixin(codeForReconstruction("gas.rho", "gas.rho"));
 		mixin(codeForReconstruction("gas.p", "gas.p"));
-		try {
-		    gmodel.update_thermo_from_rhop(Lft.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Lft.copy_values_from(IFace.left_cells[0].fs);
-		}
-		try {
-		    gmodel.update_thermo_from_rhop(Rght.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Rght.copy_values_from(IFace.right_cells[0].fs);
-		}
+		mixin(codeForThermoUpdate("rhop"));
 		break;
 	    case InterpolateOption.rhot: 
 		mixin(codeForReconstruction("gas.rho", "gas.rho"));
 		foreach (imode; 0 .. nmodes) {
 		    mixin(codeForReconstruction("gas.T[imode]", "gas.T[imode]"));
 		}
-		try {
-		    gmodel.update_thermo_from_rhoT(Lft.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Lft.copy_values_from(IFace.left_cells[0].fs);
-		}
-		try {
-		    gmodel.update_thermo_from_rhoT(Rght.gas);
-		} catch (Exception e) {
-		    writeln(e.msg);
-		    Rght.copy_values_from(IFace.right_cells[0].fs);
-		}
+		mixin(codeForThermoUpdate("rhoT"));
 		break;
 	    } // end switch thermo_interpolator
 	    // Finally, undo the transformation to local coordinates.
