@@ -25,16 +25,20 @@ import luasurface;
 
 /// Name of the metatables -- these are the Lua access name.
 immutable string TFIVolumeMT = "TFIVolume";
+immutable string LuaFnVolumeMT = "LuaFnVolume";
 immutable string SubRangedVolumeMT = "SubRangedVolume";
+// TODO MeshVolume...
 
 static const(ParametricVolume)[] volumeStore;
 
 ParametricVolume checkVolume(lua_State* L, int index) {
-    // We have to do a brute force test for each object
-    // type in turn.
+    // We have to do a brute force test for each object type, in turn.
     if ( isObjType(L, index, TFIVolumeMT) )
 	return checkObj!(TFIVolume, TFIVolumeMT)(L, index);
-    // TODO MeshVolume...
+    if ( isObjType(L, index, TFIVolumeMT) )
+	return checkObj!(LuaFnVolume, LuaFnVolumeMT)(L, index);
+    if ( isObjType(L, index, TFIVolumeMT) )
+	return checkObj!(SubRangedVolume, SubRangedVolumeMT)(L, index);
     // if no match found then
     return null;
 }
@@ -152,6 +156,122 @@ extern(C) int newTFIVolume(lua_State* L)
 } // end newTFIVolume()
 
 
+/**
+ * LuaFnVolume class and it's Lua constructor.
+ *
+ * This is hangs onto a Lua call-back function that is invoked from the D domain.
+ *
+ * Example:
+ * function myLuaFunction(r, s, t)
+ *    -- Simple cube
+ *    return {x=r, y=s, z=t}
+ * end
+ * myPath = LuaFnVolume:new{luaFnName="myLuaFunction"}
+ */
+
+class LuaFnVolume : ParametricVolume {
+public:
+    lua_State* L; // a pointer to the Lua interpreter's state.
+    // Even though some of the class methods claim that they don't change
+    // the object state, we have to get the Lua interpreter to evaluate
+    // things and that diddles with the Lua interpreter's internal state.
+    // So the const on the lua_State pointer is more a statement that
+    // "I'm not going to switch interpreters on you."
+    // Hence the ugly but (hopefully safe) casts where ever we get 
+    // the Lua interpreter to do something.
+    // This is the best I can do for the moment.  PJ, 2014-04-22, 2015-02-27
+    string luaFnName;
+    this(const lua_State* L, string luaFnName)
+    {
+	this.L = cast(lua_State*)L;
+	this.luaFnName = luaFnName;
+    }
+    this(ref const(LuaFnVolume) other)
+    {
+	L = cast(lua_State*)other.L;
+	luaFnName = other.luaFnName;
+    }
+    override LuaFnVolume dup() const
+    {
+	return new LuaFnVolume(L, luaFnName);
+    }
+    override Vector3 opCall(double r, double s, double t) const 
+    {
+	// Call back to the Lua function.
+	lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
+	lua_pushnumber(cast(lua_State*)L, r);
+	lua_pushnumber(cast(lua_State*)L, s);
+	lua_pushnumber(cast(lua_State*)L, t);
+	if ( lua_pcall(cast(lua_State*)L, 3, 1, 0) != 0 ) {
+	    string errMsg = "Error in call to " ~ luaFnName ~ 
+		" from LuaFnVolume:opCall(): " ~ 
+		to!string(lua_tostring(cast(lua_State*)L, -1));
+	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
+	}
+	// We are expecting a table to be returned, containing three numbers.
+	if ( !lua_istable(cast(lua_State*)L, -1) ) {
+	    string errMsg = "Error in call to LuaFnVolume:opCall().; " ~
+		"A table containing arguments is expected, but no table was found.";
+	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
+	}
+	double x = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "x".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    x = to!double(lua_tonumber(cast(lua_State*)L, -1));
+	}
+	lua_pop(cast(lua_State*)L, 1);
+	double y = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "y".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    y = to!double(lua_tonumber(cast(lua_State*)L, -1));
+	}
+	lua_pop(cast(lua_State*)L, 1);
+	double z = 0.0; // default value
+	lua_getfield(cast(lua_State*)L, -1, "z".toStringz());
+	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+	    z = to!double(lua_tonumber(cast(lua_State*)L, -1));
+	}
+	lua_pop(cast(lua_State*)L, 1);
+	//
+	lua_settop(cast(lua_State*)L, 0); // clear the stack
+	return Vector3(x, y, z);
+    } // end opCall()
+    override string toString() const
+    {
+	return "LuaFnVolume(luaFnName=\"" ~ luaFnName ~ "\")";
+    }
+} // end class LuaFnVolume
+
+extern(C) int newLuaFnVolume(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+	string errMsg = "Error in call to LuaFnVolume:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Expect function name in table.
+    string fnName = "";
+    lua_getfield(L, 1, "luaFnName".toStringz());
+    if ( lua_isnil(L, -1) ) {
+	string errMsg = "Error in call to LuaFnVolume:new{}. No luaFnName entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    if ( lua_isstring(L, -1) ) {
+	fnName ~= to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+    if ( fnName == "" ) {
+	string errMsg = "Error in call to LuaFnVolume:new{}. No function name found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto lfv = new LuaFnVolume(L, fnName);
+    volumeStore ~= pushObj!(LuaFnVolume, LuaFnVolumeMT)(L, lfv);
+    return 1;
+} // end newLuaFnVolume()
+
+
 void getRSandT(lua_State* L, string ctorName,
 	       out double r0, out double r1,
 	       out double s0, out double s1,
@@ -171,7 +291,8 @@ void getRSandT(lua_State* L, string ctorName,
 // Constructor for the SubRangedVolume, to be used from the Lua domain.
 //
 // Supported form is:
-// vol1 = SubRangedVolume:new{vol0}
+// vol1 = SubRangedVolume:new{underlying_pvolume=vol0, r0=r0value, r1=r1value,
+//                            s0=s0value, s1=s1vlaue, t0=t0value, t1=t1value}
 
 extern(C) int newSubRangedVolume(lua_State* L)
 {
@@ -222,6 +343,25 @@ void registerVolumes(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, TFIVolumeMT.toStringz);
+
+    // Register the LuaFnVolume object
+    luaL_newmetatable(L, LuaFnVolumeMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newLuaFnVolume);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallVolume!(LuaFnVolume, LuaFnVolumeMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallVolume!(LuaFnVolume, LuaFnVolumeMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(LuaFnVolume, LuaFnVolumeMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, LuaFnVolumeMT.toStringz);
 
     // Register the SubRangedVolume object
     luaL_newmetatable(L, SubRangedVolumeMT.toStringz);

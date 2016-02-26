@@ -38,6 +38,15 @@ print("my_volume=", my_volume)
 p = my_volume(0.1, 0.1, 0.5);
 print("my_volume(0.1, 0.1, 0.5)= ", p)
 --
+print("LuaFnVolume")
+function myLuaFunction(r, s, t)
+   -- Simple cube
+   return {x=r, y=s, z=t}
+end
+myFnVol = LuaFnVolume:new{luaFnName="myLuaFunction"}
+print("myFnVol= ", myFnVol)
+print("myFnVol(0.3, 0.4, 0.5)= ", myFnVol(0.3, 0.4, 0.5))
+--
 print("SubRangedVolume demo")
 srv = SubRangedVolume:new{underlying_pvolume=my_volume,
                           r0=0.0,r1=0.5,s0=0.0,s1=0.5,t0=0.0,t1=0.5}

@@ -54,7 +54,7 @@ function myLuaFunction(r, s)
 end
 myFnSurface = LuaFnSurface:new{luaFnName="myLuaFunction"}
 print("myFnSurface= ", myFnSurface)
-print("myFnSurface(0.3,0.4)= ", myFnSurface(0.3, 0.4))
+print("myFnSurface(0.3, 0.4)= ", myFnSurface(0.3, 0.4))
 --
 print("SubRangedSurface")
 srs = SubRangedSurface:new{underlying_psurface=my_aopatch,

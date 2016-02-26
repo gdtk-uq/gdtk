@@ -33,8 +33,7 @@ immutable string SubRangedSurfaceMT = "SubRangedSurface";
 static const(ParametricSurface)[] surfaceStore;
 
 ParametricSurface checkSurface(lua_State* L, int index) {
-    // We have to do a brute force test for each object
-    // type in turn.
+    // We have to do a brute force test for each object type, in turn.
     if ( isObjType(L, index, CoonsPatchMT) )
 	return checkObj!(CoonsPatch, CoonsPatchMT)(L, index);
     if ( isObjType(L, index, AOPatchMT ) )
@@ -440,8 +439,8 @@ extern(C) int newLuaFnSurface(lua_State* L)
 	string errMsg = "Error in call to LuaFnSurface:new{}. No function name found.";
 	luaL_error(L, errMsg.toStringz());
     }
-    auto lfp = new LuaFnSurface(L, fnName);
-    surfaceStore ~= pushObj!(LuaFnSurface, LuaFnSurfaceMT)(L, lfp);
+    auto lfs = new LuaFnSurface(L, fnName);
+    surfaceStore ~= pushObj!(LuaFnSurface, LuaFnSurfaceMT)(L, lfs);
     return 1;
 } // end newLuaFnSurface()
 
