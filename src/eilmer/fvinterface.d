@@ -134,7 +134,7 @@ public:
 	repr ~= ", area=" ~ to!string(area);
 	repr ~= ", n=" ~ to!string(n);
 	repr ~= ", t1=" ~ to!string(t1);
-	repr ~= ", t2=" ~ to!string(2);
+	repr ~= ", t2=" ~ to!string(t2);
 	repr ~= ", fs=" ~ to!string(fs);
 	repr ~= ", F=" ~ to!string(F);
 	repr ~= ", grad=" ~ to!string(grad);

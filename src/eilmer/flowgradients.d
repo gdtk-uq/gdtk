@@ -114,7 +114,7 @@ public:
     {
 	char[] repr;
 	repr ~= "FlowGradients(";
-	repr ~= ", vel=[";
+	repr ~= "vel=[";
 	foreach (i; 0 .. vel.length) {
 	    repr ~= "[" ~ to!string(vel[i][0]);
 	    foreach (j; 1 .. vel[i].length) repr ~= ", " ~ to!string(vel[i][j]); 

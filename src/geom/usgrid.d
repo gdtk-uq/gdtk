@@ -366,11 +366,11 @@ public:
 			jface_id[i][j][k] = faces.length - 1;
 			if (j == 0) {
 			    boundaries[Face.south].face_id_list ~= jface_id[i][j][k];
-			    boundaries[Face.south].outsign_list ~= -1;
+			    boundaries[Face.south].outsign_list ~= +1;
 			}
 			if (j == sg.njv-1) {
 			    boundaries[Face.north].face_id_list ~= jface_id[i][j][k];
-			    boundaries[Face.north].outsign_list ~= +1;
+			    boundaries[Face.north].outsign_list ~= -1;
 			}
 		    }
 		}
@@ -415,7 +415,7 @@ public:
 					   iface_id[i][j][k], // west
 					   kface_id[i][j][k+1], // top
 					   kface_id[i][j][k]]; // bottom
-			auto outsigns = [+1, +1, -1, -1, +1, -1];
+			auto outsigns = [-1, +1, +1, -1, +1, -1];
 			cells ~= new USGCell(USGCell_type.hexahedron, cell_vertices,
 					     cell_faces, outsigns);
 		    }

@@ -425,7 +425,7 @@ public:
 		switch (f.vtx.length) {
 		case 4:
 		    quad_properties(f.vtx[0].pos[gtl], f.vtx[1].pos[gtl],
-				    f.vtx[2].pos[gtl], f.vtx[2].pos[gtl],
+				    f.vtx[2].pos[gtl], f.vtx[3].pos[gtl],
 				    f.pos, f.n, f.t1, f.t2, f.area[gtl]);
 		    break;
 		default:

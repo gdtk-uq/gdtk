@@ -236,7 +236,7 @@ public:
 	    } // gid loop
 	    // Now, assemble the lists of references to the cells, vertices and faces
 	    // in standard order for a structured grid.
-	    if (myConfig.dimensions == 2 ) {
+	    if (myConfig.dimensions == 2) {
 		foreach (j; jmin .. jmax+1) {
 		    foreach (i; imin .. imax+1) {
 			cells ~= get_cell(i, j);
@@ -313,7 +313,7 @@ public:
 	// There is a fixed order of faces and vertices for each cell.
 	// Refer to fvcore.d
 	size_t kstart, kend;
-	if ( myConfig.dimensions == 3 ) {
+	if (myConfig.dimensions == 3) {
 	    kstart = kmin - 1;
 	    kend = kmax + 1;
 	} else {
@@ -333,7 +333,7 @@ public:
 		    cell.vtx ~= get_vtx(i+1,j,k);
 		    cell.vtx ~= get_vtx(i+1,j+1,k);
 		    cell.vtx ~= get_vtx(i,j+1,k);
-		    if ( myConfig.dimensions == 3 ) {
+		    if (myConfig.dimensions == 3) {
 			cell.iface ~= get_ifk(i,j,k+1); cell.outsign ~= 1.0; // top
 			cell.iface ~= get_ifk(i,j,k); cell.outsign ~= -1.0; // bottom
 			cell.vtx ~= get_vtx(i,j,k+1);

@@ -18,7 +18,7 @@ function tube_volume(r, s, t)
    return {x=1.0*r, y=0.1*s, z=0.1*t}
 end
 pvol=LuaFnVolume:new{luaFnName="tube_volume"}
-grid0 = StructuredGrid:new{pvolume=pvol, niv=100, njv=3, nkv=3}
+grid0 = StructuredGrid:new{pvolume=pvol, niv=101, njv=3, nkv=3}
 
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
