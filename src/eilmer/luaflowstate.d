@@ -514,7 +514,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 	// Write the data for the whole structured block.
 	auto outfile = new GzipOut(fname);
 	auto writer = appender!string();
-	formattedWrite(writer, "ustructured_grid_flow 1.0\n");
+	formattedWrite(writer, "unstructured_grid_flow 1.0\n");
 	formattedWrite(writer, "label: %s\n", grid.label);
 	formattedWrite(writer, "sim_time: %20.12e\n", t0);
 	auto gmodel = GlobalConfig.gmodel_master;
