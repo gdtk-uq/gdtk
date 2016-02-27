@@ -340,7 +340,7 @@ extern(C) int newMeshPatch(lua_State* L)
  *    -- Simple plane
  *    return {x=r, y=s, z=0.0}
  * end
- * myPath = LuaFnSurface:new{luaFnName="myLuaFunction"}
+ * mySurf = LuaFnSurface:new{luaFnName="myLuaFunction"}
  */
 
 class LuaFnSurface : ParametricSurface {

@@ -35,9 +35,9 @@ ParametricVolume checkVolume(lua_State* L, int index) {
     // We have to do a brute force test for each object type, in turn.
     if ( isObjType(L, index, TFIVolumeMT) )
 	return checkObj!(TFIVolume, TFIVolumeMT)(L, index);
-    if ( isObjType(L, index, TFIVolumeMT) )
+    if ( isObjType(L, index, LuaFnVolumeMT) )
 	return checkObj!(LuaFnVolume, LuaFnVolumeMT)(L, index);
-    if ( isObjType(L, index, TFIVolumeMT) )
+    if ( isObjType(L, index, SubRangedVolumeMT) )
 	return checkObj!(SubRangedVolume, SubRangedVolumeMT)(L, index);
     // if no match found then
     return null;
@@ -166,7 +166,7 @@ extern(C) int newTFIVolume(lua_State* L)
  *    -- Simple cube
  *    return {x=r, y=s, z=t}
  * end
- * myPath = LuaFnVolume:new{luaFnName="myLuaFunction"}
+ * myVol = LuaFnVolume:new{luaFnName="myLuaFunction"}
  */
 
 class LuaFnVolume : ParametricVolume {
