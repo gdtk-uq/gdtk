@@ -19,33 +19,39 @@ inflow = FlowState:new{p=100.0e3, T=300.0, velx=u_inf, vely=0.0}
 print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
 
 print "Building grid."
-a = Vector3:new{x=-3.0*radius, y=0.0}
-b = Vector3:new{x=-radius, y=0.0}
-c = Vector3:new{ x=0.0, y=3.0*radius}
-d = Vector3:new{ x=0.0, y=radius}
-p = Vector3:new{ x=0.0, y=0.0}
+a = Vector3:new{x = 0.0, y = 0.0}
+b = Vector3:new{x = -radius,     y = 0.0}
+c = Vector3:new{x = 0.0,         y =radius}
 
-ac = Arc:new{p0=a, p1=c, centre=p}
-bd = Arc:new{p0=b, p1=d, centre=p}
-ab = Line:new{p0=a, p1=b}
-cd = Line:new{p0=c, p1=d}
+d = Vector3:new{x = -1.5*radius,         y = 0}
+e = Vector3:new{x = -1.5*radius,         y = radius}
+f = Vector3:new{x = -radius,         y = 2.0*radius}
+g = Vector3:new{x = 0.0,         y = 3.0*radius}
 
-psurf = makePatch{north=cd, east=bd, south=ab, west=ac}
-grid = StructuredGrid:new{psurface=psurf, niv=30, njv=30}
+
+bezier_west = Bezier:new{points={d, e, f, g}}
+arc_east = Arc:new{p0 = b, p1 = c, centre = a}
+line_south = Line:new{p0 = d, p1 = b}
+line_north = Line:new{p0 = g, p1 = c}
+
+psurf = makePatch{north = line_north, east = arc_east, south = line_south, west = bezier_west}
+grid = StructuredGrid:new{psurface=psurf, niv=30, njv=60}
 
 -- We can leave east and south as slip-walls
-blk0 = SBlock:new{grid=grid, fillCondition=initial}
+blk = SBlockArray{grid=grid, fillCondition=initial,
+		       bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
+			   north=OutFlowBC_Simple:new{}}, 
+		   nib=1, njb=1}
 identifyBlockConnections()
-blk0.bcList[west] = InFlowBC_ShockFitting:new{flowCondition=inflow, label="shockfitting-inflow-boundary"}
-blk0.bcList[north] =  OutFlowBC_Simple:new{label="outflow-boundary"}
+
 
 -- Set a few more config options
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
-config.max_time = (radius*2)/u_inf * 16 -- 16 flow lengths
+config.max_time = (radius*2)/u_inf * 20 -- 16 flow lengths
 config.max_step = 400000
 config.dt_init = 1.0e-9
-config.cfl_value = 0.25 
+config.cfl_value = 0.25
 config.dt_plot = config.max_time/16
 
 -- moving grid flag
