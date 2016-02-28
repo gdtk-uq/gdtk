@@ -54,7 +54,7 @@ test shock-position {Shock position and post-shock conditions.} -body {
 	set T 0
 	set Mach 0
     } else {
-	set line_of_data [string trim [lindex [split $results "\n"] 5]]
+	set line_of_data [string trim [lindex [split $results "\n"] 6]]
 	# puts $line_of_data
 	set items [split $line_of_data]
 	set x_pos [lindex $items 0]; # remember that index starts at 0

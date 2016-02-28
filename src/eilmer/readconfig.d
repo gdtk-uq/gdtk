@@ -81,10 +81,6 @@ void read_config_file()
 	getJSONbool(jsonData, "separate_update_for_k_omega_source", false);
     GlobalConfig.apply_bcs_in_parallel =
 	getJSONbool(jsonData, "apply_bcs_in_parallel", true);
-    if ( GridMotion.shock_fitting && GlobalConfig.apply_bcs_in_parallel ) {
-	writeln("WARNING: config.apply_bcs_in_parallel is set to false when shock_fitting is used.");
-	GlobalConfig.apply_bcs_in_parallel = false;
-    } 
     GlobalConfig.stringent_cfl = getJSONbool(jsonData, "stringent_cfl", false);
     GlobalConfig.adjust_invalid_cell_data =
 	getJSONbool(jsonData, "adjust_invalid_cell_data", false);
@@ -130,6 +126,14 @@ void read_config_file()
     GlobalConfig.shock_fitting_delay = getJSONdouble(jsonData, "shock_fitting_delay", 0.0);
     
     GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
+
+    // The following checks/overrides must happen after the relevant config elements
+    // have been set.
+    if (GlobalConfig.grid_motion == GridMotion.shock_fitting &&
+	GlobalConfig.apply_bcs_in_parallel) {
+	writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
+	GlobalConfig.apply_bcs_in_parallel = false;
+    } 
 
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);

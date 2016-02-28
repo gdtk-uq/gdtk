@@ -100,10 +100,6 @@ extern(C) int configSetFromTable(lua_State* L)
 	GlobalConfig.apply_bcs_in_parallel = to!bool(lua_toboolean(L, -1));
 	lua_pushnil(L); lua_setfield(L, 1, "apply_bcs_in_parallel");
     }
-    if ( GridMotion.shock_fitting && GlobalConfig.apply_bcs_in_parallel ) {
-	writeln("WARNING: config.apply_bcs_in_parallel is set to false when shock_fitting is used.");
-	GlobalConfig.apply_bcs_in_parallel = false;
-    } 
     lua_pop(L, 1);
     lua_getfield(L, 1, "adjust_invalid_cell_data");
     if (!lua_isnil(L, -1)) {
