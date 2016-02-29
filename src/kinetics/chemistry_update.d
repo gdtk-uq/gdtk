@@ -169,7 +169,6 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 		gmodel.conc2massf(concOut, Q);
 		auto massfTotal = sum(Q.massf);
 		if ( fabs(massfTotal - 1.0) > ALLOWABLE_MASSF_ERROR ) {
-		    writeln("FAILED MASSF TEST.");
 		    passesMassFractionTest = false;
 		}
 	    }
