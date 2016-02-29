@@ -22,9 +22,10 @@ immutable double DT_DECREASE_PERCENT = 50.0; // allowable percentage decrease on
                                              // Yes, you read that write. Sometimes a step is succesful
                                              // but the timestep selection algorithm will suggest
                                              // a reduction. We limit that reduction to no more than 50%.
-immutable double DT_REDUCTION_FACTOR = 2.0; // factor by which to reduce timestep
-                                            // after a failed attempt
+immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timestep
+                                             // after a failed attempt
 immutable double H_MIN = 1.0e-15; // Minimum allowable step size
+immutable double ALLOWABLE_MASSF_ERROR = 1.0e-3; // Maximum allowable error in mass fraction over an update
 
 static bool working_memory_allocated = false;
 static GasState Qinit;
@@ -159,10 +160,21 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 	h = min(h, tInterval - t);
 	attempt= 0;
       	for ( ; attempt < maxAttempts; ++attempt ) {
-	    if ( cstep(conc0, h, concOut, dtSuggest) == ResultOfStep.success ) {
-		/* We succesfully took a step of size h
-		 * so increment the total time.
-		 */   
+	    ResultOfStep result = cstep(conc0, h, concOut, dtSuggest);
+	    bool passesMassFractionTest = true;
+	    if ( result  == ResultOfStep.success ) {
+		/* We succesfully took a step of size h according to the ODE method.
+		 * However, we need to test that that mass fractions have remained ok.
+		 */
+		gmodel.conc2massf(concOut, Q);
+		auto massfTotal = sum(Q.massf);
+		if ( fabs(massfTotal - 1.0) > ALLOWABLE_MASSF_ERROR ) {
+		    writeln("FAILED MASSF TEST.");
+		    passesMassFractionTest = false;
+		}
+	    }
+
+	    if ( result == ResultOfStep.success && passesMassFractionTest ) {
 		t += h;
 		foreach ( i; 0..conc0.length ) conc0[i] = concOut[i];
 		/* We can now make some decision about how to
@@ -202,6 +214,9 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 		 * David Mott's suggestion in his thesis (on p. 51)
 		 * and reduce the timestep by a factor of 2 or 3.
 		 * (The actual value is set as DT_REDUCTION_FACTOR).
+		 * In fact, for the types of problems we deal with
+		 * I have found that a reduction by a factor of 10
+		 * is more effective.
 		 */
 		h /= DT_REDUCTION_FACTOR;
 		if ( h < H_MIN ) {
@@ -258,9 +273,11 @@ int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
 	Q.copy_values_from(Qinit);
 	return -1;
     }
-    // else all is well, so update GasState Q and leave.
+    // At this point, it appears that everything has gone well.
+    // We'll tweak the mass fractions in case they are a little off.
     gmodel.conc2massf(concOut, Q);
-    gmodel.update_thermo_from_rhoe(Q);
+    auto massfTotal = sum(Q.massf);
+    foreach (ref mf; Q.massf) mf /= massfTotal;
     dtSuggest = dtSave;
     return 0;
 }
@@ -480,8 +497,7 @@ public:
 
 	    // actual corrector step
 	    update_conc(_yc, y0, _qtilda, _pbar, _alphabar, h);
-
-	    // test if converged or not
+	    
 	    bool converged = test_converged(_yc, _yp0, h);
 
 	    if ( converged ) {
@@ -534,20 +550,19 @@ private:
     }
 
     bool test_converged(in double[] yc, in double[] yp, double h) {
-	int flag = 0;
+	bool passesTest = true;
 	double test = 0.0;
 	foreach ( i; 0.._ndim ) {
 	    if ( yc[i] < _ZERO_EPS )
 		continue;
 	    test = fabs(yc[i] - yp[i]);
 	    // +delta from Qureshi and Prosser (2007)
-	    if ( test >= (_eps1 * (yc[i] + _delta)) )
-	      ++flag;
+	    if ( test >= (_eps1 * (yc[i] + _delta)) ) {
+		passesTest = false;
+		break; // no need to continue testing remaining species
+	    }
 	}
-	if ( flag == 0 )
-	    return true;
-	else
-	    return false;
+	return passesTest;
     }
 
     double step_suggest(double h, double[] yc, double[] yp)
