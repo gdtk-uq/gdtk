@@ -756,6 +756,12 @@ extern(C) int setGasModel(lua_State* L)
     
 }
 
+extern(C) int getGasModel(lua_State* L)
+{
+    pushObj!(GasModel, GasModelMT)(L, GlobalConfig.gmodel_master);
+    return 1;
+}
+
 /* [DEPRECATED]
 extern(C) int get_nspecies(lua_State* L)
 {
@@ -809,6 +815,8 @@ void registerGlobalConfig(lua_State* L)
     // Register other global functions related to the managed gas model.
     lua_pushcfunction(L, &setGasModel);
     lua_setglobal(L, "setGasModel");
+    lua_pushcfunction(L, &getGasModel);
+    lua_setglobal(L, "getGasModel");
     /* [DEPRECATED]
     lua_pushcfunction(L, &get_nspecies);
     lua_setglobal(L, "get_nspecies");

@@ -577,6 +577,19 @@ function setHistoryPoint(args)
    return
 end
 
+function makeFillConditionFn(flowSol)
+   local gm = getGasModel()
+   local sp = gm:speciesName(1)
+   local dummyFS = FlowState:new{p=1.0e5, T=300, massf={[sp]=1}}
+   function fillFn(x, y, z)
+      cell = flowSol:find_nearest_cell_centre{x=x, y=y, z=z}
+      cell.fmt = "FlowState"
+      dummyFS:fromTable(flowSol:get_cell_data(cell))
+      return dummyFS
+   end
+   return fillFn
+end
+
 -- --------------------------------------------------------------------
 
 function write_control_file(fileName)
