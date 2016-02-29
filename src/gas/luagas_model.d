@@ -727,6 +727,17 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_setfield(L, idx, "quality");
 }
 
+extern(C) int printValues(lua_State* L)
+{
+    lua_getfield(L, 1, "gasmodel");
+    auto gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+    auto Q = new GasState(gm.n_species, gm.n_modes);
+    getGasStateFromTable(L, gm, 1, Q);
+    writeln(Q.toString);
+    return 0;
+}
+
 void registerGasModel(lua_State* L, int tblIdx)
 {
     luaL_newmetatable(L, GasModelMT.toStringz);
@@ -811,6 +822,10 @@ void registerGasModel(lua_State* L, int tblIdx)
 
     // Make GasState constructor visible
     lua_setfield(L, tblIdx, "GasState");
+    
+    // Set a global function to print values in GasState
+    lua_pushcfunction(L, &printValues);
+    lua_setglobal(L, "printValues");
 
     // Set some of the physical constants as global
     lua_pushnumber(L, P_atm);
