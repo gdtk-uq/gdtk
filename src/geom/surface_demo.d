@@ -42,6 +42,13 @@ void main()
     auto chanp = new ChannelPatch(cA, cB);
     writeln("chanp= ", chanp);
     writeln("chanp(0.5,0.5)= ", chanp(0.5, 0.5));
+
+    writeln("SweptPathPatch demo");
+    cA = new Line(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 1.0, 0.0));
+    cB = new Line(Vector3(1.0, 0.25, 0.0), Vector3(2.0, 0.25, 0.0));
+    auto spp = new SweptPathPatch(cA, cB);
+    writeln("spp= ", spp);
+    writeln("spp(0.5,0.5)= ", spp(0.5, 0.5));
     
     writeln("Done surface_demo.");
 }

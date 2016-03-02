@@ -68,6 +68,13 @@ chanp = ChannelPatch:new{south=cA, north=cB}
 print("chanp= ", chanp)
 print("chanp(0.5,0.5)= ", chanp(0.5, 0.5))
 --
+print("SweptPathPatch demo")
+cA = Line:new{p0=Vector3:new{x=0.0,y=0.0,z=0.0}, p1=Vector3:new{x=0.0,y=1.0,z=0.0}}
+cB = Line:new{p0=Vector3:new{x=1.0,y=0.25,z=0.0}, p1=Vector3:new{x=2.0,y=0.25,z=0.0}}
+spp = SweptPathPatch:new{west=cA, south=cB}
+print("spp= ", spp)
+print("spp(0.5,0.5)= ", spp(0.5, 0.5))
+--
 print("Utility functions")
 print("isSurface(my_aopatch)= ", isSurface(my_aopatch))
 print("isSurface(surf2)= ", isSurface(surf2));

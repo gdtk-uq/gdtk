@@ -26,6 +26,7 @@ import luasgrid;
 immutable string CoonsPatchMT = "CoonsPatch";
 immutable string AOPatchMT = "AOPatch";
 immutable string ChannelPatchMT = "ChannelPatch";
+immutable string SweptPathPatchMT = "SweptPathPatch";
 immutable string MeshPatchMT = "MeshPatch";
 immutable string LuaFnSurfaceMT = "LuaFnSurface";
 immutable string SubRangedSurfaceMT = "SubRangedSurface";
@@ -40,6 +41,8 @@ ParametricSurface checkSurface(lua_State* L, int index) {
 	return checkObj!(AOPatch, AOPatchMT)(L, index);
     if ( isObjType(L, index, ChannelPatchMT ) )
 	return checkObj!(ChannelPatch, ChannelPatchMT)(L, index);
+    if ( isObjType(L, index, SweptPathPatchMT ) )
+	return checkObj!(SweptPathPatch, SweptPathPatchMT)(L, index);
     if ( isObjType(L, index, MeshPatchMT ) )
 	return checkObj!(MeshPatch, MeshPatchMT)(L, index);
     if ( isObjType(L, index, LuaFnSurfaceMT ) )
@@ -291,6 +294,49 @@ extern(C) int newChannelPatch(lua_State* L)
     surfaceStore ~= pushObj!(ChannelPatch, ChannelPatchMT)(L, cpatch);
     return 1;
 } // end newChannelPatch()
+
+
+/**
+ * This is the constructor for a SweptPathPatch to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new SweptPathPatch object
+ * is pushed onto the Lua stack.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * patch0 = SweptPathPatch:new{west=wPath, south=sPath}
+ * --------------------------
+ */
+
+extern(C) int newSweptPathPatch(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    
+    if (!lua_istable(L, 1)) {
+	string errMsg = "Error in constructor SweptPathPatch:new. " ~
+	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Look for west and south paths.
+    lua_getfield(L, 1, "west");
+    auto west = checkPath(L, -1);
+    if (west is null) {
+	string errMsg = "Error in constructor SweptPathPatch:new. Couldn't find west Path.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "south");
+    auto south = checkPath(L, -1);
+    if (south is null) {
+	string errMsg = "Error in constructor SweptPathPatch:new. Couldn't find south Path.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Construct the actual surface.
+    auto spatch = new SweptPathPatch(west, south);
+    surfaceStore ~= pushObj!(SweptPathPatch, SweptPathPatchMT)(L, spatch);
+    return 1;
+} // end newSweptPathPatch()
 
 
 /**
@@ -590,6 +636,25 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, ChannelPatchMT.toStringz);
+
+    // Register the SweptPathPatch object
+    luaL_newmetatable(L, SweptPathPatchMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newSweptPathPatch);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallSurface!(SweptPathPatch, SweptPathPatchMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallSurface!(SweptPathPatch, SweptPathPatchMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(SweptPathPatch, SweptPathPatchMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, SweptPathPatchMT.toStringz);
 
     // Register the MeshPatch object
     luaL_newmetatable(L, MeshPatchMT.toStringz);
