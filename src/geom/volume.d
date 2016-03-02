@@ -234,6 +234,58 @@ unittest {
 } // end unittest
 
 
+class SweptSurfaceVolume : ParametricVolume {
+public:
+    ParametricSurface face0123;
+    Path edge04;
+    Vector3[8] p;
+
+    this(const ParametricSurface face0123, const Path edge04)
+    {
+	this.face0123 = face0123.dup();
+	this.edge04 = edge04.dup();
+	p[0] = edge04(0.0);
+	p[1] = edge04(0.0) + face0123(1.0, 0.0) - face0123(0.0, 0.0);
+	p[2] = edge04(0.0) + face0123(1.0, 1.0) - face0123(0.0, 0.0);
+	p[3] = edge04(0.0) + face0123(0.0, 1.0) - face0123(0.0, 0.0);
+	p[4] = edge04(1.0);
+	p[5] = edge04(1.0) + face0123(1.0, 0.0) - face0123(0.0, 0.0);
+	p[6] = edge04(1.0) + face0123(1.0, 1.0) - face0123(0.0, 0.0);
+	p[7] = edge04(1.0) + face0123(0.0, 1.0) - face0123(0.0, 0.0);
+    }
+    
+    this(ref const(SweptSurfaceVolume) other)
+    {
+	face0123 = other.face0123.dup();
+	edge04 = other.edge04.dup();
+	foreach(i; 0 .. 8) this.p[i] = other.p[i].dup();
+    }
+
+    override SweptSurfaceVolume dup() const
+    {
+	return new SweptSurfaceVolume(this.face0123, this.edge04);
+    }
+
+    override Vector3 opCall(double r, double s, double t) const
+    // Locate a point within the volume by blended linear interpolation.
+    // @param r: interpolation parameter i-direction west-->east, 0.0<=r<=1.0
+    // @param s: interpolation parameter j-direction south-->north, 0.0<=s<=1.0 
+    // @param t: interpolation parameter k-direction bottom-->top, 0.0<=t<=1.0
+    // @returns: a Vector3 value for the point.
+    {
+	Vector3 p_rst = edge04(t) + face0123(r, s) - face0123(0.0, 0.0);
+	return p_rst; 
+    } // end opCall
+
+    override string toString() const
+    {
+	string repr = "SweptSurfaceVolume(face0123=" ~ to!string(face0123);
+	repr ~= ", edge04=" ~ to!string(edge04) ~ ")";
+	return repr;
+    } // end toString
+} // end SweptSurfaceVolume
+
+
 class MeshVolume : ParametricVolume {
 } // end class MeshVolume
 

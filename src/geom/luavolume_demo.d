@@ -38,6 +38,13 @@ print("my_volume=", my_volume)
 p = my_volume(0.1, 0.1, 0.5);
 print("my_volume(0.1, 0.1, 0.5)= ", p)
 --
+print("SweptSurfaceVolume demo");
+myface0123 = CoonsPatch:new{p00=p000, p10=p100, p11=p110, p01=p010}
+myedge04 = Line:new{p0=p000, p1=p001}
+ssv = SweptSurfaceVolume:new{face0123=myface0123, edge04=myedge04}
+print("ssv=", ssv)
+print("ssv(0.1, 0.1, 0.5)= ", ssv(0.1, 0.1, 0.5))
+--
 print("LuaFnVolume")
 function myLuaFunction(r, s, t)
    -- Simple cube

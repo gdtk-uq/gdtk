@@ -34,5 +34,12 @@ void main()
     writeln("SubRangedVolume demo");
     auto srv = new SubRangedVolume(my_vol, 0.0, 0.5, 0.0, 0.5, 0.0, 0.5);
     writeln("srv(0.2,0.2,0.2)= ", srv(0.2,0.2,0.2));
+
+    writeln("SweptSurfaceVolume demo");
+    auto face0123 = new CoonsPatch(p[0], p[1], p[2], p[3]);
+    auto edge04 = new Line(p[0], p[4]);
+    auto ssv = new SweptSurfaceVolume(face0123, edge04);
+    writeln("ssv=", ssv);
+    writeln("ssv(0.1, 0.1, 0.1)= ", ssv(0.1, 0.1, 0.1));
     writeln("Done volume_demo.");
 }

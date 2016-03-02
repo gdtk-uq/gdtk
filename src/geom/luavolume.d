@@ -25,6 +25,7 @@ import luasurface;
 
 /// Name of the metatables -- these are the Lua access name.
 immutable string TFIVolumeMT = "TFIVolume";
+immutable string SweptSurfaceVolumeMT = "SweptSurfaceVolume";
 immutable string LuaFnVolumeMT = "LuaFnVolume";
 immutable string SubRangedVolumeMT = "SubRangedVolume";
 // TODO MeshVolume...
@@ -35,6 +36,8 @@ ParametricVolume checkVolume(lua_State* L, int index) {
     // We have to do a brute force test for each object type, in turn.
     if ( isObjType(L, index, TFIVolumeMT) )
 	return checkObj!(TFIVolume, TFIVolumeMT)(L, index);
+    if ( isObjType(L, index, SweptSurfaceVolumeMT) )
+	return checkObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, index);
     if ( isObjType(L, index, LuaFnVolumeMT) )
 	return checkObj!(LuaFnVolume, LuaFnVolumeMT)(L, index);
     if ( isObjType(L, index, SubRangedVolumeMT) )
@@ -154,6 +157,50 @@ extern(C) int newTFIVolume(lua_State* L)
     luaL_error(L, errMsg.toStringz);
     return 0;
 } // end newTFIVolume()
+
+
+/**
+ * This is the constructor for a SweptSurfaceVolume to be used from the Lua interface.
+ *
+ * At successful completion of this function, a new SweptSurfaceVolume object
+ * is pushed onto the Lua stack.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * vol0 = SweptSurfaceVolume:new{face0123=myFace, edge04=myPath}
+ * --------------------------
+ */
+
+extern(C) int newSweptSurfaceVolume(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    
+    if (!lua_istable(L, 1)) {
+	string errMsg = "Error in constructor SweptSurfaceVolume:new. " ~
+	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Look for surface to sweep.
+    lua_getfield(L, 1, "face0123");
+    auto face0123 = checkSurface(L, -1);
+    if (face0123 is null) {
+	string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find face0123.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Look for edge to sweep along.
+    lua_getfield(L, 1, "edge04");
+    auto edge04 = checkPath(L, -1);
+    if (edge04 is null) {
+	string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find edge04.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Construct the actual surface.
+    auto ssv = new SweptSurfaceVolume(face0123, edge04);
+    volumeStore ~= pushObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, ssv);
+    return 1;
+} // end newSweptSurfaceVolume()
 
 
 /**
@@ -343,6 +390,25 @@ void registerVolumes(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, TFIVolumeMT.toStringz);
+
+    // Register the SweptSurfaceVolume object
+    luaL_newmetatable(L, SweptSurfaceVolumeMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newSweptSurfaceVolume);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallVolume!(SweptSurfaceVolume, SweptSurfaceVolumeMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallVolume!(SweptSurfaceVolume, SweptSurfaceVolumeMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, SweptSurfaceVolumeMT.toStringz);
 
     // Register the LuaFnVolume object
     luaL_newmetatable(L, LuaFnVolumeMT.toStringz);
