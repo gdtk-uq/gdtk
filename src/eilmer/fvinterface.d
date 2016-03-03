@@ -32,7 +32,7 @@ public:
     Vector3 gvel;          // grid velocity at interface, m/s
     double Ybar;           // Y-coordinate of the mid-point
     double length;         // Interface length in the x,y-plane
-    double[] area;         // Area m**2 for each time-level.
+    double[] area;         // Area m**2 for each grid-time-level.
                            // Area per radian in axisymmetric geometry
     Vector3 n;             // Direction cosines for unit normal
     Vector3 t1;            // tangent vector 1 (aka p)
@@ -49,15 +49,15 @@ public:
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
 
-    this(GasModel gm, size_t id_init=0)
+    this(LocalConfig myConfig, size_t id_init=0)
     {
 	id = id_init;
-	area.length = n_time_levels;
+	area.length = myConfig.n_grid_time_levels;
 	gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
-	fs = new FlowState(gm, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
-	F = new ConservedQuantities(gm.n_species, gm.n_modes);
+	fs = new FlowState(myConfig.gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
+	F = new ConservedQuantities(myConfig.gmodel.n_species, myConfig.gmodel.n_modes);
 	F.clear_values();
-	grad = new FlowGradients(gm.n_species);
+	grad = new FlowGradients(myConfig.gmodel.n_species);
     }
 
     this(FVInterface other, GasModel gm)

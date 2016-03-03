@@ -131,8 +131,15 @@ final class GlobalConfig {
     shared static bool axisymmetric = false;
 
     // Parameters controlling convective update
-    //
     shared static GasdynamicUpdate gasdynamic_update_scheme = GasdynamicUpdate.pc;
+    shared static size_t n_flow_time_levels = 3;
+
+    // Parameters related to possible motion of the grid.
+    shared static grid_motion = GridMotion.none;
+    shared static bool write_vertex_velocities = false;
+    shared static string udf_grid_motion_file = "dummy-grid-motion-file.txt";
+    static lua_State* master_lua_State;
+    shared static size_t n_grid_time_levels = 1;
 
     // We might update some properties in with the main convective-terms
     // time-stepping function or we might choose to update them separately, 
@@ -199,12 +206,6 @@ final class GlobalConfig {
     // the values may need to be tuned for other cases, especially where
     // viscous effects are important.
     shared static double compression_tolerance = -0.30;
-
-    // Parameters related to possible motion of the grid.
-    shared static grid_motion = GridMotion.none;
-    shared static bool write_vertex_velocities = false;
-    shared static string udf_grid_motion_file = "dummy-grid-motion-file.txt";
-    static lua_State* master_lua_State;
 
     // Parameters controlling viscous/molecular transport
     //
@@ -360,6 +361,10 @@ public:
     int dimensions;
     bool axisymmetric;
     GasdynamicUpdate gasdynamic_update_scheme;
+    size_t n_flow_time_levels;
+    GridMotion grid_motion;
+    string udf_grid_motion_file;
+    size_t n_grid_time_levels;
     bool separate_update_for_viscous_terms;
     bool separate_update_for_k_omega_source;
     bool adjust_invalid_cell_data;
@@ -372,8 +377,6 @@ public:
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
-    GridMotion grid_motion;
-    string udf_grid_motion_file;
     bool viscous;
     SpatialDerivCalc spatial_deriv_calc;
     bool deriv_calc_at_vertices;
@@ -421,6 +424,10 @@ public:
 	dimensions = GlobalConfig.dimensions;
 	axisymmetric = GlobalConfig.axisymmetric;
 	gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
+	n_flow_time_levels = GlobalConfig.n_flow_time_levels;
+	grid_motion = GlobalConfig.grid_motion;
+	udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
+	n_grid_time_levels = GlobalConfig.n_grid_time_levels;
 	separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
 	separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
 	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
@@ -433,8 +440,6 @@ public:
 	shear_tolerance = GlobalConfig.shear_tolerance;
 	M_inf = GlobalConfig.M_inf;
 	compression_tolerance = GlobalConfig.compression_tolerance;
-	grid_motion = GlobalConfig.grid_motion;
-	udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
 	viscous = GlobalConfig.viscous;
 	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
 	deriv_calc_at_vertices = GlobalConfig.deriv_calc_at_vertices;

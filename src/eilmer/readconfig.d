@@ -66,7 +66,7 @@ void read_config_file()
 	writeln("  axisymmetric: ", GlobalConfig.axisymmetric);
     }
 
-    // Parameters controlling convective update
+    // Parameters controlling convective update and size of storage arrays
     //
     GlobalConfig.interpolation_order = getJSONint(jsonData, "interpolation_order", 2);
     try {
@@ -75,6 +75,31 @@ void read_config_file()
     } catch (Exception e) {
 	GlobalConfig.gasdynamic_update_scheme = GasdynamicUpdate.pc;
     }
+    GlobalConfig.n_flow_time_levels = 1 +
+	number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+    try {
+	string name = jsonData["grid_motion"].str;
+	GlobalConfig.grid_motion = grid_motion_from_name(name);
+    } catch (Exception e) {
+	GlobalConfig.grid_motion = GridMotion.none;
+    }
+    if (GlobalConfig.grid_motion == GridMotion.none) {
+	GlobalConfig.n_grid_time_levels = 1;
+    } else {
+	GlobalConfig.n_grid_time_levels = 2; // [TODO] Kyle, is this correct? PJ 2016-03-04
+    }
+    GlobalConfig.write_vertex_velocities = 
+	getJSONbool(jsonData, "write_vertex_velocities", false);
+    GlobalConfig.udf_grid_motion_file = jsonData["udf_grid_motion_file"].str;
+    // If we have user-defined grid motion, we'll need to initialise
+    // the lua_State that holds the user's function. But we can't
+    // do that initialisation just yet. We have to wait until all
+    // of the blocks are configured since we set that information
+    // as global information available to the user. Hence, you'll
+    // find that step at the very end of this function.
+
+    // Parameters controlling convective update in detail
+    //
     GlobalConfig.separate_update_for_viscous_terms =
 	getJSONbool(jsonData, "separate_update_for_viscous_terms", false);
     GlobalConfig.separate_update_for_k_omega_source =
@@ -105,22 +130,6 @@ void read_config_file()
     GlobalConfig.M_inf = getJSONdouble(jsonData, "M_inf", 0.01);
     GlobalConfig.compression_tolerance = 
 	getJSONdouble(jsonData, "compression_tolerance", -0.30);
-    try {
-	string name = jsonData["grid_motion"].str;
-	GlobalConfig.grid_motion = grid_motion_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.grid_motion = GridMotion.none;
-    }
-    GlobalConfig.write_vertex_velocities = 
-	getJSONbool(jsonData, "write_vertex_velocities", false);
-    GlobalConfig.udf_grid_motion_file = jsonData["udf_grid_motion_file"].str;
-    // If we have user-defined grid motion, we'll need to initialise
-    // the lua_State that holds the user's function. But we can't
-    // do that initialisation just yet. We have to wait until all
-    // of the blocks are configured since we set that information
-    // as global information available to the user. Hence, you'll
-    // find that step at the very end of this function.
-
 
     // Parameters controlling shock fitting
     GlobalConfig.shock_fitting_delay = getJSONdouble(jsonData, "shock_fitting_delay", 0.0);

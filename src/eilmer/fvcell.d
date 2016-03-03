@@ -71,7 +71,7 @@ public:
 	this.myConfig = myConfig;
 	auto gmodel = myConfig.gmodel;
 	id = id_init;
-	pos.length = n_time_levels;
+	pos.length = myConfig.n_grid_time_levels;
 	fs = new FlowState(gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
     }
 } // end class BasicCell
@@ -110,9 +110,9 @@ public:
 	auto gmodel = myConfig.gmodel;
 	int n_species = gmodel.n_species;
 	int n_modes = gmodel.n_modes;
-	volume.length = n_time_levels;
-	areaxy.length = n_time_levels;
-	foreach(i; 0 .. n_time_levels) {
+	volume.length = myConfig.n_grid_time_levels;
+	areaxy.length = myConfig.n_grid_time_levels;
+	foreach(i; 0 .. myConfig.n_flow_time_levels) {
 	    U ~= new ConservedQuantities(n_species, n_modes);
 	    dUdt ~= new ConservedQuantities(n_species, n_modes);
 	}
@@ -130,13 +130,13 @@ public:
 	case CopyDataOption.all_flow:
 	    fs.copy_values_from(other.fs);
 	    Q.copy_values_from(other.Q);
-	    foreach(i; 0 .. n_time_levels) {
+	    foreach(i; 0 .. other.myConfig.n_flow_time_levels) {
 		U[i].copy_values_from(other.U[i]);
 		dUdt[i].copy_values_from(other.dUdt[i]);
 	    }
 	    break;
 	case CopyDataOption.grid:
-	    foreach(i; 0 .. n_time_levels) {
+	    foreach(i; 0 .. other.myConfig.n_grid_time_levels) {
 		pos[i].refx = other.pos[i].x;
 		pos[i].refy = other.pos[i].y;
 		pos[i].refz = other.pos[i].z;
@@ -159,7 +159,7 @@ public:
 	    // [TODO] really need to think about what needs to be copied...
 	    id = other.id;
 	    myConfig = other.myConfig;
-	    foreach(i; 0 .. n_time_levels) {
+	    foreach(i; 0 .. other.myConfig.n_grid_time_levels) {
 		pos[i].refx = other.pos[i].x;
 		pos[i].refy = other.pos[i].y;
 		pos[i].refz = other.pos[i].z;
@@ -172,7 +172,7 @@ public:
 	    L_min = other.L_min;
 	    fs.copy_values_from(other.fs);
 	    Q.copy_values_from(other.Q);
-	    foreach(i; 0 .. n_time_levels) {
+	    foreach(i; 0 .. other.myConfig.n_flow_time_levels) {
 		U[i].copy_values_from(other.U[i]);
 		dUdt[i].copy_values_from(other.dUdt[i]);
 	    }

@@ -37,10 +37,10 @@ public:
     SolidFVInterface[] iface;
     SolidFVVertex[] vtx;
 
-    this()
+    this(size_t n_flow_time_levels)
     {
-	e.length = n_time_levels;
-	dedt.length = n_time_levels;
+	e.length = n_flow_time_levels;
+	dedt.length = n_flow_time_levels;
     }
 
     void scanValuesFromString(string buffer)

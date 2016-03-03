@@ -168,7 +168,7 @@ public:
 	try {
 	    // Create the cell and interface objects for the entire block.
 	    foreach (gid; 0 .. ntot) {
-		_ctr ~= new SolidFVCell(); _ctr[gid].id = to!int(gid);
+		_ctr ~= new SolidFVCell(GlobalConfig.n_flow_time_levels); _ctr[gid].id = to!int(gid);
 		auto ijk = toIJKIndices(gid);
 		if ( ijk[0] >= imin && ijk[0] <= imax && 
 		     ijk[1] >= jmin && ijk[1] <= jmax && 

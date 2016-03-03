@@ -152,13 +152,13 @@ public:
 	}
 	// Assemble array storage for finite-volume cells, etc.
 	foreach (i, v; grid.vertices) {
-	    auto new_vtx = new FVVertex(myConfig.gmodel);
+	    auto new_vtx = new FVVertex(myConfig);
 	    new_vtx.pos[0] = v;
 	    new_vtx.id = i;
 	    vertices ~= new_vtx;
 	}
 	foreach (i, f; grid.faces) {
-	    auto new_face = new FVInterface(myConfig.gmodel);
+	    auto new_face = new FVInterface(myConfig);
 	    new_face.id = i;
 	    faces ~= new_face;
 	}

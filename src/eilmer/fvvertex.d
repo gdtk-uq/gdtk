@@ -13,6 +13,7 @@ import std.conv;
 import fvcore;
 import geom;
 import gas;
+import globalconfig;
 import flowstate;
 import flowgradients;
 
@@ -27,12 +28,12 @@ public:
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
 
-    this(in GasModel gm, size_t id_init=0)
+    this(LocalConfig myConfig, size_t id_init=0)
     {
 	id = id_init;
-	pos.length = n_time_levels;
-	vel.length = n_time_levels;
-	grad = new FlowGradients(gm.n_species);
+	pos.length = myConfig.n_grid_time_levels;
+	vel.length = myConfig.n_grid_time_levels;
+	grad = new FlowGradients(myConfig.gmodel.n_species);
     }
 
     this(FVVertex other)

@@ -67,12 +67,6 @@ GasdynamicUpdate update_scheme_from_name(string name)
 // [TODO] think about the following...
 enum CopyDataOption { all, minimal_flow, all_flow, grid, cell_lengths_only }
 
-// n_time_levels is used to size the time-derivative vectors.
-enum
-    n_time_levels = 4,
-    n_interfaces_per_cell = 6,
-    n_vertex_per_cell = 8;
-
 // Minimum values for turbulent kinetic energy (m^2/s^2) and frequency (1/s)
 // for applying limiters in the k-omega model.
 enum

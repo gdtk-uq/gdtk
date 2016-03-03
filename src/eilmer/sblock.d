@@ -227,12 +227,12 @@ public:
 	    foreach (gid; 0 .. ntot) {
 		_ctr ~= new FVCell(myConfig); _ctr[gid].id = gid;
 		auto ijk = to_ijk_indices(gid);
-		_ifi ~= new FVInterface(myConfig.gmodel); _ifi[gid].id = gid;
-		_ifj ~= new FVInterface(myConfig.gmodel); _ifj[gid].id = gid;
+		_ifi ~= new FVInterface(myConfig); _ifi[gid].id = gid;
+		_ifj ~= new FVInterface(myConfig); _ifj[gid].id = gid;
 		if ( myConfig.dimensions == 3 ) {
-		    _ifk ~= new FVInterface(myConfig.gmodel); _ifk[gid].id = gid;
+		    _ifk ~= new FVInterface(myConfig); _ifk[gid].id = gid;
 		}
-		_vtx ~= new FVVertex(myConfig.gmodel); _vtx[gid].id = gid;
+		_vtx ~= new FVVertex(myConfig); _vtx[gid].id = gid;
 	    } // gid loop
 	    // Now, assemble the lists of references to the cells, vertices and faces
 	    // in standard order for a structured grid.
