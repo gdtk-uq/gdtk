@@ -45,27 +45,6 @@ TurbulenceModel turbulence_model_from_name(string name)
     }
 } // end turbulence_model_from_name()
 
-// Symbolic names for grid motion types
-enum GridMotion { none, user_defined, shock_fitting }
-string grid_motion_name(GridMotion i)
-{
-    final switch (i) {
-    case GridMotion.none: return "none";
-    case GridMotion.user_defined: return "user_defined";
-    case GridMotion.shock_fitting: return "shock_fitting";
-    }
-}
-
-GridMotion grid_motion_from_name(string name)
-{
-    switch (name) {
-    case "none": return GridMotion.none;
-    case "user_defined": return GridMotion.user_defined;
-    case "shock_fitting": return GridMotion.shock_fitting;
-    default: return GridMotion.none;
-    }
-}
-
 class BlockZone {
     // Note that these data are not shared across threads
     // because we will want to access them frequently at the lower levels of the code.

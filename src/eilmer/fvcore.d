@@ -17,7 +17,9 @@ enum GasdynamicUpdate {
     midpoint, 
     classic_rk3,
     tvd_rk3,
-    denman_rk3
+    denman_rk3,
+    moving_grid_1_stage,
+    moving_grid_2_stage
 }
 
 string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
@@ -29,24 +31,42 @@ string gasdynamic_update_scheme_name(GasdynamicUpdate gdut)
     case GasdynamicUpdate.classic_rk3: return "classic-rk3";
     case GasdynamicUpdate.tvd_rk3: return "tvd-rk3";
     case GasdynamicUpdate.denman_rk3: return "denman-rk3";
+    case GasdynamicUpdate.moving_grid_1_stage: return "moving_grid_1_stage";
+    case GasdynamicUpdate.moving_grid_2_stage: return "moving_grid_2_stage";
     }
 } // end gasdynamic_update_scheme_name()
 
-int number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
+size_t number_of_stages_for_update_scheme(GasdynamicUpdate gdut)
 {
-    final switch ( gdut ) {
+    final switch (gdut) {
     case GasdynamicUpdate.euler: return 1;
     case GasdynamicUpdate.pc: return 2;
     case GasdynamicUpdate.midpoint: return 2;
     case GasdynamicUpdate.classic_rk3: return 3;
     case GasdynamicUpdate.tvd_rk3: return 3;
     case GasdynamicUpdate.denman_rk3: return 3;
+    case GasdynamicUpdate.moving_grid_1_stage: return 1;
+    case GasdynamicUpdate.moving_grid_2_stage: return 2;
     }
 } // end number_of_stages_for_update_scheme()
 
+size_t final_index_for_update_scheme(GasdynamicUpdate gdut)
+{
+    final switch (gdut) {
+    case GasdynamicUpdate.euler: return 1;
+    case GasdynamicUpdate.pc: return 2;
+    case GasdynamicUpdate.midpoint: return 2;
+    case GasdynamicUpdate.classic_rk3: return 3;
+    case GasdynamicUpdate.tvd_rk3: return 3;
+    case GasdynamicUpdate.denman_rk3: return 3;
+    case GasdynamicUpdate.moving_grid_1_stage: return 1;
+    case GasdynamicUpdate.moving_grid_2_stage: return 2;
+    }
+} // end final_index_for_update_scheme()
+
 GasdynamicUpdate update_scheme_from_name(string name)
 {
-    switch ( name ) {
+    switch (name) {
     case "euler": return GasdynamicUpdate.euler;
     case "pc": return GasdynamicUpdate.pc;
     case "predictor_corrector": return GasdynamicUpdate.pc;
@@ -58,10 +78,35 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "tvd-rk3": return GasdynamicUpdate.tvd_rk3;
     case "denman_rk3": return GasdynamicUpdate.denman_rk3;
     case "denman-rk3": return GasdynamicUpdate.denman_rk3;
+    case "moving_grid_1_stage": return GasdynamicUpdate.moving_grid_1_stage;
+    case "moving-grid-1-stage": return GasdynamicUpdate.moving_grid_1_stage;
+    case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
+    case "moving-grid-2-stage": return GasdynamicUpdate.moving_grid_2_stage;
     default:
 	throw new Error(text("Invalid gasdynamic update scheme name:", name));
     }
 }  // end scheme_from_name()
+
+// Symbolic names for grid motion types
+enum GridMotion { none, user_defined, shock_fitting }
+string grid_motion_name(GridMotion i)
+{
+    final switch (i) {
+    case GridMotion.none: return "none";
+    case GridMotion.user_defined: return "user_defined";
+    case GridMotion.shock_fitting: return "shock_fitting";
+    }
+}
+
+GridMotion grid_motion_from_name(string name)
+{
+    switch (name) {
+    case "none": return GridMotion.none;
+    case "user_defined": return GridMotion.user_defined;
+    case "shock_fitting": return GridMotion.shock_fitting;
+    default: return GridMotion.none;
+    }
+}
 
 
 // [TODO] think about the following...

@@ -624,6 +624,8 @@ public:
 	if (!force_euler) {
 	    final switch (myConfig.gasdynamic_update_scheme) {
 	    case GasdynamicUpdate.euler:
+	    case GasdynamicUpdate.moving_grid_1_stage:
+	    case GasdynamicUpdate.moving_grid_2_stage:
 	    case GasdynamicUpdate.pc: gamma_1 = 1.0; break;
 	    case GasdynamicUpdate.midpoint: gamma_1 = 0.5; break;
 	    case GasdynamicUpdate.classic_rk3: gamma_1 = 0.5; break;
@@ -689,7 +691,9 @@ public:
 	double gamma_1 = 0.5; // Presume predictor-corrector.
 	double gamma_2 = 0.5;
 	final switch (myConfig.gasdynamic_update_scheme) {
-	case GasdynamicUpdate.euler: assert(false, "Euler update has no second stage.");
+	case GasdynamicUpdate.euler:
+	case GasdynamicUpdate.moving_grid_1_stage: assert(false, "invalid for 1-stage update.");
+	case GasdynamicUpdate.moving_grid_2_stage:
 	case GasdynamicUpdate.pc: gamma_1 = 0.5, gamma_2 = 0.5; break;
 	case GasdynamicUpdate.midpoint: gamma_1 = 0.0; gamma_2 = 1.0; break;
 	case GasdynamicUpdate.classic_rk3: gamma_1 = -1.0; gamma_2 = 2.0; break;
@@ -746,9 +750,11 @@ public:
 	double gamma_3 = 4.0/6.0;
 	final switch (myConfig.gasdynamic_update_scheme) {
 	case GasdynamicUpdate.euler:
+	case GasdynamicUpdate.moving_grid_1_stage:
+	case GasdynamicUpdate.moving_grid_2_stage:
 	case GasdynamicUpdate.pc:
 	case GasdynamicUpdate.midpoint:
-	    assert(false, "Euler PC and midpoint updates have no second stage.");
+	    assert(false, "invalid for 2-stage update.");
 	case GasdynamicUpdate.classic_rk3: gamma_1 = 1.0/6.0; gamma_2 = 4.0/6.0; gamma_3 = 1.0/6.0; break;
 	case GasdynamicUpdate.tvd_rk3: gamma_1 = 1.0/6.0; gamma_2 = 1.0/6.0; gamma_3 = 4.0/6.0; break;
 	    // FIX-ME: Check that we have Andrew Denman's scheme ported correctly.
@@ -843,7 +849,6 @@ public:
 	ConservedQuantities dUdt0 = dUdt[0];
 	ConservedQuantities dUdt1 = dUdt[1];
 	ConservedQuantities U0 = U[0];
-	// ConservedQuantities U1 = U[1];
 	ConservedQuantities U2 = U[2];
 	double gamma_2 = 0.5;
 	double gamma_1 = 0.5;

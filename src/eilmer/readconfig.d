@@ -148,6 +148,10 @@ void read_config_file()
 	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
 	writeln("  gasdynamic_update_scheme: ",
 		gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
+	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
+	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
+	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
+	writeln("  udf_grid_motion_file: ", GlobalConfig.udf_grid_motion_file);
 	writeln("  separate_update_for_viscous_terms: ",
 		GlobalConfig.separate_update_for_viscous_terms);
 	writeln("  separate_update_for_k_omega_source: ",
@@ -165,11 +169,15 @@ void read_config_file()
 	writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
 	writeln("  M_inf: ", GlobalConfig.M_inf);
 	writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
-	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
-	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
-	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
-	writeln("  udf_grid_motion_file: ", GlobalConfig.udf_grid_motion_file);
 	writeln("  MHD: ", GlobalConfig.MHD);
+    }
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
+	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage) {
+	    // pass, we have a consistent selection.
+	} else {
+	    throw new Error("Have selected inconsistent GasdynamicUpdate scheme for grid motion.");
+	}
     }
 
     // Parameters controlling viscous/molecular transport
@@ -279,9 +287,6 @@ void read_config_file()
 	    throw new Error(format("Construction of block[%d], unknown type: %s",
 				   i, blockType));
 	} // end switch blockType
-	if (GlobalConfig.verbosity_level > 1) {
-	    writeln("  Block[", i, "]: ", gasBlocks[i]);
-	}
     }
     foreach (blk; gasBlocks) {
 	blk.init_lua_globals();
@@ -290,6 +295,11 @@ void read_config_file()
 	    luaL_dofile(blk.myL, GlobalConfig.udf_source_terms_file.toStringz);
 	}
     } 
+    // After fully constructing blocks and their boundary conditions,
+    // we can optionally print their representation for checking.
+    if (GlobalConfig.verbosity_level > 1) {
+	foreach (i, blk; gasBlocks) { writeln("  Block[", i, "]: ", blk); }
+    }
 
     // Read in any blocks in the solid domain.
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);

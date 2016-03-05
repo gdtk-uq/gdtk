@@ -458,6 +458,7 @@ void finalize_simulation()
 } // end finalize_simulation()
 
 //---------------------------------------------------------------------------
+
 void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 {
     final switch(GlobalConfig.grid_motion){
@@ -477,10 +478,10 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 	    }
 	    break;		
     }
-}
-
+} // end set_grid_velocities()
 
 //----------------------------------------------------------------------------
+
 void gasdynamic_explicit_increment_with_fixed_grid()
 {
     shared double t0 = sim_time;
@@ -495,7 +496,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     case GasdynamicUpdate.midpoint: c2 = 0.5; c3 = 1.0; break;
     case GasdynamicUpdate.classic_rk3: c2 = 0.5; c3 = 1.0; break;
     case GasdynamicUpdate.tvd_rk3: c2 = 1.0; c3 = 0.5; break;
-    case GasdynamicUpdate.denman_rk3: c2 = 1.0; c3 = 0.5; break; 
+    case GasdynamicUpdate.denman_rk3: c2 = 1.0; c3 = 0.5; break;
+    case GasdynamicUpdate.moving_grid_1_stage:
+    case GasdynamicUpdate.moving_grid_2_stage: assert(false, "invalid option");
     }
     // Preparation for the predictor-stage of inviscid gas-dynamic flow update.
     foreach (blk; parallel(gasBlocks,1)) {
@@ -844,31 +847,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     // Get the end conserved data into U[0] for next step.
     foreach (blk; parallel(gasBlocks,1)) {
 	if (!blk.active) continue;
-	size_t end_indx = 2;
-	final switch (GlobalConfig.gasdynamic_update_scheme) {
-	case GasdynamicUpdate.euler: end_indx = 1; break;
-	case GasdynamicUpdate.pc: 
-	case GasdynamicUpdate.midpoint: end_indx = 2; break;
-	case GasdynamicUpdate.tvd_rk3:
-	case GasdynamicUpdate.classic_rk3:
-	case GasdynamicUpdate.denman_rk3: end_indx = 3; break;
-	} // end switch
+	size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
 	foreach (cell; blk.cells) {
 	    swap(cell.U[0], cell.U[end_indx]);
 	}
     } // end foreach blk
-    
+    //
     foreach (sblk; solidBlocks) {
 	if (!sblk.active) continue;
-	size_t end_indx = 2;
-	final switch (GlobalConfig.gasdynamic_update_scheme) {
-	case GasdynamicUpdate.euler: end_indx = 1; break;
-	case GasdynamicUpdate.pc: 
-	case GasdynamicUpdate.midpoint: end_indx = 2; break;
-	case GasdynamicUpdate.tvd_rk3:
-	case GasdynamicUpdate.classic_rk3:
-	case GasdynamicUpdate.denman_rk3: end_indx = 3; break;
-	}
+	size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
 	foreach (scell; sblk.activeCells) {
 	    scell.e[0] = scell.e[end_indx];
 	} 
@@ -886,16 +873,8 @@ void gasdynamic_explicit_increment_with_moving_grid()
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
 	!GlobalConfig.separate_update_for_k_omega_source;
     // Set the time-step coefficients for the stages of the update scheme.
-    shared double c2 = 1.0; // default for predictor-corrector update
-    shared double c3 = 1.0; // default for predictor-corrector update
-    final switch ( GlobalConfig.gasdynamic_update_scheme ) {
-    case GasdynamicUpdate.euler:
-    case GasdynamicUpdate.pc: c2 = 1.0; c3 = 1.0; break;
-    case GasdynamicUpdate.midpoint: c2 = 0.5; c3 = 1.0; break;
-    case GasdynamicUpdate.classic_rk3: c2 = 0.5; c3 = 1.0; break;
-    case GasdynamicUpdate.tvd_rk3: c2 = 1.0; c3 = 0.5; break;
-    case GasdynamicUpdate.denman_rk3: c2 = 1.0; c3 = 0.5; break; 
-    }
+    shared double c2 = 1.0; // same for 1-stage or 2-stage update
+    shared double c3 = 1.0; // ditto
     
     // Preparation for the predictor-stage of inviscid gas-dynamic flow update.
     foreach (blk; parallel(gasBlocks,1)) {
@@ -1026,7 +1005,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	} // end foreach scell
     } // end foreach sblk
     /////
-    if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2 ) {
+    if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) == 2) {
 	// Preparation for second-stage of gas-dynamic update.
 	sim_time = t0 + c2 * dt_global;
 	foreach (blk; parallel(gasBlocks,1)) {
@@ -1152,15 +1131,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // Get the end conserved data into U[0] for next step.
     foreach (blk; parallel(gasBlocks,1)) {
 	if (!blk.active) continue;
-	size_t end_indx = 2;
-	final switch (GlobalConfig.gasdynamic_update_scheme) {
-	case GasdynamicUpdate.euler: end_indx = 1; break;
-	case GasdynamicUpdate.pc: 
-	case GasdynamicUpdate.midpoint: end_indx = 2; break;
-	case GasdynamicUpdate.tvd_rk3:
-	case GasdynamicUpdate.classic_rk3:
-	case GasdynamicUpdate.denman_rk3: end_indx = 3; break;
-	} // end switch
+	size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
 	foreach (cell; blk.cells) {
 	    swap(cell.U[0], cell.U[end_indx]);
 	}
@@ -1168,15 +1139,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     
     foreach (sblk; solidBlocks) {
 	if (!sblk.active) continue;
-	size_t end_indx = 2;
-	final switch (GlobalConfig.gasdynamic_update_scheme) {
-	case GasdynamicUpdate.euler: end_indx = 1; break;
-	case GasdynamicUpdate.pc: 
-	case GasdynamicUpdate.midpoint: end_indx = 2; break;
-	case GasdynamicUpdate.tvd_rk3:
-	case GasdynamicUpdate.classic_rk3:
-	case GasdynamicUpdate.denman_rk3: end_indx = 3; break;
-	}
+	size_t end_indx = final_index_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
 	foreach (scell; sblk.activeCells) {
 	    scell.e[0] = scell.e[end_indx];
 	} 
@@ -1186,7 +1149,6 @@ void gasdynamic_explicit_increment_with_moving_grid()
     foreach (blk; gasBlocks) {
 	if ( !blk.active ) continue;
 	foreach ( cell; blk.cells ) {
-	    //swap(cell.U[0], cell.U[1]);
 	    cell.copy_grid_level_to_level(gtl, 0);
 	}
     }
