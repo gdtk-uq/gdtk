@@ -176,7 +176,14 @@ void read_config_file()
 	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage) {
 	    // pass, we have a consistent selection.
 	} else {
-	    throw new Error("Have selected inconsistent GasdynamicUpdate scheme for grid motion.");
+	    throw new Error("We have some grid_motion but not a valid GasdynamicUpdate scheme" ~
+			    " for grid motion.");
+	}
+    } else {
+	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
+	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage) {
+	    throw new Error("We have no grid_motion but have asked for a GasdynamicUpdate scheme" ~
+			    " for grid motion.");
 	}
     }
 
