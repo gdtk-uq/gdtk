@@ -8,7 +8,7 @@ print(job_title)
 config.dimensions = 2
 config.title = job_title
 
-nsp, nmodes = setGasModel('nitrogen-2sp.lua')
+nsp, nmodes = setGasModel('cea-adaptive-lut-air.lua')
 inflow = FlowState:new{p=500.0, T=700.0, velx=5000.0, massf={N2=1.0}}
 initial = FlowState:new{p=5.0, T=300.0, massf={N2=1.0}}
 print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)

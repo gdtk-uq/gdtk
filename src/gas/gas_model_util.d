@@ -16,6 +16,7 @@ import gas.co2gas;
 import gas.co2gas_sw;
 import gas.sf6virial;
 import gas.uniform_lut;
+import gas.adaptive_lut_CEA;
 import std.file;
 import std.stdio;
 import util.lua;
@@ -81,6 +82,9 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
 	break;
     case "look-up table":  
 	gm = new  UniformLUT(L);
+	break;
+    case "CEA adaptive look-up table":
+	gm = new AdaptiveLUT(L);
 	break;
     default:
 	gm = new IdealGas();

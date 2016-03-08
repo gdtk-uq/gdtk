@@ -48,6 +48,10 @@ test uniform-lut-test {Testing uniform_lut.d} -body {
     exec ./uniform_lut_test > LOGFILE_UNIFORM_LUT_TEST
 } -result {} -returnCodes {0}
 
+test adaptive-lut-test {Testing uniform_lut.d} -body {
+    exec ./adaptive_lut_CEA_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"
