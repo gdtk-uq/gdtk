@@ -6,6 +6,7 @@ H.lua      : H        : monatomic hydrogen
 H2.lua     : H2       : diatomic hydrogen
 HI.lua     : HI       : hydrogen iodide
 H2O.lua    : H2O      : water
+H2O2.lua   : H2O2     : hydrogen peroxide
 HO2.lua    : HO2      : hydroperoxyl
 I2.lua     : I2       : iodine
 Kr.lua     : Kr       : krypton
