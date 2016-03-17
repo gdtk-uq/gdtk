@@ -1,3 +1,46 @@
-Rowan J Gollan
-Peter A Jacobs
+List of contributors as of March, 2016
+--------------------------------------
+
+Chief-gardeners:
+  Peter A. Jacobs
+  Rowan J. Gollan
+
+  shared responsibility for all encompasing duties for thermochemistry,
+  heat transfer, gas dynamics and geometric modelling.
+
+Gas dynamics:
+  Paul Petrie-Repar: rotating frame formulation
+  Jason (Kan) Qin: moving grid, turbulence wall functions
+  Ingo Jahn: moving grid
+  Wilson Chan: turbulence models
+  Kyle Damm: moving grid, shock-fitting
+  Daniel Potter: aeroshell flows
+
+Thermochemistry:
+  Daniel Potter: multi-temperature thermo and transport properties
+  Kyle Damm: GPU chemistry implementation
+  Tim Cullen: high temperature polynomials
+  Jonathan Ho: fast table look-up for supercritical CO2
+  James Burgess: adaptive look-up table for equilibrium gases
+
+Geometry definition and gridding:
+  Peter Roman: geometric modelling
+  Heather Muir: implementation of paving for unstructured 2D grids
+
+Conjugate heat transfer:
+  Anand Veeraragavan: manufactured solutions
+  Justin Beri: finite-volume implementation
+  Zac Denman: coupling via user-defined b.c.
+
+Radiation:
+  Dan Potter: spectral and transport modelling
+  Elise Fahy: flowfield coupling
+
+MHD:
+  Vince Wheatley
+  Daryl Bond
+  Lachlan Whyborn
+
+Method-of-Characteristics (MOC):
+  Momar Hughes
 
