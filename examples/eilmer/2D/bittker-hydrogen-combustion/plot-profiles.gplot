@@ -50,7 +50,7 @@ set xlabel 'Distance (m)'
 set ylabel 'p (kPa)'
 set xrange [0.0:0.1]
 set yrange [90.0:160.0]
-plot 'profile.data' using 1:($9/1000) title 'Eilmer3' with lines linestyle 1,\
+plot 'profile.data' using 1:($9/1000) title 'eilmer' with lines linestyle 1,\
      'reacting-pipe-flow.transcript' using 1:($3/1000) title 'pipe-flow' with lines linestyle 2, \
      'bittker-scullin-massf.data' using 1:($12/1000) title 'Bittker-Scullin' with points linestyle 16
 
