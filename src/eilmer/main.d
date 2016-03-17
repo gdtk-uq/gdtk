@@ -47,7 +47,7 @@ void main(string[] args)
     msg       ~= "         [--prep]                    prepare config, grid and flow files\n";
     msg       ~= "\n";
     msg       ~= "         [--run]                     run the simulation over time\n";
-    msg       ~= "         [--tindx-start=<int>]       defaults to 0\n";
+    msg       ~= "         [--tindx-start=<int>|last|9999]  defaults to 0\n";
     msg       ~= "         [--max-cpus=<int>]          defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
     msg       ~= "         [--max-wall-clock=<int>]    in seconds\n";
@@ -80,6 +80,7 @@ void main(string[] args)
     int verbosityLevel = 0;
     bool prepFlag = false;
     bool runFlag = false;
+    string tindxStartStr = "0";
     int tindxStart = 0;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
@@ -106,7 +107,7 @@ void main(string[] args)
 	       "verbosity", &verbosityLevel,
 	       "prep", &prepFlag,
 	       "run", &runFlag,
-	       "tindx-start", &tindxStart,
+	       "tindx-start", &tindxStartStr,
 	       "max-cpus", &maxCPUs,
 	       "max-wall-clock", &maxWallClock,
 	       "post", &postFlag,
@@ -189,6 +190,18 @@ void main(string[] args)
 	GlobalConfig.base_file_name = jobName;
 	GlobalConfig.verbosity_level = verbosityLevel;
 	maxCPUs = min(max(maxCPUs, 1), totalCPUs); // don't ask for more than available
+	switch (tindxStartStr) {
+	case "9999":
+	case "last":
+	    auto times_dict = readTimesFile(jobName);
+            auto tindx_list = times_dict.keys;
+	    sort(tindx_list);
+	    tindxStart = tindx_list[$-1];
+	    break;
+	default:
+	    // We assume that the command-line argument was an integer.
+	    tindxStart = to!int(tindxStartStr);
+	} // end switch
 	if (verbosityLevel > 0) {
 	    writeln("Begin simulation with command-line arguments.");
 	    writeln("  jobName: ", jobName);
