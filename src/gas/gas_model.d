@@ -141,6 +141,14 @@ public:
     double p;    /// presure, Pa
     double p_e;  /// electron pressure
     double a;    /// sound speed, m/s
+    // For a gas in thermal equilibrium, all of the internal energies
+    // are bundled together into e[0] and are represented by a single
+    // temperature T[0].  The array length will be one.
+    // For a gas in thermal nonequilibrium, the internal energies are
+    // stored unbundled, with e[0] being the trans-rotational component,
+    // e[1] being another, etc.  The array length will be determined
+    // by the specific model and, to get the total internal energy,
+    // the gas-dynamics part of the code will need to sum the array elements.
     double[] e;  /// specific internal energies, J/kg
     double[] T;  /// temperatures, K
     /// Transport properties
