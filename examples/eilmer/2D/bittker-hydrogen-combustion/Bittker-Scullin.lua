@@ -27,6 +27,7 @@
 -- Mott's alpha-QSS is a good selection for stiff exothermic systems
 Config{
    odeStep = {method='alpha-qss'},
+   tightTempCoupling = true
 }
 
 Reaction{
