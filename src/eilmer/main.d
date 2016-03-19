@@ -18,6 +18,8 @@ import std.algorithm;
 import geom;
 import gas;
 import gas.luagas_model;
+import kinetics.luareaction_mechanism;
+import kinetics.luachemistry_update;
 import globalconfig;
 import simcore;
 import util.lua;
@@ -276,6 +278,8 @@ void main(string[] args)
 	registerUnstructuredGrid(L);
 	registerSolidProps(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
+	registerReactionMechanism(L, LUA_GLOBALSINDEX);
+	registerReactionUpdateScheme(L, LUA_GLOBALSINDEX);
 	if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
 	    writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
 	    string errMsg = to!string(lua_tostring(L, -1));
