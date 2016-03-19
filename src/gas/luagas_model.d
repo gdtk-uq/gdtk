@@ -738,6 +738,23 @@ extern(C) int printValues(lua_State* L)
     return 0;
 }
 
+extern(C) int copyValues(lua_State* L)
+{
+    lua_getfield(L, 1, "gasmodel");
+    auto gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+
+    // Src GasState table
+    auto Q0 = new GasState(gm.n_species, gm.n_modes);
+    getGasStateFromTable(L, gm, 1, Q0);
+
+    // Tgt GasState table
+    // Assume table is available at index 2
+    setGasStateInTable(L, gm, 2, Q0);
+
+    return 0;
+}
+
 void registerGasModel(lua_State* L, int tblIdx)
 {
     luaL_newmetatable(L, GasModelMT.toStringz);
@@ -826,6 +843,9 @@ void registerGasModel(lua_State* L, int tblIdx)
     // Set a global function to print values in GasState
     lua_pushcfunction(L, &printValues);
     lua_setglobal(L, "printValues");
+    // Set a global function to copy GasState values from one table to another.
+    lua_pushcfunction(L, &copyValues);
+    lua_setglobal(L, "copyValues");
 
     // Set some of the physical constants as global
     lua_pushnumber(L, P_atm);
