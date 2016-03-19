@@ -259,7 +259,7 @@ void main(string[] args)
     if (customPostFlag) {
 	writeln("Begin custom post-processing using user-supplied script.");
 	// For this case, there is very little job context loaded and
-	// after loading a couple of libraries, we pretty much hand over
+	// after loading all of the libraries, we pretty much hand over
 	// to a Lua file to do everything.
 	writeln("Start lua connection.");
 	auto L = luaL_newstate();
@@ -267,6 +267,15 @@ void main(string[] args)
 	registerVector3(L);
 	registerGlobalConfig(L);
 	registerFlowSolution(L);
+	registerFlowState(L);
+	registerPaths(L);
+	registerSurfaces(L);
+	registerVolumes(L);
+	registerUnivariateFunctions(L);
+	registerStructuredGrid(L);
+	registerUnstructuredGrid(L);
+	registerSolidProps(L);
+	registerGasModel(L, LUA_GLOBALSINDEX);
 	if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
 	    writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
 	    string errMsg = to!string(lua_tostring(L, -1));

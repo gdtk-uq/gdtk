@@ -3,17 +3,12 @@
 --
 -- History:
 --   2016-02-29 -- Adapted from PJ and Fabs' eilmer3 version.
---
+--   2016-03-19 -- Made a bit tidier (PJ)
 
 config.title = "Test Case 3 from Bittker-Scullin code."
 config.dimensions = 2
 config.axisymmetric = true
 config.stringent_cfl = true
-
-nxcells = 2000
-nycells = 2
-nib = 200
-njb = 1
 
 -- Gas model setup
 nsp, nmodes, gm = setGasModel("h2-o2-n2-9sp.lua")
@@ -25,31 +20,16 @@ molefInit = {O2=0.1480, N2=0.5562, H2=0.2958}
 massfInit = gm:molef2massf(molefInit)
 inflow = FlowState:new{p=96.87e3, T=1559.0, velx=4551.73, massf=massfInit}
 
--- Geometry setup
---[[
-   ^ y
-   | 
-   |
-   d----------c
-   |          |
-   a----------b --> x
---]]
+-- Geometry and grid setup
+L = 0.1; H = 0.01 -- duct is long and skinny
+duct = CoonsPatch:new{p00=Vector3:new{x=0.0, y=0.0},
+		      p10=Vector3:new{x=L, y=0.0},
+		      p11=Vector3:new{x=L, y=H},
+		      p01=Vector3:new{x=0.0, y=H}}
+grid0 = StructuredGrid:new{psurface=duct, niv=2001, njv=3}
 
-a = Vector3:new{x=0.0, y=0.0}
-b = Vector3:new{x=0.1, y=0.0}
-c = Vector3:new{x=0.1, y=0.01}
-d = Vector3:new{x=0.0, y=0.01}
-
-ab = Line:new{p0=a, p1=b}
-ad = Line:new{p0=a, p1=d}
-bc = Line:new{p0=b, p1=c}
-dc = Line:new{p0=d, p1=c}
-
--- Grid setup
-grid0 = StructuredGrid:new{psurface=makePatch{north=dc, east=bc, south=ab, west=ad},
-			   niv=nxcells+1, njv=nycells+1}
-
--- Block setup
+-- Block setup as an array of many blocks
+nib = 200; njb = 1
 blk0 = SBlockArray{grid=grid0, fillCondition=inflow, label='blk',
 		   bcList={east=OutFlowBC_Simple:new{},
 			   west=InFlowBC_Supersonic:new{flowCondition=inflow}},
