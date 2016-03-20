@@ -42,10 +42,10 @@ config.njb = njb
 config.propagate_inflow_data = true
 config.flux_calc = "adaptive"
 config.gasdynamic_update_scheme = "classic-rk3"
-config.cfl_value = 1.0
-config.max_time = 5.0e-5
+config.cfl_value = 0.5
+config.max_time = 50.0e-6
 config.max_step = 1000000
-config.dt_plot = 5.0e-6
+config.dt_plot = 10.0e-6
 config.dt_init = 1.0e-10
 
 
