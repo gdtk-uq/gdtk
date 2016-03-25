@@ -12,6 +12,9 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.math;
+import std.algorithm.iteration : reduce;
+
+import nm.bbla;
 
 /**
  * References used in this module:
@@ -20,6 +23,20 @@ import std.math;
  * Iterative Methods for Sparse Linear Systems, 2nd ed.
  * SIAM, Philaldelphia
  */
+
+double dot(double[] a, double[] b)
+{
+    assert(a.length == b.length);
+    double sum = 0.0;
+    foreach (i; 0 .. a.length) sum += a[i]*b[i];
+    return sum;
+}
+
+double norm2(double[] vec)
+{
+    auto ssquares = reduce!((a,b) => a + b * b)(0.0, vec);
+    return sqrt(ssquares);
+}
 
 /**
  * This class is used to store and work with a sparse matrix.
@@ -115,9 +132,11 @@ bool approxEqualMatrix(SMatrix a, SMatrix b)
 }
 
 void multiply(SMatrix a, double[] b, double[] c)
-{
+in {
     assert(a.ia.length-1 == b.length);
     assert(b.length == c.length);
+}
+body {
     size_t k0, k1;
     foreach ( i; 0 .. a.ia.length-1 ) {
 	k0 = a.ia[i];
@@ -157,7 +176,7 @@ void decompILU0(SMatrix a)
 
 void solve(SMatrix LU, double[] b)
 {
-    size_t n = LU.ia.length-1;
+    int n = to!int(LU.ia.length-1);
     assert(b.length == n);
     // Forward elimination
     foreach ( i; 1 .. n ) {
@@ -180,6 +199,95 @@ void solve(SMatrix LU, double[] b)
 	b[i] = sum/LU[i,i];
     }
 }
+
+void gmres(SMatrix A, double[] b, double[] x0, int m)
+in {
+    assert(A.ia.length-1 == b.length);
+    assert(b.length == x0.length);
+    assert(m >= 1);
+}
+body {
+    immutable double ZERO_TOL = 1.0e-10;
+    // 0. Allocate working matrices and vectors
+    size_t n = b.length;
+    double[] Ax0, r0, v, w, g_old, g;
+    Ax0.length = n;
+    r0.length = n;
+    v.length = n;
+    w.length = n;
+    g_old.length = m+1;
+    g.length = m+1;
+    auto H = new Matrix(m+1, m);
+    H.zeros();
+    auto Hold = new Matrix(m+1, m);
+    auto Gamma = new Matrix(m+1, m+1);
+    auto V = new Matrix(n, m+1);
+    auto Qold = eye(n);
+    auto Q = zeros(n, n);
+
+    // 1. Compute r0, beta, v1
+    multiply(A, x0, Ax0);
+    foreach (i; 0 .. n) {
+	r0[i] = b[i] - Ax0[i];
+    }
+
+    auto beta = norm2(r0);
+    foreach (i; 0 .. n) {
+	v[i] = r0[i]/beta;
+	V[i,0] = v[i];
+    }
+
+    // 2. Do 'm' iterations of update
+    foreach (j; 0 .. m) {
+	multiply(A, v, w);
+	foreach (i; 0 .. j+1) {
+	    v = V.getColumn(i);
+	    H[i,j] = dot(w, v);
+	    foreach (k; 0 .. n) {
+		w[k] -= H[i,j]*v[k]; 
+	    }
+	}
+	H[j+1,j] = norm2(w);
+	if ( fabs(H[j+1,j]) <= ZERO_TOL ) {
+	    m = j+1;
+	    break;
+	}
+	foreach (i; 0 .. n) {
+	    v[i] = w[i]/H[j+1,j];
+	    V[i,j+1] = v[i];
+	}
+    }
+
+    // Use the plane rotations method to compute solution
+    // and residual at each step.
+    g_old[] = 0.0;
+    g_old[0] = beta;
+    copy(H, Hold);
+    foreach (i; 0 .. m) {
+	double c_i, s_i, denom;
+	denom = sqrt(H[i,i]*H[i,i] + H[i+1,i]*H[i+1,i]);
+	s_i = H[i+1,i]/denom; 
+	c_i = H[i,i]/denom;
+	Gamma.eye();
+	Gamma[i,i] = c_i; Gamma[i,i+1] = s_i;
+	Gamma[i+1,i] = -s_i; Gamma[i+1,i+1] = c_i;
+	nm.bbla.dot(Gamma, Hold, H);
+	nm.bbla.dot(Gamma, g_old, g);
+	// Get Qold and g_old ready for next step
+	g_old[] = g[];
+	copy(H, Hold);
+    }
+    auto R = H.sliceDup(0, m, 0, m);
+    auto gm = g[0 .. $-1];
+    // At end H := R
+    //        g := gm
+    upperSolve(R, gm);
+    auto Vm = V.sliceDup(0, n, 0, m);
+    nm.bbla.dot(Vm, gm, b);
+
+    foreach (i; 0 .. n) b[i] += x0[i];
+}
+
 
 version(smla_test) {
     import util.msg_service;
@@ -249,6 +357,20 @@ version(smla_test) {
 	double[] C_exp = [0.333333, 0.666667, -1, -0.666667];
 	foreach ( i; 0 .. C.length ) {
 	    assert(approxEqual(C[i], C_exp[i]), failedUnitTest());
+	}
+
+	// Test GMRES on Faires and Burden problem.
+	auto g = new SMatrix();
+	g.addRow([2., -1.], [0, 1]);
+	g.addRow([-1., 2., -1.], [0, 1, 2]);
+	g.addRow([-1., 2., -1.], [1, 2, 3]);
+	g.addRow([-1., 2.], [2, 3]);
+	double[] B1 = [1., 0., 0., 1.];
+	double[] x0 = [1.2, 0.8, 0.9, 1.1];
+
+	gmres(g, B1, x0, 4);
+	foreach (i; 0 .. B1.length) {
+	    assert(approxEqual(B1[i], B_exp[i]), failedUnitTest());
 	}
 
 	return 0;
