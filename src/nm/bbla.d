@@ -225,6 +225,21 @@ class Matrix {
 	}
     }
 
+    void zeros()
+    {
+	foreach (ref row; _data) {
+	    row[] = 0.0;
+	}
+    }
+
+    void eye()
+    {
+	foreach (i, ref row; _data) {
+	    row[] = 0.0;
+	    row[i] = 1.0;
+	}
+    }
+
 } // end class Matrix
 
 
@@ -345,6 +360,56 @@ Matrix dot(in Matrix a, in Matrix b)
     return c;
 }
 
+void dot(in Matrix a, in Matrix b, ref Matrix c)
+in {
+    assert(a.ncols == b.nrows);
+    assert(a.nrows == c.nrows);
+    assert(b.ncols == c.ncols);
+}
+body {
+    size_t nrows = a.nrows;
+    size_t ncols = b.ncols;
+    c.zeros();
+    foreach(row; 0 .. nrows) {
+	foreach(col; 0 .. ncols) {
+	    foreach(i; 0 .. a.ncols) {
+		c[row,col] += a[row,i] * b[i,col];
+	    }
+	}
+    }
+}
+
+void dot(in Matrix a, double[] b, double[] c)
+in {
+    assert(a.ncols == b.length);
+    assert(a.nrows == c.length);
+}
+body {
+    size_t nrows = a.nrows;
+    size_t ncols = a.ncols;
+    c[] = 0.0;
+    foreach(row; 0 .. nrows) {
+	foreach(col; 0 .. ncols) {
+	    c[row] += a[row,col] * b[col];
+	}
+    }
+}
+
+
+void copy(in Matrix src, ref Matrix tgt)
+in {
+    assert(src.nrows == tgt.nrows);
+    assert(src.ncols == tgt.ncols);
+}
+body {
+    foreach (row; 0 .. src.nrows) {
+	foreach (col; 0 .. src.ncols) {
+	    tgt[row,col] = src[row,col];
+	}
+    }
+}
+
+
 version(bbla_test) {
     import util.msg_service;
     int test_basic_operations() {
@@ -370,6 +435,16 @@ version(bbla_test) {
 	Matrix f = new Matrix([[1.0,2.0,3.0],[4.0,5.0,6.0]]);
 	Matrix g = dot(f,c);
 	assert(approxEqualMatrix(g, new Matrix([[1,2],[4,5]])),
+	       failedUnitTest());
+	g.zeros();
+	assert(approxEqualMatrix(g, new Matrix([[0,0],[0,0]])).
+	       failedUnitTest());
+	dot(f, c, g);
+	assert(approxEqualMatrix(g, new Matrix([[1,2],[4,5]])),
+	       failedUnitTest());
+
+	g.eye();
+	assert(approxEqualMatrix(g, new Matrix([[1,0],[0,1]])),
 	       failedUnitTest());
 
 	return 0;
@@ -530,6 +605,18 @@ Matrix inverse(in Matrix a)
     auto x = eye(n);
     solve(c, x, perm);
     return x;
+}
+
+void upperSolve(in Matrix U, double[] b)
+{
+    int n = to!int(U.nrows);
+    // Back subsitution
+    b[n-1] /= U[n-1,n-1];
+    for ( int i = to!int(n-2); i >= 0; --i ) {
+	double sum = b[i];
+	foreach (j; i+1 .. n) sum -= U[i,j] * b[j];
+	b[i] = sum/U[i,i];
+    }
 }
 
 version(bbla_test) {

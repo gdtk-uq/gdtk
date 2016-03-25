@@ -56,9 +56,9 @@ gaussquad_demo: gaussquad_demo.d gaussquad.d
 bbla_demo: bbla_demo.d bbla.d
 	dmd -g bbla_demo.d bbla.d
 
-bbla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+bbla_test: bbla.d $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -gc -w -version=$@ \
-		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+		bbla.d $(UTIL_DIR)/msg_service.d
 
 bracketing_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -gc -w -version=$@ \
