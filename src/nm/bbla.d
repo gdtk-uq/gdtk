@@ -379,6 +379,45 @@ body {
     }
 }
 
+/**
+ * A Dot product that only considers the upper left portion
+ * of the matrices.
+ * 
+ * a: matrix on left of dot
+ * aRow: work up to (but not including) this row number of a
+ * aCol: work up to (but not including) this column number of a
+ * b: matrix on right of dot
+ * bCol: work up to (but not including) this column number of b
+ * c: matrix where result is placed
+ *
+ * Notes:
+ *   1. ensure that all matrices are pre-allocated in size.
+ *   2. matrix c is only changed where the the new reuls is
+ *      computed based on the supplied row and column range.
+ */
+void dot(in Matrix a, size_t aRow, size_t aCol,
+	 in Matrix b, size_t bCol,
+	 ref Matrix c)
+in {
+    assert(aRow <= a.nrows);
+    assert(aCol <= a.ncols);
+    assert(aCol <= b.nrows);
+    assert(bCol <= b.ncols);
+    assert(aRow <= c.nrows);
+    assert(bCol <= c.ncols);
+}
+body {
+    foreach(row; 0 .. aRow) {
+	foreach(col; 0 .. bCol) {
+	    c[row,col] = 0.0;
+	    foreach(i; 0 .. aCol) {
+		c[row,col] += a[row,i] * b[i,col];
+	    }
+	}
+    }
+}
+
+
 void dot(in Matrix a, double[] b, double[] c)
 in {
     assert(a.ncols == b.length);
@@ -390,6 +429,22 @@ body {
     c[] = 0.0;
     foreach(row; 0 .. nrows) {
 	foreach(col; 0 .. ncols) {
+	    c[row] += a[row,col] * b[col];
+	}
+    }
+}
+
+void dot(in Matrix a, size_t aRow, size_t aCol, double[] b, double[] c)
+in {
+    assert(aRow <= a.nrows);
+    assert(aCol <= a.ncols);
+    assert(aCol <= b.length);
+    assert(aRow <= c.length);
+}
+body {
+    c[] = 0.0;
+    foreach(row; 0 .. aRow) {
+	foreach(col; 0 .. aCol) {
 	    c[row] += a[row,col] * b[col];
 	}
     }
