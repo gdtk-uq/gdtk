@@ -247,7 +247,7 @@ body {
 	    }
 	}
 	H[j+1,j] = norm2(w);
-	if ( fabs(H[j+1,j]) <= ZERO_TOL ) {
+	if ( H[j+1,j] <= ZERO_TOL ) {
 	    m = j;
 	    break;
 	}
@@ -414,6 +414,142 @@ body {
     return x.dup();
 }
 
+/**
+ * A GMRES iterative solver with right preconditioning.
+ * 
+ * Params: 
+ *    A =         coefficient matrix
+ *    P =         pre-conditioning matrix in LU form
+ *    b =         RHS vector
+ *    x0 =        initial guess for solution
+ *    maxIters =  maximum number of iterations
+ *    residTol =  stop iterations when residual below this tolerance
+ *
+ * Returns:
+ *    x =         solution vector
+ */
+double[] rpcGMRES(SMatrix A, SMatrix P, double[] b, double[] x0, int maxIters, double residTol)
+in {
+    assert(A.ia.length-1 == b.length);
+    assert(b.length == x0.length);
+    assert(maxIters >= 1);
+}
+body {
+    double resid;
+    // 0. Allocate working matrices and vectors
+    size_t n = b.length;
+    size_t m = maxIters;
+    double[] Ax0, r0, v, w, x, Pv;
+    Ax0.length = n;
+    r0.length = n;
+    v.length = n;
+    w.length = n;
+    x.length = n;
+    Pv.length = n;
+    auto V = new Matrix(n, m+1);
+    auto H0 = new Matrix(m+1, m); H0.zeros();
+    auto H1 = new Matrix(m+1, m); H1.zeros();
+    auto Gamma = new Matrix(m+1, m+1); Gamma.eye();
+    auto Q0 = new Matrix(m+1, m+1);
+    auto Q1 = new Matrix(m+1, m+1);
+    double[] g0, g1;
+    g0.length = m+1; g0[] = 0.0;
+    g1.length = m+1; g1[] = 0.0;
+    double[] h, hR;
+    h.length = m+1;
+    hR.length = m+1;
+
+    // 1. Compute r0, beta, v1
+    multiply(A, x0, Ax0);
+    foreach (i; 0 .. n) {
+	r0[i] = b[i] - Ax0[i];
+    }
+
+    auto beta = norm2(r0);
+    g0[0] = beta;
+    foreach (i; 0 .. n) {
+	v[i] = r0[i]/beta;
+	V[i,0] = v[i];
+    }
+
+    // 2. Do 'm' iterations of update
+    foreach (j; 0 .. m) {
+	Pv[] = v[];
+	solve(P, Pv);
+	multiply(A, Pv, w);
+	foreach (i; 0 .. j+1) {
+	    v = V.getColumn(i);
+	    H0[i,j] = dot(w, v);
+	    foreach (k; 0 .. n) {
+		w[k] -= H0[i,j]*v[k]; 
+	    }
+	}
+	H0[j+1,j] = norm2(w);
+	
+	foreach (i; 0 .. n) {
+	    v[i] = w[i]/H0[j+1,j];
+	    V[i,j+1] = v[i];
+	}
+
+	// Build rotated Hessenberg progressively
+	if ( j != 0 ) {
+	    // Extract final column in H
+	    foreach (i; 0 .. j+1) h[i] = H0[i,j];
+	    // Rotate column by previous rotations (stored in Q0)
+	    nm.bbla.dot(Q0, j+1, j+1, h, hR);
+	    // Place column back in H
+	    foreach (i; 0 .. j+1) H0[i,j] = hR[i];
+	}
+	// Now form new Gamma
+	Gamma.eye();
+	double c_j, s_j, denom;
+	denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
+	s_j = H0[j+1,j]/denom; 
+	c_j = H0[j,j]/denom;
+	Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
+	Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
+	// Apply rotations
+	nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
+	nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+	// Accumulate Gamma rotations in Q.
+	if ( j == 0 ) {
+	    copy(Gamma, Q1);
+	}
+	else {
+	    nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+	}
+	// Get residual
+	resid = fabs(g1[j+1]);
+	if ( resid <= residTol ) {
+	    m = j+1;
+	    break;
+	}
+
+	// Prepare for next step
+	copy(H1, H0);
+	g0[] = g1[];
+	copy(Q1, Q0);
+    }
+
+    auto R = H1.sliceDup(0, m, 0, m);
+    auto gm = g1[0 .. m];
+    // At end H := R
+    //        g := gm
+    upperSolve(R, gm);
+    auto Vm = V.sliceDup(0, n, 0, m);
+    nm.bbla.dot(Vm, gm, x);
+    solve(P, x);
+
+    foreach (i; 0 .. n) x[i] += x0[i];
+
+    multiply(A, x, Ax0);
+    foreach (i; 0 .. n) {
+	r0[i] = b[i] - Ax0[i];
+    }
+
+    return x.dup();
+}
+
 
 
 version(smla_test) {
@@ -503,6 +639,26 @@ version(smla_test) {
 	x = gmres2(g, B1, x0, 5, 1.0e-10);
 	foreach (i; 0 .. x.length) {
 	    assert(approxEqual(x[i], B_exp[i]), failedUnitTest());
+	}
+
+	// Test pre-conditioned GMRES on Gerald and Wheatley problem.
+	// This time we expect the exact answer. Earlier we only used
+	// an incomplete LU factorisation and so the result was
+	// only approximate.
+	auto h = new SMatrix();
+	h.addRow([3., 2., -1., 2.], [0, 1, 2, 3]);
+	h.addRow([1., 4., 2.], [0, 1, 3]);
+	h.addRow([2., 1., 2., -1.], [0, 1, 2, 3]);
+	h.addRow([1., 1., -1., 3.], [0, 1, 2, 3]);
+	auto Ph = new SMatrix(h);
+	decompILU0(Ph);
+	double[] C1 = [2., 2., 0., 0.];
+	x0 = [0.2, 0.5, -1.1, -0.6];
+	x = rpcGMRES(h, Ph, C1, x0, 5, 1.0e-15);
+	double[] C1_exp = [0.273, 0.773, -1.0, -0.682];
+
+	foreach (i; 0 .. x.length) {
+	    assert(approxEqual(x[i], C1_exp[i]), failedUnitTest());
 	}
 
 	return 0;
