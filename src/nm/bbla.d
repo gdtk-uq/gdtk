@@ -674,6 +674,23 @@ void upperSolve(in Matrix U, double[] b)
     }
 }
 
+void upperSolve(in Matrix U, int n, double[] b)
+in {
+    assert(n <= U.nrows);
+    assert(n <= U.ncols);
+    assert(n <= b.length);
+}
+body {
+    // Back subsitution
+    b[n-1] /= U[n-1,n-1];
+    for ( int i = to!int(n-2); i >= 0; --i ) {
+	double sum = b[i];
+	foreach (j; i+1 .. n) sum -= U[i,j] * b[j];
+	b[i] = sum/U[i,i];
+    }
+}
+
+
 version(bbla_test) {
     int test_decomp_and_inverse() {
 	auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
