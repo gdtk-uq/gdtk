@@ -414,6 +414,34 @@ body {
     return x.dup();
 }
 
+struct GMRESWorkSpace {
+    size_t n, m;
+    double[] Ax0, r0, v, w, Pv, g0, g1, h, hR;
+    Matrix V, H0, H1, Gamma, Q0, Q1;
+
+    this(size_t n, int maxIters) {
+	this.n = n;
+	this.m = maxIters;
+	// Allocate arrays
+	this.Ax0.length = n;
+	this.r0.length = n;
+	this.v.length = n;
+	this.w.length = n;
+	this.Pv.length = n;
+	this.g0.length = m+1; 
+	this.g1.length = m+1; 
+	this.h.length = m+1;
+	this.hR.length = m+1;
+	// Allocate matrices
+	this.V = new Matrix(n, m+1);
+	this.H0 = new Matrix(m+1, m); 
+	this.H1 = new Matrix(m+1, m); 
+	this.Gamma = new Matrix(m+1, m+1); 
+	this.Q0 = new Matrix(m+1, m+1);
+	this.Q1 = new Matrix(m+1, m+1);
+    }
+}
+
 /**
  * A GMRES iterative solver with right preconditioning.
  * 
@@ -422,13 +450,13 @@ body {
  *    P =         pre-conditioning matrix in LU form
  *    b =         RHS vector
  *    x0 =        initial guess for solution
+ *    x =         solution vector place in x
  *    maxIters =  maximum number of iterations
  *    residTol =  stop iterations when residual below this tolerance
- *
- * Returns:
- *    x =         solution vector
+ *    gws =       pre-allocated workspace
  */
-double[] rpcGMRES(SMatrix A, SMatrix P, double[] b, double[] x0, int maxIters, double residTol)
+void rpcGMRES(SMatrix A, SMatrix P, double[] b, double[] x0, double[] x,
+	      int maxIters, double residTol, ref GMRESWorkSpace gws)
 in {
     assert(A.ia.length-1 == b.length);
     assert(b.length == x0.length);
@@ -436,118 +464,92 @@ in {
 }
 body {
     double resid;
-    // 0. Allocate working matrices and vectors
     size_t n = b.length;
     size_t m = maxIters;
-    double[] Ax0, r0, v, w, x, Pv;
-    Ax0.length = n;
-    r0.length = n;
-    v.length = n;
-    w.length = n;
-    x.length = n;
-    Pv.length = n;
-    auto V = new Matrix(n, m+1);
-    auto H0 = new Matrix(m+1, m); H0.zeros();
-    auto H1 = new Matrix(m+1, m); H1.zeros();
-    auto Gamma = new Matrix(m+1, m+1); Gamma.eye();
-    auto Q0 = new Matrix(m+1, m+1);
-    auto Q1 = new Matrix(m+1, m+1);
-    double[] g0, g1;
-    g0.length = m+1; g0[] = 0.0;
-    g1.length = m+1; g1[] = 0.0;
-    double[] h, hR;
-    h.length = m+1;
-    hR.length = m+1;
+    // 0. Initialise the values in some of the pre-allocated storage
+    gws.g0[] = 0.0;
+    gws.g1[] = 0.0;
+    gws.H0.zeros();
+    gws.H1.zeros();
+    gws.Gamma.eye();
 
     // 1. Compute r0, beta, v1
-    multiply(A, x0, Ax0);
+    multiply(A, x0, gws.Ax0);
     foreach (i; 0 .. n) {
-	r0[i] = b[i] - Ax0[i];
+	gws.r0[i] = b[i] - gws.Ax0[i];
     }
 
-    auto beta = norm2(r0);
-    g0[0] = beta;
+    auto beta = norm2(gws.r0);
+    gws.g0[0] = beta;
     foreach (i; 0 .. n) {
-	v[i] = r0[i]/beta;
-	V[i,0] = v[i];
+	gws.v[i] = gws.r0[i]/beta;
+	gws.V[i,0] = gws.v[i];
     }
 
     // 2. Do 'm' iterations of update
     foreach (j; 0 .. m) {
-	Pv[] = v[];
-	solve(P, Pv);
-	multiply(A, Pv, w);
+	gws.Pv[] = gws.v[];
+	solve(P, gws.Pv);
+	multiply(A, gws.Pv, gws.w);
 	foreach (i; 0 .. j+1) {
-	    v = V.getColumn(i);
-	    H0[i,j] = dot(w, v);
-	    foreach (k; 0 .. n) {
-		w[k] -= H0[i,j]*v[k]; 
-	    }
+	    foreach (k; 0 .. n ) gws.v[k] = gws.V[k,i]; // Extract column 'i'
+	    gws.H0[i,j] = dot(gws.w, gws.v);
+	    foreach (k; 0 .. n) gws.w[k] -= gws.H0[i,j]*gws.v[k]; 
 	}
-	H0[j+1,j] = norm2(w);
+	gws.H0[j+1,j] = norm2(gws.w);
 	
-	foreach (i; 0 .. n) {
-	    v[i] = w[i]/H0[j+1,j];
-	    V[i,j+1] = v[i];
+	foreach (k; 0 .. n) {
+	    gws.v[k] = gws.w[k]/gws.H0[j+1,j];
+	    gws.V[k,j+1] = gws.v[k];
 	}
 
 	// Build rotated Hessenberg progressively
 	if ( j != 0 ) {
 	    // Extract final column in H
-	    foreach (i; 0 .. j+1) h[i] = H0[i,j];
+	    foreach (i; 0 .. j+1) gws.h[i] = gws.H0[i,j];
 	    // Rotate column by previous rotations (stored in Q0)
-	    nm.bbla.dot(Q0, j+1, j+1, h, hR);
+	    nm.bbla.dot(gws.Q0, j+1, j+1, gws.h, gws.hR);
 	    // Place column back in H
-	    foreach (i; 0 .. j+1) H0[i,j] = hR[i];
+	    foreach (i; 0 .. j+1) gws.H0[i,j] = gws.hR[i];
 	}
 	// Now form new Gamma
-	Gamma.eye();
-	double c_j, s_j, denom;
-	denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
-	s_j = H0[j+1,j]/denom; 
-	c_j = H0[j,j]/denom;
-	Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
-	Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
+	gws.Gamma.eye();
+	auto denom = sqrt(gws.H0[j,j]*gws.H0[j,j] + gws.H0[j+1,j]*gws.H0[j+1,j]);
+	auto s_j = gws.H0[j+1,j]/denom; 
+	auto c_j = gws.H0[j,j]/denom;
+	gws.Gamma[j,j] = c_j; gws.Gamma[j,j+1] = s_j;
+	gws.Gamma[j+1,j] = -s_j; gws.Gamma[j+1,j+1] = c_j;
 	// Apply rotations
-	nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
-	nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+	nm.bbla.dot(gws.Gamma, j+2, j+2, gws.H0, j+1, gws.H1);
+	nm.bbla.dot(gws.Gamma, j+2, j+2, gws.g0, gws.g1);
 	// Accumulate Gamma rotations in Q.
 	if ( j == 0 ) {
-	    copy(Gamma, Q1);
+	    copy(gws.Gamma, gws.Q1);
 	}
 	else {
-	    nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+	    nm.bbla.dot(gws.Gamma, j+2, j+2, gws.Q0, j+2, gws.Q1);
 	}
 	// Get residual
-	resid = fabs(g1[j+1]);
+	resid = fabs(gws.g1[j+1]);
 	if ( resid <= residTol ) {
 	    m = j+1;
 	    break;
 	}
 
 	// Prepare for next step
-	copy(H1, H0);
-	g0[] = g1[];
-	copy(Q1, Q0);
+	copy(gws.H1, gws.H0);
+	gws.g0[] = gws.g1[];
+	copy(gws.Q1, gws.Q0);
     }
 
-    auto R = H1.sliceDup(0, m, 0, m);
-    auto gm = g1[0 .. m];
-    // At end H := R
-    //        g := gm
-    upperSolve(R, gm);
-    auto Vm = V.sliceDup(0, n, 0, m);
-    nm.bbla.dot(Vm, gm, x);
+    // This is a memory allocation, think about cleaning this up.
+    // At end H := R up to row m
+    //        g := gm up to row m
+    upperSolve(gws.H1, to!int(m), gws.g1);
+    nm.bbla.dot(gws.V, n, m, gws.g1, x);
     solve(P, x);
 
     foreach (i; 0 .. n) x[i] += x0[i];
-
-    multiply(A, x, Ax0);
-    foreach (i; 0 .. n) {
-	r0[i] = b[i] - Ax0[i];
-    }
-
-    return x.dup();
 }
 
 
@@ -654,7 +656,9 @@ version(smla_test) {
 	decompILU0(Ph);
 	double[] C1 = [2., 2., 0., 0.];
 	x0 = [0.2, 0.5, -1.1, -0.6];
-	x = rpcGMRES(h, Ph, C1, x0, 5, 1.0e-15);
+	int maxIters = 5;
+	auto gws = GMRESWorkSpace(x0.length, maxIters);
+	rpcGMRES(h, Ph, C1, x0, x, maxIters, 1.0e-15, gws);
 	double[] C1_exp = [0.273, 0.773, -1.0, -0.682];
 
 	foreach (i; 0 .. x.length) {
