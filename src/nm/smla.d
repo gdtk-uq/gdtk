@@ -542,7 +542,6 @@ body {
 	copy(gws.Q1, gws.Q0);
     }
 
-    // This is a memory allocation, think about cleaning this up.
     // At end H := R up to row m
     //        g := gm up to row m
     upperSolve(gws.H1, to!int(m), gws.g1);
