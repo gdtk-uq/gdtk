@@ -151,7 +151,7 @@ void read_config_file()
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
 	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
 	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
-	writeln("  udf_grid_motion_file: ", GlobalConfig.udf_grid_motion_file);
+	writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
 	writeln("  separate_update_for_viscous_terms: ",
 		GlobalConfig.separate_update_for_viscous_terms);
 	writeln("  separate_update_for_k_omega_source: ",

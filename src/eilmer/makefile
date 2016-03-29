@@ -106,7 +106,7 @@ ifeq ($(DMD), gdc)
     DFLAGS := -Wall -O2 -frelease -fno-debug \
 	-I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GZIP_DIR)
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
+    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl -lcurl
 endif
 
 default: $(PROGRAMS)

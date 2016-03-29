@@ -12,7 +12,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.math;
-import std.algorithm.iteration : reduce;
+import std.algorithm : reduce;
 
 import nm.bbla;
 
