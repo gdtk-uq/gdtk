@@ -14,6 +14,7 @@ import std.string;
 import gas;
 import json_helper;
 import geom;
+import sgrid;
 import fvcore;
 import globalconfig;
 import globaldata;
@@ -22,6 +23,7 @@ import fvinterface;
 import fvcell;
 import block;
 import sblock;
+import fluxcalc;
 import ghost_cell_effect;
 import boundary_interface_effect;
 import boundary_flux_effect;
@@ -82,12 +84,23 @@ public:
     BasicCell[] ghostcells;
     int[] outsigns;
 
-    this(int id, int boundary) 
+private:
+    // Working storage for boundary flux derivatives
+    FlowState _Lft, _Rght;
+
+public:
+    this(int id, int boundary, bool isWall=true, bool ghostCellDataAvailable=true, double _emissivity=0.0)
     {
 	blk = gasBlocks[id];  // pick the relevant block out of the collection
 	which_boundary = boundary;
 	type = "";
 	group = "";
+	is_wall = isWall;
+	ghost_cell_data_available = ghostCellDataAvailable;
+	emissivity = _emissivity;
+	auto gm = GlobalConfig.gmodel_master;
+	_Lft = new FlowState(gm);
+	_Rght = new FlowState(gm);
     }
 
     // Action lists.
@@ -166,5 +179,213 @@ public:
     {
 	foreach ( bfe; postDiffFluxAction ) bfe.apply(t, gtl, ftl);
     }
+
+    version(implicit) {
+    final void convFluxDeriv(double t, int gtl, int ftl)
+    {
+	final switch (blk.grid_type) {
+	case Grid_t.structured_grid:
+	    convFluxDeriv_structured_grid(t, gtl, ftl);
+	    break;
+	case Grid_t.unstructured_grid:
+	    throw new Error("Implicit b.c.'s not implemented for UNSTRUCTURED GRIDS.");
+	}
+    }
+
+    
+    final void convFluxDeriv_structured_grid(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	auto gmodel = blk.myConfig.gmodel;
+	double h;
+	FVInterface ifacePerturb = new FVInterface(gmodel);
+
+	// 0th perturbation: rho
+	mixin(computeBoundaryFluxDeriv("gas.rho", "0", true));
+	mixin(computeBoundaryFluxDeriv("vel.refx", "1", false));
+	mixin(computeBoundaryFluxDeriv("vel.refy", "2", false));
+	mixin(computeBoundaryFluxDeriv("vel.refz", "3", false));
+	mixin(computeBoundaryFluxDeriv("gas.e[0]", "4", true));
+
+    }
+    } // end version(implicit)
 } // end class BoundaryCondition
+
+
+string computeBoundaryFluxDeriv(string varName, string posInArray, bool includeThermoUpdate)
+{
+    string codeStr;
+    codeStr ~= "final switch (which_boundary) {";
+    codeStr ~= "case Face.north:";
+    codeStr ~= "if ( preReconAction.length > 0 ) {";
+    codeStr ~= "    applyPreReconAction(t, gtl, ftl);";
+    codeStr ~= "    j = blk.jmax + 1;";
+    codeStr ~= "    for (k = blk.kmin; k <= blk.kmax; ++k) {";
+    codeStr ~= "        for (i = blk.imin; i <= blk.imax; ++i) {";
+    codeStr ~= "            auto IFace = blk.get_ifj(i,j,k);";
+    codeStr ~= "            _Lft.copy_values_from(IFace.left_cells[0].fs);";
+    codeStr ~= "            h = _Lft."~varName~" * EPSILON;";
+    codeStr ~= "            _Lft."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "           gmodel.update_thermo_from_rhoe(_Lft.gas);";
+    }
+    codeStr ~= "            _Rght.copy_values_from(IFace.right_cells[0].fs);";
+    codeStr ~= "            ifacePerturb.copy_values_from(IFace, CopyDataOption.all);";
+    codeStr ~= "            compute_interface_flux(_Lft, _Rght, ifacePerturb, gmodel, blk.omegaz);";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][0] = (ifacePerturb.F.mass - IFace.F.mass)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][1] = (ifacePerturb.F.momentum.x - IFace.F.momentum.x)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][2] = (ifacePerturb.F.momentum.y - IFace.F.momentum.y)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][3] = (ifacePerturb.F.momentum.z - IFace.F.momentum.z)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][4] = (ifacePerturb.F.total_energy - IFace.F.total_energy)/h;";
+    codeStr ~= "         }";
+    codeStr ~= "    }";
+    codeStr ~= "}";
+    codeStr ~= "else {";
+    codeStr ~= "    throw new Error(\"Implicit b.c. not implemented for b.c.'s with postConvFlux actions.\");";
+    codeStr ~= "}";
+    codeStr ~= "break;";
+    codeStr ~= "case Face.east:";
+    codeStr ~= "if ( preReconAction.length > 0 ) {";
+    codeStr ~= "    applyPreReconAction(t, gtl, ftl);";
+    codeStr ~= "    i = blk.imax + 1;";
+    codeStr ~= "    for (k = blk.kmin; k <= blk.kmax; ++k) {";
+    codeStr ~= "        for (j = blk.jmin; j <= blk.jmax; ++j) {";
+    codeStr ~= "            auto IFace = blk.get_ifi(i,j,k);";
+    codeStr ~= "            _Lft.copy_values_from(IFace.left_cells[0].fs);";
+    codeStr ~= "            h = _Lft."~varName~" * EPSILON;";
+    codeStr ~= "            _Lft."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "           gmodel.update_thermo_from_rhoe(_Lft.gas);";
+    }
+    codeStr ~= "            _Rght.copy_values_from(IFace.right_cells[0].fs);";
+    codeStr ~= "            ifacePerturb.copy_values_from(IFace, CopyDataOption.all);";
+    codeStr ~= "            compute_interface_flux(_Lft, _Rght, ifacePerturb, gmodel, blk.omegaz);";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][0] = (ifacePerturb.F.mass - IFace.F.mass)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][1] = (ifacePerturb.F.momentum.x - IFace.F.momentum.x)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][2] = (ifacePerturb.F.momentum.y - IFace.F.momentum.y)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][3] = (ifacePerturb.F.momentum.z - IFace.F.momentum.z)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][4] = (ifacePerturb.F.total_energy - IFace.F.total_energy)/h;";
+    codeStr ~= "        }";
+    codeStr ~= "    }";
+    codeStr ~= "}";
+    codeStr ~= "else {";
+    codeStr ~= "    throw new Error(\"Implicit b.c. not implemented for b.c.'s with postConvFlux actions.\");";
+    codeStr ~= "}";
+    codeStr ~= "break;";
+    codeStr ~= "case Face.south:";
+    codeStr ~= "if ( preReconAction.length > 0 ) {";
+    codeStr ~= "    applyPreReconAction(t, gtl, ftl);";
+    codeStr ~= "    j = blk.jmin;";
+    codeStr ~= "    for (k = blk.kmin; k <= blk.kmax; ++k) {";
+    codeStr ~= "        for (i = blk.imin; i <= blk.imax; ++i) {";
+    codeStr ~= "            auto IFace = blk.get_ifj(i,j,k);";
+    codeStr ~= "            _Lft.copy_values_from(IFace.left_cells[0].fs);";
+    codeStr ~= "            _Rght.copy_values_from(IFace.right_cells[0].fs);";
+    codeStr ~= "            h = _Rght."~varName~" * EPSILON;";
+    codeStr ~= "            _Rght."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "           gmodel.update_thermo_from_rhoe(_Rght.gas);";
+    }
+    codeStr ~= "            ifacePerturb.copy_values_from(IFace, CopyDataOption.all);";
+    codeStr ~= "            compute_interface_flux(_Lft, _Rght, ifacePerturb, gmodel, blk.omegaz);";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][0] = (ifacePerturb.F.mass - IFace.F.mass)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][1] = (ifacePerturb.F.momentum.x - IFace.F.momentum.x)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][2] = (ifacePerturb.F.momentum.y - IFace.F.momentum.y)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][3] = (ifacePerturb.F.momentum.z - IFace.F.momentum.z)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][4] = (ifacePerturb.F.total_energy - IFace.F.total_energy)/h;";
+    codeStr ~= "        }";
+    codeStr ~= "    }";
+    codeStr ~= "}";
+    codeStr ~= "else {";
+    codeStr ~= "    throw new Error(\"Implicit b.c. not implemented for b.c.'s with postConvFlux actions.\");";
+    codeStr ~= "}";
+    codeStr ~= "break;";
+    codeStr ~= "case Face.west:";
+    codeStr ~= "if ( preReconAction.length > 0 ) {";
+    codeStr ~= "    applyPreReconAction(t, gtl, ftl);";
+    codeStr ~= "    i = blk.imin;";
+    codeStr ~= "    for (k = blk.kmin; k <= blk.kmax; ++k) {";
+    codeStr ~= "        for (j = blk.jmin; j <= blk.jmax; ++j) {";
+    codeStr ~= "            auto IFace = blk.get_ifi(i,j,k);";
+    codeStr ~= "            _Lft.copy_values_from(IFace.left_cells[0].fs);";
+    codeStr ~= "            _Rght.copy_values_from(IFace.right_cells[0].fs);";
+    codeStr ~= "            h = _Rght."~varName~" * EPSILON;";
+    codeStr ~= "            _Rght."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "           gmodel.update_thermo_from_rhoe(_Rght.gas);";
+    }
+    codeStr ~= "            ifacePerturb.copy_values_from(IFace, CopyDataOption.all);";
+    codeStr ~= "            compute_interface_flux(_Lft, _Rght, ifacePerturb, gmodel, blk.omegaz);";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][0] = (ifacePerturb.F.mass - IFace.F.mass)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][1] = (ifacePerturb.F.momentum.x - IFace.F.momentum.x)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][2] = (ifacePerturb.F.momentum.y - IFace.F.momentum.y)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][3] = (ifacePerturb.F.momentum.z - IFace.F.momentum.z)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][4] = (ifacePerturb.F.total_energy - IFace.F.total_energy)/h;";
+    codeStr ~= "        }";
+    codeStr ~= "    }";
+    codeStr ~= "}";
+    codeStr ~= "else {";
+    codeStr ~= "    throw new Error(\"Implicit b.c. not implemented for b.c.'s with postConvFlux actions.\");";
+    codeStr ~= "}";
+    codeStr ~= "break;";
+    codeStr ~= "case Face.top:";
+    codeStr ~= "if ( preReconAction.length > 0 ) {";
+    codeStr ~= "    applyPreReconAction(t, gtl, ftl);";
+    codeStr ~= "    k = blk.kmax + 1;";
+    codeStr ~= "    for (i = blk.imin; i <= blk.imax; ++i) {";
+    codeStr ~= "        for (j = blk.jmin; j <= blk.jmax; ++j) {";
+    codeStr ~= "            auto IFace = blk.get_ifk(i,j,k);";
+    codeStr ~= "            _Lft.copy_values_from(IFace.left_cells[0].fs);";
+    codeStr ~= "            h = _Lft."~varName~" * EPSILON;";
+    codeStr ~= "            _Lft."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "           gmodel.update_thermo_from_rhoe(_Lft.gas);";
+    }
+    codeStr ~= "            _Rght.copy_values_from(IFace.right_cells[0].fs);";
+    codeStr ~= "            ifacePerturb.copy_values_from(IFace, CopyDataOption.all);";
+    codeStr ~= "            compute_interface_flux(_Lft, _Rght, ifacePerturb, gmodel, blk.omegaz);";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][0] = (ifacePerturb.F.mass - IFace.F.mass)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][1] = (ifacePerturb.F.momentum.x - IFace.F.momentum.x)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][2] = (ifacePerturb.F.momentum.y - IFace.F.momentum.y)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][3] = (ifacePerturb.F.momentum.z - IFace.F.momentum.z)/h;";
+    codeStr ~= "            IFace.dFdU_L[" ~ posInArray ~ "][4] = (ifacePerturb.F.total_energy - IFace.F.total_energy)/h;";
+    codeStr ~= "        }";
+    codeStr ~= "    }";
+    codeStr ~= "}";
+    codeStr ~= "else {";
+    codeStr ~= "    throw new Error(\"Implicit b.c. not implemented for b.c.'s with postConvFlux actions.\");";
+    codeStr ~= "}";
+    codeStr ~= "break;";
+    codeStr ~= "case Face.bottom:";
+    codeStr ~= "if ( preReconAction.length > 0 ) {";
+    codeStr ~= "    applyPreReconAction(t, gtl, ftl);";
+    codeStr ~= "    k = blk.kmin;";
+    codeStr ~= "    for (i = blk.imin; i <= blk.imax; ++i) {";
+    codeStr ~= "        for (j = blk.jmin; j <= blk.jmax; ++j) {";
+    codeStr ~= "            auto IFace = blk.get_ifk(i,j,k);";
+    codeStr ~= "            _Lft.copy_values_from(IFace.left_cells[0].fs);";
+    codeStr ~= "            _Rght.copy_values_from(IFace.right_cells[0].fs);";
+    codeStr ~= "            h = _Rght."~varName~" * EPSILON;";
+    codeStr ~= "            _Rght."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "           gmodel.update_thermo_from_rhoe(_Rght.gas);";
+    }
+    codeStr ~= "            ifacePerturb.copy_values_from(IFace, CopyDataOption.all);";
+    codeStr ~= "            compute_interface_flux(_Lft, _Rght, ifacePerturb, gmodel, blk.omegaz);";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][0] = (ifacePerturb.F.mass - IFace.F.mass)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][1] = (ifacePerturb.F.momentum.x - IFace.F.momentum.x)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][2] = (ifacePerturb.F.momentum.y - IFace.F.momentum.y)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][3] = (ifacePerturb.F.momentum.z - IFace.F.momentum.z)/h;";
+    codeStr ~= "            IFace.dFdU_R[" ~ posInArray ~ "][4] = (ifacePerturb.F.total_energy - IFace.F.total_energy)/h;";
+    codeStr ~= "         }";
+    codeStr ~= "    }";
+    codeStr ~= "}";
+    codeStr ~= "else {"; 
+    codeStr ~= "    throw new Error(\"Implicit b.c. not implemented for b.c.'s with postConvFlux actions.\");";
+    codeStr ~= "}";
+    codeStr ~= "break;";
+    codeStr ~= "}";
+
+    return codeStr;
+}
 

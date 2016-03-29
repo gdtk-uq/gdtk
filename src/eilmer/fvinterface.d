@@ -48,6 +48,10 @@ public:
     FlowGradients grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
+    version(steadystate) {
+    double[][] dFdU_L;
+    double[][] dFdU_R;
+    }
 
     this(LocalConfig myConfig, size_t id_init=0)
     {
@@ -58,6 +62,12 @@ public:
 	F = new ConservedQuantities(myConfig.gmodel.n_species, myConfig.gmodel.n_modes);
 	F.clear_values();
 	grad = new FlowGradients(myConfig.gmodel.n_species);
+	version(steadystate) {
+	dFdU_L.length = 5; // number of conserved variables
+	foreach (ref a; dFdU_L) a.length = 5;
+	dFdU_R.length = 5;
+	foreach (ref a; dFdU_R) a.length = 5;
+	}
     }
 
     this(FVInterface other, GasModel gm)
@@ -78,6 +88,12 @@ public:
 	// we cannot have const (or "in") qualifier on other.
 	cloud_pos = other.cloud_pos.dup();
 	cloud_fs = other.cloud_fs.dup();
+	version(steadystate) {
+	dFdU_L.length = 5; // number of conserved variables
+	foreach (ref a; dFdU_L) a.length = 5;
+	dFdU_R.length = 5;
+	foreach (ref a; dFdU_R) a.length = 5;
+	}
     }
 
     @nogc

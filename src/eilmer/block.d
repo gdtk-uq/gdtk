@@ -111,6 +111,9 @@ public:
     abstract void write_solution(string filename, double sim_time);
     abstract void propagate_inflow_data_west_to_east();
     abstract void convective_flux();
+    version(steadystate) {
+    abstract void computeLowOrderJacobian();
+    }
     @nogc
     abstract void copy_into_ghost_cells(int destination_face,
 					ref Block src_blk, int src_face, int src_orientation,
