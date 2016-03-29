@@ -32,13 +32,13 @@ factor = 4
 ni0 = math.floor(ni0*factor); nj0 = math.floor(nj0*factor)
 
 gridin = StructuredGrid:new{psurface=CoonsPatch:new{p00=a0, p10=b0, p11=b1, p01=a1},
-			    cfList={nil,rcf,nil,rcf}, niv=ni0+1, njv=nj0+1}
+			    cfList={east=rcf,west=rcf}, niv=ni0+1, njv=nj0+1}
 
 gridp1 = StructuredGrid:new{psurface=CoonsPatch:new{p00=b0, p10=c0, p11=c1, p01=b1},
-			    cfList={nil,rcf,nil,rcf}, niv=7*ni0+1, njv=nj0+1}
+			    cfList={east=rcf,west=rcf}, niv=7*ni0+1, njv=nj0+1}
 
 gridp2 = StructuredGrid:new{psurface=CoonsPatch:new{p00=c0, p10=d0, p11=d1, p01=c1},
-			    cfList={nil,rcf,nil,rcf}, niv=2*ni0+1, njv=nj0+1}
+			    cfList={east=rcf,west=rcf}, niv=2*ni0+1, njv=nj0+1}
 
 blkin = SBlockArray{grid=gridin, fillCondition=inflow, nib=1, njb=2,
 		    bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
