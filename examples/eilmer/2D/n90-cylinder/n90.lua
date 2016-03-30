@@ -46,7 +46,7 @@ blk0 = SBlockArray{grid=grid, fillCondition=initial, label="blk",
 		   nib=1, njb=4}
 
 -- Set a few more config options
-config.flux_calc = ADAPTIVE
+config.flux_calculator = "adaptive"
 config.max_time = 100.0e-6
 config.max_step = 40000
 config.dt_init = 1.0e-9
