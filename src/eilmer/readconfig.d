@@ -5,6 +5,7 @@
  * First code: 2015-02-05
  */
 
+import core.stdc.stdlib : exit;
 import std.stdio;
 import std.json;
 import std.file;
@@ -40,6 +41,7 @@ void read_config_file()
         content = readText(fileName);
     } catch (Exception e) {
 	writeln("Failed to read config file: ", fileName);
+	writeln("Message is: ", e.msg);
 	exit(1);
     }
     JSONValue jsonData;
@@ -47,6 +49,7 @@ void read_config_file()
 	jsonData = parseJSON!string(content);
     } catch (Exception e) {
 	writeln("Failed to parse JSON from config file: ", fileName);
+	writeln("Message is: ", e.msg);
 	exit(1);
     }
 

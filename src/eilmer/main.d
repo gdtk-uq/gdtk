@@ -6,6 +6,7 @@
  */
 
 import core.memory;
+import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
 import std.file;
