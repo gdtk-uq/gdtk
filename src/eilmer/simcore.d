@@ -125,8 +125,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     // internal to the bc. They are only known after
     // this point.
     foreach ( myblk; parallel(gasBlocks,1) ) {
-	foreach ( i; 0 .. (myblk.myConfig.dimensions == 3 ? 6 : 4) ) {
-	    auto bc = myblk.bc[i];
+	foreach ( bc; myblk.bc ) {
 	    foreach ( bfe; bc.postDiffFluxAction ) {
 		if ( bfe.type == "EnergyFluxFromAdjacentSolid" ) {
 		    auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(bfe);
@@ -282,13 +281,6 @@ void integrate_in_time(double target_time)
 	// 2a. Moving Grid - let's start by calculating vertex velocties
 	//     if GridMotion.none then set_grid_velocities to 0 m/s
 	//     else moving grid vertex velocities will be set.
-	
-	// apply boundary conditions here: shockfitting algorithm requires ghost cells to be up to date.
-	foreach (blk; gasBlocks) {
-	    if (!blk.active) continue;
-	    blk.applyPreReconAction(sim_time, 0, 0);
-	}
-	
 	set_grid_velocities(sim_time, step, 0, dt_global);
 	// 2b.
 	// explicit or implicit update of the convective terms.
@@ -361,7 +353,7 @@ void integrate_in_time(double target_time)
 	    }
 	    if (GlobalConfig.grid_motion != GridMotion.none) {
 		ensure_directory_is_present(make_path_name!"grid"(current_tindx));
-		foreach (blk; gasBlocks) {
+		foreach (blk; parallel(gasBlocks,1)) { 
 		    auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx);
 		    blk.write_grid(fileName, sim_time, 0);
 		}
@@ -443,7 +435,7 @@ void finalize_simulation()
 	}
 	if (GlobalConfig.grid_motion != GridMotion.none) {
 	    ensure_directory_is_present(make_path_name!"grid"(current_tindx));
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx);
 		blk.write_grid(fileName, sim_time);
 	    }
@@ -472,6 +464,12 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 	    assign_vertex_velocities_via_udf(sim_time);
 	    break;
 	case GridMotion.shock_fitting:
+	    // apply boundary conditions here because ...
+	    // shockfitting algorithm requires ghost cells to be up to date.
+	    foreach (blk; gasBlocks) {
+		if (!blk.active) continue;
+		blk.applyPreReconAction(sim_time, 0, 0);
+	    }
 	    foreach (blk; gasBlocks) {
 		if (!blk.active) continue;
 		shock_fitting_vertex_velocities(blk, GlobalConfig.dimensions, step, sim_time);
