@@ -320,8 +320,7 @@ final class GlobalConfig {
 
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
-	static ReactionUpdateScheme reaction_update;
-	static GPUChem gpuChem;
+	shared static GPUChem gpuChem;
     }
 
     ~this()
@@ -394,7 +393,7 @@ public:
 
     GasModel gmodel;
     bool include_quality;
-    ReactionUpdateScheme reaction_update;
+    ChemistryUpdate chemUpdate;
 
     int verbosity_level;
 
@@ -458,7 +457,7 @@ public:
 	gmodel = init_gas_model(GlobalConfig.gas_model_file);
 	include_quality = GlobalConfig.include_quality;
 	if (GlobalConfig.reacting)
-	    reaction_update = new ReactionUpdateScheme(GlobalConfig.reactions_file, gmodel);
+	    chemUpdate = new ChemistryUpdate(GlobalConfig.reactions_file, gmodel);
 
 	verbosity_level = GlobalConfig.verbosity_level;
     }

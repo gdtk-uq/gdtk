@@ -911,12 +911,12 @@ public:
 	    }
 	}
 	try {
-	    myConfig.reaction_update.update_state(fs.gas, dt, dt_chem, myConfig.gmodel);
+	    myConfig.chemUpdate(fs.gas, dt, dt_chem, myConfig.gmodel);
 	    if (myConfig.ignition_zone_active) {
 		// Restore actual gas temperature
 		fs.gas.T[0] = T_save;
 	    }
-	} catch(Exception err) {
+	} catch(ChemistryUpdateException err) {
 	    string msg = format("caught %s", err.msg);
 	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);

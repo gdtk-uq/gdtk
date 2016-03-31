@@ -280,7 +280,7 @@ void main(string[] args)
 	registerSolidProps(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	registerReactionMechanism(L, LUA_GLOBALSINDEX);
-	registerReactionUpdateScheme(L, LUA_GLOBALSINDEX);
+	registerChemistryUpdate(L, LUA_GLOBALSINDEX);
 	if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
 	    writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
 	    string errMsg = to!string(lua_tostring(L, -1));

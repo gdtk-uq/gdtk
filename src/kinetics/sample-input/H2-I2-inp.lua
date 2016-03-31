@@ -1,7 +1,9 @@
 config = {
-  errTol = 1.000000e-03,
+  maxSubcycles = 50,
+  maxAttempts = 2,
+  tightTempCoupling = false,
   tempLimits = {lower=300.000000, upper=50000.000000},
-  odeStep = {method='rkf'},
+  odeStep = {method='rkf', errTol=1.0e-3},
 }
 
 reaction = {}

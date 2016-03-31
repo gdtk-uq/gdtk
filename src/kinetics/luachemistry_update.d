@@ -15,30 +15,30 @@ import gas.luagas_model;
 
 import kinetics.chemistry_update;
 
-// name for ReactionUpdateScheme in Lua scripts
-immutable string ReactionUpdateSchemeMT = "ReactionUpdateScheme";
+// name for ChemistryUpdate in Lua scripts
+immutable string ChemistryUpdateMT = "ChemistryUpdate";
 
 // Since we have two garbage collectors at play
 // in D and Lua, it simplifies things to hang
 // onto a store of objects in D's memory space.
-static const(ReactionUpdateScheme)[] ReactionUpdateSchemeStore;
+static const(ChemistryUpdate)[] ChemistryUpdateStore;
 
-ReactionUpdateScheme checkReactionUpdateScheme(lua_State* L, int index)
+ChemistryUpdate checkChemistryUpdate(lua_State* L, int index)
 {
-    return checkObj!(ReactionUpdateScheme, ReactionUpdateSchemeMT)(L, index);
+    return checkObj!(ChemistryUpdate, ChemistryUpdateMT)(L, index);
 }
 
 /**
- * This function implements the constructor for a ReactionUpdateScheme
+ * This function implements the constructor for a ChemistryUpdate
  * from the Lua interface.
  *
- * Construction of a ReactionUpdateScheme is from a filename and
+ * Construction of a ChemistryUpdate is from a filename and
  * a previously-constructed GasModel.
  * ----------------------------------------------------------------------
- * rupdate = ReactionUpdateScheme:new{filename='fname', gasmodel=gmodel}
+ * rupdate = ChemistryUpdate:new{filename='fname', gasmodel=gmodel}
  * ----------------------------------------------------------------------
  */
-extern(C) int newReactionUpdateScheme(lua_State* L)
+extern(C) int newChemistryUpdate(lua_State* L)
 {
     lua_remove(L, 1); // Remove first argument 'this'
 
@@ -74,10 +74,10 @@ extern(C) int newReactionUpdateScheme(lua_State* L)
     }
     lua_pop(L, 1);
     
-    auto myReacUpdate = new ReactionUpdateScheme(fname, gmodel);
-    ReactionUpdateSchemeStore ~= pushObj!(ReactionUpdateScheme, ReactionUpdateSchemeMT)(L, myReacUpdate);
+    auto myChemUpdate = new ChemistryUpdate(fname, gmodel);
+    ChemistryUpdateStore ~= pushObj!(ChemistryUpdate, ChemistryUpdateMT)(L, myChemUpdate);
     return 1;
-} // end newReactionUpdateScheme
+} // end newChemistryUpdate
 
 // ----------------------------------------------------
 // Exposed methods of the ReactionMechanism class
@@ -85,7 +85,7 @@ extern(C) int newReactionUpdateScheme(lua_State* L)
 extern(C) int updateState(lua_State* L)
 {
     // Arg 1 is "self"
-    auto rupdate = checkReactionUpdateScheme(L, 1);
+    auto chemUpdate = checkChemistryUpdate(L, 1);
     // Arg 5 is gasmodel (grab this first for help with GasState)
     auto gm = checkGasModel(L, 5);
     // Arg 2 is GasState
@@ -97,10 +97,10 @@ extern(C) int updateState(lua_State* L)
     double dtSuggest = luaL_checknumber(L, 4);
 
     try {
-	rupdate.update_state(Q, tInterval, dtSuggest, gm);
+	chemUpdate(Q, tInterval, dtSuggest, gm);
     }
-    catch (Exception e) {
-	string errMsg = "Error in call to updateState(). " ~
+    catch (ChemistryUpdateException e) {
+	string errMsg = "Error in call to chemistry update. " ~
 	    "Caught exception: " ~ to!string(e);
 	luaL_error(L, errMsg.toStringz);
     }
@@ -114,19 +114,21 @@ extern(C) int updateState(lua_State* L)
 
 // --------- end: exposed methods ----------------- //
 
-void registerReactionUpdateScheme(lua_State* L, int tblIdx)
+void registerChemistryUpdate(lua_State* L, int tblIdx)
 {
-    luaL_newmetatable(L, ReactionUpdateSchemeMT.toStringz);
+    luaL_newmetatable(L, ChemistryUpdateMT.toStringz);
 
     // metatable.__index = metatable
     lua_pushvalue(L, -1); // duplicate current metatable
     lua_setfield(L, -2, "__index");
     // Register methods for use
-    lua_pushcfunction(L, &newReactionUpdateScheme);
+    lua_pushcfunction(L, &newChemistryUpdate);
     lua_setfield(L, -2, "new");
     lua_pushcfunction(L, &updateState);
     lua_setfield(L, -2, "updateState");
+    lua_pushcfunction(L, &updateState);
+    lua_setfield(L, -2, "__call");
 
     // Make class visisble
-    lua_setfield(L, tblIdx, ReactionUpdateSchemeMT.toStringz);
+    lua_setfield(L, tblIdx, ChemistryUpdateMT.toStringz);
 }

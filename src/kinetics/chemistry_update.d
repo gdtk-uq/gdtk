@@ -27,13 +27,17 @@ immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timest
 immutable double H_MIN = 1.0e-15; // Minimum allowable step size
 immutable double ALLOWABLE_MASSF_ERROR = 1.0e-3; // Maximum allowable error in mass fraction over an update
 
-static bool working_memory_allocated = false;
-static GasState Qinit;
-static double[] conc0;
-static double[] concOut;
 enum ResultOfStep { success, failure };
 
-final class ReactionUpdateScheme {
+class ChemistryUpdateException : Exception {
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+	 Throwable next=null)
+    {
+	super(message, file, line, next);
+    }
+}
+
+final class ChemistryUpdate {
     ReactionMechanism rmech;
     ChemODEStep cstep;
     bool tightTempCoupling;
@@ -42,6 +46,12 @@ final class ReactionUpdateScheme {
 
     this(string fname, GasModel gmodel)
     {
+	// Allocate memory
+	_Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
+	_conc0.length = gmodel.n_species;
+	_concOut.length = gmodel.n_species;
+
+	// Configure other parameters via Lua state.
 	auto L = init_lua_State(fname);
 
 	lua_getglobal(L, "config");
@@ -97,188 +107,179 @@ final class ReactionUpdateScheme {
 	lua_pop(L, 1);
 
 	lua_getfield(L, -1, "maxSubcycles");
-	maxSubcycles = to!int(lua_tointeger(L, -1));
+	maxSubcycles = to!int(luaL_checkinteger(L, -1));
 	lua_pop(L, 1);
 
 	lua_getfield(L, -1, "maxAttempts");
-	maxAttempts = to!int(lua_tointeger(L, -1));
+	maxAttempts = to!int(luaL_checkinteger(L, -1));
 	lua_pop(L, 1);
 
 	lua_pop(L, 1); // pops 'config'
 	lua_close(L);
     }
 
-    void update_state(GasState Q, double tInterval, ref double dtSuggest, GasModel gmodel)
+    void opCall(GasState Q, double tInterval, ref double dtSuggest, GasModel gmodel)
     {
-	if ( update_chemistry(Q, tInterval, dtSuggest, gmodel, rmech, cstep,
-			      tightTempCoupling, maxSubcycles, maxAttempts) != 0 ) {
-	    string errMsg = "There was a problem with the chemistry update.";
-	    throw new Exception(errMsg);
-	}
-    }
+	_Qinit.copy_values_from(Q);
+	gmodel.massf2conc(Q, _conc0);
 
-}
-
-int update_chemistry(GasState Q, double tInterval, ref double dtSuggest,
-		     GasModel gmodel, ReactionMechanism rmech, ChemODEStep cstep,
-		     bool tightTempCoupling, int maxSubcycles, int maxAttempts)
-{
-    // 0. On entry take a copy of the GasState in case we bugger it up.
-    if ( !working_memory_allocated ) {
-	Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
-	conc0.length = gmodel.n_species;
-	concOut.length = gmodel.n_species;
-	working_memory_allocated = true;
-    }
-    Qinit.copy_values_from(Q);
-    gmodel.massf2conc(Q, conc0);
-
-    // 0. Evaluate the rate constants. 
-    //    It helps to have these computed before doing other setup work.
-    rmech.eval_rate_constants(Q);
-    // 1. Sort out the time step for possible subcycling.
-    double t = 0.0;
-    double h;
-    if ( dtSuggest > tInterval )
-	h = tInterval;
-    else if ( dtSuggest <= 0.0 )
-        h = rmech.estimateStepSize(conc0);
-    else
-	h = dtSuggest;
-    double dtSave;
-    // 2. Now do the interesting stuff, increment species change
-    int cycle = 0;
-    int attempt = 0;
-    for ( ; cycle < maxSubcycles; ++cycle ) {
-	/* Copy the last good timestep suggestion before moving on.
-	 * If we're near the end of the interval, we want
-	 * the penultimate step. In other words, we don't
-	 * want to store the fractional step of (tInterval - t)
-	 * that is taken as the last step.
-	 */
-	dtSave = dtSuggest;
-	h = min(h, tInterval - t);
-	attempt= 0;
-      	for ( ; attempt < maxAttempts; ++attempt ) {
-	    ResultOfStep result = cstep(conc0, h, concOut, dtSuggest);
-	    bool passesMassFractionTest = true;
-	    if ( result  == ResultOfStep.success ) {
-		/* We succesfully took a step of size h according to the ODE method.
-		 * However, we need to test that that mass fractions have remained ok.
-		 */
-		gmodel.conc2massf(concOut, Q);
-		auto massfTotal = sum(Q.massf);
-		if ( fabs(massfTotal - 1.0) > ALLOWABLE_MASSF_ERROR ) {
-		    passesMassFractionTest = false;
+	// 0. Evaluate the rate constants. 
+	//    It helps to have these computed before doing other setup work.
+	rmech.eval_rate_constants(Q);
+	// 1. Sort out the time step for possible subcycling.
+	double t = 0.0;
+	double h;
+	double dtSave;
+	if ( dtSuggest > tInterval )
+	    h = tInterval;
+	else if ( dtSuggest <= 0.0 )
+	    h = rmech.estimateStepSize(_conc0);
+	else
+	    h = dtSuggest;
+	
+	// 2. Now do the interesting stuff, increment species change
+	int cycle = 0;
+	int attempt = 0;
+	for ( ; cycle < maxSubcycles; ++cycle ) {
+	    /* Copy the last good timestep suggestion before moving on.
+	     * If we're near the end of the interval, we want
+	     * the penultimate step. In other words, we don't
+	     * want to store the fractional step of (tInterval - t)
+	     * that is taken as the last step.
+	     */
+	    dtSave = dtSuggest;
+	    h = min(h, tInterval - t);
+	    attempt= 0;
+	    for ( ; attempt < maxAttempts; ++attempt ) {
+		ResultOfStep result = cstep(_conc0, h, _concOut, dtSuggest);
+		bool passesMassFractionTest = true;
+		if ( result  == ResultOfStep.success ) {
+		    /* We succesfully took a step of size h according to the ODE method.
+		     * However, we need to test that that mass fractions have remained ok.
+		     */
+		    gmodel.conc2massf(_concOut, Q);
+		    auto massfTotal = sum(Q.massf);
+		    if ( fabs(massfTotal - 1.0) > ALLOWABLE_MASSF_ERROR ) {
+			passesMassFractionTest = false;
+		    }
 		}
+
+		if ( result == ResultOfStep.success && passesMassFractionTest ) {
+		    t += h;
+		    // Copy succesful values in concOut to conc0, ready for next step
+		    _conc0[] = _concOut[];
+		    /* We can now make some decision about how to
+		     * increase the timestep. We will take some
+		     * guidance from the ODE step, but also check
+		     * that it's sensible. For example, we won't
+		     * increase by more than 10% (or INCREASE_PERCENT).
+		     * We'll also balk if the ODE step wants to reduce
+		     * the stepsize on a successful step. This is because
+		     * if the step was successful there shouldn't be any
+		     * need (stability wise or accuracy related) to warrant 
+		     * a reduction. Thus if the step is successful and
+		     * the dtSuggest comes back lower, let's just set
+		     * h as the original value for the successful step.
+		     */
+		    double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
+		    if (dtSuggest > h) {
+			/* It's possible that dtSuggest is less than h.
+			 * When that occurs, we've made the decision to ignore
+			 * the new timestep suggestion supplied by the ODE step.
+			 * Our reasoning is that we'd like push for an aggressive
+			 * timestep size. If that fails, then a later part of
+			 * the timestepping algorithm will catch that and reduce
+			 * the timestep.
+			 *
+			 * It's also possible that the suggested timestep
+			 * is much larger than what we just used. For that
+			 * case, we cap it at hMax. That's the following line.
+			 */
+			h = min(dtSuggest, hMax);
+		    }
+		    break;
+		}
+		else { // in the case of failure...
+		    /* We now need to make some decision about 
+		     * what timestep to attempt next. We follow
+		     * David Mott's suggestion in his thesis (on p. 51)
+		     * and reduce the timestep by a factor of 2 or 3.
+		     * (The actual value is set as DT_REDUCTION_FACTOR).
+		     * In fact, for the types of problems we deal with
+		     * I have found that a reduction by a factor of 10
+		     * is more effective.
+		     */
+		    h /= DT_REDUCTION_FACTOR;
+		    if ( h < H_MIN ) {
+			string errMsg = format("Hit the minimum allowable timestep in chemistry update: dt= %.4e", H_MIN);
+			Q.copy_values_from(_Qinit);
+			throw new ChemistryUpdateException(errMsg);
+		    }
+		}
+	    } // end attempts at single subcycle.
+	    if ( attempt == maxAttempts ) {
+		string errMsg = "Hit maximum number of step attempts within a subcycle for chemistry update.";
+		// We did poorly. Let's put the original GasState back in place,
+		// and let the outside world know via an Exception.
+		Q.copy_values_from(_Qinit);
+		throw new ChemistryUpdateException(errMsg);
+	    }
+	    /* Otherwise, we've done well.
+	     * If tight temperature coupling is requested, we can reevaluate
+	     * the temperature at this point. With regards to tight coupling,
+	     * we follow Oran and Boris's advice on pp. 140-141.
+	     * To paraphrase: solving a separate differential equation for
+	     * temperature is computationally expensive, however, it usually
+	     * suffices to reevaluate the temperature assuming that total internal
+	     * energy of the system has not changed but has been redistributed
+	     * among chemical states. Since the chemistry has not altered much, 
+	     * the iteration for temperature should converge in one or two
+	     * iterations.
+	     *
+	     * My own additional argument for avoiding a temperature differential
+	     * equation is that it does not play nicely with the special
+	     * ODE methods for chemistry that exploit structure in the species
+	     * differential equations.
+	     */
+	    if ( tightTempCoupling ) {
+		gmodel.conc2massf(_conc0, Q);
+		gmodel.update_thermo_from_rhoe(Q);
+		rmech.eval_rate_constants(Q);
 	    }
 
-	    if ( result == ResultOfStep.success && passesMassFractionTest ) {
-		t += h;
-		foreach ( i; 0..conc0.length ) conc0[i] = concOut[i];
-		/* We can now make some decision about how to
-		 * increase the timestep. We will take some
-		 * guidance from the ODE step, but also check
-		 * that it's sensible. For example, we won't
-		 * increase by more than 10% (or INCREASE_PERCENT).
-		 * We'll also balk if the ODE step wants to reduce
-		 * the stepsize on a successful step. This is because
-		 * if the step was successful there shouldn't be any
-		 * need (stability wise or accuracy related) to warrant 
-		 * a reduction. Thus if the step is successful and
-		 * the dtSuggest comes back lower, let's just set
-		 * h as the original value for the successful step.
-		 */
-		double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
-		if (dtSuggest > h) {
-		    /* It's possible that dtSuggest is less than h.
-		     * When that occurs, we've made the decision to ignore
-		     * the new timestep suggestion supplied by the ODE step.
-		     * Our reasoning is that we'd like push for an aggressive
-		     * timestep size. If that fails, then a later part of
-		     * the timestepping algorithm will catch that and reduce
-		     * the timestep.
-		     *
-		     * It's also possible that the suggested timestep
-		     * is much larger than what we just used. For that
-		     * case, we cap it at hMax. That's the following line.
-		     */
-		    h = min(dtSuggest, hMax);
+	    if ( t >= tInterval ) { // We've done enough work.
+		// If we've only take one cycle, then we would like to use
+		// dtSuggest rather than using the dtSuggest from the
+		// penultimate step.
+		if (cycle == 0) {
+		    dtSave = dtSuggest;
 		}
 		break;
 	    }
-	    else { // in the case of failure...
-		/* We now need to make some decision about 
-		 * what timestep to attempt next. We follow
-		 * David Mott's suggestion in his thesis (on p. 51)
-		 * and reduce the timestep by a factor of 2 or 3.
-		 * (The actual value is set as DT_REDUCTION_FACTOR).
-		 * In fact, for the types of problems we deal with
-		 * I have found that a reduction by a factor of 10
-		 * is more effective.
-		 */
-		h /= DT_REDUCTION_FACTOR;
-		if ( h < H_MIN ) {
-		    Q.copy_values_from(Qinit);
-		    return -1;
-		}
-	    }
-	} // end attempts at single step.
-	if ( attempt == maxAttempts ) {
-	    writeln("WARNING: hit max step attempts within a subcycle.");
-	    // We did poorly. Let the outside world know by returning -1.
-	    // But put the original GasState back in place.
-	    Q.copy_values_from(Qinit);
-	    return -1;
 	}
-	/* Otherwise, we've done well.
-	 * If tight temperature coupling is requested, we can reevaluate
-	 * the temperature at this point. With regards to tight coupling,
-	 * we follow Oran and Boris's advice on pp. 140-141.
-	 * To paraphrase: solving a separate differential equation for
-	 * temperature is computationally expensive, however, it usually
-	 * suffices to reevaluate the temperature assuming that total internal
-	 * energy of the system has not changed but has been redistributed
-	 * among chemical states. Since the chemistry has not altered much, 
-	 * the iteration for temperature should converge in one or two
-	 * iterations.
-	 *
-	 * My own additional argument for avoiding a temperature differential
-	 * equation is that it does not play nicely with the special
-	 * ODE methods for chemistry that exploit structure in the species
-	 * differential equations.
-	 */
-	if ( tightTempCoupling ) {
-	    gmodel.conc2massf(conc0, Q);
-	    gmodel.update_thermo_from_rhoe(Q);
-	    rmech.eval_rate_constants(Q);
+	if ( cycle == maxSubcycles ) {
+	    // If we make it out here, then we didn't complete within
+	    // the maximum number of subscyles... we are taking too long.
+	    // Let's return the gas state to how it was before we failed
+	    // and throw an Exception.
+	    string errMsg = "Hit maximum number of subcycles while attempting
+chemistry update.";
+	    Q.copy_values_from(_Qinit);
+	    throw new Exception(errMsg);
 	}
+	// At this point, it appears that everything has gone well.
+	// We'll tweak the mass fractions in case they are a little off.
+	gmodel.conc2massf(_concOut, Q);
+	auto massfTotal = sum(Q.massf);
+	foreach (ref mf; Q.massf) mf /= massfTotal;
+	dtSuggest = dtSave;
+    }
 
-	if ( t >= tInterval ) { // We've done enough work.
-	    // If we've only take one cycle, then we would like to use
-	    // dtSuggest rather than using the dtSuggest from the
-	    // penultimate step.
-	    if (cycle == 0) {
-		dtSave = dtSuggest;
-	    }
-	    break;
-	}
-    }
-    if ( cycle == maxSubcycles ) {
-	// If we make it out here, then we didn't complete within
-	// the maximum number of subscyles... we are taking too long.
-	// Let's return the gas state to how it was before we failed.
-	writeln("WARNING: hit max number of subcycles.");
-	Q.copy_values_from(Qinit);
-	return -1;
-    }
-    // At this point, it appears that everything has gone well.
-    // We'll tweak the mass fractions in case they are a little off.
-    gmodel.conc2massf(concOut, Q);
-    auto massfTotal = sum(Q.massf);
-    foreach (ref mf; Q.massf) mf /= massfTotal;
-    dtSuggest = dtSave;
-    return 0;
+private:
+    // Some memory workspace
+    GasState _Qinit;
+    double[] _conc0;
+    double[] _concOut;
 }
 
 /++
@@ -680,10 +681,10 @@ version(chemistry_update_test) {
 	 *    the chemistry update routine by solving the
 	 *    complete hydrogen-iodine system.
 	 */
+
 	double dtSuggest = 200.0;
-	int result = update_chemistry(gd, tInterval, dtSuggest,
-				      gmodel, rmech, rkfStep,
-				      false, 50, 2);
+	auto chemUpdate = new ChemistryUpdate("sample-input/H2-I2-inp.lua", gmodel);
+	chemUpdate(gd, tInterval, dtSuggest, gmodel);
 	double[] conc;
 	conc.length = 3;
 	gmodel.massf2conc(gd, conc);

@@ -82,7 +82,7 @@ public:
     {
 	writeln("GPUChem:this()");
 	_gmodel = GlobalConfig.gmodel_master;
-	_rmech = GlobalConfig.reaction_update.rmech;
+	_rmech = GlobalConfig.chemUpdate.rmech;
 	size_t nsp = _gmodel.n_species();
 	size_t nreac = _rmech.n_reactions();
 	_conc.length = nsp;
@@ -325,6 +325,6 @@ private:
 
 void initGPUChem()
 {
-    GlobalConfig.reaction_update = new ReactionUpdateScheme(GlobalConfig.reactions_file, GlobalConfig.gmodel_master);
+
     GlobalConfig.gpuChem = new GPUChem();
 }
