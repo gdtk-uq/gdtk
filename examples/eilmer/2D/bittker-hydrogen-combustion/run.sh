@@ -1,4 +1,4 @@
 #!/bin/bash
 
-time e4shared --job=bittker --run --max-cpus=1
+time e4shared --job=bittker --run --max-cpus=2
 

@@ -24,7 +24,7 @@ test run-preprocessor {Run the preprocessing stage.} -body {
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the shared-memory simulation code.} -body {
-    exec e4shared --run --job=bittker --verbosity=1 --max-cpus=1 > LOGFILE_MAIN
+    exec e4shared --run --job=bittker --verbosity=1 --max-cpus=2 > LOGFILE_MAIN
 } -result {} -returnCodes {0}
 
 test combustion-products {Combustion should have produced water by the end of the duct.} -body {
