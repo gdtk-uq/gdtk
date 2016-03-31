@@ -617,9 +617,9 @@ version(chemistry_update_test) {
     }
 
     int main() {
-
+	import gas.therm_perf_gas;
 	auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
-	auto rmech = createReactionMechanism("sample-input/H2-I2-inp.lua", gmodel);
+	auto rmech = createReactionMechanism("sample-input/H2-I2-inp.lua", gmodel, 100.0, 10000.0);
 
 	auto gd = new GasState(3, 1);
 	gd.T[0] = 700.0;
@@ -662,7 +662,7 @@ version(chemistry_update_test) {
 	 * method, we should expect to see the error drop by a factor
 	 * of 4.0 if we halve the timestep.
 	 */
-	auto alphaStep = new AlphaQssStep(gmodel, rmech);
+	auto alphaStep = new AlphaQssStep(gmodel, rmech, 0.001, 0.0005, 1.0e-10, 10);
 	dt = 2.0;
 	numVal0 = numericalEstimate(dt, tInterval, conc0, alphaStep);
 	err0 = analyticalVal - numVal0;

@@ -175,27 +175,28 @@ ReactionMechanism createReactionMechanism(lua_State* L, GasModel gmodel, double 
     return new ReactionMechanism(reactions, n_species, T_lower_limit, T_upper_limit);
 }
 
-/*
-ReactionMechanism createReactionMechanism(string fname, GasModel gmodel)
+ReactionMechanism createReactionMechanism(string fname, GasModel gmodel, double T_lower_limit, double T_upper_limit)
 {
     auto L = init_lua_State(fname);
     lua_getglobal(L, "reaction");
-    return createReactionMechanism(L, gmodel);
+    return createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
 }
-*/
 
 version(reaction_mechanism_test) {
     import std.math;
+    import gas.therm_perf_gas;
+
     int main() {
+	auto gmodel = new ThermallyPerfectGas("sample-input/H2-I2-HI.lua");
 	// Test the rate of concentration change at the initial
 	// condition for the H2 + I2 reaction system.
 	double[] conc = [4.54, 4.54, 0.0];
 	auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
 	auto gd = new GasState(3, 1);
 	gd.T[0] = 700.0;
-	auto reaction = new ElementaryReaction(rc, rc, [0, 1], [1, 1],
+	auto reaction = new ElementaryReaction(rc, rc, gmodel, [0, 1], [1, 1],
 					       [2], [2], 3);
-	auto reacMech = new ReactionMechanism([reaction], 3);
+	auto reacMech = new ReactionMechanism([reaction], 3, 100.0, 10000.0);
 	double[] rates;
 	rates.length = 3;
 	reacMech.eval_rate_constants(gd);
