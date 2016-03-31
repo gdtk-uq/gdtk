@@ -77,7 +77,7 @@ local dt_suggest = 1.0e-8  -- suggested starting time-step for chemistry updater
 print(sample_data(x, v, gas0, dt_suggest))
 
 print("# Start reactions...")
-rupdate = ReactionUpdateScheme:new{filename="h2-o2-n2-9sp-18r.lua", gasmodel=gmodel}
+chemUpdate = ChemistryUpdate:new{filename="h2-o2-n2-9sp-18r.lua", gasmodel=gmodel}
 local t = 0 -- time is in seconds
 local t_final = 22.0e-6
 local t_inc = 0.05e-6
@@ -92,7 +92,7 @@ for j=1, nsteps do
    -- Do the chemical increment.
    local gas1 = GasState:new{gmodel} -- make the new one as a clone
    copyValues(gas0, gas1)
-   dt_suggest = rupdate:updateState(gas1, t_inc, dt_suggest, gmodel)
+   dt_suggest = chemUpdate(gas1, t_inc, dt_suggest, gmodel)
    gmodel:updateThermoFromRHOE(gas1)
    --
    local de_chem = gas1.e[1] - e
