@@ -176,7 +176,7 @@ void read_config_file()
     }
     if (GlobalConfig.grid_motion != GridMotion.none) {
 	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
-	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage) {
+	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
 	    // pass, we have a consistent selection.
 	} else {
 	    throw new Error("We have some grid_motion but not a valid GasdynamicUpdate scheme" ~
@@ -184,7 +184,7 @@ void read_config_file()
 	}
     } else {
 	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
-	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage) {
+	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
 	    throw new Error("We have no grid_motion but have asked for a GasdynamicUpdate scheme" ~
 			    " for grid motion.");
 	}
