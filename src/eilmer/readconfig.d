@@ -89,7 +89,8 @@ void read_config_file()
     if (GlobalConfig.grid_motion == GridMotion.none) {
 	GlobalConfig.n_grid_time_levels = 1;
     } else {
-	GlobalConfig.n_grid_time_levels = 2; // [TODO] Kyle, is this correct? PJ 2016-03-04
+	GlobalConfig.n_grid_time_levels = 1 +
+	    number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
     }
     GlobalConfig.write_vertex_velocities = 
 	getJSONbool(jsonData, "write_vertex_velocities", false);
