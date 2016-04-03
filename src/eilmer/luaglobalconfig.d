@@ -76,6 +76,20 @@ extern(C) int configSetFromTable(lua_State* L)
     }
     lua_pop(L, 1);
 
+    lua_getfield(L, 1, "divergence_cleaning");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.divergence_cleaning = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "divergence_cleaning");
+    }
+    lua_pop(L, 1);
+    
+    lua_getfield(L, 1, "divB_damping_length");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.divB_damping_length = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "divB_damping_length");
+    }
+    lua_pop(L, 1);
+
     lua_getfield(L, 1, "gasdynamic_update_scheme");
     if (!lua_isnil(L, -1)) {
 	string name = to!string(luaL_checkstring(L, -1));
@@ -503,6 +517,14 @@ extern(C) int configGet(lua_State* L)
 	
     case "MHD":
 	lua_pushboolean(L, GlobalConfig.MHD);
+	break;
+
+    case "divergence_cleaning":
+	lua_pushboolean(L, GlobalConfig.divergence_cleaning);
+	break;
+
+    case "divB_damping_length":
+	lua_pushnumber(L, GlobalConfig.divB_damping_length);
 	break;
 
     case "gasdynamic_update_scheme":

@@ -276,6 +276,17 @@ void integrate_in_time(double target_time)
 	    do_cfl_check_now = false;  // we have done our check for now
 	} // end if do_cfl_check_now 
 
+	// Update the c_h value for MHD divergence cleaning.
+	// [FIXME] Lachlan Whyborn: not sure if this is the correct place to put it?
+	/*
+	if (GlobalConfig.divergence_cleaning) {
+	    foreach (blk; gasBlocks) {
+	        if (!blk.active) continue;
+	        blk.update_divergence_cleaning(dt_global);
+	    } 
+	}
+	*/
+
         // 2. Attempt a time step.
 	
 	// 2a. Moving Grid - let's start by calculating vertex velocties

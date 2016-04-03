@@ -191,6 +191,10 @@ public:
 				   Lft.B.refy, Rght.B.refy);
 		interp_both_scalar(cL1.fs.B.z, cL0.fs.B.z, cR0.fs.B.z, cR1.fs.B.z,
 				   Lft.B.refz, Rght.B.refz);
+		if (myConfig.divergence_cleaning) {
+		    interp_both_scalar(cL1.fs.psi, cL0.fs.psi, cR0.fs.psi, cR1.fs.psi,
+				       Lft.psi, Rght.psi);
+		}
 	    }
 	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
 		interp_both_scalar(cL1.fs.tke, cL0.fs.tke, cR0.fs.tke, cR1.fs.tke,
@@ -317,6 +321,9 @@ public:
 		interp_left_scalar(cL1.fs.B.x, cL0.fs.B.x, cR0.fs.B.x, Lft.B.refx);
 		interp_left_scalar(cL1.fs.B.y, cL0.fs.B.y, cR0.fs.B.y, Lft.B.refy);
 		interp_left_scalar(cL1.fs.B.z, cL0.fs.B.z, cR0.fs.B.z, Lft.B.refz);
+		if (myConfig.divergence_cleaning) {
+		    interp_left_scalar(cL1.fs.psi, cL0.fs.psi, cR0.fs.psi, Lft.psi);
+		}
 	    }
 	    if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
 		interp_left_scalar(cL1.fs.tke, cL0.fs.tke, cR0.fs.tke, Lft.tke);
@@ -427,6 +434,9 @@ public:
 		interp_right_scalar(cL0.fs.B.x, cR0.fs.B.x, cR1.fs.B.x, Rght.B.refx);
 		interp_right_scalar(cL0.fs.B.y, cR0.fs.B.y, cR1.fs.B.y, Rght.B.refy);
 		interp_right_scalar(cL0.fs.B.z, cR0.fs.B.z, cR1.fs.B.z, Rght.B.refz);
+		if (myConfig.divergence_cleaning) {
+		    interp_right_scalar(cL0.fs.psi, cR0.fs.psi, cR1.fs.psi, Rght.psi);
+		}
 	    }
 	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
 		interp_right_scalar(cL0.fs.tke, cR0.fs.tke, cR1.fs.tke, Rght.tke);

@@ -274,6 +274,9 @@ public:
 		mixin(codeForReconstruction("B.x", "B.refx"));
 		mixin(codeForReconstruction("B.y", "B.refy"));
 		mixin(codeForReconstruction("B.z", "B.refz"));
+		if (myConfig.divergence_cleaning) {
+		    mixin(codeForReconstruction("psi", "psi"));
+		}
 	    }
 	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
 		mixin(codeForReconstruction("tke", "tke"));

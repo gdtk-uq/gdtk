@@ -139,6 +139,8 @@ void read_config_file()
     GlobalConfig.shock_fitting_delay = getJSONdouble(jsonData, "shock_fitting_delay", 0.0);
     
     GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
+    GlobalConfig.divergence_cleaning = getJSONbool(jsonData, "divergence_cleaning", false);
+    GlobalConfig.divB_damping_length = getJSONdouble(jsonData, "divB_damping_length", 1.0);
 
     // The following checks/overrides must happen after the relevant config elements
     // have been set.
@@ -174,6 +176,8 @@ void read_config_file()
 	writeln("  M_inf: ", GlobalConfig.M_inf);
 	writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
 	writeln("  MHD: ", GlobalConfig.MHD);
+	writeln("  divergence_cleaning: ", GlobalConfig.divergence_cleaning);
+	writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
     }
     if (GlobalConfig.grid_motion != GridMotion.none) {
 	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||

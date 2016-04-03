@@ -259,6 +259,11 @@ final class GlobalConfig {
     //
     shared static bool MHD;    // Single fluid MHD
 
+    // Lachlan Whyborn's Divergence cleaning to go with MHD.
+    //
+    shared static bool divergence_cleaning = false;
+    shared static double divB_damping_length = 1.0;
+
     // Parameters controlling other simulation options
     //
     shared static int max_step = 10;       // iteration limit
@@ -387,6 +392,8 @@ public:
     bool radiation;
     bool electric_field_work;
     bool MHD;
+    bool divergence_cleaning;
+    double divB_damping_length;
 
     bool stringent_cfl;
     double viscous_signal_factor;
@@ -450,6 +457,8 @@ public:
 	radiation = GlobalConfig.radiation;
 	electric_field_work = GlobalConfig.electric_field_work;
 	MHD = GlobalConfig.MHD;
+	divergence_cleaning = GlobalConfig.divergence_cleaning;
+	divB_damping_length = GlobalConfig.divB_damping_length;
 
 	stringent_cfl = GlobalConfig.stringent_cfl;
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;

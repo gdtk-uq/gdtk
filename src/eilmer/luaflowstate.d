@@ -35,7 +35,7 @@ import fvcell;
 immutable string FlowStateMT = "FlowState";
 immutable string[] validFlowStateFields = ["p", "T", "p_e", "quality", "massf",
 					   "velx", "vely", "velz",
-					   "Bx", "By", "Bz",
+					   "Bx", "By", "Bz", "psi",
 					   "tke", "omega", "mu_t", "k_t"];
 static const(FlowState)[] flowStateStore;
 
@@ -191,6 +191,9 @@ The value should be a number.`;
     Bz = getNumberFromTable(L, 1, "Bz", false, 0.0, true, format(errMsgTmplt, "Bz"));
     auto B = Vector3(Bx, By, Bz);
     
+    //Divergence cleaning parameter psi for MHD
+    double psi = getNumberFromTable(L, 1, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
+    
     // Values related to k-omega model.
     double tke = getNumberFromTable(L, 1, "tke", false, 0.0, true, format(errMsgTmplt, "tke"));
     double omega = getNumberFromTable(L, 1, "omega", false, 0.0, true, format(errMsgTmplt, "omega"));
@@ -276,6 +279,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     mixin(pushFSVar("k_t"));
     mixin(pushFSVecVar("vel"));
     mixin(pushFSVecVar("B"));
+    mixin(pushFSVar("psi"));
 }
 
 /**
@@ -384,6 +388,10 @@ extern(C) int fromTable(lua_State* L)
 	fs.B.refz = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
+
+    // Look for divergence cleaning parameter psi
+    mixin(checkFSVar("psi"));
+
     // Now look turbulence quantities
     mixin(checkFSVar("tke"));
     mixin(checkFSVar("omega"));

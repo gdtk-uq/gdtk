@@ -69,6 +69,20 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
 	break;
     } // end switch
     ConservedQuantities F = IFace.F;
+
+    /* [FIXME] Lachlan Whyborn
+    // Adjustment of the magnetic field as per Dedner et al. 
+    // Left out until c_h is confirmed to be working, also maybe better implemented inside HLLE?
+    if (GlobalConfig.MHD) {
+        double divB = 0.5 * (Rght.B.x - Lft.B.x);
+	if (GlobalConfig.divergence_cleaning) {
+	    F.B.refx += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (GlobalConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
+	    F.psi += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) - (1.0 / 2.0 * GlobalConfig.c_h) *
+                      (Rght.psi - Lft.psi)) * GlobalConfig.c_h * GlobalConfig.c_h;
+	}
+    }
+    */
+
     if (omegaz != 0.0) {
 	// Rotating frame.
 	double x = IFace.pos.x;

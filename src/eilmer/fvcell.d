@@ -309,8 +309,14 @@ public:
 	    fs.B.refx = to!double(items.front); items.popFront();
 	    fs.B.refy = to!double(items.front); items.popFront();
 	    fs.B.refz = to!double(items.front); items.popFront();
+	    if (myConfig.divergence_cleaning) {
+		fs.psi = to!double(items.front); items.popFront();
+	    } else {
+		fs.psi = 0.0;
+	    }
 	} else {
 	    fs.B.refx = 0.0; fs.B.refy = 0.0; fs.B.refz = 0.0;
+	    fs.psi = 0.0;
 	}
 	if (myConfig.include_quality) {
 	    fs.gas.quality = to!double(items.front); items.popFront();
@@ -357,21 +363,26 @@ public:
 	formattedWrite(writer, "%.12e %.12e %.12e %.12e %.12e %.12e %.12e %.12e",
 		       pos[0].x, pos[0].y, pos[0].z, volume[0], fs.gas.rho,
 		       fs.vel.x, fs.vel.y, fs.vel.z);
-	if ( myConfig.MHD ) 
+	if (myConfig.MHD) {
 	    formattedWrite(writer, " %.12e %.12e %.12e", fs.B.x, fs.B.y, fs.B.z); 
-	if ( myConfig.include_quality ) 
+	    if (myConfig.divergence_cleaning) { formattedWrite(writer, " %.12e", fs.psi); }
+	}
+	if (myConfig.include_quality) {  
 	    formattedWrite(writer, " %.12e", fs.gas.quality);
+	}
 	formattedWrite(writer, " %.12e %.12e %.12e", fs.gas.p, fs.gas.a, fs.gas.mu);
 	foreach(i; 0 .. fs.gas.k.length) formattedWrite(writer, " %.12e", fs.gas.k[i]); 
 	formattedWrite(writer, " %.12e %.12e %d", fs.mu_t, fs.k_t, fs.S);
-	if ( myConfig.radiation ) 
-	    formattedWrite(writer, " %.12e %.12e %.12e", Q_rad_org, f_rad_org, Q_rE_rad); 
+	if (myConfig.radiation) { 
+	    formattedWrite(writer, " %.12e %.12e %.12e", Q_rad_org, f_rad_org, Q_rE_rad);
+	} 
 	formattedWrite(writer, " %.12e %.12e", fs.tke, fs.omega);
 	foreach(i; 0 .. fs.gas.massf.length) formattedWrite(writer, " %.12e", fs.gas.massf[i]); 
-	if ( fs.gas.massf.length > 1 ) formattedWrite(writer, " %.12e", dt_chem); 
-	foreach(i; 0 .. fs.gas.e.length)
-	    formattedWrite(writer, " %.12e %.12e", fs.gas.e[i], fs.gas.T[i]); 
-	if ( fs.gas.e.length > 1 ) formattedWrite(writer, " %.12e", dt_therm);
+	if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.12e", dt_chem); } 
+	foreach(i; 0 .. fs.gas.e.length) {
+	    formattedWrite(writer, " %.12e %.12e", fs.gas.e[i], fs.gas.T[i]);
+	} 
+	if (fs.gas.e.length > 1) { formattedWrite(writer, " %.12e", dt_therm); }
 	return writer.data;
     } // end write_values_to_string()
 
@@ -392,6 +403,7 @@ public:
 	myU.B.refx = fs.B.x;
 	myU.B.refy = fs.B.y;
 	myU.B.refz = fs.B.z;
+	myU.psi = fs.psi;
 	// Total Energy / unit volume = density
 	// (specific internal energy + kinetic energy/unit mass).
 	double e = 0.0; foreach(elem; fs.gas.e) e += elem;
@@ -473,6 +485,7 @@ public:
 	fs.B.refx = myU.B.x;
 	fs.B.refy = myU.B.y;
 	fs.B.refz = myU.B.z;
+	fs.psi = myU.psi;
 	// Specific internal energy from total energy per unit volume.
 	ke = 0.5 * (fs.vel.x * fs.vel.x + fs.vel.y * fs.vel.y + fs.vel.z * fs.vel.z);
 	if ( myConfig.MHD ) {
@@ -567,10 +580,16 @@ public:
 	    integral = 0.0;
 	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.z * iface[i].area[gtl];
 	    dUdt[ftl].B.refz = vol_inv * integral + Q.B.z;
+	    if (myConfig.divergence_cleaning) {
+		integral = 0.0;
+		foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.psi * iface[i].area[gtl];
+		dUdt[ftl].psi = vol_inv * integral + Q.psi;
+	    }
 	} else {
 	    dUdt[ftl].B.refx = 0.0;
 	    dUdt[ftl].B.refy = 0.0;
 	    dUdt[ftl].B.refz = 0.0;
+	    dUdt[ftl].psi = 0.0;
 	}
 
 	// Time-derivative for Total Energy/unit volume.
@@ -646,8 +665,13 @@ public:
 	    U1.B.refx = U0.B.x + dt * gamma_1 * dUdt0.B.x;
 	    U1.B.refy = U0.B.y + dt * gamma_1 * dUdt0.B.y;
 	    U1.B.refz = U0.B.z + dt * gamma_1 * dUdt0.B.z;
+	    if (myConfig.divergence_cleaning) {
+		U1.psi = U0.psi + dt * gamma_1 * dUdt0.psi;
+		U1.psi *= divergence_damping_factor(dt);
+	    }
 	} else {
 	    U1.B.refx = 0.0; U1.B.refy = 0.0; U1.B.refz = 0.0;
+	    U1.psi = 0.0;
 	}
 	U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
 	if (with_k_omega) {
@@ -709,8 +733,13 @@ public:
 	    U2.B.refx = U_old.B.x + dt * (gamma_1 * dUdt0.B.x + gamma_2 * dUdt1.B.x);
 	    U2.B.refy = U_old.B.y + dt * (gamma_1 * dUdt0.B.y + gamma_2 * dUdt1.B.y);
 	    U2.B.refz = U_old.B.z + dt * (gamma_1 * dUdt0.B.z + gamma_2 * dUdt1.B.z);
+	    if (myConfig.divergence_cleaning) {
+		U2.psi = U_old.psi + dt * (gamma_1 * dUdt0.psi + gamma_2 * dUdt1.psi);
+		U2.psi *= divergence_damping_factor(dt);
+	    }
 	} else {
 	    U2.B.refx = 0.0; U2.B.refy = 0.0; U2.B.refz = 0.0;
+	    U2.psi = 0.0;
 	}
 	U2.total_energy = U_old.total_energy + 
 	    dt * (gamma_1 * dUdt0.total_energy + gamma_2 * dUdt1.total_energy);
@@ -772,8 +801,13 @@ public:
 	    U3.B.refx = U_old.B.x + dt * (gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x + gamma_3*dUdt2.B.x);
 	    U3.B.refy = U_old.B.y + dt * (gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y + gamma_3*dUdt2.B.y);
 	    U3.B.refz = U_old.B.z + dt * (gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z + gamma_3*dUdt2.B.z);
+	    if (myConfig.divergence_cleaning) {
+		U3.psi = U_old.psi + dt * (gamma_1 * dUdt0.psi + gamma_2 * dUdt1.psi + gamma_3 * dUdt2.psi);
+		U3.psi *= divergence_damping_factor(dt);
+	    }
 	} else {
 	    U3.B.refx = 0.0; U3.B.refy = 0.0; U3.B.refz = 0.0;
+	    U3.psi = 0.0;
 	}
 	U3.total_energy = U_old.total_energy + 
 	    dt * (gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
@@ -1108,6 +1142,20 @@ public:
     {
 	fs.mu_t = 0.0;
 	fs.k_t = 0.0;
+    }
+
+    @nogc
+    double divergence_damping_factor(double dt)
+    //Divergence factor factor used to scale the cleaning factor psi after each timestep.
+    {
+	/*
+	double c_h2 = c_h * c_h;
+	double c_p2 = 0.18 * GlobalConfig.divB_damping_length * c_h;
+	
+	return exp(-(c_h2 / c_p2) * dt);
+	*/
+	return 1.0;
+	// [FIXME] Lachlan Whyborn: Temporary until I work out how to best implement divB_damping_length
     }
 
     @nogc
@@ -1635,20 +1683,23 @@ string[] variable_list_for_cell(GasModel gmodel)
     string[] list;
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["rho", "vel.x", "vel.y", "vel.z"];
-    if ( GlobalConfig.MHD ) list ~= ["B.x", "B.y", "B.z"];
-    if ( GlobalConfig.include_quality ) list ~= ["quality"];
+    if (GlobalConfig.MHD) {
+	list ~= ["B.x", "B.y", "B.z"];
+	if (GlobalConfig.divergence_cleaning) { list ~= ["psi"]; }
+    }
+    if ( GlobalConfig.include_quality ) { list ~= ["quality"]; }
     list ~= ["p", "a", "mu"];
-    foreach(i; 0 .. gmodel.n_modes) list ~= "k[" ~ to!string(i) ~ "]";
+    foreach(i; 0 .. gmodel.n_modes) { list ~= "k[" ~ to!string(i) ~ "]"; }
     list ~= ["mu_t", "k_t", "S"];
-    if ( GlobalConfig.radiation ) list ~= ["Q_rad_org", "f_rad_org", "Q_rE_rad"];
+    if ( GlobalConfig.radiation ) { list ~= ["Q_rad_org", "f_rad_org", "Q_rE_rad"]; }
     list ~= ["tke", "omega"];
     foreach(i; 0 .. gmodel.n_species) {
 	auto name = cast(char[]) gmodel.species_name(i);
 	name = tr(name, " \t", "--", "s"); // Replace internal whitespace with dashes.
 	list ~= ["massf[" ~ to!string(i) ~ "]-" ~ to!string(name)];
     }
-    if ( gmodel.n_species > 1 ) list ~= ["dt_chem"];
-    foreach(i; 0 .. gmodel.n_modes) list ~= ["e[" ~ to!string(i) ~ "]", "T[" ~ to!string(i) ~ "]"];
-    if ( gmodel.n_modes > 1 ) list ~= ["dt_therm"];
+    if ( gmodel.n_species > 1 ) { list ~= ["dt_chem"]; }
+    foreach(i; 0 .. gmodel.n_modes) { list ~= ["e[" ~ to!string(i) ~ "]", "T[" ~ to!string(i) ~ "]"]; }
+    if ( gmodel.n_modes > 1 ) { list ~= ["dt_therm"]; }
     return list;
 } // end variable_list_for_cell()

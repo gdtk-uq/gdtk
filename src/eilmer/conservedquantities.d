@@ -21,6 +21,7 @@ public:
     double total_energy; // total energy
     double[] massf;      // mass fractions of species
     double[] energies;   // modal energies (mode 0 is usually transrotational)
+    double psi;		 // divergence cleaning parameter for MHD
     double tke;          // turbulent kinetic energy
     double omega;        // omega from k-omega turbulence model
 
@@ -38,6 +39,7 @@ public:
 	total_energy = other.total_energy;
 	massf = other.massf.dup;
 	energies = other.energies.dup;
+	psi = other.psi;
 	tke = other.tke;
 	omega = other.omega;
     }
@@ -52,6 +54,7 @@ public:
 	total_energy = src.total_energy;
 	massf[] = src.massf[];
 	energies[] = src.energies[];
+	psi = src.psi;
 	tke = src.tke;
 	omega = src.omega;
     }
@@ -64,6 +67,7 @@ public:
 	total_energy = 0.0;
 	foreach(ref mf; massf) mf = 0.0;
 	foreach(ref e; energies) e = 0.0;
+	psi = 0.0;
 	tke = 0.0;
 	omega = 0.0;
     }
@@ -78,6 +82,7 @@ public:
 	repr ~= ", total_energy=" ~ to!string(total_energy);
 	repr ~= ", massf=" ~ to!string(massf);
 	repr ~= ", energies=" ~ to!string(energies);
+	repr ~= ", psi=" ~ to!string(psi);
 	repr ~= ", tke=" ~ to!string(tke);
 	repr ~= ", omega=" ~ to!string(omega);
 	repr ~= ")";

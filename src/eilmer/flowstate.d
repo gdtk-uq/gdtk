@@ -29,6 +29,7 @@ public:
     GasState gas;  // gas state
     Vector3 vel;   // flow velocity, m/s
     Vector3 B;     // magnetic field strength
+    double psi;	   // divergence cleaning parameter
     double tke;    // turbulent kinetic energy 0.5(u'^2+v'^2+w'^2)
     double omega;  // turbulence 'frequency' in k-omega model
     double mu_t;   // turbulence viscosity
@@ -38,6 +39,7 @@ public:
     this(GasModel gm, in double p_init, in double[] T_init, in Vector3 vel_init,
 	 in double[] massf_init=[1.0,], in double quality_init=1.0,
 	 in Vector3 B_init=(0.0,0.0,0.0),
+	 in double psi_init=0.0,
 	 in double tke_init=0.0, in double omega_init=1.0,
 	 in double mu_t_init=0.0, in double k_t_init=0.0,
 	 in int S_init=0)
@@ -45,6 +47,7 @@ public:
 	gas = new GasState(gm, p_init, T_init, massf_init, quality_init);
 	vel = vel_init;
 	B = B_init;
+	psi = psi_init;
 	tke = tke_init;
 	omega = omega_init;
 	mu_t = mu_t_init;
@@ -57,6 +60,7 @@ public:
 	gas = new GasState(gm, other.gas.p, other.gas.T, other.gas.massf, other.gas.quality); 
 	vel = other.vel;
 	B = other.B;
+	psi = other.psi;
 	tke = other.tke;
 	omega = other.omega;
 	mu_t = other.mu_t;
@@ -70,6 +74,7 @@ public:
 	gas.copy_values_from(other.gas);
 	vel.refx = other.vel.x; vel.refy = other.vel.y; vel.refz = other.vel.z;
 	B.refx = other.B.x; B.refy = other.B.y; B.refz = other.B.z;
+	psi = other.psi;
 	tke = other.tke;
 	omega = other.omega;
 	mu_t = other.mu_t;
@@ -82,6 +87,7 @@ public:
 	gas = new GasState(gm, 100.0e3, [300.0,], [1.0,], 1.0); 
 	vel = Vector3(0.0,0.0,0.0);
 	B = Vector3(0.0,0.0,0.0);
+	psi = 0.0;
 	tke = 0.0;
 	omega = 1.0;
 	mu_t = 0.0;
@@ -104,6 +110,7 @@ public:
 	double By = getJSONdouble(json_data, "By", 0.0);
 	double Bz = getJSONdouble(json_data, "Bz", 0.0);
 	B = Vector3(Bx,By,Bz);
+	psi = getJSONdouble(json_data, "psi", 0.0);
 	tke = getJSONdouble(json_data, "tke", 0.0);
 	omega = getJSONdouble(json_data, "omega", 1.0);
 	mu_t = getJSONdouble(json_data, "mu_t", 0.0);
@@ -124,6 +131,7 @@ public:
 	gas.copy_values_from(other.gas);
 	vel.refx = other.vel.x; vel.refy = other.vel.y; vel.refz = other.vel.z;
 	B.refx = other.B.x; B.refy = other.B.y; B.refz = other.B.z;
+	psi = other.psi;
 	tke = other.tke;
 	omega = other.omega;
 	mu_t = other.mu_t;
@@ -142,6 +150,7 @@ public:
 	B.refx = 0.5 * (fs0.B.x + fs1.B.x);
 	B.refy = 0.5 * (fs0.B.y + fs1.B.y);
 	B.refz = 0.5 * (fs0.B.z + fs1.B.z);
+	psi = 0.5 * (fs0.psi + fs1.psi);
 	tke = 0.5 * (fs0.tke + fs1.tke);
 	omega = 0.5 * (fs0.omega + fs1.omega);
 	mu_t = 0.5 * (fs0.mu_t + fs1.mu_t);
@@ -167,6 +176,7 @@ public:
 	// Accumulate from a clean slate and then divide.
 	vel.refx = 0.0; vel.refy = 0.0; vel.refz = 0.0;
 	B.refx = 0.0; B.refy = 0.0; B.refz = 0.0;
+	psi = 0.0;
 	tke = 0.0;
 	omega = 0.0;
 	mu_t = 0.0;
@@ -179,6 +189,7 @@ public:
 	    B.refx += other.B.x;
 	    B.refx += other.B.x;
 	    B.refx += other.B.x;
+	    psi += other.psi;
 	    tke += other.tke;
 	    omega += other.omega;
 	    mu_t += other.mu_t;
@@ -187,6 +198,7 @@ public:
 	}
 	vel /= n;
 	B /= n;
+	psi /= n;
 	tke /= n;
 	omega /= n;
 	mu_t /= n;
@@ -201,6 +213,7 @@ public:
 	repr ~= "gas=" ~ to!string(gas);
 	repr ~= ", vel=" ~ to!string(vel);
 	repr ~= ", B=" ~ to!string(B);
+	repr ~= ", psi=" ~ to!string(psi);
 	repr ~= ", tke=" ~ to!string(tke);
 	repr ~= ", omega=" ~ to!string(omega);
 	repr ~= ", mu_t=" ~ to!string(mu_t);
@@ -232,6 +245,7 @@ public:
 	formattedWrite(writer, ", \"Bx\": %.12e", B.x);
 	formattedWrite(writer, ", \"By\": %.12e", B.y);
 	formattedWrite(writer, ", \"Bz\": %.12e", B.z);
+	formattedWrite(writer, ", \"psi\": %.12e", psi);
 	formattedWrite(writer, ", \"tke\": %.12e", tke);
 	formattedWrite(writer, ", \"omega\": %.12e", omega);
 	formattedWrite(writer, ", \"mu_t\": %.12e", mu_t);
@@ -289,6 +303,8 @@ string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) 
 		   fs.vel.x, fs.vel.y, fs.vel.z);
     if (GlobalConfig.MHD)
 	formattedWrite(writer, " %.12e %.12e %.12e", fs.B.x, fs.B.y, fs.B.z);
+	if (GlobalConfig.divergence_cleaning)
+	   formattedWrite(writer, " %.12e", fs.psi);
     if (GlobalConfig.include_quality)
 	formattedWrite(writer, " %.12e", fs.gas.quality);
     formattedWrite(writer, " %.12e %.12e %.12e", fs.gas.p, fs.gas.a, fs.gas.mu);
