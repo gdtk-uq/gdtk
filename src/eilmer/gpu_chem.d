@@ -8,6 +8,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 
+import fvcore: FlowSolverException;
 import globalconfig;
 import globaldata;
 import fvcell;
@@ -180,7 +181,7 @@ public:
 	string fname = openCLProgName;
 	FILE *fp = fopen(fname.toStringz, "r");
 	if ( fp == null ) {
-	    throw new Error("ERROR: Failed to open gpu chemistry kernel.");
+	    throw new FlowSolverException("ERROR: Failed to open gpu chemistry kernel.");
 	}
 	char* programSource = cast(char*) malloc(MAX_SOURCE_SIZE);
 	size_t sourceSize = fread(programSource, 1, MAX_SOURCE_SIZE, fp);

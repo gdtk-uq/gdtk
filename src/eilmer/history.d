@@ -13,6 +13,7 @@ import std.file;
 import std.array;
 import std.format;
 
+import fvcore;
 import globalconfig;
 import globaldata;
 import fvcell;
@@ -30,7 +31,7 @@ void init_history_cell_files()
 	    string errMsg = "ERROR: init_history_cells()\n";
 	    errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
 	    errMsg ~= format("This block only has %d cells.\n", gasBlocks[blkId].cells.length);
-	    throw new Error(errMsg);
+	    throw new FlowSolverException(errMsg);
 	}
 	string fname = format("%s/%s-blk-%d-cell-%d.dat", 
 			      histDir, GlobalConfig.base_file_name, blkId, cellId);

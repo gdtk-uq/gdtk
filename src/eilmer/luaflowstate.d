@@ -164,7 +164,7 @@ The value should be a number.`;
 	    errMsg = "ERROR: in call to FlowState:new{}.\n";
 	    errMsg ~= format("You are using a multi-component gas with n_species= %d\n", nsp);
 	    errMsg ~= "However, you have not set any mass fraction values.\n";
-	    throw new Error(errMsg);
+	    throw new LuaInputException(errMsg);
 	}
     }
     else if ( lua_istable(L, -1) ) {

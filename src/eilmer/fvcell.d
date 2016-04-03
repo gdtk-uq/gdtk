@@ -276,11 +276,13 @@ public:
     {
 	auto gmodel = myConfig.gmodel;
 	size_t n = others.length;
-	if (n == 0) throw new Error("Need to average from a nonempty array.");
+	if (n == 0) throw new FlowSolverException("Need to average from a nonempty array.");
 	FlowState[] fsList;
 	// We need to be honest and not to fiddle with the other gas states.
 	foreach(other; others) {
-	    if ( this is other ) throw new Error("Must not include destination in source list.");
+	    if ( this is other ) {
+		throw new FlowSolverException("Must not include destination in source list.");
+	    }
 	    fsList ~= cast(FlowState)other.fs;
 	}
 	fs.copy_average_values_from(fsList, gmodel);
@@ -460,7 +462,7 @@ public:
 	    writeln("  cell-id= ", id, " x= ", pos[gtl].x, " y= ", pos[gtl].y, " z= ", pos[gtl].z);
 	    writeln("  gas= ", fs.gas);
 	    writeln("  U= ", myU);
-	    throw new Error("Bad cell, give up.");
+	    throw new FlowSolverException("Bad cell, give up.");
 	}
 	double rho = myU.mass;
 	fs.gas.rho = rho; // This is limited to nonnegative and finite values.
@@ -523,7 +525,7 @@ public:
 	    msg ~= format("The decode_conserved() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
-	    throw new Error(msg);
+	    throw new FlowSolverException(msg);
 	}
 	gmodel.update_sound_speed(fs.gas);
 	if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
@@ -955,7 +957,7 @@ public:
 	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
-	    throw new Error(msg);
+	    throw new FlowSolverException(msg);
 	}
 
 	// The update only changes mass fractions; we need to impose
@@ -970,7 +972,7 @@ public:
 	    msg ~= "This failure occurred when trying to update the thermo state after\n";
 	    msg ~= "computing the species change due to chemical reactions.\n";
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
-	    throw new Error(msg);
+	    throw new FlowSolverException(msg);
 	}
 
 	// If we are doing a viscous sim, we'll need to ensure

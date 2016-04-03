@@ -139,16 +139,19 @@ public:
     {
 	grid = new UnstructuredGrid(gridFileName, "gziptext");
 	if (grid.nvertices != nvertices) {
-	    throw new Error(format("UnstructuredGrid: incoming grid has %d vertices " ~
-				   "but expected %d vertices.", grid.nvertices, nvertices));
+	    string msg = format("UnstructuredGrid: incoming grid has %d vertices " ~
+				"but expected %d vertices.", grid.nvertices, nvertices);
+	    throw new FlowSolverException(msg);
 	}
 	if (grid.nfaces != nfaces) {
-	    throw new Error(format("UnstructuredGrid: incoming grid has %d faces " ~
-				   "but expected %d faces.", grid.nfaces, nfaces));
+	    string msg = format("UnstructuredGrid: incoming grid has %d faces " ~
+				"but expected %d faces.", grid.nfaces, nfaces);
+	    throw new FlowSolverException(msg);
 	}
 	if (grid.ncells != ncells) {
-	    throw new Error(format("UnstructuredGrid: incoming grid has %d cells " ~
-				   "but expected %d cells.", grid.ncells, ncells));
+	    string msg = format("UnstructuredGrid: incoming grid has %d cells " ~
+				"but expected %d cells.", grid.ncells, ncells);
+	    throw new FlowSolverException(msg);
 	}
 	// Assemble array storage for finite-volume cells, etc.
 	foreach (i, v; grid.vertices) {
@@ -180,9 +183,10 @@ public:
 	    }
 	    auto nf = grid.cells[i].face_id_list.length;
 	    if (nf != grid.cells[i].outsign_list.length) {
-		throw new Error(format("Mismatch in face_id_list, outsign_list lengths: %d %d",
-				       grid.cells[i].face_id_list.length,
-				       grid.cells[i].outsign_list.length));
+		string msg = format("Mismatch in face_id_list, outsign_list lengths: %d %d",
+				    grid.cells[i].face_id_list.length,
+				    grid.cells[i].outsign_list.length);
+		throw new FlowSolverException(msg);
 	    }
 	    foreach (j; 0 .. nf) {
 		auto my_face = faces[grid.cells[i].face_id_list[j]];
@@ -203,21 +207,22 @@ public:
 		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
 		msg ~= " right_cells= ";
 		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
-		throw new Error(msg);
+		throw new FlowSolverException(msg);
 	    }
 	}
 	// Work through the faces on the boundaries and add ghost cells.
 	if (nboundaries != grid.nboundaries) {
-	    throw new Error(format("Mismatch in number of boundaries: %d %d",
-				   nboundaries, grid.nboundaries));
+	    string msg = format("Mismatch in number of boundaries: %d %d",
+				nboundaries, grid.nboundaries);
+	    throw new FlowSolverException(msg);
 	}
 	size_t ghost_cell_count = 0;
 	foreach (i, bndry; grid.boundaries) {
 	    auto nf = bndry.face_id_list.length;
 	    if (nf != bndry.outsign_list.length) {
-		throw new Error(format("Mismatch in face_id_list, outsign_list lengths: %d %d",
-				       bndry.face_id_list.length,
-				       bndry.outsign_list.length));
+		string msg = format("Mismatch in face_id_list, outsign_list lengths: %d %d",
+				    bndry.face_id_list.length, bndry.outsign_list.length);
+		throw new FlowSolverException(msg);
 	    }
 	    foreach (j; 0 .. nf) {
 		FVInterface my_face = faces[bndry.face_id_list[j]];
@@ -269,7 +274,7 @@ public:
 		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
 		msg ~= " right_cells= ";
 		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
-		throw new Error(msg);
+		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
 	// For each side of a face with a single attached finite-volume cell,
@@ -329,7 +334,7 @@ public:
 		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
 		msg ~= " right_cells= ";
 		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
-		throw new Error(msg);
+		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
     } // end init_grid_and_flow_arrays()
@@ -350,7 +355,7 @@ public:
 		default:
 		    string msg = "compute_primary_cell_geometric_data(): ";
 		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
-		    throw new Error(msg);
+		    throw new FlowSolverException(msg);
 		} // end switch
 		// Cell Volume.
 		if ( myConfig.axisymmetric ) {
@@ -361,8 +366,9 @@ public:
 		    vol = xyplane_area;
 		}
 		if (vol < 0.0) {
-		    throw new Error(text("Negative cell volume: Block ", id,
-					 " vol for cell[", i, "]= ", vol));
+		    string msg = text("Negative cell volume: Block ", id,
+				      " vol for cell[", i, "]= ", vol);
+		    throw new FlowSolverException(msg);
 		}
 		cell.volume[gtl] = vol;
 		cell.areaxy[gtl] = xyplane_area;
@@ -417,7 +423,7 @@ public:
 		default:
 		    string msg = "compute_primary_cell_geometric_data() cells: ";
 		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
-		    throw new Error(msg);
+		    throw new FlowSolverException(msg);
 		} // end switch
 	    } // end foreach cell
 	    // Face geometry in 3D.
@@ -431,7 +437,7 @@ public:
 		default:
 		    string msg = "compute_primary_cell_geometric_data(), faces: ";
 		    msg ~= format("Unhandled number of vertices: %d", f.vtx.length);
-		    throw new Error(msg);
+		    throw new FlowSolverException(msg);
 		} // end switch	    
 	    } // end foreach f
 	} // end if myConfig.dimensions
@@ -486,14 +492,14 @@ public:
 
     override void read_grid(string filename, size_t gtl=0)
     {
-	throw new Error("read_grid function NOT implemented for unstructured grid.");
+	throw new FlowSolverException("read_grid function NOT implemented for unstructured grid.");
     }
 
     override void write_grid(string filename, double sim_time, size_t gtl=0)
     // Note that we reuse the StructuredGrid object that was created on the
     // use of read_grid().
     {
-	throw new Error("write_grid function not yet implemented for unstructured grid.");
+	throw new FlowSolverException("write_grid function not yet implemented for unstructured grid.");
 	// [TODO]
     } // end write_grid()
 
@@ -511,8 +517,9 @@ public:
 	string format_version;
 	formattedRead(line, "unstructured_grid_flow %s", &format_version);
 	if (format_version != "1.0") {
-	    throw new Error("UBlock.read_solution(): " ~
-			    "format version found: " ~ format_version); 
+	    string msg = text("UBlock.read_solution(): " ~ "format version found: "
+			      ~ format_version);
+	    throw new FlowSolverException(msg); 
 	}
 	string myLabel;
 	line = byLine.front; byLine.popFront();
@@ -532,8 +539,9 @@ public:
 	size_t nc;
 	formattedRead(line, "ncells: %d", &nc);
 	if (nc != ncells) {
-	    throw new Error(text("For block[", id, "] we have a mismatch in solution size.",
-				 " Have read nc=", nc, " ncells=", ncells));
+	    string msg = text("For block[", id, "] we have a mismatch in solution size.",
+			      " Have read nc=", nc, " ncells=", ncells);
+	    throw new FlowSolverException(msg);
 	}	
 	foreach (i; 0 .. ncells) {
 	    line = byLine.front; byLine.popFront();
@@ -611,8 +619,9 @@ public:
 
     override void propagate_inflow_data_west_to_east()
     {
-	throw new Error("propagate_inflow_data_west_to_east() " ~ 
-			"function not implemented for unstructured grid.");
+	string msg = "propagate_inflow_data_west_to_east() " ~ 
+	    "function not implemented for unstructured grid.";
+	throw new FlowSolverException(msg);
     }
 
     override void convective_flux()
@@ -627,9 +636,9 @@ public:
     version(steadystate) {
     override void computeJacobian()
     {
-	throw new Error("ERROR: computeJacobian not implemented for UBlock.");
+	throw new FlowSolverException("ERROR: computeJacobian not implemented for UBlock.");
     }
-    }
+    } // end version(steadystate)
 
     @nogc
     override void copy_into_ghost_cells(int destination_face,

@@ -19,6 +19,7 @@ import std.algorithm;
 import std.bitmanip;
 import std.stdint;
 import gzip;
+import fvcore;
 import fileutil;
 import geom;
 import sgrid;
@@ -126,7 +127,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     } // end if vtkxml
     //
     if (tecplotFlag) {
-	throw new Error("Tecplot output not currently available.");
+	throw new FlowSolverException("Tecplot output not currently available.");
 	// writeln("writing Tecplot file(s) to directory \"", plotDir, "\"");
 	// foreach (tindx; tindx_list_to_plot) {
 	//     writeln("  tindx= ", tindx);
@@ -477,8 +478,9 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     bool two_D = (grid.dimensions == 2);
     size_t NumberOfPoints = grid.nvertices;
     if (flow.ncells != grid.ncells) {
-	throw new Error(text("Mismatch between grid and flow grid.ncells=",
-			     grid.ncells, " flow.ncells=", flow.ncells));
+	string msg = text("Mismatch between grid and flow grid.ncells=",
+			  grid.ncells, " flow.ncells=", flow.ncells);
+	throw new FlowSolverException(msg);
     }
     size_t NumberOfCells = flow.ncells;
     fp.write("<VTKFile type=\"UnstructuredGrid\" byte_order=\"BigEndian\">\n");

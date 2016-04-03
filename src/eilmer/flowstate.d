@@ -19,6 +19,7 @@ import json_helper;
 import gzip;
 import geom;
 import gas;
+import fvcore;
 import fvcell;
 import sgrid;
 import usgrid;
@@ -162,13 +163,13 @@ public:
     // Involves some memory allocation.
     {
 	size_t n = others.length;
-	if (n == 0) throw new Error("Need to average from a nonempty array.");
+	if (n == 0) throw new FlowSolverException("Need to average from a nonempty array.");
 	GasState[] gasList;
 	// Note that, because we cast away their "const"ness,
 	// we need to be honest and not to fiddle with the other gas states.
 	foreach(other; others) {
 	    if ( this is other ) {
-		throw new Error("Must not include destination in source list.");
+		throw new FlowSolverException("Must not include destination in source list.");
 	    }
 	    gasList ~= cast(GasState)other.gas;
 	}

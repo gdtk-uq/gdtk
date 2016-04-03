@@ -58,7 +58,8 @@ public:
 	    string label;
 	    formattedRead(listFileLine, " %d %s %s", &ib_chk, &gridTypeName, &label);
 	    if (ib != ib_chk) {
-		throw new Error(format("Reading .list file ib=%d ib_chk=%d", ib, ib_chk));
+		string msg = format("Reading .list file ib=%d ib_chk=%d", ib, ib_chk);
+		throw new FlowSolverException(msg);
 	    }
 	    auto gridType = gridTypeFromName(gridTypeName);
 	    string fileName;
@@ -128,7 +129,7 @@ public:
 	if ( luaL_dofile(L, toStringz(fileName)) != 0 ) {
 	    writeln("Problem in the user-supplied Lua script: ", fileName);
 	    string errMsg = to!string(lua_tostring(L, -1));
-	    throw new Error(errMsg);
+	    throw new FlowSolverException(errMsg);
 	}
 	foreach (ib; 0 .. nBlocks) {
 	    flowBlocks[ib].subtract_ref_soln(L);
@@ -234,8 +235,9 @@ public:
 	    formattedRead(line, "unstructured_grid_flow %s", &format_version);
 	}
 	if (format_version != "1.0") {
-	    throw new Error("BlockFlow.read_solution(): " ~
-			    "format version found: " ~ format_version); 
+	    string msg = text("BlockFlow.read_solution(): " ~
+			      "format version found: " ~ format_version);
+	    throw new FlowSolverException(msg); 
 	}
 	string myLabel;
 	line = byLine.front; byLine.popFront();

@@ -243,8 +243,9 @@ public:
 	    writefln("assemble_arrays(): Begin for block %d", id);
 	// Check for obvious errors.
 	if ( _nidim <= 0 || _njdim <= 0 || _nkdim <= 0 ) {
-	    throw new Error(text("resize_arrays(): invalid dimensions nidim=",
-				 _nidim, " njdim=", _njdim, " nkdim=", _nkdim));
+	    string msg = text("resize_arrays(): invalid dimensions nidim=",
+			      _nidim, " njdim=", _njdim, " nkdim=", _nkdim);
+	    throw new FlowSolverException(msg);
 	}
 	size_t ntot = _nidim * _njdim * _nkdim;
 	try {
@@ -320,14 +321,14 @@ public:
 		    }
 		}
 	    } // end if dimensions
-	} catch (Error err) {
+	} catch (Exception e) {
 	    writeln("Failed while assembling block arrays.");
 	    writefln("nicell=%d njcell=%d nkcell=%d", nicell, njcell, nkcell);
 	    writefln("nidim=%d njdim=%d nkdim=%d", _nidim, _njdim, _nkdim);
 	    writeln("Probably ran out of memory.");
 	    writeln("Be a little less ambitious and try a smaller grid next time.");
-	    writefln("System message: %s", err.msg);
-	    throw new Error("Block.assemble_arrays() failed.");
+	    writefln("System message: %s", e.msg);
+	    throw new FlowSolverException("Block.assemble_arrays() failed.");
 	}
 	if ( myConfig.verbosity_level >= 2 ) {
 	    writefln("Done assembling arrays for %d cells.", ntot);
@@ -787,8 +788,9 @@ public:
 		    vol = xyplane_area; // Assume unit depth in the z-direction.
 		}
 		if (vol < 0.0) {
-		    throw new Error(text("Negative cell volume: Block ", id,
-					 " vol for cell[", i, " ,", j, "]= ", vol));
+		    string msg = text("Negative cell volume: Block ", id,
+				      " vol for cell[", i, " ,", j, "]= ", vol);
+		    throw new FlowSolverException(msg);
 		}
 		cell.volume[gtl] = vol;
 		cell.areaxy[gtl] = xyplane_area;
@@ -1749,9 +1751,9 @@ public:
 	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
 	if ( myConfig.dimensions == 3 ) {
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
-		throw new Error(text("For block[", id, "] we have a mismatch in 3D grid size.",
-                                     " Have read nivtx=", nivtx, " njvtx=", njvtx,
-				     " nkvtx=", nkvtx));
+		string msg = text("For block[", id, "] we have a mismatch in 3D grid size.",
+				  " Have read nivtx=", nivtx, " njvtx=", njvtx, " nkvtx=", nkvtx);
+		throw new FlowSolverException(msg);
 	    }
 	    for ( size_t k = kmin; k <= kmax+1; ++k ) {
 		for ( size_t j = jmin; j <= jmax+1; ++j ) {
@@ -1766,9 +1768,9 @@ public:
 	    } // for k
 	} else { // 2D case
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx != 1 ) {
-		throw new Error(text("For block[", id, "] we have a mismatch in 2D grid size.",
-				     " Have read nivtx=", nivtx, " njvtx=", njvtx,
-				     " nkvtx=", nkvtx));
+		string msg = text("For block[", id, "] we have a mismatch in 2D grid size.",
+				  " Have read nivtx=", nivtx, " njvtx=", njvtx, " nkvtx=", nkvtx);
+		throw new FlowSolverException(msg);
 	    }
 	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
 		for ( size_t i = imin; i <= imax+1; ++i ) {
@@ -1824,8 +1826,8 @@ public:
 	string format_version;
 	formattedRead(line, "structured_grid_flow %s", &format_version);
 	if (format_version != "1.0") {
-	    throw new Error("SBlock.read_solution(): " ~
-			    "format version found: " ~ format_version); 
+	    string msg = text("File format version found: " ~ format_version);
+	    throw new FlowSolverException(msg); 
 	}
 	line = byLine.front; byLine.popFront();
 	string myLabel;
@@ -1840,15 +1842,15 @@ public:
 	auto variable_list = line.strip().split();
 	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel);
 	if (variable_list.length != expected_variable_list.length) {
-	    throw new Error("SBlock.read_solution(): mismatch in variable lists");
+	    throw new FlowSolverException("Mismatch in variable lists");
 	}
 	// [TODO] We should test the incoming strings against the current variable names.
 	line = byLine.front; byLine.popFront();
 	size_t my_dimensions, nic, njc, nkc;
 	formattedRead(line, "dimensions: %d", &my_dimensions);
 	if (my_dimensions != myConfig.dimensions) {
-	    throw new Error("SBlock.read_solution(): " ~
-			    "dimensions found: " ~ to!string(my_dimensions));
+	    string msg = text("dimensions found: " ~ to!string(my_dimensions));
+	    throw new FlowSolverException(msg);
 	}
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "nicell: %d", &nic);
@@ -1858,8 +1860,9 @@ public:
 	formattedRead(line, "nkcell: %d", &nkc);
 	if (nic != nicell || njc != njcell || 
 	    nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
-	    throw new Error(text("For block[", id, "] we have a mismatch in solution size.",
-				 " Have read nic=", nic, " njc=", njc, " nkc=", nkc));
+	    string msg = text("For block[", id, "] we have a mismatch in solution size.",
+			      " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
+	    throw new FlowSolverException(msg);
 	}	
 	for ( size_t k = kmin; k <= kmax; ++k ) {
 	    for ( size_t j = jmin; j <= jmax; ++j ) {
@@ -2168,7 +2171,7 @@ public:
 	    
 	}
 	else {
-	    throw new Error("computeJacobian() not implemented for 3D.");
+	    throw new FlowSolverException("computeJacobian() not implemented for 3D.");
 	}
 
     } // end computeJacobian()
@@ -2941,7 +2944,7 @@ private:
 	    }
 	}
 	else {
-	    throw new Error("initialiseJacobianEntries() not implemented for 3D.");
+	    throw new FlowSolverException("initialiseJacobianEntries() not implemented for 3D.");
 	}
 
     }

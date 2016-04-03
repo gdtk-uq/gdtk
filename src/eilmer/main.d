@@ -21,6 +21,7 @@ import gas;
 import gas.luagas_model;
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
+import fvcore: FlowSolverException;
 import globalconfig;
 import simcore;
 import util.lua;
@@ -169,17 +170,17 @@ void main(string[] args)
 	if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
 	    writeln("There was a problem in the Eilmer Lua code: prep.lua");
 	    string errMsg = to!string(lua_tostring(L, -1));
-	    throw new Error(errMsg);
+	    throw new FlowSolverException(errMsg);
 	}
 	if ( luaL_dofile(L, toStringz(jobName~".lua")) != 0 ) {
 	    writeln("There was a problem in the user-supplied input lua script: ", jobName~".lua");
 	    string errMsg = to!string(lua_tostring(L, -1));
-	    throw new Error(errMsg);
+	    throw new FlowSolverException(errMsg);
 	}
 	if ( luaL_dostring(L, toStringz("build_job_files(\""~jobName~"\")")) != 0 ) {
 	    writeln("There was a problem in the Eilmer build function build_job_files() in prep.lua");
 	    string errMsg = to!string(lua_tostring(L, -1));
-	    throw new Error(errMsg);
+	    throw new FlowSolverException(errMsg);
 	}
 	writeln("Done preparation.");
     } // end if prepFlag
@@ -284,7 +285,7 @@ void main(string[] args)
 	if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
 	    writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
 	    string errMsg = to!string(lua_tostring(L, -1));
-	    throw new Error(errMsg);
+	    throw new FlowSolverException(errMsg);
 	}
 	writeln("Done custom postprocessing.");
     } // end if customPostFlag

@@ -10,6 +10,14 @@ module fvcore;
 
 import std.conv;
 
+class FlowSolverException : Exception {
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+	 Throwable next=null)
+    {
+	super(message, file, line, next);
+    }
+}
+
 // Symbolic names for the time-stepping schemes used to update the gasdynamic eqn.
 enum GasdynamicUpdate {
     euler, 
@@ -83,7 +91,8 @@ GasdynamicUpdate update_scheme_from_name(string name)
     case "moving_grid_2_stage": return GasdynamicUpdate.moving_grid_2_stage;
     case "moving-grid-2-stage": return GasdynamicUpdate.moving_grid_2_stage;
     default:
-	throw new Error(text("Invalid gasdynamic update scheme name:", name));
+	string msg = text("Invalid gasdynamic update scheme name:", name);
+	throw new FlowSolverException(msg);
     }
 }  // end scheme_from_name()
 
@@ -173,7 +182,8 @@ FluxCalculator flux_calculator_from_name(string name)
     case "adaptive": return FluxCalculator.adaptive;
     case "hlle": return FluxCalculator.hlle;
     default:
-	throw new Error(text("Invalid flux calculator name:", name));
+	string msg = text("Invalid flux calculator name:", name);
+	throw new FlowSolverException(msg);
     }
 }
 
@@ -197,6 +207,7 @@ SpatialDerivCalc spatial_deriv_calc_from_name(string name)
     case "least_squares": return SpatialDerivCalc.least_squares;
     case "divergence": return SpatialDerivCalc.divergence;
     default:
-	throw new Error(text("Invalid spatial-derivative calculator name:", name));
+	string msg = text("Invalid spatial-derivative calculator name:", name);
+	throw new FlowSolverException(msg);
     }
 }

@@ -9,6 +9,7 @@ import std.conv;
 import std.array;
 import std.format;
 import std.string;
+import fvcore: FlowSolverException;
 
 
 string make_path_name(string mytype)(int tindx)
@@ -37,6 +38,7 @@ void ensure_directory_is_present(string dir_name)
     try {
 	mkdirRecurse(dir_name);
     } catch (FileException e) {
-	throw new Error(text("Failed to ensure directory is present: ", dir_name));
+	string msg = text("Failed to ensure directory is present: ", dir_name);
+	throw new FlowSolverException(msg);
     }
 }

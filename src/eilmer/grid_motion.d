@@ -7,6 +7,7 @@ import std.conv;
 import util.lua;
 import util.lua_service;
 import lua_helper;
+import fvcore;
 import globalconfig;
 import globaldata;
 import luageom;
@@ -176,6 +177,6 @@ void assign_vertex_velocities_via_udf(double sim_time)
     if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
         string errMsg = "ERROR: while running user-defined function assignVtxVelocities()\n";
 	errMsg ~= to!string(lua_tostring(L, -1));
-	throw new Error(errMsg);
+	throw new FlowSolverException(errMsg);
     }
 }

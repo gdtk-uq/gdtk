@@ -165,17 +165,17 @@ void march_over_blocks()
 	string errMsg = text("march_over_blocks(): inconsistent numbers of blocks\n",
 			     "    nBlocks=", GlobalConfig.nBlocks,
 			     " nib=", nib, " njb=", njb, " nkb=", nkb);
-	throw new Error(errMsg);
+	throw new FlowSolverException(errMsg);
     }
     if (nkb != 1 && GlobalConfig.dimensions == 2) {
 	string errMsg = text("march_over_blocks(): for 2D flow, expected nkb=1\n",
 			     "    nkb=", nkb);
-	throw new Error(errMsg);
+	throw new FlowSolverException(errMsg);
     }
     if (nib < 2) {
 	string errMsg = text("march_over_blocks(): expected nib>=2\n",
 			     "    nib=", nib);
-	throw new Error(errMsg);
+	throw new FlowSolverException(errMsg);
     }
     Block[][][] gasBlockArray;
     gasBlockArray.length = nib;

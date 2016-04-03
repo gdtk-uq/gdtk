@@ -190,9 +190,9 @@ public:
 	    foreach (cell; cells) cell.turbulence_viscosity_zero();
 	    return;
 	case TurbulenceModel.baldwin_lomax:
-	    throw new Error("need to port baldwin_lomax_turbulence_model");
+	    throw new FlowSolverException("need to port baldwin_lomax_turbulence_model");
 	case TurbulenceModel.spalart_allmaras:
-	    throw new Error("Should implement Spalart-Allmaras some day.");
+	    throw new FlowSolverException("Should implement Spalart-Allmaras some day.");
 	case TurbulenceModel.k_omega:
 	    foreach (cell; cells) cell.turbulence_viscosity_k_omega();
 	    break;
@@ -269,9 +269,10 @@ public:
 			if (other_cell.fs.check_data(other_cell.pos[0])) neighbour_flows ~= other_cell.fs;
 		    }
 		    if (neighbour_flows.length == 0) {
-			throw new Error(text("Block::count_invalid_cells(): " ~
-					     "There were no valid neighbours " ~
-					     "to replace flow data in cell."));
+			string msg = text("Block::count_invalid_cells(): " ~
+					  "There were no valid neighbours " ~
+					  "to replace flow data in cell.");
+			throw new FlowSolverException(msg);
 		    }
 		    cell.fs.copy_average_values_from(neighbour_flows, myConfig.gmodel);
 		    cell.encode_conserved(gtl, 0, omegaz);
@@ -488,7 +489,8 @@ public:
 	    writeln( "    in the size of the initial time-step, dt");
 	    writeln( "    If this job is a restart/continuation of an old job, look in");
 	    writeln( "    the old-job.finish file for the value of dt at termination.");
-	    throw new Error(text("Bad cfl number encountered cfl_max=", cfl_max));
+	    string msg = text("Bad cfl number encountered cfl_max=", cfl_max);
+	    throw new FlowSolverException(msg);
 	}
 	return dt_allow;
     } // end determine_time_step_size()
