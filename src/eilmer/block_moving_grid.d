@@ -139,7 +139,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
     }
    
     // let's give the shock some time to form before searching for it
-    if (sim_time < GlobalConfig.shock_fitting_delay || blk.bc[Face.west].type != "\"inflow_shock_fitting\"") return;
+    if (sim_time < GlobalConfig.shock_fitting_delay || blk.bc[Face.west].type != "inflow_shock_fitting") return;
     // inflow is a reference to a duplicated flow state, it should be treated as read-only (do not alter)
     auto constFluxEffect = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     auto inflow = constFluxEffect.fstate;
@@ -159,7 +159,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 	     ++ The following code determines the vertex position and then applies the necessary method.
 	     ++/
 	    // if vtx is on block edge then grab cell data from neighbour block
-	    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"") {
+	    if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
 	        auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
 	        int neighbourBlock =  ffeBC.neighbourBlock.id;
 		cell_botrght =
@@ -168,7 +168,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 	    else // else grab data from neighbour cell in current block
 		cell_botrght = blk.get_cell(i, j-1, k);
 	    // if vtx is on block edge then grab cell data from neighbour block
-	    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"") {
+	    if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
 		auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
 		int neighbourBlock =  ffeBC.neighbourBlock.id;
 		cell_toprght =
@@ -177,7 +177,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 	    else // else grab data from neighbour cell in current block
 		cell_toprght = blk.get_cell(i, j, k);            
 	    if (reconstruction_higher_order) { 
-		if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"") {
+		if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
 		    // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
 		    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
 		    int neighbourBlock =  ffeBC.neighbourBlock.id;
@@ -190,7 +190,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 		    bot_cell_R1 = blk.get_cell(i+1, j-1, k);
 		    bot_cell_R2 = blk.get_cell(i+2, j-1, k);
 		}
-		if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"") {
+		if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
 		    // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
 		    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
 		    int neighbourBlock =  ffeBC.neighbourBlock.id;
@@ -215,17 +215,17 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 	    // using stored data estimate a value for rho
 	    // NB: if on flow domain boundary then just use the first internal cell to estimate rho
 	    if (reconstruction_higher_order) { // use reconstruction
-		if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"")
+		if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face")
 		    rho = rho_recon_top;
-		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"")
+		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face")
 		    rho = rho_recon_bottom;
 		else
 		    rho = 0.5*(rho_recon_top + rho_recon_bottom);
 	    }
 	    else { // use 0th order
-		if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"")
+		if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face")
 		    rho = cell_toprght.fs.gas.rho;
-		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"")
+		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face")
 		    rho = cell_botrght.fs.gas.rho;
 		else
 		    rho = 0.5*(cell_toprght.fs.gas.rho+cell_botrght.fs.gas.rho);
@@ -249,13 +249,13 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 		    // For the case where two blocks connect (either on the south or north faces) we need to reach across to the neighbour block and
 		    // retrieve the neighbouring vertex and interface to ensure the vertices on the connecting interface move together and
 		    // do not move independently
-		    if (j == blk.jmin && blk.bc[Face.south].type =="\"exchange_over_full_face\"" && jOffSet == 1) {
+		    if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face" && jOffSet == 1) {
 			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
 			int neighbourBlock =  ffeBC.neighbourBlock.id;
 			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
 			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
 		    }
-		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="\"exchange_over_full_face\"" && jOffSet == 0) {
+		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face" && jOffSet == 0) {
 			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
 			int neighbourBlock =  ffeBC.neighbourBlock.id;
 			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
@@ -310,9 +310,9 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
 		    if (M <= 1.0) w[jOffSet] = ((M+1)*(M+1)+(M+1)*abs(M+1))/8.0;
 		    else w[jOffSet] = M;
 		}
-		if (j == blk.jmin && blk.bc[Face.south].type != "\"exchange_over_full_face\"") // south boundary vertex has no bottom neighbour
+		if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face") // south boundary vertex has no bottom neighbour
 		  w[1] = 0.0, interface_ws[1] = Vector3(0.0, 0.0, 0.0);
-		if (j == blk.jmax+1 && blk.bc[Face.north].type != "\"exchange_over_full_face\"") // north boundary vertex has no top neighbour
+		if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face") // north boundary vertex has no top neighbour
 		  w[0] = 0.0, interface_ws[0] = Vector3(0.0, 0.0, 0.0);
 		// now that we have the surrounding interface velocities, let's combine them to approximate the central vertex velocity
 		if (abs(w[0]) < 1.0e-10 && abs(w[1]) < 1.0e-10) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average

@@ -32,9 +32,9 @@ import user_defined_effects;
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
     auto newBC = new BoundaryCondition(blk_id, boundary);
-    newBC.label = to!string(jsonData["label"]);
-    newBC.type = to!string(jsonData["type"]);
-    newBC.group = to!string(jsonData["group"]);
+    newBC.label = getJSONstring(jsonData, "label", "");
+    newBC.type = getJSONstring(jsonData, "type", "");
+    newBC.group = getJSONstring(jsonData, "group", "");
     newBC.is_wall = getJSONbool(jsonData, "is_wall", true);
     newBC.ghost_cell_data_available = getJSONbool(jsonData, "ghost_cell_data_available", true);
     newBC.convective_flux_computed_in_bc = getJSONbool(jsonData, "convective_flux_computed_in_bc", false);
