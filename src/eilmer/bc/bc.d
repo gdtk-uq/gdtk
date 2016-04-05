@@ -124,8 +124,8 @@ public:
     {
 	char[] repr;
 	repr ~= "BoundaryCondition(";
-	repr ~= "label= " ~ label ~ ", type= " ~ type ~ ", group= " ~ group;
-	repr ~= ", is_wall= " ~ to!string(is_wall);
+	repr ~= "label= \"" ~ label ~ "\", type= \"" ~ type ~ "\", group= \"" ~ group;
+	repr ~= "\", is_wall= " ~ to!string(is_wall);
 	repr ~= ", ghost_cell_data_available= " ~ to!string(ghost_cell_data_available);
 	repr ~= ", convective_flux_computed_in_bc= " ~ to!string(convective_flux_computed_in_bc);
 	if ( preReconAction.length > 0 ) {

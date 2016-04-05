@@ -168,7 +168,7 @@ public:
 	char[] repr;
 	repr ~= "SBlock(";
 	repr ~= "id=" ~ to!string(id);
-	repr ~= " label=\"" ~ label ~ "\"";
+	repr ~= ", label=\"" ~ label ~ "\"";
 	repr ~= ", active=" ~ to!string(active);
 	repr ~= ", grid_type=\"" ~ gridTypeName(grid_type) ~ "\"";
 	repr ~= ", omegaz=" ~ to!string(omegaz);
