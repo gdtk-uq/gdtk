@@ -1150,14 +1150,10 @@ public:
     double divergence_damping_factor(double dt)
     //Divergence factor factor used to scale the cleaning factor psi after each timestep.
     {
-	/*
-	double c_h2 = c_h * c_h;
-	double c_p2 = 0.18 * GlobalConfig.divB_damping_length * c_h;
+	double c_h2 = GlobalConfig.c_h * GlobalConfig.c_h;
+	double c_p2 = 0.18 * GlobalConfig.divB_damping_length *GlobalConfig.c_h;
 	
 	return exp(-(c_h2 / c_p2) * dt);
-	*/
-	return 1.0;
-	// [FIXME] Lachlan Whyborn: Temporary until I work out how to best implement divB_damping_length
     }
 
     @nogc

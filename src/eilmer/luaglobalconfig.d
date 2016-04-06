@@ -82,7 +82,14 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "divergence_cleaning");
     }
     lua_pop(L, 1);
-    
+
+    lua_getfield(L, 1, "c_h");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.c_h = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "c_h");
+    }
+    lua_pop(L, 1);
+
     lua_getfield(L, 1, "divB_damping_length");
     if (!lua_isnil(L, -1)) {
 	GlobalConfig.divB_damping_length = to!double(luaL_checknumber(L, -1));
@@ -521,6 +528,10 @@ extern(C) int configGet(lua_State* L)
 
     case "divergence_cleaning":
 	lua_pushboolean(L, GlobalConfig.divergence_cleaning);
+	break;
+
+    case "c_h":
+    	lua_pushnumber(L, GlobalConfig.c_h);
 	break;
 
     case "divB_damping_length":

@@ -400,48 +400,34 @@ public:
 	} // for cell
     } // end compute_residuals()
 
-/* [FIXME] Lachlan Whyborn
-    void update_divergence_cleaning(double dt_current)
-    //Update the c_h and damping length values for the divergence cleaning mechanism
+    double update_c_h(double dt_current)
+    //Update the c_h value for the divergence cleaning mechanism
     {
 	//Update the c_h value
 	double min_L_for_block = 1.0;
-	foreach(iface; faces) {
-	   if (iface.n.x < min_L_for_block)
-	      min_L_for_block = iface.n.x;
-	   if (iface.n.y < min_L_for_block)
-	      min_L_for_block = iface.n.y;
+	double cfl_local, cfl_max;
+	bool first = true;
+	foreach(FVCell cell; cells) {
+	//Search for the minimum length scale in the block
+	   if (cell.iLength < min_L_for_block)
+	      min_L_for_block = cell.iLength;
+	   if (cell.jLength < min_L_for_block)
+	      min_L_for_block = cell.jLength;
 	   if (GlobalConfig.dimensions == 3)	//Shouldn't be necessary as current HLLE solver does not work in 3D
-	      if (iface.n.z < min_L_for_block)
-	         min_L_for_block = iface.n.z;
+	      if (cell.kLength < min_L_for_block)
+	         min_L_for_block = cell.kLength;
+	//Search for the maximum CFL value in the block
+	  if (first) {
+	     cfl_local = cell.signal_frequency() * dt_current;
+	     cfl_max = cfl_local;
+	     first = false;
+	  } else {
+	     cfl_local = cell.signal_frequency() * dt_current;
+	     cfl_max = fmax(cfl_local, cfl_max);
+	     }
 	}
-	
-	c_h = GlobalConfig.cfl_value * min_L_for_block / dt_current;
-
-	//Update the damping length. This currently wont work with a block completed located outside positive x,y quadrant.
-	Vector3 blk_size = (0.0, 0.0, 0.0);
-	double x_min = 0.0; double y_min = 0.0; double z_min;
-	double x_max = 0.0; double y_max = 0.0; double z_max;
-	//Find the edges of the block domain
-	foreach (FVvell cell; cells) {
-	   if (cell.pos[gtl].x > x_max)
-	      x_max = cell.pos[gtl].x;
-	   elseif (cell.pos[gtl].x < x_min)
-	      x_min = cell.pos[gtl].x;
-	   if (cell.pos[gtl].y > y_max)
-	      y_max = cell.pos[gtl].y;
-	   elseif (cell.pos[gtl].y < y_min)
-	      y_min = cell.pos[gtl].y;
-	   //Ignore 3D component for now
-	}
-	blk_size.refx = x_max - x_min;
-	blk_size.refy = y_max - y_min;
-	blk_size.refz = z_max - z_min;
-
-	divB_damping_length = 1.0 / pi * sqrt(1.0 / blk_size.refx ^ 2  + 1.0 / blk_size.refy ^ 2);
-	
+	return cfl_max * min_L_for_block / dt_current;
     }
-*/
 
     double determine_time_step_size(double dt_current)
     // Compute the local time step limit for all cells in the block.

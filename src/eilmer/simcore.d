@@ -277,15 +277,18 @@ void integrate_in_time(double target_time)
 	} // end if do_cfl_check_now 
 
 	// Update the c_h value for MHD divergence cleaning.
-	// [FIXME] Lachlan Whyborn: not sure if this is the correct place to put it?
-	/*
 	if (GlobalConfig.divergence_cleaning) {
+	    bool first = true;
 	    foreach (blk; gasBlocks) {
 	        if (!blk.active) continue;
-	        blk.update_divergence_cleaning(dt_global);
+	           if (first) {
+		      GlobalConfig.c_h = blk.update_c_h(dt_global);
+		      first = false;
+		   } else {
+		      GlobalConfig.c_h = fmin(blk.update_c_h(dt_global), GlobalConfig.c_h);
+		      }
 	    } 
 	}
-	*/
 
         // 2. Attempt a time step.
 	

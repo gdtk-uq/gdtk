@@ -262,6 +262,7 @@ final class GlobalConfig {
     // Lachlan Whyborn's Divergence cleaning to go with MHD.
     //
     shared static bool divergence_cleaning = false;
+    shared static double c_h = 0.0;
     shared static double divB_damping_length = 1.0;
 
     // Parameters controlling other simulation options
@@ -393,6 +394,7 @@ public:
     bool electric_field_work;
     bool MHD;
     bool divergence_cleaning;
+    double c_h;
     double divB_damping_length;
 
     bool stringent_cfl;
@@ -458,6 +460,7 @@ public:
 	electric_field_work = GlobalConfig.electric_field_work;
 	MHD = GlobalConfig.MHD;
 	divergence_cleaning = GlobalConfig.divergence_cleaning;
+	c_h = GlobalConfig.c_h;
 	divB_damping_length = GlobalConfig.divB_damping_length;
 
 	stringent_cfl = GlobalConfig.stringent_cfl;
