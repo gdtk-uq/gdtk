@@ -70,8 +70,8 @@ void main(string[] args)
 
     double L2_norm = sqrt(sum/total_volume);
 
-    writeln(format("L2-norm = %20.12e", L2_norm));
-    writeln(format("L-inf-norm = %20.12e", LInf_norm));
+    writeln(format("L2-norm = %.16e", L2_norm));
+    writeln(format("L-inf-norm = %.16e", LInf_norm));
 }
 
 double T_analytical(LuaFunction lfunc, double x, double y)

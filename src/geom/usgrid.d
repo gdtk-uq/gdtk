@@ -570,7 +570,7 @@ public:
 	fout.compress(format("dimensions: %d\n", dimensions));
 	fout.compress(format("vertices: %d\n", nvertices));
 	foreach (v; vertices) {
-	    fout.compress(format("%20.16e %20.16e %20.16e\n", v.x, v.y, v.z));
+	    fout.compress(format("%.16e %.16e %.16e\n", v.x, v.y, v.z));
 	}
 	fout.compress(format("faces: %d\n", nfaces));
 	foreach (f; faces) { fout.compress(f.toIOString ~ "\n"); }
@@ -590,7 +590,7 @@ public:
 	f.writeln("");
 	f.writeln("DATASET UNSTRUCTURED_GRID");
 	f.writefln("POINTS %d float", nvertices);
-	foreach (v; vertices) { f.writefln("%20.16e %20.16e %20.16e", v.x, v.y, v.z); }
+	foreach (v; vertices) { f.writefln("%.16e %.16e %.16e", v.x, v.y, v.z); }
 	f.writeln("");
 	int n_ints = 0; // number of integers to describe connections
 	foreach (c; cells) { n_ints += 1 + c.vtx_id_list.length; }

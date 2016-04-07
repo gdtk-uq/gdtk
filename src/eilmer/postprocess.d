@@ -245,7 +245,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		}
 		auto norms = soln.compute_volume_weighted_norms(varName, regionStr);
 		write("    variable= ", varName, "\n");
-		write(format(" L1= %14.12e L2= %12.12e Linf= %14.12e\n",
+		write(format(" L1= %.16e L2= %.16e Linf= %.16e\n",
 			     norms[0], norms[1], norms[2]));
 		write(" x= ", norms[3], " y= ", norms[4], " z= ", norms[5]);
 		write("\n");
@@ -261,7 +261,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		    }
 		    auto norms = solidSoln.compute_volume_weighted_norms(varName, regionStr);
 		    write("    variable= ", varName, "\n");
-		    write(format(" L1= %14.12e L2= %12.12e Linf= %14.12e\n",
+		    write(format(" L1= %.16e L2= %.16e Linf= %.16e\n",
 				 norms[0], norms[1], norms[2]));
 		    write(" x= ", norms[3], " y= ", norms[4], " z= ", norms[5]);
 		    write("\n");

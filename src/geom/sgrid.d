@@ -449,7 +449,7 @@ public:
 	    foreach (j; 0 .. njv) {
 		foreach (i; 0 .. niv) {
 		    writer = appender!string();
-		    formattedWrite(writer, "%20.16e %20.16e %20.16e\n", 
+		    formattedWrite(writer, "%.16e %.16e %.16e\n", 
 				   this[i,j,k].x, this[i,j,k].y, this[i,j,k].z);
 		    f.compress(writer.data);
 		}
@@ -471,7 +471,7 @@ public:
 	foreach (k; 0 .. nkv) {
 	    foreach (j; 0 .. njv) {
 		foreach (i; 0 .. niv) {
-		    f.writefln("%20.16e %20.16e %20.16e", 
+		    f.writefln("%.16e %.16e %.16e", 
 			       this[i,j,k].x, this[i,j,k].y, this[i,j,k].z);
 		}
 	    }
