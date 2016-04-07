@@ -850,7 +850,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-		scell.stage2Update(dt_global);
+		scell.stage3Update(dt_global);
 		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
 	    } // end foreach cell
 	} // end foreach blk

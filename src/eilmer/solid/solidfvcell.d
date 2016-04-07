@@ -19,6 +19,7 @@ import solidfvinterface;
 import solidfvvertex;
 import solidprops;
 import std.stdio;
+import globalconfig; //Anand added this to access GlobalConfig
 
 class SolidFVCell {
 public:
@@ -85,17 +86,58 @@ public:
     }
     void stage1Update(double dt)
     {
-	double gamma1 = 1.0;
-	e[1] = e[0] + dt*gamma1*dedt[0];
-    }
+	double gamma1 = 1.0; // Assume Euler
+//	if (!force_euler) {
+	    final switch (GlobalConfig.gasdynamic_update_scheme) {
+	    case GasdynamicUpdate.euler:
+	    case GasdynamicUpdate.moving_grid_1_stage:
+	    case GasdynamicUpdate.moving_grid_2_stage:
+	    case GasdynamicUpdate.pc: gamma1 = 1.0; break;
+	    case GasdynamicUpdate.midpoint: gamma1 = 0.5; break;
+	    case GasdynamicUpdate.classic_rk3: gamma1 = 0.5; break;
+	    case GasdynamicUpdate.tvd_rk3: gamma1 = 1.0; break;
+	    case GasdynamicUpdate.denman_rk3: gamma1 = 8.0/15.0; break;
+	   }	
+//    }
+   	e[1] = e[0] + dt*gamma1*dedt[0];
+   }
     void stage2Update(double dt)
     {
 	// Assuming predictor-corrector
 	double gamma1 = 0.5;
 	double gamma2 = 0.5;
+	final switch (GlobalConfig.gasdynamic_update_scheme) {
+	case GasdynamicUpdate.euler:
+	case GasdynamicUpdate.moving_grid_1_stage: assert(false, "invalid for 1-stage update.");
+	case GasdynamicUpdate.moving_grid_2_stage:
+	case GasdynamicUpdate.pc: gamma1 = 0.5, gamma2 = 0.5; break;
+	case GasdynamicUpdate.midpoint: gamma1 = 0.0; gamma2 = 1.0; break;
+	case GasdynamicUpdate.classic_rk3: gamma1 = -1.0; gamma2 = 2.0; break;
+	case GasdynamicUpdate.tvd_rk3: gamma1 = 0.25; gamma2 = 0.25; break;
+	case GasdynamicUpdate.denman_rk3: gamma1 = -17.0/60.0; gamma2 = 5.0/12.0; break;
+	}
 	e[2] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1]);
     }
-
+	void stage3Update(double dt)
+    {
+	// Assuming TVD_RK3 scheme as done in flow update
+	double gamma1 = 1.0/6.0; // presume TVD_RK3 scheme.
+	double gamma2 = 1.0/6.0;
+	double gamma3 = 4.0/6.0;
+	final switch (GlobalConfig.gasdynamic_update_scheme) {
+	case GasdynamicUpdate.euler:
+	case GasdynamicUpdate.moving_grid_1_stage:
+	case GasdynamicUpdate.moving_grid_2_stage:
+	case GasdynamicUpdate.pc:
+	case GasdynamicUpdate.midpoint:
+	    assert(false, "invalid for 2-stage update.");
+	case GasdynamicUpdate.classic_rk3: gamma1 = 1.0/6.0; gamma2 = 4.0/6.0; gamma3 = 1.0/6.0; break;
+	case GasdynamicUpdate.tvd_rk3: gamma1 = 1.0/6.0; gamma2 = 1.0/6.0; gamma3 = 4.0/6.0; break;
+	    // FIX-ME: Check that we have Andrew Denman's scheme ported correctly.
+	case GasdynamicUpdate.denman_rk3: gamma1 = 0.0; gamma2 = -5.0/12.0; gamma3 = 3.0/4.0; break;
+	}
+	e[3] = e[0] + dt*(gamma1*dedt[0] + gamma2*dedt[1] + gamma3*dedt[2]);
+    }
 }
 
 string[] varListForSolidCell()
