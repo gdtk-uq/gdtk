@@ -1024,7 +1024,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
 	//       - for single temp models F_renergies isn't used
 	//       - for multitemp modes with no free-electrons p_e is zero
 	// Add electron pressure work term onto final energy mode
-	// F.energies[$-1] += F.mass * Lft.gas.p_e / Lft.gas.rho; [TODO]
+	F.energies[F.energies.length-1] += F.mass * Lft.gas.p_e / Lft.gas.rho;
     } else {
 	/* Wind is blowing from the right */
 	for (size_t imode = 1; imode < F.energies.length; ++imode ) {
@@ -1034,6 +1034,6 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
 	//       - for single temp models F_renergies isn't used
 	//       - for multitemp modes with no free-electrons p_e is zero
 	// Add electron pressure work term onto final energy mode
-	// F.energies[$-1] += F.mass * Rght.gas.p_e / Rght.gas.rho; [TODO]
+	F.energies[F.energies.length-1] += F.mass * Rght.gas.p_e / Rght.gas.rho;
     }
 } // end hlle()
