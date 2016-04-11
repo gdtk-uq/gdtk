@@ -170,6 +170,13 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
+	// In contrast with the structured-grid implementation, below,
+	// we use a single source cell because we're not sure that
+	// the next cell in the interior list (if there is one) will
+	// be positioned as a mirror image of the second ghost cell.
+	// If the grid is clustered toward the boundary, the error
+	// introduced by this zero-order reconstruction will be mitigated.
+	// PJ 2016-04-12
 	BasicCell src_cell, ghost0, ghost1;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
