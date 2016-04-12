@@ -21,6 +21,7 @@ import ghost_cell_effect;
 import boundary_interface_effect;
 import luaflowstate;
 import lua_helper;
+import bc;
 
 class UserDefinedGhostCell : GhostCellEffect {
 public:
@@ -38,8 +39,20 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("UserDefinedGhostCell.apply_unstructured_grid() not implemented yet");
-    }
+	size_t j = 0, k = 0;
+	BasicCell ghost0, ghost1;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		ghost0 = f.right_cells[0];
+		ghost1 = f.right_cells[1];
+	    } else {
+		ghost0 = f.left_cells[0];
+		ghost1 = f.left_cells[1];
+	    }
+	    callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghost0, ghost1, "unstructured_face");
+	} // end foreach face
+    }  // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
@@ -120,7 +133,7 @@ public:
     }
 			
 private:
-    void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, FVCell ghostCell)
+    void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, BasicCell ghostCell)
     {
 	auto gmodel = blk.myConfig.gmodel;
 	try {
@@ -162,7 +175,7 @@ private:
     }
 
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
-			  in FVInterface IFace, FVCell ghostCell0, FVCell ghostCell1,
+			  in FVInterface IFace, BasicCell ghostCell0, BasicCell ghostCell1,
 			  string boundaryName)
     {
 	// 1. Set up for calling function
@@ -205,6 +218,30 @@ private:
 	int number_args = 1;
 	int number_results = 2; // expecting two table of ghostCells
 
+	writeln(ghostCell1.pos[0].x);
+	writeln(ghostCell1.pos[0].y);
+	writeln(ghostCell1.pos[0].z);
+	writeln(ghostCell0.pos[0].x);
+	writeln(ghostCell0.pos[0].y);
+	writeln(ghostCell0.pos[0].z);
+	writeln(IFace.t1.x);
+	writeln(IFace.t1.y);
+	writeln(IFace.t1.z);
+	writeln(IFace.t2.x);
+	writeln(IFace.t2.y);
+	writeln(IFace.t2.z);
+	writeln(IFace.n.x);
+	writeln(IFace.n.y);
+	writeln(IFace.n.z);
+	writeln(IFace.pos.x);
+	writeln(IFace.pos.y);
+	writeln(IFace.pos.z);
+	writeln(t);
+	writeln(dt_global);
+	writeln(step);
+	writeln(gtl);
+	writeln(ftl);
+	
 	if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
 	    luaL_error(L, "error running user-defined b.c. ghostCells_%s function: %s\n",
 		       toStringz(boundaryName), lua_tostring(L, -1));
