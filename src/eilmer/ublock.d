@@ -633,13 +633,6 @@ public:
 	} // end foreach face
     } // end convective_flux()
 
-    version(steadystate) {
-    override void computeJacobian()
-    {
-	throw new FlowSolverException("ERROR: computeJacobian not implemented for UBlock.");
-    }
-    } // end version(steadystate)
-
     @nogc
     override void copy_into_ghost_cells(int destination_face,
 					ref Block src_blk, int src_face, int src_orientation,

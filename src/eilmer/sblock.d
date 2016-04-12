@@ -17,9 +17,6 @@ import std.array;
 import std.math;
 
 import util.lua;
-version(steadystate) {
-import nm.smla;
-}
 import json_helper;
 import lua_helper;
 import gzip;
@@ -76,12 +73,6 @@ private:
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     OneDInterpolator one_d;
-    version(steadystate) {
-    // The following objects are used in the computeJacobian method.
-    FVCell cellP;
-    FVInterface ifaceP;
-    SMatrix Jac;
-    }
 
 public:
     this(int id, size_t nicell, size_t njcell, size_t nkcell, string label)
@@ -114,14 +105,7 @@ public:
 	}
 	// Workspace for flux_calc method.
 	one_d = new OneDInterpolator(dedicatedConfig[id]);
-	
-	version(steadystate) {
-	// Workspace for computeJacobian method.
-	cellP = new FVCell(dedicatedConfig[id]);
-	ifaceP = new FVInterface(dedicatedConfig[id].gmodel);
-	Jac = new SMatrix();
-	initialiseJacobianEntries();
-	}
+
     } // end constructor
 
     this(in int id, JSONValue json_data)
@@ -134,6 +118,16 @@ public:
 	active = getJSONbool(json_data, "active", true);
 	omegaz = getJSONdouble(json_data, "omegaz", 0.0);
     } // end constructor from json
+
+    int get_interpolation_order()
+    {
+	return one_d.get_interpolation_order();
+    }
+
+    @nogc void set_interpolation_order(int order)
+    {
+	one_d.set_interpolation_order(order);
+    }
 
     override void init_lua_globals()
     {
@@ -2015,173 +2009,6 @@ public:
 	return;
     } // end convective_flux()
 
-    version(steadystate) {
-    override void computeLowOrderJacobian()
-    {
-	FVCell cell, cellL, cellR;
-	FVInterface IFace, iface;
-	// -----------------------------------------------------
-	// 1. Compute and store low-order flux
-	// -----------------------------------------------------
-	// ifi interfaces are East-facing interfaces.
-	for ( size_t k = kmin; k <= kmax; ++k ) {
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t i = imin; i <= imax+1; ++i ) {
-		    IFace = get_ifi(i,j,k);
-		    Lft.copy_values_from(IFace.left_cells[0].fs);
-		    Rght.copy_values_from(IFace.right_cells[0].fs);
-		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
-		} // i loop
-	    } // j loop
-	} // for k
-	
-	// ifj interfaces are North-facing interfaces.
-	for ( size_t k = kmin; k <= kmax; ++k ) {
-	    for ( size_t i = imin; i <= imax; ++i ) {
-		for ( size_t j = jmin; j <= jmax+1; ++j ) {
-		    IFace = get_ifj(i,j,k);
-		    Lft.copy_values_from(IFace.left_cells[0].fs);
-		    Rght.copy_values_from(IFace.right_cells[0].fs);
-		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
-		} // j loop
-	    } // i loop
-	} // for k
-
-	if ( myConfig.dimensions == 3 ) {
-	    // ifk interfaces are Top-facing interfaces.
-	    for ( size_t i = imin; i <= imax; ++i ) {
-		for ( size_t j = jmin; j <= jmax; ++j ) {
-		    for ( size_t k = kmin; k <= kmax+1; ++k ) {
-			IFace = get_ifk(i,j,k);
-			Lft.copy_values_from(IFace.left_cells[0].fs);
-			Rght.copy_values_from(IFace.right_cells[0].fs);
-			compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
-		    } // for k 
-		} // j loop
-	    } // i loop
-	}
-
-	// ----------------------------------------------------
-	// 2. Compute flux derivatives due to perturbations
-	// ----------------------------------------------------
-	double dvar, h, diff;
-	for ( size_t i = imin; i <= imax; ++i ) {
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t k = kmin; k <= kmax; ++k ) {
-		    cell = get_cell(i,j,k);
-		    // 0th perturbation: rho
-		    mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
-		    // 1st perturbation: rho*u
-		    mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
-		    // 2nd perturbation: rho*v
-		    mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
-		    // 3rd perturbation: rho*w
-		    if ( myConfig.dimensions == 3 ) {
-		    	mixin(computeFluxDerivativesAroundCell("vel.refz", "3", false));
-		    }
-		    // 4th perturbation: rho*E
-		    mixin(computeFluxDerivativesAroundCell("gas.e[0]", "4", true));
-		}
-	    }
-	}
-	// ----------------------------------------------------
-	// 3. Assemble the Jacobian, row-by-row
-	// ----------------------------------------------------
-	if ( myConfig.dimensions == 2 ) {
-	    // We use small letters for cell indices
-	    // and CAPITAL LETTERS for indices into Jacobian matrix
-	    size_t I, J; // indices in Jacobian matrix
-	    size_t nc = 5; // no. of conserved variables
-	    double integral;
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t i = imin; i <= imax; ++i ) {
-		    cell = get_cell(i,j);
-		    double volInv = 1.0 / cell.volume[0];
-		    // Perturbations at cell centre (i,j)
-		    for ( size_t ic = 0; ic < nc; ++ic ) {
-			I = (j-nghost)*nicell*nc + (i-nghost)*nc + ic; // row index
-			for ( size_t jc = 0; jc < nc; ++jc ) {
-			    integral = 0.0;
-			    J = (j-nghost)*nicell*nc + (i-nghost)*nc + jc; // column index
-			    // North contribution
-			    integral -= cell.outsign[0] * cell.iface[0].dFdU_L[ic][jc] * cell.iface[0].area[0];
-			    // East contribution
-			    integral -= cell.outsign[1] * cell.iface[1].dFdU_L[ic][jc] * cell.iface[1].area[0];
-			    // South contribution
-			    integral -= cell.outsign[2] * cell.iface[2].dFdU_R[ic][jc] * cell.iface[2].area[0];
-			    // West contribution
-			    integral -= cell.outsign[3] * cell.iface[3].dFdU_R[ic][jc] * cell.iface[3].area[0];
-			    Jac[I,J] = volInv * integral; // + dQdU[ic,jc]
-			}
-		    }
-		    // Perturbations at cell above (i,j+1)
-		    if ( j != jmax ) {
-			for ( size_t ic = 0; ic < nc; ++ic ) {
-			    I = (j-nghost)*nicell*nc + (i-nghost)*nc + ic; // row index [SAME ROW AS EARLIER]
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				integral = 0.0;
-				J = ((j-nghost)+1)*nicell*nc + (i-nghost)*nc + jc;
-				// There is only a NORTH contribution
-				integral -= cell.outsign[0] * cell.iface[0].dFdU_R[ic][jc] * cell.iface[0].area[0];
-				Jac[I,J] = volInv * integral; 
-			    }
-			}
-		    }
-		    // Perturbations at cell to the right (i+1,j)
-		    if ( i != imax ) {
-			for ( size_t ic = 0; ic < nc; ++ic ) {
-			    I = (j-nghost)*nicell*nc + (i-nghost)*nc + ic; // row index [SAME ROW AS EARLIER]
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				integral = 0.0;
-				J = (j-nghost)*nicell*nc + ((i-nghost)+1)*nc + jc;
-				// There is only an EAST contribution
-				integral -= cell.outsign[1] * cell.iface[1].dFdU_R[ic][jc] * cell.iface[1].area[0];
-				Jac[I,J] = volInv * integral;
-			    }
-			}
-		    }
-		    // Perturbations at cell below (i,j-1)
-		    if ( j != jmin ) {
-			for ( size_t ic = 0; ic < nc; ++ic ) {
-			    I = (j-nghost)*nicell*nc + (i-nghost)*nc + ic; // row index [SAME ROW AS EARLIER]
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				integral = 0.0;
-				J = ((j-nghost)-1)*nicell*nc + (i-nghost)*nc + jc;
-				// There is only a SOUTH contribution
-				integral -= cell.outsign[2] * cell.iface[2].dFdU_L[ic][jc] * cell.iface[2].area[0];
-				Jac[I,J] = volInv * integral;
-			    }
-			}
-		    }
-		    // Perturbations at cell to the left (i-1,j)
-		    if ( i != imin ) {
-			for ( size_t ic = 0; ic < nc; ++ic ) {
-			    I = (j-nghost)*nicell*nc + (i-nghost)*nc + ic; // row index [SAME ROW AS EARLIER]
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				integral = 0.0;
-				J = (j-nghost)*nicell*nc + ((i-nghost)-1)*nc + jc;
-				// There is only a WEST contribution
-				integral -= cell.outsign[3] * cell.iface[3].dFdU_L[ic][jc] * cell.iface[3].area[0];
-				Jac[I,J] = volInv * integral;
-			    }
-			}
-		    }
-		}
-	    }
-	    
-	}
-	else {
-	    throw new FlowSolverException("computeJacobian() not implemented for 3D.");
-	}
-
-    } // end computeJacobian()
-
-    double getJacobianVal(size_t I, size_t J)
-    {
-	return Jac[I,J];
-    }
-    } // end version(steadystate)
-
     @nogc
     override void copy_into_ghost_cells(int destination_face,
 					ref Block src_blk, int src_face, int src_orientation,
@@ -2880,75 +2707,6 @@ public:
 	} // end switch destination_face
     } // end copy_to_ghost_cells()
 
-private:
-    version(steadystate)
-    {
-    void initialiseJacobianEntries()
-    {
-	double[] vals;
-	size_t[] pos;
-	size_t nc = 5; // no. of conserved variables
-
-	if ( myConfig.dimensions == 2 ) {
-	    // We use small letters for cell indices
-	    // and CAPITAL LETTERS for indices into Jacobian matrix
-	    size_t J; // indices in Jacobian matrix
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t i = imin; i <= imax; ++i ) {
-		    for ( size_t ic = 0; ic < nc; ++ic ) {
-			vals.length = 0;
-			pos.length = 0;
-			// We need to add entries to the row in the order they appear.
-			// Entries related to cell below (i,j-1)
-			if ( j != jmin ) {
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				J = ((j-nghost)-1)*nicell*nc + (i-nghost)*nc + jc;
-				vals ~= 0.0;
-				pos ~= J;
-			    }
-			}
-			// Entries related to cell to the left (i-1,j)
-			if ( i != imin ) {
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				J = (j-nghost)*nicell*nc + ((i-nghost)-1)*nc + jc;
-				vals ~= 0.0;
-				pos ~= J;
-			    }
-			}
-			// Entries related to central cell centre (i,j)
-			for ( size_t jc = 0; jc < nc; ++jc ) {
-			    J = (j-nghost)*nicell*nc + (i-nghost)*nc + jc; // column index
-			    vals ~= 0.0;
-			    pos ~= J;
-			}
-			// Entries related to cell to the right (i+1,j)
-			if ( i != imax ) {
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				J = (j-nghost)*nicell*nc + ((i-nghost)+1)*nc + jc;
-				vals ~= 0.0;
-				pos ~= J;
-			    }
-			}
-			// Entries related to cell above (i,j+1)
-			if ( j != jmax ) {
-			    for ( size_t jc = 0; jc < nc; ++jc ) {
-				J = ((j-nghost)+1)*nicell*nc + (i-nghost)*nc + jc;
-				vals ~= 0.0;
-				pos ~= J;
-			    }
-			}
-			// Now we can add a new row to the Jacobian matrix
-			Jac.addRow(vals, pos);
-		    }
-		}
-	    }
-	}
-	else {
-	    throw new FlowSolverException("initialiseJacobianEntries() not implemented for 3D.");
-	}
-
-    }
-    } // end version(steadystate)
 } // end class SBlock
 
 
@@ -3004,131 +2762,3 @@ private:
  * \endverbatim
  */
 
-// Macro for computing interface flux derivatives
-string computeFluxDerivativesAroundCell(string varName, string posInArray, bool includeThermoUpdate)
-{
-    string codeStr;
-    codeStr ~= "cellP.copy_values_from(cell, CopyDataOption.all);";
-    codeStr ~= "dvar = cell.fs."~varName~" * EPSILON;";
-    codeStr ~= "cellP.fs."~varName~" += dvar;";
-    if ( varName == "gas.rho" ) {
-	codeStr ~= "h = dvar;";
-    }
-    else {
-	codeStr ~= "h = cell.fs.gas.rho * dvar;";
-    }
-    if ( includeThermoUpdate ) {
-	codeStr ~= "myConfig.gmodel.update_thermo_from_rhoe(cellP.fs.gas);";
-    }
-    // NORTH INTERFACE
-    codeStr ~= "iface = get_ifj(i,j+1,k);";
-    codeStr ~= "ifaceP.copy_values_from(iface, CopyDataOption.all);";
-    codeStr ~= "cellR = get_cell(i,j+1,k);";
-    codeStr ~= "Lft.copy_values_from(cellP.fs);";
-    codeStr ~= "Rght.copy_values_from(cellR.fs);";
-    codeStr ~= "compute_interface_flux(Lft, Rght, ifaceP, myConfig.gmodel, omegaz);";
-    codeStr ~= "diff = ( fabs((ifaceP.F.mass - iface.F.mass)/(iface.F.mass + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.mass - iface.F.mass);";
-    codeStr ~= "iface.dFdU_L[0][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.x - iface.F.momentum.x)/(iface.F.momentum.x + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.x - iface.F.momentum.x);";
-    codeStr ~= "iface.dFdU_L[1][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.y - iface.F.momentum.y)/(iface.F.momentum.y + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.y - iface.F.momentum.y);";
-    codeStr ~= "iface.dFdU_L[2][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.z - iface.F.momentum.z)/(iface.F.momentum.z + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.z - iface.F.momentum.z);";
-    codeStr ~= "iface.dFdU_L[3][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.total_energy - iface.F.total_energy)/(iface.F.total_energy + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.total_energy - iface.F.total_energy);";
-    codeStr ~= "iface.dFdU_L[4][" ~ posInArray ~ "] = diff/h;";
-    // [TODO] species, energies
-    // SOUTH INTERFACE
-    codeStr ~= "iface = get_ifj(i,j,k);";
-    codeStr ~= "ifaceP.copy_values_from(iface, CopyDataOption.all);";
-    codeStr ~= "cellL = get_cell(i,j-1,k);";
-    codeStr ~= "Lft.copy_values_from(cellL.fs);";
-    codeStr ~= "Rght.copy_values_from(cellP.fs);";
-    codeStr ~= "compute_interface_flux(Lft, Rght, ifaceP, myConfig.gmodel, omegaz);";
-    codeStr ~= "diff = ( fabs((ifaceP.F.mass - iface.F.mass)/(iface.F.mass + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.mass - iface.F.mass);";
-    codeStr ~= "iface.dFdU_R[0][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.x - iface.F.momentum.x)/(iface.F.momentum.x + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.x - iface.F.momentum.x);";
-    codeStr ~= "iface.dFdU_R[1][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.y - iface.F.momentum.y)/(iface.F.momentum.y + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.y - iface.F.momentum.y);";
-    codeStr ~= "iface.dFdU_R[2][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.z - iface.F.momentum.z)/(iface.F.momentum.z + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.z - iface.F.momentum.z);";
-    codeStr ~= "iface.dFdU_R[3][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.total_energy - iface.F.total_energy)/(iface.F.total_energy + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.total_energy - iface.F.total_energy);";
-    codeStr ~= "iface.dFdU_R[4][" ~ posInArray ~ "] = diff/h;";
-    // EAST INTERFACE
-    codeStr ~= "iface = get_ifi(i+1,j,k);";
-    codeStr ~= "ifaceP.copy_values_from(iface, CopyDataOption.all);";
-    codeStr ~= "cellR = get_cell(i+1,j,k);";
-    codeStr ~= "Rght.copy_values_from(cellR.fs);";
-    codeStr ~= "Lft.copy_values_from(cellP.fs);";
-    codeStr ~= "compute_interface_flux(Lft, Rght, ifaceP, myConfig.gmodel, omegaz);";
-    codeStr ~= "diff = ( fabs((ifaceP.F.mass - iface.F.mass)/(iface.F.mass + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.mass - iface.F.mass);";
-    codeStr ~= "iface.dFdU_L[0][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.x - iface.F.momentum.x)/(iface.F.momentum.x + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.x - iface.F.momentum.x);";
-    codeStr ~= "iface.dFdU_L[1][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.y - iface.F.momentum.y)/(iface.F.momentum.y + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.y - iface.F.momentum.y);";
-    codeStr ~= "iface.dFdU_L[2][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.z - iface.F.momentum.z)/(iface.F.momentum.z + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.z - iface.F.momentum.z);";
-    codeStr ~= "iface.dFdU_L[3][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.total_energy - iface.F.total_energy)/(iface.F.total_energy + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.total_energy - iface.F.total_energy);";
-    codeStr ~= "iface.dFdU_L[4][" ~ posInArray ~ "] = diff/h;";
-
-    // WEST INTERFACE
-    codeStr ~= "iface = get_ifi(i,j,k);";
-    codeStr ~= "ifaceP.copy_values_from(iface, CopyDataOption.all);";
-    codeStr ~= "cellL = get_cell(i-1,j,k);";
-    codeStr ~= "Lft.copy_values_from(cellL.fs);";
-    codeStr ~= "Rght.copy_values_from(cellP.fs);";
-    codeStr ~= "compute_interface_flux(Lft, Rght, ifaceP, myConfig.gmodel, omegaz);";
-    codeStr ~= "diff = ( fabs((ifaceP.F.mass - iface.F.mass)/(iface.F.mass + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.mass - iface.F.mass);";
-    codeStr ~= "iface.dFdU_R[0][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.x - iface.F.momentum.x)/(iface.F.momentum.x + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.x - iface.F.momentum.x);";
-    codeStr ~= "iface.dFdU_R[1][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.y - iface.F.momentum.y)/(iface.F.momentum.y + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.y - iface.F.momentum.y);";
-    codeStr ~= "iface.dFdU_R[2][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.z - iface.F.momentum.z)/(iface.F.momentum.z + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.z - iface.F.momentum.z);";
-    codeStr ~= "iface.dFdU_R[3][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.total_energy - iface.F.total_energy)/(iface.F.total_energy + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.total_energy - iface.F.total_energy);";
-    codeStr ~= "iface.dFdU_R[4][" ~ posInArray ~ "] = diff/h;";
-    
-    codeStr ~= "if ( myConfig.dimensions == 3 ) {";
-    // TOP INTERFACE
-    codeStr ~= "iface = get_ifk(i,j,k+1);";
-    codeStr ~= "ifaceP.copy_values_from(iface, CopyDataOption.all);";
-    codeStr ~= "cellR = get_cell(i,j,k+1);";
-    codeStr ~= "Rght.copy_values_from(cellR.fs);";
-    codeStr ~= "Lft.copy_values_from(cellP.fs);";
-    codeStr ~= "compute_interface_flux(Lft, Rght, ifaceP, myConfig.gmodel, omegaz);";
-    codeStr ~= "diff = ( fabs((ifaceP.F.mass - iface.F.mass)/(iface.F.mass + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.mass - iface.F.mass);";
-    codeStr ~= "iface.dFdU_L[0][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.x - iface.F.momentum.x)/(iface.F.momentum.x + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.x - iface.F.momentum.x);";
-    codeStr ~= "iface.dFdU_L[1][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.y - iface.F.momentum.y)/(iface.F.momentum.y + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.y - iface.F.momentum.y);";
-    codeStr ~= "iface.dFdU_L[2][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.z - iface.F.momentum.z)/(iface.F.momentum.z + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.z - iface.F.momentum.z);";
-    codeStr ~= "iface.dFdU_L[3][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.total_energy - iface.F.total_energy)/(iface.F.total_energy + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.total_energy - iface.F.total_energy);";
-    codeStr ~= "iface.dFdU_L[4][" ~ posInArray ~ "] = diff/h;";
-    // [TODO] species, energies
-    // BOTTOM INTERFACE
-    codeStr ~= "iface = get_ifk(i,j,k);";
-    codeStr ~= "ifaceP.copy_values_from(iface, CopyDataOption.all);";
-    codeStr ~= "cellL = get_cell(i,j,k-1);";
-    codeStr ~= "Lft.copy_values_from(cellL.fs);";
-    codeStr ~= "Rght.copy_values_from(cellP.fs);";
-    codeStr ~= "compute_interface_flux(Lft, Rght, ifaceP, myConfig.gmodel, omegaz);";
-    codeStr ~= "diff = ( fabs((ifaceP.F.mass - iface.F.mass)/(iface.F.mass + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.mass - iface.F.mass);";
-    codeStr ~= "iface.dFdU_R[0][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.x - iface.F.momentum.x)/(iface.F.momentum.x + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.x - iface.F.momentum.x);";
-    codeStr ~= "iface.dFdU_R[1][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.y - iface.F.momentum.y)/(iface.F.momentum.y + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.y - iface.F.momentum.y);";
-    codeStr ~= "iface.dFdU_R[2][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.momentum.z - iface.F.momentum.z)/(iface.F.momentum.z + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.momentum.z - iface.F.momentum.z);";
-    codeStr ~= "iface.dFdU_R[3][" ~ posInArray ~ "] = diff/h;";
-    codeStr ~= "diff = ( fabs((ifaceP.F.total_energy - iface.F.total_energy)/(iface.F.total_energy + ESSENTIALLY_ZERO)) < ESSENTIALLY_ZERO ) ? 0.0 : (ifaceP.F.total_energy - iface.F.total_energy);";
-    codeStr ~= "iface.dFdU_R[4][" ~ posInArray ~ "] = diff/h;";
-    //
-    codeStr ~= "}";
-
-    return codeStr;
-}

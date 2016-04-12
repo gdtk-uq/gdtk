@@ -9,6 +9,7 @@ import std.stdio;
 import std.math;
 import std.json;
 import util.lua;
+import nm.bbla;
 import geom;
 import sgrid;
 import gas;
@@ -69,6 +70,17 @@ public:
     FlowState Lft;
     FlowState Rght;
 
+    version(steadystate)
+    {
+    // Work-space for steady-state solver
+    // These arrays and matrices are directly tied to using the
+    // GMRES iterative solver.
+    double[] FU_o, dU, r0_o, v_o, z_o, w_o, g0_o, g1_o, h_o, hR_o;
+    Matrix V_o, Z_o, H0_o, H1_o, Gamma_o, Q0_o, Q1_o;
+    double[] FU_i, r0_i, v_i, z_i, w_i, g0_i, g1_i, h_i, hR_i;
+    Matrix V_i, H0_i, H1_i, Gamma_i, Q0_i, Q1_i;
+    }
+
     this(int id, Grid_t grid_type, string label)
     {
 	this.id = id;
@@ -112,9 +124,6 @@ public:
     abstract void write_solution(string filename, double sim_time);
     abstract void propagate_inflow_data_west_to_east();
     abstract void convective_flux();
-    version(steadystate) {
-    abstract void computeLowOrderJacobian();
-    }
     @nogc
     abstract void copy_into_ghost_cells(int destination_face,
 					ref Block src_blk, int src_face, int src_orientation,

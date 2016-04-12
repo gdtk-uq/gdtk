@@ -37,6 +37,16 @@ public:
 	this.myConfig = myConfig;
     }
 
+    int get_interpolation_order()
+    {
+	return myConfig.interpolation_order;
+    }
+
+    @nogc void set_interpolation_order(int order)
+    {
+	myConfig.interpolation_order = order;
+    }
+
     @nogc void both_prepare(double lenL1, double lenL0, double lenR0, double lenR1)
     // Set up intermediate data that depends only on the cell geometry.
     // It will remain constant when reconstructing the different scalar fields
