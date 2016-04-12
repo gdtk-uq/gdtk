@@ -8,6 +8,7 @@
 
 module nm.smla;
 
+import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
 import std.conv;
@@ -76,11 +77,19 @@ public:
 	ia ~= aa.length; // Now ia is already ready for next addition.
     }
 
+    void scaleRow(size_t row, double scaleFactor)
+    {
+	assert(row < ia.length-1);
+	foreach (j; ia[row] .. ia[row+1]) {
+	    aa[j] *= scaleFactor;
+	}
+    }
+
     const double opIndex(size_t row, size_t col)
     {
 	// We need to search the given row to see if an entry
 	// is present in the given column.
-	foreach ( j; ia[row] .. ia[row+1] ) {
+	foreach (j; ia[row] .. ia[row+1]) {
 	    if ( ja[j] == col )
 		return aa[j];
 	}
@@ -248,7 +257,7 @@ body {
 	}
 	H[j+1,j] = norm2(w);
 	if ( H[j+1,j] <= ZERO_TOL ) {
-	    m = j;
+	    m = j + 1;
 	    break;
 	}
 	foreach (i; 0 .. n) {
@@ -486,6 +495,7 @@ body {
 	gws.V[i,0] = gws.v[i];
     }
 
+
     // 2. Do 'm' iterations of update
     foreach (j; 0 .. m) {
 	gws.Pv[] = gws.v[];
@@ -549,6 +559,104 @@ body {
     solve(P, x);
 
     foreach (i; 0 .. n) x[i] += x0[i];
+}
+
+double[] fGMRES(SMatrix A, SMatrix P, double[] b, double[] x0, int mOuter, int mInner)
+in {
+    assert(A.ia.length-1 == b.length);
+    assert(b.length == x0.length);
+    assert(mOuter >= 1);
+}
+body {
+    immutable double ZERO_TOL = 1.0e-15;
+    // 0. Allocate working matrices and vectors
+    size_t n = b.length;
+    double[] Ax0, r0, v, w, g_old, g, x, z, x0_inner;
+    Ax0.length = n;
+    r0.length = n;
+    v.length = n;
+    z.length = n;
+    w.length = n;
+    x.length = n;
+    x0_inner.length = n;
+    x0_inner[] = 0.0;
+    g_old.length = mOuter+1;
+    g.length = mOuter+1;
+    auto H = new Matrix(mOuter+1, mOuter);
+    H.zeros();
+    auto Hold = new Matrix(mOuter+1, mOuter);
+    auto Gamma = new Matrix(mOuter+1, mOuter+1);
+    auto V = new Matrix(n, mOuter+1);
+    auto Z = new Matrix(n, mOuter+1);
+
+    // 1. Compute r0, beta, v1
+    multiply(A, x0, Ax0);
+    foreach (i; 0 .. n) {
+	r0[i] = b[i] - Ax0[i];
+    }
+
+    auto beta = norm2(r0);
+    foreach (i; 0 .. n) {
+	v[i] = r0[i]/beta;
+	V[i,0] = v[i];
+    }
+
+    // 2. Do 'mOuter' iterations of update
+    foreach (j; 0 .. mOuter) {
+	z = gmres(P, v, x0_inner, mInner);
+	// Save z vector in Z
+	foreach (k; 0 .. n ) Z[k,j] = z[k];
+	multiply(A, z, w);
+	foreach (i; 0 .. j+1) {
+	    v = V.getColumn(i);
+	    H[i,j] = dot(w, v);
+	    foreach (k; 0 .. n) {
+		w[k] -= H[i,j]*v[k]; 
+	    }
+	}
+	H[j+1,j] = norm2(w);
+	if ( H[j+1,j] <= ZERO_TOL ) {
+	    mOuter = j;
+	    break;
+	}
+	foreach (i; 0 .. n) {
+	    v[i] = w[i]/H[j+1,j];
+	    V[i,j+1] = v[i];
+	}
+    }
+
+    // Use the plane rotations method to compute solution
+    // and residual at each step.
+    g_old[] = 0.0;
+    g_old[0] = beta;
+    copy(H, Hold);
+    foreach (i; 0 .. mOuter) {
+	double c_i, s_i, denom;
+	denom = sqrt(H[i,i]*H[i,i] + H[i+1,i]*H[i+1,i]);
+	s_i = H[i+1,i]/denom; 
+	c_i = H[i,i]/denom;
+	Gamma.eye();
+	Gamma[i,i] = c_i; Gamma[i,i+1] = s_i;
+	Gamma[i+1,i] = -s_i; Gamma[i+1,i+1] = c_i;
+	nm.bbla.dot(Gamma, Hold, H);
+	nm.bbla.dot(Gamma, g_old, g);
+	// Get Qold and g_old ready for next step
+	g_old[] = g[];
+	copy(H, Hold);
+    }
+
+    auto resid = fabs(g[mOuter]);
+    auto R = H.sliceDup(0, mOuter, 0, mOuter);
+    auto gm = g[0 .. mOuter];
+    // At end H := R
+    //        g := gm
+    upperSolve(R, gm);
+    auto Zm = Z.sliceDup(0, n, 0, mOuter);
+    nm.bbla.dot(Zm, gm, x);
+
+    foreach (i; 0 .. n) x[i] += x0[i];
+
+    return x.dup();
 }
 
 
@@ -624,6 +732,7 @@ version(smla_test) {
 	}
 
 	// Test GMRES on Faires and Burden problem.
+
 	auto g = new SMatrix();
 	g.addRow([2., -1.], [0, 1]);
 	g.addRow([-1., 2., -1.], [0, 1, 2]);
@@ -632,11 +741,12 @@ version(smla_test) {
 	double[] B1 = [1., 0., 0., 1.];
 	double[] x0 = [1.2, 0.8, 0.9, 1.1];
 
+	
 	auto x = gmres(g, B1, x0, 4);
 	foreach (i; 0 .. x.length) {
 	    assert(approxEqual(x[i], B_exp[i]), failedUnitTest());
 	}
-
+	
 	x = gmres2(g, B1, x0, 5, 1.0e-10);
 	foreach (i; 0 .. x.length) {
 	    assert(approxEqual(x[i], B_exp[i]), failedUnitTest());
@@ -660,6 +770,17 @@ version(smla_test) {
 	rpcGMRES(h, Ph, C1, x0, x, maxIters, 1.0e-15, gws);
 	double[] C1_exp = [0.273, 0.773, -1.0, -0.682];
 
+	foreach (i; 0 .. x.length) {
+	    assert(approxEqual(x[i], C1_exp[i]), failedUnitTest());
+	}
+
+	auto Pi = new SMatrix();
+	Pi.addRow([1.,], [0]);
+	Pi.addRow([1.,], [1]);
+	Pi.addRow([1.,], [2]);
+	Pi.addRow([1.,], [3]);
+
+	x = fGMRES(h, Pi, C1, x0, 5, 3);
 	foreach (i; 0 .. x.length) {
 	    assert(approxEqual(x[i], C1_exp[i]), failedUnitTest());
 	}
