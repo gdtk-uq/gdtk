@@ -74,6 +74,17 @@ public:
 	pos.length = myConfig.n_grid_time_levels;
 	fs = new FlowState(gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
     }
+
+    override string toString() const
+    {
+	char[] repr;
+	repr ~= "BasicCell(";
+	repr ~= "id=" ~ to!string(id);
+	repr ~= ", pos=" ~ to!string(pos);
+	repr ~= ", fs=" ~ to!string(fs);
+	repr ~= ")";
+	return to!string(repr);
+    }
 } // end class BasicCell
 
 class FVCell : BasicCell {
