@@ -45,7 +45,7 @@ Grid_t gridTypeFromName(string name)
 
 class Grid {
     Grid_t grid_type;
-    int dimensions; // 2 or 3
+    int dimensions; // 1, 2 or 3
     string label;
     size_t ncells;
     size_t nvertices;
@@ -99,14 +99,22 @@ public:
 
     // Blank grid, ready for import of data.
     this(size_t niv, size_t njv, size_t nkv=1, string label="")
-    {
-	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
+    in {
+	assert(niv > 0 && njv > 0 && nkv > 0);
+    }
+    body {
+	// infer dimensions from numbers of vertices in each direction
+	int dim = 3;
+	if (nkv == 1) {
+	    if (njv == 1) { dim = 1; } else { dim = 2; }
+	} 
 	super(Grid_t.structured_grid, dim, label);
 	this.niv = niv; this.njv = njv; this.nkv = nkv;
-	if (dim == 2) {
-	    ncells = (niv-1)*(njv-1);
-	} else {
-	    ncells = (niv-1)*(njv-1)*(nkv-1);
+	switch (dim) {
+	case 1: ncells = niv-1; break;
+	case 2: ncells = (niv-1)*(njv-1); break;
+	case 3: ncells = (niv-1)*(njv-1)*(nkv-1); break;
+	default: assert(0);
 	}
 	nvertices = niv*njv*nkv;
 	vertices.length = nvertices;
@@ -121,6 +129,15 @@ public:
 		}
 	    }
 	}
+    } // end this()
+
+    // 1D grid, built on Path.
+    this(const Path my_path, size_t niv,
+	 const(UnivariateFunction) clusterf = new LinearFunction(0.0, 1.0),
+	 string label="")
+    {
+	this(niv, 1, 1, label);
+	make_grid_from_path(my_path, clusterf);
     }
 
     // 2D grid, built on Parametric surface.
@@ -146,7 +163,7 @@ public:
     // Imported grid.
     this(string fileName, string fmt, string label="")
     {
-	this(0, 0, 0, label); // these settings will be reset on actually reading the data file
+	this(1, 1, 1, label); // these settings will be reset on actually reading the data file
 	switch (fmt) {
 	case "text":
 	    read_from_text_file(fileName);
@@ -200,42 +217,57 @@ public:
 
     override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
     in {
-	size_t nic = niv - 1;
-	assert (i < nic, text("index i=", i, " is invalid, nic=", nic));
-	size_t njc = njv - 1;
-	assert (j < njc, text("index j=", j, " is invalid, njc=", njc));
-	if (dimensions == 2) {
+	size_t nic, njc, nkc;
+	switch (dimensions) {
+	case 1:
+	    nic = niv - 1;
+	    assert (i < nic, text("index i=", i, " is invalid, nic=", nic));
+	    assert (j == 0, text("index j=", j, " is invalid for 1D grid"));
+	    assert (k == 0, text("index k=", k, " is invalid for 1D grid"));
+	    break;
+	case 2:
+	    nic = niv - 1; njc = njv - 1;
+	    assert (i < nic, text("index i=", i, " is invalid, nic=", nic));
+	    assert (j < njc, text("index j=", j, " is invalid, njc=", njc));
 	    assert (k == 0, text("index k=", k, " is invalid for 2D grid"));
-	} else {
-	    size_t nkc = nkv - 1;
+	    break;
+	case 3:
+	    nic = niv - 1; njc = njv - 1; nkc = nkv - 1;
+	    assert (i < nic, text("index i=", i, " is invalid, nic=", nic));
+	    assert (j < njc, text("index j=", j, " is invalid, njc=", njc));
 	    assert (k < nkc, text("index k=", k, " is invalid, nkc=", nkc));
+	    break;
+	default: assert(0);
 	}
     }
     body {
-	if (dimensions == 2) {
-	    return [vtx_id[single_index(i,j,k)],
-		    vtx_id[single_index(i+1,j,k)],
-		    vtx_id[single_index(i+1,j+1,k)],
-		    vtx_id[single_index(i,j+1,k)]];
-	} else {
-	    return [vtx_id[single_index(i,j,k)],
-		    vtx_id[single_index(i+1,j,k)], 
-		    vtx_id[single_index(i+1,j+1,k)],
-		    vtx_id[single_index(i,j+1,k)],
-		    vtx_id[single_index(i,j,k+1)],
-		    vtx_id[single_index(i+1,j,k+1)], 
-		    vtx_id[single_index(i+1,j+1,k+1)],
-		    vtx_id[single_index(i,j+1,k+1)]];
+	switch (dimensions) {
+	case 1: return [vtx_id[single_index(i,j,k)],
+			vtx_id[single_index(i+1,j,k)]];
+	case 2: return [vtx_id[single_index(i,j,k)],
+			vtx_id[single_index(i+1,j,k)],
+			vtx_id[single_index(i+1,j+1,k)],
+			vtx_id[single_index(i,j+1,k)]];
+	case 3: return [vtx_id[single_index(i,j,k)],
+			vtx_id[single_index(i+1,j,k)], 
+			vtx_id[single_index(i+1,j+1,k)],
+			vtx_id[single_index(i,j+1,k)],
+			vtx_id[single_index(i,j,k+1)],
+			vtx_id[single_index(i+1,j,k+1)], 
+			vtx_id[single_index(i+1,j+1,k+1)],
+			vtx_id[single_index(i,j+1,k+1)]];
+	default: assert(0);
 	}
     }
 
     override size_t[] get_vtx_id_list_for_cell(size_t indx) const
     {
-	size_t nic = niv - 1;
-	size_t njc = njv - 1;
-	size_t nkc = 1;
-	if (dimensions == 3) {
-	    nkc = nkv - 1;
+	size_t nic, njc, nkc;
+	switch (dimensions) {
+	case 1: nic = niv-1; njc = 1; nkc = 1; break;
+	case 2: nic = niv-1; njc = njv-1; nkc = 1; break;
+	case 3: nic = niv-1; njc = njv-1; nkc = njv-1; break;
+	default: assert(0);
 	}
 	size_t k = indx / (nic*njc);
 	indx -= k * (nic * njc);
@@ -245,7 +277,7 @@ public:
     }
 
     StructuredGrid subgrid(size_t i0, size_t ni,
-			   size_t j0, size_t nj,
+			   size_t j0=0, size_t nj=1,
 			   size_t k0=0, size_t nk=1) const
     // Partition on vertex indices.
     {
@@ -267,6 +299,22 @@ public:
 	}
 	return new_grd;
     } // end subgrid()
+
+    void make_grid_from_path(const Path pth,
+			     const(UnivariateFunction) clusterf)
+    {
+	// First, set up clustered parameter values.
+        double[] r = clusterf.distribute_parameter_values(niv);
+	// Now, work through the mesh, one point at a time,
+        // and create the actual vertex coordinates in Cartesian space.
+        size_t k = 0; size_t j = 0;
+	foreach (i; 0 .. niv) {
+	    Vector3 p = pth(r[i]);
+	    this[i,j,k].refx = p.x;
+	    this[i,j,k].refy = p.y;
+	    this[i,j,k].refz = p.z;
+	}
+    } // end make_grid_from_path()
 
     void make_grid_from_surface(const ParametricSurface surf,
 				const(UnivariateFunction)[] clusterf)
@@ -357,7 +405,11 @@ public:
 	njv = to!int(tokens[1]);
 	nkv = to!int(tokens[2]);
 	if (nkv == 1) {
-	    ncells = (niv-1)*(njv-1);
+	    if (njv == 1) {
+		ncells = niv-1;
+	    } else {
+		ncells = (niv-1)*(njv-1);
+	    }
 	} else {
 	    ncells = (niv-1)*(njv-1)*(nkv-1);
 	}
@@ -407,7 +459,11 @@ public:
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "nkv: %d", &nkv);
 	if (nkv == 1) {
-	    ncells = (niv-1)*(njv-1);
+	    if (njv == 1) {
+		ncells = niv-1;
+	    } else {
+		ncells = (niv-1)*(njv-1);
+	    }
 	} else {
 	    ncells = (niv-1)*(njv-1)*(nkv-1);
 	}
@@ -515,10 +571,8 @@ public:
 	}
 	    
 	// Begin by testing if this join is possible
-	// First we test the dimensions of the grids to be joined.
-	int dim = (nkv == 1) ? 2 : 3; // infer dimensions
-	if ( dim == 3 ) {
-	    throw new Error("StructuredGrid.joinGrid not implemented yet for 3D grids.");
+	if (dimensions != 2) {
+	    throw new Error("StructuredGrid.joinGrid only implemented for 2D grids.");
 	}
 	if ( (joinLocation == "east") || (joinLocation == "imax") ) {
 	    if ( njv != gridToJoin.njv ) {
@@ -587,11 +641,11 @@ public:
 	    njv += gridToJoin.njv - 1; 
 	}
 
-	if ( dim == 2 ) {
-	    ncells = (niv-1)*(njv-1);
-	}
-	else {
-	    ncells = (niv-1)*(njv-1)*(nkv-1);
+	switch (dimensions) {
+	case 1: ncells = niv-1; break;
+	case 2: ncells = (niv-1)*(njv-1); break;
+	case 3: ncells = (niv-1)*(njv-1)*(nkv-1); break;
+	default: assert(0);
 	}
 	nvertices = niv*njv*nkv;
 	vertices.length = nvertices;
@@ -640,7 +694,7 @@ public:
 	size_t nearest_i, nearest_j, nearest_k;
 	nearest_k = 0;
 
-	if ( dimensions == 2 ) {
+	if (dimensions == 2) {
 	    // In 2D, we'll temporarily construct cells
 	    // A, B, C and D around vertex "x" as shown
 	    // in the ASCII art here.
@@ -717,9 +771,9 @@ public:
 		    nearest_j = j-1;
 		}
 	    }
-	} // end dimension == 2
+	} // end dimensions == 2
 	else {
-	    throw new Error("find_nearest_cell_centre not implemented in 3D yet.");
+	    throw new Error("find_nearest_cell_centre not implemented in 1D or 3D yet.");
 	}
 	    
 	indx = nearest_i + (niv-1)*(nearest_j + (njv-1)*nearest_k);
