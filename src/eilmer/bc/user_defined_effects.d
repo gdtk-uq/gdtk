@@ -50,7 +50,7 @@ public:
 		ghost0 = f.left_cells[0];
 		ghost1 = f.left_cells[1];
 	    }
-	    callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghost0, ghost1, "unstructured_face");
+	    callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghost0, ghost1);
 	} // end foreach face
     }  // end apply_unstructured_grid()
 
@@ -70,7 +70,7 @@ public:
 		    ghostCell0 = blk.get_cell(i,j+1,k);
 		    ghostCell1 = blk.get_cell(i,j+2,k);
 		    IFace = ghostCell0.iface[Face.south];
-		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1, "north");
+		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
 		} // end i loop
 	    } // end k loop
 	    break;
@@ -81,7 +81,7 @@ public:
 		    ghostCell0 = blk.get_cell(i+1,j,k);
 		    ghostCell1 = blk.get_cell(i+2,j,k);
 		    IFace = ghostCell0.iface[Face.west];
-		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1, "east");
+		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
 		} // end j loop
 	    } // end k loop
 	    break;
@@ -92,7 +92,7 @@ public:
 		    ghostCell0 = blk.get_cell(i,j-1,k);
 		    ghostCell1 = blk.get_cell(i,j-2,k);
 		    IFace = ghostCell0.iface[Face.north];
-		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1, "south");
+		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
 		} // end i loop
 	    } // end j loop
 	    break;
@@ -103,7 +103,7 @@ public:
 		    ghostCell0 = blk.get_cell(i-1,j,k);
 		    ghostCell1 = blk.get_cell(i-2,j,k);
 		    IFace = ghostCell0.iface[Face.east];
-		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1, "west");
+		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
 		} // end j loop
 	    } // end k loop
 	    break;
@@ -114,7 +114,7 @@ public:
 		    ghostCell0 = blk.get_cell(i,j,k+1);
 		    ghostCell1 = blk.get_cell(i,j,k+2);
 		    IFace = ghostCell0.iface[Face.bottom];
-		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1, "top");
+		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
 		} // end j loop
 	    } // end i loop
 	    break;
@@ -125,7 +125,7 @@ public:
 		    ghostCell0 = blk.get_cell(i,j,k-1);
 		    ghostCell1 = blk.get_cell(i,j,k-2);
 		    IFace = ghostCell0.iface[Face.top];
-		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1, "bottom");
+		    callGhostCellUDF(t, gtl, ftl, i, j, k, IFace, ghostCell0, ghostCell1);
 		} // end j loop
 	    } // end i loop
 	    break;
@@ -175,13 +175,12 @@ private:
     }
 
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
-			  in FVInterface IFace, BasicCell ghostCell0, BasicCell ghostCell1,
-			  string boundaryName)
+			  in FVInterface IFace, BasicCell ghostCell0, BasicCell ghostCell1)
     {
 	// 1. Set up for calling function
 	auto L = blk.myL;
 	// 1a. Place function to call at TOS
-	lua_getglobal(L, toStringz("ghostCells_"~boundaryName));
+	lua_getglobal(L, "ghostCell");
 	// 1b. Then put arguments (as single table) at TOS
 	lua_newtable(L);
 	lua_pushnumber(L, t); lua_setfield(L, -2, "t");
@@ -189,6 +188,7 @@ private:
 	lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
 	lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
 	lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
+	lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");
 	// Geometric information for the face.
 	lua_pushnumber(L, IFace.pos.x); lua_setfield(L, -2, "x");
 	lua_pushnumber(L, IFace.pos.y); lua_setfield(L, -2, "y");
@@ -217,34 +217,9 @@ private:
 	// 2. Call LuaFunction and expect two tables of ghost cell flow state
 	int number_args = 1;
 	int number_results = 2; // expecting two table of ghostCells
-
-	writeln(ghostCell1.pos[0].x);
-	writeln(ghostCell1.pos[0].y);
-	writeln(ghostCell1.pos[0].z);
-	writeln(ghostCell0.pos[0].x);
-	writeln(ghostCell0.pos[0].y);
-	writeln(ghostCell0.pos[0].z);
-	writeln(IFace.t1.x);
-	writeln(IFace.t1.y);
-	writeln(IFace.t1.z);
-	writeln(IFace.t2.x);
-	writeln(IFace.t2.y);
-	writeln(IFace.t2.z);
-	writeln(IFace.n.x);
-	writeln(IFace.n.y);
-	writeln(IFace.n.z);
-	writeln(IFace.pos.x);
-	writeln(IFace.pos.y);
-	writeln(IFace.pos.z);
-	writeln(t);
-	writeln(dt_global);
-	writeln(step);
-	writeln(gtl);
-	writeln(ftl);
-	
 	if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-	    luaL_error(L, "error running user-defined b.c. ghostCells_%s function: %s\n",
-		       toStringz(boundaryName), lua_tostring(L, -1));
+	    luaL_error(L, "error running user-defined b.c. ghostCell function on boundaryId %d: %s\n",
+		       which_boundary, lua_tostring(L, -1));
 	}
 
 	// 3. Grab Flowstate data from table and populate ghost cell
@@ -293,7 +268,7 @@ public:
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.north];
-		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace, "north");
+		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
 		} // end i loop
 	    } // end k loop
 	    break;
@@ -303,7 +278,7 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.east];
-		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace, "east");
+		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
 		} // end j loop
 	    } // end k loop
 	    break;
@@ -313,7 +288,7 @@ public:
 		for (i=blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.south];
-		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace, "south");
+		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
 		} // end i loop
 	    } // end j loop
 	    break;
@@ -323,7 +298,7 @@ public:
 		for (j=blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.west];
-		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace, "west");
+		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
 		} // end j loop
 	    } // end k loop
 	    break;
@@ -333,7 +308,7 @@ public:
 		for (j=blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.top];
-		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace, "top");
+		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
 		} // end j loop
 	    } // end i loop
 	    break;
@@ -343,7 +318,7 @@ public:
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.bottom];
-		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace, "bottom");
+		    callInterfaceUDF(t, gtl, ftl, i, j, k, IFace);
 		} // end j loop
 	    } // end i loop
 	    break;
@@ -412,12 +387,12 @@ private:
     }
 	    
     void callInterfaceUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
-			  FVInterface IFace, string boundaryName)
+			  FVInterface IFace)
     {
 	// 1. Set up for calling function
 	auto L = blk.myL;
 	// 1a. Place function to call at TOS
-	lua_getglobal(L, toStringz("interface_"~boundaryName));
+	lua_getglobal(L, "interface");
 	// 1b. Then put arguments (as single table) at TOS
 	lua_newtable(L);
 	lua_pushnumber(L, t); lua_setfield(L, -2, "t");
@@ -425,6 +400,7 @@ private:
 	lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
 	lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
 	lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
+	lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");
 	lua_pushnumber(L, IFace.pos.x); lua_setfield(L, -2, "x");
 	lua_pushnumber(L, IFace.pos.y); lua_setfield(L, -2, "y");
 	lua_pushnumber(L, IFace.pos.z); lua_setfield(L, -2, "z");
@@ -445,8 +421,8 @@ private:
 	int number_args = 1;
 	int number_results = 1;
 	if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-	    luaL_error(L, "error running user-defined b.c. interface_%s function: %s\n",
-		       toStringz(boundaryName), lua_tostring(L, -1));
+	    luaL_error(L, "error running user-defined b.c. interface function on boundaryId %d: %s\n",
+		       which_boundary, lua_tostring(L, -1));
 	}
 
 	// 3. Grab Flowstate data from table and populate interface

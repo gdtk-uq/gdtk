@@ -6,8 +6,21 @@
 -- the start of each time step.
 --
 -- RG & PJ 2015-03-14 : ported from PJs eilmer3 example
+--         2016-04-13 : reconfigure with single ghostCell function
+--                      as a delegator function
 
-function ghostCells_west(args)
+function ghostCell(args)
+   -- Delegate to the appropriate sub-function
+   if args.boundaryId == west then
+      return ghostCell_west(args)
+   elseif args.boundaryId == east then
+      return ghostCell_east(args)
+   else
+      print("No ghost cell b.c. function available on boundary: ", args.boundaryId)
+   end 
+end
+
+function ghostCell_west(args)
    -- For a supersonic inflow, just set the properties directly.
    ghost = {}
    ghost.p = 95.84e3 -- pressure, Pa
@@ -20,7 +33,7 @@ function ghostCells_west(args)
    return ghost, ghost
 end
 
-function ghostCells_east(args)
+function ghostCell_east(args)
    -- A simple outflow boundary condition can be implemented by looking at
    -- the flow condition for the cell just inside the boundary.
    -- Notes:

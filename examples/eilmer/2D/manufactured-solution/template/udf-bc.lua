@@ -84,8 +84,21 @@ function fillTable(t, x, y)
    return t
 end
 
+function ghostCell(args)
+   if args.boundaryId == north then
+      return ghostCell_north(args)
+   elseif args.boundaryId == east then
+      return ghostCell_east(args)
+   elseif args.boundaryId == south then
+      return ghostCell_south(args)
+   elseif args.boundaryId == west then
+      return ghostCell_west(args)
+   else
+      print("Ghost cell b.c. function not available for boundaryId", args.boundaryId)
+   end
+end
 
-function ghostCells_north(args)
+function ghostCell_north(args)
    -- Function that returns the flow states for a ghost cells.
    -- For use in the inviscid flux calculations.
    x = args.x; y = args.y
@@ -99,7 +112,7 @@ function ghostCells_north(args)
    return ghost1, ghost2
 end
 
-function ghostCells_east(args)
+function ghostCell_east(args)
    -- Function that returns the flow states for a ghost cells.
    -- For use in the inviscid flux calculations.
    x = args.x; y = args.y
@@ -113,7 +126,7 @@ function ghostCells_east(args)
    return ghost1, ghost2
 end
 
-function ghostCells_south(args)
+function ghostCell_south(args)
    -- Function that returns the flow states for a ghost cells.
    -- For use in the inviscid flux calculations.
    x = args.x; y = args.y
@@ -127,7 +140,7 @@ function ghostCells_south(args)
    return ghost1, ghost2
 end
 
-function ghostCells_west(args)
+function ghostCell_west(args)
    -- Function that returns the flow states for a ghost cells.
    -- For use in the inviscid flux calculations.
    --
@@ -148,21 +161,5 @@ function interface(args)
    x = args.x; y = args.y
    tab = {}
    return fillTable(tab, x, y)
-end
-
-function interface_north(args)
-   return interface(args)
-end
-
-function interface_east(args)
-   return interface(args)
-end
-
-function interface_south(args)
-   return interface(args)
-end
-
-function interface_west(args)
-   return interface(args)
 end
 
