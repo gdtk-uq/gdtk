@@ -180,7 +180,7 @@ private:
 	// 1. Set up for calling function
 	auto L = blk.myL;
 	// 1a. Place function to call at TOS
-	lua_getglobal(L, "ghostCell");
+	lua_getglobal(L, "ghostCells");
 	// 1b. Then put arguments (as single table) at TOS
 	lua_newtable(L);
 	lua_pushnumber(L, t); lua_setfield(L, -2, "t");
