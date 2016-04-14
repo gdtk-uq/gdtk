@@ -29,9 +29,13 @@ void main()
     registerUnivariateFunctions(L);
     registerStructuredGrid(L);
     string test_code = `
-print("2D grid")
+print("1D grid")
 a = Vector3:new{x=0.0, y=0.0}
 b = Vector3:new{x=0.0, y=1.0}
+grid1D = StructuredGrid:new{path=Line:new{p0=a, p1=b}, niv=11}
+print("somewhere in the middle=", grid1D:get_vtx(5))
+--
+print("2D grid")
 c = Vector3:new{x=1.0, y=0.0}
 d = Vector3:new{x=1.0, y=1.0}
 surf = CoonsPatch:new{north=Line:new{p0=b, p1=d}, east=Line:new{p0=c, p1=d},

@@ -19,6 +19,7 @@ import surface;
 import volume;
 import sgrid;
 import luageom;
+import luagpath;
 import luasurface;
 import luavolume;
 import luaunifunction;
@@ -32,8 +33,7 @@ StructuredGrid checkStructuredGrid(lua_State* L, int index) {
     if ( isObjType(L, index, StructuredGridMT) ) {
 	return checkObj!(StructuredGrid, StructuredGridMT)(L, index);
     }
-    // if all else fails
-    return null;
+    return null; // on fail
 }
 
 extern(C) int copyStructuredGrid(T, string MTname)(lua_State* L)
@@ -72,14 +72,10 @@ extern(C) int get_vtx(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L);
     auto grid = checkObj!(T, MTname)(L, 1);
-    size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < niv
-    size_t j = to!size_t(luaL_checkint(L, 3));
-    size_t k;
-    if (narg > 3) { 
-	k = to!size_t(luaL_checkint(L, 4));
-    } else {
-	k = 0; // Assume 2D grid
-    }
+    size_t i = to!size_t(luaL_checkint(L, 2));
+    // Note that we expect 0 <= i < niv
+    size_t j = 0; if (narg > 2) { j = to!size_t(luaL_checkint(L, 3)); }
+    size_t k = 0; if (narg > 3) { k = to!size_t(luaL_checkint(L, 4)); }
     Vector3* vtx = grid[i,j,k];
     return pushVector3(L, *vtx);
 }
@@ -88,22 +84,13 @@ extern(C) int subgrid(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L);
     auto grid = checkObj!(T, MTname)(L, 1);
-    size_t i0 = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i0 < niv
+    // Note that we expect 0 <= i0 < niv
+    size_t i0 = to!size_t(luaL_checkint(L, 2));
     size_t ni = to!size_t(luaL_checkint(L, 3));
-    size_t j0 = to!size_t(luaL_checkint(L, 4)); // Note that we expect 0 <= j0 < njv
-    size_t nj = to!size_t(luaL_checkint(L, 5));
-    size_t k0;
-    if (narg > 5) { 
-	k0 = to!size_t(luaL_checkint(L, 6));
-    } else {
-	k0 = 0; // Assume 2D grid
-    }
-    size_t nk;
-    if (narg > 6) { 
-	nk = to!size_t(luaL_checkint(L, 7));
-    } else {
-	nk = 1; // Assume 2D grid
-    }
+    size_t j0 = 0; if (narg > 3) { j0 = to!size_t(luaL_checkint(L, 4)); }
+    size_t nj = 0; if (narg > 4) { nj = to!size_t(luaL_checkint(L, 5)); }
+    size_t k0 = 0; if (narg > 5) { k0 = to!size_t(luaL_checkint(L, 6)); }
+    size_t nk = 0; if (narg > 6) { nk = to!size_t(luaL_checkint(L, 7)); }
     auto new_subgrid = grid.subgrid(i0,ni,j0,nj,k0,nk);
     structuredGridStore ~= pushObj!(T, MTname)(L, new_subgrid);
     return 1;
@@ -175,12 +162,13 @@ extern(C) int find_nearest_cell_centre(lua_State *L)
  * The Lua constructor for a StructuredGrid.
  *
  * Example construction in Lua:
- * grid = StructuredGrid:new{psurface=someParametricSurface, niv=10, njv=10,
- *                           cfList={north=cf_north, east=cf_east, south=cf_south, west=cf_west},
- *                           label="A-2D-Grid"}
+ * grid1D = StructuredGrid:new{path=somePath, niv=10, cf=my_cf01}
+ * grid2D = StructuredGrid:new{psurface=someParametricSurface, niv=10, njv=10,
+ *                             cfList={north=cfn, east=cfe, south=cfs, west=cfw},
+ *                             label="A-2D-Grid"}
  * grid3D = StructuredGrid:new{pvolume=someParametricVolume,
  *                             niv=11, njv=21, nkv=11,
- *                             cfList={},
+ *                             cfList={edge01=cf01, edge32=cf32, edge45=cf45, edge76=cf76},
  *                             label="A-3D-Grid"}
  */
 extern(C) int newStructuredGrid(lua_State* L)
@@ -192,22 +180,36 @@ extern(C) int newStructuredGrid(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    Path mypath;
     ParametricSurface psurface;
     ParametricVolume pvolume;
-    int dimensions;
-    // First, look for a ParametricSurface field, for a 2D grid.
-    lua_getfield(L, 1, "psurface".toStringz);
+    int dimensions = 0;
+    // First, look for a Path field, for a 1D grid.
+    lua_getfield(L, 1, "path".toStringz);
     if ( !lua_isnil(L, -1) ) {
-	dimensions = 2;
-	psurface = checkSurface(L, -1);
-	if (!psurface) {
-	    string errMsg = "Error in StructuredGrid:new{}. psurface not a ParametricSurface.";
+	dimensions = 1;
+	mypath = checkPath(L, -1);
+	if (!mypath) {
+	    string errMsg = "Error in StructuredGrid:new{}. path not a Path.";
 	    luaL_error(L, errMsg.toStringz);
 	}
     }
     lua_pop(L, 1);
-    // We didn't find a psurface entry, so try for a pvolume, for a 3D grid.
-    if (!psurface) {
+    if (dimensions == 0) {
+	// Next, look for a ParametricSurface field, for a 2D grid.
+	lua_getfield(L, 1, "psurface".toStringz);
+	if ( !lua_isnil(L, -1) ) {
+	    dimensions = 2;
+	    psurface = checkSurface(L, -1);
+	    if (!psurface) {
+		string errMsg = "Error in StructuredGrid:new{}. psurface not a ParametricSurface.";
+		luaL_error(L, errMsg.toStringz);
+	    }
+	}
+	lua_pop(L, 1);
+    }
+    if (dimensions == 0) {
+	// No path or surface, so try for a pvolume, for a 3D grid.
 	lua_getfield(L, 1, "pvolume".toStringz);
 	if ( !lua_isnil(L, -1) ) {
 	    dimensions = 3;
@@ -216,74 +218,87 @@ extern(C) int newStructuredGrid(lua_State* L)
 		string errMsg = "Error in StructuredGrid:new{}. pvolume not a ParametricVolume.";
 		luaL_error(L, errMsg.toStringz);
 	    }
-	} else {
-	    string errMsg = "Error in StructuredGrid:new{}. neither psurface nor pvolume found.";
-	    luaL_error(L, errMsg.toStringz);
 	}
 	lua_pop(L, 1);
     }
-
-    // Get clustering functions, 
-    // filling in nil or invalid entries with LinearFunction.
-    UnivariateFunction[] cfList;
-    int number_of_edges = (dimensions == 2) ? 4 : 12;
-    lua_getfield(L, 1, "cfList".toStringz);
-    if ( lua_istable(L, -1) ) {
-	// Before going on, check the caller gave us named parameters.
-	if ( lua_objlen(L, -1) != 0 ) {
-	    // It appears that the caller has tried to set arguments as an array
-	    string errMsg = "Error in StructuredGrid:new{}. " ~
-		"A table of named parameters is expected for the cfList. " ~
-		"An array style of parameters was found.";
-	    luaL_error(L, errMsg.toStringz);
-	}
-
-	string[] edges;
-	// Extract the cluster functions from the table at top of stack.
-	if (dimensions == 2) {
-	    edges = ["north", "east", "south", "west"];
-	} else {
-	    edges = ["edge01", "edge12", "edge32", "edge03",
-		     "edge45", "edge56", "edge76", "edge47",
-		     "edge04", "edge15", "edge26", "edge37"];
-	}
-	foreach (edge_name; edges) {
-	    lua_getfield(L, -1, edge_name.toStringz);
-	    if ( lua_isnil(L, -1) ) {
-		cfList ~= new LinearFunction();
-	    } else {
-		auto mycf = checkUnivariateFunction(L, -1);
-		if ( mycf ) {
-		    cfList ~= mycf;
-		} else {
-		    cfList ~= new LinearFunction();
-		}
-	    }
-	    lua_pop(L, 1);
-	}
-    } else {
-	// Didn't find a table of cluster functions.
-	foreach (i; 0 .. number_of_edges) {
-	    cfList ~= new LinearFunction();
-	}
+    if (dimensions == 0) {
+	string errMsg = "Error in StructuredGrid:new{}. no path, psurface or pvolume found.";
+	luaL_error(L, errMsg.toStringz);
     }
-    lua_pop(L, 1);
+ 
+    // Get clustering functions, filling in nil or invalid entries with LinearFunction.
+    UnivariateFunction cf;
+    UnivariateFunction[] cfList;
+    if (dimensions == 1) {
+	lua_getfield(L, 1, "cf".toStringz);
+	cf = checkUnivariateFunction(L, -1);
+	if (!cf) { cf = new LinearFunction(); }
+	lua_pop(L, 1);
+    } else {
+	// There will be a list of cluster functions for 2D or 3D.
+	int number_of_edges = (dimensions == 2) ? 4 : 12;
+	lua_getfield(L, 1, "cfList".toStringz);
+	if ( lua_istable(L, -1) ) {
+	    // Before going on, check the caller gave us named parameters.
+	    if ( lua_objlen(L, -1) != 0 ) {
+		// It appears that the caller has tried to set arguments as an array
+		string errMsg = "Error in StructuredGrid:new{}. " ~
+		    "A table of named parameters is expected for the cfList. " ~
+		    "An array style of parameters was found.";
+		luaL_error(L, errMsg.toStringz);
+	    }
+
+	    string[] edges;
+	    // Extract the cluster functions from the table at top of stack.
+	    if (dimensions == 2) {
+		edges = ["north", "east", "south", "west"];
+	    } else {
+		edges = ["edge01", "edge12", "edge32", "edge03",
+			 "edge45", "edge56", "edge76", "edge47",
+			 "edge04", "edge15", "edge26", "edge37"];
+	    }
+	    foreach (edge_name; edges) {
+		lua_getfield(L, -1, edge_name.toStringz);
+		if ( lua_isnil(L, -1) ) {
+		    cfList ~= new LinearFunction();
+		} else {
+		    auto mycf = checkUnivariateFunction(L, -1);
+		    if ( mycf ) {
+			cfList ~= mycf;
+		    } else {
+			cfList ~= new LinearFunction();
+		    }
+		}
+		lua_pop(L, 1);
+	    }
+	} else {
+	    // Didn't find a table of cluster functions.
+	    foreach (i; 0 .. number_of_edges) {
+		cfList ~= new LinearFunction();
+	    }
+	}
+	lua_pop(L, 1);
+    }
 
     string errMsgTmplt = "Error in StructuredGrid:new{}. " ~
 	"A valid value for '%s' was not found in list of arguments. " ~
 	"The value, if present, should be a number.";
     int niv = getIntegerFromTable(L, 1, "niv", true, 0, true, format(errMsgTmplt, "niv"));
-    int njv = getIntegerFromTable(L, 1, "njv", true, 0, true, format(errMsgTmplt, "njv"));
+    int njv = 1;
+    if (dimensions > 1) {
+	njv = getIntegerFromTable(L, 1, "njv", true, 0, true, format(errMsgTmplt, "njv"));
+    }
     int nkv = 1;
-    if ( dimensions == 3 ) {
+    if (dimensions == 3) {
 	nkv = getIntegerFromTable(L, 1, "nkv", true, 0, true, format(errMsgTmplt, "nkv"));
     }
 
     StructuredGrid grid;
-    if ( dimensions == 2 ) {
-	grid = new StructuredGrid(psurface, niv, njv, cfList);
-    } else {
-	grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList);
+    switch (dimensions) {
+    case 1: grid = new StructuredGrid(mypath, niv, cf); break;
+    case 2: grid = new StructuredGrid(psurface, niv, njv, cfList); break;
+    case 3: grid = new StructuredGrid(pvolume, niv, njv, nkv, cfList); break;
+    default: assert(0);
     }
     structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid);
     return 1;
