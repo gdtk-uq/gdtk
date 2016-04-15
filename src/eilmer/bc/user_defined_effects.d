@@ -265,7 +265,30 @@ public:
     {
 	super(id, boundary, "UserDefined");
 	luafname = fname;
-	luaL_dofile(gasBlocks[id].myL, fname.toStringz);
+    }
+    override void post_bc_construction()
+    {
+	if (blk.bc[which_boundary].myL == null) {
+	    blk.bc[which_boundary].myL = luaL_newstate();
+	    auto L = blk.bc[which_boundary].myL;
+	    luaL_openlibs(L);
+	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
+	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
+	    lua_setglobal(L, "n_species");
+	    lua_pushinteger(L, blk.myConfig.gmodel.n_modes);
+	    lua_setglobal(L, "n_modes");
+	    lua_pushinteger(L, blk.nicell); lua_setglobal(L, "nicell");
+	    lua_pushinteger(L, blk.njcell); lua_setglobal(L, "njcell");
+	    lua_pushinteger(L, blk.nkcell); lua_setglobal(L, "nkcell");
+	    lua_pushinteger(L, Face.north); lua_setglobal(L, "north");
+	    lua_pushinteger(L, Face.east); lua_setglobal(L, "east");
+	    lua_pushinteger(L, Face.south); lua_setglobal(L, "south");
+	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
+	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
+	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
+	    lua_pushcfunction(L, &luafn_sampleFlow); lua_setglobal(L, "sampleFlow");
+	}
+	luaL_dofile(blk.bc[which_boundary].myL, luafname.toStringz);
     }
 
     override string toString() const
@@ -413,7 +436,7 @@ private:
 			  FVInterface IFace)
     {
 	// 1. Set up for calling function
-	auto L = blk.myL;
+	auto L = blk.bc[which_boundary].myL;
 	// 1a. Place function to call at TOS
 	lua_getglobal(L, "interface");
 	// 1b. Then put arguments (as single table) at TOS

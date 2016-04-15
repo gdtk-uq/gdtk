@@ -94,6 +94,7 @@ public:
 	which_boundary = boundary;
 	type = _type;
     }
+    void post_bc_construction() {}
     override string toString() const
     {
 	return "BoundaryInterfaceEffect()";
