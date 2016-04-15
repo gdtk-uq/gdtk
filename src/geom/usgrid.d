@@ -22,6 +22,8 @@ import volume;
 import univariatefunctions;
 import sgrid;
 
+import paver;
+
 //-----------------------------------------------------------------
 
 enum USGCell_type {
@@ -188,12 +190,48 @@ public:
     }
 } // end class BoundaryFaceSet
 
+
 class UnstructuredGrid : Grid {
 public:
     size_t nfaces, nboundaries;
     USGFace[] faces;
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
+
+    //Paved Grid Constructor:
+    this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
+    {
+    	double[][] boundary_points;
+	foreach(p; boundary){
+	    boundary_points ~= [p._p[0], p._p[1], p._p[2]];
+	}
+	PavedGrid grid = new PavedGrid(boundary_points);
+	super(Grid_t.unstructured_grid, grid.dimensions,
+	      ((new_label == "")? grid.label : new_label));
+
+	foreach(b; in_boundaries) { boundaries ~= new BoundaryFaceSet(b); }
+	this.nvertices = grid.nvertices;
+	this.ncells = grid.ncells;
+	this.nfaces = grid.nfaces;
+	this.nboundaries = grid.nboundaries;
+	foreach(p; POINT_LIST){
+	    double[] v = [p.x, p.y, p.z];
+	    this.vertices ~= Vector3(v);
+	}
+	foreach(f; FACE_LIST){
+	    size_t[] vtx_id_list = f.point_IDs;
+	    this.faces ~= new USGFace(vtx_id_list);
+	}
+	foreach(c; CELL_LIST){
+	    c.auto_cell_type();
+	    if(c.cell_type != "quad"){
+		throw new Error(text("paver generated a non-quad cell"));
+	    } else {
+		USGCell_type cell_type = cell_type_from_name(c.cell_type);
+		this.cells ~= new USGCell(cell_type, c.point_IDs, c.face_IDs, c.outsigns);
+	    }
+	}	
+    }//end paved grid constructor
 
     this(const UnstructuredGrid other, const string new_label="")
     {
@@ -608,4 +646,6 @@ public:
     } // end write_to_vtk_file()
 
 } // end class UnstructuredGrid
+
+
 

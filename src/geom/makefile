@@ -122,3 +122,11 @@ luausgrid_demo: luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_
 	dmd $(DFLAGS_LUA) luausgrid_demo.d $(OF)luausgrid_demo \
 		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
+paver_demo: paver_demo.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
+	univariatefunctions.d \
+	$(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) paver_demo.d $(OF)paver_demo \
+		usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
+		univariatefunctions.d \
+		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+
