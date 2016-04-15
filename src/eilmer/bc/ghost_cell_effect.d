@@ -137,6 +137,11 @@ public:
 	which_boundary = boundary;
 	type = _type;
     }
+    // Most ghost cell effects will not need to do anything
+    // special after construction.
+    // However, the user-defined ghost cells bc need some
+    // extra work done to set-up the Lua_state after all
+    // of the blocks and bcs have been constructed.
     void post_bc_construction() {}
     override string toString() const
     {
