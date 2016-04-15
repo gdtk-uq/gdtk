@@ -85,76 +85,13 @@ function fillTable(t, x, y)
 end
 
 function ghostCells(args)
-   if args.boundaryId == north then
-      return ghostCells_north(args)
-   elseif args.boundaryId == east then
-      return ghostCells_east(args)
-   elseif args.boundaryId == south then
-      return ghostCells_south(args)
-   elseif args.boundaryId == west then
-      return ghostCells_west(args)
-   else
-      print("Ghost cell b.c. function not available for boundaryId", args.boundaryId)
-   end
-end
-
-function ghostCells_north(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
    x = args.x; y = args.y
    i = args.i; j = args.j; k = args.k
+   ghost0 = {}
+   fillTable(ghost0, args.gc0x, args.gc0y)
    ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i, j+1, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i, j+2, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
-end
-
-function ghostCells_east(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
-   x = args.x; y = args.y
-   i = args.i; j = args.j; k = args.k
-   ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i+1, j, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i+2, j, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
-end
-
-function ghostCells_south(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
-   x = args.x; y = args.y
-   i = args.i; j = args.j; k = args.k
-   ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i, j-1, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i, j-2, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
-end
-
-function ghostCells_west(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
-   --
-   -- args contains {t, x, y, z, csX, csY, csZ, i, j, k}
-   -- Set constant conditions across the whole boundary.
-   x = args.x; y = args.y
-   i = args.i; j = args.j; k = args.k
-   ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i-1, j, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i-2, j, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
+   fillTable(ghost1, args.gc1x, args.gc1y)
+   return ghost0, ghost1
 end
 
 function interface(args)
