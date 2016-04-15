@@ -83,7 +83,7 @@ public:
     {
 	writeln("GPUChem:this()");
 	_gmodel = GlobalConfig.gmodel_master;
-	_rmech = GlobalConfig.chemUpdate.rmech;
+	_rmech = gasBlocks[0].myConfig.chemUpdate.rmech.dup();
 	size_t nsp = _gmodel.n_species();
 	size_t nreac = _rmech.n_reactions();
 	_conc.length = nsp;

@@ -326,7 +326,7 @@ final class GlobalConfig {
 
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
-	shared static GPUChem gpuChem;
+	static GPUChem gpuChem;
     }
 
     ~this()
