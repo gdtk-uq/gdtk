@@ -88,9 +88,9 @@ extern(C) int subgrid(T, string MTname)(lua_State* L)
     size_t i0 = to!size_t(luaL_checkint(L, 2));
     size_t ni = to!size_t(luaL_checkint(L, 3));
     size_t j0 = 0; if (narg > 3) { j0 = to!size_t(luaL_checkint(L, 4)); }
-    size_t nj = 0; if (narg > 4) { nj = to!size_t(luaL_checkint(L, 5)); }
+    size_t nj = 1; if (narg > 4) { nj = to!size_t(luaL_checkint(L, 5)); }
     size_t k0 = 0; if (narg > 5) { k0 = to!size_t(luaL_checkint(L, 6)); }
-    size_t nk = 0; if (narg > 6) { nk = to!size_t(luaL_checkint(L, 7)); }
+    size_t nk = 1; if (narg > 6) { nk = to!size_t(luaL_checkint(L, 7)); }
     auto new_subgrid = grid.subgrid(i0,ni,j0,nj,k0,nk);
     structuredGridStore ~= pushObj!(T, MTname)(L, new_subgrid);
     return 1;
