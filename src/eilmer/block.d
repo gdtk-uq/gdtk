@@ -91,7 +91,7 @@ public:
 	Lft = new FlowState(dedicatedConfig[id].gmodel);
 	Rght = new FlowState(dedicatedConfig[id].gmodel);
 	// Lua interpreter for the block. 
-	// It will be available for computing user-defined source terms, etc.
+	// It will be available for computing user-defined source terms.
 	myL = luaL_newstate();
 	luaL_openlibs(myL);
 	lua_pushinteger(myL, id); lua_setglobal(myL, "blkId");

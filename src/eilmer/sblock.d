@@ -155,6 +155,7 @@ public:
 	    auto bc_json_data = json_data[json_key];
 	    bc ~= make_BC_from_json(bc_json_data, id, boundary);
 	}
+	foreach (bci; bc) bci.post_bc_construction();
     } // end init_boundary_conditions()
 
     override string toString() const

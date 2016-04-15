@@ -11,6 +11,8 @@ import std.conv;
 import std.json;
 import std.stdio;
 import std.string;
+
+import util.lua;
 import gas;
 import json_helper;
 import geom;
@@ -66,6 +68,7 @@ public:
     // Location of the boundary condition.
     Block blk; // the block to which this BC is applied
     int which_boundary; // identity/index of the relevant boundary
+    lua_State* myL; // Lua context per BC for user-defined effects.
     // We may have a label for this specific boundary.
     string label;
     // We have a symbolic name for the type of boundary condition
@@ -101,6 +104,14 @@ public:
 	auto gm = GlobalConfig.gmodel_master;
 	_Lft = new FlowState(gm);
 	_Rght = new FlowState(gm);
+    }
+    ~this()
+    {
+	if (myL != null) lua_close(myL);
+    }
+    void post_bc_construction()
+    {
+	foreach (gce; preReconAction) gce.post_bc_construction();
     }
 
     // Action lists.
