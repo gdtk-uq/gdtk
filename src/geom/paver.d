@@ -1,8 +1,8 @@
-/* 
-15/4/2016
-Heather Muir - Undergraduate Thesis
-THERE ARE DEFINITELY STILL BUGS IN THIS
-*/
+/* paver.d
+ * Generate a 2D unstructured grid of quadrilateral cells from a discretized boundary.
+ *
+ * Heather Muir - Undergraduate Thesis, 15/4/2016
+ */
 
 module paver;
 

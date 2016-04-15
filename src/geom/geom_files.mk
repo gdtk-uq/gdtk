@@ -12,4 +12,5 @@ GEOM_FILES := $(GEOM_DIR)/geom.d \
 	$(GEOM_DIR)/sgrid.d \
 	$(GEOM_DIR)/luasgrid.d \
 	$(GEOM_DIR)/usgrid.d \
-	$(GEOM_DIR)/luausgrid.d
+	$(GEOM_DIR)/luausgrid.d \
+	$(GEOM_DIR)/paver.d
