@@ -8,9 +8,11 @@ PLATFORM ?= linux
 WITH_GPU_CHEM ?= 0
 
 PROGRAMS := e4shared
+SHARE_FILES := 
 
 ifeq ($(WITH_GPU_CHEM),1)
-    PROGRAMS += eilmer-gpu-chem
+    PROGRAMS += eilmer-gpu-chem prep-gpu-chem-kernel.py
+    SHARE_FILES += alpha_qss_kernel.tmplt
 endif
 
 DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo block_demo \
@@ -113,14 +115,16 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
-install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem
+install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem $(SHARE_FILES)
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
+	- mkdir -p $(BUILD_DIR)/share
 	cp $(PROGRAMS) $(BUILD_DIR)/bin
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp prep.lua $(BUILD_DIR)/bin
 	cp $(LUA_MODULES) $(BUILD_DIR)/lib
+	- cp $(SHARE_FILES) $(BUILD_DIR)/share
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
@@ -230,6 +234,12 @@ eilmer-gpu-chem: main.d gpu_chem.d $(EILMER_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(DLINKFLAGS) -I$(OPENCL_DIR) -L-L/usr/lib64/nvidia -L-lOpenCL
 
+prep-gpu-chem-kernel.py: utils/prep-gpu-chem-kernel.py
+	cp utils/prep-gpu-chem-kernel.py .
+	chmod +x prep-gpu-chem-kernel.py
+
+alpha_qss_kernel.tmplt: utils/alpha_qss_kernel.tmplt
+	cp utils/alpha_qss_kernel.tmplt .
 
 compute-error: compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \
 	block.d sblock.d ublock.d \
