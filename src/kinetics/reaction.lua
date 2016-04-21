@@ -349,6 +349,7 @@ function transformReaction(t, species, suppressWarnings)
    -- Deal with efficiencies
    if anonymousCollider then
       r.type = "anonymous_collider"
+      r.anonymousCollider = true
       -- All efficiencies are set to 1.0
       r.efficiencies = {}
       for i=1,#species do
