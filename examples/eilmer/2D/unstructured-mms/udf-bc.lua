@@ -84,85 +84,19 @@ function fillTable(t, x, y)
    return t
 end
 
-
-function ghostCells_north(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
+function ghostCells(args)
    x = args.x; y = args.y
    i = args.i; j = args.j; k = args.k
+   ghost0 = {}
+   fillTable(ghost0, args.gc0x, args.gc0y)
    ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i, j+1, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i, j+2, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
-end
-
-function ghostCells_east(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
-   x = args.x; y = args.y
-   i = args.i; j = args.j; k = args.k
-   ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i+1, j, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i+2, j, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
-end
-
-function ghostCells_south(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
-   x = args.x; y = args.y
-   i = args.i; j = args.j; k = args.k
-   ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i, j-1, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i, j-2, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
-end
-
-function ghostCells_west(args)
-   -- Function that returns the flow states for a ghost cells.
-   -- For use in the inviscid flux calculations.
-   --
-   -- args contains {t, x, y, z, csX, csY, csZ, i, j, k}
-   -- Set constant conditions across the whole boundary.
-   x = args.x; y = args.y
-   i = args.i; j = args.j; k = args.k
-   ghost1 = {}
-   ghost2 = {}
-   cell = sampleFlow(blkId, i-1, j, k)
-   ghost1 = fillTable(ghost1, cell.x, cell.y)
-   cell = sampleFlow(blkId, i-2, j, k)
-   ghost2 = fillTable(ghost2, cell.x, cell.y)
-   return ghost1, ghost2
+   fillTable(ghost1, args.gc1x, args.gc1y)
+   return ghost0, ghost1
 end
 
 function interface(args)
    x = args.x; y = args.y
    tab = {}
    return fillTable(tab, x, y)
-end
-
-function interface_north(args)
-   return interface(args)
-end
-
-function interface_east(args)
-   return interface(args)
-end
-
-function interface_south(args)
-   return interface(args)
-end
-
-function interface_west(args)
-   return interface(args)
 end
 

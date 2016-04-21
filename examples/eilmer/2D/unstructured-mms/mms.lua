@@ -40,30 +40,30 @@ grid = StructuredGrid:new{psurface=CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01
 
 bcList = {}
 if case == 1 or case == 3 then
-   bcList[0] = OutFlowBC_Simple:new{xOrder=1}
-   bcList[1] = OutFlowBC_Simple:new{xOrder=1}
+   bcList[0] = OutFlowBC_Simple:new{xOrder=0}
+   bcList[1] = OutFlowBC_Simple:new{xOrder=0}
    bcList[2] = UserDefinedBC:new{fileName='udf-bc.lua'}
    bcList[3] = UserDefinedBC:new{fileName='udf-bc.lua'}
 else
-   bcList[0] = BoundaryCondition:new{
+   bcList[north] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[1] = BoundaryCondition:new{
+   bcList[east] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[2] = BoundaryCondition:new{
+   bcList[south] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
       }
    }
-   bcList[3] = BoundaryCondition:new{
+   bcList[west] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
       preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
 				UpdateThermoTransCoeffs:new()
@@ -75,7 +75,7 @@ if blocking == 'single' then
     blk = UBlock:new{grid=UnstructuredGrid:new{sgrid=grid}, fillCondition=initial, bcList=bcList,
 		     label='blk'}
 else 
-   blks = SBlockArray{grid=grid, fillCondition=initial, bcList=bcList, 
+   blks = UBlockArray{grid=UnstructuredGrid:new{sgrid=grid}, fillCondition=initial, bcList=bcList, 
 		      nib=2, njb=2, label="blk"}
 end
 
