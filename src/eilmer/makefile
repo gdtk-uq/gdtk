@@ -241,24 +241,4 @@ prep-gpu-chem-kernel.py: utils/prep-gpu-chem-kernel.py
 alpha_qss_kernel.tmplt: utils/alpha_qss_kernel.tmplt
 	cp utils/alpha_qss_kernel.tmplt .
 
-compute-error: compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \
-	block.d sblock.d ublock.d \
-	fluxcalc.d onedinterp.d flowgradients.d \
-	fvcore.d fvcell.d fvvertex.d fvinterface.d \
-	conservedquantities.d flowstate.d luaflowstate.d \
-	globalconfig.d luaglobalconfig.d globaldata.d \
-	block.d sblock.d ublock.d \
-	lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) 
-	$(DMD) $(DFLAGS) $(OF)compute-error \
-		compute_error.d simcore.d fileutil.d readconfig.d json_helper.d \
-		fvcore.d fvcell.d fvvertex.d fvinterface.d \
-		fluxcalc.d onedinterp.d flowgradients.d \
-		conservedquantities.d flowstate.d luaflowstate.d \
-		globalconfig.d luaglobalconfig.d globaldata.d \
-		block.d sblock.d ublock.d \
-		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
-		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(DLINKFLAGS)
+

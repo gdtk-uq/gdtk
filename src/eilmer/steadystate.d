@@ -26,7 +26,7 @@ import globaldata;
 import block;
 import sblock;
 import simcore;
-
+import user_defined_source_terms;
 
 //----------------------------------------------------------------------------
 
@@ -36,10 +36,10 @@ import simcore;
 // method. The function here is the outer part of the method, and
 // calls the inner GMRES iterations.
 
-void flexGMRES_solve(double dt, double residTol)
+void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
 {
     Block blk = gasBlocks[0];
-    int maxIters = 4;
+    int maxIters = 30;
     size_t iterCount;
     size_t m = to!size_t(maxIters);
     
@@ -55,9 +55,9 @@ void flexGMRES_solve(double dt, double residTol)
     // This actually involves doing all the steps necessary to populate dUdt[0].
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
-    blk.applyPreReconAction(sim_time, 0, 0);
+    blk.applyPreReconAction(pseudo_sim_time, 0, 0);
     blk.convective_flux();
-    blk.applyPostConvFluxAction(sim_time, 0, 0);
+    blk.applyPostConvFluxAction(pseudo_sim_time, 0, 0);
 
     double max_Frho = 0.0;
     double max_FrhoU = 0.0;
@@ -65,6 +65,10 @@ void flexGMRES_solve(double dt, double residTol)
     int cellOffset = 0;    
     foreach (cell; blk.cells) {
 	cell.add_inviscid_source_vector(0, 0.0);
+	if (blk.myConfig.udf_source_terms) {
+	    addUDFSourceTermsToCell(blk.myL, cell, 0, 
+				    pseudo_sim_time, blk.myConfig.gmodel);
+	}
 	cell.time_derivatives(0, 0, false);
 	blk.FU_o[cellOffset+0] = cell.dUdt[0].mass;
 	max_Frho = max(max_Frho, fabs(cell.dUdt[0].mass));
@@ -77,9 +81,9 @@ void flexGMRES_solve(double dt, double residTol)
 	cellOffset += 4;
     }
     // Probably need some guards against max values being 0.0
-    writefln("max_Frho= %20.16e", max_Frho);
-    writefln("max_FrhoU= %20.16e", max_FrhoU);
-    writefln("max_FrhoE= %20.16e", max_FrhoE);
+    //writefln("max_Frho= %20.16e", max_Frho);
+    //writefln("max_FrhoU= %20.16e", max_FrhoU);
+    //writefln("max_FrhoE= %20.16e", max_FrhoE);
     cellOffset = 0;
     foreach (cell; blk.cells) {
 	blk.r0_o[cellOffset+0] = (1/max_Frho)*blk.FU_o[cellOffset+0];
@@ -90,7 +94,7 @@ void flexGMRES_solve(double dt, double residTol)
     }
 
     auto beta = norm2(blk.r0_o);
-    writeln(format("beta= %20.12e", beta));
+    //writeln(format("beta= %20.12e", beta));
     blk.g0_o[0] = beta;
     foreach (k; 0 .. n) {
 	blk.v_o[k] = blk.r0_o[k]/beta;
@@ -99,9 +103,15 @@ void flexGMRES_solve(double dt, double residTol)
 
 	    // 2. Begin iterations
     foreach (j; 0 .. maxIters) {
+	writefln("==== ITERATION %d ====", j);
 	iterCount = j+1;
-	//GMRES_solve(dt, 10*residTol, blk.v_o, blk.z_o, max_Frho, max_FrhoU, max_FrhoE);
-	blk.z_o[] = blk.v_o[];
+	if ( blk.myConfig.interpolation_order > 1 ) {
+	    GMRES_solve(pseudo_sim_time, dt, 10*residTol, blk.v_o, blk.z_o, max_Frho, max_FrhoU, max_FrhoE);
+	}
+	else {
+	    // Skip the inner iterations.
+	    blk.z_o[] = blk.v_o[];
+	}
 	// Save z vector in Z.
 	foreach (k; 0 .. n) blk.Z_o[k,j] = blk.z_o[k];
 	// Get w ready with (I/dt)p term.
@@ -125,12 +135,16 @@ void flexGMRES_solve(double dt, double residTol)
 	    cell.decode_conserved(0, 1, 0.0);
 	    cellOffset += 4;
 	}
-	blk.applyPreReconAction(sim_time, 0, 1);
+	blk.applyPreReconAction(pseudo_sim_time, 0, 1);
 	blk.convective_flux();
-	blk.applyPostConvFluxAction(sim_time, 0, 1);
+	blk.applyPostConvFluxAction(pseudo_sim_time, 0, 1);
 	cellOffset = 0;
 	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(1, 0.0);
+	    if (blk.myConfig.udf_source_terms) {
+		addUDFSourceTermsToCell(blk.myL, cell, 0, 
+					pseudo_sim_time, blk.myConfig.gmodel);
+	    }
 	    cell.time_derivatives(0, 1, false);
 	    blk.z_o[cellOffset+0] = (1.0/max_Frho)*((cell.dUdt[1].mass - blk.FU_o[cellOffset+0])/sigma);
 	    blk.z_o[cellOffset+1] = (1.0/max_FrhoU)*((cell.dUdt[1].momentum.x - blk.FU_o[cellOffset+1])/sigma);
@@ -184,6 +198,7 @@ void flexGMRES_solve(double dt, double residTol)
 	}
 	// Get residual
 	double resid = fabs(blk.g1_o[j+1]);
+	writefln("residual= %20.12e", resid);
 	if ( resid <= residTol ) {
 	    m = j+1;
 	    break;
@@ -216,7 +231,7 @@ void flexGMRES_solve(double dt, double residTol)
 
     // GMRES solve is the inner iterations, working with low-order Jacobian
 
-void GMRES_solve(double dt, double residTol, double[] v, double[] z,
+void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v, double[] z,
 		 double max_Frho, double max_FrhoU, double max_FrhoE)
 {
     SBlock blk = cast(SBlock) gasBlocks[0];
@@ -239,9 +254,9 @@ void GMRES_solve(double dt, double residTol, double[] v, double[] z,
     blk.set_interpolation_order(1);
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
-    blk.applyPreReconAction(sim_time, 0, 0);
+    blk.applyPreReconAction(pseudo_sim_time, 0, 0);
     blk.convective_flux();
-    blk.applyPostConvFluxAction(sim_time, 0, 0);
+    blk.applyPostConvFluxAction(pseudo_sim_time, 0, 0);
 
     int cellOffset = 0;    
     foreach (cell; blk.cells) {
@@ -294,9 +309,9 @@ void GMRES_solve(double dt, double residTol, double[] v, double[] z,
 	    cell.decode_conserved(0, 1, 0.0);
 	    cellOffset += 4;
 	}
-	blk.applyPreReconAction(sim_time, 0, 1);
+	blk.applyPreReconAction(pseudo_sim_time, 0, 1);
 	blk.convective_flux();
-	blk.applyPostConvFluxAction(sim_time, 0, 1);
+	blk.applyPostConvFluxAction(pseudo_sim_time, 0, 1);
 	cellOffset = 0;
 	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(1, 0.0);
@@ -356,6 +371,7 @@ void GMRES_solve(double dt, double residTol, double[] v, double[] z,
 	// Get residual
 	double resid = fabs(blk.g1_i[j+1]);
 	if ( resid <= residTol ) {
+	    writefln("Breaking.");
 	    m = j+1;
 	    break;
 	}
