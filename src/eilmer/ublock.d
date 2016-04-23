@@ -169,6 +169,7 @@ public:
 	foreach (i, c; grid.cells) {
 	    auto new_cell = new FVCell(myConfig);
 	    new_cell.id = i;
+	    new_cell.will_have_valid_flow = true;
 	    cells ~= new_cell;
 	}
 	// Bind the interfaces, vertices and cells together, 
@@ -231,10 +232,12 @@ public:
 		my_face.bc_id = i; // note which boundary this face is on
 		int my_outsign = bndry.outsign_list[j];
 		BasicCell ghost0 = new BasicCell(myConfig);
+		ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		// Make ghost-cell id values distinct from FVCell ids so that
 		// the warning/error messages are somewhat informative. 
 		ghost0.id = 100000 + ghost_cell_count++;
 		BasicCell ghost1 = new BasicCell(myConfig);
+		ghost1.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		ghost1.id = 100000 + ghost_cell_count++;
 		bc[i].faces ~= my_face;
 		bc[i].outsigns ~= my_outsign;
@@ -286,23 +289,17 @@ public:
 	    if (f.left_cells.length == 1) {
 		auto cell = f.left_cells[0];
 		foreach (i, other_face; cell.iface) {
-		    if (other_face.id == f.id) continue;
-		    if (cell.outsign[i] > 0) {
-			f.left_cells ~= other_face.right_cells[0];
-		    } else {
-			f.left_cells ~= other_face.left_cells[0];
-		    }
+		    if (other_face.id == f.id) continue;  // [TODO] FIX-ME PJ 2016-04-23 should be able to remove.
+		    auto other_cell = (cell.outsign[i] > 0) ? other_face.right_cells[0] : other_face.left_cells[0];
+		    if (other_cell.will_have_valid_flow) { f.left_cells ~= other_cell; }
 		}
 	    }
 	    if (f.right_cells.length == 1) {
 		auto cell = f.right_cells[0];
 		foreach (i, other_face; cell.iface) {
-		    if (other_face.id == f.id) continue;
-		    if (cell.outsign[i] > 0) {
-			f.right_cells ~= other_face.right_cells[0];
-		    } else {
-			f.right_cells ~= other_face.left_cells[0];
-		    }
+		    if (other_face.id == f.id) continue;  // [TODO] FIX-ME PJ 2016-04-23 should be able to remove.
+		    auto other_cell = (cell.outsign[i] > 0) ? other_face.right_cells[0] : other_face.left_cells[0];
+		    if (other_cell.will_have_valid_flow) { f.right_cells ~= other_cell; }
 		}
 	    }
 	} // end foreach f
@@ -462,30 +459,30 @@ public:
 		    auto ghost0 = my_face.right_cells[0];
 		    ghost0.pos[gtl] = my_face.pos + delta;
 		    ghost0.iLength = inside0.iLength;
-		    ghost0.iLength = inside0.jLength;
-		    ghost0.iLength = inside0.kLength;
-		    ghost0.iLength = inside0.L_min;
+		    ghost0.jLength = inside0.jLength;
+		    ghost0.kLength = inside0.kLength;
+		    ghost0.L_min = inside0.L_min;
 		    auto ghost1 = my_face.right_cells[1];
 		    ghost1.pos[gtl] = my_face.pos + 3.0*delta;
 		    ghost1.iLength = inside0.iLength;
-		    ghost1.iLength = inside0.jLength;
-		    ghost1.iLength = inside0.kLength;
-		    ghost1.iLength = inside0.L_min;
+		    ghost1.jLength = inside0.jLength;
+		    ghost1.kLength = inside0.kLength;
+		    ghost1.L_min = inside0.L_min;
 		} else {
 		    auto inside0 = my_face.right_cells[0];
 		    Vector3 delta = my_face.pos - inside0.pos[gtl];
 		    auto ghost0 = my_face.left_cells[0];
 		    ghost0.pos[gtl] = my_face.pos + delta;
 		    ghost0.iLength = inside0.iLength;
-		    ghost0.iLength = inside0.jLength;
-		    ghost0.iLength = inside0.kLength;
-		    ghost0.iLength = inside0.L_min;
+		    ghost0.jLength = inside0.jLength;
+		    ghost0.kLength = inside0.kLength;
+		    ghost0.L_min = inside0.L_min;
 		    auto ghost1 = my_face.left_cells[1];
 		    ghost1.pos[gtl] = my_face.pos + 3.0*delta;
 		    ghost1.iLength = inside0.iLength;
-		    ghost1.iLength = inside0.jLength;
-		    ghost1.iLength = inside0.kLength;
-		    ghost1.iLength = inside0.L_min;
+		    ghost1.jLength = inside0.jLength;
+		    ghost1.kLength = inside0.kLength;
+		    ghost1.L_min = inside0.L_min;
 		} // end if my_outsign
 	    } // end foreach j
 	} // end foreach bndry

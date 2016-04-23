@@ -12,6 +12,7 @@
 module fvinterface;
 
 import std.conv;
+import std.format;
 import geom;
 import gas;
 import fvcore;
@@ -144,6 +145,15 @@ public:
 	repr ~= "FVInterface(";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= ", pos=" ~ to!string(pos);
+	repr ~= ", vtx_ids=[";
+	foreach (v; vtx) { repr ~= format("%d,", v.id); }
+	repr ~= "]";
+	repr ~= ", left_cell_ids=[";
+	foreach (c; left_cells) { repr ~= format("%d,", c.id); }
+	repr ~= "]";
+	repr ~= ", right_cell_ids=[";
+	foreach (c; right_cells) { repr ~= format("%d,", c.id); }
+	repr ~= "]";
 	repr ~= ", gvel=" ~ to!string(gvel);
 	repr ~= ", Ybar=" ~ to!string(Ybar);
 	repr ~= ", length=" ~ to!string(length);

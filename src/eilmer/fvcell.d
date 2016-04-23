@@ -56,6 +56,14 @@ public:
     double jLength; // length in the j-index direction
     double kLength; // length in the k-index direction
     double L_min;   // minimum length scale for cell
+    // Although most do, some boundary conditions will not fill in
+    // valid flow state data for the ghost cell. The following flag
+    // is used for the unstructured-grid code to determine if we 
+    // should add the cell to the list of points in the cloud about
+    // an interface location.
+    // [TODO] PJ 2016-04-23, Consider if we should use this flag in
+    // the context of structured grids also. 
+    bool will_have_valid_flow; 
     FlowState fs; // Flow properties
     // Connections
     FVInterface[] iface;  // references to defining interfaces of cell
@@ -81,6 +89,16 @@ public:
 	repr ~= "BasicCell(";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= ", pos=" ~ to!string(pos);
+	repr ~= ", iface_ids=[";
+	foreach (f; iface) { repr ~= format("%d,", f.id); }
+	repr ~= "]";
+	repr ~= ", outsigns=[";
+	foreach (osgn; outsign) { repr ~= format("%g,", osgn); }
+	repr ~= "]";
+	repr ~= ", vtx_ids=[";
+	foreach (v; vtx) { repr ~= format("%d,", v.id); }
+	repr ~= "]";
+	repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
 	repr ~= ", fs=" ~ to!string(fs);
 	repr ~= ")";
 	return to!string(repr);
@@ -212,6 +230,15 @@ public:
 	repr ~= "FVCell(";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= ", pos=" ~ to!string(pos);
+	repr ~= ", iface_ids=[";
+	foreach (f; iface) { repr ~= format("%d,", f.id); }
+	repr ~= "]";
+	repr ~= ", outsigns=[";
+	foreach (osgn; outsign) { repr ~= format("%g,", osgn); }
+	repr ~= "]";
+	repr ~= ", vtx_ids=[";
+	foreach (v; vtx) { repr ~= format("%d,", v.id); }
+	repr ~= "]";
 	repr ~= ", volume=" ~ to!string(volume);
 	repr ~= ", areaxy=" ~ to!string(areaxy);
 	repr ~= ", iLength=" ~ to!string(iLength);
@@ -222,6 +249,7 @@ public:
 	repr ~= ", dt_therm=" ~ to!string(dt_therm);
 	repr ~= ", in_turbulent_zone=" ~ to!string(in_turbulent_zone);
 	repr ~= ", fr_reactions_allowed=" ~ to!string(fr_reactions_allowed);
+	repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
 	repr ~= ", fs=" ~ to!string(fs);
 	repr ~= ", U=" ~ to!string(U);
 	repr ~= ", dUdt=" ~ to!string(dUdt);
