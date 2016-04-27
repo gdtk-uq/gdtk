@@ -28,6 +28,13 @@ import sblock;
 import simcore;
 import user_defined_source_terms;
 
+/* Not in use right now.
+immutable double MAX_REL_DIFF = 1.0e-12;
+immutable double MAX_ABS_DIFF_MASS = 1.0e-9;
+immutable double MAX_ABS_DIFF_MOM = 1.0e-4;
+immutable double MAX_ABS_DIFF_ENERGY = 1.0e-1;
+*/
+
 //----------------------------------------------------------------------------
 
 // We will use the flexible GMRES algorithm to solve for the Newton
@@ -36,14 +43,26 @@ import user_defined_source_terms;
 // method. The function here is the outer part of the method, and
 // calls the inner GMRES iterations.
 
-void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
+void flexGMRES_solve(double pseudo_sim_time, double dt, double outerResidTol,
+		     double innerResidTol=-1.0)
 {
+    immutable double innerOuterTolRatio = 10.0;
+    if (innerResidTol <= 0.0) {
+	// Assume the user did not set or care about this value.
+	innerResidTol = innerOuterTolRatio*outerResidTol;
+    }
     Block blk = gasBlocks[0];
-    int maxIters = 30;
+    int maxIters = 100;
     size_t iterCount;
     size_t m = to!size_t(maxIters);
-    
+    double diff;
     size_t n = blk.FU_o.length;
+    // Compute sigma, the perturbation constant using approach of
+    // Cai et al (1995)
+    // double sigma = sqrt(n*double.epsilon);
+    // Actually, a simple constant seems to work more reliably.
+    sigma = 1.0e-8;
+
     // 0. Initialise some values in the pre-allocated storage
     blk.g0_o[] = 0.0;
     blk.g1_o[] = 0.0;
@@ -75,15 +94,73 @@ void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
 	blk.FU_o[cellOffset+1] = cell.dUdt[0].momentum.x;
 	max_FrhoU = max(max_FrhoU, fabs(cell.dUdt[0].momentum.x));
 	blk.FU_o[cellOffset+2] = cell.dUdt[0].momentum.y;
-	max_FrhoU = max(max_FrhoU, fabs(cell.dUdt[0].momentum.x));
+	max_FrhoU = max(max_FrhoU, fabs(cell.dUdt[0].momentum.y));
 	blk.FU_o[cellOffset+3] = cell.dUdt[0].total_energy;
 	max_FrhoE = max(max_FrhoE, fabs(cell.dUdt[0].total_energy));
 	cellOffset += 4;
     }
-    // Probably need some guards against max values being 0.0
-    //writefln("max_Frho= %20.16e", max_Frho);
-    //writefln("max_FrhoU= %20.16e", max_FrhoU);
-    //writefln("max_FrhoE= %20.16e", max_FrhoE);
+    // Place some guards against max values being close 0.0
+    max_Frho = max(1.0e-6, max_Frho);
+    max_FrhoU = max(1.0e-6, max_FrhoU);
+    max_FrhoE = max(1.0e-6, max_FrhoE);
+
+    // r0 = b - A*x0
+    // x0:   Let's take our last change dU as an initial guess
+    // A*x0: We need to do the matrix-vector product via finite difference
+    blk.clear_fluxes_of_conserved_quantities();
+    foreach (cell; blk.cells) cell.clear_source_vector();
+    cellOffset = 0;
+    foreach (cell; blk.cells) {
+	cell.U[1].copy_values_from(cell.U[0]);
+	cell.U[1].mass += sigma*blk.dU[cellOffset+0];
+	cell.U[1].momentum.refx += sigma*blk.dU[cellOffset+1];
+	cell.U[1].momentum.refy += sigma*blk.dU[cellOffset+2];
+	cell.U[1].total_energy += sigma*blk.dU[cellOffset+3];
+	cell.decode_conserved(0, 1, 0.0);
+	cellOffset += 4;
+    }
+    blk.applyPreReconAction(pseudo_sim_time, 0, 1);
+    blk.convective_flux();
+    blk.applyPostConvFluxAction(pseudo_sim_time, 0, 1);
+    cellOffset = 0;
+    foreach (cell; blk.cells) {
+	cell.add_inviscid_source_vector(1, 0.0);
+	if (blk.myConfig.udf_source_terms) {
+	    addUDFSourceTermsToCell(blk.myL, cell, 0, 
+				    pseudo_sim_time, blk.myConfig.gmodel);
+	}
+	cell.time_derivatives(0, 1, false);
+	diff = approxEqual(cell.dUdt[1].mass, blk.FU_o[cellOffset+0], MAX_REL_DIFF, MAX_ABS_DIFF_MASS) ?
+	    0.0 : cell.dUdt[1].mass - blk.FU_o[cellOffset+0];
+	diff = cell.dUdt[1].mass - blk.FU_o[cellOffset+0];
+	blk.r0_o[cellOffset+0] = diff/sigma;
+	diff = approxEqual(cell.dUdt[1].momentum.x, blk.FU_o[cellOffset+1], MAX_REL_DIFF, MAX_ABS_DIFF_MOM) ?
+	    0.0 : cell.dUdt[1].momentum.x - blk.FU_o[cellOffset+1];
+	diff = cell.dUdt[1].momentum.x - blk.FU_o[cellOffset+1];
+	blk.r0_o[cellOffset+1] = diff/sigma;
+	diff = approxEqual(cell.dUdt[1].momentum.y, blk.FU_o[cellOffset+2], MAX_REL_DIFF, MAX_ABS_DIFF_MOM) ?
+	    0.0 : cell.dUdt[1].momentum.y - blk.FU_o[cellOffset+2];
+	diff = cell.dUdt[1].momentum.y - blk.FU_o[cellOffset+2];
+	blk.r0_o[cellOffset+2] = diff/sigma;
+	diff = approxEqual(cell.dUdt[1].total_energy, blk.FU_o[cellOffset+3], MAX_REL_DIFF, MAX_ABS_DIFF_ENERGY) ?
+	    0.0 : cell.dUdt[1].total_energy - blk.FU_o[cellOffset+3];
+	diff = cell.dUdt[1].total_energy - blk.FU_o[cellOffset+3];
+	blk.r0_o[cellOffset+3] = diff/sigma;
+	cellOffset += 4;
+    }
+
+    cellOffset = 0;
+    foreach (cell; blk.cells) {
+	blk.r0_o[cellOffset+0] = (1/max_Frho)*(blk.FU_o[cellOffset+0] - blk.r0_o[cellOffset+0]);
+	blk.r0_o[cellOffset+1] = (1/max_FrhoU)*(blk.FU_o[cellOffset+1] - blk.r0_o[cellOffset+1]);
+	blk.r0_o[cellOffset+2] = (1/max_FrhoU)*(blk.FU_o[cellOffset+2] - blk.r0_o[cellOffset+2]);
+	blk.r0_o[cellOffset+3] = (1/max_FrhoE)*(blk.FU_o[cellOffset+3] - blk.r0_o[cellOffset+3]);
+	cellOffset += 4;
+    }
+    
+    /*
+    // If we want x0 = 0, as is also recommended.
+    // In the limit of steady state, it should be a good guess.
     cellOffset = 0;
     foreach (cell; blk.cells) {
 	blk.r0_o[cellOffset+0] = (1/max_Frho)*blk.FU_o[cellOffset+0];
@@ -92,24 +169,25 @@ void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
 	blk.r0_o[cellOffset+3] = (1/max_FrhoE)*blk.FU_o[cellOffset+3];
 	cellOffset += 4;
     }
+    */
 
     auto beta = norm2(blk.r0_o);
-    //writeln(format("beta= %20.12e", beta));
     blk.g0_o[0] = beta;
     foreach (k; 0 .. n) {
 	blk.v_o[k] = blk.r0_o[k]/beta;
 	blk.V_o[k,0] = blk.v_o[k];
     }
 
-	    // 2. Begin iterations
+    // 2. Begin iterations
     foreach (j; 0 .. maxIters) {
-	writefln("==== ITERATION %d ====", j);
 	iterCount = j+1;
 	if ( blk.myConfig.interpolation_order > 1 ) {
-	    GMRES_solve(pseudo_sim_time, dt, 10*residTol, blk.v_o, blk.z_o, max_Frho, max_FrhoU, max_FrhoE);
+	    GMRES_solve(pseudo_sim_time, dt, innerResidTol, blk.v_o, blk.z_o, max_Frho, max_FrhoU, max_FrhoE);
 	}
 	else {
 	    // Skip the inner iterations.
+	    // There's not much point to solving a low-order system as the preconditioner
+	    // when the system we're solving is low order itself.
 	    blk.z_o[] = blk.v_o[];
 	}
 	// Save z vector in Z.
@@ -122,9 +200,6 @@ void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
 	// Next do finite-difference perturbation to compute Jz
 	blk.clear_fluxes_of_conserved_quantities();
 	foreach (cell; blk.cells) cell.clear_source_vector();
-	// Compute sigma, the perturbation constant using approach of
-	// Cai et al (1995)
-	double sigma = sqrt(n*double.epsilon);
 	cellOffset = 0;
 	foreach (cell; blk.cells) {
 	    cell.U[1].copy_values_from(cell.U[0]);
@@ -146,10 +221,22 @@ void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
 					pseudo_sim_time, blk.myConfig.gmodel);
 	    }
 	    cell.time_derivatives(0, 1, false);
-	    blk.z_o[cellOffset+0] = (1.0/max_Frho)*((cell.dUdt[1].mass - blk.FU_o[cellOffset+0])/sigma);
-	    blk.z_o[cellOffset+1] = (1.0/max_FrhoU)*((cell.dUdt[1].momentum.x - blk.FU_o[cellOffset+1])/sigma);
-	    blk.z_o[cellOffset+2] = (1.0/max_FrhoU)*((cell.dUdt[1].momentum.y - blk.FU_o[cellOffset+2])/sigma);
-	    blk.z_o[cellOffset+3] = (1.0/max_FrhoE)*((cell.dUdt[1].total_energy - blk.FU_o[cellOffset+3])/sigma);
+	    //diff = approxEqual(cell.dUdt[1].mass, blk.FU_o[cellOffset+0], MAX_REL_DIFF, MAX_ABS_DIFF_MASS) ?
+	    //		0.0 : cell.dUdt[1].mass - blk.FU_o[cellOffset+0];
+	    diff = cell.dUdt[1].mass - blk.FU_o[cellOffset+0];
+	    blk.z_o[cellOffset+0] = (1.0/max_Frho)*(diff/sigma);
+	    //	    diff = approxEqual(cell.dUdt[1].momentum.x, blk.FU_o[cellOffset+1], MAX_REL_DIFF, MAX_ABS_DIFF_MOM) ?
+	    //		0.0 : cell.dUdt[1].momentum.x - blk.FU_o[cellOffset+1];
+	    diff = cell.dUdt[1].momentum.x - blk.FU_o[cellOffset+1];
+	    blk.z_o[cellOffset+1] = (1.0/max_FrhoU)*(diff/sigma);
+	    //diff = approxEqual(cell.dUdt[1].momentum.y, blk.FU_o[cellOffset+2], MAX_REL_DIFF, MAX_ABS_DIFF_MOM) ?
+	    //		0.0 : cell.dUdt[1].momentum.y - blk.FU_o[cellOffset+2];
+	    diff = cell.dUdt[1].momentum.y - blk.FU_o[cellOffset+2];
+	    blk.z_o[cellOffset+2] = (1.0/max_FrhoU)*(diff/sigma);
+	    //	    diff = approxEqual(cell.dUdt[1].total_energy, blk.FU_o[cellOffset+3], MAX_REL_DIFF, MAX_ABS_DIFF_ENERGY) ?
+	    //		0.0 : cell.dUdt[1].total_energy - blk.FU_o[cellOffset+3];
+	    diff = cell.dUdt[1].total_energy - blk.FU_o[cellOffset+3];
+	    blk.z_o[cellOffset+3] = (1.0/max_FrhoE)*(diff/sigma);
 	    cellOffset += 4;
 	}
 	// Finally update w.
@@ -198,8 +285,9 @@ void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
 	}
 	// Get residual
 	double resid = fabs(blk.g1_o[j+1]);
-	writefln("residual= %20.12e", resid);
-	if ( resid <= residTol ) {
+	//writefln("residual= %.12e", resid);
+	if ( resid <= outerResidTol ) {
+	    //writefln("nIters= %d, resid= %.12e", j+1, resid);
 	    m = j+1;
 	    break;
 	}
@@ -229,18 +317,18 @@ void flexGMRES_solve(double pseudo_sim_time, double dt, double residTol)
     
 } // end flexGMRES_solve
 
-    // GMRES solve is the inner iterations, working with low-order Jacobian
-
-void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v, double[] z,
+// GMRES solve is the inner iterations, working with low-order Jacobian
+void GMRES_solve(double pseudo_sim_time, double dt, double innerResidTol, double[] v_o, double[] z_o,
 		 double max_Frho, double max_FrhoU, double max_FrhoE)
 {
     SBlock blk = cast(SBlock) gasBlocks[0];
     int interpOrderSave = blk.get_interpolation_order();
-    int maxIters = 2;
+    int maxIters = 10;
     size_t iterCount;
     size_t m = to!size_t(maxIters);
-
-    size_t n = v.length;
+    size_t n = v_o.length;
+    // Sigma, same as above.
+    double sigma = 1.0e-8;
     // 0. Initialise some values in the pre-allocated storage
     blk.g0_i[] = 0.0;
     blk.g1_i[] = 0.0;
@@ -261,6 +349,10 @@ void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v,
     int cellOffset = 0;    
     foreach (cell; blk.cells) {
 	cell.add_inviscid_source_vector(0, 0.0);
+	if (blk.myConfig.udf_source_terms) {
+	    addUDFSourceTermsToCell(blk.myL, cell, 0, 
+				    pseudo_sim_time, blk.myConfig.gmodel);
+	}
 	cell.time_derivatives(0, 0, false);
 	blk.FU_i[cellOffset+0] = cell.dUdt[0].mass;
 	blk.FU_i[cellOffset+1] = cell.dUdt[0].momentum.x;
@@ -269,19 +361,12 @@ void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v,
 	cellOffset += 4;
     }
 
-    cellOffset = 0;
-    foreach (cell; blk.cells) {
-	blk.r0_i[cellOffset+0] = (1/max_Frho)*blk.FU_i[cellOffset+0];
-	blk.r0_i[cellOffset+1] = (1/max_FrhoU)*blk.FU_i[cellOffset+1];
-	blk.r0_i[cellOffset+2] = (1/max_FrhoU)*blk.FU_i[cellOffset+2];
-	blk.r0_i[cellOffset+3] = (1/max_FrhoE)*blk.FU_i[cellOffset+3];
-	cellOffset += 4;
-    }
-
-    auto beta = norm2(blk.r0_i);
+    // r0 := v_o
+    // r0 = b - Ax0 but we'll set x0 = 0, and b = v_o
+    auto beta = norm2(v_o);
     blk.g0_i[0] = beta;
     foreach (k; 0 .. n) {
-	blk.v_i[k] = blk.r0_i[k]/beta;
+	blk.v_i[k] = v_o[k]/beta;
 	blk.V_i[k,0] = blk.v_i[k];
     }
 
@@ -296,9 +381,6 @@ void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v,
 	// Next do finite-difference perturbation to compute JP^{-1}v
 	blk.clear_fluxes_of_conserved_quantities();
 	foreach (cell; blk.cells) cell.clear_source_vector();
-	// Compute sigma, the perturbation constant using approach of
-	// Cai et al (1995)
-	double sigma = sqrt(n*double.epsilon);
 	cellOffset = 0;
 	foreach (cell; blk.cells) {
 	    cell.U[1].copy_values_from(cell.U[0]);
@@ -315,6 +397,10 @@ void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v,
 	cellOffset = 0;
 	foreach (cell; blk.cells) {
 	    cell.add_inviscid_source_vector(1, 0.0);
+	    if (blk.myConfig.udf_source_terms) {
+	    addUDFSourceTermsToCell(blk.myL, cell, 0, 
+				    pseudo_sim_time, blk.myConfig.gmodel);
+	    }
 	    cell.time_derivatives(0, 1, false);
 	    blk.v_i[cellOffset+0] = (1.0/max_Frho)*((cell.dUdt[1].mass - blk.FU_i[cellOffset+0])/sigma);
 	    blk.v_i[cellOffset+1] = (1.0/max_FrhoU)*((cell.dUdt[1].momentum.x - blk.FU_i[cellOffset+1])/sigma);
@@ -370,8 +456,7 @@ void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v,
 	}
 	// Get residual
 	double resid = fabs(blk.g1_i[j+1]);
-	if ( resid <= residTol ) {
-	    writefln("Breaking.");
+	if ( resid <= innerResidTol ) {
 	    m = j+1;
 	    break;
 	}
@@ -388,7 +473,7 @@ void GMRES_solve(double pseudo_sim_time, double dt, double residTol, double[] v,
     // At end H := R up to row m
     //        g := gm up to row m
     upperSolve(blk.H1_i, to!int(m), blk.g1_i);
-    nm.bbla.dot(blk.V_i, n, m, blk.g1_i, z);
+    nm.bbla.dot(blk.V_i, n, m, blk.g1_i, z_o);
 
     // Restore the original interpolation order
     blk.set_interpolation_order(interpOrderSave);
