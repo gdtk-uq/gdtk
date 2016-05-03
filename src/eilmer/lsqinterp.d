@@ -75,11 +75,17 @@ public:
 	    // High-order reconstruction for some properties.
 	    //
 	    // Always reconstruct in the interface-local frame of reference.
-	    foreach (cell; IFace.left_cells) {
-		cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+	    // note that clouds may share the interface neighbour cells, you should be sure not to
+	    // transform the neighbour cells twice!
+	    foreach (left_cell; IFace.left_cells) {
+		if (left_cell.id != IFace.right_cells[0].id){
+		    left_cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+		}
 	    }
-	    foreach (cell; IFace.right_cells) {
-		cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+	    foreach (right_cell; IFace.right_cells) {
+		if (right_cell.id != IFace.left_cells[0].id){
+		    right_cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+		}
 	    }
 	    // Since we are working in the interface-local frame, having the
 	    // local x-direction aligned with the unit normal for the interface,
@@ -264,7 +270,12 @@ public:
                     Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
                     Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
                 }
-                }";
+                else {
+                    Lft."~tname~" = qL;
+                    Rght."~tname~" = qR;
+                }
+                }
+                ";
 		return code;
 	    }
 	    mixin(codeForReconstruction("vel.x", "vel.refx"));
@@ -357,13 +368,18 @@ public:
 	    // Finally, undo the transformation to local coordinates.
 	    Lft.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
 	    Rght.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-	    foreach (cell; IFace.left_cells) {
-		cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+	    foreach (left_cell; IFace.left_cells) {
+		if (left_cell.id != IFace.right_cells[0].id){
+		    left_cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+		}
 	    }
-	    foreach (cell; IFace.right_cells) {
-		cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+	    foreach (right_cell; IFace.right_cells) {
+		if (right_cell.id != IFace.left_cells[0].id){
+		    right_cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+		}
 	    }
 	} // end of high-order reconstruction
     } // end interp_both()
-
+    
 } // end class LsqInterpolator
+

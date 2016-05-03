@@ -286,10 +286,14 @@ public:
 	// a cloud of cells for field reconstruction prior to computing
 	// the convective fluxes, if we want high-order reconstruction.
 	foreach (f; faces) {
-	    if (f.left_cells.length == 1) {
+	  // we will first add the third cell to the cloud for all boundary clouds
+	  if (f.left_cells.length == 2) f.left_cells ~= f.right_cells[0];
+	  if (f.right_cells.length == 2) f.right_cells ~= f.left_cells[0];
+	  // now fill out the internal clouds
+	  if (f.left_cells.length == 1) {
 		auto cell = f.left_cells[0];
 		foreach (i, other_face; cell.iface) {
-		    if (other_face.id == f.id) continue;  // [TODO] FIX-ME PJ 2016-04-23 should be able to remove.
+		    //if (other_face.id == f.id) continue;  // REMOVED 2016-05-03 KD
 		    auto other_cell = (cell.outsign[i] > 0) ? other_face.right_cells[0] : other_face.left_cells[0];
 		    if (other_cell.will_have_valid_flow) { f.left_cells ~= other_cell; }
 		}
@@ -297,7 +301,7 @@ public:
 	    if (f.right_cells.length == 1) {
 		auto cell = f.right_cells[0];
 		foreach (i, other_face; cell.iface) {
-		    if (other_face.id == f.id) continue;  // [TODO] FIX-ME PJ 2016-04-23 should be able to remove.
+		    //if (other_face.id == f.id) continue;   // REMOVED 2016-05-03 KD
 		    auto other_cell = (cell.outsign[i] > 0) ? other_face.right_cells[0] : other_face.left_cells[0];
 		    if (other_cell.will_have_valid_flow) { f.right_cells ~= other_cell; }
 		}
@@ -312,8 +316,8 @@ public:
 	    bool ok = true;
 	    string msg = "";
 	    if (f.is_on_boundary) {
-		if ((f.left_cells.length == 2 && f.right_cells.length >= min_count) ||
-		    (f.left_cells.length >= min_count && f.right_cells.length == 2)) {
+		if ((f.left_cells.length == 3 && f.right_cells.length >= min_count) ||
+		    (f.left_cells.length >= min_count && f.right_cells.length == 3)) {
 		    ok = true;
 		} else {
 		    ok = false;
