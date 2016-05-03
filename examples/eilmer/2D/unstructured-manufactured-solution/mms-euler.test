@@ -1,0 +1,60 @@
+# mms.test
+#
+# Run the method of manufactured solutions test case for an
+# unstructured grid. These known good values come from an order
+# of accuracy test.
+#
+# KAD, 2016-05-03
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+# ----------------------------------------------
+# Euler case
+# ----------------------------------------------
+
+test prepare-source-terms {Prepare manufactured source terms.} -body {
+    exec python make_source_terms.py > LOGFILE_EULER_SOURCE_TERMS
+} -result {} -returnCodes {0}
+
+test run-preprocessor {Prepare Euler case.} -body {
+    exec e4shared --job=mms --prep > LOGFILE_PREP_EULER
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the Euler case.} -body {
+    exec e4shared --job=mms --run > LOGFILE_MAIN_EULER
+} -result {} -returnCodes {0}
+
+test number-of-steps {Iteration of the final block in a certain number of steps.} -body {
+    set fp [open LOGFILE_MAIN_EULER r]
+    set contents [read $fp]
+    close $fp
+    set final_steps 0
+    foreach line [split $contents "\n"] {
+	if {[string first "final-t=" $line] >= 0} {
+	    set final_steps [lindex [split $line] 1]
+	}
+    }
+    expr abs($final_steps - 2608) < 3
+} -result {1}
+
+test computed-norms {Check the density norms.} -body {
+    set L1_ref  9.6996222721218829e-04
+    set L2_ref 1.2061647787398029e-03
+    set Linf_ref 3.3773367565639312e-03
+    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua --norms="rho" | tail -3 > rho-norms.txt
+    set fp [open rho-norms.txt r]
+    set contents [read $fp]
+    close $fp
+    set line [lindex [split $contents "\n"] 0]
+    set tks [split $line]
+    set L1 [lindex $tks 2]
+    set L2 [lindex $tks 4]
+    set Linf [lindex $tks 6]
+    list [expr abs($L1 - $L1_ref)/$L1_ref < 1.0e-3] \
+         [expr abs($L2 - $L2_ref)/$L2_ref < 1.0e-3] \
+         [expr abs($Linf - $Linf_ref)/$Linf_ref < 1.0e-3]
+} -result {1 1 1}
+
+cleanupTests

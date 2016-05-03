@@ -16,10 +16,10 @@
 from sympy import *
 R_air = 287.0
 # Read case no.
-fp = open('case.txt', 'r');
-case_str = fp.readline().strip()
-case = int(case_str)
-fp.close()
+#fp = open('case.txt', 'r');
+#case_str = fp.readline().strip()
+case = 1 #int(case_str)
+#fp.close()
 # constants
 L = 1.0
 if case == 1 or case == 3:

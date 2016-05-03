@@ -13,9 +13,9 @@ local L = 1.0
 local R = 287.0
 local gam = 1.4
 
-file = io.open("case.txt", "r")
-case = file:read("*n")
-file:close()
+--file = io.open("case.txt", "r")
+case = 1 --file:read("*n")
+--file:close()
 
 if case == 1 or case == 3 then
    -- Supersonic flow

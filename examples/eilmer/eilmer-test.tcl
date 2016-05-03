@@ -5,7 +5,7 @@
 #
 # PJ, 11-Jan-2011, 12-Jul-2011 (Eilmer3 version)
 #     2015-10-22 Port to Eilmer4
-#
+# 
 # Presently, we work through the specified directories and explicitly invoke 
 # test scripts.  Of course, there must be a better way to do this using the 
 # tcltest module.
@@ -41,7 +41,9 @@ lappend test_scripts "2D/channel-with-bump/bump.test"
 lappend test_scripts "2D/manufactured-solution/smoke-tests/mms-euler.test"
 lappend test_scripts "2D/manufactured-solution/smoke-tests/mms-ns-div-theorem.test"
 lappend test_scripts "2D/manufactured-solution/smoke-tests/mms-ns-least-sq.test"
+lappend test_scripts "2D/unstructured-manufactured-solution/mms-euler.test"
 lappend test_scripts "2D/cylinder-shockfitting/cyl-sf.test"
+lappend test_scripts "2D/unstructured-manufactured-solution/mms-euler.test"
 # lappend test_scripts "2D/odw/odw.test"
 # lappend test_scripts "2D/sawada_sphere/ss3.test"
 lappend test_scripts "2D/bittker-hydrogen-combustion/bittker.test"
