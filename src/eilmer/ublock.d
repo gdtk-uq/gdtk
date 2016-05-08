@@ -281,7 +281,7 @@ public:
 		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
-	// For each side of a face with a single attached finite-volume cell,
+	// For each side of a face with a single at
 	// work around the faces of the attached cell to accumulate 
 	// a cloud of cells for field reconstruction prior to computing
 	// the convective fluxes, if we want high-order reconstruction.
@@ -339,8 +339,78 @@ public:
 		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
+	// We will now store the cloud of points in cloud_pos for viscous derivative calcualtions
+	// equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
+	// TO_DO : Refactor below code to adhere to DRY principle. Kyle D. (09_05_2016)
+	if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.divergence) {
+	    throw new Error("Divergence theorem not implemented for unstructured grid");
+	}
+        // else continue, least-squares is selected
+	if (myConfig.deriv_calc_at_vertices) {
+	    throw new Error("deriv_calc_at_vertices not implemented for unstructured grid");
+	}
+	else { //store_references_for_derivative_calc_at_faces(gtl);
+	    // set boundary clouds first
+	    foreach(l, boundary; grid.boundaries) {
+		BoundaryCondition bc = this.bc[l];
+		foreach (i, f; bc.faces) {
+		    BasicCell[] cell_list;
+		    f.cloud_pos ~= &(f.pos);
+		    f.cloud_fs ~= f.fs;
+		    if (bc.outsigns[i] == 1) {
+			cell_list~= f.left_cells[0];
+		    } else {
+			cell_list ~= f.right_cells[0];
+		    }
+		    foreach ( cell; cell_list ) {
+			// grab cell
+			f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
+			f.cloud_fs ~= cell.fs;
+			// now grab the interfaces
+			foreach (other_face; cell.iface) {
+			    foreach (vtx_i; other_face.vtx) {
+				foreach (vtx_j; f.vtx) {
+				    if ( vtx_i.id == vtx_j.id ) {
+					if (other_face.id == f.id) continue;
+					f.cloud_pos ~= &(other_face.pos);
+					f.cloud_fs ~= other_face.fs;
+				    } // end if ( vtx_i.id == vtx_j.id )
+				} // end foreach (vtx_j; f.vtx)
+			    } // end  foreach (vtx_i; other_face.vtx)
+			} // end foreach (other_face; cell.iface)
+		    } // end  foreach ( cell; cell_list )
+		} // end foreach (i, f; bc.faces)
+	    } // end foreach(l, boundary; grid.boundaries)
+	    
+	    // now set internal interface clouds
+	    foreach (i, f; faces) {
+		f.cloud_pos ~= &(f.pos);
+		f.cloud_fs ~= f.fs;
+		BasicCell[] cell_list;
+		if (f.is_on_boundary) continue;
+		cell_list ~= f.left_cells[0];
+		cell_list ~= f.right_cells[0];
+		foreach ( cell; cell_list ) {
+		    // grab cell
+		    f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
+		    f.cloud_fs ~= cell.fs;
+		    // now grab the interfaces
+		    foreach (other_face; cell.iface) {
+			foreach (vtx_i; other_face.vtx) {
+			    foreach (vtx_j; f.vtx) {
+				if ( vtx_i.id == vtx_j.id ) {
+				    if (other_face.id == f.id) continue;
+				    f.cloud_pos ~= &(other_face.pos);
+				    f.cloud_fs ~= other_face.fs;
+				} // end if ( vtx_i.id == vtx_j.id )
+			    } // end foreach (vtx_j; f.vtx)
+			} // end foreach (vtx_i; other_face.vtx)
+		    } // end foreach (other_face; cell.iface)
+		} // end foreach ( cell; cell_list )
+	    } // end foreach (i, f; faces)
+	} // end else
     } // end init_grid_and_flow_arrays()
-
+    
     override void compute_primary_cell_geometric_data(int gtl)
     {
 	if (myConfig.dimensions == 2) {

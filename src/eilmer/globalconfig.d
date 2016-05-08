@@ -191,7 +191,7 @@ final class GlobalConfig {
     shared static bool viscous = false; 
     // If true, viscous effects are included in the gas-dynamic update.
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.least_squares;
-    shared static bool deriv_calc_at_vertices = true;
+    shared static bool deriv_calc_at_vertices = false;
     //
     // A factor to scale the viscosity in order to achieve a soft start. 
     // The soft-start for viscous effects may be handy for impulsively-started flows.
