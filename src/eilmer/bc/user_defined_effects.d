@@ -298,7 +298,12 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("BIE_UserDefined.apply_unstructured_grid() not implemented yet");
+	size_t j = 0, k = 0;
+	//BasicCell cell;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    callInterfaceUDF(t, gtl, ftl, i, j, k, f);
+	} // end foreach face
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)

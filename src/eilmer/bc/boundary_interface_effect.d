@@ -29,6 +29,7 @@ import user_defined_effects;
 import solidfvcell;
 import solidfvinterface;
 import gas_solid_interface;
+import bc;
 
 BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -127,9 +128,21 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("BIE_CopyCellData.apply_unstructured_grid() not implemented yet");
+	BasicCell cell;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		cell = f.left_cells[0];
+		FlowState fs = f.fs;
+		fs.copy_values_from(cell.fs);
+	    } else {
+		cell = f.right_cells[0];
+		FlowState fs = f.fs;
+		fs.copy_values_from(cell.fs);
+	    }
+	} // end foreach face
     }
-
+    
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
@@ -618,9 +631,24 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("BIE_UpdateThermoTransCoeffs.apply_unstructured_grid() not implemented yet");
+	BasicCell cell;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	auto gmodel = blk.myConfig.gmodel;
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		cell = f.left_cells[0];
+		FlowState fs = f.fs;
+		gmodel.update_thermo_from_pT(fs.gas);
+		gmodel.update_trans_coeffs(fs.gas);
+	    } else {
+		cell = f.right_cells[0];
+		FlowState fs = f.fs;
+		gmodel.update_thermo_from_pT(fs.gas);
+		gmodel.update_trans_coeffs(fs.gas);
+	    }
+	} // end foreach face
     }
-
+    
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
