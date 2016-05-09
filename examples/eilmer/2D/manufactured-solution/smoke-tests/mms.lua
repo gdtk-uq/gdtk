@@ -93,6 +93,7 @@ else
    config.dt_init = 1.0e-7
    config.max_time = 150.0e-3
    config.viscous_signal_factor = 0.1
+   config.deriv_calc_at_vertices = true
 end
 config.dt_plot = config.max_time/20.0
 config.max_step = 3000000

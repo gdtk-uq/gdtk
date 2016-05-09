@@ -22,7 +22,7 @@ config.dimensions = 2
 -- test parameters
 
 fluxCalc = "ausmdv"
-derivCalc = "divergence"
+derivCalc = "least_squares"
 xOrder = 2
 blocking = "single"
 ncells = 16
