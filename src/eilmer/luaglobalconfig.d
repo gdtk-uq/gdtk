@@ -238,10 +238,11 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "spatial_deriv_calc");
     }
     lua_pop(L, 1);
-    lua_getfield(L, 1, "deriv_calc_at_vertices");
+    lua_getfield(L, 1, "spatial_deriv_locn");
     if (!lua_isnil(L, -1)) {
-	GlobalConfig.deriv_calc_at_vertices = to!bool(lua_toboolean(L, -1));
-	lua_pushnil(L); lua_setfield(L, 1, "deriv_calc_at_vertices");
+	string name = to!string(luaL_checkstring(L, -1));
+	GlobalConfig.spatial_deriv_locn = spatial_deriv_locn_from_name(name);
+	lua_pushnil(L); lua_setfield(L, 1, "spatial_deriv_locn");
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_factor");
@@ -612,8 +613,9 @@ extern(C) int configGet(lua_State* L)
 	string name = spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc);
 	lua_pushstring(L, name.toStringz);
 	break;
-    case "deriv_calc_at_vertices":
-	lua_pushboolean(L, GlobalConfig.deriv_calc_at_vertices);
+    case "spatial_deriv_locn":
+	string name = spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn);
+	lua_pushstring(L, name.toStringz);
 	break;
     case "viscous_factor":
 	lua_pushnumber(L, GlobalConfig.viscous_factor);

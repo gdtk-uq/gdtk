@@ -211,3 +211,27 @@ SpatialDerivCalc spatial_deriv_calc_from_name(string name)
 	throw new FlowSolverException(msg);
     }
 }
+
+enum SpatialDerivLocn {
+    faces,
+    vertices
+}
+
+string spatial_deriv_locn_name(SpatialDerivLocn sdl)
+{
+    final switch ( sdl ) {
+    case SpatialDerivLocn.faces: return "faces";
+    case SpatialDerivLocn.vertices: return "vertices";
+    }
+}
+
+SpatialDerivLocn spatial_deriv_locn_from_name(string name)
+{
+    switch ( name ) {
+    case "faces": return SpatialDerivLocn.faces;
+    case "vertices": return SpatialDerivLocn.vertices;
+    default:
+	string msg = text("Invalid spatial-derivative location name:", name);
+	throw new FlowSolverException(msg);
+    }
+}

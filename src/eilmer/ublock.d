@@ -346,10 +346,11 @@ public:
 	    throw new Error("Divergence theorem not implemented for unstructured grid");
 	}
         // else continue, least-squares is selected
-	if (myConfig.deriv_calc_at_vertices) {
-	    throw new Error("deriv_calc_at_vertices not implemented for unstructured grid");
-	}
-	else { //store_references_for_derivative_calc_at_faces(gtl);
+	final switch (myConfig.spatial_deriv_locn) {
+	case SpatialDerivLocn.vertices:
+	    throw new Error("spatial_deriv_locn at vertices not implemented for unstructured grid");
+	    // no need for break;
+	case SpatialDerivLocn.faces:
 	    // set boundary clouds first
 	    foreach(l, boundary; grid.boundaries) {
 		BoundaryCondition bc = this.bc[l];
@@ -362,7 +363,7 @@ public:
 		    } else {
 			cell_list ~= f.right_cells[0];
 		    }
-		    foreach ( cell; cell_list ) {
+		    foreach (cell; cell_list) {
 			// grab cell
 			f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
 			f.cloud_fs ~= cell.fs;
@@ -378,7 +379,7 @@ public:
 				} // end foreach (vtx_j; f.vtx)
 			    } // end  foreach (vtx_i; other_face.vtx)
 			} // end foreach (other_face; cell.iface)
-		    } // end  foreach ( cell; cell_list )
+		    } // end  foreach (cell; cell_list)
 		} // end foreach (i, f; bc.faces)
 	    } // end foreach(l, boundary; grid.boundaries)
 	    
@@ -390,7 +391,7 @@ public:
 		if (f.is_on_boundary) continue;
 		cell_list ~= f.left_cells[0];
 		cell_list ~= f.right_cells[0];
-		foreach ( cell; cell_list ) {
+		foreach (cell; cell_list) {
 		    // grab cell
 		    f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
 		    f.cloud_fs ~= cell.fs;
@@ -406,9 +407,9 @@ public:
 			    } // end foreach (vtx_j; f.vtx)
 			} // end foreach (vtx_i; other_face.vtx)
 		    } // end foreach (other_face; cell.iface)
-		} // end foreach ( cell; cell_list )
+		} // end foreach (cell; cell_list)
 	    } // end foreach (i, f; faces)
-	} // end else
+	} // end switch (myConfig.spatial_deriv_locn)
     } // end init_grid_and_flow_arrays()
     
     override void compute_primary_cell_geometric_data(int gtl)

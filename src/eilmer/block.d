@@ -298,9 +298,10 @@ public:
     @nogc
     void flow_property_derivatives(int gtl)
     {
-	if (myConfig.deriv_calc_at_vertices) {
+	final switch (myConfig.spatial_deriv_locn) {
+	case SpatialDerivLocn.vertices:
 	    if (myConfig.dimensions == 2) {
-		final switch ( myConfig.spatial_deriv_calc ) {
+		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(vtx; vertices) { 
 			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
@@ -320,9 +321,10 @@ public:
 	    foreach (iface; faces) {
 		iface.average_vertex_deriv_values();
 	    }
-	} else { // evaluate gradients at interfaces
+	    break;
+	case SpatialDerivLocn.faces:
 	    if (myConfig.dimensions == 2) {
-		final switch ( myConfig.spatial_deriv_calc ) {
+		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(iface; faces) { 
 			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
@@ -339,7 +341,7 @@ public:
 		    iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
 		}
 	    } // end if (myConfig.dimensions
-	}
+	} // end switch (myConfig.spatial_deriv_locn
     } // end flow_property_derivatives()
 
     @nogc

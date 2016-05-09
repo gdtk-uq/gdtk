@@ -191,7 +191,7 @@ final class GlobalConfig {
     shared static bool viscous = false; 
     // If true, viscous effects are included in the gas-dynamic update.
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.least_squares;
-    shared static bool deriv_calc_at_vertices = false;
+    shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.faces;
     //
     // A factor to scale the viscosity in order to achieve a soft start. 
     // The soft-start for viscous effects may be handy for impulsively-started flows.
@@ -363,7 +363,7 @@ public:
     double compression_tolerance;
     bool viscous;
     SpatialDerivCalc spatial_deriv_calc;
-    bool deriv_calc_at_vertices;
+    SpatialDerivLocn spatial_deriv_locn;
     double viscous_factor;
     bool diffusion;
     double diffusion_factor;
@@ -429,7 +429,7 @@ public:
 	compression_tolerance = GlobalConfig.compression_tolerance;
 	viscous = GlobalConfig.viscous;
 	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
-	deriv_calc_at_vertices = GlobalConfig.deriv_calc_at_vertices;
+	spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
 	viscous_factor = GlobalConfig.viscous_factor;
 	diffusion = GlobalConfig.diffusion;
 	diffusion_factor = GlobalConfig.diffusion_factor;

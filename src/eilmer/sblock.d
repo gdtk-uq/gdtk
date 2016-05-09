@@ -1000,12 +1000,14 @@ public:
 
     void store_references_for_derivative_calc(size_t gtl)
     {
-	if (myConfig.deriv_calc_at_vertices) {
+	final switch (myConfig.spatial_deriv_locn) {
+	case SpatialDerivLocn.vertices:
 	    store_references_for_derivative_calc_at_vertices(gtl);
-	} else {
+	    break;
+	case SpatialDerivLocn.faces:
 	    store_references_for_derivative_calc_at_faces(gtl);
 	}
-    }
+    } // end store_references_for_derivative_calc()
 
     void store_references_for_derivative_calc_at_faces(size_t gtl)
     {
