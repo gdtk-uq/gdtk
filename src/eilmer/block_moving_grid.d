@@ -109,7 +109,7 @@ void predict_vertex_positions(Block blk, size_t dimensions, double dt, int gtl) 
     return;
 }
 
-void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, double sim_time) {
+void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
     /++ for a given block, loop through cell vertices and update the vertex
       + velocities. The boundary vertex velocities are set via the methodology laid out
       + in Ian Johnston's thesis available on the cfcfd website. The internal velocities
@@ -126,7 +126,7 @@ void shock_fitting_vertex_velocities(Block blk, size_t dimensions, int step, dou
     bool reconstruction_higher_order = true; // if false code reverts to 0th order interpolation
     immutable double SHOCK_DETECT_THRESHOLD =  0.2;
     immutable double VTX_VEL_SCALING_FACTOR = 0.2;
-    size_t krangemax = ( dimensions == 2 ) ? blk.kmax : blk.kmax+1;
+    size_t krangemax = ( blk.myConfig.dimensions == 2 ) ? blk.kmax : blk.kmax+1;
 
     // make sure all the vertices are given a velocity to begin with
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
