@@ -229,6 +229,34 @@ function UBlock:tojson()
 end
 
 -- ---------------------------------------------------------------------------
+function SBlock2UBlock(blk)
+   local origId = blk.id
+   -- Let's swap out any exchange_over_full_face BCs and replace
+   -- with exchange BCs.
+   local bcList = {}
+   for i,face in ipairs(faceList(config.dimensions)) do
+      if blk.bcList[face].type == "exchange_over_full_face" then
+	 -- We'll convert any exchange_over_full_face BCs
+	 bcList[i-1] = ExchangeBC_MappedCell:new{}
+      else
+	 -- For all other BCs, we directly copy.
+	 bcList[i-1] = blk.bcList[face]
+      end
+   end
+   ublk = UBlock:new{grid=UnstructuredGrid:new{sgrid=blk.grid},
+		     fillCondition=blk.fillCondition,
+		     active=blk.active,
+		     label=blk.label,
+		     omegaz=blk.omegaz,
+		     bcList=bcList}
+   local newId = ublk.id
+   -- Swap blocks in global list
+   blocks[origId+1], blocks[newId+1] = blocks[newId+1], blocks[origId+1]
+   -- Fix id of ublk
+   blocks[origId+1].id = origId
+   -- Now remove original SBlock (which is now in pos ublk.id+1)
+   table.remove(blocks, newId+1)
+end
 
 function closeEnough(vA, vB, tolerance)
    -- Decide if two Vector quantities are close enough to being equal.
