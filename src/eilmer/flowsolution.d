@@ -217,11 +217,13 @@ public:
     this(string filename, Grid_t gridType)
     {
 	this.gridType = gridType;
-	// Read in the flow data for a single structured block.
+	// Read in the flow data for a single block.
 	//
-	// Keep in sync with SBlock.write_solution(), UBlock.write_solution()
-	// and write_initial_sg_flow_file_from_lua() in luaflowstate.d
-	// and write_initial_usg_flow_file_from_lua() in luaflowstate.d.
+	// Keep in sync with: 
+	// 1. SBlock.write_solution(),
+	// 2. UBlock.write_solution()
+	// 3. write_initial_sg_flow_file_from_lua() in luaflowstate.d
+	// 4. write_initial_usg_flow_file_from_lua() in luaflowstate.d.
 	//
 	string[] tokens;
 	auto byLine = new GzipByLine(filename);
@@ -420,8 +422,8 @@ public:
 	    }
 	    // We are expecting a table, containing labelled values.
 	    if ( !lua_istable(L, -1) ) {
-		string errMsg = `Error in FlowSolution.subtract_ref_soln().;
-A table containing values is expected, but no table was found.`;
+		string errMsg = "Error in FlowSolution.subtract_ref_soln().;\n" ~
+		    "A table containing values is expected, but no table was found.";
 		luaL_error(L, errMsg.toStringz);
 		return;
 	    }
