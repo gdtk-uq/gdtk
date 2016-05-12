@@ -548,45 +548,8 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, double H)
     return p;
 }
 
-int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
-		    ref const(Vector3) b, ref const(Vector3) c)
-{
-    Vector3 n = unit(cross(a-c, b-c)); // normal to plane of triangle
-    double area1 = 0.5 * dot(cross(p-a, p-b), n); // projected area of triangle pab
-    double area2 = 0.5 * dot(cross(p-b, p-c), n);
-    double area3 = 0.5 * dot(cross(p-c, p-a), n);
-    // Only a point inside the triangle will have all areas positive.
-    if ( area1 > 0.0 && area2 > 0.0 && area3 > 0.0 ) return 1;
-    // However, the point may be damned close to an edge but
-    // missing because of floating-point round-off.
-    double tol = 1.0e-12;
-    if ( (fabs(area1) < tol && area2 > -tol && area3 > -tol) || 
-	 (fabs(area2) < tol && area1 > -tol && area3 > -tol) || 
-	 (fabs(area3) < tol && area1 > -tol && area2 > -tol) ) return 2;
-    // Otherwise, the point is outside the triangle.
-    return 0;
-}
-
-unittest {
-    Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
-    Vector3 b = Vector3(1.0, 1.0, 0.0);
-    Vector3 c = Vector3(0.5, 0.0, 0.0);
-    Vector3 qr = Vector3(3.0, 3.0, -3.0); // direction
-    Vector3 q = Vector3(0.0, 0.0, 1.0); // start point
-    int flag =  project_onto_plane(q, qr, a, b, c);
-    assert(approxEqualVectors(q, Vector3(1.0,1.0,0.0)), "project_onto_plane");
-    Vector3 myp = Vector3(1.0, 1.0, 1.0);
-    map_neutral_plane_to_cylinder(myp, 1.0);
-    assert(approxEqualVectors(myp, Vector3(1.0, sin(1.0), cos(1.0))), "cylinder map");
-    Vector3 d = Vector3(0.65, 0.0, 0.0);
-    assert(inside_triangle(d, a, b, c) > 0, "inside triangle");
-    Vector3 e = Vector3(0.65, -0.1, 0.0);
-    assert(!inside_triangle(e, a, b, c), "outside triangle");
-}
-
-
 //------------------------------------------------------------------------
-// Geometry functions projection and mapping.
+// Utility functions for cell properties in the finite-volume code.
 
 /** Quadrilateral properties of centroid, associated unit normals and area.
  *   p3-----p2
@@ -883,3 +846,111 @@ unittest {
     assert(approxEqual(volume, 1.0), "hex volume");
 }
 
+//------------------------------------------------------------------------
+// Utility functions for searching cells in the finite-volume code.
+
+int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
+		    ref const(Vector3) b, ref const(Vector3) c)
+{
+    Vector3 n = unit(cross(a-c, b-c)); // normal to plane of triangle
+    double area1 = 0.5 * dot(cross(p-a, p-b), n); // projected area of triangle pab
+    double area2 = 0.5 * dot(cross(p-b, p-c), n);
+    double area3 = 0.5 * dot(cross(p-c, p-a), n);
+    // Only a point inside the triangle will have all areas positive.
+    if ( area1 > 0.0 && area2 > 0.0 && area3 > 0.0 ) return 1;
+    // However, the point may be damned close to an edge but
+    // missing because of floating-point round-off.
+    double tol = 1.0e-12;
+    if ( (fabs(area1) < tol && area2 > -tol && area3 > -tol) || 
+	 (fabs(area2) < tol && area1 > -tol && area3 > -tol) || 
+	 (fabs(area3) < tol && area1 > -tol && area2 > -tol) ) return 2;
+    // Otherwise, the point is outside the triangle.
+    return 0;
+}
+
+bool inside_xy_polygon(ref const(Vector3) p, ref const(Vector3[]) vtx)
+// Returns true if the point p is inside or on the polygon boundary.
+//
+// We split the x,y-plane into half-planes and check which side p is on.
+// We also assume that the vertices are numbered counter-clockwise
+// around the edges of the polygon.  z-components are ignored
+{
+    uint count_on_left = 0;
+    foreach (i; 0 .. vtx.length) {
+	// Now, check to see if the specified point is on the left of
+	// or on each boundary line segment AB.
+	double xA = vtx[i].x; double yA = vtx[i].y;
+	size_t ip1 = i+1;
+	if (ip1 == vtx.length) ip1 = 0; // wrap around
+	double xB = vtx[ip1].x; double yB = vtx[ip1].y;
+	if ((p.x - xB) * (yA - yB) >= (p.y - yB) * (xA - xB)) count_on_left += 1;
+    }
+    return (count_on_left == vtx.length);
+} // end inside_xy_polygon()
+
+bool inside_hexahedron(ref const(Vector3) p, ref const(Vector3[]) vtx)
+// Returns true is the point p is inside or on the hexadedron surface.
+//
+// The test consists of dividing the 6 cell faces into triangular facets
+// with outwardly-facing normals and then computing the volumes of the
+// tetrahedra formed by these facets and the sample point p.
+// If any of the tetrahedra volumes are positive
+// (i.e. p is on the positive side of a facet) and we assume a convex cell,
+// it means that the point is outside the cell and we may say so
+// without further testing.
+//
+// [TODO] if the faces are not already triangles, they need to be split into
+// triangles about the mid point.  The current arrangement of choosing a
+// diagonal for the splitting may lead to points not being consistently 
+// being identified for cells with twisted faces.  This may lead to failed
+// searches when the cells are warped.
+{
+    // North
+    if (tetrahedron_volume(vtx[2], vtx[3], vtx[7], p) > 0.0) return false;
+    if (tetrahedron_volume(vtx[7], vtx[6], vtx[2], p) > 0.0) return false;
+    // East
+    if (tetrahedron_volume(vtx[1], vtx[2], vtx[6], p) > 0.0) return false;
+    if (tetrahedron_volume(vtx[6], vtx[5], vtx[1], p) > 0.0) return false;
+    // South
+    if (tetrahedron_volume(vtx[0], vtx[1], vtx[5], p) > 0.0) return false;
+    if (tetrahedron_volume(vtx[5], vtx[4], vtx[0], p) > 0.0) return false;
+    // West
+    if (tetrahedron_volume(vtx[3], vtx[0], vtx[4], p) > 0.0) return false;
+    if (tetrahedron_volume(vtx[4], vtx[7], vtx[3], p) > 0.0) return false;
+    // Bottom
+    if (tetrahedron_volume(vtx[1], vtx[0], vtx[3], p) > 0.0) return false;
+    if (tetrahedron_volume(vtx[3], vtx[2], vtx[1], p) > 0.0) return false;
+    // Top
+    if (tetrahedron_volume(vtx[4], vtx[5], vtx[6], p) > 0.0) return false;
+    if (tetrahedron_volume(vtx[6], vtx[7], vtx[4], p) > 0.0) return false;
+    // If we arrive here, we haven't determined that the point is outside...
+    return true;
+} // end inside_hexahedron()
+
+unittest {
+    Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
+    Vector3 b = Vector3(1.0, 1.0, 0.0);
+    Vector3 c = Vector3(0.5, 0.0, 0.0);
+    Vector3 qr = Vector3(3.0, 3.0, -3.0); // direction
+    Vector3 q = Vector3(0.0, 0.0, 1.0); // start point
+    int flag =  project_onto_plane(q, qr, a, b, c);
+    assert(approxEqualVectors(q, Vector3(1.0,1.0,0.0)), "project_onto_plane");
+    Vector3 myp = Vector3(1.0, 1.0, 1.0);
+    map_neutral_plane_to_cylinder(myp, 1.0);
+    assert(approxEqualVectors(myp, Vector3(1.0, sin(1.0), cos(1.0))), "cylinder map");
+    Vector3 d = Vector3(0.65, 0.0, 0.0);
+    assert(inside_triangle(d, a, b, c) > 0, "inside triangle");
+    Vector3 e = Vector3(0.65, -0.1, 0.0);
+    assert(!inside_triangle(e, a, b, c), "outside triangle");
+
+    Vector3[] poly = [Vector3(0.0, 0.0), Vector3(1.0, -0.1), Vector3(1.0, 1.0), Vector3(0.0, 1.0)];
+    assert(inside_xy_polygon(d, poly) > 0, "inside polygon");
+    assert(!inside_xy_polygon(e, poly) > 0, "outside polygon");
+
+    Vector3[] hex = [Vector3(0.0, 0.0, 0.0), Vector3(1.0, -0.1, 0.0),
+		     Vector3(1.0, 1.0, 0.0), Vector3(0.0, 1.0, 0.0),
+		     Vector3(0.0, 0.0, 1.0), Vector3(1.0, -0.1, 1.0),
+		     Vector3(1.0, 1.0, 1.0), Vector3(0.0, 1.0, 1.0)];
+    assert(inside_hexahedron(d, hex) > 0, "inside hexahedron");
+    assert(!inside_hexahedron(e, hex) > 0, "outside hexahedron");
+}

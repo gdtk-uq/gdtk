@@ -257,60 +257,6 @@ public:
 	return to!string(repr);
     }
 
-    bool point_is_inside(in Vector3 p, int dimensions, int gtl) const
-    // Returns true if the point p is inside or on the cell surface.
-    {
-	if ( dimensions == 2 ) {
-	    // In 2 dimensions, we split the x,y-plane into half-planes and check which side p is on.
-	    // We assume that the vertices are numbered clockwise around the edges of the cell.
-	    uint count_on_left = 0;
-	    foreach (i; 1 .. vtx.length) {
-		// Now, check to see if the specified point is on the
-		// left of (or on) each boundary line AB.
-		double xA = vtx[i-1].pos[gtl].x; double yA = vtx[i-1].pos[gtl].y;
-		double xB = vtx[i].pos[gtl].x; double yB = vtx[i].pos[gtl].y;
-		if ( (p.x - xB) * (yA - yB) >= (p.y - yB) * (xA - xB) ) count_on_left += 1;
-	    }
-	    return (count_on_left == vtx.length);
-	} else {
-	    // In 3 dimensions, we are presently assuming a hexahedron.
-	    // [TODO] unstructured-grid adaption.
-	    // [TODO] if the faces are not already triangles, they need to be split into
-	    // triangles about the mid point.  The current arrangement of choosing a
-	    // diagonal for the splitting may lead to points not being consistently 
-	    // being identified for cells with twisted faces.
-	    //
-	    // The test consists of dividing the 6 cell faces into triangular facets
-	    // with outwardly-facing normals and then computing the volumes of the
-	    // tetrahedra formed by these facets and the sample point p.
-	    // If any of the tetrahedra volumes are positive
-	    // (i.e. p is on the positive side of a facet) and we assume a convex cell,
-	    // it means that the point is outside the cell and we may say so
-	    // without further testing.
-
-	    // North
-	    if ( tetrahedron_volume(vtx[2].pos[gtl], vtx[3].pos[gtl], vtx[7].pos[gtl], p) > 0.0 ) return false;
-	    if ( tetrahedron_volume(vtx[7].pos[gtl], vtx[6].pos[gtl], vtx[2].pos[gtl], p) > 0.0 ) return false;
-	    // East
-	    if ( tetrahedron_volume(vtx[1].pos[gtl], vtx[2].pos[gtl], vtx[6].pos[gtl], p) > 0.0 ) return false;
-	    if ( tetrahedron_volume(vtx[6].pos[gtl], vtx[5].pos[gtl], vtx[1].pos[gtl], p) > 0.0 ) return false;
-	    // South
-	    if ( tetrahedron_volume(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[5].pos[gtl], p) > 0.0 ) return false;
-	    if ( tetrahedron_volume(vtx[5].pos[gtl], vtx[4].pos[gtl], vtx[0].pos[gtl], p) > 0.0 ) return false;
-	    // West
-	    if ( tetrahedron_volume(vtx[3].pos[gtl], vtx[0].pos[gtl], vtx[4].pos[gtl], p) > 0.0 ) return false;
-	    if ( tetrahedron_volume(vtx[4].pos[gtl], vtx[7].pos[gtl], vtx[3].pos[gtl], p) > 0.0 ) return false;
-	    // Bottom
-	    if ( tetrahedron_volume(vtx[1].pos[gtl], vtx[0].pos[gtl], vtx[3].pos[gtl], p) > 0.0 ) return false;
-	    if ( tetrahedron_volume(vtx[3].pos[gtl], vtx[2].pos[gtl], vtx[1].pos[gtl], p) > 0.0 ) return false;
-	    // Top
-	    if ( tetrahedron_volume(vtx[4].pos[gtl], vtx[5].pos[gtl], vtx[6].pos[gtl], p) > 0.0 ) return false;
-	    if ( tetrahedron_volume(vtx[6].pos[gtl], vtx[7].pos[gtl], vtx[4].pos[gtl], p) > 0.0 ) return false;
-	    // If we arrive here, we haven't determined that the point is outside...
-	    return true;
-	} // end dimensions != 2
-    } // end point_is_inside()
-
     void replace_flow_data_with_average(in FVCell[] others) 
     {
 	auto gmodel = myConfig.gmodel;
