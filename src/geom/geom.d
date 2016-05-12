@@ -548,6 +548,19 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, double H)
     return p;
 }
 
+unittest {
+    Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
+    Vector3 b = Vector3(1.0, 1.0, 0.0);
+    Vector3 c = Vector3(0.5, 0.0, 0.0);
+    Vector3 qr = Vector3(3.0, 3.0, -3.0); // direction
+    Vector3 q = Vector3(0.0, 0.0, 1.0); // start point
+    int flag =  project_onto_plane(q, qr, a, b, c);
+    assert(approxEqualVectors(q, Vector3(1.0,1.0,0.0)), "project_onto_plane");
+    Vector3 myp = Vector3(1.0, 1.0, 1.0);
+    map_neutral_plane_to_cylinder(myp, 1.0);
+    assert(approxEqualVectors(myp, Vector3(1.0, sin(1.0), cos(1.0))), "cylinder map");
+}
+
 //------------------------------------------------------------------------
 // Utility functions for cell properties in the finite-volume code.
 
@@ -597,12 +610,6 @@ void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
 {
     quad_properties(p[0], p[1], p[2], p[3], centroid, n, t1, t2, area, tol, area_tol);
 }
-
-double tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
-			  ref const(Vector3) p2, ref const(Vector3) p3)
-{
-    return dot(p3-p0, cross(p1-p0, p2-p0)) / 6.0;
-} // end tetrahedron_volume()
 
 void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 				  ref const(Vector3) p2, ref const(Vector3) p3,
@@ -666,6 +673,16 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     iLen = sqrt(dx * dx + dy * dy);
 } // end xyplane_quad_cell_properties()
 
+// For the tetrahedron geometry, we consider p0,p1,p2 the base.
+// Looking from p3 back toward the base, a counter-clockwise cycle
+// p0->p1->p2->p0 gives a positive volume.
+
+double tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
+			  ref const(Vector3) p2, ref const(Vector3) p3)
+{
+    return dot(p3-p0, cross(p1-p0, p2-p0)) / 6.0;
+} // end tetrahedron_volume()
+
 void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			    ref const(Vector3) p2, ref const(Vector3) p3,
 			    ref Vector3 centroid, ref double volume)
@@ -677,7 +694,7 @@ void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 void tetrahedron_properties(ref const(Vector3)[] p,
 			    ref Vector3 centroid, ref double volume)
 {
-    tetrahedron_properties(p[0], p[1], p[2], p[4], centroid, volume);
+    tetrahedron_properties(p[0], p[1], p[2], p[3], centroid, volume);
 }
 
 // Because of the way we lose precision when reading and writing files,
@@ -688,8 +705,8 @@ double smallButSignificantVolume = 1.0e-12;
 double verySmallVolume = 1.0e-20;
 
 void wedge_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2, 
-		     const Vector3 p3, in Vector3 p4, in Vector3 p5,
-		     ref Vector3 centroid, ref double volume)
+		      const Vector3 p3, in Vector3 p4, in Vector3 p5,
+		      ref Vector3 centroid, ref double volume)
 {
     double v1, v2, v3;
     Vector3 c1, c2, c3;
@@ -727,20 +744,11 @@ double tetragonal_dipyramid_volume(in Vector3 p0, in Vector3 p1,
 // Base of each dipyramid is specified clockwise from the outside.
 // pc is apex
 // pb is barycentre of base quad.
-// base quad p0->p1->p2->p3->p0 counterclockwise when looking from pc toward base.
+// A base quad cycle p0->p1->p2->p3->p0 that is counterclockwise when looking 
+// towards it from pc will result in a positive volume.
+// A negative volume indicates that the cycle is clockwise when looking from pc.
 {
     double volume = dot(pc-pb, cross(p1-p0+p2-p3, p3-p0+p2-p1)) / 12.0;
-    if ( (volume < 0.0 && fabs(volume) < smallButSignificantVolume) ||
-	 (volume >= 0.0 && volume < verySmallVolume) ) {
-	// We assume that we have a collapsed pyramid (all points coplanar);
-	// no real problem here but it may be a problem for the client code.
-	// That code should test the value of volume, on return.
-	volume = 0.0;
-    }
-    if ( volume < 0.0 ) {
-	// Something has gone wrong with our geometry.
-        throw new Exception("significant negative volume.");
-    }
     return volume;
 } // end tetragonal_dipyramid_volume()
 
@@ -868,89 +876,126 @@ int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
     return 0;
 }
 
-bool inside_xy_polygon(ref const(Vector3) p, ref const(Vector3[]) vtx)
-// Returns true if the point p is inside or on the polygon boundary.
+// Functions for xy-plane cells.
 //
 // We split the x,y-plane into half-planes and check which side p is on.
 // We also assume that the vertices are numbered counter-clockwise
-// around the edges of the polygon.  z-components are ignored
+// around the edges of the polygon.  z-components are ignored.
+
+bool on_left_of_xy_line(ref const(Vector3) a, ref const(Vector3) b, ref const(Vector3) p)
+// Returns true if p is on the left as we look along the line from a to b.
+{
+    return (p.x - b.x) * (a.y - b.y) >= (p.y - b.y) * (a.x - b.x);
+}
+
+bool inside_xy_polygon(ref const(Vector3[]) vtx, ref const(Vector3) p)
+// Returns true if the point p is inside or on the polygon boundary.
 {
     uint count_on_left = 0;
     foreach (i; 0 .. vtx.length) {
-	// Now, check to see if the specified point is on the left of
-	// or on each boundary line segment AB.
-	double xA = vtx[i].x; double yA = vtx[i].y;
 	size_t ip1 = i+1;
 	if (ip1 == vtx.length) ip1 = 0; // wrap around
-	double xB = vtx[ip1].x; double yB = vtx[ip1].y;
-	if ((p.x - xB) * (yA - yB) >= (p.y - yB) * (xA - xB)) count_on_left += 1;
+	if (on_left_of_xy_line(vtx[i], vtx[ip1], p)) count_on_left += 1;
     }
     return (count_on_left == vtx.length);
 } // end inside_xy_polygon()
 
-bool inside_hexahedron(ref const(Vector3) p, ref const(Vector3[]) vtx)
-// Returns true is the point p is inside or on the hexadedron surface.
+bool inside_xy_triangle(ref const(Vector3) p0, ref const(Vector3) p1,
+			ref const(Vector3) p2, ref const(Vector3) p)
+// Returns true if the point p is inside or on the triangle boundary.
 //
-// The test consists of dividing the 6 cell faces into triangular facets
-// with outwardly-facing normals and then computing the volumes of the
-// tetrahedra formed by these facets and the sample point p.
-// If any of the tetrahedra volumes are positive
-// (i.e. p is on the positive side of a facet) and we assume a convex cell,
-// it means that the point is outside the cell and we may say so
-// without further testing.
-//
-// [TODO] if the faces are not already triangles, they need to be split into
-// triangles about the mid point.  The current arrangement of choosing a
-// diagonal for the splitting may lead to points not being consistently 
-// being identified for cells with twisted faces.  This may lead to failed
-// searches when the cells are warped.
+// This specialized function avoids the array and loop used 
+// for the more general polygon.
 {
-    // North
-    if (tetrahedron_volume(vtx[2], vtx[3], vtx[7], p) > 0.0) return false;
-    if (tetrahedron_volume(vtx[7], vtx[6], vtx[2], p) > 0.0) return false;
-    // East
-    if (tetrahedron_volume(vtx[1], vtx[2], vtx[6], p) > 0.0) return false;
-    if (tetrahedron_volume(vtx[6], vtx[5], vtx[1], p) > 0.0) return false;
-    // South
-    if (tetrahedron_volume(vtx[0], vtx[1], vtx[5], p) > 0.0) return false;
-    if (tetrahedron_volume(vtx[5], vtx[4], vtx[0], p) > 0.0) return false;
-    // West
-    if (tetrahedron_volume(vtx[3], vtx[0], vtx[4], p) > 0.0) return false;
-    if (tetrahedron_volume(vtx[4], vtx[7], vtx[3], p) > 0.0) return false;
-    // Bottom
-    if (tetrahedron_volume(vtx[1], vtx[0], vtx[3], p) > 0.0) return false;
-    if (tetrahedron_volume(vtx[3], vtx[2], vtx[1], p) > 0.0) return false;
-    // Top
-    if (tetrahedron_volume(vtx[4], vtx[5], vtx[6], p) > 0.0) return false;
-    if (tetrahedron_volume(vtx[6], vtx[7], vtx[4], p) > 0.0) return false;
-    // If we arrive here, we haven't determined that the point is outside...
-    return true;
-} // end inside_hexahedron()
+    uint count_on_left = 0;
+    if (on_left_of_xy_line(p0, p1, p)) count_on_left += 1;
+    if (on_left_of_xy_line(p1, p2, p)) count_on_left += 1;
+    if (on_left_of_xy_line(p2, p0, p)) count_on_left += 1;
+    return (count_on_left == 3);
+} // end inside_xy_triangle()
+
+bool inside_xy_quad(ref const(Vector3) p0, ref const(Vector3) p1,
+		    ref const(Vector3) p2, ref const(Vector3) p3,
+		    ref const(Vector3) p)
+// Returns true if the point p is inside or on the quadrangle boundary.
+{
+    uint count_on_left = 0;
+    if (on_left_of_xy_line(p0, p1, p)) count_on_left += 1;
+    if (on_left_of_xy_line(p1, p2, p)) count_on_left += 1;
+    if (on_left_of_xy_line(p2, p3, p)) count_on_left += 1;
+    if (on_left_of_xy_line(p3, p0, p)) count_on_left += 1;
+    return (count_on_left == 4);
+} // end inside_xy_quad()
 
 unittest {
     Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
     Vector3 b = Vector3(1.0, 1.0, 0.0);
     Vector3 c = Vector3(0.5, 0.0, 0.0);
-    Vector3 qr = Vector3(3.0, 3.0, -3.0); // direction
-    Vector3 q = Vector3(0.0, 0.0, 1.0); // start point
-    int flag =  project_onto_plane(q, qr, a, b, c);
-    assert(approxEqualVectors(q, Vector3(1.0,1.0,0.0)), "project_onto_plane");
-    Vector3 myp = Vector3(1.0, 1.0, 1.0);
-    map_neutral_plane_to_cylinder(myp, 1.0);
-    assert(approxEqualVectors(myp, Vector3(1.0, sin(1.0), cos(1.0))), "cylinder map");
     Vector3 d = Vector3(0.65, 0.0, 0.0);
     assert(inside_triangle(d, a, b, c) > 0, "inside triangle");
     Vector3 e = Vector3(0.65, -0.1, 0.0);
     assert(!inside_triangle(e, a, b, c), "outside triangle");
 
-    Vector3[] poly = [Vector3(0.0, 0.0), Vector3(1.0, -0.1), Vector3(1.0, 1.0), Vector3(0.0, 1.0)];
-    assert(inside_xy_polygon(d, poly) > 0, "inside polygon");
-    assert(!inside_xy_polygon(e, poly) > 0, "outside polygon");
+    auto p0 = Vector3(0.0, 0.0);
+    auto p1 = Vector3(1.0, -0.1);
+    auto p2 = Vector3(1.0, 1.0);
+    auto p3 = Vector3(0.0, 1.0);
+    Vector3[] poly = [p0, p1, p2, p3];
+    assert(inside_xy_polygon(poly, d), "inside polygon");
+    assert(!inside_xy_polygon(poly, e), "outside polygon");
+    assert(inside_xy_triangle(p0, p1, p2, d), "inside xy triangle");
+    assert(!inside_xy_triangle(p0, p1, p2, e), "outside xy triangle");
+    assert(inside_xy_quad(p0, p1, p2, p3, d), "inside xy quadrangle");
+    assert(!inside_xy_quad(p0, p1, p2, p3, e), "outside xy quadrangle");
+}
 
-    Vector3[] hex = [Vector3(0.0, 0.0, 0.0), Vector3(1.0, -0.1, 0.0),
-		     Vector3(1.0, 1.0, 0.0), Vector3(0.0, 1.0, 0.0),
-		     Vector3(0.0, 0.0, 1.0), Vector3(1.0, -0.1, 1.0),
-		     Vector3(1.0, 1.0, 1.0), Vector3(0.0, 1.0, 1.0)];
-    assert(inside_hexahedron(d, hex) > 0, "inside hexahedron");
-    assert(!inside_hexahedron(e, hex) > 0, "outside hexahedron");
+// Functions for 3D cells.
+
+bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
+		       ref const(Vector3) p2, ref const(Vector3) p3,
+		       ref const(Vector3) p4, ref const(Vector3) p5,
+		       ref const(Vector3) p6, ref const(Vector3) p7,
+		       ref const(Vector3) p)
+// Returns true is the point p is inside or on the hexahedron surface.
+//
+// The test consists of using the 6 cell faces as the bases of pyramids
+// with the sample point p as the apex of each.
+// The cycle of vertices defining each base is such that the base normal
+// will be point out of the cell.
+// If any of the pyramid volumes are positive (i.e. p is on the positive 
+// side of a face) and we assume a convex cell, it means that the point 
+// is outside the cell and we may say so without further testing.
+{
+    // Mid-points of faces.
+    Vector3 pmN = 0.25*(p3+p2+p6+p7);
+    Vector3 pmE = 0.25*(p1+p2+p6+p5);
+    Vector3 pmS = 0.25*(p0+p1+p5+p4);
+    Vector3 pmW = 0.25*(p0+p3+p7+p4);
+    Vector3 pmT = 0.25*(p4+p5+p6+p7);
+    Vector3 pmB = 0.25*(p0+p1+p2+p3);
+    // Test the volume of each pyramid.
+    if (tetragonal_dipyramid_volume(p2, p3, p6, p7, pmN, p) > 0.0) return false; // North
+    if (tetragonal_dipyramid_volume(p1, p2, p6, p5, pmE, p) > 0.0) return false; // East
+    if (tetragonal_dipyramid_volume(p0, p1, p5, p4, pmS, p) > 0.0) return false; // South
+    if (tetragonal_dipyramid_volume(p3, p0, p4, p7, pmW, p) > 0.0) return false; // West
+    if (tetragonal_dipyramid_volume(p4, p5, p6, p7, pmT, p) > 0.0) return false; // Top
+    if (tetragonal_dipyramid_volume(p1, p0, p3, p2, pmB, p) > 0.0) return false; // Bottom
+    // If we arrive here, we haven't determined that the point is outside...
+    return true;
+} // end inside_hexahedron()
+
+unittest {
+    Vector3 d = Vector3(0.65, 0.0, 0.0);
+    Vector3 e = Vector3(0.65, -0.1, 0.0);
+
+    auto p0 = Vector3(0.0, 0.0, 0.0);
+    auto p1 = Vector3(1.0, -0.1, 0.0);
+    auto p2 = Vector3(1.0, 1.0, 0.0);
+    auto p3 = Vector3(0.0, 1.0, 0.0);
+    auto p4 = Vector3(0.0, 0.0, 1.0);
+    auto p5 = Vector3(1.0, -0.1, 1.0);
+    auto p6 = Vector3(1.0, 1.0, 1.0);
+    auto p7 = Vector3(0.0, 1.0, 1.0);
+    assert(inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, d), "inside hexahedron");
+    assert(!inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, e), "outside hexahedron");
 }
