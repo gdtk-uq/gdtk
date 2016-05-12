@@ -882,8 +882,10 @@ int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
 // We also assume that the vertices are numbered counter-clockwise
 // around the edges of the polygon.  z-components are ignored.
 
-bool on_left_of_xy_line(ref const(Vector3) a, ref const(Vector3) b, ref const(Vector3) p)
-// Returns true if p is on the left as we look along the line from a to b.
+bool on_left_of_xy_line(ref const(Vector3) a, ref const(Vector3) b,
+			ref const(Vector3) p)
+// Returns true if p is in the left half-plane (or on the line)
+// as we look along the line from a to b.
 {
     return (p.x - b.x) * (a.y - b.y) >= (p.y - b.y) * (a.x - b.x);
 }
