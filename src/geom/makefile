@@ -59,35 +59,35 @@ gpath_demo: gpath_demo.d gpath.d geom.d $(NM_FILES)
 	dmd $(DFLAGS) gpath_demo.d $(OF)gpath_demo \
 		gpath.d geom.d $(NM_FILES) $(DLINKFLAGS)
 
-surface_demo: surface_demo.d volume.d sgrid.d surface.d gpath.d geom.d \
+surface_demo: surface_demo.d volume.d grid.d sgrid.d surface.d gpath.d geom.d \
 	univariatefunctions.d $(NM_FILES)
 	dmd $(DFLAGS) surface_demo.d $(OF)surface_demo \
-		sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
+		grid.d sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-volume_demo: volume_demo.d sgrid.d volume.d surface.d gpath.d geom.d \
+volume_demo: volume_demo.d grid.d sgrid.d volume.d surface.d gpath.d geom.d \
 	univariatefunctions.d $(NM_FILES)
 	dmd $(DFLAGS) volume_demo.d $(OF)volume_demo \
-		sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
+		grid.d sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 univariatefunctions_demo: univariatefunctions_demo.d univariatefunctions.d
 	dmd $(DFLAGS) univariatefunctions_demo.d $(OF)univariatefunctions_demo \
 		univariatefunctions.d $(DLINKFLAGS)
 
-sgrid_demo: sgrid_demo.d sgrid.d volume.d surface.d gpath.d geom.d \
+sgrid_demo: sgrid_demo.d grid.d sgrid.d volume.d surface.d gpath.d geom.d \
 	univariatefunctions.d \
 	$(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) sgrid_demo.d $(OF)sgrid_demo \
-		sgrid.d volume.d surface.d gpath.d geom.d \
+		grid.d sgrid.d volume.d surface.d gpath.d geom.d \
 		univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-usgrid_demo: usgrid_demo.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
+usgrid_demo: usgrid_demo.d grid.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
 	univariatefunctions.d \
 	$(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) usgrid_demo.d $(OF)usgrid_demo \
-		usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
+		grid.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
 		univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
@@ -123,11 +123,11 @@ luausgrid_demo: luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_
 	dmd $(DFLAGS_LUA) luausgrid_demo.d $(OF)luausgrid_demo \
 		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-paver_demo: paver_demo.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
-	univariatefunctions.d \
+paver_demo: paver_demo.d usgrid.d paver.d grid.d sgrid.d volume.d surface.d \
+	gpath.d geom.d univariatefunctions.d \
 	$(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) paver_demo.d $(OF)paver_demo \
-		usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
+		grid.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
 		univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 

@@ -11,6 +11,7 @@ import fvcore;
 import globalconfig;
 import globaldata;
 import luageom;
+import grid;
 import sgrid;
 import block;
 import std.stdio;

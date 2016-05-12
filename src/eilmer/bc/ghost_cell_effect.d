@@ -9,7 +9,7 @@ import std.stdio;
 import std.math;
 
 import geom;
-import sgrid;
+import grid;
 import json_helper;
 import globalconfig;
 import globaldata;

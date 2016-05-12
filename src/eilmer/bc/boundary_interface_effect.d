@@ -14,7 +14,7 @@ import std.conv;
 import std.stdio;
 
 import geom;
-import sgrid;
+import grid;
 import json_helper;
 import globalconfig;
 import globaldata;

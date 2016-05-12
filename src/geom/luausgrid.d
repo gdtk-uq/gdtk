@@ -17,6 +17,7 @@ import geom;
 import gpath;
 import surface;
 import volume;
+import grid;
 import sgrid;
 import usgrid;
 import luasgrid;

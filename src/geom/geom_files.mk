@@ -9,6 +9,7 @@ GEOM_FILES := $(GEOM_DIR)/geom.d \
 	$(GEOM_DIR)/luagpath.d \
 	$(GEOM_DIR)/luasurface.d \
 	$(GEOM_DIR)/luavolume.d \
+	$(GEOM_DIR)/grid.d \
 	$(GEOM_DIR)/sgrid.d \
 	$(GEOM_DIR)/luasgrid.d \
 	$(GEOM_DIR)/usgrid.d \

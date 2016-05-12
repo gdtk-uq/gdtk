@@ -20,6 +20,7 @@ import gpath;
 import surface;
 import volume;
 import univariatefunctions;
+import grid;
 import sgrid;
 
 import paver;

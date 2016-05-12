@@ -29,6 +29,7 @@ import gzip;
 import fileutil;
 import util.lua;
 import geom;
+import grid;
 import sgrid;
 import usgrid;
 import gas;

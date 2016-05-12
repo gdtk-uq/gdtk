@@ -11,6 +11,7 @@ import std.json;
 import util.lua;
 import nm.bbla;
 import geom;
+import grid;
 import sgrid;
 import gas;
 import kinetics;
