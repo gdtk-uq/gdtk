@@ -125,7 +125,7 @@ extern(C) int joinGrid(lua_State* L)
     return 0;
 }
 
-extern(C) int find_nearest_cell_centre(lua_State *L)
+extern(C) int find_nearest_cell_centre_sg(lua_State *L)
 {
     double x, y, z;
     int narg = lua_gettop(L); // assume narg == 2;
@@ -157,7 +157,7 @@ extern(C) int find_nearest_cell_centre(lua_State *L)
     lua_pushinteger(L, indx);
     lua_pushnumber(L, dist);
     return 2;
-} // end find_nearest_cell_centre()
+} // end find_nearest_cell_centre_sg()
 
 /**
  * The Lua constructor for a StructuredGrid.
@@ -361,7 +361,7 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "write_to_gzip_file");
     lua_pushcfunction(L, &joinGrid);
     lua_setfield(L, -2, "joinGrid");
-    lua_pushcfunction(L, &find_nearest_cell_centre);
+    lua_pushcfunction(L, &find_nearest_cell_centre_sg);
     lua_setfield(L, -2, "find_nearest_cell_centre");
 
     lua_setglobal(L, StructuredGridMT.toStringz);
