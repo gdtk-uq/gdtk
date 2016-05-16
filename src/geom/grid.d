@@ -7,20 +7,9 @@
 
 module grid;
 
-// import std.algorithm;
-// import std.string;
-// import std.array;
-// import std.conv;
-// import std.stdio;
-// import std.format;
-// import std.math;
-// import gzip;
-
+import std.math;
+import std.stdio;
 import geom;
-// import gpath;
-// import surface;
-// import volume;
-// import univariatefunctions;
 
 //-----------------------------------------------------------------
 
@@ -66,6 +55,63 @@ class Grid {
     abstract void read_from_gzip_file(string fileName);
     abstract void write_to_gzip_file(string fileName);
     abstract void write_to_vtk_file(string fileName);
-}
 
-//-----------------------------------------------------------------
+    void find_enclosing_cell(double x, double y, double z, ref size_t indx, ref bool found)
+    {
+	found = false;
+	indx = 0;
+	auto p = Vector3(x, y, z);
+	foreach (i; 0 .. ncells) {
+	    bool inside_cell = false;
+	    auto vtx_id = get_vtx_id_list_for_cell(i);
+	    switch (dimensions == 2) {
+	    case 1: throw new Exception("cell search not implemented for 1D grids");
+	    case 2:
+		// In 2D, assume quad cells.
+		inside_cell = inside_xy_quad(vertices[vtx_id[0]], vertices[vtx_id[1]],
+					     vertices[vtx_id[2]], vertices[vtx_id[3]], p); 
+		break;
+	    case 3:
+		// In 3D, assume hex cells with 8 vertices.
+		inside_cell = inside_hexahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						vertices[vtx_id[2]], vertices[vtx_id[3]],
+						vertices[vtx_id[4]], vertices[vtx_id[5]],
+						vertices[vtx_id[6]], vertices[vtx_id[7]], p); 
+		break;
+	    default: assert(0);
+	    } // end switch (dimensions)
+	    if (inside_cell) { found = true; indx = i; return; }
+	} // foreach i
+	return;
+    } // end find_enclosing_cell()
+
+    Vector3 cell_barycentre(size_t indx)
+    // Returns the "centre-of-mass" of the vertices defining the cell.
+    {
+	auto cbc = Vector3(0.0, 0.0, 0.0);
+	auto vtx_ids = get_vtx_id_list_for_cell(indx);
+	foreach(vtx_id; vtx_ids) { cbc += vertices[vtx_id]; }
+	double one_over_n_vtx = 1.0 / vtx_ids.length;
+	cbc *= one_over_n_vtx;
+	return cbc;
+    } // end cell_barycentre()
+
+    void find_nearest_cell_centre(double x, double y, double z,
+				  ref size_t nearestCell, ref double minDist)
+    {
+	nearestCell = 0;
+	auto p = cell_barycentre(0);
+	double dx = x - p.x; double dy = y - p.y; double dz = z - p.z;
+	minDist = sqrt(dx*dx + dy*dy + dz*dz);
+	foreach (i; 1 .. ncells) {
+	    p = cell_barycentre(i);
+	    dx = x - p.x; dy = y - p.y; dz = z - p.z;
+	    double d = sqrt(dx*dx + dy*dy + dz*dz);
+	    if (d < minDist) {
+		minDist = d;
+		nearestCell = i;
+	    }
+	} // end foreach i
+    } // end find_nearest_cell_centre
+
+} // end class grid

@@ -131,6 +131,73 @@ extern(C) int newFlowSolution(lua_State* L)
 } // end newFlowSolution()
 
 
+extern(C) int find_enclosing_cell_from_lua(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if ( !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to FlowSolution:find_enclosing_cell.";
+	errMsg ~= " A table is expected as first (and only) argument to the method.";
+	luaL_error(L, errMsg.toStringz);
+    }
+
+    double x;
+    lua_getfield(L, 2, "x");
+    if ( lua_isnil(L, -1) ) {
+	x = 0.0;
+    } else if ( lua_isnumber(L, -1) ) {
+	x = to!double(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:find_enclosing_cell.";
+	errMsg ~= " A field for x was found, but the content was not valid.";
+	errMsg ~= " The x field, if given, should be a double.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    double y;
+    lua_getfield(L, 2, "y");
+    if ( lua_isnil(L, -1) ) {
+	y = 0.0;
+    } else if ( lua_isnumber(L, -1) ) {
+	y = to!double(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:find_enclosing_cell.";
+	errMsg ~= " A field for y was found, but the content was not valid.";
+	errMsg ~= " The y field, if given, should be a double.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    double z;
+    lua_getfield(L, 2, "z");
+    if ( lua_isnil(L, -1) ) {
+	z = 0.0;
+    } else if ( lua_isnumber(L, -1) ) {
+	z = to!double(luaL_checknumber(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:find_enclosing_cell.";
+	errMsg ~= " A field for z was found, but the content was not valid.";
+	errMsg ~= " The z field, if given, should be a double.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1);
+
+    auto cell_identity = fsol.find_enclosing_cell(x, y, z);
+
+    lua_settop(L, 0); // clear stack
+    lua_newtable(L); // anonymous table { }
+    auto tblIndx = lua_gettop(L);
+    if (cell_identity[2] != 0) {
+	lua_pushnumber(L, cell_identity[0]); lua_setfield(L, tblIndx, "ib");
+	lua_pushnumber(L, cell_identity[1]); lua_setfield(L, tblIndx, "i");
+    } else {
+	lua_pushnil(L); lua_setfield(L, tblIndx, "ib");
+	lua_pushnil(L); lua_setfield(L, tblIndx, "i");
+    }
+    return 1; // Just the table of indices is left on the stack.
+} // end find_enclosing_cell_from_lua()
+
+
 extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
 {
     auto fsol = checkFlowSolution(L, 1);
@@ -516,6 +583,8 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "new");
     lua_pushcfunction(L, &toStringObj!(FlowSolution, FlowSolutionMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &find_enclosing_cell_from_lua);
+    lua_setfield(L, -2, "find_enclosing_cell");
     lua_pushcfunction(L, &find_nearest_cell_centre_from_lua);
     lua_setfield(L, -2, "find_nearest_cell_centre");
     lua_pushcfunction(L, &get_nic);

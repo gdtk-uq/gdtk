@@ -100,6 +100,21 @@ public:
 	foreach (blk; flowBlocks) blk.add_aux_variables(addVarsList);
     }
 
+    size_t[] find_enclosing_cell(double x, double y, double z=0.0)
+    {
+	size_t[] cell_identity = [0, 0, 0]; // blk_id, i, found_flag
+	foreach (ib; 0 .. nBlocks) {
+	    bool found = false;
+	    size_t indx = 0;
+	    gridBlocks[ib].find_enclosing_cell(x, y, z, indx, found);
+	    if (found) {
+		cell_identity = [ib, indx, (found)?1:0];
+		break;
+	    }
+	} // foreach ib
+	return cell_identity;
+    } // end find_enclosing_cell()
+
     size_t[] find_nearest_cell_centre(double x, double y, double z=0.0)
     {
 	size_t[] nearest = [0, 0]; // blk_id, i
@@ -115,8 +130,7 @@ public:
 		dz = z - flowBlocks[ib]["pos.z", i];
 		double dist = sqrt(dx*dx + dy*dy + dz*dz);
 		if (dist < minDist) {
-		    minDist = dist;
-		    nearest = [ib, i];
+		    minDist = dist; nearest[0] = ib; nearest[1] = i;
 		}
 	    } // foreach i
 	} // foreach ib
