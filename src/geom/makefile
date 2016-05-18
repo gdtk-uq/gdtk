@@ -8,7 +8,7 @@ DEMO_PROGRAMS := geom_demo gpath_demo surface_demo volume_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
 	luaunifunction_demo \
 	sgrid_demo luasgrid_demo usgrid_demo luausgrid_demo \
-	paver_demo
+	paver_demo svg_demo
 
 include geom_files.mk
 
@@ -45,11 +45,14 @@ demo: $(DEMO_PROGRAMS)
 clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS)
-	- rm gpgrid*.vtk test*.vtk test*.gz
+	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg
 	- cd $(LUA_DIR); make clean
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
+
+svg_demo: svg_demo.d svg.d
+	dmd $(DFLAGS) svg_demo.d $(OF)svg_demo svg.d $(DLINKFLAGS)
 
 geom_demo: geom_demo.d geom.d
 	dmd $(DFLAGS) geom_demo.d $(OF)geom_demo \
