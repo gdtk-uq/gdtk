@@ -7,9 +7,11 @@ point for teaching students about CFD codes.
 
 ## Contents
 * Eilmer -- A compressible flow solver
-* Documentation
-* Build Requirements
-* Licence
+    * Features
+    * Documentation
+    * Build Requirements
+    * Running the program
+* License
 * Contributors
 * Chief Gardeners
 
@@ -47,15 +49,16 @@ possibly an undergraduate student of engineering but, more likely,
 a postgraduate student or academic colleague 
 wanting to simulate gas flows as part of their study.
 
-## Documentation
+### Documentation
 Although there's not much documentation currently available for this
-D-language collection, the user guides from 
+D-language code collection, the user guides from 
 the [CFCFD](http://cfcfd.mechmining.uq.edu.au) project will
 give some idea of the use of this new code.
 In particular, 
 the [Eilmer3 User Guide](http://cfcfd.mechmining.uq.edu.au/pdf/eilmer3-user-guide.pdf)
+shows how to use the previous C++/Python code 
 and [Theory Book](http://cfcfd.mechmining.uq.edu.au/pdf/eilmer3-theory-book.pdf),
-will the previous version of the code is built and how to use it.
+describes how it was built.
 
 For those brave souls prepared to dive into the use and extension of the
 code, there are examples provided as well as the source code itself.
@@ -63,16 +66,48 @@ For the short term, with the code in a period of rapid development,
 we expect that users of the code will be mainly our
 students and academic colleagues who can talk to us directly.
 
-## Build Requirements
+### Build Requirements
 Once you have cloned this repository, 
-all that is required Linux environment with a C compiler and 
-a fairly recent D compiler.
-Going into the `src/eilmer` directory you will find a single `makefile`
+all that is required Linux environment with a fairly recent D compiler
+and a C compiler (for building the Lua interpreter).
+You may use the reference DMD compiler or the GDC or LDMD2 compilers.
+We have been developing with the DMD32 and DMD64 compilers 
+from versions 2.067 through 2.070.
+
+Going into the `dgd/src/eilmer` directory you will find a single `makefile`
 that allows the build to proceed with the command `make install`.
+The executable program and supporting files will be installed into the 
+directory `$HOME/dgdinst/` by default.
+
+### Running the program
+For running the program, environment variables 
+may be set for the bash shell with:
+
+    export DGD=$HOME/dgdinst
+    export PATH=$PATH:$DGD/bin
+    export DGD_LUA_PATH=$DGD/lib/?.lua
+    export DGD_LUA_CPATH=$DGD/lib/?.so
+
+The actual running of a simulation is done in stages.
+
+1. Prepare the grids and initial flow configuration by interpreting your
+   Lua input script.
+2. Run the main simulation program, starting from the prepared initial 
+   flow state and allowing the flow field to develop in time, writing
+   the resulting flow field states at particular times.
+3. Postprocess the simulation data to extract particular data of interest.
+
+Of course, this description is too superficial to actually expect that 
+you will be able to run a simulation with no further instruction.
+If you are keen, it's now time to look at the Eilmer3 documents 
+mentioned above and then look at specific examples provided in the 
+`dgd/examples/eilmer/` directory.
 
 ## License
-GNU General Public License 3.
+For the source code, we use the GNU General Public License 3.
 Please see the file `gpl.txt`.
+For the documentation, we use the Creative Commons 
+Attribution-ShareAlike 4.0 International License.
 
 ## Contributors
 This code is the product of many people. 
