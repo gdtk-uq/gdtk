@@ -191,6 +191,8 @@ The value should be a number.`;
     Bz = getNumberFromTable(L, 1, "Bz", false, 0.0, true, format(errMsgTmplt, "Bz"));
     auto B = Vector3(Bx, By, Bz);
     
+    //Divergence of the magnetic field
+    double divB = getNumberFromTable(L, 1, "divB", false, 0.0, true, format(errMsgTmplt, "divB"));
     //Divergence cleaning parameter psi for MHD
     double psi = getNumberFromTable(L, 1, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
     
@@ -280,6 +282,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     mixin(pushFSVecVar("vel"));
     mixin(pushFSVecVar("B"));
     mixin(pushFSVar("psi"));
+    mixin(pushFSVar("divB"));
 }
 
 /**
@@ -391,6 +394,7 @@ extern(C) int fromTable(lua_State* L)
 
     // Look for divergence cleaning parameter psi
     mixin(checkFSVar("psi"));
+    mixin(checkFSVar("divB"));
 
     // Now look turbulence quantities
     mixin(checkFSVar("tke"));

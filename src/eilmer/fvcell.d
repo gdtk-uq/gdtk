@@ -296,6 +296,7 @@ public:
 	    fs.B.refx = to!double(items.front); items.popFront();
 	    fs.B.refy = to!double(items.front); items.popFront();
 	    fs.B.refz = to!double(items.front); items.popFront();
+	    fs.divB = to!double(items.front); items.popFront();
 	    if (myConfig.divergence_cleaning) {
 		fs.psi = to!double(items.front); items.popFront();
 	    } else {
@@ -303,7 +304,7 @@ public:
 	    }
 	} else {
 	    fs.B.refx = 0.0; fs.B.refy = 0.0; fs.B.refz = 0.0;
-	    fs.psi = 0.0;
+	    fs.psi = 0.0; fs.divB = 0.0;
 	}
 	if (myConfig.include_quality) {
 	    fs.gas.quality = to!double(items.front); items.popFront();
@@ -351,7 +352,7 @@ public:
 		       pos[0].x, pos[0].y, pos[0].z, volume[0], fs.gas.rho,
 		       fs.vel.x, fs.vel.y, fs.vel.z);
 	if (myConfig.MHD) {
-	    formattedWrite(writer, " %.16e %.16e %.16e", fs.B.x, fs.B.y, fs.B.z); 
+	    formattedWrite(writer, " %.16e %.16e %.16e %.16e", fs.B.x, fs.B.y, fs.B.z, fs.divB); 
 	    if (myConfig.divergence_cleaning) { formattedWrite(writer, " %.16e", fs.psi); }
 	}
 	if (myConfig.include_quality) {  
@@ -391,6 +392,7 @@ public:
 	myU.B.refy = fs.B.y;
 	myU.B.refz = fs.B.z;
 	myU.psi = fs.psi;
+	myU.divB = fs.divB;
 	// Total Energy / unit volume = density
 	// (specific internal energy + kinetic energy/unit mass).
 	double e = 0.0; foreach(elem; fs.gas.e) e += elem;
@@ -473,6 +475,7 @@ public:
 	fs.B.refy = myU.B.y;
 	fs.B.refz = myU.B.z;
 	fs.psi = myU.psi;
+	fs.divB = myU.divB;
 	// Specific internal energy from total energy per unit volume.
 	ke = 0.5 * (fs.vel.x * fs.vel.x + fs.vel.y * fs.vel.y + fs.vel.z * fs.vel.z);
 	if ( myConfig.MHD ) {
@@ -567,6 +570,9 @@ public:
 	    integral = 0.0;
 	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.z * iface[i].area[gtl];
 	    dUdt[ftl].B.refz = vol_inv * integral + Q.B.z;
+	    // Calculate divergence of the magnetic field here; not actually a time-derivatice but seems to be the best way to calculate it.
+	    dUdt[ftl].divB = 0.0;
+	    foreach(i; 0 .. iface.length) dUdt[ftl].divB += outsign[i] * iface[i].F.divB * iface[i].area[gtl];
 	    if (myConfig.divergence_cleaning) {
 		integral = 0.0;
 		foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.psi * iface[i].area[gtl];
@@ -577,6 +583,7 @@ public:
 	    dUdt[ftl].B.refy = 0.0;
 	    dUdt[ftl].B.refz = 0.0;
 	    dUdt[ftl].psi = 0.0;
+	    dUdt[ftl].divB = 0.0;
 	}
 
 	// Time-derivative for Total Energy/unit volume.
@@ -652,6 +659,7 @@ public:
 	    U1.B.refx = U0.B.x + dt * gamma_1 * dUdt0.B.x;
 	    U1.B.refy = U0.B.y + dt * gamma_1 * dUdt0.B.y;
 	    U1.B.refz = U0.B.z + dt * gamma_1 * dUdt0.B.z;
+	    U1.divB = dUdt0.divB;
 	    if (myConfig.divergence_cleaning) {
 		U1.psi = U0.psi + dt * gamma_1 * dUdt0.psi;
 		U1.psi *= divergence_damping_factor(dt);
@@ -659,6 +667,7 @@ public:
 	} else {
 	    U1.B.refx = 0.0; U1.B.refy = 0.0; U1.B.refz = 0.0;
 	    U1.psi = 0.0;
+	    U1.divB = 0.0;
 	}
 	U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
 	if (with_k_omega) {
@@ -720,6 +729,7 @@ public:
 	    U2.B.refx = U_old.B.x + dt * (gamma_1 * dUdt0.B.x + gamma_2 * dUdt1.B.x);
 	    U2.B.refy = U_old.B.y + dt * (gamma_1 * dUdt0.B.y + gamma_2 * dUdt1.B.y);
 	    U2.B.refz = U_old.B.z + dt * (gamma_1 * dUdt0.B.z + gamma_2 * dUdt1.B.z);
+	    U2.divB = dUdt0.divB;
 	    if (myConfig.divergence_cleaning) {
 		U2.psi = U_old.psi + dt * (gamma_1 * dUdt0.psi + gamma_2 * dUdt1.psi);
 		U2.psi *= divergence_damping_factor(dt);
@@ -727,6 +737,7 @@ public:
 	} else {
 	    U2.B.refx = 0.0; U2.B.refy = 0.0; U2.B.refz = 0.0;
 	    U2.psi = 0.0;
+	    U2.divB = 0.0;
 	}
 	U2.total_energy = U_old.total_energy + 
 	    dt * (gamma_1 * dUdt0.total_energy + gamma_2 * dUdt1.total_energy);
@@ -1001,7 +1012,7 @@ public:
 
     double signal_frequency()
     // [TODO] unstructured-grid adaption to be done.
-    // The current direction-by-direction checking assumes a structured grid.
+    // The current direction-by-dirFsignalection checking assumes a structured grid.
     // For the moment, things should work OK for an unstructured grid if 
     // the stringent_cfl is true.
     {
@@ -1041,7 +1052,8 @@ public:
 	}
 	// Check the INVISCID time step limit first,
 	// then add a component to ensure viscous stability.
-	if (myConfig.stringent_cfl) {
+	// Note: MHD Divergence Cleaning only works if stringent_cfl is checked properly.
+	if ((myConfig.stringent_cfl) || (myConfig.divergence_cleaning)) {
 	    // Make the worst case.
 	    if (myConfig.MHD) {
 		ca2 = B_mag*B_mag / fs.gas.rho;
@@ -1673,7 +1685,7 @@ string[] variable_list_for_cell(GasModel gmodel)
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["rho", "vel.x", "vel.y", "vel.z"];
     if (GlobalConfig.MHD) {
-	list ~= ["B.x", "B.y", "B.z"];
+	list ~= ["B.x", "B.y", "B.z", "divB"];
 	if (GlobalConfig.divergence_cleaning) { list ~= ["psi"]; }
     }
     if ( GlobalConfig.include_quality ) { list ~= ["quality"]; }

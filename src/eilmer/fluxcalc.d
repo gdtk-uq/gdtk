@@ -72,7 +72,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
 
     // Adjustment of the magnetic field flux and associated parameter psi as per Dedner et al.
     if (GlobalConfig.MHD) {
-        double divB = 0.5 * (Rght.B.x - Lft.B.x);
+        F.divB = 0.5 * (Rght.B.x - Lft.B.x);
 	if (GlobalConfig.divergence_cleaning) {
 	    F.B.refx += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (GlobalConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
 	    F.psi += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) - (1.0 / (2.0 * GlobalConfig.c_h)) *

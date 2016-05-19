@@ -21,7 +21,8 @@ public:
     double total_energy; // total energy
     double[] massf;      // mass fractions of species
     double[] energies;   // modal energies (mode 0 is usually transrotational)
-    double psi;		 // divergence cleaning parameter for MHD
+    double psi;          // divergence cleaning parameter for MHD
+    double divB;	 // divergence of the magnetic field
     double tke;          // turbulent kinetic energy
     double omega;        // omega from k-omega turbulence model
 
@@ -40,6 +41,7 @@ public:
 	massf = other.massf.dup;
 	energies = other.energies.dup;
 	psi = other.psi;
+	divB = other.divB;
 	tke = other.tke;
 	omega = other.omega;
     }
@@ -55,6 +57,7 @@ public:
 	massf[] = src.massf[];
 	energies[] = src.energies[];
 	psi = src.psi;
+	divB = src.divB;
 	tke = src.tke;
 	omega = src.omega;
     }
@@ -68,6 +71,7 @@ public:
 	foreach(ref mf; massf) mf = 0.0;
 	foreach(ref e; energies) e = 0.0;
 	psi = 0.0;
+	divB = 0.0;
 	tke = 0.0;
 	omega = 0.0;
     }
@@ -83,6 +87,7 @@ public:
 	repr ~= ", massf=" ~ to!string(massf);
 	repr ~= ", energies=" ~ to!string(energies);
 	repr ~= ", psi=" ~ to!string(psi);
+	repr ~= ", divB-" ~ to!string(divB);
 	repr ~= ", tke=" ~ to!string(tke);
 	repr ~= ", omega=" ~ to!string(omega);
 	repr ~= ")";

@@ -42,6 +42,11 @@ void reflect_normal_magnetic_field(ref FlowState fs, in FVInterface IFace)
     fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     fs.B.refx = -(fs.B.x);
     fs.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+	//Used for different boundary conditions in the divergence cleaning- not currently active
+	/*if (GlobalConfig.divergence_cleaning) { 
+		fs.psi = fs.psi + GlobalConfig.c_h * (fs.B.refx - fs.B.x);
+	}*/
+
 }
 
 GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
