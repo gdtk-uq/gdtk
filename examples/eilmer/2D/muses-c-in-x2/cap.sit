@@ -1,0 +1,137 @@
+# ben.sit
+# Ben Stewart's Muses-C Capsule -- higher resolution.
+
+BEGIN_GEOMETRY
+   NODE a -55.000e-3   0.000
+   NODE b -55.000e-3  42.500e-3
+   NODE c -15.000e-3   0.000
+   NODE d -15.000e-3  15.000e-3
+   NODE e -12.000e-3  30.000e-3
+   NODE f   0.000     42.500e-3
+   NODE g   0.000      0.000
+   NODE h   8.787e-3  21.213e-3
+   NODE i  30.000e-3   0.000
+   NODE j  17.574e-3  30.000e-3
+   NODE k  30.000e-3  17.574e-3
+   NODE l  30.000e-3   6.000e-3
+   NODE m  42.000e-3  55.000e-3
+   NODE n  45.000e-3  95.000e-3
+   NODE o  45.000e-3 130.000e-3
+   NODE p   0.000    130.000e-3
+   NODE q  95.000e-3 130.000e-3
+   NODE r 135.000e-3 100.000e-3
+   NODE s 145.000e-3  60.000e-3
+   NODE t 155.000e-3   6.000e-3
+
+   # Lines and arcs that run around the probe.
+   LINE ab a b
+   LINE ac a c
+   LINE bf b f
+   BEZIER cf c d e f
+   LINE cg c g
+   ARC gh g h i
+   LINE hj h j
+   LINE fj f j
+   LINE fp f p
+   LINE po p o
+   BEZIER jo j m n o
+   LINE jk j k
+   BEZIER os o q r s
+   LINE ks k s
+   LINE lk l k
+   LINE lt l t
+   LINE ts t s
+
+   # Define the boundaries that will be used to
+   # build the blocks.
+   POLYLINE n0   1 + bf
+   POLYLINE s0   1 + ac
+   POLYLINE w0   1 + ab
+   POLYLINE ew01 1 + cf
+
+   POLYLINE ns12 1 + fj
+   POLYLINE e1   2 + gh + hj
+   POLYLINE s1   1 + cg
+
+   POLYLINE n2   1 + po
+   POLYLINE ew23 1 + jo
+   POLYLINE w2   1 + fp
+
+   POLYLINE n3   1 + os
+   POLYLINE en34 1 + ks
+   POLYLINE s3   1 + jk
+
+   POLYLINE e4   1 + ts
+   POLYLINE s4   1 + lt
+   POLYLINE w4   1 + lk
+END_GEOMETRY
+
+BEGIN_FLOW
+   # Gas and flow properties
+   GAS_TYPE perf_air_13
+   GAS_STATE inflow   3300.0  10300.0 0.0 5226.0  1.0
+   GAS_STATE initial  4.0         0.0 0.0  293.0  1.0
+
+   # Set the boundary discretisation before building the blocks
+   DISCRETISE n0   60 0 0 0.0
+   DISCRETISE s0   60 0 0 0.0
+   DISCRETISE w0   60 0 0 0.0
+   DISCRETISE ew01 60 0 0 0.0
+   DISCRETISE ns12 60 0 0 0.0
+   DISCRETISE e1   60 0 0 0.0
+   DISCRETISE s1   60 0 0 0.0
+   DISCRETISE n2   60 0 0 0.0
+   DISCRETISE ew23 60 1 0 1.2
+   DISCRETISE w2   60 1 0 1.2
+   DISCRETISE n3   30 0 0 0.0
+   DISCRETISE en34 60 1 0 1.2
+   DISCRETISE s3   30 0 0 0.0
+   DISCRETISE e4   30 0 0 0.0
+   DISCRETISE s4   60 1 0 1.2
+   DISCRETISE w4   30 0 0 0.0
+                
+   BOUNDARY_SPEC w0 SUP_IN inflow
+   BOUNDARY_SPEC n2 SUP_OUT
+   BOUNDARY_SPEC n3 SUP_OUT
+   BOUNDARY_SPEC e4 SUP_OUT
+
+   # Define blocks
+   BLOCK [0] + n0   + ew01 + s0   + w0
+   BLOCK [1] + ns12 + e1   + s1   + ew01
+   BLOCK [2] + n2   + ew23 + ns12 + w2
+   BLOCK [3] + n3   + en34 + s3   + ew23
+   BLOCK [4] + en34 + e4   + s4   + w4
+
+   CONNECT_BLOCKS [0] east  [1] west
+   CONNECT_BLOCKS [1] north [2] south
+   CONNECT_BLOCKS [2] east  [3] west
+   CONNECT_BLOCKS [3] east  [4] north
+
+   # Assign the initial gas states
+   FILL_BLOCK [0] initial
+   FILL_BLOCK [1] initial
+   FILL_BLOCK [2] initial
+   FILL_BLOCK [3] initial
+   FILL_BLOCK [4] initial
+END_FLOW
+
+BEGIN_CONTROL
+   TITLE Muses-C Capsule for Ben Stewart.
+   CASE_ID 0
+
+   AXISYMMETRIC
+   FLUX_CALC EFM
+
+   MAX_TIME  80.0e-6
+   MAX_STEP  12000
+   TIME_STEP  0.5e-8
+   DT_PLOT    5.0e-6
+END_CONTROL
+
+# Name the output files and build them.
+BEZIER_FILE cap.bez
+PARAM_FILE  cap.p
+BUILD
+
+EXIT
+
