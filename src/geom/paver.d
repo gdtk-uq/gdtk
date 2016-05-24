@@ -33,6 +33,7 @@ class Point
     Point pointR;
     Point prev_node;
     double growth = 0;
+    bool first_seam_flag = 0;
 
     size_t rowID;
 
@@ -729,7 +730,7 @@ ERROR HERE:
 	    	if (node.growth == 0){node.growth = growth;}
 	    	else {node.growth = node.growth*growth;}
 	    	if (node.growth > biggest_growth && 
-		    (norm(node.V_L)+norm(node.V_R))>2*avr_face_length &&
+		    (norm(node.V_L)+norm(node.V_R))>4*avr_face_length &&
 		    conditions2(node)){
 		    biggest_growth = node.growth;
 		    growth_node = node;
@@ -755,12 +756,7 @@ ERROR HERE:
 
     foreach(node; surface){
 	if (node.node_cat == "row end" && node.pointR.node_cat == "row end"){
-	    if (node.interior_angle < node.pointR.interior_angle){
-		node.pointR.node_cat = "row side";
-	    }
-	    else if(node.interior_angle >= node.pointR.interior_angle){
-		node.node_cat = "row side";
-	    }
+	    node.node_cat = "row side";    
 	}
 	if(node.pointL.pointL.node_cat == "row end" &&
 	   node.pointR.pointR.node_cat == "row end"){
@@ -907,9 +903,11 @@ void node_gen(Point[] surface, size_t i, ref Point[] New_Nodes)
 	if(node.pointL.node_cat == "row end"){
 	    makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL.pointL.pointL, node.pointL.pointL]);
 	    makeCell([New_Nodes[$-3], node.pointL.pointL, node.pointL, node]);
+	    New_Nodes[$-3].node_cat = "row end";
 	} else if (node.pointL.node_cat == "with row end"){
 	    makeCell([New_Nodes[$-4], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
 	    makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL, node]);
+	    New_Nodes[$-4].node_cat = "row end";
 	} else {
 	    //New_Nodes list should not be empty since start node is a row side 	    //ie. New_Nodes[$-4] should be accessible
 	    makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL, node]);
@@ -966,10 +964,12 @@ void node_gen(Point[] surface, size_t i, ref Point[] New_Nodes)
 	if(node.pointL.node_cat == "row end"){
 	    makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL.pointL.pointL, node.pointL.pointL]);
 	    makeCell([New_Nodes[$-5], node.pointL.pointL, node.pointL, node]);
+	    New_Nodes[$-5].node_cat = "row end";
 	    //row end right beside row reversal
 	} else if (node.pointL.node_cat == "with row end"){
 	    makeCell([New_Nodes[$-6], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
 	    makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL, node]);
+	    New_Nodes[$-6].node_cat = "row end";
 	} else {
 	    //New_Nodes list should not be empty since start node is a row side 
 	    //ie. New_Nodes[$-6] should be accessible
@@ -1050,7 +1050,7 @@ double summed_squareness(Point node)
     
 
 
-double smoothing(Point[] surface, Point[] Prev_Row, bool ghost, bool first_row)
+double smoothing(Point[] surface, Point[] Prev_Row, bool boundary, bool first_row)
 {
     /* 
        Implementing Lapacian smoothing: this method moves each node
@@ -1061,7 +1061,6 @@ double smoothing(Point[] surface, Point[] Prev_Row, bool ghost, bool first_row)
        of all of the cells neighbouring the node.    
     */ 
 
-    //surface ~= surface[0];
 
     double move_length;
     double biggest_move = 0;
@@ -1072,8 +1071,8 @@ double smoothing(Point[] surface, Point[] Prev_Row, bool ghost, bool first_row)
     double squareness;
 
     foreach(node;surface) {
-	if((ghost == 1 && node.node_cat != "row corner" && node.node_cat != "row reversal") ||
-	    (ghost == 0)){
+	if((boundary == 1 && node.node_cat != "row corner" && node.node_cat != "row reversal") ||
+	    (boundary == 0)){
 	    double[2][] vectors;
 	    foreach(face; FACE_LIST) {
 		size_t[] ID_list;
@@ -1084,18 +1083,12 @@ double smoothing(Point[] surface, Point[] Prev_Row, bool ghost, bool first_row)
 		    } else {
 			attached_point = POINT_LIST[face.point_IDs[0]];
 		    }
-		    if (ghost == 1){
-			if(!Prev_Row.canFind(attached_point)){
-			    vectors ~= [attached_point.x-node.x, attached_point.y-node.y];
-			}
-		    } else if (ghost == 0){
-			vectors ~= [attached_point.x-node.x, attached_point.y-node.y];
-		    }
+		    vectors ~= [attached_point.x-node.x, attached_point.y-node.y];    
 		}
 	    }
 
 	    if (vectors.length == 0) {
-		//writeln("apparently this node has no friends! \n", node.print());
+		writeln("apparently this node has no friends! \n", node.print());
 		//throw new Error(text("apparently this node has no friends!"));
 	    }
 	
@@ -1108,7 +1101,7 @@ double smoothing(Point[] surface, Point[] Prev_Row, bool ghost, bool first_row)
 		move_length = norm(movement);
 		if (move_length > biggest_move) { biggest_move = move_length;}
 
-		if (ghost==1 && first_row==0){
+		if (first_row == 0){
 		    double x_move = movement[0]/5.;
 		    double y_move = movement[1]/5.;
 		    for(int i; i<5; ++i) {
@@ -1159,6 +1152,7 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
     double midx = (start.pointL.x+start.pointR.x)/2;
     double midy = (start.pointL.y+start.pointR.y)/2;
     New_Nodes ~= make2DPoint(midx, midy);
+    New_Nodes[$-1].first_seam_flag = 1;
     original_nodes_left -= 3;
     makeCell([New_Nodes[0], start.pointL, start, start.pointR]);
 
@@ -1175,11 +1169,13 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
 	bool conditions;
 	if(closing == 0){ //not doing the closing seam
 	    if(theta < PI/2 && 
-	  nextpointL.interior_angle > 2.4 && 
-	  nextpointL.interior_angle < 3.9 &&
-	  nextpointR.interior_angle > 2.4 &&
-	  nextpointR.interior_angle < 3.9 && 
+	  //nextpointL.interior_angle > 2.4 && 
+	  //nextpointL.interior_angle < 3.9 &&
+	  //nextpointR.interior_angle > 2.4 &&
+	  //nextpointR.interior_angle < 3.9 && 
 	  original_nodes_left > 2 &&
+	  point_dist(start, nextpointL) < 2*point_dist(start, nextpointR) &&
+	  point_dist(start, nextpointR) < 2*point_dist(start, nextpointL) &&
 	  !adjust_IDs.canFind(nextpointL.rowID) &&
 	  !adjust_IDs.canFind(nextpointR.rowID)) { conditions = 1;}
 	    else{
@@ -1265,7 +1261,7 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
     } else if (nodes == 0){
 	inner_nodes ~= New_Nodes[$-3];
     } else if (nodes == 3){
-	inner_nodes ~= [New_Nodes[$-2]]~[New_Nodes[$-3]]~[New_Nodes[$-1]];
+	inner_nodes = [New_Nodes[$-2], New_Nodes[$-3], New_Nodes[$-1]];
     }
     
     if(original_nodes_left == 1 && closing == 1){
@@ -1279,7 +1275,7 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
 	    writeln("CLOSED2");
 	}
     }
-        
+    
     adjust_IDs ~= [nextpointL.rowID, nextpointR.rowID];
     return inner_nodes;
 }
@@ -1325,143 +1321,6 @@ void fix_IDs(UFace[] face_list, Cell[] cell_list)
     }
 }
 
-void seam_worst_cell(in Cell[] cell_list)
-{
-    /*
-
-    */
-/*
-    Cell worst_cell;
-    double worst_square = 1.0;
-    double sum_square = 0;
-    double squareness;
-    foreach(cell; cell_list){
-	squareness = squareness(cell);
-	sum_squareness += squareness;
-	if (squareness < worst_square ){
-	    worst_square = squareness;
-	    worst_cell = cell;
-	}
-    }
-    double avr_square = sum_squareness/cell_list.length;
-    Cell[] remove_cells;
-    UFace[] remove_faces;
-    if (worst_square < 0.5*avr_square){
-	foreach (cell; cell_list){
-	    if (cell.pointIDs.canfind(worst_cell.point_IDs[0] ||
-		cell.pointIDs.canfind(worst_cell.point_IDs[1] ||
-		cell.pointIDs.canfind(worst_cell.point_IDs[2] ||
-		cell.pointIDs.canfind(worst_cell.point_IDs[3]) {
-		remove_cells ~= cell;
-	    }
-	}
-*/
-	/* THIS SECTION IS INCOMPLETE AND WILL NOT WORK CURRENTLY */ 
-/*
-	size_t[] point_IDs;
-	foreach(face; FACE_LIST){
-	    point_IDs = face.point_IDs;
-	    if (point_IDs.canFind(node.ID)){
-		faces ~= face;
-	    }
-	}
-	if(fix_meganodes == 1){
-	    if (faces.length >= 6){
-		worst = node; worst_faces = faces;
-		writeln("meganode found!");
-		break;
-	    } 
-	}
-	foreach(face; faces){
-	    avr += point_dist(POINT_LIST[face.point_IDs[0]], POINT_LIST[face.point_IDs[1]])/faces.length;
-	}
-	//if(node.ID%10 == 0){writeln(avr); writeln(faces.length);}
-	if (avr > worst_avr){
-	    worst_avr = avr; worst = node; worst_faces = faces;
-	}
-    }
-    if (worst is null){writeln("did not find any big nodes");}
-    writefln("coords of worst: (%s, %s)", worst.x, worst.y);
-    if(worst_faces.length < 6){fix_meganodes = 0;}
-
-    Cell[] worst_cells;
-    size_t[] worst_cell_IDs;
-    Point[] worst_points;
-    size_t[] worst_IDs;
-    foreach(cell; CELL_LIST[npoints_boundary..$]){
-	if (cell.point_IDs.canFind(worst.ID) && 
-	    !worst_cell_IDs.canFind(cell.cell_ID)){
-	    worst_cells ~= cell;
-	    worst_cell_IDs ~= cell.cell_ID;
-	    foreach(id; cell.point_IDs){
-		if (id != worst.ID && !worst_IDs.canFind(id)){
-		    worst_points ~= POINT_LIST[id];
-		    worst_IDs ~= id;
-		}
-	    }
-	}
-    }
-    Point[] ordered_points;
-    ordered_points ~= worst_points[0];
-    writeln(worst_points.length);
-
-    for(size_t i; i<worst_points.length-1; ++i){
-	writeln(i+1," : ", ordered_points.length);
-        if(ordered_points.length != i+1){
-	    throw new Exception(text("irregular geometry: cannot make sense of an ordered path"));
-	}
-        Point[] possible_points;
-	UFace face;
-	foreach(point;worst_points){
-	    face = findFace([ordered_points[i].ID, point.ID], 0);
-	    if (face !is null){
-		possible_points ~= point;
-		writeln("found face");
-	    }
-	}
-	foreach(point;possible_points){
-	    if (point !is worst && LeftorRight(worst, ordered_points[i], point)==1){
-		ordered_points ~= point;
-		writeln("next_node_found");
-		break;
-	    } //closes: test node meets condition to assign to ordered list
-	} //closes: finds test node
-    }//closes: do for each point in new boundary
-
-    assign_node_properties(ordered_points);
-
-    //removing worst point, faces and cells from global lists
-    size_t[] face_IDs;
-    foreach(face; worst_faces){
-	face_IDs ~= face.face_ID;
-    }
-    sort!("a>b")(face_IDs);
-    foreach(id; face_IDs){
-	FACE_LIST = remove(FACE_LIST, id);
-    }
-    UFace.face_ID_count -= face_IDs.length;
-
-    sort!("a>b")(worst_cell_IDs);
-    foreach(id; worst_cell_IDs){
-	CELL_LIST = remove(CELL_LIST, id);
-    }
-    Cell.cell_ID_count -= worst_cell_IDs.length;
-
-    fix_IDs(FACE_LIST, CELL_LIST);
-
-    //re-seam the gap:
-    writeln("commencing closing seam...");
-    closing_seam(ordered_points);
-
-    Point[] inside_nodes = POINT_LIST[npoints_boundary..$];
-    double biggest_move = smoothing(inside_nodes, inside_nodes, 0, 0);
-    double move = biggest_move;
-    for(int i; i<3; ++i){
-	move = smoothing(inside_nodes, inside_nodes, 0, 0);
-    }
-*/
-        
-}
 
 double biggest_cell(Cell[] cells, double initial_size)
 {
@@ -1489,10 +1348,10 @@ void even_out_size(Point[] surface)
        variances in size */
     size_t n = surface.length;
     Point start = surface[0];
-    double biggest = norm(surface[0].V_L) + norm(surface[0].V_R);
+    double biggest = point_dist(start, start.pointL) + point_dist(start, start.pointR);
     double size;
     foreach (node; surface){
-	size = norm(node.V_L) + norm(node.V_R);
+	size = point_dist(node, node.pointL) + point_dist(node, node.pointR);
 	if (size > biggest){
 	    biggest = size;
 	    start = node;
@@ -1501,15 +1360,21 @@ void even_out_size(Point[] surface)
 
     Point currentL = start;
     Point currentR = start;
-    for (int i; i<n/2;++i){
+    for (int i; i<(n/2+2);++i){
+	if(currentL.pointL.node_cat != "row corner" &&
+	   currentL.pointL.node_cat != "row reversal"){
 	currentL.pointL.x = (midpoint(currentL, currentL.pointL.pointL).x+
 			     currentL.pointL.x)/2;
 	currentL.pointL.y = (midpoint(currentL, currentL.pointL.pointL).y+
 			     currentL.pointL.y)/2;
+	}
+	if(currentR.pointR.node_cat != "row corner" &&
+	   currentR.pointR.node_cat != "row reversal"){		
 	currentR.pointR.x = (midpoint(currentR, currentR.pointR.pointR).x+
 			     currentR.pointR.x)/2;
 	currentR.pointR.y = (midpoint(currentR, currentR.pointR.pointR).y+
 			     currentR.pointR.y)/2;
+	}
 	currentL = currentL.pointL;
 	currentR = currentR.pointR;
     }
@@ -1593,7 +1458,7 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
 	intersections = intersecting_faces(New_Row) ~ intersecting_boundary(New_Row);
 	inside_prev = inside_prev_row_check(New_Row, Prev_Row);
 
-	if(remaining_area > 0 || to!int(intersections.length) > 0 || New_Row.length <= 6 || side_node_Flag == 1 || inside_prev == 0){
+	if(remaining_area > 0 || to!int(intersections.length) > 0 || New_Row.length <= 6 || side_node_Flag == 1 ){
 	    POINT_LIST = point_list_backup;
 	    FACE_LIST = face_list_backup;
 	    CELL_LIST = cell_list_backup;
@@ -1613,12 +1478,13 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
 
 	//smooth all the inside nodes
 	//forwards then backwards order to improve symmetry
+	
 	inside_nodes = POINT_LIST[npoints_boundary..New_Row[0].ID];
 	move = biggest_move;
 	reverse(New_Row);
 	reverse_count = 1;
 	for(int i; i<1; ++i){
-	    move = smoothing(inside_nodes, Prev_Row, 0, 0);
+	    move = smoothing(inside_nodes, Prev_Row, 0, 1);
 	    reverse(New_Row);
 	    ++reverse_count;
 	}
@@ -1638,17 +1504,11 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
 	}
 	if (reverse_count%2 != 0){reverse(New_Row);}
 
-	/*
-	reverse_count=0;
-	for(int i; i<2; ++i){
-	    move = smoothing(New_Row, Prev_Row, 0, 0);
-	    reverse(New_Row);
-	    ++reverse_count;
-	}
-	if (reverse_count%2 != 0){reverse(New_Row);}
-        */
+	even_out_size(New_Row);
+
 	second_prev_row = Prev_Row;
 	Prev_Row = New_Row;
+	
     }
 
     //trialling this function:
@@ -1675,9 +1535,9 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
 	    reason ~= " because a point in the new row was outside the previous row";}
     }
     else if(remaining_area > 0){
-	seam_next = 0; reason = "the new paving row fully inverted";}    
-    else if (loop_counter <= 1){
-	seam_next = 1; reason="first new row was rejected (no progress)";}
+	seam_next = 0; reason = "the new paving row fully inverted";}   
+    //else if (loop_counter <= 1){
+	//seam_next = 1; reason="first new row was rejected (no progress)";}
     //not entirely sure if this condition should go here
 
     if(npoints_new_row <= 6){
@@ -1693,6 +1553,7 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
     Prev_Row = New_Row;
 }
 
+
 void seaming_procedure(ref Point[] New_Row)
 {
     Point[][] inner_nodes;
@@ -1702,20 +1563,21 @@ void seaming_procedure(ref Point[] New_Row)
     double smallest_angle = 2*PI;
     Point smallest_angle_node;
     foreach(node; New_Row){
-	if (node.interior_angle < smallest_angle){
+	if (node.interior_angle < smallest_angle && node.first_seam_flag == 0){
 	    smallest_angle = node.interior_angle;
 	    smallest_angle_node = node;
 	}
 	if(node.interior_angle < PI/2 && original_nodes_left > 2 && 
-	   !adjust_IDs.canFind(node.rowID)){
+	   !adjust_IDs.canFind(node.rowID) && node.first_seam_flag == 0){
 	    inner_nodes ~= [seam(node, New_Row, adjust_IDs, original_nodes_left, 0)];
 	}
     }
-    if (inner_nodes.length == 0){
+    if (inner_nodes.length == 0 && smallest_angle_node !is null){
 	writeln("seaming from smallest angle node:");
+	//writeln(smallest_angle_node.print());
 	inner_nodes ~= [seam(smallest_angle_node, New_Row, adjust_IDs, original_nodes_left, 0)];
     }
-   
+
     if (inner_nodes.length > 0){
 	for(size_t i; i<inner_nodes.length; ++i){
 	    revised_New_Row ~= New_Row[adjust_IDs[2*i]];
@@ -1736,7 +1598,9 @@ void seaming_procedure(ref Point[] New_Row)
 	size_t rowID;
 	foreach(node;New_Row){
 	    node.store_rowID(rowID);
-	    node.node_cat = "none";
+	    if (node.node_cat != "row end"){
+	    	node.node_cat = "none";
+	    }
 	    ++rowID;
 	}
      
@@ -1813,12 +1677,11 @@ public:
 	writefln("there are %s points in the first new paving row", npoints_row);
 	assign_node_properties(New_Row);
 	Point[] Prev_Row = New_Row;
-	adjust_row_ends(New_Row, initial_size, 0);
 	smoothing(New_Row, Prev_Row, 1, 0);    
 	//this 'ghost' smooth works in the opposite way to the 
 	//subsequent paving row smooths
-	//even_out_size(New_Row);
-
+	even_out_size(New_Row);
+	
 	Point[4][] intersections = intersecting_boundary(New_Row);
 	bool effective_intersection = 0;
 	foreach (p; New_Row) { 
@@ -1829,7 +1692,8 @@ public:
 	    smoothing(New_Row, Prev_Row, 1, 1); 
 	    smoothing(New_Row, Prev_Row, 1, 0);
 	}
-	
+	assign_node_properties(New_Row);
+	adjust_row_ends(New_Row, initial_size, 0);
 	//foreach(p;New_Row){writeln(p.print());}
 	
 	/*----
@@ -1842,32 +1706,35 @@ public:
 	    ++loop_counter;
 	    writeln("paving new rows until intersection...");
 	    pave_rows_until_intersection(New_Row, Prev_Row, npoints_boundary, seam_next);
-	    //if(loop_counter == 1) {break;}
+	    //if(loop_counter == 20) {break;}
 	    if (seam_next==0){break;}
+	    smoothing(New_Row, Prev_Row, 1, 0);
 	    writeln("commencing seaming procedure...");
 	    seaming_procedure(New_Row);
 	    Prev_Row = New_Row;
 	    writeln("...completed seam.");
-	    //if(loop_counter == 1) {break;}
+	    //if(loop_counter == 5) {break;}
+	    even_out_size(New_Row);
 	}
-    	//foreach(p;New_Row){writeln(p.print());}
-
+	
 	writeln("smoothing before closing");
 	Point[] inside_nodes = POINT_LIST[npoints_boundary..$];
-	double biggest_move = smoothing(inside_nodes, Prev_Row, 0, 0);
+	double biggest_move = smoothing(inside_nodes, Prev_Row, 0, 1);
 	double move = biggest_move;
 	for(int i; i<1; ++i){
 	    move = smoothing(inside_nodes, Prev_Row, 0, 0);
 	}
-
+	
+	
 	/*---------------close the final region-------------------------*/
         
 	writeln("commencing closing seam...");
-	closing_seam(New_Row);    
+	closing_seam(New_Row);  
+	  
 	writeln("completing final smoothing...");
 	//smooth all the inside nodes:    
 	inside_nodes = POINT_LIST[npoints_boundary..$];
-	biggest_move = smoothing(inside_nodes, Prev_Row, 0, 0);
+	biggest_move = smoothing(inside_nodes, Prev_Row, 0, 1);
 	move = biggest_move;
 	for(int i; i<2; ++i){
 	    move = smoothing(inside_nodes, Prev_Row, 0, 0);
@@ -1877,21 +1744,7 @@ public:
 	
 
 	/*-------section for size adjustments: not currently included----*/
-	/*this works except I think it is somehow generating extra points 
-	  which is very difficult to fix, and not sure if excess points 
-	  (not utilized by cells) is unacceptable*/
 
-	/*
-	  double worst_ratio =  biggest_cell(CELL_LIST, initial_size)/(initial_size^^2);
-	  if(worst_ratio > 2){
-	  writeln("seam big cells");
-	  seam_big_cells(npoints_boundary, initial_size, 0);
-	  }
-
-	  writeln("biggest cell ratio: ", worst_ratio);
-	  writeln("biggest cell: ", biggest_cell(CELL_LIST, initial_size));
-	  writeln("initial_area: ", initial_size^^2);
-	*/
 
 	this.nvertices = POINT_LIST.length;
 	this.nfaces = FACE_LIST.length;
