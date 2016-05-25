@@ -18,6 +18,8 @@ import globalconfig;
 import globaldata;
 import fvcell;
 import fileutil;
+import solidfvcell;
+import solidblock;
 
 string histDir = "hist";
 
@@ -43,7 +45,30 @@ void init_history_cell_files()
 	}
 	f.write("\n");
 	f.close();
+    }
+
+    // And history cells in solid domain, if present
+    foreach ( hcell; GlobalConfig.solid_hcells ) {
+	auto blkId = hcell[0];
+	auto cellId = hcell[1];
+	if ( cellId >= solidBlocks[blkId].activeCells.length ) {
+	    string errMsg = "ERROR: init_history_cells()\n";
+	    errMsg ~= format("The requested history cell index %d is not valid for solid block %d.\n", cellId, blkId);
+	    errMsg ~= format("This solid block only has %d cells.\n", solidBlocks[blkId].activeCells.length);
+	    throw new FlowSolverException(errMsg);
+	}
+	string fname = format("%s/%s-solid-blk-%d-cell-%d.dat", 
+			      histDir, GlobalConfig.base_file_name, blkId, cellId);
+	auto f = File(fname, "w");
+	auto cellVars = varListForSolidCell();
+	f.write("# 1:t ");
+	foreach ( i, var; cellVars ) {
+	    f.write(format("%d:%s ", i+2, var));
+	}
+	f.write("\n");
+	f.close();
     }    
+
 }
 
 void write_history_cells_to_files(double sim_time)
@@ -59,4 +84,18 @@ void write_history_cells_to_files(double sim_time)
 		       cell.write_values_to_string());
 	append(fname, writer.data);
     }
+
+    // And history cells in solid domain, if present
+    foreach ( hcell; GlobalConfig.solid_hcells ) {
+	auto blkId = hcell[0];
+	auto cellId = hcell[1];
+	string fname = format("%s/%s-solid-blk-%d-cell-%d.dat", 
+			      histDir, GlobalConfig.base_file_name, blkId, cellId);
+	auto cell = solidBlocks[blkId].activeCells[cellId];
+	auto writer = appender!string();
+	formattedWrite(writer, "%.16e %s\n", sim_time,
+		       cell.writeValuesToString());
+	append(fname, writer.data);
+    }
+
 }

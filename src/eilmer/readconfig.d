@@ -284,6 +284,12 @@ void read_config_file()
 	auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
 	GlobalConfig.hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
     }
+    int nsolidhcell = getJSONint(jsonData, "nsolidhcell", 0);
+    foreach (i; 0 .. nsolidhcell) {
+	string jsonKey = format("solid-history-cell-%d", i);
+	auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
+	GlobalConfig.solid_hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
+    }
     // TODO -- still have other entries such as nheatzone, nreactionzone, ...
 
     // Now, configure blocks that make up the flow domain.

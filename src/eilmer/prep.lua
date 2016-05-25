@@ -30,6 +30,7 @@ solidBlocks = {}
 
 -- Storage for history cells
 historyCells = {}
+solidHistoryCells = {}
 
 function to_eilmer_axis_map(gridpro_ijk)
    -- Convert from GridPro axis_map string to Eilmer3 axis_map string.
@@ -605,6 +606,61 @@ function setHistoryPoint(args)
    return
 end
 
+function setSolidHistoryPoint(args)
+   -- Accepts a variety of arguments:
+   --  1. x, y, z coordinates
+   --  setSolidHistoryPoint{x=7.9, y=8.2, z=0.0}
+   --  2. block and single-index for cell
+   --  setSolidHistoryPoint{ib=2, i=102}
+   --  3. block and structured grid indices
+   --  setSolidHistoryPoint{ib=0, i=20, j=10, k=0}
+   
+   -- First look for x,y,z
+   if ( args.x ) then
+      x = args.x
+      y = args.y
+      z = args.z or 0.0
+      minDist = 1.0e9 -- something very large
+      blkId = 0
+      cellId = 0
+      for ib,blk in ipairs(solidBlocks) do
+	 indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
+	 if ( dist < minDist ) then
+	    minDist = dist
+	    blkId = ib
+	    cellId = indx
+	 end
+      end
+      -- Convert blkId to 0-offset
+      blkId = blkId - 1
+      solidHistoryCells[#solidHistoryCells+1] = {ib=blkId, i=cellId}
+      return
+   end
+   
+   if ( args.j ) then
+      ib = args.ib
+      i = args.i
+      j = args.j
+      k = args.k or 0
+      -- Convert back to single_index
+      nic = solidBlocks[ib+1].nic
+      njc = solidBlocks[ib+1].njc
+      cellId = k * (njc * nic) + j * nic + i
+      solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=cellId}
+      return
+   end
+
+   if ( not args.ib or not args.i ) then
+      print("No valid arguments found for setSolidHistoryPoint.")
+      print("Bailing out!")
+      os.exit(1)
+   end
+
+   solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=args.i}
+   return
+end
+
+
 function makeFillConditionFn(flowSol)
    local gm = getGasModel()
    local sp = gm:speciesName(1)
@@ -716,6 +772,10 @@ function write_config_file(fileName)
    f:write(string.format('"nhcell": %d,\n', #historyCells))
    for i,hcell in ipairs(historyCells) do
       f:write(string.format('"history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))
+   end
+   f:write(string.format('"nsolidhcell": %d,\n', #solidHistoryCells))
+   for i,hcell in ipairs(solidHistoryCells) do
+      f:write(string.format('"solid-history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))
    end
 
    f:write(string.format('"udf_solid_source_terms_file": "%s",\n', config.udf_solid_source_terms_file))

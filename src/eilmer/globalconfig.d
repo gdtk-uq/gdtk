@@ -298,6 +298,7 @@ final class GlobalConfig {
     shared static double dt_plot = 1.0e-3; // interval for writing soln
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static Tuple!(size_t, size_t)[] hcells;
+    shared static Tuple!(size_t, size_t)[] solid_hcells;
     
     shared static double energy_residual;      // to be monitored for steady state
     shared static Vector3 energy_residual_loc; // location of largest value
