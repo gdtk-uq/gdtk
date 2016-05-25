@@ -27,12 +27,9 @@ function xypath(t)
    return {x=x, y=yval}
 end
 
-a = Vector3:new{x=-1.0, y=0.0}
-b = Vector3:new{ x=0.0, y=0.0}
-c = Vector3:new{x=10.0, y=1.0}
-d = Vector3:new{x=10.0, y=7.0}
-e = Vector3:new{ x=0.0, y=7.0}
-f = Vector3:new{x=-1.0, y=7.0}
+a = Vector3:new{x=-1.0, y=0.0}; b = Vector3:new{ x=0.0, y=0.0}
+c = Vector3:new{x=10.0, y=1.0}; d = Vector3:new{x=10.0, y=7.0}
+e = Vector3:new{ x=0.0, y=7.0}; f = Vector3:new{x=-1.0, y=7.0}
 -- lower boundary including body surface
 ab = Line:new{p0=a, p1=b}; bc = LuaFnPath:new{luaFnName="xypath"} 
 -- upper boundary
