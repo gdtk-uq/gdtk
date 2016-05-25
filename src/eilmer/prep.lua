@@ -741,6 +741,7 @@ function write_config_file(fileName)
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
    f:write(string.format('"spatial_deriv_calc": "%s",\n', config.spatial_deriv_calc))
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
+   f:write(string.format('"viscous_delay": %e,\n', config.viscous_delay))
    f:write(string.format('"viscous_signal_factor": %e,\n', config.viscous_signal_factor))
 
    f:write(string.format('"turbulence_model": "%s",\n',
