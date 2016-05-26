@@ -206,7 +206,7 @@ The value should be a number.`;
     int S = 0;
 
     fs = new FlowState(managedGasModel, p, T, vel, massf, quality, B,
-		       tke, omega, mu_t, k_t);
+		       psi, divB, tke, omega, mu_t, k_t);
     flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
     return 1;
 }
