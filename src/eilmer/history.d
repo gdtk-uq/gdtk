@@ -30,7 +30,7 @@ void init_history_cell_files()
 	auto blkId = hcell[0];
 	auto cellId = hcell[1];
 	if ( cellId >= gasBlocks[blkId].cells.length ) {
-	    string errMsg = "ERROR: init_history_cells()\n";
+	    string errMsg = "ERROR: init_history_cell_files()\n";
 	    errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
 	    errMsg ~= format("This block only has %d cells.\n", gasBlocks[blkId].cells.length);
 	    throw new FlowSolverException(errMsg);
@@ -52,7 +52,7 @@ void init_history_cell_files()
 	auto blkId = hcell[0];
 	auto cellId = hcell[1];
 	if ( cellId >= solidBlocks[blkId].activeCells.length ) {
-	    string errMsg = "ERROR: init_history_cells()\n";
+	    string errMsg = "ERROR: init_history_cell_files()\n";
 	    errMsg ~= format("The requested history cell index %d is not valid for solid block %d.\n", cellId, blkId);
 	    errMsg ~= format("This solid block only has %d cells.\n", solidBlocks[blkId].activeCells.length);
 	    throw new FlowSolverException(errMsg);
