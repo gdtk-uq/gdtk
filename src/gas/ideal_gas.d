@@ -87,48 +87,85 @@ public:
     }
 
     override void update_thermo_from_pT(GasState Q) const 
-    {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.T[0] > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+	assert(Q.p > 0.0, brokenPreCondition("pressure", __LINE__, __FILE__));
+    }
+    body {
 	Q.rho = Q.p/(Q.T[0]*_Rgas);
 	Q.e[0] = _Cv*Q.T[0];
     }
     override void update_thermo_from_rhoe(GasState Q) const
-    {
-	assert(Q.e.length == 1, "incorrect length of energy array");
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.rho > 0.0, brokenPreCondition("density", __LINE__, __FILE__));
+    }
+    body {
 	Q.T[0] = Q.e[0]/_Cv;
 	Q.p = Q.rho*_Rgas*Q.T[0];
     }
     override void update_thermo_from_rhoT(GasState Q) const
-    {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.T[0] > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+	assert(Q.rho > 0.0, brokenPreCondition("density", __LINE__, __FILE__));
+    }
+    body {
 	Q.p = Q.rho*_Rgas*Q.T[0];
 	Q.e[0] = _Cv*Q.T[0];
     }
     override void update_thermo_from_rhop(GasState Q) const
-    {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.p > 0.0, brokenPreCondition("pressure", __LINE__, __FILE__));
+	assert(Q.rho > 0.0, brokenPreCondition("density", __LINE__, __FILE__));
+    }
+    body {
 	Q.T[0] = Q.p/(Q.rho*_Rgas);
 	Q.e[0] = _Cv*Q.T[0];
-	
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.p > 0.0, brokenPreCondition("pressure", __LINE__, __FILE__));
+    }
+    body {
 	Q.T[0] = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+    }	
+    body {
 	Q.T[0] = h / _Cp;
 	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T[0]/_T1)));
 	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.T[0] > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+    }
+    body {
 	Q.a = sqrt(_gamma*_Rgas*Q.T[0]);
     }
     override void update_trans_coeffs(GasState Q) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.T[0] > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+    }
+    body {
 	Q.mu = sutherland_viscosity(Q.T[0], _T_mu, _mu_ref, _S_mu);
 	Q.k[0] = sutherland_thermal_conductivity(Q.T[0], _T_k, _k_ref, _S_k);
     }
@@ -146,7 +183,12 @@ public:
 	return _Cp;
     }
     override double dpdrho_const_T(in GasState Q) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.T[0] > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+    }
+    body {
 	double R = gas_constant(Q);
 	return R*Q.T[0];
     }
@@ -155,15 +197,30 @@ public:
 	return R_universal/_mol_masses[0];
     }
     override double internal_energy(in GasState Q) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+    }
+    body {
 	return Q.e[0];
     }
     override double enthalpy(in GasState Q) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.p > 0.0, brokenPreCondition("pressure", __LINE__, __FILE__));
+	assert(Q.rho > 0.0, brokenPreCondition("density", __LINE__, __FILE__));
+    }
+    body {
 	return Q.e[0] + Q.p/Q.rho;
     }
     override double entropy(in GasState Q) const
-    {
+    in {
+	assert(Q.e.length == 1, brokenPreCondition("length of energy array", __LINE__, __FILE__));
+	assert(Q.T.length == 1, brokenPreCondition("length of temperature array", __LINE__, __FILE__));
+	assert(Q.T[0] > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
+	assert(Q.p > 0.0, brokenPreCondition("pressure", __LINE__, __FILE__));
+    }
+    body {
 	return _s1 + _Cp * log(Q.T[0]/_T1) - _Rgas * log(Q.p/_p1);
     }
 
