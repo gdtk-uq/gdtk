@@ -868,7 +868,6 @@ version(gas_calc) {
 	luaL_openlibs(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	registerReactionMechanism(L, LUA_GLOBALSINDEX);
-	registerReactionUpdateScheme(L, LUA_GLOBALSINDEX);
 
 	if ( luaL_dofile(L, toStringz(args[1])) != 0 ) {
 	    writeln(to!string(lua_tostring(L, -1)));
