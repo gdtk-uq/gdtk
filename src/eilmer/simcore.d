@@ -92,7 +92,6 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	}
 	myblk.set_cell_dt_chem(-1.0);
     }
-    init_history_cell_files();
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.
@@ -119,6 +118,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	mySolidBlk.computePrimaryCellGeometricData();
 	mySolidBlk.assignVtxLocationsForDerivCalc();
     }
+    // All cells are in place, so now we can initialise any history cell files.
+    init_history_cell_files();
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
