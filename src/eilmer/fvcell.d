@@ -1052,8 +1052,8 @@ public:
 	}
 	// Check the INVISCID time step limit first,
 	// then add a component to ensure viscous stability.
-	// Note: MHD Divergence Cleaning only works if stringent_cfl is checked properly.
-	if ((myConfig.stringent_cfl) || (myConfig.divergence_cleaning)) {
+	// Note: MHD seems to only works if stringent_cfl is used.
+	if ((myConfig.stringent_cfl) || (myConfig.MHD)) {
 	    // Make the worst case.
 	    if (myConfig.MHD) {
 		ca2 = B_mag*B_mag / fs.gas.rho;
