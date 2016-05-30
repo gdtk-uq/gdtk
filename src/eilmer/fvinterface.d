@@ -275,7 +275,8 @@ public:
 	double tau_wx = 0.0;
 	double tau_wy = 0.0;
 	double tau_wz = 0.0;
-	if ( myConfig.turbulence_model == TurbulenceModel.k_omega ) {
+	if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
+	     !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
 	    // Turbulence contribution to the shear stresses.
 	    tau_xx -= 0.66667 * fs.gas.rho * fs.tke;
 	    tau_yy -= 0.66667 * fs.gas.rho * fs.tke;
