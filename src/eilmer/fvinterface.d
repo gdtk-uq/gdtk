@@ -220,7 +220,7 @@ public:
 	    double dvdy = grad.vel[1][1];
 	    double dvdz = grad.vel[1][2];
 	    double dwdx = grad.vel[2][0];
-	    double dwdy = grad.vel[1][1];
+	    double dwdy = grad.vel[2][1];
 	    double dwdz = grad.vel[2][2];
 	    // 3-dimensional planar stresses.
 	    tau_xx = 2.0*mu_eff*dudx + lmbda*(dudx + dvdy + dwdz);
