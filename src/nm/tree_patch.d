@@ -191,6 +191,7 @@ class TreeNode {
 	patch nodePatch;
 	TreeNode* left;
 	TreeNode* right;
+	TreeNode* parent;
 	int idx;
 	char splitID;
 	
@@ -332,6 +333,20 @@ class Tree {
 			else Node.writeData(filename,'L');
 		}
 		}
+	double patchMinDeltaX(){
+		double minX = 1.0e10;
+		foreach(node; Nodes){
+			minX = min(minX,node.nodePatch.x_hi - node.nodePatch.x_lo);
+		}
+		return minX;
+	}
+	double patchMinDeltaY(){
+		double minY = 1.0e10;
+		foreach(node; Nodes){
+			minY = min(minY,node.nodePatch.y_hi - node.nodePatch.y_lo);
+		}
+		return minY;
+	}
 }
 
 Tree buildTree_fromFile(string filename = "Tree.dat"){
