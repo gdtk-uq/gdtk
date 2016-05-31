@@ -191,6 +191,7 @@ class TreeNode {
 	patch nodePatch;
 	TreeNode* left;
 	TreeNode* right;
+	TreeNode* parent;
 	int idx;
 	char splitID;
 	
