@@ -40,7 +40,7 @@ double rho_max = 1500;
 double e_min = -5.5e5;
 double e_max = 5.0e5;
 //-----------------------------REMAP------------------------------
-static double F(double u, double v){
+/*static double F(double u, double v){
 	CO2GasSW gm = new CO2GasSW;
 	auto gd = new GasState(1,1);//initializes using constructor of nspecies, n modes
 	double[2] rhoe = gm.get_rhoe_uv(u,v,rho_min,rho_max,e_min,e_max);
@@ -55,7 +55,7 @@ static double F(double u, double v){
 static double[2] F_transform(double x, double y){
 	CO2GasSW gm = new CO2GasSW();
 	return gm.get_rhoe_uv(x,y,rho_min,rho_max,e_min,e_max);
-}
+}*/
 //--------------NO REMAP-----------------------------
 /*static double F(double rho, double e){
 	CO2GasSW gm = new CO2GasSW();
@@ -69,26 +69,30 @@ static double[2] F_transform(double x, double y){
 static double[2] F_transform(double x, double y){
 	return [x,y];
 }*/
-
-
+static double F(double x, double y){
+	return 0.0002*x^^5 - y^^4 + x*y;
+}
+static double[2] F_transform(double x, double y){
+	return [x,y];
+}
 
 void main(){
-	double x_lo = 0.0;
-	double x_hi = 1.0;
-	double y_lo = 0.0;
-	double y_hi = 1.0;
+	double x_lo = -50.0;
+	double x_hi = 50.0;
+	double y_lo = -50.0;
+	double y_hi = 50.0;
 	/*double x_lo = rho_min;
 	double x_hi = rho_max;
 	double y_lo = e_min;
 	double y_hi = e_max;*/
 	immutable int n = 100;
 	Tree myTree = new Tree(x_lo, x_hi, y_lo, y_hi);
-	myTree.globalMaxError = 0.0001;
-	myTree.globalMinArea = 0.00001*(rho_max-rho_min)*(e_max-e_min);
-	myTree.X_min = rho_min;
-	myTree.X_max = rho_max;
-	myTree.Y_min = e_min;
-	myTree.Y_max = e_max;
+	myTree.globalMaxError = 0.01;
+	myTree.globalMinArea = 0.000001*(y_hi - y_lo)*(x_hi - x_lo);
+	//myTree.X_min = rho_min;
+	//myTree.X_max = rho_max;
+	//myTree.Y_min = e_min;
+	//myTree.Y_max = e_max;
 	writeln("initialised the tree, with the first patch");
 	writeln(myTree.Nodes[0].nodePatch.toString());
 	myTree.grow(&F, &F_transform, myTree.Nodes[0]);
@@ -119,10 +123,11 @@ void main(){
 		
 
 		
-	writefln("rho_min: %s, rho_max: %s, e_min: %s, e_max: %s", rho_min, rho_max, e_min, e_max);
+	//writefln("rho_min: %s, rho_max: %s, e_min: %s, e_max: %s", rho_min, rho_max, e_min, e_max);
 	writeln("finished growing the tree");
 	writefln("nleafs: %s, n_nodes: %s", n_leafs,myTree.Nodes.length);
 	writefln("globalMaxError: %s, globalMinArea: %s", myTree.globalMaxError, myTree.globalMinArea);
+	writefln("minDeltaX: %s, minDeltaY: %s", myTree.minDeltaX, myTree.minDeltaY);
 	string filename = "T_rhoe_Tree.dat";
 	myTree.writeLUT(filename); 
 	writefln("Tree written to %s ", filename);

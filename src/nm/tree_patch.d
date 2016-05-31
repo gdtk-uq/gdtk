@@ -332,6 +332,20 @@ class Tree {
 			else Node.writeData(filename,'L');
 		}
 		}
+	double minDeltaX(){
+		double minDeltaX = X_max - X_min;
+		foreach(node; Nodes){
+			minDeltaX = min(minDeltaX,node.nodePatch.x_hi - node.nodePatch.x_lo);
+		}
+		return minDeltaX;
+	}
+	double minDeltaY(){
+		double minDeltaY = Y_max - Y_min;
+		foreach(node; Nodes){
+			minDeltaY = min(minDeltaY,node.nodePatch.y_hi - node.nodePatch.y_lo);
+		}
+		return minDeltaY;
+	}
 }
 
 Tree buildTree_fromFile(string filename = "Tree.dat"){
