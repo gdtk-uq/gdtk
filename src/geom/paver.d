@@ -142,8 +142,6 @@ class Cell
 
 }
 
-/*---------------------------------------------------------*/
-
 enum CellType { //**this is different to USGCell_type in usgrid.d
     none = 0,
     line = 1,
@@ -154,10 +152,7 @@ enum CellType { //**this is different to USGCell_type in usgrid.d
     hex =6   
 }
 
-
-/*-----------------------------------Section 2----------------------------------*/
-/*-----------------------gloally accessible data storage------------------------*/
-/*----------------------------------- 6 Lines ----------------------------------*/
+/*-------------------------Globally accessible data----------------------------*/
 
 int ndimensions = 2;
 Point[] POINT_LIST;
@@ -166,9 +161,9 @@ Cell[] CELL_LIST;
 double initial_size;
 double avr_area;
 
-/*---------------------------------------*/
 
-/*-----------------------------------Section 3----------------------------------*/
+
+/*-----------------------------------Section 2----------------------------------*/
 /*---------------------geometry & vector operation functions--------------------*/
 /*----------------------------------- 88 Lines ---------------------------------*/
 
@@ -259,10 +254,6 @@ Point midpoint(Point a, Point b)
     return vector;
 }
 
-/*-----------------------------------Section 4----------------------------------*/
-/*----------some useful geometry functions utilized in Paving method------------*/
-/*---------------------------------- 175 Lines ---------------------------------*/
-
 double squareness(Cell cell)
 {
     int n = to!int(cell.point_IDs.length);
@@ -282,7 +273,7 @@ double squareness(Cell cell)
     double ans = 16*area/(perimeter^^2);
     return ans;
 }
-//^(garbage collection here)
+
 
 int winding_number(Point P, Point[] surface)
 {
@@ -300,7 +291,11 @@ int winding_number(Point P, Point[] surface)
     }
     return wn;
 }
-//^(garbage collection here)
+
+/*-----------------------------------Section 3----------------------------------*/
+/*----------some useful geometry functions utilized in Paving method------------*/
+/*---------------------------------- 175 Lines ---------------------------------*/
+
 
 double clockwise_check(Point[] surface)
 {
@@ -320,7 +315,7 @@ double clockwise_check(Point[] surface)
     return area;
     //**function returns the enclosed area
 }
-//^(garbage collection here)
+
 
 double calc_area(Point[] cell_points)
 {
@@ -334,7 +329,7 @@ double calc_area(Point[] cell_points)
 
     return area;
 }
-//^(garbage collection here)
+
 
 void closed_row_check(Point[] surface)
 {
@@ -347,7 +342,7 @@ void closed_row_check(Point[] surface)
 	}
     }
 }
-//^(garbage collection here)
+
 
 Point[4][] intersecting_boundary(Point[] surface)
 {
@@ -368,7 +363,7 @@ Point[4][] intersecting_boundary(Point[] surface)
     }
     return intersections;
 }
-//^(garbage collection here)
+
 
 Point[4][] intersecting_faces(Point[] surface)
 {
@@ -399,7 +394,6 @@ Point[4][] intersecting_faces(Point[] surface)
     }
     return intersections;
 }
-//^(garbage collection here)
 
 @nogc double average_face_length(Point[] surface)
 {
@@ -426,7 +420,6 @@ double angle_between_vectors(double[2] a, double[2] b)
     }
     return theta;
 }
-//^(garbage collection here)
 
 bool inside_prev_row_check(Point[] New_Row, Point[] Prev_Row){
     bool inside = 1;
@@ -440,11 +433,9 @@ bool inside_prev_row_check(Point[] New_Row, Point[] Prev_Row){
     }
     return inside;
 }
-//^(garbage collection here)
 
-/*---------------------------------------------------------------------------*/
 
-/*-----------------------------------Section 5----------------------------------*/
+/*-----------------------------------Section 4----------------------------------*/
 /*----------------------------MAJOR PAVING FUNCTIONS----------------------------*/
 /*---------------------------------- 1018 Lines --------------------------------*/
 
@@ -588,7 +579,7 @@ void assign_node_properties(Point[] surface)
 	double angle = acos(r);
 
 	if (angle > 3.141 && angle < 3.142){
-	    //angle is basically pi it doesn't need adjusting
+	    //if angle is basically pi it doesn't need adjusting
 	} else {
 	    // determine if the interior or exterior angle was calculated
 	    // ie. cosine rule will just calculated smallest angle
@@ -634,14 +625,11 @@ void adjust_row_ends(Point[] surface, double initial_size,  bool boundary)
       are introduced to manage this cell size reduction.
       This is disabled for the first row generated from the boundary,
       ie. when bool boundary == 1.
+      Similarly if the cell size is increasing to much beyond the orginal 
+      cell size a 'wedge' is effectively added by re-classifying the node
+      as a row corner.
     */
-/*
-ERROR HERE:
-    foreach(node;surface){
-	node.V_L = point_dist(node, node.pointL);
-	node.V_R = point_dist(node, node.pointR);
-    }
-*/
+
     bool conditions(Point node){
 	bool ans;
 	if(node is null){return ans;}
@@ -670,7 +658,6 @@ ERROR HERE:
 	} else{ ans = 0;}
 	return ans;
     }
-
 
     //----------------------------------------------
     
@@ -703,7 +690,7 @@ ERROR HERE:
 		node.node_cat = "row end";
 	        writeln("matching row end enforced");
 		row_end_list ~= node;
-	    } else {//throw new Exception(text("the node we wanted to enforce as a matching row end had too big of an angle... might need to deal with this?"));
+	    } else {//throw new Exception(text("the node we wanted to enforce as a matching row 			end had too big of an angle... si is rejected"));
 	    }
 	}
     	//asserting additional row ends to manage cell size reduction
@@ -779,7 +766,7 @@ string node_category(double angle)
 {
     /*
       categorisation of nodes based on interior angle
-      **NOTE: not dealing with ambiguous cases yet
+      **NOTE: not dealing with ambiguous cases
     */
 
     string node_cat;
@@ -807,7 +794,6 @@ string node_category(double angle)
 
 void node_gen(Point[] surface, size_t i, ref Point[] New_Nodes)
 {
-
     /*
       Generation of new nodes in the new row, based on current row
       node categorisation and relative position.
@@ -1136,8 +1122,6 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
       take to much space to explain here.
     */ 
 
-
-
     //size_t original_nodes_left = New_Row.length;
     Point[] New_Nodes;
     Point[] empty;
@@ -1168,16 +1152,12 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
 		    Point nextpointR, size_t original_nodes_left){
 	bool conditions;
 	if(closing == 0){ //not doing the closing seam
-	    if(theta < PI/2 && 
-	  //nextpointL.interior_angle > 2.4 && 
-	  //nextpointL.interior_angle < 3.9 &&
-	  //nextpointR.interior_angle > 2.4 &&
-	  //nextpointR.interior_angle < 3.9 && 
-	  original_nodes_left > 2 &&
-	  point_dist(start, nextpointL) < 2*point_dist(start, nextpointR) &&
-	  point_dist(start, nextpointR) < 2*point_dist(start, nextpointL) &&
-	  !adjust_IDs.canFind(nextpointL.rowID) &&
-	  !adjust_IDs.canFind(nextpointR.rowID)) { conditions = 1;}
+	    if (theta < PI/2 && 
+	        original_nodes_left > 2 &&
+	        point_dist(start, nextpointL) < 2*point_dist(start, nextpointR) &&
+	  	point_dist(start, nextpointR) < 2*point_dist(start, nextpointL) &&
+	  	!adjust_IDs.canFind(nextpointL.rowID) &&
+	  	!adjust_IDs.canFind(nextpointR.rowID)) { conditions = 1;}
 	    else{
 		writefln("there are %s remaining nodes \n (not closing seam)", original_nodes_left);
 		conditions = 0;}
@@ -1254,7 +1234,6 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
 	a = vector2D(nextpointL, nextpointL.pointL);
 	b = vector2D(nextpointR, nextpointR.pointR);
 	theta = angle_between_vectors(a,b);
-	//writeln("theta: ", theta);
     } 
     if (nodes == 1){
 	inner_nodes ~= New_Nodes[$-1];
@@ -1287,7 +1266,7 @@ void closing_seam(Point[] Final_Row)
       function to complete the closing procedure for the mesh
     */
 
-    size_t[] adjust_IDs; // don't actually use this, but I think I need it 
+    size_t[] adjust_IDs; // don't actually use this, but I think it needs to exist 
                          // in this scope to call the function here. 
     assert(Final_Row.length%2 == 0, "final boundary not even number of nodes - this is not ok... and shouldn't have happened");
     Point start = Final_Row[0];
@@ -1389,7 +1368,7 @@ void point_ID_check(){
     }
 }
 
-/*-----------------------------------Section 6----------------------------------*/
+/*-----------------------------------Section 5----------------------------------*/
 /*----------------------------MAJOR PAVING PROCEDURES---------------------------*/
 /*---------------------------------- 195 Lines ---------------------------------*/
 
@@ -1490,9 +1469,8 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
 	}
 	if (reverse_count%2 != 0){reverse(New_Row);}
 	
-	//trialling this function:
+	//even out size function:
 	even_out_size(New_Row);
-	//has a small effect
 	
 	//final smooth
 	move = biggest_move;
@@ -1509,14 +1487,11 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
 	second_prev_row = Prev_Row;
 	Prev_Row = New_Row;
 	
-    }
-
-    //trialling this function:
-    //even_out_size(New_Row);
+    }//end: row generation loop
 
     move = biggest_move;
     uint reverse_count=0;
-    //Point[] prev; place_holder
+
     if (loop_counter > 1) {
     	for(int i; i<2; ++i){
 	    move = smoothing(New_Row, second_prev_row, 1, 0);
@@ -1529,6 +1504,7 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
     npoints_row = New_Row.length;
     string reason;
     /* if seam_next = 0 the code proceeds to the closing procedure */
+    /* otherwise if seam_next = 1 the regular seaming procedure is commenced */
     if(to!int(intersections.length) > 0){
 	seam_next = 1; reason = "intersection detected";
 	if(inside_prev == 0){
@@ -1536,9 +1512,6 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
     }
     else if(remaining_area > 0){
 	seam_next = 0; reason = "the new paving row fully inverted";}   
-    //else if (loop_counter <= 1){
-	//seam_next = 1; reason="first new row was rejected (no progress)";}
-    //not entirely sure if this condition should go here
 
     if(npoints_new_row <= 6){
 	seam_next = 0; reason="there were 6 or less nodes in the new paving row";}
@@ -1574,7 +1547,6 @@ void seaming_procedure(ref Point[] New_Row)
     }
     if (inner_nodes.length == 0 && smallest_angle_node !is null){
 	writeln("seaming from smallest angle node:");
-	//writeln(smallest_angle_node.print());
 	inner_nodes ~= [seam(smallest_angle_node, New_Row, adjust_IDs, original_nodes_left, 0)];
     }
 
@@ -1606,12 +1578,20 @@ void seaming_procedure(ref Point[] New_Row)
      
 	assign_node_properties(New_Row);
 	adjust_row_ends(New_Row, initial_size, 1);
+
+	foreach(node;New_Row){
+	    if (node.first_seam_flag == 1 && node.pointL.first_seam_flag == 1 
+	        && node.pointR.first_seam_flag == 1 && node.pointL.pointL.first_seam_flag == 1 
+	        && node.pointR.pointR.first_seam_flag == 1){
+		node.first_seam_flag = 0;
+	    } 
+	}
         
 	clockwise_check(New_Row);
     }
 }
 
-/*-----------------------------------Section 7----------------------------------*/
+/*-----------------------------------Section 6----------------------------------*/
 /*-----------------------------The Paved Grid Class-----------------------------*/
 /*---------------------------------- 150 Lines ---------------------------------*/
 
@@ -1628,8 +1608,6 @@ public:
     {
 	/*---------------import the boundary geometry---------------------*/
 	writeln("importing external boundary...");
-	//chose an example geometry file:
-	//import_boundary_points("eg_geoms/exterior_surface2.txt");
 	foreach(p;boundary_points){
 	    make2DPoint(p[0], p[1]);
 	}
@@ -1678,10 +1656,9 @@ public:
 	assign_node_properties(New_Row);
 	Point[] Prev_Row = New_Row;
 	smoothing(New_Row, Prev_Row, 1, 0);    
-	//this 'ghost' smooth works in the opposite way to the 
-	//subsequent paving row smooths
 	even_out_size(New_Row);
 	
+	//search for special case of first row intersections and adjust if necessary
 	Point[4][] intersections = intersecting_boundary(New_Row);
 	bool effective_intersection = 0;
 	foreach (p; New_Row) { 
@@ -1694,7 +1671,6 @@ public:
 	}
 	assign_node_properties(New_Row);
 	adjust_row_ends(New_Row, initial_size, 0);
-	//foreach(p;New_Row){writeln(p.print());}
 	
 	/*----
 	  continue generating/seaming rows until closing conditions are reached
