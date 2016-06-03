@@ -641,6 +641,23 @@ function SolidBIE_UserDefined:tojson()
    return str
 end
 
+SolidBoundaryFluxEffect = {
+   type = ""
+}
+function SolidBoundaryFluxEffect:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   return o
+end
+
+SolidBFE_ZeroFlux = SolidBoundaryFluxEffect:new{}
+SolidBFE_ZeroFlux.type = "zero_flux"
+function SolidBFE_ZeroFlux:tojson()
+   local str = string.format('          {"type": "%s"} ', self.type)
+   return str
+end
+
 -- Class for SolidBoundaryCondition
 -- This class is a convenience class: it translates a high-level
 -- user name for the boundary condition into a sequence of
@@ -651,7 +668,8 @@ SolidBoundaryCondition = {
    group = "",
    is_solid_domain_bc = true,
    setsFluxDirectly = false,
-   preSpatialDerivAction = {}
+   preSpatialDerivAction = {},
+   postFluxAction = {}
 }
 function SolidBoundaryCondition:new(o)
    o = o or {}
@@ -671,6 +689,13 @@ function SolidBoundaryCondition:tojson()
       -- Extra code to deal with annoying JSON trailing comma deficiency
       if i ~= #self.preSpatialDerivAction then str = str .. "," end
    end
+   str = str .. '\n        ]'
+   str = str .. '        "post_flux_action": [\n'
+   for i,effect in ipairs(self.postFluxAction) do
+      str = str .. effect:tojson()
+      -- Extra code to deal with annoying JSON trailing comma deficiency
+      if i ~= #self.postFluxAction then str = str .. "," end
+   end
    str = str .. '\n        ]\n    }'
    return str
 end
@@ -680,6 +705,14 @@ SolidFixedTBC.type = "SolidFixedT"
 function SolidFixedTBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.preSpatialDerivAction = { SolidBIE_FixedT:new{Twall=o.Twall} }
+   return o
+end
+
+SolidAdiabaticBC = SolidBoundaryCondition:new()
+SolidAdiabaticBC.type = "SolidAdiabatic"
+function SolidAdiabaticBC:new(o)
+   o = SolidBoundaryCondition.new(self, o)
+   o.postFluxAction = { SolidBFE_ZeroFlux:new{} }
    return o
 end
 
