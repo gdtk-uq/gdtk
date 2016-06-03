@@ -21,6 +21,9 @@ SolidBoundaryCondition makeSolidBCFromJson(JSONValue jsonData, int blk_id, int b
 {
     auto setsFluxDirectly = getJSONbool(jsonData, "sets_flux_directly", false);
     auto newBC = new SolidBoundaryCondition(blk_id, boundary, setsFluxDirectly);
+    newBC.label = getJSONstring(jsonData, "label", "");
+    newBC.type = getJSONstring(jsonData, "type", "");
+    newBC.group = getJSONstring(jsonData, "group", "");
     // Assemble list of preSpatialDerivAction effects
     auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
     foreach ( jsonObj; preSpatialDerivActionList ) {
@@ -34,6 +37,14 @@ public:
     SSolidBlock blk;
     int whichBoundary;
     bool setsFluxDirectly;
+    // We may have a label for this specific boundary.
+    string label;
+    // We have a symbolic name for the type of boundary condition
+    // when thinking about the flow problem conceptually. 
+    string type;
+    // Sometimes it is convenient to think of individual boundaries
+    // grouped together.
+    string group;
     SolidBoundaryInterfaceEffect[] preSpatialDerivAction;
     //SolidBoundaryFluxEffect[] postFluxAction;
 
