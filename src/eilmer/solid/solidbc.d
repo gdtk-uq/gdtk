@@ -26,8 +26,13 @@ SolidBoundaryCondition makeSolidBCFromJson(JSONValue jsonData, int blk_id, int b
     newBC.group = getJSONstring(jsonData, "group", "");
     // Assemble list of preSpatialDerivAction effects
     auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
-    foreach ( jsonObj; preSpatialDerivActionList ) {
+    foreach (jsonObj; preSpatialDerivActionList) {
 	newBC.preSpatialDerivAction ~= makeSolidBIEfromJson(jsonObj, blk_id, boundary);
+    }
+    // Assemble list of postFluxAction effects
+    auto postFluxActionList = jsonData["post_flux_action"].array;
+    foreach (jsonObj; postFluxActionList) {
+	newBC.postFluxAction ~= makeSolidBFEfromJson(jsonObj, blk_id, boundary);
     }
     return newBC;
 }
@@ -46,7 +51,7 @@ public:
     // grouped together.
     string group;
     SolidBoundaryInterfaceEffect[] preSpatialDerivAction;
-    //SolidBoundaryFluxEffect[] postFluxAction;
+    SolidBoundaryFluxEffect[] postFluxAction;
 
     this(int blkId, int boundary, bool _setsFluxDirectly)
     {
@@ -57,12 +62,12 @@ public:
 
     final void applyPreSpatialDerivAction(double t, int tLevel)
     {
-	foreach ( sie; preSpatialDerivAction ) sie.apply(t, tLevel);
+	foreach ( bie; preSpatialDerivAction ) bie.apply(t, tLevel);
     }
 
     final void applyPostFluxAction(double t, int tLevel)
     {
-	//foreach ( sfe; postFluxAction ) sfe.apply(t, tLevel);
+	foreach ( bfe; postFluxAction ) bfe.apply(t, tLevel);
     }
 
 }

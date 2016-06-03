@@ -529,6 +529,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     foreach (sblk; solidBlocks) {
 	if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
     }
+    foreach (sblk; solidBlocks) {
+	if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+    }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
     if (GlobalConfig.flux_calculator == FluxCalculator.adaptive) {
@@ -605,6 +608,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	sblk.computeSpatialDerivatives(ftl);
 	sblk.applyPostFluxAction(sim_time, ftl);
 	sblk.computeFluxes();
+	sblk.applyPostFluxAction(sim_time, ftl);
 	foreach (scell; sblk.activeCells) {
 	    if (GlobalConfig.udfSolidSourceTerms) {
 		addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -640,6 +644,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	// Let's set up solid domain bc's also before changing any flow properties.
 	foreach (sblk; solidBlocks) {
 	    if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+	}
+	foreach (sblk; solidBlocks) {
+	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (blk.active) { blk.convective_flux(); }
@@ -708,6 +715,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    sblk.computeSpatialDerivatives(ftl);
 	    sblk.applyPostFluxAction(sim_time, ftl);
 	    sblk.computeFluxes();
+	    sblk.applyPostFluxAction(sim_time, ftl);
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -743,6 +751,9 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	// Let's set up solid domain bc's also before changing any flow properties.
 	foreach (sblk; solidBlocks) {
 	    if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+	}
+	foreach (sblk; solidBlocks) {
+	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (blk.active) { blk.convective_flux(); }
@@ -811,6 +822,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    sblk.computeSpatialDerivatives(ftl);
 	    sblk.applyPostFluxAction(sim_time, ftl);
 	    sblk.computeFluxes();
+	    sblk.applyPostFluxAction(sim_time, ftl);
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -885,6 +897,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
     foreach (sblk; solidBlocks) {
 	if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+    }
+    foreach (sblk; solidBlocks) {
+	if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
@@ -961,6 +976,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	sblk.computeSpatialDerivatives(ftl);
 	sblk.applyPostFluxAction(sim_time, ftl);
 	sblk.computeFluxes();
+	sblk.applyPostFluxAction(sim_time, ftl);
 	foreach (scell; sblk.activeCells) {
 	    if (GlobalConfig.udfSolidSourceTerms) {
 		addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -1007,6 +1023,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	// Let's set up solid domain bc's also before changing any flow properties.
 	foreach (sblk; solidBlocks) {
 	    if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+	}
+	foreach (sblk; solidBlocks) {
+	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (blk.active) { blk.convective_flux(); }
@@ -1075,6 +1094,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    sblk.computeSpatialDerivatives(ftl);
 	    sblk.applyPostFluxAction(sim_time, ftl);
 	    sblk.computeFluxes();
+	    sblk.applyPostFluxAction(sim_time, ftl);
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
