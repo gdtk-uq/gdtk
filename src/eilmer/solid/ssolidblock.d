@@ -36,7 +36,7 @@ public:
     size_t jmin, jmax;
     size_t kmin, kmax;
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
-    SolidBoundaryCondition[6] bc;
+    SolidBoundaryCondition[] bc;
 
 private:
     StructuredGrid grid; // for reading and writing
@@ -95,9 +95,10 @@ public:
 	foreach (boundary; 0 .. (GlobalConfig.dimensions == 3 ? 6 : 4)) {
 	    string jsonKey = "face_" ~ face_name[boundary];
 	    auto bcJsonData = jsonData[jsonKey];
-	    bc[boundary] = makeSolidBCFromJson(bcJsonData, id, boundary,
-					       nicell, njcell, nkcell);
+	    bc ~= makeSolidBCFromJson(bcJsonData, id, boundary,
+				      nicell, njcell, nkcell);
 	}
+	foreach (bci; bc) bci.postBCconstruction();
     }
 
     void fillInOtherSizeData()

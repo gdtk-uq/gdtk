@@ -40,7 +40,7 @@ public:
 	whichBoundary = boundary;
 	type = _type;
     }
-
+    void postBCconstruction() {}
     abstract void apply(double t, int tLevel);
 }
 

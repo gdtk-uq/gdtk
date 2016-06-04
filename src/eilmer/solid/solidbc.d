@@ -9,6 +9,7 @@ module solidbc;
 import std.json;
 import std.conv;
 
+import util.lua;
 import geom;
 import json_helper;
 import solid_boundary_interface_effect;
@@ -41,6 +42,7 @@ class SolidBoundaryCondition {
 public:
     SSolidBlock blk;
     int whichBoundary;
+    lua_State* myL; // Lua context per BC for user-defined effects
     bool setsFluxDirectly;
     // We may have a label for this specific boundary.
     string label;
@@ -59,15 +61,24 @@ public:
 	whichBoundary = boundary;
 	setsFluxDirectly = _setsFluxDirectly;
     }
+    ~this()
+    {
+	if (myL != null) lua_close(myL);
+    }
+    void postBCconstruction()
+    {
+	foreach (bie; preSpatialDerivAction) bie.postBCconstruction();
+	foreach (bfe; postFluxAction) bfe.postBCconstruction();
+    }
 
     final void applyPreSpatialDerivAction(double t, int tLevel)
     {
-	foreach ( bie; preSpatialDerivAction ) bie.apply(t, tLevel);
+	foreach (bie; preSpatialDerivAction) bie.apply(t, tLevel);
     }
 
     final void applyPostFluxAction(double t, int tLevel)
     {
-	foreach ( bfe; postFluxAction ) bfe.apply(t, tLevel);
+	foreach (bfe; postFluxAction) bfe.apply(t, tLevel);
     }
 
 }

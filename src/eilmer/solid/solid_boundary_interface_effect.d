@@ -44,7 +44,7 @@ public:
 	whichBoundary = boundary;
 	type = _type;
     }
-
+    void postBCconstruction() {}
     abstract void apply(double t, int tLevel);
 }
 
@@ -113,12 +113,31 @@ private:
 
 class SolidBIE_UserDefined : SolidBoundaryInterfaceEffect {
 public:
+    string luafname;
     this(int id, int boundary, string fname)
     {
 	super(id, boundary, "UserDefined");
-	luaL_dofile(blk.myL, fname.toStringz);
+	luafname = fname;
     }
-    
+    override void postBCconstruction()
+    {
+	if (blk.bc[whichBoundary].myL == null) {
+	    blk.bc[whichBoundary].myL = luaL_newstate();
+	    auto L = blk.bc[whichBoundary].myL;
+	    luaL_openlibs(L);
+	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
+	    lua_pushinteger(L, blk.nicell); lua_setglobal(L, "nicell");
+	    lua_pushinteger(L, blk.njcell); lua_setglobal(L, "njcell");
+	    lua_pushinteger(L, blk.nkcell); lua_setglobal(L, "nkcell");
+	    lua_pushinteger(L, Face.north); lua_setglobal(L, "north");
+	    lua_pushinteger(L, Face.east); lua_setglobal(L, "east");
+	    lua_pushinteger(L, Face.south); lua_setglobal(L, "south");
+	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
+	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
+	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
+	}
+	luaL_dofile(blk.bc[whichBoundary].myL, luafname.toStringz);
+    }
     override void apply(double t, int tLevel)
     {
 	size_t i, j, k;
@@ -172,7 +191,7 @@ public:
     void callSolidIfaceUDF(double t, int tLevel, size_t i, size_t j, size_t k,
 			   SolidFVInterface IFace, string boundaryName)
     {
-	auto L = blk.myL;
+	auto L = blk.bc[whichBoundary].myL;
 	lua_getglobal(L, toStringz("solidInterface_"~boundaryName));
 	// Set some userful values for the caller in table
 	lua_newtable(L);

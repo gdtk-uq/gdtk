@@ -689,7 +689,7 @@ function SolidBoundaryCondition:tojson()
       -- Extra code to deal with annoying JSON trailing comma deficiency
       if i ~= #self.preSpatialDerivAction then str = str .. "," end
    end
-   str = str .. '\n        ]'
+   str = str .. '\n        ],\n'
    str = str .. '        "post_flux_action": [\n'
    for i,effect in ipairs(self.postFluxAction) do
       str = str .. effect:tojson()
