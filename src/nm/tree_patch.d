@@ -183,7 +183,36 @@ class patch{
 		double y_m = (y_lo + y_hi)/2.0;
 		return new patch(x_lo,x_hi,y_m,y_hi);
 	}
-	
+	double[5] justOutsideCoordinates(char boundary, double delta){
+		switch (boundary){
+			case 'N':
+				return [y_hi + 0.5*delta, 
+				7.0/8.0*x_lo + 1.0/8.0*x_hi, 
+				5.0/8.0*x_lo + 3.0/8.0*x_hi, 
+				3.0/8.0*x_lo + 5.0/8.0*x_hi, 
+				1.0/8.0*x_lo + 7.0/8.0*x_hi];
+			case 'E':
+				return [x_hi + 0.5*delta, 
+				7.0/8.0*y_lo + 1.0/8.0*y_hi, 
+				5.0/8.0*y_lo + 3.0/8.0*y_hi, 
+				3.0/8.0*y_lo + 5.0/8.0*y_hi, 
+				1.0/8.0*y_lo + 7.0/8.0*y_hi];
+			case 'S':
+				return [y_lo - 0.5*delta, 
+				7.0/8.0*x_lo + 1.0/8.0*x_hi, 
+				5.0/8.0*x_lo + 3.0/8.0*x_hi, 
+				3.0/8.0*x_lo + 5.0/8.0*x_hi, 
+				1.0/8.0*x_lo + 7.0/8.0*x_hi];
+			case 'W':
+				return [x_lo - 0.5*delta, 
+				7.0/8.0*y_lo + 1.0/8.0*y_hi, 
+				5.0/8.0*y_lo + 3.0/8.0*y_hi, 
+				3.0/8.0*y_lo + 5.0/8.0*y_hi, 
+				1.0/8.0*y_lo + 7.0/8.0*y_hi];
+			default:
+				throw new Exception("invalid boundary specified for justOutsideCoordinates");
+		}
+	}
 } 
 
 
@@ -308,6 +337,29 @@ class Tree {
 			} 
 		return (*currentNode).nodePatch;
 	}
+	const const(int) searchForNodeID(double x, double y){
+	//returns index of the node of the patch in the tree that bounds x and y
+	//had to use pointers as it was const
+	const(TreeNode)* currentNode = &Nodes[0];//start at first node
+		if ((x<currentNode.nodePatch.x_lo)||(x>currentNode.nodePatch.x_hi)){
+			throw new Exception(format("x (probably re-parameterized internal energy) not bounded properly by look up table, x: %s is not in the bracket [%s, %s]",x,currentNode.nodePatch.x_lo,currentNode.nodePatch.x_hi));
+		}
+		if ((y<currentNode.nodePatch.y_lo)||(y>currentNode.nodePatch.y_hi)){
+			throw new Exception(format("y (probably re-parametrized density) not bounded properly by look up table, y: %s is not in the bracket [%s, %s]",y,currentNode.nodePatch.y_lo,currentNode.nodePatch.y_hi));
+		}
+		while((*currentNode).splitID != 'N') {
+			if (currentNode.splitID == 'X'){
+				if (x < (*currentNode).nodePatch.x_m()) currentNode = (*currentNode).left;
+				else currentNode = (*currentNode).right;
+				}
+			else if (currentNode.splitID == 'Y'){
+				if (y < (*currentNode).nodePatch.y_m()) currentNode = (*currentNode).left;
+				else currentNode = (*currentNode).right;
+				}
+			
+			} 
+		return (*currentNode).idx;
+	}
 	
 	void writeLeaves(){
 		//write's co-ordinates of all leaf node patches for plotting in python
@@ -347,7 +399,55 @@ class Tree {
 		}
 		return minDeltaY;
 	}
-}
+	int refine(F_xy F, F_transform F_t){
+		//returns the number of patches split for refinement purposes
+		double minDeltaXorY = min(this.minDeltaX(),this.minDeltaY());
+		double[5] coords;
+		double[4] nodeIds;
+		int numberRefined = 0;
+		foreach (node; Nodes){
+			if (node.splitID == 'N'){
+				foreach(boundary; ['N', 'E', 'S', 'W']){
+					coords = node.nodePatch.justOutsideCoordinates(boundary,minDeltaXorY);
+					try{
+						foreach(i;[0,1,2,3]){
+							nodeIds[i] = this.searchForNodeID(coords[0],coords[i+1]);
+						}
+						if ((nodeIds[0]!=nodeIds[1])|(nodeIds[2]!=nodeIds[3])){
+							numberRefined += 1;
+							if ((boundary=='N')|(boundary=='S')){
+								//do splitting and break
+								node.splitID = 'X';
+								this.Nodes ~= new TreeNode(node.nodePatch.splitX_L);
+								node.left = &Nodes[$-1]; 
+								this.grow(F,F_t,Nodes[$-1]);
+								
+								this.Nodes ~= new TreeNode(node.nodePatch.splitX_R);
+								node.right = &Nodes[$-1];
+								this.grow(F,F_t,Nodes[$-1]);
+							}
+							else{
+								node.splitID = 'Y';
+								this.Nodes ~= new TreeNode(node.nodePatch.splitY_L);
+								node.left = &Nodes[$-1];
+								this.grow(F,F_t,Nodes[$-1]);
+								this.Nodes ~= new TreeNode(node.nodePatch.splitY_R);
+								node.right = &Nodes[$-1];
+								this.grow(F,F_t,Nodes[$-1]);
+							}
+							break;
+						}//end if nodes are different
+					}//end try
+					catch{
+						//writeln("Tried to refine outside the table, continue on");
+					}
+				}//end foreach boundary
+			}
+		}//end foreach node loop
+		return numberRefined;
+	}//end refine function
+
+}//end class Tree
 
 Tree buildTree_fromFile(string filename = "Tree.dat"){
 	File treeFile = File(filename,"r");

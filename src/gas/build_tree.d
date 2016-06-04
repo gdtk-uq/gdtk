@@ -77,17 +77,17 @@ static double[2] F_transform(double x, double y){
 }
 
 void main(){
-	double x_lo = -50.0;
-	double x_hi = 50.0;
-	double y_lo = -50.0;
-	double y_hi = 50.0;
+	double x_lo = -10.0;
+	double x_hi = 40.0;
+	double y_lo = -10.0;
+	double y_hi = 40.0;
 	/*double x_lo = rho_min;
 	double x_hi = rho_max;
 	double y_lo = e_min;
 	double y_hi = e_max;*/
 	immutable int n = 100;
 	Tree myTree = new Tree(x_lo, x_hi, y_lo, y_hi);
-	myTree.globalMaxError = 0.01;
+	myTree.globalMaxError = 0.05;
 	myTree.globalMinArea = 0.000001*(y_hi - y_lo)*(x_hi - x_lo);
 	//myTree.X_min = rho_min;
 	//myTree.X_max = rho_max;
@@ -96,6 +96,11 @@ void main(){
 	writeln("initialised the tree, with the first patch");
 	writeln(myTree.Nodes[0].nodePatch.toString());
 	myTree.grow(&F, &F_transform, myTree.Nodes[0]);
+	writeln("refining the tree...");
+	int numberRefined = 1;
+	while (numberRefined) {
+			numberRefined = myTree.refine(&F, &F_transform);
+	}	
 	int n_leafs = 0;
 	//sets up control points for the Tree, and writes to a textFILE
 	 foreach(i,ref treeNode; myTree.Nodes){
