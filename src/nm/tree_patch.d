@@ -213,6 +213,73 @@ class patch{
 				throw new Exception("invalid boundary specified for justOutsideCoordinates");
 		}
 	}
+	const double[3] cornerDerivatives(int vertex){
+		//return f_x , f_y, f_xy at patch corners
+		//Denote vertices as
+		//  3----2
+		//  |    |
+		//  0----1
+		double f_x;
+		double f_y; 
+		double f_xy;
+		switch (vertex){
+			case 0:
+				f_x = 3.0*(bs[1] - bs[0])/(x_hi - x_lo);
+				f_y = 3.0*(bs[4] - bs[0])/(y_hi - y_lo);
+				f_xy = 9.0*(bs[5]+bs[0] - bs[1] - bs[4])/(x_hi - x_lo)/(y_hi - y_lo);
+				return [f_x, f_y, f_xy];
+			case 1:
+				f_x = 3.0*(bs[3] - bs[2])/(x_hi - x_lo);
+				f_y = 3.0*(bs[7] - bs[3])/(y_hi - y_lo);
+				f_xy = 9.0*(-bs[3] - bs[6] + bs[2] + bs[7])/(x_hi - x_lo)/(y_hi - y_lo);
+				return [f_x, f_y, f_xy];
+			case 2:
+				f_x = 3.0*(bs[15] - bs[14])/(x_hi - x_lo);
+				f_y = 3.0*(bs[15] - bs[11])/(y_hi - y_lo);
+				f_xy = 9.0*(bs[15]+bs[10] - bs[11] - bs[14])/(x_hi - x_lo)/(y_hi - y_lo);
+				return [f_x, f_y, f_xy];
+			case 3:
+				f_x = 3.0*(bs[13] - bs[12])/(x_hi - x_lo);
+				f_y = 3.0*(bs[12] - bs[8])/(y_hi - y_lo);
+				f_xy = 9.0*(-bs[12] - bs[9] + bs[8] + bs[13])/(x_hi - x_lo)/(y_hi - y_lo);
+				return [f_x, f_y, f_xy];
+			default:
+				throw new Exception("invalid vertex requested for corner derivatives");
+		}
+	}
+	void rewriteControlPoints(int vertex, double f, double f_x, double f_y, double f_xy){
+		//rewrite control points based on value of function at vertex and derivatives
+		switch (vertex){
+			case 0:
+				bs[0] = f;//0,0
+				bs[1] = f_x*(x_hi - x_lo)/3.0 + bs[0];//0,1
+				bs[4] = f_y*(y_hi - y_lo)/3.0 + bs[0];//1,0
+				bs[5] = f_xy*(x_hi - x_lo)*(y_hi - y_lo)/9.0 - bs[0] + bs[1] + bs[4];//1,1
+				break;
+			case 1:
+				bs[3] = f;
+				bs[2] = -f_x*(x_hi - x_lo)/3.0 + bs[3];
+				bs[7] = f_y*(y_hi - y_lo)/3.0 + bs[3];
+				bs[6] = -f_xy*(x_hi - x_lo)*(y_hi - y_lo)/9.0 - bs[3] + bs[2] + bs[7]; 
+				break;
+			case 2:
+				bs[15] = f;
+				bs[14] = -f_x*(x_hi - x_lo)/3.0 + bs[15];
+				bs[11] = -f_y*(y_hi - y_lo)/3.0 + bs[15];
+				bs[10] = f_xy*(x_hi - x_lo)*(y_hi - y_lo)/9.0 - bs[15] + bs[14] + bs[11];
+				break;
+			case 3:
+				bs[12] = f;
+				bs[13] = f_x*(x_hi - x_lo)/3.0 + bs[12];
+				bs[8] = -f_y*(y_hi - y_lo)/3.0 + bs[12];
+				bs[9] = -f_xy*(x_hi - x_lo)*(y_hi - y_lo)/9.0 - bs[12] + bs[8] + bs[13];
+				break;
+			//case 3:
+			//	{};
+			default:
+				throw new Exception("invalid vertex");
+		}
+	}
 } 
 
 
@@ -337,7 +404,7 @@ class Tree {
 			} 
 		return (*currentNode).nodePatch;
 	}
-	const const(int) searchForNodeID(double x, double y){
+	int searchForNodeID(double x, double y){
 	//returns index of the node of the patch in the tree that bounds x and y
 	//had to use pointers as it was const
 	const(TreeNode)* currentNode = &Nodes[0];//start at first node

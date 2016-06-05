@@ -136,5 +136,30 @@ void main(){
 	string filename = "T_rhoe_Tree.dat";
 	myTree.writeLUT(filename); 
 	writefln("Tree written to %s ", filename);
+	//--Testing some derivatives
+	auto patch = myTree.search(0.00001, 0.00001);
+	int patchid = myTree.searchForNodeID(0.00001, 0.00001);
+	auto originalBs = patch.bs;
+	writefln("Patch Original Control Points: %s", originalBs);
+	int vertex = 3;
+	auto derivs = patch.cornerDerivatives(vertex);
+	//double x = patch.x_lo; double y = patch.y_lo;
+	//double x = patch.x_hi; double y = patch.y_lo;
+	//double x = patch.x_hi; double y = patch.y_hi;
+	double x = patch.x_lo; double y = patch.y_hi;
+	double f = patch.interpolateF(x,y);
+	myTree.Nodes[patchid].nodePatch.rewriteControlPoints(vertex, f,derivs[0], derivs[1],derivs[2]);
+	auto newBs =  myTree.Nodes[patchid].nodePatch.bs;
+	writefln("Patch New Control Points     : %s", newBs);
+	double[16] diffBs;
+	foreach (i, ref diff; diffBs) diff = originalBs[i] - newBs[i];
+	writefln("Difference                   : %s", diffBs);
+	//double f_x = 0.001*x^^4 + y;
+	//double f_y = -4*y^^3 + x;
+	//double f_xy = 1;
+	//writefln("For x = %s, y = %s", x, y);
+	//writefln("ANALYTICAL :f_x: %s, f_y: %s, f_xy: %s",f_x, f_y, f_xy);
+	//writefln("NUMERICAL  :f_x: %s, f_y: %s, f_xy: %s",derivs[0],derivs[1], derivs[2]);
+
 }
 
