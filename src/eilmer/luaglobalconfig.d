@@ -245,6 +245,12 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "spatial_deriv_locn");
     }
     lua_pop(L, 1);
+    lua_getfield(L, 1, "include_ghost_cells_in_spatial_deriv_clouds");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds = to!bool(lua_toboolean(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "include_ghost_cells_in_spatial_deriv_clouds");
+    }
+    lua_pop(L, 1);
     lua_getfield(L, 1, "viscous_factor");
     if (!lua_isnil(L, -1)) {
 	GlobalConfig.viscous_factor = to!double(luaL_checknumber(L, -1));
@@ -616,6 +622,9 @@ extern(C) int configGet(lua_State* L)
     case "spatial_deriv_locn":
 	string name = spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn);
 	lua_pushstring(L, name.toStringz);
+	break;
+    case "include_ghost_cells_in_spatial_deriv_clouds":
+	lua_pushboolean(L, GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
 	break;
     case "viscous_factor":
 	lua_pushnumber(L, GlobalConfig.viscous_factor);

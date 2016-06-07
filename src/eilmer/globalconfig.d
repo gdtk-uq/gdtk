@@ -192,6 +192,7 @@ final class GlobalConfig {
     // If true, viscous effects are included in the gas-dynamic update.
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.least_squares;
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.faces;
+    shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
     //
     // A factor to scale the viscosity in order to achieve a soft start. 
     // The soft-start for viscous effects may be handy for impulsively-started flows.
@@ -365,6 +366,7 @@ public:
     bool viscous;
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
+    bool include_ghost_cells_in_spatial_deriv_clouds;
     double viscous_factor;
     bool diffusion;
     double diffusion_factor;
@@ -431,6 +433,8 @@ public:
 	viscous = GlobalConfig.viscous;
 	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
 	spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
+	include_ghost_cells_in_spatial_deriv_clouds = 
+	    GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
 	viscous_factor = GlobalConfig.viscous_factor;
 	diffusion = GlobalConfig.diffusion;
 	diffusion_factor = GlobalConfig.diffusion_factor;
