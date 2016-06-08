@@ -5,13 +5,16 @@ import std.json;
 import std.string;
 import std.format;
 import util.lua;
+import std.math;
 
 import simcore;
 import json_helper;
 import geom;
 import globaldata;
+import globalconfig;
 import solidfvinterface;
 import ssolidblock;
+import solidfvcell;
 
 SolidBoundaryInterfaceEffect makeSolidBIEfromJson(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -22,9 +25,19 @@ SolidBoundaryInterfaceEffect makeSolidBIEfromJson(JSONValue jsonData, int blk_id
 	double Twall = getJSONdouble(jsonData, "Twall", 300.0);
 	newBIE = new SolidBIE_FixedT(blk_id, boundary, Twall);
 	break;
+    case "copy_adjacent_cell_temperature":
+	newBIE = new SolidBIE_CopyAdjacentCellT(blk_id, boundary);
+	break;
     case "user_defined":
 	string fname = getJSONstring(jsonData, "filename", "none");
 	newBIE = new SolidBIE_UserDefined(blk_id, boundary, fname);
+	break;
+    case "connection_boundary":
+	int otherBlk = getJSONint(jsonData, "otherBlock", -1);
+	string otherFace = getJSONstring(jsonData, "otherFace", "none");
+	int orientation = getJSONint(jsonData, "orientation", -1);
+	newBIE = new SolidBIE_ConnectionBoundary(blk_id, boundary,
+						 otherBlk, face_index(otherFace), orientation);
 	break;
     default:
 	string errMsg = format("ERROR: The SolidBoundaryInterfaceEffect type: '%s' is unknown.", bieType);
@@ -110,6 +123,71 @@ public:
 private:
     double _Twall;
 }
+
+class SolidBIE_CopyAdjacentCellT : SolidBoundaryInterfaceEffect {
+public:
+    this(int id, int boundary)
+    {
+	super(id, boundary, "CopyAdjacentCellT");
+    }
+
+    override void apply(double t, int tLevel)
+    {
+	size_t i, j, k;
+	SolidFVCell cell;
+	SolidFVInterface IFace;
+	
+	final switch (whichBoundary) {
+	case Face.north:
+	    j = blk.jmax + 1;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.getCell(i, j-1, k);
+		    IFace = blk.getIfj(i, j, k);
+		    IFace.T = cell.T;
+		}
+	    }
+	    break;
+	case Face.east:
+	    i = blk.imax + 1;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.getCell(i-1, j, k);
+		    IFace = blk.getIfi(i, j, k);
+		    IFace.T = cell.T;
+		}
+	    }
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.getCell(i, j, k);
+		    IFace = blk.getIfj(i, j, k);
+		    IFace.T = cell.T;
+		}
+	    }
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.getCell(i, j, k);
+		    IFace = blk.getIfi(i, j, k);
+		    IFace.T = cell.T;
+		}
+	    }
+	    break;
+	case Face.top:
+	    throw new Error("[TODO] CopyAdjacentCellT bc not implemented for TOP face.");
+	case Face.bottom:
+	    throw new Error("[TODO] CopyAdjacentCellT bc not implemented for BOTTOM face.");
+
+	}
+
+    }
+}
+
 
 class SolidBIE_UserDefined : SolidBoundaryInterfaceEffect {
 public:
@@ -226,4 +304,104 @@ public:
 	IFace.T = luaL_checknumber(L, -1);
 	lua_pop(L, 1);
     }
+}
+
+class SolidBIE_ConnectionBoundary : SolidBoundaryInterfaceEffect {
+public:
+    SSolidBlock neighbourBlk;
+    int neighbourFace;
+    int neighbourOrientation;
+
+    this(int id, int boundary,
+	 int otherBlock, int otherFace, int orient)
+    {
+	super(id, boundary, "ConnectionBoundary");
+	neighbourBlk = solidBlocks[otherBlock];
+	neighbourFace = otherFace;
+	neighbourOrientation = orient;
+    }
+
+    override void apply(double t, int tLevel) {
+	size_t i, j, k;
+	SolidFVCell Lft, Rght;
+	SolidFVInterface IFace;
+
+	if (GlobalConfig.dimensions == 2) {
+	    switch (whichBoundary) {
+	    case Face.north:
+		throw new Error("SolidBFE_ConnectionBoundary not implemented for NORTH faces.");
+	    case Face.east:
+		switch (neighbourFace) {
+		case Face.north:
+		    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-NORTH connections.");
+		case Face.east:
+		    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-EAST connections.");
+		case Face.south:
+		    throw new Error("SolidBFE_ConnectionBoundary not implemented for EAST-SOUTH connections.");
+		case Face.west:
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			Lft = blk.getCell(blk.imax, j);
+			Rght = neighbourBlk.getCell(neighbourBlk.imin, j);
+			IFace = blk.getIfi(blk.imax+1, j);
+			computeBoundaryFlux(Lft, Rght, IFace,
+					    blk.sp.k, neighbourBlk.sp.k);
+		    }
+		    break;
+		default:
+		    throw new Error("SolidBFE_ConnectionBoundary: connection type not available in 2D.");
+		}
+		break;
+	    case Face.south:
+		throw new Error("SolidBFE_ConnectionBoundary not implemented for SOUTH faces.");	
+	    case Face.west:
+		switch (neighbourFace) {
+		case Face.north:
+		    throw new Error("SolidBFE_ConnectionBoundary not implemented for WEST-NORTH connections.");
+		case Face.east:
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			Lft = neighbourBlk.getCell(neighbourBlk.imax, j);
+			Rght = blk.getCell(blk.imin, j);
+			IFace = blk.getIfi(blk.imin, j);
+			computeBoundaryFlux(Lft, Rght, IFace,
+					    neighbourBlk.sp.k, blk.sp.k);
+		    }
+		    break;
+		case Face.south:
+		    throw new Error("SolidBFE_ConnectionBoundary not implemented for WEST-SOUTH connections.");
+		case Face.west:
+		    throw new Error("SolidBFE_ConnectionBoundary not implemented for WEST-WEST connections.");
+		default:
+		    throw new Error("SolidBFE_ConnectionBoundary: boundary connection not available in 2D.");
+		}
+		break;
+	    default:
+		throw new Error("SolidBFE_ConnectionBoundary: boundary not available in 2D.");
+	    }
+	}
+	else {
+	    throw new Error("SolidBFE_ConnectionBoundary not implemented for 3D.");
+	}
+    }
+
+    void computeBoundaryFlux(SolidFVCell Lft, SolidFVCell Rght, SolidFVInterface IFace, double kL, double kR)
+    {
+	Vector3 LI, IR;
+	double dL, dR;
+	double kL_dL, kR_dR;
+	double T, q;
+	
+	LI = IFace.pos - Lft.pos;
+	IR = Rght.pos - IFace.pos;
+	dL = fabs(dot(LI, IFace.n));
+	dR = fabs(dot(IR, IFace.n));
+	kL_dL = kL/dL;
+	kR_dR = kR/dR;
+
+	T = (Lft.T*kL_dL + Rght.T*kR_dR)/(kL_dL + kR_dR);
+	q = -kL_dL*(T - Lft.T);
+	
+	IFace.T = T;
+	IFace.flux = q;
+    }
+
 }

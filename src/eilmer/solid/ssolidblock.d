@@ -685,7 +685,7 @@ public:
 	    for ( i = imin; i <= imax + 1; ++i ) {
 		if ( i == imin && bc[Face.west].setsFluxDirectly )
 		    continue;
-		if ( i == imax && bc[Face.east].setsFluxDirectly )
+		if ( i == imax+1 && bc[Face.east].setsFluxDirectly )
 		    continue;
 		IFace = getIfi(i, j);
 		vtx1 = getVtx(i, j+1);
@@ -702,7 +702,7 @@ public:
 	    for ( i = imin; i <= imax; ++i ) {
 		if ( j == jmin && bc[Face.south].setsFluxDirectly ) 
 		    continue;
-		if ( j == jmax && bc[Face.north].setsFluxDirectly )
+		if ( j == jmax+1 && bc[Face.north].setsFluxDirectly )
 		    continue;
 		IFace = getIfj(i, j);
 		vtx1 = getVtx(i, j);

@@ -1,5 +1,6 @@
 module solid_boundary_flux_effect;
 
+import std.math;
 import std.stdio;
 import std.json;
 import std.string;
@@ -10,8 +11,10 @@ import simcore;
 import json_helper;
 import geom;
 import globaldata;
+import globalconfig;
 import solidfvinterface;
 import ssolidblock;
+import solidfvcell;
 
 SolidBoundaryFluxEffect makeSolidBFEfromJson(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -100,5 +103,5 @@ public:
 
 	}
     }
-
 }
+

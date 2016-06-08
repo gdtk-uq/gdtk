@@ -595,6 +595,13 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 					local_sim_time, blk.myConfig.gmodel);
 	    }
 	    cell.time_derivatives(local_gtl, local_ftl, local_with_k_omega);
+	    if ( (fabs(cell.pos[0].x - 0.3125) < 1.0e-8) && 
+		 (fabs(cell.pos[0].y - 0.6875) < 1.0e-8) ) {
+		writefln("CELL ID= %d", cell.id);
+		writefln("dUdt[0].mass= %e", cell.dUdt[0].mass);
+		writefln("dUdt[0].total_energy= %e", cell.dUdt[0].total_energy);
+	    }
+
 	    bool force_euler = false;
 	    cell.stage_1_update_for_flow_on_fixed_grid(local_dt_global, force_euler,
 						       local_with_k_omega);
@@ -606,9 +613,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	if (!sblk.active) continue;
 	sblk.clearSources();
 	sblk.computeSpatialDerivatives(ftl);
-	sblk.applyPostFluxAction(sim_time, ftl);
 	sblk.computeFluxes();
 	sblk.applyPostFluxAction(sim_time, ftl);
+    }
+    // We need to synchronise before updating
+    foreach (sblk; solidBlocks) {
 	foreach (scell; sblk.activeCells) {
 	    if (GlobalConfig.udfSolidSourceTerms) {
 		addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -713,9 +722,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    if (!sblk.active) continue;
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
-	    sblk.applyPostFluxAction(sim_time, ftl);
 	    sblk.computeFluxes();
 	    sblk.applyPostFluxAction(sim_time, ftl);
+	}
+	// We need to synchronise before updating
+	foreach (sblk; solidBlocks) {
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -820,9 +831,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    if (!sblk.active) continue;
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
-	    sblk.applyPostFluxAction(sim_time, ftl);
 	    sblk.computeFluxes();
 	    sblk.applyPostFluxAction(sim_time, ftl);
+	}
+	// We need to synchronise before updating
+	foreach (sblk; solidBlocks) {
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);

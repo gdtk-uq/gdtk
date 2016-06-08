@@ -269,12 +269,62 @@ end
 function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    print("connectBlocks: blkA=", blkA.id, "faceA=", faceA, 
 	 "blkB=", blkB.id, "faceB=", faceB, "orientation=", orientation)
-   blkA.bcList[faceA] = ExchangeBC_FullFace:new{otherBlock=blkB.id, otherFace=faceB,
-					       orientation=orientation}
-   blkB.bcList[faceB] = ExchangeBC_FullFace:new{otherBlock=blkA.id, otherFace=faceA,
-					       orientation=orientation}
+   if ( blkA.myType == "SBlock" and blkB.myType == "SBlock" ) then
+      blkA.bcList[faceA] = ExchangeBC_FullFace:new{otherBlock=blkB.id, otherFace=faceB,
+						   orientation=orientation}
+      blkB.bcList[faceB] = ExchangeBC_FullFace:new{otherBlock=blkA.id, otherFace=faceA,
+						   orientation=orientation}
    -- [TODO] need to test for matching corner locations and 
    -- consistent numbers of cells
+   elseif (blkA.myType == "SBlock" and blkB.myType == "SSolidBlock" ) then
+      -- Presently, only handle faceA == NORTH, faceB == SOUTH
+      if ( faceA == north and faceB == south ) then
+	 blkA.bcList[faceA] = WallBC_AdjacentToSolid:new{otherBlock=blkB.id,
+							 otherFace=faceB,
+							 orientation=orientation}
+	 blkB.bcList[faceB] = SolidAdjacentToGasBC:new{otherBlock=blkA.id,
+						       otherFace=faceA,
+						       orientation=orientation}
+      else
+	 -- [TODO] Implement and handle other connection types.
+	 print("The requested SBlock to SSolidBlock connection is not available.")
+	 print("SBlock-", faceA, " :: SSolidBlock-", faceB)
+	 print("Bailing out!")
+	 os.exit(1)
+      end
+   elseif (blkA.myType == "SSolidBlock" and blkB.myType == "SBlock") then
+       -- Presently, only handle faceA == SOUTH, faceB == NORTH
+      if ( faceA == south and faceB == north ) then
+	 blkA.bcList[faceA] = SolidAdjacentToGasBC:new{otherBlock=blkB.id,
+						       otherFace=faceB,
+						       orientation=orientation}
+	 blkB.bcList[faceB] = WallBC_AdjacentToSolid:new{otherBlock=blkA.id,
+							 otherFace=faceA,
+							 orientation=orientation}
+      else
+	 -- [TODO] Implement and handle other connection types.
+	 print("The requested SSolidBlock to SBlock connection is not available.")
+	 print("SSolidBlock-", faceA, " :: SBlock-", faceB)
+	 print("Bailing out!")
+	 os.exit(1)
+      end
+   elseif (blkA.myType == "SSolidBlock" and blkB.myType == "SSolidBlock") then
+      -- Presently only handle EAST-WEST and WEST-EAST connections
+      if ( (faceA == east and faceB == west) or ( faceA == west and faceB == east) ) then
+	 blkA.bcList[faceA] = SolidConnectionBoundaryBC:new{otherBlock=blkB.id,
+							    otherFace=faceB,
+							    orientation=orientation}
+	 blkB.bcList[faceB] = SolidConnectionBoundaryBC:new{otherBlock=blkA.id,
+							    otherFace=faceA,
+							    orientation=orientation}
+      else
+	 -- [TODO] Implement and handle other connection types for solid domains.
+	 print("The requested SSolidBlock to SSolidBlock connection is not available.")
+	 print("SSolidBlock-", faceA, " :: SSolidBlock-", faceB)
+	 print("Bailing out!")
+	 os.exit(1)
+      end
+   end
 end
 
 function isPairInList(targetPair, pairList)
@@ -310,16 +360,23 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    -- excludeList: list of pairs of SBlock objects that should not be
    --    included in the search for connections.
    -- tolerance: spatial tolerance for the colocation of vertices
-   blockList = blockList or blocks
+   local myBlockList = {}
+   if ( blockList ) then
+      for k,v in pairs(blockList) do myBlockList[k] = v end
+   else -- Use the global gas blocks list
+      for k,v in pairs(blocks) do myBlockList[k] = v end
+   end
+   -- Add solid domain block to search
+   for _,blk in ipairs(solidBlocks) do myBlockList[#myBlockList+1] = blk end
    excludeList = excludeList or {}
    -- Put UBlock objects into the exclude list because they don't
    -- have a simple topology that can always be matched to an SBlock.
-   for _,A in ipairs(blockList) do
+   for _,A in ipairs(myBlockList) do
       if A.myType == "UBlock" then excludeList[#excludeList+1] = A end
    end
    tolerance = tolerance or 1.0e-6
-   for _,A in ipairs(blockList) do
-      for _,B in ipairs(blockList) do
+   for _,A in ipairs(myBlockList) do
+      for _,B in ipairs(myBlockList) do
 	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
 	    -- print("Proceed with test for coincident vertices.")
 	    local connectionCount = 0
@@ -479,6 +536,7 @@ function SSolidBlock:new(o)
    self.__index = self
    -- Make a record of the new block for later construction of the config file.
    -- Note that we want the block id to start at zero for the D code.
+   print("Adding new solid block.")
    o.id = #solidBlocks
    solidBlocks[#solidBlocks+1] = o
    -- Must have a grid and initial temperature
@@ -492,7 +550,7 @@ function SSolidBlock:new(o)
    o.label = o.label or string.format("SOLIDBLOCK-%d", o.id)
    o.bcList = o.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
-      o.bcList[face] = o.bcList[face] or SolidFixedTBC:new{Twall=300}
+      o.bcList[face] = o.bcList[face] or SolidAdiabaticBC:new{}
    end
    -- Extract some information from the StructuredGrid
    o.nic = o.grid:get_niv() - 1
@@ -551,6 +609,87 @@ function SSolidBlock:tojson()
    str = str .. '},\n'
    return str
 end
+
+function SSolidBlockArray(t)
+   -- Expect one table as argument, with named fields.
+   -- Returns an array of blocks defined over a single region.
+   assert(t.grid, "need to supply a 'grid'")
+   assert(t.initTemperature, "need to supply an 'initTemperature'")
+   assert(t.properties, "need to supply 'properties'")
+   t.bcList = t.bcList or {} -- boundary conditions
+   for _,face in ipairs(faceList(config.dimensions)) do
+      t.bcList[face] = t.bcList[face] or SolidAdiabaticBC:new{}
+   end
+   -- Numbers of subblocks in each coordinate direction
+   t.nib = t.nib or 1
+   t.njb = t.njb or 1
+   t.nkb = t.nkb or 1
+   if config.dimensions == 2 then
+      t.nkb = 1
+   end
+   -- Extract some information from the StructuredGrid
+   -- Note 0-based indexing for vertices and cells in the D-domain.
+   local nic_total = t.grid:get_niv() - 1
+   local dnic = math.floor(nic_total/t.nib)
+   local njc_total = t.grid:get_njv() - 1
+   local dnjc = math.floor(njc_total/t.njb)
+   local nkc_total = t.grid:get_nkv() - 1
+   local dnkc = math.floor(nkc_total/t.nkb)
+   if config.dimensions == 2 then
+      nkc_total = 1
+      dnkc = 1
+   end
+   local blockArray = {} -- will be a multi-dimensional array indexed as [i][j][k]
+   local blockCollection = {} -- will be a single-dimensional array
+   for ib = 1, t.nib do
+      blockArray[ib] = {}
+      local i0 = (ib-1) * dnic
+      if (ib == t.nib) then
+	 -- Last block has to pick up remaining cells.
+	 dnic = nic_total - i0
+      end
+      for jb = 1, t.njb do
+	 local j0 = (jb-1) * dnjc
+	 if (jb == t.njb) then
+	    dnjc = njc_total - j0
+	 end
+	 if config.dimensions == 2 then
+	    -- 2D flow
+	    local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1)
+	    local bcList = {north=SolidAdiabaticBC:new{}, east=SolidAdiabaticBC:new{},
+			    south=SolidAdiabaticBC:new{}, west=SolidAdiabaticBC:new{}}
+	    if ib == 1 then
+	       bcList[west] = t.bcList[west]
+	    end
+	    if ib == t.nib then
+	       bcList[east] = t.bcList[east]
+	    end
+	    if jb == 1 then
+	       bcList[south] = t.bcList[south]
+	    end
+	    if jb == t.njb then
+	       bcList[north] = t.bcList[north]
+	    end
+	    new_block = SSolidBlock:new{grid=subgrid, properties=t.properties,
+					initTemperature=t.initTemperature,
+					bcList=bcList}
+	    blockArray[ib][jb] = new_block
+	    blockCollection[#blockCollection+1] = new_block
+	 else
+	    print("SSolidBlockArray not implemented for 3D.")
+	    print("Bailing out!")
+	    os.exit(1)
+	 end -- dimensions
+      end -- jb loop
+   end -- ib loop
+   -- Make the inter-subblock connections
+   if #blockCollection > 1 then
+      identifyBlockConnections(blockCollection)
+   end
+   return blockArray
+end
+
+
 
 function setHistoryPoint(args)
    -- Accepts a variety of arguments:

@@ -633,6 +633,12 @@ function SolidBIE_FixedT:tojson()
    return str
 end
 
+SolidBIE_CopyAdjacentCellT = SolidBoundaryInterfaceEffect:new{}
+SolidBIE_CopyAdjacentCellT.type = "copy_adjacent_cell_temperature"
+function SolidBIE_CopyAdjacentCellT:tojson()
+   return string.format('          {"type": "%s"} ', self.type)
+end
+
 SolidBIE_UserDefined = SolidBoundaryInterfaceEffect:new{fileName='user-defined-solid-bc.lua'}
 SolidBIE_UserDefined.type = "user_defined"
 function SolidBIE_UserDefined:tojson()
@@ -640,6 +646,20 @@ function SolidBIE_UserDefined:tojson()
    str = str .. string.format('"filename": "%s" }', self.fileName)
    return str
 end
+
+SolidBIE_ConnectionBoundary = SolidBoundaryInterfaceEffect:new{otherBlock=-1,
+							       otherFace=nil,
+							       orientation=-1}
+SolidBIE_ConnectionBoundary.type = "connection_boundary"
+function SolidBIE_ConnectionBoundary:tojson()
+   local str = string.format('          {"type" : "%s", ', self.type)
+   str = str .. string.format('"otherBlock" : %d, ', self.otherBlock)
+   str = str .. string.format('"otherFace" : "%s", ', self.otherFace)
+   str = str .. string.format('"orientation" : %d ', self.orientation)
+   str = str .. ' } '
+   return str
+end
+
 
 SolidBoundaryFluxEffect = {
    type = ""
@@ -712,6 +732,7 @@ SolidAdiabaticBC = SolidBoundaryCondition:new()
 SolidAdiabaticBC.type = "SolidAdiabatic"
 function SolidAdiabaticBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
+   o.preSpatialDerivAction = { SolidBIE_CopyAdjacentCellT:new{} }
    o.postFluxAction = { SolidBFE_ZeroFlux:new{} }
    return o
 end
@@ -729,5 +750,16 @@ SolidAdjacentToGasBC.type = "SolidAdjacentToGas"
 function SolidAdjacentToGasBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.setsFluxDirectly = true
+   return o
+end
+
+SolidConnectionBoundaryBC = SolidBoundaryCondition:new()
+SolidConnectionBoundaryBC.type = "SolidConnectionBoundary"
+function SolidConnectionBoundaryBC:new(o)
+   o = SolidBoundaryCondition.new(self, o)
+   o.setsFluxDirectly = true
+   o.preSpatialDerivAction = { SolidBIE_ConnectionBoundary:new{otherBlock=o.otherBlock,
+							       otherFace=o.otherFace,
+							       orientation=o.orientation} }
    return o
 end
