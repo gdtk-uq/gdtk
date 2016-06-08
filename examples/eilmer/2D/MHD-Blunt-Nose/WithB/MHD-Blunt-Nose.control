@@ -1,0 +1,16 @@
+{
+"dt_init": 1.000000e-08,
+"dt_max": 2.500000e-05,
+"cfl_value": 5.000000e-01,
+"stringent_cfl": false,
+"fixed_time_step": false,
+"dt_reduction_factor": 2.000000e-01,
+"print_count": 20,
+"cfl_count": 10,
+"max_time": 2.000000e-04,
+"max_step": 10000000,
+"dt_plot": 1.000000e-05,
+"dt_history": 1.000000e-03,
+"write_at_step": 0,
+"halt_now": 0
+}
