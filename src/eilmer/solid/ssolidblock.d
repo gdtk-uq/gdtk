@@ -92,7 +92,7 @@ public:
 
     override void initBoundaryConditions(JSONValue jsonData)
     {
-	foreach (boundary; 0 .. (GlobalConfig.dimensions == 3 ? 6 : 4)) {
+	foreach (boundary; 0 .. (myConfig.dimensions == 3 ? 6 : 4)) {
 	    string jsonKey = "face_" ~ face_name[boundary];
 	    auto bcJsonData = jsonData[jsonKey];
 	    bc ~= makeSolidBCFromJson(bcJsonData, id, boundary,
@@ -111,7 +111,7 @@ public:
 	// are both within the active set of cells.
 	imin = nghost; imax = imin + nicell - 1;
 	jmin = nghost; jmax = jmin + njcell - 1;
-	if ( GlobalConfig.dimensions == 2 ) {
+	if ( myConfig.dimensions == 2 ) {
 	    // In 2D simulations, the k range is from 0 to 0 for the
 	    // storage arrays of cells and relevant faces.
 	    if ( nkcell != 1 ) {
@@ -158,7 +158,7 @@ public:
 
     override void assembleArrays()
     {
-	if ( GlobalConfig.verbosity_level >= 2 ) 
+	if ( myConfig.verbosity_level >= 2 ) 
 	    writefln("SSolidBlock.assembleArrays(): Begin for solid_block %d", id);
 	// Check for obvious errors.
 	if ( _nidim <= 0 || _njdim <= 0 || _nkdim <= 0 ) {
@@ -169,7 +169,7 @@ public:
 	try {
 	    // Create the cell and interface objects for the entire block.
 	    foreach (gid; 0 .. ntot) {
-		_ctr ~= new SolidFVCell(GlobalConfig.n_flow_time_levels); _ctr[gid].id = to!int(gid);
+		_ctr ~= new SolidFVCell(myConfig); _ctr[gid].id = to!int(gid);
 		auto ijk = toIJKIndices(gid);
 		if ( ijk[0] >= imin && ijk[0] <= imax && 
 		     ijk[1] >= jmin && ijk[1] <= jmax && 
@@ -178,13 +178,13 @@ public:
 		}
 		_ifi ~= new SolidFVInterface(); _ifi[gid].id = gid;
 		_ifj ~= new SolidFVInterface(); _ifj[gid].id = gid;
-		if ( GlobalConfig.dimensions == 3 ) {
+		if ( myConfig.dimensions == 3 ) {
 		    _ifk ~= new SolidFVInterface(); _ifk[gid].id = gid;
 		}
 		_vtx ~= new SolidFVVertex(); _vtx[gid].id = gid;
 		_sifi ~= new SolidFVInterface(); _sifi[gid].id = gid;
 		_sifj ~= new SolidFVInterface(); _sifj[gid].id = gid;
-		if ( GlobalConfig.dimensions == 3 ) {
+		if ( myConfig.dimensions == 3 ) {
 		    _sifk ~= new SolidFVInterface(); _sifk[gid].id = gid;
 		}
 	    } // gid loop
@@ -197,14 +197,14 @@ public:
 	    writefln("System message: %s", err.msg);
 	    throw new Error("SolidBlock.assembleArrays() failed.");
 	}
-	if ( GlobalConfig.verbosity_level >= 2 ) {
+	if ( myConfig.verbosity_level >= 2 ) {
 	    writefln("Done assembling arrays for %d solid cells.", ntot);
 	}
     }
     override void bindFacesAndVerticesToCells()
     {
 	size_t kstart, kend;
-	if ( GlobalConfig.dimensions == 3 ) {
+	if ( myConfig.dimensions == 3 ) {
 	    kstart = kmin - 1;
 	    kend = kmax + 1;
 	} else {
@@ -224,7 +224,7 @@ public:
 		    cell.vtx ~= getVtx(i+1,j,k);
 		    cell.vtx ~= getVtx(i+1,j+1,k);
 		    cell.vtx ~= getVtx(i,j+1,k);
-		    if ( GlobalConfig.dimensions == 3 ) {
+		    if ( myConfig.dimensions == 3 ) {
 			cell.iface ~= getIfk(i,j,k+1); // top
 			cell.iface ~= getIfk(i,j,k); // bottom
 			cell.vtx ~= getVtx(i,j,k+1);
@@ -240,12 +240,12 @@ public:
     override void readGrid(string filename)
     {
 	size_t nivtx, njvtx, nkvtx;
-	if ( GlobalConfig.verbosity_level >= 1 && id == 0 ) {
+	if ( myConfig.verbosity_level >= 1 && id == 0 ) {
 	    writeln("SSolidBlock.readGrid(): Start block ", id);
 	}
 	grid = new StructuredGrid(filename, "gziptext");
 	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
-	if ( GlobalConfig.dimensions == 3 ) {
+	if ( myConfig.dimensions == 3 ) {
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
 		throw new Error(text("For solid_block[", id, "] we have a mismatch in 3D grid size.",
                                      " Have read nivtx=", nivtx, " njvtx=", njvtx,
@@ -282,11 +282,11 @@ public:
 
     override void writeGrid(string filename, double sim_time)
     {
-	if ( GlobalConfig.verbosity_level >= 1 && id == 0 ) {
+	if ( myConfig.verbosity_level >= 1 && id == 0 ) {
 	    writeln("SSolidBlock.writeGrid(): Start block ", id);
 	}
 	size_t kmaxrange;
-	if ( GlobalConfig.dimensions == 3 ) {
+	if ( myConfig.dimensions == 3 ) {
 	    kmaxrange = kmax + 1;
 	} else { // 2D case
 	    kmaxrange = kmax;
@@ -309,7 +309,7 @@ public:
     {
 	size_t ni, nj, nk;
 	double sim_time;
-	if ( GlobalConfig.verbosity_level >= 1 && id == 0 ) {
+	if ( myConfig.verbosity_level >= 1 && id == 0 ) {
 	    writeln("read_solution(): Start solid_block ", id);
 	}
 	auto byLine = new GzipByLine(filename);
@@ -321,7 +321,7 @@ public:
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "%d %d %d", &ni, &nj, &nk);
 	if ( ni != nicell || nj != njcell || 
-	     nk != ((GlobalConfig.dimensions == 3) ? nkcell : 1) ) {
+	     nk != ((myConfig.dimensions == 3) ? nkcell : 1) ) {
 	    throw new Error(text("For solid_block[", id, "] we have a mismatch in solution size.",
 				 " Have read ni=", ni, " nj=", nj, " nk=", nk));
 	}	
@@ -337,7 +337,7 @@ public:
 
     override void writeSolution(string fileName, double simTime)
     {
-	if ( GlobalConfig.verbosity_level >= 1 && id == 0 ) {
+	if ( myConfig.verbosity_level >= 1 && id == 0 ) {
 	    writeln("write_solution(): Start solid_block ", id);
 	}
 	auto outfile = new GzipOut(fileName);
@@ -366,7 +366,7 @@ public:
 
     override void computePrimaryCellGeometricData()
     {
-	if ( GlobalConfig.dimensions == 2 ) {
+	if ( myConfig.dimensions == 2 ) {
 	    calcVolumes2D();
 	    calcFaces2D();
 	    return;
@@ -424,7 +424,7 @@ public:
 		     (xA - xD) * (yD * yD + yD * yA + yA * yA));
 		cell.pos.refz = 0.0;
 		// Cell Volume.
-		if ( GlobalConfig.axisymmetric ) {
+		if ( myConfig.axisymmetric ) {
 		    // Volume per radian = centroid y-ordinate * cell area
 		    vol = xyarea * cell.pos.y;
 		} else {
@@ -473,7 +473,7 @@ public:
 		iface.length = LAB;
 		// Mid-point and area.
 		iface.Ybar = 0.5 * (yA + yB);
-		if ( GlobalConfig.axisymmetric ) {
+		if ( myConfig.axisymmetric ) {
 		    // Interface area per radian.
 		    iface.area = LAB * iface.Ybar;
 		} else {
@@ -507,7 +507,7 @@ public:
 		iface.length = LBC;
 		// Mid-point and area.
 		iface.Ybar = 0.5 * (yC + yB);
-		if ( GlobalConfig.axisymmetric ) {
+		if ( myConfig.axisymmetric ) {
 		    // Interface area per radian.
 		    iface.area = LBC * iface.Ybar;
 		} else {
@@ -524,7 +524,7 @@ public:
 	// This code should follow very closesly the equivalent
 	// code in sblock.d.
 	size_t i, j, k;
-	if (GlobalConfig.dimensions == 2) {
+	if (myConfig.dimensions == 2) {
 	    // First, do all of the internal secondary cells
 	    for ( i = imin+1; i <= imax; ++i ) {
 		for ( j = jmin+1; j <= jmax; ++j ) {
@@ -640,7 +640,7 @@ public:
 	bc[Face.east].applyPreSpatialDerivAction(t, tLevel);
 	bc[Face.south].applyPreSpatialDerivAction(t, tLevel);
 	bc[Face.west].applyPreSpatialDerivAction(t, tLevel);
-	if ( GlobalConfig.dimensions == 3 ) {
+	if ( myConfig.dimensions == 3 ) {
 	    bc[Face.top].applyPreSpatialDerivAction(t, tLevel);
 	    bc[Face.bottom].applyPreSpatialDerivAction(t, tLevel);
 	}
@@ -652,7 +652,7 @@ public:
 	bc[Face.east].applyPostFluxAction(t, tLevel);
 	bc[Face.south].applyPostFluxAction(t, tLevel);
 	bc[Face.west].applyPostFluxAction(t, tLevel);
-	if ( GlobalConfig.dimensions == 3 ) {
+	if ( myConfig.dimensions == 3 ) {
 	    bc[Face.top].applyPostFluxAction(t, tLevel);
 	    bc[Face.bottom].applyPostFluxAction(t, tLevel);
 	}
@@ -660,7 +660,7 @@ public:
 
     override void computeSpatialDerivatives(int ftl)
     {
-	if ( GlobalConfig.dimensions == 3 ) {
+	if ( myConfig.dimensions == 3 ) {
 	    throw new Error("computeSpatialDerivatives() not implemented for 3D yet.");
 	}
 	

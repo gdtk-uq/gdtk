@@ -17,6 +17,8 @@ import std.conv;
 
 import util.lua;
 import geom;
+import globaldata;
+import globalconfig;
 import solidfvcell;
 import solidbc;
 import solidprops;
@@ -26,6 +28,7 @@ class SolidBlock {
 public:
     int id; // block identifier
     string label;
+    LocalConfig myConfig;
     bool active; // if true, block participates in time integration
     double energyResidual; // monitor this for steady state
     Vector3 energyResidualLoc; // location of worst case
@@ -40,6 +43,7 @@ public:
     {
 	this.id = id;
 	this.label = label;
+	myConfig = dedicatedSolidConfig[id];
 	myL = luaL_newstate();
 	luaL_openlibs(myL);
 	lua_pushinteger(myL, id); lua_setglobal(myL, "blkId");

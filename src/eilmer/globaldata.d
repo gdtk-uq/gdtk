@@ -21,3 +21,4 @@ static SSolidBlock[] solidBlocks;
 // We also need to have a dedicated set of configuration parameters for each thread
 // so that there is no need to have memory barriers guarding their access.
 static LocalConfig[] dedicatedConfig;
+static LocalConfig[] dedicatedSolidConfig;

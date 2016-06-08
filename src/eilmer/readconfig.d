@@ -329,7 +329,6 @@ void read_config_file()
     if (GlobalConfig.verbosity_level > 1) {
 	foreach (i, blk; gasBlocks) { writeln("  Block[", i, "]: ", blk); }
     }
-
     // Read in any blocks in the solid domain.
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);
     GlobalConfig.udfSolidSourceTermsFile = jsonData["udf_solid_source_terms_file"].str;
@@ -338,6 +337,10 @@ void read_config_file()
 	writeln("  nSolidBlocks: ", GlobalConfig.nSolidBlocks);
 	writeln("  udf_solid_source_terms: ", GlobalConfig.udfSolidSourceTerms);
 	writeln("  udf_solid_source_terms_file: ", to!string(GlobalConfig.udfSolidSourceTermsFile));
+    }
+    // Set up dedicated copies of the configuration parameters for the threads.
+    foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
+	dedicatedSolidConfig ~= new LocalConfig();
     }
     foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
 	solidBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);

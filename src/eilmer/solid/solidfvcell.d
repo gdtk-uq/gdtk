@@ -38,10 +38,16 @@ public:
     SolidFVInterface[] iface;
     SolidFVVertex[] vtx;
 
-    this(size_t n_flow_time_levels)
+private:
+    LocalConfig myConfig;
+
+public:
+
+    this(LocalConfig myConfig)
     {
-	e.length = n_flow_time_levels;
-	dedt.length = n_flow_time_levels;
+	this.myConfig = myConfig;
+	e.length = myConfig.n_flow_time_levels;
+	dedt.length = myConfig.n_flow_time_levels;
     }
 
     void scanValuesFromString(string buffer)
@@ -88,7 +94,7 @@ public:
     {
 	double gamma1 = 1.0; // Assume Euler
 //	if (!force_euler) {
-	    final switch (GlobalConfig.gasdynamic_update_scheme) {
+	    final switch (myConfig.gasdynamic_update_scheme) {
 	    case GasdynamicUpdate.euler:
 	    case GasdynamicUpdate.moving_grid_1_stage:
 	    case GasdynamicUpdate.moving_grid_2_stage:
@@ -106,7 +112,7 @@ public:
 	// Assuming predictor-corrector
 	double gamma1 = 0.5;
 	double gamma2 = 0.5;
-	final switch (GlobalConfig.gasdynamic_update_scheme) {
+	final switch (myConfig.gasdynamic_update_scheme) {
 	case GasdynamicUpdate.euler:
 	case GasdynamicUpdate.moving_grid_1_stage: assert(false, "invalid for 1-stage update.");
 	case GasdynamicUpdate.moving_grid_2_stage:
@@ -124,7 +130,7 @@ public:
 	double gamma1 = 1.0/6.0; // presume TVD_RK3 scheme.
 	double gamma2 = 1.0/6.0;
 	double gamma3 = 4.0/6.0;
-	final switch (GlobalConfig.gasdynamic_update_scheme) {
+	final switch (myConfig.gasdynamic_update_scheme) {
 	case GasdynamicUpdate.euler:
 	case GasdynamicUpdate.moving_grid_1_stage:
 	case GasdynamicUpdate.moving_grid_2_stage:

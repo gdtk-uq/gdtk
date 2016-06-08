@@ -70,7 +70,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     read_control_file(); // some of the configuration is in here
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
-    auto nThreadsInPool = min(maxCPUs-1, GlobalConfig.nBlocks-1); // no need to have more task threads than blocks
+    auto nBlocksInParallel = max(GlobalConfig.nBlocks, GlobalConfig.nSolidBlocks);
+    auto nThreadsInPool = min(maxCPUs-1, nBlocksInParallel-1); // no need to have more task threads than blocks
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
     writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
     foreach (myblk; parallel(gasBlocks,1)) {
@@ -526,11 +527,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	}
     }
     // And we'll do a first pass on solid domain bc's too in case we need up-to-date info.
-    foreach (sblk; solidBlocks) {
+    foreach (sblk; parallel(solidBlocks, 1)) {
 	if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
-    }
-    foreach (sblk; solidBlocks) {
-	if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
@@ -609,7 +607,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	} // end foreach cell
     } // end foreach blk
     // Next do solid domain update IMMEDIATELY after at same flow time level
-    foreach (sblk; solidBlocks) {
+    foreach (sblk; parallel(solidBlocks, 1)) {
 	if (!sblk.active) continue;
 	sblk.clearSources();
 	sblk.computeSpatialDerivatives(ftl);
@@ -617,7 +615,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	sblk.applyPostFluxAction(sim_time, ftl);
     }
     // We need to synchronise before updating
-    foreach (sblk; solidBlocks) {
+    foreach (sblk; parallel(solidBlocks, 1)) {
 	foreach (scell; sblk.activeCells) {
 	    if (GlobalConfig.udfSolidSourceTerms) {
 		addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -651,10 +649,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
 	// Let's set up solid domain bc's also before changing any flow properties.
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
 	}
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
@@ -718,7 +716,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    } // end foreach cell
 	} // end foreach blk
 	// Do solid domain update IMMEDIATELY after at same flow time level
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (!sblk.active) continue;
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
@@ -726,7 +724,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    sblk.applyPostFluxAction(sim_time, ftl);
 	}
 	// We need to synchronise before updating
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
@@ -760,10 +758,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
 	// Let's set up solid domain bc's also before changing any flow properties.
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
 	}
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
@@ -827,7 +825,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    } // end foreach cell
 	} // end foreach blk
 	// Do solid domain update IMMEDIATELY after at same flow time level
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (!sblk.active) continue;
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
@@ -835,7 +833,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    sblk.applyPostFluxAction(sim_time, ftl);
 	}
 	// We need to synchronise before updating
-	foreach (sblk; solidBlocks) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
 	    foreach (scell; sblk.activeCells) {
 		if (GlobalConfig.udfSolidSourceTerms) {
 		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
