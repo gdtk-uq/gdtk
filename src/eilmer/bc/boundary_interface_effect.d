@@ -235,7 +235,12 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("BIE_ZeroVelocity.apply_unstructured_grid() not implemented yet");
+      	auto gmodel = blk.myConfig.gmodel;	
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    FlowState fs = f.fs;
+	    fs.vel.refx = 0.0; fs.vel.refy = 0.0; fs.vel.refz = 0.0;
+	} // end foreach face
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -536,7 +541,12 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("BIE_FixedT.apply_unstructured_grid() not implemented yet");
+	auto gmodel = blk.myConfig.gmodel;	
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    FlowState fs = f.fs;
+	    foreach(ref elem; fs.gas.T) elem = Twall;
+	} // end foreach face
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -755,7 +765,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
     {
 	throw new Error("BIE_WallKOmega.apply_unstructured_grid() not implemented yet");
     }
-
+    
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
