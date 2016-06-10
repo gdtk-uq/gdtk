@@ -270,7 +270,7 @@ public:
 			   SolidFVInterface IFace, string boundaryName)
     {
 	auto L = blk.bc[whichBoundary].myL;
-	lua_getglobal(L, toStringz("solidInterface_"~boundaryName));
+	lua_getglobal(L, toStringz("solidInterface"));
 	// Set some userful values for the caller in table
 	lua_newtable(L);
 	lua_pushnumber(L, t); lua_setfield(L, -2, "t");
