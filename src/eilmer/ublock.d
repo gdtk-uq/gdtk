@@ -340,73 +340,167 @@ public:
 		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
-	// We will now store the cloud of points in cloud_pos for viscous derivative calcualtions
-	// equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
+	
+	// We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
+	//equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
 	if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.divergence) {
 	    throw new Error("Divergence theorem not implemented for unstructured grid");
 	}
-        // else continue, least-squares is selected
+        // else continue on to fill least-squares/finite-difference cloud
 	final switch (myConfig.spatial_deriv_locn) {
 	case SpatialDerivLocn.vertices:
 	    throw new Error("spatial_deriv_locn at vertices not implemented for unstructured grid");
 	    // no need for break;
 	case SpatialDerivLocn.faces:
-	    // set boundary interface clouds first
-	    foreach(l, boundary; grid.boundaries) {
-	    	BoundaryCondition bc = this.bc[l];
-		foreach (i, f; bc.faces) {//bc.faces
-		    BasicCell cell;
-		    // store the interface information
-		    f.cloud_pos ~= &(f.pos);
-		    f.cloud_fs ~= f.fs;
-		    if (bc.outsigns[i] == 1) {
-			// store "neighbour cell" information
-			f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
-			f.cloud_fs ~= f.left_cells[0].fs;
-			cell = f.left_cells[0];
-		    } else {
-			// store "neighbour cell" information
+	    if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.least_squares) {  
+		if (myConfig.include_ghost_cells_in_spatial_deriv_clouds) {
+		    // this cloud allows for consistent gradients at block
+		    // boundaries, necessary to have 2nd order convergence for multiblock simulations.
+		    foreach(bndary_idx, boundary; grid.boundaries) { // set boundary clouds
+			BoundaryCondition bc = this.bc[bndary_idx];
+			foreach (i, f; bc.faces) {
+			    BasicCell[] cell_list;
+			    // store interface
+			    f.cloud_pos ~= &(f.pos);
+			    f.cloud_fs ~= f.fs;
+			    if (bc.outsigns[i] == 1) {
+				// store "neighbour cell" information
+				f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
+				f.cloud_fs ~= f.left_cells[0].fs;
+				cell_list~= f.left_cells;
+				// store ghost0 information
+				f.cloud_pos ~= &(f.right_cells[0].pos[0]);
+				f.cloud_fs ~= f.right_cells[0].fs;
+			    } else {
+				// store "neighbour cell" information
+				f.cloud_pos ~= &(f.right_cells[0].pos[0]); // assume gtl = 0
+				f.cloud_fs ~= f.right_cells[0].fs;
+				cell_list ~= f.right_cells;
+				// store ghost0 information
+				f.cloud_pos ~= &(f.left_cells[0].pos[0]);
+				f.cloud_fs ~= f.left_cells[0].fs;
+			    }
+			    // now grab the remainding cells
+			    foreach (cell; cell_list) { // for each cell
+				foreach (other_face; cell.iface) { // loop around cell interfaces
+				    if (other_face.is_on_boundary && other_face.bc_id == bndary_idx) {
+					if(other_face.id == f.id) continue; // skip current interface
+					// store cell information
+					f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
+					f.cloud_fs ~= cell.fs;
+					// and store it's neighbouring ghost0 information
+					if (bc.outsigns[i] == 1) {
+					    f.cloud_pos ~= &(other_face.right_cells[0].pos[0]); // assume gtl = 0
+					    f.cloud_fs ~= other_face.right_cells[0].fs;
+					} else {
+					    f.cloud_pos ~= &(other_face.left_cells[0].pos[0]); // assume gtl = 0
+					    f.cloud_fs ~= other_face.left_cells[0].fs;
+					} // end else 
+				    }// end if (other_face.is_on_boundary && other_face.bc_id == bndary_idx)
+				} // end foreach (other_face; cell.iface)
+			    } // foreach (cell; cell_list)
+			} // end foreach (i, f; bc.faces)
+		    } // end (bndary_idx, boundary; grid.boundaries)
+		    foreach (i, f; faces) { // set internal face clouds
+			if ( f.is_on_boundary == true) continue; // boundaries already set
+			// store interface
+			f.cloud_pos ~= &(f.pos);
+			f.cloud_fs ~= f.fs;
+			BasicCell[] cell_list;
+			cell_list ~= f.left_cells[0];
+			cell_list ~= f.right_cells[0];
+			foreach (cell; cell_list) {
+			    // grab cell
+			    f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
+			    f.cloud_fs ~= cell.fs;
+			    // now grab the cell interfaces
+			    foreach (other_face; cell.iface) {
+				if (other_face.id == f.id) continue;
+				bool prevent_dup = false; // prevents storing a face twice in 3D simulations
+				foreach (vtx_other_face; other_face.vtx) { // loop around other_face vertices
+				    foreach (vtx_f; f.vtx) { // loop around f vertices
+					if (vtx_other_face.id == vtx_f.id && prevent_dup == false) {
+					    // store interface information
+					    f.cloud_pos ~= &(other_face.pos);
+					    f.cloud_fs ~= other_face.fs;
+					    prevent_dup = true;
+					} // end if( vtx_other_face.id == vtx_f.id && prevent_dup == false)
+				    } // end foreach (vtx_f; f.vtx)
+				} // end foreach (vtx_other_face; other_face.vtx)
+			    } // end foreach (other_face; cell.iface)
+			} // end foreach (cell; cell_list)
+		    } // end foreach (i, f; faces)
+		} // end if (myConfig.include_ghost_cells_in_spatial_deriv_clouds)
+		else { // else set similar cloud as structured solver
+		    foreach(bndry_idx, boundary; grid.boundaries) { // set boundary clouds
+			BoundaryCondition bc = this.bc[bndry_idx];
+			foreach (i, f; bc.faces) { 
+			    BasicCell cell;
+			    // store the interface information
+			    f.cloud_pos ~= &(f.pos);
+			    f.cloud_fs ~= f.fs;
+			    if (bc.outsigns[i] == 1) {
+				// store "neighbour cell" information
+				f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
+				f.cloud_fs ~= f.left_cells[0].fs;
+				cell = f.left_cells[0];
+			    } else {
+				// store "neighbour cell" information
+				f.cloud_pos ~= &(f.right_cells[0].pos[0]); // assume gtl = 0
+				f.cloud_fs ~= f.right_cells[0].fs;
+				cell = f.right_cells[0];
+			    }
+			    // now grab the remainding points
+			    foreach (other_face; cell.iface) { // loop around cell interfaces
+				if(other_face.id == f.id) continue; // skip current interface
+				// store the interface information
+				f.cloud_pos ~= &(other_face.pos);
+				f.cloud_fs ~= other_face.fs;
+			    } // end foreach (other_face; cell.iface)
+			} // end foreach (i, f; bc.faces)
+		    } // end foreach(l, boundary; grid.boundaries) {
+		    foreach (i, f; faces) { // set internal face clouds
+			if ( f.is_on_boundary == true) continue; // boundaries already set
+			// store interface
+			f.cloud_pos ~= &(f.pos);
+			f.cloud_fs ~= f.fs;
+			BasicCell[] cell_list;
+			cell_list ~= f.left_cells[0];
+			cell_list ~= f.right_cells[0];
+			foreach (cell; cell_list) {
+			    // grab cell
+			    f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
+			    f.cloud_fs ~= cell.fs;
+			    // now grab the interfaces
+			    foreach (other_face; cell.iface) {
+				 if (other_face.id == f.id) continue;
+				bool prevent_dup = false; // prevents double dipping in 3D simulations
+				foreach (vtx_other_face; other_face.vtx) { // loop around other_face vertices
+				    foreach (vtx_f; f.vtx) { // loop around f vertices
+					if (vtx_other_face.id == vtx_f.id && prevent_dup == false) {
+					    f.cloud_pos ~= &(other_face.pos); // store interface information
+					    f.cloud_fs ~= other_face.fs;
+					    prevent_dup = true;
+					} // end if (vtx_other_face.id == vtx_f.id && prevent_dup == false)
+				    } // end foreach (vtx_f; f.vtx)
+				} // end foreach (vtx_other_face; other_face.vtx)
+			    } // end foreach (other_face; cell.iface)
+			} // end foreach (cell; cell_list)
+		    } // end foreach (i, f; faces)
+		} // end else
+	    }  // if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.least_squares)
+	    else { // set finite-difference cloud
+		foreach (i, f; faces) {
+		    if ( f.right_cells[0].will_have_valid_flow) {
 			f.cloud_pos ~= &(f.right_cells[0].pos[0]); // assume gtl = 0
 			f.cloud_fs ~= f.right_cells[0].fs;
-			cell = f.right_cells[0];
 		    }
-		    // now grab the remainding points
-		    foreach (other_face; cell.iface) { // loop around cell interfaces
-			if(other_face.id == f.id) continue; // skip current interface
-			// store the interface information
-			f.cloud_pos ~= &(other_face.pos);
-			f.cloud_fs ~= other_face.fs;
-		    } // end foreach (other_face; cell.iface)
-		} // end foreach (i, f; bc.faces)
-	    } // end foreach(l, boundary; grid.boundaries) {
-	    // now set internal interface clouds
-	    foreach (i, f; faces) {
-		if ( f.is_on_boundary == true) continue; // boundaries already set
-		f.cloud_pos ~= &(f.pos); // store interface
-		f.cloud_fs ~= f.fs;
-		BasicCell[] cell_list;
-		cell_list ~= f.left_cells[0];
-		cell_list ~= f.right_cells[0];
-		foreach (cell; cell_list) {
-		    // grab cell
-		    f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
-		    f.cloud_fs ~= cell.fs;
-		    // now grab the interfaces
-		    foreach (other_face; cell.iface) {
-			bool prevent_dup = false; // prevents double dipping in 3D simulations
-			foreach (vtx_other_face; other_face.vtx) {
-			    if (other_face.id == f.id) continue;
-			    foreach (vtx_f; f.vtx) {
-				if ( vtx_other_face.id == vtx_f.id && prevent_dup == false) {
-				    f.cloud_pos ~= &(other_face.pos); // store interface information
-				    f.cloud_fs ~= other_face.fs;
-				    prevent_dup = true;
-				} // end if ( vtx_i.id == vtx_j.id )
-			    } // end foreach (vtx_j; f.vtx)
-			} // end foreach (vtx_i; other_face.vtx)
-		    } // end foreach (other_face; cell.iface)
-		} // end foreach (cell; cell_list)
-	    } // end foreach (i, f; faces)
+		    if ( f.left_cells[0].will_have_valid_flow) {
+			f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
+			f.cloud_fs ~= f.left_cells[0].fs;
+		    }
+		} // end foreach (i, f; faces)		
+	    } // end else
 	} // end switch (myConfig.spatial_deriv_locn)
     } // end init_grid_and_flow_arrays()
     

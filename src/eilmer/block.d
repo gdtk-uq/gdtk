@@ -295,7 +295,7 @@ public:
 	} // foreach cell
 	return number_of_invalid_cells;
     } // end count_invalid_cells()
-
+    
     @nogc
     void flow_property_derivatives(int gtl)
     {
@@ -312,14 +312,17 @@ public:
 		    foreach(vtx; vertices) {
 			vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
 		    }
+		    break;
+		case SpatialDerivCalc.finite_difference:
+		    assert(0, "finite_difference not implemented for spatial_deriv_calc at vertices");
 		} // end switch
 	    } else {
 		// Have only least-squares in 3D.
 		foreach(vtx; vertices) {
 		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
 		}
-	    } // end if (myConfig.dimensions
-	    foreach (iface; faces) {
+	    }
+       	    foreach (iface; faces) {
 		iface.average_vertex_deriv_values();
 	    }
 	    break;
@@ -331,20 +334,37 @@ public:
 			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
 		    }
 		    break;
+		case SpatialDerivCalc.finite_difference:
+		    foreach(iface; faces) { 
+			iface.grad.gradients_finitediff(iface.cloud_fs, iface.cloud_pos, iface, myConfig.diffusion);
+		    }
+		    break;
 		case SpatialDerivCalc.divergence:
 		    foreach(iface; faces) {
 			iface.grad.gradients_xy_div(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
 		    }
 		} // end switch
-	    } else {
-		// Have only least-squares in 3D.
-		foreach(iface; faces) {
-		    iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
-		}
-	    } // end if (myConfig.dimensions
-	} // end switch (myConfig.spatial_deriv_locn
+	    } else { //3D
+		final switch (myConfig.spatial_deriv_calc) {
+		case SpatialDerivCalc.least_squares:
+		    foreach(iface; faces) {
+			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
+		    }
+		    break;
+		case SpatialDerivCalc.finite_difference:
+		    foreach(iface; faces) { 
+			iface.grad.gradients_finitediff(iface.cloud_fs, iface.cloud_pos, iface, myConfig.diffusion);
+		    }
+		    break;
+		case SpatialDerivCalc.divergence:
+		    foreach(iface; faces) {
+			assert(0, "divergence thereom not implemented for 3D");
+		    }
+		} // end switch
+	    } // end if (myConfig.dimensions)
+	} // end switch (myConfig.spatial_deriv_locn)
     } // end flow_property_derivatives()
-
+    
     @nogc
     void clear_fluxes_of_conserved_quantities()
     {

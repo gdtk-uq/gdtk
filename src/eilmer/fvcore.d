@@ -190,13 +190,15 @@ FluxCalculator flux_calculator_from_name(string name)
 // Symbolic names for the flavours of spatial-derivative calculators.
 enum SpatialDerivCalc {
     least_squares,
-    divergence
+    divergence,
+    finite_difference,
 }
 
 string spatial_deriv_calc_name(SpatialDerivCalc sdc)
 {
     final switch ( sdc ) {
     case SpatialDerivCalc.least_squares: return "least_squares";
+    case SpatialDerivCalc.finite_difference: return "finite_difference";
     case SpatialDerivCalc.divergence: return "divergence";
     }
 }
@@ -205,6 +207,7 @@ SpatialDerivCalc spatial_deriv_calc_from_name(string name)
 {
     switch ( name ) {
     case "least_squares": return SpatialDerivCalc.least_squares;
+    case "finite_difference": return SpatialDerivCalc.finite_difference;
     case "divergence": return SpatialDerivCalc.divergence;
     default:
 	string msg = text("Invalid spatial-derivative calculator name:", name);

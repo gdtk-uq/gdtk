@@ -224,9 +224,90 @@ public:
 	omega.refy = -gradient_y * area_inv;
 	omega.refz = 0.0;
     } // end gradients_xy_div()
-
+    
     @nogc
-    void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, bool diffusion)
+    void gradients_finitediff(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, FVInterface iface, bool diffusion)
+    {
+	// Uses finite differences to calculate the gradient at the interface using the distance normal to the face.
+	
+	/+ This is the first attempt at a finite difference approach to calculating the interface gradients used in
+	 + the viscous flux update. Currently the code correctly calculates gradients parallel to the face normal, 
+	 + however does not capture the gradients perpendicular to the face normal. For example, looking at a 2D cell 
+	 + face with it's normal aligned with the global x-direction, the code
+	 + calculates du/dx and dv/dx correctly but does not capture dv/dy and du/dy.
+	 + 
+	 + TO_DO: FIX ME
+         +/
+	size_t count = cloud_pos.length;
+	double nx = iface.n.x;
+	double ny = iface.n.y;	
+	double nz = iface.n.z;
+	double gradn;
+
+	string codeForGradients(string qname)
+	{
+	    string code = "
+            gradn = 0.0;
+            foreach (i; 0 .. count) {
+                double dx = (iface.pos.x - cloud_pos[i].x);
+	        double dy = (iface.pos.y - cloud_pos[i].y);
+                double dz = (iface.pos.z - cloud_pos[i].z);
+                double dn = dx*nx + dy*ny + dz*nz;
+                double dqdn = (iface.fs."~qname~" - cloud_fs[i]."~qname~")/dn;
+                gradn += dqdn;
+            }
+            gradn /= count;";
+	    return code;
+	}
+	mixin(codeForGradients("vel.x"));
+	vel[0][0] = gradn * nx;
+	vel[0][1] = gradn * ny;
+	vel[0][2] = gradn * nz;
+	// y-velocity
+	mixin(codeForGradients("vel.y"));
+	vel[1][0] = gradn * nx;
+	vel[1][1] = gradn * ny;
+	vel[1][2] = gradn * nz;
+	// z-velocity
+	mixin(codeForGradients("vel.z"));
+	vel[2][0] = gradn * nx;
+	vel[2][1] = gradn * ny;
+	vel[2][2] = gradn * nz;
+	// T[0]
+	mixin(codeForGradients("gas.T[0]"));
+	T.refx = gradn * nx;
+	T.refy = gradn * ny;
+	T.refz = gradn * nz;
+	// massf
+	size_t nsp = cloud_fs[0].gas.massf.length;
+	if (diffusion) {
+	    foreach(isp; 0 .. nsp) {
+		mixin(codeForGradients("gas.massf[isp]"));
+		massf[isp].refx = gradn * nx;
+		massf[isp].refy = gradn * ny;
+		massf[isp].refz = gradn * nz;
+	    } // foreach isp
+	} else {
+	    foreach(isp; 0 .. nsp) {
+		massf[isp].refx = 0.0;
+		massf[isp].refy = 0.0;
+		massf[isp].refz = 0.0;
+	    } // foreach isp
+	}
+	// tke
+	mixin(codeForGradients("tke"));
+	tke.refx = gradn * nx;
+	tke.refy = gradn * ny;
+	tke.refz = gradn * nz;
+	// omega
+	mixin(codeForGradients("omega"));
+	omega.refx = gradn * nx;
+	omega.refy = gradn * ny;
+	omega.refz = gradn * nz;	
+    } // end gradients_finitediff
+     
+  @nogc
+  void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, bool diffusion)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 3D
@@ -295,7 +376,7 @@ public:
 	mixin(codeForGradients("vel.y"));
 	foreach (j; 0 .. 3) { vel[1][j] = gradients[j]; }
 	// z-velocity
-	mixin(codeForGradients("vel.z"));
+	mixin(codeForGradients("vel.z"));	
 	foreach (j; 0 .. 3) { vel[2][j] = gradients[j]; }
 	// T[0]
 	mixin(codeForGradients("gas.T[0]"));
