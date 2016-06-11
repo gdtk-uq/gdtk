@@ -247,6 +247,68 @@ class patch{
 				throw new Exception("invalid vertex requested for corner derivatives");
 		}
 	}
+	const double[3] midsideDerivatives(char side){
+		double[4] alphas = [-1.0, -3.0, 3.0, 1.0];
+		double[4] betas = [1.0, 3.0, 3.0, 1.0];
+		int[4] idxs = [0, 1, 2, 3];
+		double f_x = 0.0; double f_y = 0.0; double f_xy = 0.0;
+		int x_sign;
+		int y_sign;
+		double[16] rotatedBs = rotateControlPoints(side);
+		switch (side){
+			case 'N':
+				x_sign = -1; y_sign = -1;
+				break;
+			case 'E':
+				x_sign = 1; y_sign = -1;
+				break;
+			case 'S': 
+				x_sign = 1; y_sign = 1;
+				break;
+			case 'W':
+				x_sign = -1; y_sign = 1;
+				break;
+			default:
+				throw new Exception("Invalid char specified for side");
+			}
+		foreach(i; idxs){
+				f_x += alphas[i]*rotatedBs[i];
+				f_y += betas[i]*(rotatedBs[i+4] - rotatedBs[i]);
+				f_xy += alphas[i]*(rotatedBs[i +4] - rotatedBs[i]);
+			}
+		f_x = x_sign*f_x*0.5;
+		f_y = y_sign*f_y*0.5*0.5*0.5*3;
+		f_xy = x_sign*y_sign*f_xy*0.5*3/(x_hi - x_lo)/(y_hi - y_lo);
+		if (side=='N'||side=='S') return [f_x/(x_hi - x_lo), f_y/(y_hi - y_lo), f_xy];
+			else return [f_y/(x_hi - x_lo), f_x/(y_hi - y_lo), f_xy];
+	}
+	const double[16] rotateControlPoints(char side){
+		//reorders control points so that the patch appears rotated
+		double[16] rotatedBs;
+		switch (side){
+			case 'N':
+				for(int i = 0; i != 16; i++){
+					rotatedBs[i] = this.bs[15-i];
+				}
+				return rotatedBs;
+			case 'E':
+				int[16] rotateidx = [3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12]; //this was PDiddy's Idea
+				for(int i = 0; i != 16; i++){
+					rotatedBs[i] = this.bs[rotateidx[i]];
+				}
+				return rotatedBs;
+			case 'S':
+				return this.bs;
+			case 'W':
+				int[16] rotateidx = [12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3];
+				for(int i = 0; i != 16; i++){
+					rotatedBs[i] = this.bs[rotateidx[i]];
+				}
+				return rotatedBs;
+			default:
+				throw new Exception("Invalid char specified for side");
+		}
+	}
 	void rewriteControlPoints(int vertex, double f, double f_x, double f_y, double f_xy){
 		//rewrite control points based on value of function at vertex and derivatives
 		switch (vertex){

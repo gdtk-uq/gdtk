@@ -87,7 +87,7 @@ void main(){
 	double y_hi = e_max;*/
 	immutable int n = 100;
 	Tree myTree = new Tree(x_lo, x_hi, y_lo, y_hi);
-	myTree.globalMaxError = 0.05;
+	myTree.globalMaxError = 0.00005;
 	myTree.globalMinArea = 0.000001*(y_hi - y_lo)*(x_hi - x_lo);
 	//myTree.X_min = rho_min;
 	//myTree.X_max = rho_max;
@@ -137,29 +137,39 @@ void main(){
 	myTree.writeLUT(filename); 
 	writefln("Tree written to %s ", filename);
 	//--Testing some derivatives
-	auto patch = myTree.search(0.00001, 0.00001);
-	int patchid = myTree.searchForNodeID(0.00001, 0.00001);
-	auto originalBs = patch.bs;
-	writefln("Patch Original Control Points: %s", originalBs);
-	int vertex = 3;
-	auto derivs = patch.cornerDerivatives(vertex);
+	double search_x = 20; double search_y = 10.5;
+	auto patch = myTree.search(search_x, search_y);
+	int patchid = myTree.searchForNodeID(search_x, search_y);
+	//auto originalBs = patch.bs;
+	//writefln("Patch Original Control Points: %s", originalBs);
+	//int vertex = 3;
+	//auto derivs = patch.cornerDerivatives(vertex);
 	//double x = patch.x_lo; double y = patch.y_lo;
 	//double x = patch.x_hi; double y = patch.y_lo;
 	//double x = patch.x_hi; double y = patch.y_hi;
-	double x = patch.x_lo; double y = patch.y_hi;
-	double f = patch.interpolateF(x,y);
-	myTree.Nodes[patchid].nodePatch.rewriteControlPoints(vertex, f,derivs[0], derivs[1],derivs[2]);
-	auto newBs =  myTree.Nodes[patchid].nodePatch.bs;
-	writefln("Patch New Control Points     : %s", newBs);
-	double[16] diffBs;
-	foreach (i, ref diff; diffBs) diff = originalBs[i] - newBs[i];
-	writefln("Difference                   : %s", diffBs);
-	//double f_x = 0.001*x^^4 + y;
-	//double f_y = -4*y^^3 + x;
-	//double f_xy = 1;
-	//writefln("For x = %s, y = %s", x, y);
-	//writefln("ANALYTICAL :f_x: %s, f_y: %s, f_xy: %s",f_x, f_y, f_xy);
-	//writefln("NUMERICAL  :f_x: %s, f_y: %s, f_xy: %s",derivs[0],derivs[1], derivs[2]);
+	//double x = patch.x_lo; double y = patch.y_hi;
+	//double f = patch.interpolateF(x,y);
+	//myTree.Nodes[patchid].nodePatch.rewriteControlPoints(vertex, f,derivs[0], derivs[1],derivs[2]);
+	//auto newBs =  myTree.Nodes[patchid].nodePatch.bs;
+	//writefln("Patch New Control Points     : %s", newBs);
+	//double[16] diffBs;
+	//foreach (i, ref diff; diffBs) diff = originalBs[i] - newBs[i];
+	//writefln("Difference                   : %s", diffBs);
+	
+	//testing side derivatives
+	char side = 'S';
+	double x = 0.5*(patch.x_lo + patch.x_hi); double y = patch.y_lo;
+	//double x = patch.x_hi; double y = 0.5*(patch.y_lo + patch.y_hi);
+	//double x = 0.5*(patch.x_lo + patch.x_hi); double y = patch.y_hi;
+	//double x = patch.x_lo; double y = 0.5*(patch.y_lo + patch.y_hi);
+	auto derivs = patch.midsideDerivatives(side);
+	//----------------------------------
+	double f_x = 0.001*x^^4 + y;
+	double f_y = -4*y^^3 + x;
+	double f_xy = 1;
+	writefln("For x = %s, y = %s", x, y);
+	writefln("ANALYTICAL :f_x: %s, f_y: %s, f_xy: %s",f_x, f_y, f_xy);
+	writefln("NUMERICAL  :f_x: %s, f_y: %s, f_xy: %s",derivs[0],derivs[1], derivs[2]);
 
 }
 
