@@ -309,8 +309,12 @@ class patch{
 				throw new Exception("Invalid char specified for side");
 		}
 	}
-	void rewriteControlPoints(int vertex, double f, double f_x, double f_y, double f_xy){
+	double rewriteControlPoints(int vertex, double f, double f_x, double f_y, double f_xy){
 		//rewrite control points based on value of function at vertex and derivatives
+		//  3----2
+		//  |    |
+		//  0----1
+		auto oldbs = bs;
 		switch (vertex){
 			case 0:
 				bs[0] = f;//0,0
@@ -341,6 +345,10 @@ class patch{
 			default:
 				throw new Exception("invalid vertex");
 		}
+		double maxDiff = 0;
+		//foreach (i, ref diff; diffBs) diff = fabs(oldbs[i]/bs[i]-1.0);
+		for(int i = 0; i != 16; i++) maxDiff = max(maxDiff, fabs(oldbs[i]/bs[i] - 1.0));
+		return maxDiff;
 	}
 } 
 
@@ -352,6 +360,8 @@ class TreeNode {
 	TreeNode* parent;
 	int idx;
 	char splitID;
+	int[] bigNeighbours;
+	int[] smallNeighbours;
 	
 	this(patch myPatch){
 		this.nodePatch = myPatch;}
@@ -395,6 +405,7 @@ class Tree {
 	double globalAspectRatio;
 	double globalMinArea;
 	double globalMaxError;
+	int refinedFlag = 0;
 	
 	//----------------------------------------------------------
 	//constructor which fills the tree with its first node
@@ -532,7 +543,7 @@ class Tree {
 		//returns the number of patches split for refinement purposes
 		double minDeltaXorY = min(this.minDeltaX(),this.minDeltaY());
 		double[5] coords;
-		double[4] nodeIds;
+		int[4] nodeIds;
 		int numberRefined = 0;
 		foreach (node; Nodes){
 			if (node.splitID == 'N'){
@@ -540,7 +551,8 @@ class Tree {
 					coords = node.nodePatch.justOutsideCoordinates(boundary,minDeltaXorY);
 					try{
 						foreach(i;[0,1,2,3]){
-							nodeIds[i] = this.searchForNodeID(coords[0],coords[i+1]);
+							if ((boundary=='N')|(boundary=='S')) nodeIds[i] = this.searchForNodeID(coords[i+1],coords[0]);
+								else nodeIds[i] = this.searchForNodeID(coords[0],coords[i+1]);
 						}
 						if ((nodeIds[0]!=nodeIds[1])|(nodeIds[2]!=nodeIds[3])){
 							numberRefined += 1;
@@ -548,34 +560,225 @@ class Tree {
 								//do splitting and break
 								node.splitID = 'X';
 								this.Nodes ~= new TreeNode(node.nodePatch.splitX_L);
-								node.left = &Nodes[$-1]; 
-								this.grow(F,F_t,Nodes[$-1]);
-								
+								node.left = &Nodes[$-1];
+								int idx = to!int(Nodes.length-1);
+								Nodes[$-1].idx = idx;
+								Nodes[$-1].nodePatch.getControlPoints(F);
+								Nodes[$-1].splitID = 'N';
+								//this.grow(F,F_t,Nodes[$-1]);
 								this.Nodes ~= new TreeNode(node.nodePatch.splitX_R);
 								node.right = &Nodes[$-1];
-								this.grow(F,F_t,Nodes[$-1]);
+								//this.grow(F,F_t,Nodes[$-1]);
+								idx = to!int(Nodes.length-1);
+								Nodes[$-1].idx = idx;
+								Nodes[$-1].nodePatch.getControlPoints(F);
+								Nodes[$-1].splitID = 'N';
+
 							}
 							else{
 								node.splitID = 'Y';
 								this.Nodes ~= new TreeNode(node.nodePatch.splitY_L);
 								node.left = &Nodes[$-1];
-								this.grow(F,F_t,Nodes[$-1]);
+								int idx = to!int(Nodes.length-1);
+								Nodes[$-1].idx = idx;
+								Nodes[$-1].nodePatch.getControlPoints(F);
+								Nodes[$-1].splitID = 'N';
+								//this.grow(F,F_t,Nodes[$-1]);
 								this.Nodes ~= new TreeNode(node.nodePatch.splitY_R);
 								node.right = &Nodes[$-1];
-								this.grow(F,F_t,Nodes[$-1]);
+								//this.grow(F,F_t,Nodes[$-1]);
+								idx = to!int(Nodes.length-1);
+								Nodes[$-1].idx = idx;
+								Nodes[$-1].nodePatch.getControlPoints(F);
+								Nodes[$-1].splitID = 'N';
 							}
 							break;
 						}//end if nodes are different
 					}//end try
 					catch{
-						//writeln("Tried to refine outside the table, continue on");
+						writeln("Tried to refine outside the table, continue on");
 					}
 				}//end foreach boundary
 			}
 		}//end foreach node loop
 		return numberRefined;
 	}//end refine function
+	void recordDependencies(){
+		//returns the number of patches split for refinement purposes
+		if (this.refinedFlag != 1) throw new Exception("Tree is not refined yet, cannot record dependencies");
+		double minDeltaXorY = min(this.minDeltaX(),this.minDeltaY());
+		double[5] coords;
+		int nodeID1;
+		int nodeID2;
+		foreach (node; Nodes){
+			if (node.splitID == 'N'){
+				foreach(boundary; ['N', 'E', 'S', 'W']){
+					coords = node.nodePatch.justOutsideCoordinates(boundary,minDeltaXorY);
+					try{
+							if ((boundary=='N')|(boundary=='S')) {
+								nodeID1 = this.searchForNodeID(coords[1],coords[0]);
+								nodeID2 = this.searchForNodeID(coords[3],coords[0]);
+							}								
+							else{
+								nodeID1 = this.searchForNodeID(coords[0],coords[1]);
+								nodeID2 = this.searchForNodeID(coords[0],coords[3]);
+								} 
+							if (nodeID1 != nodeID2){//two different patchees
+								node.smallNeighbours ~= [nodeID1, nodeID2];
+								this.Nodes[nodeID1].bigNeighbours ~= node.idx;
+								this.Nodes[nodeID2].bigNeighbours ~= node.idx;
+							}
 
+						}//end try
+					catch{
+						//writeln("Tried to refine outside the table, continue on");
+					}
+				}//end foreach boundary
+			}
+		}//end foreach node loop
+	}//end recordDependencies function
+	int[] dependencyOrder(){
+		//records order of nodes in which to update
+		int[] nodeIDorder;
+		int numberAdded=1;
+		while (numberAdded){
+			numberAdded = 0;
+			foreach(node; Nodes){
+				if (node.splitID == 'N'){
+					if (!node.bigNeighbours&&!nodeIDorder.canFind(node.idx)) {
+						nodeIDorder ~= node.idx;
+						numberAdded += 1;
+						foreach(smallNeighbour;node.smallNeighbours) {//remove the bigNeighbour from list
+							int[] newBigNeighbours;
+							foreach(bigNeighbour; Nodes[smallNeighbour].bigNeighbours) if (bigNeighbour!=node.idx) newBigNeighbours ~= bigNeighbour;
+							Nodes[smallNeighbour].bigNeighbours=newBigNeighbours;
+						}
+					}//end if the node has no big neighbours
+				}//end if node is leaf
+			}//end foreach node
+		}//end while
+		return nodeIDorder;
+	}
+	void makeContinuous(int[] dependencyOrder){
+		double f;
+		double[3] derivs;
+		int nodeID1;
+		int nodeID2;
+		double[5] coords;
+		double minDeltaXorY = min(this.minDeltaX(),this.minDeltaY());
+		foreach(nodeID;dependencyOrder){
+			double x_lo = Nodes[nodeID].nodePatch.x_lo;
+			double x_hi = Nodes[nodeID].nodePatch.x_hi;
+			double y_lo = Nodes[nodeID].nodePatch.y_lo;
+			double y_hi = Nodes[nodeID].nodePatch.y_hi;
+
+			if (Nodes[nodeID].splitID == 'N'){
+				foreach(boundary; ['N', 'E', 'S', 'W']){
+					coords = Nodes[nodeID].nodePatch.justOutsideCoordinates(boundary,minDeltaXorY);
+					try{
+						if ((boundary=='N')|(boundary=='S')) {
+							nodeID1 = this.searchForNodeID(coords[1],coords[0]);
+							nodeID2 = this.searchForNodeID(coords[3],coords[0]);
+						}								
+						else{
+							nodeID1 = this.searchForNodeID(coords[0],coords[1]);
+							nodeID2 = this.searchForNodeID(coords[0],coords[3]);
+							} 
+						}//end try
+					catch{
+						nodeID1=1;nodeID2=1;//writeln("Tried to refine outside the table, continue on");
+					}
+						if (nodeID1 != nodeID2){//two different patchees
+							double percentagediff;
+							double maxDiff=0.01;
+							switch(boundary){
+								case 'N':
+									//top  left corner
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(3);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_hi);
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									//MIDDLE TOP
+									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('N');
+									f = Nodes[nodeID].nodePatch.interpolateF(0.5*(x_lo+x_hi), y_hi);
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									//top right
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(2);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_hi,y_hi);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									break;
+								case 'E':
+									//bottom  right corner
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(1);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, y_lo);
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									//MIDDLE left
+									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('E');
+									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, 0.5*(y_lo+y_hi));
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									//top right
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(2);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, y_hi);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									break;
+								case 's':
+									//bottom left corner
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(0);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_lo);
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									//MIDDLE bottom
+									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('S');
+									f = Nodes[nodeID].nodePatch.interpolateF(0.5*(x_lo+x_hi), y_lo);
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									//bottom right
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(1);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, y_lo);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									break;
+								case 'W':
+									//bottom  left corner
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(0);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_lo);
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									//MIDDLE left
+									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('W');
+									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, 0.5*(y_lo+y_hi));
+									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									//top left
+									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(3);
+									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_hi);
+									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
+									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									break;
+								default:
+									break;
+							}//end switch
+						}//end if one node equals the other
+
+
+						
+				}//end foreach boundary
+			}
+		}//end for loop
+	}//end make Coninuous function
 }//end class Tree
 
 Tree buildTree_fromFile(string filename = "Tree.dat"){
