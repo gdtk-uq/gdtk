@@ -124,7 +124,9 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem $(SHARE_FILES)
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp prep.lua $(BUILD_DIR)/bin
 	cp $(LUA_MODULES) $(BUILD_DIR)/lib
-	- cp $(SHARE_FILES) $(BUILD_DIR)/share
+ifneq "$(SHARE_FILES)" ""
+	cp $(SHARE_FILES) $(BUILD_DIR)/share
+endif
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
