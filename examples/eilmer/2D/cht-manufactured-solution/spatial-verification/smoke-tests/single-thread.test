@@ -1,0 +1,54 @@
+# single-thread.test
+#
+# Run the method of manufactured solutions to test the coupling
+# of the gas and solid domains. This test executes using a single thread.
+#
+# RJG, 2016-06-14
+# Washington, DC, USA
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test make-lua-files {Make all the auxiliary user-defined Lua files.} -body {
+    exec python make_lua_files.py > LOGFILE_MAKE_LUA_FILES
+} -result {} -returnCodes {0}
+
+test run-preprocessor {Prepare coupled MMS case.} -body {
+    exec e4shared --job=coupled-mms --prep > LOGFILE_PREP_COUPLED_MMS
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the coupled MMS case.} -body {
+    exec e4shared --job=coupled-mms --run --max-cpus=1 > LOGFILE_MAIN_COUPLED_MMS
+} -result {} -returnCodes {0}
+
+test computed-norms {Check the temperature norms.} -body {
+    set L1g_ref 1.3733388514985556e-01
+    set L2g_ref 1.5760250513402219e-01
+    set Linfg_ref 3.0469657765502234e-01
+    set L1s_ref 1.5686653737239453e-01
+    set L2s_ref 1.9360403909941618e-01
+    set Linfs_ref 4.2435529004256978e-01	
+    exec e4shared --job=coupled-mms --post --tindx-plot=last --ref-soln=ref-soln.lua --norms="T\[0\],T" > T-norms.txt
+    set fp [open T-norms.txt r]
+    set contents [read $fp]
+    close $fp
+    set line [lindex [split $contents "\n"] 7]
+    set tks [split $line]
+    set L1g [lindex $tks 2]
+    set L2g [lindex $tks 4]
+    set Linfg [lindex $tks 6]
+    set line [lindex [split $contents "\n"] 16]
+    set tks [split $line]
+    set L1s [lindex $tks 2]
+    set L2s [lindex $tks 4]
+    set Linfs [lindex $tks 6]
+    list [expr abs($L1g - $L1g_ref)/$L1g_ref < 1.0e-3] \
+         [expr abs($L2g - $L2g_ref)/$L2g_ref < 1.0e-3] \
+         [expr abs($Linfg - $Linfg_ref)/$Linfg_ref < 1.0e-3] \
+	 [expr abs($L1s - $L1s_ref)/$L1s_ref < 1.0e-3] \
+         [expr abs($L2s - $L2s_ref)/$L2s_ref < 1.0e-3] \
+         [expr abs($Linfs - $Linfs_ref)/$Linfs_ref < 1.0e-3 ]
+} -result {1 1 1 1 1 1}
+
+cleanupTests
