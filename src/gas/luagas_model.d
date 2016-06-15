@@ -526,6 +526,20 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     }
     lua_pop(L, 1);
     
+    lua_getfield(L, idx, "a");
+    if ( lua_isnumber(L, -1) ) {
+	Q.a = lua_tonumber(L, -1);
+    }
+    else if ( lua_isnil(L, -1) ) {
+	// leave untouched
+    }
+    else {
+	string errMsg = "The value for 'a' is not a number.\n";
+	lua_pop(L, 1);
+	throw new Error(errMsg);
+    }
+    lua_pop(L, 1);
+
     lua_getfield(L, idx, "e");
     if ( lua_istable(L, -1) ) {
 	auto n = to!int(lua_objlen(L, -1));
