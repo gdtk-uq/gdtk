@@ -7,6 +7,7 @@ import std.string;
 import std.stdio;
 import util.lua;
 import util.lua_service;
+import gas.gas_model;
 import gas.luagas_model;
 
 import geom;
@@ -38,6 +39,9 @@ public:
 	    auto L = blk.bc[which_boundary].myL;
 	    luaL_openlibs(L);
 	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
+	    registerGasModel(L, LUA_GLOBALSINDEX);
+	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
+	    lua_setglobal(L, "gmodel");
 	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
 	    lua_setglobal(L, "n_species");
 	    lua_pushinteger(L, blk.myConfig.gmodel.n_modes);
@@ -273,6 +277,9 @@ public:
 	    auto L = blk.bc[which_boundary].myL;
 	    luaL_openlibs(L);
 	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
+	    registerGasModel(L, LUA_GLOBALSINDEX);
+	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
+	    lua_setglobal(L, "gmodel");
 	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
 	    lua_setglobal(L, "n_species");
 	    lua_pushinteger(L, blk.myConfig.gmodel.n_modes);
@@ -483,5 +490,5 @@ private:
 	// 4. Clear stack
 	lua_settop(L, 0);
     }
-} // end class UserDefinedGhostCell
+} // end class BIEUserDefined
 
