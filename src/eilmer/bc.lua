@@ -573,7 +573,7 @@ UserDefinedBC.type = "user_defined"
 function UserDefinedBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
-   o.preSpatialDerivAction = { UserDefinedInterface:new{fileName=o.fileName} } 
+   o.preSpatialDerivAction = { UserDefinedInterface:new{fileName=o.fileName}, UpdateThermoTransCoeffs:new() } 
    o.is_configured = true
    return o
 end
