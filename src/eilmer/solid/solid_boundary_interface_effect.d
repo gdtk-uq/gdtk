@@ -297,8 +297,8 @@ public:
 	int number_args = 1;
 	int number_results = 1;
 	if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-	    luaL_error(L, "error running user user-defined b.c. solidInterface_%s function: %s\n",
-		       toStringz(boundaryName), lua_tostring(L, -1));
+	    luaL_error(L, "error running user user-defined b.c. solidInterface function: %s\n",
+		       lua_tostring(L, -1));
 	}
 	
 	IFace.T = luaL_checknumber(L, -1);
