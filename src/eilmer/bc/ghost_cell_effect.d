@@ -37,6 +37,20 @@ void reflect_normal_velocity(ref FlowState fs, in FVInterface IFace)
 }
 
 @nogc
+void reverse_tangential_velocity(ref FlowState fs, in FVInterface IFace)
+// Reverses the tangential velocity with respect to the supplied interface.
+//
+// The process is to rotate the velocity vector into the local frame of
+// the interface, negate the tangential (local y-component and z-component) velocity and
+// rotate back to the global frame.
+{
+    fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    fs.vel.refy = -(fs.vel.y);
+    fs.vel.refz = -(fs.vel.z);
+    fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+}
+
+@nogc
 void reflect_normal_magnetic_field(ref FlowState fs, in FVInterface IFace)
 {
     fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
@@ -204,6 +218,14 @@ public:
 	    reflect_normal_velocity(ghost0.fs, f);
 	    ghost1.fs.copy_values_from(src_cell.fs);
 	    reflect_normal_velocity(ghost1.fs, f);
+
+	    // TO_DO: remove this ugly hack after we have removed ghost_cell_data dependence for
+	    //        wall-type boundary conditions. K.D. 17/06/2016
+	    if (bc.type == "wall_no_slip_fixed_t" || bc.type == "wall_no_slip_adiabatic") {
+		reverse_tangential_velocity(ghost0.fs, f);
+		reverse_tangential_velocity(ghost1.fs, f);
+	    }
+	    
 	    if (blk.myConfig.MHD) {
 		reflect_normal_magnetic_field(ghost0.fs, f);
 		reflect_normal_magnetic_field(ghost1.fs, f);
