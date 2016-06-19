@@ -50,6 +50,7 @@ shared static int step;
 shared static double dt_global;     // simulation time step determined by code
 shared static double dt_allow;      // allowable global time step determined by code
 shared static double[] local_dt_allow; // each block will put its result into this array
+shared static int[] local_invalid_cell_count;
 shared static double t_plot;        // time to write next soln
 shared static bool output_just_written = true;
 shared static double t_history;     // time to write next sample
@@ -231,6 +232,7 @@ void integrate_in_time(double target_time)
     step = 0;
     shared bool do_cfl_check_now = false;
     local_dt_allow.length = gasBlocks.length; // prepare array for use
+    local_invalid_cell_count.length = gasBlocks.length;
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
     shared bool finished_time_stepping = 
@@ -303,6 +305,17 @@ void integrate_in_time(double target_time)
 	    gasdynamic_explicit_increment_with_moving_grid();
 	} else {
 	    gasdynamic_explicit_increment_with_fixed_grid();
+	}
+	foreach (i, myblk; parallel(gasBlocks,1)) {
+	    local_invalid_cell_count[i] = myblk.count_invalid_cells(0);
+	}
+	foreach (i, myblk; gasBlocks) { // serial loop for possibly throwing exception
+	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+		throw new FlowSolverException(format("simcore::integrate_in_time(): " ~
+						     "Too many bad cells in block[%d] %d.",
+						     i, local_invalid_cell_count[i]));
+	
+	    }
 	}
 	// 2c. Moving Grid - Recalculate all geometry, note that in the gas dynamic
 	//     update gtl level 2 is copied to gtl level 0 for the next step thus

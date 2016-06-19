@@ -860,6 +860,7 @@ function write_config_file(fileName)
    f:write(string.format('"apply_bcs_in_parallel": %s,\n',
 			 tostring(config.apply_bcs_in_parallel)))
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
+   f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"interpolate_in_local_frame": %s,\n', 
