@@ -1012,7 +1012,7 @@ public:
 
     double signal_frequency()
     // [TODO] unstructured-grid adaption to be done.
-    // The current direction-by-dirFsignalection checking assumes a structured grid.
+    // The current direction-by-direction checking assumes a structured grid.
     // For the moment, things should work OK for an unstructured grid if 
     // the stringent_cfl is true.
     {
@@ -1053,9 +1053,10 @@ public:
 	// Check the INVISCID time step limit first,
 	// then add a component to ensure viscous stability.
 	// Note: MHD seems to only works if stringent_cfl is used.
-	if ((myConfig.stringent_cfl) || (myConfig.MHD)) {
-	    // Make the worst case.
+	if (myConfig.stringent_cfl || myConfig.MHD) {
+	    // Make the worst case assumptions.
 	    if (myConfig.MHD) {
+		// MHD signal speed
 		ca2 = B_mag*B_mag / fs.gas.rho;
 		cfast = sqrt(ca2 + fs.gas.a * fs.gas.a);
 		signal = (u_mag + cfast) / L_min;
@@ -1081,27 +1082,21 @@ public:
 		    catang2_T = Bn_T * Bn_T / fs.gas.rho;
 		    cfast_T = 0.5 * ( ca2 + sqrt( ca2*ca2 - 4.0 * (fs.gas.a * fs.gas.a * catang2_T) ) );
 		    cfast_T = sqrt(cfast_T);
-		    signalN = (un_N + cfast_N) / jLength;
-		    signal = signalN;
-		    signalE = (un_E + cfast_E) / iLength;
-		    if ( signalE > signal ) signal = signalE;
-		    signalT = (un_T + cfast_T) / kLength;
-		    if ( signalT > signal ) signal = signalT;
+		    signalN = (un_N + cfast_N) / jLength; signal = signalN;
+		    signalE = (un_E + cfast_E) / iLength; signal = fmax(signal, signalE);
+		    signalT = (un_T + cfast_T) / kLength; signal = fmax(signal, signalT);
 		} else {
 		    signalN = (un_N + cfast) / jLength;
 		    signalE = (un_E + cfast) / iLength;
 		    signal = fmax(signalN, signalE);
 		}
 	    } else if (myConfig.dimensions == 3) {
-		// eilmer -- 3D cells
-		signalN = (un_N + fs.gas.a) / jLength;
-		signal = signalN;
-		signalE = (un_E + fs.gas.a) / iLength;
-		if ( signalE > signal ) signal = signalE;
-		signalT = (un_T + fs.gas.a) / kLength;
-		if ( signalT > signal ) signal = signalT;
+		// gasdynamics only, 3D cells
+		signalN = (un_N + fs.gas.a) / jLength; signal = signalN;
+		signalE = (un_E + fs.gas.a) / iLength; signal = fmax(signal, signalE);
+		signalT = (un_T + fs.gas.a) / kLength; signal = fmax(signal, signalT);
 	    } else {
-		// mbcns2 -- 2D cells
+		// gasdynamics only, 2D cells
 		// The velocity normal to the north face is assumed to run
 		// along the length of the east face.
 		signalN = (un_N + fs.gas.a) / jLength;
@@ -1109,14 +1104,13 @@ public:
 		signal = fmax(signalN, signalE);
 	    }
 	}
-	if (myConfig.viscous && fs.gas.mu > 10.0e-23) {
+	if (myConfig.viscous && (fs.gas.mu > 10.0e-23)) {
 	    // Factor for the viscous time limit.
 	    // This factor is not included if viscosity is zero.
 	    // See Swanson, Turkel and White (1991)
 	    gam_eff = gmodel.gamma(fs.gas);
-	    // Need to sum conductivities for TNE
-	    double k_total = 0.0;
-	    foreach(i; 0 .. fs.gas.k.length) k_total += fs.gas.k[i];
+	    // Need to sum conductivities for thermal nonequilibrium.
+	    double k_total = 0.0; foreach(k_value; fs.gas.k) { k_total += k_value; }
 	    double Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
 	    if (myConfig.dimensions == 3) {
 		signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
@@ -1130,9 +1124,7 @@ public:
 		    * myConfig.viscous_signal_factor;
 	    }
 	}
-	if (with_k_omega) {
-	    if (fs.omega > signal) signal = fs.omega;
-	}
+	if (with_k_omega) { signal = fmax(signal, fs.omega); }
 	return signal;
     } // end signal_frequency()
 
