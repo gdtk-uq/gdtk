@@ -64,7 +64,7 @@ class Grid {
 	foreach (i; 0 .. ncells) {
 	    bool inside_cell = false;
 	    auto vtx_id = get_vtx_id_list_for_cell(i);
-	    switch (dimensions == 2) {
+	    switch (dimensions) {
 	    case 1: throw new Exception("cell search not implemented for 1D grids");
 	    case 2:
 		// In 2D, assume quad cells.

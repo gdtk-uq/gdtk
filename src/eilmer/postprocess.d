@@ -11,6 +11,7 @@
 
 module postprocess;
 
+import std.math;
 import std.stdio;
 import std.conv;
 import std.format;
@@ -33,8 +34,8 @@ import solidsolution;
 void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		  string addVarsStr, string luaRefSoln,
 		  bool vtkxmlFlag, bool binary_format, bool tecplotFlag,
-		  string outputFileName, string sliceListStr, string probeStr,
-		  string normsStr, string regionStr)
+		  string outputFileName, string sliceListStr, string extractStreamStr,
+		  string probeStr, string normsStr, string regionStr)
 {
     read_config_file();
     string jobName = GlobalConfig.base_file_name;
@@ -218,6 +219,78 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    } // end foreach sliceStr
 	} // end foreach tindx
     } // end if sliceListStr
+    //
+    if (extractStreamStr.length > 0) {
+	writeln("Extracting data along a streamline of the flow solution.");
+	// The output may go to a user-specified file, or stdout.
+	File outFile;
+	if (outputFileName.length > 0) {
+	    outFile = File(outputFileName, "w");
+	    writeln("Output will be sent to File: ", outputFileName);
+	} else {
+	    outFile = stdout;
+	}
+	extractStreamStr = extractStreamStr.strip();
+	extractStreamStr = removechars(extractStreamStr, "\"");
+	double[] xp, yp, zp;
+	foreach(triple; extractStreamStr.split(";")) {
+	    auto items = triple.split(",");
+	    xp ~= to!double(items[0]);
+	    yp ~= to!double(items[1]);
+	    zp ~= to!double(items[2]);
+	}
+	double stepSize = 1e-06; // set a temporal step size
+	double xInit, yInit, zInit;
+	double xOld, yOld, zOld;
+	double xNew, yNew, zNew;
+	foreach (tindx; tindx_list_to_plot) {
+	    writeln("  tindx= ", tindx);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    soln.add_aux_variables(addVarsList);
+	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    foreach (ip; 0 .. xp.length) {
+	        outFile.writeln("# streamline locus point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
+	        auto identity = soln.find_enclosing_cell(xp[ip], yp[ip], zp[ip]);
+		size_t ib = identity[0]; size_t idx = identity[1]; size_t found = identity[2];
+		if (found == 0) { // out of domain bounds
+		    writeln("User defined point not in solution domain bounds");
+		    break;
+		}
+		else { // store initial cell data
+		    outFile.writeln(soln.flowBlocks[ib].values_as_string(idx));
+		    xInit = soln.flowBlocks[ib]["pos.x", idx];
+		    yInit = soln.flowBlocks[ib]["pos.y", idx];
+		    zInit = soln.flowBlocks[ib]["pos.z", idx];
+		}
+		// we need to travel both forward (direction = 1) and backward (direction = -1)
+		int[] direction = [-1, 1];
+		double min = 1e-6;
+		foreach (direct; direction) {
+		    found = 1;
+		    xOld = xInit; yOld = yInit; zOld = zInit; 
+		    while (found == 1) { // while we have a cell in the domain
+		        double vx = soln.flowBlocks[ib]["vel.x", idx];
+			double vy = soln.flowBlocks[ib]["vel.y", idx];
+			double vz = soln.flowBlocks[ib]["vel.z", idx];
+			double dx = direct*vx*stepSize;
+			double dy = direct*vy*stepSize;
+			double dz = direct*vz*stepSize;
+			xNew = xOld + dx; yNew = yOld + dy; zNew = zOld + dz;
+			identity = soln.find_enclosing_cell(xNew, yNew, zNew);
+			if (identity[0] == ib && identity[1] == idx) { // did not step outside current cell
+			    stepSize = stepSize*2.0; found = identity[2];
+			} else {
+			    ib = identity[0]; idx = identity[1]; found = identity[2];
+			    if ( found == 1) outFile.writeln(soln.flowBlocks[ib].values_as_string(idx));
+			    xOld = xNew; yOld = yNew; zOld = zNew;
+			    stepSize = 1e-06;
+			} // end else
+		    } // end while
+		} // end foreach direction
+	    } // end for each xp.length
+	} // end foreach tindx
+    } // end if streamlineStr
     //
     if (normsStr.length > 0) {
 	writeln("Norms for variables.");

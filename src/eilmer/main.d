@@ -67,6 +67,7 @@ void main(string[] args)
     msg       ~= "         [--plot-dir=<string>]       defaults to plot\n";
     msg       ~= "         [--output-file=<string>]    defaults to stdout\n";
     msg       ~= "         [--slice-list=\"blk-range,i-range,j-range,k-range;...\"]\n";
+    msg       ~= "         [--extract-streamline=\"x,y,z;...\"]        streamline locus points\n";
     msg       ~= "         [--probe=\"x,y,z;...\"]       locations to sample flow data\n";
     msg       ~= "         [--norms=\"varName,varName,...\"] report L1,L2,Linf norms\n";
     msg       ~= "         [--region=\"x0,y0,z0,x1,y1,z1\"]  limit norms calculation to a box\n";
@@ -99,6 +100,7 @@ void main(string[] args)
     string plotDir = "plot";
     string outputFileName = "";
     string sliceListStr = "";
+    string extractStreamStr = "";
     string probeStr = "";
     string normsStr = "";
     string regionStr = "";
@@ -125,6 +127,7 @@ void main(string[] args)
 	       "plot-dir", &plotDir,
 	       "output-file", &outputFileName,
 	       "slice-list", &sliceListStr,
+	       "extract-streamline", &extractStreamStr,
 	       "probe", &probeStr,
 	       "norms", &normsStr,
 	       "region", &regionStr,
@@ -247,6 +250,7 @@ void main(string[] args)
 	    writeln("  plotDir: ", plotDir);
 	    writeln("  outputFileName: ", outputFileName);
 	    writeln("  sliceListStr: ", sliceListStr);
+	    writeln("  extractStreamStr: ", extractStreamStr);
 	    writeln("  probeStr: ", probeStr);
 	    writeln("  normsStr: ", normsStr);
 	    writeln("  regionStr: ", regionStr);
@@ -255,7 +259,7 @@ void main(string[] args)
 	post_process(plotDir, listInfoFlag, tindxPlot,
 		     addVarsStr, luaRefSoln,
 		     vtkxmlFlag, binaryFormat, tecplotFlag,
-		     outputFileName, sliceListStr, probeStr,
+		     outputFileName, sliceListStr, extractStreamStr, probeStr,
 		     normsStr, regionStr);
 	writeln("Done postprocessing.");
     } // end if postFlag
