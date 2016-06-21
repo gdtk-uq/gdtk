@@ -122,6 +122,36 @@ extern(C) int configSetFromTable(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, 1, "apply_bcs_in_parallel");
     }
     lua_pop(L, 1);
+    lua_getfield(L, 1, "flowstate_limits_max_velocity");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.flowstate_limits.max_velocity = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "flowstate_limits_max_velocity");
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "flowstate_limits_max_tke");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.flowstate_limits.max_tke = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "flowstate_limits_max_tke");
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "flowstate_limits_min_tke");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.flowstate_limits.min_tke = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "flowstate_limits_min_tke");
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "flowstate_limits_max_temp");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.flowstate_limits.max_temp = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "flowstate_limits_max_temp");
+    }
+    lua_pop(L, 1);
+    lua_getfield(L, 1, "flowstate_limits_min_temp");
+    if (!lua_isnil(L, -1)) {
+	GlobalConfig.flowstate_limits.min_temp = to!double(luaL_checknumber(L, -1));
+	lua_pushnil(L); lua_setfield(L, 1, "flowstate_limits_min_temp");
+    }
+    lua_pop(L, 1);
     lua_getfield(L, 1, "adjust_invalid_cell_data");
     if (!lua_isnil(L, -1)) {
 	GlobalConfig.adjust_invalid_cell_data = to!bool(lua_toboolean(L, -1));
@@ -557,6 +587,21 @@ extern(C) int configGet(lua_State* L)
 	break;
     case "apply_bcs_in_parallel":
 	lua_pushboolean(L, GlobalConfig.apply_bcs_in_parallel);
+	break;
+    case "flowstate_limits_max_velocity":
+	lua_pushnumber(L, GlobalConfig.flowstate_limits.max_velocity);
+	break;
+    case "flowstate_limits_max_tke":
+	lua_pushnumber(L, GlobalConfig.flowstate_limits.max_tke);
+	break;
+    case "flowstate_limits_min_tke":
+	lua_pushnumber(L, GlobalConfig.flowstate_limits.min_tke);
+	break;
+    case "flowstate_limits_max_temp":
+	lua_pushnumber(L, GlobalConfig.flowstate_limits.max_temp);
+	break;
+    case "flowstate_limits_min_temp":
+	lua_pushnumber(L, GlobalConfig.flowstate_limits.min_temp);
 	break;
     case "adjust_invalid_cell_data":
 	lua_pushboolean(L, GlobalConfig.adjust_invalid_cell_data);

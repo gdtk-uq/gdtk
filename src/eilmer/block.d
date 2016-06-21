@@ -263,10 +263,10 @@ public:
     {
 	int number_of_invalid_cells = 0;
 	foreach(cell; cells) {
-	    if ( cell.fs.check_data(cell.pos[0]) == false ) {
+	    if (cell.fs.check_data(cell.pos[0], myConfig.flowstate_limits) == false) {
 		++number_of_invalid_cells;
-		writefln("count_invalid_cells: block_id = %d, cell at %g,%g,%g\n",
-			 id, cell.pos[0].x, cell.pos[0].y, cell.pos[0].z);
+		writefln("count_invalid_cells: block_id=%d, cell_id=%d at pos %s\n",
+			 id, cell.id, to!string(cell.pos[0]));
 		writeln(cell);
 		if ( myConfig.adjust_invalid_cell_data ) {
 		    // We shall set the cell data to something that
@@ -275,8 +275,10 @@ public:
 		    printf( "Adjusting cell data to a local average.\n" );
 		    foreach (i; 0 .. cell.iface.length) {
 			auto face = cell.iface[i];
-			auto other_cell = (cell.outsign[i] == 1) ? face.right_cells[0] : face.left_cells[0];
-			if (other_cell.fs.check_data(other_cell.pos[0])) neighbour_flows ~= other_cell.fs;
+			auto other_cell = (cell.outsign[i] == 1) ?
+			    face.right_cells[0] : face.left_cells[0];
+			if (other_cell.fs.check_data(other_cell.pos[0], myConfig.flowstate_limits))
+			    { neighbour_flows ~= other_cell.fs; }
 		    }
 		    if (neighbour_flows.length == 0) {
 			string msg = text("Block::count_invalid_cells(): " ~

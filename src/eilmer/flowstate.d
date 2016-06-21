@@ -270,20 +270,33 @@ public:
     } // end toJSONString()
 
 
-    bool check_data(ref Vector3 pos) const
+    bool check_data(ref Vector3 pos, ref const(FlowStateLimits) flowstate_limits) const
     {
 	bool is_data_valid = gas.check_values(true);
-	const double MAXVEL = 30000.0;
-	if (fabs(vel.x) > MAXVEL || fabs(vel.y) > MAXVEL || fabs(vel.z) > MAXVEL) {
-	    writeln("Velocity too high ", vel.x, " ", vel.y, " ", vel.z);
+	if (fabs(vel.x) > flowstate_limits.max_velocity ||
+	    fabs(vel.y) > flowstate_limits.max_velocity ||
+	    fabs(vel.z) > flowstate_limits.max_velocity) {
+	    writeln("Velocity too high ", vel);
 	    is_data_valid = false;
 	}
 	if (!isFinite(tke)) {
 	    writeln("Turbulence KE invalid number ", tke);
 	    is_data_valid = false;
 	}
-	if (tke < 0.0) {
-	    writeln("Turbulence KE negative ", tke);
+	if (tke < flowstate_limits.min_tke) {
+	    writeln("Turbulence KE below minimum ", tke);
+	    is_data_valid = false;
+	}
+	if (tke > flowstate_limits.max_tke) {
+	    writeln("Turbulence KE above maximum ", tke);
+	    is_data_valid = false;
+	}
+	if (gas.T[0] < flowstate_limits.min_temp) {
+	    writeln("Temperature below minimum ", gas.T[0]);
+	    is_data_valid = false;
+	}
+	if (gas.T[0] > flowstate_limits.max_temp) {
+	    writeln("Temperature above maximum ", gas.T[0]);
 	    is_data_valid = false;
 	}
 	if (!isFinite(omega)) {
@@ -295,7 +308,7 @@ public:
 	    is_data_valid = false;
 	}
 	if (!is_data_valid) {
-	    writeln("   at position", pos);
+	    writeln("   at position ", pos);
 	}
 	return is_data_valid;
     } // end check_data()

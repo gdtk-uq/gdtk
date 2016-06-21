@@ -89,17 +89,11 @@ public:
 	repr ~= "BasicCell(";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= ", pos=" ~ to!string(pos);
-	repr ~= ", iface_ids=[";
-	foreach (f; iface) { repr ~= format("%d,", f.id); }
-	repr ~= "]";
-	repr ~= ", outsigns=[";
-	foreach (osgn; outsign) { repr ~= format("%g,", osgn); }
-	repr ~= "]";
-	repr ~= ", vtx_ids=[";
-	foreach (v; vtx) { repr ~= format("%d,", v.id); }
-	repr ~= "]";
+	repr ~= ", iface_ids=["; foreach (f; iface) { repr ~= format("%d,", f.id); } repr ~= "]";
+	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%g,", osgn); } repr ~= "]";
+	repr ~= ", vtx_ids=["; foreach (v; vtx) { repr ~= format("%d,", v.id); } repr ~= "]";
 	repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
-	repr ~= ", fs=" ~ to!string(fs);
+	repr ~= ",\n... fs=" ~ to!string(fs);
 	repr ~= ")";
 	return to!string(repr);
     }
@@ -230,16 +224,10 @@ public:
 	repr ~= "FVCell(";
 	repr ~= "id=" ~ to!string(id);
 	repr ~= ", pos=" ~ to!string(pos);
-	repr ~= ", iface_ids=[";
-	foreach (f; iface) { repr ~= format("%d,", f.id); }
-	repr ~= "]";
-	repr ~= ", outsigns=[";
-	foreach (osgn; outsign) { repr ~= format("%g,", osgn); }
-	repr ~= "]";
-	repr ~= ", vtx_ids=[";
-	foreach (v; vtx) { repr ~= format("%d,", v.id); }
-	repr ~= "]";
-	repr ~= ", volume=" ~ to!string(volume);
+	repr ~= ", iface_ids=["; foreach (f; iface) { repr ~= format("%d,", f.id); } repr ~= "]";
+	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%g,", osgn); } repr ~= "]";
+	repr ~= ", vtx_ids=["; foreach (v; vtx) { repr ~= format("%d,", v.id); } repr ~= "]";
+	repr ~= ",\n... volume=" ~ to!string(volume);
 	repr ~= ", areaxy=" ~ to!string(areaxy);
 	repr ~= ", iLength=" ~ to!string(iLength);
 	repr ~= ", jLength=" ~ to!string(jLength);
@@ -250,9 +238,9 @@ public:
 	repr ~= ", in_turbulent_zone=" ~ to!string(in_turbulent_zone);
 	repr ~= ", fr_reactions_allowed=" ~ to!string(fr_reactions_allowed);
 	repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
-	repr ~= ", fs=" ~ to!string(fs);
-	repr ~= ", U=" ~ to!string(U);
-	repr ~= ", dUdt=" ~ to!string(dUdt);
+	repr ~= ",\n... fs=" ~ to!string(fs);
+	repr ~= ",\n... U=" ~ to!string(U);
+	repr ~= ",\n... dUdt=" ~ to!string(dUdt);
 	repr ~= ")";
 	return to!string(repr);
     }

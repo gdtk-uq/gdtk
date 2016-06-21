@@ -137,14 +137,15 @@ final class GlobalConfig {
     shared static bool adjust_invalid_cell_data = false;
     // The maximum number of bad cells (per block) 
     // which will be tolerated without complaint.
-    shared static int max_invalid_cells = 0;  
+    shared static int max_invalid_cells = 0;
+    shared static FlowStateLimits flowstate_limits;
     // If an attempt at a time step fails because of invalid cells,
     // the time step is re-attempted with a smaller time step.
     // This reduction factor is somewhat arbitrary and can now be set
     // by the user's imput script.
     // A factor of 0.5 would seem to be not enough but a factor of
     // 0.1 would seem too expensive.  We have settled on a default of 0.2.
-    shared static double dt_reduction_factor = 0.2; 
+    shared static double dt_reduction_factor = 0.2; // [TODO] so far unused in the time stepping
 
     // Low order reconstruction (1) uses just the cell-centre data as left- and right-
     // flow properties in the flux calculation.
@@ -354,6 +355,7 @@ public:
     bool separate_update_for_viscous_terms;
     bool separate_update_for_k_omega_source;
     bool adjust_invalid_cell_data;
+    FlowStateLimits flowstate_limits;
     int interpolation_order;
     InterpolateOption thermo_interpolator;
     bool apply_limiter;
@@ -421,6 +423,7 @@ public:
 	separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
 	separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
 	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
+	flowstate_limits = GlobalConfig.flowstate_limits;
 	interpolation_order = GlobalConfig.interpolation_order;
 	thermo_interpolator = GlobalConfig.thermo_interpolator;
 	apply_limiter = GlobalConfig.apply_limiter;

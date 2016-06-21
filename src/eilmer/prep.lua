@@ -859,6 +859,11 @@ function write_config_file(fileName)
 			 tostring(config.separate_update_for_k_omega_source)))
    f:write(string.format('"apply_bcs_in_parallel": %s,\n',
 			 tostring(config.apply_bcs_in_parallel)))
+   f:write(string.format('"flowstate_limits_max_velocity": %e,\n', config.flowstate_limits_max_velocity))
+   f:write(string.format('"flowstate_limits_max_tke": %e,\n', config.flowstate_limits_max_tke))
+   f:write(string.format('"flowstate_limits_min_tke": %e,\n', config.flowstate_limits_min_tke))
+   f:write(string.format('"flowstate_limits_max_temp": %e,\n', config.flowstate_limits_max_temp))
+   f:write(string.format('"flowstate_limits_min_temp": %e,\n', config.flowstate_limits_min_temp))
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 

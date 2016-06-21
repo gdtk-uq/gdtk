@@ -111,6 +111,16 @@ void read_config_file()
     GlobalConfig.apply_bcs_in_parallel =
 	getJSONbool(jsonData, "apply_bcs_in_parallel", true);
     GlobalConfig.stringent_cfl = getJSONbool(jsonData, "stringent_cfl", false);
+    GlobalConfig.flowstate_limits.max_velocity = getJSONdouble(jsonData, "flowstate_limits_max_velocity",
+							       GlobalConfig.flowstate_limits.max_velocity);
+    GlobalConfig.flowstate_limits.max_tke = getJSONdouble(jsonData, "flowstate_limits_max_tke",
+							  GlobalConfig.flowstate_limits.max_tke);
+    GlobalConfig.flowstate_limits.min_tke = getJSONdouble(jsonData, "flowstate_limits_min_tke",
+							  GlobalConfig.flowstate_limits.min_tke);
+    GlobalConfig.flowstate_limits.max_temp = getJSONdouble(jsonData, "flowstate_limits_max_temp",
+							   GlobalConfig.flowstate_limits.max_temp);
+    GlobalConfig.flowstate_limits.min_temp = getJSONdouble(jsonData, "flowstate_limits_min_temp",
+							   GlobalConfig.flowstate_limits.min_temp);
     GlobalConfig.adjust_invalid_cell_data =
 	getJSONbool(jsonData, "adjust_invalid_cell_data", false);
     GlobalConfig.max_invalid_cells = getJSONint(jsonData, "max_invalid_cells", 0);
@@ -164,6 +174,11 @@ void read_config_file()
 		GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
 	writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
+	writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
+	writeln("  flowstate_limits_max_tke: ", GlobalConfig.flowstate_limits.max_tke);
+	writeln("  flowstate_limits_min_tke: ", GlobalConfig.flowstate_limits.min_tke);
+	writeln("  flowstate_limits_max_temp: ", GlobalConfig.flowstate_limits.max_temp);
+	writeln("  flowstate_limits_min_temp: ", GlobalConfig.flowstate_limits.min_temp);
 	writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
 	writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
 	writeln("  thermo_interpolator: ",

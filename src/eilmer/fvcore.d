@@ -18,6 +18,14 @@ class FlowSolverException : Exception {
     }
 }
 
+struct FlowStateLimits {
+    double max_velocity = 30000.0;
+    double max_tke = 0.01 * double.max;
+    double min_tke = 0.0;
+    double max_temp = 50000.0;
+    double min_temp = 0.0;
+}
+
 // Symbolic names for the time-stepping schemes used to update the gasdynamic eqn.
 enum GasdynamicUpdate {
     euler, 
