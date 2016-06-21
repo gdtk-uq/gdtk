@@ -127,13 +127,27 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     // then we can set up the cells and interfaces that
     // internal to the bc. They are only known after
     // this point.
-    foreach ( myblk; parallel(gasBlocks,1) ) {
-	foreach ( bc; myblk.bc ) {
-	    foreach ( bfe; bc.postDiffFluxAction ) {
-		if ( bfe.type == "EnergyFluxFromAdjacentSolid" ) {
-		    auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(bfe);
-		    adjSolidBC.initGasCellsAndIFaces();
-		    adjSolidBC.initSolidCellsAndIFaces();
+    if (GlobalConfig.apply_bcs_in_parallel) {
+	foreach (myblk; parallel(gasBlocks,1)) {
+	    foreach (bc; myblk.bc) {
+		foreach (bfe; bc.postDiffFluxAction) {
+		    if (bfe.type == "EnergyFluxFromAdjacentSolid") {
+			auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(bfe);
+			adjSolidBC.initGasCellsAndIFaces();
+			adjSolidBC.initSolidCellsAndIFaces();
+		    }
+		}
+	    }
+	}
+    } else {
+	foreach (myblk; gasBlocks) {
+	    foreach (bc; myblk.bc) {
+		foreach (bfe; bc.postDiffFluxAction) {
+		    if (bfe.type == "EnergyFluxFromAdjacentSolid") {
+			auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(bfe);
+			adjSolidBC.initGasCellsAndIFaces();
+			adjSolidBC.initSolidCellsAndIFaces();
+		    }
 		}
 	    }
 	}
@@ -618,7 +632,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	sblk.clearSources();
 	sblk.computeSpatialDerivatives(ftl);
 	sblk.computeFluxes();
-	sblk.applyPostFluxAction(sim_time, ftl);
+    }
+    if (GlobalConfig.apply_bcs_in_parallel) {
+	foreach (sblk; parallel(solidBlocks, 1)) {
+	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	}
+    } else {
+	foreach (sblk; solidBlocks) {
+	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	}
     }
     // We need to synchronise before updating
     foreach (sblk; parallel(solidBlocks, 1)) {
@@ -655,11 +677,20 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
 	// Let's set up solid domain bc's also before changing any flow properties.
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
-	}
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+	    }
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
+	} else {
+	    foreach (sblk; solidBlocks) {
+		if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+	    }
+	    foreach (sblk; solidBlocks) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (blk.active) { blk.convective_flux(); }
@@ -727,7 +758,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
 	    sblk.computeFluxes();
-	    sblk.applyPostFluxAction(sim_time, ftl);
+	}
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
+	} else {
+	    foreach (sblk; solidBlocks) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
 	}
 	// We need to synchronise before updating
 	foreach (sblk; parallel(solidBlocks, 1)) {
@@ -764,11 +803,20 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
 	// Let's set up solid domain bc's also before changing any flow properties.
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
-	}
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+	    }
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
+	} else {
+	    foreach (sblk; solidBlocks) {
+		if (sblk.active) { sblk.applyPreSpatialDerivAction(sim_time, ftl); }
+	    }
+	    foreach (sblk; solidBlocks) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
 	    if (blk.active) { blk.convective_flux(); }
@@ -836,7 +884,15 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    sblk.clearSources();
 	    sblk.computeSpatialDerivatives(ftl);
 	    sblk.computeFluxes();
-	    sblk.applyPostFluxAction(sim_time, ftl);
+	}
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
+	} else {
+	    foreach (sblk; solidBlocks) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
 	}
 	// We need to synchronise before updating
 	foreach (sblk; parallel(solidBlocks, 1)) {
