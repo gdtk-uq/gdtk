@@ -342,27 +342,6 @@ extern(C) int getGasModel(lua_State* L)
     return 1;
 }
 
-/* [DEPRECATED]
-extern(C) int get_nspecies(lua_State* L)
-{
-    lua_pushinteger(L, GlobalConfig.gmodel_master.n_species);
-    return 1;
-}
-
-extern(C) int get_nmodes(lua_State* L)
-{
-    lua_pushinteger(L, GlobalConfig.gmodel_master.n_modes);
-    return 1;
-}
-
-extern(C) int species_name(lua_State* L)
-{
-    int i = to!int(luaL_checkinteger(L, 1));
-    lua_pushstring(L, GlobalConfig.gmodel_master.species_name(i).toStringz);
-    return 1;
-}
-*/
-
 //-----------------------------------------------------------------------
 // Call the following function from the main program to get the
 // functions appearing in the Lua interpreter.
@@ -397,12 +376,4 @@ void registerGlobalConfig(lua_State* L)
     lua_setglobal(L, "setGasModel");
     lua_pushcfunction(L, &getGasModel);
     lua_setglobal(L, "getGasModel");
-    /* [DEPRECATED]
-    lua_pushcfunction(L, &get_nspecies);
-    lua_setglobal(L, "get_nspecies");
-    lua_pushcfunction(L, &get_nmodes);
-    lua_setglobal(L, "get_nmodes");
-    lua_pushcfunction(L, &species_name);
-    lua_setglobal(L, "species_name");
-    */
 } // end registerGlobalConfig()
