@@ -8,6 +8,8 @@
 module kinetics.rate_constant;
 
 import std.math;
+import std.algorithm;
+import std.typecons;
 import std.string;
 import util.lua;
 import util.lua_service;
@@ -19,8 +21,8 @@ import gas;
 +/
 
 interface RateConstant {
-    RateConstant dup() const;
-    double eval(in GasState Q) const;
+    RateConstant dup();
+    double eval(in GasState Q);
 }
 
 /++
@@ -57,11 +59,11 @@ public:
 	_n = getDouble(L, -1, "n");
 	_C = getDouble(L, -1, "C");
     }
-    ArrheniusRateConstant dup() const
+    ArrheniusRateConstant dup()
     {
 	return new ArrheniusRateConstant(_A, _n, _C);
     }
-    override double eval(in GasState Q) const
+    override double eval(in GasState Q)
     {
 	double T = Q.T[0];
 	return _A*pow(T, _n)*exp(-_C/T);
@@ -69,6 +71,152 @@ public:
 private:
     double _A, _n, _C;
 }
+
+
+double thirdBodyConcentration(in GasState Q, Tuple!(int, double)[] efficiencies, GasModel gmodel)
+{
+    double val = 0.0;
+    foreach (e; efficiencies) {
+	int isp = e[0];
+	double eff = e[1];
+	val += eff * (Q.massf[isp]*Q.rho/gmodel.mol_masses[isp]);
+    }
+    return val;
+}
+
+class LHRateConstant : RateConstant {
+public:
+    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0,
+	 Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+	_kInf = kInf.dup();
+	_k0 = k0.dup();
+	_efficiencies = efficiencies.dup();
+	_gmodel = gmodel;
+    }
+    this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+	lua_getfield(L, -1, "kInf");
+	_kInf = new ArrheniusRateConstant(L);
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "k0");
+	_k0 = new ArrheniusRateConstant(L);
+	lua_pop(L, 1);
+	
+	_efficiencies = efficiencies.dup();
+	_gmodel = gmodel;
+    }
+    LHRateConstant dup()
+    {
+	return new LHRateConstant(_kInf, _k0, _efficiencies, _gmodel);
+    }
+    override double eval(in GasState Q)
+    {
+	double M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
+	double kInf = _kInf.eval(Q);
+	double k0 = _k0.eval(Q);
+	return k0*kInf*M/(k0*M + kInf);
+    }
+private:
+    ArrheniusRateConstant _kInf, _k0;
+    Tuple!(int, double)[] _efficiencies;
+    GasModel _gmodel;
+}
+
+class TroeRateConstant : RateConstant {
+public:
+    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, double Fcent,
+	 Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+	_kInf = kInf.dup();
+	_k0 = k0.dup();
+	_Fcent = Fcent;
+	_Fcent_supplied = true;
+	_efficiencies = efficiencies.dup();
+	_gmodel = gmodel;
+    }
+    this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+	lua_getfield(L, -1, "kInf");
+	_kInf = new ArrheniusRateConstant(L);
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "k0");
+	_k0 = new ArrheniusRateConstant(L);
+	lua_pop(L, 1);
+
+	// Look for an F_cent value.
+	lua_getfield(L, -1, "F_cent");
+	if ( !lua_isnil(L, -1) ) {
+	    _Fcent_supplied = true;
+	    _Fcent = luaL_checknumber(L, -1);
+	    lua_pop(L, 1);
+	}
+	else {
+	    // Failng that, look for a, T1, T3 and possibly T2
+	    _Fcent_supplied = false;
+	    lua_pop(L, 1);
+	    lua_getfield(L, -1, "a"); _a = luaL_checknumber(L, -1); lua_pop(L, 1);
+	    lua_getfield(L, -1, "T1"); _T1 = luaL_checknumber(L, -1); lua_pop(L, 1);
+	    lua_getfield(L, -1, "T3"); _T3 = luaL_checknumber(L, -1); lua_pop(L, 1);
+	    lua_getfield(L, -1, "T2");
+	    if ( !lua_isnumber(L, -1) ) {
+		_T2_supplied = false;
+		_T2 = 0.0;
+	    }
+	    else {
+		_T2_supplied = true;
+		_T2 = luaL_checknumber(L, -1);
+	    }
+	    lua_pop(L, 1);
+	}
+	
+	_efficiencies = efficiencies.dup();
+	_gmodel = gmodel;
+    }
+    TroeRateConstant dup()
+    {
+	return new TroeRateConstant(_kInf, _k0, _Fcent, _efficiencies, _gmodel);
+    }
+    override double eval(in GasState Q)
+    {
+	immutable double essentially_zero = 1.0e-30;
+	double M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
+	double kInf = _kInf.eval(Q);
+	double k0 = _k0.eval(Q);
+	double p_r = k0*M/kInf;
+	double log_p_r = log10(max(p_r, essentially_zero));
+	double T = Q.T[0];
+
+	if ( !_Fcent_supplied ) {
+	    _Fcent = (1.0 - _a)*exp(-T/_T3) + _a*exp(-T/_T1);
+	    if ( _T2_supplied ) {
+		_Fcent += exp(-_T2/T);
+	    }
+	}
+
+	double log_F_cent = log10(max(_Fcent, essentially_zero));
+	double c = -0.4 - 0.67*log_F_cent;
+	double n = 0.75 - 1.27*log_F_cent;
+	double d = 0.14;
+
+	double numer = log_p_r + c; 
+	double denom = n - d*numer;
+	double frac = numer/denom;
+	double log_F = log_F_cent / (1.0 + frac*frac);
+	double F = pow(10,log_F);
+
+	return F*k0*kInf*M/(k0*M + kInf);
+    }
+private:
+    ArrheniusRateConstant _kInf, _k0;
+    double _Fcent, _a, _T1, _T2, _T3;
+    bool _Fcent_supplied, _T2_supplied;
+    Tuple!(int, double)[] _efficiencies;
+    GasModel _gmodel;
+}
+
 
 /++
  + Create a RateConstant object based on information in a LuaTable.
@@ -78,12 +226,16 @@ private:
  +        -- then model-specific parameters follow.
  +        A=..., n=..., C=...}
  +/
-RateConstant createRateConstant(lua_State* L)
+RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
 {
     auto model = getString(L, -1, "model");
     switch (model) {
     case "Arrhenius":
 	return new ArrheniusRateConstant(L);
+    case "Lindemann-Hinshelwood":
+	return new LHRateConstant(L, efficiencies, gmodel);
+    case "Troe":
+	return new TroeRateConstant(L, efficiencies, gmodel);
     case "fromEqConst":
 	return null;
     default:
@@ -108,6 +260,9 @@ version(rate_constant_test) {
 	auto rc2 = new ArrheniusRateConstant(L);
 	gd.T[0] = 4000.0;
 	assert(approxEqual(0.00159439, rc2.eval(gd), 1.0e-6), failedUnitTest());
+
+	// Test 3. Try the pressure-dependent rate of Lindemann-Hinshelwood type
+	
 
 	return 0;
     }

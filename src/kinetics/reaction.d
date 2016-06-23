@@ -46,7 +46,7 @@ public:
     @property double K_eq() const { return _K_eq; }
     @property ref int[] participants() { return _participants; }
     
-    this(in RateConstant forward, in RateConstant backward, GasModel gmodel)
+    this(RateConstant forward, RateConstant backward, GasModel gmodel)
     {
 	_gmodel = gmodel;
 	_Qw = new GasState(gmodel);
@@ -121,11 +121,11 @@ private:
     GasState _Qw; // a GasState for temporary working
     int[] _participants; // Storage of indices of species that
                          // participate in this reaction
-    double eval_forward_rate_constant(in GasState Q) const
+    double eval_forward_rate_constant(in GasState Q)
     {
 	return _forward.eval(Q);
     }
-    double eval_backward_rate_constant(in GasState Q) const
+    double eval_backward_rate_constant(in GasState Q)
     {
 	return _backward.eval(Q);
     }
@@ -142,7 +142,7 @@ private:
 class ElementaryReaction : Reaction
 {
 public:
-    this(in RateConstant forward, in RateConstant backward, GasModel gmodel,
+    this(RateConstant forward, RateConstant backward, GasModel gmodel,
 	 int[] reac_spidx, int[] reac_coeffs, int[] prod_spidx, int[] prod_coeffs,
 	 size_t n_species)
     {
@@ -180,7 +180,7 @@ public:
 	    _nu ~= nu2 - nu1;
 	}
     }
-    this(in RateConstant forward, in RateConstant backward, GasModel gmodel, in int[] participants,
+    this(RateConstant forward, RateConstant backward, GasModel gmodel, in int[] participants,
 	 in Tuple!(int, int)[] reactants, in Tuple!(int, int)[] products, in int[] nu)
     {
 	super(forward, backward, gmodel);
@@ -256,7 +256,7 @@ private:
 class AnonymousColliderReaction : Reaction
 {
 public:
-    this(in RateConstant forward, in RateConstant backward, GasModel gmodel,
+    this(RateConstant forward, RateConstant backward, GasModel gmodel,
 	 int[] reac_spidx, int[] reac_coeffs, int[] prod_spidx, int[] prod_coeffs,
 	 Tuple!(int,double)[] efficiencies, size_t n_species)
     {
@@ -295,7 +295,7 @@ public:
 	}
 	_efficiencies = efficiencies.dup();
     }
-    this(in RateConstant forward, in RateConstant backward, GasModel gmodel, in int[] participants,
+    this(RateConstant forward, RateConstant backward, GasModel gmodel, in int[] participants,
 	 in Tuple!(int, int)[] reactants, in Tuple!(int, int)[] products, in int[] nu, in Tuple!(int, double)[] efficiencies)
     {
 	super(forward, backward, gmodel);
@@ -398,12 +398,25 @@ private:
 Reaction createReaction(lua_State* L, GasModel gmodel)
 {
     int n_species = gmodel.n_species;
+    // We need to attempt to get table of efficiencies also
+    Tuple!(int, double)[] efficiencies;
+    lua_getfield(L, -1, "efficiencies");
+    if ( !lua_isnil(L, -1) ) {
+	lua_pushnil(L);
+	while ( lua_next(L, -2) != 0 ) {
+	    int spIdx = to!int(lua_tointeger(L, -2));
+	    double efficiency = lua_tonumber(L, -1);
+	    efficiencies ~= tuple(spIdx, efficiency);
+	    lua_pop(L, 1);
+	}
+    }
+    lua_pop(L, 1);
     // All Reactions have a forward and backward rate.
     lua_getfield(L, -1, "frc");
-    auto frc = createRateConstant(L);
+    auto frc = createRateConstant(L, efficiencies, gmodel);
     lua_pop(L, 1);
     lua_getfield(L, -1, "brc");
-    auto brc = createRateConstant(L);
+    auto brc = createRateConstant(L, efficiencies, gmodel);
     lua_pop(L, 1);
 
     // And most use reacIdx, reacCoeffs, prodIdx and prodCoeffs lists.
@@ -422,16 +435,6 @@ Reaction createReaction(lua_State* L, GasModel gmodel)
 				      prodIdx, prodCoeffs, n_species);
     case "anonymous_collider":
 	// We need to get table of efficiencies also
-	Tuple!(int, double)[] efficiencies;
-	lua_getfield(L, -1, "efficiencies");
-	lua_pushnil(L);
-	while ( lua_next(L, -2) != 0 ) {
-	    int spIdx = to!int(lua_tointeger(L, -2));
-	    double efficiency = lua_tonumber(L, -1);
-	    efficiencies ~= tuple(spIdx, efficiency);
-	    lua_pop(L, 1);
-	}
-	lua_pop(L, 1);
 	return new AnonymousColliderReaction(frc, brc, gmodel, 
 					     reacIdx, reacCoeffs,
 					     prodIdx, prodCoeffs,

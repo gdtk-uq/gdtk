@@ -36,6 +36,28 @@ function transformRateConstant(t, coeffs, anonymousCollider)
       m.A = t.A*convFactor
       m.n = t.n
       m.C = t.C
+   elseif m.model == 'pressure dependent' then
+      m.kInf = {}
+      m.kInf.A = t.kInf.A * convFactor
+      m.kInf.n = t.kInf.n
+      m.kInf.C = t.kInf.C
+
+      local convFactorLow = base^nc
+      m.k0 = {}
+      m.k0.A = t.k0.A * convFactorLow
+      m.k0.n = t.k0.n
+      m.k0.C = t.k0.C
+      
+      if ( t.Troe ) then
+	 m.Troe = t.Troe
+	 m.model = 'Troe'
+      else
+	 m.model = 'Lindemann-Hinshelwood'
+      end
+   else
+      print("The rate constant model: ", m.model, " is not known.")
+      print("Bailing out!")
+      os.exit(1)
    end
 
    return m
@@ -45,6 +67,19 @@ function rateConstantToLuaStr(rc)
    local str = ""
    if rc.model == 'Arrhenius' then
       str = string.format("{model='Arrhenius', A=%16.12e, n=%f, C=%16.12e }", rc.A, rc.n, rc.C)
+   elseif rc.model == 'Lindemann-Hinshelwood' then
+      str = "{model='Lindemann-Hinshelwood',\n"
+      str = str .. string.format(" kInf={A=%16.12e, n=%f, C=%16.12e},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
+      str = str .. string.format(" k0={A=%16.12e, n=%f, C=%16.12e}\n", rc.k0.A, rc.k0.n, rc.k0.C)
+      str = str .. "}"
+   elseif rc.model == 'Troe' then
+      str = "{model='Troe',\n"
+      str = str .. string.format(" kInf={A=%16.12e, n=%f, C=%16.12e},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
+      str = str .. string.format(" k0={A=%16.12e, n=%f, C=%16.12e},\n", rc.k0.A, rc.k0.n, rc.k0.C)
+      for k,v in pairs(rc.Troe) do
+	 str = str .. string.format(" %s=%16.12e, ", k, v)
+      end
+      str = str .. "\n}"
    elseif rc.model == 'fromEqConst' then
       str = "{model='fromEqConst'}"
    else
@@ -345,74 +380,30 @@ function transformReaction(t, species, suppressWarnings)
       -- By default
       r.ec = {model="from thermo",iT=0}
    end
-
-   -- Deal with efficiencies
-   if anonymousCollider then
-      r.type = "anonymous_collider"
-      r.anonymousCollider = true
-      -- All efficiencies are set to 1.0
-      r.efficiencies = {}
-      for i=1,#species do
-	 -- the { , } table needs to have 0-offset indices in it
-	 r.efficiencies[i-1] = 1.0
-      end
-      -- Next look at the special cases
-      if t.efficiencies then
-	 for k,v in pairs(t.efficiencies) do
-	    if not species[k] then
-		  if not suppressWarnings then
-		     print("WARNING: One of the species given in the efficiencies list")
-		     print("is NOT one of the species in the gas model.")
-		     print("The efficiency for: ", k, " will be skipped.")
-		     print("This occurred for reaction number: ", t.number)
-		     if t.label then
-			print("label: ", t.label)
-		     end
-		  end
-	    else
-	       -- species[k] gives back a C++ index,
-	       r.efficiencies[species[k]] =  v
-	    end
-	 end
-      end
-      local essentially_zero = 1.0e-9
-      for i=#r.efficiencies,1,-1 do
-	 if r.efficiencies[i] <= essentially_zero then
-	    table.remove(r.efficiencies, i)
-	 end
-      end
-      -- table.remove can't handle index i=0
-      if r.efficiencies[0] <= essentially_zero then
-	 r.efficiencies[0] = nil
-      end
-
-   end
-
-   -- Look for presence of pressure dependent reaction
---[==[ NOT UPDATED : 03-Mar-2015
-         TODO when pressure dependent reactions are added.
-   pressure_dependent = false
+   
+   pressureDependent = false
    for _,p in ipairs(rs[1]) do
       if type(p) == 'string' and p == 'pressure dependent' then
-	 pressure_dependent = true
+	 pressureDependent = true
       end
    end
    for _,p in ipairs(rs[3]) do
       if type(p) == 'string' and p == 'pressure dependent' then
-	 pressure_dependent = true
+	 pressureDependent = true
       end
    end
 
-   -- Deal with any efficiencies for anonymous collision partners (if needed)
-   if anonymousCollider then --  or pressure_dependent then
+   -- Deal with efficiencies
+   if anonymousCollider or pressureDependent then
       if anonymousCollider then
-	 r.type = "withAnonymousCollider"
+	 r.type = "anonymous_collider"
+	 r.anonymousCollider = true
       end
       -- All efficiencies are set to 1.0
       r.efficiencies = {}
-      for i=1,species.size do
+      for i=0,#species-1 do
 	 -- the { , } table needs to have 0-offset indices in it
-	 r.efficiencies[i] = {i-1, 1.0}
+	 r.efficiencies[i] = 1.0
       end
       -- Next look at the special cases
       if t.efficiencies then
@@ -428,38 +419,25 @@ function transformReaction(t, species, suppressWarnings)
 		     end
 		  end
 	    else
-	       -- species[k] gives back a C++ index,
-	       -- need to insert it at +1
-	       r.efficiencies[species[k]+1] = {species[k], v}
+	       -- species[k] gives back a D index,
+	       r.efficiencies[species[k]] =  v
 	    end
 	 end
       end
       -- For efficient execution in inner loops,
-      -- remove values whose efficiency is zero.
-      local essentially_zero = 1.0e-9
+      -- remove values whose efficiency is very small or zero.
+      local essentiallyZero = 1.0e-9
       for i=#r.efficiencies,1,-1 do
-	 if r.efficiencies[i][2] <= essentially_zero then
+	 if r.efficiencies[i] <= essentiallyZero then
 	    table.remove(r.efficiencies, i)
 	 end
       end
-
-      if pressure_dependent then
-	 if r.frc then
-	    if r.frc.model == "pressure dependent" then
-	       r.frc.efficiencies = r.efficiencies
-	    end
-	 end
-	 if r.brc then
-	    if r.brc.model == "pressure dependent" then
-	       r.brc.efficiencies = r.efficiencies
-	    end
-	 end
+      -- table.remove can't handle index i=0
+      if r.efficiencies[0] <= essentiallyZero then
+	 r.efficiencies[0] = nil
       end
---]==]      
-   -- Look for chemistry_energy_coupling field
-   --if t.chemistry_energy_coupling then
-   --    r.chemistry_energy_coupling = t.chemistry_energy_coupling
-   --end
+
+   end
 
    return r
 end
