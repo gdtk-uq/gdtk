@@ -342,7 +342,7 @@ public:
 	}
 	auto outfile = new GzipOut(fileName);
 	auto writer = appender!string();
-	formattedWrite(writer, "%20.12e\n", simTime);
+	formattedWrite(writer, "%.18g\n", simTime);
 	outfile.compress(writer.data);
 	writer = appender!string();
 	foreach(varname; varListForSolidCell()) {

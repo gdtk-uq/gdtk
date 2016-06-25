@@ -872,7 +872,7 @@ public:
 		yB = get_vtx(i,j+1).pos[gtl].y;
 		LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
 		if (LAB < 1.0e-9) {
-		    writefln("Zero length ifi[%d,%d]: %e", i, j, LAB);
+		    writefln("Zero length ifi[%d,%d]: %.18g", i, j, LAB);
 		}
 		// Direction cosines for the unit normal.
 		iface.n.refx = (yB - yA) / LAB;
@@ -907,7 +907,7 @@ public:
 		yC = get_vtx(i,j).pos[gtl].y;
 		LBC = sqrt((xC - xB) * (xC - xB) + (yC - yB) * (yC - yB));
 		if (LBC < 1.0e-9) {
-		    writefln("Zero length ifj[%d,%d]: %e", i, j, LBC);
+		    writefln("Zero length ifj[%d,%d]: %.18g", i, j, LBC);
 		}
 		// Direction cosines for the unit normal.
 		iface.n.refx = (yC - yB) / LBC;
@@ -1887,7 +1887,7 @@ public:
 	auto writer = appender!string();
 	formattedWrite(writer, "structured_grid_flow 1.0\n");
 	formattedWrite(writer, "label: %s\n", label);
-	formattedWrite(writer, "sim_time: %.16e\n", sim_time);
+	formattedWrite(writer, "sim_time: %.18g\n", sim_time);
 	auto variable_list = variable_list_for_cell(myConfig.gmodel);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);
 	foreach(varname; variable_list) {

@@ -80,7 +80,7 @@ void write_history_cells_to_files(double sim_time)
 			      histDir, GlobalConfig.base_file_name, blkId, cellId);
 	auto cell = gasBlocks[blkId].cells[cellId];
 	auto writer = appender!string();
-	formattedWrite(writer, "%.16e %s\n", sim_time,
+	formattedWrite(writer, "%.18g %s\n", sim_time,
 		       cell.write_values_to_string());
 	append(fname, writer.data);
     }
@@ -93,7 +93,7 @@ void write_history_cells_to_files(double sim_time)
 			      histDir, GlobalConfig.base_file_name, blkId, cellId);
 	auto cell = solidBlocks[blkId].activeCells[cellId];
 	auto writer = appender!string();
-	formattedWrite(writer, "%.16e %s\n", sim_time,
+	formattedWrite(writer, "%.18g %s\n", sim_time,
 		       cell.writeValuesToString());
 	append(fname, writer.data);
     }

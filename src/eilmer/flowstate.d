@@ -240,30 +240,30 @@ public:
     {
 	auto writer = appender!string();
 	formattedWrite(writer, "{");
-	formattedWrite(writer, "\"p\": %.16e", gas.p);
-	formattedWrite(writer, ", \"T\": [ %.16e", gas.T[0]);
+	formattedWrite(writer, "\"p\": %.18g", gas.p);
+	formattedWrite(writer, ", \"T\": [ %.18g", gas.T[0]);
 	foreach (i; 1 .. gas.T.length) {
-	    formattedWrite(writer, ", %.16e", gas.T[i]);
+	    formattedWrite(writer, ", %.18g", gas.T[i]);
 	}
 	formattedWrite(writer, "]");
-	formattedWrite(writer, ", \"massf\": [ %.16e", gas.massf[0]);
+	formattedWrite(writer, ", \"massf\": [ %.18g", gas.massf[0]);
 	foreach (i; 1 .. gas.massf.length) {
-	    formattedWrite(writer, ", %.16e", gas.massf[i]);
+	    formattedWrite(writer, ", %.18g", gas.massf[i]);
 	}
 	formattedWrite(writer, "]");
-	formattedWrite(writer, ", \"quality\": %.16e", gas.quality);
-	formattedWrite(writer, ", \"velx\": %.16e", vel.x);
-	formattedWrite(writer, ", \"vely\": %.16e", vel.y);
-	formattedWrite(writer, ", \"velz\": %.16e", vel.z);
-	formattedWrite(writer, ", \"Bx\": %.16e", B.x);
-	formattedWrite(writer, ", \"By\": %.16e", B.y);
-	formattedWrite(writer, ", \"Bz\": %.16e", B.z);
-	formattedWrite(writer, ", \"psi\": %.16e", psi);
-	formattedWrite(writer, ", \"divB\": %.16e", divB);
-	formattedWrite(writer, ", \"tke\": %.16e", tke);
-	formattedWrite(writer, ", \"omega\": %.16e", omega);
-	formattedWrite(writer, ", \"mu_t\": %.16e", mu_t);
-	formattedWrite(writer, ", \"k_t\": %.16e", k_t);
+	formattedWrite(writer, ", \"quality\": %.18g", gas.quality);
+	formattedWrite(writer, ", \"velx\": %.18g", vel.x);
+	formattedWrite(writer, ", \"vely\": %.18g", vel.y);
+	formattedWrite(writer, ", \"velz\": %.18g", vel.z);
+	formattedWrite(writer, ", \"Bx\": %.18g", B.x);
+	formattedWrite(writer, ", \"By\": %.18g", B.y);
+	formattedWrite(writer, ", \"Bz\": %.18g", B.z);
+	formattedWrite(writer, ", \"psi\": %.18g", psi);
+	formattedWrite(writer, ", \"divB\": %.18g", divB);
+	formattedWrite(writer, ", \"tke\": %.18g", tke);
+	formattedWrite(writer, ", \"omega\": %.18g", omega);
+	formattedWrite(writer, ", \"mu_t\": %.18g", mu_t);
+	formattedWrite(writer, ", \"k_t\": %.18g", k_t);
 	formattedWrite(writer, ", \"S\": %d", S);
 	formattedWrite(writer, "}");
 	return writer.data;
@@ -325,31 +325,31 @@ string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) 
 {
     // Should match FVCell.write_values_to_string()
     auto writer = appender!string();
-    formattedWrite(writer, "%.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e",
+    formattedWrite(writer, "%.18g %.18g %.18g %.18g %.18g %.18g %.18g %.18g",
 		   pos.x, pos.y, pos.z, volume, fs.gas.rho,
 		   fs.vel.x, fs.vel.y, fs.vel.z);
     if (GlobalConfig.MHD)
-	formattedWrite(writer, " %.16e %.16e %.16e %.16e", fs.B.x, fs.B.y, fs.B.z, fs.divB);
+	formattedWrite(writer, " %.18g %.18g %.18g %.18g", fs.B.x, fs.B.y, fs.B.z, fs.divB);
 	if (GlobalConfig.divergence_cleaning)
-	   formattedWrite(writer, " %.16e", fs.psi);
+	   formattedWrite(writer, " %.18g", fs.psi);
     if (GlobalConfig.include_quality)
-	formattedWrite(writer, " %.16e", fs.gas.quality);
-    formattedWrite(writer, " %.16e %.16e %.16e", fs.gas.p, fs.gas.a, fs.gas.mu);
-    foreach (kvalue; fs.gas.k) formattedWrite(writer, " %.16e", kvalue); 
+	formattedWrite(writer, " %.18g", fs.gas.quality);
+    formattedWrite(writer, " %.18g %.18g %.18g", fs.gas.p, fs.gas.a, fs.gas.mu);
+    foreach (kvalue; fs.gas.k) formattedWrite(writer, " %.18g", kvalue); 
     int S = 0;  // zero for shock detector
-    formattedWrite(writer, " %.16e %.16e %d", fs.mu_t, fs.k_t, S);
+    formattedWrite(writer, " %.18g %.18g %d", fs.mu_t, fs.k_t, S);
     if (GlobalConfig.radiation) {
 	double Q_rad_org = 0.0; double f_rad_org = 0.0; double Q_rE_rad = 0.0;
-	formattedWrite(writer, " %.16e %.16e %.16e", Q_rad_org, f_rad_org, Q_rE_rad);
+	formattedWrite(writer, " %.18g %.18g %.18g", Q_rad_org, f_rad_org, Q_rE_rad);
     }
-    formattedWrite(writer, " %.16e %.16e", fs.tke, fs.omega);
-    foreach (massfvalue; fs.gas.massf) formattedWrite(writer, " %.16e", massfvalue); 
+    formattedWrite(writer, " %.18g %.18g", fs.tke, fs.omega);
+    foreach (massfvalue; fs.gas.massf) formattedWrite(writer, " %.18g", massfvalue); 
     double dt_chem = -1.0;
-    if (fs.gas.massf.length > 1) formattedWrite(writer, " %.16e", dt_chem); 
+    if (fs.gas.massf.length > 1) formattedWrite(writer, " %.18g", dt_chem); 
     foreach (imode; 0 .. fs.gas.e.length) 
-	formattedWrite(writer, " %.16e %.16e", fs.gas.e[imode], fs.gas.T[imode]); 
+	formattedWrite(writer, " %.18g %.18g", fs.gas.e[imode], fs.gas.T[imode]); 
     double dt_therm = -1.0;
-    if (fs.gas.e.length > 1) formattedWrite(writer, " %.16e", dt_therm); 
+    if (fs.gas.e.length > 1) formattedWrite(writer, " %.18g", dt_therm); 
     return writer.data;
 } // end  cell_data_as_string()
  
@@ -368,7 +368,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     auto writer = appender!string();
     formattedWrite(writer, "structured_grid_flow 1.0\n");
     formattedWrite(writer, "label: %s\n", grid.label);
-    formattedWrite(writer, "sim_time: %.16e\n", t0);
+    formattedWrite(writer, "sim_time: %.18g\n", t0);
     auto variable_list = variable_list_for_cell(gmodel);
     formattedWrite(writer, "variables: %d\n", variable_list.length);
     // Variable list for cell on one line.
@@ -422,7 +422,7 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
     auto writer = appender!string();
     formattedWrite(writer, "unstructured_grid_flow 1.0\n");
     formattedWrite(writer, "label: %s\n", grid.label);
-    formattedWrite(writer, "sim_time: %.16e\n", t0);
+    formattedWrite(writer, "sim_time: %.18g\n", t0);
     auto variable_list = variable_list_for_cell(gmodel);
     formattedWrite(writer, "variables: %d\n", variable_list.length);
     // Variable list for cell on one line.

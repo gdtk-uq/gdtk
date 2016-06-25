@@ -67,7 +67,7 @@ end
 FixedP = GhostCellEffect:new{p_outside=1.0e5}
 FixedP.type = "fixed_pressure"
 function FixedP:tojson()
-   local str = string.format('          {"type": "%s", "p_outside": %f}',
+   local str = string.format('          {"type": "%s", "p_outside": %.18g}',
 			     self.type, self.p_outside)
    return str
 end
@@ -75,7 +75,7 @@ end
 FixedPT = GhostCellEffect:new{p_outside=1.0e5, T_outside=300.0}
 FixedPT.type = "fixed_pressure_temperature"
 function FixedPT:tojson()
-   local str = string.format('          {"type": "%s", "p_outside": %f, "T_outside": %f}',
+   local str = string.format('          {"type": "%s", "p_outside": %.18g, "T_outside": %.18g}',
 			     self.type, self.p_outside, self.T_outside)
    return str
 end
@@ -92,10 +92,10 @@ function FromStagnation:tojson()
    str = str .. string.format(' "stagnation_condition": %s,',
 			      self.stagCondition:toJSONString())
    str = str .. string.format(' "direction_type": "%s",', self.direction_type)
-   str = str .. string.format(' "direction_x": %f, "direction_y": %f, "direction_z": %f,',
+   str = str .. string.format(' "direction_x": %.18g, "direction_y": %.18g, "direction_z": %.18g,',
 			      self.direction_x, self.direction_y, self.direction_z)
-   str = str .. string.format(' "alpha": %f, "beta": %f,', self.alpha, self.beta)
-   str = str .. string.format(' "mass_flux": %f, "relax_factor": %f',
+   str = str .. string.format(' "alpha": %.18g, "beta": %.18g,', self.alpha, self.beta)
+   str = str .. string.format(' "mass_flux": %.18g, "relax_factor": %.18g',
 			      self.mass_flux, self.relax_factor)
    str = str .. '}'
    return str
@@ -114,7 +114,7 @@ function FullFaceExchangeCopy:tojson()
 			      tostring(self.reorient_vector_quantities))
    str = str .. string.format('"Rmatrix": [')
    for i,v in ipairs(self.Rmatrix) do
-      str = str .. string.format('%f', v)
+      str = str .. string.format('%.18g', v)
       if i < #self.Rmatrix then str = str .. ', ' end
    end
    str = str .. ']' -- end of Rmatrix
@@ -135,17 +135,17 @@ function MappedCellExchangeCopy:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
    str = str .. string.format('"transform_position": %s, ',
 			      tostring(self.transform_position))
-   str = str .. string.format('"c0": [%f, %f, %f], ', self.c0.x, self.c0.y, self.c0.z)
-   str = str .. string.format('"n": [%f, %f, %f], ', self.n.x, self.n.y, self.n.z)
-   str = str .. string.format('"alpha": %f, ', self.alpha)
-   str = str .. string.format('"delta": [%f, %f, %f], ', self.delta.x, self.delta.y, self.delta.z)
+   str = str .. string.format('"c0": [%.18g, %.18g, %.18g], ', self.c0.x, self.c0.y, self.c0.z)
+   str = str .. string.format('"n": [%.18g, %.18g, %.18g], ', self.n.x, self.n.y, self.n.z)
+   str = str .. string.format('"alpha": %.18g, ', self.alpha)
+   str = str .. string.format('"delta": [%.18g, %.18g, %.18g], ', self.delta.x, self.delta.y, self.delta.z)
    str = str .. string.format('"list_mapped_cells": %s, ',
 			      tostring(self.list_mapped_cells))
    str = str .. string.format('"reorient_vector_quantities": %s, ',
 			      tostring(self.reorient_vector_quantities))
    str = str .. string.format('"Rmatrix": [')
    for i,v in ipairs(self.Rmatrix) do
-      str = str .. string.format('%f', v)
+      str = str .. string.format('%.18g', v)
       if i < #self.Rmatrix then str = str .. ', ' end
    end
    str = str .. ']' -- end of Rmatrix
@@ -192,7 +192,7 @@ TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
 TranslatingSurface.type = "translating_surface"
 function TranslatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "v_trans": [%f, %f, %f]', self.v_trans.x, 
+   str = str .. string.format(' "v_trans": [%.18g, %.18g, %.18g]', self.v_trans.x, 
 			      self.v_trans.y, self.v_trans.z)
    str = str .. '}'
    return str
@@ -203,9 +203,9 @@ RotatingSurface = BoundaryInterfaceEffect:new{centre=nil, r_omega=nil}
 RotatingSurface.type = "rotating_surface"
 function RotatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "centre": [%f, %f, %f],', self.centre.x, 
+   str = str .. string.format(' "centre": [%.18g, %.18g, %.18g],', self.centre.x, 
 			      self.centre.y, self.centre.z)
-   str = str .. string.format(' "r_omega": [%f, %f, %f]', self.r_omega.x, 
+   str = str .. string.format(' "r_omega": [%.18g, %.18g, %.18g]', self.r_omega.x, 
 			      self.r_omega.y, self.r_omega.z)
    str = str .. '}'
    return str
@@ -215,7 +215,7 @@ FixedT = BoundaryInterfaceEffect:new{Twall=nil}
 FixedT.type = "fixed_temperature"
 function FixedT:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "Twall": %f', self.Twall)
+   str = str .. string.format(' "Twall": %.18g', self.Twall)
    str = str .. '}'
    return str
 end
@@ -316,10 +316,10 @@ function BoundaryCondition:tojson()
    str = str .. string.format('"label": "%s", \n', self.label)
    str = str .. string.format('        "type": "%s", \n', self.type)
    str = str .. string.format('        "group": "%s", \n', self.group)
-   str = str .. string.format('"is_wall": %s, ', tostring(self.is_wall))
-   str = str .. string.format('"ghost_cell_data_available": %s, ',
+   str = str .. string.format('        "is_wall": %s, \n', tostring(self.is_wall))
+   str = str .. string.format('        "ghost_cell_data_available": %s, \n',
 			      tostring(self.ghost_cell_data_available))
-   str = str .. string.format('"convective_flux_computed_in_bc": %s, ',
+   str = str .. string.format('        "convective_flux_computed_in_bc": %s, \n',
 			      tostring(self.convective_flux_computed_in_bc))
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
@@ -629,7 +629,7 @@ SolidBIE_FixedT = SolidBoundaryInterfaceEffect:new{Twall=300.0}
 SolidBIE_FixedT.type = "fixed_temperature"
 function SolidBIE_FixedT:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
-   str = str .. string.format('"Twall": %12.6e }', self.Twall)
+   str = str .. string.format('"Twall": %.18g }', self.Twall)
    return str
 end
 

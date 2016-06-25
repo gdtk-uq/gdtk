@@ -89,14 +89,14 @@ void writeInitialSolidFile(string fileName, ref StructuredGrid grid,
 	}
 	// Should match SolidFVCell.writeValuesToString()
 	auto writer = appender!string();
-	formattedWrite(writer, "%.16e %.16e %.16e %.16e %.16e %.16e",
+	formattedWrite(writer, "%.18g %.18g %.18g %.18g %.18g %.18g",
 		       pos.x, pos.y, pos.z, volume, e, T);
 	return writer.data;
     }
 
     // Write the data for the whole structured block.
     auto f = File(fileName, "w");
-    f.writefln("%20.16e", t0);
+    f.writefln("%.18g", t0);
     // Variable list for cell on one line.
     auto writer = appender!string();
     foreach(varname; varListForSolidCell()) {

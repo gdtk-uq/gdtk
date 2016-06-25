@@ -162,8 +162,6 @@ public:
 	    x0 = to!double(items[0]); y0 = to!double(items[1]); z0 = to!double(items[2]);
 	    x1 = to!double(items[3]); y1 = to!double(items[4]); z1 = to!double(items[5]);
 	    limitRegion = true;
-	    // writeln(format("    limit region to x0=%g y0=%g z0=%g x1=%g y1=%g z1=%g",
-	    //		   x0, y0, z0, x1, y1, z1));
 	}
 	double L1 = 0.0;
 	double L2 = 0.0;
@@ -322,9 +320,9 @@ public:
     string values_as_string(size_t i)
     {
 	auto writer = appender!string();
-	formattedWrite(writer, "%e", _data[i][0]);
+	formattedWrite(writer, "%.18g", _data[i][0]);
 	foreach (ivar; 1 .. variableNames.length) {
-	    formattedWrite(writer, " %e", _data[i][ivar]);
+	    formattedWrite(writer, " %.18g", _data[i][ivar]);
 	}
 	return writer.data;
     }

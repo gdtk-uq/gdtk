@@ -289,7 +289,7 @@ public:
 		    cell.fs.copy_average_values_from(neighbour_flows, myConfig.gmodel);
 		    cell.encode_conserved(gtl, 0, omegaz);
 		    cell.decode_conserved(gtl, 0, omegaz);
-		    writefln("after flow-data replacement: block_id = %d, cell @ %g,%g,%g\n",
+		    writefln("after flow-data replacement: block_id = %d, cell @ %.18g,%.18g,%.18g\n",
 			     id, cell.pos[0].x, cell.pos[0].y, cell.pos[0].z);
 		    writeln(cell);
 		} // end adjust_invalid_cell_data 

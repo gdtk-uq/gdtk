@@ -90,7 +90,7 @@ public:
 	repr ~= "id=" ~ to!string(id);
 	repr ~= ", pos=" ~ to!string(pos);
 	repr ~= ", iface_ids=["; foreach (f; iface) { repr ~= format("%d,", f.id); } repr ~= "]";
-	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%g,", osgn); } repr ~= "]";
+	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%.18g,", osgn); } repr ~= "]";
 	repr ~= ", vtx_ids=["; foreach (v; vtx) { repr ~= format("%d,", v.id); } repr ~= "]";
 	repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
 	repr ~= ",\n... fs=" ~ to!string(fs);
@@ -225,7 +225,7 @@ public:
 	repr ~= "id=" ~ to!string(id);
 	repr ~= ", pos=" ~ to!string(pos);
 	repr ~= ", iface_ids=["; foreach (f; iface) { repr ~= format("%d,", f.id); } repr ~= "]";
-	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%g,", osgn); } repr ~= "]";
+	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%.18g,", osgn); } repr ~= "]";
 	repr ~= ", vtx_ids=["; foreach (v; vtx) { repr ~= format("%d,", v.id); } repr ~= "]";
 	repr ~= ",\n... volume=" ~ to!string(volume);
 	repr ~= ", areaxy=" ~ to!string(areaxy);
@@ -336,29 +336,29 @@ public:
     {
 	// Should match cell_data_as_string() in flowstate.d
 	auto writer = appender!string();
-	formattedWrite(writer, "%.16e %.16e %.16e %.16e %.16e %.16e %.16e %.16e",
+	formattedWrite(writer, "%.18g %.18g %.18g %.18g %.18g %.18g %.18g %.18g",
 		       pos[0].x, pos[0].y, pos[0].z, volume[0], fs.gas.rho,
 		       fs.vel.x, fs.vel.y, fs.vel.z);
 	if (myConfig.MHD) {
-	    formattedWrite(writer, " %.16e %.16e %.16e %.16e", fs.B.x, fs.B.y, fs.B.z, fs.divB); 
-	    if (myConfig.divergence_cleaning) { formattedWrite(writer, " %.16e", fs.psi); }
+	    formattedWrite(writer, " %.18g %.18g %.18g %.18g", fs.B.x, fs.B.y, fs.B.z, fs.divB); 
+	    if (myConfig.divergence_cleaning) { formattedWrite(writer, " %.18g", fs.psi); }
 	}
 	if (myConfig.include_quality) {  
-	    formattedWrite(writer, " %.16e", fs.gas.quality);
+	    formattedWrite(writer, " %.18g", fs.gas.quality);
 	}
-	formattedWrite(writer, " %.16e %.16e %.16e", fs.gas.p, fs.gas.a, fs.gas.mu);
-	foreach(i; 0 .. fs.gas.k.length) formattedWrite(writer, " %.16e", fs.gas.k[i]); 
-	formattedWrite(writer, " %.16e %.16e %d", fs.mu_t, fs.k_t, fs.S);
+	formattedWrite(writer, " %.18g %.18g %.18g", fs.gas.p, fs.gas.a, fs.gas.mu);
+	foreach(i; 0 .. fs.gas.k.length) formattedWrite(writer, " %.18g", fs.gas.k[i]); 
+	formattedWrite(writer, " %.18g %.18g %d", fs.mu_t, fs.k_t, fs.S);
 	if (myConfig.radiation) { 
-	    formattedWrite(writer, " %.16e %.16e %.16e", Q_rad_org, f_rad_org, Q_rE_rad);
+	    formattedWrite(writer, " %.18g %.18g %.18g", Q_rad_org, f_rad_org, Q_rE_rad);
 	} 
-	formattedWrite(writer, " %.16e %.16e", fs.tke, fs.omega);
-	foreach(i; 0 .. fs.gas.massf.length) formattedWrite(writer, " %.16e", fs.gas.massf[i]); 
-	if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.16e", dt_chem); } 
+	formattedWrite(writer, " %.18g %.18g", fs.tke, fs.omega);
+	foreach(i; 0 .. fs.gas.massf.length) formattedWrite(writer, " %.18g", fs.gas.massf[i]); 
+	if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18g", dt_chem); } 
 	foreach(i; 0 .. fs.gas.e.length) {
-	    formattedWrite(writer, " %.16e %.16e", fs.gas.e[i], fs.gas.T[i]);
+	    formattedWrite(writer, " %.18g %.18g", fs.gas.e[i], fs.gas.T[i]);
 	} 
-	if (fs.gas.e.length > 1) { formattedWrite(writer, " %.16e", dt_therm); }
+	if (fs.gas.e.length > 1) { formattedWrite(writer, " %.18g", dt_therm); }
 	return writer.data;
     } // end write_values_to_string()
 
