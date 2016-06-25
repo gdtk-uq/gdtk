@@ -81,7 +81,7 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 
 	    // Should match SolidFVCell.writeValuesToString()
 	    auto writer = appender!string();
-	    formattedWrite(writer, "%.18g %.18g %.18g %.18g %.18g %.18g",
+	    formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e",
 			   pos.x, pos.y, pos.z, volume, e, T);
 	    
 	    return writer.data;
@@ -89,7 +89,7 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 
 	// Write the data for the whole structured block.
 	auto f = File(fname, "w");
-	f.writefln("%.18g", t0);
+	f.writefln("%.18e", t0);
 	// Variable list for cell on one line.
 	auto writer = appender!string();
 	foreach(varname; varListForSolidCell()) {

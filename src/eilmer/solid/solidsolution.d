@@ -207,9 +207,9 @@ public:
     string values_as_string(size_t i, size_t j, size_t k)
     {
 	auto writer = appender!string();
-	formattedWrite(writer, "%.18g", _data[i][j][k][0]);
+	formattedWrite(writer, "%.18e", _data[i][j][k][0]);
 	foreach (ivar; 1 .. variableNames.length) {
-	    formattedWrite(writer, " %.18g", _data[i][j][k][ivar]);
+	    formattedWrite(writer, " %.18e", _data[i][j][k][ivar]);
 	}
 	return writer.data;
     }

@@ -64,7 +64,7 @@ public:
     string writeValuesToString() const
     {
 	auto writer = appender!string();
-	formattedWrite(writer, "%.18g %.18g %.18g %.18g %.18g %.18g",
+	formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e",
 		       pos.x, pos.y, pos.z, volume, e[0], T);
 	return writer.data;
     }
