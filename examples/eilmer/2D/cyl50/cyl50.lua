@@ -18,15 +18,13 @@ inflow = FlowState:new{p=257.3, T=222.0, velx=597.3, vely=0.0}
 --  d     |
 --  a-----b
 --  0------------> x
-a = Vector3:new{0.0,0.005}; b = Vector3:new{1.0,0.005}
-c = Vector3:new{1.0,0.7}; d = Vector3:new{0.0,0.06}
-sth = Line:new{a,b}; nth = Line:new{d,c};
-wst = Line:new{a,d}; est = Line:new{b,c}
+a = Vector3:new{x=0.0,y=0.005}; b = Vector3:new{x=1.0,y=0.005}
+c = Vector3:new{x=1.0,y=0.7}; d = Vector3:new{x=0.0,y=0.06}
 clusterx = RobertsFunction:new{end0=true,end1=false,beta=1.1}
 clustery = RobertsFunction:new{end0=true,end1=false,beta=1.01}
-grd = StructuredGrid:new{psurface=makePatch{nth, est, sth, wst, gridType="ao"},
-			 cfList = {clusterx, clustery, clusterx, clustery},
-			 niv=51, njv=51}
+myCFList = {north=clusterx, east=clustery, south=clusterx, west=clustery}
+grd = StructuredGrid:new{psurface=AOPatch:new{p00=a, p10=b, p11=c, p01=d},
+			 cfList=myCFList, niv=51, njv=51}
 
 -- Assemble the block from the grid and boundary data.
 blks = SBlockArray{grid=grd, nib=2, njb=2, 
