@@ -167,7 +167,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 void update_times_file()
 {
     auto writer = appender!string();
-    formattedWrite(writer, "%04d %.18g %.18g\n", current_tindx, sim_time, dt_global);
+    formattedWrite(writer, "%04d %.18e %.18e\n", current_tindx, sim_time, dt_global);
     append(GlobalConfig.base_file_name ~ ".times", writer.data);
 }
 

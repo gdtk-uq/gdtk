@@ -318,7 +318,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		}
 		auto norms = soln.compute_volume_weighted_norms(varName, regionStr);
 		write("    variable= ", varName, "\n");
-		write(format(" L1= %.18g L2= %.18g Linf= %.18g\n",
+		write(format(" L1= %.18e L2= %.18e Linf= %.18e\n",
 			     norms[0], norms[1], norms[2]));
 		write(" x= ", norms[3], " y= ", norms[4], " z= ", norms[5]);
 		write("\n");
@@ -334,7 +334,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		    }
 		    auto norms = solidSoln.compute_volume_weighted_norms(varName, regionStr);
 		    write("    variable= ", varName, "\n");
-		    write(format(" L1= %.18g L2= %.18g Linf= %.18g\n",
+		    write(format(" L1= %.18e L2= %.18e Linf= %.18e\n",
 				 norms[0], norms[1], norms[2]));
 		    write(" x= ", norms[3], " y= ", norms[4], " z= ", norms[5]);
 		    write("\n");
@@ -480,7 +480,7 @@ void write_VTK_XML_files(string jobName, string plotDir,
     // Note that we append to the .pvd file for each tindx.
     auto pvdFile = File(fileName, "a");
     fileName = jobName ~ format(".t%04d.pvtu", tindx);
-    pvdFile.writef("<DataSet timestep=\"%.18g\" group=\"\" part=\"0\" file=\"%s\"/>\n",
+    pvdFile.writef("<DataSet timestep=\"%.18e\" group=\"\" part=\"0\" file=\"%s\"/>\n",
 		   soln.sim_time, fileName);
     pvdFile.close();
     return;
@@ -531,7 +531,7 @@ void write_VTK_XML_files(string jobName, string plotDir,
     // Note that we append to the .pvd file for each tindx.
     auto pvdFile = File(fileName, "a");
     fileName = jobName ~ format("-solid.t%04d.pvtu", tindx);
-    pvdFile.writef("<DataSet timestep=\"%.18g\" group=\"\" part=\"0\" file=\"%s\"/>\n",
+    pvdFile.writef("<DataSet timestep=\"%.18e\" group=\"\" part=\"0\" file=\"%s\"/>\n",
 		   soln.sim_time, fileName);
     pvdFile.close();
     return;
@@ -578,7 +578,7 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
 	    binary_data ~= nativeToBigEndian(y);
 	    binary_data ~= nativeToBigEndian(z);
 	} else {
-	    fp.writef(" %.18g %.18g %.18g\n", x,y,z);
+	    fp.writef(" %.18e %.18e %.18e\n", x,y,z);
 	}
     }
     fp.write(" </DataArray>\n");
@@ -688,7 +688,7 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
 	    if (binary_format) {
 		binary_data ~= nativeToBigEndian(to!float(uflowz(flow[var,i])));
 	    } else {
-		fp.writef(" %.18g\n", uflowz(flow[var,i]));
+		fp.writef(" %.18e\n", uflowz(flow[var,i]));
 	    }
 	} // end foreach i
 	fp.write(" </DataArray>\n");
@@ -718,7 +718,7 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
 	    binary_data ~= nativeToBigEndian(y);
 	    binary_data ~= nativeToBigEndian(z);
 	} else {
-	    fp.writef(" %.18g %.18g %.18g\n", x, y, z);
+	    fp.writef(" %.18e %.18e %.18e\n", x, y, z);
 	}
     } // end foreach i
     fp.write(" </DataArray>\n");
@@ -746,7 +746,7 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
 		binary_data ~= nativeToBigEndian(y);
 		binary_data ~= nativeToBigEndian(z);
 	    } else {
-		fp.writef(" %.18g %.18g %.18g\n", x, y, z);
+		fp.writef(" %.18e %.18e %.18e\n", x, y, z);
 	    }
 	} // end foreach i
 	fp.write(" </DataArray>\n");
@@ -775,7 +775,7 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
 		binary_data ~= nativeToBigEndian(y);
 		binary_data ~= nativeToBigEndian(z);
 	    } else {
-		fp.writef(" %.18g %.18g %.18g\n", x, y, z);
+		fp.writef(" %.18e %.18e %.18e\n", x, y, z);
 	    }
 	} // end foreach i
 	fp.write(" </DataArray>\n");
@@ -853,7 +853,7 @@ void write_VTK_XML_unstructured_file(SolidSolution soln, size_t jb,
 		    binary_data ~= nativeToBigEndian(y);
 		    binary_data ~= nativeToBigEndian(z);
                 } else {
-                    fp.writef(" %.18g %.18g %.18g\n", x,y,z);
+                    fp.writef(" %.18e %.18e %.18e\n", x,y,z);
 		}
                 vtx_number += 1;
 	    }
@@ -993,7 +993,7 @@ void write_VTK_XML_unstructured_file(SolidSolution soln, size_t jb,
                     if (binary_format) {
                         binary_data ~= nativeToBigEndian(to!float(uflowz(solid[var,i,j,k])));
                     } else {
-                        fp.writef(" %.18g\n", uflowz(solid[var,i,j,k]));
+                        fp.writef(" %.18e\n", uflowz(solid[var,i,j,k]));
 		    }
 		} // end foreach i
 	    } // end foreach j

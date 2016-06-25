@@ -320,9 +320,9 @@ public:
     string values_as_string(size_t i)
     {
 	auto writer = appender!string();
-	formattedWrite(writer, "%.18g", _data[i][0]);
+	formattedWrite(writer, "%.18e", _data[i][0]);
 	foreach (ivar; 1 .. variableNames.length) {
-	    formattedWrite(writer, " %.18g", _data[i][ivar]);
+	    formattedWrite(writer, " %.18e", _data[i][ivar]);
 	}
 	return writer.data;
     }

@@ -440,7 +440,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 	auto writer = appender!string();
 	formattedWrite(writer, "structured_grid_flow 1.0\n");
 	formattedWrite(writer, "label: %s\n", grid.label);
-	formattedWrite(writer, "sim_time: %.18g\n", t0);
+	formattedWrite(writer, "sim_time: %.18e\n", t0);
 	auto gmodel = GlobalConfig.gmodel_master;
 	auto variable_list = variable_list_for_cell(gmodel);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);
@@ -528,7 +528,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 	auto writer = appender!string();
 	formattedWrite(writer, "unstructured_grid_flow 1.0\n");
 	formattedWrite(writer, "label: %s\n", grid.label);
-	formattedWrite(writer, "sim_time: %.18g\n", t0);
+	formattedWrite(writer, "sim_time: %.18e\n", t0);
 	auto gmodel = GlobalConfig.gmodel_master;
 	auto variable_list = variable_list_for_cell(gmodel);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);

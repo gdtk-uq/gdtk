@@ -788,7 +788,7 @@ public:
 	auto writer = appender!string();
 	formattedWrite(writer, "unstructured_grid_flow 1.0\n");
 	formattedWrite(writer, "label: %s\n", label);
-	formattedWrite(writer, "sim_time: %.18g\n", sim_time);
+	formattedWrite(writer, "sim_time: %.18e\n", sim_time);
 	auto gmodel = myConfig.gmodel;
 	auto variable_list = variable_list_for_cell(gmodel);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);

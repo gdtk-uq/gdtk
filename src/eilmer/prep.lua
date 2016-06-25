@@ -123,7 +123,7 @@ function SBlock:tojson()
    str = str .. string.format('    "nic": %d,\n', self.nic)
    str = str .. string.format('    "njc": %d,\n', self.njc)
    str = str .. string.format('    "nkc": %d,\n', self.nkc)
-   str = str .. string.format('    "omegaz": %.18g,\n', self.omegaz)
+   str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
       if not self.bcList[face].is_gas_domain_bc then
@@ -201,7 +201,7 @@ function UBlock:tojson()
    str = str .. string.format('    "nvertices": %d,\n', self.nvertices)
    str = str .. string.format('    "nfaces": %d,\n', self.nfaces)
    str = str .. string.format('    "nboundaries": %d,\n', self.nboundaries)
-   str = str .. string.format('    "omegaz": %.18g,\n', self.omegaz)
+   str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
    -- Boundary conditions
    for i = 0, self.nboundaries-1 do
       if not self.bcList[i].is_gas_domain_bc then
@@ -589,9 +589,9 @@ function SSolidBlock:tojson()
    str = str .. string.format('    "njc": %d,\n', self.njc)
    str = str .. string.format('    "nkc": %d,\n', self.nkc)
    str = str .. '    "properties": {\n'
-   str = str .. string.format('       "rho": %.18g,\n', self.properties.rho)
-   str = str .. string.format('       "k": %.18g,\n', self.properties.k)
-   str = str .. string.format('       "Cp": %.18g\n', self.properties.Cp)
+   str = str .. string.format('       "rho": %.18e,\n', self.properties.rho)
+   str = str .. string.format('       "k": %.18e,\n', self.properties.k)
+   str = str .. string.format('       "Cp": %.18e\n', self.properties.Cp)
    str = str .. '    },\n'
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
@@ -818,18 +818,18 @@ end
 function write_control_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("{\n")
-   f:write(string.format('"dt_init": %.18g,\n', config.dt_init))
-   f:write(string.format('"dt_max": %.18g,\n', config.dt_max))
-   f:write(string.format('"cfl_value": %.18g,\n', config.cfl_value))
+   f:write(string.format('"dt_init": %.18e,\n', config.dt_init))
+   f:write(string.format('"dt_max": %.18e,\n', config.dt_max))
+   f:write(string.format('"cfl_value": %.18e,\n', config.cfl_value))
    f:write(string.format('"stringent_cfl": %s,\n', tostring(config.stringent_cfl)))
    f:write(string.format('"fixed_time_step": %s,\n', tostring(config.fixed_time_step)))
-   f:write(string.format('"dt_reduction_factor": %.18g,\n', config.dt_reduction_factor))
+   f:write(string.format('"dt_reduction_factor": %.18e,\n', config.dt_reduction_factor))
    f:write(string.format('"print_count": %d,\n', config.print_count))
    f:write(string.format('"cfl_count": %d,\n', config.cfl_count))
-   f:write(string.format('"max_time": %.18g,\n', config.max_time))
+   f:write(string.format('"max_time": %.18e,\n', config.max_time))
    f:write(string.format('"max_step": %d,\n', config.max_step))
-   f:write(string.format('"dt_plot": %.18g,\n', config.dt_plot))
-   f:write(string.format('"dt_history": %.18g,\n', config.dt_history))
+   f:write(string.format('"dt_plot": %.18e,\n', config.dt_plot))
+   f:write(string.format('"dt_history": %.18e,\n', config.dt_history))
    f:write(string.format('"write_at_step": %d,\n', config.write_at_step))
    f:write(string.format('"halt_now": %d\n', config.halt_now))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
@@ -852,18 +852,18 @@ function write_config_file(fileName)
 			 config.gasdynamic_update_scheme))
    f:write(string.format('"MHD": %s,\n', tostring(config.MHD)))
    f:write(string.format('"divergence_cleaning": %s,\n', tostring(config.divergence_cleaning)))
-   f:write(string.format('"divB_damping_length": %.18g,\n', config.divB_damping_length))
+   f:write(string.format('"divB_damping_length": %.18e,\n', config.divB_damping_length))
    f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
 			 tostring(config.separate_update_for_viscous_terms)))
    f:write(string.format('"separate_update_for_k_omega_source": %s,\n', 
 			 tostring(config.separate_update_for_k_omega_source)))
    f:write(string.format('"apply_bcs_in_parallel": %s,\n',
 			 tostring(config.apply_bcs_in_parallel)))
-   f:write(string.format('"flowstate_limits_max_velocity": %.18g,\n', config.flowstate_limits_max_velocity))
-   f:write(string.format('"flowstate_limits_max_tke": %.18g,\n', config.flowstate_limits_max_tke))
-   f:write(string.format('"flowstate_limits_min_tke": %.18g,\n', config.flowstate_limits_min_tke))
-   f:write(string.format('"flowstate_limits_max_temp": %.18g,\n', config.flowstate_limits_max_temp))
-   f:write(string.format('"flowstate_limits_min_temp": %.18g,\n', config.flowstate_limits_min_temp))
+   f:write(string.format('"flowstate_limits_max_velocity": %.18e,\n', config.flowstate_limits_max_velocity))
+   f:write(string.format('"flowstate_limits_max_tke": %.18e,\n', config.flowstate_limits_max_tke))
+   f:write(string.format('"flowstate_limits_min_tke": %.18e,\n', config.flowstate_limits_min_tke))
+   f:write(string.format('"flowstate_limits_max_temp": %.18e,\n', config.flowstate_limits_max_temp))
+   f:write(string.format('"flowstate_limits_min_temp": %.18e,\n', config.flowstate_limits_min_temp))
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
@@ -874,12 +874,12 @@ function write_config_file(fileName)
    f:write(string.format('"extrema_clipping": %s,\n', tostring(config.extrema_clipping)))
 
    f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
-   f:write(string.format('"compression_tolerance": %.18g,\n', config.compression_tolerance))
-   f:write(string.format('"shear_tolerance": %.18g,\n', config.shear_tolerance))
-   f:write(string.format('"M_inf": %.18g,\n', config.M_inf))
+   f:write(string.format('"compression_tolerance": %.18e,\n', config.compression_tolerance))
+   f:write(string.format('"shear_tolerance": %.18e,\n', config.shear_tolerance))
+   f:write(string.format('"M_inf": %.18e,\n', config.M_inf))
 
    f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
-   f:write(string.format('"shock_fitting_delay": %.18g,\n', config.shock_fitting_delay))
+   f:write(string.format('"shock_fitting_delay": %.18e,\n', config.shock_fitting_delay))
    f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)))
    f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))
 
@@ -888,24 +888,24 @@ function write_config_file(fileName)
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
-   f:write(string.format('"viscous_delay": %.18g,\n', config.viscous_delay))
-   f:write(string.format('"viscous_signal_factor": %.18g,\n', config.viscous_signal_factor))
+   f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
+   f:write(string.format('"viscous_signal_factor": %.18e,\n', config.viscous_signal_factor))
 
    f:write(string.format('"turbulence_model": "%s",\n',
 			 string.lower(config.turbulence_model)))
-   f:write(string.format('"turbulence_prandtl_number": %.18g,\n',
+   f:write(string.format('"turbulence_prandtl_number": %.18e,\n',
 			 config.turbulence_prandtl_number))
-   f:write(string.format('"turbulence_schmidt_number": %.18g,\n',
+   f:write(string.format('"turbulence_schmidt_number": %.18e,\n',
 			 config.turbulence_schmidt_number))
-   f:write(string.format('"max_mu_t_factor": %.18g,\n', config.max_mu_t_factor))
-   f:write(string.format('"transient_mu_t_factor": %.18g,\n', config.transient_mu_t_factor))
+   f:write(string.format('"max_mu_t_factor": %.18e,\n', config.max_mu_t_factor))
+   f:write(string.format('"transient_mu_t_factor": %.18e,\n', config.transient_mu_t_factor))
 
    f:write(string.format('"udf_source_terms_file": "%s",\n', config.udf_source_terms_file))
    f:write(string.format('"udf_source_terms": %s,\n', tostring(config.udf_source_terms)))
 
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))
    f:write(string.format('"reactions_file": "%s",\n', config.reactions_file))
-   f:write(string.format('"reaction_time_delay": %.18g,\n', config.reaction_time_delay))
+   f:write(string.format('"reaction_time_delay": %.18e,\n', config.reaction_time_delay))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nblock": %d,\n', #(blocks)))
@@ -946,7 +946,7 @@ end
 function write_times_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("# tindx sim_time dt_global\n");
-   f:write(string.format("%04d %.18g %.18g\n", 0, 0.0, config.dt_init))
+   f:write(string.format("%04d %.18e %.18e\n", 0, 0.0, config.dt_init))
    f:close()
 end
 
