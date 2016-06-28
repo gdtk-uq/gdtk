@@ -88,7 +88,7 @@ void main(){
 	immutable int n = 100;
 	Tree myTree = new Tree(x_lo, x_hi, y_lo, y_hi);
 	myTree.globalMaxError = 0.00005;
-	myTree.globalMinArea = 0.000001*(y_hi - y_lo)*(x_hi - x_lo);
+	myTree.globalMinArea = 0.0000000001*(y_hi - y_lo)*(x_hi - x_lo);
 	//myTree.X_min = rho_min;
 	//myTree.X_max = rho_max;
 	//myTree.Y_min = e_min;
@@ -100,7 +100,9 @@ void main(){
 	int numberRefined = 1;
 	while (numberRefined) {
 			numberRefined = myTree.refine(&F, &F_transform);
-	}	
+	}
+	if (numberRefined==0) myTree.refinedFlag = 1;
+	writeln("finished refining the tree");
 	int n_leafs = 0;
 	//sets up control points for the Tree, and writes to a textFILE
 	 foreach(i,ref treeNode; myTree.Nodes){
@@ -133,13 +135,14 @@ void main(){
 	writefln("nleafs: %s, n_nodes: %s", n_leafs,myTree.Nodes.length);
 	writefln("globalMaxError: %s, globalMinArea: %s", myTree.globalMaxError, myTree.globalMinArea);
 	writefln("minDeltaX: %s, minDeltaY: %s", myTree.minDeltaX, myTree.minDeltaY);
-	string filename = "T_rhoe_Tree.dat";
-	myTree.writeLUT(filename); 
-	writefln("Tree written to %s ", filename);
+	//string filename = "T_rhoe_Tree.dat";
+	//myTree.writeLUT(filename); 
+	//writefln("Tree written to %s ", filename);
+
 	//--Testing some derivatives
-	double search_x = 20; double search_y = 10.5;
-	auto patch = myTree.search(search_x, search_y);
-	int patchid = myTree.searchForNodeID(search_x, search_y);
+	//double search_x = 20; double search_y = 10.5;
+	//auto patch = myTree.search(search_x, search_y);
+	//int patchid = myTree.searchForNodeID(search_x, search_y);
 	//auto originalBs = patch.bs;
 	//writefln("Patch Original Control Points: %s", originalBs);
 	//int vertex = 3;
@@ -157,19 +160,31 @@ void main(){
 	//writefln("Difference                   : %s", diffBs);
 	
 	//testing side derivatives
-	char side = 'S';
-	double x = 0.5*(patch.x_lo + patch.x_hi); double y = patch.y_lo;
+	//char side = 'S';
+	//double x = 0.5*(patch.x_lo + patch.x_hi); double y = patch.y_lo;
 	//double x = patch.x_hi; double y = 0.5*(patch.y_lo + patch.y_hi);
 	//double x = 0.5*(patch.x_lo + patch.x_hi); double y = patch.y_hi;
 	//double x = patch.x_lo; double y = 0.5*(patch.y_lo + patch.y_hi);
-	auto derivs = patch.midsideDerivatives(side);
+	//auto derivs = patch.midsideDerivatives(side);
 	//----------------------------------
-	double f_x = 0.001*x^^4 + y;
-	double f_y = -4*y^^3 + x;
-	double f_xy = 1;
-	writefln("For x = %s, y = %s", x, y);
-	writefln("ANALYTICAL :f_x: %s, f_y: %s, f_xy: %s",f_x, f_y, f_xy);
-	writefln("NUMERICAL  :f_x: %s, f_y: %s, f_xy: %s",derivs[0],derivs[1], derivs[2]);
+	//double f_x = 0.001*x^^4 + y;
+	//double f_y = -4*y^^3 + x;
+	//double f_xy = 1;
+	//writefln("For x = %s, y = %s", x, y);
+	//writefln("ANALYTICAL :f_x: %s, f_y: %s, f_xy: %s",f_x, f_y, f_xy);
+	//writefln("NUMERICAL  :f_x: %s, f_y: %s, f_xy: %s",derivs[0],derivs[1], derivs[2]);
+
+	//---------------------------------------------------------
+	myTree.recordDependencies();
+	//for(int i = 0; i != 100; i++){
+	//	writefln("Dependencies for node %s: %s, splitID: %s, parent: %s", i, myTree.Nodes[i].smallNeighbours, myTree.Nodes[i].splitID,myTree.Nodes[i].bigNeighbours);
+	//}
+	writeln("making vertices continuous");
+	myTree.makeVertexContinuous;
+	auto dependencyOrder = myTree.dependencyOrder;
+	//writeln("making continuous");
+	//myTree.makeContinuous(dependencyOrder);
+	//writeln("finished making it continuous");
 
 }
 
