@@ -17,20 +17,6 @@ are strictly code development. Some are related to supporting
 in the project in other ways such a webpage curation, documentation
 and illustration generation.
 
-Meta-items
-----------
-Meta-items relate to those tasks related to the project itself.
-
-Licensing information
-  I'm fairly certain we would like to use the GPL on our source code.
-  This needs to be declared at the top-level of the project and it
-  would be nice to propagate this information to the subdirectories
-  for each of the supporting packages.
-
-About this project
-  We should work on a concise text (and image) description that 
-  neatly summarises what our project is about and what its goals
-  are. A mission statement, if you will.
 
 Marketing
 ---------
@@ -46,8 +32,6 @@ Eilmer
 
 Source code development
 ^^^^^^^^^^^^^^^^^^^^^^^
-+ Make ``identifyBlockConnections`` in *prep.lua* smart enough to connect
-  gas and solid blocks if their corners coincide.
 + Update spatial derivative evaluation in solid domain to emulate that
   in the gas domain.
 + Extend gas/solid block connections to all orientations in 2D.
@@ -72,11 +56,6 @@ Verification
 + Port over oblique detonation wave example from eilmer3.
 + Use the Method of Manufactured Solutions to test 3D implementation.
 + Investigate means to verify boundary conditions.
-
-Validation
-^^^^^^^^^^
-+ Port over Bittker hydrogen case.
-+ Port over the Lehr shock-induced combustion cases.
 
 Documentation
 ^^^^^^^^^^^^^
@@ -110,7 +89,6 @@ Kinetics package
 
 Source code
 ^^^^^^^^^^^
-+ Implement and test a pressure-dependent reaction type (Troe form)
 + Work on the Lua-wrappers to expose the kinetics routines.
 
 Reaction schemes
