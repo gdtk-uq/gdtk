@@ -87,7 +87,7 @@ void main(){
 	double y_hi = e_max;*/
 	immutable int n = 100;
 	Tree myTree = new Tree(x_lo, x_hi, y_lo, y_hi);
-	myTree.globalMaxError = 0.00005;
+	myTree.globalMaxError = 0.0000005;
 	myTree.globalMinArea = 0.0000000001*(y_hi - y_lo)*(x_hi - x_lo);
 	//myTree.X_min = rho_min;
 	//myTree.X_max = rho_max;
@@ -182,9 +182,9 @@ void main(){
 	writeln("making vertices continuous");
 	myTree.makeVertexContinuous;
 	auto dependencyOrder = myTree.dependencyOrder;
-	//writeln("making continuous");
-	//myTree.makeContinuous(dependencyOrder);
-	//writeln("finished making it continuous");
+	writeln("making continuous");
+	myTree.makeMidsideContinuous(dependencyOrder);
+	writeln("finished making it continuous");
 
 }
 

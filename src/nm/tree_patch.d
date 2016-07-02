@@ -9,6 +9,7 @@
  *
  * Author: Jonathan Ho
  * Date: 17-09-2015
+ * Latest Revision: 03-07-2016
  */
 module nm.tree_patch;
 import std.stdio;
@@ -307,6 +308,25 @@ class patch{
 		f_xy = x_sign*y_sign*f_xy*0.5*3/(x_hi - x_lo)/(y_hi - y_lo);
 		if (side=='N'||side=='S') return [f_x/(x_hi - x_lo), f_y/(y_hi - y_lo), f_xy];
 			else return [f_y/(x_hi - x_lo), f_x/(y_hi - y_lo), f_xy];
+	}
+	const double cornerValue(int vertex){
+		//return f at patch corners
+		//Denote vertices as
+		//  3----2
+		//  |    |
+		//  0----1
+		switch (vertex){
+			case 0:
+				return this.bs[0];
+			case 1:
+				return this.bs[3];
+			case 2: 
+				return this.bs[15];
+			case 3:
+				return this.bs[12];
+			default:
+				throw new Exception("invalid vertex specified");
+		}
 	}
 	const double[16] rotateControlPoints(char side){
 		//reorders control points so that the patch appears rotated
@@ -622,7 +642,7 @@ class Tree {
 						}//end if nodes are different
 					}//end try
 					catch{
-						writeln("Tried to refine outside the table, continue on");
+						//writeln("Tried to refine outside the table, continue on");
 					}
 				}//end foreach boundary
 			}
@@ -685,7 +705,17 @@ class Tree {
 		}//end while
 		return nodeIDorder;
 	}
-	void makeContinuous(int[] dependencyOrder){
+	void makeMidsideContinuous(int[] dependencyOrder){
+		//Goes through each leaf node in the tree and checks for an adjacent side which has two patches
+		//It then evaluates the function and three derivatives f_x, f_y, f_xy to propagate to the corners of these
+		//two patches
+		//Checks through leaf nodes in the order specified by dependency Order
+		//The following class methods should be used before makeMidsideContinuous:
+		//1. refine: splits patches to ensure that each patch has no more than two neighbouring patches on one side
+		//2. recordDependencies: records the ids of neighbouring patches depending on whether they are bigger or smaller than the patch
+		//3. dependencyOrder: records the dependency of the patches so they are updated in the right order
+		//4. run makeMidsideContinuous
+
 		double f;
 		double[3] derivs;
 		int nodeID1;
@@ -721,78 +751,62 @@ class Tree {
 								case 'N':
 									//top  left corner
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(3);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_hi);
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(3);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
 									//MIDDLE TOP
 									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('N');
 									f = Nodes[nodeID].nodePatch.interpolateF(0.5*(x_lo+x_hi), y_hi);
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
 									//top right
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(2);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_hi,y_hi);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(2);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
 									break;
 								case 'E':
 									//bottom  right corner
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(1);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, y_lo);
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(1);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
 									//MIDDLE left
 									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('E');
 									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, 0.5*(y_lo+y_hi));
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivs[0],derivs[1],derivs[2]);
 									//top right
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(2);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, y_hi);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(2);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
 									break;
 								case 's':
 									//bottom left corner
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(0);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_lo);
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(0);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
 									//MIDDLE bottom
 									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('S');
 									f = Nodes[nodeID].nodePatch.interpolateF(0.5*(x_lo+x_hi), y_lo);
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivs[0],derivs[1],derivs[2]);
 									//bottom right
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(1);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_hi, y_lo);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(1);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
 									break;
 								case 'W':
 									//bottom  left corner
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(0);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_lo);
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 1 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(0);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
 									//MIDDLE left
 									derivs = Nodes[nodeID].nodePatch.midsideDerivatives('W');
 									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, 0.5*(y_lo+y_hi));
-									percentagediff = Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 2 %s", percentagediff, boundary);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 3 %s", percentagediff, boundary);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivs[0],derivs[1],derivs[2]);
 									//top left
 									derivs = Nodes[nodeID].nodePatch.cornerDerivatives(3);
-									f = Nodes[nodeID].nodePatch.interpolateF(x_lo, y_hi);
-									percentagediff = Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on boundary 4 %s", percentagediff, boundary);
+									f = Nodes[nodeID].nodePatch.cornerValue(3);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivs[0],derivs[1],derivs[2]);
 									break;
 								default:
 									break;
@@ -832,8 +846,6 @@ class Tree {
 						nodeID1=1;nodeID2=1;
 					}
 						if ((nodeID1 != nodeID2)&&(nodeID2 != nodeID3)&&(nodeID1!= nodeID3)){//corner
-							double percentagediff;
-							double maxDiff=0.005;
 							switch(vertex){
 								case 0:
 									//top  left corner
@@ -841,18 +853,14 @@ class Tree {
 									derivs[1] = Nodes[nodeID1].nodePatch.cornerDerivatives(1);//need to check these
 									derivs[2] = Nodes[nodeID2].nodePatch.cornerDerivatives(2);
 									derivs[3] = Nodes[nodeID3].nodePatch.cornerDerivatives(3);
-									f = node.nodePatch.interpolateF(x_lo, y_lo);//potential to smooth this process out here by just picking the control point
+									f = node.nodePatch.cornerValue(0);//potential to smooth this process out here by just picking the control point
 									derivsmins[0] = min(derivs[0][0], derivs[1][0], derivs[2][0]);
 									derivsmins[1] = min(derivs[0][1], derivs[1][1], derivs[2][1]);
 									derivsmins[2] = min(derivs[0][2], derivs[1][2], derivs[2][2]);
-									percentagediff=node.nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 0 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 1 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 2 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID3].nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 3 %s", percentagediff, vertex);
+									node.nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID3].nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
 									break;
 								case 1:
 									//bottom  right corner
@@ -860,18 +868,14 @@ class Tree {
 									derivs[1] = Nodes[nodeID1].nodePatch.cornerDerivatives(0);//need to check these
 									derivs[2] = Nodes[nodeID2].nodePatch.cornerDerivatives(3);
 									derivs[3] = Nodes[nodeID3].nodePatch.cornerDerivatives(2);
-									f = node.nodePatch.interpolateF(x_hi, y_lo);//potential to smooth this process out here by just picking the control point
+									f = node.nodePatch.cornerValue(1);//potential to smooth this process out here by just picking the control point
 									derivsmins[0] = min(derivs[0][0], derivs[1][0], derivs[2][0]);
 									derivsmins[1] = min(derivs[0][1], derivs[1][1], derivs[2][1]);
 									derivsmins[2] = min(derivs[0][2], derivs[1][2], derivs[2][2]);
-									percentagediff=node.nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 0 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 1 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 2 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID3].nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 3 %s", percentagediff, vertex);
+									node.nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID3].nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
 									break;
 								case 2:
 									//upper right corner
@@ -879,18 +883,14 @@ class Tree {
 									derivs[1] = Nodes[nodeID1].nodePatch.cornerDerivatives(3);//need to check these
 									derivs[2] = Nodes[nodeID2].nodePatch.cornerDerivatives(0);
 									derivs[3] = Nodes[nodeID3].nodePatch.cornerDerivatives(1);
-									f = node.nodePatch.interpolateF(x_hi, y_hi);//potential to smooth this process out here by just picking the control point
+									f = node.nodePatch.cornerValue(2);//potential to smooth this process out here by just picking the control point
 									derivsmins[0] = min(derivs[0][0], derivs[1][0], derivs[2][0]);
 									derivsmins[1] = min(derivs[0][1], derivs[1][1], derivs[2][1]);
 									derivsmins[2] = min(derivs[0][2], derivs[1][2], derivs[2][2]);
-									percentagediff=node.nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 0 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 1 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 2 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID3].nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 3 %s", percentagediff, vertex);
+									node.nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID3].nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
 									break;
 								case 3:
 									//upper  left corner
@@ -898,18 +898,14 @@ class Tree {
 									derivs[1] = Nodes[nodeID1].nodePatch.cornerDerivatives(2);//need to check these
 									derivs[2] = Nodes[nodeID2].nodePatch.cornerDerivatives(1);
 									derivs[3] = Nodes[nodeID3].nodePatch.cornerDerivatives(0);
-									f = node.nodePatch.interpolateF(x_lo, y_hi);//potential to smooth this process out here by just picking the control point
+									f = node.nodePatch.cornerValue(3);//potential to smooth this process out here by just picking the control point
 									derivsmins[0] = min(derivs[0][0], derivs[1][0], derivs[2][0]);
 									derivsmins[1] = min(derivs[0][1], derivs[1][1], derivs[2][1]);
 									derivsmins[2] = min(derivs[0][2], derivs[1][2], derivs[2][2]);
-									percentagediff=node.nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 0 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 1 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 2 %s", percentagediff, vertex);
-									percentagediff=Nodes[nodeID3].nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
-									if (percentagediff>maxDiff) writefln("percentage diff of %s on corner 3 %s", percentagediff, vertex);
+									node.nodePatch.rewriteControlPoints(3,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID1].nodePatch.rewriteControlPoints(2,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID2].nodePatch.rewriteControlPoints(1,f,derivsmins[0],derivsmins[1],derivsmins[2]);
+									Nodes[nodeID3].nodePatch.rewriteControlPoints(0,f,derivsmins[0],derivsmins[1],derivsmins[2]);
 									break;
 								default:
 									break;
