@@ -411,7 +411,7 @@ public:
 	omega.refz = gradients[2];
     } // end gradients_xyz_leastsq()
 
-    @nogc
+    //@nogc
     void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, bool diffusion)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
@@ -437,7 +437,8 @@ public:
 	foreach (i; 0 .. n) {
 	    double dx = cloud_pos[i].x - x_mid;
 	    double dy = cloud_pos[i].y - y_mid;
-	    xx += dx*dx; xy += dx*dy; yy += dy*dy;
+	    double w = 1.0/(dx*dx+dy*dy);
+	    xx += w*dx*dx; xy += w*dx*dy; yy += w*dy*dy;
 	}
 	xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = 1.0; xTx[0][3] = 0.0;
 	xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = 0.0; xTx[1][3] = 1.0;
@@ -457,7 +458,8 @@ public:
 	        double dq = cloud_fs[i]."~qname~" - q_mid;
 	        double dx = cloud_pos[i].x - x_mid;
 	        double dy = cloud_pos[i].y - y_mid;
-	        rhs[0] += dx*dq; rhs[1] += dy*dq;
+                double w = 1.0/(dx*dx+dy*dy);
+                rhs[0] += w*dx*dq; rhs[1] += w*dy*dq;
 	    }
 	    solveWithInverse!2(xTx, rhs, gradients);";
 	    return code;
