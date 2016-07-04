@@ -1778,23 +1778,38 @@ public:
 	    // Because we need to access all of the gas blocks in the following search,
 	    // we have to run this set_up_cell_mapping function from a serial loop.
 	    // In parallel code, threads other than the main thread get uninitialized
-	    // gersions of the gasBlocks array.
-	    BasicCell closest_cell = gasBlocks[0].cells[0];
-	    Vector3 cellpos = closest_cell.pos[0];
-	    double min_distance = abs(cellpos - mypos);
-	    foreach (b; gasBlocks) {
-		foreach (cell; b.cells) {
-		    double distance = abs(cell.pos[0] - mypos);
-		    if (distance < min_distance) {
-			closest_cell = cell;
-			min_distance = distance;
-		    }
+	    // versions of the gasBlocks array.
+	    //
+	    // First, attempt to find the enclosing cell at the specified position.
+	    bool found = false;
+	    foreach (ib, blk; gasBlocks) {
+		found = false;
+		size_t indx = 0;
+		blk.find_enclosing_cell(mypos.x, mypos.y, mypos.z, indx, found);
+		if (found) {
+		    mapped_cells ~= blk.cells[indx];
+		    break;
 		}
 	    }
-	    mapped_cells ~= closest_cell;
+	    if (!found) {
+		// Fall back to nearest cell search.
+		BasicCell closest_cell = gasBlocks[0].cells[0];
+		Vector3 cellpos = closest_cell.pos[0];
+		double min_distance = abs(cellpos - mypos);
+		foreach (blk; gasBlocks) {
+		    foreach (cell; blk.cells) {
+			double distance = abs(cell.pos[0] - mypos);
+			if (distance < min_distance) {
+			    closest_cell = cell;
+			    min_distance = distance;
+			}
+		    }
+		}
+		mapped_cells ~= closest_cell;
+	    }
 	    if (list_mapped_cells) {
 		writeln("    ghost-cell-pos=", to!string(mygc.pos[0]), 
-			" mapped-cell-pos=", to!string(closest_cell.pos[0]));
+			" mapped-cell-pos=", to!string(mapped_cells[$-1].pos[0]));
 	    }
 	} // end foreach mygc
     } // end set_up_cell_mapping()
