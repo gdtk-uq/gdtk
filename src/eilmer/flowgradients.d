@@ -411,7 +411,7 @@ public:
 	omega.refz = gradients[2];
     } // end gradients_xyz_leastsq()
 
-    //@nogc
+    @nogc
     void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, bool diffusion)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
