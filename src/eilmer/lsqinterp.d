@@ -261,6 +261,8 @@ public:
                 }
                 if (myConfig.apply_limiter) {
 		    van_albada_limit(gradientsL[0], gradientsR[0]);
+                    van_albada_limit(gradientsL[1], gradientsR[1]);
+                    van_albada_limit(gradientsL[2], gradientsR[2]);
                 }
                 double qL = qL0 + dxFaceL * gradientsL[0] + 
                             dyFaceL * gradientsL[1] + dzFaceL * gradientsL[2];
