@@ -976,7 +976,7 @@ bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
     Vector3 pmT = 0.25*(p4+p5+p6+p7);
     Vector3 pmB = 0.25*(p0+p1+p2+p3);
     // Test the volume of each pyramid.
-    if (tetragonal_dipyramid_volume(p2, p3, p6, p7, pmN, p) > 0.0) return false; // North
+    if (tetragonal_dipyramid_volume(p2, p3, p7, p6, pmN, p) > 0.0) return false; // North
     if (tetragonal_dipyramid_volume(p1, p2, p6, p5, pmE, p) > 0.0) return false; // East
     if (tetragonal_dipyramid_volume(p0, p1, p5, p4, pmS, p) > 0.0) return false; // South
     if (tetragonal_dipyramid_volume(p3, p0, p4, p7, pmW, p) > 0.0) return false; // West
