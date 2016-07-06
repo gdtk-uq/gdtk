@@ -1,9 +1,16 @@
 # makefile for Eilmer
 # Builds main simulation program by default.
+# For example:
+# make TARGET=fast install
 
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
+
+# TARGET options are debug, fast, profile
+# Flags for each compiler will be determined on this option.
+TARGET ?= debug
+
 PLATFORM ?= linux
 WITH_GPU_CHEM ?= 0
 
@@ -86,30 +93,45 @@ BUILD_DIR := ../../build
 REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
 ifeq ($(DMD), dmd)
-    # (1) For debug build.  ([TODO] fix -unittest build.)
-    #     DFLAGS := -debug -gc -w
-    # (2) For profiling the debugged code.
-    #     DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off
-    # (3) For releasing a fast code.
-    #     DFLAGS := -w -O -release -inline -boundscheck=off
-    DFLAGS := -w -gc -debug \
-	-I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GZIP_DIR)
+    ifeq ($(TARGET), debug)
+        DFLAGS := -w -gc -debug
+    endif
+    ifeq ($(TARGET), profile)
+        DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off
+    endif
+    ifeq ($(TARGET), fast)
+        DFLAGS := -w -O -release -inline -boundscheck=off
+    endif
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
 ifeq ($(DMD), ldmd2)
-    DFLAGS := -w -O -release -inline -boundscheck=off \
-	-I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GZIP_DIR)
+    ifeq ($(TARGET), debug)
+        DFLAGS := -w -gc -debug
+    endif
+    ifeq ($(TARGET), profile)
+        DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off
+    endif
+    ifeq ($(TARGET), fast)
+        DFLAGS := -w -O -release -inline -boundscheck=off
+    endif
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
 ifeq ($(DMD), gdc)
-    # For debug: DFLAGS := -Wall -Og -g
-    DFLAGS := -Wall -O2 -frelease -fno-debug \
-	-I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GZIP_DIR)
+    ifeq ($(TARGET), debug)
+        DFLAGS := -Wall -Og -g
+    endif
+    ifeq ($(TARGET), profile)
+        DFLAGS := -Wall -O2 -frelease -fno-debug
+    endif
+    ifeq ($(TARGET), fast)
+        DFLAGS := -Wall -O2 -frelease -fno-debug
+    endif
     OF := -o
     DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl -lcurl
 endif
+DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GZIP_DIR)
 
 default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
