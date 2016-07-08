@@ -298,17 +298,32 @@ public:
 	} // foreach cell
 	return number_of_invalid_cells;
     } // end count_invalid_cells()
+
+    void compute_leastsq_geometric_weights(int gtl)
+    {
+    // Update the least-squares geometric weights.
+    // The weights should be calculated when the grid is initialised/moved.
+    // For this reason it is called in ublock/sblock class method compute_primary_cell_geomtric_data()
+	if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+	    if (GlobalConfig.spatial_deriv_locn == SpatialDerivLocn.faces)
+		foreach(iface; this.faces) iface.grad.weights_leastsq(iface.cloud_pos, iface.pos, iface.cloud_weights);	
+	    else // vertices
+		foreach(vtx; this.vertices) vtx.grad.weights_leastsq(vtx.cloud_pos, vtx.pos[gtl], vtx.cloud_weights);
+	}
+    } // end compute_leastsq_geometric_weights()
     
     @nogc
     void flow_property_derivatives(int gtl)
     {
+	bool compute_about_mid = false;
 	final switch (myConfig.spatial_deriv_locn) {
 	case SpatialDerivLocn.vertices:
+	    compute_about_mid = true;
 	    if (myConfig.dimensions == 2) {
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(vtx; vertices) { 
-			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
+			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights, compute_about_mid, myConfig.diffusion);
 		    }
 		    break;
 		case SpatialDerivCalc.divergence:
@@ -322,7 +337,7 @@ public:
 	    } else {
 		// Have only least-squares in 3D.
 		foreach(vtx; vertices) {
-		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, myConfig.diffusion);
+		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights, compute_about_mid, myConfig.diffusion);
 		}
 	    }
        	    foreach (iface; faces) {
@@ -330,11 +345,12 @@ public:
 	    }
 	    break;
 	case SpatialDerivLocn.faces:
+	    compute_about_mid = false;
 	    if (myConfig.dimensions == 2) {
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(iface; faces) { 
-			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
+			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos,  iface.cloud_weights, compute_about_mid, myConfig.diffusion);
 		    }
 		    break;
 		case SpatialDerivCalc.finite_difference:
@@ -351,7 +367,7 @@ public:
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(iface; faces) {
-			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, myConfig.diffusion);
+			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, iface.cloud_weights, compute_about_mid, myConfig.diffusion);
 		    }
 		    break;
 		case SpatialDerivCalc.finite_difference:

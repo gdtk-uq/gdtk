@@ -361,7 +361,7 @@ public:
 		if (myConfig.include_ghost_cells_in_spatial_deriv_clouds) {
 		    // this cloud allows for consistent gradients at block
 		    // boundaries, necessary to have 2nd order convergence for multiblock simulations.
-		    foreach(bndary_idx, boundary; grid.boundaries) { // set boundary clouds
+		    foreach(bndary_idx, boundary; grid.boundaries) { // set boundary clouds first
 			BoundaryCondition bc = this.bc[bndary_idx];
 			// TO_DO: currently we have to check whether the boundary interface is on a wall,
 			//        using wall ghost cell data is causing issues for the viscous gradient calculations
@@ -385,7 +385,7 @@ public:
 				    f.cloud_fs ~= f.right_cells[0].fs;
 				    cell = f.right_cells[0];
 				}
-				// now grab the remainding points
+				// now grab the remaining cloud points
 				foreach (other_face; cell.iface) { // loop around cell interfaces
 				    if(other_face.id == f.id) continue; // skip current interface
 				    bool prevent_dup = false; // prevents double dipping in 3D simulations
@@ -412,7 +412,7 @@ public:
 				    f.cloud_fs ~= f.left_cells[0].fs;
 				    cell_list~= f.left_cells;
 				    // store ghost0 information
-				    if (f.right_cells[0].will_have_valid_flow) { // && bc.is_wall == false) {
+				    if (f.right_cells[0].will_have_valid_flow) {
 					f.cloud_pos ~= &(f.right_cells[0].pos[0]);
 					f.cloud_fs ~= f.right_cells[0].fs;
 				    }
@@ -422,12 +422,12 @@ public:
 				    f.cloud_fs ~= f.right_cells[0].fs;
 				    cell_list ~= f.right_cells;
 				    // store ghost0 information
-				    if (f.left_cells[0].will_have_valid_flow) { // && bc.is_wall == false) {
+				    if (f.left_cells[0].will_have_valid_flow) { 
 					f.cloud_pos ~= &(f.left_cells[0].pos[0]);
 					f.cloud_fs ~= f.left_cells[0].fs;
 				    }
 				}
-				// now grab the remainding cells
+				// now grab the remaining cells
 				foreach (cell; cell_list) { // for each cell
 				    foreach (other_face; cell.iface) { // loop around cell interfaces
 					if (other_face.is_on_boundary && other_face.bc_id == bndary_idx) {
@@ -437,12 +437,12 @@ public:
 					    f.cloud_fs ~= cell.fs;
 					    // and store it's neighbouring ghost0 information
 					    if (bc.outsigns[i] == 1) {
-						if (f.right_cells[0].will_have_valid_flow) { // && bc.is_wall == false) {
+						if (f.right_cells[0].will_have_valid_flow) {
 						    f.cloud_pos ~= &(other_face.right_cells[0].pos[0]); // assume gtl = 0
 						    f.cloud_fs ~= other_face.right_cells[0].fs;
 						}
 					    } else {
-						if (f.left_cells[0].will_have_valid_flow) { // && bc.is_wall == false) {
+						if (f.left_cells[0].will_have_valid_flow) {
 						    f.cloud_pos ~= &(other_face.left_cells[0].pos[0]); // assume gtl = 0
 						    f.cloud_fs ~= other_face.left_cells[0].fs;
 						} 
@@ -515,19 +515,14 @@ public:
 					} // end if (vtx_other_face.id == vtx_f.id && prevent_dup == false)
 				    } // end foreach (vtx_f; f.vtx)
 				} // end foreach (vtx_other_face; other_face.vtx)
-				/*
-				// store the interface information
-				f.cloud_pos ~= &(other_face.pos);
-				f.cloud_fs ~= other_face.fs;
-				*/
 			    } // end foreach (other_face; cell.iface)
 			} // end foreach (i, f; bc.faces)
 		    } // end foreach(l, boundary; grid.boundaries) {
 		    foreach (i, f; faces) { // set internal face clouds
 			if ( f.is_on_boundary == true) continue; // boundaries already set
 			// store interface
-			//f.cloud_pos ~= &(f.pos);
-			//f.cloud_fs ~= f.fs;
+			f.cloud_pos ~= &(f.pos);
+			f.cloud_fs ~= f.fs;
 			BasicCell[] cell_list;
 			cell_list ~= f.left_cells[0];
 			cell_list ~= f.right_cells[0];
@@ -717,6 +712,7 @@ public:
 		} // end if my_outsign
 	    } // end foreach j
 	} // end foreach bndry
+	compute_leastsq_geometric_weights(gtl);
     } // end compute_primary_cell_geometric_data()
 
     override void read_grid(string filename, size_t gtl=0)

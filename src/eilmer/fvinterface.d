@@ -49,6 +49,7 @@ public:
     FlowGradients grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
+    double[] cloud_weights; // Weights used in the least-squares gradient calculation.
     version(steadystate) {
     double[][] dFdU_L;
     double[][] dFdU_R;
