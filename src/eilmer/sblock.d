@@ -1019,6 +1019,11 @@ public:
 
     void store_references_for_derivative_calc_at_faces(size_t gtl)
     {
+    // The weighted least squares calculation is expecting the interface
+    // at which the gradient is being calculated to be stored in position [0].
+    // However the divergence calculation is expecting a specific ordering of
+    // the cloud points, as such we must reference the spatiail_deriv_calc type
+    // to decide which cloud to use.
 	size_t i, j, k;
 	if (myConfig.dimensions == 2) {
 	    // First, i-faces
@@ -1040,8 +1045,13 @@ public:
 			FVCell B = get_cell(i-1,j);
 			FVInterface C = get_ifj(i-1,j);
 			// Retain locations and references to flow states for later.
-			face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
-			face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
+			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
+			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
+			} else {
+			    face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(face.pos)];
+			    face.cloud_fs = [A.fs, B.fs, C.fs, face.fs];
+			}
 		    } else {
 			// interior face
 			FVInterface A = get_ifj(i-1,j+1);
@@ -1051,9 +1061,15 @@ public:
 			FVCell E = get_cell(i,j);
 			FVInterface F = get_ifj(i,j+1);
 			// Retain locations and references to flow states for later.
-			face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
-					  &(D.pos), &(E.pos[gtl]), &(F.pos)];
-			face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
+					      &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+			} else {
+			    face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), 
+					      &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			    face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+			}
 		    }
 		} // j loop
 	    } // i loop
@@ -1076,8 +1092,13 @@ public:
 			FVCell B = get_cell(i,j-1);
 			FVInterface C = get_ifi(i+1,j-1);
 			// Retain locations and references to flow states for later.
-			face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
-			face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
+			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
+			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
+			} else {
+			    face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), &(face.pos)];
+			    face.cloud_fs = [A.fs, B.fs, C.fs, face.fs];
+			}
 		    } else {
 			// interior face
 			FVInterface A = get_ifi(i,j-1);
@@ -1090,6 +1111,15 @@ public:
 			face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
 					  &(D.pos), &(E.pos[gtl]), &(F.pos)];
 			face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
+					      &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+			} else {
+			    face.cloud_pos = [&(A.pos), &(B.pos[gtl]), &(C.pos), 
+					      &(D.pos), &(E.pos[gtl]), &(F.pos)];
+			    face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
+			}
 		    }
 		} // j loop
 	    } // i loop
@@ -1119,9 +1149,15 @@ public:
 			    FVInterface D = get_ifk(i-1,j,k);
 			    FVCell E = get_cell(i-1,j,k);
 			    // Retain locations and references to flow states for later.
-			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
-					      &(E.pos[gtl])];
-			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
+			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
+						  &(E.pos[gtl])];
+				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
+			    } else {
+				face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
+						  &(E.pos[gtl]), &(face.pos)];
+				face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, face.fs];
+			    }
 			} else {
 			    // interior face
 			    FVInterface A = get_ifj(i-1,j+1,k);
@@ -1135,10 +1171,17 @@ public:
 			    FVInterface I = get_ifk(i,j,k);
 			    FVCell J = get_cell(i,j,k);
 			    // Retain locations and references to flow states for later.
-			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
-					      &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
-					     F.fs, G.fs, H.fs, I.fs, J.fs];
+			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
+				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
+						 F.fs, G.fs, H.fs, I.fs, J.fs];
+			    } else {
+				face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
+				face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
+						 F.fs, G.fs, H.fs, I.fs, J.fs];
+			    }
 			}
 		    } // k loop
 		} // j loop
@@ -1168,9 +1211,15 @@ public:
 			    FVInterface D = get_ifk(i,j-1,k);
 			    FVCell E = get_cell(i,j-1,k);
 			    // Retain locations and references to flow states for later.
-			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
-					      &(E.pos[gtl])];
-			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
+			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
+						  &(E.pos[gtl])];
+				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
+			    } else {
+				face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
+						  &(E.pos[gtl]), &(face.pos)];
+				face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, face.fs];
+			    }
 			} else {
 			    // interior face
 			    FVInterface A = get_ifi(i+1,j-1,k);
@@ -1184,10 +1233,17 @@ public:
 			    FVInterface I = get_ifk(i,j,k);
 			    FVCell J = get_cell(i,j,k);
 			    // Retain locations and references to flow states for later.
-			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
-					      &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
+			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
 			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
 					     F.fs, G.fs, H.fs, I.fs, J.fs];
+			    } else {
+				face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
+				face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
+						 F.fs, G.fs, H.fs, I.fs, J.fs];
+			    }
 			}
 		    } // k loop
 		} // j loop
@@ -1217,9 +1273,15 @@ public:
 			    FVInterface D = get_ifi(i,j,k-1);
 			    FVCell E = get_cell(i,j,k-1);
 			    // Retain locations and references to flow states for later.
-			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
-					      &(E.pos[gtl])];
-			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
+			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
+						  &(E.pos[gtl])];
+				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
+			    } else {
+				face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos),
+						  &(E.pos[gtl]), &(face.pos)];
+				face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs, face.fs];
+			    }
 			} else {
 			    // interior face
 			    FVInterface A = get_ifj(i,j+1,k-1);
@@ -1233,10 +1295,17 @@ public:
 			    FVInterface I = get_ifi(i,j,k);
 			    FVCell J = get_cell(i,j,k);
 			    // Retain locations and references to flow states for later.
-			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
-					      &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
+			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
+				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
 					     F.fs, G.fs, H.fs, I.fs, J.fs];
+			    } else {
+				face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
+						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
+				face.cloud_fs = [A.fs, B.fs, C.fs, D.fs, E.fs,
+						 F.fs, G.fs, H.fs, I.fs, J.fs];
+			    }
 			}
 		    } // k loop
 		} // j loop

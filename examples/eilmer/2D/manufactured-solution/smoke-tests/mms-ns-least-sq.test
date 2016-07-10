@@ -42,9 +42,9 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 } -result {1}
 
 test computed-norms {Check the density norms.} -body {
-    set L1_ref 1.471398727973e-03
-    set L2_ref 1.773676824915e-03
-    set Linf_ref 4.094873754700e-03
+    set L1_ref 1.462794804407063429e-03
+    set L2_ref 1.774724636678932108e-03
+    set Linf_ref 4.139574720295358112e-03
     exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua --norms="rho" | tail -3 > rho-norms.txt
     set fp [open rho-norms.txt r]
     set contents [read $fp]
