@@ -4,7 +4,7 @@
 config.title = "X3 blunted conical probe."
 print(config.title)
 config.axisymmetric = true
-config.viscous = false
+config.viscous = true
 
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
