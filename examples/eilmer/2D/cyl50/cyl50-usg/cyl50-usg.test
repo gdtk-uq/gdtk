@@ -1,0 +1,62 @@
+# cyl50.test
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test prepare-gas-model {Prepare gas model.} -body {
+    exec prep-gas ideal-air.inp ideal-air-gas-model.lua > LOGFILE_PREP_GAS
+} -result {} -returnCodes {0}
+
+test run-preprocessor {Run the preprocessing stage.} -body {
+    exec e4shared --prep --job=cyl50 > LOGFILE_PREP
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the shared-memory simulation code.} -body {
+    exec e4shared --run --job=cyl50 --verbosity=1 --max-cpus=4 > LOGFILE_MAIN
+} -result {} -returnCodes {0}
+
+test number-of-steps {The main simulation takes a certain number of steps.} -body {
+    set fp [open LOGFILE_MAIN r]
+    set contents [read $fp]
+    close $fp
+    set final_steps 0
+    foreach line [split $contents "\n"] {
+	if {[string first "final-t=" $line] >= 0} {
+	    set final_steps [lindex [split $line] 1]
+	}
+    }
+    list [expr abs($final_steps - 179803) < 3]
+} -result {1}
+
+test free-stream-flow {The flow in the boundary layer} -body {
+    set a 0; set M 0; set p 0; set T 0
+    if { [catch {exec e4shared --post --job=cyl50 --tindx-plot=last --add-vars="mach" --probe=0.7,0.007,0.0 } results] } {
+        puts "Flow-field-probing command failed"
+        puts $results
+    } else {
+	# puts $results
+	# Skip through the output, looking for the interesting data.
+	# There will be a header line, followed by the actual data values.
+	set found 0
+	foreach line [split $results "\n"] {
+	    if {[string first "pos.x" $line] >= 0} {
+		set found 1
+		continue; # skip to following line
+	    }
+	    if {$found} {
+		set tokens [split [string trim $line]]
+		# puts "tokens= $tokens"
+		set a [lindex $tokens 9]
+		set M [lindex $tokens 20]
+		set p [lindex $tokens 8]
+		set T [lindex $tokens 19]
+		break; # We have our data so stop looking.
+	    }
+	}
+    }
+    list [expr abs($a - 3.177375013343550449e+02) < 1.0] [expr abs($M - 1.387463624113640881e+00) < 0.02] \
+	[expr abs($p - 2.572414895118691334e+02) < 500] [expr abs($T - 2.511717628993179119e+02) < 1.0]
+} -result {1 1 1 1}
+
+cleanupTests
