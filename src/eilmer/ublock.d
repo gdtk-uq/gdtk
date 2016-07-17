@@ -713,6 +713,10 @@ public:
 	    } // end foreach j
 	} // end foreach bndry
 	compute_leastsq_geometric_weights(gtl);
+	foreach (f; faces) {
+	    lsq.assemble_and_invert_normal_matrix(f, 0, f.left_cells, f.wsL);
+	    lsq.assemble_and_invert_normal_matrix(f, 0, f.right_cells, f.wsR);
+	}
     } // end compute_primary_cell_geometric_data()
 
     override void read_grid(string filename, size_t gtl=0)

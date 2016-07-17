@@ -22,6 +22,7 @@ import flowstate;
 import flowgradients;
 import conservedquantities;
 import globalconfig;
+import lsqinterp;
 
 class FVInterface {
 public:
@@ -43,6 +44,8 @@ public:
     // starting with the adjoining cell, and moving out in each direction.
     BasicCell[] left_cells;      // interface normal points out of this adjoining cell
     BasicCell[] right_cells;     // interface normal points into this adjoining cell
+    LSQInterpWorkspace wsL;
+    LSQInterpWorkspace wsR;
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
