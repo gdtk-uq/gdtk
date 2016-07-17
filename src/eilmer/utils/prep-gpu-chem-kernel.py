@@ -115,7 +115,7 @@ with open('workfile', 'w') as f:
         method found in Turns' textbook An Introduction to Combustion.
         '''
     print "setting up Production equations (q)"
-
+    
     vji = zeros((num_reac, num_spec))  
     for j in linspace(0, num_spec-1, num_spec):
         for i in linspace(0, num_reac-1, num_reac):
@@ -123,6 +123,7 @@ with open('workfile', 'w') as f:
             j = int(j)            
             vji[i][j] = vji_pp[i][j] - vji_p[i][j]
     for j in linspace(0, num_spec-1, num_spec):
+        zero_count = 0
         value = 'q[idx+numcell*'
         s = str(value)
         f.write(s)
@@ -130,6 +131,7 @@ with open('workfile', 'w') as f:
         f.write(']=')
         for i in linspace(0, num_reac-1, num_reac):
             if vji[i][j] == 0:
+                zero_count += 1
                 pass
             else:
                 if vji[i][j] < 0:			# if this is -ve then the production is from kb
@@ -180,13 +182,15 @@ with open('workfile', 'w') as f:
                         f.write(s)
                         f.write(str(int(i)))
                         f.write(']')
+        if (zero_count == num_reac):
+            f.write('0.0')
         f.write(';')
         f.write('\n')
 #------------------------------------------------------------------------------------
 # 					ODEs - Loss terms (p)
 #------------------------------------------------------------------------------------
     print "setting up Loss equation (p)"
-
+    
     vji = zeros((num_reac, num_spec))  
     for j in linspace(0, num_spec-1, num_spec):
         for i in linspace(0, num_reac-1, num_reac):
@@ -194,6 +198,7 @@ with open('workfile', 'w') as f:
             j = int(j)            
             vji[i][j] = vji_pp[i][j] - vji_p[i][j]
     for j in linspace(0, num_spec-1, num_spec):
+        zero_count = 0
         value = 'p[idx+numcell*'
         s = str(value)
         f.write(s)
@@ -201,6 +206,7 @@ with open('workfile', 'w') as f:
         f.write(']=')
         for i in linspace(0, num_reac-1, num_reac):
             if vji[i][j] == 0:
+                zero_count += 1
                 pass
             else:
                 if vji[i][j] < 0:			# if this is -ve then the loss is from kf
@@ -273,6 +279,8 @@ with open('workfile', 'w') as f:
                         f.write(s)
                         f.write(str(int(i)))
                         f.write(']')
+        if (zero_count == num_reac):
+            f.write('0.0')
         f.write(';')
         f.write('\n')
 f.close
