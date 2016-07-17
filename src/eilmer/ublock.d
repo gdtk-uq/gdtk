@@ -168,8 +168,7 @@ public:
 	    vertices ~= new_vtx;
 	}
 	foreach (i, f; grid.faces) {
-	    auto new_face = new FVInterface(myConfig);
-	    new_face.id = i;
+	    auto new_face = new FVInterface(myConfig, myConfig.retain_least_squares_work_data, i);
 	    faces ~= new_face;
 	}
 	foreach (i, c; grid.cells) {
@@ -713,9 +712,11 @@ public:
 	    } // end foreach j
 	} // end foreach bndry
 	compute_leastsq_geometric_weights(gtl);
-	foreach (f; faces) {
-	    lsq.assemble_and_invert_normal_matrix(f, 0, f.left_cells, f.wsL);
-	    lsq.assemble_and_invert_normal_matrix(f, 0, f.right_cells, f.wsR);
+	if (myConfig.retain_least_squares_work_data) {
+	    foreach (f; faces) {
+		lsq.assemble_and_invert_normal_matrix(f, 0, f.left_cells, *(f.wsL));
+		lsq.assemble_and_invert_normal_matrix(f, 0, f.right_cells, *(f.wsR));
+	    }
 	}
     } // end compute_primary_cell_geometric_data()
 

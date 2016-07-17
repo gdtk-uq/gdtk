@@ -27,7 +27,7 @@ class LsqInterpolator {
 
 private:
     LocalConfig myConfig;
-    // LSQInterpWorkspace wsL, wsR; // common workspaces for all interfaces, not used
+    LSQInterpWorkspace common_wsL, common_wsR;
 
 public:
     this(LocalConfig myConfig) 
@@ -133,14 +133,20 @@ public:
 	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
 	    //
-	    // If we want to reduce memory consumption, we might use common workspaces.
-	    // assemble_and_invert_normal_matrix(IFace, gtl, IFace.left_cells, wsL);
-	    // assemble_and_invert_normal_matrix(IFace, gtl, IFace.right_cells, wsR);
-	    //
-	    // To have a faster calculation (by nearly a factor of 2),
-	    // retain the workspaces with precomputed inverses in the interfaces.
-	    LSQInterpWorkspace * wsL = &(IFace.wsL);
-	    LSQInterpWorkspace * wsR = &(IFace.wsR);
+	    LSQInterpWorkspace * wsL;
+	    LSQInterpWorkspace * wsR;
+	    if (myConfig.retain_least_squares_work_data) {
+		// To have a faster calculation (by nearly a factor of 2),
+		// retain the workspaces with precomputed inverses in the interfaces.
+		wsL = IFace.wsL;
+		wsR = IFace.wsR;
+	    } else {
+		// To reduce memory consumption, we use common workspaces.
+		wsL = &(common_wsL);
+		wsR = &(common_wsR);
+		assemble_and_invert_normal_matrix(IFace, gtl, IFace.left_cells, *wsL);
+		assemble_and_invert_normal_matrix(IFace, gtl, IFace.right_cells, *wsR);
+	    }
 	    //
 	    // Always reconstruct in the interface-local frame of reference.
 	    // note that clouds may share the interface neighbour cells, you should be sure not to

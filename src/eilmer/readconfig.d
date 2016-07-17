@@ -134,6 +134,8 @@ void read_config_file()
     GlobalConfig.extrema_clipping = getJSONbool(jsonData, "extrema_clipping", true);
     GlobalConfig.interpolate_in_local_frame = 
 	getJSONbool(jsonData, "interpolate_in_local_frame", true);
+    GlobalConfig.retain_least_squares_work_data = 
+	getJSONbool(jsonData, "retain_least_squares_work_data", true);
     try {
 	string name = jsonData["flux_calculator"].str;
 	GlobalConfig.flux_calculator = flux_calculator_from_name(name);
@@ -186,6 +188,7 @@ void read_config_file()
 	writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
 	writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
 	writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
+	writeln("  retain_least_squares_work_data: ", GlobalConfig.retain_least_squares_work_data);	
 	writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
 	writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
 	writeln("  M_inf: ", GlobalConfig.M_inf);

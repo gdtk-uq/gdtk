@@ -44,8 +44,8 @@ public:
     // starting with the adjoining cell, and moving out in each direction.
     BasicCell[] left_cells;      // interface normal points out of this adjoining cell
     BasicCell[] right_cells;     // interface normal points into this adjoining cell
-    LSQInterpWorkspace wsL;
-    LSQInterpWorkspace wsR;
+    LSQInterpWorkspace * wsL;
+    LSQInterpWorkspace * wsR;
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
@@ -58,7 +58,7 @@ public:
     double[][] dFdU_R;
     }
 
-    this(LocalConfig myConfig, size_t id_init=0)
+    this(LocalConfig myConfig, bool allocate_lsq_interp_workspace, size_t id_init=0)
     {
 	id = id_init;
 	area.length = myConfig.n_grid_time_levels;
@@ -67,6 +67,11 @@ public:
 	F = new ConservedQuantities(myConfig.gmodel.n_species, myConfig.gmodel.n_modes);
 	F.clear_values();
 	grad = new FlowGradients(myConfig.gmodel.n_species);
+	if (allocate_lsq_interp_workspace) {
+	    // only used for unstructured-grid blocks
+	    wsL = new LSQInterpWorkspace();
+	    wsR = new LSQInterpWorkspace();
+	}
 	version(steadystate) {
 	dFdU_L.length = 5; // number of conserved variables
 	foreach (ref a; dFdU_L) a.length = 5;
