@@ -18,6 +18,7 @@ int computeInverse(int N, int NDIM)
 // Perform Gauss-Jordan elimination on an augmented matrix.
 // c = [A|b] such that the mutated matrix becomes [I|x]
 // where x is the solution vector(s) to A.x = b
+// When computing an inverse, the incoming data is assumed to be c=[A|I].
 //
 // Returns 0 normally, -1 if the matrix is essentially singular (zero pivot).
 //
@@ -57,6 +58,7 @@ int computeInverseDebug(int N, int NDIM)
 // Perform Gauss-Jordan elimination on an augmented matrix.
 // c = [A|b] such that the mutated matrix becomes [I|x]
 // where x is the solution vector(s) to A.x = b
+// When computing an inverse, the incoming data is assumed to be c=[A|I].
 //
 // Returns 0 normally, -1 if the matrix is essentially singular (zero pivot).
 //
@@ -102,6 +104,7 @@ int computeInverseDebug(int N, int NDIM)
 void solveWithInverse(int N, int NDIM)
     (ref double[2*NDIM][NDIM] c, ref double[NDIM] rhs, ref double[NDIM] x)
 // Multiply right-hand-side by the inverse part of the augmented matrix.
+// Augmented matrix is assumed to be c=[I|Ainv]
 {
     assert(NDIM >= N, "Inadequate size of dimension for matrix");
     foreach(i; 0 .. N) {
@@ -126,6 +129,17 @@ version(rsla_test) {
 	solveWithInverse!(4,4)(A, b, x);
 	assert(approxEqual(x[0], -0.5) && approxEqual(x[1], 1.0) &&
 	       approxEqual(x[2], 1.0/3) && approxEqual(x[3], -2.0), failedUnitTest());
+
+	// Try same workspace with a smaller system.
+	x[0] = -0.5; x[1] = 1.0;
+	A[0][0] = 0.0; A[0][1] = 2.0; A[0][2] = 1.0; A[0][3] = 0.0; 
+	A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 0.0; A[1][3] = 1.0;
+	b[0] = A[0][0]*x[0] + A[0][1]*x[1];
+	b[1] = A[1][0]*x[0] + A[1][1]*x[1];
+	computeInverse!(2,4)(A);
+	x[0] = 0.0; x[1] = 0.0;
+	solveWithInverse!(2,4)(A, b, x);
+	assert(approxEqual(x[0], -0.5) && approxEqual(x[1], 1.0), failedUnitTest());
 
 	return 0;
     }
