@@ -107,7 +107,7 @@ public:
 	ws.xTx[0][3] = 1.0; ws.xTx[0][4] = 0.0; ws.xTx[0][5] = 0.0;
 	ws.xTx[1][3] = 0.0; ws.xTx[1][4] = 1.0; ws.xTx[1][5] = 0.0;
 	ws.xTx[2][3] = 0.0; ws.xTx[2][4] = 0.0; ws.xTx[2][5] = 1.0;
-	if (0 != computeInverse!3(ws.xTx)) {
+	if (0 != computeInverse!(3,3)(ws.xTx)) {
 	    // Assume that the rows are linearly dependent 
 	    // because the sample points are colinear.
 	    // Proceed by working as a single-dimensional interpolation.
@@ -175,14 +175,14 @@ public:
                     double dq = IFace.left_cells[i].fs."~qname~" - qL0;
                     rhsL[0] += wsL.dx[i]*dq; rhsL[1] += wsL.dy[i]*dq; rhsL[2] += wsL.dz[i]*dq;
 	        }
-	        solveWithInverse!3(wsL.xTx, rhsL, gradientsL);
+	        solveWithInverse!(3,3)(wsL.xTx, rhsL, gradientsL);
                 double qR0 = IFace.right_cells[0].fs."~qname~";
                 foreach (j; 0 .. 3) { rhsR[j] = 0.0; }
                 foreach (i; 1 .. IFace.right_cells.length) {
                     double dq = IFace.right_cells[i].fs."~qname~" - qR0;
                     rhsR[0] += wsR.dx[i]*dq; rhsR[1] += wsR.dy[i]*dq; rhsR[2] += wsR.dz[i]*dq;
 	        }
-                solveWithInverse!3(wsR.xTx, rhsR, gradientsR);
+                solveWithInverse!(3,3)(wsR.xTx, rhsR, gradientsR);
                 if (myConfig.apply_limiter) {
 		    van_albada_limit(gradientsL[0], gradientsR[0]);
                     van_albada_limit(gradientsL[1], gradientsR[1]);

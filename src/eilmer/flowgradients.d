@@ -390,7 +390,7 @@ public:
 	xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
 	xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
 	xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
-	computeInverse!3(xTx);
+	computeInverse!(3,3)(xTx);
 	// x-velocity
 	double q0;
 	string codeForGradients(string qname)
@@ -411,7 +411,7 @@ public:
                 double dz = cloud_pos[i].z - z0;
                 rhs[0] += weight[i]*dx*dq; rhs[1] += weight[i]*dy*dq; rhs[2] += weight[i]*dz*dq;
 	    }
-	    solveWithInverse!3(xTx, rhs, gradients);";
+	    solveWithInverse!(3,3)(xTx, rhs, gradients);";
 	    return code;
 	}
 	mixin(codeForGradients("vel.x"));
@@ -495,7 +495,7 @@ public:
 	}
 	xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = 1.0; xTx[0][3] = 0.0;
 	xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = 0.0; xTx[1][3] = 1.0;
-	computeInverse!2(xTx);
+	computeInverse!(2,2)(xTx);
 	// x-velocity
 	double q0;
 	string codeForGradients(string qname)
@@ -515,7 +515,7 @@ public:
 	        double dy = cloud_pos[i].y - y0;
                 rhs[0] += weight[i]*dx*dq; rhs[1] += weight[i]*dy*dq;
 	    }
-	    solveWithInverse!2(xTx, rhs, gradients);";
+	    solveWithInverse!(2,2)(xTx, rhs, gradients);";
 	    return code;
 	}
 	mixin(codeForGradients("vel.x"));
