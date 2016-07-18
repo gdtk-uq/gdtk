@@ -40,7 +40,7 @@ gridp1 = StructuredGrid:new{psurface=CoonsPatch:new{p00=b0, p10=c0, p11=c1, p01=
 gridp2 = StructuredGrid:new{psurface=CoonsPatch:new{p00=c0, p10=d0, p11=d1, p01=c1},
 			    cfList={east=rcf,west=rcf}, niv=2*ni0+1, njv=nj0+1}
 
--- create special boundary condition for the no_slip_fixed_T wall
+-- create special boundary condition for the no_slip_fixed_T wall that doesn't reference KOmegaWall
 LaminarWallBC = WallBC_NoSlip_Adiabatic:new{}
 table.remove(LaminarWallBC.preSpatialDerivAction, 3)
 

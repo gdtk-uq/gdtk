@@ -28,7 +28,7 @@ grd = StructuredGrid:new{psurface=makePatch{north=nth, east=est, south=sth, west
 			 cfList = {north=clusterx, east=clustery, south=clusterx, west=clustery},
 			 niv=51, njv=51}
 
--- create special boundary condition for the no_slip_fixed_T wall
+-- create special boundary condition for the no_slip_fixed_T wall that doesn't reference KOmegaWall
 LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=222.0}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 -- Assemble the block from the grid and boundary data.

@@ -26,7 +26,7 @@ test number-of-steps {The main simulation takes a certain number of steps.} -bod
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    list [expr abs($final_steps - 179803) < 3]
+    list [expr abs($final_steps - 179480) < 3]
 } -result {1}
 
 test free-stream-flow {The flow in the boundary layer} -body {

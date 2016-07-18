@@ -67,7 +67,7 @@ grd = StructuredGrid:new{psurface=patch,
 				   south=clusterx, west=clustery_w},
 			 niv=221, njv=193}
 
--- create a special boundary condition for the no_slip_fixed_T wall
+-- create a special boundary condition for the no_slip_fixed_T wall that doesn't reference KOmegaWall
 LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=300.0}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 
