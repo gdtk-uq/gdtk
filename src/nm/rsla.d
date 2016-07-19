@@ -92,7 +92,7 @@ int computeInverse(size_t N, size_t NDIM)
 		foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
 	    }
 	} // end foreach j
-    } // end static if N >= 3
+    } // end static if N > 3
     return 0; // success
 } // end computeInverse()()
 
@@ -172,7 +172,7 @@ void solveWithInverse(size_t N, size_t NDIM)
 		x[i] += c[i][N+j] * rhs[j];
 	    }
 	}
-    }
+    } // end static if N > 3
 } // end solveWithInverse()()
 
 
