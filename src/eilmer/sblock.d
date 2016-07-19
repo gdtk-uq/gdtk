@@ -249,18 +249,24 @@ public:
 	    throw new FlowSolverException(msg);
 	}
 	size_t ntot = _nidim * _njdim * _nkdim;
+	bool lsq_workspace_at_faces = myConfig.spatial_deriv_retain_lsq_work_data 
+	    && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares
+	    && myConfig.spatial_deriv_locn == SpatialDerivLocn.faces;
+	bool lsq_workspace_at_vertices = myConfig.spatial_deriv_retain_lsq_work_data 
+	    && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares
+	    && myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices;
 	try {
 	    // Create the cell and interface objects for the entire structured block.
 	    // This includes the layer of surrounding ghost cells.
 	    foreach (gid; 0 .. ntot) {
 		_ctr ~= new FVCell(myConfig); _ctr[gid].id = gid;
 		auto ijk = to_ijk_indices(gid);
-		_ifi ~= new FVInterface(myConfig, false); _ifi[gid].id = gid;
-		_ifj ~= new FVInterface(myConfig, false); _ifj[gid].id = gid;
+		_ifi ~= new FVInterface(myConfig, false, lsq_workspace_at_faces); _ifi[gid].id = gid;
+		_ifj ~= new FVInterface(myConfig, false, lsq_workspace_at_faces); _ifj[gid].id = gid;
 		if ( myConfig.dimensions == 3 ) {
-		    _ifk ~= new FVInterface(myConfig, false); _ifk[gid].id = gid;
+		    _ifk ~= new FVInterface(myConfig, false, lsq_workspace_at_faces); _ifk[gid].id = gid;
 		}
-		_vtx ~= new FVVertex(myConfig); _vtx[gid].id = gid;
+		_vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices); _vtx[gid].id = gid;
 	    } // gid loop
 	    // Now, assemble the lists of references to the cells, vertices and faces
 	    // in standard order for a structured grid.

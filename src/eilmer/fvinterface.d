@@ -44,8 +44,9 @@ public:
     // starting with the adjoining cell, and moving out in each direction.
     BasicCell[] left_cells;      // interface normal points out of this adjoining cell
     BasicCell[] right_cells;     // interface normal points into this adjoining cell
-    LSQInterpWorkspace * wsL;
-    LSQInterpWorkspace * wsR;
+    LSQInterpWorkspace wsL;
+    LSQInterpWorkspace wsR;
+    WLSQGradWorkspace ws_grad;
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
@@ -58,7 +59,10 @@ public:
     double[][] dFdU_R;
     }
 
-    this(LocalConfig myConfig, bool allocate_lsq_interp_workspace, size_t id_init=0)
+    this(LocalConfig myConfig,
+	 bool allocate_lsq_interp_workspace,
+	 bool allocate_spatial_deriv_lsq_workspace,
+	 size_t id_init=0)
     {
 	id = id_init;
 	area.length = myConfig.n_grid_time_levels;
@@ -71,6 +75,9 @@ public:
 	    // only used for unstructured-grid blocks
 	    wsL = new LSQInterpWorkspace();
 	    wsR = new LSQInterpWorkspace();
+	}
+	if (allocate_spatial_deriv_lsq_workspace) {
+	    ws_grad = new WLSQGradWorkspace();
 	}
 	version(steadystate) {
 	dFdU_L.length = 5; // number of conserved variables
@@ -94,6 +101,9 @@ public:
 	fs = new FlowState(other.fs, gm);
 	F = new ConservedQuantities(other.F);
 	grad = new FlowGradients(other.grad);
+	if (other.ws_grad) ws_grad = new WLSQGradWorkspace(other.ws_grad);
+	if (other.wsL) wsL = new LSQInterpWorkspace(other.wsL);
+	if (other.wsR) wsR = new LSQInterpWorkspace(other.wsR);
 	// Because we copy the following pointers and references,
 	// we cannot have const (or "in") qualifier on other.
 	cloud_pos = other.cloud_pos.dup();
@@ -139,6 +149,7 @@ public:
 	    fs.copy_values_from(other.fs);
 	    F.copy_values_from(other.F);
 	    grad.copy_values_from(other.grad);
+	    // omit scratch workspaces ws_grad, wsL, wsR
 	} // end switch
     }
 

@@ -301,14 +301,29 @@ public:
 
     void compute_leastsq_geometric_weights(int gtl)
     {
-    // Update the least-squares geometric weights.
+    // Update the least-squares geometric weights and the workspaces, if appropriate.
     // The weights should be calculated when the grid is initialised/moved.
     // For this reason it is called in ublock/sblock class method compute_primary_cell_geomtric_data()
-	if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-	    if (GlobalConfig.spatial_deriv_locn == SpatialDerivLocn.faces)
-		foreach(iface; this.faces) iface.grad.weights_leastsq(iface.cloud_pos, iface.pos, iface.cloud_weights);	
-	    else // vertices
-		foreach(vtx; this.vertices) vtx.grad.weights_leastsq(vtx.cloud_pos, vtx.pos[gtl], vtx.cloud_weights);
+	if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+	    if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
+		bool compute_about_mid = false;
+		foreach(iface; faces) {
+		    iface.grad.weights_leastsq(iface.cloud_pos, iface.pos, iface.cloud_weights);
+		    if (myConfig.spatial_deriv_retain_lsq_work_data) {
+			iface.grad.set_up_workspace_for_gradients_xyz_leastsq(iface.cloud_pos, iface.cloud_weights,
+									      compute_about_mid, iface.ws_grad);
+		    }
+		}	
+	    } else { // vertices
+		bool compute_about_mid = true;
+		foreach(vtx; vertices) {
+		    vtx.grad.weights_leastsq(vtx.cloud_pos, vtx.pos[gtl], vtx.cloud_weights);
+		    if (myConfig.spatial_deriv_retain_lsq_work_data) {
+			vtx.grad.set_up_workspace_for_gradients_xyz_leastsq(vtx.cloud_pos, vtx.cloud_weights,
+									    compute_about_mid, vtx.ws_grad);
+		    }
+		}
+	    }
 	}
     } // end compute_leastsq_geometric_weights()
     
@@ -323,7 +338,9 @@ public:
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(vtx; vertices) { 
-			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights, compute_about_mid, myConfig.diffusion);
+			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights,
+						      compute_about_mid, myConfig.diffusion,
+						      vtx.ws_grad, myConfig.spatial_deriv_retain_lsq_work_data);
 		    }
 		    break;
 		case SpatialDerivCalc.divergence:
@@ -337,7 +354,9 @@ public:
 	    } else {
 		// Have only least-squares in 3D.
 		foreach(vtx; vertices) {
-		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights, compute_about_mid, myConfig.diffusion);
+		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights,
+						   compute_about_mid, myConfig.diffusion,
+						   vtx.ws_grad, myConfig.spatial_deriv_retain_lsq_work_data);
 		}
 	    }
        	    foreach (iface; faces) {
@@ -350,7 +369,9 @@ public:
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(iface; faces) { 
-			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos,  iface.cloud_weights, compute_about_mid, myConfig.diffusion);
+			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos, iface.cloud_weights,
+							compute_about_mid, myConfig.diffusion,
+							iface.ws_grad, myConfig.spatial_deriv_retain_lsq_work_data);
 		    }
 		    break;
 		case SpatialDerivCalc.finite_difference:
@@ -367,7 +388,9 @@ public:
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(iface; faces) {
-			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, iface.cloud_weights, compute_about_mid, myConfig.diffusion);
+			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, iface.cloud_weights,
+							 compute_about_mid, myConfig.diffusion,
+							 iface.ws_grad, myConfig.spatial_deriv_retain_lsq_work_data);
 		    }
 		    break;
 		case SpatialDerivCalc.finite_difference:
@@ -387,12 +410,12 @@ public:
     @nogc
     void clear_fluxes_of_conserved_quantities()
     {
-	foreach (iface; faces) iface.F.clear_values();
+	foreach (iface; faces) { iface.F.clear_values(); }
     }
 
     void viscous_flux()
     {
-	foreach (iface; faces) iface.viscous_flux_calc(myConfig); 
+	foreach (iface; faces) { iface.viscous_flux_calc(myConfig); } 
     }
 
     @nogc

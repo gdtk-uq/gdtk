@@ -26,15 +26,34 @@ import globalconfig;
 
 immutable size_t MaxNPoints = 20;
 
-struct WLSQGradWorkspace {
+class WLSQGradWorkspace {
     // A place to hold the intermediate results for assembling
     // the normal equations, to allow reuse of the values.
+public:
     double[MaxNPoints] dx, dy, dz;
     size_t loop_init; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
     size_t n; // cloud_pos.length;
     double x0, y0, z0; // reference point may be a computed midpoint
     double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
-}
+
+    this()
+    {
+	// don't need to do anything
+    }
+
+    this(const WLSQGradWorkspace other)
+    {
+	foreach (i; 0 .. MaxNPoints) {
+	    dx[i] = other.dx[i]; dy[i] = other.dy[i]; dz[i] = other.dz[i];
+	}
+	loop_init = other.loop_init;
+	n = other.n;
+	x0 = other.x0; y0 = other.y0; z0 = other.z0;
+	foreach (i; 0 .. 3) {
+	    foreach (j; 0 .. 6) { xTx[i][j] = other.xTx[i][j]; }
+	}
+    }
+} // end class WLSQGradWorkspace
 
 
 class FlowGradients {
@@ -55,7 +74,8 @@ public:
     {
 	vel.length = 3;
 	foreach (ref elem; vel) elem.length = 3;
-	massf.length = nspecies; 
+	massf.length = nspecies;
+	common_ws = new WLSQGradWorkspace();
     }
 
     this(const FlowGradients other)
@@ -66,6 +86,7 @@ public:
 	T = other.T;
 	tke = other.tke;
 	omega = other.omega;
+	common_ws = new WLSQGradWorkspace(other.common_ws);
     }
 
     @nogc
@@ -88,6 +109,7 @@ public:
 	omega.refx = other.omega.x;
 	omega.refy = other.omega.y;
 	omega.refz = other.omega.z;
+	// omit copying of common_ws
     }
 
     @nogc
@@ -110,6 +132,7 @@ public:
 	omega.refx += other.omega.x;
 	omega.refy += other.omega.y;
 	omega.refz += other.omega.z;
+	// omit copying of common_ws
     }
 
     @nogc
@@ -122,6 +145,7 @@ public:
 	T *= factor;
 	tke *= factor;
 	omega *= factor;
+	// omit common_ws
     }
 
     override string toString() const
@@ -142,6 +166,7 @@ public:
 	repr ~= ", tke=" ~ to!string(tke);
 	repr ~= ", omega=" ~ to!string(omega);
 	repr ~= ")";
+	// omit common_ws
 	return to!string(repr);
     }
 
@@ -353,8 +378,7 @@ public:
     } // end weights_leastsq()
 
     @nogc
-    void set_up_workspace_for_gradients_xyz_leastsq(ref FlowState[] cloud_fs,
-						    ref Vector3*[] cloud_pos,
+    void set_up_workspace_for_gradients_xyz_leastsq(ref Vector3*[] cloud_pos,
 						    ref double[] weight,
 						    bool compute_about_mid,
 						    ref WLSQGradWorkspace ws)
@@ -401,15 +425,23 @@ public:
 
     @nogc
     void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
-			       bool compute_about_mid, bool diffusion)
+			       bool compute_about_mid, bool diffusion,
+			       ref WLSQGradWorkspace ws, bool retain_work_data)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 3D
     // As for 2D, if using vertices spatial locations then take differences about a middle point/value.
     // Else take differences about the point at which the gradient is being calculated (i.e. the faces).
     {
-	WLSQGradWorkspace * myws = &(common_ws); // later, we may want to pass in a workspace
-	set_up_workspace_for_gradients_xyz_leastsq(cloud_fs, cloud_pos, weight, compute_about_mid, *myws);
+	WLSQGradWorkspace myws;
+	if (retain_work_data) {
+	    // To have a faster calculation, retain the workspaces with precomputed inverses.
+	    myws = ws;
+	} else {
+	    // To reduce memory consumption, we use common workspaces.
+	    myws = common_ws;
+	    set_up_workspace_for_gradients_xyz_leastsq(cloud_pos, weight, compute_about_mid, myws);
+	}
 	//
 	// Now compute gradients.
 	size_t loop_init = myws.loop_init;
@@ -480,8 +512,7 @@ public:
     } // end gradients_xyz_leastsq()
 
     @nogc
-    void set_up_workspace_for_gradients_xy_leastsq(ref FlowState[] cloud_fs,
-						   ref Vector3*[] cloud_pos,
+    void set_up_workspace_for_gradients_xy_leastsq(ref Vector3*[] cloud_pos,
 						   ref double[] weight,
 						   bool compute_about_mid,
 						   ref WLSQGradWorkspace ws)
@@ -521,15 +552,23 @@ public:
 
     @nogc
     void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
-			      bool compute_about_mid, bool diffusion)
+			      bool compute_about_mid, bool diffusion,
+			      ref WLSQGradWorkspace ws, bool retain_work_data)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 2D, built as a specialization of the 3D code.
     // Experiment with taking differences about a middle point/value for the vertices spatial locations and
     // taking differences about the interface point for the faces spatial location.
     {
-	WLSQGradWorkspace * myws = &(common_ws); // later, we may want to pass in a workspace
-	set_up_workspace_for_gradients_xy_leastsq(cloud_fs, cloud_pos, weight, compute_about_mid, *myws);
+	WLSQGradWorkspace myws;
+	if (retain_work_data) {
+	    // To have a faster calculation, retain the workspaces with precomputed inverses.
+	    myws = ws;
+	} else {
+	    // To reduce memory consumption, we use common workspaces.
+	    myws = common_ws;
+	    set_up_workspace_for_gradients_xyz_leastsq(cloud_pos, weight, compute_about_mid, myws);
+	}
 	//
 	// Now compute gradients.
 	size_t loop_init = myws.loop_init;

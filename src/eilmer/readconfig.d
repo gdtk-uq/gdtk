@@ -232,6 +232,9 @@ void read_config_file()
     }
     GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds =
 	getJSONbool(jsonData, "include_ghost_cells_in_spatial_deriv_clouds", false);
+    GlobalConfig.spatial_deriv_retain_lsq_work_data =
+	getJSONbool(jsonData, "spatial_deriv_retain_lsq_work_data",
+		    GlobalConfig.spatial_deriv_retain_lsq_work_data);
     GlobalConfig.viscous_delay = getJSONdouble(jsonData, "viscous_delay", 0.0);
     GlobalConfig.viscous_factor_increment = 
 	getJSONdouble(jsonData, "viscous_factor_increment", 0.01);
@@ -254,6 +257,7 @@ void read_config_file()
 	writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
 	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ",
 		GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
+	writeln("  spatial_deriv_retain_lsq_work_data: ", GlobalConfig.spatial_deriv_retain_lsq_work_data);
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
 	writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);

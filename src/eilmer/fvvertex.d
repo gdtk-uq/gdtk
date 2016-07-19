@@ -28,13 +28,19 @@ public:
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
     double[] cloud_weights; // Weights used in the least-squares gradient calculation.
+    WLSQGradWorkspace ws_grad;
     
-    this(LocalConfig myConfig, size_t id_init=0)
+    this(LocalConfig myConfig,
+	 bool allocate_spatial_deriv_lsq_workspace,
+	 size_t id_init=0)
     {
 	id = id_init;
 	pos.length = myConfig.n_grid_time_levels;
 	vel.length = myConfig.n_grid_time_levels;
 	grad = new FlowGradients(myConfig.gmodel.n_species);
+	if (allocate_spatial_deriv_lsq_workspace) {
+	    ws_grad = new WLSQGradWorkspace();
+	}
     }
 
     this(FVVertex other)
@@ -43,6 +49,7 @@ public:
 	pos = other.pos.dup;
 	vel = other.vel.dup;
 	grad = new FlowGradients(other.grad);
+	ws_grad = new WLSQGradWorkspace(other.ws_grad);
 	// Because we copy the following pointers and references,
 	// we cannot have const (or "in") qualifier on other.
 	cloud_pos = other.cloud_pos.dup();
@@ -65,6 +72,7 @@ public:
 		vel[i].refz = other.vel[i].z;
 	    }
 	    grad.copy_values_from(other.grad);
+	    // omit ws_grad
 	}
     } // end copy_values_from()
 
@@ -85,6 +93,7 @@ public:
 	repr ~= ", grad=" ~ to!string(grad);
 	repr ~= ", cloud_pos=" ~ to!string(cloud_pos);
 	repr ~= ", cloud_fs=" ~ to!string(cloud_fs);
+	// omit ws_grad
 	repr ~= ")";
 	return to!string(repr);
     }

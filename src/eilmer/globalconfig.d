@@ -201,6 +201,7 @@ final class GlobalConfig {
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.least_squares;
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.faces;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
+    shared static bool spatial_deriv_retain_lsq_work_data = true;
     //
     // A factor to scale the viscosity in order to achieve a soft start. 
     // The soft-start for viscous effects may be handy for impulsively-started flows.
@@ -377,6 +378,7 @@ public:
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
+    bool spatial_deriv_retain_lsq_work_data;
     double viscous_factor;
     bool diffusion;
     double diffusion_factor;
@@ -447,6 +449,7 @@ public:
 	spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
 	include_ghost_cells_in_spatial_deriv_clouds = 
 	    GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
+	spatial_deriv_retain_lsq_work_data = GlobalConfig.spatial_deriv_retain_lsq_work_data;
 	viscous_factor = GlobalConfig.viscous_factor;
 	diffusion = GlobalConfig.diffusion;
 	diffusion_factor = GlobalConfig.diffusion_factor;

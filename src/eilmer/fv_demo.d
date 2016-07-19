@@ -39,11 +39,11 @@ void main()
 	    gasdynamic_update_scheme_name(update_scheme_from_name("classic_rk3")));
 
     writeln("-----------------------");
-    auto iface = new FVInterface(gm);
+    auto iface = new FVInterface(gm, false, false);
     writeln("iface=", iface);
 
     writeln("-----------------------");
-    auto vtx = new FVVertex(gm);
+    auto vtx = new FVVertex(gm, false);
     writeln("vtx=", vtx);
 
     writeln("-----------------------");

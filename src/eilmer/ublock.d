@@ -162,13 +162,17 @@ public:
 	}
 	// Assemble array storage for finite-volume cells, etc.
 	foreach (i, v; grid.vertices) {
-	    auto new_vtx = new FVVertex(myConfig);
+	    auto new_vtx = new FVVertex(myConfig, false);
+	    // should never need grad_ws storage at vertices
 	    new_vtx.pos[0] = v;
 	    new_vtx.id = i;
 	    vertices ~= new_vtx;
 	}
 	foreach (i, f; grid.faces) {
-	    auto new_face = new FVInterface(myConfig, myConfig.retain_least_squares_work_data, i);
+	    auto new_face = new FVInterface(myConfig,
+					    myConfig.retain_least_squares_work_data, 
+					    myConfig.spatial_deriv_retain_lsq_work_data,
+					    i);
 	    faces ~= new_face;
 	}
 	foreach (i, c; grid.cells) {
@@ -714,8 +718,8 @@ public:
 	compute_leastsq_geometric_weights(gtl);
 	if (myConfig.retain_least_squares_work_data) {
 	    foreach (f; faces) {
-		lsq.assemble_and_invert_normal_matrix(f, 0, f.left_cells, *(f.wsL));
-		lsq.assemble_and_invert_normal_matrix(f, 0, f.right_cells, *(f.wsR));
+		lsq.assemble_and_invert_normal_matrix(f, 0, f.left_cells, f.wsL);
+		lsq.assemble_and_invert_normal_matrix(f, 0, f.right_cells, f.wsR);
 	    }
 	}
     } // end compute_primary_cell_geometric_data()

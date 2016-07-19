@@ -15,13 +15,31 @@ import fvcell;
 
 immutable size_t MaxNPoints = 10;
 
-struct LSQInterpWorkspace {
+class LSQInterpWorkspace {
     // A place to hold the intermediate results for assembling
     // the normal equations, to allow reuse of the values.
+public:
     double dxFace, dyFace, dzFace;
     double[MaxNPoints] dx, dy, dz;
     double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
-}
+
+    this()
+    {
+	// don't need to do anything
+    }
+
+    this(const LSQInterpWorkspace other)
+    {
+	foreach (i; 0 .. MaxNPoints) {
+	    dx[i] = other.dx[i]; dy[i] = other.dy[i]; dz[i] = other.dz[i];
+	}
+	dxFace = other.dxFace; dyFace = other.dyFace; dzFace = other.dzFace;
+	foreach (i; 0 .. 3) {
+	    foreach (j; 0 .. 6) { xTx[i][j] = other.xTx[i][j]; }
+	}
+    }
+} // end class LSQInterpWorkspace
+
 
 class LsqInterpolator {
 
@@ -133,8 +151,8 @@ public:
 	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
 	    //
-	    LSQInterpWorkspace * wsL;
-	    LSQInterpWorkspace * wsR;
+	    LSQInterpWorkspace wsL;
+	    LSQInterpWorkspace wsR;
 	    if (myConfig.retain_least_squares_work_data) {
 		// To have a faster calculation (by nearly a factor of 2),
 		// retain the workspaces with precomputed inverses in the interfaces.
@@ -142,10 +160,10 @@ public:
 		wsR = IFace.wsR;
 	    } else {
 		// To reduce memory consumption, we use common workspaces.
-		wsL = &(common_wsL);
-		wsR = &(common_wsR);
-		assemble_and_invert_normal_matrix(IFace, gtl, IFace.left_cells, *wsL);
-		assemble_and_invert_normal_matrix(IFace, gtl, IFace.right_cells, *wsR);
+		wsL = common_wsL;
+		wsR = common_wsR;
+		assemble_and_invert_normal_matrix(IFace, gtl, IFace.left_cells, wsL);
+		assemble_and_invert_normal_matrix(IFace, gtl, IFace.right_cells, wsR);
 	    }
 	    //
 	    // Always reconstruct in the interface-local frame of reference.

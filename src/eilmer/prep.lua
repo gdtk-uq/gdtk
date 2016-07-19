@@ -889,6 +889,8 @@ function write_config_file(fileName)
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
+   f:write(string.format('"spatial_deriv_retain_lsq_work_data": %s,\n',
+			 tostring(config.spatial_deriv_retain_lsq_work_data)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"viscous_signal_factor": %.18e,\n', config.viscous_signal_factor))
 
