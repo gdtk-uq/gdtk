@@ -24,6 +24,19 @@ import fvinterface;
 import fvvertex;
 import globalconfig;
 
+immutable size_t MaxNPoints = 20;
+
+struct WLSQGradWorkspace {
+    // A place to hold the intermediate results for assembling
+    // the normal equations, to allow reuse of the values.
+    double[MaxNPoints] dx, dy, dz;
+    size_t loop_init; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
+    size_t n; // cloud_pos.length;
+    double x0, y0, z0; // reference point may be a computed midpoint
+    double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
+}
+
+
 class FlowGradients {
     // Spatial derivatives of the flow quantities
 public:
@@ -36,6 +49,7 @@ public:
     Vector3 T; // Temperature derivatives (static temperature only)
     Vector3 tke; // turbulence kinetic energy
     Vector3 omega; // pseudo vorticity for k-omega turbulence
+    WLSQGradWorkspace common_ws;
 
     this(size_t nspecies)
     {
@@ -313,22 +327,23 @@ public:
     //     we are calculating the gradients) to be in the first cloud position. 
     {
 	size_t n = cloud_pos.length;
-	size_t init = 0; // loop starting position
+	assert(n <= MaxNPoints, "Too many points in cloud for least-squares gradient calc.");
+	size_t loop_init = 0; // loop starting position
 	if (GlobalConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
 	    cloud_weights ~= 1.0; // interface (primary point) does not need weighting; it is never used.
-	    init = 1; // we have pre-filled the first location.
+	    loop_init = 1; // we have pre-filled the first location.
 	}
 	double x0 = pos.x;
 	double y0 = pos.y;
 	if (GlobalConfig.dimensions == 2) {
-	    foreach (i; init .. n) {
+	    foreach (i; loop_init .. n) {
 		double dx = cloud_pos[i].x - x0;
 		double dy = cloud_pos[i].y - y0;
 		cloud_weights ~= 1.0/(dx*dx+dy*dy);
 	    }
 	} else { //3D
 	    double z0 = pos.z;
-	    foreach (i; init .. n) {
+	    foreach (i; loop_init .. n) {
 		double dx = cloud_pos[i].x - x0;
 		double dy = cloud_pos[i].y - y0;
 		double dz = cloud_pos[i].z - z0;
@@ -338,59 +353,69 @@ public:
     } // end weights_leastsq()
 
     @nogc
-    void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight, bool compute_about_mid, bool diffusion)
+    void set_up_workspace_for_gradients_xyz_leastsq(ref FlowState[] cloud_fs,
+						    ref Vector3*[] cloud_pos,
+						    ref double[] weight,
+						    bool compute_about_mid,
+						    ref WLSQGradWorkspace ws)
+    {
+	size_t loop_init = 0; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
+	size_t n = cloud_pos.length;
+	assert(n <= MaxNPoints, "Too many points in cloud for least-squares gradient calc.");
+	// If computing about mid-point, calculate mid-point.
+	double x0 = 0.0; double y0 = 0.0; double z0 = 0.0;
+	if (compute_about_mid) {
+	    loop_init = 0;
+	    foreach (i; loop_init .. n) {
+		x0 += cloud_pos[i].x; y0 += cloud_pos[i].y; z0 += cloud_pos[i].z;
+	    }
+	    x0 /= n; y0 /= n; z0 /= n; // midpoint
+	} else { // else use interface point (assumed to be in cloud position 0)
+	    loop_init = 1;
+	    x0 = cloud_pos[0].x; y0 = cloud_pos[0].y; z0 = cloud_pos[0].z;
+	}
+	ws.n = n;
+	ws.loop_init = loop_init;
+	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;
+	//
+	// Assemble and invert the normal matrix.
+	// We'll reuse the resulting inverse for each flow-field quantity.
+	double xx = 0.0; double xy = 0.0; double xz = 0.0;
+	double yy = 0.0; double yz = 0.0; double zz = 0.0;
+	foreach (i; loop_init .. n) {
+	    double dx = cloud_pos[i].x - x0;
+	    double dy = cloud_pos[i].y - y0;
+	    double dz = cloud_pos[i].z - z0;
+	    xx += weight[i]*dx*dx; xy += weight[i]*dx*dy; xz += weight[i]*dx*dz;
+	    yy += weight[i]*dy*dy; yz += weight[i]*dy*dz; zz += weight[i]*dz*dz;
+	    ws.dx[i] = dx; ws.dy[i] = dy; ws.dz[i] = dz;
+	}
+	ws.xTx[0][0] = xx; ws.xTx[0][1] = xy; ws.xTx[0][2] = xz;
+	ws.xTx[1][0] = xy; ws.xTx[1][1] = yy; ws.xTx[1][2] = yz;
+	ws.xTx[2][0] = xz; ws.xTx[2][1] = yz; ws.xTx[2][2] = zz;
+	ws.xTx[0][3] = 1.0; ws.xTx[0][4] = 0.0; ws.xTx[0][5] = 0.0;
+	ws.xTx[1][3] = 0.0; ws.xTx[1][4] = 1.0; ws.xTx[1][5] = 0.0;
+	ws.xTx[2][3] = 0.0; ws.xTx[2][4] = 0.0; ws.xTx[2][5] = 1.0;
+	computeInverse!(3,3)(ws.xTx);
+    } // end set_up_workspace_for_gradients_xyz_leastsq()
+
+    @nogc
+    void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
+			       bool compute_about_mid, bool diffusion)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 3D
     // As for 2D, if using vertices spatial locations then take differences about a middle point/value.
     // Else take differences about the point at which the gradient is being calculated (i.e. the faces).
     {
-	double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
+	WLSQGradWorkspace * myws = &(common_ws); // later, we may want to pass in a workspace
+	set_up_workspace_for_gradients_xyz_leastsq(cloud_fs, cloud_pos, weight, compute_about_mid, *myws);
+	//
+	// Now compute gradients.
+	size_t loop_init = myws.loop_init;
+	size_t n = myws.n;
 	double[3] rhs, gradients;
-	size_t init = 0; // loops starting position
-	double x0 = 0.0;
-	double y0 = 0.0;
-	double z0 = 0.0;
-	// Assemble and invert the normal matrix.
-	// We'll reuse the resulting inverse for each flow-field quantity.
-	size_t n = cloud_pos.length;
-	// if computing about mid-point, calculate mid-point.
-	if (compute_about_mid) {
-	    init = 0;
-	    foreach (i; init .. n) {
-		x0 += cloud_pos[i].x;
-		y0 += cloud_pos[i].y;
-		z0 += cloud_pos[i].z;
-	    }
-	    x0 /= n; // x_mid
-	    y0 /= n; // y_mid
-	    z0 /= n; // z_mid
-	} else { // else use interface point (assumed to be in cloud position 0)
-	    init = 1;
-	    x0 = cloud_pos[0].x;
-	    y0 = cloud_pos[0].y;
-	    z0 = cloud_pos[0].z;
-	}
-	double xx = 0.0;
-	double xy = 0.0;
-	double xz = 0.0;
-	double yy = 0.0;
-	double yz = 0.0;
-	double zz = 0.0;
-	foreach (i; init .. n) {
-	    double dx = cloud_pos[i].x - x0;
-	    double dy = cloud_pos[i].y - y0;
-	    double dz = cloud_pos[i].z - z0;
-	    xx += weight[i]*dx*dx; xy += weight[i]*dx*dy; xz += weight[i]*dx*dz;
-	    yy += weight[i]*dy*dy; yz += weight[i]*dy*dz; zz += weight[i]*dz*dz;
-	}
-	xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = xz;
-	xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = yz;
-	xTx[2][0] = xz; xTx[2][1] = yz; xTx[2][2] = zz;
-	xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
-	xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
-	xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
-	computeInverse!(3,3)(xTx);
+	//
 	// x-velocity
 	double q0;
 	string codeForGradients(string qname)
@@ -398,20 +423,19 @@ public:
 	    string code = "
             if (compute_about_mid) {
                 q0 = 0.0;
-                foreach (i; init .. n) {
-	            q0 += cloud_fs[i]."~qname~";
-	        }
+                foreach (i; loop_init .. n) { q0 += cloud_fs[i]."~qname~"; }
 	        q0 /= n;
-            } else q0 = cloud_fs[0]."~qname~";
+            } else { 
+                q0 = cloud_fs[0]."~qname~";
+            }
 	    foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-            foreach (i; init .. n) {
+            foreach (i; loop_init .. n) {
                 double dq = cloud_fs[i]."~qname~" - q0;
-                double dx = cloud_pos[i].x - x0;
-                double dy = cloud_pos[i].y - y0;
-                double dz = cloud_pos[i].z - z0;
-                rhs[0] += weight[i]*dx*dq; rhs[1] += weight[i]*dy*dq; rhs[2] += weight[i]*dz*dq;
+                rhs[0] += weight[i] * myws.dx[i] * dq;
+                rhs[1] += weight[i] * myws.dy[i] * dq;
+                rhs[2] += weight[i] * myws.dz[i] * dq;
 	    }
-	    solveWithInverse!(3,3)(xTx, rhs, gradients);";
+	    solveWithInverse!(3,3)(myws.xTx, rhs, gradients);";
 	    return code;
 	}
 	mixin(codeForGradients("vel.x"));
@@ -456,46 +480,61 @@ public:
     } // end gradients_xyz_leastsq()
 
     @nogc
-    void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight, bool compute_about_mid, bool diffusion)
+    void set_up_workspace_for_gradients_xy_leastsq(ref FlowState[] cloud_fs,
+						   ref Vector3*[] cloud_pos,
+						   ref double[] weight,
+						   bool compute_about_mid,
+						   ref WLSQGradWorkspace ws)
+    {
+	size_t loop_init = 0; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
+	size_t n = cloud_pos.length;
+	assert(n <= MaxNPoints, "Too many points in cloud for least-squares gradient calc.");
+	// If computing about mid-point, calculate mid-point.
+	double x0 = 0.0; double y0 = 0.0; double z0 = 0.0;
+	if (compute_about_mid) {
+	    loop_init = 0;
+	    foreach (i; loop_init .. n) {
+		x0 += cloud_pos[i].x; y0 += cloud_pos[i].y;
+	    }
+	    x0 /= n; y0 /= n; // midpoint
+	} else { // else use interface point (assumed to be in cloud position 0)
+	    loop_init = 1;
+	    x0 = cloud_pos[0].x; y0 = cloud_pos[0].y;
+	}
+	ws.n = n;
+	ws.loop_init = loop_init;
+	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;
+	//
+	// Assemble and invert the normal matrix.
+	// We'll reuse the resulting inverse for each flow-field quantity.
+	double xx = 0.0; double xy = 0.0; double yy = 0.0;
+	foreach (i; loop_init .. n) {
+	    double dx = cloud_pos[i].x - x0;
+	    double dy = cloud_pos[i].y - y0;
+	    xx += weight[i]*dx*dx; xy += weight[i]*dx*dy; yy += weight[i]*dy*dy;
+	    ws.dx[i] = dx; ws.dy[i] = dy; ws.dz[i] = 0.0;
+	}
+	ws.xTx[0][0] = xx; ws.xTx[0][1] = xy; ws.xTx[0][2] = 1.0; ws.xTx[0][3] = 0.0;
+	ws.xTx[1][0] = xy; ws.xTx[1][1] = yy; ws.xTx[1][2] = 0.0; ws.xTx[1][3] = 1.0;
+	computeInverse!(2,3)(ws.xTx);
+    } // end set_up_workspace_for_gradients_xy_leastsq()
+
+    @nogc
+    void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
+			      bool compute_about_mid, bool diffusion)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 2D, built as a specialization of the 3D code.
     // Experiment with taking differences about a middle point/value for the vertices spatial locations and
     // taking differences about the interface point for the faces spatial location.
     {
-	double[4][2] xTx; // normal matrix, augmented to give 4 entries per row
-	double[2] rhs, gradients;
-	size_t init = 0;
-	double x0 = 0.0;
-	double y0 = 0.0;
-	// Assemble and invert the normal matrix.
-	// We'll reuse the resulting inverse for each flow-field quantity.
-	size_t n = cloud_pos.length;
-	// if computing about mid-point, calculate mid-point.
-	if (compute_about_mid) {
-	    init = 0;
-	    foreach (i; init .. n) {
-		x0 += cloud_pos[i].x;
-		y0 += cloud_pos[i].y;
-	    }
-	    x0 /= n; // x_mid
-	    y0 /= n; // y_mid
-	} else { // else use interface point  (assumed to be in cloud position 0)
-	    init = 1;
-	    x0 = cloud_pos[0].x;
-	    y0 = cloud_pos[0].y;
-	}
-	double xx = 0.0;
-	double xy = 0.0;
-	double yy = 0.0;
-	foreach (i; init .. n) {
-	    double dx = cloud_pos[i].x - x0;
-	    double dy = cloud_pos[i].y - y0;
-	    xx += weight[i]*dx*dx; xy += weight[i]*dx*dy; yy += weight[i]*dy*dy;
-	}
-	xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = 1.0; xTx[0][3] = 0.0;
-	xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = 0.0; xTx[1][3] = 1.0;
-	computeInverse!(2,2)(xTx);
+	WLSQGradWorkspace * myws = &(common_ws); // later, we may want to pass in a workspace
+	set_up_workspace_for_gradients_xy_leastsq(cloud_fs, cloud_pos, weight, compute_about_mid, *myws);
+	//
+	// Now compute gradients.
+	size_t loop_init = myws.loop_init;
+	size_t n = myws.n;
+	double[3] rhs, gradients;
 	// x-velocity
 	double q0;
 	string codeForGradients(string qname)
@@ -503,19 +542,18 @@ public:
 	    string code = "
             if (compute_about_mid) {
                 q0 = 0.0;
-                foreach (i; init .. n) {
-	            q0 += cloud_fs[i]."~qname~";
-	        }
+                foreach (i; loop_init .. n) { q0 += cloud_fs[i]."~qname~"; }
 	        q0 /= n;
-            } else q0 = cloud_fs[0]."~qname~";
+            } else {
+                q0 = cloud_fs[0]."~qname~";
+            }
 	    rhs[0] = 0.0; rhs[1] = 0.0;
-	    foreach (i; init .. n) {
+	    foreach (i; loop_init .. n) {
 	        double dq = cloud_fs[i]."~qname~" - q0;
-	        double dx = cloud_pos[i].x - x0;
-	        double dy = cloud_pos[i].y - y0;
-                rhs[0] += weight[i]*dx*dq; rhs[1] += weight[i]*dy*dq;
+                rhs[0] += weight[i] * myws.dx[i] * dq;
+                rhs[1] += weight[i] * myws.dy[i] * dq;
 	    }
-	    solveWithInverse!(2,2)(xTx, rhs, gradients);";
+	    solveWithInverse!(2,3)(myws.xTx, rhs, gradients);";
 	    return code;
 	}
 	mixin(codeForGradients("vel.x"));
