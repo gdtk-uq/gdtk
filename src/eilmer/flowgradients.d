@@ -567,7 +567,7 @@ public:
 	} else {
 	    // To reduce memory consumption, we use common workspaces.
 	    myws = common_ws;
-	    set_up_workspace_for_gradients_xyz_leastsq(cloud_pos, weight, compute_about_mid, myws);
+	    set_up_workspace_for_gradients_xy_leastsq(cloud_pos, weight, compute_about_mid, myws);
 	}
 	//
 	// Now compute gradients.

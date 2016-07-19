@@ -310,8 +310,13 @@ public:
 		foreach(iface; faces) {
 		    iface.grad.weights_leastsq(iface.cloud_pos, iface.pos, iface.cloud_weights);
 		    if (myConfig.spatial_deriv_retain_lsq_work_data) {
-			iface.grad.set_up_workspace_for_gradients_xyz_leastsq(iface.cloud_pos, iface.cloud_weights,
-									      compute_about_mid, iface.ws_grad);
+			if (myConfig.dimensions == 2) {
+			    iface.grad.set_up_workspace_for_gradients_xy_leastsq(iface.cloud_pos, iface.cloud_weights,
+										 compute_about_mid, iface.ws_grad);
+			} else { // 3D
+			    iface.grad.set_up_workspace_for_gradients_xyz_leastsq(iface.cloud_pos, iface.cloud_weights,
+										  compute_about_mid, iface.ws_grad);
+			}
 		    }
 		}	
 	    } else { // vertices
@@ -319,8 +324,13 @@ public:
 		foreach(vtx; vertices) {
 		    vtx.grad.weights_leastsq(vtx.cloud_pos, vtx.pos[gtl], vtx.cloud_weights);
 		    if (myConfig.spatial_deriv_retain_lsq_work_data) {
-			vtx.grad.set_up_workspace_for_gradients_xyz_leastsq(vtx.cloud_pos, vtx.cloud_weights,
-									    compute_about_mid, vtx.ws_grad);
+			if (myConfig.dimensions == 2) {
+			    vtx.grad.set_up_workspace_for_gradients_xy_leastsq(vtx.cloud_pos, vtx.cloud_weights,
+									       compute_about_mid, vtx.ws_grad);
+			} else { // 3D
+			    vtx.grad.set_up_workspace_for_gradients_xyz_leastsq(vtx.cloud_pos, vtx.cloud_weights,
+										compute_about_mid, vtx.ws_grad);
+			}
 		    }
 		}
 	    }
