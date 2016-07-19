@@ -248,7 +248,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    outFile.writeln("xStreamPos ", "yStreamPos ", "zStreamPos ", soln.flowBlocks[0].variable_names_as_string());
 	    foreach (ip; 0 .. xp.length) {
 	        outFile.writeln("# streamline locus point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
 	        auto identity = soln.find_enclosing_cell(xp[ip], yp[ip], zp[ip]);
@@ -258,10 +258,10 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		    break;
 		}
 		else { // store initial cell data
-		    outFile.writeln(soln.flowBlocks[ib].values_as_string(idx));
 		    xInit = soln.flowBlocks[ib]["pos.x", idx];
 		    yInit = soln.flowBlocks[ib]["pos.y", idx];
 		    zInit = soln.flowBlocks[ib]["pos.z", idx];
+		    outFile.writeln(xInit, " ", yInit, " ", zInit, " ", soln.flowBlocks[ib].values_as_string(idx));
 		}
 		// we need to travel both forward (direction = 1) and backward (direction = -1)
 		int[] direction = [-1, 1];
@@ -282,7 +282,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 			    stepSize = stepSize*2.0; found = identity[2];
 			} else {
 			    ib = identity[0]; idx = identity[1]; found = identity[2];
-			    if ( found == 1) outFile.writeln(soln.flowBlocks[ib].values_as_string(idx));
+			    if ( found == 1) outFile.writeln(xNew, " ", yNew, " ", zNew, " ", soln.flowBlocks[ib].values_as_string(idx));
 			    xOld = xNew; yOld = yNew; zOld = zNew;
 			    stepSize = 1e-06;
 			} // end else
