@@ -715,8 +715,15 @@ public:
 		} // end if my_outsign
 	    } // end foreach j
 	} // end foreach bndry
-	compute_leastsq_geometric_weights(gtl);
-	if (myConfig.retain_least_squares_work_data) {
+	if (myConfig.viscous) {
+	    // LSQ weights are used in the calculation of flow gradients
+	    // for the viscous terms.
+	    compute_leastsq_geometric_weights(gtl);
+	}
+	if (myConfig.interpolation_order > 1 &&
+	    myConfig.retain_least_squares_work_data) {
+	    // The LSQ linear model for the flow field is fitted using 
+	    // information on the locations of the points. 
 	    foreach (f; faces) {
 		lsq.assemble_and_invert_normal_matrix(f, 0, f.left_cells, f.wsL);
 		lsq.assemble_and_invert_normal_matrix(f, 0, f.right_cells, f.wsR);

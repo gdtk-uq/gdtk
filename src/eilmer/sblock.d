@@ -495,10 +495,16 @@ public:
 	Vector3 dummy;
 	Vector3 ds;
 	if ( myConfig.dimensions == 2 ) {
+	    // There is some history as to why the functions are in pieces as below.
+	    // These functions go way back in time to the days of cns4u.
 	    calc_volumes_2D(gtl);
 	    calc_faces_2D(gtl);
 	    calc_ghost_cell_geom_2D(gtl);
-	    compute_leastsq_geometric_weights(gtl);
+	    if (myConfig.viscous && 
+		myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+		// Needed for flow gradient calculations that feed into the viscous fluxes.
+		compute_leastsq_geometric_weights(gtl);
+	    }
 	    return;
 	}
 	// Cell properties of volume and position.
@@ -693,7 +699,11 @@ public:
 		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
 	    }
 	}
-	compute_leastsq_geometric_weights(gtl);
+	if (myConfig.viscous && 
+	    myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+	    // Needed for flow gradient calculations that feed into the viscous fluxes.
+	    compute_leastsq_geometric_weights(gtl);
+	}
     } // end compute_primary_cell_geometric_data()
 
     override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
