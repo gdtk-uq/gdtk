@@ -352,10 +352,10 @@ public:
     //     we are calculating the gradients) to be in the first cloud position. 
     {
 	size_t n = cloud_pos.length;
-	assert(n <= MaxNPoints, "Too many points in cloud for least-squares gradient calc.");
+	if (cloud_weights.length < n) cloud_weights.length = n;
 	size_t loop_init = 0; // loop starting position
 	if (GlobalConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
-	    cloud_weights ~= 1.0; // interface (primary point) does not need weighting; it is never used.
+	    cloud_weights[0] = 1.0; // interface (primary point) does not need weighting; it is never used.
 	    loop_init = 1; // we have pre-filled the first location.
 	}
 	double x0 = pos.x;
@@ -364,7 +364,7 @@ public:
 	    foreach (i; loop_init .. n) {
 		double dx = cloud_pos[i].x - x0;
 		double dy = cloud_pos[i].y - y0;
-		cloud_weights ~= 1.0/(dx*dx+dy*dy);
+		cloud_weights[i] = 1.0/(dx*dx+dy*dy);
 	    }
 	} else { //3D
 	    double z0 = pos.z;
@@ -372,7 +372,7 @@ public:
 		double dx = cloud_pos[i].x - x0;
 		double dy = cloud_pos[i].y - y0;
 		double dz = cloud_pos[i].z - z0;
-		cloud_weights ~= 1.0/(dx*dx+dy*dy+dz*dz);
+		cloud_weights[i] = 1.0/(dx*dx+dy*dy+dz*dz);
 	    }
 	}
     } // end weights_leastsq()
