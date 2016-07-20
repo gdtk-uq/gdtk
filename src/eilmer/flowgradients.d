@@ -24,13 +24,12 @@ import fvinterface;
 import fvvertex;
 import globalconfig;
 
-immutable size_t MaxNPoints = 20;
 
 class WLSQGradWorkspace {
     // A place to hold the intermediate results for assembling
     // the normal equations, to allow reuse of the values.
 public:
-    double[MaxNPoints] dx, dy, dz;
+    double[] dx, dy, dz;
     size_t loop_init; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
     size_t n; // cloud_pos.length;
     double x0, y0, z0; // reference point may be a computed midpoint
@@ -43,9 +42,7 @@ public:
 
     this(const WLSQGradWorkspace other)
     {
-	foreach (i; 0 .. MaxNPoints) {
-	    dx[i] = other.dx[i]; dy[i] = other.dy[i]; dz[i] = other.dz[i];
-	}
+	dx = other.dx.dup(); dy = other.dy.dup(); dz = other.dz.dup();
 	loop_init = other.loop_init;
 	n = other.n;
 	x0 = other.x0; y0 = other.y0; z0 = other.z0;
@@ -377,7 +374,6 @@ public:
 	}
     } // end weights_leastsq()
 
-    @nogc
     void set_up_workspace_for_gradients_xyz_leastsq(ref Vector3*[] cloud_pos,
 						    ref double[] weight,
 						    bool compute_about_mid,
@@ -385,7 +381,6 @@ public:
     {
 	size_t loop_init = 0; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
 	size_t n = cloud_pos.length;
-	assert(n <= MaxNPoints, "Too many points in cloud for least-squares gradient calc.");
 	// If computing about mid-point, calculate mid-point.
 	double x0 = 0.0; double y0 = 0.0; double z0 = 0.0;
 	if (compute_about_mid) {
@@ -401,6 +396,9 @@ public:
 	ws.n = n;
 	ws.loop_init = loop_init;
 	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;
+	if (ws.dx.length < n) { ws.dx.length = n; }
+	if (ws.dy.length < n) { ws.dy.length = n; }
+	if (ws.dz.length < n) { ws.dz.length = n; }
 	//
 	// Assemble and invert the normal matrix.
 	// We'll reuse the resulting inverse for each flow-field quantity.
@@ -423,7 +421,6 @@ public:
 	computeInverse!(3,3)(ws.xTx);
     } // end set_up_workspace_for_gradients_xyz_leastsq()
 
-    @nogc
     void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
 			       bool compute_about_mid, bool diffusion,
 			       ref WLSQGradWorkspace ws, bool retain_work_data)
@@ -511,7 +508,6 @@ public:
 	omega.refz = gradients[2];
     } // end gradients_xyz_leastsq()
 
-    @nogc
     void set_up_workspace_for_gradients_xy_leastsq(ref Vector3*[] cloud_pos,
 						   ref double[] weight,
 						   bool compute_about_mid,
@@ -519,7 +515,6 @@ public:
     {
 	size_t loop_init = 0; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
 	size_t n = cloud_pos.length;
-	assert(n <= MaxNPoints, "Too many points in cloud for least-squares gradient calc.");
 	// If computing about mid-point, calculate mid-point.
 	double x0 = 0.0; double y0 = 0.0; double z0 = 0.0;
 	if (compute_about_mid) {
@@ -535,6 +530,9 @@ public:
 	ws.n = n;
 	ws.loop_init = loop_init;
 	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;
+	if (ws.dx.length < n) { ws.dx.length = n; }
+	if (ws.dy.length < n) { ws.dy.length = n; }
+	if (ws.dz.length < n) { ws.dz.length = n; }
 	//
 	// Assemble and invert the normal matrix.
 	// We'll reuse the resulting inverse for each flow-field quantity.
@@ -550,7 +548,6 @@ public:
 	computeInverse!(2,3)(ws.xTx);
     } // end set_up_workspace_for_gradients_xy_leastsq()
 
-    @nogc
     void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
 			      bool compute_about_mid, bool diffusion,
 			      ref WLSQGradWorkspace ws, bool retain_work_data)

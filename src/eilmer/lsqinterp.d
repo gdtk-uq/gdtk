@@ -13,14 +13,13 @@ import flowstate;
 import fvinterface;
 import fvcell;
 
-immutable size_t MaxNPoints = 10;
 
 class LSQInterpWorkspace {
     // A place to hold the intermediate results for assembling
     // the normal equations, to allow reuse of the values.
 public:
     double dxFace, dyFace, dzFace;
-    double[MaxNPoints] dx, dy, dz;
+    double[] dx, dy, dz;
     double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
 
     this()
@@ -30,9 +29,7 @@ public:
 
     this(const LSQInterpWorkspace other)
     {
-	foreach (i; 0 .. MaxNPoints) {
-	    dx[i] = other.dx[i]; dy[i] = other.dy[i]; dz[i] = other.dz[i];
-	}
+	dx = other.dx.dup(); dy = other.dy.dup(); dz = other.dz.dup();
 	dxFace = other.dxFace; dyFace = other.dyFace; dzFace = other.dzFace;
 	foreach (i; 0 .. 3) {
 	    foreach (j; 0 .. 6) { xTx[i][j] = other.xTx[i][j]; }
@@ -94,7 +91,9 @@ public:
 	ws.dxFace = dr.x; ws.dyFace = dr.y; ws.dzFace = dr.z;
 	//
 	size_t np = cell_cloud.length;
-	assert(np <= MaxNPoints, "too many left_cells");
+	if (ws.dx.length < np) { ws.dx.length = np; }
+	if (ws.dy.length < np) { ws.dy.length = np; }
+	if (ws.dz.length < np) { ws.dz.length = np; }
 	foreach (i; 1 .. np) {
 	    dr = cell_cloud[i].pos[gtl]; dr -= cell_cloud[0].pos[gtl];
 	    dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);

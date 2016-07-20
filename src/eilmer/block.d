@@ -337,7 +337,6 @@ public:
 	}
     } // end compute_leastsq_geometric_weights()
     
-    @nogc
     void flow_property_derivatives(int gtl)
     {
 	bool compute_about_mid = false;
