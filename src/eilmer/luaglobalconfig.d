@@ -106,7 +106,6 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
     mixin(get_bool_field("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
     mixin(get_int_field("max_invalid_cells", "max_invalid_cells"));
-    mixin(get_double_field("dt_reduction_factor", "dt_reduction_factor"));
     //
     mixin(get_int_field("interpolation_order", "interpolation_order"));
     mixin(get_enum_field("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
@@ -157,7 +156,6 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("stringent_cfl", "stringent_cfl"));
     mixin(get_int_field("cfl_count", "cfl_count"));
     mixin(get_bool_field("fixed_time_step", "fixed_time_step"));
-    mixin(get_int_field("write_at_step", "write_at_step"));
     mixin(get_double_field("dt_plot", "dt_plot"));
     mixin(get_double_field("dt_history", "dt_history"));
     //
@@ -221,7 +219,6 @@ extern(C) int configGet(lua_State* L)
     case "flowstate_limits_min_temp": lua_pushnumber(L, GlobalConfig.flowstate_limits.min_temp); break;
     case "adjust_invalid_cell_data": lua_pushboolean(L, GlobalConfig.adjust_invalid_cell_data); break;
     case "max_invalid_cells": lua_pushnumber(L, GlobalConfig.max_invalid_cells); break;
-    case "dt_reduction_factor": lua_pushnumber(L, GlobalConfig.dt_reduction_factor); break;
 	//
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
@@ -272,7 +269,6 @@ extern(C) int configGet(lua_State* L)
     case "stringent_cfl": lua_pushboolean(L, GlobalConfig.stringent_cfl); break;
     case "cfl_count": lua_pushnumber(L, GlobalConfig.cfl_count); break;
     case "fixed_time_step": lua_pushboolean(L, GlobalConfig.fixed_time_step); break;
-    case "write_at_step": lua_pushnumber(L, GlobalConfig.write_at_step); break;
     case "dt_plot": lua_pushnumber(L, GlobalConfig.dt_plot); break;
     case "dt_history": lua_pushnumber(L, GlobalConfig.dt_history); break;
 	//

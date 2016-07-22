@@ -419,8 +419,6 @@ void read_control_file()
     GlobalConfig.dt_max = getJSONdouble(jsonData, "dt_max", 1.0-3);
     GlobalConfig.cfl_value = getJSONdouble(jsonData, "cfl_value", 0.5);
     GlobalConfig.fixed_time_step = getJSONbool(jsonData, "fixed_time_step", false);
-    GlobalConfig.dt_reduction_factor = getJSONdouble(jsonData, "dt_reduction_factor", 0.2);
-    GlobalConfig.write_at_step = getJSONint(jsonData, "write_at_step", 0);
     GlobalConfig.dt_plot = getJSONdouble(jsonData, "dt_plot", 1.0e-3);
     GlobalConfig.dt_history = getJSONdouble(jsonData, "dt_history", 1.0e-3);
 
@@ -433,9 +431,7 @@ void read_control_file()
 	writeln("  dt_init: ", GlobalConfig.dt_init);
 	writeln("  dt_max: ", GlobalConfig.dt_max);
 	writeln("  cfl_value: ", GlobalConfig.cfl_value);
-	writeln("  dt_reduction_factor: ", GlobalConfig.dt_reduction_factor);
 	writeln("  fixed_time_step: ", GlobalConfig.fixed_time_step);
-	writeln("  write_at_step: ", GlobalConfig.write_at_step);
 	writeln("  dt_plot: ", GlobalConfig.dt_plot);
 	writeln("  dt_history: ", GlobalConfig.dt_history);
     }

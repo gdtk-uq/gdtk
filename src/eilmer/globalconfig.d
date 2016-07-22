@@ -139,13 +139,6 @@ final class GlobalConfig {
     // which will be tolerated without complaint.
     shared static int max_invalid_cells = 0;
     shared static FlowStateLimits flowstate_limits;
-    // If an attempt at a time step fails because of invalid cells,
-    // the time step is re-attempted with a smaller time step.
-    // This reduction factor is somewhat arbitrary and can now be set
-    // by the user's imput script.
-    // A factor of 0.5 would seem to be not enough but a factor of
-    // 0.1 would seem too expensive.  We have settled on a default of 0.2.
-    shared static double dt_reduction_factor = 0.2; // [TODO] so far unused in the time stepping
 
     // Low order reconstruction (1) uses just the cell-centre data as left- and right-
     // flow properties in the flux calculation.
@@ -304,7 +297,6 @@ final class GlobalConfig {
     shared static size_t cfl_count = 10;  // steps between checking time step size
     shared static bool fixed_time_step = false; // set true to fix dt_allow
 
-    shared static size_t write_at_step = 0; // update step at which to write a solution, 0=don't do it
     shared static double dt_plot = 1.0e-3; // interval for writing soln
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static Tuple!(size_t, size_t)[] hcells;
@@ -321,15 +313,6 @@ final class GlobalConfig {
     shared static int njb = 1;
     shared static int nkb = 1;
     shared static bool propagate_inflow_data = false;
-
-    // Filter application parameters.
-    shared static bool   filter_flag = false;
-    shared static double filter_tstart = 0.0;
-    shared static double filter_tend = 0.0;
-    shared static double filter_dt;
-    shared static double filter_next_time;
-    shared static double filter_mu;
-    shared static int filter_npass;
 
     // Parameters related to the solid domain and conjugate coupling
     shared static bool udfSolidSourceTerms = false;
