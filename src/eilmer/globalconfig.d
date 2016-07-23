@@ -104,8 +104,8 @@ final class GlobalConfig {
     // don't trip over each other.
     shared static bool include_quality = false; // if true, we include quality in the solution file  
 
-    shared static int nBlocks; // Number of blocks in the overall simulation.
-    shared static int nSolidBlocks; // Number of solid blocks in the overall simulation.
+    shared static int nBlocks = 0; // Number of blocks in the overall simulation.
+    shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
     shared static bool axisymmetric = false;
 
@@ -187,6 +187,24 @@ final class GlobalConfig {
     // viscous effects are important.
     shared static double compression_tolerance = -0.30;
 
+    // With this flag on, finite-rate evolution of the vibrational energies 
+    // (and in turn the total energy) is computed.
+    shared static bool thermal_energy_exchange = false;
+
+    shared static bool radiation = false;
+    shared static int radiation_update_frequency; // = 1 for every time-step
+    shared static bool radiation_scaling = false;
+
+    shared static bool electric_field_work;
+
+    // For Daryl Bond and Vince Wheatley's MHD additions.
+    //
+    shared static bool MHD = false;    // Single fluid MHD
+    // Lachlan Whyborn's Divergence cleaning to go with MHD.
+    shared static bool divergence_cleaning = false;
+    shared static double c_h = 0.0;
+    shared static double divB_damping_length = 1.0;
+
     // Parameters controlling viscous/molecular transport
     //
     shared static bool viscous = false; 
@@ -248,29 +266,9 @@ final class GlobalConfig {
     static IgnitionZone[] ignition_zones;
     shared static bool ignition_zone_active = false;
 
-    // With this flag on, finite-rate evolution of the vibrational energies 
-    // (and in turn the total energy) is computed.
-    shared static bool thermal_energy_exchange = false;
-
-    shared static bool radiation = false;
-    shared static int radiation_update_frequency; // = 1 for every time-step
-    shared static bool radiation_scaling = false;
-
-    shared static bool electric_field_work;
-
-    // For Daryl Bond and Vince Wheatley's MHD additions.
-    //
-    shared static bool MHD;    // Single fluid MHD
-
-    // Lachlan Whyborn's Divergence cleaning to go with MHD.
-    //
-    shared static bool divergence_cleaning = false;
-    shared static double c_h = 0.0;
-    shared static double divB_damping_length = 1.0;
-
     // Parameters controlling other simulation options
     //
-    shared static int max_step = 10;       // iteration limit
+    shared static int max_step = 100;      // iteration limit
     shared static int t_level;             // time level within update
     shared static int halt_now = 0;        // flag for premature halt
     shared static bool halt_on_large_flow_change = false; 
@@ -357,6 +355,14 @@ public:
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
+
+    bool radiation;
+    bool electric_field_work;
+    bool MHD;
+    bool divergence_cleaning;
+    double c_h;
+    double divB_damping_length;
+
     bool viscous;
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
@@ -367,6 +373,9 @@ public:
     double diffusion_factor;
     double diffusion_lewis;
     double diffusion_schmidt;
+
+    bool stringent_cfl;
+    double viscous_signal_factor;
 
     TurbulenceModel turbulence_model;
     double turbulence_prandtl_number;
@@ -387,16 +396,6 @@ public:
     double ignition_time_stop;
     IgnitionZone[] ignition_zones;
     bool ignition_zone_active;
-
-    bool radiation;
-    bool electric_field_work;
-    bool MHD;
-    bool divergence_cleaning;
-    double c_h;
-    double divB_damping_length;
-
-    bool stringent_cfl;
-    double viscous_signal_factor;
 
     GasModel gmodel;
     bool include_quality;
@@ -427,6 +426,14 @@ public:
 	shear_tolerance = GlobalConfig.shear_tolerance;
 	M_inf = GlobalConfig.M_inf;
 	compression_tolerance = GlobalConfig.compression_tolerance;
+
+	radiation = GlobalConfig.radiation;
+	electric_field_work = GlobalConfig.electric_field_work;
+	MHD = GlobalConfig.MHD;
+	divergence_cleaning = GlobalConfig.divergence_cleaning;
+	c_h = GlobalConfig.c_h;
+	divB_damping_length = GlobalConfig.divB_damping_length;
+
 	viscous = GlobalConfig.viscous;
 	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
 	spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
@@ -438,6 +445,9 @@ public:
 	diffusion_factor = GlobalConfig.diffusion_factor;
 	diffusion_lewis = GlobalConfig.diffusion_lewis;
 	diffusion_schmidt = GlobalConfig.diffusion_schmidt;
+
+	stringent_cfl = GlobalConfig.stringent_cfl;
+	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
 
 	turbulence_model = GlobalConfig.turbulence_model;
 	turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
@@ -458,16 +468,6 @@ public:
 	ignition_time_stop = GlobalConfig.ignition_time_stop;
 	ignition_zone_active = GlobalConfig.ignition_zone_active;
 	foreach (iz; GlobalConfig.ignition_zones) ignition_zones ~= new IgnitionZone(iz);
-
-	radiation = GlobalConfig.radiation;
-	electric_field_work = GlobalConfig.electric_field_work;
-	MHD = GlobalConfig.MHD;
-	divergence_cleaning = GlobalConfig.divergence_cleaning;
-	c_h = GlobalConfig.c_h;
-	divB_damping_length = GlobalConfig.divB_damping_length;
-
-	stringent_cfl = GlobalConfig.stringent_cfl;
-	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
 
 	gmodel = init_gas_model(GlobalConfig.gas_model_file);
 	include_quality = GlobalConfig.include_quality;

@@ -71,7 +71,6 @@ void read_config_file()
 
     // Parameters controlling convective update and size of storage arrays
     //
-    GlobalConfig.interpolation_order = getJSONint(jsonData, "interpolation_order", 2);
     try {
 	string name = jsonData["gasdynamic_update_scheme"].str;
 	GlobalConfig.gasdynamic_update_scheme = update_scheme_from_name(name);
@@ -124,6 +123,7 @@ void read_config_file()
     GlobalConfig.adjust_invalid_cell_data =
 	getJSONbool(jsonData, "adjust_invalid_cell_data", false);
     GlobalConfig.max_invalid_cells = getJSONint(jsonData, "max_invalid_cells", 0);
+    GlobalConfig.interpolation_order = getJSONint(jsonData, "interpolation_order", 2);
     try {
 	string name = jsonData["thermo_interpolator"].str;
 	GlobalConfig.thermo_interpolator = thermo_interpolator_from_name(name);
@@ -154,6 +154,7 @@ void read_config_file()
     GlobalConfig.divergence_cleaning = getJSONbool(jsonData, "divergence_cleaning", false);
     GlobalConfig.divB_damping_length = getJSONdouble(jsonData, "divB_damping_length", 1.0);
 
+    // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
     // have been set.
     if (GlobalConfig.grid_motion == GridMotion.shock_fitting &&
@@ -163,7 +164,6 @@ void read_config_file()
     } 
 
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
 	writeln("  gasdynamic_update_scheme: ",
 		gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
@@ -183,6 +183,7 @@ void read_config_file()
 	writeln("  flowstate_limits_min_temp: ", GlobalConfig.flowstate_limits.min_temp);
 	writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
 	writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
+	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
 	writeln("  thermo_interpolator: ",
 		thermo_interpolator_name(GlobalConfig.thermo_interpolator));
 	writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
@@ -197,6 +198,9 @@ void read_config_file()
 	writeln("  divergence_cleaning: ", GlobalConfig.divergence_cleaning);
 	writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
     }
+    //
+    // More checking of constraints.
+    //
     if (GlobalConfig.grid_motion != GridMotion.none) {
 	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
 	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
@@ -231,7 +235,7 @@ void read_config_file()
 	GlobalConfig.spatial_deriv_locn = SpatialDerivLocn.faces;
     }
     GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds =
-	getJSONbool(jsonData, "include_ghost_cells_in_spatial_deriv_clouds", false);
+	getJSONbool(jsonData, "include_ghost_cells_in_spatial_deriv_clouds", true);
     GlobalConfig.spatial_deriv_retain_lsq_work_data =
 	getJSONbool(jsonData, "spatial_deriv_retain_lsq_work_data",
 		    GlobalConfig.spatial_deriv_retain_lsq_work_data);
@@ -289,7 +293,7 @@ void read_config_file()
 
     // Parameters controlling other simulation options
     //
-    GlobalConfig.control_count = getJSONint(jsonData, "control_count", 10);
+    GlobalConfig.control_count = getJSONint(jsonData, "control_count", 100);
     GlobalConfig.block_marching = getJSONbool(jsonData, "block_marching", false);
     GlobalConfig.nib = getJSONint(jsonData, "nib", 1);
     GlobalConfig.njb = getJSONint(jsonData, "njb", 1);
