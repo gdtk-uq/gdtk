@@ -293,7 +293,7 @@ final class GlobalConfig {
     shared static bool stringent_cfl = false; 
     // If true, assume the worst with respect to cell geometry and wave speed.
     shared static double viscous_signal_factor = 1.0; // can reduce the viscous influence in CFL condition
-    shared static size_t cfl_count = 10;  // steps between checking time step size
+    shared static int cfl_count = 10;  // steps between checking time step size
     shared static bool fixed_time_step = false; // set true to fix dt_allow
 
     shared static double dt_plot = 1.0e-3; // interval for writing soln
