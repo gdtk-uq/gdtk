@@ -32,6 +32,37 @@ import user_defined_source_terms;
 import solid_udf_source_terms;
 import grid_motion;
 
+// Utility functions to condense the following code.
+//
+string update_string(string key, string field)
+{
+    return "GlobalConfig."~field~" = getJSONstring(jsonData, \""~key~"\", GlobalConfig."~field~");";
+}
+string update_bool(string key, string field)
+{
+    return "GlobalConfig."~field~" = getJSONbool(jsonData, \""~key~"\", GlobalConfig."~field~");";
+}
+string update_int(string key, string field)
+{
+    return "GlobalConfig."~field~" = getJSONint(jsonData, \""~key~"\", GlobalConfig."~field~");";
+}
+string update_double(string key, string field)
+{
+    return "GlobalConfig."~field~" = getJSONdouble(jsonData, \""~key~"\", GlobalConfig."~field~");";
+}
+string update_enum(string key, string field, string enum_from_name)
+{
+    return "{ // start new block scope
+    auto mySaveValue = GlobalConfig."~field~";
+    try {
+	string name = jsonData[\""~key~"\"].str;
+	GlobalConfig."~field~" = "~enum_from_name~"(name);
+    } catch (Exception e) {
+	GlobalConfig."~field~" = mySaveValue;
+    }
+    }";
+}
+
 void read_config_file()
 {
     if (GlobalConfig.verbosity_level > 1) writeln("Read config file.");
@@ -52,15 +83,16 @@ void read_config_file()
 	writeln("Message is: ", e.msg);
 	exit(1);
     }
-
-    // Now that we have parsed JSON data, dip into it to get config values.
+    // Now that we have parsed JSON data, proceed to update those config values.
+    // Note that some of the lines below are much longer than PJ would normally tolerate.
+    // The trade-off for ease of reading with one line per entry won out... 
     //
-    GlobalConfig.title = jsonData["title"].str;
-    GlobalConfig.gas_model_file = jsonData["gas_model_file"].str;
+    mixin(update_string("title", "title"));
+    mixin(update_string("gas_model_file", "gas_model_file"));
     GlobalConfig.gmodel_master = init_gas_model(GlobalConfig.gas_model_file);
-    GlobalConfig.include_quality = getJSONbool(jsonData, "include_quality", false);
-    GlobalConfig.dimensions = getJSONint(jsonData, "dimensions", 2);
-    GlobalConfig.axisymmetric = getJSONbool(jsonData, "axisymmetric", false);
+    mixin(update_bool("include_quality", "include_quality"));
+    mixin(update_int("dimensions", "dimensions"));
+    mixin(update_bool("axisymmetric", "axisymmetric"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  title: ", to!string(GlobalConfig.title));
 	writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
@@ -71,29 +103,16 @@ void read_config_file()
 
     // Parameters controlling convective update and size of storage arrays
     //
-    try {
-	string name = jsonData["gasdynamic_update_scheme"].str;
-	GlobalConfig.gasdynamic_update_scheme = update_scheme_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.gasdynamic_update_scheme = GasdynamicUpdate.pc;
-    }
-    GlobalConfig.n_flow_time_levels = 1 +
-	number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
-    try {
-	string name = jsonData["grid_motion"].str;
-	GlobalConfig.grid_motion = grid_motion_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.grid_motion = GridMotion.none;
-    }
+    mixin(update_enum("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
+    GlobalConfig.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+    mixin(update_enum("grid_motion", "grid_motion", "grid_motion_from_name"));
     if (GlobalConfig.grid_motion == GridMotion.none) {
 	GlobalConfig.n_grid_time_levels = 1;
     } else {
-	GlobalConfig.n_grid_time_levels = 1 +
-	    number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+	GlobalConfig.n_grid_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
     }
-    GlobalConfig.write_vertex_velocities = 
-	getJSONbool(jsonData, "write_vertex_velocities", false);
-    GlobalConfig.udf_grid_motion_file = jsonData["udf_grid_motion_file"].str;
+    mixin(update_bool("write_vertex_velocities", "write_vertex_velocities"));
+    mixin(update_string("udf_grid_motion_file", "udf_grid_motion_file"));
     // If we have user-defined grid motion, we'll need to initialise
     // the lua_State that holds the user's function. But we can't
     // do that initialisation just yet. We have to wait until all
@@ -103,56 +122,31 @@ void read_config_file()
 
     // Parameters controlling convective update in detail
     //
-    GlobalConfig.separate_update_for_viscous_terms =
-	getJSONbool(jsonData, "separate_update_for_viscous_terms", false);
-    GlobalConfig.separate_update_for_k_omega_source =
-	getJSONbool(jsonData, "separate_update_for_k_omega_source", false);
-    GlobalConfig.apply_bcs_in_parallel =
-	getJSONbool(jsonData, "apply_bcs_in_parallel", true);
-    GlobalConfig.stringent_cfl = getJSONbool(jsonData, "stringent_cfl", false);
-    GlobalConfig.flowstate_limits.max_velocity = getJSONdouble(jsonData, "flowstate_limits_max_velocity",
-							       GlobalConfig.flowstate_limits.max_velocity);
-    GlobalConfig.flowstate_limits.max_tke = getJSONdouble(jsonData, "flowstate_limits_max_tke",
-							  GlobalConfig.flowstate_limits.max_tke);
-    GlobalConfig.flowstate_limits.min_tke = getJSONdouble(jsonData, "flowstate_limits_min_tke",
-							  GlobalConfig.flowstate_limits.min_tke);
-    GlobalConfig.flowstate_limits.max_temp = getJSONdouble(jsonData, "flowstate_limits_max_temp",
-							   GlobalConfig.flowstate_limits.max_temp);
-    GlobalConfig.flowstate_limits.min_temp = getJSONdouble(jsonData, "flowstate_limits_min_temp",
-							   GlobalConfig.flowstate_limits.min_temp);
-    GlobalConfig.adjust_invalid_cell_data =
-	getJSONbool(jsonData, "adjust_invalid_cell_data", false);
-    GlobalConfig.max_invalid_cells = getJSONint(jsonData, "max_invalid_cells", 0);
-    GlobalConfig.interpolation_order = getJSONint(jsonData, "interpolation_order", 2);
-    try {
-	string name = jsonData["thermo_interpolator"].str;
-	GlobalConfig.thermo_interpolator = thermo_interpolator_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.thermo_interpolator = InterpolateOption.rhoe;
-    }
-    GlobalConfig.apply_limiter = getJSONbool(jsonData, "apply_limiter", true);
-    GlobalConfig.extrema_clipping = getJSONbool(jsonData, "extrema_clipping", true);
-    GlobalConfig.interpolate_in_local_frame = 
-	getJSONbool(jsonData, "interpolate_in_local_frame", true);
-    GlobalConfig.retain_least_squares_work_data = 
-	getJSONbool(jsonData, "retain_least_squares_work_data", true);
-    try {
-	string name = jsonData["flux_calculator"].str;
-	GlobalConfig.flux_calculator = flux_calculator_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.flux_calculator = FluxCalculator.adaptive;
-    }
-    GlobalConfig.shear_tolerance = getJSONdouble(jsonData, "shear_tolerance", 0.20);
-    GlobalConfig.M_inf = getJSONdouble(jsonData, "M_inf", 0.01);
-    GlobalConfig.compression_tolerance = 
-	getJSONdouble(jsonData, "compression_tolerance", -0.30);
-
-    // Parameters controlling shock fitting
-    GlobalConfig.shock_fitting_delay = getJSONdouble(jsonData, "shock_fitting_delay", 0.0);
-    
-    GlobalConfig.MHD = getJSONbool(jsonData, "MHD", false);
-    GlobalConfig.divergence_cleaning = getJSONbool(jsonData, "divergence_cleaning", false);
-    GlobalConfig.divB_damping_length = getJSONdouble(jsonData, "divB_damping_length", 1.0);
+    mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
+    mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
+    mixin(update_bool("apply_bcs_in_parallel", "apply_bcs_in_parallel"));
+    mixin(update_bool("stringent_cfl", "stringent_cfl"));
+    mixin(update_double("flowstate_limits_max_velocity", "flowstate_limits.max_velocity"));
+    mixin(update_double("flowstate_limits_max_tke", "flowstate_limits.max_tke"));
+    mixin(update_double("flowstate_limits_min_tke", "flowstate_limits.min_tke"));
+    mixin(update_double("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
+    mixin(update_double("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
+    mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
+    mixin(update_int("max_invalid_cells", "max_invalid_cells"));
+    mixin(update_int("interpolation_order", "interpolation_order"));
+    mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
+    mixin(update_bool("apply_limiter", "apply_limiter"));
+    mixin(update_bool("extrema_clipping", "extrema_clipping"));
+    mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
+    mixin(update_bool("retain_least_squares_work_data", "retain_least_squares_work_data"));
+    mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
+    mixin(update_double("shear_tolerance", "shear_tolerance"));
+    mixin(update_double("M_inf", "M_inf"));
+    mixin(update_double("compression_tolerance", "compression_tolerance"));
+    mixin(update_double("shock_fitting_delay", "shock_fitting_delay"));
+    mixin(update_bool("MHD", "MHD"));
+    mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
+    mixin(update_double("divB_damping_length", "divB_damping_length"));
 
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
@@ -164,16 +158,13 @@ void read_config_file()
     } 
 
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  gasdynamic_update_scheme: ",
-		gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
+	writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
 	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
 	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
 	writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
-	writeln("  separate_update_for_viscous_terms: ",
-		GlobalConfig.separate_update_for_viscous_terms);
-	writeln("  separate_update_for_k_omega_source: ",
-		GlobalConfig.separate_update_for_k_omega_source);
+	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
+	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
 	writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
 	writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
@@ -184,8 +175,7 @@ void read_config_file()
 	writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
 	writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
 	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
-	writeln("  thermo_interpolator: ",
-		thermo_interpolator_name(GlobalConfig.thermo_interpolator));
+	writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
 	writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
 	writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
 	writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
@@ -221,46 +211,24 @@ void read_config_file()
 
     // Parameters controlling viscous/molecular transport
     //
-    GlobalConfig.viscous = getJSONbool(jsonData, "viscous", false);
-    try {
-	string name = jsonData["spatial_deriv_calc"].str;
-	GlobalConfig.spatial_deriv_calc = spatial_deriv_calc_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.spatial_deriv_calc = SpatialDerivCalc.least_squares;
-    }
-    try {
-	string name = jsonData["spatial_deriv_locn"].str;
-	GlobalConfig.spatial_deriv_locn = spatial_deriv_locn_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.spatial_deriv_locn = SpatialDerivLocn.faces;
-    }
-    GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds =
-	getJSONbool(jsonData, "include_ghost_cells_in_spatial_deriv_clouds", true);
-    GlobalConfig.spatial_deriv_retain_lsq_work_data =
-	getJSONbool(jsonData, "spatial_deriv_retain_lsq_work_data",
-		    GlobalConfig.spatial_deriv_retain_lsq_work_data);
-    GlobalConfig.viscous_delay = getJSONdouble(jsonData, "viscous_delay", 0.0);
-    GlobalConfig.viscous_factor_increment = 
-	getJSONdouble(jsonData, "viscous_factor_increment", 0.01);
-    GlobalConfig.viscous_signal_factor = getJSONdouble(jsonData, "viscous_signal_factor", 1.0);
-    try {
-	string name = jsonData["turbulence_model"].str;
-	GlobalConfig.turbulence_model = turbulence_model_from_name(name);
-    } catch (Exception e) {
-	GlobalConfig.turbulence_model = TurbulenceModel.none;
-    }
-    GlobalConfig.turbulence_prandtl_number =
-	getJSONdouble(jsonData, "turbulence_prandtl_number", 0.89);
-    GlobalConfig.turbulence_schmidt_number =
-	getJSONdouble(jsonData, "turbulence_schmidt_number", 0.75);
-    GlobalConfig.max_mu_t_factor = getJSONdouble(jsonData, "max_mu_t_factor", 300.0);
-    GlobalConfig.transient_mu_t_factor = getJSONdouble(jsonData, "transient_mu_t_factor", 1.0);
+    mixin(update_bool("viscous", "viscous"));
+    mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
+    mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
+    mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(update_bool("spatial_deriv_retain_lsq_work_data", "spatial_deriv_retain_lsq_work_data"));
+    mixin(update_double("viscous_delay", "viscous_delay"));
+    mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
+    mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
+    mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
+    mixin(update_double("turbulence_prandtl_number", "turbulence_prandtl_number"));
+    mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
+    mixin(update_double("max_mu_t_factor", "max_mu_t_factor"));
+    mixin(update_double("transient_mu_t_factor", "transient_mu_t_factor"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  viscous: ", GlobalConfig.viscous);
 	writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
 	writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
-	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ",
-		GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
+	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
 	writeln("  spatial_deriv_retain_lsq_work_data: ", GlobalConfig.spatial_deriv_retain_lsq_work_data);
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
@@ -273,8 +241,8 @@ void read_config_file()
     }
 
     // User-defined source terms
-    GlobalConfig.udf_source_terms = getJSONbool(jsonData, "udf_source_terms", false);
-    GlobalConfig.udf_source_terms_file = jsonData["udf_source_terms_file"].str;
+    mixin(update_bool("udf_source_terms", "udf_source_terms"));
+    mixin(update_string("udf_source_terms_file", "udf_source_terms_file"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  udf_source_terms: ", GlobalConfig.udf_source_terms);
 	writeln("  udf_source_terms_file: ", to!string(GlobalConfig.udf_source_terms_file));
@@ -282,9 +250,9 @@ void read_config_file()
 
     // Parameters controlling thermochemistry
     //
-    GlobalConfig.reacting = getJSONbool(jsonData, "reacting", false);
-    GlobalConfig.reactions_file = jsonData["reactions_file"].str;
-    GlobalConfig.reaction_time_delay = getJSONdouble(jsonData, "reaction_time_delay", 0.0);
+    mixin(update_bool("reacting", "reacting"));
+    mixin(update_string("reactions_file", "reactions_file"));
+    mixin(update_double("reaction_time_delay", "reaction_time_delay"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  reacting: ", GlobalConfig.reacting);
 	writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
@@ -293,12 +261,12 @@ void read_config_file()
 
     // Parameters controlling other simulation options
     //
-    GlobalConfig.control_count = getJSONint(jsonData, "control_count", 100);
-    GlobalConfig.block_marching = getJSONbool(jsonData, "block_marching", false);
-    GlobalConfig.nib = getJSONint(jsonData, "nib", 1);
-    GlobalConfig.njb = getJSONint(jsonData, "njb", 1);
-    GlobalConfig.nkb = getJSONint(jsonData, "nkb", 1);
-    GlobalConfig.propagate_inflow_data = getJSONbool(jsonData, "propagate_inflow_data", false);
+    mixin(update_int("control_count", "control_count"));
+    mixin(update_bool("block_marching", "block_marching"));
+    mixin(update_int("nib", "nib"));
+    mixin(update_int("njb", "njb"));
+    mixin(update_int("nkb", "nkb"));
+    mixin(update_bool("propagate_inflow_data", "propagate_inflow_data"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  control_count: ", GlobalConfig.control_count);
 	writeln("  block_marching: ", GlobalConfig.block_marching);
@@ -326,7 +294,7 @@ void read_config_file()
     //
     // This is done in phases.  The blocks need valid references to LocalConfig objects
     // and the boundary conditions need valid references to Sblock objects.
-    GlobalConfig.nBlocks = getJSONint(jsonData, "nblock", 0);
+    mixin(update_int("nblock", "nBlocks"));
     if (GlobalConfig.verbosity_level > 1) { writeln("  nBlocks: ", GlobalConfig.nBlocks); }
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nBlocks) {
@@ -413,19 +381,18 @@ void read_control_file()
 	writeln("Failed to parse JSON from control file: ", fileName);
 	exit(1);
     }
-
-    GlobalConfig.max_step = getJSONint(jsonData, "max_step", 100);
-    GlobalConfig.max_time = getJSONdouble(jsonData, "max_time", 1.0e-3);
-    GlobalConfig.halt_now = getJSONint(jsonData, "halt_now", 0);
-    GlobalConfig.print_count = getJSONint(jsonData, "print_count", 0);
-    GlobalConfig.cfl_count = getJSONint(jsonData, "cfl_count", 0);
-    GlobalConfig.dt_init = getJSONdouble(jsonData, "dt_init", 1.0e-6);
-    GlobalConfig.dt_max = getJSONdouble(jsonData, "dt_max", 1.0-3);
-    GlobalConfig.cfl_value = getJSONdouble(jsonData, "cfl_value", 0.5);
-    GlobalConfig.fixed_time_step = getJSONbool(jsonData, "fixed_time_step", false);
-    GlobalConfig.dt_plot = getJSONdouble(jsonData, "dt_plot", 1.0e-3);
-    GlobalConfig.dt_history = getJSONdouble(jsonData, "dt_history", 1.0e-3);
-
+    mixin(update_int("max_step", "max_step"));
+    mixin(update_double("max_time", "max_time"));
+    mixin(update_int("halt_now", "halt_now"));
+    mixin(update_int("print_count", "print_count"));
+    mixin(update_int("cfl_count", "cfl_count"));
+    mixin(update_double("dt_init", "dt_init"));
+    mixin(update_double("dt_max", "dt_max"));
+    mixin(update_double("cfl_value", "cfl_value"));
+    mixin(update_bool("fixed_time_step", "fixed_time_step"));
+    mixin(update_double("dt_plot", "dt_plot"));
+    mixin(update_double("dt_history", "dt_history"));
+    //
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  max_step: ", GlobalConfig.max_step);
 	writeln("  max_time: ", GlobalConfig.max_time);

@@ -191,15 +191,20 @@ final class GlobalConfig {
     // (and in turn the total energy) is computed.
     shared static bool thermal_energy_exchange = false;
 
+    // For including radiation energy exchange.
+    //
     shared static bool radiation = false;
     shared static int radiation_update_frequency; // = 1 for every time-step
     shared static bool radiation_scaling = false;
+    shared static bool halt_on_large_flow_change = false; 
+    // Set to true to halt simulation when any monitor point sees a large flow change.
+    shared static double tolerance_in_T;   // Temperature change for the flow change.
 
     shared static bool electric_field_work;
 
-    // For Daryl Bond and Vince Wheatley's MHD additions.
+    // For Daryl Bond and Vince Wheatley's Single-fluid MHD additions.
     //
-    shared static bool MHD = false;    // Single fluid MHD
+    shared static bool MHD = false;
     // Lachlan Whyborn's Divergence cleaning to go with MHD.
     shared static bool divergence_cleaning = false;
     shared static double c_h = 0.0;
@@ -271,10 +276,6 @@ final class GlobalConfig {
     shared static int max_step = 100;      // iteration limit
     shared static int t_level;             // time level within update
     shared static int halt_now = 0;        // flag for premature halt
-    shared static bool halt_on_large_flow_change = false; 
-    // Set to true to halt simulation when any
-    // monitor point sees a large flow change.
-    shared static double tolerance_in_T;   // Temperature change for the flow change.
     shared static int print_count = 20; // Number of steps between writing messages to console.
     shared static int control_count = 10; // Number of steps between rereading .control file.
 
