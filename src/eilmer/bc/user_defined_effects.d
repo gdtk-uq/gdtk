@@ -67,7 +67,7 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
 	size_t j = 0, k = 0;
-	BasicCell ghost0, ghost1;
+	FVCell ghost0, ghost1;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
@@ -160,7 +160,7 @@ public:
     }
 			
 private:
-    void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, BasicCell ghostCell)
+    void putFlowStateIntoGhostCell(lua_State* L, int tblIdx, FVCell ghostCell)
     {
 	auto gmodel = blk.myConfig.gmodel;
 	try {
@@ -202,7 +202,7 @@ private:
     }
 
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
-			  in FVInterface IFace, BasicCell ghostCell0, BasicCell ghostCell1)
+			  in FVInterface IFace, FVCell ghostCell0, FVCell ghostCell1)
     {
 	// 1. Set up for calling function
 	auto L = blk.bc[which_boundary].myL;
@@ -306,7 +306,6 @@ public:
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
 	size_t j = 0, k = 0;
-	//BasicCell cell;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    callInterfaceUDF(t, gtl, ftl, i, j, k, f);

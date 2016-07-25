@@ -80,7 +80,7 @@ public:
     }
 
     void assemble_and_invert_normal_matrix(ref FVInterface IFace, size_t gtl,
-					   ref BasicCell[] cell_cloud,
+					   ref FVCell[] cell_cloud,
 					   ref LSQInterpWorkspace ws)
     {
 	// Since we are working in the interface-local frame, having the

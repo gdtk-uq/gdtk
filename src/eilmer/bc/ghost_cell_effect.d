@@ -202,7 +202,7 @@ public:
 	// If the grid is clustered toward the boundary, the error
 	// introduced by this zero-order reconstruction will be mitigated.
 	// PJ 2016-04-12
-	BasicCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0, ghost1;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
@@ -406,7 +406,7 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	BasicCell ghost0, ghost1;
+	FVCell ghost0, ghost1;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
@@ -518,7 +518,7 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	BasicCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0, ghost1;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
@@ -1029,7 +1029,7 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	BasicCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0, ghost1;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	auto gmodel = blk.myConfig.gmodel;
 	foreach (i, f; bc.faces) {
@@ -1177,7 +1177,7 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	BasicCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0, ghost1;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	auto gmodel = blk.myConfig.gmodel;
 	foreach (i, f; bc.faces) {
@@ -1628,8 +1628,8 @@ public:
     // For each ghost cell associated with the boundary,
     // we will have a corresponding "mapped cell" from which we will copy
     // the flow conditions.
-    BasicCell[] ghost_cells;
-    BasicCell[] mapped_cells;
+    FVCell[] ghost_cells;
+    FVCell[] mapped_cells;
     // Parameters for the calculation of the mapped-cell location.
     bool transform_position;
     Vector3 c0 = Vector3(0.0, 0.0, 0.0); // default origin
@@ -1793,7 +1793,7 @@ public:
 	    }
 	    if (!found) {
 		// Fall back to nearest cell search.
-		BasicCell closest_cell = gasBlocks[0].cells[0];
+		FVCell closest_cell = gasBlocks[0].cells[0];
 		Vector3 cellpos = closest_cell.pos[0];
 		double min_distance = abs(cellpos - mypos);
 		foreach (blk; gasBlocks) {

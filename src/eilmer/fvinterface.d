@@ -42,8 +42,8 @@ public:
     FVVertex[] vtx;        // references to vertices for line (2D) and quadrilateral (3D) faces
     // The following two arrays will contain references to the nearby cells,
     // starting with the adjoining cell, and moving out in each direction.
-    BasicCell[] left_cells;      // interface normal points out of this adjoining cell
-    BasicCell[] right_cells;     // interface normal points into this adjoining cell
+    FVCell[] left_cells;      // interface normal points out of this adjoining cell
+    FVCell[] right_cells;     // interface normal points into this adjoining cell
     LSQInterpWorkspace wsL;
     LSQInterpWorkspace wsR;
     WLSQGradWorkspace ws_grad;

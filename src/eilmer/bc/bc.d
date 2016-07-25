@@ -84,7 +84,7 @@ public:
     bool convective_flux_computed_in_bc = false;
     double emissivity = 0.0;
     FVInterface[] faces;
-    BasicCell[] ghostcells;
+    FVCell[] ghostcells;
     int[] outsigns;
 
 private:

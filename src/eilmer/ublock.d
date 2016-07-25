@@ -240,12 +240,12 @@ public:
 		my_face.is_on_boundary = true;
 		my_face.bc_id = i; // note which boundary this face is on
 		int my_outsign = bndry.outsign_list[j];
-		BasicCell ghost0 = new BasicCell(myConfig);
+		FVCell ghost0 = new FVCell(myConfig);
 		ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		// Make ghost-cell id values distinct from FVCell ids so that
 		// the warning/error messages are somewhat informative. 
 		ghost0.id = 100000 + ghost_cell_count++;
-		BasicCell ghost1 = new BasicCell(myConfig);
+		FVCell ghost1 = new FVCell(myConfig);
 		ghost1.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		ghost1.id = 100000 + ghost_cell_count++;
 		bc[i].faces ~= my_face;
@@ -373,7 +373,7 @@ public:
 			//        point cloud stencil which does not use any ghost cell data at walls. KD 17/06/2016
 			if (bc.is_wall) {
 			    foreach (i, f; bc.faces) { 
-				BasicCell cell;
+				FVCell cell;
 				// store the interface information
 				f.cloud_pos ~= &(f.pos);
 				f.cloud_fs ~= f.fs;
@@ -405,7 +405,7 @@ public:
 			    } // end foreach (i, f; bc.faces)
 			} else {
 			    foreach (i, f; bc.faces) {
-				BasicCell[] cell_list;
+				FVCell[] cell_list;
 				// store interface
 				f.cloud_pos ~= &(f.pos);
 				f.cloud_fs ~= f.fs;
@@ -461,7 +461,7 @@ public:
 			// store interface
 			f.cloud_pos ~= &(f.pos);
 			f.cloud_fs ~= f.fs;
-			BasicCell[] cell_list;
+			FVCell[] cell_list;
 			cell_list ~= f.left_cells[0];
 			cell_list ~= f.right_cells[0];
 			foreach (cell; cell_list) {
@@ -490,7 +490,7 @@ public:
 		    foreach(bndry_idx, boundary; grid.boundaries) { // set boundary clouds
 			BoundaryCondition bc = this.bc[bndry_idx];
 			foreach (i, f; bc.faces) { 
-			    BasicCell cell;
+			    FVCell cell;
 			    // store the interface information
 			    f.cloud_pos ~= &(f.pos);
 			    f.cloud_fs ~= f.fs;
@@ -526,7 +526,7 @@ public:
 			// store interface
 			f.cloud_pos ~= &(f.pos);
 			f.cloud_fs ~= f.fs;
-			BasicCell[] cell_list;
+			FVCell[] cell_list;
 			cell_list ~= f.left_cells[0];
 			cell_list ~= f.right_cells[0];
 			foreach (cell; cell_list) {

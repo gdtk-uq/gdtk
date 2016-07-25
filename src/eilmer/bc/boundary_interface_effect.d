@@ -128,17 +128,14 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	BasicCell cell;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		cell = f.left_cells[0];
-		FlowState fs = f.fs;
-		fs.copy_values_from(cell.fs);
+		FVCell cell = f.left_cells[0];
+		f.fs.copy_values_from(cell.fs);
 	    } else {
-		cell = f.right_cells[0];
-		FlowState fs = f.fs;
-		fs.copy_values_from(cell.fs);
+		FVCell cell = f.right_cells[0];
+		f.fs.copy_values_from(cell.fs);
 	    }
 	} // end foreach face
     }
@@ -641,17 +638,14 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	BasicCell cell;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	auto gmodel = blk.myConfig.gmodel;
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		cell = f.left_cells[0];
 		FlowState fs = f.fs;
 		gmodel.update_thermo_from_pT(fs.gas);
 		gmodel.update_trans_coeffs(fs.gas);
 	    } else {
-		cell = f.right_cells[0];
 		FlowState fs = f.fs;
 		gmodel.update_thermo_from_pT(fs.gas);
 		gmodel.update_trans_coeffs(fs.gas);

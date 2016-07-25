@@ -41,7 +41,7 @@ string avg_over_iface_list(string quantity, string result)
     return code;
 }
 
-class BasicCell {
+class FVCell {
 public:
     size_t id;  // allows us to work out where, in the block, the cell is
     // Note to future-self while in a very intense debugging session:
@@ -51,11 +51,27 @@ public:
     // cells[0] will have an id value much larger than 0.
     // Also, for the StructuredGrid block, there is a mapping from id 
     // back to the i,j,k indices that is sometimes handy.
+    bool fr_reactions_allowed; // if true, will call chemical_increment (also thermal_increment)
+    double dt_chem; // acceptable time step for finite-rate chemistry
+    double dt_therm; // acceptable time step for thermal relaxation
+    bool in_turbulent_zone; // if true, we will keep the turbulence viscosity
+    double base_qdot; // base-level of heat addition to cell, W/m**3
+    // Geometry
     Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
     double iLength; // length in the i-index direction
     double jLength; // length in the j-index direction
     double kLength; // length in the k-index direction
     double L_min;   // minimum length scale for cell
+    // Connections
+    FVInterface[] iface;  // references to defining interfaces of cell
+    double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
+    FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
+    double[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
+    double[] areaxy; // (x,y)-plane area for time-levels, m**2
+    double distance_to_nearest_wall; // for turbulence model correction.
+    double half_cell_width_at_wall;  // ditto
+    FVCell cell_at_nearest_wall;   // ditto
+    // Flow
     // Although most do, some boundary conditions will not fill in
     // valid flow state data for the ghost cell. The following flag
     // is used for the unstructured-grid code to determine if we 
@@ -65,54 +81,6 @@ public:
     // the context of structured grids also. 
     bool will_have_valid_flow; 
     FlowState fs; // Flow properties
-    // Connections
-    FVInterface[] iface;  // references to defining interfaces of cell
-    double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
-    FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
-
-private:
-    LocalConfig myConfig;
-
-public:
-    this(LocalConfig myConfig, int id_init=0)
-    {
-	this.myConfig = myConfig;
-	auto gmodel = myConfig.gmodel;
-	id = id_init;
-	pos.length = myConfig.n_grid_time_levels;
-	fs = new FlowState(gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
-    }
-
-    override string toString() const
-    {
-	char[] repr;
-	repr ~= "BasicCell(";
-	repr ~= "id=" ~ to!string(id);
-	repr ~= ", pos=" ~ to!string(pos);
-	repr ~= ", iface_ids=["; foreach (f; iface) { repr ~= format("%d,", f.id); } repr ~= "]";
-	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%.18e,", osgn); } repr ~= "]";
-	repr ~= ", vtx_ids=["; foreach (v; vtx) { repr ~= format("%d,", v.id); } repr ~= "]";
-	repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
-	repr ~= ",\n... fs=" ~ to!string(fs);
-	repr ~= ")";
-	return to!string(repr);
-    }
-} // end class BasicCell
-
-class FVCell : BasicCell {
-public:
-    bool fr_reactions_allowed; // if true, will call chemical_increment (also thermal_increment)
-    double dt_chem; // acceptable time step for finite-rate chemistry
-    double dt_therm; // acceptable time step for thermal relaxation
-    bool in_turbulent_zone; // if true, we will keep the turbulence viscosity
-    double base_qdot; // base-level of heat addition to cell, W/m**3
-    // Geometry
-    double[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
-    double[] areaxy; // (x,y)-plane area for time-levels, m**2
-    double distance_to_nearest_wall; // for turbulence model correction.
-    double half_cell_width_at_wall;  // ditto
-    FVCell cell_at_nearest_wall;   // ditto
-    // Flow
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
@@ -125,16 +93,21 @@ public:
                           // value for all of the update stages.
     // Data for computing residuals.
     double rho_at_start_of_step, rE_at_start_of_step;
+private:
+    LocalConfig myConfig;
 
 public:
     this(LocalConfig myConfig, int id_init=0)
     {
-	super(myConfig, id_init);
-	auto gmodel = myConfig.gmodel;
-	int n_species = gmodel.n_species;
-	int n_modes = gmodel.n_modes;
+	this.myConfig = myConfig;
+	id = id_init;
+	pos.length = myConfig.n_grid_time_levels;
 	volume.length = myConfig.n_grid_time_levels;
 	areaxy.length = myConfig.n_grid_time_levels;
+	auto gmodel = myConfig.gmodel;
+	fs = new FlowState(gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
+	int n_species = gmodel.n_species;
+	int n_modes = gmodel.n_modes;
 	foreach(i; 0 .. myConfig.n_flow_time_levels) {
 	    U ~= new ConservedQuantities(n_species, n_modes);
 	    dUdt ~= new ConservedQuantities(n_species, n_modes);
