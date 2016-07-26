@@ -206,13 +206,13 @@ public:
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		src_cell = f.left_cells[0];
-		ghost0 = f.right_cells[0];
-		ghost1 = f.right_cells[1];
+		src_cell = f.left_cell;
+		ghost0 = f.right_cell;
+		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
-		src_cell = f.right_cells[0];
-		ghost0 = f.left_cells[0];
-		ghost1 = f.left_cells[1];
+		src_cell = f.right_cell;
+		ghost0 = f.left_cell;
+		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    reflect_normal_velocity(ghost0.fs, f);
@@ -410,11 +410,11 @@ public:
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		ghost0 = f.right_cells[0];
-		ghost1 = f.right_cells[1];
+		ghost0 = f.right_cell;
+		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
-		ghost0 = f.left_cells[0];
-		ghost1 = f.left_cells[1];
+		ghost0 = f.left_cell;
+		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(fstate);
 	    ghost1.fs.copy_values_from(fstate);
@@ -522,13 +522,13 @@ public:
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		src_cell = f.left_cells[0];
-		ghost0 = f.right_cells[0];
-		ghost1 = f.right_cells[1];
+		src_cell = f.left_cell;
+		ghost0 = f.right_cell;
+		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
-		src_cell = f.right_cells[0];
-		ghost0 = f.left_cells[0];
-		ghost1 = f.left_cells[1];
+		src_cell = f.right_cell;
+		ghost0 = f.left_cell;
+		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    if (xOrder == 1) {
 		throw new Error("First order extrapolation not implemented.");
@@ -1034,13 +1034,13 @@ public:
 	auto gmodel = blk.myConfig.gmodel;
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		src_cell = f.left_cells[0];
-		ghost0 = f.right_cells[0];
-		ghost1 = f.right_cells[1];
+		src_cell = f.left_cell;
+		ghost0 = f.right_cell;
+		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
-		src_cell = f.right_cells[0];
-		ghost0 = f.left_cells[0];
-		ghost1 = f.left_cells[1];
+		src_cell = f.right_cell;
+		ghost0 = f.left_cell;
+		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    ghost0.fs.gas.p = p_outside;
@@ -1182,13 +1182,13 @@ public:
 	auto gmodel = blk.myConfig.gmodel;
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		src_cell = f.left_cells[0];
-		ghost0 = f.right_cells[0];
-		ghost1 = f.right_cells[1];
+		src_cell = f.left_cell;
+		ghost0 = f.right_cell;
+		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
-		src_cell = f.right_cells[0];
-		ghost0 = f.left_cells[0];
-		ghost1 = f.left_cells[1];
+		src_cell = f.right_cell;
+		ghost0 = f.left_cell;
+		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    ghost0.fs.gas.p = p_outside;
@@ -1690,11 +1690,11 @@ public:
 	    BoundaryCondition bc = blk.bc[which_boundary];
 	    foreach (i, f; bc.faces) {
 		if (bc.outsigns[i] == 1) {
-		    ghost_cells ~= f.right_cells[0];
-		    ghost_cells ~= f.right_cells[1];
+		    ghost_cells ~= f.right_cell;
+		    ghost_cells ~= f.right_cells[1]; // [FIXME]
 		} else {
-		    ghost_cells ~= f.left_cells[0];
-		    ghost_cells ~= f.left_cells[1];
+		    ghost_cells ~= f.left_cell;
+		    ghost_cells ~= f.left_cells[1]; // [FIXME]
 		}
 	    } // end foreach face
 	    break;

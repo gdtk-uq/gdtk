@@ -205,9 +205,11 @@ public:
 		c.iface ~= my_face;
 		c.outsign ~= to!double(my_outsign);
 		if (my_outsign == 1) {
-		    my_face.left_cells ~= c;
+		    my_face.left_cell = c; // [TODO] check that we assign only once
+		    my_face.left_cells ~= c; // [TODO] eliminate this list
 		} else {
-		    my_face.right_cells ~= c;
+		    my_face.right_cell = c;
+		    my_face.right_cells ~= c; // [TODO] eliminate this list
 		}
 	    }
 	} // end foreach cells
@@ -253,16 +255,19 @@ public:
 		bc[i].ghostcells ~= ghost0;
 		bc[i].ghostcells ~= ghost1;
 		if (my_outsign == 1) {
-		    my_face.right_cells ~= ghost0;
+		    my_face.right_cell = ghost0;
+		    my_face.right_cells ~= ghost0; // [TODO] eliminate these lists
 		    my_face.right_cells ~= ghost1;
 		} else {
-		    my_face.left_cells ~= ghost0;
+		    my_face.left_cell = ghost0;
+		    my_face.left_cells ~= ghost0; // [TODO] eliminate these lists
 		    my_face.left_cells ~= ghost1;
 		}
 	    }
 	}
 	// At this point, all faces should have either one finite-volume cell
 	// or two ghost cells attached to a side -- check that this is true.
+	// [TODO] change to not having the lists.
 	foreach (f; faces) {
 	    bool ok = true;
 	    string msg = "";

@@ -131,11 +131,9 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		FVCell cell = f.left_cells[0];
-		f.fs.copy_values_from(cell.fs);
+		f.fs.copy_values_from(f.left_cell.fs);
 	    } else {
-		FVCell cell = f.right_cells[0];
-		f.fs.copy_values_from(cell.fs);
+		f.fs.copy_values_from(f.right_cell.fs);
 	    }
 	} // end foreach face
     }

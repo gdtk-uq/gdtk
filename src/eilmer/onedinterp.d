@@ -159,6 +159,7 @@ public:
 
     // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_both(ref FVInterface IFace,
+		     ref FVCell cL1, ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
 		     double cL1Length, double cL0Length, 
 		     double cR0Length, double cR1Length, 
 		     ref FlowState Lft, ref FlowState Rght)
@@ -166,10 +167,6 @@ public:
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
 	auto nmodes = gmodel.n_modes;
-	auto cL1 = IFace.left_cells[1];
-	auto cL0 = IFace.left_cells[0];
-	auto cR0 = IFace.right_cells[0];
-	auto cR1 = IFace.right_cells[1];
 	// Low-order reconstruction just copies data from adjacent FV_Cell.
 	// Even for high-order reconstruction, we depend upon this copy for
 	// the viscous-transport and diffusion coefficients.
@@ -301,15 +298,13 @@ public:
 
     // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_left(ref FVInterface IFace,
+		     ref FVCell cL1, ref FVCell cL0, ref FVCell cR0,
 		     double cL1Length, double cL0Length, double cR0Length,
 		     ref FlowState Lft, ref FlowState Rght)
     {
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
 	auto nmodes = gmodel.n_modes;
-	auto cL1 = IFace.left_cells[1];
-	auto cL0 = IFace.left_cells[0];
-	auto cR0 = IFace.right_cells[0];
 	// Low-order reconstruction just copies data from adjacent FV_Cell.
 	// Even for high-order reconstruction, we depend upon this copy for
 	// the viscous-transport and diffusion coefficients.
@@ -410,6 +405,7 @@ public:
 
     // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_right(ref FVInterface IFace,
+		      ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
 		      double cL0Length, double cR0Length, double cR1Length,
 		      ref FlowState Lft, ref FlowState Rght)
     // Reconstruct flow properties at an interface from cells L0,R0,R1.
@@ -420,9 +416,6 @@ public:
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
 	auto nmodes = gmodel.n_modes;
-	auto cL0 = IFace.left_cells[0];
-	auto cR0 = IFace.right_cells[0];
-	auto cR1 = IFace.right_cells[1];
 	// Low-order reconstruction just copies data from adjacent FV_Cell.
 	// Even for high-order reconstruction, we depend upon this copy for
 	// the viscous-transport and diffusion coefficients.

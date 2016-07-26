@@ -237,8 +237,8 @@ public:
 	double tol = myConfig.compression_tolerance;
 	// First, work across interfaces and locate shocks using the (local) normal velocity.
 	foreach (iface; faces) {
-	    auto cL = iface.left_cells[0];
-	    auto cR = iface.right_cells[0];
+	    auto cL = iface.left_cell;
+	    auto cR = iface.right_cell;
 	    double uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
 	    double uR = cR.fs.vel.x * iface.n.x + cR.fs.vel.y * iface.n.y + cR.fs.vel.z * iface.n.z;
 	    double aL = cL.fs.gas.a;
@@ -276,8 +276,7 @@ public:
 		    printf( "Adjusting cell data to a local average.\n" );
 		    foreach (i; 0 .. cell.iface.length) {
 			auto face = cell.iface[i];
-			auto other_cell = (cell.outsign[i] == 1) ?
-			    face.right_cells[0] : face.left_cells[0];
+			auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
 			if (other_cell.fs.check_data(other_cell.pos[0], myConfig.flowstate_limits))
 			    { neighbour_flows ~= other_cell.fs; }
 		    }

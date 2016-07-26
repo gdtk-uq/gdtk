@@ -40,6 +40,11 @@ public:
     Vector3 t1;            // tangent vector 1 (aka p)
     Vector3 t2;            // tangent vector 2 (aka q)
     FVVertex[] vtx;        // references to vertices for line (2D) and quadrilateral (3D) faces
+    // Adjoining cells.
+    FVCell left_cell;      // interface normal points out of this adjoining cell
+    FVCell right_cell;     // interface normal points into this adjoining cell
+    // [TODO] 2016-07-26 eliminate the following left_cells right_cells arrays
+    // and LSQInterpWorkspace items (These should move into the FVCell class.
     // The following two arrays will contain references to the nearby cells,
     // starting with the adjoining cell, and moving out in each direction.
     FVCell[] left_cells;      // interface normal points out of this adjoining cell

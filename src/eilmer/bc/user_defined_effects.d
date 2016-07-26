@@ -71,11 +71,11 @@ public:
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		ghost0 = f.right_cells[0];
-		ghost1 = f.right_cells[1];
+		ghost0 = f.right_cell;
+		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
-		ghost0 = f.left_cells[0];
-		ghost1 = f.left_cells[1];
+		ghost0 = f.left_cell;
+		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghost0, ghost1);
 	} // end foreach face
