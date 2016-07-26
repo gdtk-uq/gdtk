@@ -86,9 +86,9 @@ test expanded-driver-region {Expanded driver gas conditions.} -body {
 	# puts "rho=$rho p=$p T=$T velx=$velx"
     }
     # The differences with respect to the reference values should be small. 
-    list [expr abs($rho - $rho_ref)/$rho_ref < 1.0e-2] \
+    list [expr abs($rho - $rho_ref)/$rho_ref < 1.5e-2] \
     	 [expr abs($p - $p_ref)/$p_ref < 1.0e-2] \
-    	 [expr abs($T - $T_ref)/$T_ref < 1.0e-2] \
+    	 [expr abs($T - $T_ref)/$T_ref < 1.5e-2] \
     	 [expr abs($velx - $velx_ref)/$velx_ref < 1.0e-2]
 } -result {1 1 1 1}
 
