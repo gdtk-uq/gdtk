@@ -879,6 +879,8 @@ function write_config_file(fileName)
 
    f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
    f:write(string.format('"shock_fitting_delay": %.18e,\n', config.shock_fitting_delay))
+   f:write(string.format('"shock_fitting_interpolation_order": %d,\n', config.shock_fitting_interpolation_order))
+   f:write(string.format('"shock_fitting_scale_factor": %.18e,\n', config.shock_fitting_scale_factor))
    f:write(string.format('"write_vertex_velocities": %s,\n', tostring(config.write_vertex_velocities)))
    f:write(string.format('"udf_grid_motion_file": "%s",\n', tostring(config.udf_grid_motion_file)))
 

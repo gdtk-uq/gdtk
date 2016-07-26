@@ -120,6 +120,8 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_enum_field("grid_motion", "grid_motion", "grid_motion_from_name"));
     mixin(get_double_field("shock_fitting_delay", "shock_fitting_delay"));
+    mixin(get_int_field("shock_fitting_interpolation_order","shock_fitting_interpolation_order"));
+    mixin(get_double_field("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
     mixin(get_bool_field("write_vertex_velocities", "write_vertex_velocities"));
     mixin(get_string_field("udf_grid_motion_file", "udf_grid_motion_file"));
     //
@@ -235,6 +237,8 @@ extern(C) int configGet(lua_State* L)
     case "write_vertex_velocities": lua_pushboolean(L, GlobalConfig.write_vertex_velocities); break;
     case "udf_grid_motion_file": lua_pushstring(L, toStringz(GlobalConfig.udf_grid_motion_file)); break;
     case "shock_fitting_delay": lua_pushnumber(L, GlobalConfig.shock_fitting_delay); break;
+    case "shock_fitting_interpolation_order": lua_pushinteger(L, GlobalConfig.shock_fitting_interpolation_order); break;
+    case "shock_fitting_scale_factor": lua_pushnumber(L, GlobalConfig.shock_fitting_scale_factor); break;
 	//
     case "viscous": lua_pushboolean(L, GlobalConfig.viscous); break;
     case "spatial_deriv_calc": lua_pushstring(L, spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc).toStringz); break;

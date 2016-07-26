@@ -123,9 +123,9 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
     double U_plus_a, rho, shock_detect, temp1, temp2, ws1, ws2, rho_lft, rho_rght,  p_lft, p_rght, M, rho_recon_top, rho_recon_bottom;
     Vector3[4] interface_ws;
     double[4] w;
-    bool reconstruction_higher_order = true; // if false code reverts to 0th order interpolation
+    int interpolation_order = blk.myConfig.shock_fitting_interpolation_order;
     immutable double SHOCK_DETECT_THRESHOLD =  0.2;
-    immutable double VTX_VEL_SCALING_FACTOR = 0.2;
+    immutable double VTX_VEL_SCALING_FACTOR = blk.myConfig.shock_fitting_scale_factor;
     size_t krangemax = ( blk.myConfig.dimensions == 2 ) ? blk.kmax : blk.kmax+1;
 
     // make sure all the vertices are given a velocity to begin with
@@ -176,7 +176,7 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 	    }
 	    else // else grab data from neighbour cell in current block
 		cell_toprght = blk.get_cell(i, j, k);            
-	    if (reconstruction_higher_order) { 
+	    if (interpolation_order == 2) { 
 		if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
 		    // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
 		    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
@@ -214,7 +214,7 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 	    
 	    // using stored data estimate a value for rho
 	    // NB: if on flow domain boundary then just use the first internal cell to estimate rho
-	    if (reconstruction_higher_order) { // use reconstruction
+	    if (interpolation_order == 2) { // use reconstruction
 		if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face")
 		    rho = rho_recon_top;
 		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face")
@@ -222,7 +222,7 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 		else
 		    rho = 0.5*(rho_recon_top + rho_recon_bottom);
 	    }
-	    else { // use 0th order
+	    else { 
 		if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face")
 		    rho = cell_toprght.fs.gas.rho;
 		else if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face")
@@ -261,7 +261,7 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
 			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
 		    }
-		    if (reconstruction_higher_order) {
+		    if (interpolation_order == 2) {
 			cell_R1 = blk.get_cell(i+1, j-jOffSet, k);
 			cell_R2 =  blk.get_cell(i+2, j-jOffSet, k);
 			// As suggested in onedinterp.d we are transforming all cells velocities to a local reference frame relative to the
@@ -366,10 +366,10 @@ Vector3 weighting_function(Vector3 vel_max, size_t imax, size_t i) {
 }
 
 double scalar_reconstruction(double x1, double x2, double x3, double h1, double h2, double h3, double g1) {
-    bool higher_order = true; // if false then the reconstruction will be 1st order
+    bool johnston_reconstruction = false;
     double eps = 1.0e-12;
     double reconstructed_value;
-    if (higher_order) {
+    if (johnston_reconstruction) {
 	// This is a special one sided reconstruction presented in Ian Johnston's thesis. 
 	double delta_theta = 2*(x2-x1)/(h1+h2);
 	double delta_cross = 2*(x3-x2)/(h2+h3);

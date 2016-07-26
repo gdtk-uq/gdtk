@@ -144,6 +144,8 @@ void read_config_file()
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_double("shock_fitting_delay", "shock_fitting_delay"));
+    mixin(update_int("shock_fitting_interpolation_order", "shock_fitting_interpolation_order"));
+    mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
     mixin(update_bool("MHD", "MHD"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
@@ -161,6 +163,8 @@ void read_config_file()
 	writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
 	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
+	writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
+	writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
 	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
 	writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
 	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);

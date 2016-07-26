@@ -228,6 +228,10 @@ final class GlobalConfig {
     shared static double viscous_delay = 0.0;
     // The amount of time by which to delay the shock fitting.
     shared static double shock_fitting_delay = 1.5e-3;
+    // order of the special interpolation applied at the shock fitting inflow boundary
+    shared static int shock_fitting_interpolation_order = 1;
+    // scaling factor applied to vertices in shock fitting simulations for stability
+    shared static double shock_fitting_scale_factor = 0.5;
     // When the diffusion is calculated is treated as part of the viscous calculation:
     //   false for neglecting multicomponent diffusion, 
     //   true when considering the diffusion 
@@ -378,6 +382,9 @@ public:
     bool stringent_cfl;
     double viscous_signal_factor;
 
+    int shock_fitting_interpolation_order;
+    double shock_fitting_scale_factor;
+    
     TurbulenceModel turbulence_model;
     double turbulence_prandtl_number;
     double turbulence_schmidt_number;
@@ -450,6 +457,9 @@ public:
 	stringent_cfl = GlobalConfig.stringent_cfl;
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
 
+	shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
+	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
+	
 	turbulence_model = GlobalConfig.turbulence_model;
 	turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
 	turbulence_schmidt_number = GlobalConfig.turbulence_schmidt_number;
