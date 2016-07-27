@@ -5,6 +5,7 @@
 import std.math;
 import std.stdio;
 import std.algorithm;
+import std.conv;
 import nm.rsla;
 import geom;
 import gas;
@@ -30,7 +31,7 @@ public:
 	dx.length = np; dy.length = np; dz.length = np;
     }
 
-    this(LSQInterpWorkspace other)
+    this(ref LSQInterpWorkspace other)
     {
 	// Cannot have const in constructor signature because of the duplication of references.
 	cell_cloud = other.cell_cloud.dup(); 
@@ -100,7 +101,7 @@ public:
 	e.length = nmodes;
     }
 
-    this(const LSQInterpGradients other)
+    this(ref const LSQInterpGradients other)
     {
 	velx.refx = other.velx.x; velx.refy = other.velx.y; velx.refz = other.velx.z;
 	vely.refx = other.vely.x; vely.refy = other.vely.y; vely.refz = other.vely.z;
@@ -111,11 +112,11 @@ public:
 	psi.refx = other.psi.x; psi.refy = other.psi.y; psi.refz = other.psi.z;
 	tke.refx = other.tke.x; tke.refy = other.tke.y; tke.refz = other.tke.z;
 	omega.refx = other.omega.x; omega.refy = other.omega.y; omega.refz = other.omega.z;
-	foreach(m; other.massf) { massf ~= Vector3(m); }
+	foreach(ref m; other.massf) { massf ~= Vector3(m); }
 	rho.refx = other.rho.x; rho.refy = other.rho.y; rho.refz = other.rho.z;
 	p.refx = other.p.x; p.refy = other.p.y; p.refz = other.p.z;
-	foreach(Ti; other.T) { T ~= Vector3(Ti); }
-	foreach(ei; other.e) { massf ~= Vector3(ei); }
+	foreach(ref Ti; other.T) { T ~= Vector3(Ti); }
+	foreach(ref ei; other.e) { massf ~= Vector3(ei); }
     }
 
     void compute_lsq_values(ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
@@ -333,7 +334,7 @@ public:
 	    LSQInterpWorkspace wsR = cR0.ws;
 	    Vector3 dL = IFace.pos; dL -= cL0.pos[gtl]; // vector from left-cell-centre to face midpoint
 	    Vector3 dR = IFace.pos; dR -= cR0.pos[gtl];
-	    Vector3 mygrad;
+	    Vector3 mygradL, mygradR;
 	    //
 	    // Always reconstruct in the global frame of reference -- for now
 	    //
@@ -344,26 +345,44 @@ public:
                 double qL0 = cL0.fs."~qname~";
                 double qMinL = qL0;
                 double qMaxL = qL0;
-                foreach (i; 1 .. wsL.cell_cloud.length) {
-                    qMinL = min(qMinL, wsL.cell_cloud[i].fs."~qname~");
-                    qMaxL = max(qMaxL, wsL.cell_cloud[i].fs."~qname~");
+                if (wsL) { // an active cell will have a workspace
+                    foreach (i; 1 .. wsL.cell_cloud.length) {
+                        qMinL = min(qMinL, wsL.cell_cloud[i].fs."~qname~");
+                        qMaxL = max(qMaxL, wsL.cell_cloud[i].fs."~qname~");
+                    }
+                    mygradL.refx = cL0.gradients."~gname~".x;
+                    mygradL.refy = cL0.gradients."~gname~".y;
+                    mygradL.refz = cL0.gradients."~gname~".z;
+                } else {
+                    mygradL.refx = 0.0;
+                    mygradL.refy = 0.0;
+                    mygradL.refz = 0.0;
                 }
                 double qR0 = cR0.fs."~qname~";
                 double qMinR = qR0;
                 double qMaxR = qR0;
-                foreach (i; 1 .. wsR.cell_cloud.length) {
-                    qMinR = min(qMinR, wsR.cell_cloud[i].fs."~qname~");
-                    qMaxR = max(qMaxR, wsR.cell_cloud[i].fs."~qname~");
+                if (wsR) { // an active cell will have a workspace
+                    foreach (i; 1 .. wsR.cell_cloud.length) {
+                        qMinR = min(qMinR, wsR.cell_cloud[i].fs."~qname~");
+                        qMaxR = max(qMaxR, wsR.cell_cloud[i].fs."~qname~");
+                    }
+                    mygradR.refx = cR0.gradients."~gname~".x;
+                    mygradR.refy = cR0.gradients."~gname~".y;
+                    mygradR.refz = cR0.gradients."~gname~".z;
+                } else {
+                    mygradR.refx = 0.0;
+                    mygradR.refy = 0.0;
+                    mygradR.refz = 0.0;
                 }
                 if (myConfig.apply_limiter) {
                     // venkatakrishan_limit(wsL.gradients."~gname~", cL0, qL0, qMinL, qMaxL, cL0.iLength, cL0.jLength, cL0.kLength);
                     // venkatakrishan_limit(wsR.gradients."~gname~", cR0, qR0, qMinR, qMaxR, cR0.iLength, cR0.jLength, cR0.kLength);
-                    mygrad.refx = 0.0; // [FIXME] temporary value to allow construction of code
-                    mygrad.refy = 0.0;
-                    mygrad.refz = 0.0;
+                    van_albada_limit(mygradL.refx, mygradR.refx);
+                    van_albada_limit(mygradL.refy, mygradR.refy);
+                    van_albada_limit(mygradL.refz, mygradR.refz);
                 }
-                double qL = qL0 + dL.dot(mygrad);
-                double qR = qR0 + dR.dot(mygrad);
+                double qL = qL0 + dL.dot(mygradL);
+                double qR = qR0 + dR.dot(mygradR);
                 if (myConfig.extrema_clipping) {
                     Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
                     Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
@@ -375,7 +394,7 @@ public:
                 ";
 		return code;
 	    }
-	    mixin(codeForReconstruction("vel.x", "velx", "vel.refx")); // [FIXME] segmentation fault here 1:30pm 2016-07-27
+	    mixin(codeForReconstruction("vel.x", "velx", "vel.refx"));
 	    mixin(codeForReconstruction("vel.y", "vely", "vel.refy"));
 	    mixin(codeForReconstruction("vel.z", "velz", "vel.refz"));
 	    if (myConfig.MHD) {
