@@ -76,11 +76,6 @@ public:
 	F = new ConservedQuantities(myConfig.gmodel.n_species, myConfig.gmodel.n_modes);
 	F.clear_values();
 	grad = new FlowGradients(myConfig.gmodel.n_species);
-	if (allocate_lsq_interp_workspace) {
-	    // only used for unstructured-grid blocks
-	    wsL = new LSQInterpWorkspace();
-	    wsR = new LSQInterpWorkspace();
-	}
 	if (allocate_spatial_deriv_lsq_workspace) {
 	    ws_grad = new WLSQGradWorkspace();
 	}
@@ -107,8 +102,6 @@ public:
 	F = new ConservedQuantities(other.F);
 	grad = new FlowGradients(other.grad);
 	if (other.ws_grad) ws_grad = new WLSQGradWorkspace(other.ws_grad);
-	if (other.wsL) wsL = new LSQInterpWorkspace(other.wsL);
-	if (other.wsR) wsR = new LSQInterpWorkspace(other.wsR);
 	// Because we copy the following pointers and references,
 	// we cannot have const (or "in") qualifier on other.
 	cloud_pos = other.cloud_pos.dup();

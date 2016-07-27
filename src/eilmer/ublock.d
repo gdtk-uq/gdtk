@@ -295,6 +295,10 @@ public:
 		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
+	//
+//------------------------------------- [TODO] cut below -----------------------------------------------------
+	// [TODO] will eventually eliminate the left_cells and right_cells lists.
+	//
 	// For each side of a face with a single at
 	// work around the faces of the attached cell to accumulate 
 	// a cloud of cells for field reconstruction prior to computing
@@ -353,7 +357,30 @@ public:
 		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
-	
+//------------------------------------- [TODO] cut above -----------------------------------------------------
+
+	// Set up the cell clouds for least-squares derivative estimation for use in 
+	// interpolation/reconstruction of flow quantities at left- and right- sides
+	// of cell faces.
+	// (Will be used for the convective fluxes).
+	auto nsp = myConfig.gmodel.n_species;
+	auto nmodes = myConfig.gmodel.n_modes;
+	foreach (c; cells) {
+	    FVCell[] cell_cloud;
+	    // First cell in the cloud is the cell itself.  Differences are taken about it.
+	    cell_cloud ~= c;
+	    // Subsequent cells are the surrounding cells.
+	    foreach (i, f; c.iface) {
+		if (c.outsign[i] > 0.0) {
+		    if (f.right_cell) { cell_cloud ~= f.right_cell; }
+		} else {
+		    if (f.left_cell) { cell_cloud ~= f.left_cell; }
+		}
+	    } // end foreach face
+	    c.ws = new LSQInterpWorkspace(cell_cloud);
+	    c.gradients = new LSQInterpGradients(nsp, nmodes);
+	} // end foreach cell
+
 	// We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
 	//equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
 	if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.divergence) {
@@ -725,14 +752,10 @@ public:
 	    // for the viscous terms.
 	    compute_leastsq_geometric_weights(gtl);
 	}
-	if (myConfig.interpolation_order > 1 &&
-	    myConfig.retain_least_squares_work_data) {
+	if (myConfig.interpolation_order > 1) {
 	    // The LSQ linear model for the flow field is fitted using 
 	    // information on the locations of the points. 
-	    foreach (f; faces) {
-		lsq.assemble_and_invert_normal_matrix(f, 0, f.left_cells, f.wsL);
-		lsq.assemble_and_invert_normal_matrix(f, 0, f.right_cells, f.wsR);
-	    }
+	    foreach (c; cells) { c.ws.assemble_and_invert_normal_matrix(myConfig.dimensions, gtl); }
 	}
     } // end compute_primary_cell_geometric_data()
 
@@ -872,6 +895,9 @@ public:
 
     override void convective_flux()
     {
+	foreach (c; cells) {
+	    c.gradients.compute_lsq_values(c.ws, myConfig);
+	}
 	foreach (f; faces) {
 	    lsq.interp_both(f, 0, Lft, Rght); // gtl assumed 0
 	    f.fs.copy_average_values_from(Lft, Rght);

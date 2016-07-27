@@ -23,6 +23,7 @@ import conservedquantities;
 import fvvertex;
 import fvinterface;
 import globalconfig;
+import lsqinterp;
 
 // The following functions are used at compile time.
 // Look for mixin statements further down in the file. 
@@ -84,6 +85,9 @@ public:
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
     ConservedQuantities Q; // source (or production) terms
+    // for unstructured grids, we may be doing high-order reconstruction
+    LSQInterpWorkspace ws;
+    LSQInterpGradients gradients;
     // Terms for loose-coupling of radiation.
     double Q_rad_org;
     double f_rad_org;

@@ -16,34 +16,189 @@ import fvcell;
 
 
 class LSQInterpWorkspace {
+public:
     // A place to hold the intermediate results for assembling
     // the normal equations, to allow reuse of the values.
-public:
-    double dxFace, dyFace, dzFace;
+    FVCell[] cell_cloud;
     double[] dx, dy, dz;
     double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
 
-    this()
+    this(FVCell[] cell_cloud)
     {
-	// don't need to do anything
+	this.cell_cloud = cell_cloud.dup();
+	auto np = cell_cloud.length;
+	dx.length = np; dy.length = np; dz.length = np;
     }
 
-    this(const LSQInterpWorkspace other)
+    this(LSQInterpWorkspace other)
     {
+	// Cannot have const in constructor signature because of the duplication of references.
+	cell_cloud = other.cell_cloud.dup(); 
 	dx = other.dx.dup(); dy = other.dy.dup(); dz = other.dz.dup();
-	dxFace = other.dxFace; dyFace = other.dyFace; dzFace = other.dzFace;
 	foreach (i; 0 .. 3) {
 	    foreach (j; 0 .. 6) { xTx[i][j] = other.xTx[i][j]; }
 	}
     }
+    
+    void assemble_and_invert_normal_matrix(int dimensions, size_t gtl)
+    {
+	size_t np = cell_cloud.length;
+	assert(np == dx.length, "oops wrong array lengths");
+	foreach (i; 1 .. np) {
+	    Vector3 dr = cell_cloud[i].pos[gtl]; dr -= cell_cloud[0].pos[gtl];
+	    dx[i] = dr.x; dy[i] = dr.y; dz[i] = dr.z;
+	}	    
+	// Prepare the normal matrix for the cloud and invert it.
+	// Depending on how aligned the points are, there may be insufficient
+	// variation in the local y- or z-positions to make a sensible 3D matrix.
+	// We will form the sums and look at their relative sizes.
+	double xx = 0.0; double xy = 0.0; double xz = 0.0;
+	double yy = 0.0; double yz = 0.0;
+	double zz = 0.0;
+	foreach (i; 1 .. np) {
+	    xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; xz += dx[i]*dz[i];
+	    yy += dy[i]*dy[i]; yz += dy[i]*dz[i]; zz += dz[i]*dz[i];
+	}
+	if (dimensions == 3) {
+	    xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = xz;
+	    xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = yz;
+	    xTx[2][0] = xz; xTx[2][1] = yz; xTx[2][2] = zz;
+	} else {
+	    // dimensions == 2
+	    xTx[0][0] =  xx; xTx[0][1] =  xy; xTx[0][2] = 0.0;
+	    xTx[1][0] =  xy; xTx[1][1] =  yy; xTx[1][2] = 0.0;
+	    xTx[2][0] = 0.0; xTx[2][1] = 0.0; xTx[2][2] = 1.0;
+	}
+	xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
+	xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
+	xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
+	if (0 != computeInverse!(3,3)(xTx)) {
+	    throw new FlowSolverException("Failed to invert LSQ normal matrix");
+	    // Assume that the rows are linearly dependent 
+	    // because the sample points are colinear.
+	    // Maybe we could proceed by working as a single-dimensional interpolation.
+	}
+    } // end assemble_and_invert_normal_matrix()
 } // end class LSQInterpWorkspace
+
+class LSQInterpGradients {
+    // These are the quantities that will be interpolated from cell centres 
+    // to the Left and Right sides of interfaces.
+    // We need to hold onto their gradients within cells.
+public:
+    Vector3 velx, vely, velz;
+    Vector3 Bx, By, Bz, psi;
+    Vector3 tke, omega;
+    Vector3[] massf;
+    Vector3 rho, p;
+    Vector3[] T, e;
+
+    this(size_t nsp, size_t nmodes)
+    {
+	massf.length = nsp;
+	T.length = nmodes;
+	e.length = nmodes;
+    }
+
+    this(const LSQInterpGradients other)
+    {
+	velx.refx = other.velx.x; velx.refy = other.velx.y; velx.refz = other.velx.z;
+	vely.refx = other.vely.x; vely.refy = other.vely.y; vely.refz = other.vely.z;
+	velz.refx = other.velz.x; velz.refy = other.velz.y; velz.refz = other.velz.z;
+	Bx.refx = other.Bx.x; Bx.refy = other.Bx.y; Bx.refz = other.Bx.z;
+	By.refx = other.By.x; By.refy = other.By.y; By.refz = other.By.z;
+	Bz.refx = other.Bz.x; Bz.refy = other.Bz.y; Bz.refz = other.Bz.z;
+	psi.refx = other.psi.x; psi.refy = other.psi.y; psi.refz = other.psi.z;
+	tke.refx = other.tke.x; tke.refy = other.tke.y; tke.refz = other.tke.z;
+	omega.refx = other.omega.x; omega.refy = other.omega.y; omega.refz = other.omega.z;
+	foreach(m; other.massf) { massf ~= Vector3(m); }
+	rho.refx = other.rho.x; rho.refy = other.rho.y; rho.refz = other.rho.z;
+	p.refx = other.p.x; p.refy = other.p.y; p.refz = other.p.z;
+	foreach(Ti; other.T) { T ~= Vector3(Ti); }
+	foreach(ei; other.e) { massf ~= Vector3(ei); }
+    }
+
+    void compute_lsq_values(ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    {
+	double[3] rhs, gradients;
+	// x-velocity
+	string codeForGradients(string qname, string gname)
+	{
+	    string code = "{
+                double q0 = ws.cell_cloud[0].fs."~qname~";
+                foreach (j; 0 .. 3) { rhs[j] = 0.0; }
+                foreach (i; 1 .. ws.cell_cloud.length) {
+                    double dq = ws.cell_cloud[i].fs."~qname~" - q0;
+                    rhs[0] += ws.dx[i]*dq; rhs[1] += ws.dy[i]*dq; rhs[2] += ws.dz[i]*dq;
+                }
+	        solveWithInverse!(3,3)(ws.xTx, rhs, gradients);
+                "~gname~".refx = gradients[0];
+                "~gname~".refy = gradients[1];
+                "~gname~".refz = gradients[2];
+                }
+                ";
+	    return code;
+	}
+	mixin(codeForGradients("vel.x", "velx"));
+	mixin(codeForGradients("vel.y", "vely"));
+	mixin(codeForGradients("vel.z", "velz"));
+	if (myConfig.MHD) {
+	    mixin(codeForGradients("B.x", "Bx"));
+	    mixin(codeForGradients("B.y", "By"));
+	    mixin(codeForGradients("B.z", "Bz"));
+	    if (myConfig.divergence_cleaning) {
+		mixin(codeForGradients("psi", "psi"));
+	    }
+	}
+	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+	    mixin(codeForGradients("tke", "tke"));
+	    mixin(codeForGradients("omega", "omega"));
+	}
+	auto nsp = myConfig.gmodel.n_species;
+	if (nsp > 1) {
+	    // Multiple species.
+	    foreach (isp; 0 .. nsp) {
+		mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
+	    }
+	} else {
+	    // Only one possible gradient value for a single species.
+	    massf[0].refx = 0.0; massf[0].refy = 0.0; massf[0].refz = 0.0;
+	}
+	// Interpolate on two of the thermodynamic quantities, 
+	// and fill in the rest based on an EOS call. 
+	auto nmodes = myConfig.gmodel.n_modes;
+	final switch (myConfig.thermo_interpolator) {
+	case InterpolateOption.pt: 
+	    mixin(codeForGradients("gas.p", "p"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.T[imode]", "T[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhoe:
+	    mixin(codeForGradients("gas.rho", "rho"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.e[imode]", "e[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhop:
+	    mixin(codeForGradients("gas.rho", "rho"));
+	    mixin(codeForGradients("gas.p", "p"));
+	    break;
+	case InterpolateOption.rhot: 
+	    mixin(codeForGradients("gas.rho", "rho"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.T[imode]", "T[imode]"));
+	    }
+	    break;
+	} // end switch thermo_interpolator
+    } // end compute_lsq_gradients()
+} // end class LSQInterpGradients
 
 
 class LsqInterpolator {
 
 private:
     LocalConfig myConfig;
-    LSQInterpWorkspace common_wsL, common_wsR;
 
 public:
     this(LocalConfig myConfig) 
@@ -159,144 +314,56 @@ public:
 	if (myConfig.dimensions == 3) grad[2] *= s;
     }
     
-    void assemble_and_invert_normal_matrix(ref FVInterface IFace, size_t gtl,
-					   ref FVCell[] cell_cloud,
-					   ref LSQInterpWorkspace ws)
-    {
-	// Since we are working in the interface-local frame, having the
-	// local x-direction aligned with the unit normal for the interface,
-	// we always expect good distribition of points in that direction.
-	Vector3 dr = IFace.pos; dr -= cell_cloud[0].pos[gtl];
-	dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-	ws.dxFace = dr.x; ws.dyFace = dr.y; ws.dzFace = dr.z;
-	//
-	size_t np = cell_cloud.length;
-	if (ws.dx.length < np) { ws.dx.length = np; }
-	if (ws.dy.length < np) { ws.dy.length = np; }
-	if (ws.dz.length < np) { ws.dz.length = np; }
-	foreach (i; 1 .. np) {
-	    dr = cell_cloud[i].pos[gtl]; dr -= cell_cloud[0].pos[gtl];
-	    dr.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-	    ws.dx[i] = dr.x; ws.dy[i] = dr.y; ws.dz[i] = dr.z;
-	}	    
-	// Prepare the normal matrix for the cloud and invert it.
-	// Depending on how aligned the points are, there may be insufficient
-	// variation in the local y- or z-positions to make a sensible 3D matrix.
-	// We will form the sums and look at their relative sizes.
-	double xx = 0.0; double xy = 0.0; double xz = 0.0;
-	double yy = 0.0; double yz = 0.0;
-	double zz = 0.0;
-	foreach (i; 1 .. np) {
-	    xx += ws.dx[i]*ws.dx[i]; xy += ws.dx[i]*ws.dy[i]; xz += ws.dx[i]*ws.dz[i];
-	    yy += ws.dy[i]*ws.dy[i]; yz += ws.dy[i]*ws.dz[i]; zz += ws.dz[i]*ws.dz[i];
-	}
-	assert (fabs(xx) > 1.0e-12, "left_cells xx essentially zero");
-	if (myConfig.dimensions == 3) {
-	    ws.xTx[0][0] = xx; ws.xTx[0][1] = xy; ws.xTx[0][2] = xz;
-	    ws.xTx[1][0] = xy; ws.xTx[1][1] = yy; ws.xTx[1][2] = yz;
-	    ws.xTx[2][0] = xz; ws.xTx[2][1] = yz; ws.xTx[2][2] = zz;
-	} else {
-	    // dimensions == 2
-	    ws.xTx[0][0] =  xx; ws.xTx[0][1] =  xy; ws.xTx[0][2] = 0.0;
-	    ws.xTx[1][0] =  xy; ws.xTx[1][1] =  yy; ws.xTx[1][2] = 0.0;
-	    ws.xTx[2][0] = 0.0; ws.xTx[2][1] = 0.0; ws.xTx[2][2] = 1.0;
-	}
-	ws.xTx[0][3] = 1.0; ws.xTx[0][4] = 0.0; ws.xTx[0][5] = 0.0;
-	ws.xTx[1][3] = 0.0; ws.xTx[1][4] = 1.0; ws.xTx[1][5] = 0.0;
-	ws.xTx[2][3] = 0.0; ws.xTx[2][4] = 0.0; ws.xTx[2][5] = 1.0;
-	if (0 != computeInverse!(3,3)(ws.xTx)) {
-	    // Assume that the rows are linearly dependent 
-	    // because the sample points are colinear.
-	    // Proceed by working as a single-dimensional interpolation.
-	    ws.xTx[0][0] = 1.0; ws.xTx[0][1] = 0.0; ws.xTx[0][2] = 0.0;
-	    ws.xTx[1][0] = 0.0; ws.xTx[1][1] = 1.0; ws.xTx[1][2] = 0.0;
-	    ws.xTx[2][0] = 0.0; ws.xTx[2][1] = 0.0; ws.xTx[2][2] = 1.0;
-	    ws.xTx[0][3] = 1.0/xx; ws.xTx[0][4] = 0.0; ws.xTx[0][5] = 0.0;
-	    ws.xTx[1][3] = 0.0; ws.xTx[1][4] = 0.0; ws.xTx[1][5] = 0.0;
-	    ws.xTx[2][3] = 0.0; ws.xTx[2][4] = 0.0; ws.xTx[2][5] = 0.0;
-	}
-    } // end assemble_and_invert_normal_matrix()
-    
     void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght)
     {
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
 	auto nmodes = gmodel.n_modes;
+	FVCell cL0 = IFace.left_cell;
+	FVCell cR0 = IFace.right_cell;
 	// Low-order reconstruction just copies data from adjacent FV_Cell.
 	// Even for high-order reconstruction, we depend upon this copy for
 	// the viscous-transport and diffusion coefficients.
-	Lft.copy_values_from(IFace.left_cells[0].fs);
-	Rght.copy_values_from(IFace.right_cells[0].fs);
+	Lft.copy_values_from(cL0.fs);
+	Rght.copy_values_from(cR0.fs);
 	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
 	    //
-	    LSQInterpWorkspace wsL;
-	    LSQInterpWorkspace wsR;
-	    if (myConfig.retain_least_squares_work_data) {
-		// To have a faster calculation (by nearly a factor of 2),
-		// retain the workspaces with precomputed inverses in the interfaces.
-		wsL = IFace.wsL;
-		wsR = IFace.wsR;
-	    } else {
-		// To reduce memory consumption, we use common workspaces.
-		wsL = common_wsL;
-		wsR = common_wsR;
-		assemble_and_invert_normal_matrix(IFace, gtl, IFace.left_cells, wsL);
-		assemble_and_invert_normal_matrix(IFace, gtl, IFace.right_cells, wsR);
-	    }
+	    LSQInterpWorkspace wsL = cL0.ws;
+	    LSQInterpWorkspace wsR = cR0.ws;
+	    Vector3 dL = IFace.pos; dL -= cL0.pos[gtl]; // vector from left-cell-centre to face midpoint
+	    Vector3 dR = IFace.pos; dR -= cR0.pos[gtl];
+	    Vector3 mygrad;
 	    //
-	    // Always reconstruct in the interface-local frame of reference.
-	    // note that clouds may share the interface neighbour cells, you should be sure not to
-	    // transform the neighbour cells twice!
-	    foreach (left_cell; IFace.left_cells) {
-		if (left_cell.id != IFace.right_cells[0].id){
-		    left_cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-		}
-	    }
-	    foreach (right_cell; IFace.right_cells) {
-		if (right_cell.id != IFace.left_cells[0].id){
-		    right_cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-		}
-	    }
+	    // Always reconstruct in the global frame of reference -- for now
 	    //
-	    // Actual resonstruction phase.
-	    double[3] rhsL, gradientsL;
-	    double[3] rhsR, gradientsR;
-	    double qMinL, qMaxL, qMinR, qMaxR; // values used in Barth and Venkat limiters
 	    // x-velocity
-	    string codeForReconstruction(string qname, string tname)
+	    string codeForReconstruction(string qname, string gname, string tname)
 	    {
 		string code = "{
-                double qL0 = IFace.left_cells[0].fs."~qname~";
-                qMinL = qL0; qMaxL = qL0;
-                foreach (j; 0 .. 3) { rhsL[j] = 0.0; }
-                foreach (i; 1 .. IFace.left_cells.length) {
-                    double dq = IFace.left_cells[i].fs."~qname~" - qL0;
-                    rhsL[0] += wsL.dx[i]*dq; rhsL[1] += wsL.dy[i]*dq; rhsL[2] += wsL.dz[i]*dq;
-                    if (IFace.left_cells[i].fs."~qname~" < qMinL) qMinL = IFace.left_cells[i].fs."~qname~";
-                    if (IFace.left_cells[i].fs."~qname~" > qMaxL) qMaxL = IFace.left_cells[i].fs."~qname~";
+                double qL0 = cL0.fs."~qname~";
+                double qMinL = qL0;
+                double qMaxL = qL0;
+                foreach (i; 1 .. wsL.cell_cloud.length) {
+                    qMinL = min(qMinL, wsL.cell_cloud[i].fs."~qname~");
+                    qMaxL = max(qMaxL, wsL.cell_cloud[i].fs."~qname~");
                 }
-	        solveWithInverse!(3,3)(wsL.xTx, rhsL, gradientsL);
-                double qR0 = IFace.right_cells[0].fs."~qname~";
-                qMinR = qR0; qMaxR = qR0;
-                foreach (j; 0 .. 3) { rhsR[j] = 0.0; }
-                foreach (i; 1 .. IFace.right_cells.length) {
-                    double dq = IFace.right_cells[i].fs."~qname~" - qR0;
-                    rhsR[0] += wsR.dx[i]*dq; rhsR[1] += wsR.dy[i]*dq; rhsR[2] += wsR.dz[i]*dq;
-	            if (IFace.right_cells[i].fs."~qname~" < qMinR) qMinR = IFace.right_cells[i].fs."~qname~";
-                    if (IFace.right_cells[i].fs."~qname~" > qMaxR) qMaxR = IFace.right_cells[i].fs."~qname~";
+                double qR0 = cR0.fs."~qname~";
+                double qMinR = qR0;
+                double qMaxR = qR0;
+                foreach (i; 1 .. wsR.cell_cloud.length) {
+                    qMinR = min(qMinR, wsR.cell_cloud[i].fs."~qname~");
+                    qMaxR = max(qMaxR, wsR.cell_cloud[i].fs."~qname~");
                 }
-                solveWithInverse!(3,3)(wsR.xTx, rhsR, gradientsR);
                 if (myConfig.apply_limiter) {
-                    venkatakrishan_limit(gradientsL, IFace.left_cells[0], qL0, qMinL, qMaxL, IFace.left_cells[0].iLength, IFace.left_cells[0].jLength, IFace.left_cells[0].kLength);
-                    venkatakrishan_limit(gradientsR, IFace.right_cells[0], qR0, qMinR, qMaxR, IFace.right_cells[0].iLength, IFace.right_cells[0].jLength, IFace.right_cells[0].kLength);
+                    // venkatakrishan_limit(wsL.gradients."~gname~", cL0, qL0, qMinL, qMaxL, cL0.iLength, cL0.jLength, cL0.kLength);
+                    // venkatakrishan_limit(wsR.gradients."~gname~", cR0, qR0, qMinR, qMaxR, cR0.iLength, cR0.jLength, cR0.kLength);
+                    mygrad.refx = 0.0; // [FIXME] temporary value to allow construction of code
+                    mygrad.refy = 0.0;
+                    mygrad.refz = 0.0;
                 }
-                double qL = qL0 + wsL.dxFace * gradientsL[0] + wsL.dyFace * gradientsL[1];
-                double qR = qR0 + wsR.dxFace * gradientsR[0] + wsR.dyFace * gradientsR[1];
-                if (myConfig.dimensions == 3) {
-                    qL += wsL.dzFace * gradientsL[2];
-                    qR += wsR.dzFace * gradientsR[2];
-                }
+                double qL = qL0 + dL.dot(mygrad);
+                double qR = qR0 + dR.dot(mygrad);
                 if (myConfig.extrema_clipping) {
                     Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
                     Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
@@ -308,25 +375,25 @@ public:
                 ";
 		return code;
 	    }
-	    mixin(codeForReconstruction("vel.x", "vel.refx"));
-	    mixin(codeForReconstruction("vel.y", "vel.refy"));
-	    mixin(codeForReconstruction("vel.z", "vel.refz"));
+	    mixin(codeForReconstruction("vel.x", "velx", "vel.refx")); // [FIXME] segmentation fault here 1:30pm 2016-07-27
+	    mixin(codeForReconstruction("vel.y", "vely", "vel.refy"));
+	    mixin(codeForReconstruction("vel.z", "velz", "vel.refz"));
 	    if (myConfig.MHD) {
-		mixin(codeForReconstruction("B.x", "B.refx"));
-		mixin(codeForReconstruction("B.y", "B.refy"));
-		mixin(codeForReconstruction("B.z", "B.refz"));
+		mixin(codeForReconstruction("B.x", "Bx", "B.refx"));
+		mixin(codeForReconstruction("B.y", "By", "B.refy"));
+		mixin(codeForReconstruction("B.z", "Bz", "B.refz"));
 		if (myConfig.divergence_cleaning) {
-		    mixin(codeForReconstruction("psi", "psi"));
+		    mixin(codeForReconstruction("psi", "psi", "psi"));
 		}
 	    }
 	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-		mixin(codeForReconstruction("tke", "tke"));
-		mixin(codeForReconstruction("omega", "omega"));
+		mixin(codeForReconstruction("tke", "tke", "tke"));
+		mixin(codeForReconstruction("omega", "omega", "omega"));
 	    }
 	    if (nsp > 1) {
 		// Multiple species.
 		foreach (isp; 0 .. nsp) {
-		    mixin(codeForReconstruction("gas.massf[isp]", "gas.massf[isp]"));
+		    mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]", "gas.massf[isp]"));
 		}
 		try {
 		    scale_mass_fractions(Lft.gas.massf); 
@@ -369,45 +436,32 @@ public:
 	    }
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
-		mixin(codeForReconstruction("gas.p", "gas.p"));
+		mixin(codeForReconstruction("gas.p", "p", "gas.p"));
 		foreach (imode; 0 .. nmodes) {
-		    mixin(codeForReconstruction("gas.T[imode]", "gas.T[imode]"));
+		    mixin(codeForReconstruction("gas.T[imode]", "T[imode]", "gas.T[imode]"));
 		}
 		mixin(codeForThermoUpdate("pT"));
 		break;
 	    case InterpolateOption.rhoe:
-		mixin(codeForReconstruction("gas.rho", "gas.rho"));
+		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho"));
 		foreach (imode; 0 .. nmodes) {
-		    mixin(codeForReconstruction("gas.e[imode]", "gas.e[imode]"));
+		    mixin(codeForReconstruction("gas.e[imode]", "e[imode]", "gas.e[imode]"));
 		}
 		mixin(codeForThermoUpdate("rhoe"));
 		break;
 	    case InterpolateOption.rhop:
-		mixin(codeForReconstruction("gas.rho", "gas.rho"));
-		mixin(codeForReconstruction("gas.p", "gas.p"));
+		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho"));
+		mixin(codeForReconstruction("gas.p", "p", "gas.p"));
 		mixin(codeForThermoUpdate("rhop"));
 		break;
 	    case InterpolateOption.rhot: 
-		mixin(codeForReconstruction("gas.rho", "gas.rho"));
+		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho"));
 		foreach (imode; 0 .. nmodes) {
-		    mixin(codeForReconstruction("gas.T[imode]", "gas.T[imode]"));
+		    mixin(codeForReconstruction("gas.T[imode]", "T[imode]", "gas.T[imode]"));
 		}
 		mixin(codeForThermoUpdate("rhoT"));
 		break;
 	    } // end switch thermo_interpolator
-	    // Finally, undo the transformation to local coordinates.
-	    Lft.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-	    Rght.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-	    foreach (left_cell; IFace.left_cells) {
-		if (left_cell.id != IFace.right_cells[0].id){
-		    left_cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-		}
-	    }
-	    foreach (right_cell; IFace.right_cells) {
-		if (right_cell.id != IFace.left_cells[0].id){
-		    right_cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-		}
-	    }
 	} // end of high-order reconstruction
     } // end interp_both()
     
