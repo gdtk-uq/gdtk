@@ -65,7 +65,6 @@ public:
     }
 
     this(LocalConfig myConfig,
-	 bool allocate_lsq_interp_workspace,
 	 bool allocate_spatial_deriv_lsq_workspace,
 	 size_t id_init=0)
     {

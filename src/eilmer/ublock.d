@@ -170,7 +170,6 @@ public:
 	}
 	foreach (i, f; grid.faces) {
 	    auto new_face = new FVInterface(myConfig,
-					    myConfig.retain_least_squares_work_data, 
 					    myConfig.spatial_deriv_retain_lsq_work_data,
 					    i);
 	    faces ~= new_face;

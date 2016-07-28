@@ -156,13 +156,6 @@ final class GlobalConfig {
     shared static bool extrema_clipping = true;
     shared static bool interpolate_in_local_frame = true;
 
-    // The least-squares reconstruction is faster but requires more storage
-    // if we retain the work data consisting of the normal matrix and it's inverse.
-    // Usually, we like fast and don't care much about storage, except when 
-    // a simulation consumes all available RAM and starts using swap space.
-    // Try setting the following flag to false when that happens.
-    shared static bool retain_least_squares_work_data = true;
-
     // Default flux calculator is the adaptive mix of ausmdv and efm.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive;
 
@@ -355,7 +348,6 @@ public:
     bool apply_limiter;
     bool extrema_clipping;
     bool interpolate_in_local_frame;
-    bool retain_least_squares_work_data;
     FluxCalculator flux_calculator;
     double shear_tolerance;
     double M_inf;
@@ -429,7 +421,6 @@ public:
 	apply_limiter = GlobalConfig.apply_limiter;
 	extrema_clipping = GlobalConfig.extrema_clipping;
 	interpolate_in_local_frame = GlobalConfig.interpolate_in_local_frame;
-	retain_least_squares_work_data = GlobalConfig.retain_least_squares_work_data;
 	flux_calculator = GlobalConfig.flux_calculator;
 	shear_tolerance = GlobalConfig.shear_tolerance;
 	M_inf = GlobalConfig.M_inf;

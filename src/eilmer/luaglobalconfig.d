@@ -112,7 +112,6 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("apply_limiter", "apply_limiter"));
     mixin(get_bool_field("extrema_clipping", "extrema_clipping"));
     mixin(get_bool_field("interpolate_in_local_frame", "interpolate_in_local_frame"));
-    mixin(get_bool_field("retain_least_squares_work_data", "retain_least_squares_work_data"));
     mixin(get_enum_field("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(get_double_field("shear_tolerance", "shear_tolerance"));
     mixin(get_double_field("M_inf", "M_inf"));
@@ -227,7 +226,6 @@ extern(C) int configGet(lua_State* L)
     case "apply_limiter": lua_pushboolean(L, GlobalConfig.apply_limiter); break;
     case "extrema_clipping": lua_pushboolean(L, GlobalConfig.extrema_clipping); break;
     case "interpolate_in_local_frame": lua_pushboolean(L, GlobalConfig.interpolate_in_local_frame); break;
-    case "retain_least_squares_work_data": lua_pushboolean(L, GlobalConfig.retain_least_squares_work_data); break;
     case "flux_calculator": lua_pushstring(L, flux_calculator_name(GlobalConfig.flux_calculator).toStringz); break;
     case "shear_tolerance": lua_pushnumber(L, GlobalConfig.shear_tolerance); break;
     case "M_inf": lua_pushnumber(L, GlobalConfig.M_inf); break;

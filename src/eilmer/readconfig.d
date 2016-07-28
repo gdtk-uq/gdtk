@@ -138,7 +138,6 @@ void read_config_file()
     mixin(update_bool("apply_limiter", "apply_limiter"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
-    mixin(update_bool("retain_least_squares_work_data", "retain_least_squares_work_data"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_double("M_inf", "M_inf"));
@@ -183,7 +182,6 @@ void read_config_file()
 	writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
 	writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
 	writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
-	writeln("  retain_least_squares_work_data: ", GlobalConfig.retain_least_squares_work_data);	
 	writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
 	writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
 	writeln("  M_inf: ", GlobalConfig.M_inf);
