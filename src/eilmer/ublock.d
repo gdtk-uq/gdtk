@@ -295,69 +295,6 @@ public:
 	    }
 	} // end foreach f
 	//
-//------------------------------------- [TODO] cut below -----------------------------------------------------
-	// [TODO] will eventually eliminate the left_cells and right_cells lists.
-	//
-	// For each side of a face with a single at
-	// work around the faces of the attached cell to accumulate 
-	// a cloud of cells for field reconstruction prior to computing
-	// the convective fluxes, if we want high-order reconstruction.
-	foreach (f; faces) {
-	  // we will first add the third cell to the cloud for all boundary clouds
-	  if (f.left_cells.length == 2) f.left_cells ~= f.right_cells[0];
-	  if (f.right_cells.length == 2) f.right_cells ~= f.left_cells[0];
-	  // now fill out the internal clouds
-	  if (f.left_cells.length == 1) {
-		auto cell = f.left_cells[0];
-		foreach (i, other_face; cell.iface) {
-		    //if (other_face.id == f.id) continue;  // REMOVED 2016-05-03 KD
-		    auto other_cell = (cell.outsign[i] > 0) ? other_face.right_cells[0] : other_face.left_cells[0];
-		    if (other_cell.will_have_valid_flow) { f.left_cells ~= other_cell; }
-		}
-	    }
-	    if (f.right_cells.length == 1) {
-		auto cell = f.right_cells[0];
-		foreach (i, other_face; cell.iface) {
-		    //if (other_face.id == f.id) continue;   // REMOVED 2016-05-03 KD
-		    auto other_cell = (cell.outsign[i] > 0) ? other_face.right_cells[0] : other_face.left_cells[0];
-		    if (other_cell.will_have_valid_flow) { f.right_cells ~= other_cell; }
-		}
-	    }
-	} // end foreach f
-	// Finally, all faces should have either a cloud of finite-volume cells
-	// or two ghost cells attached to a side -- check that this is true.
-	// For 2D triangular cells, expect 3 in a cloud. Quads will have 4
-	// For 2D tetrahedral cells, expect 4 in a cloud. Hex cells will have 6.
-	size_t min_count = (myConfig.dimensions == 2) ? 3 : 4;
-	foreach (f; faces) {
-	    bool ok = true;
-	    string msg = "";
-	    if (f.is_on_boundary) {
-		if ((f.left_cells.length == 3 && f.right_cells.length >= min_count) ||
-		    (f.left_cells.length >= min_count && f.right_cells.length == 3)) {
-		    ok = true;
-		} else {
-		    ok = false;
-		    msg ~= "Boundary face does not have correct number of cells per side.";
-		}
-	    } else {
-		// not on a boundary, should have a cloud on both sides.
-		if (f.left_cells.length < min_count || f.right_cells.length < min_count) {
-		    ok = false;
-		    msg ~= "Non-boundary face does not have correct number of cells per side.";
-		}
-	    }
-	    if (!ok) {
-		msg = format("After adding clouds of cells to face %d: ", f.id) ~ msg;
-		msg ~= " left_cells= ";
-		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
-		msg ~= " right_cells= ";
-		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
-		throw new FlowSolverException(msg);
-	    }
-	} // end foreach f
-//------------------------------------- [TODO] cut above -----------------------------------------------------
-
 	// Set up the cell clouds for least-squares derivative estimation for use in 
 	// interpolation/reconstruction of flow quantities at left- and right- sides
 	// of cell faces.
@@ -409,14 +346,14 @@ public:
 				f.cloud_fs ~= f.fs;
 				if (bc.outsigns[i] == 1) {
 				    // store "neighbour cell" information
-				    f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
-				    f.cloud_fs ~= f.left_cells[0].fs;
-				    cell = f.left_cells[0];
+				    f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
+				    f.cloud_fs ~= f.left_cell.fs;
+				    cell = f.left_cell;
 				} else {
 				    // store "neighbour cell" information
-				    f.cloud_pos ~= &(f.right_cells[0].pos[0]); // assume gtl = 0
-				    f.cloud_fs ~= f.right_cells[0].fs;
-				    cell = f.right_cells[0];
+				    f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
+				    f.cloud_fs ~= f.right_cell.fs;
+				    cell = f.right_cell;
 				}
 				// now grab the remaining cloud points
 				foreach (other_face; cell.iface) { // loop around cell interfaces
@@ -441,23 +378,23 @@ public:
 				f.cloud_fs ~= f.fs;
 				if (bc.outsigns[i] == 1) {
 				    // store "neighbour cell" information
-				    f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
-				    f.cloud_fs ~= f.left_cells[0].fs;
-				    cell_list~= f.left_cells;
+				    f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
+				    f.cloud_fs ~= f.left_cell.fs;
+				    cell_list~= f.left_cell.cell_cloud;
 				    // store ghost0 information
-				    if (f.right_cells[0].will_have_valid_flow) {
-					f.cloud_pos ~= &(f.right_cells[0].pos[0]);
-					f.cloud_fs ~= f.right_cells[0].fs;
+				    if (f.right_cell.will_have_valid_flow) {
+					f.cloud_pos ~= &(f.right_cell.pos[0]);
+					f.cloud_fs ~= f.right_cell.fs;
 				    }
 				} else {
 				    // store "neighbour cell" information
-				    f.cloud_pos ~= &(f.right_cells[0].pos[0]); // assume gtl = 0
-				    f.cloud_fs ~= f.right_cells[0].fs;
-				    cell_list ~= f.right_cells;
+				    f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
+				    f.cloud_fs ~= f.right_cell.fs;
+				    cell_list ~= f.right_cell;
 				    // store ghost0 information
-				    if (f.left_cells[0].will_have_valid_flow) { 
-					f.cloud_pos ~= &(f.left_cells[0].pos[0]);
-					f.cloud_fs ~= f.left_cells[0].fs;
+				    if (f.left_cell.will_have_valid_flow) { 
+					f.cloud_pos ~= &(f.left_cell.pos[0]);
+					f.cloud_fs ~= f.left_cell.fs;
 				    }
 				}
 				// now grab the remaining cells
@@ -470,14 +407,14 @@ public:
 					    f.cloud_fs ~= cell.fs;
 					    // and store it's neighbouring ghost0 information
 					    if (bc.outsigns[i] == 1) {
-						if (f.right_cells[0].will_have_valid_flow) {
-						    f.cloud_pos ~= &(other_face.right_cells[0].pos[0]); // assume gtl = 0
-						    f.cloud_fs ~= other_face.right_cells[0].fs;
+						if (f.right_cell.will_have_valid_flow) {
+						    f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
+						    f.cloud_fs ~= other_face.right_cell.fs;
 						}
 					    } else {
-						if (f.left_cells[0].will_have_valid_flow) {
-						    f.cloud_pos ~= &(other_face.left_cells[0].pos[0]); // assume gtl = 0
-						    f.cloud_fs ~= other_face.left_cells[0].fs;
+						if (f.left_cell.will_have_valid_flow) {
+						    f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
+						    f.cloud_fs ~= other_face.left_cell.fs;
 						} 
 					    } // end else 
 					}// end if (other_face.is_on_boundary && other_face.bc_id == bndary_idx)
@@ -492,8 +429,8 @@ public:
 			f.cloud_pos ~= &(f.pos);
 			f.cloud_fs ~= f.fs;
 			FVCell[] cell_list;
-			cell_list ~= f.left_cells[0];
-			cell_list ~= f.right_cells[0];
+			cell_list ~= f.left_cell;
+			cell_list ~= f.right_cell;
 			foreach (cell; cell_list) {
 			    // grab cell
 			    f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
@@ -526,14 +463,14 @@ public:
 			    f.cloud_fs ~= f.fs;
 			    if (bc.outsigns[i] == 1) {
 				// store "neighbour cell" information
-				f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
-				f.cloud_fs ~= f.left_cells[0].fs;
-				cell = f.left_cells[0];
+				f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
+				f.cloud_fs ~= f.left_cell.fs;
+				cell = f.left_cell;
 			    } else {
 				// store "neighbour cell" information
-				f.cloud_pos ~= &(f.right_cells[0].pos[0]); // assume gtl = 0
-				f.cloud_fs ~= f.right_cells[0].fs;
-				cell = f.right_cells[0];
+				f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
+				f.cloud_fs ~= f.right_cell.fs;
+				cell = f.right_cell;
 			    }
 			    // now grab the remainding points
 			    foreach (other_face; cell.iface) { // loop around cell interfaces
@@ -557,8 +494,8 @@ public:
 			f.cloud_pos ~= &(f.pos);
 			f.cloud_fs ~= f.fs;
 			FVCell[] cell_list;
-			cell_list ~= f.left_cells[0];
-			cell_list ~= f.right_cells[0];
+			cell_list ~= f.left_cell;
+			cell_list ~= f.right_cell;
 			foreach (cell; cell_list) {
 			    // grab cell
 			    f.cloud_pos ~= &(cell.pos[0]); // assume gtl = 0
@@ -583,13 +520,13 @@ public:
 	    }  // if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.least_squares)
 	    else { // set finite-difference cloud
 		foreach (i, f; faces) {
-		    if ( f.right_cells[0].will_have_valid_flow) {
-			f.cloud_pos ~= &(f.right_cells[0].pos[0]); // assume gtl = 0
-			f.cloud_fs ~= f.right_cells[0].fs;
+		    if ( f.right_cell.will_have_valid_flow) {
+			f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
+			f.cloud_fs ~= f.right_cell.fs;
 		    }
-		    if ( f.left_cells[0].will_have_valid_flow) {
-			f.cloud_pos ~= &(f.left_cells[0].pos[0]); // assume gtl = 0
-			f.cloud_fs ~= f.left_cells[0].fs;
+		    if ( f.left_cell.will_have_valid_flow) {
+			f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
+			f.cloud_fs ~= f.left_cell.fs;
 		    }
 		} // end foreach (i, f; faces)		
 	    } // end else
