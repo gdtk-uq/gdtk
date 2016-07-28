@@ -67,6 +67,8 @@ public:
     FVInterface[] iface;  // references to defining interfaces of cell
     double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
     FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
+    FVCell[] cell_cloud; // references to neighbouring cells
+    // More geometry
     double[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
     double[] areaxy; // (x,y)-plane area for time-levels, m**2
     double distance_to_nearest_wall; // for turbulence model correction.

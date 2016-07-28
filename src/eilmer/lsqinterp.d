@@ -20,31 +20,27 @@ class LSQInterpWorkspace {
 public:
     // A place to hold the intermediate results for assembling
     // the normal equations, to allow reuse of the values.
-    FVCell[] cell_cloud;
     double[] dx, dy, dz;
     double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
 
-    this(FVCell[] cell_cloud)
+    this()
     {
-	this.cell_cloud = cell_cloud.dup();
-	auto np = cell_cloud.length;
-	dx.length = np; dy.length = np; dz.length = np;
+	// do nothing
     }
 
     this(ref LSQInterpWorkspace other)
     {
 	// Cannot have const in constructor signature because of the duplication of references.
-	cell_cloud = other.cell_cloud.dup(); 
 	dx = other.dx.dup(); dy = other.dy.dup(); dz = other.dz.dup();
 	foreach (i; 0 .. 3) {
 	    foreach (j; 0 .. 6) { xTx[i][j] = other.xTx[i][j]; }
 	}
     }
     
-    void assemble_and_invert_normal_matrix(int dimensions, size_t gtl)
+    void assemble_and_invert_normal_matrix(FVCell[] cell_cloud, int dimensions, size_t gtl)
     {
-	size_t np = cell_cloud.length;
-	assert(np == dx.length, "oops wrong array lengths");
+	auto np = cell_cloud.length;
+	dx.length = np; dy.length = np; dz.length = np;
 	foreach (i; 1 .. np) {
 	    Vector3 dr = cell_cloud[i].pos[gtl]; dr -= cell_cloud[0].pos[gtl];
 	    dx[i] = dr.x; dy[i] = dr.y; dz[i] = dr.z;
@@ -119,17 +115,18 @@ public:
 	foreach(ref ei; other.e) { massf ~= Vector3(ei); }
     }
 
-    void compute_lsq_values(ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
 	double[3] rhs, gradients;
-	// x-velocity
+	auto np = cell_cloud.length;
+	// The following function to be used at compile time.
 	string codeForGradients(string qname, string gname)
 	{
 	    string code = "{
-                double q0 = ws.cell_cloud[0].fs."~qname~";
+                double q0 = cell_cloud[0].fs."~qname~";
                 foreach (j; 0 .. 3) { rhs[j] = 0.0; }
-                foreach (i; 1 .. ws.cell_cloud.length) {
-                    double dq = ws.cell_cloud[i].fs."~qname~" - q0;
+                foreach (i; 1 .. np) {
+                    double dq = cell_cloud[i].fs."~qname~" - q0;
                     rhs[0] += ws.dx[i]*dq; rhs[1] += ws.dy[i]*dq; rhs[2] += ws.dz[i]*dq;
                 }
 	        solveWithInverse!(3,3)(ws.xTx, rhs, gradients);
@@ -140,6 +137,7 @@ public:
                 ";
 	    return code;
 	}
+	// x-velocity
 	mixin(codeForGradients("vel.x", "velx"));
 	mixin(codeForGradients("vel.y", "vely"));
 	mixin(codeForGradients("vel.z", "velz"));
@@ -346,9 +344,9 @@ public:
                 double qMinL = qL0;
                 double qMaxL = qL0;
                 if (wsL) { // an active cell will have a workspace
-                    foreach (i; 1 .. wsL.cell_cloud.length) {
-                        qMinL = min(qMinL, wsL.cell_cloud[i].fs."~qname~");
-                        qMaxL = max(qMaxL, wsL.cell_cloud[i].fs."~qname~");
+                    foreach (i; 1 .. cL0.cell_cloud.length) {
+                        qMinL = min(qMinL, cL0.cell_cloud[i].fs."~qname~");
+                        qMaxL = max(qMaxL, cL0.cell_cloud[i].fs."~qname~");
                     }
                     mygradL.refx = cL0.gradients."~gname~".x;
                     mygradL.refy = cL0.gradients."~gname~".y;
@@ -362,9 +360,9 @@ public:
                 double qMinR = qR0;
                 double qMaxR = qR0;
                 if (wsR) { // an active cell will have a workspace
-                    foreach (i; 1 .. wsR.cell_cloud.length) {
-                        qMinR = min(qMinR, wsR.cell_cloud[i].fs."~qname~");
-                        qMaxR = max(qMaxR, wsR.cell_cloud[i].fs."~qname~");
+                    foreach (i; 1 .. cR0.cell_cloud.length) {
+                        qMinR = min(qMinR, cR0.cell_cloud[i].fs."~qname~");
+                        qMaxR = max(qMaxR, cR0.cell_cloud[i].fs."~qname~");
                     }
                     mygradR.refx = cR0.gradients."~gname~".x;
                     mygradR.refy = cR0.gradients."~gname~".y;

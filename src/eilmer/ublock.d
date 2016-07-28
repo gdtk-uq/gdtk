@@ -366,18 +366,17 @@ public:
 	auto nsp = myConfig.gmodel.n_species;
 	auto nmodes = myConfig.gmodel.n_modes;
 	foreach (c; cells) {
-	    FVCell[] cell_cloud;
 	    // First cell in the cloud is the cell itself.  Differences are taken about it.
-	    cell_cloud ~= c;
+	    c.cell_cloud ~= c;
 	    // Subsequent cells are the surrounding cells.
 	    foreach (i, f; c.iface) {
 		if (c.outsign[i] > 0.0) {
-		    if (f.right_cell) { cell_cloud ~= f.right_cell; }
+		    if (f.right_cell) { c.cell_cloud ~= f.right_cell; }
 		} else {
-		    if (f.left_cell) { cell_cloud ~= f.left_cell; }
+		    if (f.left_cell) { c.cell_cloud ~= f.left_cell; }
 		}
 	    } // end foreach face
-	    c.ws = new LSQInterpWorkspace(cell_cloud);
+	    c.ws = new LSQInterpWorkspace();
 	    c.gradients = new LSQInterpGradients(nsp, nmodes);
 	} // end foreach cell
 
@@ -755,7 +754,9 @@ public:
 	if (myConfig.interpolation_order > 1) {
 	    // The LSQ linear model for the flow field is fitted using 
 	    // information on the locations of the points. 
-	    foreach (c; cells) { c.ws.assemble_and_invert_normal_matrix(myConfig.dimensions, gtl); }
+	    foreach (c; cells) {
+		c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
+	    }
 	}
     } // end compute_primary_cell_geometric_data()
 
@@ -896,7 +897,7 @@ public:
     override void convective_flux()
     {
 	foreach (c; cells) {
-	    c.gradients.compute_lsq_values(c.ws, myConfig);
+	    c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
 	}
 	foreach (f; faces) {
 	    lsq.interp_both(f, 0, Lft, Rght); // gtl assumed 0
