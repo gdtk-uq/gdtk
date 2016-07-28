@@ -416,13 +416,13 @@ public:
 		    scale_mass_fractions(Lft.gas.massf); 
 		} catch (Exception e) {
 		    writeln(e.msg);
-		    Lft.gas.massf[] = IFace.left_cells[0].fs.gas.massf[];
+		    Lft.gas.massf[] = IFace.left_cell.fs.gas.massf[];
 		}
 		try {
 		    scale_mass_fractions(Rght.gas.massf);
 		} catch (Exception e) {
 		    writeln(e.msg);
-		    Rght.gas.massf[] = IFace.right_cells[0].fs.gas.massf[];
+		    Rght.gas.massf[] = IFace.right_cell.fs.gas.massf[];
 		}
 	    } else {
 		// Only one possible mass-fraction value for a single species.
@@ -440,13 +440,13 @@ public:
 		    gmodel.update_thermo_from_"~funname~"(Lft.gas);
 		} catch (Exception e) {
 		    writeln(e.msg);
-		    Lft.copy_values_from(IFace.left_cells[0].fs);
+		    Lft.copy_values_from(IFace.left_cell.fs);
 		}
 		try {
 		    gmodel.update_thermo_from_"~funname~"(Rght.gas);
 		} catch (Exception e) {
 		    writeln(e.msg);
-		    Rght.copy_values_from(IFace.right_cells[0].fs);
+		    Rght.copy_values_from(IFace.right_cell.fs);
 		}
                 ";
 		return code;
