@@ -72,10 +72,8 @@ public:
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
 		ghost0 = f.right_cell;
-		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
 		ghost0 = f.left_cell;
-		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    callGhostCellUDF(t, gtl, ftl, i, j, k, f, ghost0, ghost1);
 	} // end foreach face
@@ -237,24 +235,34 @@ private:
 	lua_pushnumber(L, ghostCell0.pos[0].x); lua_setfield(L, -2, "gc0x"); // ghostcell0 x-coordinate
 	lua_pushnumber(L, ghostCell0.pos[0].y); lua_setfield(L, -2, "gc0y");
 	lua_pushnumber(L, ghostCell0.pos[0].z); lua_setfield(L, -2, "gc0z");
-	lua_pushnumber(L, ghostCell1.pos[0].x); lua_setfield(L, -2, "gc1x");
-	lua_pushnumber(L, ghostCell1.pos[0].y); lua_setfield(L, -2, "gc1y");
-	lua_pushnumber(L, ghostCell1.pos[0].z); lua_setfield(L, -2, "gc1z");
+	if (ghostCell1) {
+	    lua_pushnumber(L, ghostCell1.pos[0].x); lua_setfield(L, -2, "gc1x");
+	    lua_pushnumber(L, ghostCell1.pos[0].y); lua_setfield(L, -2, "gc1y");
+	    lua_pushnumber(L, ghostCell1.pos[0].z); lua_setfield(L, -2, "gc1z");
+	}
 
 	// 2. Call LuaFunction and expect two tables of ghost cell flow state
 	int number_args = 1;
-	int number_results = 2; // expecting two table of ghostCells
+	int number_results = 1; // default to expecting 1 ghostCell table
+	if (ghostCell1) {
+	    number_results = 2; // expecting two table of ghostCells
+	}
 	if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
 	    luaL_error(L, "error running user-defined b.c. ghostCell function on boundaryId %d: %s\n",
 		       which_boundary, lua_tostring(L, -1));
 	}
 
 	// 3. Grab Flowstate data from table and populate ghost cell
-	// Stack positions:
-	//    -2 :: ghostCell0
-	//    -1 :: ghostCell1
-	putFlowStateIntoGhostCell(L, -2, ghostCell0);
-	putFlowStateIntoGhostCell(L, -1, ghostCell1);
+	if (ghostCell1) {
+	    // Stack positions for two ghost cells:
+	    //    -2 :: ghostCell0
+	    //    -1 :: ghostCell1
+	    putFlowStateIntoGhostCell(L, -2, ghostCell0);
+	    putFlowStateIntoGhostCell(L, -1, ghostCell1);
+	} else {
+	    // Just the first ghost cell.
+	    putFlowStateIntoGhostCell(L, -1, ghostCell0);
+	}
 
 	// 4. Clear stack
 	lua_settop(L, 0);

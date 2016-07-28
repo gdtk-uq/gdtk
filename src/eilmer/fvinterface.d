@@ -29,6 +29,7 @@ public:
     size_t id;  // allows us to work out where, in the block, the interface is
     bool is_on_boundary = false;  // by default, assume not on boundary
     size_t bc_id;  // if the face is on a block boundary, which one
+    //
     // Geometry
     Vector3 pos;           // position of the (approx) midpoint
     Vector3 gvel;          // grid velocity at interface, m/s
@@ -40,25 +41,23 @@ public:
     Vector3 t1;            // tangent vector 1 (aka p)
     Vector3 t2;            // tangent vector 2 (aka q)
     FVVertex[] vtx;        // references to vertices for line (2D) and quadrilateral (3D) faces
+    //
     // Adjoining cells.
     FVCell left_cell;      // interface normal points out of this adjoining cell
     FVCell right_cell;     // interface normal points into this adjoining cell
-    // [TODO] 2016-07-26 eliminate the following left_cells right_cells arrays
-    // and LSQInterpWorkspace items (These should move into the FVCell class.
-    // The following two arrays will contain references to the nearby cells,
-    // starting with the adjoining cell, and moving out in each direction.
-    FVCell[] left_cells;      // interface normal points out of this adjoining cell
-    FVCell[] right_cells;     // interface normal points into this adjoining cell
-    LSQInterpWorkspace wsL;
-    LSQInterpWorkspace wsR;
-    WLSQGradWorkspace ws_grad;
+    //
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
+    //
+    // Viscous-flux-related quantities.
     FlowGradients grad;
+    WLSQGradWorkspace ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
     double[] cloud_weights; // Weights used in the least-squares gradient calculation.
+    //
+    // Rowan's implicit solver workspace.
     version(steadystate) {
     double[][] dFdU_L;
     double[][] dFdU_R;
@@ -146,7 +145,7 @@ public:
 	    fs.copy_values_from(other.fs);
 	    F.copy_values_from(other.F);
 	    grad.copy_values_from(other.grad);
-	    // omit scratch workspaces ws_grad, wsL, wsR
+	    // omit scratch workspace ws_grad
 	} // end switch
     }
 
@@ -165,12 +164,8 @@ public:
 	repr ~= ", vtx_ids=[";
 	foreach (v; vtx) { repr ~= format("%d,", v.id); }
 	repr ~= "]";
-	repr ~= ", left_cell_ids=[";
-	foreach (c; left_cells) { repr ~= format("%d,", c.id); }
-	repr ~= "]";
-	repr ~= ", right_cell_ids=[";
-	foreach (c; right_cells) { repr ~= format("%d,", c.id); }
-	repr ~= "]";
+	repr ~= format(", left_cell_id=%d", left_cell.id);
+	repr ~= format(", right_cell_id=%d", right_cell.id);
 	repr ~= ", gvel=" ~ to!string(gvel);
 	repr ~= ", Ybar=" ~ to!string(Ybar);
 	repr ~= ", length=" ~ to!string(length);

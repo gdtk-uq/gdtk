@@ -202,33 +202,27 @@ public:
 	// If the grid is clustered toward the boundary, the error
 	// introduced by this zero-order reconstruction will be mitigated.
 	// PJ 2016-04-12
-	FVCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
 		src_cell = f.left_cell;
 		ghost0 = f.right_cell;
-		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
 		src_cell = f.right_cell;
 		ghost0 = f.left_cell;
-		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    reflect_normal_velocity(ghost0.fs, f);
-	    ghost1.fs.copy_values_from(src_cell.fs);
-	    reflect_normal_velocity(ghost1.fs, f);
 
 	    // TO_DO: remove this ugly hack after we have removed ghost_cell_data dependence for
 	    //        wall-type boundary conditions. K.D. 17/06/2016
 	    if (bc.type == "wall_no_slip_fixed_t" || bc.type == "wall_no_slip_adiabatic") {
 		reverse_tangential_velocity(ghost0.fs, f);
-		reverse_tangential_velocity(ghost1.fs, f);
 	    }
 	    
 	    if (blk.myConfig.MHD) {
 		reflect_normal_magnetic_field(ghost0.fs, f);
-		reflect_normal_magnetic_field(ghost1.fs, f);
 	    }
 	} // end foreach face
     } // end apply_unstructured_grid()
@@ -406,18 +400,15 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	FVCell ghost0, ghost1;
+	FVCell ghost0;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
 		ghost0 = f.right_cell;
-		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
 		ghost0 = f.left_cell;
-		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(fstate);
-	    ghost1.fs.copy_values_from(fstate);
 	} // end foreach face
     } // end apply_unstructured_grid()
 
@@ -518,24 +509,21 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	FVCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
 		src_cell = f.left_cell;
 		ghost0 = f.right_cell;
-		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
 		src_cell = f.right_cell;
 		ghost0 = f.left_cell;
-		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    if (xOrder == 1) {
 		throw new Error("First order extrapolation not implemented.");
 	    } else {
 		// Zero-order extrapolation.
 		ghost0.fs.copy_values_from(src_cell.fs);
-		ghost1.fs.copy_values_from(src_cell.fs);
 	    }
 	} // end foreach face
     } // end apply_unstructured_grid()
@@ -1029,25 +1017,20 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	FVCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	auto gmodel = blk.myConfig.gmodel;
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
 		src_cell = f.left_cell;
 		ghost0 = f.right_cell;
-		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
 		src_cell = f.right_cell;
 		ghost0 = f.left_cell;
-		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    ghost0.fs.gas.p = p_outside;
 	    gmodel.update_thermo_from_pT(ghost0.fs.gas);
-	    ghost1.fs.copy_values_from(src_cell.fs);
-	    ghost1.fs.gas.p = p_outside;
-	    gmodel.update_thermo_from_pT(ghost1.fs.gas);
 	} // end foreach face
     } // end apply_unstructured_grid()
     
@@ -1177,27 +1160,21 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	FVCell src_cell, ghost0, ghost1;
+	FVCell src_cell, ghost0;
 	BoundaryCondition bc = blk.bc[which_boundary];
 	auto gmodel = blk.myConfig.gmodel;
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
 		src_cell = f.left_cell;
 		ghost0 = f.right_cell;
-		ghost1 = f.right_cells[1]; // [FIXME]
 	    } else {
 		src_cell = f.right_cell;
 		ghost0 = f.left_cell;
-		ghost1 = f.left_cells[1]; // [FIXME]
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    ghost0.fs.gas.p = p_outside;
 	    foreach(ref elem; ghost0.fs.gas.T) elem = T_outside; 
 	    gmodel.update_thermo_from_pT(ghost0.fs.gas);
-	    ghost1.fs.copy_values_from(src_cell.fs);
-	    ghost1.fs.gas.p = p_outside;
-	    foreach(ref elem; ghost1.fs.gas.T) elem = T_outside; 
-	    gmodel.update_thermo_from_pT(ghost1.fs.gas);
 	} // end foreach face
     } // end apply_unstructured_grid()
     
@@ -1691,10 +1668,8 @@ public:
 	    foreach (i, f; bc.faces) {
 		if (bc.outsigns[i] == 1) {
 		    ghost_cells ~= f.right_cell;
-		    ghost_cells ~= f.right_cells[1]; // [FIXME]
 		} else {
 		    ghost_cells ~= f.left_cell;
-		    ghost_cells ~= f.left_cells[1]; // [FIXME]
 		}
 	    } // end foreach face
 	    break;

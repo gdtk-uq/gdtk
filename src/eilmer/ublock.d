@@ -204,24 +204,24 @@ public:
 		c.iface ~= my_face;
 		c.outsign ~= to!double(my_outsign);
 		if (my_outsign == 1) {
-		    my_face.left_cell = c; // [TODO] check that we assign only once
-		    my_face.left_cells ~= c; // [TODO] eliminate this list
+		    if (my_face.left_cell) {
+			string msg = format("Already have cell %d attached to left-of-face %d. Attempt to add cell %d.",
+					    my_face.left_cell.id, my_face.id, c.id);
+			throw new FlowSolverException(msg);
+		    } else {
+			my_face.left_cell = c;
+		    }
 		} else {
-		    my_face.right_cell = c;
-		    my_face.right_cells ~= c; // [TODO] eliminate this list
+		    if (my_face.right_cell) {
+			string msg = format("Already have cell %d attached to right-of-face %d. Attempt to add cell %d.",
+					    my_face.right_cell.id, my_face.id, c.id);
+			throw new FlowSolverException(msg);
+		    } else {
+			my_face.right_cell = c;
+		    }
 		}
 	    }
 	} // end foreach cells
-	// Presently, no face should have more than one cell on its left or right side.
-	foreach (f; faces) {
-	    if (f.left_cells.length > 1 || f.right_cells.length > 1) {
-		string msg = format("Face id= %d too many attached cells: left_cells= ", f.id);
-		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
-		msg ~= " right_cells= ";
-		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
-		throw new FlowSolverException(msg);
-	    }
-	}
 	// Work through the faces on the boundaries and add ghost cells.
 	if (nboundaries != grid.nboundaries) {
 	    string msg = format("Mismatch in number of boundaries: %d %d",
@@ -246,33 +246,35 @@ public:
 		// Make ghost-cell id values distinct from FVCell ids so that
 		// the warning/error messages are somewhat informative. 
 		ghost0.id = 100000 + ghost_cell_count++;
-		FVCell ghost1 = new FVCell(myConfig);
-		ghost1.will_have_valid_flow = bc[i].ghost_cell_data_available;
-		ghost1.id = 100000 + ghost_cell_count++;
 		bc[i].faces ~= my_face;
 		bc[i].outsigns ~= my_outsign;
 		bc[i].ghostcells ~= ghost0;
-		bc[i].ghostcells ~= ghost1;
 		if (my_outsign == 1) {
-		    my_face.right_cell = ghost0;
-		    my_face.right_cells ~= ghost0; // [TODO] eliminate these lists
-		    my_face.right_cells ~= ghost1;
+		    if (my_face.right_cell) {
+			string msg = format("Already have cell %d attached to right-of-face %d. Attempt to add ghost cell %d.",
+					    my_face.right_cell.id, my_face.id, ghost0.id);
+			throw new FlowSolverException(msg);
+		    } else {
+			my_face.right_cell = ghost0;
+		    }
 		} else {
-		    my_face.left_cell = ghost0;
-		    my_face.left_cells ~= ghost0; // [TODO] eliminate these lists
-		    my_face.left_cells ~= ghost1;
+		    if (my_face.left_cell) {
+			string msg = format("Already have cell %d attached to left-of-face %d. Attempt to add ghost cell %d.",
+					    my_face.left_cell.id, my_face.id, ghost0.id);
+			throw new FlowSolverException(msg);
+		    } else {
+			my_face.left_cell = ghost0;
+		    }
 		}
 	    }
 	}
 	// At this point, all faces should have either one finite-volume cell
-	// or two ghost cells attached to a side -- check that this is true.
-	// [TODO] change to not having the lists.
+	// or one ghost cells attached to a side -- check that this is true.
 	foreach (f; faces) {
 	    bool ok = true;
-	    string msg = "";
+	    string msg = " ";
 	    if (f.is_on_boundary) {
-		if ((f.left_cells.length == 2 && f.right_cells.length == 1) ||
-		    (f.left_cells.length == 1 && f.right_cells.length == 2)) {
+		if (f.left_cell && f.right_cell) {
 		    ok = true;
 		} else {
 		    ok = false;
@@ -280,17 +282,15 @@ public:
 		}
 	    } else {
 		// not on a boundary, should have one cell only per side.
-		if (f.left_cells.length != 1 || f.right_cells.length != 1) {
+		if (f.left_cell && f.right_cell) {
+		    ok = true;
+		} else {
 		    ok = false;
 		    msg ~= "Non-boundary face does not have correct number of cells per side.";
 		}
 	    }
 	    if (!ok) {
 		msg = format("After adding ghost cells to face %d: ", f.id) ~ msg;
-		msg ~= " left_cells= ";
-		foreach (c; f.left_cells) { msg ~= format(" %d", c.id); }
-		msg ~= " right_cells= ";
-		foreach (c; f.right_cells) { msg ~= format(" %d", c.id); }
 		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f
@@ -307,9 +307,13 @@ public:
 	    // Subsequent cells are the surrounding cells.
 	    foreach (i, f; c.iface) {
 		if (c.outsign[i] > 0.0) {
-		    if (f.right_cell) { c.cell_cloud ~= f.right_cell; }
+		    if (f.right_cell && f.right_cell.will_have_valid_flow) {
+			c.cell_cloud ~= f.right_cell;
+		    }
 		} else {
-		    if (f.left_cell) { c.cell_cloud ~= f.left_cell; }
+		    if (f.left_cell && f.left_cell.will_have_valid_flow) {
+			c.cell_cloud ~= f.left_cell;
+		    }
 		}
 	    } // end foreach face
 	    c.ws = new LSQInterpWorkspace();
@@ -650,35 +654,23 @@ public:
 		auto my_face = faces[bndry.face_id_list[j]];
 		auto my_outsign = bndry.outsign_list[j];
 		if (my_outsign == 1) {
-		    auto inside0 = my_face.left_cells[0];
+		    auto inside0 = my_face.left_cell;
 		    Vector3 delta = my_face.pos - inside0.pos[gtl];
-		    auto ghost0 = my_face.right_cells[0];
+		    auto ghost0 = my_face.right_cell;
 		    ghost0.pos[gtl] = my_face.pos + delta;
 		    ghost0.iLength = inside0.iLength;
 		    ghost0.jLength = inside0.jLength;
 		    ghost0.kLength = inside0.kLength;
 		    ghost0.L_min = inside0.L_min;
-		    auto ghost1 = my_face.right_cells[1];
-		    ghost1.pos[gtl] = my_face.pos + 3.0*delta;
-		    ghost1.iLength = inside0.iLength;
-		    ghost1.jLength = inside0.jLength;
-		    ghost1.kLength = inside0.kLength;
-		    ghost1.L_min = inside0.L_min;
 		} else {
-		    auto inside0 = my_face.right_cells[0];
+		    auto inside0 = my_face.right_cell;
 		    Vector3 delta = my_face.pos - inside0.pos[gtl];
-		    auto ghost0 = my_face.left_cells[0];
+		    auto ghost0 = my_face.left_cell;
 		    ghost0.pos[gtl] = my_face.pos + delta;
 		    ghost0.iLength = inside0.iLength;
 		    ghost0.jLength = inside0.jLength;
 		    ghost0.kLength = inside0.kLength;
 		    ghost0.L_min = inside0.L_min;
-		    auto ghost1 = my_face.left_cells[1];
-		    ghost1.pos[gtl] = my_face.pos + 3.0*delta;
-		    ghost1.iLength = inside0.iLength;
-		    ghost1.jLength = inside0.jLength;
-		    ghost1.kLength = inside0.kLength;
-		    ghost1.L_min = inside0.L_min;
 		} // end if my_outsign
 	    } // end foreach j
 	} // end foreach bndry
@@ -806,11 +798,11 @@ public:
 			min_distance =  distance;
 			auto my_outsign = bndry.outsign_list[j];
 			if (my_outsign == 1) {
-			    auto inside0 = my_face.left_cells[0];
+			    auto inside0 = my_face.left_cell;
 			    cell_half_width = abs(inside0.pos[gtl] - my_face.pos);
 			    cell_id_at_nearest_wall = inside0.id;
 			} else {
-			    auto inside0 = my_face.right_cells[0];
+			    auto inside0 = my_face.right_cell;
 			    cell_half_width = abs(inside0.pos[gtl] - my_face.pos);
 			    cell_id_at_nearest_wall = inside0.id;
 			}
