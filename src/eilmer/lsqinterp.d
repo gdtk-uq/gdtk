@@ -352,9 +352,10 @@ public:
                     mygradL.refy = cL0.gradients."~gname~".y;
                     mygradL.refz = cL0.gradients."~gname~".z;
                 } else {
-                    mygradL.refx = 0.0;
-                    mygradL.refy = 0.0;
-                    mygradL.refz = 0.0;
+                    // Guess that there is good data over on the other side.
+                    mygradL.refx = cR0.gradients."~gname~".x;
+                    mygradL.refy = cR0.gradients."~gname~".y;
+                    mygradL.refz = cR0.gradients."~gname~".z;
                 }
                 double qR0 = cR0.fs."~qname~";
                 double qMinR = qR0;
@@ -368,9 +369,10 @@ public:
                     mygradR.refy = cR0.gradients."~gname~".y;
                     mygradR.refz = cR0.gradients."~gname~".z;
                 } else {
-                    mygradR.refx = 0.0;
-                    mygradR.refy = 0.0;
-                    mygradR.refz = 0.0;
+                    // Guess that there is good data over on the other side.
+                    mygradR.refx = cL0.gradients."~gname~".x;
+                    mygradR.refy = cL0.gradients."~gname~".y;
+                    mygradR.refz = cL0.gradients."~gname~".z;
                 }
                 if (myConfig.apply_limiter) {
                     // venkatakrishan_limit(wsL.gradients."~gname~", cL0, qL0, qMinL, qMaxL, cL0.iLength, cL0.jLength, cL0.kLength);
