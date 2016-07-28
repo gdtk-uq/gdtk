@@ -89,8 +89,6 @@ function ghostCells(args)
    i = args.i; j = args.j; k = args.k
    ghost0 = {}
    fillTable(ghost0, args.gc0x, args.gc0y)
-   ghost1 = {}
-   fillTable(ghost1, args.gc1x, args.gc1y)
    return ghost0, ghost1
 end
 
