@@ -102,12 +102,12 @@ class LSQInterpGradients {
     // to the Left and Right sides of interfaces.
     // We need to hold onto their gradients within cells.
 public:
-    Vector3 velx, vely, velz;
-    Vector3 Bx, By, Bz, psi;
-    Vector3 tke, omega;
-    Vector3[] massf;
-    Vector3 rho, p;
-    Vector3[] T, e;
+    double[3] velx, vely, velz;
+    double[3] Bx, By, Bz, psi;
+    double[3] tke, omega;
+    double[3][] massf;
+    double[3] rho, p;
+    double[3][] T, e;
 
     this(size_t nsp, size_t nmodes)
     {
@@ -118,20 +118,14 @@ public:
 
     this(ref const LSQInterpGradients other)
     {
-	velx.refx = other.velx.x; velx.refy = other.velx.y; velx.refz = other.velx.z;
-	vely.refx = other.vely.x; vely.refy = other.vely.y; vely.refz = other.vely.z;
-	velz.refx = other.velz.x; velz.refy = other.velz.y; velz.refz = other.velz.z;
-	Bx.refx = other.Bx.x; Bx.refy = other.Bx.y; Bx.refz = other.Bx.z;
-	By.refx = other.By.x; By.refy = other.By.y; By.refz = other.By.z;
-	Bz.refx = other.Bz.x; Bz.refy = other.Bz.y; Bz.refz = other.Bz.z;
-	psi.refx = other.psi.x; psi.refy = other.psi.y; psi.refz = other.psi.z;
-	tke.refx = other.tke.x; tke.refy = other.tke.y; tke.refz = other.tke.z;
-	omega.refx = other.omega.x; omega.refy = other.omega.y; omega.refz = other.omega.z;
-	foreach(ref m; other.massf) { massf ~= Vector3(m); }
-	rho.refx = other.rho.x; rho.refy = other.rho.y; rho.refz = other.rho.z;
-	p.refx = other.p.x; p.refy = other.p.y; p.refz = other.p.z;
-	foreach(ref Ti; other.T) { T ~= Vector3(Ti); }
-	foreach(ref ei; other.e) { e ~= Vector3(ei); }
+	velx[] = other.velx[]; vely[] = other.vely[]; velz[] = other.velz[];
+	Bx[] = other.Bx[]; By[] = other.By[]; Bz[] = other.Bz[]; psi[] = other.psi[];
+	tke[] = other.tke[]; omega[] = other.omega[];
+	massf.length = other.massf.length;
+	foreach(i; 0 .. other.massf.length) { massf[i][] = other.massf[i][]; }
+	rho[] = other.rho[]; p[] = other.p[];
+	T.length = other.T.length; e.length = other.e.length;
+	foreach(i; 0 .. other.T.length) { T[i][] = other.T[i][]; e[i][] = other.e[i][]; }
     }
 
     void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
@@ -143,12 +137,12 @@ public:
 	{
 	    string code = "{
                 double q0 = cell_cloud[0].fs."~qname~";
-                "~gname~".refx = 0.0; "~gname~".refy = 0.0; "~gname~".refz = 0.0;
+                "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
                 foreach (i; 1 .. np) {
                     double dq = cell_cloud[i].fs."~qname~" - q0;
-                    "~gname~".refx += ws.wx[i] * dq;
-                    "~gname~".refy += ws.wy[i] * dq;
-                    if (dimensions == 3) { "~gname~".refz += ws.wz[i] * dq; }
+                    "~gname~"[0] += ws.wx[i] * dq;
+                    "~gname~"[1] += ws.wy[i] * dq;
+                    if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }
                 }
                 }
                 ";
@@ -178,7 +172,7 @@ public:
 	    }
 	} else {
 	    // Only one possible gradient value for a single species.
-	    massf[0].refx = 0.0; massf[0].refy = 0.0; massf[0].refz = 0.0;
+	    massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
 	}
 	// Interpolate on two of the thermodynamic quantities, 
 	// and fill in the rest based on an EOS call. 
@@ -349,7 +343,7 @@ public:
 	    LSQInterpWorkspace wsR = cR0.ws;
 	    Vector3 dL = IFace.pos; dL -= cL0.pos[gtl]; // vector from left-cell-centre to face midpoint
 	    Vector3 dR = IFace.pos; dR -= cR0.pos[gtl];
-	    Vector3 mygradL, mygradR;
+	    double[3] mygradL, mygradR;
 	    //
 	    // Always reconstruct in the global frame of reference -- for now
 	    //
@@ -365,14 +359,14 @@ public:
                         qMinL = min(qMinL, cL0.cell_cloud[i].fs."~qname~");
                         qMaxL = max(qMaxL, cL0.cell_cloud[i].fs."~qname~");
                     }
-                    mygradL.refx = cL0.gradients."~gname~".x;
-                    mygradL.refy = cL0.gradients."~gname~".y;
-                    mygradL.refz = cL0.gradients."~gname~".z;
+                    mygradL[0] = cL0.gradients."~gname~"[0];
+                    mygradL[1] = cL0.gradients."~gname~"[1];
+                    mygradL[2] = cL0.gradients."~gname~"[2];
                 } else {
                     // Guess that there is good data over on the other side.
-                    mygradL.refx = cR0.gradients."~gname~".x;
-                    mygradL.refy = cR0.gradients."~gname~".y;
-                    mygradL.refz = cR0.gradients."~gname~".z;
+                    mygradL[0] = cR0.gradients."~gname~"[0];
+                    mygradL[1] = cR0.gradients."~gname~"[1];
+                    mygradL[2] = cR0.gradients."~gname~"[2];
                 }
                 double qR0 = cR0.fs."~qname~";
                 double qMinR = qR0;
@@ -382,24 +376,28 @@ public:
                         qMinR = min(qMinR, cR0.cell_cloud[i].fs."~qname~");
                         qMaxR = max(qMaxR, cR0.cell_cloud[i].fs."~qname~");
                     }
-                    mygradR.refx = cR0.gradients."~gname~".x;
-                    mygradR.refy = cR0.gradients."~gname~".y;
-                    mygradR.refz = cR0.gradients."~gname~".z;
+                    mygradR[0] = cR0.gradients."~gname~"[0];
+                    mygradR[1] = cR0.gradients."~gname~"[1];
+                    mygradR[2] = cR0.gradients."~gname~"[2];
                 } else {
                     // Guess that there is good data over on the other side.
-                    mygradR.refx = cL0.gradients."~gname~".x;
-                    mygradR.refy = cL0.gradients."~gname~".y;
-                    mygradR.refz = cL0.gradients."~gname~".z;
+                    mygradR[0] = cL0.gradients."~gname~"[0];
+                    mygradR[1] = cL0.gradients."~gname~"[1];
+                    mygradR[2] = cL0.gradients."~gname~"[2];
                 }
                 if (myConfig.apply_limiter) {
                     // venkatakrishan_limit(wsL.gradients."~gname~", cL0, qL0, qMinL, qMaxL, cL0.iLength, cL0.jLength, cL0.kLength);
                     // venkatakrishan_limit(wsR.gradients."~gname~", cR0, qR0, qMinR, qMaxR, cR0.iLength, cR0.jLength, cR0.kLength);
-                    van_albada_limit(mygradL.refx, mygradR.refx);
-                    van_albada_limit(mygradL.refy, mygradR.refy);
-                    van_albada_limit(mygradL.refz, mygradR.refz);
+                    van_albada_limit(mygradL[0], mygradR[0]);
+                    van_albada_limit(mygradL[1], mygradR[1]);
+                    van_albada_limit(mygradL[2], mygradR[2]);
                 }
-                double qL = qL0 + dL.dot(mygradL);
-                double qR = qR0 + dR.dot(mygradR);
+                double qL = qL0 + dL.x*mygradL[0] + dL.y*mygradL[1];
+                double qR = qR0 + dR.x*mygradR[0] + dR.y*mygradR[1];
+                if (myConfig.dimensions == 3) {
+                    qL += dL.z*mygradL[2];
+                    qR += dR.z*mygradR[2];
+                }
                 if (myConfig.extrema_clipping) {
                     Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
                     Rght."~tname~" = clip_to_limits(qR, qL0, qR0);
