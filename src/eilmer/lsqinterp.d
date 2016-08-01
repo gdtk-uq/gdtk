@@ -18,62 +18,81 @@ import fvcell;
 
 class LSQInterpWorkspace {
 public:
-    // A place to hold the intermediate results for assembling
-    // the normal equations, to allow reuse of the values.
-    double[] dx, dy, dz;
-    double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
+    // A place to hold the intermediate results for computing
+    // the least-squares model as a weighted sum of the flow data.
+    double[] wx, wy, wz; 
 
     this()
     {
 	// do nothing
     }
 
-    this(ref LSQInterpWorkspace other)
+    this(const LSQInterpWorkspace other)
     {
-	// Cannot have const in constructor signature because of the duplication of references.
-	dx = other.dx.dup(); dy = other.dy.dup(); dz = other.dz.dup();
-	foreach (i; 0 .. 3) {
-	    foreach (j; 0 .. 6) { xTx[i][j] = other.xTx[i][j]; }
-	}
+	wx = other.wx.dup(); wy = other.wy.dup(); wz = other.wz.dup();
     }
     
     void assemble_and_invert_normal_matrix(FVCell[] cell_cloud, int dimensions, size_t gtl)
     {
 	auto np = cell_cloud.length;
-	dx.length = np; dy.length = np; dz.length = np;
+	double[] dx, dy, dz;
+	dx.length = np; wx.length = np;
+	dy.length = np; wy.length = np;
+	if (dimensions == 3) { dz.length = np; wz.length = np; }
 	foreach (i; 1 .. np) {
 	    Vector3 dr = cell_cloud[i].pos[gtl]; dr -= cell_cloud[0].pos[gtl];
-	    dx[i] = dr.x; dy[i] = dr.y; dz[i] = dr.z;
+	    dx[i] = dr.x; dy[i] = dr.y; if (dimensions == 3) { dz[i] = dr.z; }
 	}	    
 	// Prepare the normal matrix for the cloud and invert it.
-	// Depending on how aligned the points are, there may be insufficient
-	// variation in the local y- or z-positions to make a sensible 3D matrix.
-	// We will form the sums and look at their relative sizes.
-	double xx = 0.0; double xy = 0.0; double xz = 0.0;
-	double yy = 0.0; double yz = 0.0;
-	double zz = 0.0;
-	foreach (i; 1 .. np) {
-	    xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; xz += dx[i]*dz[i];
-	    yy += dy[i]*dy[i]; yz += dy[i]*dz[i]; zz += dz[i]*dz[i];
-	}
 	if (dimensions == 3) {
+	    double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
+	    double xx = 0.0; double xy = 0.0; double xz = 0.0;
+	    double yy = 0.0; double yz = 0.0;
+	    double zz = 0.0;
+	    foreach (i; 1 .. np) {
+		xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; xz += dx[i]*dz[i];
+		yy += dy[i]*dy[i]; yz += dy[i]*dz[i]; zz += dz[i]*dz[i];
+	    }
 	    xTx[0][0] = xx; xTx[0][1] = xy; xTx[0][2] = xz;
 	    xTx[1][0] = xy; xTx[1][1] = yy; xTx[1][2] = yz;
 	    xTx[2][0] = xz; xTx[2][1] = yz; xTx[2][2] = zz;
+	    xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
+	    xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
+	    xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
+	    if (0 != computeInverse!(3,3)(xTx)) {
+		throw new FlowSolverException("Failed to invert LSQ normal matrix");
+		// Assume that the rows are linearly dependent 
+		// because the sample points are colinear.
+		// Maybe we could proceed by working as a single-dimensional interpolation.
+	    }
+	    // Prepare final weights for later use in the reconstruction phase.
+	    foreach (i; 1 .. np) {
+		wx[i] = xTx[0][3]*dx[i] + xTx[0][4]*dy[i] + xTx[0][5]*dz[i];
+		wy[i] = xTx[1][3]*dx[i] + xTx[1][4]*dy[i] + xTx[1][5]*dz[i];
+		wz[i] = xTx[2][3]*dx[i] + xTx[2][4]*dy[i] + xTx[2][5]*dz[i];
+	    }
 	} else {
 	    // dimensions == 2
-	    xTx[0][0] =  xx; xTx[0][1] =  xy; xTx[0][2] = 0.0;
-	    xTx[1][0] =  xy; xTx[1][1] =  yy; xTx[1][2] = 0.0;
-	    xTx[2][0] = 0.0; xTx[2][1] = 0.0; xTx[2][2] = 1.0;
-	}
-	xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
-	xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
-	xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
-	if (0 != computeInverse!(3,3)(xTx)) {
-	    throw new FlowSolverException("Failed to invert LSQ normal matrix");
-	    // Assume that the rows are linearly dependent 
-	    // because the sample points are colinear.
-	    // Maybe we could proceed by working as a single-dimensional interpolation.
+	    double[4][2] xTx; // normal matrix, augmented to give 4 entries per row
+	    double xx = 0.0; double xy = 0.0; double yy = 0.0;
+	    foreach (i; 1 .. np) {
+		xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; yy += dy[i]*dy[i];
+	    }
+	    xTx[0][0] =  xx; xTx[0][1] =  xy;
+	    xTx[1][0] =  xy; xTx[1][1] =  yy;
+	    xTx[0][2] = 1.0; xTx[0][3] = 0.0;
+	    xTx[1][2] = 0.0; xTx[1][3] = 1.0;
+	    if (0 != computeInverse!(2,2)(xTx)) {
+		throw new FlowSolverException("Failed to invert LSQ normal matrix");
+		// Assume that the rows are linearly dependent 
+		// because the sample points are colinear.
+		// Maybe we could proceed by working as a single-dimensional interpolation.
+	    }
+	    // Prepare final weights for later use in the reconstruction phase.
+	    foreach (i; 1 .. np) {
+		wx[i] = xTx[0][2]*dx[i] + xTx[0][3]*dy[i];
+		wy[i] = xTx[1][2]*dx[i] + xTx[1][3]*dy[i];
+	    }
 	}
     } // end assemble_and_invert_normal_matrix()
 } // end class LSQInterpWorkspace
@@ -117,22 +136,20 @@ public:
 
     void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
-	double[3] rhs, gradients;
+	size_t dimensions = myConfig.dimensions;
 	auto np = cell_cloud.length;
 	// The following function to be used at compile time.
 	string codeForGradients(string qname, string gname)
 	{
 	    string code = "{
                 double q0 = cell_cloud[0].fs."~qname~";
-                foreach (j; 0 .. 3) { rhs[j] = 0.0; }
+                "~gname~".refx = 0.0; "~gname~".refy = 0.0; "~gname~".refz = 0.0;
                 foreach (i; 1 .. np) {
                     double dq = cell_cloud[i].fs."~qname~" - q0;
-                    rhs[0] += ws.dx[i]*dq; rhs[1] += ws.dy[i]*dq; rhs[2] += ws.dz[i]*dq;
+                    "~gname~".refx += ws.wx[i] * dq;
+                    "~gname~".refy += ws.wy[i] * dq;
+                    if (dimensions == 3) { "~gname~".refz += ws.wz[i] * dq; }
                 }
-	        solveWithInverse!(3,3)(ws.xTx, rhs, gradients);
-                "~gname~".refx = gradients[0];
-                "~gname~".refy = gradients[1];
-                "~gname~".refz = gradients[2];
                 }
                 ";
 	    return code;
