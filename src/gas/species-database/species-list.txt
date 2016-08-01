@@ -7,13 +7,18 @@ H2.lua     : H2       : diatomic hydrogen
 HI.lua     : HI       : hydrogen iodide
 H2O.lua    : H2O      : water
 H2O2.lua   : H2O2     : hydrogen peroxide
+HNO.lua    : HNO      : nitroxyl
+HNO2.lua   : HNO2     : nitrous acid
+HNO3.lua   : HNO3     : nitric acid
 HO2.lua    : HO2      : hydroperoxyl
 I2.lua     : I2       : iodine
 Kr.lua     : Kr       : krypton
 N.lua      : N        : monatomic nitrogen
 N2.lua     : N2       : diatomic nitrogen
 NO.lua     : NO       : nitrogen oxide
+NO2.lua    : NO2      : nitrogen dioxide
 O.lua      : O        : monatomic oxygen
 O2.lua     : O2       : diatomic oxygen
+O3.lua     : O3       : ozone
 OH.lua     : OH       : hydroxyl radical
 SF6.lua    : SF6      : sulphur hexafluorane
