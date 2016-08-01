@@ -1,0 +1,2 @@
+model = 'thermally perfect gas'
+species = {'H2', 'O2', 'H2O', 'HO2', 'H2O2', 'OH', 'O', 'H', 'N2'}

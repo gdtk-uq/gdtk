@@ -1,0 +1,11 @@
+set term postscript eps enhanced "Times" 20 
+set output "h2-ignition-delay.eps"
+set title "Ignition delay times for H2/O2 system at p = 1 atm"
+set xlabel "temperature, K"
+set ylabel "ignition delay, {/Symbol m}s"
+set yrange [0:1500]
+set xrange [800:1400]
+plot 'slack-grillo-p-1atm.data' t 'Slack \& Grillo (1977) expt.' w p pt 8 ps 1.5, \
+     'ES-ignition-delay.dat' u 1:($2*1.0e6) t 'Evans \& Schexnayder' w l ls 1, \
+     'RS-ignition-delay.dat' u 1:($2*1.0e6) t 'Rogers \& Schexnayder' w l ls 3, \
+     'Stanford-ignition-delay.dat' u 1:($2*1.0e6) t 'Stanford (2011)' w l ls 5
