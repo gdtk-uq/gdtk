@@ -131,7 +131,7 @@ public:
 	rho.refx = other.rho.x; rho.refy = other.rho.y; rho.refz = other.rho.z;
 	p.refx = other.p.x; p.refy = other.p.y; p.refz = other.p.z;
 	foreach(ref Ti; other.T) { T ~= Vector3(Ti); }
-	foreach(ref ei; other.e) { massf ~= Vector3(ei); }
+	foreach(ref ei; other.e) { e ~= Vector3(ei); }
     }
 
     void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
