@@ -250,23 +250,23 @@ public:
 	}
 	size_t ntot = _nidim * _njdim * _nkdim;
 	bool lsq_workspace_at_faces = myConfig.spatial_deriv_retain_lsq_work_data 
-	    && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares
-	    && myConfig.spatial_deriv_locn == SpatialDerivLocn.faces;
+	    && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
 	bool lsq_workspace_at_vertices = myConfig.spatial_deriv_retain_lsq_work_data 
-	    && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares
-	    && myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices;
+	    && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
 	try {
 	    // Create the cell and interface objects for the entire structured block.
 	    // This includes the layer of surrounding ghost cells.
 	    foreach (gid; 0 .. ntot) {
-		_ctr ~= new FVCell(myConfig); _ctr[gid].id = gid;
+		_ctr ~= new FVCell(myConfig, gid);
 		auto ijk = to_ijk_indices(gid);
-		_ifi ~= new FVInterface(myConfig, false, lsq_workspace_at_faces); _ifi[gid].id = gid;
-		_ifj ~= new FVInterface(myConfig, false, lsq_workspace_at_faces); _ifj[gid].id = gid;
+		_ifi ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
+		_ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
 		if ( myConfig.dimensions == 3 ) {
-		    _ifk ~= new FVInterface(myConfig, false, lsq_workspace_at_faces); _ifk[gid].id = gid;
+		    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
 		}
-		_vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices); _vtx[gid].id = gid;
+		_vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices, gid);
 	    } // gid loop
 	    // Now, assemble the lists of references to the cells, vertices and faces
 	    // in standard order for a structured grid.

@@ -49,7 +49,9 @@ public:
 	pos = other.pos.dup;
 	vel = other.vel.dup;
 	grad = new FlowGradients(other.grad);
-	ws_grad = new WLSQGradWorkspace(other.ws_grad);
+	if (other.ws_grad) {
+	    ws_grad = new WLSQGradWorkspace(other.ws_grad);
+	}
 	// Because we copy the following pointers and references,
 	// we cannot have const (or "in") qualifier on other.
 	cloud_pos = other.cloud_pos.dup();

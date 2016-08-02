@@ -393,6 +393,7 @@ public:
 	    loop_init = 1;
 	    x0 = cloud_pos[0].x; y0 = cloud_pos[0].y; z0 = cloud_pos[0].z;
 	}
+	assert(ws, "We are missing the workspace!");
 	ws.n = n;
 	ws.loop_init = loop_init;
 	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;
@@ -527,6 +528,7 @@ public:
 	    loop_init = 1;
 	    x0 = cloud_pos[0].x; y0 = cloud_pos[0].y;
 	}
+	assert(ws, "We are missing the workspace!");
 	ws.n = n;
 	ws.loop_init = loop_init;
 	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;

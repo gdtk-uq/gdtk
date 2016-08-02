@@ -161,22 +161,23 @@ public:
 	    throw new FlowSolverException(msg);
 	}
 	// Assemble array storage for finite-volume cells, etc.
+	bool lsq_workspace_at_vertices = myConfig.spatial_deriv_retain_lsq_work_data &&
+	    (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) &&
+	    (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
 	foreach (i, v; grid.vertices) {
-	    auto new_vtx = new FVVertex(myConfig, false);
-	    // should never need grad_ws storage at vertices
+	    auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, i);
 	    new_vtx.pos[0] = v;
-	    new_vtx.id = i;
 	    vertices ~= new_vtx;
 	}
+	bool lsq_workspace_at_faces = myConfig.spatial_deriv_retain_lsq_work_data &&
+	    (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) &&
+	    (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
 	foreach (i, f; grid.faces) {
-	    auto new_face = new FVInterface(myConfig,
-					    myConfig.spatial_deriv_retain_lsq_work_data,
-					    i);
+	    auto new_face = new FVInterface(myConfig, lsq_workspace_at_faces, i);
 	    faces ~= new_face;
 	}
 	foreach (i, c; grid.cells) {
-	    auto new_cell = new FVCell(myConfig);
-	    new_cell.id = i;
+	    auto new_cell = new FVCell(myConfig, i);
 	    new_cell.will_have_valid_flow = true;
 	    cells ~= new_cell;
 	}
