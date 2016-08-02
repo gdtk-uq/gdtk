@@ -103,7 +103,7 @@ private:
     LocalConfig myConfig;
 
 public:
-    this(LocalConfig myConfig, int id_init=0)
+    this(LocalConfig myConfig, size_t id_init=0)
     {
 	this.myConfig = myConfig;
 	id = id_init;
