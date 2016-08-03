@@ -395,7 +395,7 @@ public:
 				    // store "neighbour cell" information
 				    f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
 				    f.cloud_fs ~= f.right_cell.fs;
-				    cell_list ~= f.right_cell;
+				    cell_list ~= f.right_cell.cell_cloud;
 				    // store ghost0 information
 				    if (f.left_cell.will_have_valid_flow) { 
 					f.cloud_pos ~= &(f.left_cell.pos[0]);
