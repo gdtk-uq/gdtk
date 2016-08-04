@@ -268,9 +268,9 @@ public:
 	    }
 	}
 	// Thermal conductivity (NOTE: q is total energy flux)
-	double qx = k_eff * grad.T.x;
-	double qy = k_eff * grad.T.y;
-	double qz = k_eff * grad.T.z;
+	double qx = k_eff * grad.T[0];
+	double qy = k_eff * grad.T[1];
+	double qz = k_eff * grad.T[2];
 	if ( myConfig.diffusion ) {
 	    // for( size_t isp = 0; isp < nsp; ++isp ) {
 	    // 	double h = 0.0; // [TODO] Rowan, transport of species enthalpies?
@@ -296,18 +296,18 @@ public:
 	    // Turbulence contribution to heat transfer.
 	    double sigma_star = 0.6;
 	    double mu_effective = fs.gas.mu + sigma_star * fs.mu_t;
-	    qx += mu_effective * grad.tke.x;
-	    qy += mu_effective * grad.tke.y;
-	    if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke.z; }
+	    qx += mu_effective * grad.tke[0];
+	    qy += mu_effective * grad.tke[1];
+	    if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
 	    // Turbulence transport of the turbulence properties themselves.
-	    tau_kx = mu_effective * grad.tke.x; 
-	    tau_ky = mu_effective * grad.tke.y;
-	    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke.z; }
+	    tau_kx = mu_effective * grad.tke[0]; 
+	    tau_ky = mu_effective * grad.tke[1];
+	    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
 	    double sigma = 0.5;
 	    mu_effective = fs.gas.mu + sigma * fs.mu_t;
-	    tau_wx = mu_effective * grad.omega.x; 
-	    tau_wy = mu_effective * grad.omega.y; 
-	    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega.z; } 
+	    tau_wx = mu_effective * grad.omega[0]; 
+	    tau_wy = mu_effective * grad.omega[1]; 
+	    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
 	}
 	// Combine into fluxes: store as the dot product (F.n).
 	double nx = n.x;

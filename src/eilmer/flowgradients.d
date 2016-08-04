@@ -56,92 +56,66 @@ public:
 class FlowGradients {
     // Spatial derivatives of the flow quantities
 public:
-    double[][] vel; 
+    double[3][3] vel; 
     // velocity derivatives stored as a second-order tensor
     // [[du/dx du/dy du/dz]
     //  [dv/dx dv/dy dv/dz]
     //  [dw/dx dw/dy dw/dz]]
-    Vector3[] massf; // mass fraction derivatives
-    Vector3 T; // Temperature derivatives (static temperature only)
-    Vector3 tke; // turbulence kinetic energy
-    Vector3 omega; // pseudo vorticity for k-omega turbulence
+    double[3][] massf; // mass fraction derivatives
+    double[3] T; // Temperature derivatives (static temperature only)
+    double[3] tke; // turbulence kinetic energy
+    double[3] omega; // pseudo vorticity for k-omega turbulence
     WLSQGradWorkspace common_ws;
 
     this(size_t nspecies)
     {
-	vel.length = 3;
-	foreach (ref elem; vel) elem.length = 3;
 	massf.length = nspecies;
 	common_ws = new WLSQGradWorkspace();
     }
 
     this(const FlowGradients other)
     {
-	vel.length = 3;
-	foreach(i; 0 .. 3) vel[i] = other.vel[i].dup();
-	foreach(item; other.massf) massf ~= Vector3(item);
-	T = other.T;
-	tke = other.tke;
-	omega = other.omega;
-	common_ws = new WLSQGradWorkspace(other.common_ws);
+	foreach(i; 0 .. 3) vel[i][] = other.vel[i][];
+	massf.length = other.massf.length;
+	foreach(isp; 0 .. other.massf.length) { massf[isp][] = other.massf[isp][]; }
+	T[] = other.T[];
+	tke[] = other.tke[];
+	omega[] = other.omega[];
+	if (other.common_ws) {
+	    common_ws = new WLSQGradWorkspace(other.common_ws);
+	}
     }
 
     @nogc
     void copy_values_from(const FlowGradients other)
     {
-	foreach (i; 0 .. 3) {
-	    foreach (j; 0 .. 3) vel[i][j] = other.vel[i][j];
-	}
-	foreach (isp; 0 .. massf.length) {
-	    massf[isp].refx = other.massf[isp].x;
-	    massf[isp].refy = other.massf[isp].y;
-	    massf[isp].refz = other.massf[isp].z;
-	}
-	T.refx = other.T.x;
-	T.refy = other.T.y;
-	T.refz = other.T.z;
-	tke.refx = other.tke.x;
-	tke.refy = other.tke.y;
-	tke.refz = other.tke.z;
-	omega.refx = other.omega.x;
-	omega.refy = other.omega.y;
-	omega.refz = other.omega.z;
+	foreach (i; 0 .. 3) { vel[i][] = other.vel[i][]; }
+	foreach (isp; 0 .. other.massf.length) { massf[isp][] = other.massf[isp][]; }
+	T[] = other.T[];
+	tke[] = other.tke[];
+	omega[] = other.omega[];
 	// omit copying of common_ws
     }
 
     @nogc
     void accumulate_values_from(const FlowGradients other)
     {
-	foreach (i; 0 .. 3) {
-	    foreach (j; 0 .. 3) vel[i][j] += other.vel[i][j];
-	}
-	foreach (isp; 0 .. massf.length) {
-	    massf[isp].refx += other.massf[isp].x;
-	    massf[isp].refy += other.massf[isp].y;
-	    massf[isp].refz += other.massf[isp].z;
-	}
-	T.refx += other.T.x;
-	T.refy += other.T.y;
-	T.refz += other.T.z;
-	tke.refx += other.tke.x;
-	tke.refy += other.tke.y;
-	tke.refz += other.tke.z;
-	omega.refx += other.omega.x;
-	omega.refy += other.omega.y;
-	omega.refz += other.omega.z;
+	foreach (i; 0 .. 3) { vel[i][] += other.vel[i][]; }
+	foreach (isp; 0 .. massf.length) { massf[isp][] += other.massf[isp][]; }
+	T[] += other.T[];
+	tke[] += other.tke[];
+	omega[] += other.omega[];
 	// omit copying of common_ws
     }
 
     @nogc
     void scale_values_by(double factor)
     {
-	foreach (i; 0 .. 3) {
-	    foreach (j; 0 .. 3) vel[i][j] *= factor;
-	} 
-	foreach (isp; 0 .. massf.length) massf[isp] *= factor; 
-	T *= factor;
-	tke *= factor;
-	omega *= factor;
+	foreach (i; 0 .. 3) { vel[i][] *= factor; } 
+	foreach (isp; 0 .. massf.length) { massf[isp][] *= factor; } 
+	T[] *= factor;
+	tke[] *= factor;
+	omega[] *= factor;
 	// omit common_ws
     }
 
@@ -230,35 +204,35 @@ public:
 	vel[2][2] = 0.0;
 	//
 	mixin(codeForGradients("gas.T[0]"));
-	T.refx = gradient_x * area_inv;
-	T.refy = -gradient_y * area_inv;
-	T.refz = 0.0;
+	T[0] = gradient_x * area_inv;
+	T[1] = -gradient_y * area_inv;
+	T[2] = 0.0;
 	//
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]"));
-		massf[isp].refx = gradient_x * area_inv;
-		massf[isp].refy = -gradient_y * area_inv;
-		massf[isp].refz = 0.0;
+		massf[isp][0] = gradient_x * area_inv;
+		massf[isp][1] = -gradient_y * area_inv;
+		massf[isp][2] = 0.0;
 	    }
 	} else {
 	    foreach(isp; 0 .. nsp) {
-		massf[isp].refx = 0.0;
-		massf[isp].refy = 0.0;
-		massf[isp].refz = 0.0;
+		massf[isp][0] = 0.0;
+		massf[isp][1] = 0.0;
+		massf[isp][2] = 0.0;
 	    }
 	}
 	//
 	mixin(codeForGradients("tke"));
-	tke.refx = gradient_x * area_inv;
-	tke.refy = -gradient_y * area_inv;
-	tke.refz = 0.0;
+	tke[0] = gradient_x * area_inv;
+	tke[1] = -gradient_y * area_inv;
+	tke[2] = 0.0;
 	//
 	mixin(codeForGradients("omega"));
-	omega.refx = gradient_x * area_inv;
-	omega.refy = -gradient_y * area_inv;
-	omega.refz = 0.0;
+	omega[0] = gradient_x * area_inv;
+	omega[1] = -gradient_y * area_inv;
+	omega[2] = 0.0;
     } // end gradients_xy_div()
     
     @nogc
@@ -311,35 +285,35 @@ public:
 	vel[2][2] = gradn * nz;
 	// T[0]
 	mixin(codeForGradients("gas.T[0]"));
-	T.refx = gradn * nx;
-	T.refy = gradn * ny;
-	T.refz = gradn * nz;
+	T[0] = gradn * nx;
+	T[1] = gradn * ny;
+	T[2] = gradn * nz;
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]"));
-		massf[isp].refx = gradn * nx;
-		massf[isp].refy = gradn * ny;
-		massf[isp].refz = gradn * nz;
+		massf[isp][0] = gradn * nx;
+		massf[isp][1] = gradn * ny;
+		massf[isp][2] = gradn * nz;
 	    } // foreach isp
 	} else {
 	    foreach(isp; 0 .. nsp) {
-		massf[isp].refx = 0.0;
-		massf[isp].refy = 0.0;
-		massf[isp].refz = 0.0;
+		massf[isp][0] = 0.0;
+		massf[isp][1] = 0.0;
+		massf[isp][2] = 0.0;
 	    } // foreach isp
 	}
 	// tke
 	mixin(codeForGradients("tke"));
-	tke.refx = gradn * nx;
-	tke.refy = gradn * ny;
-	tke.refz = gradn * nz;
+	tke[0] = gradn * nx;
+	tke[1] = gradn * ny;
+	tke[2] = gradn * nz;
 	// omega
 	mixin(codeForGradients("omega"));
-	omega.refx = gradn * nx;
-	omega.refy = gradn * ny;
-	omega.refz = gradn * nz;	
+	omega[0] = gradn * nx;
+	omega[1] = gradn * ny;
+	omega[2] = gradn * nz;	
     } // end gradients_finitediff
 
     void weights_leastsq(ref Vector3*[] cloud_pos, ref Vector3 pos, ref double[] cloud_weights)
@@ -446,7 +420,6 @@ public:
 	size_t n = myws.n;
 	double[3] rhs, gradients;
 	//
-	// x-velocity
 	double q0;
 	string codeForGradients(string qname)
 	{
@@ -468,6 +441,7 @@ public:
 	    solveWithInverse!(3,3)(myws.xTx, rhs, gradients);";
 	    return code;
 	}
+	// x-velocity
 	mixin(codeForGradients("vel.x"));
 	foreach (j; 0 .. 3) { vel[0][j] = gradients[j]; }
 	// y-velocity
@@ -478,35 +452,35 @@ public:
 	foreach (j; 0 .. 3) { vel[2][j] = gradients[j]; }
 	// T[0]
 	mixin(codeForGradients("gas.T[0]"));
-	T.refx = gradients[0];
-	T.refy = gradients[1];
-	T.refz = gradients[2];
+	T[0] = gradients[0];
+	T[1] = gradients[1];
+	T[2] = gradients[2];
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]"));
-		massf[isp].refx = gradients[0];
-		massf[isp].refy = gradients[1];
-		massf[isp].refz = gradients[2];
+		massf[isp][0] = gradients[0];
+		massf[isp][1] = gradients[1];
+		massf[isp][2] = gradients[2];
 	    } // foreach isp
 	} else {
 	    foreach(isp; 0 .. nsp) {
-		massf[isp].refx = 0.0;
-		massf[isp].refy = 0.0;
-		massf[isp].refz = 0.0;
+		massf[isp][0] = 0.0;
+		massf[isp][1] = 0.0;
+		massf[isp][2] = 0.0;
 	    } // foreach isp
 	}
 	// tke
 	mixin(codeForGradients("tke"));
-	tke.refx = gradients[0];
-	tke.refy = gradients[1];
-	tke.refz = gradients[2];
+	tke[0] = gradients[0];
+	tke[1] = gradients[1];
+	tke[2] = gradients[2];
 	// omega
 	mixin(codeForGradients("omega"));
-	omega.refx = gradients[0];
-	omega.refy = gradients[1];
-	omega.refz = gradients[2];
+	omega[0] = gradients[0];
+	omega[1] = gradients[1];
+	omega[2] = gradients[2];
     } // end gradients_xyz_leastsq()
 
     void set_up_workspace_for_gradients_xy_leastsq(ref Vector3*[] cloud_pos,
@@ -609,35 +583,35 @@ public:
 	vel[2][2] = 0.0;
 	// T[0]
 	mixin(codeForGradients("gas.T[0]"));
-	T.refx = gradients[0];
-	T.refy = gradients[1];
-	T.refz = 0.0;
+	T[0] = gradients[0];
+	T[1] = gradients[1];
+	T[2] = 0.0;
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]"));
-		massf[isp].refx = gradients[0];
-		massf[isp].refy = gradients[1];
-		massf[isp].refz = 0.0;
+		massf[isp][0] = gradients[0];
+		massf[isp][1] = gradients[1];
+		massf[isp][2] = 0.0;
 	    } // foreach isp
 	} else {
 	    foreach(isp; 0 .. nsp) {
-		massf[isp].refx = 0.0;
-		massf[isp].refy = 0.0;
-		massf[isp].refz = 0.0;
+		massf[isp][0] = 0.0;
+		massf[isp][1] = 0.0;
+		massf[isp][2] = 0.0;
 	    } // foreach isp
 	}
 	// tke
 	mixin(codeForGradients("tke"));
-	tke.refx = gradients[0];
-	tke.refy = gradients[1];
-	tke.refz = 0.0;
+	tke[0] = gradients[0];
+	tke[1] = gradients[1];
+	tke[2] = 0.0;
 	// omega
 	mixin(codeForGradients("omega"));
-	omega.refx = gradients[0];
-	omega.refy = gradients[1];
-	omega.refz = 0.0;
+	omega[0] = gradients[0];
+	omega[1] = gradients[1];
+	omega[2] = 0.0;
     } // end gradients_xy_leastsq()
 
 } // end class FlowGradients
