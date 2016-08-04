@@ -418,10 +418,10 @@ public:
 	// Now compute gradients.
 	size_t loop_init = myws.loop_init;
 	size_t n = myws.n;
-	double[3] rhs, gradients;
+	double[3] rhs;
 	//
 	double q0;
-	string codeForGradients(string qname)
+	string codeForGradients(string qname, string gname)
 	{
 	    string code = "
             if (compute_about_mid) {
@@ -438,49 +438,26 @@ public:
                 rhs[1] += weight[i] * myws.dy[i] * dq;
                 rhs[2] += weight[i] * myws.dz[i] * dq;
 	    }
-	    solveWithInverse!(3,3)(myws.xTx, rhs, gradients);";
+	    solveWithInverse!(3,3)(myws.xTx, rhs, "~gname~");";
 	    return code;
 	}
-	// x-velocity
-	mixin(codeForGradients("vel.x"));
-	foreach (j; 0 .. 3) { vel[0][j] = gradients[j]; }
-	// y-velocity
-	mixin(codeForGradients("vel.y"));
-	foreach (j; 0 .. 3) { vel[1][j] = gradients[j]; }
-	// z-velocity
-	mixin(codeForGradients("vel.z"));	
-	foreach (j; 0 .. 3) { vel[2][j] = gradients[j]; }
-	// T[0]
-	mixin(codeForGradients("gas.T[0]"));
-	T[0] = gradients[0];
-	T[1] = gradients[1];
-	T[2] = gradients[2];
+	mixin(codeForGradients("vel.x", "vel[0]"));
+	mixin(codeForGradients("vel.y", "vel[1]"));
+	mixin(codeForGradients("vel.z", "vel[2]"));	
+	mixin(codeForGradients("gas.T[0]", "T"));
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
-		mixin(codeForGradients("gas.massf[isp]"));
-		massf[isp][0] = gradients[0];
-		massf[isp][1] = gradients[1];
-		massf[isp][2] = gradients[2];
-	    } // foreach isp
+		mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
+	    }
 	} else {
 	    foreach(isp; 0 .. nsp) {
-		massf[isp][0] = 0.0;
-		massf[isp][1] = 0.0;
-		massf[isp][2] = 0.0;
-	    } // foreach isp
+		massf[isp][0] = 0.0; massf[isp][1] = 0.0; massf[isp][2] = 0.0;
+	    }
 	}
-	// tke
-	mixin(codeForGradients("tke"));
-	tke[0] = gradients[0];
-	tke[1] = gradients[1];
-	tke[2] = gradients[2];
-	// omega
-	mixin(codeForGradients("omega"));
-	omega[0] = gradients[0];
-	omega[1] = gradients[1];
-	omega[2] = gradients[2];
+	mixin(codeForGradients("tke", "tke"));
+	mixin(codeForGradients("omega", "omega"));
     } // end gradients_xyz_leastsq()
 
     void set_up_workspace_for_gradients_xy_leastsq(ref Vector3*[] cloud_pos,
@@ -546,10 +523,9 @@ public:
 	// Now compute gradients.
 	size_t loop_init = myws.loop_init;
 	size_t n = myws.n;
-	double[3] rhs, gradients;
-	// x-velocity
+	double[3] rhs;
 	double q0;
-	string codeForGradients(string qname)
+	string codeForGradients(string qname, string gname)
 	{
 	    string code = "
             if (compute_about_mid) {
@@ -565,53 +541,27 @@ public:
                 rhs[0] += weight[i] * myws.dx[i] * dq;
                 rhs[1] += weight[i] * myws.dy[i] * dq;
 	    }
-	    solveWithInverse!(2,3)(myws.xTx, rhs, gradients);";
+	    solveWithInverse!(2,3)(myws.xTx, rhs, "~gname~");
+            "~gname~"[2] = 0.0;";
 	    return code;
 	}
-	mixin(codeForGradients("vel.x"));
-	vel[0][0] = gradients[0];
-	vel[0][1] = gradients[1];
-	vel[0][2] = 0.0;
-	// y-velocity
-	mixin(codeForGradients("vel.y"));
-	vel[1][0] = gradients[0];
-	vel[1][1] = gradients[1];
-	vel[1][2] = 0.0;
-	// z-velocity
-	vel[2][0] = 0.0;
-	vel[2][1] = 0.0;
-	vel[2][2] = 0.0;
-	// T[0]
-	mixin(codeForGradients("gas.T[0]"));
-	T[0] = gradients[0];
-	T[1] = gradients[1];
-	T[2] = 0.0;
-	// massf
+	mixin(codeForGradients("vel.x", "vel[0]"));
+	mixin(codeForGradients("vel.y", "vel[1]"));
+	vel[2][0] = 0.0; vel[2][1] = 0.0; vel[2][2] = 0.0; // z-velocity
+	mixin(codeForGradients("gas.T[0]", "T"));
+	//
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (diffusion) {
 	    foreach(isp; 0 .. nsp) {
-		mixin(codeForGradients("gas.massf[isp]"));
-		massf[isp][0] = gradients[0];
-		massf[isp][1] = gradients[1];
-		massf[isp][2] = 0.0;
-	    } // foreach isp
+		mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
+	    }
 	} else {
 	    foreach(isp; 0 .. nsp) {
-		massf[isp][0] = 0.0;
-		massf[isp][1] = 0.0;
-		massf[isp][2] = 0.0;
-	    } // foreach isp
+		massf[isp][0] = 0.0; massf[isp][1] = 0.0; massf[isp][2] = 0.0;
+	    }
 	}
-	// tke
-	mixin(codeForGradients("tke"));
-	tke[0] = gradients[0];
-	tke[1] = gradients[1];
-	tke[2] = 0.0;
-	// omega
-	mixin(codeForGradients("omega"));
-	omega[0] = gradients[0];
-	omega[1] = gradients[1];
-	omega[2] = 0.0;
+	mixin(codeForGradients("tke", "tke"));
+	mixin(codeForGradients("omega", "omega"));
     } // end gradients_xy_leastsq()
 
 } // end class FlowGradients
