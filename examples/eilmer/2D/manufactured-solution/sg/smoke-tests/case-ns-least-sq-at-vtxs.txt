@@ -1,6 +1,6 @@
 2
 ausm_plus_up
-divergence
+least_squares
 vertices
 2
 single

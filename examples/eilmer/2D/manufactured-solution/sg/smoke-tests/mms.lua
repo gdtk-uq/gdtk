@@ -15,6 +15,7 @@ file = io.open("case.txt", "r")
 case = tonumber(file:read("*line"))
 fluxCalc = tostring(file:read("*line"))
 derivCalc = tostring(file:read("*line"))
+derivLocn = tostring(file:read("*line"))
 xOrder = tonumber(file:read("*line"))
 blocking = tostring(file:read("*line"))
 ncells = tonumber(file:read("*line"))
@@ -83,6 +84,7 @@ config.interpolation_order = xOrder
 config.gasdynamic_update_scheme = "predictor-corrector"
 config.flux_calculator = fluxCalc
 config.spatial_deriv_calc = derivCalc
+config.spatial_deriv_locn = derivLocn
 config.udf_source_terms = true
 config.udf_source_terms_file = 'udf-source-terms.lua'
 if case == 1 or case == 3 then

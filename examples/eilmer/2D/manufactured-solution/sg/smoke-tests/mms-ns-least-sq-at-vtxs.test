@@ -12,24 +12,24 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {start body error}
 
-test copy-ns-least-sq-case {Copy N-S least squares theorem case.} -body {
-   exec cp case-ns-least-sq.txt case.txt
+test copy-ns-least-sq-case {Copy N-S least squares at vertices case.} -body {
+   exec cp case-ns-least-sq-at-vtxs.txt case.txt
 } -result {} -returnCodes {0}
 
 test prepare-source-terms {Prepare manufactured source terms.} -body {
-    exec python make_source_terms.py > LOGFILE_NS_LEAST_SQ_SOURCE_TERMS
+    exec python make_source_terms.py > LOGFILE_NS_LEAST_SQ_VTXS_SOURCE_TERMS
 } -result {} -returnCodes {0}
 
 test run-preprocessor {Prepare N-S least squares case.} -body {
-    exec e4shared --job=mms --prep > LOGFILE_PREP_NS_LEAST_SQ
+    exec e4shared --job=mms --prep > LOGFILE_PREP_NS_LEAST_SQ_VTXS
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the case.} -body {
-    exec e4shared --job=mms --run > LOGFILE_MAIN_NS_LEAST_SQ
+    exec e4shared --job=mms --run > LOGFILE_MAIN_NS_LEAST_SQ_VTXS
 } -result {} -returnCodes {0}
 
 test number-of-steps {Iteration of the final block in a certain number of steps.} -body {
-    set fp [open LOGFILE_MAIN_NS_LEAST_SQ r]
+    set fp [open LOGFILE_MAIN_NS_LEAST_SQ_VTXS r]
     set contents [read $fp]
     close $fp
     set final_steps 0
