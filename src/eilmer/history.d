@@ -38,7 +38,9 @@ void init_history_cell_files()
 	string fname = format("%s/%s-blk-%d-cell-%d.dat", 
 			      histDir, GlobalConfig.base_file_name, blkId, cellId);
 	auto f = File(fname, "w");
-	auto cellVars = variable_list_for_cell(GlobalConfig.gmodel_master);
+	auto cellVars = variable_list_for_cell(GlobalConfig.gmodel_master, GlobalConfig.include_quality,
+					       GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+					       GlobalConfig.radiation);
 	f.write("# 1:t ");
 	foreach ( i, var; cellVars ) {
 	    f.write(format("%d:%s ", i+2, var));

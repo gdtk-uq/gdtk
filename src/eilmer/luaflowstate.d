@@ -442,7 +442,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 	formattedWrite(writer, "label: %s\n", grid.label);
 	formattedWrite(writer, "sim_time: %.18e\n", t0);
 	auto gmodel = GlobalConfig.gmodel_master;
-	auto variable_list = variable_list_for_cell(gmodel);
+	auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
+						    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+						    GlobalConfig.radiation);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);
 	// Variable list for cell on one line.
 	foreach(varname; variable_list) {
@@ -492,7 +494,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			errMsg ~= "The returned object is not a proper FlowState object.";
 			luaL_error(L, errMsg.toStringz);
 		    }
-		    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs) ~ "\n");
+		    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
+							       GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+							       GlobalConfig.radiation) ~ "\n");
 		} // end foreach i
 	    } // end foreach j
 	} // end foreach k
@@ -530,7 +534,9 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 	formattedWrite(writer, "label: %s\n", grid.label);
 	formattedWrite(writer, "sim_time: %.18e\n", t0);
 	auto gmodel = GlobalConfig.gmodel_master;
-	auto variable_list = variable_list_for_cell(gmodel);
+	auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
+						    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+						    GlobalConfig.radiation);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);
 	// Variable list for cell on one line.
 	foreach(varname; variable_list) {
@@ -564,7 +570,9 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		errMsg ~= "The returned object is not a proper FlowState object.";
 		luaL_error(L, errMsg.toStringz);
 	    }
-	    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs) ~ "\n");
+	    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
+						       GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+						       GlobalConfig.radiation) ~ "\n");
 	} // end foreach i
 	outfile.finish();
 	return 0;

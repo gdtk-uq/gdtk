@@ -321,24 +321,22 @@ public:
     }
 } // end class FlowState
 
-string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) fs)
+string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) fs,
+			   bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
 {
     // Should match FVCell.write_values_to_string()
     auto writer = appender!string();
     formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
 		   pos.x, pos.y, pos.z, volume, fs.gas.rho,
 		   fs.vel.x, fs.vel.y, fs.vel.z);
-    if (GlobalConfig.MHD)
-	formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB);
-	if (GlobalConfig.divergence_cleaning)
-	   formattedWrite(writer, " %.18e", fs.psi);
-    if (GlobalConfig.include_quality)
-	formattedWrite(writer, " %.18e", fs.gas.quality);
+    if (MHD) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB); }
+    if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
+    if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
     formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
     foreach (kvalue; fs.gas.k) formattedWrite(writer, " %.18e", kvalue); 
     int S = 0;  // zero for shock detector
     formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, S);
-    if (GlobalConfig.radiation) {
+    if (radiation) {
 	double Q_rad_org = 0.0; double f_rad_org = 0.0; double Q_rE_rad = 0.0;
 	formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad);
     }
@@ -369,7 +367,9 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     formattedWrite(writer, "structured_grid_flow 1.0\n");
     formattedWrite(writer, "label: %s\n", grid.label);
     formattedWrite(writer, "sim_time: %.18e\n", t0);
-    auto variable_list = variable_list_for_cell(gmodel);
+    auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality, 
+						GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+						GlobalConfig.radiation);
     formattedWrite(writer, "variables: %d\n", variable_list.length);
     // Variable list for cell on one line.
     foreach(varname; variable_list) {
@@ -402,7 +402,9 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
 		    Vector3 p011 = *grid[i,j+1,k+1];
 		    pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
 		}
-		outfile.compress(" " ~ cell_data_as_string(pos, volume, fs) ~ "\n");
+		outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
+							   GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+							   GlobalConfig.radiation) ~ "\n");
 	    }
 	}
     }
@@ -423,7 +425,9 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
     formattedWrite(writer, "unstructured_grid_flow 1.0\n");
     formattedWrite(writer, "label: %s\n", grid.label);
     formattedWrite(writer, "sim_time: %.18e\n", t0);
-    auto variable_list = variable_list_for_cell(gmodel);
+    auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
+						GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+						GlobalConfig.radiation);
     formattedWrite(writer, "variables: %d\n", variable_list.length);
     // Variable list for cell on one line.
     foreach(varname; variable_list) {
@@ -440,7 +444,9 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
 	foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
 	pos /= grid.cells[i].vtx_id_list.length;
 	double volume = 0.0; 
-	outfile.compress(" " ~ cell_data_as_string(pos, volume, fs) ~ "\n");
+	outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
+						   GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+						   GlobalConfig.radiation) ~ "\n");
     }
     outfile.finish();
     return;

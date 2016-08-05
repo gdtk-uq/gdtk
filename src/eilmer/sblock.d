@@ -238,7 +238,7 @@ public:
 
     void assemble_arrays()
     // We shouldn't be calling this until the essential bits of the GlobalConfig
-    // have been set up.
+    // and the local myConfig instances have been set up.
     {
 	if ( myConfig.verbosity_level >= 2 ) 
 	    writefln("assemble_arrays(): Begin for block %d", id);
@@ -1051,7 +1051,7 @@ public:
 			FVCell B = get_cell(i-1,j);
 			FVInterface C = get_ifj(i-1,j);
 			// Retain locations and references to flow states for later.
-			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
 			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
 			} else {
@@ -1067,7 +1067,7 @@ public:
 			FVCell E = get_cell(i,j);
 			FVInterface F = get_ifj(i,j+1);
 			// Retain locations and references to flow states for later.
-			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
 					      &(D.pos), &(E.pos[gtl]), &(F.pos)];
 			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
@@ -1098,7 +1098,7 @@ public:
 			FVCell B = get_cell(i,j-1);
 			FVInterface C = get_ifi(i+1,j-1);
 			// Retain locations and references to flow states for later.
-			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos)];
 			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs];
 			} else {
@@ -1117,7 +1117,7 @@ public:
 			face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
 					  &(D.pos), &(E.pos[gtl]), &(F.pos)];
 			face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
-			if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 			    face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos[gtl]), &(C.pos), 
 					      &(D.pos), &(E.pos[gtl]), &(F.pos)];
 			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs, F.fs];
@@ -1155,7 +1155,7 @@ public:
 			    FVInterface D = get_ifk(i-1,j,k);
 			    FVCell E = get_cell(i-1,j,k);
 			    // Retain locations and references to flow states for later.
-			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
 						  &(E.pos[gtl])];
 				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
@@ -1177,7 +1177,7 @@ public:
 			    FVInterface I = get_ifk(i,j,k);
 			    FVCell J = get_cell(i,j,k);
 			    // Retain locations and references to flow states for later.
-			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
 						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
 				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
@@ -1217,7 +1217,7 @@ public:
 			    FVInterface D = get_ifk(i,j-1,k);
 			    FVCell E = get_cell(i,j-1,k);
 			    // Retain locations and references to flow states for later.
-			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
 						  &(E.pos[gtl])];
 				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
@@ -1239,7 +1239,7 @@ public:
 			    FVInterface I = get_ifk(i,j,k);
 			    FVCell J = get_cell(i,j,k);
 			    // Retain locations and references to flow states for later.
-			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
 						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
 			    face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
@@ -1279,7 +1279,7 @@ public:
 			    FVInterface D = get_ifi(i,j,k-1);
 			    FVCell E = get_cell(i,j,k-1);
 			    // Retain locations and references to flow states for later.
-			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos),
 						  &(E.pos[gtl])];
 				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs];
@@ -1301,7 +1301,7 @@ public:
 			    FVInterface I = get_ifi(i,j,k);
 			    FVCell J = get_cell(i,j,k);
 			    // Retain locations and references to flow states for later.
-			    if (GlobalConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+			    if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 				face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
 						  &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
 				face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
@@ -1920,7 +1920,9 @@ public:
 	formattedRead(line, "variables: %d", &nvariables);
 	line = byLine.front; byLine.popFront();
 	auto variable_list = line.strip().split();
-	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel);
+	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
+							     myConfig.MHD, myConfig.divergence_cleaning,
+							     myConfig.radiation);
 	if (variable_list.length != expected_variable_list.length) {
 	    throw new FlowSolverException("Mismatch in variable lists");
 	}
@@ -1970,7 +1972,9 @@ public:
 	formattedWrite(writer, "structured_grid_flow 1.0\n");
 	formattedWrite(writer, "label: %s\n", label);
 	formattedWrite(writer, "sim_time: %.18e\n", sim_time);
-	auto variable_list = variable_list_for_cell(myConfig.gmodel);
+	auto variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
+						    myConfig.MHD, myConfig.divergence_cleaning,
+						    myConfig.radiation);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);
 	foreach(varname; variable_list) {
 	    formattedWrite(writer, " \"%s\"", varname);
@@ -2035,7 +2039,7 @@ public:
 		    IFace.fs.copy_average_values_from(Lft, Rght);
 		    if ((i == imin) && (bc[Face.west].convective_flux_computed_in_bc == true)) continue;
 		    if ((i == imax+1) && (bc[Face.east].convective_flux_computed_in_bc == true)) continue;
-		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
+		    compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
 		} // i loop
 	    } // j loop
 	} // for k
@@ -2060,7 +2064,7 @@ public:
 		    IFace.fs.copy_average_values_from(Lft, Rght);
 		    if ((j == jmin) && (bc[Face.south].convective_flux_computed_in_bc == true)) continue;
 		    if ((j == jmax+1) && (bc[Face.north].convective_flux_computed_in_bc == true)) continue;
-		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
+		    compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
 		} // j loop
 	    } // i loop
 	} // for k
@@ -2088,7 +2092,7 @@ public:
 		    IFace.fs.copy_average_values_from(Lft, Rght);
 		    if ((k == kmin) && (bc[Face.bottom].convective_flux_computed_in_bc == true)) continue;
 		    if ((k == kmax+1) && (bc[Face.top].convective_flux_computed_in_bc == true)) continue;
-		    compute_interface_flux(Lft, Rght, IFace, myConfig.gmodel, omegaz);
+		    compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
 		} // for k 
 	    } // j loop
 	} // i loop

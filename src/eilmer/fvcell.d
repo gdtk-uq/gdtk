@@ -319,12 +319,10 @@ public:
 		       pos[0].x, pos[0].y, pos[0].z, volume[0], fs.gas.rho,
 		       fs.vel.x, fs.vel.y, fs.vel.z);
 	if (myConfig.MHD) {
-	    formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB); 
-	    if (myConfig.divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
+	    formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB);
 	}
-	if (myConfig.include_quality) {  
-	    formattedWrite(writer, " %.18e", fs.gas.quality);
-	}
+	if (myConfig.MHD && myConfig.divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
+	if (myConfig.include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
 	formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
 	foreach(i; 0 .. fs.gas.k.length) formattedWrite(writer, " %.18e", fs.gas.k[i]); 
 	formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
@@ -629,7 +627,7 @@ public:
 	    U1.divB = dUdt0.divB;
 	    if (myConfig.divergence_cleaning) {
 		U1.psi = U0.psi + dt * gamma_1 * dUdt0.psi;
-		U1.psi *= divergence_damping_factor(dt);
+		U1.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
 	    U1.B.refx = 0.0; U1.B.refy = 0.0; U1.B.refz = 0.0;
@@ -699,7 +697,7 @@ public:
 	    U2.divB = dUdt0.divB;
 	    if (myConfig.divergence_cleaning) {
 		U2.psi = U_old.psi + dt * (gamma_1 * dUdt0.psi + gamma_2 * dUdt1.psi);
-		U2.psi *= divergence_damping_factor(dt);
+		U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
 	    U2.B.refx = 0.0; U2.B.refy = 0.0; U2.B.refz = 0.0;
@@ -768,7 +766,7 @@ public:
 	    U3.B.refz = U_old.B.z + dt * (gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z + gamma_3*dUdt2.B.z);
 	    if (myConfig.divergence_cleaning) {
 		U3.psi = U_old.psi + dt * (gamma_1 * dUdt0.psi + gamma_2 * dUdt1.psi + gamma_3 * dUdt2.psi);
-		U3.psi *= divergence_damping_factor(dt);
+		U3.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
 	    U3.B.refx = 0.0; U3.B.refy = 0.0; U3.B.refz = 0.0;
@@ -1103,12 +1101,11 @@ public:
     }
 
     @nogc
-    double divergence_damping_factor(double dt)
+    double divergence_damping_factor(double dt, double c_h, double divB_damping_length)
     //Divergence factor factor used to scale the cleaning factor psi after each timestep.
     {
-	double c_h2 = GlobalConfig.c_h * GlobalConfig.c_h;
-	double c_p2 = 0.18 * GlobalConfig.divB_damping_length *GlobalConfig.c_h;
-	
+	double c_h2 = c_h * c_h;
+	double c_p2 = 0.18 * divB_damping_length * c_h;
 	return exp(-(c_h2 / c_p2) * dt);
     }
 
@@ -1633,7 +1630,8 @@ public:
 } // end class FVCell
 
 
-string[] variable_list_for_cell(GasModel gmodel)
+string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
+				bool MHD, bool divergence_cleaning, bool radiation)
 {
     // This function needs to be kept consistent with functions
     // FVCell.write_values_to_string, FVCell.scan_values_from_string
@@ -1643,23 +1641,21 @@ string[] variable_list_for_cell(GasModel gmodel)
     string[] list;
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["rho", "vel.x", "vel.y", "vel.z"];
-    if (GlobalConfig.MHD) {
-	list ~= ["B.x", "B.y", "B.z", "divB"];
-	if (GlobalConfig.divergence_cleaning) { list ~= ["psi"]; }
-    }
-    if ( GlobalConfig.include_quality ) { list ~= ["quality"]; }
+    if (MHD) { list ~= ["B.x", "B.y", "B.z", "divB"]; }
+    if (MHD && divergence_cleaning) { list ~= ["psi"]; }
+    if (include_quality) { list ~= ["quality"]; }
     list ~= ["p", "a", "mu"];
     foreach(i; 0 .. gmodel.n_modes) { list ~= "k[" ~ to!string(i) ~ "]"; }
     list ~= ["mu_t", "k_t", "S"];
-    if ( GlobalConfig.radiation ) { list ~= ["Q_rad_org", "f_rad_org", "Q_rE_rad"]; }
+    if (radiation) { list ~= ["Q_rad_org", "f_rad_org", "Q_rE_rad"]; }
     list ~= ["tke", "omega"];
     foreach(i; 0 .. gmodel.n_species) {
 	auto name = cast(char[]) gmodel.species_name(i);
 	name = tr(name, " \t", "--", "s"); // Replace internal whitespace with dashes.
 	list ~= ["massf[" ~ to!string(i) ~ "]-" ~ to!string(name)];
     }
-    if ( gmodel.n_species > 1 ) { list ~= ["dt_chem"]; }
+    if (gmodel.n_species > 1) { list ~= ["dt_chem"]; }
     foreach(i; 0 .. gmodel.n_modes) { list ~= ["e[" ~ to!string(i) ~ "]", "T[" ~ to!string(i) ~ "]"]; }
-    if ( gmodel.n_modes > 1 ) { list ~= ["dt_therm"]; }
+    if (gmodel.n_modes > 1) { list ~= ["dt_therm"]; }
     return list;
 } // end variable_list_for_cell()

@@ -144,9 +144,9 @@ final class GlobalConfig {
     // flow properties in the flux calculation.
     // High-order reconstruction (2) adds a correction term to the cell-centre values
     // to approach something like a piecewise-quadratic interpolation between the
-    // cell centres.
+    // cell centres for structured-grids and a linear model across a cloud of cell 
+    // centres for unstructured-grids.
     shared static int interpolation_order = 2; 
-
     // Default flow-data reconstruction includes interpolation of density 
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
@@ -154,7 +154,7 @@ final class GlobalConfig {
     shared static InterpolateOption thermo_interpolator = InterpolateOption.rhoe;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
-    shared static bool interpolate_in_local_frame = true;
+    shared static bool interpolate_in_local_frame = true; // only for structured-grid
 
     // Default flux calculator is the adaptive mix of ausmdv and efm.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive;

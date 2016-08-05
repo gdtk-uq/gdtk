@@ -73,7 +73,7 @@ public:
 	fs = new FlowState(myConfig.gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
 	F = new ConservedQuantities(myConfig.gmodel.n_species, myConfig.gmodel.n_modes);
 	F.clear_values();
-	grad = new FlowGradients(myConfig.gmodel.n_species);
+	grad = new FlowGradients(myConfig);
 	if (allocate_spatial_deriv_lsq_workspace) {
 	    ws_grad = new WLSQGradWorkspace();
 	}

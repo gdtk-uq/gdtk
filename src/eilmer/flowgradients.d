@@ -65,11 +65,15 @@ public:
     double[3] T; // Temperature derivatives (static temperature only)
     double[3] tke; // turbulence kinetic energy
     double[3] omega; // pseudo vorticity for k-omega turbulence
+private:
     WLSQGradWorkspace common_ws;
+    LocalConfig myConfig;
 
-    this(size_t nspecies)
+public:
+    this(ref LocalConfig myConfig)
     {
-	massf.length = nspecies;
+	this.myConfig = myConfig;
+	massf.length = myConfig.gmodel.n_species;
 	common_ws = new WLSQGradWorkspace();
     }
 
@@ -142,7 +146,7 @@ public:
     }
 
     @nogc
-    void gradients_xy_div(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, bool diffusion)
+    void gradients_xy_div(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos)
     // Using the divergence theorem (I think), compute the average gradients
     // for the flow conditions over a polygon in the xy-plane.
     //     2-----1   1
@@ -209,7 +213,7 @@ public:
 	T[2] = 0.0;
 	//
 	size_t nsp = cloud_fs[0].gas.massf.length;
-	if (diffusion) {
+	if (myConfig.diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]"));
 		massf[isp][0] = gradient_x * area_inv;
@@ -236,7 +240,7 @@ public:
     } // end gradients_xy_div()
     
     @nogc
-    void gradients_finitediff(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, FVInterface iface, bool diffusion)
+    void gradients_finitediff(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, FVInterface iface)
     {
 	// Uses finite differences to calculate the gradient at the interface using the distance normal to the face.
 	
@@ -290,7 +294,7 @@ public:
 	T[2] = gradn * nz;
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
-	if (diffusion) {
+	if (myConfig.diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]"));
 		massf[isp][0] = gradn * nx;
@@ -325,13 +329,13 @@ public:
 	size_t n = cloud_pos.length;
 	if (cloud_weights.length < n) cloud_weights.length = n;
 	size_t loop_init = 0; // loop starting position
-	if (GlobalConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
+	if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
 	    cloud_weights[0] = 1.0; // interface (primary point) does not need weighting; it is never used.
 	    loop_init = 1; // we have pre-filled the first location.
 	}
 	double x0 = pos.x;
 	double y0 = pos.y;
-	if (GlobalConfig.dimensions == 2) {
+	if (myConfig.dimensions == 2) {
 	    foreach (i; loop_init .. n) {
 		double dx = cloud_pos[i].x - x0;
 		double dy = cloud_pos[i].y - y0;
@@ -397,8 +401,7 @@ public:
     } // end set_up_workspace_for_gradients_xyz_leastsq()
 
     void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
-			       bool compute_about_mid, bool diffusion,
-			       ref WLSQGradWorkspace ws, bool retain_work_data)
+			       bool compute_about_mid, ref WLSQGradWorkspace ws)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 3D
@@ -406,7 +409,7 @@ public:
     // Else take differences about the point at which the gradient is being calculated (i.e. the faces).
     {
 	WLSQGradWorkspace myws;
-	if (retain_work_data) {
+	if (myConfig.spatial_deriv_retain_lsq_work_data) {
 	    // To have a faster calculation, retain the workspaces with precomputed inverses.
 	    myws = ws;
 	} else {
@@ -447,7 +450,7 @@ public:
 	mixin(codeForGradients("gas.T[0]", "T"));
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
-	if (diffusion) {
+	if (myConfig.diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
 	    }
@@ -502,8 +505,7 @@ public:
     } // end set_up_workspace_for_gradients_xy_leastsq()
 
     void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos, ref double[] weight,
-			      bool compute_about_mid, bool diffusion,
-			      ref WLSQGradWorkspace ws, bool retain_work_data)
+			      bool compute_about_mid, ref WLSQGradWorkspace ws)
     // Fit a linear model to the cloud of flow-quantity points
     // in order to extract approximations to the flow-field gradients.
     // 2D, built as a specialization of the 3D code.
@@ -511,7 +513,7 @@ public:
     // taking differences about the interface point for the faces spatial location.
     {
 	WLSQGradWorkspace myws;
-	if (retain_work_data) {
+	if (myConfig.spatial_deriv_retain_lsq_work_data) {
 	    // To have a faster calculation, retain the workspaces with precomputed inverses.
 	    myws = ws;
 	} else {
@@ -551,7 +553,7 @@ public:
 	mixin(codeForGradients("gas.T[0]", "T"));
 	//
 	size_t nsp = cloud_fs[0].gas.massf.length;
-	if (diffusion) {
+	if (myConfig.diffusion) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
 	    }

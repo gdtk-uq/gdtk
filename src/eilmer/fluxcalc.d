@@ -21,7 +21,7 @@ import globalconfig;
 
 
 void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterface IFace,
-			    GasModel gmodel, double omegaz=0.0)
+			    ref LocalConfig myConfig, double omegaz=0.0)
 /** \brief Compute the inviscid fluxes (in 2D) across the cell interfaces.
  *
  * This is the top-level function that calls the previously selected
@@ -46,37 +46,37 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     Lft.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     Rght.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     // Also transform the magnetic field
-    if ( GlobalConfig.MHD ) {
+    if (myConfig.MHD) {
 	Lft.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
         Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     }
     // Compute the fluxes in the local frame of the interface.
-    final switch (GlobalConfig.flux_calculator) {
+    final switch (myConfig.flux_calculator) {
     case FluxCalculator.efm:
-        efmflx(Lft, Rght, IFace, gmodel);
+        efmflx(Lft, Rght, IFace, myConfig.gmodel);
 	break;
     case FluxCalculator.ausmdv:
         ausmdv(Lft, Rght, IFace);
 	break;
     case FluxCalculator.adaptive:
-        adaptive_flux(Lft, Rght, IFace, gmodel);
+        adaptive_flux(Lft, Rght, IFace, myConfig);
 	break;
     case FluxCalculator.ausm_plus_up:
-        ausm_plus_up(Lft, Rght, IFace);
+        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf);
 	break;
     case FluxCalculator.hlle:
-        hlle(Lft, Rght, IFace, gmodel);
+        hlle(Lft, Rght, IFace, myConfig.gmodel);
 	break;
     } // end switch
     ConservedQuantities F = IFace.F;
 
     // Adjustment of the magnetic field flux and associated parameter psi as per Dedner et al.
-    if (GlobalConfig.MHD) {
+    if (myConfig.MHD) {
         F.divB = 0.5 * (Rght.B.x - Lft.B.x);
-	if (GlobalConfig.divergence_cleaning) {
-	    F.B.refx += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (GlobalConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
-	    F.psi += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) - (1.0 / (2.0 * GlobalConfig.c_h)) *
-                      (Rght.psi - Lft.psi)) * GlobalConfig.c_h * GlobalConfig.c_h;
+	if (myConfig.divergence_cleaning) {
+	    F.B.refx += Lft.psi + 0.5 * (Rght.psi - Lft.psi) - (myConfig.c_h / 2.0) * (Rght.B.x - Lft.B.x);
+	    F.psi += (Lft.B.x + 0.5 * (Rght.B.x - Lft.B.x) - (1.0 / (2.0 * myConfig.c_h)) *
+                      (Rght.psi - Lft.psi)) * myConfig.c_h * myConfig.c_h;
 	}
     }
 
@@ -102,7 +102,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     // Also, transform the interface (grid) velocity
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // and transform the magnetic field
-    if (GlobalConfig.MHD) {
+    if (myConfig.MHD) {
 	F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     }
     return;
@@ -131,19 +131,19 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs)
     F.tke = F.mass * fs.tke;  // turbulence kinetic energy
     F.omega = F.mass * fs.omega;  // pseudo vorticity
     // Species mass flux
-    for ( size_t isp = 0; isp < F.massf.length; ++isp ) {
+    for (size_t isp = 0; isp < F.massf.length; ++isp) {
 	F.massf[isp] = F.mass * fs.gas.massf[isp];
     }
     // Individual energies.
     // NOTE: renergies[0] is never used so skipping (DFP 10/12/09)
-    for ( size_t imode = 1; imode < F.energies.length; ++imode ) {
+    for (size_t imode = 1; imode < F.energies.length; ++imode) {
 	F.energies[imode] = F.mass * fs.gas.e[imode];
     }
 } // end set_flux_vector_in_local_frame()
 
 @nogc
 void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs, 
-				     double omegaz=0.0)
+				     ref LocalConfig myConfig, double omegaz=0.0)
 {
     ConservedQuantities F = IFace.F;
     // Record velocity to restore fs at end.
@@ -154,11 +154,9 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     // also transform the magnetic field
-    if ( GlobalConfig.MHD ) {
-	fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-    }
+    if (myConfig.MHD) { fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
     set_flux_vector_in_local_frame(IFace.F, fs);
-    if ( omegaz != 0.0 ) {
+    if (omegaz != 0.0) {
 	// Rotating frame.
 	double x = IFace.pos.x;
 	double y = IFace.pos.y;
@@ -181,9 +179,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     // also transform the interface (grid) velocity
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);	  
     // also transform the magnetic field
-    if ( GlobalConfig.MHD ) {
-	F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-    }
+    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
     fs.vel.refx = vx; fs.vel.refy = vy; fs.vel.refz = vz; // restore fs.vel
 } // end set_flux_vector_in_global_frame()
 
@@ -598,7 +594,7 @@ void exxef(double sn, ref double exx, ref double ef)
 } // end exxef
 
 
-void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
 // This adaptive flux calculator uses uses the Equilibrium Flux Method.
 // near shocks and AUSMDV away from shocks, however, we really don't want
 // EFM to be used across interfaces with strong shear.
@@ -611,16 +607,16 @@ void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, G
     double sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
     double shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
     double shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
-    bool shear_is_small = fmax(shear_y, shear_z) <= GlobalConfig.shear_tolerance;
+    bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
     if ( (Lft.S == 1 || Rght.S == 1) && shear_is_small ) {
-	efmflx(Lft, Rght, IFace, gmodel);
+	efmflx(Lft, Rght, IFace, myConfig.gmodel);
     } else {
 	ausmdv(Lft, Rght, IFace);
     }
 } // end adaptive_flux()
 
 @nogc
-void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
+void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, double M_inf)
 // Liou's 2006 AUSM+up flux calculator
 //
 // A new version of the AUSM-family schemes, based 
@@ -724,7 +720,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
     /*
      * Reference Mach number (eqn 71).
      */
-    double M0Sq = fmin(1.0, fmax(MbarSq, GlobalConfig.M_inf));
+    double M0Sq = fmin(1.0, fmax(MbarSq, M_inf));
     /*
      * Some additional parameters.
      */

@@ -37,7 +37,7 @@ public:
 	id = id_init;
 	pos.length = myConfig.n_grid_time_levels;
 	vel.length = myConfig.n_grid_time_levels;
-	grad = new FlowGradients(myConfig.gmodel.n_species);
+	grad = new FlowGradients(myConfig);
 	if (allocate_spatial_deriv_lsq_workspace) {
 	    ws_grad = new WLSQGradWorkspace();
 	}

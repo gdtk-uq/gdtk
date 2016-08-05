@@ -765,7 +765,9 @@ public:
 	formattedWrite(writer, "label: %s\n", label);
 	formattedWrite(writer, "sim_time: %.18e\n", sim_time);
 	auto gmodel = myConfig.gmodel;
-	auto variable_list = variable_list_for_cell(gmodel);
+	auto variable_list = variable_list_for_cell(gmodel, myConfig.include_quality,
+						    myConfig.MHD, myConfig.divergence_cleaning,
+						    myConfig.radiation);
 	formattedWrite(writer, "variables: %d\n", variable_list.length);
 	// Variable list for cell on one line.
 	foreach(varname; variable_list) {
@@ -831,7 +833,7 @@ public:
 	foreach (f; faces) {
 	    lsq.interp_both(f, 0, Lft, Rght); // gtl assumed 0
 	    f.fs.copy_average_values_from(Lft, Rght);
-	    compute_interface_flux(Lft, Rght, f, myConfig.gmodel, omegaz);
+	    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
 	} // end foreach face
     } // end convective_flux()
 
