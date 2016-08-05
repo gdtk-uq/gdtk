@@ -827,8 +827,11 @@ public:
 
     override void convective_flux()
     {
-	foreach (c; cells) {
-	    c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
+	if (myConfig.interpolation_order > 1) {
+	    foreach (c; cells) {
+		c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
+		//c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
+	    }
 	}
 	foreach (f; faces) {
 	    lsq.interp_both(f, 0, Lft, Rght); // gtl assumed 0
@@ -836,7 +839,7 @@ public:
 	    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
 	} // end foreach face
     } // end convective_flux()
-
+    
     @nogc
     override void copy_into_ghost_cells(int destination_face,
 					ref Block src_blk, int src_face, int src_orientation,
