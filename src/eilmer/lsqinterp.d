@@ -109,11 +109,43 @@ public:
     double[3] rho, p;
     double[3][] T, e;
 
+    double velxPhi, velyPhi, velzPhi;
+    double BxPhi, ByPhi, BzPhi, psiPhi;
+    double tkePhi, omegaPhi;
+    double[] massfPhi;
+    double rhoPhi, pPhi;
+    double[] TPhi, ePhi;
+
+    double velxMax, velyMax, velzMax;
+    double BxMax, ByMax, BzMax, psiMax;
+    double tkeMax, omegaMax;
+    double[] massfMax;
+    double rhoMax, pMax;
+    double[] TMax, eMax;
+    double velxMin, velyMin, velzMin;
+    double BxMin, ByMin, BzMin, psiMin;
+    double tkeMin, omegaMin;
+    double[] massfMin;
+    double rhoMin, pMin;
+    double[] TMin, eMin;
+
     this(size_t nsp, size_t nmodes)
     {
 	massf.length = nsp;
 	T.length = nmodes;
 	e.length = nmodes;
+
+	massfPhi.length = nsp;
+	TPhi.length = nmodes;
+	ePhi.length = nmodes;
+
+	massfMax.length = nsp;
+	TMax.length = nmodes;
+	eMax.length = nmodes;
+
+	massfMin.length = nsp;
+	TMin.length = nmodes;
+	eMin.length = nmodes;
     }
 
     this(ref const LSQInterpGradients other)
@@ -126,49 +158,88 @@ public:
 	rho[] = other.rho[]; p[] = other.p[];
 	T.length = other.T.length; e.length = other.e.length;
 	foreach(i; 0 .. other.T.length) { T[i][] = other.T[i][]; e[i][] = other.e[i][]; }
+
+	velxPhi = other.velxPhi; velyPhi = other.velyPhi; velzPhi = other.velzPhi;
+	BxPhi = other.BxPhi; ByPhi = other.ByPhi; BzPhi = other.BzPhi; psiPhi = other.psiPhi;
+	tkePhi = other.tkePhi; omegaPhi = other.omegaPhi;
+	massfPhi.length = other.massfPhi.length;
+	foreach(i; 0 .. other.massf.length) { massfPhi[i] = other.massfPhi[i]; }
+	rhoPhi = other.rhoPhi; pPhi = other.pPhi;
+	TPhi.length = other.TPhi.length; ePhi.length = other.ePhi.length;
+	foreach(i; 0 .. other.TPhi.length) { TPhi[i] = other.TPhi[i]; ePhi[i] = other.ePhi[i]; }
+
+	velxMax = other.velxMax; velyMax = other.velyMax; velzMax = other.velzMax;
+	BxMax = other.BxMax; ByMax = other.ByMax; BzMax = other.BzMax; psiMax = other.psiMax;
+	tkeMax = other.tkeMax; omegaMax = other.omegaMax;
+	massfMax.length = other.massfMax.length;
+	foreach(i; 0 .. other.massf.length) { massfMax[i] = other.massfMax[i]; }
+	rhoMax = other.rhoMax; pMax = other.pMax;
+	TMax.length = other.TMax.length; eMax.length = other.eMax.length;
+	foreach(i; 0 .. other.TMax.length) { TMax[i] = other.TMax[i]; eMax[i] = other.eMax[i]; }
+
+	velxMin = other.velxMin; velyMin = other.velyMin; velzMin = other.velzMin;
+	BxMin = other.BxMin; ByMin = other.ByMin; BzMin = other.BzMin; psiMin = other.psiMin;
+	tkeMin = other.tkeMin; omegaMin = other.omegaMin;
+	massfMin.length = other.massfMin.length;
+	foreach(i; 0 .. other.massf.length) { massfMin[i] = other.massfMin[i]; }
+	rhoMin = other.rhoMin; pMin = other.pMin;
+	TMin.length = other.TMin.length; eMin.length = other.eMin.length;
+	foreach(i; 0 .. other.TMin.length) { TMin[i] = other.TMin[i]; eMin[i] = other.eMin[i]; }
     }
 
-    void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    void barth_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
 	size_t dimensions = myConfig.dimensions;
-	auto np = cell_cloud.length;
+	double a, b, U, phi;
 	// The following function to be used at compile time.
-	string codeForGradients(string qname, string gname)
+	string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
 	{
 	    string code = "{
-                double q0 = cell_cloud[0].fs."~qname~";
-                "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
-                foreach (i; 1 .. np) {
-                    double dq = cell_cloud[i].fs."~qname~" - q0;
-                    "~gname~"[0] += ws.wx[i] * dq;
-                    "~gname~"[1] += ws.wy[i] * dq;
-                    if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }
-                }
-                }
-                ";
+            U = cell_cloud[0].fs."~qname~";
+            phi = 1.0;
+            if (abs("~gname~"[0]) > 0.0 || abs("~gname~"[1]) > 0.0 || abs("~gname~"[2]) > 0.0) {
+            foreach (i, f; cell_cloud[0].iface) {
+                Vector3 dr = f.pos; dr -= cell_cloud[0].pos[0];
+		dr.transform_to_local_frame(f.n, f.t1, f.t2);
+		double dxFace = dr.x; double dyFace = dr.y; double dzFace = dr.z;                    
+		b = "~gname~"[0] * dxFace + "~gname~"[1] * dyFace;
+		if (myConfig.dimensions == 3) b += "~gname~"[2] * dzFace;
+		if (b > 0.0) {
+		    a = "~qMaxname~" - U;
+		    phi = min(phi, a/b);
+		}
+		else if (b < 0.0) {
+		    a = "~qMinname~" - U;
+		    phi = min(phi, a/b);
+		}
+	    }
+            }
+            "~limFactorname~" = phi;
+            }
+            ";
 	    return code;
 	}
 	// x-velocity
-	mixin(codeForGradients("vel.x", "velx"));
-	mixin(codeForGradients("vel.y", "vely"));
-	mixin(codeForGradients("vel.z", "velz"));
+	mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
+	mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
+	mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
 	if (myConfig.MHD) {
-	    mixin(codeForGradients("B.x", "Bx"));
-	    mixin(codeForGradients("B.y", "By"));
-	    mixin(codeForGradients("B.z", "Bz"));
+	    mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+	    mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+	    mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
 	    if (myConfig.divergence_cleaning) {
-		mixin(codeForGradients("psi", "psi"));
+		mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
 	    }
 	}
 	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-	    mixin(codeForGradients("tke", "tke"));
-	    mixin(codeForGradients("omega", "omega"));
+	    mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
+	    mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
 	}
 	auto nsp = myConfig.gmodel.n_species;
 	if (nsp > 1) {
 	    // Multiple species.
 	    foreach (isp; 0 .. nsp) {
-		mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
+		mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]", "massfMax[isp]", "massfMin[isp]"));
 	    }
 	} else {
 	    // Only one possible gradient value for a single species.
@@ -179,25 +250,104 @@ public:
 	auto nmodes = myConfig.gmodel.n_modes;
 	final switch (myConfig.thermo_interpolator) {
 	case InterpolateOption.pt: 
-	    mixin(codeForGradients("gas.p", "p"));
+	    mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
 	    foreach (imode; 0 .. nmodes) {
-		mixin(codeForGradients("gas.T[imode]", "T[imode]"));
+		mixin(codeForLimits("gas.T[imode]", "T[imode]", "TPhi[imode]", "TMax[imode]", "TMin[imode]"));
 	    }
 	    break;
 	case InterpolateOption.rhoe:
-	    mixin(codeForGradients("gas.rho", "rho"));
+	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
 	    foreach (imode; 0 .. nmodes) {
-		mixin(codeForGradients("gas.e[imode]", "e[imode]"));
+		mixin(codeForLimits("gas.e[imode]", "e[imode]", "ePhi[imode]", "eMax[imode]", "eMin[imode]"));
 	    }
 	    break;
 	case InterpolateOption.rhop:
-	    mixin(codeForGradients("gas.rho", "rho"));
-	    mixin(codeForGradients("gas.p", "p"));
+	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+	    mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
 	    break;
 	case InterpolateOption.rhot: 
-	    mixin(codeForGradients("gas.rho", "rho"));
+	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
 	    foreach (imode; 0 .. nmodes) {
-		mixin(codeForGradients("gas.T[imode]", "T[imode]"));
+		mixin(codeForLimits("gas.T[imode]", "T[imode]", "TPhi[imode]", "TMax[imode]", "TMin[imode]"));
+	    }
+	    break;
+	} // end switch thermo_interpolator
+    } // end compute_lsq_gradients()
+    
+    void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    {
+	size_t dimensions = myConfig.dimensions;
+	auto np = cell_cloud.length;
+	// The following function to be used at compile time.
+	string codeForGradients(string qname, string gname, string qMaxname, string qMinname)
+	{
+	    string code = "{
+                double q0 = cell_cloud[0].fs."~qname~";
+                "~qMaxname~" = q0;
+                "~qMinname~" = q0;
+                "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
+                foreach (i; 1 .. np) {
+                    double dq = cell_cloud[i].fs."~qname~" - q0;
+                    "~gname~"[0] += ws.wx[i] * dq;
+                    "~gname~"[1] += ws.wy[i] * dq;
+                    if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }
+                    "~qMaxname~" = max("~qMaxname~", cell_cloud[i].fs."~qname~");
+                    "~qMinname~" = min("~qMinname~", cell_cloud[i].fs."~qname~");
+                }
+                }
+                ";
+	    return code;
+	}
+	// x-velocity
+	mixin(codeForGradients("vel.x", "velx", "velxMax", "velxMin"));
+	mixin(codeForGradients("vel.y", "vely", "velyMax", "velyMin"));
+	mixin(codeForGradients("vel.z", "velz", "velzMax", "velzMin"));
+	if (myConfig.MHD) {
+	    mixin(codeForGradients("B.x", "Bx", "BxMax", "BxMin"));
+	    mixin(codeForGradients("B.y", "By", "ByMax", "ByMin"));
+	    mixin(codeForGradients("B.z", "Bz", "BzMax", "BzMin"));
+	    if (myConfig.divergence_cleaning) {
+		mixin(codeForGradients("psi", "psi", "psiMax", "psiMin"));
+	    }
+	}
+	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+	    mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
+	    mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
+	}
+	auto nsp = myConfig.gmodel.n_species;
+	if (nsp > 1) {
+	    // Multiple species.
+	    foreach (isp; 0 .. nsp) {
+		mixin(codeForGradients("gas.massf[isp]", "massf[isp]", "massfMax[isp]", "massfMin[isp]"));
+	    }
+	} else {
+	    // Only one possible gradient value for a single species.
+	    massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+	}
+	// Interpolate on two of the thermodynamic quantities, 
+	// and fill in the rest based on an EOS call. 
+	auto nmodes = myConfig.gmodel.n_modes;
+	final switch (myConfig.thermo_interpolator) {
+	case InterpolateOption.pt: 
+	    mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.T[imode]", "T[imode]", "TMax[imode]", "TMin[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhoe:
+	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.e[imode]", "e[imode]", "eMax[imode]", "eMin[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhop:
+	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
+	    mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
+	    break;
+	case InterpolateOption.rhot: 
+	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.T[imode]", "T[imode]", "TMax[imode]", "TMin[imode]"));
 	    }
 	    break;
 	} // end switch thermo_interpolator
@@ -348,17 +498,13 @@ public:
 	    // Always reconstruct in the global frame of reference -- for now
 	    //
 	    // x-velocity
-	    string codeForReconstruction(string qname, string gname, string tname)
+	    string codeForReconstruction(string qname, string gname, string tname, string lname)
 	    {
 		string code = "{
                 double qL0 = cL0.fs."~qname~";
                 double qMinL = qL0;
                 double qMaxL = qL0;
                 if (wsL) { // an active cell will have a workspace
-                    foreach (i; 1 .. cL0.cell_cloud.length) {
-                        qMinL = min(qMinL, cL0.cell_cloud[i].fs."~qname~");
-                        qMaxL = max(qMaxL, cL0.cell_cloud[i].fs."~qname~");
-                    }
                     mygradL[0] = cL0.gradients."~gname~"[0];
                     mygradL[1] = cL0.gradients."~gname~"[1];
                     mygradL[2] = cL0.gradients."~gname~"[2];
@@ -372,10 +518,6 @@ public:
                 double qMinR = qR0;
                 double qMaxR = qR0;
                 if (wsR) { // an active cell will have a workspace
-                    foreach (i; 1 .. cR0.cell_cloud.length) {
-                        qMinR = min(qMinR, cR0.cell_cloud[i].fs."~qname~");
-                        qMaxR = max(qMaxR, cR0.cell_cloud[i].fs."~qname~");
-                    }
                     mygradR[0] = cR0.gradients."~gname~"[0];
                     mygradR[1] = cR0.gradients."~gname~"[1];
                     mygradR[2] = cR0.gradients."~gname~"[2];
@@ -391,6 +533,18 @@ public:
                     van_albada_limit(mygradL[0], mygradR[0]);
                     van_albada_limit(mygradL[1], mygradR[1]);
                     van_albada_limit(mygradL[2], mygradR[2]);
+                    /*
+                    if (wsL) {
+                        mygradL[0] *=  cL0.gradients."~lname~"; mygradL[1] *=  cL0.gradients."~lname~"; mygradL[2] *=  cL0.gradients."~lname~";
+                    } else {                    
+                        mygradL[0] *=  cR0.gradients."~lname~"; mygradL[1] *=  cR0.gradients."~lname~"; mygradL[2] *=  cR0.gradients."~lname~";
+                    }
+                    if (wsR) {
+                       mygradR[0] *=  cR0.gradients."~lname~"; mygradR[1] *=  cR0.gradients."~lname~"; mygradR[2] *=  cR0.gradients."~lname~";
+                    } else {                
+                       mygradR[0] *=  cL0.gradients."~lname~"; mygradR[1] *=  cL0.gradients."~lname~"; mygradR[2] *=  cL0.gradients."~lname~";
+                    }
+                   */
                 }
                 double qL = qL0 + dL.x*mygradL[0] + dL.y*mygradL[1];
                 double qR = qR0 + dR.x*mygradR[0] + dR.y*mygradR[1];
@@ -409,25 +563,25 @@ public:
                 ";
 		return code;
 	    }
-	    mixin(codeForReconstruction("vel.x", "velx", "vel.refx"));
-	    mixin(codeForReconstruction("vel.y", "vely", "vel.refy"));
-	    mixin(codeForReconstruction("vel.z", "velz", "vel.refz"));
+	    mixin(codeForReconstruction("vel.x", "velx", "vel.refx", "velxPhi"));
+	    mixin(codeForReconstruction("vel.y", "vely", "vel.refy", "velyPhi"));
+	    mixin(codeForReconstruction("vel.z", "velz", "vel.refz", "velzPhi"));
 	    if (myConfig.MHD) {
-		mixin(codeForReconstruction("B.x", "Bx", "B.refx"));
-		mixin(codeForReconstruction("B.y", "By", "B.refy"));
-		mixin(codeForReconstruction("B.z", "Bz", "B.refz"));
+		mixin(codeForReconstruction("B.x", "Bx", "B.refx", "BxPhi"));
+		mixin(codeForReconstruction("B.y", "By", "B.refy", "ByPhi"));
+		mixin(codeForReconstruction("B.z", "Bz", "B.refz", "BxPhi"));
 		if (myConfig.divergence_cleaning) {
-		    mixin(codeForReconstruction("psi", "psi", "psi"));
+		    mixin(codeForReconstruction("psi", "psi", "psi", "psiPhi"));
 		}
 	    }
 	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-		mixin(codeForReconstruction("tke", "tke", "tke"));
-		mixin(codeForReconstruction("omega", "omega", "omega"));
+		mixin(codeForReconstruction("tke", "tke", "tke", "tkePhi"));
+		mixin(codeForReconstruction("omega", "omega", "omega", "omegaPhi"));
 	    }
 	    if (nsp > 1) {
 		// Multiple species.
 		foreach (isp; 0 .. nsp) {
-		    mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]", "gas.massf[isp]"));
+		    mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]", "gas.massf[isp]", "massfPhi[isp]"));
 		}
 		try {
 		    scale_mass_fractions(Lft.gas.massf); 
@@ -470,28 +624,28 @@ public:
 	    }
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
-		mixin(codeForReconstruction("gas.p", "p", "gas.p"));
+		mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
 		foreach (imode; 0 .. nmodes) {
-		    mixin(codeForReconstruction("gas.T[imode]", "T[imode]", "gas.T[imode]"));
+		    mixin(codeForReconstruction("gas.T[imode]", "T[imode]", "gas.T[imode]", "TPhi[imode]"));
 		}
 		mixin(codeForThermoUpdate("pT"));
 		break;
 	    case InterpolateOption.rhoe:
-		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho"));
+		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
 		foreach (imode; 0 .. nmodes) {
-		    mixin(codeForReconstruction("gas.e[imode]", "e[imode]", "gas.e[imode]"));
+		    mixin(codeForReconstruction("gas.e[imode]", "e[imode]", "gas.e[imode]", "ePhi[imode]"));
 		}
 		mixin(codeForThermoUpdate("rhoe"));
 		break;
 	    case InterpolateOption.rhop:
-		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho"));
-		mixin(codeForReconstruction("gas.p", "p", "gas.p"));
+		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
+		mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
 		mixin(codeForThermoUpdate("rhop"));
 		break;
 	    case InterpolateOption.rhot: 
-		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho"));
+		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
 		foreach (imode; 0 .. nmodes) {
-		    mixin(codeForReconstruction("gas.T[imode]", "T[imode]", "gas.T[imode]"));
+		    mixin(codeForReconstruction("gas.T[imode]", "T[imode]", "gas.T[imode]", "TPhi[imode]"));
 		}
 		mixin(codeForThermoUpdate("rhoT"));
 		break;
