@@ -354,9 +354,6 @@ public:
 		    foreach(vtx; vertices) {
 			vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
 		    }
-		    break;
-		case SpatialDerivCalc.finite_difference:
-		    assert(0, "finite_difference not implemented for spatial_deriv_calc at vertices");
 		} // end switch
 	    } else {
 		// Have only least-squares in 3D.
@@ -379,11 +376,6 @@ public:
 							compute_about_mid, iface.ws_grad);
 		    }
 		    break;
-		case SpatialDerivCalc.finite_difference:
-		    foreach(iface; faces) { 
-			iface.grad.gradients_finitediff(iface.cloud_fs, iface.cloud_pos, iface);
-		    }
-		    break;
 		case SpatialDerivCalc.divergence:
 		    foreach(iface; faces) {
 			iface.grad.gradients_xy_div(iface.cloud_fs, iface.cloud_pos);
@@ -395,11 +387,6 @@ public:
 		    foreach(iface; faces) {
 			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, iface.cloud_weights,
 							 compute_about_mid, iface.ws_grad);
-		    }
-		    break;
-		case SpatialDerivCalc.finite_difference:
-		    foreach(iface; faces) { 
-			iface.grad.gradients_finitediff(iface.cloud_fs, iface.cloud_pos, iface);
 		    }
 		    break;
 		case SpatialDerivCalc.divergence:
