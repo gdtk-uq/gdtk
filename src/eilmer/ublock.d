@@ -843,12 +843,6 @@ public:
 		        c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
 		        break;
 		}
-		/*
-		if (myConfig.unstructured_limiter.barth)
-		    c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
-		if (myConfig.unstructured_limiter.venkat)
-		    c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
-		*/
 	    }
 	}
 	foreach (f; faces) {
