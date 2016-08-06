@@ -161,17 +161,15 @@ public:
 	    throw new FlowSolverException(msg);
 	}
 	// Assemble array storage for finite-volume cells, etc.
-	bool lsq_workspace_at_vertices = myConfig.spatial_deriv_retain_lsq_work_data &&
-	    (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) &&
-	    (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
+	bool lsq_workspace_at_vertices = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
 	foreach (i, v; grid.vertices) {
 	    auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, i);
 	    new_vtx.pos[0] = v;
 	    vertices ~= new_vtx;
 	}
-	bool lsq_workspace_at_faces = myConfig.spatial_deriv_retain_lsq_work_data &&
-	    (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) &&
-	    (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
+	bool lsq_workspace_at_faces = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
+	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
 	foreach (i, f; grid.faces) {
 	    auto new_face = new FVInterface(myConfig, lsq_workspace_at_faces, i);
 	    faces ~= new_face;

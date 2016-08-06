@@ -327,19 +327,8 @@ public:
     // As for 2D, if using vertices spatial locations then take differences about a middle point/value.
     // Else take differences about the point at which the gradient is being calculated (i.e. the faces).
     {
-	WLSQGradWorkspace myws;
-	if (myConfig.spatial_deriv_retain_lsq_work_data) {
-	    // To have a faster calculation, retain the workspaces with precomputed inverses.
-	    myws = ws;
-	} else {
-	    // To reduce memory consumption, we use common workspaces.
-	    myws = common_ws;
-	    set_up_workspace_for_gradients_xyz_leastsq(cloud_pos, weight, compute_about_mid, myws);
-	}
-	//
-	// Now compute gradients.
-	size_t loop_init = myws.loop_init;
-	size_t n = myws.n;
+	size_t loop_init = ws.loop_init;
+	size_t n = ws.n;
 	double[3] rhs;
 	//
 	double q0;
@@ -356,11 +345,11 @@ public:
 	    foreach (j; 0 .. 3) { rhs[j] = 0.0; }
             foreach (i; loop_init .. n) {
                 double dq = cloud_fs[i]."~qname~" - q0;
-                rhs[0] += weight[i] * myws.dx[i] * dq;
-                rhs[1] += weight[i] * myws.dy[i] * dq;
-                rhs[2] += weight[i] * myws.dz[i] * dq;
+                rhs[0] += weight[i] * ws.dx[i] * dq;
+                rhs[1] += weight[i] * ws.dy[i] * dq;
+                rhs[2] += weight[i] * ws.dz[i] * dq;
 	    }
-	    solveWithInverse!(3,3)(myws.xTx, rhs, "~gname~");";
+	    solveWithInverse!(3,3)(ws.xTx, rhs, "~gname~");";
 	    return code;
 	}
 	mixin(codeForGradients("vel.x", "vel[0]"));
@@ -431,19 +420,8 @@ public:
     // Experiment with taking differences about a middle point/value for the vertices spatial locations and
     // taking differences about the interface point for the faces spatial location.
     {
-	WLSQGradWorkspace myws;
-	if (myConfig.spatial_deriv_retain_lsq_work_data) {
-	    // To have a faster calculation, retain the workspaces with precomputed inverses.
-	    myws = ws;
-	} else {
-	    // To reduce memory consumption, we use common workspaces.
-	    myws = common_ws;
-	    set_up_workspace_for_gradients_xy_leastsq(cloud_pos, weight, compute_about_mid, myws);
-	}
-	//
-	// Now compute gradients.
-	size_t loop_init = myws.loop_init;
-	size_t n = myws.n;
+	size_t loop_init = ws.loop_init;
+	size_t n = ws.n;
 	double[3] rhs;
 	double q0;
 	string codeForGradients(string qname, string gname)
@@ -459,10 +437,10 @@ public:
 	    rhs[0] = 0.0; rhs[1] = 0.0;
 	    foreach (i; loop_init .. n) {
 	        double dq = cloud_fs[i]."~qname~" - q0;
-                rhs[0] += weight[i] * myws.dx[i] * dq;
-                rhs[1] += weight[i] * myws.dy[i] * dq;
+                rhs[0] += weight[i] * ws.dx[i] * dq;
+                rhs[1] += weight[i] * ws.dy[i] * dq;
 	    }
-	    solveWithInverse!(2,3)(myws.xTx, rhs, "~gname~");
+	    solveWithInverse!(2,3)(ws.xTx, rhs, "~gname~");
             "~gname~"[2] = 0.0;";
 	    return code;
 	}

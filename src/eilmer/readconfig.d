@@ -219,7 +219,6 @@ void read_config_file()
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
-    mixin(update_bool("spatial_deriv_retain_lsq_work_data", "spatial_deriv_retain_lsq_work_data"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
@@ -233,7 +232,6 @@ void read_config_file()
 	writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
 	writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
 	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
-	writeln("  spatial_deriv_retain_lsq_work_data: ", GlobalConfig.spatial_deriv_retain_lsq_work_data);
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
 	writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
