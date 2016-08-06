@@ -27,7 +27,6 @@ public:
     FlowGradients grad;
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
-    double[] cloud_weights; // Weights used in the least-squares gradient calculation.
     WLSQGradWorkspace ws_grad;
     
     this(LocalConfig myConfig,

@@ -307,25 +307,21 @@ public:
 	    if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
 		bool compute_about_mid = false;
 		foreach(iface; faces) {
-		    iface.grad.weights_leastsq(iface.cloud_pos, iface.pos, iface.cloud_weights);
+		    iface.grad.weights_leastsq(iface.cloud_pos, iface.pos, compute_about_mid, iface.ws_grad);
 		    if (myConfig.dimensions == 2) {
-			iface.grad.set_up_workspace_for_gradients_xy_leastsq(iface.cloud_pos, iface.cloud_weights,
-									     compute_about_mid, iface.ws_grad);
+			iface.grad.set_up_workspace_for_gradients_xy_leastsq(iface.cloud_pos, iface.ws_grad);
 		    } else { // 3D
-			iface.grad.set_up_workspace_for_gradients_xyz_leastsq(iface.cloud_pos, iface.cloud_weights,
-									      compute_about_mid, iface.ws_grad);
+			iface.grad.set_up_workspace_for_gradients_xyz_leastsq(iface.cloud_pos, iface.ws_grad);
 		    }
 		}	
 	    } else { // vertices
 		bool compute_about_mid = true;
 		foreach(vtx; vertices) {
-		    vtx.grad.weights_leastsq(vtx.cloud_pos, vtx.pos[gtl], vtx.cloud_weights);
+		    vtx.grad.weights_leastsq(vtx.cloud_pos, vtx.pos[gtl], compute_about_mid, vtx.ws_grad);
 		    if (myConfig.dimensions == 2) {
-			vtx.grad.set_up_workspace_for_gradients_xy_leastsq(vtx.cloud_pos, vtx.cloud_weights,
-									   compute_about_mid, vtx.ws_grad);
+			vtx.grad.set_up_workspace_for_gradients_xy_leastsq(vtx.cloud_pos, vtx.ws_grad);
 		    } else { // 3D
-			vtx.grad.set_up_workspace_for_gradients_xyz_leastsq(vtx.cloud_pos, vtx.cloud_weights,
-									    compute_about_mid, vtx.ws_grad);
+			vtx.grad.set_up_workspace_for_gradients_xyz_leastsq(vtx.cloud_pos, vtx.ws_grad);
 		    }
 		}
 	    }
@@ -334,16 +330,13 @@ public:
     
     void flow_property_derivatives(int gtl)
     {
-	bool compute_about_mid = false;
 	final switch (myConfig.spatial_deriv_locn) {
 	case SpatialDerivLocn.vertices:
-	    compute_about_mid = true;
 	    if (myConfig.dimensions == 2) {
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(vtx; vertices) { 
-			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights,
-						      compute_about_mid, vtx.ws_grad);
+			vtx.grad.gradients_xy_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.ws_grad);
 		    }
 		    break;
 		case SpatialDerivCalc.divergence:
@@ -354,8 +347,7 @@ public:
 	    } else {
 		// Have only least-squares in 3D.
 		foreach(vtx; vertices) {
-		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.cloud_weights,
-						   compute_about_mid, vtx.ws_grad);
+		    vtx.grad.gradients_xyz_leastsq(vtx.cloud_fs, vtx.cloud_pos, vtx.ws_grad);
 		}
 	    }
        	    foreach (iface; faces) {
@@ -363,13 +355,11 @@ public:
 	    }
 	    break;
 	case SpatialDerivLocn.faces:
-	    compute_about_mid = false;
 	    if (myConfig.dimensions == 2) {
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(iface; faces) { 
-			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos, iface.cloud_weights,
-							compute_about_mid, iface.ws_grad);
+			iface.grad.gradients_xy_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad);
 		    }
 		    break;
 		case SpatialDerivCalc.divergence:
@@ -381,8 +371,7 @@ public:
 		final switch (myConfig.spatial_deriv_calc) {
 		case SpatialDerivCalc.least_squares:
 		    foreach(iface; faces) {
-			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, iface.cloud_weights,
-							 compute_about_mid, iface.ws_grad);
+			iface.grad.gradients_xyz_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad);
 		    }
 		    break;
 		case SpatialDerivCalc.divergence:
