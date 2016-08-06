@@ -673,10 +673,10 @@ public:
 		} // end if my_outsign
 	    } // end foreach j
 	} // end foreach bndry
-	if (myConfig.viscous) {
+	if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
 	    // LSQ weights are used in the calculation of flow gradients
 	    // for the viscous terms.
-	    compute_leastsq_geometric_weights(gtl);
+	    compute_leastsq_weights(gtl);
 	}
 	if (myConfig.interpolation_order > 1) {
 	    // The LSQ linear model for the flow field is fitted using 

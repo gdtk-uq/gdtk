@@ -298,32 +298,22 @@ public:
 	return number_of_invalid_cells;
     } // end count_invalid_cells()
 
-    void compute_leastsq_geometric_weights(int gtl)
+    void compute_leastsq_weights(int gtl)
+    // Update the least-squares geometric weights and the workspaces,
+    // if appropriate.
+    // The weights should be calculated when the grid is initialised or moved.
+    // For this reason it is called in ublock and sblock class method
+    // compute_primary_cell_geomtric_data()
     {
-    // Update the least-squares geometric weights and the workspaces, if appropriate.
-    // The weights should be calculated when the grid is initialised/moved.
-    // For this reason it is called in ublock/sblock class method compute_primary_cell_geomtric_data()
-	if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-	    if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
-		bool compute_about_mid = false;
-		foreach(iface; faces) {
-		    iface.grad.weights_leastsq(iface.cloud_pos, iface.pos, compute_about_mid, iface.ws_grad);
-		    if (myConfig.dimensions == 2) {
-			iface.grad.set_up_workspace_for_gradients_xy_leastsq(iface.cloud_pos, iface.ws_grad);
-		    } else { // 3D
-			iface.grad.set_up_workspace_for_gradients_xyz_leastsq(iface.cloud_pos, iface.ws_grad);
-		    }
-		}	
-	    } else { // vertices
-		bool compute_about_mid = true;
-		foreach(vtx; vertices) {
-		    vtx.grad.weights_leastsq(vtx.cloud_pos, vtx.pos[gtl], compute_about_mid, vtx.ws_grad);
-		    if (myConfig.dimensions == 2) {
-			vtx.grad.set_up_workspace_for_gradients_xy_leastsq(vtx.cloud_pos, vtx.ws_grad);
-		    } else { // 3D
-			vtx.grad.set_up_workspace_for_gradients_xyz_leastsq(vtx.cloud_pos, vtx.ws_grad);
-		    }
-		}
+	if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
+	    foreach(iface; faces) {
+		iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos,
+						    false, iface.ws_grad);
+	    }	
+	} else { // vertices
+	    foreach(vtx; vertices) {
+		vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl],
+						  true, vtx.ws_grad);
 	    }
 	}
     } // end compute_leastsq_geometric_weights()

@@ -30,11 +30,12 @@ class WLSQGradWorkspace {
     // the normal equations, to allow reuse of the values.
 public:
     double[] weights2; // square of the weights for the linear constraint eqns.
-    bool compute_about_mid;
     double[] dx, dy, dz;
-    size_t loop_init; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
-    size_t n; // cloud_pos.length;
     double x0, y0, z0; // reference point may be a computed midpoint
+    bool compute_about_mid;
+    size_t loop_init; // starting index for loops:
+    // 0=compute_about_mid, 1=compute_about_[0]
+    size_t n; // cloud_pos.length;
     double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
 
     this()
@@ -234,13 +235,10 @@ public:
 	omega[2] = 0.0;
     } // end gradients_xy_div()
 
-    void weights_leastsq(ref Vector3*[] cloud_pos, ref Vector3 pos,
-			 bool compute_about_mid, ref WLSQGradWorkspace ws)
-    // Calculate weights used in the least-squares gradient calculation.
-    // The weights are calculated with the current interface/vertex as the reference point (pos).
-    // NB. For the "faces" spatial location we are expecting the primary point (i.e. the face at which
-    //     we are calculating the gradients) to be in the first cloud position. 
+    void set_up_workspace_leastsq(ref Vector3*[] cloud_pos, ref Vector3 pos,
+				  bool compute_about_mid, ref WLSQGradWorkspace ws)
     {
+	assert(ws, "We are missing the workspace!");
 	size_t n = cloud_pos.length;
 	size_t loop_init;
 	if (ws.weights2.length < n) ws.weights2.length = n;
@@ -255,8 +253,14 @@ public:
 	}
 	ws.n = n;
 	ws.loop_init = loop_init;
-	double x0 = pos.x;
-	double y0 = pos.y;
+	//
+	// Calculate weights used in the least-squares gradient calculation.
+	// These weights are calculated with the current interface/vertex
+	// as the reference point (pos).
+	// For the "faces" spatial location we are expecting the primary point
+	// (i.e. the face at which we are calculating the gradients) to be in
+	// the first cloud position. 
+	double x0 = pos.x; double y0 = pos.y; double z0 = pos.z;
 	if (myConfig.dimensions == 2) {
 	    foreach (i; loop_init .. n) {
 		double dx = cloud_pos[i].x - x0;
@@ -264,7 +268,6 @@ public:
 		ws.weights2[i] = 1.0/(dx*dx+dy*dy);
 	    }
 	} else { //3D
-	    double z0 = pos.z;
 	    foreach (i; loop_init .. n) {
 		double dx = cloud_pos[i].x - x0;
 		double dy = cloud_pos[i].y - y0;
@@ -272,28 +275,16 @@ public:
 		ws.weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
 	    }
 	}
-    } // end weights_leastsq()
-
-    void set_up_workspace_for_gradients_xyz_leastsq(ref Vector3*[] cloud_pos,
-						    ref WLSQGradWorkspace ws)
-    {
-	size_t loop_init = 0; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
-	size_t n = cloud_pos.length;
-	// If computing about mid-point, calculate mid-point.
-	double x0 = 0.0; double y0 = 0.0; double z0 = 0.0;
-	if (ws.compute_about_mid) {
-	    loop_init = 0;
-	    foreach (i; loop_init .. n) {
+	// If computing about a mid-point, calculate that mid-point.
+	if (compute_about_mid) {
+	    x0 = 0.0; y0 = 0.0; z0 = 0.0;
+	    foreach (i; 0 .. n) {
 		x0 += cloud_pos[i].x; y0 += cloud_pos[i].y; z0 += cloud_pos[i].z;
 	    }
 	    x0 /= n; y0 /= n; z0 /= n; // midpoint
-	} else { // else use interface point (assumed to be in cloud position 0)
-	    loop_init = 1;
+	} else { // else use the primary point (assumed to be in cloud position 0)
 	    x0 = cloud_pos[0].x; y0 = cloud_pos[0].y; z0 = cloud_pos[0].z;
 	}
-	assert(ws, "We are missing the workspace!");
-	ws.n = n;
-	ws.loop_init = loop_init;
 	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;
 	if (ws.dx.length < n) { ws.dx.length = n; }
 	if (ws.dy.length < n) { ws.dy.length = n; }
@@ -301,24 +292,46 @@ public:
 	//
 	// Assemble and invert the normal matrix.
 	// We'll reuse the resulting inverse for each flow-field quantity.
-	double xx = 0.0; double xy = 0.0; double xz = 0.0;
-	double yy = 0.0; double yz = 0.0; double zz = 0.0;
-	foreach (i; loop_init .. n) {
-	    double dx = cloud_pos[i].x - x0;
-	    double dy = cloud_pos[i].y - y0;
-	    double dz = cloud_pos[i].z - z0;
-	    xx += ws.weights2[i]*dx*dx; xy += ws.weights2[i]*dx*dy; xz += ws.weights2[i]*dx*dz;
-	    yy += ws.weights2[i]*dy*dy; yz += ws.weights2[i]*dy*dz; zz += ws.weights2[i]*dz*dz;
-	    ws.dx[i] = dx; ws.dy[i] = dy; ws.dz[i] = dz;
+	if (myConfig.dimensions == 3) {
+	    double xx = 0.0; double xy = 0.0; double xz = 0.0;
+	    double yy = 0.0; double yz = 0.0; double zz = 0.0;
+	    foreach (i; loop_init .. n) {
+		double dx = cloud_pos[i].x - x0;
+		double dy = cloud_pos[i].y - y0;
+		double dz = cloud_pos[i].z - z0;
+		xx += ws.weights2[i]*dx*dx;
+		xy += ws.weights2[i]*dx*dy;
+		xz += ws.weights2[i]*dx*dz;
+		yy += ws.weights2[i]*dy*dy;
+		yz += ws.weights2[i]*dy*dz;
+		zz += ws.weights2[i]*dz*dz;
+		ws.dx[i] = dx; ws.dy[i] = dy; ws.dz[i] = dz;
+	    }
+	    ws.xTx[0][0] = xx; ws.xTx[0][1] = xy; ws.xTx[0][2] = xz;
+	    ws.xTx[1][0] = xy; ws.xTx[1][1] = yy; ws.xTx[1][2] = yz;
+	    ws.xTx[2][0] = xz; ws.xTx[2][1] = yz; ws.xTx[2][2] = zz;
+	    ws.xTx[0][3] = 1.0; ws.xTx[0][4] = 0.0; ws.xTx[0][5] = 0.0;
+	    ws.xTx[1][3] = 0.0; ws.xTx[1][4] = 1.0; ws.xTx[1][5] = 0.0;
+	    ws.xTx[2][3] = 0.0; ws.xTx[2][4] = 0.0; ws.xTx[2][5] = 1.0;
+	    computeInverse!(3,3)(ws.xTx);
+	} else {
+	    // dimensions == 2
+	    double xx = 0.0; double xy = 0.0; double yy = 0.0;
+	    foreach (i; loop_init .. n) {
+		double dx = cloud_pos[i].x - x0;
+		double dy = cloud_pos[i].y - y0;
+		xx += ws.weights2[i]*dx*dx;
+		xy += ws.weights2[i]*dx*dy;
+		yy += ws.weights2[i]*dy*dy;
+		ws.dx[i] = dx; ws.dy[i] = dy; ws.dz[i] = 0.0;
+	    }
+	    ws.xTx[0][0] = xx; ws.xTx[0][1] = xy;
+	    ws.xTx[1][0] = xy; ws.xTx[1][1] = yy;
+	    ws.xTx[0][2] = 1.0; ws.xTx[0][3] = 0.0;
+	    ws.xTx[1][2] = 0.0; ws.xTx[1][3] = 1.0;
+	    computeInverse!(2,3)(ws.xTx);
 	}
-	ws.xTx[0][0] = xx; ws.xTx[0][1] = xy; ws.xTx[0][2] = xz;
-	ws.xTx[1][0] = xy; ws.xTx[1][1] = yy; ws.xTx[1][2] = yz;
-	ws.xTx[2][0] = xz; ws.xTx[2][1] = yz; ws.xTx[2][2] = zz;
-	ws.xTx[0][3] = 1.0; ws.xTx[0][4] = 0.0; ws.xTx[0][5] = 0.0;
-	ws.xTx[1][3] = 0.0; ws.xTx[1][4] = 1.0; ws.xTx[1][5] = 0.0;
-	ws.xTx[2][3] = 0.0; ws.xTx[2][4] = 0.0; ws.xTx[2][5] = 1.0;
-	computeInverse!(3,3)(ws.xTx);
-    } // end set_up_workspace_for_gradients_xyz_leastsq()
+    } // end set_up_workspace_leastsq()
 
     void gradients_xyz_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos,
 			       ref WLSQGradWorkspace ws)
@@ -371,45 +384,6 @@ public:
 	mixin(codeForGradients("tke", "tke"));
 	mixin(codeForGradients("omega", "omega"));
     } // end gradients_xyz_leastsq()
-
-    void set_up_workspace_for_gradients_xy_leastsq(ref Vector3*[] cloud_pos,
-						   ref WLSQGradWorkspace ws)
-    {
-	size_t loop_init = 0; // starting index for loops: 0=compute_about_mid, 1=compute_about_[0]
-	size_t n = cloud_pos.length;
-	// If computing about mid-point, calculate mid-point.
-	double x0 = 0.0; double y0 = 0.0; double z0 = 0.0;
-	if (ws.compute_about_mid) {
-	    loop_init = 0;
-	    foreach (i; loop_init .. n) {
-		x0 += cloud_pos[i].x; y0 += cloud_pos[i].y;
-	    }
-	    x0 /= n; y0 /= n; // midpoint
-	} else { // else use interface point (assumed to be in cloud position 0)
-	    loop_init = 1;
-	    x0 = cloud_pos[0].x; y0 = cloud_pos[0].y;
-	}
-	assert(ws, "We are missing the workspace!");
-	ws.n = n;
-	ws.loop_init = loop_init;
-	ws.x0 = x0; ws.y0 = y0; ws.z0 = z0;
-	if (ws.dx.length < n) { ws.dx.length = n; }
-	if (ws.dy.length < n) { ws.dy.length = n; }
-	if (ws.dz.length < n) { ws.dz.length = n; }
-	//
-	// Assemble and invert the normal matrix.
-	// We'll reuse the resulting inverse for each flow-field quantity.
-	double xx = 0.0; double xy = 0.0; double yy = 0.0;
-	foreach (i; loop_init .. n) {
-	    double dx = cloud_pos[i].x - x0;
-	    double dy = cloud_pos[i].y - y0;
-	    xx += ws.weights2[i]*dx*dx; xy += ws.weights2[i]*dx*dy; yy += ws.weights2[i]*dy*dy;
-	    ws.dx[i] = dx; ws.dy[i] = dy; ws.dz[i] = 0.0;
-	}
-	ws.xTx[0][0] = xx; ws.xTx[0][1] = xy; ws.xTx[0][2] = 1.0; ws.xTx[0][3] = 0.0;
-	ws.xTx[1][0] = xy; ws.xTx[1][1] = yy; ws.xTx[1][2] = 0.0; ws.xTx[1][3] = 1.0;
-	computeInverse!(2,3)(ws.xTx);
-    } // end set_up_workspace_for_gradients_xy_leastsq()
 
     void gradients_xy_leastsq(ref FlowState[] cloud_fs, ref Vector3*[] cloud_pos,
 			      ref WLSQGradWorkspace ws)

@@ -488,10 +488,9 @@ public:
 	    calc_volumes_2D(gtl);
 	    calc_faces_2D(gtl);
 	    calc_ghost_cell_geom_2D(gtl);
-	    if (myConfig.viscous && 
-		myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+	    if (myConfig.viscous && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
 		// Needed for flow gradient calculations that feed into the viscous fluxes.
-		compute_leastsq_geometric_weights(gtl);
+		compute_leastsq_weights(gtl);
 	    }
 	    return;
 	}
@@ -687,10 +686,9 @@ public:
 		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
 	    }
 	}
-	if (myConfig.viscous && 
-	    myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
+	if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
 	    // Needed for flow gradient calculations that feed into the viscous fluxes.
-	    compute_leastsq_geometric_weights(gtl);
+	    compute_leastsq_weights(gtl);
 	}
     } // end compute_primary_cell_geometric_data()
 
