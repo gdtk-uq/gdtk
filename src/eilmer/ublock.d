@@ -831,6 +831,7 @@ public:
 	    foreach (c; cells) {
 		c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
 		c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
+		//c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
 	    }
 	}
 	foreach (f; faces) {
