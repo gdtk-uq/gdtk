@@ -491,85 +491,6 @@ public:
 	a *= s;
 	b *= s;
     }
-
-    void venkatakrishan_limit(ref double[3] grad, FVCell cell, double U, double Umin, double Umax,
-			      double dx, double dy, double dz)
-    // A smooth slope limiter developed for unstructured grids (improvement on Barth limiter).
-    // Reported to have 2nd order accuracy at the cost of exhibiting non-montonicity near shocks
-    // -- small oscillations in regions of large gradients can occur.
-    {
-	immutable double w = 1.0e-12;
-	immutable double K = 100.0;
-	double a, b, numer, denom, s;
-	double[] phi;
-	double h;
-	if (myConfig.dimensions == 3) h =  cbrt(dx*dy*dz);
-	else h = sqrt(dx*dy);
-	double eps = (K*h) * (K*h) * (K*h);
-	if (cell.iface.length == 0) s = 1.0; // if ghost cell => do not limit
-	else {
-	    foreach (i, f; cell.iface) { // loop over gauss points
-		Vector3 dr = f.pos; dr -= cell.pos[0];
-		dr.transform_to_local_frame(f.n, f.t1, f.t2);
-		double dxFace = dr.x; double dyFace = dr.y; double dzFace = dr.z;
-		b = grad[0] * dxFace + grad[1] * dyFace;
-		if (myConfig.dimensions == 3) b += grad[2] * dzFace;
-		b = sgn(b) * (fabs(b) + w);
-		if (b > 0.0) a = Umax - U;
-		else if (b < 0.0) a = Umin - U;
-		numer = (a*a + eps)*b + 2.0*b*b*a;
-		denom = a*a + 2.0*b*b + a*b + eps;
-		s = (1.0/b) * (numer/denom);
-		if (b == 0.0) s = 1.0;
-		phi ~= s;
-	    }
-	    s = phi[0];
-	    foreach (i; 1..phi.length) { // take the mininum limiting factor 
-		if (phi[i] < s) s = phi[i];
-	    }
-	}
-	grad[0] *= s;
-	grad[1] *= s;
-	if (myConfig.dimensions == 3) grad[2] *= s;
-    }
-
-    void barth_limit(ref double[3] grad, FVCell cell, double U, double Umin, double Umax,
-		     double dx, double dy, double dz)
-    // A non-differentiable slope limiter developed for unstructured grids.
-    // This limiter exhibits monotonicity, although it has poor convergence order.
-    {
-	double a, b, numer, denom, s;
-	double[] phi;
-	immutable double w = 1.0e-12;
-	if (cell.iface.length == 0) s = 1.0; // if ghost cell => do not limit
-	else {
-	    foreach (i, f; cell.iface) { // loop over gauss points
-		Vector3 dr = f.pos; dr -= cell.pos[0];
-		dr.transform_to_local_frame(f.n, f.t1, f.t2);
-		double dxFace = dr.x; double dyFace = dr.y; double dzFace = dr.z;
-		b = grad[0] * dxFace + grad[1] * dyFace;
-		if (myConfig.dimensions == 3) b += grad[2] * dzFace;
-		if (b > 0.0) {
-		    a = Umax - U;
-		    phi ~= min(1.0, a/b);
-		}
-		else if (b < 0.0) {
-		    a = Umin - U;
-		    phi ~= min(1.0, a/b);
-		}
-		else {
-		    phi ~= 1.0;
-		}
-	    }
-	    s = phi[0];
-	    foreach (i; 1..phi.length) { // take the mininum limiting factor
-		if (phi[i] < s) s = phi[i];
-	    }
-	}
-	grad[0] *= s;
-	grad[1] *= s;
-	if (myConfig.dimensions == 3) grad[2] *= s;
-    }
     
     void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght)
     {
@@ -625,23 +546,32 @@ public:
                     mygradR[2] = cL0.gradients."~gname~"[2];
                 }
                 if (myConfig.apply_limiter) {
-                    // venkatakrishan_limit(wsL.gradients."~gname~", cL0, qL0, qMinL, qMaxL, cL0.iLength, cL0.jLength, cL0.kLength);
-                    // venkatakrishan_limit(wsR.gradients."~gname~", cR0, qR0, qMinR, qMaxR, cR0.iLength, cR0.jLength, cR0.kLength);
-                    //van_albada_limit(mygradL[0], mygradR[0]);
-                    //van_albada_limit(mygradL[1], mygradR[1]);
-                    //van_albada_limit(mygradL[2], mygradR[2]);
-                    
-                    if (wsL) {
-                        mygradL[0] *=  cL0.gradients."~lname~"; mygradL[1] *=  cL0.gradients."~lname~"; mygradL[2] *=  cL0.gradients."~lname~";
-                    } else {                    
-                        mygradL[0] *=  cR0.gradients."~lname~"; mygradL[1] *=  cR0.gradients."~lname~"; mygradL[2] *=  cR0.gradients."~lname~";
+                    final switch (myConfig.unstructured_limiter) {
+                    case UnstructuredLimiter.van_albada:
+                        van_albada_limit(mygradL[0], mygradR[0]);
+                        van_albada_limit(mygradL[1], mygradR[1]);
+                        van_albada_limit(mygradL[2], mygradR[2]);
+                        break;
+                    case UnstructuredLimiter.min_mod:
+                        min_mod_limit(mygradL[0], mygradR[0]);
+                        min_mod_limit(mygradL[1], mygradR[1]);
+                        min_mod_limit(mygradL[2], mygradR[2]);
+                        break;
+                    case UnstructuredLimiter.barth:
+                        goto case UnstructuredLimiter.venkat;
+                    case UnstructuredLimiter.venkat:
+                        if (wsL) {
+                            mygradL[0] *=  cL0.gradients."~lname~"; mygradL[1] *=  cL0.gradients."~lname~"; mygradL[2] *=  cL0.gradients."~lname~";
+                        } else {                    
+                            mygradL[0] *=  cR0.gradients."~lname~"; mygradL[1] *=  cR0.gradients."~lname~"; mygradL[2] *=  cR0.gradients."~lname~";
+                        }
+                        if (wsR) {
+                            mygradR[0] *=  cR0.gradients."~lname~"; mygradR[1] *=  cR0.gradients."~lname~"; mygradR[2] *=  cR0.gradients."~lname~";
+                        } else {                
+                            mygradR[0] *=  cL0.gradients."~lname~"; mygradR[1] *=  cL0.gradients."~lname~"; mygradR[2] *=  cL0.gradients."~lname~";
+                        }
+                        break;
                     }
-                    if (wsR) {
-                       mygradR[0] *=  cR0.gradients."~lname~"; mygradR[1] *=  cR0.gradients."~lname~"; mygradR[2] *=  cR0.gradients."~lname~";
-                    } else {                
-                       mygradR[0] *=  cL0.gradients."~lname~"; mygradR[1] *=  cL0.gradients."~lname~"; mygradR[2] *=  cL0.gradients."~lname~";
-                    }
-                   
                 }
                 double qL = qL0 + dL.x*mygradL[0] + dL.y*mygradL[1];
                 double qR = qR0 + dR.x*mygradR[0] + dR.y*mygradR[1];

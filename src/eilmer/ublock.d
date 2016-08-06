@@ -830,8 +830,25 @@ public:
 	if (myConfig.interpolation_order > 1) {
 	    foreach (c; cells) {
 		c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
-		c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
-		//c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
+		// it is more efficient to determine limiting factor here for some usg limiters
+		final switch (myConfig.unstructured_limiter) {
+		    case UnstructuredLimiter.van_albada:
+		        break;
+		    case UnstructuredLimiter.min_mod:
+		        break;
+		    case UnstructuredLimiter.barth:
+		        c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
+		        break;
+		    case UnstructuredLimiter.venkat:
+		        c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
+		        break;
+		}
+		/*
+		if (myConfig.unstructured_limiter.barth)
+		    c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
+		if (myConfig.unstructured_limiter.venkat)
+		    c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
+		*/
 	    }
 	}
 	foreach (f; faces) {

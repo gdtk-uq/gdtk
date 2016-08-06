@@ -138,6 +138,7 @@ void read_config_file()
     mixin(update_bool("apply_limiter", "apply_limiter"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
+    mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_double("M_inf", "M_inf"));
@@ -180,6 +181,7 @@ void read_config_file()
 	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
 	writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
 	writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
+	writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
 	writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
 	writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
 	writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));

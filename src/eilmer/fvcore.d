@@ -199,7 +199,7 @@ FluxCalculator flux_calculator_from_name(string name)
 enum SpatialDerivCalc {
     least_squares,
     divergence,
-    finite_difference,
+    finite_difference
 }
 
 string spatial_deriv_calc_name(SpatialDerivCalc sdc)
@@ -243,6 +243,38 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
     case "vertices": return SpatialDerivLocn.vertices;
     default:
 	string msg = text("Invalid spatial-derivative location name:", name);
+	throw new FlowSolverException(msg);
+    }
+}
+
+// Symbolic names for the flavours of unstructured limiters.
+enum UnstructuredLimiter {
+    van_albada,
+    min_mod,
+    barth,
+    venkat
+}
+
+string unstructured_limiter_name(UnstructuredLimiter ul)
+{
+    final switch ( ul ) {
+    case UnstructuredLimiter.van_albada: return "van_albada";
+    case UnstructuredLimiter.min_mod: return "min_mod";
+    case UnstructuredLimiter.barth: return "barth";
+    case UnstructuredLimiter.venkat: return "venkat";
+    
+    }
+}
+
+UnstructuredLimiter unstructured_limiter_from_name(string name)
+{
+    switch ( name ) {
+    case "van_albada": return UnstructuredLimiter.van_albada;
+    case "min_mod": return UnstructuredLimiter.min_mod;
+    case "barth": return UnstructuredLimiter.barth;
+    case "venkat": return UnstructuredLimiter.venkat;
+    default:
+	string msg = text("Invalid unstructured limiter name:", name);
 	throw new FlowSolverException(msg);
     }
 }

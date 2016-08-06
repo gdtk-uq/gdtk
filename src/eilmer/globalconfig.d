@@ -155,6 +155,8 @@ final class GlobalConfig {
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
+    // The unstructured solver has a selection of limiters available
+    shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.van_albada;
 
     // Default flux calculator is the adaptive mix of ausmdv and efm.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive;
@@ -348,6 +350,7 @@ public:
     bool apply_limiter;
     bool extrema_clipping;
     bool interpolate_in_local_frame;
+    UnstructuredLimiter unstructured_limiter;
     FluxCalculator flux_calculator;
     double shear_tolerance;
     double M_inf;
@@ -421,6 +424,7 @@ public:
 	apply_limiter = GlobalConfig.apply_limiter;
 	extrema_clipping = GlobalConfig.extrema_clipping;
 	interpolate_in_local_frame = GlobalConfig.interpolate_in_local_frame;
+	unstructured_limiter = GlobalConfig.unstructured_limiter;
 	flux_calculator = GlobalConfig.flux_calculator;
 	shear_tolerance = GlobalConfig.shear_tolerance;
 	M_inf = GlobalConfig.M_inf;

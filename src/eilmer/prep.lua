@@ -870,7 +870,8 @@ function write_config_file(fileName)
 			 tostring(config.interpolate_in_local_frame)))
    f:write(string.format('"apply_limiter": %s,\n', tostring(config.apply_limiter)))
    f:write(string.format('"extrema_clipping": %s,\n', tostring(config.extrema_clipping)))
-
+   f:write(string.format('"unstructured_limiter": "%s",\n', config.unstructured_limiter))
+   
    f:write(string.format('"flux_calculator": "%s",\n', config.flux_calculator))
    f:write(string.format('"compression_tolerance": %.18e,\n', config.compression_tolerance))
    f:write(string.format('"shear_tolerance": %.18e,\n', config.shear_tolerance))
