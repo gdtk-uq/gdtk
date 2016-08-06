@@ -199,10 +199,13 @@ public:
             phi = 1.0;
             if (abs("~gname~"[0]) > 0.0 || abs("~gname~"[1]) > 0.0 || abs("~gname~"[2]) > 0.0) {
             foreach (i, f; cell_cloud[0].iface) {
-                Vector3 dr = f.pos; dr -= cell_cloud[0].pos[0];
-		dr.transform_to_local_frame(f.n, f.t1, f.t2);
-		double dxFace = dr.x; double dyFace = dr.y; double dzFace = dr.z;                    
-		b = "~gname~"[0] * dxFace + "~gname~"[1] * dyFace;
+                double dx = f.pos.x - cell_cloud[0].pos[0].x; 
+                double dy = f.pos.y - cell_cloud[0].pos[0].y; 
+                double dz = f.pos.z - cell_cloud[0].pos[0].z;
+                double dxFace = dx*f.n.x + dy*f.n.y + dz*f.n.z;
+                double dyFace = dx*f.t1.x + dy*f.t1.y + dz*f.t1.z;
+                double dzFace = dx*f.t2.x + dy*f.t2.y + dz*f.t2.z;
+                b = "~gname~"[0] * dxFace + "~gname~"[1] * dyFace;
 		if (myConfig.dimensions == 3) b += "~gname~"[2] * dzFace;
 		if (b > 0.0) {
 		    a = "~qMaxname~" - U;
@@ -530,10 +533,10 @@ public:
                 if (myConfig.apply_limiter) {
                     // venkatakrishan_limit(wsL.gradients."~gname~", cL0, qL0, qMinL, qMaxL, cL0.iLength, cL0.jLength, cL0.kLength);
                     // venkatakrishan_limit(wsR.gradients."~gname~", cR0, qR0, qMinR, qMaxR, cR0.iLength, cR0.jLength, cR0.kLength);
-                    van_albada_limit(mygradL[0], mygradR[0]);
-                    van_albada_limit(mygradL[1], mygradR[1]);
-                    van_albada_limit(mygradL[2], mygradR[2]);
-                    /*
+                    //van_albada_limit(mygradL[0], mygradR[0]);
+                    //van_albada_limit(mygradL[1], mygradR[1]);
+                    //van_albada_limit(mygradL[2], mygradR[2]);
+                    
                     if (wsL) {
                         mygradL[0] *=  cL0.gradients."~lname~"; mygradL[1] *=  cL0.gradients."~lname~"; mygradL[2] *=  cL0.gradients."~lname~";
                     } else {                    
@@ -544,7 +547,7 @@ public:
                     } else {                
                        mygradR[0] *=  cL0.gradients."~lname~"; mygradR[1] *=  cL0.gradients."~lname~"; mygradR[2] *=  cL0.gradients."~lname~";
                     }
-                   */
+                   
                 }
                 double qL = qL0 + dL.x*mygradL[0] + dL.y*mygradL[1];
                 double qR = qR0 + dR.x*mygradR[0] + dR.y*mygradR[1];
