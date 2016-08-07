@@ -77,7 +77,13 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
     foreach (myblk; parallel(gasBlocks,1)) {
 	writeln("myblk=", myblk);
-	myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0)); // tindx==0
+	if ( GlobalConfig.grid_motion != GridMotion.none ) {
+	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, tindx)); 
+	}
+	else {
+	    // Assume there is only a single, static grid stored at tindx=0
+	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0)); 
+	}
 	myblk.compute_primary_cell_geometric_data(0);
 	myblk.compute_distance_to_nearest_wall_for_all_cells(0);
 	myblk.identify_reaction_zones(0);
