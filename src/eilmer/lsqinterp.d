@@ -15,12 +15,13 @@ import flowstate;
 import fvinterface;
 import fvcell;
 
+immutable size_t cloud_nmax = 12;
 
 class LSQInterpWorkspace {
 public:
     // A place to hold the intermediate results for computing
     // the least-squares model as a weighted sum of the flow data.
-    double[] wx, wy, wz; 
+    double[cloud_nmax] wx, wy, wz; 
 
     this()
     {
@@ -29,19 +30,22 @@ public:
 
     this(const LSQInterpWorkspace other)
     {
-	wx = other.wx.dup(); wy = other.wy.dup(); wz = other.wz.dup();
+	wx[] = other.wx[]; wy[] = other.wy[]; wz[] = other.wz[];
     }
     
     void assemble_and_invert_normal_matrix(FVCell[] cell_cloud, int dimensions, size_t gtl)
     {
 	auto np = cell_cloud.length;
-	double[] dx, dy, dz;
-	dx.length = np; wx.length = np;
-	dy.length = np; wy.length = np;
-	if (dimensions == 3) { dz.length = np; wz.length = np; }
+	assert(np <= cloud_nmax, "Too many points in cloud.");
+	double[cloud_nmax] dx, dy, dz;
 	foreach (i; 1 .. np) {
-	    Vector3 dr = cell_cloud[i].pos[gtl]; dr -= cell_cloud[0].pos[gtl];
-	    dx[i] = dr.x; dy[i] = dr.y; if (dimensions == 3) { dz[i] = dr.z; }
+	    dx[i] = cell_cloud[i].pos[gtl].x - cell_cloud[0].pos[gtl].x;
+	    dy[i] = cell_cloud[i].pos[gtl].y - cell_cloud[0].pos[gtl].y;
+	    if (dimensions == 3) {
+		dz[i] = cell_cloud[i].pos[gtl].z - cell_cloud[0].pos[gtl].z;
+	    } else {
+		dz[i] = 0.0;
+	    }
 	}	    
 	// Prepare the normal matrix for the cloud and invert it.
 	if (dimensions == 3) {
