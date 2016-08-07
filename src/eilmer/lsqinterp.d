@@ -513,8 +513,13 @@ public:
 	    //
 	    LSQInterpWorkspace wsL = cL0.ws;
 	    LSQInterpWorkspace wsR = cR0.ws;
-	    Vector3 dL = IFace.pos; dL -= cL0.pos[gtl]; // vector from left-cell-centre to face midpoint
-	    Vector3 dR = IFace.pos; dR -= cR0.pos[gtl];
+	    // vector from left-cell-centre to face midpoint
+	    double dLx = IFace.pos.x - cL0.pos[gtl].x;
+	    double dLy = IFace.pos.y - cL0.pos[gtl].y;
+	    double dLz = IFace.pos.z - cL0.pos[gtl].z;
+	    double dRx = IFace.pos.x - cR0.pos[gtl].x;
+	    double dRy = IFace.pos.y - cR0.pos[gtl].y;
+	    double dRz = IFace.pos.z - cR0.pos[gtl].z;
 	    double[3] mygradL, mygradR;
 	    //
 	    // Always reconstruct in the global frame of reference -- for now
@@ -577,11 +582,11 @@ public:
                         break;
                     }
                 }
-                double qL = qL0 + dL.x*mygradL[0] + dL.y*mygradL[1];
-                double qR = qR0 + dR.x*mygradR[0] + dR.y*mygradR[1];
+                double qL = qL0 + dLx*mygradL[0] + dLy*mygradL[1];
+                double qR = qR0 + dRx*mygradR[0] + dRy*mygradR[1];
                 if (myConfig.dimensions == 3) {
-                    qL += dL.z*mygradL[2];
-                    qR += dR.z*mygradR[2];
+                    qL += dLz*mygradL[2];
+                    qR += dRz*mygradR[2];
                 }
                 if (myConfig.extrema_clipping) {
                     Lft."~tname~" = clip_to_limits(qL, qL0, qR0);
