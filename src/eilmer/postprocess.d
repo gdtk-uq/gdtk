@@ -249,7 +249,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    outFile.writeln("xStreamPos ", "yStreamPos ", "zStreamPos ", soln.flowBlocks[0].variable_names_as_string());
+	    outFile.writeln("xStreamPos ", "yStreamPos ", "zStreamPos ",
+			    soln.flowBlocks[0].variable_names_as_string());
 	    foreach (ip; 0 .. xp.length) {
 	        outFile.writeln("# streamline locus point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
 	        auto identity = soln.find_enclosing_cell(xp[ip], yp[ip], zp[ip]);
@@ -262,7 +263,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		    xInit = soln.flowBlocks[ib]["pos.x", idx];
 		    yInit = soln.flowBlocks[ib]["pos.y", idx];
 		    zInit = soln.flowBlocks[ib]["pos.z", idx];
-		    outFile.writeln(xInit, " ", yInit, " ", zInit, " ", soln.flowBlocks[ib].values_as_string(idx));
+		    outFile.writeln(xInit, " ", yInit, " ", zInit, " ",
+				    soln.flowBlocks[ib].values_as_string(idx));
 		}
 		// we need to travel both forward (direction = 1) and backward (direction = -1)
 		int[] direction = [-1, 1];
@@ -279,11 +281,15 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 			double dz = direct*vz*stepSize;
 			xNew = xOld + dx; yNew = yOld + dy; zNew = zOld + dz;
 			identity = soln.find_enclosing_cell(xNew, yNew, zNew);
-			if (identity[0] == ib && identity[1] == idx) { // did not step outside current cell
+			if (identity[0] == ib && identity[1] == idx) {
+			    // did not step outside current cell
 			    stepSize = stepSize*2.0; found = identity[2];
 			} else {
 			    ib = identity[0]; idx = identity[1]; found = identity[2];
-			    if ( found == 1) outFile.writeln(xNew, " ", yNew, " ", zNew, " ", soln.flowBlocks[ib].values_as_string(idx));
+			    if (found == 1) {
+				outFile.writeln(xNew, " ", yNew, " ", zNew, " ",
+						soln.flowBlocks[ib].values_as_string(idx));
+			    }
 			    xOld = xNew; yOld = yNew; zOld = zNew;
 			    stepSize = 1e-06;
 			} // end else
@@ -311,6 +317,11 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    size_t[2][] cells_found; // accumulate the identies of the cells found here
+	    // I think that it will be convenient to omit repeated cells so that we can
+	    // specify really tiny steps and be sure of sampling all cells and also
+	    // be able to specify multiple lines that get concatenated, again without
+	    // repeated cells in the output stream.
 	    foreach(lineStr; extractLineStr.split(";")) {
 		auto items = lineStr.split(",");
 		double x0 = to!double(items[0]);
@@ -327,15 +338,25 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		    double z = z0*(1.0-frac) + z1*frac;
 		    // outFile.writeln("# point: ", x, ", ", y, ", ", z);
 		    auto identity = soln.find_enclosing_cell(x, y, z);
-		    size_t ib = identity[0]; size_t idx = identity[1]; size_t found = identity[2];
+		    size_t ib = identity[0]; size_t idx = identity[1];
+		    size_t found = identity[2];
 		    if (found == 0) { // out of domain bounds
 			writefln("Point %g,%g,%g not in solution domain bounds", x, y, z);
 			continue;
 		    } else { // store cell data
-			outFile.writeln(soln.flowBlocks[ib].values_as_string(idx));
+			if ((cells_found.length == 0) ||
+			    (cells_found[$-1][0] != ib) ||
+			    (cells_found[$-1][1] != idx)) {
+			    // Add only "new" cells.
+			    cells_found ~= [ib, idx];
+			}
 		    }
 		} // end foreach ip
 	    } // end foreach lineStr
+	    foreach(i; 0 .. cells_found.length) {
+		size_t ib = cells_found[i][0]; size_t idx = cells_found[i][1];
+		outFile.writeln(soln.flowBlocks[ib].values_as_string(idx));
+	    }
 	} // end foreach tindx
     } // end if extractLineStr
     //
