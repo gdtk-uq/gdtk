@@ -34,7 +34,8 @@ import solidsolution;
 void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		  string addVarsStr, string luaRefSoln,
 		  bool vtkxmlFlag, bool binary_format, bool tecplotFlag,
-		  string outputFileName, string sliceListStr, string extractStreamStr,
+		  string outputFileName, string sliceListStr,
+		  string extractStreamStr, string extractLineStr,
 		  string probeStr, string normsStr, string regionStr)
 {
     read_config_file();
@@ -291,6 +292,52 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    } // end for each xp.length
 	} // end foreach tindx
     } // end if streamlineStr
+    //
+    if (extractLineStr.length > 0) {
+	writeln("Extracting data along a straight line between end points.");
+	// The output may go to a user-specified file, or stdout.
+	File outFile;
+	if (outputFileName.length > 0) {
+	    outFile = File(outputFileName, "w");
+	    writeln("Output will be sent to File: ", outputFileName);
+	} else {
+	    outFile = stdout;
+	}
+	extractLineStr = extractLineStr.strip();
+	extractLineStr = removechars(extractLineStr, "\"");
+	foreach (tindx; tindx_list_to_plot) {
+	    writeln("  tindx= ", tindx);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    soln.add_aux_variables(addVarsList);
+	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    foreach(lineStr; extractLineStr.split(";")) {
+		auto items = lineStr.split(",");
+		double x0 = to!double(items[0]);
+		double y0 = to!double(items[1]);
+		double z0 = to!double(items[2]);
+		double x1 = to!double(items[3]);
+		double y1 = to!double(items[4]);
+		double z1 = to!double(items[5]);
+		size_t n = to!size_t(items[6]);
+		foreach (ip; 0 .. n) {
+		    double frac = double(ip) / double(n-1);
+		    double x = x0*(1.0-frac) + x1*frac;
+		    double y = y0*(1.0-frac) + y1*frac;
+		    double z = z0*(1.0-frac) + z1*frac;
+		    // outFile.writeln("# point: ", x, ", ", y, ", ", z);
+		    auto identity = soln.find_enclosing_cell(x, y, z);
+		    size_t ib = identity[0]; size_t idx = identity[1]; size_t found = identity[2];
+		    if (found == 0) { // out of domain bounds
+			writefln("Point %g,%g,%g not in solution domain bounds", x, y, z);
+			continue;
+		    } else { // store cell data
+			outFile.writeln(soln.flowBlocks[ib].values_as_string(idx));
+		    }
+		} // end foreach ip
+	    } // end foreach lineStr
+	} // end foreach tindx
+    } // end if extractLineStr
     //
     if (normsStr.length > 0) {
 	writeln("Norms for variables.");
