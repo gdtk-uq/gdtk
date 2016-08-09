@@ -20,7 +20,7 @@ config.viscous = true
 config.spatial_deriv_calc = "least_squares"
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
-config.max_time = 10.0e-3
+config.max_time = 2.5e-3
 config.max_step = 300000
 config.cfl_value = 0.4
 config.cfl_count = 3
@@ -71,7 +71,3 @@ blks = SBlockArray{grid=grd, nib=22, njb=2,
 			   east=OutFlowBC_Simple:new{},
 			   south=InFlowBC_Supersonic:new{flowCondition=inflow},
 			   west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
-
-config.block_marching = true
-config.nib = 22
-config.njb = 2
