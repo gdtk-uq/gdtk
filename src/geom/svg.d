@@ -226,17 +226,17 @@ public:
     }
     
     void text(double x, double y, string textString,
-	      double angle=0.0, int fontSize=10,
-	      string anchor="start", string colour="black",
-	      string fontFamily="sanserif")
+	      double angle=0.0, string anchor="start",
+	      int fontSize=10, string colour="black", string fontFamily="sanserif")
     // Render the textString at point (x,y).
     // x: x-coordinate of anchor in user-space
     // y: y-coordinate of anchor in user-space
     // textString: string of characters to render
     // angle: angle (in degrees) of text line wrt x-axis (counterclockwise is positive)
-    // fontSize: size of font in points
     // anchor: one of "start", "middle" or "end"
-    // colour: of the text
+    // fontSize: size of font in points
+    // colour: of rendered text
+    // fontFamily: a font name known in SVG
     {
         double xp = toPointsX(x); double yp = toPointsY(y);
         f.writef("<text x=\"%.2f\" y=\"%.2f\"", xp, yp);
@@ -255,16 +255,16 @@ public:
 
     void dotlabel(double x, double y, string label="",
 		  string anchor="middle", double dotSize=2.0,
-		  int fontSize=10, string colour="black",
-		  string fontFamily="sanserif")
+		  int fontSize=10, string colour="black", string fontFamily="sanserif")
     // Render a dot with a text label.
     // x: x-coordinate in user-space
     // y: y-coordinate in user-space
     // label: label text
     // anchor: anchor location on label
     // dotSize: dot diameter in mm
-    // textSize: font size in points
+    // fontSize: font size in points
     // colour: of both the label and the dot
+    // fontFamily: a font name known in SVG
     {
         double xp = toPointsX(x); double yp = toPointsY(y);
         double rp = dotSize/2.0 * 72.0/25.4;

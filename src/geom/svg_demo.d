@@ -25,7 +25,7 @@ void main()
     s.circle(25.0, 85.0, 12.3);
     s.setLineWidth(0.25);
     s.polyline([0.0, 10.0, 20.0, 30.0], [50.0, 60.0, 50.0, 60.0], true);
-    s.text(25.0, 85.0, "Circle", -30.0, 10, "middle");
+    s.text(25.0, 85.0, "Circle", -30.0, "middle", 10);
     s.arc(90.0, 0.0, 60.0, 30.0, 60.0, 0.0);
     s.setLineWidth(0.75);
     s.arc(30.0, 0.0, 60.0, 30.0, 60.0, 0.0, true);
