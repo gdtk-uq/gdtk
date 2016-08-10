@@ -107,7 +107,7 @@ public:
     }
     final void massf2conc(in GasState Q, double[] conc) 
     in {
-	assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lenghts."));
+	assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
 	foreach ( i; 0.._n_species ) {
@@ -117,7 +117,7 @@ public:
     }
     final void conc2massf(in double[] conc, GasState Q) 
     in {
-	assert(Q.massf.length == conc.length, brokenPreCondition("Inconsisten array lenghts."));
+	assert(Q.massf.length == conc.length, brokenPreCondition("Inconsisten array lengths."));
     }
     body {
 	foreach ( i; 0.._n_species ) {
