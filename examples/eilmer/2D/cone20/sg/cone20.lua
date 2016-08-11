@@ -65,3 +65,15 @@ config.dt_history = 10.0e-5
 setHistoryPoint{x=b.x, y=b.y}
 -- add history point at base of cone
 setHistoryPoint{ib=1, i=nx1, j=0}
+
+-- Make a sketch of the flow domain
+s = Sketch:new{renderer="svg", projection="xyortho"}
+s:set{canvas={0.0,0.0,120.0,120.0}, viewport={-0.1,-0.1,1.1,1.1}}
+s:start{file_name="cone20.svg"}
+s:set{line_width=0.1, fill_colour="green"} -- for flow domain
+s:render{surf=quad0}; s:render{surf=quad1}
+s:set{line_width=0.5}; s:render{path=bc} -- thick line for cone surface
+s:dotlabel{point=a, label="a"}; s:dotlabel{point=b, label="b"}
+s:dotlabel{point=c, label="c"}; s:dotlabel{point=d, label="d"}
+s:dotlabel{point=e, label="e"}; s:dotlabel{point=f, label="f"}
+s:finish{}

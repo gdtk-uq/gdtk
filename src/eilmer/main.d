@@ -35,6 +35,7 @@ import luavolume;
 import luaunifunction;
 import luasgrid;
 import luausgrid;
+import luasketch;
 import luasolidprops;
 import postprocess;
 import luaflowsolution;
@@ -171,6 +172,7 @@ void main(string[] args)
 	registerUnivariateFunctions(L);
 	registerStructuredGrid(L);
 	registerUnstructuredGrid(L);
+	registerSketch(L);
 	registerSolidProps(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
@@ -287,6 +289,7 @@ void main(string[] args)
 	registerUnivariateFunctions(L);
 	registerStructuredGrid(L);
 	registerUnstructuredGrid(L);
+	registerSketch(L);
 	registerSolidProps(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	registerReactionMechanism(L, LUA_GLOBALSINDEX);
