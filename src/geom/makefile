@@ -8,7 +8,7 @@ DEMO_PROGRAMS := geom_demo gpath_demo surface_demo volume_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
 	luaunifunction_demo \
 	sgrid_demo luasgrid_demo usgrid_demo luausgrid_demo \
-	paver_demo svg_demo sketch_demo
+	paver_demo svg_demo sketch_demo luasketch_demo
 
 include geom_files.mk
 
@@ -113,6 +113,10 @@ luagpath_demo: luagpath_demo.d luagpath.d luageom.d geom.d gpath.d \
 
 luasurface_demo: luasurface_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	dmd $(DFLAGS_LUA) luasurface_demo.d $(OF)luasurface_demo \
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+
+luasketch_demo: luasketch_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+	dmd $(DFLAGS_LUA) luasketch_demo.d $(OF)luasketch_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 luavolume_demo: luavolume_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)

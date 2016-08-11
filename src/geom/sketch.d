@@ -80,7 +80,16 @@ public:
 	viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
     }
 
-    void begin(string file_name="sketch.svg")
+    override string toString()
+    {
+	string str = "Sketch(";
+	str ~= "renderer=\""~renderer_name~"\"";
+	str ~= ", projection=\""~projection_name~"\"";
+	str ~= ")";
+	return str;
+    }
+
+    void start(string file_name="sketch.svg")
     {
 	switch(renderer_name) {
 	case "svg":
@@ -92,7 +101,7 @@ public:
 	}
     }
 
-    void end()
+    void finish()
     {
 	switch(renderer_name) {
 	case "svg":

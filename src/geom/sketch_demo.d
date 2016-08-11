@@ -23,7 +23,7 @@ void main()
     auto b = Vector3(1.0, 1.0);
     auto c = Vector3(1.0, 0.0);
     auto abc = new Arc(a, b, c);
-    s.begin("test.svg");
+    s.start("test.svg");
     s.line(Vector3(-1.0,1.0,0.0), Vector3(1.0,-1.0,0.0));
     s.render(abc);
     s.setFillColour("green");
@@ -35,9 +35,9 @@ void main()
     s.dotlabel(p00, "p00"); s.dotlabel(p10, "p10");
     s.dotlabel(p11, "p11"); s.dotlabel(p01, "p01");
     s.render(my_patch);
-    s.end();
+    s.finish();
     //
-    s.begin("test2.svg");
+    s.start("test2.svg");
     s.viewport.set(0.0,0.0,120.0,120.0);
     s.line(Vector3(0.0,0.0), Vector3(90.0,120.0));
     s.setLineWidth(0.5);
@@ -57,7 +57,7 @@ void main()
     s.setLineWidth(0.1);
     s.polygon([Vector3(60,10), Vector3(95,10), Vector3(95,50), Vector3(60,50)],
 	      true, true, true);
-    s.end();
+    s.finish();
     writeln("Done.");
 }
 

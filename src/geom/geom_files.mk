@@ -16,4 +16,5 @@ GEOM_FILES := $(GEOM_DIR)/geom.d \
 	$(GEOM_DIR)/luausgrid.d \
 	$(GEOM_DIR)/paver.d \
 	$(GEOM_DIR)/svg.d \
-	$(GEOM_DIR)/sketch.d
+	$(GEOM_DIR)/sketch.d \
+	$(GEOM_DIR)/luasketch.d
