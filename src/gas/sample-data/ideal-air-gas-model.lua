@@ -14,9 +14,12 @@ IdealGas = {
      T_ref = 273.0,
      S = 111.0, 
   },
-  sutherlandThermCond = {
-     T_ref = 273.0, 
-     k_ref = 0.0241, 
-     S = 194.0
+  thermCondModel = {
+     model = 'sutherland',
+     sutherlandThermCond = {
+	T_ref = 273.0, 
+	k_ref = 0.0241, 
+	S = 194.0
+     }
   }
 }

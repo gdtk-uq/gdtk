@@ -54,10 +54,20 @@ public:
 	_T_mu = getDouble(L, -1, "T_ref");
 	_S_mu = getDouble(L, -1, "S");
 	lua_pop(L, 1);
-	lua_getfield(L, -1, "sutherlandThermCond");
-	_k_ref = getDouble(L, -1, "k_ref");
-	_T_k = getDouble(L, -1, "T_ref");
-	_S_k = getDouble(L, -1, "S");
+	lua_getfield(L, -1, "thermCondModel");
+	auto tcModel = getString(L, -1, "model");
+	if ( tcModel == "constPrandtl" ) {
+	    _Prandtl = getDouble(L, -1, "Prandtl");
+	    _constPrandtl = true;
+	}
+	else {
+	    lua_getfield(L, -1, "sutherlandThermCond");
+	    _k_ref = getDouble(L, -1, "k_ref");
+	    _T_k = getDouble(L, -1, "T_ref");
+	    _S_k = getDouble(L, -1, "S");
+	    _constPrandtl = false;
+	    lua_pop(L, 1);
+	}
 	lua_pop(L, 1);
 	// Compute derived parameters
 	_Rgas = R_universal/_mol_masses[0];
@@ -77,6 +87,8 @@ public:
 	repr ~= ", T1=" ~ to!string(_T1);
 	repr ~= ", p1=" ~ to!string(_p1);
 	repr ~= ", mu_ref=" ~ to!string(_mu_ref);
+	repr ~= ", constPrandtl=" ~ to!string(_constPrandtl);
+	repr ~= ", Prandtl=" ~ to!string(_Prandtl);
 	repr ~= ", T_mu=" ~ to!string(_T_mu);
 	repr ~= ", S_mu=" ~ to!string(_S_mu);
 	repr ~= ", k_ref=" ~ to!string(_k_ref);
@@ -130,7 +142,12 @@ public:
     override void update_trans_coeffs(GasState Q) const
     {
 	Q.mu = sutherland_viscosity(Q.T[0], _T_mu, _mu_ref, _S_mu);
-	Q.k[0] = sutherland_thermal_conductivity(Q.T[0], _T_k, _k_ref, _S_k);
+	if ( _constPrandtl ) {
+	    Q.k[0] = _Cp*Q.mu/_Prandtl;
+	}
+	else {
+	    Q.k[0] = sutherland_thermal_conductivity(Q.T[0], _T_k, _k_ref, _S_k);
+	}
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {
@@ -181,6 +198,12 @@ private:
     double _mu_ref = 1.716e-5; // Pa.s
     double _T_mu = 273.0; // degrees K
     double _S_mu = 111.0; // degrees K
+    // We compute thermal conductivity in one of two ways:
+    // 1. based on constant Prandtl number; OR
+    // 2. using a Sutherland expression
+    // therefore we have places for both data
+    bool _constPrandtl = false;
+    double _Prandtl = 1.0;
     double _k_ref = 0.0241; // W/(m.K) 
     double _T_k = 273.0; // degrees K
     double _S_k = 194.0; // degrees K
