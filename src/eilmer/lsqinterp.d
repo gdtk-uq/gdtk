@@ -286,7 +286,7 @@ public:
 	size_t dimensions = myConfig.dimensions;
 	double a, b, U, phi, h, denom, numer, s;
 	immutable double w = 1.0e-12;
-        immutable double K = 100.0;
+        immutable double K = 0.3;
 	if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].iLength * cell_cloud[0].jLength * cell_cloud[0].kLength);  
         else h = sqrt(cell_cloud[0].iLength * cell_cloud[0].jLength);
 	double eps = (K*h) * (K*h) * (K*h);
@@ -313,7 +313,8 @@ public:
                 denom = a*a + 2.0*b*b + a*b + eps;
                 s = (1.0/b) * (numer/denom);                    
                 phi = min(phi, s);
-	    }
+	        if (b == 0.0) phi = 1.0;
+            }
             }
             "~limFactorname~" = phi;
             }
