@@ -51,8 +51,12 @@ clean:
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
 
-sketch_demo: sketch_demo.d sketch.d svg.d geom.d
-	dmd $(DFLAGS) sketch_demo.d $(OF)sketch_demo sketch.d svg.d geom.d $(DLINKFLAGS)
+sketch_demo: sketch_demo.d sketch.d svg.d geom.d gpath.d surface.d volume.d \
+	grid.d sgrid.d univariatefunctions.d $(NM_FILES)
+	dmd $(DFLAGS) sketch_demo.d $(OF)sketch_demo \
+		sketch.d svg.d geom.d gpath.d surface.d volume.d \
+		grid.d sgrid.d univariatefunctions.d \
+		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 svg_demo: svg_demo.d svg.d
 	dmd $(DFLAGS) svg_demo.d $(OF)svg_demo svg.d $(DLINKFLAGS)

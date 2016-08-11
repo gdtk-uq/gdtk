@@ -9,6 +9,8 @@
 
 import std.stdio;
 import geom;
+import gpath;
+import surface;
 import sketch;
 
 void main()
@@ -16,9 +18,23 @@ void main()
     writeln("Begin demonstration of the geometric rendering.");
     auto s = new Sketch("svg", "xyortho");
     s.canvas.set(0.0,0.0,120.0,120.0);
-    s.viewport.set(-1.0,-1.0,1.0,1.0);
+    s.viewport.set(-2.0,-2.0,2.0,2.0);
+    auto a = Vector3(2.0, 0.0);
+    auto b = Vector3(1.0, 1.0);
+    auto c = Vector3(1.0, 0.0);
+    auto abc = new Arc(a, b, c);
     s.begin("test.svg");
     s.line(Vector3(-1.0,1.0,0.0), Vector3(1.0,-1.0,0.0));
+    s.render(abc);
+    s.setFillColour("green");
+    auto p00 = Vector3(0.0, 0.1);
+    auto p10 = Vector3(1.0, 0.1);
+    auto p11 = Vector3(1.0, 1.1);
+    auto p01 = Vector3(0.0, 1.1);
+    auto my_patch = new CoonsPatch(p00, p10, p11, p01);
+    s.dotlabel(p00, "p00"); s.dotlabel(p10, "p10");
+    s.dotlabel(p11, "p11"); s.dotlabel(p01, "p01");
+    s.render(my_patch);
     s.end();
     //
     s.begin("test2.svg");

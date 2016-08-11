@@ -24,6 +24,8 @@ import std.algorithm;
 
 import svg;
 import geom;
+import gpath;
+import surface;
 
 struct Extents{
     double x0, x1, y0, y1;
@@ -302,4 +304,27 @@ public:
 	}
 	return;
     }
+
+    // Render functions for our geometric entities used in the flow simulation.
+    void render(const Path pth, bool dashed=false, size_t n=100)
+    {
+	Vector3[] psample;
+	double dt = 1.0/n;
+	foreach(i; 0 .. n+1) { psample ~= pth(i*dt); }
+	polyline(psample, dashed);
+    }
+
+    void render(const ParametricSurface surf, bool fill=true,
+		bool stroke=true, bool dashed=false, size_t n=100)
+    {
+	Vector3[] psample;
+	double dt = 1.0/n;
+	// Sample boundaries, progressing counter-clockwise.
+	foreach(i; 0 .. n+1) { psample ~= surf(i*dt, 0.0); } // south boundary
+	foreach(i; 1 .. n+1) { psample ~= surf(1.0, i*dt); } // east
+	foreach(i; 1 .. n+1) { psample ~= surf(1.0-i*dt, 1.0); } // north
+	foreach(i; 1 .. n+1) { psample ~= surf(0.0, 1.0-i*dt); } // west
+	polygon(psample, fill, stroke, dashed);
+    }
+    
  } // end class Sketch
