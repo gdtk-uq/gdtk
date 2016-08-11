@@ -39,18 +39,21 @@ abc = Arc:new{p0=a, p1=b, centre=c}
 s:start{file_name="test.svg"}
 s:set{line_width=0.1}
 s:line{p0=Vector3:new{x=-1.0,y=1.0,z=0.0}, p1=Vector3:new{x=1.0,y=-1.0,z=0.0}}
--- s.render(abc)
+s:render{path=abc}
 s:set{fill_colour="green"}
 p00 = Vector3:new{x=0.0, y=0.1}
 p10 = Vector3:new{x=1.0, y=0.1}
 p11 = Vector3:new{x=1.0, y=1.1}
 p01 = Vector3:new{x=0.0, y=1.1}
+s:set{line_width=0.3}
+-- s:polyline{points={p00,p10,p11,p01}}
+-- s:polygon{points={p00,p10,p11,p01}, dashed=true}
 my_patch = CoonsPatch:new{p00=p00, p10=p10, p11=p11, p01=p01}
 s:dotlabel{point=p00, label="p00"}
 s:dotlabel{point=p10, label="p10"}
 s:dotlabel{point=p11, label="p11"}
 s:dotlabel{point=p01, label="p01", anchor="left", dot_size=1.0}
--- s.render(my_patch);
+s:render{surf=my_patch};
 s:finish{}
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
