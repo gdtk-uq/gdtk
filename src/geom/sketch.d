@@ -114,6 +114,42 @@ public:
 	return;
     }
 
+    void setLineColour(string colour)
+    {
+	switch(renderer_name) {
+	case "svg":
+	    svg.setLineColour(colour);
+	    break;
+	default:
+	    throw new Exception("oops, invalid render name " ~ renderer_name);
+	}
+	return;
+    }
+
+    void setFillColour(string colour)
+    {
+	switch(renderer_name) {
+	case "svg":
+	    svg.setFillColour(colour);
+	    break;
+	default:
+	    throw new Exception("oops, invalid render name " ~ renderer_name);
+	}
+	return;
+    }
+
+    void clearFillColour()
+    {
+	switch(renderer_name) {
+	case "svg":
+	    svg.clearFillColour();
+	    break;
+	default:
+	    throw new Exception("oops, invalid render name " ~ renderer_name);
+	}
+	return;
+    }
+
     void setDashArray(double dashLength=2.0, double gapLength=2.0)
     // Sets length of dashes and gaps, in units appropriate to the renderer.
     {
@@ -170,6 +206,22 @@ public:
 	return;
     }
 
+    void polygon(const Vector3[] pa, bool fill=true, bool stroke=true, bool dashed=false)
+    {
+	double[] xlist, ylist;
+	foreach(p; pa) {
+	    xlist ~= toCanvasX(p.x); ylist ~= toCanvasY(p.y);
+	}
+	switch(renderer_name) {
+	case "svg":
+	    svg.polygon(xlist, ylist, fill, stroke, dashed);
+	    break;
+	default:
+	    throw new Exception("oops, invalid render name " ~ renderer_name);
+	}
+	return;
+    }
+
     void arc(const Vector3 p0, const Vector3 p1, const Vector3 pc,
 	     bool dashed=false)
     {
@@ -186,12 +238,13 @@ public:
 	return;
     }
 
-    void circle(const Vector3 pc, double r, bool dashed=false)
+    void circle(const Vector3 pc, double r, bool fill=true,
+		bool stroke=true, bool dashed=false)
     {
 	double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
 	switch(renderer_name) {
 	case "svg":
-	    svg.circle(xc, yc, r, dashed);
+	    svg.circle(xc, yc, r, fill, stroke, dashed);
 	    break;
 	default:
 	    throw new Exception("oops, invalid render name " ~ renderer_name);

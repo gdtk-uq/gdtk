@@ -87,6 +87,24 @@ public:
 	return;
     }
 
+    void setLineColour(string colour)
+    {
+	lineColour = colour;
+	return;
+    }
+
+    void setFillColour(string colour)
+    {
+	fillColour = colour;
+	return;
+    }
+
+    void clearFillColour()
+    {
+	fillColour = "none";
+	return;
+    }
+    
     void setDashArray(double dashLength=2.0, double gapLength=2.0)
     // Sets length of dashes and gaps (in mm).
     {
@@ -95,13 +113,23 @@ public:
 	return;
     }
     
-    string getLineStyle(bool dashed=false)
+    string styleStr(bool fill, bool stroke, bool dashed)
     // Assembles a suitable style specification string.
-    // dashed: flag to indicate that the line is dashed
+    // fill: flag to indicate that the interior should be painted
+    // stroke: flag to indicate that the outline should be drawn
+    // dashed: flag to indicate that the outline is dashed
     // Returns style string.
     {
-        string style = format("stroke:%s;stroke-width:%.2f;stroke-linecap:%s;fill:%s",
-			      lineColour, lineWidth, lineCap, fillColour);
+	string style = "";
+	if (fill) {
+	    style ~= format("fill:%s", fillColour);
+	} else {
+	    style ~= format("fill:%s", "none");
+	}
+	if (stroke) {
+	    style ~= format(";stroke:%s;stroke-width:%.2f;stroke-linecap:%s",
+			    lineColour, lineWidth, lineCap);
+	}
         if (dashed) {
             style ~= format(";stroke-dasharray: %.2f %.2f", dashLength, gapLength);
 	}
@@ -144,6 +172,22 @@ public:
 	return;
     }
 
+    void begin_group(string id="", double opacity=1.0)
+    // id needs to be a unique identifier string, if supplied
+    // opacity is in range 0.0, 1.0
+    {
+	f.write("<g ");
+	if (id.length > 0) { f.writef(" id=\"%s\"", id); }
+	f.writef("opacity=\"%g\" >\n", opacity);
+	return;
+    }
+
+    void end_group()
+    {
+	f.write("</g>\n");
+	return;
+    }
+    
     void line(double x1, double y1, double x2, double y2, bool dashed=false)
     // Render a line from point 1 to point 2.
     {
@@ -151,7 +195,7 @@ public:
         auto x2p = toPointsX(x2); auto y2p = toPointsY(y2);
         f.writef("<line x1=\"%.2f\" y1=\"%.2f\" x2=\"%.2f\" y2=\"%.2f\" ",
                  x1p, y1p, x2p, y2p);
-        f.writef("style=\"%s\" />\n", getLineStyle(dashed));
+        f.writef("style=\"%s\" />\n", styleStr(false, true, dashed));
 	return;
     }
 
@@ -165,8 +209,29 @@ public:
             f.writef(" L %.2f,%.2f", x, y);
 	}
         f.write("\""); // finish the coordinate string
-        f.writef(" style=\"%s\"", getLineStyle(dashed));
+        f.writef(" style=\"%s\"", styleStr(false, true, dashed));
         f.write("/>\n");
+        return;
+    }
+
+    void polygon(double[] xlist, double[] ylist, bool fill=true,
+		 bool stroke=true, bool dashed=false,
+		 string id="", double opacity=0.5)
+    // Render a (closed) polygon from lists of x and y coordinates.
+    // The default opacity is 0.5 so that covered-over objects are
+    // still visible.
+    {
+	begin_group(id, opacity);
+        auto x0 = toPointsX(xlist[0]); auto y0 = toPointsY(ylist[0]);
+        f.writef("<polygon points=\"%.2f,%.2f", x0, y0);
+        foreach (i; 1 .. min(xlist.length, ylist.length)) {
+            auto x = toPointsX(xlist[i]); auto y = toPointsY(ylist[i]);
+            f.writef(" %.2f,%.2f", x, y);
+	}
+        f.write("\""); // finish the coordinate string
+        f.writef(" style=\"%s\"", styleStr(fill, stroke, dashed));
+        f.write("/>\n");
+	end_group();
         return;
     }
 
@@ -194,18 +259,24 @@ public:
         f.writef("<path d=\"M %.2f %.2f A %.2f %.2f, %.2f, %d, %d, %.2f %.2f\" ",
 		 x0p, y0p, rp, rp, x_axis_rotation, large_arc_flag,
 		 sweep_flag, x1p, y1p);
-        f.writef("style=\"%s\"", getLineStyle(dashed));
+        f.writef("style=\"%s\"", styleStr(false, true, dashed));
         f.write("/>\n");
         return;
     }
     
-    void circle(double x, double y, double r, bool dashed=false)
+    void circle(double x, double y, double r, bool fill=true,
+		bool stroke=true, bool dashed=false,
+		string id="", double opacity=0.5)
     // Render a circle of radius r at centre (x,y).
+    // The default opacity is 0.5 so that covered-over objects are
+    // still visible.
     {
+	begin_group(id, opacity);
         double xp = toPointsX(x); double yp = toPointsY(y);
         double rp = r * unitToPoints;
         f.writef("<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%.2f\" ", xp, yp, rp);
-        f.writef("style=\"%s\" />\n", getLineStyle(dashed));
+        f.writef("style=\"%s\" />\n", styleStr(fill, stroke, dashed));
+	end_group();
         return;
     }
 
@@ -221,7 +292,7 @@ public:
         f.writef("<path d=\"M %.2f %.2f ", x0p, y0p);
         f.writef("C %.2f %.2f %.2f %.2f %.2f %.2f\" ",
 		 x1p, y1p, x2p, y2p, x3p, y3p);
-        f.writef("style=\"%s\" />\n", getLineStyle(dashed));
+        f.writef("style=\"%s\" />\n", styleStr(false, true, dashed));
         return;
     }
     
