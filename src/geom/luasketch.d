@@ -414,6 +414,117 @@ extern(C) int polygonSketch(lua_State* L)
     return 0;
 } // end polygonSketch()
 
+extern(C) int textSketch(lua_State* L)
+{
+    auto my_sketch = checkObj!(Sketch, SketchMT)(L, 1); // first argument "this"
+    lua_remove(L, 1); // remove first argument "this"
+    // Now, I'm expecting a table of arguments as the only item on the stack.
+    int narg = lua_gettop(L);
+    if (narg == 0 || !lua_istable(L, 1)) {
+	string errMsg = "Error in call to Sketch:text{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    //
+    lua_getfield(L, 1, "point");
+    if (lua_isnil(L, -1)) {
+	string errMsg = "Error in call to Sketch:text{}. No point entry found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    Vector3* point = checkVector3(L, -1);
+    if (point is null) {
+	string errMsg = "Error in call to Sketch:text{}. " ~
+	    "A Vector3 object is expected as the point argument. No valid Vector3 was found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1); // dispose of point item
+    //
+    string text = "";
+    lua_getfield(L, 1, "text");
+    if (lua_isstring(L, -1)) {
+	text = to!string(lua_tostring(L, -1));
+    } else {
+	string errMsg = "Error in call to Sketch:text{}. Expected a string for text.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1); // dispose of label item
+    //
+    Vector3* direction = new Vector3(1.0,0.0,0.0); // default to x-direction
+    lua_getfield(L, 1, "direction");
+    if (!lua_isnil(L, -1)) {
+	direction = checkVector3(L, -1);
+	if (direction is null) {
+	    string errMsg = "Error in call to Sketch:text{}. " ~
+		"A Vector3 object is expected as the direction argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of direction item
+    //
+    Vector3* normal = new Vector3(0.0,0.0,1.0); // default to z-direction
+    lua_getfield(L, 1, "normal");
+    if (!lua_isnil(L, -1)) {
+	normal = checkVector3(L, -1);
+	if (normal is null) {
+	    string errMsg = "Error in call to Sketch:text{}. " ~
+		"A Vector3 object is expected as the normal argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of normal item
+    //
+    string anchor = "middle";
+    lua_getfield(L, 1, "anchor");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isstring(L, -1)) {
+	    anchor = to!string(lua_tostring(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a string for anchor.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of anchor item
+    //
+    int fontSize = 10;
+    lua_getfield(L, 1, "font_size");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    fontSize = to!int(lua_tointeger(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a number for font_size.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of font_size item
+    //
+    string colour = "black";
+    lua_getfield(L, 1, "colour");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isstring(L, -1)) {
+	    colour = to!string(lua_tostring(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a string for colour.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of colour item
+    //
+    string fontFamily = "sanserif";
+    lua_getfield(L, 1, "font_family");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isstring(L, -1)) {
+	    colour = to!string(lua_tostring(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a string for font_family.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of font_family item
+    //
+    my_sketch.text(*point, text, *direction, *normal, anchor, fontSize, colour, fontFamily);
+    return 0;
+} // end textSketch()
+
 extern(C) int dotlabelSketch(lua_State* L)
 {
     auto my_sketch = checkObj!(Sketch, SketchMT)(L, 1); // first argument "this"
@@ -473,7 +584,43 @@ extern(C) int dotlabelSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of dot_size item
     //
-    my_sketch.dotlabel(*point, label, anchor, dotSize);
+    int fontSize = 10;
+    lua_getfield(L, 1, "font_size");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    fontSize = to!int(lua_tointeger(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a number for font_size.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of font_size item
+    //
+    string colour = "black";
+    lua_getfield(L, 1, "colour");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isstring(L, -1)) {
+	    colour = to!string(lua_tostring(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a string for colour.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of colour item
+    //
+    string fontFamily = "sanserif";
+    lua_getfield(L, 1, "font_family");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isstring(L, -1)) {
+	    colour = to!string(lua_tostring(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a string for font_family.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of font_family item
+    //
+    my_sketch.dotlabel(*point, label, anchor, dotSize, fontSize, colour, fontFamily);
     return 0;
 } // end dotlabelSketch()
 
@@ -579,6 +726,8 @@ void registerSketch(lua_State* L)
     lua_setfield(L, -2, "set");
     lua_pushcfunction(L, &lineSketch);
     lua_setfield(L, -2, "line");
+    lua_pushcfunction(L, &textSketch);
+    lua_setfield(L, -2, "text");
     lua_pushcfunction(L, &dotlabelSketch);
     lua_setfield(L, -2, "dotlabel");
     lua_pushcfunction(L, &polylineSketch);
