@@ -347,6 +347,13 @@ public:
     
     void rule(string direction, double vmin, double vmax, double vtic, Vector3 anchorPoint,
 	      double ticMarkSize, string numberFormat, double textOffset, int fontSize)
+    // direction: one of "x", "y", "z"
+    // vmin, vmax, vtic: range and increments for our rule
+    // anchorPoint: rule will go through this point (if extended, maybe)
+    // ticMarkSize: in world units
+    // numberFormat: print specifier string, "%.1f" for example
+    // textOffset: world units to anchor point for text labels
+    // fontSize: in points
     {
 	Vector3 p0 = Vector3(anchorPoint);
 	Vector3 p1 = Vector3(anchorPoint);

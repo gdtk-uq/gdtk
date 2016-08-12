@@ -624,6 +624,131 @@ extern(C) int dotlabelSketch(lua_State* L)
     return 0;
 } // end dotlabelSketch()
 
+
+extern(C) int ruleSketch(lua_State* L)
+{
+    auto my_sketch = checkObj!(Sketch, SketchMT)(L, 1); // first argument "this"
+    lua_remove(L, 1); // remove first argument "this"
+    // Now, I'm expecting a table of arguments as the only item on the stack.
+    int narg = lua_gettop(L);
+    if (narg == 0 || !lua_istable(L, 1)) {
+	string errMsg = "Error in call to Sketch:rule{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    //
+    string direction = "x";
+    lua_getfield(L, 1, "direction");
+    if (lua_isstring(L, -1)) {
+	direction = to!string(lua_tostring(L, -1));
+    } else {
+	string errMsg = "Error in call to Sketch:rule{}. Expected a string for direction.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1); // dispose of direction item
+    //
+    double vmin = 0.0;
+    lua_getfield(L, 1, "vmin");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    vmin = to!double(lua_tonumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a number for vmin.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of vmin item
+    //
+    double vmax = 1.0;
+    lua_getfield(L, 1, "vmax");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    vmax = to!double(lua_tonumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a number for vmax.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of vmax item
+    //
+    double vtic = 0.2;
+    lua_getfield(L, 1, "vtic");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    vtic = to!double(lua_tonumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a number for vtic.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of vtic item
+    //
+    Vector3* anchorPoint = new Vector3(0.0,0.0,0.0);
+    lua_getfield(L, 1, "anchor_point");
+    if (!lua_isnil(L, -1)) {
+	anchorPoint = checkVector3(L, -1);
+	if (anchorPoint is null) {
+	    string errMsg = "Error in call to Sketch:rule{}. " ~
+		"A Vector3 object is expected as the anchor_point argument. " ~
+		"No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of anchorPoint item
+    //
+    double ticMarkSize = 0.02;
+    lua_getfield(L, 1, "tic_mark_size");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    ticMarkSize = to!double(lua_tonumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a number for tic_mark_size.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of tic_mark_size item
+    //
+    string numberFormat = "%.1f";
+    lua_getfield(L, 1, "number_format");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isstring(L, -1)) {
+	    numberFormat = to!string(lua_tostring(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a string for number_format.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of number_format item
+    //
+    double textOffset = 0.06;
+    lua_getfield(L, 1, "text_offset");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    textOffset = to!double(lua_tonumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a number for text_offset.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of text_offset item
+    //
+    int fontSize = 10;
+    lua_getfield(L, 1, "font_size");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    fontSize = to!int(lua_tointeger(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a number for font_size.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of font_size item
+    //
+    my_sketch.rule(direction, vmin, vmax, vtic, *anchorPoint,
+		   ticMarkSize, numberFormat, textOffset, fontSize);
+    return 0;
+} // end ruleSketch()
+
 extern(C) int renderSketch(lua_State* L)
 {
     auto my_sketch = checkObj!(Sketch, SketchMT)(L, 1); // first argument "this"
@@ -734,6 +859,8 @@ void registerSketch(lua_State* L)
     lua_setfield(L, -2, "polyline");
     lua_pushcfunction(L, &polygonSketch);
     lua_setfield(L, -2, "polygon");
+    lua_pushcfunction(L, &ruleSketch);
+    lua_setfield(L, -2, "rule");
     lua_pushcfunction(L, &renderSketch);
     lua_setfield(L, -2, "render");
 
