@@ -29,7 +29,7 @@ private:
     double width;
     double height;
     string unitLength;
-    double unitToPoints = 1.0;
+    double unitToPixels = 1.0;
     string lineColour = "black";
     string fillColour = "none";
     double lineWidth = 1.0; // points
@@ -49,11 +49,12 @@ public:
         this.width = width;
         this.height = height;
         this.unitLength = unitLength;
+	// Anonymous units in SVG 1.1 are pixels with 90px=1in or 1.25px=1pt
         switch (unitLength) {
-	case "in": unitToPoints = 72.0; break;
-        case "mm": unitToPoints = 72.0/25.4; break;
-        case "cm": unitToPoints = 72.0/2.54; break;
-        case "m": unitToPoints = 72.0/0.0254; break;
+	case "in": unitToPixels = 90.0; break;
+        case "mm": unitToPixels = 90.0/25.4; break;
+        case "cm": unitToPixels = 90.0/2.54; break;
+        case "m": unitToPixels = 90.0/0.0254; break;
         default:
             throw new Exception("SvgEnvironment: Unknown units " ~ unitLength);
 	} // end switch
@@ -64,20 +65,20 @@ public:
 	return;
     }
 
-    double toPointsX(double x)
+    double toPixelsX(double x)
     // Transforms x-coordinate from user-space to SVG space.
     // x: x-coordinate in units (with the origin in the lower-left corner)       
     // Returns points for SVG
     {
-	return x * unitToPoints;
+	return x * unitToPixels;
     }
 
-    double toPointsY(double y)
+    double toPixelsY(double y)
     // Transforms y-coordinate from user-space to SVG space.
     // y: y-coordinate in units (with the origin in the lower-left corner)
     // Returns points in SVG coordinate system (with the origin in the upper left)
     {
-        return (height - y) * unitToPoints;
+        return (height - y) * unitToPixels;
     }
 
     void setLineWidth(double w)
@@ -146,7 +147,7 @@ public:
         f.write("<svg xmlns:svg=\"http://www.w3.org/2000/svg\"\n");
         f.write("     xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n");
         f.writef("     width=\"%.2f\" height=\"%.2f\"\n",
-		 width*unitToPoints, height*unitToPoints);
+		 width*unitToPixels, height*unitToPixels);
         f.write("     version=\"1.0\">\n");
         f.writef("<title>%s</title>\n", title);
         f.writef("<desc>%s</desc>\n", description);
@@ -191,8 +192,8 @@ public:
     void line(double x1, double y1, double x2, double y2, bool dashed=false)
     // Render a line from point 1 to point 2.
     {
-        auto x1p = toPointsX(x1); auto y1p = toPointsY(y1);
-        auto x2p = toPointsX(x2); auto y2p = toPointsY(y2);
+        auto x1p = toPixelsX(x1); auto y1p = toPixelsY(y1);
+        auto x2p = toPixelsX(x2); auto y2p = toPixelsY(y2);
         f.writef("<line x1=\"%.2f\" y1=\"%.2f\" x2=\"%.2f\" y2=\"%.2f\" ",
                  x1p, y1p, x2p, y2p);
         f.writef("style=\"%s\" />\n", styleStr(false, true, dashed));
@@ -202,10 +203,10 @@ public:
     void polyline(double[] xlist, double[] ylist, bool dashed=false)
     // Render a polyline from lists of x and y coordinates.
     {
-        auto x0 = toPointsX(xlist[0]); auto y0 = toPointsY(ylist[0]);
+        auto x0 = toPixelsX(xlist[0]); auto y0 = toPixelsY(ylist[0]);
         f.writef("<path d=\"M %.2f,%.2f", x0, y0);
         foreach (i; 1 .. min(xlist.length, ylist.length)) {
-            auto x = toPointsX(xlist[i]); auto y = toPointsY(ylist[i]);
+            auto x = toPixelsX(xlist[i]); auto y = toPixelsY(ylist[i]);
             f.writef(" L %.2f,%.2f", x, y);
 	}
         f.write("\""); // finish the coordinate string
@@ -222,10 +223,10 @@ public:
     // still visible.
     {
 	begin_group(id, opacity);
-        auto x0 = toPointsX(xlist[0]); auto y0 = toPointsY(ylist[0]);
+        auto x0 = toPixelsX(xlist[0]); auto y0 = toPixelsY(ylist[0]);
         f.writef("<polygon points=\"%.2f,%.2f", x0, y0);
         foreach (i; 1 .. min(xlist.length, ylist.length)) {
-            auto x = toPointsX(xlist[i]); auto y = toPointsY(ylist[i]);
+            auto x = toPixelsX(xlist[i]); auto y = toPixelsY(ylist[i]);
             f.writef(" %.2f,%.2f", x, y);
 	}
         f.write("\""); // finish the coordinate string
@@ -250,9 +251,9 @@ public:
         double crossz = (dx0 * dy1 - dx1 * dy0); // z-component of vector product
         bool clockwise = (crossz < 0.0);
         // now, do the rendering in SVG space (in points)
-        double x0p = toPointsX(x0); double y0p = toPointsY(y0);
-        double x1p = toPointsX(x1); double y1p = toPointsY(y1);
-        double rp = r0 * unitToPoints;
+        double x0p = toPixelsX(x0); double y0p = toPixelsY(y0);
+        double x1p = toPixelsX(x1); double y1p = toPixelsY(y1);
+        double rp = r0 * unitToPixels;
         double x_axis_rotation = 0.0;
         int large_arc_flag = 0;
 	int sweep_flag = (clockwise)? 1 : 0;
@@ -272,8 +273,8 @@ public:
     // still visible.
     {
 	begin_group(id, opacity);
-        double xp = toPointsX(x); double yp = toPointsY(y);
-        double rp = r * unitToPoints;
+        double xp = toPixelsX(x); double yp = toPixelsY(y);
+        double rp = r * unitToPixels;
         f.writef("<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%.2f\" ", xp, yp, rp);
         f.writef("style=\"%s\" />\n", styleStr(fill, stroke, dashed));
 	end_group();
@@ -285,10 +286,10 @@ public:
 		 bool dashed=false)
     // Render a thrid-order Bezier curve.
     {
-        double x0p = toPointsX(x0); double y0p = toPointsY(y0);
-        double x1p = toPointsX(x1); double y1p = toPointsY(y1);
-        double x2p = toPointsX(x2); double y2p = toPointsY(y2);
-        double x3p = toPointsX(x3); double y3p = toPointsY(y3);
+        double x0p = toPixelsX(x0); double y0p = toPixelsY(y0);
+        double x1p = toPixelsX(x1); double y1p = toPixelsY(y1);
+        double x2p = toPixelsX(x2); double y2p = toPixelsY(y2);
+        double x3p = toPixelsX(x3); double y3p = toPixelsY(y3);
         f.writef("<path d=\"M %.2f %.2f ", x0p, y0p);
         f.writef("C %.2f %.2f %.2f %.2f %.2f %.2f\" ",
 		 x1p, y1p, x2p, y2p, x3p, y3p);
@@ -309,13 +310,13 @@ public:
     // colour: of rendered text
     // fontFamily: a font name known in SVG
     {
-        double xp = toPointsX(x); double yp = toPointsY(y);
+        double xp = toPixelsX(x); double yp = toPixelsY(y);
         f.writef("<text x=\"%.2f\" y=\"%.2f\"", xp, yp);
         if (angle != 0.0) {
             // my angle is positive counterclockwise.
             f.writef(" transform=\"rotate(%.2f,%.2f,%.2f)\" ", -angle, xp, yp);
 	}
-	f.writef(" style=\"font-size:%d;text-anchor:%s;fill:%s;stroke:none",
+	f.writef(" style=\"font-size:%dpt;text-anchor:%s;fill:%s;stroke:none",
                 fontSize, anchor, colour);
         f.writef(";font-weight:normal;font-family:%s\" ", fontFamily);
         f.write(">"); // end of opening tag
@@ -337,14 +338,14 @@ public:
     // colour: of both the label and the dot
     // fontFamily: a font name known in SVG
     {
-        double xp = toPointsX(x); double yp = toPointsY(y);
+        double xp = toPixelsX(x); double yp = toPixelsY(y);
         double rp = dotSize/2.0 * 72.0/25.4;
         f.writef("<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%.2f\" ", xp, yp, rp);
         f.writef("style=\"fill:%s\" />\n", colour);
         if (label.length > 0) {
             // put the label slightly above the dot.
             f.writef("<text x=\"%.2f\" y=\"%.2f\"", xp, yp-1.5*rp);
-            f.writef(" style=\"font-size:%d;text-anchor:%s;fill:%s;stroke:none",
+            f.writef(" style=\"font-size:%dpt;text-anchor:%s;fill:%s;stroke:none",
 		     fontSize, anchor, colour);
             f.writef(";font-weight:normal;font-family:%s\" ", fontFamily);
             f.write(">"); // end of opening tag

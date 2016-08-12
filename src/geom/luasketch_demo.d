@@ -41,7 +41,7 @@ s:set{line_width=0.1}
 s:line{p0=Vector3:new{x=-1.0,y=1.0,z=0.0}, p1=Vector3:new{x=1.0,y=-1.0,z=0.0}}
 s:render{path=abc}
 s:set{fill_colour="green"}
-s:text{point=Vector3:new{x=-1.0,y=1.5},text="A sample, just to see",font_size=20}
+s:text{point=Vector3:new{x=0.0,y=1.5},text="A sample, just to see",font_size=20}
 p00 = Vector3:new{x=0.0, y=0.1}
 p10 = Vector3:new{x=1.0, y=0.1}
 p11 = Vector3:new{x=1.0, y=1.1}
