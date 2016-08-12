@@ -195,7 +195,7 @@ extern(C) int setSketch(lua_State* L)
 	    luaL_error(L, errMsg.toStringz());
 	}
     }
-    lua_pop(L, 1); // dispose of viewport item
+    lua_pop(L, 1); // dispose of canvas item
     //
     lua_getfield(L, 1, "viewport");
     if (!lua_isnil(L, -1)) {

@@ -89,6 +89,9 @@ public:
     }
 
     void setLineColour(string colour)
+    // 6 hexadecimal digits in form "#rrggbb"
+    // aqua, black, blue, fichsia, gray, green, lime, maroon,
+    // navy, olive, purple, red, silver, teal, white, yellow
     {
 	lineColour = colour;
 	return;
@@ -114,7 +117,8 @@ public:
 	return;
     }
     
-    string styleStr(bool fill, bool stroke, bool dashed)
+    string styleStr(bool fill, bool stroke, bool dashed,
+		    double fillOpacity=1.0, double strokeOpacity=1.0)
     // Assembles a suitable style specification string.
     // fill: flag to indicate that the interior should be painted
     // stroke: flag to indicate that the outline should be drawn
@@ -123,13 +127,14 @@ public:
     {
 	string style = "";
 	if (fill) {
-	    style ~= format("fill:%s", fillColour);
+	    style ~= format("fill:%s;fill-opacity:%g", fillColour, fillOpacity);
 	} else {
 	    style ~= format("fill:%s", "none");
 	}
 	if (stroke) {
 	    style ~= format(";stroke:%s;stroke-width:%.2f;stroke-linecap:%s",
 			    lineColour, lineWidth, lineCap);
+	    style ~= format(";stroke-opacity:%g", strokeOpacity);
 	}
         if (dashed) {
             style ~= format(";stroke-dasharray: %.2f %.2f", dashLength, gapLength);
@@ -189,18 +194,20 @@ public:
 	return;
     }
     
-    void line(double x1, double y1, double x2, double y2, bool dashed=false)
+    void line(double x1, double y1, double x2, double y2,
+	      bool dashed=false, double opacity=1.0)
     // Render a line from point 1 to point 2.
     {
         auto x1p = toPixelsX(x1); auto y1p = toPixelsY(y1);
         auto x2p = toPixelsX(x2); auto y2p = toPixelsY(y2);
         f.writef("<line x1=\"%.2f\" y1=\"%.2f\" x2=\"%.2f\" y2=\"%.2f\" ",
                  x1p, y1p, x2p, y2p);
-        f.writef("style=\"%s\" />\n", styleStr(false, true, dashed));
+        f.writef("style=\"%s\" />\n", styleStr(false, true, dashed, 1.0, opacity));
 	return;
     }
 
-    void polyline(double[] xlist, double[] ylist, bool dashed=false)
+    void polyline(double[] xlist, double[] ylist,
+		  bool dashed=false, double opacity=1.0)
     // Render a polyline from lists of x and y coordinates.
     {
         auto x0 = toPixelsX(xlist[0]); auto y0 = toPixelsY(ylist[0]);
@@ -210,7 +217,7 @@ public:
             f.writef(" L %.2f,%.2f", x, y);
 	}
         f.write("\""); // finish the coordinate string
-        f.writef(" style=\"%s\"", styleStr(false, true, dashed));
+        f.writef(" style=\"%s\"", styleStr(false, true, dashed, 1.0, opacity));
         f.write("/>\n");
         return;
     }
@@ -222,7 +229,6 @@ public:
     // The default opacity is 0.5 so that covered-over objects are
     // still visible.
     {
-	begin_group(id, opacity);
         auto x0 = toPixelsX(xlist[0]); auto y0 = toPixelsY(ylist[0]);
         f.writef("<polygon points=\"%.2f,%.2f", x0, y0);
         foreach (i; 1 .. min(xlist.length, ylist.length)) {
@@ -230,14 +236,13 @@ public:
             f.writef(" %.2f,%.2f", x, y);
 	}
         f.write("\""); // finish the coordinate string
-        f.writef(" style=\"%s\"", styleStr(fill, stroke, dashed));
+        f.writef(" style=\"%s\"", styleStr(fill, stroke, dashed, opacity, opacity));
         f.write("/>\n");
-	end_group();
         return;
     }
 
     void arc(double x0, double y0, double x1, double y1, double xc, double yc,
-	     bool dashed=false)
+	     bool dashed=false, double opacity=1.0)
     // Render a circular arc from point 0 to point 1 with centre at c.
     // in user-space coordinates, comput the properties of the arc.
     {
@@ -260,7 +265,7 @@ public:
         f.writef("<path d=\"M %.2f %.2f A %.2f %.2f, %.2f, %d, %d, %.2f %.2f\" ",
 		 x0p, y0p, rp, rp, x_axis_rotation, large_arc_flag,
 		 sweep_flag, x1p, y1p);
-        f.writef("style=\"%s\"", styleStr(false, true, dashed));
+        f.writef("style=\"%s\"", styleStr(false, true, dashed, 1.0, opacity));
         f.write("/>\n");
         return;
     }
@@ -272,18 +277,16 @@ public:
     // The default opacity is 0.5 so that covered-over objects are
     // still visible.
     {
-	begin_group(id, opacity);
         double xp = toPixelsX(x); double yp = toPixelsY(y);
         double rp = r * unitToPixels;
         f.writef("<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%.2f\" ", xp, yp, rp);
-        f.writef("style=\"%s\" />\n", styleStr(fill, stroke, dashed));
-	end_group();
+        f.writef("style=\"%s\" />\n", styleStr(fill, stroke, dashed, opacity, opacity));
         return;
     }
 
     void bezier3(double x0, double y0, double x1, double y1,
 		 double x2, double y2, double x3, double y3, 
-		 bool dashed=false)
+		 bool dashed=false, double opacity=1.0)
     // Render a thrid-order Bezier curve.
     {
         double x0p = toPixelsX(x0); double y0p = toPixelsY(y0);
@@ -293,7 +296,7 @@ public:
         f.writef("<path d=\"M %.2f %.2f ", x0p, y0p);
         f.writef("C %.2f %.2f %.2f %.2f %.2f %.2f\" ",
 		 x1p, y1p, x2p, y2p, x3p, y3p);
-        f.writef("style=\"%s\" />\n", styleStr(false, true, dashed));
+        f.writef("style=\"%s\" />\n", styleStr(false, true, dashed, 1.0, opacity));
         return;
     }
     
