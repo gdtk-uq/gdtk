@@ -315,7 +315,7 @@ public:
             // my angle is positive counterclockwise.
             f.writef(" transform=\"rotate(%.2f,%.2f,%.2f)\" ", -angle, xp, yp);
 	}
-	f.write(" style=\"font-size:%g;text-anchor:%s;fill:%s;stroke:none",
+	f.writef(" style=\"font-size:%d;text-anchor:%s;fill:%s;stroke:none",
                 fontSize, anchor, colour);
         f.writef(";font-weight:normal;font-family:%s\" ", fontFamily);
         f.write(">"); // end of opening tag

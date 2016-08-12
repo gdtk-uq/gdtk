@@ -26,6 +26,8 @@ void main()
     s.start("test.svg");
     s.line(Vector3(-1.0,1.0,0.0), Vector3(1.0,-1.0,0.0));
     s.render(abc);
+    s.rule("x", -1.2, 1.2, 0.4, Vector3(0.0,-1.3), 0.03, "%.1f", 0.12, 8);
+    s.rule("y", -1.2, 1.2, 0.4, Vector3(-1.3,0.0), 0.03, "%.1f", 0.06, 8);
     s.setFillColour("green");
     auto p00 = Vector3(0.0, 0.1);
     auto p10 = Vector3(1.0, 0.1);

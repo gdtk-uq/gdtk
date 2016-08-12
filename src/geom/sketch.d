@@ -17,6 +17,7 @@
 
 module sketch;
 
+import std.conv;
 import std.stdio;
 import std.math;
 import std.string;
@@ -186,6 +187,32 @@ public:
 	return canvas.y0 + (y - viewport.y0)/(viewport.height)*canvas.height;
     }
 
+    void begin_group(string id="", double opacity=1.0)
+    // id needs to be a unique identifier string, if supplied
+    // opacity is in range 0.0, 1.0
+    {
+	switch(renderer_name) {
+	case "svg":
+	    svg.begin_group(id, opacity);
+	    break;
+	default:
+	    throw new Exception("oops, invalid render name " ~ renderer_name);
+	}
+	return;
+    }
+
+    void end_group()
+    {
+	switch(renderer_name) {
+	case "svg":
+	    svg.end_group();
+	    break;
+	default:
+	    throw new Exception("oops, invalid render name " ~ renderer_name);
+	}
+	return;
+    }
+
     void line(const Vector3 p0, const Vector3 p1, bool dashed=false)
     // Render a line from point 1 to point 2.
     {
@@ -313,7 +340,72 @@ public:
 	}
 	return;
     }
-
+    
+    // ----------------------------------------------------------------------
+    // The following methods should be independent of the particular renderer.
+    // ----------------------------------------------------------------------
+    
+    void rule(string direction, double vmin, double vmax, double vtic, Vector3 anchorPoint,
+	      double ticMarkSize, string numberFormat, double textOffset, int fontSize)
+    {
+	Vector3 p0 = Vector3(anchorPoint);
+	Vector3 p1 = Vector3(anchorPoint);
+	Vector3 dp = Vector3(0.0,0.0,0.0);
+	Vector3 dpTic = Vector3(0.0,0.0,0.0);
+	int n = to!int(1.000001*(vmax - vmin)/vtic); // be sure to get final tic mark 
+	if (n > 50) {
+	    writeln("You have asked for a lot of tic marks: ", n);
+	}
+	Vector3 dpText = Vector3(0.0,0.0,0.0);
+	Vector3 textDirection;
+	Vector3 textNormal;
+	string textAnchor;
+	switch(direction) {
+	case "x":
+	    p0.refx = vmin; p1.refx = vmax; dp.refx = vtic;
+	    dpTic.refy = -ticMarkSize; // tic marks go in -y direction
+	    dpText.refy = -textOffset;
+	    textDirection = Vector3(1.0,0.0,0.0); // text horizontal
+	    textNormal = Vector3(0.0,0.0,1.0);
+	    textAnchor = "middle";
+	    break;
+	case "y":
+	    p0.refy = vmin; p1.refy = vmax; dp.refy = vtic;
+	    dpTic.refx = -ticMarkSize; // tic marks go in -x direction
+	    dpText.refx = -textOffset;
+	    textDirection = Vector3(1.0,0.0,0.0); // text horizontal
+	    textNormal = Vector3(0.0,0.0,1.0);
+	    textAnchor = "end";
+	    break;
+	case "z":
+	    p0.refz = vmin; p1.refz = vmax; dp.refz = vtic;
+	    dpTic.refx = -ticMarkSize; // tic marks go in -x direction
+	    dpText.refx = -textOffset;
+	    textDirection = Vector3(1.0,0.0,0.0);
+	    textNormal = Vector3(0.0,1.0,0.0);
+	    textAnchor = "end";
+	    break;
+	default:
+	    throw new Exception("invalid direction for rule: "~direction);
+	}
+	begin_group(); // Keep tic marks together
+	line(p0, p1);
+	foreach(i; 0 .. n+1) {
+	    Vector3 p = p0 + i*dp;
+	    Vector3 p2 = p+dpTic;
+	    line(p, p2);
+	}
+	end_group();
+	// Label the tic marks
+	foreach(i; 0 .. n+1) {
+	    Vector3 p = p0 + i*dp;
+	    Vector3 p3 = p+dpText;
+	    double value = vmin + i*vtic;
+	    string myText = format(numberFormat, value);
+	    text(p3, myText, textDirection, textNormal, textAnchor, fontSize);
+	}
+    } // end rule()
+    
     // Render functions for our geometric entities used in the flow simulation.
     void render(const Path pth, bool dashed=false, size_t n=100)
     {
