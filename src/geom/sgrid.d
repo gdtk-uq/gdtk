@@ -28,6 +28,8 @@ import univariatefunctions;
 class StructuredGrid : Grid {
 public:
     size_t niv, njv, nkv;
+    size_t[] vtx_id; // used to hold the single-index id for each vertex.
+    // So that the structured-grid can look like an unstructured grid.
 
     size_t single_index(size_t i, size_t j, size_t k=0) const
     in {

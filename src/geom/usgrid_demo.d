@@ -49,5 +49,9 @@ void main()
     auto usg3 = new UnstructuredGrid("test_3Dgrid.gz", "gziptext");
     usg3.write_to_vtk_file("test_3Dgrid_2.vtk");
 
+    writeln("su2 2D grid");
+    auto su2grid = new UnstructuredGrid("sample-data/square-mesh.su2", "su2text");
+    // su2grid.write_to_vtk_file("test_su2grid.vtk");
+    
     writeln("Done.");
 }

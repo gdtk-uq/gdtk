@@ -45,6 +45,7 @@ uint face_index(string name)
 } // end face_index
 
 // VTK cell types, for use when writing and reading VTK files.
+// With wedge and pyramid items from SU2 Mesh File documentation.
 enum VTKElement {
     vertex = 1,
     polyvertex = 2,
@@ -57,7 +58,9 @@ enum VTKElement {
     quad = 9,
     tetra = 10,
     voxel = 11,
-    hexahedron = 12
+    hexahedron = 12,
+    wedge = 13,
+    pyramid = 14
 }
 
 //---------------------------------------------------------------------

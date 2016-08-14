@@ -11,6 +11,7 @@ import std.string;
 import std.array;
 import std.conv;
 import std.stdio;
+import std.algorithm;
 import std.format;
 import std.math;
 import gzip;
@@ -27,20 +28,22 @@ import paver;
 
 //-----------------------------------------------------------------
 
-enum USGCell_type {
+enum USGCell_type { // We will use GMSH names.
     none = 0,
     triangle = 1,
     quad = 2,
     polygon = 3,
     tetra = 4,
     prism = 5,
-    hexahedron = 6
+    hexahedron = 6,
+    pyramid = 7
 }
 string[] cell_names = ["none", "triangle", "quad", "polygon",
-		       "tetra", "prism", "hexahedron"];
+		       "tetra", "prism", "hexahedron", "pyramid"];
 
 int[] cell_type_for_vtk = [0, VTKElement.triangle, VTKElement.quad, VTKElement.polygon,
-			   VTKElement.tetra, 0, VTKElement.hexahedron];
+			   VTKElement.tetra, VTKElement.wedge, VTKElement.hexahedron,
+			   VTKElement.pyramid];
 
 USGCell_type cell_type_from_name(string name)
 {
@@ -52,6 +55,7 @@ USGCell_type cell_type_from_name(string name)
     case "tetra": return USGCell_type.tetra;
     case "prism": return USGCell_type.prism;
     case "hexahedron": return USGCell_type.hexahedron;
+    case "pyramid": return USGCell_type.pyramid;
     default:
 	throw new Error(text("Invalid USGCell type name: ", name));
     }
@@ -60,6 +64,13 @@ USGCell_type cell_type_from_name(string name)
 class USGFace {
 public:
     size_t[] vtx_id_list;
+    // Note that, when construction a grid from a set of vertices and lists
+    // of vertex indices, we will be able to tell if a face in a boundary list
+    // is facing in or out by whether it has a right or left cell.
+    // This information is filled in when constructing a new mesh but is not copied
+    // in the USGFace copy constructor.  Beware.
+    USGCell left_cell;
+    USGCell right_cell;
 
     this(size_t[] vtx_id_list) 
     {
@@ -69,6 +80,9 @@ public:
     this(const USGFace other)
     {
 	vtx_id_list = other.vtx_id_list.dup();
+	// The const constraint means that we cannot copy the left_cell and
+	// right_cell references.  The compiler cannot be sure that we will
+	// honour the const promise once it has allowed us to copy references.
     }
 
     this(string str)
@@ -151,6 +165,13 @@ public:
     size_t[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
+    this(string tag, size_t[] face_id_list, int[] outsign_list)
+    {
+	this.tag = tag;
+	this.face_id_list = face_id_list.dup();
+	this.outsign_list = outsign_list.dup();
+    }
+    
     this(string str) 
     {
 	auto tokens = str.strip().split();
@@ -199,7 +220,7 @@ public:
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
 
-    //Paved Grid Constructor:
+    //Paved Grid Constructor by Heather Muir, 2016.
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
     {
     	double[][] boundary_points;
@@ -328,8 +349,15 @@ public:
 				       jface_id[i][j], // south
 				       iface_id[i][j]]; // west
 		    auto outsigns = [+1, +1, -1, -1];
-		    cells ~= new USGCell(USGCell_type.quad, cell_vertices,
-					 cell_faces, outsigns);
+		    auto my_cell = new USGCell(USGCell_type.quad, cell_vertices,
+					       cell_faces, outsigns);
+		    cells ~= my_cell;
+		    // Now that we have the new cell, we can make the connections
+		    // from the faces back to the cell.
+		    faces[jface_id[i][j+1]].left_cell = my_cell;
+		    faces[iface_id[i+1][j]].left_cell = my_cell;
+		    faces[jface_id[i][j]].right_cell = my_cell;
+		    faces[iface_id[i][j]].right_cell = my_cell;
 		}
 	    }
 	} else {
@@ -455,8 +483,17 @@ public:
 					   kface_id[i][j][k+1], // top
 					   kface_id[i][j][k]]; // bottom
 			auto outsigns = [-1, +1, +1, -1, +1, -1];
-			cells ~= new USGCell(USGCell_type.hexahedron, cell_vertices,
-					     cell_faces, outsigns);
+			auto my_cell = new USGCell(USGCell_type.hexahedron, cell_vertices,
+						   cell_faces, outsigns);
+			cells ~= my_cell;
+			// Now that we have the new cell, we can make the connections
+			// from the faces back to the cell.
+			faces[jface_id[i][j+1][k]].left_cell = my_cell;
+			faces[iface_id[i+1][j][k]].left_cell = my_cell;
+			faces[jface_id[i][j][k]].right_cell = my_cell;
+			faces[iface_id[i][j][k]].right_cell = my_cell;
+			faces[kface_id[i][j][k+1]].left_cell = my_cell;
+			faces[kface_id[i][j][k]].right_cell = my_cell;
 		    }
 		}
 	    }
@@ -472,19 +509,11 @@ public:
 	super(Grid_t.unstructured_grid, 0, new_label);
 	// dimensions will be reset on reading grid
 	switch (fmt) {
-	case "text":
-	    read_from_text_file(fileName, false);
-	    break;
-	case "gziptext":
-	    read_from_gzip_file(fileName);
-	    break;
-	case "vtk":
-	    read_from_text_file(fileName, true);
-	    break;
-	case "vtkxml":
-	    throw new Error("Reading from VTK XML format not implemented.");
-	default:
-	    throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
+	case "gziptext": read_from_gzip_file(fileName); break;
+	case "su2text": read_from_su2_text_file(fileName); break;
+	case "vtktext": read_from_vtk_text_file(fileName); break;
+	case "vtkxml": throw new Error("Reading from VTK XML format not implemented.");
+	default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
 	}
 	if (new_label != "") { label = new_label; }
     }
@@ -494,6 +523,10 @@ public:
 	return new UnstructuredGrid(this);
     }
 
+    // -----------------------------
+    // Indexing and location methods.
+    // -----------------------------
+    
     override Vector3* opIndex(size_t i, size_t j, size_t k=0)
     in {
 	assert (i < nvertices, text("index i=", i, " is invalid, nvertices=", nvertices));
@@ -532,28 +565,34 @@ public:
 	return cells[indx].vtx_id_list.dup();
     }
 
-    void read_from_text_file(string fileName, bool vtkHeader=true)
+    bool findFaceIndex(const size_t[] id_list, ref size_t indx)
+    // Given a list of vertex ids, determine is we already have a face
+    // constructed from those vertices, and returns its index.
+    //
+    // This is a slow, brute-force search with lots of allocations.
+    // If we have to use it a lot, if may be better to store hashes
+    // of the list of vertex-id values at face construction time and
+    // search on those.
     {
-	// [TODO] It may be convenient to import grids from other preprocessing
-	// programs via their generic text format.
-	// We've left this function here as a place-holder.
-	// For VTK files, we need to work out how to extract 
-	// the topological dimensions for the incoming grid.
-	// Maybe all cell types being triangle or quad for 2-dimensional grids.
-	string[] tokens;
-	auto f = File(fileName, "r");
-	if (vtkHeader) {
-	    read_VTK_header_line("vtk", f);
-	    label = f.readln().strip();
-	    read_VTK_header_line("ASCII", f);
-	    read_VTK_header_line("USTRUCTURED_GRID", f);
-	} else {
-	    tokens = f.readln().strip().split();
+	bool found = false;
+	size_t[] sorted_id_list = id_list.dup();
+	foreach(i; 0 .. faces.length) {
+	    if (faces[i].vtx_id_list.length != sorted_id_list.length) continue;
+	    size_t[] sorted_list_for_face = faces[i].vtx_id_list.dup();
+	    if (equal(sorted_id_list, sorted_list_for_face)) {
+		found = true; indx = i;
+	    }
 	}
-	throw new Error("read_from_text_file() is not implemented, yet.");
-    } // end read_from_text_file()
-
+	return found;
+    }
+    
+    // ------------------------
+    // Import-from-file methods.
+    // ------------------------
+    
     override void read_from_gzip_file(string fileName)
+    // This function and the matching write_to_gzip_file() (below)
+    // define the Eilmer4 native format.
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
@@ -600,8 +639,205 @@ public:
 	}
     } // end read_from_gzip_file()
 
+    void read_from_su2_text_file(string fileName)
+    // Information on the su2 file format from
+    // https://github.com/su2code/SU2/wiki/Mesh-File
+    {
+	auto f = File(fileName, "r");
+	string getHeaderContent(string target)
+	// Helper function to proceed through file, line-by-line,
+	// looking for a particular header line.
+	// Returns the content from the header line and leaves the file
+	// at the next line to be read, presumably with expected data.
+	{
+	    while (!f.eof) {
+		auto line = f.readln().strip();
+		if (canFind(line, target)) {
+		    auto tokens = line.split("=");
+		    return tokens[1].strip();
+		}
+	    } // end while
+	    return ""; // didn't find the target
+	}
+	dimensions = to!int(getHeaderContent("NDIME"));
+	writeln("dimensions=", dimensions);
+	ncells = to!size_t(getHeaderContent("NELEM"));
+	writeln("ncells=", ncells);
+	cells.length = ncells;
+	foreach(i; 0 .. ncells) {
+	    auto lineContent = f.readln().strip();
+	    auto tokens = lineContent.split();
+	    int vtk_element_type = to!int(tokens[0]);
+	    size_t indx = to!size_t(tokens[$-1]);
+	    size_t[] vtx_id_list;
+	    foreach(j; 1 .. tokens.length-1) { vtx_id_list ~= to!size_t(tokens[j]); }
+	    USGCell_type cell_type = USGCell_type.none;
+	    switch (vtk_element_type) {
+	    case VTKElement.triangle: cell_type = USGCell_type.triangle; break;
+	    case VTKElement.quad: cell_type = USGCell_type.quad; break;
+	    case VTKElement.tetra: cell_type = USGCell_type.tetra; break;
+	    case VTKElement.wedge: cell_type = USGCell_type.prism; break;
+	    case VTKElement.hexahedron: cell_type = USGCell_type.hexahedron; break;
+	    case VTKElement.pyramid: cell_type = USGCell_type.pyramid; break;
+	    default:
+		throw new Exception("unknown element type for line: "~to!string(lineContent));
+	    }
+	    size_t[] face_id_list; // empty, so far
+	    int[] outsign_list; // empty, so far
+	    // Once we have created the full list of vertices, we will be able to make
+	    // the set of faces and then come back to filling in the face_id_list and
+	    // outsign_list for each cell.
+	    cells[indx] = new USGCell(cell_type, vtx_id_list, face_id_list, outsign_list);
+	} // end foreach i .. ncells
+	foreach(i; 0 .. cells.length) {
+	    if (!cells[i]) { writeln("Warning: uninitialized cell at index: ", i); }
+	    // [TODO] if we have any uninitialized cells,
+	    // we should compress the array to eliminate empty elements.
+	}
+	nvertices = to!size_t(getHeaderContent("NPOIN"));
+	writeln("nvertices=", nvertices);
+	vertices.length = nvertices;
+	foreach(i; 0 .. nvertices) {
+	    auto tokens = f.readln().strip().split();
+	    double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
+	    if (dimensions == 2) {
+		x = to!double(tokens[0]);
+		y = to!double(tokens[1]);
+		indx = to!size_t(tokens[2]);
+	    } else {
+		assert(dimensions == 3, "invalid dimensions");
+		x = to!double(tokens[0]);
+		y = to!double(tokens[1]);
+		z = to!double(tokens[2]);
+		indx = to!size_t(tokens[3]);
+	    }
+	    Vector3* vtx = &vertices[indx];
+	    vtx.refx = x; vtx.refy = y; vtx.refz = z;
+	    // writeln("indx=", indx, " vtx=", *vtx);
+	} // end foreach i .. nvertices
+	//
+	// Now that we have the full list of cells and vertices assigned to each cell,
+	// we can construct the faces between cells and along the boundaries.
+	//
+	void add_face_for_2D(ref USGCell cell, size_t idx0, size_t idx1)
+	{
+	    size_t[] my_vtx_id_list = [cell.vtx_id_list[idx0], cell.vtx_id_list[idx1]];
+	    size_t face_indx = 0;
+	    if (!findFaceIndex(my_vtx_id_list, face_indx)) {
+		// Since we didn't find the face already, construct it.
+		face_indx = faces.length;
+		faces ~= new USGFace(my_vtx_id_list);
+	    }
+	    cell.face_id_list ~= face_indx;
+	    Vector3* v0 = &vertices[faces[face_indx].vtx_id_list[0]];
+	    Vector3* v1 = &vertices[faces[face_indx].vtx_id_list[1]];
+	    Vector3 pmid = Vector3(vertices[cell.vtx_id_list[0]]);
+	    foreach(i; 1 .. cell.vtx_id_list.length) {
+		pmid += vertices[cell.vtx_id_list[i]];
+	    }
+	    pmid /= cell.vtx_id_list.length;
+	    if (on_left_of_xy_line(*v0, *v1, pmid)) {
+		if (faces[face_indx].left_cell) {
+		    throw new Exception("face already has a left cell");
+		}
+		faces[face_indx].left_cell = cell;
+		cell.outsign_list ~=  1;
+	    } else {
+		if (faces[face_indx].right_cell) {
+		    throw new Exception("face already has a right cell");
+		}
+		faces[face_indx].right_cell = cell;
+		cell.outsign_list ~= -1;
+	    }
+	    return;
+	}
+	foreach(cell; cells) {
+	    if (!cell) continue;
+	    if (dimensions == 2) {
+		switch(cell.cell_type) {
+		case USGCell_type.triangle:
+		    add_face_for_2D(cell, 0, 1);
+		    add_face_for_2D(cell, 1, 2);
+		    add_face_for_2D(cell, 2, 0);
+		    break;
+		case USGCell_type.quad:
+		    add_face_for_2D(cell, 0, 1);
+		    add_face_for_2D(cell, 1, 2);
+		    add_face_for_2D(cell, 2, 3);
+		    add_face_for_2D(cell, 3, 0);
+		    break;
+		default:
+		    throw new Exception("invalid cell type in 2D");
+		}
+	    } else {
+		assert(dimensions == 3, "invalid dimensions");
+		switch(cell.cell_type) {
+		case USGCell_type.tetra:
+		    throw new Exception("not implemented yet");
+		case USGCell_type.hexahedron:
+		    throw new Exception("not implemented yet");
+		case USGCell_type.pyramid:
+		    throw new Exception("not implemented yet");
+		default:
+		    throw new Exception("invalid cell type in 3D");
+		}
+	    }
+	} // end foreach cell
+	//
+	// Now that we have a full set of cells and faces,
+	// make lists of the boundary faces.
+	//
+	nboundaries = to!size_t(getHeaderContent("NMARK"));
+	foreach(i; 0 .. nboundaries) {
+	    string tag = getHeaderContent("MARKER_TAG");
+	    writeln("boundary i=", i, " tag=", tag);
+	    size_t[] face_id_list;
+	    int[] outsign_list;
+	    size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS"));
+	    // writeln("nelem=", nelem);
+	    foreach(j; 0 .. nelem) {
+		auto tokens = f.readln().strip().split();
+		int vtk_type = to!int(tokens[0]);
+		size_t[] my_vtx_id_list;
+		foreach(k; 1 .. tokens.length) { my_vtx_id_list ~= to!size_t(tokens[k]); }
+		size_t face_indx = 0;
+		if (findFaceIndex(my_vtx_id_list, face_indx)) {
+		    USGFace my_face = faces[face_indx];
+		    assert(my_face.left_cell || my_face.right_cell,
+			   "face is not properly connected");
+		    if (my_face.left_cell && !(my_face.right_cell)) {
+			outsign_list ~= 1;
+		    } else if ((!my_face.left_cell) && my_face.right_cell) {
+			outsign_list ~= -1;
+		    } else {
+			throw new Exception("appears to be an interior face");
+		    }
+		    face_id_list ~= face_indx;
+		} else {
+		    throw new Exception("cannot find face in collection");
+		}
+	    } // end foreach j
+	    boundaries ~= new BoundaryFaceSet(tag, face_id_list, outsign_list);
+	} // end foreach i
+    } // end read_from_su2_text_file()
+
+    void read_from_vtk_text_file(string fileName)
+    {
+	string[] tokens;
+	auto f = File(fileName, "r");
+	read_VTK_header_line("vtk", f);
+	label = f.readln().strip();
+	read_VTK_header_line("ASCII", f);
+	read_VTK_header_line("USTRUCTURED_GRID", f);
+	tokens = f.readln().strip().split();
+	throw new Error("read_from_vtk_text_file() is not finished, yet.");
+	// For VTK files, we need to work out how to extract 
+	// the topological details for the incoming grid.
+    } // end read_from_vtk_text_file()
+
     override void write_to_gzip_file(string fileName)
-    // This function essentially defines the Eilmer4 native format.
+    // This function and the matching read_from_gzip_file() (above)
+    // define the Eilmer4 native format.
     {
 	auto fout = new GzipOut(fileName);
 	fout.compress("unstructured_grid 1.0\n");

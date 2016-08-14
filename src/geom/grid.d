@@ -39,7 +39,6 @@ class Grid {
     size_t ncells;
     size_t nvertices;
     Vector3[] vertices;
-    size_t[] vtx_id;
     
     this(Grid_t grid_type, int dimensions, string label="")
     {
