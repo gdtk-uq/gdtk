@@ -86,6 +86,7 @@ public:
     }
 
     this(string str)
+    // Defines the format for input from a text stream.
     {
 	auto tokens = str.strip().split();
 	vtx_id_list.length = to!int(tokens[0]);
@@ -93,6 +94,7 @@ public:
     }
 
     string toIOString()
+    // Defines the format for output to a text stream.
     {
 	string str = to!string(vtx_id_list.length);
 	foreach (vtx_id; vtx_id_list) { str ~= " " ~ to!string(vtx_id); }
@@ -125,6 +127,7 @@ public:
     }
 
     this(string str)
+    // Defines the format for input from a text stream.
     {
 	auto tokens = str.strip().split();
 	int itok = 0;
@@ -147,6 +150,7 @@ public:
     }
 
     string toIOString()
+    // Defines the format for output to a text stream.
     {
 	string str = cell_names[cell_type];
 	str ~= " vtx " ~ to!string(vtx_id_list.length);
@@ -173,6 +177,7 @@ public:
     }
     
     this(string str) 
+    // Defines the format for input from a text stream.
     {
 	auto tokens = str.strip().split();
 	if (tokens.length == 1) {
@@ -202,6 +207,7 @@ public:
     }
 
     string toIOString()
+    // Defines the format for output to a text stream.
     {
 	string str = tag;
 	str ~= " faces " ~ to!string(face_id_list.length);
@@ -591,8 +597,10 @@ public:
     // ------------------------
     
     override void read_from_gzip_file(string fileName)
-    // This function and the matching write_to_gzip_file() (below)
+    // This function, together with the constructors (from strings) for
+    // the classes USGFace, USGCell and BoundaryFaceSet (above),
     // define the Eilmer4 native format.
+    // For output, there is the matching write_to_gzip_file() below.
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
@@ -836,8 +844,10 @@ public:
     } // end read_from_vtk_text_file()
 
     override void write_to_gzip_file(string fileName)
-    // This function and the matching read_from_gzip_file() (above)
+    // This function, together with the toIOstring methods for
+    // the classes USGFace, USGCell and BoundaryFaceSet (way above)
     // define the Eilmer4 native format.
+    // For input, there is the matching read_from_gzip_file(), above.
     {
 	auto fout = new GzipOut(fileName);
 	fout.compress("unstructured_grid 1.0\n");
