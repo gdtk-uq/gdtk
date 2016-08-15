@@ -28,18 +28,19 @@ import paver;
 
 //-----------------------------------------------------------------
 
-enum USGCell_type { // We will use GMSH names.
+enum USGCell_type {
+    // We will use VTK names and vertex ordering, to align with su2 file format.
     none = 0,
     triangle = 1,
     quad = 2,
     polygon = 3,
     tetra = 4,
-    prism = 5,
+    wedge = 5,
     hexahedron = 6,
     pyramid = 7
 }
 string[] cell_names = ["none", "triangle", "quad", "polygon",
-		       "tetra", "prism", "hexahedron", "pyramid"];
+		       "tetra", "wedge", "hexahedron", "pyramid"];
 
 int[] cell_type_for_vtk = [0, VTKElement.triangle, VTKElement.quad, VTKElement.polygon,
 			   VTKElement.tetra, VTKElement.wedge, VTKElement.hexahedron,
@@ -53,7 +54,7 @@ USGCell_type cell_type_from_name(string name)
     case "quad": return USGCell_type.quad;
     case "polygon": return USGCell_type.polygon;
     case "tetra": return USGCell_type.tetra;
-    case "prism": return USGCell_type.prism;
+    case "wedge": return USGCell_type.wedge;
     case "hexahedron": return USGCell_type.hexahedron;
     case "pyramid": return USGCell_type.pyramid;
     default:
@@ -684,7 +685,7 @@ public:
 	    case VTKElement.triangle: cell_type = USGCell_type.triangle; break;
 	    case VTKElement.quad: cell_type = USGCell_type.quad; break;
 	    case VTKElement.tetra: cell_type = USGCell_type.tetra; break;
-	    case VTKElement.wedge: cell_type = USGCell_type.prism; break;
+	    case VTKElement.wedge: cell_type = USGCell_type.wedge; break;
 	    case VTKElement.hexahedron: cell_type = USGCell_type.hexahedron; break;
 	    case VTKElement.pyramid: cell_type = USGCell_type.pyramid; break;
 	    default:
@@ -727,7 +728,7 @@ public:
 	// Now that we have the full list of cells and vertices assigned to each cell,
 	// we can construct the faces between cells and along the boundaries.
 	//
-	void add_face_for_2D(ref USGCell cell, size_t idx0, size_t idx1)
+	void add_linear_face_for_2D(ref USGCell cell, size_t idx0, size_t idx1)
 	{
 	    size_t[] my_vtx_id_list = [cell.vtx_id_list[idx0], cell.vtx_id_list[idx1]];
 	    size_t face_indx = 0;
@@ -737,6 +738,9 @@ public:
 		faces ~= new USGFace(my_vtx_id_list);
 	    }
 	    cell.face_id_list ~= face_indx;
+	    // Note that, from this point, we work with the face from the collection
+	    // which, if it was an existing face, will not have the same orientation
+	    // as indicated by the cycle of vertices passed in to this function call.
 	    Vector3* v0 = &vertices[faces[face_indx].vtx_id_list[0]];
 	    Vector3* v1 = &vertices[faces[face_indx].vtx_id_list[1]];
 	    Vector3 pmid = Vector3(vertices[cell.vtx_id_list[0]]);
@@ -758,21 +762,61 @@ public:
 		cell.outsign_list ~= -1;
 	    }
 	    return;
-	}
+	} // end add_linear_face_for_2D()
+	void add_quadrilateral_face_for_3D(ref USGCell cell, size_t idx0, size_t idx1,
+					   size_t idx2, size_t idx3)
+	{
+	    size_t[] my_vtx_id_list = [cell.vtx_id_list[idx0], cell.vtx_id_list[idx1],
+				       cell.vtx_id_list[idx2], cell.vtx_id_list[idx3]];
+	    size_t face_indx = 0;
+	    if (!findFaceIndex(my_vtx_id_list, face_indx)) {
+		// Since we didn't find the face already, construct it.
+		face_indx = faces.length;
+		faces ~= new USGFace(my_vtx_id_list);
+	    }
+	    cell.face_id_list ~= face_indx;
+	    // Note that, from this point, we work with the face from the collection
+	    // which, if it was an existing face, will not have the same orientation
+	    // as indicated by the cycle of vertices passed in to this function call.
+	    Vector3* v0 = &vertices[faces[face_indx].vtx_id_list[0]];
+	    Vector3* v1 = &vertices[faces[face_indx].vtx_id_list[1]];
+	    Vector3* v2 = &vertices[faces[face_indx].vtx_id_list[2]];
+	    Vector3* v3 = &vertices[faces[face_indx].vtx_id_list[3]];
+	    Vector3 vmid = 0.25*(*v0 + *v1 + *v2 + *v3);
+	    Vector3 cell_mid = Vector3(vertices[cell.vtx_id_list[0]]);
+	    foreach(i; 1 .. cell.vtx_id_list.length) {
+		cell_mid += vertices[cell.vtx_id_list[i]];
+	    }
+	    cell_mid /= cell.vtx_id_list.length;
+	    if (tetragonal_dipyramid_volume(*v0, *v1, *v2, *v3, vmid, cell_mid) < 0.0) {
+		if (faces[face_indx].left_cell) {
+		    throw new Exception("face already has a left cell");
+		}
+		faces[face_indx].left_cell = cell;
+		cell.outsign_list ~=  1;
+	    } else {
+		if (faces[face_indx].right_cell) {
+		    throw new Exception("face already has a right cell");
+		}
+		faces[face_indx].right_cell = cell;
+		cell.outsign_list ~= -1;
+	    }
+	    return;
+	} // end add_quadrilateral_face_for_3D()
 	foreach(cell; cells) {
 	    if (!cell) continue;
 	    if (dimensions == 2) {
 		switch(cell.cell_type) {
 		case USGCell_type.triangle:
-		    add_face_for_2D(cell, 0, 1);
-		    add_face_for_2D(cell, 1, 2);
-		    add_face_for_2D(cell, 2, 0);
+		    add_linear_face_for_2D(cell, 0, 1);
+		    add_linear_face_for_2D(cell, 1, 2);
+		    add_linear_face_for_2D(cell, 2, 0);
 		    break;
 		case USGCell_type.quad:
-		    add_face_for_2D(cell, 0, 1);
-		    add_face_for_2D(cell, 1, 2);
-		    add_face_for_2D(cell, 2, 3);
-		    add_face_for_2D(cell, 3, 0);
+		    add_linear_face_for_2D(cell, 2, 3); // north
+		    add_linear_face_for_2D(cell, 1, 2); // east
+		    add_linear_face_for_2D(cell, 0, 1); // south
+		    add_linear_face_for_2D(cell, 3, 0); // west
 		    break;
 		default:
 		    throw new Exception("invalid cell type in 2D");
@@ -783,6 +827,14 @@ public:
 		case USGCell_type.tetra:
 		    throw new Exception("not implemented yet");
 		case USGCell_type.hexahedron:
+		    add_quadrilateral_face_for_3D(cell, 2, 3, 7, 6); // north
+		    add_quadrilateral_face_for_3D(cell, 1, 2, 6, 5); // east
+		    add_quadrilateral_face_for_3D(cell, 1, 0, 4, 5); // south
+		    add_quadrilateral_face_for_3D(cell, 0, 3, 7, 4); // west
+		    add_quadrilateral_face_for_3D(cell, 4, 5, 6, 7); // top
+		    add_quadrilateral_face_for_3D(cell, 0, 1, 2, 3); // bottom
+		    break;
+		case USGCell_type.wedge:
 		    throw new Exception("not implemented yet");
 		case USGCell_type.pyramid:
 		    throw new Exception("not implemented yet");
