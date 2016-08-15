@@ -582,11 +582,9 @@ public:
     // search on those.
     {
 	bool found = false;
-	size_t[] sorted_id_list = id_list.dup();
 	foreach(i; 0 .. faces.length) {
-	    if (faces[i].vtx_id_list.length != sorted_id_list.length) continue;
-	    size_t[] sorted_list_for_face = faces[i].vtx_id_list.dup();
-	    if (equal(sorted_id_list, sorted_list_for_face)) {
+	    if (faces[i].vtx_id_list.length != id_list.length) continue;
+	    if (equal(sort(id_list.dup()), sort(faces[i].vtx_id_list.dup()))) {
 		found = true; indx = i;
 	    }
 	}
@@ -741,6 +739,7 @@ public:
 	    // Note that, from this point, we work with the face from the collection
 	    // which, if it was an existing face, will not have the same orientation
 	    // as indicated by the cycle of vertices passed in to this function call.
+	    assert(faces[face_indx].vtx_id_list.length == 2, "incorrect number of vertices");
 	    Vector3* v0 = &vertices[faces[face_indx].vtx_id_list[0]];
 	    Vector3* v1 = &vertices[faces[face_indx].vtx_id_list[1]];
 	    Vector3 pmid = Vector3(vertices[cell.vtx_id_list[0]]);
@@ -778,6 +777,7 @@ public:
 	    // Note that, from this point, we work with the face from the collection
 	    // which, if it was an existing face, will not have the same orientation
 	    // as indicated by the cycle of vertices passed in to this function call.
+	    assert(faces[face_indx].vtx_id_list.length == 4, "incorrect number of vertices");
 	    Vector3* v0 = &vertices[faces[face_indx].vtx_id_list[0]];
 	    Vector3* v1 = &vertices[faces[face_indx].vtx_id_list[1]];
 	    Vector3* v2 = &vertices[faces[face_indx].vtx_id_list[2]];
@@ -788,6 +788,9 @@ public:
 		cell_mid += vertices[cell.vtx_id_list[i]];
 	    }
 	    cell_mid /= cell.vtx_id_list.length;
+	    // The face has been defined with the vertices being in a counter-clockwise
+	    // cycle when viewed from outside of the cell.  We expect negative volumes
+	    // for the pyramid having the cell centre as the apex.
 	    if (tetragonal_dipyramid_volume(*v0, *v1, *v2, *v3, vmid, cell_mid) < 0.0) {
 		if (faces[face_indx].left_cell) {
 		    throw new Exception("face already has a left cell");
