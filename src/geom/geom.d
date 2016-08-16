@@ -676,6 +676,42 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     iLen = sqrt(dx * dx + dy * dy);
 } // end xyplane_quad_cell_properties()
 
+void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+				      ref const(Vector3) p2,
+				      ref Vector3 centroid, ref double xyplane_area,
+				      ref double iLen, ref double jLen, ref double minLen)
+// p2
+//  |\
+//  | \
+//  |  \
+// p0--p1  counter-clockwise cycle when looking down at the x,y-plane
+{
+    // These are the corners.
+    double x0 = p0.x; double y0 = p0.y;
+    double x1 = p1.x; double y1 = p1.y;
+    double x2 = p2.x; double y2 = p2.y;
+    //
+    xyplane_area = 0.5*((x1+x0)*(y1-y0) + (x2+x1)*(y2-y1) + (x0+x2)*(y0-y2));
+    //
+    centroid.refx = 1.0/(xyplane_area*6.0) * 
+	((y1-y0)*(x0*x0 + x0*x1 + x1*x1) + 
+	 (y2-y1)*(x1*x1 + x1*x2 + x2*x2) +
+	 (y0-y2)*(x2*x2 + x2*x0 + x0*x0));
+    centroid.refy = -1.0/(xyplane_area*6.0) * 
+	((x1-x0)*(y0*y0 + y0*y1 + y1*y1) + 
+	 (x2-x1)*(y1*y1 + y1*y2 + y2*y2) +
+	 (x0-x2)*(y2*y2 + y2*y0 + y0*y0));
+    centroid.refz = 0.0;
+    //
+    // Also, save the minimum length for later use in the CFL checking routine.
+    minLen = sqrt(xyplane_area);
+    // i- and j-directions don't have much significance in unstructured grids.
+    // Just fill in the data with something
+    jLen = minLen; 
+    iLen = minLen;
+    return;
+}
+
 // For the tetrahedron geometry, we consider p0,p1,p2 the base.
 // Looking from p3 back toward the base, a counter-clockwise cycle
 // p0->p1->p2->p0 gives a positive volume.

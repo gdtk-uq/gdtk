@@ -543,6 +543,12 @@ public:
 	    foreach (i, cell; cells) {
 		double vol, xyplane_area;
 		switch (cell.vtx.length) {
+		case 3:
+		    xyplane_triangle_cell_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+						     cell.vtx[2].pos[gtl],
+						     cell.pos[gtl], xyplane_area,
+						     cell.iLength, cell.jLength, cell.L_min);
+		    break;
 		case 4:
 		    xyplane_quad_cell_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
 						 cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],

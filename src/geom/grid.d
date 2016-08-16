@@ -68,9 +68,18 @@ class Grid {
 	    switch (dimensions) {
 	    case 1: throw new Exception("cell search not implemented for 1D grids");
 	    case 2:
-		// In 2D, assume quad cells.
-		inside_cell = inside_xy_quad(vertices[vtx_id[0]], vertices[vtx_id[1]],
-					     vertices[vtx_id[2]], vertices[vtx_id[3]], p); 
+		switch (vtx_id.length) {
+		case 3:
+		    inside_cell = inside_xy_triangle(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						     vertices[vtx_id[2]], p);
+		    break;
+		case 4:
+		    inside_cell = inside_xy_quad(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						 vertices[vtx_id[2]], vertices[vtx_id[3]], p);
+		    break;
+		default:
+		    assert(0);
+		}
 		break;
 	    case 3:
 		// In 3D, assume hex cells with 8 vertices.
