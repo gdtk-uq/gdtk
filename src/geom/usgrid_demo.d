@@ -55,7 +55,7 @@ void main()
     writeln("su2 2D grid -- quadrangles");
     auto su2grid2 = new UnstructuredGrid("sample-data/square-mesh-quads.su2", "su2text");
     su2grid2.write_to_vtk_file("test_su2-square-mesh-quads.vtk");
-    writeln("su2 2D grid -- hexagons");
+    writeln("su2 3D grid -- hexagons");
     auto su2grid3 = new UnstructuredGrid("sample-data/cube-mesh-hex.su2", "su2text");
     su2grid3.write_to_vtk_file("test_su2-cube-mesh-hex.vtk");
     

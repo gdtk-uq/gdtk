@@ -27,13 +27,19 @@ import sgrid;
 import paver;
 
 //-----------------------------------------------------------------
+// For the USGCell types, we will have only the linear elements,
+// with straight-line edges joining the vertices.
+// We will use VTK names and vertex ordering to align with su2 file format,
+// however, we will have a different integer tags so we will need
+// a translation array between the tags.
 
 enum USGCell_type {
-    // We will use VTK names and vertex ordering, to align with su2 file format.
     none = 0,
+    // For 2D simulations.
     triangle = 1,
     quad = 2,
     polygon = 3,
+    // For 3D simulations.
     tetra = 4,
     wedge = 5,
     hexahedron = 6,
@@ -62,9 +68,31 @@ USGCell_type cell_type_from_name(string name)
     }
 }
 
+string makeFaceTag(const size_t[] vtx_id_list)
+{
+    // We make a tag for this face out of the vertex id numbers
+    // sorted in ascending order.  Any cycle of the same vertices
+    // should define the same face, so we will use this tag as
+    // a way to check if we have made a particular face before.
+    // Of course, permutations of the same values that are not
+    // correct cycles will produce the same tag, however,
+    // we'll not worry about that for now because we should only
+    // ever be providing correct cycles.
+    size_t[] my_id_list = vtx_id_list.dup();
+    sort(my_id_list);
+    string tag = "";
+    size_t n = my_id_list.length;
+    foreach(i; 0 .. n) {
+	if (i > 0) { tag ~= "-"; }
+	tag ~= format("%d", my_id_list[i]);
+    }
+    return tag;
+}
+
 class USGFace {
 public:
     size_t[] vtx_id_list;
+    string tag;
     // Note that, when construction a grid from a set of vertices and lists
     // of vertex indices, we will be able to tell if a face in a boundary list
     // is facing in or out by whether it has a right or left cell.
@@ -73,14 +101,16 @@ public:
     USGCell left_cell;
     USGCell right_cell;
 
-    this(size_t[] vtx_id_list) 
+    this(const size_t[] vtx_id_list) 
     {
 	this.vtx_id_list = vtx_id_list.dup();
+	this.tag = makeFaceTag(vtx_id_list);
     }
 
     this(const USGFace other)
     {
 	vtx_id_list = other.vtx_id_list.dup();
+	tag = other.tag;
 	// The const constraint means that we cannot copy the left_cell and
 	// right_cell references.  The compiler cannot be sure that we will
 	// honour the const promise once it has allowed us to copy references.
@@ -591,12 +621,10 @@ public:
     // of the list of vertex-id values at face construction time and
     // search on those.
     {
+	string myTag = makeFaceTag(id_list);
 	bool found = false;
 	foreach(i; 0 .. faces.length) {
-	    if (faces[i].vtx_id_list.length != id_list.length) continue;
-	    if (equal(sort(id_list.dup()), sort(faces[i].vtx_id_list.dup()))) {
-		found = true; indx = i;
-	    }
+	    if (myTag == faces[i].tag) { found = true; indx = i; }
 	}
 	return found;
     }
@@ -736,9 +764,14 @@ public:
 	// Now that we have the full list of cells and vertices assigned to each cell,
 	// we can construct the faces between cells and along the boundaries.
 	//
-	void add_linear_face_for_2D(ref USGCell cell, size_t idx0, size_t idx1)
+	void add_face_to_cell(ref USGCell cell, size_t[] corners)
 	{
-	    size_t[] my_vtx_id_list = [cell.vtx_id_list[idx0], cell.vtx_id_list[idx1]];
+	    // If the face is new, we add it to the list, else we use the face
+	    // already stored within the list, so that it may no longer be
+	    // outward pointing for this cell.
+	    //
+	    size_t[] my_vtx_id_list;
+	    foreach(i; corners) { my_vtx_id_list ~= cell.vtx_id_list[i]; }
 	    size_t face_indx = 0;
 	    if (!findFaceIndex(my_vtx_id_list, face_indx)) {
 		// Since we didn't find the face already, construct it.
@@ -746,62 +779,54 @@ public:
 		faces ~= new USGFace(my_vtx_id_list);
 	    }
 	    cell.face_id_list ~= face_indx;
+	    //
 	    // Note that, from this point, we work with the face from the collection
 	    // which, if it was an existing face, will not have the same orientation
 	    // as indicated by the cycle of vertices passed in to this function call.
-	    assert(faces[face_indx].vtx_id_list.length == 2, "incorrect number of vertices");
-	    Vector3* v0 = &vertices[faces[face_indx].vtx_id_list[0]];
-	    Vector3* v1 = &vertices[faces[face_indx].vtx_id_list[1]];
-	    Vector3 pmid = Vector3(vertices[cell.vtx_id_list[0]]);
-	    foreach(i; 1 .. cell.vtx_id_list.length) {
-		pmid += vertices[cell.vtx_id_list[i]];
+	    //
+	    // Pointers to all vertices on face.
+	    Vector3*[] v;
+	    foreach (i; 0 .. corners.length) {
+		v ~= &vertices[faces[face_indx].vtx_id_list[i]];
 	    }
-	    pmid /= cell.vtx_id_list.length;
-	    if (on_left_of_xy_line(*v0, *v1, pmid)) {
-		if (faces[face_indx].left_cell) {
-		    throw new Exception("face already has a left cell");
-		}
-		faces[face_indx].left_cell = cell;
-		cell.outsign_list ~=  1;
-	    } else {
-		if (faces[face_indx].right_cell) {
-		    throw new Exception("face already has a right cell");
-		}
-		faces[face_indx].right_cell = cell;
-		cell.outsign_list ~= -1;
-	    }
-	    return;
-	} // end add_linear_face_for_2D()
-	void add_quadrilateral_face_for_3D(ref USGCell cell, size_t idx0, size_t idx1,
-					   size_t idx2, size_t idx3)
-	{
-	    size_t[] my_vtx_id_list = [cell.vtx_id_list[idx0], cell.vtx_id_list[idx1],
-				       cell.vtx_id_list[idx2], cell.vtx_id_list[idx3]];
-	    size_t face_indx = 0;
-	    if (!findFaceIndex(my_vtx_id_list, face_indx)) {
-		// Since we didn't find the face already, construct it.
-		face_indx = faces.length;
-		faces ~= new USGFace(my_vtx_id_list);
-	    }
-	    cell.face_id_list ~= face_indx;
-	    // Note that, from this point, we work with the face from the collection
-	    // which, if it was an existing face, will not have the same orientation
-	    // as indicated by the cycle of vertices passed in to this function call.
-	    assert(faces[face_indx].vtx_id_list.length == 4, "incorrect number of vertices");
-	    Vector3* v0 = &vertices[faces[face_indx].vtx_id_list[0]];
-	    Vector3* v1 = &vertices[faces[face_indx].vtx_id_list[1]];
-	    Vector3* v2 = &vertices[faces[face_indx].vtx_id_list[2]];
-	    Vector3* v3 = &vertices[faces[face_indx].vtx_id_list[3]];
-	    Vector3 vmid = 0.25*(*v0 + *v1 + *v2 + *v3);
+	    // Location of mid-point of cell.
 	    Vector3 cell_mid = Vector3(vertices[cell.vtx_id_list[0]]);
 	    foreach(i; 1 .. cell.vtx_id_list.length) {
 		cell_mid += vertices[cell.vtx_id_list[i]];
 	    }
 	    cell_mid /= cell.vtx_id_list.length;
-	    // The face has been defined with the vertices being in a counter-clockwise
-	    // cycle when viewed from outside of the cell.  We expect negative volumes
-	    // for the pyramid having the cell centre as the apex.
-	    if (tetragonal_dipyramid_volume(*v0, *v1, *v2, *v3, vmid, cell_mid) < 0.0) {
+	    //
+	    // Determine if cell is on left- or right-side of face.
+	    //
+	    bool onLeft;
+	    switch (corners.length) {
+	    case 2:
+		// Two-dimensional simulation:
+		// The face is a line in the xy-plane.
+		onLeft = on_left_of_xy_line(*(v[0]), *(v[1]), cell_mid);
+		break;
+	    case 3:
+		// Three-dimensional simulation:
+		// The face has been defined with the vertices being in
+		// a counter-clockwise cycle when viewed from outside of the cell.
+		// We expect negative volumes for the pyramid having the cell's
+		// midpoint as its apex.
+		onLeft = (tetrahedron_volume(*(v[0]), *(v[1]), *(v[2]), cell_mid) < 0.0);
+		break;
+	    case 4:
+		// Three-dimensional simulation:
+		// The face has been defined with the vertices being in
+		// a counter-clockwise cycle when viewed from outside of the cell.
+		// We expect negative volumes for the pyramid having the cell's
+		// midpoint as its apex.
+		Vector3 vmid = 0.25*( *(v[0]) + *(v[1]) + *(v[2]) + *(v[3]) );
+		onLeft = (tetragonal_dipyramid_volume(*(v[0]), *(v[1]), *(v[2]), *(v[3]),
+						      vmid, cell_mid) < 0.0);
+		break;
+	    default:
+		throw new Exception("invalid number of corners on face.");
+	    }
+	    if (onLeft) {
 		if (faces[face_indx].left_cell) {
 		    throw new Exception("face already has a left cell");
 		}
@@ -815,21 +840,27 @@ public:
 		cell.outsign_list ~= -1;
 	    }
 	    return;
-	} // end add_quadrilateral_face_for_3D()
+	} // end add_face_to_cell()
+	//
 	foreach(cell; cells) {
 	    if (!cell) continue;
+	    // Attach the faces to each cell. In 2D, faces are defined as lines.
+	    // As we progress along the line the face normal is pointing to the right.
+	    // In 3D, a counter-clockwise cycles of points plus the right-hand rule
+	    // define the face normal. Whether a face points out of or into a cell
+	    // will be determined and remembered when we add the face to the cell.
 	    if (dimensions == 2) {
 		switch(cell.cell_type) {
 		case USGCell_type.triangle:
-		    add_linear_face_for_2D(cell, 0, 1);
-		    add_linear_face_for_2D(cell, 1, 2);
-		    add_linear_face_for_2D(cell, 2, 0);
+		    add_face_to_cell(cell, [0,1]);
+		    add_face_to_cell(cell, [1,2]);
+		    add_face_to_cell(cell, [2,0]);
 		    break;
 		case USGCell_type.quad:
-		    add_linear_face_for_2D(cell, 2, 3); // north
-		    add_linear_face_for_2D(cell, 1, 2); // east
-		    add_linear_face_for_2D(cell, 0, 1); // south
-		    add_linear_face_for_2D(cell, 3, 0); // west
+		    add_face_to_cell(cell, [2,3]); // north
+		    add_face_to_cell(cell, [1,2]); // east
+		    add_face_to_cell(cell, [0,1]); // south
+		    add_face_to_cell(cell, [3,0]); // west
 		    break;
 		default:
 		    throw new Exception("invalid cell type in 2D");
@@ -838,19 +869,33 @@ public:
 		assert(dimensions == 3, "invalid dimensions");
 		switch(cell.cell_type) {
 		case USGCell_type.tetra:
-		    throw new Exception("not implemented yet");
+		    add_face_to_cell(cell, [0,1,2]);
+		    add_face_to_cell(cell, [0,1,3]);
+		    add_face_to_cell(cell, [1,2,3]);
+		    add_face_to_cell(cell, [2,0,3]);
+		    break;
 		case USGCell_type.hexahedron:
-		    add_quadrilateral_face_for_3D(cell, 2, 3, 7, 6); // north
-		    add_quadrilateral_face_for_3D(cell, 1, 2, 6, 5); // east
-		    add_quadrilateral_face_for_3D(cell, 1, 0, 4, 5); // south
-		    add_quadrilateral_face_for_3D(cell, 0, 3, 7, 4); // west
-		    add_quadrilateral_face_for_3D(cell, 4, 5, 6, 7); // top
-		    add_quadrilateral_face_for_3D(cell, 0, 1, 2, 3); // bottom
+		    add_face_to_cell(cell, [2,3,7,6]); // north
+		    add_face_to_cell(cell, [1,2,6,5]); // east
+		    add_face_to_cell(cell, [1,0,4,5]); // south
+		    add_face_to_cell(cell, [0,3,7,4]); // west
+		    add_face_to_cell(cell, [4,5,6,7]); // top
+		    add_face_to_cell(cell, [0,1,2,3]); // bottom
 		    break;
 		case USGCell_type.wedge:
-		    throw new Exception("not implemented yet");
+		    add_face_to_cell(cell, [0,1,2]);
+		    add_face_to_cell(cell, [3,4,5]);
+		    add_face_to_cell(cell, [0,2,5,3]);
+		    add_face_to_cell(cell, [0,3,4,1]);
+		    add_face_to_cell(cell, [1,4,5,2]);
+		    break;
 		case USGCell_type.pyramid:
-		    throw new Exception("not implemented yet");
+		    add_face_to_cell(cell, [0,1,2,3]);
+		    add_face_to_cell(cell, [0,1,4]);
+		    add_face_to_cell(cell, [1,2,4]);
+		    add_face_to_cell(cell, [2,3,4]);
+		    add_face_to_cell(cell, [3,0,4]);
+		    break;
 		default:
 		    throw new Exception("invalid cell type in 3D");
 		}
