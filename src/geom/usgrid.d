@@ -71,7 +71,8 @@ USGCell_type cell_type_from_name(string name)
 string makeFaceTag(const size_t[] vtx_id_list)
 {
     // We make a tag for this face out of the vertex id numbers
-    // sorted in ascending order.  Any cycle of the same vertices
+    // sorted in ascending order, to be used as a key in an
+    // associative array of indices.  Any cycle of the same vertices
     // should define the same face, so we will use this tag as
     // a way to check if we have made a particular face before.
     // Of course, permutations of the same values that are not
@@ -104,13 +105,11 @@ public:
     this(const size_t[] vtx_id_list) 
     {
 	this.vtx_id_list = vtx_id_list.dup();
-	this.tag = makeFaceTag(vtx_id_list);
     }
 
     this(const USGFace other)
     {
 	vtx_id_list = other.vtx_id_list.dup();
-	tag = other.tag;
 	// The const constraint means that we cannot copy the left_cell and
 	// right_cell references.  The compiler cannot be sure that we will
 	// honour the const promise once it has allowed us to copy references.
@@ -254,6 +253,9 @@ class UnstructuredGrid : Grid {
 public:
     size_t nfaces, nboundaries;
     USGFace[] faces;
+    // The following dictionary of faces, identified by their defining vertices,
+    // will enable us to quickly search for an already defined face.
+    size_t[string] faceIndices;
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
 
@@ -279,6 +281,7 @@ public:
 	}
 	foreach(f; FACE_LIST){
 	    size_t[] vtx_id_list = f.point_IDs;
+	    faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
 	    this.faces ~= new USGFace(vtx_id_list);
 	}
 	foreach(c; CELL_LIST){
@@ -301,7 +304,10 @@ public:
 	nfaces = other.nfaces;
 	nboundaries = other.nboundaries;
 	foreach(v; other.vertices) { vertices ~= Vector3(v); }
-	foreach(f; other.faces) { faces ~= new USGFace(f); }
+	foreach(f; other.faces) {
+	    faceIndices[makeFaceTag(f.vtx_id_list)] = faces.length;
+	    faces ~= new USGFace(f);
+	}
 	foreach(c; other.cells) { cells ~= new USGCell(c); }
 	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
     }
@@ -344,7 +350,9 @@ public:
 	    }
 	    foreach (j; 0 .. sg.njv-1) {
 		foreach (i; 0 .. sg.niv) {
-		    faces ~= new USGFace([vtx_id[i][j], vtx_id[i][j+1]]);
+		    size_t[] vtx_id_list = [vtx_id[i][j], vtx_id[i][j+1]];
+		    faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
+		    faces ~= new USGFace(vtx_id_list);
 		    iface_id[i][j] = faces.length - 1;
 		    if (i == 0) {
 			boundaries[Face.west].face_id_list ~= iface_id[i][j];
@@ -364,7 +372,9 @@ public:
 	    }
 	    foreach (j; 0 .. sg.njv) {
 		foreach (i; 0 .. sg.niv-1) {
-		    faces ~= new USGFace([vtx_id[i+1][j], vtx_id[i][j]]);
+		    size_t[] vtx_id_list = [vtx_id[i+1][j], vtx_id[i][j]];
+		    faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
+		    faces ~= new USGFace(vtx_id_list);
 		    jface_id[i][j] = faces.length - 1;
 		    if (j == 0) {
 			boundaries[Face.south].face_id_list ~= jface_id[i][j];
@@ -439,8 +449,10 @@ public:
 	    foreach (k; 0 .. sg.nkv-1) {
 		foreach (j; 0 .. sg.njv-1) {
 		    foreach (i; 0 .. sg.niv) {
-			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i][j+1][k],
-					      vtx_id[i][j+1][k+1], vtx_id[i][j][k+1]]);
+			size_t[] vtx_id_list = [vtx_id[i][j][k], vtx_id[i][j+1][k],
+						vtx_id[i][j+1][k+1], vtx_id[i][j][k+1]];
+			faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
+			faces ~= new USGFace(vtx_id_list);
 			iface_id[i][j][k] = faces.length - 1;
 			if (i == 0) {
 			    boundaries[Face.west].face_id_list ~= iface_id[i][j][k];
@@ -465,8 +477,10 @@ public:
 	    foreach (k; 0 .. sg.nkv-1) {
 		foreach (j; 0 .. sg.njv) {
 		    foreach (i; 0 .. sg.niv-1) {
-			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
-					      vtx_id[i+1][j][k+1], vtx_id[i][j][k+1]]);
+			size_t[] vtx_id_list = [vtx_id[i][j][k], vtx_id[i+1][j][k],
+						vtx_id[i+1][j][k+1], vtx_id[i][j][k+1]];
+			faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
+			faces ~= new USGFace(vtx_id_list);
 			jface_id[i][j][k] = faces.length - 1;
 			if (j == 0) {
 			    boundaries[Face.south].face_id_list ~= jface_id[i][j][k];
@@ -491,8 +505,10 @@ public:
 	    foreach (k; 0 .. sg.nkv) {
 		foreach (j; 0 .. sg.njv-1) {
 		    foreach (i; 0 .. sg.niv-1) {
-			faces ~= new USGFace([vtx_id[i][j][k], vtx_id[i+1][j][k],
-					      vtx_id[i+1][j+1][k], vtx_id[i][j+1][k]]);
+			size_t[] vtx_id_list = [vtx_id[i][j][k], vtx_id[i+1][j][k],
+						vtx_id[i+1][j+1][k], vtx_id[i][j+1][k]];
+			faceIndices[makeFaceTag(vtx_id_list)] = faces.length;
+			faces ~= new USGFace(vtx_id_list);
 			kface_id[i][j][k] = faces.length - 1;
 			if (k == 0) {
 			    boundaries[Face.bottom].face_id_list ~= kface_id[i][j][k];
@@ -613,20 +629,14 @@ public:
     }
 
     bool findFaceIndex(const size_t[] id_list, ref size_t indx)
-    // Given a list of vertex ids, determine is we already have a face
-    // constructed from those vertices, and returns its index.
-    //
-    // This is a slow, brute-force search with lots of allocations.
-    // If we have to use it a lot, if may be better to store hashes
-    // of the list of vertex-id values at face construction time and
-    // search on those.
+    // Returns true is the face is in the dictionary.
     {
-	string myTag = makeFaceTag(id_list);
-	bool found = false;
-	foreach(i; 0 .. faces.length) {
-	    if (myTag == faces[i].tag) { found = true; indx = i; }
+	string tag = makeFaceTag(id_list);
+	if (tag in faceIndices) {
+	    indx = faceIndices[tag];
+	    return true;
 	}
-	return found;
+	return false;
     }
     
     // ------------------------
@@ -666,7 +676,9 @@ public:
 	faces.length = 0;
 	foreach (i; 0 .. nfaces) {
 	    line = byLine.front; byLine.popFront();
-	    faces ~= new USGFace(line);
+	    auto myFace = new USGFace(line);
+	    faceIndices[makeFaceTag(myFace.vtx_id_list)] = faces.length;
+	    faces ~= myFace;
 	}
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "cells: %d", &ncells);
@@ -773,10 +785,15 @@ public:
 	    size_t[] my_vtx_id_list;
 	    foreach(i; corners) { my_vtx_id_list ~= cell.vtx_id_list[i]; }
 	    size_t face_indx = 0;
-	    if (!findFaceIndex(my_vtx_id_list, face_indx)) {
+	    string faceTag = makeFaceTag(my_vtx_id_list);
+	    if (faceTag in faceIndices) {
+		// Use the face already present.
+		face_indx = faceIndices[faceTag];
+	    } else {
 		// Since we didn't find the face already, construct it.
 		face_indx = faces.length;
 		faces ~= new USGFace(my_vtx_id_list);
+		faceIndices[faceTag] = face_indx;
 	    }
 	    cell.face_id_list ~= face_indx;
 	    //
