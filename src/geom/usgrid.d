@@ -42,7 +42,7 @@ enum USGCell_type {
 string[] cell_names = ["none", "triangle", "quad", "polygon",
 		       "tetra", "wedge", "hexahedron", "pyramid"];
 
-int[] cell_type_for_vtk = [0, VTKElement.triangle, VTKElement.quad, VTKElement.polygon,
+int[] vtk_element_types = [0, VTKElement.triangle, VTKElement.quad, VTKElement.polygon,
 			   VTKElement.tetra, VTKElement.wedge, VTKElement.hexahedron,
 			   VTKElement.pyramid];
 
@@ -52,7 +52,7 @@ USGCell_type cell_type_from_name(string name)
     case "none": return USGCell_type.none;
     case "triangle": return USGCell_type.triangle;
     case "quad": return USGCell_type.quad;
-    case "polygon": return USGCell_type.polygon;
+    // case "polygon": return USGCell_type.polygon; // don't allow polygon cells
     case "tetra": return USGCell_type.tetra;
     case "wedge": return USGCell_type.wedge;
     case "hexahedron": return USGCell_type.hexahedron;
@@ -61,7 +61,7 @@ USGCell_type cell_type_from_name(string name)
 	throw new Error(text("Invalid USGCell type name: ", name));
     }
 }
-    
+
 class USGFace {
 public:
     size_t[] vtx_id_list;
@@ -553,6 +553,16 @@ public:
 	return &(vertices[indx]);
     }
 
+    override size_t number_of_vertices_for_cell(size_t i)
+    {
+	return cells[i].vtx_id_list.length;
+    }
+
+    override int vtk_element_type_for_cell(size_t i)
+    {
+	return vtk_element_types[cells[i].cell_type];
+    }
+
     override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
     in {
 	assert (i < ncells, text("index i=", i, " is invalid, ncells=", ncells));
@@ -846,6 +856,7 @@ public:
 		}
 	    }
 	} // end foreach cell
+	nfaces = faces.length;
 	//
 	// Now that we have a full set of cells and faces,
 	// make lists of the boundary faces.
@@ -942,7 +953,7 @@ public:
 	}
 	f.writefln("CELL_TYPES %d", ncells);
 	foreach (c; cells) {
-	    f.writeln(cell_type_for_vtk[c.cell_type]);
+	    f.writeln(vtk_element_types[c.cell_type]);
 	}
 	f.close();
     } // end write_to_vtk_file()

@@ -54,6 +54,8 @@ class Grid {
     abstract void read_from_gzip_file(string fileName);
     abstract void write_to_gzip_file(string fileName);
     abstract void write_to_vtk_file(string fileName);
+    abstract size_t number_of_vertices_for_cell(size_t i);
+    abstract int vtk_element_type_for_cell(size_t i);
 
     void find_enclosing_cell(double x, double y, double z, ref size_t indx, ref bool found)
     {

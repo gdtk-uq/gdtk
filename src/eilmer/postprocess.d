@@ -692,13 +692,9 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     }
     // Since all of the point-lists are concatenated, these offsets into the connectivity
     // array specify the end of each cell.
+    size_t conn_offset = 0;
     foreach (i; 0 .. grid.ncells) {
-	size_t conn_offset;
-	if (two_D) {
-	    conn_offset = 4*(1+i);
-	} else {
-	    conn_offset = 8*(1+i);
-	}
+	conn_offset += grid.number_of_vertices_for_cell(i);
 	if (binary_format) {
 	    binary_data ~= nativeToBigEndian(to!int32_t(conn_offset));
 	} else {
@@ -720,13 +716,8 @@ void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb,
     } else {
         fp.write(" format=\"ascii\">\n");
     }
-    int type_value;
-    if (two_D) {
-        type_value = VTKElement.quad;
-    } else {
-        type_value = VTKElement.hexahedron;
-    }
     foreach (i; 0 .. grid.ncells) {
+	int type_value = grid.vtk_element_type_for_cell(i);
 	if (binary_format) {
 	    binary_data ~= nativeToBigEndian(to!uint8_t(type_value));
 	} else {

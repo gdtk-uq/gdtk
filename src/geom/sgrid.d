@@ -172,6 +172,26 @@ public:
 	return &(vertices[indx]);
     }
 
+    override size_t number_of_vertices_for_cell(size_t i)
+    {
+	switch (dimensions) {
+	case 1: return 2;
+	case 2: return 4;
+	case 3: return 8;
+	default: return 0; // oops
+	}
+    }
+
+    override int vtk_element_type_for_cell(size_t i)
+    {
+	switch (dimensions) {
+	case 1: return VTKElement.line;
+	case 2: return VTKElement.quad;
+	case 3: return VTKElement.hexahedron;
+	default: return 0; // oops
+	}
+    }
+    
     override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
     in {
 	size_t nic, njc, nkc;

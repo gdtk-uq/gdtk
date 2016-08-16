@@ -167,11 +167,11 @@ A table containing arguments is expected, but no table was found.`;
 	luaL_error(L, errMsg.toStringz);
     }
     UnstructuredGrid usgrid;
-    StructuredGrid sgrid;
+    //
     // First, look for a StructuredGrid field.
     lua_getfield(L, 1, "sgrid".toStringz);
     if ( !lua_isnil(L, -1) ) {
-	sgrid = checkStructuredGrid(L, -1);
+	StructuredGrid sgrid = checkStructuredGrid(L, -1);
 	if (!sgrid) {
 	    string errMsg = "Error in UnstructuredGrid:new{}. sgrid not a StructuredGrid.";
 	    luaL_error(L, errMsg.toStringz);
@@ -185,14 +185,18 @@ A table containing arguments is expected, but no table was found.`;
 	lua_getfield(L, 1, "filename".toStringz);
 	if ( !lua_isnil(L, -1) ) {
 	    string filename = to!string(luaL_checkstring(L, -1));
+	    string fmt = "gziptext";
+	    lua_getfield(L, 1, "fmt".toStringz);
+	    if ( !lua_isnil(L, -1) ) { fmt = to!string(luaL_checkstring(L, -1)); }
+	    lua_pop(L, 1); // dispose of format item
 	    if (filename.length > 0) {
-		usgrid = new UnstructuredGrid(filename, "gziptext"); // [TODO] new_label
+		usgrid = new UnstructuredGrid(filename, fmt); // [TODO] new_label
 	    }
 	} else {
 	    string errMsg = "Error in UnstructuredGrid:new{}. expected a string for filename.";
 	    luaL_error(L, errMsg.toStringz);
 	}
-	lua_pop(L, 1);
+	lua_pop(L, 1); // dispose of filename item
     }
 
     if (usgrid) {
