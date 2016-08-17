@@ -612,6 +612,15 @@ public:
 	    // Primary cell geometry in 3D.
 	    foreach (i, cell; cells) {
 		switch (cell.vtx.length) {
+		case 4:
+		    tetrahedron_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+					   cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
+					   cell.pos[gtl], cell.volume[gtl]);
+		    cell.L_min = exp(log(cell.volume[gtl])/3.0);
+		    cell.iLength = cell.L_min;
+		    cell.jLength = cell.L_min;
+		    cell.kLength = cell.L_min;
+		    break;
 		case 8:
 		    hex_cell_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
 					cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
@@ -623,6 +632,10 @@ public:
 		    if (cell.jLength < cell.L_min) cell.L_min = cell.jLength;
 		    if (cell.kLength < cell.L_min) cell.L_min = cell.kLength;
 		    break;
+		case 5:
+		    throw new Exception("need to implement pyramid cell properties");
+		case 6:
+		    throw new Exception("need to implement wedge cell properties");
 		default:
 		    string msg = "compute_primary_cell_geometric_data() cells: ";
 		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
@@ -632,6 +645,11 @@ public:
 	    // Face geometry in 3D.
 	    foreach (f; faces) {
 		switch (f.vtx.length) {
+		case 3:
+		    triangle_properties(f.vtx[0].pos[gtl], f.vtx[1].pos[gtl],
+					f.vtx[2].pos[gtl],
+					f.pos, f.n, f.t1, f.t2, f.area[gtl]);
+		    break;
 		case 4:
 		    quad_properties(f.vtx[0].pos[gtl], f.vtx[1].pos[gtl],
 				    f.vtx[2].pos[gtl], f.vtx[3].pos[gtl],

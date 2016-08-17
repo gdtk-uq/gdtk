@@ -79,14 +79,27 @@ class Grid {
 		    break;
 		default:
 		    assert(0);
-		}
+		} // end switch (vtx_id.length)
 		break;
 	    case 3:
-		// In 3D, assume hex cells with 8 vertices.
-		inside_cell = inside_hexahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
-						vertices[vtx_id[2]], vertices[vtx_id[3]],
-						vertices[vtx_id[4]], vertices[vtx_id[5]],
-						vertices[vtx_id[6]], vertices[vtx_id[7]], p); 
+		switch (vtx_id.length) {
+		case 4:
+		    inside_cell = inside_tetrahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						     vertices[vtx_id[2]], vertices[vtx_id[3]], p);
+		    break;
+		case 8:
+		    inside_cell = inside_hexahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						    vertices[vtx_id[2]], vertices[vtx_id[3]],
+						    vertices[vtx_id[4]], vertices[vtx_id[5]],
+						    vertices[vtx_id[6]], vertices[vtx_id[7]], p); 
+		    break;
+		case 5:
+		    throw new Exception("need to implement inside pyramid cell");
+		case 6:
+		    throw new Exception("need to implement inside wedge cell");
+		default:
+		    assert(0);
+		} // end switch (vtx_id.length)
 		break;
 	    default: assert(0);
 	    } // end switch (dimensions)

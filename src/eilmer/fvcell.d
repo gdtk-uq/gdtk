@@ -14,6 +14,7 @@ import std.array;
 import std.format;
 import std.stdio;
 import std.math;
+import std.algorithm;
 import geom;
 import gas;
 import kinetics;
@@ -1000,8 +1001,9 @@ public:
 	// Also, compute the velocity magnitude and recall the minimum length.
 	un_N = fabs(fs.vel.dot(iface[Face.north].n));
 	un_E = fabs(fs.vel.dot(iface[Face.east].n));
+	size_t third_face = min(Face.top, iface.length-1);
 	if (myConfig.dimensions == 3) {
-	    un_T = fabs(fs.vel.dot(iface[Face.top].n));
+	    un_T = fabs(fs.vel.dot(iface[third_face].n));
 	    u_mag = sqrt(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
 	} else {
 	    un_T = 0.0;
@@ -1011,7 +1013,7 @@ public:
 	    Bn_N = fabs(fs.B.dot(iface[Face.north].n));
 	    Bn_E = fabs(fs.B.dot(iface[Face.east].n));
 	    if (myConfig.dimensions == 3) {
-		Bn_T = fabs(fs.B.dot(iface[Face.top].n));
+		Bn_T = fabs(fs.B.dot(iface[third_face].n));
 	    }
 	    u_mag = sqrt(fs.vel.x * fs.vel.x + fs.vel.y * fs.vel.y + fs.vel.z * fs.vel.z);
 	    B_mag = sqrt(fs.B.x * fs.B.x + fs.B.y * fs.B.y + fs.B.z * fs.B.z);

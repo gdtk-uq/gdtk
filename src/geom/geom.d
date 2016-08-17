@@ -567,6 +567,47 @@ unittest {
 //------------------------------------------------------------------------
 // Utility functions for cell properties in the finite-volume code.
 
+/** Triangle properties of centroid, associated unit normals and area.
+ *  p2
+ *   |\
+ *   | \
+ *   |  \
+ *   |   \
+ *  p0----p1
+ * Resultant normal vector is up, toward you.
+ * Assume that all points are in the one plane.
+ */
+void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+			 ref const(Vector3) p2,
+			 ref Vector3 centroid,
+			 ref Vector3 n, ref Vector3 t1, ref Vector3 t2,
+			 ref double area,
+			 double tol=1.0e-12, double area_tol=1.0e-20)
+{
+    centroid = (p0 + p1 + p2)/3.0;
+    // Compute areas via the cross products.
+    Vector3 vector_area = 0.5 * cross(p1-p0, p2-p0);
+    // unit-normal and area
+    area = abs(vector_area);
+    if ( area > area_tol ) {
+	n = unit(vector_area);
+	// Tangent unit-vectors: 
+	// t1 is parallel to side01
+	// t2 is normal to n and t1
+	t1 = unit(p1-p0);
+	t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
+    } else {
+	// We have nothing meaningful to put into the unit vectors.
+	throw new Exception("Effectively zero area triangle.");
+    }
+    if ( fabs(abs(n)-1.0) > tol || fabs(abs(t1)-1.0) > tol || fabs(abs(t2)-1.0) > tol ) {
+	string details = text(" p0=", p0, " p1=", p1, " p2=", p2,
+			      " n=", n, " t1=", t1, " t2=", t2,
+			      " area=", area, " centroid=", centroid);
+	throw new Exception(text("Failed to produce unit vectors properly.", details));
+    }
+} // end triangle_properties()
+
 /** Quadrilateral properties of centroid, associated unit normals and area.
  *   p3-----p2
  *   |      |
@@ -719,6 +760,7 @@ void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) 
 double tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 			  ref const(Vector3) p2, ref const(Vector3) p3)
 {
+    // [TODO] expand up to components to avoid allocation
     return dot(p3-p0, cross(p1-p0, p2-p0)) / 6.0;
 } // end tetrahedron_volume()
 
@@ -727,7 +769,7 @@ void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			    ref Vector3 centroid, ref double volume)
 {
     volume = tetrahedron_volume(p0, p1, p2, p3);
-    centroid = 0.25 * (p0 + p1 + p2 + p3);
+    centroid = 0.25 * (p0 + p1 + p2 + p3); // [TODO] expand to components
 } // end tetrahedron_properties()
 
 void tetrahedron_properties(ref const(Vector3)[] p,
@@ -747,6 +789,9 @@ void wedge_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2,
 		      const Vector3 p3, in Vector3 p4, in Vector3 p5,
 		      ref Vector3 centroid, ref double volume)
 {
+    // [TODO] may be better to use midpoints of the quad faces
+    // and then use 3 tetragonal-dipyramids and 2 tetrahedrons.
+    // This will be more computation but will cope with warped cells.
     double v1, v2, v3;
     Vector3 c1, c2, c3;
     tetrahedron_properties(p0, p4, p5, p3, c1, v1);
@@ -991,6 +1036,19 @@ unittest {
 }
 
 // Functions for 3D cells.
+
+bool inside_tetrahedron(ref const(Vector3) p0, ref const(Vector3) p1,
+			ref const(Vector3) p2, ref const(Vector3) p3,
+			ref const(Vector3) p)
+// Returns true is the point p is inside or on the tetrahedron surface.
+{
+    if ((tetrahedron_volume(p0, p2, p1, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p0, p1, p3, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p1, p2, p3, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p0, p2, p3, p)) > 0.0) return false;
+    // If we arrive here, we haven't determined that the point is outside...
+    return true;
+} // end inside_tetrahedron()
 
 bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
 		       ref const(Vector3) p2, ref const(Vector3) p3,
