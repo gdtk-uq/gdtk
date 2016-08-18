@@ -1770,10 +1770,12 @@ public:
 		// Fall back to nearest cell search.
 		FVCell closest_cell = gasBlocks[0].cells[0];
 		Vector3 cellpos = closest_cell.pos[0];
-		double min_distance = abs(cellpos - mypos);
+		Vector3 dp = cellpos - mypos;
+		double min_distance = abs(dp);
 		foreach (blk; gasBlocks) {
 		    foreach (cell; blk.cells) {
-			double distance = abs(cell.pos[0] - mypos);
+			dp = cell.pos[0] - mypos;
+			double distance = abs(dp);
 			if (distance < min_distance) {
 			    closest_cell = cell;
 			    min_distance = distance;

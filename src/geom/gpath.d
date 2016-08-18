@@ -77,10 +77,11 @@ public:
 	int n = 100;
 	double dt = (tb - ta) / n;
 	Vector3 p0 = this.opCall(ta);
-	Vector3 p1;
+	Vector3 p1, dp;
 	foreach (i; 1 .. n+1) {
 	    p1 = this.opCall(ta + dt * i);
-	    L += abs(p1 - p0);
+	    dp = p1 - p0;
+	    L += abs(dp);
 	    p0 = p1;
 	}
 	return L;
@@ -95,10 +96,11 @@ public:
 	int n = 1000;
 	double dt = 1.0 / n;
 	Vector3 p0 = this.opCall(0.0);
-	Vector3 p1;
+	Vector3 p1, dp;
 	foreach (i; 1 .. n+1) {
 	    p1 = this.opCall(dt * i);
-	    L += abs(p1 - p0);
+	    dp = p1 - p0;
+	    L += abs(dp);
 	    p0 = p1;
 	    if( L > length ) {
 		t = dt * i;
@@ -151,11 +153,13 @@ public:
     }
     override double partial_length(double ta, double tb) const
     {
-	return fabs(tb - ta) * abs(p1 - p0);
+	Vector3 dp = p1 - p0;
+	return fabs(tb - ta) * abs(dp);
     }
     override Vector3 point_from_length(double length, out double t) const
     {
-	t = length/(abs(p1 - p0));
+	Vector3 dp = p1 - p0;
+	t = length/(abs(dp));
 	return this.opCall(t);
     }
 } // end class Line
@@ -293,7 +297,8 @@ class Arc3 : Arc {
 	double s_mb = s_values[1,0];
 	Vector3 c = mid_am + s_am * bisect_am;
 	Vector3 c_check = mid_mb + s_mb * bisect_mb;
-	if (abs(c_check - this.c) > 1.0e-9) {
+	Vector3 delc = c_check - this.c;
+	if (abs(delc) > 1.0e-9) {
 	    throw new Error(text("Arc3: Points inconsistent centre estimates.",
 				 " c=", to!string(this.c),
 				 " c_check=", to!string(c_check)));
@@ -592,7 +597,8 @@ public:
 	    foreach (i; 1 .. m) {
 		old_p = d[i];
 		d[i] = 0.25 * (6.0 * p[i] - d[i-1] - d[i+1]);
-		max_diff = fmax(max_diff, abs(d[i] - old_p));
+		Vector3 diff = d[i] - old_p;
+		max_diff = fmax(max_diff, abs(diff));
 	    } // end foreach i
 	    if ( max_diff < tolerance ) break;
 	} // end foreach j
@@ -775,7 +781,8 @@ protected:
 	Vector3 p1;
 	foreach (i; 1 .. N+1) {
 	    p1 = underlying_path(dt * i);
-	    L += abs(p1 - p0);
+	    Vector3 dp = p1 - p0;
+	    L += abs(dp);
 	    arc_length_vector ~= L;
 	    p0 = p1;
 	}
@@ -813,13 +820,15 @@ private:
     double d_arc_f_dt(double t) const
     {
 	// "t" is underlying_t
-	return abs(underlying_path.dpdt(t))/arc_length_vector[$-1];
+	Vector3 dpdt = underlying_path.dpdt(t);
+	return abs(dpdt)/arc_length_vector[$-1];
     }
     double d2_arc_f_dt2(double t) const
     {
 	// "t" is underlying_t
 	//chain rule on d_arc_f_dt
-	return dot(unit(underlying_path.dpdt(t)),underlying_path.d2pdt2(t))/arc_length_vector[$-1];
+	Vector3 dpdt = underlying_path.dpdt(t);
+	return dot(unit(dpdt),underlying_path.d2pdt2(t))/arc_length_vector[$-1];
     }
 } // end class ArcLengthParameterizedPath
 
@@ -838,8 +847,10 @@ unittest {
     c = Vector3([1.0, 2.0, 0.0]);
     auto acb = new ArcLengthParameterizedPath(new Bezier([a, c, b])); 
     auto L = acb.underlying_path.length();
-    auto dAdt = abs(Vector3(-1, 0, 1))/L;
-    auto d2Adt2 = dot(unit(Vector3(-1, 0, 1)),Vector3(2,0,2))/L;
+    auto dA = Vector3(-1, 0, 1);
+    auto dAdt = abs(dA)/L;
+    Vector3 d2A = Vector3(-1, 0, 1);
+    auto d2Adt2 = dot(unit(d2A),Vector3(2,0,2))/L;
     // check to finite-difference in Path
     assert(approxEqualVectors(acb.dpdt(0.5), acb.Path.dpdt(0.5)), "ArcLengthParameterizedPath");
     assert(approxEqualVectors(acb.d2pdt2(0.5), acb.Path.d2pdt2(0.5)), "ArcLengthParameterizedPath");

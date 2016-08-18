@@ -382,7 +382,7 @@ double dot(in Vector3 v1, in Vector3 v2)
  * Returns magnitude of the vector.
  */
 @nogc
-double abs(in Vector3 v)
+double abs(ref const(Vector3) v)
 {
     return sqrt(v.dot(v));
 }
@@ -390,9 +390,10 @@ double abs(in Vector3 v)
 /**
  * Returns a unit vector in the same direction as v.
  */
-Vector3 unit(in Vector3 v)
+Vector3 unit(ref const(Vector3) v)
 {
-    return Vector3(v).normalize();
+    Vector3 v2 = Vector3(v);
+    return v2.normalize();
 }
 
 /**
@@ -409,6 +410,7 @@ void cross(alias v3)(ref const(Vector3) v1, ref const(Vector3) v2)
 
 /**
  * Vector cross product for use in Vector3 expressions.
+ * We need to keep the "in" qualifiers.
  */
 @nogc
 Vector3 cross(in Vector3 v1, in Vector3 v2)
@@ -419,7 +421,27 @@ Vector3 cross(in Vector3 v1, in Vector3 v2)
 }
 
 /**
- * Returns true is all of the components are approximately equal.
+ * Component forms
+ */
+
+@nogc
+double dot_product(double ax, double ay, double az, double bx, double by, double bz)
+{
+    return ax*bx + ay*by + az*bz;
+}
+
+@nogc
+void cross_product(double ax, double ay, double az, double bx, double by, double bz,
+		   ref double cx, ref double cy, ref double cz)
+{
+    cx = ay*bz - az*by;
+    cy = az*bx - ax*bz;
+    cz = ax*by - ay*bx;
+    return;
+}
+
+/**
+ * Returns true is all of the components of two vectors are approximately equal.
  */
 @nogc
 bool approxEqualVectors(in Vector3 v1, in Vector3 v2)
@@ -485,8 +507,8 @@ unittest {
     Vector3 zref = Vector3(0.0,0.0,1.0);
     assert(approxEqualVectors(z, zref), "cross product");
 
-    Vector3 n = unit(Vector3(1.0,1.0,0.0));
-    Vector3 t1 = unit(Vector3(-1.0,1.0,0.0));
+    Vector3 n = Vector3(1.0,1.0,0.0); n = unit(n);
+    Vector3 t1 = Vector3(-1.0,1.0,0.0); t1 = unit(t1);
     Vector3 t2 = cross(n, t1);
     Vector3 h = Vector3(1.0,0.0,1.0);
     Vector3 h_ref = Vector3(h);
@@ -577,6 +599,7 @@ unittest {
  * Resultant normal vector is up, toward you.
  * Assume that all points are in the one plane.
  */
+@nogc
 void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			 ref const(Vector3) p2,
 			 ref Vector3 centroid,
@@ -584,27 +607,34 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			 ref double area,
 			 double tol=1.0e-12, double area_tol=1.0e-20)
 {
-    centroid = (p0 + p1 + p2)/3.0;
+    centroid.refx = (p0.x + p1.x + p2.x)/3.0;
+    centroid.refy = (p0.y + p1.y + p2.y)/3.0;
+    centroid.refz = (p0.z + p1.z + p2.z)/3.0;
     // Compute areas via the cross products.
-    Vector3 vector_area = 0.5 * cross(p1-p0, p2-p0);
+    double p01x=p1.x-p0.x; double p01y=p1.y-p0.y; double p01z=p1.z-p0.z;
+    double p02x=p2.x-p0.x; double p02y=p2.y-p0.y; double p02z=p2.z-p0.z;
+    double vector_area_x; double vector_area_y; double vector_area_z;
+    // Vector3 vector_area = 0.5 * cross(p1-p0, p2-p0);
+    cross_product(p01x, p01y, p01z, p02x, p02y, p02z,
+		  vector_area_x, vector_area_y, vector_area_z);
     // unit-normal and area
-    area = abs(vector_area);
-    if ( area > area_tol ) {
-	n = unit(vector_area);
+    // area = abs(vector_area);
+    area = sqrt(vector_area_x^^2 + vector_area_y^^2 + vector_area_z^^2);
+    if (area > area_tol) {
+	// n = unit(vector_area);
+	n.refx = vector_area_x/area; n.refy = vector_area_y/area; n.refz = vector_area_z/area;
 	// Tangent unit-vectors: 
 	// t1 is parallel to side01
 	// t2 is normal to n and t1
-	t1 = unit(p1-p0);
-	t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
+	double abs_p01 = sqrt(p01x^^2 + p01y^^2 + p01z^^2);
+	// t1 = unit(p1-p0);
+	t1.refx = p01x/abs_p01; t1.refy = p01y/abs_p01; t1.refz = p01z/abs_p01;
+	// t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
+	cross!t2(n, t1);
+	t2.normalize();
     } else {
 	// We have nothing meaningful to put into the unit vectors.
-	throw new Exception("Effectively zero area triangle.");
-    }
-    if ( fabs(abs(n)-1.0) > tol || fabs(abs(t1)-1.0) > tol || fabs(abs(t2)-1.0) > tol ) {
-	string details = text(" p0=", p0, " p1=", p1, " p2=", p2,
-			      " n=", n, " t1=", t1, " t2=", t2,
-			      " area=", area, " centroid=", centroid);
-	throw new Exception(text("Failed to produce unit vectors properly.", details));
+	assert(0, "Effectively zero area triangle.");
     }
 } // end triangle_properties()
 
@@ -616,6 +646,7 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
  * Resultant normal vector is up, toward you.
  * Assume that all points are in the one plane.
  */
+@nogc
 void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 		     ref const(Vector3) p2, ref const(Vector3) p3,
 		     ref Vector3 centroid,
@@ -623,30 +654,45 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 		     ref double area,
 		     double tol=1.0e-12, double area_tol=1.0e-20)
 {
-    centroid = 0.25 * (p0 + p1 + p2 + p3);
+    centroid.refx = 0.25 * (p0.x + p1.x + p2.x + p3.x);
+    centroid.refy = 0.25 * (p0.y + p1.y + p2.y + p3.y);
+    centroid.refz = 0.25 * (p0.z + p1.z + p2.z + p3.z);
     // Compute areas via the cross products.
-    Vector3 vector_area = 0.25 * cross(p1-p0+p2-p3, p3-p0+p2-p1);
+    // Vector3 vector_area = 0.25 * cross(p1-p0+p2-p3, p3-p0+p2-p1);
+    double p01x = p1.x-p0.x+p2.x-p3.x;
+    double p01y = p1.y-p0.y+p2.y-p3.y;
+    double p01z = p1.z-p0.z+p2.z-p3.z;
+    double p03x = p3.x-p0.x+p2.x-p1.x;
+    double p03y = p3.y-p0.y+p2.y-p1.y;
+    double p03z = p3.z-p0.z+p2.z-p1.z;
+    double vector_area_x, vector_area_y, vector_area_z;
+    cross_product(p01x, p01y, p01z, p03x, p03y, p03z,
+		  vector_area_x, vector_area_y, vector_area_z);
+    vector_area_x *= 0.25; vector_area_y *= 0.25; vector_area_z *= 0.25;
     // unit-normal and area
-    area = abs(vector_area);
-    if ( area > area_tol ) {
-	n = unit(vector_area);
+    // area = abs(vector_area);
+    area = sqrt(vector_area_x^^2 + vector_area_y^^2 + vector_area_z^^2);
+    if (area > area_tol) {
+	// n = unit(vector_area);
+	n.refx = vector_area_x/area;
+	n.refy = vector_area_y/area;
+	n.refz = vector_area_z/area;
 	// Tangent unit-vectors: 
 	// t1 is parallel to side01 and side32, 
 	// t2 is normal to n and t1
-	t1 = unit((p1-p0)+(p2-p3)); // Works even if one edge has zero length.
-	t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
+	// t1 = unit((p1-p0)+(p2-p3)); // Works even if one edge has zero length.
+	t1.refx = p01x; t1.refy = p01y; t1.refz = p01z;
+	t1.normalize();
+	// t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
+	cross!t2(n, t1);
+	t2.normalize();
     } else {
 	// We have nothing meaningful to put into the unit vectors.
-	throw new Exception("Effectively zero area quadrilateral.");
-    }
-    if ( fabs(abs(n)-1.0) > tol || fabs(abs(t1)-1.0) > tol || fabs(abs(t2)-1.0) > tol ) {
-	string details = text(" p0=", p0, " p1=", p1, " p2=", p2, " p3=", p3,
-			      " n=", n, " t1=", t1, " t2=", t2,
-			      " area=", area, " centroid=", centroid);
-	throw new Exception(text("Failed to produce unit vectors properly.", details));
+	assert(0, "Effectively zero area quadrilateral.");
     }
 } // end quad_properties()
 
+@nogc
 void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
 		     ref Vector3 n, ref Vector3 t1, ref Vector3 t2,
 		     ref double area,
@@ -655,6 +701,7 @@ void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
     quad_properties(p[0], p[1], p[2], p[3], centroid, n, t1, t2, area, tol, area_tol);
 }
 
+@nogc
 void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 				  ref const(Vector3) p2, ref const(Vector3) p3,
 				  ref Vector3 centroid, ref double xyplane_area,
@@ -717,6 +764,7 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     iLen = sqrt(dx * dx + dy * dy);
 } // end xyplane_quad_cell_properties()
 
+@nogc
 void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 				      ref const(Vector3) p2,
 				      ref Vector3 centroid, ref double xyplane_area,
@@ -757,21 +805,32 @@ void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) 
 // Looking from p3 back toward the base, a counter-clockwise cycle
 // p0->p1->p2->p0 gives a positive volume.
 
+@nogc
 double tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 			  ref const(Vector3) p2, ref const(Vector3) p3)
 {
-    // [TODO] expand up to components to avoid allocation
-    return dot(p3-p0, cross(p1-p0, p2-p0)) / 6.0;
+    // Was return dot(p3-p0, cross(p1-p0, p2-p0)) / 6.0;
+    // Now, expand up to components to avoid allocation.
+    double dx01=p1.x-p0.x; double dy01=p1.y-p0.y; double dz01=p1.z-p0.z;
+    double dx02=p2.x-p0.x; double dy02=p2.y-p0.y; double dz02=p2.z-p0.z;
+    double cx, cy, cz;
+    cross_product(dx01, dy01, dz01, dx02, dy02, dz02, cx, cy, cz);
+    double dx03=p3.x-p0.x; double dy03=p3.y-p0.y; double dz03=p3.z-p0.z;
+    return dot_product(dx03, dy03, dz03, cx, cy, cz) / 6.0;
 } // end tetrahedron_volume()
 
+@nogc
 void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			    ref const(Vector3) p2, ref const(Vector3) p3,
 			    ref Vector3 centroid, ref double volume)
 {
+    centroid.refx = 0.25 * (p0.x + p1.x + p2.x + p3.x);
+    centroid.refy = 0.25 * (p0.y + p1.y + p2.y + p3.y);
+    centroid.refz = 0.25 * (p0.z + p1.z + p2.z + p3.z);
     volume = tetrahedron_volume(p0, p1, p2, p3);
-    centroid = 0.25 * (p0 + p1 + p2 + p3); // [TODO] expand to components
 } // end tetrahedron_properties()
 
+@nogc
 void tetrahedron_properties(ref const(Vector3)[] p,
 			    ref Vector3 centroid, ref double volume)
 {
@@ -785,8 +844,9 @@ void tetrahedron_properties(ref const(Vector3)[] p,
 double smallButSignificantVolume = 1.0e-12;
 double verySmallVolume = 1.0e-20;
 
-void wedge_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2, 
-		      const Vector3 p3, in Vector3 p4, in Vector3 p5,
+@nogc
+void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1, ref const(Vector3) p2, 
+		      ref const(Vector3) p3, ref const(Vector3) p4, ref const(Vector3) p5,
 		      ref Vector3 centroid, ref double volume)
 {
     // [TODO] may be better to use midpoints of the quad faces
@@ -803,27 +863,35 @@ void wedge_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2,
 	// We assume that we have a collapsed wedge; no real problem.
 	volume = 0.0;
 	// equally-weighted tetrahedral centroids.
-	centroid = (c1 + c2 + c3) / 3.0;
+	centroid.refx = (c1.x + c2.x + c3.x) / 3.0;
+	centroid.refy = (c1.y + c2.y + c3.y) / 3.0;
+	centroid.refz = (c1.z + c2.z + c3.z) / 3.0;
 	return;
     }
     if ( volume < 0.0 ) {
 	// Something has gone wrong with our wedge geometry.
-	centroid = (c1 + c2 + c3) / 3.0;
-        throw new Exception("significant negative volume.");
+	centroid.refx = (c1.x + c2.x + c3.x) / 3.0;
+	centroid.refy = (c1.y + c2.y + c3.y) / 3.0;
+	centroid.refz = (c1.z + c2.z + c3.z) / 3.0;
+        assert(0, "significant negative volume.");
     }
     // Weight the tetrahedral centroids with their volumes.
-    centroid = (c1*v1 + c2*v2 + c3*v3) / volume;
+    centroid.refx = (c1.x*v1 + c2.x*v2 + c3.x*v3) / volume;
+    centroid.refy = (c1.y*v1 + c2.y*v2 + c3.y*v3) / volume;
+    centroid.refz = (c1.z*v1 + c2.z*v2 + c3.z*v3) / volume;
 } // end wedge_properties()
 
+@nogc
 void wedge_properties(ref const(Vector3)[] p,
 		      ref Vector3 centroid, ref double volume)
 {
     wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
 }
 
-double tetragonal_dipyramid_volume(in Vector3 p0, in Vector3 p1, 
-				   in Vector3 p2, in Vector3 p3, 
-				   in Vector3 pb, in Vector3 pc)
+@nogc
+double tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1, 
+				   ref const(Vector3) p2, ref const(Vector3) p3, 
+				   ref const(Vector3) pb, ref const(Vector3) pc)
 // J. Grandy (1997) Efficient Computation of Volume of Hexahedral Cells UCRL-ID-128886.
 // Base of each dipyramid is specified clockwise from the outside.
 // pc is apex
@@ -832,32 +900,70 @@ double tetragonal_dipyramid_volume(in Vector3 p0, in Vector3 p1,
 // towards it from pc will result in a positive volume.
 // A negative volume indicates that the cycle is clockwise when looking from pc.
 {
-    double volume = dot(pc-pb, cross(p1-p0+p2-p3, p3-p0+p2-p1)) / 12.0;
+    // double volume = dot(pc-pb, cross(p1-p0+p2-p3, p3-p0+p2-p1)) / 12.0;
+    double p01x = 0.5*(p1.x-p0.x+p2.x-p3.x);
+    double p01y = 0.5*(p1.y-p0.y+p2.y-p3.y);
+    double p01z = 0.5*(p1.z-p0.z+p2.z-p3.z);
+    double p03x = 0.5*(p3.x-p0.x+p2.x-p1.x);
+    double p03y = 0.5*(p3.y-p0.y+p2.y-p1.y);
+    double p03z = 0.5*(p3.z-p0.z+p2.z-p1.z);
+    double vector_area_x, vector_area_y, vector_area_z;
+    cross_product(p01x, p01y, p01z, p03x, p03y, p03z,
+		  vector_area_x, vector_area_y, vector_area_z);
+    double bcx = pc.x-pb.x; double bcy = pc.y-pb.y; double bcz = pc.z-pb.z;
+    double volume = dot_product(bcx,bcy,bcz,vector_area_x,vector_area_y,vector_area_z)/3.0;
     return volume;
 } // end tetragonal_dipyramid_volume()
 
-void hex_cell_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2, in Vector3 p3,
-			 in Vector3 p4, in Vector3 p5, in Vector3 p6, in Vector3 p7,
+@nogc
+void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+			 ref const(Vector3) p2, ref const(Vector3) p3,
+			 ref const(Vector3) p4, ref const(Vector3) p5,
+			 ref const(Vector3) p6, ref const(Vector3) p7,
 			 ref Vector3 centroid, ref double volume,
 			 ref double iLen, ref double jLen, ref double kLen)
 {
     // PJ 10-Sep-2012
     // When computing the volume of Rolf's thin, warped cells, we have to do 
     // something better than splitting our cell into six tetrahedra.
-    centroid = 0.125 * (p0+p1+p2+p3+p4+p5+p6+p7);
+    centroid.refx = 0.125 * (p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x);
+    centroid.refy = 0.125 * (p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y);
+    centroid.refz = 0.125 * (p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z);
     // Mid-points of faces.
-    Vector3 pmN = 0.25*(p3+p2+p6+p7);
-    Vector3 pmE = 0.25*(p1+p2+p6+p5);
-    Vector3 pmS = 0.25*(p0+p1+p5+p4);
-    Vector3 pmW = 0.25*(p0+p3+p7+p4);
-    Vector3 pmT = 0.25*(p4+p5+p6+p7);
-    Vector3 pmB = 0.25*(p0+p1+p2+p3);
+    Vector3 pmN;
+    pmN.refx = 0.25*(p3.x+p2.x+p6.x+p7.x);
+    pmN.refy = 0.25*(p3.y+p2.y+p6.y+p7.y);
+    pmN.refz = 0.25*(p3.z+p2.z+p6.z+p7.z);
+    Vector3 pmE;
+    pmE.refx = 0.25*(p1.x+p2.x+p6.x+p5.x);
+    pmE.refy = 0.25*(p1.y+p2.y+p6.y+p5.y);
+    pmE.refz = 0.25*(p1.z+p2.z+p6.z+p5.z);
+    Vector3 pmS;
+    pmS.refx = 0.25*(p0.x+p1.x+p5.x+p4.x);
+    pmS.refy = 0.25*(p0.y+p1.y+p5.y+p4.y);
+    pmS.refz = 0.25*(p0.z+p1.z+p5.z+p4.z);
+    Vector3 pmW;
+    pmW.refx = 0.25*(p0.x+p3.x+p7.x+p4.x);
+    pmW.refy = 0.25*(p0.y+p3.y+p7.y+p4.y);
+    pmW.refz = 0.25*(p0.z+p3.z+p7.z+p4.z);
+    Vector3 pmT;
+    pmT.refx = 0.25*(p4.x+p5.x+p6.x+p7.x);
+    pmT.refy = 0.25*(p4.y+p5.y+p6.y+p7.y);
+    pmT.refz = 0.25*(p4.z+p5.z+p6.z+p7.z);
+    Vector3 pmB;
+    pmB.refx = 0.25*(p0.x+p1.x+p2.x+p3.x);
+    pmB.refy = 0.25*(p0.y+p1.y+p2.y+p3.y);
+    pmB.refz = 0.25*(p0.z+p1.z+p2.z+p3.z);
     // Lengths between mid-points of faces.
     // Note that we are assuming that the hexahedron is not very skewed
     // when we later use these values as the widths of the hex cell.
-    iLen = abs(pmE - pmW);
-    jLen = abs(pmN - pmS);
-    kLen = abs(pmT - pmB);
+    double dx, dy, dz;
+    dx = pmE.x - pmW.x; dy = pmE.y - pmW.y; dz = pmE.z - pmW.z;
+    iLen = sqrt(dx^^2 + dy^^2 + dz^^2);
+    dx = pmN.x - pmS.x; dy = pmN.y - pmS.y; dz = pmN.z - pmS.z;
+    jLen = sqrt(dx^^2 + dy^^2 + dz^^2);
+    dx = pmT.x - pmB.x; dy = pmT.y - pmB.y; dz = pmT.z - pmB.z;
+    kLen = sqrt(dx^^2 + dy^^2 + dz^^2);
     // writeln("Single hexahedron divided into six tetragonal dipyramids.");
     // J. Grandy (1997) Efficient Computation of Volume of Hexahedral Cells UCRL-ID-128886.
     // Base of each dipyramid is specified clockwise from the outside.
@@ -877,12 +983,12 @@ void hex_cell_properties(in Vector3 p0, in Vector3 p1, in Vector3 p2, in Vector3
     }
     if ( volume < 0.0 ) {
 	// Something has gone wrong with our geometry.
-        throw new Exception("significant negative volume.");
+        assert(0, "significant negative volume.");
     }
     return; 
 } // end hex_cell_properties()
 
-
+@nogc
 void hex_cell_properties(ref const(Vector3)[] p,
 			 ref Vector3 centroid, ref double volume,
 			 ref double iLen, ref double jLen, ref double kLen)
@@ -944,7 +1050,7 @@ unittest {
 int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
 		    ref const(Vector3) b, ref const(Vector3) c)
 {
-    Vector3 n = unit(cross(a-c, b-c)); // normal to plane of triangle
+    Vector3 n = cross(a-c, b-c); n.normalize(); // normal to plane of triangle
     double area1 = 0.5 * dot(cross(p-a, p-b), n); // projected area of triangle pab
     double area2 = 0.5 * dot(cross(p-b, p-c), n);
     double area3 = 0.5 * dot(cross(p-c, p-a), n);
@@ -966,6 +1072,7 @@ int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
 // We also assume that the vertices are numbered counter-clockwise
 // around the edges of the polygon.  z-components are ignored.
 
+@nogc
 bool on_left_of_xy_line(ref const(Vector3) a, ref const(Vector3) b,
 			ref const(Vector3) p)
 // Returns true if p is in the left half-plane (or on the line)
@@ -974,6 +1081,7 @@ bool on_left_of_xy_line(ref const(Vector3) a, ref const(Vector3) b,
     return (p.x - b.x) * (a.y - b.y) >= (p.y - b.y) * (a.x - b.x);
 }
 
+@nogc
 bool inside_xy_polygon(ref const(Vector3[]) vtx, ref const(Vector3) p)
 // Returns true if the point p is inside or on the polygon boundary.
 {
@@ -986,6 +1094,7 @@ bool inside_xy_polygon(ref const(Vector3[]) vtx, ref const(Vector3) p)
     return (count_on_left == vtx.length);
 } // end inside_xy_polygon()
 
+@nogc
 bool inside_xy_triangle(ref const(Vector3) p0, ref const(Vector3) p1,
 			ref const(Vector3) p2, ref const(Vector3) p)
 // Returns true if the point p is inside or on the triangle boundary.
@@ -1000,6 +1109,7 @@ bool inside_xy_triangle(ref const(Vector3) p0, ref const(Vector3) p1,
     return (count_on_left == 3);
 } // end inside_xy_triangle()
 
+@nogc
 bool inside_xy_quad(ref const(Vector3) p0, ref const(Vector3) p1,
 		    ref const(Vector3) p2, ref const(Vector3) p3,
 		    ref const(Vector3) p)
@@ -1045,7 +1155,7 @@ bool inside_tetrahedron(ref const(Vector3) p0, ref const(Vector3) p1,
     if ((tetrahedron_volume(p0, p2, p1, p)) > 0.0) return false;
     if ((tetrahedron_volume(p0, p1, p3, p)) > 0.0) return false;
     if ((tetrahedron_volume(p1, p2, p3, p)) > 0.0) return false;
-    if ((tetrahedron_volume(p0, p2, p3, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p2, p0, p3, p)) > 0.0) return false;
     // If we arrive here, we haven't determined that the point is outside...
     return true;
 } // end inside_tetrahedron()
@@ -1097,4 +1207,15 @@ unittest {
     auto p7 = Vector3(0.0, 1.0, 1.0);
     assert(inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, d), "inside hexahedron");
     assert(!inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, e), "outside hexahedron");
+
+    auto f = Vector3(0.1, 0.0, 0.5);
+    assert(inside_tetrahedron(p0, p1, p2, p4, f), "inside_tetrahedron");
+    f = Vector3(0.0, 0.2, 0.5);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
+    f = Vector3(0.0, -0.2, 0.5);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
+    f = Vector3(1.0, 0.0, 1.0);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
+    f = Vector3(0.0, 0.0, -0.5);
+    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
 }

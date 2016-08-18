@@ -707,35 +707,47 @@ public:
 	    // straight to the bounding walls.
 	    // North
 	    face_at_wall = get_ifj(i,jmax+1,k);
-	    dist[Face.north] = abs(cell.pos[gtl] - face_at_wall.pos);
+	    Vector3 dp = cell.pos[gtl] - face_at_wall.pos;
+	    dist[Face.north] = abs(dp);
 	    cell_at_wall[Face.north] = get_cell(i,jmax,k);
-	    half_width[Face.north] = abs(cell_at_wall[Face.north].pos[gtl] - face_at_wall.pos);
+	    dp = cell_at_wall[Face.north].pos[gtl] - face_at_wall.pos;
+	    half_width[Face.north] = abs(dp);
 	    // East
 	    face_at_wall = get_ifi(imax+1,j,k);
-	    dist[Face.east] = abs(cell.pos[gtl] - face_at_wall.pos);
+	    dp = cell.pos[gtl] - face_at_wall.pos;
+	    dist[Face.east] = abs(dp);
 	    cell_at_wall[Face.east] = get_cell(imax,j,k);
-	    half_width[Face.east] = abs(cell_at_wall[Face.east].pos[gtl] - face_at_wall.pos);
+	    dp = cell_at_wall[Face.east].pos[gtl] - face_at_wall.pos;
+	    half_width[Face.east] = abs(dp);
 	    // South
 	    face_at_wall = get_ifj(i,jmin,k);
-	    dist[Face.south] = abs(cell.pos[gtl] - face_at_wall.pos);
+	    dp = cell.pos[gtl] - face_at_wall.pos;
+	    dist[Face.south] = abs(dp);
 	    cell_at_wall[Face.south] = get_cell(i,jmin,k);
-	    half_width[Face.south] = abs(cell_at_wall[Face.south].pos[gtl] - face_at_wall.pos);
+	    dp = cell_at_wall[Face.south].pos[gtl] - face_at_wall.pos;
+	    half_width[Face.south] = abs(dp);
 	    // West
 	    face_at_wall = get_ifi(imin,j,k);
-	    dist[Face.west] = abs(cell.pos[gtl] - face_at_wall.pos);
+	    dp = cell.pos[gtl] - face_at_wall.pos;
+	    dist[Face.west] = abs(dp);
 	    cell_at_wall[Face.west] = get_cell(imin,j,k);
-	    half_width[Face.west] = abs(cell_at_wall[Face.west].pos[gtl] - face_at_wall.pos);
+	    dp = cell_at_wall[Face.west].pos[gtl] - face_at_wall.pos;
+	    half_width[Face.west] = abs(dp);
 	    if ( myConfig.dimensions == 3 ) {
 		// Top
 		face_at_wall = get_ifk(i,j,kmax+1);
-		dist[Face.top] = abs(cell.pos[gtl] - face_at_wall.pos);
+		dp = cell.pos[gtl] - face_at_wall.pos;
+		dist[Face.top] = abs(dp);
 		cell_at_wall[Face.top] = get_cell(i,j,kmax);
-		half_width[Face.top] = abs(cell_at_wall[Face.top].pos[gtl] - face_at_wall.pos);
+		dp = cell_at_wall[Face.top].pos[gtl] - face_at_wall.pos;
+		half_width[Face.top] = abs(dp);
 		// Bottom
 		face_at_wall = get_ifk(i,j,kmin);
-		dist[Face.bottom] = abs(cell.pos[gtl] - face_at_wall.pos);
+		dp = cell.pos[gtl] - face_at_wall.pos;
+		dist[Face.bottom] = abs(dp);
 		cell_at_wall[Face.bottom] = get_cell(i,j,kmin);
-		half_width[Face.bottom] = abs(cell_at_wall[Face.bottom].pos[gtl] - face_at_wall.pos);
+		dp = cell_at_wall[Face.bottom].pos[gtl] - face_at_wall.pos;
+		half_width[Face.bottom] = abs(dp);
 	    }
 
 	    // Step 2: Just in case there are no real walls for this block...

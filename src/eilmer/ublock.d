@@ -818,17 +818,20 @@ public:
 		auto nf = bndry.face_id_list.length;
 		foreach (j; 0 .. nf) {
 		    auto my_face = faces[bndry.face_id_list[j]];
-		    double distance = abs(cell.pos[gtl] - my_face.pos);
+		    auto dp = cell.pos[gtl] - my_face.pos;
+		    double distance = abs(dp);
 		    if (distance < min_distance) {
 			min_distance =  distance;
 			auto my_outsign = bndry.outsign_list[j];
 			if (my_outsign == 1) {
 			    auto inside0 = my_face.left_cell;
-			    cell_half_width = abs(inside0.pos[gtl] - my_face.pos);
+			    dp = inside0.pos[gtl] - my_face.pos;
+			    cell_half_width = abs(dp);
 			    cell_id_at_nearest_wall = inside0.id;
 			} else {
 			    auto inside0 = my_face.right_cell;
-			    cell_half_width = abs(inside0.pos[gtl] - my_face.pos);
+			    dp = inside0.pos[gtl] - my_face.pos;
+			    cell_half_width = abs(dp);
 			    cell_id_at_nearest_wall = inside0.id;
 			}
 		    }

@@ -28,15 +28,16 @@ void main()
     writeln("g += f -> ", g);
     g /= 2.0;
     writeln("g /= 2.0 -> ", g);
-    Vector3 u = unit(g*2);
+    Vector3 gg = Vector3(g*2);
+    Vector3 u = unit(gg);
     writeln("unit(g*2) = ", u, " magnitude = ", abs(u));
     Vector3 x = Vector3(1.0, 0.0, 0.0);
     Vector3 y = Vector3(0.0, 1.0, 0.0);
     Vector3 z = cross(x,y);
     writeln("z = ", z);
 
-    Vector3 n = unit(Vector3(1.0,1.0,0.0));
-    Vector3 t1 = unit(Vector3(-1.0,1.0,0.0));
+    Vector3 n = Vector3(1.0,1.0,0.0); n = unit(n);
+    Vector3 t1 = Vector3(-1.0,1.0,0.0); t1 = unit(t1);
     Vector3 t2 = cross(n, t1);
     Vector3 h = Vector3(1.0,0.0,1.0);
     Vector3 h_ref = Vector3(h);
