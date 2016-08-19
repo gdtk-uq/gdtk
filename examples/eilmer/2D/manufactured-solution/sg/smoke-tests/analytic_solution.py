@@ -14,14 +14,12 @@
 # Re-worked completely to use sympy
 
 from sympy import *
-R_air = 287.0
+execfile('constants.txt')
 # Read case no.
 fp = open('case.txt', 'r');
 case_str = fp.readline().strip()
 case = int(case_str)
 fp.close()
-# constants
-L = 1.0
 if case == 1 or case == 3:
     # Supersonic flow
     rho0=1.0; rhox=0.15; rhoy=-0.1; rhoxy=0.0; arhox=1.0; arhoy=0.5; arhoxy=0.0;
@@ -53,7 +51,7 @@ def ref_function(x1, y1, z1, t):
     inp = {x:x1, y:y1}
     rho1 = rho.subs(inp).evalf()
     p1 = p.subs(inp).evalf()
-    T1 = p1/(rho1*R_air)
+    T1 = p1/(rho1*Rgas)
     u1 = u.subs(inp).evalf()
     v1 = v.subs(inp).evalf()
     return {"rho":rho1, "p":p1, "T":T1, "vel.x":u1, "vel.y":v1}

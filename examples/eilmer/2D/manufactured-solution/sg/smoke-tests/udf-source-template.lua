@@ -14,7 +14,7 @@ function sourceTerms(t, cell)
    src = {}
    x = cell.x
    y = cell.y
-<insert-source-terms-here>
+<insert-expressions-here>
    src.mass = fmass
    src.momentum_x = fxmom
    src.momentum_y = fymom

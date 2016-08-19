@@ -16,8 +16,8 @@ test copy-ns-least-sq-case {Copy N-S least squares at vertices case.} -body {
    exec cp case-ns-least-sq-at-vtxs.txt case.txt
 } -result {} -returnCodes {0}
 
-test prepare-source-terms {Prepare manufactured source terms.} -body {
-    exec python make_source_terms.py > LOGFILE_NS_LEAST_SQ_VTXS_SOURCE_TERMS
+test prepare-lua-files {Prepare Lua files.} -body {
+    exec python make_lua_files.py > LOGFILE_NS_LEAST_SQ_VTXS_LUA_FILES
 } -result {} -returnCodes {0}
 
 test run-preprocessor {Prepare N-S least squares case.} -body {
@@ -45,7 +45,7 @@ test computed-norms {Check the density norms.} -body {
     set L1_ref 1.462794804407063429e-03
     set L2_ref 1.774724636678932108e-03
     set Linf_ref 4.139574720295358112e-03
-    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua --norms="rho" | tail -3 > rho-norms.txt
+    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=ref-soln.lua --norms="rho" | tail -3 > rho-norms.txt
     set fp [open rho-norms.txt r]
     set contents [read $fp]
     close $fp

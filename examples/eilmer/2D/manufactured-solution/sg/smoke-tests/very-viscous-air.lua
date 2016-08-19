@@ -7,7 +7,6 @@ Cv = Rgas/(g-1)
 Cp = g * Cv
 mu = 10.0
 k = mu*Cp/Prandtl
-mu = k*Prandtl/Cp
 
 VeryViscousAir = {
   k = k,

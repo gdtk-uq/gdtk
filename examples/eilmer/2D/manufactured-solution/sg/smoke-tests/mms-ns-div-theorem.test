@@ -16,8 +16,8 @@ test copy-ns-div-theorem-case {Copy N-S div. theorem case.} -body {
    exec cp case-ns-div-theorem.txt case.txt
 } -result {} -returnCodes {0}
 
-test prepare-source-terms {Prepare manufactured source terms.} -body {
-    exec python make_source_terms.py > LOGFILE_NS_DIV_THEOREM_SOURCE_TERMS
+test prepare-lua-files {Prepare Lua files.} -body {
+    exec python make_lua_files.py > LOGFILE_NS_DIV_THEOREM_LUA_FILES
 } -result {} -returnCodes {0}
 
 test run-preprocessor {Prepare N-S div. theorem case.} -body {
@@ -45,7 +45,7 @@ test computed-norms {Check the density norms.} -body {
     set L1_ref 1.471398727973e-03
     set L2_ref 1.773676824915e-03
     set Linf_ref 4.094873754700e-03
-    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua --norms="rho" | tail -3 > rho-norms.txt
+    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=ref-soln.lua --norms="rho" | tail -3 > rho-norms.txt
     set fp [open rho-norms.txt r]
     set contents [read $fp]
     close $fp

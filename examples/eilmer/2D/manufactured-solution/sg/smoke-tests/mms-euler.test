@@ -20,8 +20,8 @@ test copy-euler-case {Copy Euler case.} -body {
    exec cp case-euler.txt case.txt
 } -result {} -returnCodes {0}
 
-test prepare-source-terms {Prepare manufactured source terms.} -body {
-    exec python make_source_terms.py > LOGFILE_EULER_SOURCE_TERMS
+test prepare-udf-files {Prepare UDF files.} -body {
+    exec python make_lua_files.py > LOGFILE_EULER_UDF_FILES
 } -result {} -returnCodes {0}
 
 test run-preprocessor {Prepare Euler case.} -body {
@@ -49,7 +49,7 @@ test computed-norms {Check the density norms.} -body {
     set L1_ref 5.992287970340e-04
     set L2_ref 8.134693405237e-04
     set Linf_ref 2.746228919538e-03
-    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua --norms="rho" | tail -3 > rho-norms.txt
+    exec e4shared --job=mms --post --tindx-plot=20 --ref-soln=ref-soln.lua --norms="rho" | tail -3 > rho-norms.txt
     set fp [open rho-norms.txt r]
     set contents [read $fp]
     close $fp
