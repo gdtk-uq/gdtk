@@ -616,7 +616,7 @@ public:
 		    tetrahedron_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
 					   cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
 					   cell.pos[gtl], cell.volume[gtl]);
-		    cell.L_min = exp(log(cell.volume[gtl])/3.0);
+		    cell.L_min = pow(cell.volume[gtl], 1.0/3.0);
 		    cell.iLength = cell.L_min;
 		    cell.jLength = cell.L_min;
 		    cell.kLength = cell.L_min;

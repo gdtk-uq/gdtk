@@ -617,6 +617,7 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     // Vector3 vector_area = 0.5 * cross(p1-p0, p2-p0);
     cross_product(p01x, p01y, p01z, p02x, p02y, p02z,
 		  vector_area_x, vector_area_y, vector_area_z);
+    vector_area_x *= 0.5; vector_area_y *= 0.5; vector_area_z *= 0.5;
     // unit-normal and area
     // area = abs(vector_area);
     area = sqrt(vector_area_x^^2 + vector_area_y^^2 + vector_area_z^^2);
@@ -1004,6 +1005,13 @@ unittest {
     Vector3 p3 = Vector3(0.0, 1.0, 1.0);
     Vector3 centroid, n, t1, t2;
     double area;
+    triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
+    assert(approxEqual(area, 0.5), "triangle_properties area");
+    assert(approxEqualVectors(centroid, Vector3(2.0/3,1.0/3,1.0)), "triangle_properties centroid");
+    assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), "triangle_properties normal");
+    assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), "triangle_properties t1");
+    assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), "triangle_properties t2");
+
     quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
     assert(approxEqual(area, 1.0), "quad_properties area");
     assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0)), "quad_properties centroid");
