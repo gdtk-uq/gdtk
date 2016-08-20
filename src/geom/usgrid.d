@@ -627,17 +627,6 @@ public:
     body {
 	return cells[indx].vtx_id_list.dup();
     }
-
-    bool findFaceIndex(const size_t[] id_list, ref size_t indx)
-    // Returns true is the face is in the dictionary.
-    {
-	string tag = makeFaceTag(id_list);
-	if (tag in faceIndices) {
-	    indx = faceIndices[tag];
-	    return true;
-	}
-	return false;
-    }
     
     // ------------------------
     // Import-from-file methods.
@@ -936,8 +925,9 @@ public:
 		int vtk_type = to!int(tokens[0]);
 		size_t[] my_vtx_id_list;
 		foreach(k; 1 .. tokens.length) { my_vtx_id_list ~= to!size_t(tokens[k]); }
-		size_t face_indx = 0;
-		if (findFaceIndex(my_vtx_id_list, face_indx)) {
+		string faceTag = makeFaceTag(my_vtx_id_list);
+		if (faceTag in faceIndices) {
+		    size_t face_indx = faceIndices[faceTag];
 		    USGFace my_face = faces[face_indx];
 		    assert(my_face.left_cell || my_face.right_cell,
 			   "face is not properly connected");

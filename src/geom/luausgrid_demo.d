@@ -55,6 +55,9 @@ volume = TFIVolume:new{vertices=pArray}
 my_grid3D = StructuredGrid:new{pvolume=volume, niv=11, njv=21, nkv=11}
 my_usg3D = UnstructuredGrid:new{sgrid=my_grid3D} 
 my_usg3D:write_to_vtk_file("test_grid3D.vtk")
+for i=0,my_usg3D:get_nboundaries()-1 do
+   print(string.format("boundaryset_tag[%d]=%s", i, my_usg3D:get_boundaryset_tag(i)))
+end
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
 	writeln("There was a problem interpreting the test code.");

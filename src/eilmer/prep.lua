@@ -181,10 +181,16 @@ function UBlock:new(o)
    end
    o.label = o.label or string.format("BLOCK-%d", o.id)
    o.omegaz = o.omegaz or 0.0
-   o.bcList = o.bcList or {} -- boundary conditions
-   -- [TODO] think about attaching boundary conditions via boundary labels or tags.
+   o.bcList = o.bcList or {} -- boundary conditions passed in
+   -- Attach boundary conditions from list or from the dictionary of conditions.
    for i = 0, o.nboundaries-1 do
-      o.bcList[i] = o.bcList[i] or WallBC_WithSlip:new()
+      local mybc = o.bcList[i]
+      if mybc == nil then
+	 local tag = o.grid:get_boundaryset_tag(i)
+	 mybc = o.bcDict[tag]
+      end
+      mybc = mybc or WallBC_WithSlip:new() -- default boundary condition
+      o.bcList[i] = mybc
    end
    o.hcellList = o.hcellList or {}
    o.xforceList = o.xforceList or {}

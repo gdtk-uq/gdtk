@@ -89,6 +89,19 @@ extern(C) int get_nboundaries(T, string MTname)(lua_State* L)
     return 1;
 }
 
+extern(C) int get_boundaryset_tag(T, string MTname)(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid = checkObj!(T, MTname)(L, 1);
+    size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
+    if (i < grid.boundaries.length) {
+	lua_pushstring(L, grid.boundaries[i].tag.toStringz());
+    } else {
+	lua_pushnil(L);
+    }
+    return 1;
+}
+
 extern(C) int get_vtx(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L);
@@ -236,6 +249,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_nfaces");
     lua_pushcfunction(L, &get_nboundaries!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "get_nboundaries");
+    lua_pushcfunction(L, &get_boundaryset_tag!(UnstructuredGrid, UnstructuredGridMT));
+    lua_setfield(L, -2, "get_boundaryset_tag");
     lua_pushcfunction(L, &get_vtx!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &write_to_gzip_file!(UnstructuredGrid, UnstructuredGridMT));
