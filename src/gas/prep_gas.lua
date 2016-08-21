@@ -28,22 +28,59 @@ function writeIdealGas(f, sp, db, optsTable)
    f:write(string.format("      T1 = %.8f,\n", db[s].entropyRefValues.T1))
    f:write(string.format("      p1 = %.8e,\n", db[s].entropyRefValues.p1))
    f:write("   },\n")
-   f:write("   sutherlandVisc = {\n")
-   f:write(string.format("      mu_ref = %.8e,\n", db[s].sutherlandVisc.mu_ref))
-   f:write(string.format("      T_ref = %.8f,\n", db[s].sutherlandVisc.T_ref))
-   f:write(string.format("      S = %.8f,\n", db[s].sutherlandVisc.S))
-   f:write("   },\n")
+   if optsTable and optsTable.viscosity == "CEA" then
+      f:write("   viscosity = {\n")
+      f:write("      model = 'CEA',\n")
+      secName = "ceaViscosity"
+      t = db[s][secName]
+      f:write(string.format("      nsegments = %d,\n", t.nsegments))
+      for i=0,t.nsegments-1 do
+	 seg = "segment"..i
+	 f:write(string.format("      segment%d = {\n", i))
+	 f:write(string.format("         T_lower = %.1f,\n", t[seg].T_lower))
+	 f:write(string.format("         T_upper = %.1f,\n", t[seg].T_upper))
+	 f:write(string.format("         A = % -10.7e,\n", t[seg].A))
+	 f:write(string.format("         B = % -10.7e,\n", t[seg].B))
+	 f:write(string.format("         C = % -10.7e,\n", t[seg].C))
+	 f:write(string.format("         D = % -10.7e,\n", t[seg].D))
+	 f:write("      },\n")
+      end
+      f:write("   },\n")
+   else
+      -- We will use Sutherland viscosity
+      f:write("   viscosity = {\n")
+      f:write("      model = 'Sutherland',\n");
+      f:write(string.format("      mu_ref = %.8e,\n", db[s].sutherlandVisc.mu_ref))
+      f:write(string.format("      T_ref = %.8f,\n", db[s].sutherlandVisc.T_ref))
+      f:write(string.format("      S = %.8f,\n", db[s].sutherlandVisc.S))
+      f:write("   },\n")
+   end
    f:write("   thermCondModel = {\n")
    if optsTable and optsTable.Prandtl then
       f:write("      model = 'constPrandtl',\n")
       f:write(string.format("      Prandtl = %.8f\n", optsTable.Prandtl))
-   else 
-      f:write("       model = 'sutherlandThermCond',\n")
-      f:write("       sutherlandThermCond = {\n")
-      f:write(string.format("         k_ref = %.8e,\n", db[s].sutherlandThermCond.k_ref))
-      f:write(string.format("         T_ref = %.8f,\n", db[s].sutherlandThermCond.T_ref))
-      f:write(string.format("         S = %.8f,\n", db[s].sutherlandThermCond.S))
-      f:write("       }\n")
+   elseif optsTable and optsTable.thermal_conductivity == "CEA" then
+      f:write("      model = 'CEA',\n")
+      secName = "ceaThermCond"
+      t = db[s][secName]
+      f:write(string.format("      nsegments = %d,\n", t.nsegments))
+      for i=0,t.nsegments-1 do
+	 seg = "segment"..i
+	 f:write(string.format("      segment%d = {\n", i))
+	 f:write(string.format("         T_lower = %.1f,\n", t[seg].T_lower))
+	 f:write(string.format("         T_upper = %.1f,\n", t[seg].T_upper))
+	 f:write(string.format("         A = % -10.7e,\n", t[seg].A))
+	 f:write(string.format("         B = % -10.7e,\n", t[seg].B))
+	 f:write(string.format("         C = % -10.7e,\n", t[seg].C))
+	 f:write(string.format("         D = % -10.7e,\n", t[seg].D))
+	 f:write("      },\n")
+      end
+   else
+      -- We will use Sutherland expression
+      f:write("      model = 'Sutherland',\n")
+      f:write(string.format("      k_ref = %.8e,\n", db[s].sutherlandThermCond.k_ref))
+      f:write(string.format("      T_ref = %.8f,\n", db[s].sutherlandThermCond.T_ref))
+      f:write(string.format("      S = %.8f,\n", db[s].sutherlandThermCond.S))
    end
    f:write("   }\n")
    f:write("}\n")

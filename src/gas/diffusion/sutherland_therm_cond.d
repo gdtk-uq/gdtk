@@ -11,8 +11,9 @@ module gas.diffusion.sutherland_therm_cond;
 import std.math;
 import gas.gas_model;
 import gas.diffusion.therm_cond;
+import util.lua;
+import util.lua_service;
 import util.msg_service;
-
 /++
   Compute the thermal conductivity using Sutherland's expression.
   
@@ -65,6 +66,14 @@ private:
     double _T_ref;
     double _k_ref;
     double _S;
+}
+
+SutherlandThermCond createSutherlandThermalConductivity(lua_State* L)
+{
+    auto T_ref = getDouble(L, -1, "T_ref");
+    auto k_ref = getDouble(L, -1, "k_ref");
+    auto S = getDouble(L, -1, "S");
+    return new SutherlandThermCond(T_ref, k_ref, S);
 }
 
 version(sutherland_therm_cond_test) {

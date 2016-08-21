@@ -19,6 +19,7 @@ import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
 import std.file;
 import std.stdio;
+import std.string;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
@@ -87,7 +88,8 @@ GasModel init_gas_model(in string file_name="gas-model.lua") {
 	gm = new AdaptiveLUT(L);
 	break;
     default:
-	gm = new IdealGas();
+	string errMsg = format("The gas model '%s' is not available.", gas_model_name);
+	throw new Error(errMsg);
     }
     lua_close(L);
     return gm;
