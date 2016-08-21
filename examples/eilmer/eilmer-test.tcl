@@ -30,8 +30,8 @@ for {set i 0} {$i < $argc} {incr i} {
         set dummy_run 1
     }
 }
-set test_scripts [list "2D/cone20/sg/cone20.test"]
-lappend test_scripts "2D/cone20/usg/cone20-usg.test"
+set test_scripts [list "2D/sharp-cone-20-degrees/sg/cone20.test"]
+lappend test_scripts "2D/sharp-cone-20-degrees/usg/cone20-usg.test"
 lappend test_scripts "3D/sod-shock-tube/sg/sod.test"
 lappend test_scripts "3D/sod-shock-tube/usg/sod.test"
 # lappend test_scripts "2D/sod/N2-O2/sod.test"
