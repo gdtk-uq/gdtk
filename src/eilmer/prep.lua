@@ -185,7 +185,7 @@ function UBlock:new(o)
    -- Attach boundary conditions from list or from the dictionary of conditions.
    for i = 0, o.nboundaries-1 do
       local mybc = o.bcList[i]
-      if mybc == nil then
+      if (mybc == nil) and o.bcDict then
 	 local tag = o.grid:get_boundaryset_tag(i)
 	 mybc = o.bcDict[tag]
       end
