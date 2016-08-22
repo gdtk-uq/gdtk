@@ -240,11 +240,11 @@ public:
 		my_face.is_on_boundary = true;
 		my_face.bc_id = i; // note which boundary this face is on
 		int my_outsign = bndry.outsign_list[j];
-		FVCell ghost0 = new FVCell(myConfig);
-		ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		// Make ghost-cell id values distinct from FVCell ids so that
 		// the warning/error messages are somewhat informative. 
-		ghost0.id = 100000 + ghost_cell_count++;
+		FVCell ghost0 = new FVCell(myConfig, 100000+ghost_cell_count);
+		ghost_cell_count++;
+		ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		bc[i].faces ~= my_face;
 		bc[i].outsigns ~= my_outsign;
 		bc[i].ghostcells ~= ghost0;
@@ -318,7 +318,21 @@ public:
 	    c.ws = new LSQInterpWorkspace();
 	    c.gradients = new LSQInterpGradients(nsp, nmodes);
 	} // end foreach cell
-
+	// We will also need derivative storage in ghostcells because the
+	// reconstruction functions will expect to be able to access the gradients
+	// either side of each interface.
+	// We will be able to get these gradients from the mapped-cells
+	// in an adjoining block.
+	// [TODO] think about this for the junction of usgrid and sgrid blocks.
+	// The sgrid blocks will not have the gradients stored within the cells.
+	foreach (bci; bc) {
+	    if (bci.ghost_cell_data_available) {
+		foreach (c; bci.ghostcells) {
+		    c.gradients = new LSQInterpGradients(nsp, nmodes);
+		}
+	    }
+	}
+	//
 	// We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
 	//equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
 	if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.divergence) {
