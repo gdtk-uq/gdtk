@@ -242,7 +242,7 @@ public:
 		int my_outsign = bndry.outsign_list[j];
 		// Make ghost-cell id values distinct from FVCell ids so that
 		// the warning/error messages are somewhat informative. 
-		FVCell ghost0 = new FVCell(myConfig, 100000+ghost_cell_count);
+		FVCell ghost0 = new FVCell(myConfig, 1000000+ghost_cell_count);
 		ghost_cell_count++;
 		ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		bc[i].faces ~= my_face;
@@ -250,7 +250,8 @@ public:
 		bc[i].ghostcells ~= ghost0;
 		if (my_outsign == 1) {
 		    if (my_face.right_cell) {
-			string msg = format("Already have cell %d attached to right-of-face %d. Attempt to add ghost cell %d.",
+			string msg = format("Already have cell %d attached to right-of-face %d."
+					    ~" Attempt to add ghost cell %d.",
 					    my_face.right_cell.id, my_face.id, ghost0.id);
 			throw new FlowSolverException(msg);
 		    } else {
@@ -258,7 +259,8 @@ public:
 		    }
 		} else {
 		    if (my_face.left_cell) {
-			string msg = format("Already have cell %d attached to left-of-face %d. Attempt to add ghost cell %d.",
+			string msg = format("Already have cell %d attached to left-of-face %d."
+					    ~" Attempt to add ghost cell %d.",
 					    my_face.left_cell.id, my_face.id, ghost0.id);
 			throw new FlowSolverException(msg);
 		    } else {
@@ -864,16 +866,20 @@ public:
 	throw new FlowSolverException(msg);
     }
 
-    override void convective_flux()
+    override void convective_flux_phase0()
+    // Compute gradients of flow quantities for higher-order reconstruction, if required.
+    // To be used, later, in the convective flux calculation.
     {
 	if (myConfig.interpolation_order > 1) {
 	    foreach (c; cells) {
 		c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
-		// it is more efficient to determine limiting factor here for some usg limiters
+		// It is more efficient to determine limiting factor here for some usg limiters.
 		final switch (myConfig.unstructured_limiter) {
 		    case UnstructuredLimiter.van_albada:
+			// do nothing now
 		        break;
 		    case UnstructuredLimiter.min_mod:
+			// do nothing now
 		        break;
 		    case UnstructuredLimiter.barth:
 		        c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
@@ -881,15 +887,69 @@ public:
 		    case UnstructuredLimiter.venkat:
 		        c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
 		        break;
-		}
-	    }
-	}
+		} // end switch
+	    } // end foreach c
+	} // end if interpolation_order > 1
+    } // end convective_flux-phase0()
+
+    override void convective_flux_phase1()
+    // Make use of the flow gradients to actually do the high-order reconstruction
+    // and then compute fluxes of conserved quantities at all faces.
+    {
+	if (myConfig.interpolation_order > 1) {
+	    // Fill in gradients for ghost cells so that left- and right- cells at all faces,
+	    // including those along block boundaries, have the latest gradient values.
+	    foreach (bcond; bc) {
+		bool found_mapped_cell_bc = false;
+		foreach (gce; bcond.preReconAction) {
+		    if (gce.type == "MappedCellExchangeCopy") {
+			found_mapped_cell_bc = true;
+			// There is a mapped-cell backing the ghost cell, so we can copy its gradients.
+			foreach (i, f; bcond.faces) {
+			    // Only FVCell objects in an unstructured-grid are expected to have
+			    // precomputed gradients.  There will be an initialized reference
+			    // in the FVCell object of a structured-grid block, so we need to
+			    // test and avoid copying from such a reference.
+			    auto mapped_cell_grad = gce.get_mapped_cell(i).gradients;
+			    if (bcond.outsigns[i] == 1) {
+				if (mapped_cell_grad) {
+				    f.right_cell.gradients.copy_values_from(mapped_cell_grad);
+				} else {
+				    // Fall back to looking over the face for suitable gradient data.
+				    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+				}
+			    } else {
+				if (mapped_cell_grad) {
+				    f.left_cell.gradients.copy_values_from(mapped_cell_grad);
+				} else {
+				    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+				}
+			    }
+			} // end foreach f
+		    } // end if gce.type
+		} // end foreach gce
+		if (!found_mapped_cell_bc) {
+		    // There are no other cells backing the ghost cells on this boundary.
+		    // Fill in ghost-cell gradients from the other side of the face.
+		    foreach (i, f; bcond.faces) {
+			if (bcond.outsigns[i] == 1) {
+			    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+			} else {
+			    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+			}
+		    } // end foreach f
+		} // end if !found_mapped_cell_bc
+	    } // end foreach bcond
+	} // end if interpolation_order > 1
+	//
+	// At this point, we should have all gradient values up to date and we are now ready
+	// to reconstruct field values and compute the convective fluxes.
 	foreach (f; faces) {
 	    lsq.interp_both(f, 0, Lft, Rght); // gtl assumed 0
 	    f.fs.copy_average_values_from(Lft, Rght);
 	    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
 	} // end foreach face
-    } // end convective_flux()
+    } // end convective_flux-phase1()
     
     @nogc
     override void copy_into_ghost_cells(int destination_face,

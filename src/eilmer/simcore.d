@@ -571,7 +571,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	}
     }
     foreach (blk; parallel(gasBlocks,1)) {
-	if (blk.active) { blk.convective_flux(); }
+	if (blk.active) { blk.convective_flux_phase0(); }
+    }
+    foreach (blk; parallel(gasBlocks,1)) {
+	if (blk.active) { blk.convective_flux_phase1(); }
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(gasBlocks,1)) {
@@ -699,7 +702,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
-	    if (blk.active) { blk.convective_flux(); }
+	    if (blk.active) { blk.convective_flux_phase0(); }
+	}
+	foreach (blk; parallel(gasBlocks,1)) {
+	    if (blk.active) { blk.convective_flux_phase1(); }
 	}
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(gasBlocks,1)) {
@@ -825,7 +831,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
-	    if (blk.active) { blk.convective_flux(); }
+	    if (blk.active) { blk.convective_flux_phase0(); }
+	}
+	foreach (blk; parallel(gasBlocks,1)) {
+	    if (blk.active) { blk.convective_flux_phase1(); }
 	}
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(gasBlocks,1)) {
@@ -988,7 +997,10 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	}
     }
     foreach (blk; parallel(gasBlocks,1)) {
-	if (blk.active) { blk.convective_flux(); }
+	if (blk.active) { blk.convective_flux_phase0(); }
+    }
+    foreach (blk; parallel(gasBlocks,1)) {
+	if (blk.active) { blk.convective_flux_phase1(); }
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(gasBlocks,1)) {
@@ -1107,7 +1119,10 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
-	    if (blk.active) { blk.convective_flux(); }
+	    if (blk.active) { blk.convective_flux_phase0(); }
+	}
+	foreach (blk; parallel(gasBlocks,1)) {
+	    if (blk.active) { blk.convective_flux_phase1(); }
 	}
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(gasBlocks,1)) {

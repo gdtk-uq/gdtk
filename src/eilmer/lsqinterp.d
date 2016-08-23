@@ -154,6 +154,11 @@ public:
 
     this(ref const LSQInterpGradients other)
     {
+	this.copy_values_from(other);
+    }
+
+    void copy_values_from(ref const LSQInterpGradients other)
+    {
 	velx[] = other.velx[]; vely[] = other.vely[]; velz[] = other.velz[];
 	Bx[] = other.Bx[]; By[] = other.By[]; Bz[] = other.Bz[]; psi[] = other.psi[];
 	tke[] = other.tke[]; omega[] = other.omega[];
@@ -189,8 +194,8 @@ public:
 	rhoMin = other.rhoMin; pMin = other.pMin;
 	TMin.length = other.TMin.length; eMin.length = other.eMin.length;
 	foreach(i; 0 .. other.TMin.length) { TMin[i] = other.TMin[i]; eMin[i] = other.eMin[i]; }
-    }
-
+    } // end copy_values_from()
+    
     void barth_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
 	size_t dimensions = myConfig.dimensions;
@@ -498,6 +503,8 @@ public:
     }
     
     void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght)
+    // Interpolate the flow field quantities at the left- and right-side of the interface,
+    // given information in both cells attached to this interface.
     {
 	auto gmodel = myConfig.gmodel;
 	auto nsp = gmodel.n_species;
@@ -532,29 +539,15 @@ public:
                 double qL0 = cL0.fs."~qname~";
                 double qMinL = qL0;
                 double qMaxL = qL0;
-                if (wsL) { // an active cell will have a workspace
-                    mygradL[0] = cL0.gradients."~gname~"[0];
-                    mygradL[1] = cL0.gradients."~gname~"[1];
-                    mygradL[2] = cL0.gradients."~gname~"[2];
-                } else {
-                    // Guess that there is good data over on the other side.
-                    mygradL[0] = cR0.gradients."~gname~"[0];
-                    mygradL[1] = cR0.gradients."~gname~"[1];
-                    mygradL[2] = cR0.gradients."~gname~"[2];
-                }
+                mygradL[0] = cL0.gradients."~gname~"[0];
+                mygradL[1] = cL0.gradients."~gname~"[1];
+                mygradL[2] = cL0.gradients."~gname~"[2];
                 double qR0 = cR0.fs."~qname~";
                 double qMinR = qR0;
                 double qMaxR = qR0;
-                if (wsR) { // an active cell will have a workspace
-                    mygradR[0] = cR0.gradients."~gname~"[0];
-                    mygradR[1] = cR0.gradients."~gname~"[1];
-                    mygradR[2] = cR0.gradients."~gname~"[2];
-                } else {
-                    // Guess that there is good data over on the other side.
-                    mygradR[0] = cL0.gradients."~gname~"[0];
-                    mygradR[1] = cL0.gradients."~gname~"[1];
-                    mygradR[2] = cL0.gradients."~gname~"[2];
-                }
+                mygradR[0] = cR0.gradients."~gname~"[0];
+                mygradR[1] = cR0.gradients."~gname~"[1];
+                mygradR[2] = cR0.gradients."~gname~"[2];
                 if (myConfig.apply_limiter) {
                     final switch (myConfig.unstructured_limiter) {
                     case UnstructuredLimiter.van_albada:

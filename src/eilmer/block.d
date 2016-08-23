@@ -125,7 +125,8 @@ public:
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
     abstract void propagate_inflow_data_west_to_east();
-    abstract void convective_flux();
+    abstract void convective_flux_phase0();
+    abstract void convective_flux_phase1();
     @nogc
     abstract void copy_into_ghost_cells(int destination_face,
 					ref Block src_blk, int src_face, int src_orientation,

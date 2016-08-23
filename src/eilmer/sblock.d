@@ -2017,7 +2017,7 @@ public:
 	}
     } // end propagate_inflow_data_west_to_east()
 
-    override void convective_flux()
+    override void convective_flux_phase0()
     // Compute the flux from data on either-side of the interface.
     {
 	// Barring exceptions at the block boundaries, the general process is:
@@ -2106,6 +2106,14 @@ public:
 	} // i loop
 	return;
     } // end convective_flux()
+
+    override void convective_flux_phase1()
+    // Compute the flux from data on either-side of the interface.
+    // For the structured-grid block, there is nothing to do.
+    // The unstructured-grid block needs to work in two phases.
+    {
+	return;
+    }
 
     @nogc
     override void copy_into_ghost_cells(int destination_face,
