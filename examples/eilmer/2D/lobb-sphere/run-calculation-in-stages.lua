@@ -11,7 +11,7 @@ flowTimes = {15, 5, 3, 2}
 
 EILMER_CMD = "e4shared"
 filesToCopy = {'case.lua',
-	       'air-5species.lua',
+	       'air-5sp.lua',
 	       'air-5sp-6r.lua',
 	       'lobb.lua'}
 
