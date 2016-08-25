@@ -1,0 +1,57 @@
+# ss3.test
+# 2D axisymmetric flow with look-up table model for air.
+#
+# PJ, 14-Jan-2011
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test run-preprocessor {Run the preprocessing stage.} -body {
+    exec cp $env(HOME)/dgd/src/gas/sample-data/cea-lut-air-version-test.lua cea-lut-air.lua
+    exec e4shared --prep --job=ss3 > LOGFILE_PREP
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the shared-memory simulation code.} -body {
+    exec e4shared --run --job=ss3 --verbosity=1 --max-cpus=4 > LOGFILE_MAIN
+} -result {} -returnCodes {0}
+
+test run-postprocessor {Run the postprocessing stage.} -body {
+    exec e4shared --post --job=ss3 --tindx-plot=last --slice-list=0,:,0,: \
+	--output-file=ss3_stag_line.data > LOGFILE_POST
+    exec awk -f locate_shock.awk ss3_stag_line.data > ss3.result
+} -result {} -returnCodes {0}
+
+test number-of-steps {The main simulation takes a certain number of steps.} -body {
+    set fp [open LOGFILE_MAIN r]
+    set contents [read $fp]
+    close $fp
+    set final_steps 0
+    foreach line [split $contents "\n"] {
+	if {[string first "final-t=" $line] >= 0} {
+	    set final_steps [lindex [split $line] 1]
+	}
+    }
+    # We'll tolerate a small change in the number of steps,
+    # in case the look-up table gets changed.
+    # 2013-05-14: bumped tolerance from 10 to 50
+    expr abs($final_steps - 3600) < 50
+} -result {1}
+
+test stand-off {The shock stand-off distance compared with experiment.} -body {
+    set shock_location 0
+    set fp [open ss3.result r]
+    set results [read $fp]
+    close $fp
+    foreach line [split $results "\n"] {
+	if {[string first "shock-location=" $line] == 0} {
+	    scan $line "%*s %f %*f" shock_location
+	}
+    }
+    # Compute shock stand-off im mm and then check that the 
+    # relative error is less than 2%.
+    set stand_off [expr ($shock_location * -1000) - 31.8]
+    expr abs($stand_off - 2.66)/2.66 < 2.0e-2
+} -result {1}
+
+cleanupTests
