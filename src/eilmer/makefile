@@ -25,7 +25,7 @@ endif
 DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo block_demo \
 	luaflowstate_demo luaglobalconfig_demo
 
-EILMER_FILES := simcore.d fileutil.d readconfig.d json_helper.d \
+EILMER_FILES := simcore.d fileutil.d json_helper.d \
 		fvcore.d fvcell.d fvvertex.d fvinterface.d \
 		fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d \
 		conservedquantities.d flowstate.d luaflowstate.d \

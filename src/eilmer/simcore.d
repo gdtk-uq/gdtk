@@ -23,7 +23,6 @@ import geom;
 import gas;
 import fvcore;
 import globalconfig;
-import readconfig;
 import globaldata;
 import flowstate;
 import block;

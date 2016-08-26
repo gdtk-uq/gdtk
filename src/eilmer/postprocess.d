@@ -26,7 +26,6 @@ import geom;
 import sgrid;
 import gas;
 import globalconfig;
-import readconfig;
 import flowsolution;
 import solidsolution;
 
