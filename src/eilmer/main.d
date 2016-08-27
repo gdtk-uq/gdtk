@@ -40,6 +40,15 @@ import luasolidprops;
 import postprocess;
 import luaflowsolution;
 
+void moveFileToBackup(string fileName)
+{
+    if (exists(fileName)) {
+	if (exists(fileName~".bak")) { remove(fileName~".bak"); }
+	rename(fileName, fileName~".bak");
+    }
+    return;
+}
+
 void main(string[] args)
 {
     writeln("Eilmer4 compressible-flow simulation code.");
@@ -175,6 +184,11 @@ void main(string[] args)
 	registerSketch(L);
 	registerSolidProps(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
+	// Before processing the Lua input files, move old .config and .control files.
+	// This should prevent a subsequent run of the simulation on old config files
+	// in the case that the processing of the input script fails.
+	moveFileToBackup(jobName~".config");
+	moveFileToBackup(jobName~".control");
 	if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
 	    writeln("There was a problem in the Eilmer Lua code: prep.lua");
 	    string errMsg = to!string(lua_tostring(L, -1));
