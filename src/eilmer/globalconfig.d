@@ -620,12 +620,8 @@ void read_config_file()
 
     // Checking of constraints.
     // The following checks/overrides must happen after the relevant config elements
-    // have been set.
-    if (GlobalConfig.grid_motion == GridMotion.shock_fitting &&
-	GlobalConfig.apply_bcs_in_parallel) {
-	writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
-	GlobalConfig.apply_bcs_in_parallel = false;
-    } 
+    // have been set.  This is the first such check.  For details, see the function below.
+    configCheckPoint1();
 
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
@@ -660,26 +656,7 @@ void read_config_file()
 	writeln("  divergence_cleaning: ", GlobalConfig.divergence_cleaning);
 	writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
     }
-    //
-    // More checking of constraints.
-    //
-    if (GlobalConfig.grid_motion != GridMotion.none) {
-	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
-	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
-	    // pass, we have a consistent selection.
-	} else {
-	    string msg = "We have some grid_motion but not a valid GasdynamicUpdate scheme" ~
-		" for grid motion.";
-	    throw new FlowSolverException(msg);
-	}
-    } else {
-	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
-	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
-	    string msg = "We have no grid_motion but have asked for a GasdynamicUpdate scheme" ~
-		" for grid motion.";
-	    throw new FlowSolverException(msg);
-	}
-    }
+    configCheckPoint2();
 
     // Parameters controlling viscous/molecular transport
     //
@@ -877,3 +854,53 @@ void read_control_file()
 	writeln("  dt_history: ", GlobalConfig.dt_history);
     }
 } // end read_control_file()
+
+//
+// Functions to check the compatibility of the GlobalConfig parameters.
+// The individual checks are called at particular locations during the
+// reading of the config parameters from the JSON .config file.
+//
+// Sometimes, we can make a suitable change and continue (after emitting a warning)
+// but other times it is not sensible to continue, but throw an exception.
+//
+void configCheckPoint1()
+{
+    if (GlobalConfig.grid_motion == GridMotion.shock_fitting &&
+	GlobalConfig.apply_bcs_in_parallel) {
+	writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
+	GlobalConfig.apply_bcs_in_parallel = false;
+    }
+    return;
+} // end configCheckPoint1()
+
+void configCheckPoint2()
+{
+    // More checking of constraints on the config parameters.
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
+	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
+	    // pass, we have a consistent selection.
+	} else {
+	    string msg = "We have some grid_motion but not a valid GasdynamicUpdate scheme" ~
+		" for grid motion.";
+	    throw new FlowSolverException(msg);
+	}
+    } else {
+	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
+	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
+	    string msg = "We have no grid_motion but have asked for a GasdynamicUpdate scheme" ~
+		" for grid motion.";
+	    throw new FlowSolverException(msg);
+	}
+    }
+    return;
+} // end configCheckPoint2()
+
+void checkGlobalConfig()
+// Bundle all of the checks together so that they may be conveniently applied
+// at the end of processing the user's Lua input script.
+{
+    configCheckPoint1();
+    configCheckPoint2();
+    return;
+}

@@ -199,6 +199,7 @@ void main(string[] args)
 	    string errMsg = to!string(lua_tostring(L, -1));
 	    throw new FlowSolverException(errMsg);
 	}
+	checkGlobalConfig(); // We may not proceed if the config parameters are incompatible.
 	if ( luaL_dostring(L, toStringz("build_job_files(\""~jobName~"\")")) != 0 ) {
 	    writeln("There was a problem in the Eilmer build function build_job_files() in prep.lua");
 	    string errMsg = to!string(lua_tostring(L, -1));
