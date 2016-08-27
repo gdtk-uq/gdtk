@@ -39,7 +39,7 @@ test post-shock-region {Post-shock gas conditions.} -body {
     set p_ref 30.2e3
     set T_ref 398.0
     set velx_ref 293.0
-    if { [catch {exec e4shared --post --job=sod --tindx-plot=last --probe=0.8,0.025,0.025 } results] } {
+    if { [catch {exec e4shared --post --job=sod --tindx-plot=last --probe=0.755,0.025,0.025 } results] } {
         puts "postprocessing probe command failed"
         puts $results
 	set rho 0
@@ -68,7 +68,7 @@ test expanded-driver-region {Expanded driver gas conditions.} -body {
     set p_ref 30.2e3
     set T_ref 247.0
     set velx_ref 293.0
-    if { [catch {exec e4shared --post --job=sod --tindx-plot=last --probe=0.6,0.025,0.025 } results] } {
+    if { [catch {exec e4shared --post --job=sod --tindx-plot=last --probe=0.555,0.025,0.025 } results] } {
         puts "postprocessing probe command failed"
         puts $results
 	set rho 0

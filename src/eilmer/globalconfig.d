@@ -172,7 +172,7 @@ final class GlobalConfig {
     shared static bool extrema_clipping = true;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
     // The unstructured solver has a selection of limiters available
-    shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.van_albada;
+    shared static UnstructuredLimiter unstructured_limiter = UnstructuredLimiter.venkat;
 
     // Default flux calculator is the adaptive mix of ausmdv and efm.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive;
