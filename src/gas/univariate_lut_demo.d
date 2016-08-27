@@ -10,7 +10,6 @@ import std.datetime;
 
 import nm.univariate_lut;
 import gas.gas_model;
-import gas.gas_model_util;
 import gas.co2gas_sw;
 
 

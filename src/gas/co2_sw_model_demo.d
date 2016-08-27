@@ -7,7 +7,6 @@
 
 import std.stdio;
 import gas.gas_model;
-import gas.gas_model_util;
 import std.datetime;
 
 void main() {

@@ -24,10 +24,6 @@ test gas-model-test {Testing gas_model.d} -body {
     exec ./gas_model_test
 } -result {} -returnCodes {0}
 
-test gas-model-util-test {Testing gas_model_util.d} -body {
-    exec ./gas_model_util_test
-} -result {} -returnCodes {0}
-
 test ideal-gas-test {Testing ideal_gas.d} -body {
     exec ./ideal_gas_test
 } -result {} -returnCodes {0}

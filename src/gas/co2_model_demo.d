@@ -7,7 +7,6 @@
 
 import std.stdio;
 import gas.gas_model;
-import gas.gas_model_util;
 
 void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes using CO2...");

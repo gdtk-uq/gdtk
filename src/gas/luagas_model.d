@@ -19,7 +19,6 @@ import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
 
 import gas.gas_model;
-import gas.gas_model_util;
 import gas.physical_constants;
 
 

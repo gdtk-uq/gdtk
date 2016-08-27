@@ -1157,10 +1157,89 @@ double dp, p_old, p_new, T_old, T_new, dT;
 	throw new Exception(msg);
     }
 
+} // end update_thermo_state_hs()
+
+
+// Utility function to construct specific gas models needs to know about
+// all of the gas-model modules.
+import gas.ideal_gas;
+import gas.therm_perf_gas;
+import gas.very_viscous_air;
+import gas.co2gas;
+import gas.co2gas_sw;
+import gas.sf6virial;
+import gas.uniform_lut;
+import gas.adaptive_lut_CEA;
+import core.stdc.stdlib : exit;
+
+
+GasModel init_gas_model(in string file_name="gas-model.lua")
+/**
+ * Get the instructions for setting up the GasModel object from a Lua file.
+ * The first item in the file should be a model name which we use to select 
+ * the specific GasModel class.
+ * The constructor for each specific gas model will know how to pick out the
+ * specific parameters of interest.
+ * As new GasModel classes are added to the collection, just 
+ * add a new case to the switch statement below.
+ */
+{
+    lua_State* L;
+   
+    try { 
+        L = init_lua_State(file_name);
+    } catch (Exception e) {
+        writeln("ERROR: in function init_gas_model() in gas_model.d");
+        writeln("ERROR: There was a problem parsing the input file: ", file_name);
+	writeln("ERROR: There could be a Lua syntax error OR the file might not exist.");
+	writeln("ERROR: Quitting at this point.");
+ 	exit(1);
+    }
+    string gas_model_name;
+    try {
+    	gas_model_name = getString(L, LUA_GLOBALSINDEX, "model");
+    } catch (Exception e) {
+        writeln("ERROR: in function init_gas_model() in gas_model.d");
+        writeln("ERROR: There was a problem reading the 'model' name" );
+	writeln("ERROR: in the gas model input Lua file.");
+	writeln("ERROR: Quitting at this point.");
+        exit(1);
+    }
+    GasModel gm;
+    switch ( gas_model_name ) {
+    case "IdealGas":
+	gm = new IdealGas(L);
+	break;
+    case "ThermallyPerfectGas":
+	gm = new ThermallyPerfectGas(L);
+	break;
+    case "VeryViscousAir":
+	gm = new VeryViscousAir(L);
+	break;
+    case "CO2Gas":
+	gm = new CO2Gas(L);
+	break;
+    case "CO2GasSW":
+	gm = new CO2GasSW(L);
+	break;
+    case "SF6Virial":
+	gm = new SF6Virial(L);
+	break;
+    case "look-up table":  
+	gm = new  UniformLUT(L);
+	break;
+    case "CEA adaptive look-up table":
+	gm = new AdaptiveLUT(L);
+	break;
+    default:
+	string errMsg = format("The gas model '%s' is not available.", gas_model_name);
+	throw new Error(errMsg);
+    }
+    lua_close(L);
+    return gm;
 }
 
-
-
+//---------------------------------------------------------------------------------
 
 version(gas_model_test) {
     int main() {
@@ -1173,18 +1252,33 @@ version(gas_model_test) {
 	
 	// Iterative methods test using idealgas single species model
 	// These assume IdealGas class is working properly
-	import gas.ideal_gas;
-	
 	GasModel gm;
-	try { lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
-	    gm = new IdealGas(L);
+	try {
+	    gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
 	}
 	catch {
 	    string msg;
 	    msg ~= "Test of iterative methods in gas_model.d require file:";
 	    msg ~= " ideal-air-gas-model.lua in directory: gas/sample_data";
 	    throw new Exception(msg);
-	    }
+	}
+
+	gd = new GasState(gm, 100.0e3, 300.0);
+	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), "gas constant");
+	assert(gm.n_modes == 1, "number of energy modes");
+	assert(gm.n_species == 1, "number of species");
+	assert(approxEqual(gd.p, 1.0e5), "pressure");
+	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), "static temperature");
+	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), "massf[0]");
+
+	gm.update_thermo_from_pT(gd);
+	gm.update_sound_speed(gd);
+	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), "density");
+	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), "internal energy");
+	assert(approxEqual(gd.a, 347.241, 1.0e-4), "sound speed");
+	gm.update_trans_coeffs(gd);
+	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), "viscosity");
+	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), "conductivity");
 
 	// Select arbitrary energy and density and establish a set of 
 	// variables that are thermodynamically consistent
@@ -1230,6 +1324,7 @@ version(gas_model_test) {
 	assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.p, p_given, 1.0e-6), failedUnitTest());
 
+	// Try 
 	return 0;
     }
 }

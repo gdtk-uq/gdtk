@@ -28,7 +28,6 @@ import std.conv;
 import std.datetime;
 import nm.tree_patch;
 import gas.gas_model;
-import gas.gas_model_util;
 import gas.co2gas_sw;
 
 
