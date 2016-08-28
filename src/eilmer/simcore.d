@@ -250,6 +250,26 @@ void integrate_in_time(double target_time)
     // Overall iteration count.
     step = 0;
     shared bool do_cfl_check_now = false;
+    //
+    if (GlobalConfig.viscous) {
+	// We have requested viscous effects but their application may be delayed
+	// until the flow otherwise starts.
+	if (GlobalConfig.viscous_delay > 0.0 && sim_time < GlobalConfig.viscous_delay) {
+	    // We will initially turn-down viscous effects and
+	    // only turn them up when the delay time is exceeded.
+	    GlobalConfig.viscous_factor = 0.0;
+	} else {
+	    // No delay in applying full viscous effects.
+	    GlobalConfig.viscous_factor = 1.0;
+	}
+    } else {
+	// We haven't requested viscous effects at all.
+	GlobalConfig.viscous_factor = 0.0;
+    }
+    foreach (myblk; gasBlocks) {
+	myblk.myConfig.viscous_factor = GlobalConfig.viscous_factor; 
+    }
+    //
     local_dt_allow.length = gasBlocks.length; // prepare array for use
     local_invalid_cell_count.length = gasBlocks.length;
     // Normally, we can terminate upon either reaching 
@@ -261,11 +281,24 @@ void integrate_in_time(double target_time)
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
     while ( !finished_time_stepping ) {
+	//
         // 0. Alter configuration setting if necessary.
 	if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
 	    read_control_file(); // Reparse the time-step control parameters occasionally.
 	}
-
+	if (GlobalConfig.viscous && GlobalConfig.viscous_factor < 1.0 &&
+	    sim_time > GlobalConfig.viscous_delay) {
+	    // We want to increment the viscous_factor that scales the viscous effects terms.
+	    double viscous_factor = GlobalConfig.viscous_factor;
+	    viscous_factor += GlobalConfig.viscous_factor_increment;
+	    viscous_factor = min(viscous_factor, 1.0);
+	    // Make sure that everyone is up-to-date.
+	    foreach (myblk; gasBlocks) {
+		myblk.myConfig.viscous_factor = viscous_factor; 
+	    }
+	    GlobalConfig.viscous_factor = viscous_factor;
+	}
+	//
 	// 1. Set the size of the time step to be the minimum allowed for any active block.
 	if (!GlobalConfig.fixed_time_step && 
 	    (step/GlobalConfig.cfl_count)*GlobalConfig.cfl_count == step) {
