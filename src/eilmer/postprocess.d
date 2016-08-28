@@ -415,7 +415,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 //-----------------------------------------------------------------------
 
 size_t[] decode_range_indices(string rangeStr, size_t first, size_t endplus1)
-// Decode strings such as "0:$", ":", "0:3",
+// Decode strings such as "0:$", ":", "0:3", "$"
 // On input, first and endplus1 represent the largest, available range.
 // Return the pair of numbers that can be used in a foreach loop range.
 {
@@ -431,7 +431,10 @@ size_t[] decode_range_indices(string rangeStr, size_t first, size_t endplus1)
 	    size_t new_endplus1 = to!size_t(items[1]);
 	    if (new_endplus1 < endplus1) endplus1 = new_endplus1; 
 	}
-    } else {
+    } else if (rangeStr == "$") {
+	// Wit just a single "$" specified, we want only the last index.
+	first = endplus1 - 1;
+    }else {
 	// Presume that we have a single integer.
 	first = to!size_t(rangeStr);
 	if (first < endplus1) endplus1 = first+1;
