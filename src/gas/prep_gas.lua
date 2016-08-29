@@ -10,6 +10,14 @@
 -- for advanced users.
 --
 
+function split_string(str)
+   tokens = {}
+   for tk in string.gmatch(str, "%S+") do
+      tokens[#tokens+1] = tk
+   end
+   return tokens
+end
+
 function writeIdealGas(f, sp, db, optsTable)
    -- We can only deal with one species for an ideal gas.
    if ( #sp > 1 ) then
@@ -282,8 +290,37 @@ function printHelp()
    os.exit(1)
 end
 
+function parseSpeciesList(fname)
+   f = assert(io.open(fname, 'r'))
+   spMap = {}
+   while true do
+      line = f:read('*line')
+      if not line then
+	 break
+      end
+      tks = split_string(line)
+      if tks[1] ~= '#' then
+	 spSymbol = tks[3]
+	 spEntry = string.match(tks[1], "(.+)%.lua")
+	 spMap[spSymbol] = spEntry
+      end
+   end
+   f:close()
+   return spMap
+end
+
+
 function prepareGasFile(inpFname, outFname)
    dofile(inpFname)
+   -- Convert species names to database entries
+   spNames = {}
+   for _,sp in ipairs(species) do spNames[#spNames+1] = sp end
+   -- Locate species list and parse
+   listName = dir.."species-list.txt"
+   spMap = parseSpeciesList(listName)
+   for i,sp in ipairs(spNames) do
+      species[i] = spMap[sp]
+   end
    -- Check we have all the species
    for _,sp in ipairs(species) do
       if ( not db[sp] ) then

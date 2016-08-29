@@ -66,6 +66,7 @@ build-prep-gas: prep_gas.lua species-database.lua
 	cp prep_gas.lua $(BUILD_DIR)/bin/prep-gas; chmod +x $(BUILD_DIR)/bin/prep-gas
 	- mkdir -p $(BUILD_DIR)/data
 	cp species-database/species-database.lua $(BUILD_DIR)/data/
+	cp species-database/species-list.txt $(BUILD_DIR)/data/
 
 gas-calc: luagas_model.d $(LIBLUA) $(GAS_FILES) $(GAS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	dmd -ofgas-calc -version=gas_calc \
