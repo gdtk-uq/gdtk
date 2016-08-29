@@ -170,14 +170,14 @@ public:
 
 private:
     // Thermodynamic constants
-    double _Rgas = R_universal/0.02896; // J/kg/K
-    double _gamma = 1.4;   // ratio of specific heats
-    double _Cv = R_universal/0.02896 / 0.4; // J/kg/K
-    double _Cp = R_universal/0.02896 * 1.4/0.4; // J/kg/K
+    double _Rgas; // J/kg/K
+    double _gamma;   // ratio of specific heats
+    double _Cv; // J/kg/K
+    double _Cp; // J/kg/K
     // Reference values for entropy
-    double _s1 = 0.0; // J/kg/K
-    double _T1 = 298.15; // K
-    double _p1 = 101.325e3; // Pa
+    double _s1;  // J/kg/K
+    double _T1;  // K
+    double _p1;  // Pa
     // Molecular transport coefficent constants.
     Viscosity _viscModel;
     // We compute thermal conductivity in one of two ways:
@@ -185,7 +185,7 @@ private:
     // 2. ThermalConductivity model
     // therefore we have places for both data
     bool _constPrandtl = false;
-    double _Prandtl = 1.0;
+    double _Prandtl;
     ThermalConductivity _thermCondModel;
 
 } // end class Ideal_gas
