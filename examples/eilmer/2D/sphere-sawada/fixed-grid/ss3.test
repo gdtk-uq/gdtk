@@ -8,8 +8,7 @@ namespace import ::tcltest::*
 configure -verbose {start body error}
 
 test run-preprocessor {Run the preprocessing stage.} -body {
-    exec cp $env(HOME)/dgd/src/gas/sample-data/cea-lut-air-version-test.lua cea-lut-air.lua
-    exec e4shared --prep --job=ss3 > LOGFILE_PREP
+    exec ./prep.sh > LOGFILE_PREP
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the shared-memory simulation code.} -body {

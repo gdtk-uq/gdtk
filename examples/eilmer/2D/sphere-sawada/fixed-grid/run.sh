@@ -1,7 +1,5 @@
 #!/bin/bash
 # run.sh
-cp ~/dgd/src/gas/sample-data/cea-lut-air-version-test.lua ./cea-lut-air.lua
-e4shared --prep --job=ss3
 e4shared --run --job=ss3 --verbosity=1 --max-cpus=4
 e4shared --post --job=ss3 --tindx-plot=all --vtk-xml \
 	 --add-vars="mach,pitot,total-p,total-h"
