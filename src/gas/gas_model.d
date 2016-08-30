@@ -261,8 +261,8 @@ public:
 	mu = 0.5 * (gs0.mu + gs1.mu);
 	foreach(i; 0 .. k.length) k[i] = 0.5 * (gs0.k[i] + gs1.k[i]);
 	// D_AB
-	sigma = 0.5 * (gs0.sigma * gs1.sigma);
-	foreach(i; 0 .. massf.length) massf[i] = 0.5 * (gs0.massf[i] * gs1.massf[i]);
+	sigma = 0.5 * (gs0.sigma + gs1.sigma);
+	foreach(i; 0 .. massf.length) massf[i] = 0.5 * (gs0.massf[i] + gs1.massf[i]);
 	quality = 0.5 * (gs0.quality + gs1.quality);
     }
 
