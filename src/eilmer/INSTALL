@@ -27,11 +27,14 @@ $HOME area.
 > mkdir $HOME/dgdinst
 
 Configure your environment to use eilmer. You will need to set the
-DGD variable to point to the top of the installation tree. You then
+DGD variable to point to the top of the installation tree, and
+the DGD_REPO variable to point to the top of the repository tree.
+Note that the installation tree and repository tree are separate. You then
 also need to set $PATH, $DGD_LUA_PATH and $DGD_LUA_CPATH to point to
 the appropriate places. Some example lines from a .bashrc file are::
 
    export DGD=$HOME/dgdinst
+   export DGD_REPO=$HOME/dgd
    export PATH=$PATH:$DGD/bin
    export DGD_LUA_PATH=$DGD/lib/?.lua
    export DGD_LUA_CPATH=$DGD/lib/?.so
