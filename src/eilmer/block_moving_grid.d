@@ -332,15 +332,32 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
     // Next update the internal vertex velocities (these are slaves dervied from the WEST boundary master velocities) 
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
 	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
-	    for ( size_t i = blk.imin+1; i <= blk.imax+1; ++i ) {
+	    Vector3 vel_max = blk.get_vtx(blk.imin, j, k).vel[0];
+	    // Set up a linear weighting on fraction of distance from east boundary back to west boundary.
+	    double[200] distance;
+	    assert(200 > blk.imax+1, "my distance array is not big enough");
+	    distance[blk.imax+1] = 0.0;
+	    for (size_t i = blk.imax; i >= blk.imin; --i) {
+		vtx =  blk.get_vtx(i,j,k);
+		vtx_right = blk.get_vtx(i+1,j,k);
+		Vector3 delta = vtx.pos[0] - vtx_right.pos[0];
+		distance[i] = abs(delta) + distance[i+1];
+	    }
+	    double west_distance = distance[blk.imin];
+	    for (size_t i = blk.imax; i >= blk.imin; --i) {
+		distance[i] /= west_distance;
+	    }
+	    for ( size_t i = blk.imin+1; i <= blk.imax; ++i ) {
 		vtx = blk.get_vtx(i,j,k);
 		vtx_left = blk.get_vtx(i-1,j,k);
 		vtx_right = blk.get_vtx(i+1,j,k);
-		temp_vel = weighting_function(blk.get_vtx(blk.imin, j, k).vel[0],blk.imax+1,i);
+		temp_vel = distance[i]*vel_max; // we used to call weighting function here
 		unit_d = correct_direction(unit_d, vtx.pos[0], vtx_left.pos[0], vtx_right.pos[0], i, blk.imin, blk.imax);
 		temp_vel = dot(temp_vel, unit_d)*unit_d;
 		vtx.vel[0] = temp_vel;
 	    }
+	    vtx = blk.get_vtx(blk.imax+1,j,k); // east boundary vertex is fixed
+	    vtx.vel[0].refx = 0.0; vtx.vel[0].refy = 0.0; vtx.vel[0].refz = 0.0;
 	}
     }
     return;
