@@ -607,11 +607,12 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 
     if ( count >= MAX_STEPS ) {
 	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("Warning in function: %s:\n", __FUNCTION__);
 	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
 	msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
 	msg ~= "  Supplied Q:" ~ Q.toString();
-	throw new Exception(msg);
+	writeln(msg);
 
     }
 
@@ -620,6 +621,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	msg ~= format("Error in function: %s:\n", __FUNCTION__);
 	msg ~= format("    Iterations failed badly.\n");
 	msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
+	msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
 	msg ~= "  Supplied Q:" ~ Q.toString();
 	throw new Exception(msg);
     }
@@ -752,11 +754,12 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 
      if ( count >= MAX_STEPS ) {
 	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("Warning in function: %s:\n", __FUNCTION__);
 	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    fT_old = %g\n", fT_old);
 	msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
         msg ~= "  Supplied Q:" ~ Q.toString;
-	throw new Exception(msg);
+	writeln(msg);
 
     }
     if ( fabs(fT_old) > fT_tol_fail ) {
