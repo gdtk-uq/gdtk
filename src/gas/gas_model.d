@@ -899,9 +899,10 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 	string msg;
 	msg ~= format("Error in function: %s:\n", __FUNCTION__);
 	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    fp_old = %g, e_old = %g\n", fp_old, e_old);
 	msg ~= format("    rho_given = %.5s, p_given, %.8s\n", rho_given, p_given); 
         msg ~= "  Supplied Q:" ~ Q.toString;
-	throw new Exception(msg);
+	writeln(msg);
     }
 
     if ( fabs(fp_old) > fp_tol_fail ) {
@@ -1012,9 +1013,10 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
 	string msg;
 	msg ~= format("Error in function: %s:\n", __FUNCTION__);
 	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    fs_old = %g\n", fs_old);
 	msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
         msg ~= "  Supplied Q:" ~ Q.toString;
-	throw new Exception(msg);
+	writeln(msg);
     }
 
     if ( fabs(fs_old) > fs_tol_fail ) {
@@ -1146,9 +1148,10 @@ double dp, p_old, p_new, T_old, T_new, dT;
 	string msg;
 	msg ~= format("Error in function: %s:\n", __FUNCTION__);
 	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    fh_old = %g, fs_old = %g\n", fh_old, fs_old);
 	msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given); 
 	msg ~= "  Supplied Q:" ~ Q.toString();
-	throw new Exception(msg);
+	writeln(msg);
     }
 
     if( (fabs(fh_old) > fh_tol_fail) || (fabs(fs_old) > fs_tol_fail) ) {
