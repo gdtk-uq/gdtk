@@ -1,0 +1,12 @@
+# Kemp Rose and Detra theoretical heat transfer around a sphere
+# phi (degrees), q/q_s
+0.0 1.0
+10.0 0.9837
+20.0 0.9363
+30.0 0.8345
+40.0 0.7256
+50.0 0.5947
+60.0 0.4504
+70.0 0.3173
+80.0 0.2131
+90.0 0.1585

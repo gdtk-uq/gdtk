@@ -78,3 +78,5 @@ config.max_step = 40000
 config.dt_init = 1.0e-9
 config.cfl_value = 0.5 
 config.dt_plot = config.max_time/4
+
+dofile("sketch-domain.lua")
