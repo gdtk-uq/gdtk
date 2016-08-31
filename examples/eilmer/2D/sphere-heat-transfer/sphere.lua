@@ -15,7 +15,7 @@ nsp, nmodes, gmodel = setGasModel('cea-lut-air.lua')
 p_init = 6.7 -- Pa
 p_inf = 535.6 -- Pa
 vx_inf = 2436.5 -- m/s
-T_inf = 2436.5 -- K
+T_inf = 2573.5 -- K
 inflow = FlowState:new{p=p_inf, T=T_inf, velx=vx_inf}
 initial = FlowState:new{p=p_init, T=T_inf}
 
