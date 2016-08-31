@@ -624,7 +624,7 @@ public:
 
 
 class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
-    this(int id, int boundary, double Twall=300.0)
+    this(int id, int boundary)
     {
 	super(id, boundary, "UpdateThermoTransCoeffs");
     }
