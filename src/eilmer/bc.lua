@@ -180,6 +180,16 @@ function CopyCellData:tojson()
    return str
 end
 
+FlowStateCopyToInterface = BoundaryInterfaceEffect:new{flowCondition=nil}
+FlowStateCopyToInterface.type = "flow_state_copy_to_interface"
+function FlowStateCopyToInterface:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "flowstate": %s', self.flowCondition:toJSONString())
+   str = str .. '}'
+   return str
+end
+
+
 ZeroVelocity = BoundaryInterfaceEffect:new()
 ZeroVelocity.type = "zero_velocity"
 function ZeroVelocity:tojson()
@@ -442,7 +452,7 @@ function InFlowBC_Supersonic:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivAction = { FlowStateCopyToInterface{flowCondition=o.flowCondition} }
    o.is_configured = true
    return o
 end

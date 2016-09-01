@@ -34,12 +34,19 @@ import bc;
 BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
     string bieType = jsonData["type"].str;
+    // At the point at which we call this function, we may be inside the block-constructor.
+    // Don't attempt the use the block-owned gas model.
+    auto gmodel = GlobalConfig.gmodel_master; 
     // If we need access to a gas model in here, 
     // be sure to use GlobalConfig.gmodel_master.
     BoundaryInterfaceEffect newBIE;
     switch (bieType) {
     case "copy_cell_data":
 	newBIE = new BIE_CopyCellData(blk_id, boundary);
+	break;
+    case "flow_state_copy":
+	auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
+	newBIE = new BIE_FlowStateCopy(blk_id, boundary, flowstate);
 	break;
     case "zero_velocity":
 	newBIE = new BIE_ZeroVelocity(blk_id, boundary);
@@ -215,6 +222,106 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 	} // end switch which_boundary
     } // end apply()
 } // end class BIE_CopyCellData
+
+class BIE_FlowStateCopy : BoundaryInterfaceEffect {
+    FlowState fstate;
+
+    this(int id, int boundary, in FlowState _fstate)
+    {
+	super(id, boundary, "flowStateCopy");
+	fstate = new FlowState(_fstate);
+    }
+
+    override string toString() const 
+    {
+	return "flowStateCopy(fstate=" ~ to!string(fstate) ~ ")";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    f.fs.copy_values_from(fstate);
+	} // end foreach face
+    }
+    
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	FVCell cell;
+	FVInterface IFace;
+	auto gmodel = blk.myConfig.gmodel;
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.north];
+		    FlowState fs = IFace.fs;
+		    fs.copy_values_from(fstate);
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.east];
+		    FlowState fs = IFace.fs;
+		    fs.copy_values_from(fstate);
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.south];
+		    FlowState fs = IFace.fs;
+		    fs.copy_values_from(fstate);
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.west];
+		    FlowState fs = IFace.fs;
+		    fs.copy_values_from(fstate);
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.top];
+		    FlowState fs = IFace.fs;
+		    fs.copy_values_from(fstate);
+		} // end j loop
+	    } // end for i
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.bottom];
+		    FlowState fs = IFace.fs;
+		    fs.copy_values_from(fstate);
+		} // end j loop
+	    } // end for i
+	    break;
+	} // end switch which_boundary
+    } // end apply()
+} // end class BIE_FlowStateCopy
 
 
 class BIE_ZeroVelocity : BoundaryInterfaceEffect {
