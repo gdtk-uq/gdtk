@@ -452,8 +452,8 @@ function InFlowBC_Supersonic:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
-   o.preSpatialDerivAction = { FlowStateCopyToInterface{flowCondition=o.flowCondition} }
-   o.is_configured = true
+   o.preSpatialDerivAction = { FlowStateCopyToInterface:new{flowCondition=o.flowCondition} }
+   o.is_configured = true      
    return o
 end
 

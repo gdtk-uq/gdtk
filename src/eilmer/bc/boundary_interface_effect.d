@@ -44,7 +44,7 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
     case "copy_cell_data":
 	newBIE = new BIE_CopyCellData(blk_id, boundary);
 	break;
-    case "flow_state_copy":
+    case "flow_state_copy_to_interface":
 	auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
 	newBIE = new BIE_FlowStateCopy(blk_id, boundary, flowstate);
 	break;
