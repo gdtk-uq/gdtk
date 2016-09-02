@@ -408,7 +408,8 @@ function transformReaction(t, species, suppressWarnings)
       -- Next look at the special cases
       if t.efficiencies then
 	 for k,v in pairs(t.efficiencies) do
-	    if not species[k] then
+	    sp = transformSpeciesStr(k) 
+	    if not species[sp] then
 		  if not suppressWarnings then
 		     print("WARNING: One of the species given in the efficiencies list")
 		     print("is NOT one of the species in the gas model.")
@@ -419,24 +420,11 @@ function transformReaction(t, species, suppressWarnings)
 		     end
 		  end
 	    else
-	       -- species[k] gives back a D index,
-	       r.efficiencies[species[k]] =  v
+	       -- species[sp] gives back a D index,
+	       r.efficiencies[species[sp]] =  v
 	    end
 	 end
       end
-      -- For efficient execution in inner loops,
-      -- remove values whose efficiency is very small or zero.
-      local essentiallyZero = 1.0e-9
-      for i=#r.efficiencies,1,-1 do
-	 if r.efficiencies[i] <= essentiallyZero then
-	    table.remove(r.efficiencies, i)
-	 end
-      end
-      -- table.remove can't handle index i=0
-      if r.efficiencies[0] <= essentiallyZero then
-	 r.efficiencies[0] = nil
-      end
-
    end
 
    return r
@@ -471,8 +459,11 @@ function reacToLuaStr(r, i)
       for i,_ in pairs(r.efficiencies) do spIdx[#spIdx+1] = i end
       table.sort(spIdx)
       -- Write out efficiencies in species sorted order
+      -- Skip over those efficiencies that are 0.0
       for _,i in ipairs(spIdx) do
-	 rstr = rstr .. string.format("    [%d]=%12.6e,\n", i, r.efficiencies[i])
+	 if r.efficiencies[i] ~= 0.0 then
+	    rstr = rstr .. string.format("    [%d]=%12.6e,\n", i, r.efficiencies[i])
+	 end
       end
       rstr = rstr .. "  },\n"
    end
