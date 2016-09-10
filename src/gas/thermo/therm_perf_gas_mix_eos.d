@@ -26,10 +26,6 @@ import gas.gas_model;
 import gas.physical_constants;
 import gas.thermo.evt_eos;
 import gas.thermo.cea_thermo_curves;
-// For testing, use solve from either brent or ridder.
-import nm.brent;
-// import nm.ridder;
-import nm.bracketing;
 import util.lua;
 import util.lua_service;
 
@@ -79,13 +75,7 @@ public:
 	double T1 = fmax(Q.T[0] - delT/2, T_MIN);
 	double T2 = T1 + delT;
 
-	auto zeroFun = delegate (double T) {
-	    Q.T[0] = T;
-	    update_energy(Q);
-	    return e_tgt - Q.e[0];
-	};
-
-	if ( bracket!zeroFun(T1, T2, T_MIN) == -1 ) {
+	if ( bracket(T1, T2, e_tgt, Q, T_MIN) == -1 ) {
 	    string msg = "The 'bracket' function failed to find temperature values\n";
 	    msg ~= "that bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
 	    msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
@@ -96,7 +86,7 @@ public:
 	    throw new Exception(msg);
 	}
 	try {
-	    Q.T[0] = solve!zeroFun(T1, T2, TOL);
+	    Q.T[0] = solve(T1, T2, TOL, e_tgt, Q);
 	}
 	catch ( Exception e ) {
 	    string msg = "There was a problem iterating to find temperature\n";
@@ -115,7 +105,149 @@ private:
     CEAThermo[] _curves;
     // Private working arrays
     double[] _energy;
-}
+
+    //--------------------------------------------------------------------------------
+    // Bracketing and solve functions copied in from nm/bracketing.d and nm/brent.d
+    // and explicitly specialized for the temperature update.
+    //
+    // Originally, we would call the solving functions, passing to them a delegate f,
+    // and let them determine T such that f(T)=0, however, creating a delegate involves
+    // memory allocation and we suspect that it hinders parallel calculations.
+    //
+    // PJ, 10-Sep-2016
+
+    import std.math;
+    import std.algorithm;
+
+    double zeroFun(double T, double e_tgt, ref GasState Q)
+    // Helper function for update_temperature.
+    {
+	Q.T[0] = T;
+	update_energy(Q);
+	return e_tgt - Q.e[0];
+    }
+
+    int bracket(ref double x1, ref double x2, double e_tgt, ref GasState Q,
+		double x1_min = -1.0e99, double x2_max = +1.0e99,
+		int max_try=50, double factor=1.6)
+    {
+	if ( x1 == x2 ) {
+	    throw new Exception("Bad initial range given to bracket.");
+	}
+	double f1 = zeroFun(x1, e_tgt, Q);
+	double f2 = zeroFun(x2, e_tgt, Q);
+	for ( int i = 0; i < max_try; ++i ) {
+	    if ( f1*f2 < 0.0 ) return 0; // we have success
+	    if ( abs(f1) < abs(f2) ) {
+		x1 += factor * (x1 - x2);
+		//prevent the bracket from being expanded beyond a specified domain
+		x1 = fmax(x1_min, x1);
+		f1 = zeroFun(x1, e_tgt, Q);
+	    } else {
+		x2 += factor * (x2 - x1);
+		x2 = fmin(x2_max, x2);
+		f2 = zeroFun(x2, e_tgt, Q);
+	    }
+	}
+	// If we leave the loop here, we were unsuccessful.
+	return -1;
+    } // end bracket()
+
+    /**
+     * Locate a root of f(x) known to lie between x1 and x2. The method
+     * is guaranteed to converge (according to Brent) given the initial 
+     * x values bound the solution. The method uses root bracketing,
+     * bisection and inverse quadratic interpolation.
+     *
+     * Params:
+     *    f: user-supplied function f(x)
+     *    x1: first end of range
+     *    x2: other end of range
+     *    tol: minimum size for range
+     *
+     * Returns:
+     *    b, a point near the root.
+     */
+    double solve(double x1, double x2, double tol, double e_tgt, ref GasState Q) 
+    {
+	const int ITMAX = 100;           // maximum allowed number of iterations
+	const double EPS=double.epsilon; // Machine floating-point precision
+	double a = x1;
+	double b = x2;
+	double fa = zeroFun(a, e_tgt, Q);
+	double fb = zeroFun(b, e_tgt, Q);
+	if ( abs(fa) == 0.0 ) return a;
+	if ( abs(fb) == 0.0 ) return b;
+	if ( fa * fb > 0.0 ) {
+	    // Supplied bracket does not encompass zero of the function.
+	    string msg = "Root must be bracketed by x1 and x2\n";
+	    msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
+	    throw new Exception(msg);
+	}
+	double c = b;
+	double fc = fb;
+	for ( int iter=0; iter<ITMAX; iter++ ) {
+	    double d, e, tol1, xm;
+	    if ( (fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0) ) {
+		c = a;
+		fc = fa;
+		e = d = b-a;
+	    }
+	    if ( abs(fc) < abs(fb) ) {
+		a = b;
+		b = c;
+		c = a;
+		fa = fb;
+		fb = fc;
+		fc = fa;
+	    }
+	    tol1 = 2.0*EPS*abs(b)+0.5*tol;  // Convergence check
+	    xm = 0.5*(c-b);
+	    if ( abs(xm) <= tol1 || fb == 0.0 ) return b;   // if converged let's return the best estimate
+	    if ( abs(e) >= tol1 && abs(fa) > abs(fb) ) {
+		double p, q, r, s;
+		s = fb/fa;         // Attempt inverse quadratic interpolation for new bound
+		if ( a == c ) {
+		    p = 2.0*xm*s;
+		    q = 1.0-s;
+		}
+		else {
+		    q = fa/fc;
+		    r = fb/fc;
+		    p = s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
+		    q = (q-1.0)*(r-1.0)*(s-1.0);
+		}
+		if ( p > 0.0 )
+		    q = -q;    // Check whether quadratic interpolation is in bounds
+		p = abs(p);
+		double min1 = 3.0*xm*q-abs(tol1*q);
+		double min2 = abs(e*q);
+		if (2.0*p < (min1 < min2 ? min1 : min2) ) {
+		    e = d;     // Accept interpolation
+		    d = p/q;
+		}
+		else {
+		    d = xm;  // else Interpolation failed, use bisection
+		    e = d;
+		}
+	    }
+	    else {
+		d = xm;   // Bounds decreasing too slowly, use bisection
+		e = d;
+	    }
+	    a = b;       // Move last guess to a
+	    fa = fb;
+	    if ( abs(d) > tol1 )  // Evaluate new trial root
+		b += d;
+	    else {
+		b += copysign(tol1, xm);
+	    }
+	    fb = zeroFun(b, e_tgt, Q);	    
+	}
+	throw new Exception("Maximum number of iterations exceeded in solve (therm_perf_gas_mix)");
+    } // end solve()
+} // end class ThermallyPerfectGasMixEOS
+
 
 ThermallyPerfectGasMixEOS createThermallyPerfectGasMixEOS(string[] species, lua_State* L)
 {
@@ -157,5 +289,3 @@ version(therm_perf_gas_mix_eos_test) {
 	return 0;
     }
 }
-
-
