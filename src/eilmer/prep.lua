@@ -349,8 +349,8 @@ function verticesAreCoincident(A, B, vtxPairs, tolerance)
    tolerance = tolerance or 1.0e-6
    local allVerticesAreClose = true
    for _,v in ipairs(vtxPairs) do
-      -- print("A.id=", A.id, "B.id=", B.id, "vtxPair=", tostringVtxPair(v))
-      -- print("  A.p=", tostring(A.p[v[1]]), "B.p=", tostring(B.p[v[2]]))
+      -- print("A.id=", A.id, "B.id=", B.id, "vtxPair=", tostringVtxPair(v)) -- DEBUG
+      -- print("  A.p=", tostring(A.p[v[1]]), "B.p=", tostring(B.p[v[2]])) -- DEBUG
       if vabs(A.p[v[1]] - B.p[v[2]]) > tolerance then
 	 allVerticesAreClose = false
       end
@@ -384,13 +384,13 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    for _,A in ipairs(myBlockList) do
       for _,B in ipairs(myBlockList) do
 	 if (A ~= B) and (not isPairInList({A, B}, excludeList)) then
-	    -- print("Proceed with test for coincident vertices.")
+	    -- print("Proceed with test for coincident vertices.") -- DEBUG
 	    local connectionCount = 0
 	    if config.dimensions == 2 then
-	       -- print("2D test")
+	       -- print("2D test A.id=", A.id, " B.id=", B.id) -- DEBUG
 	       for vtxPairs,connection in pairs(connections2D) do
 		  -- print("vtxPairs=", tostringVtxPairList(vtxPairs),
-		  --       "connection=", tostringConnection(connection))
+		  --       "connection=", tostringConnection(connection)) -- DEBUG
 		  if verticesAreCoincident(A, B, vtxPairs, tolerance) then
 		     local faceA, faceB = unpack(connection)
 		     connectBlocks(A, faceA, B, faceB, 0)
@@ -453,18 +453,22 @@ function SBlockArray(t)
    for ib = 1, t.nib do
       blockArray[ib] = {}
       local i0 = (ib-1) * dnic
+      local my_dnic = dnic
       if (ib == t.nib) then
 	 -- Last block has to pick up remaining cells.
-	 dnic = nic_total - i0
+	 my_dnic = nic_total - i0
       end
       for jb = 1, t.njb do
 	 local j0 = (jb-1) * dnjc
+	 local my_dnjc = dnjc
 	 if (jb == t.njb) then
-	    dnjc = njc_total - j0
+	    my_dnjc = njc_total - j0
 	 end
 	 if config.dimensions == 2 then
 	    -- 2D flow
-	    local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1)
+	    -- print("making subblock id=", #blockCollection) -- DEBUG
+	    -- print("  i0=", i0, "my_dnic+1=", my_dnic+1, "j0=", j0, "my_dnjc+1=", my_dnjc+1) -- DEBUG
+	    local subgrid = t.grid:subgrid(i0,my_dnic+1,j0,my_dnjc+1)
 	    local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			    south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new()}
 	    if ib == 1 then
@@ -488,10 +492,11 @@ function SBlockArray(t)
 	    blockArray[ib][jb] = {}
 	    for kb = 1, t.nkb do
 	       local k0 = (kb-1) * dnkc
+	       local my_dnkc = dnkc
 	       if (kb == t.nkb) then
-		  dnkc = nkc_total - k0
+		  my_dnkc = nkc_total - k0
 	       end
-	       local subgrid = t.grid:subgrid(i0,dnic+1,j0,dnjc+1,k0,dnkc+1)
+	       local subgrid = t.grid:subgrid(i0,my_dnic+1,j0,my_dnjc+1,k0,my_dnkc+1)
 	       local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			       south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new(),
 			       top=WallBC_WithSlip:new(), bottom=WallBC_WithSlip:new()}
