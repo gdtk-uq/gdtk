@@ -32,6 +32,11 @@ solidBlocks = {}
 historyCells = {}
 solidHistoryCells = {}
 
+-- Storage for zones
+ignitionZones = {}
+reactionZones = {}
+turbulentZones = {}
+
 function to_eilmer_axis_map(gridpro_ijk)
    -- Convert from GridPro axis_map string to Eilmer3 axis_map string.
    -- From GridPro manual, Section 7.3.2 Connectivity Information.
@@ -824,6 +829,69 @@ function makeFillConditionFn(flowSol)
    return fillFn
 end
 
+-- -----------------------------------------------------------------------
+
+-- Classes for construction of zones.
+
+ReactionZone = {
+   p0 = Vector3:new{x=0.0, y=0.0, z=0.0},
+   p1 = Vector3:new{x=0.0, y=0.0, z=0.0},
+}
+
+function ReactionZone:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new zone, for later construction of the config file.
+   -- Note that we want zone id to start at zero for the D code.
+   o.id = #(reactionZones)
+   reactionZones[#(reactionZones)+1] = o
+   -- Must have corners
+   assert(o.p0, "need to supply lower-left corner p0")
+   assert(o.p1, "need to supply upper-right corner p1")
+   return o
+end
+
+IgnitionZone = {
+   p0 = Vector3:new{x=0.0, y=0.0, z=0.0},
+   p1 = Vector3:new{x=0.0, y=0.0, z=0.0},
+   T = 300.0 -- degrees K
+}
+
+function IgnitionZone:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new zone, for later construction of the config file.
+   -- Note that we want zone id to start at zero for the D code.
+   o.id = #(ignitionZones)
+   ignitionZones[#(ignitionZones)+1] = o
+   -- Must have corners and temperature
+   assert(o.p0, "need to supply lower-left corner p0")
+   assert(o.p1, "need to supply upper-right corner p1")
+   assert(o.T, "need to supply ignition temperature T")
+   return o
+end
+
+TurbulentZone = {
+   p0 = Vector3:new{x=0.0, y=0.0, z=0.0},
+   p1 = Vector3:new{x=0.0, y=0.0, z=0.0},
+}
+
+function TurbulentZone:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   -- Make a record of the new zone, for later construction of the config file.
+   -- Note that we want zone id to start at zero for the D code.
+   o.id = #(turbulentZones)
+   turbulentZones[#(turbulentZones)+1] = o
+   -- Must have corners
+   assert(o.p0, "need to supply lower-left corner p0")
+   assert(o.p1, "need to supply upper-right corner p1")
+   return o
+end
+
 -- --------------------------------------------------------------------
 
 function write_control_file(fileName)
@@ -936,6 +1004,25 @@ function write_config_file(fileName)
    f:write(string.format('"nsolidhcell": %d,\n', #solidHistoryCells))
    for i,hcell in ipairs(solidHistoryCells) do
       f:write(string.format('"solid-history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))
+   end
+
+   f:write(string.format('"n-reaction-zones": %d,\n', #reactionZones))
+   for i,zone in ipairs(reactionZones) do
+      f:write(string.format('"reaction-zone-%d": [%.18e, %.18e, %.18e, %.18e, %.18e, %.18e],\n',
+			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
+			    zone.p1.x, zone.p1.y, zone.p1.z))
+   end
+   f:write(string.format('"n-ignition-zones": %d,\n', #ignitionZones))
+   for i,zone in ipairs(ignitionZones) do
+      f:write(string.format('"ignition-zone-%d": [%.18e, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e],\n',
+			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
+			    zone.p1.x, zone.p1.y, zone.p1.z, zone.T))
+   end
+   f:write(string.format('"n-turbulent-zones": %d,\n', #turbulentZones))
+   for i,zone in ipairs(turbulentZones) do
+      f:write(string.format('"turbulent-zone-%d": [%.18e, %.18e, %.18e, %.18e, %.18e, %.18e],\n',
+			    i-1, zone.p0.x, zone.p0.y, zone.p0.z,
+			    zone.p1.x, zone.p1.y, zone.p1.z))
    end
 
    f:write(string.format('"udf_solid_source_terms_file": "%s",\n', config.udf_solid_source_terms_file))

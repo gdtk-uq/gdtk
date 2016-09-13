@@ -735,7 +735,32 @@ void read_config_file()
 	auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
 	GlobalConfig.solid_hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
     }
-    // TODO -- still have other entries such as nheatzone, nreactionzone, ...
+
+    int n_reaction_zones = getJSONint(jsonData, "n-reaction-zones", 0);
+    foreach (i; 0 .. n_reaction_zones) {
+	string jsonKey = format("reaction-zone-%d", i);
+	auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+	Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+	GlobalConfig.reaction_zones ~= new BlockZone(p0, p1);
+    }
+    int n_ignition_zones = getJSONint(jsonData, "n-ignition-zones", 0);
+    foreach (i; 0 .. n_ignition_zones) {
+	string jsonKey = format("ignition-zone-%d", i);
+	auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 300.0]);
+	Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+	double Tig = zone_data[6];
+	GlobalConfig.ignition_zones ~= new IgnitionZone(p0, p1, Tig);
+    }
+    int n_turbulent_zones = getJSONint(jsonData, "n-turbulent-zones", 0);
+    foreach (i; 0 .. n_turbulent_zones) {
+	string jsonKey = format("turbulent-zone-%d", i);
+	auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+	Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+	GlobalConfig.turbulent_zones ~= new BlockZone(p0, p1);
+    }
 
     // Now, configure blocks that make up the flow domain.
     //
