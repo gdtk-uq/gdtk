@@ -334,8 +334,8 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
 	    Vector3 vel_max = blk.get_vtx(blk.imin, j, k).vel[0];
 	    // Set up a linear weighting on fraction of distance from east boundary back to west boundary.
-	    double[200] distance;
-	    assert(200 > blk.imax+1, "my distance array is not big enough");
+	    double[300] distance;
+	    assert(300 > blk.imax+1, "my distance array is not big enough");
 	    distance[blk.imax+1] = 0.0;
 	    for (size_t i = blk.imax; i >= blk.imin; --i) {
 		vtx =  blk.get_vtx(i,j,k);
