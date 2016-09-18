@@ -37,7 +37,7 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 	}
     }
     # recalibrate 2016-07-29
-    expr abs($final_steps - 2613) < 3
+    expr abs($final_steps - 3141) < 3
 } -result {1}
 
 test computed-norms {Check the density norms.} -body {
