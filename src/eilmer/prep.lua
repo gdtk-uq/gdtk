@@ -901,6 +901,7 @@ function write_control_file(fileName)
    f:write(string.format('"dt_max": %.18e,\n', config.dt_max))
    f:write(string.format('"cfl_value": %.18e,\n', config.cfl_value))
    f:write(string.format('"stringent_cfl": %s,\n', tostring(config.stringent_cfl)))
+   f:write(string.format('"viscous_signal_factor": %.18e,\n', config.viscous_signal_factor))
    f:write(string.format('"fixed_time_step": %s,\n', tostring(config.fixed_time_step)))
    f:write(string.format('"print_count": %d,\n', config.print_count))
    f:write(string.format('"cfl_count": %d,\n', config.cfl_count))
@@ -969,7 +970,6 @@ function write_config_file(fileName)
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
-   f:write(string.format('"viscous_signal_factor": %.18e,\n', config.viscous_signal_factor))
 
    f:write(string.format('"turbulence_model": "%s",\n',
 			 string.lower(config.turbulence_model)))

@@ -495,6 +495,13 @@ public:
 
 	verbosity_level = GlobalConfig.verbosity_level;
     }
+
+    void update_control_parameters()
+    // to be used after reading job.control file.
+    {
+	stringent_cfl = GlobalConfig.stringent_cfl;
+	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
+    }
 } // end class LocalConfig
 
 //-----------------------------------------------------------------------------------
@@ -593,7 +600,6 @@ void read_config_file()
     mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(update_bool("apply_bcs_in_parallel", "apply_bcs_in_parallel"));
-    mixin(update_bool("stringent_cfl", "stringent_cfl"));
     mixin(update_double("flowstate_limits_max_velocity", "flowstate_limits.max_velocity"));
     mixin(update_double("flowstate_limits_max_tke", "flowstate_limits.max_tke"));
     mixin(update_double("flowstate_limits_min_tke", "flowstate_limits.min_tke"));
@@ -634,7 +640,6 @@ void read_config_file()
 	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
 	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
-	writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
 	writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
 	writeln("  flowstate_limits_max_tke: ", GlobalConfig.flowstate_limits.max_tke);
 	writeln("  flowstate_limits_min_tke: ", GlobalConfig.flowstate_limits.min_tke);
@@ -666,7 +671,6 @@ void read_config_file()
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
-    mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
     mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
     mixin(update_double("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
@@ -679,7 +683,6 @@ void read_config_file()
 	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
-	writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
 	writeln("  turbulence_model: ", turbulence_model_name(GlobalConfig.turbulence_model));
 	writeln("  turbulence_prandtl_number: ", GlobalConfig.turbulence_prandtl_number);
 	writeln("  turbulence_schmidt_number: ", GlobalConfig.turbulence_schmidt_number);
@@ -853,31 +856,43 @@ void read_control_file()
 	writeln("Failed to parse JSON from control file: ", fileName);
 	exit(1);
     }
-    mixin(update_int("max_step", "max_step"));
-    mixin(update_double("max_time", "max_time"));
-    mixin(update_int("halt_now", "halt_now"));
-    mixin(update_int("print_count", "print_count"));
-    mixin(update_int("cfl_count", "cfl_count"));
     mixin(update_double("dt_init", "dt_init"));
     mixin(update_double("dt_max", "dt_max"));
     mixin(update_double("cfl_value", "cfl_value"));
+    mixin(update_bool("stringent_cfl", "stringent_cfl"));
+    mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
     mixin(update_bool("fixed_time_step", "fixed_time_step"));
+    mixin(update_int("print_count", "print_count"));
+    mixin(update_int("cfl_count", "cfl_count"));
+    mixin(update_double("max_time", "max_time"));
+    mixin(update_int("max_step", "max_step"));
     mixin(update_double("dt_plot", "dt_plot"));
     mixin(update_double("dt_history", "dt_history"));
+    mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  max_step: ", GlobalConfig.max_step);
-	writeln("  max_time: ", GlobalConfig.max_time);
-	writeln("  halt_now: ", GlobalConfig.halt_now);
-	writeln("  print_count: ", GlobalConfig.print_count);
-	writeln("  cfl_count: ", GlobalConfig.cfl_count);
 	writeln("  dt_init: ", GlobalConfig.dt_init);
 	writeln("  dt_max: ", GlobalConfig.dt_max);
 	writeln("  cfl_value: ", GlobalConfig.cfl_value);
+	writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
+	writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
 	writeln("  fixed_time_step: ", GlobalConfig.fixed_time_step);
+	writeln("  print_count: ", GlobalConfig.print_count);
+	writeln("  cfl_count: ", GlobalConfig.cfl_count);
+	writeln("  max_time: ", GlobalConfig.max_time);
+	writeln("  max_step: ", GlobalConfig.max_step);
 	writeln("  dt_plot: ", GlobalConfig.dt_plot);
 	writeln("  dt_history: ", GlobalConfig.dt_history);
+	writeln("  halt_now: ", GlobalConfig.halt_now);
     }
+    // Propagate new values to the local copies of config.
+    foreach (localConfig; dedicatedConfig) {
+	localConfig.update_control_parameters();
+    }
+    foreach (localConfig; dedicatedSolidConfig) {
+	localConfig.update_control_parameters();
+    }
+
 } // end read_control_file()
 
 //
