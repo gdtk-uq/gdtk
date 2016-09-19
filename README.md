@@ -72,7 +72,7 @@ all that is required Linux environment with a fairly recent D compiler
 and a C compiler (for building the Lua interpreter).
 You may use the reference DMD compiler or the GDC or LDMD2 compilers.
 We have been developing with the DMD32 and DMD64 compilers 
-from versions 2.067 through 2.070.
+from versions 2.067 through 2.071.2.
 
 Going into the `dgd/src/eilmer` directory you will find a single `makefile`
 that allows the build to proceed with the command `make install`.
@@ -83,10 +83,14 @@ directory `$HOME/dgdinst/` by default.
 For running the program, environment variables 
 may be set for the bash shell with:
 
-    export DGD=$HOME/dgdinst
-    export PATH=$PATH:$DGD/bin
-    export DGD_LUA_PATH=$DGD/lib/?.lua
-    export DGD_LUA_CPATH=$DGD/lib/?.so
+    export DGD_REPO=${HOME}/dgd
+    export DGD=${HOME}/dgdinst
+    export PATH=${PATH}:${DGD}/bin
+    export DGD_LUA_PATH=${DGD}/lib/?.lua
+    export DGD_LUA_CPATH=${DGD}/lib/?.so
+
+Setting DGD_REPO may be handy if you have cloned your copy of the
+repository to somewhere other than `$HOME/dgd/`.
 
 The actual running of a simulation is done in stages.
 
@@ -116,5 +120,5 @@ who has written what part of the code.
 The commit history is place to go to see further details. 
 
 ## Chief Gardeners
-Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2016-05-19
+Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2016-09-19
 
