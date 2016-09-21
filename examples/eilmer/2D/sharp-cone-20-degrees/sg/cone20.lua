@@ -15,12 +15,13 @@ print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
 initial = FlowState:new{p=5955.0, T=304.0, velx=0.0}
 inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0}
 
--- Demo: Verify Mach number of inflow.
+-- Demo: Verify Mach number of inflow and compute dynamic pressure.
 Q = GasState:new{gm}
 Q.p = 95.84e3; Q.T = {1103.0}; Q.massf = {air=1.0}
-gm:updateSoundSpeed(Q)
-print("T=", Q.T[1], "Sound speed= ", Q.a)
-print("Inflow Mach number= ", 1000.0/Q.a)
+gm:updateThermoFromPT(Q); gm:updateSoundSpeed(Q)
+print("T=", Q.T[1], "density=", Q.rho, "sound speed= ", Q.a)
+print("inflow Mach number=", 1000.0/Q.a)
+print("dynamic pressure q=", 1/2*Q.rho*1.0e6)
 
 -- Set up two quadrilaterals in the (x,y)-plane by first defining
 -- the corner nodes, then the lines between those corners.
@@ -49,6 +50,11 @@ blk1 = SBlock:new{grid=grid1, fillCondition=initial}
 identifyBlockConnections()
 blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
 blk1.bcList[east] = OutFlowBC_Simple:new{}
+
+-- add history point 1/3 along length of cone surface
+setHistoryPoint{x=2*b.x/3+c.x/3, y=2*b.y/3+c.y/3}
+-- add history point 2/3 along length of cone surface
+setHistoryPoint{ib=1, i=math.floor(2*nx1/3), j=0}
 
 -- Do a little more setting of global data.
 config.max_time = 5.0e-3  -- seconds
