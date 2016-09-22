@@ -63,7 +63,7 @@ alpha0 = sum_y/N - alpha1 * sum_x/N
 shock_angle = math.atan(alpha1)
 sum_y_error = 0.0
 for j = 1, N do
-   sum_y_error = sum_y_error + math.abs((alpha0 + alpha1 * xshock[j]) - yshock[j])
+   sum_y_error = sum_y_error+math.abs((alpha0+alpha1*xshock[j])-yshock[j])
 end
 print("shock_angle_deg=", shock_angle*180.0/math.pi)
 print("average_deviation_metres=", sum_y_error/N)
