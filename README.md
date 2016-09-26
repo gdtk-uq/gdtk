@@ -67,9 +67,9 @@ we expect that users of the code will be mainly our
 students and academic colleagues who can talk to us directly.
 
 ### Build Requirements
-Once you have cloned this repository, 
-all that is required Linux environment with a fairly recent D compiler
-and a C compiler (for building the Lua interpreter).
+Once you have cloned this repository, all that is required is 
+a Linux environment with a fairly recent D compiler for building the
+main code and a C compiler for building the Lua interpreter.
 You may use the reference DMD compiler or the GDC or LDMD2 compilers.
 We have been developing with the DMD32 and DMD64 compilers 
 from versions 2.067 through 2.071.2.
