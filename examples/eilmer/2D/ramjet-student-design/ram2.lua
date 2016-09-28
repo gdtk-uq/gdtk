@@ -14,25 +14,23 @@ end
 config.title = "Ramjet in Mach 1.8 Flight -- Reacting Gas."
 print(config.title)
 
--- Gas model consists of a reactant and a product gas -- eventually.
--- For the moment, just use ideal air.
-nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
--- setGasModel(fname='a-b-gas-model.lua')
-print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
-
--- config.reacting = true
--- config.reactions_file = 'single-step-reaction.lua'
+-- Gas model setup taken from Bittker combsution in a duct example.
+nsp, nmodes, gm = setGasModel("h2-o2-n2-9sp.lua")
+config.reacting = true
+config.reactions_file = "h2-o2-n2-9sp-18r.lua"
+molefInit = {O2=0.1480, N2=0.5562, H2=0.2958}
+massfInit = gm:molef2massf(molefInit)
+print("GasModel set to H2-O2-N2 mix. nsp= ", nsp, " nmodes= ", nmodes)
 
 -- Define flow conditions
 p_inf = 90.0e3  -- Pa
 T_inf = 282     -- degrees K
-a_inf = math.sqrt(1.4 * 287.0 * T_inf)
+a_inf = math.sqrt(1.4 * 287.0 * T_inf) -- assumes ideal air
 M_inf = 1.8
 Vx_inf = M_inf * a_inf
 print("flight speed=", Vx_inf, "m/s")
--- fuel_air_mix = {air=0.5, a=0.5, b=0.0}
-initial = FlowState:new{p=p_inf/3, T=T_inf, velx=0.0}
-inflow = FlowState:new{p=p_inf, T=T_inf, velx=Vx_inf}
+initial = FlowState:new{p=p_inf/3, T=T_inf, velx=0.0, massf=massfInit}
+inflow = FlowState:new{p=p_inf, T=T_inf, velx=Vx_inf, massf=massfInit}
 
 -- Set up the geometry in the (x,y)-plane be first defining key parameters,
 -- then defining points and paths using those parameters.
@@ -205,6 +203,8 @@ config.dt_history = 10.0e-5
 -- and into the nozzle.
 ReactionZone:new{p0=Vector3:new{x=L1+L2/4.0, y=Y3},
 		 p1=Vector3:new{x=L1+L2+L3, y=Y2}}
+IgnitionZone:new{p0=Vector3:new{x=L1+L2/4.0, y=Y3},
+		 p1=Vector3:new{x=L1+L2/3.0, y=Y2}, T=1100.0}
 -- Also, we want the flow through the combustor to establish before
 -- allowing reactions to become active.
 config.reaction_time_delay = 2.5e-3
