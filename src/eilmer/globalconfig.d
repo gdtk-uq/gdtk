@@ -198,6 +198,11 @@ final class GlobalConfig {
     // viscous effects are important.
     shared static double compression_tolerance = -0.30;
 
+    // With this flag on, the energy equation is modified such that
+    // an artificial compressibility form of equations is solved.
+    shared static bool artificial_compressibility = false;
+    shared static double ac_alpha = 0.1;
+
     // With this flag on, finite-rate evolution of the vibrational energies 
     // (and in turn the total energy) is computed.
     shared static bool thermal_energy_exchange = false;
@@ -370,6 +375,8 @@ public:
     double shear_tolerance;
     double M_inf;
     double compression_tolerance;
+    bool artificial_compressibility;
+    double ac_alpha;
 
     bool radiation;
     bool electric_field_work;
@@ -443,6 +450,8 @@ public:
 	shear_tolerance = GlobalConfig.shear_tolerance;
 	M_inf = GlobalConfig.M_inf;
 	compression_tolerance = GlobalConfig.compression_tolerance;
+	artificial_compressibility = GlobalConfig.artificial_compressibility;
+	ac_alpha = GlobalConfig.ac_alpha;
 
 	radiation = GlobalConfig.radiation;
 	electric_field_work = GlobalConfig.electric_field_work;
@@ -617,6 +626,8 @@ void read_config_file()
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_double("M_inf", "M_inf"));
     mixin(update_double("compression_tolerance", "compression_tolerance"));
+    mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
+    mixin(update_double("ac_alpha", "ac_alpha"));
     mixin(update_double("shock_fitting_delay", "shock_fitting_delay"));
     mixin(update_int("shock_fitting_interpolation_order", "shock_fitting_interpolation_order"));
     mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));

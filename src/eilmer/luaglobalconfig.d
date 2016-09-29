@@ -117,6 +117,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("shear_tolerance", "shear_tolerance"));
     mixin(get_double_field("M_inf", "M_inf"));
     mixin(get_double_field("compression_tolerance", "compression_tolerance"));
+    mixin(get_bool_field("artificial_compressiblity", "artificial_compressibility"));
+    mixin(get_double_field("ac_alpha", "ac_alpha"));
     //
     mixin(get_enum_field("grid_motion", "grid_motion", "grid_motion_from_name"));
     mixin(get_double_field("shock_fitting_delay", "shock_fitting_delay"));
@@ -230,6 +232,8 @@ extern(C) int configGet(lua_State* L)
     case "shear_tolerance": lua_pushnumber(L, GlobalConfig.shear_tolerance); break;
     case "M_inf": lua_pushnumber(L, GlobalConfig.M_inf); break;
     case "compression_tolerance": lua_pushnumber(L, GlobalConfig.compression_tolerance); break;
+    case "artificial_compressibility": lua_pushboolean(L, GlobalConfig.artificial_compressibility); break;
+    case "ac_alpha": lua_pushnumber(L, GlobalConfig.ac_alpha); break;
 	//
     case "grid_motion": lua_pushstring(L, grid_motion_name(GlobalConfig.grid_motion).toStringz); break;
     case "write_vertex_velocities": lua_pushboolean(L, GlobalConfig.write_vertex_velocities); break;

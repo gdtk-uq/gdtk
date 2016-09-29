@@ -956,6 +956,8 @@ function write_config_file(fileName)
    f:write(string.format('"compression_tolerance": %.18e,\n', config.compression_tolerance))
    f:write(string.format('"shear_tolerance": %.18e,\n', config.shear_tolerance))
    f:write(string.format('"M_inf": %.18e,\n', config.M_inf))
+   f:write(string.format('"artificial_compressibility": %s,\n', tostring(config.artificial_compressibility)))
+   f:write(string.format('"ac_alpha": %.18e,\n', config.ac_alpha))
 
    f:write(string.format('"grid_motion": "%s",\n', tostring(config.grid_motion)))
    f:write(string.format('"shock_fitting_delay": %.18e,\n', config.shock_fitting_delay))
