@@ -82,6 +82,10 @@ public:
     {
 	return _reactions[ir].k_b;
     }
+    final double rate(int ir, int isp)
+    {
+	return _reactions[ir].production(isp) - _reactions[ir].loss(isp);
+    }
     /++
      + Selects an approriate chemistry time step based on rate of change information.
      +

@@ -110,7 +110,6 @@ extern(C) int newReactionMechanism(lua_State* L)
 extern(C) int nReactions(lua_State* L)
 {
     auto rmech = checkReactionMechanism(L, 1);
-    writeln("n_reactions= ", rmech.n_reactions);
     lua_pushinteger(L, rmech.n_reactions);
     return 1;
 }
@@ -165,6 +164,15 @@ extern(C) int k_b(lua_State* L)
     return 1;
 }
 
+extern(C) int rate(lua_State* L)
+{
+    auto rmech = checkReactionMechanism(L, 1);
+    int ir = luaL_checkint(L, 2);
+    int isp = luaL_checkint(L, 3);
+    lua_pushnumber(L, rmech.rate(ir, isp));
+    return 1;
+}
+
 // --------- end: exposed methods ----------------- //
 
 void registerReactionMechanism(lua_State* L, int tblIdx)
@@ -187,6 +195,8 @@ void registerReactionMechanism(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "k_f");
     lua_pushcfunction(L, &k_b);
     lua_setfield(L, -2, "k_b");
+    lua_pushcfunction(L, &rate);
+    lua_setfield(L, -2, "rate");
 
     // Make class visible
     lua_setfield(L, tblIdx, ReactionMechanismMT.toStringz);
