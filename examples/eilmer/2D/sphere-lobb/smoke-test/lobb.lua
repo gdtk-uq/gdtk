@@ -39,7 +39,7 @@ config.axisymmetric = true
 config.grid_motion = "shock_fitting"
 config.flux_calculator = "ausmdv"
 config.interpolation_order = 2
-config.gasdynamic_update_scheme = "predictor-corrector"
+config.gasdynamic_update_scheme = "moving_grid_1_stage"
 config.max_time = no_flow_times*body_flow_time
 if useOldSoln then
    config.shock_fitting_delay = 0.0

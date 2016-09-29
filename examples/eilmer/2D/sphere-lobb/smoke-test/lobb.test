@@ -35,7 +35,7 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 19620) < 1
+    expr abs($final_steps - 19394) < 1
 } -result {1}
 
 test post-simulation {Extract the shock location.} -body {
