@@ -200,6 +200,7 @@ public:
     {
 	size_t dimensions = myConfig.dimensions;
 	double a, b, U, phi;
+	immutable double w = 1.0e-12;
 	// The following function to be used at compile time.
 	string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
 	{
@@ -211,12 +212,10 @@ public:
                 double dx = f.pos.x - cell_cloud[0].pos[0].x; 
                 double dy = f.pos.y - cell_cloud[0].pos[0].y; 
                 double dz = f.pos.z - cell_cloud[0].pos[0].z;
-                double dxFace = dx*f.n.x + dy*f.n.y + dz*f.n.z;
-                double dyFace = dx*f.t1.x + dy*f.t1.y + dz*f.t1.z;
-                double dzFace = dx*f.t2.x + dy*f.t2.y + dz*f.t2.z;
-                b = "~gname~"[0] * dxFace + "~gname~"[1] * dyFace;
-		if (myConfig.dimensions == 3) b += "~gname~"[2] * dzFace;
-		if (b > 0.0) {
+                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
+		if (myConfig.dimensions == 3) b += "~gname~"[2] * dz; 
+                b = sgn(b) * (fabs(b) + w);
+                if (b > 0.0) {
 		    a = "~qMaxname~" - U;
 		    phi = min(phi, a/b);
 		}
@@ -306,11 +305,8 @@ public:
                 double dx = f.pos.x - cell_cloud[0].pos[0].x; 
                 double dy = f.pos.y - cell_cloud[0].pos[0].y; 
                 double dz = f.pos.z - cell_cloud[0].pos[0].z;
-                double dxFace = dx*f.n.x + dy*f.n.y + dz*f.n.z;
-                double dyFace = dx*f.t1.x + dy*f.t1.y + dz*f.t1.z;
-                double dzFace = dx*f.t2.x + dy*f.t2.y + dz*f.t2.z;
-                b = "~gname~"[0] * dxFace + "~gname~"[1] * dyFace;
-		if (myConfig.dimensions == 3) b += "~gname~"[2] * dzFace;
+                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
+		if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
 		b = sgn(b) * (fabs(b) + w); 
                 if (b > 0.0) a = "~qMaxname~" - U; 
                 else if (b < 0.0) a = "~qMinname~" - U; 
