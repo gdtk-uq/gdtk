@@ -305,6 +305,13 @@ extern(C) int configSetWithCall(lua_State* L)
 extern(C) int configSetFromValue(lua_State *L)
 {
     // Argumnets to __newindex are: table, key, value
+    // Let's first see if the value is non-nil. If nil,
+    // we'd like to warn the user.
+    if ( lua_isnil(L, 3) ) {
+	writeln("WARNING: -----------------------------------------------------------------------------");
+	writeln(format("WARNING: You tried to set the configuration option '%s' with a nil value. It has been ignored.", to!string(luaL_checkstring(L, 2))));
+	writeln("WARNING: -----------------------------------------------------------------------------");
+    }
     // We aren't interested in the table because we have
     // the GlobalConfig object to use.
     // Let's put the key and value into a table with one entry
