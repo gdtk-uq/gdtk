@@ -40,7 +40,7 @@ public:
 
     this(GasModel gm, in double p_init, in double[] T_init, in Vector3 vel_init,
 	 in double[] massf_init=[1.0,], in double quality_init=1.0,
-	 in Vector3 B_init=(0.0,0.0,0.0),
+	 in Vector3 B_init=Vector3(0.0,0.0,0.0),
 	 in double psi_init=0.0, in double divB_init=1.0,
 	 in double tke_init=0.0, in double omega_init=1.0,
 	 in double mu_t_init=0.0, in double k_t_init=0.0,

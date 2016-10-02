@@ -745,7 +745,8 @@ version(adaptive_lut_CEA_test)
 	try { lua_State* L = init_lua_State("sample-data/cea-adaptive-lut-air-bezier.lua");
 	    gm = new AdaptiveLUT(L);
 	}
-	catch {
+	catch (Exception e) {
+	    writeln(e.msg);
 	    string msg;
 	    msg ~= "Test of look up table in adaptive_lut_CEA.d require file:";
 	    msg ~= "cea-adaptive-lut-air-bezier.lua ";
@@ -803,7 +804,8 @@ version(adaptive_lut_CEA_test)
 	try { lua_State* L = init_lua_State("sample-data/cea-adaptive-lut-air-linear.lua");
 	    gm = new AdaptiveLUT(L);
 	}
-	catch {
+	catch (Exception e) {
+	    writeln(e.msg);
 	    string msg;
 	    msg ~= "Test of look up table in adaptive_lut_CEA.d require file:";
 	    msg ~= "cea-adaptive-lut-air-linear.lua";

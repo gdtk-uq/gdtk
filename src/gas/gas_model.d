@@ -1262,7 +1262,8 @@ version(gas_model_test) {
 	try {
 	    gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
 	}
-	catch {
+	catch (Exception e) {
+	    writeln(e.msg);
 	    string msg;
 	    msg ~= "Test of iterative methods in gas_model.d require file:";
 	    msg ~= " ideal-air-gas-model.lua in directory: gas/sample_data";

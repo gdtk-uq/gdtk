@@ -47,7 +47,8 @@ public:
 	    _T1 = getDouble(L, LUA_GLOBALSINDEX, "T1");
 	    _s1 = getDouble(L, LUA_GLOBALSINDEX, "s1");
 	}
-	catch {       
+	catch (Exception e) {       
+	    writeln(e.msg);
 	    with_entropy = 0;
 	    writeln("Look_up_table(): No entropy data available");
 	}
@@ -585,7 +586,8 @@ version(uniform_lut_test)
 	try { lua_State* L = init_lua_State("sample-data/cea-lut-air-version-test.lua");
 	    gm = new UniformLUT(L);
 	}
-	catch {
+	catch (Exception e) {
+	    writeln(e.msg);
 	    string msg;
 	    msg ~= "Test of look up table in uniform_lut.d require file:";
 	    msg ~= " cea-lut-air-version-test.lua ";

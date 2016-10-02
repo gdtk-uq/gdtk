@@ -221,12 +221,14 @@ public:
 		}
 		try {
 		    scale_mass_fractions(Lft.gas.massf); 
-		} catch {
+		} catch(Exception e) {
+	            writeln(e.msg);
 		    Lft.gas.massf[] = gL0.massf[];
 		}
 		try {
 		    scale_mass_fractions(Rght.gas.massf);
-		} catch {
+		} catch(Exception e) {
+	            writeln(e.msg);
 		    Rght.gas.massf[] = gR0.massf[];
 		}
 	    } else {
@@ -342,7 +344,8 @@ public:
 		}
 		try {
 		    scale_mass_fractions(Lft.gas.massf);
-		} catch {
+		} catch(Exception e) {
+	            writeln(e.msg);
 		    Lft.gas.massf[] = gL0.massf[];
 		}
 	    } else {
@@ -453,7 +456,8 @@ public:
 		}
 		try {
 		    scale_mass_fractions(Rght.gas.massf);
-		} catch {
+		} catch(Exception e) {
+	            writeln(e.msg);
 		    Rght.gas.massf[] = gR0.massf[];
 		}
 	    } else {

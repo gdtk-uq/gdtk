@@ -404,7 +404,7 @@ public:
 			this[i,j,k].refy = to!double(tokens[1]);
 			this[i,j,k].refz = to!double(tokens[2]);
 		    } catch (Exception e) {
-			throw new Error(text("Failed to read grid file at "
+			throw new Error(text("Failed to read grid file at " ~
 					     "i=", i, " j=", j, " k=", k,
 					     "tokens=", tokens, "exception=", e));
 		    }

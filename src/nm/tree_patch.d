@@ -641,8 +641,9 @@ class Tree {
 							break;
 						}//end if nodes are different
 					}//end try
-					catch{
-						//writeln("Tried to refine outside the table, continue on");
+					catch (Exception e) {
+					    writeln(e.msg);
+					    //writeln("Tried to refine outside the table, continue on");
 					}
 				}//end foreach boundary
 			}
@@ -676,8 +677,9 @@ class Tree {
 							}
 
 						}//end try
-					catch{
-						//writeln("Tried to refine outside the table, continue on");
+					catch (Exception e) {
+					    writeln(e.msg);
+					    //writeln("Tried to refine outside the table, continue on");
 					}
 				}//end foreach boundary
 			}
@@ -741,8 +743,9 @@ class Tree {
 							nodeID2 = this.searchForNodeID(coords[0],coords[3]);
 							} 
 						}//end try
-					catch{
-						nodeID1=1;nodeID2=1;//writeln("Tried to refine outside the table, continue on");
+					catch (Exception e) {
+					    writeln(e.msg);
+					    nodeID1=1;nodeID2=1;//writeln("Tried to refine outside the table, continue on");
 					}
 						if (nodeID1 != nodeID2){//two different patchees
 							double percentagediff;
@@ -842,8 +845,9 @@ class Tree {
 							nodeID2 = this.searchForNodeID(coords[0],coords[2]);
 							nodeID3 = this.searchForNodeID(coords[1],coords[2]);
 						}//end try
-					catch{
-						nodeID1=1;nodeID2=1;
+					catch (Exception e) {
+					    writeln(e.msg);
+					    nodeID1=1;nodeID2=1;
 					}
 						if ((nodeID1 != nodeID2)&&(nodeID2 != nodeID3)&&(nodeID1!= nodeID3)){//corner
 							switch(vertex){
