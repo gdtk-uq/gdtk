@@ -136,6 +136,20 @@ final class GlobalConfig {
     static lua_State* master_lua_State;
     shared static size_t n_grid_time_levels = 1;
 
+    // Shock-fitting
+    //
+    // The amount of time by which to delay the shock fitting.
+    // We'll often be doing shock-fitting of a strong bow shock over a blunt body.
+    // To get the simulation started, we'll operate with a fixed grid, with the
+    // flow solver in shock-capturing mode.  Once the bow shock has formed,
+    // we then allow the supersonic-inflow boundary to then be moved toward
+    // the captured shock.
+    shared static double shock_fitting_delay = 1.5e-3;
+    // order of the special interpolation applied at the shock fitting inflow boundary
+    shared static int shock_fitting_interpolation_order = 1;
+    // scaling factor applied to vertices in shock fitting simulations for stability
+    shared static double shock_fitting_scale_factor = 0.5;
+
     // We might update some properties in with the main convective-terms
     // time-stepping function or we might choose to update them separately, 
     // like the chemistry update.
@@ -241,12 +255,6 @@ final class GlobalConfig {
     // The amount by which to increment the viscous factor during soft-start.
     shared static double viscous_factor_increment = 0.01;
     shared static double viscous_delay = 0.0;
-    // The amount of time by which to delay the shock fitting.
-    shared static double shock_fitting_delay = 1.5e-3;
-    // order of the special interpolation applied at the shock fitting inflow boundary
-    shared static int shock_fitting_interpolation_order = 1;
-    // scaling factor applied to vertices in shock fitting simulations for stability
-    shared static double shock_fitting_scale_factor = 0.5;
     // When the diffusion is calculated is treated as part of the viscous calculation:
     //   false for neglecting multicomponent diffusion, 
     //   true when considering the diffusion 
@@ -361,6 +369,10 @@ public:
     GridMotion grid_motion;
     string udf_grid_motion_file;
     size_t n_grid_time_levels;
+
+    int shock_fitting_interpolation_order;
+    double shock_fitting_scale_factor;
+
     bool separate_update_for_viscous_terms;
     bool separate_update_for_k_omega_source;
     bool adjust_invalid_cell_data;
@@ -397,9 +409,6 @@ public:
 
     bool stringent_cfl;
     double viscous_signal_factor;
-
-    int shock_fitting_interpolation_order;
-    double shock_fitting_scale_factor;
     
     TurbulenceModel turbulence_model;
     double turbulence_prandtl_number;
@@ -436,6 +445,10 @@ public:
 	grid_motion = GlobalConfig.grid_motion;
 	udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
 	n_grid_time_levels = GlobalConfig.n_grid_time_levels;
+
+	shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
+	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
+
 	separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
 	separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
 	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
@@ -473,9 +486,6 @@ public:
 
 	stringent_cfl = GlobalConfig.stringent_cfl;
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
-
-	shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
-	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
 	
 	turbulence_model = GlobalConfig.turbulence_model;
 	turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
@@ -603,6 +613,11 @@ void read_config_file()
     // of the blocks are configured since we set that information
     // as global information available to the user. Hence, you'll
     // find that step at the very end of this function.
+    //
+    // Shock fitting involves grid motion.
+    mixin(update_double("shock_fitting_delay", "shock_fitting_delay"));
+    mixin(update_int("shock_fitting_interpolation_order", "shock_fitting_interpolation_order"));
+    mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
 
     // Parameters controlling convective update in detail
     //
@@ -628,9 +643,6 @@ void read_config_file()
     mixin(update_double("compression_tolerance", "compression_tolerance"));
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
     mixin(update_double("ac_alpha", "ac_alpha"));
-    mixin(update_double("shock_fitting_delay", "shock_fitting_delay"));
-    mixin(update_int("shock_fitting_interpolation_order", "shock_fitting_interpolation_order"));
-    mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
     mixin(update_bool("MHD", "MHD"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
@@ -643,11 +655,11 @@ void read_config_file()
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
 	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
+	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
+	writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
 	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
 	writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
 	writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
-	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
-	writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
 	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
 	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
