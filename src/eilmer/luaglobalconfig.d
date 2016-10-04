@@ -96,8 +96,6 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("divB_damping_length","divB_damping_length"));
     //
     mixin(get_enum_field("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
-    mixin(get_bool_field("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
-    mixin(get_bool_field("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(get_bool_field("apply_bcs_in_parallel", "apply_bcs_in_parallel"));
     mixin(get_double_field("flowstate_limits_max_velocity", "flowstate_limits.max_velocity"));
     mixin(get_double_field("flowstate_limits_max_tke", "flowstate_limits.max_tke"));
@@ -128,6 +126,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_string_field("udf_grid_motion_file", "udf_grid_motion_file"));
     //
     mixin(get_bool_field("viscous", "viscous"));
+    mixin(get_bool_field("use_viscosity_from_cells", "use_viscosity_from_cells"));
     mixin(get_enum_field("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(get_enum_field("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(get_bool_field("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
@@ -135,6 +134,9 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("viscous_signal_factor", "viscous_signal_factor"));
     mixin(get_bool_field("diffusion", "diffusion"));
+    //
+    mixin(get_bool_field("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
+    mixin(get_bool_field("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     //
     mixin(get_enum_field("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
     mixin(get_double_field("turbulence_prandtl_number", "turbulence_prandtl_number"));
@@ -211,8 +213,6 @@ extern(C) int configGet(lua_State* L)
     case "divB_damping_length": lua_pushnumber(L, GlobalConfig.divB_damping_length); break;
 	//
     case "gasdynamic_update_scheme": lua_pushstring(L, gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme).toStringz); break;
-    case "separate_update_for_viscous_terms": lua_pushboolean(L, GlobalConfig.separate_update_for_viscous_terms); break;
-    case "separate_update_for_k_omega_source": lua_pushboolean(L, GlobalConfig.separate_update_for_k_omega_source); break;
     case "apply_bcs_in_parallel": lua_pushboolean(L, GlobalConfig.apply_bcs_in_parallel); break;
     case "flowstate_limits_max_velocity": lua_pushnumber(L, GlobalConfig.flowstate_limits.max_velocity); break;
     case "flowstate_limits_max_tke": lua_pushnumber(L, GlobalConfig.flowstate_limits.max_tke); break;
@@ -243,6 +243,7 @@ extern(C) int configGet(lua_State* L)
     case "shock_fitting_scale_factor": lua_pushnumber(L, GlobalConfig.shock_fitting_scale_factor); break;
 	//
     case "viscous": lua_pushboolean(L, GlobalConfig.viscous); break;
+    case "use_viscosity_from_cells": lua_pushboolean(L, GlobalConfig.use_viscosity_from_cells); break;
     case "spatial_deriv_calc": lua_pushstring(L, spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc).toStringz); break;
     case "spatial_deriv_locn": lua_pushstring(L, spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn).toStringz); break;
     case "include_ghost_cells_in_spatial_deriv_clouds": lua_pushboolean(L, GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds); break;
@@ -250,6 +251,9 @@ extern(C) int configGet(lua_State* L)
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "viscous_signal_factor": lua_pushnumber(L, GlobalConfig.viscous_signal_factor); break;
     case "diffusion": lua_pushboolean(L, GlobalConfig.diffusion); break;
+	//
+    case "separate_update_for_viscous_terms": lua_pushboolean(L, GlobalConfig.separate_update_for_viscous_terms); break;
+    case "separate_update_for_k_omega_source": lua_pushboolean(L, GlobalConfig.separate_update_for_k_omega_source); break;
 	//
     case "turbulence_model": lua_pushstring(L, turbulence_model_name(GlobalConfig.turbulence_model).toStringz); break;
     case "turbulence_prandtl_number": lua_pushnumber(L, GlobalConfig.turbulence_prandtl_number); break;

@@ -931,10 +931,6 @@ function write_config_file(fileName)
    f:write(string.format('"MHD": %s,\n', tostring(config.MHD)))
    f:write(string.format('"divergence_cleaning": %s,\n', tostring(config.divergence_cleaning)))
    f:write(string.format('"divB_damping_length": %.18e,\n', config.divB_damping_length))
-   f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
-			 tostring(config.separate_update_for_viscous_terms)))
-   f:write(string.format('"separate_update_for_k_omega_source": %s,\n', 
-			 tostring(config.separate_update_for_k_omega_source)))
    f:write(string.format('"apply_bcs_in_parallel": %s,\n',
 			 tostring(config.apply_bcs_in_parallel)))
    f:write(string.format('"flowstate_limits_max_velocity": %.18e,\n', config.flowstate_limits_max_velocity))
@@ -968,11 +964,17 @@ function write_config_file(fileName)
    f:write(string.format('"shock_fitting_scale_factor": %.18e,\n', config.shock_fitting_scale_factor))
 
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
+   f:write(string.format('"use_viscosity_from_cells": %s,\n', tostring(config.use_viscosity_from_cells)))
    f:write(string.format('"spatial_deriv_calc": "%s",\n', config.spatial_deriv_calc))
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
+
+   f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
+			 tostring(config.separate_update_for_viscous_terms)))
+   f:write(string.format('"separate_update_for_k_omega_source": %s,\n', 
+			 tostring(config.separate_update_for_k_omega_source)))
 
    f:write(string.format('"turbulence_model": "%s",\n',
 			 string.lower(config.turbulence_model)))

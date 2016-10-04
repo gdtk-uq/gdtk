@@ -244,6 +244,12 @@ final class GlobalConfig {
     //
     shared static bool viscous = false; 
     // If true, viscous effects are included in the gas-dynamic update.
+    shared static bool use_viscosity_from_cells = false;
+    // Proper treatment of viscous effects at the walls implies using the viscous
+    // transport coefficients evaluated at the wall temperature, however,
+    // Eilmer3 was set up to use the cell-average values of transport coefficients
+    // because a full gas state was not available at the cell interfaces.
+    // Setting use_viscosity_from_cells to true should give Eilmer3-like behaviour.
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.least_squares;
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.faces;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
@@ -373,8 +379,6 @@ public:
     int shock_fitting_interpolation_order;
     double shock_fitting_scale_factor;
 
-    bool separate_update_for_viscous_terms;
-    bool separate_update_for_k_omega_source;
     bool adjust_invalid_cell_data;
     FlowStateLimits flowstate_limits;
     int interpolation_order;
@@ -398,6 +402,7 @@ public:
     double divB_damping_length;
 
     bool viscous;
+    bool use_viscosity_from_cells;
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
@@ -409,7 +414,10 @@ public:
 
     bool stringent_cfl;
     double viscous_signal_factor;
-    
+
+    bool separate_update_for_viscous_terms;
+    bool separate_update_for_k_omega_source;
+
     TurbulenceModel turbulence_model;
     double turbulence_prandtl_number;
     double turbulence_schmidt_number;
@@ -449,8 +457,6 @@ public:
 	shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
 	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
 
-	separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
-	separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
 	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
 	flowstate_limits = GlobalConfig.flowstate_limits;
 	interpolation_order = GlobalConfig.interpolation_order;
@@ -474,6 +480,7 @@ public:
 	divB_damping_length = GlobalConfig.divB_damping_length;
 
 	viscous = GlobalConfig.viscous;
+	use_viscosity_from_cells = GlobalConfig.use_viscosity_from_cells;
 	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
 	spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
 	include_ghost_cells_in_spatial_deriv_clouds = 
@@ -486,6 +493,9 @@ public:
 
 	stringent_cfl = GlobalConfig.stringent_cfl;
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
+
+	separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
+	separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
 	
 	turbulence_model = GlobalConfig.turbulence_model;
 	turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
@@ -621,8 +631,6 @@ void read_config_file()
 
     // Parameters controlling convective update in detail
     //
-    mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
-    mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(update_bool("apply_bcs_in_parallel", "apply_bcs_in_parallel"));
     mixin(update_double("flowstate_limits_max_velocity", "flowstate_limits.max_velocity"));
     mixin(update_double("flowstate_limits_max_tke", "flowstate_limits.max_tke"));
@@ -660,8 +668,6 @@ void read_config_file()
 	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
 	writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
 	writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
-	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
-	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
 	writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
 	writeln("  flowstate_limits_max_tke: ", GlobalConfig.flowstate_limits.max_tke);
@@ -689,11 +695,14 @@ void read_config_file()
     // Parameters controlling viscous/molecular transport
     //
     mixin(update_bool("viscous", "viscous"));
+    mixin(update_bool("use_viscosity_from_cells", "use_viscosity_from_cells"));
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
+    mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
+    mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
     mixin(update_double("turbulence_prandtl_number", "turbulence_prandtl_number"));
     mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
@@ -701,11 +710,14 @@ void read_config_file()
     mixin(update_double("transient_mu_t_factor", "transient_mu_t_factor"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  viscous: ", GlobalConfig.viscous);
+	writeln("  use_viscosity_from_cells: ", GlobalConfig.use_viscosity_from_cells);
 	writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
 	writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
 	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
+	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
+	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  turbulence_model: ", turbulence_model_name(GlobalConfig.turbulence_model));
 	writeln("  turbulence_prandtl_number: ", GlobalConfig.turbulence_prandtl_number);
 	writeln("  turbulence_schmidt_number: ", GlobalConfig.turbulence_schmidt_number);
