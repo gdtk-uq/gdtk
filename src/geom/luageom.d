@@ -364,7 +364,7 @@ extern(C) int quadProperties(lua_State* L)
 	lua_setfield(L, tblIndx, "area");
 	return 1;
     } else {
-	string errMsg = "quadProperties enpected a table with names corners.";
+	string errMsg = "quadProperties expected a table with named corner points.";
 	luaL_error(L, errMsg.toStringz);
 	return 0;
     }
@@ -423,7 +423,7 @@ extern(C) int hexCellProperties(lua_State* L)
 	lua_setfield(L, tblIndx, "kLen");
 	return 1;
     } else {
-	string errMsg = "hexCellProperties enpected a table with names corners.";
+	string errMsg = "hexCellProperties expected a table with named corner points.";
 	luaL_error(L, errMsg.toStringz);
 	return 0;
     }
