@@ -1,6 +1,6 @@
 db.NO_plus = {}
 db.NO_plus.atomicConstituents = {O=1,N=1,}
-db.NO_plus.charge = 0
+db.NO_plus.charge = 1
 db.NO_plus.M = {
    value = 30.0055514e-3,
    units = 'kg/mol',
