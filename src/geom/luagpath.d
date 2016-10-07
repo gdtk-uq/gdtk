@@ -68,6 +68,9 @@ Path checkPath(lua_State* L, int index) {
     if ( isObjType(L, index, TranslatedPathMT) ) {
 	return checkObj!(TranslatedPath, TranslatedPathMT)(L, index);
     }
+    if ( isObjType(L, index, MirrorImagePathMT) ) {
+	return checkObj!(MirrorImagePath, MirrorImagePathMT)(L, index);
+    }
     if ( isObjType(L, index, RotatedAboutZAxisPathMT) ) {
 	return checkObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, index);
     }
