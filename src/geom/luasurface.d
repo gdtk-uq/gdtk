@@ -190,8 +190,8 @@ extern(C) int newCoonsPatch(lua_State* L)
  *
  * Supported constructions are:
  * -------------------------
- * patch0 = AOPatch:new{north=nPath, east=ePath, south=sPath, west=wPath}
- * patch2 = AOPatch:new{p00=a, p10=b, p11=c, p01=d}
+ * patch0 = AOPatch:new{north=nPath, east=ePath, south=sPath, west=wPath, nx=10, ny=10}
+ * patch2 = AOPatch:new{p00=a, p10=b, p11=c, p01=d, nx=10, ny=10}
  * --------------------------
  * Notes:
  * 1. See PJs diagram at top of geom.surface.d for ordering and labelling of
@@ -294,6 +294,27 @@ extern(C) int newChannelPatch(lua_State* L)
     surfaceStore ~= pushObj!(ChannelPatch, ChannelPatchMT)(L, cpatch);
     return 1;
 } // end newChannelPatch()
+
+extern(C) int make_bridging_path_ChannelPatch(lua_State* L)
+{
+    auto surface = checkObj!(ChannelPatch, ChannelPatchMT)(L, 1);
+    if (!surface) {
+	string errMsg = "Error in ChannelPatch:make_bridging_path. Didn't get a ChannelPatch object.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    auto r = luaL_checknumber(L, 2);
+    // Construct the actual path.
+    auto bpath = surface.make_bridging_path(r);
+    if (auto dpath = cast(Line) bpath) {
+	pathStore ~= pushObj!(Line, LineMT)(L, dpath);
+    } else if (auto dpath = cast(Bezier) bpath) {
+	pathStore ~= pushObj!(Bezier, BezierMT)(L, dpath);
+    } else {
+	string errMsg = "Error in ChannelPatch:make_bridging_path. Didn't push a Path object.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    return 1;
+} // end make_bridging_path_ChannelPatch()
 
 
 /**
@@ -500,7 +521,7 @@ extern(C) int newLuaFnSurface(lua_State* L)
  *
  * Supported constructions are:
  * -------------------------
- * srs = SubRangedSurface:new{psurf, r0=0.0, r1=1.0, s0=0.0, s1=1.0}
+ * srs = SubRangedSurface:new{underlying_surface=psurf, r0=0.0, r1=1.0, s0=0.0, s1=1.0}
  * --------------------------
  */
 extern(C) int newSubRangedSurface(lua_State* L)
@@ -634,6 +655,8 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(ChannelPatch, ChannelPatchMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &make_bridging_path_ChannelPatch);
+    lua_setfield(L, -2, "make_bridging_path");
 
     lua_setglobal(L, ChannelPatchMT.toStringz);
 
