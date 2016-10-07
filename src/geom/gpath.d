@@ -790,6 +790,8 @@ protected:
     override double underlying_t(double t) const
     {
 	// The incoming parameter value, t, is proportional to arc_length fraction.
+	if (t <= 0.0) return 0.0;
+	if (t >= 1.0) return 1.0;
 	// Do a reverse look-up from the arc_length fraction to the original t parameter
 	// of the underlying Path.
 	double L_target = t * arc_length_vector[$-1];
