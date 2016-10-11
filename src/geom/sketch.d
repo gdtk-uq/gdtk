@@ -69,6 +69,12 @@ public:
     // (1) 3D vertex data for model --> multiply by view_matrix --> 3D world coordinates
     // (2) 3D world coordinates --> multiply by projection_matrix --> 2D view coordinates
     // (3) 2D view coordinates --> viewport transform --> 2D window/canvas coordinates
+    //
+    // Default view is having the z-axis coming towards your eye, x-axis to the right
+    // and y-axis in the up direction.
+    Vector3 eye = Vector3(0.0, 0.0, 0.0);
+    Vector3 centre = Vector3(0.0, 0.0, -1.0);
+    Vector3 up = Vector3(0.0, 1.0, 0.0);
 
 public:
     this(string renderer_name="svg", string projection_name="xyortho")
@@ -85,7 +91,7 @@ public:
 	}
 	assert(this.renderer_name == "svg", "other renderers unimplemented"); // FIX-ME
 	set_to_identity(proj_mat);
-	set_to_identity(view_mat);
+	set_to_identity(view_mat); // consistent with default view
 	switch (this.projection_name) {
 	case "xyortho":
 	    proj_mat[2][2] = 0.0; // x,y unchanged, z eliminated
@@ -116,6 +122,9 @@ public:
 	string str = "Sketch(";
 	str ~= "renderer=\""~renderer_name~"\"";
 	str ~= ", projection=\""~projection_name~"\"";
+	str ~= ", eye=" ~ to!string(eye);
+	str ~= ", centre=" ~ to!string(centre);
+	str ~= ", up=" ~ to!string(up);
 	str ~= ")";
 	return str;
     }
@@ -153,6 +162,26 @@ public:
 	    // do nothing.
 	}
 	p.refx = ph[0]; p.refy = ph[1]; p.refz = ph[2]; w = ph[3];
+    }
+
+    void look_at(const Vector3 eye, const Vector3 centre, const Vector3 up)
+    // Set the view matrix so that we have a new view of the 3D model.
+    // In the new coordinates, we are looking back along the znew-axis,
+    // with ynew up and xnew toward the right. 
+    {
+	this.eye = eye;
+	this.centre = centre;
+	this.up = up;
+	Vector3 znew = (eye - centre).normalize();
+	Vector3 xnew = (cross(up, znew)).normalize();
+	Vector3 ynew = (cross(znew, xnew)).normalize();
+	view_mat[0][0] = xnew.x; view_mat[0][1] = xnew.y; view_mat[0][2] = xnew.z;
+	view_mat[1][0] = ynew.x; view_mat[1][1] = ynew.y; view_mat[1][2] = ynew.z;
+	view_mat[2][0] = znew.x; view_mat[2][1] = znew.y; view_mat[2][2] = znew.z;
+	view_mat[0][3] = -(dot(centre,xnew));
+	view_mat[1][3] = -(dot(centre,ynew));
+	view_mat[2][3] = -(dot(centre,znew));
+	view_mat[3][0] = 0.0; view_mat[3][1] = 0.0; view_mat[3][2] = 0.0; view_mat[3][3] = 1.0;
     }
     
     void start(string file_name="sketch.svg")

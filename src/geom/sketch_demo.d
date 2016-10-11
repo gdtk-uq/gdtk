@@ -60,6 +60,23 @@ void main()
     s.polygon([Vector3(60,10), Vector3(95,10), Vector3(95,50), Vector3(60,50)],
 	      true, true, true);
     s.finish();
+    //
+    s = new Sketch("svg", "isometric");
+    s.canvas.set(0.0,0.0,120.0,120.0);
+    s.viewport.set(-2.0,-2.0,2.0,2.0);
+    s.look_at(Vector3(0.0,0.0,-1.0), Vector3(0.0,0.0,0.0), Vector3(0.0,1.0,0.0));
+    a = Vector3(2.0, 0.0);
+    b = Vector3(1.0, 1.0);
+    c = Vector3(1.0, 0.0);
+    abc = new Arc(a, b, c);
+    s.start("test3.svg");
+    s.line(Vector3(-1.0,1.0,0.0), Vector3(1.0,-1.0,0.0));
+    s.render(abc);
+    s.rule("x", -1.2, 1.2, 0.4, Vector3(0.0,0.0,0.0), 0.03, "%.1f", 0.12, 8);
+    s.rule("y", -1.2, 1.2, 0.4, Vector3(0.0,0.0,0.0), 0.03, "%.1f", 0.06, 8);
+    s.rule("z", -1.2, 1.2, 0.4, Vector3(0.0,0.0,0.0), 0.03, "%.1f", 0.06, 8);
+    s.finish();
+    //
     writeln("Done.");
 }
 
