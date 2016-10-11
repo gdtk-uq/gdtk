@@ -59,8 +59,16 @@ public:
     //        |               |
     //     (x0,y0)---------(x1,y0)
     //
-    Extents canvas; // canvas-space in mm or pixels, depending on renderer
-    Extents viewport; // user-space in metres
+    Extents canvas; // canvas- or device-space in mm or pixels, depending on renderer
+    Extents viewport; // view coordinates in metres (following projection)
+    double[4][4] proj_mat; // projection matrix, as per OpenGL description
+    double[4][4] view_mat; // for when we want to view the model differently
+    // We keep in mind the usual 4-component homogeneous coordinate representation
+    // (x,y,z,w) so that we can accommodate perspective projection eventually.
+    // Graphics pipeline processes are:
+    // (1) 3D vertex data for model --> multiply by view_matrix --> 3D world coordinates
+    // (2) 3D world coordinates --> multiply by projection_matrix --> 2D view coordinates
+    // (3) 2D view coordinates --> viewport transform --> 2D window/canvas coordinates
 
 public:
     this(string renderer_name="svg", string projection_name="xyortho")
@@ -76,7 +84,29 @@ public:
 	    throw new Exception("Unknown projection: " ~ projection_name);
 	}
 	assert(this.renderer_name == "svg", "other renderers unimplemented"); // FIX-ME
-	assert(this.projection_name == "xyortho", "other projections unimplemented"); // FIX-ME
+	set_to_identity(proj_mat);
+	set_to_identity(view_mat);
+	switch (this.projection_name) {
+	case "xyortho":
+	    proj_mat[2][2] = 0.0; // x,y unchanged, z eliminated
+	    break;
+	case "isometric":
+	    double cos30 = cos(30.0/180.0*PI);
+	    double sin30 = sin(30.0/180.0*PI);
+	    proj_mat[0][0] =  cos30; proj_mat[0][1] = 0.0; proj_mat[0][2] = -cos30; proj_mat[0][3] = 0.0;
+	    proj_mat[1][0] = -sin30; proj_mat[1][1] = 1.0; proj_mat[1][2] = -sin30; proj_mat[1][3] = 0.0;
+	    proj_mat[2][0] =    0.0; proj_mat[2][1] = 0.0; proj_mat[2][2] =    0.0; proj_mat[2][3] = 0.0;
+	    proj_mat[3][0] =    0.0; proj_mat[3][1] = 0.0; proj_mat[3][2] =    0.0; proj_mat[3][3] = 1.0;
+	    break;
+	case "oblique":
+	    double zfactor = 1.0/(2.0*sqrt(2.0));
+	    proj_mat[0][0] =  1.0; proj_mat[0][1] = 0.0; proj_mat[0][2] = -zfactor; proj_mat[0][3] = 0.0;
+	    proj_mat[1][0] =  0.0; proj_mat[1][1] = 1.0; proj_mat[1][2] = -zfactor; proj_mat[1][3] = 0.0;
+	    proj_mat[2][0] =  0.0; proj_mat[2][1] = 0.0; proj_mat[2][2] =      0.0; proj_mat[2][3] = 0.0;
+	    proj_mat[3][0] =  0.0; proj_mat[3][1] = 0.0; proj_mat[3][2] =      0.0; proj_mat[3][3] = 1.0;
+	    break;
+	default: throw new Exception("other projections unimplemented");
+	}
 	canvas.set(0.0, 0.0, 120.0, 120.0); // reasonable size for a drawing in SVG
 	viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
     }
@@ -90,6 +120,41 @@ public:
 	return str;
     }
 
+    void set_to_identity(ref double[4][4] mat)
+    {
+	foreach (i; 0 .. 4) {
+	    foreach (j; 0 .. 4) { mat[i][j] = 0.0; }
+	    mat[i][i] = 1.0;
+	}
+    }
+
+    void matrix_vector_multiply(ref double[4][4] mat, ref double[4] vec)
+    {
+	double[4] result;
+	foreach (i; 0 .. 4) {
+	    result[i] = 0.0;
+	    foreach (j; 0 .. 4) { result[i] += mat[i][j] * vec[j]; }
+	}
+	foreach (i; 0 .. 4) { vec[i] = result[i]; }
+    }
+    
+    void apply_transform(string transform_name, ref Vector3 p, ref double w)
+    {
+	double[4] ph; // homogeneous coordinate representation
+	ph[0] = p.x; ph[1] = p.y; ph[2] = p.z; ph[3] = w;
+	switch (transform_name) {
+	case "view":
+	    matrix_vector_multiply(view_mat, ph);
+	    break;
+	case "projection":
+	    matrix_vector_multiply(proj_mat, ph);
+	    break;
+	default:
+	    // do nothing.
+	}
+	p.refx = ph[0]; p.refy = ph[1]; p.refz = ph[2]; w = ph[3];
+    }
+    
     void start(string file_name="sketch.svg")
     {
 	switch(renderer_name) {
@@ -113,12 +178,12 @@ public:
 	}
     }
 
-    void setLineWidth(double w)
+    void setLineWidth(double width)
     // Sets line width, in units appropriate to the renderer.
     {
 	switch(renderer_name) {
 	case "svg":
-	    svg.setLineWidth(w); // in mm
+	    svg.setLineWidth(width); // in mm
 	    break;
 	default:
 	    throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -216,8 +281,12 @@ public:
     void line(const Vector3 p0, const Vector3 p1, bool dashed=false)
     // Render a line from point 1 to point 2.
     {
-	auto x0 = toCanvasX(p0.x); auto y0 = toCanvasY(p0.y);
-	auto x1 = toCanvasX(p1.x); auto y1 = toCanvasY(p1.y);
+	Vector3 p0tmp = Vector3(p0); Vector3 p1tmp = Vector3(p1);
+	double w0 = 1.0; double w1 = 1.0;
+	apply_transform("view", p0tmp, w0); apply_transform("view", p1tmp, w1);
+	apply_transform("projection", p0tmp, w0); apply_transform("projection", p1tmp, w1);
+	auto x0 = toCanvasX(p0tmp.x); auto y0 = toCanvasY(p0tmp.y);
+	auto x1 = toCanvasX(p1tmp.x); auto y1 = toCanvasY(p1tmp.y);
 	switch(renderer_name) {
 	case "svg":
 	    svg.line(x0, y0, x1, y1, dashed);
@@ -230,8 +299,14 @@ public:
 
     void polyline(const Vector3[] pa, bool dashed=false)
     {
+	Vector3[] ptmp; double[] wtmp;
+	foreach (p; pa) { ptmp ~= Vector3(p); wtmp ~= 1.0; }
+	foreach (i; 0 .. ptmp.length) {
+	    apply_transform("view", ptmp[i], wtmp[i]);
+	    apply_transform("projection", ptmp[i], wtmp[i]);
+	}	    
 	double[] xlist, ylist;
-	foreach(p; pa) {
+	foreach(p; ptmp) {
 	    xlist ~= toCanvasX(p.x); ylist ~= toCanvasY(p.y);
 	}
 	switch(renderer_name) {
@@ -246,8 +321,14 @@ public:
 
     void polygon(const Vector3[] pa, bool fill=true, bool stroke=true, bool dashed=false)
     {
+	Vector3[] ptmp; double[] wtmp;
+	foreach (p; pa) { ptmp ~= Vector3(p); wtmp ~= 1.0; }
+	foreach (i; 0 .. ptmp.length) {
+	    apply_transform("view", ptmp[i], wtmp[i]);
+	    apply_transform("projection", ptmp[i], wtmp[i]);
+	}	    
 	double[] xlist, ylist;
-	foreach(p; pa) {
+	foreach(p; ptmp) {
 	    xlist ~= toCanvasX(p.x); ylist ~= toCanvasY(p.y);
 	}
 	switch(renderer_name) {
@@ -263,6 +344,7 @@ public:
     void arc(const Vector3 p0, const Vector3 p1, const Vector3 pc,
 	     bool dashed=false)
     {
+	// This is a purely 2D xy-plane function.
 	double x0 = toCanvasX(p0.x); double y0 = toCanvasY(p0.y);
 	double x1 = toCanvasX(p1.x); double y1 = toCanvasY(p1.y);
 	double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
@@ -279,6 +361,7 @@ public:
     void circle(const Vector3 pc, double r, bool fill=true,
 		bool stroke=true, bool dashed=false)
     {
+	// This is a purely 2D xy-plane function.
 	double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
 	switch(renderer_name) {
 	case "svg":
@@ -294,10 +377,18 @@ public:
 		 const Vector3 p2, const Vector3 p3,
 		 bool dashed=false)
     {
-	double x0 = toCanvasX(p0.x); double y0 = toCanvasY(p0.y);
-	double x1 = toCanvasX(p1.x); double y1 = toCanvasY(p1.y);
-	double x2 = toCanvasX(p2.x); double y2 = toCanvasY(p2.y);
-	double x3 = toCanvasX(p3.x); double y3 = toCanvasY(p3.y);
+	Vector3 p0tmp = Vector3(p0); Vector3 p1tmp = Vector3(p1);
+	Vector3 p2tmp = Vector3(p0); Vector3 p3tmp = Vector3(p1);
+	double w0 = 1.0; double w1 = 1.0;
+	double w2 = 1.0; double w3 = 1.0;
+	apply_transform("view", p0tmp, w0); apply_transform("view", p1tmp, w1);
+	apply_transform("view", p2tmp, w2); apply_transform("view", p3tmp, w3);
+	apply_transform("projection", p0tmp, w0); apply_transform("projection", p1tmp, w1);
+	apply_transform("projection", p2tmp, w2); apply_transform("projection", p3tmp, w3);
+	double x0 = toCanvasX(p0tmp.x); double y0 = toCanvasY(p0tmp.y);
+	double x1 = toCanvasX(p1tmp.x); double y1 = toCanvasY(p1tmp.y);
+	double x2 = toCanvasX(p2tmp.x); double y2 = toCanvasY(p2tmp.y);
+	double x3 = toCanvasX(p3tmp.x); double y3 = toCanvasY(p3tmp.y);
 	switch(renderer_name) {
 	case "svg":
 	    svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
@@ -314,8 +405,15 @@ public:
 	      string anchor="start",
 	      int fontSize=10, string colour="black", string fontFamily="sanserif")
     {
-	double xp = toCanvasX(p.x); double yp = toCanvasY(p.y);
-	double angle = atan2(direction.y, direction.x)*180.0/PI;
+	Vector3 p_tmp = Vector3(p);
+	Vector3 direction_tmp = Vector3(direction);
+	Vector3 normal_tmp = Vector3(normal);
+	double w_p = 1.0; double w_dir = 1.0; double w_n = 1.0;
+	apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
+	apply_transform("view", direction_tmp, w_dir); apply_transform("projection", direction_tmp, w_dir);
+	apply_transform("view", normal_tmp, w_n); apply_transform("projection", normal_tmp, w_n);
+	double xp = toCanvasX(p_tmp.x); double yp = toCanvasY(p_tmp.y);
+	double angle = atan2(direction_tmp.y, direction_tmp.x)*180.0/PI;
 	switch(renderer_name) {
 	case "svg":
 	    svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
@@ -330,7 +428,9 @@ public:
 		  string anchor="middle", double dotSize=2.0,
 		  int fontSize=10, string colour="black", string fontFamily="sanserif")
     {
-	double xp = toCanvasX(p.x); double yp = toCanvasY(p.y);
+	Vector3 p_tmp = Vector3(p); double w_p = 1.0;
+	apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
+	double xp = toCanvasX(p_tmp.x); double yp = toCanvasY(p_tmp.y);
 	switch(renderer_name) {
 	case "svg":
 	    svg.dotlabel(xp, yp, label, anchor, dotSize, fontSize, colour, fontFamily);
