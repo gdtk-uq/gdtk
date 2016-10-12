@@ -71,15 +71,13 @@ public:
     FlowState Lft;
     FlowState Rght;
 
-    version(steadystate)
+    version(steady_state)
     {
     // Work-space for steady-state solver
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
-    double[] FU_o, dU, r0_o, v_o, z_o, w_o, g0_o, g1_o, h_o, hR_o;
-    Matrix V_o, Z_o, H0_o, H1_o, Gamma_o, Q0_o, Q1_o;
-    double[] FU_i, r0_i, v_i, z_i, w_i, g0_i, g1_i, h_i, hR_i;
-    Matrix V_i, H0_i, H1_i, Gamma_i, Q0_i, Q1_i;
+    double[] FU, dU, r0, v, w, g0, g1, h, hR;
+    Matrix V, W, H0, H1, Gamma, Q0, Q1;
     }
 
     this(int id, Grid_t grid_type, string label)
@@ -540,5 +538,31 @@ public:
     void applyPostDiffFluxAction(double t, int gtl, int ftl)
     {
 	foreach(boundary; bc) { boundary.applyPostDiffFluxAction(t, gtl, ftl); }
+    }
+
+    version(steady_state) {
+    void allocate_GMRES_workspace()
+    {
+	int nConserved = 4; // rho, rho*u, rho*v, rho*E
+	size_t m = to!size_t(GlobalConfig.sssOptions.maxInnerIterations);
+	size_t n = nConserved*cells.length;
+	// Now allocate arrays and matrices
+	FU.length = n;
+	dU.length = n; dU[] = 0.0;
+	r0.length = n;
+	v.length = n;
+	w.length = n;
+	g0.length = m+1;
+	g1.length = m+1;
+	h.length = m+1;
+	hR.length = m+1;
+	V = new Matrix(n, m+1);
+	W = new Matrix(n, m+1);
+	H0 = new Matrix(m+1, m);
+	H1 = new Matrix(m+1, m);
+	Gamma = new Matrix(m+1, m+1);
+	Q0 = new Matrix(m+1, m+1);
+	Q1 = new Matrix(m+1, m+1);
+    }
     }
 } // end class Block

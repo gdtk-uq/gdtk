@@ -22,6 +22,39 @@ require 'gridpro'
 -- in the configuration script
 applyGridproConnectivity = gridpro.applyGridproConnectivity
 
+-- Storage for steady-state solver settings
+sssOptionsHidden = { -- hidden from user
+   -- set defaults here
+   cfl_init = 0.5,
+   eta = 0.01,
+   sigma = 1.0e-8,
+   tau = 0.1,
+   no_low_order_iterations = 20,
+   no_outer_iterations = 100,
+   max_inner_iterations = 20,
+   max_no_attempts = 3,
+   snapshots_frequency = 10,
+   snapshots_count = 1,
+   __index = function (t, k) 
+      return sssOptionsHidden[k]
+   end,
+   __newindex = function (t, k, v)
+      if sssOptionsHidden[k] == nil then
+	 print(string.format("The field '%s' cannot be set in 'SteadyStateSolver' table.", k))
+      else
+	 sssOptionsHidden[k] = v
+      end
+   end,
+   __call = function (_, t)
+      for k, v in pairs(t) do
+	 sssOptionsHidden.__newindex(t, k, v)
+      end
+   end
+}
+
+SteadyStateSolver = {}
+setmetatable(SteadyStateSolver, sssOptionsHidden)
+
 -- Storage for later definitions of Block objects
 blocks = {}
 
@@ -909,7 +942,20 @@ function write_control_file(fileName)
    f:write(string.format('"max_step": %d,\n', config.max_step))
    f:write(string.format('"dt_plot": %.18e,\n', config.dt_plot))
    f:write(string.format('"dt_history": %.18e,\n', config.dt_history))
-   f:write(string.format('"halt_now": %d\n', config.halt_now))
+   f:write(string.format('"halt_now": %d,\n', config.halt_now))
+   f:write('"steady_state_solver_options" : {\n')
+   f:write(string.format('   "cfl_init": %.18e,\n', SteadyStateSolver.cfl_init))
+   f:write(string.format('   "eta": %.18e,\n', SteadyStateSolver.eta))
+   f:write(string.format('   "sigma": %.18e,\n', SteadyStateSolver.sigma))
+   f:write(string.format('   "tau": %.18e,\n', SteadyStateSolver.tau))
+   f:write(string.format('   "no_low_order_iterations": %d,\n', SteadyStateSolver.no_low_order_iterations))
+   f:write(string.format('   "no_outer_iterations": %d,\n', SteadyStateSolver.no_outer_iterations))
+   f:write(string.format('   "max_inner_iterations": %d,\n', SteadyStateSolver.max_inner_iterations))
+   f:write(string.format('   "max_no_attempts": %d,\n', SteadyStateSolver.max_no_attempts))
+   f:write(string.format('   "snapshots_frequency": %d,\n', SteadyStateSolver.snapshots_frequency))
+   f:write(string.format('   "snapshots_count": %d\n', SteadyStateSolver.snapshots_count))
+   -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
+   f:write('    }\n')
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write("}\n")
    f:close()

@@ -107,6 +107,22 @@ class IgnitionZone : BlockZone {
     }
 }
 
+version(steady_state) {
+struct SteadyStateSolverOptions {
+    double cflInit = 0.5;
+    int nConserved = 4;
+    double eta = 0.01;
+    double sigma = 1.0e-8;
+    double tau = 0.1;
+    int noLowOrderIterations = 20;
+    int noOuterIterations = 100;
+    int maxInnerIterations = 20;
+    int maxNoAttempts = 3;
+    int snapshotsFrequency = 10;
+    int snapshotsCount = 1;
+    
+}
+}
 
 final class GlobalConfig {
     shared static string base_file_name = "job"; // Change this to suit at run time.
@@ -353,6 +369,10 @@ final class GlobalConfig {
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
 	static GPUChem gpuChem;
+    }
+
+    version (steady_state) {
+	static SteadyStateSolverOptions sssOptions;
     }
 
     ~this()
@@ -920,6 +940,27 @@ void read_control_file()
 	writeln("  dt_history: ", GlobalConfig.dt_history);
 	writeln("  halt_now: ", GlobalConfig.halt_now);
     }
+    
+    version (steady_state) {
+    auto sssOptions = jsonData["steady_state_solver_options"];
+    GlobalConfig.sssOptions.cflInit = getJSONdouble(sssOptions, "cfl_init", GlobalConfig.sssOptions.cflInit);
+    GlobalConfig.sssOptions.eta = getJSONdouble(sssOptions, "eta", GlobalConfig.sssOptions.eta);
+    GlobalConfig.sssOptions.sigma = getJSONdouble(sssOptions, "sigma", GlobalConfig.sssOptions.sigma);
+    GlobalConfig.sssOptions.tau = getJSONdouble(sssOptions, "tau", GlobalConfig.sssOptions.tau);
+    GlobalConfig.sssOptions.noLowOrderIterations = 
+	getJSONint(sssOptions, "no_low_order_iterations", GlobalConfig.sssOptions.noLowOrderIterations);
+    GlobalConfig.sssOptions.noOuterIterations = 
+	getJSONint(sssOptions, "no_outer_iterations", GlobalConfig.sssOptions.noOuterIterations);
+    GlobalConfig.sssOptions.maxInnerIterations = 
+	getJSONint(sssOptions, "max_inner_iterations", GlobalConfig.sssOptions.maxInnerIterations);
+    GlobalConfig.sssOptions.maxNoAttempts = 
+	getJSONint(sssOptions, "max_no_attempts", GlobalConfig.sssOptions.maxNoAttempts);
+    GlobalConfig.sssOptions.snapshotsFrequency = 
+	getJSONint(sssOptions, "snapshots_frequency", GlobalConfig.sssOptions.snapshotsFrequency);
+    GlobalConfig.sssOptions.snapshotsCount = 
+	getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
+    }
+
     // Propagate new values to the local copies of config.
     foreach (localConfig; dedicatedConfig) {
 	localConfig.update_control_parameters();
