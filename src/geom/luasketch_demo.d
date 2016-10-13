@@ -12,10 +12,12 @@ import util.lua;
 import geom;
 import gpath;
 import surface;
+import volume;
 import sketch;
 import luageom;
 import luagpath;
 import luasurface;
+import luavolume;
 import luasketch;
 
 void main()
@@ -26,6 +28,7 @@ void main()
     registerVector3(L);
     registerPaths(L);
     registerSurfaces(L);
+    registerVolumes(L);
     registerSketch(L);
     string test_code = `
 -- Add a couple of points and alter their data.
@@ -59,6 +62,24 @@ s:dotlabel{point=p10, label="p10"}
 s:dotlabel{point=p11, label="p11"}
 s:dotlabel{point=p01, label="p01", anchor="left", dot_size=1.0}
 s:render{surf=my_patch};
+s:finish{}
+--
+s = Sketch:new{renderer="svg", projection="isometric"}
+s:start{file_name="test2.svg"}
+L = 0.5 -- length of edge
+p000 = Vector3:new{x=0.0, y=0.0, z=0.0}; p100 = Vector3:new{x=L, y=0.0, z=0.0}
+p110 = Vector3:new{x=L, y=L, z=0.0}; p010 = Vector3:new{x=0.0, y=L, z=0.0}
+p001 = Vector3:new{x=0.0, y=0.0, z=L}; p101 = Vector3:new{x=L, y=0.0, z=L}
+p111 = Vector3:new{x=L, y=L, z=L}; p011 = Vector3:new{x=0.0, y=L, z=L}
+-- Beware of Lua indexing for tables starting at 1.
+-- By providing a list literal, we side-step the issue.
+pointList = {p000,p100,p110,p010,p001,p101,p111,p011}
+my_volume = TFIVolume:new{vertices=pointList}
+s:set{fill_colour="green"}
+s:render{volume=my_volume, stroke=true, facets=true};
+for i,p in ipairs(pointList) do
+   s:dotlabel{point=p, label=string.format("p%d", i-1)}
+end
 s:finish{}
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {

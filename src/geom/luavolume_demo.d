@@ -33,6 +33,8 @@ p001 = Vector3:new{x=0.0, y=0.1, z=3.0}
 p101 = Vector3:new{x=1.0, y=0.1, z=3.0}
 p111 = Vector3:new{x=1.0, y=1.1, z=3.0}
 p011 = Vector3:new{x=0.0, y=1.1, z=3.0}
+-- Beware of Lua indexing for tables starting at 1.
+-- By providing a list literal, we side-step the issue.
 my_volume = TFIVolume:new{vertices={p000,p100,p110,p010,p001,p101,p111,p011}}
 print("my_volume=", my_volume)
 p = my_volume(0.1, 0.1, 0.5);

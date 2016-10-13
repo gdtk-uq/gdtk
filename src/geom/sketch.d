@@ -27,6 +27,7 @@ import svg;
 import geom;
 import gpath;
 import surface;
+import volume;
 
 struct Extents{
     double x0, x1, y0, y1;
@@ -115,7 +116,7 @@ public:
 	}
 	canvas.set(0.0, 0.0, 120.0, 120.0); // reasonable size for a drawing in SVG
 	viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
-    }
+    } // end this
 
     override string toString()
     {
@@ -162,7 +163,7 @@ public:
 	    // do nothing.
 	}
 	p.refx = ph[0]; p.refy = ph[1]; p.refz = ph[2]; w = ph[3];
-    }
+    } // end apply_transform
 
     void look_at(const Vector3 eye, const Vector3 centre, const Vector3 up)
     // Set the view matrix so that we have a new view of the 3D model.
@@ -182,7 +183,7 @@ public:
 	view_mat[1][3] = -(dot(centre,ynew));
 	view_mat[2][3] = -(dot(centre,znew));
 	view_mat[3][0] = 0.0; view_mat[3][1] = 0.0; view_mat[3][2] = 0.0; view_mat[3][3] = 1.0;
-    }
+    } // end look_at
     
     void start(string file_name="sketch.svg")
     {
@@ -543,7 +544,7 @@ public:
     } // end rule()
     
     // Render functions for our geometric entities used in the flow simulation.
-    void render(const Path pth, bool dashed=false, size_t n=100)
+    void render(const Path pth, bool dashed=false, size_t n=30)
     {
 	Vector3[] psample;
 	double dt = 1.0/n;
@@ -552,16 +553,184 @@ public:
     }
 
     void render(const ParametricSurface surf, bool fill=true,
-		bool stroke=true, bool dashed=false, size_t n=100)
+		bool stroke=true, bool dashed=false,
+		size_t n=30, bool facets=false)
     {
-	Vector3[] psample;
 	double dt = 1.0/n;
 	// Sample boundaries, progressing counter-clockwise.
-	foreach(i; 0 .. n+1) { psample ~= surf(i*dt, 0.0); } // south boundary
-	foreach(i; 1 .. n+1) { psample ~= surf(1.0, i*dt); } // east
-	foreach(i; 1 .. n+1) { psample ~= surf(1.0-i*dt, 1.0); } // north
-	foreach(i; 1 .. n+1) { psample ~= surf(0.0, 1.0-i*dt); } // west
-	polygon(psample, fill, stroke, dashed);
-    }
+	Vector3[] p_boundary;
+	foreach(i; 0 .. n+1) { p_boundary ~= surf(i*dt, 0.0); } // south boundary
+	foreach(i; 1 .. n+1) { p_boundary ~= surf(1.0, i*dt); } // east
+	foreach(i; 1 .. n+1) { p_boundary ~= surf(1.0-i*dt, 1.0); } // north
+	foreach(i; 1 .. n+1) { p_boundary ~= surf(0.0, 1.0-i*dt); } // west
+	if (fill) {
+	    if (facets) {
+		// Fill in the surface as (many) quadrilateral patches.
+		begin_group();
+		foreach(i; 0 .. n) {
+		    double r0 = i*dt; double r1 = r0+dt;
+		    foreach(j; 0 .. n) {
+			double s0 = j*dt; double s1 = s0+dt;
+			Vector3[] psample;
+			psample ~= surf(r0, s0); psample ~= surf(r1, s0);
+			psample ~= surf(r1, s1); psample ~= surf(r0, s1);
+			polygon(psample, fill, false, false);
+		    }
+		}
+		end_group();
+	    } else {
+		// Fill a single polygon boundary.
+		// This will allow a much smaller SVG file for 2D renderings.
+		polygon(p_boundary, fill, false, false);
+	    }
+	} // end if fill
+	if (stroke) {
+	    polygon(p_boundary, false, stroke, dashed);
+	}
+    } // end render (ParametricSurface)
+
+    void render(const ParametricVolume pvol, bool fill=true,
+		bool stroke=true, bool dashed=false,
+		size_t n=30, bool facets=false)
+    {
+	// Render the bounding surface and edges of the ParametricVolume.
+	double dt = 1.0/n;
+	// Sample boundaries, progressing counter-clockwise.
+	Vector3[] p_bottom;
+	foreach(i; 0 .. n+1) { p_bottom ~= pvol(i*dt, 0.0, 0.0); } // south edge
+	foreach(i; 1 .. n+1) { p_bottom ~= pvol(1.0, i*dt, 0.0); } // east
+	foreach(i; 1 .. n+1) { p_bottom ~= pvol(1.0-i*dt, 1.0, 0.0); } // north
+	foreach(i; 1 .. n+1) { p_bottom ~= pvol(0.0, 1.0-i*dt, 0.0); } // west
+	Vector3[] p_top;
+	foreach(i; 0 .. n+1) { p_top ~= pvol(i*dt, 0.0, 1.0); } // south edge
+	foreach(i; 1 .. n+1) { p_top ~= pvol(1.0, i*dt, 1.0); } // east
+	foreach(i; 1 .. n+1) { p_top ~= pvol(1.0-i*dt, 1.0, 1.0); } // north
+	foreach(i; 1 .. n+1) { p_top ~= pvol(0.0, 1.0-i*dt, 1.0); } // west
+	Vector3[] p_west;
+	foreach(i; 0 .. n+1) { p_west ~= pvol(0.0, 0.0, i*dt); }
+	foreach(i; 1 .. n+1) { p_west ~= pvol(0.0, i*dt, 1.0); }
+	foreach(i; 1 .. n+1) { p_west ~= pvol(0.0, 1.0, 1.0-i*dt); }
+	foreach(i; 1 .. n+1) { p_west ~= pvol(0.0, 1.0-i*dt, 0.0); }
+	Vector3[] p_east;
+	foreach(i; 0 .. n+1) { p_east ~= pvol(1.0, 0.0, i*dt); }
+	foreach(i; 1 .. n+1) { p_east ~= pvol(1.0, i*dt, 1.0); }
+	foreach(i; 1 .. n+1) { p_east ~= pvol(1.0, 1.0, 1.0-i*dt); }
+	foreach(i; 1 .. n+1) { p_east ~= pvol(1.0, 1.0-i*dt, 0.0); }
+	Vector3[] p_south;
+	foreach(i; 0 .. n+1) { p_south ~= pvol(i*dt, 0.0, 0.0); }
+	foreach(i; 1 .. n+1) { p_south ~= pvol(1.0, 0.0, i*dt); }
+	foreach(i; 1 .. n+1) { p_south ~= pvol(1.0-i*dt, 0.0, 1.0); }
+	foreach(i; 1 .. n+1) { p_south ~= pvol(0.0, 0.0, 1.0-i*dt); }
+	Vector3[] p_north;
+	foreach(i; 0 .. n+1) { p_north ~= pvol(i*dt, 1.0, 0.0); }
+	foreach(i; 1 .. n+1) { p_north ~= pvol(1.0, 1.0, i*dt); }
+	foreach(i; 1 .. n+1) { p_north ~= pvol(1.0-i*dt, 1.0, 1.0); }
+	foreach(i; 1 .. n+1) { p_north ~= pvol(0.0, 1.0, 1.0-i*dt); }
+	if (fill) {
+	    if (facets) {
+		begin_group(); // hold all surfaces together
+		// Fill in the bottom surface as (many) quadrilateral patches.
+		begin_group();
+		foreach(i; 0 .. n) {
+		    double r0 = i*dt; double r1 = r0+dt;
+		    foreach(j; 0 .. n) {
+			double s0 = j*dt; double s1 = s0+dt;
+			Vector3[] psample;
+			psample ~= pvol(r0, s0, 0.0); psample ~= pvol(r1, s0, 0.0);
+			psample ~= pvol(r1, s1, 0.0); psample ~= pvol(r0, s1, 0.0);
+			polygon(psample, fill, false, false);
+		    }
+		}
+		end_group();
+		// Fill in the top surface as (many) quadrilateral patches.
+		begin_group();
+		foreach(i; 0 .. n) {
+		    double r0 = i*dt; double r1 = r0+dt;
+		    foreach(j; 0 .. n) {
+			double s0 = j*dt; double s1 = s0+dt;
+			Vector3[] psample;
+			psample ~= pvol(r0, s0, 1.0); psample ~= pvol(r1, s0, 1.0);
+			psample ~= pvol(r1, s1, 1.0); psample ~= pvol(r0, s1, 1.0);
+			polygon(psample, fill, false, false);
+		    }
+		}
+		end_group();
+		// Fill in the west surface as (many) quadrilateral patches.
+		begin_group();
+		foreach(i; 0 .. n) {
+		    double t0 = i*dt; double t1 = t0+dt;
+		    foreach(j; 0 .. n) {
+			double s0 = j*dt; double s1 = s0+dt;
+			Vector3[] psample;
+			psample ~= pvol(0.0, s0, t0); psample ~= pvol(0.0, s0, t1);
+			psample ~= pvol(0.0, s1, t1); psample ~= pvol(0.0, s1, t0);
+			polygon(psample, fill, false, false);
+		    }
+		}
+		end_group();
+		// Fill in the east surface as (many) quadrilateral patches.
+		begin_group();
+		foreach(i; 0 .. n) {
+		    double t0 = i*dt; double t1 = t0+dt;
+		    foreach(j; 0 .. n) {
+			double s0 = j*dt; double s1 = s0+dt;
+			Vector3[] psample;
+			psample ~= pvol(1.0, s0, t0); psample ~= pvol(1.0, s0, t1);
+			psample ~= pvol(1.0, s1, t1); psample ~= pvol(1.0, s1, t0);
+			polygon(psample, fill, false, false);
+		    }
+		}
+		end_group();
+		// Fill in the south surface as (many) quadrilateral patches.
+		begin_group();
+		foreach(i; 0 .. n) {
+		    double r0 = i*dt; double r1 = r0+dt;
+		    foreach(j; 0 .. n) {
+			double t0 = j*dt; double t1 = t0+dt;
+			Vector3[] psample;
+			psample ~= pvol(r0, 0.0, t0); psample ~= pvol(r1, 0.0, t0);
+			psample ~= pvol(r1, 0.0, t1); psample ~= pvol(r0, 0.0, t1);
+			polygon(psample, fill, false, false);
+		    }
+		}
+		end_group();
+		// Fill in the north surface as (many) quadrilateral patches.
+		begin_group();
+		foreach(i; 0 .. n) {
+		    double r0 = i*dt; double r1 = r0+dt;
+		    foreach(j; 0 .. n) {
+			double t0 = j*dt; double t1 = t0+dt;
+			Vector3[] psample;
+			psample ~= pvol(r0, 1.0, t0); psample ~= pvol(r1, 1.0, t0);
+			psample ~= pvol(r1, 1.0, t1); psample ~= pvol(r0, 1.0, t1);
+			polygon(psample, fill, false, false);
+		    }
+		}
+		end_group();
+		end_group(); // for all surfaces, together
+	    } else {
+		// Fill a single polygon boundary for each bounding surface.
+		// This will allow a much smaller SVG file for 2D renderings.
+		begin_group();
+		polygon(p_bottom, fill, false, false);
+		polygon(p_top, fill, false, false);
+		polygon(p_west, fill, false, false);
+		polygon(p_east, fill, false, false);
+		polygon(p_south, fill, false, false);
+		polygon(p_north, fill, false, false);
+		end_group();
+	    }
+	} // end if fill
+	if (stroke) {
+	    begin_group();
+	    polygon(p_bottom, false, stroke, dashed);
+	    polygon(p_top, false, stroke, dashed);
+	    polygon(p_west, false, stroke, dashed);
+	    polygon(p_east, false, stroke, dashed);
+	    polygon(p_south, false, stroke, dashed);
+	    polygon(p_north, false, stroke, dashed);
+	    end_group();
+	}
+    } // end render (ParametricVolume)
     
  } // end class Sketch

@@ -16,10 +16,12 @@ import util.lua_service;
 import geom;
 import gpath;
 import surface;
+import volume;
 import sketch;
 import luageom;
 import luagpath;
 import luasurface;
+import luavolume;
 
 immutable string SketchMT = "Sketch"; // Name of Sketch metatable
 
@@ -769,13 +771,17 @@ extern(C) int renderSketch(lua_State* L)
     lua_getfield(L, 1, "surf");
     if (!lua_isnil(L, -1)) { my_surf = checkSurface(L, -1); }
     lua_pop(L, 1); // dispose of surf item
-    if ((my_path is null) && (my_surf is null)) {
+    ParametricVolume my_vol;
+    lua_getfield(L, 1, "volume");
+    if (!lua_isnil(L, -1)) { my_vol = checkVolume(L, -1); }
+    lua_pop(L, 1); // dispose of volume item
+    if ((my_path is null) && (my_surf is null) && (my_vol is null)) {
 	string errMsg = "Error in call to Sketch:render{}. " ~
-	    "Could not find a path nor surf element.";
+	    "Could not find a path nor surf nor volume element.";
 	luaL_error(L, errMsg.toStringz());
     }
     //
-    size_t n = 100;
+    size_t n = 30;
     lua_getfield(L, 1, "n");
     if (!lua_isnil(L, -1)) {
 	if (lua_isnumber(L, -1)) {
@@ -798,6 +804,18 @@ extern(C) int renderSketch(lua_State* L)
 	}
     }
     lua_pop(L, 1); // dispose of fill item
+    //
+    bool facets = false;
+    lua_getfield(L, 1, "facets");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isboolean(L, -1)) {
+	    facets = to!bool(lua_toboolean(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:render{}. Expected a bool for facets.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of facets item
     //
     bool stroke = true;
     lua_getfield(L, 1, "stroke");
@@ -824,7 +842,8 @@ extern(C) int renderSketch(lua_State* L)
     lua_pop(L, 1); // dispose of dashed item
     //
     if (my_path) { my_sketch.render(my_path, dashed, n); }
-    if (my_surf) { my_sketch.render(my_surf, fill, stroke, dashed, n); }
+    if (my_surf) { my_sketch.render(my_surf, fill, stroke, dashed, n, facets); }
+    if (my_vol) { my_sketch.render(my_vol, fill, stroke, dashed, n, facets); }
     return 0;
 } // end renderSketch()
 
