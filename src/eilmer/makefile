@@ -163,7 +163,7 @@ clean:
 	- rm -r $(BUILD_DIR)/*
 	- rm test-grid.txt.gz test-flow.txt.gz trace.log trace.def
 	- rm -r plot/ flow/ grid/
-	- rm main_with_rev_string.d
+	- rm main_with_rev_string.d steadystate_solver_with_rev_string.d
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 

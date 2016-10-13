@@ -430,20 +430,15 @@ public:
     }
 
     void text(const Vector3 p, string textString,
-	      const Vector3 direction=Vector3(1.0,0.0,0.0), // x-direction
-	      const Vector3 normal=Vector3(0.0,0.0,1.0), // z-direction
+	      const double angle=0.0, // angle (in degrees) of text line wrt x-axis in canvas system
+	      // (counterclockwise is positive)
 	      string anchor="start",
 	      int fontSize=10, string colour="black", string fontFamily="sanserif")
     {
 	Vector3 p_tmp = Vector3(p);
-	Vector3 direction_tmp = Vector3(direction);
-	Vector3 normal_tmp = Vector3(normal);
 	double w_p = 1.0; double w_dir = 1.0; double w_n = 1.0;
 	apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
-	apply_transform("view", direction_tmp, w_dir); apply_transform("projection", direction_tmp, w_dir);
-	apply_transform("view", normal_tmp, w_n); apply_transform("projection", normal_tmp, w_n);
 	double xp = toCanvasX(p_tmp.x); double yp = toCanvasY(p_tmp.y);
-	double angle = atan2(direction_tmp.y, direction_tmp.x)*180.0/PI;
 	switch(renderer_name) {
 	case "svg":
 	    svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
@@ -476,13 +471,15 @@ public:
     // ----------------------------------------------------------------------
     
     void rule(string direction, double vmin, double vmax, double vtic, Vector3 anchorPoint,
-	      double ticMarkSize, string numberFormat, double textOffset, int fontSize)
+	      double ticMarkSize, string numberFormat, double textOffset, double textAngle, int fontSize)
     // direction: one of "x", "y", "z"
     // vmin, vmax, vtic: range and increments for our rule
     // anchorPoint: rule will go through this point (if extended, maybe)
     // ticMarkSize: in world units
     // numberFormat: print specifier string, "%.1f" for example
     // textOffset: world units to anchor point for text labels
+    // textAngle: angle (in degrees) of text line wrt x-axis in canvas system
+    //            (counterclockwise is positive)
     // fontSize: in points
     {
 	Vector3 p0 = Vector3(anchorPoint);
@@ -494,32 +491,24 @@ public:
 	    writeln("You have asked for a lot of tic marks: ", n);
 	}
 	Vector3 dpText = Vector3(0.0,0.0,0.0);
-	Vector3 textDirection;
-	Vector3 textNormal;
 	string textAnchor;
 	switch(direction) {
 	case "x":
 	    p0.refx = vmin; p1.refx = vmax; dp.refx = vtic;
 	    dpTic.refy = -ticMarkSize; // tic marks go in -y direction
 	    dpText.refy = -textOffset;
-	    textDirection = Vector3(1.0,0.0,0.0); // text horizontal
-	    textNormal = Vector3(0.0,0.0,1.0);
 	    textAnchor = "middle";
 	    break;
 	case "y":
 	    p0.refy = vmin; p1.refy = vmax; dp.refy = vtic;
 	    dpTic.refx = -ticMarkSize; // tic marks go in -x direction
 	    dpText.refx = -textOffset;
-	    textDirection = Vector3(1.0,0.0,0.0); // text horizontal
-	    textNormal = Vector3(0.0,0.0,1.0);
 	    textAnchor = "end";
 	    break;
 	case "z":
 	    p0.refz = vmin; p1.refz = vmax; dp.refz = vtic;
 	    dpTic.refx = -ticMarkSize; // tic marks go in -x direction
 	    dpText.refx = -textOffset;
-	    textDirection = Vector3(1.0,0.0,0.0);
-	    textNormal = Vector3(0.0,1.0,0.0);
 	    textAnchor = "end";
 	    break;
 	default:
@@ -539,7 +528,7 @@ public:
 	    Vector3 p3 = p+dpText;
 	    double value = vmin + i*vtic;
 	    string myText = format(numberFormat, value);
-	    text(p3, myText, textDirection, textNormal, textAnchor, fontSize);
+	    text(p3, myText, textAngle, textAnchor, fontSize);
 	}
     } // end rule()
     

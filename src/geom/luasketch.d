@@ -449,31 +449,19 @@ extern(C) int textSketch(lua_State* L)
 	string errMsg = "Error in call to Sketch:text{}. Expected a string for text.";
 	luaL_error(L, errMsg.toStringz());
     }
-    lua_pop(L, 1); // dispose of label item
+    lua_pop(L, 1); // dispose of text item
     //
-    Vector3* direction = new Vector3(1.0,0.0,0.0); // default to x-direction
-    lua_getfield(L, 1, "direction");
+    double angle = 0.0;
+    lua_getfield(L, 1, "angle");
     if (!lua_isnil(L, -1)) {
-	direction = checkVector3(L, -1);
-	if (direction is null) {
-	    string errMsg = "Error in call to Sketch:text{}. " ~
-		"A Vector3 object is expected as the direction argument. No valid Vector3 was found.";
+	if (lua_isnumber(L, -1)) {
+	    angle = to!double(lua_tonumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:text{}. Expected a number for angle.";
 	    luaL_error(L, errMsg.toStringz());
 	}
     }
-    lua_pop(L, 1); // dispose of direction item
-    //
-    Vector3* normal = new Vector3(0.0,0.0,1.0); // default to z-direction
-    lua_getfield(L, 1, "normal");
-    if (!lua_isnil(L, -1)) {
-	normal = checkVector3(L, -1);
-	if (normal is null) {
-	    string errMsg = "Error in call to Sketch:text{}. " ~
-		"A Vector3 object is expected as the normal argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-    }
-    lua_pop(L, 1); // dispose of normal item
+    lua_pop(L, 1); // dispose of angle item
     //
     string anchor = "middle";
     lua_getfield(L, 1, "anchor");
@@ -523,7 +511,7 @@ extern(C) int textSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of font_family item
     //
-    my_sketch.text(*point, text, *direction, *normal, anchor, fontSize, colour, fontFamily);
+    my_sketch.text(*point, text, angle, anchor, fontSize, colour, fontFamily);
     return 0;
 } // end textSketch()
 
@@ -716,7 +704,7 @@ extern(C) int ruleSketch(lua_State* L)
 	if (lua_isstring(L, -1)) {
 	    numberFormat = to!string(lua_tostring(L, -1));
 	} else {
-	    string errMsg = "Error in call to Sketch:text{}. Expected a string for number_format.";
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a string for number_format.";
 	    luaL_error(L, errMsg.toStringz());
 	}
     }
@@ -734,20 +722,32 @@ extern(C) int ruleSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of text_offset item
     //
+    double textAngle = 0.0;
+    lua_getfield(L, 1, "text_angle");
+    if (!lua_isnil(L, -1)) {
+	if (lua_isnumber(L, -1)) {
+	    textAngle = to!double(lua_tonumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a number for text_angle.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+    }
+    lua_pop(L, 1); // dispose of text_angle item
+    //
     int fontSize = 10;
     lua_getfield(L, 1, "font_size");
     if (!lua_isnil(L, -1)) {
 	if (lua_isnumber(L, -1)) {
 	    fontSize = to!int(lua_tointeger(L, -1));
 	} else {
-	    string errMsg = "Error in call to Sketch:text{}. Expected a number for font_size.";
+	    string errMsg = "Error in call to Sketch:rule{}. Expected a number for font_size.";
 	    luaL_error(L, errMsg.toStringz());
 	}
     }
     lua_pop(L, 1); // dispose of font_size item
     //
     my_sketch.rule(direction, vmin, vmax, vtic, *anchorPoint,
-		   ticMarkSize, numberFormat, textOffset, fontSize);
+		   ticMarkSize, numberFormat, textOffset, textAngle, fontSize);
     return 0;
 } // end ruleSketch()
 
