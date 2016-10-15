@@ -114,10 +114,11 @@ struct SteadyStateSolverOptions {
     double eta = 0.01;
     double sigma = 1.0e-8;
     double tau = 0.1;
-    int noLowOrderIterations = 20;
-    int noOuterIterations = 100;
+    int nPreIterations = 10;
+    int nLowOrderIterations = 20;
+    int nOuterIterations = 100;
     int maxInnerIterations = 20;
-    int maxNoAttempts = 3;
+    int maxNumberAttempts = 3;
     int snapshotsFrequency = 10;
     int snapshotsCount = 1;
     
@@ -947,14 +948,16 @@ void read_control_file()
     GlobalConfig.sssOptions.eta = getJSONdouble(sssOptions, "eta", GlobalConfig.sssOptions.eta);
     GlobalConfig.sssOptions.sigma = getJSONdouble(sssOptions, "sigma", GlobalConfig.sssOptions.sigma);
     GlobalConfig.sssOptions.tau = getJSONdouble(sssOptions, "tau", GlobalConfig.sssOptions.tau);
-    GlobalConfig.sssOptions.noLowOrderIterations = 
-	getJSONint(sssOptions, "no_low_order_iterations", GlobalConfig.sssOptions.noLowOrderIterations);
-    GlobalConfig.sssOptions.noOuterIterations = 
-	getJSONint(sssOptions, "no_outer_iterations", GlobalConfig.sssOptions.noOuterIterations);
+    GlobalConfig.sssOptions.nPreIterations = 
+	getJSONint(sssOptions, "number_pre_iterations", GlobalConfig.sssOptions.nPreIterations);
+    GlobalConfig.sssOptions.nLowOrderIterations = 
+	getJSONint(sssOptions, "number_low_order_iterations", GlobalConfig.sssOptions.nLowOrderIterations);
+    GlobalConfig.sssOptions.nOuterIterations = 
+	getJSONint(sssOptions, "number_outer_iterations", GlobalConfig.sssOptions.nOuterIterations);
     GlobalConfig.sssOptions.maxInnerIterations = 
 	getJSONint(sssOptions, "max_inner_iterations", GlobalConfig.sssOptions.maxInnerIterations);
-    GlobalConfig.sssOptions.maxNoAttempts = 
-	getJSONint(sssOptions, "max_no_attempts", GlobalConfig.sssOptions.maxNoAttempts);
+    GlobalConfig.sssOptions.maxNumberAttempts = 
+	getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
     GlobalConfig.sssOptions.snapshotsFrequency = 
 	getJSONint(sssOptions, "snapshots_frequency", GlobalConfig.sssOptions.snapshotsFrequency);
     GlobalConfig.sssOptions.snapshotsCount = 

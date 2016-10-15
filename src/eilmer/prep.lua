@@ -29,10 +29,11 @@ sssOptionsHidden = { -- hidden from user
    eta = 0.01,
    sigma = 1.0e-8,
    tau = 0.1,
-   no_low_order_iterations = 20,
-   no_outer_iterations = 100,
+   number_pre_iterations = 10,
+   number_low_order_iterations = 20,
+   number_outer_iterations = 100,
    max_inner_iterations = 20,
-   max_no_attempts = 3,
+   max_number_attempts = 3,
    snapshots_frequency = 10,
    snapshots_count = 1,
    __index = function (t, k) 
@@ -948,10 +949,11 @@ function write_control_file(fileName)
    f:write(string.format('   "eta": %.18e,\n', SteadyStateSolver.eta))
    f:write(string.format('   "sigma": %.18e,\n', SteadyStateSolver.sigma))
    f:write(string.format('   "tau": %.18e,\n', SteadyStateSolver.tau))
-   f:write(string.format('   "no_low_order_iterations": %d,\n', SteadyStateSolver.no_low_order_iterations))
-   f:write(string.format('   "no_outer_iterations": %d,\n', SteadyStateSolver.no_outer_iterations))
+   f:write(string.format('   "number_pre_iterations": %d,\n', SteadyStateSolver.number_pre_iterations))
+   f:write(string.format('   "number_low_order_iterations": %d,\n', SteadyStateSolver.number_low_order_iterations))
+   f:write(string.format('   "number_outer_iterations": %d,\n', SteadyStateSolver.number_outer_iterations))
    f:write(string.format('   "max_inner_iterations": %d,\n', SteadyStateSolver.max_inner_iterations))
-   f:write(string.format('   "max_no_attempts": %d,\n', SteadyStateSolver.max_no_attempts))
+   f:write(string.format('   "max_number_attempts": %d,\n', SteadyStateSolver.max_number_attempts))
    f:write(string.format('   "snapshots_frequency": %d,\n', SteadyStateSolver.snapshots_frequency))
    f:write(string.format('   "snapshots_count": %d\n', SteadyStateSolver.snapshots_count))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)

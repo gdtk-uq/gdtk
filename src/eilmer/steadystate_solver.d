@@ -125,10 +125,10 @@ void main(string[] args)
 	writeln("Steady-state solver not implemented for 3D calculations.");
 	goodToProceed = false;
     }
-    if ( GlobalConfig.viscous == true ) {
-	writeln("Steady-state solver not implemented for viscous calculations.");
-	goodToProceed = false;
-    }
+    //if ( GlobalConfig.viscous == true ) {
+    //	writeln("Steady-state solver not implemented for viscous calculations.");
+    //	goodToProceed = false;
+    //    }
     if ( gasBlocks.length > 1 ) {
 	writeln("Steady-state solver not implemented nBlocks > 1.");
 	goodToProceed = false;
@@ -148,10 +148,8 @@ void main(string[] args)
 void integrate_to_steady_state()
 {
     string jobName = GlobalConfig.base_file_name;
-    int nsteps = GlobalConfig.sssOptions.noOuterIterations;
-    writeln("noiters= ", GlobalConfig.sssOptions.noOuterIterations);
-    int maxNoAttempts = GlobalConfig.sssOptions.maxNoAttempts;
-    writeln("max_no_attempts= ", maxNoAttempts);
+    int nsteps = GlobalConfig.sssOptions.nOuterIterations;
+    int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     int nConserved = GlobalConfig.sssOptions.nConserved;
     double cflInit = GlobalConfig.sssOptions.cflInit;
     SBlock sblk = cast(SBlock) gasBlocks[0];
@@ -166,26 +164,97 @@ void integrate_to_steady_state()
     int snapshotsCount = GlobalConfig.sssOptions.snapshotsCount;
     int writtenSnapshotsCount = 0;
 
-    int noLowOrderSteps = GlobalConfig.sssOptions.noLowOrderIterations;
+    int nPreIterations = GlobalConfig.sssOptions.nPreIterations;
+    int nLowOrderSteps = GlobalConfig.sssOptions.nLowOrderIterations;
     double tau = GlobalConfig.sssOptions.tau;
     bool inexactNewtonPhase = false;
 
     double[string][] times;
     times ~= [ "pst":0.0, "dt":dt ];
 
+    // The initial residual is usually a poor choice for basing decisions about how the
+    // residual is dropping, particularly when a constant initial condition is given.
+    // A constant initial condition gives a zero residual everywhere in the interior
+    // of the domain. Therefore, the only residual can come from boundary condition influences.
+    // What we do here is use some early iterations (I've called them "pre"-iterations) to
+    // allow the boundary conditions to exert some influence into the interior.
+    // We'll find the max residual in that start-up process and use that as our initial value
+    // for residual. Our relative residuals will then be based on that.
+    // We can use a fixed timestep (typically small) and low-order reconstruction in this
+    // pre-iteration stage.
+    double normMax = 0.0;
+    ResidValues maxResid, currResid;
+
+
+    writeln("Begin pre-iterations to establish sensible max residual.");
+    foreach ( preStep; -nPreIterations .. 0 ) {
+	sblk.set_interpolation_order(1);
+	foreach (attempt; 0 .. maxNumberAttempts) {
+	    normOld = GMRES_solve(pseudoSimTime, dt);
+	    foreach (blk; gasBlocks) {
+		int cellCount = 0;
+		foreach (cell; blk.cells) {
+		    cell.U[1].copy_values_from(cell.U[0]);
+		    cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+0];
+		    cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+1];
+		    cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+2];
+		    cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+3];
+		    try {
+			cell.decode_conserved(0, 1, 0.0);
+		    }
+		    catch (FlowSolverException e) {
+			writefln("Failed attempt %d: dt= %e", attempt, dt);
+			failedAttempt = true;
+			dt = 0.1*dt;
+			break;
+		    }
+		    cellCount += nConserved;
+		}
+	    }
+
+	    if ( failedAttempt )
+		continue;
+
+	    // If we get here, things are good. Put flow state into U[0]
+	    // ready for next iteration.
+	    foreach (blk; gasBlocks) {
+		foreach (cell; blk.cells) {
+		    swap(cell.U[0], cell.U[1]);
+		}
+	    }
+	    // If we got here, we can break the attempts loop.
+	    break;
+	}
+	if ( failedAttempt ) {
+	    writefln("Pre-step failed: %d", step);
+	    writeln("Bailing out!");
+	    exit(1);
+	}
+	
+	writefln("pre-iteration %d:  dt= %.3e  global-norm= %.12e", preStep, dt, normOld); 
+	if ( normOld > normMax ) {
+	    normMax = normOld;
+	    max_residuals(gasBlocks[0], maxResid);
+	}
+    }
+
+    writeln("Pre-iteration phase complete.");
+    writeln("Maximum resisudals are established as:");
+    writefln("MASS:           %.12e", maxResid.mass);
+    writefln("X-MOMENTUM:     %.12e", maxResid.xMomentum);
+    writefln("Y-MOMENTUM:     %.12e", maxResid.yMomentum);
+    writefln("ENERGY:         %.12e", maxResid.energy);
+
     // Open file for writing residuals
     auto fname = format("%s.residuals.dat", jobName);
     auto fResid = File(fname, "w");
     fResid.write("# iteration   pseudo-time    dt     mass-abs   mass-rel    x-mom-abs  x-mom-rel   y-mom-abs  y-mom-rel   energy-abs  energy-rel\n");
-    ResidValues initResid, currResid;
-    evalRHS(gasBlocks[0], 0.0, 0);
-    max_residuals(gasBlocks[0], initResid);
 
     writeln("nsteps= ", nsteps);
 
     // Begin Newton iterations
     foreach (step; 1 .. nsteps+1) {
-	if ( step <= noLowOrderSteps ) {
+	if ( step <= nLowOrderSteps ) {
 	    sblk.set_interpolation_order(1);
 	}
 	else {
@@ -193,7 +262,7 @@ void integrate_to_steady_state()
 	}
 
 
-	foreach (attempt; 0 .. maxNoAttempts) {
+	foreach (attempt; 0 .. maxNumberAttempts) {
 	    failedAttempt = false;
 	    normNew = GMRES_solve(pseudoSimTime, dt);
 	    foreach (blk; gasBlocks) {
@@ -242,10 +311,10 @@ void integrate_to_steady_state()
 	// Write out residuals
 	max_residuals(gasBlocks[0], currResid);
 	fResid.writef("%8d  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e\n",
-		      step, pseudoSimTime, dt, currResid.mass, currResid.mass/initResid.mass,
-		      currResid.xMomentum, currResid.xMomentum/initResid.xMomentum,
-		      currResid.yMomentum, currResid.yMomentum/initResid.yMomentum,
-		      currResid.energy, currResid.energy/initResid.energy);
+		      step, pseudoSimTime, dt, currResid.mass, currResid.mass/maxResid.mass,
+		      currResid.xMomentum, currResid.xMomentum/maxResid.xMomentum,
+		      currResid.yMomentum, currResid.yMomentum/maxResid.yMomentum,
+		      currResid.energy, currResid.energy/maxResid.energy);
 
 	if ( (step % GlobalConfig.print_count) == 0 ) {
 	    auto writer = appender!string();
@@ -254,10 +323,10 @@ void integrate_to_steady_state()
 	    formattedWrite(writer, "absolute   %10.6e %10.6e %10.6e %10.6e\n",
 			   currResid.mass, currResid.xMomentum, currResid.yMomentum, currResid.energy);
 	    formattedWrite(writer, "relative   %10.6e %10.6e %10.6e %10.6e\n",
-			   currResid.mass/initResid.mass,
-			   currResid.xMomentum/initResid.xMomentum,
-			   currResid.yMomentum/initResid.yMomentum,
-			   currResid.energy/initResid.energy);
+			   currResid.mass/maxResid.mass,
+			   currResid.xMomentum/maxResid.xMomentum,
+			   currResid.yMomentum/maxResid.yMomentum,
+			   currResid.energy/maxResid.energy);
 	    writeln(writer.data);
 	}
 
@@ -297,7 +366,7 @@ void integrate_to_steady_state()
 	    }
 	}
 
-	if ( !inexactNewtonPhase && currResid.mass/initResid.mass < tau ) {
+	if ( !inexactNewtonPhase && currResid.mass/maxResid.mass < tau ) {
 	    // Switch to inexactNewtonPhase
 	    inexactNewtonPhase = true;
 	}
@@ -344,6 +413,13 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
     blk.convective_flux_phase0();
     blk.convective_flux_phase1();
     blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);
+    if (GlobalConfig.viscous) {
+	blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
+	blk.flow_property_derivatives(0); 
+	blk.estimate_turbulence_viscosity();
+	blk.viscous_flux();
+	blk.applyPostDiffFluxAction(pseudoSimTime, 0, ftl);
+    }
 
     foreach (cell; blk.cells) {
 	cell.add_inviscid_source_vector(0, 0.0);
