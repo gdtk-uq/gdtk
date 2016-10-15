@@ -99,8 +99,9 @@ SteadyStateSolver{
    eta = 0.01,
    sigma = 1.0e-8,
    tau = 0.1,
-   no_low_order_iterations = 5,
-   no_outer_iterations = 40,
+   number_pre_iterations = 3,
+   number_low_order_iterations = 5,
+   number_outer_iterations = 40,
    max_inner_iterations = 30,
    snapshots_frequency = 1,
    snapshots_count = 40
