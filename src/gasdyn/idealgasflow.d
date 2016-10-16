@@ -32,12 +32,14 @@
  * 09-Sep-2015: Merge with the cfpylib/gasdyn/ideal_gas_flow.py module.
  */
 
-module gasdynamic;
+module idealgasflow;
+
 import std.conv;
 import std.math;
 import std.string;
-import ridder;
-import linesearch;
+import nm.bracketing;
+import nm.ridder;
+import nm.linesearch;
 
 /// Isentropic flow
 

@@ -39,6 +39,7 @@ import luasketch;
 import luasolidprops;
 import postprocess;
 import luaflowsolution;
+import luaidealgasflow;
 
 void moveFileToBackup(string fileName)
 {
@@ -184,6 +185,7 @@ void main(string[] args)
 	registerSketch(L);
 	registerSolidProps(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
+	registeridealgasflowFunctions(L);
 	// Before processing the Lua input files, move old .config and .control files.
 	// This should prevent a subsequent run of the simulation on old config files
 	// in the case that the processing of the input script fails.
@@ -309,6 +311,7 @@ void main(string[] args)
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	registerReactionMechanism(L, LUA_GLOBALSINDEX);
 	registerChemistryUpdate(L, LUA_GLOBALSINDEX);
+	registeridealgasflowFunctions(L);
 	if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
 	    writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
 	    string errMsg = to!string(lua_tostring(L, -1));
