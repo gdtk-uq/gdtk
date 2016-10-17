@@ -6,6 +6,10 @@
  *
  * Note: This is the first attempt at 'production' code.
  * Some test implementations began on 2016-03-29.
+ *
+ * History:
+ *   2016-10-17 : Implement right-preconditioned GMRES and
+ *                add a preconditioner.
  */
 
 import core.stdc.stdlib : exit;
@@ -140,15 +144,16 @@ void main(string[] args)
 	exit(1);
     }
 
-    integrate_to_steady_state();
+    iterate_to_steady_state();
     writeln("Done simulation.");
 }
 
 
-void integrate_to_steady_state()
+void iterate_to_steady_state()
 {
     string jobName = GlobalConfig.base_file_name;
     int nsteps = GlobalConfig.sssOptions.nOuterIterations;
+    int nInnerIterations;
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     int nConserved = GlobalConfig.sssOptions.nConserved;
     double cflInit = GlobalConfig.sssOptions.cflInit;
@@ -190,7 +195,7 @@ void integrate_to_steady_state()
     foreach ( preStep; -nPreIterations .. 0 ) {
 	sblk.set_interpolation_order(1);
 	foreach (attempt; 0 .. maxNumberAttempts) {
-	    normOld = GMRES_solve(pseudoSimTime, dt);
+	    GMRES_solve(pseudoSimTime, dt, normOld, nInnerIterations);
 	    foreach (blk; gasBlocks) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
@@ -264,7 +269,7 @@ void integrate_to_steady_state()
 
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    failedAttempt = false;
-	    normNew = GMRES_solve(pseudoSimTime, dt);
+	    GMRES_solve(pseudoSimTime, dt, normNew, nInnerIterations);
 	    foreach (blk; gasBlocks) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
@@ -310,8 +315,9 @@ void integrate_to_steady_state()
 	// Now do some output and diagnostics work
 	// Write out residuals
 	max_residuals(gasBlocks[0], currResid);
-	fResid.writef("%8d  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e\n",
-		      step, pseudoSimTime, dt, currResid.mass, currResid.mass/maxResid.mass,
+	fResid.writef("%8d  %20.16e  %20.16e  %3d %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e\n",
+		      step, pseudoSimTime, dt, nInnerIterations, 
+		      currResid.mass, currResid.mass/maxResid.mass,
 		      currResid.xMomentum, currResid.xMomentum/maxResid.xMomentum,
 		      currResid.yMomentum, currResid.yMomentum/maxResid.yMomentum,
 		      currResid.energy, currResid.energy/maxResid.energy);
@@ -459,7 +465,7 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double maxMass, double
     }
 }
 
-double GMRES_solve(double pseudoSimTime, double dt)
+void GMRES_solve(double pseudoSimTime, double dt, ref double residual, ref int nInnerIterations)
 {
     double resid;
     int nConserved = GlobalConfig.sssOptions.nConserved;
@@ -619,7 +625,8 @@ double GMRES_solve(double pseudoSimTime, double dt)
 	cellCount += nConserved;
     }
 
-    return unscaledNorm2;
+    residual = unscaledNorm2;
+    nInnerIterations = to!int(m);
 }
 
 struct ResidValues {
