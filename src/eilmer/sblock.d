@@ -357,10 +357,12 @@ public:
 	    for ( size_t j = jmin-1; j <= jmax+1; ++j ) {
 		for ( size_t i = imin-1; i <= imax+1; ++i ) {
 		    FVCell cell = get_cell(i,j,k);
+		    cell.iface.length = 0; cell.outsign.length = 0;
 		    cell.iface ~= get_ifj(i,j+1,k); cell.outsign ~= 1.0; // north
 		    cell.iface ~= get_ifi(i+1,j,k); cell.outsign ~= 1.0; // east
 		    cell.iface ~= get_ifj(i,j,k); cell.outsign ~= -1.0; // south
 		    cell.iface ~= get_ifi(i,j,k); cell.outsign ~= -1.0; // west
+		    cell.vtx.length = 0;
 		    cell.vtx ~= get_vtx(i,j,k);
 		    cell.vtx ~= get_vtx(i+1,j,k);
 		    cell.vtx ~= get_vtx(i+1,j+1,k);
@@ -382,7 +384,7 @@ public:
 	// the cells that adjoin it.
 	//
 	// ifi interfaces are East-facing interfaces.
-	// In 2D, vtx0==p11, vtx1==p10.
+	// In 2D, vtx0==p10, vtx1==p11.
 	// In 3D, the cycle [vtx0,vtx1,vtx2,vtx3] progresses counter-clockwise around 
 	// the periphery of the face when the normal unit vector is pointing toward you.
 	// t1 vector aligned with j-index direction
@@ -392,6 +394,7 @@ public:
 	    for ( size_t j = jmin; j <= jmax; ++j ) {
 		for ( size_t i = imin-1; i <= imax; ++i ) {
 		    auto IFace = get_ifi(i+1,j,k);
+		    IFace.vtx.length = 0;
 		    if (myConfig.dimensions == 3) {
 			IFace.vtx ~= get_vtx(i+1,j,k);
 			IFace.vtx ~= get_vtx(i+1,j+1,k);
@@ -400,8 +403,8 @@ public:
 			IFace.left_cell = get_cell(i,j,k);
 			IFace.right_cell = get_cell(i+1,j,k);
 		    } else {
-			IFace.vtx ~= get_vtx(i+1,j+1);
 			IFace.vtx ~= get_vtx(i+1,j);
+			IFace.vtx ~= get_vtx(i+1,j+1);
 			IFace.left_cell = get_cell(i,j);
 			IFace.right_cell = get_cell(i+1,j);
 		    }
@@ -417,13 +420,14 @@ public:
 	    } // j loop
 	} // for k
 	// ifj interfaces are North-facing interfaces.
-	// In 2D, vtx0==p01, vtx1==p11.
+	// In 2D, vtx0==p11, vtx1==p01.
 	// t1 vector aligned with k-index direction
 	// t2 vector aligned with i-index direction
 	for ( size_t k = kmin; k <= kmax; ++k ) {
 	    for ( size_t i = imin; i <= imax; ++i ) {
 		for ( size_t j = jmin-1; j <= jmax; ++j ) {
 		    auto IFace = get_ifj(i,j+1,k);
+		    IFace.vtx.length = 0;
 		    if (myConfig.dimensions == 3) {
 			IFace.vtx ~= get_vtx(i,j+1,k);
 			IFace.vtx ~= get_vtx(i,j+1,k+1);
@@ -432,8 +436,8 @@ public:
 			IFace.left_cell = get_cell(i,j,k);
 			IFace.right_cell = get_cell(i,j+1,k);
 		    } else {
-			IFace.vtx ~= get_vtx(i,j+1);
 			IFace.vtx ~= get_vtx(i+1,j+1);
+			IFace.vtx ~= get_vtx(i,j+1);
 			IFace.left_cell = get_cell(i,j);
 			IFace.right_cell = get_cell(i,j+1);
 		    }
@@ -456,6 +460,7 @@ public:
 	    for ( size_t j = jmin; j <= jmax; ++j ) {
 		for ( size_t k = kmin-1; k <= kmax; ++k ) {
 		    auto IFace = get_ifk(i,j,k+1);
+		    IFace.vtx.length = 0;
 		    IFace.vtx ~= get_vtx(i,j,k+1);
 		    IFace.vtx ~= get_vtx(i+1,j,k+1);
 		    IFace.vtx ~= get_vtx(i+1,j+1,k+1);
