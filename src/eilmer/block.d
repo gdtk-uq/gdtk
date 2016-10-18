@@ -254,12 +254,18 @@ public:
 	}
     } // end detect_shock_points()
 
-    int count_invalid_cells(int gtl)
+    int count_invalid_cells(int gtl, int ftl)
     // Returns the number of cells that contain invalid data,
     // optionally patching bad cell data as it goes.
     //
-    // This data can be identified by the density of internal energy 
+    // Since this function may be called at the end of each stage of the gasdynamic update,
+    // we must patch the conserved quantities at the appropriate flow-level, as well as
+    // patching the flow data.
+    //
+    // Bad flow data can be identified by the density of internal energy 
     // being on the minimum limit or the velocity being very large.
+    // There is also a flag to indicate that the thermo data is dodgy from an earlier
+    // call to one of the thermochemical update functions.
     {
 	int number_of_invalid_cells = 0;
 	foreach(cell; cells) {
@@ -267,7 +273,7 @@ public:
 		cell.fs.check_data(cell.pos[0], myConfig.flowstate_limits) == false) {
 		++number_of_invalid_cells;
 		writefln("count_invalid_cells: block_id=%d, cell_id=%d at pos %s\n",
-			 id, cell.id, to!string(cell.pos[0]));
+			 id, cell.id, to!string(cell.pos[gtl]));
 		writeln(cell);
 		if ( myConfig.adjust_invalid_cell_data ) {
 		    // We shall set the cell data to something that
@@ -277,7 +283,7 @@ public:
 		    foreach (i; 0 .. cell.iface.length) {
 			auto face = cell.iface[i];
 			auto other_cell = (cell.outsign[i] == 1) ? face.right_cell : face.left_cell;
-			if (other_cell.fs.check_data(other_cell.pos[0], myConfig.flowstate_limits))
+			if (other_cell.fs.check_data(other_cell.pos[gtl], myConfig.flowstate_limits))
 			    { neighbour_flows ~= other_cell.fs; }
 		    }
 		    if (neighbour_flows.length == 0) {
@@ -287,11 +293,12 @@ public:
 			throw new FlowSolverException(msg);
 		    }
 		    cell.fs.copy_average_values_from(neighbour_flows, myConfig.gmodel);
-		    cell.thermo_data_is_known_bad = false; // we assume at this point.
-		    cell.encode_conserved(gtl, 0, omegaz);
-		    cell.decode_conserved(gtl, 0, omegaz);
-		    writefln("after flow-data replacement: block_id = %d, cell @ %.18e,%.18e,%.18e\n",
-			     id, cell.pos[0].x, cell.pos[0].y, cell.pos[0].z);
+		    scale_mass_fractions(cell.fs.gas.massf, 0.0, 0.9); // big assertion-error-tolerance
+		    cell.thermo_data_is_known_bad = false; // assume that we've fixed it at this point.
+		    cell.encode_conserved(gtl, ftl, omegaz);
+		    cell.decode_conserved(gtl, ftl, omegaz);
+		    writefln("after flow-data replacement: block_id = %d, cell pos %.18e,%.18e,%.18e\n",
+			     id, cell.pos[gtl].x, cell.pos[gtl].y, cell.pos[gtl].z);
 		    writeln(cell);
 		    if (cell.thermo_data_is_known_bad) {
 			string msg = text("Block::count_invalid_cells(): " ~

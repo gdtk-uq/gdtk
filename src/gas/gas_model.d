@@ -368,12 +368,14 @@ public:
 } // end class GasState
 
 
-@nogc void scale_mass_fractions(ref double[] massf, double tolerance=0.0)
+@nogc void scale_mass_fractions(ref double[] massf, double tolerance=0.0,
+				double assert_error_tolerance=0.1)
 {
     auto my_nsp = massf.length;
     if (my_nsp == 1) {
 	// Single species, always expect massf[0]==1.0, so we can take a short-cut.
-	assert(fabs(massf[0] - 1.0) < 0.1, "Single species mass fraction far from 1.0");
+	assert(fabs(massf[0] - 1.0) < assert_error_tolerance,
+	       "Single species mass fraction far from 1.0");
 	massf[0] = 1.0;
     } else {
 	// Multiple species, do the full job.
@@ -382,7 +384,8 @@ public:
 	    massf[isp] = massf[isp] >= 0.0 ? massf[isp] : 0.0;
 	    massf_sum += massf[isp];
 	}
-	assert(fabs(massf_sum - 1.0) < 0.1, "Sum of species mass fractions far from 1.0");
+	assert(fabs(massf_sum - 1.0) < assert_error_tolerance,
+	       "Sum of species mass fractions far from 1.0");
 	if ( fabs(massf_sum - 1.0) > tolerance ) {
 	    foreach(isp; 0 .. my_nsp) massf[isp] /= massf_sum;
 	}

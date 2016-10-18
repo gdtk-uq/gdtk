@@ -659,7 +659,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 						       local_with_k_omega);
 	    cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	} // end foreach cell
-	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
     } // end foreach blk
     foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
 	if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
@@ -798,7 +798,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		cell.stage_2_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
-	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
 	} // end foreach blk
 	foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
 	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
@@ -936,7 +936,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		cell.stage_3_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
-	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
 	} // end foreach blk
 	foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
 	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
@@ -1115,7 +1115,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    cell.stage_1_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
 	    cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	} // end foreach cell
-	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
     } // end foreach blk
     foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
 	if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
@@ -1245,7 +1245,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 		cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
-	    local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
+	    local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
 	} // end foreach blk
 	foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
 	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {

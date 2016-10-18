@@ -487,8 +487,16 @@ public:
 	    gmodel.update_sound_speed(fs.gas);
 	    if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
 	} catch (Exception err) {
-	    thermo_data_is_known_bad = true;
-	}
+	    if (myConfig.adjust_invalid_cell_data) {
+		thermo_data_is_known_bad = true;
+	    } else {
+		string msg = format("Thermodynamic update exception with message:\n  %s", err.msg);
+		msg ~= format("The decode_conserved() failed for cell: %d\n", id);
+		msg ~= format("This cell is located at: %s\n", pos[0]);
+		msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+		throw new FlowSolverException(msg);
+	    } // end if
+	} // end catch
 	return;
     } // end decode_conserved()
 
