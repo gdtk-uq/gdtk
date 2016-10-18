@@ -263,7 +263,8 @@ public:
     {
 	int number_of_invalid_cells = 0;
 	foreach(cell; cells) {
-	    if (cell.fs.check_data(cell.pos[0], myConfig.flowstate_limits) == false) {
+	    if (cell.thermo_data_is_known_bad ||
+		cell.fs.check_data(cell.pos[0], myConfig.flowstate_limits) == false) {
 		++number_of_invalid_cells;
 		writefln("count_invalid_cells: block_id=%d, cell_id=%d at pos %s\n",
 			 id, cell.id, to!string(cell.pos[0]));
@@ -286,11 +287,17 @@ public:
 			throw new FlowSolverException(msg);
 		    }
 		    cell.fs.copy_average_values_from(neighbour_flows, myConfig.gmodel);
+		    cell.thermo_data_is_known_bad = false; // we assume at this point.
 		    cell.encode_conserved(gtl, 0, omegaz);
 		    cell.decode_conserved(gtl, 0, omegaz);
 		    writefln("after flow-data replacement: block_id = %d, cell @ %.18e,%.18e,%.18e\n",
 			     id, cell.pos[0].x, cell.pos[0].y, cell.pos[0].z);
 		    writeln(cell);
+		    if (cell.thermo_data_is_known_bad) {
+			string msg = text("Block::count_invalid_cells(): " ~
+					  "Tried to replace flow data in cell but it's still bad.");
+			throw new FlowSolverException(msg);
+		    }
 		} // end adjust_invalid_cell_data 
 	    } // end of if invalid data...
 	} // foreach cell

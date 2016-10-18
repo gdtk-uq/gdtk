@@ -53,6 +53,11 @@ public:
     // cells[0] will have an id value much larger than 0.
     // Also, for the StructuredGrid block, there is a mapping from id 
     // back to the i,j,k indices that is sometimes handy.
+    //
+    bool thermo_data_is_known_bad; // Set to false at the start of an update.
+    // Reset and checked at points through the update so that we don't stagger on
+    // with bad data poisoning the simulation.
+    //
     bool fr_reactions_allowed; // if true, will call chemical_increment (also thermal_increment)
     double dt_chem; // acceptable time step for finite-rate chemistry
     double dt_therm; // acceptable time step for thermal relaxation
@@ -82,7 +87,12 @@ public:
     // should add the cell to the list of points in the cloud about
     // an interface location.
     // [TODO] PJ 2016-04-23, Consider if we should use this flag in
-    // the context of structured grids also. 
+    // the context of structured grids also.
+    // [TODO] PJ 2016-10-18, We should really only have cells where we truly
+    // expect to have gas.  If we eliminate the use of ghost cells for boundaries
+    // where there is no gas on the otherside of the "wall",
+    // this flag might not be needed.
+    // Such a change will need a big rework of boundary condition code.
     bool will_have_valid_flow; 
     FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
@@ -474,17 +484,11 @@ public:
 	// Fill out the other variables: P, T, a, and viscous transport coefficients.
 	try {
 	    gmodel.update_thermo_from_rhoe(fs.gas);
+	    gmodel.update_sound_speed(fs.gas);
+	    if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
+	} catch (Exception err) {
+	    thermo_data_is_known_bad = true;
 	}
-	catch (Exception err) {
-	    string msg = format("caught %s", err.msg);
-	    msg ~= format("The decode_conserved() failed for cell: %d\n", id);
-	    msg ~= format("This cell is located at: %s\n", pos[0]);
-	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
-	    throw new FlowSolverException(msg);
-	}
-	gmodel.update_sound_speed(fs.gas);
-	if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
-	// if (myConfig.diffusion) gmodel.update_diff_coeffs(fs.gas);
 	return;
     } // end decode_conserved()
 

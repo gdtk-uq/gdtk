@@ -350,25 +350,15 @@ void integrate_in_time(double target_time)
 	//     if GridMotion.none then set_grid_velocities to 0 m/s
 	//     else moving grid vertex velocities will be set.
 	set_grid_velocities(sim_time, step, 0, dt_global);
-	// 2b.
-	// explicit or implicit update of the convective terms.
+	//
+	// 2b. Explicit or implicit update of the convective terms.
 	if (GlobalConfig.grid_motion != GridMotion.none) {
 	    //  Moving Grid - perform gas update for moving grid
 	    gasdynamic_explicit_increment_with_moving_grid();
 	} else {
 	    gasdynamic_explicit_increment_with_fixed_grid();
 	}
-	foreach (i, myblk; parallel(gasBlocks,1)) {
-	    local_invalid_cell_count[i] = myblk.count_invalid_cells(0);
-	}
-	foreach (i, myblk; gasBlocks) { // serial loop for possibly throwing exception
-	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
-		throw new FlowSolverException(format("simcore::integrate_in_time(): " ~
-						     "Too many bad cells in block[%d] %d.",
-						     i, local_invalid_cell_count[i]));
-	
-	    }
-	}
+	//
 	// 2c. Moving Grid - Recalculate all geometry, note that in the gas dynamic
 	//     update gtl level 2 is copied to gtl level 0 for the next step thus
 	//     we actually do want to calculate geometry at gtl 0 here.
@@ -576,7 +566,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     foreach (blk; parallel(gasBlocks,1)) {
 	if (blk.active) {
 	    blk.clear_fluxes_of_conserved_quantities();
-	    foreach (cell; blk.cells) cell.clear_source_vector();
+	    foreach (cell; blk.cells) {
+		cell.clear_source_vector();
+		cell.thermo_data_is_known_bad = false;
+	    }
 	}
     }
     // First-stage of gas-dynamic update.
@@ -644,7 +637,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	}
     } // end if viscous
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (i, blk; parallel(gasBlocks,1)) {
 	if (!blk.active) continue;
 	int local_ftl = ftl;
 	int local_gtl = gtl;
@@ -666,7 +659,17 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 						       local_with_k_omega);
 	    cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	} // end foreach cell
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
     } // end foreach blk
+    foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
+	if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+	    string msg = format("Following first-stage gasdynamic update: " ~
+				"%d bad cells in block[%d].",
+				local_invalid_cell_count[i], i);
+	    throw new FlowSolverException(msg);
+	}
+    }
+    //
     // Next do solid domain update IMMEDIATELY after at same flow time level
     foreach (sblk; parallel(solidBlocks, 1)) {
 	if (!sblk.active) continue;
@@ -775,7 +778,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		}
 	    }
 	} // end if viscous
-	foreach (blk; parallel(gasBlocks,1)) {
+	foreach (i, blk; parallel(gasBlocks,1)) {
 	    if (!blk.active) continue;
 	    int local_ftl = ftl;
 	    int local_gtl = gtl;
@@ -795,7 +798,16 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		cell.stage_2_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
 	} // end foreach blk
+	foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
+	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+		string msg = format("Following second-stage gasdynamic update: " ~
+				    "%d bad cells in block[%d].",
+				    local_invalid_cell_count[i], i);
+		throw new FlowSolverException(msg);
+	    }
+	}
 	// Do solid domain update IMMEDIATELY after at same flow time level
 	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (!sblk.active) continue;
@@ -904,7 +916,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		}
 	    }
 	} // end if viscous
-	foreach (blk; parallel(gasBlocks,1)) {
+	foreach (i, blk; parallel(gasBlocks,1)) {
 	    if (!blk.active) continue;
 	    int local_ftl = ftl;
 	    int local_gtl = gtl;
@@ -924,7 +936,16 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		cell.stage_3_update_for_flow_on_fixed_grid(local_dt_global, local_with_k_omega);
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
 	} // end foreach blk
+	foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
+	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+		string msg = format("Following third-stage gasdynamic update: " ~
+				    "%d bad cells in block[%d].",
+				    local_invalid_cell_count[i], i);
+		throw new FlowSolverException(msg);
+	    }
+	}
 	// Do solid domain update IMMEDIATELY after at same flow time level
 	foreach (sblk; parallel(solidBlocks, 1)) {
 	    if (!sblk.active) continue;
@@ -988,7 +1009,10 @@ void gasdynamic_explicit_increment_with_moving_grid()
     foreach (blk; parallel(gasBlocks,1)) {
 	if (blk.active) {
 	    blk.clear_fluxes_of_conserved_quantities();
-	    foreach (cell; blk.cells) { cell.clear_source_vector(); }
+	    foreach (cell; blk.cells) {
+		cell.clear_source_vector();
+		cell.thermo_data_is_known_bad = false;
+	    }
 	}
     }
     // First-stage of gas-dynamic update.
@@ -1070,7 +1094,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    }
 	}
     } // end if viscous
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (i, blk; parallel(gasBlocks,1)) {
 	if (!blk.active) continue;
 	int local_ftl = ftl;
 	int local_gtl = gtl;
@@ -1091,7 +1115,16 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    cell.stage_1_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
 	    cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	} // end foreach cell
+	local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
     } // end foreach blk
+    foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
+	if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+	    string msg = format("Following first-stage gasdynamic update: " ~
+				"%d bad cells in block[%d].",
+				local_invalid_cell_count[i], i);
+	    throw new FlowSolverException(msg);
+	}
+    }
     // Next do solid domain update IMMEDIATELY after at same flow time level
     foreach (sblk; solidBlocks) {
 	if (!sblk.active) continue;
@@ -1192,7 +1225,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 		}
 	    }
 	} // end if viscous
-	foreach (blk; parallel(gasBlocks,1)) {
+	foreach (i, blk; parallel(gasBlocks,1)) {
 	    if (!blk.active) continue;
 	    int local_ftl = ftl;
 	    int local_gtl = gtl;
@@ -1212,7 +1245,16 @@ void gasdynamic_explicit_increment_with_moving_grid()
 		cell.stage_2_update_for_flow_on_moving_grid(local_dt_global, local_with_k_omega);
 		cell.decode_conserved(local_gtl, local_ftl+1, blk.omegaz);
 	    } // end foreach cell
+	    local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl);
 	} // end foreach blk
+	foreach (i, blk; gasBlocks) { // serial loop for possibly throwing exception
+	    if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
+		string msg = format("Following first-stage gasdynamic update: " ~
+				    "%d bad cells in block[%d].",
+				    local_invalid_cell_count[i], i);
+		throw new FlowSolverException(msg);
+	    }
+	}
 	// Do solid domain update IMMEDIATELY after at same flow time level
 	foreach (sblk; solidBlocks) {
 	    if (!sblk.active) continue;
