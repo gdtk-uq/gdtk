@@ -988,6 +988,7 @@ function write_config_file(fileName)
    f:write(string.format('"flowstate_limits_min_temp": %.18e,\n', config.flowstate_limits_min_temp))
    f:write(string.format('"max_invalid_cells": %d,\n', config.max_invalid_cells))
    f:write(string.format('"adjust_invalid_cell_data": %s,\n', tostring(config.adjust_invalid_cell_data)))
+   f:write(string.format('"report_invalid_cells": %s,\n', tostring(config.report_invalid_cells)))
    f:write(string.format('"thermo_interpolator": "%s",\n', 
 			 string.lower(config.thermo_interpolator)))
    f:write(string.format('"interpolate_in_local_frame": %s,\n', 

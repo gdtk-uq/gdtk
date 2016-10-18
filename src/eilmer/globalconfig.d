@@ -179,11 +179,12 @@ final class GlobalConfig {
     
     /// When decoding the array of conserved quantities, 
     /// the temperature or the density may try to go negative.  
-    /// If it does and adjust_invalid_cell_data == true, the cell data
-    /// is adjusted to make it reasonable.
+    /// If it does and adjust_invalid_cell_data == true,
+    /// the cell data are adjusted to make them reasonable.
     shared static bool adjust_invalid_cell_data = false;
-    // The maximum number of bad cells (per block) 
-    // which will be tolerated without complaint.
+    shared static bool report_invalid_cells = true;
+    // The maximum number of bad cells (per block) that will be tolerated
+    // without throwing an exception.
     shared static int max_invalid_cells = 0;
     shared static FlowStateLimits flowstate_limits;
 
@@ -401,6 +402,7 @@ public:
     double shock_fitting_scale_factor;
 
     bool adjust_invalid_cell_data;
+    bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
     int interpolation_order;
     InterpolateOption thermo_interpolator;
@@ -479,6 +481,7 @@ public:
 	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
 
 	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
+	report_invalid_cells = GlobalConfig.report_invalid_cells;
 	flowstate_limits = GlobalConfig.flowstate_limits;
 	interpolation_order = GlobalConfig.interpolation_order;
 	thermo_interpolator = GlobalConfig.thermo_interpolator;
@@ -659,6 +662,7 @@ void read_config_file()
     mixin(update_double("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
     mixin(update_double("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
     mixin(update_bool("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
+    mixin(update_bool("report_invalid_cells", "report_invalid_cells"));
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
     mixin(update_int("interpolation_order", "interpolation_order"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
@@ -696,6 +700,7 @@ void read_config_file()
 	writeln("  flowstate_limits_max_temp: ", GlobalConfig.flowstate_limits.max_temp);
 	writeln("  flowstate_limits_min_temp: ", GlobalConfig.flowstate_limits.min_temp);
 	writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
+	writeln("  report_invalid_cells: ", GlobalConfig.report_invalid_cells);
 	writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
 	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
 	writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));

@@ -103,6 +103,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("flowstate_limits_max_temp", "flowstate_limits.max_temp"));
     mixin(get_double_field("flowstate_limits_min_temp", "flowstate_limits.min_temp"));
     mixin(get_bool_field("adjust_invalid_cell_data", "adjust_invalid_cell_data"));
+    mixin(get_bool_field("report_invalid_cells", "report_invalid_cells"));
     mixin(get_int_field("max_invalid_cells", "max_invalid_cells"));
     //
     mixin(get_int_field("interpolation_order", "interpolation_order"));
@@ -220,6 +221,7 @@ extern(C) int configGet(lua_State* L)
     case "flowstate_limits_max_temp": lua_pushnumber(L, GlobalConfig.flowstate_limits.max_temp); break;
     case "flowstate_limits_min_temp": lua_pushnumber(L, GlobalConfig.flowstate_limits.min_temp); break;
     case "adjust_invalid_cell_data": lua_pushboolean(L, GlobalConfig.adjust_invalid_cell_data); break;
+    case "report_invalid_cells": lua_pushboolean(L, GlobalConfig.report_invalid_cells); break;
     case "max_invalid_cells": lua_pushnumber(L, GlobalConfig.max_invalid_cells); break;
 	//
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;
