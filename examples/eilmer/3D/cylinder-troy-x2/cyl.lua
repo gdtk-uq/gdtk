@@ -145,13 +145,14 @@ identifyBlockConnections()
 config.flux_calculator = "adaptive"
 config.thermo_interpolator = "pT"
 config.adjust_invalid_cell_data = true
+config.report_invalid_cells = false
 config.max_invalid_cells = 10
-config.cfl_count = 3
+-- config.cfl_count = 3
 config.gasdynamic_update_scheme="euler"
 my_max_time = Rc/V_inf * 30
 print("max_time=", my_max_time)
 config.max_time = my_max_time
 config.max_step = 40000
 config.dt_init = 1.0e-10
-config.cfl_value = 0.4 
+config.cfl_value = 0.5
 config.dt_plot = my_max_time/10

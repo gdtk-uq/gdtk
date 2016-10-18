@@ -11,6 +11,12 @@
 --   24-Mar-2009 - reduced file to minimum input
 --   11-Aug-2015 - updated for dlang module
 
+--[[
+Config{
+   tightTempCoupling = true
+}
+--]]
+
 Reaction{
    'N2 + N2 <=> N + N + N2',
    fr={'Arrhenius', A=7.0e21,  n=-1.6, C=113200.0},
