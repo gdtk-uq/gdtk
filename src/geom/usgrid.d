@@ -258,6 +258,8 @@ public:
     size_t[string] faceIndices;
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
+    // The following array can be used to get a list of faces attached to a vertex.
+    size_t[][] faceIndexListPerVertex;
 
     //Paved Grid Constructor by Heather Muir, 2016.
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
@@ -292,7 +294,8 @@ public:
 		USGCell_type cell_type = cell_type_from_name(c.cell_type);
 		this.cells ~= new USGCell(cell_type, c.point_IDs, c.face_IDs, c.outsigns);
 	    }
-	}	
+	}
+	assembleFaceIndexListPerVertex();
     }//end paved grid constructor
 
     this(const UnstructuredGrid other, const string new_label="")
@@ -310,6 +313,7 @@ public:
 	}
 	foreach(c; other.cells) { cells ~= new USGCell(c); }
 	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
+	assembleFaceIndexListPerVertex();
     }
 
     this(const StructuredGrid sg, const string new_label="")
@@ -554,6 +558,7 @@ public:
 	assert(nvertices == vertices.length, "mismatch in number of vertices");
 	assert(nfaces == faces.length, "mismatch in number of faces");
 	assert(ncells == cells.length, "mismatch in number of cells");
+	assembleFaceIndexListPerVertex();
     } // end constructor from StructuredGrid object
 
     // Imported grid.
@@ -569,6 +574,7 @@ public:
 	default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
 	}
 	if (new_label != "") { label = new_label; }
+	assembleFaceIndexListPerVertex();
     }
 
     UnstructuredGrid dup() const
@@ -576,6 +582,22 @@ public:
 	return new UnstructuredGrid(this);
     }
 
+    // ---------------------------------
+    // Helper functions for constructors.
+    // ---------------------------------
+    
+    void assembleFaceIndexListPerVertex()
+    // Work through the collection of faces and record, for each vertex,
+    // that this face is attached to the vertex.
+    {
+	assert(nvertices == vertices.length, "Inconsistent record of vertices.");
+	faceIndexListPerVertex.length = vertices.length;
+	foreach (i, f; faces) {
+	    foreach (vtxid; f.vtx_id_list) { faceIndexListPerVertex[vtxid] ~= i; }
+	}
+    }
+
+    
     // -----------------------------
     // Indexing and location methods.
     // -----------------------------
