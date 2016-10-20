@@ -76,7 +76,8 @@ public:
     // Work-space for steady-state solver
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
-    double[] FU, dU, r0, v, w, g0, g1, h, hR;
+    double[] FU, dU, S, r0, v, w;
+    double[] g0, g1, h, hR;
     Matrix V, W, H0, H1, Gamma, Q0, Q1;
     }
 
@@ -574,6 +575,7 @@ public:
 	// Now allocate arrays and matrices
 	FU.length = n;
 	dU.length = n; dU[] = 0.0;
+	S.length = n;
 	r0.length = n;
 	v.length = n;
 	w.length = n;

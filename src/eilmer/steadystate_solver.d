@@ -251,11 +251,9 @@ void iterate_to_steady_state()
     writefln("ENERGY:         %.12e", maxResid.energy);
 
     // Open file for writing residuals
-    auto fname = format("%s.residuals.dat", jobName);
+    auto fname = "e4sss.diagnostics.dat";
     auto fResid = File(fname, "w");
     fResid.write("# iteration   pseudo-time    dt     mass-abs   mass-rel    x-mom-abs  x-mom-rel   y-mom-abs  y-mom-rel   energy-abs  energy-rel\n");
-
-    writeln("nsteps= ", nsteps);
 
     // Begin Newton iterations
     foreach (step; 1 .. nsteps+1) {
@@ -437,7 +435,7 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
     }
 }
 
-void evalJacobianVecProd(Block blk, double pseudoSimTime, double maxMass, double maxMom, double maxEnergy)
+void evalJacobianVecProd(Block blk, double pseudoSimTime)
 {
     double sigma = GlobalConfig.sssOptions.sigma;
     int nConserved = GlobalConfig.sssOptions.nConserved;
@@ -447,20 +445,20 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double maxMass, double
     int cellCount = 0;
     foreach (cell; blk.cells) {
 	cell.U[1].copy_values_from(cell.U[0]);
-	cell.U[1].mass += sigma*maxMass*blk.v[cellCount+0];
-	cell.U[1].momentum.refx += sigma*maxMom*blk.v[cellCount+1];
-	cell.U[1].momentum.refy += sigma*maxMom*blk.v[cellCount+2];
-	cell.U[1].total_energy += sigma*maxEnergy*blk.v[cellCount+3];
+	cell.U[1].mass += sigma*blk.S[cellCount+0]*blk.v[cellCount+0];
+	cell.U[1].momentum.refx += sigma*blk.S[cellCount+1]*blk.v[cellCount+1];
+	cell.U[1].momentum.refy += sigma*blk.S[cellCount+2]*blk.v[cellCount+2];
+	cell.U[1].total_energy += sigma*blk.S[cellCount+3]*blk.v[cellCount+3];
 	cell.decode_conserved(0, 1, 0.0);
 	cellCount += nConserved;
     }
     evalRHS(blk, pseudoSimTime, 1);
     cellCount = 0;
     foreach (cell; blk.cells) {
-	blk.v[cellCount+0] = (cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*maxMass);
-	blk.v[cellCount+1] = (cell.dUdt[1].momentum.x - blk.FU[cellCount+1])/(sigma*maxMom);
-	blk.v[cellCount+2] = (cell.dUdt[1].momentum.y - blk.FU[cellCount+2])/(sigma*maxMom);
-	blk.v[cellCount+3] = (cell.dUdt[1].total_energy - blk.FU[cellCount+3])/(sigma*maxEnergy);
+	blk.v[cellCount+0] = (cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*blk.S[cellCount+0]);
+	blk.v[cellCount+1] = (cell.dUdt[1].momentum.x - blk.FU[cellCount+1])/(sigma*blk.S[cellCount+1]);
+	blk.v[cellCount+2] = (cell.dUdt[1].momentum.y - blk.FU[cellCount+2])/(sigma*blk.S[cellCount+2]);
+	blk.v[cellCount+3] = (cell.dUdt[1].total_energy - blk.FU[cellCount+3])/(sigma*blk.S[cellCount+3]);
 	cellCount += nConserved;
     }
 }
@@ -513,21 +511,30 @@ void GMRES_solve(double pseudoSimTime, double dt, ref double residual, ref int n
     maxMom = fmax(maxMom, minNonDimVal);
     maxEnergy = fmax(maxEnergy, minNonDimVal);
     //DEBUG: writefln("maxMass= %e  maxMom= %e maxEnergy= %e", maxMass, maxMom, maxEnergy);
+    // Now set-up scaling matrix (which is diagonal, so just store as a vector)
+    cellCount = 0;
+    foreach (cell; blk.cells) {
+	blk.S[cellCount+0] = maxMass;
+	blk.S[cellCount+1] = maxMom;
+	blk.S[cellCount+2] = maxMom;
+	blk.S[cellCount+3] = maxEnergy;
+	cellCount += nConserved;
+    }
 
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
     // Taking x0 = [0] (as is common) gives r0 = b = FU
     cellCount = 0;
     foreach (cell; blk.cells) {
-	blk.r0[cellCount+0] = (1./maxMass)*blk.FU[cellCount+0];
-	blk.r0[cellCount+1] = (1./maxMom)*blk.FU[cellCount+1];
-	blk.r0[cellCount+2] = (1./maxMom)*blk.FU[cellCount+2];
-	blk.r0[cellCount+3] = (1./maxEnergy)*blk.FU[cellCount+3];
+	blk.r0[cellCount+0] = (1./blk.S[cellCount+0])*blk.FU[cellCount+0];
+	blk.r0[cellCount+1] = (1./blk.S[cellCount+1])*blk.FU[cellCount+1];
+	blk.r0[cellCount+2] = (1./blk.S[cellCount+2])*blk.FU[cellCount+2];
+	blk.r0[cellCount+3] = (1./blk.S[cellCount+3])*blk.FU[cellCount+3];
 	cellCount += nConserved;
     }
     // Then compute v = r0/||r0||
     auto beta = norm2(blk.r0);
-    // DEBUG: writefln("beta= %e", beta);
+    // DEBUG:   writefln("beta= %e", beta);
     blk.g0[0] = beta;
     foreach (k; 0 .. n) {
 	blk.v[k] = blk.r0[k]/beta;
@@ -547,7 +554,7 @@ void GMRES_solve(double pseudoSimTime, double dt, ref double residual, ref int n
 	    blk.w[k] = dtInv*blk.v[k];
 	}
 	// Evaluate Jv and place in v
-	evalJacobianVecProd(blk, pseudoSimTime, maxMass, maxMom, maxEnergy);
+	evalJacobianVecProd(blk, pseudoSimTime);
 	// Complete calculation of w.
 	foreach (k; 0 .. n) {
 	    blk.w[k] -= blk.v[k];
@@ -606,7 +613,6 @@ void GMRES_solve(double pseudoSimTime, double dt, ref double residual, ref int n
 	blk.g0[] = blk.g1[];
 	copy(blk.Q1, blk.Q0);
     }
-
     if ( iterCount == maxIters )
 	m = maxIters;
 
@@ -618,10 +624,10 @@ void GMRES_solve(double pseudoSimTime, double dt, ref double residual, ref int n
     // Rescale
     cellCount = 0;
     foreach (cell; blk.cells) {
-	blk.dU[cellCount+0] *= maxMass;
-	blk.dU[cellCount+1] *= maxMom;
-	blk.dU[cellCount+2] *= maxMom;
-	blk.dU[cellCount+3] *= maxEnergy;
+	blk.dU[cellCount+0] *= blk.S[cellCount+0];
+	blk.dU[cellCount+1] *= blk.S[cellCount+1];
+	blk.dU[cellCount+2] *= blk.S[cellCount+2];
+	blk.dU[cellCount+3] *= blk.S[cellCount+3];
 	cellCount += nConserved;
     }
 
