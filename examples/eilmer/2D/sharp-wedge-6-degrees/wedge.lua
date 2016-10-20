@@ -102,7 +102,7 @@ SteadyStateSolver{
    number_pre_iterations = 3,
    number_low_order_iterations = 5,
    number_outer_iterations = 40,
-   max_inner_iterations = 30,
+   max_inner_iterations = 60,
    snapshots_frequency = 1,
    snapshots_count = 40
 }

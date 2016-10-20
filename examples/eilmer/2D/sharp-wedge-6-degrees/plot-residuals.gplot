@@ -2,9 +2,9 @@ set term postscript eps enhanced "Times" 25
 set output 'wedge-residuals.eps'
 set title 'Residual history: Mach 10 flow over 6 deg wedge'
 set logscale y
-set ylabel 'relative residuals, ||F(u^i)||/||F(u^0)||'
+set ylabel 'relative residuals, ||F(u^{max})||/||F(u^0)||'
 set xlabel 'iteration count'
-plot 'wedge.residuals.dat' u 1:5 t 'mass' w linesp, \
-     'wedge.residuals.dat' u 1:7 t 'x-mom' w linesp, \
-     'wedge.residuals.dat' u 1:9 t 'y-mom' w linesp, \
-     'wedge.residuals.dat' u 1:11 t 'energy' w linesp 
+plot 'e4sss.diagnostics.dat' u 1:6 t 'mass' w linesp, \
+     'e4sss.diagnostics.dat' u 1:8 t 'x-mom' w linesp, \
+     'e4sss.diagnostics.dat' u 1:10 t 'y-mom' w linesp, \
+     'e4sss.diagnostics.dat' u 1:12 t 'energy' w linesp 
