@@ -56,6 +56,8 @@ class Grid {
     abstract void write_to_vtk_file(string fileName);
     abstract size_t number_of_vertices_for_cell(size_t i);
     abstract int vtk_element_type_for_cell(size_t i);
+    abstract Grid get_boundary_grid(size_t boundary_indx);
+    abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
 
     void find_enclosing_cell(double x, double y, double z, ref size_t indx, ref bool found)
     {

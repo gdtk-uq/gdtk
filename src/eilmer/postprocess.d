@@ -24,6 +24,7 @@ import fvcore;
 import fileutil;
 import geom;
 import sgrid;
+import grid;
 import gas;
 import globalconfig;
 import flowsolution;
@@ -223,6 +224,34 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     //
     if (surfaceListStr.length > 0) {
 	writeln("Extracting named surfaces of the flow solution.");
+	foreach (tindx; tindx_list_to_plot) {
+	    writeln("  tindx= ", tindx);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    soln.add_aux_variables(addVarsList);
+	    foreach (surfaceStr; surfaceListStr.split(";")) {
+		auto itemStrings = surfaceStr.split(",");
+		size_t blk_indx = to!size_t(itemStrings[0]);
+		string boundary_id = itemStrings[1];
+		size_t boundary_indx;
+		if (canFind(face_name, boundary_id)) {
+		    boundary_indx = face_index(boundary_id);
+		} else {
+		    boundary_indx = to!size_t(boundary_id);
+		}
+		string fileName = format("%s-t%04d-blk-%04d-surface-%s.vtu",
+					 jobName, tindx, blk_indx, boundary_id);
+		writeln("fileName=", fileName); // DEBUG
+		auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
+		auto surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
+		size_t new_dimensions = surf_grid.dimensions;
+		size_t new_nic = surf_cells.length;
+		size_t new_njc = 0;
+		size_t new_nkc = 0;
+		auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
+					       new_dimensions, new_nic, new_njc, new_nkc);
+		write_VTK_XML_unstructured_file(surf_flow, surf_grid, fileName, binary_format);
+	    } // end foreach surfaceStr
+	} // end foreach tindx
     } // end if surfaceListStr
     //
     if (extractStreamStr.length > 0) {
@@ -534,7 +563,7 @@ void write_VTK_XML_files(string jobName, string plotDir,
         pvtuFile.writef("<Piece Source=\"%s\"/>\n", fileName);
         // but use the long version to actually open it.
         fileName = plotDir ~ "/" ~ fileName;
-        write_VTK_XML_unstructured_file(soln, jb, fileName, binary_format);
+        write_VTK_XML_unstructured_file(soln.flowBlocks[jb], soln.gridBlocks[jb], fileName, binary_format);
     }
     pvtuFile.write("</PUnstructuredGrid>\n");
     pvtuFile.write("</VTKFile>\n");
@@ -612,14 +641,14 @@ void write_VTK_XML_files(string jobName, string plotDir,
     return;
 } // end write_VTK_XML_files()
 
-void write_VTK_XML_unstructured_file(FlowSolution soln, size_t jb, 
+void write_VTK_XML_unstructured_file(BlockFlow flow, Grid grid, 
 				     string fileName, bool binary_format)
 // Write the cell-centred flow data from a single block (index jb)
 // as an unstructured grid of finite-volume cells.
 {
     auto fp = File(fileName, "wb"); // We may be writing some binary data.
-    auto flow = soln.flowBlocks[jb];
-    auto grid = soln.gridBlocks[jb];
+    // auto flow = soln.flowBlocks[jb];
+    // auto grid = soln.gridBlocks[jb];
     ubyte[] binary_data_string;
     ubyte[] binary_data;
     int binary_data_offset = 0;

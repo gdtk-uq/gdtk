@@ -649,6 +649,23 @@ public:
     body {
 	return cells[indx].vtx_id_list.dup();
     }
+
+    override Grid get_boundary_grid(size_t boundary_indx)
+    // Returns the grid defining a particular boundary of the original grid.
+    // For an 3D block, a 2D surface grid will be returned, with index directions
+    // as defined on the debugging cube.
+    {
+	return new UnstructuredGrid(this); // FIXME
+    } // end get_boundary_grid()
+
+    override size_t[] get_list_of_boundary_cells(size_t boundary_indx)
+    // Prepares list of cells indicies that match the boundary grid selected by
+    // the function get_boundary_grid().  See above.
+    {
+	size_t new_nic, new_njc, new_nkc;
+	size_t[] cellList;
+	return cellList; // FIXME
+    } // end get_list_of_boundary_cells()
     
     // ------------------------
     // Import-from-file methods.

@@ -299,7 +299,8 @@ public:
 
     this(ref const(BlockFlow) other, size_t[] cellList, size_t new_dimensions,
 	 size_t new_nic, size_t new_njc, size_t new_nkc)
-    // Construct by extracting a subset of cells from another FlowBlock.
+    // Construct by extracting a subset of cells from another BlockFlow object.
+    // Note that we may end up with dodgy values for the nic, njc and nkc counts.
     {
 	gridType = other.gridType;
 	dimensions = new_dimensions;
