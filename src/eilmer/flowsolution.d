@@ -297,6 +297,27 @@ public:
 	} // foreach i
     } // end constructor from file
 
+    this(ref const(BlockFlow) other, size_t[] cellList, size_t new_dimensions,
+	 size_t new_nic, size_t new_njc, size_t new_nkc)
+    // Construct by extracting a subset of cells from another FlowBlock.
+    {
+	gridType = other.gridType;
+	dimensions = new_dimensions;
+	ncells = cellList.length;
+	nic = new_nic; njc = new_njc; nkc = new_nkc;
+	sim_time = other.sim_time;
+	variableNames = other.variableNames.dup();
+	foreach(i, var; variableNames) { variableIndex[var] = i; }
+	_data.length = ncells;
+	foreach (i, iother; cellList) {
+	    _data[i].length = variableNames.length;
+	    foreach (ivar; 0 .. variableNames.length) {
+		_data[i][ivar] = other._data[iother][ivar];
+	    }
+	} // foreach i
+	return;
+    } // end constructor of subset
+    
     ref double opIndex(string varName, size_t i)
     {
 	return _data[i][variableIndex[varName]];

@@ -44,7 +44,7 @@ void main()
     my_3Dgrid.write_to_vtk_file("test_3Dgrid.vtk");
     //
     writeln("2D surface from the 3D grid");
-    auto north_grid = new StructuredGrid(my_3Dgrid, Face.north);
+    auto north_grid = my_3Dgrid.get_boundary_grid(Face.north);
     writeln("grid point 5 5 at p=", *north_grid[5,5]);
     
     writeln("Import GridPro grid...");

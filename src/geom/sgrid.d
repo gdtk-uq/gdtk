@@ -148,69 +148,6 @@ public:
 	}
     }
 
-    // Extract a surface grid from a 3D block.
-    this(const StructuredGrid other, size_t surface_indx)
-    {
-	if (other.dimensions != 3) {
-	    throw new Exception("Expected a 3D grid.");
-	}
-	size_t niv, njv, nkv;
-	string label = other.label;
-	//
-	// 1. Use orientation to decide size of new 2D grid.
-	final switch (surface_indx) {
-	case Face.north:
-	    niv = other.niv; njv = other.nkv; nkv = 1; label = other.label ~ "-north"; break;
-	case Face.south:
-	    niv = other.niv; njv = other.nkv; nkv = 1; label = other.label ~ "-south"; break;
-	case Face.west:
-	    niv = other.njv; njv = other.nkv; nkv = 1; label = other.label ~ "-west"; break;
-	case Face.east:
-	    niv = other.njv; njv = other.nkv; nkv = 1; label = other.label ~ "-east"; break;
-	case Face.top:
-	    niv = other.niv; njv = other.njv; nkv = 1; label = other.label ~ "-top"; break;
-	case Face.bottom:
-	    niv = other.niv; njv = other.njv; nkv = 1; label = other.label ~ "-bottom"; break;
-	} // end switch surface_indx
-	//
-	// 2. prepare the empty grid.
-	this(niv, njv, nkv, label);
-	//
-	// 3. and fill it.
-	final switch (surface_indx) {
-	case Face.north:
-	    foreach (i; 0 .. niv) {
-		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,other.njv-1,j)]); }
-	    }
-	    break;
-	case Face.south:
-	    foreach (i; 0 .. niv) {
-		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,0,j)]); }
-	    }
-	    break;
-	case Face.west:
-	    foreach (i; 0 .. niv) {
-		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(0,i,j)]); }
-	    }
-	    break;
-	case Face.east:
-	    foreach (i; 0 .. niv) {
-		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(other.niv,i,j)]); }
-	    }
-	    break;
-	case Face.top:
-	    foreach (i; 0 .. niv) {
-		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,j,other.nkv-1)]); }
-	    }
-	    break;
-	case Face.bottom:
-	    foreach (i; 0 .. niv) {
-		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,j,0)]); }
-	    }
-	    break;
-	} // end switch surface_indx
-    } // end this
-
     StructuredGrid dup() const
     {
 	return new StructuredGrid(this);
@@ -331,15 +268,147 @@ public:
 	foreach (i; 0 .. ni) {
 	    foreach (j; 0 .. nj) {
 		foreach (k; 0 .. nk) {
-		    new_grd[i,j,k].refx = vertices[single_index(i0+i,j0+j,k0+k)].x;
-		    new_grd[i,j,k].refy = vertices[single_index(i0+i,j0+j,k0+k)].y;
-		    new_grd[i,j,k].refz = vertices[single_index(i0+i,j0+j,k0+k)].z;
+		    new_grd[i,j,k].set(vertices[single_index(i0+i,j0+j,k0+k)]);
 		}
 	    }
 	}
 	return new_grd;
     } // end subgrid()
 
+    StructuredGrid get_boundary_grid(size_t boundary_indx)
+    // Returns the grid defining a particular boundary of the original grid.
+    // For an 3D block, a 2D surface grid will be returned, with index directions
+    // as defined on the debugging cube.
+    {
+	size_t new_niv, new_njv, new_nkv;
+	string new_label = label;
+	if (dimensions == 3) {
+	    // 1. Use orientation to decide size of new 2D grid.
+	    final switch (boundary_indx) {
+	    case Face.north:
+		new_niv = niv; new_njv = nkv; new_nkv = 1; new_label ~= "-north"; break;
+	    case Face.south:
+		new_niv = niv; new_njv = nkv; new_nkv = 1; new_label ~= "-south"; break;
+	    case Face.west:
+		new_niv = njv; new_njv = nkv; new_nkv = 1; new_label ~= "-west"; break;
+	    case Face.east:
+		new_niv = njv; new_njv = nkv; new_nkv = 1; new_label ~= "-east"; break;
+	    case Face.top:
+		new_niv = niv; new_njv = njv; new_nkv = 1; new_label ~= "-top"; break;
+	    case Face.bottom:
+		new_niv = niv; new_njv = njv; new_nkv = 1; new_label ~= "-bottom"; break;
+	    } // end switch boundary_indx
+	} else {
+	    throw new Exception("Extraction from 2D grid not implemented yet.");
+	}
+	// 2. prepare the empty grid.
+	auto bgrid = new StructuredGrid(new_niv, new_njv, new_nkv, label);
+	// 3. and fill it.
+	if (dimensions == 3) {
+	    final switch (boundary_indx) {
+	    case Face.north:
+		foreach (i; 0 .. new_niv) {
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,njv-1,j)]); }
+		}
+		break;
+	    case Face.south:
+		foreach (i; 0 .. new_niv) {
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,0,j)]); }
+		}
+		break;
+	    case Face.west:
+		foreach (i; 0 .. new_niv) {
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(0,i,j)]); }
+		}
+		break;
+	    case Face.east:
+		foreach (i; 0 .. new_niv) {
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(niv-1,i,j)]); }
+		}
+		break;
+	    case Face.top:
+		foreach (i; 0 .. new_niv) {
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,j,nkv-1)]); }
+		}
+		break;
+	    case Face.bottom:
+		foreach (i; 0 .. niv) {
+		    foreach (j; 0 .. njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,j,0)]); }
+		}
+		break;
+	    } // end switch boundary_indx
+	} else {
+	    throw new Exception("Extraction from 2D grid not implemented yet.");
+	}
+	return bgrid;
+    } // end get_boundary_grid()
+
+    size_t[] get_list_of_boundary_cells(size_t boundary_indx)
+    // Prepares list of cells indicies that match the boundary grid selected by
+    // the function get_boundary_grid().  See above.
+    {
+	size_t new_nic, new_njc, new_nkc;
+	size_t[] cellList;
+	if (dimensions == 3) {
+	    // 1. Use orientation to decide size of new 2D grid.
+	    final switch (boundary_indx) {
+	    case Face.north:
+		new_nic = niv-1; new_njc = nkv-1; new_nkc = 1; break;
+	    case Face.south:
+		new_nic = niv-1; new_njc = nkv-1; new_nkc = 1; break;
+	    case Face.west:
+		new_nic = njv-1; new_njc = nkv-1; new_nkc = 1; break;
+	    case Face.east:
+		new_nic = njv-1; new_njc = nkv-1; new_nkc = 1; break;
+	    case Face.top:
+		new_nic = niv-1; new_njc = njv-1; new_nkc = 1; break;
+	    case Face.bottom:
+		new_nic = niv-1; new_njc = njv-1; new_nkc = 1; break;
+	    } // end switch boundary_indx
+	} else {
+	    throw new Exception("Extraction from 2D grid not implemented yet.");
+	}
+	cellList.length = new_nic * new_njc * new_nkc;
+	if (dimensions == 3) {
+	    size_t single_cell_index(size_t i, size_t j, size_t k) { return i + (niv-1)*(j + (njv-1)*k); }
+	    final switch (boundary_indx) {
+	    case Face.north:
+		foreach (i; 0 .. new_nic) {
+		    foreach (j; 0 .. new_njc) { cellList[i+new_nic*j] = single_cell_index(i,njv-2,j); }
+		}
+		break;
+	    case Face.south:
+		foreach (i; 0 .. new_nic) {
+		    foreach (j; 0 .. new_njc) { cellList[i+new_nic*j] = single_cell_index(i,0,j); }
+		}
+		break;
+	    case Face.west:
+		foreach (i; 0 .. new_nic) {
+		    foreach (j; 0 .. new_njc) { cellList[i+new_nic*j] = single_cell_index(0,i,j); }
+		}
+		break;
+	    case Face.east:
+		foreach (i; 0 .. new_nic) {
+		    foreach (j; 0 .. new_njc) { cellList[i+new_nic*j] = single_cell_index(niv-2,i,j); }
+		}
+		break;
+	    case Face.top:
+		foreach (i; 0 .. new_nic) {
+		    foreach (j; 0 .. new_njc) { cellList[i+new_nic*j] = single_cell_index(i,j,nkv-2); }
+		}
+		break;
+	    case Face.bottom:
+		foreach (i; 0 .. new_nic) {
+		    foreach (j; 0 .. new_njc) { cellList[i+new_nic*j] = single_cell_index(i,j,0); }
+		}
+		break;
+	    } // end switch boundary_indx
+	} else {
+	    throw new Exception("Extraction from 2D grid not implemented yet.");
+	}
+	return cellList;
+    } // end get_list_of_boundary_cells()
+    
     void make_grid_from_path(const Path pth,
 			     const(UnivariateFunction) clusterf)
     {
@@ -350,9 +419,7 @@ public:
         size_t k = 0; size_t j = 0;
 	foreach (i; 0 .. niv) {
 	    Vector3 p = pth(r[i]);
-	    this[i,j,k].refx = p.x;
-	    this[i,j,k].refy = p.y;
-	    this[i,j,k].refz = p.z;
+	    this[i,j,k].set(p);
 	}
     } // end make_grid_from_path()
 
@@ -375,9 +442,7 @@ public:
                 double sdash = (1.0-r) * sWest[j] + r * sEast[j]; 
                 double rdash = (1.0-s) * rSouth[i] + s * rNorth[i];
                 Vector3 p = surf(rdash, sdash);
-                this[i,j,k].refx = p.x;
-                this[i,j,k].refy = p.y;
-                this[i,j,k].refz = p.z;
+                this[i,j,k].set(p);
 	    }
 	}
     } // end make_grid_from_surface()
@@ -420,9 +485,7 @@ public:
                     double rdash = (1.0-s)*(1.0-t)*r01[i] + s*t*r76[i] + 
 			(1.0-s)*t*r45[i] + s*(1.0-t)*r32[i];
 		    Vector3 p = pvolume(rdash, sdash, tdash);
-		    this[i,j,k].refx = p.x;
-		    this[i,j,k].refy = p.y;
-		    this[i,j,k].refz = p.z;
+		    this[i,j,k].set(p);
 		} // i
 	    } // j
 	} // k
@@ -463,9 +526,9 @@ public:
 		foreach (i; 0 .. niv) {
 		    tokens = f.readln().strip().split();
 		    try {
-			this[i,j,k].refx = to!double(tokens[0]);
-			this[i,j,k].refy = to!double(tokens[1]);
-			this[i,j,k].refz = to!double(tokens[2]);
+			this[i,j,k].set(to!double(tokens[0]),
+					to!double(tokens[1]),
+					to!double(tokens[2]));
 		    } catch (Exception e) {
 			throw new Error(text("Failed to read grid file at " ~
 					     "i=", i, " j=", j, " k=", k,
@@ -519,9 +582,7 @@ public:
 		    line = byLine.front; byLine.popFront();
 		    // Note that the line starts with whitespace.
 		    formattedRead(line, " %g %g %g", &x, &y, &z);
-		    this[i,j,k].refx = x;
-		    this[i,j,k].refy = y;
-		    this[i,j,k].refz = z;
+		    this[i,j,k].set(x, y, z);
 		    vtx_id[single_index(i,j,k)] = ivtx;
 		    ivtx++;
 		} // foreach i
@@ -802,9 +863,9 @@ to convert to metres for use in Eilmer.
             foreach (j; 0 .. njv) {
                 foreach (k; 0 .. nkv) {
                     tks = f.readln().strip().split();
-                    mygrid[i,j,k].refx = uflowz(scale*to!double(tks[0]));
-                    mygrid[i,j,k].refy = uflowz(scale*to!double(tks[1]));
-                    mygrid[i,j,k].refz = uflowz(scale*to!double(tks[2]));
+                    mygrid[i,j,k].set(uflowz(scale*to!double(tks[0])),
+				      uflowz(scale*to!double(tks[1])),
+				      uflowz(scale*to!double(tks[2])));
 		}
 	    }
 	}

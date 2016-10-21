@@ -117,14 +117,14 @@ struct Vector3 {
 	return Vector3(this);
     }
 
-    ref Vector3 set(ref const(Vector3) other)
+    @nogc ref Vector3 set(ref const(Vector3) other)
     // Convenience function for setting the components of an existing object.
     {
 	_p[] = other._p[];
 	return this;
     }
 
-    ref Vector3 set(double x, double y, double z)
+    @nogc ref Vector3 set(double x, double y, double z)
     // Convenience function for setting the components of an existing object.
     {
 	_p[0] = x; _p[1] = y; _p[2] = z;
