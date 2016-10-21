@@ -117,6 +117,20 @@ struct Vector3 {
 	return Vector3(this);
     }
 
+    ref Vector3 set(ref const(Vector3) other)
+    // Convenience function for setting the components of an existing object.
+    {
+	_p[] = other._p[];
+	return this;
+    }
+
+    ref Vector3 set(double x, double y, double z)
+    // Convenience function for setting the components of an existing object.
+    {
+	_p[0] = x; _p[1] = y; _p[2] = z;
+	return this;
+    }
+    
     string toString() const
     {
 	return "Vector3(" ~ to!string(_p) ~ ")";
@@ -461,6 +475,11 @@ unittest {
     assert(a.x == b.x, "a.x == b.x fail");
     assert(b.y == 0.0, "b.y fail");
     assert(b.z == 0.0, "b.z fail");
+    b.set(a);
+    assert(a.x == b.x && a.y == b.y && a.z == b.z, "b.set(a) fail");
+    b.set(1.0, 0.0, 0.0);
+    assert(b.x == 1.0 && b.y == 0.0 && b.z == 0.0, "b.set(1.0,0.0,0.0) fail");
+
     // Check operators
     b = -a;
     assert(b.x == -a.x && b.y == -a.y && b.z == -a.z, "unary negation");

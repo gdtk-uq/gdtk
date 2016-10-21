@@ -42,7 +42,11 @@ void main()
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
     writeln("grid point 5 5 5 at p=", *my_3Dgrid[5,5,5]);
     my_3Dgrid.write_to_vtk_file("test_3Dgrid.vtk");
-
+    //
+    writeln("2D surface from the 3D grid");
+    auto north_grid = new StructuredGrid(my_3Dgrid, Face.north);
+    writeln("grid point 5 5 at p=", *north_grid[5,5]);
+    
     writeln("Import GridPro grid...");
     auto gpgrid = import_gridpro_grid("../../examples/eilmer/3D/gridpro-import/blk.tmp");
     foreach (i; 0 .. gpgrid.length) {

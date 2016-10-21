@@ -148,6 +148,69 @@ public:
 	}
     }
 
+    // Extract a surface grid from a 3D block.
+    this(const StructuredGrid other, size_t surface_indx)
+    {
+	if (other.dimensions != 3) {
+	    throw new Exception("Expected a 3D grid.");
+	}
+	size_t niv, njv, nkv;
+	string label = other.label;
+	//
+	// 1. Use orientation to decide size of new 2D grid.
+	final switch (surface_indx) {
+	case Face.north:
+	    niv = other.niv; njv = other.nkv; nkv = 1; label = other.label ~ "-north"; break;
+	case Face.south:
+	    niv = other.niv; njv = other.nkv; nkv = 1; label = other.label ~ "-south"; break;
+	case Face.west:
+	    niv = other.njv; njv = other.nkv; nkv = 1; label = other.label ~ "-west"; break;
+	case Face.east:
+	    niv = other.njv; njv = other.nkv; nkv = 1; label = other.label ~ "-east"; break;
+	case Face.top:
+	    niv = other.niv; njv = other.njv; nkv = 1; label = other.label ~ "-top"; break;
+	case Face.bottom:
+	    niv = other.niv; njv = other.njv; nkv = 1; label = other.label ~ "-bottom"; break;
+	} // end switch surface_indx
+	//
+	// 2. prepare the empty grid.
+	this(niv, njv, nkv, label);
+	//
+	// 3. and fill it.
+	final switch (surface_indx) {
+	case Face.north:
+	    foreach (i; 0 .. niv) {
+		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,other.njv-1,j)]); }
+	    }
+	    break;
+	case Face.south:
+	    foreach (i; 0 .. niv) {
+		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,0,j)]); }
+	    }
+	    break;
+	case Face.west:
+	    foreach (i; 0 .. niv) {
+		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(0,i,j)]); }
+	    }
+	    break;
+	case Face.east:
+	    foreach (i; 0 .. niv) {
+		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(other.niv,i,j)]); }
+	    }
+	    break;
+	case Face.top:
+	    foreach (i; 0 .. niv) {
+		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,j,other.nkv-1)]); }
+	    }
+	    break;
+	case Face.bottom:
+	    foreach (i; 0 .. niv) {
+		foreach (j; 0 .. njv) { vertices[i+niv*j].set(other.vertices[other.single_index(i,j,0)]); }
+	    }
+	    break;
+	} // end switch surface_indx
+    } // end this
+
     StructuredGrid dup() const
     {
 	return new StructuredGrid(this);

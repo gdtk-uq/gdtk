@@ -34,8 +34,9 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		  string addVarsStr, string luaRefSoln,
 		  bool vtkxmlFlag, bool binary_format, bool tecplotFlag,
 		  string outputFileName, string sliceListStr,
-		  string extractStreamStr, string extractLineStr,
-		  string probeStr, string normsStr, string regionStr)
+		  string surfaceListStr, string extractStreamStr,
+		  string extractLineStr, string probeStr,
+		  string normsStr, string regionStr)
 {
     read_config_file();
     string jobName = GlobalConfig.base_file_name;
@@ -219,6 +220,10 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    } // end foreach sliceStr
 	} // end foreach tindx
     } // end if sliceListStr
+    //
+    if (surfaceListStr.length > 0) {
+	writeln("Extracting named surfaces of the flow solution.");
+    } // end if surfaceListStr
     //
     if (extractStreamStr.length > 0) {
 	writeln("Extracting data along a streamline of the flow solution.");
