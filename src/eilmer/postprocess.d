@@ -104,28 +104,55 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     } // end if listInfoFlag
     //
     if (vtkxmlFlag) {
-	writeln("writing VTK-XML files to directory \"", plotDir, "\"");
-	begin_Visit_file(jobName, plotDir, GlobalConfig.nBlocks);
-	begin_PVD_file(jobName, plotDir);
+	ensure_directory_is_present(plotDir);
+	//
+	writeln("writing flow-solution VTK-XML files to directory \"", plotDir, "\"");
+	File visitFile = File(plotDir~"/"~jobName~".visit", "w");
+	// For each time index, the visit justs lists the names of the files for individual blocks.
+	visitFile.writef("!NBLOCKS %d\n", GlobalConfig.nBlocks);
+	File pvdFile = begin_PVD_file(plotDir~"/"~jobName~".pvd");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    write_VTK_XML_files(jobName, plotDir, soln, tindx, binary_format);
+	    string pvtuFileName = jobName~format("-t%04d", tindx)~".pvtu";
+	    add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
+	    File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.flowBlocks[0].variableNames);
+	    foreach (jb; 0 .. soln.nBlocks) {
+		string vtuFileName = jobName~format("-b%04d-t%04d.vtu", jb, tindx);
+		add_piece_to_PVTU_file(pvtuFile, vtuFileName);
+		visitFile.writef("%s\n", vtuFileName);
+		write_VTU_file(soln.flowBlocks[jb], soln.gridBlocks[jb], plotDir~"/"~vtuFileName, binary_format);
+	    }
+	    finish_PVTU_file(pvtuFile);
 	} // foreach tindx
-	finish_PVD_file(jobName, plotDir);
+	finish_PVD_file(pvdFile);
+	visitFile.close();
+	//
 	if ( GlobalConfig.nSolidBlocks > 0 ) {
 	    writeln("writing solid VTK-XML files to directory \"", plotDir, "\"");
-	    begin_Visit_file(jobName~"-solid", plotDir, GlobalConfig.nSolidBlocks);
-	    begin_PVD_file(jobName~"-solid", plotDir);
+	    visitFile = File(plotDir~"/"~jobName~"-solid.visit", "w");
+	    // For each time index, the visit justs lists the names of the files for individual blocks.
+	    visitFile.writef("!NBLOCKS %d\n", GlobalConfig.nBlocks);
+	    pvdFile = begin_PVD_file(plotDir~"/"~jobName~"-solid.pvd");
 	    foreach (tindx; tindx_list_to_plot) {
 		writeln("  tindx= ", tindx);
 		auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
 		if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-		write_VTK_XML_files(jobName, plotDir, soln, tindx, binary_format);
+		string pvtuFileName = jobName~format("-solid-t%04d", tindx)~".pvtu";
+		add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
+		File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.solidBlocks[0].variableNames);
+		foreach (jb; 0 .. soln.nBlocks) {
+		    string vtuFileName = jobName~format("-solid-b%04d-t%04d.vtu", jb, tindx);
+		    add_piece_to_PVTU_file(pvtuFile, vtuFileName);
+		    visitFile.writef("%s\n", vtuFileName);
+		    write_VTU_file(soln.solidBlocks[jb], soln.gridBlocks[jb], plotDir~"/"~vtuFileName, binary_format);
+		}
+		finish_PVTU_file(pvtuFile);
 	    } // foreach tindx
-	    finish_PVD_file(jobName~"-solid", plotDir);
+	    finish_PVD_file(pvdFile);
+	    visitFile.close();
 	} // end if nSolidBlocks > 0
     } // end if vtkxml
     //
@@ -224,10 +251,20 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     //
     if (surfaceListStr.length > 0) {
 	writeln("Extracting named surfaces of the flow solution.");
+	writeln("writing VTK-XML files to directory \"", plotDir, "\"");
+	ensure_directory_is_present(plotDir);
+	string surfaceCollectionName = outputFileName;
+	if (surfaceCollectionName.length == 0) {
+	    throw new Exception("Expected name for surface collection to be provided with --output-file");
+	}
+	File pvdFile = begin_PVD_file(plotDir~"/"~surfaceCollectionName~".pvd");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
 	    soln.add_aux_variables(addVarsList);
+	    string pvtuFileName = surfaceCollectionName~format("-t%04d", tindx)~".pvtu";
+	    add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
+	    File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.flowBlocks[0].variableNames);
 	    foreach (surfaceStr; surfaceListStr.split(";")) {
 		auto itemStrings = surfaceStr.split(",");
 		size_t blk_indx = to!size_t(itemStrings[0]);
@@ -238,9 +275,9 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		} else {
 		    boundary_indx = to!size_t(boundary_id);
 		}
-		string fileName = format("%s-t%04d-blk-%04d-surface-%s.vtu",
-					 jobName, tindx, blk_indx, boundary_id);
-		writeln("fileName=", fileName); // DEBUG
+		string vtuFileName = format("%s-t%04d-blk-%04d-surface-%s.vtu",
+					 surfaceCollectionName, tindx, blk_indx, boundary_id);
+		writeln("vtuFileName=", vtuFileName); // DEBUG
 		auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
 		auto surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
 		size_t new_dimensions = surf_grid.dimensions;
@@ -249,9 +286,12 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		size_t new_nkc = 0;
 		auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
 					       new_dimensions, new_nic, new_njc, new_nkc);
-		write_VTK_XML_unstructured_file(surf_flow, surf_grid, fileName, binary_format);
+		add_piece_to_PVTU_file(pvtuFile, vtuFileName);
+		write_VTU_file(surf_flow, surf_grid, plotDir~"/"~vtuFileName, binary_format);
 	    } // end foreach surfaceStr
+	    finish_PVTU_file(pvtuFile);
 	} // end foreach tindx
+	finish_PVD_file(pvdFile);
     } // end if surfaceListStr
     //
     if (extractStreamStr.length > 0) {
@@ -496,159 +536,70 @@ double[int] readTimesFile(string jobName)
 
 //-----------------------------------------------------------------------
 
-void begin_Visit_file(string jobName, string plotDir, int nBlocks)
+File begin_PVD_file(string fileName)
 {
-    // Will be handy to have a Visit file, also.
-    // For each time index, this justs lists the names of the files for individual blocks.
-    ensure_directory_is_present(plotDir);
-    string fileName = plotDir ~ "/" ~ jobName ~ ".visit";
-    auto visitFile = File(fileName, "w");
-    visitFile.writef("!NBLOCKS %d\n", nBlocks);
-    visitFile.close();
-    return;
-} // end begin_Visit_file()
-
-void begin_PVD_file(string jobName, string plotDir)
-{
-    // Will be handy to have a Paraview collection file, also.
+    // Start a Paraview collection file.
     // For each time index, this justs lists the name of the top-level .pvtu file.
-    ensure_directory_is_present(plotDir);
-    string fileName = plotDir ~ "/" ~ jobName ~ ".pvd";
-    auto pvdFile = File(fileName, "w");
-    pvdFile.write("<?xml version=\"1.0\"?>\n");
-    pvdFile.write("<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n");
-    pvdFile.write("<Collection>\n");
-    pvdFile.close();
-    return;
-} // end begin_PVD_file()
+    File f = File(fileName, "w");
+    f.write("<?xml version=\"1.0\"?>\n");
+    f.write("<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n");
+    f.write("<Collection>\n");
+    return f;
+}
 
-void finish_PVD_file(string jobName, string plotDir)
+void add_time_stamp_to_PVD_file(File f, double timeStamp, string pvtuFileName)
 {
-    ensure_directory_is_present(plotDir);
-    string fileName = plotDir ~ "/" ~ jobName ~ ".pvd";
-    auto pvdFile = File(fileName, "a");
-    pvdFile.write("</Collection>\n");
-    pvdFile.write("</VTKFile>\n");
-    pvdFile.close();
-    return;
-} // end finish_PVD_file()
+    f.writef("<DataSet timestep=\"%.18e\" group=\"\" part=\"0\" file=\"%s\"/>\n",
+	     timeStamp, pvtuFileName);
+}
 
-void write_VTK_XML_files(string jobName, string plotDir,
-			 FlowSolution soln, int tindx,
-			 bool binary_format=false)
+void finish_PVD_file(File f)
 {
-    ensure_directory_is_present(plotDir);
-    string fileName = plotDir~"/"~jobName~format(".t%04d", tindx)~".pvtu";
-    auto pvtuFile = File(fileName, "w");
-    pvtuFile.write("<VTKFile type=\"PUnstructuredGrid\">\n");
-    pvtuFile.write("<PUnstructuredGrid GhostLevel=\"0\">");
-    pvtuFile.write("<PPoints>\n");
-    pvtuFile.write(" <PDataArray type=\"Float32\" NumberOfComponents=\"3\"/>\n");
-    pvtuFile.write("</PPoints>\n");
-    pvtuFile.write("<PCellData>\n");
-    foreach (var; soln.flowBlocks[0].variableNames) {
-        pvtuFile.writef(" <DataArray Name=\"%s\" type=\"Float32\" NumberOfComponents=\"1\"/>\n", var);
-    }
-    pvtuFile.write(" <PDataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
-    if (canFind(soln.flowBlocks[0].variableNames,"c.x")) {
-	pvtuFile.write(" <PDataArray Name=\"c.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
-    }
-    if (canFind(soln.flowBlocks[0].variableNames,"B.x")) {
-	pvtuFile.write(" <PDataArray Name=\"B.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
-    }
-    pvtuFile.write("</PCellData>\n");
-    foreach (jb; 0 .. soln.nBlocks) {
-        fileName = jobName ~ format(".b%04d.t%04d.vtu", jb, tindx);
-        // We write the short version of the fileName into the pvtu file.
-        pvtuFile.writef("<Piece Source=\"%s\"/>\n", fileName);
-        // but use the long version to actually open it.
-        fileName = plotDir ~ "/" ~ fileName;
-        write_VTK_XML_unstructured_file(soln.flowBlocks[jb], soln.gridBlocks[jb], fileName, binary_format);
-    }
-    pvtuFile.write("</PUnstructuredGrid>\n");
-    pvtuFile.write("</VTKFile>\n");
-    pvtuFile.close();
-    // Will be handy to have a Visit file, also.
-    // This justs lists the names of the files for individual blocks.
-    fileName = plotDir ~ "/" ~ jobName ~ ".visit";
-    // Note that we append to the visit file for each tindx.
-    auto visitFile = File(fileName, "a");
-    foreach (jb; 0 .. soln.nBlocks) {
-        fileName = jobName ~ format(".b%04d.t%04d.vtu", jb, tindx);
-        visitFile.writef("%s\n", fileName);
-    }
-    visitFile.close();
-    // Will be handy to have a Paraview PVD file, also.
-    // This justs lists the top-level .pvtu files.
-    fileName = plotDir ~ "/" ~ jobName ~ ".pvd";
-    // Note that we append to the .pvd file for each tindx.
-    auto pvdFile = File(fileName, "a");
-    fileName = jobName ~ format(".t%04d.pvtu", tindx);
-    pvdFile.writef("<DataSet timestep=\"%.18e\" group=\"\" part=\"0\" file=\"%s\"/>\n",
-		   soln.sim_time, fileName);
-    pvdFile.close();
-    return;
-} // end write_VTK_XML_files()
+    f.write("</Collection>\n");
+    f.write("</VTKFile>\n");
+    f.close();
+}
 
-// This version is for writing out solid domain files
-void write_VTK_XML_files(string jobName, string plotDir,
-			 SolidSolution soln, int tindx,
-			 bool binary_format=false)
+File begin_PVTU_file(string fileName, string[] variableNames)
 {
-    ensure_directory_is_present(plotDir);
-    string fileName = plotDir~"/"~jobName~format("-solid.t%04d", tindx)~".pvtu";
-    auto pvtuFile = File(fileName, "w");
-    pvtuFile.write("<VTKFile type=\"PUnstructuredGrid\">\n");
-    pvtuFile.write("<PUnstructuredGrid GhostLevel=\"0\">");
-    pvtuFile.write("<PPoints>\n");
-    pvtuFile.write(" <PDataArray type=\"Float32\" NumberOfComponents=\"3\"/>\n");
-    pvtuFile.write("</PPoints>\n");
-    pvtuFile.write("<PCellData>\n");
-    foreach (var; soln.solidBlocks[0].variableNames) {
-        pvtuFile.writef(" <DataArray Name=\"%s\" type=\"Float32\" NumberOfComponents=\"1\"/>\n", var);
+    File f = File(fileName, "w");
+    f.write("<VTKFile type=\"PUnstructuredGrid\">\n");
+    f.write("<PUnstructuredGrid GhostLevel=\"0\">");
+    f.write("<PPoints>\n");
+    f.write(" <PDataArray type=\"Float32\" NumberOfComponents=\"3\"/>\n");
+    f.write("</PPoints>\n");
+    f.write("<PCellData>\n");
+    foreach (var; variableNames) {
+        f.writef(" <DataArray Name=\"%s\" type=\"Float32\" NumberOfComponents=\"1\"/>\n", var);
     }
-    pvtuFile.write("</PCellData>\n");
-    foreach (jb; 0 .. soln.nBlocks) {
-        fileName = jobName~format("-solid.b%04d.t%04d.vtu", jb, tindx);
-        // We write the short version of the fileName into the pvtu file.
-        pvtuFile.writef("<Piece Source=\"%s\"/>\n", fileName);
-        // but use the long version to actually open it.
-        fileName = plotDir ~ "/" ~ fileName;
-        write_VTK_XML_unstructured_file(soln, jb, fileName, binary_format);
+    f.write(" <PDataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
+    if (canFind(variableNames,"c.x")) {
+	f.write(" <PDataArray Name=\"c.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
     }
-    pvtuFile.write("</PUnstructuredGrid>\n");
-    pvtuFile.write("</VTKFile>\n");
-    pvtuFile.close();
-    // Will be handy to have a Visit file, also.
-    // This justs lists the names of the files for individual blocks.
-    fileName = plotDir ~ "/" ~ jobName ~ "-solid.visit";
-    // Note that we append to the visit file for each tindx.
-    auto visitFile = File(fileName, "a");
-    foreach (jb; 0 .. soln.nBlocks) {
-        fileName = jobName ~ format("-solid.b%04d.t%04d.vtu", jb, tindx);
-        visitFile.writef("%s\n", fileName);
+    if (canFind(variableNames,"B.x")) {
+	f.write(" <PDataArray Name=\"B.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
     }
-    visitFile.close();
-    // Will be handy to have a Paraview PVD file, also.
-    // This justs lists the top-level .pvtu files.
-    fileName = plotDir ~ "/" ~ jobName ~ "-solid.pvd";
-    // Note that we append to the .pvd file for each tindx.
-    auto pvdFile = File(fileName, "a");
-    fileName = jobName ~ format("-solid.t%04d.pvtu", tindx);
-    pvdFile.writef("<DataSet timestep=\"%.18e\" group=\"\" part=\"0\" file=\"%s\"/>\n",
-		   soln.sim_time, fileName);
-    pvdFile.close();
-    return;
-} // end write_VTK_XML_files()
+    f.write("</PCellData>\n");
+    return f;
+} // end begin_PVTU_file()
 
-void write_VTK_XML_unstructured_file(BlockFlow flow, Grid grid, 
-				     string fileName, bool binary_format)
+void add_piece_to_PVTU_file(File f, string fileName)
+{
+    f.writef("<Piece Source=\"%s\"/>\n", fileName);
+}
+
+void finish_PVTU_file(File f)
+{
+    f.write("</PUnstructuredGrid>\n");
+    f.write("</VTKFile>\n");
+    f.close();
+}
+
+void write_VTU_file(BlockFlow flow, Grid grid, string fileName, bool binary_format)
 // Write the cell-centred flow data from a single block (index jb)
 // as an unstructured grid of finite-volume cells.
 {
     auto fp = File(fileName, "wb"); // We may be writing some binary data.
-    // auto flow = soln.flowBlocks[jb];
-    // auto grid = soln.gridBlocks[jb];
     ubyte[] binary_data_string;
     ubyte[] binary_data;
     int binary_data_offset = 0;
@@ -894,18 +845,17 @@ void write_VTK_XML_unstructured_file(BlockFlow flow, Grid grid,
     fp.write("</VTKFile>\n");
     fp.close();
     return;
-} // end write_VTK_XML_unstructured_file()
+} // end write_VTU_file()
 
 
 // This version is for the solid domain.
-void write_VTK_XML_unstructured_file(SolidSolution soln, size_t jb, 
-				     string fileName, bool binary_format)
+void write_VTU_file(SBlockSolid solid, StructuredGrid grid, string fileName, bool binary_format)
 // Write the cell-centred flow data from a single block (index jb)
 // as an unstructured grid of finite-volume cells.
 {
     auto fp = File(fileName, "wb"); // We may be writing some binary data.
-    auto solid = soln.solidBlocks[jb];
-    auto grid = soln.gridBlocks[jb];
+    //auto solid = soln.solidBlocks[jb];
+    //auto grid = soln.gridBlocks[jb];
     ubyte[] binary_data_string;
     ubyte[] binary_data;
     int binary_data_offset = 0;
@@ -1114,4 +1064,4 @@ void write_VTK_XML_unstructured_file(SolidSolution soln, size_t jb,
     fp.write("</VTKFile>\n");
     fp.close();
     return;
-} // end write_VTK_XML_unstructured_file()
+} // end write_VTU_file()

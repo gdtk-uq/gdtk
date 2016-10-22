@@ -284,6 +284,8 @@ public:
 	string new_label = label;
 	if (dimensions == 3) {
 	    // 1. Use orientation to decide size of new 2D grid.
+	    // When looking at the 2D grid alone, the new i-direcion starts west and
+	    // progresses to east, while the new j-direction starts south and progresses north.
 	    final switch (boundary_indx) {
 	    case Face.north:
 		new_niv = niv; new_njv = nkv; new_nkv = 1; new_label ~= "-north"; break;
@@ -308,32 +310,32 @@ public:
 	    final switch (boundary_indx) {
 	    case Face.north:
 		foreach (i; 0 .. new_niv) {
-		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,njv-1,j)]); }
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+new_niv*j].set(vertices[single_index(i,njv-1,j)]); }
 		}
 		break;
 	    case Face.south:
 		foreach (i; 0 .. new_niv) {
-		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,0,j)]); }
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+new_niv*j].set(vertices[single_index(i,0,j)]); }
 		}
 		break;
 	    case Face.west:
 		foreach (i; 0 .. new_niv) {
-		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(0,i,j)]); }
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+new_niv*j].set(vertices[single_index(0,i,j)]); }
 		}
 		break;
 	    case Face.east:
 		foreach (i; 0 .. new_niv) {
-		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(niv-1,i,j)]); }
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+new_niv*j].set(vertices[single_index(niv-1,i,j)]); }
 		}
 		break;
 	    case Face.top:
 		foreach (i; 0 .. new_niv) {
-		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,j,nkv-1)]); }
+		    foreach (j; 0 .. new_njv) { bgrid.vertices[i+new_niv*j].set(vertices[single_index(i,j,nkv-1)]); }
 		}
 		break;
 	    case Face.bottom:
 		foreach (i; 0 .. niv) {
-		    foreach (j; 0 .. njv) { bgrid.vertices[i+niv*j].set(vertices[single_index(i,j,0)]); }
+		    foreach (j; 0 .. njv) { bgrid.vertices[i+new_niv*j].set(vertices[single_index(i,j,0)]); }
 		}
 		break;
 	    } // end switch boundary_indx
