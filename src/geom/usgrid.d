@@ -296,6 +296,7 @@ public:
 	    }
 	}
 	assembleFaceIndexListPerVertex();
+	niv = vertices.length; njv = 1; nkv = 1;
     }//end paved grid constructor
 
     this(const UnstructuredGrid other, const string new_label="")
@@ -314,6 +315,7 @@ public:
 	foreach(c; other.cells) { cells ~= new USGCell(c); }
 	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
 	assembleFaceIndexListPerVertex();
+	niv = vertices.length; njv = 1; nkv = 1;
     }
 
     this(const StructuredGrid sg, const string new_label="")
@@ -559,6 +561,7 @@ public:
 	assert(nfaces == faces.length, "mismatch in number of faces");
 	assert(ncells == cells.length, "mismatch in number of cells");
 	assembleFaceIndexListPerVertex();
+	niv = vertices.length; njv = 1; nkv = 1;
     } // end constructor from StructuredGrid object
 
     // Imported grid.
@@ -575,6 +578,7 @@ public:
 	}
 	if (new_label != "") { label = new_label; }
 	assembleFaceIndexListPerVertex();
+	niv = vertices.length; njv = 1; nkv = 1;
     }
 
     UnstructuredGrid dup() const

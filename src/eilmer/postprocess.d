@@ -279,11 +279,13 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 					 surfaceCollectionName, tindx, blk_indx, boundary_id);
 		writeln("vtuFileName=", vtuFileName); // DEBUG
 		auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
-		auto surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
+		size_t[] surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
 		size_t new_dimensions = surf_grid.dimensions;
-		size_t new_nic = surf_cells.length;
-		size_t new_njc = 0;
-		size_t new_nkc = 0;
+		// The following should work for both structured and unstructured grids.
+		size_t new_nic = max(surf_grid.niv-1, 1);
+		size_t new_njc = max(surf_grid.njv-1, 1);
+		size_t new_nkc = max(surf_grid.nkv-1, 1);
+		assert(new_nic*new_njc*new_nkc == surf_cells.length, "mismatch is number of cells");
 		auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
 					       new_dimensions, new_nic, new_njc, new_nkc);
 		add_piece_to_PVTU_file(pvtuFile, vtuFileName);

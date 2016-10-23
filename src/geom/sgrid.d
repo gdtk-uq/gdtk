@@ -27,32 +27,8 @@ import univariatefunctions;
 
 class StructuredGrid : Grid {
 public:
-    size_t niv, njv, nkv;
     size_t[] vtx_id; // used to hold the single-index id for each vertex.
     // So that the structured-grid can look like an unstructured grid.
-
-    size_t single_index(size_t i, size_t j, size_t k=0) const
-    in {
-	assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
-	assert (j < njv, text("index j=", j, " is invalid, njv=", njv));
-	assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
-    }
-    body {
-	return i + niv*(j + njv*k);
-    }
-
-    size_t[] ijk_indices(size_t indx) const
-    in {
-	assert ( indx < vertices.length );
-    }
-    body {
-	size_t k = indx / (niv*njv);
-	indx -= k * (niv * njv);
-	size_t j = indx / niv;
-	indx -= j * niv;
-	return [indx, j, k];
-    }
-	    
 
     // Blank grid, ready for import of data.
     this(size_t niv, size_t njv, size_t nkv=1, string label="")

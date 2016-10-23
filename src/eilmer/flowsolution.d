@@ -281,6 +281,7 @@ public:
 	case Grid_t.unstructured_grid:
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "ncells: %d", &ncells);
+	    nic = ncells; njc = 1; nkc = 1;
 	}
 	// Scan the remainder of the file, extracting our data.
 	// Assume it is in standard cell order.
@@ -300,7 +301,9 @@ public:
     this(ref const(BlockFlow) other, size_t[] cellList, size_t new_dimensions,
 	 size_t new_nic, size_t new_njc, size_t new_nkc)
     // Construct by extracting a subset of cells from another BlockFlow object.
-    // Note that we may end up with dodgy values for the nic, njc and nkc counts.
+    // Note that the values for the nic, njc and nkc counts should be consistent with
+    // cellList.length == new_nic * new_njc * new_nkc
+    // For an unstructured grid, new_njc=1 and new_nkc=1 should be provided.
     {
 	gridType = other.gridType;
 	dimensions = new_dimensions;

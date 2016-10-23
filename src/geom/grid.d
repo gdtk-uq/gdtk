@@ -9,6 +9,7 @@ module grid;
 
 import std.math;
 import std.stdio;
+import std.conv;
 import geom;
 
 //-----------------------------------------------------------------
@@ -39,6 +40,10 @@ class Grid {
     size_t ncells;
     size_t nvertices;
     Vector3[] vertices;
+    // For both structured and unstructured grids, we can index vertices with i,j,k indices.
+    // For structured grids, the numbers have an obvious significance.
+    // For unstructured grids, niv==vertices.length, njv==1, nkv==1
+    size_t niv, njv, nkv;
     
     this(Grid_t grid_type, int dimensions, string label="")
     {
@@ -47,6 +52,29 @@ class Grid {
 	this.label = label;
     }
 
+    // Unified indexing.
+    size_t single_index(size_t i, size_t j, size_t k=0) const
+    in {
+	assert (i < niv, text("index i=", i, " is invalid, niv=", niv));
+	assert (j < njv, text("index j=", j, " is invalid, njv=", njv));
+	assert (k < nkv, text("index k=", k, " is invalid, nkv=", nkv));
+    }
+    body {
+	return i + niv*(j + njv*k);
+    }
+
+    size_t[] ijk_indices(size_t indx) const
+    in {
+	assert ( indx < vertices.length );
+    }
+    body {
+	size_t k = indx / (niv*njv);
+	indx -= k * (niv * njv);
+	size_t j = indx / niv;
+	indx -= j * niv;
+	return [indx, j, k];
+    }
+	    
     abstract Vector3* opIndex(size_t i, size_t j, size_t k=0);
     abstract Vector3* opIndex(size_t indx);
     abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const; 
