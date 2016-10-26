@@ -258,8 +258,6 @@ public:
     size_t[string] faceIndices;
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
-    // The following array can be used to get a list of faces attached to a vertex.
-    size_t[][] faceIndexListPerVertex;
 
     //Paved Grid Constructor by Heather Muir, 2016.
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
@@ -659,7 +657,8 @@ public:
     // For an 3D block, a 2D surface grid will be returned, with index directions
     // as defined on the debugging cube.
     {
-	return new UnstructuredGrid(this); // FIXME
+	// FIXME -- not yet implemented.
+	return new UnstructuredGrid(this);
     } // end get_boundary_grid()
 
     override size_t[] get_list_of_boundary_cells(size_t boundary_indx)
@@ -668,7 +667,8 @@ public:
     {
 	size_t new_nic, new_njc, new_nkc;
 	size_t[] cellList;
-	return cellList; // FIXME
+	// FIXME -- not yet implemented.
+	return cellList;
     } // end get_list_of_boundary_cells()
     
     // ------------------------
