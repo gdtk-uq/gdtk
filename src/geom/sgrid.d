@@ -519,7 +519,8 @@ public:
 	} // foreach k
     } // end read_grid_from_text_file()
 
-    override void read_from_gzip_file(string fileName)
+    override void read_from_gzip_file(string fileName, double scale=1.0)
+    // scale = unit length in metres
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
@@ -560,7 +561,7 @@ public:
 		    line = byLine.front; byLine.popFront();
 		    // Note that the line starts with whitespace.
 		    formattedRead(line, " %g %g %g", &x, &y, &z);
-		    this[i,j,k].set(x, y, z);
+		    this[i,j,k].set(scale*x, scale*y, scale*z);
 		    vtx_id[single_index(i,j,k)] = ivtx;
 		    ivtx++;
 		} // foreach i

@@ -563,14 +563,14 @@ public:
     } // end constructor from StructuredGrid object
 
     // Imported grid.
-    this(string fileName, string fmt, string new_label="")
+    this(string fileName, string fmt, double scale=1.0, string new_label="")
     {
 	super(Grid_t.unstructured_grid, 0, new_label);
 	// dimensions will be reset on reading grid
 	switch (fmt) {
-	case "gziptext": read_from_gzip_file(fileName); break;
-	case "su2text": read_from_su2_text_file(fileName); break;
-	case "vtktext": read_from_vtk_text_file(fileName); break;
+	case "gziptext": read_from_gzip_file(fileName, scale); break;
+	case "su2text": read_from_su2_text_file(fileName, scale); break;
+	case "vtktext": read_from_vtk_text_file(fileName, scale); break;
 	case "vtkxml": throw new Error("Reading from VTK XML format not implemented.");
 	default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
 	}
@@ -675,11 +675,12 @@ public:
     // Import-from-file methods.
     // ------------------------
     
-    override void read_from_gzip_file(string fileName)
+    override void read_from_gzip_file(string fileName, double scale=1.0)
     // This function, together with the constructors (from strings) for
     // the classes USGFace, USGCell and BoundaryFaceSet (above),
     // define the Eilmer4 native format.
     // For output, there is the matching write_to_gzip_file() below.
+    // scale = unit length in metres
     {
 	auto byLine = new GzipByLine(fileName);
 	auto line = byLine.front; byLine.popFront();
@@ -701,7 +702,7 @@ public:
 	    line = byLine.front; byLine.popFront();
 	    // Note that the line starts with whitespace.
 	    formattedRead(line, " %g %g %g", &x, &y, &z);
-	    vertices ~= Vector3(x, y, z);
+	    vertices ~= Vector3(scale*x, scale*y, scale*z);
 	}
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "faces: %d", &nfaces);
@@ -728,9 +729,10 @@ public:
 	}
     } // end read_from_gzip_file()
 
-    void read_from_su2_text_file(string fileName)
+    void read_from_su2_text_file(string fileName, double scale=1.0)
     // Information on the su2 file format from
     // https://github.com/su2code/SU2/wiki/Mesh-File
+    // scale = unit length in metres
     {
 	auto f = File(fileName, "r");
 	string getHeaderContent(string target)
@@ -790,14 +792,14 @@ public:
 	    auto tokens = f.readln().strip().split();
 	    double x=0.0; double y=0.0; double z = 0.0; size_t indx = 0;
 	    if (dimensions == 2) {
-		x = to!double(tokens[0]);
-		y = to!double(tokens[1]);
+		x = scale * to!double(tokens[0]);
+		y = scale * to!double(tokens[1]);
 		indx = to!size_t(tokens[2]);
 	    } else {
 		assert(dimensions == 3, "invalid dimensions");
-		x = to!double(tokens[0]);
-		y = to!double(tokens[1]);
-		z = to!double(tokens[2]);
+		x = scale * to!double(tokens[0]);
+		y = scale * to!double(tokens[1]);
+		z = scale * to!double(tokens[2]);
 		indx = to!size_t(tokens[3]);
 	    }
 	    Vector3* vtx = &vertices[indx];
@@ -990,7 +992,8 @@ public:
 	} // end foreach i
     } // end read_from_su2_text_file()
 
-    void read_from_vtk_text_file(string fileName)
+    void read_from_vtk_text_file(string fileName, double scale=1.0)
+    // scale = unit length in metres
     {
 	string[] tokens;
 	auto f = File(fileName, "r");
