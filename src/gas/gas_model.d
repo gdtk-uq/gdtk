@@ -153,7 +153,7 @@ public:
     double[] T;  /// temperatures, K
     /// Transport properties
     double mu;   /// viscosity, Pa.s
-    double[] k;  /// thermal conductivities, W/(m.k)
+    double[] k;  /// thermal conductivities, W/(m.K)
     // double[][] D_AB; /// binary diffusion coefficients
     double sigma;    /// electrical conductivity, S/m
     /// Composition
