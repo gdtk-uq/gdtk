@@ -1836,6 +1836,7 @@ public:
     {
 	foreach (i; 0 .. ghost_cells.length) {
 	    ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
+	    ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
 	    if (reorient_vector_quantities) {
 		ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
 	    }
