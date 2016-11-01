@@ -56,6 +56,51 @@ extern(C) int idealgasflow_beta_obl(lua_State* L)
     return 1;
 }
 
+extern(C) int idealgasflow_M2_obl(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) {
+	string errMsg = "Expected a number for M1";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double M1 = to!double(luaL_checknumber(L, 1));
+    if (!lua_isnumber(L, 2)) {
+	string errMsg = "Expected a number for beta";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double beta = to!double(luaL_checknumber(L, 2));
+    if (!lua_isnumber(L, 3)) {
+	string errMsg = "Expected a number for theta";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double theta = to!double(luaL_checknumber(L, 3));
+    double g = 1.4; // default value
+    if (lua_isnumber(L, 4)) {
+	g = to!double(luaL_checknumber(L, 4));
+    }
+    lua_pushnumber(L, M2_obl(M1, beta, theta, g));
+    return 1;
+}
+
+extern(C) int idealgasflow_p2_p1_obl(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) {
+	string errMsg = "Expected a number for M1";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double M1 = to!double(luaL_checknumber(L, 1));
+    if (!lua_isnumber(L, 2)) {
+	string errMsg = "Expected a number for beta";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double beta = to!double(luaL_checknumber(L, 2));
+    double g = 1.4; // default value
+    if (lua_isnumber(L, 3)) {
+	g = to!double(luaL_checknumber(L, 3));
+    }
+    lua_pushnumber(L, p2_p1_obl(M1, beta, g));
+    return 1;
+}
+
 
 void registeridealgasflowFunctions(lua_State* L)
 {
@@ -71,6 +116,10 @@ void registeridealgasflowFunctions(lua_State* L)
     lua_setfield(L, -2, "A_Astar");
     lua_pushcfunction(L, &idealgasflow_beta_obl);
     lua_setfield(L, -2, "beta_obl");
+    lua_pushcfunction(L, &idealgasflow_M2_obl);
+    lua_setfield(L, -2, "M2_obl");
+    lua_pushcfunction(L, &idealgasflow_p2_p1_obl);
+    lua_setfield(L, -2, "p2_p1_obl");
 
     lua_setglobal(L, idealgasflowMT.toStringz);
 }
