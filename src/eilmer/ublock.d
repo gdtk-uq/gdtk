@@ -12,6 +12,7 @@ import std.format;
 import std.string;
 import std.array;
 import std.math;
+import std.algorithm;
 
 import util.lua;
 import json_helper;
@@ -722,6 +723,65 @@ public:
 	    // The LSQ linear model for the flow field is fitted using 
 	    // information on the locations of the points. 
 	    foreach (c; cells) {
+		/++ 
+		    In some instances the point cloud used for the reconstruction may not have adequate variation in all
+		    dimenions, in the case the standard deviation of the points in the cloud are less than some fraction
+		    of a cell length, store a larger cloud -- ideally this should be carried out where the clouds are
+		    originally constructed, but at that stage the code hasn't set the necessary geometric data.
+		    		    
+		    We do this before assembling and inverting the least-squares matrix.
+		    ++/
+		double[3] avg, sigma;
+		avg[0] = 0.0; avg[1] = 0.0; avg[2] = 0.0;
+		sigma[0] = 0.0; sigma[1] = 0.0; sigma[2] = 0.0;
+		auto n = c.cell_cloud.length;
+		foreach(i; 0..n) {
+		    avg[0] += c.cell_cloud[i].pos[gtl].x; 
+		    avg[1] += c.cell_cloud[i].pos[gtl].y;
+		    if (myConfig.dimensions == 3) avg[2] += c.cell_cloud[i].pos[gtl].z;
+		}
+		avg[0] /= n;
+		avg[1] /= n;
+		if (myConfig.dimensions == 3) avg[2] /= n;
+		foreach (i; 0..n) {
+		    sigma[0] += (c.cell_cloud[i].pos[gtl].x - avg[0])*(c.cell_cloud[i].pos[gtl].x - avg[0]);
+		    sigma[1] += (c.cell_cloud[i].pos[gtl].y - avg[1])*(c.cell_cloud[i].pos[gtl].y - avg[1]);
+		    if (myConfig.dimensions == 3) sigma[2] += (c.cell_cloud[i].pos[gtl].z - avg[2])*(c.cell_cloud[i].pos[gtl].z - avg[2]);
+		    
+		}
+		sigma[0] /= n;
+		sigma[0] = sqrt(sigma[0]);
+		sigma[1] /= n;
+		sigma[1] = sqrt(sigma[1]);
+		if (myConfig.dimensions == 3) sigma[2] = sqrt(sigma[2]/n);
+
+		double[] cell_cloud_ids;
+		foreach(i; 0..n) {
+		    cell_cloud_ids ~= c.cell_cloud[i].id;
+		}
+		double min_sig;
+		min_sig = min(sigma[0], sigma[1]);
+		if (myConfig.dimensions == 3) min_sig = min(min_sig, sigma[2]);
+		if (min_sig< 0.5*c.iLength) {
+		    // collect the face neighbours of the nearest-neighbour cloud cells
+		    foreach (j; 1 .. n) {
+			foreach (i, f; c.cell_cloud[j].iface) {
+			    if (f.right_cell && f.right_cell.will_have_valid_flow) {
+				if (cell_cloud_ids.canFind(f.right_cell.id) == false) {
+				    c.cell_cloud ~= f.right_cell;
+				    cell_cloud_ids ~= f.right_cell.id;
+				}
+			    }
+			    if (f.left_cell && f.left_cell.will_have_valid_flow) {
+				if (cell_cloud_ids.canFind(f.left_cell.id) == false) {
+				    c.cell_cloud ~= f.left_cell;
+				    cell_cloud_ids ~= f.left_cell.id;
+				}
+			    }
+			}
+		    }
+		}
+		writeln(c.cell_cloud.length);
 		c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
 	    }
 	}
