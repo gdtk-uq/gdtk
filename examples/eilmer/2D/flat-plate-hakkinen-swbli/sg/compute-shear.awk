@@ -10,7 +10,7 @@ BEGIN {
     T_inf = 164.4 # K
     # Sutherland expression for viscosity
     mu_ref = 1.716e-5; T_ref = 273.0; S_mu = 111.0
-    mu_inf = (T_inf/T_ref)*sqrt(T_inf/T_ref) * (T_ref + S_mu)/(T_inf + S_mu) * mu_ref
+    mu_inf = (T_inf/T_ref)*sqrt(T_inf/T_ref)*(T_ref+S_mu)/(T_inf+S_mu)*mu_ref
     print("# x(m)  tau_w(Pa)  Cf   y_plus")
 }
 
