@@ -106,6 +106,9 @@ public:
 	lua_close(myL);
     }
 
+    @nogc abstract int get_interpolation_order();
+    @nogc void set_interpolation_order(int order);
+
     override string toString() const { return "Block(id=" ~ to!string(id) ~ ")"; }
 
     abstract void init_lua_globals();

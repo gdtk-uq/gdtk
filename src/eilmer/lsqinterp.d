@@ -469,6 +469,16 @@ public:
 	this.myConfig = myConfig;
     }
 
+    @nogc int get_interpolation_order()
+    {
+	return myConfig.interpolation_order;
+    }
+
+    @nogc void set_interpolation_order(int order)
+    {
+	myConfig.interpolation_order = order;
+    }
+
     @nogc double clip_to_limits(double q, double A, double B)
     // Returns q if q is between the values A and B, else
     // it returns the closer limit of the range [A,B].

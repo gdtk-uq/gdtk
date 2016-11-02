@@ -63,6 +63,16 @@ public:
 	lsq = new LsqInterpolator(dedicatedConfig[id]);
     } // end constructor from json
 
+    @nogc override int get_interpolation_order()
+    {
+	return lsq.get_interpolation_order();
+    }
+
+    @nogc override void set_interpolation_order(int order)
+    {
+	lsq.set_interpolation_order(order);
+    }
+
     override void init_lua_globals()
     {
 	lua_pushinteger(myL, ncells); lua_setglobal(myL, "ncells");

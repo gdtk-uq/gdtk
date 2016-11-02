@@ -37,7 +37,7 @@ public:
 	this.myConfig = myConfig;
     }
 
-    int get_interpolation_order()
+    @nogc int get_interpolation_order()
     {
 	return myConfig.interpolation_order;
     }

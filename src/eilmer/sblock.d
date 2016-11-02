@@ -120,12 +120,12 @@ public:
 	omegaz = getJSONdouble(json_data, "omegaz", 0.0);
     } // end constructor from json
 
-    int get_interpolation_order()
+    @nogc override int get_interpolation_order()
     {
 	return one_d.get_interpolation_order();
     }
 
-    @nogc void set_interpolation_order(int order)
+    @nogc override void set_interpolation_order(int order)
     {
 	one_d.set_interpolation_order(order);
     }
