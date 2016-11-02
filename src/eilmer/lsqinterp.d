@@ -15,7 +15,7 @@ import flowstate;
 import fvinterface;
 import fvcell;
 
-immutable size_t cloud_nmax = 12;
+immutable size_t cloud_nmax = 33;
 
 class LSQInterpWorkspace {
 public:
