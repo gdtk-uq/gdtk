@@ -417,6 +417,25 @@ public:
 					f.cloud_fs ~= f.left_cell.fs;
 				    }
 				}
+
+				
+				foreach (fvtx; f.vtx) {
+				    bool prevent_dup = false;                     // prevents double dipping in 3D simulations
+				    foreach (other_face_id; grid.faceIndexListPerVertex[fvtx.id]) {
+					FVInterface other_face = faces[other_face_id];
+					if(other_face.id == f.id) continue;    // skip current interface
+					if (other_face.is_on_boundary && other_face.bc_id == bndary_idx && prevent_dup == false) {
+					    prevent_dup = true;
+					    // store left and right cell
+					    f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
+					    f.cloud_fs ~= other_face.left_cell.fs;
+					    f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
+					    f.cloud_fs ~= other_face.right_cell.fs;
+					}// end if (other_face.is_on_boundary && other_face.bc_id == bndary_idx)
+				    } // end foreach (gvtx; fvtx.faceIndexListPerVertex)
+				} // end foreach (fvtx; f.vtx)
+				
+				/*
 				// now grab the remaining cells
 				foreach (cell; cell_list) { // for each cell
 				    foreach (other_face; cell.iface) { // loop around cell interfaces
@@ -440,6 +459,8 @@ public:
 					}// end if (other_face.is_on_boundary && other_face.bc_id == bndary_idx)
 				    } // end foreach (other_face; cell.iface)
 				} // foreach (cell; cell_list)
+				*/
+				
 			    } // end foreach (i, f; bc.faces)
 			} // end else
 		    } // end (bndary_idx, boundary; grid.boundaries)
@@ -535,6 +556,7 @@ public:
 				} // end foreach (vtx_other_face; other_face.vtx)
 			    } // end foreach (other_face; cell.iface)
 			} // end foreach (cell; cell_list)
+			//writeln(f.cloud_pos.length);
 		    } // end foreach (i, f; faces)
 		} // end else
 	    }  // if (myConfig.spatial_deriv_calc ==  SpatialDerivCalc.least_squares)
@@ -781,7 +803,6 @@ public:
 			}
 		    }
 		}
-		writeln(c.cell_cloud.length);
 		c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
 	    }
 	}
