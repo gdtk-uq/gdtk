@@ -1,3 +1,4 @@
 #!/bin/bash
-e4sss --job=wedge
+gnuplot live-residuals.gplot &
+/work/dgdinst/bin/e4sss --job=wedge
 

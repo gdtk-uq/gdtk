@@ -95,14 +95,17 @@ blk.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
 config.interpolation_order = 2
 config.print_count = 1
 SteadyStateSolver{
-   cfl_init = 10.0,
+   cfl_init = 5.0,
    eta = 0.01,
-   sigma = 1.0e-8,
+   use_preconditioning = false,
+   sigma = 1.0e-7,
    tau = 0.1,
-   number_pre_iterations = 3,
-   number_low_order_iterations = 5,
-   number_outer_iterations = 40,
-   max_inner_iterations = 60,
+   number_pre_steps = 3,
+   number_low_order_steps = 5,
+   number_newton_steps = 40,
+   max_outer_iterations = 40,
+   number_inner_iterations = 10,
+   max_restarts = 5,
    snapshots_frequency = 1,
    snapshots_count = 40
 }
