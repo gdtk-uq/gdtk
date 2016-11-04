@@ -27,13 +27,17 @@ sssOptionsHidden = { -- hidden from user
    -- set defaults here
    cfl_init = 0.5,
    eta = 0.01,
+   inner_to_outer_tol_ratio = 10.0,
    sigma = 1.0e-8,
    tau = 0.1,
-   number_pre_iterations = 10,
-   number_low_order_iterations = 20,
-   number_outer_iterations = 100,
-   max_inner_iterations = 20,
+   use_preconditioning = true,
+   number_pre_steps = 10,
+   number_low_order_steps = 20,
+   number_newton_steps = 100,
    max_number_attempts = 3,
+   max_outer_iterations = 20,
+   max_restarts = 10,
+   number_inner_iterations = 5,
    snapshots_frequency = 10,
    snapshots_count = 1,
    __index = function (t, k) 
@@ -949,10 +953,13 @@ function write_control_file(fileName)
    f:write(string.format('   "eta": %.18e,\n', SteadyStateSolver.eta))
    f:write(string.format('   "sigma": %.18e,\n', SteadyStateSolver.sigma))
    f:write(string.format('   "tau": %.18e,\n', SteadyStateSolver.tau))
-   f:write(string.format('   "number_pre_iterations": %d,\n', SteadyStateSolver.number_pre_iterations))
-   f:write(string.format('   "number_low_order_iterations": %d,\n', SteadyStateSolver.number_low_order_iterations))
-   f:write(string.format('   "number_outer_iterations": %d,\n', SteadyStateSolver.number_outer_iterations))
-   f:write(string.format('   "max_inner_iterations": %d,\n', SteadyStateSolver.max_inner_iterations))
+   f:write(string.format('   "use_preconditioning": %s,\n', tostring(SteadyStateSolver.use_preconditioning)))
+   f:write(string.format('   "number_pre_steps": %d,\n', SteadyStateSolver.number_pre_steps))
+   f:write(string.format('   "number_low_order_steps": %d,\n', SteadyStateSolver.number_low_order_steps))
+   f:write(string.format('   "number_newton_steps": %d,\n', SteadyStateSolver.number_newton_steps))
+   f:write(string.format('   "max_outer_iterations": %d,\n', SteadyStateSolver.max_outer_iterations))
+   f:write(string.format('   "max_restarts": %d,\n', SteadyStateSolver.max_restarts))
+   f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))
    f:write(string.format('   "max_number_attempts": %d,\n', SteadyStateSolver.max_number_attempts))
    f:write(string.format('   "snapshots_frequency": %d,\n', SteadyStateSolver.snapshots_frequency))
    f:write(string.format('   "snapshots_count": %d\n', SteadyStateSolver.snapshots_count))

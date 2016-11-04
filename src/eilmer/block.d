@@ -76,9 +76,16 @@ public:
     // Work-space for steady-state solver
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
-    double[] FU, dU, S, r0, v, w;
-    double[] g0, g1, h, hR;
-    Matrix V, W, H0, H1, Gamma, Q0, Q1;
+    double[] FU, dU, S, r0, x0;
+    // outer iterations 
+    double[] v_outer, w_outer, z_outer;
+    double[] g0_outer, g1_outer, h_outer, hR_outer;
+    Matrix V_outer, Z_outer, W_outer, H0_outer, H1_outer, Gamma_outer, Q0_outer, Q1_outer;
+    // inner iterations 
+    double[] v_inner, w_inner;
+    double[] g0_inner, g1_inner, h_inner, hR_inner;
+    Matrix V_inner, W_inner, H0_inner, H1_inner, Gamma_inner, Q0_inner, Q1_inner;
+
     }
 
     this(int id, Grid_t grid_type, string label)
@@ -573,26 +580,44 @@ public:
     void allocate_GMRES_workspace()
     {
 	int nConserved = 4; // rho, rho*u, rho*v, rho*E
-	size_t m = to!size_t(GlobalConfig.sssOptions.maxInnerIterations);
+	size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
+	size_t mInner = to!size_t(GlobalConfig.sssOptions.nInnerIterations);
 	size_t n = nConserved*cells.length;
 	// Now allocate arrays and matrices
 	FU.length = n;
 	dU.length = n; dU[] = 0.0;
 	S.length = n;
 	r0.length = n;
-	v.length = n;
-	w.length = n;
-	g0.length = m+1;
-	g1.length = m+1;
-	h.length = m+1;
-	hR.length = m+1;
-	V = new Matrix(n, m+1);
-	W = new Matrix(n, m+1);
-	H0 = new Matrix(m+1, m);
-	H1 = new Matrix(m+1, m);
-	Gamma = new Matrix(m+1, m+1);
-	Q0 = new Matrix(m+1, m+1);
-	Q1 = new Matrix(m+1, m+1);
+	x0.length = n;
+	v_outer.length = n;
+	w_outer.length = n;
+	z_outer.length = n;
+	g0_outer.length = mOuter+1;
+	g1_outer.length = mOuter+1;
+	h_outer.length = mOuter+1;
+	hR_outer.length = mOuter+1;
+	V_outer = new Matrix(n, mOuter+1);
+	W_outer = new Matrix(n, mOuter+1);
+	Z_outer = new Matrix(n, mOuter+1);
+	H0_outer = new Matrix(mOuter+1, mOuter);
+	H1_outer = new Matrix(mOuter+1, mOuter);
+	Gamma_outer = new Matrix(mOuter+1, mOuter+1);
+	Q0_outer = new Matrix(mOuter+1, mOuter+1);
+	Q1_outer = new Matrix(mOuter+1, mOuter+1);
+
+	v_inner.length = n;
+	w_inner.length = n;
+	g0_inner.length = mInner+1;
+	g1_inner.length = mInner+1;
+	h_inner.length = mInner+1;
+	hR_inner.length = mInner+1;
+	V_inner = new Matrix(n, mInner+1);
+	W_inner = new Matrix(n, mInner+1);
+	H0_inner = new Matrix(mInner+1, mInner);
+	H1_inner = new Matrix(mInner+1, mInner);
+	Gamma_inner = new Matrix(mInner+1, mInner+1);
+	Q0_inner = new Matrix(mInner+1, mInner+1);
+	Q1_inner = new Matrix(mInner+1, mInner+1);
     }
     }
 } // end class Block

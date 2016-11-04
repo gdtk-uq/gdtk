@@ -114,14 +114,16 @@ struct SteadyStateSolverOptions {
     double eta = 0.01;
     double sigma = 1.0e-8;
     double tau = 0.1;
-    int nPreIterations = 10;
-    int nLowOrderIterations = 20;
-    int nOuterIterations = 100;
-    int maxInnerIterations = 20;
+    bool usePreconditioning = true;
+    int nPreSteps = 10;
+    int nLowOrderSteps = 20;
+    int nNewtonSteps = 100;
     int maxNumberAttempts = 3;
+    int maxOuterIterations = 10;
+    int maxRestarts = 10;
+    int nInnerIterations = 5;
     int snapshotsFrequency = 10;
     int snapshotsCount = 1;
-    
 }
 }
 
@@ -953,16 +955,21 @@ void read_control_file()
     GlobalConfig.sssOptions.eta = getJSONdouble(sssOptions, "eta", GlobalConfig.sssOptions.eta);
     GlobalConfig.sssOptions.sigma = getJSONdouble(sssOptions, "sigma", GlobalConfig.sssOptions.sigma);
     GlobalConfig.sssOptions.tau = getJSONdouble(sssOptions, "tau", GlobalConfig.sssOptions.tau);
-    GlobalConfig.sssOptions.nPreIterations = 
-	getJSONint(sssOptions, "number_pre_iterations", GlobalConfig.sssOptions.nPreIterations);
-    GlobalConfig.sssOptions.nLowOrderIterations = 
-	getJSONint(sssOptions, "number_low_order_iterations", GlobalConfig.sssOptions.nLowOrderIterations);
-    GlobalConfig.sssOptions.nOuterIterations = 
-	getJSONint(sssOptions, "number_outer_iterations", GlobalConfig.sssOptions.nOuterIterations);
-    GlobalConfig.sssOptions.maxInnerIterations = 
-	getJSONint(sssOptions, "max_inner_iterations", GlobalConfig.sssOptions.maxInnerIterations);
+    GlobalConfig.sssOptions.usePreconditioning = getJSONbool(sssOptions, "use_preconditioning", GlobalConfig.sssOptions.usePreconditioning);
+    GlobalConfig.sssOptions.nPreSteps = 
+	getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
+    GlobalConfig.sssOptions.nLowOrderSteps = 
+	getJSONint(sssOptions, "number_low_order_steps", GlobalConfig.sssOptions.nLowOrderSteps);
+    GlobalConfig.sssOptions.nNewtonSteps = 
+	getJSONint(sssOptions, "number_newton_steps", GlobalConfig.sssOptions.nNewtonSteps);
     GlobalConfig.sssOptions.maxNumberAttempts = 
 	getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
+    GlobalConfig.sssOptions.maxOuterIterations = 
+	getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
+    GlobalConfig.sssOptions.maxRestarts = 
+	getJSONint(sssOptions, "max_restarts", GlobalConfig.sssOptions.maxRestarts);
+    GlobalConfig.sssOptions.nInnerIterations = 
+	getJSONint(sssOptions, "number_inner_iterations", GlobalConfig.sssOptions.nInnerIterations);
     GlobalConfig.sssOptions.snapshotsFrequency = 
 	getJSONint(sssOptions, "snapshots_frequency", GlobalConfig.sssOptions.snapshotsFrequency);
     GlobalConfig.sssOptions.snapshotsCount = 
