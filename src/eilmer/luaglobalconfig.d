@@ -148,6 +148,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("reacting", "reacting"));
     mixin(get_string_field("reactions_file", "reactions_file"));
     mixin(get_double_field("reaction_time_delay", "reaction_time_delay"));
+    mixin(get_double_field("T_frozen", "T_frozen"));
+    mixin(get_double_field("T_frozen_energy", "T_frozen_energy"));
     //
     mixin(get_int_field("max_step", "max_step"));
     mixin(get_int_field("halt_now", "halt_now"));
@@ -266,6 +268,8 @@ extern(C) int configGet(lua_State* L)
     case "reacting": lua_pushboolean(L, GlobalConfig.reacting); break;
     case "reactions_file": lua_pushstring(L, GlobalConfig.reactions_file.toStringz); break;
     case "reaction_time_delay": lua_pushnumber(L, GlobalConfig.reaction_time_delay); break;
+    case "T_frozen": lua_pushnumber(L, GlobalConfig.T_frozen); break;
+    case "T_frozen_energy": lua_pushnumber(L, GlobalConfig.T_frozen_energy); break;
 	//
     case "max_step": lua_pushnumber(L, GlobalConfig.max_step); break;
     case "halt_now": lua_pushnumber(L, GlobalConfig.halt_now); break;

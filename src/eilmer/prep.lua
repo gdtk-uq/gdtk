@@ -1047,6 +1047,8 @@ function write_config_file(fileName)
    f:write(string.format('"reacting": %s,\n', tostring(config.reacting)))
    f:write(string.format('"reactions_file": "%s",\n', config.reactions_file))
    f:write(string.format('"reaction_time_delay": %.18e,\n', config.reaction_time_delay))
+   f:write(string.format('"T_frozen": %.18e,\n', config.T_frozen))
+   f:write(string.format('"T_frozen_energy": %.18e,\n', config.T_frozen_energy))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nblock": %d,\n', #(blocks)))

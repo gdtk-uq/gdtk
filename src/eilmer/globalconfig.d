@@ -316,8 +316,8 @@ final class GlobalConfig {
     shared static bool reacting = false;
     shared static string reactions_file = "chemistry.lua";
     shared static double reaction_time_delay = 0.0;
-    shared static double T_frozen; // temperature (in K) below which reactions are frozen
-    shared static double T_frozen_energy; // temperature (in K) below which energy exchanges are skipped
+    shared static double T_frozen = 300.0; // temperature (in K) below which reactions are frozen
+    shared static double T_frozen_energy = 300.0; // temperature (in K) below which energy exchanges are skipped
     static BlockZone[] reaction_zones;
     shared static double ignition_time_start = 0.0;
     shared static double ignition_time_stop = 0.0;
@@ -766,10 +766,14 @@ void read_config_file()
     mixin(update_bool("reacting", "reacting"));
     mixin(update_string("reactions_file", "reactions_file"));
     mixin(update_double("reaction_time_delay", "reaction_time_delay"));
+    mixin(update_double("T_frozen", "T_frozen"));
+    mixin(update_double("T_frozen_energy", "T_frozen_energy"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  reacting: ", GlobalConfig.reacting);
 	writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
 	writeln("  reaction_time_delay: ", GlobalConfig.reaction_time_delay);
+	writeln("  T_frozen: ", GlobalConfig.T_frozen);
+	writeln("  T_frozen_energy: ", GlobalConfig.T_frozen_energy);
     }
 
     // Parameters controlling other simulation options
