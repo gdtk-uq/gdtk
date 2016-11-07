@@ -4,11 +4,16 @@ set logscale y
 set ylabel 'relative residuals'
 set xlabel 'step'
 set yrange [1.0e-12:10]
-set xrange [0:50]
-plot 'e4sss.diagnostics.dat' u 1:7 t 'mass' w lines lw 2.5, \
-     'e4sss.diagnostics.dat' u 1:9 t 'x-mom' w lines lw 2.5, \
-     'e4sss.diagnostics.dat' u 1:11 t 'y-mom' w lines lw 2.5, \
-     'e4sss.diagnostics.dat' u 1:13 t 'energy' w lines lw 2.5 
+set xrange [0:30]
+set y2tics
+set y2label 'no. function evaluations'
+set y2range [0:3000]
+plot 'e4sss.diagnostics.dat' u 1:17 t 'global' w lines lw 2.5, \
+     'e4sss.diagnostics.dat' u 1:9 t 'mass' w lines lw 2.5, \
+     'e4sss.diagnostics.dat' u 1:11 t 'x-mom' w lines lw 2.5, \
+     'e4sss.diagnostics.dat' u 1:13 t 'y-mom' w lines lw 2.5, \
+     'e4sss.diagnostics.dat' u 1:15 t 'energy' w lines lw 2.5 lc 7, \
+     'e4sss.diagnostics.dat' u 1:6 axes x1y2 t 'n fn evals' w lines lw 2
 pause 2
 bind "x" "exit gnuplot"
 reread

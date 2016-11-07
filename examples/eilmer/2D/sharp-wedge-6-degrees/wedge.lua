@@ -95,19 +95,27 @@ blk.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
 config.interpolation_order = 2
 config.print_count = 1
 SteadyStateSolver{
-   cfl_init = 5.0,
-   eta = 0.01,
    use_preconditioning = false,
-   sigma = 1.0e-7,
-   tau = 0.1,
+   -- sigma = 1.0e-6, -- presently it's computed internally
    number_pre_steps = 3,
-   number_low_order_steps = 5,
-   number_newton_steps = 40,
-   max_outer_iterations = 40,
-   number_inner_iterations = 10,
-   max_restarts = 5,
-   snapshots_frequency = 1,
-   snapshots_count = 40
+   number_total_steps = 30,
+   -- Settings for FGMRES iterative solver
+   max_outer_iterations = 60,
+   -- number_inner_iterations = 5, -- not needed is preconditioning is false
+   max_restarts = 9,
+   -- Settings for start-up phase
+   number_start_up_steps = 5,
+   cfl0 = 5.0,
+   eta0 = 0.5,
+   tau0 = 0.1,
+   -- Settings for inexact Newton phase
+   cfl1 = 100.0,
+   eta1 = 0.01,
+   eta_strategy = "constant",
+   -- Settings control write-out
+   snapshots_frequency = 30,
+   snapshots_count = 1,
+   write_diagnostics_count = 1
 }
    
 
