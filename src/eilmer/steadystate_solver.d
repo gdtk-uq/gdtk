@@ -295,19 +295,20 @@ void iterate_to_steady_state()
     fResid.writeln("#  2: pseudo-time");
     fResid.writeln("#  3: dt");
     fResid.writeln("#  4: CFL");
-    fResid.writeln("#  5: nRestarts");
-    fResid.writeln("#  6: nFnCalls");
-    fResid.writeln("#  7: wall-clock, s");
-    fResid.writeln("#  8: mass-abs");
-    fResid.writeln("#  9: mass-rel");
-    fResid.writeln("# 10: x-mom-abs");
-    fResid.writeln("# 11: x-mom-rel");
-    fResid.writeln("# 12: y-mom-abs");
-    fResid.writeln("# 13: y-mom-rel");
-    fResid.writeln("# 14: energy-abs");
-    fResid.writeln("# 15: energy-rel\n");
-    fResid.writeln("# 16: global-residual-abs\n");
-    fResid.writeln("# 17: global-residual-rel\n");
+    fResid.writeln("#  5: eta");
+    fResid.writeln("#  6: nRestarts");
+    fResid.writeln("#  7: nFnCalls");
+    fResid.writeln("#  8: wall-clock, s");
+    fResid.writeln("#  9: mass-abs");
+    fResid.writeln("# 10: mass-rel");
+    fResid.writeln("# 11: x-mom-abs");
+    fResid.writeln("# 12: x-mom-rel");
+    fResid.writeln("# 13: y-mom-abs");
+    fResid.writeln("# 14: y-mom-rel");
+    fResid.writeln("# 15: energy-abs");
+    fResid.writeln("# 16: energy-rel\n");
+    fResid.writeln("# 17: global-residual-abs\n");
+    fResid.writeln("# 18: global-residual-rel\n");
     fResid.close();
 
     // Begin Newton steps
@@ -382,8 +383,8 @@ void iterate_to_steady_state()
 		residualsUpToDate = true;
 	    }
 	    fResid = File(residFname, "a");
-	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %3d %5d %8d %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e\n",
-			  step, pseudoSimTime, dt, cfl, nRestarts, fnCount, wallClockElapsed, 
+	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %8d %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e\n",
+			  step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
 			  currResid.mass, currResid.mass/maxResid.mass,
 			  currResid.xMomentum, currResid.xMomentum/maxResid.xMomentum,
 			  currResid.yMomentum, currResid.yMomentum/maxResid.yMomentum,
@@ -398,7 +399,7 @@ void iterate_to_steady_state()
 	    auto writer = appender!string();
 
 	    formattedWrite(writer, "Iteration= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%d \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
-	    formattedWrite(writer, "Residuals:     mass        x-mom       y-mom        energy      global\n");
+	    formattedWrite(writer, "Residuals:     mass         x-mom        y-mom        energy       global\n");
 	    formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
 			   currResid.mass, currResid.xMomentum, currResid.yMomentum, currResid.energy, normNew);
 	    formattedWrite(writer, "--> relative   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
