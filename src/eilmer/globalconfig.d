@@ -108,24 +108,60 @@ class IgnitionZone : BlockZone {
 }
 
 version(steady_state) {
+enum EtaStrategy { constant, linear_reduction, adaptive, adaptive_capped }
+string etaStrategyName(EtaStrategy i)
+{
+    final switch (i) {
+    case EtaStrategy.constant: return "constant";
+    case EtaStrategy.linear_reduction: return "linear_reduction";
+    case EtaStrategy.adaptive: return "adaptive";
+    case EtaStrategy.adaptive_capped: return "adaptive_capped";
+    }
+} // end etaStrategyName()
+
+EtaStrategy etaStrategyFromName(string name)
+{
+    final switch (name) {
+    case "constant": return EtaStrategy.constant;
+    case "linear_reduction": return EtaStrategy.linear_reduction;
+    case "adaptive": return EtaStrategy.adaptive;
+    case "adaptive_capped": return EtaStrategy.adaptive_capped;
+    }
+} // end etaStrategyFromName()
+
 struct SteadyStateSolverOptions {
-    double cflInit = 0.5;
     int nConserved = 4;
-    double eta = 0.01;
-    double sigma = 1.0e-8;
-    double tau = 0.1;
+    double sigma = 1.0e-8;  // presently, we overwrite this with sqrt(n*epsilon)
     bool usePreconditioning = true;
     int nPreSteps = 10;
-    int nLowOrderSteps = 20;
-    int nNewtonSteps = 100;
-    int maxNumberAttempts = 3;
+    int nTotalSteps = 100;
+    int maxNumberAttempts = 3; // at taking a Newton step.
+    // Restarted preconditioned FGMRES settings
     int maxOuterIterations = 10;
     int maxRestarts = 10;
     int nInnerIterations = 5;
+    // Options for start-up phase
+    int nStartUpSteps = 5;
+    double cfl0 = 1.0;
+    double eta0 = 0.5;
+    double tau0 = 0.1;
+    // Options for inexact Newton phase
+    double cfl1 = 10.0;
+    double tau1 = 0.1;
+    EtaStrategy etaStrategy = EtaStrategy.constant;
+    double eta1 = 0.5;
+    double eta1_max = 0.9;
+    double eta1_min = 0.01;
+    double etaChangePerStep = 0.01;
+    double gamma = 0.9;
+    double alpha = 2.0;
+    // Options related to writing out snapshots and diagnostics
     int snapshotsFrequency = 10;
     int snapshotsCount = 1;
+    int writeDiagnosticsCount = 20;
 }
-}
+
+} // end version(steady_state)
 
 final class GlobalConfig {
     shared static string base_file_name = "job"; // Change this to suit at run time.
@@ -955,17 +991,13 @@ void read_control_file()
     
     version (steady_state) {
     auto sssOptions = jsonData["steady_state_solver_options"];
-    GlobalConfig.sssOptions.cflInit = getJSONdouble(sssOptions, "cfl_init", GlobalConfig.sssOptions.cflInit);
-    GlobalConfig.sssOptions.eta = getJSONdouble(sssOptions, "eta", GlobalConfig.sssOptions.eta);
     GlobalConfig.sssOptions.sigma = getJSONdouble(sssOptions, "sigma", GlobalConfig.sssOptions.sigma);
-    GlobalConfig.sssOptions.tau = getJSONdouble(sssOptions, "tau", GlobalConfig.sssOptions.tau);
+
     GlobalConfig.sssOptions.usePreconditioning = getJSONbool(sssOptions, "use_preconditioning", GlobalConfig.sssOptions.usePreconditioning);
     GlobalConfig.sssOptions.nPreSteps = 
 	getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
-    GlobalConfig.sssOptions.nLowOrderSteps = 
-	getJSONint(sssOptions, "number_low_order_steps", GlobalConfig.sssOptions.nLowOrderSteps);
-    GlobalConfig.sssOptions.nNewtonSteps = 
-	getJSONint(sssOptions, "number_newton_steps", GlobalConfig.sssOptions.nNewtonSteps);
+    GlobalConfig.sssOptions.nTotalSteps = 
+	getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);    
     GlobalConfig.sssOptions.maxNumberAttempts = 
 	getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
     GlobalConfig.sssOptions.maxOuterIterations = 
@@ -974,10 +1006,48 @@ void read_control_file()
 	getJSONint(sssOptions, "max_restarts", GlobalConfig.sssOptions.maxRestarts);
     GlobalConfig.sssOptions.nInnerIterations = 
 	getJSONint(sssOptions, "number_inner_iterations", GlobalConfig.sssOptions.nInnerIterations);
+    // Settings for start-up phase
+    GlobalConfig.sssOptions.nStartUpSteps = 
+	getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
+    GlobalConfig.sssOptions.cfl0 =
+	getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
+    GlobalConfig.sssOptions.eta0 =
+	getJSONdouble(sssOptions, "eta0", GlobalConfig.sssOptions.eta0);
+    GlobalConfig.sssOptions.tau0 =
+	getJSONdouble(sssOptions, "tau0", GlobalConfig.sssOptions.tau0);
+    // Setting for inexact Newton phase
+    GlobalConfig.sssOptions.cfl1 =
+	getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
+    GlobalConfig.sssOptions.tau1 =
+	getJSONdouble(sssOptions, "tau1", GlobalConfig.sssOptions.tau1);
+    { 
+	auto mySaveValue = GlobalConfig.sssOptions.etaStrategy;
+	try {
+	    string name = sssOptions["eta_strategy"].str;
+	    GlobalConfig.sssOptions.etaStrategy = etaStrategyFromName(name);
+	} catch (Exception e) {
+	    GlobalConfig.sssOptions.etaStrategy = mySaveValue;
+	}
+    }
+    GlobalConfig.sssOptions.eta1 =
+	getJSONdouble(sssOptions, "eta1", GlobalConfig.sssOptions.eta1);
+    GlobalConfig.sssOptions.eta1_max =
+	getJSONdouble(sssOptions, "eta1_max", GlobalConfig.sssOptions.eta1_max);
+    GlobalConfig.sssOptions.eta1_min =
+	getJSONdouble(sssOptions, "eta1_min", GlobalConfig.sssOptions.eta1_min);
+    GlobalConfig.sssOptions.etaChangePerStep =
+	getJSONdouble(sssOptions, "eta_change_per_step", GlobalConfig.sssOptions.etaChangePerStep);
+    GlobalConfig.sssOptions.gamma =
+	getJSONdouble(sssOptions, "gamma", GlobalConfig.sssOptions.gamma);
+    GlobalConfig.sssOptions.alpha =
+	getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
+    // Settings for writing out snapshots and diagnostics
     GlobalConfig.sssOptions.snapshotsFrequency = 
 	getJSONint(sssOptions, "snapshots_frequency", GlobalConfig.sssOptions.snapshotsFrequency);
     GlobalConfig.sssOptions.snapshotsCount = 
 	getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
+    GlobalConfig.sssOptions.writeDiagnosticsCount = 
+	getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
     }
 
     // Propagate new values to the local copies of config.

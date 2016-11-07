@@ -26,6 +26,7 @@ import std.getopt;
 import std.string;
 import std.array;
 import std.math;
+import std.datetime;
 
 import nm.smla;
 import nm.bbla;
@@ -39,9 +40,7 @@ import fvcore;
 import fileutil;
 import user_defined_source_terms;
 
-immutable double dU_essentially_zero = 1.0e-16;
-
-int fnCount = 0;
+static int fnCount = 0;
 
 struct ResidValues {
     double mass;
@@ -53,8 +52,6 @@ struct ResidValues {
 
 void main(string[] args)
 {
-    //    GlobalConfig.use_steady_state_solver = true;
-
     writeln("Eilmer compressible-flow simulation code -- steady state solver.");
     writeln("Revision: PUT_REVISION_STRING_HERE");
 
@@ -144,10 +141,7 @@ void main(string[] args)
 	writeln("Steady-state solver not implemented for 3D calculations.");
 	goodToProceed = false;
     }
-    //if ( GlobalConfig.viscous == true ) {
-    //	writeln("Steady-state solver not implemented for viscous calculations.");
-    //	goodToProceed = false;
-    //    }
+
     if ( gasBlocks.length > 1 ) {
 	writeln("Steady-state solver not implemented nBlocks > 1.");
 	goodToProceed = false;
@@ -166,30 +160,48 @@ void main(string[] args)
 
 void iterate_to_steady_state()
 {
+    auto wallClockStart = Clock.currTime();
     bool withPTC = true;
     string jobName = GlobalConfig.base_file_name;
-    int nsteps = GlobalConfig.sssOptions.nNewtonSteps;
-    int nOuterIterations;
+    int nsteps = GlobalConfig.sssOptions.nTotalSteps;
+    int nRestarts;
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     int nConserved = GlobalConfig.sssOptions.nConserved;
-    double cflInit = GlobalConfig.sssOptions.cflInit;
+    double sigma = sqrt(gasBlocks[0].cells.length * nConserved * double.epsilon);
+    // Settings for start-up phase
+    double cfl0 = GlobalConfig.sssOptions.cfl0;
+    double tau0 = GlobalConfig.sssOptions.tau0;
+    double eta0 = GlobalConfig.sssOptions.eta0;
+    // Settings for inexact Newton phase
+    double cfl1 = GlobalConfig.sssOptions.cfl1;
+    double tau1 = GlobalConfig.sssOptions.tau1;
+    EtaStrategy etaStrategy = GlobalConfig.sssOptions.etaStrategy;
+    double eta1 = GlobalConfig.sssOptions.eta1;
+    double eta1_max = GlobalConfig.sssOptions.eta1_max;
+    double eta1_min = GlobalConfig.sssOptions.eta1_min;
+    double etaChangePerStep = GlobalConfig.sssOptions.etaChangePerStep;
+    double gamma = GlobalConfig.sssOptions.gamma;
+    double alpha = GlobalConfig.sssOptions.alpha;
+
     SBlock sblk = cast(SBlock) gasBlocks[0];
     int interpOrderSave = sblk.get_interpolation_order();
 
-    double dt = determine_initial_dt(cflInit);
-    double dtTrial;
+    double dt = determine_initial_dt(cfl0);
+    double dtTrial, etaTrial;
     bool failedAttempt;
     double pseudoSimTime = 0.0;
     double normOld, normNew;
     int snapshotsFreq = GlobalConfig.sssOptions.snapshotsFrequency;
     int snapshotsCount = GlobalConfig.sssOptions.snapshotsCount;
     int writtenSnapshotsCount = 0;
+    int writeDiagnosticsCount = GlobalConfig.sssOptions.writeDiagnosticsCount;
 
     int nPreSteps = GlobalConfig.sssOptions.nPreSteps;
-    int nLowOrderSteps = GlobalConfig.sssOptions.nLowOrderSteps;
-    double tau = GlobalConfig.sssOptions.tau;
+    int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
 
+    long wallClockElapsed;
+    double cfl;
     double[string][] times;
     times ~= [ "pst":0.0, "dt":dt ];
 
@@ -205,6 +217,7 @@ void iterate_to_steady_state()
     // pre-step phase.
     double normMax = 0.0;
     ResidValues maxResid, currResid;
+    bool residualsUpToDate = false;
 
     bool withPreconditioning = false;
 
@@ -212,7 +225,7 @@ void iterate_to_steady_state()
     foreach ( preStep; -nPreSteps .. 0 ) {
 	sblk.set_interpolation_order(1);
 	foreach (attempt; 0 .. maxNumberAttempts) {
-	    FGMRES_solve(pseudoSimTime, dt, withPreconditioning, withPTC, normOld, nOuterIterations);
+	    FGMRES_solve(pseudoSimTime, dt, eta0, withPreconditioning, normOld, nRestarts);
 	    foreach (blk; gasBlocks) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
@@ -268,32 +281,56 @@ void iterate_to_steady_state()
 	max_residuals(gasBlocks[0], maxResid);
     }
 
-    writeln("Maximum resisudals are established as:");
+    writeln("Maximum residuals are established as:");
     writefln("MASS:           %.12e", maxResid.mass);
     writefln("X-MOMENTUM:     %.12e", maxResid.xMomentum);
     writefln("Y-MOMENTUM:     %.12e", maxResid.yMomentum);
     writefln("ENERGY:         %.12e", maxResid.energy);
 
-    // Open file for writing residuals
+    // Open file for writing diagnostics
+
     auto residFname = "e4sss.diagnostics.dat";
     auto fResid = File(residFname, "w");
-    fResid.write("# step   pseudo-time    dt   nOuterIterations  nFnCalls mass-abs   mass-rel    x-mom-abs  x-mom-rel   y-mom-abs  y-mom-rel   energy-abs  energy-rel\n");
+    fResid.writeln("#  1: step");
+    fResid.writeln("#  2: pseudo-time");
+    fResid.writeln("#  3: dt");
+    fResid.writeln("#  4: CFL");
+    fResid.writeln("#  5: nRestarts");
+    fResid.writeln("#  6: nFnCalls");
+    fResid.writeln("#  7: wall-clock, s");
+    fResid.writeln("#  8: mass-abs");
+    fResid.writeln("#  9: mass-rel");
+    fResid.writeln("# 10: x-mom-abs");
+    fResid.writeln("# 11: x-mom-rel");
+    fResid.writeln("# 12: y-mom-abs");
+    fResid.writeln("# 13: y-mom-rel");
+    fResid.writeln("# 14: energy-abs");
+    fResid.writeln("# 15: energy-rel\n");
+    fResid.writeln("# 16: global-residual-abs\n");
+    fResid.writeln("# 17: global-residual-rel\n");
     fResid.close();
 
     // Begin Newton steps
+    double eta;
+    double tau;
     foreach (step; 1 .. nsteps+1) {
-	if ( step <= nLowOrderSteps ) {
+	residualsUpToDate = false;
+	if ( step <= nStartUpSteps ) {
 	    sblk.set_interpolation_order(1);
 	    withPreconditioning = false;
+	    eta = eta0;
+	    tau = tau0;
 	}
 	else {
 	    sblk.set_interpolation_order(interpOrderSave);
 	    withPreconditioning = GlobalConfig.sssOptions.usePreconditioning;
+	    eta = eta1;
+	    tau = tau1;
 	}
 
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    failedAttempt = false;
-	    FGMRES_solve(pseudoSimTime, dt, withPreconditioning, withPTC, normNew, nOuterIterations);
+	    FGMRES_solve(pseudoSimTime, dt, eta, withPreconditioning, normNew, nRestarts);
 	    foreach (blk; gasBlocks) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
@@ -335,30 +372,41 @@ void iterate_to_steady_state()
 	}
 
 	pseudoSimTime += dt;
-	
+	wallClockElapsed = (Clock.currTime() - wallClockStart).total!"seconds"();	
 	// Now do some output and diagnostics work
-	// Write out residuals
-	max_residuals(gasBlocks[0], currResid);
-	fResid = File(residFname, "a");
-	fResid.writef("%8d  %20.16e  %20.16e  %3d %5d %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e\n",
-		      step, pseudoSimTime, dt, nOuterIterations, fnCount,
-		      currResid.mass, currResid.mass/maxResid.mass,
-		      currResid.xMomentum, currResid.xMomentum/maxResid.xMomentum,
-		      currResid.yMomentum, currResid.yMomentum/maxResid.yMomentum,
-		      currResid.energy, currResid.energy/maxResid.energy);
-	fResid.close();
+	if ( (step % writeDiagnosticsCount) == 0 ) {
+	    cfl = determine_min_cfl(dt);
+	    // Write out residuals
+	    if ( !residualsUpToDate ) {
+		max_residuals(gasBlocks[0], currResid);
+		residualsUpToDate = true;
+	    }
+	    fResid = File(residFname, "a");
+	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %3d %5d %8d %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e\n",
+			  step, pseudoSimTime, dt, cfl, nRestarts, fnCount, wallClockElapsed, 
+			  currResid.mass, currResid.mass/maxResid.mass,
+			  currResid.xMomentum, currResid.xMomentum/maxResid.xMomentum,
+			  currResid.yMomentum, currResid.yMomentum/maxResid.yMomentum,
+			  currResid.energy, currResid.energy/maxResid.energy,
+			  normNew, normNew/normMax);
+	    fResid.close();
+	}
 
 	if ( (step % GlobalConfig.print_count) == 0 ) {
+	    cfl = determine_min_cfl(dt);
+	    max_residuals(gasBlocks[0], currResid);
 	    auto writer = appender!string();
-	    formattedWrite(writer, "Iteration= %7d  pseudo-time=%10.3e dt=%10.3e global-residual= %10.6e\n", step, pseudoSimTime, dt, normNew);
-	    formattedWrite(writer, "Residuals:  mass  x-mom  y-mom  energy\n");
-	    formattedWrite(writer, "absolute   %10.6e %10.6e %10.6e %10.6e\n",
-			   currResid.mass, currResid.xMomentum, currResid.yMomentum, currResid.energy);
-	    formattedWrite(writer, "relative   %10.6e %10.6e %10.6e %10.6e\n",
+
+	    formattedWrite(writer, "Iteration= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%d \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
+	    formattedWrite(writer, "Residuals:     mass        x-mom       y-mom        energy      global\n");
+	    formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
+			   currResid.mass, currResid.xMomentum, currResid.yMomentum, currResid.energy, normNew);
+	    formattedWrite(writer, "--> relative   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
 			   currResid.mass/maxResid.mass,
 			   currResid.xMomentum/maxResid.xMomentum,
 			   currResid.yMomentum/maxResid.yMomentum,
-			   currResid.energy/maxResid.energy);
+			   currResid.energy/maxResid.energy,
+			   normNew/normMax);
 	    writeln(writer.data);
 	}
 
@@ -400,20 +448,65 @@ void iterate_to_steady_state()
 	    inexactNewtonPhase = true;
 	}
 
-	// Choose a new timestep.
+	// Choose a new timestep and eta value.
+	auto normRatio = normOld/normNew;
 	if ( inexactNewtonPhase ) {
-	    if ( step <= nLowOrderSteps ) {
+	    if ( step <= nStartUpSteps ) {
 		// Let's assume we're still letting the shock settle
 		// when doing low order steps, so we use a power of 0.75
 		dtTrial = dt*pow(normOld/normNew, 0.75);
 	    }
 	    else {
 		// We use a power of 1.0
-		dtTrial = dt*(normOld/normNew);
+		dtTrial = dt*normRatio;
 	    }
+	    // Apply safeguards to dt
 	    dtTrial = min(dtTrial, 2.0*dt);
 	    dtTrial = max(dtTrial, 0.1*dt);
 	    dt = dtTrial;
+	}
+
+	if ( step == nStartUpSteps+1 ) {
+	    // At the swap-over point from start-up phase to main phase
+	    // we need to do a few special things.
+	    // 1. Reset dt to user's choice for this new phase based on cfl1.
+	    dt = determine_initial_dt(cfl1);
+	    // 2. Reset the inexact Newton phase.
+	    //    We'll take some constant timesteps at the new dt
+	    //    until the residuals have dropped.
+	    inexactNewtonPhase = false;
+	}
+
+	if ( step > nStartUpSteps+1 ) {
+	    // Adjust eta1 according to eta update strategy
+	    final switch (etaStrategy) {
+	    case EtaStrategy.constant:
+		break;
+	    case EtaStrategy.linear_reduction:
+		eta1 -= etaChangePerStep;
+		// but don't go past eta1_min
+		eta1 = fmax(eta1, eta1_min);
+		break;
+	    case EtaStrategy.adaptive, EtaStrategy.adaptive_capped:
+		// Use Eisenstat & Walker adaptive strategy no. 2
+		auto etaOld = eta1;
+		eta1 = gamma*pow(1./normRatio, alpha);
+		// Apply Eisenstat & Walker safeguards
+		auto testVal = gamma*pow(etaOld, alpha);
+		if ( testVal > 0.1 ) {
+		    eta1 = fmax(eta1, testVal);
+		}
+		// and don't let eta1 get larger than a max value
+		eta1 = fmin(eta1, eta1_max);
+		if ( etaStrategy == EtaStrategy.adaptive_capped ) {
+		    // Additionally, we cap the maximum so that we never
+		    // retreat on the eta1 value.
+		    eta1_max = fmin(eta1, eta1_max);
+		    // but don't let our eta1_max cap get too tiny
+		    eta1_max = fmax(eta1, eta1_min);
+		}
+		break;
+	    }
 	}
 
 	normOld = normNew;
@@ -437,6 +530,24 @@ double determine_initial_dt(double cflInit)
 	}
     }
     return dt;
+}
+
+double determine_min_cfl(double dt)
+{
+    double signal, cfl_local, cfl;
+    bool first = true;
+
+    foreach (blk; gasBlocks) {
+	foreach (cell; blk.cells) {
+	    signal = cell.signal_frequency();
+	    cfl_local = dt * signal;
+	    if ( first )
+		cfl = cfl_local;
+	    else
+		cfl = fmin(cfl, cfl_local);
+	}
+    }
+    return cfl;
 }
 
 void evalRHS(Block blk, double pseudoSimTime, int ftl)
@@ -498,7 +609,7 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double[] v)
 }
 
 
-void FGMRES_solve(double pseudoSimTime, double dt, bool withPreconditioning, bool withPTC, ref double residual, ref int nRestarts)
+void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPreconditioning, ref double residual, ref int nRestarts)
 {
     double resid;
     int nConserved = GlobalConfig.sssOptions.nConserved;
@@ -575,7 +686,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, bool withPreconditioning, boo
     }
     // Then compute v = r0/||r0||
     auto beta = norm2(blk.r0);
-    // DEBUG:  writefln("OUTER: beta= %e", beta);
+    // DEBUG: writefln("OUTER: beta= %e", beta);
     blk.g0_outer[0] = beta;
     foreach (k; 0 .. n) {
 	blk.v_outer[k] = blk.r0[k]/beta;
@@ -583,8 +694,9 @@ void FGMRES_solve(double pseudoSimTime, double dt, bool withPreconditioning, boo
     }
 
     // Compute tolerance
-    auto outerTol = GlobalConfig.sssOptions.eta*beta;
-    // DEBUG:  writefln("OUTER: outerTol= %e", outerTol);
+    auto outerTol = eta*beta;
+    //DEBUG:
+    writefln("OUTER: eta=%f  beta= %e  outerTol= %e", eta, beta, outerTol);
 
     // 2. Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {
@@ -592,7 +704,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, bool withPreconditioning, boo
 	foreach (j; 0 .. m) {
 	    iterCount = j+1;
 	    if ( withPreconditioning ) {
-		GMRES_solve(pseudoSimTime, dt, withPTC);
+		GMRES_solve(pseudoSimTime, dt);
 	    }
 	    else {
 		blk.z_outer[] = blk.v_outer[];
@@ -715,10 +827,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, bool withPreconditioning, boo
     }
     
     residual = unscaledNorm2;
-    nRestarts = to!int(m);
+    nRestarts = to!int(r);
 }
 
-void GMRES_solve(double pseudoSimTime, double dt, bool withPTC)
+void GMRES_solve(double pseudoSimTime, double dt)
 {
     // We always perform 'nInnerIterations' for the preconditioning step
     // That is, we do NOT stop on some tolerance in this solve.

@@ -25,21 +25,35 @@ applyGridproConnectivity = gridpro.applyGridproConnectivity
 -- Storage for steady-state solver settings
 sssOptionsHidden = { -- hidden from user
    -- set defaults here
-   cfl_init = 0.5,
-   eta = 0.01,
-   inner_to_outer_tol_ratio = 10.0,
    sigma = 1.0e-8,
-   tau = 0.1,
    use_preconditioning = true,
    number_pre_steps = 10,
-   number_low_order_steps = 20,
-   number_newton_steps = 100,
+   number_total_steps = 100,
    max_number_attempts = 3,
-   max_outer_iterations = 20,
+   -- Restarted preconditioned FGMRES settings
+   max_outer_iterations = 10,
    max_restarts = 10,
    number_inner_iterations = 5,
+   -- Options for start-up phase
+   number_start_up_steps = 5,
+   cfl0 = 1.0,
+   eta0 = 0.5,
+   tau0 = 0.1,
+   -- Options for inexact Newton phase
+   cfl1 = 10.0,
+   tau1 = 0.1,
+   eta_strategy = "constant",
+   eta1 = 0.5,
+   eta1_max = 0.9,
+   eta1_min = 0.01,
+   eta_change_per_step = 0.01,
+   gamma = 0.9,
+   alpha = 2.0,
+   -- Options related to writing out snapshots and diagnostics
    snapshots_frequency = 10,
    snapshots_count = 1,
+   write_diagnostics_count = 20,
+
    __index = function (t, k) 
       return sssOptionsHidden[k]
    end,
@@ -949,20 +963,30 @@ function write_control_file(fileName)
    f:write(string.format('"dt_history": %.18e,\n', config.dt_history))
    f:write(string.format('"halt_now": %d,\n', config.halt_now))
    f:write('"steady_state_solver_options" : {\n')
-   f:write(string.format('   "cfl_init": %.18e,\n', SteadyStateSolver.cfl_init))
-   f:write(string.format('   "eta": %.18e,\n', SteadyStateSolver.eta))
    f:write(string.format('   "sigma": %.18e,\n', SteadyStateSolver.sigma))
-   f:write(string.format('   "tau": %.18e,\n', SteadyStateSolver.tau))
    f:write(string.format('   "use_preconditioning": %s,\n', tostring(SteadyStateSolver.use_preconditioning)))
    f:write(string.format('   "number_pre_steps": %d,\n', SteadyStateSolver.number_pre_steps))
-   f:write(string.format('   "number_low_order_steps": %d,\n', SteadyStateSolver.number_low_order_steps))
-   f:write(string.format('   "number_newton_steps": %d,\n', SteadyStateSolver.number_newton_steps))
+   f:write(string.format('   "number_total_steps": %d,\n', SteadyStateSolver.number_total_steps))
+   f:write(string.format('   "max_number_attempts": %d,\n', SteadyStateSolver.max_number_attempts))
    f:write(string.format('   "max_outer_iterations": %d,\n', SteadyStateSolver.max_outer_iterations))
    f:write(string.format('   "max_restarts": %d,\n', SteadyStateSolver.max_restarts))
    f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))
-   f:write(string.format('   "max_number_attempts": %d,\n', SteadyStateSolver.max_number_attempts))
+   f:write(string.format('   "number_start_up_steps": %d,\n', SteadyStateSolver.number_start_up_steps))
+   f:write(string.format('   "cfl0": %.18e,\n', SteadyStateSolver.cfl0))
+   f:write(string.format('   "eta0": %.18e,\n', SteadyStateSolver.eta0))
+   f:write(string.format('   "tau0": %.18e,\n', SteadyStateSolver.tau0))
+   f:write(string.format('   "cfl1": %.18e,\n', SteadyStateSolver.cfl1))
+   f:write(string.format('   "tau1": %.18e,\n', SteadyStateSolver.tau1))
+   f:write(string.format('   "eta_strategy": "%s",\n', SteadyStateSolver.eta_strategy))
+   f:write(string.format('   "eta1": %.18e,\n', SteadyStateSolver.eta1))
+   f:write(string.format('   "eta1_max": %.18e,\n', SteadyStateSolver.eta1_max))
+   f:write(string.format('   "eta1_min": %.18e,\n', SteadyStateSolver.eta1_min))
+   f:write(string.format('   "eta_change_per_step": %.18e,\n', SteadyStateSolver.eta_change_per_step))
+   f:write(string.format('   "gamma": %.18e,\n', SteadyStateSolver.gamma))
+   f:write(string.format('   "alpha": %.18e,\n', SteadyStateSolver.alpha))
    f:write(string.format('   "snapshots_frequency": %d,\n', SteadyStateSolver.snapshots_frequency))
-   f:write(string.format('   "snapshots_count": %d\n', SteadyStateSolver.snapshots_count))
+   f:write(string.format('   "snapshots_count": %d,\n', SteadyStateSolver.snapshots_count))
+   f:write(string.format('   "write_diagnostics_count": %d\n', SteadyStateSolver.write_diagnostics_count))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('    }\n')
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
