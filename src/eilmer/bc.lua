@@ -198,7 +198,7 @@ function ZeroVelocity:tojson()
 end
 
 TranslatingSurface = BoundaryInterfaceEffect:new{v_trans=nil}
--- Note that we are expecting v_trans as a table of 3 floats.
+-- Note that we are expecting v_trans as a table of 3 floats, or a Vector3 object.
 TranslatingSurface.type = "translating_surface"
 function TranslatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
@@ -209,7 +209,7 @@ function TranslatingSurface:tojson()
 end
 
 RotatingSurface = BoundaryInterfaceEffect:new{centre=nil, r_omega=nil}
--- Note that we are expecting tables, each with three floats.
+-- Note that we are expecting tables, each with three floats, or Vector3 objects.
 RotatingSurface.type = "rotating_surface"
 function RotatingSurface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
@@ -399,6 +399,10 @@ WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
 function WallBC_TranslatingSurface_FixedT:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
+   -- Fill in missing components for v_trans
+   o.v_trans.x = o.v_trans.x or 0.0
+   o.v_trans.y = o.v_trans.y or 0.0
+   o.v_trans.z = o.v_trans.z or 0.0
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       TranslatingSurface:new{v_trans=o.v_trans},
 			       FixedT:new{Twall=o.Twall},
@@ -413,6 +417,10 @@ WallBC_TranslatingSurface_Adiabatic.type = "wall_translating_surface_adiabatic"
 function WallBC_TranslatingSurface_Adiabatic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
+   -- Fill in missing components for v_trans
+   o.v_trans.x = o.v_trans.x or 0.0
+   o.v_trans.y = o.v_trans.y or 0.0
+   o.v_trans.z = o.v_trans.z or 0.0
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       TranslatingSurface:new{v_trans=o.v_trans},
 			       WallKOmega:new() }
@@ -425,6 +433,13 @@ WallBC_RotatingSurface_FixedT.type = "wall_rotating_surface_fixed_t"
 function WallBC_RotatingSurface_FixedT:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
+   -- Fill in missing components for r_omega and centre
+   o.r_omega.x = o.r_omega.x or 0.0
+   o.r_omega.y = o.r_omega.y or 0.0
+   o.r_omega.z = o.r_omega.z or 0.0
+   o.centre.x = o.centre.x or 0.0
+   o.centre.y = o.centre.y or 0.0
+   o.centre.z = o.centre.z or 0.0
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       RotatingSurface:new{r_omega=o.r_omega, centre=o.centre},
 			       FixedT:new{Twall=o.Twall},
@@ -439,6 +454,13 @@ WallBC_RotatingSurface_Adiabatic.type = "wall_rotating_surface_adiabatic"
 function WallBC_RotatingSurface_Adiabatic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
+   -- Fill in missing components for r_omega and centre
+   o.r_omega.x = o.r_omega.x or 0.0
+   o.r_omega.y = o.r_omega.y or 0.0
+   o.r_omega.z = o.r_omega.z or 0.0
+   o.centre.x = o.centre.x or 0.0
+   o.centre.y = o.centre.y or 0.0
+   o.centre.z = o.centre.z or 0.0
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       TranslatingSurface:new{r_omega=o.r_omega, centre=o.centre},
 			       WallKOmega:new() }
