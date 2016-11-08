@@ -166,6 +166,8 @@ void iterate_to_steady_state()
     int nsteps = GlobalConfig.sssOptions.nTotalSteps;
     int nRestarts;
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
+    double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
+    double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
     int nConserved = GlobalConfig.sssOptions.nConserved;
     double sigma = sqrt(gasBlocks[0].cells.length * nConserved * double.epsilon);
     // Settings for start-up phase
@@ -218,7 +220,7 @@ void iterate_to_steady_state()
     double normMax = 0.0;
     ResidValues maxResid, currResid;
     bool residualsUpToDate = false;
-
+    bool finalStep = false;
     bool withPreconditioning = false;
 
     writeln("Begin pre-iterations to establish sensible max residual.");
@@ -306,9 +308,9 @@ void iterate_to_steady_state()
     fResid.writeln("# 13: y-mom-abs");
     fResid.writeln("# 14: y-mom-rel");
     fResid.writeln("# 15: energy-abs");
-    fResid.writeln("# 16: energy-rel\n");
-    fResid.writeln("# 17: global-residual-abs\n");
-    fResid.writeln("# 18: global-residual-rel\n");
+    fResid.writeln("# 16: energy-rel");
+    fResid.writeln("# 17: global-residual-abs");
+    fResid.writeln("# 18: global-residual-rel");
     fResid.close();
 
     // Begin Newton steps
@@ -395,10 +397,13 @@ void iterate_to_steady_state()
 
 	if ( (step % GlobalConfig.print_count) == 0 ) {
 	    cfl = determine_min_cfl(dt);
-	    max_residuals(gasBlocks[0], currResid);
+	    if ( !residualsUpToDate ) {
+		max_residuals(gasBlocks[0], currResid);
+		residualsUpToDate = true;
+	    }
 	    auto writer = appender!string();
 
-	    formattedWrite(writer, "Iteration= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%d \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
+	    formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%d \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
 	    formattedWrite(writer, "Residuals:     mass         x-mom        y-mom        energy       global\n");
 	    formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
 			   currResid.mass, currResid.xMomentum, currResid.yMomentum, currResid.energy, normNew);
@@ -411,9 +416,27 @@ void iterate_to_steady_state()
 	    writeln(writer.data);
 	}
 
+	// Check on some stopping criteria
+	if ( step == nsteps ) {
+	    writeln("STOPPING: Reached maximum number of steps.");
+	    finalStep = true;
+	}
+	if ( normNew <= absGlobalResidReduction ) {
+	    writeln("STOPPING: The absolute global residual is below target value.");
+	    writefln("          current value= %.12e   target value= %.12e", normNew, absGlobalResidReduction);
+	    finalStep = true;
+	}
+	if ( normNew/normMax <= relGlobalResidReduction ) {
+	    writeln("STOPPING: The relative global residual is below target value.");
+	    writefln("          current value= %.12e   target value= %.12e", normNew/normMax, relGlobalResidReduction);
+	    finalStep = true;
+	}
+
 	// Write out the flow field, if required
-	if ( (step % snapshotsFreq) == 0 ) {
-	    writefln("Writing flow solution at pseudo-time= %e", pseudoSimTime);
+	if ( (step % snapshotsFreq) == 0 || finalStep ) {
+	    writefln("-----------------------------------------------------------------------");
+	    writefln("Writing flow solution at step= %4d; pseudo-time= %6.3e", step, pseudoSimTime);
+	    writefln("-----------------------------------------------------------------------\n");
 	    writtenSnapshotsCount++;
 	    if ( writtenSnapshotsCount <= snapshotsCount ) {
 		ensure_directory_is_present(make_path_name!"flow"(writtenSnapshotsCount));
@@ -443,6 +466,8 @@ void iterate_to_steady_state()
 		rewrite_times_file(times);
 	    }
 	}
+
+	if ( finalStep ) break;
 
 	if ( !inexactNewtonPhase && currResid.mass/maxResid.mass < tau ) {
 	    // Switch to inexactNewtonPhase
@@ -696,8 +721,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 
     // Compute tolerance
     auto outerTol = eta*beta;
-    //DEBUG:
-    writefln("OUTER: eta=%f  beta= %e  outerTol= %e", eta, beta, outerTol);
+    //DEBUG: writefln("OUTER: eta=%f  beta= %e  outerTol= %e", eta, beta, outerTol);
 
     // 2. Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {

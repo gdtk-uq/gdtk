@@ -30,6 +30,8 @@ sssOptionsHidden = { -- hidden from user
    number_pre_steps = 10,
    number_total_steps = 100,
    max_number_attempts = 3,
+   stop_on_relative_global_residual = 1.0e-99,
+   stop_on_absolute_global_residual = 1.0e-99,
    -- Restarted preconditioned FGMRES settings
    max_outer_iterations = 10,
    max_restarts = 10,
@@ -968,6 +970,8 @@ function write_control_file(fileName)
    f:write(string.format('   "number_pre_steps": %d,\n', SteadyStateSolver.number_pre_steps))
    f:write(string.format('   "number_total_steps": %d,\n', SteadyStateSolver.number_total_steps))
    f:write(string.format('   "max_number_attempts": %d,\n', SteadyStateSolver.max_number_attempts))
+   f:write(string.format('   "stop_on_relative_global_residual": %.18e,\n', SteadyStateSolver.stop_on_relative_global_residual))
+   f:write(string.format('   "stop_on_absolute_global_residual": %.18e,\n', SteadyStateSolver.stop_on_absolute_global_residual))
    f:write(string.format('   "max_outer_iterations": %d,\n', SteadyStateSolver.max_outer_iterations))
    f:write(string.format('   "max_restarts": %d,\n', SteadyStateSolver.max_restarts))
    f:write(string.format('   "number_inner_iterations": %d,\n', SteadyStateSolver.number_inner_iterations))

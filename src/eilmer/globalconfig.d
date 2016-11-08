@@ -136,6 +136,8 @@ struct SteadyStateSolverOptions {
     int nPreSteps = 10;
     int nTotalSteps = 100;
     int maxNumberAttempts = 3; // at taking a Newton step.
+    double stopOnRelGlobalResid = 1.0e-99;
+    double stopOnAbsGlobalResid = 1.0e-99;
     // Restarted preconditioned FGMRES settings
     int maxOuterIterations = 10;
     int maxRestarts = 10;
@@ -1000,6 +1002,10 @@ void read_control_file()
 	getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);    
     GlobalConfig.sssOptions.maxNumberAttempts = 
 	getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
+    GlobalConfig.sssOptions.stopOnRelGlobalResid =
+	getJSONdouble(sssOptions, "stop_on_relative_global_residual", GlobalConfig.sssOptions.stopOnRelGlobalResid);
+    GlobalConfig.sssOptions.stopOnAbsGlobalResid =
+	getJSONdouble(sssOptions, "stop_on_absolute_global_residual", GlobalConfig.sssOptions.stopOnAbsGlobalResid);
     GlobalConfig.sssOptions.maxOuterIterations = 
 	getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
     GlobalConfig.sssOptions.maxRestarts = 
