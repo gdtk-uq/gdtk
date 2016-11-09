@@ -108,12 +108,12 @@ class IgnitionZone : BlockZone {
 }
 
 version(steady_state) {
-enum EtaStrategy { constant, linear_reduction, adaptive, adaptive_capped }
+enum EtaStrategy { constant, geometric, adaptive, adaptive_capped }
 string etaStrategyName(EtaStrategy i)
 {
     final switch (i) {
     case EtaStrategy.constant: return "constant";
-    case EtaStrategy.linear_reduction: return "linear_reduction";
+    case EtaStrategy.geometric: return "geometric";
     case EtaStrategy.adaptive: return "adaptive";
     case EtaStrategy.adaptive_capped: return "adaptive_capped";
     }
@@ -123,7 +123,7 @@ EtaStrategy etaStrategyFromName(string name)
 {
     final switch (name) {
     case "constant": return EtaStrategy.constant;
-    case "linear_reduction": return EtaStrategy.linear_reduction;
+    case "geometric": return EtaStrategy.geometric;
     case "adaptive": return EtaStrategy.adaptive;
     case "adaptive_capped": return EtaStrategy.adaptive_capped;
     }
@@ -154,7 +154,7 @@ struct SteadyStateSolverOptions {
     double eta1 = 0.5;
     double eta1_max = 0.9;
     double eta1_min = 0.01;
-    double etaChangePerStep = 0.01;
+    double etaRatioPerStep = 0.9;
     double gamma = 0.9;
     double alpha = 2.0;
     // Options related to writing out snapshots and diagnostics
@@ -1041,8 +1041,8 @@ void read_control_file()
 	getJSONdouble(sssOptions, "eta1_max", GlobalConfig.sssOptions.eta1_max);
     GlobalConfig.sssOptions.eta1_min =
 	getJSONdouble(sssOptions, "eta1_min", GlobalConfig.sssOptions.eta1_min);
-    GlobalConfig.sssOptions.etaChangePerStep =
-	getJSONdouble(sssOptions, "eta_change_per_step", GlobalConfig.sssOptions.etaChangePerStep);
+    GlobalConfig.sssOptions.etaRatioPerStep =
+	getJSONdouble(sssOptions, "eta_ratio_per_step", GlobalConfig.sssOptions.etaRatioPerStep);
     GlobalConfig.sssOptions.gamma =
 	getJSONdouble(sssOptions, "gamma", GlobalConfig.sssOptions.gamma);
     GlobalConfig.sssOptions.alpha =

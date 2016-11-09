@@ -181,7 +181,7 @@ void iterate_to_steady_state()
     double eta1 = GlobalConfig.sssOptions.eta1;
     double eta1_max = GlobalConfig.sssOptions.eta1_max;
     double eta1_min = GlobalConfig.sssOptions.eta1_min;
-    double etaChangePerStep = GlobalConfig.sssOptions.etaChangePerStep;
+    double etaRatioPerStep = GlobalConfig.sssOptions.etaRatioPerStep;
     double gamma = GlobalConfig.sssOptions.gamma;
     double alpha = GlobalConfig.sssOptions.alpha;
 
@@ -217,7 +217,7 @@ void iterate_to_steady_state()
     // for the "max" residual. Our relative residuals will then be based on that.
     // We can use a fixed timestep (typically small) and low-order reconstruction in this
     // pre-step phase.
-    double normMax = 0.0;
+    double normRef = 0.0;
     ResidValues maxResid, currResid;
     bool residualsUpToDate = false;
     bool finalStep = false;
@@ -269,8 +269,8 @@ void iterate_to_steady_state()
 	}
 	
 	writefln("PRE-STEP  %d  ::  dt= %.3e  global-norm= %.12e", preStep, dt, normOld); 
-	if ( normOld > normMax ) {
-	    normMax = normOld;
+	if ( normOld > normRef ) {
+	    normRef = normOld;
 	    max_residuals(gasBlocks[0], maxResid);
 	}
     }
@@ -283,7 +283,8 @@ void iterate_to_steady_state()
 	max_residuals(gasBlocks[0], maxResid);
     }
 
-    writeln("Maximum residuals are established as:");
+    writeln("Reference residuals are established as:");
+    writefln("GLOBAL:         %.12e", normRef);
     writefln("MASS:           %.12e", maxResid.mass);
     writefln("X-MOMENTUM:     %.12e", maxResid.xMomentum);
     writefln("Y-MOMENTUM:     %.12e", maxResid.yMomentum);
@@ -376,8 +377,25 @@ void iterate_to_steady_state()
 
 	pseudoSimTime += dt;
 	wallClockElapsed = (Clock.currTime() - wallClockStart).total!"seconds"();	
+
+	// Check on some stopping criteria
+	if ( step == nsteps ) {
+	    writeln("STOPPING: Reached maximum number of steps.");
+	    finalStep = true;
+	}
+	if ( normNew <= absGlobalResidReduction && step > nStartUpSteps ) {
+	    writeln("STOPPING: The absolute global residual is below target value.");
+	    writefln("          current value= %.12e   target value= %.12e", normNew, absGlobalResidReduction);
+	    finalStep = true;
+	}
+	if ( normNew/normRef <= relGlobalResidReduction && step > nStartUpSteps ) {
+	    writeln("STOPPING: The relative global residual is below target value.");
+	    writefln("          current value= %.12e   target value= %.12e", normNew/normRef, relGlobalResidReduction);
+	    finalStep = true;
+	}
+
 	// Now do some output and diagnostics work
-	if ( (step % writeDiagnosticsCount) == 0 ) {
+	if ( (step % writeDiagnosticsCount) == 0 || finalStep ) {
 	    cfl = determine_min_cfl(dt);
 	    // Write out residuals
 	    if ( !residualsUpToDate ) {
@@ -391,11 +409,11 @@ void iterate_to_steady_state()
 			  currResid.xMomentum, currResid.xMomentum/maxResid.xMomentum,
 			  currResid.yMomentum, currResid.yMomentum/maxResid.yMomentum,
 			  currResid.energy, currResid.energy/maxResid.energy,
-			  normNew, normNew/normMax);
+			  normNew, normNew/normRef);
 	    fResid.close();
 	}
 
-	if ( (step % GlobalConfig.print_count) == 0 ) {
+	if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
 	    cfl = determine_min_cfl(dt);
 	    if ( !residualsUpToDate ) {
 		max_residuals(gasBlocks[0], currResid);
@@ -412,24 +430,8 @@ void iterate_to_steady_state()
 			   currResid.xMomentum/maxResid.xMomentum,
 			   currResid.yMomentum/maxResid.yMomentum,
 			   currResid.energy/maxResid.energy,
-			   normNew/normMax);
+			   normNew/normRef);
 	    writeln(writer.data);
-	}
-
-	// Check on some stopping criteria
-	if ( step == nsteps ) {
-	    writeln("STOPPING: Reached maximum number of steps.");
-	    finalStep = true;
-	}
-	if ( normNew <= absGlobalResidReduction ) {
-	    writeln("STOPPING: The absolute global residual is below target value.");
-	    writefln("          current value= %.12e   target value= %.12e", normNew, absGlobalResidReduction);
-	    finalStep = true;
-	}
-	if ( normNew/normMax <= relGlobalResidReduction ) {
-	    writeln("STOPPING: The relative global residual is below target value.");
-	    writefln("          current value= %.12e   target value= %.12e", normNew/normMax, relGlobalResidReduction);
-	    finalStep = true;
 	}
 
 	// Write out the flow field, if required
@@ -469,7 +471,7 @@ void iterate_to_steady_state()
 
 	if ( finalStep ) break;
 
-	if ( !inexactNewtonPhase && currResid.mass/maxResid.mass < tau ) {
+	if ( !inexactNewtonPhase && normNew/normRef < tau ) {
 	    // Switch to inexactNewtonPhase
 	    inexactNewtonPhase = true;
 	}
@@ -477,7 +479,7 @@ void iterate_to_steady_state()
 	// Choose a new timestep and eta value.
 	auto normRatio = normOld/normNew;
 	if ( inexactNewtonPhase ) {
-	    if ( step <= nStartUpSteps ) {
+	    if ( step < nStartUpSteps ) {
 		// Let's assume we're still letting the shock settle
 		// when doing low order steps, so we use a power of 0.75
 		dtTrial = dt*pow(normOld/normNew, 0.75);
@@ -492,24 +494,26 @@ void iterate_to_steady_state()
 	    dt = dtTrial;
 	}
 
-	if ( step == nStartUpSteps+1 ) {
+	if ( step == nStartUpSteps ) {
 	    // At the swap-over point from start-up phase to main phase
 	    // we need to do a few special things.
 	    // 1. Reset dt to user's choice for this new phase based on cfl1.
+	    writefln("step= %d dt= %e  cfl1= %f", step, dt, cfl1);
 	    dt = determine_initial_dt(cfl1);
+	    writefln("after choosing new timestep: %e", dt);
 	    // 2. Reset the inexact Newton phase.
 	    //    We'll take some constant timesteps at the new dt
 	    //    until the residuals have dropped.
 	    inexactNewtonPhase = false;
 	}
 
-	if ( step > nStartUpSteps+1 ) {
+	if ( step > nStartUpSteps ) {
 	    // Adjust eta1 according to eta update strategy
 	    final switch (etaStrategy) {
 	    case EtaStrategy.constant:
 		break;
-	    case EtaStrategy.linear_reduction:
-		eta1 -= etaChangePerStep;
+	    case EtaStrategy.geometric:
+		eta1 *= etaRatioPerStep;
 		// but don't go past eta1_min
 		eta1 = fmax(eta1, eta1_min);
 		break;

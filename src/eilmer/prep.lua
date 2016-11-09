@@ -48,7 +48,7 @@ sssOptionsHidden = { -- hidden from user
    eta1 = 0.5,
    eta1_max = 0.9,
    eta1_min = 0.01,
-   eta_change_per_step = 0.01,
+   eta_ratio_per_step = 0.9,
    gamma = 0.9,
    alpha = 2.0,
    -- Options related to writing out snapshots and diagnostics
@@ -985,7 +985,7 @@ function write_control_file(fileName)
    f:write(string.format('   "eta1": %.18e,\n', SteadyStateSolver.eta1))
    f:write(string.format('   "eta1_max": %.18e,\n', SteadyStateSolver.eta1_max))
    f:write(string.format('   "eta1_min": %.18e,\n', SteadyStateSolver.eta1_min))
-   f:write(string.format('   "eta_change_per_step": %.18e,\n', SteadyStateSolver.eta_change_per_step))
+   f:write(string.format('   "eta_ratio_per_step": %.18e,\n', SteadyStateSolver.eta_ratio_per_step))
    f:write(string.format('   "gamma": %.18e,\n', SteadyStateSolver.gamma))
    f:write(string.format('   "alpha": %.18e,\n', SteadyStateSolver.alpha))
    f:write(string.format('   "snapshots_frequency": %d,\n', SteadyStateSolver.snapshots_frequency))
