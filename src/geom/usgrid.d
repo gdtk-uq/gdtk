@@ -807,6 +807,43 @@ public:
 	    // writeln("indx=", indx, " vtx=", *vtx);
 	} // end foreach i .. nvertices
 	//
+	if (dimensions == 2) {
+	    // In 2D, the flow solver code assumes that the cycle of vertices
+	    // defining the cell is counterclockwise, looking down the negative z-axis,
+	    // toward the x,y-plane.
+	    // If any of the cells that have been read from the file presently have
+	    // their normal vector pointing in the negative z-direction,
+	    // we should reverse the order of their vertex list.
+	    foreach(c; cells) {
+		switch (c.cell_type) {
+		case USGCell_type.triangle:
+		    Vector3 a = Vector3(vertices[c.vtx_id_list[1]]);
+		    a -= vertices[c.vtx_id_list[0]];
+		    Vector3 b = Vector3(vertices[c.vtx_id_list[2]]);
+		    b -= vertices[c.vtx_id_list[0]];
+		    Vector3 n;
+		    cross!n(a,b);
+		    if (n.z < 0.0) { reverse(c.vtx_id_list); }
+		    break;
+		case USGCell_type.quad:
+		    Vector3 a = Vector3(vertices[c.vtx_id_list[1]]);
+		    a -= vertices[c.vtx_id_list[0]];
+		    a += vertices[c.vtx_id_list[2]];
+		    a -= vertices[c.vtx_id_list[3]];
+		    Vector3 b = Vector3(vertices[c.vtx_id_list[3]]);
+		    b -= vertices[c.vtx_id_list[0]];
+		    b += vertices[c.vtx_id_list[2]];
+		    b -= vertices[c.vtx_id_list[1]];
+		    Vector3 n;
+		    cross!n(a,b);
+		    if (n.z < 0.0) { reverse(c.vtx_id_list); }
+		    break;
+		default:
+		    throw new Exception("invalid cell type for 2D grid");
+		} // end switch
+	    } // end foreach c
+	} // end if (dimensions == 2)
+	//
 	// Now that we have the full list of cells and vertices assigned to each cell,
 	// we can construct the faces between cells and along the boundaries.
 	//
