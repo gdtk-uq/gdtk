@@ -852,3 +852,48 @@ to convert to metres for use in Eilmer.
     } // end while
     return grids;
 } // end import_gridpro_grid()
+
+void writeGridsAsPlot3D(string fname, StructuredGrid[] grids, int dim)
+{
+    if ( dim != 2 && dim != 3 ) {
+	string errMsg = "ERROR in writeGridsAsPlot3D: 'dim' must be 2 or 3";
+	throw new Error(errMsg);
+    }
+    auto f = File(fname, "w");
+    f.writefln(" %d", grids.length); // Always write multi-block format
+                                     // even if we only have a single block.
+    foreach (g; grids) {
+	if ( dim == 2 ) {
+	    f.writefln(" %d %d", g.niv, g.njv);
+	}
+	else {
+	    f.writefln(" %d %d %d", g.niv, g.njv, g.nkv);
+	}
+    }
+    foreach (g; grids) {
+	foreach (k; 0 .. g.nkv) {
+	    foreach (j; 0 .. g.njv) {
+		foreach (i; 0 .. g.niv) {
+		    f.writefln(" %.18e", g[i,j,k].x);
+		}
+	    }
+	}
+	foreach (k; 0 .. g.nkv) {
+	    foreach (j; 0 .. g.njv) {
+		foreach (i; 0 .. g.niv) {
+		    f.writefln(" %.18e", g[i,j,k].y);
+		}
+	    }
+	}
+	if ( dim == 3 ) {
+	    foreach (k; 0 .. g.nkv) {
+		foreach (j; 0 .. g.njv) {
+		    foreach (i; 0 .. g.niv) {
+			f.writefln(" %.18e", g[i,j,k].z);
+		    }
+		}
+	    }
+	}
+    }
+    f.close();
+}

@@ -328,6 +328,32 @@ extern(C) int importGridproGrid(lua_State *L)
     return 1;
 } // end importGridproGrid()
 
+extern(C) int writeGridsAsPlot3D(lua_State *L)
+{
+    int narg = lua_gettop(L);
+    if ( narg != 3 ) {
+	string errMsg = "Error in call to writeGridsAsPlot3D(). " ~
+	    "3 arguments are required: name of file, array of grids, and dimension/";
+	luaL_error(L, errMsg.toStringz);
+    }
+    auto fname = to!string(luaL_checkstring(L, 1));
+    if (!lua_istable(L, 2)) {
+	string errMsg = "Error in call to writeGridsAsPlot3D(). " ~
+	    "The second argument should be an array of grids.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    int n = to!int(lua_objlen(L, 2));
+    StructuredGrid[] grids;
+    foreach (i; 1 .. n+1) {
+	lua_rawgeti(L, 2, i);
+	grids ~= checkObj!(StructuredGrid, StructuredGridMT)(L, -1);
+	lua_pop(L, 1);
+    }
+    int dim = to!int(luaL_checkinteger(L, 3));
+    sgrid.writeGridsAsPlot3D(fname, grids, dim);
+    return 0;
+}
+
 
 void registerStructuredGrid(lua_State* L)
 {
@@ -369,6 +395,9 @@ void registerStructuredGrid(lua_State* L)
     // Global functions available for use
     lua_pushcfunction(L, &importGridproGrid);
     lua_setglobal(L, "importGridproGrid");
+    lua_pushcfunction(L, &writeGridsAsPlot3D);
+    lua_setglobal(L, "writeGridsAsPlot3D");
+
 
 } // end registerStructuredGrid()
     
