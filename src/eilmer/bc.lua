@@ -631,7 +631,7 @@ end
 
 -- Retain the old BC names as aliases, for now.
 -- They are deprecated.
-allowOldBCNames = true
+allowOldBCNames = false
 if allowOldBCNames then
    print("Old boundary condition names are available.")
    SlipWallBC = WallBC_WithSlip
