@@ -497,6 +497,7 @@ int main(string[] args){
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
     string partitionFile = partitionDual(dualFormatFile, nparts);
     construct_blocks(inputMeshFile, partitionFile, dualFormatFile, nparts);
+    clean_dir(dualFormatFile, partitionFile, metisFormatFile);
     writeln("Finished partitioning................");
     return 0;
 }
