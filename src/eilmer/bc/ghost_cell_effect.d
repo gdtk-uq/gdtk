@@ -1796,7 +1796,7 @@ public:
 	    foreach (ib, blk; gasBlocks) {
 		found = false;
 		size_t indx = 0;
-		blk.find_enclosing_cell(mypos.x, mypos.y, mypos.z, indx, found);
+		blk.find_enclosing_cell(mypos, indx, found);
 		if (found) {
 		    mapped_cells ~= blk.cells[indx];
 		    break;

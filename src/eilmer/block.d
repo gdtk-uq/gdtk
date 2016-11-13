@@ -125,7 +125,7 @@ public:
     @nogc abstract ref FVInterface get_ifj(size_t i, size_t j, size_t k=0);
     @nogc abstract ref FVInterface get_ifk(size_t i, size_t j, size_t k=0);
     @nogc abstract ref FVVertex get_vtx(size_t i, size_t j, size_t k=0);
-    abstract void find_enclosing_cell(double x, double y, double z, ref size_t indx, ref bool found);
+    abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract void compute_primary_cell_geometric_data(int gtl);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);

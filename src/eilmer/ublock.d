@@ -148,9 +148,9 @@ public:
 	return vertices[i];
     }
 
-    override void find_enclosing_cell(double x, double y, double z, ref size_t indx, ref bool found)
+    override void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
-	grid.find_enclosing_cell(x, y, z, indx, found); // delegate to the grid object
+	grid.find_enclosing_cell(p, indx, found); // delegate to the grid object
     }
 
     override void init_grid_and_flow_arrays(string gridFileName)

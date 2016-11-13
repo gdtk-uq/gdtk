@@ -157,7 +157,8 @@ extern(C) int find_nearest_cell_centre_usg(lua_State *L)
     lua_pop(L, 1);
     size_t indx;
     double dist;
-    grid.find_nearest_cell_centre(x, y, z, indx, dist);
+    Vector3 p = Vector3(x, y, z);
+    grid.find_nearest_cell_centre(p, indx, dist);
     lua_pushinteger(L, indx);
     lua_pushnumber(L, dist);
     return 2;

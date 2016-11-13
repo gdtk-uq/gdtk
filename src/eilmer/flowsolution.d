@@ -100,13 +100,13 @@ public:
 	foreach (blk; flowBlocks) blk.add_aux_variables(addVarsList);
     }
 
-    size_t[] find_enclosing_cell(double x, double y, double z=0.0)
+    size_t[] find_enclosing_cell(ref const(Vector3) p)
     {
 	size_t[] cell_identity = [0, 0, 0]; // blk_id, i, found_flag
 	foreach (ib; 0 .. nBlocks) {
 	    bool found = false;
 	    size_t indx = 0;
-	    gridBlocks[ib].find_enclosing_cell(x, y, z, indx, found);
+	    gridBlocks[ib].find_enclosing_cell(p, indx, found);
 	    if (found) {
 		cell_identity = [ib, indx, (found)?1:0];
 		break;
@@ -115,8 +115,21 @@ public:
 	return cell_identity;
     } // end find_enclosing_cell()
 
+    size_t[] find_enclosing_cell(double x, double y, double z=0.0)
+    {
+	Vector3 p = Vector3(x, y, z);
+	return find_enclosing_cell(p);
+    }
+    
     size_t[] find_nearest_cell_centre(double x, double y, double z=0.0)
     {
+	// [TODO] Think about delegating this work to the underlying grid objects.
+	// It seems that we should not be repeating code here, but it also seems that
+	// we should not be repeating the cell positions in the flow solution file
+	// when they can be obtained (via computation) from the underlying grid object.
+	// The counter argument is that having the cell centre position available in
+	// the solution file has been handy, over time.
+	// PJ, 2016-11-13
 	size_t[] nearest = [0, 0]; // blk_id, i
 	double dx = x - flowBlocks[0]["pos.x", 0];
 	double dy = y - flowBlocks[0]["pos.y", 0];

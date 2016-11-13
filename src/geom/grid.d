@@ -92,84 +92,80 @@ class Grid {
     abstract Grid get_boundary_grid(size_t boundary_indx);
     abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
 
-    void find_enclosing_cell(double x, double y, double z, ref size_t indx, ref bool found)
+    bool point_is_inside_cell(ref const(Vector3) p, size_t i)
     {
-	found = false;
-	indx = 0;
-	auto p = Vector3(x, y, z);
-	foreach (i; 0 .. ncells) {
-	    bool inside_cell = false;
-	    auto vtx_id = get_vtx_id_list_for_cell(i);
-	    switch (dimensions) {
-	    case 1: throw new Exception("cell search not implemented for 1D grids");
-	    case 2:
-		switch (vtx_id.length) {
-		case 3:
-		    inside_cell = inside_xy_triangle(vertices[vtx_id[0]], vertices[vtx_id[1]],
-						     vertices[vtx_id[2]], p);
-		    break;
-		case 4:
-		    inside_cell = inside_xy_quad(vertices[vtx_id[0]], vertices[vtx_id[1]],
-						 vertices[vtx_id[2]], vertices[vtx_id[3]], p);
-		    break;
-		default:
-		    assert(0);
-		} // end switch (vtx_id.length)
-		break;
+	bool inside_cell = false;
+	size_t[] vtx_id = get_vtx_id_list_for_cell(i);
+	switch (dimensions) {
+	case 1: throw new Exception("cell search not implemented for 1D grids");
+	case 2:
+	    switch (vtx_id.length) {
 	    case 3:
-		switch (vtx_id.length) {
-		case 4:
-		    inside_cell = inside_tetrahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
-						     vertices[vtx_id[2]], vertices[vtx_id[3]], p);
-		    break;
-		case 8:
-		    inside_cell = inside_hexahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
-						    vertices[vtx_id[2]], vertices[vtx_id[3]],
-						    vertices[vtx_id[4]], vertices[vtx_id[5]],
-						    vertices[vtx_id[6]], vertices[vtx_id[7]], p); 
-		    break;
-		case 5:
-		    throw new Exception("need to implement inside pyramid cell");
-		case 6:
-		    throw new Exception("need to implement inside wedge cell");
-		default:
-		    assert(0);
-		} // end switch (vtx_id.length)
+		inside_cell = inside_xy_triangle(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						 vertices[vtx_id[2]], p);
 		break;
-	    default: assert(0);
-	    } // end switch (dimensions)
-	    if (inside_cell) { found = true; indx = i; return; }
-	} // foreach i
-	return;
+	    case 4:
+		inside_cell = inside_xy_quad(vertices[vtx_id[0]], vertices[vtx_id[1]],
+					     vertices[vtx_id[2]], vertices[vtx_id[3]], p);
+		break;
+	    default:
+		assert(0);
+	    } // end switch (vtx_id.length)
+	    break;
+	case 3:
+	    switch (vtx_id.length) {
+	    case 4:
+		inside_cell = inside_tetrahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						 vertices[vtx_id[2]], vertices[vtx_id[3]], p);
+		break;
+	    case 8:
+		inside_cell = inside_hexahedron(vertices[vtx_id[0]], vertices[vtx_id[1]],
+						vertices[vtx_id[2]], vertices[vtx_id[3]],
+						vertices[vtx_id[4]], vertices[vtx_id[5]],
+						vertices[vtx_id[6]], vertices[vtx_id[7]], p); 
+		break;
+	    case 5:
+		throw new Exception("need to implement inside pyramid cell");
+	    case 6:
+		throw new Exception("need to implement inside wedge cell");
+	    default:
+		assert(0);
+	    } // end switch (vtx_id.length)
+	    break;
+	default: assert(0);
+	} // end switch (dimensions)
+	return inside_cell;
+    } // end point_is_inside_cell()
+
+    void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
+    {
+	found = false; indx = 0;
+	foreach (i; 0 .. ncells) {
+	    if (point_is_inside_cell(p, i)) { found = true; indx = i; break; }
+	}
     } // end find_enclosing_cell()
 
     Vector3 cell_barycentre(size_t indx)
     // Returns the "centre-of-mass" of the vertices defining the cell.
     {
-	auto cbc = Vector3(0.0, 0.0, 0.0);
-	auto vtx_ids = get_vtx_id_list_for_cell(indx);
+	Vector3 cbc = Vector3(0.0, 0.0, 0.0);
+	size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
 	foreach(vtx_id; vtx_ids) { cbc += vertices[vtx_id]; }
 	double one_over_n_vtx = 1.0 / vtx_ids.length;
 	cbc *= one_over_n_vtx;
 	return cbc;
     } // end cell_barycentre()
 
-    void find_nearest_cell_centre(double x, double y, double z,
-				  ref size_t nearestCell, ref double minDist)
+    void find_nearest_cell_centre(ref const(Vector3) p, ref size_t nearestCell, ref double minDist)
     {
-	nearestCell = 0;
-	auto p = cell_barycentre(0);
-	double dx = x - p.x; double dy = y - p.y; double dz = z - p.z;
-	minDist = sqrt(dx*dx + dy*dy + dz*dz);
+	Vector3 dp = cell_barycentre(0); dp -= p;
+	double d = abs(dp);
+	minDist = d; nearestCell = 0;
 	foreach (i; 1 .. ncells) {
-	    p = cell_barycentre(i);
-	    dx = x - p.x; dy = y - p.y; dz = z - p.z;
-	    double d = sqrt(dx*dx + dy*dy + dz*dz);
-	    if (d < minDist) {
-		minDist = d;
-		nearestCell = i;
-	    }
-	} // end foreach i
+	    dp = cell_barycentre(i); dp -= p;
+	    d = abs(dp);
+	    if (d < minDist) { minDist = d; nearestCell = i; }
+	}
     } // end find_nearest_cell_centre
 
 } // end class grid
