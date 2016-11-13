@@ -268,7 +268,8 @@ class Grid {
     void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
 	if (cells_are_sorted_into_bins) {
-	    find_enclosing_cell_fast(p, indx, found);
+	    // find_enclosing_cell_fast(p, indx, found); // FIXME -- not working reliably for triangular mesh
+	    find_enclosing_cell_slow(p, indx, found); // FIXME -- should be fast
 	} else {
 	    find_enclosing_cell_slow(p, indx, found);
 	}

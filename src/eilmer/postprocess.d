@@ -401,7 +401,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		Vector3 p1 = Vector3(to!double(items[3]), to!double(items[4]), to!double(items[5]));
 		size_t n = to!size_t(items[6]);
 		auto count = soln.find_enclosing_cells_along_line(p0, p1, n, cells_found);
-		writeln("# ", count, " cells from point ", p0, " to point ", p1);
+		writeln("# Info: Found ", count, " cells from point ", p0, " to point ", p1);
 	    } // end foreach lineStr
 	    foreach(i; 0 .. cells_found.length) {
 		size_t ib = cells_found[i][0]; size_t idx = cells_found[i][1];

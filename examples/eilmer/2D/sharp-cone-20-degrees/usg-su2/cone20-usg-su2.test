@@ -1,9 +1,9 @@
-# cone20-usg.test
+# cone20-usg-su2.test
 # Functional test for a conical (axisymmetric), inviscid flow.
 #
 # This exercises quite a few of the basic functions of the unstructured-grid code.
 #
-# PJ, 11-Jan-2011 (Eilmer4 port 2015-10-21, unstructured-grid 2015-12-21, with shock angle 2016-11-13)
+# PJ, 11-Jan-2011 (Eilmer4 port 2015-10-21, unstructured-grid 2015-12-21, su2 2016-11-13)
 #
 # Can be run manually with the command:
 # $ tclsh cone20-usg.test
@@ -24,7 +24,7 @@ test run-preprocessor {Run the preprocessing stage.} -body {
 } -result {} -returnCodes {0}
 
 test run-simulation {Run the shared-memory simulation code.} -body {
-    exec e4shared --run --job=cone20 --verbosity=1 --max-cpus=2 > LOGFILE_MAIN
+    exec e4shared --run --job=cone20 --verbosity=1 --max-cpus=4 > LOGFILE_MAIN
 } -result {} -returnCodes {0}
 
 test number-of-steps {The main simulation takes a certain number of steps.} -body {
@@ -37,7 +37,7 @@ test number-of-steps {The main simulation takes a certain number of steps.} -bod
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    list [expr abs($final_steps - 853) < 3]
+    list [expr abs($final_steps - 1641) < 3]
 } -result {1}
 
 test free-stream-flow {The flow in the second block, upstream of the shock.} -body {
@@ -97,7 +97,7 @@ test pressure-on-cone-surface {The expected pressure on the cone surface.} -body
     set q_inf [expr 0.5 * 0.3029 * 1.0e6]; # dynamic pressure for free stream
     set p_cone_surface [expr 95.84e3 + 0.387 * $q_inf]
     # puts "p=$p, q_inf=$q_inf, p_cone_surface=$p_cone_surface"
-    list [expr abs($p - $p_cone_surface) < 6.0e2]
+    list [expr abs($p - $p_cone_surface) < 5.0e2]
 } -result {1}
 
 test shock-angle {The shock angle should be close to 49 degrees.} -body {

@@ -152,8 +152,8 @@ extern(C) int find_enclosing_cell_from_lua(lua_State* L)
 	errMsg ~= " The x field, if given, should be a double.";
 	throw new LuaInputException(errMsg);
     }
-    lua_pop(L, 1);
-
+    lua_pop(L, 1); // dispose of x item
+    //
     double y;
     lua_getfield(L, 2, "y");
     if ( lua_isnil(L, -1) ) {
@@ -166,8 +166,8 @@ extern(C) int find_enclosing_cell_from_lua(lua_State* L)
 	errMsg ~= " The y field, if given, should be a double.";
 	throw new LuaInputException(errMsg);
     }
-    lua_pop(L, 1);
-
+    lua_pop(L, 1); // dispose of y item
+    //
     double z;
     lua_getfield(L, 2, "z");
     if ( lua_isnil(L, -1) ) {
@@ -180,7 +180,7 @@ extern(C) int find_enclosing_cell_from_lua(lua_State* L)
 	errMsg ~= " The z field, if given, should be a double.";
 	throw new LuaInputException(errMsg);
     }
-    lua_pop(L, 1);
+    lua_pop(L, 1); // dispose of z item
 
     auto cell_identity = fsol.find_enclosing_cell(x, y, z);
 
@@ -194,8 +194,151 @@ extern(C) int find_enclosing_cell_from_lua(lua_State* L)
 	lua_pushnil(L); lua_setfield(L, tblIndx, "ib");
 	lua_pushnil(L); lua_setfield(L, tblIndx, "i");
     }
-    return 1; // Just the table of indices is left on the stack.
+    return 1; // Just the table of labelled indices is left on the stack.
 } // end find_enclosing_cell_from_lua()
+
+
+extern(C) int find_enclosing_cells_along_line_from_lua(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    if ( !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	errMsg ~= " A table is expected as first (and only) argument to the method.";
+	luaL_error(L, errMsg.toStringz);
+    }
+
+    Vector3 p0;
+    lua_getfield(L, 2, "p0");
+    if (lua_istable(L, -1)) {
+	// Seems that we have been given a table for the p0 value.
+	double x;
+	lua_getfield(L, -1, "x");
+	if ( lua_isnil(L, -1) ) {
+	    x = 0.0;
+	} else if ( lua_isnumber(L, -1) ) {
+	    x = to!double(luaL_checknumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	    errMsg ~= " A field for p0.x was found, but the content was not valid.";
+	    errMsg ~= " The x field, if given, should be a double.";
+	    throw new LuaInputException(errMsg);
+	}
+	lua_pop(L, 1); // dispose of x item
+	//
+	double y;
+	lua_getfield(L, -1, "y");
+	if ( lua_isnil(L, -1) ) {
+	    y = 0.0;
+	} else if ( lua_isnumber(L, -1) ) {
+	    y = to!double(luaL_checknumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	    errMsg ~= " A field for p0.y was found, but the content was not valid.";
+	    errMsg ~= " The y field, if given, should be a double.";
+	    throw new LuaInputException(errMsg);
+	}
+	lua_pop(L, 1); // dispose of y item
+	//
+	double z;
+	lua_getfield(L, -1, "z");
+	if ( lua_isnil(L, -1) ) {
+	    z = 0.0;
+	} else if ( lua_isnumber(L, -1) ) {
+	    z = to!double(luaL_checknumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	    errMsg ~= " A field for p0.z was found, but the content was not valid.";
+	    errMsg ~= " The z field, if given, should be a double.";
+	    throw new LuaInputException(errMsg);
+	}
+	lua_pop(L, 1); // dispose of z item
+	p0 = Vector3(x, y, z);
+    } else {
+	// Was not a table, so try extracting a Vector3 pointer.
+	p0 = *checkVector3(L, -1);
+    }
+    lua_pop(L, 1); // dispose of p0 item
+
+    Vector3 p1;
+    lua_getfield(L, 2, "p1");
+    if (lua_istable(L, -1)) {
+	// Seems that we have been given a table for the p1 value.
+	double x;
+	lua_getfield(L, -1, "x");
+	if ( lua_isnil(L, -1) ) {
+	    x = 0.0;
+	} else if ( lua_isnumber(L, -1) ) {
+	    x = to!double(luaL_checknumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	    errMsg ~= " A field for p1.x was found, but the content was not valid.";
+	    errMsg ~= " The x field, if given, should be a double.";
+	    throw new LuaInputException(errMsg);
+	}
+	lua_pop(L, 1); // dispose of x item
+	//
+	double y;
+	lua_getfield(L, -1, "y");
+	if ( lua_isnil(L, -1) ) {
+	    y = 0.0;
+	} else if ( lua_isnumber(L, -1) ) {
+	    y = to!double(luaL_checknumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	    errMsg ~= " A field for p1.y was found, but the content was not valid.";
+	    errMsg ~= " The y field, if given, should be a double.";
+	    throw new LuaInputException(errMsg);
+	}
+	lua_pop(L, 1); // dispose of y item
+	//
+	double z;
+	lua_getfield(L, -1, "z");
+	if ( lua_isnil(L, -1) ) {
+	    z = 0.0;
+	} else if ( lua_isnumber(L, -1) ) {
+	    z = to!double(luaL_checknumber(L, -1));
+	} else {
+	    string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	    errMsg ~= " A field for p1.z was found, but the content was not valid.";
+	    errMsg ~= " The z field, if given, should be a double.";
+	    throw new LuaInputException(errMsg);
+	}
+	lua_pop(L, 1); // dispose of z item
+	p1 = Vector3(x, y, z);
+    } else {
+	// Was not a table, so try extracting a Vector3 pointer.
+	p1 = *checkVector3(L, -1);
+    }
+    lua_pop(L, 1); // dispose of p1 item
+
+    size_t n = 0;
+    lua_getfield(L, -1, "n");
+    if ( lua_isnil(L, -1) ) {
+	n = 0;
+    } else if ( lua_isnumber(L, -1) ) {
+	n = to!size_t(lua_tointeger(L, -1));
+    } else {
+	string errMsg = "Error in call to FlowSolution:find_enclosing_cells_along_line.";
+	errMsg ~= " A field for n was found, but the content was not valid.";
+	errMsg ~= " The n field, if given, should be a nonnegative integer.";
+	throw new LuaInputException(errMsg);
+    }
+    lua_pop(L, 1); // dispose of z item
+    
+    size_t[2][] cells_found;
+    auto count = fsol.find_enclosing_cells_along_line(p0, p1, n, cells_found);
+
+    lua_settop(L, 0); // clear stack
+    lua_newtable(L); // start anonymous table { } for the array
+    foreach(j, cell_identity; cells_found) {
+	lua_newtable(L); // start anonymous table {} for the pair indices representing cellid
+	auto tblIndx = lua_gettop(L);
+ 	lua_pushnumber(L, cell_identity[0]); lua_setfield(L, tblIndx, "ib");
+       	lua_pushnumber(L, cell_identity[1]); lua_setfield(L, tblIndx, "i");
+	lua_rawseti(L, 1, to!int(j+1)); // push the cellid pair into the array
+    }
+    return 1; // Just the array of tables of labelled indices is left on the stack.
+} // end find_enclosing_cells_along_line_from_lua()
 
 
 extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
@@ -585,6 +728,8 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &find_enclosing_cell_from_lua);
     lua_setfield(L, -2, "find_enclosing_cell");
+    lua_pushcfunction(L, &find_enclosing_cells_along_line_from_lua);
+    lua_setfield(L, -2, "find_enclosing_cells_along_line");
     lua_pushcfunction(L, &find_nearest_cell_centre_from_lua);
     lua_setfield(L, -2, "find_nearest_cell_centre");
     lua_pushcfunction(L, &get_nic);

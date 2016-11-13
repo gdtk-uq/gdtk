@@ -139,7 +139,7 @@ public:
 	    size_t ib = identity[0]; size_t idx = identity[1];
 	    size_t found = identity[2];
 	    if (found == 0) { // out of domain bounds
-		writefln("Point %g,%g,%g not in solution domain bounds", p.x, p.y, p.z);
+		writeln("# Info: Cell not found for point ", p);
 		continue;
 	    } else { // maybe store cell data
 		// It is convenient to omit repeated cells so that we can specify
