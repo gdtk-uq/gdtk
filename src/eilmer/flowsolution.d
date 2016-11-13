@@ -77,6 +77,11 @@ public:
 	    case Grid_t.unstructured_grid:
 		gridBlocks ~= new UnstructuredGrid(fileName, "gziptext");
 	    }
+	    if (gridBlocks[$-1].dimensions == 2) {
+		gridBlocks[$-1].sort_cells_into_bins(10, 10);
+	    } else {
+		gridBlocks[$-1].sort_cells_into_bins(10, 10, 10);
+	    }
 	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx);
 	    fileName = dir ~ "/" ~ fileName;
 	    flowBlocks ~= new BlockFlow(fileName, gridType);

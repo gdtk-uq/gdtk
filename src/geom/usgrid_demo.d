@@ -44,6 +44,17 @@ void main()
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
     writeln("grid point 5 5 5 at p=", *my_3Dgrid[5,5,5]);
     auto usg3D = new UnstructuredGrid(my_3Dgrid);
+    usg3D.sort_cells_into_bins(10, 10, 10);
+    Vector3 my_point = 0.5*(p[0] + p[7]);
+    size_t cell_indx = 0; bool found = false;
+    usg3D.find_enclosing_cell(my_point, cell_indx, found);
+    writeln("Search for cell enclosing my_point= ", my_point);
+    if (found) {
+	writeln("    cell found, index= ", cell_indx);
+	writeln("    cell barycentre= ", usg3D.cell_barycentre(cell_indx));
+    } else {
+	writeln("    cell not found");
+    }
     usg3D.write_to_vtk_file("test_3Dgrid.vtk");
     usg3D.write_to_gzip_file("test_3Dgrid.gz");
     auto usg3 = new UnstructuredGrid("test_3Dgrid.gz", "gziptext");

@@ -42,6 +42,17 @@ void main()
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
     writeln("grid point 5 5 5 at p=", *my_3Dgrid[5,5,5]);
     my_3Dgrid.write_to_vtk_file("test_3Dgrid.vtk");
+    my_3Dgrid.sort_cells_into_bins(10, 10, 10);
+    Vector3 my_point = 0.5*(p[0] + p[7]);
+    size_t cell_indx = 0; bool found = false;
+    my_3Dgrid.find_enclosing_cell(my_point, cell_indx, found);
+    writeln("Search for cell enclosing my_point= ", my_point);
+    if (found) {
+	writeln("    cell found, index= ", cell_indx);
+	writeln("    cell barycentre= ", my_3Dgrid.cell_barycentre(cell_indx));
+    } else {
+	writeln("    cell not found");
+    }
     //
     writeln("2D surface from the 3D grid");
     auto north_grid = my_3Dgrid.get_boundary_grid(Face.north);

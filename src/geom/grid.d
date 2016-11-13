@@ -10,6 +10,7 @@ module grid;
 import std.math;
 import std.stdio;
 import std.conv;
+import std.algorithm;
 import geom;
 
 //-----------------------------------------------------------------
@@ -49,6 +50,15 @@ class Grid {
     // we need to access the data via a this base class.
     // I think that my abstractions are leaking.
     size_t[][] faceIndexListPerVertex;
+    //
+    // For fast searches, we should sort the cells according
+    // to location, so that we may limit the number of cells that
+    // we need to check for any given location.
+    Vector3 bb0, bb1; // bounding box for the entire grid.
+    size_t[][][][] bins; // Array of bins for holding lists of cell indices.
+    size_t nbx, nby, nbz; // number of bins in each coordinate direction
+    double deltax, deltay, deltaz; // size of bin in each coordinate direction
+    bool cells_are_sorted_into_bins = false;
     
     this(Grid_t grid_type, int dimensions, string label="")
     {
@@ -137,14 +147,6 @@ class Grid {
 	return inside_cell;
     } // end point_is_inside_cell()
 
-    void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
-    {
-	found = false; indx = 0;
-	foreach (i; 0 .. ncells) {
-	    if (point_is_inside_cell(p, i)) { found = true; indx = i; break; }
-	}
-    } // end find_enclosing_cell()
-
     Vector3 cell_barycentre(size_t indx)
     // Returns the "centre-of-mass" of the vertices defining the cell.
     {
@@ -155,6 +157,122 @@ class Grid {
 	cbc *= one_over_n_vtx;
 	return cbc;
     } // end cell_barycentre()
+
+    // Bin-sorting methods to speed up the search for the enclosing cell.
+    
+    // Since we are cannot control what position we are given,
+    // determine the bin index cautiously.
+    size_t get_bin_ix(ref const(Vector3) p)
+    {
+	double dx = p.x - bb0.x;
+	int ix = to!int(abs(dx)/deltax);
+	ix = max(0, min(nbx-1, ix));
+	return to!size_t(ix);
+    }
+    
+    size_t get_bin_iy(ref const(Vector3) p)
+    {
+	double dy = p.y - bb0.y;
+	int iy = to!int(abs(dy)/deltay);
+	iy = max(0, min(nby-1, iy));
+	return to!size_t(iy);
+    }
+    
+    size_t get_bin_iz(ref const(Vector3) p)
+    {
+	int iz = 0;
+	if (dimensions == 3) {
+	    double dz = p.z - bb0.z;
+	    iz = to!int(abs(dz)/deltaz);
+	    iz = max(0, min(nbz-1, iz));
+	}
+	return to!size_t(iz);
+    }
+    
+    void sort_cells_into_bins(size_t nx=1, size_t ny=1, size_t nz=1)
+    // We have this as method separate from the constructor because
+    // it may need to be called more than once for a moving grid.
+    {
+	// Numbers of bins in each coordinate direction.
+	if (nx < 1 || ny < 1 || nz < 1) {
+	    throw new Exception("Need to have nx, ny and nz >= 1");
+	}
+	nbx = nx; nby = ny; nbz = nz;
+	// Determine the bounding box for the entire grid.
+	Vector3 p = vertices[0];
+	bb0 = p; bb1 = p;
+	foreach (i; 1 .. nvertices) {
+	    p = vertices[i];
+	    bb0.refx = fmin(p.x, bb0.x); bb0.refy = fmin(p.y, bb0.y); bb0.refz = fmin(p.z, bb0.z);
+	    bb1.refx = fmax(p.x, bb1.x); bb1.refy = fmax(p.y, bb1.y); bb1.refz = fmax(p.z, bb1.z);
+	}
+	// Sizes of the bins.
+	deltax = (bb1.x - bb0.x)/nbx; deltay = (bb1.y - bb0.y)/nby; deltaz = (bb1.z - bb0.z)/nbz;
+	// Now, set up the bins and sort the cells into those bins.
+	bins.length = nbx;
+	foreach (ix; 0 .. nbx) {
+	    bins[ix].length = nby;
+	    foreach (iy; 0 .. nby) { bins[ix][iy].length = nbz; }
+	}
+	foreach (i; 0 .. ncells) {
+	    p = cell_barycentre(i);
+	    size_t ix = get_bin_ix(p);
+	    size_t iy = get_bin_iy(p);
+	    size_t iz = get_bin_iz(p);
+	    bins[ix][iy][iz] ~= i;
+	}
+	cells_are_sorted_into_bins = true;
+    } // end sort_cells_into_bins()
+
+    void find_enclosing_cell_fast(ref const(Vector3) p, ref size_t indx, ref bool found)
+    {
+	// Search for the cell only in the near-by bins.
+	found = false; indx = 0;
+	// Pick the most-likely bin, based on position.
+	size_t ix0 = get_bin_ix(p);
+	size_t iy0 = get_bin_iy(p);
+	size_t iz0 = get_bin_iz(p);
+	// Visit that bin first.
+	foreach (i; bins[ix0][iy0][iz0]) {
+	    if (point_is_inside_cell(p, i)) { found = true; indx = i; return; }
+	}
+        // If we reach this point, extend the search one bin further in each direction.
+	size_t ix_start = max(ix0-1, 0); size_t ix_end = min(ix0+1, nbx-1);
+	size_t iy_start = max(iy0-1, 0); size_t iy_end = min(iy0+1, nby-1);
+	size_t iz_start = max(iz0-1, 0); size_t iz_end = min(iz0+1, nbz-1);
+	for (size_t iz = iz_start; iz <= iz_end; ++iz) {
+	    for (size_t iy = iy_start; iy <= iy_end; ++iy) {
+		for (size_t ix = ix_start; ix <= ix_end; ++ix) {
+		    // Search only bins we have not already visited.
+		    if (ix == ix0 && iy == iy0 && iz == iz0) continue;
+		    foreach (i; bins[ix][iy][iz]) {
+			if (point_is_inside_cell(p, i)) { found = true; indx = i; return; }
+		    }
+		}
+	    }
+	}
+	// If we arrive here, give up anyway and look no further.
+	return;
+    } // end find_enclosing_cell_fast()
+
+    void find_enclosing_cell_slow(ref const(Vector3) p, ref size_t indx, ref bool found)
+    {
+	// Search every cell in the block.
+	found = false; indx = 0;
+	foreach (i; 0 .. ncells) {
+	    if (point_is_inside_cell(p, i)) { found = true; indx = i; break; }
+	}
+	return;
+    } // end find_enclosing_cell_slow()
+
+    void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
+    {
+	if (cells_are_sorted_into_bins) {
+	    find_enclosing_cell_fast(p, indx, found);
+	} else {
+	    find_enclosing_cell_slow(p, indx, found);
+	}
+    } // end find_enclosing_cell()
 
     void find_nearest_cell_centre(ref const(Vector3) p, ref size_t nearestCell, ref double minDist)
     {
@@ -167,5 +285,5 @@ class Grid {
 	    if (d < minDist) { minDist = d; nearestCell = i; }
 	}
     } // end find_nearest_cell_centre
-
+    
 } // end class grid

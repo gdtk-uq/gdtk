@@ -1841,6 +1841,11 @@ public:
 	    writeln("read_grid(): Start block ", id);
 	}
 	grid = new StructuredGrid(filename, "gziptext");
+	if (grid.dimensions == 2) {
+	    grid.sort_cells_into_bins(10, 10);
+	} else {
+	    grid.sort_cells_into_bins(10, 10, 10);
+	}
 	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
 	if ( myConfig.dimensions == 3 ) {
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {

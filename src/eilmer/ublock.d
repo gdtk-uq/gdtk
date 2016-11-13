@@ -156,6 +156,11 @@ public:
     override void init_grid_and_flow_arrays(string gridFileName)
     {
 	grid = new UnstructuredGrid(gridFileName, "gziptext");
+	if (grid.dimensions == 2) {
+	    grid.sort_cells_into_bins(10, 10);
+	} else {
+	    grid.sort_cells_into_bins(10, 10, 10);
+	}
 	if (grid.nvertices != nvertices) {
 	    string msg = format("UnstructuredGrid: incoming grid has %d vertices " ~
 				"but expected %d vertices.", grid.nvertices, nvertices);

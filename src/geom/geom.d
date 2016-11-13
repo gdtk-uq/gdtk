@@ -454,6 +454,25 @@ void cross_product(double ax, double ay, double az, double bx, double by, double
     return;
 }
 
+@nogc
+bool inside_bounding_box(ref const(Vector3) p,
+			 ref const(Vector3) bb0, ref const(Vector3) bb1,
+			 int dimensions)
+{
+    // Returns true if we do not determine that the point is outside the box.
+    // So it may be on the surface.
+    bool is_inside = true;
+    if (p.x < bb0.x) is_inside = false;
+    if (p.y < bb0.y) is_inside = false;
+    if (p.x > bb1.x) is_inside = false;
+    if (p.y > bb1.y) is_inside = false;
+    if (dimensions == 3) {
+	if (p.z < bb0.z) is_inside = false;
+	if (p.z > bb1.z) is_inside = false;
+    }
+    return is_inside;
+} // end inside_bounding_box()
+
 /**
  * Returns true is all of the components of two vectors are approximately equal.
  */
@@ -536,6 +555,14 @@ unittest {
 	   "to_local_frame");
     h.transform_to_global_frame(n, t1, t2);
     assert(approxEqualVectors(h, h_ref), "to_global_frame");
+
+    Vector3 bb0 = Vector3(1.0, 1.0, 1.0);
+    Vector3 bb1 = Vector3(2.0, 2.0, 2.0);
+    Vector3 p = 0.5*(bb0 + bb1);
+    assert(inside_bounding_box(p, bb0, bb1, 3), "bounding box test 1");
+    p += Vector3(0.0, 0.0, 1.0);
+    assert(!inside_bounding_box(p, bb0, bb1, 3), "bounding box test 2");
+    assert(inside_bounding_box(p, bb0, bb1, 2), "bounding box test 3");
 }
 
 
