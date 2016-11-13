@@ -125,6 +125,36 @@ public:
 	Vector3 p = Vector3(x, y, z);
 	return find_enclosing_cell(p);
     }
+
+    size_t find_enclosing_cells_along_line(ref const(Vector3) p0, ref const(Vector3) p1,
+					   size_t n, ref size_t[2][] cells_found)
+    // Locate cells along the line p0 --> p1, accumulating the block index and the cell index
+    // into the cells_found array.
+    {
+	size_t count = 0;
+	foreach (ip; 0 .. n) {
+	    double frac = double(ip) / double(n-1);
+	    Vector3 p = p0*(1.0-frac) + p1*frac;
+	    auto identity = find_enclosing_cell(p);
+	    size_t ib = identity[0]; size_t idx = identity[1];
+	    size_t found = identity[2];
+	    if (found == 0) { // out of domain bounds
+		writefln("Point %g,%g,%g not in solution domain bounds", p.x, p.y, p.z);
+		continue;
+	    } else { // maybe store cell data
+		// It is convenient to omit repeated cells so that we can specify
+		// tiny steps and be sure of sampling all cells and also be able
+		// to specify multiple lines that get concatenated, again without
+		// repeated cells in the output stream.
+		if ((cells_found.length == 0) ||
+		    (cells_found[$-1][0] != ib) || (cells_found[$-1][1] != idx)) {
+		    cells_found ~= [ib, idx]; // Add a "new" cell.
+		    count += 1;
+		}
+	    }
+	} // end foreach ip
+	return count;
+    } // end find_enclosing_cells_along_line()
     
     size_t[] find_nearest_cell_centre(double x, double y, double z=0.0)
     {

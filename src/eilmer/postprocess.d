@@ -395,40 +395,13 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
 	    size_t[2][] cells_found; // accumulate the identies of the cells found here
-	    // I think that it will be convenient to omit repeated cells so that we can
-	    // specify really tiny steps and be sure of sampling all cells and also
-	    // be able to specify multiple lines that get concatenated, again without
-	    // repeated cells in the output stream.
 	    foreach(lineStr; extractLineStr.split(";")) {
 		auto items = lineStr.split(",");
-		double x0 = to!double(items[0]);
-		double y0 = to!double(items[1]);
-		double z0 = to!double(items[2]);
-		double x1 = to!double(items[3]);
-		double y1 = to!double(items[4]);
-		double z1 = to!double(items[5]);
+		Vector3 p0 = Vector3(to!double(items[0]), to!double(items[1]), to!double(items[2]));
+		Vector3 p1 = Vector3(to!double(items[3]), to!double(items[4]), to!double(items[5]));
 		size_t n = to!size_t(items[6]);
-		foreach (ip; 0 .. n) {
-		    double frac = double(ip) / double(n-1);
-		    double x = x0*(1.0-frac) + x1*frac;
-		    double y = y0*(1.0-frac) + y1*frac;
-		    double z = z0*(1.0-frac) + z1*frac;
-		    // outFile.writeln("# point: ", x, ", ", y, ", ", z);
-		    auto identity = soln.find_enclosing_cell(x, y, z);
-		    size_t ib = identity[0]; size_t idx = identity[1];
-		    size_t found = identity[2];
-		    if (found == 0) { // out of domain bounds
-			writefln("Point %g,%g,%g not in solution domain bounds", x, y, z);
-			continue;
-		    } else { // store cell data
-			if ((cells_found.length == 0) ||
-			    (cells_found[$-1][0] != ib) ||
-			    (cells_found[$-1][1] != idx)) {
-			    // Add only "new" cells.
-			    cells_found ~= [ib, idx];
-			}
-		    }
-		} // end foreach ip
+		auto count = soln.find_enclosing_cells_along_line(p0, p1, n, cells_found);
+		writeln("# ", count, " cells from point ", p0, " to point ", p1);
 	    } // end foreach lineStr
 	    foreach(i; 0 .. cells_found.length) {
 		size_t ib = cells_found[i][0]; size_t idx = cells_found[i][1];
