@@ -185,8 +185,8 @@ void iterate_to_steady_state()
     double gamma = GlobalConfig.sssOptions.gamma;
     double alpha = GlobalConfig.sssOptions.alpha;
 
-    SBlock sblk = cast(SBlock) gasBlocks[0];
-    int interpOrderSave = sblk.get_interpolation_order();
+    auto myBlk = gasBlocks[0];
+    int interpOrderSave = myBlk.get_interpolation_order();
 
     double dt = determine_initial_dt(cfl0);
     double dtTrial, etaTrial;
@@ -225,7 +225,7 @@ void iterate_to_steady_state()
 
     writeln("Begin pre-iterations to establish sensible max residual.");
     foreach ( preStep; -nPreSteps .. 0 ) {
-	sblk.set_interpolation_order(1);
+	myBlk.set_interpolation_order(1);
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    FGMRES_solve(pseudoSimTime, dt, eta0, withPreconditioning, normOld, nRestarts);
 	    foreach (blk; gasBlocks) {
@@ -320,13 +320,13 @@ void iterate_to_steady_state()
     foreach (step; 1 .. nsteps+1) {
 	residualsUpToDate = false;
 	if ( step <= nStartUpSteps ) {
-	    sblk.set_interpolation_order(1);
+	    myBlk.set_interpolation_order(1);
 	    withPreconditioning = false;
 	    eta = eta0;
 	    tau = tau0;
 	}
 	else {
-	    sblk.set_interpolation_order(interpOrderSave);
+	    myBlk.set_interpolation_order(interpOrderSave);
 	    withPreconditioning = GlobalConfig.sssOptions.usePreconditioning;
 	    eta = eta1;
 	    tau = tau1;
@@ -612,8 +612,6 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double[] v)
 {
     double sigma = GlobalConfig.sssOptions.sigma;
     int nConserved = GlobalConfig.sssOptions.nConserved;
-    SBlock sblk = cast(SBlock) gasBlocks[0];
-    int interpOrder = sblk.get_interpolation_order();
     // We perform a Frechet derivative to evaluate J*v
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
@@ -645,8 +643,6 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     int nConserved = GlobalConfig.sssOptions.nConserved;
     // Presently, just do one block
     Block blk = gasBlocks[0];
-    SBlock sblk = cast(SBlock) gasBlocks[0];
-    int interpOrder = sblk.get_interpolation_order();
     int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     // We add 1 because the user thinks of "re"starts, so they
     // might legitimately ask for no restarts. We still have
