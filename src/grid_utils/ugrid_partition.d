@@ -56,6 +56,10 @@ public:
     size_t id;    // block id number
     Cell[] cells; // collection of cells in block
     Node[] nodes; // collection of nodes in block
+    size_t[] node_id_list; // collection of the node ids
+                           // although we already have a list of the nodes
+                           // having a list of the ids will make for a
+                           // fast means of checking if a node is in a block.
     Boundary[string] boundary; // collection of block boundaries
     string[] bc_names; // list of boundary condition types for a block
     this(size_t id) {
@@ -84,7 +88,7 @@ class Face {
 public:
     size_t id;       // Face id number
     size_t[] node_id_list;   // list of ids for the faces attached to a face
-
+    size_t[] partition_id_list; // list of partition ids for the cells attached to face
     this(size_t[] node_id_list) {
 	this.node_id_list = node_id_list.dup();
     }
@@ -229,6 +233,13 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	double[3] pos = [x, y, z];
 	global_nodes ~= new Node(indx, pos);
     } // end foreach i .. nnodes
+    // Collect what partition each cell belongs to
+    f = File(partitionFile, "r");
+    foreach(cell_id;0 .. ncells) {
+	auto tokens = f.readln().strip().split();
+	size_t partition_id = to!int(tokens[0]);
+	global_cells[cell_id].partition = partition_id;
+    }    
     // construct faces
     //
     // Now that we have the full list of cells and vertices assigned to each cell,
@@ -275,6 +286,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	    global_faces ~= new Face(my_node_id_list);
 	    faceIndices[faceTag] = face_indx;
 	}
+	global_faces[face_indx].partition_id_list ~= cell.partition;
 	cell.face_id_list ~= face_indx;
 	return;
     } // end add_face_to_cell()
@@ -341,6 +353,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
     // Now that we have a full set of cells and faces,
     // make lists of the boundary faces.
     //
+    f = File(meshFile, "r"); 
     auto nboundaries = to!size_t(getHeaderContent("NMARK"));
     foreach(i; 0 .. nboundaries) {
 	string tag = getHeaderContent("MARKER_TAG");
@@ -363,22 +376,15 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	} // end foreach j
 	global_boundaries ~= new Boundary(tag, face_id_list);
     } // end foreach i
-    // Collect what partition each cell belongs to
-    f = File(partitionFile, "r");
-    foreach(cell_id;0 .. ncells) {
-	auto tokens = f.readln().strip().split();
-	size_t partition_id = to!int(tokens[0]);
-	global_cells[cell_id].partition = partition_id;
-    }
     // Collect cell inter-connectivity
-     f = File(dualFile, "r");
-     f.readln(); // skip first line
-     foreach(cell_id;0 .. ncells) {
+    f = File(dualFile, "r");
+    f.readln(); // skip first line
+    foreach(cell_id;0 .. ncells) {
 	 auto lineContent = f.readln().strip();
 	 auto tokens = lineContent.split();
 	 foreach(j; 0 .. tokens.length) { global_cells[cell_id].cell_neighbour_id_list ~= to!size_t(tokens[j]) - 1 ; }	 
-     }
-     // At this point we have all the data we need. Now construct the new blocks.
+    }
+    // At this point we have all the data we need. Now construct the new blocks.
      // construct blocks
      foreach(i;0 .. nparts) {
 	 blocks ~= new Block(i);
@@ -391,7 +397,10 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 size_t partition_id = global_cells[cell_id].partition;
 	 blocks[partition_id].cells ~= global_cells[cell_id];
 	 foreach(i;0..global_cells[cell_id].node_id_list.length) {
+	     //if (!blocks[partition_id].node_id_list.canFind(global_cells[cell_id].node_id_list[i])) {
 	     blocks[partition_id].nodes ~= global_nodes[global_cells[cell_id].node_id_list[i]];
+		 //	 blocks[partition_id].node_id_list ~= global_cells[cell_id].node_id_list[i];
+		 //}
 	 }
 	 // assign interior boundaries
 	 foreach(neighbour_cell_id; global_cells[cell_id].cell_neighbour_id_list) {
@@ -404,19 +413,19 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 }
      }
      // finally assign domain boundary faces to correct blocks
-     foreach(i;0 .. nboundaries) {
-	 foreach(face_id; global_boundaries[i].face_id_list) {
-	     foreach(cell_id;0..ncells) {
-		 if (global_cells[cell_id].face_id_list.canFind(face_id)) {
-			 auto partition_id = global_cells[cell_id].partition;
-			 string tag = global_boundaries[i].tag;
-			 if (!blocks[partition_id].bc_names.canFind(tag)) {
-			     size_t[] face_id_list;
-			     blocks[partition_id].boundary[tag] = new Boundary(tag, face_id_list);
-			     blocks[partition_id].bc_names ~= tag;
-			 }
-			 blocks[partition_id].boundary[tag].face_id_list ~= face_id;
+     foreach(face_id;0 .. global_faces.length) {  
+	 if (global_faces[face_id].partition_id_list.length ==  1) {
+	     foreach(i;0 .. nboundaries) {
+		 if (global_boundaries[i].face_id_list.canFind(face_id)) {
+		     auto partition_id = global_faces[face_id].partition_id_list[0];
+		     string tag = global_boundaries[i].tag;
+		     if (!blocks[partition_id].bc_names.canFind(tag)) {
+			 size_t[] face_id_list;
+			 blocks[partition_id].boundary[tag] = new Boundary(tag, face_id_list);
+			 blocks[partition_id].bc_names ~= tag;
 		     }
+		     blocks[partition_id].boundary[tag].face_id_list ~= face_id;
+		 }                                                                 
 	     }
 	 }
      }
