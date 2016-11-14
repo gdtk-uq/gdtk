@@ -42,6 +42,17 @@ import user_defined_source_terms;
 
 static int fnCount = 0;
 
+// Module-local, global memory arrays and matrices
+double[] g0_outer;
+double[] g1_outer;
+double[] h_outer;
+double[] hR_outer;
+Matrix H0_outer;
+Matrix H1_outer;
+Matrix Gamma_outer;
+Matrix Q0_outer;
+Matrix Q1_outer;
+
 struct ResidValues {
     double mass;
     double xMomentum;
@@ -131,6 +142,7 @@ void main(string[] args)
 	
     init_simulation(tindxStart, maxCPUs, maxWallClock);
     // Additional initialisation
+    allocate_global_workspace();
     foreach (blk; gasBlocks) {
 	blk.allocate_GMRES_workspace();
     }
@@ -544,6 +556,20 @@ void iterate_to_steady_state()
 
 }
 
+void allocate_global_workspace()
+{
+    size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
+    g0_outer.length = mOuter+1;
+    g1_outer.length = mOuter+1;
+    h_outer.length = mOuter+1;
+    hR_outer.length = mOuter+1;
+    H0_outer = new Matrix(mOuter+1, mOuter);
+    H1_outer = new Matrix(mOuter+1, mOuter);
+    Gamma_outer = new Matrix(mOuter+1, mOuter+1);
+    Q0_outer = new Matrix(mOuter+1, mOuter+1);
+    Q1_outer = new Matrix(mOuter+1, mOuter+1);
+}
+
 double determine_initial_dt(double cflInit)
 {
     double signal, dt_local, dt;
@@ -693,10 +719,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     }
 
     // Initialise some arrays and matrices that have already been allocated
-    blk.g0_outer[] = 0.0;
-    blk.g1_outer[] = 0.0;
-    blk.H0_outer.zeros();
-    blk.H1_outer.zeros();
+    g0_outer[] = 0.0;
+    g1_outer[] = 0.0;
+    H0_outer.zeros();
+    H1_outer.zeros();
 
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
@@ -713,7 +739,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // Then compute v = r0/||r0||
     auto beta = norm2(blk.r0);
     // DEBUG: writefln("OUTER: beta= %e", beta);
-    blk.g0_outer[0] = beta;
+    g0_outer[0] = beta;
     foreach (k; 0 .. n) {
 	blk.v_outer[k] = blk.r0[k]/beta;
 	blk.V_outer[k,0] = blk.v_outer[k];
@@ -751,50 +777,50 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    // GMRES implementation (for example, see smla.d)
 	    foreach (i; 0 .. j+1) {
 		foreach (k; 0 .. n ) blk.v_outer[k] = blk.V_outer[k,i]; // Extract column 'i'
-		blk.H0_outer[i,j] = dot(blk.w_outer, blk.v_outer);
-		foreach (k; 0 .. n) blk.w_outer[k] -= blk.H0_outer[i,j]*blk.v_outer[k]; 
+		H0_outer[i,j] = dot(blk.w_outer, blk.v_outer);
+		foreach (k; 0 .. n) blk.w_outer[k] -= H0_outer[i,j]*blk.v_outer[k]; 
 	    }
-	    blk.H0_outer[j+1,j] = norm2(blk.w_outer);
+	    H0_outer[j+1,j] = norm2(blk.w_outer);
 	
 	    foreach (k; 0 .. n) {
-		blk.v_outer[k] = blk.w_outer[k]/blk.H0_outer[j+1,j];
+		blk.v_outer[k] = blk.w_outer[k]/H0_outer[j+1,j];
 		blk.V_outer[k,j+1] = blk.v_outer[k];
 	    }
 
 	    // Build rotated Hessenberg progressively
 	    if ( j != 0 ) {
 		// Extract final column in H
-		foreach (i; 0 .. j+1) blk.h_outer[i] = blk.H0_outer[i,j];
+		foreach (i; 0 .. j+1) h_outer[i] = H0_outer[i,j];
 		// Rotate column by previous rotations (stored in Q0)
-		nm.bbla.dot(blk.Q0_outer, j+1, j+1, blk.h_outer, blk.hR_outer);
+		nm.bbla.dot(Q0_outer, j+1, j+1, h_outer, hR_outer);
 		// Place column back in H
-		foreach (i; 0 .. j+1) blk.H0_outer[i,j] = blk.hR_outer[i];
+		foreach (i; 0 .. j+1) H0_outer[i,j] = hR_outer[i];
 	    }
 	    // Now form new Gamma
-	    blk.Gamma_outer.eye();
-	    auto denom = sqrt(blk.H0_outer[j,j]*blk.H0_outer[j,j] + blk.H0_outer[j+1,j]*blk.H0_outer[j+1,j]);
-	    auto s_j = blk.H0_outer[j+1,j]/denom; 
-	    auto c_j = blk.H0_outer[j,j]/denom;
-	    blk.Gamma_outer[j,j] = c_j; blk.Gamma_outer[j,j+1] = s_j;
-	    blk.Gamma_outer[j+1,j] = -s_j; blk.Gamma_outer[j+1,j+1] = c_j;
+	    Gamma_outer.eye();
+	    auto denom = sqrt(H0_outer[j,j]*H0_outer[j,j] + H0_outer[j+1,j]*H0_outer[j+1,j]);
+	    auto s_j = H0_outer[j+1,j]/denom; 
+	    auto c_j = H0_outer[j,j]/denom;
+	    Gamma_outer[j,j] = c_j; Gamma_outer[j,j+1] = s_j;
+	    Gamma_outer[j+1,j] = -s_j; Gamma_outer[j+1,j+1] = c_j;
 	    // Apply rotations
-	    nm.bbla.dot(blk.Gamma_outer, j+2, j+2, blk.H0_outer, j+1, blk.H1_outer);
-	    nm.bbla.dot(blk.Gamma_outer, j+2, j+2, blk.g0_outer, blk.g1_outer);
+	    nm.bbla.dot(Gamma_outer, j+2, j+2, H0_outer, j+1, H1_outer);
+	    nm.bbla.dot(Gamma_outer, j+2, j+2, g0_outer, g1_outer);
 	    // Accumulate Gamma rotations in Q.
 	    if ( j == 0 ) {
-		copy(blk.Gamma_outer, blk.Q1_outer);
+		copy(Gamma_outer, Q1_outer);
 	    }
 	    else {
-		nm.bbla.dot(blk.Gamma_outer, j+2, j+2, blk.Q0_outer, j+2, blk.Q1_outer);
+		nm.bbla.dot(Gamma_outer, j+2, j+2, Q0_outer, j+2, Q1_outer);
 	    }
 
 	    // Prepare for next step
-	    copy(blk.H1_outer, blk.H0_outer);
-	    blk.g0_outer[] = blk.g1_outer[];
-	    copy(blk.Q1_outer, blk.Q0_outer);
+	    copy(H1_outer, H0_outer);
+	    g0_outer[] = g1_outer[];
+	    copy(Q1_outer, Q0_outer);
 
 	    // Get residual
-	    resid = fabs(blk.g1_outer[j+1]);
+	    resid = fabs(g1_outer[j+1]);
 	    // DEBUG:
 	    //	    writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
 	    if ( resid <= outerTol ) {
@@ -810,8 +836,8 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 
 	// At end H := R up to row m
 	//        g := gm up to row m
-	upperSolve(blk.H1_outer, to!int(m), blk.g1_outer);
-	nm.bbla.dot(blk.Z_outer, n, m, blk.g1_outer, blk.dU);
+	upperSolve(H1_outer, to!int(m), g1_outer);
+	nm.bbla.dot(blk.Z_outer, n, m, g1_outer, blk.dU);
 	foreach (k; 0 .. n) blk.dU[k] += blk.x0[k];
 
 	if ( resid <= outerTol || r+1 == maxRestarts ) {
@@ -823,9 +849,9 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	// Else, we prepare for restart by computing r0 and setting x0
 	blk.x0[] = blk.dU[];
 	foreach (k; 0 .. n) blk.Z_outer[k,m] = blk.V_outer[k,m]; // store final Arnoldi vector in Z (unpreconditioned)
-	nm.bbla.dot(blk.Z_outer, n, m+1, blk.Q1_outer, m+1, blk.V_outer);
-	foreach (i; 0 .. m) blk.g0_outer[i] = 0.0;
-	nm.bbla.dot(blk.V_outer, n, m+1, blk.g0_outer, blk.r0);
+	nm.bbla.dot(blk.Z_outer, n, m+1, Q1_outer, m+1, blk.V_outer);
+	foreach (i; 0 .. m) g0_outer[i] = 0.0;
+	nm.bbla.dot(blk.V_outer, n, m+1, g0_outer, blk.r0);
 
 	beta = norm2(blk.r0);
 	// DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
@@ -834,12 +860,12 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    blk.V_outer[k,0] = blk.v_outer[k];
 	}
 	// Re-initialise some vectors and matrices for restart
-	blk.g0_outer[] = 0.0;
-	blk.g1_outer[] = 0.0;
-	blk.H0_outer.zeros();
-	blk.H1_outer.zeros();
+	g0_outer[] = 0.0;
+	g1_outer[] = 0.0;
+	H0_outer.zeros();
+	H1_outer.zeros();
 	// And set first residual entry
-	blk.g0_outer[0] = beta;
+	g0_outer[0] = beta;
     }
     // Rescale
     cellCount = 0;

@@ -79,8 +79,9 @@ public:
     double[] FU, dU, S, r0, x0;
     // outer iterations 
     double[] v_outer, w_outer, z_outer;
-    double[] g0_outer, g1_outer, h_outer, hR_outer;
-    Matrix V_outer, Z_outer, W_outer, H0_outer, H1_outer, Gamma_outer, Q0_outer, Q1_outer;
+    //double[] g0_outer, g1_outer, h_outer, hR_outer;
+    Matrix V_outer, Z_outer, W_outer;
+    // H0_outer, H1_outer, Gamma_outer, Q0_outer, Q1_outer;
     // inner iterations 
     double[] v_inner, w_inner;
     double[] g0_inner, g1_inner, h_inner, hR_inner;
@@ -592,18 +593,18 @@ public:
 	v_outer.length = n;
 	w_outer.length = n;
 	z_outer.length = n;
-	g0_outer.length = mOuter+1;
-	g1_outer.length = mOuter+1;
-	h_outer.length = mOuter+1;
-	hR_outer.length = mOuter+1;
+	//g0_outer.length = mOuter+1;
+	//g1_outer.length = mOuter+1;
+	//h_outer.length = mOuter+1;
+	//hR_outer.length = mOuter+1;
 	V_outer = new Matrix(n, mOuter+1);
 	W_outer = new Matrix(n, mOuter+1);
 	Z_outer = new Matrix(n, mOuter+1);
-	H0_outer = new Matrix(mOuter+1, mOuter);
-	H1_outer = new Matrix(mOuter+1, mOuter);
-	Gamma_outer = new Matrix(mOuter+1, mOuter+1);
-	Q0_outer = new Matrix(mOuter+1, mOuter+1);
-	Q1_outer = new Matrix(mOuter+1, mOuter+1);
+	//H0_outer = new Matrix(mOuter+1, mOuter);
+	//H1_outer = new Matrix(mOuter+1, mOuter);
+	//Gamma_outer = new Matrix(mOuter+1, mOuter+1);
+	//Q0_outer = new Matrix(mOuter+1, mOuter+1);
+	//Q1_outer = new Matrix(mOuter+1, mOuter+1);
 
 	v_inner.length = n;
 	w_inner.length = n;
