@@ -60,6 +60,9 @@ public:
                            // although we already have a list of the nodes
                            // having a list of the ids will make for a
                            // fast means of checking if a node is in a block.
+    size_t[string] transform_list; // a dictionary which uses the global node id
+                                   // as an index to retrieve the local id stored as
+                                   // a list of type size_t.
     Boundary[string] boundary; // collection of block boundaries
     string[] bc_names; // list of boundary condition types for a block
     this(size_t id) {
@@ -396,11 +399,12 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
      foreach(cell_id;0 .. ncells) {
 	 size_t partition_id = global_cells[cell_id].partition;
 	 blocks[partition_id].cells ~= global_cells[cell_id];
-	 foreach(i;0..global_cells[cell_id].node_id_list.length) {
-	     //if (!blocks[partition_id].node_id_list.canFind(global_cells[cell_id].node_id_list[i])) {
-	     blocks[partition_id].nodes ~= global_nodes[global_cells[cell_id].node_id_list[i]];
-		 //	 blocks[partition_id].node_id_list ~= global_cells[cell_id].node_id_list[i];
-		 //}
+	 foreach(node_id;global_cells[cell_id].node_id_list) {
+	     if (!blocks[partition_id].node_id_list.canFind(node_id)) {
+		 blocks[partition_id].nodes ~= global_nodes[node_id];
+		 blocks[partition_id].node_id_list ~= node_id;
+		 blocks[partition_id].transform_list[to!string(node_id)] = blocks[partition_id].nodes.length - 1; 
+	     }
 	 }
 	 // assign interior boundaries
 	 foreach(neighbour_cell_id; global_cells[cell_id].cell_neighbour_id_list) {
@@ -434,11 +438,6 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 writeln("-- Writing out block: #", i);
 	 string outputFileName = "block_" ~ to!string(i) ~ "_" ~ meshFile;
 	 File outFile;
-
-	 auto min_node = global_nodes.length;
-	 foreach(node; blocks[i].nodes) {
-	     if (min_node > node.id) min_node = node.id;
-	 }
 	 outFile = File(outputFileName, "w");
 	 outFile.writeln("%");
 	 outFile.writeln("% Problem dimension");
@@ -451,7 +450,8 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 foreach(cell_id;0 .. blocks[i].cells.length) {
 	     outFile.writef("%d \t", blocks[i].cells[cell_id].type);
 	     foreach(j;0 .. blocks[i].cells[cell_id].node_id_list.length) {
-		 outFile.writef("%d \t", blocks[i].cells[cell_id].node_id_list[j] - min_node);
+		 auto local_node_id = blocks[i].transform_list[to!string(blocks[i].cells[cell_id].node_id_list[j])];
+		 outFile.writef("%d \t", local_node_id);
 	     }
 	     outFile.writef("%d \n", cell_id); //blocks[i].cells[cell_id].id);
 	 }
@@ -459,11 +459,11 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 outFile.writeln("% Node coordinates");
 	 outFile.writeln("%");
 	 outFile.writef("NPOIN= %d \n", blocks[i].nodes.length);
-	 foreach(node_id;0 .. blocks[i].nodes.length) {
+	 foreach(local_node_id;0 .. blocks[i].nodes.length) {
 	     foreach(j;0 .. dimensions) { // blocks[i].nodes[node_id].pos.length)
-		 outFile.writef("%.17f \t", blocks[i].nodes[node_id].pos[j]);
+		 outFile.writef("%.17f \t", blocks[i].nodes[local_node_id].pos[j]);
 	     }
-	     outFile.writef("%d \n", blocks[i].nodes[node_id].id - min_node);
+	     outFile.writef("%d \n", local_node_id);
 	 }
 	 outFile.writeln("%");
 	 outFile.writeln("% Boundary elements");
@@ -487,7 +487,8 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 		     throw new Exception("invalid element type");
 		 }
 		 foreach(node_id; global_faces[face_id].node_id_list) {
-		     outFile.writef("%d \t", node_id - min_node);
+		     auto local_node_id = blocks[i].transform_list[to!string(node_id)];
+		     outFile.writef("%d \t", local_node_id);
 		 }
 		 outFile.writef("\n");
 	     }
