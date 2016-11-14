@@ -165,7 +165,7 @@ class Grid {
     size_t get_bin_ix(ref const(Vector3) p)
     {
 	double dx = p.x - bb0.x;
-	int ix = to!int(abs(dx)/deltax);
+	int ix = to!int(dx/deltax);
 	ix = max(0, min(nbx-1, ix));
 	return to!size_t(ix);
     }
@@ -173,7 +173,7 @@ class Grid {
     size_t get_bin_iy(ref const(Vector3) p)
     {
 	double dy = p.y - bb0.y;
-	int iy = to!int(abs(dy)/deltay);
+	int iy = to!int(dy/deltay);
 	iy = max(0, min(nby-1, iy));
 	return to!size_t(iy);
     }
@@ -183,22 +183,23 @@ class Grid {
 	int iz = 0;
 	if (dimensions == 3) {
 	    double dz = p.z - bb0.z;
-	    iz = to!int(abs(dz)/deltaz);
+	    iz = to!int(dz/deltaz);
 	    iz = max(0, min(nbz-1, iz));
 	}
 	return to!size_t(iz);
     }
     
-    void sort_cells_into_bins(size_t nx=1, size_t ny=1, size_t nz=1)
+    void sort_cells_into_bins(size_t nbinx=5, size_t nbiny=5, size_t nbinz=5)
     // We have this as method separate from the constructor because
     // it may need to be called more than once for a moving grid.
     {
+	if (dimensions == 2) { nbinz = 1; }
 	// Numbers of bins in each coordinate direction.
-	if (nx < 1 || ny < 1 || nz < 1) {
-	    throw new Exception("Need to have nx, ny and nz >= 1");
+	if (nbinx < 1 || nbiny < 1 || nbinz < 1) {
+	    throw new Exception("Need to have nbinx, nbiny and nbinz >= 1");
 	}
-	nbx = nx; nby = ny; nbz = nz;
-	// Determine the bounding box for the entire grid.
+	nbx = nbinx; nby = nbiny; nbz = nbinz;
+	// Determine the bounding box for the grid.
 	Vector3 p = vertices[0];
 	bb0 = p; bb1 = p;
 	foreach (i; 1 .. nvertices) {
@@ -268,8 +269,7 @@ class Grid {
     void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
     {
 	if (cells_are_sorted_into_bins) {
-	    // find_enclosing_cell_fast(p, indx, found); // FIXME -- not working reliably for triangular mesh
-	    find_enclosing_cell_slow(p, indx, found); // FIXME -- should be fast
+	    find_enclosing_cell_fast(p, indx, found);
 	} else {
 	    find_enclosing_cell_slow(p, indx, found);
 	}

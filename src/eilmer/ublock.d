@@ -156,11 +156,6 @@ public:
     override void init_grid_and_flow_arrays(string gridFileName)
     {
 	grid = new UnstructuredGrid(gridFileName, "gziptext");
-	if (grid.dimensions == 2) {
-	    grid.sort_cells_into_bins(10, 10);
-	} else {
-	    grid.sort_cells_into_bins(10, 10, 10);
-	}
 	if (grid.nvertices != nvertices) {
 	    string msg = format("UnstructuredGrid: incoming grid has %d vertices " ~
 				"but expected %d vertices.", grid.nvertices, nvertices);
@@ -176,6 +171,7 @@ public:
 				"but expected %d cells.", grid.ncells, ncells);
 	    throw new FlowSolverException(msg);
 	}
+	grid.sort_cells_into_bins();
 	// Assemble array storage for finite-volume cells, etc.
 	bool lsq_workspace_at_vertices = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
 	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
