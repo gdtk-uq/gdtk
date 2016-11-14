@@ -162,23 +162,23 @@ class Grid {
     
     // Since we are cannot control what position we are given,
     // determine the bin index cautiously.
-    size_t get_bin_ix(ref const(Vector3) p)
+    int get_bin_ix(ref const(Vector3) p)
     {
 	double dx = p.x - bb0.x;
 	int ix = to!int(dx/deltax);
 	ix = max(0, min(nbx-1, ix));
-	return to!size_t(ix);
+	return ix;
     }
     
-    size_t get_bin_iy(ref const(Vector3) p)
+    int get_bin_iy(ref const(Vector3) p)
     {
 	double dy = p.y - bb0.y;
 	int iy = to!int(dy/deltay);
 	iy = max(0, min(nby-1, iy));
-	return to!size_t(iy);
+	return iy;
     }
     
-    size_t get_bin_iz(ref const(Vector3) p)
+    int get_bin_iz(ref const(Vector3) p)
     {
 	int iz = 0;
 	if (dimensions == 3) {
@@ -186,7 +186,7 @@ class Grid {
 	    iz = to!int(dz/deltaz);
 	    iz = max(0, min(nbz-1, iz));
 	}
-	return to!size_t(iz);
+	return iz;
     }
     
     void sort_cells_into_bins(size_t nbinx=5, size_t nbiny=5, size_t nbinz=5)
@@ -209,7 +209,7 @@ class Grid {
 	}
 	// Sizes of the bins.
 	deltax = (bb1.x - bb0.x)/nbx; deltay = (bb1.y - bb0.y)/nby; deltaz = (bb1.z - bb0.z)/nbz;
-	// Now, set up the bins and sort the cells into those bins.
+	// Now, set up the array of bins and sort the cells into those bins.
 	bins.length = nbx;
 	foreach (ix; 0 .. nbx) {
 	    bins[ix].length = nby;
@@ -217,9 +217,9 @@ class Grid {
 	}
 	foreach (i; 0 .. ncells) {
 	    p = cell_barycentre(i);
-	    size_t ix = get_bin_ix(p);
-	    size_t iy = get_bin_iy(p);
-	    size_t iz = get_bin_iz(p);
+	    int ix = get_bin_ix(p);
+	    int iy = get_bin_iy(p);
+	    int iz = get_bin_iz(p);
 	    bins[ix][iy][iz] ~= i;
 	}
 	cells_are_sorted_into_bins = true;
@@ -229,21 +229,24 @@ class Grid {
     {
 	// Search for the cell only in the near-by bins.
 	found = false; indx = 0;
+	if (!inside_bounding_box(p, bb0, bb1, dimensions)) return;
+	//
+	// So, the point is inside or on the grid's bounding box; look more closely.
 	// Pick the most-likely bin, based on position.
-	size_t ix0 = get_bin_ix(p);
-	size_t iy0 = get_bin_iy(p);
-	size_t iz0 = get_bin_iz(p);
+	int ix0 = get_bin_ix(p);
+	int iy0 = get_bin_iy(p);
+	int iz0 = get_bin_iz(p);
 	// Visit that bin first.
 	foreach (i; bins[ix0][iy0][iz0]) {
 	    if (point_is_inside_cell(p, i)) { found = true; indx = i; return; }
 	}
         // If we reach this point, extend the search one bin further in each direction.
-	size_t ix_start = max(ix0-1, 0); size_t ix_end = min(ix0+1, nbx-1);
-	size_t iy_start = max(iy0-1, 0); size_t iy_end = min(iy0+1, nby-1);
-	size_t iz_start = max(iz0-1, 0); size_t iz_end = min(iz0+1, nbz-1);
-	for (size_t iz = iz_start; iz <= iz_end; ++iz) {
-	    for (size_t iy = iy_start; iy <= iy_end; ++iy) {
-		for (size_t ix = ix_start; ix <= ix_end; ++ix) {
+	int ix_start = max(ix0-1, 0); int ix_end = min(ix0+1, nbx-1);
+	int iy_start = max(iy0-1, 0); int iy_end = min(iy0+1, nby-1);
+	int iz_start = max(iz0-1, 0); int iz_end = min(iz0+1, nbz-1);
+	for (auto iz = iz_start; iz <= iz_end; ++iz) {
+	    for (auto iy = iy_start; iy <= iy_end; ++iy) {
+		for (auto ix = ix_start; ix <= ix_end; ++ix) {
 		    // Search only bins we have not already visited.
 		    if (ix == ix0 && iy == iy0 && iz == iz0) continue;
 		    foreach (i; bins[ix][iy][iz]) {
