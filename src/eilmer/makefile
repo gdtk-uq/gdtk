@@ -1,3 +1,4 @@
+
 # makefile for Eilmer
 # Builds main simulation program by default.
 # For example:
@@ -67,6 +68,8 @@ include $(NM_DIR)/nm_files.mk
 
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
+
+GRID_DIR := ../grid_utils
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
@@ -140,7 +143,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
-install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem $(SHARE_FILES)
+install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem $(SHARE_FILES) ugrid_partition
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -169,9 +172,14 @@ clean:
 	- rm main_with_rev_string.d steadystate_solver_with_rev_string.d
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
+	- cd $(GRID_DIR); make clean
 
 prep-gas:
 	cd $(GAS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-gas 
+
+ugrid_partition:
+	cd $(GRID_DIR); make BUILD_DIR=$(BUILD_DIR) ugrid_partition 
+
 
 prep-chem:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
