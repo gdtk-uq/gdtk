@@ -163,12 +163,12 @@ void main(string[] args)
 	exit(1);
     }
 
-    iterate_to_steady_state();
+    iterate_to_steady_state(maxCPUs);
     writeln("Done simulation.");
 }
 
 
-void iterate_to_steady_state()
+void iterate_to_steady_state(int maxCPUs)
 {
     auto wallClockStart = Clock.currTime();
     bool withPTC = true;
@@ -216,9 +216,12 @@ void iterate_to_steady_state()
     int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
 
+    // No need to have more task threads than blocks
+    auto nThreadsInPool = min(maxCPUs-1, GlobalConfig.nBlocks-1);
+    defaultPoolThreads(nThreadsInPool);
+    writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
 
-
-    long wallClockElapsed;
+    double wallClockElapsed;
     double cfl;
     double[string][] times;
     times ~= [ "pst":0.0, "dt":dt ];
@@ -239,11 +242,11 @@ void iterate_to_steady_state()
     bool withPreconditioning = false;
 
     writeln("Begin pre-iterations to establish sensible max residual.");
-    foreach (blk; gasBlocks) blk.set_interpolation_order(1);
+    foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
     foreach ( preStep; -nPreSteps .. 0 ) {
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    FGMRES_solve(pseudoSimTime, dt, eta0, withPreconditioning, normOld, nRestarts);
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
 		    cell.U[1].copy_values_from(cell.U[0]);
@@ -269,7 +272,7 @@ void iterate_to_steady_state()
 
 	    // If we get here, things are good. Put flow state into U[0]
 	    // ready for next iteration.
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		foreach (cell; blk.cells) {
 		    swap(cell.U[0], cell.U[1]);
 		}
@@ -335,13 +338,13 @@ void iterate_to_steady_state()
     foreach (step; 1 .. nsteps+1) {
 	residualsUpToDate = false;
 	if ( step <= nStartUpSteps ) {
-	    foreach (blk; gasBlocks) blk.set_interpolation_order(1);
+	    foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
 	    withPreconditioning = false;
 	    eta = eta0;
 	    tau = tau0;
 	}
 	else {
-	    foreach (blk; gasBlocks) blk.set_interpolation_order(interpOrderSave);
+	    foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(interpOrderSave);
 	    withPreconditioning = GlobalConfig.sssOptions.usePreconditioning;
 	    eta = eta1;
 	    tau = tau1;
@@ -350,7 +353,7 @@ void iterate_to_steady_state()
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    failedAttempt = false;
 	    FGMRES_solve(pseudoSimTime, dt, eta, withPreconditioning, normNew, nRestarts);
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
 		    cell.U[1].copy_values_from(cell.U[0]);
@@ -376,7 +379,7 @@ void iterate_to_steady_state()
 
 	    // If we get here, things are good. Put flow state into U[0]
 	    // ready for next iteration.
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		foreach (cell; blk.cells) {
 		    swap(cell.U[0], cell.U[1]);
 		}
@@ -391,7 +394,7 @@ void iterate_to_steady_state()
 	}
 
 	pseudoSimTime += dt;
-	wallClockElapsed = (Clock.currTime() - wallClockStart).total!"seconds"();	
+	wallClockElapsed = 1.0e-3*(Clock.currTime() - wallClockStart).total!"msecs"();	
 
 	// Check on some stopping criteria
 	if ( step == nsteps ) {
@@ -418,7 +421,7 @@ void iterate_to_steady_state()
 		residualsUpToDate = true;
 	    }
 	    fResid = File(residFname, "a");
-	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %8d %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e\n",
+	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e\n",
 			  step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
 			  currResiduals.mass, currResiduals.mass/maxResiduals.mass,
 			  currResiduals.momentum.x, currResiduals.momentum.x/maxResiduals.momentum.x,
@@ -436,7 +439,7 @@ void iterate_to_steady_state()
 	    }
 	    auto writer = appender!string();
 
-	    formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%d \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
+	    formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%.1f \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
 	    formattedWrite(writer, "Residuals:     mass         x-mom        y-mom        energy       global\n");
 	    formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
 			   currResiduals.mass, currResiduals.momentum.x, currResiduals.momentum.y, currResiduals.total_energy, normNew);
@@ -613,7 +616,7 @@ void evalRHS(double pseudoSimTime, int ftl)
 {
     fnCount++;
     
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.clear_fluxes_of_conserved_quantities();
 	foreach (cell; blk.cells) cell.clear_source_vector();
     }
@@ -625,15 +628,15 @@ void evalRHS(double pseudoSimTime, int ftl)
     // doing the Frechet derivative, so we'll only search for shock points
     // at ftl = 0, which is when the F(U) evaluation is made.
     if ( ftl == 0 && GlobalConfig.flux_calculator == FluxCalculator.adaptive) {
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    blk.detect_shock_points();
 	}
     }
     
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.convective_flux_phase0();
     }
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.convective_flux_phase1();
     }
     foreach (blk; gasBlocks) {
@@ -643,7 +646,7 @@ void evalRHS(double pseudoSimTime, int ftl)
 	foreach (blk; gasBlocks) {
 	    blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
 	}
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    blk.flow_property_derivatives(0); 
 	    blk.estimate_turbulence_viscosity();
 	    blk.viscous_flux();
@@ -653,7 +656,7 @@ void evalRHS(double pseudoSimTime, int ftl)
 	}
     }
 
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	foreach (i, cell; blk.cells) {
 	    cell.add_inviscid_source_vector(0, 0.0);
 	    if (blk.myConfig.udf_source_terms) {
@@ -670,7 +673,7 @@ void evalJacobianVecProd(double pseudoSimTime)
     double sigma = sqrt(nTotalVars*double.epsilon);
     int nConserved = GlobalConfig.sssOptions.nConserved;
     // We perform a Frechet derivative to evaluate J*z
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.clear_fluxes_of_conserved_quantities();
 	foreach (cell; blk.cells) cell.clear_source_vector();
 	int cellCount = 0;
@@ -685,7 +688,7 @@ void evalJacobianVecProd(double pseudoSimTime)
 	}
     }
     evalRHS(pseudoSimTime, 1);
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	int cellCount = 0;
 	foreach (cell; blk.cells) {
 	    blk.z_outer[cellCount+0] = (-cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*blk.maxRate.mass);
@@ -701,7 +704,7 @@ void evalJacobianVecProd(double pseudoSimTime)
 string dot_over_blocks(string dot, string A, string B)
 {
     return `
-foreach (blk; gasBlocks) {
+foreach (blk; parallel(gasBlocks,1)) {
    blk.dotAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
       blk.dotAcc += blk.`~A~`[k]*blk.`~B~`[k];
@@ -715,7 +718,7 @@ foreach (blk; gasBlocks) `~dot~` += blk.dotAcc;`;
 string norm2_over_blocks(string norm2, string blkMember)
 {
     return `
-foreach (blk; gasBlocks) {
+foreach (blk; parallel(gasBlocks,1)) {
    blk.normAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
       blk.normAcc += blk.`~blkMember~`[k]*blk.`~blkMember~`[k];
@@ -800,7 +803,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // might legitimately ask for no restarts. We still have
     // to execute at least once.
     int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1; 
-    size_t m = to!size_t(maxIters);
+    shared size_t m = to!size_t(maxIters);
     size_t r;
     size_t iterCount;
 
@@ -814,7 +817,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // 1. Evaluate r0, beta, v1
     evalRHS(pseudoSimTime, 0);
     // Store dUdt[0] as F(U)
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	int cellCount = 0;
 	blk.maxRate.mass = 0.0;
 	blk.maxRate.momentum.refx = 0.0;
@@ -832,10 +835,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    blk.maxRate.total_energy = fmax(blk.maxRate.total_energy, fabs(cell.dUdt[0].total_energy));
 	}
     }
-    double maxMass = 0.0;
-    double maxMomX = 0.0;
-    double maxMomY = 0.0;
-    double maxEnergy = 0.0;
+    shared double maxMass = 0.0;
+    shared double maxMomX = 0.0;
+    shared double maxMomY = 0.0;
+    shared double maxEnergy = 0.0;
     foreach (blk; gasBlocks) {
 	maxMass = fmax(maxMass, blk.maxRate.mass);
 	maxMomX = fmax(maxMomX, blk.maxRate.momentum.x);
@@ -847,14 +850,14 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     maxMomX = fmax(maxMomX, minNonDimVal);
     maxMomY = fmax(maxMomY, minNonDimVal);
     maxEnergy = fmax(maxEnergy, minNonDimVal);
-    double maxMom = fmax(maxMomX, maxMomY);
+    shared double maxMom = fmax(maxMomX, maxMomY);
 
     /*
     writefln("max-mass= %.18e", maxMass);
     writefln("max-mom= %.18e", maxMom);
     writefln("max-energy= %.18e", maxEnergy);
     */
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.maxRate.mass = maxMass;
 	blk.maxRate.momentum.refx = maxMomX;
 	blk.maxRate.momentum.refy = maxMomY;
@@ -873,7 +876,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
     // Taking x0 = [0] (as is common) gives r0 = b = FU
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.x0[] = 0.0;
 	int cellCount = 0;
 	foreach (cell; blk.cells) {
@@ -885,11 +888,12 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	}
     }
     // Then compute v = r0/||r0||
-    double beta;
-    mixin(norm2_over_blocks("beta", "r0"));
+    double betaTmp;
+    mixin(norm2_over_blocks("betaTmp", "r0"));
+    shared double beta = betaTmp;
     // DEBUG: writefln("OUTER: beta= %e", beta);
     g0_outer[0] = beta;
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	foreach (k; 0 .. blk.nvars) {
 	    blk.v_outer[k] = blk.r0[k]/beta;
 	    blk.V_outer[k,0] = blk.v_outer[k];
@@ -903,23 +907,24 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // 2. Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {
 	// 2a. Begin iterations
-	foreach (j; 0 .. m) {
+	foreach (shared j; 0 .. m) {
 	    iterCount = j+1;
 	    if ( withPreconditioning ) {
 		//GMRES_solve(pseudoSimTime, dt);
 	    }
 	    else {
-		foreach (blk; gasBlocks) {
+		foreach (blk; parallel(gasBlocks,1)) {
 		    blk.z_outer[] = blk.v_outer[];
 		}
 	    }
 	    // Save z vector in Z.
-	    foreach (blk; gasBlocks) {
-		foreach (k; 0 .. blk.nvars) blk.Z_outer[k,j] = blk.z_outer[k];
+	    foreach (blk; parallel(gasBlocks,1)) {
+		size_t jLocal = j;
+		foreach (k; 0 .. blk.nvars) blk.Z_outer[k,jLocal] = blk.z_outer[k];
 	    }
 
 	    // Prepare 'w' with (I/dt)v term;
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		double dtInv = 1.0/dt;
 		foreach (k; 0 .. blk.nvars) {
 		    blk.w_outer[k] = dtInv*blk.z_outer[k];
@@ -929,33 +934,37 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    // Evaluate Jz and place result in z_outer
 	    evalJacobianVecProd(pseudoSimTime);
 	    // Now we can complete calculation of w
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		foreach (k; 0 .. blk.nvars)  blk.w_outer[k] += blk.z_outer[k];
 	    }
 	    // The remainder of the algorithm looks a lot like any standard
 	    // GMRES implementation (for example, see smla.d)
-	    foreach (i; 0 .. j+1) {
-		foreach (blk; gasBlocks) {
+	    foreach (shared i; 0 .. j+1) {
+		foreach (blk; parallel(gasBlocks,1)) {
+		    size_t iLocal = i;
 		    // Extract column 'i'
-		    foreach (k; 0 .. blk.nvars ) blk.v_outer[k] = blk.V_outer[k,i]; 
+		    foreach (k; 0 .. blk.nvars ) blk.v_outer[k] = blk.V_outer[k,iLocal]; 
 		}
-		double H0_ij;
-		mixin(dot_over_blocks("H0_ij", "w_outer", "v_outer"));
+		double H0_ij_tmp;
+		mixin(dot_over_blocks("H0_ij_tmp", "w_outer", "v_outer"));
+		shared double H0_ij = H0_ij_tmp;
 		H0_outer[i,j] = H0_ij;
-		foreach (blk; gasBlocks) {
-		    double local_H0_ij = H0_outer[i,j];
+		foreach (blk; parallel(gasBlocks,1)) {
+		    double local_H0_ij = H0_ij;
 		    foreach (k; 0 .. blk.nvars) blk.w_outer[k] -= local_H0_ij*blk.v_outer[k]; 
 		}
 	    }
-	    double H0_jp1j;
-	    mixin(norm2_over_blocks("H0_jp1j", "w_outer"));
+	    double H0_jp1j_tmp;
+	    mixin(norm2_over_blocks("H0_jp1j_tmp", "w_outer"));
+	    shared double H0_jp1j = H0_jp1j_tmp;
 	    H0_outer[j+1,j] = H0_jp1j;
 	
-	    foreach (blk; gasBlocks) {
+	    foreach (blk; parallel(gasBlocks,1)) {
 		double local_H0_jp1j = H0_jp1j;
+		size_t jLocal = j;
 		foreach (k; 0 .. blk.nvars) {
 		    blk.v_outer[k] = blk.w_outer[k]/local_H0_jp1j;
-		    blk.V_outer[k,j+1] = blk.v_outer[k];
+		    blk.V_outer[k,jLocal+1] = blk.v_outer[k];
 		}
 	    }
 
@@ -1011,10 +1020,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	upperSolve(H1_outer, to!int(m), g1_outer);
 	// In serial, distribute a copy of g1 to each block
 	foreach (blk; gasBlocks) blk.g1_outer[] = g1_outer[];
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    nm.bbla.dot(blk.Z_outer, blk.nvars, m, blk.g1_outer, blk.dU);
 	}
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
 	}
 
@@ -1025,26 +1034,28 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	}
 
 	// Else, we prepare for restart by computing r0 and setting x0
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    blk.x0[] = blk.dU[];
+	    size_t mLocal = m;
 	    // store final Arnoldi vector in Z (unpreconditioned)
-	    foreach (k; 0 .. blk.nvars) blk.Z_outer[k,m] = blk.V_outer[k,m]; 
+	    foreach (k; 0 .. blk.nvars) blk.Z_outer[k,mLocal] = blk.V_outer[k,mLocal]; 
 	}
 	// In serial, distribute a copy of Q1 to each block
 	foreach (blk; gasBlocks) copy(Q1_outer, blk.Q1_outer);
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    nm.bbla.dot(blk.Z_outer, blk.nvars, m+1, blk.Q1_outer, m+1, blk.V_outer);
 	}
 	foreach (i; 0 .. m) g0_outer[i] = 0.0;
 	// In serial, distribute a copy of g0 to each block
 	foreach (blk; gasBlocks) blk.g0_outer[] = g0_outer[];
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    nm.bbla.dot(blk.V_outer, blk.nvars, m+1, blk.g0_outer, blk.r0);
 	}
 
-	mixin(norm2_over_blocks("beta", "r0"));
+	mixin(norm2_over_blocks("betaTmp", "r0"));
+	beta = betaTmp;
 	// DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
-	foreach (blk; gasBlocks) {
+	foreach (blk; parallel(gasBlocks,1)) {
 	    foreach (k; 0 .. blk.nvars) {
 		blk.v_outer[k] = blk.r0[k]/beta;
 		blk.V_outer[k,0] = blk.v_outer[k];
@@ -1178,7 +1189,7 @@ void GMRES_solve(double pseudoSimTime, double dt)
 void max_residuals(ConservedQuantities residuals)
 {
     int nc = GlobalConfig.sssOptions.nConserved;
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
 	double massLocal, xMomLocal, yMomLocal, energyLocal;
 	foreach (cell; blk.cells) {
