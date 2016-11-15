@@ -39,9 +39,10 @@ import simcore;
 import fvcore;
 import fileutil;
 import user_defined_source_terms;
+import conservedquantities;
 
 static int fnCount = 0;
-
+static int nTotalVars;
 // Module-local, global memory arrays and matrices
 double[] g0_outer;
 double[] g1_outer;
@@ -53,13 +54,7 @@ Matrix Gamma_outer;
 Matrix Q0_outer;
 Matrix Q1_outer;
 
-struct ResidValues {
-    double mass;
-    double xMomentum;
-    double yMomentum;
-    double zMomentum;
-    double energy;
-}
+
 
 void main(string[] args)
 {
@@ -142,9 +137,12 @@ void main(string[] args)
 	
     init_simulation(tindxStart, maxCPUs, maxWallClock);
     // Additional initialisation
+    int nConserved = 4;
+    nTotalVars = 0;
     allocate_global_workspace();
     foreach (blk; gasBlocks) {
 	blk.allocate_GMRES_workspace();
+	nTotalVars += blk.cells.length*nConserved;
     }
 
     /* Check that items are implemented. */
@@ -153,12 +151,12 @@ void main(string[] args)
 	writeln("Steady-state solver not implemented for 3D calculations.");
 	goodToProceed = false;
     }
-
+    /*
     if ( gasBlocks.length > 1 ) {
 	writeln("Steady-state solver not implemented nBlocks > 1.");
 	goodToProceed = false;
     }
-
+    */
     if ( !goodToProceed ) {
 	writeln("One or more options are not yet available for the steady-state solver.");
 	writeln("Bailing out!");
@@ -197,12 +195,16 @@ void iterate_to_steady_state()
     double gamma = GlobalConfig.sssOptions.gamma;
     double alpha = GlobalConfig.sssOptions.alpha;
 
-    auto myBlk = gasBlocks[0];
-    int interpOrderSave = myBlk.get_interpolation_order();
+    int interpOrderSave = GlobalConfig.interpolation_order;
+    
+    int n_species = GlobalConfig.gmodel_master.n_species();
+    int n_modes = GlobalConfig.gmodel_master.n_modes();
+    ConservedQuantities maxResiduals = new ConservedQuantities(n_species, n_modes);
+    ConservedQuantities currResiduals = new ConservedQuantities(n_species, n_modes);
 
-    double dt = determine_initial_dt(cfl0);
+    shared double dt = determine_initial_dt(cfl0);
     double dtTrial, etaTrial;
-    bool failedAttempt;
+    shared bool failedAttempt;
     double pseudoSimTime = 0.0;
     double normOld, normNew;
     int snapshotsFreq = GlobalConfig.sssOptions.snapshotsFrequency;
@@ -213,6 +215,8 @@ void iterate_to_steady_state()
     int nPreSteps = GlobalConfig.sssOptions.nPreSteps;
     int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
+
+
 
     long wallClockElapsed;
     double cfl;
@@ -230,14 +234,13 @@ void iterate_to_steady_state()
     // We can use a fixed timestep (typically small) and low-order reconstruction in this
     // pre-step phase.
     double normRef = 0.0;
-    ResidValues maxResid, currResid;
     bool residualsUpToDate = false;
     bool finalStep = false;
     bool withPreconditioning = false;
 
     writeln("Begin pre-iterations to establish sensible max residual.");
+    foreach (blk; gasBlocks) blk.set_interpolation_order(1);
     foreach ( preStep; -nPreSteps .. 0 ) {
-	myBlk.set_interpolation_order(1);
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    FGMRES_solve(pseudoSimTime, dt, eta0, withPreconditioning, normOld, nRestarts);
 	    foreach (blk; gasBlocks) {
@@ -283,7 +286,7 @@ void iterate_to_steady_state()
 	writefln("PRE-STEP  %d  ::  dt= %.3e  global-norm= %.12e", preStep, dt, normOld); 
 	if ( normOld > normRef ) {
 	    normRef = normOld;
-	    max_residuals(gasBlocks[0], maxResid);
+	    max_residuals(maxResiduals);
 	}
     }
 
@@ -291,16 +294,16 @@ void iterate_to_steady_state()
     
     if ( nPreSteps <= 0 ) {
 	// Take initial residual as max residual
-	evalRHS(gasBlocks[0], 0.0, 0);
-	max_residuals(gasBlocks[0], maxResid);
+	evalRHS(0.0, 0);
+	max_residuals(maxResiduals);
     }
 
     writeln("Reference residuals are established as:");
     writefln("GLOBAL:         %.12e", normRef);
-    writefln("MASS:           %.12e", maxResid.mass);
-    writefln("X-MOMENTUM:     %.12e", maxResid.xMomentum);
-    writefln("Y-MOMENTUM:     %.12e", maxResid.yMomentum);
-    writefln("ENERGY:         %.12e", maxResid.energy);
+    writefln("MASS:           %.12e", maxResiduals.mass);
+    writefln("X-MOMENTUM:     %.12e", maxResiduals.momentum.x);
+    writefln("Y-MOMENTUM:     %.12e", maxResiduals.momentum.y);
+    writefln("ENERGY:         %.12e", maxResiduals.total_energy);
 
     // Open file for writing diagnostics
 
@@ -332,13 +335,13 @@ void iterate_to_steady_state()
     foreach (step; 1 .. nsteps+1) {
 	residualsUpToDate = false;
 	if ( step <= nStartUpSteps ) {
-	    myBlk.set_interpolation_order(1);
+	    foreach (blk; gasBlocks) blk.set_interpolation_order(1);
 	    withPreconditioning = false;
 	    eta = eta0;
 	    tau = tau0;
 	}
 	else {
-	    myBlk.set_interpolation_order(interpOrderSave);
+	    foreach (blk; gasBlocks) blk.set_interpolation_order(interpOrderSave);
 	    withPreconditioning = GlobalConfig.sssOptions.usePreconditioning;
 	    eta = eta1;
 	    tau = tau1;
@@ -411,16 +414,16 @@ void iterate_to_steady_state()
 	    cfl = determine_min_cfl(dt);
 	    // Write out residuals
 	    if ( !residualsUpToDate ) {
-		max_residuals(gasBlocks[0], currResid);
+		max_residuals(currResiduals);
 		residualsUpToDate = true;
 	    }
 	    fResid = File(residFname, "a");
 	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %8d %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e\n",
 			  step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
-			  currResid.mass, currResid.mass/maxResid.mass,
-			  currResid.xMomentum, currResid.xMomentum/maxResid.xMomentum,
-			  currResid.yMomentum, currResid.yMomentum/maxResid.yMomentum,
-			  currResid.energy, currResid.energy/maxResid.energy,
+			  currResiduals.mass, currResiduals.mass/maxResiduals.mass,
+			  currResiduals.momentum.x, currResiduals.momentum.x/maxResiduals.momentum.x,
+			  currResiduals.momentum.y, currResiduals.momentum.y/maxResiduals.momentum.y,
+			  currResiduals.total_energy, currResiduals.total_energy/maxResiduals.total_energy,
 			  normNew, normNew/normRef);
 	    fResid.close();
 	}
@@ -428,7 +431,7 @@ void iterate_to_steady_state()
 	if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
 	    cfl = determine_min_cfl(dt);
 	    if ( !residualsUpToDate ) {
-		max_residuals(gasBlocks[0], currResid);
+		max_residuals(currResiduals);
 		residualsUpToDate = true;
 	    }
 	    auto writer = appender!string();
@@ -436,12 +439,12 @@ void iterate_to_steady_state()
 	    formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%d \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
 	    formattedWrite(writer, "Residuals:     mass         x-mom        y-mom        energy       global\n");
 	    formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
-			   currResid.mass, currResid.xMomentum, currResid.yMomentum, currResid.energy, normNew);
+			   currResiduals.mass, currResiduals.momentum.x, currResiduals.momentum.y, currResiduals.total_energy, normNew);
 	    formattedWrite(writer, "--> relative   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
-			   currResid.mass/maxResid.mass,
-			   currResid.xMomentum/maxResid.xMomentum,
-			   currResid.yMomentum/maxResid.yMomentum,
-			   currResid.energy/maxResid.energy,
+			   currResiduals.mass/maxResiduals.mass,
+			   currResiduals.momentum.x/maxResiduals.momentum.x,
+			   currResiduals.momentum.y/maxResiduals.momentum.y,
+			   currResiduals.total_energy/maxResiduals.total_energy,
 			   normNew/normRef);
 	    writeln(writer.data);
 	}
@@ -606,18 +609,141 @@ double determine_min_cfl(double dt)
     return cfl;
 }
 
-void evalRHS(Block blk, double pseudoSimTime, int ftl)
+void evalRHS(double pseudoSimTime, int ftl)
 {
     fnCount++;
+    
+    foreach (blk; gasBlocks) {
+	blk.clear_fluxes_of_conserved_quantities();
+	foreach (cell; blk.cells) cell.clear_source_vector();
+    }
+    foreach (blk; gasBlocks) {
+	blk.applyPreReconAction(pseudoSimTime, 0, ftl);
+    }
+    
+    // We don't want to switch between flux calculator application while
+    // doing the Frechet derivative, so we'll only search for shock points
+    // at ftl = 0, which is when the F(U) evaluation is made.
+    if ( ftl == 0 && GlobalConfig.flux_calculator == FluxCalculator.adaptive) {
+	foreach (blk; gasBlocks) {
+	    blk.detect_shock_points();
+	}
+    }
+    
+    foreach (blk; gasBlocks) {
+	blk.convective_flux_phase0();
+    }
+    foreach (blk; gasBlocks) {
+	blk.convective_flux_phase1();
+    }
+    foreach (blk; gasBlocks) {
+	blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);
+    }
+    if (GlobalConfig.viscous) {
+	foreach (blk; gasBlocks) {
+	    blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
+	}
+	foreach (blk; gasBlocks) {
+	    blk.flow_property_derivatives(0); 
+	    blk.estimate_turbulence_viscosity();
+	    blk.viscous_flux();
+	}
+	foreach (blk; gasBlocks) {
+	    blk.applyPostDiffFluxAction(pseudoSimTime, 0, ftl);
+	}
+    }
+
+    foreach (blk; gasBlocks) {
+	foreach (i, cell; blk.cells) {
+	    cell.add_inviscid_source_vector(0, 0.0);
+	    if (blk.myConfig.udf_source_terms) {
+		addUDFSourceTermsToCell(blk.myL, cell, 0, 
+					pseudoSimTime, blk.myConfig.gmodel);
+	    }
+	    cell.time_derivatives(0, ftl, false);
+	}
+    }
+}
+
+void evalJacobianVecProd(double pseudoSimTime)
+{
+    double sigma = sqrt(nTotalVars*double.epsilon);
+    int nConserved = GlobalConfig.sssOptions.nConserved;
+    // We perform a Frechet derivative to evaluate J*z
+    foreach (blk; gasBlocks) {
+	blk.clear_fluxes_of_conserved_quantities();
+	foreach (cell; blk.cells) cell.clear_source_vector();
+	int cellCount = 0;
+	foreach (cell; blk.cells) {
+	    cell.U[1].copy_values_from(cell.U[0]);
+	    cell.U[1].mass += sigma*blk.maxRate.mass*blk.z_outer[cellCount+0];
+	    cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.z_outer[cellCount+1];
+	    cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.z_outer[cellCount+2];
+	    cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.z_outer[cellCount+3];
+	    cell.decode_conserved(0, 1, 0.0);
+	    cellCount += nConserved;
+	}
+    }
+    evalRHS(pseudoSimTime, 1);
+    foreach (blk; gasBlocks) {
+	int cellCount = 0;
+	foreach (cell; blk.cells) {
+	    blk.z_outer[cellCount+0] = (-cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*blk.maxRate.mass);
+	    blk.z_outer[cellCount+1] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+1])/(sigma*blk.maxRate.momentum.x);
+	    blk.z_outer[cellCount+2] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+2])/(sigma*blk.maxRate.momentum.y);
+	    blk.z_outer[cellCount+3] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+3])/(sigma*blk.maxRate.total_energy);
+	    cellCount += nConserved;
+	}
+    }
+}
+
+
+string dot_over_blocks(string dot, string A, string B)
+{
+    return `
+foreach (blk; gasBlocks) {
+   blk.dotAcc = 0.0;
+   foreach (k; 0 .. blk.nvars) {
+      blk.dotAcc += blk.`~A~`[k]*blk.`~B~`[k];
+   }
+}
+`~dot~` = 0.0;
+foreach (blk; gasBlocks) `~dot~` += blk.dotAcc;`;
+
+}
+
+string norm2_over_blocks(string norm2, string blkMember)
+{
+    return `
+foreach (blk; gasBlocks) {
+   blk.normAcc = 0.0;
+   foreach (k; 0 .. blk.nvars) {
+      blk.normAcc += blk.`~blkMember~`[k]*blk.`~blkMember~`[k];
+   }
+}
+`~norm2~` = 0.0;
+foreach (blk; gasBlocks) `~norm2~` += blk.normAcc;
+`~norm2~` = sqrt(`~norm2~`);`;
+
+}
+
+
+/*
+void evalRHS(Block blk, double pseudoSimTime, int ftl)
+{
+    // We don't want to get a false function count by counting
+    // function calls for separate blocks, so only add to
+    // count if this is the first block.
+    if ( blk.id == 0 ) fnCount++; 
 
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
-    blk.applyPreReconAction(pseudoSimTime, 0, ftl);
+    //    blk.applyPreReconAction(pseudoSimTime, 0, ftl);
     blk.convective_flux_phase0();
     blk.convective_flux_phase1();
-    blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);
+    //    blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);
     if (GlobalConfig.viscous) {
-	blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
+	//  blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
 	blk.flow_property_derivatives(0); 
 	blk.estimate_turbulence_viscosity();
 	blk.viscous_flux();
@@ -633,7 +759,8 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
 	cell.time_derivatives(0, ftl, false);
     }
 }
-
+*/
+/*
 void evalJacobianVecProd(Block blk, double pseudoSimTime, double[] v)
 {
     double sigma = GlobalConfig.sssOptions.sigma;
@@ -661,62 +788,81 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double[] v)
 	cellCount += nConserved;
     }
 }
-
+*/
 
 void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPreconditioning, ref double residual, ref int nRestarts)
 {
     double resid;
     int nConserved = GlobalConfig.sssOptions.nConserved;
     // Presently, just do one block
-    Block blk = gasBlocks[0];
     int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     // We add 1 because the user thinks of "re"starts, so they
     // might legitimately ask for no restarts. We still have
     // to execute at least once.
     int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1; 
     size_t m = to!size_t(maxIters);
-    size_t n = blk.v_outer.length;
     size_t r;
     size_t iterCount;
 
     // Variables for max rates of change
     // Use these for equation scaling.
-    double maxMass = 0.0;
-    double maxMom = 0.0;
-    double maxEnergy = 0.0;
     double minNonDimVal = 1.0; // minimum value used for non-dimensionalisation
                                // when our time rates of change are very small
                                // then we'll avoid non-dimensionalising by 
                                // values close to zero.
 
     // 1. Evaluate r0, beta, v1
-    evalRHS(blk, pseudoSimTime, 0);
+    evalRHS(pseudoSimTime, 0);
     // Store dUdt[0] as F(U)
-    int cellCount = 0;
-    foreach (cell; blk.cells) {
-	blk.FU[cellCount+0] = -cell.dUdt[0].mass;
-	blk.FU[cellCount+1] = -cell.dUdt[0].momentum.x;
-	blk.FU[cellCount+2] = -cell.dUdt[0].momentum.y;
-	blk.FU[cellCount+3] = -cell.dUdt[0].total_energy;
-	cellCount += nConserved;
-	maxMass = fmax(maxMass, cell.dUdt[0].mass);
-	maxMom = max(maxMom, cell.dUdt[0].momentum.x, cell.dUdt[0].momentum.y);
-	maxEnergy = fmax(maxEnergy, cell.dUdt[0].total_energy);
+    foreach (blk; gasBlocks) {
+	int cellCount = 0;
+	blk.maxRate.mass = 0.0;
+	blk.maxRate.momentum.refx = 0.0;
+	blk.maxRate.momentum.refy = 0.0;
+	blk.maxRate.total_energy = 0.0;
+	foreach (cell; blk.cells) {
+	    blk.FU[cellCount+0] = -cell.dUdt[0].mass;
+	    blk.FU[cellCount+1] = -cell.dUdt[0].momentum.x;
+	    blk.FU[cellCount+2] = -cell.dUdt[0].momentum.y;
+	    blk.FU[cellCount+3] = -cell.dUdt[0].total_energy;
+	    cellCount += nConserved;
+	    blk.maxRate.mass = fmax(blk.maxRate.mass, fabs(cell.dUdt[0].mass));
+	    blk.maxRate.momentum.refx = fmax(blk.maxRate.momentum.x, fabs(cell.dUdt[0].momentum.x));
+	    blk.maxRate.momentum.refy = fmax(blk.maxRate.momentum.y, fabs(cell.dUdt[0].momentum.y));
+	    blk.maxRate.total_energy = fmax(blk.maxRate.total_energy, fabs(cell.dUdt[0].total_energy));
+	}
     }
-    double unscaledNorm2 = norm2(blk.FU);
+    double maxMass = 0.0;
+    double maxMomX = 0.0;
+    double maxMomY = 0.0;
+    double maxEnergy = 0.0;
+    foreach (blk; gasBlocks) {
+	maxMass = fmax(maxMass, blk.maxRate.mass);
+	maxMomX = fmax(maxMomX, blk.maxRate.momentum.x);
+	maxMomY = fmax(maxMomY, blk.maxRate.momentum.y);
+	maxEnergy = fmax(maxEnergy, blk.maxRate.total_energy);
+    }
     // Place some guards when time-rate-of-changes are very small.
     maxMass = fmax(maxMass, minNonDimVal);
-    maxMom = fmax(maxMom, minNonDimVal);
+    maxMomX = fmax(maxMomX, minNonDimVal);
+    maxMomY = fmax(maxMomY, minNonDimVal);
     maxEnergy = fmax(maxEnergy, minNonDimVal);
-    // Now set-up scaling matrix (which is diagonal, so just store as a vector)
-    cellCount = 0;
-    foreach (cell; blk.cells) {
-	blk.S[cellCount+0] = maxMass;
-	blk.S[cellCount+1] = maxMom;
-	blk.S[cellCount+2] = maxMom;
-	blk.S[cellCount+3] = maxEnergy;
-	cellCount += nConserved;
+    double maxMom = fmax(maxMomX, maxMomY);
+
+    /*
+    writefln("max-mass= %.18e", maxMass);
+    writefln("max-mom= %.18e", maxMom);
+    writefln("max-energy= %.18e", maxEnergy);
+    */
+    foreach (blk; gasBlocks) {
+	blk.maxRate.mass = maxMass;
+	blk.maxRate.momentum.refx = maxMomX;
+	blk.maxRate.momentum.refy = maxMomY;
+	blk.maxRate.total_energy = maxEnergy;
     }
+    double unscaledNorm2;
+    mixin(norm2_over_blocks("unscaledNorm2", "FU"));
+    //writefln("unscaledNorm2= %.18e", unscaledNorm2);
 
     // Initialise some arrays and matrices that have already been allocated
     g0_outer[] = 0.0;
@@ -727,22 +873,27 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
     // Taking x0 = [0] (as is common) gives r0 = b = FU
-    blk.x0[] = 0.0;
-    cellCount = 0;
-    foreach (cell; blk.cells) {
-	blk.r0[cellCount+0] = -(1./blk.S[cellCount+0])*blk.FU[cellCount+0];
-	blk.r0[cellCount+1] = -(1./blk.S[cellCount+1])*blk.FU[cellCount+1];
-	blk.r0[cellCount+2] = -(1./blk.S[cellCount+2])*blk.FU[cellCount+2];
-	blk.r0[cellCount+3] = -(1./blk.S[cellCount+3])*blk.FU[cellCount+3];
-	cellCount += nConserved;
+    foreach (blk; gasBlocks) {
+	blk.x0[] = 0.0;
+	int cellCount = 0;
+	foreach (cell; blk.cells) {
+	    blk.r0[cellCount+0] = -(1./blk.maxRate.mass)*blk.FU[cellCount+0];
+	    blk.r0[cellCount+1] = -(1./blk.maxRate.momentum.x)*blk.FU[cellCount+1];
+	    blk.r0[cellCount+2] = -(1./blk.maxRate.momentum.y)*blk.FU[cellCount+2];
+	    blk.r0[cellCount+3] = -(1./blk.maxRate.total_energy)*blk.FU[cellCount+3];
+	    cellCount += nConserved;
+	}
     }
     // Then compute v = r0/||r0||
-    auto beta = norm2(blk.r0);
+    double beta;
+    mixin(norm2_over_blocks("beta", "r0"));
     // DEBUG: writefln("OUTER: beta= %e", beta);
     g0_outer[0] = beta;
-    foreach (k; 0 .. n) {
-	blk.v_outer[k] = blk.r0[k]/beta;
-	blk.V_outer[k,0] = blk.v_outer[k];
+    foreach (blk; gasBlocks) {
+	foreach (k; 0 .. blk.nvars) {
+	    blk.v_outer[k] = blk.r0[k]/beta;
+	    blk.V_outer[k,0] = blk.v_outer[k];
+	}
     }
 
     // Compute tolerance
@@ -755,36 +906,57 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	foreach (j; 0 .. m) {
 	    iterCount = j+1;
 	    if ( withPreconditioning ) {
-		GMRES_solve(pseudoSimTime, dt);
+		//GMRES_solve(pseudoSimTime, dt);
 	    }
 	    else {
-		blk.z_outer[] = blk.v_outer[];
+		foreach (blk; gasBlocks) {
+		    blk.z_outer[] = blk.v_outer[];
+		}
 	    }
 	    // Save z vector in Z.
-	    foreach (k; 0 .. n) blk.Z_outer[k,j] = blk.z_outer[k];
+	    foreach (blk; gasBlocks) {
+		foreach (k; 0 .. blk.nvars) blk.Z_outer[k,j] = blk.z_outer[k];
+	    }
 
 	    // Prepare 'w' with (I/dt)v term;
-	    double dtInv = 1.0/dt;
-	    foreach (k; 0 .. n) {
-		blk.w_outer[k] = dtInv*blk.z_outer[k];
+	    foreach (blk; gasBlocks) {
+		double dtInv = 1.0/dt;
+		foreach (k; 0 .. blk.nvars) {
+		    blk.w_outer[k] = dtInv*blk.z_outer[k];
+		}
 	    }
 	
 	    // Evaluate Jz and place result in z_outer
-	    evalJacobianVecProd(blk, pseudoSimTime, blk.z_outer);
+	    evalJacobianVecProd(pseudoSimTime);
 	    // Now we can complete calculation of w
-	    foreach (k; 0 .. n)  blk.w_outer[k] += blk.z_outer[k];
+	    foreach (blk; gasBlocks) {
+		foreach (k; 0 .. blk.nvars)  blk.w_outer[k] += blk.z_outer[k];
+	    }
 	    // The remainder of the algorithm looks a lot like any standard
 	    // GMRES implementation (for example, see smla.d)
 	    foreach (i; 0 .. j+1) {
-		foreach (k; 0 .. n ) blk.v_outer[k] = blk.V_outer[k,i]; // Extract column 'i'
-		H0_outer[i,j] = dot(blk.w_outer, blk.v_outer);
-		foreach (k; 0 .. n) blk.w_outer[k] -= H0_outer[i,j]*blk.v_outer[k]; 
+		foreach (blk; gasBlocks) {
+		    // Extract column 'i'
+		    foreach (k; 0 .. blk.nvars ) blk.v_outer[k] = blk.V_outer[k,i]; 
+		}
+		double H0_ij;
+		mixin(dot_over_blocks("H0_ij", "w_outer", "v_outer"));
+		H0_outer[i,j] = H0_ij;
+		foreach (blk; gasBlocks) {
+		    double local_H0_ij = H0_outer[i,j];
+		    foreach (k; 0 .. blk.nvars) blk.w_outer[k] -= local_H0_ij*blk.v_outer[k]; 
+		}
 	    }
-	    H0_outer[j+1,j] = norm2(blk.w_outer);
+	    double H0_jp1j;
+	    mixin(norm2_over_blocks("H0_jp1j", "w_outer"));
+	    H0_outer[j+1,j] = H0_jp1j;
 	
-	    foreach (k; 0 .. n) {
-		blk.v_outer[k] = blk.w_outer[k]/H0_outer[j+1,j];
-		blk.V_outer[k,j+1] = blk.v_outer[k];
+	    foreach (blk; gasBlocks) {
+		double local_H0_jp1j = H0_jp1j;
+		foreach (k; 0 .. blk.nvars) {
+		    blk.v_outer[k] = blk.w_outer[k]/local_H0_jp1j;
+		    blk.V_outer[k,j+1] = blk.v_outer[k];
+		}
 	    }
 
 	    // Build rotated Hessenberg progressively
@@ -837,8 +1009,14 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	// At end H := R up to row m
 	//        g := gm up to row m
 	upperSolve(H1_outer, to!int(m), g1_outer);
-	nm.bbla.dot(blk.Z_outer, n, m, g1_outer, blk.dU);
-	foreach (k; 0 .. n) blk.dU[k] += blk.x0[k];
+	// In serial, distribute a copy of g1 to each block
+	foreach (blk; gasBlocks) blk.g1_outer[] = g1_outer[];
+	foreach (blk; gasBlocks) {
+	    nm.bbla.dot(blk.Z_outer, blk.nvars, m, blk.g1_outer, blk.dU);
+	}
+	foreach (blk; gasBlocks) {
+	    foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
+	}
 
 	if ( resid <= outerTol || r+1 == maxRestarts ) {
 	    // DEBUG:  writefln("resid= %e outerTol= %e  r+1= %d  maxRestarts= %d", resid, outerTol, r+1, maxRestarts);
@@ -847,17 +1025,30 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	}
 
 	// Else, we prepare for restart by computing r0 and setting x0
-	blk.x0[] = blk.dU[];
-	foreach (k; 0 .. n) blk.Z_outer[k,m] = blk.V_outer[k,m]; // store final Arnoldi vector in Z (unpreconditioned)
-	nm.bbla.dot(blk.Z_outer, n, m+1, Q1_outer, m+1, blk.V_outer);
+	foreach (blk; gasBlocks) {
+	    blk.x0[] = blk.dU[];
+	    // store final Arnoldi vector in Z (unpreconditioned)
+	    foreach (k; 0 .. blk.nvars) blk.Z_outer[k,m] = blk.V_outer[k,m]; 
+	}
+	// In serial, distribute a copy of Q1 to each block
+	foreach (blk; gasBlocks) copy(Q1_outer, blk.Q1_outer);
+	foreach (blk; gasBlocks) {
+	    nm.bbla.dot(blk.Z_outer, blk.nvars, m+1, blk.Q1_outer, m+1, blk.V_outer);
+	}
 	foreach (i; 0 .. m) g0_outer[i] = 0.0;
-	nm.bbla.dot(blk.V_outer, n, m+1, g0_outer, blk.r0);
+	// In serial, distribute a copy of g0 to each block
+	foreach (blk; gasBlocks) blk.g0_outer[] = g0_outer[];
+	foreach (blk; gasBlocks) {
+	    nm.bbla.dot(blk.V_outer, blk.nvars, m+1, blk.g0_outer, blk.r0);
+	}
 
-	beta = norm2(blk.r0);
+	mixin(norm2_over_blocks("beta", "r0"));
 	// DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
-	foreach (k; 0 .. n) {
-	    blk.v_outer[k] = blk.r0[k]/beta;
-	    blk.V_outer[k,0] = blk.v_outer[k];
+	foreach (blk; gasBlocks) {
+	    foreach (k; 0 .. blk.nvars) {
+		blk.v_outer[k] = blk.r0[k]/beta;
+		blk.V_outer[k,0] = blk.v_outer[k];
+	    }
 	}
 	// Re-initialise some vectors and matrices for restart
 	g0_outer[] = 0.0;
@@ -868,19 +1059,22 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	g0_outer[0] = beta;
     }
     // Rescale
-    cellCount = 0;
-    foreach (cell; blk.cells) {
-	blk.dU[cellCount+0] *= blk.S[cellCount+0];
-	blk.dU[cellCount+1] *= blk.S[cellCount+1];
-	blk.dU[cellCount+2] *= blk.S[cellCount+2];
-	blk.dU[cellCount+3] *= blk.S[cellCount+3];
-	cellCount += nConserved;
+    foreach (blk; gasBlocks) {
+	int cellCount = 0;
+	foreach (cell; blk.cells) {
+	    blk.dU[cellCount+0] *= blk.maxRate.mass;
+	    blk.dU[cellCount+1] *= blk.maxRate.momentum.x;
+	    blk.dU[cellCount+2] *= blk.maxRate.momentum.y;
+	    blk.dU[cellCount+3] *= blk.maxRate.total_energy;
+	    cellCount += nConserved;
+	}
     }
     
     residual = unscaledNorm2;
     nRestarts = to!int(r);
 }
 
+/*
 void GMRES_solve(double pseudoSimTime, double dt)
 {
     // We always perform 'nInnerIterations' for the preconditioning step
@@ -979,32 +1173,33 @@ void GMRES_solve(double pseudoSimTime, double dt)
     nm.bbla.dot(blk.V_inner, n, m, blk.g1_inner, blk.z_outer);
 
 }
+*/
 
-void max_residuals(Block blk, ref ResidValues rv)
+void max_residuals(ConservedQuantities residuals)
 {
     int nc = GlobalConfig.sssOptions.nConserved;
-    double massMax = blk.cells[0].dUdt[0].mass;
-    double xMomMax = blk.cells[0].dUdt[0].momentum.x;
-    double yMomMax = blk.cells[0].dUdt[0].momentum.y;
-    double energyMax = blk.cells[0].dUdt[0].total_energy;
-
-    double massLocal, xMomLocal, yMomLocal, energyLocal;
-    foreach (cell; blk.cells) {
-	massLocal = cell.dUdt[0].mass;
-	xMomLocal = cell.dUdt[0].momentum.x;
-	yMomLocal = cell.dUdt[0].momentum.y;
-	energyLocal = cell.dUdt[0].total_energy;
-
-	massMax = fmax(massMax, massLocal);
-	xMomMax = fmax(xMomMax, xMomLocal);
-	yMomMax = fmax(yMomMax, yMomLocal);
-	energyMax = fmax(energyMax, energyLocal);
+    foreach (blk; gasBlocks) {
+	blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
+	double massLocal, xMomLocal, yMomLocal, energyLocal;
+	foreach (cell; blk.cells) {
+	    massLocal = cell.dUdt[0].mass;
+	    xMomLocal = cell.dUdt[0].momentum.x;
+	    yMomLocal = cell.dUdt[0].momentum.y;
+	    energyLocal = cell.dUdt[0].total_energy;
+	    
+	    blk.residuals.mass = fmax(blk.residuals.mass, massLocal);
+	    blk.residuals.momentum.refx = fmax(blk.residuals.momentum.x, xMomLocal);
+	    blk.residuals.momentum.refy = fmax(blk.residuals.momentum.y, yMomLocal);
+	    blk.residuals.total_energy = fmax(blk.residuals.total_energy, energyLocal);
+	}
     }
-
-    rv.mass = massMax;
-    rv.xMomentum = xMomMax;
-    rv.yMomentum = yMomMax;
-    rv.energy = energyMax;
+    residuals.copy_values_from(gasBlocks[0].residuals);
+    foreach (blk; gasBlocks) {
+	residuals.mass = fmax(residuals.mass, blk.residuals.mass);
+	residuals.momentum.refx = fmax(residuals.momentum.x, blk.residuals.momentum.x);
+	residuals.momentum.refy = fmax(residuals.momentum.y, blk.residuals.momentum.y);
+	residuals.total_energy = fmax(residuals.total_energy, blk.residuals.total_energy);
+    }
 }
 
 void rewrite_times_file(double[string][] times)

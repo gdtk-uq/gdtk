@@ -25,6 +25,7 @@ import fvcell;
 import flowgradients;
 import bc;
 import user_defined_source_terms;
+import conservedquantities;
 
 enum
     nghost = 2; // Number of ghost cells surrounding the active cells.
@@ -76,9 +77,14 @@ public:
     // Work-space for steady-state solver
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
-    double[] FU, dU, S, r0, x0;
+    ConservedQuantities maxRate, residuals;
+    double normAcc, dotAcc;
+    size_t nvars;
+    double[] FU, dU, r0, x0;
     // outer iterations 
     double[] v_outer, w_outer, z_outer;
+    double[] g0_outer, g1_outer;
+    Matrix Q1_outer;
     //double[] g0_outer, g1_outer, h_outer, hR_outer;
     Matrix V_outer, Z_outer, W_outer;
     // H0_outer, H1_outer, Gamma_outer, Q0_outer, Q1_outer;
@@ -581,20 +587,25 @@ public:
     void allocate_GMRES_workspace()
     {
 	int nConserved = 4; // rho, rho*u, rho*v, rho*E
+	int n_species = GlobalConfig.gmodel_master.n_species();
+	int n_modes = GlobalConfig.gmodel_master.n_modes();
+	maxRate = new ConservedQuantities(n_species, n_modes);
+	residuals = new ConservedQuantities(n_species, n_modes);
+
 	size_t mOuter = to!size_t(GlobalConfig.sssOptions.maxOuterIterations);
 	size_t mInner = to!size_t(GlobalConfig.sssOptions.nInnerIterations);
 	size_t n = nConserved*cells.length;
+	nvars = n;
 	// Now allocate arrays and matrices
 	FU.length = n;
 	dU.length = n; dU[] = 0.0;
-	S.length = n;
 	r0.length = n;
 	x0.length = n;
 	v_outer.length = n;
 	w_outer.length = n;
 	z_outer.length = n;
-	//g0_outer.length = mOuter+1;
-	//g1_outer.length = mOuter+1;
+	g0_outer.length = mOuter+1;
+	g1_outer.length = mOuter+1;
 	//h_outer.length = mOuter+1;
 	//hR_outer.length = mOuter+1;
 	V_outer = new Matrix(n, mOuter+1);
@@ -604,7 +615,7 @@ public:
 	//H1_outer = new Matrix(mOuter+1, mOuter);
 	//Gamma_outer = new Matrix(mOuter+1, mOuter+1);
 	//Q0_outer = new Matrix(mOuter+1, mOuter+1);
-	//Q1_outer = new Matrix(mOuter+1, mOuter+1);
+	Q1_outer = new Matrix(mOuter+1, mOuter+1);
 
 	v_inner.length = n;
 	w_inner.length = n;
