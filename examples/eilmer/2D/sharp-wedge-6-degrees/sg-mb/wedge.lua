@@ -85,11 +85,12 @@ grid = StructuredGrid:new{psurface=makePatch{north=de, east=ce, south=abc, west=
 			  niv=nx+1, njv=ny+1}
 
 -- Set up block
-blk = SBlock:new{grid=grid, fillCondition=inflow, label="block-0"}
-blk.bcList[north] = OutFlowBC_Simple:new{}
-blk.bcList[east] = OutFlowBC_Simple:new{}
-blk.bcList[south] = WallBC_WithSlip:new{}
-blk.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
+blks = SBlockArray{grid=grid, fillCondition=inflow, nib=2, njb=1,
+		   bcList={north=OutFlowBC_Simple:new{},
+			   east=OutFlowBC_Simple:new{},
+			   south=WallBC_WithSlip:new{},
+			   west=InFlowBC_Supersonic:new{flowCondition=inflow}}
+}
 
 -- Set simulation parameters
 config.interpolation_order = 2
