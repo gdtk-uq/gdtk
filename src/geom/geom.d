@@ -130,6 +130,14 @@ struct Vector3 {
 	_p[0] = x; _p[1] = y; _p[2] = z;
 	return this;
     }
+
+    @nogc ref Vector3 add(ref const(Vector3) other)
+    // Convenience function for adding the components of an existing object.
+    // This avoids the temporary associated with += (below)
+    {
+	_p[] += other._p[];
+	return this;
+    }
     
     string toString() const
     {
@@ -891,49 +899,6 @@ void tetrahedron_properties(ref const(Vector3)[] p,
 double smallButSignificantVolume = 1.0e-12;
 double verySmallVolume = 1.0e-20;
 
-@nogc
-void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1, ref const(Vector3) p2, 
-		      ref const(Vector3) p3, ref const(Vector3) p4, ref const(Vector3) p5,
-		      ref Vector3 centroid, ref double volume)
-{
-    // [TODO] may be better to use midpoints of the quad faces
-    // and then use 3 tetragonal-dipyramids and 2 tetrahedrons.
-    // This will be more computation but will cope with warped cells.
-    double v1, v2, v3;
-    Vector3 c1, c2, c3;
-    tetrahedron_properties(p0, p4, p5, p3, c1, v1);
-    tetrahedron_properties(p0, p5, p4, p1, c2, v2);
-    tetrahedron_properties(p0, p1, p2, p5, c3, v3);
-    volume = v1 + v2 + v3;
-    if ( (volume < 0.0 && fabs(volume) < smallButSignificantVolume) ||
-	 (volume >= 0.0 && volume < verySmallVolume) ) {
-	// We assume that we have a collapsed wedge; no real problem.
-	volume = 0.0;
-	// equally-weighted tetrahedral centroids.
-	centroid.refx = (c1.x + c2.x + c3.x) / 3.0;
-	centroid.refy = (c1.y + c2.y + c3.y) / 3.0;
-	centroid.refz = (c1.z + c2.z + c3.z) / 3.0;
-	return;
-    }
-    if ( volume < 0.0 ) {
-	// Something has gone wrong with our wedge geometry.
-	centroid.refx = (c1.x + c2.x + c3.x) / 3.0;
-	centroid.refy = (c1.y + c2.y + c3.y) / 3.0;
-	centroid.refz = (c1.z + c2.z + c3.z) / 3.0;
-        assert(0, "significant negative volume.");
-    }
-    // Weight the tetrahedral centroids with their volumes.
-    centroid.refx = (c1.x*v1 + c2.x*v2 + c3.x*v3) / volume;
-    centroid.refy = (c1.y*v1 + c2.y*v2 + c3.y*v3) / volume;
-    centroid.refz = (c1.z*v1 + c2.z*v2 + c3.z*v3) / volume;
-} // end wedge_properties()
-
-@nogc
-void wedge_properties(ref const(Vector3)[] p,
-		      ref Vector3 centroid, ref double volume)
-{
-    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
-}
 
 @nogc
 double tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1, 
@@ -963,6 +928,81 @@ double tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 } // end tetragonal_dipyramid_volume()
 
 @nogc
+void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+			ref const(Vector3) p2, ref const(Vector3) p3,
+			ref const(Vector3) p4, 
+			ref Vector3 centroid, ref double volume)
+{
+    // p0-p1-p2-p3 is the quadrilateral base, p4 is the peak.
+    // cycle of base vertices is counterclockwise, viewed from p4.
+    //
+    // Split into 4 tetrahedra and sum contributions to volume and moment.
+    Vector3 pmB; // Mid-point of quadrilateral base.
+    pmB.refx = 0.25*(p0.x+p1.x+p2.x+p3.x);
+    pmB.refy = 0.25*(p0.y+p1.y+p2.y+p3.y);
+    pmB.refz = 0.25*(p0.z+p1.z+p2.z+p3.z);
+    //
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    double tet_volume; Vector3 tet_centroid;
+    tetrahedron_properties(p0, p1, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    tetrahedron_properties(p1, p2, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    tetrahedron_properties(p2, p3, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    tetrahedron_properties(p3, p0, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    //    
+    moment /= volume; // to get overall centroid
+    centroid = moment;
+    return; 
+} // end pyramid_properties()
+
+@nogc
+void pyramid_properties(ref const(Vector3)[] p,
+			ref Vector3 centroid, ref double volume)
+{
+    pyramid_properties(p[0], p[1], p[2], p[3], p[4], centroid, volume);
+}
+
+@nogc
+void prism_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+		      ref const(Vector3) p2, ref const(Vector3) p3,
+		      ref const(Vector3) p4, ref const(Vector3) p5, 
+		      ref Vector3 centroid, ref double volume)
+{
+    // Use the average of the vertex points to get a rough centroid of the prism.
+    centroid.refx = 1.0/6.0 * (p0.x+p1.x+p2.x+p3.x+p4.x+p5.x);
+    centroid.refy = 1.0/6.0 * (p0.y+p1.y+p2.y+p3.y+p4.y+p5.y);
+    centroid.refz = 1.0/6.0 * (p0.z+p1.z+p2.z+p3.z+p4.z+p5.z);
+    // Split the prism into three pyramids and two tetrahedra
+    // using this centroid as the peak of each sub-volume.
+    double sub_volume; Vector3 sub_centroid;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    pyramid_properties(p3, p5, p2, p0, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p1, p2, p5, p4, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p0, p1, p4, p3, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    tetrahedron_properties(p0, p2, p1, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    tetrahedron_properties(p3, p4, p5, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    //    
+    moment /= volume; // to get overall centroid
+    centroid = moment;
+    return; 
+} // end prism_properties()
+
+@nogc
+void prism_properties(ref const(Vector3)[] p,
+		      ref Vector3 centroid, ref double volume)
+{
+    prism_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
+}
+
+@nogc
 void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			 ref const(Vector3) p2, ref const(Vector3) p3,
 			 ref const(Vector3) p4, ref const(Vector3) p5,
@@ -972,7 +1012,12 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 {
     // PJ 10-Sep-2012
     // When computing the volume of Rolf's thin, warped cells, we have to do 
-    // something better than splitting our cell into six tetrahedra.
+    // something better than splitting our cell into six tetrahedra, so we do that
+    // by dividing the hex cell into six tetragonal dipyramids with the original
+    // faces as the pyramid bases.
+    //
+    // Estimate the centroid so that we can use it as the peak
+    // of each of the pyramid sub-volumes.
     centroid.refx = 0.125 * (p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x);
     centroid.refy = 0.125 * (p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y);
     centroid.refz = 0.125 * (p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z);
@@ -1014,13 +1059,21 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     // writeln("Single hexahedron divided into six tetragonal dipyramids.");
     // J. Grandy (1997) Efficient Computation of Volume of Hexahedral Cells UCRL-ID-128886.
     // Base of each dipyramid is specified clockwise from the outside.
-    volume = 0.0;
-    volume += tetragonal_dipyramid_volume(p6, p7, p3, p2, pmN, centroid); // North
-    volume += tetragonal_dipyramid_volume(p5, p6, p2, p1, pmE, centroid); // East
-    volume += tetragonal_dipyramid_volume(p4, p5, p1, p0, pmS, centroid); // South
-    volume += tetragonal_dipyramid_volume(p7, p4, p0, p3, pmW, centroid); // West
-    volume += tetragonal_dipyramid_volume(p7, p6, p5, p4, pmT, centroid); // Top
-    volume += tetragonal_dipyramid_volume(p0, p1, p2, p3, pmB, centroid); // Bottom
+    double sub_volume; Vector3 sub_centroid;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    pyramid_properties(p6, p7, p3, p2, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p5, p6, p2, p1, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p4, p5, p1, p0, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p7, p4, p0, p3, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p7, p6, p5, p4, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p0, p1, p2, p3, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    //
     if ( (volume < 0.0 && fabs(volume) < smallButSignificantVolume) ||
 	 (volume >= 0.0 && volume < verySmallVolume) ) {
 	// We assume that we have a collapsed hex cell;
@@ -1032,6 +1085,9 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 	// Something has gone wrong with our geometry.
         assert(0, "significant negative volume.");
     }
+    //    
+    moment /= volume; // to get overall centroid
+    centroid = moment;
     return; 
 } // end hex_cell_properties()
 
@@ -1065,7 +1121,7 @@ unittest {
     assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), "quad_properties t1");
     assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), "quad_properties t2");
 
-    // Build tetrahedron with equilateral triangle (side 1.0) on xy plane.
+    // Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
     p0 = Vector3(0, 0, 0);
     p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
     p2 = Vector3(0.0, 1.0, 0.0);
@@ -1078,13 +1134,22 @@ unittest {
     assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), "tetrahedron centroid");
     assert(approxEqual(volume, cos(radians(30))*0.5*dz/3), "tetrahedron volume");
 
-    // Build a wedge with the same equilateral-triangle base.
-    p3 = p0 + Vector3(0, 0, 1.0);
-    Vector3 p4 = p1 + Vector3(0, 0, 1.0);
-    Vector3 p5 = p2 + Vector3(0, 0, 1.0);
-    wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
-    assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.5)), "wedge centroid");
-    assert(approxEqual(volume, cos(radians(30))*0.5*1.0), "wedge volume");
+    // Build a prism with the same equilateral-triangle base.
+    Vector3 incz = Vector3(0, 0, -1.0);
+    p3 = p0 + incz;
+    Vector3 p4 = p1 + incz;
+    Vector3 p5 = p2 + incz;
+    prism_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
+    assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), "prism centroid");
+    assert(approxEqual(volume, cos(radians(30))*0.5*1.0), "prism volume");
+
+    // Pyramid
+    p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
+    p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
+    p4 = Vector3(0.5,0.5,1); // peak
+    pyramid_properties(p0, p1, p2, p3, p4, centroid, volume);
+    assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0/4)), "pyramid centroid");
+    assert(approxEqual(volume, 1.0/3), "pyramid volume");
 
     // Simple cube for the hex cell.
     p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);

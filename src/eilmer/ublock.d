@@ -570,14 +570,28 @@ public:
 					cell.vtx[6].pos[gtl], cell.vtx[7].pos[gtl],
 					cell.pos[gtl], cell.volume[gtl],
 					cell.iLength, cell.jLength, cell.kLength);
-		    cell.L_min = cell.iLength;
-		    if (cell.jLength < cell.L_min) cell.L_min = cell.jLength;
-		    if (cell.kLength < cell.L_min) cell.L_min = cell.kLength;
+		    cell.L_min = min(cell.iLength, cell.jLength, cell.kLength);
 		    break;
 		case 5:
-		    throw new Exception("need to implement pyramid cell properties");
+		    pyramid_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+				       cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
+				       cell.vtx[4].pos[gtl],
+				       cell.pos[gtl], cell.volume[gtl]);
+		    cell.L_min = pow(cell.volume[gtl], 1.0/3.0);
+		    cell.iLength = cell.L_min;
+		    cell.jLength = cell.L_min;
+		    cell.kLength = cell.L_min;
+		    break;
 		case 6:
-		    throw new Exception("need to implement wedge cell properties");
+		    prism_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+				     cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
+				     cell.vtx[4].pos[gtl], cell.vtx[5].pos[gtl],
+				     cell.pos[gtl], cell.volume[gtl]);
+		    cell.L_min = pow(cell.volume[gtl], 1.0/3.0);
+		    cell.iLength = cell.L_min;
+		    cell.jLength = cell.L_min;
+		    cell.kLength = cell.L_min;
+		    break;
 		default:
 		    string msg = "compute_primary_cell_geometric_data() cells: ";
 		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
