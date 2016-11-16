@@ -507,6 +507,10 @@ public:
 
     int verbosity_level;
 
+    version (steady_state) {
+	SteadyStateSolverOptions sssOptions;
+    }
+
     this() 
     {
 	dimensions = GlobalConfig.dimensions;
@@ -587,6 +591,11 @@ public:
 	    chemUpdate = new ChemistryUpdate(GlobalConfig.reactions_file, gmodel);
 
 	verbosity_level = GlobalConfig.verbosity_level;
+
+	version (steady_state) {
+	sssOptions = GlobalConfig.sssOptions;
+	}
+
     }
 
     void update_control_parameters()

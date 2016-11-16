@@ -151,12 +151,6 @@ void main(string[] args)
 	writeln("Steady-state solver not implemented for 3D calculations.");
 	goodToProceed = false;
     }
-    /*
-    if ( gasBlocks.length > 1 ) {
-	writeln("Steady-state solver not implemented nBlocks > 1.");
-	goodToProceed = false;
-    }
-    */
     if ( !goodToProceed ) {
 	writeln("One or more options are not yet available for the steady-state solver.");
 	writeln("Bailing out!");
@@ -299,6 +293,17 @@ void iterate_to_steady_state(int maxCPUs)
 	// Take initial residual as max residual
 	evalRHS(0.0, 0);
 	max_residuals(maxResiduals);
+	foreach (blk; parallel(gasBlocks, 1)) {
+	    int cellCount = 0;
+	    foreach (cell; blk.cells) {
+		blk.FU[cellCount+0] = -cell.dUdt[0].mass;
+		blk.FU[cellCount+1] = -cell.dUdt[0].momentum.x;
+		blk.FU[cellCount+2] = -cell.dUdt[0].momentum.y;
+		blk.FU[cellCount+3] = -cell.dUdt[0].total_energy;
+		cellCount += nConserved;
+	    }
+	}
+	mixin(norm2_over_blocks("normRef", "FU"));
     }
 
     writeln("Reference residuals are established as:");
@@ -730,8 +735,6 @@ foreach (blk; gasBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-
-/*
 void evalRHS(Block blk, double pseudoSimTime, int ftl)
 {
     // We don't want to get a false function count by counting
@@ -741,6 +744,8 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
 
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
+    // We do NOT do boundary conditions, since these are fixed
+    // during the preconditioner.
     //    blk.applyPreReconAction(pseudoSimTime, 0, ftl);
     blk.convective_flux_phase0();
     blk.convective_flux_phase1();
@@ -762,36 +767,36 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
 	cell.time_derivatives(0, ftl, false);
     }
 }
-*/
-/*
-void evalJacobianVecProd(Block blk, double pseudoSimTime, double[] v)
+
+
+void evalJacobianVecProd(Block blk, double pseudoSimTime)
 {
-    double sigma = GlobalConfig.sssOptions.sigma;
-    int nConserved = GlobalConfig.sssOptions.nConserved;
+    double sigma = sqrt(blk.nvars*double.epsilon);
+    int nConserved = blk.myConfig.sssOptions.nConserved;
     // We perform a Frechet derivative to evaluate J*v
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
     foreach (cell; blk.cells) {
 	cell.U[1].copy_values_from(cell.U[0]);
-	cell.U[1].mass += sigma*blk.S[cellCount+0]*v[cellCount+0];
-	cell.U[1].momentum.refx += sigma*blk.S[cellCount+1]*v[cellCount+1];
-	cell.U[1].momentum.refy += sigma*blk.S[cellCount+2]*v[cellCount+2];
-	cell.U[1].total_energy += sigma*blk.S[cellCount+3]*v[cellCount+3];
+	cell.U[1].mass += sigma*blk.maxRate.mass*blk.v_inner[cellCount+0];
+	cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.v_inner[cellCount+1];
+	cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.v_inner[cellCount+2];
+	cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.v_inner[cellCount+3];
 	cell.decode_conserved(0, 1, 0.0);
 	cellCount += nConserved;
     }
     evalRHS(blk, pseudoSimTime, 1);
     cellCount = 0;
     foreach (cell; blk.cells) {
-	v[cellCount+0] = (-cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*blk.S[cellCount+0]);
-	v[cellCount+1] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+1])/(sigma*blk.S[cellCount+1]);
-	v[cellCount+2] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+2])/(sigma*blk.S[cellCount+2]);
-	v[cellCount+3] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+3])/(sigma*blk.S[cellCount+3]);
+	blk.v_inner[cellCount+0] = (-cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*blk.maxRate.mass);
+	blk.v_inner[cellCount+1] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+1])/(sigma*blk.maxRate.momentum.x);
+	blk.v_inner[cellCount+2] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+2])/(sigma*blk.maxRate.momentum.y);
+	blk.v_inner[cellCount+3] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+3])/(sigma*blk.maxRate.total_energy);
 	cellCount += nConserved;
     }
 }
-*/
+
 
 void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPreconditioning, ref double residual, ref int nRestarts)
 {
@@ -803,7 +808,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // might legitimately ask for no restarts. We still have
     // to execute at least once.
     int maxRestarts = GlobalConfig.sssOptions.maxRestarts + 1; 
-    shared size_t m = to!size_t(maxIters);
+    size_t m = to!size_t(maxIters);
     size_t r;
     size_t iterCount;
 
@@ -835,10 +840,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    blk.maxRate.total_energy = fmax(blk.maxRate.total_energy, fabs(cell.dUdt[0].total_energy));
 	}
     }
-    shared double maxMass = 0.0;
-    shared double maxMomX = 0.0;
-    shared double maxMomY = 0.0;
-    shared double maxEnergy = 0.0;
+    double maxMass = 0.0;
+    double maxMomX = 0.0;
+    double maxMomY = 0.0;
+    double maxEnergy = 0.0;
     foreach (blk; gasBlocks) {
 	maxMass = fmax(maxMass, blk.maxRate.mass);
 	maxMomX = fmax(maxMomX, blk.maxRate.momentum.x);
@@ -850,7 +855,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     maxMomX = fmax(maxMomX, minNonDimVal);
     maxMomY = fmax(maxMomY, minNonDimVal);
     maxEnergy = fmax(maxEnergy, minNonDimVal);
-    shared double maxMom = fmax(maxMomX, maxMomY);
+    double maxMom = fmax(maxMomX, maxMomY);
 
     /*
     writefln("max-mass= %.18e", maxMass);
@@ -890,7 +895,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // Then compute v = r0/||r0||
     double betaTmp;
     mixin(norm2_over_blocks("betaTmp", "r0"));
-    shared double beta = betaTmp;
+    double beta = betaTmp;
     // DEBUG: writefln("OUTER: beta= %e", beta);
     g0_outer[0] = beta;
     foreach (blk; parallel(gasBlocks,1)) {
@@ -907,10 +912,12 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     // 2. Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {
 	// 2a. Begin iterations
-	foreach (shared j; 0 .. m) {
+	foreach (j; 0 .. m) {
 	    iterCount = j+1;
 	    if ( withPreconditioning ) {
-		//GMRES_solve(pseudoSimTime, dt);
+		foreach (blk; parallel(gasBlocks,1)) {
+		    GMRES_solve(blk, pseudoSimTime, dt);
+		}
 	    }
 	    else {
 		foreach (blk; parallel(gasBlocks,1)) {
@@ -919,8 +926,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    }
 	    // Save z vector in Z.
 	    foreach (blk; parallel(gasBlocks,1)) {
-		size_t jLocal = j;
-		foreach (k; 0 .. blk.nvars) blk.Z_outer[k,jLocal] = blk.z_outer[k];
+		foreach (k; 0 .. blk.nvars) blk.Z_outer[k,j] = blk.z_outer[k];
 	    }
 
 	    // Prepare 'w' with (I/dt)v term;
@@ -939,32 +945,28 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    }
 	    // The remainder of the algorithm looks a lot like any standard
 	    // GMRES implementation (for example, see smla.d)
-	    foreach (shared i; 0 .. j+1) {
+	    foreach (i; 0 .. j+1) {
 		foreach (blk; parallel(gasBlocks,1)) {
-		    size_t iLocal = i;
 		    // Extract column 'i'
-		    foreach (k; 0 .. blk.nvars ) blk.v_outer[k] = blk.V_outer[k,iLocal]; 
+		    foreach (k; 0 .. blk.nvars ) blk.v_outer[k] = blk.V_outer[k,i]; 
 		}
 		double H0_ij_tmp;
 		mixin(dot_over_blocks("H0_ij_tmp", "w_outer", "v_outer"));
-		shared double H0_ij = H0_ij_tmp;
+		double H0_ij = H0_ij_tmp;
 		H0_outer[i,j] = H0_ij;
 		foreach (blk; parallel(gasBlocks,1)) {
-		    double local_H0_ij = H0_ij;
-		    foreach (k; 0 .. blk.nvars) blk.w_outer[k] -= local_H0_ij*blk.v_outer[k]; 
+		    foreach (k; 0 .. blk.nvars) blk.w_outer[k] -= H0_ij*blk.v_outer[k]; 
 		}
 	    }
 	    double H0_jp1j_tmp;
 	    mixin(norm2_over_blocks("H0_jp1j_tmp", "w_outer"));
-	    shared double H0_jp1j = H0_jp1j_tmp;
+	    double H0_jp1j = H0_jp1j_tmp;
 	    H0_outer[j+1,j] = H0_jp1j;
 	
 	    foreach (blk; parallel(gasBlocks,1)) {
-		double local_H0_jp1j = H0_jp1j;
-		size_t jLocal = j;
 		foreach (k; 0 .. blk.nvars) {
-		    blk.v_outer[k] = blk.w_outer[k]/local_H0_jp1j;
-		    blk.V_outer[k,jLocal+1] = blk.v_outer[k];
+		    blk.v_outer[k] = blk.w_outer[k]/H0_jp1j;
+		    blk.V_outer[k,j+1] = blk.v_outer[k];
 		}
 	    }
 
@@ -1036,9 +1038,8 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	// Else, we prepare for restart by computing r0 and setting x0
 	foreach (blk; parallel(gasBlocks,1)) {
 	    blk.x0[] = blk.dU[];
-	    size_t mLocal = m;
 	    // store final Arnoldi vector in Z (unpreconditioned)
-	    foreach (k; 0 .. blk.nvars) blk.Z_outer[k,mLocal] = blk.V_outer[k,mLocal]; 
+	    foreach (k; 0 .. blk.nvars) blk.Z_outer[k,m] = blk.V_outer[k,m]; 
 	}
 	// In serial, distribute a copy of Q1 to each block
 	foreach (blk; gasBlocks) copy(Q1_outer, blk.Q1_outer);
@@ -1085,16 +1086,14 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
     nRestarts = to!int(r);
 }
 
-/*
-void GMRES_solve(double pseudoSimTime, double dt)
+
+void GMRES_solve(Block blk, double pseudoSimTime, double dt)
 {
     // We always perform 'nInnerIterations' for the preconditioning step
     // That is, we do NOT stop on some tolerance in this solve.
     double resid;
-    int nConserved = GlobalConfig.sssOptions.nConserved;
-    // Presently, just do one block
-    Block blk = gasBlocks[0];
-    int maxIters = GlobalConfig.sssOptions.nInnerIterations;
+    int nConserved = blk.myConfig.sssOptions.nConserved;
+    int maxIters = blk.myConfig.sssOptions.nInnerIterations;
     size_t m = to!size_t(maxIters);
     size_t n = blk.v_inner.length;
     size_t iterCount;
@@ -1126,7 +1125,7 @@ void GMRES_solve(double pseudoSimTime, double dt)
 	    blk.w_inner[k] = dtInv*blk.v_inner[k];
 	}
 	// Evaluate Jv and place in v
-	evalJacobianVecProd(blk, pseudoSimTime, blk.v_inner);
+	evalJacobianVecProd(blk, pseudoSimTime);
 	// Complete calculation of w.
 	foreach (k; 0 .. n) blk.w_inner[k] += blk.v_inner[k];
 
@@ -1184,7 +1183,6 @@ void GMRES_solve(double pseudoSimTime, double dt)
     nm.bbla.dot(blk.V_inner, n, m, blk.g1_inner, blk.z_outer);
 
 }
-*/
 
 void max_residuals(ConservedQuantities residuals)
 {
