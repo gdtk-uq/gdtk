@@ -1832,6 +1832,12 @@ public:
 	} // end if (myConfig.dimensions
     } // end store_references_for_derivative_calc_at_vertices()
 
+    override void compute_least_squares_setup_for_reconstruction(int gtl)
+    {
+	// Nothing needs doing for the structured grid
+	// because we have another approach for reconstruction.
+    }
+    
     override void read_grid(string filename, size_t gtl=0)
     // Read the grid vertices from a gzip file.
     // We delegate the actual file reading to the StructuredGrid class.

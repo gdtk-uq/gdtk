@@ -136,6 +136,7 @@ public:
     abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract void compute_primary_cell_geometric_data(int gtl);
     abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
+    abstract void compute_least_squares_setup_for_reconstruction(int gtl);
     abstract void read_grid(string filename, size_t gtl=0);
     abstract void write_grid(string filename, double sim_time, size_t gtl=0);
     abstract double read_solution(string filename, bool overwrite_geometry_data);

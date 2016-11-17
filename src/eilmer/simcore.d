@@ -20,6 +20,7 @@ import std.parallelism;
 
 import fileutil;
 import geom;
+import grid;
 import gas;
 import fvcore;
 import globalconfig;
@@ -111,6 +112,13 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 		    mygce.set_up_cell_mapping();
 		}
 	    }
+	}
+    }
+    // Now that we know the ghost-cell locations, we can set up the least-squares subproblems
+    // for reconstruction prior to convective flux calculation for the unstructured-grid blocks.
+    foreach (myblk; gasBlocks) {
+	if ((myblk.grid_type == Grid_t.unstructured_grid) && (myblk.myConfig.interpolation_order > 1)) { 
+	    myblk.compute_least_squares_setup_for_reconstruction(0);
 	}
     }
     version (gpu_chem) {
@@ -367,6 +375,9 @@ void integrate_in_time(double target_time)
 		if (blk.active) {
 		    blk.compute_primary_cell_geometric_data(0);
 		    blk.compute_distance_to_nearest_wall_for_all_cells(0);
+		    if ((blk.grid_type == Grid_t.unstructured_grid) && (blk.myConfig.interpolation_order > 1)) { 
+			blk.compute_least_squares_setup_for_reconstruction(0);
+		    }
 		}
 	    }	    
 	}
@@ -1025,6 +1036,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global, gtl);
 	// recalculate cell geometry with new vertex positions @ gtl = 1
 	blk.compute_primary_cell_geometric_data(gtl+1);
+	if ((blk.grid_type == Grid_t.unstructured_grid) && (blk.myConfig.interpolation_order > 1)) { 
+	    blk.compute_least_squares_setup_for_reconstruction(gtl+1);
+	}
 	// determine interface velocities using GCL for gtl = 1
 	set_gcl_interface_properties(blk, gtl+1, dt_global);
     }
@@ -1160,6 +1174,9 @@ void gasdynamic_explicit_increment_with_moving_grid()
 		predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global, gtl);
 		// recalculate cell geometry with new vertex positions
 		blk.compute_primary_cell_geometric_data(gtl+1);
+		if ((blk.grid_type == Grid_t.unstructured_grid) && (blk.myConfig.interpolation_order > 1)) { 
+		    blk.compute_least_squares_setup_for_reconstruction(gtl+1);
+		}
 		// grid remains at pos[gtl=1], thus let's use old interface velocities
 		// thus no need to set_gcl_interface_properties(blk, 2, dt_global);
 	    }

@@ -619,7 +619,7 @@ public:
 	    } // end foreach f
 	} // end if myConfig.dimensions
 	//
-	// Position ghost-cell centres and copy cross-cell lengths.
+	// Guess the position ghost-cell centres and copy cross-cell lengths.
 	// Copy without linear extrapolation for the moment.
 	//
 	// 25-Feb-2014 Note copied from Eilmer3
@@ -658,78 +658,80 @@ public:
 	    // for the viscous terms.
 	    compute_leastsq_weights(gtl);
 	}
-	if (myConfig.interpolation_order > 1) {
-	    // The LSQ linear model for the flow field is fitted using 
-	    // information on the locations of the points. 
-	    foreach (c; cells) {
-		/++ 
-		    In some instances the point cloud used for the reconstruction may not have adequate variation in all
-		    dimenions, in the case the standard deviation of the points in the cloud are less than some fraction
-		    of a cell length, store a larger cloud -- ideally this should be carried out where the clouds are
-		    originally constructed, but at that stage the code hasn't set the necessary geometric data.
+    } // end compute_primary_cell_geometric_data()
+
+    override void compute_least_squares_setup_for_reconstruction(int gtl)
+    {
+	// The LSQ linear model for the flow field is fitted using 
+	// information on the locations of the points. 
+	foreach (c; cells) {
+	    /++ 
+	     In some instances the point cloud used for the reconstruction may not have adequate variation in all
+	     dimenions, in the case the standard deviation of the points in the cloud are less than some fraction
+	     of a cell length, store a larger cloud -- ideally this should be carried out where the clouds are
+	     originally constructed, but at that stage the code hasn't set the necessary geometric data.
 		    		    
-		    We do this before assembling and inverting the least-squares matrix.
-		    ++/
-		double[3] avg, sigma;
-		avg[0] = 0.0; avg[1] = 0.0; avg[2] = 0.0;
-		sigma[0] = 0.0; sigma[1] = 0.0; sigma[2] = 0.0;
-		auto n = c.cell_cloud.length;
-		foreach(i; 0..n) {
-		    avg[0] += c.cell_cloud[i].pos[gtl].x; 
-		    avg[1] += c.cell_cloud[i].pos[gtl].y;
-		    if (myConfig.dimensions == 3) avg[2] += c.cell_cloud[i].pos[gtl].z;
-		}
-		avg[0] /= n;
-		avg[1] /= n;
-		if (myConfig.dimensions == 3) avg[2] /= n;
-		foreach (i; 0..n) {
-		    sigma[0] += (c.cell_cloud[i].pos[gtl].x - avg[0])*(c.cell_cloud[i].pos[gtl].x - avg[0]);
-		    sigma[1] += (c.cell_cloud[i].pos[gtl].y - avg[1])*(c.cell_cloud[i].pos[gtl].y - avg[1]);
-		    if (myConfig.dimensions == 3) sigma[2] += (c.cell_cloud[i].pos[gtl].z - avg[2])*(c.cell_cloud[i].pos[gtl].z - avg[2]);
+	     We do this before assembling and inverting the least-squares matrix.
+	     ++/
+	    double[3] avg, sigma;
+	    avg[0] = 0.0; avg[1] = 0.0; avg[2] = 0.0;
+	    sigma[0] = 0.0; sigma[1] = 0.0; sigma[2] = 0.0;
+	    auto n = c.cell_cloud.length;
+	    foreach(i; 0..n) {
+		avg[0] += c.cell_cloud[i].pos[gtl].x; 
+		avg[1] += c.cell_cloud[i].pos[gtl].y;
+		if (myConfig.dimensions == 3) avg[2] += c.cell_cloud[i].pos[gtl].z;
+	    }
+	    avg[0] /= n;
+	    avg[1] /= n;
+	    if (myConfig.dimensions == 3) avg[2] /= n;
+	    foreach (i; 0..n) {
+		sigma[0] += (c.cell_cloud[i].pos[gtl].x - avg[0])*(c.cell_cloud[i].pos[gtl].x - avg[0]);
+		sigma[1] += (c.cell_cloud[i].pos[gtl].y - avg[1])*(c.cell_cloud[i].pos[gtl].y - avg[1]);
+		if (myConfig.dimensions == 3) sigma[2] += (c.cell_cloud[i].pos[gtl].z - avg[2])*(c.cell_cloud[i].pos[gtl].z - avg[2]);
 		    
-		}
-		sigma[0] /= n;
-		sigma[0] = sqrt(sigma[0]);
-		sigma[1] /= n;
-		sigma[1] = sqrt(sigma[1]);
-		if (myConfig.dimensions == 3) sigma[2] = sqrt(sigma[2]/n);
+	    }
+	    sigma[0] /= n;
+	    sigma[0] = sqrt(sigma[0]);
+	    sigma[1] /= n;
+	    sigma[1] = sqrt(sigma[1]);
+	    if (myConfig.dimensions == 3) sigma[2] = sqrt(sigma[2]/n);
 
-		double[] cell_cloud_ids;
-		foreach(i; 0..n) {
-		    cell_cloud_ids ~= c.cell_cloud[i].id;
-		}
-		double min_sig;
-		min_sig = min(sigma[0], sigma[1]);
-		if (myConfig.dimensions == 3) min_sig = min(min_sig, sigma[2]);
+	    double[] cell_cloud_ids;
+	    foreach(i; 0..n) {
+		cell_cloud_ids ~= c.cell_cloud[i].id;
+	    }
+	    double min_sig;
+	    min_sig = min(sigma[0], sigma[1]);
+	    if (myConfig.dimensions == 3) min_sig = min(min_sig, sigma[2]);
 
-		double avg_cell_length;
-		if (myConfig.dimensions == 3) avg_cell_length = (1.0/3.0)*(c.iLength+c.jLength+c.kLength);
-		else avg_cell_length = (1.0/2.0)*(c.iLength+c.jLength);
+	    double avg_cell_length;
+	    if (myConfig.dimensions == 3) avg_cell_length = (1.0/3.0)*(c.iLength+c.jLength+c.kLength);
+	    else avg_cell_length = (1.0/2.0)*(c.iLength+c.jLength);
 
-		if (min_sig < 0.5*avg_cell_length) {
-		    // collect the face neighbours of the nearest-neighbour cloud cells
-		    foreach (j; 1 .. n) {
-			foreach (i, f; c.cell_cloud[j].iface) {
-			    if (f.right_cell && f.right_cell.will_have_valid_flow) {
-				if (cell_cloud_ids.canFind(f.right_cell.id) == false) {
-				    c.cell_cloud ~= f.right_cell;
-				    cell_cloud_ids ~= f.right_cell.id;
-				}
+	    if (min_sig < 0.5*avg_cell_length) {
+		// collect the face neighbours of the nearest-neighbour cloud cells
+		foreach (j; 1 .. n) {
+		    foreach (i, f; c.cell_cloud[j].iface) {
+			if (f.right_cell && f.right_cell.will_have_valid_flow) {
+			    if (cell_cloud_ids.canFind(f.right_cell.id) == false) {
+				c.cell_cloud ~= f.right_cell;
+				cell_cloud_ids ~= f.right_cell.id;
 			    }
-			    if (f.left_cell && f.left_cell.will_have_valid_flow) {
-				if (cell_cloud_ids.canFind(f.left_cell.id) == false) {
-				    c.cell_cloud ~= f.left_cell;
-				    cell_cloud_ids ~= f.left_cell.id;
-				}
+			}
+			if (f.left_cell && f.left_cell.will_have_valid_flow) {
+			    if (cell_cloud_ids.canFind(f.left_cell.id) == false) {
+				c.cell_cloud ~= f.left_cell;
+				cell_cloud_ids ~= f.left_cell.id;
 			    }
 			}
 		    }
 		}
-		c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
 	    }
+	    c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
 	}
-    } // end compute_primary_cell_geometric_data()
-
+    } // end compute_least_squares_setup_for_reconstruction()
+    
     override void read_grid(string filename, size_t gtl=0)
     {
 	throw new FlowSolverException("read_grid function NOT implemented for unstructured grid.");
