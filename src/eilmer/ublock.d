@@ -397,43 +397,54 @@ public:
 			} // end foreach (i, f; bc.faces)
 		    } else {  // if NOT a WALL OR we are using ghost cell data then use the ghost cell data
 			foreach (i, f; bc.faces) {
+			    double[] cell_cloud_face_ids;
+			    double[] cell_cloud_cell_ids;
 			    FVCell[] cell_list;
 			    // store interface
 			    f.cloud_pos ~= &(f.pos);
 			    f.cloud_fs ~= f.fs;
+			    cell_cloud_face_ids ~= f.id;
 			    if (bc.outsigns[i] == 1) {
 				// store neighbour cell
 				f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
 				f.cloud_fs ~= f.left_cell.fs;
 				cell_list~= f.left_cell.cell_cloud;
+				cell_cloud_cell_ids ~= f.left_cell.id;
 				// store ghost0
 				if (f.right_cell.will_have_valid_flow) {
 				    f.cloud_pos ~= &(f.right_cell.pos[0]);
 				    f.cloud_fs ~= f.right_cell.fs;
+				    cell_cloud_cell_ids ~= f.right_cell.id;
 				}
 			    } else {
 				// store neighbour cell
 				f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
 				f.cloud_fs ~= f.right_cell.fs;
 				cell_list ~= f.right_cell.cell_cloud;
+				cell_cloud_cell_ids ~= f.right_cell.id;
 				// store ghost0
 				if (f.left_cell.will_have_valid_flow) { 
 				    f.cloud_pos ~= &(f.left_cell.pos[0]);
 				    f.cloud_fs ~= f.left_cell.fs;
+				    cell_cloud_cell_ids ~= f.left_cell.id;
 				}
 			    }
-			    double[] cell_cloud_ids;
-			    cell_cloud_ids ~= f.id;
 			    foreach (fvtx; f.vtx) {
 				foreach (other_face_id; grid.faceIndexListPerVertex[fvtx.id]) {
 				    FVInterface other_face = faces[other_face_id];
-				    if (other_face.is_on_boundary && other_face.bc_id == bndary_idx && cell_cloud_ids.canFind(other_face.id) == false) {
+				    if (other_face.is_on_boundary && other_face.bc_id == bndary_idx && cell_cloud_face_ids.canFind(other_face.id) == false) {
 					// store left and right cell
-					f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
-					f.cloud_fs ~= other_face.left_cell.fs;
-					f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
-					f.cloud_fs ~= other_face.right_cell.fs;
-					cell_cloud_ids ~= other_face.id;
+					if (cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false) {
+					    f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
+					    f.cloud_fs ~= other_face.left_cell.fs;
+					    cell_cloud_cell_ids ~= other_face.left_cell.id;
+					}
+					if (cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false) {
+					    f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
+					    f.cloud_fs ~= other_face.right_cell.fs;
+					    cell_cloud_cell_ids ~= other_face.right_cell.id;
+					}
+					cell_cloud_face_ids ~= other_face.id;
 				    }// end if (other_face.is_on_boundary && other_face.bc_id == bndary_idx)
 				} // end foreach (gvtx; fvtx.faceIndexListPerVertex)
 			    } // end foreach (fvtx; f.vtx)
@@ -697,19 +708,19 @@ public:
 	    sigma[1] = sqrt(sigma[1]);
 	    if (myConfig.dimensions == 3) sigma[2] = sqrt(sigma[2]/n);
 
-	    double[] cell_cloud_ids;
+	    size_t[] cell_cloud_ids;
 	    foreach(i; 0..n) {
 		cell_cloud_ids ~= c.cell_cloud[i].id;
 	    }
 	    double min_sig;
 	    min_sig = min(sigma[0], sigma[1]);
 	    if (myConfig.dimensions == 3) min_sig = min(min_sig, sigma[2]);
-
+	    
 	    double avg_cell_length;
 	    if (myConfig.dimensions == 3) avg_cell_length = (1.0/3.0)*(c.iLength+c.jLength+c.kLength);
 	    else avg_cell_length = (1.0/2.0)*(c.iLength+c.jLength);
-
-	    if (min_sig < 0.5*avg_cell_length) {
+	    
+	    if (min_sig < 0.6*avg_cell_length) {
 		// collect the face neighbours of the nearest-neighbour cloud cells
 		foreach (j; 1 .. n) {
 		    foreach (i, f; c.cell_cloud[j].iface) {
