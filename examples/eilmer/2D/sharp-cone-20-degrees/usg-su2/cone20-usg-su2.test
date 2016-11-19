@@ -97,7 +97,7 @@ test pressure-on-cone-surface {The expected pressure on the cone surface.} -body
     set q_inf [expr 0.5 * 0.3029 * 1.0e6]; # dynamic pressure for free stream
     set p_cone_surface [expr 95.84e3 + 0.387 * $q_inf]
     # puts "p=$p, q_inf=$q_inf, p_cone_surface=$p_cone_surface"
-    list [expr abs($p - $p_cone_surface) < 5.0e2]
+    list [expr abs($p - $p_cone_surface) < 1.0e3]
 } -result {1}
 
 test shock-angle {The shock angle should be close to 49 degrees.} -body {
@@ -118,7 +118,7 @@ test shock-angle {The shock angle should be close to 49 degrees.} -body {
     }
     # The shock wave angle should be within 1 degree of expected
     # and average deviation of points should be less than 3mm (more lax than the structured grid). 
-    list [expr abs($shock_angle - 49.547) < 1.0] [expr $average_deviation < 0.003]
+    list [expr abs($shock_angle - 49.547) < 1.0] [expr $average_deviation < 0.004]
 } -result {1 1}
 
 cleanupTests
