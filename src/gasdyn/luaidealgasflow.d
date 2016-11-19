@@ -84,9 +84,41 @@ string wrapfn(string fname, string[] args)
 } // end wrapfn()
 
 mixin(wrapfn("A_Astar", ["M", "g=1.4"]));
+mixin(wrapfn("T0_T", ["M", "g=1.4"]));
+mixin(wrapfn("p0_p", ["M", "g=1.4"]));
+mixin(wrapfn("r0_r", ["M", "g=1.4"]));
+
+mixin(wrapfn("m2_shock", ["M1", "g=1.4"]));
+mixin(wrapfn("r2_r1", ["M1", "g=1.4"]));
+mixin(wrapfn("u2_u1", ["M1", "g=1.4"]));
+mixin(wrapfn("p2_p1", ["M1", "g=1.4"]));
+mixin(wrapfn("T2_T1", ["M1", "g=1.4"]));
+mixin(wrapfn("p02_p01", ["M1", "g=1.4"]));
+mixin(wrapfn("DS_Cv", ["M1", "g=1.4"]));
+mixin(wrapfn("pitot_p", ["p1", "M1", "g=1.4"]));
+
+mixin(wrapfn("T0_T0star", ["M", "g=1.4"]));
+mixin(wrapfn("M_Rayleigh", ["T0T0star", "g=1.4"]));
+mixin(wrapfn("T_Tstar", ["M", "g=1.4"]));
+mixin(wrapfn("p_pstar", ["M", "g=1.4"]));
+mixin(wrapfn("r_rstar", ["M", "g=1.4"]));
+mixin(wrapfn("p0_p0star", ["M", "g=1.4"]));
+
+mixin(wrapfn("PM1", ["M", "g=1.4"]));
+mixin(wrapfn("PM2", ["nu", "g=1.4", "tol=1.0e-6"]));
+mixin(wrapfn("MachAngle", ["M"]));
+
 mixin(wrapfn("beta_obl", ["M1", "theta", "g=1.4", "tol=1.0e-6"]));
+mixin(wrapfn("beta_obl2", ["M1", "p2_p1", "g=1.4"]));
+mixin(wrapfn("theta_obl", ["M1", "beta", "g=1.4"]));
+mixin(wrapfn("dtan_theta", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("M2_obl", ["M1", "beta", "theta", "g=1.4"]));
+mixin(wrapfn("r2_r1_obl", ["M1", "beta", "g=1.4"]));
+mixin(wrapfn("u2_u1_obl", ["M1", "beta", "g=1.4"]));
+mixin(wrapfn("V2_V1_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("p2_p1_obl", ["M1", "beta", "g=1.4"]));
+mixin(wrapfn("T2_T1_obl", ["M1", "beta", "g=1.4"]));
+mixin(wrapfn("p02_p01_obl", ["M1", "beta", "g=1.4"]));
 
 string registerfn(string fname)
 {
@@ -104,9 +136,41 @@ void registeridealgasflowFunctions(lua_State* L)
     lua_setfield(L, -2, "__index");
 
     mixin(registerfn("A_Astar"));
+    mixin(registerfn("T0_T"));
+    mixin(registerfn("p0_p"));
+    mixin(registerfn("r0_r"));
+    
+    mixin(registerfn("m2_shock"));
+    mixin(registerfn("r2_r1"));
+    mixin(registerfn("u2_u1"));
+    mixin(registerfn("p2_p1"));
+    mixin(registerfn("T2_T1"));
+    mixin(registerfn("p02_p01"));
+    mixin(registerfn("DS_Cv"));
+    mixin(registerfn("pitot_p"));
+
+    mixin(registerfn("T0_T0star"));
+    mixin(registerfn("M_Rayleigh"));
+    mixin(registerfn("T_Tstar"));
+    mixin(registerfn("p_pstar"));
+    mixin(registerfn("r_rstar"));
+    mixin(registerfn("p0_p0star"));
+
+    mixin(registerfn("PM1"));
+    mixin(registerfn("PM2"));
+    mixin(registerfn("MachAngle"));
+
     mixin(registerfn("beta_obl"));
+    mixin(registerfn("beta_obl2"));
+    mixin(registerfn("theta_obl"));
+    mixin(registerfn("dtan_theta"));
     mixin(registerfn("M2_obl"));
+    mixin(registerfn("r2_r1_obl"));
+    mixin(registerfn("u2_u1_obl"));
+    mixin(registerfn("V2_V1_obl"));
     mixin(registerfn("p2_p1_obl"));
+    mixin(registerfn("T2_T1_obl"));
+    mixin(registerfn("p02_p01_obl"));
 
     lua_setglobal(L, idealgasflowMT.toStringz);
 } // end registeridealgasflowFunctions()

@@ -95,6 +95,7 @@ unittest {
     double g = 1.4;
     assert(approxEqual(T0_T(M,g), 2.152), "Total temperature fail");
     assert(approxEqual(p0_p(M,g), 14.620), "Total pressure fail");
+    assert(approxEqual(r0_r(M,g), 6.7937), "Total density fail");
 }
 
 //------------------------------------------------------------------
@@ -456,7 +457,6 @@ double MachAngle(double M)
 unittest {
     double M = 2.4;
     double g = 1.4;
-    assert(approxEqual(PM1(M,g), 0.6413), "Prandtl-Meyer fail");
     assert(approxEqual(PM1(M,g), 0.6413), "Prandtl-Meyer fail");
     try {
 	PM1(0.8,g);

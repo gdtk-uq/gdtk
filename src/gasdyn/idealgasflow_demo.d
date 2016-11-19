@@ -23,7 +23,6 @@ void main(){
     writeln("Test: NuFromM...");
     writeln("...returns nu = ",PM1(M,g));
     writeln("Literature value = 0.6413");
-    // [TODO] These tests for subsonic values should go into the unittest.
     writeln("...provided M=0.8:");
     try {
 	PM1(0.8,g);
