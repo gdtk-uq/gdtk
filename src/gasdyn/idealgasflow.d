@@ -718,5 +718,190 @@ unittest {
 
 //------------------------------------------------------------------------
 
-/// [TODO] Taylor-Maccoll cone flow.
+/// Taylor-Maccoll cone flow.
+import std.stdio;
+import nm.bbla;
+import nm.ridder; // FIXME -- really want my sceant method back...
 
+double[] taylor_maccoll_odes(double[] z, double theta, double g=1.4)
+{
+    /**
+    The ODEs from the Taylor-Maccoll formulation.
+
+    See PJ's workbook for Feb 2012 for details.
+    We've packaged them formally so that we might one day use
+    a more sophisticated ODE integrator requiring fewer steps.
+    **/
+    double rho=z[0]; double V_r=z[1]; double V_theta=z[2]; double h=z[3]; double p=z[4];
+    // Assemble linear system for determining the derivatives wrt theta.
+    auto A = zeros(5,6); // Augmented matrix with rhs in last column.
+    A[0,0] = V_theta; A[0,2] = rho; A[0,5] = -2.0*rho*V_r - rho*V_theta/tan(theta);
+    A[1,1] = 1.0; A[1,5] = V_theta;
+    A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0;
+    A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0;
+    A[4,0] = h*(g-1)/g; A[4,3] = rho*(g-1)/g; A[4,4] = -1.0;
+    gaussJordanElimination(A);
+    double[] dzdtheta =  A.getColumn(5);
+    return dzdtheta;
+}
+
+double[] theta_cone(double V1, double p1, double T1, double beta, double R=287.1, double g=1.4)
+{
+    /**
+    Compute the cone-surface angle and conditions given the shock wave angle.
+
+    :param V1: speed of gas into shock
+    :param p1: free-stream pressure
+    :param T1: free-stream static temperature
+    :param beta: shock wave angle wrt stream direction (in radians)
+    :param R: gas constant
+    :param g: ratio of specific heats
+    :returns: tuple of theta_c, V_c, p_c, T_c:
+        theta_c is stream deflection angle in radians
+        V_c is the cone-surface speed of gas in m/s
+        p_c is the cone-surface pressure
+        T_c is the cone-surface static temperature
+
+    The computation starts with the oblique-shock jump and then integrates
+    across theta until V_theta goes through zero.
+    The cone surface corresponds to V_theta == 0.
+
+    .. Versions: This ideal-gas version adapted from the cea2_gas_flow version, 08-Mar-2012.
+       24-Jun-2012 : RJG added checks to catch the limiting case when beta < mu
+                   : and a linear interpolation when beta is only slightly larger
+                   : than mu (1% larger)
+       2016-11-19 ported to D by PJ
+    **/
+    // When beta is only this fraction larger than mu,
+    // we'll apply a linear interpolation
+    enum LINEAR_INTERP_SWITCH = 1.01;
+    // Free-stream properties and gas model.
+    double a1 = sqrt(g*R*T1);
+    double M1 = V1 / a1;
+    double C_p = R * g / (g-1);
+    double h1 = C_p * T1;
+    double rho1 = p1 / (R * T1);
+    // Test beta in relation to the Mach angle, mu
+    double mu = asin(1.0/M1);
+    double beta2 = LINEAR_INTERP_SWITCH*mu;
+    writeln("beta= ", beta, " mu= ", mu, " beta2= ", beta2); // DEBUG
+    // Test for an infinitely-weak shock angle
+    if (beta <= mu) { return [0.0, V1, p1, T1]; }
+    //
+    if (beta < beta2) {
+        // It is difficult to integrate between the shock and cone body
+        // when the shock angle is only slightly larger than the Mach
+        // angle. In this instance, find the value at LINEAR_INTER_SWITCH*mu
+        // and linearly interpolate to find the value at beta
+	auto results = theta_cone(V1, p1, T1, beta2, R, g);
+	double theta2=results[0]; double V2=results[1];
+	double p2=results[2]; double T2=results[3];
+        double frac = (beta - mu)/(beta2 - mu);
+        double theta_c = frac*theta2;
+        double V = (1.0 - frac)*V1 + frac*V2;
+        double p = (1.0 - frac)*p1 + frac*p2;
+        double T = (1.0 - frac)*T1 + frac*T2;
+        return [theta_c, V, p, T];
+    }
+    //
+    // Start at the point just downstream the oblique shock.
+    double theta_s = theta_obl(M1, beta, g);
+    double M2 = M2_obl(M1, beta, theta_s, g);
+    assert(M2 > 1.0, "gone subsonic at shock");
+    double rho2 = rho1 * r2_r1_obl(M1, beta, g);
+    double V2 = V1 * u2_u1_obl(M1, beta, g);
+    double p2 = p1 * p2_p1_obl(M1, beta, g);
+    double T2 = T1 * T2_T1_obl(M1, beta, g);
+    double h2 = T2 * C_p;
+    //
+    // Initial conditions for Taylor-Maccoll integration.
+    double dtheta = -0.05 * PI / 180.0;  // fraction-of-a-degree steps
+    double theta = beta;
+    double V_r = V2 * cos(beta - theta_s);
+    double V_theta = -V2 * sin(beta - theta_s);
+    double rho = rho2; double p = p2; double h = h2;
+    // For integrating across the shock layer, the state vector is:
+    double[5] z = [rho2, V_r, V_theta, h2, p2];
+    double[5] z_old; double theta_old= theta;
+    while (V_theta < 0.0) {
+        // Keep a copy for linear interpolation at the end.
+        z_old[] = z[]; theta_old = theta;
+        // Do the update using a low-order method (Euler) for the moment.
+        double[5] dzdtheta = taylor_maccoll_odes(z, theta, g);
+        z[] += dtheta * dzdtheta[]; theta += dtheta;
+        rho=z[0]; V_r=z[1]; V_theta=z[2]; h=z[3]; p=z[4];
+        if (false) { writeln("DEBUG theta=", theta, " V_r=", V_r, " V_theta=", V_theta); }
+    }
+    // At this point, V_theta should have crossed zero so
+    // we can linearly-interpolate the cone-surface conditions.
+    double V_theta_old = z_old[2];
+    double frac = (0.0 - V_theta_old)/(V_theta - V_theta_old);
+    double[5] z_c; z_c[] = z_old[]*(1.0-frac) + z[]*frac;
+    double theta_c = theta_old*(1.0-frac) + theta*frac;
+    // At the cone surface...
+    rho=z_c[0]; V_r=z_c[1]; V_theta=z_c[2]; h=z_c[3]; p=z_c[4];
+    double T = h / C_p;
+    assert(abs(V_theta) < 1.0e-6, "oops");
+    return [theta_c, V_r, p, T];
+} // end theta_cone()
+
+double beta_cone(double V1, double p1, double T1, double theta,
+		 double R=287.1, double g=1.4)
+{
+    /**
+    Compute the conical shock wave angle given the cone-surface deflection angle.
+
+    :param V1: speed of gas into shock
+    :param p1: free-stream pressure
+    :param T1: free-stream static temperature
+    :param theta: stream deflection angle (in radians)
+    :param R: gas constant
+    :param g: ratio of specific heats
+    :returns: shock wave angle wrt incoming stream direction (in radians)
+
+    .. This ideal-gas version adapted from the cea2_gas_flow version, 08-Mar-2012.
+    **/
+    // Free-stream properties and gas model.
+    double a1 = sqrt(g*R*T1);
+    double M1 = V1 / a1;
+    double C_p = R * g / (g-1);
+    double h1 = C_p * T1;
+    double rho1 = p1 / (R * T1);
+    // Initial guess at bracket for shock wave angle.
+    double b1 = asin(1.0/M1) * 1.01; // to be stronger than a Mach wave
+    double b2 = 1.25 * b1; // use a 1.05 perturbation for the secant method
+    auto error_in_theta = delegate (double beta_guess)
+    {
+	double[] results = theta_cone(V1, p1, T1, beta_guess, R, g);
+        double theta_guess = results[0]; // here, we only care about this value
+        return theta_guess - theta;
+    };
+    return solve!error_in_theta(b1, b2, 1.0e-4);
+} // end beta_cone()
+
+double beta_cone2(double M1, double theta, double R=287.1, double g=1.4)
+{
+    /**
+    Compute the conical shock wave angle given the cone-surface deflection angle and free stream Mach number.
+
+    :param M1: free stream Mach number
+    :param theta: stream deflection angle (in radians)
+    :param R: gas constant
+    :param g: ratio of specific heats
+    :returns: shock wave angle wrt incoming stream direction (in radians)
+
+    .. This version basically delegates work to beta_cone().
+    **/
+    // Compute free stream velocity assuming unit value temperature
+    double T1 = 1.0;
+    double a1 = sqrt(g*R*T1);
+    double V1 = M1*a1;
+    // Set free stream pressure to unit value
+    double p1 = 1.0;
+    // Now ready to call beta_cone()
+    return beta_cone(V1, p1, T1, theta, R, g);
+} // end beta_cone2()
+
+unittest {
+    writeln("FIXME -- port some of the demo for the unittest code.");
+}

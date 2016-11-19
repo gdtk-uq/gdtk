@@ -1,7 +1,8 @@
 /*
  * file: idealgasflow_demo.d
- * author: Momar Hughes
+ * author: Momar Hughes and Peter J.
  * date: 5 Apr 2015 initial code
+ *       2016-11-19 added Taylor-Maccoll demo
  */
 
 import std.stdio, std.math;
@@ -50,6 +51,27 @@ void main(){
     } catch (Error e) {
 	writeln("Caught subsonic value.");
     }
+    
+    double M1 = 1.5; double p1 = 100.0e3; double T1 = 300.0;
+    double R = 287.1; g = 1.4; double rho1 = p1/(R*T1);
+    writefln("Taylor-Maccoll cone flow demo with M1=%g", M1);
+    writeln("for M1=1.5, beta=49deg, expect theta=20deg from NACA1135.");
+    double a1 = sqrt(1.4*287*T1);
+    double V1 = M1 * a1;
+    double beta = 49.0 * PI/180;
+    double[] results = theta_cone(V1, p1, T1, beta);
+    double theta_c=results[0];  double V_c=results[1];
+    double p_c=results[2]; double T_c=results[3];
+    writeln("theta_c(deg)=", theta_c*180.0/PI, " expected 20deg, surface speed V_c=", V_c);
+    writeln("surface pressure coefficient=", (p_c - p1)/(0.5*rho1*V1*V1), " expected 0.385");
+    writefln("p_c: %g, T_c: %g", p_c, T_c);
+    writeln("");
+    writeln("Conical shock from cone with half-angle 20deg in M1=", M1);
+    beta = beta_cone(V1, p1, T1, 20.0*PI/180);
+    writeln("sigma(deg)=", beta*180/PI, " expected 49deg");
+    writeln("Repeat above test, but call beta_cone2()");
+    beta = beta_cone2(M1, 20.0*PI/180);
+    writeln("sigma(deg)=", beta*180/PI, " expected 49deg");
 	
     writeln("Finished gasdynamic demo.");
 } // end main()
