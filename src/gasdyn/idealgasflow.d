@@ -37,6 +37,8 @@ module idealgasflow;
 import std.conv;
 import std.math;
 import std.string;
+import std.stdio;
+import nm.bbla;
 import nm.bracketing;
 import nm.ridder;
 import nm.linesearch;
@@ -717,11 +719,7 @@ unittest {
 }
 
 //------------------------------------------------------------------------
-
 /// Taylor-Maccoll cone flow.
-import std.stdio;
-import nm.bbla;
-import nm.ridder; // FIXME -- really want my sceant method back...
 
 double[] taylor_maccoll_odes(double[] z, double theta, double g=1.4)
 {
@@ -732,7 +730,8 @@ double[] taylor_maccoll_odes(double[] z, double theta, double g=1.4)
     We've packaged them formally so that we might one day use
     a more sophisticated ODE integrator requiring fewer steps.
     **/
-    double rho=z[0]; double V_r=z[1]; double V_theta=z[2]; double h=z[3]; double p=z[4];
+    double rho=z[0]; double V_r=z[1]; double V_theta=z[2];
+    double h=z[3]; double p=z[4];
     // Assemble linear system for determining the derivatives wrt theta.
     auto A = zeros(5,6); // Augmented matrix with rhs in last column.
     A[0,0] = V_theta; A[0,2] = rho; A[0,5] = -2.0*rho*V_r - rho*V_theta/tan(theta);
@@ -745,7 +744,8 @@ double[] taylor_maccoll_odes(double[] z, double theta, double g=1.4)
     return dzdtheta;
 }
 
-double[] theta_cone(double V1, double p1, double T1, double beta, double R=287.1, double g=1.4)
+double[] theta_cone(double V1, double p1, double T1, double beta,
+		    double R=287.1, double g=1.4)
 {
     /**
     Compute the cone-surface angle and conditions given the shock wave angle.
@@ -766,7 +766,8 @@ double[] theta_cone(double V1, double p1, double T1, double beta, double R=287.1
     across theta until V_theta goes through zero.
     The cone surface corresponds to V_theta == 0.
 
-    .. Versions: This ideal-gas version adapted from the cea2_gas_flow version, 08-Mar-2012.
+    .. Versions: 
+       08-Mar-2012 : PJ ideal-gas version adapted from the cea2_gas_flow.py. 
        24-Jun-2012 : RJG added checks to catch the limiting case when beta < mu
                    : and a linear interpolation when beta is only slightly larger
                    : than mu (1% larger)
@@ -841,7 +842,7 @@ double[] theta_cone(double V1, double p1, double T1, double beta, double R=287.1
     // At the cone surface...
     rho=z_c[0]; V_r=z_c[1]; V_theta=z_c[2]; h=z_c[3]; p=z_c[4];
     double T = h / C_p;
-    assert(abs(V_theta) < 1.0e-6, "oops");
+    assert(abs(V_theta) < 1.0e-6, "oops, did not correctly find cone surface");
     return [theta_c, V_r, p, T];
 } // end theta_cone()
 
@@ -867,22 +868,25 @@ double beta_cone(double V1, double p1, double T1, double theta,
     double C_p = R * g / (g-1);
     double h1 = C_p * T1;
     double rho1 = p1 / (R * T1);
-    // Initial guess at bracket for shock wave angle.
-    double b1 = asin(1.0/M1) * 1.01; // to be stronger than a Mach wave
-    double b2 = 1.25 * b1; // use a 1.05 perturbation for the secant method
+    // We guess values of beta until this error measure is (close to) zero.
     auto error_in_theta = delegate (double beta_guess)
     {
 	double[] results = theta_cone(V1, p1, T1, beta_guess, R, g);
         double theta_guess = results[0]; // here, we only care about this value
         return theta_guess - theta;
     };
+    // Initial guess at bracket for shock wave angle.
+    double b1 = asin(1.0/M1) * 1.01; // to be stronger than a Mach wave
+    double b2 = 1.05 * b1;
+    bracket!error_in_theta(b1, b2, asin(1.0/M1), PI/2);
     return solve!error_in_theta(b1, b2, 1.0e-4);
 } // end beta_cone()
 
 double beta_cone2(double M1, double theta, double R=287.1, double g=1.4)
 {
     /**
-    Compute the conical shock wave angle given the cone-surface deflection angle and free stream Mach number.
+    Compute the conical shock wave angle,
+    given the cone-surface deflection angle and free stream Mach number.
 
     :param M1: free stream Mach number
     :param theta: stream deflection angle (in radians)
