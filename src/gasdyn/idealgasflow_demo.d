@@ -51,6 +51,22 @@ void main(){
     } catch (Error e) {
 	writeln("Caught subsonic value.");
     }
+
+    M = 2.0;
+    writeln("Oblique shock relations may not quite match (data is from chart)...");
+    double beta = 44.0*PI/180.0; double theta = 14.0*PI/180.0; // from chart, M=2
+    writefln("Computed: M1=%g, theta(beta=%g)=%g, beta(theta=%g)=%g",
+	     M, beta, theta_obl(M, beta), theta, beta_obl(M, theta));
+    writeln("Conditions behind shock:");
+    writefln("M2=%g, expected 1.482 (from chart, 14 degree deflection)",
+	     M2_obl(M, beta, theta));
+    writefln("Computed: T2/T1=%g, p2/p1=%g, r2/r1=%g",
+	     T2_T1_obl(M, beta), p2_p1_obl(M, beta), r2_r1_obl(M, beta));
+    writeln("Expected: T2/T1=1.249, p2/p1=2.088, r2/r1=1.673",
+	    " (approx. normal-shock table M=1.390)");
+    writefln("V2/V1=%g, p02/p01=%g", V2_V1_obl(M, beta, theta), p02_p01_obl(M, beta));
+    writeln("Expected: V2/V1=0.8304=sin(B)/sin(B-d)*r1/r2");
+    writeln("");
     
     double M1 = 1.5; double p1 = 100.0e3; double T1 = 300.0;
     double R = 287.1; g = 1.4; double rho1 = p1/(R*T1);
@@ -58,7 +74,7 @@ void main(){
     writeln("for M1=1.5, beta=49deg, expect theta=20deg from NACA1135.");
     double a1 = sqrt(1.4*287*T1);
     double V1 = M1 * a1;
-    double beta = 49.0 * PI/180;
+    beta = 49.0 * PI/180;
     double[] results = theta_cone(V1, p1, T1, beta);
     double theta_c=results[0];  double V_c=results[1];
     double p_c=results[2]; double T_c=results[3];

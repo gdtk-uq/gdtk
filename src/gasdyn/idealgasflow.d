@@ -570,7 +570,9 @@ double dtan_theta(double M1,double beta,double g=1.4)
     beta = fabs(beta);
     double dum1 = M1^^2*(cos(2.0*beta)+g)+2.0;
     double dum2 = M1^^2*sin(beta)^^2-1.0;
-    return 4.0*M1^^2*cos(beta)^^2/dum1 + 4.0*M1^^2*sin(2.0*beta)*dum2/(dum1^^2)/tan(beta) - 2.0*dum2/dum1/(sin(beta)^^2);
+    return 4.0*M1^^2*cos(beta)^^2/dum1
+	+ 4.0*M1^^2*sin(2.0*beta)*dum2/(dum1^^2)/tan(beta)
+	- 2.0*dum2/dum1/(sin(beta)^^2);
 } // end dtan_theta()
 
 /**
@@ -608,16 +610,16 @@ double r2_r1_obl(double M1, double beta, double g=1.4)
 } // end r2_r1_obl()
 
 /**
- * normal velocity ratio u2/u1 across an oblique shock.
+ * normal velocity ratio Vn2/Vn1 across an oblique shock.
  * Input:
  *   M1: upstream Mach number
  *   beta: shock angle with respect to initial flow direction (radians)
- * Returns: u2/u1
+ * Returns: Vn2/Vn1
  */
-double u2_u1_obl(double M1, double beta,double g=1.4)
+double Vn2_Vn1_obl(double M1, double beta,double g=1.4)
 {
     if (M1 < 1.0) {
-	throw new Error(text("u2_u1_obl: subsonic Mach number: ", M1));	
+	throw new Error(text("Vn2_Vn1_obl: subsonic Mach number: ", M1));	
     }
     double M1n = M1 * fabs(sin(beta));
     return u2_u1(M1n,g);	
@@ -702,8 +704,8 @@ unittest {
     assert(approxEqual(p2_p1_obl(M, beta, g), 2.088), "Oblique shock, pressure ratio fail");
     assert(approxEqual(r2_r1_obl(M, beta, g), 1.673), "Oblique shock, density ratio fail");
     assert(approxEqual(p02_p01_obl(M, beta, g), 0.9608), "Oblique shock, total-pressure fail");
-    assert(approxEqual(u2_u1_obl(M, beta, g), 0.598), "Oblique shock, normal velocity ratio fail");
-    assert(approxEqual(V2_V1_obl(M, beta,theta, g),0.828), "Oblique shock, absolute velocity ratio fail");
+    assert(approxEqual(Vn2_Vn1_obl(M, beta, g), 0.598), "Oblique shock, normal velocity ratio fail");
+    assert(approxEqual(V2_V1_obl(M, beta, theta, g),0.828), "Oblique shock, absolute velocity ratio fail");
     try {
 	beta_obl(M,40.*PI/180.,g);
     } catch (Error e) {
@@ -785,7 +787,6 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
     // Test beta in relation to the Mach angle, mu
     double mu = asin(1.0/M1);
     double beta2 = LINEAR_INTERP_SWITCH*mu;
-    writeln("beta= ", beta, " mu= ", mu, " beta2= ", beta2); // DEBUG
     // Test for an infinitely-weak shock angle
     if (beta <= mu) { return [0.0, V1, p1, T1]; }
     //
@@ -810,7 +811,7 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
     double M2 = M2_obl(M1, beta, theta_s, g);
     assert(M2 > 1.0, "gone subsonic at shock");
     double rho2 = rho1 * r2_r1_obl(M1, beta, g);
-    double V2 = V1 * u2_u1_obl(M1, beta, g);
+    double V2 = V1 * V2_V1_obl(M1, beta, theta_s, g);
     double p2 = p1 * p2_p1_obl(M1, beta, g);
     double T2 = T1 * T2_T1_obl(M1, beta, g);
     double h2 = T2 * C_p;
@@ -831,7 +832,6 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
         double[5] dzdtheta = taylor_maccoll_odes(z, theta, g);
         z[] += dtheta * dzdtheta[]; theta += dtheta;
         rho=z[0]; V_r=z[1]; V_theta=z[2]; h=z[3]; p=z[4];
-        if (false) { writeln("DEBUG theta=", theta, " V_r=", V_r, " V_theta=", V_theta); }
     }
     // At this point, V_theta should have crossed zero so
     // we can linearly-interpolate the cone-surface conditions.

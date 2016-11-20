@@ -100,7 +100,7 @@ assert(approxEqual(idealgasflow.r2_r1_obl(M, beta, g), 1.673),
        "Oblique shock, density ratio fail")
 assert(approxEqual(idealgasflow.p02_p01_obl(M, beta, g), 0.9608),
        "Oblique shock, total-pressure fail")
-assert(approxEqual(idealgasflow.u2_u1_obl(M, beta, g), 0.598),
+assert(approxEqual(idealgasflow.Vn2_Vn1_obl(M, beta, g), 0.598),
        "Oblique shock, normal velocity ratio fail")
 assert(approxEqual(idealgasflow.V2_V1_obl(M, beta,theta, g),0.828),
        "Oblique shock, absolute velocity ratio fail")
@@ -113,4 +113,3 @@ print("Done.")
     }
     writeln("End luaidealgasflow_demo.");
 }
-

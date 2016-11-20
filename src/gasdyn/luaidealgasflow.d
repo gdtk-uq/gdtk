@@ -114,7 +114,7 @@ mixin(wrapfn("theta_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("dtan_theta", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("M2_obl", ["M1", "beta", "theta", "g=1.4"]));
 mixin(wrapfn("r2_r1_obl", ["M1", "beta", "g=1.4"]));
-mixin(wrapfn("u2_u1_obl", ["M1", "beta", "g=1.4"]));
+mixin(wrapfn("Vn2_Vn1_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("V2_V1_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("p2_p1_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("T2_T1_obl", ["M1", "beta", "g=1.4"]));
@@ -166,7 +166,7 @@ void registeridealgasflowFunctions(lua_State* L)
     mixin(registerfn("dtan_theta"));
     mixin(registerfn("M2_obl"));
     mixin(registerfn("r2_r1_obl"));
-    mixin(registerfn("u2_u1_obl"));
+    mixin(registerfn("Vn2_Vn1_obl"));
     mixin(registerfn("V2_V1_obl"));
     mixin(registerfn("p2_p1_obl"));
     mixin(registerfn("T2_T1_obl"));
