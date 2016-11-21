@@ -56,6 +56,7 @@ public:
     size_t id;    // block id number
     Cell[] cells; // collection of cells in block
     Node[] nodes; // collection of nodes in block
+    MappedCells[] mapped_cells; // collection of mapped_cell
     size_t[] node_id_list; // collection of the node ids
                            // although we already have a list of the nodes
                            // having a list of the ids will make for a
@@ -63,12 +64,35 @@ public:
     size_t[string] transform_list; // a dictionary which uses the global node id
                                    // as an index to retrieve the local id stored as
                                    // a list of type size_t.
+    size_t[string] transform_cell_list; // a dictionary which uses the global cell id
+                                   // as an index to retrieve the local id stored as
+                                   // a list of type size_t.
+    size_t[] mapped_cells_list; // list of the cells that are to be mapped to
+                                // ghost cells in eilmer4. Each list entry
+                                // is made up of a list in the format:
+                                // [local id of current cell, neighbour block id, local
+                                // id of neighbour block cell]
     Boundary[string] boundary; // collection of block boundaries
     string[] bc_names; // list of boundary condition types for a block
     this(size_t id) {
 	this.id = id;
     }
 } // end class Block
+// -------------------------------------------------------------------------------------
+class MappedCells {
+public:
+    size_t global_cell_id;   // current blocks local cell id number
+    size_t global_neighbour_cell_id;  // neighbiour blocks local cell id number
+    size_t block_id;        // current blocks id
+    size_t neighbour_block_id; // neighbour blocks id
+
+    this(size_t global_cell_id, size_t global_neighbour_cell_id, size_t block_id, size_t neighbour_block_id) {
+	this.global_cell_id = global_cell_id;
+	this.global_neighbour_cell_id = global_neighbour_cell_id;
+	this.block_id = block_id;
+	this.neighbour_block_id = neighbour_block_id;
+    }
+}
 // -------------------------------------------------------------------------------------
 class Cell {
 public:
@@ -399,6 +423,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
      foreach(cell_id;0 .. ncells) {
 	 size_t partition_id = global_cells[cell_id].partition;
 	 blocks[partition_id].cells ~= global_cells[cell_id];
+	 blocks[partition_id].transform_cell_list[to!string(cell_id)] = blocks[partition_id].cells.length - 1;
 	 foreach(node_id;global_cells[cell_id].node_id_list) {
 	     if (!blocks[partition_id].node_id_list.canFind(node_id)) {
 		 blocks[partition_id].nodes ~= global_nodes[node_id];
@@ -409,13 +434,15 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 // assign interior boundaries
 	 foreach(neighbour_cell_id; global_cells[cell_id].cell_neighbour_id_list) {
 	     if (global_cells[neighbour_cell_id].partition != global_cells[cell_id].partition) {
+		 // store mapped cell information
+		 blocks[partition_id].mapped_cells ~= new MappedCells(cell_id, neighbour_cell_id, global_cells[cell_id].partition, global_cells[neighbour_cell_id].partition);
 		 // store shared face
 		 foreach(face_id; global_cells[cell_id].face_id_list) {
 		     if (global_cells[neighbour_cell_id].face_id_list.canFind(face_id)) blocks[partition_id].boundary["INTERIOR"].face_id_list ~= face_id;
 		 }
 	     }
 	 }
-     }
+     } 
      // finally assign domain boundary faces to correct blocks
      foreach(face_id;0 .. global_faces.length) {  
 	 if (global_faces[face_id].partition_id_list.length ==  1) {
@@ -434,8 +461,19 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 }
      }
      // at this point we have fully constructed the new blocks. Now write the data out to separate text files.
+     File outFile_mappedcells;
+     outFile_mappedcells = File("mapped_cells", "w");
      foreach(i;0..nparts) {
 	 writeln("-- Writing out block: #", i);
+	 // let's begin by writing out the mapped cells for the block
+	 foreach(mapped_cell; blocks[i].mapped_cells){
+	     auto primary_cell_local_id = blocks[i].transform_cell_list[to!string(mapped_cell.global_cell_id)];
+	     auto secondary_cell_local_id = blocks[mapped_cell.neighbour_block_id].transform_cell_list[to!string(mapped_cell.global_neighbour_cell_id)];
+	     outFile_mappedcells.writef("%d \t", i);
+	     outFile_mappedcells.writef("%d \t", primary_cell_local_id);
+	     outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id);
+	     outFile_mappedcells.writef("%d \n", secondary_cell_local_id);
+	 }
 	 string outputFileName = "block_" ~ to!string(i) ~ "_" ~ meshFile;
 	 File outFile;
 	 outFile = File(outputFileName, "w");
