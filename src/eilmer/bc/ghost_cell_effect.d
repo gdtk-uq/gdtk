@@ -1820,11 +1820,11 @@ public:
 		}
 		mapped_cells ~= closest_cell;
 	    }
-	    mygc.copy_values_from(mapped_cells[$-1], CopyDataOption.grid);
 	    if (list_mapped_cells) {
 		writeln("    ghost-cell-pos=", to!string(mygc.pos[0]), 
 			" mapped-cell-pos=", to!string(mapped_cells[$-1].pos[0]));
 	    }
+	    mygc.copy_values_from(mapped_cells[$-1], CopyDataOption.grid);
 	} // end foreach mygc
     } // end set_up_cell_mapping()
 
