@@ -85,12 +85,13 @@ public:
     size_t global_neighbour_cell_id;  // neighbiour blocks local cell id number
     size_t block_id;        // current blocks id
     size_t neighbour_block_id; // neighbour blocks id
-
-    this(size_t global_cell_id, size_t global_neighbour_cell_id, size_t block_id, size_t neighbour_block_id) {
+    string faceTag;
+    this(size_t global_cell_id, size_t global_neighbour_cell_id, size_t block_id, size_t neighbour_block_id, string faceTag) {
 	this.global_cell_id = global_cell_id;
 	this.global_neighbour_cell_id = global_neighbour_cell_id;
 	this.block_id = block_id;
 	this.neighbour_block_id = neighbour_block_id;
+	this.faceTag = faceTag;
     }
 }
 // -------------------------------------------------------------------------------------
@@ -434,11 +435,18 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 // assign interior boundaries
 	 foreach(neighbour_cell_id; global_cells[cell_id].cell_neighbour_id_list) {
 	     if (global_cells[neighbour_cell_id].partition != global_cells[cell_id].partition) {
-		 // store mapped cell information
-		 blocks[partition_id].mapped_cells ~= new MappedCells(cell_id, neighbour_cell_id, global_cells[cell_id].partition, global_cells[neighbour_cell_id].partition);
 		 // store shared face
 		 foreach(face_id; global_cells[cell_id].face_id_list) {
-		     if (global_cells[neighbour_cell_id].face_id_list.canFind(face_id)) blocks[partition_id].boundary["INTERIOR"].face_id_list ~= face_id;
+		     if (global_cells[neighbour_cell_id].face_id_list.canFind(face_id)) {
+			 blocks[partition_id].boundary["INTERIOR"].face_id_list ~= face_id;
+			 // facetag needs to be made with local node ids
+			 size_t[] local_node_id_list;
+			 foreach(node;global_faces[face_id].node_id_list)
+			     local_node_id_list ~= blocks[global_cells[cell_id].partition].transform_list[to!string(node)];
+			 string faceTag = makeFaceTag(local_node_id_list);
+			 // store mapped cell information
+			 blocks[partition_id].mapped_cells ~= new MappedCells(cell_id, neighbour_cell_id, global_cells[cell_id].partition, global_cells[neighbour_cell_id].partition, faceTag);
+		     }
 		 }
 	     }
 	 }
@@ -463,16 +471,24 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
      // at this point we have fully constructed the new blocks. Now write the data out to separate text files.
      File outFile_mappedcells;
      outFile_mappedcells = File("mapped_cells", "w");
+     
      foreach(i;0..nparts) {
 	 writeln("-- Writing out block: #", i);
 	 // let's begin by writing out the mapped cells for the block
+
+	 string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i) ~ "]= "; 
+	 outFile_mappedcells.writef("%s", mapped_cells_tag);
+	 auto ninterior = blocks[i].boundary["INTERIOR"].face_id_list.length;
+	 outFile_mappedcells.writef("%d \n", ninterior);
+	 
 	 foreach(mapped_cell; blocks[i].mapped_cells){
 	     auto primary_cell_local_id = blocks[i].transform_cell_list[to!string(mapped_cell.global_cell_id)];
 	     auto secondary_cell_local_id = blocks[mapped_cell.neighbour_block_id].transform_cell_list[to!string(mapped_cell.global_neighbour_cell_id)];
 	     outFile_mappedcells.writef("%d \t", i);
 	     outFile_mappedcells.writef("%d \t", primary_cell_local_id);
 	     outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id);
-	     outFile_mappedcells.writef("%d \n", secondary_cell_local_id);
+	     outFile_mappedcells.writef("%d \t", secondary_cell_local_id);
+	     outFile_mappedcells.writef("%s \n", mapped_cell.faceTag);
 	 }
 	 string outputFileName = "block_" ~ to!string(i) ~ "_" ~ meshFile;
 	 File outFile;

@@ -121,8 +121,8 @@ function FullFaceExchangeCopy:tojson()
    str = str .. '}' -- end of JSON value
    return str
 end
-
-MappedCellExchangeCopy = GhostCellEffect:new{transform_position=false,
+MappedCellExchangeCopy = GhostCellEffect:new{cell_mapping_from_file=false, fileName='mapped_cells',
+					     transform_position=false,
 					     c0=Vector3:new{x=0.0,y=0.0,z=0.0},
 					     n=Vector3:new{x=0.0,y=0.0,z=1.0},
 					     alpha=0.0,
@@ -133,6 +133,9 @@ MappedCellExchangeCopy = GhostCellEffect:new{transform_position=false,
 MappedCellExchangeCopy.type = "mapped_cell_exchange_copy"
 function MappedCellExchangeCopy:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format('"cell_mapping_from_file": %s, ',
+			      tostring(self.cell_mapping_from_file))
+   str = str .. string.format('"filename": "%s", ', self.fileName)
    str = str .. string.format('"transform_position": %s, ',
 			      tostring(self.transform_position))
    str = str .. string.format('"c0": [%.18e, %.18e, %.18e], ', self.c0.x, self.c0.y, self.c0.z)
@@ -590,7 +593,9 @@ ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
-   o.preReconAction = { MappedCellExchangeCopy:new{transform_position=o.transform_position,
+   o.preReconAction = { MappedCellExchangeCopy:new{cell_mapping_from_file=o.cell_mapping_from_file,
+						   fileName=o.fileName,
+						   transform_position=o.transform_position,
 						   c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
 						   list_mapped_cells=o.list_mapped_cells,
 						   reorient_vector_quantities=o.reorient_vector_quantities,

@@ -7,6 +7,8 @@ import std.string;
 import std.conv;
 import std.stdio;
 import std.math;
+import std.file;
+import std.algorithm;
 
 import geom;
 import grid;
@@ -120,6 +122,8 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 						   rvq, Rmatrix);
 	break;
     case "mapped_cell_exchange_copy":
+	bool cmff = getJSONbool(jsonData, "cell_mapping_from_file", false);
+	string fname = getJSONstring(jsonData, "filename", "none");
 	bool transform_pos = getJSONbool(jsonData, "transform_position", false);
 	Vector3 c0 = getJSONVector3(jsonData, "c0", Vector3(0.0,0.0,0.0));
 	Vector3 n = getJSONVector3(jsonData, "n", Vector3(0.0,0.0,1.0));
@@ -130,6 +134,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 	double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
 					      [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
 	newGCE = new GhostCellMappedCellExchangeCopy(blk_id, boundary,
+						     cmff, fname,
 						     transform_pos, c0, n, alpha, delta, lmc,
 						     rvq, Rmatrix);
 	break;
@@ -1644,6 +1649,8 @@ public:
     FVCell[] ghost_cells;
     FVCell[] mapped_cells;
     // Parameters for the calculation of the mapped-cell location.
+    bool cell_mapping_from_file;
+    string mapped_cells_filename;
     bool transform_position;
     Vector3 c0 = Vector3(0.0, 0.0, 0.0); // default origin
     Vector3 n = Vector3(0.0, 0.0, 1.0); // z-axis
@@ -1655,6 +1662,8 @@ public:
     double[] Rmatrix;
 
     this(int id, int boundary,
+	 bool cell_mapping_from_file,
+	 string mapped_cells_filename,
 	 bool transform_pos,
 	 ref const(Vector3) c0, ref const(Vector3) n, double alpha,
 	 ref const(Vector3) delta,
@@ -1663,6 +1672,8 @@ public:
 	 ref const(double[]) Rmatrix)
     {
 	super(id, boundary, "MappedCellExchangeCopy");
+	this.cell_mapping_from_file = cell_mapping_from_file;
+	this.mapped_cells_filename = mapped_cells_filename;
 	this.transform_position = transform_pos;
 	this.c0 = c0;
 	this.n = n; this.n.normalize();
@@ -1676,7 +1687,9 @@ public:
     override string toString() const
     { 
 	string str = "MappedCellExchangeCopy(" ~
-	    "transform_position=" ~ to!string(transform_position) ~
+	    "cell_mapping_from_file=" ~ to!string(cell_mapping_from_file) ~
+	    ", mapped_cells_filename=" ~ to!string(mapped_cells_filename) ~
+	    ", transform_position=" ~ to!string(transform_position) ~
 	    ", c0=" ~ to!string(c0) ~ 
 	    ", n=" ~ to!string(n) ~ 
 	    ", alpha=" ~ to!string(alpha) ~
@@ -1693,6 +1706,110 @@ public:
     }
 
     void set_up_cell_mapping()
+    {
+	if (cell_mapping_from_file)
+	    set_up_cell_mapping_from_file();
+	else
+	    set_up_cell_mapping_via_search();
+    }
+
+    void set_up_cell_mapping_from_file()
+    {
+	string makeFaceTag(const size_t[] node_id_list)
+	{
+	    // We make a tag for this face out of the vertex id numbers
+	    // sorted in ascending order, to be used as a key in an
+	    // associative array of indices.  Any cycle of the same vertices
+	    // should define the same face, so we will use this tag as
+	    // a way to check if we have made a particular face before.
+	    // Of course, permutations of the same values that are not
+	    // correct cycles will produce the same tag, however,
+	    // we'll not worry about that for now because we should only
+	    // ever be providing correct cycles.
+	    size_t[] my_id_list = node_id_list.dup();
+	    sort(my_id_list);
+	    string tag = "";
+	    size_t n = my_id_list.length;
+	    foreach(i; 0 .. n) {
+		if (i > 0) { tag ~= "-"; }
+		tag ~= format("%d", my_id_list[i]);
+	    }
+	    return tag;
+	}
+	int[2][string] mapped_cells_list; // list of cells to be mapped to ghost cells,
+	                                  // referenced by the neighbour cells id. 
+	// stage 1
+	if (!exists(mapped_cells_filename))
+	    assert(0, "mapped_cells file does not exist.");
+	// else if the file exists
+	auto f = File(mapped_cells_filename, "r");
+	string getHeaderContent(string target)
+	// Helper function to proceed through file, line-by-line,
+	// looking for a particular header line.
+	// Returns the content from the header line and leaves the file
+	// at the next line to be read, presumably with expected data.
+	{
+	    while (!f.eof) {
+		auto line = f.readln().strip();
+		if (canFind(line, target)) {
+		    auto tokens = line.split("=");
+		    return tokens[1].strip();
+		}
+	    } // end while
+	    return ""; // didn't find the target
+	}
+	string blk_id_str = to!string(blk.id);
+	string mapped_cells_tag = "NMappedCells in BLOCK[" ~ blk_id_str ~ "]";
+	auto nfaces  = to!int(getHeaderContent(mapped_cells_tag));
+	foreach(i; 0..nfaces) {
+	    auto lineContent = f.readln().strip();
+	    auto tokens = lineContent.split();
+	    int primary_blk_id = to!int(tokens[0]);
+	    int primary_cell_id = to!int(tokens[1]);
+	    int secondary_blk_id = to!int(tokens[2]);
+	    int secondary_cell_id = to!int(tokens[3]);
+	    auto faceTag = tokens[4];
+	    int[2] mapped_cell;
+	    mapped_cell[0] = secondary_blk_id;
+	    mapped_cell[1] = secondary_cell_id;
+	    mapped_cells_list[faceTag] = mapped_cell;
+	}
+	// stage 2
+	final switch (blk.grid_type) {
+	case Grid_t.unstructured_grid: 
+	    writeln("Set up mapping to unstructured-grid ghost cells");
+	    BoundaryCondition bc = blk.bc[which_boundary];
+	    foreach (i, face; bc.faces) {
+		size_t[] my_vtx_list;
+		foreach(vtx; face.vtx)
+		    my_vtx_list ~= vtx.id;
+		string faceTag =  makeFaceTag(my_vtx_list);
+		if (bc.outsigns[i] == 1) {
+		    ghost_cells ~= face.right_cell;
+		    int cell_id = to!int(face.left_cell.id);
+		    int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
+		    int ghost_cell_id = mapped_cells_list[faceTag][1];
+		    mapped_cells ~= gasBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+		} else {
+		    ghost_cells ~= face.left_cell;
+		    int cell_id = to!int(face.right_cell.id);
+		    int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
+		    int ghost_cell_id = mapped_cells_list[faceTag][1];
+		    mapped_cells ~= gasBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+		}
+		if (list_mapped_cells) {
+		    writeln("    ghost-cell-pos=", to!string(ghost_cells[$-1].pos[0]), 
+			    " mapped-cell-pos=", to!string(mapped_cells[$-1].pos[0]));
+		}
+		ghost_cells[$-1].copy_values_from(mapped_cells[$-1], CopyDataOption.grid);
+	    } // end foreach face
+	    break;
+	case Grid_t.structured_grid:
+	    throw new Error("mapped cells from file not implemented for structured grids");
+	}
+    }
+    
+    void set_up_cell_mapping_via_search()
     {
 	// Stage-2 construction for this boundary condition.
 	// Needs to be called after the cell geometries have been computed.
