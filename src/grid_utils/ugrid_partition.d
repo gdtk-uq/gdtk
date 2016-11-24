@@ -56,23 +56,16 @@ public:
     size_t id;    // block id number
     Cell[] cells; // collection of cells in block
     Node[] nodes; // collection of nodes in block
-    MappedCells[] mapped_cells; // collection of mapped_cell
+    MappedCells[] mapped_cells; // collection of mapped_cells in block
     size_t[] node_id_list; // collection of the node ids
                            // although we already have a list of the nodes
                            // having a list of the ids will make for a
-                           // fast means of checking if a node is in a block.
-    size_t[string] transform_list; // a dictionary which uses the global node id
-                                   // as an index to retrieve the local id stored as
-                                   // a list of type size_t.
-    size_t[string] transform_cell_list; // a dictionary which uses the global cell id
-                                   // as an index to retrieve the local id stored as
-                                   // a list of type size_t.
-    size_t[] mapped_cells_list; // list of the cells that are to be mapped to
-                                // ghost cells in eilmer4. Each list entry
-                                // is made up of a list in the format:
-                                // [local id of current cell, neighbour block id, local
-                                // id of neighbour block cell]
-    Boundary[string] boundary; // collection of block boundaries
+                           // fast means of checking if a node is in a block
+    size_t[size_t] transform_list; // a dictionary which uses the global node id
+                                   // as an index to retrieve the local id
+    size_t[size_t] transform_cell_list; // a dictionary which uses the global cell id
+                                   // as an index to retrieve the local id
+    Boundary[string] boundary; // collection of block boundaries attached to block
     string[] bc_names; // list of boundary condition types for a block
     this(size_t id) {
 	this.id = id;
@@ -81,11 +74,11 @@ public:
 // -------------------------------------------------------------------------------------
 class MappedCells {
 public:
-    size_t global_cell_id;   // current blocks local cell id number
-    size_t global_neighbour_cell_id;  // neighbiour blocks local cell id number
-    size_t block_id;        // current blocks id
-    size_t neighbour_block_id; // neighbour blocks id
-    string faceTag;
+    size_t global_cell_id;            // current blocks local cell id number
+    size_t global_neighbour_cell_id;  // neighbour blocks local cell id number
+    size_t block_id;                  // current blocks id
+    size_t neighbour_block_id;        // neighbour blocks id
+    string faceTag;                   // unique face identifier constructed with the faces local node ids in ascending order
     this(size_t global_cell_id, size_t global_neighbour_cell_id, size_t block_id, size_t neighbour_block_id, string faceTag) {
 	this.global_cell_id = global_cell_id;
 	this.global_neighbour_cell_id = global_neighbour_cell_id;
@@ -229,7 +222,8 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	} // end while
 	return ""; // didn't find the target
     }
-    // Collect cells
+    writeln("-- -- Reading su2 file");
+    // Proceed through su2 file and collect cells
     auto dimensions = to!int(getHeaderContent("NDIME"));
     auto ncells = to!size_t(getHeaderContent("NELEM"));
     foreach(i; 0 .. ncells) {
@@ -242,7 +236,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
  	size_t[] face_id_list; // empty, so far
 	global_cells ~= new Cell(cell_id, cell_type, node_id_list, face_id_list);
     }
-    // Collect nodes
+    // Proceed through su2 file and collect nodes
     auto nnodes = to!size_t(getHeaderContent("NPOIN"));
     foreach(i; 0 .. nnodes) {
 	auto tokens = f.readln().strip().split();
@@ -262,6 +256,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	global_nodes ~= new Node(indx, pos);
     } // end foreach i .. nnodes
     // Collect what partition each cell belongs to
+    writeln("-- -- Reading metis output file");
     f = File(partitionFile, "r");
     foreach(cell_id;0 .. ncells) {
 	auto tokens = f.readln().strip().split();
@@ -269,6 +264,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	global_cells[cell_id].partition = partition_id;
     }    
     // construct faces
+    writeln("-- -- Construct mesh faces");
     //
     // Now that we have the full list of cells and vertices assigned to each cell,
     // we can construct the faces between cells and along the boundaries.
@@ -381,11 +377,12 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
     // Now that we have a full set of cells and faces,
     // make lists of the boundary faces.
     //
+    writeln("-- -- Fill boundary face arrays");
     f = File(meshFile, "r"); 
     auto nboundaries = to!size_t(getHeaderContent("NMARK"));
     foreach(i; 0 .. nboundaries) {
 	string tag = getHeaderContent("MARKER_TAG");
-	writeln("-- Found boundary i=", i, " tag=", tag);
+	writeln("-- -- -- Found boundary i=", i, " tag=", tag);
 	size_t[] face_id_list;
 	size_t nelem = to!size_t(getHeaderContent("MARKER_ELEMS"));
 	foreach(j; 0 .. nelem) {
@@ -404,6 +401,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	} // end foreach j
 	global_boundaries ~= new Boundary(tag, face_id_list);
     } // end foreach i
+    writeln("-- -- Reading cell interconnectivity from dual format file");
     // Collect cell inter-connectivity
     f = File(dualFile, "r");
     f.readln(); // skip first line
@@ -413,141 +411,141 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	 foreach(j; 0 .. tokens.length) { global_cells[cell_id].cell_neighbour_id_list ~= to!size_t(tokens[j]) - 1 ; }	 
     }
     // At this point we have all the data we need. Now construct the new blocks.
-     // construct blocks
-     foreach(i;0 .. nparts) {
-	 blocks ~= new Block(i);
-	 // create an INTERIOR boundary for all blocks (we will fill the face id list later)
-	 size_t[] face_id_list;
-	 blocks[i].boundary["INTERIOR"] = new Boundary("INTERIOR", face_id_list);
-     }
-     // assign cells to correct blocks, as well as interior boundary faces
-     foreach(cell_id;0 .. ncells) {
-	 size_t partition_id = global_cells[cell_id].partition;
-	 blocks[partition_id].cells ~= global_cells[cell_id];
-	 blocks[partition_id].transform_cell_list[to!string(cell_id)] = blocks[partition_id].cells.length - 1;
-	 foreach(node_id;global_cells[cell_id].node_id_list) {
-	     if (!blocks[partition_id].node_id_list.canFind(node_id)) {
-		 blocks[partition_id].nodes ~= global_nodes[node_id];
-		 blocks[partition_id].node_id_list ~= node_id;
-		 blocks[partition_id].transform_list[to!string(node_id)] = blocks[partition_id].nodes.length - 1; 
-	     }
+    // construct blocks
+    writeln("-- -- Data reading complete, proceed to building blocks");
+    foreach(i;0 .. nparts) {
+	blocks ~= new Block(i);
+	// create an INTERIOR boundary for all blocks (we will fill the face id list later)
+	size_t[] face_id_list;
+	blocks[i].boundary["INTERIOR"] = new Boundary("INTERIOR", face_id_list);
+    }
+    // assign cells to correct blocks, as well as interior boundary faces
+    foreach(cell_id;0 .. ncells) {
+	size_t partition_id = global_cells[cell_id].partition;
+	blocks[partition_id].cells ~= global_cells[cell_id];
+	blocks[partition_id].transform_cell_list[cell_id] = blocks[partition_id].cells.length - 1;
+	foreach(node_id;global_cells[cell_id].node_id_list) {
+	    if (!blocks[partition_id].node_id_list.canFind(node_id)) {
+		blocks[partition_id].nodes ~= global_nodes[node_id];
+		blocks[partition_id].node_id_list ~= node_id;
+		blocks[partition_id].transform_list[node_id] = blocks[partition_id].nodes.length - 1; 
+	    }
+	}
+	// assign interior boundaries
+	foreach(neighbour_cell_id; global_cells[cell_id].cell_neighbour_id_list) {
+	    if (global_cells[neighbour_cell_id].partition != global_cells[cell_id].partition) {
+		// store shared face
+		foreach(face_id; global_cells[cell_id].face_id_list) {
+		    if (global_cells[neighbour_cell_id].face_id_list.canFind(face_id)) {
+			blocks[partition_id].boundary["INTERIOR"].face_id_list ~= face_id;
+			// facetag needs to be made with local node ids
+			size_t[] local_node_id_list;
+			foreach(node;global_faces[face_id].node_id_list)
+			    local_node_id_list ~= blocks[global_cells[cell_id].partition].transform_list[node];
+			string faceTag = makeFaceTag(local_node_id_list);
+			// store mapped cell information
+			blocks[partition_id].mapped_cells ~= new MappedCells(cell_id, neighbour_cell_id, global_cells[cell_id].partition, global_cells[neighbour_cell_id].partition, faceTag);
+		    }
+		}
+	    }
 	 }
-	 // assign interior boundaries
-	 foreach(neighbour_cell_id; global_cells[cell_id].cell_neighbour_id_list) {
-	     if (global_cells[neighbour_cell_id].partition != global_cells[cell_id].partition) {
-		 // store shared face
-		 foreach(face_id; global_cells[cell_id].face_id_list) {
-		     if (global_cells[neighbour_cell_id].face_id_list.canFind(face_id)) {
-			 blocks[partition_id].boundary["INTERIOR"].face_id_list ~= face_id;
-			 // facetag needs to be made with local node ids
-			 size_t[] local_node_id_list;
-			 foreach(node;global_faces[face_id].node_id_list)
-			     local_node_id_list ~= blocks[global_cells[cell_id].partition].transform_list[to!string(node)];
-			 string faceTag = makeFaceTag(local_node_id_list);
-			 // store mapped cell information
-			 blocks[partition_id].mapped_cells ~= new MappedCells(cell_id, neighbour_cell_id, global_cells[cell_id].partition, global_cells[neighbour_cell_id].partition, faceTag);
-		     }
-		 }
-	     }
-	 }
-     } 
-     // finally assign domain boundary faces to correct blocks
-     foreach(face_id;0 .. global_faces.length) {  
-	 if (global_faces[face_id].partition_id_list.length ==  1) {
-	     foreach(i;0 .. nboundaries) {
-		 if (global_boundaries[i].face_id_list.canFind(face_id)) {
-		     auto partition_id = global_faces[face_id].partition_id_list[0];
-		     string tag = global_boundaries[i].tag;
-		     if (!blocks[partition_id].bc_names.canFind(tag)) {
-			 size_t[] face_id_list;
-			 blocks[partition_id].boundary[tag] = new Boundary(tag, face_id_list);
-			 blocks[partition_id].bc_names ~= tag;
-		     }
-		     blocks[partition_id].boundary[tag].face_id_list ~= face_id;
-		 }                                                                 
-	     }
-	 }
-     }
-     // at this point we have fully constructed the new blocks. Now write the data out to separate text files.
-     File outFile_mappedcells;
-     outFile_mappedcells = File("mapped_cells", "w");
-     
-     foreach(i;0..nparts) {
-	 writeln("-- Writing out block: #", i);
-	 // let's begin by writing out the mapped cells for the block
-
-	 string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i) ~ "]= "; 
-	 outFile_mappedcells.writef("%s", mapped_cells_tag);
-	 auto ninterior = blocks[i].boundary["INTERIOR"].face_id_list.length;
-	 outFile_mappedcells.writef("%d \n", ninterior);
-	 
-	 foreach(mapped_cell; blocks[i].mapped_cells){
-	     auto primary_cell_local_id = blocks[i].transform_cell_list[to!string(mapped_cell.global_cell_id)];
-	     auto secondary_cell_local_id = blocks[mapped_cell.neighbour_block_id].transform_cell_list[to!string(mapped_cell.global_neighbour_cell_id)];
-	     outFile_mappedcells.writef("%d \t", i);
-	     outFile_mappedcells.writef("%d \t", primary_cell_local_id);
-	     outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id);
-	     outFile_mappedcells.writef("%d \t", secondary_cell_local_id);
-	     outFile_mappedcells.writef("%s \n", mapped_cell.faceTag);
-	 }
-	 string outputFileName = "block_" ~ to!string(i) ~ "_" ~ meshFile;
-	 File outFile;
-	 outFile = File(outputFileName, "w");
-	 outFile.writeln("%");
-	 outFile.writeln("% Problem dimension");
-	 outFile.writeln("%");
-	 outFile.writef("NDIME= %d \n", dimensions);
-	 outFile.writeln("%");
-	 outFile.writeln("% Inner element connectivity");
-	 outFile.writeln("%");
-	 outFile.writef("NELEM= %d \n", blocks[i].cells.length);
-	 foreach(cell_id;0 .. blocks[i].cells.length) {
-	     outFile.writef("%d \t", blocks[i].cells[cell_id].type);
-	     foreach(j;0 .. blocks[i].cells[cell_id].node_id_list.length) {
-		 auto local_node_id = blocks[i].transform_list[to!string(blocks[i].cells[cell_id].node_id_list[j])];
-		 outFile.writef("%d \t", local_node_id);
-	     }
-	     outFile.writef("%d \n", cell_id); //blocks[i].cells[cell_id].id);
-	 }
-	 outFile.writeln("%");
-	 outFile.writeln("% Node coordinates");
-	 outFile.writeln("%");
-	 outFile.writef("NPOIN= %d \n", blocks[i].nodes.length);
-	 foreach(local_node_id;0 .. blocks[i].nodes.length) {
-	     foreach(j;0 .. dimensions) { // blocks[i].nodes[node_id].pos.length)
-		 outFile.writef("%.17f \t", blocks[i].nodes[local_node_id].pos[j]);
-	     }
-	     outFile.writef("%d \n", local_node_id);
-	 }
-	 outFile.writeln("%");
-	 outFile.writeln("% Boundary elements");
-	 outFile.writeln("%");
-	 outFile.writef("NMARK= %d \n", blocks[i].boundary.length);
-	 foreach(bndary; blocks[i].boundary) {
-	     outFile.writef("MARKER_TAG= %s \n", bndary.tag);
-	     outFile.writef("MARKER_ELEMS= %s \n", bndary.face_id_list.length);
-	     foreach(face_id; bndary.face_id_list) {
-		 switch(global_faces[face_id].node_id_list.length) {
-		 case 2: // line
-		     outFile.writef("3 \t");
-		     break;
-		 case 3: // tri
-		     outFile.writef("5 \t");
-		     break;
-		 case 4: // rectangle
-		     outFile.writef("9 \t");
-		     break;
-		 default:
-		     throw new Exception("invalid element type");
-		 }
-		 foreach(node_id; global_faces[face_id].node_id_list) {
-		     auto local_node_id = blocks[i].transform_list[to!string(node_id)];
-		     outFile.writef("%d \t", local_node_id);
-		 }
-		 outFile.writef("\n");
-	     }
-	 }
-     }
+    } 
+    // finally assign domain boundary faces to correct blocks
+    foreach(face_id;0 .. global_faces.length) {  
+	if (global_faces[face_id].partition_id_list.length ==  1) {
+	    foreach(i;0 .. nboundaries) {
+		if (global_boundaries[i].face_id_list.canFind(face_id)) {
+		    auto partition_id = global_faces[face_id].partition_id_list[0];
+		    string tag = global_boundaries[i].tag;
+		    if (!blocks[partition_id].bc_names.canFind(tag)) {
+			size_t[] face_id_list;
+			blocks[partition_id].boundary[tag] = new Boundary(tag, face_id_list);
+			blocks[partition_id].bc_names ~= tag;
+		    }
+		    blocks[partition_id].boundary[tag].face_id_list ~= face_id;
+		}                                                                 
+	    }
+	}
+    }
+    // at this point we have fully constructed the new blocks. Now write the data out to separate text files.
+    // NB. cells and nodes use their local ids.
+    File outFile_mappedcells;
+    outFile_mappedcells = File("mapped_cells", "w");
+    
+    foreach(i;0..nparts) {
+	writeln("-- Writing out block: #", i);
+	// let's begin by writing out the mapped cells for the block
+	
+	string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i) ~ "]= "; 
+	outFile_mappedcells.writef("%s", mapped_cells_tag);
+	auto ninterior = blocks[i].boundary["INTERIOR"].face_id_list.length;
+	outFile_mappedcells.writef("%d \n", ninterior);
+	
+	foreach(mapped_cell; blocks[i].mapped_cells){
+	    auto primary_cell_local_id = blocks[i].transform_cell_list[mapped_cell.global_cell_id];
+	    auto secondary_cell_local_id = blocks[mapped_cell.neighbour_block_id].transform_cell_list[mapped_cell.global_neighbour_cell_id];
+	    outFile_mappedcells.writef("%s \t", mapped_cell.faceTag);
+	    outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id);
+	    outFile_mappedcells.writef("%d \n", secondary_cell_local_id);
+	}
+	string outputFileName = "block_" ~ to!string(i) ~ "_" ~ meshFile;
+	File outFile;
+	outFile = File(outputFileName, "w");
+	outFile.writeln("%");
+	outFile.writeln("% Problem dimension");
+	outFile.writeln("%");
+	outFile.writef("NDIME= %d \n", dimensions);
+	outFile.writeln("%");
+	outFile.writeln("% Inner element connectivity");
+	outFile.writeln("%");
+	outFile.writef("NELEM= %d \n", blocks[i].cells.length);
+	foreach(cell_id;0 .. blocks[i].cells.length) {
+	    outFile.writef("%d \t", blocks[i].cells[cell_id].type);
+	    foreach(j;0 .. blocks[i].cells[cell_id].node_id_list.length) {
+		auto local_node_id = blocks[i].transform_list[blocks[i].cells[cell_id].node_id_list[j]];
+		outFile.writef("%d \t", local_node_id);
+	    }
+	    outFile.writef("%d \n", cell_id); //blocks[i].cells[cell_id].id);
+	}
+	outFile.writeln("%");
+	outFile.writeln("% Node coordinates");
+	outFile.writeln("%");
+	outFile.writef("NPOIN= %d \n", blocks[i].nodes.length);
+	foreach(local_node_id;0 .. blocks[i].nodes.length) {
+	    foreach(j;0 .. dimensions) { // blocks[i].nodes[node_id].pos.length)
+		outFile.writef("%.17f \t", blocks[i].nodes[local_node_id].pos[j]);
+	    }
+	    outFile.writef("%d \n", local_node_id);
+	}
+	outFile.writeln("%");
+	outFile.writeln("% Boundary elements");
+	outFile.writeln("%");
+	outFile.writef("NMARK= %d \n", blocks[i].boundary.length);
+	foreach(bndary; blocks[i].boundary) {
+	    outFile.writef("MARKER_TAG= %s \n", bndary.tag);
+	    outFile.writef("MARKER_ELEMS= %s \n", bndary.face_id_list.length);
+	    foreach(face_id; bndary.face_id_list) {
+		switch(global_faces[face_id].node_id_list.length) {
+		case 2: // line
+		    outFile.writef("3 \t");
+		    break;
+		case 3: // tri
+		    outFile.writef("5 \t");
+		    break;
+		case 4: // rectangle
+		    outFile.writef("9 \t");
+		    break;
+		default:
+		    throw new Exception("invalid element type");
+		}
+		foreach(node_id; global_faces[face_id].node_id_list) {
+		    auto local_node_id = blocks[i].transform_list[node_id];
+		    outFile.writef("%d \t", local_node_id);
+		}
+		outFile.writef("\n");
+	    }
+	}
+    }
 }
 
 int main(string[] args){

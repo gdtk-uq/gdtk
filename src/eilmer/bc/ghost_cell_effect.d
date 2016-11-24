@@ -1738,7 +1738,7 @@ public:
 	}
 	int[2][string] mapped_cells_list; // list of cells to be mapped to ghost cells,
 	                                  // referenced by the neighbour cells id. 
-	// stage 1
+	// Stage 1 -- read mapped_cells file
 	if (!exists(mapped_cells_filename))
 	    assert(0, "mapped_cells file does not exist.");
 	// else if the file exists
@@ -1764,17 +1764,15 @@ public:
 	foreach(i; 0..nfaces) {
 	    auto lineContent = f.readln().strip();
 	    auto tokens = lineContent.split();
-	    int primary_blk_id = to!int(tokens[0]);
-	    int primary_cell_id = to!int(tokens[1]);
-	    int secondary_blk_id = to!int(tokens[2]);
-	    int secondary_cell_id = to!int(tokens[3]);
-	    auto faceTag = tokens[4];
+	    int secondary_blk_id = to!int(tokens[1]);
+	    int secondary_cell_id = to!int(tokens[2]);
+	    auto faceTag = tokens[0];
 	    int[2] mapped_cell;
 	    mapped_cell[0] = secondary_blk_id;
 	    mapped_cell[1] = secondary_cell_id;
 	    mapped_cells_list[faceTag] = mapped_cell;
 	}
-	// stage 2
+	// Stage 2 -- map cells
 	final switch (blk.grid_type) {
 	case Grid_t.unstructured_grid: 
 	    writeln("Set up mapping to unstructured-grid ghost cells");
@@ -1786,13 +1784,11 @@ public:
 		string faceTag =  makeFaceTag(my_vtx_list);
 		if (bc.outsigns[i] == 1) {
 		    ghost_cells ~= face.right_cell;
-		    int cell_id = to!int(face.left_cell.id);
 		    int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
 		    int ghost_cell_id = mapped_cells_list[faceTag][1];
 		    mapped_cells ~= gasBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
 		} else {
 		    ghost_cells ~= face.left_cell;
-		    int cell_id = to!int(face.right_cell.id);
 		    int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
 		    int ghost_cell_id = mapped_cells_list[faceTag][1];
 		    mapped_cells ~= gasBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
