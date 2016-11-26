@@ -131,7 +131,6 @@ EtaStrategy etaStrategyFromName(string name)
 
 struct SteadyStateSolverOptions {
     int nConserved = 4;
-    double sigma = 1.0e-8;  // presently, we overwrite this with sqrt(n*epsilon)
     bool usePreconditioning = true;
     int nPreSteps = 10;
     int nTotalSteps = 100;
@@ -147,9 +146,11 @@ struct SteadyStateSolverOptions {
     double cfl0 = 1.0;
     double eta0 = 0.5;
     double tau0 = 0.1;
+    double sigma0 = 1.0e-8;
     // Options for inexact Newton phase
     double cfl1 = 10.0;
     double tau1 = 0.1;
+    double sigma1 = 1.0e-8;
     EtaStrategy etaStrategy = EtaStrategy.constant;
     double eta1 = 0.5;
     double eta1_max = 0.9;
@@ -1002,8 +1003,6 @@ void read_control_file()
     
     version (steady_state) {
     auto sssOptions = jsonData["steady_state_solver_options"];
-    GlobalConfig.sssOptions.sigma = getJSONdouble(sssOptions, "sigma", GlobalConfig.sssOptions.sigma);
-
     GlobalConfig.sssOptions.usePreconditioning = getJSONbool(sssOptions, "use_preconditioning", GlobalConfig.sssOptions.usePreconditioning);
     GlobalConfig.sssOptions.nPreSteps = 
 	getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
@@ -1030,11 +1029,15 @@ void read_control_file()
 	getJSONdouble(sssOptions, "eta0", GlobalConfig.sssOptions.eta0);
     GlobalConfig.sssOptions.tau0 =
 	getJSONdouble(sssOptions, "tau0", GlobalConfig.sssOptions.tau0);
+    GlobalConfig.sssOptions.sigma0 =
+	getJSONdouble(sssOptions, "sigma0", GlobalConfig.sssOptions.sigma0);
     // Setting for inexact Newton phase
     GlobalConfig.sssOptions.cfl1 =
 	getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
     GlobalConfig.sssOptions.tau1 =
 	getJSONdouble(sssOptions, "tau1", GlobalConfig.sssOptions.tau1);
+    GlobalConfig.sssOptions.sigma1 =
+	getJSONdouble(sssOptions, "sigma1", GlobalConfig.sssOptions.sigma1);
     { 
 	auto mySaveValue = GlobalConfig.sssOptions.etaStrategy;
 	try {

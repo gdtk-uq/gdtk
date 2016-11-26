@@ -173,14 +173,15 @@ void iterate_to_steady_state(int maxCPUs)
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
     int nConserved = GlobalConfig.sssOptions.nConserved;
-    double sigma = sqrt(gasBlocks[0].cells.length * nConserved * double.epsilon);
     // Settings for start-up phase
     double cfl0 = GlobalConfig.sssOptions.cfl0;
     double tau0 = GlobalConfig.sssOptions.tau0;
     double eta0 = GlobalConfig.sssOptions.eta0;
+    double sigma0 = GlobalConfig.sssOptions.sigma0;
     // Settings for inexact Newton phase
     double cfl1 = GlobalConfig.sssOptions.cfl1;
     double tau1 = GlobalConfig.sssOptions.tau1;
+    double sigma1 = GlobalConfig.sssOptions.sigma1;
     EtaStrategy etaStrategy = GlobalConfig.sssOptions.etaStrategy;
     double eta1 = GlobalConfig.sssOptions.eta1;
     double eta1_max = GlobalConfig.sssOptions.eta1_max;
@@ -239,7 +240,7 @@ void iterate_to_steady_state(int maxCPUs)
     foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
     foreach ( preStep; -nPreSteps .. 0 ) {
 	foreach (attempt; 0 .. maxNumberAttempts) {
-	    FGMRES_solve(pseudoSimTime, dt, eta0, withPreconditioning, normOld, nRestarts);
+	    FGMRES_solve(pseudoSimTime, dt, eta0, sigma0, withPreconditioning, normOld, nRestarts);
 	    foreach (blk; parallel(gasBlocks,1)) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
@@ -340,6 +341,7 @@ void iterate_to_steady_state(int maxCPUs)
     // Begin Newton steps
     double eta;
     double tau;
+    double sigma;
     foreach (step; 1 .. nsteps+1) {
 	residualsUpToDate = false;
 	if ( step <= nStartUpSteps ) {
@@ -347,17 +349,19 @@ void iterate_to_steady_state(int maxCPUs)
 	    withPreconditioning = false;
 	    eta = eta0;
 	    tau = tau0;
+	    sigma = sigma0;
 	}
 	else {
 	    foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(interpOrderSave);
 	    withPreconditioning = GlobalConfig.sssOptions.usePreconditioning;
 	    eta = eta1;
 	    tau = tau1;
+	    sigma = sigma1;
 	}
 
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    failedAttempt = false;
-	    FGMRES_solve(pseudoSimTime, dt, eta, withPreconditioning, normNew, nRestarts);
+	    FGMRES_solve(pseudoSimTime, dt, eta, sigma, withPreconditioning, normNew, nRestarts);
 	    foreach (blk; parallel(gasBlocks,1)) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
@@ -673,9 +677,8 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
 }
 
-void evalJacobianVecProd(double pseudoSimTime)
+void evalJacobianVecProd(double pseudoSimTime, double sigma)
 {
-    double sigma = sqrt(nTotalVars*double.epsilon);
     int nConserved = GlobalConfig.sssOptions.nConserved;
     // We perform a Frechet derivative to evaluate J*z
     foreach (blk; parallel(gasBlocks,1)) {
@@ -769,9 +772,8 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
 }
 
 
-void evalJacobianVecProd(Block blk, double pseudoSimTime)
+void evalJacobianVecProd(Block blk, double pseudoSimTime, double sigma)
 {
-    double sigma = sqrt(blk.nvars*double.epsilon);
     int nConserved = blk.myConfig.sssOptions.nConserved;
     // We perform a Frechet derivative to evaluate J*v
     blk.clear_fluxes_of_conserved_quantities();
@@ -798,7 +800,7 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime)
 }
 
 
-void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPreconditioning, ref double residual, ref int nRestarts)
+void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, bool withPreconditioning, ref double residual, ref int nRestarts)
 {
     double resid;
     int nConserved = GlobalConfig.sssOptions.nConserved;
@@ -916,7 +918,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    iterCount = j+1;
 	    if ( withPreconditioning ) {
 		foreach (blk; parallel(gasBlocks,1)) {
-		    GMRES_solve(blk, pseudoSimTime, dt);
+		    GMRES_solve(blk, pseudoSimTime, dt, sigma);
 		}
 	    }
 	    else {
@@ -938,7 +940,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 	    }
 	
 	    // Evaluate Jz and place result in z_outer
-	    evalJacobianVecProd(pseudoSimTime);
+	    evalJacobianVecProd(pseudoSimTime, sigma);
 	    // Now we can complete calculation of w
 	    foreach (blk; parallel(gasBlocks,1)) {
 		foreach (k; 0 .. blk.nvars)  blk.w_outer[k] += blk.z_outer[k];
@@ -1087,7 +1089,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, bool withPrecondi
 }
 
 
-void GMRES_solve(Block blk, double pseudoSimTime, double dt)
+void GMRES_solve(Block blk, double pseudoSimTime, double dt, double sigma)
 {
     // We always perform 'nInnerIterations' for the preconditioning step
     // That is, we do NOT stop on some tolerance in this solve.
@@ -1125,7 +1127,7 @@ void GMRES_solve(Block blk, double pseudoSimTime, double dt)
 	    blk.w_inner[k] = dtInv*blk.v_inner[k];
 	}
 	// Evaluate Jv and place in v
-	evalJacobianVecProd(blk, pseudoSimTime);
+	evalJacobianVecProd(blk, pseudoSimTime, sigma);
 	// Complete calculation of w.
 	foreach (k; 0 .. n) blk.w_inner[k] += blk.v_inner[k];
 

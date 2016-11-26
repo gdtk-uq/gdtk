@@ -25,7 +25,6 @@ applyGridproConnectivity = gridpro.applyGridproConnectivity
 -- Storage for steady-state solver settings
 sssOptionsHidden = { -- hidden from user
    -- set defaults here
-   sigma = 1.0e-8,
    use_preconditioning = true,
    number_pre_steps = 10,
    number_total_steps = 100,
@@ -41,9 +40,11 @@ sssOptionsHidden = { -- hidden from user
    cfl0 = 1.0,
    eta0 = 0.5,
    tau0 = 0.1,
+   sigma0 = 1.0e-8,
    -- Options for inexact Newton phase
    cfl1 = 10.0,
    tau1 = 0.1,
+   sigma1 = 1.0e-8,
    eta_strategy = "constant",
    eta1 = 0.5,
    eta1_max = 0.9,
@@ -965,7 +966,6 @@ function write_control_file(fileName)
    f:write(string.format('"dt_history": %.18e,\n', config.dt_history))
    f:write(string.format('"halt_now": %d,\n', config.halt_now))
    f:write('"steady_state_solver_options" : {\n')
-   f:write(string.format('   "sigma": %.18e,\n', SteadyStateSolver.sigma))
    f:write(string.format('   "use_preconditioning": %s,\n', tostring(SteadyStateSolver.use_preconditioning)))
    f:write(string.format('   "number_pre_steps": %d,\n', SteadyStateSolver.number_pre_steps))
    f:write(string.format('   "number_total_steps": %d,\n', SteadyStateSolver.number_total_steps))
@@ -979,8 +979,10 @@ function write_control_file(fileName)
    f:write(string.format('   "cfl0": %.18e,\n', SteadyStateSolver.cfl0))
    f:write(string.format('   "eta0": %.18e,\n', SteadyStateSolver.eta0))
    f:write(string.format('   "tau0": %.18e,\n', SteadyStateSolver.tau0))
+   f:write(string.format('   "sigma0": %.18e,\n', SteadyStateSolver.sigma0))
    f:write(string.format('   "cfl1": %.18e,\n', SteadyStateSolver.cfl1))
    f:write(string.format('   "tau1": %.18e,\n', SteadyStateSolver.tau1))
+   f:write(string.format('   "sigma1": %.18e,\n', SteadyStateSolver.sigma1))
    f:write(string.format('   "eta_strategy": "%s",\n', SteadyStateSolver.eta_strategy))
    f:write(string.format('   "eta1": %.18e,\n', SteadyStateSolver.eta1))
    f:write(string.format('   "eta1_max": %.18e,\n', SteadyStateSolver.eta1_max))
