@@ -159,8 +159,8 @@ struct SteadyStateSolverOptions {
     double gamma = 0.9;
     double alpha = 2.0;
     // Options related to writing out snapshots and diagnostics
-    int snapshotsFrequency = 10;
-    int snapshotsCount = 1;
+    int snapshotsCount = 10;
+    int nTotalSnapshots = 5;
     int writeDiagnosticsCount = 20;
 }
 
@@ -1060,10 +1060,10 @@ void read_control_file()
     GlobalConfig.sssOptions.alpha =
 	getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
     // Settings for writing out snapshots and diagnostics
-    GlobalConfig.sssOptions.snapshotsFrequency = 
-	getJSONint(sssOptions, "snapshots_frequency", GlobalConfig.sssOptions.snapshotsFrequency);
     GlobalConfig.sssOptions.snapshotsCount = 
 	getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
+    GlobalConfig.sssOptions.nTotalSnapshots = 
+	getJSONint(sssOptions, "number_total_snapshots", GlobalConfig.sssOptions.nTotalSnapshots);
     GlobalConfig.sssOptions.writeDiagnosticsCount = 
 	getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
     }

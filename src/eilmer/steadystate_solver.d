@@ -40,6 +40,7 @@ import fvcore;
 import fileutil;
 import user_defined_source_terms;
 import conservedquantities;
+import postprocess : readTimesFile;
 
 static int fnCount = 0;
 static int nTotalVars;
@@ -54,8 +55,6 @@ Matrix Gamma_outer;
 Matrix Q0_outer;
 Matrix Q1_outer;
 
-
-
 void main(string[] args)
 {
     writeln("Eilmer compressible-flow simulation code -- steady state solver.");
@@ -65,7 +64,7 @@ void main(string[] args)
     msg       ~= "e4sss    [--job=<string>]            file names built from this string\n";
     msg       ~= "         [--verbosity=<int>]         defaults to 0\n";
     msg       ~= "\n";
-    msg       ~= "         [--restart]                 start from latest available iteration\n";
+    msg       ~= "         [--snapshot-start=<int>|last] defaults to 0\n";
     msg       ~= "         [--max-cpus=<int>]          defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
     msg       ~= "         [--max-wall-clock=<int>]    in seconds\n";
@@ -78,8 +77,8 @@ void main(string[] args)
     }
     string jobName = "";
     int verbosityLevel = 0;
-    int tindxStart = 0;
-    bool restart = false;
+    string snapshotStartStr = "0";
+    int snapshotStart = 0;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool helpWanted = false;
@@ -87,7 +86,7 @@ void main(string[] args)
 	getopt(args,
 	       "job", &jobName,
 	       "verbosity", &verbosityLevel,
-	       "restart", &restart,
+	       "snapshot-start", &snapshotStartStr,
 	       "max-cpus", &maxCPUs,
 	       "max-wall-clock", &maxWallClock,
 	       "help", &helpWanted
@@ -115,27 +114,28 @@ void main(string[] args)
     GlobalConfig.verbosity_level = verbosityLevel;
     maxCPUs = min(max(maxCPUs, 1), totalCPUs); // don't ask for more than available
 
-    if (restart) {
-	string errMsg = "Restart option not yet implemented.";
-	throw new Error(errMsg);
-	/*
-	auto times_dict = readTimesFile(jobName);
-	auto tindx_list = times_dict.keys;
-	sort(tindx_list);
-	tindxStart = tindx_list[$-1];
-	*/
-    }
-
     if (verbosityLevel > 0) {
 	writeln("Begin simulation with command-line arguments.");
 	writeln("  jobName: ", jobName);
-	writeln("  restart: ", restart);
+	writeln("  snapshotStart: ", snapshotStartStr);
 	writeln("  maxWallClock: ", maxWallClock);
 	writeln("  verbosityLevel: ", verbosityLevel);
 	writeln("  maxCPUs: ", maxCPUs);
     }
-	
-    init_simulation(tindxStart, maxCPUs, maxWallClock);
+
+    switch (snapshotStartStr) {
+    case "last":
+	auto timesDict = readTimesFile(jobName);
+	auto tindxList = timesDict.keys;
+	sort(tindxList);
+	snapshotStart = tindxList[$-1];
+	break;
+    default:
+	snapshotStart = to!int(snapshotStartStr);
+    }
+
+    writefln("Initialising simulation from snapshot: %d", snapshotStart);
+    init_simulation(snapshotStart, maxCPUs, maxWallClock);
     // Additional initialisation
     int nConserved = 4;
     nTotalVars = 0;
@@ -157,12 +157,53 @@ void main(string[] args)
 	exit(1);
     }
 
-    iterate_to_steady_state(maxCPUs);
+    iterate_to_steady_state(snapshotStart, maxCPUs);
     writeln("Done simulation.");
 }
 
+struct RestartInfo {
+    double pseudoSimTime;
+    double dt;
+    int step;
+    double globalResidual;
+    ConservedQuantities residuals;
 
-void iterate_to_steady_state(int maxCPUs)
+    this(int n_species, int n_modes)
+    {
+	residuals = new ConservedQuantities(n_species, n_modes);
+    }
+}
+
+void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
+{
+    auto gmodel = GlobalConfig.gmodel_master;
+    RestartInfo restartInfo = RestartInfo(gmodel.n_species, gmodel.n_modes);
+    // Start reading the times file, looking for the snapshot index
+    auto timesFile = File(jobName ~ ".times");
+    auto line = timesFile.readln().strip();
+    while (line.length > 0) {
+	if (line[0] != '#') {
+	    // Process a non-comment line.
+	    auto tokens = line.split();
+	    auto idx = to!int(tokens[0]);
+	    restartInfo.pseudoSimTime = to!double(tokens[1]);
+	    restartInfo.dt = to!double(tokens[2]);
+	    restartInfo.step = to!int(tokens[3]);
+	    restartInfo.globalResidual = to!double(tokens[4]);
+	    restartInfo.residuals.mass = to!double(tokens[5]);
+	    restartInfo.residuals.momentum.refx = to!double(tokens[6]);
+	    restartInfo.residuals.momentum.refy = to!double(tokens[7]);
+	    restartInfo.residuals.total_energy = to!double(tokens[8]);
+	    times ~= restartInfo;
+	}
+	line = timesFile.readln().strip();
+    }
+    timesFile.close();
+    return;
+} 
+
+
+void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 {
     auto wallClockStart = Clock.currTime();
     bool withPTC = true;
@@ -197,16 +238,17 @@ void iterate_to_steady_state(int maxCPUs)
     ConservedQuantities maxResiduals = new ConservedQuantities(n_species, n_modes);
     ConservedQuantities currResiduals = new ConservedQuantities(n_species, n_modes);
 
-    shared double dt = determine_initial_dt(cfl0);
+    shared double dt;
     double dtTrial, etaTrial;
     shared bool failedAttempt;
     double pseudoSimTime = 0.0;
     double normOld, normNew;
-    int snapshotsFreq = GlobalConfig.sssOptions.snapshotsFrequency;
     int snapshotsCount = GlobalConfig.sssOptions.snapshotsCount;
-    int writtenSnapshotsCount = 0;
+    int nTotalSnapshots = GlobalConfig.sssOptions.nTotalSnapshots;
+    int nWrittenSnapshots = 0;
     int writeDiagnosticsCount = GlobalConfig.sssOptions.writeDiagnosticsCount;
 
+    int startStep;
     int nPreSteps = GlobalConfig.sssOptions.nPreSteps;
     int nStartUpSteps = GlobalConfig.sssOptions.nStartUpSteps;
     bool inexactNewtonPhase = false;
@@ -216,133 +258,195 @@ void iterate_to_steady_state(int maxCPUs)
     defaultPoolThreads(nThreadsInPool);
     writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
 
-    double wallClockElapsed;
-    double cfl;
-    double[string][] times;
-    times ~= [ "pst":0.0, "dt":dt ];
-
-    // The initial residual is usually a poor choice for basing decisions about how the
-    // residual is dropping, particularly when a constant initial condition is given.
-    // A constant initial condition gives a zero residual everywhere in the interior
-    // of the domain. Therefore, the only residual can come from boundary condition influences.
-    // What we do here is use some early steps (I've called them "pre"-steps) to
-    // allow the boundary conditions to exert some influence into the interior.
-    // We'll find the max residual in that start-up process and use that as our initial value
-    // for the "max" residual. Our relative residuals will then be based on that.
-    // We can use a fixed timestep (typically small) and low-order reconstruction in this
-    // pre-step phase.
     double normRef = 0.0;
     bool residualsUpToDate = false;
     bool finalStep = false;
     bool withPreconditioning = false;
 
-    writeln("Begin pre-iterations to establish sensible max residual.");
-    foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
-    foreach ( preStep; -nPreSteps .. 0 ) {
-	foreach (attempt; 0 .. maxNumberAttempts) {
-	    FGMRES_solve(pseudoSimTime, dt, eta0, sigma0, withPreconditioning, normOld, nRestarts);
-	    foreach (blk; parallel(gasBlocks,1)) {
+    // We only do a pre-step phase if we are starting from scratch.
+    if ( snapshotStart == 0 ) {
+	dt = determine_initial_dt(cfl0);
+	// The initial residual is usually a poor choice for basing decisions about how the
+	// residual is dropping, particularly when a constant initial condition is given.
+	// A constant initial condition gives a zero residual everywhere in the interior
+	// of the domain. Therefore, the only residual can come from boundary condition influences.
+	// What we do here is use some early steps (I've called them "pre"-steps) to
+	// allow the boundary conditions to exert some influence into the interior.
+	// We'll find the max residual in that start-up process and use that as our initial value
+	// for the "max" residual. Our relative residuals will then be based on that.
+	// We can use a fixed timestep (typically small) and low-order reconstruction in this
+	// pre-step phase.
+
+	writeln("Begin pre-iterations to establish sensible max residual.");
+	foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
+	foreach ( preStep; -nPreSteps .. 0 ) {
+	    foreach (attempt; 0 .. maxNumberAttempts) {
+		FGMRES_solve(pseudoSimTime, dt, eta0, sigma0, withPreconditioning, normOld, nRestarts);
+		foreach (blk; parallel(gasBlocks,1)) {
+		    int cellCount = 0;
+		    foreach (cell; blk.cells) {
+			cell.U[1].copy_values_from(cell.U[0]);
+			cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+0];
+			cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+1];
+			cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+2];
+			cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+3];
+			try {
+			    cell.decode_conserved(0, 1, 0.0);
+			}
+			catch (FlowSolverException e) {
+			    writefln("Failed attempt %d: dt= %e", attempt, dt);
+			    failedAttempt = true;
+			    dt = 0.1*dt;
+			    break;
+			}
+			cellCount += nConserved;
+		    }
+		}
+
+		if ( failedAttempt )
+		    continue;
+
+		// If we get here, things are good. Put flow state into U[0]
+		// ready for next iteration.
+		foreach (blk; parallel(gasBlocks,1)) {
+		    foreach (cell; blk.cells) {
+			swap(cell.U[0], cell.U[1]);
+		    }
+		}
+		// If we got here, we can break the attempts loop.
+		break;
+	    }
+	    if ( failedAttempt ) {
+		writefln("Pre-step failed: %d", step);
+		writeln("Bailing out!");
+		exit(1);
+	    }
+	
+	    writefln("PRE-STEP  %d  ::  dt= %.3e  global-norm= %.12e", preStep, dt, normOld); 
+	    if ( normOld > normRef ) {
+		normRef = normOld;
+		max_residuals(maxResiduals);
+	    }
+	}
+
+	writeln("Pre-step phase complete.");
+    
+	if ( nPreSteps <= 0 ) {
+	    // Take initial residual as max residual
+	    evalRHS(0.0, 0);
+	    max_residuals(maxResiduals);
+	    foreach (blk; parallel(gasBlocks, 1)) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
-		    cell.U[1].copy_values_from(cell.U[0]);
-		    cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+0];
-		    cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+1];
-		    cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+2];
-		    cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+3];
-		    try {
-			cell.decode_conserved(0, 1, 0.0);
-		    }
-		    catch (FlowSolverException e) {
-			writefln("Failed attempt %d: dt= %e", attempt, dt);
-			failedAttempt = true;
-			dt = 0.1*dt;
-			break;
-		    }
+		    blk.FU[cellCount+0] = -cell.dUdt[0].mass;
+		    blk.FU[cellCount+1] = -cell.dUdt[0].momentum.x;
+		    blk.FU[cellCount+2] = -cell.dUdt[0].momentum.y;
+		    blk.FU[cellCount+3] = -cell.dUdt[0].total_energy;
 		    cellCount += nConserved;
 		}
 	    }
-
-	    if ( failedAttempt )
-		continue;
-
-	    // If we get here, things are good. Put flow state into U[0]
-	    // ready for next iteration.
-	    foreach (blk; parallel(gasBlocks,1)) {
-		foreach (cell; blk.cells) {
-		    swap(cell.U[0], cell.U[1]);
-		}
-	    }
-	    // If we got here, we can break the attempts loop.
-	    break;
+	    mixin(norm2_over_blocks("normRef", "FU"));
 	}
-	if ( failedAttempt ) {
-	    writefln("Pre-step failed: %d", step);
-	    writeln("Bailing out!");
-	    exit(1);
-	}
+	writeln("Reference residuals are established as:");
+	writefln("GLOBAL:         %.12e", normRef);
+	writefln("MASS:           %.12e", maxResiduals.mass);
+	writefln("X-MOMENTUM:     %.12e", maxResiduals.momentum.x);
+	writefln("Y-MOMENTUM:     %.12e", maxResiduals.momentum.y);
+	writefln("ENERGY:         %.12e", maxResiduals.total_energy);
 	
-	writefln("PRE-STEP  %d  ::  dt= %.3e  global-norm= %.12e", preStep, dt, normOld); 
-	if ( normOld > normRef ) {
-	    normRef = normOld;
-	    max_residuals(maxResiduals);
-	}
+	string refResidFname = jobName ~ "-ref-residuals.txt";
+	auto refResid = File(refResidFname, "w");
+	refResid.writefln("%.18e %.18e %.18e %.18e %.18e",
+			  normRef, maxResiduals.mass, maxResiduals.momentum.x,
+			  maxResiduals.momentum.y, maxResiduals.total_energy);
+	refResid.close();
+	
     }
 
-    writeln("Pre-step phase complete.");
-    
-    if ( nPreSteps <= 0 ) {
-	// Take initial residual as max residual
-	evalRHS(0.0, 0);
-	max_residuals(maxResiduals);
-	foreach (blk; parallel(gasBlocks, 1)) {
-	    int cellCount = 0;
-	    foreach (cell; blk.cells) {
-		blk.FU[cellCount+0] = -cell.dUdt[0].mass;
-		blk.FU[cellCount+1] = -cell.dUdt[0].momentum.x;
-		blk.FU[cellCount+2] = -cell.dUdt[0].momentum.y;
-		blk.FU[cellCount+3] = -cell.dUdt[0].total_energy;
-		cellCount += nConserved;
+    RestartInfo[] times;
+
+    if ( snapshotStart > 0 ) {
+	extractRestartInfoFromTimesFile(jobName, times);
+	normOld = times[snapshotStart].globalResidual;
+	// We need to read in the reference residual values from a file.
+	string refResidFname = jobName ~ "-ref-residuals.txt";
+	auto refResid = File(refResidFname, "r");
+	auto line = refResid.readln().strip();
+	auto tokens = line.split();
+	normRef = to!double(tokens[0]);
+	maxResiduals.mass = to!double(tokens[1]);
+	maxResiduals.momentum.refx = to!double(tokens[2]);
+	maxResiduals.momentum.refy = to!double(tokens[3]);
+	maxResiduals.total_energy = to!double(tokens[4]);
+	// We also need to determine how many snapshots have already been written
+	auto timesFile = File(jobName ~ ".times");
+	line = timesFile.readln().strip();
+	while (line.length > 0) {
+	    if (line[0] != '#') {
+		nWrittenSnapshots++;
 	    }
+	    line = timesFile.readln().strip();
 	}
-	mixin(norm2_over_blocks("normRef", "FU"));
+	timesFile.close();
+	nWrittenSnapshots--; // We don't count the initial solution as a written snapshot
     }
 
-    writeln("Reference residuals are established as:");
-    writefln("GLOBAL:         %.12e", normRef);
-    writefln("MASS:           %.12e", maxResiduals.mass);
-    writefln("X-MOMENTUM:     %.12e", maxResiduals.momentum.x);
-    writefln("Y-MOMENTUM:     %.12e", maxResiduals.momentum.y);
-    writefln("ENERGY:         %.12e", maxResiduals.total_energy);
+    double wallClockElapsed;
+    double cfl;
+    RestartInfo restartInfo;
 
-    // Open file for writing diagnostics
+    // We need to do some configuration based on whether we are starting from scratch,
+    // or attempting to restart from an earlier snapshot.
+    if ( snapshotStart == 0 ) {
+	startStep = 1;
+	restartInfo.pseudoSimTime = 0.0;
+	restartInfo.dt = dt;
+	restartInfo.step = 0;
+	restartInfo.globalResidual = normRef;
+	restartInfo.residuals = maxResiduals;
+	times ~= restartInfo;
+    }
+    else {
+	restartInfo = times[snapshotStart];
+	dt = restartInfo.dt;
+	startStep = restartInfo.step + 1;
+	pseudoSimTime = restartInfo.pseudoSimTime;
+	writefln("Restarting steps from step= %d", startStep);
+	writefln("   pseudo-sim-time= %.6e dt= %.6e", pseudoSimTime, dt);  
+    }
+
 
     auto residFname = "e4sss.diagnostics.dat";
-    auto fResid = File(residFname, "w");
-    fResid.writeln("#  1: step");
-    fResid.writeln("#  2: pseudo-time");
-    fResid.writeln("#  3: dt");
-    fResid.writeln("#  4: CFL");
-    fResid.writeln("#  5: eta");
-    fResid.writeln("#  6: nRestarts");
-    fResid.writeln("#  7: nFnCalls");
-    fResid.writeln("#  8: wall-clock, s");
-    fResid.writeln("#  9: mass-abs");
-    fResid.writeln("# 10: mass-rel");
-    fResid.writeln("# 11: x-mom-abs");
-    fResid.writeln("# 12: x-mom-rel");
-    fResid.writeln("# 13: y-mom-abs");
-    fResid.writeln("# 14: y-mom-rel");
-    fResid.writeln("# 15: energy-abs");
-    fResid.writeln("# 16: energy-rel");
-    fResid.writeln("# 17: global-residual-abs");
-    fResid.writeln("# 18: global-residual-rel");
-    fResid.close();
+    File fResid;
+    if ( snapshotStart == 0 ) {
+        // Open file for writing diagnostics
+	fResid = File(residFname, "w");
+	fResid.writeln("#  1: step");
+	fResid.writeln("#  2: pseudo-time");
+	fResid.writeln("#  3: dt");
+	fResid.writeln("#  4: CFL");
+	fResid.writeln("#  5: eta");
+	fResid.writeln("#  6: nRestarts");
+	fResid.writeln("#  7: nFnCalls");
+	fResid.writeln("#  8: wall-clock, s");
+	fResid.writeln("#  9: mass-abs");
+	fResid.writeln("# 10: mass-rel");
+	fResid.writeln("# 11: x-mom-abs");
+	fResid.writeln("# 12: x-mom-rel");
+	fResid.writeln("# 13: y-mom-abs");
+	fResid.writeln("# 14: y-mom-rel");
+	fResid.writeln("# 15: energy-abs");
+	fResid.writeln("# 16: energy-rel");
+	fResid.writeln("# 17: global-residual-abs");
+	fResid.writeln("# 18: global-residual-rel");
+	fResid.close();
+    }
 
     // Begin Newton steps
     double eta;
     double tau;
     double sigma;
-    foreach (step; 1 .. nsteps+1) {
+    foreach (step; startStep .. nsteps+1) {
 	residualsUpToDate = false;
 	if ( step <= nStartUpSteps ) {
 	    foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
@@ -462,23 +566,32 @@ void iterate_to_steady_state(int maxCPUs)
 	}
 
 	// Write out the flow field, if required
-	if ( (step % snapshotsFreq) == 0 || finalStep ) {
+	if ( (step % snapshotsCount) == 0 || finalStep ) {
+	    if ( !residualsUpToDate ) {
+		max_residuals(currResiduals);
+		residualsUpToDate = true;
+	    }
 	    writefln("-----------------------------------------------------------------------");
 	    writefln("Writing flow solution at step= %4d; pseudo-time= %6.3e", step, pseudoSimTime);
 	    writefln("-----------------------------------------------------------------------\n");
-	    writtenSnapshotsCount++;
-	    if ( writtenSnapshotsCount <= snapshotsCount ) {
-		ensure_directory_is_present(make_path_name!"flow"(writtenSnapshotsCount));
+	    nWrittenSnapshots++;
+	    if ( nWrittenSnapshots <= nTotalSnapshots ) {
+		ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
 		foreach ( iblk, blk; gasBlocks ) {
-		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), writtenSnapshotsCount);
+		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nWrittenSnapshots);
 		    blk.write_solution(fileName, pseudoSimTime);
 		}
-		times ~= [ "pst": pseudoSimTime, "dt":dt ];
+		restartInfo.pseudoSimTime = pseudoSimTime;
+		restartInfo.dt = dt;
+		restartInfo.step = step;
+		restartInfo.globalResidual = normNew;
+		restartInfo.residuals = currResiduals;
+		times ~= restartInfo;
 		rewrite_times_file(times);
 	    }
 	    else {
 		// We need to shuffle all of the snapshots...
-		foreach ( iSnap; 2 .. snapshotsCount+1) {
+		foreach ( iSnap; 2 .. nTotalSnapshots+1) {
 		    foreach ( iblk; 0 .. gasBlocks.length ) {
 			auto fromName = make_file_name!"flow"(jobName, to!int(iblk), iSnap);
 			auto toName = make_file_name!"flow"(jobName, to!int(iblk), iSnap-1);
@@ -487,11 +600,16 @@ void iterate_to_steady_state(int maxCPUs)
 		}
 		// ... and add the new snapshot.
 		foreach ( iblk, blk; gasBlocks ) {
-		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), snapshotsCount);	
+		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nTotalSnapshots);	
 		    blk.write_solution(fileName, pseudoSimTime);
 		}
 		remove(times, 1);
-		times[$-1] = [ "pst": pseudoSimTime, "dt":dt ];
+		restartInfo.pseudoSimTime = pseudoSimTime;
+		restartInfo.dt = dt;
+		restartInfo.step = step;
+		restartInfo.globalResidual = normNew;
+		restartInfo.residuals = currResiduals;
+		times[$-1] = restartInfo;
 		rewrite_times_file(times);
 	    }
 	}
@@ -1213,13 +1331,17 @@ void max_residuals(ConservedQuantities residuals)
     }
 }
 
-void rewrite_times_file(double[string][] times)
+void rewrite_times_file(RestartInfo[] times)
 {
     auto fname = format("%s.times", GlobalConfig.base_file_name);
     auto f = File(fname, "w");
     f.writeln("# tindx sim_time dt_global");
-    foreach (i, t; times) {
-	f.writefln("%04d %.18e %.18e", i, t["pst"], t["dt"]);
+    foreach (i, rInfo; times) {
+	f.writefln("%04d %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
+		   i, rInfo.pseudoSimTime, rInfo.dt, rInfo.step,
+		   rInfo.globalResidual, rInfo.residuals.mass,
+		   rInfo.residuals.momentum.x, rInfo.residuals.momentum.y,
+		   rInfo.residuals.total_energy);
     }
     f.close();
 }

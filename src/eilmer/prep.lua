@@ -53,8 +53,8 @@ sssOptionsHidden = { -- hidden from user
    gamma = 0.9,
    alpha = 2.0,
    -- Options related to writing out snapshots and diagnostics
-   snapshots_frequency = 10,
-   snapshots_count = 1,
+   snapshots_count = 10,
+   number_total_snapshots = 5,
    write_diagnostics_count = 20,
 
    __index = function (t, k) 
@@ -990,8 +990,8 @@ function write_control_file(fileName)
    f:write(string.format('   "eta_ratio_per_step": %.18e,\n', SteadyStateSolver.eta_ratio_per_step))
    f:write(string.format('   "gamma": %.18e,\n', SteadyStateSolver.gamma))
    f:write(string.format('   "alpha": %.18e,\n', SteadyStateSolver.alpha))
-   f:write(string.format('   "snapshots_frequency": %d,\n', SteadyStateSolver.snapshots_frequency))
    f:write(string.format('   "snapshots_count": %d,\n', SteadyStateSolver.snapshots_count))
+   f:write(string.format('   "number_total_snapshots": %d,\n', SteadyStateSolver.number_total_snapshots))
    f:write(string.format('   "write_diagnostics_count": %d\n', SteadyStateSolver.write_diagnostics_count))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('    }\n')
