@@ -109,13 +109,16 @@ SteadyStateSolver{
    cfl0 = 5.0,
    eta0 = 0.5,
    tau0 = 0.1,
+   sigma0 = 5.0e-6,
    -- Settings for inexact Newton phase
    cfl1 = 100.0,
+   tau1 = 0.1,
+   sigma1 = 5.0e-6,
    eta1 = 0.01,
    eta_strategy = "constant",
    -- Settings control write-out
-   snapshots_frequency = 30,
    snapshots_count = 1,
+   number_total_snapshots = 30,
    write_diagnostics_count = 1
 }
    
