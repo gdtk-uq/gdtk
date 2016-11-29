@@ -907,5 +907,18 @@ double beta_cone2(double M1, double theta, double R=287.1, double g=1.4)
 } // end beta_cone2()
 
 unittest {
-    writeln("FIXME -- port some of the demo for the unittest code.");
+    double M1 = 1.5; double p1 = 100.0e3; double T1 = 300.0;
+    double R = 287.1; double g = 1.4; double rho1 = p1/(R*T1);
+    double a1 = sqrt(g*R*T1);
+    double V1 = M1 * a1;
+    double beta = 49.0 * PI/180; // conical shock angle
+    double[] results = theta_cone(V1, p1, T1, beta);
+    double theta_c=results[0];  double V_c=results[1];
+    double p_c=results[2]; double T_c=results[3];
+    assert(approxEqual(theta_c*180.0/PI, 19.96), "cone flow deflection angle fail");
+    assert(approxEqual((p_c - p1)/(0.5*rho1*V1*V1), 0.386), "cone pressure coefficient fail");
+    assert(approxEqual(beta_cone(V1, p1, T1, 20.0*PI/180)*180/PI, 49.0),
+	   "cone shock angle from deflection, V, p and T fail");
+    assert(approxEqual(beta_cone2(M1, 20.0*PI/180)*180/PI, 49.0),
+	   "cone shock angle from deflection and M fail");
 }

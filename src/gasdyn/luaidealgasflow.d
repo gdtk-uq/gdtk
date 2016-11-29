@@ -37,7 +37,7 @@ extern(C) int idealgasflow_A_Astar(lua_State* L)
 }
 +/
 
-string wrapfn(string fname, string[] args)
+string wrapfn(string fname, string[] args, int nreturn=1)
 // Generate the code to wrap D function for access from the idealgasflow table.
 // The arguments are assumed to be of type double and may have a default value.
 {
@@ -74,11 +74,20 @@ string wrapfn(string fname, string[] args)
 	    code ~= "    "~a~" = to!double(luaL_checknumber(L, "~format("%d", i+1)~"));\n";
 	}
     }
-    // Now call the function and pack up the result.
-    code ~= "    lua_pushnumber(L, "~fname~"(";
-    foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
-    code ~= "));\n";
-    code ~= "    return 1;\n";
+    // Now call the function and stack up the result(s).
+    if (nreturn == 1) {
+	code ~= "    lua_pushnumber(L, "~fname~"(";
+	foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
+	code ~= "));\n";
+	code ~= "    return 1;\n";
+    } else {
+	assert(nreturn>1, "oops");
+	code ~= "    double[] results = "~fname~"(";
+	foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
+	code ~= ");\n";
+	code ~= "    foreach(res; results) { lua_pushnumber(L, res); }\n";
+	code ~= "    return to!int(results.length);\n";
+    }
     code ~= "}\n";
     return to!string(code);
 } // end wrapfn()
@@ -119,6 +128,10 @@ mixin(wrapfn("V2_V1_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("p2_p1_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("T2_T1_obl", ["M1", "beta", "g=1.4"]));
 mixin(wrapfn("p02_p01_obl", ["M1", "beta", "g=1.4"]));
+
+mixin(wrapfn("theta_cone", ["V1", "p1", "T1", "beta", "R=287.1", "g=1.4"], 4));
+mixin(wrapfn("beta_cone", ["V1", "p1", "T1", "theta", "R=287.1", "g=1.4"]));
+mixin(wrapfn("beta_cone2", ["M1", "theta", "R=287.1", "g=1.4"]));
 
 string registerfn(string fname)
 {
@@ -171,6 +184,10 @@ void registeridealgasflowFunctions(lua_State* L)
     mixin(registerfn("p2_p1_obl"));
     mixin(registerfn("T2_T1_obl"));
     mixin(registerfn("p02_p01_obl"));
+
+    mixin(registerfn("theta_cone"));
+    mixin(registerfn("beta_cone"));
+    mixin(registerfn("beta_cone2"));
 
     lua_setglobal(L, idealgasflowMT.toStringz);
 } // end registeridealgasflowFunctions()

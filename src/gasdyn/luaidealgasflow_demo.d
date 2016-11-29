@@ -105,6 +105,20 @@ assert(approxEqual(idealgasflow.Vn2_Vn1_obl(M, beta, g), 0.598),
 assert(approxEqual(idealgasflow.V2_V1_obl(M, beta,theta, g),0.828),
        "Oblique shock, absolute velocity ratio fail")
 
+print("conical flow")
+local M1 = 1.5; local p1 = 100.0e3; local T1 = 300.0
+local R = 287.1; local g = 1.4; local rho1 = p1/(R*T1)
+local a1 = math.sqrt(g*R*T1)
+local V1 = M1 * a1
+local beta = math.rad(49.0) -- conical shock angle
+theta_c, V_c, p_c, T_c = idealgasflow.theta_cone(V1, p1, T1, beta)
+assert(approxEqual(math.deg(theta_c), 19.96), "cone flow deflection angle fail")
+assert(approxEqual((p_c - p1)/(0.5*rho1*V1*V1), 0.386), "cone pressure coefficient fail")
+assert(approxEqual(idealgasflow.beta_cone(V1, p1, T1, math.rad(20.0)), math.rad(49.0)),
+       "cone shock angle from deflection, V, p and T fail")
+assert(approxEqual(idealgasflow.beta_cone2(M1, math.rad(20.0)), math.rad(49.0)),
+       "cone shock angle from deflection and M fail");
+
 print("Done.")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
