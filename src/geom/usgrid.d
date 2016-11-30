@@ -673,9 +673,60 @@ public:
     
     override double cell_volume(size_t indx)
     {
-	return 0.0;
-    }
+	Vector3 centroid;
+	double vol, iLen, jLen, kLen, Lmin;
+	size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
 
+	if (dimensions == 2) {
+	    switch (vtx_ids.length) {
+	    case 3:
+		xyplane_triangle_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], vertices[vtx_ids[2]],
+						  centroid, vol, iLen, jLen, Lmin);
+		return vol;
+	    case 4:
+		xyplane_quad_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
+					     vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+					     centroid, vol, iLen, jLen, Lmin);
+		return vol;
+	    default:
+		string msg = "usgrid.cell_volume(): ";
+		msg ~= format("Unhandled number of vertices: %d", vtx_ids.length);
+		throw new Error(msg);
+	    } // end switch
+	} // end: if 2D
+	// else, 3D
+	switch (vtx_ids.length) {
+	case 4:
+	    tetrahedron_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+				   vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+				   centroid, vol);
+	    return vol;
+	case 8:
+	    hex_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+				vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+				vertices[vtx_ids[4]], vertices[vtx_ids[5]],
+				vertices[vtx_ids[6]], vertices[vtx_ids[7]],
+				centroid, vol, iLen, jLen, kLen);
+	    return vol;
+	case 5:
+	    pyramid_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+			       vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+			       vertices[vtx_ids[4]], 
+			       centroid, vol);
+	    return vol;
+	case 6:
+	    prism_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
+			     vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+			     vertices[vtx_ids[4]], vertices[vtx_ids[5]],
+			     centroid, vol);
+	    return vol;
+	default:
+	    string msg = "usgrid.cell_volume(): ";
+	    msg ~= format("Unhandled number of vertices: %d", vtx_ids.length);
+	    throw new Error(msg);
+	} // end switch
+    } // end cell_volume()
+    
     // ------------------------
     // Import-from-file methods.
     // ------------------------
