@@ -45,6 +45,12 @@ extern(C) int copyStructuredGrid(T, string MTname)(lua_State* L)
     return 1;
 }
 
+extern(C) int get_ncells(lua_State* L)
+{
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    lua_pushnumber(L, grid.ncells);
+    return 1;
+}
 extern(C) int get_niv(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 1; This is a getter
@@ -96,6 +102,15 @@ extern(C) int subgrid(T, string MTname)(lua_State* L)
     structuredGridStore ~= pushObj!(T, MTname)(L, new_subgrid);
     return 1;
 } // end subgrid()
+
+extern(C) int cellVolume(lua_State *L)
+{
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    size_t indx = to!size_t(luaL_checkint(L, 2));
+    double vol = grid.cell_volume(indx);
+    lua_pushnumber(L, vol);
+    return 1;
+}
 
 extern(C) int write_to_vtk_file(T, string MTname)(lua_State* L)
 {
@@ -372,6 +387,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyStructuredGrid!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &get_ncells);
+    lua_setfield(L, -2, "get_ncells");
     lua_pushcfunction(L, &get_niv!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "get_niv");
     lua_pushcfunction(L, &get_njv!(StructuredGrid, StructuredGridMT));
@@ -382,6 +399,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &subgrid!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "subgrid");
+    lua_pushcfunction(L, &cellVolume);
+    lua_setfield(L, -2, "cellVolume");
     lua_pushcfunction(L, &write_to_vtk_file!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "write_to_vtk_file");
     lua_pushcfunction(L, &write_to_gzip_file!(StructuredGrid, StructuredGridMT));

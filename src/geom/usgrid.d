@@ -671,6 +671,11 @@ public:
 	return cellList;
     } // end get_list_of_boundary_cells()
     
+    override double cell_volume(size_t indx)
+    {
+	return 0.0;
+    }
+
     // ------------------------
     // Import-from-file methods.
     // ------------------------

@@ -884,6 +884,34 @@ function makeFillConditionFn(flowSol)
    return fillFn
 end
 
+function checkCellVolumes(t)
+   if not t then
+      t = {}
+   end
+   -- Stop reporting cells after this limit
+   badCellLimit = t.badCellLimit or 20
+   badCells = {}
+   badCellCount = 0
+   for ib,blk in ipairs(blocks) do
+      grid = blk.grid
+      for idx=0,grid:get_ncells()-1 do
+	 vol = grid:cellVolume(idx)
+	 if vol <= 0 then
+	    badCellCount = badCellCount + 1
+	    badCells[#badCells+1] = {ib, idx}
+	    if badCellCount >= badCellLimit then
+	       return false, badCells
+	    end
+	 end
+      end
+   end
+   if #badCells > 0 then
+      return false, badCells
+   else
+      return true, badCells
+   end
+end
+
 -- -----------------------------------------------------------------------
 
 -- Classes for construction of zones.

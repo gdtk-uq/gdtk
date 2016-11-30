@@ -101,6 +101,7 @@ class Grid {
     abstract int vtk_element_type_for_cell(size_t i);
     abstract Grid get_boundary_grid(size_t boundary_indx);
     abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
+    abstract double cell_volume(size_t indx);
 
     bool point_is_inside_cell(ref const(Vector3) p, size_t i)
     {

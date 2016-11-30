@@ -387,6 +387,26 @@ public:
 	return cellList;
     } // end get_list_of_boundary_cells()
     
+    override double cell_volume(size_t indx)
+    {
+	size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
+	if (dimensions == 2) {
+	    Vector3 centroid;
+	    double vol, iLen, jLen, Lmin;
+	    xyplane_quad_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+					 vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+					 centroid, vol, iLen, jLen, Lmin);
+	    return vol;
+	}
+	// else 3D
+	Vector3 centroid;
+	double vol, iLen, jLen, kLen;
+	hex_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+			    vertices[vtx_ids[4]], vertices[vtx_ids[5]], vertices[vtx_ids[6]], vertices[vtx_ids[7]],
+			    centroid, vol, iLen, jLen, kLen);
+	return vol;
+    }
+
     void make_grid_from_path(const Path pth,
 			     const(UnivariateFunction) clusterf)
     {
