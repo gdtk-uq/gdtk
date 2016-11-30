@@ -164,6 +164,17 @@ extern(C) int soundSpeed(lua_State* L)
    return 0;
 }
 
+extern(C) int transCoeffs(lua_State* L)
+{
+   auto gm = checkGasModel(L, 1);
+   auto Q = new GasState(gm.n_species, gm.n_modes);
+   getGasStateFromTable(L, gm, 2, Q); 
+   gm.update_trans_coeffs(Q);
+   setGasStateInTable(L, gm, 2, Q);
+   return 0;
+}
+
+
 // We don't wrap dedT_const_v as we do Cv in its place.
 // We don't wrap dhdT_const_p as we do Cp in its place.
 
@@ -804,6 +815,8 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "updateThermoFromHS");
     lua_pushcfunction(L, &soundSpeed);
     lua_setfield(L, -2, "updateSoundSpeed");
+    lua_pushcfunction(L, &transCoeffs);
+    lua_setfield(L, -2, "updateTransCoeffs");
     lua_pushcfunction(L, &dpdrhoConstT);
     lua_setfield(L, -2, "dpdrhoConstT");
     lua_pushcfunction(L, &intEnergy);
