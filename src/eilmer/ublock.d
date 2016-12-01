@@ -594,7 +594,7 @@ public:
 		    cell.kLength = cell.L_min;
 		    break;
 		case 6:
-		    prism_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
+		    wedge_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
 				     cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
 				     cell.vtx[4].pos[gtl], cell.vtx[5].pos[gtl],
 				     cell.pos[gtl], cell.volume[gtl]);
@@ -608,6 +608,11 @@ public:
 		    msg ~= format("Unhandled number of vertices: %d", cell.vtx.length);
 		    throw new FlowSolverException(msg);
 		} // end switch
+		if (cell.volume[gtl] <= 0.0) {
+		    string msg = "compute_primary_cell_geometric_data(): ";
+		    msg ~= format("Invalid volume %g for cell %d", cell.volume[gtl], cell.id);
+		    throw new FlowSolverException(msg);
+		}
 	    } // end foreach cell
 	    // Face geometry in 3D.
 	    foreach (f; faces) {

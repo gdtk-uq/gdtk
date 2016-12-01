@@ -966,16 +966,16 @@ void pyramid_properties(ref const(Vector3)[] p,
 }
 
 @nogc
-void prism_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 		      ref const(Vector3) p2, ref const(Vector3) p3,
 		      ref const(Vector3) p4, ref const(Vector3) p5, 
 		      ref Vector3 centroid, ref double volume)
 {
-    // Use the average of the vertex points to get a rough centroid of the prism.
+    // Use the average of the vertex points to get a rough centroid of the wedge.
     centroid.refx = 1.0/6.0 * (p0.x+p1.x+p2.x+p3.x+p4.x+p5.x);
     centroid.refy = 1.0/6.0 * (p0.y+p1.y+p2.y+p3.y+p4.y+p5.y);
     centroid.refz = 1.0/6.0 * (p0.z+p1.z+p2.z+p3.z+p4.z+p5.z);
-    // Split the prism into three pyramids and two tetrahedra
+    // Split the wedge into three pyramids and two tetrahedra
     // using this centroid as the peak of each sub-volume.
     double sub_volume; Vector3 sub_centroid;
     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
@@ -993,13 +993,13 @@ void prism_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     moment /= volume; // to get overall centroid
     centroid = moment;
     return; 
-} // end prism_properties()
+} // end wedge_properties()
 
 @nogc
-void prism_properties(ref const(Vector3)[] p,
+void wedge_properties(ref const(Vector3)[] p,
 		      ref Vector3 centroid, ref double volume)
 {
-    prism_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
+    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
 }
 
 @nogc
@@ -1134,14 +1134,14 @@ unittest {
     assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), "tetrahedron centroid");
     assert(approxEqual(volume, cos(radians(30))*0.5*dz/3), "tetrahedron volume");
 
-    // Build a prism with the same equilateral-triangle base.
+    // Build a wedge with the same equilateral-triangle base.
     Vector3 incz = Vector3(0, 0, -1.0);
     p3 = p0 + incz;
     Vector3 p4 = p1 + incz;
     Vector3 p5 = p2 + incz;
-    prism_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
-    assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), "prism centroid");
-    assert(approxEqual(volume, cos(radians(30))*0.5*1.0), "prism volume");
+    wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
+    assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), "wedge centroid");
+    assert(approxEqual(volume, cos(radians(30))*0.5*1.0), "wedge volume");
 
     // Pyramid
     p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);

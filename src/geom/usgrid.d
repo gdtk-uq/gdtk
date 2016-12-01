@@ -735,7 +735,7 @@ public:
 			       centroid, vol);
 	    return vol;
 	case 6:
-	    prism_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
+	    wedge_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
 			     vertices[vtx_ids[2]], vertices[vtx_ids[3]],
 			     vertices[vtx_ids[4]], vertices[vtx_ids[5]],
 			     centroid, vol);
