@@ -30,8 +30,10 @@ import paver;
 // For the USGCell types, we will have only the linear elements,
 // with straight-line edges joining the vertices.
 // We will use VTK names and vertex ordering to align with su2 file format,
-// however, we will have a different integer tags so we will need
-// a translation array between the tags.
+// but we will have different integer tags and thus need a translation array 
+// between the tag values.  This is vtk_element_types below.
+// 2016-dec-01: Kyle has found that Pointwise writes the su2 file with GMSH
+// vertex ordering for the wedge elements.  We retain the VTK ordering. 
 
 enum USGCell_type {
     none = 0,
@@ -52,6 +54,20 @@ int[] vtk_element_types = [0, VTKElement.triangle, VTKElement.quad, VTKElement.p
 			   VTKElement.tetra, VTKElement.wedge, VTKElement.hexahedron,
 			   VTKElement.pyramid];
 
+USGCell_type convert_cell_type(int vtk_element_type)
+{
+    switch (vtk_element_type) {
+    case VTKElement.triangle: return USGCell_type.triangle;
+    case VTKElement.quad: return USGCell_type.quad;
+    case VTKElement.tetra: return USGCell_type.tetra;
+    case VTKElement.wedge: return USGCell_type.wedge;
+    case VTKElement.hexahedron: return USGCell_type.hexahedron;
+    case VTKElement.pyramid: return USGCell_type.pyramid;
+    default:
+	return USGCell_type.none;
+    }
+}
+
 USGCell_type cell_type_from_name(string name)
 {
     switch (name) {
@@ -64,7 +80,7 @@ USGCell_type cell_type_from_name(string name)
     case "hexahedron": return USGCell_type.hexahedron;
     case "pyramid": return USGCell_type.pyramid;
     default:
-	throw new Error(text("Invalid USGCell type name: ", name));
+	return USGCell_type.none;
     }
 }
 
@@ -162,6 +178,9 @@ public:
 	auto tokens = str.strip().split();
 	int itok = 0;
 	cell_type = cell_type_from_name(tokens[itok++]);
+	if (cell_type == USGCell_type.none) {
+	    throw new Exception("Unexpected cell type from line: " ~ str);
+	}
         auto junk = tokens[itok++]; // "vtx"
 	vtx_id_list.length = to!int(tokens[itok++]);
 	foreach(i; 0 .. vtx_id_list.length) {
@@ -563,13 +582,14 @@ public:
     } // end constructor from StructuredGrid object
 
     // Imported grid.
-    this(string fileName, string fmt, double scale=1.0, string new_label="")
+    this(string fileName, string fmt, double scale=1.0,
+	 bool expect_gmsh_order_for_wedges=true, string new_label="")
     {
 	super(Grid_t.unstructured_grid, 0, new_label);
 	// dimensions will be reset on reading grid
 	switch (fmt) {
 	case "gziptext": read_from_gzip_file(fileName, scale); break;
-	case "su2text": read_from_su2_text_file(fileName, scale); break;
+	case "su2text": read_from_su2_text_file(fileName, scale, expect_gmsh_order_for_wedges); break;
 	case "vtktext": read_from_vtk_text_file(fileName, scale); break;
 	case "vtkxml": throw new Error("Reading from VTK XML format not implemented.");
 	default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
@@ -785,7 +805,8 @@ public:
 	}
     } // end read_from_gzip_file()
 
-    void read_from_su2_text_file(string fileName, double scale=1.0)
+    void read_from_su2_text_file(string fileName, double scale=1.0,
+				 bool expect_gmsh_order_for_wedges=true)
     // Information on the su2 file format from
     // https://github.com/su2code/SU2/wiki/Mesh-File
     // scale = unit length in metres
@@ -818,16 +839,15 @@ public:
 	    size_t indx = to!size_t(tokens[$-1]);
 	    size_t[] vtx_id_list;
 	    foreach(j; 1 .. tokens.length-1) { vtx_id_list ~= to!size_t(tokens[j]); }
-	    USGCell_type cell_type = USGCell_type.none;
-	    switch (vtk_element_type) {
-	    case VTKElement.triangle: cell_type = USGCell_type.triangle; break;
-	    case VTKElement.quad: cell_type = USGCell_type.quad; break;
-	    case VTKElement.tetra: cell_type = USGCell_type.tetra; break;
-	    case VTKElement.wedge: cell_type = USGCell_type.wedge; break;
-	    case VTKElement.hexahedron: cell_type = USGCell_type.hexahedron; break;
-	    case VTKElement.pyramid: cell_type = USGCell_type.pyramid; break;
-	    default:
+	    USGCell_type cell_type = convert_cell_type(vtk_element_type);
+	    if (cell_type == USGCell_type.none) {
 		throw new Exception("unknown element type for line: "~to!string(lineContent));
+	    }
+	    if (cell_type == USGCell_type.wedge && expect_gmsh_order_for_wedges) {
+		// We assume that we have picked up the vertex indices for a wedge
+		// in GMSH order but we need to store them in VTK order.
+		vtx_id_list = [vtx_id_list[1], vtx_id_list[0], vtx_id_list[2],
+			       vtx_id_list[4], vtx_id_list[3], vtx_id_list[5]];
 	    }
 	    size_t[] face_id_list; // empty, so far
 	    int[] outsign_list; // empty, so far

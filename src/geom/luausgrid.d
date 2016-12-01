@@ -166,8 +166,16 @@ A table containing arguments is expected, but no table was found.`;
 	    lua_getfield(L, 1, "fmt".toStringz);
 	    if ( !lua_isnil(L, -1) ) { fmt = to!string(luaL_checkstring(L, -1)); }
 	    lua_pop(L, 1); // dispose of fmt item
+	    bool expect_gmsh_order_for_wedges = true;
+	    lua_getfield(L, 1, "expect_gmsh_order_for_wedges".toStringz);
+	    if ( !lua_isnil(L, -1) ) {
+		expect_gmsh_order_for_wedges = to!bool(lua_toboolean(L, -1));
+	    }
+	    lua_pop(L, 1); // dispose of expect_gmsh_order_for_wedges item
 	    if (filename.length > 0) {
-		usgrid = new UnstructuredGrid(filename, fmt, scale); // [TODO] new_label
+		usgrid = new UnstructuredGrid(filename, fmt, scale,
+					      expect_gmsh_order_for_wedges);
+		// [TODO] new_label
 	    }
 	} else {
 	    string errMsg = "Error in UnstructuredGrid:new{}. expected a string for filename.";
