@@ -503,7 +503,7 @@ double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
     if (M1 < 1.0) {
 	throw new Error(text("beta_obl: subsonic Mach number: ", M1));
     } // end if
-    int sign = 1; if(theta<0.0){sign=-1;}
+    int sign_beta = (theta < 0.0) ? -1 : 1;
     theta = fabs(theta);
     auto f_to_solve = delegate(double beta){return theta_obl(M1, beta, g) - theta;};
     //    
@@ -511,7 +511,7 @@ double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
     double b2 = b1 * 1.05;
     int result_flag = bracket!f_to_solve(b1, b2);
     // [TODO] should test result_flag.
-    return sign*solve!f_to_solve(b1,b2);
+    return sign_beta*solve!f_to_solve(b1,b2);
 } // end beta_obl()
 
 /**
@@ -543,18 +543,18 @@ double beta_obl2(double M1, double p2_p1, double g=1.4)
  */
 double theta_obl(double M1, double beta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("theta_obl: subsonic Mach number: ", M1));
-    } // end if
-    int sign = 1; if(beta<0.0){sign=-1;}
+    double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("theta_obl: subsonic normal Mach number: ", M1n));
+    }
+    int sign_beta = (beta < 0.0) ? -1 : 1;
     beta = fabs(beta);
     if (dtan_theta(M1,beta,g) < 0.0){
 	throw new Error(text("theta_obl: shock is detached."));
     } // end if
-    double M1n = M1 * sin(beta);
     double t1 = 2.0 / tan(beta) * (M1n^^2 - 1.0); 
     double t2 = M1^^2 * (g + cos(2.0 * beta)) + 2.0;
-    return sign*atan(t1/t2);
+    return sign_beta*atan(t1/t2);
 } // end theta_obl()
 
 /**
@@ -565,7 +565,7 @@ double theta_obl(double M1, double beta, double g=1.4)
  *   M: pre-shock Mach number
  *   beta: shock angle with respect to initial flow direction (radians)
  */
-double dtan_theta(double M1,double beta,double g=1.4)
+double dtan_theta(double M1, double beta, double g=1.4)
 {
     beta = fabs(beta);
     double dum1 = M1^^2*(cos(2.0*beta)+g)+2.0;
@@ -582,12 +582,12 @@ double dtan_theta(double M1,double beta,double g=1.4)
  *   beta: shock angle with respect to initial flow direction (radians)
  * Returns: Mach number in flow after the shock
  */
-double M2_obl(double M1,double beta,double theta,double g=1.4)
+double M2_obl(double M1, double beta, double theta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("M2_obl: subsonic Mach number: ", M1));
-    } // end if
     double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("M2_obl: subsonic normal Mach number: ", M1n));
+    }
     double numer = 1.0 + (g - 1.0) * 0.5 * M1n^^2;
     double denom = g * M1n^^2 - (g - 1.0) * 0.5;
     return sqrt(numer / denom / (sin(beta - theta))^^2 );
@@ -602,10 +602,10 @@ double M2_obl(double M1,double beta,double theta,double g=1.4)
  */
 double r2_r1_obl(double M1, double beta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("MachAngle: subsonic Mach number: ", M1));
-    }
     double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("r2_r1_obl: subsonic normal Mach number: ", M1n));
+    }
     return r2_r1(M1n,g);
 } // end r2_r1_obl()
 
@@ -616,31 +616,29 @@ double r2_r1_obl(double M1, double beta, double g=1.4)
  *   beta: shock angle with respect to initial flow direction (radians)
  * Returns: Vn2/Vn1
  */
-double Vn2_Vn1_obl(double M1, double beta,double g=1.4)
+double Vn2_Vn1_obl(double M1, double beta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("Vn2_Vn1_obl: subsonic Mach number: ", M1));	
-    }
     double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("Vn2_Vn1_obl: subsonic normal Mach number: ", M1n));	
+    }
     return u2_u1(M1n,g);	
 }
 
 /**
- * absolute velocity ratio V2/V1 across an oblique shock.
+ * Speed ratio V2/V1 across an oblique shock.
  * Input:
  *   M1: upstream Mach number
  *   beta: shock angle with respect to initial flow direction (radians)
- *   theta: flow deflection angle (radians)
  * Returns: V2/V1
  */
-double V2_V1_obl(double M1, double beta,double theta, double g=1.4)
+double V2_V1_obl(double M1, double beta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("v2_V1_obl: subsonic Mach number: ", M1));	
+    double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("V2_V1_obl: subsonic normal Mach number: ", M1n));	
     }
-    double M2 = M2_obl(M1,beta,theta,g);
-    double T2_T1 = T2_T1_obl(M1,beta,g);
-    return M2/M1*sqrt(T2_T1);
+    return sqrt((sin(beta) / r2_r1_obl(M1, beta, g))^^2 + (cos(beta))^^2);
 }
 
 /**
@@ -652,10 +650,10 @@ double V2_V1_obl(double M1, double beta,double theta, double g=1.4)
  */
 double p2_p1_obl(double M1, double beta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("p2_p1_obl: subsonic Mach number: ", M1));
-    }
     double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("p2_p1_obl: subsonic normal Mach number: ", M1n));
+    }
     return p2_p1(M1n,g);
 }
 
@@ -668,10 +666,10 @@ double p2_p1_obl(double M1, double beta, double g=1.4)
  */
 double T2_T1_obl(double M1, double beta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("T2_T1_obl: subsonic Mach number: ", M1));
-    }
     double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("T2_T1_obl: subsonic normal Mach number: ", M1n));
+    }
     return T2_T1(M1n,g);
 }
 
@@ -684,10 +682,10 @@ double T2_T1_obl(double M1, double beta, double g=1.4)
  */
 double p02_p01_obl(double M1, double beta, double g=1.4)
 {
-    if (M1 < 1.0) {
-	throw new Error(text("p02_p01_obl: subsonic Mach number: ", M1));
-    }
     double M1n = M1 * fabs(sin(beta));
+    if (M1n < 1.0) {
+	throw new Error(text("p02_p01_obl: subsonic normal Mach number: ", M1n));
+    }
     return p02_p01(M1n,g);
 }
 
@@ -705,7 +703,7 @@ unittest {
     assert(approxEqual(r2_r1_obl(M, beta, g), 1.673), "Oblique shock, density ratio fail");
     assert(approxEqual(p02_p01_obl(M, beta, g), 0.9608), "Oblique shock, total-pressure fail");
     assert(approxEqual(Vn2_Vn1_obl(M, beta, g), 0.598), "Oblique shock, normal velocity ratio fail");
-    assert(approxEqual(V2_V1_obl(M, beta, theta, g),0.828), "Oblique shock, absolute velocity ratio fail");
+    assert(approxEqual(V2_V1_obl(M, beta, g),0.828), "Oblique shock, absolute velocity ratio fail");
     try {
 	beta_obl(M,40.*PI/180.,g);
     } catch (Error e) {
@@ -811,7 +809,7 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
     double M2 = M2_obl(M1, beta, theta_s, g);
     assert(M2 > 1.0, "gone subsonic at shock");
     double rho2 = rho1 * r2_r1_obl(M1, beta, g);
-    double V2 = V1 * V2_V1_obl(M1, beta, theta_s, g);
+    double V2 = V1 * V2_V1_obl(M1, beta, g);
     double p2 = p1 * p2_p1_obl(M1, beta, g);
     double T2 = T1 * T2_T1_obl(M1, beta, g);
     double h2 = T2 * C_p;

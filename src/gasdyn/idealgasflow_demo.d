@@ -64,10 +64,10 @@ void main(){
 	     T2_T1_obl(M, beta), p2_p1_obl(M, beta), r2_r1_obl(M, beta));
     writeln("Expected: T2/T1=1.249, p2/p1=2.088, r2/r1=1.673",
 	    " (approx. normal-shock table M=1.390)");
-    writefln("V2/V1=%g, p02/p01=%g", V2_V1_obl(M, beta, theta), p02_p01_obl(M, beta));
+    writefln("V2/V1=%g, p02/p01=%g", V2_V1_obl(M, beta), p02_p01_obl(M, beta));
     writeln("Expected: V2/V1=0.8304=sin(B)/sin(B-d)*r1/r2");
     writeln("");
-    
+
     double M1 = 1.5; double p1 = 100.0e3; double T1 = 300.0;
     double R = 287.1; g = 1.4; double rho1 = p1/(R*T1);
     writefln("Taylor-Maccoll cone flow demo with M1=%g", M1);

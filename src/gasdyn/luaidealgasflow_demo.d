@@ -102,8 +102,8 @@ assert(approxEqual(idealgasflow.p02_p01_obl(M, beta, g), 0.9608),
        "Oblique shock, total-pressure fail")
 assert(approxEqual(idealgasflow.Vn2_Vn1_obl(M, beta, g), 0.598),
        "Oblique shock, normal velocity ratio fail")
-assert(approxEqual(idealgasflow.V2_V1_obl(M, beta,theta, g),0.828),
-       "Oblique shock, absolute velocity ratio fail")
+assert(approxEqual(idealgasflow.V2_V1_obl(M, beta, g),0.828),
+       "Oblique shock, speed ratio fail")
 
 print("conical flow")
 local M1 = 1.5; local p1 = 100.0e3; local T1 = 300.0
