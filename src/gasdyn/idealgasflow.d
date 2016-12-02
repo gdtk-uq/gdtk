@@ -750,17 +750,21 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
     /**
     Compute the cone-surface angle and conditions given the shock wave angle.
 
-    :param V1: speed of gas into shock
-    :param p1: free-stream pressure
-    :param T1: free-stream static temperature
-    :param beta: shock wave angle wrt stream direction (in radians)
-    :param R: gas constant
-    :param g: ratio of specific heats
-    :returns: tuple of theta_c, V_c, p_c, T_c:
-        theta_c is stream deflection angle in radians
-        V_c is the cone-surface speed of gas in m/s
-        p_c is the cone-surface pressure
-        T_c is the cone-surface static temperature
+    Input:
+    V1: speed of gas into shock
+    p1: free-stream pressure
+    T1: free-stream static temperature
+    beta: shock wave angle wrt stream direction (in radians)
+    R: gas constant
+    g: ratio of specific heats
+    
+    Returns:
+    an array of [theta_c, V_c, p_c, T_c]
+    where
+    theta_c is stream deflection angle in radians
+    V_c is the cone-surface speed of gas in m/s
+    p_c is the cone-surface pressure
+    T_c is the cone-surface static temperature
 
     The computation starts with the oblique-shock jump and then integrates
     across theta until V_theta goes through zero.
@@ -850,15 +854,19 @@ double beta_cone(double V1, double p1, double T1, double theta,
     /**
     Compute the conical shock wave angle given the cone-surface deflection angle.
 
-    :param V1: speed of gas into shock
-    :param p1: free-stream pressure
-    :param T1: free-stream static temperature
-    :param theta: stream deflection angle (in radians)
-    :param R: gas constant
-    :param g: ratio of specific heats
-    :returns: shock wave angle wrt incoming stream direction (in radians)
+    Input:
+    V1: speed of gas into shock
+    p1: free-stream pressure
+    T1: free-stream static temperature
+    theta: stream deflection angle (in radians)
+    R: gas constant
+    g: ratio of specific heats
 
-    .. This ideal-gas version adapted from the cea2_gas_flow version, 08-Mar-2012.
+    Returns:
+    shock wave angle wrt incoming stream direction (in radians)
+
+    This ideal-gas version adapted from the cea2_gas_flow version, 08-Mar-2012.
+    and then ported to D, November 2016.
     **/
     // Free-stream properties and gas model.
     double a1 = sqrt(g*R*T1);
