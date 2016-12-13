@@ -173,7 +173,10 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     // set the global time step to the initial value.
     dt_global = GlobalConfig.dt_init; 
     //
-    if (GlobalConfig.verbosity_level > 0) writeln("Done init_simulation().");
+    if (GlobalConfig.verbosity_level > 0) {
+	writeln("Done init_simulation().");
+	stdout.flush();
+    }
     return;
 } // end init_simulation()
 
@@ -251,7 +254,10 @@ void march_over_blocks()
 
 void integrate_in_time(double target_time)
 {
-    if (GlobalConfig.verbosity_level > 0) writeln("Integrate in time.");
+    if (GlobalConfig.verbosity_level > 0) {
+	writeln("Integrate in time.");
+	stdout.flush();
+    }
     // The next time for output...
     t_plot = sim_time + GlobalConfig.dt_plot;
     t_history = sim_time + GlobalConfig.dt_history;
@@ -413,6 +419,7 @@ void integrate_in_time(double target_time)
 	    formattedWrite(writer, "WC=%d WCtFT=%.1f WCtMS=%.1f", 
 			   wall_clock_elapsed, WCtFT, WCtMS);
 	    writeln(writer.data);
+	    stdout.flush();
 	}
 
         // 4. (Occasionally) Write out an intermediate solution
