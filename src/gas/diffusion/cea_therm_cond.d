@@ -149,8 +149,8 @@ version(cea_therm_cond_test) {
 	auto co2CEA = createCEAThermalConductivity(L);
 	lua_close(L);
 	auto Q = new GasState(1, 1);
-	Q.Ttr = 3500.0;
-	assert(approxEqual(1.859070e-01, co2CEA.eval(Q, 0), 1.0e-6), failedUnitTest());
+	// Q.Ttr = 3500.0;
+	assert(approxEqual(1.859070e-01, co2CEA.eval(Q, 3500.0), 1.0e-6), failedUnitTest());
 
 	return 0;
     }

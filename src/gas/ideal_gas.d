@@ -194,7 +194,7 @@ version(ideal_gas_test) {
 	lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
 	auto gm = new IdealGas(L);
 	lua_close(L);
-	auto gd = new GasState(1, 1);
+	auto gd = new GasState(1, 0);
 	gd.p = 1.0e5;
 	gd.Ttr = 300.0;
 	gd.massf[0] = 1.0;

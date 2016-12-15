@@ -326,7 +326,7 @@ version(therm_perf_gas_test) {
 	import util.msg_service;
 
 	auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
-	auto gd = new GasState(5, 1);
+	auto gd = new GasState(5, 0);
 	gd.p = 1.0e6;
 	gd.Ttr = 2000.0;
 	gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];
