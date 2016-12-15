@@ -358,6 +358,8 @@ extern(C) int fromTable(lua_State* L)
     }
     // We should call equation of state to make sure gas state is consistent.
     GlobalConfig.gmodel_master.update_thermo_from_pT(fs.gas);
+    GlobalConfig.gmodel_master.update_sound_speed(fs.gas);
+    GlobalConfig.gmodel_master.update_trans_coeffs(fs.gas);
 
     // Look for velocity components: "velx", "vely", "velz"
     lua_getfield(L, 2, "velx");
