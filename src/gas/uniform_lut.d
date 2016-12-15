@@ -31,7 +31,7 @@ public:
     this()
     {
 	_n_species = 1;
-	_n_modes = 1; 
+	_n_modes = 0; 
 	_species_names ~= "LUT";
 	assert(_species_names.length == 1);
 	create_species_reverse_lookup();
@@ -199,7 +199,7 @@ public:
 	// Find the enclosing cell
 	double logrho = log10(Q.rho);
 	ir = cast(int)((logrho - _lrmin) / _dlr);
-	ie = cast (int)((Q.e[0] - _emin) / _de);
+	ie = cast (int)((Q.u - _emin) / _de);
 
 	// Make sure that we don't try to access data outside the
 	// actual arrays.
@@ -210,7 +210,7 @@ public:
 
 	// Calculate bilinear interpolation(/extrapolation) fractions.
 	lrfrac = (logrho - (_lrmin +ir* _dlr)) / _dlr;
-	efrac  = (Q.e[0] - (_emin +ie* _de)) / _de;
+	efrac  = (Q.u - (_emin +ie* _de)) / _de;
     
 	// Limit the extrapolation to small distances.
 	const double EXTRAP_MARGIN = 0.2;
@@ -222,7 +222,6 @@ public:
 
     override void update_thermo_from_rhoe(GasState Q) const
     {
-	assert(Q.e.length == 1, "incorrect length of energy array");
 	double efrac, lrfrac, Cv_eff, R_eff, g_eff;
 	int    ir, ie;
    
@@ -250,21 +249,21 @@ public:
 	    (1.0 - efrac) * lrfrac         * _g_hat[ie][ir+1];
    
 	// Reconstruct the thermodynamic properties.
-	Q.T[0] = Q.e[0] / Cv_eff;
-	Q.p = Q.rho*R_eff*Q.T[0];
-	Q.a = sqrt(g_eff*R_eff*Q.T[0]);
-	if ( Q.T[0] < T_MIN ) {
+	Q.Ttr = Q.u / Cv_eff;
+	Q.p = Q.rho*R_eff*Q.Ttr;
+	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
+	if ( Q.Ttr < T_MIN ) {
 	    string msg;
 	    msg ~= format("Error in function  %s\n", __FUNCTION__);
 	    msg ~= format("Low temperature, rho = %.5s ", Q.rho);
-	    msg ~= format("e= %.8s  T= %.5s \n", Q.e[0], Q.T[0]);
+	    msg ~= format("e= %.8s  T= %.5s \n", Q.u, Q.Ttr);
 	    msg ~= format(    "Supplied Q: %s ", Q);
 	    throw new Exception(msg);
 	}
 
 	// Fix meaningless values if they arise
 	if ( Q.p < 0.0 ) Q.p = 0.0;
-	if ( Q.T[0] < 0.0 ) Q.T[0] = 0.0;
+	if ( Q.Ttr < 0.0 ) Q.Ttr = 0.0;
 	if ( Q.a < 0.0 ) Q.a = 0.0;
     }  
 
@@ -293,7 +292,7 @@ public:
 	    (1.0 - efrac) * lrfrac         * _k_hat[ie][ir+1];
    
 	Q.mu = mu_eff;
-	Q.k[0] = k_eff;
+	Q.kth = k_eff;
 
     }
     /* 
@@ -386,7 +385,7 @@ public:
 	// LUT gas specially.
 	// This is the one-species implementation
 
-	return Q.e[0];
+	return Q.u;
     }
 
 
@@ -397,7 +396,7 @@ public:
 	// GasData object. Then enthalpy is computed
 	// from definition.
 
-	double h = Q.e[0] + Q.p/Q.rho;
+	double h = Q.u + Q.p/Q.rho;
 	return h;
     }
 
@@ -429,7 +428,7 @@ public:
 		efrac         * (1.0 - lrfrac) * _Cp_hat[ie+1][ir] +
 		efrac         * lrfrac         * _Cp_hat[ie+1][ir+1] +
 		(1.0 - efrac) * lrfrac         * _Cp_hat[ie][ir+1];
-	    double T = Q.e[0] / Cv_eff;
+	    double T = Q.u / Cv_eff;
 	    double p = Q.rho*R_eff*T;
 	    s = _s1 + Cp_eff*log(T/_T1) - R_eff*log(p/_p1); 
 	}
@@ -444,7 +443,7 @@ public:
 	    double Cp = R + _Cv_hat[ie][ir];
 	    const double T1 = 300.0; // degrees K: This value and the next was type constexpr
 	    const double p1 = 100.0e3; // Pa
-	    s = Cp * log(Q.T[0]/T1) - R * log(Q.p/p1);
+	    s = Cp * log(Q.Ttr/T1) - R * log(Q.p/p1);
 	} 
 	return s;
     }
@@ -487,10 +486,10 @@ public:
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
-	if (isNaN(Q.rho) || isNaN(Q.e[0])) {
+	if (isNaN(Q.rho) || isNaN(Q.u)) {
 	    string err;
 	    err ~= format("update_sound_speed() method for LUT requires e and rho of ");
-	    err ~= format("GasState Q to be defined: rho = %.5s, e = .8s", Q.rho, Q.e[0]);
+	    err ~= format("GasState Q to be defined: rho = %.5s, e = .8s", Q.rho, Q.u);
 	    throw new Exception(err);
 	}
 	R_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _R_hat[ie][ir] +
@@ -504,19 +503,17 @@ public:
 	    (1.0 - efrac) * lrfrac         * _g_hat[ie][ir+1];
    
 	// Reconstruct the thermodynamic properties.
-	Q.a = sqrt(g_eff*R_eff*Q.T[0]);
+	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
     }
  
 
     // Remaining functions must call numerical method solution defined in gas_model.d
     override void update_thermo_from_pT(GasState Q) 
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
 	update_thermo_state_pT(this, Q);
     }
     override void update_thermo_from_rhoT(GasState Q)  
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
 	update_thermo_state_rhoT(this, Q);
     }
     override void update_thermo_from_rhop(GasState Q) 
@@ -624,15 +621,15 @@ version(uniform_lut_test)
 	double h = gm.enthalpy(Q);
 	double s = gm.entropy(Q);
 
-	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
-	assert(approxEqual(e_given, Q.e[0], 1.0e-4), failedUnitTest());
+	assert(approxEqual(e_given, Q.u, 1.0e-4), failedUnitTest());
 	assert(approxEqual(rho_given, Q.rho, 1.0e-4), failedUnitTest());
 	assert(approxEqual(a_given, Q.a, 1.0e-4), failedUnitTest());
 	assert(approxEqual(Cp_given, Cp, 1.0e-3), failedUnitTest());
 	assert(approxEqual(h_given, h, 1.0e-4), failedUnitTest());
 	assert(approxEqual(mu_given, Q.mu, 1.0e-4), failedUnitTest());
-	assert(approxEqual(k_given, Q.k[0], 1.0e-3), failedUnitTest());
+	assert(approxEqual(k_given, Q.kth, 1.0e-3), failedUnitTest());
 	assert(approxEqual(s_given, s, 1.0e-4), failedUnitTest());
 	assert(approxEqual(R_given, R, 1.0e-4), failedUnitTest());
 	

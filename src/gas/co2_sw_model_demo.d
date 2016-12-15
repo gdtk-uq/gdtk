@@ -16,11 +16,11 @@ void main() {
 	writeln("species[", i, "] name=", gm.species_name(i));
     }
     auto gd = new GasState(gm, 6.0e6, 300.0);
-    writefln("R= %s, pressure= %.8f, temperature= %.8f", gm.R(gd), gd.p, gd.T[0]);
+    writefln("R= %s, pressure= %.8f, temperature= %.8f", gm.R(gd), gd.p, gd.Ttr);
     gm.update_thermo_from_pT(gd);
     gm.update_sound_speed(gd);
     double s = gm.entropy(gd);
-    writefln("rho= %.8f, e= %.8f, a= %.8f, s=%.8f", gd.rho, gd.e[0], gd.a, s); 
+    writefln("rho= %.8f, e= %.8f, a= %.8f, s=%.8f", gd.rho, gd.u, gd.a, s); 
     writeln("------------------------------------------");
     writeln("Update again from p, s");
     writeln("------------------------------------------");
@@ -31,8 +31,8 @@ void main() {
     sw.stop();
     gm.update_sound_speed(gd);
     long t_eval_ps = sw.peek().usecs;
-    writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.T[0]);
-    writefln("rho= %.8f, e= %.8f, a= %.8f, s=%.8f", gd.rho, gd.e[0], gd.a, s); 
+    writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.Ttr);
+    writefln("rho= %.8f, e= %.8f, a= %.8f, s=%.8f", gd.rho, gd.u, gd.a, s); 
     writeln("------------------------------------------");
     writeln("Using LUT to update again from rho, e");
     writeln("------------------------------------------");
@@ -41,8 +41,8 @@ void main() {
     sw.stop();
     long t_lut = sw.peek().usecs - t_eval_ps;
     gm.update_sound_speed(gd);
-    writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.T[0]);
-    writefln("rho= %.8f, e= %.8f, a= %.8f", gd.rho, gd.e[0], gd.a); 
+    writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.Ttr);
+    writefln("rho= %.8f, e= %.8f, a= %.8f", gd.rho, gd.u, gd.a); 
     writeln("gd= ", gd);
     writeln("-------------------------------");
     writefln("Time taken for %s evaluations:", ncycles);

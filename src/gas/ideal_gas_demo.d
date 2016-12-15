@@ -18,11 +18,11 @@ void main() {
     writeln("species name=", gm.species_name(0));
     writeln("gm=", gm);
     auto gd = new GasState(gm, 100.0e3, 300.0);
-    writefln("R= %s, pressure= %s, temperature= %s", gm.R(gd), gd.p, gd.T[0]);
+    writefln("R= %s, pressure= %s, temperature= %s", gm.R(gd), gd.p, gd.Ttr);
     gm.update_thermo_from_pT(gd);
     gm.update_sound_speed(gd);
-    writefln("rho= %s, e= %s, a= %s", gd.rho, gd.e[0], gd.a);
+    writefln("rho= %s, e= %s, a= %s", gd.rho, gd.u, gd.a);
     gm.update_trans_coeffs(gd);
-    writefln("mu= %s, k= %s", gd.mu, gd.k[0]);
+    writefln("mu= %s, k= %s", gd.mu, gd.kth);
     writeln("Done.");
 }

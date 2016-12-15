@@ -31,7 +31,7 @@ public:
     +/
     @nogc override void update_pressure(ref GasState Q) const {
 	double Rmix = mass_average(Q, _R);
-	Q.p = Q.rho*Rmix*Q.T[0];
+	Q.p = Q.rho*Rmix*Q.Ttr;
     }
 
     /++
@@ -40,7 +40,7 @@ public:
     +/
     @nogc override void update_density(ref GasState Q) const {
 	double Rmix = mass_average(Q, _R);
-	Q.rho = Q.p/(Rmix*Q.T[0]);
+	Q.rho = Q.p/(Rmix*Q.Ttr);
     }
 
     /++
@@ -49,7 +49,7 @@ public:
     +/
     @nogc override void update_temperature(ref GasState Q) const {
 	double Rmix = mass_average(Q, _R);
-	Q.T[0] = Q.p/(Rmix*Q.rho);
+	Q.Ttr = Q.p/(Rmix*Q.rho);
     }
 
 private:
@@ -64,7 +64,7 @@ version(perf_gas_mix_eos_test) {
 	double[] R = [297.0, 260.0]; // N2, O2
 	auto pg = new PerfectGasMixEOS(R);
 	auto gd = new GasState(2, 1);
-	gd.T[0] = 300.0;
+	gd.Ttr = 300.0;
 	gd.rho = 1.2;
 	gd.massf[0] = 0.78;
 	gd.massf[1] = 0.22;
@@ -75,9 +75,9 @@ version(perf_gas_mix_eos_test) {
 	pg.update_density(gd);
 	assert(approxEqual(gd.rho, 1.2, 1.0e-6), failedUnitTest());
 	gd.rho = 1.2;
-	gd.T[0] = 0.0;
+	gd.Ttr = 0.0;
 	pg.update_temperature(gd);
-	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
 	
 	return 0;
     }

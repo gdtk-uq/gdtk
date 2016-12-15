@@ -26,7 +26,7 @@ public:
     this() {
 	// Default model is mostly initialized in the private data below.
 	_n_species = 1;
-	_n_modes = 1;
+	_n_modes = 0;
 	_species_names ~= "very viscous";
 	_Rgas = 287.0;
 	_mol_masses ~= R_universal/_Rgas;
@@ -65,28 +65,23 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.rho = Q.p/(Q.T[0]*_Rgas);
-	Q.e[0] = _Cv*Q.T[0];
+	Q.rho = Q.p/(Q.Ttr*_Rgas);
+	Q.u = _Cv*Q.Ttr;
     }
     override void update_thermo_from_rhoe(GasState Q) const
     {
-	assert(Q.e.length == 1, "incorrect length of energy array");
-	Q.T[0] = Q.e[0]/_Cv;
-	Q.p = Q.rho*_Rgas*Q.T[0];
+	Q.Ttr = Q.u/_Cv;
+	Q.p = Q.rho*_Rgas*Q.Ttr;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.p = Q.rho*_Rgas*Q.T[0];
-	Q.e[0] = _Cv*Q.T[0];
+	Q.p = Q.rho*_Rgas*Q.Ttr;
+	Q.u = _Cv*Q.Ttr;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.T[0] = Q.p/(Q.rho*_Rgas);
-	Q.e[0] = _Cv*Q.T[0];
-	
+	Q.Ttr = Q.p/(Q.rho*_Rgas);
+	Q.u = _Cv*Q.Ttr;
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
@@ -99,12 +94,12 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = sqrt(_gamma*_Rgas*Q.T[0]);
+	Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
     }
     override void update_trans_coeffs(GasState Q) const
     {
 	Q.mu = _mu;
-	Q.k[0] = _k;
+	Q.kth = _k;
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {
@@ -122,7 +117,7 @@ public:
     override double dpdrho_const_T(in GasState Q) const
     {
 	double R = gas_constant(Q);
-	return R*Q.T[0];
+	return R*Q.Ttr;
     }
     override double gas_constant(in GasState Q) const
     {
@@ -130,15 +125,15 @@ public:
     }
     override double internal_energy(in GasState Q) const
     {
-	return Q.e[0];
+	return Q.u;
     }
     override double enthalpy(in GasState Q) const
     {
-	return Q.e[0] + Q.p/Q.rho;
+	return Q.u + Q.p/Q.rho;
     }
     override double entropy(in GasState Q) const
     {
-	return _s1 + _Cp * log(Q.T[0]/_T1) - _Rgas * log(Q.p/_p1);
+	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
     }
 
 private:
@@ -166,11 +161,11 @@ version(very_viscous_air_test) {
 	gm.update_thermo_from_pT(gs);
 	gm.update_sound_speed(gs);
 	assert(approxEqual(gs.rho, 1.16144, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gs.e[0], 215250, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gs.u, 215250, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gs.a, 347.189, 1.0e-6), failedUnitTest());
 	gm.update_trans_coeffs(gs);
 	assert(approxEqual(gs.mu, 10.0, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gs.k[0], 10045, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gs.kth, 10045, 1.0e-6), failedUnitTest());
 
 	return 0;
     }

@@ -29,8 +29,8 @@ double compute_equilibrium_constant(GasModel gmodel, GasState Q,
 	dG += nu[isp] * gmodel.gibbs_free_energy(Q, isp) * gmodel.mol_masses()[isp];
 	nuSum += nu[isp];
     }
-    double K_p = exp(-dG/(R_universal*Q.T[0]));
-    double K_c = K_p*pow(P_atm/(R_universal*Q.T[0]), nuSum);
+    double K_p = exp(-dG/(R_universal*Q.Ttr));
+    double K_c = K_p*pow(P_atm/(R_universal*Q.Ttr), nuSum);
     return K_c;
 }
 
@@ -196,7 +196,7 @@ public:
     }
     override void eval_equilibrium_constant(in GasState Q)
     {
-	_Qw.T[0] = Q.T[0];
+	_Qw.Ttr = Q.Ttr;
 	_K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
     override double production(int isp) const
@@ -312,7 +312,7 @@ public:
     }
     override void eval_equilibrium_constant(in GasState Q)
     {
-	_Qw.T[0] = Q.T[0];
+	_Qw.Ttr = Q.Ttr;
 	_K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
     override double production(int isp) const

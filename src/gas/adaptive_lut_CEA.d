@@ -27,7 +27,7 @@ public:
     this()
     {
 	_n_species = 1;
-	_n_modes = 1; 
+	_n_modes = 0; 
 	_species_names ~= "AdaptiveLUT";
 	assert(_species_names.length == 1);
 	create_species_reverse_lookup();
@@ -289,61 +289,57 @@ public:
     override void update_thermo_from_rhoe(GasState Q) {
      	double Cv_eff, R_eff, g_eff;
 
-	assert(Q.e.length == 1, "incorrect length of energy array");
-	
 	double lr = log10(Q.rho);
-	const(Patch)* node = this.search_tree(lr, Q.e[0]);
+	const(Patch)* node = this.search_tree(lr, Q.u);
 
-	Cv_eff = node.interpolate(lr, Q.e[0], "Cv_hat");
-	R_eff =  node.interpolate(lr, Q.e[0], "R_hat"); 
-	g_eff = node.interpolate(lr, Q.e[0], "gamma_hat");
+	Cv_eff = node.interpolate(lr, Q.u, "Cv_hat");
+	R_eff =  node.interpolate(lr, Q.u, "R_hat"); 
+	g_eff = node.interpolate(lr, Q.u, "gamma_hat");
 
 	// Reconstruct the thermodynamic properties.
-	Q.T[0] = Q.e[0] / Cv_eff;
-	Q.p = Q.rho*R_eff*Q.T[0];
-	Q.a = sqrt(g_eff*R_eff*Q.T[0]);
+	Q.Ttr = Q.u / Cv_eff;
+	Q.p = Q.rho*R_eff*Q.Ttr;
+	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
 
 	// Fix meaningless values if they arise
 	if ( Q.p < 0.0 ) Q.p = 0.0;
-	if ( Q.T[0] < 0.0 ) Q.T[0] = 0.0;
+	if ( Q.Ttr < 0.0 ) Q.Ttr = 0.0;
 	if ( Q.a < 0.0 ) Q.a = 0.0;
 
     }
 
     override void update_sound_speed(GasState Q){ 
-	if (isNaN(Q.rho) || isNaN(Q.e[0])) {
+	if (isNaN(Q.rho) || isNaN(Q.u)) {
 	    string err;
 	    err ~= format("update_sound_speed() method for LUT requires e and rho of ");
-	    err ~= format("GasState Q to be defined: rho = %.5s, e = .8s", Q.rho, Q.e[0]);
+	    err ~= format("GasState Q to be defined: rho = %.5s, e = .8s", Q.rho, Q.u);
 	    throw new Exception(err);
 	}
 
 	double lr = log10(Q.rho);
-	const(Patch)* node = this.search_tree(lr, Q.e[0]);
+	const(Patch)* node = this.search_tree(lr, Q.u);
 
-	double R_eff = node.interpolate(lr, Q.e[0], "R_hat");
-	double g_eff = node.interpolate(lr, Q.e[0], "gamma_hat");
+	double R_eff = node.interpolate(lr, Q.u, "R_hat");
+	double g_eff = node.interpolate(lr, Q.u, "gamma_hat");
 
 	// Reconstruct the thermodynamic properties.
-	Q.a = sqrt(g_eff*R_eff*Q.T[0]);
+	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
     }
 
     override void update_trans_coeffs(GasState Q) const
     {
 	double lr = log10(Q.rho);
-	const(Patch)* node = this.search_tree(lr, Q.e[0]);
+	const(Patch)* node = this.search_tree(lr, Q.u);
 	
-	Q.mu = node.interpolate(lr, Q.e[0], "mu");
-	Q.k[0] = node.interpolate(lr, Q.e[0], "k"); 
+	Q.mu = node.interpolate(lr, Q.u, "mu");
+	Q.kth = node.interpolate(lr, Q.u, "k"); 
     }
     
     override void update_thermo_from_pT(GasState Q) {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
 	update_thermo_state_pT(this, Q);
     }
     
     override void update_thermo_from_rhoT(GasState Q) {
- 	assert(Q.T.length == 1, "incorrect length of temperature array");
 	update_thermo_state_rhoT(this, Q);
     }
 
@@ -391,18 +387,18 @@ public:
     override double dedT_const_v(in GasState Q) 
     {
 	double lr = log10(Q.rho);
-	const(Patch)* node = this.search_tree(lr, Q.e[0]);
+	const(Patch)* node = this.search_tree(lr, Q.u);
 	
-	double Cv_actual = node.interpolate(lr, Q.e[0], "Cv");
+	double Cv_actual = node.interpolate(lr, Q.u, "Cv");
 	return Cv_actual;
     }
     override double dhdT_const_p(in GasState Q) 
     { 
 	double lr = log10(Q.rho);
-	const(Patch)* node = this.search_tree(lr, Q.e[0]);
+	const(Patch)* node = this.search_tree(lr, Q.u);
 	
-	double Cv_actual = node.interpolate(lr, Q.e[0], "Cv"); 
-	double R_eff = node.interpolate(lr, Q.e[0], "R_hat"); 
+	double Cv_actual = node.interpolate(lr, Q.u, "Cv"); 
+	double R_eff = node.interpolate(lr, Q.u, "R_hat"); 
 
 	return (Cv_actual + R_eff);
     }
@@ -410,9 +406,9 @@ public:
     override double gas_constant(in GasState Q)  
     {
     	double lr = log10(Q.rho);
-	const(Patch)* node = this.search_tree(lr, Q.e[0]);
+	const(Patch)* node = this.search_tree(lr, Q.u);
 	
-	double R_eff = node.interpolate(lr, Q.e[0], "R_hat"); 
+	double R_eff = node.interpolate(lr, Q.u, "R_hat"); 
 	return R_eff;
     }
     
@@ -428,7 +424,7 @@ public:
 	// LUT gas specially.
 	// This is the one-species implementation
 
-	return Q.e[0];
+	return Q.u;
     }
     override double enthalpy(in GasState Q)  
     {
@@ -437,7 +433,7 @@ public:
 	// GasData object. Then enthalpy is computed
 	// from definition.
 
-	double h = Q.e[0] + Q.p/Q.rho;
+	double h = Q.u + Q.p/Q.rho;
 	return h;
     }
 
@@ -449,13 +445,13 @@ public:
 	// this function does not do this
 
 	double lr = log10(Q.rho);
-	const(Patch)* node = this.search_tree(lr, Q.e[0]);
+	const(Patch)* node = this.search_tree(lr, Q.u);
 	
-	double Cv_eff = node.interpolate(lr, Q.e[0], "Cv_hat");
-	double R_eff = node.interpolate(lr, Q.e[0], "R_hat"); 
-	double Cp_eff = node.interpolate(lr, Q.e[0], "Cp_hat"); 
+	double Cv_eff = node.interpolate(lr, Q.u, "Cv_hat");
+	double R_eff = node.interpolate(lr, Q.u, "R_hat"); 
+	double Cp_eff = node.interpolate(lr, Q.u, "Cp_hat"); 
 
-	double T = Q.e[0] / Cv_eff;
+	double T = Q.u / Cv_eff;
 	double p = Q.rho*R_eff*T;
 	double s = _s1 + Cp_eff*log(T/_T1) - R_eff*log(p/_p1); 
 
@@ -786,15 +782,15 @@ version(adaptive_lut_CEA_test)
 	double h = gm.enthalpy(Q);
 	double s = gm.entropy(Q);
 	
-       	assert(gm.n_modes == 1, failedUnitTest());
+       	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
-	assert(approxEqual(e_given, Q.e[0], 1.0e-4), failedUnitTest());
+	assert(approxEqual(e_given, Q.u, 1.0e-4), failedUnitTest());
 	assert(approxEqual(rho_given, Q.rho, 1.0e-4), failedUnitTest());
 	assert(approxEqual(a_given, Q.a, 1.0e-4), failedUnitTest());
 	assert(approxEqual(Cp_given, Cp, 1.0e-3), failedUnitTest());
 	assert(approxEqual(h_given, h, 1.0e-4), failedUnitTest());
 	assert(approxEqual(mu_given, Q.mu, 1.0e-4), failedUnitTest());
-	assert(approxEqual(k_given, Q.k[0], 1.0e-4), failedUnitTest());
+	assert(approxEqual(k_given, Q.kth, 1.0e-4), failedUnitTest());
 	assert(approxEqual(s_given, s, 1.0e-4), failedUnitTest());
 	assert(approxEqual(R_given, R, 1.0e-4), failedUnitTest());
 	
@@ -817,15 +813,15 @@ version(adaptive_lut_CEA_test)
 
 	// Note that the unit tests are to a higher error tolerance
 	// because the look-up table was generated higher error allowed
-       	assert(gm.n_modes == 1, failedUnitTest());
+       	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
-	assert(approxEqual(e_given, Q.e[0], 1.0e-3), failedUnitTest());
+	assert(approxEqual(e_given, Q.u, 1.0e-3), failedUnitTest());
 	assert(approxEqual(rho_given, Q.rho, 1.0e-3), failedUnitTest());
 	assert(approxEqual(a_given, Q.a, 1.0e-3), failedUnitTest());
 	assert(approxEqual(Cp_given, Cp, 1.0e-3), failedUnitTest());
 	assert(approxEqual(h_given, h, 1.0e-3), failedUnitTest());
 	assert(approxEqual(mu_given, Q.mu, 1.0e-3), failedUnitTest());
-	assert(approxEqual(k_given, Q.k[0], 1.0e-3), failedUnitTest());
+	assert(approxEqual(k_given, Q.kth, 1.0e-3), failedUnitTest());
 	assert(approxEqual(s_given, s, 1.0e-3), failedUnitTest());
 	assert(approxEqual(R_given, R, 1.0e-3), failedUnitTest());
 	

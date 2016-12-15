@@ -46,10 +46,10 @@ double e_max = 5.0e5;
 	double rho = rhoe[0];
 	double e = rhoe[1];
 	gd.rho = rho;
-	gd.e[0] = e;
+	gd.u = e;
 	gm.update_thermo_from_rhoe(gd);
 	//gm.update_sound_speed(gd);
-	return gd.T[0];
+	return gd.Ttr;
 	}
 static double[2] F_transform(double x, double y){
 	CO2GasSW gm = new CO2GasSW();
@@ -60,10 +60,10 @@ static double[2] F_transform(double x, double y){
 	CO2GasSW gm = new CO2GasSW();
 	auto gd = new GasState(1,1);//initializes using constructor of nspecies, n modes
 	gd.rho = rho;
-	gd.e[0] = e;
+	gd.u = e;
 	gm.update_thermo_from_rhoe(gd);
 	//gm.update_sound_speed(gd);
-	return gd.T[0];
+	return gd.Ttr;
 	}
 static double[2] F_transform(double x, double y){
 	return [x,y];

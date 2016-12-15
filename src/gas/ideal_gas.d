@@ -27,7 +27,7 @@ public:
 
     this(lua_State *L) {
 	_n_species = 1;
-	_n_modes = 1;
+	_n_modes = 0;
 	// Bring table to TOS
 	lua_getglobal(L, "IdealGas");
 	// Let's overwrite that here.
@@ -84,50 +84,46 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.rho = Q.p/(Q.T[0]*_Rgas);
-	Q.e[0] = _Cv*Q.T[0];
+	Q.rho = Q.p/(Q.Ttr*_Rgas);
+	Q.u = _Cv*Q.Ttr;
     }
     override void update_thermo_from_rhoe(GasState Q) const
     {
-	assert(Q.e.length == 1, "incorrect length of energy array");
-	Q.T[0] = Q.e[0]/_Cv;
-	Q.p = Q.rho*_Rgas*Q.T[0];
+	Q.Ttr = Q.u/_Cv;
+	Q.p = Q.rho*_Rgas*Q.Ttr;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.p = Q.rho*_Rgas*Q.T[0];
-	Q.e[0] = _Cv*Q.T[0];
+	Q.p = Q.rho*_Rgas*Q.Ttr;
+	Q.u = _Cv*Q.Ttr;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.T[0] = Q.p/(Q.rho*_Rgas);
-	Q.e[0] = _Cv*Q.T[0];
+	Q.Ttr = Q.p/(Q.rho*_Rgas);
+	Q.u = _Cv*Q.Ttr;
 	
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	Q.T[0] = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
+	Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	Q.T[0] = h / _Cp;
-	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T[0]/_T1)));
+	Q.Ttr = h / _Cp;
+	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
 	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = sqrt(_gamma*_Rgas*Q.T[0]);
+	Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
     }
     override void update_trans_coeffs(GasState Q)
     {
 	_viscModel.update_viscosity(Q);
 	if ( _constPrandtl ) {
-	    Q.k[0] = _Cp*Q.mu/_Prandtl;
+	    Q.kth = _Cp*Q.mu/_Prandtl;
 	}
 	else {
 	    _thermCondModel.update_thermal_conductivity(Q);
@@ -149,7 +145,7 @@ public:
     override double dpdrho_const_T(in GasState Q) const
     {
 	double R = gas_constant(Q);
-	return R*Q.T[0];
+	return R*Q.Ttr;
     }
     override double gas_constant(in GasState Q) const
     {
@@ -157,15 +153,15 @@ public:
     }
     override double internal_energy(in GasState Q) const
     {
-	return Q.e[0];
+	return Q.u;
     }
     override double enthalpy(in GasState Q) const
     {
-	return Q.e[0] + Q.p/Q.rho;
+	return Q.u + Q.p/Q.rho;
     }
     override double entropy(in GasState Q) const
     {
-	return _s1 + _Cp * log(Q.T[0]/_T1) - _Rgas * log(Q.p/_p1);
+	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
     }
 
 private:
@@ -200,23 +196,23 @@ version(ideal_gas_test) {
 	lua_close(L);
 	auto gd = new GasState(1, 1);
 	gd.p = 1.0e5;
-	gd.T[0] = 300.0;
+	gd.Ttr = 300.0;
 	gd.massf[0] = 1.0;
 	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
-	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.T[0], 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
 	gm.update_thermo_from_pT(gd);
 	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
-	assert(approxEqual(gd.e[0], 215314.0, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.u, 215314.0, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.kth, 0.0262449, 1.0e-6), failedUnitTest());
 
 	return 0;
     }

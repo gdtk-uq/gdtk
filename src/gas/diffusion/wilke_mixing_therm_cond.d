@@ -59,12 +59,12 @@ public:
 	return new WilkeMixingThermCond(this);
     }
 
-    override double eval(in GasState Q, int imode) {
+    override double eval(ref const(GasState) Q, double T) {
 	// 1. Evaluate the mole fractions
 	massf2molef(Q.massf, _mol_masses, _x);
 	// 2. Calculate the component viscosities
 	for ( auto isp = 0; isp < Q.massf.length; ++isp ) {
-	    _k[isp] = _tcms[isp].eval(Q, imode);
+	    _k[isp] = _tcms[isp].eval(Q, T);
 	}
 	// 3. Calculate interaction potentials
 	for ( auto i = 0; i < Q.massf.length; ++i ) {
@@ -108,9 +108,9 @@ unittest {
     auto tcm = new WilkeMixingThermCond([tcm_N2, tcm_O2], [28.0e-3, 32.0e-3]);
 
     auto gd = new GasState(2, 1);
-    gd.T[0] = T;
+    gd.Ttr = T;
     gd.massf[0] = 0.8;
     gd.massf[1] = 0.2;
     tcm.update_thermal_conductivity(gd);
-    assert(approxEqual(0.0263063, gd.k[0]), failedUnitTest());
+    assert(approxEqual(0.0263063, gd.kth), failedUnitTest());
 }

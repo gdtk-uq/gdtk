@@ -65,7 +65,7 @@ public:
     }
     override double eval(in GasState Q)
     {
-	double T = Q.T[0];
+	double T = Q.Ttr;
 	return _A*pow(T, _n)*exp(-_C/T);
     }
 private:
@@ -187,7 +187,7 @@ public:
 	double k0 = _k0.eval(Q);
 	double p_r = k0*M/kInf;
 	double log_p_r = log10(max(p_r, essentially_zero));
-	double T = Q.T[0];
+	double T = Q.Ttr;
 
 	if ( !_Fcent_supplied ) {
 	    _Fcent = (1.0 - _a)*exp(-T/_T3) + _a*exp(-T/_T1);

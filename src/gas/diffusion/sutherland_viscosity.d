@@ -65,7 +65,7 @@ public:
       up-to-date in GasState Q.
     +/
     override double eval(in GasState Q) const {
-	return sutherland_viscosity(Q.T[0], _T_ref, _mu_ref, _S);
+	return sutherland_viscosity(Q.Ttr, _T_ref, _mu_ref, _S);
     }
 
 private:
@@ -92,7 +92,7 @@ version(sutherland_viscosity_test) {
 
 	auto vm = new SutherlandViscosity(T_ref, mu_ref, S);
 	auto gd = new GasState(1, 1);
-	gd.T[0] = 300.0;
+	gd.Ttr = 300.0;
 	vm.update_viscosity(gd);
 	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-5), failedUnitTest());
 

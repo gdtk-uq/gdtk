@@ -58,8 +58,8 @@ public:
     override SutherlandThermCond dup() const {
 	return new SutherlandThermCond(this);
     }
-    override double eval(in GasState Q, int imode) const {
-	return sutherland_thermal_conductivity(Q.T[imode], _T_ref, _k_ref, _S);
+    override double eval(ref const(GasState) Q, double T) const {
+	return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
     }
 
 private:
@@ -86,10 +86,10 @@ version(sutherland_therm_cond_test) {
 
 	auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
 	auto gd = new GasState(1, 1);
-	gd.T[0] = 300.0;
-	gd.k[0] = 0.0;
+	gd.Ttr = 300.0;
+	gd.kth = 0.0;
 	tcm.update_thermal_conductivity(gd);
-	assert(approxEqual(gd.k[0], 0.0262449, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.kth, 0.0262449, 1.0e-6), failedUnitTest());
 
 	return 0;
     }

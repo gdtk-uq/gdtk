@@ -34,13 +34,13 @@ print("Test thermo evaluations....")
 Q = GasState(gm)
 print("Q.p= ", Q.p)
 Q.p = 1.0e5
-Q.T[1] = 300.0
+Q.T = 300.0
 print("update based on p-T")
 gm:updateThermoFromPT(Q)
-print("Q.e[1]= ", Q.e[1])
+print("Q.u= ", Q.u)
 print("update based on rho-e")
 gm:updateThermoFromRHOE(Q)
-print("Q.p= ", Q.p, " Q.T[1]= ", Q.T[1])
+print("Q.p= ", Q.p, " Q.T= ", Q.T)
 
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {

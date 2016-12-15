@@ -87,7 +87,7 @@ public:
     }
     override double eval(in GasState Q) const
     {
-	double T = Q.T[0];
+	double T = Q.Ttr;
 	// At the limits of the curve, extrapolate value as a constant.
 	if ( T < _T_lowest ) {
 	    return _curves[0].eval(_T_lowest);
@@ -153,7 +153,7 @@ version(cea_viscosity_test) {
 	auto o2CEA = createCEAViscosity(L);
 	lua_close(L);
 	auto Q = new GasState(1, 1);
-	Q.T[0] = 1500.0;
+	Q.Ttr = 1500.0;
 	assert(approxEqual(6.407851e-05, o2CEA.eval(Q), 1.0e-6), failedUnitTest());
 
 	return 0;

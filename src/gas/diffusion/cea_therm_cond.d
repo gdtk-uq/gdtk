@@ -82,9 +82,8 @@ public:
     {
 	return new CEAThermalConductivity(this);
     }
-    override double eval(in GasState Q, int imode) const
+    override double eval(ref const(GasState) Q, double T) const
     {
-	double T = Q.T[imode];
 	// At the limits of the curve, extrapolate value as a constant.
 	if ( T < _T_lowest ) {
 	    return _curves[0].eval(_T_lowest);
@@ -150,7 +149,7 @@ version(cea_therm_cond_test) {
 	auto co2CEA = createCEAThermalConductivity(L);
 	lua_close(L);
 	auto Q = new GasState(1, 1);
-	Q.T[0] = 3500.0;
+	Q.Ttr = 3500.0;
 	assert(approxEqual(1.859070e-01, co2CEA.eval(Q, 0), 1.0e-6), failedUnitTest());
 
 	return 0;

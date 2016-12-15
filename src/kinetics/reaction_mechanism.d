@@ -43,16 +43,12 @@ public:
     
     final void eval_rate_constants(GasState Q)
     {
-	double T_save = Q.T[0];
-	if ( Q.T[0] < _T_lower_limit ) {
-	    Q.T[0] = _T_lower_limit;
-	}
-	if ( Q.T[0] > _T_upper_limit ) {
-	    Q.T[0] = _T_upper_limit;
-        }
+	double T_save = Q.Ttr;
+	if ( Q.Ttr < _T_lower_limit ) { Q.Ttr = _T_lower_limit; }
+	if ( Q.Ttr > _T_upper_limit ) { Q.Ttr = _T_upper_limit; }
 	foreach ( ref r; _reactions ) r.eval_rate_constants(Q);
 	// Always reset Q.T[0] on exit
-	Q.T[0] = T_save;
+	Q.Ttr = T_save;
     }
 
     final void eval_rates(in double[] conc, double[] rates)

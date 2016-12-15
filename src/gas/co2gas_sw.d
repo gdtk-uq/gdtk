@@ -33,7 +33,7 @@ public:
     this() {
 	// Default model is mostly initialized in the private data below.
 	_n_species = 1;
-	_n_modes = 1;
+	_n_modes = 0;
 	_species_names ~= "CO2";
 	_mol_masses ~= 0.04401121121333065;// value for CO2
 	create_species_reverse_lookup();
@@ -117,64 +117,58 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.rho = updateRho_PT(Q.p, Q.T[0]);
-	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
+	Q.rho = updateRho_PT(Q.p, Q.Ttr);
+	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
     override void update_thermo_from_rhoe(GasState Q) const
     {
-	assert(Q.e.length == 1, "incorrect length of energy array");
 	if (lookup_rhoeFlag){
 		//following line assumes that both T and P trees constructed with same bounds
-		double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
+		double[2] uv = get_uv_rhoe(Q.rho, Q.u,
 						T_rhoe_Tree.X_min,
 						T_rhoe_Tree.X_max,
 						T_rhoe_Tree.Y_min,
 						T_rhoe_Tree.Y_max);
-		Q.T[0] = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
+		Q.Ttr = T_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
 		Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
 	}
 	else{
-		Q.T[0] = updateTemperature_rhoe(Q.rho, Q.e[0]);
-		Q.p = updatePressure_rhoT(Q.rho,Q.T[0]);
+		Q.Ttr = updateTemperature_rhoe(Q.rho, Q.u);
+		Q.p = updatePressure_rhoT(Q.rho,Q.Ttr);
 	}
     }
     override void update_thermo_from_rhoT(GasState Q) const//DONE
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.p = updatePressure_rhoT(Q.rho, Q.T[0]);
-	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
-
+	Q.p = updatePressure_rhoT(Q.rho, Q.Ttr);
+	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
 
 
     override void update_thermo_from_rhop(GasState Q) const
     {
-	assert(Q.T.length == 1, "incorrect length of temperature array");
-	Q.T[0] = updateT_Prho(Q.p, Q.rho);
-	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
-	
+	Q.Ttr = updateT_Prho(Q.p, Q.rho);
+	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	Q.rho = getRho_EntropyP(s,Q.p, Q.T[0]);//Q.T[0] is modified by function
-	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
+	Q.rho = getRho_EntropyP(s,Q.p, Q.Ttr);//Q.Ttr is modified by function
+	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
 	if (lookup_hsFlag){
 		Q.rho = rho_sh_Tree.search(s,h).interpolateF(s,h);
-		Q.T[0] = T_sh_Tree.search(s,h).interpolateF(s,h);}
+		Q.Ttr = T_sh_Tree.search(s,h).interpolateF(s,h);}
 	else{
-		Q.rho = getRho_sh(s,h, Q.T[0]);
+		Q.rho = getRho_sh(s,h, Q.Ttr);
 		}
-	Q.e[0] = updateEnergy_rhoT(Q.rho, Q.T[0]);
+	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
     override void update_sound_speed(GasState Q) const
     {
 	if (lookup_rhoeFlag){
-		double[2] uv = get_uv_rhoe(Q.rho, Q.e[0],
+		double[2] uv = get_uv_rhoe(Q.rho, Q.u,
 						a_rhoe_Tree.X_min,
 						a_rhoe_Tree.X_max,
 						a_rhoe_Tree.Y_min,
@@ -182,13 +176,13 @@ public:
 		Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
 	}	
 	else {
-		Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T[0]);
+		Q.a = updateSoundSpeed_rhoT(Q.rho, Q.Ttr);
 	}
     }
     override void update_trans_coeffs(GasState Q) const
     {
-	Q.mu = sutherland_viscosity(Q.T[0], _T_mu, _mu_ref, _S_mu);
-	Q.k[0] = sutherland_thermal_conductivity(Q.T[0], _T_k, _k_ref, _S_k);
+	Q.mu = sutherland_viscosity(Q.Ttr, _T_mu, _mu_ref, _S_mu);
+	Q.kth = sutherland_thermal_conductivity(Q.Ttr, _T_k, _k_ref, _S_k);
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {
@@ -197,7 +191,7 @@ public:
     */
     override double dedT_const_v(in GasState Q) const
     {
-	return get_de_dT(Q.rho,Q.T[0]);
+	return get_de_dT(Q.rho,Q.Ttr);
     }
     override double dhdT_const_p(in GasState Q) const
     {
@@ -213,15 +207,15 @@ public:
     }
     override double internal_energy(in GasState Q) const
     {
-	return Q.e[0];
+	return Q.u;
     }
     override double enthalpy(in GasState Q) const
     {
-	return updateEnthalpy_rhoT_original(Q.rho, Q.T[0]);
+	return updateEnthalpy_rhoT_original(Q.rho, Q.Ttr);
     }
     override double entropy(in GasState Q) const
     {
-	return updateEntropy_rhoT(Q.rho, Q.T[0]);
+	return updateEntropy_rhoT(Q.rho, Q.Ttr);
     }
     //------A function that re-maps the rho, T domain according to the liquid-vapour line------------
     //placed in public so it is available for building Tables
@@ -846,10 +840,10 @@ version(co2gas_sw_test) {
 	assert(gm.species_name(0) == "CO2", failedUnitTest());
 	auto gd = new GasState(gm, 7.38e6, 304.5);//point chosen close to critical point
 	assert(approxEqual(gm.R(gd), 188.924, 1.0e-4), failedUnitTest());
-	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 304.5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
 
@@ -857,39 +851,39 @@ version(co2gas_sw_test) {
 	gm.update_thermo_from_pT(gd);
 	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
-	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 
 	gm.update_thermo_from_rhoe(gd);
 	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.T, 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 304.5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 
 	gm.update_thermo_from_rhoT(gd);
 	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 
 	gm.update_thermo_from_rhop(gd);
 	gm.update_sound_speed(gd);
-	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 
 	gm.update_thermo_from_ps(gd, -1183.950027);
 	gm.update_sound_speed(gd);
-	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 304.5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
-	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 	gm.update_thermo_from_hs(gd, -137587.549656, -1183.950027);
 	gm.update_sound_speed(gd);
-	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 304.5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
-	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 
 
@@ -898,27 +892,27 @@ version(co2gas_sw_test) {
 	gm = new CO2GasSW(L);
 	lua_close(L);
 	gd.p = 7.38e6;
-	gd.T[0] = 304.5;
+	gd.Ttr = 304.5;
 	assert(approxEqual(gm.R(gd), 188.9241, 1.0e-4), failedUnitTest());
-	assert(gm.n_modes == 1, failedUnitTest());
+	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.T[0], 304.5, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 304.5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-4), failedUnitTest());
 
 	gm.update_thermo_from_pT(gd);
 	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.rho, 340.128346, 1.0e-4), failedUnitTest());
-	assert(approxEqual(gd.e[0], -159285.241490, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 	//looser tolerances on the updates below as they are using LuT
 	gm.update_thermo_from_rhoe(gd);
 	gm.update_sound_speed(gd);
 
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-2), failedUnitTest());
-	assert(approxEqual(gd.T, 304.5, 1.0e-2), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 304.5, 1.0e-2), failedUnitTest());
 	assert(approxEqual(gd.a, 178.562447, 1.0e-2), failedUnitTest());
 	return 0;
     }
 }
-	//writeln(gd.rho, " ,", gd.e[0], " ,",gd.T[0]," ,", gd.p, " ,",gd.a);
+	//writeln(gd.rho, " ,", gd.u, " ,",gd.Ttr," ,", gd.p, " ,",gd.a);

@@ -76,7 +76,7 @@ test cea-viscosity-test {Testing diffusion/cea_viscosity.d} -body {
     exec ./cea_viscosity_test
 } -result {} -returnCodes {0}
 
-test sutherland-therm-cond-test {Testing diffusion/sutherland_therm_cone.d} -body {
+test sutherland-therm-cond-test {Testing diffusion/sutherland_therm_cond.d} -body {
     exec ./sutherland_therm_cond_test
 } -result {} -returnCodes {0}
 
