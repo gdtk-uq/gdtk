@@ -17,7 +17,7 @@ inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0}
 
 -- Demo: Verify Mach number of inflow and compute dynamic pressure.
 Q = inflow:toTable()
-print("T=", Q.T[1], "density=", Q.rho, "sound speed= ", Q.a)
+print("T=", Q.T, "density=", Q.rho, "sound speed= ", Q.a)
 print("inflow Mach number=", 1000.0/Q.a)
 print("dynamic pressure q=", 1/2*Q.rho*1.0e6)
 

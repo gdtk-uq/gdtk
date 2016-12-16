@@ -261,15 +261,19 @@ public:
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_both_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
+		interp_both_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, gR1.Ttr, Lft.gas.Ttr, Rght.gas.Ttr);
 		foreach (i; 0 .. nmodes) {
-		    interp_both_scalar(gL1.T[i], gL0.T[i], gR0.T[i], gR1.T[i], Lft.gas.T[i], Rght.gas.T[i]);
+		    interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
+				       gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
 		}
 		mixin(codeForThermoUpdateBoth("pT"));
 		break;
 	    case InterpolateOption.rhoe:
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
+		interp_both_scalar(gL1.u, gL0.u, gR0.u, gR1.u, Lft.gas.u, Rght.gas.u);
 		foreach (i; 0 .. nmodes) {
-		    interp_both_scalar(gL1.e[i], gL0.e[i], gR0.e[i], gR1.e[i], Lft.gas.e[i], Rght.gas.e[i]);
+		    interp_both_scalar(gL1.e_modes[i], gL0.e_modes[i], gR0.e_modes[i],
+				       gR1.e_modes[i], Lft.gas.e_modes[i], Rght.gas.e_modes[i]);
 		}
 		mixin(codeForThermoUpdateBoth("rhoe"));
 		break;
@@ -280,8 +284,10 @@ public:
 		break;
 	    case InterpolateOption.rhot: 
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
+		interp_both_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, gR1.Ttr, Lft.gas.Ttr, Rght.gas.Ttr);
 		foreach (i; 0 .. nmodes) {
-		    interp_both_scalar(gL1.T[i], gL0.T[i], gR0.T[i], gR1.T[i], Lft.gas.T[i], Rght.gas.T[i]);
+		    interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
+				       gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
 		}
 		mixin(codeForThermoUpdateBoth("rhoT"));
 		break;
@@ -371,15 +377,17 @@ public:
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_left_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p);
+		interp_left_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, Lft.gas.Ttr);
 		foreach (i; 0 .. nmodes) {
-		    interp_left_scalar(gL1.T[i], gL0.T[i], gR0.T[i], Lft.gas.T[i]);
+		    interp_left_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], Lft.gas.T_modes[i]);
 		}
 		mixin(codeForThermoUpdateLft("pT"));
 		break;
 	    case InterpolateOption.rhoe:
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
+		interp_left_scalar(gL1.u, gL0.u, gR0.u, Lft.gas.u);
 		foreach (i; 0 .. nmodes) {
-		    interp_left_scalar(gL1.e[i], gL0.e[i], gR0.e[i], Lft.gas.e[i]);
+		    interp_left_scalar(gL1.e_modes[i], gL0.e_modes[i], gR0.e_modes[i], Lft.gas.e_modes[i]);
 		}
 		mixin(codeForThermoUpdateLft("rhoe"));
 		break;
@@ -390,8 +398,9 @@ public:
 		break;
 	    case InterpolateOption.rhot: 
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
+		interp_left_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, Lft.gas.Ttr);
 		foreach (i; 0 .. nmodes) {
-		    interp_left_scalar(gL1.T[i], gL0.T[i], gR0.T[i], Lft.gas.T[i]);
+		    interp_left_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], Lft.gas.T_modes[i]);
 		}
 		mixin(codeForThermoUpdateLft("rhoT"));
 		break;
@@ -483,15 +492,17 @@ public:
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_right_scalar(gL0.p, gR0.p, gR1.p, Rght.gas.p);
+		interp_right_scalar(gL0.Ttr, gR0.Ttr, gR1.Ttr, Rght.gas.Ttr);
 		foreach (i; 0 .. nmodes) {
-		    interp_right_scalar(gL0.T[i], gR0.T[i], gR1.T[i], Rght.gas.T[i]);
+		    interp_right_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], Rght.gas.T_modes[i]);
 		}
 		mixin(codeForThermoUpdateRght("pT"));
 		break;
 	    case InterpolateOption.rhoe:
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);
+		interp_right_scalar(gL0.u, gR0.u, gR1.u, Rght.gas.u);
 		foreach (i; 0 .. nmodes) {
-		    interp_right_scalar(gL0.e[i], gR0.e[i], gR1.e[i], Rght.gas.e[i]);
+		    interp_right_scalar(gL0.e_modes[i], gR0.e_modes[i], gR1.e_modes[i], Rght.gas.e_modes[i]);
 		}
 		mixin(codeForThermoUpdateRght("rhoe"));
 		break;
@@ -502,8 +513,9 @@ public:
 		break;
 	    case InterpolateOption.rhot: 
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);
+		interp_right_scalar(gL0.Ttr, gR0.Ttr, gR1.Ttr, Rght.gas.Ttr);
 		foreach (i; 0 .. nmodes) {
-		    interp_right_scalar(gL0.T[i], gR0.T[i], gR1.T[i], Rght.gas.T[i]);
+		    interp_right_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], Rght.gas.T_modes[i]);
 		}
 		mixin(codeForThermoUpdateRght("rhoT"));
 		break;

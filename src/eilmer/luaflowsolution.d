@@ -543,14 +543,14 @@ void plottingTableToFlowStateTable(lua_State *L)
     lua_getfield(L, tblIdx, "B.z");
     lua_setfield(L, tblIdx, "Bz");
 
-    // 3. Convert temperatures
+    // 3. Convert modal temperatures
     lua_newtable(L);
     foreach ( i; 0 .. n_modes ) {
-	string key = format("T[%d]", i);
+	string key = format("T_modes[%d]", i);
 	lua_getfield(L, tblIdx, toStringz(key));
 	lua_rawseti(L, -2, i+1);
     }
-    lua_setfield(L, tblIdx, "T");
+    lua_setfield(L, tblIdx, "T_modes");
 
     // 4. Convert mass fractions
     lua_newtable(L);

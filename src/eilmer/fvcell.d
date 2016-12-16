@@ -123,9 +123,11 @@ public:
 	volume.length = myConfig.n_grid_time_levels;
 	areaxy.length = myConfig.n_grid_time_levels;
 	auto gmodel = myConfig.gmodel;
-	fs = new FlowState(gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
 	int n_species = gmodel.n_species;
 	int n_modes = gmodel.n_modes;
+	double Ttr = 300.0;
+	double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
+	fs = new FlowState(gmodel, 100.0e3, Ttr, T_modes, Vector3(0.0,0.0,0.0));
 	foreach(i; 0 .. myConfig.n_flow_time_levels) {
 	    U ~= new ConservedQuantities(n_species, n_modes);
 	    dUdt ~= new ConservedQuantities(n_species, n_modes);
@@ -293,8 +295,9 @@ public:
 	fs.gas.p = to!double(items.front); items.popFront();
 	fs.gas.a = to!double(items.front); items.popFront();
 	fs.gas.mu = to!double(items.front); items.popFront();
+	fs.gas.kth = to!double(items.front); items.popFront();
 	foreach(i; 0 .. gm.n_modes) {
-	    fs.gas.k[i] = to!double(items.front); items.popFront();
+	    fs.gas.k_modes[i] = to!double(items.front); items.popFront();
 	}
 	fs.mu_t = to!double(items.front); items.popFront();
 	fs.k_t = to!double(items.front); items.popFront();
@@ -314,11 +317,13 @@ public:
 	if (gm.n_species > 1) {
 	    dt_chem = to!double(items.front); items.popFront();
 	}
+	fs.gas.u = to!double(items.front); items.popFront();
+	fs.gas.Ttr = to!double(items.front); items.popFront();
 	foreach(i; 0 .. gm.n_modes) {
-	    fs.gas.e[i] = to!double(items.front); items.popFront();
-	    fs.gas.T[i] = to!double(items.front); items.popFront();
+	    fs.gas.e_modes[i] = to!double(items.front); items.popFront();
+	    fs.gas.T_modes[i] = to!double(items.front); items.popFront();
 	}
-	if (gm.n_modes > 1) {
+	if (gm.n_modes > 0) {
 	    dt_therm = to!double(items.front); items.popFront(); 
 	}
     } // end scan_values_from_string()
@@ -336,7 +341,8 @@ public:
 	if (myConfig.MHD && myConfig.divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
 	if (myConfig.include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
 	formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-	foreach(i; 0 .. fs.gas.k.length) formattedWrite(writer, " %.18e", fs.gas.k[i]); 
+	formattedWrite(writer, " %.18e", fs.gas.kth);
+	foreach(i; 0 .. fs.gas.k_modes.length) formattedWrite(writer, " %.18e", fs.gas.k_modes[i]); 
 	formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
 	if (myConfig.radiation) { 
 	    formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad);
@@ -344,10 +350,11 @@ public:
 	formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
 	foreach(i; 0 .. fs.gas.massf.length) formattedWrite(writer, " %.18e", fs.gas.massf[i]); 
 	if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
-	foreach(i; 0 .. fs.gas.e.length) {
-	    formattedWrite(writer, " %.18e %.18e", fs.gas.e[i], fs.gas.T[i]);
+	formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.Ttr);
+	foreach(i; 0 .. fs.gas.e_modes.length) {
+	    formattedWrite(writer, " %.18e %.18e", fs.gas.e_modes[i], fs.gas.T_modes[i]);
 	} 
-	if (fs.gas.e.length > 1) { formattedWrite(writer, " %.18e", dt_therm); }
+	if (fs.gas.e_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
 	return writer.data;
     } // end write_values_to_string()
 
@@ -372,7 +379,7 @@ public:
 	myU.divB = fs.divB;
 	// Total Energy / unit volume = density
 	// (specific internal energy + kinetic energy/unit mass).
-	double e = 0.0; foreach(elem; fs.gas.e) e += elem;
+	double e = fs.gas.u; foreach(elem; fs.gas.e_modes) e += elem;
 	double ke = 0.5 * (fs.vel.x * fs.vel.x + fs.vel.y * fs.vel.y + fs.vel.z * fs.vel.z);
 	if (with_k_omega) {
 	    myU.tke = fs.gas.rho * fs.tke;
@@ -393,7 +400,7 @@ public:
 	}
 	// Individual energies: energy in mode per unit volume
 	foreach(imode; 0 .. myU.energies.length) {
-	    myU.energies[imode] = fs.gas.rho * fs.gas.e[imode];
+	    myU.energies[imode] = fs.gas.rho * fs.gas.e_modes[imode];
 	}
 	if (omegaz != 0.0) {
 	    // Rotating frame.
@@ -471,15 +478,13 @@ public:
 	}
 	foreach(isp; 0 .. gmodel.n_species) fs.gas.massf[isp] = myU.massf[isp] * dinv; 
 	if (gmodel.n_species > 1) scale_mass_fractions(fs.gas.massf);
-	foreach(imode; 0 .. gmodel.n_modes) fs.gas.e[imode] = myU.energies[imode] * dinv; 
-	// We can recompute e[0] from total energy and component
-	// modes NOT in translation.
-	if (gmodel.n_modes > 1) {
-	    double e_tmp = 0.0;
-	    foreach(imode; 1 .. gmodel.n_modes) e_tmp += fs.gas.e[imode];
-	    fs.gas.e[0] = e - e_tmp;
+	foreach(imode; 0 .. gmodel.n_modes) fs.gas.e_modes[imode] = myU.energies[imode] * dinv; 
+	// We can recompute thermal energy from total energy and internal energies.
+	if (gmodel.n_modes > 0) {
+	    double e_tmp = 0.0; foreach(ei; fs.gas.e_modes) e_tmp += ei;
+	    fs.gas.u = e - e_tmp;
 	} else {
-	    fs.gas.e[0] = e;
+	    fs.gas.u = e;
 	}
 	// Fill out the other variables: P, T, a, and viscous transport coefficients.
 	try {
@@ -592,10 +597,7 @@ public:
 	    dUdt[ftl].massf[isp] = vol_inv * integral + Q.massf[isp];
 	}
 	// Individual energies.
-	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
-	// Instead we get this from the conservation of total energy
-	dUdt[ftl].energies[0] = 0.0;
-	foreach(imode; 1 .. iface[0].F.energies.length) {
+	foreach(imode; 0 .. iface[0].F.energies.length) {
 	    integral = 0.0;
 	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.energies[imode] * iface[i].area[gtl];
 	    dUdt[ftl].energies[imode] = vol_inv * integral + Q.energies[imode];
@@ -670,10 +672,7 @@ public:
 	foreach(isp; 0 .. U1.massf.length) {
 	    U1.massf[isp] = U0.massf[isp] + dt * gamma_1 * dUdt0.massf[isp];
 	}
-	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
-	// Instead we get this from the conservation of total energy
-	U1.energies[0] = U0.energies[0];
-	foreach(imode; 1 .. U1.energies.length) {
+	foreach(imode; 0 .. U1.energies.length) {
 	    U1.energies[imode] = U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode];
 	}
 	return;
@@ -732,10 +731,7 @@ public:
 	foreach(isp; 0 .. U2.massf.length) {
 	    U2.massf[isp] = U_old.massf[isp] + dt * (gamma_1 * dUdt0.massf[isp] + gamma_2 * dUdt1.massf[isp]);
 	}
-	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
-	// Instead we get this from the conservation of total energy
-	U2.energies[0] = U_old.energies[0];
-	foreach(imode; 1 .. U2.energies.length) {
+	foreach(imode; 0 .. U2.energies.length) {
 	    U2.energies[imode] = U_old.energies[imode] + 
 		dt * (gamma_1 * dUdt0.energies[imode] + gamma_2 * dUdt1.energies[imode]);
 	}
@@ -801,10 +797,7 @@ public:
 	    U3.massf[isp] = U_old.massf[isp] +
 		dt * (gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp] + gamma_3*dUdt2.massf[isp]);
 	}
-	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
-	// Instead we get this from the conservation of total energy
-	U3.energies[0] = U_old.energies[0];
-	foreach(imode; 1 .. U3.energies.length) {
+	foreach(imode; 0 .. U3.energies.length) {
 	    U3.energies[imode] = U_old.energies[imode] +
 		dt * (gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode] +
 		      gamma_3*dUdt2.energies[imode]);
@@ -845,10 +838,7 @@ public:
 	foreach(isp; 0 .. U1.massf.length) {
 	    U1.massf[isp] = vr * (U0.massf[isp] + dt * gamma_1 * dUdt0.massf[isp]);
 	}
-	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
-	// Instead we get this from the conservation of total energy
-	U1.energies[0] = U0.energies[0];
-	foreach(imode; 1 .. U1.energies.length) {
+	foreach(imode; 0 .. U1.energies.length) {
 	    U1.energies[imode] = vr * (U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode]);
 	}
 	return;
@@ -898,10 +888,7 @@ public:
 				       dt * (gamma_1 * dUdt0.massf[isp] + 
 					     gamma_2 * dUdt1.massf[isp]));
 	}
-	// We will not put anything meaningful in imode = 0 (RJG & DFP : 22-Apr-2013)
-	// Instead we get this from the conservation of total energy
-	U2.energies[0] = U0.energies[0];
-	foreach(imode; 1 .. U2.energies.length) {
+	foreach(imode; 0 .. U2.energies.length) {
 	    U2.energies[imode] = vol_inv * (v_old * U0.energies[imode] +
 					    dt * (gamma_1 * dUdt0.energies[imode] + 
 						  gamma_2 * dUdt1.energies[imode]));
@@ -913,19 +900,19 @@ public:
     // Use the finite-rate chemistry module to update the species fractions
     // and the other thermochemical properties.
     {
-	if (!fr_reactions_allowed || fs.gas.T[0] <= T_frozen) return;
-	double T_save = fs.gas.T[0];
+	if (!fr_reactions_allowed || fs.gas.Ttr <= T_frozen) return;
+	double T_save = fs.gas.Ttr;
 	if (myConfig.ignition_zone_active) {
 	    // When active, replace gas temperature with an effective ignition temperature
 	    foreach(zone; myConfig.ignition_zones) {
-		if ( zone.is_inside(pos[0], myConfig.dimensions) ) fs.gas.T[0] = zone.Tig; 
+		if ( zone.is_inside(pos[0], myConfig.dimensions) ) fs.gas.Ttr = zone.Tig; 
 	    }
 	}
 	try {
 	    myConfig.chemUpdate(fs.gas, dt, dt_chem, myConfig.gmodel);
 	    if (myConfig.ignition_zone_active) {
 		// Restore actual gas temperature
-		fs.gas.T[0] = T_save;
+		fs.gas.Ttr = T_save;
 	    }
 	} catch(ChemistryUpdateException err) {
 	    string msg = format("caught %s", err.msg);
@@ -958,9 +945,9 @@ public:
 	// Finally, we have to manually update the conservation quantities
 	// for the gas-dynamics time integration.
 	// Species densities: mass of species isp per unit volume.
-	foreach(isp; 0 .. fs.gas.massf.length)
+	foreach(isp; 0 .. fs.gas.massf.length) {
 	    U[0].massf[isp] = fs.gas.rho * fs.gas.massf[isp];
-
+	}
     } // end chemical_increment()
 
     void thermal_increment(double dt, double T_frozen_energy, GasModel gmodel) 
@@ -969,7 +956,7 @@ public:
     // We are assuming that this is done after a successful gas-dynamic update
     // and that the current conserved quantities are held in U[0].
     {
-	if ( !fr_reactions_allowed || fs.gas.T[0] <= T_frozen_energy ) return;
+	if ( !fr_reactions_allowed || fs.gas.Ttr <= T_frozen_energy ) return;
 	// auto eeupdate = myConfig.energy_exchange_update_scheme;
 	// eeupdate.update_state(fs.gas, dt, dt_therm, gmodel);
 	// The update only changes modal energies, we need to impose
@@ -984,7 +971,7 @@ public:
 	// for the gas-dynamics time integration.
 	// Independent energies energy: Joules per unit volume.
 	foreach(imode; 0 .. U[0].energies.length) {
-	    U[0].energies[imode] = fs.gas.rho * fs.gas.e[imode];
+	    U[0].energies[imode] = fs.gas.rho * fs.gas.e_modes[imode];
 	}
 	assert(false, "[TODO] thermal_increment() not yet ready for use");
     } // end thermal_increment()
@@ -1090,7 +1077,7 @@ public:
 	    // See Swanson, Turkel and White (1991)
 	    gam_eff = gmodel.gamma(fs.gas);
 	    // Need to sum conductivities for thermal nonequilibrium.
-	    double k_total = 0.0; foreach(k_value; fs.gas.k) { k_total += k_value; }
+	    double k_total = 0.0; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
 	    double Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
 	    if (myConfig.dimensions == 3) {
 		signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
@@ -1144,7 +1131,7 @@ public:
     // starting shock structure and the simulations do not progress.
     {
 	fs.mu_t = fmin(fs.mu_t, factor * fs.gas.mu);
-	fs.k_t = fmin(fs.k_t, factor * fs.gas.k[0]); // ASSUMPTION re k[0]
+	fs.k_t = fmin(fs.k_t, factor * fs.gas.kth); // ASSUMPTION re k
     }
 
     @nogc
@@ -1593,8 +1580,7 @@ public:
 	Q_rad_org = Q_rE_rad;
 	// 2. Compute the scaling factor based on local gas properties
 	// NOTE: - The idea is that f_rad_org is proportional to actual value
-	//       - Assuming that the last temperature is the electronic temperature
-	double T = fs.gas.T.back();
+	double T = fs.gas.Ttr;
 	if ( Q_rad_org <= 0.0 ) {
 	    // This cell is a net emitter
 	    f_rad_org = fs.gas.rho * pow(T, 4);
@@ -1607,7 +1593,7 @@ public:
     void rescale_Q_rE_rad() 
     {
 	// 1. Compute the current scaling factor based on local gas properties
-	double T = fs.gas.T[0];
+	double T = fs.gas.Ttr;
 	double f_rad_new = 1.0;
 	if ( Q_rad_org <= 0.0 ) {
 	    // This cell is a net emitter
@@ -1629,7 +1615,7 @@ public:
     double rad_scaling_ratio() 
     {
 	// 1. Compute the current scaling factor based on local gas properties
-	double T = fs.gas.T[0];
+	double T = fs.gas.Ttr;
 	double f_rad = 1.0;
 	if ( Q_rE_rad <= 0.0 ) {
 	    // This cell is a net emitter
@@ -1659,8 +1645,8 @@ string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
     if (MHD) { list ~= ["B.x", "B.y", "B.z", "divB"]; }
     if (MHD && divergence_cleaning) { list ~= ["psi"]; }
     if (include_quality) { list ~= ["quality"]; }
-    list ~= ["p", "a", "mu"];
-    foreach(i; 0 .. gmodel.n_modes) { list ~= "k[" ~ to!string(i) ~ "]"; }
+    list ~= ["p", "a", "mu", "k"];
+    foreach(i; 0 .. gmodel.n_modes) { list ~= "k_modes[" ~ to!string(i) ~ "]"; }
     list ~= ["mu_t", "k_t", "S"];
     if (radiation) { list ~= ["Q_rad_org", "f_rad_org", "Q_rE_rad"]; }
     list ~= ["tke", "omega"];
@@ -1670,7 +1656,10 @@ string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
 	list ~= ["massf[" ~ to!string(i) ~ "]-" ~ to!string(name)];
     }
     if (gmodel.n_species > 1) { list ~= ["dt_chem"]; }
-    foreach(i; 0 .. gmodel.n_modes) { list ~= ["e[" ~ to!string(i) ~ "]", "T[" ~ to!string(i) ~ "]"]; }
-    if (gmodel.n_modes > 1) { list ~= ["dt_therm"]; }
+    list ~= ["u", "Ttr"];
+    foreach(i; 0 .. gmodel.n_modes) {
+	list ~= ["e_modes[" ~ to!string(i) ~ "]", "T_modes[" ~ to!string(i) ~ "]"];
+    }
+    if (gmodel.n_modes > 0) { list ~= ["dt_therm"]; }
     return list;
 } // end variable_list_for_cell()

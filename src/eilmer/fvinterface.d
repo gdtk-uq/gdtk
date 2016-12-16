@@ -69,8 +69,13 @@ public:
 	id = id_init;
 	area.length = myConfig.n_grid_time_levels;
 	gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
-	fs = new FlowState(myConfig.gmodel, 100.0e3, [300.0,], Vector3(0.0,0.0,0.0));
-	F = new ConservedQuantities(myConfig.gmodel.n_species, myConfig.gmodel.n_modes);
+	auto gmodel = myConfig.gmodel;
+	int n_species = gmodel.n_species;
+	int n_modes = gmodel.n_modes;
+	double Ttr = 300.0;
+	double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
+	fs = new FlowState(gmodel, 100.0e3, Ttr, T_modes, Vector3(0.0,0.0,0.0));
+	F = new ConservedQuantities(n_species, n_modes);
 	F.clear_values();
 	grad = new FlowGradients(myConfig);
 	if (allocate_spatial_deriv_lsq_workspace) {
@@ -195,25 +200,25 @@ public:
     // Note that the gradient values need to be in place before calling this procedure.
     {
 	double viscous_factor = myConfig.viscous_factor;
-	double k_laminar = fs.gas.k[0];
+	double k_laminar = fs.gas.kth;
 	double mu_laminar = fs.gas.mu;
 	if (myConfig.use_viscosity_from_cells) {
 	    // Emulate Eilmer3 behaviour by using the viscous transport coefficients
 	    // from the cells either side of the interface.
 	    if (left_cell && right_cell) {
-		k_laminar = 0.5*(left_cell.fs.gas.k[0]+right_cell.fs.gas.k[0]);
+		k_laminar = 0.5*(left_cell.fs.gas.kth+right_cell.fs.gas.kth);
 		mu_laminar = 0.5*(left_cell.fs.gas.mu+right_cell.fs.gas.mu);
 	    } else if (left_cell) {
-		k_laminar = left_cell.fs.gas.k[0];
+		k_laminar = left_cell.fs.gas.kth;
 		mu_laminar = left_cell.fs.gas.mu;
 	    } else if (right_cell) {
-		k_laminar = right_cell.fs.gas.k[0];
+		k_laminar = right_cell.fs.gas.kth;
 		mu_laminar = right_cell.fs.gas.mu;
 	    } else {
 		assert(0, "Oops, don't seem to have a cell available.");
 	    }
 	}
-        double k_eff = viscous_factor * (fs.gas.k[0] + fs.k_t);
+        double k_eff = viscous_factor * (fs.gas.kth + fs.k_t);
 	double mu_eff =  viscous_factor * (fs.gas.mu + fs.mu_t);
 	double lmbda = -2.0/3.0 * mu_eff;
 	if ( myConfig.diffusion ) {
@@ -285,9 +290,9 @@ public:
 	    }
 	}
 	// Thermal conductivity (NOTE: q is total energy flux)
-	double qx = k_eff * grad.T[0];
-	double qy = k_eff * grad.T[1];
-	double qz = k_eff * grad.T[2];
+	double qx = k_eff * grad.Ttr[0];
+	double qy = k_eff * grad.Ttr[1];
+	double qz = k_eff * grad.Ttr[2];
 	if ( myConfig.diffusion ) {
 	    // for( size_t isp = 0; isp < nsp; ++isp ) {
 	    // 	double h = 0.0; // [TODO] Rowan, transport of species enthalpies?

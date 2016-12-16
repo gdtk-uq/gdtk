@@ -38,15 +38,21 @@ public:
     double k_t;    // turbulence thermal-conductivity
     int S;         // shock indicator, value 0 or 1
 
-    this(GasModel gm, in double p_init, in double[] T_init, in Vector3 vel_init,
-	 in double[] massf_init=[1.0,], in double quality_init=1.0,
+    this(GasModel gm,
+	 in double p_init,
+	 in double Ttr_init,
+	 in double[] T_modes_init,
+	 in Vector3 vel_init,
+	 in double[] massf_init=[1.0,],
+	 in double quality_init=1.0,
 	 in Vector3 B_init=Vector3(0.0,0.0,0.0),
 	 in double psi_init=0.0, in double divB_init=1.0,
 	 in double tke_init=0.0, in double omega_init=1.0,
 	 in double mu_t_init=0.0, in double k_t_init=0.0,
 	 in int S_init=0)
     {
-	gas = new GasState(gm, p_init, T_init, massf_init, quality_init);
+	gas = new GasState(gm, p_init, Ttr_init, T_modes_init,
+			   massf_init, quality_init);
 	vel = vel_init;
 	B = B_init;
 	psi = psi_init;
@@ -60,7 +66,8 @@ public:
 
     this(in FlowState other, GasModel gm)
     {
-	gas = new GasState(gm, other.gas.p, other.gas.T, other.gas.massf, other.gas.quality); 
+	gas = new GasState(gm, other.gas.p, other.gas.Ttr, other.gas.T_modes,
+			   other.gas.massf, other.gas.quality); 
 	vel = other.vel;
 	B = other.B;
 	psi = other.psi;
@@ -74,7 +81,8 @@ public:
 
     this(in FlowState other)
     {
-	gas = new GasState(to!int(other.gas.massf.length), to!int(other.gas.T.length));
+	gas = new GasState(to!int(other.gas.massf.length),
+			   to!int(other.gas.T_modes.length));
 	gas.copy_values_from(other.gas);
 	vel.refx = other.vel.x; vel.refy = other.vel.y; vel.refz = other.vel.z;
 	B.refx = other.B.x; B.refy = other.B.y; B.refz = other.B.z;
@@ -89,7 +97,7 @@ public:
 
     this(GasModel gm)
     {
-	gas = new GasState(gm, 100.0e3, [300.0,], [1.0,], 1.0); 
+	gas = new GasState(gm, 100.0e3, 300.0, [1.0,], 1.0); 
 	vel = Vector3(0.0,0.0,0.0);
 	B = Vector3(0.0,0.0,0.0);
 	psi = 0.0;
@@ -104,10 +112,13 @@ public:
     this(in JSONValue json_data, GasModel gm)
     {
 	double p = getJSONdouble(json_data, "p", 100.0e3);
-	double[] T = getJSONdoublearray(json_data, "T", [300.0,]);
+	double Ttr = getJSONdouble(json_data, "Ttr", 300.0e3);
+	double[] T_modes;
+	foreach(i; 0 .. gm.n_modes) { T_modes ~= Ttr; }
+	T_modes = getJSONdoublearray(json_data, "T_modes", []);
 	double[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
 	double quality = getJSONdouble(json_data, "quality", 1.0);
-	gas = new GasState(gm, p, T, massf, quality);
+	gas = new GasState(gm, p, Ttr, T_modes, massf, quality);
 	double velx = getJSONdouble(json_data, "velx", 0.0);
 	double vely = getJSONdouble(json_data, "vely", 0.0);
 	double velz = getJSONdouble(json_data, "velz", 0.0);
@@ -241,10 +252,12 @@ public:
 	auto writer = appender!string();
 	formattedWrite(writer, "{");
 	formattedWrite(writer, "\"p\": %.18e", gas.p);
-	formattedWrite(writer, ", \"T\": [ %.18e", gas.T[0]);
-	foreach (i; 1 .. gas.T.length) {
-	    formattedWrite(writer, ", %.18e", gas.T[i]);
-	}
+	formattedWrite(writer, ", \"Ttr\": %.18e", gas.Ttr);
+	// zero or more T_modes
+	formattedWrite(writer, ", \"T_modes\": [");
+	if (gas.T_modes.length > 0) { formattedWrite(writer, " %.18e", gas.T_modes[0]); }
+	foreach (i; 1 .. gas.T_modes.length) { formattedWrite(writer, ", %.18e", gas.T_modes[i]); }
+	// one or more mass fractions
 	formattedWrite(writer, "]");
 	formattedWrite(writer, ", \"massf\": [ %.18e", gas.massf[0]);
 	foreach (i; 1 .. gas.massf.length) {
@@ -291,12 +304,12 @@ public:
 	    writeln("Turbulence KE above maximum ", tke);
 	    is_data_valid = false;
 	}
-	if (gas.T[0] < flowstate_limits.min_temp) {
-	    writeln("Temperature below minimum ", gas.T[0]);
+	if (gas.Ttr < flowstate_limits.min_temp) {
+	    writeln("Temperature below minimum ", gas.Ttr);
 	    is_data_valid = false;
 	}
-	if (gas.T[0] > flowstate_limits.max_temp) {
-	    writeln("Temperature above maximum ", gas.T[0]);
+	if (gas.Ttr > flowstate_limits.max_temp) {
+	    writeln("Temperature above maximum ", gas.Ttr);
 	    is_data_valid = false;
 	}
 	if (!isFinite(omega)) {
@@ -333,7 +346,8 @@ string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) 
     if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
     if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
     formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-    foreach (kvalue; fs.gas.k) formattedWrite(writer, " %.18e", kvalue); 
+    formattedWrite(writer, " %.18e", fs.gas.kth);
+    foreach (kvalue; fs.gas.k_modes) formattedWrite(writer, " %.18e", kvalue); 
     int S = 0;  // zero for shock detector
     formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, S);
     if (radiation) {
@@ -344,10 +358,11 @@ string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) 
     foreach (massfvalue; fs.gas.massf) formattedWrite(writer, " %.18e", massfvalue); 
     double dt_chem = -1.0;
     if (fs.gas.massf.length > 1) formattedWrite(writer, " %.18e", dt_chem); 
-    foreach (imode; 0 .. fs.gas.e.length) 
-	formattedWrite(writer, " %.18e %.18e", fs.gas.e[imode], fs.gas.T[imode]); 
+    formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.Ttr); 
+    foreach (imode; 0 .. fs.gas.e_modes.length) 
+	formattedWrite(writer, " %.18e %.18e", fs.gas.e_modes[imode], fs.gas.T_modes[imode]); 
     double dt_therm = -1.0;
-    if (fs.gas.e.length > 1) formattedWrite(writer, " %.18e", dt_therm); 
+    if (fs.gas.e_modes.length > 0) formattedWrite(writer, " %.18e", dt_therm); 
     return writer.data;
 } // end  cell_data_as_string()
  

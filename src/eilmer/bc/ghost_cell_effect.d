@@ -580,8 +580,9 @@ public:
 			// Extrapolate on primitive variables
 			// 1. First exterior point
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -607,8 +608,9 @@ public:
 			cell_1 = dest_cell;
 			dest_cell = blk.get_cell(i,j+2,k);
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -657,8 +659,9 @@ public:
 			// Extrapolate on primitive variables
 			// 1. First exterior point
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -684,8 +687,9 @@ public:
 			cell_1 = dest_cell;
 			dest_cell = blk.get_cell(i+2,j,k);
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -733,8 +737,9 @@ public:
 			// Extrapolate on primitive variables
 			// 1. First exterior point
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -760,8 +765,9 @@ public:
 			cell_1 = dest_cell;
 			dest_cell = blk.get_cell(i,j-2,k);
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -808,8 +814,9 @@ public:
 			// Extrapolate on primitive variables
 			// 1. First exterior point
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -835,8 +842,9 @@ public:
 			cell_1 = dest_cell;
 			dest_cell = blk.get_cell(i-2,j,k);
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -884,8 +892,9 @@ public:
 			// Extrapolate on primitive variables
 			// 1. First exterior point
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -911,8 +920,9 @@ public:
 			cell_1 = dest_cell;
 			dest_cell = blk.get_cell(i,j,k+2);
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -960,8 +970,9 @@ public:
 			// Extrapolate on primitive variables
 			// 1. First exterior point
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -987,8 +998,9 @@ public:
 			cell_1 = dest_cell;
 			dest_cell = blk.get_cell(i,j,k-2);
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
+			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e[imode] = 2.0*cell_1.fs.gas.e[imode] - cell_2.fs.gas.e[imode];
+			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -1204,7 +1216,8 @@ public:
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    ghost0.fs.gas.p = p_outside;
-	    foreach(ref elem; ghost0.fs.gas.T) elem = T_outside; 
+	    ghost0.fs.gas.Ttr = T_outside;
+	    foreach(ref elem; ghost0.fs.gas.T_modes) { elem = T_outside; } 
 	    gmodel.update_thermo_from_pT(ghost0.fs.gas);
 	} // end foreach face
     } // end apply_unstructured_grid()
@@ -1224,12 +1237,14 @@ public:
 		    dest_cell = blk.get_cell(i,j+1,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j+2,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
 	    } // for k
@@ -1242,12 +1257,14 @@ public:
 		    dest_cell = blk.get_cell(i+1,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i+2,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for k
@@ -1260,12 +1277,14 @@ public:
 		    dest_cell = blk.get_cell(i,j-1,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; }
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j-2,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
 	    } // for k
@@ -1278,12 +1297,14 @@ public:
 		    dest_cell = blk.get_cell(i-1,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i-2,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for k
@@ -1296,12 +1317,14 @@ public:
 		    dest_cell = blk.get_cell(i,j,k+1);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k+2);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for i
@@ -1314,12 +1337,14 @@ public:
 		    dest_cell = blk.get_cell(i,j,k-1);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; }
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k-2);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    foreach(ref elem; dest_cell.fs.gas.T) elem = T_outside; 
+		    dest_cell.fs.gas.Ttr = T_outside;
+		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
 	    } // for i

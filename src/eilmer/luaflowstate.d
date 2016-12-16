@@ -33,7 +33,8 @@ import fvcell;
 
 /// name for FlowState object in Lua scripts.
 immutable string FlowStateMT = "FlowState";
-immutable string[] validFlowStateFields = ["p", "T", "p_e", "quality", "massf",
+immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
+					   "quality", "massf",
 					   "velx", "vely", "velz",
 					   "Bx", "By", "Bz", "psi",
 					   "tke", "omega", "mu_t", "k_t"];
@@ -52,7 +53,7 @@ FlowState checkFlowState(lua_State* L, int index)
  * Construction of a FlowState object from in Lua will accept:
  * -----------------
  * fs = FlowState:new{p=1.0e5, T=300.0, velx=1000.0, vely=200.0, massf={spName=1.0}}
- * fs = FlowState:new{p=1.0e7, T={300.0}}
+ * fs = FlowState:new{p=1.0e7, T=300.0}
  * fs = FlowState:new()
  * fs = FlowState:new{}
  * -----------------
@@ -114,31 +115,34 @@ A valid pressure value 'p' is not found in arguments.
 The value should be a number.`;
     double p = getNumberFromTable(L, 1, "p", true, double.init, true, errMsg);
 
-    // Next test for T and if it's a single value or array.
-    double[] T;
-    lua_getfield(L, 1, "T");
+    errMsg = `Error in call to FlowState:new.
+A valid pressure value 'T' is not found in arguments.
+The value should be a number.`;
+    double Ttr = getNumberFromTable(L, 1, "T", true, double.init, true, errMsg);
+
+    // Now everything else is optional. If it has been set, then we will 
+    // ensure that it can be retrieved correctly, or signal the user.
+
+    // Next test for T_modes and see if it is a scalar or an array.
+    double[] T_modes;
+    lua_getfield(L, 1, "T_modes");
     if ( lua_isnumber(L, -1 ) ) {
 	double Tval = lua_tonumber(L, -1);
-	foreach ( i; 0..managedGasModel.n_modes ) T ~= Tval;
+	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Tval; }
     }
     else if ( lua_istable(L, -1 ) ) {
-	getArrayOfDoubles(L, 1, "T", T);
-	if ( T.length != managedGasModel.n_modes ) {
+	getArrayOfDoubles(L, 1, "T_modes", T_modes);
+	if ( T_modes.length != managedGasModel.n_modes ) {
 	    errMsg = "Error in call to FlowState:new.";
-	    errMsg ~= "Length of T vector does not match number of modes in gas model.";
-	    errMsg ~= format("T.length= %d; n_modes= %d\n", T.length, managedGasModel.n_modes);
+	    errMsg ~= "Length of T_modes vector does not match number of modes in gas model.";
+	    errMsg ~= format("T_modes.length= %d; n_modes= %d\n", T_modes.length, managedGasModel.n_modes);
 	    throw new LuaInputException(errMsg);
 	}
     }
     else  {
-	errMsg = "Error in call to FlowState:new.";
-	errMsg ~= "A valid temperature value 'T' is not found in arguments.";
-	errMsg ~= "It should be listed as a single value, or list of values.";
-	throw new LuaInputException(errMsg);
+	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Ttr; }
     }
     lua_pop(L, 1);
-    // Now everything else is optional. If it has been set, then we will 
-    // ensure that it can be retrieved correctly, or signal the user.
     // Values related to velocity.
     double velx = 0.0;
     double vely = 0.0;
@@ -205,7 +209,7 @@ The value should be a number.`;
     // We won't let user set 'S' -- shock detector value.
     int S = 0;
 
-    fs = new FlowState(managedGasModel, p, T, vel, massf, quality, B,
+    fs = new FlowState(managedGasModel, p, Ttr, T_modes, vel, massf, quality, B,
 		       psi, divB, tke, omega, mu_t, k_t);
     flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
     return 1;
@@ -227,6 +231,12 @@ string pushGasVar(string var)
 {
     return `lua_pushnumber(L, fs.gas.` ~ var ~ `);
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
+}
+
+string pushGasVar(string var_in_D, string var_in_Lua)
+{
+    return `lua_pushnumber(L, fs.gas.` ~ var_in_D ~ `);
+lua_setfield(L, tblIdx, "` ~ var_in_Lua ~`");`;
 }
 
 string pushGasVarArray(string var)
@@ -260,8 +270,10 @@ lua_setfield(L, tblIdx, "`~var~`z");`;
 void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gmodel)
 {
     mixin(pushGasVar("p"));
-    mixin(pushGasVarArray("T"));
-    mixin(pushGasVarArray("e"));
+    mixin(pushGasVar("Ttr", "T"));
+    mixin(pushGasVarArray("T_modes"));
+    mixin(pushGasVar("u"));
+    mixin(pushGasVarArray("e_modes"));
     mixin(pushGasVar("quality"));
     // -- massf as key-val table
     lua_newtable(L);
@@ -274,7 +286,8 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     mixin(pushGasVar("a"));
     mixin(pushGasVar("rho"));
     mixin(pushGasVar("mu"));
-    mixin(pushGasVarArray("k"));
+    mixin(pushGasVar("kth", "k"));
+    mixin(pushGasVarArray("k_modes"));
     mixin(pushFSVar("tke"));
     mixin(pushFSVar("omega"));
     mixin(pushFSVar("mu_t"));
@@ -311,6 +324,15 @@ if ( !lua_isnil(L, -1) ) {
 lua_pop(L, 1);`;
 }
 
+string checkGasVar(string var_in_D, string var_in_Lua)
+{
+    return `lua_getfield(L, 2, "`~var_in_Lua~`");
+if ( !lua_isnil(L, -1) ) {
+    fs.gas.`~var_in_D~` = luaL_checknumber(L, -1);
+}
+lua_pop(L, 1);`;
+}
+
 string checkGasVarArray(string var)
 {
     return `lua_getfield(L, 2, "`~var~`");
@@ -337,9 +359,10 @@ extern(C) int fromTable(lua_State* L)
     if ( !lua_istable(L, 2) ) {
 	return 0;
     }
-    // Look for gas variables: "p" and "qaulity"
+    // Look for gas variables: "p" and "quality"
     mixin(checkGasVar("p"));
     mixin(checkGasVar("quality"));
+    mixin(checkGasVar("Ttr", "T")); // not same name in Lua domain
     // Look for a table with mass fraction info
     lua_getfield(L, 2, "massf");
     if ( lua_istable(L, -1) ) {
@@ -347,12 +370,12 @@ extern(C) int fromTable(lua_State* L)
 	getSpeciesValsFromTable(L, managedGasModel, massfIdx, fs.gas.massf, "massf");
     }
     lua_pop(L, 1);
-    // Look for an array of temperatures.
-    mixin(checkGasVarArray("T"));
-    if ( fs.gas.T.length != GlobalConfig.gmodel_master.n_modes ) {
-	string errMsg = "The temperature array ('T') did not contain"~
+    // Look for an array of internal temperatures.
+    mixin(checkGasVarArray("T_modes"));
+    if ( fs.gas.T_modes.length != GlobalConfig.gmodel_master.n_modes ) {
+	string errMsg = "The temperature array ('T_modes') did not contain"~
 	    " the correct number of entries.\n";
-	errMsg ~= format("T.length= %d; n_modes= %d\n", fs.gas.T.length,
+	errMsg ~= format("T_modes.length= %d; n_modes= %d\n", fs.gas.T_modes.length,
 			 GlobalConfig.gmodel_master.n_modes);
 	luaL_error(L, errMsg.toStringz);
     }

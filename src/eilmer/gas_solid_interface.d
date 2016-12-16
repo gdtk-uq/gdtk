@@ -39,13 +39,13 @@ void computeFluxesAndTemperatures(int ftl, double kS, FVCell[] gasCells, FVInter
 	dyS = solidIFaces[i].pos.y - solidCells[i].pos.y;
 	dnS = fabs(cosA*dxS + cosB*dyS);
 
-	kG_dnG = gasCells[i].fs.gas.k[0] / dnG;
+	kG_dnG = gasCells[i].fs.gas.kth / dnG;
 	kS_dnS = kS / dnS;
 
-	T = (gasCells[i].fs.gas.T[0]*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
-	q = -kG_dnG * (T - gasCells[i].fs.gas.T[0]);
+	T = (gasCells[i].fs.gas.Ttr*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
+	q = -kG_dnG * (T - gasCells[i].fs.gas.Ttr);
 	// Finally update properties in interfaces
-	gasIFaces[i].fs.gas.T[0] = T;
+	gasIFaces[i].fs.gas.Ttr = T;
 	gasIFaces[i].F.total_energy = q; // CHECK ME: might only work for
 	                                 // NORTH-SOUTH orientation.
 	                                 // Need to think about sign.

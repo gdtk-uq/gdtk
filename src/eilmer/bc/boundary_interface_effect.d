@@ -647,7 +647,8 @@ public:
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    FlowState fs = f.fs;
-	    foreach(ref elem; fs.gas.T) elem = Twall;
+	    fs.gas.Ttr = Twall;
+	    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 	} // end foreach face
     }
 
@@ -666,7 +667,8 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.north];
 		    FlowState fs = IFace.fs;
-		    foreach(ref elem; fs.gas.T) elem = Twall;
+		    fs.gas.Ttr = Twall;
+		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end i loop
 	    } // end for k
 	    break;
@@ -677,7 +679,8 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.east];
 		    FlowState fs = IFace.fs;
-		    foreach(ref elem; fs.gas.T) elem = Twall;
+		    fs.gas.Ttr = Twall;
+		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for k
 	    break;
@@ -688,7 +691,8 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.south];
 		    FlowState fs = IFace.fs;
-		    foreach(ref elem; fs.gas.T) elem = Twall;
+		    fs.gas.Ttr = Twall;
+		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end i loop
 	    } // end for k
 	    break;
@@ -699,7 +703,8 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.west];
 		    FlowState fs = IFace.fs;
-		    foreach(ref elem; fs.gas.T) elem = Twall;
+		    fs.gas.Ttr = Twall;
+		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for k
 	    break;
@@ -710,7 +715,8 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.top];
 		    FlowState fs = IFace.fs;
-		    foreach(ref elem; fs.gas.T) elem = Twall;
+		    fs.gas.Ttr = Twall;
+		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for i
 	    break;
@@ -721,7 +727,8 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.bottom];
 		    FlowState fs = IFace.fs;
-		    foreach(ref elem; fs.gas.T) elem = Twall;
+		    fs.gas.Ttr = Twall;
+		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for i
 	    break;

@@ -407,7 +407,7 @@ public:
 	// We assume a lot about the data that has been read in so,
 	// we need to skip this function if all is not in place
 	bool ok_to_proceed = true;
-	foreach (name; ["a", "rho", "p", "vel.x", "vel.y", "vel.z", "e[0]", "tke"]) {
+	foreach (name; ["a", "rho", "p", "vel.x", "vel.y", "vel.z", "u", "tke"]) {
 	    if (!canFind(variableNames, name)) { ok_to_proceed = false; }
 	}
 	if (!ok_to_proceed) {
@@ -474,7 +474,7 @@ public:
 		_data[i] ~= total_p;
 	    }
 	    if (add_total_h) {
-		double e0 = _data[i][variableIndex["e[0]"]];
+		double e0 = _data[i][variableIndex["u"]];
 		double tke = _data[i][variableIndex["tke"]];
 		// Sum up the bits of energy,
 		// forgetting the multiple energy modes, for the moment.

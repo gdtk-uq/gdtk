@@ -206,10 +206,10 @@ public:
 	 in double[] massf_init=[1.0,], in double quality_init=1.0,
 	 in double sigma_init=0.0)
     {
-	double[] Tlocal;
-	Tlocal.length = gm.n_modes;
-	foreach(ref Tmode; Tlocal) { Tmode = T_init; }
-	this(gm, p_init, T_init, Tlocal, massf_init, quality_init, sigma_init);
+	double[] T_modes;
+	T_modes.length = gm.n_modes;
+	foreach(ref Tmode; T_modes) { Tmode = T_init; }
+	this(gm, p_init, T_init, T_modes, massf_init, quality_init, sigma_init);
     }
 
     this(in GasState other) 
@@ -218,6 +218,7 @@ public:
 	p = other.p;
 	p_e = other.p_e;
 	Ttr = other.Ttr;
+	u = other.u;
 	a = other.a;
 	e_modes = other.e_modes.dup;
 	T_modes = other.T_modes.dup;
@@ -234,6 +235,7 @@ public:
 	rho = other.rho;
 	p = other.p;
 	Ttr = other.Ttr;
+	u = other.u;
 	p_e = other.p_e;
 	a = other.a;
 	foreach (i; 0 .. e_modes.length) { e_modes[i] = other.e_modes[i]; }
@@ -252,6 +254,7 @@ public:
 	rho = 0.5 * (gs0.rho + gs1.rho);
 	p = 0.5 * (gs0.p + gs1.p);
 	Ttr = 0.5 * (gs0.Ttr + gs1.Ttr);
+	u = 0.5 * (gs0.u + gs1.u);
 	p_e = 0.5 * (gs0.p_e + gs1.p_e);
 	a = 0.5 * (gs0.a + gs1.a);
 	foreach(i; 0 .. e_modes.length) { e_modes[i] = 0.5 * (gs0.e_modes[i] + gs1.e_modes[i]); }
@@ -275,6 +278,7 @@ public:
 	// Accumulate from a clean slate and then divide.
 	p = 0.0;
 	Ttr = 0.0;
+	u = 0.0;
 	p_e = 0.0;
 	foreach(ref elem; T_modes) { elem = 0.0; }
 	sigma = 0.0;
@@ -283,6 +287,7 @@ public:
 	foreach(other; others) {
 	    p += other.p;
 	    Ttr += other.Ttr;
+	    u += other.u;
 	    p_e += other.p_e;
 	    foreach(i; 0 .. T_modes.length) { T_modes[i] += other.T_modes[i]; }
 	    sigma += other.sigma;
@@ -291,6 +296,7 @@ public:
 	}
 	p /= n;
 	Ttr /= n;
+	u /= n;
 	p_e /= n;
 	foreach(ref elem; T_modes) { elem /= n; }
 	sigma /= n;
@@ -354,6 +360,7 @@ public:
 	repr ~= "rho=" ~ to!string(rho);
 	repr ~= ", p=" ~ to!string(p);
 	repr ~= ", Ttr=" ~ to!string(Ttr);
+	repr ~= ", u=" ~ to!string(u);
 	repr ~= ", p_e=" ~ to!string(p_e);
 	repr ~= ", a=" ~ to!string(a);
 	repr ~= ", T_modes=" ~ to!string(T_modes);
