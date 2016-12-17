@@ -169,7 +169,9 @@ private:
 	try {
 	    ghostCell.fs.gas.p = getDouble(L, tblIdx, "p");
 	    ghostCell.fs.gas.Ttr = getDouble(L, tblIdx, "T");
-	    getArrayOfDoubles(L, tblIdx, "T_modes", ghostCell.fs.gas.T_modes);
+	    if (gmodel.n_modes > 0) {
+		getArrayOfDoubles(L, tblIdx, "T_modes", ghostCell.fs.gas.T_modes);
+	    }
 	    lua_getfield(L, tblIdx, "massf");
 	    if ( lua_istable(L, -1) ) {
 		int massfIdx = lua_gettop(L);
@@ -418,12 +420,14 @@ private:
 	}
 	lua_pop(L, 1);
 
-	lua_getfield(L, tblIdx, "T_modes");
-	if ( !lua_isnil(L, -1) ) {
-	    // Interior-modes temperatures should be provided as an array.
-	    getArrayOfDoubles(L, tblIdx, "T_modes", fs.gas.T_modes);
+	if (gmodel.n_modes > 0) {
+	    lua_getfield(L, tblIdx, "T_modes");
+	    if ( !lua_isnil(L, -1) ) {
+		// Interior-modes temperatures should be provided as an array.
+		getArrayOfDoubles(L, tblIdx, "T_modes", fs.gas.T_modes);
+	    }
+	    lua_pop(L, 1);
 	}
-	lua_pop(L, 1);
 
 	lua_getfield(L, tblIdx, "massf");
 	if ( !lua_isnil(L, -1) ) {

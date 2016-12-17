@@ -24,7 +24,7 @@ function ghostCells_west(args)
    -- For a supersonic inflow, just set the properties directly.
    ghost = {}
    ghost.p = 95.84e3 -- pressure, Pa
-   ghost.T = {1103.0}  -- temperatures, K (as a table)
+   ghost.T = 1103.0  -- temperatures, K (as a table)
    ghost.massf = {air=1.0} -- mass fractions to be provided as a table
    -- or, if working with a single-species gas model, omitted.
    ghost.velx = 1000.0  -- x-velocity, m/s

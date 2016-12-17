@@ -13,7 +13,7 @@ print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
 initial = FlowState:new{p=5955.0, T=304.0, velx=0.0}
 -- Compute inflow from Mach number.
 Q = inflow:toTable()
-print("T=", Q.T[1], "density=", Q.rho, "sound speed= ", Q.a)
+print("T=", Q.T, "density=", Q.rho, "sound speed= ", Q.a)
 M = 1.5
 Vx = M * Q.a
 print("inflow velocity Vx=", Vx)

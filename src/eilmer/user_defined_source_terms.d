@@ -81,15 +81,17 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, Ga
 	// decision, so leave it alone.
     }
 
-    lua_getfield(L, -1, "energies");
-    if ( !lua_isnil(L, -1) ) {
-	for ( int imode = 0; imode < n_modes; ++imode ) {
-	    lua_rawgeti(L, -1, imode+1);
-	    cell.Q.energies[imode] += lua_tonumber(L, -1);
-	    lua_pop(L, 1);
+    if (n_modes > 0) {
+	lua_getfield(L, -1, "energies");
+	if ( !lua_isnil(L, -1) ) {
+	    for ( int imode = 0; imode < n_modes; ++imode ) {
+		lua_rawgeti(L, -1, imode+1);
+		cell.Q.energies[imode] += lua_tonumber(L, -1);
+		lua_pop(L, 1);
+	    }
 	}
+	lua_pop(L, 1);
     }
-    lua_pop(L, 1);
 
     // Clear stack.
     lua_settop(L, 0);
