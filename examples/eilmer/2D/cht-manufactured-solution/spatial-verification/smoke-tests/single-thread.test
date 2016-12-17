@@ -29,7 +29,7 @@ test computed-norms {Check the temperature norms.} -body {
     set L1s_ref 1.5686653737239453e-01
     set L2s_ref 1.9360403909941618e-01
     set Linfs_ref 4.2435529004256978e-01	
-    exec e4shared --job=coupled-mms --post --tindx-plot=last --ref-soln=ref-soln.lua --norms="T\[0\],T" > T-norms.txt
+    exec e4shared --job=coupled-mms --post --tindx-plot=last --ref-soln=ref-soln.lua --norms="Ttr,T" > T-norms.txt
     set fp [open T-norms.txt r]
     set contents [read $fp]
     close $fp
