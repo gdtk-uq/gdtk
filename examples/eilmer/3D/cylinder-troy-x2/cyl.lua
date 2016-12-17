@@ -20,9 +20,9 @@ print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
 
 -- Compute inflow Mach number.
 Q = GasState:new{gm}
-Q.p = p_inf; Q.T = {T_inf}; Q.massf = {N2=1.0}
+Q.p = p_inf; Q.T = T_inf; Q.massf = {N2=1.0}
 gm:updateThermoFromPT(Q); gm:updateSoundSpeed(Q)
-print("T=", Q.T[1], "density=", Q.rho, "sound speed= ", Q.a)
+print("T=", Q.T, "density=", Q.rho, "sound speed= ", Q.a)
 M_inf = V_inf / Q.a
 print("M_inf=", M_inf)
 

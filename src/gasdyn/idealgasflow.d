@@ -507,8 +507,12 @@ double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
     theta = fabs(theta);
     auto f_to_solve = delegate(double beta){return theta_obl(M1, beta, g) - theta;};
     //    
-    double b1 = asin(1.0/M1); 
-    double b2 = b1 * 1.05;
+    double b1 = asin(1.0/M1); // the weakest shock is at the Mach angle
+    double f1 = f_to_solve(b1);
+    if (fabs(f1) < tol) return sign_beta*b1;
+    double b2 = b1 * 1.05; // second guess slightly stronger
+    double f2 = f_to_solve(b2);
+    if (fabs(f2) < tol) return sign_beta*b2;
     int result_flag = bracket!f_to_solve(b1, b2);
     // [TODO] should test result_flag.
     return sign_beta*solve!f_to_solve(b1,b2);
