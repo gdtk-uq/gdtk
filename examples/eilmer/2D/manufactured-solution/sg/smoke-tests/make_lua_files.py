@@ -105,9 +105,9 @@ if __name__ == '__main__':
     taskList = [ {'fName': "udf-source-terms.lua", 'tName': "udf-source-template.lua",
                   'varList': [("fmass", fmass), ("fxmom", fxmom), ("fymom", fymom), ("fe", fe)]},
                  {'fName': "udf-bc.lua", 'tName': "udf-bc-template.lua",
-                  'varList': [("tab.p", p), ("tab.T[1]", T), ("tab.velx", u), ("tab.vely", v)]},
+                  'varList': [("tab.p", p), ("tab.T", T), ("tab.velx", u), ("tab.vely", v)]},
                  {'fName': "ref-soln.lua", 'tName': "ref-soln-template.lua",
-                  'varList': [("tab.rho", rho), ("tab.p", p), ("tab['T[0]']", T),
+                  'varList': [("tab.rho", rho), ("tab.p", p), ("tab['T']", T),
                               ("tab['vel.x']", u), ("tab['vel.y']", v)]},
         ]
 

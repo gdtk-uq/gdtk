@@ -4,7 +4,6 @@ local exp = math.exp
 local pi = math.pi
 
 function fillTable(tab, x, y, t)
-   tab.T = {}
    <insert-expressions-here>
    tab.velz = 0.0
    return tab

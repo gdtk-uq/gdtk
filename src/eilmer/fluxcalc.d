@@ -822,7 +822,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
 	//       - for single temp models F_renergies isn't used
 	//       - for multitemp modes with no free-electrons p_e is zero
 	// Add electron pressure work term onto final energy mode
-	F.energies[nmodes-1] += ru_half * Lft.gas.p_e / Lft.gas.rho;
+	// F.energies[nmodes-1] += ru_half * Lft.gas.p_e / Lft.gas.rho;
     } else {
 	/* Wind is blowing from the right */
 	for (size_t imode = 0; imode < nmodes; ++imode) {
@@ -832,7 +832,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
 	//       - for single temp models F_renergies isn't used
 	//       - for multitemp modes with no free-electrons p_e is zero
 	// Add electron pressure work term onto final energy mode
-	F.energies[nmodes-1] += ru_half * Rght.gas.p_e / Rght.gas.rho;
+	// F.energies[nmodes-1] += ru_half * Rght.gas.p_e / Rght.gas.rho;
     }
 } // end ausm_plus_up()
 

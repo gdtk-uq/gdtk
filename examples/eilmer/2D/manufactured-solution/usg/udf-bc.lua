@@ -79,8 +79,7 @@ function fillTable(t, x, y)
    t.velx = u(x, y)
    t.vely = v(x, y)
    t.velz = 0.0
-   t.T = {}
-   t.T[1] = t.p/(t_rho*R)      -- temperature, K
+   t.T = t.p/(t_rho*R)      -- temperature, K
    return t
 end
 
