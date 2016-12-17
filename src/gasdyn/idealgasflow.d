@@ -548,6 +548,7 @@ double beta_obl2(double M1, double p2_p1, double g=1.4)
 double theta_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
+    if (fabs(M1n - 1) < 1.0e-9) return 0.0;
     if (M1n < 1.0) {
 	throw new Error(text("theta_obl: subsonic normal Mach number: ", M1n));
     }
