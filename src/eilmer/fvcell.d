@@ -1077,7 +1077,7 @@ public:
 	    // See Swanson, Turkel and White (1991)
 	    gam_eff = gmodel.gamma(fs.gas);
 	    // Need to sum conductivities for thermal nonequilibrium.
-	    double k_total = 0.0; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
+	    double k_total = fs.gas.kth; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
 	    double Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
 	    if (myConfig.dimensions == 3) {
 		signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
