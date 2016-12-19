@@ -285,6 +285,17 @@ function ConstFlux:tojson()
    str = str .. '}'
    return str
 end
+
+UserDefinedFlux = BoundaryFluxEffect:new{fileName='user-defined-bc.lua', funcName='convective_flux'}
+UserDefinedFlux.type = "user_defined"
+function UserDefinedFlux:tojson()
+   local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format('"filename": "%s", ', self.fileName)
+   str = str .. string.format('"function_name": "%s" ', self.funcName)
+   str = str .. '}'
+   return str
+end
+
 EnergyFluxFromAdjacentSolid = BoundaryFluxEffect:new{otherBlock=nil, otherFace=nil, orientation=-1}
 EnergyFluxFromAdjacentSolid.type = "energy_flux_from_adjacent_solid"
 function EnergyFluxFromAdjacentSolid:tojson()

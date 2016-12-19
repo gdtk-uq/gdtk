@@ -20,6 +20,7 @@ import globalconfig;
 import globaldata;
 import ghost_cell_effect;
 import boundary_interface_effect;
+import boundary_flux_effect;
 import luaflowstate;
 import lua_helper;
 import bc;
@@ -515,3 +516,241 @@ private:
     }
 } // end class BIEUserDefined
 
+class BFE_UserDefined : BoundaryFluxEffect {
+public:
+    string luafname;
+    string luaFnName;
+    this(int id, int boundary, string fname, string funcName)
+    {
+	super(id, boundary, "UserDefinedFluxEffect");
+	luafname = fname;
+	luaFnName = funcName;
+    }
+    override void post_bc_construction()
+    {
+	if (blk.bc[which_boundary].myL == null) {
+	    blk.bc[which_boundary].myL = luaL_newstate();
+	    auto L = blk.bc[which_boundary].myL;
+	    luaL_openlibs(L);
+	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
+	    registerGasModel(L, LUA_GLOBALSINDEX);
+	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
+	    lua_setglobal(L, "gmodel");
+	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
+	    lua_setglobal(L, "n_species");
+	    lua_pushinteger(L, blk.myConfig.gmodel.n_modes);
+	    lua_setglobal(L, "n_modes");
+	    lua_pushinteger(L, blk.nicell); lua_setglobal(L, "nicell");
+	    lua_pushinteger(L, blk.njcell); lua_setglobal(L, "njcell");
+	    lua_pushinteger(L, blk.nkcell); lua_setglobal(L, "nkcell");
+	    lua_pushinteger(L, Face.north); lua_setglobal(L, "north");
+	    lua_pushinteger(L, Face.east); lua_setglobal(L, "east");
+	    lua_pushinteger(L, Face.south); lua_setglobal(L, "south");
+	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
+	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
+	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
+	    lua_pushcfunction(L, &luafn_sampleFlow); lua_setglobal(L, "sampleFlow");
+	}
+	luaL_dofile(blk.bc[which_boundary].myL, luafname.toStringz);
+    }
+    override string toString() const
+    {
+	return "UserDefinedFluxEffect(fname=" ~ luafname ~ ", luaFnName=" ~ luaFnName ~ ")";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	size_t j = 0, k = 0;
+	FVCell ghost0, ghost1;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    callFluxUDF(t, gtl, ftl, i, j, k, f);
+	} // end foreach face
+    }  // end apply_unstructured_grid()
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	FVInterface IFace;
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax + 1;
+	    for (k = blk.kmin; k <= blk.kmax; ++k)  {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    IFace = blk.get_ifj(i, j, k);
+		    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
+		} // end i loop
+	    } // end k loop
+	    break;
+	case Face.east:
+	    i = blk.imax + 1;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    IFace = blk.get_ifi(i, j, k);
+		    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
+		} // end j loop
+	    } // end k loop
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i=blk.imin; i <= blk.imax; ++i) {
+		    IFace = blk.get_ifj(i, j, k);
+		    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
+		} // end i loop
+	    } // end j loop
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j=blk.jmin; j <= blk.jmax; ++j) {
+		    IFace = blk.get_ifi(i, j, k);
+		    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
+		} // end j loop
+	    } // end k loop
+	    break;
+	case Face.top:
+	    k = blk.kmax + 1;
+	    for (i= blk.imin; i <= blk.imax; ++i) {
+		for (j=blk.jmin; j <= blk.jmax; ++j) {
+		    IFace = blk.get_ifk(i, j, k);
+		    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
+		} // end j loop
+	    } // end i loop
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    IFace = blk.get_ifk(i, j, k);
+		    callFluxUDF(t, gtl, ftl, i, j, k, IFace);
+		} // end j loop
+	    } // end i loop
+	    break;
+	} // end switch which boundary
+    }
+			
+private:
+    void putFluxIntoInterface(lua_State* L, int tblIdx, FVInterface iface)
+    {
+	// Now the user might only set some of the fluxes
+	// since they might be relying on another boundary
+	// effect to do some work.
+	// So we need to test every possibility and only set
+	// the non-nil values.
+	auto gmodel = blk.myConfig.gmodel;
+	
+	lua_getfield(L, tblIdx, "mass");
+	if ( !lua_isnil(L, -1) ) {
+	    iface.F.mass += getDouble(L, tblIdx, "mass");
+	}
+	lua_pop(L, 1);
+
+	lua_getfield(L, tblIdx, "momentum_x");
+	if ( !lua_isnil(L, -1) ) {
+	    iface.F.momentum.refx += getDouble(L, tblIdx, "momentum_x");
+	}
+	lua_pop(L, 1);
+
+	lua_getfield(L, tblIdx, "momentum_y");
+	if ( !lua_isnil(L, -1) ) {
+	    iface.F.momentum.refy += getDouble(L, tblIdx, "momentum_y");
+	}
+	lua_pop(L, 1);
+
+	lua_getfield(L, tblIdx, "momentum_z");
+	if ( !lua_isnil(L, -1) ) {
+	    iface.F.momentum.refz += getDouble(L, tblIdx, "momentum_z");
+	}
+	lua_pop(L, 1);
+
+	lua_getfield(L, tblIdx, "total_energy");
+	if ( !lua_isnil(L, -1) ) {
+	    iface.F.total_energy += getDouble(L, tblIdx, "total_energy");
+	}
+	lua_pop(L, 1);
+	
+	if (gmodel.n_modes > 0) {
+	    // TODO: update user-defined flux for multiple energy modes.
+	    throw new Error("User-defined flux not implemented for n_modes > 0.");
+	}
+
+	lua_getfield(L, tblIdx, "species");
+	if ( !lua_isnil(L, -1) ) {
+	    int massfIdx = lua_gettop(L);
+	    getSpeciesValsFromTable(L, gmodel, massfIdx, iface.F.massf, "species");
+	}
+	else {
+	    if ( gmodel.n_species() == 1 ) {
+		iface.F.massf[0] = iface.F.mass;
+	    }
+	    // ELSE: There's no clear choice for multi-species.
+	    // Maybe best not to alter the species flux.
+	}
+	lua_pop(L, 1);
+
+	// TODO: Think on tke and omega fluxes.
+	/*
+	lua_getfield(L, tblIdx, "tke");
+	if ( !lua_isnil(L, -1) ) {
+	    fs.tke = getDouble(L, tblIdx, "tke");
+	}
+	lua_pop(L, 1);
+
+	lua_getfield(L, tblIdx, "omega");
+	if ( !lua_isnil(L, -1) ) {
+	    fs.omega = getDouble(L, tblIdx, "omega");
+	}
+	lua_pop(L, 1);
+	*/
+    }
+
+    void callFluxUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
+		     FVInterface IFace)
+    {
+	// 1. Set up for calling function
+	auto L = blk.bc[which_boundary].myL;
+	// 1a. Place function to call at TOS
+	lua_getglobal(L, luaFnName.toStringz);
+	// 1b. Then put arguments (as single table) at TOS
+	lua_newtable(L);
+	lua_pushnumber(L, t); lua_setfield(L, -2, "t");
+	lua_pushnumber(L, dt_global); lua_setfield(L, -2, "dt");
+	lua_pushinteger(L, step); lua_setfield(L, -2, "timeStep");
+	lua_pushinteger(L, gtl); lua_setfield(L, -2, "gridTimeLevel");
+	lua_pushinteger(L, ftl); lua_setfield(L, -2, "flowTimeLevel");
+	lua_pushinteger(L, which_boundary); lua_setfield(L, -2, "boundaryId");
+	lua_pushnumber(L, IFace.pos.x); lua_setfield(L, -2, "x");
+	lua_pushnumber(L, IFace.pos.y); lua_setfield(L, -2, "y");
+	lua_pushnumber(L, IFace.pos.z); lua_setfield(L, -2, "z");
+	lua_pushnumber(L, IFace.n.x); lua_setfield(L, -2, "csX");
+	lua_pushnumber(L, IFace.n.y); lua_setfield(L, -2, "csY");
+	lua_pushnumber(L, IFace.n.z); lua_setfield(L, -2, "csZ");
+	lua_pushnumber(L, IFace.t1.x); lua_setfield(L, -2, "csX1");
+	lua_pushnumber(L, IFace.t1.y); lua_setfield(L, -2, "csY1");
+	lua_pushnumber(L, IFace.t1.z); lua_setfield(L, -2, "csZ1");
+	lua_pushnumber(L, IFace.t2.x); lua_setfield(L, -2, "csX2");
+	lua_pushnumber(L, IFace.t2.y); lua_setfield(L, -2, "csY2");
+	lua_pushnumber(L, IFace.t2.z); lua_setfield(L, -2, "csZ2");
+	lua_pushinteger(L, i); lua_setfield(L, -2, "i");
+	lua_pushinteger(L, j); lua_setfield(L, -2, "j");
+	lua_pushinteger(L, k); lua_setfield(L, -2, "k");
+
+	// 2. Call LuaFunction and expect a table of flux values
+	int number_args = 1;
+	int number_results = 1;
+	if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+	    luaL_error(L, "error running user-defined b.c. interface function on boundaryId %d: %s\n",
+		       which_boundary, lua_tostring(L, -1));
+	}
+
+	// 3. Grab flux data from table and populate interface fluxes
+	int tblIdx = lua_gettop(L);
+	putFluxIntoInterface(L, tblIdx, IFace);
+
+	// 4. Clear stack
+	lua_settop(L, 0);
+    }
+
+} // end class UserDefinedFluxEffect

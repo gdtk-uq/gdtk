@@ -29,6 +29,7 @@ import solidfvinterface;
 import gas_solid_interface;
 import flowstate;
 import gas;
+import user_defined_effects;
 
 BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -40,6 +41,11 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
     case "const_flux":
 	auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
 	newBFE = new BFE_ConstFlux(blk_id, boundary, flowstate);
+	break;
+    case "user_defined":
+	string fname = getJSONstring(jsonData, "filename", "none");
+	string funcName = getJSONstring(jsonData, "function_name", "none");
+	newBFE = new BFE_UserDefined(blk_id, boundary, fname, funcName);
 	break;
     case "energy_flux_from_adjacent_solid":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
@@ -69,6 +75,7 @@ public:
 	which_boundary = boundary;
 	type = _type;
     }
+    void post_bc_construction() {}
     override string toString() const
     {
 	return "BoundaryFluxEffect()";

@@ -112,7 +112,9 @@ public:
     void post_bc_construction()
     {
 	foreach (gce; preReconAction) gce.post_bc_construction();
+	foreach (bfe; postConvFluxAction) bfe.post_bc_construction();
 	foreach (bie; preSpatialDerivAction) bie.post_bc_construction();
+	foreach (bfe; postDiffFluxAction) bfe.post_bc_construction();
     }
 
     // Action lists.
