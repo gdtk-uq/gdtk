@@ -123,7 +123,7 @@ public:
     {
 	_viscModel.update_viscosity(Q);
 	if ( _constPrandtl ) {
-	    Q.kth = _Cp*Q.mu/_Prandtl;
+	    Q.k = _Cp*Q.mu/_Prandtl;
 	}
 	else {
 	    _thermCondModel.update_thermal_conductivity(Q);
@@ -212,7 +212,7 @@ version(ideal_gas_test) {
 	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.kth, 0.0262449, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
 
 	return 0;
     }

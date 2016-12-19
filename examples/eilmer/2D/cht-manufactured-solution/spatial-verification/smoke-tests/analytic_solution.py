@@ -35,4 +35,4 @@ def ref_function(x1, y1, z1, t):
     p1 = rho1*Rgas*T1	
     u1 = u.subs(inp).evalf()
     v1 = v.subs(inp).evalf()
-    return {"rho":rho1, "p":p1, "T[0]":T1, "vel.x":u1, "vel.y":v1}        
+    return {"rho":rho1, "p":p1, "Ttr":T1, "vel.x":u1, "vel.y":v1}        

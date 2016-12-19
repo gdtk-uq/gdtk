@@ -654,15 +654,15 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     }
     lua_pop(L, 1);
 
-    lua_getfield(L, idx, "kth");
+    lua_getfield(L, idx, "k");
     if ( lua_isnumber(L, -1) ) {
-	Q.kth = lua_tonumber(L, -1);
+	Q.k = lua_tonumber(L, -1);
     }
     else if ( lua_isnil(L, -1) ) {
 	// leave untouched
     }
     else {
-	string errMsg = "The value for 'kth' is not a number.\n";
+	string errMsg = "The value for 'k' is not a number.\n";
 	lua_pop(L, 1);
 	throw new Error(errMsg);
     }
@@ -779,8 +779,8 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_pushnumber(L, Q.mu);
     lua_setfield(L, idx, "mu");
     
-    lua_pushnumber(L, Q.kth);
-    lua_setfield(L, idx, "kth");
+    lua_pushnumber(L, Q.k);
+    lua_setfield(L, idx, "k");
 
     lua_newtable(L);
     foreach ( int i, k; Q.k_modes ) {

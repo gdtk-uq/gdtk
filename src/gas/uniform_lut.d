@@ -292,7 +292,7 @@ public:
 	    (1.0 - efrac) * lrfrac         * _k_hat[ie][ir+1];
    
 	Q.mu = mu_eff;
-	Q.kth = k_eff;
+	Q.k = k_eff;
 
     }
     /* 
@@ -629,7 +629,7 @@ version(uniform_lut_test)
 	assert(approxEqual(Cp_given, Cp, 1.0e-3), failedUnitTest());
 	assert(approxEqual(h_given, h, 1.0e-4), failedUnitTest());
 	assert(approxEqual(mu_given, Q.mu, 1.0e-4), failedUnitTest());
-	assert(approxEqual(k_given, Q.kth, 1.0e-3), failedUnitTest());
+	assert(approxEqual(k_given, Q.k, 1.0e-3), failedUnitTest());
 	assert(approxEqual(s_given, s, 1.0e-4), failedUnitTest());
 	assert(approxEqual(R_given, R, 1.0e-4), failedUnitTest());
 	

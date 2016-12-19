@@ -35,7 +35,7 @@ end
 
 function refSoln(x, y, z)
    t = {}
-   t["T[0]"] = T(x, y)
+   t["T"] = T(x, y)
    return t
 end
 

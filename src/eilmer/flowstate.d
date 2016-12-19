@@ -346,7 +346,7 @@ string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) 
     if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
     if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
     formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-    formattedWrite(writer, " %.18e", fs.gas.kth);
+    formattedWrite(writer, " %.18e", fs.gas.k);
     foreach (kvalue; fs.gas.k_modes) formattedWrite(writer, " %.18e", kvalue); 
     int S = 0;  // zero for shock detector
     formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, S);

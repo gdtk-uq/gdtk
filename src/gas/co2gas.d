@@ -127,7 +127,7 @@ public:
     override void update_trans_coeffs(GasState Q) const
     {
 	Q.mu = sutherland_viscosity(Q.Ttr, _T_mu, _mu_ref, _S_mu);
-	Q.kth = sutherland_thermal_conductivity(Q.Ttr, _T_k, _k_ref, _S_k);
+	Q.k = sutherland_thermal_conductivity(Q.Ttr, _T_k, _k_ref, _S_k);
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {
@@ -369,7 +369,7 @@ unittest {
     assert(approxEqual(gd.a, 347.241), failedUnitTest());
     gm.update_trans_coeffs(gd);
     assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
-    assert(approxEqual(gd.kth, 0.0262449), failedUnitTest());
+    assert(approxEqual(gd.k, 0.0262449), failedUnitTest());
 
     lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
     gm = new IdealGas(L);
@@ -388,5 +388,5 @@ unittest {
     assert(approxEqual(gd.a, 347.241), failedUnitTest());
     gm.update_trans_coeffs(gd);
     assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
-    assert(approxEqual(gd.kth, 0.0262449), failedUnitTest());
+    assert(approxEqual(gd.k, 0.0262449), failedUnitTest());
 }

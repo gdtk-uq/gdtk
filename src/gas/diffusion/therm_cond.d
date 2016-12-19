@@ -19,7 +19,7 @@ interface ThermalConductivity {
     ThermalConductivity dup() const;
     final void update_thermal_conductivity(GasState Q) 
     {
-	Q.kth = eval(Q, Q.Ttr);
+	Q.k = eval(Q, Q.Ttr);
 	for ( auto imode = 0; imode < Q.T_modes.length; ++imode) {
 	    Q.k_modes[imode] = eval(Q, Q.T_modes[imode]);
 	}

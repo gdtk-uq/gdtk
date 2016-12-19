@@ -39,7 +39,7 @@ void computeFluxesAndTemperatures(int ftl, double kS, FVCell[] gasCells, FVInter
 	dyS = solidIFaces[i].pos.y - solidCells[i].pos.y;
 	dnS = fabs(cosA*dxS + cosB*dyS);
 
-	kG_dnG = gasCells[i].fs.gas.kth / dnG;
+	kG_dnG = gasCells[i].fs.gas.k / dnG;
 	kS_dnS = kS / dnS;
 
 	T = (gasCells[i].fs.gas.Ttr*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);

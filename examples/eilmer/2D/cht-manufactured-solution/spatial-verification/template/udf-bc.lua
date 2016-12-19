@@ -34,7 +34,7 @@ end
 
 function refSoln(x, y, z)
    t = {}
-   t["T[0]"] = T(x, y)
+   t["T"] = T(x, y)
    return t
 end
 
@@ -46,8 +46,7 @@ end
 
 function fillTable(t, x, y)
    t_rho = rho(x, y)
-   t.T = {}
-   t.T[1] = T(x,y)
+   t.T = T(x,y)
    t.p = t_rho*R*t.T[1]
    t.velx = u(x, y)
    t.vely = v(x, y)

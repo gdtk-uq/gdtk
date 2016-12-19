@@ -295,7 +295,7 @@ public:
 	fs.gas.p = to!double(items.front); items.popFront();
 	fs.gas.a = to!double(items.front); items.popFront();
 	fs.gas.mu = to!double(items.front); items.popFront();
-	fs.gas.kth = to!double(items.front); items.popFront();
+	fs.gas.k = to!double(items.front); items.popFront();
 	foreach(i; 0 .. gm.n_modes) {
 	    fs.gas.k_modes[i] = to!double(items.front); items.popFront();
 	}
@@ -341,7 +341,7 @@ public:
 	if (myConfig.MHD && myConfig.divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
 	if (myConfig.include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
 	formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-	formattedWrite(writer, " %.18e", fs.gas.kth);
+	formattedWrite(writer, " %.18e", fs.gas.k);
 	foreach(i; 0 .. fs.gas.k_modes.length) formattedWrite(writer, " %.18e", fs.gas.k_modes[i]); 
 	formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
 	if (myConfig.radiation) { 
@@ -1077,7 +1077,7 @@ public:
 	    // See Swanson, Turkel and White (1991)
 	    gam_eff = gmodel.gamma(fs.gas);
 	    // Need to sum conductivities for thermal nonequilibrium.
-	    double k_total = fs.gas.kth; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
+	    double k_total = fs.gas.k; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
 	    double Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
 	    if (myConfig.dimensions == 3) {
 		signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
@@ -1131,7 +1131,7 @@ public:
     // starting shock structure and the simulations do not progress.
     {
 	fs.mu_t = fmin(fs.mu_t, factor * fs.gas.mu);
-	fs.k_t = fmin(fs.k_t, factor * fs.gas.kth); // ASSUMPTION re k
+	fs.k_t = fmin(fs.k_t, factor * fs.gas.k); // ASSUMPTION re k
     }
 
     @nogc

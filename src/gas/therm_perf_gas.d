@@ -370,7 +370,7 @@ version(therm_perf_gas_test) {
 	gd.Ttr = 4000.0;
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(0.00012591, gd.mu, 1.0e-6), failedUnitTest());
-	assert(approxEqual(0.2448263, gd.kth, 1.0e-6), failedUnitTest());
+	assert(approxEqual(0.2448263, gd.k, 1.0e-6), failedUnitTest());
 	
 	// [TODO]
 	// entropy, enthalpy and sound speed tests

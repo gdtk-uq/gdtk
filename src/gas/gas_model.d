@@ -155,7 +155,7 @@ public:
     double[] T_modes;  /// temperatures for internal energies for thermal nonequilibrium, K
     /// Transport properties
     double mu;   /// viscosity, Pa.s
-    double kth;  /// thermal conductivity for a single temperature gas, W/(m.K)
+    double k;  /// thermal conductivity for a single temperature gas, W/(m.K)
     double[] k_modes;  /// thermal conductivities for the nonequilibrium model, W/(m.K)
     double sigma;    /// electrical conductivity, S/m
     /// Composition
@@ -223,7 +223,7 @@ public:
 	e_modes = other.e_modes.dup;
 	T_modes = other.T_modes.dup;
 	mu = other.mu;
-	kth = other.kth;
+	k = other.k;
 	k_modes = other.k_modes.dup;
 	sigma = other.sigma;
 	massf = other.massf.dup;
@@ -241,7 +241,7 @@ public:
 	foreach (i; 0 .. e_modes.length) { e_modes[i] = other.e_modes[i]; }
 	foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
 	mu = other.mu;
-	kth = other.kth;
+	k = other.k;
 	foreach (i; 0 .. k_modes.length) { k_modes[i] = other.k_modes[i]; }
 	sigma = other.sigma;
 	foreach (i; 0 .. massf.length) { massf[i] = other.massf[i]; }
@@ -260,7 +260,7 @@ public:
 	foreach(i; 0 .. e_modes.length) { e_modes[i] = 0.5 * (gs0.e_modes[i] + gs1.e_modes[i]); }
 	foreach(i; 0 .. T_modes.length) { T_modes[i] = 0.5 * (gs0.T_modes[i] + gs1.T_modes[i]); }
 	mu = 0.5 * (gs0.mu + gs1.mu);
-	kth = 0.5 * (gs0.kth + gs1.kth);
+	k = 0.5 * (gs0.k + gs1.k);
 	foreach(i; 0 .. k_modes.length) { k_modes[i] = 0.5 * (gs0.k_modes[i] + gs1.k_modes[i]); }
 	sigma = 0.5 * (gs0.sigma + gs1.sigma);
 	foreach(i; 0 .. massf.length) massf[i] = 0.5 * (gs0.massf[i] + gs1.massf[i]);
@@ -366,7 +366,7 @@ public:
 	repr ~= ", T_modes=" ~ to!string(T_modes);
 	repr ~= ", e_modes=" ~ to!string(e_modes);
 	repr ~= ", mu=" ~ to!string(mu);
-	repr ~= ", kth=" ~ to!string(kth);
+	repr ~= ", k=" ~ to!string(k);
 	repr ~= ", k_modes=" ~ to!string(k_modes);
 	repr ~= ", massf=" ~ to!string(massf);
 	repr ~= ", quality=" ~ to!string(quality);
@@ -1297,7 +1297,7 @@ version(gas_model_test) {
 	assert(approxEqual(gd.a, 347.241, 1.0e-4), "sound speed");
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), "viscosity");
-	assert(approxEqual(gd.kth, 0.0262449, 1.0e-6), "conductivity");
+	assert(approxEqual(gd.k, 0.0262449, 1.0e-6), "conductivity");
 
 	// Select arbitrary energy and density and establish a set of 
 	// variables that are thermodynamically consistent

@@ -87,9 +87,9 @@ version(sutherland_therm_cond_test) {
 	auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
 	auto gd = new GasState(1, 0);
 	gd.Ttr = 300.0;
-	gd.kth = 0.0;
+	gd.k = 0.0;
 	tcm.update_thermal_conductivity(gd);
-	assert(approxEqual(gd.kth, 0.0262449, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
 
 	return 0;
     }

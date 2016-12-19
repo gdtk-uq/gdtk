@@ -112,5 +112,5 @@ unittest {
     gd.massf[0] = 0.8;
     gd.massf[1] = 0.2;
     tcm.update_thermal_conductivity(gd);
-    assert(approxEqual(0.0263063, gd.kth), failedUnitTest());
+    assert(approxEqual(0.0263063, gd.k), failedUnitTest());
 }

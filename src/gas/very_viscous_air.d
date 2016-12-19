@@ -99,7 +99,7 @@ public:
     override void update_trans_coeffs(GasState Q) const
     {
 	Q.mu = _mu;
-	Q.kth = _k;
+	Q.k = _k;
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {
@@ -165,7 +165,7 @@ version(very_viscous_air_test) {
 	assert(approxEqual(gs.a, 347.189, 1.0e-6), failedUnitTest());
 	gm.update_trans_coeffs(gs);
 	assert(approxEqual(gs.mu, 10.0, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gs.kth, 10045, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gs.k, 10045, 1.0e-6), failedUnitTest());
 
 	return 0;
     }

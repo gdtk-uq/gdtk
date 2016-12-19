@@ -23,6 +23,6 @@ void main() {
     gm.update_sound_speed(gd);
     writefln("rho= %s, e= %s, a= %s", gd.rho, gd.u, gd.a);
     gm.update_trans_coeffs(gd);
-    writefln("mu= %s, k= %s", gd.mu, gd.kth);
+    writefln("mu= %s, k= %s", gd.mu, gd.k);
     writeln("Done.");
 }

@@ -43,7 +43,7 @@ def buildRunStr():
     str += "python make_solid_source_terms.py\n"
     str += "e4shared --job=coupled-mms --prep\n"
     str += "e4shared --job=coupled-mms --run --max-cpus=1\n"
-    str += 'e4shared --job=coupled-mms --post --tindx-plot=40 --ref-soln=udf-bc.lua  --norms="T[0],T" | tail -10 > T-norms.txt\n'
+    str += 'e4shared --job=coupled-mms --post --tindx-plot=40 --ref-soln=udf-bc.lua  --norms="Ttr,T" | tail -10 > T-norms.txt\n'
     return str
 
 def prepareCases(ncellsList):

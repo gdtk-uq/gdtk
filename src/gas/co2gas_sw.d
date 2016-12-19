@@ -182,7 +182,7 @@ public:
     override void update_trans_coeffs(GasState Q) const
     {
 	Q.mu = sutherland_viscosity(Q.Ttr, _T_mu, _mu_ref, _S_mu);
-	Q.kth = sutherland_thermal_conductivity(Q.Ttr, _T_k, _k_ref, _S_k);
+	Q.k = sutherland_thermal_conductivity(Q.Ttr, _T_k, _k_ref, _S_k);
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {

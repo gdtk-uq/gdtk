@@ -200,25 +200,25 @@ public:
     // Note that the gradient values need to be in place before calling this procedure.
     {
 	double viscous_factor = myConfig.viscous_factor;
-	double k_laminar = fs.gas.kth;
+	double k_laminar = fs.gas.k;
 	double mu_laminar = fs.gas.mu;
 	if (myConfig.use_viscosity_from_cells) {
 	    // Emulate Eilmer3 behaviour by using the viscous transport coefficients
 	    // from the cells either side of the interface.
 	    if (left_cell && right_cell) {
-		k_laminar = 0.5*(left_cell.fs.gas.kth+right_cell.fs.gas.kth);
+		k_laminar = 0.5*(left_cell.fs.gas.k+right_cell.fs.gas.k);
 		mu_laminar = 0.5*(left_cell.fs.gas.mu+right_cell.fs.gas.mu);
 	    } else if (left_cell) {
-		k_laminar = left_cell.fs.gas.kth;
+		k_laminar = left_cell.fs.gas.k;
 		mu_laminar = left_cell.fs.gas.mu;
 	    } else if (right_cell) {
-		k_laminar = right_cell.fs.gas.kth;
+		k_laminar = right_cell.fs.gas.k;
 		mu_laminar = right_cell.fs.gas.mu;
 	    } else {
 		assert(0, "Oops, don't seem to have a cell available.");
 	    }
 	}
-        double k_eff = viscous_factor * (fs.gas.kth + fs.k_t);
+        double k_eff = viscous_factor * (fs.gas.k + fs.k_t);
 	double mu_eff =  viscous_factor * (fs.gas.mu + fs.mu_t);
 	double lmbda = -2.0/3.0 * mu_eff;
 	if ( myConfig.diffusion ) {
