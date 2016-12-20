@@ -169,6 +169,9 @@ public:
 	double TOL = 1.0e-6;
 	double delT = 100.0;
 	double T1 = Q.Ttr;
+	// It's possible that Ttr is 'nan' if it's never been set, so:
+	if ( isNaN(T1) )
+	    T1 = 300.0; // Just set at some value to get started.
 	double Tsave = T1;
 	double T2 = T1 + delT;
 
