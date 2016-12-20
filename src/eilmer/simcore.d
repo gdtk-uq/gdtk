@@ -252,12 +252,13 @@ void march_over_blocks()
     }
 } // end march_over_blocks()
 
-void integrate_in_time(double target_time)
+void integrate_in_time(double target_time_as_requested)
 {
     if (GlobalConfig.verbosity_level > 0) {
 	writeln("Integrate in time.");
 	stdout.flush();
     }
+    double target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
     // The next time for output...
     t_plot = sim_time + GlobalConfig.dt_plot;
     t_history = sim_time + GlobalConfig.dt_history;
@@ -288,9 +289,7 @@ void integrate_in_time(double target_time)
     local_invalid_cell_count.length = gasBlocks.length;
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
-    shared bool finished_time_stepping = 
-	(sim_time >= min(target_time, GlobalConfig.max_time) || 
-	 step >= GlobalConfig.max_step);
+    shared bool finished_time_stepping = (sim_time >= target_time) || (step >= GlobalConfig.max_step);
     //----------------------------------------------------------------
     //                 Top of main time-stepping loop
     //----------------------------------------------------------------
@@ -299,6 +298,7 @@ void integrate_in_time(double target_time)
         // 0. Alter configuration setting if necessary.
 	if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
 	    read_control_file(); // Reparse the time-step control parameters occasionally.
+	    target_time = (GlobalConfig.block_marching) ? target_time_as_requested : GlobalConfig.max_time;
 	}
 	if (GlobalConfig.viscous && GlobalConfig.viscous_factor < 1.0 &&
 	    sim_time > GlobalConfig.viscous_delay) {
