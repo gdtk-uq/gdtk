@@ -1,0 +1,12 @@
+set term postscript eps enhanced font "Times,25" colour size 16cm,9cm
+set output 'O2-thermo.eps'
+set xlabel 'temperature, K'
+set xtics 4000
+set ylabel 'C_p, J/kg/K'
+set yrange [0:1500]
+set ytics nomirror
+set y2label 'h, J/kg'
+set y2tics
+set y2range [-0.5e7:3e7]
+plot 'O2-thermo.dat' u 1:2 t 'C_p' w l lw 3, \
+     'O2-thermo.dat' u 1:3 axes x1y2 t 'h' w l lw 3 lc 3
