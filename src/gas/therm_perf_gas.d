@@ -268,7 +268,7 @@ public:
 	throw new Exception("not implemented");
     }
     */
-    override double dedT_const_v(in GasState Q)
+    override double dudT_const_v(in GasState Q)
     {
 	// Noting that Cv = Cp - R
 	foreach ( i; 0.._n_species ) _Cv[i] = _curves[i].eval_Cp(Q.Ttr) - _R[i];

@@ -175,7 +175,7 @@ extern(C) int transCoeffs(lua_State* L)
 }
 
 
-// We don't wrap dedT_const_v as we do Cv in its place.
+// We don't wrap dudT_const_v as we do Cv in its place.
 // We don't wrap dhdT_const_p as we do Cp in its place.
 
 extern(C) int dpdrhoConstT(lua_State* L)
@@ -879,7 +879,7 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_pushcfunction(L, &Cv);
     lua_setfield(L, -2, "Cv");
     lua_pushcfunction(L, &Cv);
-    lua_setfield(L, -2, "dedTConstV");
+    lua_setfield(L, -2, "dudTConstV");
     lua_pushcfunction(L, &Cp);
     lua_setfield(L, -2, "Cp");
     lua_pushcfunction(L, &Cp);

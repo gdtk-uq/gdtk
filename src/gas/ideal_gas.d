@@ -134,7 +134,7 @@ public:
 	throw new Exception("not implemented");
     }
     */
-    override double dedT_const_v(in GasState Q) const
+    override double dudT_const_v(in GasState Q) const
     {
 	return _Cv;
     }

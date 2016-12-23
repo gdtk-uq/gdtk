@@ -302,7 +302,7 @@ public:
        }
     */
 
-    override double dedT_const_v(in GasState Q) const
+    override double dudT_const_v(in GasState Q) const
     { 
 	double efrac, lrfrac;
 	int    ir, ie;
@@ -615,7 +615,7 @@ version(uniform_lut_test)
 		
 	auto Q = new GasState(gm, p_given, T_given);
 	// Return values not stored in the GasState
-	double Cv = gm.dedT_const_v(Q);
+	double Cv = gm.dudT_const_v(Q);
 	double Cp = gm.dhdT_const_p(Q);
 	double R = gm.gas_constant(Q);
 	double h = gm.enthalpy(Q);

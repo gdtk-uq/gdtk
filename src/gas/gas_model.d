@@ -52,7 +52,7 @@ public:
     // const void update_diff_coeffs(ref GasState Q) {}
 
     // Methods to be overridden.
-    abstract double dedT_const_v(in GasState Q); 
+    abstract double dudT_const_v(in GasState Q); 
     abstract double dhdT_const_p(in GasState Q); 
     abstract double dpdrho_const_T(in GasState Q); 
     abstract double gas_constant(in GasState Q);
@@ -80,7 +80,7 @@ public:
 	return g;
     }
     
-    final double Cv(in GasState Q) { return dedT_const_v(Q); }
+    final double Cv(in GasState Q) { return dudT_const_v(Q); }
     final double Cp(in GasState Q) { return dhdT_const_p(Q); }
     final double R(in GasState Q)  { return gas_constant(Q); }
     final double gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
