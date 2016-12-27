@@ -9,7 +9,9 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/therm_perf_gas.d \
 	$(GAS_DIR)/very_viscous_air.d \
 	$(GAS_DIR)/uniform_lut.d \
-	$(GAS_DIR)/adaptive_lut_CEA.d
+	$(GAS_DIR)/adaptive_lut_CEA.d \
+	$(GAS_DIR)/ideal_air_proxy.d \
+	$(GAS_DIR)/ideal_air_fortran.o
 
 THERMO_FILES := \
 	$(GAS_DIR)/thermo/cea_thermo_curves.d \

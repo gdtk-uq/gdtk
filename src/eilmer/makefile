@@ -288,4 +288,8 @@ prep-gpu-chem-kernel.py: utils/prep-gpu-chem-kernel.py
 alpha_qss_kernel.tmplt: utils/alpha_qss_kernel.tmplt
 	cp utils/alpha_qss_kernel.tmplt .
 
+#--------------------------------------------------------------------------
+# Fortran bits -- we need a bit of a hack
 
+$(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
+	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f

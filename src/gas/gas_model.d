@@ -1188,6 +1188,7 @@ import gas.co2gas_sw;
 import gas.sf6virial;
 import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
+import gas.ideal_air_proxy;
 import core.stdc.stdlib : exit;
 
 
@@ -1248,6 +1249,9 @@ GasModel init_gas_model(in string file_name="gas-model.lua")
 	break;
     case "CEA adaptive look-up table":
 	gm = new AdaptiveLUT(L);
+	break;
+    case "IdealAirProxy":
+	gm = new IdealAirProxy(); // no further config in the Lua file
 	break;
     default:
 	string errMsg = format("The gas model '%s' is not available.", gas_model_name);
