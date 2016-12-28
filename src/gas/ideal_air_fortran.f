@@ -23,8 +23,8 @@ subroutine iaf_init() bind(C, name='iaf_init')
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   !
-  real(kind=8) prandtl
-  common /iaf_trans/ prandtl
+  real(kind=8) mu_ref, T_ref_mu, S_mu, k_ref, T_ref_k, S_k
+  common /iaf_trans/ mu_ref, T_ref_mu, S_mu, k_ref, T_ref_k, S_k
   !
   ! Thermodynamic constants
   Runiv = 8.31451 ! Universal gas constant in J/(mol.K) -- Tipler (1991)
@@ -40,11 +40,15 @@ subroutine iaf_init() bind(C, name='iaf_init')
   p1 = 101.325e3 ! reference pressure for entropy calculation, Pa
   !
   ! Molecular transport coefficent constants.
-  ! Viscosity parameters
-  ! FIX-ME by filling in
+  ! Viscosity parameters for Sutherland expression
+  mu_ref = 1.716e-5
+  T_ref_mu = 273.0
+  S_mu = 111.0
   !
-  ! Thermal conductivity
-  ! FIX-ME by filling in
+  ! Thermal conductivity for Sutherland expression
+  k_ref = 0.0241
+  T_ref_k = 273.0
+  S_k = 194.0
 end subroutine iaf_init
 
 integer(c_int) function iaf_n_species() result (n) bind(C, name='iaf_n_species')
@@ -160,10 +164,10 @@ subroutine update_trans_coeffs(p, Ttr, rho, u, massf, mu, k) bind(C, name='iaf_u
   real(c_double) :: massf(*)
   real(c_double) :: mu
   real(c_double) :: k
-  real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  mu = 1.84691e-05 ! FIX-ME dummy value for unit test
-  k = 0.0262449 ! FIX-ME dummy value for unit test
+  real(kind=8) mu_ref, T_ref_mu, S_mu, k_ref, T_ref_k, S_k
+  common /iaf_trans/ mu_ref, T_ref_mu, S_mu, k_ref, T_ref_k, S_k
+  mu = mu_ref*sqrt(Ttr/T_ref_mu)*(Ttr/T_ref_mu)*(T_ref_mu + S_mu)/(Ttr + S_mu)
+  k = k_ref*sqrt(Ttr/T_ref_k)*(Ttr/T_ref_k)*(T_ref_k + S_k)/(Ttr + S_k)
 end subroutine update_trans_coeffs
 
 real(c_double) function get_Cv() result (val) bind(C, name='iaf_get_Cv')
