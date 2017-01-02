@@ -20,6 +20,15 @@ module ideal_air_fortran
 
 subroutine iaf_init() bind(C, name='iaf_init')
   !
+  ! In the context of a multi-threaded flow calculation, we can
+  ! get away with the following simple arrangement of common blocks
+  ! for the data that is to be seen by all of the functions.
+  ! This is because the data are set to the same values for each thread
+  ! and are only ever read by the other functions.
+  ! To safely handle and retain mutable data between function calls,
+  ! we will probably need each thread to have its own storage,
+  ! with a pointer to that storage passed in from the D-language domain.
+  ! 
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   !
