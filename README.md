@@ -21,8 +21,8 @@ the *Eilmer* simulation code for 2D and 3D gas dynamic flows
 that may involve chemical reactions.
 It is a research/education code and, 
 with its built-in grid generation capabilities, 
-is suitable for the exploration of flows where the bounding geometry 
-is not too complex.
+is suitable for the exploration of flows 
+where the bounding geometry is not too complex.
 
 ### Features:
 * Eulerian/Lagrangian description of the flow (finite-volume, 2D axisymmetric or 3D).
@@ -35,11 +35,11 @@ is not too complex.
 * Dense-gas thermodynamic models and rotating frames of reference for
   turbomachine modelling.
 * Turbulence models.
-* Coupling to radiation and ablation codes for aeroshell flows.
 * Conjugate heat transfer to solid surfaces and heat flow within 
   solid objects.
-* MHD simulation for a single-fluid plasma.
-* Import of GridPro grids for complex flow geometries.
+* MHD simulation for a single-fluid plasma (a work in progress).
+* Import of GridPro structured grids and SU2 unstructured grids 
+  for complex flow geometries.
 
 We have structured the code as a programmable program, 
 with a user-supplied input script (written in Lua) 
@@ -50,15 +50,11 @@ a postgraduate student or academic colleague
 wanting to simulate gas flows as part of their study.
 
 ### Documentation
-Although there's not much documentation currently available for this
-D-language code collection, the user guides from 
-the [CFCFD](http://cfcfd.mechmining.uq.edu.au) project will
-give some idea of the use of this new code.
-In particular, 
-the [Eilmer3 User Guide](http://cfcfd.mechmining.uq.edu.au/pdf/eilmer3-user-guide.pdf)
-shows how to use the previous C++/Python code 
-and [Theory Book](http://cfcfd.mechmining.uq.edu.au/pdf/eilmer3-theory-book.pdf),
-describes how it was built.
+The documentation for users of the code is in a set of PDF reports
+in the `dgd/pdf` subdirectory.
+Presently there is a user guide for the main simulation code,
+the geometry package and the gas model package.
+More documents will appear as they are completed.
 
 For those brave souls prepared to dive into the use and extension of the
 code, there are examples provided as well as the source code itself.
@@ -69,10 +65,13 @@ students and academic colleagues who can talk to us directly.
 ### Build Requirements
 Once you have cloned this repository, all that is required is 
 a Linux environment with a fairly recent D compiler for building the
-main code and a C compiler for building the Lua interpreter.
+main code, a C compiler for building the Lua interpreter, and
+a Fortran-2003 compiler for building some of the thermochemical models.
+
 You may use the reference DMD compiler or the GDC or LDMD2 compilers.
 We have been developing with the DMD32 and DMD64 compilers 
-from versions 2.067 through 2.071.2.
+from versions 2.067 through 2.072.2.
+We also use GCC and GFortran.
 
 Going into the `dgd/src/eilmer` directory you will find a single `makefile`
 that allows the build to proceed with the command `make install`.
@@ -120,5 +119,5 @@ who has written what part of the code.
 The commit history is place to go to see further details. 
 
 ## Chief Gardeners
-Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2016-09-19
+Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2017-01-02
 
