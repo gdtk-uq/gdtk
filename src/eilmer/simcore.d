@@ -38,6 +38,7 @@ import solid_udf_source_terms;
 import block_moving_grid;
 import grid_motion;
 import history;
+import conservedquantities;
 version (gpu_chem) {
     import gpu_chem;
 }
@@ -254,6 +255,8 @@ void march_over_blocks()
 
 void integrate_in_time(double target_time_as_requested)
 {
+    ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
+								 GlobalConfig.gmodel_master.n_modes);
     if (GlobalConfig.verbosity_level > 0) {
 	writeln("Integrate in time.");
 	stdout.flush();
@@ -419,6 +422,17 @@ void integrate_in_time(double target_time_as_requested)
 	    formattedWrite(writer, "WC=%d WCtFT=%.1f WCtMS=%.1f", 
 			   wall_clock_elapsed, WCtFT, WCtMS);
 	    writeln(writer.data);
+	    if ( GlobalConfig.verbosity_level >= 1 ) {
+		// We also compute the residual information and write to screen
+		compute_Linf_residuals(Linf_residuals);
+		auto writer2 = appender!string();
+		formattedWrite(writer2, "RESIDUALS: step= %7d WC= %d ",
+			       step, wall_clock_elapsed);
+		formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
+			       Linf_residuals.mass, Linf_residuals.momentum.x,
+			       Linf_residuals.momentum.y, Linf_residuals.total_energy);
+		writeln(writer2.data);
+	    }
 	    stdout.flush();
 	}
 
@@ -1321,3 +1335,17 @@ void gasdynamic_explicit_increment_with_moving_grid()
     sim_time = t0 + dt_global;
 } // end gasdynamic_explicit_increment_with_moving_grid()
 
+void compute_Linf_residuals(ConservedQuantities Linf_residuals)
+{
+    foreach (blk; parallel(gasBlocks,1)) {
+	blk.compute_Linf_residuals();
+    }
+    Linf_residuals.copy_values_from(gasBlocks[0].Linf_residuals);
+    foreach (blk; gasBlocks) {
+	Linf_residuals.mass = fmax(Linf_residuals.mass, fabs(blk.Linf_residuals.mass));
+	Linf_residuals.momentum.refx = fmax(Linf_residuals.momentum.x, fabs(blk.Linf_residuals.momentum.x));
+	Linf_residuals.momentum.refy = fmax(Linf_residuals.momentum.y, fabs(blk.Linf_residuals.momentum.y));
+	Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(blk.Linf_residuals.total_energy));
+
+    }
+}

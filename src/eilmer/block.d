@@ -47,6 +47,7 @@ public:
                    // There is only one component, about the z-axis.
     double mass_residual, energy_residual; // monitor these for steady state
     Vector3 mass_residual_loc, energy_residual_loc; // locations of worst case
+    ConservedQuantities Linf_residuals;
     double c_h, divB_damping_length; //divergence cleaning parameters for MHD
     int mncell;                 // number of monitor cells
     double[] initial_T_value; // for monitor cells to check against
@@ -101,6 +102,8 @@ public:
 	this.grid_type = grid_type;
 	this.label = label;
 	myConfig = dedicatedConfig[id];
+	Linf_residuals = new ConservedQuantities(dedicatedConfig[id].gmodel.n_species,
+						 dedicatedConfig[id].gmodel.n_modes);
 	// Workspace for flux_calc method.
 	Lft = new FlowState(dedicatedConfig[id].gmodel);
 	Rght = new FlowState(dedicatedConfig[id].gmodel);
@@ -482,6 +485,27 @@ public:
 	    }
 	} // for cell
     } // end compute_residuals()
+
+    @nogc
+    void compute_Linf_residuals()
+    // Compute Linf residuals for conserved quantities.
+    // This is similar to the calculation above of
+    // residual, but this differs by a factor of the timestep size
+    // because here the residual is taken as R(U) = dU/dt.
+    // We will assume that dUdt[0] is up-to-date.
+    {
+	Linf_residuals.copy_values_from(cells[0].dUdt[0]);
+	Linf_residuals.mass = fabs(Linf_residuals.mass);
+	Linf_residuals.momentum.refx = fabs(Linf_residuals.momentum.x);
+	Linf_residuals.momentum.refy = fabs(Linf_residuals.momentum.y);
+	Linf_residuals.total_energy = fabs(Linf_residuals.total_energy);
+	foreach (cell; cells) {
+	    Linf_residuals.mass = fmax(Linf_residuals.mass, fabs(cell.dUdt[0].mass));
+	    Linf_residuals.momentum.refx = fmax(Linf_residuals.momentum.x, fabs(cell.dUdt[0].momentum.x));
+	    Linf_residuals.momentum.refy = fmax(Linf_residuals.momentum.y, fabs(cell.dUdt[0].momentum.y));
+	    Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(cell.dUdt[0].total_energy));
+	}
+    }
 
     double update_c_h(double dt_current)
     //Update the c_h value for the divergence cleaning mechanism
