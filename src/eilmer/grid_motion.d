@@ -64,6 +64,8 @@ void init_master_lua_State(string fname)
     // Now set some helper functions
     lua_pushcfunction(L, &luafn_sampleFlow);
     lua_setglobal(L, "sampleFlow");
+    lua_pushcfunction(L, &luafn_getVtxPosition);
+    lua_setglobal(L, "getVtxPosition");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForDomain);
     lua_setglobal(L, "setVtxVelocitiesForDomain");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForBlock);
@@ -71,6 +73,25 @@ void init_master_lua_State(string fname)
     lua_pushcfunction(L, &luafn_setVtxVelocity);
     lua_setglobal(L, "setVtxVelocity");
 
+}
+
+extern(C) int luafn_getVtxPosition(lua_State *L)
+{
+    // Get arguments from lua_stack
+    auto blkId = lua_tointeger(L, 1);
+    auto i = lua_tointeger(L, 2);
+    auto j = lua_tointeger(L, 3);
+    auto k = lua_tointeger(L, 4);
+
+    // Grab the appropriate vtx
+    auto vtx = gasBlocks[blkId].get_vtx(i, j, k);
+    
+    // Return the interesting bits as a table with entries x, y, z.
+    lua_newtable(L);
+    lua_pushnumber(L, vtx.pos[0].x); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, vtx.pos[0].y); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, vtx.pos[0].z); lua_setfield(L, -2, "z");
+    return 1;
 }
 
 extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
