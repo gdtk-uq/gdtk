@@ -605,16 +605,8 @@ public:
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
-                        if (wsL) {
-                            mygradL[0] *=  cL0.gradients."~lname~"; mygradL[1] *=  cL0.gradients."~lname~"; mygradL[2] *=  cL0.gradients."~lname~";
-                        } else {                    
-                            mygradL[0] *=  cR0.gradients."~lname~"; mygradL[1] *=  cR0.gradients."~lname~"; mygradL[2] *=  cR0.gradients."~lname~";
-                        }
-                        if (wsR) {
-                            mygradR[0] *=  cR0.gradients."~lname~"; mygradR[1] *=  cR0.gradients."~lname~"; mygradR[2] *=  cR0.gradients."~lname~";
-                        } else {                
-                            mygradR[0] *=  cL0.gradients."~lname~"; mygradR[1] *=  cL0.gradients."~lname~"; mygradR[2] *=  cL0.gradients."~lname~";
-                        }
+                        mygradL[0] *=  cL0.gradients."~lname~"; mygradL[1] *=  cL0.gradients."~lname~"; mygradL[2] *=  cL0.gradients."~lname~";
+                        mygradR[0] *=  cR0.gradients."~lname~"; mygradR[1] *=  cR0.gradients."~lname~"; mygradR[2] *=  cR0.gradients."~lname~";
                         break;
                     }
                 }
