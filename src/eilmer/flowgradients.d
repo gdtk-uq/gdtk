@@ -24,7 +24,7 @@ import fvinterface;
 import fvvertex;
 import globalconfig;
 
-immutable size_t cloud_nmax = 12;
+immutable size_t cloud_nmax = 64;
 
 class WLSQGradWorkspace {
 public:
