@@ -13,7 +13,6 @@ clean:
 	- rm *.o
 	- rm $(PROGRAMS)
 	- rm $(BUILD_DIR)/bin/$(PROGRAMS)
-	- rm $(INSTALL_DIR)/bin/$(PROGRAMS)
 
 install: $(PROGRAMS)
 
