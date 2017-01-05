@@ -151,6 +151,13 @@ void clean_dir(string dualFile, string partitionFile, string metisFormatFile) {
     remove(metisFormatFile);
 }
 
+int metisCheck() {
+    string command = "gpmetis";
+    auto output = executeShell(command);
+    int status = output[0];
+    return status;
+}
+
 string mesh2dual(string fileName, int ncommon) {
     writeln("-- Converting mesh to dual format");
     string outputFileName = "dual_"~fileName;
@@ -558,6 +565,8 @@ int main(string[] args){
     nparts = to!int(args[3]);
     ncommon = to!int(args[4]);
     writeln("Begin partitioner................");
+    // check if Metis is installed correctly. 
+    if (metisCheck() != 0)  throw new Error("Metis partition software cannot be found.");
     string metisFormatFile = SU2_to_metis_format(inputMeshFile);//("square_mesh.su2");
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
     string partitionFile = partitionDual(dualFormatFile, nparts);
