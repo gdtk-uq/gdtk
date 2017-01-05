@@ -417,7 +417,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	blocks ~= new Block(i);
 	// create an INTERIOR boundary for all blocks (we will fill the face id list later)
 	size_t[] face_id_list;
-	blocks[i].boundary["INTERIOR"] = new Boundary("INTERIOR", face_id_list);
+	blocks[i].boundary["METIS_INTERIOR"] = new Boundary("METIS_INTERIOR", face_id_list);
     }
     // assign cells to correct blocks, as well as interior boundary faces
     foreach(cell_id;0 .. ncells) {
@@ -437,7 +437,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 		// store shared face
 		foreach(face_id; global_cells[cell_id].face_id_list) {
 		    if (global_cells[neighbour_cell_id].face_id_list.canFind(face_id)) {
-			blocks[partition_id].boundary["INTERIOR"].face_id_list ~= face_id;
+			blocks[partition_id].boundary["METIS_INTERIOR"].face_id_list ~= face_id;
 			// facetag needs to be made with local node ids
 			size_t[] local_node_id_list;
 			foreach(node;global_faces[face_id].node_id_list)
@@ -478,7 +478,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 	
 	string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i) ~ "]= "; 
 	outFile_mappedcells.writef("%s", mapped_cells_tag);
-	auto ninterior = blocks[i].boundary["INTERIOR"].face_id_list.length;
+	auto ninterior = blocks[i].boundary["METIS_INTERIOR"].face_id_list.length;
 	outFile_mappedcells.writef("%d \n", ninterior);
 	
 	foreach(mapped_cell; blocks[i].mapped_cells){
