@@ -6,7 +6,7 @@
 # PJ, 11-Jan-2011 (Eilmer4 port 2015-10-21, unstructured-grid 2015-12-21, su2 2016-11-13)
 #
 # Can be run manually with the command:
-# $ tclsh cone20-usg.test
+# $ tclsh cone20-usg-metis.test
 #
 # Note that later tests below depend on earlier ones,
 # just as we shouldn't do.  Should fix this some day.
@@ -14,6 +14,10 @@
 package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {start body error}
+ 
+test prepare-metis-grid {Partition grid with metis.} -body {
+    exec ugrid_partition cone20.su2 mapped_cells 4 2 > LOGFILE_PREP_METIS
+} -result {} -returnCodes {0}
 
 test prepare-gas-model {Prepare gas model.} -body {
     exec prep-gas ideal-air.inp ideal-air-gas-model.lua > LOGFILE_PREP_GAS
