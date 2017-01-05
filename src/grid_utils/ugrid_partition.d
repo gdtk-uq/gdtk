@@ -21,13 +21,15 @@
  + $ dmd partition_core.d
  +
  + To partition a mesh:
- + $ ./partition_core arg1 arg2 arg3
+ + $ ugrid_partition mesh_fileName mappedCells_fileName nPartitions nDim
  +
  + where,
- + arg1 is the mesh file name, i.e. mesh.su2
- + arg2 is the number of partitions
- + arg3 is the minimum number of nodes that constitutes a face,
- + i.e. 2 for a line (2D), 3 for a triangle (3D)
+ + mesh_fileName is the mesh file name, i.e. mesh.su2
+ + mappedCells_fileName is the user defined name given to the file used to store
+ +                      the ghost cell connectivity along METIS_INTERIOR boundaries 
+ + nPartitions is the number of partitions
+ + nDim is the minimum number of nodes that constitutes a face,
+ +      i.e. 2 for a line (2D), 3 for a triangle (3D)
  +
  + example:
  + $ ./partition_core mesh_file.su2 4 2
@@ -199,7 +201,7 @@ string SU2_to_metis_format(string fileName) {
     return outputFileName;
 }
 
-void construct_blocks(string meshFile, string partitionFile, string dualFile, int nparts) {
+void construct_blocks(string meshFile, string mappedCellsFilename, string partitionFile, string dualFile, int nparts) {
     writeln("-- Constructing ", nparts, " blocks");
     auto f = File(meshFile, "r");
     Cell[] global_cells;
@@ -470,7 +472,7 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
     // at this point we have fully constructed the new blocks. Now write the data out to separate text files.
     // NB. cells and nodes use their local ids.
     File outFile_mappedcells;
-    outFile_mappedcells = File("mapped_cells", "w");
+    outFile_mappedcells = File(mappedCellsFilename, "w");
     
     foreach(i;0..nparts) {
 	writeln("-- Writing out block: #", i);
@@ -550,15 +552,16 @@ void construct_blocks(string meshFile, string partitionFile, string dualFile, in
 
 int main(string[] args){
     // assign command line arguments to variable names
-    string inputMeshFile; int nparts; int ncommon;
+    string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon;
     inputMeshFile = args[1];
-    nparts = to!int(args[2]);
-    ncommon = to!int(args[3]);
+    mappedCellsFilename = args[2];
+    nparts = to!int(args[3]);
+    ncommon = to!int(args[4]);
     writeln("Begin partitioner................");
     string metisFormatFile = SU2_to_metis_format(inputMeshFile);//("square_mesh.su2");
     string dualFormatFile = mesh2dual(metisFormatFile, ncommon);
     string partitionFile = partitionDual(dualFormatFile, nparts);
-    construct_blocks(inputMeshFile, partitionFile, dualFormatFile, nparts);
+    construct_blocks(inputMeshFile, mappedCellsFilename, partitionFile, dualFormatFile, nparts);
     clean_dir(dualFormatFile, partitionFile, metisFormatFile);
     writeln("Finished partitioning................");
     return 0;
