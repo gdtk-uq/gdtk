@@ -19,7 +19,7 @@ import kinetics.reaction_mechanism;
 
 immutable double DT_INCREASE_PERCENT = 10.0; // allowable percentage increase on succesful step
 immutable double DT_DECREASE_PERCENT = 50.0; // allowable percentage decrease on succesful step
-                                             // Yes, you read that write. Sometimes a step is succesful
+                                             // Yes, you read that right. Sometimes a step is succesful
                                              // but the timestep selection algorithm will suggest
                                              // a reduction. We limit that reduction to no more than 50%.
 immutable double DT_REDUCTION_FACTOR = 10.0; // factor by which to reduce timestep
