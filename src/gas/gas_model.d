@@ -1,11 +1,24 @@
 /**
- * gasmodel.d
- * Storage arrangement for the data defining a gas state,
- * interface description of the gas model functionality and
- * utilities to create specific gas model objects.
+ * gas_model.d
+ * 
+ * Contents: The gas model file has a number of parts.
+ *   1. The GasModel base class for specifying how 
+ *      specific gas models should behave.
+ *   2. The GasState class which specifies the storage arrangement
+ *      for the data defining a gas state.
+ *   3. The ThermochemicalReactor base class for specifying how a particular
+ *      GasState should evolve over time in an isolated system.
+ *   4. Utility functions to transform mass-fraction and mole-fraction
+ *      data arrays.
+ *   5. Fill-in functions for gas model classes that don't implement
+ *      some of the functions declared in the base class.
+ *   6. Utility functions to create GasModel and ThermochemicalReactor objects.
+ *   7. Unit tests for the module.
  *
- * Author: Peter J. and Rowan G.
+ * Authors: Peter J. and Rowan G.
  * Version: 2014-06-22, first cut, exploring the options.
+ *          2015--2016, lots of experiments
+ *          2017-01-06, introduce ChemicalReactor base class
  */
 
 module gas.gas_model;
@@ -25,6 +38,10 @@ immutable double MIN_MASS_FRACTION = 1.0e-30;
 immutable double MIN_MOLES = 1.0e-30;
 immutable double T_MIN = 20.0; 
 immutable double MASSF_ERROR_TOL = 1.0e-6;
+
+//----------------------------------------------------------------------------------------
+// PART 1. GasModel base class
+//----------------------------------------------------------------------------------------
 
 class GasModel {
 public:
@@ -135,6 +152,10 @@ protected:
     double[] _mol_masses;
 } // end class GasModel
 
+
+//----------------------------------------------------------------------------------------
+// PART 2. GasState data storage class
+//----------------------------------------------------------------------------------------
 
 class GasState {
 public:
@@ -378,6 +399,39 @@ public:
     }
 } // end class GasState
 
+//----------------------------------------------------------------------------------------
+// PART 3. ThermochemicalReactor base class
+//----------------------------------------------------------------------------------------
+
+class ChemistryUpdateException : Exception {
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+	 Throwable next=null)
+    {
+	super(message, file, line, next);
+    }
+}
+
+class ThermochemicalReactor {
+public:
+    this(string fname, GasModel gmodel)
+    {
+	// We need a reference to the original gas model object
+	// to update the GasState data at a later time.
+	_gmodel = gmodel;
+    }
+
+    // All the work happens when calling the concrete object
+    // which updates the GasState over the (small) time, tInterval.
+    abstract void opCall(GasState Q, double tInterval, ref double dtSuggest);
+    
+public:
+    GasModel _gmodel;
+} // end class ThermochemicalReactor
+
+
+//----------------------------------------------------------------------------------------
+// PART 4. Utility functions for mass-fraction and mole-fraction data
+//----------------------------------------------------------------------------------------
 
 @nogc void scale_mass_fractions(ref double[] massf, double tolerance=0.0,
 				double assert_error_tolerance=0.1)
@@ -454,6 +508,11 @@ body {
     foreach ( i; 0..massf.length ) massf[i] = molef[i] * mol_masses[i] / mixMolMass;
 }
 
+
+//----------------------------------------------------------------------------------------
+// PART 5. Fill-in functions for gas models that don't define all functions
+//         specified in the base class GasModel
+//----------------------------------------------------------------------------------------
 
 /* The following functions:
    update_thermo_state_pT(), update_thermo_state_rhoT(), update_thermo_state_rhop() 
@@ -640,8 +699,6 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	throw new Exception(msg);
     }
 }
-   
-
 
 void update_thermo_state_rhoT(GasModel gmodel, GasState Q)  
 {
@@ -929,7 +986,6 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     }
 }
 
-
 void update_thermo_state_ps(GasModel gmodel, GasState Q, double s) 
 {
     double T_old, T_new, dT, tmp, dT_sign;
@@ -1013,7 +1069,6 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
     }   // end while 
     // Ensure that we have the current data for all EOS variables.
     Q.Ttr = T_old;
-
 
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
@@ -1176,9 +1231,12 @@ double dp, p_old, p_new, T_old, T_new, dT;
 	msg ~= "  Supplied Q:" ~ Q.toString();
 	throw new Exception(msg);
     }
-
 } // end update_thermo_state_hs()
 
+
+//----------------------------------------------------------------------------------------
+// PART 6. Utility functions to make GasModel and ChemicalReactor objects
+//----------------------------------------------------------------------------------------
 
 // Utility function to construct specific gas models needs to know about
 // all of the gas-model modules.
@@ -1263,7 +1321,10 @@ GasModel init_gas_model(in string file_name="gas-model.lua")
     return gm;
 }
 
-//---------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
+// PART 7. Unit tests for the module
+//----------------------------------------------------------------------------------------
 
 version(gas_model_test) {
     int main() {

@@ -29,14 +29,6 @@ immutable double ALLOWABLE_MASSF_ERROR = 1.0e-3; // Maximum allowable error in m
 
 enum ResultOfStep { success, failure };
 
-class ChemistryUpdateException : Exception {
-    this(string message, string file=__FILE__, size_t line=__LINE__,
-	 Throwable next=null)
-    {
-	super(message, file, line, next);
-    }
-}
-
 final class ChemistryUpdate {
     ReactionMechanism rmech;
     ChemODEStep cstep;
