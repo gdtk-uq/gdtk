@@ -33,6 +33,13 @@ build-prep-chem: prep_chem.lua reaction.lua lex_elems.lua
 test: $(TEST_PROGRAMS)
 	tclsh kinetics-package-test.tcl
 
+clean:
+	- rm *.o
+	- rm $(TEST_PROGRAMS)
+	- rm -r $(BUILD_DIR)/*
+	- cd $(LUA_DIR); make clean
+	- cd $(GAS_DIR); make clean; rm libgas.a
+
 ${LIBLUA}:
 	cd ${LUA_DIR}; make $(PLATFORM) local
 
@@ -56,5 +63,9 @@ reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILE
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
+#--------------------------------------------------------------------------
+# Fortran bits
 
+$(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
+	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f
 

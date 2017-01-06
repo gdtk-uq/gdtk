@@ -623,10 +623,10 @@ version(chemistry_update_test) {
 	auto rmech = createReactionMechanism("sample-input/H2-I2-inp.lua", gmodel, 100.0, 10000.0);
 
 	auto gd = new GasState(3, 1);
-	gd.T[0] = 700.0;
+	gd.Ttr = 700.0;
 	double c0 = 4.54;
 	double[] conc0 = [c0, c0, 0.0];
-	gd.p = 2.0*c0*R_universal*gd.T[0];
+	gd.p = 2.0*c0*R_universal*gd.Ttr;
 	double[] molef = [0.5, 0.5, 0.0];
 	gmodel.molef2massf(molef, gd);
 	gmodel.update_thermo_from_pT(gd);

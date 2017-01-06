@@ -193,7 +193,7 @@ version(reaction_mechanism_test) {
 	double[] conc = [4.54, 4.54, 0.0];
 	auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
 	auto gd = new GasState(3, 1);
-	gd.T[0] = 700.0;
+	gd.Ttr = 700.0;
 	auto reaction = new ElementaryReaction(rc, rc, gmodel, [0, 1], [1, 1],
 					       [2], [2], 3);
 	auto reacMech = new ReactionMechanism([reaction], 3, 100.0, 10000.0);

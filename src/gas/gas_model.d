@@ -133,7 +133,9 @@ protected:
     string[] _species_names;
     int[string] _species_indices;
     double[] _mol_masses;
-}
+} // end class GasModel
+
+
 class GasState {
 public:
     /// Thermodynamic properties.
