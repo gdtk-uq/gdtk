@@ -909,7 +909,7 @@ public:
 	    }
 	}
 	try {
-	    myConfig.chemUpdate(fs.gas, dt, dt_chem, myConfig.gmodel);
+	    myConfig.chemUpdate(fs.gas, dt, dt_chem);
 	    if (myConfig.ignition_zone_active) {
 		// Restore actual gas temperature
 		fs.gas.Ttr = T_save;

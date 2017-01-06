@@ -278,8 +278,11 @@ chemistry update.";
 	dtSuggest = dtSave;
     }
 
-private:
+public:
+    // We will need to access this referenced model from the Lua functions
+    // so it needs to be public.
     GasModel _gmodel;
+private:
     // Some memory workspace
     GasState _Qinit;
     double[] _conc0;

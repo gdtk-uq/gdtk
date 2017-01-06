@@ -87,7 +87,10 @@ extern(C) int updateState(lua_State* L)
     // Arg 1 is "self"
     auto chemUpdate = checkChemistryUpdate(L, 1);
     // Arg 5 is gasmodel (grab this first for help with GasState)
-    auto gm = checkGasModel(L, 5);
+    // [FIX-ME] Rowan, should be able to dispose of this argument from your scripts
+    // now that a reference is packed inside the ChemistryUpdate object.
+    // auto gm = checkGasModel(L, 5);
+    GasModel gm = chemUpdate._gmodel;
     // Arg 2 is GasState
     auto Q = new GasState(gm.n_species, gm.n_modes);
     getGasStateFromTable(L, gm, 2, Q);
@@ -97,7 +100,7 @@ extern(C) int updateState(lua_State* L)
     double dtSuggest = luaL_checknumber(L, 4);
 
     try {
-	chemUpdate(Q, tInterval, dtSuggest, gm);
+	chemUpdate(Q, tInterval, dtSuggest);
     }
     catch (ChemistryUpdateException e) {
 	string errMsg = "Error in call to chemistry update. " ~
