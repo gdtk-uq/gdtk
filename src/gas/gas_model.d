@@ -1254,7 +1254,7 @@ import gas.ideal_air_proxy;
 import core.stdc.stdlib : exit;
 
 
-GasModel init_gas_model(in string file_name="gas-model.lua")
+GasModel init_gas_model(string file_name="gas-model.lua")
 /**
  * Get the instructions for setting up the GasModel object from a Lua file.
  * The first item in the file should be a model name which we use to select 
@@ -1321,7 +1321,22 @@ GasModel init_gas_model(in string file_name="gas-model.lua")
     }
     lua_close(L);
     return gm;
-}
+} // end init_gas_model()
+
+
+// The utility function to make new ThermochemicalReactor objects needs to know about
+// the schemes that are available.
+import kinetics.chemistry_update;
+
+ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileName="")
+{
+    ThermochemicalReactor reactor; // start with a null reference
+    if ((cast(ThermallyPerfectGas) gmodel) !is null) { reactor = new ChemistryUpdate(fileName, gmodel); }
+    if (reactor is null) {
+	throw new ChemistryUpdateException("Oops, tried but failed to set up a ThermochemicalReactor.");
+    }
+    return reactor;
+} // end init_thermochemical_reactor()
 
 
 //----------------------------------------------------------------------------------------

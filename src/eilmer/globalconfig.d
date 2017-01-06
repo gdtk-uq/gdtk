@@ -504,7 +504,7 @@ public:
 
     GasModel gmodel;
     bool include_quality;
-    ChemistryUpdate chemUpdate;
+    ThermochemicalReactor chemUpdate;
 
     int verbosity_level;
 
@@ -521,10 +521,10 @@ public:
 	grid_motion = GlobalConfig.grid_motion;
 	udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
 	n_grid_time_levels = GlobalConfig.n_grid_time_levels;
-
+	//
 	shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
 	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
-
+	//
 	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
 	report_invalid_cells = GlobalConfig.report_invalid_cells;
 	flowstate_limits = GlobalConfig.flowstate_limits;
@@ -540,14 +540,14 @@ public:
 	compression_tolerance = GlobalConfig.compression_tolerance;
 	artificial_compressibility = GlobalConfig.artificial_compressibility;
 	ac_alpha = GlobalConfig.ac_alpha;
-
+	//
 	radiation = GlobalConfig.radiation;
 	electric_field_work = GlobalConfig.electric_field_work;
 	MHD = GlobalConfig.MHD;
 	divergence_cleaning = GlobalConfig.divergence_cleaning;
 	c_h = GlobalConfig.c_h;
 	divB_damping_length = GlobalConfig.divB_damping_length;
-
+	//
 	viscous = GlobalConfig.viscous;
 	use_viscosity_from_cells = GlobalConfig.use_viscosity_from_cells;
 	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
@@ -559,45 +559,45 @@ public:
 	diffusion_factor = GlobalConfig.diffusion_factor;
 	diffusion_lewis = GlobalConfig.diffusion_lewis;
 	diffusion_schmidt = GlobalConfig.diffusion_schmidt;
-
+	//
 	stringent_cfl = GlobalConfig.stringent_cfl;
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
-
+	//
 	separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
 	separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
-	
+	//
 	turbulence_model = GlobalConfig.turbulence_model;
 	turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
 	turbulence_schmidt_number = GlobalConfig.turbulence_schmidt_number;
 	max_mu_t_factor = GlobalConfig.max_mu_t_factor;
 	transient_mu_t_factor = GlobalConfig.transient_mu_t_factor;
-	foreach (bz; GlobalConfig.turbulent_zones) turbulent_zones ~= new BlockZone(bz);
-
+	foreach (bz; GlobalConfig.turbulent_zones) { turbulent_zones ~= new BlockZone(bz); }
+	//
 	udf_source_terms = GlobalConfig.udf_source_terms;
-
+	//
 	reacting = GlobalConfig.reacting;
 	reaction_time_delay = GlobalConfig.reaction_time_delay;
 	T_frozen = GlobalConfig.T_frozen;
 	T_frozen_energy = GlobalConfig.T_frozen_energy;
-	foreach (rz; GlobalConfig.reaction_zones) reaction_zones ~= new BlockZone(rz);
-
+	foreach (rz; GlobalConfig.reaction_zones) { reaction_zones ~= new BlockZone(rz); }
+	//
 	ignition_time_start = GlobalConfig.ignition_time_start;
 	ignition_time_stop = GlobalConfig.ignition_time_stop;
 	ignition_zone_active = GlobalConfig.ignition_zone_active;
-	foreach (iz; GlobalConfig.ignition_zones) ignition_zones ~= new IgnitionZone(iz);
-
+	foreach (iz; GlobalConfig.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
+	//
 	gmodel = init_gas_model(GlobalConfig.gas_model_file);
 	include_quality = GlobalConfig.include_quality;
-	if (GlobalConfig.reacting)
-	    chemUpdate = new ChemistryUpdate(GlobalConfig.reactions_file, gmodel);
-
-	verbosity_level = GlobalConfig.verbosity_level;
-
-	version (steady_state) {
-	sssOptions = GlobalConfig.sssOptions;
+	if (GlobalConfig.reacting) {
+	    chemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file);
 	}
-
-    }
+	//
+	verbosity_level = GlobalConfig.verbosity_level;
+	//
+	version (steady_state) {
+	    sssOptions = GlobalConfig.sssOptions;
+	}
+    } // end constructor
 
     void update_control_parameters()
     // to be used after reading job.control file.
