@@ -50,6 +50,9 @@ final class ChemistryUpdate {
 	_Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
 	_conc0.length = gmodel.n_species;
 	_concOut.length = gmodel.n_species;
+	// We need a reference to the original gas model object
+	// to update the gas state at a later time.
+	_gmodel = gmodel;
 
 	// Configure other parameters via Lua state.
 	auto L = init_lua_State(fname);
@@ -118,10 +121,10 @@ final class ChemistryUpdate {
 	lua_close(L);
     }
 
-    void opCall(GasState Q, double tInterval, ref double dtSuggest, GasModel gmodel)
+    void opCall(GasState Q, double tInterval, ref double dtSuggest)
     {
 	_Qinit.copy_values_from(Q);
-	gmodel.massf2conc(Q, _conc0);
+	_gmodel.massf2conc(Q, _conc0);
 
 	// 0. Evaluate the rate constants. 
 	//    It helps to have these computed before doing other setup work.
@@ -157,7 +160,7 @@ final class ChemistryUpdate {
 		    /* We succesfully took a step of size h according to the ODE method.
 		     * However, we need to test that that mass fractions have remained ok.
 		     */
-		    gmodel.conc2massf(_concOut, Q);
+		    _gmodel.conc2massf(_concOut, Q);
 		    auto massfTotal = sum(Q.massf);
 		    if ( fabs(massfTotal - 1.0) > ALLOWABLE_MASSF_ERROR ) {
 			passesMassFractionTest = false;
@@ -242,8 +245,8 @@ final class ChemistryUpdate {
 	     * differential equations.
 	     */
 	    if ( tightTempCoupling ) {
-		gmodel.conc2massf(_conc0, Q);
-		gmodel.update_thermo_from_rhoe(Q);
+		_gmodel.conc2massf(_conc0, Q);
+		_gmodel.update_thermo_from_rhoe(Q);
 		rmech.eval_rate_constants(Q);
 	    }
 
@@ -269,18 +272,19 @@ chemistry update.";
 	}
 	// At this point, it appears that everything has gone well.
 	// We'll tweak the mass fractions in case they are a little off.
-	gmodel.conc2massf(_concOut, Q);
+	_gmodel.conc2massf(_concOut, Q);
 	auto massfTotal = sum(Q.massf);
 	foreach (ref mf; Q.massf) mf /= massfTotal;
 	dtSuggest = dtSave;
     }
 
 private:
+    GasModel _gmodel;
     // Some memory workspace
     GasState _Qinit;
     double[] _conc0;
     double[] _concOut;
-}
+} // end class ChemistryUpdate
 
 /++
  + ChemODEStep is an abstract class that provides the interface
@@ -684,7 +688,7 @@ version(chemistry_update_test) {
 
 	double dtSuggest = 200.0;
 	auto chemUpdate = new ChemistryUpdate("sample-input/H2-I2-inp.lua", gmodel);
-	chemUpdate(gd, tInterval, dtSuggest, gmodel);
+	chemUpdate(gd, tInterval, dtSuggest);
 	double[] conc;
 	conc.length = 3;
 	gmodel.massf2conc(gd, conc);
