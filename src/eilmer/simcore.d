@@ -390,18 +390,15 @@ void integrate_in_time(double target_time_as_requested)
 		}
 	    }	    
 	}
-	// 2d. Increment because of viscous effects may be done
-	//     separately to the convective terms.
-        // 2e. Chemistry step. 
-	// [TODO]: Set T_frozen from config.
+	// 2d. Chemistry step. 
 	if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
 	    version (gpu_chem) {
-		GlobalConfig.gpuChem.chemical_increment(dt_global, 300.0);
+		GlobalConfig.gpuChem.chemical_increment(dt_global);
 	    } else { // without GPU accelerator
 		foreach (blk; parallel(gasBlocks,1)) {
 		    if (blk.active) {
 			double local_dt_global = dt_global;
-			foreach (cell; blk.cells) { cell.chemical_increment(local_dt_global, 300.0); }
+			foreach (cell; blk.cells) { cell.chemical_increment(local_dt_global); }
 		    }
 		}
 	    }

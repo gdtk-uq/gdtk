@@ -896,11 +896,11 @@ public:
 	return;
     } // end stage_2_update_for_flow_on_moving_grid()
 
-    void chemical_increment(double dt, double T_frozen) 
+    void chemical_increment(double dt) 
     // Use the finite-rate chemistry module to update the species fractions
     // and the other thermochemical properties.
     {
-	if (!fr_reactions_allowed || fs.gas.Ttr <= T_frozen) return;
+	if (!fr_reactions_allowed || fs.gas.Ttr <= myConfig.T_frozen) return;
 	double T_save = fs.gas.Ttr;
 	if (myConfig.ignition_zone_active) {
 	    // When active, replace gas temperature with an effective ignition temperature

@@ -218,7 +218,7 @@ public:
 	//writeln("vendor= ", vendor);
     }
 
-    void chemical_increment(double dt_flow, double T_frozen)
+    void chemical_increment(double dt_flow)
     {
 	size_t nsp = _gmodel.n_species();
 	size_t nreac = _rmech.n_reactions();
