@@ -29,7 +29,7 @@ immutable double ALLOWABLE_MASSF_ERROR = 1.0e-3; // Maximum allowable error in m
 
 enum ResultOfStep { success, failure };
 
-final class ChemistryUpdate {
+final class ChemistryUpdate : ThermochemicalReactor {
     ReactionMechanism rmech;
     ChemODEStep cstep;
     bool tightTempCoupling;
@@ -38,13 +38,11 @@ final class ChemistryUpdate {
 
     this(string fname, GasModel gmodel)
     {
+	super(gmodel);
 	// Allocate memory
 	_Qinit = new GasState(gmodel.n_species, gmodel.n_modes);
 	_conc0.length = gmodel.n_species;
 	_concOut.length = gmodel.n_species;
-	// We need a reference to the original gas model object
-	// to update the gas state at a later time.
-	_gmodel = gmodel;
 
 	// Configure other parameters via Lua state.
 	auto L = init_lua_State(fname);
@@ -113,7 +111,7 @@ final class ChemistryUpdate {
 	lua_close(L);
     }
 
-    void opCall(GasState Q, double tInterval, ref double dtSuggest)
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest)
     {
 	_Qinit.copy_values_from(Q);
 	_gmodel.massf2conc(Q, _conc0);
@@ -270,10 +268,6 @@ chemistry update.";
 	dtSuggest = dtSave;
     }
 
-public:
-    // We will need to access this referenced model from the Lua functions
-    // so it needs to be public.
-    GasModel _gmodel;
 private:
     // Some memory workspace
     GasState _Qinit;

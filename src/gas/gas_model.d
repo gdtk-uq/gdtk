@@ -413,7 +413,7 @@ class ChemistryUpdateException : Exception {
 
 class ThermochemicalReactor {
 public:
-    this(string fname, GasModel gmodel)
+    this(GasModel gmodel)
     {
 	// We need a reference to the original gas model object
 	// to update the GasState data at a later time.
@@ -425,6 +425,8 @@ public:
     abstract void opCall(GasState Q, double tInterval, ref double dtSuggest);
     
 public:
+    // We will need to access this referenced model from the Lua functions
+    // so it needs to be public.
     GasModel _gmodel;
 } // end class ThermochemicalReactor
 
