@@ -30,6 +30,8 @@ import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
 
+// First, the basic gas model.
+
 class PowersAslamGas: GasModel {
 public:
 
@@ -42,6 +44,7 @@ public:
 	_species_names[1] = "B";
 	// Bring table to TOS
 	lua_getglobal(L, "PowersAslamGas");
+	// [TODO] test that we actually have the table as item -1
 	// Now, pull out the remaining numeric value parameters.
 	_Rgas = getDouble(L, -1, "R");
 	_mol_masses.length = 2;
@@ -61,7 +64,7 @@ public:
 	_Cv = _Rgas / (_gamma - 1.0);
 	_Cp = _Rgas*_gamma/(_gamma - 1.0);
 	create_species_reverse_lookup();
-    }
+    } // end constructor
 
     override string toString() const
     {
@@ -101,11 +104,13 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
+	// [FIX-ME] to account for the reaction
 	Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
+	// [FIX-ME] to account for the reaction
 	Q.Ttr = h / _Cp;
 	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
 	update_thermo_from_pT(Q);
@@ -116,8 +121,7 @@ public:
     }
     override void update_trans_coeffs(GasState Q)
     {
-	// The gas is inviscid for the test cases described
-	// in the AIAA paper.
+	// The gas is inviscid for the test cases described in the AIAA paper.
 	Q.mu = 0.0;
 	Q.k = 0.0;
     }
@@ -148,6 +152,7 @@ public:
     }
     override double entropy(in GasState Q) const
     {
+	// [FIX-ME] to account for the reaction
 	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
     }
 
@@ -168,11 +173,59 @@ private:
     double _alpha; // 1/s
     // Ignition temperature
     double _Ti; // degrees K
-} // end class Ideal_gas
+} // end class PowersAslamGas
 
 
-// [TODO] Add the ThermochemicalReactor subclass HERE
+// Now, for the reaction update...
+//
+// It is included here because it is a small amount of code and
+// is specific to the gas model.
 
+final class UpdateAB : ThermochemicalReactor {
+    
+    this(string fname, GasModel gmodel)
+    {
+	super(gmodel); // hang on to a reference to the gas model
+	// We need to pick a number of pieces out of the gas-model file, again.
+	// Although they exist in the GasModel object, they are private.
+	auto L = init_lua_State(fname);
+	lua_getglobal(L, "PowersAslamGas");
+	// Now, pull out the numeric value parameters.
+	_alpha = getDouble(L, -1, "alpha");
+	_Ti = getDouble(L, -1, "Ti");
+	lua_pop(L, 1); // dispose of the table
+	lua_close(L);
+    }
+    
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest)
+    {
+	if (Q.Ttr > _Ti) {
+	    // We are above the ignition point, proceed with reaction.
+	    double massfA = Q.massf[0];
+	    double massfB = Q.massf[1];
+	    // This gas has a very simple reaction scheme that can be integrated explicitly.
+	    massfB += _alpha * massfA * tInterval;
+	    massfB = fmin(massfB, 1.0); // in case we overshoot
+	    massfA = 1.0 - massfB;
+	    Q.massf[0] = massfA; Q.massf[1] = massfB;
+	} else {
+	    // do nothing, since we are below the ignition temperature
+	}
+	// Since the internal energy and density in the (isolated) reactor is fixed,
+	// we need to evaluate the new temperature, pressure, etc.
+	_gmodel.update_thermo_from_rhoe(Q);
+	_gmodel.update_sound_speed(Q);
+    }
+
+private:
+    // Reaction rate constant
+    double _alpha; // 1/s
+    // Ignition temperature
+    double _Ti; // degrees K
+} // end class UpdateAB
+
+
+// Unit test of the basic gas model...
 
 version(powers_aslam_gas_test) {
     import std.stdio;

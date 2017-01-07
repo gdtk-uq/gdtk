@@ -1251,6 +1251,7 @@ import gas.sf6virial;
 import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
+import gas.powers_aslam_gas;
 import core.stdc.stdlib : exit;
 
 
@@ -1315,6 +1316,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     case "IdealAirProxy":
 	gm = new IdealAirProxy(); // no further config in the Lua file
 	break;
+    case "PowersAslamGas":
+	gm = new PowersAslamGas(L);
+	break;
     default:
 	string errMsg = format("The gas model '%s' is not available.", gas_model_name);
 	throw new Error(errMsg);
@@ -1332,6 +1336,7 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
 {
     ThermochemicalReactor reactor; // start with a null reference
     if ((cast(ThermallyPerfectGas) gmodel) !is null) { reactor = new ChemistryUpdate(fileName, gmodel); }
+    if ((cast(PowersAslamGas) gmodel) !is null) { reactor = new UpdateAB(fileName, gmodel); }
     if (reactor is null) {
 	throw new ChemistryUpdateException("Oops, tried but failed to set up a ThermochemicalReactor.");
     }
