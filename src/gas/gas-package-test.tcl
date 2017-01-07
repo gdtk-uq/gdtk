@@ -52,6 +52,10 @@ test ideal-air-proxy-test {Testing ideal_air_proxy.d} -body {
     exec ./ideal_air_proxy_test
 } -result {} -returnCodes {0}
 
+test powers-aslam-gas-test {Testing powers_aslam_gas.d} -body {
+    exec ./powers_aslam_gas_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"
