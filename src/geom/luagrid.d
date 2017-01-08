@@ -61,6 +61,15 @@ extern(C) int write_to_vtk_file(T, string MTname)(lua_State* L)
     return 0;
 }
 
+extern(C) int write_to_su2_file(T, string MTname)(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 2;
+    auto grid = checkObj!(T, MTname)(L, 1);
+    auto fileName = to!string(luaL_checkstring(L, 2));
+    grid.write_to_su2_file(fileName);
+    return 0;
+}
+
 extern(C) int write_to_gzip_file(T, string MTname)(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 2;

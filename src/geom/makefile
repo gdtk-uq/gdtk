@@ -45,17 +45,17 @@ demo: $(DEMO_PROGRAMS)
 clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS)
-	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg
+	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2
 	- cd $(LUA_DIR); make clean
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
 
 sketch_demo: sketch_demo.d sketch.d svg.d geom.d gpath.d surface.d volume.d \
-	grid.d sgrid.d univariatefunctions.d $(NM_FILES)
+	grid.d sgrid.d usgrid.d paver.d univariatefunctions.d $(NM_FILES)
 	dmd $(DFLAGS) sketch_demo.d $(OF)sketch_demo \
 		sketch.d svg.d geom.d gpath.d surface.d volume.d \
-		grid.d sgrid.d univariatefunctions.d \
+		grid.d sgrid.d usgrid.d paver.d univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 svg_demo: svg_demo.d svg.d
@@ -69,27 +69,27 @@ gpath_demo: gpath_demo.d gpath.d geom.d $(NM_FILES)
 	dmd $(DFLAGS) gpath_demo.d $(OF)gpath_demo \
 		gpath.d geom.d $(NM_FILES) $(DLINKFLAGS)
 
-surface_demo: surface_demo.d volume.d grid.d sgrid.d surface.d gpath.d geom.d \
+surface_demo: surface_demo.d volume.d grid.d sgrid.d usgrid.d paver.d surface.d gpath.d geom.d \
 	univariatefunctions.d $(NM_FILES)
 	dmd $(DFLAGS) surface_demo.d $(OF)surface_demo \
-		grid.d sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
+		grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-volume_demo: volume_demo.d grid.d sgrid.d volume.d surface.d gpath.d geom.d \
+volume_demo: volume_demo.d grid.d sgrid.d paver.d usgrid.d volume.d surface.d gpath.d geom.d \
 	univariatefunctions.d $(NM_FILES)
 	dmd $(DFLAGS) volume_demo.d $(OF)volume_demo \
-		grid.d sgrid.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
+		grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 univariatefunctions_demo: univariatefunctions_demo.d univariatefunctions.d
 	dmd $(DFLAGS) univariatefunctions_demo.d $(OF)univariatefunctions_demo \
 		univariatefunctions.d $(DLINKFLAGS)
 
-sgrid_demo: sgrid_demo.d grid.d sgrid.d volume.d surface.d gpath.d geom.d \
+sgrid_demo: sgrid_demo.d grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d \
 	univariatefunctions.d \
 	$(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) sgrid_demo.d $(OF)sgrid_demo \
-		grid.d sgrid.d volume.d surface.d gpath.d geom.d \
+		grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d \
 		univariatefunctions.d \
 		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 

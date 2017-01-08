@@ -589,7 +589,7 @@ public:
 	// dimensions will be reset on reading grid
 	switch (fmt) {
 	case "gziptext": read_from_gzip_file(fileName, scale); break;
-	case "su2text": read_from_su2_text_file(fileName, scale, expect_gmsh_order_for_wedges); break;
+	case "su2text": read_from_su2_file(fileName, scale, expect_gmsh_order_for_wedges); break;
 	case "vtktext": read_from_vtk_text_file(fileName, scale); break;
 	case "vtkxml": throw new Error("Reading from VTK XML format not implemented.");
 	default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
@@ -805,8 +805,8 @@ public:
 	}
     } // end read_from_gzip_file()
 
-    void read_from_su2_text_file(string fileName, double scale=1.0,
-				 bool expect_gmsh_order_for_wedges=true)
+    void read_from_su2_file(string fileName, double scale=1.0,
+			    bool expect_gmsh_order_for_wedges=true)
     // Information on the su2 file format from
     // https://github.com/su2code/SU2/wiki/Mesh-File
     // scale = unit length in metres
@@ -1169,6 +1169,59 @@ public:
 	f.close();
     } // end write_to_vtk_file()
 
+    override void write_to_su2_file(string fileName, double scale=1.0,
+				    bool use_gmsh_order_for_wedges=true)
+    {
+	auto f = File(fileName, "w");
+	f.writefln("NDIME= %d", dimensions);
+	f.writeln("");
+	f.writefln("NELEM= %d", ncells);
+	foreach (i, c; cells) {
+	    f.write(vtk_element_types[c.cell_type]);
+	    if (c.cell_type == USGCell_type.wedge && use_gmsh_order_for_wedges) {
+		size_t[] vtx_id_list = c.vtx_id_list.dup();
+		// We have the vertex indices for a wedge stored in VTK order
+		// but we are requested to output them in GMSH order.
+		vtx_id_list = [vtx_id_list[1], vtx_id_list[0], vtx_id_list[2],
+			       vtx_id_list[4], vtx_id_list[3], vtx_id_list[5]];
+		foreach (vtx_id; vtx_id_list) { f.write(" ", vtx_id); }
+	    } else {
+		foreach (vtx_id; c.vtx_id_list) { f.write(" ", vtx_id); }
+	    }
+	    f.writefln(" %d", i); // cell index
+	}
+	f.writeln("");
+	f.writefln("NPOIN= %d", nvertices);
+	foreach (i, v; vertices) {
+	    if (dimensions == 3) {
+		f.writefln("%.18e %.18e %.18e %d", v.x/scale, v.y/scale, v.z/scale, i);
+	    } else {
+		f.writefln("%.18e %.18e %d", v.x/scale, v.y/scale, i);
+	    }
+	}
+	f.writeln("");
+	f.writefln("NMARK= %d", nboundaries);
+	foreach (b; boundaries) {
+	    f.writefln("MARKER_TAG= %s", b.tag);
+	    f.writefln("MARKER_ELEMS= %d", b.face_id_list.length);
+	    foreach (faceIndx; b.face_id_list) {
+		auto vtx_id_list = faces[faceIndx].vtx_id_list;
+		if (dimensions == 3) {
+		    switch (vtx_id_list.length) {
+		    case 3: f.writef("%d", VTKElement.triangle); break;
+		    case 4: f.writef("%d", VTKElement.quad); break;
+		    default: f.write("oops, should not have this number of vertices");
+		    }
+		} else {
+		    // In 2D, we have only lines as the boundary elements.
+		    f.writef("%d", VTKElement.line);
+		}
+		foreach (vtx_id; vtx_id_list) { f.writef(" %d", vtx_id); }
+		f.writeln();
+	    }
+	}
+	f.close();
+    } // end write_to_su2_file()
 } // end class UnstructuredGrid
 
 

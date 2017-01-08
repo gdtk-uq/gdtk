@@ -59,16 +59,20 @@ void main()
     usg3D.write_to_gzip_file("test_3Dgrid.gz");
     auto usg3 = new UnstructuredGrid("test_3Dgrid.gz", "gziptext");
     usg3.write_to_vtk_file("test_3Dgrid_2.vtk");
+    usg3.write_to_vtk_file("test_3Dgrid_2.su2");
 
     writeln("su2 2D grid -- triangles");
     auto su2grid = new UnstructuredGrid("sample-data/square-mesh.su2", "su2text");
     su2grid.write_to_vtk_file("test_su2-square-mesh.vtk");
+    su2grid.write_to_su2_file("test_su2-square-mesh.su2");
     writeln("su2 2D grid -- quadrangles");
     auto su2grid2 = new UnstructuredGrid("sample-data/square-mesh-quads.su2", "su2text");
     su2grid2.write_to_vtk_file("test_su2-square-mesh-quads.vtk");
+    su2grid2.write_to_su2_file("test_su2-square-mesh-quads.su2");
     writeln("su2 3D grid -- hexagons");
     auto su2grid3 = new UnstructuredGrid("sample-data/cube-mesh-hex.su2", "su2text");
     su2grid3.write_to_vtk_file("test_su2-cube-mesh-hex.vtk");
+    su2grid3.write_to_su2_file("test_su2-cube-mesh-hex.su2");
     
     writeln("Done.");
 }

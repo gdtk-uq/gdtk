@@ -97,6 +97,8 @@ class Grid {
     abstract void read_from_gzip_file(string fileName, double scale=1.0);
     abstract void write_to_gzip_file(string fileName);
     abstract void write_to_vtk_file(string fileName);
+    abstract void write_to_su2_file(string fileName, double scale=1.0,
+				    bool use_gmsh_order_for_wedges=true);
     abstract size_t number_of_vertices_for_cell(size_t i);
     abstract int vtk_element_type_for_cell(size_t i);
     abstract Grid get_boundary_grid(size_t boundary_indx);

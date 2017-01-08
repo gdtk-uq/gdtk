@@ -22,6 +22,7 @@ import gpath;
 import surface;
 import volume;
 import univariatefunctions;
+import usgrid;
 
 //-----------------------------------------------------------------
 
@@ -766,6 +767,14 @@ public:
 	    }
 	}
     } // end joinGrid
+
+    override void write_to_su2_file(string fileName, double scale=1.0,
+				    bool use_gmsh_order_for_wedges=true)
+    {
+	// We can write a unstructured grid file but I have no idea why you would want to.
+	auto usg = new UnstructuredGrid(this);
+	usg.write_to_su2_file(fileName, scale, use_gmsh_order_for_wedges);
+    }
 
 } // end class StructuredGrid
 
