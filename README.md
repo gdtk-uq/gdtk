@@ -70,7 +70,7 @@ a Fortran-2003 compiler for building some of the thermochemical models.
 
 You may use the reference DMD compiler or the GDC or LDMD2 compilers.
 We have been developing with the DMD32 and DMD64 compilers 
-from versions 2.067 through 2.072.2.
+from versions 2.067 through 2.073.
 We also use GCC and GFortran.
 
 Going into the `dgd/src/eilmer` directory you will find a single `makefile`
@@ -119,5 +119,5 @@ who has written what part of the code.
 The commit history is place to go to see further details. 
 
 ## Chief Gardeners
-Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2017-01-02
+Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2017-01-08
 
