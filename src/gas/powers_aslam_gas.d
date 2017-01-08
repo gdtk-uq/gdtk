@@ -204,9 +204,8 @@ final class UpdateAB : ThermochemicalReactor {
 	    double massfA = Q.massf[0];
 	    double massfB = Q.massf[1];
 	    // This gas has a very simple reaction scheme that can be integrated explicitly.
-	    massfB += _alpha * massfA * tInterval;
-	    massfB = fmin(massfB, 1.0); // in case we overshoot
-	    massfA = 1.0 - massfB;
+	    massfA = massfA*exp(-_alpha*tInterval);
+	    massfB = 1.0 - massfA;
 	    Q.massf[0] = massfA; Q.massf[1] = massfB;
 	} else {
 	    // do nothing, since we are below the ignition temperature
