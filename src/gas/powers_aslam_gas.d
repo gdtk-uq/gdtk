@@ -104,13 +104,11 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	// [FIX-ME] to account for the reaction
 	Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	// [FIX-ME] to account for the reaction
 	Q.Ttr = h / _Cp;
 	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
 	update_thermo_from_pT(Q);
@@ -152,7 +150,6 @@ public:
     }
     override double entropy(in GasState Q) const
     {
-	// [FIX-ME] to account for the reaction
 	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
     }
 
@@ -179,7 +176,7 @@ private:
 // Now, for the reaction update...
 //
 // It is included here because it is a small amount of code and
-// is specific to the gas model.
+// it is specific to this particular gas model.
 
 final class UpdateAB : ThermochemicalReactor {
     

@@ -43,22 +43,20 @@ patch1 = makePatch{north=north1, east=east1, south=south1, west=east0west1}
 factor = 2 -- for adjusting the grid resolution
 nxcells = math.floor(40*factor)
 nycells = math.floor(40*factor)
-nx0 = math.floor(0.125*nxcells); nx1 = nxcells-nx0; ny = nycells
+fraction0 = (0-xmin)/(xmax-xmin) -- fraction of domain upstream of wedge
+nx0 = math.floor(fraction0*nxcells); nx1 = nxcells-nx0; ny = nycells
 grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
 -- Define the flow-solution blocks and set boundary conditions.
-blk0 = SBlock:new{grid=grid0, fillCondition=inflow,
-		  bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			  north=OutFlowBC_Simple:new{}}}
-blk1 = SBlock:new{grid=grid1, fillCondition=initial,
-		  bcList={east=OutFlowBC_Simple:new{},
-			  north=OutFlowBC_Simple:new{}}}
+-- We split the patches into roughly equal blocks so that
+-- we make good use of our multicore machines.
+blk0 = SBlockArray{grid=grid0, fillCondition=inflow, nib=1, njb=2,
+		   bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			   north=OutFlowBC_Simple:new{}}}
+blk1 = SBlockArray{grid=grid1, fillCondition=initial, nib=7, njb=2,
+		   bcList={east=OutFlowBC_Simple:new{},
+			   north=OutFlowBC_Simple:new{}}}
 identifyBlockConnections()
-
--- add history point 1/3 along length of cone surface
-setHistoryPoint{x=2*b.x/3+c.x/3, y=2*b.y/3+c.y/3}
--- add history point 2/3 along length of cone surface
-setHistoryPoint{ib=1, i=math.floor(2*nx1/3), j=0}
 
 -- Do a little more setting of global data.
 config.reacting = true
