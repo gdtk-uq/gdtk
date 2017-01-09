@@ -83,8 +83,8 @@ public:
     {
 	writeln("GPUChem:this()");
 	_gmodel = GlobalConfig.gmodel_master;
-	auto myChemUpdate = gasBlocks[0].myConfig.chemUpdate;
-	if ((cast(ChemistryUpdate) gmodel) !is null) { 
+	auto myChemUpdate = cast(ChemistryUpdate) gasBlocks[0].myConfig.chemUpdate;
+	if (myChemUpdate !is null) { 
 	    _rmech = myChemUpdate.rmech.dup();
 	} else {
 	    throw new Exception("Opps, incorrect ThermochemicalReactor.");
