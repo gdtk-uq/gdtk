@@ -83,7 +83,12 @@ public:
     {
 	writeln("GPUChem:this()");
 	_gmodel = GlobalConfig.gmodel_master;
-	_rmech = gasBlocks[0].myConfig.chemUpdate.rmech.dup();
+	auto myChemUpdate = gasBlocks[0].myConfig.chemUpdate;
+	if ((cast(ChemistryUpdate) gmodel) !is null) { 
+	    _rmech = myChemUpdate.rmech.dup();
+	} else {
+	    throw new Exception("Opps, incorrect ThermochemicalReactor.");
+	}
 	size_t nsp = _gmodel.n_species();
 	size_t nreac = _rmech.n_reactions();
 	_conc.length = nsp;
