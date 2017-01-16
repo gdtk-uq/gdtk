@@ -480,12 +480,30 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
     // NB. cells and nodes use their local ids.
     File outFile_mappedcells;
     outFile_mappedcells = File(mappedCellsFilename, "w");
-    
+
+    // Let's check the user doesn't have any previous partitioned su2 files in the directory -- if there are, this will upset the code
+    // if the user intends on partitioning more than one su2 file.
+    int nSimilarBlocks;    
+    string commandCheck = "if [ -f block_0_"~meshFile~" ] ; then echo 'yes' ; else echo 'no' ; fi";
+    auto fileCheck = executeShell(commandCheck);
+    if (fileCheck[1] != "no\n")  throw new Error("It appears the partitioned su2 files already exist. Please remove these files before running the partitioner again.");
+
+    // If the user is partitioning more than one su2 file, then we need to count the current number of partitions (su2 files) to
+    // know where to start the block counting for the new partitions.
+    int nCurrentBlocks=0;
+
+    string command = "ls -d block_*_* | wc -l";
+    auto output = executeShell(command);
+    if (output[1] != "ls: cannot access 'block_*_*': No such file or directory\n0\n") {
+	nCurrentBlocks = to!int(splitLines(output[1])[0]);
+    }
+
+    // We are ready to construct those partition files!
     foreach(i;0..nparts) {
-	writeln("-- Writing out block: #", i);
+	writeln("-- Writing out block: #", i+nCurrentBlocks);
 	// let's begin by writing out the mapped cells for the block
 	
-	string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i) ~ "]= "; 
+	string mapped_cells_tag = "NMappedCells in BLOCK[" ~ to!string(i+nCurrentBlocks) ~ "]= "; 
 	outFile_mappedcells.writef("%s", mapped_cells_tag);
 	auto ninterior = blocks[i].boundary["METIS_INTERIOR"].face_id_list.length;
 	outFile_mappedcells.writef("%d \n", ninterior);
@@ -494,10 +512,10 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
 	    auto primary_cell_local_id = blocks[i].transform_cell_list[mapped_cell.global_cell_id];
 	    auto secondary_cell_local_id = blocks[mapped_cell.neighbour_block_id].transform_cell_list[mapped_cell.global_neighbour_cell_id];
 	    outFile_mappedcells.writef("%s \t", mapped_cell.faceTag);
-	    outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id);
+	    outFile_mappedcells.writef("%d \t", mapped_cell.neighbour_block_id+nCurrentBlocks);
 	    outFile_mappedcells.writef("%d \n", secondary_cell_local_id);
 	}
-	string outputFileName = "block_" ~ to!string(i) ~ "_" ~ meshFile;
+	string outputFileName = "block_" ~ to!string(i+nCurrentBlocks) ~ "_" ~ meshFile;
 	File outFile;
 	outFile = File(outputFileName, "w");
 	outFile.writeln("%");
