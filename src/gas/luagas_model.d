@@ -934,11 +934,11 @@ void registerGasModel(lua_State* L, int tblIdx)
 
 version(gas_calc) {
     int main(string[] args) {
-	if ( args.length != 2 ) {
+	if ( args.length < 2 ) {
 	    writeln("ERROR: Wrong number of arguments.");
 	    writeln("");
 	    writeln("Usage: ");
-	    writeln("  gas-calc inputFile");
+	    writeln("  gas-calc inputFile (+ script args)");
 	    return 1;
 	}
 	auto L = luaL_newstate();
@@ -946,6 +946,15 @@ version(gas_calc) {
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	registerReactionMechanism(L, LUA_GLOBALSINDEX);
 	registerChemistryUpdate(L, LUA_GLOBALSINDEX);
+	// Pass on command line args to user's scripts.
+	lua_newtable(L);
+	int argIdx = 1;
+	foreach (i; 2 .. args.length) {
+	    lua_pushstring(L, args[i].toStringz);
+	    lua_rawseti(L, -2, argIdx);
+	    argIdx++;
+	}
+	lua_setglobal(L, "arg");
 
 	if ( luaL_dofile(L, toStringz(args[1])) != 0 ) {
 	    writeln(to!string(lua_tostring(L, -1)));
