@@ -83,7 +83,4 @@ blks = SBlockArray{grid=grd, nib=22, njb=2,
 for i=1,44 do
    SBlock2UBlock(blocks[i])
 end
- 
-config.block_marching = true
-config.nib = 22
-config.njb = 2
+
