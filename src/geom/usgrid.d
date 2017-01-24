@@ -45,14 +45,17 @@ enum USGCell_type {
     tetra = 4,
     wedge = 5,
     hexahedron = 6,
-    pyramid = 7
+    pyramid = 7,
+    // For subsetting the grid, need lines
+    line = 8
 }
 string[] cell_names = ["none", "triangle", "quad", "polygon",
-		       "tetra", "wedge", "hexahedron", "pyramid"];
+		       "tetra", "wedge", "hexahedron", "pyramid",
+		       "line"];
 
 int[] vtk_element_types = [0, VTKElement.triangle, VTKElement.quad, VTKElement.polygon,
 			   VTKElement.tetra, VTKElement.wedge, VTKElement.hexahedron,
-			   VTKElement.pyramid];
+			   VTKElement.pyramid, VTKElement.line];
 
 USGCell_type convert_cell_type(int vtk_element_type)
 {
@@ -63,6 +66,7 @@ USGCell_type convert_cell_type(int vtk_element_type)
     case VTKElement.wedge: return USGCell_type.wedge;
     case VTKElement.hexahedron: return USGCell_type.hexahedron;
     case VTKElement.pyramid: return USGCell_type.pyramid;
+    case VTKElement.line: return USGCell_type.line;
     default:
 	return USGCell_type.none;
     }
@@ -79,6 +83,7 @@ USGCell_type cell_type_from_name(string name)
     case "wedge": return USGCell_type.wedge;
     case "hexahedron": return USGCell_type.hexahedron;
     case "pyramid": return USGCell_type.pyramid;
+    case "line": return USGCell_type.line;
     default:
 	return USGCell_type.none;
     }
@@ -245,6 +250,8 @@ public:
 	    foreach(i; 0 .. outsign_list.length) {
 		outsign_list[i] = to!int(tokens[itok++]);
 	    }
+	    assert(face_id_list.length == outsign_list.length,
+		   "Mismatch in numbers of faces and outsigns");
 	}
     }
     
@@ -278,8 +285,14 @@ public:
     USGCell[] cells;
     BoundaryFaceSet[] boundaries;
 
-    //Paved Grid Constructor by Heather Muir, 2016.
+    this(int dimensions, string label="")
+    // A new empty grid that will have its details filled in later.
+    {
+	super(Grid_t.unstructured_grid, dimensions, label);
+    }
+
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
+    //Paved Grid Constructor by Heather Muir, 2016.
     {
     	double[][] boundary_points;
 	foreach(p; boundary){
@@ -676,9 +689,47 @@ public:
     // Returns the grid defining a particular boundary of the original grid.
     // For an 3D block, a 2D surface grid will be returned, with index directions
     // as defined on the debugging cube.
+    // This new grid is intended for use just in the output of a subset 
+    // of the simulation data and not for actual simulation.
+    // It does not carry all of the information required for flow simulation.
     {
-	// FIXME -- not yet implemented.
-	return new UnstructuredGrid(this);
+	int new_dimensions = dimensions - 1;
+	if (new_dimensions < 1 || new_dimensions > 2) {
+	    throw new Exception(format("Invalid new_dimensions=%d", new_dimensions));
+	}
+	BoundaryFaceSet bfs = boundaries[boundary_indx];
+	UnstructuredGrid new_grid = new UnstructuredGrid(new_dimensions, bfs.tag);
+	// We'll make a full copy of the original grid's vertices
+	// so that we don't have to renumber them.
+	new_grid.nvertices = nvertices;
+	new_grid.vertices.length = nvertices;
+	foreach (i; 0 .. nvertices) { new_grid.vertices[i].set(vertices[i]); }
+	foreach (fid; bfs.face_id_list) {
+	    // fid is the face in the original grid.
+	    // It will become the cell in the new grid.
+	    USGCell_type new_cell_type = USGCell_type.none;
+	    switch (faces[fid].vtx_id_list.length) {
+	    case 2:
+		assert(dimensions == 2, "Assumed 2D but it was not so.");
+		new_cell_type = USGCell_type.line;
+		break;
+	    case 3:
+		assert(dimensions == 3, "Assumed 3D but it was not so.");
+		new_cell_type = USGCell_type.triangle;
+		break;
+	    case 4:
+		assert(dimensions == 3, "Assumed 3D but it was not so.");
+		new_cell_type = USGCell_type.quad;
+		break;
+	    default:
+		throw new Exception("Did not know what to do with this number of vertices.");
+	    }
+	    size_t[] newCell_face_id_list; // empty
+	    int[] newCell_outsign_list; // empty
+	    new_grid.cells ~= new USGCell(new_cell_type, faces[fid].vtx_id_list,
+					  newCell_face_id_list, newCell_outsign_list);
+	}
+	return new_grid;
     } // end get_boundary_grid()
 
     override size_t[] get_list_of_boundary_cells(size_t boundary_indx)
@@ -687,7 +738,18 @@ public:
     {
 	size_t new_nic, new_njc, new_nkc;
 	size_t[] cellList;
-	// FIXME -- not yet implemented.
+	// Make a dictionary of cell indices, so that we may look them up
+	// when building the list of indices.
+	size_t[USGCell] cell_indx;
+	foreach (i, c; cells) { cell_indx[c] = i; }
+	// Work through the set of boundary faces and identify the inside cell
+	// as being the one we want to associate with the boundary face.
+	BoundaryFaceSet bfs = boundaries[boundary_indx];
+	foreach (i, fid; bfs.face_id_list) {
+	    USGCell insideCell = (bfs.outsign_list[i] == 1) ? 
+		faces[fid].left_cell : faces[fid].right_cell;
+	    cellList ~= cell_indx[insideCell];
+	}
 	return cellList;
     } // end get_list_of_boundary_cells()
     
