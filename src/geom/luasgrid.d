@@ -98,6 +98,15 @@ extern(C) int subgrid(lua_State* L)
     return 1;
 } // end subgrid()
 
+extern(C) int get_boundary_grid(lua_State *L)
+{
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    size_t boundary_indx = to!size_t(luaL_checkint(L, 2));
+    StructuredGrid extracted_grid = cast(StructuredGrid) grid.get_boundary_grid(boundary_indx);
+    structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, extracted_grid);
+    return 1;
+}
+
 extern(C) int joinGrid(lua_State* L)
 {
     int narg = lua_gettop(L); // assume narg == 3;
@@ -367,6 +376,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &subgrid);
     lua_setfield(L, -2, "subgrid");
+    lua_pushcfunction(L, &get_boundary_grid);
+    lua_setfield(L, -2, "get_boundary_grid");
     lua_pushcfunction(L, &cellVolume!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "cellVolume");
     lua_pushcfunction(L, &write_to_vtk_file!(StructuredGrid, StructuredGridMT));
