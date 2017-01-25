@@ -420,13 +420,28 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	} else {
 	    outFile = stdout;
 	}
+	string groupTag = computeLoadsOnGroupStr;
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    foreach (i; 0..GlobalConfig.nBlocks) {
-		//writeln(soln.flowBlocks[i].bcGroups);
+	    double Fx = 0.0; double Fy = 0.0; double Fz = 0.0; double F = 0.0; double q = 0.0;
+	    foreach (blk_indx; 0..GlobalConfig.nBlocks) {
+		foreach (boundary_indx; 0..soln.flowBlocks[blk_indx].bcGroups.length) {
+		    auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
+		    size_t[] surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
+		    size_t new_dimensions = surf_grid.dimensions;
+		    // The following should work for both structured and unstructured grids.
+		    size_t new_nic = max(surf_grid.niv-1, 1);
+		    size_t new_njc = max(surf_grid.njv-1, 1);
+		    size_t new_nkc = max(surf_grid.nkv-1, 1);
+		    assert(new_nic*new_njc*new_nkc == surf_cells.length, "mismatch is number of cells");
+		    auto surf_flow = new BlockFlow(soln.flowBlocks[blk_indx], surf_cells,
+						   new_dimensions, new_nic, new_njc, new_nkc);
+		    // At this stage we should have a surface flow structure, and a sufrace grid.
+		    
+		}
 	    }
 	}
     } // end if computeLoadsOnGroupStr
