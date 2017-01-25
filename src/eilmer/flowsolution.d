@@ -25,6 +25,8 @@ import std.string;
 import std.algorithm;
 import std.array;
 import std.math;
+import std.json;
+import std.file;
 import gzip;
 import fileutil;
 import util.lua;
@@ -35,6 +37,8 @@ import usgrid;
 import gas;
 import fvcore;
 import globalconfig;
+import json_helper;
+import core.stdc.stdlib : exit;
 
 
 class FlowSolution {
@@ -49,6 +53,25 @@ public:
     
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
+        // -- initialising JSONData
+	string configFileName = GlobalConfig.base_file_name ~ ".config";
+        string content;
+        try {
+            content = readText(configFileName);
+        } catch (Exception e) {
+            writeln("Failed to read config file: ", configFileName);
+            writeln("Message is: ", e.msg);
+            exit(1);
+        }
+        JSONValue jsonData;
+        try {
+            jsonData = parseJSON!string(content);
+        } catch (Exception e) {
+            writeln("Failed to parse JSON from config file: ", configFileName);
+            writeln("Message is: ", e.msg);
+            exit(1);
+        }
+        // -- end initialising JSONData
 	// Use job.list to get a hint of the type of each block.
 	auto listFile = File(dir ~ "/" ~ jobName ~ ".list");
 	auto listFileLine = listFile.readln().chomp(); // only comments on the first line
@@ -80,7 +103,7 @@ public:
 	    gridBlocks[$-1].sort_cells_into_bins();
 	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx);
 	    fileName = dir ~ "/" ~ fileName;
-	    flowBlocks ~= new BlockFlow(fileName, gridType);
+            flowBlocks ~= new BlockFlow(fileName, ib, jsonData, gridType);
 	} // end foreach ib
 	this.jobName = jobName;
 	this.nBlocks = nBlocks;
@@ -256,6 +279,7 @@ public:
     size_t nic;
     size_t njc;
     size_t nkc;
+    string[] bcGroups;
     string[] variableNames;
     size_t[string] variableIndex;
     double sim_time;
@@ -271,7 +295,7 @@ public:
 	return i + nic*(j + njc*k);
     }
 
-    this(string filename, Grid_t gridType)
+    this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType)
     {
 	this.gridType = gridType;
 	// Read in the flow data for a single block.
@@ -340,6 +364,12 @@ public:
 		_data[i][ivar] = to!double(tokens[ivar]);
 	    }
 	} // foreach i
+        // Fill boundary group list
+	size_t nboundaries = getJSONint(jsonData["block_" ~ to!string(blkID)], "nboundaries", 0);
+	for (size_t i=0; i < nboundaries; i++) {
+	    auto myGroup = getJSONstring(jsonData["block_" ~ to!string(blkID)]["boundary_" ~ to!string(i)], "group", "");
+	    bcGroups ~= myGroup;
+	}
     } // end constructor from file
 
     this(ref const(BlockFlow) other, size_t[] cellList, size_t new_dimensions,

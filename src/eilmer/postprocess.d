@@ -36,8 +36,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		  bool vtkxmlFlag, bool binary_format, bool tecplotFlag,
 		  string outputFileName, string sliceListStr,
 		  string surfaceListStr, string extractStreamStr,
-		  string extractLineStr, string probeStr,
-		  string normsStr, string regionStr)
+		  string extractLineStr, string computeLoadsOnGroupStr,
+		  string probeStr, string normsStr, string regionStr)
 {
     read_config_file();
     string jobName = GlobalConfig.base_file_name;
@@ -409,6 +409,27 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    }
 	} // end foreach tindx
     } // end if extractLineStr
+    //
+    if (computeLoadsOnGroupStr.length > 0) {
+	writeln("Computing loads on group: " ~ computeLoadsOnGroupStr ~ " .");
+	// The output may go to a user-specified file, or stdout.
+	File outFile;
+	if (outputFileName.length > 0) {
+	    outFile = File(outputFileName, "w");
+	    writeln("Output will be sent to File: ", outputFileName);
+	} else {
+	    outFile = stdout;
+	}
+	foreach (tindx; tindx_list_to_plot) {
+	    writeln("  tindx= ", tindx);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    soln.add_aux_variables(addVarsList);
+	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+	    foreach (i; 0..GlobalConfig.nBlocks) {
+		//writeln(soln.flowBlocks[i].bcGroups);
+	    }
+	}
+    } // end if computeLoadsOnGroupStr
     //
     if (normsStr.length > 0) {
 	writeln("Norms for variables.");

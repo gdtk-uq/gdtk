@@ -81,6 +81,7 @@ void main(string[] args)
     msg       ~= "         [--surface-list=\"blk,surface-id;...\"]\n";
     msg       ~= "         [--extract-streamline=\"x,y,z;...\"]        streamline locus points\n";
     msg       ~= "         [--extract-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line\n";
+    msg       ~= "         [--compute-loads-on-group=\"\"]    group tag\n";
     msg       ~= "         [--probe=\"x,y,z;...\"]       locations to sample flow data\n";
     msg       ~= "         [--norms=\"varName,varName,...\"] report L1,L2,Linf norms\n";
     msg       ~= "         [--region=\"x0,y0,z0,x1,y1,z1\"]  limit norms calculation to a box\n";
@@ -116,6 +117,7 @@ void main(string[] args)
     string surfaceListStr = "";
     string extractStreamStr = "";
     string extractLineStr = "";
+    string computeLoadsOnGroupStr = "";
     string probeStr = "";
     string normsStr = "";
     string regionStr = "";
@@ -145,6 +147,7 @@ void main(string[] args)
 	       "surface-list", &surfaceListStr,
 	       "extract-streamline", &extractStreamStr,
 	       "extract-line", &extractLineStr,
+	       "compute-loads-on-group", &computeLoadsOnGroupStr,
 	       "probe", &probeStr,
 	       "norms", &normsStr,
 	       "region", &regionStr,
@@ -278,6 +281,7 @@ void main(string[] args)
 	    writeln("  surfaceListStr: ", surfaceListStr);
 	    writeln("  extractStreamStr: ", extractStreamStr);
 	    writeln("  extractLineStr: ", extractLineStr);
+	    writeln("  computeLoadsOnGroupStr: ", computeLoadsOnGroupStr);
 	    writeln("  probeStr: ", probeStr);
 	    writeln("  normsStr: ", normsStr);
 	    writeln("  regionStr: ", regionStr);
@@ -287,8 +291,8 @@ void main(string[] args)
 		     addVarsStr, luaRefSoln,
 		     vtkxmlFlag, binaryFormat, tecplotFlag,
 		     outputFileName, sliceListStr, surfaceListStr,
-		     extractStreamStr, extractLineStr, probeStr,
-		     normsStr, regionStr);
+		     extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
+		     probeStr, normsStr, regionStr);
 	writeln("Done postprocessing.");
     } // end if postFlag
 
