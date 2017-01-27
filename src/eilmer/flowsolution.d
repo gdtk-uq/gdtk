@@ -54,7 +54,7 @@ public:
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
         // -- initialising JSONData
-	string configFileName = GlobalConfig.base_file_name ~ ".config";
+	string configFileName = jobName ~ ".config";
         string content;
         try {
             content = readText(configFileName);
