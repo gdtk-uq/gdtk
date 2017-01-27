@@ -494,7 +494,8 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
 
     string command = "ls -d block_*_* | wc -l";
     auto output = executeShell(command);
-    if (output[1] != "ls: cannot access 'block_*_*': No such file or directory\n0\n") {
+    if ( !canFind(output[1], "ls: cannot access") ) {
+	// Assume that we were successful in finding a number of blocks for partitioning.
 	nCurrentBlocks = to!int(splitLines(output[1])[0]);
     }
 

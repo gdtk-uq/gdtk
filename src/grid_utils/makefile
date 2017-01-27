@@ -15,9 +15,9 @@ clean:
 	- rm $(BUILD_DIR)/bin/$(PROGRAMS)
 
 install: $(PROGRAMS)
+	cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin
 
 ugrid_partition: ugrid_partition.d
-		$(DMD) $(PROGRAMS)			
-		cp $(PROGRAMS) $(BUILD_DIR)/bin/	
-		cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin
+	$(DMD) -w -gc -debug ugrid_partition.d			
+	cp $(PROGRAMS) $(BUILD_DIR)/bin/	
 
