@@ -1,0 +1,38 @@
+----------------------------------------------
+Constant velocity piston driving shock in duct
+----------------------------------------------
+:Author: Rowan J. Gollan
+:Date: 2017-01-30
+
+This directory contains an Eilmer example of simulating the motion
+of a piston in a duct and its effect on the gas in front of the
+piston. The particular feature that is demonstrated in this example
+is that of the moving grid capability in Eilmer.
+
+There is an extra file required in this simulation that is not
+needed in static grid simulations. That file is "grid-motion.lua"
+and it specifies how the grid movies throughout the simulation.
+Specifically, it specifies the vertex velocities of all grid
+points in the grid as a function of time. This is how the grid
+motion is handled in Eilmer: the user must specify the velocities
+of the grid points and then Eilmer takes care of updating their
+positions.
+
+Another aspect of this simulation that is a little different from
+the usual is the use of a user-defined boundary condition. The 
+boundary effect at the piston face is a customised effect and
+so we build a user-defined boundary condition to handle that
+effect. This can be inspected in the file "piston-bc.lua"
+
+This example can be run in the usual manner:
+
+> ./prep.sh
+> ./run.sh
+> ./post.sh
+
+At the end, a series of VTK files are produced and placed in the
+plot/ subdirectory. You may then use Paraview to inspect the
+flow field and make an animation of the moving piston simulation.
+
+
+
