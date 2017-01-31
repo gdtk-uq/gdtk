@@ -1,0 +1,7 @@
+model = "IdealGas"
+species = {'N2'}
+options = {
+	Prandtl = 0.72,
+	viscosity = 'CEA',
+	thermal_conductivity = 'CEA'
+}
