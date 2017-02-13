@@ -262,71 +262,17 @@ public:
 
     void scan_values_from_string(string buffer, bool overwrite_geometry_data)
     // Note that the position data is read into grid_time_level 0.
-    // The data format is defined by the implementation of write_values_to_string()
-    // that can be found immediately below.
     {
-	auto gm = myConfig.gmodel;
-	auto items = split(buffer);
-	if (overwrite_geometry_data) { pos[0].refx = to!double(items.front); } items.popFront();
-	if (overwrite_geometry_data) { pos[0].refy = to!double(items.front); } items.popFront();
-	if (overwrite_geometry_data) { pos[0].refz = to!double(items.front); } items.popFront();
-	if (overwrite_geometry_data) { volume[0] = to!double(items.front); } items.popFront();
-	fs.gas.rho = to!double(items.front); items.popFront();
-	fs.vel.refx = to!double(items.front); items.popFront();
-	fs.vel.refy = to!double(items.front); items.popFront();
-	fs.vel.refz = to!double(items.front); items.popFront();
-	if (myConfig.MHD) {
-	    fs.B.refx = to!double(items.front); items.popFront();
-	    fs.B.refy = to!double(items.front); items.popFront();
-	    fs.B.refz = to!double(items.front); items.popFront();
-	    fs.divB = to!double(items.front); items.popFront();
-	    if (myConfig.divergence_cleaning) {
-		fs.psi = to!double(items.front); items.popFront();
-	    } else {
-		fs.psi = 0.0;
-	    }
-	} else {
-	    fs.B.refx = 0.0; fs.B.refy = 0.0; fs.B.refz = 0.0;
-	    fs.psi = 0.0; fs.divB = 0.0;
-	}
-	if (myConfig.include_quality) {
-	    fs.gas.quality = to!double(items.front); items.popFront();
-	} else {
-	    fs.gas.quality = 1.0;
-	}
-	fs.gas.p = to!double(items.front); items.popFront();
-	fs.gas.a = to!double(items.front); items.popFront();
-	fs.gas.mu = to!double(items.front); items.popFront();
-	fs.gas.k = to!double(items.front); items.popFront();
-	foreach(i; 0 .. gm.n_modes) {
-	    fs.gas.k_modes[i] = to!double(items.front); items.popFront();
-	}
-	fs.mu_t = to!double(items.front); items.popFront();
-	fs.k_t = to!double(items.front); items.popFront();
-	fs.S = to!int(items.front); items.popFront();
-	if ( myConfig.radiation ) {
-	    Q_rad_org = to!double(items.front); items.popFront();
-	    f_rad_org = to!double(items.front); items.popFront();
-	    Q_rE_rad = to!double(items.front); items.popFront();
-	} else {
-	    Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-	}
-	fs.tke = to!double(items.front); items.popFront();
-	fs.omega = to!double(items.front); items.popFront();
-	foreach(i; 0 .. gm.n_species) {
-	    fs.gas.massf[i] = to!double(items.front); items.popFront();
-	}
-	if (gm.n_species > 1) {
-	    dt_chem = to!double(items.front); items.popFront();
-	}
-	fs.gas.u = to!double(items.front); items.popFront();
-	fs.gas.Ttr = to!double(items.front); items.popFront();
-	foreach(i; 0 .. gm.n_modes) {
-	    fs.gas.e_modes[i] = to!double(items.front); items.popFront();
-	    fs.gas.T_modes[i] = to!double(items.front); items.popFront();
-	}
-	if (gm.n_modes > 0) {
-	    dt_therm = to!double(items.front); items.popFront(); 
+	Vector3 new_pos;
+	double new_volume;
+	scan_cell_data_from_string(buffer, new_pos, new_volume, fs,
+				   Q_rad_org, f_rad_org, Q_rE_rad,
+				   dt_chem, dt_therm,
+				   myConfig.include_quality, myConfig.MHD,
+				   myConfig.divergence_cleaning, myConfig.radiation);
+	if (overwrite_geometry_data) {
+	    pos[0].set(new_pos);
+	    volume[0] = new_volume;
 	}
     } // end scan_values_from_string()
 
@@ -1645,10 +1591,81 @@ string cell_data_as_string(ref const(Vector3) pos, double volume, ref const(Flow
     return writer.data;
 } // end cell_data_as_string()
 
+void scan_cell_data_from_string(string buffer,
+				ref Vector3 pos, ref double volume, ref FlowState fs,
+				ref double Q_rad_org, ref double f_rad_org, ref double Q_rE_rad,
+				ref double dt_chem, ref double dt_therm,
+				bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
+{
+    // This function needs to be kept consistent with cell_data_as_string() above.
+    auto items = split(buffer);
+    pos.refx = to!double(items.front); items.popFront();
+    pos.refy = to!double(items.front); items.popFront();
+    pos.refz = to!double(items.front); items.popFront();
+    volume = to!double(items.front); items.popFront();
+    fs.gas.rho = to!double(items.front); items.popFront();
+    fs.vel.refx = to!double(items.front); items.popFront();
+    fs.vel.refy = to!double(items.front); items.popFront();
+    fs.vel.refz = to!double(items.front); items.popFront();
+    if (MHD) {
+	fs.B.refx = to!double(items.front); items.popFront();
+	fs.B.refy = to!double(items.front); items.popFront();
+	fs.B.refz = to!double(items.front); items.popFront();
+	fs.divB = to!double(items.front); items.popFront();
+	if (divergence_cleaning) {
+	    fs.psi = to!double(items.front); items.popFront();
+	} else {
+	    fs.psi = 0.0;
+	}
+    } else {
+	fs.B.refx = 0.0; fs.B.refy = 0.0; fs.B.refz = 0.0;
+	fs.psi = 0.0; fs.divB = 0.0;
+    }
+    if (include_quality) {
+	fs.gas.quality = to!double(items.front); items.popFront();
+    } else {
+	fs.gas.quality = 1.0;
+    }
+    fs.gas.p = to!double(items.front); items.popFront();
+    fs.gas.a = to!double(items.front); items.popFront();
+    fs.gas.mu = to!double(items.front); items.popFront();
+    fs.gas.k = to!double(items.front); items.popFront();
+    foreach(i; 0 .. fs.gas.k_modes.length) {
+	fs.gas.k_modes[i] = to!double(items.front); items.popFront();
+    }
+    fs.mu_t = to!double(items.front); items.popFront();
+    fs.k_t = to!double(items.front); items.popFront();
+    fs.S = to!int(items.front); items.popFront();
+    if (radiation) {
+	Q_rad_org = to!double(items.front); items.popFront();
+	f_rad_org = to!double(items.front); items.popFront();
+	Q_rE_rad = to!double(items.front); items.popFront();
+    } else {
+	Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+    }
+    fs.tke = to!double(items.front); items.popFront();
+    fs.omega = to!double(items.front); items.popFront();
+    foreach(i; 0 .. fs.gas.massf.length) {
+	fs.gas.massf[i] = to!double(items.front); items.popFront();
+    }
+    if (fs.gas.massf.length > 1) {
+	dt_chem = to!double(items.front); items.popFront();
+    }
+    fs.gas.u = to!double(items.front); items.popFront();
+    fs.gas.Ttr = to!double(items.front); items.popFront();
+    foreach(i; 0 .. fs.gas.e_modes.length) {
+	fs.gas.e_modes[i] = to!double(items.front); items.popFront();
+	fs.gas.T_modes[i] = to!double(items.front); items.popFront();
+    }
+    if (fs.gas.e_modes.length > 0) {
+	dt_therm = to!double(items.front); items.popFront(); 
+    }
+} // end scan_values_from_string()
+
 string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
 				bool MHD, bool divergence_cleaning, bool radiation)
 {
-    // This function needs to be kept consistent with cell_data_as_string().
+    // This function needs to be kept consistent with cell_data_as_string() above.
     string[] list;
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["rho", "vel.x", "vel.y", "vel.z"];
