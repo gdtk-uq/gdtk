@@ -80,6 +80,10 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 	auto flowstate = new FlowState(jsonData["flowstate"], gmodel);
 	newGCE = new GhostCellFlowStateCopy(blk_id, boundary, flowstate);
 	break;
+    case "flowstate_copy_from_profile":
+	string fname = getJSONstring(jsonData, "filename", "none");
+	newGCE = new GhostCellFlowStateCopyFromProfile(blk_id, boundary, fname);
+	break;
     case "extrapolate_copy":
 	int xOrder = getJSONint(jsonData, "x_order", 0);
 	newGCE = new GhostCellExtrapolateCopy(blk_id, boundary, xOrder);
@@ -507,6 +511,127 @@ public:
     } // end apply_structured_grid()
 
 } // end class GhostCellFlowStateCopy
+
+class GhostCellFlowStateCopyFromProfile : GhostCellEffect {
+public:
+    // [TODO] need to finish this class, once we have cleaned up the multiple functions
+    // for reading and writing cell data.
+    string fileName;
+    FlowState fstate;
+    // Need a dictionary of cell-id to flowstate index
+
+    this(int id, int boundary, string fileName)
+    {
+	super(id, boundary, "flowStateCopyFromProfile");
+	// Open filename and read all data points.
+	// Format will be sample point data as per the postprocessor
+	// Need to map the nearest input point to each ghost-cell.
+	// fstate = new FlowState(_fstate);
+    }
+
+    override string toString() const
+    {
+	return "flowStateCopyFromProfile(filename=" ~ to!string(fstate) ~ ")";
+    }
+
+    override ref FVCell get_mapped_cell(size_t i)
+    {
+	assert(0, "not implemented for this ghost_cell_effect");
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	FVCell ghost0;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		ghost0 = f.right_cell;
+	    } else {
+		ghost0 = f.left_cell;
+	    }
+	    ghost0.fs.copy_values_from(fstate);
+	} // end foreach face
+    } // end apply_unstructured_grid()
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+    	// Fill ghost cells with data from just inside the boundary
+	// using zero-order extrapolation (i.e. just copy the data).
+	size_t i, j, k;
+	FVCell src_cell, dest_cell;
+	FVInterface dest_face;
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    dest_cell = blk.get_cell(i,j+1,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell = blk.get_cell(i,j+2,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		} // end i loop
+	    } // for k
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    dest_cell = blk.get_cell(i+1,j,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell = blk.get_cell(i+2,j,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		} // end j loop
+	    } // for k
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    dest_cell = blk.get_cell(i,j-1,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell = blk.get_cell(i,j-2,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		} // end i loop
+	    } // for k
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    dest_cell = blk.get_cell(i-1,j,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell = blk.get_cell(i-2,j,k);
+		    dest_cell.fs.copy_values_from(fstate);
+		} // end j loop
+	    } // for k
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    dest_cell = blk.get_cell(i,j,k+1);
+		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell = blk.get_cell(i,j,k+2);
+		    dest_cell.fs.copy_values_from(fstate);
+		} // end j loop
+	    } // for i
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    dest_cell = blk.get_cell(i,j,k-1);
+		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell = blk.get_cell(i,j,k-2);
+		    dest_cell.fs.copy_values_from(fstate);
+		} // end j loop
+	    } // for i
+	    break;
+	} // end switch
+    } // end apply_structured_grid()
+
+} // end class GhostCellFlowStateCopyFromProfile
 
 class GhostCellExtrapolateCopy : GhostCellEffect {
 public:

@@ -57,6 +57,15 @@ function FlowStateCopy:tojson()
    return str
 end
 
+FlowStateCopyFromProfile = GhostCellEffect:new{filename=""}
+FlowStateCopyFromProfile.type = "flowstate_copy_from_profile"
+function FlowStateCopyFromProfile:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "filename": %s', self.filename)
+   str = str .. '}'
+   return str
+end
+
 ExtrapolateCopy = GhostCellEffect:new{xOrder=0}
 ExtrapolateCopy.type = "extrapolate_copy"
 function ExtrapolateCopy:tojson()
@@ -188,6 +197,15 @@ FlowStateCopyToInterface.type = "flow_state_copy_to_interface"
 function FlowStateCopyToInterface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "flowstate": %s', self.flowCondition:toJSONString())
+   str = str .. '}'
+   return str
+end
+
+FlowStateCopyFromProfileToInterface = BoundaryInterfaceEffect:new{flowCondition=nil}
+FlowStateCopyFromProfileToInterface.type = "flow_state_copy_from_profile_to_interface"
+function FlowStateCopyFromProfileToInterface:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "filename": %s', self.filename)
    str = str .. '}'
    return str
 end
@@ -489,6 +507,17 @@ function InFlowBC_Supersonic:new(o)
    o.is_wall = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivAction = { FlowStateCopyToInterface:new{flowCondition=o.flowCondition} }
+   o.is_configured = true      
+   return o
+end
+
+InFlowBC_StaticProfile = BoundaryCondition:new()
+InFlowBC_StaticProfile.type = "inflow_static_profile"
+function InFlowBC_StaticProfile:new(o)
+   o = BoundaryCondition.new(self, o)
+   o.is_wall = false
+   o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename} }
+   o.preSpatialDerivAction = { FlowStateCopyFromProfileToInterface:new{filename=o.filename} }
    o.is_configured = true      
    return o
 end

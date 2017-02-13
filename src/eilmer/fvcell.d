@@ -262,6 +262,8 @@ public:
 
     void scan_values_from_string(string buffer, bool overwrite_geometry_data)
     // Note that the position data is read into grid_time_level 0.
+    // The data format is defined by the implementation of write_values_to_string()
+    // that can be found immediately below.
     {
 	auto gm = myConfig.gmodel;
 	auto items = split(buffer);
@@ -330,7 +332,10 @@ public:
 
     string write_values_to_string() const
     {
-	// Should match cell_data_as_string() in flowstate.d
+	// We'll treat this function as the master definition of the data format.
+	// It should match scan_values_from_string() above
+	// variable_list_for_cell() toward the end of this file
+	// and cell_data_as_string() in flowstate.d
 	auto writer = appender!string();
 	formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
 		       pos[0].x, pos[0].y, pos[0].z, volume[0], fs.gas.rho,
@@ -1635,10 +1640,8 @@ string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
 				bool MHD, bool divergence_cleaning, bool radiation)
 {
     // This function needs to be kept consistent with functions
-    // FVCell.write_values_to_string, FVCell.scan_values_from_string
-    // (found above) and with the corresponding Python functions
-    // write_cell_data and variable_list_for_cell
-    // that may be found in app/eilmer3/source/e3_flow.py.
+    // FVCell.write_values_to_string(), FVCell.scan_values_from_string()
+    // (found above) and cell_data_as_string() in flowstate.d.
     string[] list;
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["rho", "vel.x", "vel.y", "vel.z"];
