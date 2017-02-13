@@ -332,35 +332,11 @@ public:
 
     string write_values_to_string() const
     {
-	// We'll treat this function as the master definition of the data format.
-	// It should match scan_values_from_string() above
-	// variable_list_for_cell() toward the end of this file
-	// and cell_data_as_string() in flowstate.d
-	auto writer = appender!string();
-	formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-		       pos[0].x, pos[0].y, pos[0].z, volume[0], fs.gas.rho,
-		       fs.vel.x, fs.vel.y, fs.vel.z);
-	if (myConfig.MHD) {
-	    formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB);
-	}
-	if (myConfig.MHD && myConfig.divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
-	if (myConfig.include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
-	formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-	formattedWrite(writer, " %.18e", fs.gas.k);
-	foreach(i; 0 .. fs.gas.k_modes.length) formattedWrite(writer, " %.18e", fs.gas.k_modes[i]); 
-	formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
-	if (myConfig.radiation) { 
-	    formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad);
-	} 
-	formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
-	foreach(i; 0 .. fs.gas.massf.length) formattedWrite(writer, " %.18e", fs.gas.massf[i]); 
-	if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
-	formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.Ttr);
-	foreach(i; 0 .. fs.gas.e_modes.length) {
-	    formattedWrite(writer, " %.18e %.18e", fs.gas.e_modes[i], fs.gas.T_modes[i]);
-	} 
-	if (fs.gas.e_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
-	return writer.data;
+	return cell_data_as_string(pos[0], volume[0], fs,
+				   Q_rad_org, f_rad_org, Q_rE_rad,
+				   dt_chem, dt_therm,
+				   myConfig.include_quality, myConfig.MHD,
+				   myConfig.divergence_cleaning, myConfig.radiation);
     } // end write_values_to_string()
 
     @nogc
@@ -1635,13 +1611,44 @@ public:
 
 } // end class FVCell
 
+//--------------------------------------------------------------------------------
+// The following functions define the written formats for the cell data.
+// Other input and output functions should delegate their work to these functions.
+//--------------------------------------------------------------------------------
+
+string cell_data_as_string(ref const(Vector3) pos, double volume, ref const(FlowState) fs,
+			   double Q_rad_org, double f_rad_org, double Q_rE_rad,
+			   double dt_chem, double dt_therm,
+			   bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
+{
+    // We'll treat this function as the master definition of the data format.
+    auto writer = appender!string();
+    formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
+		   pos.x, pos.y, pos.z, volume, fs.gas.rho,
+		   fs.vel.x, fs.vel.y, fs.vel.z);
+    if (MHD) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB); }
+    if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
+    if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
+    formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
+    formattedWrite(writer, " %.18e", fs.gas.k);
+    foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue); } 
+    formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
+    if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
+    formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
+    foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); } 
+    if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
+    formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.Ttr); 
+    foreach (imode; 0 .. fs.gas.e_modes.length) {
+	formattedWrite(writer, " %.18e %.18e", fs.gas.e_modes[imode], fs.gas.T_modes[imode]);
+    }
+    if (fs.gas.e_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); } 
+    return writer.data;
+} // end cell_data_as_string()
 
 string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
 				bool MHD, bool divergence_cleaning, bool radiation)
 {
-    // This function needs to be kept consistent with functions
-    // FVCell.write_values_to_string(), FVCell.scan_values_from_string()
-    // (found above) and cell_data_as_string() in flowstate.d.
+    // This function needs to be kept consistent with cell_data_as_string().
     string[] list;
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["rho", "vel.x", "vel.y", "vel.z"];

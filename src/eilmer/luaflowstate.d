@@ -519,8 +519,11 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			errMsg ~= "The returned object is not a proper FlowState object.";
 			luaL_error(L, errMsg.toStringz);
 		    }
-		    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
-							       GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+		    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+							       0.0, 0.0, 0.0, -1.0, -1.0,
+							       GlobalConfig.include_quality,
+							       GlobalConfig.MHD,
+							       GlobalConfig.divergence_cleaning,
 							       GlobalConfig.radiation) ~ "\n");
 		} // end foreach i
 	    } // end foreach j
@@ -595,8 +598,11 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		errMsg ~= "The returned object is not a proper FlowState object.";
 		luaL_error(L, errMsg.toStringz);
 	    }
-	    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
-						       GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+	    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+						       0.0, 0.0, 0.0, -1.0, -1.0,
+						       GlobalConfig.include_quality,
+						       GlobalConfig.MHD,
+						       GlobalConfig.divergence_cleaning,
 						       GlobalConfig.radiation) ~ "\n");
 	} // end foreach i
 	outfile.finish();

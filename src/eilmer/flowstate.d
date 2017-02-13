@@ -333,38 +333,6 @@ public:
 	B.apply_matrix_transform(Rmatrix);
     }
 } // end class FlowState
-
-string cell_data_as_string(ref Vector3 pos, double volume, ref const(FlowState) fs,
-			   bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
-{
-    // Should match FVCell.write_values_to_string()
-    auto writer = appender!string();
-    formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-		   pos.x, pos.y, pos.z, volume, fs.gas.rho,
-		   fs.vel.x, fs.vel.y, fs.vel.z);
-    if (MHD) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB); }
-    if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
-    if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
-    formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-    formattedWrite(writer, " %.18e", fs.gas.k);
-    foreach (kvalue; fs.gas.k_modes) formattedWrite(writer, " %.18e", kvalue); 
-    int S = 0;  // zero for shock detector
-    formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, S);
-    if (radiation) {
-	double Q_rad_org = 0.0; double f_rad_org = 0.0; double Q_rE_rad = 0.0;
-	formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad);
-    }
-    formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
-    foreach (massfvalue; fs.gas.massf) formattedWrite(writer, " %.18e", massfvalue); 
-    double dt_chem = -1.0;
-    if (fs.gas.massf.length > 1) formattedWrite(writer, " %.18e", dt_chem); 
-    formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.Ttr); 
-    foreach (imode; 0 .. fs.gas.e_modes.length) 
-	formattedWrite(writer, " %.18e %.18e", fs.gas.e_modes[imode], fs.gas.T_modes[imode]); 
-    double dt_therm = -1.0;
-    if (fs.gas.e_modes.length > 0) formattedWrite(writer, " %.18e", dt_therm); 
-    return writer.data;
-} // end  cell_data_as_string()
  
 void write_initial_flow_file(string fileName, ref StructuredGrid grid,
 			     in FlowState fs, double t0, GasModel gmodel)
@@ -417,8 +385,11 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
 		    Vector3 p011 = *grid[i,j+1,k+1];
 		    pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
 		}
-		outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
-							   GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+		outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+							   0.0, 0.0, 0.0, -1.0, -1.0,
+							   GlobalConfig.include_quality,
+							   GlobalConfig.MHD,
+							   GlobalConfig.divergence_cleaning,
 							   GlobalConfig.radiation) ~ "\n");
 	    }
 	}
@@ -459,8 +430,11 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
 	foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
 	pos /= grid.cells[i].vtx_id_list.length;
 	double volume = 0.0; 
-	outfile.compress(" " ~ cell_data_as_string(pos, volume, fs, GlobalConfig.include_quality,
-						   GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+	outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+						   0.0, 0.0, 0.0, -1.0, -1.0,
+						   GlobalConfig.include_quality,
+						   GlobalConfig.MHD,
+						   GlobalConfig.divergence_cleaning,
 						   GlobalConfig.radiation) ~ "\n");
     }
     outfile.finish();
