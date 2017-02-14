@@ -1635,7 +1635,18 @@ void scan_cell_data_from_string(string buffer,
     }
     fs.mu_t = to!double(items.front); items.popFront();
     fs.k_t = to!double(items.front); items.popFront();
-    fs.S = to!int(items.front); items.popFront();
+    // In the usual format for the flow data, the shock detector appears as an int.
+    // In profile files, the same value may appear as a double.
+    try {
+	fs.S = to!int(items.front);
+    } catch(Exception e) {
+	try {
+	    fs.S = to!int(to!double(items.front));
+	} catch(Exception e2) {
+	    throw new FlowSolverException("Couldn't get a reasonable value for shock detector.");
+	}
+    }
+    items.popFront();
     if (radiation) {
 	Q_rad_org = to!double(items.front); items.popFront();
 	f_rad_org = to!double(items.front); items.popFront();

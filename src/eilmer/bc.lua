@@ -57,11 +57,12 @@ function FlowStateCopy:tojson()
    return str
 end
 
-FlowStateCopyFromProfile = GhostCellEffect:new{filename=""}
+FlowStateCopyFromProfile = GhostCellEffect:new{filename="", match="xyz"}
 FlowStateCopyFromProfile.type = "flowstate_copy_from_profile"
 function FlowStateCopyFromProfile:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "filename": %s', self.filename)
+   str = str .. string.format(' "filename": "%s",', self.filename)
+   str = str .. string.format(' "match": "%s"', self.match)
    str = str .. '}'
    return str
 end
@@ -201,15 +202,15 @@ function FlowStateCopyToInterface:tojson()
    return str
 end
 
-FlowStateCopyFromProfileToInterface = BoundaryInterfaceEffect:new{flowCondition=nil}
+FlowStateCopyFromProfileToInterface = BoundaryInterfaceEffect:new{filename="", match="xyz"}
 FlowStateCopyFromProfileToInterface.type = "flow_state_copy_from_profile_to_interface"
 function FlowStateCopyFromProfileToInterface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "filename": %s', self.filename)
+   str = str .. string.format(' "filename": "%s",', self.filename)
+   str = str .. string.format(' "match": "%s"', self.match)
    str = str .. '}'
    return str
 end
-
 
 ZeroVelocity = BoundaryInterfaceEffect:new()
 ZeroVelocity.type = "zero_velocity"
@@ -516,6 +517,8 @@ InFlowBC_StaticProfile.type = "inflow_static_profile"
 function InFlowBC_StaticProfile:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
+   -- If we don't specify the match option, we will get the default "xyz" value
+   -- from the prototypes for each of the Action constructors.
    o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename} }
    o.preSpatialDerivAction = { FlowStateCopyFromProfileToInterface:new{filename=o.filename} }
    o.is_configured = true      

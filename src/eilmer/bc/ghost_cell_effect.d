@@ -81,8 +81,9 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 	newGCE = new GhostCellFlowStateCopy(blk_id, boundary, flowstate);
 	break;
     case "flowstate_copy_from_profile":
-	string fname = getJSONstring(jsonData, "filename", "none");
-	newGCE = new GhostCellFlowStateCopyFromProfile(blk_id, boundary, fname);
+	string fname = getJSONstring(jsonData, "filename", "");
+	string match = getJSONstring(jsonData, "match", "xyz");
+	newGCE = new GhostCellFlowStateCopyFromProfile(blk_id, boundary, fname, match);
 	break;
     case "extrapolate_copy":
 	int xOrder = getJSONint(jsonData, "x_order", 0);
@@ -514,24 +515,26 @@ public:
 
 class GhostCellFlowStateCopyFromProfile : GhostCellEffect {
 public:
-    // [TODO] need to finish this class, once we have cleaned up the multiple functions
-    // for reading and writing cell data.
     string fileName;
-    FlowState fstate;
+    string posMatch;
+    FlowState[] fstate;
+    Vector3[] pos;
     // Need a dictionary of cell-id to flowstate index
 
-    this(int id, int boundary, string fileName)
+    this(int id, int boundary, string fileName, string match)
     {
 	super(id, boundary, "flowStateCopyFromProfile");
-	// Open filename and read all data points.
-	// Format will be sample point data as per the postprocessor
-	// Need to map the nearest input point to each ghost-cell.
-	// fstate = new FlowState(_fstate);
+	this.fileName = fileName;
+	this.posMatch = match;
+	auto npoints = read_profile(fileName, fstate, pos);
+	writefln("GhostCellFlowStateCopyFromProfile: file=\"%s\", match=\"%s\", npoints=%d",
+		 fileName, match, npoints);
+	// [TODO] Need to map the nearest input point to each ghost-cell.
     }
 
     override string toString() const
     {
-	return "flowStateCopyFromProfile(filename=" ~ to!string(fstate) ~ ")";
+	return "flowStateCopyFromProfile(filename=\"" ~ fileName ~ "\", match=\"" ~ posMatch ~ "\")";
     }
 
     override ref FVCell get_mapped_cell(size_t i)
@@ -549,7 +552,8 @@ public:
 	    } else {
 		ghost0 = f.left_cell;
 	    }
-	    ghost0.fs.copy_values_from(fstate);
+	    size_t ip = 0; // Assuming at least one point in the profile. [TODO] proper indexing
+	    ghost0.fs.copy_values_from(fstate[ip]);
 	} // end foreach face
     } // end apply_unstructured_grid()
 
@@ -560,6 +564,7 @@ public:
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
 	FVInterface dest_face;
+	size_t ip = 0; // Assuming at least one point in the profile. [TODO] proper indexing
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -567,9 +572,9 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    dest_cell = blk.get_cell(i,j+1,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j+2,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end i loop
 	    } // for k
 	    break;
@@ -578,9 +583,9 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i+1,j,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i+2,j,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for k
 	    break;
@@ -589,9 +594,9 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    dest_cell = blk.get_cell(i,j-1,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j-2,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end i loop
 	    } // for k
 	    break;
@@ -600,9 +605,9 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i-1,j,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i-2,j,k);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for k
 	    break;
@@ -611,9 +616,9 @@ public:
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i,j,k+1);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j,k+2);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for i
 	    break;
@@ -622,9 +627,9 @@ public:
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i,j,k-1);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j,k-2);
-		    dest_cell.fs.copy_values_from(fstate);
+		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for i
 	    break;

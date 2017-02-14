@@ -10,6 +10,7 @@ module flowstate;
 
 import std.string;
 import std.conv;
+import std.algorithm;
 import std.json;
 import std.array;
 import std.format;
@@ -440,3 +441,30 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
     outfile.finish();
     return;
 } // end write_initial_flow_file() UnstructuredGrid version
+
+int read_profile(string fileName, ref FlowState[] fs, ref Vector3[] pos)
+{
+    // Open filename and read all data points.
+    // Format will be sample point data as per the postprocessor.
+    auto f = new File(fileName);
+    auto range = f.byLine();
+    auto line = range.front;
+    int npoints = 0;
+    while (!line.empty) {
+	string text = to!string(line);
+	if (!canFind(text, "#")) {
+	    // Assume that we have a line of data rather than variable names.
+	    fs ~= new FlowState(GlobalConfig.gmodel_master);
+	    pos ~= Vector3();
+	    double volume, Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm;
+	    scan_cell_data_from_string(text, pos[$-1], volume, fs[$-1],
+				       Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm,
+				       GlobalConfig.include_quality, GlobalConfig.MHD,
+				       GlobalConfig.divergence_cleaning, GlobalConfig.radiation);
+	    npoints += 1;
+	}
+	range.popFront();
+	line = range.front;
+    } // end while
+    return npoints;
+} // end read_profile()
