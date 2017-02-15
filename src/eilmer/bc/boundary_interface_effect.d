@@ -229,7 +229,6 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 } // end class BIE_CopyCellData
 
 class BIE_FlowStateCopy : BoundaryInterfaceEffect {
-    FlowState fstate;
 
     this(int id, int boundary, in FlowState _fstate)
     {
@@ -326,48 +325,41 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
 	    break;
 	} // end switch which_boundary
     } // end apply()
+
+private:
+    FlowState fstate;
+
 } // end class BIE_FlowStateCopy
 
 
 class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
-    string fileName;
-    string posMatch;
-    FlowState[] fstate;
-    Vector3[] pos;
-    // Need a dictionary of cell-id to flowstate index
-
+public:
     this(int id, int boundary, string fileName, string match)
     {
 	super(id, boundary, "flowStateCopyFromProfile");
-	this.fileName = fileName;
-	this.posMatch = match;
-	auto npoints = read_profile(fileName, fstate, pos);
-	writefln("BIE_FlowStateCopyFromProfile: file=\"%s\", match=\"%s\", npoints=%d",
-		 fileName, match, npoints);
-	// [TODO] Need to map the nearest input point to each ghost-cell.
+	fprofile = new FlowProfile(fileName, match);
     }
 
     override string toString() const 
     {
-	return "flowStateCopyFromProfile(filename=\"" ~ fileName ~ "\", match=\"" ~ posMatch ~ "\")";
+	return format("flowStateCopyFromProfile(filename=\"%s\", match=\"%s\")",
+		      fprofile.fileName, fprofile.posMatch);
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
-	    size_t ip = 0; // Assuming at least one point in the profile. [TODO] proper indexing
-	    f.fs.copy_values_from(fstate[ip]);
-	} // end foreach face
+	    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+	}
     }
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
 	FVCell cell;
-	FVInterface IFace;
+	FVInterface f;
 	auto gmodel = blk.myConfig.gmodel;
-	size_t ip = 0; // Assuming at least one point in the profile. [TODO] proper indexing
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -375,9 +367,8 @@ class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
-		    IFace = cell.iface[Face.north];
-		    FlowState fs = IFace.fs;
-		    fs.copy_values_from(fstate[ip]);
+		    f = cell.iface[Face.north];
+		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
 		} // end i loop
 	    } // end for k
 	    break;
@@ -386,9 +377,8 @@ class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-		    IFace = cell.iface[Face.east];
-		    FlowState fs = IFace.fs;
-		    fs.copy_values_from(fstate[ip]);
+		    f = cell.iface[Face.east];
+		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
 		} // end j loop
 	    } // end for k
 	    break;
@@ -397,9 +387,8 @@ class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
-		    IFace = cell.iface[Face.south];
-		    FlowState fs = IFace.fs;
-		    fs.copy_values_from(fstate[ip]);
+		    f = cell.iface[Face.south];
+		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
 		} // end i loop
 	    } // end for k
 	    break;
@@ -408,9 +397,8 @@ class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-		    IFace = cell.iface[Face.west];
-		    FlowState fs = IFace.fs;
-		    fs.copy_values_from(fstate[ip]);
+		    f = cell.iface[Face.west];
+		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
 		} // end j loop
 	    } // end for k
 	    break;
@@ -419,9 +407,8 @@ class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-		    IFace = cell.iface[Face.top];
-		    FlowState fs = IFace.fs;
-		    fs.copy_values_from(fstate[ip]);
+		    f = cell.iface[Face.top];
+		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
 		} // end j loop
 	    } // end for i
 	    break;
@@ -430,14 +417,17 @@ class BIE_FlowStateCopyFromProfile : BoundaryInterfaceEffect {
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-		    IFace = cell.iface[Face.bottom];
-		    FlowState fs = IFace.fs;
-		    fs.copy_values_from(fstate[ip]);
+		    f = cell.iface[Face.bottom];
+		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
 		} // end j loop
 	    } // end for i
 	    break;
 	} // end switch which_boundary
     } // end apply()
+
+private:
+    FlowProfile fprofile;
+
 } // end class BIE_FlowStateCopyFromProfile
 
 

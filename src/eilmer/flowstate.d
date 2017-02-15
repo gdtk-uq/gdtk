@@ -442,29 +442,112 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
     return;
 } // end write_initial_flow_file() UnstructuredGrid version
 
-int read_profile(string fileName, ref FlowState[] fs, ref Vector3[] pos)
-{
-    // Open filename and read all data points.
-    // Format will be sample point data as per the postprocessor.
-    auto f = new File(fileName);
-    auto range = f.byLine();
-    auto line = range.front;
-    int npoints = 0;
-    while (!line.empty) {
-	string text = to!string(line);
-	if (!canFind(text, "#")) {
-	    // Assume that we have a line of data rather than variable names.
-	    fs ~= new FlowState(GlobalConfig.gmodel_master);
-	    pos ~= Vector3();
-	    double volume, Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm;
-	    scan_cell_data_from_string(text, pos[$-1], volume, fs[$-1],
-				       Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm,
-				       GlobalConfig.include_quality, GlobalConfig.MHD,
-				       GlobalConfig.divergence_cleaning, GlobalConfig.radiation);
-	    npoints += 1;
+
+class FlowProfile {
+    // For use in the classes that implement the InflowBC_StaticProfile boundary condition.
+    // GhostCellFlowStateCopyFromProfile, BIE_FlowStateCopyFromProfile
+    
+public:
+    string fileName;
+    string posMatch;
+    FlowState[] fstate;
+    Vector3[] pos;
+    size_t[size_t] which_point; // A place to memoize the mapped indices and we find them.
+    // Below, we search for the profile point nearest to the initial position.
+    // This position will only change for moving-grid simulations and we will not try
+    // to deal with that complication.
+
+    this (string fileName, string match)
+    {
+	this.fileName = fileName;
+	this.posMatch = match;
+	// Open filename and read all data points.
+	// Format will be sample point data as per the postprocessor.
+	auto f = new File(fileName);
+	auto range = f.byLine();
+	auto line = range.front;
+	int npoints = 0;
+	while (!line.empty) {
+	    string text = to!string(line);
+	    if (!canFind(text, "#")) {
+		// Assume that we have a line of data rather than variable names.
+		fstate ~= new FlowState(GlobalConfig.gmodel_master);
+		pos ~= Vector3();
+		double volume, Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm;
+		scan_cell_data_from_string(text, pos[$-1], volume, fstate[$-1],
+					   Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm,
+					   GlobalConfig.include_quality, GlobalConfig.MHD,
+					   GlobalConfig.divergence_cleaning, GlobalConfig.radiation);
+		npoints += 1;
+	    }
+	    range.popFront();
+	    line = range.front;
+	} // end while
+	// writefln("FlowProfile: file=\"%s\", match=\"%s\", npoints=%d", fileName, match, npoints);
+	//
+	// The mapping of the nearest profile point to each ghost-cell or interface location
+	// will be done as needed, at application time.
+	// This way, all of the necessary cell and position data should be valid.
+    } // end this()
+
+    double compute_distance(ref const(Vector3) my_pos, ref const(Vector3) other_pos)
+    {
+	double distance, other_r, my_r, dx, dy, dz, dr;
+	switch (posMatch) {
+	case "xyz": goto default;
+	case "xy":
+	    dx = my_pos.x - other_pos.x;
+	    dy = my_pos.y - other_pos.y;
+	    distance = sqrt(dx^^2 + dy^^2);
+	    break;
+	case "y":
+	    dy = my_pos.y - other_pos.y;
+	    distance = fabs(dy);
+	    break;
+	case "xr":
+	    dx = my_pos.x - other_pos.x;
+	    other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
+	    my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
+	    dr = my_r - other_r;
+	    distance = sqrt(dx*dx + dr*dr);
+	    break;
+	case "r":
+	    other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
+	    my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
+	    dr = my_r - other_r;
+	    distance = fabs(dr);
+	    break;
+	default:
+	    dx = my_pos.x - other_pos.x;
+	    dy = my_pos.y - other_pos.y;
+	    dz = my_pos.z - other_pos.z;
+	    distance = sqrt(dx*dx + dy*dy + dz*dz);
+	    break; 
 	}
-	range.popFront();
-	line = range.front;
-    } // end while
-    return npoints;
-} // end read_profile()
+	return distance;
+    } // end compute_distance()
+    
+    size_t find_nearest_profile_point(ref const(Vector3) my_pos)
+    {
+	size_t ip = 0; // Start looking here, assuming that there is at least one point.
+	double min_distance = compute_distance(my_pos, pos[0]);
+	foreach (i; 1 .. pos.length) {
+	    double new_distance = compute_distance(my_pos, pos[i]);
+	    if (new_distance < min_distance) { ip = i; min_distance = new_distance; }
+	}
+	return ip;
+    } // end find_nearest_profile_point()
+
+    FlowState get_flowstate(size_t my_id, ref const(Vector3) my_pos)
+    {
+	assert(fstate.length > 0, "FlowProfile is empty.");
+	if (my_id in which_point) {
+	    return fstate[which_point[my_id]];
+	} else {
+	    size_t ip = find_nearest_profile_point(my_pos);
+	    which_point[my_id] = ip;
+	    return fstate[ip];
+	}
+    } // end get_flowstate()
+
+} // end class FlowProfile
