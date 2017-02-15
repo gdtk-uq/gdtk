@@ -519,7 +519,10 @@ public:
     string posMatch;
     FlowState[] fstate;
     Vector3[] pos;
-    // Need a dictionary of cell-id to flowstate index
+    size_t[size_t] which_point; // A place to memoize the mapped indices and we find them.
+    // Below, we search for the profile point nearest to the initial cell position.
+    // This position will only change for moving-grid simulations and we will not try
+    // to deal with that complication.
 
     this(int id, int boundary, string fileName, string match)
     {
@@ -529,9 +532,71 @@ public:
 	auto npoints = read_profile(fileName, fstate, pos);
 	writefln("GhostCellFlowStateCopyFromProfile: file=\"%s\", match=\"%s\", npoints=%d",
 		 fileName, match, npoints);
-	// [TODO] Need to map the nearest input point to each ghost-cell.
+	// The mapping of the nearest profile point to each ghost-cell
+	// will be done as needed, at application time.
+	// This way, all of the necessary cell and position data should be valid.
     }
 
+    double compute_distance(ref const(Vector3) ghost_pos, ref const(Vector3) pos)
+    {
+	double distance, pos_r, ghost_r, dx, dy, dz, dr;
+	switch (posMatch) {
+	case "xyz": goto default;
+	case "xy":
+	    dx = ghost_pos.x - pos.x;
+	    dy = ghost_pos.y - pos.y;
+	    distance = sqrt(dx^^2 + dy^^2);
+	    break;
+	case "y":
+	    dy = ghost_pos.y - pos.y;
+	    distance = fabs(dy);
+	    break;
+	case "xr":
+	    dx = ghost_pos.x - pos.x;
+	    pos_r = sqrt(pos.y^^2 + pos.z^^2);
+	    ghost_r = sqrt(ghost_pos.y^^2 + ghost_pos.z^^2);
+	    dr = ghost_r - pos_r;
+	    distance = sqrt(dx*dx + dr*dr);
+	    break;
+	case "r":
+	    pos_r = sqrt(pos.y^^2 + pos.z^^2);
+	    ghost_r = sqrt(ghost_pos.y^^2 + ghost_pos.z^^2);
+	    dr = ghost_r - pos_r;
+	    distance = fabs(dr);
+	    break;
+	default:
+	    dx = ghost_pos.x - pos.x;
+	    dy = ghost_pos.y - pos.y;
+	    dz = ghost_pos.z - pos.z;
+	    distance = sqrt(dx*dx + dy*dy + dz*dz);
+	    break; 
+	}
+	return distance;
+    } // end compute_distance()
+    
+    size_t find_nearest_profile_point(ref const(Vector3) ghost_pos)
+    {
+	size_t ip = 0; // Start looking here, assuming that there is at least one point.
+	double min_distance = compute_distance(ghost_pos, pos[0]);
+	foreach (i; 1 .. pos.length) {
+	    double new_distance = compute_distance(ghost_pos, pos[i]);
+	    if (new_distance < min_distance) { ip = i; min_distance = new_distance; }
+	}
+	return ip;
+    } // end find_nearest_profile_point()
+
+    size_t get_index_of_profile_point(ref const(FVCell) c)
+    {
+	auto cell_id = c.id;
+	if (cell_id in which_point) {
+	    return which_point[cell_id];
+	} else {
+	    size_t ip = find_nearest_profile_point(c.pos[0]);
+	    which_point[cell_id] = ip;
+	    return ip;
+	}
+    } // end get_index_of_profile_point()
+    
     override string toString() const
     {
 	return "flowStateCopyFromProfile(filename=\"" ~ fileName ~ "\", match=\"" ~ posMatch ~ "\")";
@@ -552,7 +617,7 @@ public:
 	    } else {
 		ghost0 = f.left_cell;
 	    }
-	    size_t ip = 0; // Assuming at least one point in the profile. [TODO] proper indexing
+	    size_t ip = get_index_of_profile_point(ghost0);
 	    ghost0.fs.copy_values_from(fstate[ip]);
 	} // end foreach face
     } // end apply_unstructured_grid()
@@ -564,7 +629,7 @@ public:
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
 	FVInterface dest_face;
-	size_t ip = 0; // Assuming at least one point in the profile. [TODO] proper indexing
+	size_t ip; // pointer into the profile array
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -572,8 +637,10 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    dest_cell = blk.get_cell(i,j+1,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j+2,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end i loop
 	    } // for k
@@ -583,8 +650,10 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i+1,j,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i+2,j,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for k
@@ -594,8 +663,10 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    dest_cell = blk.get_cell(i,j-1,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j-2,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end i loop
 	    } // for k
@@ -605,8 +676,10 @@ public:
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i-1,j,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i-2,j,k);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for k
@@ -616,8 +689,10 @@ public:
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i,j,k+1);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j,k+2);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for i
@@ -627,8 +702,10 @@ public:
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    dest_cell = blk.get_cell(i,j,k-1);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		    dest_cell = blk.get_cell(i,j,k-2);
+		    ip = get_index_of_profile_point(dest_cell);
 		    dest_cell.fs.copy_values_from(fstate[ip]);
 		} // end j loop
 	    } // for i
