@@ -559,10 +559,12 @@ public:
 	case "AyA-to-AyA": break;
 	case "xy-to-xR": goto case "Ay-to-AR";
 	case "Ay-to-AR":
+	    // We are assuming that the original 2D simulation had y>0.
 	    double r = sqrt(my_pos.y^^2 + my_pos.z^^2);
 	    double vel_yz = sqrt(fs.vel.y^^2 + fs.vel.z);
-	    fs.vel.refy = vel_yz * my_pos.y / r;
-	    fs.vel.refz = vel_yz * my_pos.z / r;
+	    double vely_sign = (fs.vel.y < 0.0) ? -1.0 : 1.0;
+	    fs.vel.refy = vely_sign * vel_yz * my_pos.y / r;
+	    fs.vel.refz = vely_sign * vel_yz * my_pos.z / r;
 	    break;
 	default: break; // 3D, do nothing. 
 	}
