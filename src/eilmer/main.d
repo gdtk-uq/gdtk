@@ -66,6 +66,7 @@ void main(string[] args)
     msg       ~= "         [--max-cpus=<int>]          defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
     msg       ~= "         [--max-wall-clock=<int>]    in seconds\n";
+    msg       ~= "         [--report-residuals]        include residual reporting in console output\n";
     msg       ~= "\n";
     msg       ~= "         [--post]                    post-process simulation data\n";
     msg       ~= "         [--list-info]               report some details of this simulation\n";
@@ -103,6 +104,7 @@ void main(string[] args)
     int tindxStart = 0;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
+    bool reportResiduals = false;
     bool postFlag = false;
     bool listInfoFlag = false;
     string tindxPlot = "last";
@@ -133,6 +135,7 @@ void main(string[] args)
 	       "tindx-start", &tindxStartStr,
 	       "max-cpus", &maxCPUs,
 	       "max-wall-clock", &maxWallClock,
+	       "report-residuals", &reportResiduals,
 	       "post", &postFlag,
 	       "list-info", &listInfoFlag,
 	       "tindx-plot", &tindxPlot,
@@ -224,6 +227,7 @@ void main(string[] args)
 	}
 	GlobalConfig.base_file_name = jobName;
 	GlobalConfig.verbosity_level = verbosityLevel;
+	GlobalConfig.report_residuals = reportResiduals;
 	maxCPUs = min(max(maxCPUs, 1), totalCPUs); // don't ask for more than available
 	switch (tindxStartStr) {
 	case "9999":

@@ -378,6 +378,9 @@ final class GlobalConfig {
     // 2 : plus verbose init messages
     // 3 : plus verbose boundary condition messages
 
+    shared static bool report_residuals; // indicate if residuals are computed and reported
+                                         // on STDOUT for time-integrated simulations
+
     shared static double max_time = 1.0e-3; // final solution time, s, set by user
     shared static double dt_init = 1.0e-6; // initial time step set by user
     shared static double dt_max = 1.0e-3; // Maximum allowable time-step, after all other considerations.

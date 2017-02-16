@@ -419,7 +419,7 @@ void integrate_in_time(double target_time_as_requested)
 	    formattedWrite(writer, "WC=%d WCtFT=%.1f WCtMS=%.1f", 
 			   wall_clock_elapsed, WCtFT, WCtMS);
 	    writeln(writer.data);
-	    if ( GlobalConfig.verbosity_level >= 1 ) {
+	    if ( GlobalConfig.report_residuals ) {
 		// We also compute the residual information and write to screen
 		compute_Linf_residuals(Linf_residuals);
 		auto writer2 = appender!string();
