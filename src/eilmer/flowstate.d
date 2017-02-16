@@ -494,30 +494,31 @@ public:
     {
 	double distance, other_r, my_r, dx, dy, dz, dr;
 	switch (posMatch) {
-	case "xyz": goto default;
-	case "xy":
+	case "xyz-to-xyz": goto default;
+	case "xyA-to-xyA":
 	    dx = my_pos.x - other_pos.x;
 	    dy = my_pos.y - other_pos.y;
 	    distance = sqrt(dx^^2 + dy^^2);
 	    break;
-	case "y":
+	case "AyA-to-AyA":
 	    dy = my_pos.y - other_pos.y;
 	    distance = fabs(dy);
 	    break;
-	case "xr":
+	case "xy-to-xR":
 	    dx = my_pos.x - other_pos.x;
 	    other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
 	    my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
 	    dr = my_r - other_r;
 	    distance = sqrt(dx*dx + dr*dr);
 	    break;
-	case "r":
+	case "Ay-to-AR":
 	    other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
 	    my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
 	    dr = my_r - other_r;
 	    distance = fabs(dr);
 	    break;
 	default:
+	    // 3D, closest match on all position components.
 	    dx = my_pos.x - other_pos.x;
 	    dy = my_pos.y - other_pos.y;
 	    dz = my_pos.z - other_pos.z;
@@ -550,4 +551,20 @@ public:
 	}
     } // end get_flowstate()
 
+    void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos)
+    {
+	switch (posMatch) {
+	case "xyz-to-xyz": break;
+	case "xyA-to-xyA": break;
+	case "AyA-to-AyA": break;
+	case "xy-to-xR": goto case "Ay-to-AR";
+	case "Ay-to-AR":
+	    double r = sqrt(my_pos.y^^2 + my_pos.z^^2);
+	    double vel_yz = sqrt(fs.vel.y^^2 + fs.vel.z);
+	    fs.vel.refy = vel_yz * my_pos.y / r;
+	    fs.vel.refz = vel_yz * my_pos.z / r;
+	    break;
+	default: break; // 3D, do nothing. 
+	}
+    }
 } // end class FlowProfile

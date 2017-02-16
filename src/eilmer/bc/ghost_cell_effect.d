@@ -544,6 +544,7 @@ public:
 		ghost0 = f.left_cell;
 	    }
 	    ghost0.fs.copy_values_from(fprofile.get_flowstate(ghost0.id, ghost0.pos[0]));
+	    fprofile.adjust_velocity(ghost0.fs, ghost0.pos[0]);
 	} // end foreach face
     } // end apply_unstructured_grid()
 
@@ -564,9 +565,11 @@ public:
 		    dest_cell = blk.get_cell(i,j+1,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		    dest_cell = blk.get_cell(i,j+2,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		} // end i loop
 	    } // for k
 	    break;
@@ -577,9 +580,11 @@ public:
 		    dest_cell = blk.get_cell(i+1,j,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		    dest_cell = blk.get_cell(i+2,j,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		} // end j loop
 	    } // for k
 	    break;
@@ -590,9 +595,11 @@ public:
 		    dest_cell = blk.get_cell(i,j-1,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		    dest_cell = blk.get_cell(i,j-2,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		} // end i loop
 	    } // for k
 	    break;
@@ -603,9 +610,11 @@ public:
 		    dest_cell = blk.get_cell(i-1,j,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		    dest_cell = blk.get_cell(i-2,j,k);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		} // end j loop
 	    } // for k
 	    break;
@@ -616,9 +625,11 @@ public:
 		    dest_cell = blk.get_cell(i,j,k+1);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		    dest_cell = blk.get_cell(i,j,k+2);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		} // end j loop
 	    } // for i
 	    break;
@@ -629,9 +640,11 @@ public:
 		    dest_cell = blk.get_cell(i,j,k-1);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		    dest_cell = blk.get_cell(i,j,k-2);
 		    fstate = fprofile.get_flowstate(dest_cell.id, dest_cell.pos[0]);
 		    dest_cell.fs.copy_values_from(fstate);
+		    fprofile.adjust_velocity(dest_cell.fs, dest_cell.pos[0]);
 		} // end j loop
 	    } // for i
 	    break;

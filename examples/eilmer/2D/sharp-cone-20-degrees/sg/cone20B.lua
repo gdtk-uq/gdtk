@@ -41,7 +41,7 @@ blk1 = SBlock:new{grid=grid1, fillCondition=initial}
 -- Set boundary conditions.
 identifyBlockConnections()
 blk0.bcList[west] = InFlowBC_StaticProfile:new{filename="profile.data",
-					       match="xy"}
+					       match="xyA-to-xyA"}
 blk1.bcList[east] = OutFlowBC_Simple:new{}
 
 -- add history point 1/3 along length of cone surface

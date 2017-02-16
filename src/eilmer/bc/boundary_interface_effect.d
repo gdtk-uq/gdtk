@@ -351,6 +351,7 @@ public:
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+	    fprofile.adjust_velocity(f.fs, f.pos);
 	}
     }
     
@@ -369,6 +370,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    f = cell.iface[Face.north];
 		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+		    fprofile.adjust_velocity(f.fs, f.pos);
 		} // end i loop
 	    } // end for k
 	    break;
@@ -379,6 +381,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    f = cell.iface[Face.east];
 		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+		    fprofile.adjust_velocity(f.fs, f.pos);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -389,6 +392,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    f = cell.iface[Face.south];
 		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+		    fprofile.adjust_velocity(f.fs, f.pos);
 		} // end i loop
 	    } // end for k
 	    break;
@@ -399,6 +403,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    f = cell.iface[Face.west];
 		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+		    fprofile.adjust_velocity(f.fs, f.pos);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -409,6 +414,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    f = cell.iface[Face.top];
 		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+		    fprofile.adjust_velocity(f.fs, f.pos);
 		} // end j loop
 	    } // end for i
 	    break;
@@ -419,6 +425,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    f = cell.iface[Face.bottom];
 		    f.fs.copy_values_from(fprofile.get_flowstate(f.id, f.pos));
+		    fprofile.adjust_velocity(f.fs, f.pos);
 		} // end j loop
 	    } // end for i
 	    break;
