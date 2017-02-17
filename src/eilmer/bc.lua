@@ -57,7 +57,7 @@ function FlowStateCopy:tojson()
    return str
 end
 
-FlowStateCopyFromProfile = GhostCellEffect:new{filename="", match="xyz"}
+FlowStateCopyFromProfile = GhostCellEffect:new{filename=nil, match=nil}
 FlowStateCopyFromProfile.type = "flowstate_copy_from_profile"
 function FlowStateCopyFromProfile:tojson()
    local str = string.format('          {"type": "%s",', self.type)
@@ -202,7 +202,7 @@ function FlowStateCopyToInterface:tojson()
    return str
 end
 
-FlowStateCopyFromProfileToInterface = BoundaryInterfaceEffect:new{filename="", match="xyz"}
+FlowStateCopyFromProfileToInterface = BoundaryInterfaceEffect:new{filename=nil, match=nil}
 FlowStateCopyFromProfileToInterface.type = "flow_state_copy_from_profile_to_interface"
 function FlowStateCopyFromProfileToInterface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
@@ -517,10 +517,9 @@ InFlowBC_StaticProfile.type = "inflow_static_profile"
 function InFlowBC_StaticProfile:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
-   -- If we don't specify the match option, we will get the default "xyz" value
-   -- from the prototypes for each of the Action constructors.
-   o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename} }
-   o.preSpatialDerivAction = { FlowStateCopyFromProfileToInterface:new{filename=o.filename} }
+   o.match = o.match or "xyz-to-xyz"
+   o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename, match=o.match} }
+   o.preSpatialDerivAction = { FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match} }
    o.is_configured = true      
    return o
 end

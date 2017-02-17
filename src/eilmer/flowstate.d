@@ -446,6 +446,8 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
 class FlowProfile {
     // For use in the classes that implement the InflowBC_StaticProfile boundary condition.
     // GhostCellFlowStateCopyFromProfile, BIE_FlowStateCopyFromProfile
+    // There are non-obvious options for the match parameter in the constructor call.
+    // See the switch statement in the compute_distance() function for some hints.
     
 public:
     string fileName;
@@ -494,17 +496,30 @@ public:
     {
 	double distance, other_r, my_r, dx, dy, dz, dr;
 	switch (posMatch) {
-	case "xyz-to-xyz": goto default;
+	case "xyz-to-xyz":
+	    // 2D or 3D, closest match on all components of position.
+	    // In 2D all z-components are supposed to be zero (and so, not matter).
+	    dx = my_pos.x - other_pos.x;
+	    dy = my_pos.y - other_pos.y;
+	    dz = my_pos.z - other_pos.z;
+	    distance = sqrt(dx*dx + dy*dy + dz*dz);
+	    break; 
 	case "xyA-to-xyA":
+	    // 2D or 3D; don't care about z-component of position.
 	    dx = my_pos.x - other_pos.x;
 	    dy = my_pos.y - other_pos.y;
 	    distance = sqrt(dx^^2 + dy^^2);
 	    break;
 	case "AyA-to-AyA":
+	    // 2D or 3D; only care about the y-component of position.
 	    dy = my_pos.y - other_pos.y;
 	    distance = fabs(dy);
 	    break;
 	case "xy-to-xR":
+	    // Starting with a profile from a 2D simulation, map it to
+	    // a radial profile in a 3D simulation, considering the x-component
+	    // of the position of the ghost cells when computing distance and
+	    // picking the nearest point in the profile.
 	    dx = my_pos.x - other_pos.x;
 	    other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
 	    my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
@@ -512,18 +527,17 @@ public:
 	    distance = sqrt(dx*dx + dr*dr);
 	    break;
 	case "Ay-to-AR":
+	    // Starting with a profile from a 2D simulation, map it to
+	    // a radial profile in a 3D simulation, ignoring the x-component
+	    // of the position of the ghost cells when computing distance and
+	    // picking the nearest point in the profile.
 	    other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
 	    my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
 	    dr = my_r - other_r;
 	    distance = fabs(dr);
 	    break;
 	default:
-	    // 3D, closest match on all position components.
-	    dx = my_pos.x - other_pos.x;
-	    dy = my_pos.y - other_pos.y;
-	    dz = my_pos.z - other_pos.z;
-	    distance = sqrt(dx*dx + dy*dy + dz*dz);
-	    break; 
+	    throw new FlowSolverException(format("Invalid match option: \"%s\".", posMatch));
 	}
 	return distance;
     } // end compute_distance()
@@ -554,19 +568,20 @@ public:
     void adjust_velocity(ref FlowState fs, ref const(Vector3) my_pos)
     {
 	switch (posMatch) {
-	case "xyz-to-xyz": break;
-	case "xyA-to-xyA": break;
-	case "AyA-to-AyA": break;
+	case "xyz-to-xyz": /* 3D, do nothing. */ break;
+	case "xyA-to-xyA": /* 3D, do nothing. */ break;
+	case "AyA-to-AyA": /* 3D, do nothing. */ break;
 	case "xy-to-xR": goto case "Ay-to-AR";
 	case "Ay-to-AR":
 	    // We are assuming that the original 2D simulation had y>0.
 	    double r = sqrt(my_pos.y^^2 + my_pos.z^^2);
-	    double vel_yz = sqrt(fs.vel.y^^2 + fs.vel.z);
+	    double vel_yz = sqrt(fs.vel.y^^2 + fs.vel.z^^2);
 	    double vely_sign = (fs.vel.y < 0.0) ? -1.0 : 1.0;
 	    fs.vel.refy = vely_sign * vel_yz * my_pos.y / r;
 	    fs.vel.refz = vely_sign * vel_yz * my_pos.z / r;
 	    break;
-	default: break; // 3D, do nothing. 
+	default: 
+	    throw new FlowSolverException(format("Invalid match option: \"%s\".", posMatch));
 	}
     }
 } // end class FlowProfile
