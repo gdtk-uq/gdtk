@@ -217,6 +217,79 @@ private:
     GasModel _gmodel;
 }
 
+/++
+ + A pressure-dependent rate constant in the form given by
+ + Yungster and Rabinowitz. 
+ +
+ + Yungster and Rabinowitz cite Troe-Golden for this form
+ + of rate constant, however, when I traced back to original
+ + sources I could *not* find the equation in the form given.
+ + Hence, I've named this form directly after that paper.
+ +
+ + Referece:
+ + Yungster and Rabinowitz (1994)
+ + Computation of Shock-Induced Combustion Using a Detailed
+ + Methane-Air Mechanism.
+ + Journal of Propulsion and Power, 10:5, pp. 609--617
+ +/
+
+class YRRateConstant : RateConstant {
+public:
+    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, double a, double b, double c, 
+	 Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+	_kInf = kInf.dup();
+	_k0 = k0.dup();
+	_a = a;
+	_b = b;
+	_c = c;
+	_efficiencies = efficiencies.dup();
+	_gmodel = gmodel;
+    }
+    this(lua_State* L, Tuple!(int, double)[] efficiencies, GasModel gmodel)
+    {
+	lua_getfield(L, -1, "kInf");
+	_kInf = new ArrheniusRateConstant(L);
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "k0");
+	_k0 = new ArrheniusRateConstant(L);
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "a"); _a = luaL_checknumber(L, -1); lua_pop(L, 1);
+	lua_getfield(L, -1, "b"); _b = luaL_checknumber(L, -1); lua_pop(L, 1);
+	lua_getfield(L, -1, "c"); _c = luaL_checknumber(L, -1); lua_pop(L, 1);
+
+	_efficiencies = efficiencies.dup();
+	_gmodel = gmodel;
+    }
+    YRRateConstant dup()
+    {
+	return new YRRateConstant(_kInf, _k0, _a, _b, _c, _efficiencies, _gmodel);
+    }
+    override double eval(in GasState Q)
+    {
+	immutable double essentially_zero = 1.0e-30;
+	double M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
+	double kInf = _kInf.eval(Q);
+	double k0 = _k0.eval(Q);
+	double p_r = k0*M/kInf;
+	double log_p_r = log(p_r);
+	double T = Q.Ttr;
+
+	double Fc = _a*exp(-_b/T) + (1.0 - _a)*exp(-_c/T);
+	double xt = 1.0/(1.0 + log_p_r*log_p_r);
+
+	return kInf*(p_r/(1.0 + p_r))*Fc*xt;
+    }
+private:
+    ArrheniusRateConstant _kInf, _k0;
+    double _a, _b, _c;
+    Tuple!(int, double)[] _efficiencies;
+    GasModel _gmodel;
+}
+
+
 
 /++
  + Create a RateConstant object based on information in a LuaTable.
@@ -236,6 +309,8 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
 	return new LHRateConstant(L, efficiencies, gmodel);
     case "Troe":
 	return new TroeRateConstant(L, efficiencies, gmodel);
+    case "Yungster-Rabinowitz":
+	return new YRRateConstant(L, efficiencies, gmodel);
     case "fromEqConst":
 	return null;
     default:
@@ -260,9 +335,6 @@ version(rate_constant_test) {
 	auto rc2 = new ArrheniusRateConstant(L);
 	gd.Ttr = 4000.0;
 	assert(approxEqual(0.00159439, rc2.eval(gd), 1.0e-6), failedUnitTest());
-
-	// Test 3. Try the pressure-dependent rate of Lindemann-Hinshelwood type
-	
 
 	return 0;
     }
