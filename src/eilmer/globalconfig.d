@@ -38,6 +38,16 @@ import user_defined_source_terms;
 import solid_udf_source_terms;
 import grid_motion;
 
+// Indices into arrays for conserved quantities
+static size_t nConservedQuantities;
+static size_t massIdx;
+static size_t xMomIdx;
+static size_t yMomIdx;
+static size_t zMomIdx;
+static size_t totEnergyIdx;
+static size_t tkeIdx;
+static size_t omegaIdx;
+
 // Symbolic names for turbulence models.
 enum TurbulenceModel { none, baldwin_lomax, k_omega, spalart_allmaras }
 string turbulence_model_name(TurbulenceModel i)
@@ -1081,6 +1091,30 @@ void read_control_file()
 
 } // end read_control_file()
 
+// The setting up of indices should only be called after the GlobalConfig
+// object has been configured. We will use information about the simulation
+// parameters to set the appropriate indices.
+void setupIndicesForConservedQuantities()
+{
+    massIdx = 0;
+    xMomIdx = 1;
+    yMomIdx = 2;
+    if ( GlobalConfig.dimensions == 2 ) {
+	totEnergyIdx = 3;
+	nConservedQuantities = 4;
+    }
+    else { // 3D simulations
+	zMomIdx = 3;
+	totEnergyIdx = 4;
+	nConservedQuantities = 5;
+    }
+    // TODO: Add handling for turbulence quantities
+
+    // TODO: Add this line when multi-species are handled correctly
+    //       by steady-state solver.
+    //nConservedQuantities += GlobalConfig.gmodel_master.n_species;
+}
+
 //
 // Functions to check the compatibility of the GlobalConfig parameters.
 // The individual checks are called at particular locations during the
@@ -1130,3 +1164,4 @@ void checkGlobalConfig()
     configCheckPoint2();
     return;
 }
+

@@ -213,7 +213,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     int maxNumberAttempts = GlobalConfig.sssOptions.maxNumberAttempts;
     double relGlobalResidReduction = GlobalConfig.sssOptions.stopOnRelGlobalResid;
     double absGlobalResidReduction = GlobalConfig.sssOptions.stopOnAbsGlobalResid;
-    int nConserved = GlobalConfig.sssOptions.nConserved;
+
     // Settings for start-up phase
     double cfl0 = GlobalConfig.sssOptions.cfl0;
     double tau0 = GlobalConfig.sssOptions.tau0;
@@ -237,6 +237,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     int n_modes = GlobalConfig.gmodel_master.n_modes();
     ConservedQuantities maxResiduals = new ConservedQuantities(n_species, n_modes);
     ConservedQuantities currResiduals = new ConservedQuantities(n_species, n_modes);
+
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
 
     shared double dt;
     double dtTrial, etaTrial;
@@ -286,10 +294,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		    int cellCount = 0;
 		    foreach (cell; blk.cells) {
 			cell.U[1].copy_values_from(cell.U[0]);
-			cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+0];
-			cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+1];
-			cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+2];
-			cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+3];
+			cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+MASS];
+			cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+X_MOM];
+			cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+Y_MOM];
+			cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
 			try {
 			    cell.decode_conserved(0, 1, 0.0);
 			}
@@ -338,10 +346,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	    foreach (blk; parallel(gasBlocks, 1)) {
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
-		    blk.FU[cellCount+0] = -cell.dUdt[0].mass;
-		    blk.FU[cellCount+1] = -cell.dUdt[0].momentum.x;
-		    blk.FU[cellCount+2] = -cell.dUdt[0].momentum.y;
-		    blk.FU[cellCount+3] = -cell.dUdt[0].total_energy;
+		    blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
+		    blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
+		    blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
+		    blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
 		    cellCount += nConserved;
 		}
 	    }
@@ -470,10 +478,10 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		int cellCount = 0;
 		foreach (cell; blk.cells) {
 		    cell.U[1].copy_values_from(cell.U[0]);
-		    cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+0];
-		    cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+1];
-		    cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+2];
-		    cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+3];
+		    cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+MASS];
+		    cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+X_MOM];
+		    cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+Y_MOM];
+		    cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
 		    try {
 			cell.decode_conserved(0, 1, 0.0);
 		    }
@@ -797,7 +805,14 @@ void evalRHS(double pseudoSimTime, int ftl)
 
 void evalJacobianVecProd(double pseudoSimTime, double sigma)
 {
-    int nConserved = GlobalConfig.sssOptions.nConserved;
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
+
     // We perform a Frechet derivative to evaluate J*z
     foreach (blk; parallel(gasBlocks,1)) {
 	blk.clear_fluxes_of_conserved_quantities();
@@ -805,10 +820,10 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
 	int cellCount = 0;
 	foreach (cell; blk.cells) {
 	    cell.U[1].copy_values_from(cell.U[0]);
-	    cell.U[1].mass += sigma*blk.maxRate.mass*blk.z_outer[cellCount+0];
-	    cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.z_outer[cellCount+1];
-	    cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.z_outer[cellCount+2];
-	    cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.z_outer[cellCount+3];
+	    cell.U[1].mass += sigma*blk.maxRate.mass*blk.z_outer[cellCount+MASS];
+	    cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.z_outer[cellCount+X_MOM];
+	    cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.z_outer[cellCount+Y_MOM];
+	    cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.z_outer[cellCount+TOT_ENERGY];
 	    cell.decode_conserved(0, 1, 0.0);
 	    cellCount += nConserved;
 	}
@@ -817,10 +832,10 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
     foreach (blk; parallel(gasBlocks,1)) {
 	int cellCount = 0;
 	foreach (cell; blk.cells) {
-	    blk.z_outer[cellCount+0] = (-cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*blk.maxRate.mass);
-	    blk.z_outer[cellCount+1] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+1])/(sigma*blk.maxRate.momentum.x);
-	    blk.z_outer[cellCount+2] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+2])/(sigma*blk.maxRate.momentum.y);
-	    blk.z_outer[cellCount+3] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+3])/(sigma*blk.maxRate.total_energy);
+	    blk.z_outer[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
+	    blk.z_outer[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
+	    blk.z_outer[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
+	    blk.z_outer[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
 	    cellCount += nConserved;
 	}
     }
@@ -892,27 +907,34 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
 
 void evalJacobianVecProd(Block blk, double pseudoSimTime, double sigma)
 {
-    int nConserved = blk.myConfig.sssOptions.nConserved;
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
+
     // We perform a Frechet derivative to evaluate J*v
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
     foreach (cell; blk.cells) {
 	cell.U[1].copy_values_from(cell.U[0]);
-	cell.U[1].mass += sigma*blk.maxRate.mass*blk.v_inner[cellCount+0];
-	cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.v_inner[cellCount+1];
-	cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.v_inner[cellCount+2];
-	cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.v_inner[cellCount+3];
+	cell.U[1].mass += sigma*blk.maxRate.mass*blk.v_inner[cellCount+MASS];
+	cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.v_inner[cellCount+X_MOM];
+	cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.v_inner[cellCount+Y_MOM];
+	cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.v_inner[cellCount+TOT_ENERGY];
 	cell.decode_conserved(0, 1, 0.0);
 	cellCount += nConserved;
     }
     evalRHS(blk, pseudoSimTime, 1);
     cellCount = 0;
     foreach (cell; blk.cells) {
-	blk.v_inner[cellCount+0] = (-cell.dUdt[1].mass - blk.FU[cellCount+0])/(sigma*blk.maxRate.mass);
-	blk.v_inner[cellCount+1] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+1])/(sigma*blk.maxRate.momentum.x);
-	blk.v_inner[cellCount+2] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+2])/(sigma*blk.maxRate.momentum.y);
-	blk.v_inner[cellCount+3] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+3])/(sigma*blk.maxRate.total_energy);
+	blk.v_inner[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
+	blk.v_inner[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
+	blk.v_inner[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
+	blk.v_inner[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
 	cellCount += nConserved;
     }
 }
@@ -920,8 +942,16 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double sigma)
 
 void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, bool withPreconditioning, ref double residual, ref int nRestarts)
 {
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
+
     double resid;
-    int nConserved = GlobalConfig.sssOptions.nConserved;
+
     // Presently, just do one block
     int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     // We add 1 because the user thinks of "re"starts, so they
@@ -949,10 +979,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 	blk.maxRate.momentum.refy = 0.0;
 	blk.maxRate.total_energy = 0.0;
 	foreach (cell; blk.cells) {
-	    blk.FU[cellCount+0] = -cell.dUdt[0].mass;
-	    blk.FU[cellCount+1] = -cell.dUdt[0].momentum.x;
-	    blk.FU[cellCount+2] = -cell.dUdt[0].momentum.y;
-	    blk.FU[cellCount+3] = -cell.dUdt[0].total_energy;
+	    blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
+	    blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
+	    blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
+	    blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
 	    cellCount += nConserved;
 	    blk.maxRate.mass = fmax(blk.maxRate.mass, fabs(cell.dUdt[0].mass));
 	    blk.maxRate.momentum.refx = fmax(blk.maxRate.momentum.x, fabs(cell.dUdt[0].momentum.x));
@@ -1005,10 +1035,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 	blk.x0[] = 0.0;
 	int cellCount = 0;
 	foreach (cell; blk.cells) {
-	    blk.r0[cellCount+0] = -(1./blk.maxRate.mass)*blk.FU[cellCount+0];
-	    blk.r0[cellCount+1] = -(1./blk.maxRate.momentum.x)*blk.FU[cellCount+1];
-	    blk.r0[cellCount+2] = -(1./blk.maxRate.momentum.y)*blk.FU[cellCount+2];
-	    blk.r0[cellCount+3] = -(1./blk.maxRate.total_energy)*blk.FU[cellCount+3];
+	    blk.r0[cellCount+0] = -(1./blk.maxRate.mass)*blk.FU[cellCount+MASS];
+	    blk.r0[cellCount+1] = -(1./blk.maxRate.momentum.x)*blk.FU[cellCount+X_MOM];
+	    blk.r0[cellCount+2] = -(1./blk.maxRate.momentum.y)*blk.FU[cellCount+Y_MOM];
+	    blk.r0[cellCount+3] = -(1./blk.maxRate.total_energy)*blk.FU[cellCount+TOT_ENERGY];
 	    cellCount += nConserved;
 	}
     }
@@ -1194,10 +1224,10 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
     foreach (blk; gasBlocks) {
 	int cellCount = 0;
 	foreach (cell; blk.cells) {
-	    blk.dU[cellCount+0] *= blk.maxRate.mass;
-	    blk.dU[cellCount+1] *= blk.maxRate.momentum.x;
-	    blk.dU[cellCount+2] *= blk.maxRate.momentum.y;
-	    blk.dU[cellCount+3] *= blk.maxRate.total_energy;
+	    blk.dU[cellCount+MASS] *= blk.maxRate.mass;
+	    blk.dU[cellCount+X_MOM] *= blk.maxRate.momentum.x;
+	    blk.dU[cellCount+Y_MOM] *= blk.maxRate.momentum.y;
+	    blk.dU[cellCount+TOT_ENERGY] *= blk.maxRate.total_energy;
 	    cellCount += nConserved;
 	}
     }
@@ -1209,10 +1239,12 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 
 void GMRES_solve(Block blk, double pseudoSimTime, double dt, double sigma)
 {
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+
     // We always perform 'nInnerIterations' for the preconditioning step
     // That is, we do NOT stop on some tolerance in this solve.
     double resid;
-    int nConserved = blk.myConfig.sssOptions.nConserved;
     int maxIters = blk.myConfig.sssOptions.nInnerIterations;
     size_t m = to!size_t(maxIters);
     size_t n = blk.v_inner.length;
@@ -1309,6 +1341,10 @@ void max_residuals(ConservedQuantities residuals)
     int nc = GlobalConfig.sssOptions.nConserved;
     foreach (blk; parallel(gasBlocks,1)) {
 	blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
+	blk.residuals.mass = fabs(blk.residuals.mass);
+	blk.residuals.momentum.refx = fabs(blk.residuals.momentum.x);
+	blk.residuals.momentum.refy = fabs(blk.residuals.momentum.y);
+	blk.residuals.total_energy = fabs(blk.residuals.total_energy);
 	double massLocal, xMomLocal, yMomLocal, energyLocal;
 	foreach (cell; blk.cells) {
 	    massLocal = cell.dUdt[0].mass;

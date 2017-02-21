@@ -70,6 +70,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
+    setupIndicesForConservedQuantities(); 
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
     auto nBlocksInParallel = max(GlobalConfig.nBlocks, GlobalConfig.nSolidBlocks);
