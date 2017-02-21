@@ -32,7 +32,7 @@ nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 -- Compute inflow speed from Mach and free-stream conditions
 Q = GasState:new{gm}
 Q.p = p_inf
-Q.T = {T_inf}
+Q.T = T_inf
 Q.massf = {air=1.0}
 gm:updateThermoFromPT(Q)
 gm:updateSoundSpeed(Q)
@@ -102,24 +102,24 @@ SteadyStateSolver{
    -- sigma = 1.0e-6, -- presently it's computed internally
    number_pre_steps = 3,
    number_total_steps = 500,
-   stop_on_relative_global_residual = 1.0e-10,
+   stop_on_relative_global_residual = 1.0e-13,
    -- Settings for FGMRES iterative solver
    max_outer_iterations = 60,
 --   number_inner_iterations = 10, -- not needed is preconditioning is false
-   max_restarts = 9,
+   max_restarts = 5,
    -- Settings for start-up phase
-   number_start_up_steps = 20,
+   number_start_up_steps = 5,
    cfl0 = 5.0,
    eta0 = 0.5,
    tau0 = 0.1,
-   sigma0 = 1.0e-6,
+   sigma0 = 5.0e-6,
    -- Settings for inexact Newton phase
-   cfl1 = 2.0,
-   sigma1 = 2.0e-6,
-   eta1 = 0.5,
+   cfl1 = 100.0,
+   tau1 = 0.1,
+   sigma1 = 5.0e-6,
+   eta1 = 0.01,
    eta1_min = 0.01,
-   eta_ratio_per_step = 0.99,
-   eta_strategy = "geometric",
+   eta_strategy = "constant",
    -- Settings control write-out
    snapshots_count = 10,
    number_total_snapshots = 5,

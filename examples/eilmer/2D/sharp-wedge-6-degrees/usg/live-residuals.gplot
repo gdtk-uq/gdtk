@@ -3,7 +3,7 @@ set title "Residual history\n[Press 'x' to exit]"
 set logscale y
 set ylabel 'relative residuals'
 set xlabel 'step'
-set yrange [1.0e-12:10]
+set yrange [1.0e-14:10]
 #set xrange [0:30]
 set y2tics
 set y2label 'eta'

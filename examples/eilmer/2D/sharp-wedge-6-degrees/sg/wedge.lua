@@ -32,7 +32,7 @@ nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 -- Compute inflow speed from Mach and free-stream conditions
 Q = GasState:new{gm}
 Q.p = p_inf
-Q.T = {T_inf}
+Q.T = T_inf
 Q.massf = {air=1.0}
 gm:updateThermoFromPT(Q)
 gm:updateSoundSpeed(Q)
