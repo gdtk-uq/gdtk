@@ -83,7 +83,7 @@ function rateConstantToLuaStr(rc)
 	 str = str .. string.format(" %s=%16.12e, ", k, v)
       end
       str = str .. "\n}"
-   elseif rc.model == 'Yungster-Rabinowtiz' then
+   elseif rc.model == 'Yungster-Rabinowitz' then
       str = "{model='Yungster-Rabinowitz',\n"
       str = str .. string.format(" kInf={A=%16.12e, n=%f, C=%16.12e},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
       str = str .. string.format(" k0={A=%16.12e, n=%f, C=%16.12e},\n", rc.k0.A, rc.k0.n, rc.k0.C)
