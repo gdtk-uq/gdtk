@@ -28,6 +28,10 @@ test ideal-gas-test {Testing ideal_gas.d} -body {
     exec ./ideal_gas_test
 } -result {} -returnCodes {0}
 
+test cea-gas-test {Testing cea_gas.d} -body {
+    exec ./cea_gas_test
+} -result {} -returnCodes {0}
+
 test therm-perf-gas-test {Testing therm_perf_gas.d} -body {
     exec ./therm_perf_gas_test
 } -result {} -returnCodes {0}

@@ -4,6 +4,7 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/co2gas_sw.d \
 	$(GAS_DIR)/gas_model.d \
 	$(GAS_DIR)/ideal_gas.d \
+	$(GAS_DIR)/cea_gas.d \
 	$(GAS_DIR)/physical_constants.d \
 	$(GAS_DIR)/sf6virial.d \
 	$(GAS_DIR)/therm_perf_gas.d \

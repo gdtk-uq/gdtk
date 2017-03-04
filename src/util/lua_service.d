@@ -67,12 +67,25 @@ int getInt(lua_State* L, int tblIdx, string key)
     return val;
 }
 
+bool getBool(lua_State* L, int tblIdx, string key)
+{
+    lua_getfield(L, tblIdx, key.toStringz);
+    if ( !lua_isboolean(L, -1) ) {
+	string errMsg = format("A boolean value was expected in field: %s", key);
+	lua_pop(L, 1);
+	throw new Error(errMsg);
+    }
+    bool val = to!bool(lua_toboolean(L, -1));
+    lua_pop(L, 1);
+    return val;
+}
+
 void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values)
 {
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
-	string errMsg = format("A table of numbers was expected in field: %s", key);
+	string errMsg = format("A table of strings was expected in field: %s", key);
 	lua_pop(L, 1);
 	throw new Error(errMsg);
     }
