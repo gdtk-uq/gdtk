@@ -58,6 +58,7 @@ clean:
 	- rm gas-calc
 	- rm species-database/species-database.lua
 	- rm LOGFILE*TEST
+	- rm thermo.inp thermo.lib trans.inp trans.lib
 	- cd $(LUA); make clean
 
 test: $(TEST_PROGRAMS) gas-calc
