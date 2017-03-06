@@ -32,11 +32,46 @@ import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
 
+
+struct CEASavedData {
+    // This holds some parameters of the gas state that are scanned
+    // from the CEA output file and may be needed at a later time.
+    // We will put them into the GasState object only when the
+    // GasModel is a CEAGas.
+public:
+    double p; // Pa
+    double rho; // kg/m**3
+    double u; // J/kg
+    double T; // K
+    double a; // m/s
+    double Rgas; // J/kg/K
+    double gamma; // ratio of specific heats
+    double Cv; // J/kg/K
+    double Cp; // J/kg/K
+    double s;  // J/kg/K
+    double[] massf;
+    
+    this(const CEASavedData other) {
+	this.p = other.p;
+	this.rho = other.rho;
+	this.u = other.u;
+	this.T = other.T;
+	this.a = other.a;
+	this.Rgas = other.Rgas;
+	this.gamma = other.gamma;
+	this.Cv = other.Cv;
+	this.Cp = other.Cp;
+	this.s = other.s;
+	this.massf = other.massf.dup();
+    }
+} // end CEASavedData
+
+
 class CEAGas: GasModel {
 public:
 
     this(string mixtureName, string[] speciesList, double[string] reactants,
-	 string inputUnits, string outputUnits, double trace, bool withIons)
+	 string inputUnits, double trace, bool withIons)
     {
 	_mixtureName = mixtureName;
 	_n_modes = 0;
@@ -44,7 +79,6 @@ public:
 	_n_species = to!uint(_species_names.length);
 	_reactants = reactants.dup();
 	_inputUnits = inputUnits;
-	_outputUnits = outputUnits;
 	_trace = trace;
 	_withIons = withIons;
 	//
@@ -102,7 +136,6 @@ public:
 	}
 	lua_pop(L, 1); // dispose of reactants table
 	string inputUnits = getString(L, -1, "inputUnits");
-	string outputUnits = getString(L, -1, "outputUnits");
 	double trace = getDouble(L, -1, "trace");
 	bool withIons = getBool(L, -1, "withIons");
 	// We have finished gathering the information from the Lua file.
@@ -112,7 +145,7 @@ public:
 	    if (canFind(sname, "+")) { withIons = true; }
 	    if (canFind(sname, "-")) { withIons = true; }
 	}	
-	this(name, speciesList, reactants, inputUnits, outputUnits, trace, withIons);
+	this(name, speciesList, reactants, inputUnits, trace, withIons);
     } // end constructor from a Lua file
 
     override string toString() const
@@ -132,7 +165,6 @@ public:
 	    repr ~= (i+1 < reactantNames.length) ? ", " : "]";
 	}
 	repr ~= ", inputUnits=\"" ~ _inputUnits ~ "\"";
-	repr ~= ", outputUnits=\"" ~ _outputUnits ~ "\"";
 	repr ~= ", trace=" ~ to!string(_trace);
 	repr ~= ", withIons=" ~ to!string(_withIons);
 	repr ~= ", cea_exe_path=\"" ~ _cea_exe_path ~ "\"";
@@ -184,19 +216,19 @@ public:
 
     override double dudT_const_v(in GasState Q) const
     {
-	return _Cv;
+	return Q.ceaSavedData.Cv;
     }
     override double dhdT_const_p(in GasState Q) const
     {
-	return _Cp;
+	return Q.ceaSavedData.Cp;
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	return _Rgas * Q.Ttr;
+	return Q.ceaSavedData.Rgas * Q.Ttr;
     }
     override double gas_constant(in GasState Q) const
     {
-	return _Rgas;
+	return Q.ceaSavedData.Rgas;
     }
     override double internal_energy(in GasState Q) const
     {
@@ -208,7 +240,7 @@ public:
     }
     override double entropy(in GasState Q) const
     {
-	return _s;
+	return Q.ceaSavedData.s;
     }
 
 private:
@@ -220,15 +252,6 @@ private:
     bool _withIons;
     string _cea_exe_path; // expect to find cea2 executable file here
     string _cea_cases_path; // expect to find thermo.lib and trans.lib
-
-    // Thermodynamic parameters that can be filled in by running CEA.
-    // [FIXME] to keep our const flavour of the functions, we need to put
-    // these data into the GasState object.
-    double _Rgas; // J/kg/K
-    double _gamma; // ratio of specific heats
-    double _Cv; // J/kg/K
-    double _Cp; // J/kg/K
-    double _s;  // J/kg/K
 
     void runCEAProgram(string jobName, bool checkTableHeader=true) const
     {
@@ -347,8 +370,8 @@ private:
 	writer.put("end\n");
 	std.file.write("tmp.inp", writer.data);
 	//
-	// Actually run the CEA program and check that the summary header 
-	// is present in the output file.
+	// Run the CEA program and check that the summary header is present
+	// in the output file.  This is a crude test for success.
 	runCEAProgram("tmp", true);
 	//
 	// Scan the output file for all of the bits that we need.
@@ -357,23 +380,23 @@ private:
 	switch (problemType) {
 	case "pT":
 	    // [TODO]
-	    Q.rho = Q.p/(Q.Ttr*_Rgas);
-	    Q.u = _Cv*Q.Ttr;
+	    Q.rho = Q.p/(Q.Ttr*Q.ceaSavedData.Rgas);
+	    Q.u = Q.ceaSavedData.Cv*Q.Ttr;
 	    break;
 	case "rhoe":
 	    // [TODO]
-	    Q.Ttr = Q.u/_Cv;
-	    Q.p = Q.rho*_Rgas*Q.Ttr;
+	    Q.Ttr = Q.u/Q.ceaSavedData.Cv;
+	    Q.p = Q.rho*Q.ceaSavedData.Rgas*Q.Ttr;
 	    break;
 	case "rhoT":
 	    // [TODO]
-	    Q.p = Q.rho*_Rgas*Q.Ttr;
-	    Q.u = _Cv*Q.Ttr;
+	    Q.p = Q.rho*Q.ceaSavedData.Rgas*Q.Ttr;
+	    Q.u = Q.ceaSavedData.Cv*Q.Ttr;
 	    break;
 	case "rhop":
 	    // [TODO]
-	    Q.Ttr = Q.p/(Q.rho*_Rgas);
-	    Q.u = _Cv*Q.Ttr;
+	    Q.Ttr = Q.p/(Q.rho*Q.ceaSavedData.Rgas);
+	    Q.u = Q.ceaSavedData.Cv*Q.Ttr;
 	    break;
 	case "ps":
 	    // [TODO]
@@ -382,13 +405,13 @@ private:
 	    break;
  	case "hs":
 	    // [TODO]
-	    Q.Ttr = h / _Cp;
+	    Q.Ttr = h / Q.ceaSavedData.Cp;
 	    // Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
 	    update_thermo_from_pT(Q);
 	    break;
 	case "sound_speed":
 	    // [TODO]
-	    Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
+	    Q.a = sqrt(Q.ceaSavedData.gamma*Q.ceaSavedData.Rgas*Q.Ttr);
 	    break;
 	default: 
 	    throw new Exception("Unknown problemType for CEA.");
@@ -405,7 +428,7 @@ version(cea_gas_test) {
 	auto gm = new CEAGas(L);
 	lua_close(L);
 	writeln("gm=", gm); // for debug
-	auto gd = new GasState(1, 0);
+	auto gd = new GasState(1, 0, true);
 	gd.p = 1.0e5;
 	gd.Ttr = 300.0;
 	gm.update_thermo_from_pT(gd);
@@ -420,11 +443,10 @@ version(cea_gas_test) {
 	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.u, 215314.0, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
-	/+
+
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
-	+/
 
 	return 0;
     }

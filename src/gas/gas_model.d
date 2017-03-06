@@ -32,6 +32,7 @@ import util.lua_service;
 
 import util.msg_service;
 import gas.physical_constants;
+import gas.cea_gas;
 
 immutable double SMALL_MOLE_FRACTION = 1.0e-15;
 immutable double MIN_MASS_FRACTION = 1.0e-30;
@@ -184,18 +185,23 @@ public:
     /// Composition
     double[] massf;  /// species mass fractions
     double quality;  /// vapour quality
+    // A place to hang on to some CEA data, so that it can be called up
+    // in CEAGas methods that don't have access to the original CEA output file.
+    CEASavedData* ceaSavedData; 
 
-    this(uint n_species, uint n_modes)
+    this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
 	massf.length = n_species;
 	e_modes.length = n_modes;
 	T_modes.length = n_modes;
 	k_modes.length = n_modes;
+	if (includeSavedData) { ceaSavedData = new CEASavedData; }
     }
 
     this(GasModel gm)
     {
 	this(gm.n_species, gm.n_modes);
+	if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
     }
 
     this(GasModel gm, in double p_init, in double Ttr_init, in double[] T_modes_init,
@@ -219,6 +225,7 @@ public:
 	}
 	quality = quality_init;
 	sigma = sigma_init;
+	if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
 	// Now, evaluate the rest of the properties using the gas model.
 	gm.update_thermo_from_pT(this);
 	gm.update_sound_speed(this);
@@ -1243,6 +1250,7 @@ double dp, p_old, p_new, T_old, T_new, dT;
 // Utility function to construct specific gas models needs to know about
 // all of the gas-model modules.
 import gas.ideal_gas;
+import gas.cea_gas;
 import gas.therm_perf_gas;
 import gas.very_viscous_air;
 import gas.co2gas;
@@ -1291,6 +1299,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     switch ( gas_model_name ) {
     case "IdealGas":
 	gm = new IdealGas(L);
+	break;
+    case "CEAGas":
+	gm = new CEAGas(L);
 	break;
     case "ThermallyPerfectGas":
 	gm = new ThermallyPerfectGas(L);
