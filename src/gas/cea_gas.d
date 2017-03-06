@@ -10,6 +10,8 @@
  *
  * Author: Peter J. and Rowan G.
  * Version: 2017-03-04: port the essential parts of our Python module.
+ *
+ * Note: Do not use this gas model in a parallel calculation.
  */
 
 module gas.cea_gas;
@@ -24,25 +26,11 @@ import std.path;
 import std.conv;
 import std.algorithm;
 import std.process;
+import std.array;
+import std.format;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
-
-void runCEAProgram(string jobName, bool checkTableHeader=true)
-{
-    string inpFile = jobName ~ ".inp";
-    string outFile = jobName ~ ".out";
-    string pltFile = jobName ~ ".plt";
-    if (!exists(inpFile)) {
-	throw new Exception(format("CEAGas cannot find %s", inpFile));
-    }
-    if (exists(outFile)) { remove(outFile); }
-    if (exists(pltFile)) { remove(pltFile); }
-    //
-    // [TODO] run cea as a subprocess and send the jobName to it.
-    //
-    // [TODO] scan the outFile looking for "THERMODYNAMIC PROPERTIES".
-} // end runCEAProgram()
 
 class CEAGas: GasModel {
 public:
@@ -63,31 +51,30 @@ public:
 	create_species_reverse_lookup();
 	//
 	// Make sure that all of the pieces are in place to run CEA calculations.
-	//
-	_cea_exe_path = environment.get("CEA_EXE_PATH", "~/e3bin/cea2");
-	_cea_cases_path = environment.get("CEA_CASES_PATH", "~/e3bin/cea-cases");
-	string ceaExeFile = expandTilde(_cea_exe_path);
-	// writeln("ceaExeFile=", ceaExeFile); // DEBUG
-	if (!exists(ceaExeFile)) {
+	_cea_exe_path = expandTilde(environment.get("CEA_EXE_PATH", "~/e3bin/cea2"));
+	_cea_cases_path = expandTilde(environment.get("CEA_CASES_PATH", "~/e3bin/cea-cases"));
+	// writeln("_cea_exe_path=", _cea_exe_path); // DEBUG
+	if (!exists(_cea_exe_path)) {
 	    throw new Exception("Cannot find cea2 exe file.");
 	}
-	string ceaThermoFile = buildNormalizedPath(expandTilde(_cea_cases_path),
-						   "thermo.inp");
-	// writeln("ceaThermoFile=", ceaThermoFile); // DEBUG
-	if (!exists(ceaThermoFile)) {
-	    throw new Exception("Cannot find cea2 thermo.inp file.");
+	if (!exists("thermo.lib") || getSize("thermo.lib") == 0) {
+	    string ceaThermoFile = buildNormalizedPath(_cea_cases_path, "thermo.inp");
+	    writeln("ceaThermoFile=", ceaThermoFile); // DEBUG
+	    if (!exists(ceaThermoFile)) {
+		throw new Exception("Cannot find cea2 thermo.inp file.");
+	    }
+	    auto copy_thermo = executeShell("cp " ~ ceaThermoFile ~ " .");
+	    runCEAProgram("thermo", false);
 	}
-	auto copy_thermo = executeShell("cp " ~ ceaThermoFile ~ " .");
-	string ceaTransFile = buildNormalizedPath(expandTilde(_cea_cases_path),
-						  "trans.inp");
-	// writeln("ceaTransFile=", ceaTransFile); // DEBUG
-	if (!exists(ceaTransFile)) {
-	    throw new Exception("Cannot find cea2 trans.inp file.");
+	if (!exists("trans.lib") || getSize("trans.lib") == 0) {
+	    string ceaTransFile = buildNormalizedPath(_cea_cases_path, "trans.inp");
+	    writeln("ceaTransFile=", ceaTransFile); // DEBUG
+	    if (!exists(ceaTransFile)) {
+		throw new Exception("Cannot find cea2 trans.inp file.");
+	    }
+	    auto copy_trans = executeShell("cp " ~ ceaTransFile ~ " .");
+	    runCEAProgram("trans", false);
 	}
-	auto copy_trans = executeShell("cp " ~ ceaTransFile ~ " .");
-	//
-	runCEAProgram("thermo");
-	runCEAProgram("trans");
     } // end constructor
     
     this(lua_State *L) {
@@ -230,61 +217,182 @@ private:
     string _outputUnits;
     double _trace; // fraction below which CEA ignores species
     double[string] _reactants;
-    string[] _onlyList;
     bool _withIons;
     string _cea_exe_path; // expect to find cea2 executable file here
     string _cea_cases_path; // expect to find thermo.lib and trans.lib
 
     // Thermodynamic parameters that can be filled in by running CEA.
+    // [FIXME] to keep our const flavour of the functions, we need to put
+    // these data into the GasState object.
     double _Rgas; // J/kg/K
     double _gamma; // ratio of specific heats
     double _Cv; // J/kg/K
     double _Cp; // J/kg/K
     double _s;  // J/kg/K
-    
+
+    void runCEAProgram(string jobName, bool checkTableHeader=true) const
+    {
+	string inpFile = jobName ~ ".inp";
+	string outFile = jobName ~ ".out";
+	string pltFile = jobName ~ ".plt";
+	if (!exists(inpFile)) {
+	    throw new Exception(format("CEAGas cannot find %s", inpFile));
+	}
+	if (exists(outFile)) { remove(outFile); }
+	if (exists(pltFile)) { remove(pltFile); }
+	auto pp = pipeProcess(_cea_exe_path, Redirect.stdin);
+	pp.stdin.writeln(jobName);
+	pp.stdin.flush();
+	pp.stdin.close();
+	auto returnCode = wait(pp.pid);
+	if (returnCode) {
+	    throw new Exception(format("CEAGas: cea program return code nonzero %d",
+				       returnCode));
+	}
+	if (checkTableHeader) {
+	    // scan the outFile looking for summary table header.
+	    auto outFileText = readText(outFile);
+	    if (!canFind(outFileText, "THERMODYNAMIC PROPERTIES")) {
+		throw new Exception("CEAGas: the cea output file seems incomplete.");
+	    }
+	}
+    } // end runCEAProgram()
+
+    string cleanFloat(string[] tokens) const
+    // Clean up the CEA2 short-hand notation for exponential format.
+    // CEA2 seems to write exponential-format numbers in a number of ways:
+    // 1.023-2
+    // 1.023+2
+    // 1.023 2
+    {
+	string valueStr;
+	switch (tokens.length) {
+	case 0:
+	    valueStr = "0.0";
+	    break;
+	case 1:
+	    valueStr = tokens[0];
+	    if (canFind(valueStr, "****")) { valueStr = "nil"; }
+	    if (canFind(valueStr, "-")) { valueStr = valueStr.replace("-", "e-"); }
+	    if (canFind(valueStr, "+")) { valueStr = valueStr.replace("+", "e+"); }
+	    break;
+	case 2:
+	    valueStr = tokens[0] ~ "e+" ~ tokens[1];
+	    break;
+	default:
+	    throw new Exception("CEAGas: cleanFloat received too many tokens.");
+	}
+	return valueStr;
+    } // end cleanFloat()
+
     void callCEA(GasState Q, double h, double s,
 		 string problemType="pT", bool transProps=true) const
     {
 	// Write input file for CEA that is specific to the problemType.
-	// [TODO]
+	string inpFileName = "tmp.inp";
+	auto writer = appender!string();
+	writer.put(format("# %s generated by CEAGas\n", inpFileName));
 	switch (problemType) {
 	case "pT":
+	    writer.put("problem case=CEAGas tp");
+            if (_withIons) { writer.put(" ions"); }
+	    writer.put("\n");
+            assert(Q.p > 0.0 && Q.Ttr > 0.0, "CEAGas: Invalid pT");
+            writer.put(format("   p(bar)      %e\n", Q.p / 1.0e5));
+            writer.put(format("   t(k)        %e\n", Q.Ttr));
+	    break;
+	case "rhoe":
+	    // [TODO]
+	    break;
+	case "rhoT":
+	    // [TODO]
+	    break;
+	case "rhop":
+	    // [TODO]
+	    break;
+	case "ps":
+	    // [TODO]
+	    break;
+ 	case "hs":
+	    // [TODO]
+	    break;
+	case "sound_speed":
+	    // [TODO]
+	    break;
+	default: 
+	    throw new Exception("Unknown problemType for CEA.");
+	}
+	// Select the gas components for CEA.
+	// Note that the speciesList contains all of the reactants,
+	// and that the constructor would have made a reactants entry
+	// for each species.
+	writer.put("react\n");
+	foreach (name; _species_names) {
+            double frac = _reactants[name];
+            if (frac > 0.0) {
+		writer.put(format("   name= %s  %s=%g", name,
+				  ((_inputUnits == "moles") ? "moles" : "wtf"),
+				  frac));
+                if (canFind(["ph", "rhoe"], problemType)) { writer.put(" t=300"); }
+                writer.put("\n");
+	    }
+	}
+	writer.put("only");
+	foreach (name; _species_names) { writer.put(format(" %s", name)); }
+	writer.put("\n");
+	writer.put("output massf");
+	writer.put(format(" trace=%e", _trace));
+	if (transProps) { writer.put(" trans"); }
+	writer.put("\n");
+	writer.put("end\n");
+	std.file.write("tmp.inp", writer.data);
+	//
+	// Actually run the CEA program and check that the summary header 
+	// is present in the output file.
+	runCEAProgram("tmp", true);
+	//
+	// Scan the output file for all of the bits that we need.
+	// [TODO]
+	//
+	switch (problemType) {
+	case "pT":
+	    // [TODO]
 	    Q.rho = Q.p/(Q.Ttr*_Rgas);
 	    Q.u = _Cv*Q.Ttr;
 	    break;
 	case "rhoe":
+	    // [TODO]
 	    Q.Ttr = Q.u/_Cv;
 	    Q.p = Q.rho*_Rgas*Q.Ttr;
 	    break;
 	case "rhoT":
+	    // [TODO]
 	    Q.p = Q.rho*_Rgas*Q.Ttr;
 	    Q.u = _Cv*Q.Ttr;
 	    break;
 	case "rhop":
+	    // [TODO]
 	    Q.Ttr = Q.p/(Q.rho*_Rgas);
 	    Q.u = _Cv*Q.Ttr;
 	    break;
 	case "ps":
+	    // [TODO]
 	    // Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
 	    update_thermo_from_pT(Q);
 	    break;
  	case "hs":
+	    // [TODO]
 	    Q.Ttr = h / _Cp;
 	    // Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
 	    update_thermo_from_pT(Q);
 	    break;
 	case "sound_speed":
+	    // [TODO]
 	    Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
 	    break;
 	default: 
 	    throw new Exception("Unknown problemType for CEA.");
 	}
-	//
-	// Actually run the CEA program
-	//
-	// Scan the output file for all of the bits that we need.
-	// [TODO]
-	//
     } // end callCEA()
 } // end class CEAGgas
 
@@ -300,15 +408,14 @@ version(cea_gas_test) {
 	auto gd = new GasState(1, 0);
 	gd.p = 1.0e5;
 	gd.Ttr = 300.0;
-	// FIXME gd.massf[0] = 1.0;
-	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
+	gm.update_thermo_from_pT(gd);
+	assert(approxEqual(gm.R(gd), 287.1, 0.1), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
-	gm.update_thermo_from_pT(gd);
 	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.u, 215314.0, 1.0e-4), failedUnitTest());
