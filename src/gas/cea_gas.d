@@ -103,7 +103,6 @@ public:
 	}
 	if (!exists("thermo.lib") || getSize("thermo.lib") == 0) {
 	    string ceaThermoFile = buildNormalizedPath(_cea_cases_path, "thermo.inp");
-	    writeln("ceaThermoFile=", ceaThermoFile); // DEBUG
 	    if (!exists(ceaThermoFile)) {
 		throw new Exception("Cannot find cea2 thermo.inp file.");
 	    }
@@ -112,7 +111,6 @@ public:
 	}
 	if (!exists("trans.lib") || getSize("trans.lib") == 0) {
 	    string ceaTransFile = buildNormalizedPath(_cea_cases_path, "trans.inp");
-	    writeln("ceaTransFile=", ceaTransFile); // DEBUG
 	    if (!exists(ceaTransFile)) {
 		throw new Exception("Cannot find cea2 trans.inp file.");
 	    }
@@ -200,7 +198,7 @@ public:
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	callCEA(Q, 0.0, 0.0, "rhop", false);
+	throw new Exception("CEAGas update_thermo_from_rhop not implemented.");
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
@@ -209,7 +207,7 @@ public:
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	callCEA(Q, h, 0.0, "hs", false);
+	throw new Exception("CEAGas update_thermo_from_hs not implemented.");
     }
     override void update_sound_speed(GasState Q) const
     {
@@ -359,19 +357,31 @@ private:
             writer.put(format("   t(k)        %e\n", Q.Ttr));
 	    break;
 	case "rhoe":
-	    // [TODO]
+	    writer.put("problem case=CEAGas vu");
+            if (_withIons) { writer.put(" ions"); }
+	    writer.put("\n");
+            assert(Q.rho > 0.0, "CEAGas: Invalid rho");
+            writer.put(format("   rho,kg/m**3 %e\n", Q.rho));
+	    // R_universal is in J/mol/K and u from flow solver is in J/kg
+            writer.put(format("   u/r         %e\n", Q.u/R_universal/1000.0));
 	    break;
 	case "rhoT":
-	    // [TODO]
-	    break;
-	case "rhop":
-	    // [TODO]
+	    writer.put("problem case=CEAGas tv");
+            if (_withIons) { writer.put(" ions"); }
+	    writer.put("\n");
+            assert(Q.rho > 0.0 && Q.Ttr > 0.0, "CEAGas: Invalid rhoT");
+            writer.put(format("   rho,kg/m**3 %e\n", Q.rho));
+            writer.put(format("   t(k)        %e\n", Q.Ttr));
 	    break;
 	case "ps":
-	    // [TODO]
-	    break;
- 	case "hs":
-	    // [TODO]
+	    writer.put("problem case=CEAGas ps");
+            if (_withIons) { writer.put(" ions"); }
+	    writer.put("\n");
+            assert(Q.p > 0.0, "CEAGas: Invalid p");
+            writer.put(format("   p(bar)      %e\n", Q.p / 1.0e5));
+	    // R_universal is in J/mol/K and s from flow solver is in J/kg/K
+            writer.put(format("   s/r         %e\n", s/R_universal/1000.0));
+            writer.put(format("   t(k)        %e\n", Q.Ttr));
 	    break;
 	default: 
 	    throw new Exception("Unknown problemType for CEA.");
@@ -464,18 +474,7 @@ private:
 	    Q.u = Q.ceaSavedData.u;
 	    Q.a = Q.ceaSavedData.a;
 	    break;
-	case "rhop":
-	    Q.Ttr = Q.ceaSavedData.T;
-	    Q.u = Q.ceaSavedData.u;
-	    Q.a = Q.ceaSavedData.a;
-	    break;
 	case "ps":
-	    Q.Ttr = Q.ceaSavedData.T;
-	    Q.rho = Q.ceaSavedData.rho;
-	    Q.u = Q.ceaSavedData.u;
-	    Q.a = Q.ceaSavedData.a;
-	    break;
- 	case "hs":
 	    Q.Ttr = Q.ceaSavedData.T;
 	    Q.rho = Q.ceaSavedData.rho;
 	    Q.u = Q.ceaSavedData.u;
@@ -518,6 +517,14 @@ version(cea_gas_test) {
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(gd.mu, 1.87e-05, 0.01), failedUnitTest());
 	assert(approxEqual(gd.k, 0.02647, 1.0e-5), failedUnitTest());
+
+	gm.update_thermo_from_ps(gd, gd.ceaSavedData.s);
+	assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 300.0, 0.1), failedUnitTest());
+
+	gm.update_thermo_from_rhoe(gd);
+	assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
+	assert(approxEqual(gd.Ttr, 300.0, 0.1), failedUnitTest());
 
 	return 0;
     }
