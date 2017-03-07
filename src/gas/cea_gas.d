@@ -50,7 +50,7 @@ public:
     double gamma; // ratio of specific heats
     double Cp; // J/kg/K
     double s;  // J/kg/K
-    double[] massf;
+    double[string] massf;
     double k; // thermal conductivity, W/m/K
     double mu; // viscosity, Pa.s
     
@@ -66,7 +66,7 @@ public:
 	this.gamma = other.gamma;
 	this.Cp = other.Cp;
 	this.s = other.s;
-	this.massf = other.massf.dup();
+	foreach (k; other.massf.byKey()) { this.massf[k] = other.massf[k]; }
     }
 } // end CEASavedData
 
@@ -455,8 +455,25 @@ private:
 		    Q.ceaSavedData.k = 0.0;
 		}
 	    } // end thermo_props_found
-	} // end foreach
+	} // end foreach line
 	//
+	// Scan the output file again, looking for the mass fractions of species.
+	lines = File("tmp.out", "r").byLine();
+	bool species_fractions_found = false;
+	foreach (line; lines) {
+	    if (line.length == 0) continue;
+            if (line.strip().startsWith("MASS FRACTIONS")) {
+		species_fractions_found = true;
+		continue;
+	    }
+            if (line.canFind("* THERMODYNAMIC PROPERTIES FITTED")) { break; }
+            if (species_fractions_found) {
+                char[][] tokens = line.split();
+                string speciesName = to!string(tokens[0]).replace("*", "");
+                Q.ceaSavedData.massf[speciesName] = ceaFloat(tokens[1..$]);
+	    }
+	} // end foreach line
+ 	//
 	// Put the relevant pieces of the scanned data into the GasState object.
 	switch (problemType) {
 	case "pT":
@@ -508,10 +525,12 @@ version(cea_gas_test) {
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
-
-	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.rho, 1.1566, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.u, -84587.0, 0.1), failedUnitTest());
+	assert(approxEqual(gd.ceaSavedData.massf["N2"], 0.76708, 1.0e-5), failedUnitTest());
+	assert(approxEqual(gd.ceaSavedData.massf["O2"], 0.23292, 1.0e-5), failedUnitTest());
+
+	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.a, 347.7, 0.1), failedUnitTest());
 
 	gm.update_trans_coeffs(gd);
