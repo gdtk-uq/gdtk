@@ -42,24 +42,28 @@ public:
     double p; // Pa
     double rho; // kg/m**3
     double u; // J/kg
+    double h; // J/kg
     double T; // K
     double a; // m/s
+    double Mmass; // average molecular mass, kg/mole
     double Rgas; // J/kg/K
     double gamma; // ratio of specific heats
-    double Cv; // J/kg/K
     double Cp; // J/kg/K
     double s;  // J/kg/K
     double[] massf;
+    double k; // thermal conductivity, W/m/K
+    double mu; // viscosity, Pa.s
     
     this(const CEASavedData other) {
 	this.p = other.p;
 	this.rho = other.rho;
 	this.u = other.u;
+	this.h = other.h;
 	this.T = other.T;
 	this.a = other.a;
+	this.Mmass = other.Mmass;
 	this.Rgas = other.Rgas;
 	this.gamma = other.gamma;
-	this.Cv = other.Cv;
 	this.Cp = other.Cp;
 	this.s = other.s;
 	this.massf = other.massf.dup();
@@ -73,10 +77,16 @@ public:
     this(string mixtureName, string[] speciesList, double[string] reactants,
 	 string inputUnits, double trace, bool withIons)
     {
-	_mixtureName = mixtureName;
+	// In the context of Rowan's perfect gas mix, the CEA gas is a strange beast.
+	// We will hide it's internal species behind a single pseudo-species that
+	// we will call by the mixtureName.  It will not have a fixed molecular mass.
 	_n_modes = 0;
-	_species_names = speciesList.dup();
-	_n_species = to!uint(_species_names.length);
+	_n_species = 1;
+	_species_names.length =  _n_species;
+	_species_names[0] = mixtureName;
+	_mol_masses.length = 1;
+	_mol_masses[0] = 0.0; // dummy value; we shouldn't use it
+	_cea_species_names = speciesList.dup();
 	_reactants = reactants.dup();
 	_inputUnits = inputUnits;
 	_trace = trace;
@@ -152,11 +162,11 @@ public:
     {
 	char[] repr;
 	repr ~= "CEAGas(";
-	repr ~= "mixtureName=\"" ~ _mixtureName ~"\"";
+	repr ~= "mixtureName=\"" ~ _species_names[0] ~"\"";
 	repr ~= ", speciesList=[";
-	foreach (i, sname; _species_names) {
+	foreach (i, sname; _cea_species_names) {
 	    repr ~= format("\"%s\"", sname);
-	    repr ~= (i+1 < _species_names.length) ? ", " : "]";
+	    repr ~= (i+1 < _cea_species_names.length) ? ", " : "]";
 	}
 	repr ~= ", reactants=[";
 	string[] reactantNames = _reactants.keys;
@@ -203,7 +213,9 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-	callCEA(Q, 0.0, 0.0, "sound_speed", false);
+	// It's not really a separate operation since all other updates will
+	// also get a new estimate of sound speed.
+	callCEA(Q, 0.0, 0.0, "pT", false);
     }
     override void update_trans_coeffs(GasState Q)
     {
@@ -216,7 +228,7 @@ public:
 
     override double dudT_const_v(in GasState Q) const
     {
-	return Q.ceaSavedData.Cv;
+	return Q.ceaSavedData.Cp - Q.ceaSavedData.Rgas;
     }
     override double dhdT_const_p(in GasState Q) const
     {
@@ -236,7 +248,7 @@ public:
     }
     override double enthalpy(in GasState Q) const
     {
-	return Q.u + Q.p/Q.rho;
+	return Q.ceaSavedData.h;
     }
     override double entropy(in GasState Q) const
     {
@@ -244,7 +256,7 @@ public:
     }
 
 private:
-    string _mixtureName;
+    string[] _cea_species_names;
     string _inputUnits; // "moles" or "massf"
     string _outputUnits;
     double _trace; // fraction below which CEA ignores species
@@ -263,7 +275,7 @@ private:
 	}
 	if (exists(outFile)) { remove(outFile); }
 	if (exists(pltFile)) { remove(pltFile); }
-	auto pp = pipeProcess(_cea_exe_path, Redirect.stdin);
+	auto pp = pipeProcess(_cea_exe_path, Redirect.all);
 	pp.stdin.writeln(jobName);
 	pp.stdin.flush();
 	pp.stdin.close();
@@ -281,32 +293,54 @@ private:
 	}
     } // end runCEAProgram()
 
-    string cleanFloat(string[] tokens) const
+    double ceaFloat(char[][] tokens) const
     // Clean up the CEA2 short-hand notation for exponential format.
     // CEA2 seems to write exponential-format numbers in a number of ways:
-    // 1.023-2
-    // 1.023+2
-    // 1.023 2
+    // -1.023
+    //  1.023-2
+    //  1.023+2
+    //  1.023 2
     {
-	string valueStr;
+	char[] valueStr;
+	char signChr;
 	switch (tokens.length) {
 	case 0:
-	    valueStr = "0.0";
+	    valueStr = to!(char[])("0.0");
 	    break;
 	case 1:
-	    valueStr = tokens[0];
-	    if (canFind(valueStr, "****")) { valueStr = "nil"; }
-	    if (canFind(valueStr, "-")) { valueStr = valueStr.replace("-", "e-"); }
-	    if (canFind(valueStr, "+")) { valueStr = valueStr.replace("+", "e+"); }
+	    // Preserve the sign.
+	    if (tokens[0][0] == '+' || tokens[0][0] == '-') {
+		signChr = tokens[0][0];
+		valueStr = tokens[0][1..$];
+	    } else {
+		signChr = 0;
+		valueStr = tokens[0][];
+	    }
+	    if (canFind(valueStr, "****")) {
+		// Occasionally, we get dodgy strings like ******e-3 because
+		// CEA2 seems to write them for values like 0.009998.
+		// Assume the we shoul replace the stars with 1.0.
+		char[] exponent = find(valueStr, "e");
+		valueStr = to!(char[])("1.0") ~ exponent;
+	    }
+	    // Fix the exponent notation, if necessary.
+	    if (canFind(valueStr, "-") && !canFind(valueStr, "e")) {
+		valueStr = valueStr.replace("-", "e-");
+	    }
+	    if (canFind(valueStr, "+") && !canFind(valueStr, "e")) {
+		valueStr = valueStr.replace("+", "e+");
+	    }
+	    // Restore the sign.
+	    if (signChr) { valueStr = signChr ~ valueStr; }
 	    break;
 	case 2:
 	    valueStr = tokens[0] ~ "e+" ~ tokens[1];
 	    break;
 	default:
-	    throw new Exception("CEAGas: cleanFloat received too many tokens.");
+	    throw new Exception("CEAGas: ceaFloat received too many tokens.");
 	}
-	return valueStr;
-    } // end cleanFloat()
+	return to!double(valueStr);
+    } // end ceaFloat()
 
     void callCEA(GasState Q, double h, double s,
 		 string problemType="pT", bool transProps=true) const
@@ -339,9 +373,6 @@ private:
  	case "hs":
 	    // [TODO]
 	    break;
-	case "sound_speed":
-	    // [TODO]
-	    break;
 	default: 
 	    throw new Exception("Unknown problemType for CEA.");
 	}
@@ -350,7 +381,7 @@ private:
 	// and that the constructor would have made a reactants entry
 	// for each species.
 	writer.put("react\n");
-	foreach (name; _species_names) {
+	foreach (name; _cea_species_names) {
             double frac = _reactants[name];
             if (frac > 0.0) {
 		writer.put(format("   name= %s  %s=%g", name,
@@ -361,7 +392,7 @@ private:
 	    }
 	}
 	writer.put("only");
-	foreach (name; _species_names) { writer.put(format(" %s", name)); }
+	foreach (name; _cea_species_names) { writer.put(format(" %s", name)); }
 	writer.put("\n");
 	writer.put("output massf");
 	writer.put(format(" trace=%e", _trace));
@@ -374,48 +405,87 @@ private:
 	// in the output file.  This is a crude test for success.
 	runCEAProgram("tmp", true);
 	//
-	// Scan the output file for all of the bits that we need.
-	// [TODO]
+	// Scan the output file for all of the data that we need.
+	auto lines = File("tmp.out", "r").byLine();
+        bool thermo_props_found = false;
+        bool conductivity_found = false;
+	foreach (line; lines) {
+	    if (line.length == 0) continue;
+            if (line.canFind("PRODUCTS WHICH WERE CONSIDERED BUT WHOSE")) break;
+            if (line.canFind("THERMODYNAMIC EQUILIBRIUM PROPERTIES AT ASSIGNED") ||
+                line.canFind("THERMODYNAMIC EQUILIBRIUM COMBUSTION PROPERTIES AT ASSIGNED")) {
+                thermo_props_found = true;
+            } else if (thermo_props_found) {
+                char[][] tokens = line.split();
+                // Scan for the thermodynamic properties.
+                if (line.canFind("H, KJ/KG")) { Q.ceaSavedData.h = ceaFloat(tokens[2..$])*1.0e3; }
+                if (line.canFind("U, KJ/KG")) { Q.ceaSavedData.u = ceaFloat(tokens[2..$])*1.0e3; }
+                if (line.canFind("S, KJ/(KG)(K)")) { Q.ceaSavedData.s = ceaFloat(tokens[2..$])*1.0e3; }
+                if (line.canFind("Cp, KJ/(KG)(K)")) { Q.ceaSavedData.Cp = ceaFloat(tokens[2..$])*1.0e3; }
+                if (line.canFind("GAMMAs")) { Q.ceaSavedData.gamma = ceaFloat(tokens[1..$]); }
+                if (line.canFind("M, (1/n)")) {
+		    Q.ceaSavedData.Mmass = ceaFloat(tokens[2..$])/1.0e3; // kg/mole
+		    Q.ceaSavedData.Rgas = R_universal / Q.ceaSavedData.Mmass; // kJ/kg/K
+		}
+                if (line.canFind("SON VEL,M/SEC")) { Q.ceaSavedData.a = ceaFloat(tokens[2..$]); }
+                if (line.canFind("P, BAR")) { Q.ceaSavedData.p = ceaFloat(tokens[2..$])*1.0e5; }
+                if (line.canFind("T, K")) { Q.ceaSavedData.T = ceaFloat(tokens[2..$]); }
+                if (line.canFind("RHO, KG/CU M")) { Q.ceaSavedData.rho = ceaFloat(tokens[3..$]); }
+		//
+		if (transProps) {
+		    // Scan for transport properties.
+		    if (line.canFind("VISC,MILLIPOISE")) {
+			Q.ceaSavedData.mu = ceaFloat(tokens[1..$])*1.0e-4;
+		    } else if (!conductivity_found && line.canFind("CONDUCTIVITY") && tokens.length == 2) {
+			Q.ceaSavedData.k = ceaFloat(tokens[1..$])*1.0e-1;
+			conductivity_found = true;
+		    }
+		} else {
+		    Q.ceaSavedData.mu = 0.0;
+		    Q.ceaSavedData.k = 0.0;
+		}
+	    } // end thermo_props_found
+	} // end foreach
 	//
+	// Put the relevant pieces of the scanned data into the GasState object.
 	switch (problemType) {
 	case "pT":
-	    // [TODO]
-	    Q.rho = Q.p/(Q.Ttr*Q.ceaSavedData.Rgas);
-	    Q.u = Q.ceaSavedData.Cv*Q.Ttr;
+	    Q.rho = Q.ceaSavedData.rho;
+	    Q.u = Q.ceaSavedData.u;
+	    Q.a = Q.ceaSavedData.a;
 	    break;
 	case "rhoe":
-	    // [TODO]
-	    Q.Ttr = Q.u/Q.ceaSavedData.Cv;
-	    Q.p = Q.rho*Q.ceaSavedData.Rgas*Q.Ttr;
+	    Q.Ttr = Q.ceaSavedData.T;
+	    Q.p = Q.ceaSavedData.p;
+	    Q.a = Q.ceaSavedData.a;
 	    break;
 	case "rhoT":
-	    // [TODO]
-	    Q.p = Q.rho*Q.ceaSavedData.Rgas*Q.Ttr;
-	    Q.u = Q.ceaSavedData.Cv*Q.Ttr;
+	    Q.p = Q.ceaSavedData.p;
+	    Q.u = Q.ceaSavedData.u;
+	    Q.a = Q.ceaSavedData.a;
 	    break;
 	case "rhop":
-	    // [TODO]
-	    Q.Ttr = Q.p/(Q.rho*Q.ceaSavedData.Rgas);
-	    Q.u = Q.ceaSavedData.Cv*Q.Ttr;
+	    Q.Ttr = Q.ceaSavedData.T;
+	    Q.u = Q.ceaSavedData.u;
+	    Q.a = Q.ceaSavedData.a;
 	    break;
 	case "ps":
-	    // [TODO]
-	    // Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
-	    update_thermo_from_pT(Q);
+	    Q.Ttr = Q.ceaSavedData.T;
+	    Q.rho = Q.ceaSavedData.rho;
+	    Q.u = Q.ceaSavedData.u;
+	    Q.a = Q.ceaSavedData.a;
 	    break;
  	case "hs":
-	    // [TODO]
-	    Q.Ttr = h / Q.ceaSavedData.Cp;
-	    // Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
-	    update_thermo_from_pT(Q);
-	    break;
-	case "sound_speed":
-	    // [TODO]
-	    Q.a = sqrt(Q.ceaSavedData.gamma*Q.ceaSavedData.Rgas*Q.Ttr);
+	    Q.Ttr = Q.ceaSavedData.T;
+	    Q.rho = Q.ceaSavedData.rho;
+	    Q.u = Q.ceaSavedData.u;
+	    Q.a = Q.ceaSavedData.a;
 	    break;
 	default: 
 	    throw new Exception("Unknown problemType for CEA.");
 	}
+	Q.mu = Q.ceaSavedData.mu;
+	Q.k = Q.ceaSavedData.k;
     } // end callCEA()
 } // end class CEAGgas
 
@@ -427,12 +497,13 @@ version(cea_gas_test) {
 	lua_State* L = init_lua_State("sample-data/cea-air5species-gas-model.lua");
 	auto gm = new CEAGas(L);
 	lua_close(L);
-	writeln("gm=", gm); // for debug
+
 	auto gd = new GasState(1, 0, true);
 	gd.p = 1.0e5;
 	gd.Ttr = 300.0;
+	gd.massf[0] = 1.0;
 	gm.update_thermo_from_pT(gd);
-	assert(approxEqual(gm.R(gd), 287.1, 0.1), failedUnitTest());
+	assert(approxEqual(gm.R(gd), 288.198, 0.01), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
@@ -440,13 +511,13 @@ version(cea_gas_test) {
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
 	gm.update_sound_speed(gd);
-	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
-	assert(approxEqual(gd.u, 215314.0, 1.0e-4), failedUnitTest());
-	assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.rho, 1.1566, 1.0e-4), failedUnitTest());
+	assert(approxEqual(gd.u, -84587.0, 0.1), failedUnitTest());
+	assert(approxEqual(gd.a, 347.7, 0.1), failedUnitTest());
 
 	gm.update_trans_coeffs(gd);
-	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.mu, 1.87e-05, 0.01), failedUnitTest());
+	assert(approxEqual(gd.k, 0.02647, 1.0e-5), failedUnitTest());
 
 	return 0;
     }
