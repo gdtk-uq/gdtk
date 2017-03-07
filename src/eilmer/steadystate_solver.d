@@ -147,8 +147,12 @@ void main(string[] args)
 
     /* Check that items are implemented. */
     bool goodToProceed = true;
-    if ( GlobalConfig.dimensions == 3 ) {
-	writeln("Steady-state solver not implemented for 3D calculations.");
+    if ( GlobalConfig.gmodel_master.n_species > 1 ) {
+	writeln("Steady-state solver not implemented for multiple-species calculations.");
+	goodToProceed = false;
+    }
+    if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
+	writeln("Steady-state solver not implemented for k-omega turbulence model.");
 	goodToProceed = false;
     }
     if ( !goodToProceed ) {
@@ -176,6 +180,14 @@ struct RestartInfo {
 
 void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
 {
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+    size_t MASS = massIdx;
+    size_t X_MOM = xMomIdx;
+    size_t Y_MOM = yMomIdx;
+    size_t Z_MOM = zMomIdx;
+    size_t TOT_ENERGY = totEnergyIdx;
+
     auto gmodel = GlobalConfig.gmodel_master;
     RestartInfo restartInfo = RestartInfo(gmodel.n_species, gmodel.n_modes);
     // Start reading the times file, looking for the snapshot index
@@ -190,10 +202,12 @@ void extractRestartInfoFromTimesFile(string jobName, ref RestartInfo[] times)
 	    restartInfo.dt = to!double(tokens[2]);
 	    restartInfo.step = to!int(tokens[3]);
 	    restartInfo.globalResidual = to!double(tokens[4]);
-	    restartInfo.residuals.mass = to!double(tokens[5]);
-	    restartInfo.residuals.momentum.refx = to!double(tokens[6]);
-	    restartInfo.residuals.momentum.refy = to!double(tokens[7]);
-	    restartInfo.residuals.total_energy = to!double(tokens[8]);
+	    restartInfo.residuals.mass = to!double(tokens[5+MASS]);
+	    restartInfo.residuals.momentum.refx = to!double(tokens[5+X_MOM]);
+	    restartInfo.residuals.momentum.refy = to!double(tokens[5+Y_MOM]);
+	    if ( GlobalConfig.dimensions == 3 ) 
+		restartInfo.residuals.momentum.refz = to!double(tokens[5+Z_MOM]);
+	    restartInfo.residuals.total_energy = to!double(tokens[5+TOT_ENERGY]);
 	    times ~= restartInfo;
 	}
 	line = timesFile.readln().strip();
@@ -297,6 +311,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 			cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+MASS];
 			cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+X_MOM];
 			cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+Y_MOM];
+			if ( GlobalConfig.dimensions == 3 ) 
+			    cell.U[1].momentum.refz = cell.U[0].momentum.z + blk.dU[cellCount+Z_MOM];
+			
 			cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
 			try {
 			    cell.decode_conserved(0, 1, 0.0);
@@ -349,6 +366,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		    blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
 		    blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
 		    blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
+		    if ( GlobalConfig.dimensions == 3 )
+			blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].momentum.z;
 		    blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
 		    cellCount += nConserved;
 		}
@@ -360,13 +379,23 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	writefln("MASS:           %.12e", maxResiduals.mass);
 	writefln("X-MOMENTUM:     %.12e", maxResiduals.momentum.x);
 	writefln("Y-MOMENTUM:     %.12e", maxResiduals.momentum.y);
+	if ( GlobalConfig.dimensions == 3 )
+	    writefln("Z-MOMENTUM:     %.12e", maxResiduals.momentum.z);
 	writefln("ENERGY:         %.12e", maxResiduals.total_energy);
 	
 	string refResidFname = jobName ~ "-ref-residuals.txt";
 	auto refResid = File(refResidFname, "w");
-	refResid.writefln("%.18e %.18e %.18e %.18e %.18e",
-			  normRef, maxResiduals.mass, maxResiduals.momentum.x,
-			  maxResiduals.momentum.y, maxResiduals.total_energy);
+	if ( GlobalConfig.dimensions == 2 ) {
+	    refResid.writefln("%.18e %.18e %.18e %.18e %.18e",
+			      normRef, maxResiduals.mass, maxResiduals.momentum.x,
+			      maxResiduals.momentum.y, maxResiduals.total_energy);
+	}
+	else {
+	    refResid.writefln("%.18e %.18e %.18e %.18e %.18e %.18e",
+			      normRef, maxResiduals.mass, maxResiduals.momentum.x,
+			      maxResiduals.momentum.y, maxResiduals.momentum.z,
+			      maxResiduals.total_energy);
+	}
 	refResid.close();
 	
     }
@@ -382,10 +411,12 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	auto line = refResid.readln().strip();
 	auto tokens = line.split();
 	normRef = to!double(tokens[0]);
-	maxResiduals.mass = to!double(tokens[1]);
-	maxResiduals.momentum.refx = to!double(tokens[2]);
-	maxResiduals.momentum.refy = to!double(tokens[3]);
-	maxResiduals.total_energy = to!double(tokens[4]);
+	maxResiduals.mass = to!double(tokens[1+MASS]);
+	maxResiduals.momentum.refx = to!double(tokens[1+X_MOM]);
+	maxResiduals.momentum.refy = to!double(tokens[1+Y_MOM]);
+	if ( GlobalConfig.dimensions == 3 ) 
+	    maxResiduals.momentum.refz = to!double(tokens[1+Z_MOM]);
+	maxResiduals.total_energy = to!double(tokens[1+TOT_ENERGY]);
 	// We also need to determine how many snapshots have already been written
 	auto timesFile = File(jobName ~ ".times");
 	line = timesFile.readln().strip();
@@ -437,16 +468,20 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	fResid.writeln("#  6: nRestarts");
 	fResid.writeln("#  7: nFnCalls");
 	fResid.writeln("#  8: wall-clock, s");
-	fResid.writeln("#  9: mass-abs");
-	fResid.writeln("# 10: mass-rel");
-	fResid.writeln("# 11: x-mom-abs");
-	fResid.writeln("# 12: x-mom-rel");
-	fResid.writeln("# 13: y-mom-abs");
-	fResid.writeln("# 14: y-mom-rel");
-	fResid.writeln("# 15: energy-abs");
-	fResid.writeln("# 16: energy-rel");
-	fResid.writeln("# 17: global-residual-abs");
-	fResid.writeln("# 18: global-residual-rel");
+	fResid.writefln("#  %02d: mass-abs", 9+2*MASS);
+	fResid.writefln("# %02d: mass-rel", 9+2*MASS+1);
+	fResid.writefln("# %02d: x-mom-abs", 9+2*X_MOM);
+	fResid.writefln("# %02d: x-mom-rel", 9+2*X_MOM+1);
+	fResid.writefln("# %02d: y-mom-abs", 9+2*Y_MOM);
+	fResid.writefln("# %02d: y-mom-rel", 9+2*Y_MOM+1);
+	if ( GlobalConfig.dimensions == 3 ) {
+	    fResid.writefln("# %02d: z-mom-abs", 9+2*Z_MOM);
+	    fResid.writefln("# %02d: z-mom-rel", 9+2*Z_MOM+1);
+	}
+	fResid.writefln("# %02d: energy-abs", 9+2*TOT_ENERGY);
+	fResid.writefln("# %02d: energy-rel", 9+2*TOT_ENERGY+1);
+	fResid.writefln("# %02d: global-residual-abs", 9+2*(TOT_ENERGY+1));
+	fResid.writefln("# %02d: global-residual-rel", 9+2*(TOT_ENERGY+1)+1);
 	fResid.close();
     }
 
@@ -481,6 +516,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		    cell.U[1].mass = cell.U[0].mass + blk.dU[cellCount+MASS];
 		    cell.U[1].momentum.refx = cell.U[0].momentum.x + blk.dU[cellCount+X_MOM];
 		    cell.U[1].momentum.refy = cell.U[0].momentum.y + blk.dU[cellCount+Y_MOM];
+		    if ( blk.myConfig.dimensions == 3 ) 
+			cell.U[1].momentum.refz = cell.U[0].momentum.z + blk.dU[cellCount+Z_MOM];
 		    cell.U[1].total_energy = cell.U[0].total_energy + blk.dU[cellCount+TOT_ENERGY];
 		    try {
 			cell.decode_conserved(0, 1, 0.0);
@@ -542,11 +579,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		residualsUpToDate = true;
 	    }
 	    fResid = File(residFname, "a");
-	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e %20.16e  %20.16e  %20.16e  %20.16e  %20.16e %20.16e  %20.16e\n",
+	    fResid.writef("%8d  %20.16e  %20.16e %20.16e %20.16e %3d %5d %.8f %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  %20.16e  ",
 			  step, pseudoSimTime, dt, cfl, eta, nRestarts, fnCount, wallClockElapsed, 
 			  currResiduals.mass, currResiduals.mass/maxResiduals.mass,
 			  currResiduals.momentum.x, currResiduals.momentum.x/maxResiduals.momentum.x,
-			  currResiduals.momentum.y, currResiduals.momentum.y/maxResiduals.momentum.y,
+			  currResiduals.momentum.y, currResiduals.momentum.y/maxResiduals.momentum.y);
+	    if ( GlobalConfig.dimensions == 3 )
+		fResid.writef("%20.16e  %20.16e  ", currResiduals.momentum.z, currResiduals.momentum.z/maxResiduals.momentum.z);
+	    fResid.writef("%20.16e  %20.16e  %20.16e  %20.16e\n",
 			  currResiduals.total_energy, currResiduals.total_energy/maxResiduals.total_energy,
 			  normNew, normNew/normRef);
 	    fResid.close();
@@ -561,16 +601,32 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	    auto writer = appender!string();
 
 	    formattedWrite(writer, "STEP= %7d  pseudo-time=%10.3e dt=%10.3e cfl=%10.3e  WC=%.1f \n", step, pseudoSimTime, dt, cfl, wallClockElapsed);
-	    formattedWrite(writer, "Residuals:     mass         x-mom        y-mom        energy       global\n");
-	    formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
-			   currResiduals.mass, currResiduals.momentum.x, currResiduals.momentum.y, currResiduals.total_energy, normNew);
-	    formattedWrite(writer, "--> relative   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
-			   currResiduals.mass/maxResiduals.mass,
-			   currResiduals.momentum.x/maxResiduals.momentum.x,
-			   currResiduals.momentum.y/maxResiduals.momentum.y,
-			   currResiduals.total_energy/maxResiduals.total_energy,
-			   normNew/normRef);
-	    writeln(writer.data);
+	    if ( GlobalConfig.dimensions == 2 ) {
+		formattedWrite(writer, "Residuals:     mass         x-mom        y-mom        energy       global\n");
+		formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
+			       currResiduals.mass, currResiduals.momentum.x, currResiduals.momentum.y, currResiduals.total_energy, normNew);
+		formattedWrite(writer, "--> relative   %10.6e %10.6e %10.6e %10.6e %10.6e\n",
+			       currResiduals.mass/maxResiduals.mass,
+			       currResiduals.momentum.x/maxResiduals.momentum.x,
+			       currResiduals.momentum.y/maxResiduals.momentum.y,
+			       currResiduals.total_energy/maxResiduals.total_energy,
+			       normNew/normRef);
+		writeln(writer.data);
+	    }
+	    else {
+		formattedWrite(writer, "Residuals:     mass         x-mom        y-mom        z-mom      energy       global\n");
+		formattedWrite(writer, "--> absolute   %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e\n",
+			       currResiduals.mass, currResiduals.momentum.x, currResiduals.momentum.y,
+			       currResiduals.momentum.z, currResiduals.total_energy, normNew);
+		formattedWrite(writer, "--> relative   %10.6e %10.6e %10.6e %10.6e %10.6e %10.6e\n",
+			       currResiduals.mass/maxResiduals.mass,
+			       currResiduals.momentum.x/maxResiduals.momentum.x,
+			       currResiduals.momentum.y/maxResiduals.momentum.y,
+			       currResiduals.momentum.z/maxResiduals.momentum.z,
+			       currResiduals.total_energy/maxResiduals.total_energy,
+			       normNew/normRef);
+		writeln(writer.data);
+	    }
 	}
 
 	// Write out the flow field, if required
@@ -823,6 +879,8 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
 	    cell.U[1].mass += sigma*blk.maxRate.mass*blk.z_outer[cellCount+MASS];
 	    cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.z_outer[cellCount+X_MOM];
 	    cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.z_outer[cellCount+Y_MOM];
+	    if ( blk.myConfig.dimensions == 3 )
+		cell.U[1].momentum.refz += sigma*blk.maxRate.momentum.z*blk.z_outer[cellCount+Z_MOM];
 	    cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.z_outer[cellCount+TOT_ENERGY];
 	    cell.decode_conserved(0, 1, 0.0);
 	    cellCount += nConserved;
@@ -835,6 +893,8 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
 	    blk.z_outer[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
 	    blk.z_outer[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
 	    blk.z_outer[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
+	    if ( blk.myConfig.dimensions == 3 )
+		blk.z_outer[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma*blk.maxRate.momentum.z);
 	    blk.z_outer[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
 	    cellCount += nConserved;
 	}
@@ -924,6 +984,8 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double sigma)
 	cell.U[1].mass += sigma*blk.maxRate.mass*blk.v_inner[cellCount+MASS];
 	cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.v_inner[cellCount+X_MOM];
 	cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.v_inner[cellCount+Y_MOM];
+	if ( blk.myConfig.dimensions == 3 ) 
+	    cell.U[1].momentum.refz += sigma*blk.maxRate.momentum.z*blk.v_inner[cellCount+Z_MOM];
 	cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.v_inner[cellCount+TOT_ENERGY];
 	cell.decode_conserved(0, 1, 0.0);
 	cellCount += nConserved;
@@ -934,6 +996,8 @@ void evalJacobianVecProd(Block blk, double pseudoSimTime, double sigma)
 	blk.v_inner[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
 	blk.v_inner[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
 	blk.v_inner[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
+	if ( blk.myConfig.dimensions == 3 )
+	    blk.v_inner[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma*blk.maxRate.momentum.z);
 	blk.v_inner[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
 	cellCount += nConserved;
     }
@@ -977,50 +1041,57 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 	blk.maxRate.mass = 0.0;
 	blk.maxRate.momentum.refx = 0.0;
 	blk.maxRate.momentum.refy = 0.0;
+	if ( blk.myConfig.dimensions == 3 )
+	    blk.maxRate.momentum.refz = 0.0;
 	blk.maxRate.total_energy = 0.0;
 	foreach (cell; blk.cells) {
 	    blk.FU[cellCount+MASS] = -cell.dUdt[0].mass;
 	    blk.FU[cellCount+X_MOM] = -cell.dUdt[0].momentum.x;
 	    blk.FU[cellCount+Y_MOM] = -cell.dUdt[0].momentum.y;
+	    if ( blk.myConfig.dimensions == 3 )
+		blk.FU[cellCount+Z_MOM] = -cell.dUdt[0].momentum.z;
 	    blk.FU[cellCount+TOT_ENERGY] = -cell.dUdt[0].total_energy;
 	    cellCount += nConserved;
 	    blk.maxRate.mass = fmax(blk.maxRate.mass, fabs(cell.dUdt[0].mass));
 	    blk.maxRate.momentum.refx = fmax(blk.maxRate.momentum.x, fabs(cell.dUdt[0].momentum.x));
 	    blk.maxRate.momentum.refy = fmax(blk.maxRate.momentum.y, fabs(cell.dUdt[0].momentum.y));
+	    if ( blk.myConfig.dimensions == 3 )
+		blk.maxRate.momentum.refz = fmax(blk.maxRate.momentum.z, fabs(cell.dUdt[0].momentum.z));
 	    blk.maxRate.total_energy = fmax(blk.maxRate.total_energy, fabs(cell.dUdt[0].total_energy));
 	}
     }
     double maxMass = 0.0;
     double maxMomX = 0.0;
     double maxMomY = 0.0;
+    double maxMomZ = 0.0;
     double maxEnergy = 0.0;
     foreach (blk; gasBlocks) {
 	maxMass = fmax(maxMass, blk.maxRate.mass);
 	maxMomX = fmax(maxMomX, blk.maxRate.momentum.x);
 	maxMomY = fmax(maxMomY, blk.maxRate.momentum.y);
+	if ( blk.myConfig.dimensions == 3 )
+	    maxMomZ = fmax(maxMomZ, blk.maxRate.momentum.z);
 	maxEnergy = fmax(maxEnergy, blk.maxRate.total_energy);
     }
     // Place some guards when time-rate-of-changes are very small.
     maxMass = fmax(maxMass, minNonDimVal);
     maxMomX = fmax(maxMomX, minNonDimVal);
     maxMomY = fmax(maxMomY, minNonDimVal);
+    if ( GlobalConfig.dimensions == 3 )
+	maxMomZ = fmax(maxMomZ, minNonDimVal);
     maxEnergy = fmax(maxEnergy, minNonDimVal);
-    double maxMom = fmax(maxMomX, maxMomY);
+    double maxMom = max(maxMomX, maxMomY, maxMomZ);
 
-    /*
-    writefln("max-mass= %.18e", maxMass);
-    writefln("max-mom= %.18e", maxMom);
-    writefln("max-energy= %.18e", maxEnergy);
-    */
     foreach (blk; parallel(gasBlocks,1)) {
 	blk.maxRate.mass = maxMass;
 	blk.maxRate.momentum.refx = maxMomX;
 	blk.maxRate.momentum.refy = maxMomY;
+	if ( blk.myConfig.dimensions == 3 )
+	    	blk.maxRate.momentum.refz = maxMomZ;
 	blk.maxRate.total_energy = maxEnergy;
     }
     double unscaledNorm2;
     mixin(norm2_over_blocks("unscaledNorm2", "FU"));
-    //writefln("unscaledNorm2= %.18e", unscaledNorm2);
 
     // Initialise some arrays and matrices that have already been allocated
     g0_outer[] = 0.0;
@@ -1035,10 +1106,12 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 	blk.x0[] = 0.0;
 	int cellCount = 0;
 	foreach (cell; blk.cells) {
-	    blk.r0[cellCount+0] = -(1./blk.maxRate.mass)*blk.FU[cellCount+MASS];
-	    blk.r0[cellCount+1] = -(1./blk.maxRate.momentum.x)*blk.FU[cellCount+X_MOM];
-	    blk.r0[cellCount+2] = -(1./blk.maxRate.momentum.y)*blk.FU[cellCount+Y_MOM];
-	    blk.r0[cellCount+3] = -(1./blk.maxRate.total_energy)*blk.FU[cellCount+TOT_ENERGY];
+	    blk.r0[cellCount+MASS] = -(1./blk.maxRate.mass)*blk.FU[cellCount+MASS];
+	    blk.r0[cellCount+X_MOM] = -(1./blk.maxRate.momentum.x)*blk.FU[cellCount+X_MOM];
+	    blk.r0[cellCount+Y_MOM] = -(1./blk.maxRate.momentum.y)*blk.FU[cellCount+Y_MOM];
+	    if ( blk.myConfig.dimensions == 3 )
+		blk.r0[cellCount+Z_MOM] = -(1./blk.maxRate.momentum.z)*blk.FU[cellCount+Z_MOM];
+	    blk.r0[cellCount+TOT_ENERGY] = -(1./blk.maxRate.total_energy)*blk.FU[cellCount+TOT_ENERGY];
 	    cellCount += nConserved;
 	}
     }
@@ -1046,7 +1119,6 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
     double betaTmp;
     mixin(norm2_over_blocks("betaTmp", "r0"));
     double beta = betaTmp;
-    // DEBUG: writefln("OUTER: beta= %e", beta);
     g0_outer[0] = beta;
     foreach (blk; parallel(gasBlocks,1)) {
 	foreach (k; 0 .. blk.nvars) {
@@ -1057,7 +1129,6 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 
     // Compute tolerance
     auto outerTol = eta*beta;
-    //DEBUG: writefln("OUTER: eta=%f  beta= %e  outerTol= %e", eta, beta, outerTol);
 
     // 2. Start outer-loop of restarted GMRES
     for ( r = 0; r < maxRestarts; r++ ) {
@@ -1227,6 +1298,8 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 	    blk.dU[cellCount+MASS] *= blk.maxRate.mass;
 	    blk.dU[cellCount+X_MOM] *= blk.maxRate.momentum.x;
 	    blk.dU[cellCount+Y_MOM] *= blk.maxRate.momentum.y;
+	    if ( blk.myConfig.dimensions == 3 )
+		blk.dU[cellCount+Z_MOM] *= blk.maxRate.momentum.z;
 	    blk.dU[cellCount+TOT_ENERGY] *= blk.maxRate.total_energy;
 	    cellCount += nConserved;
 	}
@@ -1338,23 +1411,30 @@ void GMRES_solve(Block blk, double pseudoSimTime, double dt, double sigma)
 
 void max_residuals(ConservedQuantities residuals)
 {
-    int nc = GlobalConfig.sssOptions.nConserved;
+    // Make a stack-local copy of conserved quantities info
+    size_t nConserved = nConservedQuantities;
+
     foreach (blk; parallel(gasBlocks,1)) {
 	blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
 	blk.residuals.mass = fabs(blk.residuals.mass);
 	blk.residuals.momentum.refx = fabs(blk.residuals.momentum.x);
 	blk.residuals.momentum.refy = fabs(blk.residuals.momentum.y);
+	if ( blk.myConfig.dimensions == 3 )
+	    blk.residuals.momentum.refz = fabs(blk.residuals.momentum.z);
 	blk.residuals.total_energy = fabs(blk.residuals.total_energy);
-	double massLocal, xMomLocal, yMomLocal, energyLocal;
+	double massLocal, xMomLocal, yMomLocal, zMomLocal, energyLocal;
 	foreach (cell; blk.cells) {
 	    massLocal = cell.dUdt[0].mass;
 	    xMomLocal = cell.dUdt[0].momentum.x;
 	    yMomLocal = cell.dUdt[0].momentum.y;
+	    zMomLocal = cell.dUdt[0].momentum.z;
 	    energyLocal = cell.dUdt[0].total_energy;
 	    
 	    blk.residuals.mass = fmax(blk.residuals.mass, massLocal);
 	    blk.residuals.momentum.refx = fmax(blk.residuals.momentum.x, xMomLocal);
 	    blk.residuals.momentum.refy = fmax(blk.residuals.momentum.y, yMomLocal);
+	    if ( blk.myConfig.dimensions == 3 )
+		blk.residuals.momentum.refz = fmax(blk.residuals.momentum.z, zMomLocal);
 	    blk.residuals.total_energy = fmax(blk.residuals.total_energy, energyLocal);
 	}
     }
@@ -1363,6 +1443,8 @@ void max_residuals(ConservedQuantities residuals)
 	residuals.mass = fmax(residuals.mass, blk.residuals.mass);
 	residuals.momentum.refx = fmax(residuals.momentum.x, blk.residuals.momentum.x);
 	residuals.momentum.refy = fmax(residuals.momentum.y, blk.residuals.momentum.y);
+	if ( blk.myConfig.dimensions == 3 )
+	    residuals.momentum.refz = fmax(residuals.momentum.z, blk.residuals.momentum.z);
 	residuals.total_energy = fmax(residuals.total_energy, blk.residuals.total_energy);
     }
 }
@@ -1373,11 +1455,20 @@ void rewrite_times_file(RestartInfo[] times)
     auto f = File(fname, "w");
     f.writeln("# tindx sim_time dt_global");
     foreach (i, rInfo; times) {
-	f.writefln("%04d %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
-		   i, rInfo.pseudoSimTime, rInfo.dt, rInfo.step,
-		   rInfo.globalResidual, rInfo.residuals.mass,
-		   rInfo.residuals.momentum.x, rInfo.residuals.momentum.y,
-		   rInfo.residuals.total_energy);
+	if ( GlobalConfig.dimensions == 2 ) {
+	    f.writefln("%04d %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e",
+		       i, rInfo.pseudoSimTime, rInfo.dt, rInfo.step,
+		       rInfo.globalResidual, rInfo.residuals.mass,
+		       rInfo.residuals.momentum.x, rInfo.residuals.momentum.y,
+		       rInfo.residuals.total_energy);
+	}
+	else {
+	    f.writefln("%04d %.18e %.18e %d %.18e %.18e %.18e %.18e %.18e %.18e",
+		       i, rInfo.pseudoSimTime, rInfo.dt, rInfo.step,
+		       rInfo.globalResidual, rInfo.residuals.mass,
+		       rInfo.residuals.momentum.x, rInfo.residuals.momentum.y, rInfo.residuals.momentum.z,
+		       rInfo.residuals.total_energy);
+	}
     }
     f.close();
 }

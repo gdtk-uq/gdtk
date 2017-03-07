@@ -611,7 +611,7 @@ public:
     version(steady_state) {
     void allocate_GMRES_workspace()
     {
-	int nConserved = 4; // rho, rho*u, rho*v, rho*E
+	size_t nConserved = nConservedQuantities;
 	int n_species = GlobalConfig.gmodel_master.n_species();
 	int n_modes = GlobalConfig.gmodel_master.n_modes();
 	maxRate = new ConservedQuantities(n_species, n_modes);
