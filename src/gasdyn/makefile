@@ -52,18 +52,16 @@ $(LIBLUA):
 	cd $(LUA_DIR); make linux local
 
 idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(KINETICS_FILES)
+	$(UTIL_FILES)
 	dmd $(DFLAGS) $(OF)idealgasflow_demo \
 		idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
-		$(GAS_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
+		$(DLINKFLAGS_LUA)
 
 luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES) \
-	$(GAS_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES)
+	$(UTIL_FILES) idealgasflow.d luaidealgasflow.d
 	dmd $(DFLAGS_LUA) $(OF)luaidealgasflow_demo \
-		luaidealgasflow_demo.d $(GASDYN_FILES) $(NM_FILES) \
-		$(GAS_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(UTIL_FILES) $(DLINKFLAGS_LUA)
+		luaidealgasflow_demo.d idealgasflow.d luaidealgasflow.d \
+		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 gasflow_demo: gasflow_demo.d gasflow.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(KINETICS_FILES)
