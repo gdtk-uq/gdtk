@@ -274,6 +274,7 @@ private:
 } // end class SF6
 
 unittest {//need to write these properly
+/+ 2017-03-09 PJ cut these lines out because they are referring to another gas model
     import std.stdio;
     auto gm = new IdealGas();
     assert(gm.species_name(0) == "ideal air", "species name list");
@@ -312,4 +313,5 @@ unittest {//need to write these properly
     gm.update_trans_coeffs(gd);
     assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
     assert(approxEqual(gd.k, 0.0262449), failedUnitTest());
++/
 }

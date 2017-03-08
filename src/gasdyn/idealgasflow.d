@@ -18,7 +18,7 @@
  *
  * - Prandtl-Meyer functions
  * - Oblique-shock relations
- * - [TODO] Taylor-Maccoll conical flow
+ * - Taylor-Maccoll conical flow
  *
  * Authors: Peter Jacobs, Rowan Gollan, Momar Hughes
  *          Centre for Hypersonics, School of Engineering
@@ -30,6 +30,7 @@
  * Things happened... then.
  * 16-Feb-2015: D port of isentropic relations from the C code
  * 09-Sep-2015: Merge with the cfpylib/gasdyn/ideal_gas_flow.py module.
+ * 2016-Nov-19: Port the conical flow functions
  */
 
 module idealgasflow;

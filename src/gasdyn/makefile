@@ -7,7 +7,8 @@
 
 PLATFORM ?= linux
 
-DEMO_PROGRAMS := idealgasflow_demo luaidealgasflow_demo
+DEMO_PROGRAMS := idealgasflow_demo luaidealgasflow_demo \
+	gasflow_demo
 
 include gasdyn_files.mk
 
@@ -15,21 +16,20 @@ GZIP_DIR := ../extern/gzip
 GZIP_FILES := $(GZIP_DIR)/gzip.d
 
 UTIL_DIR := ../util
-UTIL_FILES := $(UTIL_DIR)/lua.d \
-	$(UTIL_DIR)/lua_service.d \
-	$(UTIL_DIR)/msg_service.d
+include $(UTIL_DIR)/util_files.mk
 
 NM_DIR := ../nm
-NM_FILES := $(NM_DIR)/ridder.d $(NM_DIR)/bracketing.d \
-	$(NM_DIR)/linesearch.d $(NM_DIR)/bbla.d
+include $(NM_DIR)/nm_files.mk
 
 LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
 LIBLUAPATH := $(LUA_DIR)/lib
-LUAD_DIR := ../extern/LuaD
-LUAD_FILES := $(wildcard $(LUAD_DIR)/luad/*.d) \
-	$(wildcard $(LUAD_DIR)/luad/c/*.d) \
-	$(wildcard $(LUAD_DIR)/luad/conversions/*.d)
+
+GAS_DIR := ../gas
+include $(GAS_DIR)/gas_files.mk
+
+KINETICS_DIR := ../kinetics
+include $(KINETICS_DIR)/kinetics_files.mk
 
 DFLAGS := -w -unittest -g -I..
 OF := -of
@@ -52,12 +52,27 @@ $(LIBLUA):
 	cd $(LUA_DIR); make linux local
 
 idealgasflow_demo: idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES)
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(KINETICS_FILES)
 	dmd $(DFLAGS) $(OF)idealgasflow_demo \
-		idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(DLINKFLAGS)
+		idealgasflow_demo.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
+		$(GAS_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
 
 luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
-	$(UTIL_FILES) $(GASDYN_FILES)
+	$(UTIL_FILES) $(GASDYN_FILES) \
+	$(GAS_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES)
 	dmd $(DFLAGS_LUA) $(OF)luaidealgasflow_demo \
 		luaidealgasflow_demo.d $(GASDYN_FILES) $(NM_FILES) \
+		$(GAS_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(UTIL_FILES) $(DLINKFLAGS_LUA)
+
+gasflow_demo: gasflow_demo.d gasflow.d $(NM_FILES) $(LIBLUA) \
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(KINETICS_FILES)
+	dmd $(DFLAGS) $(OF)gasflow_demo \
+		gasflow_demo.d gasflow.d $(NM_FILES) $(UTIL_FILES) \
+		$(GAS_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
+
+#--------------------------------------------------------------------------
+# Fortran bits -- we need a bit of a hack
+
+$(GAS_DIR)/ideal_air_fortran.o: $(GAS_DIR)/ideal_air_fortran.f
+	cd $(GAS_DIR); gfortran -c -ffree-form ideal_air_fortran.f

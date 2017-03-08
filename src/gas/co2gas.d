@@ -348,9 +348,10 @@ private:
 	}
 
 
-} // end class Ideal_gas
+} // end class CO2gas
 
 unittest {
+/+ 2017-03-09 PJ cut this out because it should be testing the CO2gas
     import std.stdio;
     auto gm = new IdealGas();
     assert(gm.species_name(0) == "ideal air", "species name list");
@@ -389,4 +390,5 @@ unittest {
     gm.update_trans_coeffs(gd);
     assert(approxEqual(gd.mu, 1.84691e-05), failedUnitTest());
     assert(approxEqual(gd.k, 0.0262449), failedUnitTest());
++/
 }
