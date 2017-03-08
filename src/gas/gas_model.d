@@ -258,6 +258,9 @@ public:
 	sigma = other.sigma;
 	massf = other.massf.dup;
 	quality = other.quality;
+	if (other.ceaSavedData !is null) {
+	    ceaSavedData = new CEASavedData(*(other.ceaSavedData));
+	}
     }
 
     @nogc void copy_values_from(ref const(GasState) other) 

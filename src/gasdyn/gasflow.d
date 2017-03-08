@@ -43,7 +43,7 @@ import gas.gas_model;
  *   state2: reference to post-shock Gas state (to be estimated)
  *   gm: the gas model in use
  *
- * Returns: the post-shock gas speed,
+ * Returns: the dynamic array [vel2, velg], containing the post-shock gas speeds,
  *   vel2 in the shock-reference frame,
  *   velg in the lab frame.
  */
@@ -53,7 +53,6 @@ double[] shock_ideal(GasState state1, double vels, GasState state2, GasModel gm)
     double vel1 = vels;
     double gam = gm.gamma(state1);
     double R = gm.R(state1);
-    double C_v = gm.Cv(state1);
     //
     state2.rho = state1.rho * (gam+1.0)*M1*M1 / (2.0+(gam-1.0)*M1*M1);
     state2.p = state1.p * (2.0*gam*M1*M1 - (gam-1.0)) / (gam+1.0);
@@ -63,7 +62,6 @@ double[] shock_ideal(GasState state1, double vels, GasState state2, GasModel gm)
     //
     double vel2 = state1.rho / state2.rho * vel1;
     double velg = vel1 - vel2;
-    //
     return [vel2, velg];
 } // end shock_ideal()
 

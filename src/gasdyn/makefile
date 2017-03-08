@@ -45,6 +45,9 @@ clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS)
 	- rm trace.log trace.def
+	- rm thermo.inp thermo.lib thermo.out 
+	- rm trans.inp trans.lib trans.out
+	- rm tmp.inp tmp.out tmp.plt
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 

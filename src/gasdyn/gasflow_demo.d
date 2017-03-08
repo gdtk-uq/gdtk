@@ -15,6 +15,7 @@ void main(){
     writeln("s1:", s1);
     writeln("Incident shock");
     GasState s2 = new GasState(s1);
+    writeln("s2:", s2);
     double[] vel_results = shock_ideal(s1, 3000.0, s2, gm);
     double vel2 = vel_results[0];
     double velg = vel_results[1];

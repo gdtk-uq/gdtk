@@ -55,6 +55,11 @@ public:
     double mu; // viscosity, Pa.s
     
     this(const CEASavedData other) {
+	this.copy_values_from(other);
+    }
+    
+    void copy_values_from(const CEASavedData other)
+    {
 	this.p = other.p;
 	this.rho = other.rho;
 	this.u = other.u;
@@ -66,7 +71,9 @@ public:
 	this.gamma = other.gamma;
 	this.Cp = other.Cp;
 	this.s = other.s;
-	foreach (k; other.massf.byKey()) { this.massf[k] = other.massf[k]; }
+	foreach (key; other.massf.byKey()) { this.massf[key] = other.massf[key]; }
+	this.mu = other.mu;
+	this.k = other.k;
     }
 } // end CEASavedData
 
