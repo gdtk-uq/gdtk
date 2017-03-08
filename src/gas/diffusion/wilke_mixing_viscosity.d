@@ -99,6 +99,7 @@ private:
     double[][] _phi;
 }
 
+/* RJG, Remove this and replace with specific version identifiers
 unittest {
     import gas.diffusion.sutherland_viscosity;
     // Placeholder test. Redo with CEA curves.
@@ -114,3 +115,4 @@ unittest {
     vm.update_viscosity(gd);
     assert(approxEqual(1.12102e-05, gd.mu), failedUnitTest());
 }
+*/

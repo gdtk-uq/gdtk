@@ -98,6 +98,7 @@ private:
     double[][] _phi;
 }
 
+/* RJG, Remove these and replace with specific version identifiers
 unittest {
     import std.stdio;
     import gas.diffusion.sutherland_therm_cond;
@@ -114,3 +115,4 @@ unittest {
     tcm.update_thermal_conductivity(gd);
     assert(approxEqual(0.0263063, gd.k), failedUnitTest());
 }
+*/
