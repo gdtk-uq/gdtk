@@ -31,11 +31,12 @@ include $(GAS_DIR)/gas_files.mk
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
 
-DFLAGS := -w -unittest -g -I..
+# For development work, we have put on -debug and -unittest.
+DFLAGS := -w -debug -unittest -g -I..
 OF := -of
 DLINKFLAGS := -L-ldl
 
-DFLAGS_LUA := -w -g -I.. -I$(LUAD_DIR)
+DFLAGS_LUA := -w -debug -unittest -g -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
 
 demo: $(DEMO_PROGRAMS)

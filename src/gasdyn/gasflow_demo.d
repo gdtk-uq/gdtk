@@ -12,15 +12,20 @@ void main(){
     writeln("Begin gasflow demo (reflected-shock tunnel calculation)");
     GasModel gm = init_gas_model("../gas/sample-data/cea-air5species-gas-model.lua");
     GasState s1 = new GasState(gm, 100.0e3, 300.0);
-    writeln("s1:", s1);
-    writeln("Incident shock");
+    writeln("    s1: ", s1);
+    //
+    writeln("Incident shock (ideal gas)");
     GasState s2 = new GasState(s1);
-    writeln("s2:", s2);
     double[] vel_results = shock_ideal(s1, 3000.0, s2, gm);
-    double vel2 = vel_results[0];
-    double velg = vel_results[1];
-    writeln("vel2=", vel2, "velg=", velg);
-    writeln("s2:", s2);
+    double vel2 = vel_results[0]; double velg = vel_results[1];
+    writeln(    "vel2=", vel2, " velg=", velg);
+    writeln("    s2: ", s2);
+    //
+    writeln("Incident shock (full gas model)");
+    vel_results = normal_shock(s1, 3000.0, s2, gm);
+    vel2 = vel_results[0]; velg = vel_results[1];
+    writeln("    vel2=", vel2, " velg=", velg);
+    writeln("    s2: ", s2);
 /+
     #
     print "Reflected shock"

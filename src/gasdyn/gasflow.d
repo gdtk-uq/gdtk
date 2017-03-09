@@ -34,12 +34,13 @@ import nm.linesearch;
 import gas.gas_model;
 
 
+double[] shock_ideal(GasState state1, double vels, GasState state2, GasModel gm)
 /**
  * Computes post-shock conditions in the shock frame, assuming ideal gas.
  *
  * Input:
- *   state1: reference to pre-shock Gas state
- *   vels: speed of gas coming into shock
+ *   state1: reference to pre-shock Gas state (given)
+ *   vels: speed of gas coming into shock (given)
  *   state2: reference to post-shock Gas state (to be estimated)
  *   gm: the gas model in use
  *
@@ -47,7 +48,6 @@ import gas.gas_model;
  *   vel2 in the shock-reference frame,
  *   velg in the lab frame.
  */
-double[] shock_ideal(GasState state1, double vels, GasState state2, GasModel gm)
 {
     double M1 = vels / state1.a;
     double vel1 = vels;
@@ -65,129 +65,117 @@ double[] shock_ideal(GasState state1, double vels, GasState state2, GasModel gm)
     return [vel2, velg];
 } // end shock_ideal()
 
+double my_limiter(double delta, double orig, double frac=0.5)
+// Limit the magnitude of delta to no more than a fraction of the original.
+// It occasionally happens that the Newton iterations go badly.
+// It is worth trying to take smaller steps in these situations,
+// assuming that the computed direction is still a fair guess.
+{
+    return copysign(fmin(abs(delta),frac*abs(orig)), delta);
+}
+
+double[] normal_shock(GasState state1, double vels, GasState state2, GasModel gm)
+/**
+ * Computes post-shock conditions in a shock-stationary frame.
+ *
+ * Input:
+ *   state1: reference to pre-shock Gas state (given)
+ *   vels: speed of gas coming into shock (given)
+ *   state2: reference to post-shock Gas state (to be estimated)
+ *   gm: the gas model in use
+ *
+ * Returns: the dynamic array [vel2, velg], containing the post-shock gas speeds,
+ *   vel2 in the shock-reference frame,
+ *   velg in the lab frame.
+ *
+ * Note that we may need to reintroduce Chris James' guessed R and gamma options
+ * for some very strong shocks and difficult gases.
+ */
+{
+    debug {
+        writeln("normal_shock(): pre-shock condition assuming real gas and original pT");
+        writeln("state1:", state1);
+    }
+    // Initial guess via ideal gas relations.
+    double[] velocities = shock_ideal(state1, vels, state2, gm);
+    double vel2 = velocities[0]; double velg = velocities[1];
+    debug {
+        writeln("normal_shock(): post-shock condition assuming ideal gas");
+        writeln("state2:", state2);
+        writefln("  vel2: %g m/s, velg: %g m/s", vel2, velg);
+    }
+    // We assume that state2 now contains a fair initial guess
+    // and set up the target values for the Rankine-Hugoniot relations.
+    double vel1 = vels;
+    double momentum = state1.p + state1.rho * vel1 * vel1;
+    double total_enthalpy = gm.enthalpy(state1) + 0.5 * vel1 * vel1;
+    //
+    auto Fvector = delegate(double rho2, double T2)
+    {
+	// Constraint equations for state2 from the normal shock relations.
+	// The correct post-shock values allow this vector to evaluate to zeros.
+	state2.rho = rho2; state2.Ttr = T2;
+	gm.update_thermo_from_rhoT(state2);
+	vel2 = vel1 * state1.rho / rho2; // mass conservation
+        double f1 = momentum - state2.p - state2.rho*vel2*vel2;
+        double f2 = total_enthalpy - gm.enthalpy(state2) - 0.5*vel2*vel2;
+	return [f1, f2];
+    };
+    //
+    Matrix Ab = new Matrix(2, 3); // Augmented matrix for the linear equation coefficients.
+    //
+    double rho_delta = 1.0;
+    double T_delta = 1.0;
+    double rho_tol = 1.0e-3; // tolerance in kg/m^3
+    double T_tol = 0.25;  // tolerance in degrees K
+    //
+    // Update the estimates using the Newton-Raphson method.
+    //
+    foreach (count; 0..20) {
+        double rho_save = state2.rho;
+        double T_save = state2.Ttr;
+        double[] f_save = Fvector(rho_save, T_save);
+        // Use finite differences to compute the Jacobian.
+        double d_rho = rho_save * 0.01;
+        double d_T = T_save * 0.01;
+        double[] f_values = Fvector(rho_save + d_rho, T_save);
+        double df0drho = (f_values[0] - f_save[0]) / d_rho;
+        double df1drho = (f_values[1] - f_save[1]) / d_rho;
+        f_values = Fvector(rho_save, T_save + d_T);
+        double df0dT = (f_values[0] - f_save[0]) / d_T;
+        double df1dT = (f_values[1] - f_save[1]) / d_T;
+	Ab[0,0] = df0drho; Ab[0,1] = df0dT; Ab[0,2] = -f_save[0];
+	Ab[1,0] = df1drho; Ab[1,1] = df1dT; Ab[1,2] = -f_save[1];
+	gaussJordanElimination(Ab);
+        rho_delta = Ab[0,2]; T_delta = Ab[1,2];
+        // Possibly limit the increments so that the Newton iteration is
+        // less inclined to go crazy.
+        rho_delta = my_limiter(rho_delta, rho_save);
+        T_delta = my_limiter(T_delta, T_save);
+        double rho_new = rho_save + rho_delta;
+        double T_new   = T_save + T_delta;
+        debug{
+            writefln("normal_shock(): rho_save=%e, T_save=%e", rho_save, T_save);
+            writefln("normal_shock(): rho_delta=%e, T_delta=%e", rho_delta, T_delta);
+            writefln("normal_shock(): rho_new=%e, T_new=%e", rho_new, T_new);
+	}
+	state2.rho=rho_new; state2.Ttr = T_new;
+        gm.update_thermo_from_rhoT(state2);
+        // Check convergence.
+        if (abs(rho_delta) < rho_tol && abs(T_delta) < T_tol) { break; }
+	//
+	debug {
+	    writefln("normal_shock(): count = %d, drho=%e, dT=%e",
+		     count, rho_delta, T_delta);
+	}
+    } // end foreach count
+    // Back-out velocities via continuity.
+    vel2 = vel1 * state1.rho / state2.rho;
+    velg = vel1 - vel2;
+    return [vel2, velg];
+} // end normal_shock()
+
 /+
-def my_limiter(delta, orig, frac=0.5):
-    """
-    Limit the magnitude of delta to no more than a fraction of the original.
-
-    It occasionally happens that the Newton iterations go badly.
-    It is worth trying to take smaller steps in these situations,
-    assuming that the computed direction is still a fair guess.
-    """
-    if delta >= 0.0:
-        sign = 1
-    else:
-        sign = -1
-    abs_delta = min(abs(delta), frac*abs(orig))
-    return sign * abs_delta
-
-
-def normal_shock(state1, Vs, state2,ideal_gas_guess=None):
-    """
-    Computes post-shock conditions, using high-temperature gas properties
-    and a shock-stationary frame.
-
-    :param state1: pre-shock gas state
-    :param Vs: speed of gas coming into shock
-    :param state2: post-shock gas state
-    :param ideal_gas_guess: defaulting to None, otherwise a dictionary of the 
-        form {'gam':gam,'R':R} thatis used for the ideal guess at the start of
-        the function when Vs is too high and CEA can't deal with the ideal guess 
-        for state 2
-    :returns: the post-shock gas speed, V2 in the shock-reference frame, Vg in the lab frame.
-    """
-    #
-    # Initial guess via ideal gas relations.
-    #
-    if ideal_gas_guess: #if we're worried the ideal gas guess will not work, 
-                        #store the original state and use our own guess gam and R for now
-        original_state1 = state1.clone()
-        state1.gam = ideal_gas_guess['gam']
-        state1.R = ideal_gas_guess['R']
-    (V2,Vg) = shock_ideal(state1, Vs, state2)
-    if DEBUG_GAS_FLOW:
-        print 'normal_shock(): post-shock condition assuming ideal gas'
-        state2.write_state(sys.stdout)
-        print '    V2: %g m/s, Vg: %g m/s' % (V2,Vg)
-    #
-    # We assume that p1 and T1 are correct
-    # and that state2 contains a fair initial guess.
-    V1 = Vs
-    state1.set_pT(state1.p, state1.T);
-    if DEBUG_GAS_FLOW:
-        print 'normal_shock(): pre-shock condition assuming real gas and original pT'
-        state1.write_state(sys.stdout)
-    state2.set_pT(state2.p, state2.T);
-    if DEBUG_GAS_FLOW:
-        print 'normal_shock(): post-shock condition assuming real gas and ideal pT'
-        state2.write_state(sys.stdout)
-    #
-    momentum = state1.p + state1.rho * V1 * V1
-    total_enthalpy = state1.h + 0.5 * V1 * V1
-    #
-    def Fvector(rho2, T2):
-        """
-        Constraint equations for state2 from the normal shock relations.
-
-        The correct post-shock values allow this vector to evaluate to zeros.
-        """
-        state2.set_rhoT(rho2, T2)
-        V2 = V1 * state1.rho / rho2  # mass conservation
-        f1 = momentum - state2.p - state2.rho * V2 * V2
-        f2 = total_enthalpy - state2.h - 0.5 * V2 * V2
-        return f1, f2
-    #
-    A = numpy.zeros((2,2), float)
-    b = numpy.zeros((2,), float)
-    #
-    rho_delta = 1.0
-    T_delta = 1.0
-    rho_tol = 1.0e-3; # tolerance in kg/m^3
-    T_tol = 0.25;  # tolerance in degrees K
-    #
-    # Update the estimates using the Newton-Raphson method.
-    #
-    for count in range(20):
-        rho_save = state2.rho
-        T_save = state2.T
-        f1_save, f2_save = Fvector(rho_save, T_save)
-        # Use finite differences to compute the Jacobian.
-        d_rho = rho_save * 0.01
-        d_T = T_save * 0.01
-        f1, f2 = Fvector(rho_save + d_rho, T_save)
-        df1drho = (f1 - f1_save) / d_rho
-        df2drho = (f2 - f2_save) / d_rho
-        f1, f2 = Fvector(rho_save, T_save + d_T)
-        df1dT = (f1 - f1_save) / d_T
-        df2dT = (f2 - f2_save) / d_T
-        A = numpy.array([[df1drho, df1dT],
-                         [df2drho, df2dT]])
-        b = numpy.array([-f1_save, -f2_save])
-        rho_delta, T_delta = numpy.linalg.solve(A, b)
-        # Possibly limit the increments so that the Newton iteration is
-        # less inclined to go crazy.
-        rho_delta = my_limiter(rho_delta, rho_save)
-        T_delta = my_limiter(T_delta, T_save)
-        rho_new = rho_save + rho_delta
-        T_new   = T_save + T_delta
-        if DEBUG_GAS_FLOW:
-            print('normal_shock(): rho_save=%e, T_save=%e' % (rho_save, T_save))
-            print('normal_shock(): rho_delta=%e, T_delta=%e' % (rho_delta, T_delta))
-            print('normal_shock(): rho_new=%e, T_new=%e' % (rho_new, T_new))
-        state2.set_rhoT(rho_new, T_new)
-        # Check convergence.
-        if abs(rho_delta) < rho_tol and abs(T_delta) < T_tol: break
-    #
-    if DEBUG_GAS_FLOW:
-        print ('normal_shock(): count = %d, drho=%e, dT=%e' %
-               (count, rho_delta, T_delta) )
-    if ideal_gas_guess: #if we did this, restore the original state before we finish
-        state1 = original_state1.clone()
-    #
-    # Back-out velocities via continuity.
-    V2 = V1 * state1.rho / state2.rho
-    Vg = V1 - V2
-    return (V2, Vg)
 
 
 def normal_shock_p2p1(state1, p2p1):
