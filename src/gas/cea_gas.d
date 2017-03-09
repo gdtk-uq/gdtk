@@ -480,6 +480,14 @@ private:
                 Q.ceaSavedData.massf[speciesName] = ceaFloat(tokens[1..$]);
 	    }
 	} // end foreach line
+	// Trace species will not have been listed by CEA but the caller
+	// might like to assume they are available. As such, we'll loop
+	// over the complete _cea_species_names and set the mass fraction value
+	// of trace species to 0.0
+	foreach (sname; _cea_species_names) {
+	    if ( sname !in Q.ceaSavedData.massf )
+		Q.ceaSavedData.massf[sname] = 0.0;
+	}
  	//
 	// Put the relevant pieces of the scanned data into the GasState object.
 	switch (problemType) {
