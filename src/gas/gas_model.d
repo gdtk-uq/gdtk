@@ -59,6 +59,11 @@ public:
 	}
     }
     // Methods to be overridden.
+    //
+    // Although the following methods are not intended to alter their
+    // GasModel object in a formal sense, they are not marked const.
+    // The reason for this non-const-ness is that some GasModel classes
+    // have private workspace that needs to be alterable.
     abstract void update_thermo_from_pT(GasState Q);
     abstract void update_thermo_from_rhoe(GasState Q);
     abstract void update_thermo_from_rhoT(GasState Q);

@@ -34,7 +34,7 @@ import nm.linesearch;
 import gas.gas_model;
 
 
-double[] shock_ideal(GasState state1, double vels, GasState state2, GasModel gm)
+double[] shock_ideal(const(GasState) state1, double vels, GasState state2, GasModel gm)
 /**
  * Computes post-shock conditions in the shock frame, assuming ideal gas.
  *
@@ -74,7 +74,7 @@ double my_limiter(double delta, double orig, double frac=0.5)
     return copysign(fmin(abs(delta),frac*abs(orig)), delta);
 }
 
-double[] normal_shock(GasState state1, double vels, GasState state2, GasModel gm)
+double[] normal_shock(const(GasState) state1, double vels, GasState state2, GasModel gm)
 /**
  * Computes post-shock conditions in a shock-stationary frame.
  *
@@ -88,8 +88,13 @@ double[] normal_shock(GasState state1, double vels, GasState state2, GasModel gm
  *   vel2 in the shock-reference frame,
  *   velg in the lab frame.
  *
- * Note that we may need to reintroduce Chris James' guessed R and gamma options
- * for some very strong shocks and difficult gases.
+ * Note that, at the moment, we have implemented only a simple ideal-gas starting
+ * guess for the Newton iteration.  We may need to reintroduce Chris James' 
+ * guessed R and gamma options for some very strong shocks and difficult gases. 
+ * An alternative may be do simply reduce the temperature by some factor and 
+ * raise the density by the same factor, keeping the pressure about the same.
+ * I vaguely recall Malcolm McIntosh had a correlation with shock velocity or 
+ * Mach number for his adjustments to the ideal-gas initial guess. 
  */
 {
     debug {
