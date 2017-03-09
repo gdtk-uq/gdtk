@@ -21,7 +21,6 @@ import kinetics.luachemistry_update;
 import gas.gas_model;
 import gas.physical_constants;
 
-
 // name for GasModel class in Lua scripts
 immutable string GasModelMT = "GasModel";
 
@@ -94,7 +93,7 @@ extern(C) int speciesName(lua_State* L)
 extern(C) int thermoPT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_pT(Q);
     setGasStateInTable(L, gm, 2, Q);
@@ -104,7 +103,7 @@ extern(C) int thermoPT(lua_State* L)
 extern(C) int thermoRHOE(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_rhoe(Q);
     setGasStateInTable(L, gm, 2, Q);
@@ -114,7 +113,7 @@ extern(C) int thermoRHOE(lua_State* L)
 extern(C) int thermoRHOT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_rhoT(Q);
     setGasStateInTable(L, gm, 2, Q);
@@ -124,7 +123,7 @@ extern(C) int thermoRHOT(lua_State* L)
 extern(C) int thermoRHOP(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     gm.update_thermo_from_rhop(Q);
     setGasStateInTable(L, gm, 2, Q);
@@ -134,7 +133,7 @@ extern(C) int thermoRHOP(lua_State* L)
 extern(C) int thermoPS(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto s = lua_tonumber(L, 3);
     gm.update_thermo_from_ps(Q, s);
@@ -145,7 +144,7 @@ extern(C) int thermoPS(lua_State* L)
 extern(C) int thermoHS(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto h = lua_tonumber(L, 3);
     auto s = lua_tonumber(L, 4);
@@ -157,7 +156,7 @@ extern(C) int thermoHS(lua_State* L)
 extern(C) int soundSpeed(lua_State* L)
 {
    auto gm = checkGasModel(L, 1);
-   auto Q = new GasState(gm.n_species, gm.n_modes);
+   auto Q = new GasState(gm);
    getGasStateFromTable(L, gm, 2, Q); 
    gm.update_sound_speed(Q);
    setGasStateInTable(L, gm, 2, Q);
@@ -167,13 +166,12 @@ extern(C) int soundSpeed(lua_State* L)
 extern(C) int transCoeffs(lua_State* L)
 {
    auto gm = checkGasModel(L, 1);
-   auto Q = new GasState(gm.n_species, gm.n_modes);
+   auto Q = new GasState(gm);
    getGasStateFromTable(L, gm, 2, Q); 
    gm.update_trans_coeffs(Q);
    setGasStateInTable(L, gm, 2, Q);
    return 0;
 }
-
 
 // We don't wrap dudT_const_v as we do Cv in its place.
 // We don't wrap dhdT_const_p as we do Cp in its place.
@@ -181,7 +179,7 @@ extern(C) int transCoeffs(lua_State* L)
 extern(C) int dpdrhoConstT(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto dpdrho = gm.dpdrho_const_T(Q);
     lua_pushnumber(L, dpdrho);
@@ -193,7 +191,7 @@ extern(C) int dpdrhoConstT(lua_State* L)
 extern(C) int intEnergy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     int narg = lua_gettop(L);
     auto e = gm.internal_energy(Q);
@@ -204,7 +202,7 @@ extern(C) int intEnergy(lua_State* L)
 extern(C) int enthalpy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     int narg = lua_gettop(L);
     double h;
@@ -222,7 +220,7 @@ extern(C) int enthalpy(lua_State* L)
 extern(C) int entropy(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     int narg = lua_gettop(L);
     double s;
@@ -240,7 +238,7 @@ extern(C) int entropy(lua_State* L)
 extern(C) int Cv(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto Cv = gm.Cv(Q);
     lua_pushnumber(L, Cv);
@@ -250,7 +248,7 @@ extern(C) int Cv(lua_State* L)
 extern(C) int Cp(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto Cp = gm.Cp(Q);
     lua_pushnumber(L, Cp);
@@ -260,7 +258,7 @@ extern(C) int Cp(lua_State* L)
 extern(C) int R(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto R = gm.R(Q);
     lua_pushnumber(L, R);
@@ -270,7 +268,7 @@ extern(C) int R(lua_State* L)
 extern(C) int gamma(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto gamma = gm.gamma(Q);
     lua_pushnumber(L, gamma);
@@ -280,7 +278,7 @@ extern(C) int gamma(lua_State* L)
 extern(C) int molMass(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     auto molMass = gm.molecular_mass(Q);
     lua_pushnumber(L, molMass);
@@ -290,7 +288,7 @@ extern(C) int molMass(lua_State* L)
 extern(C) int massf2molef(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     double[] molef; molef.length = gm.n_species;
     gm.massf2molef(Q, molef);
@@ -319,7 +317,7 @@ extern(C) int molef2massf(lua_State* L)
 	lua_pop(L, 1);
 	throw new Error(errMsg);
     }
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     if ( narg == 3 ) {
 	getGasStateFromTable(L, gm, 3, Q);
     }
@@ -340,7 +338,7 @@ extern(C) int molef2massf(lua_State* L)
 extern(C) int massf2conc(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
     double[] conc; conc.length = gm.n_species;
     gm.massf2conc(Q, conc);
@@ -368,7 +366,7 @@ extern(C) int conc2massf(lua_State* L)
 	lua_pop(L, 1);
 	throw new Error(errMsg);
     }
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 3, Q);
     gm.conc2massf(conc, Q);
     // Update table with new mass fractions
@@ -438,7 +436,7 @@ void checkAndScaleMassFractions(double[] massf, double tol)
 extern(C) int createTableForGasState(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     // For the special case of n_species = 1, it's quite likely
     // that the user might never consider the massf array.
     // In which case, we'll just set that value to 1.0.
@@ -468,7 +466,7 @@ extern(C) int newTableForGasState(lua_State* L)
     lua_rawgeti(L, 1, 1);
     auto gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     // For the special case of n_species = 1, it's quite likely
     // that the user might never consider the massf array.
     // In which case, we'll just set that value to 1.0.
@@ -800,6 +798,65 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, GasState Q)
 
     lua_pushnumber(L, Q.quality);
     lua_setfield(L, idx, "quality");
+
+    // We will also add a special field for the ceaSavedData
+    // if we find at non-null pointer to the saved data struct.
+    // Yes, it will appear that we are duplicating some of
+    // the information stored directly in the GasState table
+    // but this will give us direct access to the data that
+    // we've scanned from the CEA output.
+    if ( Q.ceaSavedData ) {
+	lua_newtable(L);
+
+	lua_pushnumber(L, Q.ceaSavedData.p);
+	lua_setfield(L, -2, "p");
+
+	lua_pushnumber(L, Q.ceaSavedData.rho);
+	lua_setfield(L, -2, "rho");
+	
+	lua_pushnumber(L, Q.ceaSavedData.u);
+	lua_setfield(L, -2, "u");
+	
+	lua_pushnumber(L, Q.ceaSavedData.h);
+	lua_setfield(L, -2, "h");
+
+	lua_pushnumber(L, Q.ceaSavedData.T);
+	lua_setfield(L, -2, "T");
+	
+	lua_pushnumber(L, Q.ceaSavedData.a);
+	lua_setfield(L, -2, "a");
+
+	lua_pushnumber(L, Q.ceaSavedData.Mmass);
+	lua_setfield(L, -2, "Mmass");
+
+	lua_pushnumber(L, Q.ceaSavedData.Rgas);
+	lua_setfield(L, -2, "Rgas");
+	
+	lua_pushnumber(L, Q.ceaSavedData.gamma);
+	lua_setfield(L, -2, "gamma");
+
+	lua_pushnumber(L, Q.ceaSavedData.Cp);
+	lua_setfield(L, -2, "Cp");
+
+	lua_pushnumber(L, Q.ceaSavedData.s);
+	lua_setfield(L, -2, "s");
+
+	lua_pushnumber(L, Q.ceaSavedData.k);
+	lua_setfield(L, -2, "k");
+	
+	lua_pushnumber(L, Q.ceaSavedData.mu);
+	lua_setfield(L, -2, "mu");
+
+	lua_newtable(L);
+	foreach (sp, mf; Q.ceaSavedData.massf) {
+	    lua_pushnumber(L, mf);
+	    lua_setfield(L, -2, toStringz(sp));
+	}
+	lua_setfield(L, -2, "massf");
+
+	lua_setfield(L, idx, "ceaSavedData");
+    }
+
 }
 
 extern(C) int printValues(lua_State* L)
@@ -807,7 +864,7 @@ extern(C) int printValues(lua_State* L)
     lua_getfield(L, 1, "gasmodel");
     auto gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    auto Q = new GasState(gm.n_species, gm.n_modes);
+    auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 1, Q);
     writeln(Q.toString);
     return 0;
@@ -820,7 +877,7 @@ extern(C) int copyValues(lua_State* L)
     lua_pop(L, 1);
 
     // Source GasState table
-    auto Q0 = new GasState(gm.n_species, gm.n_modes);
+    auto Q0 = new GasState(gm);
     getGasStateFromTable(L, gm, 1, Q0);
 
     // Target GasState table
