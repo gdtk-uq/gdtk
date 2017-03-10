@@ -96,6 +96,15 @@ test sutherland-viscosity-test {Testing diffusion/sutherland_viscosity.d} -body 
     exec ./sutherland_viscosity_test
 } -result {} -returnCodes {0}
 
+test wilke-mixing-therm-cond-test {Testing diffusion/wilke_mixing_therm_cond.d} -body {
+    exec ./wilke_mixing_therm_cond_test
+} -result {} -returnCodes {0}
+
+test wilke-mixing-viscosity-test {Testing diffusion/wilke_mixing_viscosity.d} -body {
+    exec ./wilke_mixing_viscosity_test
+} -result {} -returnCodes {0}
+
+
 puts "-----------------------------------------"
 puts "   Lua wrapped functions (gas-calc) test "
 puts "-----------------------------------------"

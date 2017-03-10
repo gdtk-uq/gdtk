@@ -204,6 +204,14 @@ very_viscous_air_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	dmd -of$@ -debug -gc -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
+wilke_mixing_therm_cond_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+wilke_mixing_viscosity_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -gc -w -version=$@ \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
 co2gas_sw_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	dmd -of$@ -debug -gc -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)

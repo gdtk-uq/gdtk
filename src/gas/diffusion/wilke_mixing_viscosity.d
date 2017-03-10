@@ -99,20 +99,23 @@ private:
     double[][] _phi;
 }
 
-/* RJG, Remove this and replace with specific version identifiers
-unittest {
-    import gas.diffusion.sutherland_viscosity;
-    // Placeholder test. Redo with CEA curves.
-    double T = 300.0;
-    auto vm_N2 = new SutherlandViscosity(273.0, 1.663e-5, 107.0);
-    auto vm_O2 = new SutherlandViscosity(273.0, 1.919e-5, 139.0);
-    auto vm = new WilkeMixingViscosity([vm_N2, vm_O2], [28.0e-3, 32.0e-3]);
+version(wilke_mixing_viscosity_test) {
+    int main() {
+	import gas.diffusion.sutherland_viscosity;
+	// Placeholder test. Redo with CEA curves.
+	double T = 300.0;
+	auto vm_N2 = new SutherlandViscosity(273.0, 1.663e-5, 107.0);
+	auto vm_O2 = new SutherlandViscosity(273.0, 1.919e-5, 139.0);
+	auto vm = new WilkeMixingViscosity([vm_N2, vm_O2], [28.0e-3, 32.0e-3]);
 
-    auto gd = new GasState(2, 1);
-    gd.Ttr = T;
-    gd.massf[0] = 0.8;
-    gd.massf[1] = 0.2;
-    vm.update_viscosity(gd);
-    assert(approxEqual(1.12102e-05, gd.mu), failedUnitTest());
+	auto gd = new GasState(2, 0);
+	gd.Ttr = T;
+	gd.massf[0] = 0.8;
+	gd.massf[1] = 0.2;
+	vm.update_viscosity(gd);
+	assert(approxEqual(1.12102e-05, gd.mu), failedUnitTest());
+
+	return 0;
+    }
 }
-*/
+
