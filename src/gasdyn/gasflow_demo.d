@@ -10,30 +10,36 @@ import gasflow;
 
 void main(){
     writeln("Begin gasflow demo (reflected-shock tunnel calculation)");
-    GasModel gm = init_gas_model("../gas/sample-data/cea-air5species-gas-model.lua");
-    GasState s1 = new GasState(gm, 100.0e3, 300.0);
+    GasModel gm = init_gas_model("../gas/sample-data/cea-air13species-gas-model.lua");
+    GasState s1 = new GasState(gm, 125.0e3, 300.0);
     writeln("    s1: ", s1);
     //
     writeln("Incident shock (ideal gas)");
     GasState s2 = new GasState(s1);
-    double[] vel_results = shock_ideal(s1, 3000.0, s2, gm);
+    double[] vel_results = shock_ideal(s1, 2414.0, s2, gm);
     double vel2 = vel_results[0]; double velg = vel_results[1];
-    writeln(    "vel2=", vel2, " velg=", velg);
+    writeln("    vel2=", vel2, " velg=", velg);
     writeln("    s2: ", s2);
     //
     writeln("Incident shock (full gas model)");
-    vel_results = normal_shock(s1, 3000.0, s2, gm);
+    vel_results = normal_shock(s1, 2414.0, s2, gm);
     vel2 = vel_results[0]; velg = vel_results[1];
     writeln("    vel2=", vel2, " velg=", velg);
     writeln("    s2: ", s2);
+    //
+    writeln("Incident shock computed from pressure ratio (full gas model)");
+    vel_results = normal_shock_p2p1(s1, 7.314e6/125.0e3, s2, gm);
+    double vel1 = vel_results[0]; vel2 = vel_results[1]; velg = vel_results[2];
+    writeln("    vel1=", vel1);
+    writeln("    vel2=", vel2, " velg=", velg);
+    writeln("    s2: ", s2);
+    //
+    writeln("Reflected shock");
+    GasState s5 = new GasState(s1);
+    double velr_b = reflected_shock(s2, velg, s5, gm);
+    writeln("    velr_b=", velr_b);
+    writeln("    s5:", s5);
 /+
-    #
-    print "Reflected shock"
-    s5 = s1.clone()
-    Vr_b = reflected_shock(s2, Vg, s5)
-    print "Vr_b=", Vr_b
-    print "s5:"
-    s5.write_state(sys.stdout)
     #
     print "Expand from stagnation"
     s6, V = expand_from_stagnation(0.0025, s5)

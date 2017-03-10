@@ -27,6 +27,7 @@ import std.conv;
 import std.math;
 import std.string;
 import std.stdio;
+import std.algorithm;
 import nm.bbla;
 import nm.bracketing;
 import nm.ridder;
@@ -97,18 +98,9 @@ double[] normal_shock(const(GasState) state1, double vels, GasState state2, GasM
  * Mach number for his adjustments to the ideal-gas initial guess. 
  */
 {
-    debug {
-        writeln("normal_shock(): pre-shock condition assuming real gas and original pT");
-        writeln("state1:", state1);
-    }
     // Initial guess via ideal gas relations.
     double[] velocities = shock_ideal(state1, vels, state2, gm);
     double vel2 = velocities[0]; double velg = velocities[1];
-    debug {
-        writeln("normal_shock(): post-shock condition assuming ideal gas");
-        writeln("state2:", state2);
-        writefln("  vel2: %g m/s, velg: %g m/s", vel2, velg);
-    }
     // We assume that state2 now contains a fair initial guess
     // and set up the target values for the Rankine-Hugoniot relations.
     double vel1 = vels;
@@ -127,7 +119,8 @@ double[] normal_shock(const(GasState) state1, double vels, GasState state2, GasM
 	return [f1, f2];
     };
     //
-    Matrix Ab = new Matrix(2, 3); // Augmented matrix for the linear equation coefficients.
+    // Augmented matrix for the linear equation coefficients.
+    Matrix Ab = new Matrix(2, 3);
     //
     double rho_delta = 1.0;
     double T_delta = 1.0;
@@ -159,20 +152,10 @@ double[] normal_shock(const(GasState) state1, double vels, GasState state2, GasM
         T_delta = my_limiter(T_delta, T_save);
         double rho_new = rho_save + rho_delta;
         double T_new   = T_save + T_delta;
-        debug{
-            writefln("normal_shock(): rho_save=%e, T_save=%e", rho_save, T_save);
-            writefln("normal_shock(): rho_delta=%e, T_delta=%e", rho_delta, T_delta);
-            writefln("normal_shock(): rho_new=%e, T_new=%e", rho_new, T_new);
-	}
 	state2.rho=rho_new; state2.Ttr = T_new;
         gm.update_thermo_from_rhoT(state2);
         // Check convergence.
         if (abs(rho_delta) < rho_tol && abs(T_delta) < T_tol) { break; }
-	//
-	debug {
-	    writefln("normal_shock(): count = %d, drho=%e, dT=%e",
-		     count, rho_delta, T_delta);
-	}
     } // end foreach count
     // Back-out velocities via continuity.
     vel2 = vel1 * state1.rho / state2.rho;
@@ -180,92 +163,109 @@ double[] normal_shock(const(GasState) state1, double vels, GasState state2, GasM
     return [vel2, velg];
 } // end normal_shock()
 
+
+double[] normal_shock_p2p1(const(GasState) state1, double p2p1,
+			   GasState state2, GasModel gm)
+/**
+ * Computes post-shock conditions, using high-temperature gas properties
+ * and a shock-stationary frame.
+ *
+ * Input:
+ *   state1: pre-shock gas state (given)
+ *   p2p1: ration of pressure across the shock (given)
+ *   state2: reference to the post-shock state (to be computed)
+ *   gmodel: reference to the gas model
+ *
+ * Returns: an array containing
+ *   the incident shock speed, vel1
+ *   the post-shock gas speed, vel2 in the shock-reference frame
+ *                             velg in the lab frame.
+ */
+{
+    state2.copy_values_from(state1);
+    // Initial guess via ideal gas relations.
+    double g = gm.gamma(state1);
+    double Ms = sqrt(1+(g+1)/2/g*(p2p1-1.0));
+    double vel1ideal = Ms * state1.a;
+    double[] velocities;
+    // Set up error function that will be zero when we have the correct shock speed.
+    auto error_in_p2p1 = delegate(double vels) {
+        velocities = normal_shock(state1, vels, state2, gm);
+        return (state2.p/state1.p - p2p1)/p2p1;
+    };
+    double vguess1 = vel1ideal;
+    double vguess2 = 1.1 * vel1ideal;
+    if (bracket!error_in_p2p1(vguess1, vguess2) < 0) {
+	throw new Exception("normal_shock_p2p1 could not bracket the shock velocity.");
+    }
+    double vel1 = solve!error_in_p2p1(vguess1, vguess2, 1.0e-3);
+    velocities = normal_shock(state1, vel1, state2, gm);
+    double vel2 = velocities[0]; double velg = velocities[1];
+    return [vel1, vel2, velg];
+} // end normal_shock_p2p1()
+
+
+double reflected_shock(const(GasState) state2, double velg,
+		       GasState state5, GasModel gm)
+/**
+ * Computes state5 which has brought the gas to rest at the end of the shock tube.
+ *
+ * Input
+ * state2: the post-incident-shock gas state
+ * velg: the lab-frame velocity of the gas in state 2
+ * s5: reference to the stagnation state (to be computed)
+ *
+ * Returns: velr, the reflected shock speed in the lab frame.
+ */
+{
+    // As an initial guess, 
+    // assume that we have a very strong shock in an ideal gas.
+    double gam = gm.gamma(state2);
+    double density_ratio = (gam+1.0)/(gam-1.0);
+    double velr_a = velg / density_ratio;
+    double[] velocities = normal_shock(state2, velr_a+velg, state5, gm);
+    double vel5 = velocities[0]; 
+    // The objective function is the difference in speeds,
+    // units are m/s.  A value of zero for this function means
+    // that, as the shock propagates upstream with speed ur,
+    // the processed test gas is left in the end of the tube
+    // with a velocity of zero in the laboratory frame.
+    double f_a = vel5 - velr_a;
+    //
+    // Now, update this guess using the secant method.
+    //
+    double velr_b = 1.1 * velr_a;
+    velocities = normal_shock(state2, velr_b+velg, state5, gm); 
+    vel5 = velocities[0]; 
+    double f_b = vel5 - velr_b;
+    if (abs(f_a) < abs(f_b)) {
+	swap(f_a, f_b);
+	swap(velr_a, velr_b);
+    }
+    int count = 0;
+    while (abs(f_b) > 0.5 && count < 20) {
+        double slope = (f_b - f_a) / (velr_b - velr_a);
+        double velr_c = velr_b - f_b / slope;
+        velocities = normal_shock(state2, velr_c+velg, state5, gm);
+	vel5 = velocities[0];
+        double f_c = vel5 - velr_c;
+        if (abs(f_c) < abs(f_b)) {
+            velr_b = velr_c; f_b = f_c;
+        } else {
+            velr_a = velr_c; f_a = f_c;
+	}
+        count += 1;
+    }
+    if (count >= 20) {
+        throw new Exception("Reflected shock iteration did not converge.");
+    }
+    // At this point, velr_b should be our best guess.
+    // Update the gas state data and return the best-guess value.
+    velocities = normal_shock(state2, velr_b+velg, state5, gm);
+    return velr_b;
+} // end reflected_shock()
+
 /+
-
-
-def normal_shock_p2p1(state1, p2p1):
-    """
-    Computes post-shock conditions, using high-temperature gas properties
-    and a shock-stationary frame.
-
-    :param state1: pre-shock gas state
-    :param p2p1: ration of pressure across the shock
-    :returns: a tuple of the incident shock speed, V1;
-        the post-shock gas speed, V2 in the shock-reference frame;
-        Vg in the lab frame; and the post shock state state2.
-    """
-    state2 = state1.clone()
-    # Initial guess via ideal gas relations.
-    g = state1.gam
-    Ms = math.sqrt(1+(g+1)/2/g*(p2p1-1.0))
-    V1ideal = Ms * state1.a
-    def error_in_p2p1(Vs, state1=state1, state2=state2, p2p1=p2p1):
-        "Set up error function that will be zero when we have the correct V1"
-        V2, Vg = normal_shock(state1, Vs, state2)
-        return (state2.p/state1.p - p2p1)/p2p1
-    V1 = secant(error_in_p2p1, V1ideal, 1.01*V1ideal, tol=1.0e-3)
-    if V1 == 'FAIL':
-        raise Exception, ("normal_shock_p2p1: secant method failed p2p1=%g, V1ideal=%g" 
-                          % (p2p1, V1ideal))
-    V2, Vg = normal_shock(state1, V1, state2)
-    return (V1, V2, Vg, state2)
-
-
-def reflected_shock(state2, Vg, s5):
-    """
-    Computes state5 which has brought the gas to rest at the end of the shock tube.
-
-    :param state2: the post-incident-shock gas state
-    :param Vg: the lab-frame velocity of the gas in state 2
-    :param s5: the stagnation state that will be filled in
-        (as a side effect of this function)
-    :returns: Vr, the reflected shock speed in the lab frame.
-    """
-    #
-    # As an initial guess, 
-    # assume that we have a very strong shock in an ideal gas.
-    density_ratio = (state2.gam + 1.0)/(state2.gam - 1.0)
-    Vr_a = Vg / density_ratio;
-    V5, Vjunk = normal_shock(state2, Vr_a+Vg, s5)
-    # The objective function is the difference in speeds,
-    # units are m/s.  A value of zero for this function means
-    # that, as the shock propagates upstream with speed ur,
-    # the processed test gas is left in the end of the tube
-    # with a velocity of zero in the laboratory frame.
-    f_a = V5 - Vr_a
-    if DEBUG_GAS_FLOW:
-        print 'Reflected shock: Vr_a: %g, V5: %g' % (Vr_a, V5)
-    #
-    # Now, we need to update this guess...use a secant update.
-    #
-    Vr_b = 1.1 * Vr_a
-    V5, Vjunk = normal_shock(state2, Vr_b+Vg, s5)
-    f_b = V5 - Vr_b
-    if DEBUG_GAS_FLOW:
-        print 'Reflected shock: Vr_b: %g, V5: %g' % (Vr_b, V5)
-    if abs(f_a) < abs(f_b):
-        f_a, f_b = f_b, f_a
-        Vr_a, Vr_b = Vr_b, Vr_a
-    count = 0
-    while abs(f_b) > 0.5 and count < 20:
-        slope = (f_b - f_a) / (Vr_b - Vr_a)
-        Vr_c = Vr_b - f_b / slope
-        V5, Vjunk = normal_shock(state2, Vr_c+Vg, s5)
-        f_c = V5 - Vr_c
-        if abs(f_c) < abs(f_b):
-            Vr_b = Vr_c; f_b = f_c
-        else:
-            Vr_a = Vr_c; f_a = f_c
-        count = count + 1
-    #
-    # At this point, ur_b should be out best guess.
-    # Update the gas state data and return the best-guess value.
-    #
-    if count >= 20:
-        print 'Reflected shock iteration did not converge.'
-    V5, Vjunk = normal_shock(state2, Vr_b+Vg, s5)
-    return Vr_b
-
 
 def expand_from_stagnation(p_over_p0, state0):
     """
