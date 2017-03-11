@@ -213,7 +213,7 @@ double reflected_shock(const(GasState) state2, double velg,
  * Input
  * state2: the post-incident-shock gas state
  * velg: the lab-frame velocity of the gas in state 2
- * s5: reference to the stagnation state (to be computed)
+ * state5: reference to the stagnation state (to be computed)
  *
  * Returns: velr, the reflected shock speed in the lab frame.
  */
@@ -265,116 +265,131 @@ double reflected_shock(const(GasState) state2, double velg,
     return velr_b;
 } // end reflected_shock()
 
+
+double expand_from_stagnation(double p_over_p0, const(GasState) state0,
+			      GasState state1, GasModel gm)
+/**
+ * Given a stagnation condition state0, expand to a new pressure.
+ *
+ * Input:
+ *   p_over_p0: pressure ratio
+ *   state0: GasState object specifying stagnation conditions
+ *   state1: GasState object for the expanded conditions (to be computed)
+ *
+ * Returns: the corresponding velocity (in m/s) of the expanded stream.
+ */
+{
+    state1.copy_values_from(state0);
+    state1.p = state0.p * p_over_p0;
+    double s0 = gm.entropy(state0);
+    gm.update_thermo_from_ps(state1, s0);
+    // Matt McGilvray had a note about CEA giving bad entropy values
+    // so we'll assert things are OK before proceeding.
+    assert (abs(gm.entropy(state1) - s0)/abs(s0) < 0.001, "Bad entropy value.");
+    double static_enthalpy = gm.enthalpy(state1);
+    double total_enthalpy = gm.enthalpy(state0);
+    double vel = sqrt(2.0*(total_enthalpy - static_enthalpy));
+    return vel;
+} // end expand_from_stagnation()
+
+
+double expand_to_mach(double mach, const(GasState) state0,
+		      GasState state1, GasModel gm)
+/**
+ * Given a stagnation condition state0, expand to a given Mach number.
+ *
+ * Input:
+ *   mach: target mach number
+ *   state0: GasState object specifying stagnation conditions
+ *   state1: GasState object for the expanded conditions (to be computed)
+ *
+ * Returns: the corresponding velocity (in m/s) of the expanded stream.
+ */
+{
+    double total_enthalpy = gm.enthalpy(state0);
+    double s0 = gm.entropy(state0);
+    state1.copy_values_from(state0);
+    double p_over_p0_guess1 = 1.0;
+    double p_over_p0_guess2 = 0.90;
+    // [TODO] Could probably do better with ideal gas guess.
+    auto error_in_mach = delegate(double p_over_p0) {
+	double vel = expand_from_stagnation(p_over_p0, state0, state1, gm);
+	double a = state1.a;
+	return mach - vel/a;
+    };
+    if (bracket!error_in_mach(p_over_p0_guess1, p_over_p0_guess2) < 0) {
+	throw new Exception("expand_to_mach() could not bracket the pressure ratio.");
+    }
+    double p_over_p0 = solve!error_in_mach(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6);
+    state1.p = state0.p * p_over_p0;
+    gm.update_thermo_from_ps(state1, s0);
+    double static_enthalpy = gm.enthalpy(state1);
+    double vel = sqrt(2.0*(total_enthalpy - static_enthalpy));
+    return vel;
+} // end expand_to_mach()
+
+
+void total_condition(const(GasState) state1, double vel1, 
+		     GasState state0, GasModel gm)
+/**
+ * Given a free-stream condition and velocity,
+ * compute the corresponding stagnant condition
+ * at which the gas is brought to rest isentropically.
+ *
+ * Input
+ *   state1: Gas object specifying free-stream condition
+ *   vel1: free-stream velocity, m/s
+ *   state0: reference to the stagnation gas state (to be computed)
+ *   gm: gas model
+ */
+{
+    double H1 = gm.enthalpy(state1) + 0.5*vel1*vel1;
+    double s1 = gm.entropy(state1);
+    state0.copy_values_from(state1);
+    auto error_in_total_enthalpy = delegate(double x) {
+        // The enthalpy at the stagnation condition should match
+        // the total enthalpy of the stream.
+	state0.p = x * state1.p;
+        gm.update_thermo_from_ps(state0, s1);
+	return (H1 - gm.enthalpy(state0))/abs(H1);
+    };
+    double x1 = 1.0; double x2 = 1.01;
+    // [TODO] could probably do better with an ideal gas guess
+    if (bracket!error_in_total_enthalpy(x1, x2) < 0) {
+	throw new Exception("total_condition() could not bracket the pressure ratio.");
+    }
+    double x_total = solve!error_in_total_enthalpy(x1, x2, 1.0e-4);
+    state0.p = x_total * state1.p;
+    gm.update_thermo_from_ps(state0, s1);
+} // end total_condition()
+
+
+void pitot_condition(const(GasState) state1, double vel1, 
+		     GasState state2pitot, GasModel gm)
+/**
+ * Given a free-stream condition, compute the corresponding Pitot condition
+ * at which the gas is brought to rest, possibly through a shock.
+ *
+ * Input
+ *   state1: Gas object specifying free-stream condition
+ *   vel1: free-stream velocity, m/s
+ *   state2: reference to the final gas state (to be computed)
+ *   gm: gas model
+ */
+{
+    if (vel1 > state1.a) {
+        // Supersonic free-stream; process through a shock first.
+	GasState state2 = new GasState(state1);
+        double[] velocities = normal_shock(state1, vel1, state2, gm);
+	double vel2 = velocities[0];
+        total_condition(state2, vel2, state2pitot, gm);
+    } else {
+        // Subsonic free-stream
+        total_condition(state1, vel1, state2pitot, gm);
+    }
+} // end pitot_condition()
+
 /+
-
-def expand_from_stagnation(p_over_p0, state0):
-    """
-    Given a stagnation condition state0, expand to a new pressure.
-
-    :param p_over_p0: pressure ratio
-    :param state0: Gas object specifying stagnation conditions
-    :returns: new gas state and the corresponding velocity (in m/s)
-        of the expanded stream.
-    """
-    new_state = state0.clone()
-    new_state.set_ps(state0.p * p_over_p0, state0.s)
-    # Matt McGilvray had a note about CEA giving bad entropy values
-    # so we'll assert things are OK before proceeding.
-    assert abs(new_state.s - state0.s)/abs(state0.s) < 0.001
-    h = new_state.e + new_state.p/new_state.rho  # static enthalpy
-    H = state0.e + state0.p/state0.rho  # stagnation enthalpy
-    V = math.sqrt(2.0*(H-h))
-    return new_state, V
-    
-def expansion_to_throat_calculation(state1, p0, T0, PRINT_STATUS = 1):
-    """
-    Given a starting state and stagnation pressure and temperature (p0 and T0)
-    find the throat conditions.
-    
-    A more generalised version of a function written by Matt McGilvray for his
-    gun tunnel version of nenzfr.
-    
-    :param state1: starting gas object
-    :param p0: stagnation pressure (in Pa)
-    :param T0: stagnation temperature (in K)
-    :param PRINT_STATUS: tells the program to print or not, turned on by default
-    :returns: a dictionary including state start, enthalpy, throat state,
-        throat velocity, and throat mass flux.
-    
-    """
-    if PRINT_STATUS: print 'Write stagnation conditions.'
-    state1.set_pT(p0, T0)
-    H1 = state1.e + state1.p/state1.rho
-    result = {'state1':state1, 'H1':H1}
-    if PRINT_STATUS: print 'print state1.s =', state1.s
-    #
-    if PRINT_STATUS: print 'Start isentropic relaxation to throat (Mach 1)'
-    def error_at_throat(x, s1s=state1):
-        "Returns Mach number error as pressure is changed."
-        state, V = expand_from_stagnation(x, s1s)
-        return (V/state.a) - 1.0
-    x6 = secant(error_at_throat, 0.95, 0.90, tol=1.0e-4)
-    if x6 == 'FAIL':
-        print "Failed to find throat conditions iteratively."
-        x6 = 1.0
-    state6, V6 = expand_from_stagnation(x6, state1)
-    mflux6 = state6.rho * V6  # mass flux per unit area, at throat
-    result['state6'] = state6
-    result['V6'] = V6
-    result['mflux6'] = mflux6
-    print 'M6 =', V6/state6.a, ', V6 =', V6, 'm/s and a6 =', state6.a, 'm/s'
-    #
-    return result
-
-
-def total_condition(state1, V1):
-    """
-    Given a free-stream condition and velocity,
-    compute the corresponding stagnant condition
-    at which the gas is brought to rest isentropically.
-
-    :param state1: Gas object specifying free-stream condition
-    :param V1: free-stream velocity, m/s
-    :returns: Gas object specifying gas total conditions (isentropic, stagnant)
-    """
-    H1 = state1.p/state1.rho + state1.e + 0.5*V1*V1
-    def error_in_total_enthalpy(x, state1=state1, H1=H1):
-        """
-        The enthalpy at the stagnation condition should match
-        the total enthalpy of the stream.
-        """
-        new_state = state1.clone()
-        new_state.set_ps(x * state1.p, state1.s)
-        h = new_state.p/new_state.rho + new_state.e
-        return (H1 - h)/abs(H1)
-    x_total = secant(error_in_total_enthalpy, 1.0, 1.01, tol=1.0e-4)
-    if x_total == 'FAIL':
-        print "Failed to find total conditions iteratively."
-        x_total = 1.0
-    new_state = state1.clone()
-    new_state.set_ps(x_total * state1.p, state1.s)
-    return new_state
-
-
-def pitot_condition(state1, V1):
-    """
-    Given a free-stream condition, compute the corresponding Pitot condition
-    at which the gas is brought to rest, possibly through a shock.
-
-    :param state1: Gas object specifying free-stream condition
-    :param V1: free-stream velocity, m/s
-    :returns: Gas object specifying gas impact conditions, 
-        possibly after processing be a normal shock. 
-    """
-    if V1 > state1.a:
-        # Supersonic free-stream; process through a shock first.
-        state2 = state1.clone()
-        (V2,Vg) = normal_shock(state1, V1, state2)
-        return total_condition(state2, V2)
-    else:
-        # Subsonic free-stream
-        return total_condition(state1, V1)
-
 
 def steady_flow_with_area_change(state1, V1, A2_over_A1, tol = 1.0e-4):
     """

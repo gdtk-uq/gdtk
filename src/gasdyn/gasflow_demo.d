@@ -39,21 +39,31 @@ void main(){
     double velr_b = reflected_shock(s2, velg, s5, gm);
     writeln("    velr_b=", velr_b);
     writeln("    s5:", s5);
+    //
+    writeln("Expand from stagnation (with ratio of pressure to match observation)");
+    GasState s5s = new GasState(s5);
+    double vel5s = expand_from_stagnation(34.37/59.47, s5, s5s, gm);
+    writeln("    vel5s=", vel5s, " Mach=", vel5s/s5s.a);
+    writeln("    s5s:", s5s);
+    //
+    writeln("Expand to throat conditions (Mach 1)");
+    GasState s6 = new GasState(s5s);
+    double vel6 = expand_to_mach(1.0, s5s, s6, gm);
+    writeln("    vel6=", vel6, " Mach=", vel6/s6.a);
+    writeln("    s6:", s6);
+    // [TODO] expand up to a Mach 4 condition and then compute pitot pressure.
+    //
+    writeln("Total condition");
+    GasState s7 = new GasState(s6);
+    total_condition(s6, vel6, s7, gm);
+    writeln("    s7:", s7);
+    //
+    writeln("Pitot condition from state 6");
+    GasState s8 = new GasState(s6);
+    pitot_condition(s6, vel6, s8, gm);
+    writeln("    pitot-p/total-p=", s8.p/s5.p);
+    writeln("    s8:", s8);
 /+
-    #
-    print "Expand from stagnation"
-    s6, V = expand_from_stagnation(0.0025, s5)
-    print "V=", V, "Mach=", V/s6.a, "s6:"
-    s6.write_state(sys.stdout)
-    #
-    print "Total condition"
-    s7 = total_condition(s6, V)
-    print "s7:"
-    s7.write_state(sys.stdout)
-    print "Pitot condition from state 6"
-    s8 = pitot_condition(s6, V)
-    print "pitot-p/total-p=", s8.p/s5.p, "s8:"
-    s8.write_state(sys.stdout)
     #
     print "\nSteady, isentropic flow with area change."
     s8a = Gas({'Air':1.0})
