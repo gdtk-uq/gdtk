@@ -389,74 +389,88 @@ void pitot_condition(const(GasState) state1, double vel1,
     }
 } // end pitot_condition()
 
+
+double steady_flow_with_area_change(const(GasState)state1, double vel1, double A2_over_A1,
+				    GasState state2, GasModel gm, double tol = 1.0e-4)
+/**
+ * Given station 1 condition, velocity and area-ratio A2/A1,
+ * compute the steady, isentropic condition at station 2.
+ *
+ * Input:
+ *   state1: Gas object specifying condition at station 1 (given)
+ *   vel1: velocity at station 1, m/s (given)
+ *   A2_over_A1: area ratio between stations A2/A1 (given)
+ *   state2: reference to GasState object for condition 2 (to be computed)
+ *   tol: tolerance for function solver to find nozzle outlet condition
+ *
+ * Returns: velocity at station 2, m/s
+ */
+{
+    state2.copy_values_from(state1);
+    gm.update_sound_speed(state2);
+    double M1 = abs(vel1)/state2.a;
+    double vel2 = vel1;
+    if (abs(A2_over_A1 - 1.0) < 1.0e-6) { return vel2; } // essentially no change
+    //
+    GasState total_cond = new GasState(state1);
+    total_condition(state1, vel1, total_cond, gm);
+    double p2p1_max = total_cond.p/state1.p;
+    double p2p1_min = 0.0001;
+    // Establish a suitable bracket for the pressure ratio.
+    // [TODO] When setting up the initial guess for pressure ratio,
+    // we could probably do better with the ideal relation between M and A/Astar.
+    double p2p1_guess1;
+    double p2p1_guess2;
+    // Note that we'll have trouble heading toward the sonic condition.
+    // For the moment, just don't do that.
+    if (M1 > 1.0) {
+        if (A2_over_A1 > 1.0) {
+            // For a supersonic expansion, we will see a drop in presure.
+	    p2p1_guess1 = 0.8;
+            p2p1_guess2 = 0.9;
+	} else {
+            // For a supersonic compression, we will see a rise in pressure.
+            p2p1_guess1 = min(1.1, 1.0+0.1*(p2p1_max-1));
+            p2p1_guess2 = min(1.2, 1.0+0.9*(p2p1_max-1));
+	}
+    } else {
+        if (A2_over_A1 < 1.0) {
+            // Subsonic nozzle will accelerate to lower pressures.
+            p2p1_guess1 = 0.8;
+            p2p1_guess2 = 0.9;
+        } else {
+            // Subsonic diffuser will decelerate to higher pressure.
+            p2p1_guess1 = min(1.1, 1.0+0.1*(p2p1_max-1));
+	    p2p1_guess2 = min(1.2, 1.0+0.9*(p2p1_max-1));
+	}
+    }
+    writefln("bracket p2p1_1=%g p2p1_2=%g", p2p1_guess1, p2p1_guess2);
+    // Set up constraint data and the error-function to be given to the solver.
+    double H1 = gm.enthalpy(state1) + 0.5*vel1*vel1;
+    double mdot1 = state1.rho * vel1; // assuming unit area at station 1
+    double s1 = gm.entropy(state1);
+    auto error_in_mass_flux = delegate(double p2p1) {
+        // The mass flux should be the same at each station.
+        state2.copy_values_from(state1);
+	state2.p *= p2p1;
+	gm.update_thermo_from_ps(state2, s1);
+        vel2 = sqrt(2*(H1 - gm.enthalpy(state2)));
+	double mdot2 = state2.rho * vel2 * A2_over_A1;
+        return (mdot2 - mdot1)/abs(mdot1);
+    };
+    if (bracket!error_in_mass_flux(p2p1_guess1, p2p1_guess2, p2p1_min, p2p1_max) < 0) {
+	throw new Exception("steady_flow_with_area_change() could not bracket" ~
+			    " the pressure ratio.");
+    }
+    double p2p1 = solve!error_in_mass_flux(p2p1_guess1, p2p1_guess2, tol);
+    state2.copy_values_from(state1);
+    state2.p *= p2p1;
+    gm.update_thermo_from_ps(state2, s1);
+    vel2 = sqrt(2*(H1 - gm.enthalpy(state2)));
+    return vel2;
+} // end steady_flow_with_area_change()
+
 /+
-
-def steady_flow_with_area_change(state1, V1, A2_over_A1, tol = 1.0e-4):
-    """
-    Given station 1 condition, velocity and area-ratio A2/A1,
-    compute the steady, isentropic condition at station 2.
-
-    :param state1: Gas object specifying condition at station 1
-    :param V1: velocity at station 1, m/s
-    :param A2_over_A1: area ratio between stations A2/A1
-    :param tol: tolerance for secant solver to find nozzle outlet condition
-    :returns: tuple (V2, state2) of conditions at station 2
-    """
-    M1 = abs(V1)/state1.a
-    # When setting up the initial guess for pressure ratio,
-    # we could probably do better with the ideal relation between M and A/Astar.
-    # Note that we'll have trouble heading toward the sonic condition.
-    # For the moment, just don't do that.
-    if M1 > 1.0:
-        if A2_over_A1 > 1.0:
-            # For a supersonic expansion, we might start at the high Mach number end.
-            if state1.p >= 2000.0:
-                p2p1_guess_1 = 0.001
-            elif state1.p >= 100.0: 
-                # we may not want to drop so low if our starting pressure is very low to start with
-                # Chris James 19/1/15
-                p2p1_guess_1 = 0.01
-            else: # and go even less if the pressure is very low
-                p2p1_guess_1 = 0.1
-            p2p1_guess_2 = 1.01 * p2p1_guess_1
-        else:
-            # For a supersonic compression, we probably can't go far in area ratio.
-            p2p1_guess_1 = 1.01
-            p2p1_guess_2 = 1.01 * p2p1_guess_1
-    else:
-        if A2_over_A1 < 1.0:
-            # Subsonic nozzle will accelerate to lower pressures.
-            p2p1_guess_1 = 0.95
-            p2p1_guess_2 = 1.01 * p2p1_guess_1
-        else:
-            # Subsonic diffuser will decelerate to higher pressure.
-            total_cond = total_condition(state1, V1)
-            p2p1_guess_1 = 0.99 * total_cond.p/state1.p
-            p2p1_guess_2 = 0.99 * p2p1_guess_1
-    # Set up constraint data and the error-function to be given to the solver.
-    H1 = state1.p/state1.rho + state1.e + 0.5*V1*V1
-    mdot1 = state1.rho * V1  # assuming unit area at station 1
-    def error_in_mass_flux(p2p1, state1=state1, A2=A2_over_A1, H1=H1, mdot1=mdot1):
-        """
-        The mass flux should be the same at each station.
-        """
-        # print "p2/p1=", p2p1
-        state2 = state1.clone()
-        state2.set_ps(p2p1 * state1.p, state1.s)
-        h2 = state2.p/state2.rho + state2.e
-        V2 = math.sqrt(2*(H1 - h2))
-        mdot2 = state2.rho * V2 * A2
-        return (mdot2 - mdot1)/abs(mdot1)
-    p2p1 = secant(error_in_mass_flux, p2p1_guess_1, p2p1_guess_2, tol=tol)
-    if p2p1 == 'FAIL':
-        print "Failed to find area-change conditions iteratively."
-        raise Exception, "Failed to find area-change conditions iteratively."
-        p2p1 = 1.0
-    state2 = state1.clone()
-    state2.set_ps(p2p1 * state1.p, state1.s)
-    h2 = state2.p/state2.rho + state2.e
-    V2 = math.sqrt(2*(H1 - h2))
-    return V2, state2
 
 #------------------------------------------------------------------------
 # Finite-strength waves along characteristic lines.

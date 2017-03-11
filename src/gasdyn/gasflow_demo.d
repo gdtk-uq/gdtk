@@ -45,24 +45,30 @@ void main(){
     double vel5s = expand_from_stagnation(34.37/59.47, s5, s5s, gm);
     writeln("    vel5s=", vel5s, " Mach=", vel5s/s5s.a);
     writeln("    s5s:", s5s);
+    writeln("    (h5s-h1)=", gm.enthalpy(s5s) - gm.enthalpy(s1)); 
     //
     writeln("Expand to throat conditions (Mach 1)");
     GasState s6 = new GasState(s5s);
     double vel6 = expand_to_mach(1.0, s5s, s6, gm);
     writeln("    vel6=", vel6, " Mach=", vel6/s6.a);
     writeln("    s6:", s6);
-    // [TODO] expand up to a Mach 4 condition and then compute pitot pressure.
     //
-    writeln("Total condition");
+    writeln("Something like a Mach 4 nozzle.");
     GasState s7 = new GasState(s6);
-    total_condition(s6, vel6, s7, gm);
+    double vel7 = steady_flow_with_area_change(s6, vel6, 27.0, s7, gm);
+    writeln("    vel7=", vel7);
     writeln("    s7:", s7);
     //
-    writeln("Pitot condition from state 6");
-    GasState s8 = new GasState(s6);
-    pitot_condition(s6, vel6, s8, gm);
-    writeln("    pitot-p/total-p=", s8.p/s5.p);
+    writeln("Total condition");
+    GasState s8 = new GasState(s7);
+    total_condition(s7, vel7, s8, gm);
     writeln("    s8:", s8);
+    //
+    writeln("Pitot condition from state 7");
+    GasState s9 = new GasState(s7);
+    pitot_condition(s7, vel7, s9, gm);
+    writeln("    pitot-p/total-p=", s9.p/s8.p);
+    writeln("    s9:", s9);
 /+
     #
     print "\nSteady, isentropic flow with area change."
