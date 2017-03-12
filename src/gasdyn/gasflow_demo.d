@@ -1,5 +1,5 @@
 /** gasflow_demo.d
- * Example of computing a reflected-shock tunnel flow.
+ * Example of computing a reflected-shock tunnel flow, followed by other cases.
  *
  * PJ, 2017-03-09
  */
@@ -17,123 +17,123 @@ void main(){
     //
     writeln("Incident shock (ideal gas)");
     GasState s2 = new GasState(s1);
-    double[] vel_results = shock_ideal(s1, 2414.0, s2, gm);
-    double vel2 = vel_results[0]; double velg = vel_results[1];
-    writeln("    vel2=", vel2, " velg=", velg);
+    double[] velocities = shock_ideal(s1, 2414.0, s2, gm);
+    double V2 = velocities[0]; double Vg = velocities[1];
+    writeln("    V2=", V2, " Vg=", Vg);
     writeln("    s2: ", s2);
     //
     writeln("Incident shock (full gas model)");
-    vel_results = normal_shock(s1, 2414.0, s2, gm);
-    vel2 = vel_results[0]; velg = vel_results[1];
-    writeln("    vel2=", vel2, " velg=", velg);
+    velocities = normal_shock(s1, 2414.0, s2, gm);
+    V2 = velocities[0]; Vg = velocities[1];
+    writeln("    V2=", V2, " Vg=", Vg);
     writeln("    s2: ", s2);
     //
     writeln("Incident shock computed from pressure ratio (full gas model)");
-    vel_results = normal_shock_p2p1(s1, 7.314e6/125.0e3, s2, gm);
-    double vel1 = vel_results[0]; vel2 = vel_results[1]; velg = vel_results[2];
-    writeln("    vel1=", vel1);
-    writeln("    vel2=", vel2, " velg=", velg);
+    velocities = normal_shock_p2p1(s1, 7.314e6/125.0e3, s2, gm);
+    double V1 = velocities[0]; V2 = velocities[1]; Vg = velocities[2];
+    writeln("    V1=", V1);
+    writeln("    V2=", V2, " Vg=", Vg);
     writeln("    s2: ", s2);
     //
     writeln("Reflected shock");
     GasState s5 = new GasState(s1);
-    double velr_b = reflected_shock(s2, velg, s5, gm);
-    writeln("    velr_b=", velr_b);
+    double Vr_b = reflected_shock(s2, Vg, s5, gm);
+    writeln("    Vr_b=", Vr_b);
     writeln("    s5:", s5);
     //
     writeln("Expand from stagnation (with ratio of pressure to match observation)");
     GasState s5s = new GasState(s5);
-    double vel5s = expand_from_stagnation(34.37/59.47, s5, s5s, gm);
-    writeln("    vel5s=", vel5s, " Mach=", vel5s/s5s.a);
+    double V5s = expand_from_stagnation(34.37/59.47, s5, s5s, gm);
+    writeln("    V5s=", V5s, " Mach=", V5s/s5s.a);
     writeln("    s5s:", s5s);
     writeln("    (h5s-h1)=", gm.enthalpy(s5s) - gm.enthalpy(s1)); 
     //
     writeln("Expand to throat conditions (Mach 1)");
     GasState s6 = new GasState(s5s);
-    double vel6 = expand_to_mach(1.0, s5s, s6, gm);
-    writeln("    vel6=", vel6, " Mach=", vel6/s6.a);
+    double V6 = expand_to_mach(1.0, s5s, s6, gm);
+    writeln("    V6=", V6, " Mach=", V6/s6.a);
     writeln("    s6:", s6);
     //
     writeln("Something like a Mach 4 nozzle.");
     GasState s7 = new GasState(s6);
-    double vel7 = steady_flow_with_area_change(s6, vel6, 27.0, s7, gm);
-    writeln("    vel7=", vel7);
+    double V7 = steady_flow_with_area_change(s6, V6, 27.0, s7, gm);
+    writeln("    V7=", V7);
     writeln("    s7:", s7);
     //
     writeln("Total condition");
     GasState s8 = new GasState(s7);
-    total_condition(s7, vel7, s8, gm);
+    total_condition(s7, V7, s8, gm);
     writeln("    s8:", s8);
     //
     writeln("Pitot condition from state 7");
     GasState s9 = new GasState(s7);
-    pitot_condition(s7, vel7, s9, gm);
+    pitot_condition(s7, V7, s9, gm);
     writeln("    pitot-p/total-p=", s9.p/s8.p);
     writeln("    s9:", s9);
     //
     writeln("\nSteady, isentropic flow with area change. (more checks)");
     GasState s10a = new GasState(gm, 1.0e5, 320.0); // ideal air, not high T
     gm.update_sound_speed(s10a);
-    double vel10a = 1.001 * s10a.a;
+    double V10a = 1.001 * s10a.a;
     GasState s10b = new GasState(s10a);
     writeln("something like M4 nozzle with ideal air");
-    double vel10b = steady_flow_with_area_change(s10a, vel10a, 10.72, s10b, gm);
-    writeln("    M=", vel10b/s10b.a, " expected 4");
+    double V10b = steady_flow_with_area_change(s10a, V10a, 10.72, s10b, gm);
+    writeln("    M=", V10b/s10b.a, " expected 4");
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.006586/0.5283);
     //
     writeln("slightly supersonic start");
-    vel10b = steady_flow_with_area_change(s10a, vel10a, 1.030, s10b, gm); 
-    writeln("    M=", vel10b/s10b.a, " expected 1.2");
+    V10b = steady_flow_with_area_change(s10a, V10a, 1.030, s10b, gm); 
+    writeln("    M=", V10b/s10b.a, " expected 1.2");
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.4124/0.5283);
     //
     writeln("sonic to M=0.2");
-    vel10a = 0.999 * s10a.a;
-    vel10b = steady_flow_with_area_change(s10a, vel10a, 2.9635, s10b, gm);
-    writeln("    M=", vel10b/s10b.a, " expected 0.2");
+    V10a = 0.999 * s10a.a;
+    V10b = steady_flow_with_area_change(s10a, V10a, 2.9635, s10b, gm);
+    writeln("    M=", V10b/s10b.a, " expected 0.2");
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.9725/0.5283);
     //
     writeln("M=0.2 to M=0.5");
-    vel10a = 0.2 * s10a.a;
-    vel10b = steady_flow_with_area_change(s10a, vel10a, 1.3398/2.9635, s10b, gm);
-    writeln("    M=", vel10b/s10b.a, " expected 0.5");
+    V10a = 0.2 * s10a.a;
+    V10b = steady_flow_with_area_change(s10a, V10a, 1.3398/2.9635, s10b, gm);
+    writeln("    M=", V10b/s10b.a, " expected 0.5");
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.8430/0.9725);
     //
     writeln("\nFinite wave process along a cplus characteristic, stepping in pressure.");
-    vel1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
+    V1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
     gm.update_sound_speed(s1);
-    double Jplus = vel1 + 2*s1.a/(1.4-1);
-    vel2 = finite_wave_dp("cplus", vel1, s1, 60.0e3, s2, gm);
-    writeln("    vel2=", vel2);
+    double Jplus = V1 + 2*s1.a/(1.4-1);
+    V2 = finite_wave_dp("cplus", V1, s1, 60.0e3, s2, gm);
+    writeln("    V2=", V2);
     writeln("    s2:", s2);
-    writeln("    ideal vel2=", Jplus - 2*s2.a/(1.4-1));
+    writeln("    ideal V2=", Jplus - 2*s2.a/(1.4-1));
     //
     writeln("\nFinite wave process along a cplus characteristic, stepping in velocity.");
-    vel1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
+    V1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
     gm.update_sound_speed(s1);
-    Jplus = vel1 + 2*s1.a/(1.4-1);
-    vel2 = finite_wave_dv("cplus", vel1, s1, 125.0, s2, gm);
-    writeln("    vel2=", vel2);
+    Jplus = V1 + 2*s1.a/(1.4-1);
+    V2 = finite_wave_dv("cplus", V1, s1, 125.0, s2, gm);
+    writeln("    V2=", V2);
     writeln("    s2:", s2);
-    writeln("    ideal Jplus=", Jplus, " actual Jplus=", vel2 + 2*s2.a/(1.4-1));
+    writeln("    ideal Jplus=", Jplus, " actual Jplus=", V2 + 2*s2.a/(1.4-1));
     //
     double M1 = 1.5;
     writefln("\nOblique-shock demo for M1=%g.", M1);
-    GasState s21 = new GasState(gm, 1.0e5, 300.0); // ideal air, not high T
-    gm.update_sound_speed(s21);
-    GasState s22 = new GasState(s21);
+    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    gm.update_thermo_from_pT(s1); 
+    gm.update_sound_speed(s1);
     double beta = 45.0 * PI/180.0;
     writeln("    given beta(degrees)=", beta);
-    double vel21 = 1.5 * s21.a;
-    writeln("    s21:", s21);
-    double[] shock_results = theta_oblique(s21, vel21, beta, s22, gm);
-    double theta = shock_results[0]; vel2 = shock_results[1];
+    V1 = 1.5 * s1.a;
+    writeln("    s1:", s1);
+    double[] shock_results = theta_oblique(s1, V1, beta, s2, gm);
+    double theta = shock_results[0]; V2 = shock_results[1];
     writeln("    theta=", theta);
-    writeln("    vel2=", vel2);
-    writeln("    s22:", s22);
+    writeln("    V2=", V2);
+    writeln("    s2:", s2);
     writeln("    c.f. ideal gas angle=", theta_obl(M1, beta));
     //
     writeln("Oblique shock angle from deflection.");
-    double beta2 = beta_oblique(s21, vel21, theta, gm);
+    double beta2 = beta_oblique(s1, V1, theta, gm);
     writeln("    beta2(degrees)=", beta2*180/PI);
     //
 /+
