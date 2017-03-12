@@ -644,53 +644,73 @@ double beta_oblique(const(GasState) state1, double V1, double theta,
     double beta_result = solve!error_in_theta(b1, b2, 1.0e-4);
     return beta_result;
 }
-/+
 
-#------------------------------------------------------------------------
-# Taylor-Maccoll cone flow.
+//------------------------------------------------------------------------
+// Taylor-Maccoll cone flow.
 
-def EOS_derivatives(state):
-    """
-    Compute equation-of-state derivatives at the specified state.
+double[] EOS_derivatives(const(GasState) state_0, GasModel gm)
+/**
+ * Compute equation-of-state derivatives at the specified state.
+ *
+ * Input:
+ *   state: a complete state (with valid data)
+ *   gm: reference to current gas model
+ *
+ * Returns: array of approximations [drho/dp, drho/dh]
+ */
+{
+    double rho_0 = state_0.rho;
+    double h_0 = gm.enthalpy(state_0);
+    double T_0 = state_0.Ttr;
+    // Choose relatively-small increments in enthalpy (J/kg) and pressure (Pa).
+    double dh = abs(h_0) * 0.01 + 1000.0;
+    double dp = state_0.p * 0.01 + 1000.0;
+    // We're actually going to work in changes of p and T.
+    double Cp = gm.dhdT_const_p(state_0);
+    double dT = dh/Cp;
+    // Use finite-differences to get the partial derivative.
+    GasState state_new = new GasState(state_0);
+    state_new.p = state_0.p + dp;
+    gm.update_thermo_from_pT(state_new);
+    double drhodp = (state_new.rho - rho_0) / dp;
+    // and again, for the change in h, holding p constant.
+    state_new.copy_values_from(state_0);
+    state_new.p = state_0.p;
+    state_new.Ttr = state_0.Ttr + dT;
+    gm.update_thermo_from_pT(state_new);
+    double drhodh = (state_new.rho - rho_0) / dh;
+    // Assume that these first-order differences will suffice.
+    return [drhodp, drhodh];
+} // end EOS_derivatives()
 
-    :param state: a complete state (with valid data)
-    :returns: tuple of approximations (drho/dp, drho/dh)
-    """
-    rho_0 = state.rho
-    # Choose relatively-small increments in enthalpy (J/kg) and pressure (Pa).
-    dh = abs(state.h) * 0.01 + 1000.0
-    dp = state.p * 0.01 + 1000.0
-    # Use finite-differences to get the partial derivative.
-    state_new = state.clone()
-    state_new.set_ph(state.p + dp, state.h)
-    drhodp = (state_new.rho - rho_0) / dp
-    # and again, for the other.
-    state_new.set_ph(state.p, state.h + dh)
-    drhodh = (state_new.rho - rho_0) / dh
-    # Assume that these first-order differences will suffice.
-    return drhodp, drhodh
 
-def taylor_maccoll_odes(z, theta, gas_state):
-    """
+double[] taylor_maccoll_odes(double[] z, double theta,
+			     const(GasState) gas_state, GasModel gm)
+{
+    /**
     The ODEs from the Taylor-Maccoll formulation.
 
     See PJ's workbook for Feb 2012 for details.
     We've packaged them formally so that we might one day use
     a more sophisticated ODE integrator requiring fewer steps.
-    """
-    rho, V_r, V_theta, h, p = z
-    dfdp, dfdh = EOS_derivatives(gas_state)
-    if DEBUG_GAS_FLOW: print "DEBUG dfdp=", dfdp, "dfdh=", dfdh
-    # Assemble linear system for determining the derivatives wrt theta.
-    A = numpy.zeros((5,5), float)
-    b = numpy.zeros((5,), float)
-    A[0,0] = V_theta; A[0,2] = rho; b[0] = -2.0*rho*V_r - rho*V_theta/math.tan(theta)
-    A[1,1] = 1.0; b[1] = V_theta
-    A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0
-    A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0
-    A[4,0] = 1.0; A[4,3] = -dfdh; A[4,4] = -dfdp
-    dzdtheta = numpy.linalg.solve(A,b)
-    return dzdtheta
+    **/
+    double rho=z[0]; double V_r=z[1]; double V_theta=z[2];
+    double h=z[3]; double p=z[4];
+    // Assemble linear system for determining the derivatives wrt theta.
+    auto A = zeros(5,6); // Augmented matrix with rhs in last column.
+    double[] derivs = EOS_derivatives(gas_state, gm);
+    double dfdp = derivs[0]; double dfdh = derivs[1];
+    debug { writeln("DEBUG dfdp=", dfdp, " dfdh=", dfdh); }
+    A[0,0] = V_theta; A[0,2] = rho; A[0,5] = -2.0*rho*V_r - rho*V_theta/tan(theta);
+    A[1,1] = 1.0; A[1,5] = V_theta;
+    A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0;
+    A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0;
+    A[4,0] = 1.0; A[4,3] = -dfdh; A[4,4] = -dfdp;
+    gaussJordanElimination(A);
+    double[] dzdtheta =  A.getColumn(5);
+    return dzdtheta;
+}
+/+
 
 def theta_cone(state1, V1, beta):
     """
