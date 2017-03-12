@@ -96,26 +96,25 @@ void main(){
     vel10b = steady_flow_with_area_change(s10a, vel10a, 1.3398/2.9635, s10b, gm);
     writeln("    M=", vel10b/s10b.a, " expected 0.5");
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.8430/0.9725);
+    //
+    writeln("\nFinite wave process along a cplus characteristic, stepping in pressure.");
+    vel1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
+    gm.update_sound_speed(s1);
+    double Jplus = vel1 + 2*s1.a/(1.4-1);
+    vel2 = finite_wave_dp("cplus", vel1, s1, 60.0e3, s2, gm);
+    writeln("    vel2=", vel2);
+    writeln("    s2:", s2);
+    writeln("    ideal vel2=", Jplus - 2*s2.a/(1.4-1));
+    //
+    writeln("\nFinite wave process along a cplus characteristic, stepping in velocity.");
+    vel1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
+    gm.update_sound_speed(s1);
+    Jplus = vel1 + 2*s1.a/(1.4-1);
+    vel2 = finite_wave_dv("cplus", vel1, s1, 125.0, s2, gm);
+    writeln("    vel2=", vel2);
+    writeln("    s2:", s2);
+    writeln("    ideal Jplus=", Jplus, " actual Jplus=", vel2 + 2*s2.a/(1.4-1));
 /+
-    #
-    print "\nFinite wave process along a cplus characteristic, stepping in p."
-    V1 = 0.0
-    s9 = Gas({'Air':1.0})
-    s9.set_pT(1.0e5, 320.0)
-    Jplus = V1 + 2*s9.a/(1.4-1)
-    V2, s10 = finite_wave_dp('cplus', V1, s9, 60.0e3)
-    print "V2=", V2, "s10:"
-    s10.write_state(sys.stdout)
-    print "ideal V2=", Jplus - 2*s10.a/(1.4-1)
-    #
-    print "\nFinite wave process along a cplus characteristic, stepping in V."
-    V1 = 0.0
-    s9.set_pT(1.0e5, 320.0)
-    Jplus = V1 + 2*s9.a/(1.4-1)
-    V2, s10 = finite_wave_dv('cplus', V1, s9, 125.0)
-    print "V2=", V2, "s10:"
-    s10.write_state(sys.stdout)
-    print "ideal Jplus=", Jplus, " actual Jplus=", V2 + 2*s10.a/(1.4-1)
     #
     M1 = 1.5
     print "\nOblique-shock demo for M1=%g." % M1
