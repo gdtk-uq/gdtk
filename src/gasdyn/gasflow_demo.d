@@ -69,22 +69,34 @@ void main(){
     pitot_condition(s7, vel7, s9, gm);
     writeln("    pitot-p/total-p=", s9.p/s8.p);
     writeln("    s9:", s9);
+    //
+    writeln("\nSteady, isentropic flow with area change. (more checks)");
+    GasState s10a = new GasState(gm, 1.0e5, 320.0); // ideal air, not high T
+    gm.update_sound_speed(s10a);
+    double vel10a = 1.001 * s10a.a;
+    GasState s10b = new GasState(s10a);
+    writeln("something like M4 nozzle with ideal air");
+    double vel10b = steady_flow_with_area_change(s10a, vel10a, 10.72, s10b, gm);
+    writeln("    M=", vel10b/s10b.a, " expected 4");
+    writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.006586/0.5283);
+    //
+    writeln("slightly supersonic start");
+    vel10b = steady_flow_with_area_change(s10a, vel10a, 1.030, s10b, gm); 
+    writeln("    M=", vel10b/s10b.a, " expected 1.2");
+    writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.4124/0.5283);
+    //
+    writeln("sonic to M=0.2");
+    vel10a = 0.999 * s10a.a;
+    vel10b = steady_flow_with_area_change(s10a, vel10a, 2.9635, s10b, gm);
+    writeln("    M=", vel10b/s10b.a, " expected 0.2");
+    writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.9725/0.5283);
+    //
+    writeln("M=0.2 to M=0.5");
+    vel10a = 0.2 * s10a.a;
+    vel10b = steady_flow_with_area_change(s10a, vel10a, 1.3398/2.9635, s10b, gm);
+    writeln("    M=", vel10b/s10b.a, " expected 0.5");
+    writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.8430/0.9725);
 /+
-    #
-    print "\nSteady, isentropic flow with area change."
-    s8a = Gas({'Air':1.0})
-    s8a.set_pT(1.0e5, 320.0)
-    V8a = 1.001 * s8a.a
-    V8b, s8b = steady_flow_with_area_change(s8a, V8a, 10.72) # something like M4 nozzle
-    print "M=", V8b/s8b.a, "expected 4,  p2/p1=", s8b.p/s8a.p, "expected", 0.006586/0.5283
-    V8b, s8b = steady_flow_with_area_change(s8a, V8a, 1.030) # slightly supersonic
-    print "M=", V8b/s8b.a, "expected 1.2,  p2/p1=", s8b.p/s8a.p, "expected", 0.4124/0.5283
-    V8a = 0.999 * s8a.a
-    V8b, s8b = steady_flow_with_area_change(s8a, V8a, 2.9635) # sonic to M=0.2
-    print "M=", V8b/s8b.a, "expected 0.2,  p2/p1=", s8b.p/s8a.p, "expected", 0.9725/0.5283
-    V8a = 0.2 * s8a.a
-    V8b, s8b = steady_flow_with_area_change(s8a, V8a, 1.3398/2.9635) # M=0.2 to M=0.5
-    print "M=", V8b/s8b.a, "expected 0.5,  p2/p1=", s8b.p/s8a.p, "expected", 0.8430/0.9725
     #
     print "\nFinite wave process along a cplus characteristic, stepping in p."
     V1 = 0.0

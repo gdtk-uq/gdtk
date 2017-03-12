@@ -415,36 +415,33 @@ double steady_flow_with_area_change(const(GasState)state1, double vel1, double A
     GasState total_cond = new GasState(state1);
     total_condition(state1, vel1, total_cond, gm);
     double p2p1_max = total_cond.p/state1.p;
-    double p2p1_min = 0.0001;
+    double p2p1_min = 0.001;
     // Establish a suitable bracket for the pressure ratio.
     // [TODO] When setting up the initial guess for pressure ratio,
     // we could probably do better with the ideal relation between M and A/Astar.
     double p2p1_guess1;
     double p2p1_guess2;
-    // Note that we'll have trouble heading toward the sonic condition.
-    // For the moment, just don't do that.
     if (M1 > 1.0) {
         if (A2_over_A1 > 1.0) {
             // For a supersonic expansion, we will see a drop in presure.
-	    p2p1_guess1 = 0.8;
-            p2p1_guess2 = 0.9;
+	    p2p1_guess1 = 0.9;
+            p2p1_guess2 = 1.0;
 	} else {
             // For a supersonic compression, we will see a rise in pressure.
             p2p1_guess1 = min(1.1, 1.0+0.1*(p2p1_max-1));
             p2p1_guess2 = min(1.2, 1.0+0.9*(p2p1_max-1));
 	}
-    } else {
+    } else { // subsonic
         if (A2_over_A1 < 1.0) {
             // Subsonic nozzle will accelerate to lower pressures.
-            p2p1_guess1 = 0.8;
-            p2p1_guess2 = 0.9;
+            p2p1_guess1 = 0.5;
+            p2p1_guess2 = 1.0;
         } else {
             // Subsonic diffuser will decelerate to higher pressure.
             p2p1_guess1 = min(1.1, 1.0+0.1*(p2p1_max-1));
 	    p2p1_guess2 = min(1.2, 1.0+0.9*(p2p1_max-1));
 	}
     }
-    writefln("bracket p2p1_1=%g p2p1_2=%g", p2p1_guess1, p2p1_guess2);
     // Set up constraint data and the error-function to be given to the solver.
     double H1 = gm.enthalpy(state1) + 0.5*vel1*vel1;
     double mdot1 = state1.rho * vel1; // assuming unit area at station 1
@@ -456,7 +453,8 @@ double steady_flow_with_area_change(const(GasState)state1, double vel1, double A
 	gm.update_thermo_from_ps(state2, s1);
         vel2 = sqrt(2*(H1 - gm.enthalpy(state2)));
 	double mdot2 = state2.rho * vel2 * A2_over_A1;
-        return (mdot2 - mdot1)/abs(mdot1);
+        double mdot_error = (mdot2 - mdot1)/abs(mdot1);
+        return mdot_error;
     };
     if (bracket!error_in_mass_flux(p2p1_guess1, p2p1_guess2, p2p1_min, p2p1_max) < 0) {
 	throw new Exception("steady_flow_with_area_change() could not bracket" ~
