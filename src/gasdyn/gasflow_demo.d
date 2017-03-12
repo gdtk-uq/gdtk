@@ -7,6 +7,7 @@
 import std.stdio, std.math;
 import gas.gas_model;
 import gasflow;
+import idealgasflow; // for the oblique shock relations
 
 void main(){
     writeln("Begin gasflow demo (reflected-shock tunnel calculation)");
@@ -114,25 +115,28 @@ void main(){
     writeln("    vel2=", vel2);
     writeln("    s2:", s2);
     writeln("    ideal Jplus=", Jplus, " actual Jplus=", vel2 + 2*s2.a/(1.4-1));
+    //
+    double M1 = 1.5;
+    writefln("\nOblique-shock demo for M1=%g.", M1);
+    GasState s21 = new GasState(gm, 1.0e5, 300.0); // ideal air, not high T
+    gm.update_sound_speed(s21);
+    GasState s22 = new GasState(s21);
+    double beta = 45.0 * PI/180.0;
+    writeln("    given beta(degrees)=", beta);
+    double vel21 = 1.5 * s21.a;
+    writeln("    s21:", s21);
+    double[] shock_results = theta_oblique(s21, vel21, beta, s22, gm);
+    double theta = shock_results[0]; vel2 = shock_results[1];
+    writeln("    theta=", theta);
+    writeln("    vel2=", vel2);
+    writeln("    s22:", s22);
+    writeln("    c.f. ideal gas angle=", theta_obl(M1, beta));
+    //
+    writeln("Oblique shock angle from deflection.");
+    double beta2 = beta_oblique(s21, vel21, theta, gm);
+    writeln("    beta2(degrees)=", beta2*180/PI);
+    //
 /+
-    #
-    M1 = 1.5
-    print "\nOblique-shock demo for M1=%g." % M1
-    from ideal_gas_flow import theta_obl
-    s1.set_pT(100.0e3, 300.0)
-    beta = 45.0 * math.pi/180
-    V1 = 1.5 * s1.a
-    print "s1:"
-    s1.write_state(sys.stdout)
-    theta, V2, s2 = theta_oblique(s1, V1, beta)
-    print "theta=", theta, "V2=", V2, "s2:"
-    s2.write_state(sys.stdout)
-    print "c.f. ideal gas angle=", theta_obl(M1, beta)
-    #
-    print "Oblique shock angle from deflection."
-    beta2 = beta_oblique(s1, V1, theta)
-    print "beta2(degrees)=", beta2*180/math.pi
-    #
     M1 = 1.5
     print "\nTaylor-Maccoll cone flow demo with M1=%g" % M1
     print "for M1=1.5, beta=49deg, expect theta=20deg from NACA1135."

@@ -67,10 +67,10 @@ luaidealgasflow_demo: luaidealgasflow_demo.d $(NM_FILES) $(LIBLUA) \
 		luaidealgasflow_demo.d idealgasflow.d luaidealgasflow.d \
 		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-gasflow_demo: gasflow_demo.d gasflow.d $(NM_FILES) $(LIBLUA) \
+gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
 	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(KINETICS_FILES)
 	dmd $(DFLAGS) $(OF)gasflow_demo \
-		gasflow_demo.d gasflow.d $(NM_FILES) $(UTIL_FILES) \
+		gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
 
 #--------------------------------------------------------------------------

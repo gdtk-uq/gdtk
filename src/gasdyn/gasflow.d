@@ -576,56 +576,75 @@ double finite_wave_dv(string characteristic, double vel1, const(GasState) state1
     return vel2;
 } // end finite_wave_dv()
 
+
+//------------------------------------------------------------------------
+// Oblique shock relations
+
+double[] theta_oblique(const(GasState) state1, double vel1, double beta,
+		       GasState state2, GasModel gm)
+/**
+ * Compute the deflection angle and post-shock conditions given the shock wave angle.
+ *
+ * Input:
+ *   state1: upstream gas condition
+ *   vel1: speed of gas into shock
+ *   beta: shock wave angle with respect to stream direction (in radians)
+ *   state2: reference to downstream gas condition (to be computed)
+ *   gm: reference to current gas model
+ *
+ * Returns: array of theta, vel2.
+ *   theta is stream deflection angle in radians
+ *   vel2 is post-shock speed of gas in m/s
+ */
+{
+    double vel1_n = vel1 * sin(beta);
+    double vel_t = vel1 * cos(beta);
+    state2.copy_values_from(state1);
+    gm.update_sound_speed(state2);
+    double M1_n = vel1 / state2.a; // normal Mach number coming into shock
+    if (M1_n < 1.0) {
+        throw new Exception(format("theta_oblique(): subsonic inflow M1_n=%e", M1_n));
+    }
+    double[] velocities = normal_shock(state1, vel1_n, state2, gm);
+    double vel2_n = velocities[0]; double velg_n = velocities[1]; 
+    double vel2 = sqrt(vel2_n * vel2_n + vel_t * vel_t);
+    double theta = beta - atan2(vel2_n, vel_t);
+    return [theta, vel2];
+} // end theta_oblique()
+
+
+double beta_oblique(const(GasState) state1, double vel1, double theta,
+		    GasModel gm)
+/**
+ * Compute the oblique shock wave angle given the deflection angle.
+ *
+ * Input:
+ *   state1: upstream gas condition
+ *   vel1: speed of gas into shock
+ *   theta: stream deflection angle (in radians)
+ *   gm: reference to the current gas model
+ *
+ * Returns: shock wave angle wrt incoming stream direction (in radians)
+ */
+{
+    GasState state2 = new GasState(state1);
+    gm.update_sound_speed(state2);
+    double M1 = vel1 / state2.a;
+    double b1 = max(asin(1.0/M1), 1.1*theta);
+    double b2 = b1 * 1.05;
+    auto error_in_theta = delegate(double beta_guess) {
+        double[] shock_results = theta_oblique(state1, vel1, beta_guess, state2, gm);
+        double theta_guess = shock_results[0]; double vel2 = shock_results[1]; 
+        double error_value = theta_guess - theta;
+        return error_value;
+    };
+    if (bracket!error_in_theta(b1, b2, asin(1.0/M1), PI/2) < 0) {
+	throw new Exception("beta_oblique(): failed to converge on a shock-wave angle.");
+    }
+    double beta_result = solve!error_in_theta(b1, b2, 1.0e-4);
+    return beta_result;
+}
 /+
-
-#------------------------------------------------------------------------
-# Oblique shock relations
-
-def theta_oblique(state1, V1, beta):
-    """
-    Compute the deflection angle and post-shock conditions given the shock wave angle.
-
-    :param state1: upstream gas condition
-    :param V1: speed of gas into shock
-    :param beta: shock wave angle wrt stream direction (in radians)
-    :returns: tuple of theta, V2 and state2:
-        theta is stream deflection angle in radians
-        V2 is post-shock speed of gas in m/s
-        state2 is post-shock gas state
-    """
-    V1_n = V1 * math.sin(beta)
-    V_t = V1 * math.cos(beta)
-    M1_n = V1 / state1.a
-    if M1_n < 1.0:
-        raise Exception, 'theta_oblique(): subsonic inflow M1_n=%e' % M1_n
-    state2 = state1.clone()
-    V2_n, Vg_n = normal_shock(state1, V1_n, state2)
-    V2 = math.sqrt(V2_n * V2_n + V_t * V_t)
-    theta = beta - math.atan2(V2_n, V_t)
-    return theta, V2, state2
-
-
-def beta_oblique(state1, V1, theta):
-    """
-    Compute the oblique shock wave angle given the deflection angle.
-
-    :param state1: upstream gas condition
-    :param V1: speed of gas into shock
-    :param theta: stream deflection angle (in radians)
-    :returns: shock wave angle wrt incoming stream direction (in radians)
-    """
-    M1 = V1 / state1.a
-    b1 = max(math.asin(1.0/M1), 1.1*theta)
-    b2 = b1 * 1.05
-    def error_in_theta(beta_guess):
-        theta_guess, V2, state2 = theta_oblique(state1, V1, beta_guess)
-        error_value = theta_guess - theta
-        # print "beta_guess=", beta_guess, "error_value=", error_value
-        return error_value
-    beta_result = secant(error_in_theta, b1, b2, tol=1.0e-4)
-    if beta_result == 'FAIL':
-        raise RuntimeError('beta_oblique(): failed to converge on a shock-wave angle.')
-    return beta_result
 
 #------------------------------------------------------------------------
 # Taylor-Maccoll cone flow.
