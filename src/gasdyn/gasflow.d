@@ -19,6 +19,7 @@
  *               Matt McGilvray's gun tunnel version of nenzfr. -Chris James
  * 2017-Mar-09 : Ported to D by PJ
  *
+ * [TODO] change to using Brent's function solver rather than Ridder's.
  */
 
 module gasflow;
@@ -75,7 +76,8 @@ double my_limiter(double delta, double orig, double frac=0.5)
     return copysign(fmin(abs(delta),frac*abs(orig)), delta);
 }
 
-double[] normal_shock(const(GasState) state1, double Vs, GasState state2, GasModel gm)
+double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
+		      GasModel gm, double rho_tol=1.0e-6, double T_tol = 0.1)
 /**
  * Computes post-shock conditions in a shock-stationary frame.
  *
@@ -84,6 +86,8 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2, GasMod
  *   Vs: speed of gas coming into shock (given)
  *   state2: reference to post-shock Gas state (to be estimated)
  *   gm: the gas model in use
+ *   rho_tol: tolerance in kg/m^3
+ *   T_tol: temperature tolerance in degrees K
  *
  * Returns: the dynamic array [V2, Vg], containing the post-shock gas speeds,
  *   V2 in the shock-reference frame,
@@ -124,8 +128,6 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2, GasMod
     //
     double rho_delta = 1.0;
     double T_delta = 1.0;
-    double rho_tol = 1.0e-3; // tolerance in kg/m^3
-    double T_tol = 0.25;  // tolerance in degrees K
     //
     // Update the estimates using the Newton-Raphson method.
     //
@@ -150,9 +152,8 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2, GasMod
         // less inclined to go crazy.
         rho_delta = my_limiter(rho_delta, rho_save);
         T_delta = my_limiter(T_delta, T_save);
-        double rho_new = rho_save + rho_delta;
-        double T_new   = T_save + T_delta;
-	state2.rho=rho_new; state2.Ttr = T_new;
+        state2.rho = rho_save + rho_delta;
+        state2.Ttr = T_save + T_delta;
         gm.update_thermo_from_rhoT(state2);
         // Check convergence.
         if (abs(rho_delta) < rho_tol && abs(T_delta) < T_tol) { break; }
@@ -160,6 +161,7 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2, GasMod
     // Back-out velocities via continuity.
     V2 = V1 * state1.rho / state2.rho;
     Vg = V1 - V2;
+    gm.update_sound_speed(state2); // be sure that state2 is complete
     return [V2, Vg];
 } // end normal_shock()
 
@@ -198,7 +200,7 @@ double[] normal_shock_p2p1(const(GasState) state1, double p2p1,
     if (bracket!error_in_p2p1(vguess1, vguess2) < 0) {
 	throw new Exception("normal_shock_p2p1 could not bracket the shock velocity.");
     }
-    double V1 = solve!error_in_p2p1(vguess1, vguess2, 1.0e-3);
+    double V1 = solve!error_in_p2p1(vguess1, vguess2, 1.0e-6);
     velocities = normal_shock(state1, V1, state2, gm);
     double V2 = velocities[0]; double Vg = velocities[1];
     return [V1, V2, Vg];
@@ -641,14 +643,14 @@ double beta_oblique(const(GasState) state1, double V1, double theta,
     if (bracket!error_in_theta(b1, b2, asin(1.0/M1), PI/2) < 0) {
 	throw new Exception("beta_oblique(): failed to converge on a shock-wave angle.");
     }
-    double beta_result = solve!error_in_theta(b1, b2, 1.0e-4);
+    double beta_result = solve!error_in_theta(b1, b2, 1.0e-6);
     return beta_result;
 }
 
 //------------------------------------------------------------------------
 // Taylor-Maccoll cone flow.
 
-double[] EOS_derivatives(const(GasState) state_0, GasModel gm)
+double[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
 /**
  * Compute equation-of-state derivatives at the specified state.
  *
@@ -656,135 +658,168 @@ double[] EOS_derivatives(const(GasState) state_0, GasModel gm)
  *   state: a complete state (with valid data)
  *   gm: reference to current gas model
  *
- * Returns: array of approximations [drho/dp, drho/dh]
+ * Returns: array of approximate derivatives [drho/dp, drho/du]
  */
 {
     double rho_0 = state_0.rho;
-    double h_0 = gm.enthalpy(state_0);
-    double T_0 = state_0.Ttr;
-    // Choose relatively-small increments in enthalpy (J/kg) and pressure (Pa).
-    double dh = abs(h_0) * 0.01 + 1000.0;
+    // Choose relatively-small increments in energy (J/kg) and pressure (Pa).
+    double du = abs(state_0.u) * 0.01 + 1000.0;
     double dp = state_0.p * 0.01 + 1000.0;
     // We're actually going to work in changes of p and T.
-    double Cp = gm.dhdT_const_p(state_0);
-    double dT = dh/Cp;
+    // The function name for Cv evaluation does look a bit odd,
+    // in that the increment in internal energy with p constant
+    // will not be constant volume.  However, what we really want
+    // is the change in temperature for a change in internal energy.
+    double Cv = gm.dudT_const_v(state_0);
+    double dT = du/Cv;
     // Use finite-differences to get the partial derivative.
     GasState state_new = new GasState(state_0);
     state_new.p = state_0.p + dp;
     gm.update_thermo_from_pT(state_new);
     double drhodp = (state_new.rho - rho_0) / dp;
-    // and again, for the change in h, holding p constant.
+    // and again, for the change in u, holding p constant.
     state_new.copy_values_from(state_0);
     state_new.p = state_0.p;
     state_new.Ttr = state_0.Ttr + dT;
     gm.update_thermo_from_pT(state_new);
-    double drhodh = (state_new.rho - rho_0) / dh;
+    double drhodu = (state_new.rho - rho_0) / du;
+    // debug {
+    // 	writeln("DEBUG drhodp=", drhodp, " drhodu=", drhodu);
+    // }
     // Assume that these first-order differences will suffice.
-    return [drhodp, drhodh];
+    return [drhodp, drhodu];
 } // end EOS_derivatives()
 
 
-double[] taylor_maccoll_odes(double[] z, double theta,
-			     const(GasState) gas_state, GasModel gm)
+double[5] taylor_maccoll_odes(double[5] z, double theta,
+			      const(GasState) gas_state, GasModel gm)
 {
     /**
     The ODEs from the Taylor-Maccoll formulation.
 
-    See PJ's workbook for Feb 2012 for details.
+    See PJ's workbook for March 2017 for details.
     We've packaged them formally so that we might one day use
     a more sophisticated ODE integrator requiring fewer steps.
     **/
     double rho=z[0]; double V_r=z[1]; double V_theta=z[2];
-    double h=z[3]; double p=z[4];
+    double u=z[3]; double p=z[4];
+    // Assume gas_state is current.
     // Assemble linear system for determining the derivatives wrt theta.
     auto A = zeros(5,6); // Augmented matrix with rhs in last column.
-    double[] derivs = EOS_derivatives(gas_state, gm);
-    double dfdp = derivs[0]; double dfdh = derivs[1];
-    debug { writeln("DEBUG dfdp=", dfdp, " dfdh=", dfdh); }
+    double[2] derivs = EOS_derivatives(gas_state, gm);
+    double drhodp = derivs[0]; double drhodu = derivs[1];
     A[0,0] = V_theta; A[0,2] = rho; A[0,5] = -2.0*rho*V_r - rho*V_theta/tan(theta);
     A[1,1] = 1.0; A[1,5] = V_theta;
     A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0;
-    A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0;
-    A[4,0] = 1.0; A[4,3] = -dfdh; A[4,4] = -dfdp;
+    A[3,0] = -p/(rho^^2); A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0; A[3,4] = 1.0/rho;
+    A[4,0] = 1.0; A[4,3] = -drhodu; A[4,4] = -drhodp;
     gaussJordanElimination(A);
-    double[] dzdtheta =  A.getColumn(5);
+    double[5] dzdtheta =  A.getColumn(5);
     return dzdtheta;
 }
-/+
 
-def theta_cone(state1, V1, beta):
-    """
-    Compute the cone-surface angle and conditions given the shock wave angle.
+double[2] theta_cone(const(GasState) state1, double V1, double beta,
+		     GasState state_c, GasModel gm)
+/**
+ * Compute the cone-surface angle and conditions given the shock wave angle.
+ *
+ * Input:
+ *   state1: upstream gas condition
+ *   V1: speed of gas into shock
+ *   beta: shock wave angle wrt stream direction (in radians)
+ *   state_c: reference to the gas state at the cone surface (to be computed)
+ *   gm: reference to the current gas model
+ *
+ * Returns: array of [theta_c, V_c]:
+ *   theta_c is stream deflection angle in radians
+ *   V_c is cone-surface speed of gas in m/s
+ *
+ * The computation starts with the oblique-shock jump and then integrates
+ * across theta until V_theta goes through zero.
+ * The cone surface corresponds to V_theta == 0.
+ */
+{
+    // [TODO] Implement Rowan's linear interpolation for weak shocks.
+    //
+    // Start at the point just downstream the oblique shock.
+    GasState state2 = new GasState(state1);
+    double[] shock_results = theta_oblique(state1, V1, beta, state2, gm);
+    double theta_s = shock_results[0]; double V2 = shock_results[1];
+    //
+    // Initial conditions.
+    double dtheta = -0.5 * PI/180.0;  // fraction-of-a-degree steps
+    double theta = beta;
+    double V_r = V2 * cos(beta - theta_s);
+    double V_theta = -V2 * sin(beta - theta_s);
+    double rho = state2.rho; double u = state2.u; double p = state2.p;
+    //
+    GasState gas_state = new GasState(state2);
+    gas_state.rho = rho; gas_state.u = u;
+    gm.update_thermo_from_rhoe(gas_state);
+    // For integrating across the shock layer, the state vector is:
+    double[5] z = [rho, V_r, V_theta, u, p];
+    double[5] z_old; double theta_old; double V_theta_old;
+    while (V_theta < 0.0) {
+        // Keep a copy for linear interpolation at the end.
+        z_old[] = z[]; theta_old = theta; V_theta_old = V_theta;
+        // Do the update using a low-order method (Euler) for the moment.
+        double[5] dzdtheta = taylor_maccoll_odes(z, theta, gas_state, gm);
+        z[] += dtheta * dzdtheta[]; theta += dtheta;
+	rho=z[0]; V_r=z[1]; V_theta=z[2]; u=z[3]; p=z[4];
+        gas_state.rho = rho; gas_state.u = u;
+        gm.update_thermo_from_rhoe(gas_state);
+	assert(abs(gas_state.p - p)/p < 0.001, "pressure diverging");
+    }
+    // At this point, V_theta should have crossed zero so
+    // we can linearly-interpolate the cone-surface conditions.
+    double frac = (0.0 - V_theta_old)/(V_theta - V_theta_old);
+    double[5] z_c;
+    z_c[] = z_old[]*(1.0-frac) + z[]*frac;
+    double theta_c = theta_old*(1.0-frac) + theta*frac;
+    // At the cone surface...
+    // debug { writeln("frac=", frac, " z_c=", z_c); }
+    rho=z_c[0]; V_r=z_c[1]; V_theta=z_c[2]; u=z_c[3]; p=z_c[4];
+    state_c.rho = rho; state_c.u = u;
+    gm.update_thermo_from_rhoe(state_c);
+    gm.update_sound_speed(state_c);
+    assert(abs(V_theta) < 1.0e-6, "V_theta should be very small");
+    return [theta_c, V_r];
+} // end theta_cone()
 
-    :param state1: upstream gas condition
-    :param V1: speed of gas into shock
-    :param beta: shock wave angle wrt stream direction (in radians)
-    :returns: tuple of theta_c, V_c and state_c:
-        theta_c is stream deflection angle in radians
-        V_c is cone-surface speed of gas in m/s
-        state_c is cone-surface gas state
 
-    The computation starts with the oblique-shock jump and then integrates
-    across theta until V_theta goes through zero.
-    The cone surface corresponds to V_theta == 0.
-    """
-    # Start at the point just downstream the oblique shock.
-    theta_s, V2, state2 = theta_oblique(state1, V1, beta)
-    #
-    # Initial conditions.
-    dtheta = -0.5 * math.pi / 180.0  # fraction-of-a-degree steps
-    theta = beta
-    V_r = V2 * math.cos(beta - theta_s)
-    V_theta = -V2 * math.sin(beta - theta_s)
-    rho = state2.rho; h = state2.h; p = state2.p
-    gas_state = state2.clone()
-    # For integrating across the shock layer, the state vector is:
-    z = numpy.array([rho, V_r, V_theta, h, p])
-    while V_theta < 0.0:
-        # Keep a copy for linear interpolation at the end.
-        z_old = z.copy(); theta_old = theta
-        # Do the update using a low-order method (Euler) for the moment.
-        dzdtheta = taylor_maccoll_odes(z, theta, gas_state)
-        z += dtheta * dzdtheta; theta += dtheta
-        rho, V_r, V_theta, h, p = z
-        gas_state.set_ph(p, h)
-        if DEBUG_GAS_FLOW: print "DEBUG theta=", theta, "V_r=", V_r, "V_theta=", V_theta
-    # At this point, V_theta should have crossed zero so
-    # we can linearly-interpolate the cone-surface conditions.
-    V_theta_old = z_old[2]
-    frac = (0.0 - V_theta_old)/(V_theta - V_theta_old)
-    z_c = z_old*(1.0-frac) + z*frac
-    theta_c = theta_old*(1.0-frac) + theta*frac
-    # At the cone surface...
-    rho, V_r, V_theta, h, p = z_c
-    gas_state.set_ph(p, h)
-    assert abs(V_theta) < 1.0e-6
-    #
-    return theta_c, V_r, gas_state
+double beta_cone(const(GasState) state1, double V1, double theta, GasModel gm)
+/**
+ * Compute the conical shock wave angle given the cone-surface deflection angle.
+ *
+ * Input:
+ * state1: upstream gas condition
+ * V1: speed of gas into shock
+ * theta: stream deflection angle (in radians)
+ * gm: reference to current gas model
+ *
+ * Returns: shock wave angle wrt incoming stream direction (in radians)
+ */
+{
+    GasState state2 = new GasState(state1);
+    gm.update_sound_speed(state2);
+    double M1 = V1 / state2.a;
+    double b1 = max(asin(1.0/M1), 1.1*theta); // to be stronger than a Mach wave
+    double b2 = b1 * 1.05;
+    auto error_in_theta = delegate(double beta_guess) {
+        double[] shock_results = theta_cone(state1, V1, beta_guess, state2, gm);
+        double theta_guess = shock_results[0]; double V2 = shock_results[1]; 
+        double error_value = theta_guess - theta;
+        return error_value;
+    };
+    if (bracket!error_in_theta(b1, b2, asin(1.0/M1), PI/2) < 0) {
+	throw new Exception("beta_cone(): failed to converge on a shock-wave angle.");
+    }
+    double beta_result = solve!error_in_theta(b1, b2, 1.0e-6);
+    return beta_result;
+} // end beta_cone()
 
+//--------------------------------------------------------------------------------
 
-def beta_cone(state1, V1, theta):
-    """
-    Compute the conical shock wave angle given the cone-surface deflection angle.
-
-    :param state1: upstream gas condition
-    :param V1: speed of gas into shock
-    :param theta: stream deflection angle (in radians)
-    :returns: shock wave angle wrt incoming stream direction (in radians)
-    """
-    M1 = V1 / state1.a
-    b1 = max(math.asin(1.0/M1), theta) * 1.01 # to be stronger than a Mach wave
-    b2 = b1 * 1.05
-    def error_in_theta(beta_guess):
-        theta_guess, V_c, state_c = theta_cone(state1, V1, beta_guess)
-        return theta_guess - theta
-    beta_result = secant(error_in_theta, b1, b2, tol=1.0e-4)
-    if beta_result == 'FAIL':
-        raise RuntimeError('beta_cone(): failed to converge on a shock-wave angle.')
-    return beta_result
-
-+/
-//------------------------------------------------------------------------
-
-unittest {
-}    
+version (test_gasflow) {
+    // [TODO]
+}

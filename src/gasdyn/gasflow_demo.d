@@ -122,7 +122,7 @@ void main(){
     gm.update_thermo_from_pT(s1); 
     gm.update_sound_speed(s1);
     double beta = 45.0 * PI/180.0;
-    writeln("    given beta(degrees)=", beta);
+    writeln("    given beta(degrees)=", beta*180/PI);
     V1 = 1.5 * s1.a;
     writeln("    s1:", s1);
     double[] shock_results = theta_oblique(s1, V1, beta, s2, gm);
@@ -136,48 +136,60 @@ void main(){
     double beta2 = beta_oblique(s1, V1, theta, gm);
     writeln("    beta2(degrees)=", beta2*180/PI);
     //
-/+
-    M1 = 1.5
-    print "\nTaylor-Maccoll cone flow demo with M1=%g" % M1
-    print "for M1=1.5, beta=49deg, expect theta=20deg from NACA1135."
-    V1 = M1 * s1.a
-    beta = 49.0 * math.pi/180
-    theta_c, V_c, s_c = theta_cone(s1, V1, beta)
-    print "theta_c(deg)=", theta_c*180.0/math.pi, "expected 20deg, surface speed V_c=", V_c
-    print "surface pressure coefficient=", (s_c.p - s1.p)/(0.5*s1.rho*V1*V1), "expected 0.385"
-    print "s_c:"
-    s_c.write_state(sys.stdout)
-    #
-    M1 = 1.5
-    print "\nTaylor-Maccoll cone flow demo with M1=%g" % M1
-    print "for M1=1.5, beta=49.0404423512deg, expect theta=20deg from NACA1135."
-    V1 = M1 * s1.a
-    beta = 49.0404423512 * math.pi/180
-    theta_c, V_c, s_c = theta_cone(s1, V1, beta)
-    print "theta_c(deg)=", theta_c*180.0/math.pi, "expected 20deg, surface speed V_c=", V_c
-    print "surface pressure coefficient=", (s_c.p - s1.p)/(0.5*s1.rho*V1*V1), "expected 0.385"
-    print "s_c:"
-    s_c.write_state(sys.stdout)
-    #
-    M1 = 1.8
-    print "\nTaylor-Maccoll cone flow demo with M1=%g" % M1
-    print "for M1=1.8, beta=45deg, theta=24deg from NACA1135."
-    V1 = M1 * s1.a
-    beta = 45.0 * math.pi/180
-    theta_c, V_c, s_c = theta_cone(s1, V1, beta)
-    print "theta_c(deg)=", theta_c*180.0/math.pi, "expected 24deg, surface speed V_c=", V_c
-    print "surface pressure coefficient=", (s_c.p - s1.p)/(0.5*s1.rho*V1*V1), "expected 0.466"
-    print "s_c:"
-    s_c.write_state(sys.stdout)
-    #
-    M1 = 1.5
-    print "\nConical shock from cone with half-angle 20deg in M1=", M1
-    V1 = M1 * s1.a
-    beta = beta_cone(s1, V1, 20.0*math.pi/180)
-    print "sigma(deg)=", beta*180/math.pi, "expected 49deg"
-    #
-    print "Done."
-+/
-	
-    writeln("Finished gasflow demo.");
+    M1 = 1.5;
+    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    gm.update_thermo_from_pT(s1); 
+    gm.update_sound_speed(s1);
+    writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
+    writeln("for M1=1.5, beta=49deg, expect theta=20deg from NACA1135.");
+    V1 = M1 * s1.a;
+    beta = 49.0 * PI/180.0;
+    GasState state_c = new GasState(s1);
+    double[2] cone_results = theta_cone(s1, V1, beta, state_c, gm);
+    double theta_c = cone_results[0]; double V_c = cone_results[1];
+    writeln("    theta_c(deg)=", theta_c*180.0/PI);
+    writeln("    expected 20deg, surface speed V_c=", V_c);
+    writeln("    surface pressure coefficient=",
+	    (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.385");
+    writeln("    state_c:", state_c);
+    //
+    M1 = 1.5;
+    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    gm.update_thermo_from_pT(s1); 
+    gm.update_sound_speed(s1);
+    writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
+    writeln("for M1=1.5, beta=49.0404423512deg, expect theta=20deg from NACA1135.");
+    V1 = M1 * s1.a;
+    beta = 49.0404423512 * PI/180.0;
+    cone_results = theta_cone(s1, V1, beta, state_c, gm);
+    theta_c = cone_results[0]; V_c = cone_results[1];
+    writeln("    theta_c(deg)=", theta_c*180.0/PI);
+    writeln("    expected 20deg, surface speed V_c=", V_c);
+    writeln("    surface pressure coefficient=",
+	    (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.385");
+    writeln("    state_c:", state_c);
+    //
+    M1 = 1.8;
+    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    gm.update_thermo_from_pT(s1); 
+    gm.update_sound_speed(s1);
+    writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
+    writeln("for M1=1.8, beta=45deg, expect theta=24deg from NACA1135.");
+    V1 = M1 * s1.a;
+    beta = 45.0 * PI/180.0;
+    cone_results = theta_cone(s1, V1, beta, state_c, gm);
+    theta_c = cone_results[0]; V_c = cone_results[1];
+    writeln("    theta_c(deg)=", theta_c*180.0/PI);
+    writeln("    expected 24deg, surface speed V_c=", V_c);
+    writeln("    surface pressure coefficient=",
+	    (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.466");
+    writeln("    state_c:", state_c);
+    //
+    M1 = 1.5;
+    writeln("\nConical shock from cone with half-angle 20deg in M1=", M1);
+    V1 = M1 * s1.a;
+    beta = beta_cone(s1, V1, 20.0*PI/180, gm);
+    writeln("sigma(deg)=", beta*180/PI, " expected 49deg");
+    //
+    writeln("\nFinished gasflow demo.");
 } // end main()
