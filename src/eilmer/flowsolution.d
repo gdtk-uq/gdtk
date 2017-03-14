@@ -54,7 +54,7 @@ public:
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
         // -- initialising JSONData
-	string configFileName = jobName ~ ".config";
+	string configFileName = dir ~ "/" ~ jobName ~ ".config";
         string content;
         try {
             content = readText(configFileName);
