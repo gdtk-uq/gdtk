@@ -319,6 +319,11 @@ function prepareGasFile(inpFname, outFname)
    listName = dir.."species-list.txt"
    spMap = parseSpeciesList(listName)
    for i,sp in ipairs(spNames) do
+      if ( not spMap[sp] ) then
+	 print(string.format("The requested species '%s' could not be located in the species list.", sp))
+	 print("Exiting without doing anything.")
+	 os.exit(1)
+      end
       species[i] = spMap[sp]
    end
    -- Check we have all the species
