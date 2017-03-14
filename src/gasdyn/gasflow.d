@@ -67,15 +67,6 @@ double[] shock_ideal(const(GasState) state1, double Vs, GasState state2, GasMode
     return [V2, Vg];
 } // end shock_ideal()
 
-double my_limiter(double delta, double orig, double frac=0.5)
-// Limit the magnitude of delta to no more than a fraction of the original.
-// It occasionally happens that the Newton iterations go badly.
-// It is worth trying to take smaller steps in these situations,
-// assuming that the computed direction is still a fair guess.
-{
-    return copysign(fmin(abs(delta),frac*abs(orig)), delta);
-}
-
 double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
 		      GasModel gm, double rho_tol=1.0e-6, double T_tol = 0.1)
 /**
@@ -122,16 +113,19 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
         double f2 = total_enthalpy - gm.enthalpy(state2) - 0.5*V2*V2;
 	return [f1, f2];
     };
-    //
     // Augmented matrix for the linear equation coefficients.
     Matrix Ab = new Matrix(2, 3);
+    double rho_delta = 1.0; double T_delta = 1.0;
     //
-    double rho_delta = 1.0;
-    double T_delta = 1.0;
+    // Update the estimates for rho,T using the Newton-Raphson method.
     //
-    // Update the estimates using the Newton-Raphson method.
-    //
-    foreach (count; 0..20) {
+    // We put an upper limit on the number of iterations that should be plenty
+    // for well behaved gas models.  The CEA2 code, however, can have inconsistent
+    // thermo data at the joins of the polynomial pieces and the Newton iterations
+    // may go into a limit cycle that is close to the solution but never within
+    // the requested tolerances.  If this happens, we just accept whatever final
+    // iteration is computed.
+    foreach (count; 0 .. 20) {
         double rho_save = state2.rho;
         double T_save = state2.Ttr;
         double[] f_save = Fvector(rho_save, T_save);
@@ -147,11 +141,11 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
 	Ab[0,0] = df0drho; Ab[0,1] = df0dT; Ab[0,2] = -f_save[0];
 	Ab[1,0] = df1drho; Ab[1,1] = df1dT; Ab[1,2] = -f_save[1];
 	gaussJordanElimination(Ab);
+	// These are the full increments according to the Newton method.
         rho_delta = Ab[0,2]; T_delta = Ab[1,2];
-        // Possibly limit the increments so that the Newton iteration is
-        // less inclined to go crazy.
-        rho_delta = my_limiter(rho_delta, rho_save);
-        T_delta = my_limiter(T_delta, T_save);
+        // Limit the increments so that the iteration is more stable for the difficult cases.
+        rho_delta = copysign(fmin(abs(rho_delta),0.2*abs(rho_save)), rho_delta);
+        T_delta = copysign(fmin(abs(T_delta),0.2*abs(T_save)), T_delta);
         state2.rho = rho_save + rho_delta;
         state2.Ttr = T_save + T_delta;
         gm.update_thermo_from_rhoT(state2);
