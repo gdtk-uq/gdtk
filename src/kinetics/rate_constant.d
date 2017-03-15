@@ -126,13 +126,19 @@ private:
 
 class TroeRateConstant : RateConstant {
 public:
-    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, double Fcent,
+    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, double Fcent,  bool Fcent_supplied,
+	 double a, double T1, double T2, double T3, bool T2_supplied,
 	 Tuple!(int, double)[] efficiencies, GasModel gmodel)
     {
 	_kInf = kInf.dup();
 	_k0 = k0.dup();
 	_Fcent = Fcent;
-	_Fcent_supplied = true;
+	_Fcent_supplied = Fcent_supplied;
+	_a = a;
+	_T1 = T1;
+	_T2 = T2;
+	_T3 = T3;
+	_T2_supplied = T2_supplied;
 	_efficiencies = efficiencies.dup();
 	_gmodel = gmodel;
     }
@@ -177,7 +183,9 @@ public:
     }
     TroeRateConstant dup()
     {
-	return new TroeRateConstant(_kInf, _k0, _Fcent, _efficiencies, _gmodel);
+	return new TroeRateConstant(_kInf, _k0, _Fcent, _Fcent_supplied,
+				    _a, _T1, _T2, _T3, _T2_supplied,
+				    _efficiencies, _gmodel);
     }
     override double eval(in GasState Q)
     {
@@ -188,7 +196,7 @@ public:
 	double p_r = k0*M/kInf;
 	double log_p_r = log10(max(p_r, essentially_zero));
 	double T = Q.Ttr;
-
+	
 	if ( !_Fcent_supplied ) {
 	    _Fcent = (1.0 - _a)*exp(-T/_T3) + _a*exp(-T/_T1);
 	    if ( _T2_supplied ) {
