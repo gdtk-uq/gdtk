@@ -85,8 +85,7 @@ extern(C) int speciesName(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     int i = to!int(lua_tointeger(L, 2));
-    // Use "i-1" since D indexes from 0
-    lua_pushstring(L, toStringz(gm.species_name(i-1)));
+    lua_pushstring(L, toStringz(gm.species_name(i)));
     return 1;
 }
 
