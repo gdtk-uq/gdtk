@@ -3,7 +3,7 @@ gm = GasModel:new{'sample-data/ideal-air-gas-model.lua'}
 -- Try out some of the service functions
 assert(gm:nSpecies() == 1)
 assert(gm:nModes() == 0)
-assert(gm:speciesName(1) == 'air')
+assert(gm:speciesName(0) == 'air')
 -- Test thermo evaluations....
 Q = GasState:new{gm}
 assert(Q.massf.air == 1)

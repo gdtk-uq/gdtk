@@ -12,6 +12,7 @@ DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo 
 TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test \
 	gas_model_test ideal_gas_test cea_gas_test powers_aslam_gas_test \
 	perf_gas_mix_eos_test sutherland_therm_cond_test sutherland_viscosity_test \
+	wilke_mixing_therm_cond_test wilke_mixing_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_mix_eos_test very_viscous_air_test \
 	co2gas_sw_test uniform_lut_test adaptive_lut_CEA_test ideal_air_proxy_test
 
