@@ -34,6 +34,7 @@ import nm.bracketing;
 import nm.ridder;
 import nm.linesearch;
 import gas.gas_model;
+import gas.cea_gas;
 
 
 double[] shock_ideal(const(GasState) state1, double Vs, GasState state2, GasModel gm)
@@ -84,18 +85,20 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
  *   V2 in the shock-reference frame,
  *   Vg in the lab frame.
  *
- * Note that, at the moment, we have implemented only a simple ideal-gas starting
- * guess for the Newton iteration.  We may need to reintroduce Chris James' 
- * guessed R and gamma options for some very strong shocks and difficult gases. 
- * An alternative may be do simply reduce the temperature by some factor and 
- * raise the density by the same factor, keeping the pressure about the same.
- * I vaguely recall Malcolm McIntosh had a correlation with shock velocity or 
- * Mach number for his adjustments to the ideal-gas initial guess. 
  */
 {
     // Initial guess via ideal gas relations.
     double[] velocities = shock_ideal(state1, Vs, state2, gm);
     double V2 = velocities[0]; double Vg = velocities[1];
+    if (cast(CEAGas) gm !is null) {
+	// The ideal gas estimate may have an unreasonably high value for temperature.
+	// I vaguely recall Malcolm McIntosh had a correlation with shock velocity or 
+	// Mach number for his adjustments to the ideal-gas initial guess, however,
+	// this is Chris James' simple adjustment that seems to allow the calculation
+	// to proceed.
+	state2.Ttr = fmin(state2.Ttr, 20000.0);
+	gm.update_thermo_from_pT(state2);
+    }
     // We assume that state2 now contains a fair initial guess
     // and set up the target values for the Rankine-Hugoniot relations.
     double V1 = Vs;
@@ -677,9 +680,6 @@ double[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
     state_new.Ttr = state_0.Ttr + dT;
     gm.update_thermo_from_pT(state_new);
     double drhodu = (state_new.rho - rho_0) / du;
-    // debug {
-    // 	writeln("DEBUG drhodp=", drhodp, " drhodu=", drhodu);
-    // }
     // Assume that these first-order differences will suffice.
     return [drhodp, drhodu];
 } // end EOS_derivatives()
@@ -771,7 +771,6 @@ double[2] theta_cone(const(GasState) state1, double V1, double beta,
     z_c[] = z_old[]*(1.0-frac) + z[]*frac;
     double theta_c = theta_old*(1.0-frac) + theta*frac;
     // At the cone surface...
-    // debug { writeln("frac=", frac, " z_c=", z_c); }
     rho=z_c[0]; V_r=z_c[1]; V_theta=z_c[2]; u=z_c[3]; p=z_c[4];
     state_c.rho = rho; state_c.u = u;
     gm.update_thermo_from_rhoe(state_c);
