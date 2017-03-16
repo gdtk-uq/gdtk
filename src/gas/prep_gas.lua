@@ -94,15 +94,31 @@ function writeIdealGas(f, sp, db, optsTable)
    f:write("}\n")
 end
 
-function writeCeaThermoCoeffs(f, sp, db)
-   if ( not db[sp].ceaThermoCoeffs ) then
+function writeCeaThermoCoeffs(f, sp, db, optsTable)
+   local t
+   if optsTable and optsTable.database == "prefer-grimech" then
+      if ( not db[sp].grimechThermoCoeffs ) then
+	 print("WARNING: GRIMECH thermo coefficients have been selected as preferred,")
+	 print("WARNING: but they could not be found for species: ", sp)
+	 print("WARNING: We default back to using the CEA thermo coefficients (if available).")
+         print("")
+      else
+	 t = db[sp].grimechThermoCoeffs
+	 t.origin = "GRIMECH"
+      end
+   end
+
+   if ( not t and not db[sp].ceaThermoCoeffs ) then
       print("ERROR: The table of CEA coefficients to compute thermodynamic properties")
       print("ERROR: could not be found for species: ", sp)
       print("ERROR: Bailing out!")
       os.exit(1)
+   else 
+      t = db[sp].ceaThermoCoeffs
+      t.origin = "CEA"
    end
-   t = db[sp].ceaThermoCoeffs
-   f:write(string.format("%s.ceaThermoCoeffs = {\n", sp))
+   f:write(string.format("%s.thermoCoeffs = {\n", sp))
+   f:write(string.format("  origin = '%s',\n", t.origin))
    f:write(string.format("  nsegments = %d, \n", t.nsegments))
    for i=0,t.nsegments-1 do
       seg = "segment"..i
@@ -147,7 +163,7 @@ function writeCeaTransCoeffs(f, sp, db, name)
    f:write("}\n")
 end
 
-function writeThermPerfGas(f, species, db)
+function writeThermPerfGas(f, species, db, optsTable)
    f:write("species = {")
    for _,sp in ipairs(species) do
       f:write(string.format("'%s', ", sp))
@@ -156,7 +172,7 @@ function writeThermPerfGas(f, species, db)
    for _,sp in ipairs(species) do
       f:write(string.format("%s = {}\n", sp))
       f:write(string.format("%s.M = %.8f\n", sp, db[sp].M.value))
-      writeCeaThermoCoeffs(f, sp, db)
+      writeCeaThermoCoeffs(f, sp, db, optsTable)
       writeCeaTransCoeffs(f, sp, db, "Viscosity")
       writeCeaTransCoeffs(f, sp, db, "ThermCond")
    end

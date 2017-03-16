@@ -56,7 +56,7 @@ N2.ceaThermCond = {
       D = -14.517761,
     },
 }
-N2.ceaThermoCoeffs = {
+N2.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -160,7 +160,7 @@ O2.ceaThermCond = {
       D = 20.342043,
     },
 }
-O2.ceaThermoCoeffs = {
+O2.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -264,7 +264,7 @@ NO.ceaThermCond = {
       D = 20.928749,
     }
 }
-NO.ceaThermoCoeffs = {
+NO.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -352,7 +352,7 @@ N.ceaThermCond = {
       D = 0.24048513,
     },
 }
-N.ceaThermoCoeffs = {
+N.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -440,7 +440,7 @@ O.ceaThermCond = {
       D = 0.48644232,
     },
 }
-O.ceaThermoCoeffs = {
+O.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,

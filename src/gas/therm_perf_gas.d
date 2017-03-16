@@ -55,7 +55,7 @@ public:
 	// 3. Set the e-v-T EOS (which in this case is an e-T relationship only)
 	foreach ( isp; 0.._n_species ) {
 	    lua_getglobal(L, _species_names[isp].toStringz);
-	    lua_getfield(L, -1, "ceaThermoCoeffs");
+	    lua_getfield(L, -1, "thermoCoeffs");
 	    _curves ~= createCEAThermo(L, _R[isp]);
 	    lua_pop(L, 1);
 	    lua_pop(L, 1);
