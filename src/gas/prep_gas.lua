@@ -108,14 +108,16 @@ function writeCeaThermoCoeffs(f, sp, db, optsTable)
       end
    end
 
-   if ( not t and not db[sp].ceaThermoCoeffs ) then
-      print("ERROR: The table of CEA coefficients to compute thermodynamic properties")
-      print("ERROR: could not be found for species: ", sp)
-      print("ERROR: Bailing out!")
-      os.exit(1)
-   else 
-      t = db[sp].ceaThermoCoeffs
-      t.origin = "CEA"
+   if not t then
+      if not db[sp].ceaThermoCoeffs  then
+         print("ERROR: The table of CEA coefficients to compute thermodynamic properties")
+         print("ERROR: could not be found for species: ", sp)
+         print("ERROR: Bailing out!")
+         os.exit(1)
+      else 
+         t = db[sp].ceaThermoCoeffs
+         t.origin = "CEA"
+      end
    end
    f:write(string.format("%s.thermoCoeffs = {\n", sp))
    f:write(string.format("  origin = '%s',\n", t.origin))
