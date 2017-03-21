@@ -191,9 +191,9 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
 		    +(tau_xy*l+sigma_y*m+tau_yz*n)*(tau_xy*l+sigma_y*m+tau_yz*n)
 		    +(tau_xz*l+tau_yz*m+sigma_z*n)*(tau_xz*l+tau_yz*m+sigma_z*n)-sigma_wall*sigma_wall);
     // tau_wall directional cosines
-    l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
-    m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
-    n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
+    double l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
+    double m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
+    double n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
     // store in file
     auto writer = format("%f %f %f %f %f %f %f %f %f %f %f %f %f\n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area,
 			 q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz);
