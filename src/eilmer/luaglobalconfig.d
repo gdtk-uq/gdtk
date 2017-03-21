@@ -165,6 +165,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("fixed_time_step", "fixed_time_step"));
     mixin(get_double_field("dt_plot", "dt_plot"));
     mixin(get_double_field("dt_history", "dt_history"));
+    mixin(get_double_field("dt_loads", "dt_loads"));
     //
     mixin(get_bool_field("block_marching", "block_marching"));
     mixin(get_int_field("nib", "nib"));
@@ -285,6 +286,7 @@ extern(C) int configGet(lua_State* L)
     case "fixed_time_step": lua_pushboolean(L, GlobalConfig.fixed_time_step); break;
     case "dt_plot": lua_pushnumber(L, GlobalConfig.dt_plot); break;
     case "dt_history": lua_pushnumber(L, GlobalConfig.dt_history); break;
+    case "dt_loads": lua_pushnumber(L, GlobalConfig.dt_loads); break;
 	//
     case "block_marching": lua_pushboolean(L, GlobalConfig.block_marching); break;
     case "nib": lua_pushnumber(L, GlobalConfig.nib); break;

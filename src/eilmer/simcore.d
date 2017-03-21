@@ -38,6 +38,7 @@ import solid_udf_source_terms;
 import block_moving_grid;
 import grid_motion;
 import history;
+import loads;
 import conservedquantities;
 version (gpu_chem) {
     import gpu_chem;
@@ -55,7 +56,9 @@ shared static int[] local_invalid_cell_count;
 shared static double t_plot;        // time to write next soln
 shared static bool output_just_written = true;
 shared static double t_history;     // time to write next sample
+shared static double t_loads;     // time to write next loads file
 shared static bool history_just_written = true;
+shared static bool loads_just_written = true;
 
  // For working how long the simulation has been running.
 static SysTime wall_clock_start;
@@ -137,6 +140,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     }
     // All cells are in place, so now we can initialise any history cell files.
     init_history_cell_files();
+    // create the loads directory
+    init_loads_dir();
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
@@ -171,6 +176,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     // On startup or restart, it is assumed to be so.
     output_just_written = true;
     history_just_written = true;
+    loads_just_written = true;
     // When starting a new calculation,
     // set the global time step to the initial value.
     dt_global = GlobalConfig.dt_init; 
@@ -266,6 +272,7 @@ void integrate_in_time(double target_time_as_requested)
     // The next time for output...
     t_plot = sim_time + GlobalConfig.dt_plot;
     t_history = sim_time + GlobalConfig.dt_history;
+    t_loads = sim_time + GlobalConfig.dt_loads;
     // Overall iteration count.
     step = 0;
     shared bool do_cfl_check_now = false;
@@ -409,6 +416,7 @@ void integrate_in_time(double target_time_as_requested)
         step = step + 1;
         output_just_written = false;
         history_just_written = false;
+	loads_just_written = false;
         if ( (step / GlobalConfig.print_count) * GlobalConfig.print_count == step ) {
             // Print the current time-stepping status.
 	    auto writer = appender!string();
@@ -460,13 +468,17 @@ void integrate_in_time(double target_time_as_requested)
             t_plot = t_plot + GlobalConfig.dt_plot;
         }
 
-        // 4a. (Occasionally) Write out the cell history data
+        // 4a. (Occasionally) Write out the cell history data and loads on boundary groups data
         if ( (sim_time >= t_history) && !history_just_written ) {
 	    write_history_cells_to_files(sim_time);
 	    history_just_written = true;
             t_history = t_history + GlobalConfig.dt_history;
         }
-
+	if ( (sim_time >= t_loads) && !loads_just_written ) {
+	    write_boundary_loads_to_file(sim_time, current_tindx);
+	    loads_just_written = true;
+            t_loads = t_loads + GlobalConfig.dt_loads;
+        }
         // 5. For steady-state approach, check the residuals for mass and energy.
 
 	// 6. Spatial filter may be applied occasionally.
