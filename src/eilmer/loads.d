@@ -195,7 +195,6 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
     double m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
     double n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
     // store in file
-    auto writer = format("%f %f %f %f %f %f %f %f %f %f %f %f %f\n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area,
-			 q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz);
+    auto writer = format("%f %f %f %f %f %f %f %f %f %f %f %f \n", iface.pos.x, iface.pos.y, iface.pos.z, q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz);
     append(fname, writer);    
 } // end compute_and_store_loads()
