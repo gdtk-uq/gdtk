@@ -61,6 +61,40 @@ db.Ar.ceaThermoCoeffs = {
       }
    },
 }
+db.Ar.grimechThermoCoeffs = {
+   notes = 'data from GRIMECH 3.0',
+   nsegments = 2, 
+   segment0 ={
+      T_lower = 300.0,
+      T_upper = 1000.0,
+      coeffs = {
+         0,
+         0,
+          0.02500000E+02,
+          0.00000000E+00,
+          0.00000000E+00,
+          0.00000000E+00,
+          0.00000000E+00,
+         -0.07453750E+04,
+          0.04366000E+02,
+      }
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 5000.0,
+      coeffs = {
+         0,
+         0,
+          0.02500000E+02,
+          0.00000000E+00,
+          0.00000000E+00,
+          0.00000000E+00,
+          0.00000000E+00,
+         -0.07453750E+04,
+          0.04366000E+02,
+      }
+   }
+}
 db.Ar.ceaViscosity = {
    nsegments = 3,
    segment0 = {

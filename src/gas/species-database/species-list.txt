@@ -1,23 +1,62 @@
 # file        : symbol   : name  
 air.lua       : air      : air
 Ar.lua        : Ar       : argon
+C.lua         : C        : carbon
+C2H.lua       : C2H      : ethynyl
+C2H2.lua      : C2H2     : ethyne
+C2H3.lua      : C2H3     : ethenyl radical
+C2H4.lua      : C2H4     : ethene
+C2H5.lua      : C2H5     : ethyl radical
+C2H6.lua      : C2H6     : ethane
+C3H7.lua      : C3H7     : isopropyl radical
+C3H8.lua      : C3H8     : propane
+CH.lua	      : CH       : methylidyne
+CH2.lua       : CH2      : methylene
+CH2_S.lua     : CH2_S    : methylene single state CH2(S)
+CH2CHO.lua    : CH2CHO   : acetaldehyde
+CH2CO.lua     : CH2CO    : ethenone
+CH2O.lua      : CH2O     : formaldehyde
+CH2OH.lua     : CH2OH    : hydroxy methyl
+CH3.lua       : CH3      : methyl
+CH3CHO.lua    : CH3CHO   : acetaldehyde
+CH3O.lua      : CH3O     : methoxide
+CH3OH.lua     : CH3OH    : methanol
+CH4.lua       : CH4      : methane
+CHO.lua       : CHO      : aldehyde (2)
+CN.lua        : CN       : cyanide
+CO.lua        : CO       : carbon monoxide
 CO2.lua       : CO2      : carbon dioxide
 e_minus.lua   : e-       : electron
 H.lua         : H        : monatomic hydrogen
 H2.lua        : H2       : diatomic hydrogen
+H2CN.lua      : H2CN     : methyleneaminyl radical
+HCN.lua       : HCN      : hydrogen cyanide
+HCNN.lua      : HCNN     : hydrogen diazocarbene
+HCNO.lua      : HCNO     : isocyanic acid (1)
+HCO.lua       : HCO      : aldehyde
+HCCO.lua      : HCCO     : ethynyloxy radical
+HCCOH.lua     : HCCOH    : ethynol
 HI.lua        : HI       : hydrogen iodide
 H2O.lua       : H2O      : water
 H2O2.lua      : H2O2     : hydrogen peroxide
+HNCO.lua      : HNCO     : isocyanic acid (2)
 HNO.lua       : HNO      : nitroxyl
 HNO2.lua      : HNO2     : nitrous acid
 HNO3.lua      : HNO3     : nitric acid
 HO2.lua       : HO2      : hydroperoxyl
+HOCN.lua      : HOCN     : cyanic acid
 I2.lua        : I2       : iodine
 Kr.lua        : Kr       : krypton
 N.lua         : N        : monatomic nitrogen
 N_plus.lua    : N+       : singly-ionized atomic nitrogen
 N2.lua        : N2       : diatomic nitrogen
 N2_plus.lua   : N2+      : singly-ionized molecular nitrogen
+N2O.lua       : N2O      : nitrous oxide
+NCO.lua       : NCO      : isocyanade
+NH.lua        : NH       : nitrate monohydride
+NH2.lua       : NH2      : amine radical
+NH3.lua       : NH3      : ammonia
+NNH.lua       : NNH      : nitrous monohydride 
 NO.lua        : NO       : nitrogen oxide
 NO_plus.lua   : NO+      : singly-ionized nitrogen oxide
 NO2.lua       : NO2      : nitrogen dioxide

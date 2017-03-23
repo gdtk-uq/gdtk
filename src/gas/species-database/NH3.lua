@@ -1,0 +1,49 @@
+db.NH3 = {}
+db.NH3.atomicConstituents = {N=1,H=3,}
+db.NH3.charge = 0
+db.NH3.M = {
+   value = 17.030520e-3,
+   units = 'kg/mol',
+   description = 'molecular mass',
+   reference = 'Periodic table'
+}
+db.NH3.gamma = {
+   value = 1.3036e00,
+   units = 'non-dimensional',
+   description = 'ratio of specific heats at 300.0K',
+   reference = 'evaluated using Cp/R from Chemkin-II coefficients'
+}
+db.NH3.grimechThermoCoeffs = {
+   notes = 'data from GRIMECH 3.0',
+   nsegments = 2, 
+   segment0 ={
+      T_lower = 200.0,
+      T_upper = 1000.0,
+      coeffs = {
+         0,
+         0,
+          0.42860274E+01,
+         -0.46605230E-02,
+          0.21718513E-04,
+         -0.22808887E-07,
+          0.82638046E-11,
+         -0.67417285E+04,
+         -0.62537277E+00,
+      }
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 6000.0,
+      coeffs = {
+         0,
+         0,
+          0.26344521E+01,
+          0.56662560E-02,
+         -0.17278676E-05,
+          0.23867161E-09,
+         -0.12578786E-13,
+         -0.65446958E+04,
+          0.65662928E+01,
+      }
+   }
+}

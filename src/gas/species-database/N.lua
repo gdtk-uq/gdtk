@@ -55,6 +55,40 @@ db.N.ceaThermoCoeffs = {
    },
    reference="from CEA2::thermo.inp"
 }
+db.N.grimechThermoCoeffs = {
+   notes = 'data from GRIMECH 3.0',
+   nsegments = 2, 
+   segment0 ={
+      T_lower = 200.0,
+      T_upper = 1000.0,
+      coeffs = {
+         0,
+         0,
+          0.25000000E+01,
+          0.00000000E+00,
+          0.00000000E+00,
+          0.00000000E+00,
+          0.00000000E+00,
+          0.56104637E+05,
+          0.41939087E+01,
+      }
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 6000.0,
+      coeffs = {
+         0,
+         0,
+          0.24159429E+01,
+          0.17489065E-03,
+         -0.11902369E-06,
+          0.30226245E-10,
+         -0.20360982E-14,
+          0.56133773E+05,
+          0.46496096E+01,
+      }
+   }
+}
 db.N.ceaViscosity = {
    nsegments = 2,
    segment0 = {

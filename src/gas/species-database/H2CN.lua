@@ -1,0 +1,49 @@
+db.H2CN = {}
+db.H2CN.atomicConstituents = {C=1,H=2,N=1,}
+db.H2CN.charge = 0
+db.H2CN.M = {
+   value = 28.033280e-3,
+   units = 'kg/mol',
+   description = 'molecular mass',
+   reference = 'Periodic table'
+}
+db.H2CN.gamma = {
+   value = 1.2769e00,
+   units = 'non-dimensional',
+   description = 'ratio of specific heats at 300.0K',
+   reference = 'evaluated using Cp/R from Chemkin-II coefficients'
+}
+db.H2CN.grimechThermoCoeffs = {
+   notes = 'data from GRIMECH 3.0',
+   nsegments = 2, 
+   segment0 ={
+      T_lower = 300.0,
+      T_upper = 1000.0,
+      coeffs = {
+         0,
+         0,
+          0.28516610E+01,
+          0.56952331E-02,
+          0.10711400E-05,
+         -0.16226120E-08,
+         -0.23511081E-12,
+          0.28637820E+05,
+          0.89927511E+01,
+      }
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 4000.0,
+      coeffs = {
+         0,
+         0,
+          0.52097030E+01,
+          0.29692911E-02,
+         -0.28555891E-06,
+         -0.16355500E-09,
+          0.30432589E-13,
+          0.27677109E+05,
+         -0.44444780E+01,
+      }
+   }
+}

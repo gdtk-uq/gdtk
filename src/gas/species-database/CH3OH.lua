@@ -1,0 +1,49 @@
+db.CH3OH = {}
+db.CH3OH.atomicConstituents = {C=1,H=4,O=1,}
+db.CH3OH.charge = 0
+db.CH3OH.M = {
+   value = 32.041860e-3,
+   units = 'kg/mol',
+   description = 'molecular mass',
+   reference = 'Periodic table'
+}
+db.CH3OH.gamma = {
+   value = 1.2320e+00,
+   units = 'non-dimensional',
+   description = 'ratio of specific heats at 300.0K',
+   reference = 'evaluated using Cp/R from Chemkin-II coefficients'
+}
+db.CH3OH.grimechThermoCoeffs = {
+   notes = 'data from GRIMECH 3.0',
+   nsegments = 2, 
+   segment0 ={
+      T_lower = 200.0,
+      T_upper = 1000.0,
+      coeffs = {
+         0,
+         0,
+          5.71539582E+00,
+         -1.52309129E-02,
+          6.52441155E-05,
+         -7.10806889E-08,
+          2.61352698E-11,
+         -2.56427656E+04,
+         -1.50409823E+00,
+      }
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 3500.0,
+      coeffs = {
+         0,
+         0,
+          1.78970791E+00,
+          1.40938292E-02,
+         -6.36500835E-06,
+          1.38171085E-09,
+         -1.17060220E-13,
+         -2.53748747E+04,
+          1.45023623E+01,
+      }
+   }
+}

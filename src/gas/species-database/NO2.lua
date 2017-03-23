@@ -46,7 +46,40 @@ db.NO2.ceaThermoCoeffs = {
       }
    }
 }
-
+db.NO2.grimechThermoCoeffs = {
+   notes = 'data from GRIMECH 3.0',
+   nsegments = 2, 
+   segment0 ={
+      T_lower = 200.0,
+      T_upper = 1000.0,
+      coeffs = {
+         0,
+         0,
+          0.39440312E+01,
+         -0.15854290E-02,
+          0.16657812E-04,
+         -0.20475426E-07,
+          0.78350564E-11,
+          0.28966179E+04,
+          0.63119917E+01,
+      }
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 6000.0,
+      coeffs = {
+         0,
+         0,
+          0.48847542E+01,
+          0.21723956E-02,
+         -0.82806906E-06,
+          0.15747510E-09,
+         -0.10510895E-13,
+          0.23164983E+04,
+         -0.11741695E+00,
+      }
+   }
+}
 db.NO2.ceaViscosity = {
    nsegments = 2,
    segment0 = {

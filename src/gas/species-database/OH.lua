@@ -61,6 +61,40 @@ db.OH.ceaThermoCoeffs = {
       }
    },
 }
+db.OH.grimechThermoCoeffs = {
+   notes = 'data from GRIMECH 3.0',
+   nsegments = 2, 
+   segment0 ={
+      T_lower = 200.0,
+      T_upper = 1000.0,
+      coeffs = {
+         0,
+         0,
+          3.99201543E+00,
+         -2.40131752E-03,
+          4.61793841E-06,
+         -3.88113333E-09,
+          1.36411470E-12,
+          3.61508056E+03,
+         -1.03925458E-01,
+      }
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 3500.0,
+      coeffs = {
+         0,
+         0,
+          3.09288767E+00,
+          5.48429716E-04,
+          1.26505228E-07,
+         -8.79461556E-11,
+          1.17412376E-14,
+          3.85865700E+03,
+          4.47669610E+00,
+      }
+   }
+}
 db.OH.ceaViscosity = {
    nsegments = 2,
    segment0 = {
