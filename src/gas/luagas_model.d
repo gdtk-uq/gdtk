@@ -76,7 +76,7 @@ extern(C) int molMasses(lua_State* L)
     lua_newtable(L);
     foreach ( int isp, mMass; gm.mol_masses ) {
 	lua_pushnumber(L, mMass);
-	lua_rawseti(L, -2, isp+1);
+	lua_setfield(L, -2, toStringz(gm.species_name(isp)));
     }
     return 1;
 }
@@ -233,6 +233,20 @@ extern(C) int entropy(lua_State* L)
     lua_pushnumber(L, s);
     return 1;
 }
+
+extern(C) int gibbsFreeEnergy(lua_State* L)
+{
+    auto gm = checkGasModel(L, 1);
+    auto Q = new GasState(gm);
+    getGasStateFromTable(L, gm, 2, Q);
+    int narg = lua_gettop(L);
+    double G;
+    int isp = luaL_checkint(L, 3);
+    G = gm.gibbs_free_energy(Q, isp);
+    lua_pushnumber(L, G);
+    return 1;
+}
+
 
 extern(C) int Cv(lua_State* L)
 {
@@ -932,6 +946,8 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "enthalpy");
     lua_pushcfunction(L, &entropy);
     lua_setfield(L, -2, "entropy");
+    lua_pushcfunction(L, &gibbsFreeEnergy);
+    lua_setfield(L, -2, "gibbsFreeEnergy");
     lua_pushcfunction(L, &Cv);
     lua_setfield(L, -2, "Cv");
     lua_pushcfunction(L, &Cv);

@@ -4,6 +4,8 @@ gm = GasModel:new{'sample-data/ideal-air-gas-model.lua'}
 assert(gm:nSpecies() == 1)
 assert(gm:nModes() == 0)
 assert(gm:speciesName(0) == 'air')
+molMasses = gm:molMasses()
+assert(math.abs(molMasses['air'] - 0.02896) < 1.0e-6)
 -- Test thermo evaluations....
 Q = GasState:new{gm}
 assert(Q.massf.air == 1)
