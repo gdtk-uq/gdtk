@@ -28,7 +28,6 @@ state1 = GasState:new{gm}
 state1.p = 125.0e3; state1.T = 300.0
 gm:updateThermoFromPT(state1)
 print("state1:"); printValues(state1)
-state2 = GasState:new{gm}
 
 print("Test some assertions")
 function approxEqual(a, b, relTol, absTol)
@@ -48,7 +47,8 @@ end
 
 print("normal shock")
 Vs = 2414.0
-V2, Vg = gasflow.normal_shock(state1, Vs, state2, gm)
+V2, Vg, state2 = gasflow.normal_shock(state1, Vs)
+print("V2=", V2, "Vg=", Vg, " state2="); printValues(state2)
 assert(approxEqual(V2, 361.9), "V2 number after shock fail")
 assert(approxEqual(Vg, 2052.1), "Vg number after shock fail")
 

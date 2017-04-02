@@ -23,22 +23,29 @@ immutable string gasflowMT = "gasflow";
 
 extern(C) int gasflow_normal_shock(lua_State* L)
 {
-    // Expected arguments:
-    //   1 state1 table
-    //   2 Vs
-    //   3 rho_tol (optional)
-    //   4 T_tol (optional)
-    // We also expect the gasmodel filed in the state1 table.
-    //
-    // [TODO] consider accepting everything in a table
-    // and returning all results in a table.
+    // Function signature in Lua domain:
+    // V2, Vg, state2 = gasflow.normal_shock(state1, Vs, rho_tol, T_tol)
+    // Input:
+    //   state1: in a GasState table (with gasmodel field)
+    //   Vs: velocity of shock into quiescent gas 
+    //   rho_tol: optional toleralnce on density
+    //   T_tol: optional tolerance on temperature
+    // Returns:
+    //   V2: gas velocity leaving shock (in shock frame)
+    //   Vg: gas velocity in lab frame, for a moving shock
+    //   state2: gas state following shock
     //
     lua_getfield(L, 1, "gasmodel");
     GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
     GasState state1 = new GasState(gm);
     getGasStateFromTable(L, gm, 1, state1);
-    writeln("state1: ", state1.toString);
+    gm.update_thermo_from_pT(state1); // needed for cea_gas
+    // Same values into state2, for now.
+    GasState state2 =  new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state2);
+    gm.update_thermo_from_pT(state2);
+    //
     if (!lua_isnumber(L, 2)) {
 	string errMsg = "Expected a number for Vs";
 	luaL_error(L, errMsg.toStringz);
@@ -52,14 +59,19 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     if (lua_isnumber(L, 4)) {
 	T_tol = to!double(luaL_checknumber(L, 4));
     }
-    GasState state2 =  new GasState(state1);
-    double[] results = normal_shock(state1, Vs, state2, gm, rho_tol, T_tol);
-    // [TODO] PJ, consider clearing stack at this point.
-    lua_pushnumber(L, results[0]); // V2
-    lua_pushnumber(L, results[1]); // Vg
-    // [TODO] return a table as the third item
-    // setGasStateInTable(L, gm, 3, state2);
-    return 2;
+    //
+    double[] vel_results = normal_shock(state1, Vs, state2, gm, rho_tol, T_tol);
+    //
+    lua_settop(L, 0); // clear the stack, in preparation for pushing results
+    lua_pushnumber(L, vel_results[0]); // V2
+    lua_pushnumber(L, vel_results[1]); // Vg
+    lua_newtable(L); // state2 table
+    int idx = lua_gettop(L);
+    setGasStateInTable(L, gm, idx, state2);
+    // Remember to put a reference the gas model into the GasState table.
+    pushObj!(GasModel, GasModelMT)(L, gm);
+    lua_setfield(L, idx, "gasmodel");
+    return 3;
 } // end gasflow_normal_shock()
 
 string registerfn(string fname)
