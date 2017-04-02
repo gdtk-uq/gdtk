@@ -8,7 +8,7 @@
 PLATFORM ?= linux
 
 DEMO_PROGRAMS := idealgasflow_demo luaidealgasflow_demo \
-	gasflow_demo
+	gasflow_demo luagasflow_demo
 
 include gasdyn_files.mk
 
@@ -72,6 +72,17 @@ gasflow_demo: gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(LIBLUA) \
 	dmd $(DFLAGS) $(OF)gasflow_demo \
 		gasflow_demo.d gasflow.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
 		$(GAS_FILES) $(KINETICS_FILES) $(DLINKFLAGS_LUA)
+
+luagasflow_demo: luagasflow_demo.d luagasflow.d luaidealgasflow.d \
+	gasflow.d idealgasflow.d \
+	$(NM_FILES) $(LIBLUA) \
+	$(UTIL_FILES) $(GASDYN_FILES) $(GAS_FILES) $(GAS_LUA_FILES) \
+	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
+	dmd $(DFLAGS) $(OF)luagasflow_demo \
+		luagasflow_demo.d luagasflow.d luaidealgasflow.d \
+		gasflow.d idealgasflow.d $(NM_FILES) $(UTIL_FILES) \
+		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \
+		$(DLINKFLAGS_LUA)
 
 #--------------------------------------------------------------------------
 # Fortran bits -- we need a bit of a hack
