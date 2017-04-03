@@ -24,6 +24,10 @@ SolidBoundaryFluxEffect makeSolidBFEfromJson(JSONValue jsonData, int blk_id, int
     case "zero_flux":
 	newBFE = new SolidBFE_ZeroFlux(blk_id, boundary);
 	break;
+    case "constant_flux":
+	double fluxValue = getJSONdouble(jsonData, "flux_value", 0.0);
+	newBFE = new SolidBFE_ConstantFlux(blk_id, boundary, fluxValue);
+	break;
     default:
 	string errMsg = format("ERROR: The SolidBoundaryFluxEffect type: '%s' is unknown.", bfeType);
 	throw new Exception(errMsg);
@@ -103,5 +107,67 @@ public:
 
 	}
     }
+}
+
+class SolidBFE_ConstantFlux : SolidBoundaryFluxEffect {
+public:
+    this(int id, int boundary, double fluxValue)
+    {
+	super(id, boundary, "ConstantFlux");
+	_fluxValue = fluxValue;
+    }
+
+    override void apply(double t, int tLevel)
+    {
+	size_t i, j, k;
+	SolidFVInterface IFace;
+
+	final switch (whichBoundary) {
+	case Face.north:
+	    j = blk.jmax + 1;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    IFace = blk.getIfj(i, j, k);
+		    IFace.flux = _fluxValue;
+		}
+	    }
+	    break;
+	case Face.east:
+	    i = blk.imax + 1;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    IFace = blk.getIfi(i, j, k);
+		    IFace.flux = _fluxValue;
+		}
+	    }
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    IFace = blk.getIfj(i, j, k);
+		    IFace.flux = _fluxValue;
+		}
+	    }
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    IFace = blk.getIfi(i, j, k);
+		    IFace.flux = _fluxValue;
+		}
+	    }
+	    break;
+	case Face.top:
+	    throw new Error("[TODO] ConstantFlux bc not implemented for TOP face.");
+	case Face.bottom:
+	    throw new Error("[TODO] ConstantFlux bc not implemented for BOTTOM face.");
+
+	}
+    }
+
+private:
+    double _fluxValue;
 }
 

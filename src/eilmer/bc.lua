@@ -757,6 +757,14 @@ function SolidBFE_ZeroFlux:tojson()
    return str
 end
 
+SolidBFE_ConstantFlux = SolidBoundaryFluxEffect:new{fluxValue=0.0}
+SolidBFE_ConstantFlux.type = "constant_flux"
+function SolidBFE_ConstantFlux:tojson()
+   local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format('"flux_value": %.18e }', self.fluxValue)
+   return str
+end
+
 -- Class for SolidBoundaryCondition
 -- This class is a convenience class: it translates a high-level
 -- user name for the boundary condition into a sequence of
@@ -813,8 +821,20 @@ function SolidAdiabaticBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
    o.preSpatialDerivAction = { SolidBIE_CopyAdjacentCellT:new{} }
    o.postFluxAction = { SolidBFE_ZeroFlux:new{} }
+   o.setsFluxDirectly = true
    return o
 end
+
+SolidConstantFluxBC = SolidBoundaryCondition:new()
+SolidConstantFluxBC.type = "SolidConstantFlux"
+function SolidConstantFluxBC:new(o)
+   o = SolidBoundaryCondition.new(self, o)
+   o.preSpatialDerivAction = { SolidBIE_CopyAdjacentCellT:new{} }
+   o.postFluxAction = { SolidBFE_ConstantFlux:new{fluxValue=o.fluxValue} }
+   o.setsFluxDirectly = true
+   return o
+end
+
 
 SolidUserDefinedBC = SolidBoundaryCondition:new()
 SolidUserDefinedBC.type = "SolidUserDefined"
