@@ -172,6 +172,7 @@ struct SteadyStateSolverOptions {
     int snapshotsCount = 10;
     int nTotalSnapshots = 5;
     int writeDiagnosticsCount = 20;
+    int writeLoadsCount = 20;
 }
 
 } // end version(steady_state)
@@ -1082,6 +1083,8 @@ void read_control_file()
 	getJSONint(sssOptions, "number_total_snapshots", GlobalConfig.sssOptions.nTotalSnapshots);
     GlobalConfig.sssOptions.writeDiagnosticsCount = 
 	getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
+    GlobalConfig.sssOptions.writeLoadsCount = 
+	getJSONint(sssOptions, "write_loads_count", GlobalConfig.sssOptions.writeLoadsCount);
     }
 
     // Propagate new values to the local copies of config.

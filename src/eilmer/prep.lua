@@ -56,6 +56,7 @@ sssOptionsHidden = { -- hidden from user
    snapshots_count = 10,
    number_total_snapshots = 5,
    write_diagnostics_count = 20,
+   write_loads_count = 20,
 
    __index = function (t, k) 
       return sssOptionsHidden[k]
@@ -1021,7 +1022,8 @@ function write_control_file(fileName)
    f:write(string.format('   "alpha": %.18e,\n', SteadyStateSolver.alpha))
    f:write(string.format('   "snapshots_count": %d,\n', SteadyStateSolver.snapshots_count))
    f:write(string.format('   "number_total_snapshots": %d,\n', SteadyStateSolver.number_total_snapshots))
-   f:write(string.format('   "write_diagnostics_count": %d\n', SteadyStateSolver.write_diagnostics_count))
+   f:write(string.format('   "write_diagnostics_count": %d,\n', SteadyStateSolver.write_diagnostics_count))
+   f:write(string.format('   "write_loads_count": %d\n', SteadyStateSolver.write_loads_count))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('    }\n')
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)

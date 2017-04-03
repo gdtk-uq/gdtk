@@ -41,6 +41,7 @@ import fileutil;
 import user_defined_source_terms;
 import conservedquantities;
 import postprocess : readTimesFile;
+import loads;
 
 static int fnCount = 0;
 static int nTotalVars;
@@ -269,6 +270,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     int nTotalSnapshots = GlobalConfig.sssOptions.nTotalSnapshots;
     int nWrittenSnapshots = 0;
     int writeDiagnosticsCount = GlobalConfig.sssOptions.writeDiagnosticsCount;
+    int writeLoadsCount = GlobalConfig.sssOptions.writeLoadsCount;
 
     int startStep;
     int nPreSteps = GlobalConfig.sssOptions.nPreSteps;
@@ -592,6 +594,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	    fResid.close();
 	}
 
+	// write out the loads
+	if ( (step % writeLoadsCount) == 0 || finalStep ) {
+	    write_boundary_loads_to_file(pseudoSimTime, step);
+	}
+	
 	if ( (step % GlobalConfig.print_count) == 0 || finalStep ) {
 	    cfl = determine_min_cfl(dt);
 	    if ( !residualsUpToDate ) {
@@ -679,7 +686,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	}
 
 	if ( finalStep ) break;
-
+	
 	if ( !inexactNewtonPhase && normNew/normRef < tau ) {
 	    // Switch to inexactNewtonPhase
 	    inexactNewtonPhase = true;
