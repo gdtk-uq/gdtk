@@ -65,12 +65,7 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     lua_pushnumber(L, vel_results[0]); // V2
     lua_pushnumber(L, vel_results[1]); // Vg
-    lua_newtable(L); // state2 table
-    int idx = lua_gettop(L);
-    setGasStateInTable(L, gm, idx, state2);
-    // Remember to put a reference the gas model into the GasState table.
-    pushObj!(GasModel, GasModelMT)(L, gm);
-    lua_setfield(L, idx, "gasmodel");
+    pushNewGasTable(L, state2, gm);
     return 3;
 } // end gasflow_normal_shock()
 

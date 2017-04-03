@@ -446,10 +446,20 @@ void checkAndScaleMassFractions(double[] massf, double tol)
     massf[] /= massfSum;
 }
 
-extern(C) int createTableForGasState(lua_State* L)
+void pushNewGasTable(lua_State* L, const(GasState) Q, GasModel gm)
 {
-    auto gm = checkGasModel(L, 1);
-    auto Q = new GasState(gm);
+    lua_newtable(L);
+    int idx = lua_gettop(L);
+    setGasStateInTable(L, gm, idx, Q);
+    // It's convenient in the Lua code to put a reference
+    // to the gas model in the GasState table.
+    pushObj!(GasModel, GasModelMT)(L, gm);
+    lua_setfield(L, idx, "gasmodel");
+}
+
+GasState makeNewGasState(GasModel gm)
+{
+    GasState Q = new GasState(gm);
     // For the special case of n_species = 1, it's quite likely
     // that the user might never consider the massf array.
     // In which case, we'll just set that value to 1.0.
@@ -463,13 +473,14 @@ extern(C) int createTableForGasState(lua_State* L)
     else {
 	Q.massf[] = 0.0;
     }
-    lua_newtable(L);
-    int idx = lua_gettop(L);
-    setGasStateInTable(L, gm, idx, Q);
-    // It's convenient in the Lua code to put a reference
-    // to the gas model in the GasState table.
-    pushObj!(GasModel, GasModelMT)(L, gm);
-    lua_setfield(L, idx, "gasmodel");
+    return Q;
+}
+
+extern(C) int createTableForGasState(lua_State* L)
+{
+    GasModel gm = checkGasModel(L, 1);
+    GasState Q = makeNewGasState(gm);
+    pushNewGasTable(L, Q, gm);
     return 1;
 }
 
@@ -477,29 +488,10 @@ extern(C) int newTableForGasState(lua_State* L)
 {
     lua_remove(L, 1); // Remove first argument this
     lua_rawgeti(L, 1, 1);
-    auto gm = checkGasModel(L, -1);
+    GasModel gm = checkGasModel(L, -1);
     lua_pop(L, 1);
-    auto Q = new GasState(gm);
-    // For the special case of n_species = 1, it's quite likely
-    // that the user might never consider the massf array.
-    // In which case, we'll just set that value to 1.0.
-    // For all other cases, we take the default action of
-    // setting all mass fractions to 0.0.
-    // For a multi-component gas, we expect the user to 
-    // take care with setting mass fraction values.
-    if ( gm.n_species == 1 ) {
-	Q.massf[0] = 1.0;
-    }
-    else {
-	Q.massf[] = 0.0;
-    }
-    lua_newtable(L);
-    int idx = lua_gettop(L);
-    setGasStateInTable(L, gm, idx, Q);
-    // It's convenient in the Lua code to put a reference
-    // to the gas model in the GasState table.
-    pushObj!(GasModel, GasModelMT)(L, gm);
-    lua_setfield(L, idx, "gasmodel");
+    GasState Q = makeNewGasState(gm);
+    pushNewGasTable(L, Q, gm);
     return 1;
 }
 
@@ -755,7 +747,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_pop(L, 1);
 }
 
-void setGasStateInTable(lua_State* L, GasModel gm, int idx, GasState Q)
+void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
 {
     lua_pushnumber(L, Q.rho);
     lua_setfield(L, idx, "rho");
