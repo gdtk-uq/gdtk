@@ -19,6 +19,7 @@ import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
 
 import gas.gas_model;
+import gas.cea_gas;
 import gas.physical_constants;
 
 // name for GasModel class in Lua scripts
@@ -192,6 +193,7 @@ extern(C) int intEnergy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
     auto e = gm.internal_energy(Q);
     lua_pushnumber(L, e);
@@ -203,6 +205,7 @@ extern(C) int enthalpy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
     double h;
     if ( narg >= 3 ) { // Call species-specific version
@@ -221,6 +224,7 @@ extern(C) int entropy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
     double s;
     if ( narg >= 3 ) { // Call species-specific version

@@ -47,13 +47,13 @@ end
 
 print("normal shock, given shock speed")
 Vs = 2414.0
-V2, Vg, state2 = gasflow.normal_shock(state1, Vs)
+state2, V2, Vg = gasflow.normal_shock(state1, Vs)
 print("V2=", V2, "Vg=", Vg)
 print("state2:"); printValues(state2)
 assert(approxEqual(V2, 361.9), "V2 number after shock fail")
 assert(approxEqual(Vg, 2052.1), "Vg number after shock fail")
 assert(approxEqual(state2.p, 7.314e6), "p2 number after shock fail")
-assert(approxEqual(state2.T, 2630.0), "p2 number after shock fail")
+assert(approxEqual(state2.T, 2630.0), "T2 number after shock fail")
 
 print("normal shock computed from pressure ratio")
 V1, V2, Vg = gasflow.normal_shock_p2p1(state1, 7.314e6/125.0e3)
@@ -61,6 +61,23 @@ print("V1=", V1, " V2=", V2, " Vg=", Vg)
 assert(approxEqual(V1, 2414.0), "V1 number after p2p1 shock fail")
 assert(approxEqual(V2, 361.9), "V2 number after p2p1 shock fail")
 assert(approxEqual(Vg, 2052.1), "Vg number after p2p1 shock fail")
+
+print("reflected shock")
+state5, Vr = gasflow.reflected_shock(state2, Vg)
+print("Vr=", Vr)
+print("state5:"); printValues(state5)
+assert(approxEqual(Vr, 573.9), "Vr number after reflected shock fail")
+assert(approxEqual(state5.p, 59.47e6), "p5 number after reflected shock fail")
+assert(approxEqual(state5.T, 4551.8), "T5 number after reflected shock fail")
+
+print("Expand from stagnation (with ratio of pressure to match observation)")
+state5s, V5s = gasflow.expand_from_stagnation(state5, 34.37/59.47)
+print("    V5s=", V5s, " Mach=", V5s/state5s.a)
+print("    s5s:"); printValues(state5s)
+print("    (h5s-h1)=", gm:enthalpy(state5s) - gm:enthalpy(state1)) 
+assert(approxEqual(V5s, 1184.7), "V5s number after expand_from_stagnation fail")
+assert(approxEqual(state5s.p, 34.37e6), "p5s number after expand_from_stagnation fail")
+assert(approxEqual(state5s.T, 4161.8), "T5s number after expand_from_stagnation shock fail")
 
 print("Done.")
     `;
