@@ -12,3 +12,6 @@ NM_FILES := $(NM_DIR)/bbla.d \
 	$(NM_DIR)/smla.d \
 	$(NM_DIR)/tree_patch.d \
 	$(NM_DIR)/univariate_lut.d
+
+NM_LUA_FILES := $(NM_DIR)/luabbla.d
+

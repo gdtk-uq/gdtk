@@ -1,7 +1,10 @@
 # makefile for the Numerical Methods package
 # Builds all of the demonstration programs
+DMD ?= dmd
+PLATFORM ?= linux
 
 UTIL_DIR := ../util
+include $(UTIL_DIR)/util_files.mk
 
 include nm_files.mk
 
@@ -22,7 +25,28 @@ TEST_PROGRAMS := bbla_test \
 	brent_test \
 	rungekutta_test \
 	smla_test \
-	rsla_test
+	rsla_test \
+	luabbla_test
+
+LUA := ../../extern/lua-5.1.4
+LIBLUA := $(LUA)/lib/liblua.a
+LIBLUAPATH := $(LUA)/lib
+ifeq ($(DMD), dmd)
+    # DFLAGS := -w
+    DFLAGS := -w -O -release -inline -boundscheck=off
+    OF := -of
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+endif
+ifeq ($(DMD), ldmd2)
+    DFLAGS := -w -O -release -inline -boundscheck=off
+    OF := -of
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+endif
+ifeq ($(DMD), gdc)
+    DFLAGS := -Wall -O2 -frelease -fno-debug
+    OF := -o
+    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
+endif
 
 demo: ${DEMO_PROGRAMS}
 	echo "Demo codes built."
@@ -34,6 +58,9 @@ clean:
 	- rm *.o
 	- rm ${DEMO_PROGRAMS}
 	- rm ${TEST_PROGRAMS}
+
+$(LIBLUA):
+	cd $(LUA); make linux local
 
 ridder_demo: ridder_demo.d ridder.d bracketing.d
 	dmd -g ridder_demo.d ridder.d bracketing.d
@@ -95,3 +122,7 @@ smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 rsla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -gc -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+luabbla_test: luabbla.d bbla.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
+	dmd -of$@ -debug -gc -w -version=$@ \
+		luabbla.d bbla.d $(UTIL_FILES) $(DLINKFLAGS)
