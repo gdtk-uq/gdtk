@@ -171,7 +171,7 @@ double[] normal_shock_p2p1(const(GasState) state1, double p2p1,
  *
  * Input:
  *   state1: pre-shock gas state (given)
- *   p2p1: ration of pressure across the shock (given)
+ *   p2p1: ratio of pressure across the shock (given)
  *   state2: reference to the post-shock state (to be computed)
  *   gmodel: reference to the gas model
  *

@@ -45,12 +45,22 @@ function approxEqual(a, b, relTol, absTol)
    return result
 end
 
-print("normal shock")
+print("normal shock, given shock speed")
 Vs = 2414.0
 V2, Vg, state2 = gasflow.normal_shock(state1, Vs)
-print("V2=", V2, "Vg=", Vg, " state2="); printValues(state2)
+print("V2=", V2, "Vg=", Vg)
+print("state2:"); printValues(state2)
 assert(approxEqual(V2, 361.9), "V2 number after shock fail")
 assert(approxEqual(Vg, 2052.1), "Vg number after shock fail")
+assert(approxEqual(state2.p, 7.314e6), "p2 number after shock fail")
+assert(approxEqual(state2.T, 2630.0), "p2 number after shock fail")
+
+print("normal shock computed from pressure ratio")
+V1, V2, Vg = gasflow.normal_shock_p2p1(state1, 7.314e6/125.0e3)
+print("V1=", V1, " V2=", V2, " Vg=", Vg)
+assert(approxEqual(V1, 2414.0), "V1 number after p2p1 shock fail")
+assert(approxEqual(V2, 361.9), "V2 number after p2p1 shock fail")
+assert(approxEqual(Vg, 2052.1), "Vg number after p2p1 shock fail")
 
 print("Done.")
     `;

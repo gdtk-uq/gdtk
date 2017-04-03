@@ -69,6 +69,44 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     return 3;
 } // end gasflow_normal_shock()
 
+extern(C) int gasflow_normal_shock_p2p1(lua_State* L)
+{
+    // Function signature in Lua domain:
+    // V1, V2, Vg = gasflow.normal_shock_p2p1(state1, p2p1)
+    // Input:
+    //   state1: in a GasState table (with gasmodel field)
+    //   p2p1: ratio of pressure across the shock 
+    // Returns:
+    //   V1: the incident shock speed (into quiescent gas)
+    //   V2: gas velocity leaving shock (in shock frame)
+    //   Vg: gas velocity in lab frame, for a moving shock
+    //
+    lua_getfield(L, 1, "gasmodel");
+    GasModel gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+    GasState state1 = new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state1);
+    gm.update_thermo_from_pT(state1); // needed for cea_gas
+    // Same values into state2, for now.
+    GasState state2 =  new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state2);
+    gm.update_thermo_from_pT(state2);
+    //
+    if (!lua_isnumber(L, 2)) {
+	string errMsg = "Expected a number for p2p1";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double p2p1 = to!double(luaL_checknumber(L, 2));
+    //
+    double[] vel_results = normal_shock_p2p1(state1, p2p1, state2, gm);
+    //
+    lua_settop(L, 0); // clear the stack, in preparation for pushing results
+    lua_pushnumber(L, vel_results[0]); // V1
+    lua_pushnumber(L, vel_results[1]); // V2
+    lua_pushnumber(L, vel_results[2]); // Vg
+    return 3;
+} // end gasflow_normal_shock_p2p1()
+
 string registerfn(string fname)
 {
     return "    lua_pushcfunction(L, &gasflow_"~fname~");\n" ~
@@ -85,6 +123,7 @@ void registergasflowFunctions(lua_State* L)
     lua_setfield(L, -2, "__index");
 
     mixin(registerfn("normal_shock"));
+    mixin(registerfn("normal_shock_p2p1"));
 
     lua_setglobal(L, gasflowMT.toStringz);
 } // end registergasflowFunctions()
