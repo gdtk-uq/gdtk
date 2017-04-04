@@ -265,14 +265,14 @@ double reflected_shock(const(GasState) state2, double Vg,
 } // end reflected_shock()
 
 
-double expand_from_stagnation(double p_over_p0, const(GasState) state0,
+double expand_from_stagnation(const(GasState) state0, double p_over_p0,
 			      GasState state1, GasModel gm)
 /**
  * Given a stagnation condition state0, expand to a new pressure.
  *
  * Input:
- *   p_over_p0: pressure ratio
  *   state0: GasState object specifying stagnation conditions
+ *   p_over_p0: pressure ratio
  *   state1: GasState object for the expanded conditions (to be computed)
  *
  * Returns: the corresponding velocity (in m/s) of the expanded stream.
@@ -292,14 +292,14 @@ double expand_from_stagnation(double p_over_p0, const(GasState) state0,
 } // end expand_from_stagnation()
 
 
-double expand_to_mach(double mach, const(GasState) state0,
+double expand_to_mach(const(GasState) state0, double mach,
 		      GasState state1, GasModel gm)
 /**
  * Given a stagnation condition state0, expand to a given Mach number.
  *
  * Input:
- *   mach: target mach number
  *   state0: GasState object specifying stagnation conditions
+ *   mach: target mach number for the expanded gas
  *   state1: GasState object for the expanded conditions (to be computed)
  *
  * Returns: the corresponding velocity (in m/s) of the expanded stream.
@@ -312,7 +312,7 @@ double expand_to_mach(double mach, const(GasState) state0,
     double p_over_p0_guess2 = 0.90;
     // [TODO] Could probably do better with ideal gas guess.
     auto error_in_mach = delegate(double p_over_p0) {
-	double V = expand_from_stagnation(p_over_p0, state0, state1, gm);
+	double V = expand_from_stagnation(state0, p_over_p0, state1, gm);
 	double a = state1.a;
 	return mach - V/a;
     };
@@ -400,7 +400,7 @@ double steady_flow_with_area_change(const(GasState)state1, double V1, double A2_
  *   V1: velocity at station 1, m/s (given)
  *   A2_over_A1: area ratio between stations A2/A1 (given)
  *   state2: reference to GasState object for condition 2 (to be computed)
- *   tol: tolerance for function solver to find nozzle outlet condition
+ *   tol: tolerance for function solver to find condition 2
  *
  * Returns: velocity at station 2, m/s
  */

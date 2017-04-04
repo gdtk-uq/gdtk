@@ -43,21 +43,21 @@ void main(){
     //
     writeln("Expand from stagnation (with ratio of pressure to match observation)");
     GasState s5s = new GasState(s5);
-    double V5s = expand_from_stagnation(34.37/59.47, s5, s5s, gm);
+    double V5s = expand_from_stagnation(s5, 34.37/59.47, s5s, gm);
     writeln("    V5s=", V5s, " Mach=", V5s/s5s.a);
     writeln("    s5s:", s5s);
     writeln("    (h5s-h1)=", gm.enthalpy(s5s) - gm.enthalpy(s1)); 
     //
-    writeln("Expand to throat conditions (Mach 1)");
+    writeln("Expand to throat conditions (Mach 1.0001)");
     GasState s6 = new GasState(s5s);
-    double V6 = expand_to_mach(1.0, s5s, s6, gm);
+    double V6 = expand_to_mach(s5s, 1.0001, s6, gm);
     writeln("    V6=", V6, " Mach=", V6/s6.a);
     writeln("    s6:", s6);
     //
     writeln("Something like a Mach 4 nozzle.");
     GasState s7 = new GasState(s6);
     double V7 = steady_flow_with_area_change(s6, V6, 27.0, s7, gm);
-    writeln("    V7=", V7);
+    writeln("    V7=", V7, " Mach=", V7/s7.a);
     writeln("    s7:", s7);
     //
     writeln("Total condition");
