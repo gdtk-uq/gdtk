@@ -21,6 +21,7 @@ import gas;
 import gas.luagas_model;
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
+import nm.luabbla;
 import fvcore: FlowSolverException;
 import globalconfig;
 import simcore;
@@ -195,6 +196,7 @@ void main(string[] args)
 	registerSolidProps(L);
 	registerGasModel(L, LUA_GLOBALSINDEX);
 	registeridealgasflowFunctions(L);
+	registerBBLA(L);
 	// Before processing the Lua input files, move old .config and .control files.
 	// This should prevent a subsequent run of the simulation on old config files
 	// in the case that the processing of the input script fails.
