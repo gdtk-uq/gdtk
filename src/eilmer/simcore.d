@@ -80,7 +80,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     auto nThreadsInPool = min(maxCPUs-1, nBlocksInParallel-1); // no need to have more task threads than blocks
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
     writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
-    foreach (myblk; parallel(gasBlocks,1)) {
+    foreach (myblk; gasBlocks) {
 	writeln("myblk=", myblk);
 	if ( GlobalConfig.grid_motion != GridMotion.none ) {
 	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, tindx)); 
@@ -430,10 +430,11 @@ void integrate_in_time(double target_time_as_requested)
 	    writeln(writer.data);
 	    if ( GlobalConfig.report_residuals ) {
 		// We also compute the residual information and write to screen
+		auto wallClock2 = 1.0e-3*(Clock.currTime() - wall_clock_start).total!"msecs"();
 		compute_Linf_residuals(Linf_residuals);
 		auto writer2 = appender!string();
-		formattedWrite(writer2, "RESIDUALS: step= %7d WC= %d ",
-			       step, wall_clock_elapsed);
+		formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
+			       step, wallClock2);
 		formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
 			       Linf_residuals.mass, Linf_residuals.momentum.x,
 			       Linf_residuals.momentum.y, Linf_residuals.total_energy);
