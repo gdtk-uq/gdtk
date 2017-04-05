@@ -106,6 +106,32 @@ state9 = gasflow.pitot_condition(state7, V7)
 print("    state9:"); printValues(state9)
 assert(approxEqual(state9.p/state8.p, 0.06253), "pitot/total pressure ratio fail")
 
+print("\nFinite wave process along a cplus characteristic, stepping in pressure.")
+V1 = 0.0; state1.p = 1.0e5; state1.T = 320.0 -- ideal air, not high T
+gm:updateThermoFromPT(state1)
+gm:updateSoundSpeed(state1)
+Jplus = V1 + 2*state1.a/(1.4-1)
+state2, V2 = gasflow.finite_wave_dp(state1, V1, "cplus", 60.0e3, 500)
+print("    V2=", V2)
+print("    state2:"); printValues(state2)
+print("    ideal V2=", Jplus - 2*state2.a/(1.4-1))
+assert(approxEqual(V2, 126.2), "velocity after finite_wave_dp fail")
+assert(approxEqual(state2.p, 60.0e3), "pressure after finite_wave_dp fail")
+assert(approxEqual(state2.T, 276.5), "temperature after finite_wave_dp fail")
+
+print("\nFinite wave process along a cplus characteristic, stepping in velocity.")
+V1 = 0.0; state1.p = 1.0e5; state1.T = 320.0 -- ideal air, not high T
+gm:updateThermoFromPT(state1)
+gm:updateSoundSpeed(state1)
+Jplus = V1 + 2*state1.a/(1.4-1)
+state2, V2 = gasflow.finite_wave_dv(state1, V1, "cplus", 125.0)
+print("    V2=", V2)
+print("    state2:"); printValues(state2)
+print("    ideal V2=", Jplus - 2*state2.a/(1.4-1))
+assert(approxEqual(V2, 125.0), "velocity after finite_wave_dv fail")
+assert(approxEqual(state2.p, 60.3e3), "pressure after finite_wave_dv fail")
+assert(approxEqual(state2.T, 276.9), "temperature after finite_wave_dv fail")
+
 print("Done.")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {

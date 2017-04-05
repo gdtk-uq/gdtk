@@ -102,7 +102,7 @@ void main(){
     V1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
     gm.update_sound_speed(s1);
     double Jplus = V1 + 2*s1.a/(1.4-1);
-    V2 = finite_wave_dp("cplus", V1, s1, 60.0e3, s2, gm);
+    V2 = finite_wave_dp(s1, V1, "cplus", 60.0e3, s2, gm);
     writeln("    V2=", V2);
     writeln("    s2:", s2);
     writeln("    ideal V2=", Jplus - 2*s2.a/(1.4-1));
@@ -111,7 +111,7 @@ void main(){
     V1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
     gm.update_sound_speed(s1);
     Jplus = V1 + 2*s1.a/(1.4-1);
-    V2 = finite_wave_dv("cplus", V1, s1, 125.0, s2, gm);
+    V2 = finite_wave_dv(s1, V1, "cplus", 125.0, s2, gm);
     writeln("    V2=", V2);
     writeln("    s2:", s2);
     writeln("    ideal Jplus=", Jplus, " actual Jplus=", V2 + 2*s2.a/(1.4-1));

@@ -471,8 +471,9 @@ double steady_flow_with_area_change(const(GasState)state1, double V1, double A2_
 //------------------------------------------------------------------------
 // Finite-strength waves along characteristic lines.
 
-double finite_wave_dp(string characteristic, double V1, const(GasState) state1,
-		      double p2, GasState state2, GasModel gm, int steps=100)
+double finite_wave_dp(const(GasState) state1, double V1,
+		      string characteristic, double p2,
+		      GasState state2, GasModel gm, int steps=100)
 /**
  * Process the gas isentropically, following a characteristic line.
  *
@@ -480,10 +481,10 @@ double finite_wave_dp(string characteristic, double V1, const(GasState) state1,
  * Modern Compressible Flow.
  *
  * Input:
- *   characteristic: is either 'cplus' or 'cminus'
- *   V1: initial gas velocity, in m/s
  *   state1: initial gas state
- *   p2: new pressure after processing, in Pa
+ *   V1: initial gas velocity, in m/s
+ *   characteristic: is either 'cplus' or 'cminus'
+ *   p2: target pressure after processing, in Pa
  *   state2: reference to the final gas state (to be computed)
  *   gm: reference to the current gas model
  *   steps: number of small steps to take through the process
@@ -526,8 +527,9 @@ double finite_wave_dp(string characteristic, double V1, const(GasState) state1,
 } // end finite_wave_dp()
 
 
-double finite_wave_dv(string characteristic, double V1, const(GasState) state1,
-		      double V2_target, GasState state2, GasModel gm,
+double finite_wave_dv(const(GasState) state1, double V1,
+		      string characteristic, double V2_target,
+		      GasState state2, GasModel gm,
 		      int steps=100, double Tmin=200.0)
 /**
  * Process the gas isentropically, following a characteristic line.
@@ -536,9 +538,9 @@ double finite_wave_dv(string characteristic, double V1, const(GasState) state1,
  * Modern Compressible Flow.
  *
  * Input:
- *   characteristic: is either 'cplus' or 'cminus'
- *   V1: initial gas velocity, in m/s
  *   state1: initial gas state
+ *   V1: initial gas velocity, in m/s
+ *   characteristic: is either 'cplus' or 'cminus'
  *   V2_target: desired velocity after processing, in m/s
  *     Note that we may not reach the requested velocity before pressure 
  *     and temperature become too small.

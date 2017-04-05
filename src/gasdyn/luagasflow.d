@@ -292,7 +292,7 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
     //   state1: a GasState table for condition at station 1
     //   V1: velocity of gas at station 1
     //   A2_over_A1: area ratio
-    //   tol: tolerance for function solver
+    //   tol: (optional) tolerance for function solver
     // Returns:
     //   state2: GasState table for condition at station 2
     //   V2: velocity of gas at station 2
@@ -331,6 +331,119 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
     return 2;
 } // end gasflow_steady_flow_with_area_change()
 
+extern(C) int gasflow_finite_wave_dp(lua_State* L)
+{
+    // Function signature in Lua domain:
+    // state2, V2 = gasflow.finite_wave_dp(state1, V1, characteristic, p2, steps)
+    // Input:
+    //   state1: a GasState table for condition at station 1
+    //   V1: velocity of gas at station 1
+    //   p2: pressure at target state 2, following processing
+    //   characteristic: "cplus" or "cminus"
+    //   steps: (optional) number of steps to take in pressure
+    // Returns:
+    //   state2: GasState table for condition at station 2
+    //   V2: velocity of gas at station 2
+    //
+    lua_getfield(L, 1, "gasmodel");
+    GasModel gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+    GasState state1 = new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state1);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
+    // Same values into state2, for now.
+    GasState state2 =  new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state2);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
+    //
+    if (!lua_isnumber(L, 2)) {
+	string errMsg = "Expected a number for V1";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double V1 = to!double(luaL_checknumber(L, 2));
+    if (!lua_isstring(L, 3)) {
+	string errMsg = "Expected a string for characteristic";
+	luaL_error(L, errMsg.toStringz);
+    }
+    string characteristic = to!string(luaL_checkstring(L, 3));
+    if (!lua_isnumber(L, 4)) {
+	string errMsg = "Expected a number for p2";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double p2 = to!double(luaL_checknumber(L, 4));
+    int steps = 100; // default value
+    if (lua_isnumber(L, 5)) {
+	steps = to!int(luaL_checkint(L, 5));
+    }
+    //
+    double V2 = finite_wave_dp(state1, V1, characteristic, p2, state2, gm, steps);
+    //
+    lua_settop(L, 0); // clear the stack, in preparation for pushing results
+    pushNewGasTable(L, state2, gm);
+    lua_pushnumber(L, V2);
+    return 2;
+} // end gasflow_finite_wave_dp()
+
+extern(C) int gasflow_finite_wave_dv(lua_State* L)
+{
+    // Function signature in Lua domain:
+    // state2, V2 = gasflow.finite_wave_dp(state1, V1, characteristic, V2_target,
+    //                                     steps, Tmin)
+    // Input:
+    //   state1: a GasState table for condition at station 1
+    //   V1: velocity of gas at station 1
+    //   V2_target: velocity at target state 2, following processing
+    //   characteristic: "cplus" or "cminus"
+    //   steps: (optional) number of steps to take through the process
+    //   Tmin: (optional) temperature (in Kelvin) below which we terminate the process
+    // Returns:
+    //   state2: GasState table for condition at station 2
+    //   V2: velocity of gas at station 2
+    //
+    lua_getfield(L, 1, "gasmodel");
+    GasModel gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+    GasState state1 = new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state1);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
+    // Same values into state2, for now.
+    GasState state2 =  new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state2);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
+    //
+    if (!lua_isnumber(L, 2)) {
+	string errMsg = "Expected a number for V1";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double V1 = to!double(luaL_checknumber(L, 2));
+    if (!lua_isstring(L, 3)) {
+	string errMsg = "Expected a string for characteristic";
+	luaL_error(L, errMsg.toStringz);
+    }
+    string characteristic = to!string(luaL_checkstring(L, 3));
+    if (!lua_isnumber(L, 4)) {
+	string errMsg = "Expected a number for V2_target";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double V2_target = to!double(luaL_checknumber(L, 4));
+    int steps = 100; // default value
+    if (lua_isnumber(L, 5)) {
+	steps = to!int(luaL_checkint(L, 5));
+    }
+    double Tmin = 200.0; // default value
+    if (lua_isnumber(L, 6)) {
+	Tmin = to!double(luaL_checknumber(L, 6));
+    }
+    //
+    double V2 = finite_wave_dv(state1, V1, characteristic, V2_target,
+			       state2, gm, steps, Tmin);
+    //
+    lua_settop(L, 0); // clear the stack, in preparation for pushing results
+    pushNewGasTable(L, state2, gm);
+    lua_pushnumber(L, V2);
+    return 2;
+} // end gasflow_finite_wave_dv()
+
 string registerfn(string fname)
 {
     return "    lua_pushcfunction(L, &gasflow_"~fname~");\n" ~
@@ -354,6 +467,8 @@ void registergasflowFunctions(lua_State* L)
     mixin(registerfn("total_condition"));
     mixin(registerfn("pitot_condition"));
     mixin(registerfn("steady_flow_with_area_change"));
+    mixin(registerfn("finite_wave_dp"));
+    mixin(registerfn("finite_wave_dv"));
 
     lua_setglobal(L, gasflowMT.toStringz);
 } // end registergasflowFunctions()
