@@ -11,6 +11,7 @@ import std.conv;
 import std.string;
 import util.lua;
 import gas.luagas_model;
+import luaidealgasflow;
 import luagasflow;
 
 void main()
@@ -19,6 +20,7 @@ void main()
     auto L = luaL_newstate();
     luaL_openlibs(L);
     registerGasModel(L, LUA_GLOBALSINDEX);
+    registeridealgasflowFunctions(L);
     registergasflowFunctions(L);
     string test_code = `
 print("Try out gasflow functions.")
@@ -131,6 +133,26 @@ print("    ideal V2=", Jplus - 2*state2.a/(1.4-1))
 assert(approxEqual(V2, 125.0), "velocity after finite_wave_dv fail")
 assert(approxEqual(state2.p, 60.3e3), "pressure after finite_wave_dv fail")
 assert(approxEqual(state2.T, 276.9), "temperature after finite_wave_dv fail")
+
+M1 = 1.5
+print("\nOblique-shock demo for M1=", M1)
+state1.p = 1.0e5; state1.T = 300.0 -- ideal air, not high T
+gm:updateThermoFromPT(state1) 
+gm:updateSoundSpeed(state1)
+beta = 45.0 * math.pi/180.0
+print("    given beta(degrees)=", beta*180/math.pi)
+V1 = 1.5 * state1.a
+print("    state1:"); printValues(state1)
+state2, theta, V2 = gasflow.theta_oblique(state1, V1, beta)
+print("    theta=", theta)
+print("    V2=", V2)
+print("    state2:"); printValues(state2)
+print("    c.f. ideal gas angle=", idealgasflow.theta_obl(M1, beta))
+
+print("Oblique shock angle from deflection.")
+beta2 = gasflow.beta_oblique(state1, V1, theta)
+print("    beta2(degrees)=", beta2*180/math.pi)
+assert(approxEqual(beta, beta2), "shock wave angle fail")
 
 print("Done.")
     `;

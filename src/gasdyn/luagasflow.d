@@ -444,6 +444,90 @@ extern(C) int gasflow_finite_wave_dv(lua_State* L)
     return 2;
 } // end gasflow_finite_wave_dv()
 
+extern(C) int gasflow_theta_oblique(lua_State* L)
+{
+    // Function signature in Lua domain:
+    // state2, theta, V2 = gasflow.theta_oblique(state1, V1, beta)
+    // Input:
+    //   state1: a GasState table for condition before shock
+    //   V1: velocity of gas before shock
+    //   beta: shock wave angle (in radians) wrt stream direction
+    // Returns:
+    //   state2: GasState table for condition post-shock
+    //   V2: post-shock speed of gas (in m/s)
+    //   theta: stream deflection angle (in radians)
+    //
+    lua_getfield(L, 1, "gasmodel");
+    GasModel gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+    GasState state1 = new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state1);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
+    // Same values into state2, for now.
+    GasState state2 =  new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state2);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
+    //
+    if (!lua_isnumber(L, 2)) {
+	string errMsg = "Expected a number for V1";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double V1 = to!double(luaL_checknumber(L, 2));
+    if (!lua_isnumber(L, 3)) {
+	string errMsg = "Expected a number for beta";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double beta = to!double(luaL_checknumber(L, 3));
+    //
+    double[] results = theta_oblique(state1, V1, beta, state2, gm);
+    //
+    lua_settop(L, 0); // clear the stack, in preparation for pushing results
+    pushNewGasTable(L, state2, gm);
+    lua_pushnumber(L, results[0]); // theta
+    lua_pushnumber(L, results[1]); // V2
+    return 3;
+} // end gasflow_theta_oblique()
+
+extern(C) int gasflow_beta_oblique(lua_State* L)
+{
+    // Function signature in Lua domain:
+    // beta = gasflow.theta_oblique(state1, V1, beta)
+    // Input:
+    //   state1: a GasState table for condition before shock
+    //   V1: velocity of gas before shock
+    //   theta: stream deflection angle (in radians)
+    // Returns:
+    //   beta: shock wave angle (in radians) wrt free-stream direction
+    //
+    lua_getfield(L, 1, "gasmodel");
+    GasModel gm = checkGasModel(L, -1);
+    lua_pop(L, 1);
+    GasState state1 = new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state1);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
+    // Same values into state2, for now.
+    GasState state2 =  new GasState(gm);
+    getGasStateFromTable(L, gm, 1, state2);
+    if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
+    //
+    if (!lua_isnumber(L, 2)) {
+	string errMsg = "Expected a number for V1";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double V1 = to!double(luaL_checknumber(L, 2));
+    if (!lua_isnumber(L, 3)) {
+	string errMsg = "Expected a number for theta";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double theta = to!double(luaL_checknumber(L, 3));
+    //
+    double beta = beta_oblique(state1, V1, theta, gm);
+    //
+    lua_settop(L, 0); // clear the stack, in preparation for pushing results
+    lua_pushnumber(L, beta);
+    return 1;
+} // end gasflow_beta_oblique()
+
 string registerfn(string fname)
 {
     return "    lua_pushcfunction(L, &gasflow_"~fname~");\n" ~
@@ -469,6 +553,8 @@ void registergasflowFunctions(lua_State* L)
     mixin(registerfn("steady_flow_with_area_change"));
     mixin(registerfn("finite_wave_dp"));
     mixin(registerfn("finite_wave_dv"));
+    mixin(registerfn("theta_oblique"));
+    mixin(registerfn("beta_oblique"));
 
     lua_setglobal(L, gasflowMT.toStringz);
 } // end registergasflowFunctions()
