@@ -46,7 +46,7 @@
 dofile('sim-config.lua')
 endDomain = L
 
-function assignVtxVelocities(sim_time)
+function assignVtxVelocities(sim_time, dt)
    -- Compute present position of piston
    pPos = pSpeed * sim_time
    -- Compute current length of domain
