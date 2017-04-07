@@ -570,7 +570,7 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 	    }
 	    break;
 	case GridMotion.user_defined:
-	    assign_vertex_velocities_via_udf(sim_time);
+	    assign_vertex_velocities_via_udf(sim_time, dt_global);
 	    break;
 	case GridMotion.shock_fitting:
 	    // apply boundary conditions here because ...

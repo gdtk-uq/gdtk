@@ -188,12 +188,13 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     return 0;
 }
 
-void assign_vertex_velocities_via_udf(double sim_time)
+void assign_vertex_velocities_via_udf(double sim_time, double dt)
 {
     auto L = GlobalConfig.master_lua_State;
     lua_getglobal(L, "assignVtxVelocities");
     lua_pushnumber(L, sim_time);
-    int number_args = 1;
+    lua_pushnumber(L, dt);
+    int number_args = 2;
     int number_results = 0;
 
     if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
