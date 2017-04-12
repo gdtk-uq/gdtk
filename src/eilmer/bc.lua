@@ -410,8 +410,10 @@ function WallBC_NoSlip_FixedT:new(o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
 			       FixedT:new{Twall=o.Twall},
-			       UpdateThermoTransCoeffs:new(),
-			       WallKOmega:new() }
+			       UpdateThermoTransCoeffs:new() }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+   end
    o.is_configured = true
    return o
 end
@@ -421,8 +423,10 @@ WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
 function WallBC_NoSlip_Adiabatic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
-			       WallKOmega:new() }
+   o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new() }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+   end
    o.is_configured = true
    return o
 end
@@ -439,8 +443,10 @@ function WallBC_TranslatingSurface_FixedT:new(o)
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       TranslatingSurface:new{v_trans=o.v_trans},
 			       FixedT:new{Twall=o.Twall},
-			       UpdateThermoTransCoeffs:new(),
-			       WallKOmega:new() }
+			       UpdateThermoTransCoeffs:new() }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+   end
    o.is_configured = true
    return o
 end
@@ -455,8 +461,10 @@ function WallBC_TranslatingSurface_Adiabatic:new(o)
    o.v_trans.y = o.v_trans.y or 0.0
    o.v_trans.z = o.v_trans.z or 0.0
    o.preSpatialDerivAction = { CopyCellData:new(),
-			       TranslatingSurface:new{v_trans=o.v_trans},
-			       WallKOmega:new() }
+			       TranslatingSurface:new{v_trans=o.v_trans} }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+   end
    o.is_configured = true
    return o
 end
@@ -476,8 +484,10 @@ function WallBC_RotatingSurface_FixedT:new(o)
    o.preSpatialDerivAction = { CopyCellData:new(),
 			       RotatingSurface:new{r_omega=o.r_omega, centre=o.centre},
 			       FixedT:new{Twall=o.Twall},
-			       UpdateThermoTransCoeffs:new(),
-			       WallKOmega:new() }
+			       UpdateThermoTransCoeffs:new() }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+   end
    o.is_configured = true
    return o
 end
@@ -495,8 +505,10 @@ function WallBC_RotatingSurface_Adiabatic:new(o)
    o.centre.y = o.centre.y or 0.0
    o.centre.z = o.centre.z or 0.0
    o.preSpatialDerivAction = { CopyCellData:new(),
-			       TranslatingSurface:new{r_omega=o.r_omega, centre=o.centre},
-			       WallKOmega:new() }
+			       TranslatingSurface:new{r_omega=o.r_omega, centre=o.centre} }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+   end
    o.is_configured = true
    return o
 end
@@ -666,8 +678,11 @@ function WallBC_AdjacentToSolid:new(o)
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
 			       TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
 							    otherFace=o.otherFace,
-							    orientation=o.orientation},
-			       WallKOmega:new() }
+							    orientation=o.orientation} }
+   
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+   end		
    o.postDiffFluxAction = { EnergyFluxFromAdjacentSolid:new{otherBlock=o.otherBlock,
 							    otherFace=o.otherFace,
 							    orientation=o.orientation }
