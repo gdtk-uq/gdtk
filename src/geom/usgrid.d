@@ -960,7 +960,7 @@ public:
 		    Vector3 b = Vector3(vertices[c.vtx_id_list[2]]);
 		    b -= vertices[c.vtx_id_list[0]];
 		    Vector3 n;
-		    cross!n(a,b);
+		    cross(n,a,b);
 		    if (n.z < 0.0) { reverse(c.vtx_id_list); }
 		    break;
 		case USGCell_type.quad:
@@ -973,7 +973,7 @@ public:
 		    b += vertices[c.vtx_id_list[2]];
 		    b -= vertices[c.vtx_id_list[1]];
 		    Vector3 n;
-		    cross!n(a,b);
+		    cross(n,a,b);
 		    if (n.z < 0.0) { reverse(c.vtx_id_list); }
 		    break;
 		default:

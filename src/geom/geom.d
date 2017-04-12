@@ -362,8 +362,8 @@ struct Vector3 {
 	Vector3 n = Vector3(normal.x, normal.y, normal.z); n.normalize();
 	// Construct tangents to the plane.
 	Vector3 different = n + Vector3(1.0, 1.0, 1.0);
-	Vector3 t1; cross!t1(n, different); t1.normalize();
-	Vector3 t2; cross!t2(n, t1); t2.normalize();
+	Vector3 t1; cross(t1, n, different); t1.normalize();
+	Vector3 t2; cross(t2, n, t1); t2.normalize();
 	// Mirror image the vector in a frame local to the plane.
 	transform_to_local_frame(n, t1, t2, point);
 	_p[0] = -_p[0];
@@ -419,11 +419,10 @@ Vector3 unit(ref const(Vector3) v)
 }
 
 /**
- * Vector cross product as a macro.
+ * Vector cross product for use in a single statement that will not make temporaries.
  */
 @nogc
-void cross(alias v3)(ref const(Vector3) v1, ref const(Vector3) v2)
-    if (is(typeof(v3) == Vector3))
+void cross(ref Vector3 v3, ref const(Vector3) v1, ref const(Vector3) v2)
 {
     v3._p[0] = v1._p[1] * v2._p[2] - v2._p[1] * v1._p[2];
     v3._p[1] = v2._p[0] * v1._p[2] - v1._p[0] * v2._p[2];
@@ -438,7 +437,7 @@ void cross(alias v3)(ref const(Vector3) v1, ref const(Vector3) v2)
 Vector3 cross(in Vector3 v1, in Vector3 v2)
 {
     Vector3 v3;
-    cross!v3(v1, v2);
+    cross(v3, v1, v2);
     return v3;
 }
 
@@ -685,7 +684,7 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 	// t1 = unit(p1-p0);
 	t1.refx = p01x/abs_p01; t1.refy = p01y/abs_p01; t1.refz = p01z/abs_p01;
 	// t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
-	cross!t2(n, t1);
+	cross(t2, n, t1);
 	t2.normalize();
     } else {
 	// We have nothing meaningful to put into the unit vectors.
@@ -739,7 +738,7 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 	t1.refx = p01x; t1.refy = p01y; t1.refz = p01z;
 	t1.normalize();
 	// t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
-	cross!t2(n, t1);
+	cross(t2, n, t1);
 	t2.normalize();
     } else {
 	// We have nothing meaningful to put into the unit vectors.
