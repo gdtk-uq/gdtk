@@ -983,7 +983,15 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new Error("BIE_WallKOmega.apply_unstructured_grid() not implemented yet");
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    if (bc.outsigns[i] == 1) {
+		f.fs.omega = ideal_omega_at_wall(f.left_cell);
+	    } else {
+		f.fs.omega = ideal_omega_at_wall(f.right_cell);
+	    }
+	    f.fs.tke = 0.0;
+	} // end foreach face
     }
     
     override void apply_structured_grid(double t, int gtl, int ftl)
