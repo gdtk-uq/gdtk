@@ -41,15 +41,11 @@ grdFlare = StructuredGrid:new{psurface=CoonsPatch:new{p00=b0,p10=c0,p11=c1,p01=b
 			    cfList= {north=None,east=rcfy,south=None,west=rcfy},
 			    niv=ni0+1, njv=nj0+1}   
 
--- create a special boundary condition for the no_slip_fixed_T wall that doesn't reference KOmegaWall
-LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=T_wall}
-table.remove(LaminarWallBC.preSpatialDerivAction, 5)
-
 cyl = SBlockArray{grid=grdCyl, nib=6, njb=2,
 		  fillCondition=inflow,
 		  bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
 			  east=None,
-			  south=LaminarWallBC,
+			  south=WallBC_NoSlip_FixedT:new{Twall=T_wall},
 			  west=InFlowBC_Supersonic:new{flowCondition=inflow}},
 			  label="cyl"}
 
@@ -57,7 +53,7 @@ Flare = SBlockArray{grid=grdFlare, nib=6, njb=2,
 		 fillCondition=initial,
 		 bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
 			 east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},
-			 south=LaminarWallBC,
+			 south=WallBC_NoSlip_FixedT:new{Twall=T_wall},
 			 west=None},
 		 label="flare"}  
 
