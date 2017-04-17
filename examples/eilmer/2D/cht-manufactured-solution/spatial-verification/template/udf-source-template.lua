@@ -14,12 +14,11 @@ function sourceTerms(t, cell)
    src = {}
    x = cell.x
    y = cell.y
-<insert-source-terms-here>
+<insert-expressions-here>
    src.mass = fmass
    src.momentum_x = fxmom
    src.momentum_y = fymom
    src.momentum_z = 0.0
    src.total_energy = fe
-   src.species = {src.mass}
    return src
 end

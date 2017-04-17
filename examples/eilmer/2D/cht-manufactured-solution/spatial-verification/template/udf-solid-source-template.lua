@@ -7,6 +7,6 @@ function solidSourceTerms(t, cell)
    src = {}
    x = cell.x
    y = cell.y
-<insert-source-terms-here>
+<insert-expressions-here>
    return fe_s
 end
