@@ -118,7 +118,9 @@ extern(C) int newLine(lua_State* L)
     // Expect Vector3 for starting point.
     lua_getfield(L, 1, "p0");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Line:new{}. No p0 entry found.";
+	string errMsg = "Error in call to Line:new{}. No p0 entry found." ~
+	    "Check that the keyword argument 'p0' is present,\n" ~
+	    "and that a valid object is passed as value.\n";
 	luaL_error(L, errMsg.toStringz());
     }
     auto p0 = checkVector3(L, -1);
@@ -132,7 +134,9 @@ extern(C) int newLine(lua_State* L)
     // Expect Vector3 for end point.
     lua_getfield(L, 1, "p1");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Line:new{}. No p1 entry found.";
+	string errMsg = "Error in call to Line:new{}. No p1 entry found.\n" ~ 
+	    "Check that the keyword argument 'p1' is present,\n" ~
+	    "and that a valid object is passed as value.";
 	luaL_error(L, errMsg.toStringz());
     }
     auto p1 = checkVector3(L, -1);
