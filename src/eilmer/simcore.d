@@ -713,34 +713,35 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	}
     }
     //
-    // Next do solid domain update IMMEDIATELY after at same flow time level
-    foreach (sblk; parallel(solidBlocks, 1)) {
-	if (!sblk.active) continue;
-	sblk.clearSources();
-	sblk.computeSpatialDerivatives(ftl);
-	sblk.computeFluxes();
-    }
-    if (GlobalConfig.apply_bcs_in_parallel) {
+    if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
+	// Next do solid domain update IMMEDIATELY after at same flow time level
 	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    if (!sblk.active) continue;
+	    sblk.clearSources();
+	    sblk.computeSpatialDerivatives(ftl);
+	    sblk.computeFluxes();
 	}
-    } else {
-	foreach (sblk; solidBlocks) {
-	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
-	}
-    }
-    // We need to synchronise before updating
-    foreach (sblk; parallel(solidBlocks, 1)) {
-	foreach (scell; sblk.activeCells) {
-	    if (GlobalConfig.udfSolidSourceTerms) {
-		addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+	if (GlobalConfig.apply_bcs_in_parallel) {
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 	    }
-	    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-	    scell.stage1Update(dt_global);
-	    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
-	} // end foreach scell
-    } // end foreach sblk
-
+	} else {
+	    foreach (sblk; solidBlocks) {
+		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+	    }
+	}
+	// We need to synchronise before updating
+	foreach (sblk; parallel(solidBlocks, 1)) {
+	    foreach (scell; sblk.activeCells) {
+		if (GlobalConfig.udfSolidSourceTerms) {
+		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+		}
+		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+		scell.stage1Update(dt_global);
+		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+	    } // end foreach scell
+	} // end foreach sblk
+    } // end if tight solid domain coupling.
     //
     if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2 ) {
 	// Preparation for second-stage of gas-dynamic update.
@@ -851,33 +852,35 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		throw new FlowSolverException(msg);
 	    }
 	}
-	// Do solid domain update IMMEDIATELY after at same flow time level
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (!sblk.active) continue;
-	    sblk.clearSources();
-	    sblk.computeSpatialDerivatives(ftl);
-	    sblk.computeFluxes();
-	}
-	if (GlobalConfig.apply_bcs_in_parallel) {
+	if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
+	    // Do solid domain update IMMEDIATELY after at same flow time level
 	    foreach (sblk; parallel(solidBlocks, 1)) {
-		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+		if (!sblk.active) continue;
+		sblk.clearSources();
+		sblk.computeSpatialDerivatives(ftl);
+		sblk.computeFluxes();
 	    }
-	} else {
-	    foreach (sblk; solidBlocks) {
-		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
-	    }
-	}
-	// We need to synchronise before updating
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    foreach (scell; sblk.activeCells) {
-		if (GlobalConfig.udfSolidSourceTerms) {
-		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+	    if (GlobalConfig.apply_bcs_in_parallel) {
+		foreach (sblk; parallel(solidBlocks, 1)) {
+		    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 		}
-		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-		scell.stage2Update(dt_global);
-		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
-	    } // end foreach cell
-	} // end foreach blk
+	    } else {
+		foreach (sblk; solidBlocks) {
+		    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+		}
+	    }
+	    // We need to synchronise before updating
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		foreach (scell; sblk.activeCells) {
+		    if (GlobalConfig.udfSolidSourceTerms) {
+			addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+		    }
+		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+		    scell.stage2Update(dt_global);
+		    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		} // end foreach cell
+	    } // end foreach blk
+	} // end if tight solid domain coupling.
     } // end if number_of_stages_for_update_scheme >= 2 
     //
     if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 3 ) {
@@ -989,33 +992,35 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		throw new FlowSolverException(msg);
 	    }
 	}
-	// Do solid domain update IMMEDIATELY after at same flow time level
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (!sblk.active) continue;
-	    sblk.clearSources();
-	    sblk.computeSpatialDerivatives(ftl);
-	    sblk.computeFluxes();
-	}
-	if (GlobalConfig.apply_bcs_in_parallel) {
+	if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
+	    // Do solid domain update IMMEDIATELY after at same flow time level
 	    foreach (sblk; parallel(solidBlocks, 1)) {
-		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+		if (!sblk.active) continue;
+		sblk.clearSources();
+		sblk.computeSpatialDerivatives(ftl);
+		sblk.computeFluxes();
 	    }
-	} else {
-	    foreach (sblk; solidBlocks) {
-		if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
-	    }
-	}
-	// We need to synchronise before updating
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    foreach (scell; sblk.activeCells) {
-		if (GlobalConfig.udfSolidSourceTerms) {
-		    addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+	    if (GlobalConfig.apply_bcs_in_parallel) {
+		foreach (sblk; parallel(solidBlocks, 1)) {
+		    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
 		}
-		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-		scell.stage3Update(dt_global);
-		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
-	    } // end foreach cell
-	} // end foreach blk
+	    } else {
+		foreach (sblk; solidBlocks) {
+		    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+		}
+	    }
+	    // We need to synchronise before updating
+	    foreach (sblk; parallel(solidBlocks, 1)) {
+		foreach (scell; sblk.activeCells) {
+		    if (GlobalConfig.udfSolidSourceTerms) {
+			addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+		    }
+		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+		    scell.stage3Update(dt_global);
+		    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		} // end foreach cell
+	    } // end foreach blk
+	} // end if tight solid domain coupling.
     } // end if number_of_stages_for_update_scheme >= 3
     //
     // Get the end conserved data into U[0] for next step.

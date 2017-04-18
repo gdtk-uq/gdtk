@@ -71,6 +71,26 @@ TurbulenceModel turbulence_model_from_name(string name)
     }
 } // end turbulence_model_from_name()
 
+enum SolidDomainCoupling { tight, loose, lagged }
+string solidDomainCouplingName(SolidDomainCoupling i)
+{
+    final switch (i) {
+    case SolidDomainCoupling.tight: return "tight";
+    case SolidDomainCoupling.loose: return "loose";
+    case SolidDomainCoupling.lagged: return "lagged";
+    }
+}
+
+SolidDomainCoupling solidDomainCouplingFromName(string name)
+{
+    switch (name) {
+    case "tight": return SolidDomainCoupling.tight;
+    case "loose": return SolidDomainCoupling.loose;
+    case "lagged": return SolidDomainCoupling.lagged;
+    default: return SolidDomainCoupling.tight;
+    }
+}
+
 class BlockZone {
     // Note that these data are not shared across threads
     // because we will want to access them frequently at the lower levels of the code.
@@ -197,6 +217,9 @@ final class GlobalConfig {
     // Parameters controlling convective update
     shared static GasdynamicUpdate gasdynamic_update_scheme = GasdynamicUpdate.pc;
     shared static size_t n_flow_time_levels = 3;
+
+    // Parameters controlling solid domain update
+    shared static SolidDomainCoupling coupling_with_solid_domains = SolidDomainCoupling.tight;
 
     // Parameters related to possible motion of the grid.
     shared static grid_motion = GridMotion.none;
@@ -718,6 +741,8 @@ void read_config_file()
     mixin(update_int("shock_fitting_interpolation_order", "shock_fitting_interpolation_order"));
     mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
 
+    mixin(update_enum("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
+
     // Parameters controlling convective update in detail
     //
     mixin(update_bool("apply_bcs_in_parallel", "apply_bcs_in_parallel"));
@@ -758,6 +783,7 @@ void read_config_file()
 	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
 	writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
 	writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
+	writeln("  coupling_with_solid_domains: ", GlobalConfig.coupling_with_solid_domains);
 	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
 	writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
 	writeln("  flowstate_limits_max_tke: ", GlobalConfig.flowstate_limits.max_tke);
