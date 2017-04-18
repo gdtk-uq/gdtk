@@ -46,6 +46,7 @@ SOLID_FILES := solid/solidbc.d \
 	solid/solidblock.d \
 	solid/solid_boundary_flux_effect.d \
 	solid/solid_boundary_interface_effect.d \
+	solid/solid_loose_coupling_update.d \
 	solid/ssolidblock.d \
 	solid/solidfvcell.d \
 	solid/solidfvinterface.d \

@@ -30,6 +30,7 @@ import block;
 import sblock;
 import ssolidblock;
 import solidprops;
+import solid_loose_coupling_update;
 import bc;
 import ghost_cell_effect;
 import user_defined_source_terms;
@@ -398,7 +399,13 @@ void integrate_in_time(double target_time_as_requested)
 		}
 	    }	    
 	}
-	// 2d. Chemistry step. 
+	// 2d. Solid domain update (if loosely coupled)
+	//     (If tight coupling, then this has been performed in the gasdynamic_explicit_increment()
+	if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose ) {
+	    // Call Nigel's update function here.
+	    solid_domains_backward_euler_update(sim_time, dt_global);
+	}
+	// 2e. Chemistry step. 
 	if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
 	    version (gpu_chem) {
 		GlobalConfig.gpuChem.chemical_increment(dt_global);
