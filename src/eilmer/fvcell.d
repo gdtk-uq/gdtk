@@ -1084,18 +1084,20 @@ public:
 	double C_lim = 0.875;
 	double beta_star = 0.09;
 
-	double grad_vel_avg_over_vtx_list(int i, int j)() 
-	    if ( is(typeof(vtx[0].grad.vel[i][j]) == double) )
-	{
-	    double result = 0.0;
-	    foreach (v; vtx) { result += v.grad.vel[i][j]; }
-	    return result / vtx.length;
-	}
-
-	double dudx = grad_vel_avg_over_vtx_list!(0,0)();
-	double dudy = grad_vel_avg_over_vtx_list!(0,1)();
-	double dvdx = grad_vel_avg_over_vtx_list!(1,0)();
-	double dvdy = grad_vel_avg_over_vtx_list!(1,1)();
+	double dudx, dudy, dvdx, dvdy;
+	final switch (myConfig.spatial_deriv_locn) {
+	case SpatialDerivLocn.vertices:
+	    mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
+	    mixin(avg_over_vtx_list("grad.vel[0][1]", "dudy"));
+	    mixin(avg_over_vtx_list("grad.vel[1][0]", "dvdx"));
+	    mixin(avg_over_vtx_list("grad.vel[1][1]", "dvdy"));
+	    break;
+	case SpatialDerivLocn.faces:
+	    mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
+	    mixin(avg_over_iface_list("grad.vel[0][1]", "dudy"));
+	    mixin(avg_over_iface_list("grad.vel[1][0]", "dvdx"));
+	    mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
+	} // end switch (myConfig.spatial_deriv_locn)
 	if ( myConfig.dimensions == 2 ) {
 	    // 2D cartesian or 2D axisymmetric
 	    if ( myConfig.axisymmetric ) {
@@ -1113,11 +1115,22 @@ public:
 	    }
 	} else {
 	    // 3D cartesian
-	    double dudz = grad_vel_avg_over_vtx_list!(0,2)();
-	    double dvdz = grad_vel_avg_over_vtx_list!(1,2)();
-	    double dwdx = grad_vel_avg_over_vtx_list!(2,0)();
-	    double dwdy = grad_vel_avg_over_vtx_list!(2,1)();
-	    double dwdz = grad_vel_avg_over_vtx_list!(2,2)();
+	    double dudz, dvdz, dwdx, dwdy, dwdz;
+	    final switch (myConfig.spatial_deriv_locn) {
+	    case SpatialDerivLocn.vertices:
+		mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
+		mixin(avg_over_vtx_list("grad.vel[1][2]", "dvdz"));
+		mixin(avg_over_vtx_list("grad.vel[2][0]", "dwdx"));
+		mixin(avg_over_vtx_list("grad.vel[2][1]", "dwdy"));
+		mixin(avg_over_vtx_list("grad.vel[2][2]", "dwdz"));
+		break;
+	    case SpatialDerivLocn.faces:
+		mixin(avg_over_iface_list("grad.vel[0][2]", "dudz"));
+		mixin(avg_over_iface_list("grad.vel[1][2]", "dvdz"));
+		mixin(avg_over_iface_list("grad.vel[2][0]", "dwdx"));
+		mixin(avg_over_iface_list("grad.vel[2][1]", "dwdy"));
+		mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
+	    } // end switch (myConfig.spatial_deriv_locn)
 	    S_bar_squared =  dudx*dudx + dvdy*dvdy + dwdz*dwdz
 		- 1.0/3.0*(dudx + dvdy + dwdz)*(dudx + dvdy + dwdz)
 		+ 0.5 * (dudy + dvdx) * (dudy + dvdx)
