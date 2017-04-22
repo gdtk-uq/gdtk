@@ -1,20 +1,16 @@
 /**
- * powers_aslam_gas.d
+ * ideal_dissociating_gas.d
  *
- * Two-component reacting gas as described in.
- * JM Powers and TD Aslam (2006)
- * Exact solution for multidimensional compressible reactive flow
- * for verifying numerical algorithms.
- * AIAA Journal Vol. 44 No. 2 pages 337-344
+ * This is the Lighthill-Freeman ideal dissociating gas model as described in
+ * M. N. Macrossan (1990)
+ * Hypervelocity flow of dissociating nitrogen downstream of a blunt nose.
+ * Journal of Fluid Mechanics Vol. 217, pp 167-202.
  *
- * This gas model is useful as a demonstration of building a custom
- * reacting gas model and as a flow-solver verification tool.
- *
- * Authors: Peter J. and Rowan G.
- * Version: 2017-01-07: initial cut.
+ * Authors: Peter J., Katrina Sklavos and Rowan G.
+ * Version: 2017-04-22: initial shell copied from powers-aslam-gas module.
  */
 
-module gas.powers_aslam_gas;
+module gas.ideal_dissociating_gas;
 
 import gas.gas_model;
 import gas.physical_constants;
@@ -32,7 +28,7 @@ import core.stdc.stdlib : exit;
 
 // First, the basic gas model.
 
-class PowersAslamGas: GasModel {
+class IdealDissociatingGas: GasModel {
 public:
 
     this(lua_State *L) {
@@ -43,7 +39,7 @@ public:
 	_species_names[0] = "A";
 	_species_names[1] = "B";
 	// Bring table to TOS
-	lua_getglobal(L, "PowersAslamGas");
+	lua_getglobal(L, "IdealDissociatingGas");
 	// [TODO] test that we actually have the table as item -1
 	// Now, pull out the remaining numeric value parameters.
 	_Rgas = getDouble(L, -1, "R");
@@ -69,7 +65,7 @@ public:
     override string toString() const
     {
 	char[] repr;
-	repr ~= "PowersAslamGas =(";
+	repr ~= "IdealDissociatingGas =(";
 	repr ~= "species=[\"A\", \"B\"]";
 	repr ~= ", Mmass=[" ~ to!string(_mol_masses[0]);
 	repr ~= "," ~ to!string(_mol_masses[1]) ~ "]";
@@ -170,7 +166,7 @@ private:
     double _alpha; // 1/s
     // Ignition temperature
     double _Ti; // degrees K
-} // end class PowersAslamGas
+} // end class IdealDissociatingGas
 
 
 // Now, for the reaction update...
@@ -178,7 +174,7 @@ private:
 // It is included here because it is a small amount of code and
 // it is specific to this particular gas model.
 
-final class UpdateAB : ThermochemicalReactor {
+final class UpdateA2A : ThermochemicalReactor {
     
     this(string fname, GasModel gmodel)
     {
@@ -186,7 +182,7 @@ final class UpdateAB : ThermochemicalReactor {
 	// We need to pick a number of pieces out of the gas-model file, again.
 	// Although they exist in the GasModel object, they are private.
 	auto L = init_lua_State(fname);
-	lua_getglobal(L, "PowersAslamGas");
+	lua_getglobal(L, "IdealDissociatingGas");
 	// Now, pull out the numeric value parameters.
 	_alpha = getDouble(L, -1, "alpha");
 	_Ti = getDouble(L, -1, "Ti");
@@ -219,18 +215,18 @@ private:
     double _alpha; // 1/s
     // Ignition temperature
     double _Ti; // degrees K
-} // end class UpdateAB
+} // end class UpdateA2A
 
 
 // Unit test of the basic gas model...
 
-version(powers_aslam_gas_test) {
+version(ideal_dissociating_gas_test) {
     import std.stdio;
     import util.msg_service;
 
     int main() {
-	lua_State* L = init_lua_State("sample-data/powers-aslam-gas-model.lua");
-	auto gm = new PowersAslamGas(L);
+	lua_State* L = init_lua_State("sample-data/ideal-dissociating-gas-model.lua");
+	auto gm = new IdealDissociatingGas(L);
 	lua_close(L);
 	auto gd = new GasState(2, 0);
 	gd.p = 1.0e5;

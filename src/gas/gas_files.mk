@@ -13,6 +13,8 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/adaptive_lut_CEA.d \
 	$(GAS_DIR)/ideal_air_proxy.d \
 	$(GAS_DIR)/powers_aslam_gas.d \
+	$(GAS_DIR)/ideal_dissociating_gas.d \
+	$(GAS_DIR)/fuel_air_mix.d \
 	$(GAS_DIR)/ideal_air_fortran.o
 
 THERMO_FILES := \

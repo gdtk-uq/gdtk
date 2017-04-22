@@ -1273,6 +1273,8 @@ import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
 import gas.powers_aslam_gas;
+import gas.ideal_dissociating_gas;
+import gas.fuel_air_mix;
 import core.stdc.stdlib : exit;
 
 
@@ -1343,6 +1345,12 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     case "PowersAslamGas":
 	gm = new PowersAslamGas(L);
 	break;
+    case "IdealDissociatingGas":
+	gm = new IdealDissociatingGas(L);
+	break;
+    case "FuelAirMix":
+	gm = new FuelAirMix(L);
+	break;
     default:
 	string errMsg = format("The gas model '%s' is not available.", gas_model_name);
 	throw new Error(errMsg);
@@ -1359,10 +1367,20 @@ import kinetics.chemistry_update;
 ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileName="")
 {
     ThermochemicalReactor reactor; // start with a null reference
-    if ((cast(ThermallyPerfectGas) gmodel) !is null) { reactor = new ChemistryUpdate(fileName, gmodel); }
-    if ((cast(PowersAslamGas) gmodel) !is null) { reactor = new UpdateAB(fileName, gmodel); }
+    if ((cast(ThermallyPerfectGas) gmodel) !is null) {
+	reactor = new ChemistryUpdate(fileName, gmodel);
+    }
+    if ((cast(PowersAslamGas) gmodel) !is null) {
+	reactor = new UpdateAB(fileName, gmodel);
+    }
+    if ((cast(IdealDissociatingGas) gmodel) !is null) {
+	reactor = new UpdateA2A(fileName, gmodel);
+    }
+    if ((cast(FuelAirMix) gmodel) !is null) {
+	reactor = new MixingLimitedUpdate(fileName, gmodel);
+    }
     if (reactor is null) {
-	throw new ChemistryUpdateException("Oops, tried but failed to set up a ThermochemicalReactor.");
+	throw new ChemistryUpdateException("Oops, failed to set up a ThermochemicalReactor.");
     }
     return reactor;
 } // end init_thermochemical_reactor()
