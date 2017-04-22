@@ -194,7 +194,8 @@ final class UpdateAB : ThermochemicalReactor {
 	lua_close(L);
     }
     
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest)
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+			 ref double[] params)
     {
 	if (Q.Ttr > _Ti) {
 	    // We are above the ignition point, proceed with reaction.

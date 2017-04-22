@@ -98,9 +98,11 @@ extern(C) int updateState(lua_State* L)
     double tInterval = luaL_checknumber(L, 3);
     // Arg 4 is dtSuggest
     double dtSuggest = luaL_checknumber(L, 4);
+    // Extra parameters are not considered, presently. PJ 2017-04-22
+    double[] params;
 
     try {
-	chemUpdate(Q, tInterval, dtSuggest);
+	chemUpdate(Q, tInterval, dtSuggest, params);
     }
     catch (ChemistryUpdateException e) {
 	string errMsg = "Error in call to chemistry update. " ~

@@ -835,8 +835,15 @@ public:
 		if ( zone.is_inside(pos[0], myConfig.dimensions) ) fs.gas.Ttr = zone.Tig; 
 	    }
 	}
+
+	// The extra parameters are intended for some special gas and kinetics models,
+	// such as JJ Hoste's mixing-limited fuel-air model.
+	// Most gas models and reaction schemes will just ignore the params array.
+	double[] params;
+	// Use if (cast(MixingLimitedFuelAir)myConfig.gmodel) { fill params array }
+
 	try {
-	    myConfig.chemUpdate(fs.gas, dt, dt_chem);
+	    myConfig.chemUpdate(fs.gas, dt, dt_chem, params);
 	    if (myConfig.ignition_zone_active) {
 		// Restore actual gas temperature
 		fs.gas.Ttr = T_save;

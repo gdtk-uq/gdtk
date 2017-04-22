@@ -111,7 +111,8 @@ final class ChemistryUpdate : ThermochemicalReactor {
 	lua_close(L);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest)
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+			 ref double[] params)
     {
 	_Qinit.copy_values_from(Q);
 	_gmodel.massf2conc(Q, _conc0);

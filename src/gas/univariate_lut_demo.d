@@ -34,9 +34,9 @@ void main(){
 	double meanError2 = 0;
 	double maxError = 0;
 	double e;
-	double es[];
+	double[] es;
 	double rho;
-	double rhos[];
+	double[] rhos;
 	double n_t = 100000;
 	for(int i = 0; i != n_t + 1 ; i++){
 		rho = i/n_t*(rho_max - rho_min) + rho_min;

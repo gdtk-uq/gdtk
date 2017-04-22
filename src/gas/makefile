@@ -97,32 +97,32 @@ $(LIBLUA):
 species-database.lua :
 	cd species-database; make species-database.lua
 
-gas_model_demo: gas_model_demo.d $(LIBLUA) 
+gas_model_demo: gas_model_demo.d $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA) 
 	$(DMD) -g $(DFLAGS) gas_model_demo.d $(OF)gas_model_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS) 
 
-ideal_gas_demo: ideal_gas_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+ideal_gas_demo: ideal_gas_demo.d $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) ideal_gas_demo.d $(OF)ideal_gas_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
-co2_model_demo: co2_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES) 
+co2_model_demo: co2_model_demo.d $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) 
 	$(DMD) -g $(DFLAGS) co2_model_demo.d $(OF)co2_model_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
-co2_sw_model_demo: co2_sw_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+co2_sw_model_demo: co2_sw_model_demo.d $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) co2_sw_model_demo.d $(OF)co2_sw_model_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
-sf6_model_demo: sf6_model_demo.d  $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
+sf6_model_demo: sf6_model_demo.d $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) -g $(DFLAGS) sf6_model_demo.d $(OF)sf6_model_demo \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(DLINKFLAGS)
 
-luagas_model_demo: luagas_model_demo.d $(GAS_LUA_FILES) $(LIBLUA) \
+luagas_model_demo: luagas_model_demo.d $(GAS_FILES) $(GAS_LUA_FILES) $(LIBLUA) \
 	$(KINETICS_FILES) $(KINETICS_LUA_FILES)
 	$(DMD) -g $(DFLAGS) luagas_model_demo.d $(OF)luagas_model_demo \
 		$(GAS_FILES) $(GAS_LUA_FILES) $(KINETICS_FILES) $(KINETICS_LUA_FILES) \

@@ -437,7 +437,12 @@ public:
 
     // All the work happens when calling the concrete object
     // which updates the GasState over the (small) time, tInterval.
-    abstract void opCall(GasState Q, double tInterval, ref double dtSuggest);
+    //
+    // The array params is there to allow extra information to be passed in.
+    // For example, the mixing-limited combustion model by JJ Hoste needs
+    // some information about the local flow state beyond the usual gas state.
+    abstract void opCall(GasState Q, double tInterval, ref double dtSuggest,
+			 ref double[] params);
     
 public:
     // We will need to access this referenced model from the Lua functions
