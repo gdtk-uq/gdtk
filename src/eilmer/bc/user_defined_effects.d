@@ -9,6 +9,7 @@ import util.lua;
 import util.lua_service;
 import gas.gas_model;
 import gas.luagas_model;
+import nm.luabbla;
 
 import geom;
 import simcore;
@@ -41,6 +42,7 @@ public:
 	    luaL_openlibs(L);
 	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
 	    registerGasModel(L, LUA_GLOBALSINDEX);
+	    registerBBLA(L);
 	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
 	    lua_setglobal(L, "gmodel");
 	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
@@ -295,6 +297,7 @@ public:
 	    luaL_openlibs(L);
 	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
 	    registerGasModel(L, LUA_GLOBALSINDEX);
+	    registerBBLA(L);
 	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
 	    lua_setglobal(L, "gmodel");
 	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
@@ -534,6 +537,7 @@ public:
 	    luaL_openlibs(L);
 	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
 	    registerGasModel(L, LUA_GLOBALSINDEX);
+	    registerBBLA(L);
 	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
 	    lua_setglobal(L, "gmodel");
 	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);

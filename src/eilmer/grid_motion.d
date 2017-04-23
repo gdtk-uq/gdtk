@@ -6,6 +6,7 @@ import std.conv;
 
 import util.lua;
 import util.lua_service;
+import nm.luabbla;
 import lua_helper;
 import fvcore;
 import globalconfig;
@@ -22,6 +23,7 @@ void init_master_lua_State(string fname)
     // Give me a conveniently-named pointer for use in this function.
     auto L = GlobalConfig.master_lua_State;
     registerVector3(L);
+    registerBBLA(L);
     // Set some globally available constants for the
     // Lua state.
     lua_pushnumber(L, GlobalConfig.nBlocks);
