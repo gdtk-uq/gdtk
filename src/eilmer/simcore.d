@@ -577,6 +577,11 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 	    }
 	    break;
 	case GridMotion.user_defined:
+	    // First set all velocities to zero.
+	    foreach (blk; parallel(gasBlocks,1)) {
+		if (blk.active) { foreach (iface; blk.faces) iface.gvel = Vector3(0.0, 0.0, 0.0); }
+	    }
+	    // Then rely on use to set those with actual velocities.
 	    assign_vertex_velocities_via_udf(sim_time, dt_global);
 	    break;
 	case GridMotion.shock_fitting:
