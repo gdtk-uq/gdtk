@@ -426,6 +426,7 @@ public:
 		string msg = format("Thermodynamic update exception with message:\n  %s", err.msg);
 		msg ~= format("The decode_conserved() failed for cell: %d\n", id);
 		msg ~= format("This cell is located at: %s\n", pos[0]);
+		msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
 		msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
 		throw new FlowSolverException(msg);
 	    } // end if
@@ -853,6 +854,7 @@ public:
 	    string msg = format("caught %s", err.msg);
 	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);
+	    msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
 	    throw new FlowSolverException(msg);
 	}
@@ -866,6 +868,7 @@ public:
 	    string msg = format("caught %s", err.msg);
 	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);
+	    	msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
 	    msg ~= "This failure occurred when trying to update the thermo state after\n";
 	    msg ~= "computing the species change due to chemical reactions.\n";
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
