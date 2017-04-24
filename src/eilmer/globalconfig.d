@@ -469,6 +469,7 @@ final class GlobalConfig {
 // at the lower levels of the code without having to guard them with memory barriers.
 class LocalConfig {
 public:
+    int universe_blk_id;
     int dimensions;
     bool axisymmetric;
     GasdynamicUpdate gasdynamic_update_scheme;
@@ -550,8 +551,9 @@ public:
 	SteadyStateSolverOptions sssOptions;
     }
 
-    this() 
+    this(int universe_blk_id) 
     {
+	this.universe_blk_id = universe_blk_id;
 	dimensions = GlobalConfig.dimensions;
 	axisymmetric = GlobalConfig.axisymmetric;
 	gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
@@ -929,7 +931,7 @@ void read_config_file()
     if (GlobalConfig.verbosity_level > 1) { writeln("  nBlocks: ", GlobalConfig.nBlocks); }
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nBlocks) {
-	dedicatedConfig ~= new LocalConfig();
+	dedicatedConfig ~= new LocalConfig(i);
     }
     foreach (i; 0 .. GlobalConfig.nBlocks) {
 	auto jsonDataForBlock = jsonData["block_" ~ to!string(i)];
@@ -969,7 +971,7 @@ void read_config_file()
     }
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
-	dedicatedSolidConfig ~= new LocalConfig();
+	dedicatedSolidConfig ~= new LocalConfig(i);
     }
     foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
 	solidBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);

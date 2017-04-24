@@ -357,7 +357,8 @@ public:
 	// Mass / unit volume = Density
 	if (!(myU.mass > 0.0)) {
 	    writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
-	    writeln("  cell-id= ", id, " x= ", pos[gtl].x, " y= ", pos[gtl].y, " z= ", pos[gtl].z);
+	    writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
+	    writeln("  x= ", pos[gtl].x, " y= ", pos[gtl].y, " z= ", pos[gtl].z);
 	    writeln("  gas= ", fs.gas);
 	    writeln("  U= ", myU);
 	    throw new FlowSolverException("Bad cell, give up.");
