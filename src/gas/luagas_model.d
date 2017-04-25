@@ -641,7 +641,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
 	// leave untouched
     }
     else {
-	string errMsg = "The value for 'T' is not an array of numbers.\n";
+	string errMsg = "The value for 'T_modes' is not an array of numbers.\n";
 	lua_pop(L, 1);
 	throw new Error(errMsg);
     }
