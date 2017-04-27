@@ -34,5 +34,9 @@ At the end, a series of VTK files are produced and placed in the
 plot/ subdirectory. You may then use Paraview to inspect the
 flow field and make an animation of the moving piston simulation.
 
+You can also extract a line data and plot that as an x-y line plot.
+To do that use:
+
+> ./extract-profile.sh
 
 
