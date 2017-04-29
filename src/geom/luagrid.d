@@ -6,7 +6,7 @@
  *
  * We need a base class to collect the common wrapper
  * implementations between structured and unstructured grids.
- * The following macros will generate specific functions at
+ * The following templates will generate specific functions at
  * compile time for Unstructured and Structured Grids.
  * These specific functions can be then registered into 
  * the appropriate table of the Lua interpreter at run time.

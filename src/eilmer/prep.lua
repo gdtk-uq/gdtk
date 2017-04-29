@@ -79,7 +79,7 @@ SteadyStateSolver = {}
 setmetatable(SteadyStateSolver, sssOptionsHidden)
 
 -- Storage for later definitions of Block objects
-blocks = {}
+fluidBlocks = {}
 
 -- Storgage for later definitions of SolidBlock objects
 solidBlocks = {}
@@ -115,19 +115,18 @@ end
 -- -----------------------------------------------------------------------
 
 -- Class for gas dynamics Block construction (based on a StructuredGrid).
-SBlock = {
-   myType = "SBlock",
-   gridType = "structured_grid"
+FluidBlock = {
+   myType = "FluidBlock",
 } -- end Block
 
-function SBlock:new(o)
+function FluidBlock:new(o)
    o = o or {}
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new block, for later construction of the config file.
    -- Note that we want block id to start at zero for the D code.
-   o.id = #(blocks)
-   blocks[#(blocks)+1] = o
+   o.id = #(fluidBlocks)
+   fluidBlocks[#(fluidBlocks)+1] = o
    -- Must have a grid and fillCondition
    assert(o.grid, "need to supply a grid")
    assert(o.fillCondition, "need to supply a fillCondition")
@@ -137,159 +136,133 @@ function SBlock:new(o)
    end
    o.label = o.label or string.format("BLOCK-%d", o.id)
    o.omegaz = o.omegaz or 0.0
-   o.bcList = o.bcList or {} -- boundary conditions
-   for _,face in ipairs(faceList(config.dimensions)) do
-      o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
-   end
+   o.bcList = o.bcList or {} -- boundary conditions passed in, maybe
    o.hcellList = o.hcellList or {}
    o.xforceList = o.xforceList or {}
-   -- Extract some information from the StructuredGrid
-   -- Note 0-based indexing for vertices and cells.
-   o.nic = o.grid:get_niv() - 1
-   o.njc = o.grid:get_njv() - 1
-   if config.dimensions == 3 then
-      o.nkc = o.grid:get_nkv() - 1
-   else
-      o.nkc = 1
+   -- Check the grid information.
+   if config.dimensions ~= o.grid:get_dimensions() then
+      local msg = string.format("Mismatch in dimensions, config %d grid %d.",
+				config.dimensions, o.grid.get_dimensions())
+      error(msg)
    end
-   -- The following table p for the corner locations,
-   -- is to be used later for testing for block connections.
-   o.p = {}
-   if config.dimensions == 3 then
-      o.p[0] = o.grid:get_vtx(0, 0, 0)
-      o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
-      o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
-      o.p[3] = o.grid:get_vtx(0, o.njc, 0)
-      o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
-      o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
-      o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
-      o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
-   else
-      o.p[0] = o.grid:get_vtx(0, 0)
-      o.p[1] = o.grid:get_vtx(o.nic, 0)
-      o.p[2] = o.grid:get_vtx(o.nic, o.njc)
-      o.p[3] = o.grid:get_vtx(0, o.njc)
+   if o.grid:get_type() == "structured_grid" then
+      -- Extract some information from the StructuredGrid
+      -- Note 0-based indexing for vertices and cells.
+      o.nic = o.grid:get_niv() - 1
+      o.njc = o.grid:get_njv() - 1
+      if config.dimensions == 3 then
+	 o.nkc = o.grid:get_nkv() - 1
+      else
+	 o.nkc = 1
+      end
+      -- The following table p for the corner locations,
+      -- is to be used later for testing for block connections.
+      o.p = {}
+      if config.dimensions == 3 then
+	 o.p[0] = o.grid:get_vtx(0, 0, 0)
+	 o.p[1] = o.grid:get_vtx(o.nic, 0, 0)
+	 o.p[2] = o.grid:get_vtx(o.nic, o.njc, 0)
+	 o.p[3] = o.grid:get_vtx(0, o.njc, 0)
+	 o.p[4] = o.grid:get_vtx(0, 0, o.nkc)
+	 o.p[5] = o.grid:get_vtx(o.nic, 0, o.nkc)
+	 o.p[6] = o.grid:get_vtx(o.nic, o.njc, o.nkc)
+	 o.p[7] = o.grid:get_vtx(0, o.njc, o.nkc)
+      else
+	 o.p[0] = o.grid:get_vtx(0, 0)
+	 o.p[1] = o.grid:get_vtx(o.nic, 0)
+	 o.p[2] = o.grid:get_vtx(o.nic, o.njc)
+	 o.p[3] = o.grid:get_vtx(0, o.njc)
+      end
+      -- print("FluidBlock id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
+      --       "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3]))
+      -- Attach default boundary conditions for those not specified.
+      for _,face in ipairs(faceList(config.dimensions)) do
+	 o.bcList[face] = o.bcList[face] or WallBC_WithSlip:new()
+      end
    end
-   -- print("Block id=", o.id, "p0=", tostring(o.p[0]), "p1=", tostring(o.p[1]),
-   --       "p2=", tostring(o.p[2]), "p3=", tostring(o.p[3]))
+   if o.grid:get_type() == "unstructured_grid" then
+      -- Extract some information from the UnstructuredGrid
+      o.ncells = o.grid:get_ncells()
+      o.nvertices = o.grid:get_nvertices()
+      o.nfaces = o.grid:get_nfaces()
+      o.nboundaries = o.grid:get_nboundaries()
+      -- Attach boundary conditions from list or from the dictionary of conditions.
+      for i = 0, o.nboundaries-1 do
+	 local mybc = o.bcList[i]
+	 if (mybc == nil) and o.bcDict then
+	    local tag = o.grid:get_boundaryset_tag(i)
+	    mybc = o.bcDict[tag]
+	 end
+	 mybc = mybc or WallBC_WithSlip:new() -- default boundary condition
+	 o.bcList[i] = mybc
+      end
+   end
    return o
 end
 
-function SBlock:tojson()
+function FluidBlock:tojson()
+   -- [TODO] Should refactor the boundary condition checking and error messages.
+   -- [TODO] Only the loops are different and we should error() rather than exit(), I think. PJ 2017-04-29
    local str = string.format('"block_%d": {\n', self.id)
    str = str .. string.format('    "type": "%s",\n', self.myType)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
-   str = str .. string.format('    "grid_type": "%s",\n', self.gridType)
-   str = str .. string.format('    "nic": %d,\n', self.nic)
-   str = str .. string.format('    "njc": %d,\n', self.njc)
-   str = str .. string.format('    "nkc": %d,\n', self.nkc)
    str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
-   -- Boundary conditions
-   for _,face in ipairs(faceList(config.dimensions)) do
-      if not self.bcList[face].is_gas_domain_bc then
-	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
-	 errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
-	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
-	 print(errMsg)
-	 os.exit(1)
+   str = str .. string.format('    "grid_type": "%s",\n', self.grid:get_type())
+   if self.grid:get_type() == "structured_grid" then
+      str = str .. string.format('    "nic": %d,\n', self.nic)
+      str = str .. string.format('    "njc": %d,\n', self.njc)
+      str = str .. string.format('    "nkc": %d,\n', self.nkc)
+      -- Boundary conditions for structured grid.
+      for _,face in ipairs(faceList(config.dimensions)) do
+	 if not self.bcList[face].is_gas_domain_bc then
+	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
+	    errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
+	    errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
+	    print(errMsg)
+	    os.exit(1)
+	 end
+	 if not self.bcList[face].is_configured then
+	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
+	    errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
+	    errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
+	    errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
+	    errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
+	    errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
+	    print(errMsg)
+	    os.exit(1)
+	 end
+	 str = str .. string.format('    "boundary_%s": ', face) ..
+	    self.bcList[face]:tojson() .. ',\n'
       end
-      if not self.bcList[face].is_configured then
-	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
-	 errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
-	 errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
-	 errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
-	 errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
-	 errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
-	 print(errMsg)
-	 os.exit(1)
-      end
-      str = str .. string.format('    "boundary_%s": ', face) ..
-	 self.bcList[face]:tojson() .. ',\n'
    end
-   str = str .. '    "dummy_entry_without_trailing_comma": 0\n'
-   str = str .. '},\n'
-   return str
-end
-
--- -----------------------------------------------------------------------
-
--- Class for gas dynamics Block construction (based on an UnstructuredGrid).
-UBlock = {
-   myType = "UBlock",
-   gridType = "unstructured_grid"
-} -- end Block
-
-function UBlock:new(o)
-   o = o or {}
-   setmetatable(o, self)
-   self.__index = self
-   -- Make a record of the new block, for later construction of the config file.
-   -- Note that we want block id to start at zero for the D code.
-   o.id = #(blocks)
-   blocks[#(blocks)+1] = o
-   -- Must have a grid and fillCondition
-   assert(o.grid, "need to supply a grid")
-   assert(o.fillCondition, "need to supply a fillCondition")
-   -- Extract some information from the UnstructuredGrid
-   o.ncells = o.grid:get_ncells()
-   o.nvertices = o.grid:get_nvertices()
-   o.nfaces = o.grid:get_nfaces()
-   o.nboundaries = o.grid:get_nboundaries()
-   -- Fill in default values, if already not set
-   if o.active == nil then
-      o.active = true
-   end
-   o.label = o.label or string.format("BLOCK-%d", o.id)
-   o.omegaz = o.omegaz or 0.0
-   o.bcList = o.bcList or {} -- boundary conditions passed in
-   -- Attach boundary conditions from list or from the dictionary of conditions.
-   for i = 0, o.nboundaries-1 do
-      local mybc = o.bcList[i]
-      if (mybc == nil) and o.bcDict then
-	 local tag = o.grid:get_boundaryset_tag(i)
-	 mybc = o.bcDict[tag]
+   if self.grid:get_type() == "unstructured_grid" then
+      str = str .. string.format('    "ncells": %d,\n', self.ncells)
+      str = str .. string.format('    "nvertices": %d,\n', self.nvertices)
+      str = str .. string.format('    "nfaces": %d,\n', self.nfaces)
+      str = str .. string.format('    "nboundaries": %d,\n', self.nboundaries)
+      -- Boundary conditions for the unstructured grid
+      for i = 0, self.nboundaries-1 do
+	 if not self.bcList[i].is_gas_domain_bc then
+	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
+	    errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
+	    errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
+	    print(errMsg)
+	    os.exit(1)
+	 end
+	 if not self.bcList[i].is_configured then
+	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
+	    errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
+	    errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
+	    errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
+	    errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
+	    errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
+	    print(errMsg)
+	    os.exit(1)
+	 end
+	 str = str .. string.format('    "boundary_%d": ', i) ..
+	    self.bcList[i]:tojson() .. ',\n'
       end
-      mybc = mybc or WallBC_WithSlip:new() -- default boundary condition
-      o.bcList[i] = mybc
-   end
-   o.hcellList = o.hcellList or {}
-   o.xforceList = o.xforceList or {}
-   return o
-end
-
-function UBlock:tojson()
-   local str = string.format('"block_%d": {\n', self.id)
-   str = str .. string.format('    "type": "%s",\n', self.myType)
-   str = str .. string.format('    "label": "%s",\n', self.label)
-   str = str .. string.format('    "active": %s,\n', tostring(self.active))
-   str = str .. string.format('    "grid_type": "%s",\n', self.gridType)
-   str = str .. string.format('    "ncells": %d,\n', self.ncells)
-   str = str .. string.format('    "nvertices": %d,\n', self.nvertices)
-   str = str .. string.format('    "nfaces": %d,\n', self.nfaces)
-   str = str .. string.format('    "nboundaries": %d,\n', self.nboundaries)
-   str = str .. string.format('    "omegaz": %.18e,\n', self.omegaz)
-   -- Boundary conditions
-   for i = 0, self.nboundaries-1 do
-      if not self.bcList[i].is_gas_domain_bc then
-	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
-	 errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
-	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
-	 print(errMsg)
-	 os.exit(1)
-      end
-      if not self.bcList[i].is_configured then
-	 errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
-	 errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
-	 errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
-	 errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
-	 errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
-	 errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
-	 print(errMsg)
-	 os.exit(1)
-      end
-      str = str .. string.format('    "boundary_%d": ', i) ..
-	 self.bcList[i]:tojson() .. ',\n'
    end
    str = str .. '    "dummy_entry_without_trailing_comma": 0\n'
    str = str .. '},\n'
@@ -311,12 +284,12 @@ function SBlock2UBlock(blk)
 	 bcList[i-1] = blk.bcList[face]
       end
    end
-   ublk = UBlock:new{grid=UnstructuredGrid:new{sgrid=blk.grid},
-		     fillCondition=blk.fillCondition,
-		     active=blk.active,
-		     label=blk.label,
-		     omegaz=blk.omegaz,
-		     bcList=bcList}
+   ublk = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=blk.grid},
+			 fillCondition=blk.fillCondition,
+			 active=blk.active,
+			 label=blk.label,
+			 omegaz=blk.omegaz,
+			 bcList=bcList}
    local newId = ublk.id
    -- Swap blocks in global list
    blocks[origId+1], blocks[newId+1] = blocks[newId+1], blocks[origId+1]
@@ -336,16 +309,18 @@ end
 function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    print("connectBlocks: blkA=", blkA.id, "faceA=", faceA, 
 	 "blkB=", blkB.id, "faceB=", faceB, "orientation=", orientation)
-   if ( blkA.myType == "SBlock" and blkB.myType == "SBlock" ) then
+   if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
+      error("connectBlocks() Works only for structured-grid blocks.")
+   end
+   if blkA.myType == "FluidBlock" and blkB.myType == "FluidBlock" then
       blkA.bcList[faceA] = ExchangeBC_FullFace:new{otherBlock=blkB.id, otherFace=faceB,
 						   orientation=orientation}
       blkB.bcList[faceB] = ExchangeBC_FullFace:new{otherBlock=blkA.id, otherFace=faceA,
 						   orientation=orientation}
-   -- [TODO] need to test for matching corner locations and 
-   -- consistent numbers of cells
-   elseif (blkA.myType == "SBlock" and blkB.myType == "SSolidBlock" ) then
+      -- [TODO] need to test for matching corner locations and consistent numbers of cells
+   elseif blkA.myType == "FluidBlock" and blkB.myType == "SolidBlock" then
       -- Presently, only handle faceA == NORTH, faceB == SOUTH
-      if ( faceA == north and faceB == south ) then
+      if faceA == north and faceB == south then
 	 blkA.bcList[faceA] = WallBC_AdjacentToSolid:new{otherBlock=blkB.id,
 							 otherFace=faceB,
 							 orientation=orientation}
@@ -354,14 +329,14 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 						       orientation=orientation}
       else
 	 -- [TODO] Implement and handle other connection types.
-	 print("The requested SBlock to SSolidBlock connection is not available.")
-	 print("SBlock-", faceA, " :: SSolidBlock-", faceB)
+	 print("The requested FluidBlock to SolidBlock connection is not available.")
+	 print("FluidBlock-", faceA, " :: SolidBlock-", faceB)
 	 print("Bailing out!")
 	 os.exit(1)
       end
-   elseif (blkA.myType == "SSolidBlock" and blkB.myType == "SBlock") then
+   elseif blkA.myType == "SolidBlock" and blkB.myType == "FluidBlock" then
        -- Presently, only handle faceA == SOUTH, faceB == NORTH
-      if ( faceA == south and faceB == north ) then
+      if faceA == south and faceB == north then
 	 blkA.bcList[faceA] = SolidAdjacentToGasBC:new{otherBlock=blkB.id,
 						       otherFace=faceB,
 						       orientation=orientation}
@@ -370,12 +345,12 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 							 orientation=orientation}
       else
 	 -- [TODO] Implement and handle other connection types.
-	 print("The requested SSolidBlock to SBlock connection is not available.")
-	 print("SSolidBlock-", faceA, " :: SBlock-", faceB)
+	 print("The requested SolidBlock to FluidBlock connection is not available.")
+	 print("SolidBlock-", faceA, " :: FluidBlock-", faceB)
 	 print("Bailing out!")
 	 os.exit(1)
       end
-   elseif (blkA.myType == "SSolidBlock" and blkB.myType == "SSolidBlock") then
+   elseif blkA.myType == "SolidBlock" and blkB.myType == "SolidBlock" then
       -- Presently only handle EAST-WEST and WEST-EAST connections
       if ( (faceA == east and faceB == west) or ( faceA == west and faceB == east) ) then
 	 blkA.bcList[faceA] = SolidConnectionBoundaryBC:new{otherBlock=blkB.id,
@@ -386,8 +361,8 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 							    orientation=orientation}
       else
 	 -- [TODO] Implement and handle other connection types for solid domains.
-	 print("The requested SSolidBlock to SSolidBlock connection is not available.")
-	 print("SSolidBlock-", faceA, " :: SSolidBlock-", faceB)
+	 print("The requested SolidBlock to SolidBlock connection is not available.")
+	 print("SolidBlock-", faceA, " :: SolidBlock-", faceB)
 	 print("Bailing out!")
 	 os.exit(1)
       end
@@ -431,7 +406,7 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    if ( blockList ) then
       for k,v in pairs(blockList) do myBlockList[k] = v end
    else -- Use the global gas blocks list
-      for k,v in pairs(blocks) do myBlockList[k] = v end
+      for k,v in pairs(fluidBlocks) do myBlockList[k] = v end
    end
    -- Add solid domain block to search
    for _,blk in ipairs(solidBlocks) do myBlockList[#myBlockList+1] = blk end
@@ -439,7 +414,7 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    -- Put UBlock objects into the exclude list because they don't
    -- have a simple topology that can always be matched to an SBlock.
    for _,A in ipairs(myBlockList) do
-      if A.myType == "UBlock" then excludeList[#excludeList+1] = A end
+      if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
    end
    tolerance = tolerance or 1.0e-6
    for _,A in ipairs(myBlockList) do
@@ -479,10 +454,11 @@ end
 
 -- ---------------------------------------------------------------------------
 
-function SBlockArray(t)
+function FluidBlockArray(t)
    -- Expect one table as argument, with named fields.
-   -- Returns an array of blocks defined over a single region.
+   -- Returns an array of FluidBlocks defined over a single region.
    assert(t.grid, "need to supply a grid")
+   assert(t.grid:get_type() == "structured_grid", "grid must be structured")
    assert(t.fillCondition, "need to supply a fillCondition")
    t.omegaz = t.omegaz or 0.0
    t.bcList = t.bcList or {} -- boundary conditions
@@ -544,8 +520,8 @@ function SBlockArray(t)
 	    if jb == t.njb then
 	       bcList[north] = t.bcList[north]
 	    end
-	    new_block = SBlock:new{grid=subgrid, omegaz=t.omegaz,
-				   fillCondition=t.fillCondition, bcList=bcList}
+	    new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
+				       fillCondition=t.fillCondition, bcList=bcList}
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
 	 else
@@ -579,9 +555,9 @@ function SBlockArray(t)
 	       if kb == t.nkb then
 		  bcList[top] = t.bcList[top]
 	       end
-	       new_block = SBlock:new{grid=subgrid, omegaz=t.omegaz,
-				      fillCondition=t.fillCondition,
-				      bcList=bcList}
+	       new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
+					  fillCondition=t.fillCondition,
+					  bcList=bcList}
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
 	    end -- kb loop
@@ -593,16 +569,15 @@ function SBlockArray(t)
       identifyBlockConnections(blockCollection)
    end
    return blockArray
-end
+end -- FluidBlockArray
 
 
--- Class for SolidBlock construction (based on a StructuredGrid)
-SSolidBlock = {
-   myType = "SSolidBlock",
-   gridType = "structured_grid"
+-- Class for SolidBlock construction
+SolidBlock = {
+   myType = "SolidBlock",
 } -- end SSolidBlock
 
-function SSolidBlock:new(o)
+function SolidBlock:new(o)
    o = o or {}
    setmetatable(o, self)
    self.__index = self
@@ -613,6 +588,7 @@ function SSolidBlock:new(o)
    solidBlocks[#solidBlocks+1] = o
    -- Must have a grid and initial temperature
    assert(o.grid, "need to supply a grid")
+   assert(o.grid:get_type() == "structured_grid", "grid must be structured") -- for the moment
    assert(o.initTemperature, "need to supply an initTemperature")
    assert(o.properties, "need to supply physical properties for the block")
    -- Fill in some defaults, if not already set
@@ -653,7 +629,7 @@ function SSolidBlock:new(o)
    return o
 end
 
-function SSolidBlock:tojson()
+function SolidBlock:tojson()
    local str = string.format('"solid_block_%d": {\n', self.id)
    str = str .. string.format('    "label": "%s",\n', self.label)
    str = str .. string.format('    "active": %s,\n', tostring(self.active))
@@ -682,7 +658,7 @@ function SSolidBlock:tojson()
    return str
 end
 
-function SSolidBlockArray(t)
+function SolidBlockArray(t)
    -- Expect one table as argument, with named fields.
    -- Returns an array of blocks defined over a single region.
    assert(t.grid, "need to supply a 'grid'")
@@ -742,13 +718,13 @@ function SSolidBlockArray(t)
 	    if jb == t.njb then
 	       bcList[north] = t.bcList[north]
 	    end
-	    new_block = SSolidBlock:new{grid=subgrid, properties=t.properties,
-					initTemperature=t.initTemperature,
-					bcList=bcList}
+	    new_block = SolidBlock:new{grid=subgrid, properties=t.properties,
+				       initTemperature=t.initTemperature,
+				       bcList=bcList}
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
 	 else
-	    print("SSolidBlockArray not implemented for 3D.")
+	    print("SolidBlockArray not implemented for 3D.")
 	    print("Bailing out!")
 	    os.exit(1)
 	 end -- dimensions
@@ -759,8 +735,7 @@ function SSolidBlockArray(t)
       identifyBlockConnections(blockCollection)
    end
    return blockArray
-end
-
+end -- SolidBlockArray
 
 
 function setHistoryPoint(args)
@@ -780,7 +755,7 @@ function setHistoryPoint(args)
       minDist = 1.0e9 -- something very large
       blkId = 0
       cellId = 0
-      for ib,blk in ipairs(blocks) do
+      for ib,blk in ipairs(fluidBlocks) do
 	 indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
 	 if ( dist < minDist ) then
 	    minDist = dist
@@ -800,8 +775,8 @@ function setHistoryPoint(args)
       j = args.j
       k = args.k or 0
       -- Convert back to single_index
-      nic = blocks[ib+1].nic
-      njc = blocks[ib+1].njc
+      nic = fluidBlocks[ib+1].nic
+      njc = fluidBlocks[ib+1].njc
       cellId = k * (njc * nic) + j * nic + i
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       return
@@ -893,7 +868,7 @@ function checkCellVolumes(t)
    badCellLimit = t.badCellLimit or 20
    badCells = {}
    badCellCount = 0
-   for ib,blk in ipairs(blocks) do
+   for ib,blk in ipairs(fluidBlocks) do
       grid = blk.grid
       for idx=0,grid:get_ncells()-1 do
 	 vol = grid:cellVolume(idx)
@@ -1114,7 +1089,7 @@ function write_config_file(fileName)
    f:write(string.format('"T_frozen_energy": %.18e,\n', config.T_frozen_energy))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
-   f:write(string.format('"nblock": %d,\n', #(blocks)))
+   f:write(string.format('"nblock": %d,\n', #(fluidBlocks)))
 
    f:write(string.format('"block_marching": %s,\n',
 			 tostring(config.block_marching)))
@@ -1155,8 +1130,8 @@ function write_config_file(fileName)
    f:write(string.format('"udf_solid_source_terms": %s,\n', tostring(config.udf_solid_source_terms)))
    f:write(string.format('"nsolidblock": %d,\n', #solidBlocks))
 
-   for i = 1, #blocks do
-      f:write(blocks[i]:tojson())
+   for i = 1, #fluidBlocks do
+      f:write(fluidBlocks[i]:tojson())
    end
    for i = 1, #solidBlocks do
       f:write(solidBlocks[i]:tojson())
@@ -1178,8 +1153,10 @@ end
 function write_block_list_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("# indx type label\n")
-   for i = 1, #(blocks) do
-      f:write(string.format("%4d %s %s\n", blocks[i].id, blocks[i].gridType, blocks[i].label))
+   for i = 1, #(fluidBlocks) do
+      f:write(string.format("%4d %s %s\n", fluidBlocks[i].id,
+			    fluidBlocks[i].grid:get_type(),
+			    fluidBlocks[i].label))
    end
    f:close()
 end
@@ -1196,16 +1173,16 @@ function build_job_files(job)
       os.execute("mkdir -p solid-grid/t0000")
       os.execute("mkdir -p solid/t0000")
    end
-   for i = 1, #blocks do
-      local id = blocks[i].id
-      print("Block id=", id)
+   for i = 1, #fluidBlocks do
+      local id = fluidBlocks[i].id
+      print("FluidBlock id=", id)
       local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000.gz", id)
-      blocks[i].grid:write_to_gzip_file(fileName)
+      fluidBlocks[i].grid:write_to_gzip_file(fileName)
       local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000.gz", id)
-      if blocks[i].myType == "SBlock" then
-	 write_initial_sg_flow_file(fileName, blocks[i].grid, blocks[i].fillCondition, 0.0)
+      if fluidBlocks[i].grid:get_type() == "structured_grid" then
+	 write_initial_sg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].fillCondition, 0.0)
       else
-	 write_initial_usg_flow_file(fileName, blocks[i].grid, blocks[i].fillCondition, 0.0)
+	 write_initial_usg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].fillCondition, 0.0)
       end
    end
    for i = 1, #solidBlocks do
@@ -1222,4 +1199,16 @@ function build_job_files(job)
    print("Done building files.")
 end
 
-print("Done loading e4prep.lua")
+
+if true then
+   -- Keep old names available, for now.
+   -- Once we purge all of the old names from the examples,
+   -- we should delete this code block
+   SBlock = FluidBlock
+   UBlock = FluidBlock
+   SBlockArray = FluidBlockArray
+   SSolidBlock = SolidBlock
+   SSolidBlockArray = SolidBlockArray
+end
+
+print("Done loading prep.lua")

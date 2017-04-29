@@ -935,18 +935,18 @@ void read_config_file()
     }
     foreach (i; 0 .. GlobalConfig.nBlocks) {
 	auto jsonDataForBlock = jsonData["block_" ~ to!string(i)];
-	string blockType = getJSONstring(jsonDataForBlock, "type", "");
-	switch (blockType) {
-	case "SBlock": 
+	string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
+	switch (gridType) {
+	case "structured_grid": 
 	    gasBlocks ~= new SBlock(i, jsonDataForBlock);
 	    break;
-	case "UBlock":
+	case "unstructured_grid":
 	    gasBlocks ~= new UBlock(i, jsonDataForBlock);
 	    break;
 	default:
-	    throw new Error(format("Construction of block[%d], unknown type: %s",
-				   i, blockType));
-	} // end switch blockType
+	    throw new Error(format("Construction of fluidblock[%d], unknown grid type: %s",
+				   i, gridType));
+	} // end switch gridType
     }
     foreach (blk; gasBlocks) {
 	blk.init_lua_globals();
