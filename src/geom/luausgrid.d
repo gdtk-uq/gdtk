@@ -213,6 +213,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "copy");
     lua_pushcfunction(L, &get_dimensions!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "get_dimensions");
+    lua_pushcfunction(L, &get_type!(UnstructuredGrid, UnstructuredGridMT));
+    lua_setfield(L, -2, "get_type");
     lua_pushcfunction(L, &get_nvertices!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "get_nvertices");
     lua_pushcfunction(L, &get_ncells!(UnstructuredGrid, UnstructuredGridMT));

@@ -6,11 +6,16 @@
  *
  * We need a base class to collect the common wrapper
  * implementations between structured and unstructured grids.
+ * The following macros will generate specific functions at
+ * compile time for Unstructured and Structured Grids.
+ * These specific functions can be then registered into 
+ * the appropriate table of the Lua interpreter at run time.
  */
 
 module luagrid;
 
 import std.conv;
+import std.string;
 
 import util.lua;
 import util.lua_service;
@@ -18,6 +23,13 @@ import grid;
 import sgrid;
 import usgrid;
 
+extern(C) int get_type(T, string MTname)(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 1; This is a getter
+    auto grid = checkObj!(T, MTname)(L, 1);
+    lua_pushstring(L, gridTypeName(grid.grid_type).toStringz);
+    return 1;
+}
 
 extern(C) int get_dimensions(T, string MTname)(lua_State* L)
 {

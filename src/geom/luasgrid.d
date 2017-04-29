@@ -364,6 +364,10 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyStructuredGrid!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &get_dimensions!(StructuredGrid, StructuredGridMT));
+    lua_setfield(L, -2, "get_dimensions");
+    lua_pushcfunction(L, &get_type!(StructuredGrid, StructuredGridMT));
+    lua_setfield(L, -2, "get_type");
     lua_pushcfunction(L, &get_ncells!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "get_ncells");
     lua_pushcfunction(L, &get_niv);
