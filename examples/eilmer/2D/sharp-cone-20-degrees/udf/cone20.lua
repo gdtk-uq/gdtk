@@ -37,9 +37,9 @@ nx0 = 10; nx1 = 30; ny = 40
 grid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
 -- Define the flow-solution blocks.
-blk0 = SBlock:new{grid=grid0, fillCondition=inflow, label="BLOCK-0"}
-blk1 = SBlock:new{grid=grid1, fillCondition=initial, label="BLOCK-1",
-		  xforceList={0,0,1,0}}
+blk0 = FluidBlock:new{grid=grid0, fillCondition=inflow, label="BLOCK-0"}
+blk1 = FluidBlock:new{grid=grid1, fillCondition=initial, label="BLOCK-1",
+		      xforceList={0,0,1,0}}
 setHistoryPoint{ib=1, i=9, j=0}
 -- Set boundary conditions.
 identifyBlockConnections()

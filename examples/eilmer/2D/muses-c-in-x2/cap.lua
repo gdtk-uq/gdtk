@@ -67,11 +67,11 @@ grid4 = StructuredGrid:new{psurface=patch4, niv=nx1+1, njv=ny2+1,
 			   cfList={east=cfy2, west=cfy2}}
 
 -- Define the flow-solution blocks.
-blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="BLK0"}
-blk1 = SBlock:new{grid=grid1, fillCondition=initial, label="BLK1"}
-blk2 = SBlock:new{grid=grid2, fillCondition=initial, label="BLK2"}
-blk3 = SBlock:new{grid=grid3, fillCondition=initial, label="BLK3"}
-blk4 = SBlock:new{grid=grid4, fillCondition=initial, label="BLK4"}
+blk0 = FluidBlock:new{grid=grid0, fillCondition=initial, label="BLK0"}
+blk1 = FluidBlock:new{grid=grid1, fillCondition=initial, label="BLK1"}
+blk2 = FluidBlock:new{grid=grid2, fillCondition=initial, label="BLK2"}
+blk3 = FluidBlock:new{grid=grid3, fillCondition=initial, label="BLK3"}
+blk4 = FluidBlock:new{grid=grid4, fillCondition=initial, label="BLK4"}
 -- Set boundary conditions.
 identifyBlockConnections()
 blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}

@@ -43,16 +43,16 @@ grd2 = StructuredGrid:new{psurface=patch2, niv=ni2+1, njv=nj+1,
 			  cfList={west=cfy1,east=cfy1,north=cfx2,south=cfx2}}
 
 -- Assemble the block from the grid and boundary data.
-blk0 = SBlock:new{grid=grd0, fillCondition=inflow,
-		  bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
-blk1 = SBlock:new{grid=grd1, fillCondition=inflow,
-		  bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			  north=InFlowBC_Supersonic:new{flowCondition=inflow}}}
-blks = SBlockArray{grid=grd2, nib=10, njb=1, 
-		   fillCondition=initial,
-		   bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   east=OutFlowBC_Simple:new{},
-			   south=WallBC_NoSlip_FixedT:new{Twall=300.0}}}
+blk0 = FluidBlock:new{grid=grd0, fillCondition=inflow,
+		      bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+blk1 = FluidBlock:new{grid=grd1, fillCondition=inflow,
+		      bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			      north=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+blks = FluidBlockArray{grid=grd2, nib=10, njb=1, 
+		       fillCondition=initial,
+		       bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       east=OutFlowBC_Simple:new{},
+			       south=WallBC_NoSlip_FixedT:new{Twall=300.0}}}
 identifyBlockConnections()
 
 config.flux_calculator = "adaptive"

@@ -52,29 +52,29 @@ grdCone3 = StructuredGrid:new{psurface=CoonsPatch:new{p00=c0,p10=d0,p11=d1,p01=c
 LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=T_wall}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 
-cone1 = SBlockArray{grid=grdCone1, nib=6, njb=2,
-		  fillCondition=inflow,
-		  bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			  east=None,
-			  south=LaminarWallBC,
-			  west=InFlowBC_Supersonic:new{flowCondition=inflow}},
-			  label="cone1"}
+cone1 = FluidBlockArray{grid=grdCone1, nib=6, njb=2,
+			fillCondition=inflow,
+			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+				east=None,
+				south=LaminarWallBC,
+				west=InFlowBC_Supersonic:new{flowCondition=inflow}},
+			label="cone1"}
 
-cone2 = SBlockArray{grid=grdCone2, nib=6, njb=2,
-		 fillCondition=initial,
-		 bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			 east=None,
-			 south=LaminarWallBC,
-			 west=None},
-		 label="cone2"}  
+cone2 = FluidBlockArray{grid=grdCone2, nib=6, njb=2,
+			fillCondition=initial,
+			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+				east=None,
+				south=LaminarWallBC,
+				west=None},
+			label="cone2"}  
 
-cone3 = SBlockArray{grid=grdCone3, nib=2, njb=2,
-		 fillCondition=initial,
-		 bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			 east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},
-			 south=LaminarWallBC,
-			 west=None},
-		 label="out"}  
+cone3 = FluidBlockArray{grid=grdCone3, nib=2, njb=2,
+			fillCondition=initial,
+			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+				east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},
+				south=LaminarWallBC,
+				west=None},
+			label="out"}  
 
 identifyBlockConnections()  
 

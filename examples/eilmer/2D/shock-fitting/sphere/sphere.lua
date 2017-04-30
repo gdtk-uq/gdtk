@@ -32,10 +32,10 @@ psurf = makePatch{north=cd, east=bd, south=ab, west=ac}
 grid = StructuredGrid:new{psurface=psurf, niv=100, njv=100}
 
 -- We can leave east and south as slip-walls
-blk = SBlockArray{grid=grid, fillCondition=initial,
-		  bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
-			  north=OutFlowBC_Simple:new{}},
-		  nib=1, njb=8}
+blk = FluidBlockArray{grid=grid, fillCondition=initial,
+		      bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
+			      north=OutFlowBC_Simple:new{}},
+		      nib=1, njb=8}
 identifyBlockConnections()
 
 -- Set a few more config options

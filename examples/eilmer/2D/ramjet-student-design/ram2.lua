@@ -178,7 +178,7 @@ grid[15] = StructuredGrid:new{psurface=quad[15], niv=nx3+1, njv=ny2+1}
 
 blk = {}
 for ib = 0, 15 do
-   blk[ib] = SBlock:new{grid=grid[ib], fillCondition=initial}
+   blk[ib] = FluidBlock:new{grid=grid[ib], fillCondition=initial}
 end
 
 -- Boundary conditions

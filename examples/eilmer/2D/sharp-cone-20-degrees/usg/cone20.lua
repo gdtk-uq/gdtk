@@ -44,12 +44,12 @@ nx0 = 10; nx1 = 30; ny = 40
 grid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
 -- Define the flow-solution blocks.
-blk0 = UBlock:new{grid=UnstructuredGrid:new{sgrid=grid0},
-		  fillCondition=inflow, label="BLOCK-0"}
-blk1 = UBlock:new{grid=UnstructuredGrid:new{sgrid=grid1}, 
-		  fillCondition=initial,
-		  label="BLOCK-1",
-		  hcellList={9,0}}
+blk0 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid0},
+		      fillCondition=inflow, label="BLOCK-0"}
+blk1 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid1}, 
+		      fillCondition=initial,
+		      label="BLOCK-1",
+		      hcellList={9,0}}
 -- Set boundary conditions.
 -- identifyBlockConnections()
 blk0.bcList[3] = InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}

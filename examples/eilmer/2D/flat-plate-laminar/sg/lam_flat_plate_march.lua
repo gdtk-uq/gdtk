@@ -65,12 +65,12 @@ grd = StructuredGrid:new{psurface=patch,
 			 niv=221, njv=193}
 
 -- Assemble the block from the grid and boundary data.
-blks = SBlockArray{grid=grd, nib=22, njb=2, 
-		   fillCondition=inflow,
-		   bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
-			   east=OutFlowBC_Simple:new{},
-			   south=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+blks = FluidBlockArray{grid=grd, nib=22, njb=2, 
+		       fillCondition=inflow,
+		       bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
+			       east=OutFlowBC_Simple:new{},
+			       south=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 
 config.block_marching = true
 config.nib = 22

@@ -26,5 +26,5 @@ my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-
 	     OUTFLOW=OutFlowBC_Simple:new{label="outflow-boundary"},
 	     RAMP_SURFACE=WallBC_WithSlip:new{},
 	     INTERIOR=ExchangeBC_MappedCell:new{list_mapped_cells=true}}
-blk0 = UBlock:new{grid=grid0, fillCondition=inflow, bcDict=my_bcDict}
-blk1 = UBlock:new{grid=grid1, fillCondition=initial, bcDict=my_bcDict}
+blk0 = FluidBlock:new{grid=grid0, fillCondition=inflow, bcDict=my_bcDict}
+blk1 = FluidBlock:new{grid=grid1, fillCondition=initial, bcDict=my_bcDict}

@@ -74,33 +74,34 @@ grdCone3 = StructuredGrid:new{psurface=CoonsPatch:new{p00=c0,p10=d0,p11=d1,p01=c
 			    cfList= {north=None,east=rcfy,south=None,west=rcfy},
 			    niv=tonumber(ni0/2.0)+1, njv=nj0+1}   
 
+-- [TODO] Can we remove this boundary condition fudge now? PJ 2017-04-30
 -- create a special boundary condition for the no_slip_fixed_T wall that doesn't reference KOmegaWall
 LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=T_wall}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 
-cone1 = SBlockArray{grid=grdCone1, nib=6, njb=2,
-		  fillCondition=inflow,
-		  bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			  east=None,
-			  south=LaminarWallBC,
-			  west=None},
-			  label="cone1"}
+cone1 = FluidBlockArray{grid=grdCone1, nib=6, njb=2,
+			fillCondition=inflow,
+			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+				east=None,
+				south=LaminarWallBC,
+				west=None},
+			label="cone1"}
 
-cone2 = SBlockArray{grid=grdCone2, nib=6, njb=2,
-		 fillCondition=inflow,
-		 bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			 east=None,
-			 south=LaminarWallBC,
-			 west=None},
-		 label="cone2"}  
+cone2 = FluidBlockArray{grid=grdCone2, nib=6, njb=2,
+			fillCondition=inflow,
+			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+				east=None,
+				south=LaminarWallBC,
+				west=None},
+			label="cone2"}  
 
-cone3 = SBlockArray{grid=grdCone3, nib=2, njb=2,
-		 fillCondition=inflow,
-		 bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			 east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},
-			 south=LaminarWallBC,
-			 west=None},
-		 label="out"}  
+cone3 = FluidBlockArray{grid=grdCone3, nib=2, njb=2,
+			fillCondition=inflow,
+			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+				east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},
+				south=LaminarWallBC,
+				west=None},
+			label="out"}  
 
 identifyBlockConnections()  
 

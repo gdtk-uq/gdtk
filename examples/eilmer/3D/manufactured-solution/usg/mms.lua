@@ -91,11 +91,11 @@ else
 end
 config.apply_bcs_in_parallel = false
 if blocking == 'single' then
-   blk = SBlock:new{grid=grid, fillCondition=gasFillFn, bcList=bcList, label="blk"}
+   blk = FluidBlock:new{grid=grid, fillCondition=gasFillFn, bcList=bcList, label="blk"}
    SBlock2UBlock(blocks[1])
 else 
-   blks = SBlockArray{grid=grid, fillCondition=gasFillFn, bcList=bcList, 
-		      nib=2, njb=2, nkb=2, label="blk"}
+   blks = FluidBlockArray{grid=grid, fillCondition=gasFillFn, bcList=bcList, 
+			  nib=2, njb=2, nkb=2, label="blk"}
    for i=1,8 do
       SBlock2UBlock(blocks[i])
    end 

@@ -43,13 +43,13 @@ ny1 = math.floor(ny0/2)
 grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny0+1}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx0+1, njv=ny1+1}
 
-blk0 = SBlock:new{grid=grid0, fillCondition=gasFillFn, label="blk0"}
+blk0 = FluidBlock:new{grid=grid0, fillCondition=gasFillFn, label="blk0"}
 blk0.bcList[east] = UserDefinedBC:new{fileName='udf-bc.lua'}
 blk0.bcList[south] = UserDefinedBC:new{fileName='udf-bc.lua'}
 blk0.bcList[west] = UserDefinedBC:new{fileName='udf-bc.lua'}
 
-blk1 = SSolidBlock:new{grid=grid1, initTemperature=solidFillFn,
-		       properties={rho=rho_s, k=k_s, Cp=Cp_s}}
+blk1 = SolidBlock:new{grid=grid1, initTemperature=solidFillFn,
+		      properties={rho=rho_s, k=k_s, Cp=Cp_s}}
 blk1.bcList[north] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
 blk1.bcList[east] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}
 blk1.bcList[west] = SolidUserDefinedBC:new{fileName='udf-solid-bc.lua'}

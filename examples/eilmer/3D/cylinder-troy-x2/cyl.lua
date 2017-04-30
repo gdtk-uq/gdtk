@@ -129,16 +129,16 @@ grid2 = StructuredGrid:new{pvolume=beside_cylinder,
 -- Use the grids to define some flow blocks.
 -- Note that we divide up the biggest grid to make better use
 -- of our multiple cpu machine.
-blk0 = SBlockArray{grid=grid0, fillCondition=initial,
-		   bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   north=OutFlowBC_Simple:new{}}, 
-		   nkb=math.floor(L/D)}
-blk1 = SBlock:new{grid=grid1, fillCondition=initial,
-		  bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			  north=OutFlowBC_Simple:new{}}}
-blk2 = SBlock:new{grid=grid2, fillCondition=initial,
-		  bcList={east=OutFlowBC_Simple:new{},
-			  north=OutFlowBC_Simple:new{}}}
+blk0 = FluidBlockArray{grid=grid0, fillCondition=initial,
+		       bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       north=OutFlowBC_Simple:new{}}, 
+		       nkb=math.floor(L/D)}
+blk1 = FluidBlock:new{grid=grid1, fillCondition=initial,
+		      bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			      north=OutFlowBC_Simple:new{}}}
+blk2 = FluidBlock:new{grid=grid2, fillCondition=initial,
+		      bcList={east=OutFlowBC_Simple:new{},
+			      north=OutFlowBC_Simple:new{}}}
 identifyBlockConnections()
 
 -- Set a few more config options

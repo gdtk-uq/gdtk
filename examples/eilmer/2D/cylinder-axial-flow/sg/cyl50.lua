@@ -27,12 +27,12 @@ grd = StructuredGrid:new{psurface=AOPatch:new{p00=a, p10=b, p11=c, p01=d},
 			 cfList=myCFList, niv=51, njv=51}
 
 -- Assemble the block from the grid and boundary data.
-blks = SBlockArray{grid=grd, nib=2, njb=2, 
-		   fillCondition=inflow,
-		   bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   east=OutFlowBC_Simple:new{},
-			   south=WallBC_NoSlip_FixedT:new{Twall=222.0},
-			   west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+blks = FluidBlockArray{grid=grd, nib=2, njb=2, 
+		       fillCondition=inflow,
+		       bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       east=OutFlowBC_Simple:new{},
+			       south=WallBC_NoSlip_FixedT:new{Twall=222.0},
+			       west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 
 -- Do a little more setting of the simulation configuration data.
 config.viscous = true

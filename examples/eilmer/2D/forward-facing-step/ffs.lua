@@ -46,12 +46,12 @@ bcList2 = {north=nil, east=OutFlowBC_Simple:new{label="outflow-boundary"},
 	   south=nil, west=nil}
 
 -- Define the flow-solution blocks and stitch them together.
-blk0 = SBlockArray{grid=grid0, nib=1, njb=1, 
-		   fillCondition=inflow, bcList=bcList0, label="BLOCK-0"}
-blk1 = SBlockArray{grid=grid1, nib=1, njb=4,
-		   fillCondition=inflow, bcList=bcList1, label="BLOCK-1"}
-blk2 = SBlockArray{grid=grid2, nib=4, njb=4,
-		   fillCondition=inflow, bcList=bcList2, label="BLOCK-2"}
+blk0 = FluidBlockArray{grid=grid0, nib=1, njb=1, 
+		       fillCondition=inflow, bcList=bcList0, label="BLOCK-0"}
+blk1 = FluidBlockArray{grid=grid1, nib=1, njb=4,
+		       fillCondition=inflow, bcList=bcList1, label="BLOCK-1"}
+blk2 = FluidBlockArray{grid=grid2, nib=4, njb=4,
+		       fillCondition=inflow, bcList=bcList2, label="BLOCK-2"}
 identifyBlockConnections()
 
 -- Do a little more setting of global data.

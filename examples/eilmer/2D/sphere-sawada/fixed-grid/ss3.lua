@@ -65,10 +65,10 @@ cf_radial = RobertsFunction:new{end0=false, end1=true, beta=1.2}
 grid = StructuredGrid:new{psurface=psurf, niv=61, njv=61,
 			  cfList={west=cf_circum, east=cf_circum,
 				  south=cf_radial, north=cf_radial}}
-blk0 = SBlockArray{grid=grid, fillCondition=initial, label="blk",
-		   bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   north=OutFlowBC_Simple:new{}}, 
-		   nib=1, njb=4}
+blk0 = FluidBlockArray{grid=grid, fillCondition=initial, label="blk",
+		       bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       north=OutFlowBC_Simple:new{}}, 
+		       nib=1, njb=4}
 -- We have left east and south as (default) slip-walls
 
 -- Set a few more config options

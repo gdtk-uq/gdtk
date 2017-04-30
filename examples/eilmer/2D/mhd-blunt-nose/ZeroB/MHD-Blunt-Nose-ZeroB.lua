@@ -89,8 +89,8 @@ grid1 = StructuredGrid:new{psurface = makePatch{north=eb, east=ab, south=da, wes
 grid2 = StructuredGrid:new{psurface = makePatch{north=be, east=fe, south=cf, west=cb}, cfList = {north=inversecluster, south=inversecluster},niv= nx + 1, njv=ny + 1}
 
 --Create blocks
-blk_1 = SBlock:new{grid = grid1, fillCondition = Static}
-blk_2 = SBlock:new{grid = grid2, fillCondition = Static}
+blk_1 = FluidBlock:new{grid = grid1, fillCondition = Static}
+blk_2 = FluidBlock:new{grid = grid2, fillCondition = Static}
 
 --Set boundary conditions
 identifyBlockConnections()

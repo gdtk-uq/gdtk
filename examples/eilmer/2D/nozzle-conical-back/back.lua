@@ -71,8 +71,10 @@ patch1 = makePatch{north=north1, east=east1, south=south1, west=east0west1}
 nx0 = 50; nx1 = 60; ny = 30
 grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
-subsonic_region = SBlock:new{grid=grid0, fillCondition=stagnation_gas, label="subsonic-region"}
-supersonic_region = SBlock:new{grid=grid1, fillCondition=low_pressure_gas, label="supersonic-region"} 
+subsonic_region = FluidBlock:new{grid=grid0, fillCondition=stagnation_gas,
+				 label="subsonic-region"}
+supersonic_region = FluidBlock:new{grid=grid1, fillCondition=low_pressure_gas,
+				   label="supersonic-region"} 
 -- History locations near throat and exit
 setHistoryPoint{ib=1, i=1, j=1}
 setHistoryPoint{ib=1, i=nx1-1, j=1}
@@ -84,7 +86,8 @@ if fixed_pressure then
 else
    -- Specify the inflow mass_flux (kg/s/m^^2) across inlet and guess the stagnation condition.
    subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas,
-							      mass_flux=275.16, relax_factor=0.2,
+							      mass_flux=275.16,
+							      relax_factor=0.2,
 							      label="inflow-boundary"}
 end
 supersonic_region.bcList[east] = OutFlowBC_Simple:new{label="outflow-boundary"}

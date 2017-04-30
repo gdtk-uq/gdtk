@@ -54,9 +54,9 @@ blk1Corners[3].z = blk1Corners[2].z
 grid1 = StructuredGrid:new{pvolume=TFIVolume:new{vertices=blk1Corners}, 
 			   niv=31, njv=5, nkv=41, cfList=cflist}
 
-blk0 = SBlock:new{label="first-block", grid=grid0, fillCondition=initial}
+blk0 = FluidBlock:new{label="first-block", grid=grid0, fillCondition=initial}
 blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
-blk1 = SBlock:new{label="second-block", grid=grid1, fillCondition=initial}
+blk1 = FluidBlock:new{label="second-block", grid=grid1, fillCondition=initial}
 blk1.bcList[east] = OutFlowBC_Simple:new{}
 identifyBlockConnections()
 setHistoryPoint{ib=1, i=1, j=1, k=2}

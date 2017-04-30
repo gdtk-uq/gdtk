@@ -109,7 +109,7 @@ patch1 = makePatch{north=Line:new{p0=e, p1=f},
 grid0 = StructuredGrid:new{psurface=patch0, niv=3, njv=3}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx+1, njv=ny+1}
 
-blk0 = SBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
+blk0 = FluidBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
 
 blk0.bcList[north] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
@@ -136,8 +136,8 @@ blk0.bcList[west] = BoundaryCondition:new{
    }
 }
 
-blk1 = SSolidBlock:new{grid=grid1, initTemperature=initT,
-		       properties={rho=10000, k=100000, Cp=100}}
+blk1 = SolidBlock:new{grid=grid1, initTemperature=initT,
+		      properties={rho=10000, k=100000, Cp=100}}
 
 -- Set boundary conditions
 blk1.bcList[north] = SolidUserDefinedBC:new{fileName='udf-bc.lua'}

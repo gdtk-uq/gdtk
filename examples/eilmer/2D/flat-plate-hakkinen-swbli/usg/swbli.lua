@@ -44,19 +44,19 @@ gridp2 = StructuredGrid:new{psurface=CoonsPatch:new{p00=c0, p10=d0, p11=d1, p01=
 LaminarWallBC = WallBC_NoSlip_Adiabatic:new{}
 table.remove(LaminarWallBC.preSpatialDerivAction, 3)
 
-blkin = SBlockArray{grid=gridin, fillCondition=inflow, nib=1, njb=2,
-		    bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			    north=WallBC_WithSlip:new{},
-			    south=WallBC_WithSlip:new{}}}
+blkin = FluidBlockArray{grid=gridin, fillCondition=inflow, nib=1, njb=2,
+			bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+				north=WallBC_WithSlip:new{},
+				south=WallBC_WithSlip:new{}}}
 
-blk1 = SBlockArray{grid=gridp1, fillCondition=inflow, nib=7, njb=2,
-		   bcList={south=LaminarWallBC,
-			   north=WallBC_WithSlip:new{}}}
+blk1 = FluidBlockArray{grid=gridp1, fillCondition=inflow, nib=7, njb=2,
+		       bcList={south=LaminarWallBC,
+			       north=WallBC_WithSlip:new{}}}
 
-blk2 = SBlockArray{grid=gridp2, fillCondition=inflow, nib=2, njb=2,
-		   bcList={south=LaminarWallBC,
-			   north=WallBC_WithSlip:new{},
-			   east=OutFlowBC_FixedPT:new{p_outside=p_inf,T_outside=T_inf}}}
+blk2 = FluidBlockArray{grid=gridp2, fillCondition=inflow, nib=2, njb=2,
+		       bcList={south=LaminarWallBC,
+			       north=WallBC_WithSlip:new{},
+			       east=OutFlowBC_FixedPT:new{p_outside=p_inf,T_outside=T_inf}}}
 identifyBlockConnections()
 
 -- convert structured blocks to unstructured blocks

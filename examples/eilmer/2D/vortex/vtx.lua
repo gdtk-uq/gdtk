@@ -36,8 +36,8 @@ bcList = {north=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  east=OutFlowBC_Simple:new{},
 	  south=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
-blk0 = SBlock:new{grid=grid0, fillCondition=initial, bcList=bcList,
-		  label="Duct"}
+blk0 = FluidBlock:new{grid=grid0, fillCondition=initial, bcList=bcList,
+		      label="Duct"}
 
 -- Do a little more setting of global data.
 config.max_time = 20.0e-3  -- seconds

@@ -71,7 +71,7 @@ cd = Line:new{p0=c, p1=d}
 
 grid = StructuredGrid:new{psurface=makePatch{north=cd, east=bd, south=ab, west=ac},
 			  niv=nxcells+1, njv=nycells+1}
-blk = SBlock:new{grid=grid, fillCondition=initial}
+blk = FluidBlock:new{grid=grid, fillCondition=initial}
 -- We now set a special boundary condition for the boundary that acts as the piston face (WEST face).
 -- Since this is a somewhat customised boundary condition, we use the generic boundary
 -- condition object and explicitly control its behaviour with the available settings.

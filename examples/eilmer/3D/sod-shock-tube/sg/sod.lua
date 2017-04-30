@@ -39,7 +39,7 @@ function tube_gas(x, y, z)
 end
 
 -- Define a single block for the tube and fill it with gas conditions.
-SBlock:new{grid=grid0, fillCondition=tube_gas}
+FluidBlock:new{grid=grid0, fillCondition=tube_gas}
 
 config.flux_calculator = "ausmdv"
 config.max_time = 0.6e-3  -- seconds

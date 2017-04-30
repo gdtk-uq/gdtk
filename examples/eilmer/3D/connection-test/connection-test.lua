@@ -268,11 +268,11 @@ end
 -- our collections of vertices.
 lftGrid = StructuredGrid:new{pvolume=TFIVolume:new{vertices=lftVtxs},
 			     niv=nn+1, njv=nn+1, nkv=nn+1}
-lftBlk = SBlock:new{grid=lftGrid, fillCondition=lftCubeFill}
+lftBlk = FluidBlock:new{grid=lftGrid, fillCondition=lftCubeFill}
 
 rghtGrid = StructuredGrid:new{pvolume=TFIVolume:new{vertices=rghtVtxs},
 			      niv=nn+1, njv=nn+1, nkv=nn+1}
-rghtBlk = SBlock:new{grid=rghtGrid, fillCondition=rghtCubeFill}
+rghtBlk = FluidBlock:new{grid=rghtGrid, fillCondition=rghtCubeFill}
 
 identifyBlockConnections()
 

@@ -26,7 +26,7 @@ my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowCondition=inflow},
 	    }
 blks = {}
 for i=0,3 do
-   blks[i] = UBlock:new{grid=grids[i], fillCondition=inflow, bcDict=my_bcDict}
+   blks[i] = FluidBlock:new{grid=grids[i], fillCondition=inflow, bcDict=my_bcDict}
 end
 
 -- Do a little more setting of global data.

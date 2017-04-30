@@ -33,8 +33,8 @@ grid0 = StructuredGrid:new{psurface=patch0, niv=nx+1, njv=ny+1}
 
 -- Define the solution block
 -- Physical properties are those of copper
-blk0 = SSolidBlock:new{grid=grid0, initTemperature=300.0,
-		       properties={rho=8960, k=401, Cp=386}}
+blk0 = SolidBlock:new{grid=grid0, initTemperature=300.0,
+		      properties={rho=8960, k=401, Cp=386}}
 
 -- Set boundary conditions
 blk0.bcList[north] = SolidFixedTBC:new{Twall=1000.0}
@@ -51,6 +51,6 @@ config.fixed_time_step = true
 config.dt_plot = 0.1
 
 -- Set a dummy flow block
-dummy = SBlock:new{grid=grid0, fillCondition=initial, label="dummy", active=false}
+dummy = FluidBlock:new{grid=grid0, fillCondition=initial, label="dummy", active=false}
 
 

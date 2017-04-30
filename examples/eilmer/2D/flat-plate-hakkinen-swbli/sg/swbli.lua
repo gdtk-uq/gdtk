@@ -65,18 +65,18 @@ grid2 = StructuredGrid:new{psurface=patch2, niv=2*ni0+1, njv=nj0+1,
 --
 -- Build the flow blocks and attach boundary conditions.
 --
-blk0 = SBlockArray{grid=grid0, fillCondition=inflow, nib=1, njb=2,
-		   bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   north=WallBC_WithSlip:new{},
-			   south=WallBC_WithSlip:new{}}}
-blk1 = SBlockArray{grid=grid1, fillCondition=inflow, nib=7, njb=2,
-		   bcList={south=WallBC_NoSlip_Adiabatic:new{},
-			   north=WallBC_WithSlip:new{}}}
-blk2 = SBlockArray{grid=grid2, fillCondition=inflow, nib=2, njb=2,
-		   bcList={south=WallBC_NoSlip_Adiabatic:new{},
-			   north=WallBC_WithSlip:new{},
-			   east=OutFlowBC_FixedPT:new{p_outside=p_inf,
-						      T_outside=T_inf}}}
+blk0 = FluidBlockArray{grid=grid0, fillCondition=inflow, nib=1, njb=2,
+		       bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       north=WallBC_WithSlip:new{},
+			       south=WallBC_WithSlip:new{}}}
+blk1 = FluidBlockArray{grid=grid1, fillCondition=inflow, nib=7, njb=2,
+		       bcList={south=WallBC_NoSlip_Adiabatic:new{},
+			       north=WallBC_WithSlip:new{}}}
+blk2 = FluidBlockArray{grid=grid2, fillCondition=inflow, nib=2, njb=2,
+		       bcList={south=WallBC_NoSlip_Adiabatic:new{},
+			       north=WallBC_WithSlip:new{},
+			       east=OutFlowBC_FixedPT:new{p_outside=p_inf,
+							  T_outside=T_inf}}}
 identifyBlockConnections()
 
 config.gasdynamic_update_scheme = "classic-rk3"

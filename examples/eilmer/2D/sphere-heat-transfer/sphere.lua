@@ -53,10 +53,10 @@ cf_radial = RobertsFunction:new{end0=false, end1=true, beta=1.2}
 grid = StructuredGrid:new{psurface=psurf, niv=ni+1, njv=nj+1,
 			  cfList={north=cf_radial, south=cf_radial}}
 
-blk = SBlockArray{grid=grid, fillCondition=initial, label='blk',
-		  bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
-			  east=WallBC_NoSlip_FixedT:new{Twall=296.0},
-			  north=OutFlowBC_Simple:new{}},
-                  nib=1, njb=4}
+blk = FluidBlockArray{grid=grid, fillCondition=initial, label='blk',
+		      bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
+			      east=WallBC_NoSlip_FixedT:new{Twall=296.0},
+			      north=OutFlowBC_Simple:new{}},
+		      nib=1, njb=4}
 
 dofile("sketch-domain.lua")

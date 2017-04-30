@@ -72,11 +72,11 @@ else
 end
 config.apply_bcs_in_parallel = false
 if blocking == 'single' then
-    blk = SBlock:new{grid=grid, fillCondition=initial, bcList=bcList,
-		     label='blk'}
+    blk = FluidBlock:new{grid=grid, fillCondition=initial, bcList=bcList,
+			 label='blk'}
 else 
-   blks = SBlockArray{grid=grid, fillCondition=initial, bcList=bcList, 
-		      nib=2, njb=2, label="blk"}
+   blks = FluidBlockArray{grid=grid, fillCondition=initial, bcList=bcList, 
+			  nib=2, njb=2, label="blk"}
 end
 
 config.interpolation_order = xOrder

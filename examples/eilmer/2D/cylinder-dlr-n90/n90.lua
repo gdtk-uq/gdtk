@@ -40,10 +40,10 @@ psurf = makePatch{north=Bezier:new{points={i, j, k, e}},
 grid = StructuredGrid:new{psurface=psurf, niv=61, njv=41}
 
 -- We can leave east and south as slip-walls
-blk0 = SBlockArray{grid=grid, fillCondition=initial, label="blk",
-		   bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   north=OutFlowBC_Simple:new{}}, 
-		   nib=1, njb=4}
+blk0 = FluidBlockArray{grid=grid, fillCondition=initial, label="blk",
+		       bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       north=OutFlowBC_Simple:new{}}, 
+		       nib=1, njb=4}
 
 -- Set a few more config options
 config.flux_calculator = "adaptive"

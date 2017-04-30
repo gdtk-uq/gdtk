@@ -32,12 +32,12 @@ grd = StructuredGrid:new{psurface=makePatch{north=nth, east=est, south=sth, west
 LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=222.0}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 -- Assemble the block from the grid and boundary data.
-blks = SBlockArray{grid=grd, nib=2, njb=2, 
-		   fillCondition=inflow,
-		   bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-			   east=OutFlowBC_Simple:new{},
-			   south=LaminarWallBC,
-			   west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+blks = FluidBlockArray{grid=grd, nib=2, njb=2, 
+		       fillCondition=inflow,
+		       bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+			       east=OutFlowBC_Simple:new{},
+			       south=LaminarWallBC,
+			       west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 -- convert structured blocks to unstructured blocks
 for i=1,4 do
    SBlock2UBlock(blocks[i])
