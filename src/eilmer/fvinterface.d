@@ -55,6 +55,9 @@ public:
     WLSQGradWorkspace ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
+    double[] jx; // diffusive mass flux in x
+    double[] jy; // diffusive mass flux in y
+    double[] jz; // diffusive mass flux in z
     //
     // Rowan's implicit solver workspace.
     version(steadystate) {
@@ -81,6 +84,9 @@ public:
 	if (allocate_spatial_deriv_lsq_workspace) {
 	    ws_grad = new WLSQGradWorkspace();
 	}
+	jx.length = n_species;
+	jy.length = n_species;
+	jz.length = n_species;
 	version(steadystate) {
 	dFdU_L.length = 5; // number of conserved variables
 	foreach (ref a; dFdU_L) a.length = 5;
@@ -108,6 +114,9 @@ public:
 	// we cannot have const (or "in") qualifier on other.
 	cloud_pos = other.cloud_pos.dup();
 	cloud_fs = other.cloud_fs.dup();
+	jx = other.jx.dup();
+	jy = other.jy.dup();
+	jz = other.jz.dup();
 	version(steadystate) {
 	dFdU_L.length = 5; // number of conserved variables
 	foreach (ref a; dFdU_L) a.length = 5;
@@ -194,11 +203,14 @@ public:
 	grad.scale_values_by(1.0/to!double(vtx.length));
     } // end average_vertex_deriv_values()
 
-    @nogc
+    //@nogc
+    // Removed presently because of call to GasModel.enthalpy.
     void viscous_flux_calc(ref LocalConfig myConfig)
     // Unified 2D and 3D viscous-flux calculation.
     // Note that the gradient values need to be in place before calling this procedure.
     {
+	auto gmodel = myConfig.gmodel;
+	size_t n_species = gmodel.n_species;
 	double viscous_factor = myConfig.viscous_factor;
 	double k_laminar = fs.gas.k;
 	double mu_laminar = fs.gas.mu;
@@ -221,13 +233,21 @@ public:
         double k_eff = viscous_factor * (fs.gas.k + fs.k_t);
 	double mu_eff =  viscous_factor * (fs.gas.mu + fs.mu_t);
 	double lmbda = -2.0/3.0 * mu_eff;
+	// We separate diffusion based on laminar or turbulent
+	// and treat the differently.
+	if ( myConfig.turbulence_model != TurbulenceModel.none ) {
+	    double Sc_t = myConfig.turbulence_schmidt_number;
+	    double D_t = fs.mu_t / (fs.gas.rho * Sc_t);
+
+	    for ( size_t isp = 0; isp < n_species; ++isp ) {
+		jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
+		jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
+		jz[isp] = -fs.gas.rho * D_t * grad.massf[isp][2];
+	    }
+	}
+	    
 	if ( myConfig.diffusion ) {
-	    // Apply a diffusion model
-	    // double D_t = 0.0;
-	    // if ( myConfig.turbulence_model != TurbulenceModel.none ) {
-	    // 	double Sc_t = myConfig.turbulence_schmidt_number;
-	    // 	D_t = fs.mu_t / (fs.gas.rho * Sc_t);
-	    // }
+	    // Apply a laminar diffusion model
 	    // [TODO] Rowan, calculate_diffusion_fluxes(fs.gas, D_t, grad.f, jx, jy, jz);
 	    // for( size_t isp = 0; isp < nsp; ++isp ) {
 	    // 	jx[isp] = 0.0;
@@ -293,6 +313,15 @@ public:
 	double qx = k_eff * grad.Ttr[0];
 	double qy = k_eff * grad.Ttr[1];
 	double qz = k_eff * grad.Ttr[2];
+	if ( myConfig.turbulence_model != TurbulenceModel.none ) {
+	    for ( int isp = 0; isp < n_species; ++isp ) {
+		double h = gmodel.enthalpy(fs.gas, isp);
+		qx -= jx[isp] * h;
+		qy -= jy[isp] * h;
+		qz -= jz[isp] * h;
+	    }
+	}
+
 	if ( myConfig.diffusion ) {
 	    // for( size_t isp = 0; isp < nsp; ++isp ) {
 	    // 	double h = 0.0; // [TODO] Rowan, transport of species enthalpies?
@@ -346,6 +375,11 @@ public:
 	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
 	    F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
 	    F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+	}
+	if (myConfig.turbulence_model != TurbulenceModel.none) {
+	    for ( int isp = 0; isp < n_species; ++isp ) {
+		F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+	    }
 	}
 	if (myConfig.diffusion) {
 	    // Species mass flux
