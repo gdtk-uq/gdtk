@@ -37,7 +37,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		  string outputFileName, string sliceListStr,
 		  string surfaceListStr, string extractStreamStr,
 		  string extractLineStr, string computeLoadsOnGroupStr,
-		  string probeStr, string normsStr, string regionStr)
+		  string probeStr, string outputFormat,
+		  string normsStr, string regionStr)
 {
     read_config_file();
     string jobName = GlobalConfig.base_file_name;
@@ -201,11 +202,36 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    if (outputFormat == "gnuplot") {
+		outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    }
 	    foreach (ip; 0 .. xp.length) {
 		auto nearest = soln.find_nearest_cell_centre(xp[ip], yp[ip], zp[ip]);
 		size_t ib = nearest[0]; size_t i = nearest[1];
-		outFile.writeln(soln.flowBlocks[ib].values_as_string(i));
+		if (outputFormat == "gnuplot") {
+		    outFile.writeln(soln.flowBlocks[ib].values_as_string(i));
+		} else {
+		    // Assume that pretty format was requested.
+		    outFile.writefln("Block[%d], cell[%d]:", ib, i);
+		    outFile.writefln("  pos=(%s, %s, %s)m, volume=%s m^^3",
+				     soln.get_value_str(ib, i, "pos.x"), soln.get_value_str(ib, i, "pos.y"),
+				     soln.get_value_str(ib, i, "pos.z"), soln.get_value_str(ib, i, "volume"));
+		    outFile.writefln("  rho=%s kg/m^^3, p=%s Pa, Ttr=%s K, u=%s J/kg",
+				     soln.get_value_str(ib, i, "rho"), soln.get_value_str(ib, i, "p"),
+				     soln.get_value_str(ib, i, "Ttr"), soln.get_value_str(ib, i, "u"));
+		    outFile.writefln("  vel=(%s, %s, %s)m/s, a=%s m/s",
+				     soln.get_value_str(ib, i, "vel.x"), soln.get_value_str(ib, i, "vel.y"),
+				     soln.get_value_str(ib, i, "vel.z"), soln.get_value_str(ib, i, "a"));
+		    outFile.writefln("  M_local=%s, pitot_p=%s Pa, total_p=%s Pa, total_h=%s J/kg",
+		    		     soln.get_value_str(ib, i, "M_local"), soln.get_value_str(ib, i, "pitot_p"),
+		    		     soln.get_value_str(ib, i, "total_p"), soln.get_value_str(ib, i, "total_h"));
+		    outFile.writefln("  mu=%s Pa.s, k=%s W/(m.K)", soln.get_value_str(ib, i, "mu"),
+				     soln.get_value_str(ib, i, "k"));
+		    outFile.writefln("  mu_t=%s Pa.s, k_t=%s W/(m.K), tke=%s (m/s)^^2, omega=%s 1/s",
+				     soln.get_value_str(ib, i, "mu_t"), soln.get_value_str(ib, i, "k_t"),
+				     soln.get_value_str(ib, i, "tke"), soln.get_value_str(ib, i, "omega"));
+		    outFile.writefln("  massf=[%s]", soln.get_massf_str(ib, i));
+		}
 	    }
 	} // end foreach tindx
     } // end if probeStr

@@ -86,6 +86,7 @@ void main(string[] args)
     msg       ~= "         [--extract-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line\n";
     msg       ~= "         [--compute-loads-on-group=\"\"]    group tag\n";
     msg       ~= "         [--probe=\"x,y,z;...\"]       locations to sample flow data\n";
+    msg       ~= "         [--output-format=<string>]  gnuplot|pretty\n";
     msg       ~= "         [--norms=\"varName,varName,...\"] report L1,L2,Linf norms\n";
     msg       ~= "         [--region=\"x0,y0,z0,x1,y1,z1\"]  limit norms calculation to a box\n";
     msg       ~= "\n";
@@ -123,6 +124,7 @@ void main(string[] args)
     string extractLineStr = "";
     string computeLoadsOnGroupStr = "";
     string probeStr = "";
+    string outputFormat = "gnuplot";
     string normsStr = "";
     string regionStr = "";
     bool customPostFlag = false;
@@ -154,6 +156,7 @@ void main(string[] args)
 	       "extract-line", &extractLineStr,
 	       "compute-loads-on-group", &computeLoadsOnGroupStr,
 	       "probe", &probeStr,
+	       "output-format", &outputFormat,
 	       "norms", &normsStr,
 	       "region", &regionStr,
 	       "custom-post", &customPostFlag,
@@ -291,6 +294,7 @@ void main(string[] args)
 	    writeln("  extractLineStr: ", extractLineStr);
 	    writeln("  computeLoadsOnGroupStr: ", computeLoadsOnGroupStr);
 	    writeln("  probeStr: ", probeStr);
+	    writeln("  outputFormat: ", outputFormat);
 	    writeln("  normsStr: ", normsStr);
 	    writeln("  regionStr: ", regionStr);
 	    writeln("  verbosityLevel: ", verbosityLevel);
@@ -300,7 +304,7 @@ void main(string[] args)
 		     vtkxmlFlag, binaryFormat, tecplotFlag,
 		     outputFileName, sliceListStr, surfaceListStr,
 		     extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
-		     probeStr, normsStr, regionStr);
+		     probeStr, outputFormat, normsStr, regionStr);
 	writeln("Done postprocessing.");
     } // end if postFlag
 

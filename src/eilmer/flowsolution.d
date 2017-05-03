@@ -260,6 +260,31 @@ public:
 	return [L1, L2, Linf, peak_pos[0], peak_pos[1], peak_pos[2]];
     } // end compute_volume_weighted_norms()
 
+    string get_value_str(size_t ib, size_t i, string varName)
+    {
+	string value;
+	if (canFind(flowBlocks[ib].variableNames, varName)) {
+	    value ~= format("%g", flowBlocks[ib][varName, i]);
+	} else {
+	    value ~= "nil";
+	}
+	return value;
+    } // end get_value_str()
+
+    string get_massf_str(size_t ib, size_t i)
+    {
+	string txt;
+	size_t count = 0;
+	foreach (varName; flowBlocks[ib].variableNames) {
+	    if (startsWith(varName, "massf")) {
+		if (count > 0) { txt ~= ", "; }
+		string shortName = removechars(varName, "massf");
+		txt ~= format("%s=%g", shortName, flowBlocks[ib][varName, i]);
+		count += 1;
+	    }
+	}
+	return txt;
+    } // end get_massf_str()
 } // end class FlowSolution
 
 class BlockFlow {
