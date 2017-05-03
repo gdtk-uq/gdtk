@@ -580,7 +580,9 @@ version(uniform_lut_test)
     import util.msg_service;
     int main() {
 	GasModel gm;
-	try { lua_State* L = init_lua_State("sample-data/cea-lut-air-version-test.lua");
+	try {
+	    lua_State* L = init_lua_State();
+	    doLuaFile(L, "sample-data/cea-lut-air-version-test.lua");
 	    gm = new UniformLUT(L);
 	}
 	catch (Exception e) {

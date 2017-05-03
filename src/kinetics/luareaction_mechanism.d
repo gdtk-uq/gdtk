@@ -96,7 +96,8 @@ extern(C) int newReactionMechanism(lua_State* L)
     }
     lua_pop(L, 1);
 
-    auto L2 = init_lua_State(fname);
+    auto L2 = init_lua_State();
+    doLuaFile(L, fname);
     lua_getglobal(L2, "reaction");
     auto myReacMech = createReactionMechanism(L2, gmodel, T_lower, T_upper);
     lua_close(L2);

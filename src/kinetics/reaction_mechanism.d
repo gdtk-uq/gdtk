@@ -177,7 +177,8 @@ ReactionMechanism createReactionMechanism(lua_State* L, GasModel gmodel, double 
 
 ReactionMechanism createReactionMechanism(string fname, GasModel gmodel, double T_lower_limit, double T_upper_limit)
 {
-    auto L = init_lua_State(fname);
+    auto L = init_lua_State();
+    doLuaFile(L, fname);
     lua_getglobal(L, "reaction");
     return createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
 }

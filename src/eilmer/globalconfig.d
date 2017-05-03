@@ -20,9 +20,14 @@ import std.array;
 import std.format;
 
 import util.lua;
+import util.lua_service;
+import nm.luabbla;
+import lua_helper;
 import gas;
 import kinetics;
 import geom;
+import luageom;
+import grid;
 import fvcore;
 version (gpu_chem) {
     import gpu_chem;
@@ -30,6 +35,7 @@ version (gpu_chem) {
 import json_helper;
 import globaldata;
 import flowstate;
+import block;
 import sblock;
 import ublock;
 import ssolidblock;
@@ -987,12 +993,13 @@ void read_config_file()
 	}
     }
 
-    // Now that the blocks are configured, we can set up the
-    // lua_State for a user-defined moving grid, if needed.
-    if ( GlobalConfig.grid_motion == GridMotion.user_defined ) {
-	// We'll need to initialise the lua_State that holds the
-	// user's function for defining grid motion.
-	init_master_lua_State(GlobalConfig.udf_grid_motion_file);
+    // Now that the blocks are configured, we can initialize
+    // the lua_State that holds the user's functions
+    // for simulation supervision and for defining grid motion.
+    init_master_lua_State();
+    if (GlobalConfig.grid_motion == GridMotion.user_defined) {
+	setGridMotionHelperFunctions(GlobalConfig.master_lua_State);
+	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
 } // end read_config_file()
 
@@ -1199,3 +1206,54 @@ void checkGlobalConfig()
     return;
 }
 
+
+void init_master_lua_State()
+{
+    GlobalConfig.master_lua_State = init_lua_State();
+    // Give me a conveniently-named pointer for use in this function.
+    auto L = GlobalConfig.master_lua_State;
+    registerVector3(L);
+    registerBBLA(L);
+    // Set some globally available constants for the
+    // Lua state.
+    lua_pushnumber(L, GlobalConfig.nBlocks);
+    lua_setglobal(L, "nBlocks");
+    lua_pushnumber(L, nghost);
+    lua_setglobal(L, "nGhost");
+    // Give the user a table that holds information about
+    // all of the blocks
+    lua_newtable(L);
+    foreach (int i, blk; gasBlocks) {
+	lua_newtable(L);
+	lua_pushnumber(L, blk.cells.length);
+	lua_setfield(L, -2, "nCells");
+	lua_pushnumber(L, blk.vertices.length);
+	lua_setfield(L, -2, "nVertices");
+	if ( blk.grid_type == Grid_t.structured_grid ) {
+	    lua_pushnumber(L, blk.nicell);
+	    lua_setfield(L, -2, "niCells");
+	    lua_pushnumber(L, blk.njcell);
+	    lua_setfield(L, -2, "njCells");
+	    lua_pushnumber(L, blk.nkcell);
+	    lua_setfield(L, -2, "nkCells");
+	    lua_pushnumber(L, blk.imin);
+	    lua_setfield(L, -2, "vtxImin");
+	    lua_pushnumber(L, blk.imax+1);
+	    lua_setfield(L, -2, "vtxImax");
+	    lua_pushnumber(L, blk.jmin);
+	    lua_setfield(L, -2, "vtxJmin");
+	    lua_pushnumber(L, blk.jmax+1);
+	    lua_setfield(L, -2, "vtxJmax");
+	    lua_pushnumber(L, blk.kmin);
+	    lua_setfield(L, -2, "vtxKmin");
+	    lua_pushnumber(L, blk.kmax+1);
+	    lua_setfield(L, -2, "vtxKmax");
+	}
+	lua_rawseti(L, -2, i);
+    }
+    lua_setglobal(L, "blockData");
+
+    // Now set some helper functions
+    lua_pushcfunction(L, &luafn_sampleFlow);
+    lua_setglobal(L, "sampleFlow");
+} // end init_master_lua_State()

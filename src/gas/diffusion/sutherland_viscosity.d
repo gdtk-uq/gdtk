@@ -96,7 +96,8 @@ version(sutherland_viscosity_test) {
 	vm.update_viscosity(gd);
 	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-5), failedUnitTest());
 
-	lua_State* L = init_lua_State("sample-data/O2-viscosity.lua");
+	lua_State* L = init_lua_State();
+	doLuaFile(L, "sample-data/O2-viscosity.lua");
 	lua_getglobal(L, "Sutherland");
 	vm = createSutherlandViscosity(L);
 	lua_close(L);

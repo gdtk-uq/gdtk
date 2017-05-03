@@ -17,55 +17,8 @@ import sgrid;
 import block;
 import std.stdio;
 
-void init_master_lua_State(string fname)
+void setGridMotionHelperFunctions(lua_State *L)
 {
-    GlobalConfig.master_lua_State = init_lua_State(fname);
-    // Give me a conveniently-named pointer for use in this function.
-    auto L = GlobalConfig.master_lua_State;
-    registerVector3(L);
-    registerBBLA(L);
-    // Set some globally available constants for the
-    // Lua state.
-    lua_pushnumber(L, GlobalConfig.nBlocks);
-    lua_setglobal(L, "nBlocks");
-    lua_pushnumber(L, nghost);
-    lua_setglobal(L, "nGhost");
-    // Give the user a table that holds information about
-    // all of the blocks
-    lua_newtable(L);
-    foreach ( int i, blk; gasBlocks ) {
-	lua_newtable(L);
-	lua_pushnumber(L, blk.cells.length);
-	lua_setfield(L, -2, "nCells");
-	lua_pushnumber(L, blk.vertices.length);
-	lua_setfield(L, -2, "nVertices");
-	if ( blk.grid_type == Grid_t.structured_grid ) {
-	    lua_pushnumber(L, blk.nicell);
-	    lua_setfield(L, -2, "niCells");
-	    lua_pushnumber(L, blk.njcell);
-	    lua_setfield(L, -2, "njCells");
-	    lua_pushnumber(L, blk.nkcell);
-	    lua_setfield(L, -2, "nkCells");
-	    lua_pushnumber(L, blk.imin);
-	    lua_setfield(L, -2, "vtxImin");
-	    lua_pushnumber(L, blk.imax+1);
-	    lua_setfield(L, -2, "vtxImax");
-	    lua_pushnumber(L, blk.jmin);
-	    lua_setfield(L, -2, "vtxJmin");
-	    lua_pushnumber(L, blk.jmax+1);
-	    lua_setfield(L, -2, "vtxJmax");
-	    lua_pushnumber(L, blk.kmin);
-	    lua_setfield(L, -2, "vtxKmin");
-	    lua_pushnumber(L, blk.kmax+1);
-	    lua_setfield(L, -2, "vtxKmax");
-	}
-	lua_rawseti(L, -2, i);
-    }
-    lua_setglobal(L, "blockData");
-
-    // Now set some helper functions
-    lua_pushcfunction(L, &luafn_sampleFlow);
-    lua_setglobal(L, "sampleFlow");
     lua_pushcfunction(L, &luafn_getVtxPosition);
     lua_setglobal(L, "getVtxPosition");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForDomain);
@@ -74,7 +27,6 @@ void init_master_lua_State(string fname)
     lua_setglobal(L, "setVtxVelocitiesForBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocity);
     lua_setglobal(L, "setVtxVelocity");
-
 }
 
 extern(C) int luafn_getVtxPosition(lua_State *L)

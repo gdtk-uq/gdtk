@@ -525,7 +525,8 @@ version(cea_gas_test) {
     import util.msg_service;
 
     int main() {
-	lua_State* L = init_lua_State("sample-data/cea-air5species-gas-model.lua");
+	lua_State* L = init_lua_State();
+	doLuaFile(L, "sample-data/cea-air5species-gas-model.lua");
 	auto gm = new CEAGas(L);
 	lua_close(L);
 

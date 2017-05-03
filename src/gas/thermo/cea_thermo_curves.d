@@ -221,7 +221,8 @@ version(cea_thermo_curves_test) {
 	curve.a[6] = 1.277986024e-16; curve.a[7] = 2.550585618e+06; curve.a[8] = -5.848769753e+02;
 	assert(approxEqual(2022.9958, curve.eval_Cp(7500.0), 1.0e-6), failedUnitTest());
 	// 2. Test full curve
-	auto L = init_lua_State("sample-data/O-thermo.lua");
+	auto L = init_lua_State();
+	doLuaFile(L, "sample-data/O-thermo.lua");
 	lua_getglobal(L, "CEA_coeffs");
 	double R = 8.31451/0.0159994;
 	auto oThermo = createCEAThermo(L, R);

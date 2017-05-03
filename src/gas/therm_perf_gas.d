@@ -87,7 +87,8 @@ public:
 
     this(in string fname)
     {
-	auto L = init_lua_State(fname);
+	auto L = init_lua_State();
+	doLuaFile(L, fname);
 	this(L);
 	lua_close(L);
 	create_species_reverse_lookup();

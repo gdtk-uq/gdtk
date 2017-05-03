@@ -190,7 +190,8 @@ version(ideal_gas_test) {
     import util.msg_service;
 
     int main() {
-	lua_State* L = init_lua_State("sample-data/ideal-air-gas-model.lua");
+	lua_State* L = init_lua_State();
+	doLuaFile(L, "sample-data/ideal-air-gas-model.lua");
 	auto gm = new IdealGas(L);
 	lua_close(L);
 	auto gd = new GasState(1, 0);

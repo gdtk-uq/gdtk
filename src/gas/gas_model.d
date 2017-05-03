@@ -1292,7 +1292,8 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     lua_State* L;
    
     try { 
-        L = init_lua_State(file_name);
+        L = init_lua_State();
+	doLuaFile(L, file_name);
     } catch (Exception e) {
         writeln("ERROR: in function init_gas_model() in gas_model.d");
         writeln("ERROR: There was a problem parsing the input file: ", file_name);

@@ -178,7 +178,8 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
 	super(gmodel); // hang on to a reference to the gas model
 	// We need to pick a number of pieces out of the gas-model file, again.
 	// Although they exist in the GasModel object, they are private.
-	auto L = init_lua_State(fname);
+	auto L = init_lua_State();
+	doLuaFile(L, fname);
 	lua_getglobal(L, "FuelAirMix");
 	// Now, pull out the numeric value parameters.
 	_alpha = getDouble(L, -1, "alpha");
@@ -222,7 +223,8 @@ version(fuel_air_mix_test) {
     import util.msg_service;
 
     int main() {
-	lua_State* L = init_lua_State("sample-data/fuel-air-mix-model.lua");
+	lua_State* L = init_lua_State();
+	doLuaFile(L, "sample-data/fuel-air-mix-model.lua");
 	auto gm = new FuelAirMix(L);
 	lua_close(L);
 	auto gd = new GasState(2, 0);

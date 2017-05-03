@@ -45,7 +45,8 @@ final class ChemistryUpdate : ThermochemicalReactor {
 	_concOut.length = gmodel.n_species;
 
 	// Configure other parameters via Lua state.
-	auto L = init_lua_State(fname);
+	auto L = init_lua_State();
+	doLuaFile(L, fname);
 
 	lua_getglobal(L, "config");
 	lua_getfield(L, -1, "tempLimits");

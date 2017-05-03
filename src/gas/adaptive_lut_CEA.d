@@ -738,7 +738,9 @@ version(adaptive_lut_CEA_test)
     int main() {
 	GasModel gm;
 	
-	try { lua_State* L = init_lua_State("sample-data/cea-adaptive-lut-air-bezier.lua");
+	try {
+	    lua_State* L = init_lua_State();
+	    doLuaFile(L, "sample-data/cea-adaptive-lut-air-bezier.lua");
 	    gm = new AdaptiveLUT(L);
 	}
 	catch (Exception e) {
@@ -797,7 +799,9 @@ version(adaptive_lut_CEA_test)
 
 	
 	// Now do the same test for the linear implementation
-	try { lua_State* L = init_lua_State("sample-data/cea-adaptive-lut-air-linear.lua");
+	try {
+	    lua_State* L = init_lua_State();
+	    doLuaFile(L, "sample-data/cea-adaptive-lut-air-linear.lua");
 	    gm = new AdaptiveLUT(L);
 	}
 	catch (Exception e) {

@@ -148,7 +148,8 @@ version(cea_viscosity_test) {
 
 	/// Next, let's test the creation and functionality
 	/// of a CEAViscosity object.
-	auto L = init_lua_State("sample-data/O2-viscosity.lua");
+	auto L = init_lua_State();
+	doLuaFile(L, "sample-data/O2-viscosity.lua");
 	lua_getglobal(L, "cea");
 	auto o2CEA = createCEAViscosity(L);
 	lua_close(L);

@@ -888,7 +888,8 @@ version(co2gas_sw_test) {
 
 
 	
-	lua_State* L = init_lua_State("sample-data/co2sw-gas-model.lua");
+	lua_State* L = init_lua_State();
+	doLuaFile(L, "sample-data/co2sw-gas-model.lua");
 	gm = new CO2GasSW(L);
 	lua_close(L);
 	gd.p = 7.38e6;

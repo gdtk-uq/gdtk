@@ -16,17 +16,20 @@ import std.conv;
 
 import util.lua;
 
-lua_State* init_lua_State(string fname)
+lua_State* init_lua_State()
 {
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
+    return L;
+}
+
+void doLuaFile(lua_State* L, string fname)
+{
     if ( luaL_dofile(L, fname.toStringz) != 0 ) {
 	string errMsg = to!string(lua_tostring(L, -1));
 	throw new Error(errMsg);
     }
-    return L;
 }
-
 
 string getString(lua_State* L, int tblIdx, string key)
 {
