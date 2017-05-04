@@ -213,6 +213,7 @@ final class GlobalConfig {
     // Presumably, we won't be accessing this particular gas model from the 
     // individual block computations, so that parallel computations for the blocks
     // don't trip over each other.
+    shared static string udf_supervisor_file; // empty to start
     shared static bool include_quality = false; // if true, we include quality in the solution file  
 
     shared static int nBlocks = 0; // Number of blocks in the overall simulation.
@@ -714,12 +715,14 @@ void read_config_file()
     mixin(update_string("title", "title"));
     mixin(update_string("gas_model_file", "gas_model_file"));
     GlobalConfig.gmodel_master = init_gas_model(GlobalConfig.gas_model_file);
+    mixin(update_string("udf_supervisor_file", "udf_supervisor_file"));
     mixin(update_bool("include_quality", "include_quality"));
     mixin(update_int("dimensions", "dimensions"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  title: ", to!string(GlobalConfig.title));
 	writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
+	writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
 	writeln("  include_quality: ", GlobalConfig.include_quality);
 	writeln("  dimensions: ", GlobalConfig.dimensions);
 	writeln("  axisymmetric: ", GlobalConfig.axisymmetric);
@@ -997,6 +1000,9 @@ void read_config_file()
     // the lua_State that holds the user's functions
     // for simulation supervision and for defining grid motion.
     init_master_lua_State();
+    if (GlobalConfig.udf_supervisor_file.length > 0) {
+	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_supervisor_file);
+    }
     if (GlobalConfig.grid_motion == GridMotion.user_defined) {
 	setGridMotionHelperFunctions(GlobalConfig.master_lua_State);
 	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);

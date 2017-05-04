@@ -1011,6 +1011,7 @@ function write_config_file(fileName)
    f:write("{\n")
    f:write(string.format('"title": "%s",\n', config.title))
    f:write(string.format('"gas_model_file": "%s",\n', config.gas_model_file))
+   f:write(string.format('"udf_supervisor_file": "%s",\n', tostring(config.udf_supervisor_file)))
    f:write(string.format('"include_quality": %s,\n',
 			 tostring(config.include_quality)))
    f:write(string.format('"dimensions": %d,\n', config.dimensions))

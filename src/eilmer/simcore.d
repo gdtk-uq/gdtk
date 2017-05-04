@@ -18,6 +18,8 @@ import std.algorithm;
 import std.datetime;
 import std.parallelism;
 
+import util.lua;
+import util.lua_service;
 import fileutil;
 import geom;
 import grid;
@@ -323,6 +325,19 @@ void integrate_in_time(double target_time_as_requested)
 		myblk.myConfig.viscous_factor = viscous_factor; 
 	    }
 	    GlobalConfig.viscous_factor = viscous_factor;
+	}
+	if (GlobalConfig.udf_supervisor_file.length > 0) {
+	    auto L = GlobalConfig.master_lua_State;
+	    lua_getglobal(L, "atTimestepStart");
+	    lua_pushnumber(L, sim_time);
+	    lua_pushnumber(L, step);
+	    int number_args = 2;
+	    int number_results = 0;
+	    if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
+		string errMsg = "ERROR: while running user-defined function atTimestepStart()\n";
+		errMsg ~= to!string(lua_tostring(L, -1));
+		throw new FlowSolverException(errMsg);
+	    }
 	}
 	//
 	// 1. Set the size of the time step to be the minimum allowed for any active block.
