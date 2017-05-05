@@ -1000,11 +1000,11 @@ void read_config_file()
     // the lua_State that holds the user's functions
     // for simulation supervision and for defining grid motion.
     init_master_lua_State();
+    setGridMotionHelperFunctions(GlobalConfig.master_lua_State);
     if (GlobalConfig.udf_supervisor_file.length > 0) {
 	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_supervisor_file);
     }
     if (GlobalConfig.grid_motion == GridMotion.user_defined) {
-	setGridMotionHelperFunctions(GlobalConfig.master_lua_State);
 	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
 } // end read_config_file()
