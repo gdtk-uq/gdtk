@@ -318,7 +318,11 @@ public:
 	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
 	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
 	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
-	    lua_pushcfunction(L, &luafn_sampleFlow); lua_setglobal(L, "sampleFlow");
+	    // Although we make the helper functions available within 
+	    // the block-specific Lua interpreter, we should use 
+	    // those functions only in the context of the master thread.
+	    setSampleHelperFunctions(L);
+	    setGridMotionHelperFunctions(L);
 	}
 	luaL_dofile(blk.bc[which_boundary].myL, luafname.toStringz);
     }
@@ -558,7 +562,11 @@ public:
 	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
 	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
 	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
-	    lua_pushcfunction(L, &luafn_sampleFlow); lua_setglobal(L, "sampleFlow");
+	    // Although we make the helper functions available within 
+	    // the block-specific Lua interpreter, we should use 
+	    // those functions only in the context of the master thread.
+	    setSampleHelperFunctions(L);
+	    setGridMotionHelperFunctions(L);
 	}
 	luaL_dofile(blk.bc[which_boundary].myL, luafname.toStringz);
     }
