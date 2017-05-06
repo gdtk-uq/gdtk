@@ -1000,7 +1000,6 @@ void read_config_file()
     // the lua_State that holds the user's functions
     // for simulation supervision and for defining grid motion.
     init_master_lua_State();
-    setGridMotionHelperFunctions(GlobalConfig.master_lua_State);
     if (GlobalConfig.udf_supervisor_file.length > 0) {
 	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_supervisor_file);
     }
@@ -1258,8 +1257,7 @@ void init_master_lua_State()
 	lua_rawseti(L, -2, i);
     }
     lua_setglobal(L, "blockData");
-
-    // Now set some helper functions
-    lua_pushcfunction(L, &luafn_sampleFlow);
-    lua_setglobal(L, "sampleFlow");
+    //
+    setSampleHelperFunctions(L);
+    setGridMotionHelperFunctions(L);
 } // end init_master_lua_State()

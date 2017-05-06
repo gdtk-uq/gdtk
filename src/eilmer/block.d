@@ -26,6 +26,8 @@ import flowgradients;
 import bc;
 import user_defined_source_terms;
 import conservedquantities;
+import lua_helper;
+import grid_motion;
 
 enum
     nghost = 2; // Number of ghost cells surrounding the active cells.
@@ -116,6 +118,11 @@ public:
 	lua_setglobal(myL, "n_species");
 	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_modes);
 	lua_setglobal(myL, "n_modes");
+	// Although we make the helper functions available within 
+	// the block-specific Lua interpreter, we should use 
+	// those functions only in the context of the master thread.
+	setSampleHelperFunctions(myL);
+	setGridMotionHelperFunctions(myL);
     }
 
     ~this()
