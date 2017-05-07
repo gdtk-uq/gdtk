@@ -100,7 +100,7 @@ public:
 	this(1, 1, 1, label); // these settings will be reset on actually reading the data file
 	switch (fmt) {
 	case "text":
-	    read_from_text_file(fileName);
+	    read_from_text_file(fileName, false);
 	    break;
 	case "gziptext":
 	    read_from_gzip_file(fileName);
@@ -503,9 +503,24 @@ public:
 	} else {
 	    tokens = f.readln().strip().split();
 	}
+	dimensions = 0; // start with none
 	niv = to!int(tokens[0]);
 	njv = to!int(tokens[1]);
 	nkv = to!int(tokens[2]);
+	if (niv > 1 && njv > 1 && nkv > 1) {
+	    dimensions = 3;
+	} else {
+	    if (niv > 1 && njv > 1) {
+		dimensions = 2;
+	    } else {
+		if (niv > 1) { dimensions = 1; }
+	    }
+	}
+	if (dimensions == 0) {
+	    throw new Exception(format("Invalid number of vertices" ~
+				       " niv=%d, njv=%d, nkv=%d.",
+				       niv, njv, nkv));
+	}
 	if (nkv == 1) {
 	    if (njv == 1) {
 		ncells = niv-1;

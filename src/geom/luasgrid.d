@@ -164,6 +164,11 @@ extern(C) int find_nearest_cell_centre_sg(lua_State *L)
  *                             niv=11, njv=21, nkv=11,
  *                             cfList={edge01=cf01, edge32=cf32, edge45=cf45, edge76=cf76},
  *                             label="A-3D-Grid"}
+ *
+ * importedGrid = StructuredGrid:new{file="myFileName.dat", fmt="vtk"}
+ * The format "vtk" is the legacy text format for the VTK system.
+ * Other format values could be "gzip", which is the Eilmer4 native file
+ * or "text", which is essentially the Eilmer3 native file uncompressed.
  */
 extern(C) int newStructuredGrid(lua_State* L)
 {
@@ -174,6 +179,24 @@ extern(C) int newStructuredGrid(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    // Let's first see if we have been given a file that contains the grid.
+    lua_getfield(L, 1, "file".toStringz);
+    if ( lua_isstring(L, -1) ) {
+	string fileName = to!string(lua_tostring(L, -1));
+	lua_pop(L, 1);
+	string fmt = "vtk";
+	lua_getfield(L, 1, "fmt".toStringz);
+	if ( lua_isstring(L, -1) ) { fmt = to!string(lua_tostring(L, -1)); }
+	lua_pop(L, 1);
+	StructuredGrid importedGrid = new StructuredGrid(fileName, fmt);
+	structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, importedGrid);
+	return 1; // our work is done
+    }
+    lua_pop(L, 1);
+    //
+    // If we haven't already obtained a grid from a file,
+    // it's time to try to construct one on top of 
+    // a geometric description of the region.
     Path mypath;
     ParametricSurface psurface;
     ParametricVolume pvolume;
