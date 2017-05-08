@@ -37,6 +37,7 @@ import fvcell;
 import onedinterp;
 import block;
 import bc;
+import grid_motion;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
@@ -141,10 +142,11 @@ public:
 	lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
 	lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
 	lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
-	lua_pushcfunction(myL, &luafn_sampleFlow); lua_setglobal(myL, "sampleFlow");
-	// Note that the sampleFlow function can be expected to work only in serial mode.
+	setSampleHelperFunctions(myL);
+	// Note that the sampleFluidCell function can be expected to work only in serial mode.
 	// Once it is called from a thread, other than the main thread, it may not
 	// have access to properly initialized data for any other block.
+	setGridMotionHelperFunctions(myL);
     } // end init_lua_globals()
 
     override void init_boundary_conditions(JSONValue json_data)

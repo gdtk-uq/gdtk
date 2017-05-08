@@ -7,14 +7,18 @@
 // Lua script.
 //
 // RG & PJ 2015-03-17 -- First hack (with Guiness in hand)
+
 import std.stdio;
 import std.conv;
+import std.string;
 import util.lua;
 
+import grid;
 import gas;
 import fvcell;
 import fvinterface;
 import luaflowstate;
+import globalconfig;
 import globaldata;
 
 // -----------------------------------------------------
@@ -26,15 +30,46 @@ import globaldata;
 
 void setSampleHelperFunctions(lua_State *L)
 {
-    lua_pushcfunction(L, &luafn_sampleFace);
-    lua_setglobal(L, "sampleFace");
-    lua_pushcfunction(L, &luafn_sampleFlow);
-    lua_setglobal(L, "sampleCell");
-    lua_pushcfunction(L, &luafn_sampleFlow);
-    lua_setglobal(L, "sampleFlow"); // alias for sampleCell
+    lua_pushcfunction(L, &luafn_infoFluidBlock);
+    lua_setglobal(L, "infoFluidBlock");
+    lua_pushcfunction(L, &luafn_sampleFluidFace);
+    lua_setglobal(L, "sampleFluidFace");
+    lua_pushcfunction(L, &luafn_sampleFluidFace);
+    lua_setglobal(L, "sampleFace"); // alias for sampleFluidFace; [TODO] remove eventually
+    lua_pushcfunction(L, &luafn_sampleFluidCell);
+    lua_setglobal(L, "sampleFluidCell");
+    lua_pushcfunction(L, &luafn_sampleFluidCell);
+    lua_setglobal(L, "sampleFlow"); // alias for sampleFluidCell; [TODO] remove eventually
 }
 
-extern(C) int luafn_sampleFlow(lua_State *L)
+extern(C) int luafn_infoFluidBlock(lua_State *L)
+{
+    // Expect FluidBlock index on the lua_stack.
+    auto blkId = lua_tointeger(L, 1);
+    auto blk = gasBlocks[blkId];
+    // Return the interesting bits as a table.
+    lua_newtable(L);
+    int tblIdx = lua_gettop(L);
+    lua_pushinteger(L, GlobalConfig.dimensions); lua_setfield(L, tblIdx, "dimensions");
+    lua_pushstring(L, gridTypeName(blk.grid_type).toStringz); lua_setfield(L, tblIdx, "grid_type");
+    // For a structured_grid
+    lua_pushinteger(L, blk.nicell); lua_setfield(L, tblIdx, "nicell");
+    lua_pushinteger(L, blk.njcell); lua_setfield(L, tblIdx, "njcell");
+    lua_pushinteger(L, blk.nkcell); lua_setfield(L, tblIdx, "nkcell");
+    lua_pushinteger(L, blk.imin); lua_setfield(L, tblIdx, "imin");
+    lua_pushinteger(L, blk.jmin); lua_setfield(L, tblIdx, "jmin");
+    lua_pushinteger(L, blk.kmin); lua_setfield(L, tblIdx, "kmin");
+    lua_pushinteger(L, blk.imax); lua_setfield(L, tblIdx, "imax");
+    lua_pushinteger(L, blk.jmax); lua_setfield(L, tblIdx, "jmax");
+    lua_pushinteger(L, blk.kmax); lua_setfield(L, tblIdx, "kmax");
+    // For an unstructured_grid
+    lua_pushinteger(L, blk.cells.length); lua_setfield(L, tblIdx, "ncells");
+    lua_pushinteger(L, blk.faces.length); lua_setfield(L, tblIdx, "nfaces");
+    lua_pushinteger(L, blk.vertices.length); lua_setfield(L, tblIdx, "nvertices");
+    return 1;
+} // end luafn_infoFluidBlock()
+
+extern(C) int luafn_sampleFluidCell(lua_State *L)
 {
     // Get arguments from lua_stack
     auto blkId = lua_tointeger(L, 1);
@@ -48,11 +83,11 @@ extern(C) int luafn_sampleFlow(lua_State *L)
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushCellToTable(L, tblIdx, cell, 0, gasBlocks[blkId].myConfig.gmodel);
+    pushFluidCellToTable(L, tblIdx, cell, 0, gasBlocks[blkId].myConfig.gmodel);
     return 1;
-} // end luafn_sampleFlow()
+} // end luafn_sampleFluidCell()
 
-extern(C) int luafn_sampleFace(lua_State *L)
+extern(C) int luafn_sampleFluidFace(lua_State *L)
 {
     // Get arguments from lua_stack
     string which_face = to!string(lua_tostring(L, 1));
@@ -73,29 +108,29 @@ extern(C) int luafn_sampleFace(lua_State *L)
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushFaceToTable(L, tblIdx, face, 0, gasBlocks[blkId].myConfig.gmodel);
+    pushFluidFaceToTable(L, tblIdx, face, 0, gasBlocks[blkId].myConfig.gmodel);
     return 1;
-} // end luafn_sampleIFace()
+} // end luafn_sampleFluidFace()
 
 // -----------------------------------------------------
 // D code functions
 
 /**
- * Push the interesting data from a cell to a Lua table
+ * Push the interesting data from a FVCell and FVInterface to a Lua table
  *
  */
-void pushCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell, 
-		     size_t gtl, GasModel gmodel)
+void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell, 
+			  size_t gtl, GasModel gmodel)
 {
     lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");
     lua_pushnumber(L, cell.pos[gtl].y); lua_setfield(L, tblIdx, "y");
     lua_pushnumber(L, cell.pos[gtl].z); lua_setfield(L, tblIdx, "z");
     lua_pushnumber(L, cell.volume[gtl]); lua_setfield(L, tblIdx, "vol");
     pushFlowStateToTable(L, tblIdx, cell.fs, gmodel);
-}
+} // end pushFluidCellToTable()
 
-void pushFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face, 
-		     size_t gtl, GasModel gmodel)
+void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face, 
+			  size_t gtl, GasModel gmodel)
 {
     lua_pushnumber(L, face.pos.x); lua_setfield(L, tblIdx, "x");
     lua_pushnumber(L, face.pos.y); lua_setfield(L, tblIdx, "y");
@@ -115,7 +150,7 @@ void pushFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face,
     lua_pushnumber(L, face.gvel.y); lua_setfield(L, tblIdx, "gvely");
     lua_pushnumber(L, face.gvel.z); lua_setfield(L, tblIdx, "gvelz");
     pushFlowStateToTable(L, tblIdx, face.fs, gmodel);
-}
+} // end pushFluidFaceToTable()
 
 
 

@@ -32,7 +32,7 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, Ga
     // Push cell data into an args table and onto TOS
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushCellToTable(L, tblIdx, cell, gtl, gmodel);
+    pushFluidCellToTable(L, tblIdx, cell, gtl, gmodel);
     // Call sourceTerms function with (t, args)
     int number_args = 2;
     int number_results = 1;

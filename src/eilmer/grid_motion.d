@@ -1,6 +1,8 @@
 // Authors: RG, PJ & KD
 // Date: 2015-11-20
 
+module grid_motion;
+
 import std.string;
 import std.conv;
 
