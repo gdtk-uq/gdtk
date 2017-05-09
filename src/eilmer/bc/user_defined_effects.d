@@ -2,6 +2,16 @@
 //
 // Authors: RG & PJ
 // Date: 2015-03-14
+//       2017-05-09 clean up Lua interpreter initialization.
+//
+// Notes:
+// There is one Lua interpreter for the BoundaryCondition object
+// and each effect may initialize the interpreter if it is sees
+// that the interpreter has not yet been initialized.
+// The consequence of this initialize when needed approach is that
+// only one of the effects to do the initialization,
+// using the file name that it possesses.  Thus, you need to have
+// all of your user-defined effects within the one file.
 
 import std.string;
 import std.stdio;
@@ -9,7 +19,6 @@ import util.lua;
 import util.lua_service;
 import gas.gas_model;
 import gas.luagas_model;
-import nm.luabbla;
 
 import geom;
 import simcore;
@@ -23,8 +32,6 @@ import ghost_cell_effect;
 import boundary_interface_effect;
 import boundary_flux_effect;
 import luaflowstate;
-import lua_helper;
-import grid_motion;
 import bc;
 
 class UserDefinedGhostCell : GhostCellEffect {
@@ -38,34 +45,8 @@ public:
     override void post_bc_construction()
     {
 	if (blk.bc[which_boundary].myL == null) {
-	    blk.bc[which_boundary].myL = luaL_newstate();
-	    auto L = blk.bc[which_boundary].myL;
-	    luaL_openlibs(L);
-	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
-	    registerGasModel(L, LUA_GLOBALSINDEX);
-	    registerBBLA(L);
-	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
-	    lua_setglobal(L, "gmodel");
-	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
-	    lua_setglobal(L, "n_species");
-	    lua_pushinteger(L, blk.myConfig.gmodel.n_modes);
-	    lua_setglobal(L, "n_modes");
-	    lua_pushinteger(L, blk.nicell); lua_setglobal(L, "nicell");
-	    lua_pushinteger(L, blk.njcell); lua_setglobal(L, "njcell");
-	    lua_pushinteger(L, blk.nkcell); lua_setglobal(L, "nkcell");
-	    lua_pushinteger(L, Face.north); lua_setglobal(L, "north");
-	    lua_pushinteger(L, Face.east); lua_setglobal(L, "east");
-	    lua_pushinteger(L, Face.south); lua_setglobal(L, "south");
-	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
-	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
-	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
-	    // Although we make the helper functions available within 
-	    // the block-specific Lua interpreter, we should use 
-	    // those functions only in the context of the master thread.
-	    setSampleHelperFunctions(L);
-	    setGridMotionHelperFunctions(L);
+	    blk.bc[which_boundary].init_lua_State(luafname);
 	}
-	luaL_dofile(blk.bc[which_boundary].myL, luafname.toStringz);
     }
     override string toString() const
     {
@@ -297,34 +278,8 @@ public:
     override void post_bc_construction()
     {
 	if (blk.bc[which_boundary].myL == null) {
-	    blk.bc[which_boundary].myL = luaL_newstate();
-	    auto L = blk.bc[which_boundary].myL;
-	    luaL_openlibs(L);
-	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
-	    registerGasModel(L, LUA_GLOBALSINDEX);
-	    registerBBLA(L);
-	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
-	    lua_setglobal(L, "gmodel");
-	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
-	    lua_setglobal(L, "n_species");
-	    lua_pushinteger(L, blk.myConfig.gmodel.n_modes);
-	    lua_setglobal(L, "n_modes");
-	    lua_pushinteger(L, blk.nicell); lua_setglobal(L, "nicell");
-	    lua_pushinteger(L, blk.njcell); lua_setglobal(L, "njcell");
-	    lua_pushinteger(L, blk.nkcell); lua_setglobal(L, "nkcell");
-	    lua_pushinteger(L, Face.north); lua_setglobal(L, "north");
-	    lua_pushinteger(L, Face.east); lua_setglobal(L, "east");
-	    lua_pushinteger(L, Face.south); lua_setglobal(L, "south");
-	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
-	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
-	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
-	    // Although we make the helper functions available within 
-	    // the block-specific Lua interpreter, we should use 
-	    // those functions only in the context of the master thread.
-	    setSampleHelperFunctions(L);
-	    setGridMotionHelperFunctions(L);
+	    blk.bc[which_boundary].init_lua_State(luafname);
 	}
-	luaL_dofile(blk.bc[which_boundary].myL, luafname.toStringz);
     }
 
     override string toString() const
@@ -541,35 +496,9 @@ public:
     override void post_bc_construction()
     {
 	if (blk.bc[which_boundary].myL == null) {
-	    blk.bc[which_boundary].myL = luaL_newstate();
-	    auto L = blk.bc[which_boundary].myL;
-	    luaL_openlibs(L);
-	    lua_pushinteger(L, blk.id); lua_setglobal(L, "blkId");
-	    registerGasModel(L, LUA_GLOBALSINDEX);
-	    registerBBLA(L);
-	    pushObj!(GasModel, GasModelMT)(L, blk.myConfig.gmodel);
-	    lua_setglobal(L, "gmodel");
-	    lua_pushinteger(L, blk.myConfig.gmodel.n_species);
-	    lua_setglobal(L, "n_species");
-	    lua_pushinteger(L, blk.myConfig.gmodel.n_modes);
-	    lua_setglobal(L, "n_modes");
-	    lua_pushinteger(L, blk.nicell); lua_setglobal(L, "nicell");
-	    lua_pushinteger(L, blk.njcell); lua_setglobal(L, "njcell");
-	    lua_pushinteger(L, blk.nkcell); lua_setglobal(L, "nkcell");
-	    lua_pushinteger(L, Face.north); lua_setglobal(L, "north");
-	    lua_pushinteger(L, Face.east); lua_setglobal(L, "east");
-	    lua_pushinteger(L, Face.south); lua_setglobal(L, "south");
-	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
-	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
-	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
-	    // Although we make the helper functions available within 
-	    // the block-specific Lua interpreter, we should use 
-	    // those functions only in the context of the master thread.
-	    setSampleHelperFunctions(L);
-	    setGridMotionHelperFunctions(L);
+	    blk.bc[which_boundary].init_lua_State(luafname);
 	}
-	luaL_dofile(blk.bc[which_boundary].myL, luafname.toStringz);
-    }
+   }
     override string toString() const
     {
 	return "UserDefinedFluxEffect(fname=" ~ luafname ~ ", luaFnName=" ~ luaFnName ~ ")";

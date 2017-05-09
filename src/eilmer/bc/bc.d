@@ -13,7 +13,10 @@ import std.stdio;
 import std.string;
 
 import util.lua;
+import util.lua_service;
 import gas;
+import gas.luagas_model;
+import nm.luabbla;
 import json_helper;
 import geom;
 import sgrid;
@@ -30,6 +33,8 @@ import ghost_cell_effect;
 import boundary_interface_effect;
 import boundary_flux_effect;
 import user_defined_effects;
+import lua_helper;
+import grid_motion;
 
 BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -194,6 +199,46 @@ public:
 	foreach ( bfe; postDiffFluxAction ) bfe.apply(t, gtl, ftl);
     }
 
+    // The Lua interpreter for the user-defined boundary condition belongs to
+    // the boundary condition.  User-defined GhostCellEffect or 
+    // BoundaryInterfaceEffect objects may need to initialize it. 
+    void init_lua_State(string luafname)
+    {
+	myL = luaL_newstate();
+	luaL_openlibs(myL);
+	// Top-level, generic data.
+	lua_pushinteger(myL, blk.id); lua_setglobal(myL, "blkId");
+	registerGasModel(myL, LUA_GLOBALSINDEX);
+	registerBBLA(myL);
+	pushObj!(GasModel, GasModelMT)(myL, blk.myConfig.gmodel);
+	lua_setglobal(myL, "gmodel");
+	lua_pushinteger(myL, blk.myConfig.gmodel.n_species);
+	lua_setglobal(myL, "n_species");
+	lua_pushinteger(myL, blk.myConfig.gmodel.n_modes);
+	lua_setglobal(myL, "n_modes");
+	// Structured-block-specific data
+	lua_pushinteger(myL, blk.nicell); lua_setglobal(myL, "nicell");
+	lua_pushinteger(myL, blk.njcell); lua_setglobal(myL, "njcell");
+	lua_pushinteger(myL, blk.nkcell); lua_setglobal(myL, "nkcell");
+	lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
+	lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
+	lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
+	lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
+	lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
+	lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
+	// Boundary-specific data
+	lua_pushinteger(myL, which_boundary); lua_setglobal(myL, "boundaryId");
+	lua_pushstring(myL, label.toStringz); lua_setglobal(myL, "label");
+	lua_pushstring(myL, type.toStringz); lua_setglobal(myL, "type");
+	lua_pushstring(myL, group.toStringz); lua_setglobal(myL, "group");
+	// Although we make the helper functions available within 
+	// the boundary-condition-specific Lua interpreter, we should use 
+	// those functions only in the context of the master thread.
+	setSampleHelperFunctions(myL);
+	setGridMotionHelperFunctions(myL);
+	// Finally, do the actual user-supplied file.
+	luaL_dofile(myL, luafname.toStringz);
+    }
 } // end class BoundaryCondition
 
 

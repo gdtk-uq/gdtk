@@ -51,6 +51,7 @@ extern(C) int luafn_infoFluidBlock(lua_State *L)
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
     lua_pushinteger(L, GlobalConfig.dimensions); lua_setfield(L, tblIdx, "dimensions");
+    lua_pushstring(L, blk.label.toStringz); lua_setfield(L, tblIdx, "label");
     lua_pushstring(L, gridTypeName(blk.grid_type).toStringz); lua_setfield(L, tblIdx, "grid_type");
     // For a structured_grid
     lua_pushinteger(L, blk.nicell); lua_setfield(L, tblIdx, "nicell");
