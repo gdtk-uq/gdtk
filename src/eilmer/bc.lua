@@ -505,7 +505,7 @@ function WallBC_RotatingSurface_Adiabatic:new(o)
    o.centre.y = o.centre.y or 0.0
    o.centre.z = o.centre.z or 0.0
    o.preSpatialDerivAction = { CopyCellData:new(),
-			       TranslatingSurface:new{r_omega=o.r_omega, centre=o.centre} }
+			       RotatingSurface:new{r_omega=o.r_omega, centre=o.centre} }
    if config.turbulence_model == "k_omega" then
       o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
    end
