@@ -147,6 +147,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("max_mu_t_factor", "max_mu_t_factor"));
     mixin(get_double_field("transient_mu_t_factor", "transient_mu_t_factor"));
     //
+    mixin(get_enum_field("tci_model", "tci_model", "tci_model_from_name"));
+    //
     mixin(get_bool_field("reacting", "reacting"));
     mixin(get_string_field("reactions_file", "reactions_file"));
     mixin(get_double_field("reaction_time_delay", "reaction_time_delay"));
@@ -269,6 +271,8 @@ extern(C) int configGet(lua_State* L)
     case "turbulence_schmidt_number": lua_pushnumber(L, GlobalConfig.turbulence_schmidt_number); break;
     case "max_mu_t_factor": lua_pushnumber(L, GlobalConfig.max_mu_t_factor); break;
     case "transient_mu_t_factor": lua_pushnumber(L, GlobalConfig.transient_mu_t_factor); break;
+	//
+    case "tci_model": lua_pushstring(L, tci_model_name(GlobalConfig.tci_model).toStringz); break;
 	//
     case "reacting": lua_pushboolean(L, GlobalConfig.reacting); break;
     case "reactions_file": lua_pushstring(L, GlobalConfig.reactions_file.toStringz); break;

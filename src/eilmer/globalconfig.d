@@ -77,6 +77,29 @@ TurbulenceModel turbulence_model_from_name(string name)
     }
 } // end turbulence_model_from_name()
 
+
+// Symbolic names for JJ Hoste's Turbulence-Chemistry-Interaction Model
+enum TCIModel { none, edm, edc }
+string tci_model_name(TCIModel tcim)
+{
+    final switch (tcim) {
+    case TCIModel.none: return "none";
+    case TCIModel.edm: return "edm";
+    case TCIModel.edc: return "edc";
+    }
+} // end tci_model_name()
+
+TCIModel tci_model_from_name(string name)
+{
+    switch (name) {
+    case "none": return TCIModel.none;
+    case "edm": return TCIModel.edm;
+    case "edc": return TCIModel.edc;
+    default: return TCIModel.none;
+    }
+} // end tci_model_from_name()
+
+
 enum SolidDomainCoupling { tight, loose, lagged }
 string solidDomainCouplingName(SolidDomainCoupling i)
 {
@@ -403,6 +426,8 @@ final class GlobalConfig {
     shared static double ignition_time_stop = 0.0;
     static IgnitionZone[] ignition_zones;
     shared static bool ignition_zone_active = false;
+    // JJ Hoste's Turbulence-Chemistry Interaction model
+    shared static TCIModel tci_model = TCIModel.none;
 
     // Parameters controlling other simulation options
     //
@@ -542,6 +567,7 @@ public:
     double T_frozen;
     double T_frozen_energy;
     BlockZone[] reaction_zones;
+    TCIModel tci_model;
 
     double ignition_time_start;
     double ignition_time_stop;
@@ -627,6 +653,7 @@ public:
 	T_frozen = GlobalConfig.T_frozen;
 	T_frozen_energy = GlobalConfig.T_frozen_energy;
 	foreach (rz; GlobalConfig.reaction_zones) { reaction_zones ~= new BlockZone(rz); }
+	tci_model = GlobalConfig.tci_model;
 	//
 	ignition_time_start = GlobalConfig.ignition_time_start;
 	ignition_time_stop = GlobalConfig.ignition_time_stop;
@@ -868,12 +895,14 @@ void read_config_file()
     mixin(update_double("reaction_time_delay", "reaction_time_delay"));
     mixin(update_double("T_frozen", "T_frozen"));
     mixin(update_double("T_frozen_energy", "T_frozen_energy"));
+    mixin(update_enum("tci_model", "tci_model", "tci_model_from_name"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  reacting: ", GlobalConfig.reacting);
 	writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
 	writeln("  reaction_time_delay: ", GlobalConfig.reaction_time_delay);
 	writeln("  T_frozen: ", GlobalConfig.T_frozen);
 	writeln("  T_frozen_energy: ", GlobalConfig.T_frozen_energy);
+	writeln("  tci_model: ", tci_model_name(GlobalConfig.tci_model));
     }
 
     // Parameters controlling other simulation options

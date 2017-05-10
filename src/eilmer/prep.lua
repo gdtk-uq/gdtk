@@ -1071,8 +1071,6 @@ function write_config_file(fileName)
    f:write(string.format('"separate_update_for_k_omega_source": %s,\n', 
 			 tostring(config.separate_update_for_k_omega_source)))
 
-   f:write(string.format('"turbulence_model": "%s",\n',
-			 string.lower(config.turbulence_model)))
    f:write(string.format('"turbulence_prandtl_number": %.18e,\n',
 			 config.turbulence_prandtl_number))
    f:write(string.format('"turbulence_schmidt_number": %.18e,\n',
@@ -1088,6 +1086,7 @@ function write_config_file(fileName)
    f:write(string.format('"reaction_time_delay": %.18e,\n', config.reaction_time_delay))
    f:write(string.format('"T_frozen": %.18e,\n', config.T_frozen))
    f:write(string.format('"T_frozen_energy": %.18e,\n', config.T_frozen_energy))
+   f:write(string.format('"tci_model": "%s",\n', string.lower(config.tci_model)))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nblock": %d,\n', #(fluidBlocks)))
