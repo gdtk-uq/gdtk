@@ -1375,7 +1375,7 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
 	reactor = new UpdateAB(fileName, gmodel);
     }
     if ((cast(IdealDissociatingGas) gmodel) !is null) {
-	reactor = new UpdateA2A(fileName, gmodel);
+	reactor = new UpdateIDG(fileName, gmodel);
     }
     if ((cast(FuelAirMix) gmodel) !is null) {
 	reactor = new MixingLimitedUpdate(fileName, gmodel);

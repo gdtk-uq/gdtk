@@ -36,29 +36,29 @@ public:
 	_n_species = 2;
 	_n_modes = 0;
 	_species_names.length = 2;
-	_species_names[0] = "A";
-	_species_names[1] = "B";
 	// Bring table to TOS
 	lua_getglobal(L, "IdealDissociatingGas");
 	// [TODO] test that we actually have the table as item -1
-	// Now, pull out the remaining numeric value parameters.
-	_Rgas = getDouble(L, -1, "R");
+	// Now, pull out the remaining value parameters.
+	_species_names[0] = getString(L, -1, "molecule");
+	_species_names[1] = getString(L, -1, "atom");
+	_W = getDouble(L, -1, "W"); // molecular weight, g/mole
+	_Rnn = R_universal / _W * 1000; // gas constant for molecule, J/kg/K
 	_mol_masses.length = 2;
-	_mol_masses[0] = R_universal / _Rgas;
-	_mol_masses[1] = _mol_masses[0];
-	_gamma = getDouble(L, -1, "gamma");
-	// Heat of reaction
-	_q = getDouble(L, -1, "q");
-	_alpha = getDouble(L, -1, "alpha");
-	_Ti = getDouble(L, -1, "Ti");
+	_mol_masses[0] = _W/1000; // kg/mole
+	_mol_masses[1] = _W/2000; // kg/mole
+	_T_d = getDouble(L, -1, "T_d"); // characteristic dissociation temperature, K
+	_rho_d = getDouble(L, -1, "rho_d"); // characteristic density, g/cm^3
+	// Rate constants follow.
+	_C1 = getDouble(L, -1, "C1"); 
+	_n1 = getDouble(L, -1, "n1");
+	_C2 = getDouble(L, -1, "C2");
+	_n2 = getDouble(L, -1, "n2");
 	lua_pop(L, 1); // dispose of the table
 	// Entropy reference, same as for IdealAir
 	_s1 = 0.0;
 	_T1 = 298.15;
 	_p1 = 101.325e3;
-	// Compute derived parameters
-	_Cv = _Rgas / (_gamma - 1.0);
-	_Cp = _Rgas*_gamma/(_gamma - 1.0);
 	create_species_reverse_lookup();
     } // end constructor
 
@@ -66,75 +66,92 @@ public:
     {
 	char[] repr;
 	repr ~= "IdealDissociatingGas =(";
-	repr ~= "species=[\"A\", \"B\"]";
+	repr ~= "species=[\""~_species_names[0];
+	repr ~= "\", \""~_species_names[1]~"\"]";
+	repr ~= ", W=", to!string(_W);
 	repr ~= ", Mmass=[" ~ to!string(_mol_masses[0]);
 	repr ~= "," ~ to!string(_mol_masses[1]) ~ "]";
-	repr ~= ", gamma=" ~ to!string(_gamma);
-	repr ~= ", q=" ~ to!string(_q);
-	repr ~= ", alpha=" ~ to!string(_alpha);
-	repr ~= ", Ti=" ~ to!string(_Ti);
+	repr ~= ", T_d=" ~ to!string(_T_d);
+	repr ~= ", rho_d=" ~ to!string(_rho_d);
+	repr ~= ", C1=" ~ to!string(_C1);
+	repr ~= ", n1=" ~ to!string(_n1);
+	repr ~= ", C2=" ~ to!string(_C2);
+	repr ~= ", n2=" ~ to!string(_n2);
 	repr ~= ")";
 	return to!string(repr);
     }
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	Q.rho = Q.p/(Q.Ttr*_Rgas);
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
+	double alpha = Q.massf[1];
+	Q.rho = Q.p/(Q.Ttr*_Rnn*(1+alpha));
+	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.Ttr;
     }
     override void update_thermo_from_rhoe(GasState Q) const
     {
-	Q.Ttr = (Q.u + Q.massf[1]*_q)/_Cv;
-	Q.p = Q.rho*_Rgas*Q.Ttr;
+	double alpha = Q.massf[1];
+	Q.Ttr = (Q.u - _Rnn*alpha*_T_d)/(_Rnn*3);
+	Q.p = Q.rho*(1+alpha)*_Rnn*Q.Ttr;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	Q.p = Q.rho*_Rgas*Q.Ttr;
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
+	double alpha = Q.massf[1];
+	Q.p = Q.rho*(1+alpha)*_Rnn*Q.Ttr;
+	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.Ttr;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	Q.Ttr = Q.p/(Q.rho*_Rgas);
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
+	double alpha = Q.massf[1];
+	Q.Ttr = Q.p/(Q.rho*(1+alpha)*_Rnn*Q.Ttr);
+	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.Ttr;
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
+	double alpha = Q.massf[1];
+	Q.Ttr = _T1; // [TODO] [FIXME]
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	Q.Ttr = h / _Cp;
-	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
+	double alpha = Q.massf[1];
+	Q.Ttr = _T1; // [TODO] [FIXME]
+	Q.p = _p1;  // [TODO] [FIXME]
 	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
+	// For frozen composition.
+	double alpha = Q.massf[1];
+	double gamma = (4+alpha)/3.0;
+	double Rgas = (1+alpha)*_Rnn;
+	Q.a = sqrt(gamma*Rgas*Q.Ttr);
     }
     override void update_trans_coeffs(GasState Q)
     {
-	// The gas is inviscid for the test cases described in the AIAA paper.
+	// The gas is inviscid.
 	Q.mu = 0.0;
 	Q.k = 0.0;
     }
     override double dudT_const_v(in GasState Q) const
     {
-	return _Cv;
+	double alpha = Q.massf[1];
+	return _Rnn*3; // frozen alpha
     }
     override double dhdT_const_p(in GasState Q) const
     {
-	return _Cp;
+	double alpha = Q.massf[1];
+	return _Rnn*(4+alpha); // frozen alpha
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	double R = gas_constant(Q);
-	return R*Q.Ttr;
+	double alpha = Q.massf[1];
+	return _Rnn*(1+alpha)*Q.Ttr; // frozen alpha
     }
     override double gas_constant(in GasState Q) const
     {
-	return _Rgas;
+	double alpha = Q.massf[1];
+	return (1+alpha)*_Rnn;
     }
     override double internal_energy(in GasState Q) const
     {
@@ -146,26 +163,22 @@ public:
     }
     override double entropy(in GasState Q) const
     {
-	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
+	return _s1; // [TODO] [FIXME]
     }
 
 private:
     // Thermodynamic constants
-    double _Rgas; // J/kg/K
-    double _gamma;   // ratio of specific heats
-    double _Cv; // J/kg/K
-    double _Cp; // J/kg/K
+    double _W; // Molecular mass in g/mole
+    double _Rnn; // gas constant for molecule in J/kg/K
+    double _T_d; // characteristic dissociation temperature, K
+    double _rho_d; // characteristic density, g/cm^3
+    // Rate constants
+    double _C1, _n1, _C2, _n2;
     // Reference values for entropy
     double _s1;  // J/kg/K
     double _T1;  // K
     double _p1;  // Pa
     // Molecular transport coefficents are zero.
-    // Heat of reaction.
-    double _q; // J/kg
-    // Reaction rate constant
-    double _alpha; // 1/s
-    // Ignition temperature
-    double _Ti; // degrees K
 } // end class IdealDissociatingGas
 
 
@@ -174,7 +187,7 @@ private:
 // It is included here because it is a small amount of code and
 // it is specific to this particular gas model.
 
-final class UpdateA2A : ThermochemicalReactor {
+final class UpdateIDG : ThermochemicalReactor {
     
     this(string fname, GasModel gmodel)
     {
@@ -184,9 +197,14 @@ final class UpdateA2A : ThermochemicalReactor {
 	auto L = init_lua_State();
 	doLuaFile(L, fname);
 	lua_getglobal(L, "IdealDissociatingGas");
-	// Now, pull out the numeric value parameters.
-	_alpha = getDouble(L, -1, "alpha");
-	_Ti = getDouble(L, -1, "Ti");
+	_W = getDouble(L, -1, "W"); // molecular weight, g/mole
+	_T_d = getDouble(L, -1, "T_d"); // characteristic dissociation temperature, K
+	_rho_d = getDouble(L, -1, "rho_d"); // characteristic density, g/cm^3
+	// Rate constants follow.
+	_C1 = getDouble(L, -1, "C1"); 
+	_n1 = getDouble(L, -1, "n1");
+	_C2 = getDouble(L, -1, "C2");
+	_n2 = getDouble(L, -1, "n2");
 	lua_pop(L, 1); // dispose of the table
 	lua_close(L);
     }
@@ -194,17 +212,8 @@ final class UpdateA2A : ThermochemicalReactor {
     override void opCall(GasState Q, double tInterval, ref double dtSuggest,
 			 ref double[] params)
     {
-	if (Q.Ttr > _Ti) {
-	    // We are above the ignition point, proceed with reaction.
-	    double massfA = Q.massf[0];
-	    double massfB = Q.massf[1];
-	    // This gas has a very simple reaction scheme that can be integrated explicitly.
-	    massfA = massfA*exp(-_alpha*tInterval);
-	    massfB = 1.0 - massfA;
-	    Q.massf[0] = massfA; Q.massf[1] = massfB;
-	} else {
-	    // do nothing, since we are below the ignition temperature
-	}
+	double alpha = Q.massf[1];
+	//
 	// Since the internal energy and density in the (isolated) reactor is fixed,
 	// we need to evaluate the new temperature, pressure, etc.
 	_gmodel.update_thermo_from_rhoe(Q);
@@ -212,11 +221,13 @@ final class UpdateA2A : ThermochemicalReactor {
     }
 
 private:
-    // Reaction rate constant
-    double _alpha; // 1/s
-    // Ignition temperature
-    double _Ti; // degrees K
-} // end class UpdateA2A
+    // Thermodynamic constants
+    double _W; // Molecular mass in g/mole
+    double _T_d; // characteristic dissociation temperature, K
+    double _rho_d; // characteristic density, g/cm^3
+    // Rate constants
+    double _C1, _n1, _C2, _n2;
+} // end class UpdateIDG
 
 
 // Unit test of the basic gas model...
@@ -227,30 +238,31 @@ version(ideal_dissociating_gas_test) {
 
     int main() {
 	lua_State* L = init_lua_State();
-	doLuaFile(L, "sample-data/ideal-dissociating-gas-model.lua");
+	doLuaFile(L, "sample-data/idg-nitrogen.lua");
 	auto gm = new IdealDissociatingGas(L);
 	lua_close(L);
 	auto gd = new GasState(2, 0);
 	gd.p = 1.0e5;
 	gd.Ttr = 300.0;
-	gd.massf[0] = 0.75; gd.massf[1] = 0.25;
-	assert(approxEqual(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
+	gd.massf[0] = 1.0; gd.massf[1] = 0.0;
+	double Rgas = R_universal / 0.028;
+	assert(approxEqual(gm.R(gd), Rgas, 1.0e-4), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 2, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
 
 	gm.update_thermo_from_pT(gd);
 	gm.update_sound_speed(gd);
-	double my_rho = 1.0e5 / (287.0 * 300.0);
+	double my_rho = 1.0e5 / (Rgas * 300.0);
 	assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
 	double my_Cv = gm.dudT_const_v(gd);
-	double my_u = my_Cv*300.0 - 0.25*300000.0; 
+	double my_u = my_Cv*300.0; 
 	assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
 	double my_Cp = gm.dhdT_const_p(gd);
-	double my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
+	double my_a = sqrt(my_Cp/my_Cv*Rgas*300.0);
 	assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());

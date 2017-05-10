@@ -60,6 +60,10 @@ test powers-aslam-gas-test {Testing powers_aslam_gas.d} -body {
     exec ./powers_aslam_gas_test
 } -result {} -returnCodes {0}
 
+test ideal-dissociating-gas-test {Testing ideal_dissociating_gas.d} -body {
+    exec ./ideal_dissociating_gas_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"
