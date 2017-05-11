@@ -8,6 +8,8 @@
  *
  * Authors: Peter J., Katrina Sklavos and Rowan G.
  * Version: 2017-04-22: initial shell copied from powers-aslam-gas module.
+ *          2017-04-11: Filled in IDG thermo details as noted in 
+ *                      PJ's workbooks 2017-04-22 through 2017-05-11
  */
 
 module gas.ideal_dissociating_gas;
@@ -55,11 +57,9 @@ public:
 	_C2 = getDouble(L, -1, "C2");
 	_n2 = getDouble(L, -1, "n2");
 	lua_pop(L, 1); // dispose of the table
-	// Entropy reference, same as for IdealAir
-	_s1 = 0.0;
-	_T1 = 298.15;
-	_p1 = 101.325e3;
 	create_species_reverse_lookup();
+	// Reference conditions for entropy.
+	_Tref = 298.15; _pref = 101.325e3;
     } // end constructor
 
     override string toString() const
@@ -108,15 +108,17 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
+	// For frozen composition.
 	double alpha = Q.massf[1];
-	Q.Ttr = _T1; // [TODO] [FIXME]
+	Q.Ttr = _Tref * exp((1.0/((4+alpha)*_Rnn))*(s+(1+alpha)*_Rnn*log(Q.p/_pref)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
+	// For frozen composition.
 	double alpha = Q.massf[1];
-	Q.Ttr = _T1; // [TODO] [FIXME]
-	Q.p = _p1;  // [TODO] [FIXME]
+	Q.Ttr = (h - _Rnn*alpha*_T_d) / ((4+alpha)*_Rnn);
+	Q.p = _pref * exp(((4+alpha)*_Rnn*log(Q.Ttr/_Tref)-s)/((4+alpha)*_Rnn));
 	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
@@ -151,7 +153,7 @@ public:
     override double gas_constant(in GasState Q) const
     {
 	double alpha = Q.massf[1];
-	return (1+alpha)*_Rnn;
+	return _Rnn*(1+alpha);
     }
     override double internal_energy(in GasState Q) const
     {
@@ -163,7 +165,10 @@ public:
     }
     override double entropy(in GasState Q) const
     {
-	return _s1; // [TODO] [FIXME]
+	// Presume that we have a fixed composition mixture and that
+	// Entropy for each species is zero at reference condition.
+	double alpha = Q.massf[1];
+	return (4+alpha)*log(Q.Ttr/_Tref) - (1+alpha)*_Rnn*log(Q.p/_pref);
     }
 
 private:
@@ -172,13 +177,10 @@ private:
     double _Rnn; // gas constant for molecule in J/kg/K
     double _T_d; // characteristic dissociation temperature, K
     double _rho_d; // characteristic density, g/cm^3
+    double _Tref, _pref; // Reference conditions for entropy
     // Rate constants
     double _C1, _n1, _C2, _n2;
-    // Reference values for entropy
-    double _s1;  // J/kg/K
-    double _T1;  // K
-    double _p1;  // Pa
-    // Molecular transport coefficents are zero.
+   // Molecular transport coefficents are zero.
 } // end class IdealDissociatingGas
 
 
