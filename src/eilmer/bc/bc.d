@@ -228,9 +228,9 @@ public:
 	lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
 	// Boundary-specific data
 	lua_pushinteger(myL, which_boundary); lua_setglobal(myL, "boundaryId");
-	lua_pushstring(myL, label.toStringz); lua_setglobal(myL, "label");
-	lua_pushstring(myL, type.toStringz); lua_setglobal(myL, "type");
-	lua_pushstring(myL, group.toStringz); lua_setglobal(myL, "group");
+	lua_pushstring(myL, label.toStringz); lua_setglobal(myL, "boundaryLabel");
+	lua_pushstring(myL, type.toStringz); lua_setglobal(myL, "boundaryType");
+	lua_pushstring(myL, group.toStringz); lua_setglobal(myL, "boundaryGroup");
 	// Although we make the helper functions available within 
 	// the boundary-condition-specific Lua interpreter, we should use 
 	// those functions only in the context of the master thread.
