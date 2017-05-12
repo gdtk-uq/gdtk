@@ -852,7 +852,13 @@ function makeFillConditionFn(flowSol)
    local sp = gm:speciesName(0)
    local dummyFS = FlowState:new{p=1.0e5, T=300, massf={[sp]=1}}
    function fillFn(x, y, z)
+      -- We try to find an enclosing cell.
       cell = flowSol:find_enclosing_cell{x=x, y=y, z=z}
+      -- If that fails, we'll just grab a 'nearest' cell.
+      -- This should never fail.
+      if not cell.ib then
+	 cell = flowSol:find_nearest_cell_centre{x=x, y=y, z=z}
+      end
       cell.fmt = "FlowState"
       dummyFS:fromTable(flowSol:get_cell_data(cell))
       return dummyFS
