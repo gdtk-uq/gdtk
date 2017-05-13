@@ -1077,6 +1077,8 @@ function write_config_file(fileName)
    f:write(string.format('"separate_update_for_k_omega_source": %s,\n', 
 			 tostring(config.separate_update_for_k_omega_source)))
 
+   f:write(string.format('"turbulence_model": "%s",\n',
+			 string.lower(config.turbulence_model)))
    f:write(string.format('"turbulence_prandtl_number": %.18e,\n',
 			 config.turbulence_prandtl_number))
    f:write(string.format('"turbulence_schmidt_number": %.18e,\n',
