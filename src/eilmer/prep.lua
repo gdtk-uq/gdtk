@@ -292,11 +292,11 @@ function SBlock2UBlock(blk)
 			 bcList=bcList}
    local newId = ublk.id
    -- Swap blocks in global list
-   blocks[origId+1], blocks[newId+1] = blocks[newId+1], blocks[origId+1]
+   fluidBlocks[origId+1], fluidBlocks[newId+1] = fluidBlocks[newId+1], fluidBlocks[origId+1]
    -- Fix id of ublk
-   blocks[origId+1].id = origId
+   fluidBlocks[origId+1].id = origId
    -- Now remove original SBlock (which is now in pos ublk.id+1)
-   table.remove(blocks, newId+1)
+   table.remove(fluidBlocks, newId+1)
 end
 
 function closeEnough(vA, vB, tolerance)
