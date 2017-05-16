@@ -42,7 +42,7 @@ patch1 = CoonsPatch:new{p00=b0, p10=c0, p11=c1, p01=b1}
 rcfx = RobertsFunction:new{end0=true, end1=false, beta=1.2}
 rcfy = RobertsFunction:new{end0=true, end1=false, beta=1.1}
 ni0 = 200; nj0 = 40 -- We'll scale discretization off these values
-factor = 2.0
+factor = 1.0
 ni0 = math.floor(ni0*factor); nj0 = math.floor(nj0*factor)
 grid0 = StructuredGrid:new{psurface=patch0, niv=ni0+1, njv=nj0+1,
 			   cfList={north=rcfx,east=rcfy,south=rcfx,west=rcfy}}
@@ -58,7 +58,7 @@ tail = FluidBlockArray{grid=grid1, nib=1, njb=2,
 		       fillCondition=initial, label="tail",
 		       bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
 			       south=WallBC_NoSlip_FixedT:new{Twall=T_wall},
-			       east=OutFlowBC_FixedP:new{Pout=p_inf/5}}}
+			       east=OutFlowBC_FixedP:new{p_outside=p_inf/5}}}
 identifyBlockConnections()
 
 -- Do a little more setting of global data.
