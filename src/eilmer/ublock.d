@@ -669,15 +669,16 @@ public:
 		} // end if my_outsign
 	    } // end foreach j
 	} // end foreach bndry
-	if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
-	    // LSQ weights are used in the calculation of flow gradients
-	    // for the viscous terms.
-	    compute_leastsq_weights(gtl);
-	}
     } // end compute_primary_cell_geometric_data()
 
     override void compute_least_squares_setup_for_reconstruction(int gtl)
     {
+	if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
+	    // LSQ weights are used in the calculation of flow gradients for the viscous terms.
+	    // At this point in the initialisation stage, the domain cells, and the ghost cells, all
+	    // have the correct cell centre values -- hence we can now compute the lsq weights.
+	    compute_leastsq_weights(gtl);
+	}
 	// The LSQ linear model for the flow field is fitted using 
 	// information on the locations of the points. 
 	foreach (c; cells) {
