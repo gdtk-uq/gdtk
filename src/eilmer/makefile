@@ -63,6 +63,7 @@ LUA_MODULES := blk_conn.lua \
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
+LUA_MODULES += $(UTIL_DIR)/lua_helper.lua
 
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
