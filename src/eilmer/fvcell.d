@@ -25,6 +25,7 @@ import fvvertex;
 import fvinterface;
 import globalconfig;
 import lsqinterp;
+import gas.fuel_air_mix;
 
 // The following functions are used at compile time.
 // Look for mixin statements further down in the file. 
@@ -842,7 +843,11 @@ public:
 	// such as JJ Hoste's mixing-limited fuel-air model.
 	// Most gas models and reaction schemes will just ignore the params array.
 	double[] params;
-	// Use if (cast(MixingLimitedFuelAir)myConfig.gmodel) { fill params array }
+	if ((cast(FuelAirMix) myConfig.gmodel) !is null) {
+	    // for this gas model thermochemical reactor we need turbulence info
+	    params.length=1; 
+	    params[0]=fs.omega;
+	}
 
 	try {
 	    myConfig.chemUpdate(fs.gas, dt, dt_chem, params);

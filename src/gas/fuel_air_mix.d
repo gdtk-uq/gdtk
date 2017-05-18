@@ -11,208 +11,303 @@ module gas.fuel_air_mix;
 
 import gas.gas_model;
 import gas.physical_constants;
+import gas.therm_perf_gas;
+import gas.thermo.cea_thermo_curves;
+import gas.thermo.perf_gas_mix_eos;
+import gas.thermo.therm_perf_gas_mix_eos;
 import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;
+import gas.diffusion.cea_viscosity;
+import gas.diffusion.cea_therm_cond;
+import gas.diffusion.wilke_mixing_viscosity;
+import gas.diffusion.wilke_mixing_therm_cond;
 import std.math;
 import std.stdio;
 import std.string;
 import std.file;
 import std.json;
 import std.conv;
+import std.algorithm;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
+import nm.bracketing;
+import nm.brent; 
+import kinetics.reaction_mechanism;
+import kinetics.reaction;
 
 // First, the basic gas model.
 
-class FuelAirMix: GasModel {
+class FuelAirMix: ThermallyPerfectGas {
 public:
-
     this(lua_State *L) {
-	// Some parameters are fixed and some come from the gas model file.
-	_n_species = 2;
-	_n_modes = 0;
-	_species_names.length = 2;
-	_species_names[0] = "A";
-	_species_names[1] = "B";
-	// Bring table to TOS
-	lua_getglobal(L, "FuelAirMix");
-	// [TODO] test that we actually have the table as item -1
-	// Now, pull out the remaining numeric value parameters.
-	_Rgas = getDouble(L, -1, "R");
-	_mol_masses.length = 2;
-	_mol_masses[0] = R_universal / _Rgas;
-	_mol_masses[1] = _mol_masses[0];
-	_gamma = getDouble(L, -1, "gamma");
-	// Heat of reaction
-	_q = getDouble(L, -1, "q");
-	_alpha = getDouble(L, -1, "alpha");
-	_Ti = getDouble(L, -1, "Ti");
+	super(L); 
+	lua_getglobal(L, "FuelAirMix"); 
+	// Now, pull out the numeric value parameters.
+	_A_edm = getDouble(L, -1, "Aedm");
+	_B_edm = getDouble(L, -1, "Bedm");
+	_laminar_limit = getBool(L, -1, "lamLimit");
 	lua_pop(L, 1); // dispose of the table
-	// Entropy reference, same as for IdealAir
-	_s1 = 0.0;
-	_T1 = 298.15;
-	_p1 = 101.325e3;
-	// Compute derived parameters
-	_Cv = _Rgas / (_gamma - 1.0);
-	_Cp = _Rgas*_gamma/(_gamma - 1.0);
-	create_species_reverse_lookup();
     } // end constructor
 
     override string toString() const
     {
 	char[] repr;
 	repr ~= "FuelAirMix =(";
-	repr ~= "species=[\"A\", \"B\"]";
-	repr ~= ", Mmass=[" ~ to!string(_mol_masses[0]);
-	repr ~= "," ~ to!string(_mol_masses[1]) ~ "]";
-	repr ~= ", gamma=" ~ to!string(_gamma);
-	repr ~= ", q=" ~ to!string(_q);
-	repr ~= ", alpha=" ~ to!string(_alpha);
-	repr ~= ", Ti=" ~ to!string(_Ti);
+	repr ~= " Aedm=" ~ to!string(_A_edm);
+	repr ~= ", Bedm=" ~ to!string(_B_edm);
 	repr ~= ")";
 	return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const 
-    {
-	Q.rho = Q.p/(Q.Ttr*_Rgas);
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
-    }
-    override void update_thermo_from_rhoe(GasState Q) const
-    {
-	Q.Ttr = (Q.u + Q.massf[1]*_q)/_Cv;
-	Q.p = Q.rho*_Rgas*Q.Ttr;
-    }
-    override void update_thermo_from_rhoT(GasState Q) const
-    {
-	Q.p = Q.rho*_Rgas*Q.Ttr;
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
-    }
-    override void update_thermo_from_rhop(GasState Q) const
-    {
-	Q.Ttr = Q.p/(Q.rho*_Rgas);
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
-    }
-    
-    override void update_thermo_from_ps(GasState Q, double s) const
-    {
-	Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
-	update_thermo_from_pT(Q);
-    }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
-    {
-	Q.Ttr = h / _Cp;
-	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
-	update_thermo_from_pT(Q);
-    }
-    override void update_sound_speed(GasState Q) const
-    {
-	Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
-    }
-    override void update_trans_coeffs(GasState Q)
-    {
-	// The gas is inviscid for the test cases described in the AIAA paper.
-	Q.mu = 0.0;
-	Q.k = 0.0;
-    }
-    override double dudT_const_v(in GasState Q) const
-    {
-	return _Cv;
-    }
-    override double dhdT_const_p(in GasState Q) const
-    {
-	return _Cp;
-    }
-    override double dpdrho_const_T(in GasState Q) const
-    {
-	double R = gas_constant(Q);
-	return R*Q.Ttr;
-    }
-    override double gas_constant(in GasState Q) const
-    {
-	return _Rgas;
-    }
-    override double internal_energy(in GasState Q) const
-    {
-	return Q.u;
-    }
-    override double enthalpy(in GasState Q) const
-    {
-	return Q.u + Q.p/Q.rho;
-    }
-    override double entropy(in GasState Q) const
-    {
-	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
-    }
-
 private:
-    // Thermodynamic constants
-    double _Rgas; // J/kg/K
-    double _gamma;   // ratio of specific heats
-    double _Cv; // J/kg/K
-    double _Cp; // J/kg/K
-    // Reference values for entropy
-    double _s1;  // J/kg/K
-    double _T1;  // K
-    double _p1;  // Pa
-    // Molecular transport coefficents are zero.
-    // Heat of reaction.
-    double _q; // J/kg
-    // Reaction rate constant
-    double _alpha; // 1/s
-    // Ignition temperature
-    double _Ti; // degrees K
+    //settings specific to EDM model
+    double _A_edm;
+    double _B_edm;
+    bool _laminar_limit;	
 } // end class FuelAirMix
 
 
 // Now, for the reaction update...
-//
 // It is included here because it is a small amount of code and
 // it is specific to this particular gas model.
 
 final class MixingLimitedUpdate : ThermochemicalReactor {
-    
+    ReactionMechanism rmech; //only used if we desire to limit the reaction rate
     this(string fname, GasModel gmodel)
     {
 	super(gmodel); // hang on to a reference to the gas model
 	// We need to pick a number of pieces out of the gas-model file, again.
 	// Although they exist in the GasModel object, they are private.
+	//lua_State *L;
 	auto L = init_lua_State();
-	doLuaFile(L, fname);
+	
+	// get details about type of species: fuel, ox, prod or inert
+	doLuaFile(L, fname); //reading the reaction file here
+	_n_species = gmodel.n_species;
+	lua_getglobal(L, "speciesType");
+	getArrayOfStrings(L, LUA_GLOBALSINDEX, "speciesType", _species_type);
+	lua_pop(L, 1); // dispose of the table
+	foreach(isp;0.._n_species){
+	    if(_species_type[isp]=="fuel"){_n_fuel=_n_fuel+1;}
+	    if(_species_type[isp]=="ox"){_n_ox=_n_ox+1;}
+	    if(_species_type[isp]=="prod"){_n_prod=_n_prod+1;}
+	}
+	_n_reacting=_n_fuel+_n_ox+_n_prod;
+	writeln("nb of fuel species = ",_n_fuel);
+	writeln("nb of ox species = ",_n_ox);
+	writeln("nb of prod species = ",_n_prod);
+
+	// get settings for EDM model
 	lua_getglobal(L, "FuelAirMix");
 	// Now, pull out the numeric value parameters.
-	_alpha = getDouble(L, -1, "alpha");
-	_Ti = getDouble(L, -1, "Ti");
+	_A_edm = getDouble(L, -1, "Aedm");
+	_B_edm = getDouble(L, -1, "Bedm");
+	_laminar_limit = getBool(L, -1, "lamLimit");
 	lua_pop(L, 1); // dispose of the table
-	lua_close(L);
-    }
-    
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
-			 ref double[] params)
-    {
-	if (Q.Ttr > _Ti) {
-	    // We are above the ignition point, proceed with reaction.
-	    double massfA = Q.massf[0];
-	    double massfB = Q.massf[1];
-	    // This gas has a very simple reaction scheme that can be integrated explicitly.
-	    massfA = massfA*exp(-_alpha*tInterval);
-	    massfB = 1.0 - massfA;
-	    Q.massf[0] = massfA; Q.massf[1] = massfB;
-	} else {
-	    // do nothing, since we are below the ignition temperature
+	//writeln(_laminar_limit);
+
+	// if true we want to limit the reaction rate with the "no-model" one
+	// in that case we initialize the ReactionMechanism object
+	if (_laminar_limit) {
+	    lua_getglobal(L, "config");
+	    lua_getfield(L, -1, "tempLimits");
+	    lua_getfield(L, -1, "lower");
+	    double T_lower_limit = lua_tonumber(L, -1);
+	    lua_pop(L, 1);
+	    lua_getfield(L, -1, "upper");
+	    double T_upper_limit = lua_tonumber(L, -1);
+	    lua_pop(L, 1);
+	    lua_pop(L, 1);
+	    lua_pop(L, 1);
+	    lua_getglobal(L, "reaction");	
+	    rmech = createReactionMechanism(L, gmodel, T_lower_limit, T_upper_limit);
+	    lua_rawgeti(L, -1, 1); //only 1 reaction called reaction[1]
+	    lua_pop(L, 1);
 	}
-	// Since the internal energy and density in the (isolated) reactor is fixed,
-	// we need to evaluate the new temperature, pressure, etc.
-	_gmodel.update_thermo_from_rhoe(Q);
-	_gmodel.update_sound_speed(Q);
+
+	lua_getglobal(L, "reaction");	
+	lua_rawgeti(L, -1, 1); //only 1 reaction called reaction[1]
+	int[] reacCoeffs; // required to set stochiometric mass ratio
+	getArrayOfInts(L, -1, "reacCoeffs", reacCoeffs);
+	writeln(reacCoeffs,reacCoeffs[0]);
+	if (_n_reacting > 3) {
+	    int[] prodCoeffs;
+	    _nu_W.length=_n_reacting;
+	    getArrayOfInts(L, -1, "prodCoeffs", prodCoeffs);
+	    foreach(isp; 0 .. _n_fuel+_n_ox) {
+		writeln(isp);
+		_nu_W[isp]= 1.0 * reacCoeffs[isp]*gmodel.mol_masses[isp]; 
+	    }
+	    foreach(isp; 0 .. _n_prod) {
+		_nu_W[_n_fuel+_n_ox+isp]= -1.0 * prodCoeffs[isp]*gmodel.mol_masses[isp+_n_fuel+_n_ox]; 
+	    }
+	    lua_pop(L, 1);
+	} // else we don't need _nu_W in further computations
+	lua_pop(L, 1); // I believe needed to get out 1 step back to all reactions
+	lua_close(L);
+	writeln("stochiometric mass ratio ",_sRatio);
+	set_stochiometricRatio(reacCoeffs,gmodel.mol_masses);
+	writeln("stochiometric mass ratio ",_sRatio);
+    } // end of constructor
+
+
+    void set_stochiometricRatio(int[] stochCoeff, double[] mol_masses)
+    {	
+	double num=0.0,denom=0.0;	
+	foreach (isp; 0 .. _n_fuel) {
+	    denom = denom + mol_masses[isp]*stochCoeff[isp];
+	}
+	_nuF_WF = denom; //only needed when more than 3 reacting species/prod
+
+	foreach (isp; 0 .. _n_ox) {
+	    num = num + mol_masses[_n_fuel+isp]*stochCoeff[_n_fuel+isp];
+	}
+	_sRatio=num/denom;
     }
 
+    void get_massf(GasState gas, ref double[3] Ys)
+    {
+	// pass Ys by ref required to fill local variable
+	// initialization required in case of cumulative sum below
+	Ys=[0.0,0.0,0.0];
+	int i=0;
+	if (_n_fuel > 1) {
+	    foreach (isp; 0 .. _n_fuel) {
+		Ys[0]=Ys[0]+gas.massf[isp];
+		i=_n_fuel-1;
+	    }
+	} else {
+	    Ys[0]=gas.massf[0];
+	    writeln(" massf sp0 ",Ys[0]);
+	}
+	if (_n_ox>1) {
+	    foreach(isp;0.._n_ox){
+		Ys[1]=Ys[1]+gas.massf[_n_fuel+isp];
+	    }
+	} else {
+	    Ys[1]=gas.massf[_n_fuel];
+	    //writeln(" massf sp1 ",Ys[1]);
+	}
+	if(_n_prod>1) {
+	    foreach(isp;0.._n_prod){
+		Ys[2]=Ys[2]+gas.massf[_n_fuel+_n_ox+isp];
+		//writeln(" massf prod ",Ys[2]);
+	    }
+	} else {
+	    Ys[2]=gas.massf[_n_fuel+_n_ox];
+	}
+    }
+
+    double get_omegaDotF(double omega, double[3] Ys)
+    {
+	return -1.0 * _A_edm / _tau_edm * min(Ys[0],Ys[1]/_sRatio,_B_edm*Ys[2]/(1.0+_sRatio));
+    }
+
+    override void opCall(GasState Q, double tInterval, ref double dtSuggest,ref double[] params)
+    {
+	double local_dt_global=tInterval;
+	double omega = params[0];
+	_tau_edm=1.0/(_beta_star*omega);
+	double _omega_dot_F = 0.0;
+	double omega_dot_O = 0.0;
+	double omega_dot_P = 0.0;
+	double[] rates; // for laminar= "no-model" combustion
+	rates.length = _n_species;
+	//writeln(rmech.) 
+	double[3] _Y_s;
+	if(_n_reacting > 3){
+	    get_massf(Q,_Y_s);
+	    //writeln("species massf ",_Y_s);
+	    _omega_dot_F = get_omegaDotF(omega,_Y_s);
+	    //writeln("fuel RR ",_omega_dot_F);
+	    //writeln("nu F x W F = ",_nuF_WF);
+	    //writeln("nu  x W  = ",_nu_W);
+	    if(_laminar_limit){
+		double[] conc;
+		conc.length=_n_species; 
+		rmech.eval_rate_constants(Q);  
+		_gmodel.massf2conc(Q,conc);
+		writeln("concentration ",conc);
+		rmech.eval_rates(conc,rates); 
+		writeln("laminar RR (1/s)= ",rates);
+		double[] lamRR; //in kg/(m^3 . s)
+		lamRR.length=rates.length;
+		double sumLamRR=0.0;
+		foreach (isp; 0 .. _n_species) {
+		    lamRR[isp]= _gmodel.mol_masses[isp]/Q.rho* rates[isp];
+		    sumLamRR=sumLamRR+lamRR[isp];
+		}
+		writeln("laminar RR (1/s) = ",lamRR);
+		writeln("sum of laminar RR (1/s) = ",sumLamRR);
+		writeln("Fuel RR (1/s) before lam eval= ",_omega_dot_F);
+		_omega_dot_F=-1.0*(min(abs(_omega_dot_F),abs(rates[0]))); 
+	    }
+	    writeln("Fuel RR (1/s)= ",_omega_dot_F);
+	    foreach (isp; 0 .. _n_reacting) { //don't account for inert species
+		Q.massf[isp]=Q.massf[isp] + local_dt_global * (_nu_W[isp])/ _nuF_WF* _omega_dot_F;
+	    }
+	    //double sum=0.0;
+	    //foreach(isp;0.._n_species){
+		//sum=sum+Q.massf[isp];					
+	    //}
+	    //writeln("sum of species = ",sum);
+	} else {
+	    _Y_s[0]=Q.massf[0];
+	    _Y_s[1]=Q.massf[1];
+	    _Y_s[2]=Q.massf[2];
+	    _omega_dot_F = get_omegaDotF(omega,_Y_s);	// units 1/s in here 
+	    if(_laminar_limit) {
+		double[] conc;
+		conc.length=_n_species; 
+		rmech.eval_rate_constants(Q);  
+		_gmodel.massf2conc(Q,conc);
+		writeln("concentration ",conc);
+		rmech.eval_rates(conc,rates); 
+		writeln("laminar RR (1/s)= ",rates);
+		double[] lamRR; //in kg/(m^3 . s)
+		lamRR.length=rates.length;
+		double sumLamRR=0.0;
+		foreach (isp; 0 .. _n_species) {
+		    lamRR[isp]= _gmodel.mol_masses[isp]/Q.rho* rates[isp];
+		    sumLamRR=sumLamRR+lamRR[isp];
+		}
+		writeln("laminar RR (1/s) = ",lamRR);
+		writeln("sum of laminar RR (1/s) = ",sumLamRR);
+		writeln("Fuel RR (1/s) before lam eval= ",_omega_dot_F);
+		_omega_dot_F=-1.0*(min(abs(_omega_dot_F),abs(rates[0]))); // units are same 
+		// NOTE: when fuel/ox almost zero the laminar RR will give positive values for
+		//       these reaction rates BUT the EDM one is much smaller and dominates	
+		//		 only reason for laminar is to avoid reaction where T too low and not enough
+		//		 mixing occurs.			
+	    } // end if /else
+	    omega_dot_O = _sRatio * _omega_dot_F;
+	    omega_dot_P = - (1.0+_sRatio) *_omega_dot_F;
+	    //writeln("Fuel RR (1/s)= ",_omega_dot_F);
+	    //writeln(omega_dot_O);
+	    //writeln(omega_dot_P);
+	    Q.massf[0]=_Y_s[0] + local_dt_global * _omega_dot_F;
+	    // following is actuall still correct for laminar RR
+	    Q.massf[1]=_Y_s[1] + local_dt_global * _sRatio*_omega_dot_F;
+	    Q.massf[2]=_Y_s[2] + local_dt_global * - (1.0+_sRatio) *_omega_dot_F;		
+	} //end if/ else
+    } //end function opCall
+
 private:
-    // Reaction rate constant
-    double _alpha; // 1/s
-    // Ignition temperature
-    double _Ti; // degrees K
+    // EDM model constants
+    double _A_edm=4.0; 
+    double _B_edm=0.5;
+    double _tau_edm;
+    // boolean for use of laminar reaction rate limit
+    bool _laminar_limit=false;
+    static immutable _beta_star=0.09;
+    string[] _species_type; // fuel, ox, prod, inert
+
+    int _n_fuel, _n_ox, _n_prod, _n_species, _n_reacting;
+    double _sRatio; // mass stochiometric ratio
+    // parameters used if nb of species in reaction (_n_reacting) > 3
+    double _nuF_WF; // stochiometric coeff fuel x molar mass fuel
+    double[] _nu_W; // the above for every species
 } // end class MixingLimitedUpdate
 
 
@@ -231,6 +326,8 @@ version(fuel_air_mix_test) {
 	gd.p = 1.0e5;
 	gd.Ttr = 300.0;
 	gd.massf[0] = 0.75; gd.massf[1] = 0.25;
+	/+
+	 [FIX-ME]
 	assert(approxEqual(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 2, failedUnitTest());
@@ -252,7 +349,7 @@ version(fuel_air_mix_test) {
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
-
+	+/
 	return 0;
     }
 }
