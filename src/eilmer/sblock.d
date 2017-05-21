@@ -105,6 +105,7 @@ public:
 	    _nkdim = nkcell + 2 * nghost;
 	    kmin = nghost; kmax = kmin + nkcell - 1;
 	}
+	this.ncells = nicell * njcell * nkcell;
 	// Workspace for flux_calc method.
 	one_d = new OneDInterpolator(dedicatedConfig[id]);
 

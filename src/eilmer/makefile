@@ -15,7 +15,7 @@ TARGET ?= debug
 PLATFORM ?= linux
 WITH_GPU_CHEM ?= 0
 
-PROGRAMS := e4shared e4sss
+PROGRAMS := e4shared e4sss 
 SHARE_FILES := 
 
 ifeq ($(WITH_GPU_CHEM),1)
@@ -268,6 +268,16 @@ e4sss: steadystate_solver.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > steadystate_solver_with_rev_string.d
 	$(DMD) -version=steady_state $(DFLAGS) $(OF)e4sss \
 		steadystate_solver_with_rev_string.d $(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
+		$(DLINKFLAGS)
+
+e4loadbalance: loadbalance.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' loadbalance.d > loadbalance_with_rev_string.d
+	$(DMD) $(DFLAGS) $(OF)e4loadbalance \
+		loadbalance_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)

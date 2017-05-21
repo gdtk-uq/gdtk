@@ -53,6 +53,12 @@ public:
     double c_h, divB_damping_length; //divergence cleaning parameters for MHD
     int mncell;                 // number of monitor cells
     double[] initial_T_value; // for monitor cells to check against
+    size_t ncells; // number of cells.
+                   // Although this value could be retrieved from
+                   // cells.length, it is convenient to store it
+                   // separately because sometimes we do not 
+                   // wish to allocate all of the cells just to
+                   // get a count of the cells.
     FVCell[] cells; // collection of references to be used in foreach statements.
     FVInterface[] faces; // collection of references to all in-use interfaces
     FVVertex[] vertices;
