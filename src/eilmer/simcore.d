@@ -143,8 +143,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     }
     // All cells are in place, so now we can initialise any history cell files.
     init_history_cell_files();
-    // create the loads directory
-    init_loads_dir();
+    // create the loads directory, maybe
+    if (GlobalConfig.compute_loads) { init_loads_dir(); }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
@@ -497,7 +497,7 @@ void integrate_in_time(double target_time_as_requested)
 	    history_just_written = true;
             t_history = t_history + GlobalConfig.dt_history;
         }
-	if ( (sim_time >= t_loads) && !loads_just_written ) {
+	if ( GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written ) {
 	    write_boundary_loads_to_file(sim_time, current_tindx);
 	    loads_just_written = true;
             t_loads = t_loads + GlobalConfig.dt_loads;

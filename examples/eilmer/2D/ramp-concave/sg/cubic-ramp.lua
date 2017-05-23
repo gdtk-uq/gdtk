@@ -52,7 +52,7 @@ grid1 = StructuredGrid:new{psurface=patch1, niv=math.floor(ni0/10)+1, njv=nj0+1,
 wedge = FluidBlockArray{grid=grid0, nib=10, njb=2,
 			fillCondition=inflow, label="wedge",
 			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
-				south=WallBC_NoSlip_FixedT:new{Twall=T_wall},
+				south=WallBC_NoSlip_FixedT:new{Twall=T_wall,group="loads"},
 				west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
 tail = FluidBlockArray{grid=grid1, nib=1, njb=2,
 		       fillCondition=initial, label="tail",
@@ -70,3 +70,4 @@ config.max_time = 1.0e-3 -- long enough for several flow lengths
 config.max_step = 2000000
 config.dt_init = 1.0e-9
 config.dt_plot = 0.1e-3
+config.dt_loads = 0.1e-3

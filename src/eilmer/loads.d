@@ -67,7 +67,7 @@ string generate_boundary_load_file(int current_tindx, double sim_time, string gr
 
 void apply_unstructured_grid(Block blk, double sim_time, int current_tindx) {
     foreach (bndary; blk.bc) {
-	if (bndary.group != "") { // assume only named boundary groups require loads computed
+	if (bndary.group == GlobalConfig.boundary_group_for_loads) {
 	    string fname = generate_boundary_load_file(current_tindx, sim_time, bndary.group);
 		foreach (iface; bndary.faces) {
 		    compute_and_store_loads(iface, sim_time, current_tindx, fname);
@@ -78,7 +78,7 @@ void apply_unstructured_grid(Block blk, double sim_time, int current_tindx) {
 
 void apply_structured_grid(Block blk, double sim_time, int current_tindx) {
     foreach (bndary; blk.bc) {
-	if (bndary.group != "") {
+	if (bndary.group == GlobalConfig.boundary_group_for_loads) {
 	    string fname = generate_boundary_load_file(current_tindx, sim_time, bndary.group);
 	    size_t i, j, k;
 	    FVCell cell;

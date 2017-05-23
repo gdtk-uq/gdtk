@@ -460,6 +460,8 @@ final class GlobalConfig {
     shared static double dt_plot = 1.0e-3; // interval for writing soln
     shared static double dt_history = 1.0e-3; // interval for writing sample
     shared static double dt_loads = 1.0e-3; // interval for writing loads on boundary groups
+    shared static string boundary_group_for_loads = "loads";
+    shared static bool compute_loads = true;
     shared static Tuple!(size_t, size_t)[] hcells;
     shared static Tuple!(size_t, size_t)[] solid_hcells;
     
@@ -1068,6 +1070,8 @@ void read_control_file()
     mixin(update_double("dt_plot", "dt_plot"));
     mixin(update_double("dt_history", "dt_history"));
     mixin(update_double("dt_loads", "dt_loads"));
+    mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
+    mixin(update_bool("compute_loads", "compute_loads"));
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
@@ -1084,6 +1088,8 @@ void read_control_file()
 	writeln("  dt_plot: ", GlobalConfig.dt_plot);
 	writeln("  dt_history: ", GlobalConfig.dt_history);
 	writeln("  dt_loads: ", GlobalConfig.dt_loads);
+	writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
+	writeln("  compute_loads: ", GlobalConfig.compute_loads);
 	writeln("  halt_now: ", GlobalConfig.halt_now);
     }
     
