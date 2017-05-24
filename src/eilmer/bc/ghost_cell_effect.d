@@ -1553,7 +1553,7 @@ public:
 	    ", relax_factor=" ~ to!string(relax_factor) ~ ")";
     }
 
-    void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face)
+    void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face, bool outwardNormal=false)
     {
 	switch ( direction_type ) {
 	case "uniform":
@@ -1582,8 +1582,13 @@ public:
 	case "normal":
 	default:
 	    vel.refx = speed * face.n.x;
-   	    vel.refy = speed * face.n.y;
+	    vel.refy = speed * face.n.y;
 	    vel.refz = speed * face.n.z;
+	    if ( outwardNormal ) {
+		// Correct the direction so flow is *into* the domain
+		vel = -vel;
+	    }
+	
 	}
     } // end set_velocity_components()
 
@@ -1674,7 +1679,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.east];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face, true);
 		    dest_cell = blk.get_cell(i+1,j,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i+2,j,k);
@@ -1748,7 +1753,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.west];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face, false);
 		    dest_cell = blk.get_cell(i-1,j,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i-2,j,k);
