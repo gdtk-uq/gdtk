@@ -3,6 +3,21 @@
 -- 
 print("Loading prep.lua...")
 
+function checkAllowedNames(myTable, allowedNames)
+   local setOfNames = {}
+   local namesOk = true
+   for i,name in ipairs(allowedNames) do
+      setOfNames[name] = true
+   end
+   for k,v in pairs(myTable) do
+      if not setOfNames[k] then
+	 print("Warning: Invalid name: ", k)
+	 namesOk = false
+      end
+   end
+   return namesOk
+end
+
 NGHOST = 2
 
 require 'blk_conn'
@@ -121,6 +136,10 @@ FluidBlock = {
 
 function FluidBlock:new(o)
    o = o or {}
+   local flag = checkAllowedNames(o, {"grid", "fillCondition", "active",
+				      "label", "omegaz", "bcList", "bcDict",
+				      "hcellList", "xforceList"})
+   assert(flag, "Invalid name for item supplied to FluidBlock constructor.")
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new block, for later construction of the config file.
