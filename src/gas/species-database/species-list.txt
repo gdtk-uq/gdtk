@@ -36,6 +36,7 @@ HCNO.lua      : HCNO     : isocyanic acid (1)
 HCO.lua       : HCO      : aldehyde
 HCCO.lua      : HCCO     : ethynyloxy radical
 HCCOH.lua     : HCCOH    : ethynol
+He.lua        : He       : helium
 HI.lua        : HI       : hydrogen iodide
 H2O.lua       : H2O      : water
 H2O2.lua      : H2O2     : hydrogen peroxide

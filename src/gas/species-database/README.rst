@@ -17,7 +17,8 @@ file O2_plus.lua. This is to avoid problems with handling
 "+" and "-" characters in the file names. The translation
 between filenames and actual compound name is handled in
 the file species-list.txt. The primary data is stored as
-plain text in Lua tables easy manipulation by Lua utilities.
+plain text in Lua tables that allow easy manipulation by 
+Lua utilities.
 
 Adding a new species
 --------------------
