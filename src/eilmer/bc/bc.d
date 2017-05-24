@@ -210,7 +210,7 @@ public:
 	lua_pushinteger(myL, blk.id); lua_setglobal(myL, "blkId");
 	registerGasModel(myL, LUA_GLOBALSINDEX);
 	registerBBLA(myL);
-	luaL_dofile("require 'lua_helper'");
+	luaL_dostring(myL, "require 'lua_helper'");
 	pushObj!(GasModel, GasModelMT)(myL, blk.myConfig.gmodel);
 	lua_setglobal(myL, "gmodel");
 	lua_pushinteger(myL, blk.myConfig.gmodel.n_species);
