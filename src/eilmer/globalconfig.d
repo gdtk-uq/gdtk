@@ -1254,6 +1254,9 @@ void init_master_lua_State()
     auto L = GlobalConfig.master_lua_State;
     registerVector3(L);
     registerBBLA(L);
+    // Load some Lua modules using 'require'.
+    // There is no convenient C API expression to do the equivalent of "require"
+    luaL_dostring(L, "require 'lua_helper'");
     // Set some globally available constants for the
     // Lua state.
     lua_pushnumber(L, GlobalConfig.nBlocks);
