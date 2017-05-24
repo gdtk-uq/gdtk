@@ -476,6 +476,10 @@ end
 function FluidBlockArray(t)
    -- Expect one table as argument, with named fields.
    -- Returns an array of FluidBlocks defined over a single region.
+   local flag = checkAllowedNames(t, {"grid", "fillCondition", "active",
+				      "label", "omegaz", "bcList",
+				      "nib", "njb", "nkb"})
+   assert(flag, "Invalid name for item supplied to FluidBlockArray.")
    assert(t.grid, "need to supply a grid")
    assert(t.grid:get_type() == "structured_grid", "grid must be structured")
    assert(t.fillCondition, "need to supply a fillCondition")
@@ -598,6 +602,9 @@ SolidBlock = {
 
 function SolidBlock:new(o)
    o = o or {}
+   local flag = checkAllowedNames(o, {"grid", "initTemperature", "active",
+				      "label", "bcList", "properties"})
+   assert(flag, "Invalid name for item supplied to SolidBlock constructor.")
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new block for later construction of the config file.
@@ -610,6 +617,8 @@ function SolidBlock:new(o)
    assert(o.grid:get_type() == "structured_grid", "grid must be structured") -- for the moment
    assert(o.initTemperature, "need to supply an initTemperature")
    assert(o.properties, "need to supply physical properties for the block")
+   local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp"})
+   assert(flag2, "Invalid name for item supplied in SolidBlock properties table.")
    -- Fill in some defaults, if not already set
    if o.active == nil then
       o.active = true
@@ -680,6 +689,10 @@ end
 function SolidBlockArray(t)
    -- Expect one table as argument, with named fields.
    -- Returns an array of blocks defined over a single region.
+   local flag = checkAllowedNames(t, {"grid", "initTemperature", "active",
+				      "label", "bcList", "properties",
+				      "nib", "njb", "nkb"})
+   assert(flag, "Invalid name for item supplied to SolidBlockArray.")
    assert(t.grid, "need to supply a 'grid'")
    assert(t.initTemperature, "need to supply an 'initTemperature'")
    assert(t.properties, "need to supply 'properties'")
@@ -765,7 +778,9 @@ function setHistoryPoint(args)
    --  setHistoryPoint{ib=2, i=102}
    --  3. block and structured grid indices
    --  setHistoryPoint{ib=0, i=20, j=10, k=0}
-   
+   --
+   local flag = checkAllowedNames(args, {"x", "y", "z", "ib", "i", "j", "k"})
+   assert(flag, "Invalid name for item supplied to setHistoryPoint.")
    -- First look for x,y,z
    if ( args.x ) then
       x = args.x
@@ -787,7 +802,7 @@ function setHistoryPoint(args)
       historyCells[#historyCells+1] = {ib=blkId, i=cellId}
       return
    end
-   
+   --
    if ( args.j ) then
       ib = args.ib
       i = args.i
@@ -800,13 +815,13 @@ function setHistoryPoint(args)
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       return
    end
-
+   --
    if ( not args.ib or not args.i ) then
       print("No valid arguments found for setHistoryPoint.")
       print("Bailing out!")
       os.exit(1)
    end
-
+   --
    historyCells[#historyCells+1] = {ib=args.ib, i=args.i}
    return
 end
@@ -819,7 +834,9 @@ function setSolidHistoryPoint(args)
    --  setSolidHistoryPoint{ib=2, i=102}
    --  3. block and structured grid indices
    --  setSolidHistoryPoint{ib=0, i=20, j=10, k=0}
-   
+   --
+   local flag = checkAllowedNames(args, {"x", "y", "z", "ib", "i", "j", "k"})
+   assert(flag, "Invalid name for item supplied to setSolidHistoryPoint.")
    -- First look for x,y,z
    if ( args.x ) then
       x = args.x
@@ -841,7 +858,7 @@ function setSolidHistoryPoint(args)
       solidHistoryCells[#solidHistoryCells+1] = {ib=blkId, i=cellId}
       return
    end
-   
+   --
    if ( args.j ) then
       ib = args.ib
       i = args.i
@@ -854,13 +871,13 @@ function setSolidHistoryPoint(args)
       solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=cellId}
       return
    end
-
+   --
    if ( not args.ib or not args.i ) then
       print("No valid arguments found for setSolidHistoryPoint.")
       print("Bailing out!")
       os.exit(1)
    end
-
+   --
    solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=args.i}
    return
 end
@@ -924,6 +941,8 @@ ReactionZone = {
 
 function ReactionZone:new(o)
    o = o or {}
+   local flag = checkAllowedNames(args, {"p0", "p1"})
+   assert(flag, "Invalid name for item supplied to ReactionZone constructor.")
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new zone, for later construction of the config file.
@@ -944,6 +963,8 @@ IgnitionZone = {
 
 function IgnitionZone:new(o)
    o = o or {}
+   local flag = checkAllowedNames(args, {"p0", "p1", "T"})
+   assert(flag, "Invalid name for item supplied to IgnitionZone constructor.")
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new zone, for later construction of the config file.
@@ -964,6 +985,8 @@ TurbulentZone = {
 
 function TurbulentZone:new(o)
    o = o or {}
+   local flag = checkAllowedNames(args, {"p0", "p1"})
+   assert(flag, "Invalid name for item supplied to TurbulentZone constructor.")
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new zone, for later construction of the config file.
