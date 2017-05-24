@@ -7,6 +7,7 @@
 
 module simcore;
 
+import core.memory;
 import std.math;
 import std.stdio;
 import std.file;
@@ -188,6 +189,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	writeln("Done init_simulation().");
 	stdout.flush();
     }
+    GC.collect();
     return;
 } // end init_simulation()
 
@@ -489,6 +491,7 @@ void integrate_in_time(double target_time_as_requested)
 	    update_times_file();
 	    output_just_written = true;
             t_plot = t_plot + GlobalConfig.dt_plot;
+	    GC.collect();
         }
 
         // 4a. (Occasionally) Write out the cell history data and loads on boundary groups data
@@ -496,11 +499,13 @@ void integrate_in_time(double target_time_as_requested)
 	    write_history_cells_to_files(sim_time);
 	    history_just_written = true;
             t_history = t_history + GlobalConfig.dt_history;
+	    GC.collect();
         }
 	if ( GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written ) {
 	    write_boundary_loads_to_file(sim_time, current_tindx);
 	    loads_just_written = true;
             t_loads = t_loads + GlobalConfig.dt_loads;
+	    GC.collect();
         }
         // 5. For steady-state approach, check the residuals for mass and energy.
 
@@ -577,8 +582,9 @@ void finalize_simulation()
     if (!history_just_written) {
 	write_history_cells_to_files(sim_time);
     }
+    GC.collect();
     writeln("Step= ", step, " final-t= ", sim_time);
-    if (GlobalConfig.verbosity_level > 0) writeln("Done finalize_simulation.");
+    if (GlobalConfig.verbosity_level > 0) { writeln("Done finalize_simulation."); }
 } // end finalize_simulation()
 
 //---------------------------------------------------------------------------
