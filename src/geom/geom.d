@@ -687,8 +687,9 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 	cross(t2, n, t1);
 	t2.normalize();
     } else {
-	// We have nothing meaningful to put into the unit vectors.
-	assert(0, "Effectively zero area triangle.");
+	// We have nothing meaningful to put into the unit vectors,
+	// so, put in an arbitrary but orthogonal set.
+	n.set(1.0,0.0,0.0); t1.set(0.0,1.0,0.0); t2.set(0.0,0.0,1.0);
     }
 } // end triangle_properties()
 
@@ -741,8 +742,9 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 	cross(t2, n, t1);
 	t2.normalize();
     } else {
-	// We have nothing meaningful to put into the unit vectors.
-	assert(0, "Effectively zero area quadrilateral.");
+	// We have nothing meaningful to put into the unit vectors,
+	// so, put in an arbitrary but orthogonal set.
+	n.set(1.0,0.0,0.0); t1.set(0.0,1.0,0.0); t2.set(0.0,0.0,1.0);
     }
 } // end quad_properties()
 
