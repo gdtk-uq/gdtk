@@ -940,9 +940,7 @@ public:
 		z = scale * to!double(tokens[2]);
 		indx = to!size_t(tokens[3]);
 	    }
-	    Vector3* vtx = &vertices[indx];
-	    vtx.refx = x; vtx.refy = y; vtx.refz = z;
-	    // writeln("indx=", indx, " vtx=", *vtx);
+	    vertices[indx].set(x, y, z);
 	} // end foreach i .. nvertices
 	//
 	if (dimensions == 2) {

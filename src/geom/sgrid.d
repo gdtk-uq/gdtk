@@ -118,11 +118,7 @@ public:
     this(const StructuredGrid other)
     {
 	this(other.niv, other.njv, nkv = other.nkv, other.label);
-	foreach (i; 0 .. vertices.length) {
-	    vertices[i].refx = other.vertices[i].x;
-	    vertices[i].refy = other.vertices[i].y;
-	    vertices[i].refz = other.vertices[i].z;
-	}
+	foreach (i; 0 .. vertices.length) { vertices[i].set(other.vertices[i]); }
     }
 
     StructuredGrid dup() const

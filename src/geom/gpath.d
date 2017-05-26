@@ -258,9 +258,7 @@ public:
 	L = theta * cb_mag;
 	// Move the second point around the arc in the local xy-plane.
 	theta *= t;
-	loc.refx = cos(theta) * cb_mag;
-	loc.refy = sin(theta) * cb_mag;
-	loc.refz = 0.0;
+	loc.set(cos(theta)*cb_mag, sin(theta)*cb_mag, 0.0);
 	// Transform back to global xyz coordinates
 	// and remember to add the centre coordinates.
 	loc.transform_to_global_frame(tangent1, tangent2, n, c);

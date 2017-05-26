@@ -162,7 +162,7 @@ public:
 	default:
 	    // do nothing.
 	}
-	p.refx = ph[0]; p.refy = ph[1]; p.refz = ph[2]; w = ph[3];
+	p.set(ph[0], ph[1], ph[2]); w = ph[3];
     } // end apply_transform
 
     void look_at(const Vector3 eye, const Vector3 centre, const Vector3 up)

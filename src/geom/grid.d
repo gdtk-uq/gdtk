@@ -207,11 +207,13 @@ class Grid {
 	bb0 = p; bb1 = p;
 	foreach (i; 1 .. nvertices) {
 	    p = vertices[i];
-	    bb0.refx = fmin(p.x, bb0.x); bb0.refy = fmin(p.y, bb0.y); bb0.refz = fmin(p.z, bb0.z);
-	    bb1.refx = fmax(p.x, bb1.x); bb1.refy = fmax(p.y, bb1.y); bb1.refz = fmax(p.z, bb1.z);
+	    bb0.set(fmin(p.x, bb0.x), fmin(p.y, bb0.y), fmin(p.z, bb0.z));
+	    bb1.set(fmax(p.x, bb1.x), fmax(p.y, bb1.y), fmax(p.z, bb1.z));
 	}
 	// Sizes of the bins.
-	deltax = (bb1.x - bb0.x)/nbx; deltay = (bb1.y - bb0.y)/nby; deltaz = (bb1.z - bb0.z)/nbz;
+	deltax = (bb1.x - bb0.x)/nbx;
+	deltay = (bb1.y - bb0.y)/nby;
+	deltaz = (bb1.z - bb0.z)/nbz;
 	// Now, set up the array of bins and sort the cells into those bins.
 	bins.length = nbx;
 	foreach (ix; 0 .. nbx) {

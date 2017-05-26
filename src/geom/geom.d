@@ -618,10 +618,7 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, double H)
     // For Hannes Wojciak and Paul Petrie-Repar's turbomachinery grids.
     if ( H > 0.0 ) {
 	double theta = p.y / H;
-	double old_z = p.z;
-	p.refz = old_z * cos(theta);
-	p.refy = old_z * sin(theta);
-	// x remains the same
+	p.set(p.x, p.z*sin(theta), p.z*cos(theta));
     }
     return p;
 }
@@ -660,9 +657,9 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			 ref double area,
 			 double tol=1.0e-12, double area_tol=1.0e-20)
 {
-    centroid.refx = (p0.x + p1.x + p2.x)/3.0;
-    centroid.refy = (p0.y + p1.y + p2.y)/3.0;
-    centroid.refz = (p0.z + p1.z + p2.z)/3.0;
+    centroid.set((p0.x + p1.x + p2.x)/3.0,
+		 (p0.y + p1.y + p2.y)/3.0,
+		 (p0.z + p1.z + p2.z)/3.0);
     // Compute areas via the cross products.
     double p01x=p1.x-p0.x; double p01y=p1.y-p0.y; double p01z=p1.z-p0.z;
     double p02x=p2.x-p0.x; double p02y=p2.y-p0.y; double p02z=p2.z-p0.z;
@@ -676,13 +673,13 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     area = sqrt(vector_area_x^^2 + vector_area_y^^2 + vector_area_z^^2);
     if (area > area_tol) {
 	// n = unit(vector_area);
-	n.refx = vector_area_x/area; n.refy = vector_area_y/area; n.refz = vector_area_z/area;
+	n.set(vector_area_x/area, vector_area_y/area, vector_area_z/area);
 	// Tangent unit-vectors: 
 	// t1 is parallel to side01
 	// t2 is normal to n and t1
 	double abs_p01 = sqrt(p01x^^2 + p01y^^2 + p01z^^2);
 	// t1 = unit(p1-p0);
-	t1.refx = p01x/abs_p01; t1.refy = p01y/abs_p01; t1.refz = p01z/abs_p01;
+	t1.set(p01x/abs_p01, p01y/abs_p01, p01z/abs_p01);
 	// t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
 	cross(t2, n, t1);
 	t2.normalize();
@@ -709,9 +706,9 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 		     ref double area,
 		     double tol=1.0e-12, double area_tol=1.0e-20)
 {
-    centroid.refx = 0.25 * (p0.x + p1.x + p2.x + p3.x);
-    centroid.refy = 0.25 * (p0.y + p1.y + p2.y + p3.y);
-    centroid.refz = 0.25 * (p0.z + p1.z + p2.z + p3.z);
+    centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
+		 0.25*(p0.y + p1.y + p2.y + p3.y),
+		 0.25*(p0.z + p1.z + p2.z + p3.z));
     // Compute areas via the cross products.
     // Vector3 vector_area = 0.25 * cross(p1-p0+p2-p3, p3-p0+p2-p1);
     double p01x = p1.x-p0.x+p2.x-p3.x;
@@ -729,14 +726,12 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     area = sqrt(vector_area_x^^2 + vector_area_y^^2 + vector_area_z^^2);
     if (area > area_tol) {
 	// n = unit(vector_area);
-	n.refx = vector_area_x/area;
-	n.refy = vector_area_y/area;
-	n.refz = vector_area_z/area;
+	n.set(vector_area_x/area, vector_area_y/area, vector_area_z/area);
 	// Tangent unit-vectors: 
 	// t1 is parallel to side01 and side32, 
 	// t2 is normal to n and t1
 	// t1 = unit((p1-p0)+(p2-p3)); // Works even if one edge has zero length.
-	t1.refx = p01x; t1.refy = p01y; t1.refz = p01z;
+	t1.set(p01x, p01y, p01z);
 	t1.normalize();
 	// t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
 	cross(t2, n, t1);
@@ -778,17 +773,17 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     xyplane_area = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
 			  (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
     //
-    centroid.refx = 1.0 / (xyplane_area * 6.0) * 
+    double x = 1.0 / (xyplane_area * 6.0) * 
 	((yB - yA) * (xA * xA + xA * xB + xB * xB) + 
 	 (yC - yB) * (xB * xB + xB * xC + xC * xC) +
 	 (yD - yC) * (xC * xC + xC * xD + xD * xD) + 
 	 (yA - yD) * (xD * xD + xD * xA + xA * xA));
-    centroid.refy = -1.0 / (xyplane_area * 6.0) * 
+    double y = -1.0 / (xyplane_area * 6.0) * 
 	((xB - xA) * (yA * yA + yA * yB + yB * yB) + 
 	 (xC - xB) * (yB * yB + yB * yC + yC * yC) +
 	 (xD - xC) * (yC * yC + yC * yD + yD * yD) + 
 	 (xA - xD) * (yD * yD + yD * yA + yA * yA));
-    centroid.refz = 0.0;
+    centroid.set(x, y, 0.0);
     //
     // Check cell length scale using North and East boundaries.
     // Also, save the minimum length for later use in the CFL checking routine.
@@ -838,15 +833,15 @@ void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) 
     //
     xyplane_area = 0.5*((x1+x0)*(y1-y0) + (x2+x1)*(y2-y1) + (x0+x2)*(y0-y2));
     //
-    centroid.refx = 1.0/(xyplane_area*6.0) * 
+    double x = 1.0/(xyplane_area*6.0) * 
 	((y1-y0)*(x0*x0 + x0*x1 + x1*x1) + 
 	 (y2-y1)*(x1*x1 + x1*x2 + x2*x2) +
 	 (y0-y2)*(x2*x2 + x2*x0 + x0*x0));
-    centroid.refy = -1.0/(xyplane_area*6.0) * 
+    double y = -1.0/(xyplane_area*6.0) * 
 	((x1-x0)*(y0*y0 + y0*y1 + y1*y1) + 
 	 (x2-x1)*(y1*y1 + y1*y2 + y2*y2) +
 	 (x0-x2)*(y2*y2 + y2*y0 + y0*y0));
-    centroid.refz = 0.0;
+    centroid.set(x, y, 0.0);
     //
     // Also, save the minimum length for later use in the CFL checking routine.
     minLen = sqrt(xyplane_area);
@@ -880,9 +875,9 @@ void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			    ref const(Vector3) p2, ref const(Vector3) p3,
 			    ref Vector3 centroid, ref double volume)
 {
-    centroid.refx = 0.25 * (p0.x + p1.x + p2.x + p3.x);
-    centroid.refy = 0.25 * (p0.y + p1.y + p2.y + p3.y);
-    centroid.refz = 0.25 * (p0.z + p1.z + p2.z + p3.z);
+    centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
+		 0.25*(p0.y + p1.y + p2.y + p3.y),
+		 0.25*(p0.z + p1.z + p2.z + p3.z));
     volume = tetrahedron_volume(p0, p1, p2, p3);
 } // end tetrahedron_properties()
 
@@ -939,9 +934,9 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     //
     // Split into 4 tetrahedra and sum contributions to volume and moment.
     Vector3 pmB; // Mid-point of quadrilateral base.
-    pmB.refx = 0.25*(p0.x+p1.x+p2.x+p3.x);
-    pmB.refy = 0.25*(p0.y+p1.y+p2.y+p3.y);
-    pmB.refz = 0.25*(p0.z+p1.z+p2.z+p3.z);
+    pmB.set(0.25*(p0.x+p1.x+p2.x+p3.x),
+	    0.25*(p0.y+p1.y+p2.y+p3.y),
+	    0.25*(p0.z+p1.z+p2.z+p3.z));
     //
     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
     double tet_volume; Vector3 tet_centroid;
@@ -973,9 +968,9 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 		      ref Vector3 centroid, ref double volume)
 {
     // Use the average of the vertex points to get a rough centroid of the wedge.
-    centroid.refx = 1.0/6.0 * (p0.x+p1.x+p2.x+p3.x+p4.x+p5.x);
-    centroid.refy = 1.0/6.0 * (p0.y+p1.y+p2.y+p3.y+p4.y+p5.y);
-    centroid.refz = 1.0/6.0 * (p0.z+p1.z+p2.z+p3.z+p4.z+p5.z);
+    centroid.set(1.0/6.0*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x),
+		 1.0/6.0*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y),
+		 1.0/6.0*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z));
     // Split the wedge into three pyramids and two tetrahedra
     // using this centroid as the peak of each sub-volume.
     double sub_volume; Vector3 sub_centroid;
@@ -1019,34 +1014,34 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     //
     // Estimate the centroid so that we can use it as the peak
     // of each of the pyramid sub-volumes.
-    centroid.refx = 0.125 * (p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x);
-    centroid.refy = 0.125 * (p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y);
-    centroid.refz = 0.125 * (p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z);
+    centroid.set(0.125*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x+p6.x+p7.x),
+		 0.125*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y+p6.y+p7.y),
+		 0.125*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z+p6.z+p7.z));
     // Mid-points of faces.
     Vector3 pmN;
-    pmN.refx = 0.25*(p3.x+p2.x+p6.x+p7.x);
-    pmN.refy = 0.25*(p3.y+p2.y+p6.y+p7.y);
-    pmN.refz = 0.25*(p3.z+p2.z+p6.z+p7.z);
+    pmN.set(0.25*(p3.x+p2.x+p6.x+p7.x),
+	    0.25*(p3.y+p2.y+p6.y+p7.y),
+	    0.25*(p3.z+p2.z+p6.z+p7.z));
     Vector3 pmE;
-    pmE.refx = 0.25*(p1.x+p2.x+p6.x+p5.x);
-    pmE.refy = 0.25*(p1.y+p2.y+p6.y+p5.y);
-    pmE.refz = 0.25*(p1.z+p2.z+p6.z+p5.z);
+    pmE.set(0.25*(p1.x+p2.x+p6.x+p5.x),
+	    0.25*(p1.y+p2.y+p6.y+p5.y),
+	    0.25*(p1.z+p2.z+p6.z+p5.z));
     Vector3 pmS;
-    pmS.refx = 0.25*(p0.x+p1.x+p5.x+p4.x);
-    pmS.refy = 0.25*(p0.y+p1.y+p5.y+p4.y);
-    pmS.refz = 0.25*(p0.z+p1.z+p5.z+p4.z);
+    pmS.set(0.25*(p0.x+p1.x+p5.x+p4.x),
+	    0.25*(p0.y+p1.y+p5.y+p4.y),
+	    0.25*(p0.z+p1.z+p5.z+p4.z));
     Vector3 pmW;
-    pmW.refx = 0.25*(p0.x+p3.x+p7.x+p4.x);
-    pmW.refy = 0.25*(p0.y+p3.y+p7.y+p4.y);
-    pmW.refz = 0.25*(p0.z+p3.z+p7.z+p4.z);
+    pmW.set(0.25*(p0.x+p3.x+p7.x+p4.x),
+	    0.25*(p0.y+p3.y+p7.y+p4.y),
+	    0.25*(p0.z+p3.z+p7.z+p4.z));
     Vector3 pmT;
-    pmT.refx = 0.25*(p4.x+p5.x+p6.x+p7.x);
-    pmT.refy = 0.25*(p4.y+p5.y+p6.y+p7.y);
-    pmT.refz = 0.25*(p4.z+p5.z+p6.z+p7.z);
+    pmT.set(0.25*(p4.x+p5.x+p6.x+p7.x),
+	    0.25*(p4.y+p5.y+p6.y+p7.y),
+	    0.25*(p4.z+p5.z+p6.z+p7.z));
     Vector3 pmB;
-    pmB.refx = 0.25*(p0.x+p1.x+p2.x+p3.x);
-    pmB.refy = 0.25*(p0.y+p1.y+p2.y+p3.y);
-    pmB.refz = 0.25*(p0.z+p1.z+p2.z+p3.z);
+    pmB.set(0.25*(p0.x+p1.x+p2.x+p3.x),
+	    0.25*(p0.y+p1.y+p2.y+p3.y),
+	    0.25*(p0.z+p1.z+p2.z+p3.z));
     // Lengths between mid-points of faces.
     // Note that we are assuming that the hexahedron is not very skewed
     // when we later use these values as the widths of the hex cell.
