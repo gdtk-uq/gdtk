@@ -1392,8 +1392,9 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
     Linf_residuals.copy_values_from(gasBlocks[0].Linf_residuals);
     foreach (blk; gasBlocks) {
 	Linf_residuals.mass = fmax(Linf_residuals.mass, fabs(blk.Linf_residuals.mass));
-	Linf_residuals.momentum.refx = fmax(Linf_residuals.momentum.x, fabs(blk.Linf_residuals.momentum.x));
-	Linf_residuals.momentum.refy = fmax(Linf_residuals.momentum.y, fabs(blk.Linf_residuals.momentum.y));
+	Linf_residuals.momentum.set(fmax(Linf_residuals.momentum.x, fabs(blk.Linf_residuals.momentum.x)),
+				    fmax(Linf_residuals.momentum.y, fabs(blk.Linf_residuals.momentum.y)),
+				    fmax(Linf_residuals.momentum.z, fabs(blk.Linf_residuals.momentum.z)));
 	Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(blk.Linf_residuals.total_energy));
 
     }

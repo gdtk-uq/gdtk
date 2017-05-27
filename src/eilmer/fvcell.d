@@ -154,9 +154,7 @@ public:
 	    break;
 	case CopyDataOption.grid:
 	    foreach(i; 0 .. other.myConfig.n_grid_time_levels) {
-		pos[i].refx = other.pos[i].x;
-		pos[i].refy = other.pos[i].y;
-		pos[i].refz = other.pos[i].z;
+		pos[i].set(other.pos[i]);
 		volume[i] = other.volume[i];
 		areaxy[i] = other.areaxy[i];
 	    }
@@ -177,9 +175,7 @@ public:
 	    id = other.id;
 	    myConfig = other.myConfig;
 	    foreach(i; 0 .. other.myConfig.n_grid_time_levels) {
-		pos[i].refx = other.pos[i].x;
-		pos[i].refy = other.pos[i].y;
-		pos[i].refz = other.pos[i].z;
+		pos[i].set(other.pos[i]);
 		volume[i] = other.volume[i];
 		areaxy[i] = other.areaxy[i];
 	    }
@@ -293,42 +289,38 @@ public:
     {
 	ConservedQuantities myU = U[ftl];
 	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
-
-	myU.mass = fs.gas.rho;
-	// X-, Y- and Z-momentum per unit volume.
-	myU.momentum.refx = fs.gas.rho * fs.vel.x;
-	myU.momentum.refy = fs.gas.rho * fs.vel.y;
-	myU.momentum.refz = fs.gas.rho * fs.vel.z;
+	double myrho = fs.gas.rho;
+	// Mass per unit volume.
+	myU.mass = myrho;
+	// Momentum per unit volume.
+	myU.momentum.set(fs.gas.rho*fs.vel.x, fs.gas.rho*fs.vel.y, fs.gas.rho*fs.vel.z);
 	// Magnetic field
-	myU.B.refx = fs.B.x;
-	myU.B.refy = fs.B.y;
-	myU.B.refz = fs.B.z;
+	myU.B.set(fs.B);
 	myU.psi = fs.psi;
 	myU.divB = fs.divB;
-	// Total Energy / unit volume = density
-	// (specific internal energy + kinetic energy/unit mass).
-	double e = fs.gas.u; foreach(elem; fs.gas.e_modes) e += elem;
-	double ke = 0.5 * (fs.vel.x * fs.vel.x + fs.vel.y * fs.vel.y + fs.vel.z * fs.vel.z);
+	// Total Energy / unit volume = (specific internal energy + kinetic energy/unit mass).
+	double e = fs.gas.u; foreach(elem; fs.gas.e_modes) { e += elem; }
+	double ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
 	if (with_k_omega) {
 	    myU.tke = fs.gas.rho * fs.tke;
 	    myU.omega = fs.gas.rho * fs.omega;
-	    myU.total_energy = fs.gas.rho * (e + ke + fs.tke);
+	    myU.total_energy = fs.gas.rho*(e + ke + fs.tke);
 	} else {
 	    myU.tke = 0.0;
 	    myU.omega = fs.gas.rho * 1.0;
-	    myU.total_energy = fs.gas.rho * (e + ke);
+	    myU.total_energy = fs.gas.rho*(e + ke);
 	}
 	if (myConfig.MHD) {
-	    double me = 0.5 * (fs.B.x * fs.B.x + fs.B.y * fs.B.y + fs.B.z * fs.B.z);
+	    double me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
 	    myU.total_energy += me;
 	}
 	// Species densities: mass of species is per unit volume.
 	foreach(isp; 0 .. myU.massf.length) {
-	    myU.massf[isp] = fs.gas.rho * fs.gas.massf[isp];
+	    myU.massf[isp] = fs.gas.rho*fs.gas.massf[isp];
 	}
 	// Individual energies: energy in mode per unit volume
 	foreach(imode; 0 .. myU.energies.length) {
-	    myU.energies[imode] = fs.gas.rho * fs.gas.e_modes[imode];
+	    myU.energies[imode] = fs.gas.rho*fs.gas.e_modes[imode];
 	}
 	if (omegaz != 0.0) {
 	    // Rotating frame.
@@ -342,7 +334,7 @@ public:
 	    double rsq = x*x + y*y;
 	    // The conserved quantity is rothalpy. I = E - (u**2)/2
 	    // where rotating frame velocity  u = omegaz * r.
-	    myU.total_energy -= rho * 0.5 * omegaz * omegaz * rsq;
+	    myU.total_energy -= rho*0.5*omegaz*omegaz*rsq;
 	}
 	assert(U[ftl].mass > 0.0, "invalid density in conserved quantities vector" ~
 	       " when leaving FVCell.encode_conserved().");
@@ -374,23 +366,19 @@ public:
 	    double x = pos[gtl].x;
 	    double y = pos[gtl].y;
 	    double rsq = x*x + y*y;
-	    rE = myU.total_energy + rho * 0.5 * omegaz * omegaz * rsq;
+	    rE = myU.total_energy + rho*0.5*omegaz*omegaz*rsq;
 	} else {
 	    // Non-rotating frame.
 	    rE = myU.total_energy;
 	}
 	// Velocities from momenta.
-	fs.vel.refx = myU.momentum.x * dinv;
-	fs.vel.refy = myU.momentum.y * dinv;
-	fs.vel.refz = myU.momentum.z * dinv;
+	fs.vel.set(myU.momentum.x*dinv, myU.momentum.y*dinv, myU.momentum.z*dinv);
 	// Magnetic field
-	fs.B.refx = myU.B.x;
-	fs.B.refy = myU.B.y;
-	fs.B.refz = myU.B.z;
+	fs.B.set(myU.B);
 	fs.psi = myU.psi;
 	fs.divB = myU.divB;
 	// Specific internal energy from total energy per unit volume.
-	ke = 0.5 * (fs.vel.x * fs.vel.x + fs.vel.y * fs.vel.y + fs.vel.z * fs.vel.z);
+	ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
 	if ( myConfig.MHD ) {
 	    me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
 	} else {
@@ -445,73 +433,64 @@ public:
     //       2: End of stage-2.
     {
 	double vol_inv = 1.0 / volume[gtl]; // Cell volume (inverted).
-	double integral;
     
 	// Time-derivative for Mass/unit volume.
-	integral = 0.0;
-	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.mass * iface[i].area[gtl];
-	dUdt[ftl].mass = vol_inv * integral + Q.mass;
+	double integral = 0.0;
+	foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.mass*iface[i].area[gtl]; }
+	dUdt[ftl].mass = vol_inv*integral + Q.mass;
 
-	// Time-derivative for X-Momentum/unit volume.
-	integral = 0.0;
-	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.momentum.x * iface[i].area[gtl];
-	dUdt[ftl].momentum.refx = vol_inv * integral + Q.momentum.x;
-	// Time-derivative for Y-Momentum/unit volume.
-	integral = 0.0;
-	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.momentum.y * iface[i].area[gtl];
-	dUdt[ftl].momentum.refy = vol_inv * integral + Q.momentum.y;
-    
-	// we require the z-momentum for MHD even in 2D
-	if ((myConfig.dimensions == 3) || ( myConfig.MHD )) {
-	    // Time-derivative for Z-Momentum/unit volume.
-	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.momentum.z * iface[i].area[gtl];
-	    dUdt[ftl].momentum.refz = vol_inv * integral + Q.momentum.z;
-	} else {
-	    dUdt[ftl].momentum.refz = 0.0;
+	// Time-derivative for Momentum/unit volume.
+	double integralx = 0.0; double integraly = 0.0; double integralz = 0.0;
+	foreach(i; 0 .. iface.length) {
+	    integralx -= outsign[i]*iface[i].F.momentum.x*iface[i].area[gtl];
+	    integraly -= outsign[i]*iface[i].F.momentum.y*iface[i].area[gtl];
+	    if ((myConfig.dimensions == 3) || ( myConfig.MHD )) {
+		// require z-momentum for MHD even in 2D
+		integralz -= outsign[i]*iface[i].F.momentum.z*iface[i].area[gtl];
+	    }
 	}
+	dUdt[ftl].momentum.set(vol_inv*integralx + Q.momentum.x,
+			       vol_inv*integraly + Q.momentum.y,
+			       vol_inv*integralz + Q.momentum.z);
     
 	if (myConfig.MHD) {
-	    // Time-derivative for X-Magnetic Field/unit volume.
-	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.x * iface[i].area[gtl];
-	    dUdt[ftl].B.refx = vol_inv * integral + Q.B.x;
-	    // Time-derivative for Y-Magnetic Field/unit volume.
-	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.y * iface[i].area[gtl];
-	    dUdt[ftl].B.refy = vol_inv * integral + Q.B.y;
-	    // Time-derivative for Z-Magnetic Field/unit volume.
-	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.B.z * iface[i].area[gtl];
-	    dUdt[ftl].B.refz = vol_inv * integral + Q.B.z;
-	    // Calculate divergence of the magnetic field here; not actually a time-derivatice but seems to be the best way to calculate it.
+	    // Time-derivative for Magnetic Field/unit volume.
+	    integralx = 0.0; integraly = 0.0; integralz = 0.0;
+	    foreach(i; 0 .. iface.length) {
+		integralx -= outsign[i]*iface[i].F.B.x*iface[i].area[gtl];
+		integraly -= outsign[i]*iface[i].F.B.y*iface[i].area[gtl];
+		integralz -= outsign[i]*iface[i].F.B.z*iface[i].area[gtl];
+	    }
+	    dUdt[ftl].B.set(vol_inv*integralx + Q.B.x,
+			    vol_inv*integraly + Q.B.y,
+			    vol_inv*integralz + Q.B.z);
+	    // Calculate divergence of the magnetic field here;
+	    // not actually a time-derivatice but seems to be the best way to calculate it.
 	    dUdt[ftl].divB = 0.0;
-	    foreach(i; 0 .. iface.length) dUdt[ftl].divB += outsign[i] * iface[i].F.divB * iface[i].area[gtl];
+	    foreach(i; 0 .. iface.length) { dUdt[ftl].divB += outsign[i]*iface[i].F.divB*iface[i].area[gtl]; }
 	    if (myConfig.divergence_cleaning) {
 		integral = 0.0;
-		foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.psi * iface[i].area[gtl];
-		dUdt[ftl].psi = vol_inv * integral + Q.psi;
+		foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.psi*iface[i].area[gtl]; }
+		dUdt[ftl].psi = vol_inv*integral + Q.psi;
 	    }
 	} else {
-	    dUdt[ftl].B.refx = 0.0;
-	    dUdt[ftl].B.refy = 0.0;
-	    dUdt[ftl].B.refz = 0.0;
+	    dUdt[ftl].B.set(0.0, 0.0, 0.0);
 	    dUdt[ftl].psi = 0.0;
 	    dUdt[ftl].divB = 0.0;
 	}
 
 	// Time-derivative for Total Energy/unit volume.
 	integral = 0.0;
-	foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.total_energy * iface[i].area[gtl];
-	dUdt[ftl].total_energy = vol_inv * integral + Q.total_energy;
+	foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.total_energy*iface[i].area[gtl]; }
+	dUdt[ftl].total_energy = vol_inv*integral + Q.total_energy;
     
 	if (with_k_omega) {
 	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.tke * iface[i].area[gtl];
-	    dUdt[ftl].tke = vol_inv * integral + Q.tke;
+	    foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.tke*iface[i].area[gtl]; }
+	    dUdt[ftl].tke = vol_inv*integral + Q.tke;
 	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.omega * iface[i].area[gtl];
-	    dUdt[ftl].omega = vol_inv * integral + Q.omega;
+	    foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.omega*iface[i].area[gtl]; }
+	    dUdt[ftl].omega = vol_inv*integral + Q.omega;
 	} else {
 	    dUdt[ftl].tke = 0.0;
 	    dUdt[ftl].omega = 0.0;
@@ -523,14 +502,14 @@ public:
 	// Units of DmassfDt are 1/sec.
 	foreach(isp; 0 .. iface[0].F.massf.length) {
 	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.massf[isp] * iface[i].area[gtl];
-	    dUdt[ftl].massf[isp] = vol_inv * integral + Q.massf[isp];
+	    foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.massf[isp]*iface[i].area[gtl]; }
+	    dUdt[ftl].massf[isp] = vol_inv*integral + Q.massf[isp];
 	}
 	// Individual energies.
 	foreach(imode; 0 .. iface[0].F.energies.length) {
 	    integral = 0.0;
-	    foreach(i; 0 .. iface.length) integral -= outsign[i] * iface[i].F.energies[imode] * iface[i].area[gtl];
-	    dUdt[ftl].energies[imode] = vol_inv * integral + Q.energies[imode];
+	    foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.energies[imode]*iface[i].area[gtl]; }
+	    dUdt[ftl].energies[imode] = vol_inv*integral + Q.energies[imode];
 	}
     } // end time_derivatives()
 
@@ -557,26 +536,26 @@ public:
 	    case GasdynamicUpdate.denman_rk3: gamma_1 = 8.0/15.0; break;
 	    }
 	}
-	U1.mass = U0.mass + dt * gamma_1 * dUdt0.mass;
+	U1.mass = U0.mass + dt*gamma_1*dUdt0.mass;
 	// Side note: 
 	// It would be convenient (codewise) for the updates of these Vector3 quantities to
 	// be done with the Vector3 arithmetic operators but I suspect that the implementation
 	// of those oerators is such that a whole lot of Vector3 temporaries would be created.
-	U1.momentum.refx = U0.momentum.x + dt * gamma_1 * dUdt0.momentum.x;
-	U1.momentum.refy = U0.momentum.y + dt * gamma_1 * dUdt0.momentum.y;
-	U1.momentum.refz = U0.momentum.z + dt * gamma_1 * dUdt0.momentum.z;
+	U1.momentum.set(U0.momentum.x + dt*gamma_1*dUdt0.momentum.x,
+			U0.momentum.y + dt*gamma_1*dUdt0.momentum.y,
+			U0.momentum.z + dt*gamma_1*dUdt0.momentum.z);
 	if (myConfig.MHD) {
 	    // Magnetic field
-	    U1.B.refx = U0.B.x + dt * gamma_1 * dUdt0.B.x;
-	    U1.B.refy = U0.B.y + dt * gamma_1 * dUdt0.B.y;
-	    U1.B.refz = U0.B.z + dt * gamma_1 * dUdt0.B.z;
+	    U1.B.set(U0.B.x + dt*gamma_1*dUdt0.B.x,
+		     U0.B.y + dt*gamma_1*dUdt0.B.y,
+		     U0.B.z + dt*gamma_1*dUdt0.B.z);
 	    U1.divB = dUdt0.divB;
 	    if (myConfig.divergence_cleaning) {
-		U1.psi = U0.psi + dt * gamma_1 * dUdt0.psi;
+		U1.psi = U0.psi + dt*gamma_1*dUdt0.psi;
 		U1.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
-	    U1.B.refx = 0.0; U1.B.refy = 0.0; U1.B.refz = 0.0;
+	    U1.B.set(0.0, 0.0, 0.0);
 	    U1.psi = 0.0;
 	    U1.divB = 0.0;
 	}
@@ -600,10 +579,10 @@ public:
 	    U1.omega = U0.omega;
 	}
 	foreach(isp; 0 .. U1.massf.length) {
-	    U1.massf[isp] = U0.massf[isp] + dt * gamma_1 * dUdt0.massf[isp];
+	    U1.massf[isp] = U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp];
 	}
 	foreach(imode; 0 .. U1.energies.length) {
-	    U1.energies[imode] = U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode];
+	    U1.energies[imode] = U0.energies[imode] + dt*gamma_1*dUdt0.energies[imode];
 	}
 	return;
     } // end stage_1_update_for_flow_on_fixed_grid()
@@ -628,42 +607,40 @@ public:
 	case GasdynamicUpdate.tvd_rk3: gamma_1 = 0.25; gamma_2 = 0.25; break;
 	case GasdynamicUpdate.denman_rk3: gamma_1 = -17.0/60.0; gamma_2 = 5.0/12.0; break;
 	}
-	U2.mass = U_old.mass + dt * (gamma_1 * dUdt0.mass + gamma_2 * dUdt1.mass);
-	U2.momentum.refx = U_old.momentum.x + dt * (gamma_1 * dUdt0.momentum.x + gamma_2 * dUdt1.momentum.x);
-	U2.momentum.refy = U_old.momentum.y + dt * (gamma_1 * dUdt0.momentum.y + gamma_2 * dUdt1.momentum.y);
-	U2.momentum.refz = U_old.momentum.z + dt * (gamma_1 * dUdt0.momentum.z + gamma_2 * dUdt1.momentum.z);
+	U2.mass = U_old.mass + dt*(gamma_1*dUdt0.mass + gamma_2*dUdt1.mass);
+	U2.momentum.set(U_old.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x),
+			U_old.momentum.y + dt*(gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y),
+			U_old.momentum.z + dt*(gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z));
 	if (myConfig.MHD) {
 	    // Magnetic field
-	    U2.B.refx = U_old.B.x + dt * (gamma_1 * dUdt0.B.x + gamma_2 * dUdt1.B.x);
-	    U2.B.refy = U_old.B.y + dt * (gamma_1 * dUdt0.B.y + gamma_2 * dUdt1.B.y);
-	    U2.B.refz = U_old.B.z + dt * (gamma_1 * dUdt0.B.z + gamma_2 * dUdt1.B.z);
+	    U2.B.set(U_old.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x),
+		     U_old.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y),
+		     U_old.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z));
 	    U2.divB = dUdt0.divB;
 	    if (myConfig.divergence_cleaning) {
-		U2.psi = U_old.psi + dt * (gamma_1 * dUdt0.psi + gamma_2 * dUdt1.psi);
+		U2.psi = U_old.psi + dt*(gamma_1*dUdt0.psi + gamma_2*dUdt1.psi);
 		U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
-	    U2.B.refx = 0.0; U2.B.refy = 0.0; U2.B.refz = 0.0;
+	    U2.B.set(0.0, 0.0, 0.0);
 	    U2.psi = 0.0;
 	    U2.divB = 0.0;
 	}
-	U2.total_energy = U_old.total_energy + 
-	    dt * (gamma_1 * dUdt0.total_energy + gamma_2 * dUdt1.total_energy);
+	U2.total_energy = U_old.total_energy + dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy);
 	if ( with_k_omega ) {
-	    U2.tke = U_old.tke + dt * (gamma_1 * dUdt0.tke + gamma_2 * dUdt1.tke);
+	    U2.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke);
 	    U2.tke = fmax(U2.tke, 0.0);
-	    U2.omega = U_old.omega + dt * (gamma_1 * dUdt0.omega + gamma_2 * dUdt1.omega);
+	    U2.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega);
 	    U2.omega = fmax(U2.omega, U_old.mass);
 	} else {
 	    U2.tke = U_old.tke;
 	    U2.omega = U_old.omega;
 	}
 	foreach(isp; 0 .. U2.massf.length) {
-	    U2.massf[isp] = U_old.massf[isp] + dt * (gamma_1 * dUdt0.massf[isp] + gamma_2 * dUdt1.massf[isp]);
+	    U2.massf[isp] = U_old.massf[isp] + dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]);
 	}
 	foreach(imode; 0 .. U2.energies.length) {
-	    U2.energies[imode] = U_old.energies[imode] + 
-		dt * (gamma_1 * dUdt0.energies[imode] + gamma_2 * dUdt1.energies[imode]);
+	    U2.energies[imode] = U_old.energies[imode] + dt*(gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode]);
 	}
 	return;
     } // end stage_2_update_for_flow_on_fixed_grid()
@@ -693,31 +670,28 @@ public:
 	case GasdynamicUpdate.denman_rk3: gamma_1 = 0.0; gamma_2 = -5.0/12.0; gamma_3 = 3.0/4.0; break;
 	}
 	U3.mass = U_old.mass + dt * (gamma_1*dUdt0.mass + gamma_2*dUdt1.mass + gamma_3*dUdt2.mass);
-	U3.momentum.refx = U_old.momentum.x +
-	    dt * (gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x + gamma_3*dUdt2.momentum.x);
-	U3.momentum.refy = U_old.momentum.y +
-	    dt * (gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y + gamma_3*dUdt2.momentum.y);
-	U3.momentum.refz = U_old.momentum.z + 
-	    dt * (gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z + gamma_3*dUdt2.momentum.z);
+	U3.momentum.set(U_old.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x + gamma_3*dUdt2.momentum.x),
+			U_old.momentum.y + dt*(gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y + gamma_3*dUdt2.momentum.y),
+			U_old.momentum.z + dt*(gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z + gamma_3*dUdt2.momentum.z));
 	if (myConfig.MHD) {
 	    // Magnetic field
-	    U3.B.refx = U_old.B.x + dt * (gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x + gamma_3*dUdt2.B.x);
-	    U3.B.refy = U_old.B.y + dt * (gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y + gamma_3*dUdt2.B.y);
-	    U3.B.refz = U_old.B.z + dt * (gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z + gamma_3*dUdt2.B.z);
+	    U3.B.set(U_old.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x + gamma_3*dUdt2.B.x),
+		     U_old.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y + gamma_3*dUdt2.B.y),
+		     U_old.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z + gamma_3*dUdt2.B.z));
 	    if (myConfig.divergence_cleaning) {
-		U3.psi = U_old.psi + dt * (gamma_1 * dUdt0.psi + gamma_2 * dUdt1.psi + gamma_3 * dUdt2.psi);
+		U3.psi = U_old.psi + dt*(gamma_1*dUdt0.psi + gamma_2*dUdt1.psi + gamma_3*dUdt2.psi);
 		U3.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
-	    U3.B.refx = 0.0; U3.B.refy = 0.0; U3.B.refz = 0.0;
+	    U3.B.set(0.0, 0.0, 0.0);
 	    U3.psi = 0.0;
 	}
 	U3.total_energy = U_old.total_energy + 
-	    dt * (gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
+	    dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
 	if (with_k_omega) {
-	    U3.tke = U_old.tke + dt * (gamma_1*dUdt0.tke + gamma_2*dUdt1.tke + gamma_3*dUdt2.tke);
+	    U3.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke + gamma_3*dUdt2.tke);
 	    U3.tke = fmax(U3.tke, 0.0);
-	    U3.omega = U_old.omega + dt * (gamma_1*dUdt0.omega + gamma_2*dUdt1.omega + gamma_3*dUdt2.omega);
+	    U3.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega + gamma_3*dUdt2.omega);
 	    U3.omega = fmax(U3.omega, U_old.mass);
 	} else {
 	    U3.tke = U_old.tke;
@@ -725,12 +699,11 @@ public:
 	}
 	foreach(isp; 0 .. U3.massf.length) {
 	    U3.massf[isp] = U_old.massf[isp] +
-		dt * (gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp] + gamma_3*dUdt2.massf[isp]);
+		dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp] + gamma_3*dUdt2.massf[isp]);
 	}
 	foreach(imode; 0 .. U3.energies.length) {
 	    U3.energies[imode] = U_old.energies[imode] +
-		dt * (gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode] +
-		      gamma_3*dUdt2.energies[imode]);
+		dt*(gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode] + gamma_3*dUdt2.energies[imode]);
 	}
 	return;
     } // end stage_3_update_for_flow_on_fixed_grid()
@@ -743,33 +716,33 @@ public:
 	ConservedQuantities U1 = U[1];
 	double gamma_1 = 1.0;
 	double vr = volume[0] / volume[1];
-	U1.mass = vr * (U0.mass + dt * gamma_1 * dUdt0.mass);
-	U1.momentum.refx = vr * (U0.momentum.x + dt * gamma_1 * dUdt0.momentum.x);
-	U1.momentum.refy = vr * (U0.momentum.y + dt * gamma_1 * dUdt0.momentum.y);
-	U1.momentum.refz = vr * (U0.momentum.z + dt * gamma_1 * dUdt0.momentum.z);
+	U1.mass = vr*(U0.mass + dt*gamma_1*dUdt0.mass);
+	U1.momentum.set(vr*(U0.momentum.x + dt*gamma_1*dUdt0.momentum.x),
+			vr*(U0.momentum.y + dt*gamma_1*dUdt0.momentum.y),
+			vr*(U0.momentum.z + dt*gamma_1*dUdt0.momentum.z));
 	if (myConfig.MHD) {
 	    // Magnetic field
-	    U1.B.refx = vr * (U0.B.x + dt * gamma_1 * dUdt0.B.x);
-	    U1.B.refy = vr * (U0.B.y + dt * gamma_1 * dUdt0.B.y);
-	    U1.B.refz = vr * (U0.B.z + dt * gamma_1 * dUdt0.B.z);
+	    U1.B.set(vr*(U0.B.x + dt*gamma_1*dUdt0.B.x),
+		     vr*(U0.B.y + dt*gamma_1*dUdt0.B.y),
+		     vr*(U0.B.z + dt*gamma_1*dUdt0.B.z));
 	} else {
-	    U1.B.refx = 0.0; U1.B.refy = 0.0; U1.B.refz = 0.0;
+	    U1.B.set(0.0, 0.0, 0.0);
 	}
-	U1.total_energy = vr * (U0.total_energy + dt * gamma_1 * dUdt0.total_energy);
+	U1.total_energy = vr*(U0.total_energy + dt*gamma_1*dUdt0.total_energy);
 	if (with_k_omega) {
-	    U1.tke = vr * (U0.tke + dt * gamma_1 * dUdt0.tke);
+	    U1.tke = vr*(U0.tke + dt*gamma_1*dUdt0.tke);
 	    U1.tke = fmax(U1.tke, 0.0);
-	    U1.omega = vr * (U0.omega + dt * gamma_1 * dUdt0.omega);
+	    U1.omega = vr*(U0.omega + dt*gamma_1*dUdt0.omega);
 	    U1.omega = fmax(U1.omega, U0.mass);
 	} else {
 	    U1.tke = U0.tke;
 	    U1.omega = U0.omega;
 	}
 	foreach(isp; 0 .. U1.massf.length) {
-	    U1.massf[isp] = vr * (U0.massf[isp] + dt * gamma_1 * dUdt0.massf[isp]);
+	    U1.massf[isp] = vr*(U0.massf[isp] + dt*gamma_1*dUdt0.massf[isp]);
 	}
 	foreach(imode; 0 .. U1.energies.length) {
-	    U1.energies[imode] = vr * (U0.energies[imode] + dt * gamma_1 * dUdt0.energies[imode]);
+	    U1.energies[imode] = vr*(U0.energies[imode] + dt*gamma_1*dUdt0.energies[imode]);
 	}
 	return;
     } // end stage_1_update_for_flow_on_moving_grid()
@@ -786,42 +759,37 @@ public:
 	double v_old = volume[0];
 	double vol_inv = 1.0 / volume[2];
 	gamma_1 *= volume[0]; gamma_2 *= volume[1]; // Roll-in the volumes for convenience below. 
-    
+	//
 	U2.mass = vol_inv * (v_old * U0.mass + dt * (gamma_1 * dUdt0.mass + gamma_2 * dUdt1.mass));
-	U2.momentum.refx = vol_inv * (v_old * U0.momentum.x + 
-				      dt * (gamma_1 * dUdt0.momentum.x + gamma_2 * dUdt1.momentum.x));
-	U2.momentum.refy = vol_inv * (v_old * U0.momentum.y + 
-				      dt * (gamma_1 * dUdt0.momentum.y + gamma_2 * dUdt1.momentum.y));
-	U2.momentum.refz = vol_inv * (v_old * U0.momentum.z + 
-				      dt * (gamma_1 * dUdt0.momentum.z + gamma_2 * dUdt1.momentum.z));
+	U2.momentum.set(vol_inv*(v_old*U0.momentum.x + dt*(gamma_1*dUdt0.momentum.x + gamma_2*dUdt1.momentum.x)),
+			vol_inv*(v_old*U0.momentum.y + dt*(gamma_1*dUdt0.momentum.y + gamma_2*dUdt1.momentum.y)),
+			vol_inv*(v_old*U0.momentum.z + dt*(gamma_1*dUdt0.momentum.z + gamma_2*dUdt1.momentum.z)));
 	if (myConfig.MHD) {
 	    // Magnetic field
-	    U2.B.refx = vol_inv * (v_old * U0.B.x + dt * (gamma_1 * dUdt0.B.x + gamma_2 * dUdt1.B.x));
-	    U2.B.refy = vol_inv * (v_old * U0.B.y + dt * (gamma_1 * dUdt0.B.y + gamma_2 * dUdt1.B.y));
-	    U2.B.refz = vol_inv * (v_old * U0.B.z + dt * (gamma_1 * dUdt0.B.z + gamma_2 * dUdt1.B.z));
+	    U2.B.set(vol_inv*(v_old*U0.B.x + dt*(gamma_1*dUdt0.B.x + gamma_2*dUdt1.B.x)),
+		     vol_inv*(v_old*U0.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y)),
+		     vol_inv*(v_old*U0.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z)));
 	} else {
-	    U2.B.refx = 0.0; U2.B.refy = 0.0; U2.B.refz = 0.0;
+	    U2.B.set(0.0, 0.0, 0.0);
 	}
-	U2.total_energy = vol_inv * (v_old * U0.total_energy + 
-				     dt * (gamma_1 * dUdt0.total_energy + gamma_2 * dUdt1.total_energy));
+	U2.total_energy = vol_inv*(v_old*U0.total_energy +
+				   dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy));
 	if (with_k_omega) {
-	    U2.tke = vol_inv * (v_old * U0.tke + dt * (gamma_1 * dUdt0.tke + gamma_2 * dUdt1.tke));
+	    U2.tke = vol_inv*(v_old*U0.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke));
 	    U2.tke = fmax(U2.tke, 0.0);
-	    U2.omega = vol_inv * (v_old * U0.omega + dt * (gamma_1 * dUdt0.omega + gamma_2 * dUdt1.omega));
+	    U2.omega = vol_inv*(v_old*U0.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega));
 	    U2.omega = fmax(U2.omega, U0.mass);
 	} else {
 	    U2.tke = vol_inv * (v_old * U0.tke);
 	    U2.omega = vol_inv * (v_old * U0.omega);
 	}
 	foreach(isp; 0 .. U2.massf.length) {
-	    U2.massf[isp] = vol_inv * (v_old * U0.massf[isp] +
-				       dt * (gamma_1 * dUdt0.massf[isp] + 
-					     gamma_2 * dUdt1.massf[isp]));
+	    U2.massf[isp] = vol_inv*(v_old*U0.massf[isp] +
+				     dt*(gamma_1*dUdt0.massf[isp] + gamma_2*dUdt1.massf[isp]));
 	}
 	foreach(imode; 0 .. U2.energies.length) {
-	    U2.energies[imode] = vol_inv * (v_old * U0.energies[imode] +
-					    dt * (gamma_1 * dUdt0.energies[imode] + 
-						  gamma_2 * dUdt1.energies[imode]));
+	    U2.energies[imode] = vol_inv*(v_old*U0.energies[imode] +
+					  dt*(gamma_1*dUdt0.energies[imode] + gamma_2*dUdt1.energies[imode]));
 	}
 	return;
     } // end stage_2_update_for_flow_on_moving_grid()
@@ -1393,13 +1361,13 @@ public:
     // have to start with a clean slate, so to speak.
     {
 	Q.mass = 0.0;
-	Q.momentum.refx = 0.0; Q.momentum.refy = 0.0; Q.momentum.refz = 0.0;
-	Q.B.refx = 0.0; Q.B.refy = 0.0; Q.B.refz = 0.0;
+	Q.momentum.set(0.0, 0.0, 0.0);
+	Q.B.set(0.0, 0.0, 0.0);
 	Q.total_energy = 0.0;
 	Q.tke = 0.0;
 	Q.omega = 0.0;
-	foreach(ref elem; Q.massf) elem = 0.0;
-	foreach(ref elem; Q.energies) elem = 0.0;
+	foreach(ref elem; Q.massf) { elem = 0.0; }
+	foreach(ref elem; Q.energies) { elem = 0.0; }
 	Q_rE_rad = 0.0;
     } // end clear_source_vector()
 
@@ -1647,7 +1615,7 @@ void scan_cell_data_from_string(string buffer,
 	    fs.psi = 0.0;
 	}
     } else {
-	fs.B.refx = 0.0; fs.B.refy = 0.0; fs.B.refz = 0.0;
+	fs.B.set(0.0, 0.0, 0.0);
 	fs.psi = 0.0; fs.divB = 0.0;
     }
     if (include_quality) {

@@ -904,9 +904,7 @@ public:
 		    writefln("Zero length ifi[%d,%d]: %.18e", i, j, LAB);
 		}
 		// Direction cosines for the unit normal.
-		iface.n.refx = (yB - yA) / LAB;
-		iface.n.refy = -(xB - xA) / LAB;
-		iface.n.refz = 0.0;  // 2D plane
+		iface.n.set((yB-yA)/LAB, -(xB-xA)/LAB, 0.0);
 		iface.t2 = Vector3(0.0, 0.0, 1.0);
 		iface.t1 = cross(iface.n, iface.t2);
 		// Length in the XY-plane.
@@ -939,9 +937,7 @@ public:
 		    writefln("Zero length ifj[%d,%d]: %.18e", i, j, LBC);
 		}
 		// Direction cosines for the unit normal.
-		iface.n.refx = (yC - yB) / LBC;
-		iface.n.refy = -(xC - xB) / LBC;
-		iface.n.refz = 0.0;  // 2D plane
+		iface.n.set((yC-yB)/LBC, -(xC-xB)/LBC, 0.0);
 		iface.t2 = Vector3(0.0, 0.0, 1.0);
 		iface.t1 = cross(iface.n, iface.t2);
 		// Length in the XY-plane.
@@ -1863,9 +1859,7 @@ public:
 		    for ( size_t i = imin; i <= imax+1; ++i ) {
 			auto vtx = get_vtx(i,j,k);
 			auto src_vtx = grid[i-imin,j-jmin,k-kmin];
-			vtx.pos[gtl].refx = src_vtx.x;
-			vtx.pos[gtl].refy = src_vtx.y;
-			vtx.pos[gtl].refz = src_vtx.z;
+			vtx.pos[gtl].set(*src_vtx);
 		    } // for i
 		} // for j
 	    } // for k
@@ -1879,9 +1873,7 @@ public:
 		for ( size_t i = imin; i <= imax+1; ++i ) {
 		    auto vtx = get_vtx(i,j);
 		    auto src_vtx = grid[i-imin,j-jmin];
-		    vtx.pos[gtl].refx = src_vtx.x;
-		    vtx.pos[gtl].refy = src_vtx.y;
-		    vtx.pos[gtl].refz = 0.0;
+		    vtx.pos[gtl].set(src_vtx.x, src_vtx.y, 0.0);
 		} // for i
 	    } // for j
 	}
@@ -1905,9 +1897,7 @@ public:
 		for ( size_t i = imin; i <= imax+1; ++i ) {
 		    auto vtx = get_vtx(i,j,k);
 		    auto dest_vtx = grid[i-imin,j-jmin,k-kmin];
-		    dest_vtx.refx = vtx.pos[gtl].x;
-		    dest_vtx.refy = vtx.pos[gtl].y;
-		    dest_vtx.refz = vtx.pos[gtl].z;
+		    dest_vtx.set(vtx.pos[gtl]);
 		} // for i
 	    } // for j
 	} // for k

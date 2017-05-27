@@ -62,16 +62,8 @@ public:
     {
 	if (!(this is other)) {
 	    id = other.id;
-	    foreach (i; 0 .. pos.length) {
-	    	pos[i].refx = other.pos[i].x;
-	    	pos[i].refy = other.pos[i].y;
-	    	pos[i].refz = other.pos[i].z;
-	    }
-	    foreach (i; 0 .. vel.length) {
-		vel[i].refx = other.vel[i].x;
-		vel[i].refy = other.vel[i].y;
-		vel[i].refz = other.vel[i].z;
-	    }
+	    foreach (i; 0 .. pos.length) { pos[i].set(other.pos[i]); }
+	    foreach (i; 0 .. vel.length) { vel[i].set(other.vel[i]); }
 	    grad.copy_values_from(other.grad);
 	    // omit ws_grad
 	}

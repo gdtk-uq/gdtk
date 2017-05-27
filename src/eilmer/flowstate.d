@@ -85,8 +85,8 @@ public:
 	gas = new GasState(to!int(other.gas.massf.length),
 			   to!int(other.gas.T_modes.length));
 	gas.copy_values_from(other.gas);
-	vel.refx = other.vel.x; vel.refy = other.vel.y; vel.refz = other.vel.z;
-	B.refx = other.B.x; B.refy = other.B.y; B.refz = other.B.z;
+	vel.set(other.vel);
+	B.set(other.B);
 	psi = other.psi;
 	divB = other.divB;
 	tke = other.tke;
@@ -99,8 +99,8 @@ public:
     this(GasModel gm)
     {
 	gas = new GasState(gm, 100.0e3, 300.0, [1.0,], 1.0); 
-	vel = Vector3(0.0,0.0,0.0);
-	B = Vector3(0.0,0.0,0.0);
+	vel.set(0.0,0.0,0.0);
+	B.set(0.0,0.0,0.0);
 	psi = 0.0;
 	divB = 0.0;
 	tke = 0.0;
@@ -123,11 +123,11 @@ public:
 	double velx = getJSONdouble(json_data, "velx", 0.0);
 	double vely = getJSONdouble(json_data, "vely", 0.0);
 	double velz = getJSONdouble(json_data, "velz", 0.0);
-	vel = Vector3(velx,vely,velz);
+	vel.set(velx,vely,velz);
 	double Bx = getJSONdouble(json_data, "Bx", 0.0);
 	double By = getJSONdouble(json_data, "By", 0.0);
 	double Bz = getJSONdouble(json_data, "Bz", 0.0);
-	B = Vector3(Bx,By,Bz);
+	B.set(Bx,By,Bz);
 	psi = getJSONdouble(json_data, "psi", 0.0);
 	divB = getJSONdouble(json_data, "divB", 0.0);
 	tke = getJSONdouble(json_data, "tke", 0.0);
@@ -148,8 +148,8 @@ public:
     void copy_values_from(in FlowState other)
     {
 	gas.copy_values_from(other.gas);
-	vel.refx = other.vel.x; vel.refy = other.vel.y; vel.refz = other.vel.z;
-	B.refx = other.B.x; B.refy = other.B.y; B.refz = other.B.z;
+	vel.set(other.vel);
+	B.set(other.B);
 	psi = other.psi;
 	divB = other.divB;
 	tke = other.tke;
@@ -164,12 +164,12 @@ public:
     // Avoids memory allocation, it's all in place.
     {
 	gas.copy_average_values_from(fs0.gas, fs1.gas);
-	vel.refx = 0.5 * (fs0.vel.x + fs1.vel.x);
-	vel.refy = 0.5 * (fs0.vel.y + fs1.vel.y);
-	vel.refz = 0.5 * (fs0.vel.z + fs1.vel.z);
-	B.refx = 0.5 * (fs0.B.x + fs1.B.x);
-	B.refy = 0.5 * (fs0.B.y + fs1.B.y);
-	B.refz = 0.5 * (fs0.B.z + fs1.B.z);
+	vel.set(0.5*(fs0.vel.x + fs1.vel.x),
+		0.5*(fs0.vel.y + fs1.vel.y),
+		0.5*(fs0.vel.z + fs1.vel.z));
+	B.set(0.5*(fs0.B.x + fs1.B.x),
+	      0.5*(fs0.B.y + fs1.B.y),
+	      0.5*(fs0.B.z + fs1.B.z));
 	psi = 0.5 * (fs0.psi + fs1.psi);
 	divB = 0.5 * (fs0.divB + fs1.divB);
 	tke = 0.5 * (fs0.tke + fs1.tke);
@@ -195,8 +195,8 @@ public:
 	}
 	gas.copy_average_values_from(gasList, gm);
 	// Accumulate from a clean slate and then divide.
-	vel.refx = 0.0; vel.refy = 0.0; vel.refz = 0.0;
-	B.refx = 0.0; B.refy = 0.0; B.refz = 0.0;
+	vel.set(0.0, 0.0, 0.0);
+	B.set(0.0, 0.0, 0.0);
 	psi = 0.0;
 	divB = 0.0;
 	tke = 0.0;
@@ -205,12 +205,8 @@ public:
 	k_t = 0.0;
 	S = 0; // Remember that shock detector is an integer flag.
 	foreach(other; others) {
-	    vel.refx += other.vel.x;
-	    vel.refy += other.vel.y;
-	    vel.refz += other.vel.z;
-	    B.refx += other.B.x;
-	    B.refx += other.B.x;
-	    B.refx += other.B.x;
+	    vel.refx += other.vel.x; vel.refy += other.vel.y; vel.refz += other.vel.z;
+	    B.refx += other.B.x; B.refy += other.B.y; B.refz += other.B.z;
 	    psi += other.psi;
 	    divB += other.divB;
 	    tke += other.tke;

@@ -538,9 +538,8 @@ public:
 		double LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
 		// Direction cosines for the unit normal and two tangential directions.
 		if (LAB > 1.0e-12) {
-		    f.n.refx = (yB - yA) / LAB;
-		    f.n.refy = -(xB - xA) / LAB;
-		    f.n.refz = 0.0; // normal purely in xy-plane
+		    // normal is purely in the xy-plane
+		    f.n.set((yB-yA)/LAB, -(xB-xA)/LAB, 0.0);
 		    f.t2 = Vector3(0.0, 0.0, 1.0);
 		    f.t1 = cross(f.n, f.t2);
 		    f.length = LAB; // Length in the XY-plane.

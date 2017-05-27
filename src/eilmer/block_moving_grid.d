@@ -55,9 +55,7 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	    // recommends using initial interfacial area in calculation.
 	    IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
 	    averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-	    IFace.gvel.refx = temp.z;
-	    IFace.gvel.refy = averaged_ivel.y;
-	    IFace.gvel.refz = averaged_ivel.z;
+	    IFace.gvel.set(temp.z, averaged_ivel.y, averaged_ivel.z);
 	    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);	    
 	    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);	    			 
 	}
@@ -76,15 +74,13 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
 	    temp = vol / ( dt * IFace.area[0] );
 	    IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
 	    averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);	    
-	    IFace.gvel.refx = temp.z;
-	    IFace.gvel.refy = averaged_ivel.y;
-	    IFace.gvel.refz = averaged_ivel.z;
+	    IFace.gvel.set(temp.z, averaged_ivel.y, averaged_ivel.z);
 	    if ( blk.myConfig.axisymmetric && j == blk.jmin) {
 		// For axis symmetric cases the cells along the axis of symmetry have 0 interface area,
 		// this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
 		// We choose to set the y and z directions to 0, but take an averaged value for the
 		// x-direction so as to not force the grid to be stationary, defeating the moving grid's purpose.
-		IFace.gvel.refx = averaged_ivel.x; IFace.gvel.refy = 0.0; IFace.gvel.refz = 0.0;
+		IFace.gvel.set(averaged_ivel.x, 0.0, 0.0);
 	    }
 	    averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);	    
 	    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
@@ -232,9 +228,7 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 	    }
 	    shock_detect = abs(inflow.gas.rho - rho)/fmax(inflow.gas.rho, rho);
 	    if (shock_detect < SHOCK_DETECT_THRESHOLD) { // no shock across boundary set vertex velocity to wave speed (u+a)
-		temp_vel.refx = inflow.vel.x + inflow.gas.a;
-	        temp_vel.refy = -1.0*(inflow.vel.y+inflow.gas.a);
-		temp_vel.refz = 0.0;
+		temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), 0.0);
 	    }
 	    else { // shock detected across boundary
 		// loop over cells which neighbour current vertex and calculate wave speed at interfaces
@@ -318,9 +312,7 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 		if (abs(w[0]) < 1.0e-10 && abs(w[1]) < 1.0e-10) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average
 		temp_vel =  (w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, 80% for stability		
 		if (abs(temp_vel) > U_plus_a) { // safety catch: if an extreme velocity has been assigned let's just limit vel to  u+a
-		    temp_vel.refx = inflow.vel.x + inflow.gas.a; 
-	            temp_vel.refy = -1.0*(inflow.vel.y+inflow.gas.a); 
-		    temp_vel.refz = 0.0;
+		    temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), 0.0);
 		}
 		
 	    }
@@ -357,7 +349,7 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 		vtx.vel[0] = temp_vel;
 	    }
 	    vtx = blk.get_vtx(blk.imax+1,j,k); // east boundary vertex is fixed
-	    vtx.vel[0].refx = 0.0; vtx.vel[0].refy = 0.0; vtx.vel[0].refz = 0.0;
+	    vtx.vel[0].set(0.0, 0.0, 0.0);
 	}
     }
     return;

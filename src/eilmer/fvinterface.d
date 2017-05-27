@@ -135,26 +135,22 @@ public:
 	    F.copy_values_from(other.F);
 	    break;
 	case CopyDataOption.grid:
-	    pos.refx = other.pos.x; pos.refy = other.pos.y; pos.refz = other.pos.z;
-	    gvel.refx = other.gvel.x; gvel.refy = other.gvel.y; gvel.refz = other.gvel.z;
+	    pos.set(other.pos);
+	    gvel.set(other.gvel);
 	    Ybar = other.Ybar;
 	    length = other.length;
 	    area[] = other.area[];
-	    n.refx = other.n.x; n.refy = other.n.y; n.refz = other.n.z;
-	    t1.refx = other.t1.x; t1.refy = other.t1.y; t1.refz = other.t1.z;
-	    t2.refx = other.t2.x; t2.refy = other.t2.y; t2.refz = other.t2.z;
+	    n.set(other.n); t1.set(other.t1); t2.set(other.t2);
 	    break;
 	case CopyDataOption.all: 
 	default:
 	    id = other.id;
-	    pos.refx = other.pos.x; pos.refy = other.pos.y; pos.refz = other.pos.z;
-	    gvel.refx = other.gvel.x; gvel.refy = other.gvel.y; gvel.refz = other.gvel.z;
+	    pos.set(other.pos);
+	    gvel.set(other.gvel);
 	    Ybar = other.Ybar;
 	    length = other.length;
 	    area[] = other.area[];
-	    n.refx = other.n.x; n.refy = other.n.y; n.refz = other.n.z;
-	    t1.refx = other.t1.x; t1.refy = other.t1.y; t1.refz = other.t1.z;
-	    t2.refx = other.t2.x; t2.refy = other.t2.y; t2.refz = other.t2.z;
+	    n.set(other.n); t1.set(other.t1); t2.set(other.t2);
 	    fs.copy_values_from(other.fs);
 	    F.copy_values_from(other.F);
 	    grad.copy_values_from(other.grad);

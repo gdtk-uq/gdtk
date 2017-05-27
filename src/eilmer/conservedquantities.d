@@ -49,10 +49,8 @@ public:
     @nogc void copy_values_from(in ConservedQuantities src)
     {
 	mass = src.mass;
-	momentum.refx = src.momentum.x;
-	momentum.refy = src.momentum.y;
-	momentum.refz = src.momentum.z;
-	B.refx = src.B.x; B.refy = src.B.y; B.refz = src.B.z;
+	momentum.set(src.momentum);
+	B.set(src.B);
 	total_energy = src.total_energy;
 	massf[] = src.massf[];
 	energies[] = src.energies[];
@@ -65,11 +63,11 @@ public:
     @nogc void clear_values()
     {
 	mass = 0.0;
-	momentum.refx = 0.0; momentum.refy = 0.0; momentum.refz = 0.0;
-	B.refx = 0.0; B.refy = 0.0; B.refz = 0.0;
+	momentum.set(0.0, 0.0, 0.0);
+	B.set(0.0, 0.0, 0.0);
 	total_energy = 0.0;
-	foreach(ref mf; massf) mf = 0.0;
-	foreach(ref e; energies) e = 0.0;
+	foreach(ref mf; massf) { mf = 0.0; }
+	foreach(ref e; energies) { e = 0.0; }
 	psi = 0.0;
 	divB = 0.0;
 	tke = 0.0;

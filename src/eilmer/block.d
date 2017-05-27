@@ -448,9 +448,9 @@ public:
     // Initialization of data for later computing residuals.
     {
 	mass_residual = 0.0;
-	mass_residual_loc = Vector3(0.0, 0.0, 0.0);
+	mass_residual_loc.set(0.0, 0.0, 0.0);
 	energy_residual = 0.0;
-	energy_residual_loc = Vector3(0.0, 0.0, 0.0);
+	energy_residual_loc.set(0.0, 0.0, 0.0);
 	foreach(FVCell cell; cells) {
 	    cell.rho_at_start_of_step = cell.fs.gas.rho;
 	    cell.rE_at_start_of_step = cell.U[0].total_energy;
@@ -471,30 +471,24 @@ public:
     // with their location. 
     {
 	mass_residual = 0.0;
-	mass_residual_loc = Vector3(0.0, 0.0, 0.0);
+	mass_residual_loc.set(0.0, 0.0, 0.0);
 	energy_residual = 0.0;
-	energy_residual_loc = Vector3(0.0, 0.0, 0.0);
+	energy_residual_loc.set(0.0, 0.0, 0.0);
 	foreach(FVCell cell; cells) {
-	    double local_residual = (cell.fs.gas.rho - cell.rho_at_start_of_step) 
-		/ cell.fs.gas.rho;
+	    double local_residual = (cell.fs.gas.rho - cell.rho_at_start_of_step) / cell.fs.gas.rho;
 	    local_residual = fabs(local_residual);
 	    if ( local_residual > mass_residual ) {
 		mass_residual = local_residual;
-		mass_residual_loc.refx = cell.pos[gtl].x;
-		mass_residual_loc.refy = cell.pos[gtl].y;
-		mass_residual_loc.refz = cell.pos[gtl].z;
+		mass_residual_loc.set(cell.pos[gtl]);
 	    }
 	    // In the following line, the zero index is used because,
 	    // at the end of the gas-dynamic update, that index holds
 	    // the updated data.
-	    local_residual = (cell.U[0].total_energy - cell.rE_at_start_of_step) 
-		/ cell.U[0].total_energy;
+	    local_residual = (cell.U[0].total_energy - cell.rE_at_start_of_step) / cell.U[0].total_energy;
 	    local_residual = fabs(local_residual);
 	    if ( local_residual > energy_residual ) {
 		energy_residual = local_residual;
-		energy_residual_loc.refx = cell.pos[gtl].x;
-		energy_residual_loc.refy = cell.pos[gtl].y;
-		energy_residual_loc.refz = cell.pos[gtl].z;
+		energy_residual_loc.set(cell.pos[gtl]);
 	    }
 	} // for cell
     } // end compute_residuals()
@@ -509,16 +503,18 @@ public:
     {
 	Linf_residuals.copy_values_from(cells[0].dUdt[0]);
 	Linf_residuals.mass = fabs(Linf_residuals.mass);
-	Linf_residuals.momentum.refx = fabs(Linf_residuals.momentum.x);
-	Linf_residuals.momentum.refy = fabs(Linf_residuals.momentum.y);
+	Linf_residuals.momentum.set(fabs(Linf_residuals.momentum.x),
+				    fabs(Linf_residuals.momentum.y),
+				    fabs(Linf_residuals.momentum.z));
 	Linf_residuals.total_energy = fabs(Linf_residuals.total_energy);
 	foreach (cell; cells) {
 	    Linf_residuals.mass = fmax(Linf_residuals.mass, fabs(cell.dUdt[0].mass));
-	    Linf_residuals.momentum.refx = fmax(Linf_residuals.momentum.x, fabs(cell.dUdt[0].momentum.x));
-	    Linf_residuals.momentum.refy = fmax(Linf_residuals.momentum.y, fabs(cell.dUdt[0].momentum.y));
+	    Linf_residuals.momentum.set(fmax(Linf_residuals.momentum.x, fabs(cell.dUdt[0].momentum.x)),
+					fmax(Linf_residuals.momentum.y, fabs(cell.dUdt[0].momentum.y)),
+					fmax(Linf_residuals.momentum.z, fabs(cell.dUdt[0].momentum.z)));
 	    Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(cell.dUdt[0].total_energy));
 	}
-    }
+    } // end compute_Linf_residuals()
 
     double update_c_h(double dt_current)
     //Update the c_h value for the divergence cleaning mechanism
@@ -528,26 +524,25 @@ public:
 	double cfl_local, cfl_max;
 	bool first = true;
 	foreach(FVCell cell; cells) {
-	//Search for the minimum length scale in the block
-	   if (cell.iLength < min_L_for_block)
-	      min_L_for_block = cell.iLength;
-	   if (cell.jLength < min_L_for_block)
-	      min_L_for_block = cell.jLength;
-	   if (GlobalConfig.dimensions == 3)	//Shouldn't be necessary as current HLLE solver does not work in 3D
-	      if (cell.kLength < min_L_for_block)
-	         min_L_for_block = cell.kLength;
-	//Search for the maximum CFL value in the block
-	  if (first) {
-	     cfl_local = cell.signal_frequency() * dt_current;
-	     cfl_max = cfl_local;
-	     first = false;
-	  } else {
-	     cfl_local = cell.signal_frequency() * dt_current;
-	     cfl_max = fmax(cfl_local, cfl_max);
-	     }
+	    //Search for the minimum length scale in the block
+	    if (cell.iLength < min_L_for_block) { min_L_for_block = cell.iLength; }
+	    if (cell.jLength < min_L_for_block) { min_L_for_block = cell.jLength; }
+	    if (GlobalConfig.dimensions == 3) {
+		//Shouldn't be necessary as current HLLE solver does not work in 3D
+		if (cell.kLength < min_L_for_block) { min_L_for_block = cell.kLength; }
+	    }
+	    //Search for the maximum CFL value in the block
+	    if (first) {
+		cfl_local = cell.signal_frequency() * dt_current;
+		cfl_max = cfl_local;
+		first = false;
+	    } else {
+		cfl_local = cell.signal_frequency() * dt_current;
+		cfl_max = fmax(cfl_local, cfl_max);
+	    }
 	}
 	return cfl_max * min_L_for_block / dt_current;
-    }
+    } // end update_c_h()
 
     double determine_time_step_size(double dt_current)
     // Compute the local time step limit for all cells in the block.
