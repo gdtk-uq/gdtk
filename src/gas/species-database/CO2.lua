@@ -26,35 +26,56 @@ db.CO2.sutherlandThermCond = {
    S = 194.0,--these have not been updated
    reference = "Table 1-3, White (2006)"
 }
+
 db.CO2.ceaThermoCoeffs = {
-   nsegments = 2,
+   nsegments = 3,
    segment0 = {
       T_lower = 200.0,
       T_upper =  1000.0,
-       coeffs = { 1.009950160e+04,--these have not been updated either
-                 -1.968275610e+02,
-                  5.009155110e+00,
-	         -5.761013730e-03,
-                  1.066859930e-05,
-                 -7.940297970e-09,
-                  2.185231910e-12,
-                 -1.767967310e+02,
-                 -3.921504225e+00 },
+      coeffs = {
+	 4.943650540e+04,
+	-6.264116010e+02,
+	 5.301725240e+00,
+	 2.503813816e-03,
+	-2.127308728e-07,
+	-7.689988780e-10,
+	 2.849677801e-13,
+	-4.528198460e+04,
+	-7.048279440e+00
+      }
    },
    segment1 = { 
       T_lower = 1000.0,
       T_upper = 6000.0,
-      coeffs = {  2.415214430e+05,
-                 -1.257874600e+03,
-                  5.144558670e+00,
-                 -2.138541790e-04,
-                  7.065227840e-08,
-                 -1.071483490e-11,
-                  6.577800150e-16,
-                  6.462263190e+03,
-                 -8.147411905e+00 }
-  }
+      coeffs = {
+	 1.176962419e+05,
+	-1.788791477e+03,
+	 8.291523190e+00,
+	-9.223156780e-05,
+	 4.863676880e-09,
+	-1.891053312e-12,
+	 6.330036590e-16,
+	-3.908350590e+04,
+	-2.652669281e+01
+      }
+   },
+   segment2 = { 
+      T_lower = 6000.0,
+      T_upper = 20000.0,
+      coeffs = {
+	-1.544423287e+09,
+	 1.016847056e+06,
+	-2.561405230e+02,
+	 3.369401080e-02,
+	-2.181184337e-06,
+	 6.991420840e-11,
+	-8.842351500e-16,
+	-8.043214510e+06,
+	 2.254177493e+03
+      }
+   } -- from thermo.inp Gurvich, 1991 pt1 p211 pt2 p200
 }
+
 db.CO2.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 
@@ -88,5 +109,64 @@ db.CO2.grimechThermoCoeffs = {
           2.27163806E+00,
       }
    }
+}
+
+db.CO2.ceaViscosity = {
+   nsegments = 3,
+   segment0 = {
+      T_lower =200.0,
+      T_upper =1000.0,
+      A= 0.51137258e+00,
+      B= -0.22951321e+03,
+      C= 0.13710678e+05,
+      D= 0.27075538e+01
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 5000.0, 
+      A= 0.63978285e+00,
+      B= -0.42637076e+02,
+      C= -0.15522605e+05,
+      D= 0.16628843e+01
+     -- ref = 'from CEA2::trans.inp which cites Bousheri et al. (1987) and Svehla (1994)'
+   },
+   segment2 = {
+      T_lower = 5000.0,
+      T_upper = 15000.0, 
+      A= 0.72150912e+00,
+      B= 0.75012895e+03,
+      C= -0.11825507e+07,
+      D= 0.85493645e+00
+     -- ref = 'from CEA2::trans.inp which cites Bousheri et al. (1987) and Svehla (1994)'
+   }
+}
+
+db.CO2.ceaThermCond = {
+   nsegments = 3,
+   segment0 = {
+      T_lower = 200.0,
+      T_upper =1000.0, 
+      A = 0.48056568e+00,
+      B = -0.50786720e+03,
+      C = 0.35088811e+05,
+      D = 0.36747794e+01
+   },
+   segment1 = {
+      T_lower = 1000.0,
+      T_upper = 5000.0, 
+      A = 0.69857277e+00,
+      B = -0.11830477e+03,
+      C = -0.50688859e+05,
+      D =  0.18650551e+01
+   },
+   segment2 = {
+      T_lower = 5000.0,
+      T_upper = 15000.0, 
+      A = 0.10518358e+01,
+      B = -0.42555944e+04,
+      C = 0.14288688e+08,
+      D = -0.88950473e+00
+   }
+      --ref = 'from CEA2::trans.inp which cites Bousheri et al. (1987) and Svehla (1994)'
 }
 
