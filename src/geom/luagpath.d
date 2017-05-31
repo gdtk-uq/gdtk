@@ -115,6 +115,10 @@ extern(C) int newLine(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["p0", "p1"])) {
+	string errMsg = "Error in call to Line:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect Vector3 for starting point.
     lua_getfield(L, 1, "p0");
     if ( lua_isnil(L, -1) ) {
@@ -171,6 +175,10 @@ extern(C) int newArc(lua_State* L)
     if ( narg == 0 || !lua_istable(L, 1) ) {
 	string errMsg = "Error in call to Arc:new{}.; " ~
 	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["p0", "p1", "centre"])) {
+	string errMsg = "Error in call to Arc:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 for starting point.
@@ -241,6 +249,10 @@ extern(C) int newArc3(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["p0", "pmid", "p1"])) {
+	string errMsg = "Error in call to Arc3:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect Vector3 for start point p0.
     lua_getfield(L, 1, "p0");
     if ( lua_isnil(L, -1) ) {
@@ -307,6 +319,10 @@ extern(C) int newBezier(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["points"])) {
+	string errMsg = "Error in call to Bezier:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     lua_getfield(L, 1, "points".toStringz());
     if ( lua_isnil(L, -1) ) {
 	string errMsg = "Error in call to Bezier:new{}. No points entry found.";
@@ -362,6 +378,10 @@ extern(C) int newPolyline(lua_State* L)
     if ( narg == 0 || !lua_istable(L, 1) ) {
 	string errMsg = "Error in call to Polyline:new{}.; " ~
 	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["segments"])) {
+	string errMsg = "Error in call to Polyline:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "segments".toStringz());
@@ -420,6 +440,10 @@ extern(C) int newSpline(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["points"])) {
+	string errMsg = "Error in call to Spline:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     lua_getfield(L, 1, "points".toStringz());
     if ( lua_isnil(L, -1) ) {
 	string errMsg = "Error in call to Spline:new{}. No points entry found.";
@@ -469,6 +493,10 @@ extern(C) int newSpline2(lua_State* L)
     if ( narg == 0 || !lua_istable(L, 1) ) {
 	string errMsg = "Error in call to Spline2:new{}.; " ~
 	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["filename"])) {
+	string errMsg = "Error in call to Spline2:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "filename".toStringz());
@@ -582,6 +610,10 @@ extern(C) int newLuaFnPath(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["luaFnName"])) {
+	string errMsg = "Error in call to LuaFnPath:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect function name in table.
     string fnName = "";
     lua_getfield(L, 1, "luaFnName".toStringz());
@@ -624,6 +656,11 @@ extern(C) int newArcLengthParameterizedPath(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["underlying_path"])) {
+	string errMsg = "Error in call to ArcLengthParameterizedPath:new{}. " ~
+	    "Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect the underlying_path object in the table.
     lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
@@ -664,6 +701,10 @@ extern(C) int newSubRangedPath(lua_State* L)
     if ( narg == 0 || !lua_istable(L, 1) ) {
 	string errMsg = "Error in call to SubRangedPath:new{}.; " ~
 	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["underlying_path", "t0", "t1"])) {
+	string errMsg = "Error in call to SubRangedPath:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect the underlying_path object in the table.
@@ -744,6 +785,10 @@ extern(C) int newReversedPath(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["underlying_path"])) {
+	string errMsg = "Error in call to ReversedPath:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect the underlying_path object in the table.
     lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
@@ -783,6 +828,10 @@ extern(C) int newTranslatedPath(lua_State* L)
     if ( narg == 0 || !lua_istable(L, 1) ) {
 	string errMsg = "Error in call to TranslatedPath:new{}.; " ~
 	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["original_path", "shift"])) {
+	string errMsg = "Error in call to TranslatedPath:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect the original_path object in the table.
@@ -834,6 +883,10 @@ extern(C) int newMirrorImagePath(lua_State* L)
     if ( narg == 0 || !lua_istable(L, 1) ) {
 	string errMsg = "Error in call to MirrorImagePath:new{}.; " ~
 	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["original_path", "point", "normal"])) {
+	string errMsg = "Error in call to MirrorImagePath:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect the original_path object in the table.
@@ -891,6 +944,10 @@ extern(C) int newRotatedAboutZAxisPath(lua_State* L)
     if ( narg == 0 || !lua_istable(L, 1) ) {
 	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}.; " ~
 	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["original_path", "angle"])) {
+	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Expect the original_path object in the table.

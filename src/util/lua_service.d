@@ -13,6 +13,7 @@ import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
 import std.conv;
+import std.algorithm;
 
 import util.lua;
 
@@ -350,6 +351,23 @@ bool getBooleanFromTable(lua_State* L, int index, string field,
     // We didn't want to fail, so give back bool.init
     return valIfError;
 } // end getBooleanFromTable()
+
+bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
+{
+    bool namesOk = true;
+    // Iterate through the table and check each key (name).
+    lua_pushnil(L); // first key
+    while (lua_next(L, tblIndx) != 0) {
+	// next key is left on stack at -2, value at -1
+	string key = to!string(lua_tostring(L, -2));
+	if (!canFind(allowedNames, key)) {
+	    writeln("Warning: Invalid name: ", key);
+	    namesOk = false;
+	}
+	lua_pop(L, 1); // discard value but keep key for next
+    } // end while
+    return namesOk;
+} // end checkAllowedNames()
 
 /**
  * Custom exception type for signalling Lua input errors.
