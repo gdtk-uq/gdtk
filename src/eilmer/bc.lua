@@ -2,25 +2,10 @@
 -- 
 -- Authors: PJ and RJG
 -- Date: 2015-10-01
---         Extracted from prep.lua
+--       Extracted from prep.lua (to be imported into prep.lua via require)
 --
 
 module(..., package.seeall)
-
--- Helper function to check arguments for BC construction
-function checkForInvalidArgs(tab, allowedArgs, funcName)
-   -- allowedArgs is in array form build a reverse mapping.
-   -- We'll put the args in as keys and set those values to true.
-   argsTruthTable = {}
-   for _,k in ipairs(allowedArgs) do
-      argsTruthTable[k] = true
-   end
-   for k,_ in pairs(tab) do
-      if not argsTruthTable[k] then
-	 print(string.format("WARNING: %s is an INVALID argument in function: %s\n", k, funcName))
-      end
-   end 
-end
 
 -- -----------------------------------------------------------------------
 -- Classes for constructing boundary conditions.
@@ -396,6 +381,9 @@ end
 WallBC_WithSlip = BoundaryCondition:new()
 WallBC_WithSlip.type = "wall_with_slip"
 function WallBC_WithSlip:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_WithSlip constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new() }
@@ -406,6 +394,9 @@ end
 WallBC_NoSlip_FixedT = BoundaryCondition:new()
 WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
 function WallBC_NoSlip_FixedT:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"Twall", "label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
@@ -421,6 +412,9 @@ end
 WallBC_NoSlip_Adiabatic = BoundaryCondition:new()
 WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
 function WallBC_NoSlip_Adiabatic:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new() }
@@ -434,6 +428,9 @@ end
 WallBC_TranslatingSurface_FixedT = BoundaryCondition:new()
 WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
 function WallBC_TranslatingSurface_FixedT:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"v_trans", "T_wall", "label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_TranslatingSurface_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for v_trans
@@ -454,6 +451,9 @@ end
 WallBC_TranslatingSurface_Adiabatic = BoundaryCondition:new()
 WallBC_TranslatingSurface_Adiabatic.type = "wall_translating_surface_adiabatic"
 function WallBC_TranslatingSurface_Adiabatic:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"v_trans", "label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_TranslatingSurface_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for v_trans
@@ -472,6 +472,9 @@ end
 WallBC_RotatingSurface_FixedT = BoundaryCondition:new()
 WallBC_RotatingSurface_FixedT.type = "wall_rotating_surface_fixed_t"
 function WallBC_RotatingSurface_FixedT:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_RotatingSurface_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for r_omega and centre
@@ -495,6 +498,9 @@ end
 WallBC_RotatingSurface_Adiabatic = BoundaryCondition:new()
 WallBC_RotatingSurface_Adiabatic.type = "wall_rotating_surface_adiabatic"
 function WallBC_RotatingSurface_Adiabatic:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_RotatingSurface_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for r_omega and centre
@@ -516,6 +522,8 @@ end
 InFlowBC_Supersonic = BoundaryCondition:new()
 InFlowBC_Supersonic.type = "inflow_supersonic"
 function InFlowBC_Supersonic:new(o)
+   local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
+   assert(flag, "Invalid name for item supplied to InFlowBC_Supersonic constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
@@ -527,6 +535,9 @@ end
 InFlowBC_StaticProfile = BoundaryCondition:new()
 InFlowBC_StaticProfile.type = "inflow_static_profile"
 function InFlowBC_StaticProfile:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"filename", "match", "label", "group"})
+   assert(flag, "Invalid name for item supplied to InFlowBC_StaticProfile constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.match = o.match or "xyz-to-xyz"
@@ -539,6 +550,9 @@ end
 InFlowBC_ConstFlux = BoundaryCondition:new()
 InFlowBC_ConstFlux.type = "inflow_const_flux"
 function InFlowBC_ConstFlux:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
+   assert(flag, "Invalid name for item supplied to InFlowBC_ConstFlux constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.convective_flux_computed_in_bc = true
@@ -552,6 +566,9 @@ end
 InFlowBC_ShockFitting = BoundaryCondition:new()
 InFlowBC_ShockFitting.type = "inflow_shock_fitting"
 function InFlowBC_ShockFitting:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
+   assert(flag, "Invalid name for item supplied to InFlowBC_ShockFitting constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.convective_flux_computed_in_bc = true
@@ -564,20 +581,14 @@ end
 
 InFlowBC_FromStagnation = BoundaryCondition:new()
 InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
-InFlowBC_FromStagnation.allowedArgs = {'type', 'label', 'group',
-				       'is_wall', 'ghost_cell_data_available',
-				       'convective_flux_computed_in_bc', 
-				       'stagCondition',
-				       'direction_type',
-				       'direction_x',
-				       'direction_y',
-				       'direction_z',
-				       'alpha',
-				       'mass_flux',
-				       'relax_factor'}
 function InFlowBC_FromStagnation:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"stagCondition", "direction_type",
+				      "direction_x", "direction_y", "direction_z",
+				      "alpha", "mass_flux", "relax_factor",
+				      "label", "group"})
+   assert(flag, "Invalid name for item supplied to InFlowBC_FromStagnation constructor.")
    o = BoundaryCondition.new(self, o)
-   checkForInvalidArgs(o, self.allowedArgs, "InFlowBC_FromStagnation:new{}")
    o.is_wall = false
    o.preReconAction = { FromStagnation:new{stagCondition=o.stagCondition,
 					   direction_type=o.direction_type,
@@ -595,6 +606,9 @@ end
 OutFlowBC_Simple = BoundaryCondition:new()
 OutFlowBC_Simple.type = "outflow_simple_extrapolate"
 function OutFlowBC_Simple:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"xOrder", "label", "group"})
+   assert(flag, "Invalid name for item supplied to OutFlowBC_Simple constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
@@ -606,6 +620,9 @@ end
 OutFlowBC_FixedP = BoundaryCondition:new()
 OutFlowBC_FixedP.type = "outflow_fixed_p"
 function OutFlowBC_FixedP:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"xOrder", "p_outside", "label", "group"})
+   assert(flag, "Invalid name for item supplied to OutFlowBC_FixedP constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
@@ -618,6 +635,10 @@ end
 OutFlowBC_FixedPT = BoundaryCondition:new()
 OutFlowBC_FixedPT.type = "outflow_fixed_p_and_t"
 function OutFlowBC_FixedPT:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"xOrder", "p_outside", "T_outside",
+				      "label", "group"})
+   assert(flag, "Invalid name for item supplied to OutFlowBC_FixedPT constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
@@ -630,6 +651,11 @@ end
 ExchangeBC_FullFace = BoundaryCondition:new()
 ExchangeBC_FullFace.type = "exchange_over_full_face"
 function ExchangeBC_FullFace:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
+				      "reorient_vector_quantities", "Rmatrix",
+				      "label", "group"})
+   assert(flag, "Invalid name for item supplied to ExchangeBC_FullFace constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { FullFaceExchangeCopy:new{otherBlock=o.otherBlock,
@@ -645,6 +671,13 @@ end
 ExchangeBC_MappedCell = BoundaryCondition:new()
 ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", 
+				      "transform_position", "c0", "n", "alpha", "delta",
+				      "list_mapped_cells",
+				      "reorient_vector_quantities", "Rmatrix",
+				      "label", "group"})
+   assert(flag, "Invalid name for item supplied to ExchangeBC_MappedCell constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { MappedCellExchangeCopy:new{cell_mapping_from_file=o.cell_mapping_from_file,
@@ -662,6 +695,9 @@ end
 UserDefinedBC = BoundaryCondition:new()
 UserDefinedBC.type = "user_defined"
 function UserDefinedBC:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"fileName", "label", "group"})
+   assert(flag, "Invalid name for item supplied to UserDefinedBC constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
    o.preSpatialDerivAction = { UserDefinedInterface:new{fileName=o.fileName}, UpdateThermoTransCoeffs:new() } 
@@ -672,6 +708,10 @@ end
 WallBC_AdjacentToSolid = BoundaryCondition:new()
 WallBC_AdjacentToSolid.type = "wall_adjacent_to_solid"
 function WallBC_AdjacentToSolid:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
+				      "label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_AdjacentToSolid constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = true
    o.preReconAction = { InternalCopyThenReflect:new() }

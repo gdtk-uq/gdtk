@@ -33,7 +33,7 @@ end
 my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"},
 	     OUTFLOW=OutFlowBC_Simple:new{label="outflow-boundary"},
 	     SLIP_WALL=WallBC_WithSlip:new{},
-	     METIS_INTERIOR=ExchangeBC_MappedCell:new{mapped_cells_from_file=true}}
+	     METIS_INTERIOR=ExchangeBC_MappedCell:new{cell_mapping_from_file=true}}
 
 blks = {}
 for i=0,nblocks-1 do
