@@ -536,11 +536,12 @@ InFlowBC_StaticProfile = BoundaryCondition:new()
 InFlowBC_StaticProfile.type = "inflow_static_profile"
 function InFlowBC_StaticProfile:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"filename", "match", "label", "group"})
+   local flag = checkAllowedNames(o, {"filename", "fileName", "match", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_StaticProfile constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.match = o.match or "xyz-to-xyz"
+   o.filename = o.filename or o.fileName
    o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename, match=o.match} }
    o.preSpatialDerivAction = { FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match} }
    o.is_configured = true      
@@ -672,7 +673,7 @@ ExchangeBC_MappedCell = BoundaryCondition:new()
 ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", 
+   local flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", "filename",
 				      "transform_position", "c0", "n", "alpha", "delta",
 				      "list_mapped_cells",
 				      "reorient_vector_quantities", "Rmatrix",
@@ -680,6 +681,7 @@ function ExchangeBC_MappedCell:new(o)
    assert(flag, "Invalid name for item supplied to ExchangeBC_MappedCell constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
+   o.fileName = o.fileName or o.filename
    o.preReconAction = { MappedCellExchangeCopy:new{cell_mapping_from_file=o.cell_mapping_from_file,
 						   fileName=o.fileName,
 						   transform_position=o.transform_position,
@@ -696,9 +698,10 @@ UserDefinedBC = BoundaryCondition:new()
 UserDefinedBC.type = "user_defined"
 function UserDefinedBC:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"fileName", "label", "group"})
+   local flag = checkAllowedNames(o, {"fileName", "filename", "label", "group"})
    assert(flag, "Invalid name for item supplied to UserDefinedBC constructor.")
    o = BoundaryCondition.new(self, o)
+   o.fileName = o.fileName or o.filename
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
    o.preSpatialDerivAction = { UserDefinedInterface:new{fileName=o.fileName}, UpdateThermoTransCoeffs:new() } 
    o.is_configured = true
