@@ -70,6 +70,11 @@ extern(C) int newLinearFunction(lua_State* L)
 A table containing arguments is expected, but no table was found.`;
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["t0", "t1"])) {
+	string errMsg = "Error in call to LinearFunction:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    //
     string errMsgTmplt = `Error in call to LinearFunction:new{}.
 A valid value for '%s' was not found in list of arguments.
 The value, if present, should be a number.`;
@@ -97,6 +102,11 @@ extern(C) int newRobertsFunction(lua_State* L)
 A table containing arguments is expected, but no table was found.`;
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["end0", "end1", "beta"])) {
+	string errMsg = "Error in call to RobertsFunction:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+     //
     string errMsgTmpltNumber = `Error in call to RobertsFunction:new{}.
 A valid value for '%s' was not found in list of arguments.
 The value, if present, should be a number.`;
@@ -171,10 +181,14 @@ extern(C) int newLuaFnUnivariateFunction(lua_State *L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
-    string fnName = "";
+    if (!checkAllowedNames(L, 1, ["luaFnName"])) {
+	string errMsg = "Error in call to LuaFnUnivariateFunction:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+     string fnName = "";
     lua_getfield(L, 1, toStringz("luaFnName"));
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to LuaFnClustering.new{}. No luaFnName entry found.";
+	string errMsg = "Error in call to LuaFnUnivariateFunction.new{}. No luaFnName entry found.";
 	luaL_error(L, errMsg.toStringz);
     }
     if ( lua_isstring(L, -1) ) {
@@ -182,7 +196,7 @@ extern(C) int newLuaFnUnivariateFunction(lua_State *L)
     }
     lua_pop(L, 1);
     if ( fnName == "" ) {
-	string errMsg = "Error in call to LuaFnClustering:new{}. No function name found.";
+	string errMsg = "Error in call to LuaFnUnivariateFunction:new{}. No function name is empty.";
 	luaL_error(L, errMsg.toStringz);
     }
     auto lfc = new LuaFnUnivariateFunction(L, fnName);

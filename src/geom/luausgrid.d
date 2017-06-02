@@ -139,6 +139,12 @@ extern(C) int newUnstructuredGrid(lua_State* L)
 A table containing arguments is expected, but no table was found.`;
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["sgrid","new_label","filename","fileName","scale","fmt",
+				  "expect_gmsh_order_for_wedges"])) {
+	string errMsg = "Error in call to UnstructuredGrid:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    //
     UnstructuredGrid usgrid;
     //
     // First, look for a StructuredGrid field.
@@ -156,6 +162,10 @@ A table containing arguments is expected, but no table was found.`;
     if (!usgrid) {
 	// We didn't find a sgrid entry, so try for a file name.
 	lua_getfield(L, 1, "filename".toStringz);
+	if (lua_isnil(L, -1)) {
+	    lua_pop(L, 1);
+	    lua_getfield(L, 1, "fileName".toStringz);
+	}
 	if ( !lua_isnil(L, -1) ) {
 	    string filename = to!string(luaL_checkstring(L, -1));
 	    double scale = 1.0;

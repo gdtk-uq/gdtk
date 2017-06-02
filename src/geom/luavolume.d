@@ -128,6 +128,10 @@ extern(C) int newTFIVolume(lua_State* L)
 	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["north","south","west","east","top","bottom","vertices"])) {
+	string errMsg = "Error in call to TFIVolume:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Look for named ParametricSurfaces. 
     // If found, proceed with construction from these faces.
     lua_getfield(L, 1, "north"); // test item
@@ -178,6 +182,10 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
     if (!lua_istable(L, 1)) {
 	string errMsg = "Error in constructor SweptSurfaceVolume:new. " ~
 	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["face0123","edge04"])) {
+	string errMsg = "Error in call to SweptSurfaceVolume:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Look for surface to sweep.
@@ -298,6 +306,10 @@ extern(C) int newLuaFnVolume(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["luaFnName"])) {
+	string errMsg = "Error in call to LuaFnVolume:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect function name in table.
     string fnName = "";
     lua_getfield(L, 1, "luaFnName".toStringz());
@@ -348,6 +360,10 @@ extern(C) int newSubRangedVolume(lua_State* L)
     if ( !lua_istable(L, 1) ) {
 	string errMsg = "Error in constructor SubRangeVolume:new. " ~
 	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["underlying_pvolume","r0","r1","s0","s1","t0","t1"])) {
+	string errMsg = "Error in call to SubRangedVolume:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Look for the underlying ParametricVolume.

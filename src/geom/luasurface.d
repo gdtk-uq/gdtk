@@ -148,6 +148,10 @@ extern(C) int newCoonsPatch(lua_State* L)
 	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["p00","p10","p11","p01","north","south","west","east"])) {
+	string errMsg = "Error in call to CoonsPatch:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Look for a path. If found, proceed with construction from paths.
     lua_getfield(L, 1, "north");
     if ( ! lua_isnil(L, -1) ) { 
@@ -209,6 +213,10 @@ extern(C) int newAOPatch(lua_State* L)
 	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["p00","p10","p11","p01","north","south","west","east","nx","ny"])) {
+	string errMsg = "Error in call to AOPatch:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     string errMsgTmplt = "Error in call to AOPatch:new.\n";
     errMsgTmplt ~= "A valid value for '%s' is not found in arguments.\n";
     errMsgTmplt ~= "The value, if present, should be a number.";
@@ -266,6 +274,10 @@ extern(C) int newChannelPatch(lua_State* L)
     if ( !lua_istable(L, 1) ) {
 	string errMsg = "Error in constructor ChannelPatch:new. " ~
 	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["north","south","ruled","pure2D"])) {
+	string errMsg = "Error in call to ChannelPatch:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Look for south and north paths.
@@ -338,6 +350,10 @@ extern(C) int newSweptPathPatch(lua_State* L)
 	    "A table with input parameters is expected as the first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["south","west"])) {
+	string errMsg = "Error in call to SweptPathPatch:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Look for west and south paths.
     lua_getfield(L, 1, "west");
     auto west = checkPath(L, -1);
@@ -379,6 +395,10 @@ extern(C) int newMeshPatch(lua_State* L)
     if ( !lua_istable(L, 1) ) {
 	string errMsg = "Error in constructor MeshPatch:new. " ~
 	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["sgrid"])) {
+	string errMsg = "Error in call to MeshPatch:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Look for the StructuredGrid object.
@@ -491,6 +511,10 @@ extern(C) int newLuaFnSurface(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["luaFnName"])) {
+	string errMsg = "Error in call to LuaFnSurface:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect function name in table.
     string fnName = "";
     lua_getfield(L, 1, "luaFnName".toStringz());
@@ -533,6 +557,10 @@ extern(C) int newSubRangedSurface(lua_State* L)
 A table with input parameters is expected as the first argument.`;
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["underlying_psurface", "r0", "r1", "s0", "s1"])) {
+	string errMsg = "Error in call to SubRangedSurface:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Expect a Surface object at the first array position in the table.
     lua_getfield(L, 1, "underlying_psurface");
     if ( lua_isnil(L, -1) ) {
@@ -566,6 +594,10 @@ extern(C) int makePatch(lua_State* L)
 	// It appears that the caller has tried to set arguments as an array
 	string errMsg = "Error in call to makePatch. " ~
 	    "Name parameters are expected. An array style of parameters was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["north", "south", "west", "east", "gridType"])) {
+	string errMsg = "Error in call to makePatch:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     // Get boundary paths.

@@ -329,6 +329,10 @@ extern(C) int crossVector3(lua_State* L)
 extern(C) int quadProperties(lua_State* L)
 {
     if ( lua_istable(L, 1) ) {
+	if (!checkAllowedNames(L, 1, ["p0", "p1", "p2", "p3"])) {
+	    string errMsg = "Error in call to quadProperties{}. Invalid name in table.";
+	    luaL_error(L, errMsg.toStringz);
+	}
 	lua_getfield(L, 1, "p0");
 	Vector3 p0 = *checkVector3(L, -1);
 	lua_pop(L, 1);
@@ -377,6 +381,10 @@ extern(C) int quadProperties(lua_State* L)
 extern(C) int hexCellProperties(lua_State* L)
 {
     if ( lua_istable(L, 1) ) {
+	if (!checkAllowedNames(L, 1, ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"])) {
+	    string errMsg = "Error in call to hexCellProperties{}. Invalid name in table.";
+	    luaL_error(L, errMsg.toStringz);
+	}
 	lua_getfield(L, 1, "p0");
 	Vector3 p0 = *checkVector3(L, -1);
 	lua_pop(L, 1);

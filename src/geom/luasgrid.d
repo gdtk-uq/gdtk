@@ -179,8 +179,17 @@ extern(C) int newStructuredGrid(lua_State* L)
 	    "A table containing arguments is expected, but no table was found.";
 	luaL_error(L, errMsg.toStringz);
     }
+    if (!checkAllowedNames(L, 1, ["path","psurface","pvolume","niv","njv","nkv",
+				  "cf","cfList","label","filename","fileName","fmt"])) {
+	string errMsg = "Error in call to StructuredGrid:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
     // Let's first see if we have been given a file that contains the grid.
-    lua_getfield(L, 1, "file".toStringz);
+    lua_getfield(L, 1, "filename".toStringz);
+    if (lua_isnil(L, -1)) {
+	lua_pop(L, 1);
+	lua_getfield(L, 1, "fileName".toStringz);
+    }
     if ( lua_isstring(L, -1) ) {
 	string fileName = to!string(lua_tostring(L, -1));
 	lua_pop(L, 1);
