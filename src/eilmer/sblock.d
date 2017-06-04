@@ -263,9 +263,10 @@ public:
 		_ctr ~= new FVCell(myConfig, gid);
 		auto ijk = to_ijk_indices(gid);
 		_ifi ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
-		_ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
+		// We want distinct numbers for i, j and k interface ids, so add offsets.
+		_ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid+ntot);
 		if ( myConfig.dimensions == 3 ) {
-		    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
+		    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid+2*ntot);
 		}
 		_vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices, gid);
 	    } // gid loop
