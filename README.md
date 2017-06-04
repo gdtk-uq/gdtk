@@ -69,9 +69,13 @@ main code, a C compiler for building the Lua interpreter, and
 a Fortran-2003 compiler for building some of the thermochemical models.
 
 You may use the reference DMD compiler or the GDC or LDMD2 compilers.
-We have been developing with the DMD32 and DMD64 compilers 
-from versions 2.067 through 2.073.
-We also use GCC and GFortran.
+We have been developing with the recent DMD32 and DMD64 compilers, 
+from version 2.073.
+For the C and Fortran compilers, we use gcc and gfortran.
+
+Beyond having a standard Linux system with recent compilers,
+the build of the Lua interpreter requires the development packages for
+libreadline and libncurses.
 
 Going into the `dgd/src/eilmer` directory you will find a single `makefile`
 that allows the build to proceed with the command `make install`.
@@ -102,7 +106,7 @@ The actual running of a simulation is done in stages.
 
 Of course, this description is too superficial to actually expect that 
 you will be able to run a simulation with no further instruction.
-If you are keen, it's now time to look at the Eilmer3 documents 
+If you are keen, it's now time to look at the PDF documents 
 mentioned above and then look at specific examples provided in the 
 `dgd/examples/eilmer/` directory.
 
@@ -119,5 +123,5 @@ who has written what part of the code.
 The commit history is place to go to see further details. 
 
 ## Chief Gardeners
-Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2017-01-08
+Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2017-06-05
 
