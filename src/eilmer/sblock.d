@@ -1843,9 +1843,7 @@ public:
     // We delegate the actual file reading to the StructuredGrid class.
     {
 	size_t nivtx, njvtx, nkvtx;
-	if (myConfig.verbosity_level >= 1) {
-	    writeln("read_grid(): Start block ", id);
-	}
+	if (myConfig.verbosity_level > 1) { writeln("read_grid(): Start block ", id); }
 	grid = new StructuredGrid(filename, "gziptext");
 	grid.sort_cells_into_bins();
 	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
@@ -1884,9 +1882,7 @@ public:
     // Note that we reuse the StructuredGrid object that was created on the
     // use of read_grid().
     {
-	if (myConfig.verbosity_level >= 1) {
-	    writeln("write_grid(): Start block ", id);
-	}
+	if (myConfig.verbosity_level > 1) { writeln("write_grid(): Start block ", id); }
 	size_t kmaxrange;
 	if ( myConfig.dimensions == 3 ) {
 	    kmaxrange = kmax + 1;
@@ -1912,9 +1908,7 @@ public:
     // Keep in sync with write_initial_flow_file() in flowstate.d
     // and write_solution below.
     {
-	if (myConfig.verbosity_level >= 1) {
-	    writeln("read_solution(): Start block ", id);
-	}
+	if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
 	string format_version;
@@ -1978,9 +1972,7 @@ public:
     // Keep in sync with write_initial_flow_file() in flowstate.d
     // and read_solution above.
     {
-	if (myConfig.verbosity_level >= 1) {
-	    writeln("write_solution(): Start block ", id);
-	}
+	if (myConfig.verbosity_level > 1) { writeln("write_solution(): Start block ", id); }
 	auto outfile = new GzipOut(filename);
 	auto writer = appender!string();
 	formattedWrite(writer, "structured_grid_flow 1.0\n");

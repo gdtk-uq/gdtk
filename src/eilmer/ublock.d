@@ -766,9 +766,7 @@ public:
     // write_initial_usg_flow_file_from_lua() in luaflowstate.d. 
     // Returns sim_time from file.
     {
-	if (myConfig.verbosity_level >= 1) {
-	    writeln("read_solution(): Start block ", id);
-	}
+	if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
 	auto byLine = new GzipByLine(filename);
 	auto line = byLine.front; byLine.popFront();
 	string format_version;
@@ -814,9 +812,7 @@ public:
     // write_initial_usg_flow_file_from_lua() from luaflowstate.d and
     // write_initial_flow_file() from flowstate.d.
     {
-	if (myConfig.verbosity_level >= 1) {
-	    writeln("write_solution(): Start block ", id);
-	}
+	if (myConfig.verbosity_level > 1) { writeln("write_solution(): Start block ", id); }
 	auto outfile = new GzipOut(filename);
 	auto writer = appender!string();
 	formattedWrite(writer, "unstructured_grid_flow 1.0\n");

@@ -438,7 +438,7 @@ final class GlobalConfig {
     shared static int control_count = 10; // Number of steps between rereading .control file.
 
     shared static int verbosity_level = 1;
-    // Messages have a hierarchy:  // [TODO] we are not really abiding by this.
+    // Messages have a hierarchy:
     // 0 : only error messages will be omitted
     // 1 : emit messages that are useful for a long-running job (default)
     // 2 : plus verbose init messages

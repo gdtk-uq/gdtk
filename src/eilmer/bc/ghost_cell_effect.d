@@ -1955,9 +1955,9 @@ public:
 	int[2][string] mapped_cells_list; // list of cells to be mapped to ghost cells,
 	                                  // referenced by the neighbour cells id. 
 	// Stage 1 -- read mapped_cells file
-	if (!exists(mapped_cells_filename))
+	if (!exists(mapped_cells_filename)) {
 	    assert(0, "mapped_cells file does not exist.");
-	// else if the file exists
+	} // else if the file exists
 	auto f = File(mapped_cells_filename, "r");
 	string getHeaderContent(string target)
 	// Helper function to proceed through file, line-by-line,
@@ -1991,7 +1991,6 @@ public:
 	// Stage 2 -- map cells
 	final switch (blk.grid_type) {
 	case Grid_t.unstructured_grid: 
-	    writeln("Set up mapping to unstructured-grid ghost cells");
 	    BoundaryCondition bc = blk.bc[which_boundary];
 	    foreach (i, face; bc.faces) {
 		size_t[] my_vtx_list;
@@ -2025,10 +2024,8 @@ public:
     {
 	// Stage-2 construction for this boundary condition.
 	// Needs to be called after the cell geometries have been computed.
-	write("GhostCellMappedCellExchangeCopy: ");
 	final switch (blk.grid_type) {
 	case Grid_t.unstructured_grid: 
-	    writeln("Set up mapping to unstructured-grid ghost cells");
 	    BoundaryCondition bc = blk.bc[which_boundary];
 	    foreach (i, f; bc.faces) {
 		if (bc.outsigns[i] == 1) {
@@ -2039,7 +2036,6 @@ public:
 	    } // end foreach face
 	    break;
 	case Grid_t.structured_grid:
-	    writeln("Set up mapping to structured-grid ghost cells");
 	    size_t i, j, k;
 	    final switch (which_boundary) {
 	    case Face.north:

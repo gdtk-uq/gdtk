@@ -72,7 +72,7 @@ static int maxWallClockSeconds;
 
 void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 {
-    if (GlobalConfig.verbosity_level > 0) writeln("Begin init_simulation()...");
+    if (GlobalConfig.verbosity_level > 0) { writeln("Begin init_simulation()..."); }
     maxWallClockSeconds = maxWallClock;
     wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
@@ -83,13 +83,15 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     auto nBlocksInParallel = max(GlobalConfig.nBlocks, GlobalConfig.nSolidBlocks);
     auto nThreadsInPool = min(maxCPUs-1, nBlocksInParallel-1); // no need to have more task threads than blocks
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
-    writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
+    if (GlobalConfig.verbosity_level > 0) {
+	writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
+    }
     foreach (myblk; gasBlocks) {
-	writeln("myblk=", myblk);
-	if ( GlobalConfig.grid_motion != GridMotion.none ) {
+	// [TODO] Note that this loop is serial; Can we do some in parallel?
+	if (GlobalConfig.verbosity_level > 1) { writeln("myblk=", myblk); }
+	if (GlobalConfig.grid_motion != GridMotion.none) {
 	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, tindx)); 
-	}
-	else {
+	} else {
 	    // Assume there is only a single, static grid stored at tindx=0
 	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0)); 
 	}
@@ -202,7 +204,7 @@ void update_times_file()
 
 void march_over_blocks()
 {
-    if (GlobalConfig.verbosity_level > 0) writeln("March over blocks.");
+    if (GlobalConfig.verbosity_level > 0) { writeln("March over blocks."); }
     // Organise the blocks into a regular array.
     int nib = GlobalConfig.nib;
     int njb = GlobalConfig.njb;
@@ -260,7 +262,7 @@ void march_over_blocks()
 		}
 	    }
 	}
-	writeln("march over blocks i=", i);
+	if (GlobalConfig.verbosity_level > 0) { writeln("march over blocks i=", i); }
 	integrate_in_time(sim_time+time_slice);
     }
 } // end march_over_blocks()
@@ -451,8 +453,8 @@ void integrate_in_time(double target_time_as_requested)
 	    double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
 	    formattedWrite(writer, "WC=%d WCtFT=%.1f WCtMS=%.1f", 
 			   wall_clock_elapsed, WCtFT, WCtMS);
-	    writeln(writer.data);
-	    if ( GlobalConfig.report_residuals ) {
+	    if (GlobalConfig.verbosity_level > 0) { writeln(writer.data); }
+	    if (GlobalConfig.report_residuals) {
 		// We also compute the residual information and write to screen
 		auto wallClock2 = 1.0e-3*(Clock.currTime() - wall_clock_start).total!"msecs"();
 		compute_Linf_residuals(Linf_residuals);
@@ -469,6 +471,7 @@ void integrate_in_time(double target_time_as_requested)
 
         // 4. (Occasionally) Write out an intermediate solution
         if ( (sim_time >= t_plot) && !output_just_written ) {
+	    if (GlobalConfig.verbosity_level > 0) { writeln("Writing solution."); }
 	    current_tindx = current_tindx + 1;
 	    ensure_directory_is_present(make_path_name!"flow"(current_tindx));
 	    auto job_name = GlobalConfig.base_file_name;
@@ -556,8 +559,9 @@ void integrate_in_time(double target_time_as_requested)
 
 void finalize_simulation()
 {
-    if (GlobalConfig.verbosity_level > 0) writeln("Finalize the simulation.");
+    if (GlobalConfig.verbosity_level > 0) { writeln("Finalize the simulation."); }
     if (!output_just_written) {
+	if (GlobalConfig.verbosity_level > 0) { writeln("Writing solution."); }
 	current_tindx = current_tindx + 1;
 	ensure_directory_is_present(make_path_name!"flow"(current_tindx));
 	auto job_name = GlobalConfig.base_file_name;
@@ -583,8 +587,7 @@ void finalize_simulation()
 	write_history_cells_to_files(sim_time);
     }
     GC.collect();
-    writeln("Step= ", step, " final-t= ", sim_time);
-    if (GlobalConfig.verbosity_level > 0) { writeln("Done finalize_simulation."); }
+    if (GlobalConfig.verbosity_level > 0) { writeln("Step= ", step, " final-t= ", sim_time); }
 } // end finalize_simulation()
 
 //---------------------------------------------------------------------------

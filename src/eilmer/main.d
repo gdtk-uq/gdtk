@@ -54,9 +54,6 @@ void moveFileToBackup(string fileName)
 
 void main(string[] args)
 {
-    writeln("Eilmer4 compressible-flow simulation code.");
-    writeln("Revision: PUT_REVISION_STRING_HERE");
-
     string msg = "Usage:                               Comment:\n";
     msg       ~= "e4shared [--job=<string>]            file names built from this string\n";
     msg       ~= "         [--verbosity=<int>]         defaults to 0\n";
@@ -100,7 +97,7 @@ void main(string[] args)
 	exit(1);
     }
     string jobName = "";
-    int verbosityLevel = 0;
+    int verbosityLevel = 1; // default to having a little information
     bool prepFlag = false;
     bool runFlag = false;
     string tindxStartStr = "0";
@@ -171,19 +168,23 @@ void main(string[] args)
 	write(msg);
 	exit(1);
     }
+    if (verbosityLevel > 0) {
+	writeln("Eilmer4 compressible-flow simulation code.");
+	writeln("Revision: PUT_REVISION_STRING_HERE");
+    }
     if (helpWanted) {
 	write(msg);
 	exit(0);
     }
-
+    //
     if (prepFlag) {
-	writeln("Begin preparation stage for a simulation.");
+	if (verbosityLevel > 0) { writeln("Begin preparation stage for a simulation."); }
 	if (jobName.length == 0) {
 	    writeln("Need to specify a job name.");
 	    write(msg);
 	    exit(1);
 	}
-	writeln("Start lua connection.");
+	if (verbosityLevel > 1) { writeln("Start lua connection."); }
 	auto L = luaL_newstate();
 	luaL_openlibs(L);
 	registerVector3(L);
@@ -223,7 +224,7 @@ void main(string[] args)
 	    string errMsg = to!string(lua_tostring(L, -1));
 	    throw new FlowSolverException(errMsg);
 	}
-	writeln("Done preparation.");
+	if (verbosityLevel > 0) { writeln("Done preparation."); }
     } // end if prepFlag
 
     if (runFlag) {
@@ -258,14 +259,14 @@ void main(string[] args)
 	}
 	
 	init_simulation(tindxStart, maxCPUs, maxWallClock);
-	writeln("starting simulation time= ", simcore.sim_time);
+	if (verbosityLevel > 0) { writeln("starting simulation time= ", simcore.sim_time); }
 	if (GlobalConfig.block_marching) {
 	    march_over_blocks();
 	} else {
 	    integrate_in_time(GlobalConfig.max_time);
 	}
 	finalize_simulation();
-	writeln("Done simulation.");
+	if (verbosityLevel > 0) { writeln("Done simulation."); }
     } // end if runFlag
 
     if (postFlag) {
@@ -279,6 +280,9 @@ void main(string[] args)
 	if (verbosityLevel > 0) {
 	    writeln("Begin post-processing with command-line arguments.");
 	    writeln("  jobName: ", jobName);
+	    writeln("  verbosityLevel: ", verbosityLevel);
+	}
+	if (verbosityLevel > 1) {
 	    writeln("  listInfoFlag: ", listInfoFlag);
 	    writeln("  tindxPlot: ", tindxPlot);
 	    writeln("  addVarsStr: ", addVarsStr);
@@ -297,7 +301,6 @@ void main(string[] args)
 	    writeln("  outputFormat: ", outputFormat);
 	    writeln("  normsStr: ", normsStr);
 	    writeln("  regionStr: ", regionStr);
-	    writeln("  verbosityLevel: ", verbosityLevel);
 	}
 	post_process(plotDir, listInfoFlag, tindxPlot,
 		     addVarsStr, luaRefSoln,
@@ -305,15 +308,17 @@ void main(string[] args)
 		     outputFileName, sliceListStr, surfaceListStr,
 		     extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
 		     probeStr, outputFormat, normsStr, regionStr);
-	writeln("Done postprocessing.");
+	if (verbosityLevel > 0) { writeln("Done postprocessing."); }
     } // end if postFlag
 
     if (customPostFlag) {
-	writeln("Begin custom post-processing using user-supplied script.");
+	if (verbosityLevel > 0) { 
+	    writeln("Begin custom post-processing using user-supplied script.");
+	}
 	// For this case, there is very little job context loaded and
 	// after loading all of the libraries, we pretty much hand over
 	// to a Lua file to do everything.
-	writeln("Start lua connection.");
+	if (verbosityLevel > 1) { writeln("Start lua connection."); }
 	auto L = luaL_newstate();
 	luaL_openlibs(L);
 	registerVector3(L);
@@ -338,7 +343,7 @@ void main(string[] args)
 	    string errMsg = to!string(lua_tostring(L, -1));
 	    throw new FlowSolverException(errMsg);
 	}
-	writeln("Done custom postprocessing.");
+	if (verbosityLevel > 0) { writeln("Done custom postprocessing."); }
     } // end if customPostFlag
 } // end main()
 
