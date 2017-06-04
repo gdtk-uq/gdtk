@@ -1,0 +1,8 @@
+{
+    "name": "typevector",
+    "targetType": "executable",
+    "sourcePaths": ["."],
+    "dependencies": {
+        "mpi": {"path": "../.."}
+    }
+}

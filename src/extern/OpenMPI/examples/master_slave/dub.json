@@ -1,0 +1,8 @@
+{
+    "name": "master_slave",
+    "targetType": "executable",
+    "sourcePaths": ["."],
+    "dependencies": {
+        "mpi": {"path": "../.."}
+    }
+}

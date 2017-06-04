@@ -1,0 +1,8 @@
+{
+    "name": "connectivity_d",
+    "targetType": "executable",
+    "sourcePaths": ["."],
+    "dependencies": {
+        "mpi": {"path": "../.."}
+    }
+}

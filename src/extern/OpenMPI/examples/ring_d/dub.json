@@ -1,0 +1,8 @@
+{
+    "name": "ring_d",
+    "targetType": "executable",
+    "sourcePaths": ["."],
+    "dependencies": {
+        "mpi": {"path": "../.."}
+    }
+}

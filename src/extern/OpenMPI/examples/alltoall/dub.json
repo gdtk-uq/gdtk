@@ -1,0 +1,8 @@
+{
+    "name": "alltoall",
+    "targetType": "executable",
+    "sourcePaths": ["."],
+    "dependencies": {
+        "mpi": {"path": "../.."}
+    }
+}
