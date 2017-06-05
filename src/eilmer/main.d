@@ -42,6 +42,10 @@ import postprocess;
 import luaflowsolution;
 import luaidealgasflow;
 import luagasflow;
+version(mpi_parallel) {
+    import mpi;
+    import mpi.util;
+}
 
 void moveFileToBackup(string fileName)
 {
@@ -52,8 +56,22 @@ void moveFileToBackup(string fileName)
     return;
 }
 
-void main(string[] args)
+int main(string[] args)
 {
+    int exitFlag = 0; // Presume OK in the beginning.
+    //
+    version(mpi_parallel) {
+	// This preamble copied directly from the OpenMPI hello-world example.
+	int argc = cast(int)args.length;
+	auto argv = args.toArgv();
+	int rank;
+	int size;
+	MPI_Init(&argc, &argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	scope(exit) { MPI_Finalize(); }
+    }
+    //
     string msg = "Usage:                               Comment:\n";
     msg       ~= "e4shared [--job=<string>]            file names built from this string\n";
     msg       ~= "         [--verbosity=<int>]         defaults to 0\n";
@@ -94,7 +112,8 @@ void main(string[] args)
     if ( args.length < 2 ) {
 	writeln("Too few arguments.");
 	write(msg);
-	exit(1);
+	exitFlag = 1;
+	return exitFlag;
     }
     string jobName = "";
     int verbosityLevel = 1; // default to having a little information
@@ -166,15 +185,27 @@ void main(string[] args)
 	args = args[1 .. $]; // Dispose of program name in first argument.
 	foreach (myarg; args) writeln("    arg: ", myarg);
 	write(msg);
-	exit(1);
+	exitFlag = 1;
+	return exitFlag;
     }
     if (verbosityLevel > 0) {
-	writeln("Eilmer4 compressible-flow simulation code.");
-	writeln("Revision: PUT_REVISION_STRING_HERE");
+	version(mpi_parallel) {
+	    if (rank == 0) {
+		writeln("Eilmer4 compressible-flow simulation code.");
+		writeln("Revision: PUT_REVISION_STRING_HERE");
+	    }
+	    writefln("MPI rank=%d size=%d", rank, size);
+	    MPI_Barrier(MPI_COMM_WORLD);
+	} else {
+	    writeln("Eilmer4 compressible-flow simulation code.");
+	    writeln("Revision: PUT_REVISION_STRING_HERE");
+	    writeln("Shared-memory");
+	}
     }
     if (helpWanted) {
 	write(msg);
-	exit(0);
+	exitFlag = 0;
+	return exitFlag;
     }
     //
     if (prepFlag) {
@@ -182,7 +213,8 @@ void main(string[] args)
 	if (jobName.length == 0) {
 	    writeln("Need to specify a job name.");
 	    write(msg);
-	    exit(1);
+	    exitFlag = 1;
+	    return exitFlag;
 	}
 	if (verbosityLevel > 1) { writeln("Start lua connection."); }
 	auto L = luaL_newstate();
@@ -231,7 +263,8 @@ void main(string[] args)
 	if (jobName.length == 0) {
 	    writeln("Need to specify a job name.");
 	    write(msg);
-	    exit(1);
+	    exitFlag = 1;
+	    return exitFlag;
 	}
 	GlobalConfig.base_file_name = jobName;
 	GlobalConfig.verbosity_level = verbosityLevel;
@@ -273,7 +306,8 @@ void main(string[] args)
 	if (jobName.length == 0) {
 	    writeln("Need to specify a job name.");
 	    write(msg);
-	    exit(1);
+	    exitFlag = 1;
+	    return exitFlag;
 	}
 	GlobalConfig.base_file_name = jobName;
 	GlobalConfig.verbosity_level = verbosityLevel;
@@ -345,6 +379,8 @@ void main(string[] args)
 	}
 	if (verbosityLevel > 0) { writeln("Done custom postprocessing."); }
     } // end if customPostFlag
+    //
+    return exitFlag;
 } // end main()
 
 

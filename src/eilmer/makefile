@@ -15,8 +15,12 @@ TARGET ?= debug
 PLATFORM ?= linux
 WITH_GPU_CHEM ?= 0
 
-PROGRAMS := e4shared e4sss 
+PROGRAMS := e4shared e4sss
 SHARE_FILES := 
+
+ifeq ($(WITH_MPI),1)
+    PROGRAMS += e4mpi
+endif
 
 ifeq ($(WITH_GPU_CHEM),1)
     PROGRAMS += eilmer-gpu-chem prep-gpu-chem-kernel.py
@@ -87,6 +91,9 @@ GZIP_FILES := $(GZIP_DIR)/gzip.d
 
 OPENCL_DIR := ../extern/opencl.d/source
 OPENCL_FILES := $(OPENCL_DIR)/cl.d
+
+OPENMPI_DIR := ../extern/OpenMPI/
+OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d $(OPENMPI_DIR)/source/mpi/util.d
 
 LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
@@ -171,7 +178,10 @@ clean:
 	- rm -r $(BUILD_DIR)/*
 	- rm test-grid.txt.gz test-flow.txt.gz trace.log trace.def
 	- rm -r plot/ flow/ grid/
-	- rm main_with_rev_string.d steadystate_solver_with_rev_string.d
+	- rm main_with_rev_string.d
+	- rm steadystate_solver_with_rev_string.d
+	- rm mpi_main_with_rev_string.d e4mpi
+	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
 	- cd $(GRID_DIR); make clean
@@ -261,6 +271,18 @@ e4shared: main.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
+
+e4mpi: main.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(NM_LUA_FILES)
+	cd $(OPENMPI_DIR); gen/setup.sh
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > mpi_main_with_rev_string.d
+	$(DMD) $(DFLAGS) $(OF)e4mpi -version=mpi_parallel -I$(OPENMPI_DIR) \
+		mpi_main_with_rev_string.d $(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) $(DLINKFLAGS) -L-lmpi
 
 e4sss: steadystate_solver.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
