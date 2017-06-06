@@ -26,8 +26,7 @@ local function to_eilmer_axis_map(gridpro_ijk)
       gridpro_ijk = string.format("%03d", gridpro_ijk)
    end
    if type(gridpro_ijk) ~= "string" then
-      print("Expected a string or integer of three digits but got:", gridpro_ijk)
-      os.exit(-1)
+      error("Expected a string or integer of three digits but got:"..tostring(gridpro_ijk))
    end
    eilmer_ijk = axis_map[tonumber(string.sub(gridpro_ijk, 1, 1))] ..
       axis_map[tonumber(string.sub(gridpro_ijk, 2, 2))] ..

@@ -118,8 +118,7 @@ function to_eilmer_axis_map(gridpro_ijk)
       gridpro_ijk = string.format("%03d", gridpro_ijk)
    end
    if type(gridpro_ijk) ~= "string" then
-      print("Expected a string or integer of three digits but got:", gridpro_ijk)
-      os.exit(-1)
+      error("Expected a string or integer of three digits but got:"..tostring(gridpro_ijk))
    end
    eilmer_ijk = axis_map[tonumber(string.sub(gridpro_ijk, 1, 1))] ..
       axis_map[tonumber(string.sub(gridpro_ijk, 2, 2))] ..
@@ -235,21 +234,19 @@ function FluidBlock:tojson()
       -- Boundary conditions for structured grid.
       for _,face in ipairs(faceList(config.dimensions)) do
 	 if not self.bcList[face].is_gas_domain_bc then
-	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
-	    errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
-	    errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
-	    print(errMsg)
-	    os.exit(1)
+	    local msg = string.format("Boundary condition problem for block:%d, face:%s\n", self.id, face)
+	    msg = msg.."   This boundary condition should be a gas domain b.c.\n"
+	    msg = msg.."   The preparation stage cannot complete successfully.\n"
+	    error(msg)
 	 end
 	 if not self.bcList[face].is_configured then
-	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, face:%s\n", self.id, face)
-	    errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
-	    errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
-	    errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
-	    errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
-	    errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
-	    print(errMsg)
-	    os.exit(1)
+	    local msg = string.format("Boundary condition problem for block:%d, face:%s\n", self.id, face)
+	    msg = msg.."   This boundary condition was not configured correctly.\n"
+	    msg = msg.."   If you used one of the standard boundary conditions,\n"
+	    msg = msg.."   did you remember to call the b.c constructor as bcName:new{}?\n"
+	    msg = msg.."   If you have custom configured the boundary condition,\n"
+	    msg = msg.."   did you remember to set the 'is_configured' flag to true?\n"
+	    error(msg)
 	 end
 	 str = str .. string.format('    "boundary_%s": ', face) ..
 	    self.bcList[face]:tojson() .. ',\n'
@@ -263,21 +260,19 @@ function FluidBlock:tojson()
       -- Boundary conditions for the unstructured grid
       for i = 0, self.nboundaries-1 do
 	 if not self.bcList[i].is_gas_domain_bc then
-	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
-	    errMsg = errMsg .. "       This boundary condition should be a gas domain b.c.\n"
-	    errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
-	    print(errMsg)
-	    os.exit(1)
+	    local msg = string.format("Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
+	    msg = msg.."   This boundary condition should be a gas domain b.c.\n"
+	    msg = msg.."   The preparation stage cannot complete successfully.\n"
+	    error(msg)
 	 end
 	 if not self.bcList[i].is_configured then
-	    errMsg = string.format("ERROR: Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
-	    errMsg = errMsg .. "       This boundary condition was not configured correctly.\n"
-	    errMsg = errMsg .. "       If you used one of the standard boundary conditions,\n"
-	    errMsg = errMsg .. "       did you remember to call the b.c constructor as bcName:new{}?\n"
-	    errMsg = errMsg .. "       If you have custom configured the boundary condition,\n"
-	    errMsg = errMsg .. "       did you remember to set the 'is_configured' flag to true?\n"
-	    print(errMsg)
-	    os.exit(1)
+	    local msg = string.format("Boundary condition problem for block:%d, boundary:%d\n", self.id, i)
+	    msg = msg.."   This boundary condition was not configured correctly.\n"
+	    msg = msg.."   If you used one of the standard boundary conditions,\n"
+	    msg = msg.."   did you remember to call the b.c constructor as bcName:new{}?\n"
+	    msg = msg.."   If you have custom configured the boundary condition,\n"
+	    msg = msg.."   did you remember to set the 'is_configured' flag to true?\n"
+	    error(msg)
 	 end
 	 str = str .. string.format('    "boundary_%d": ', i) ..
 	    self.bcList[i]:tojson() .. ',\n'
@@ -348,10 +343,9 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 						       orientation=orientation}
       else
 	 -- [TODO] Implement and handle other connection types.
-	 print("The requested FluidBlock to SolidBlock connection is not available.")
-	 print("FluidBlock-", faceA, " :: SolidBlock-", faceB)
-	 print("Bailing out!")
-	 os.exit(1)
+	 local msg = "The requested FluidBlock to SolidBlock connection is not available.\n"
+	 msg = msg .."FluidBlock-"..tostring(faceA).." :: SolidBlock-"..tostring(faceB)
+	 error(msg)
       end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "FluidBlock" then
        -- Presently, only handle faceA == SOUTH, faceB == NORTH
@@ -364,10 +358,9 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 							 orientation=orientation}
       else
 	 -- [TODO] Implement and handle other connection types.
-	 print("The requested SolidBlock to FluidBlock connection is not available.")
-	 print("SolidBlock-", faceA, " :: FluidBlock-", faceB)
-	 print("Bailing out!")
-	 os.exit(1)
+	 local msg = "The requested SolidBlock to FluidBlock connection is not available.\n"
+	 msg = msg.."SolidBlock-"..tostring(faceA).." :: FluidBlock-"..tostring(faceB)
+	 error(msg)
       end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "SolidBlock" then
       -- Presently only handle EAST-WEST and WEST-EAST connections
@@ -380,10 +373,9 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 							    orientation=orientation}
       else
 	 -- [TODO] Implement and handle other connection types for solid domains.
-	 print("The requested SolidBlock to SolidBlock connection is not available.")
-	 print("SolidBlock-", faceA, " :: SolidBlock-", faceB)
-	 print("Bailing out!")
-	 os.exit(1)
+	 local msg = "The requested SolidBlock to SolidBlock connection is not available.\n"
+	 msg = msg.."SolidBlock-"..tostring(faceA).." :: SolidBlock-"..tostring(faceB)
+	 error(msg)
       end
    end
 end
@@ -672,11 +664,10 @@ function SolidBlock:tojson()
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
       if not self.bcList[face].is_solid_domain_bc then
-	 errMsg = string.format("ERROR: Boundary condition problem for solid block:%d, face:%s\n", self.id, face)
+	 errMsg = string.format("Boundary condition problem for solid block:%d, face:%s\n", self.id, face)
 	 errMsg = errMsg .. "       This boundary condition should be a solid domain b.c.\n"
-	 errMsg = errMsg .. "       The preparation stage cannot complete successfully. Bailing out!\n"
-	 print(errMsg)
-	 os.exit(1)
+	 errMsg = errMsg .. "       The preparation stage cannot complete successfully.\n"
+	 error(errMsg)
       end
       str = str .. string.format('    "face_%s": ', face) ..
 	 self.bcList[face]:tojson() .. ',\n'
@@ -756,9 +747,7 @@ function SolidBlockArray(t)
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
 	 else
-	    print("SolidBlockArray not implemented for 3D.")
-	    print("Bailing out!")
-	    os.exit(1)
+	    error("SolidBlockArray not implemented for 3D.")
 	 end -- dimensions
       end -- jb loop
    end -- ib loop
@@ -802,7 +791,7 @@ function setHistoryPoint(args)
       historyCells[#historyCells+1] = {ib=blkId, i=cellId}
       return
    end
-   --
+   -- Still trying; look for integer indices.
    if ( args.j ) then
       ib = args.ib
       i = args.i
@@ -815,13 +804,7 @@ function setHistoryPoint(args)
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       return
    end
-   --
-   if ( not args.ib or not args.i ) then
-      print("No valid arguments found for setHistoryPoint.")
-      print("Bailing out!")
-      os.exit(1)
-   end
-   --
+   assert(args.ib and args.i, "No valid arguments found for setHistoryPoint.")
    historyCells[#historyCells+1] = {ib=args.ib, i=args.i}
    return
 end
@@ -858,7 +841,7 @@ function setSolidHistoryPoint(args)
       solidHistoryCells[#solidHistoryCells+1] = {ib=blkId, i=cellId}
       return
    end
-   --
+   -- Still trying; look for integer indices.
    if ( args.j ) then
       ib = args.ib
       i = args.i
@@ -871,13 +854,7 @@ function setSolidHistoryPoint(args)
       solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=cellId}
       return
    end
-   --
-   if ( not args.ib or not args.i ) then
-      print("No valid arguments found for setSolidHistoryPoint.")
-      print("Bailing out!")
-      os.exit(1)
-   end
-   --
+   assert(args.ib and args.i, "No valid arguments found for setSolidHistoryPoint.")
    solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=args.i}
    return
 end
