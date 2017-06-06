@@ -47,7 +47,7 @@ test post-shock-region {Post-shock gas conditions.} -body {
 	set T 0
 	set velx 0
     } else {
-	set line_of_data [string trim [lindex [split $results "\n"] 5]]
+	set line_of_data [string trim [lindex [split $results "\n"] 9]]
 	# puts $line_of_data
 	set items [split $line_of_data]
 	set rho [lindex $items 4]; # remember that index starts at 0
@@ -76,7 +76,7 @@ test expanded-driver-region {Expanded driver gas conditions.} -body {
 	set T 0
 	set velx 0
     } else {
-	set line_of_data [string trim [lindex [split $results "\n"] 5]]
+	set line_of_data [string trim [lindex [split $results "\n"] 9]]
 	# puts $line_of_data
 	set items [split $line_of_data]
 	set rho [lindex $items 4]; # remember that index starts at 0

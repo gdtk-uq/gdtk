@@ -57,7 +57,7 @@ test post-shock-state {Post-shock state along the stagnation line.} -body {
 	set T 0
 	set massf_N 0
     } else {
-	set line_of_data [string trim [lindex [split $results "\n"] 5]]
+	set line_of_data [string trim [lindex [split $results "\n"] 9]]
 	# puts $line_of_data
 	set items [split $line_of_data]
 	set rho [lindex $items 4]; # remember that index starts at 0
