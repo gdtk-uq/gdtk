@@ -57,14 +57,25 @@ test post-shock-state {Post-shock state along the stagnation line.} -body {
 	set T 0
 	set massf_N 0
     } else {
-	set line_of_data [string trim [lindex [split $results "\n"] 9]]
-	# puts $line_of_data
-	set items [split $line_of_data]
-	set rho [lindex $items 4]; # remember that index starts at 0
-	set velx [lindex $items 5]
-	set p [lindex $items 8]
-	set massf_N [lindex $items 18]
-	set T [lindex $items 21]
+	# Skip through the output, looking for the interesting data.
+	# There will be a header line, followed by the actual data values.
+	set found 0
+	foreach line [split $results "\n"] {
+	    if {[string first "pos.x" $line] >= 0} {
+		set found 1
+		continue; # skip to following line
+	    }
+	    if {$found} {
+		set tokens [split [string trim $line]]
+		# puts "tokens= $tokens"
+		set rho [lindex $tokens 4]; # remember that index starts at 0
+		set velx [lindex $tokens 5]
+		set p [lindex $tokens 8]
+		set massf_N [lindex $tokens 18]
+		set T [lindex $tokens 21]
+		break; # We have our data so stop looking.
+	    }
+	}
 	# puts "rho=$rho velx=$velx p=$p T=$T massf_N=$massf_N"
     }
     # The differences with respect to the reference values should be small. 

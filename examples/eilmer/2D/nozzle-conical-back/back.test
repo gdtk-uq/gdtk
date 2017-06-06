@@ -53,13 +53,24 @@ test subsonic-region {Subsonic region should have a small positive Mach number.}
 	set T 0
 	set Mach 0
     } else {
-	set line_of_data [string trim [lindex [split $results "\n"] 9]]
-	# puts $line_of_data
-	set items [split $line_of_data]
-	set rho [lindex $items 4]; # remember that index starts at 0
-	set p [lindex $items 8]
-	set T [lindex $items 19]
-	set Mach [lindex $items 20]
+	# Skip through the output, looking for the interesting data.
+	# There will be a header line, followed by the actual data values.
+	set found 0
+	foreach line [split $results "\n"] {
+	    if {[string first "pos.x" $line] >= 0} {
+		set found 1
+		continue; # skip to following line
+	    }
+	    if {$found} {
+		set tokens [split [string trim $line]]
+		# puts "tokens= $tokens"
+		set rho [lindex $tokens 4]; # remember that index starts at 0
+		set p [lindex $tokens 8]
+		set T [lindex $tokens 19]
+		set Mach [lindex $tokens 20]
+		break; # We have our data so stop looking.
+	    }
+	}
 	# puts "rho=$rho p=$p T=$T Mach=$Mach"
     }
     # The differences with respect to the reference values should be small. 
@@ -86,13 +97,24 @@ test supersonic-region {Supersonic exit should be a bit over Mach 3.} -body {
 	set T 0
 	set Mach 0
     } else {
-	set line_of_data [string trim [lindex [split $results "\n"] 9]]
-	# puts $line_of_data
-	set items [split $line_of_data]
-	set rho [lindex $items 4]; # remember that index starts at 0
-	set p [lindex $items 8]
-	set T [lindex $items 19]
-	set Mach [lindex $items 20]
+	# Skip through the output, looking for the interesting data.
+	# There will be a header line, followed by the actual data values.
+	set found 0
+	foreach line [split $results "\n"] {
+	    if {[string first "pos.x" $line] >= 0} {
+		set found 1
+		continue; # skip to following line
+	    }
+	    if {$found} {
+		set tokens [split [string trim $line]]
+		# puts "tokens= $tokens"
+		set rho [lindex $tokens 4]; # remember that index starts at 0
+		set p [lindex $tokens 8]
+		set T [lindex $tokens 19]
+		set Mach [lindex $tokens 20]
+		break; # We have our data so stop looking.
+	    }
+	}
 	# puts "rho=$rho p=$p T=$T Mach=$Mach"
     }
     # The differences with respect to the reference values should be small. 

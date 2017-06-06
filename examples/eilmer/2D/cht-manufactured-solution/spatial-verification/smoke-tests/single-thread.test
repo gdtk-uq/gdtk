@@ -33,16 +33,29 @@ test computed-norms {Check the temperature norms.} -body {
     set fp [open T-norms.txt r]
     set contents [read $fp]
     close $fp
-    set line [lindex [split $contents "\n"] 7]
-    set tks [split $line]
-    set L1g [lindex $tks 2]
-    set L2g [lindex $tks 4]
-    set Linfg [lindex $tks 6]
-    set line [lindex [split $contents "\n"] 16]
-    set tks [split $line]
-    set L1s [lindex $tks 2]
-    set L2s [lindex $tks 4]
-    set Linfs [lindex $tks 6]
+    # Skip through the output, looking for the two lines of interesting data.
+    set foundState 0
+    foreach line [split $contents "\n"] {
+	if {[string first "L1=" $line] >= 0} {
+	    incr foundState
+	}
+	if {$foundState == 1} {
+	    set tokens [split [string trim $line]]
+	    # puts "tokens= $tokens"
+	    set L1g [lindex $tokens 1]
+	    set L2g [lindex $tokens 3]
+	    set Linfg [lindex $tokens 5]
+	    incr foundState
+	}
+	if {$foundState == 3} {
+	    set tokens [split [string trim $line]]
+	    # puts "tokens= $tokens"
+	    set L1s [lindex $tokens 1]
+	    set L2s [lindex $tokens 3]
+	    set Linfs [lindex $tokens 5]
+	    incr foundState
+	}
+    }
     list [expr abs($L1g - $L1g_ref)/$L1g_ref < 1.0e-3] \
          [expr abs($L2g - $L2g_ref)/$L2g_ref < 1.0e-3] \
          [expr abs($Linfg - $Linfg_ref)/$Linfg_ref < 1.0e-3] \
