@@ -423,7 +423,7 @@ public:
 	return;
     } // end decode_conserved()
 
-    @nogc
+    //@nogc
     void time_derivatives(int gtl, int ftl, bool with_k_omega) 
     // These are the spatial (RHS) terms in the semi-discrete governing equations.
     // gtl : (grid-time-level) flow derivatives are evaluated at this grid level
@@ -490,7 +490,20 @@ public:
 	    dUdt[ftl].tke = vol_inv*integral + Q.tke;
 	    integral = 0.0;
 	    foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.omega*iface[i].area[gtl]; }
+	    /*
+	    if ( id == 117 ) {
+		writefln("EAST: id= %d, %.16e", iface[Face.east].id, iface[Face.east].F.omega);
+		writefln("NORTH: id= %d, %.16e", iface[Face.north].id, iface[Face.north].F.omega);
+		writefln("WEST: id= %d, %.16e", iface[Face.west].id, iface[Face.west].F.omega);
+		writefln("SOUTH: id= %d, %.16e", iface[Face.south].id, iface[Face.south].F.omega);
+	    }
+	    */
 	    dUdt[ftl].omega = vol_inv*integral + Q.omega;
+	    /*
+	      if ( id == 117 ) {
+		writefln("Q.omega= %.16e dOmegadt= %.16e", Q.omega, dUdt[ftl].omega);
+	    }
+	    */
 	} else {
 	    dUdt[ftl].tke = 0.0;
 	    dUdt[ftl].omega = 0.0;
@@ -1088,13 +1101,13 @@ public:
 		// 2D axisymmetric
 		double v_over_y = fs.vel.y / pos[0].y;
 		S_bar_squared = dudx*dudx + dvdy*dvdy + v_over_y*v_over_y
-		    - 1.0/3.0 * (dudx + dvdy + v_over_y)
+		    - 4.0/9.0 * (dudx + dvdy + v_over_y)
 		    * (dudx + dvdy + v_over_y)
 		    + 0.5 * (dudy + dvdx) * (dudy + dvdx) ;
 	    } else {
 		// 2D cartesian
 		S_bar_squared = dudx*dudx + dvdy*dvdy
-		    - 1.0/3.0 * (dudx + dvdy) * (dudx + dvdy)
+		    - 4.0/9.0 * (dudx + dvdy) * (dudx + dvdy)
 		    + 0.5 * (dudy + dvdx) * (dudy + dvdx);
 	    }
 	} else {
@@ -1116,7 +1129,7 @@ public:
 		mixin(avg_over_iface_list("grad.vel[2][2]", "dwdz"));
 	    } // end switch (myConfig.spatial_deriv_locn)
 	    S_bar_squared =  dudx*dudx + dvdy*dvdy + dwdz*dwdz
-		- 1.0/3.0*(dudx + dvdy + dwdz)*(dudx + dvdy + dwdz)
+		- 4.0/9.0*(dudx + dvdy + dwdz)*(dudx + dvdy + dwdz)
 		+ 0.5 * (dudy + dvdx) * (dudy + dvdx)
 		+ 0.5 * (dudz + dwdx) * (dudz + dwdx)
 		+ 0.5 * (dvdz + dwdy) * (dvdz + dwdy);

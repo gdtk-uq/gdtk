@@ -11,6 +11,8 @@
 
 module fvinterface;
 
+import std.stdio;
+
 import std.conv;
 import std.format;
 import geom;
@@ -229,6 +231,7 @@ public:
         double k_eff = viscous_factor * (fs.gas.k + fs.k_t);
 	double mu_eff =  viscous_factor * (fs.gas.mu + fs.mu_t);
 	double lmbda = -2.0/3.0 * mu_eff;
+
 	// We separate diffusion based on laminar or turbulent
 	// and treat the differently.
 	if ( myConfig.turbulence_model != TurbulenceModel.none ) {
@@ -337,12 +340,12 @@ public:
 	if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
 	     !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
 	    // Turbulence contribution to the shear stresses.
-	    tau_xx -= 0.66667 * fs.gas.rho * fs.tke;
-	    tau_yy -= 0.66667 * fs.gas.rho * fs.tke;
-	    if (myConfig.dimensions == 3) { tau_zz -= 0.66667 * fs.gas.rho * fs.tke; }
+	    tau_xx -= 2.0/3.0 * fs.gas.rho * fs.tke;
+	    tau_yy -= 2.0/3.0 * fs.gas.rho * fs.tke;
+	    if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.tke; }
 	    // Turbulence contribution to heat transfer.
 	    double sigma_star = 0.6;
-	    double mu_effective = fs.gas.mu + sigma_star * fs.mu_t;
+	    double mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
 	    qx += mu_effective * grad.tke[0];
 	    qy += mu_effective * grad.tke[1];
 	    if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
@@ -351,7 +354,7 @@ public:
 	    tau_ky = mu_effective * grad.tke[1];
 	    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
 	    double sigma = 0.5;
-	    mu_effective = fs.gas.mu + sigma * fs.mu_t;
+	    mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
 	    tau_wx = mu_effective * grad.omega[0]; 
 	    tau_wy = mu_effective * grad.omega[1]; 
 	    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 

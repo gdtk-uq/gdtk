@@ -389,6 +389,17 @@ void integrate_in_time(double target_time_as_requested)
 	    }
 	} // end if (GlobalConfig.divergence_cleaning)
 
+	// If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
+	// because the convective update is where the interface values of mu_t and k_t are set.
+	if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+	    foreach (blk; parallel(gasBlocks,1)) {
+		if (blk.active) {
+		    blk.flow_property_derivatives(0); 
+		    blk.estimate_turbulence_viscosity();
+		}
+	    }
+	}
+
         // 2. Attempt a time step.
 	
 	// 2a. Moving Grid - let's start by calculating vertex velocties

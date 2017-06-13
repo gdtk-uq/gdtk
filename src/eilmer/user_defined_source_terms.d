@@ -49,6 +49,8 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, Ga
     cell.Q.momentum.refy += getNumberFromTable(L, -1, "momentum_y", false, 0.0);
     cell.Q.momentum.refz += getNumberFromTable(L, -1, "momentum_z", false, 0.0);
     cell.Q.total_energy += getNumberFromTable(L, -1, "total_energy",false, 0.0);
+    cell.Q.tke += getNumberFromTable(L, -1, "tke", false, 0.0);
+    cell.Q.omega += getNumberFromTable(L, -1, "omega", false, 0.0);
     lua_getfield(L, -1, "species");
     if ( lua_istable(L, -1) ) {
 	// Iterate over species by names.

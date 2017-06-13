@@ -432,6 +432,18 @@ private:
 	if ( !lua_isnil(L, -1) ) {
 	    fs.omega = getDouble(L, tblIdx, "omega");
 	}
+
+	lua_getfield(L, tblIdx, "mu_t");
+	if ( !lua_isnil(L, -1) ) {
+	    fs.mu_t = getDouble(L, tblIdx, "mu_t");
+	}
+	lua_pop(L, 1);
+
+	lua_getfield(L, tblIdx, "k_t");
+	if ( !lua_isnil(L, -1) ) {
+	    fs.k_t = getDouble(L, tblIdx, "k_t");
+	}
+
 	lua_pop(L, 1);
     }
 	    

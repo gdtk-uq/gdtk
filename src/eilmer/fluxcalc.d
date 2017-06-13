@@ -51,12 +51,13 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     }
     // Compute the fluxes in the local frame of the interface.
+    bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
     final switch (myConfig.flux_calculator) {
     case FluxCalculator.efm:
         efmflx(Lft, Rght, IFace, myConfig.gmodel);
 	break;
     case FluxCalculator.ausmdv:
-        ausmdv(Lft, Rght, IFace);
+        ausmdv(Lft, Rght, IFace, with_k_omega);
 	break;
     case FluxCalculator.adaptive:
         adaptive_flux(Lft, Rght, IFace, myConfig);
@@ -169,7 +170,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 } // end set_flux_vector_in_global_frame()
 
 @nogc
-void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
+void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, bool with_k_omega)
 // Wada and Liou's flux calculator.
 // 
 // Implemented from details in their AIAA paper 
@@ -190,6 +191,9 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
     double aL = Lft.gas.a;
     double keL = 0.5*(uL*uL + vL*vL + wL*wL);
     double HL = eL + pLrL + keL;
+    if (with_k_omega) {
+	HL += Lft.tke;
+    }
     //
     double rR = Rght.gas.rho;
     double pR = Rght.gas.p;
@@ -201,6 +205,9 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
     double aR = Rght.gas.a;
     double keR = 0.5*(uR*uR + vR*vR + wR*wR);
     double HR = eR + pRrR + keR;
+    if (with_k_omega) {
+	HR += Rght.tke;
+    }
     //
     // This is the main part of the flux calculator.
     // Weighting parameters (eqn 32) for velocity splitting.
@@ -486,7 +493,8 @@ void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, r
     if ( (Lft.S == 1 || Rght.S == 1) && shear_is_small ) {
 	efmflx(Lft, Rght, IFace, myConfig.gmodel);
     } else {
-	ausmdv(Lft, Rght, IFace);
+	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
+	ausmdv(Lft, Rght, IFace, with_k_omega);
     }
 } // end adaptive_flux()
 
