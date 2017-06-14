@@ -20,6 +20,7 @@ Author: Ingo Jahn
 Last Modified: 17/05/2017
 --]]
 
+module(..., package.seeall)
 
 --// The Save Function
 function table.save(  tbl,filename )
