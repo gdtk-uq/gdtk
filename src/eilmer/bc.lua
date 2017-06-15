@@ -312,8 +312,13 @@ function EnergyFluxFromAdjacentSolid:tojson()
 end
 
 -- Class for (complete) BoundaryCondition
+--
 -- BoundaryConditions consist of lists of actions to be done
 -- at particular stages of the gas-dynamic update.
+--
+-- We expect that the user will construct instances of this class
+-- in their input script, so it is worth checking arguments in
+-- the following constructors.
 
 BoundaryCondition = {
    label = "",
@@ -434,6 +439,10 @@ function WallBC_TranslatingSurface_FixedT:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for v_trans
+   if type(o.v_trans) == "table" then
+      flag = checkAllowedNames(o.v_trans, {"x", "y", "z"})
+      assert(flag, "Table representing v_trans should have only named cartesian components.")
+   end
    o.v_trans.x = o.v_trans.x or 0.0
    o.v_trans.y = o.v_trans.y or 0.0
    o.v_trans.z = o.v_trans.z or 0.0
@@ -457,6 +466,10 @@ function WallBC_TranslatingSurface_Adiabatic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for v_trans
+   if type(o.v_trans) == "table" then
+      flag = checkAllowedNames(o.v_trans, {"x", "y", "z"})
+      assert(flag, "Table representing v_trans should have only named cartesian components.")
+   end
    o.v_trans.x = o.v_trans.x or 0.0
    o.v_trans.y = o.v_trans.y or 0.0
    o.v_trans.z = o.v_trans.z or 0.0
@@ -478,9 +491,17 @@ function WallBC_RotatingSurface_FixedT:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for r_omega and centre
+   if type(o.r_omega) == "table" then
+      flag = checkAllowedNames(o.r_omega, {"x", "y", "z"})
+      assert(flag, "Table representing r_omega should have only named cartesian components.")
+   end
    o.r_omega.x = o.r_omega.x or 0.0
    o.r_omega.y = o.r_omega.y or 0.0
    o.r_omega.z = o.r_omega.z or 0.0
+   if type(o.centre) == "table" then
+      flag = checkAllowedNames(o.centre, {"x", "y", "z"})
+      assert(flag, "Table representing centre should have only named cartesian components.")
+   end
    o.centre.x = o.centre.x or 0.0
    o.centre.y = o.centre.y or 0.0
    o.centre.z = o.centre.z or 0.0
@@ -504,9 +525,17 @@ function WallBC_RotatingSurface_Adiabatic:new(o)
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for r_omega and centre
+   if type(o.r_omega) == "table" then
+      flag = checkAllowedNames(o.r_omega, {"x", "y", "z"})
+      assert(flag, "Table representing r_omega should have only named cartesian components.")
+   end
    o.r_omega.x = o.r_omega.x or 0.0
    o.r_omega.y = o.r_omega.y or 0.0
    o.r_omega.z = o.r_omega.z or 0.0
+   if type(o.centre) == "table" then
+      flag = checkAllowedNames(o.centre, {"x", "y", "z"})
+      assert(flag, "Table representing centre should have only named cartesian components.")
+   end
    o.centre.x = o.centre.x or 0.0
    o.centre.y = o.centre.y or 0.0
    o.centre.z = o.centre.z or 0.0
