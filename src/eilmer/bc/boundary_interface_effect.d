@@ -965,12 +965,6 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
 
 
 class BIE_WallKOmega : BoundaryInterfaceEffect {
-    // Menter's slightly-rough-surface boundary condition is described
-    // in Wilcox's 2006 text, eqn 7.36.
-    // For low-resolution grids, the k-omega model is reported to over-estimate
-    // the magnitude of omega, well out into the boundary layer so,
-    // to get reasonable values for omega close to the wall, we propagate
-    // the 1/y**2 form of the omega data out a few cells from the wall.
     this(int id, int boundary)
     {
 	super(id, boundary, "WallKOmega");
@@ -1079,10 +1073,20 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 
     @nogc
     double ideal_omega_at_wall(in FVCell cell)
+    // As recommended by Wilson Chan, we use Menter's correction
+    // for omega values at the wall. This appears as Eqn A12 in 
+    // Menter's paper.
+    // Reference:
+    // Menter (1994)
+    // Two-Equation Eddy-Viscosity Turbulence Models for
+    // Engineering Applications.
+    // AIAA Journal, 32:8, pp. 1598--1605
     {
 	auto wall_gas = cell.cell_at_nearest_wall.fs.gas;
 	double d0 = cell.half_cell_width_at_wall;
-	return 400.0 * wall_gas.mu / wall_gas.rho / (d0 * d0);
+	double nu = wall_gas.mu / wall_gas.rho;
+	double beta1 = 0.075;
+	return 10 * (6 * nu) / (beta1 * d0 * d0);
     }
 
     @nogc
