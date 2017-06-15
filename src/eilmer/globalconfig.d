@@ -1189,8 +1189,11 @@ void setupIndicesForConservedQuantities()
 	totEnergyIdx = 4;
 	nConservedQuantities = 5;
     }
-    // TODO: Add handling for turbulence quantities
-
+    if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
+	tkeIdx = nConservedQuantities;
+	omegaIdx = tkeIdx + 1;
+	nConservedQuantities += 2;
+    }
     // TODO: Add this line when multi-species are handled correctly
     //       by steady-state solver.
     //nConservedQuantities += GlobalConfig.gmodel_master.n_species;
