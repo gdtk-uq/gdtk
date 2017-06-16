@@ -9,7 +9,7 @@ print(config.title)
 config.dimensions = 2
 config.turbulence_model = "k_omega"
 config.viscous = true
-config.flux_calculator = 'adaptive'
+config.flux_calculator = 'ausmdv'
  	
 -- Gas model and flow conditions
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')

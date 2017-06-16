@@ -63,7 +63,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         adaptive_flux(Lft, Rght, IFace, myConfig);
 	break;
     case FluxCalculator.ausm_plus_up:
-        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf);
+        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, with_k_omega);
 	break;
     case FluxCalculator.hlle:
         hlle(Lft, Rght, IFace, myConfig.gmodel);
@@ -499,7 +499,7 @@ void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, r
 } // end adaptive_flux()
 
 @nogc
-void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, double M_inf)
+void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, double M_inf, bool with_k_omega)
 // Liou's 2006 AUSM+up flux calculator
 //
 // A new version of the AUSM-family schemes, based 
@@ -571,6 +571,9 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double aL = Lft.gas.a;
     double keL = 0.5 * (uL * uL + vL * vL + wL * wL);
     double HL = eL + pL/rL + keL;
+    if (with_k_omega) {
+	HL += Lft.tke;
+    }
     //
     double rR = Rght.gas.rho;
     double pR = Rght.gas.p;
@@ -581,6 +584,9 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double aR = Rght.gas.a;
     double keR = 0.5 * (uR * uR + vR * vR + wR * wR);
     double HR = eR + pR/rR + keR;
+    if (with_k_omega) {
+	HR += Rght.tke;
+    }
     //
     // This is the main part of the flux calculator.
     //

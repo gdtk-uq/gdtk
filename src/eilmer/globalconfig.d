@@ -882,6 +882,8 @@ void read_config_file()
 	writeln("  transient_mu_t_factor: ", GlobalConfig.transient_mu_t_factor);
     }
 
+    configCheckPoint3();
+
     // User-defined source terms
     mixin(update_bool("udf_source_terms", "udf_source_terms"));
     mixin(update_string("udf_source_terms_file", "udf_source_terms_file"));
@@ -1240,12 +1242,28 @@ void configCheckPoint2()
     return;
 } // end configCheckPoint2()
 
+void configCheckPoint3()
+{
+    // Check the compatibility of turbulence model selection and flux calculator.
+    if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
+	if ( GlobalConfig.flux_calculator == FluxCalculator.efm ||
+	     GlobalConfig.flux_calculator == FluxCalculator.adaptive ||
+	     GlobalConfig.flux_calculator == FluxCalculator.hlle ) {
+	    string msg = format("The selected flux calculator '%s'",  flux_calculator_name(GlobalConfig.flux_calculator));
+	    msg ~= " is incompatible with the k-omega turbulence model.";
+	    throw new FlowSolverException(msg);
+	}
+    }
+    return;
+}
+
 void checkGlobalConfig()
 // Bundle all of the checks together so that they may be conveniently applied
 // at the end of processing the user's Lua input script.
 {
     configCheckPoint1();
     configCheckPoint2();
+    configCheckPoint3();
     return;
 }
 
