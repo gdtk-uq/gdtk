@@ -1246,10 +1246,9 @@ void configCheckPoint3()
 {
     // Check the compatibility of turbulence model selection and flux calculator.
     if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
-	if ( GlobalConfig.flux_calculator == FluxCalculator.efm ||
-	     GlobalConfig.flux_calculator == FluxCalculator.adaptive ||
-	     GlobalConfig.flux_calculator == FluxCalculator.hlle ) {
-	    string msg = format("The selected flux calculator '%s'",  flux_calculator_name(GlobalConfig.flux_calculator));
+	if ( GlobalConfig.flux_calculator == FluxCalculator.hlle ) {
+	    string msg = format("The selected flux calculator '%s'",
+				flux_calculator_name(GlobalConfig.flux_calculator));
 	    msg ~= " is incompatible with the k-omega turbulence model.";
 	    throw new FlowSolverException(msg);
 	}

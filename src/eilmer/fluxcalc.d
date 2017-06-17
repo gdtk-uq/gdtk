@@ -51,19 +51,18 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     }
     // Compute the fluxes in the local frame of the interface.
-    bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
     final switch (myConfig.flux_calculator) {
     case FluxCalculator.efm:
         efmflx(Lft, Rght, IFace, myConfig.gmodel);
 	break;
     case FluxCalculator.ausmdv:
-        ausmdv(Lft, Rght, IFace, with_k_omega);
+        ausmdv(Lft, Rght, IFace);
 	break;
     case FluxCalculator.adaptive:
         adaptive_flux(Lft, Rght, IFace, myConfig);
 	break;
     case FluxCalculator.ausm_plus_up:
-        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, with_k_omega);
+        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf);
 	break;
     case FluxCalculator.hlle:
         hlle(Lft, Rght, IFace, myConfig.gmodel);
@@ -122,7 +121,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs)
     // Fluxes (quantity / unit time / unit area)
     F.mass = rho * un; // The mass flux is relative to the moving interface.
     F.momentum.set(F.mass*un + p, F.mass*vt1, F.mass*vt2);
-    F.total_energy = F.mass * (e + ke) + p * un;
+    F.total_energy = F.mass * (e + ke) + p * un + fs.tke;
     F.tke = F.mass * fs.tke;  // turbulence kinetic energy
     F.omega = F.mass * fs.omega;  // pseudo vorticity
     foreach (isp; 0 .. F.massf.length) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
@@ -170,7 +169,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 } // end set_flux_vector_in_global_frame()
 
 @nogc
-void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, bool with_k_omega)
+void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
 // Wada and Liou's flux calculator.
 // 
 // Implemented from details in their AIAA paper 
@@ -190,10 +189,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, bool wit
     double eL = Lft.gas.u; foreach(elem; Lft.gas.e_modes) { eL += elem; }
     double aL = Lft.gas.a;
     double keL = 0.5*(uL*uL + vL*vL + wL*wL);
-    double HL = eL + pLrL + keL;
-    if (with_k_omega) {
-	HL += Lft.tke;
-    }
+    double HL = eL + pLrL + keL + Lft.tke;
     //
     double rR = Rght.gas.rho;
     double pR = Rght.gas.p;
@@ -204,10 +200,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, bool wit
     double eR = Rght.gas.u; foreach(elem; Rght.gas.e_modes) { eR += elem; }
     double aR = Rght.gas.a;
     double keR = 0.5*(uR*uR + vR*vR + wR*wR);
-    double HR = eR + pRrR + keR;
-    if (with_k_omega) {
-	HR += Rght.tke;
-    }
+    double HR = eR + pRrR + keR + Rght.tke;
     //
     // This is the main part of the flux calculator.
     // Weighting parameters (eqn 32) for velocity splitting.
@@ -357,7 +350,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     rhoL = Lft.gas.rho;
     presL = Lft.gas.p;
     eL = Lft.gas.u; foreach(elem; Lft.gas.e_modes) { eL += elem; }
-    hL = eL + presL/rhoL;
+    hL = eL + presL/rhoL + Lft.tke; // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.Ttr;
     vnL = Lft.vel.x;
     vpL = Lft.vel.y;
@@ -366,7 +359,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     rhoR = Rght.gas.rho;
     presR = Rght.gas.p;
     eR = Rght.gas.u; foreach(elem; Rght.gas.e_modes) { eR += elem; }
-    hR = eR + presR/rhoR;
+    hR = eR + presR/rhoR + Rght.tke;
     tR = Rght.gas.Ttr;
     vnR = Rght.vel.x;
     vpR = Rght.vel.y;
@@ -493,13 +486,12 @@ void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, r
     if ( (Lft.S == 1 || Rght.S == 1) && shear_is_small ) {
 	efmflx(Lft, Rght, IFace, myConfig.gmodel);
     } else {
-	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
-	ausmdv(Lft, Rght, IFace, with_k_omega);
+	ausmdv(Lft, Rght, IFace);
     }
 } // end adaptive_flux()
 
 @nogc
-void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, double M_inf, bool with_k_omega)
+void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, double M_inf)
 // Liou's 2006 AUSM+up flux calculator
 //
 // A new version of the AUSM-family schemes, based 
@@ -570,10 +562,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double eL = Lft.gas.u; foreach(elem; Lft.gas.e_modes) { eL += elem; }
     double aL = Lft.gas.a;
     double keL = 0.5 * (uL * uL + vL * vL + wL * wL);
-    double HL = eL + pL/rL + keL;
-    if (with_k_omega) {
-	HL += Lft.tke;
-    }
+    double HL = eL + pL/rL + keL + Lft.tke;
     //
     double rR = Rght.gas.rho;
     double pR = Rght.gas.p;
@@ -583,10 +572,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double eR = Rght.gas.u; foreach(elem; Rght.gas.e_modes) { eR += elem; }
     double aR = Rght.gas.a;
     double keR = 0.5 * (uR * uR + vR * vR + wR * wR);
-    double HR = eR + pR/rR + keR;
-    if (with_k_omega) {
-	HR += Rght.tke;
-    }
+    double HR = eR + pR/rR + keR + Rght.tke;
     //
     // This is the main part of the flux calculator.
     //
