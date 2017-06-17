@@ -120,7 +120,7 @@ public:
 	Q.rho = updateRho_PT(Q.p, Q.Ttr);
 	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
 	if (lookup_rhoeFlag){
 		//following line assumes that both T and P trees constructed with same bounds
@@ -854,7 +854,7 @@ version(co2gas_sw_test) {
 	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 
-	gm.update_thermo_from_rhoe(gd);
+	gm.update_thermo_from_rhou(gd);
 	gm.update_sound_speed(gd);
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.Ttr, 304.5, 1.0e-6), failedUnitTest());
@@ -907,7 +907,7 @@ version(co2gas_sw_test) {
 	assert(approxEqual(gd.u, -159285.241490, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.a, 178.565447, 1.0e-4), failedUnitTest());
 	//looser tolerances on the updates below as they are using LuT
-	gm.update_thermo_from_rhoe(gd);
+	gm.update_thermo_from_rhou(gd);
 	gm.update_sound_speed(gd);
 
 	assert(approxEqual(gd.p, 7.38e6, 1.0e-2), failedUnitTest());

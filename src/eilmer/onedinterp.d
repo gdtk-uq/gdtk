@@ -268,14 +268,14 @@ public:
 		}
 		mixin(codeForThermoUpdateBoth("pT"));
 		break;
-	    case InterpolateOption.rhoe:
+	    case InterpolateOption.rhou:
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
 		interp_both_scalar(gL1.u, gL0.u, gR0.u, gR1.u, Lft.gas.u, Rght.gas.u);
 		foreach (i; 0 .. nmodes) {
 		    interp_both_scalar(gL1.e_modes[i], gL0.e_modes[i], gR0.e_modes[i],
 				       gR1.e_modes[i], Lft.gas.e_modes[i], Rght.gas.e_modes[i]);
 		}
-		mixin(codeForThermoUpdateBoth("rhoe"));
+		mixin(codeForThermoUpdateBoth("rhou"));
 		break;
 	    case InterpolateOption.rhop:
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
@@ -383,13 +383,13 @@ public:
 		}
 		mixin(codeForThermoUpdateLft("pT"));
 		break;
-	    case InterpolateOption.rhoe:
+	    case InterpolateOption.rhou:
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
 		interp_left_scalar(gL1.u, gL0.u, gR0.u, Lft.gas.u);
 		foreach (i; 0 .. nmodes) {
 		    interp_left_scalar(gL1.e_modes[i], gL0.e_modes[i], gR0.e_modes[i], Lft.gas.e_modes[i]);
 		}
-		mixin(codeForThermoUpdateLft("rhoe"));
+		mixin(codeForThermoUpdateLft("rhou"));
 		break;
 	    case InterpolateOption.rhop:
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
@@ -498,13 +498,13 @@ public:
 		}
 		mixin(codeForThermoUpdateRght("pT"));
 		break;
-	    case InterpolateOption.rhoe:
+	    case InterpolateOption.rhou:
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);
 		interp_right_scalar(gL0.u, gR0.u, gR1.u, Rght.gas.u);
 		foreach (i; 0 .. nmodes) {
 		    interp_right_scalar(gL0.e_modes[i], gR0.e_modes[i], gR1.e_modes[i], Rght.gas.e_modes[i]);
 		}
-		mixin(codeForThermoUpdateRght("rhoe"));
+		mixin(codeForThermoUpdateRght("rhou"));
 		break;
 	    case InterpolateOption.rhop:
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);

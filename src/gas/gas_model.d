@@ -65,7 +65,7 @@ public:
     // The reason for this non-const-ness is that some GasModel classes
     // have private workspace that needs to be alterable.
     abstract void update_thermo_from_pT(GasState Q);
-    abstract void update_thermo_from_rhoe(GasState Q);
+    abstract void update_thermo_from_rhou(GasState Q);
     abstract void update_thermo_from_rhoT(GasState Q);
     abstract void update_thermo_from_rhop(GasState Q);
     abstract void update_thermo_from_ps(GasState Q, double s);
@@ -540,7 +540,7 @@ body {
    update_thermo_state_pT(), update_thermo_state_rhoT(), update_thermo_state_rhop() 
    are for updating the thermo state from when  the gas model does not  have a method
    for doing so with those variables, but does have a defined method for
-   update_thermo_from_rhoe(). (e.g. in the UniformLUT class)
+   update_thermo_from_rhou(). (e.g. in the UniformLUT class)
    A guess is made for rho & e and that guess is iterated using the  Newton-Raphson 
    method.
    A GasModel object is a function parameter so that the update method from rho,e for
@@ -582,18 +582,18 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     // and internal energy.
     Q.rho = 1.0; // kg/m**3 
     Q.u = 2.0e5; // J/kg 
-    gmodel.update_thermo_from_rhoe(Q);
+    gmodel.update_thermo_from_rhou(Q);
     
     T_old = Q.Ttr;
     R_eff = Q.p / (Q.rho * T_old);
     de = 0.01 * Q.u;
     Q.u += de;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
   	string msg;
 	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -608,11 +608,11 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     Q.rho = rho_old;
     Q.u = e_old;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
   	string msg;
 	msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -630,11 +630,11 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	e_new = e_old;
 	Q.rho = rho_new;
 	Q.u = e_new;
-	try { gmodel.update_thermo_from_rhoe(Q); }
+	try { gmodel.update_thermo_from_rhou(Q); }
 	catch (Exception caughtException) {
 	    string msg;
 	    msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__); 
-	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
@@ -648,11 +648,11 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	Q.rho = rho_new;
 	Q.u = e_new;
 
-	try { gmodel.update_thermo_from_rhoe(Q); }
+	try { gmodel.update_thermo_from_rhou(Q); }
 	catch (Exception caughtException) {
 	    string msg;
 	    msg ~= format("Iteration %s failed at call B in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
@@ -685,11 +685,11 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	// Make sure of consistent thermo state.
 	Q.rho = rho_old;
 	Q.u = e_old;
-	try { gmodel.update_thermo_from_rhoe(Q); }
+	try { gmodel.update_thermo_from_rhou(Q); }
 	catch (Exception caughtException) {
 	    string msg;
 	    msg ~= format("Iteration %s failed in %s\n", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
@@ -746,17 +746,17 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
        
     Q.rho = rho_given; // kg/m**3 
     Q.u = 2.0e5; // J/kg 
-    gmodel.update_thermo_from_rhoe(Q);
+    gmodel.update_thermo_from_rhou(Q);
 
     T_old = Q.Ttr;
     de = 0.01 * Q.u;
     Q.u += de;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
   	string msg;
 	msg ~= format("Starting guess at iteration 0 failed in %s", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -769,11 +769,11 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     Q.rho = rho_given;
     Q.u = e_old;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
 	string msg;
 	msg ~= format("Starting guess at iteration 1 failed in %s", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -784,11 +784,11 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     Q.rho = rho_given;
     Q.u = e_new;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
 	string msg;
 	msg ~= format("Starting guess at iteration 2 failed in %s", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -816,11 +816,11 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 	e_new = e_old + de;
 	Q.rho = rho_given;
 	Q.u = e_new;
-	try { gmodel.update_thermo_from_rhoe(Q); }
+	try { gmodel.update_thermo_from_rhou(Q); }
 	catch (Exception caughtException) {
 	    string msg;
 	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
@@ -836,11 +836,11 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     Q.rho = rho_given;
     Q.u = e_old;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
 	string msg;
 	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -887,16 +887,16 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     // and internal energy.
     Q.rho = rho_given; // kg/m**3
     Q.u = 2.0e5; // J/kg 
-    gmodel.update_thermo_from_rhoe(Q);
+    gmodel.update_thermo_from_rhou(Q);
     p_old = Q.p;
     de = 0.01 * Q.u;
     Q.u += de;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
   	string msg;
 	msg ~= format("Starting guess at iteration 0 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -910,11 +910,11 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     Q.u = e_old;
 
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
   	string msg;
 	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -925,11 +925,11 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     Q.rho = rho_given;
     Q.u = e_new;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
   	string msg;
 	msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -958,11 +958,11 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 	Q.rho = rho_given;
 	Q.u = e_new;
 
-	try { gmodel.update_thermo_from_rhoe(Q); }
+	try { gmodel.update_thermo_from_rhou(Q); }
 	catch (Exception caughtException) {
 	    string msg;
 	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
@@ -979,11 +979,11 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     Q.rho = rho_given;
     Q.u = e_old;
 
-    try { gmodel.update_thermo_from_rhoe(Q); }
+    try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
 	string msg;
 	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhoe() was:\n\n");
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	msg ~= to!string(caughtException);
 	throw new Exception(msg);
     }
@@ -1438,7 +1438,7 @@ version(gas_model_test) {
 	auto Q = new GasState(gm);
 	Q.u = e_given;
 	Q.rho = rho_given;
-	gm.update_thermo_from_rhoe(Q);
+	gm.update_thermo_from_rhou(Q);
 	double p_given = Q.p;
 	double T_given = Q.Ttr;
 	

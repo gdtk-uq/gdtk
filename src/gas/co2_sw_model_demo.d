@@ -37,7 +37,7 @@ void main() {
     writeln("Using LUT to update again from rho, e");
     writeln("------------------------------------------");
     sw.start();
-    for(int i = 0; i != ncycles; i++) gm.update_thermo_from_rhoe(gd);
+    for(int i = 0; i != ncycles; i++) gm.update_thermo_from_rhou(gd);
     sw.stop();
     long t_lut = sw.peek().usecs - t_eval_ps;
     gm.update_sound_speed(gd);

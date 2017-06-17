@@ -751,7 +751,7 @@ double[2] theta_cone(const(GasState) state1, double V1, double beta,
     //
     GasState gas_state = new GasState(state2);
     gas_state.rho = rho; gas_state.u = u;
-    gm.update_thermo_from_rhoe(gas_state);
+    gm.update_thermo_from_rhou(gas_state);
     // For integrating across the shock layer, the state vector is:
     double[5] z = [rho, V_r, V_theta, u, p];
     double[5] z_old; double theta_old; double V_theta_old;
@@ -763,7 +763,7 @@ double[2] theta_cone(const(GasState) state1, double V1, double beta,
         z[] += dtheta * dzdtheta[]; theta += dtheta;
 	rho=z[0]; V_r=z[1]; V_theta=z[2]; u=z[3]; p=z[4];
         gas_state.rho = rho; gas_state.u = u;
-        gm.update_thermo_from_rhoe(gas_state);
+        gm.update_thermo_from_rhou(gas_state);
 	assert(abs(gas_state.p - p)/p < 0.001, "pressure diverging");
     }
     // At this point, V_theta should have crossed zero so
@@ -775,7 +775,7 @@ double[2] theta_cone(const(GasState) state1, double V1, double beta,
     // At the cone surface...
     rho=z_c[0]; V_r=z_c[1]; V_theta=z_c[2]; u=z_c[3]; p=z_c[4];
     state_c.rho = rho; state_c.u = u;
-    gm.update_thermo_from_rhoe(state_c);
+    gm.update_thermo_from_rhou(state_c);
     gm.update_sound_speed(state_c);
     assert(abs(V_theta) < 1.0e-6, "V_theta should be very small");
     return [theta_c, V_r];

@@ -741,7 +741,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -769,7 +769,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -820,7 +820,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -848,7 +848,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -898,7 +898,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -926,7 +926,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -975,7 +975,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -1003,7 +1003,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -1053,7 +1053,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -1081,7 +1081,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -1131,7 +1131,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;
@@ -1159,7 +1159,7 @@ public:
 			else {
 			    dest_cell.fs.gas.massf[0] = 1.0;
 			}
-			gmodel.update_thermo_from_rhoe(dest_cell.fs.gas);
+			gmodel.update_thermo_from_rhou(dest_cell.fs.gas);
 			dest_cell.fs.vel.refx = 2.0*cell_1.fs.vel.x - cell_2.fs.vel.x;
 			dest_cell.fs.vel.refy = 2.0*cell_1.fs.vel.y - cell_2.fs.vel.y;
 			dest_cell.fs.vel.refz = 2.0*cell_1.fs.vel.z - cell_2.fs.vel.z;

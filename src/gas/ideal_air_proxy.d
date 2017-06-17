@@ -24,7 +24,7 @@ extern(C) {
     int iaf_n_modes();
     double iaf_mol_mass(int i);
     void iaf_update_thermo_from_pT(double *p, double *Ttr, double *rho, double *u, double *massf);
-    void iaf_update_thermo_from_rhoe(double *p, double *Ttr, double *rho, double *u, double *massf);
+    void iaf_update_thermo_from_rhou(double *p, double *Ttr, double *rho, double *u, double *massf);
     void iaf_update_thermo_from_rhoT(double *p, double *Ttr, double *rho, double *u, double *massf);
     void iaf_update_thermo_from_rhop(double *p, double *Ttr, double *rho, double *u, double *massf);
     void iaf_update_thermo_from_ps(double *p, double *Ttr, double *rho, double *u, double *massf,
@@ -81,9 +81,9 @@ public:
     {
 	iaf_update_thermo_from_pT(&(Q.p), &(Q.Ttr), &(Q.rho), &(Q.u), Q.massf.ptr);
     }
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
-	iaf_update_thermo_from_rhoe(&(Q.p), &(Q.Ttr), &(Q.rho), &(Q.u), Q.massf.ptr);
+	iaf_update_thermo_from_rhou(&(Q.p), &(Q.Ttr), &(Q.rho), &(Q.u), Q.massf.ptr);
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {

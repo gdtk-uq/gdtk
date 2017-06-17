@@ -86,7 +86,7 @@ public:
 	Q.rho = Q.p/(Q.Ttr*_Rgas);
 	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
     }
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
 	Q.Ttr = (Q.u + Q.massf[1]*_q)/_Cv;
 	Q.p = Q.rho*_Rgas*Q.Ttr;
@@ -211,7 +211,7 @@ final class UpdateAB : ThermochemicalReactor {
 	}
 	// Since the internal energy and density in the (isolated) reactor is fixed,
 	// we need to evaluate the new temperature, pressure, etc.
-	_gmodel.update_thermo_from_rhoe(Q);
+	_gmodel.update_thermo_from_rhou(Q);
 	_gmodel.update_sound_speed(Q);
     }
 

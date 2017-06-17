@@ -89,7 +89,7 @@ subroutine update_thermo_from_pT(p, Ttr, rho, u, massf) bind(C, name='iaf_update
   u = Cv*Ttr
 end subroutine update_thermo_from_pT
 	
-subroutine update_thermo_from_rhoe(p, Ttr, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhoe')
+subroutine update_thermo_from_rhou(p, Ttr, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhou')
   real(c_double) :: p
   real(c_double) :: Ttr
   real(c_double) :: rho
@@ -99,7 +99,7 @@ subroutine update_thermo_from_rhoe(p, Ttr, rho, u, massf) bind(C, name='iaf_upda
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   Ttr = u/Cv
   p = rho*Rgas*Ttr
-end subroutine update_thermo_from_rhoe
+end subroutine update_thermo_from_rhou
 	
 subroutine update_thermo_from_rhoT(p, Ttr, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhoT')
   real(c_double) :: p

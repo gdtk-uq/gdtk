@@ -92,9 +92,9 @@ public:
 	Q.rho = updateRho_PT(Q.p, Q.Ttr);
 	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.Ttr = updateTemperature_rhoe(Q.rho, Q.u);
+	Q.Ttr = updateTemperature_rhou(Q.rho, Q.u);
 	Q.p = updatePressure_rhoT(Q.rho,Q.Ttr);
     }
     override void update_thermo_from_rhoT(GasState Q) const//DONE
@@ -108,7 +108,7 @@ public:
     override void update_thermo_from_rhop(GasState Q) const
     {
 	Q.u = updateEnergy_Prho(Q.p, Q.rho);//might want to fix the order that this solves in
-	Q.Ttr = updateTemperature_rhoe(Q.rho, Q.u);
+	Q.Ttr = updateTemperature_rhou(Q.rho, Q.u);
 	
     }
     
@@ -218,7 +218,7 @@ private:
 							  + (-rho^^2/(2*gamma) - (2*gamma^^2)^^-1)*(3*_As[17]*T^^-2+4*_As[18]*T^^-3 + 5*_As[19]*T^^-4));
 	return _u0 + integral_cV_dT + integralDensityChange;
    }
-   const double updateTemperature_rhoe(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
+   const double updateTemperature_rhou(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
 	assert(e >= _u0*0.3, "energy below 10% of reference");//make sure you are above the reference point
 	double T = 1000*(e - 441482)/(1.42035e6-411482)+400; // first approximation using totally ideal gas not possible because we don't know pressure;
 	for(int i = 0; i != maxIterations; i++){
@@ -252,7 +252,7 @@ private:
 	//writeln("Temperature guess", P/rho/Gas.R);
 	//writeln("first guess at e: ", e);
 	double[2] bracket = [updateEnergy_rhoT(rho, Tbracket[0]),updateEnergy_rhoT(rho, Tbracket[1])];
-	double e = RidderSolverXYZ(P,&updatePressure_rhoe, rho, bracket, tol);
+	double e = RidderSolverXYZ(P,&updatePressure_rhou, rho, bracket, tol);
 	string errorString = "P: " ~ to!string(P) ~ ", rho: " ~ to!string(rho);
 	assert(!isNaN(e), errorString);
 	//WORKS WELL FOR SUPERCRITICAL
@@ -265,8 +265,8 @@ private:
 	assert(!isNaN(rho), errorString);
 	return rho;
    }
-   const double updatePressure_rhoe(double rho, double e){
-   	   double T = updateTemperature_rhoe(rho, e);
+   const double updatePressure_rhou(double rho, double e){
+   	   double T = updateTemperature_rhou(rho, e);
    return updatePressure_rhoT(rho, T);}
    
    const double updatePressure_Trho(double T, double rho){

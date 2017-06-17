@@ -37,8 +37,8 @@ Q.p = 1.0e5; Q.T = 300.0
 print("update based on p-T")
 gm:updateThermoFromPT(Q)
 print("Q.u= ", Q.u)
-print("update based on rho-e")
-gm:updateThermoFromRHOE(Q)
+print("update based on rho-u")
+gm:updateThermoFromRHOU(Q)
 print("Q.p= ", Q.p, " Q.T= ", Q.T)
 printValues(Q)
     `;

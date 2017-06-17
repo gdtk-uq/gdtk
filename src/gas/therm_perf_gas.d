@@ -104,7 +104,7 @@ public:
 	_pgMixEOS.update_density(Q);
 	_tpgMixEOS.update_energy(Q);
     }
-    override void update_thermo_from_rhoe(GasState Q)
+    override void update_thermo_from_rhou(GasState Q)
     {
 	_tpgMixEOS.update_temperature(Q);
 	_pgMixEOS.update_pressure(Q);
@@ -343,7 +343,7 @@ version(therm_perf_gas_test) {
 
 	gd.rho = 2.0;
 	gd.u = 14.0e6;
-	gm.update_thermo_from_rhoe(gd);
+	gm.update_thermo_from_rhou(gd);
 	assert(approxEqual(3373757.4, gd.p, 1.0e-6), failedUnitTest());
 	assert(approxEqual(4331.944, gd.Ttr, 1.0e-6), failedUnitTest());
     

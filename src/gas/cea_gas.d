@@ -195,7 +195,7 @@ public:
     {
 	callCEA(Q, 0.0, 0.0, "pT", false);
     }
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
 	callCEA(Q, 0.0, 0.0, "rhoe", false);
     }
@@ -557,7 +557,7 @@ version(cea_gas_test) {
 	assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
 	assert(approxEqual(gd.Ttr, 300.0, 0.1), failedUnitTest());
 
-	gm.update_thermo_from_rhoe(gd);
+	gm.update_thermo_from_rhou(gd);
 	assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
 	assert(approxEqual(gd.Ttr, 300.0, 0.1), failedUnitTest());
 

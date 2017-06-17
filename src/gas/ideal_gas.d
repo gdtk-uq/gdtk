@@ -87,7 +87,7 @@ public:
 	Q.rho = Q.p/(Q.Ttr*_Rgas);
 	Q.u = _Cv*Q.Ttr;
     }
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
 	Q.Ttr = Q.u/_Cv;
 	Q.p = Q.rho*_Rgas*Q.Ttr;

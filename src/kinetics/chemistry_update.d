@@ -238,7 +238,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
 	     */
 	    if ( tightTempCoupling ) {
 		_gmodel.conc2massf(_conc0, Q);
-		_gmodel.update_thermo_from_rhoe(Q);
+		_gmodel.update_thermo_from_rhou(Q);
 		rmech.eval_rate_constants(Q);
 	    }
 

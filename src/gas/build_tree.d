@@ -47,7 +47,7 @@ double e_max = 5.0e5;
 	double e = rhoe[1];
 	gd.rho = rho;
 	gd.u = e;
-	gm.update_thermo_from_rhoe(gd);
+	gm.update_thermo_from_rhou(gd);
 	//gm.update_sound_speed(gd);
 	return gd.Ttr;
 	}
@@ -61,7 +61,7 @@ static double[2] F_transform(double x, double y){
 	auto gd = new GasState(1,1);//initializes using constructor of nspecies, n modes
 	gd.rho = rho;
 	gd.u = e;
-	gm.update_thermo_from_rhoe(gd);
+	gm.update_thermo_from_rhou(gd);
 	//gm.update_sound_speed(gd);
 	return gd.Ttr;
 	}

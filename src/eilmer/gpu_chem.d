@@ -246,7 +246,7 @@ public:
 	    foreach ( isp; 0 .. nsp ) _conc[isp] = _Y[i+isp*_ncell];
 	    _gmodel.conc2massf(_conc, cell.fs.gas);
 	    cell.dt_chem = _h[i];
-	    _gmodel.update_thermo_from_rhoe(cell.fs.gas);
+	    _gmodel.update_thermo_from_rhou(cell.fs.gas);
 	    if ( GlobalConfig.viscous ) _gmodel.update_trans_coeffs(cell.fs.gas);
 	    foreach ( isp; 0 .. nsp )
 		cell.U[0].massf[isp] = cell.fs.gas.rho*cell.fs.gas.massf[isp];

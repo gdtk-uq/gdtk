@@ -304,7 +304,7 @@ final class GlobalConfig {
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
     // density+pressure.
-    shared static InterpolateOption thermo_interpolator = InterpolateOption.rhoe;
+    shared static InterpolateOption thermo_interpolator = InterpolateOption.rhou;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid

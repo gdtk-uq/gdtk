@@ -405,7 +405,7 @@ public:
 	}
 	// Fill out the other variables: P, T, a, and viscous transport coefficients.
 	try {
-	    gmodel.update_thermo_from_rhoe(fs.gas);
+	    gmodel.update_thermo_from_rhou(fs.gas);
 	    gmodel.update_sound_speed(fs.gas);
 	    if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
 	} catch (Exception err) {
@@ -848,7 +848,7 @@ public:
 	// The update only changes mass fractions; we need to impose
 	// a thermodynamic constraint based on a call to the equation of state.
 	try {
-	    myConfig.gmodel.update_thermo_from_rhoe(fs.gas);
+	    myConfig.gmodel.update_thermo_from_rhou(fs.gas);
 	}
 	catch (Exception err) {
 	    string msg = format("caught %s", err.msg);
@@ -886,7 +886,7 @@ public:
 	// The update only changes modal energies, we need to impose
 	// a thermodynamic constraint based on a call to the equation
 	// of state.
-	gmodel.update_thermo_from_rhoe(fs.gas);
+	gmodel.update_thermo_from_rhou(fs.gas);
 	// If we are doing a viscous sim, we'll need to ensure
 	// viscous properties are up-to-date
 	if ( myConfig.viscous ) gmodel.update_trans_coeffs(fs.gas);

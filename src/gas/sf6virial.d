@@ -93,9 +93,9 @@ public:
 	Q.rho = updateRho_PT(Q.p, Q.Ttr);
 	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
     }
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.Ttr = updateTemperature_rhoe(Q.rho, Q.u);
+	Q.Ttr = updateTemperature_rhou(Q.rho, Q.u);
 	Q.p = updatePressure_rhoT(Q.rho,Q.Ttr);
     }
     override void update_thermo_from_rhoT(GasState Q) const//DONE
@@ -106,7 +106,7 @@ public:
     override void update_thermo_from_rhop(GasState Q) const
     {
 	Q.u = updateEnergy_Prho(Q.p, Q.rho);//might want to fix the order that this solves in
-	Q.Ttr = updateTemperature_rhoe(Q.rho, Q.u);
+	Q.Ttr = updateTemperature_rhou(Q.rho, Q.u);
     }
     override void update_thermo_from_ps(GasState Q, double s) const
     {
@@ -198,7 +198,7 @@ private:
 	for(int i = 2; i != 6; i++) integralDensity += (_a[i] + (1 + _k*T/_Tc)*_c[i]*exp(-_k*T/_Tc))/(i - 1)/(v - _d)^^(i - 1);
 	return integralcv0 + integralDensity + _u0;
    }
-   const double updateTemperature_rhoe(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
+   const double updateTemperature_rhou(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
 	double T = 400; // first approximation using totally ideal gas not possible because we don't know pressure;
 	for(int i = 0; i != maxIterations; i++){
 		double deltaT = (updateEnergy_rhoT(rho,T)-e)/get_de_dT(rho,T);
@@ -248,7 +248,7 @@ private:
 	return rho;
    }
    const double updatePressure_rhoe(double rho, double e){
-   	   double T = updateTemperature_rhoe(rho, e);
+   	   double T = updateTemperature_rhou(rho, e);
   	 return updatePressure_rhoT(rho, T);}
    
    const double updatePressure_Trho(double T, double rho){

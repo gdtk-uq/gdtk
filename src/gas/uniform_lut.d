@@ -220,7 +220,7 @@ public:
 	efrac = min(efrac, 1.0+EXTRAP_MARGIN);
     }
 
-    override void update_thermo_from_rhoe(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q) const
     {
 	double efrac, lrfrac, Cv_eff, R_eff, g_eff;
 	int    ir, ie;

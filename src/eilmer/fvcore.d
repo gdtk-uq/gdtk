@@ -136,13 +136,13 @@ enum
     small_omega = 1.0;
 
 // Symbolic names for the types of flow-data reconstruction.
-enum InterpolateOption { pt, rhoe, rhop, rhot }
+enum InterpolateOption { pt, rhou, rhop, rhot }
 
 string thermo_interpolator_name(InterpolateOption i)
 {
     final switch ( i ) {
     case InterpolateOption.pt: return "pT";
-    case InterpolateOption.rhoe: return "rhoe";
+    case InterpolateOption.rhou: return "rhou";
     case InterpolateOption.rhop: return "rhop";
     case InterpolateOption.rhot: return "rhoT";
     }
@@ -153,11 +153,12 @@ InterpolateOption thermo_interpolator_from_name(string name)
     switch ( name ) {
     case "pT": return InterpolateOption.pt;
     case "pt": return InterpolateOption.pt;
-    case "rhoe": return InterpolateOption.rhoe;
+    case "rhou": return InterpolateOption.rhou;
+    case "rhoe": return InterpolateOption.rhou; // allow the old name
     case "rhop": return InterpolateOption.rhop;
     case "rhoT": return InterpolateOption.rhot;
     case "rhot": return InterpolateOption.rhot;
-    default: return InterpolateOption.rhoe;
+    default: return InterpolateOption.rhou;
     }
 } // end thermo_interpolator_from_name()
 

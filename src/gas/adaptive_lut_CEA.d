@@ -286,7 +286,7 @@ public:
 	return node;
     }
  
-    override void update_thermo_from_rhoe(GasState Q) {
+    override void update_thermo_from_rhou(GasState Q) {
      	double Cv_eff, R_eff, g_eff;
 
 	double lr = log10(Q.rho);
@@ -777,7 +777,7 @@ version(adaptive_lut_CEA_test)
 	auto Q = new GasState(gm, p_given, T_given);
 	// Return values not stored in the GasState
 	// The constructor of the gas state will call update_thermo_from_pT
-	// which itself calls update_thermo_from_rhoe, so we are testing both
+	// which itself calls update_thermo_from_rhou, so we are testing both
 	double Cv = gm.dudT_const_v(Q);
 	double Cp = gm.dhdT_const_p(Q);
 	double R = gm.gas_constant(Q);

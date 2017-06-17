@@ -100,12 +100,12 @@ extern(C) int thermoPT(lua_State* L)
     return 0;
 }
 
-extern(C) int thermoRHOE(lua_State* L)
+extern(C) int thermoRHOU(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    gm.update_thermo_from_rhoe(Q);
+    gm.update_thermo_from_rhou(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
 }
@@ -920,8 +920,10 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "createGasState");
     lua_pushcfunction(L, &thermoPT);
     lua_setfield(L, -2, "updateThermoFromPT");
-    lua_pushcfunction(L, &thermoRHOE);
-    lua_setfield(L, -2, "updateThermoFromRHOE");
+    lua_pushcfunction(L, &thermoRHOU);
+    lua_setfield(L, -2, "updateThermoFromRHOU");
+    lua_pushcfunction(L, &thermoRHOU);
+    lua_setfield(L, -2, "updateThermoFromRHOE"); // keep the old name, as well
     lua_pushcfunction(L, &thermoRHOT);
     lua_setfield(L, -2, "updateThermoFromRHOT");
     lua_pushcfunction(L, &thermoPT);

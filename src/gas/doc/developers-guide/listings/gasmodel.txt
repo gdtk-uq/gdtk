@@ -5,7 +5,7 @@ public:
     const string species_name(int i) { return _species_names[i]; }
 
     const void update_thermo_from_pT(ref GasState Q) {}
-    const void update_thermo_from_rhoe(ref GasState Q) {}
+    const void update_thermo_from_rhou(ref GasState Q) {}
     const void update_thermo_from_rhoT(ref GasState Q) {}
     const void update_thermo_from_rhop(ref GasState Q) {}
     const void update_thermo_from_ps(ref GasState Q, double s) {}
