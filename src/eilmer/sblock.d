@@ -201,6 +201,11 @@ public:
     } // end to_ijk_indices()
 
     @nogc
+    override ref FVCell get_cell_from_array(size_t idx)
+    {
+	return _ctr[idx];
+    }
+    @nogc
     override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
     {
 	return _ctr[to_global_index(i,j,k)];
@@ -237,6 +242,51 @@ public:
 	bind_interfaces_vertices_and_cells();
 	store_references_for_derivative_calc(0);
 	read_grid(gridFileName, 0);
+	// Set references to boundary faces in bc objects.
+	// north boundary
+	foreach (k; kmin .. kmax+1) {
+	    foreach (i; imin .. imax+1) {
+		bc[Face.north].faces ~= get_ifj(i, jmax+1, k);
+		bc[Face.north].outsigns ~= 1;
+	    }
+	}
+
+	foreach (k; kmin .. kmax+1) {
+	    foreach (j; jmin .. jmax+1) {
+		bc[Face.east].faces ~= get_ifi(imax+1, j, k);
+		bc[Face.east].outsigns ~= 1;
+	    }
+	}
+
+	foreach (k; kmin .. kmax+1) {
+	    foreach (i; imin .. imax+1) {
+		bc[Face.south].faces ~= get_ifj(i, jmin, k);
+		bc[Face.south].outsigns ~= -1;
+	    }
+	}
+
+	foreach (k; kmin .. kmax+1) {
+	    foreach (j; jmin .. jmax+1) {
+		bc[Face.west].faces ~= get_ifi(imin, j, k);
+		bc[Face.west].outsigns ~= -1;
+	    }
+	}
+
+	if (myConfig.dimensions == 3) {
+	    foreach (j; jmin .. jmax+1) {
+		foreach (i; imin .. imax+1) {
+		    bc[Face.top].faces ~= get_ifk(i, j, kmax+1);
+		    bc[Face.top].outsigns ~= 1;
+		}
+	    }
+
+	    foreach (j; jmin .. jmax+1) {
+		foreach (i; imin .. imax+1) {
+		    bc[Face.bottom].faces ~= get_ifk(i, j, kmin);
+		    bc[Face.bottom].outsigns ~= -1;
+		}
+	    }
+	}
     }
 
     void assemble_arrays()

@@ -44,6 +44,7 @@ import grid_motion;
 import history;
 import loads;
 import conservedquantities;
+import special_block_init;
 version (gpu_chem) {
     import gpu_chem;
 }
@@ -132,6 +133,16 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	    myblk.compute_least_squares_setup_for_reconstruction(0);
 	}
     }
+
+    // TODO: Make this a configurable option.
+    static if (0) {
+	// We can apply a special initialisation to the flow field, if requested
+	foreach (blk; gasBlocks) {
+	    writeln("Calling diffuseWallConditions()");
+	    diffuseWallConditionsIntoBlock(blk, 60);
+	}
+    }
+
     version (gpu_chem) {
 	initGPUChem();
     }
