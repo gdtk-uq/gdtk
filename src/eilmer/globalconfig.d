@@ -470,6 +470,10 @@ final class GlobalConfig {
     shared static double mass_residual;
     shared static Vector3 mass_residual_loc;
 
+    // Parameters related to special block initialisation
+    shared static bool diffuseWallBCsOnInit = false;
+    shared static int nInitPasses = 30;
+
     // Block-marching parameters
     shared static bool block_marching = false;
     shared static int nib = 1;
@@ -911,6 +915,8 @@ void read_config_file()
 
     // Parameters controlling other simulation options
     //
+    mixin(update_bool("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
+    mixin(update_int("number_init_passes", "nInitPasses"));
     mixin(update_int("control_count", "control_count"));
     mixin(update_bool("block_marching", "block_marching"));
     mixin(update_int("nib", "nib"));
@@ -918,6 +924,8 @@ void read_config_file()
     mixin(update_int("nkb", "nkb"));
     mixin(update_bool("propagate_inflow_data", "propagate_inflow_data"));
     if (GlobalConfig.verbosity_level > 1) {
+	writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
+	writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
 	writeln("  control_count: ", GlobalConfig.control_count);
 	writeln("  block_marching: ", GlobalConfig.block_marching);
 	writeln("  nib: ", GlobalConfig.nib);

@@ -173,6 +173,9 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_string_field("boundary_group_for_loads", "boundary_group_for_loads"));
     mixin(get_bool_field("compute_loads", "compute_loads"));
     //
+    mixin(get_bool_field("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
+    mixin(get_int_field("number_init_passes", "nInitPasses")); 
+    //
     mixin(get_bool_field("block_marching", "block_marching"));
     mixin(get_int_field("nib", "nib"));
     mixin(get_int_field("njb", "njb"));
@@ -299,6 +302,9 @@ extern(C) int configGet(lua_State* L)
     case "dt_loads": lua_pushnumber(L, GlobalConfig.dt_loads); break;
     case "boundary_group_for_loads": lua_pushstring(L, GlobalConfig.boundary_group_for_loads.toStringz); break;
     case "compute_loads": lua_pushboolean(L, GlobalConfig.compute_loads); break;
+	//
+    case "diffuse_wall_bcs_on_init": lua_pushboolean(L, GlobalConfig.diffuseWallBCsOnInit); break;
+    case "number_init_passes": lua_pushnumber(L, GlobalConfig.nInitPasses); break;
 	//
     case "block_marching": lua_pushboolean(L, GlobalConfig.block_marching); break;
     case "nib": lua_pushnumber(L, GlobalConfig.nib); break;

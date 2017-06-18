@@ -17,7 +17,7 @@ import block;
 import fvcell;
 import fvinterface;
 
-void diffuseWallConditionsIntoBlock(Block blk, int nsteps)
+void diffuseWallBCsIntoBlock(Block blk, int nPasses)
 {
     size_t[] cellsAlongWalls;
     bool[size_t] cellsInDiffusionZone;
@@ -27,7 +27,7 @@ void diffuseWallConditionsIntoBlock(Block blk, int nsteps)
     // Determine which walls if any are no-slip walls
     bool[size_t] noSlipWalls;
     foreach (bcId, bc; blk.bc) {
-	writeln("bcId: ", bcId, " is_wall= ", bc.is_wall);
+	// writeln("bcId: ", bcId, " is_wall= ", bc.is_wall);
 	if (bc.is_wall) {
 	    noSlipWalls[bcId] = true;
 	}
@@ -97,7 +97,7 @@ void diffuseWallConditionsIntoBlock(Block blk, int nsteps)
 
     // Now perform averaging of flow properties for cells
     // in the diffusion zone.
-    foreach (step; 0 .. nsteps) {
+    foreach (pass; 0 .. nPasses) {
 	// Do the averaging
 	foreach (cellId; cellsInDiffusionZone.byKey()) {
 	    auto cell = blk.get_cell_from_array(cellId);
@@ -152,7 +152,7 @@ void diffuseWallConditionsIntoBlock(Block blk, int nsteps)
 	}
 
 	// Add a new layer of cells for diffusion step
-	if (step != (nsteps-1)) {
+	if (pass != (nPasses-1)) { // We don't need to grab new cells on the final pass.
 	    cellsAddedThisStep.length = 0;
 	    foreach (cellId; cellsAddedLastStep) {
 		auto cell = blk.get_cell_from_array(cellId);
