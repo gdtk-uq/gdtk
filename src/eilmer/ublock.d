@@ -823,7 +823,14 @@ public:
 		    }
 		}
 	    }
-	    c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
+	    try {
+		c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
+	    } catch (Exception e) {
+		writefln("In compute_least_squares_setup_for_reconstruction()," ~
+			 " we have failed to assemble and invert normal matrix for cell id=%d",
+			 c.id);
+		throw e;
+	    }
 	}
     } // end compute_least_squares_setup_for_reconstruction()
     
