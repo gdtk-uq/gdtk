@@ -18,6 +18,6 @@ install: $(PROGRAMS)
 	cp -r $(BUILD_DIR)/bin/$(PROGRAMS) $(INSTALL_DIR)/bin
 
 ugrid_partition: ugrid_partition.d
-	$(DMD) -w -gc -debug ugrid_partition.d			
+	$(DMD) -w -gc ugrid_partition.d			
 	cp $(PROGRAMS) $(BUILD_DIR)/bin/	
 
