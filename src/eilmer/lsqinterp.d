@@ -314,8 +314,8 @@ public:
 	double a, b, U, phi, h, denom, numer, s;
 	immutable double w = 1.0e-12;
         immutable double K = 0.3;
-	if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].iLength * cell_cloud[0].jLength * cell_cloud[0].kLength);  
-        else h = sqrt(cell_cloud[0].iLength * cell_cloud[0].jLength);
+	if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[0]);  
+        else h = sqrt(cell_cloud[0].volume[0]);
 	double eps = (K*h) * (K*h) * (K*h);
 	// The following function to be used at compile time.
 	string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
@@ -324,21 +324,21 @@ public:
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
             if (abs("~gname~"[0]) > 0.0 || abs("~gname~"[1]) > 0.0 || abs("~gname~"[2]) > 0.0) {
-            foreach (i, f; cell_cloud[0].iface) {
-                double dx = f.pos.x - cell_cloud[0].pos[0].x; 
-                double dy = f.pos.y - cell_cloud[0].pos[0].y; 
-                double dz = f.pos.z - cell_cloud[0].pos[0].z;
-                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
-		if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
-		b = sgn(b) * (fabs(b) + w); 
-                if (b > 0.0) a = "~qMaxname~" - U; 
-                else if (b < 0.0) a = "~qMinname~" - U; 
-                numer = (a*a + eps)*b + 2.0*b*b*a;
-                denom = a*a + 2.0*b*b + a*b + eps;
-                s = (1.0/b) * (numer/denom);                    
-                phi = min(phi, s);
-	        if (b == 0.0) phi = 1.0;
-            }
+                foreach (i, f; cell_cloud[0].iface) {
+                    double dx = f.pos.x - cell_cloud[0].pos[0].x; 
+                    double dy = f.pos.y - cell_cloud[0].pos[0].y; 
+                    double dz = f.pos.z - cell_cloud[0].pos[0].z;
+                    b = "~gname~"[0] * dx + "~gname~"[1] * dy;
+		    if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
+		    b = sgn(b) * (fabs(b) + w); 
+                    if (b > 0.0) a = "~qMaxname~" - U; 
+                    else if (b < 0.0) a = "~qMinname~" - U; 
+                    numer = (a*a + eps)*b + 2.0*b*b*a;
+                    denom = a*a + 2.0*b*b + a*b + eps;
+                    s = (1.0/b) * (numer/denom);                    
+                    phi = min(phi, s);
+	            if (b == 0.0) phi = 1.0;
+                }
             }
             "~limFactorname~" = phi;
             }
