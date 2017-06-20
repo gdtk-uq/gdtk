@@ -168,7 +168,7 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
     double dwdx = grad.vel[2][0]; double dwdy = grad.vel[2][1]; double dwdz = grad.vel[2][2];
     // compute heat load
     double dTdn = dTtrdx*nx + dTtrdy*ny + dTtrdz*nz; // dot product
-    double q = k_wall * dTdn; // heat load (negative sign means heat flows to the wall)
+    double q = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
     // compute stress tensor at interface in global reference frame
     double lmbda = -2.0/3.0 * mu_wall;
     double tau_xx = 2.0*mu_wall*dudx + lmbda*(dudx + dvdy + dwdz);
