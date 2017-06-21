@@ -63,7 +63,7 @@ public:
 	    xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
 	    xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
 	    xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
-	    if (0 != computeInverse!(3,3)(xTx)) {
+	    if (0 != computeInverse!(3,3)(xTx, 1.0e-50)) {
 		throw new FlowSolverException("Failed to invert LSQ normal matrix");
 		// Assume that the rows are linearly dependent 
 		// because the sample points are colinear.
