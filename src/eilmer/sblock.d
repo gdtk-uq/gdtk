@@ -201,11 +201,6 @@ public:
     } // end to_ijk_indices()
 
     @nogc
-    override ref FVCell get_cell_from_array(size_t idx)
-    {
-	return _ctr[idx];
-    }
-    @nogc
     override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
     {
 	return _ctr[to_global_index(i,j,k)];

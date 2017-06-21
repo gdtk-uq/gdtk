@@ -19,15 +19,14 @@ import fvinterface;
 
 void diffuseWallBCsIntoBlock(Block blk, int nPasses)
 {
-    size_t[] cellsAlongWalls;
-    bool[size_t] cellsInDiffusionZone;
+    FVCell[] cellsAlongWalls;
+    FVCell[size_t] cellsInDiffusionZone;
     size_t[] cellsAddedLastStep;
     size_t[] cellsAddedThisStep;
 
     // Determine which walls if any are no-slip walls
     bool[size_t] noSlipWalls;
     foreach (bcId, bc; blk.bc) {
-	// writeln("bcId: ", bcId, " is_wall= ", bc.is_wall);
 	if (bc.is_wall) {
 	    noSlipWalls[bcId] = true;
 	}
@@ -37,12 +36,11 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
     foreach (bcId; noSlipWalls.byKey()) {
 	foreach (i, face; blk.bc[bcId].faces) {
 	    if (blk.bc[bcId].outsigns[i] == 1) {
-		cellsAlongWalls ~= face.left_cell.id;
+		cellsAlongWalls ~= face.left_cell;
 	    }
 	    else {
-		cellsAlongWalls ~= face.right_cell.id;
+		cellsAlongWalls ~= face.right_cell;
 	    }
-	    //writeln("Just added wall cell: ", cellsAlongWalls[$-1]);
 	}
     }
 
@@ -50,8 +48,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
     foreach (bcId; noSlipWalls.byKey()) {
 	blk.bc[bcId].applyPreSpatialDerivAction(0.0, 0, 0);
     }
-    foreach (cellId; cellsAlongWalls) {
-	auto cell = blk.get_cell_from_array(cellId);
+    foreach (cell; cellsAlongWalls) {
 	foreach (face; cell.iface) {
 	    if (face.is_on_boundary && (face.bc_id in noSlipWalls)) {
 		cell.fs.gas.Ttr = face.fs.gas.Ttr;
@@ -69,8 +66,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
     
     // Gather the cells adjacent to the wall cells
     // as the first layer in the diffusion zone.
-    foreach (cellId; cellsAlongWalls) {
-	auto cell = blk.get_cell_from_array(cellId);
+    foreach (cell; cellsAlongWalls) {
 	foreach (face; cell.iface) {
 	    if (face.is_on_boundary) {
 		// The only cells this interface touches
@@ -78,16 +74,14 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
 		// We do not want these in the diffusion zone.
 		continue;
 	    }
-	    if (!cellsAlongWalls.canFind(face.left_cell.id)) {
-		//writeln("Adding cell to diffusion zone: ", face.left_cell.id);
-		cellsInDiffusionZone[face.left_cell.id] = true;
+	    if (!cellsAlongWalls.canFind(face.left_cell)) {
+		cellsInDiffusionZone[face.left_cell.id] = face.left_cell;
 		if (!cellsAddedLastStep.canFind(face.left_cell.id)) {
 		    cellsAddedLastStep ~= face.left_cell.id;
 		}
 	    }
-	    if (!cellsAlongWalls.canFind(face.right_cell.id)) {
-		//writeln("Adding cell to diffusion zone: ", face.right_cell.id);
-		cellsInDiffusionZone[face.right_cell.id] = true;
+	    if (!cellsAlongWalls.canFind(face.right_cell)) {
+		cellsInDiffusionZone[face.right_cell.id] = face.right_cell;
 		if (!cellsAddedLastStep.canFind(face.right_cell.id)) {
 		    cellsAddedLastStep ~= face.right_cell.id;
 		}
@@ -99,8 +93,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
     // in the diffusion zone.
     foreach (pass; 0 .. nPasses) {
 	// Do the averaging
-	foreach (cellId; cellsInDiffusionZone.byKey()) {
-	    auto cell = blk.get_cell_from_array(cellId);
+	foreach (cell; cellsInDiffusionZone.byValue()) {
 	    int nNbrCells = 0;
 	    double T_avg = 0.0;
 	    double velx_avg = 0.0;
@@ -155,7 +148,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
 	if (pass != (nPasses-1)) { // We don't need to grab new cells on the final pass.
 	    cellsAddedThisStep.length = 0;
 	    foreach (cellId; cellsAddedLastStep) {
-		auto cell = blk.get_cell_from_array(cellId);
+		auto cell = cellsInDiffusionZone[cellId];
 		foreach (face; cell.iface) {
 		    if (face.is_on_boundary) {
 			// The only cells this interface touches
@@ -166,18 +159,16 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
 		    if (face.left_cell.id == cell.id) {
 			// Interested in right_cell.
 			if ( !(face.right_cell.id in cellsInDiffusionZone) &&
-			     !cellsAlongWalls.canFind(face.right_cell.id) ) {
-			    //writeln("Adding cell to diffusion zone: ", face.right_cell.id);
-			    cellsInDiffusionZone[face.right_cell.id] = true;
+			     !cellsAlongWalls.canFind(face.right_cell) ) {
+			    cellsInDiffusionZone[face.right_cell.id] = face.right_cell;
 			    cellsAddedThisStep ~= face.right_cell.id;
 			}
 		    }
 		    else {
 			// Interested in left_cell.
 			if ( !(face.left_cell.id in cellsInDiffusionZone) &&
-			     !cellsAlongWalls.canFind(face.left_cell.id) ) {
-			    //writeln("Adding cell to diffusion zone: ", face.left_cell.id);
-			    cellsInDiffusionZone[face.left_cell.id] = true;
+			     !cellsAlongWalls.canFind(face.left_cell) ) {
+			    cellsInDiffusionZone[face.left_cell.id] = face.left_cell;
 			    cellsAddedThisStep ~= face.left_cell.id;
 			}
 		    }

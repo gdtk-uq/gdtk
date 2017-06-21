@@ -119,11 +119,6 @@ public:
 	return to!string(repr);
     }
 
-    @nogc
-    override ref FVCell get_cell_from_array(size_t idx)
-    {
-	return cells[idx];
-    }
     // The following 5 access methods are here to match the structured-grid API
     // but they're really not intended for serious use on the unstructured-grid.
     @nogc 
