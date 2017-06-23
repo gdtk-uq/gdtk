@@ -533,6 +533,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     double tau;
     double sigma;
     foreach (step; startStep .. nsteps+1) {
+	if ( (step/GlobalConfig.control_count)*GlobalConfig.control_count == step ) {
+	    read_control_file(); // Reparse the time-step control parameters occasionally.
+	}
 	residualsUpToDate = false;
 	if ( step <= nStartUpSteps ) {
 	    foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
@@ -617,7 +620,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	    writefln("          current value= %.12e   target value= %.12e", normNew/normRef, relGlobalResidReduction);
 	    finalStep = true;
 	}
-
+	if (GlobalConfig.halt_now == 1) {
+	    writeln("STOPPING: Halt set in control file.");
+	    finalStep = true;
+        }
+	
 	// Now do some output and diagnostics work
 	if ( (step % writeDiagnosticsCount) == 0 || finalStep ) {
 	    cfl = determine_min_cfl(dt);
