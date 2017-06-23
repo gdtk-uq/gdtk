@@ -13,6 +13,20 @@ import std.conv;
 import std.stdio;
 
 @nogc
+double normInf(size_t N, size_t NDIM)(ref double[2*NDIM][NDIM] c)
+// Return the max-absolute-row-sum of an augmented matrix c = [A|b]
+// We are concerned with a measure of A only.
+{
+    double norm = 0.0;
+    foreach (i; 0 .. N) {
+	double rowsum = 0.0;
+	foreach (j; 0 .. N) { rowsum += fabs(c[i][j]); }
+	norm = fmax(rowsum, norm);
+    }
+    return norm;
+} // end normInf()()
+
+@nogc
 int computeInverse(size_t N, size_t NDIM)
     (ref double[2*NDIM][NDIM] c, double very_small_value=1.0e-16)
 // Perform Gauss-Jordan elimination on an augmented matrix.
@@ -183,6 +197,7 @@ version(rsla_test) {
 			  [2.0,  2.0,  3.0,  2.0,  0.0, 1.0, 0.0, 0.0],
 			  [4.0, -3.0,  0.0,  1.0,  0.0, 0.0, 1.0, 0.0],
 			  [6.0,  1.0, -6.0, -5.0,  0.0, 0.0, 0.0, 1.0]];
+	assert(approxEqual(normInf!(4,4)(A), 18.0), failedUnitTest());
 	computeInverse!(4,4)(A);
 	double[4] b = [0.0, -2.0, -7.0, 6.0];
 	double[4] x;
@@ -196,6 +211,7 @@ version(rsla_test) {
 	A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 0.0; A[1][3] = 1.0;
 	b[0] = A[0][0]*x[0] + A[0][1]*x[1];
 	b[1] = A[1][0]*x[0] + A[1][1]*x[1];
+	       assert(approxEqual(normInf!(2,4)(A), 4.0), failedUnitTest());
 	computeInverse!(2,4)(A);
 	x[0] = 0.0; x[1] = 0.0;
 	solveWithInverse!(2,4)(A, b, x);
@@ -212,6 +228,7 @@ version(rsla_test) {
 	b[0] = A[0][0]*x[0] + A[0][1]*x[1] + A[0][2]*x[2];
 	b[1] = A[1][0]*x[0] + A[1][1]*x[1] + A[1][2]*x[2];
 	b[2] = A[2][0]*x[0] + A[2][1]*x[1] + A[2][2]*x[2];
+	       assert(approxEqual(normInf!(3,4)(A), 7.0), failedUnitTest());
 	computeInverse!(3,4)(A);
 	x[0] = 0.0; x[1] = 0.0; x[2] = 0.0;
 	solveWithInverse!(3,4)(A, b, x);
