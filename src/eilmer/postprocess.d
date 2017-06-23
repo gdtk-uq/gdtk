@@ -30,11 +30,13 @@ import gas;
 import globalconfig;
 import flowsolution;
 import solidsolution;
-
+version(with_tecplot_binary) {
+import tecplot_writer;
+}
 
 void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		  string addVarsStr, string luaRefSoln,
-		  bool vtkxmlFlag, bool binary_format, bool tecplotFlag,
+		  bool vtkxmlFlag, bool binary_format, bool tecplotBinaryFlag, bool tecplotAsciiFlag,
 		  string outputFileName, string sliceListStr,
 		  string surfaceListStr, string extractStreamStr,
 		  string extractLineStr, string computeLoadsOnGroupStr,
@@ -158,7 +160,46 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	} // end if nSolidBlocks > 0
     } // end if vtkxml
     //
-    if (tecplotFlag) {
+    version(with_tecplot_binary) {
+    if (tecplotBinaryFlag) {
+	ensure_directory_is_present(plotDir);
+	writeln("Writing Tecplot (binary) file(s) to directory \"", plotDir, "\"");
+	foreach (tindx; tindx_list_to_plot) {
+	    writeln("  tindx= ", tindx);
+	    double timeStamp = times_dict[tindx];
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    soln.add_aux_variables(addVarsList);
+	    string fname = format("%s/%s.t%04d", plotDir, jobName, tindx);
+	    if ( writeTecplotBinaryHeader(jobName, tindx, fname, soln.flowBlocks[0].variableNames) != 0 ) {
+		string errMsg = format("Tecplot binary output failed for tindx: %d", tindx);
+		throw new FlowSolverException(errMsg);
+	    }
+	    foreach (jb; 0 .. GlobalConfig.nBlocks) {
+		int zoneType;
+		size_t[][] connList;
+		prepareGridConnectivity(soln.gridBlocks[jb], zoneType, connList);
+		if ( writeTecplotBinaryZoneHeader(soln.flowBlocks[jb], soln.gridBlocks[jb], jb,
+						  soln.flowBlocks[jb].variableNames, timeStamp, zoneType) != 0 ) {
+		    string errMsg = format("Tecplot binary output failed for block: %d", jb);
+		    throw new FlowSolverException(errMsg);
+		}
+		writeTecplotBinaryZoneData(soln.flowBlocks[jb], soln.gridBlocks[jb], 
+					   soln.flowBlocks[jb].variableNames, connList);
+	    }
+	    if ( closeTecplotBinaryFile() != 0 ) {
+		string errMsg = format("Closing of Tecplot binary file failed for tindx: %d", tindx);
+		throw new FlowSolverException(errMsg);
+	    }
+	}
+    }
+    }
+    else {
+    if (tecplotBinaryFlag) {
+	string errMsg = "This version of e4shared was NOT compiled with support for Tecplot binary files.";
+	throw new FlowSolverException(errMsg);
+    }   
+    } 
+    if (tecplotAsciiFlag) {
 	writeln("writing Tecplot file(s) to directory \"", plotDir, "\"");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);

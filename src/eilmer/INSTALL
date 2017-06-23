@@ -54,3 +54,37 @@ On Mac, we need to give the make command an extra hint:
 
 > make PLATFORM=macosx INSTALL_DIR=$HOME/dgdinst install
 
+Compiling with support for Tecplot binary output
+------------------------------------------------
+There are some extra steps involved if you would like to
+compile with Tecplot binary output support. You will
+require an installation of Tecplot on your machine
+since this houses the required shared libraries
+needed at build and run time.
+
+1. Set your LD_LIBRARY_PATH to include the Tecplot directories.
+   For example, place something like this in your .bashrc:
+
+   export TECHOME=/my/tecplot/dir
+   export LD_LIBRARY_PATH=$TECHOME/bin:$TECHOME/bin/sys
+
+   It is important to get both "bin/" and "bin/sys/" on the
+   LD_LIBRARY_PATH since we need access to a shared library
+   in each of those directories.
+
+2. Use the TECPLOT_BIN_DIR setting when compiling Eilmer.
+   At compile time, Eilmer will build in Tecplot support
+   if you provide a valid pointer to the Tecplot "bin/" directory.
+
+   > make TECPLOT_BIN_DIR=$TECHOME/bin install
+
+If you see linking problems at compile time, this likely means that
+you have not given the correct path to your tecplot bin installation.
+
+If you see share library problems at run time, this likely means that
+you have not correctly configured your LD_LIBRARY_PATH. Check what its
+value and see that it is as you expect:
+   > echo $LD_LIBRARY_PATH
+
+
+   

@@ -92,7 +92,8 @@ int main(string[] args)
     msg       ~= "         [--ref-soln=<filename>]     Lua file for reference solution\n";
     msg       ~= "         [--vtk-xml]                 produce XML VTK-format plot files\n";
     msg       ~= "         [--binary-format]           use binary within the VTK-XML\n";
-    msg       ~= "         [--tecplot]                 write an ASCII file for Tecplot\n";
+    msg       ~= "         [--tecplot]                 write a binary szplt file in Tecplot format\n";
+    msg       ~= "         [--tecplot-ascii]           write an ASCII (text) file in Tecplot format\n";
     msg       ~= "         [--plot-dir=<string>]       defaults to plot\n";
     msg       ~= "         [--output-file=<string>]    defaults to stdout\n";
     msg       ~= "         [--slice-list=\"blk-range,i-range,j-range,k-range;...\"]\n";
@@ -131,7 +132,8 @@ int main(string[] args)
     string luaRefSoln = "";
     bool vtkxmlFlag = false;
     bool binaryFormat = false;
-    bool tecplotFlag = false;
+    bool tecplotBinaryFlag = false;
+    bool tecplotAsciiFlag = false;
     string plotDir = "plot";
     string outputFileName = "";
     string sliceListStr = "";
@@ -163,7 +165,8 @@ int main(string[] args)
                "ref-soln", &luaRefSoln,
 	       "vtk-xml", &vtkxmlFlag,
 	       "binary-format", &binaryFormat,
-	       "tecplot", &tecplotFlag,
+	       "tecplot", &tecplotBinaryFlag,
+	       "tecplot-ascii", &tecplotAsciiFlag,
 	       "plot-dir", &plotDir,
 	       "output-file", &outputFileName,
 	       "slice-list", &sliceListStr,
@@ -323,7 +326,8 @@ int main(string[] args)
 	    writeln("  luaRefSoln: ", luaRefSoln);
 	    writeln("  vtkxmlFlag: ", vtkxmlFlag);
 	    writeln("  binaryFormat: ", binaryFormat);
-	    writeln("  tecplotFlag: ", tecplotFlag);
+	    writeln("  tecplotBinaryFlag: ", tecplotBinaryFlag);
+	    writeln("  tecplotAsciiFlag: ", tecplotAsciiFlag);
 	    writeln("  plotDir: ", plotDir);
 	    writeln("  outputFileName: ", outputFileName);
 	    writeln("  sliceListStr: ", sliceListStr);
@@ -338,7 +342,7 @@ int main(string[] args)
 	}
 	post_process(plotDir, listInfoFlag, tindxPlot,
 		     addVarsStr, luaRefSoln,
-		     vtkxmlFlag, binaryFormat, tecplotFlag,
+		     vtkxmlFlag, binaryFormat, tecplotBinaryFlag, tecplotAsciiFlag,
 		     outputFileName, sliceListStr, surfaceListStr,
 		     extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
 		     probeStr, outputFormat, normsStr, regionStr);

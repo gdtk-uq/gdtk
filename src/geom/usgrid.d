@@ -666,6 +666,11 @@ public:
 	return vtk_element_types[cells[i].cell_type];
     }
 
+    override int get_cell_type(size_t i)
+    {
+	return cells[i].cell_type;
+    }
+
     override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
     in {
 	assert (i < ncells, text("index i=", i, " is invalid, ncells=", ncells));

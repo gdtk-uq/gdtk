@@ -15,6 +15,13 @@ TARGET ?= debug
 PLATFORM ?= linux
 WITH_GPU_CHEM ?= 0
 
+TECPLOT_BIN_DIR ?= unavailable
+TECPLOT_BIN_VERSION_STR = tecplot_unavailable
+ifneq ($(TECPLOT_BIN_DIR), unavailable)
+    TECPLOT_BIN_VERSION_STR = with_tecplot_binary
+endif
+
+
 PROGRAMS := e4shared e4sss
 SHARE_FILES := 
 
@@ -39,6 +46,11 @@ EILMER_FILES := simcore.d fileutil.d json_helper.d \
 		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
 		postprocess.d flowsolution.d luaflowsolution.d grid_motion.d \
 		block_moving_grid.d history.d loads.d special_block_init.d
+
+ifneq ($(TECPLOT_BIN_DIR), unavailable)
+    EILMER_FILES += tecio.d tecplot_writer.d
+endif
+
 
 BC_FILES := bc/bc.d \
 	bc/ghost_cell_effect.d \
@@ -119,6 +131,9 @@ ifeq ($(DMD), dmd)
     endif
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+    ifneq ($(TECPLOT_BIN_DIR), unavailable)
+        DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
+    endif
 endif
 ifeq ($(DMD), ldmd2)
     ifeq ($(TARGET), debug)
@@ -266,11 +281,23 @@ e4shared: main.d $(EILMER_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4shared \
+	$(DMD) $(DFLAGS) $(OF)e4shared -version=$(TECPLOT_BIN_VERSION_STR) \
 		main_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
+
+e4shared_w_tecio: main.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
+	$(DMD) $(DFLAGS) $(OF)e4shared_w_tecio \
+		main_with_rev_string.d $(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(NM_LUA_FILES) tecplot_writer.d ../extern/tecio/tecio.d $(DLINKFLAGS) -L/home/gollan/opt/tecplot-2017/360ex_2017r1/bin/libtecio.so -L/home/gollan/opt/tecplot-2017/360ex_2017r1/bin/sys/libstdc++.so.6
+
 
 e4mpi: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \

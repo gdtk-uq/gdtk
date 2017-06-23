@@ -101,6 +101,7 @@ class Grid {
 				    bool use_gmsh_order_for_wedges=true);
     abstract size_t number_of_vertices_for_cell(size_t i);
     abstract int vtk_element_type_for_cell(size_t i);
+    abstract int get_cell_type(size_t i);
     abstract Grid get_boundary_grid(size_t boundary_indx);
     abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
     abstract double cell_volume(size_t indx);

@@ -165,6 +165,11 @@ public:
 	}
     }
     
+    override int get_cell_type(size_t i)
+    {
+	return -1; // for structured grid.
+    }
+
     override size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const
     in {
 	size_t nic, njc, nkc;
