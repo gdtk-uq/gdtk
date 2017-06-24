@@ -480,6 +480,29 @@ bool inside_bounding_box(ref const(Vector3) p,
     return is_inside;
 } // end inside_bounding_box()
 
+@nogc
+bool intersect2D(const Vector3 p0, const Vector3 p1, const Vector3 ps, const Vector3 d, out double t)
+// Determine the intersection of a projected line with a line segment.
+// Input:
+//     p0->p1 line segment
+//     ps starting point for projected line
+//     d direction of projected line
+// Output:
+//     t parametric position of intersection along the line segment
+// Returns:
+//     true, if the lines cross;
+//     false, if the lines are parallel
+// See PJ's workbook page 34, 2017-06-24 for notation and derivation.
+{
+    double delx = p1.x-p0.x;
+    double dely = p1.y-p0.y;
+    double denom = delx*d.y - dely*d.x;
+    double segmentSize = fabs(delx)+fabs(dely);
+    if (fabs(denom) < 1.0e-16*segmentSize) { return false; } // d is parallel to line segment
+    t = ((ps.x-p0.x)*d.y - (ps.y-p0.y)*d.x)/denom;
+    return true;
+} // end intersect2D()
+
 /**
  * Returns true is all of the components of two vectors are approximately equal.
  */
@@ -570,6 +593,13 @@ unittest {
     p += Vector3(0.0, 0.0, 1.0);
     assert(!inside_bounding_box(p, bb0, bb1, 3), "bounding box test 2");
     assert(inside_bounding_box(p, bb0, bb1, 2), "bounding box test 3");
+
+    double t_intersection;
+    bool foundIntersection = intersect2D(Vector3(0.0,1.0), Vector3(1.0,1.0),
+					 Vector3(0.5,0.5), Vector3(0.0,1.0),
+					 t_intersection);
+    assert(foundIntersection, "intersect2D failed to find");
+    assert(approxEqual(t_intersection, 0.5), "intersect2D failed computing position");
 }
 
 

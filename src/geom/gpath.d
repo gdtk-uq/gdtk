@@ -112,6 +112,33 @@ public:
     }
     abstract override string toString() const;
     abstract string classString() const;
+    bool intersect2D(const Vector3 ps, const Vector3 d, out double t, int nseg=20) const
+    // Determine the intersection of a projected line on the Path.
+    // Input:
+    //     ps starting point for projected line
+    //     d direction of projected line
+    // Output:
+    //     t parametric position of intersection along the Path
+    // Returns:
+    //     true, if the intersection point was located;
+    //     false, if the intersection was not found
+    // See PJ's workbook page 34, 2017-06-24 for notation and derivation.
+    {
+	if (cast(Line)this !is null) { nseg = 1; } // straight Line
+	double delt = 1.0/nseg;
+	double t0 = 0.0; Vector3 p0 = this.opCall(0.0);
+	foreach (i; 0 .. nseg) {
+	    double t1 = delt*(i+1); Vector3 p1 = this.opCall(t1);
+	    double tOnSegment;
+	    bool intersectionOK = geom.intersect2D(p0, p1, ps, d, tOnSegment);
+	    if (intersectionOK && tOnSegment >= 0.0 && tOnSegment <= 1.0) {
+		t = t0 + tOnSegment*delt;
+		return true;
+	    }
+	    t0 = t1; p0 = p1; // for next segment
+	}
+	return false;
+    } // end intersect2D()
 } // end class Path
 
 
@@ -174,6 +201,13 @@ unittest {
     auto ab2 = ab.dup();
     auto d = ab2(0.5);
     assert(approxEqualVectors(c, d), "Line.dup");
+    auto pth = new Line(Vector3(0.0,1.0), Vector3(1.0,1.0));
+    auto ps = Vector3(0.5,0.5);
+    auto dir = Vector3(0.0,1.0);
+    double t;
+    auto found = pth.intersect2D(ps, dir, t);
+    assert(found, "intersect2D not found on Line");
+    assert(approxEqual(t,0.5), "intersect2D parametric location on Line");
 }
 
 
@@ -331,6 +365,14 @@ unittest {
     assert(approxEqualVectors(d, Vector3(1.7071068, 2.0, 0.7071068)), "Arc");
     auto adb = new Arc3(a, d, b);
     assert(approxEqualVectors(d, adb(0.5)), "Arc3");
+    //
+    auto pth = new Arc3(Vector3(0.0,1.0), Vector3(0.5,1.2), Vector3(1.0,1.0));
+    auto ps = Vector3(0.5,0.5);
+    auto dir = Vector3(0.0,1.0);
+    double t;
+    auto found = pth.intersect2D(ps, dir, t, 10);
+    assert(found, "intersect2D not found on Arc3");
+    assert(approxEqual(t,0.5), "intersect2D parametric location on Arc3");
 }
 
 

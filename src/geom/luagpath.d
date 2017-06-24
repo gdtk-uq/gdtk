@@ -94,7 +94,69 @@ extern(C) int copyPath(T, string MTname)(lua_State* L)
     return 1;
 }
 
-/* ----------------- Path-specific functions --------------- */
+extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
+// Example of use:
+// found, t = path:intersect2D{ps=pstart, d=mydir, nseg=20}
+{
+    auto path = checkObj!(T, MTname)(L, 1);
+    int narg = lua_gettop(L);
+    if ( narg == 1 || !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to Path:intersect2D{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 2, ["ps", "d", "nseg"])) {
+	string errMsg = "Error in call to Path:intersect2D{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Expect Vector3 for starting point.
+    lua_getfield(L, 2, "ps");
+    if (lua_isnil(L, -1)) {
+	string errMsg = "Error in call to Path:intersect2D{}. No ps entry found." ~
+	    "Check that the keyword argument 'ps' is present,\n" ~
+	    "and that a valid object is passed as value.\n";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto ps = checkVector3(L, -1);
+    if (ps is null) {
+	string errMsg = "Error in call to Path:intersect2D{}. " ~
+	    "A Vector3 object is expected as the ps argument. " ~ 
+	    "No valid Vector3 was found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1);
+    // Expect Vector3 for direction vector.
+    lua_getfield(L, 2, "d");
+    if (lua_isnil(L, -1)) {
+	string errMsg = "Error in call to Path:intersect2D{}. No d entry found.\n" ~ 
+	    "Check that the keyword argument 'd' is present,\n" ~
+	    "and that a valid object is passed as value.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    auto d = checkVector3(L, -1);
+    if (d is null) {
+	string errMsg = "Error in call to Path:intersect2D{}. " ~
+	    "A Vector3 object is expected as the d argument. " ~
+	    "No valid Vector3 was found.";
+	luaL_error(L, errMsg.toStringz());
+    }
+    lua_pop(L, 1);
+    int nseg = 20; // default value
+    lua_getfield(L, 2, "nseg");
+    if (!lua_isnumber(L, -1)) {
+	nseg = to!int(lua_tonumber(L, -1));
+    }
+    lua_pop(L, 1);
+    //
+    double t = 0.0;
+    bool found = path.intersect2D(*ps, *d, t, nseg);
+    lua_settop(L, 0); // clear stack
+    lua_pushboolean(L, found);
+    lua_pushnumber(L, t);
+    return 2;
+} // end pathIntersect2D()()
+
+/* ----------------- Specific constructors --------------- */
 
 /**
  * The Lua constructor for a Line.
@@ -995,6 +1057,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(Line, LineMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(Line, LineMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, LineMT.toStringz);
 
@@ -1015,6 +1079,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(Arc, ArcMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(Arc, ArcMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, ArcMT.toStringz);
 
@@ -1035,6 +1101,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(Arc3, Arc3MT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(Arc3, Arc3MT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, Arc3MT.toStringz);
 
@@ -1055,6 +1123,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(Bezier, BezierMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(Bezier, BezierMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, BezierMT.toStringz);
 
@@ -1075,6 +1145,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(Polyline, PolylineMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(Polyline, PolylineMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, PolylineMT.toStringz);
 
@@ -1095,6 +1167,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(Polyline, SplineMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(Polyline, SplineMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, SplineMT.toStringz);
 
@@ -1115,6 +1189,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(Polyline, Spline2MT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(Polyline, Spline2MT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, Spline2MT.toStringz);
 
@@ -1135,6 +1211,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(LuaFnPath, LuaFnPathMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(LuaFnPath, LuaFnPathMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, LuaFnPathMT.toStringz);
 
@@ -1159,6 +1237,9 @@ void registerPaths(lua_State* L)
     lua_pushcfunction(L, &copyPath!(ArcLengthParameterizedPath,
 				    ArcLengthParameterizedPathMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(ArcLengthParameterizedPath,
+					   ArcLengthParameterizedPathMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, ArcLengthParameterizedPathMT.toStringz);
 
@@ -1183,6 +1264,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "t0");
     lua_pushcfunction(L, &t1Path!(SubRangedPath, SubRangedPathMT));
     lua_setfield(L, -2, "t1");
+    lua_pushcfunction(L, &pathIntersect2D!(SubRangedPath, SubRangedPathMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, SubRangedPathMT.toStringz);
 
@@ -1207,6 +1290,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "t0");
     lua_pushcfunction(L, &t1Path!(ReversedPath, ReversedPathMT));
     lua_setfield(L, -2, "t1");
+    lua_pushcfunction(L, &pathIntersect2D!(ReversedPath, ReversedPathMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, ReversedPathMT.toStringz);
 
@@ -1227,6 +1312,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(TranslatedPath, TranslatedPathMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(TranslatedPath, TranslatedPathMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, TranslatedPathMT.toStringz);
 
@@ -1247,6 +1334,8 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(MirrorImagePath, MirrorImagePathMT));
     lua_setfield(L, -2, "copy");
+    lua_pushcfunction(L, &pathIntersect2D!(MirrorImagePath, MirrorImagePathMT));
+    lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, MirrorImagePathMT.toStringz);
 

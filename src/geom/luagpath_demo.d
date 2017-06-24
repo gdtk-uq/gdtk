@@ -55,6 +55,12 @@ adb = Bezier:new{points={a, d, b}}
 e = adb(0.5)
 print("e=", e, "expected approximately Vector3([1.60355, 2, 0.603553])")
 --
+mypth = Arc3:new{p0=Vector3:new{x=0.0,y=1.0}, pmid=Vector3:new{x=0.5,y=1.2}, p1=Vector3:new{x=1.0,y=1.0}}
+myps = Vector3:new{x=0.5,y=0.5}
+mydir = Vector3:new{x=0.0,y=1.0}
+found, t = mypth:intersect2D{ps=myps, d=mydir, nseg=10}
+print("intersection on Arc3: found=", found, "t=", t)
+--
 print("Polyline")
 polyline = Polyline:new{segments={abc, Line:new{p0=b,p1=c}}}
 print("polyline= ", polyline)
