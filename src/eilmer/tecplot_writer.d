@@ -103,7 +103,7 @@ void prepareGridConnectivity(Grid grid, ref int zoneType, ref size_t[][] connLis
 	    if (cellType != prevCellType ) {
 		// We won't be visiting this branch of code anymore.
 		specialCase = false;
-		writeln("Non tria/tetra cell detected: switching to quad/hexa elements");
+		// writeln("Non tria/tetra cell detected: switching to quad/hexa elements");
 		zoneType = (grid.dimensions == 2) ? 3 : 5;
 		// We need to convert all of our previous connList
 		foreach (j; 0 .. connList.length-1) {
