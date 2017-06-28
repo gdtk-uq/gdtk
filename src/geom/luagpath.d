@@ -143,7 +143,7 @@ extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
     lua_pop(L, 1);
     int nseg = 20; // default value
     lua_getfield(L, 2, "nseg");
-    if (!lua_isnumber(L, -1)) {
+    if (lua_isnumber(L, -1)) {
 	nseg = to!int(lua_tonumber(L, -1));
     }
     lua_pop(L, 1);
