@@ -473,6 +473,7 @@ public:
 	bool add_pitot_p = canFind(addVarsList, "pitot");
 	bool add_total_p = canFind(addVarsList, "total-p");
 	bool add_total_h = canFind(addVarsList, "total-h");
+	bool add_total_T = canFind(addVarsList, "total-T");
 	//
 	if (add_mach) {
 	    variableNames ~= "M_local";
@@ -490,6 +491,10 @@ public:
 	    variableNames ~= "total_h";
 	    variableIndex["total_h"] = variableNames.length - 1;
 	}
+	if (add_total_T) {
+	    variableNames ~= "total_T";
+	    variableIndex["total_T"] = variableNames.length - 1;
+	}
 	//
 	// Be careful to add auxiliary variable values in the code below 
 	// in the same order as the list of variable names in the code above.
@@ -498,6 +503,7 @@ public:
 	    double a = _data[i][variableIndex["a"]];
 	    double p = _data[i][variableIndex["p"]];
 	    double rho = _data[i][variableIndex["rho"]];
+	    double T = _data[i][variableIndex["Ttr"]];
 	    double g = a*a*rho/p; // approximation for gamma
 	    // Velocity in the block frame of reference that
 	    // may be rotating for turbomachinery calculations.
@@ -535,6 +541,10 @@ public:
 		// forgetting the multiple energy modes, for the moment.
 		double total_h = p/rho + e0 + 0.5*w*w + tke;
 		_data[i] ~= total_h;
+	    }
+	    if (add_total_T) {
+		double total_T = T * (1.0 + 0.5 * (g - 1.0) * M*M);
+		_data[i] ~= total_T;
 	    }
 	} // foreach i
     } // end add_aux_variables()
