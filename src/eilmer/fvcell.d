@@ -461,9 +461,14 @@ public:
 		integraly -= outsign[i]*iface[i].F.B.y*iface[i].area[gtl];
 		integralz -= outsign[i]*iface[i].F.B.z*iface[i].area[gtl];
 	    }
-	    dUdt[ftl].B.set(vol_inv*integralx + Q.B.x,
-			    vol_inv*integraly + Q.B.y,
-			    vol_inv*integralz + Q.B.z);
+
+        if (myConfig.MHD_frozen) { 
+            dUdt[ftl].B.set(Q.B.x, Q.B.y, Q.B.z); // if using the frozen magnetic field assumption then the magnetic field won't change...
+        } else {
+        	    dUdt[ftl].B.set(vol_inv*integralx + Q.B.x,
+                			    vol_inv*integraly + Q.B.y,
+                			    vol_inv*integralz + Q.B.z);
+        }
 	    // Calculate divergence of the magnetic field here;
 	    // not actually a time-derivatice but seems to be the best way to calculate it.
 	    dUdt[ftl].divB = 0.0;

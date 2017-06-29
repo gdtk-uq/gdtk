@@ -1048,6 +1048,7 @@ function write_config_file(fileName)
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))
    f:write(string.format('"MHD": %s,\n', tostring(config.MHD)))
+   f:write(string.format('"MHD_frozen": %s,\n', tostring(config.MHD_frozen)))
    f:write(string.format('"divergence_cleaning": %s,\n', tostring(config.divergence_cleaning)))
    f:write(string.format('"divB_damping_length": %.18e,\n', config.divB_damping_length))
    f:write(string.format('"apply_bcs_in_parallel": %s,\n',

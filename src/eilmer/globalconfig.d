@@ -358,6 +358,8 @@ final class GlobalConfig {
     // For Daryl Bond and Vince Wheatley's Single-fluid MHD additions.
     //
     shared static bool MHD = false;
+    shared static bool MHD_frozen = false;
+
     // Lachlan Whyborn's Divergence cleaning to go with MHD.
     shared static bool divergence_cleaning = false;
     shared static double c_h = 0.0;
@@ -538,6 +540,7 @@ public:
     bool radiation;
     bool electric_field_work;
     bool MHD;
+    bool MHD_frozen;
     bool divergence_cleaning;
     double c_h;
     double divB_damping_length;
@@ -623,6 +626,7 @@ public:
 	radiation = GlobalConfig.radiation;
 	electric_field_work = GlobalConfig.electric_field_work;
 	MHD = GlobalConfig.MHD;
+    MHD_frozen = GlobalConfig.MHD_frozen;
 	divergence_cleaning = GlobalConfig.divergence_cleaning;
 	c_h = GlobalConfig.c_h;
 	divB_damping_length = GlobalConfig.divB_damping_length;
@@ -811,6 +815,7 @@ void read_config_file()
     mixin(update_bool("artificial_compressibility", "artificial_compressibility"));
     mixin(update_double("ac_alpha", "ac_alpha"));
     mixin(update_bool("MHD", "MHD"));
+    mixin(update_bool("MHD_frozen", "MHD_frozen"));
     mixin(update_bool("divergence_cleaning", "divergence_cleaning"));
     mixin(update_double("divB_damping_length", "divB_damping_length"));
 
@@ -848,6 +853,7 @@ void read_config_file()
 	writeln("  M_inf: ", GlobalConfig.M_inf);
 	writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
 	writeln("  MHD: ", GlobalConfig.MHD);
+    writeln("  MHD_frozen: ", GlobalConfig.MHD_frozen);
 	writeln("  divergence_cleaning: ", GlobalConfig.divergence_cleaning);
 	writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
     }

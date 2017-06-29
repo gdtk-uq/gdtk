@@ -92,6 +92,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("axisymmetric","axisymmetric"));
     //
     mixin(get_bool_field("MHD","MHD"));
+    mixin(get_bool_field("MHD_frozen","MHD_frozen"));
     mixin(get_bool_field("divergence_cleaning","divergence_cleaning"));
     mixin(get_double_field("c_h","c_h"));
     mixin(get_double_field("divB_damping_length","divB_damping_length"));
@@ -222,6 +223,7 @@ extern(C) int configGet(lua_State* L)
     case "axisymmetric": lua_pushboolean(L, GlobalConfig.axisymmetric); break;
 	//
     case "MHD": lua_pushboolean(L, GlobalConfig.MHD); break;
+    case "MHD_frozen": lua_pushboolean(L, GlobalConfig.MHD_frozen); break;
     case "divergence_cleaning": lua_pushboolean(L, GlobalConfig.divergence_cleaning); break;
     case "c_h": lua_pushnumber(L, GlobalConfig.c_h); break;
     case "divB_damping_length": lua_pushnumber(L, GlobalConfig.divB_damping_length); break;
