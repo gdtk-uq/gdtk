@@ -158,3 +158,10 @@ Here is the content of my `.hgrc` file:
     [extensions]
     hgext.convert =
 
+Note that the 'username' is very explicit: it leaves no doubt as
+to who to blame!
+On a more serious note, please use your full name in the 'username' field.
+This will help identifying the contributors to the code over 
+the long-term history of development.
+
+
