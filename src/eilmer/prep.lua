@@ -918,7 +918,7 @@ ReactionZone = {
 
 function ReactionZone:new(o)
    o = o or {}
-   local flag = checkAllowedNames(args, {"p0", "p1"})
+   local flag = checkAllowedNames(o, {"p0", "p1"})
    assert(flag, "Invalid name for item supplied to ReactionZone constructor.")
    setmetatable(o, self)
    self.__index = self
@@ -940,7 +940,7 @@ IgnitionZone = {
 
 function IgnitionZone:new(o)
    o = o or {}
-   local flag = checkAllowedNames(args, {"p0", "p1", "T"})
+   local flag = checkAllowedNames(o, {"p0", "p1", "T"})
    assert(flag, "Invalid name for item supplied to IgnitionZone constructor.")
    setmetatable(o, self)
    self.__index = self
@@ -962,7 +962,7 @@ TurbulentZone = {
 
 function TurbulentZone:new(o)
    o = o or {}
-   local flag = checkAllowedNames(args, {"p0", "p1"})
+   local flag = checkAllowedNames(o, {"p0", "p1"})
    assert(flag, "Invalid name for item supplied to TurbulentZone constructor.")
    setmetatable(o, self)
    self.__index = self
