@@ -26,6 +26,8 @@ import luasurface;
 /// Name of the metatables -- these are the Lua access name.
 immutable string TFIVolumeMT = "TFIVolume";
 immutable string SweptSurfaceVolumeMT = "SweptSurfaceVolume";
+immutable string SlabVolumeMT = "SlabVolume";
+immutable string WedgeVolumeMT = "WedgeVolume";
 immutable string LuaFnVolumeMT = "LuaFnVolume";
 immutable string SubRangedVolumeMT = "SubRangedVolume";
 // TODO MeshVolume...
@@ -34,24 +36,35 @@ static const(ParametricVolume)[] volumeStore;
 
 ParametricVolume checkVolume(lua_State* L, int index) {
     // We have to do a brute force test for each object type, in turn.
-    if ( isObjType(L, index, TFIVolumeMT) )
+    if (isObjType(L, index, TFIVolumeMT)) {
 	return checkObj!(TFIVolume, TFIVolumeMT)(L, index);
-    if ( isObjType(L, index, SweptSurfaceVolumeMT) )
+    }
+    if (isObjType(L, index, SweptSurfaceVolumeMT)) {
 	return checkObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, index);
-    if ( isObjType(L, index, LuaFnVolumeMT) )
+    }
+    if (isObjType(L, index, SlabVolumeMT)) {
+	return checkObj!(SlabVolume, SlabVolumeMT)(L, index);
+    }
+    if (isObjType(L, index, WedgeVolumeMT)) {
+	return checkObj!(WedgeVolume, WedgeVolumeMT)(L, index);
+    }
+    if (isObjType(L, index, LuaFnVolumeMT)) {
 	return checkObj!(LuaFnVolume, LuaFnVolumeMT)(L, index);
-    if ( isObjType(L, index, SubRangedVolumeMT) )
+    }
+    if (isObjType(L, index, SubRangedVolumeMT)) {
 	return checkObj!(SubRangedVolume, SubRangedVolumeMT)(L, index);
+    }
     // if no match found then
     return null;
 }
 
 extern(C) int isVolume(lua_State* L)
 {
-    if ( checkVolume(L, 1) )
+    if (checkVolume(L, 1)) {
 	lua_pushboolean(L, 1);
-    else
+    } else {
 	lua_pushboolean(L, 0);
+    }
     return 1;
 }
 
@@ -209,6 +222,96 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
     volumeStore ~= pushObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, ssv);
     return 1;
 } // end newSweptSurfaceVolume()
+
+
+/**
+ * This is the constructor for a SlabVolume to be used from the Lua interface.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * vol0 = SlabVolume:new{face0123=myFace, dz=myVector3}
+ * --------------------------
+ */
+
+extern(C) int newSlabVolume(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    
+    if (!lua_istable(L, 1)) {
+	string errMsg = "Error in constructor SlabVolume:new. " ~
+	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["face0123","dz"])) {
+	string errMsg = "Error in call to SlabVolume:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Look for bottom surface.
+    lua_getfield(L, 1, "face0123");
+    auto face0123 = checkSurface(L, -1);
+    if (face0123 is null) {
+	string errMsg = "Error in constructor SlabVolume:new. Couldn't find face0123.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Look for thickness vector.
+    lua_getfield(L, 1, "dz");
+    auto dz_ptr = checkVector3(L, -1);
+    if (dz_ptr is null) {
+	string errMsg = "Error in constructor SlabVolume:new. Couldn't find dz.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Construct the actual surface.
+    auto slabv = new SlabVolume(face0123, *dz_ptr);
+    volumeStore ~= pushObj!(SlabVolume, SlabVolumeMT)(L, slabv);
+    return 1;
+} // end newSlabVolume()
+
+
+/**
+ * This is the constructor for a WedgeVolume to be used from the Lua interface.
+ *
+ * Supported constructions are:
+ * -------------------------
+ * vol0 = WedgeVolume:new{face0123=myFace, dtheta=0.1}
+ * --------------------------
+ */
+
+extern(C) int newWedgeVolume(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    
+    if (!lua_istable(L, 1)) {
+	string errMsg = "Error in constructor WedgeVolume:new. " ~
+	    "A table with input parameters is expected as the first argument.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["face0123","dtheta"])) {
+	string errMsg = "Error in call to WedgeVolume:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // Look for bottom surface.
+    lua_getfield(L, 1, "face0123");
+    auto face0123 = checkSurface(L, -1);
+    if (face0123 is null) {
+	string errMsg = "Error in constructor WedgeVolume:new. Couldn't find face0123.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    // Look for sweep angle, in radians.
+    lua_getfield(L, 1, "dtheta");
+    if (!lua_isnumber(L, -1)) {
+	string errMsg = "Error in constructor SlabVolume:new. Expected number for dtheta.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double dtheta = to!double(luaL_checknumber(L, -1));
+    lua_pop(L, 1);
+    // Construct the actual surface.
+    auto wedgev = new WedgeVolume(face0123, dtheta);
+    volumeStore ~= pushObj!(WedgeVolume, WedgeVolumeMT)(L, wedgev);
+    return 1;
+} // end newWedgeVolume()
 
 
 /**
@@ -425,6 +528,44 @@ void registerVolumes(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, SweptSurfaceVolumeMT.toStringz);
+
+    // Register the SlabVolume object
+    luaL_newmetatable(L, SlabVolumeMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newSlabVolume);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallVolume!(SlabVolume, SlabVolumeMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallVolume!(SlabVolume, SlabVolumeMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(SlabVolume, SlabVolumeMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, SlabVolumeMT.toStringz);
+
+    // Register the WedgeVolume object
+    luaL_newmetatable(L, WedgeVolumeMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    /* Register methods for use. */
+    lua_pushcfunction(L, &newWedgeVolume);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallVolume!(WedgeVolume, WedgeVolumeMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallVolume!(WedgeVolume, WedgeVolumeMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(WedgeVolume, WedgeVolumeMT));
+    lua_setfield(L, -2, "__tostring");
+
+    lua_setglobal(L, WedgeVolumeMT.toStringz);
 
     // Register the LuaFnVolume object
     luaL_newmetatable(L, LuaFnVolumeMT.toStringz);
