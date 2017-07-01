@@ -174,6 +174,8 @@ function writeThermPerfGas(f, species, db, optsTable)
    for _,sp in ipairs(species) do
       f:write(string.format("%s = {}\n", sp))
       f:write(string.format("%s.M = %.8f\n", sp, db[sp].M.value))
+      f:write(string.format("%s.sigma = %.8f\n", sp, db[sp].sigma.value))
+      f:write(string.format("%s.epsilon = %.8f\n", sp, db[sp].epsilon.value))
       writeCeaThermoCoeffs(f, sp, db, optsTable)
       writeCeaTransCoeffs(f, sp, db, "Viscosity")
       writeCeaTransCoeffs(f, sp, db, "ThermCond")

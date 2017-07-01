@@ -49,6 +49,8 @@ public:
     @nogc @property uint n_species() const { return _n_species; }
     @nogc @property uint n_modes() const { return _n_modes; }
     @property ref double[] mol_masses() { return _mol_masses; }
+    @property ref double[] LJ_sigmas() { return _LJ_sigmas; }
+    @property ref double[] LJ_epsilons() { return _LJ_epsilons; }
     final string species_name(int i) const { return _species_names[i]; }
     final int species_index(string spName) const { return _species_indices.get(spName, -1); }
 
@@ -156,6 +158,8 @@ protected:
     string[] _species_names;
     int[string] _species_indices;
     double[] _mol_masses;
+    double[] _LJ_sigmas;
+    double[] _LJ_epsilons;
 } // end class GasModel
 
 

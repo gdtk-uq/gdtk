@@ -13,6 +13,18 @@ db.N2.gamma = {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'diatomic molecule at low temperatures, gamma = 7/5'
 }
+db.N2.sigma = {
+   value = 3.621,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.N2.epsilon = {
+   value = 97.530,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference 'GRI-Mech 3.0 transport file.'
+}
 db.N2.entropyRefValues = {
    s1 = 6839.91,
    T1 = 298.15,

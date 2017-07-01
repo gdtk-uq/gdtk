@@ -44,10 +44,19 @@ public:
 	// 1. Initialise gas constants from molecular mass
 	_R.length = _n_species;
 	_mol_masses.length = _n_species;
-	foreach ( isp; 0.._n_species ) {
+	foreach (isp; 0 .. _n_species) {
 	    lua_getglobal(L, _species_names[isp].toStringz);
 	    _mol_masses[isp] = getDouble(L, -1, "M");
 	    _R[isp] = R_universal/_mol_masses[isp];
+	    lua_pop(L, 1);
+	}
+	// 1b. Gather L-J parameters
+	_LJ_sigmas.length = _n_species;
+	_LJ_epsilons.length = _n_species;
+	foreach (isp; 0 .. _n_species) {
+	    lua_getglobal(L, _species_names[isp].toStringz);
+	    _LJ_sigmas[isp] = getDouble(L, -1, "sigma");
+	    _LJ_epsilons[isp] = getDouble(L, -1, "epsilon");
 	    lua_pop(L, 1);
 	}
 	// 2. Set the p-v-T EOS
@@ -334,6 +343,9 @@ version(therm_perf_gas_test) {
 
 	auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
 	auto gd = new GasState(5, 0);
+	assert(approxEqual(3.621, gm.LJ_sigmas[0]), failedUnitTest());
+	assert(approxEqual(97.530, gm.LJ_epsilons[0]), failedUnitTest());
+	       
 	gd.p = 1.0e6;
 	gd.Ttr = 2000.0;
 	gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];

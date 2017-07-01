@@ -13,6 +13,18 @@ db.O2.gamma = {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'diatomic molecule at low temperatures, gamma = 7/5'
 }
+db.O2.sigma = {
+   value = 3.458,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.O2.epsilon = {
+   value = 107.400,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference 'GRI-Mech 3.0 transport file.'
+}
 db.O2.ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {

@@ -2,6 +2,8 @@ species = {'N2', 'O2', 'NO', 'N', 'O', }
 
 N2 = {}
 N2.M = 0.0280134
+N2.sigma = 3.621
+N2.epsilon = 97.530
 N2.ceaViscosity = {
    nsegments = 3,
    segment0 = {
@@ -106,6 +108,8 @@ N2.thermoCoeffs = {
 }
 O2 = {}
 O2.M = 0.0319988
+O2.sigma = 3.458
+O2.epsilon = 107.400
 O2.ceaViscosity = {
    nsegments = 3,
    segment0 = {
@@ -210,6 +214,8 @@ O2.thermoCoeffs = {
 }
 NO = {}
 NO.M = 0.0300061
+NO.sigma = 3.621
+NO.epsilon = 97.530
 NO.ceaViscosity = {
    nsegments = 3,
    segment0 = {
@@ -314,6 +320,8 @@ NO.thermoCoeffs = {
 }
 N = {}
 N.M = 0.0140067
+N.sigma = 3.298 
+N.epsilon = 71.400 
 N.ceaViscosity = {
    nsegments = 2,
    segment0 = {
@@ -402,6 +410,8 @@ N.thermoCoeffs = {
 }
 O = {}
 O.M = 0.0159994
+O.sigma = 2.750
+O.epsilon = 80.000
 O.ceaViscosity = {
    nsegments = 2,
    segment0 = {

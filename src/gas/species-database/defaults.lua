@@ -20,7 +20,19 @@ db.default.M = {
 }
 db.default.gamma = {
    value = 1.4,
-   note = "valid at low temperatures"
+   note = "valid at low temperatures for diatomic molecules"
+}
+db.default.sigma = {
+   value = 3.621,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'taken from N2.'
+}
+db.default.epsilon = {
+   value = 97.530,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference 'taken from N2.'
 }
 db.default.entropyRefValues = {
    s1 = 0.0,
