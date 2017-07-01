@@ -43,6 +43,7 @@ import bc;
 import user_defined_source_terms;
 import solid_udf_source_terms;
 import grid_motion;
+import mass_diffusion;
 
 // Indices into arrays for conserved quantities
 static size_t nConservedQuantities;
@@ -386,21 +387,8 @@ final class GlobalConfig {
     // The amount by which to increment the viscous factor during soft-start.
     shared static double viscous_factor_increment = 0.01;
     shared static double viscous_delay = 0.0;
-    // When the diffusion is calculated is treated as part of the viscous calculation:
-    //   false for neglecting multicomponent diffusion, 
-    //   true when considering the diffusion 
-    shared static bool diffusion = false; 
-    // A factor to scale the diffusion in order to achieve a soft start.
-    // The soft-start for diffusion effects may be handy for impulsively-started flows.
-    // Note that this is separate to viscous effects.
-    shared static double diffusion_factor = 1.0;
-    // The amount by which to increment the diffusion factor during soft-start.
-    shared static double diffusion_factor_increment = 0.01;
-    shared static double diffusion_time_delay = 0.0;
-    // The Lewis number when using the constant Lewis number diffusion model
-    shared static double diffusion_lewis = 1.0;
-    // The Schmidt number when using the constant Schmidt number diffusion model
-    shared static double diffusion_schmidt = 0.7;
+    shared static MassDiffusionModel mass_diffusion_model = MassDiffusionModel.none;
+    static MassDiffusion massDiffusion;
 
     shared static TurbulenceModel turbulence_model = TurbulenceModel.none;
     shared static double turbulence_prandtl_number = 0.89;
@@ -551,10 +539,8 @@ public:
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
     double viscous_factor;
-    bool diffusion;
-    double diffusion_factor;
-    double diffusion_lewis;
-    double diffusion_schmidt;
+    MassDiffusionModel mass_diffusion_model;
+    MassDiffusion massDiffusion;
 
     bool stringent_cfl;
     double viscous_signal_factor;
@@ -626,7 +612,7 @@ public:
 	radiation = GlobalConfig.radiation;
 	electric_field_work = GlobalConfig.electric_field_work;
 	MHD = GlobalConfig.MHD;
-    MHD_frozen = GlobalConfig.MHD_frozen;
+	MHD_frozen = GlobalConfig.MHD_frozen;
 	divergence_cleaning = GlobalConfig.divergence_cleaning;
 	c_h = GlobalConfig.c_h;
 	divB_damping_length = GlobalConfig.divB_damping_length;
@@ -638,10 +624,7 @@ public:
 	include_ghost_cells_in_spatial_deriv_clouds = 
 	    GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
 	viscous_factor = GlobalConfig.viscous_factor;
-	diffusion = GlobalConfig.diffusion;
-	diffusion_factor = GlobalConfig.diffusion_factor;
-	diffusion_lewis = GlobalConfig.diffusion_lewis;
-	diffusion_schmidt = GlobalConfig.diffusion_schmidt;
+	mass_diffusion_model = GlobalConfig.mass_diffusion_model;
 	//
 	stringent_cfl = GlobalConfig.stringent_cfl;
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
@@ -671,6 +654,9 @@ public:
 	foreach (iz; GlobalConfig.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
 	//
 	gmodel = init_gas_model(GlobalConfig.gas_model_file);
+	if (mass_diffusion_model != MassDiffusionModel.none) {
+	    massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model);
+	}
 	include_quality = GlobalConfig.include_quality;
 	if (GlobalConfig.reacting) {
 	    chemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file);
@@ -868,6 +854,7 @@ void read_config_file()
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
+    mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
@@ -883,6 +870,7 @@ void read_config_file()
 	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
+	writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
 	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
 	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  turbulence_model: ", turbulence_model_name(GlobalConfig.turbulence_model));
@@ -894,6 +882,9 @@ void read_config_file()
 
     configCheckPoint3();
 
+    if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
+	GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.mass_diffusion_model);
+    }
     // User-defined source terms
     mixin(update_bool("udf_source_terms", "udf_source_terms"));
     mixin(update_string("udf_source_terms_file", "udf_source_terms_file"));
@@ -1258,9 +1249,17 @@ void configCheckPoint2()
 
 void configCheckPoint3()
 {
+    // Check the compatibility of the gas model if mass diffusion is selected.
+    if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
+	if (GlobalConfig.gmodel_master.n_species == 1) {
+	    string msg = format("The selected mass diffusion model '%s'", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
+	    msg ~= " makes no sense when number of species = 1.\n";
+	    throw new FlowSolverException(msg);
+	}
+    }
     // Check the compatibility of turbulence model selection and flux calculator.
-    if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
-	if ( GlobalConfig.flux_calculator == FluxCalculator.hlle ) {
+    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+	if (GlobalConfig.flux_calculator == FluxCalculator.hlle) {
 	    string msg = format("The selected flux calculator '%s'",
 				flux_calculator_name(GlobalConfig.flux_calculator));
 	    msg ~= " is incompatible with the k-omega turbulence model.";

@@ -45,7 +45,8 @@ EILMER_FILES := simcore.d fileutil.d json_helper.d \
 		block.d sblock.d ublock.d \
 		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
 		postprocess.d flowsolution.d luaflowsolution.d grid_motion.d \
-		block_moving_grid.d history.d loads.d special_block_init.d
+		block_moving_grid.d history.d loads.d special_block_init.d \
+		mass_diffusion.d
 
 ifneq ($(TECPLOT_BIN_DIR), unavailable)
     EILMER_FILES += tecio.d tecplot_writer.d

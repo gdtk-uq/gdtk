@@ -25,6 +25,7 @@ import flowgradients;
 import conservedquantities;
 import globalconfig;
 import lsqinterp;
+import mass_diffusion;
 
 class FVInterface {
 public:
@@ -234,30 +235,25 @@ public:
 
 	// We separate diffusion based on laminar or turbulent
 	// and treat the differently.
-	if ( myConfig.turbulence_model != TurbulenceModel.none ) {
+	if (myConfig.turbulence_model != TurbulenceModel.none) {
 	    double Sc_t = myConfig.turbulence_schmidt_number;
 	    double D_t = fs.mu_t / (fs.gas.rho * Sc_t);
 
-	    for ( size_t isp = 0; isp < n_species; ++isp ) {
+	    foreach (isp; 0 .. n_species) {
 		jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
 		jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
 		jz[isp] = -fs.gas.rho * D_t * grad.massf[isp][2];
 	    }
 	}
-	    
-	if ( myConfig.diffusion ) {
-	    // Apply a laminar diffusion model
-	    // [TODO] Rowan, calculate_diffusion_fluxes(fs.gas, D_t, grad.f, jx, jy, jz);
-	    // for( size_t isp = 0; isp < nsp; ++isp ) {
-	    // 	jx[isp] = 0.0;
-	    // 	jy[isp] = 0.0;
-	    // 	jz[isp] = 0.0;
-	    // }
-	    // for( size_t isp = 0; isp < nsp; ++isp ) {
-	    // 	jx[isp] *= viscous_factor;
-	    // 	jy[isp] *= viscous_factor;
-	    // 	jz[isp] *= viscous_factor;
-	    // }
+	else { // apply molecular diffusion instead of turbulence in laminar flows
+	    if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+		myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
+		foreach (isp; 0 .. n_species) {
+		    jx[isp] *= viscous_factor;
+		    jy[isp] *= viscous_factor;
+		    jz[isp] *= viscous_factor;
+		}
+	    }
 	}
 	double tau_xx = 0.0;
 	double tau_yy = 0.0;
@@ -312,24 +308,15 @@ public:
 	double qx = k_eff * grad.Ttr[0];
 	double qy = k_eff * grad.Ttr[1];
 	double qz = k_eff * grad.Ttr[2];
-	if ( myConfig.turbulence_model != TurbulenceModel.none ) {
-	    for ( int isp = 0; isp < n_species; ++isp ) {
-		double h = gmodel.enthalpy(fs.gas, isp);
+	if (myConfig.turbulence_model != TurbulenceModel.none ||
+	    myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
+	    foreach (isp; 0 .. n_species) {
+		double h = gmodel.enthalpy(fs.gas, to!int(isp));
 		qx -= jx[isp] * h;
 		qy -= jy[isp] * h;
 		qz -= jz[isp] * h;
 	    }
-	}
-
-	if ( myConfig.diffusion ) {
-	    // for( size_t isp = 0; isp < nsp; ++isp ) {
-	    // 	double h = 0.0; // [TODO] Rowan, transport of species enthalpies?
-	    // 	// double h = gm.enthalpy(fs.gas, isp);
-	    // 	qx -= jx[isp] * h;
-	    // 	qy -= jy[isp] * h;
-	    // 	qz -= jz[isp] * h;
-	    // 	// [TODO] Rowan, modal enthalpies ?
-	    // }
+	    // [TODO] Rowan, modal enthalpies ?
 	}
 	double tau_kx = 0.0;
 	double tau_ky = 0.0;
@@ -375,17 +362,11 @@ public:
 	    F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
 	    F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
 	}
-	if (myConfig.turbulence_model != TurbulenceModel.none) {
-	    for ( int isp = 0; isp < n_species; ++isp ) {
+	if (myConfig.turbulence_model != TurbulenceModel.none ||
+	    myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+	    foreach (isp; 0 .. n_species) {
 		F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
 	    }
-	}
-	if (myConfig.diffusion) {
-	    // Species mass flux
-	    // [TODO] Rowan, what happens with user-defined flux?
-	    // for( size_t isp = 0; isp < nsp; ++isp ) {
-	    //	F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
-	    // }
 	}
 	// [TODO] Rowan, Modal energy flux?
     } // end viscous_flux_calc()

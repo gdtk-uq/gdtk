@@ -16,6 +16,7 @@ import gas;
 import gas.luagas_model;
 import fvcore;
 import globalconfig;
+import mass_diffusion;
 
 // -------------------------------------------------------------------------------
 // Set GlobalConfig fields from a table.
@@ -137,7 +138,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("viscous_factor_increment", "viscous_factor_increment"));
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("viscous_signal_factor", "viscous_signal_factor"));
-    mixin(get_bool_field("diffusion", "diffusion"));
+    mixin(get_enum_field("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     //
     mixin(get_bool_field("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(get_bool_field("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
@@ -268,7 +269,7 @@ extern(C) int configGet(lua_State* L)
     case "viscous_factor_increment": lua_pushnumber(L, GlobalConfig.viscous_factor_increment); break;
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "viscous_signal_factor": lua_pushnumber(L, GlobalConfig.viscous_signal_factor); break;
-    case "diffusion": lua_pushboolean(L, GlobalConfig.diffusion); break;
+    case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;
 	//
     case "separate_update_for_viscous_terms": lua_pushboolean(L, GlobalConfig.separate_update_for_viscous_terms); break;
     case "separate_update_for_k_omega_source": lua_pushboolean(L, GlobalConfig.separate_update_for_k_omega_source); break;

@@ -23,6 +23,7 @@ import fvcore;
 import fvinterface;
 import fvvertex;
 import globalconfig;
+import mass_diffusion;
 
 immutable size_t cloud_nmax = 64;
 
@@ -202,7 +203,8 @@ public:
 	Ttr[2] = 0.0;
 	//
 	size_t nsp = cloud_fs[0].gas.massf.length;
-	if (myConfig.diffusion) {
+	if (myConfig.turbulence_model != TurbulenceModel.none ||
+	    myConfig.mass_diffusion_model != MassDiffusionModel.none) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]"));
 		massf[isp][0] = gradient_x * area_inv;
@@ -391,7 +393,8 @@ public:
 	mixin(codeForGradients("gas.Ttr", "Ttr"));
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
-	if (myConfig.diffusion) {
+	if (myConfig.turbulence_model != TurbulenceModel.none ||
+	    myConfig.mass_diffusion_model != MassDiffusionModel.none) {
 	    foreach(isp; 0 .. nsp) {
 		mixin(codeForGradients("gas.massf[isp]", "massf[isp]"));
 	    }

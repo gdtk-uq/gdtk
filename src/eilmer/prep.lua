@@ -1091,6 +1091,8 @@ function write_config_file(fileName)
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
+   f:write(string.format('"mass_diffusion_model": "%s",\n',
+			 string.lower(config.mass_diffusion_model)))
 
    f:write(string.format('"separate_update_for_viscous_terms": %s,\n',
 			 tostring(config.separate_update_for_viscous_terms)))
