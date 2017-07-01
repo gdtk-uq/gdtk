@@ -651,6 +651,7 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, CoonsPatchMT.toStringz);
+    lua_getglobal(L, CoonsPatchMT.toStringz); lua_setglobal(L, "CoonsSurface"); // alias
 
     // Register the AOPatch object
     luaL_newmetatable(L, AOPatchMT.toStringz);
@@ -670,6 +671,7 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, AOPatchMT.toStringz);
+    lua_getglobal(L, AOPatchMT.toStringz); lua_setglobal(L, "AOSurface"); // alias
 
     // Register the ChannelPatch object
     luaL_newmetatable(L, ChannelPatchMT.toStringz);
@@ -691,6 +693,7 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "make_bridging_path");
 
     lua_setglobal(L, ChannelPatchMT.toStringz);
+    lua_getglobal(L, ChannelPatchMT.toStringz); lua_setglobal(L, "ChannelSurface"); // alias
 
     // Register the SweptPathPatch object
     luaL_newmetatable(L, SweptPathPatchMT.toStringz);
@@ -710,6 +713,7 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, SweptPathPatchMT.toStringz);
+    lua_getglobal(L, SweptPathPatchMT.toStringz); lua_setglobal(L, "SweptPathSurface"); // alias
 
     // Register the MeshPatch object
     luaL_newmetatable(L, MeshPatchMT.toStringz);
@@ -729,6 +733,7 @@ void registerSurfaces(lua_State* L)
     lua_setfield(L, -2, "__tostring");
 
     lua_setglobal(L, MeshPatchMT.toStringz);
+    lua_getglobal(L, MeshPatchMT.toStringz); lua_setglobal(L, "MeshSurface"); // alias
 
     // Register the LuaFnSurface object
     luaL_newmetatable(L, LuaFnSurfaceMT.toStringz);
@@ -769,8 +774,7 @@ void registerSurfaces(lua_State* L)
     lua_setglobal(L, SubRangedSurfaceMT.toStringz);
 
     // Register utility functions.
-    lua_pushcfunction(L, &isSurface);
-    lua_setglobal(L, "isSurface");
-    lua_pushcfunction(L, &makePatch);
-    lua_setglobal(L, "makePatch");
+    lua_pushcfunction(L, &isSurface); lua_setglobal(L, "isSurface");
+    lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makePatch");
+    lua_pushcfunction(L, &makePatch); lua_setglobal(L, "makeSurface"); // alias
 } // end registerSurfaces()
