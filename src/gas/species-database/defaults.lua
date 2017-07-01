@@ -32,7 +32,7 @@ db.default.epsilon = {
    value = 97.530,
    units = 'K',
    description = 'Lennard-Jones potential well depth.',
-   reference 'taken from N2.'
+   reference = 'taken from N2.'
 }
 db.default.entropyRefValues = {
    s1 = 0.0,

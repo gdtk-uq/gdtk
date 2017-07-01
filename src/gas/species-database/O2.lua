@@ -23,7 +23,7 @@ db.O2.epsilon = {
    value = 107.400,
    units = 'K',
    description = 'Lennard-Jones potential well depth.',
-   reference 'GRI-Mech 3.0 transport file.'
+   reference = 'GRI-Mech 3.0 transport file.'
 }
 db.O2.ceaThermoCoeffs = {
    nsegments = 3,

@@ -23,7 +23,7 @@ db.N2.epsilon = {
    value = 97.530,
    units = 'K',
    description = 'Lennard-Jones potential well depth.',
-   reference 'GRI-Mech 3.0 transport file.'
+   reference = 'GRI-Mech 3.0 transport file.'
 }
 db.N2.entropyRefValues = {
    s1 = 6839.91,
