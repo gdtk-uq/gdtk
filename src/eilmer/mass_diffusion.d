@@ -190,7 +190,6 @@ private:
 	    }
 	    else {
 		_D_avg[isp] = (1.0 - _molef[isp])/sum;
-		writefln("isp= %d, D= %.8e", isp, _D_avg[isp]);
 	    }
 	}
     }
