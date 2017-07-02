@@ -1,0 +1,61 @@
+# bd.test
+# Functional test for binary diffusion of two gases.
+#
+# This exercises the laminar diffusion model.
+#
+# RJG, 2017-07-02
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test prepare-gas-model {Prepare gas model.} -body {
+    exec prep-gas gas-model.inp thermally-perfect-N2-O2-mix.lua > LOGFILE_PREP_GAS
+} -result {} -returnCodes {0}
+
+test run-preprocessor {Run the preprocessing stage.} -body {
+    exec e4shared --job=bd --prep > LOGFILE_PREP
+} -result {} -returnCodes {0}
+
+test run-simulation {Run the shared-memory simulation code.} -body {
+    exec e4shared --run --job=bd > LOGFILE_MAIN
+} -result {} -returnCodes {0}
+
+test composition {Composition at x=0.5e-5} -body {
+     # The following values were extracted from the solution
+     # as computed by revision 1085 (756ece432bb0)
+     set rho_ref 1.373172040772266067
+     set massf_N2_ref 1.819097532464550027e-01
+     set massf_O2_ref 8.180902467535450251e-01
+     # Probe the solution at x=0.5e-5
+     if { [catch {exec e4shared --job=bd --post --tindx-plot=last --probe=0.5e-5,0.0,0.0} results] } {
+        puts "Flow field probing failed."
+        puts $results
+     	set rho 0
+        set massf_N2 0
+        set massf_O2 0
+     } else {
+        # Skip through out, looking for the interesting bits.
+        set found 0
+        foreach line [split $results "\n"] {
+           if {[string first "#" $line] >= 0} {
+               set found 1
+               continue; # skip to following line
+           }
+           if {$found} {
+               set tokens [split [string trim $line]]
+               set rho [lindex $tokens 4]
+               set massf_N2 [lindex $tokens 17]
+	       set massf_O2 [lindex $tokens 18]
+               break;
+           }
+        }
+        # The difference between the extracted values and
+        # the reference values should be small.
+        list [expr abs($rho - $rho_ref)/$rho_ref < 5.0e-3] \
+	     [expr abs($massf_N2 - $massf_N2_ref)/$massf_N2_ref < 2.5e-2] \
+             [expr abs($massf_O2 - $massf_O2_ref)/$massf_O2_ref < 2.5e-2]
+     }
+} -result {1 1 1}
+
+cleanupTests
