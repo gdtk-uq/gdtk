@@ -507,11 +507,12 @@ bool intersect2D(const Vector3 p0, const Vector3 p1, const Vector3 ps, const Vec
  * Returns true is all of the components of two vectors are approximately equal.
  */
 @nogc
-bool approxEqualVectors(in Vector3 v1, in Vector3 v2)
+bool approxEqualVectors(in Vector3 v1, in Vector3 v2,
+			double maxRelDiff=1.0e-2, double maxAbsDiff=1.0e-5)
 {
-    return (approxEqual(v1._p[0], v2._p[0]) && 
-	    approxEqual(v1._p[1], v2._p[1]) &&
-	    approxEqual(v1._p[2], v2._p[2]));
+    return (approxEqual(v1._p[0], v2._p[0], maxRelDiff, maxAbsDiff) && 
+	    approxEqual(v1._p[1], v2._p[1], maxRelDiff, maxAbsDiff) &&
+	    approxEqual(v1._p[2], v2._p[2], maxRelDiff, maxAbsDiff));
 }
 
 unittest {
