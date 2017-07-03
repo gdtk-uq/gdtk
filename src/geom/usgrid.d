@@ -1290,86 +1290,158 @@ public:
     } // end write_to_su2_file()
 
     void write_openFoam_polyMesh(string topLevelDir)
+    // The OpenFoam mesh format is defined primarily in terms of the face polygons.
+    // There is a required order for the faces in which all internal faces appear first,
+    // followed by the boundary sets of faces.  This order is required so that each
+    // boundary set can be simply identified as a starting face and a number of faces.
+    // There is also a constraint that each face's unit normal points out of its
+    // "owning" cell.  For an internal cell, between two cells, the owning cell is
+    // the one with the smaller index.
+    //
+    // Files that will be written:
+    // <topLevelDir>/polyMesh/points
+    //                       /faces
+    //                       /owner
+    //                       /neighbour
+    //                       /boundary
     {
+	// First, we will construct a description of the unstructured mesh
+	// in terms of quantities that OpenFOAM uses.
+	//
+	// Construct dictionary of cell indices so that we can look up
+	// the indices of the left and right cells.
+	//
+	int[USGCell] cellId; foreach (i, c; cells) { cellId[c] = to!int(i); }
+	//
+	// Set up the list of internal-face ids and a list of outsign values,
+	// indicating whether the internal face is point out of its owning cell.
+	//
+	size_t[] internal_face_id_list; // limited to internal faces only
+	int[] owner_cell_id_list; // an entry for all faces
+	int[] neighbour_cell_id_list; // an entry for all faces
+	int[] outsign_list; // an entry for all faces
+	foreach (i, face; faces) {
+	    int owner_id = -1;
+	    int neighbour_id = -1;
+	    int outsign = 1;
+	    if (face.left_cell is null) {
+		owner_id = cellId[face.right_cell];
+		outsign = -1;
+	    } else if (face.right_cell is null) {
+		owner_id = cellId[face.left_cell];
+	    } else {
+		internal_face_id_list ~= i;
+		if (cellId[face.left_cell] < cellId[face.right_cell]) {
+		    owner_id = cellId[face.left_cell];
+		    neighbour_id = cellId[face.right_cell];
+		} else {
+		    owner_id = cellId[face.right_cell];
+		    neighbour_id = cellId[face.left_cell];
+		    outsign = -1;
+		}
+	    }
+	    assert(owner_id >= 0, "face seems to be not owned by a cell"); // [TODO] more info
+	    owner_cell_id_list ~= owner_id;
+	    neighbour_cell_id_list ~= neighbour_id;
+	    outsign_list ~= outsign;
+	}
+	size_t face_tally = internal_face_id_list.length;
+	foreach (b; boundaries) { face_tally += b.face_id_list.length; }
+	assert(face_tally == faces.length, "mismatch in number of faces in boundary sets");
+	//
+	// Now, we are ready to write the files.
+	//
 	string polyMeshDir = topLevelDir ~ "/polyMesh";
 	if (!exists(polyMeshDir)) { mkdirRecurse(polyMeshDir); }
 	//
 	auto f = File(polyMeshDir~"/points", "w");
 	f.writeln("FoamFile\n{");
-	f.writeln(" version     2.0;");
-	f.writeln(" format      ascii;");
-	f.writeln(" class       vectorField;");
-	f.writeln(" location    \"constant/polyMesh\";");
-	f.writeln(" object      points;");
+	f.writeln(" version   2.0;");
+	f.writeln(" format    ascii;");
+	f.writeln(" class     vectorField;");
+	f.writeln(" location  \"constant/polyMesh\";");
+	f.writeln(" object    points;");
 	f.writeln("}");
 	f.writefln("%d\n(", vertices.length);
 	foreach (i,v; vertices) { f.writefln(" (%.18e %.18e %.18e)", v.x, v.y, v.z); }
 	f.writeln(")");
 	f.close();
 	//
-	// TODO, fix order of faces so that boundary faces are last
-	//
 	f = File(polyMeshDir~"/faces", "w");
 	f.writeln("FoamFile\n{");
-	f.writeln(" version     2.0;");
-	f.writeln(" format      ascii;");
-	f.writeln(" class       faceList;");
-	f.writeln(" location    \"constant/polyMesh\";");
-	f.writeln(" object      faces;");
+	f.writeln(" version   2.0;");
+	f.writeln(" format    ascii;");
+	f.writeln(" class     faceList;");
+	f.writeln(" location  \"constant/polyMesh\";");
+	f.writeln(" object    faces;");
 	f.writeln("}");
-	f.writefln("%d\n(", faces.length);
-	foreach (i, face; faces) {
-	    string str = " " ~ to!string(face.vtx_id_list.length) ~ "(";
-	    // TODO change order to ensure that face is pointing out for owner cell.
-	    foreach (j, vtx_id; face.vtx_id_list) {
+	string index_str(const ref USGFace f, int outsign)
+	{
+	    string str = " " ~ to!string(f.vtx_id_list.length) ~ "(";
+	    auto my_vtx_id_list = f.vtx_id_list.dup();
+	    if (outsign < 0) { reverse(my_vtx_id_list); }
+	    foreach (j, vtx_id; my_vtx_id_list) {
 		if (j > 0) { str ~= " "; }
 		str ~= to!string(vtx_id);
 	    }
 	    str ~= ")";
-	    f.writeln(str);
+	    return str;
+	}
+	f.writefln("%d\n(", faces.length);
+	foreach (i; internal_face_id_list) { f.writeln(index_str(faces[i], outsign_list[i])); }
+	foreach (b; boundaries) {
+	    foreach (i; b.face_id_list) { f.writeln(index_str(faces[i], outsign_list[i])); }
 	}
 	f.writeln(")");
 	f.close();
 	//
-	// Construct dictionary of cell indices so that we can look up
-	// the indices of the left and right cells.
-	int[USGCell] cellId; foreach (i, c; cells) { cellId[c] = to!int(i); }
-	//
 	f = File(polyMeshDir~"/owner", "w");
 	f.writeln("FoamFile\n{");
-	f.writeln(" version     2.0;");
-	f.writeln(" format      ascii;");
-	f.writeln(" class       labelList;");
-	f.writeln(" location    \"constant/polyMesh\";");
-	f.writeln(" object      owner;");
+	f.writeln(" version   2.0;");
+	f.writeln(" format    ascii;");
+	f.writeln(" class     labelList;");
+	f.writeln(" location  \"constant/polyMesh\";");
+	f.writeln(" object    owner;");
 	f.writeln("}");
 	f.writefln("%d\n(", faces.length);
-	int owner_id = -1;
-	foreach (i, face; faces) {
-	    if (face.left_cell is null) {
-		owner_id = cellId[face.right_cell];
-	    } else if (face.right_cell is null) {
-		owner_id = cellId[face.left_cell];
-	    } else if (cellId[face.left_cell] < cellId[face.right_cell]) {
-		owner_id = cellId[face.left_cell];
-	    } else {
-		owner_id = cellId[face.right_cell];
-	    }
-	    assert(owner_id >= 0, "face seems to be not owned by a cell"); // [TODO] more info
-	    f.writefln(" %d", owner_id);
+	foreach (i; internal_face_id_list) { f.writefln(" %d", owner_cell_id_list[i]); }
+	foreach (b; boundaries) {
+	    foreach (i; b.face_id_list) { f.writefln(" %d", owner_cell_id_list[i]); }
 	}
 	f.writeln(")");
 	f.close();
 	//
 	f = File(polyMeshDir~"/neighbour", "w");
-	f.writeln("neighbour\n(");
-	f.writeln("    TODO");
+	f.writeln("FoamFile\n{");
+	f.writeln(" version   2.0;");
+	f.writeln(" format    ascii;");
+	f.writeln(" class     labelList;");
+	f.writeln(" location  \"constant/polyMesh\";");
+	f.writeln(" object    neighbour;");
+	f.writeln("}");
+	f.writefln("%d\n(", internal_face_id_list.length);
+	foreach (i; internal_face_id_list) { f.writefln(" %d", owner_cell_id_list[i]); }
 	f.writeln(")");
 	f.close();
 	//
 	f = File(polyMeshDir~"/boundary", "w");
-	f.writeln("boundary\n(");
-	f.writeln("    TODO");
+	f.writeln("FoamFile\n{");
+	f.writeln(" version   2.0;");
+	f.writeln(" format    ascii;");
+	f.writeln(" class     polyBoundaryMesh;");
+	f.writeln(" location  \"constant/polyMesh\";");
+	f.writeln(" object    boundary;");
+	f.writeln("}");
+	f.writefln("%d\n(", boundaries.length);
+	size_t startFace = internal_face_id_list.length;
+	foreach (i, b; boundaries) {
+	    f.writefln(" boundary%04d\n {", i);
+	    f.writefln("  type      %s;", "patch");
+	    f.writefln("  nFaces    %d;", b.face_id_list.length);
+	    f.writefln("  startFace %d;", startFace);
+	    f.writeln(" }");
+	    startFace += b.face_id_list.length; // for the next boundary
+	}
 	f.writeln(")");
 	f.close();
     } // end write_openFoam_polyMesh()
