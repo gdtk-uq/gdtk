@@ -46,6 +46,7 @@ clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS)
 	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2
+	- rm -r test_openFoam
 	- cd $(LUA_DIR); make clean
 
 $(LIBLUA):

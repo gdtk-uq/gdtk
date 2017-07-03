@@ -11,6 +11,7 @@ import std.string;
 import std.array;
 import std.conv;
 import std.stdio;
+import std.file;
 import std.algorithm;
 import std.format;
 import std.math;
@@ -1287,6 +1288,92 @@ public:
 	}
 	f.close();
     } // end write_to_su2_file()
+
+    void write_openFoam_polyMesh(string topLevelDir)
+    {
+	string polyMeshDir = topLevelDir ~ "/polyMesh";
+	if (!exists(polyMeshDir)) { mkdirRecurse(polyMeshDir); }
+	//
+	auto f = File(polyMeshDir~"/points", "w");
+	f.writeln("FoamFile\n{");
+	f.writeln(" version     2.0;");
+	f.writeln(" format      ascii;");
+	f.writeln(" class       vectorField;");
+	f.writeln(" location    \"constant/polyMesh\";");
+	f.writeln(" object      points;");
+	f.writeln("}");
+	f.writefln("%d\n(", vertices.length);
+	foreach (i,v; vertices) { f.writefln(" (%.18e %.18e %.18e)", v.x, v.y, v.z); }
+	f.writeln(")");
+	f.close();
+	//
+	// TODO, fix order of faces so that boundary faces are last
+	//
+	f = File(polyMeshDir~"/faces", "w");
+	f.writeln("FoamFile\n{");
+	f.writeln(" version     2.0;");
+	f.writeln(" format      ascii;");
+	f.writeln(" class       faceList;");
+	f.writeln(" location    \"constant/polyMesh\";");
+	f.writeln(" object      faces;");
+	f.writeln("}");
+	f.writefln("%d\n(", faces.length);
+	foreach (i, face; faces) {
+	    string str = " " ~ to!string(face.vtx_id_list.length) ~ "(";
+	    // TODO change order to ensure that face is pointing out for owner cell.
+	    foreach (j, vtx_id; face.vtx_id_list) {
+		if (j > 0) { str ~= " "; }
+		str ~= to!string(vtx_id);
+	    }
+	    str ~= ")";
+	    f.writeln(str);
+	}
+	f.writeln(")");
+	f.close();
+	//
+	// Construct dictionary of cell indices so that we can look up
+	// the indices of the left and right cells.
+	int[USGCell] cellId; foreach (i, c; cells) { cellId[c] = to!int(i); }
+	//
+	f = File(polyMeshDir~"/owner", "w");
+	f.writeln("FoamFile\n{");
+	f.writeln(" version     2.0;");
+	f.writeln(" format      ascii;");
+	f.writeln(" class       labelList;");
+	f.writeln(" location    \"constant/polyMesh\";");
+	f.writeln(" object      owner;");
+	f.writeln("}");
+	f.writefln("%d\n(", faces.length);
+	int owner_id = -1;
+	foreach (i, face; faces) {
+	    if (face.left_cell is null) {
+		owner_id = cellId[face.right_cell];
+	    } else if (face.right_cell is null) {
+		owner_id = cellId[face.left_cell];
+	    } else if (cellId[face.left_cell] < cellId[face.right_cell]) {
+		owner_id = cellId[face.left_cell];
+	    } else {
+		owner_id = cellId[face.right_cell];
+	    }
+	    assert(owner_id >= 0, "face seems to be not owned by a cell"); // [TODO] more info
+	    f.writefln(" %d", owner_id);
+	}
+	f.writeln(")");
+	f.close();
+	//
+	f = File(polyMeshDir~"/neighbour", "w");
+	f.writeln("neighbour\n(");
+	f.writeln("    TODO");
+	f.writeln(")");
+	f.close();
+	//
+	f = File(polyMeshDir~"/boundary", "w");
+	f.writeln("boundary\n(");
+	f.writeln("    TODO");
+	f.writeln(")");
+	f.close();
+    } // end write_openFoam_polyMesh()
+
 } // end class UnstructuredGrid
 
 

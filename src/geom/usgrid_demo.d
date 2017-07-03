@@ -73,6 +73,7 @@ void main()
     auto su2grid3 = new UnstructuredGrid("sample-data/cube-mesh-hex.su2", "su2text");
     su2grid3.write_to_vtk_file("test_su2-cube-mesh-hex.vtk");
     su2grid3.write_to_su2_file("test_su2-cube-mesh-hex.su2");
+    su2grid3.write_openFoam_polyMesh("test_openFoam");
     
     writeln("Done.");
 }
