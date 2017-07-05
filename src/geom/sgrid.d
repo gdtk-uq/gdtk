@@ -784,40 +784,51 @@ public:
 	}
     } // end joinGrid
 
-    StructuredGrid makeSlabGrid(Vector3 dz)
+    StructuredGrid makeSlabGrid(Vector3 dz, bool symmetric=true)
     {
 	assert(nkv == 1, "makeSlabGrid expected only 2D grid");
 	StructuredGrid newg = new StructuredGrid(niv, njv, 2, label);
 	foreach (j; 0 ..njv) {
 	    foreach (i; 0 .. niv) {
-		*(newg[i,j,0]) = *(this[i,j,0]);
-		*(newg[i,j,1]) = *(this[i,j,0]) + dz;
+		if (symmetric) {
+		    *(newg[i,j,0]) = *(this[i,j,0]) - 0.5*dz;
+		    *(newg[i,j,1]) = *(this[i,j,0]) + 0.5*dz;
+		} else {
+		    *(newg[i,j,0]) = *(this[i,j,0]);
+		    *(newg[i,j,1]) = *(this[i,j,0]) + dz;
+		}
 	    }
 	}
 	return newg;
     } // end makeSlabGrid()
 
-    StructuredGrid makeSlabGrid(double dz)
+    StructuredGrid makeSlabGrid(double dz, bool symmetric=true)
     {
-	return makeSlabGrid(Vector3(0,0,dz));
+	return makeSlabGrid(Vector3(0,0,dz), symmetric);
     }
 
-    StructuredGrid makeWedgeGrid(double dtheta)
+    StructuredGrid makeWedgeGrid(double dtheta, bool symmetric=true)
     {
 	assert(nkv == 1, "makeWedgeGrid expected only 2D grid");
 	StructuredGrid newg = new StructuredGrid(niv, njv, 2, label);
 	foreach (j; 0 ..njv) {
 	    foreach (i; 0 .. niv) {
 		Vector3* p0 = this[i,j,0];
-		*(newg[i,j,0]) = *p0;
-		Vector3* p1 = newg[i,j,1];
 		// We want to rotate the point about the x-axis, according to the right-hand rule.
 		// Angles are measured from the y-axis, positive as we swing around toward the z-axis.
 		// Refer to PJ's workbook page 36, 2017-07-01
 		double r = sqrt((p0.y)^^2 + (p0.z)^^2);
 		double theta0 = atan2(p0.z, p0.y);
-		double theta1 = theta0+dtheta;
-		p1.set(p0.x, r*cos(theta1), r*sin(theta1));
+		if (symmetric) {
+		    double theta1 = theta0-0.5*dtheta;
+		    newg[i,j,0].set(p0.x, r*cos(theta1), r*sin(theta1));
+		    theta1 = theta0+0.5*dtheta;
+		    newg[i,j,1].set(p0.x, r*cos(theta1), r*sin(theta1));
+		} else {
+		    *(newg[i,j,0]) = *p0;
+		    double theta1 = theta0+dtheta;
+		    newg[i,j,1].set(p0.x, r*cos(theta1), r*sin(theta1));
+		}
 	    }
 	}
 	return newg;

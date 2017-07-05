@@ -23,7 +23,7 @@ void main()
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     my_grid.write_to_vtk_file("test_grid-2D.vtk");
     my_grid.write_to_gzip_file("test_grid-2D.gz");
-    auto my_grid2 = new StructuredGrid("test_grid.gz", "gziptext");
+    auto my_grid2 = new StructuredGrid("test_grid-2D.gz", "gziptext");
     my_grid2.write_to_vtk_file("test_grid2-2D.vtk");
 
     writeln("SlabGrid");
