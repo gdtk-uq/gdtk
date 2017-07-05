@@ -21,12 +21,19 @@ void main()
 	       new LinearFunction(), new LinearFunction()];
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
-    my_grid.write_to_vtk_file("test_grid.vtk");
-    my_grid.write_to_gzip_file("test_grid.gz");
+    my_grid.write_to_vtk_file("test_grid-2D.vtk");
+    my_grid.write_to_gzip_file("test_grid-2D.gz");
     auto my_grid2 = new StructuredGrid("test_grid.gz", "gziptext");
-    my_grid2.write_to_vtk_file("test_grid2.vtk");
+    my_grid2.write_to_vtk_file("test_grid2-2D.vtk");
 
-    writeln("3D grid");
+    writeln("SlabGrid");
+    auto my_grid3 = my_grid.makeSlabGrid(0.2);
+    my_grid3.write_to_vtk_file("test_grid3-slab.vtk");
+    writeln("WedgeGrid");
+    auto my_grid4 = my_grid.makeWedgeGrid(0.2);
+    my_grid4.write_to_vtk_file("test_grid4-wedge.vtk");
+    
+    writeln("3D grid from the start");
     Vector3[8] p;
     p[0] = Vector3(0.0, 0.1, 0.0);
     p[1] = Vector3(1.0, 0.1, 0.0);
@@ -41,7 +48,7 @@ void main()
     auto simple_box = new TFIVolume(p);
     auto my_3Dgrid = new StructuredGrid(simple_box, 11, 21, 11, cf);
     writeln("grid point 5 5 5 at p=", *my_3Dgrid[5,5,5]);
-    my_3Dgrid.write_to_vtk_file("test_3Dgrid.vtk");
+    my_3Dgrid.write_to_vtk_file("test_grid-3D.vtk");
     my_3Dgrid.sort_cells_into_bins(10, 10, 10);
     Vector3 my_point = 0.5*(p[0] + p[7]);
     size_t cell_indx = 0; bool found = false;

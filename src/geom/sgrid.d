@@ -784,6 +784,45 @@ public:
 	}
     } // end joinGrid
 
+    StructuredGrid makeSlabGrid(Vector3 dz)
+    {
+	assert(nkv == 1, "makeSlabGrid expected only 2D grid");
+	StructuredGrid newg = new StructuredGrid(niv, njv, 2, label);
+	foreach (j; 0 ..njv) {
+	    foreach (i; 0 .. niv) {
+		*(newg[i,j,0]) = *(this[i,j,0]);
+		*(newg[i,j,1]) = *(this[i,j,0]) + dz;
+	    }
+	}
+	return newg;
+    } // end makeSlabGrid()
+
+    StructuredGrid makeSlabGrid(double dz)
+    {
+	return makeSlabGrid(Vector3(0,0,dz));
+    }
+
+    StructuredGrid makeWedgeGrid(double dtheta)
+    {
+	assert(nkv == 1, "makeWedgeGrid expected only 2D grid");
+	StructuredGrid newg = new StructuredGrid(niv, njv, 2, label);
+	foreach (j; 0 ..njv) {
+	    foreach (i; 0 .. niv) {
+		Vector3* p0 = this[i,j,0];
+		*(newg[i,j,0]) = *p0;
+		Vector3* p1 = newg[i,j,1];
+		// We want to rotate the point about the x-axis, according to the right-hand rule.
+		// Angles are measured from the y-axis, positive as we swing around toward the z-axis.
+		// Refer to PJ's workbook page 36, 2017-07-01
+		double r = sqrt((p0.y)^^2 + (p0.z)^^2);
+		double theta0 = atan2(p0.z, p0.y);
+		double theta1 = theta0+dtheta;
+		p1.set(p0.x, r*cos(theta1), r*sin(theta1));
+	    }
+	}
+	return newg;
+    } // end makeWedgeGrid()
+
     override void write_to_su2_file(string fileName, double scale=1.0,
 				    bool use_gmsh_order_for_wedges=true)
     {
