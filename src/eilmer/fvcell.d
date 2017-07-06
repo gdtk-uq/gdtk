@@ -462,7 +462,7 @@ public:
 		integralz -= outsign[i]*iface[i].F.B.z*iface[i].area[gtl];
 	    }
 
-        if (myConfig.MHD_frozen) { 
+        if (myConfig.MHD_static_field) { 
             dUdt[ftl].B.set(Q.B.x, Q.B.y, Q.B.z); // if using the frozen magnetic field assumption then the magnetic field won't change...
         } else {
         	    dUdt[ftl].B.set(vol_inv*integralx + Q.B.x,
