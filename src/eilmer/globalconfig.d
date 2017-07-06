@@ -615,7 +615,7 @@ public:
 	electric_field_work = GlobalConfig.electric_field_work;
 	MHD = GlobalConfig.MHD;
 	MHD_static_field = GlobalConfig.MHD_static_field;
-    MHD_resistive = GlobalConfig.MHD_resistive;
+	MHD_resistive = GlobalConfig.MHD_resistive;
 	divergence_cleaning = GlobalConfig.divergence_cleaning;
 	c_h = GlobalConfig.c_h;
 	divB_damping_length = GlobalConfig.divB_damping_length;
@@ -843,8 +843,8 @@ void read_config_file()
 	writeln("  M_inf: ", GlobalConfig.M_inf);
 	writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
 	writeln("  MHD: ", GlobalConfig.MHD);
-    writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
-    writeln("  MHD_resistive: ", GlobalConfig.MHD_resistive);
+	writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
+	writeln("  MHD_resistive: ", GlobalConfig.MHD_resistive);
 	writeln("  divergence_cleaning: ", GlobalConfig.divergence_cleaning);
 	writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
     }
