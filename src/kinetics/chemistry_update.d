@@ -679,7 +679,8 @@ version(chemistry_update_test) {
 
 	double dtSuggest = 200.0;
 	auto chemUpdate = new ChemistryUpdate("sample-input/H2-I2-inp.lua", gmodel);
-	chemUpdate(gd, tInterval, dtSuggest);
+	double[] params;
+	chemUpdate(gd, tInterval, dtSuggest, params);
 	double[] conc;
 	conc.length = 3;
 	gmodel.massf2conc(gd, conc);

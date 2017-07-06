@@ -16,6 +16,7 @@ import std.stdio;
 import std.conv;
 import std.format;
 import std.string;
+import std.regex;
 import std.algorithm;
 import std.array;
 import std.math;
@@ -98,7 +99,7 @@ public:
 	double x0, y0, z0, x1, y1, z1;
 	bool limitRegion = false;
 	regionStr = regionStr.strip();
-	regionStr = removechars(regionStr, "\"");
+	regionStr = regionStr.replaceAll(regex("\""), "");
 	if (regionStr.length > 0) {
 	    auto items = regionStr.split(",");
 	    x0 = to!double(items[0]); y0 = to!double(items[1]); z0 = to!double(items[2]);
@@ -159,7 +160,7 @@ public:
 	formattedRead(line, " %g", &sim_time);
 	line = byLine.front; byLine.popFront();
 	variableNames = line.strip().split();
-	foreach (ref var; variableNames) { var = removechars(var, "\""); }
+	foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
 	foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
 	line = byLine.front; byLine.popFront();
 	formattedRead(line, "%d %d %d", &nic, &njc, &nkc);

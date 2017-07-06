@@ -159,91 +159,91 @@ univariate_lut_demo: univariate_lut_demo.d $(LIBLUA) $(UTIL_FILES) $(NM_FILES)
 #		$(DLINKFLAGS)
 
 cea_therm_cond_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_viscosity_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_thermo_curves_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 gas_model_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 perf_gas_mix_eos_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 sutherland_therm_cond_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 sutherland_viscosity_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 therm_perf_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 therm_perf_gas_mix_eos_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 very_viscous_air_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 wilke_mixing_therm_cond_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 wilke_mixing_viscosity_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 co2gas_sw_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 uniform_lut_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 adaptive_lut_CEA_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 lut_comp_demo: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA) lut_comp_demo.d
-	dmd -of$@ -debug -gc -w lut_comp_demo.d \
+	dmd -of$@ -debug -g -w lut_comp_demo.d \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_air_proxy_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 powers_aslam_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_dissociating_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 fuel_air_mix_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 #--------------------------------------------------------------------------

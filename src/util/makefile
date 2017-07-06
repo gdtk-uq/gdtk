@@ -10,7 +10,7 @@ $(LIBLUA):
 	cd $(LUA); make linux local
 
 lua_service : lua_service.d $(LIBLUA)
-	dmd -main -unittest -gc lua_service.d ${LUAD_FILES} -L-L$(LIBLUAPATH) -L-llua -L-ldl
+	dmd -main -unittest -g lua_service.d ${LUAD_FILES} -L-L$(LIBLUAPATH) -L-llua -L-ldl
 
 clean:
 	- rm *.o lua_service

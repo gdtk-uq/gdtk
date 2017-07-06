@@ -44,22 +44,22 @@ ${LIBLUA}:
 	cd ${LUA_DIR}; make $(PLATFORM) local
 
 chemistry_update_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -version=$@ \
+	dmd -of$@ -debug -g -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 rate_constant_test: $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -version=$@ \
+	dmd -of$@ -debug -g -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 reaction_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -version=$@ \
+	dmd -of$@ -debug -g -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
 reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
-	dmd -of$@ -debug -gc -version=$@ \
+	dmd -of$@ -debug -g -version=$@ \
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 

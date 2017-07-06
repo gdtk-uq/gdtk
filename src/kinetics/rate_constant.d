@@ -338,7 +338,8 @@ version(rate_constant_test) {
 	assert(approxEqual(3.10850956e-5, rc.eval(gd), 1.0e-6), failedUnitTest());
 	// Test 2. Read rate constant parameters for nitrogen dissociation
 	// from Lua input and compute rate constant at 4000.0 K
-	auto L = init_lua_State("sample-input/N2-diss.lua");
+	auto L = init_lua_State();
+	luaL_dofile(L, "sample-input/N2-diss.lua");
 	lua_getglobal(L, "rate");
 	auto rc2 = new ArrheniusRateConstant(L);
 	gd.Ttr = 4000.0;

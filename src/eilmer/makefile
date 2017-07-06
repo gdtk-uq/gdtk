@@ -122,7 +122,7 @@ REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
 ifeq ($(DMD), dmd)
     ifeq ($(TARGET), debug)
-        DFLAGS := -w -gc -debug
+        DFLAGS := -w -g -debug
     endif
     ifeq ($(TARGET), profile)
         DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off
@@ -138,7 +138,7 @@ ifeq ($(DMD), dmd)
 endif
 ifeq ($(DMD), ldmd2)
     ifeq ($(TARGET), debug)
-        DFLAGS := -w -gc -debug
+        DFLAGS := -w -g -debug
     endif
     ifeq ($(TARGET), profile)
         DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off

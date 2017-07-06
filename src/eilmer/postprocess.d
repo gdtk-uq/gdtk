@@ -16,6 +16,7 @@ import std.stdio;
 import std.conv;
 import std.format;
 import std.string;
+import std.regex;
 import std.algorithm;
 import std.bitmanip;
 import std.stdint;
@@ -48,7 +49,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     //
     string[] addVarsList;
     addVarsStr = addVarsStr.strip();
-    addVarsStr = removechars(addVarsStr, "\"");
+    addVarsStr = addVarsStr.replaceAll(regex("\""), "");
     if (addVarsStr.length > 0) {
 	addVarsList = addVarsStr.split(",");
     }
@@ -85,7 +86,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	formattedRead(line, " %g", &sim_time);
 	line = byLine.front; byLine.popFront();
 	auto variableNames = line.strip().split();
-	foreach (ref var; variableNames) { var = removechars(var, "\""); }
+	foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
 	foreach (i; 0 .. variableNames.length) {
 	    writeln(format("%4d %s", i, variableNames[i]));
 	}
@@ -100,7 +101,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    formattedRead(line, " %g", &sim_time);
 	    line = byLine.front; byLine.popFront();
 	    variableNames = line.strip().split();
-	    foreach (ref var; variableNames) { var = removechars(var, "\""); }
+	    foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
 	    foreach (i; 0 .. variableNames.length) {
 		writeln(format("%4d %s", i, variableNames[i]));
 	    }
@@ -238,7 +239,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    outFile = stdout;
 	}
 	probeStr = probeStr.strip();
-	probeStr = removechars(probeStr, "\"");
+	probeStr = probeStr.replaceAll(regex("\""), "");
 	double[] xp, yp, zp;
 	foreach(triple; probeStr.split(";")) {
 	    auto items = triple.split(",");
@@ -382,7 +383,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    outFile = stdout;
 	}
 	extractStreamStr = extractStreamStr.strip();
-	extractStreamStr = removechars(extractStreamStr, "\"");
+	extractStreamStr = extractStreamStr.replaceAll(regex("\""), "");
 	double[] xp, yp, zp;
 	foreach(triple; extractStreamStr.split(";")) {
 	    auto items = triple.split(",");
@@ -462,7 +463,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    outFile = stdout;
 	}
 	extractLineStr = extractLineStr.strip();
-	extractLineStr = removechars(extractLineStr, "\"");
+	extractLineStr = extractLineStr.replaceAll(regex("\""), "");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
@@ -524,7 +525,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     if (normsStr.length > 0) {
 	writeln("Norms for variables.");
 	normsStr = normsStr.strip();
-	normsStr = removechars(normsStr, "\"");
+	normsStr = normsStr.replaceAll(regex("\""), "");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);

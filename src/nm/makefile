@@ -84,45 +84,45 @@ bbla_demo: bbla_demo.d bbla.d
 	dmd -g bbla_demo.d bbla.d
 
 bbla_test: bbla.d $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		bbla.d $(UTIL_DIR)/msg_service.d
 
 bracketing_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 gaussquad_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 linesearch_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 newtoncotes_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 ridder_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rungekutta_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 brent_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rsla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 luabbla_test: luabbla.d bbla.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
-	dmd -of$@ -debug -gc -w -version=$@ \
+	dmd -of$@ -debug -g -w -version=$@ \
 		luabbla.d bbla.d $(UTIL_FILES) $(DLINKFLAGS)
