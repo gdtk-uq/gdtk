@@ -161,8 +161,8 @@ public:
     size_t[] face_id_list;
     int[] outsign_list; // +1 face normal is outward; -1 face normal is inward
 
-    this(USGCell_type cell_type, size_t[] vtx_id_list,
-	 size_t[] face_id_list, int[] outsign_list)
+    this(const USGCell_type cell_type, const size_t[] vtx_id_list,
+	 const size_t[] face_id_list, const int[] outsign_list)
     {
 	this.cell_type = cell_type;
 	this.vtx_id_list = vtx_id_list.dup();
@@ -1445,7 +1445,67 @@ public:
 	f.writeln(")");
 	f.close();
     } // end write_openFoam_polyMesh()
-
+    
+    UnstructuredGrid joinGrid(const UnstructuredGrid joinGrid,
+			      double relTol=1.0e-6, double absTol=1.0e-9)
+    {
+	if (this == joinGrid) return this; // nothing to do
+	// Some checking of the incoming data.
+	assert(nvertices == vertices.length, "number of vertices in owner grid");
+	assert(joinGrid.nvertices == joinGrid.vertices.length, "number of vertices in joinGrid");
+	assert(nfaces == faces.length, "number of faces in owner grid");
+	assert(joinGrid.nfaces == joinGrid.faces.length, "number of faces in joinGrid");
+	assert(ncells == cells.length, "number of cells in owner grid");
+	assert(joinGrid.ncells == joinGrid.cells.length, "number of cells in joinGrid");
+	//
+	// Copy only unique points and keep a record of where we put them.
+	size_t[] new_vtx_ids;
+	new_vtx_ids.length = joinGrid.vertices.length;
+	foreach (i, vtx; joinGrid.vertices) {
+	    bool found = false;
+	    size_t jsave;
+	    foreach (j, v; vertices) {
+		if (approxEqualVectors(v, vtx, relTol, absTol)) {
+		    found = true;
+		    jsave = j; // remember where we found it
+		    break;
+		}
+	    }
+	    if (!found) {
+		// We have a new vertex for the master grid.
+		vertices ~= vtx;
+		new_vtx_ids[i] = vertices.length - 1;
+	    } else {
+		// This vertex was already in master grid.
+		new_vtx_ids[i] = jsave;
+	    }
+	}
+	nvertices = vertices.length;
+	size_t[] new_face_ids;
+	new_face_ids.length = joinGrid.faces.length;
+	foreach (i, f; joinGrid.faces) {
+	    size_t[] new_vtx_id_list;
+	    foreach (vid; f.vtx_id_list) { new_vtx_id_list ~= new_vtx_ids[vid]; }
+	    // [TODO] Need to filter out redundant faces.
+	    faces ~= new USGFace(new_vtx_id_list);
+	    new_face_ids[i] = faces.length -1;
+	}
+	nfaces = faces.length;
+	foreach (i, c; joinGrid.cells) {
+	    size_t[] new_vtx_id_list;
+	    foreach (vid; c.vtx_id_list) { new_vtx_id_list ~= new_vtx_ids[vid]; }
+	    size_t[] new_face_id_list;
+	    foreach (fid; c.face_id_list) { new_face_id_list ~= new_face_ids[fid]; }
+	    cells ~= new USGCell(c.cell_type, new_vtx_id_list,
+				 new_face_id_list, c.outsign_list);
+	}
+	ncells = cells.length;
+	//
+	// [TODO] boundary sets
+	//
+	return this; // allows us to chain joinGrid calls
+    } // end joinGrid()
+    
 } // end class UnstructuredGrid
 
 

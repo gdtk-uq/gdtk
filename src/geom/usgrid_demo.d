@@ -74,6 +74,27 @@ void main()
     su2grid3.write_to_vtk_file("test_su2-cube-mesh-hex.vtk");
     su2grid3.write_to_su2_file("test_su2-cube-mesh-hex.su2");
     su2grid3.write_openFoam_polyMesh("test_openFoam");
+
+    writeln("Try joining grids");
+    auto grid_a = new StructuredGrid(simple_box, 3, 3, 4, cf);
+    auto usg3D_a = new UnstructuredGrid(grid_a);
+    Vector3[8] pb;
+    pb[0] = Vector3(1.0, 0.1, 0.0);
+    pb[1] = Vector3(2.0, 0.1, 0.0);
+    pb[2] = Vector3(2.0, 1.1, 0.0);
+    pb[3] = Vector3(1.0, 1.1, 0.0);
+    //
+    pb[4] = Vector3(1.0, 0.1, 3.0);
+    pb[5] = Vector3(2.0, 0.1, 3.0);
+    pb[6] = Vector3(2.0, 1.1, 3.0);
+    pb[7] = Vector3(1.0, 1.1, 3.0);
+    //
+    auto simple_box_b = new TFIVolume(pb);
+    auto grid_b = new StructuredGrid(simple_box_b, 3, 3, 4, cf);
+    writeln("grid point 1 1 2 at p=", *my_3Dgrid[1,1,2]);
+    auto usg3D_b = new UnstructuredGrid(grid_b);
+    usg3D_a.joinGrid(usg3D_b);
+    usg3D_a.write_to_vtk_file("test-join-grid.vtk");
     
     writeln("Done.");
 }
