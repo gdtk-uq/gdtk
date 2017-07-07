@@ -110,7 +110,27 @@ string makeFaceTag(const size_t[] vtx_id_list)
 	tag ~= format("%d", my_id_list[i]);
     }
     return tag;
-}
+} // end makeFaceTag()
+
+bool sameOrientation(const size_t[] vtx_id_list_a, const size_t[] vtx_id_list_b)
+{
+    assert(vtx_id_list_a.length == vtx_id_list_b.length, "Mismatch in vtx list lengths.");
+    assert(isPermutation(vtx_id_list_a, vtx_id_list_b), "Lists should be permutations of vtx ids");
+    if (vtx_id_list_a.length == 2) {
+	// In 2D, faces have only 2 points, so they must be in order.
+	return equal(vtx_id_list_a, vtx_id_list_b);
+    } else {
+	// In 3D, the cycle of points may start with any of them,
+	// so we have to check them all.
+	size_t[] test_list = vtx_id_list_b.dup();
+	foreach (j; 0 .. test_list.length) {
+	    if (equal(vtx_id_list_a, test_list)) { return true; }
+	    bringToFront(test_list[1..$], test_list[$-1..$]); // for the next cycle
+	}
+	// At this point, we have checked all cycles and none match.
+	return false;
+    }
+} // end sameOrientation()
 
 class USGFace {
 public:
@@ -1446,22 +1466,25 @@ public:
 	f.close();
     } // end write_openFoam_polyMesh()
     
-    UnstructuredGrid joinGrid(const UnstructuredGrid joinGrid,
+    UnstructuredGrid joinGrid(const UnstructuredGrid other,
 			      double relTol=1.0e-6, double absTol=1.0e-9)
     {
-	if (this == joinGrid) return this; // nothing to do
+	// We consider *this as the "master" grid and will join
+	// a copy of the unique bits of the other grid to it.
+	//
+	if (this == other) return this; // nothing to do
 	// Some checking of the incoming data.
-	assert(nvertices == vertices.length, "number of vertices in owner grid");
-	assert(joinGrid.nvertices == joinGrid.vertices.length, "number of vertices in joinGrid");
-	assert(nfaces == faces.length, "number of faces in owner grid");
-	assert(joinGrid.nfaces == joinGrid.faces.length, "number of faces in joinGrid");
-	assert(ncells == cells.length, "number of cells in owner grid");
-	assert(joinGrid.ncells == joinGrid.cells.length, "number of cells in joinGrid");
+	assert(nvertices == vertices.length, "number of vertices in master grid");
+	assert(other.nvertices == other.vertices.length, "number of vertices in other grid");
+	assert(nfaces == faces.length, "number of faces in master grid");
+	assert(other.nfaces == other.faces.length, "number of faces in other grid");
+	assert(ncells == cells.length, "number of cells in master grid");
+	assert(other.ncells == other.cells.length, "number of cells in other grid");
 	//
 	// Copy only unique points and keep a record of where we put them.
 	size_t[] new_vtx_ids;
-	new_vtx_ids.length = joinGrid.vertices.length;
-	foreach (i, vtx; joinGrid.vertices) {
+	new_vtx_ids.length = other.vertices.length;
+	foreach (i, vtx; other.vertices) {
 	    bool found = false;
 	    size_t jsave;
 	    foreach (j, v; vertices) {
@@ -1481,27 +1504,59 @@ public:
 	    }
 	}
 	nvertices = vertices.length;
-	size_t[] new_face_ids;
-	new_face_ids.length = joinGrid.faces.length;
-	foreach (i, f; joinGrid.faces) {
+	//
+	// Make sure that we have a full dictionary of the faces in the master-grid.
+	foreach (i, f; faces) {
+	    string faceTag = makeFaceTag(f.vtx_id_list);
+	    if (faceTag !in faceIndices) { faceIndices[faceTag] = i; }
+	}
+	size_t[] new_face_ids; new_face_ids.length = other.faces.length;
+	bool[] flip_new_face; flip_new_face.length = other.faces.length;
+	foreach (i, f; other.faces) {
 	    size_t[] new_vtx_id_list;
 	    foreach (vid; f.vtx_id_list) { new_vtx_id_list ~= new_vtx_ids[vid]; }
-	    // [TODO] Need to filter out redundant faces.
-	    faces ~= new USGFace(new_vtx_id_list);
-	    new_face_ids[i] = faces.length -1;
+	    string faceTag = makeFaceTag(new_vtx_id_list);
+	    if (faceTag !in faceIndices) { 
+		faces ~= new USGFace(new_vtx_id_list);
+		auto j = faces.length - 1;
+		faceIndices[faceTag] = j;
+		new_face_ids[i] = j;
+		flip_new_face[i] = false;
+	    } else {
+		// Face is already in collection.
+		auto j = faceIndices[faceTag];
+		new_face_ids[i] = j;
+		flip_new_face[i] = !sameOrientation(faces[j].vtx_id_list, new_vtx_id_list);
+	    }
 	}
 	nfaces = faces.length;
-	foreach (i, c; joinGrid.cells) {
+	//
+	foreach (i, c; other.cells) {
 	    size_t[] new_vtx_id_list;
 	    foreach (vid; c.vtx_id_list) { new_vtx_id_list ~= new_vtx_ids[vid]; }
 	    size_t[] new_face_id_list;
-	    foreach (fid; c.face_id_list) { new_face_id_list ~= new_face_ids[fid]; }
+	    int[] new_outsign_list;
+	    foreach (j, fid; c.face_id_list) {
+		new_face_id_list ~= new_face_ids[fid];
+		if (flip_new_face[fid]) {
+		    new_outsign_list ~= -c.outsign_list[j];
+		} else {
+		    new_outsign_list ~= c.outsign_list[j];
+		}
+	    }
 	    cells ~= new USGCell(c.cell_type, new_vtx_id_list,
-				 new_face_id_list, c.outsign_list);
+				 new_face_id_list, new_outsign_list);
 	}
 	ncells = cells.length;
 	//
-	// [TODO] boundary sets
+	// [TODO]
+	// At this point, we can work through the cells and put cell references
+	// into the left_cell and right_cell variables for each interface.
+	// We should be able to check that the outsign values are consistent.
+	//
+	// [TODO] Sift through the original boundary sets and eliminate faces
+	// that have become "internal" (i.e. have non-null left_cell and right_cell).
+	// Also, update outsigns for the copied faces, as appropriate.
 	//
 	return this; // allows us to chain joinGrid calls
     } // end joinGrid()
