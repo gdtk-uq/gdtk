@@ -318,7 +318,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
 	foreach ( preStep; -nPreSteps .. 0 ) {
 	    foreach (attempt; 0 .. maxNumberAttempts) {
-		FGMRES_solve(pseudoSimTime, dt, eta0, sigma0, withPreconditioning, normOld, nRestarts);
+		try {
+		    FGMRES_solve(pseudoSimTime, dt, eta0, sigma0, withPreconditioning, normOld, nRestarts);
+		}
+		catch (FlowSolverException e) {
+		    writefln("Failed when attempting GMRES solve in pre-steps.");
+		    writefln("attempt %d: dt= %e", attempt, dt);
+		    failedAttempt = true;
+		    dt = 0.1*dt;
+		    break;
+		}
 		foreach (blk; parallel(gasBlocks,1)) {
 		    bool local_with_k_omega = with_k_omega;
 		    int cellCount = 0;
@@ -338,7 +347,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 			    cell.decode_conserved(0, 1, 0.0);
 			}
 			catch (FlowSolverException e) {
-			    writefln("Failed attempt %d: dt= %e", attempt, dt);
+			    writefln("Failed to provide sensible update.");
+			    writefln("attempt %d: dt= %e", attempt, dt);
 			    failedAttempt = true;
 			    dt = 0.1*dt;
 			    break;
@@ -554,7 +564,16 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 
 	foreach (attempt; 0 .. maxNumberAttempts) {
 	    failedAttempt = false;
-	    FGMRES_solve(pseudoSimTime, dt, eta, sigma, withPreconditioning, normNew, nRestarts);
+	    try {
+		FGMRES_solve(pseudoSimTime, dt, eta, sigma, withPreconditioning, normNew, nRestarts);
+	    }
+	    catch (FlowSolverException e) {
+		    writefln("Failed when attempting GMRES solve in main steps.");
+		    writefln("attempt %d: dt= %e", attempt, dt);
+		    failedAttempt = true;
+		    dt = 0.1*dt;
+		    continue;
+	    }
 	    foreach (blk; parallel(gasBlocks,1)) {
 		bool local_with_k_omega = with_k_omega;
 		int cellCount = 0;
@@ -1278,7 +1297,15 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 	    }
 	
 	    // Evaluate Jz and place result in z_outer
-	    evalJacobianVecProd(pseudoSimTime, sigma);
+	    try {
+		evalJacobianVecProd(pseudoSimTime, sigma);
+	    }
+	    catch (FlowSolverException e) {
+		// Retry with sigma half as small.
+		double sigmaHalf = 0.5*sigma;
+		writeln("Retrying evalJacobian: sigma= ", sigmaHalf);
+		evalJacobianVecProd(pseudoSimTime, sigmaHalf);
+	    }
 	    // Now we can complete calculation of w
 	    foreach (blk; parallel(gasBlocks,1)) {
 		foreach (k; 0 .. blk.nvars)  blk.w_outer[k] += blk.z_outer[k];
