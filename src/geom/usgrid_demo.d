@@ -77,7 +77,7 @@ void main()
 
     writeln("Try joining grids");
     auto grid_a = new StructuredGrid(simple_box, 3, 3, 4, cf);
-    auto usg3D_a = new UnstructuredGrid(grid_a);
+    auto usg3D_a = new UnstructuredGrid(grid_a, "usga");
     Vector3[8] pb;
     pb[0] = Vector3(1.0, 0.1, 0.0);
     pb[1] = Vector3(2.0, 0.1, 0.0);
@@ -92,7 +92,7 @@ void main()
     auto simple_box_b = new TFIVolume(pb);
     auto grid_b = new StructuredGrid(simple_box_b, 3, 3, 4, cf);
     writeln("grid point 1 1 2 at p=", *my_3Dgrid[1,1,2]);
-    auto usg3D_b = new UnstructuredGrid(grid_b);
+    auto usg3D_b = new UnstructuredGrid(grid_b, "usgb");
     usg3D_a.writeStats();
     usg3D_b.writeStats();
     usg3D_a.joinGrid(usg3D_b);

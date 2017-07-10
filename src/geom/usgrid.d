@@ -249,13 +249,14 @@ public:
 	this.tag = tag;
 	this.face_id_list = face_id_list.dup();
 	this.outsign_list = outsign_list.dup();
-    }
+    } // end constructor
     
     this(string str) 
     // Defines the format for input from a text stream.
     {
 	auto tokens = str.strip().split();
 	if (tokens.length == 1) {
+	    // Special case; just the string tag.
 	    this.tag = tokens[0];
 	} else {
 	    // We have more information so try to use it.
@@ -274,14 +275,14 @@ public:
 	    assert(face_id_list.length == outsign_list.length,
 		   "Mismatch in numbers of faces and outsigns");
 	}
-    }
+    } // end constructor from a string
     
     this(const BoundaryFaceSet other)
     {
 	tag = other.tag;
 	face_id_list = other.face_id_list.dup();
 	outsign_list = other.outsign_list.dup();
-    }
+    } // end constructor from another
 
     string toIOString()
     // Defines the format for output to a text stream.
@@ -348,7 +349,7 @@ public:
 	}
 	assembleFaceIndexListPerVertex();
 	niv = vertices.length; njv = 1; nkv = 1;
-    }//end paved grid constructor
+    } //end paved grid constructor
 
     this(const UnstructuredGrid other, const string new_label="")
     {
@@ -367,12 +368,12 @@ public:
 	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
 	assembleFaceIndexListPerVertex();
 	niv = vertices.length; njv = 1; nkv = 1;
-    }
+    } // end constructor from another
 
     this(const StructuredGrid sg, const string new_label="")
     {
-	super(Grid_t.unstructured_grid, sg.dimensions,
-	      ((new_label == "")? sg.label : new_label));
+	string my_block_label = (new_label == "")? sg.label : new_label;
+	super(Grid_t.unstructured_grid, sg.dimensions, my_block_label);
 	vertices.length = 0;
 	faces.length = 0;
 	cells.length = 0;
@@ -383,8 +384,10 @@ public:
 	    ncells = (sg.niv-1)*(sg.njv-1);
 	    nboundaries = 4;
 	    foreach(ib; 0 .. nboundaries) {
-		boundaries ~= new BoundaryFaceSet(face_name[ib]);
-		// 0=north, 1=east, 2=south, 3=west
+		string boundary_label;
+		if (my_block_label.length > 0) { boundary_label = my_block_label ~ "-"; }
+		boundary_label ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west
+		boundaries ~= new BoundaryFaceSet(boundary_label);
 	    }
 	    // vertex index array
 	    size_t[][] vtx_id;
@@ -473,8 +476,10 @@ public:
 	    ncells = (sg.niv-1)*(sg.njv-1)*(sg.nkv-1);
 	    nboundaries = 6;
 	    foreach(ib; 0 .. nboundaries) {
-		boundaries ~= new BoundaryFaceSet(face_name[ib]);
-		// 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
+		string boundary_label;
+		if (my_block_label.length > 0) { boundary_label = my_block_label ~ "-"; }
+		boundary_label ~= face_name[ib]; // 0=north, 1=east, 2=south, 3=west, 4=top, 5=bottom
+		boundaries ~= new BoundaryFaceSet(boundary_label);
 	    }
 	    // vertex index array
 	    size_t[][][] vtx_id;
@@ -631,7 +636,7 @@ public:
 	if (new_label != "") { label = new_label; }
 	assembleFaceIndexListPerVertex();
 	niv = vertices.length; njv = 1; nkv = 1;
-    }
+    } // end constructor from data imported from a file
 
     UnstructuredGrid dup() const
     {
