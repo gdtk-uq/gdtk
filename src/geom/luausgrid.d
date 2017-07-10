@@ -140,12 +140,18 @@ A table containing arguments is expected, but no table was found.`;
 	luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["sgrid","new_label","filename","fileName","scale","fmt",
-				  "expect_gmsh_order_for_wedges"])) {
+				  "expect_gmsh_order_for_wedges", "label"])) {
 	string errMsg = "Error in call to UnstructuredGrid:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
     //
     UnstructuredGrid usgrid;
+    string label = "";
+    lua_getfield(L, 1, "label".toStringz);
+    if (lua_isstring(L, -1)) {
+	label = to!string(luaL_checkstring(L, -1));
+    }
+    lua_pop(L, 1); // dispose of label entry, even if it is a nil
     //
     // First, look for a StructuredGrid field.
     lua_getfield(L, 1, "sgrid".toStringz);
@@ -155,10 +161,10 @@ A table containing arguments is expected, but no table was found.`;
 	    string errMsg = "Error in UnstructuredGrid:new{}. sgrid not a StructuredGrid.";
 	    luaL_error(L, errMsg.toStringz);
 	}
-	usgrid = new UnstructuredGrid(sgrid); // [TODO] new_label
+	usgrid = new UnstructuredGrid(sgrid, label);
     }
     lua_pop(L, 1);
-
+    //
     if (!usgrid) {
 	// We didn't find a sgrid entry, so try for a file name.
 	lua_getfield(L, 1, "filename".toStringz);
@@ -184,8 +190,8 @@ A table containing arguments is expected, but no table was found.`;
 	    lua_pop(L, 1); // dispose of expect_gmsh_order_for_wedges item
 	    if (filename.length > 0) {
 		usgrid = new UnstructuredGrid(filename, fmt, scale,
-					      expect_gmsh_order_for_wedges);
-		// [TODO] new_label
+					      expect_gmsh_order_for_wedges,
+					      label);
 	    }
 	} else {
 	    string errMsg = "Error in UnstructuredGrid:new{}. expected a string for filename.";
@@ -193,7 +199,7 @@ A table containing arguments is expected, but no table was found.`;
 	}
 	lua_pop(L, 1); // dispose of filename item
     }
-
+    //
     if (usgrid) {
 	unstructuredGridStore ~= pushObj!(UnstructuredGrid, UnstructuredGridMT)(L, usgrid);
 	return 1;
@@ -203,6 +209,38 @@ A table containing arguments is expected, but no table was found.`;
 	return 0;
     }
 } // end newUnstructuredGrid()
+
+
+extern(C) int usg_joinGrid(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    UnstructuredGrid master = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    if (!master) {
+	string errMsg = "Error in UnstructuredGrid:joinGrid(). master grid not an UnstructuredGrid.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    UnstructuredGrid other = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 2);
+    if (!other) {
+	string errMsg = "Error in UnstructuredGrid:joinGrid(). other grid not an UnstructuredGrid.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    master.joinGrid(other);
+    lua_settop(L, 1); // We leave the master grid at stack position 1
+    return 1;
+} // end usg_joinGrid()
+
+extern(C) int usg_writeStats(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    UnstructuredGrid usgrid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    if (!usgrid) {
+	string errMsg = "Error in UnstructuredGrid:writeStats(). grid not an UnstructuredGrid.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    usgrid.writeStats();
+    lua_settop(L, 0);
+    return 0;
+} // end usg_writeStats()
 
 
 void registerUnstructuredGrid(lua_State* L)
@@ -247,6 +285,10 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "write_to_su2_file");
     lua_pushcfunction(L, &find_nearest_cell_centre_usg);
     lua_setfield(L, -2, "find_nearest_cell_centre");
+    lua_pushcfunction(L, &usg_joinGrid);
+    lua_setfield(L, -2, "joinGrid");
+    lua_pushcfunction(L, &usg_writeStats);
+    lua_setfield(L, -2, "writeStats");
 
     lua_setglobal(L, UnstructuredGridMT.toStringz);
 
