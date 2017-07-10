@@ -136,12 +136,10 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 
     if (GlobalConfig.diffuseWallBCsOnInit) {
 	// We can apply a special initialisation to the flow field, if requested
-	if (GlobalConfig.verbosity_level >= 2) {
-	    writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-	    writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-	}
+	writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
+	writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
 	foreach (blk; parallel(gasBlocks,1)) {
-	    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses);
+	    diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
 	}
     }
 

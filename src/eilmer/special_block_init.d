@@ -17,7 +17,7 @@ import block;
 import fvcell;
 import fvinterface;
 
-void diffuseWallBCsIntoBlock(Block blk, int nPasses)
+void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
 {
     FVCell[] cellsAlongWalls;
     FVCell[size_t] cellsInDiffusionZone;
@@ -51,7 +51,12 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses)
     foreach (cell; cellsAlongWalls) {
 	foreach (face; cell.iface) {
 	    if (face.is_on_boundary && (face.bc_id in noSlipWalls)) {
-		cell.fs.gas.Ttr = face.fs.gas.Ttr;
+		if (Twall > 0.0) {
+		    cell.fs.gas.Ttr = Twall;
+		}
+		else {
+		    cell.fs.gas.Ttr = face.fs.gas.Ttr;
+		}
 		cell.fs.vel.set(face.fs.vel);
 		cell.fs.tke = face.fs.tke;
 		cell.fs.omega = face.fs.omega;

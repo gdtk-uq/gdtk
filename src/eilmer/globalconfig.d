@@ -464,6 +464,7 @@ final class GlobalConfig {
     // Parameters related to special block initialisation
     shared static bool diffuseWallBCsOnInit = false;
     shared static int nInitPasses = 30;
+    shared static double initTWall = -1.0; // negative indicates that initTWall is NOT used.
 
     // Block-marching parameters
     shared static bool block_marching = false;
@@ -919,6 +920,7 @@ void read_config_file()
     //
     mixin(update_bool("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
     mixin(update_int("number_init_passes", "nInitPasses"));
+    mixin(update_double("wall_temperature_on_init", "initTWall"));
     mixin(update_int("control_count", "control_count"));
     mixin(update_bool("block_marching", "block_marching"));
     mixin(update_int("nib", "nib"));
@@ -928,6 +930,7 @@ void read_config_file()
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
 	writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
+	writeln("  wall_temperature_on_init: ", GlobalConfig.initTWall);
 	writeln("  control_count: ", GlobalConfig.control_count);
 	writeln("  block_marching: ", GlobalConfig.block_marching);
 	writeln("  nib: ", GlobalConfig.nib);

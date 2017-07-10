@@ -178,6 +178,7 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_bool_field("diffuse_wall_bcs_on_init", "diffuseWallBCsOnInit"));
     mixin(get_int_field("number_init_passes", "nInitPasses")); 
+    mixin(get_double_field("wall_temperature_on_init", "initTWall"));
     //
     mixin(get_bool_field("block_marching", "block_marching"));
     mixin(get_int_field("nib", "nib"));
@@ -311,6 +312,7 @@ extern(C) int configGet(lua_State* L)
 	//
     case "diffuse_wall_bcs_on_init": lua_pushboolean(L, GlobalConfig.diffuseWallBCsOnInit); break;
     case "number_init_passes": lua_pushnumber(L, GlobalConfig.nInitPasses); break;
+    case "wall_temperature_on_init": lua_pushnumber(L, GlobalConfig.initTWall); break;
 	//
     case "block_marching": lua_pushboolean(L, GlobalConfig.block_marching); break;
     case "nib": lua_pushnumber(L, GlobalConfig.nib); break;

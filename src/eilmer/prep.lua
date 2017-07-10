@@ -1124,6 +1124,7 @@ function write_config_file(fileName)
 
    f:write(string.format('"diffuse_wall_bcs_on_init": %s,\n', tostring(config.diffuse_wall_bcs_on_init)))
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
+   f:write(string.format('"wall_temperature_on_init": %.18e,\n', config.wall_temperature_on_init));
 
    f:write(string.format('"block_marching": %s,\n',
 			 tostring(config.block_marching)))
