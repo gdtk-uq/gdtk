@@ -408,7 +408,7 @@ public:
 	    gmodel.update_thermo_from_rhou(fs.gas);
 	    gmodel.update_sound_speed(fs.gas);
 	    if (myConfig.viscous) gmodel.update_trans_coeffs(fs.gas);
-	} catch (Exception err) {
+	} catch (GasModelException err) {
 	    if (myConfig.adjust_invalid_cell_data) {
 		thermo_data_is_known_bad = true;
 	    } else {

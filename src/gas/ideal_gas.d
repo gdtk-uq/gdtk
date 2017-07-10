@@ -91,6 +91,10 @@ public:
     {
 	Q.Ttr = Q.u/_Cv;
 	Q.p = Q.rho*_Rgas*Q.Ttr;
+	if (Q.Ttr <= 0.0 || Q.p <= 0.0) {
+	    string msg = "Temperature and/or pressure went negative in IdealGas update."; 
+	    throw new GasModelException(msg);
+	}
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {

@@ -40,6 +40,14 @@ immutable double MIN_MOLES = 1.0e-30;
 immutable double T_MIN = 20.0; 
 immutable double MASSF_ERROR_TOL = 1.0e-6;
 
+class GasModelException : Exception {
+    this(string message, string file=__FILE__, size_t line=__LINE__,
+	 Throwable next=null)
+    {
+	super(message, file, line, next);
+    }
+}
+
 //----------------------------------------------------------------------------------------
 // PART 1. GasModel base class
 //----------------------------------------------------------------------------------------
