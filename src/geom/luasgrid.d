@@ -331,6 +331,98 @@ extern(C) int newStructuredGrid(lua_State* L)
 } // end newStructuredGrid()
 
 
+extern(C) int makeSlabGrid(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid2D = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    if (grid2D is null || grid2D.nkv != 1) {
+	string errMsg = "Error in StructuredGrid:makeSlabGrid{}. expected a 2D StructuredGrid object.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if ( narg < 2 || !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to StructuredGrid:makeSlabGrid{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 2, ["dz","symmetric","label"])) {
+	string errMsg = "Error in call to StructuredGrid:makeSlabGrid{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double dz;
+    lua_getfield(L, 2, "dz");
+    if (!lua_isnil(L, -1)) {
+	dz = luaL_checknumber(L, -1);
+    } else {
+	dz = 0.0;
+	string errMsg = "Error in call to StructuredGrid:makeSlabGrid{}. expected number for dz.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    bool symmetric = true;
+    lua_getfield(L, 2, "symmetric");
+    if (!lua_isnil(L, -1)) {
+	symmetric = to!bool(lua_toboolean(L, -1));
+    }
+    lua_pop(L, 1);
+    string label = grid2D.label; // carry over original label, by default
+    lua_getfield(L, 2, "label");
+    if (!lua_isnil(L, -1)) {
+	label = to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+    //
+    lua_settop(L, 0); // clear stack
+    auto grid3D = grid2D.makeSlabGrid(dz, symmetric, label);
+    structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid3D);
+    return 1;
+} // end makeSlabGrid()
+
+extern(C) int makeWedgeGrid(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid2D = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    if (grid2D is null || grid2D.nkv != 1) {
+	string errMsg = "Error in StructuredGrid:makeWedgeGrid{}. expected a 2D StructuredGrid object.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if ( narg < 2 || !lua_istable(L, 2) ) {
+	string errMsg = "Error in call to StructuredGrid:makeWedgeGrid{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 2, ["dtheta","symmetric","label"])) {
+	string errMsg = "Error in call to StructuredGrid:makeWedgeGrid{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    double dtheta;
+    lua_getfield(L, 2, "dtheta");
+    if (!lua_isnil(L, -1)) {
+	dtheta = luaL_checknumber(L, -1);
+    } else {
+	dtheta = 0.0;
+	string errMsg = "Error in call to StructuredGrid:makeWedgeGrid{}. expected number for dtheta.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    lua_pop(L, 1);
+    bool symmetric = true;
+    lua_getfield(L, 2, "symmetric");
+    if (!lua_isnil(L, -1)) {
+	symmetric = to!bool(lua_toboolean(L, -1));
+    }
+    lua_pop(L, 1);
+    string label = grid2D.label; // carry over original label, by default
+    lua_getfield(L, 2, "label");
+    if (!lua_isnil(L, -1)) {
+	label = to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+    //
+    lua_settop(L, 0); // clear stack
+    auto grid3D = grid2D.makeWedgeGrid(dtheta, symmetric, label);
+    structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, grid3D);
+    return 1;
+} // end makeWedgeGrid()
+
 extern(C) int importGridproGrid(lua_State *L)
 {
     int narg = lua_gettop(L);
@@ -424,6 +516,10 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "joinGrid");
     lua_pushcfunction(L, &find_nearest_cell_centre_sg);
     lua_setfield(L, -2, "find_nearest_cell_centre");
+    lua_pushcfunction(L, &makeSlabGrid);
+    lua_setfield(L, -2, "makeSlabGrid");
+    lua_pushcfunction(L, &makeWedgeGrid);
+    lua_setfield(L, -2, "makeWedgeGrid");
 
     lua_setglobal(L, StructuredGridMT.toStringz);
 

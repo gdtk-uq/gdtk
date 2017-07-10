@@ -51,6 +51,13 @@ nj = grid:get_njv()
 print("grid size=", ni, nj)
 print("upper-right corner=", grid:get_vtx(ni-1,nj-1))
 --
+print("SlabGrid")
+grid3 = grid:makeSlabGrid{dz=0.2, symmetric=true, label="slab"}
+grid3:write_to_vtk_file("test_grid3-slab.vtk");
+print("WedgeGrid")
+grid4 = grid:makeWedgeGrid{dtheta=0.2, symmetric=true, label="wedge"}
+grid4:write_to_vtk_file("test_grid4-wedge.vtk");
+--
 print("MeshPatch surface")
 surf2 = MeshPatch:new{sgrid=grid}
 print("mid-point on MeshPatch surface p= ", surf2(0.5, 0.5))

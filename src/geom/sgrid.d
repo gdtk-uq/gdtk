@@ -784,10 +784,11 @@ public:
 	}
     } // end joinGrid
 
-    StructuredGrid makeSlabGrid(Vector3 dz, bool symmetric=true)
+    StructuredGrid makeSlabGrid(Vector3 dz, bool symmetric=true, string label="")
     {
 	assert(nkv == 1, "makeSlabGrid expected only 2D grid");
-	StructuredGrid newg = new StructuredGrid(niv, njv, 2, label);
+	string newlabel = (label.length > 0) ? label : this.label;
+	StructuredGrid newg = new StructuredGrid(niv, njv, 2, newlabel);
 	foreach (j; 0 ..njv) {
 	    foreach (i; 0 .. niv) {
 		if (symmetric) {
@@ -802,15 +803,16 @@ public:
 	return newg;
     } // end makeSlabGrid()
 
-    StructuredGrid makeSlabGrid(double dz, bool symmetric=true)
+    StructuredGrid makeSlabGrid(double dz, bool symmetric=true, string label="")
     {
-	return makeSlabGrid(Vector3(0,0,dz), symmetric);
+	return makeSlabGrid(Vector3(0,0,dz), symmetric, label);
     }
 
-    StructuredGrid makeWedgeGrid(double dtheta, bool symmetric=true)
+    StructuredGrid makeWedgeGrid(double dtheta, bool symmetric=true, string label="")
     {
 	assert(nkv == 1, "makeWedgeGrid expected only 2D grid");
-	StructuredGrid newg = new StructuredGrid(niv, njv, 2, label);
+	string newlabel = (label.length > 0) ? label : this.label;
+	StructuredGrid newg = new StructuredGrid(niv, njv, 2, newlabel);
 	foreach (j; 0 ..njv) {
 	    foreach (i; 0 .. niv) {
 		Vector3* p0 = this[i,j,0];
