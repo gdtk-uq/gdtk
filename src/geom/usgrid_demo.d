@@ -93,7 +93,10 @@ void main()
     auto grid_b = new StructuredGrid(simple_box_b, 3, 3, 4, cf);
     writeln("grid point 1 1 2 at p=", *my_3Dgrid[1,1,2]);
     auto usg3D_b = new UnstructuredGrid(grid_b);
+    usg3D_a.writeStats();
+    usg3D_b.writeStats();
     usg3D_a.joinGrid(usg3D_b);
+    usg3D_a.writeStats();
     usg3D_a.write_to_vtk_file("test-join-grid.vtk");
     
     writeln("Done.");

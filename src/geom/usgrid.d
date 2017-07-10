@@ -1474,14 +1474,15 @@ public:
 	//
 	if (this == other) return this; // nothing to do
 	// Some checking of the incoming data.
-	assert(nvertices == vertices.length, "number of vertices in master grid");
-	assert(other.nvertices == other.vertices.length, "number of vertices in other grid");
-	assert(nfaces == faces.length, "number of faces in master grid");
-	assert(other.nfaces == other.faces.length, "number of faces in other grid");
-	assert(ncells == cells.length, "number of cells in master grid");
-	assert(other.ncells == other.cells.length, "number of cells in other grid");
+	assert(nvertices == vertices.length, "wrong number of vertices in master grid");
+	assert(other.nvertices == other.vertices.length, "wrong number of vertices in other grid");
+	assert(nfaces == faces.length, "wrong number of faces in master grid");
+	assert(other.nfaces == other.faces.length, "wrong number of faces in other grid");
+	assert(ncells == cells.length, "wrong number of cells in master grid");
+	assert(other.ncells == other.cells.length, "wrong number of cells in other grid");
 	//
-	// Copy only unique points and keep a record of where we put them.
+	// Merge the unique points from the other grid and keep a record of where we put them.
+	//
 	size_t[] new_vtx_ids;
 	new_vtx_ids.length = other.vertices.length;
 	foreach (i, vtx; other.vertices) {
@@ -1505,11 +1506,17 @@ public:
 	}
 	nvertices = vertices.length;
 	//
-	// Make sure that we have a full dictionary of the faces in the master-grid.
+	// Make sure that we have a full dictionary of the faces in the master-grid,
+	// in preparation for merging the other collection of faces.
 	foreach (i, f; faces) {
 	    string faceTag = makeFaceTag(f.vtx_id_list);
 	    if (faceTag !in faceIndices) { faceIndices[faceTag] = i; }
 	}
+	//
+	// Merge the faces from the other grid and keep a record of where, in the master list,
+	// we store them.  Also decide if a face already in the master list needs to be flipped
+	// to match the other description.
+	//
 	size_t[] new_face_ids; new_face_ids.length = other.faces.length;
 	bool[] flip_new_face; flip_new_face.length = other.faces.length;
 	foreach (i, f; other.faces) {
@@ -1531,6 +1538,9 @@ public:
 	}
 	nfaces = faces.length;
 	//
+	// Merge all of the cells from the other grid, using vertices and faces
+	// stored in the merged lists.
+	//
 	foreach (i, c; other.cells) {
 	    size_t[] new_vtx_id_list;
 	    foreach (vid; c.vtx_id_list) { new_vtx_id_list ~= new_vtx_ids[vid]; }
@@ -1549,18 +1559,88 @@ public:
 	}
 	ncells = cells.length;
 	//
-	// [TODO]
-	// At this point, we can work through the cells and put cell references
+	// At this point, we can work through the cells and update cell references
 	// into the left_cell and right_cell variables for each interface.
 	// We should be able to check that the outsign values are consistent.
 	//
-	// [TODO] Sift through the original boundary sets and eliminate faces
-	// that have become "internal" (i.e. have non-null left_cell and right_cell).
-	// Also, update outsigns for the copied faces, as appropriate.
+	foreach (f; faces) { f.left_cell = null; f.right_cell = null; }
+	foreach (i, c; cells) {
+	    foreach (j, fid; c.face_id_list) {
+		switch (c.outsign_list[j]) {
+		case 1:
+		    assert(faces[fid].left_cell is null, "Oops, seem to already have a cell on left.");
+		    faces[fid].left_cell = c;
+		    break;
+		case -1:
+		    assert(faces[fid].right_cell is null, "Oops, seem to already have a cell on right.");
+		    faces[fid].right_cell = c;
+		    break;
+		default:
+		    assert(0, "Oops, we seem to have an invalid value for outsign.");
+		}
+	    }
+	}
+	foreach (i, f; faces) {
+	    if (f.left_cell is null && f.right_cell is null) {
+		writefln("Warning, face[%d] in the merged collection is unattached.", i);
+	    }
+	}
 	//
+	// Sift through the original boundary sets and eliminate faces
+	// that have become "internal" (i.e. have non-null left_cell and right_cell).
+	//
+	foreach (i, b; boundaries) {
+	    size_t[] new_face_id_list;
+	    int[] new_outsign_list;
+	    foreach (j, fid; b.face_id_list) {
+		auto f = faces[fid];
+		if (f.left_cell !is null && f.right_cell !is null) {
+		    // Omit face from boundary set.
+		} else {
+		    new_face_id_list ~= fid;
+		    new_outsign_list ~= b.outsign_list[j];
+		}
+	    }
+	    b.face_id_list = new_face_id_list;
+	    b.outsign_list = new_outsign_list;
+	}
+	//
+	// Merge the other boundary sets into the master collection.
+	//
+	foreach (i, b; other.boundaries) {
+	    size_t[] new_face_id_list;
+	    int[] new_outsign_list;
+	    foreach (j, fid; b.face_id_list) {
+		// Remember that fid is the original id in the other grid and
+		// that we need to merge into the master collection with the new id.
+		auto f = faces[new_face_ids[fid]];
+		if (f.left_cell !is null && f.right_cell !is null) {
+		    // Omit face from boundary set.
+		} else {
+		    // Add the face to the set using the new face id.
+		    new_face_id_list ~= new_face_ids[fid];
+		    if (flip_new_face[fid]) {
+			new_outsign_list ~= -b.outsign_list[j];
+		    } else {
+			new_outsign_list ~= b.outsign_list[j];
+		    }
+		}
+	    }
+	    boundaries ~= new BoundaryFaceSet(b.tag, new_face_id_list, new_outsign_list);
+	}
 	return this; // allows us to chain joinGrid calls
     } // end joinGrid()
-    
+
+    void writeStats()
+    {
+	writefln("UnstructuredGrid: label=%s", label);
+	writefln("  nvertices=%d nfaces=%d ncells=%d", vertices.length, faces.length, cells.length);
+	foreach (i, b; boundaries) {
+	    writefln("  BoundarySet[%d] tag=%s nfaces=%d", i, b.tag, b.face_id_list.length);
+	}
+	return;
+    } // end writeStats()
+		
 } // end class UnstructuredGrid
 
 
