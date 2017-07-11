@@ -76,6 +76,7 @@ usg3D_b:writeStats()
 usg3D_a:joinGrid(usg3D_b)
 usg3D_a:writeStats()
 usg3D_a:write_to_vtk_file("test-join-grid_lua.vtk")
+usg3D_a:writeOpenFoamPolyMesh("test_openFoam")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
 	writeln("There was a problem interpreting the test code.");

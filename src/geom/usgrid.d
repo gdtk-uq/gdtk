@@ -1457,10 +1457,16 @@ public:
 	f.writeln(" location  \"constant/polyMesh\";");
 	f.writeln(" object    boundary;");
 	f.writeln("}");
-	f.writefln("%d\n(", boundaries.length);
+	size_t bndry_count = 0; // for non-empty boundary sets
+	foreach (b; boundaries) { if (b.face_id_list.length > 0) { ++bndry_count; } }
+	f.writefln("%d\n(", bndry_count);
 	size_t startFace = internal_face_id_list.length;
 	foreach (i, b; boundaries) {
-	    f.writefln(" boundary%04d\n {", i);
+	    if (b.face_id_list.length == 0) continue; // skip past empty sets 
+	    string label = b.tag; // Nominally, we would like to use the assigned tag
+	    // but, if it is not useful, make up something that is.
+	    if (label.length == 0) { label = format("boundary%04d", i); }
+	    f.writefln(" %s\n {", label);
 	    f.writefln("  type      %s;", "patch");
 	    f.writefln("  nFaces    %d;", b.face_id_list.length);
 	    f.writefln("  startFace %d;", startFace);

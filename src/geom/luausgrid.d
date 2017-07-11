@@ -242,6 +242,21 @@ extern(C) int usg_writeStats(lua_State* L)
     return 0;
 } // end usg_writeStats()
 
+extern(C) int usg_writeOpenFoamPolyMesh(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    UnstructuredGrid usgrid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    if (!usgrid) {
+	string errMsg = "Error in UnstructuredGrid:writeOpenFoamPolyMesh(). grid not an UnstructuredGrid.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    string topLevelDir = ".";
+    if (lua_isstring(L, 2)) { topLevelDir = to!string(luaL_checkstring(L, 2)); }
+    usgrid.write_openFoam_polyMesh(topLevelDir);
+    lua_settop(L, 0);
+    return 0;
+} // end usg_writeOpenFoamPolyMesh()
+
 
 void registerUnstructuredGrid(lua_State* L)
 {
@@ -289,6 +304,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "joinGrid");
     lua_pushcfunction(L, &usg_writeStats);
     lua_setfield(L, -2, "writeStats");
+    lua_pushcfunction(L, &usg_writeOpenFoamPolyMesh);
+    lua_setfield(L, -2, "writeOpenFoamPolyMesh");
 
     lua_setglobal(L, UnstructuredGridMT.toStringz);
 
