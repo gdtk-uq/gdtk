@@ -1,7 +1,11 @@
 # makefile for the geometry package
 # Builds all of the demonstration programs.
 
+DMD ?= dmd
 PLATFORM ?= linux
+INSTALL_DIR ?= $(HOME)/dgdinst
+BUILD_DIR := ../../build
+REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
 DEMO_PROGRAMS := geom_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
@@ -49,8 +53,22 @@ clean:
 	- rm -r test_openFoam
 	- cd $(LUA_DIR); make clean
 
+install: foamMesh foam-mesh.lua
+	- mkdir -p $(INSTALL_DIR)
+	cp foamMesh $(BUILD_DIR)/bin/
+	cp foam-mesh.lua $(BUILD_DIR)/bin/
+	@echo "Installing to $(INSTALL_DIR)"
+	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+
+
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
+
+foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' foamMesh.d > foamMesh_with_rev_string.d
+
+	dmd $(DFLAGS_LUA) foamMesh_with_rev_string.d $(OF)foamMesh \
+	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA) 
 
 sketch_demo: sketch_demo.d sketch.d svg.d geom.d gpath.d surface.d volume.d \
 	grid.d sgrid.d usgrid.d paver.d univariatefunctions.d $(NM_FILES)

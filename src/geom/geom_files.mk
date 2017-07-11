@@ -19,3 +19,6 @@ GEOM_FILES := $(GEOM_DIR)/geom.d \
 	$(GEOM_DIR)/svg.d \
 	$(GEOM_DIR)/sketch.d \
 	$(GEOM_DIR)/luasketch.d
+
+GEOM_LUA_FILES := $(GEOM_DIR)/foam-mesh.lua
+

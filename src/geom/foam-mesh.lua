@@ -4,6 +4,13 @@
 -- Authors: Rowan G., Ingo J., and Peter J.
 -- Date: 2017-07-03
 
+NORTH = 0
+EAST = 1
+SOUTH = 2
+WEST = 3
+TOP = 4
+BOTTOM = 5
+
 function checkAllowedNames(myTable, allowedNames)
    local setOfNames = {}
    local namesOk = true
@@ -31,7 +38,8 @@ function checkBndryLabels(bndryList)
    for k,v in pairs(bndryList) do
       local labelOK = false
       for _,allowedPrefix in ipairs(bndryLabelPrefixes) do
-	 i,j = string.find(allowedPrefix, v)
+	 pattern = string.gsub(allowedPrefix, "%-", "%%%-")
+	 i, j = string.find(v, pattern)
 	 if (i == 1) then
 	    labelOK = true
 	 end
@@ -49,69 +57,124 @@ function checkBndryLabels(bndryList)
    end
 end
 	      
+-- Storage for global collection of boundary labels
+globalBndryLabels = {}
 
--- Storage for FoamMesh objects
-meshes = {}
+-- Storage for FoamBlock objects
+blks = {}
 
-FoamMesh = {}
-
-function FoamMesh:new(o)
+-- Class definition
+FoamBlock = {}
+function FoamBlock:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"psurface", "pvolume", "project3D",
-				      "niv", "njv", "nkv",
-				      "bndryList"})
-   assert(flag, "Invalid name for item supplied to FoamMesh:new().")
+   local flag = checkAllowedNames(o, {"grid", "bndry_labels"})
+   assert(flag, "Invalid name for item supplied to FoamBlock:new().")
    setmetatable(o, self)
    self.__index = self
-   -- Make a record of this mesh for later use when writing out.
-   o.id = #(meshes)
-   meshes[#(meshes)+1] = o
-   -- Need either a psurface or a pvolume
-   if (o.psurface == nil and o.pvolume == nil) then
-      print("Either a 'psurface' or 'pvolume' must be supplied to FoamMesh:new().")
-      os.exit(1)
+   -- Make a record of this block for later use when writing out.
+   o.id = #(blks)
+   blks[#(blks)+1] = o
+   if (o.grid == nil) then
+      error("A 'grid' object must be supplied to FoamBlock:new().")
    end
-   -- Let's do some more checks before going on with grid generation
-   checkBndryLabels(o.bndryList)
-   if o.psurface then
-      assert(o.niv, "need to provide 'niv' in FoamMesh:new().")
-      assert(o.njv, "need to provide 'njv' in FoamMesh:new().")
+   if (o.grid:get_dimensions() ~= 3) then
+      errMsg = "The 'grid' object supplied to FoamBlock:new() must be a 3D grid.\n"
+      errMsg = errMsg .. "You can convert a 2D grid using 'makeSlabGrid' or 'makeWedgeGrid' functions."
+      error(errMsg)
    end
-   if o.pvolume then
-      -- Check we have been given discretisation settings.
-      assert(o.niv, "need to provide 'niv' in FoamMesh:new().")
-      assert(o.njv, "need to provide 'njv' in FoamMesh:new().")
-      assert(o.nkv, "need to provide 'nkv' in FoamMesh:new().")
+   if (o.grid:get_type() == "structured_grid") then
+      -- We'll need to convert to unstructured before we can proceed
+      o.grid = UnstructuredGrid:new{sgrid=o.grid}
    end
-   -- Let's work on psurface, if present
-   if o.psurface then
-      -- We'll set the nkv to 2 for a one-cell slice
-      o.nkv = 2
-      -- We need a project3D type
-      if o.project3D == nil then
-	 print("A 'project3D' type of 'slab' or 'wedge' must be supplied when a 'psurface' is given to FoamMesh:new().")
-	 os.exit(1)
-      end
-      if o.project3D == 'slab' then
-	 o.pvolume = SlabVolume:new{face0123=o.psurface, dz=Vector3:new{x=0, y=0, z=1}}
-      elseif o.project3D == 'wedge' then
-	 o.pvolume = WedgeVolume:new{face0123=o.psurface, dtheta=1}
-      else
-	 print("The 'project3D' type ", o.pvolume, " is unknown.")
-	 print("This error occurred in FoamMesh:new().")
-	 os.exit(1)
-      end
+   checkBndryLabels(o.bndry_labels)
+   -- Add the unique boundary labels to the global collection
+   for _,bl in pairs(o.bndry_labels) do
+      globalBndryLabels[bl] = true
    end
-   -- So at this point, we either have our handed volume,
-   -- or we created one from a surface.
-   -- Now it's time to build a grid.
-   -- We build a structured grid, then directly convert it
-   -- to an unstructured grid.
-   -- TODO: Handle clustering.
-   local sgrid = StructuredGrid:new{pvolume=o.pvolume,
-				    niv=o.niv, njv=o.njv, nkv=o.nkv}
-   o.usgrid = UnstructuredGrid:new{sgrid=sgrid, new_label="mesh-"~tostring(o.id)}
+   -- Overwrite the BoundaryFaceSet tags if necessary
+   if o.bndry_labels.north then
+      o.grid:set_boundaryset_tag(NORTH, o.bndry_labels.north)
+   end
+   if o.bndry_labels.east then
+      o.grid:set_boundaryset_tag(EAST, o.bndry_labels.east)
+   end
+   if o.bndry_labels.south then
+      o.grid:set_boundaryset_tag(SOUTH, o.bndry_labels.south)
+   end
+   if o.bndry_labels.west then
+      o.grid:set_boundaryset_tag(WEST, o.bndry_labels.west)
+   end
+   if o.bndry_labels.top then
+      o.grid:set_boundaryset_tag(TOP, o.bndry_labels.top)
+   end
+   if o.bndry_labels.bottom then
+      o.grid:set_boundaryset_tag(BOTTOM, o.bndry_labels.bottom)
+   end
    return o
 end
+
+function writeFaceSetFile(grid, tag)
+   -- Collect all faces that match tag
+   nBndry = grid:get_nboundaries()
+   faces = {}
+   for iBndry=0,nBndry-1 do
+      if (tag == grid:get_boundaryset_tag(iBndry)) then
+	 grid:add_boundaryset_faces_to_table(iBndry, faces)
+      end
+   end
+   -- Now write faceSet file
+   objName = tag.."_faces"
+   -- We'll remove the "-" from the tags and replace with underscores
+   objName = string.gsub(objName, "-", "_")
+   os.execute("mkdir -p constant/polyMesh/sets")
+   fname = "constant/polyMesh/sets/"..objName
+   -- We'll remove the "-" from the tags and replace with underscores
+   fname = string.gsub(fname, "-", "_")
+   f = assert(io.open(fname, 'w'))
+   f:write(string.format("// Auto-generated by foamMesh on %s\n", os.date("%d-%b-%Y at %X")))
+   f:write("\n")
+	   
+   f:write("FoamFile\n")
+   f:write("{\n")
+   f:write("    version     2.0;\n")
+   f:write("    format      ascii;\n")
+   f:write("    class       faceSet;\n")
+   f:write('    location    "constant/polyMesh/sets";\n')
+   f:write(string.format("    object      %s;\n", objName))
+   f:write("\n")
+   f:write(string.format("%d\n", #faces))
+   f:write("(\n")
+   for _,faceId in ipairs(faces) do
+      f:write(string.format("%d\n", faceId))
+   end
+   f:write(")\n")
+end
+
+function writeMeshes()
+   blks[1].grid.write_openFoam_polyMesh(".")
    
+end
+
+function main(verbosityLevel)
+   if #blks > 1 then
+      print("foamMesh only works on the first block presently.")
+   end
+
+   if (verbosityLevel >= 1) then
+      print("Writing out grid into 'polyMesh/'")
+   end
+   
+   blks[1].grid:writeOpenFoamPolyMesh("constant")
+
+   if (verbosityLevel >= 1) then
+      print("Writing out faceSet files into 'sets/'")
+   end
+   for bl,_ in pairs(globalBndryLabels) do
+      if (verbosityLevel >= 2) then
+	 print("Writing faceSet file for label: ", bl)
+      end
+      writeFaceSetFile(blks[1].grid, bl)
+   end
+   
+end   
 

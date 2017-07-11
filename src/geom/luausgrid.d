@@ -88,6 +88,30 @@ extern(C) int get_boundaryset_tag(lua_State* L)
     return 1;
 }
 
+extern(C) int set_boundaryset_tag(lua_State* L)
+{
+    auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
+    string tag = to!string(luaL_checkstring(L, 3));
+    if (i < grid.boundaries.length) {
+	grid.boundaries[i].tag = tag;
+    }
+    return 0;
+}
+
+extern(C) int add_boundaryset_faces_to_table(lua_State* L)
+{
+    auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
+    int idx = to!int(lua_objlen(L, 3)); // Assuming table at location 3
+    foreach (faceId; grid.boundaries[i].face_id_list) {
+	lua_pushnumber(L, faceId);
+	lua_rawseti(L, 3, idx+1);
+	idx++;
+    }
+    return 0;
+}
+
 extern(C) int find_nearest_cell_centre_usg(lua_State *L)
 {
     double x, y, z;
@@ -288,6 +312,10 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_nboundaries");
     lua_pushcfunction(L, &get_boundaryset_tag);
     lua_setfield(L, -2, "get_boundaryset_tag");
+    lua_pushcfunction(L, &set_boundaryset_tag);
+    lua_setfield(L, -2, "set_boundaryset_tag");
+    lua_pushcfunction(L, &add_boundaryset_faces_to_table);
+    lua_setfield(L, -2, "add_boundaryset_faces_to_table");
     lua_pushcfunction(L, &get_vtx!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "get_vtx");
     lua_pushcfunction(L, &cellVolume!(UnstructuredGrid, UnstructuredGridMT));
