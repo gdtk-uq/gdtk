@@ -1,0 +1,10 @@
+2 2
+#Reactant Stoichiometric Matrix
+2 0 
+1 1 
+#Product Stoichiometric Matrix
+1 2 
+0 3 
+#Anonymous collider? No : 0, Yes : 1
+0
+0
