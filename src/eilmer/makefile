@@ -1,4 +1,3 @@
-
 # makefile for Eilmer
 # Builds main simulation program by default.
 # For example:
@@ -7,13 +6,16 @@
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
+NVCC ?= nvcc
+GPP ?= g++
 
 # TARGET options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
 TARGET ?= debug
 
 PLATFORM ?= linux
-WITH_GPU_CHEM ?= 0
+WITH_OPENCL_GPU_CHEM ?= 0
+WITH_CUDA_GPU_CHEM ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -29,9 +31,14 @@ ifeq ($(WITH_MPI),1)
     PROGRAMS += e4mpi
 endif
 
-ifeq ($(WITH_GPU_CHEM),1)
-    PROGRAMS += eilmer-gpu-chem prep-gpu-chem-kernel.py
-    SHARE_FILES += alpha_qss_kernel.tmplt
+ifeq ($(WITH_OPENCL_GPU_CHEM),1)
+    PROGRAMS += eilmer-opencl-gpu-chem prep-opencl-gpu-chem-kernel.py
+    SHARE_FILES += alpha_qss_kernel_opencl_tmplt.cl
+endif
+
+ifeq ($(WITH_CUDA_GPU_CHEM),1)
+    PROGRAMS += eilmer-cuda-gpu-chem prep-cuda-gpu-chem-kernel.py
+    SHARE_FILES += alpha_qss_kernel_cuda_tmplt.cu libcudakernel.so
 endif
 
 DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo block_demo \
@@ -104,6 +111,20 @@ GZIP_FILES := $(GZIP_DIR)/gzip.d
 
 OPENCL_DIR := ../extern/opencl.d/source
 OPENCL_FILES := $(OPENCL_DIR)/cl.d
+
+CUDA_LIB_DIR ?= /usr/local/cuda-7.5/lib64
+CUDA_DIR := ../extern/cuda.d/source/cuda_d
+CUDA_FILES := $(CUDA_DIR)/cublas_api.d \
+	$(CUDA_DIR)/cublasXt.d \
+	$(CUDA_DIR)/cudalibxt.d \
+	$(CUDA_DIR)/curand.d \
+	$(CUDA_DIR)/cublas.d \
+	$(CUDA_DIR)/cuComplex.d \
+	$(CUDA_DIR)/cuda_profiler_api.d \
+	$(CUDA_DIR)/vector_types.d \
+	$(CUDA_DIR)/cublas_v2.d \
+	$(CUDA_DIR)/cuda.d \
+	$(CUDA_DIR)/cuda_runtime_api.d 
 
 OPENMPI_DIR := ../extern/OpenMPI/
 OPENMPI_FILES := $(OPENMPI_DIR)/source/mpi/package.d $(OPENMPI_DIR)/source/mpi/util.d
@@ -333,22 +354,43 @@ e4loadbalance: loadbalance.d $(EILMER_FILES) \
 		$(DLINKFLAGS)
 
 
-eilmer-gpu-chem: main.d gpu_chem.d $(EILMER_FILES) \
+eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(OPENCL_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
-	$(DMD) -version=gpu_chem $(DFLAGS) $(OF)eilmer-gpu-chem \
-		main_with_rev_string.d $(EILMER_FILES) gpu_chem.d \
+	$(DMD) -version=gpu_chem -version=opencl_gpu_chem  $(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
+		main_with_rev_string.d $(EILMER_FILES) opencl_gpu_chem.d \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GASDYN_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)\
 		$(DLINKFLAGS) -I$(OPENCL_DIR) -L-L/usr/lib64/nvidia -L-lOpenCL
 
-prep-gpu-chem-kernel.py: utils/prep-gpu-chem-kernel.py
-	cp utils/prep-gpu-chem-kernel.py .
-	chmod +x prep-gpu-chem-kernel.py
+eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(CUDA_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
+	$(NVCC) --shared -o libcudakernel.so alpha_qss_kernel_cuda_tmplt.cu --compiler-options '-fPIC'
+	$(DMD) -version=gpu_chem -version=cuda_gpu_chem $(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
+		main_with_rev_string.d $(EILMER_FILES) cuda_gpu_chem.d \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)\
+		$(DLINKFLAGS) -I$(CUDA_DIR) $(CUDA_FILES) -L-L$(CUDA_LIB_DIR) -L-lcuda -L-lcudart -L-L. -L-lcudakernel
 
-alpha_qss_kernel.tmplt: utils/alpha_qss_kernel.tmplt
-	cp utils/alpha_qss_kernel.tmplt .
+prep-opencl-gpu-chem-kernel.py: utils/prep-opencl-gpu-chem-kernel.py
+	cp utils/prep-opencl-gpu-chem-kernel.py .
+	chmod +x prep-opencl-gpu-chem-kernel.py
+
+alpha_qss_kernel_opencl_tmplt.cl: utils/alpha_qss_kernel_opencl_tmplt.cl
+	cp utils/alpha_qss_kernel_opencl_tmplt.cl .
+
+prep-cuda-gpu-chem-kernel.py: utils/prep-cuda-gpu-chem-kernel.py
+	cp utils/prep-cuda-gpu-chem-kernel.py .
+	chmod +x prep-cuda-gpu-chem-kernel.py
+
+alpha_qss_kernel_cuda_tmplt.cu: utils/alpha_qss_kernel_cuda_tmplt.cu
+	cp utils/alpha_qss_kernel_cuda_tmplt.cu .
+
+libcudakernel.so: libcudakernel.so
+	cp libcudakernel.so ./../lib/
 
 #--------------------------------------------------------------------------
 # Fortran bits -- we need a bit of a hack

@@ -14,7 +14,8 @@ Start by finding and storing the correct path to the kernel template
 '''
 
 src_dir = os.getenv("DGD")
-tmplt_file = src_dir + "/share/alpha_qss_kernel.tmplt"
+tmplt_file = src_dir + "/share/alpha_qss_kernel_cuda_tmplt.cu"
+#tmplt_file = '/home/kdamm/codes/eilmer4/dgd-gpu-dev/src/eilmer/utils/alpha_qss_kernel_cuda_tmplt.cu'
 #------------------------------------------------------------------------------------
 # 			      Read in Data 
 #------------------------------------------------------------------------------------
@@ -297,12 +298,18 @@ indata = in_file.read()
 fin = open(tmplt_file, 'r')  #open template and store contents
 template_text = fin.read()
 fin.close()          #close template file
-update_text = template_text.replace('<insert-source-terms-here>',indata) #place in equations
-fout = open('alpha_qss_kernel.cl', 'w') #open and store kernel for gpu
+update_text = template_text.replace('// <insert-source-terms-here>',indata) #place in equations
+fout = open('alpha_qss_kernel.cu', 'w') #open and store kernel for gpu
 fout.write(update_text)
 fout.close()           #close update file
 os.remove("workfile")  #delete temporary equations file
 
+# now build cuda kernel into shared object
+cmd = "nvcc --shared -o libcudakernel.so alpha_qss_kernel.cu --compiler-options '-fPIC'"
+os.system(cmd)
+dest = src_dir + "/lib/"
+cmd = "cp libcudakernel.so " + dest
+os.system(cmd)
 
 print "Kernel ready for launch."
 #------------------------------------------------------------------------------------

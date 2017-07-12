@@ -15,7 +15,7 @@ import fvcell;
 import cl;
 import gas;
 import kinetics;
-
+ 
 immutable string openCLProgName = "alpha_qss_kernel.cl";
 immutable int MAX_SOURCE_SIZE = 0x100000;
 

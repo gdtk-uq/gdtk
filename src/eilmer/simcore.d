@@ -45,8 +45,11 @@ import history;
 import loads;
 import conservedquantities;
 import special_block_init;
-version (gpu_chem) {
-    import gpu_chem;
+version (opencl_gpu_chem) {
+    import opencl_gpu_chem;
+}
+version (cuda_gpu_chem) {
+    import cuda_gpu_chem;	
 }
 
 // State data for simulation.

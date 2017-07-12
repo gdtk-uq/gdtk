@@ -28,6 +28,5 @@ clean:
 
 install: hello_world.d hello_world_kernel.cu
 	$(NVCC) --shared -o libhwkernel.so hello_world_kernel.cu --compiler-options '-fPIC'  
-	$(DMD) -c hello_world.d -I$(CUDA_DIR)/ $(CUDA_FILES)	
-	$(GPP) hello_world.o -L. -L/opt/dmd/dmd2/2.071.1/linux/lib64 -L/usr/local/cuda-7.5/lib64 \
-	-lcuda -lcudart -lphobos2 -lhwkernel -o hello 
+	$(DMD) hello_world.d -I$(CUDA_DIR)/ $(CUDA_FILES) -L-L. -L-L/usr/local/cuda-7.5/lib64 \
+		-L-lcuda -L-lcudart -L-lphobos2 -L-lhwkernel

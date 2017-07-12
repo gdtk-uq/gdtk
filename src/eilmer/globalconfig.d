@@ -29,8 +29,11 @@ import geom;
 import luageom;
 import grid;
 import fvcore;
-version (gpu_chem) {
-    import gpu_chem;
+version (opencl_gpu_chem) {
+    import opencl_gpu_chem;
+}
+version (cuda_gpu_chem) {
+     import cuda_gpu_chem;	
 }
 import json_helper;
 import globaldata;
