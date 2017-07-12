@@ -603,9 +603,9 @@ public:
 			cells ~= my_cell;
 			// Now that we have the new cell, we can make the connections
 			// from the faces back to the cell.
-			faces[jface_id[i][j+1][k]].left_cell = my_cell;
+			faces[jface_id[i][j+1][k]].right_cell = my_cell;
 			faces[iface_id[i+1][j][k]].left_cell = my_cell;
-			faces[jface_id[i][j][k]].right_cell = my_cell;
+			faces[jface_id[i][j][k]].left_cell = my_cell;
 			faces[iface_id[i][j][k]].right_cell = my_cell;
 			faces[kface_id[i][j][k+1]].left_cell = my_cell;
 			faces[kface_id[i][j][k]].right_cell = my_cell;
