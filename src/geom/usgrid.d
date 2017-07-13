@@ -1490,7 +1490,7 @@ public:
 	f.writeln(" object    neighbour;");
 	f.writeln("}");
 	f.writefln("%d\n(", internal_face_id_list.length);
-	foreach (i; internal_face_id_list) { f.writefln(" %d", owner_cell_id_list[i]); }
+	foreach (i; internal_face_id_list) { f.writefln(" %d", neighbour_cell_id_list[i]); }
 	f.writeln(")");
 	f.close();
 	//
