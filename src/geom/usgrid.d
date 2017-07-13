@@ -1338,20 +1338,17 @@ public:
 	//
 	int[USGCell] cellId; foreach (i, c; cells) { cellId[c] = to!int(i); }
 	//
-	// Set up the list of internal-face ids and a list of outsign values,
-	// indicating whether the internal face is point out of its owning cell.
+	// Set up the list of internal-to-block face ids and 
+	// lists of owner and neighbour cells.
 	//
 	size_t[] internal_face_id_list; // limited to internal faces only
 	int[] owner_cell_id_list; // an entry for all faces
 	int[] neighbour_cell_id_list; // an entry for all faces
-	int[] outsign_list; // an entry for all faces
 	foreach (i, face; faces) {
 	    int owner_id = -1;
 	    int neighbour_id = -1;
-	    int outsign = 1;
 	    if (face.left_cell is null) {
 		owner_id = cellId[face.right_cell];
-		outsign = -1;
 	    } else if (face.right_cell is null) {
 		owner_id = cellId[face.left_cell];
 	    } else {
@@ -1362,17 +1359,61 @@ public:
 		} else {
 		    owner_id = cellId[face.right_cell];
 		    neighbour_id = cellId[face.left_cell];
-		    outsign = -1;
 		}
 	    }
 	    assert(owner_id >= 0, "face seems to be not owned by a cell"); // [TODO] more info
 	    owner_cell_id_list ~= owner_id;
 	    neighbour_cell_id_list ~= neighbour_id;
-	    outsign_list ~= outsign;
 	}
 	size_t face_tally = internal_face_id_list.length;
 	foreach (b; boundaries) { face_tally += b.face_id_list.length; }
 	assert(face_tally == faces.length, "mismatch in number of faces in boundary sets");
+	//
+	// We need to sift through the list of cells and check the orientations
+	// of all of the attached faces.
+	// OpenFoam expects each face to be pointing out of the owner cell
+	// so, where we currently have the outsign negative for the owner cell,
+	// we need to reverse the order when writing the vertex ids for the face.
+	//
+	bool[] reverse_vtx_order_for_face;
+	reverse_vtx_order_for_face.length = faces.length;
+	foreach (i, c; cells) {
+	    foreach (j, fid; c.face_id_list) {
+		USGFace f = faces[fid];
+		if (f.left_cell is null) {
+		    // block-boundary cell
+		    assert(c.outsign_list[j] == -1, "expected inward-pointing face");
+		    reverse_vtx_order_for_face[fid] = true;
+		    continue;
+		}
+		if (f.right_cell is null) {
+		    // block-boundary cell
+		    assert(c.outsign_list[j] == 1, "expected outward-pointing face");
+		    reverse_vtx_order_for_face[fid] = false;
+		    continue;
+		}
+		// From this point, assume an interior cell.
+		if (cellId[f.left_cell] < cellId[f.right_cell]) {
+		    // Left cell is owner cell, in openFoam context.
+		    if (c.outsign_list[j] == 1) {
+			// Face is already pointing out from the owner cell.
+			reverse_vtx_order_for_face[fid] = false;
+		    } else {
+			// Face is currently pointing in to the owner cell.
+			reverse_vtx_order_for_face[fid] = true;
+		    }
+		} else {
+		    // Right cell is owner cell in openFoam context.
+		    if (c.outsign_list[j] == -1) {
+			// Face is already pointing out from the owner cell.
+			reverse_vtx_order_for_face[fid] = false;
+		    } else {
+			// Face is currently pointing in to the owner cell.
+			reverse_vtx_order_for_face[fid] = true;
+		    }
+		} // end if
+	    } // end foreach fid
+	} // end foreach c
 	//
 	// Now, we are ready to write the files.
 	//
@@ -1400,11 +1441,11 @@ public:
 	f.writeln(" location  \"constant/polyMesh\";");
 	f.writeln(" object    faces;");
 	f.writeln("}");
-	string index_str(const ref USGFace f, int outsign)
+	string index_str(const ref USGFace f, bool reverse_vtx_order)
 	{
 	    string str = " " ~ to!string(f.vtx_id_list.length) ~ "(";
 	    auto my_vtx_id_list = f.vtx_id_list.dup();
-	    if (outsign < 0) { reverse(my_vtx_id_list); }
+	    if (reverse_vtx_order) { reverse(my_vtx_id_list); }
 	    foreach (j, vtx_id; my_vtx_id_list) {
 		if (j > 0) { str ~= " "; }
 		str ~= to!string(vtx_id);
@@ -1413,9 +1454,13 @@ public:
 	    return str;
 	}
 	f.writefln("%d\n(", faces.length);
-	foreach (i; internal_face_id_list) { f.writeln(index_str(faces[i], outsign_list[i])); }
+	foreach (i; internal_face_id_list) {
+	    f.writeln(index_str(faces[i], reverse_vtx_order_for_face[i]));
+	}
 	foreach (b; boundaries) {
-	    foreach (i; b.face_id_list) { f.writeln(index_str(faces[i], outsign_list[i])); }
+	    foreach (i; b.face_id_list) {
+		f.writeln(index_str(faces[i], reverse_vtx_order_for_face[i]));
+	    }
 	}
 	f.writeln(")");
 	f.close();
