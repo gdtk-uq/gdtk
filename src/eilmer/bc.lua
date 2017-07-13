@@ -251,6 +251,13 @@ function WallKOmega:tojson()
    return str
 end
 
+WallFunction = BoundaryInterfaceEffect:new()
+WallFunction.type = "wall_function"
+function WallFunction:tojson()
+   local str = string.format('          {"type" : "%s"}', self.type)
+   return str
+end
+
 TemperatureFromGasSolidInterface = BoundaryInterfaceEffect:new{otherBlock=nil, otherFace=nil, orientation=-1}
 TemperatureFromGasSolidInterface.type = "temperature_from_gas_solid_interface"
 function TemperatureFromGasSolidInterface:tojson()
@@ -400,7 +407,7 @@ WallBC_NoSlip_FixedT = BoundaryCondition:new()
 WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
 function WallBC_NoSlip_FixedT:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"Twall", "label", "group"})
+   local flag = checkAllowedNames(o, {"Twall", "wall_function", "label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -409,6 +416,10 @@ function WallBC_NoSlip_FixedT:new(o)
 			       UpdateThermoTransCoeffs:new() }
    if config.turbulence_model == "k_omega" then
       o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      if o.wall_function then
+	 -- Only makes sense to add a wall function if the k-omega model is active.
+	 o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallFunction:new()
+      end
    end
    o.is_configured = true
    return o
@@ -418,13 +429,17 @@ WallBC_NoSlip_Adiabatic = BoundaryCondition:new()
 WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
 function WallBC_NoSlip_Adiabatic:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"label", "group"})
+   local flag = checkAllowedNames(o, {"wall_function", "label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new() }
    if config.turbulence_model == "k_omega" then
       o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      if o.wall_function then
+	 -- Only makes sense to add a wall function if the k-omega model is active.
+	 o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallFunction:new()
+      end
    end
    o.is_configured = true
    return o

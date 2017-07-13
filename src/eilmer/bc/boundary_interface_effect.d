@@ -75,6 +75,9 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
     case "wall_k_omega":
 	newBIE = new BIE_WallKOmega(blk_id, boundary);
 	break;
+    case "wall_function":
+	newBIE = new BIE_WallFunction(blk_id, boundary);
+	break;
     case "temperature_from_gas_solid_interface":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
 	string otherFaceName = getJSONstring(jsonData, "other_face", "none");
@@ -963,7 +966,6 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
     } // end apply()
 } // end class BIE_UpdateThermoTransCoeffs
 
-
 class BIE_WallKOmega : BoundaryInterfaceEffect {
     this(int id, int boundary)
     {
@@ -1097,6 +1099,109 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 	return ideal_omega_at_wall(cell) * (d0 * d0) / ((d0 + d) * (d0 + d));
     }
 } // end class BIE_WallKOmega
+
+class BIE_WallFunction : BoundaryInterfaceEffect {
+    this(int id, int boundary)
+    {
+	super(id, boundary, "WallFunction");
+    }
+
+    override string toString() const 
+    {
+	return "WallFunction()";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    // TODO: Wilson please fill me in.
+	    //       In fact, you could leave the unstructured version unimplemented for the moment.
+	    throw new FlowSolverException("WallFunction bc not implemented for unstructured grids.");
+	} // end foreach face
+    }
+    
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	FVCell cell;
+	FVInterface IFace;
+	auto gmodel = blk.myConfig.gmodel;
+
+	// TODO: Wilson please fill in details for each boundary.
+	throw new FlowSolverException("WallFunction bc not implemented for structured grids.");
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.north];
+		    FlowState fs = IFace.fs;
+
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.east];
+		    FlowState fs = IFace.fs;
+
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.south];
+		    FlowState fs = IFace.fs;
+
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.west];
+		    FlowState fs = IFace.fs;
+
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.top];
+		    FlowState fs = IFace.fs;
+
+		} // end j loop
+	    } // end for i
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.bottom];
+		    FlowState fs = IFace.fs;
+
+		} // end j loop
+	    } // end for i
+	    break;
+	} // end switch which_boundary
+    } // end apply()
+
+} // end class BIE_WallFunction
 
 // NOTE: This GAS DOMAIN boundary effect has a large
 //       and important side-effect:
