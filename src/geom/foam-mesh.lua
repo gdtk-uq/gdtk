@@ -4,12 +4,14 @@
 -- Authors: Rowan G., Ingo J., and Peter J.
 -- Date: 2017-07-03
 
-NORTH = 0
-EAST = 1
-SOUTH = 2
-WEST = 3
-TOP = 4
-BOTTOM = 5
+faceMap = {
+   north=0,
+   east=1,
+   south=2,
+   west=3,
+   top=4,
+   bottom=5
+}
 
 function checkAllowedNames(myTable, allowedNames)
    local setOfNames = {}
@@ -87,43 +89,38 @@ function FoamBlock:new(o)
       o.grid = UnstructuredGrid:new{sgrid=o.grid}
    end
    checkBndryLabels(o.bndry_labels)
+   -- Populate the unset bndry_labels with the internal defaults
+   for face, idx in pairs(faceMap) do
+      o.bndry_labels[face] = o.bndry_labels[face] or o.grid:get_boundaryset_tag(idx)
+   end
    -- Add the unique boundary labels to the global collection
    for _,bl in pairs(o.bndry_labels) do
       globalBndryLabels[bl] = true
    end
-   -- Overwrite the BoundaryFaceSet tags if necessary
-   if o.bndry_labels.north then
-      o.grid:set_boundaryset_tag(NORTH, o.bndry_labels.north)
-   end
-   if o.bndry_labels.east then
-      o.grid:set_boundaryset_tag(EAST, o.bndry_labels.east)
-   end
-   if o.bndry_labels.south then
-      o.grid:set_boundaryset_tag(SOUTH, o.bndry_labels.south)
-   end
-   if o.bndry_labels.west then
-      o.grid:set_boundaryset_tag(WEST, o.bndry_labels.west)
-   end
-   if o.bndry_labels.top then
-      o.grid:set_boundaryset_tag(TOP, o.bndry_labels.top)
-   end
-   if o.bndry_labels.bottom then
-      o.grid:set_boundaryset_tag(BOTTOM, o.bndry_labels.bottom)
-   end
    return o
 end
 
-function writeFaceSetFile(grid, tag)
-   -- Collect all faces that match tag
-   nBndry = grid:get_nboundaries()
+function writeFaceSetFile(grid, blks, label)
+   -- Collect all faces that match label
    faces = {}
-   for iBndry=0,nBndry-1 do
-      if (tag == grid:get_boundaryset_tag(iBndry)) then
-	 grid:add_boundaryset_faces_to_table(iBndry, faces)
+   for ib, blk in ipairs(blks) do
+      for bndry, bndry_label in pairs(blk.bndry_labels) do
+	 if (bndry_label == label) then
+	    iBndry = 6*(ib-1) + faceMap[bndry]
+	    grid:add_boundaryset_faces_to_table(iBndry, faces)
+	 end
       end
    end
+   if #faces == 0 then
+      -- We've found and empty boundaryset. Do nothing.
+      if (vrbLvl >= 2) then
+	 print("No faces in boundary face set: ", tag)
+	 print("Not writing a faceSet file.")
+      end
+      return
+   end
    -- Now write faceSet file
-   objName = tag.."_faces"
+   objName = label.."_faces"
    -- We'll remove the "-" from the tags and replace with underscores
    objName = string.gsub(objName, "-", "_")
    os.execute("mkdir -p constant/polyMesh/sets")
@@ -156,6 +153,7 @@ function writeMeshes()
 end
 
 function main(verbosityLevel)
+   vrbLvl = verbosityLevel
    if #blks > 1 then
       print("foamMesh only works on the first block presently.")
    end
@@ -173,7 +171,7 @@ function main(verbosityLevel)
       if (verbosityLevel >= 2) then
 	 print("Writing faceSet file for label: ", bl)
       end
-      writeFaceSetFile(blks[1].grid, bl)
+      writeFaceSetFile(blks[1].grid, blks, bl)
    end
    
 end   

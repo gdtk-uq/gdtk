@@ -99,6 +99,23 @@ extern(C) int set_boundaryset_tag(lua_State* L)
     return 0;
 }
 
+extern(C) int is_boundaryset_empty(lua_State* L)
+{
+    auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
+    size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
+    if (i < grid.boundaries.length) {
+	if (grid.boundaries[i].face_id_list.length == 0)
+	    lua_pushboolean(L, 1); // 1 is true, yes boundary is empty
+	else
+	    lua_pushboolean(L, 0); // zero is false, boundar is NOT empty
+    }
+    else {
+	// If there's no boundary, then it must be empty
+	lua_pushboolean(L, 1);
+    }
+    return 1;
+}
+
 extern(C) int add_boundaryset_faces_to_table(lua_State* L)
 {
     auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
@@ -314,6 +331,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_boundaryset_tag");
     lua_pushcfunction(L, &set_boundaryset_tag);
     lua_setfield(L, -2, "set_boundaryset_tag");
+    lua_pushcfunction(L, &is_boundaryset_empty);
+    lua_setfield(L, -2, "is_boundaryset_empty");
     lua_pushcfunction(L, &add_boundaryset_faces_to_table);
     lua_setfield(L, -2, "add_boundaryset_faces_to_table");
     lua_pushcfunction(L, &get_vtx!(UnstructuredGrid, UnstructuredGridMT));
