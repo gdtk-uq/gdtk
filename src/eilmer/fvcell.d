@@ -864,6 +864,10 @@ public:
 	foreach(isp; 0 .. fs.gas.massf.length) {
 	    U[0].massf[isp] = fs.gas.rho * fs.gas.massf[isp];
 	}
+	// Independent energies energy: Joules per unit volume.
+	foreach(imode; 0 .. U[0].energies.length) {
+	    U[0].energies[imode] = fs.gas.rho * fs.gas.e_modes[imode];
+	}
     } // end chemical_increment()
 
     void thermal_increment(double dt, double T_frozen_energy, GasModel gmodel) 
