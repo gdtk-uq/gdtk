@@ -1286,6 +1286,7 @@ import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
 import gas.powers_aslam_gas;
 import gas.ideal_dissociating_gas;
+import gas.two_temperature_nitrogen;
 import gas.fuel_air_mix;
 import core.stdc.stdlib : exit;
 
@@ -1361,6 +1362,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     case "IdealDissociatingGas":
 	gm = new IdealDissociatingGas(L);
 	break;
+    case "TwoTemperatureNitrogen":
+	gm = new TwoTemperatureNitrogen();
+	break;
     case "FuelAirMix":
 	gm = new FuelAirMix(L);
 	break;
@@ -1391,6 +1395,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     }
     if ((cast(FuelAirMix) gmodel) !is null) {
 	reactor = new MixingLimitedUpdate(fileName, gmodel);
+    }
+    if ((cast(TwoTemperatureNitrogen) gmodel) !is null) {
+	reactor = new VibRelaxNitrogen(fileName, gmodel);
     }
     if (reactor is null) {
 	throw new ChemistryUpdateException("Oops, failed to set up a ThermochemicalReactor.");
