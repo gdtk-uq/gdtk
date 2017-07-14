@@ -1377,41 +1377,42 @@ public:
 	//
 	bool[] reverse_vtx_order_for_face;
 	reverse_vtx_order_for_face.length = faces.length;
+	bool[] face_already_checked;
+	foreach (fid; 0 .. faces.length) { face_already_checked ~= false; }
 	foreach (i, c; cells) {
 	    foreach (j, fid; c.face_id_list) {
 		USGFace f = faces[fid];
+		if (face_already_checked[fid]) continue;
 		if (f.left_cell is null) {
 		    // block-boundary cell
 		    assert(c.outsign_list[j] == -1, "expected inward-pointing face");
 		    reverse_vtx_order_for_face[fid] = true;
+		    face_already_checked[fid] = true;
 		    continue;
 		}
 		if (f.right_cell is null) {
 		    // block-boundary cell
 		    assert(c.outsign_list[j] == 1, "expected outward-pointing face");
 		    reverse_vtx_order_for_face[fid] = false;
+		    face_already_checked[fid] = true;
 		    continue;
 		}
-		// From this point, assume an interior cell.
-		if (cellId[f.left_cell] < cellId[f.right_cell]) {
-		    // Left cell is owner cell, in openFoam context.
-		    if (c.outsign_list[j] == 1) {
-			// Face is already pointing out from the owner cell.
-			reverse_vtx_order_for_face[fid] = false;
-		    } else {
-			// Face is currently pointing in to the owner cell.
-			reverse_vtx_order_for_face[fid] = true;
-		    }
+		// From this point, assume an interior face with two attached cells.
+		size_t other_cell_id;
+		if (c.outsign_list[j] == 1) {
+		    other_cell_id = cellId[f.right_cell];
 		} else {
-		    // Right cell is owner cell in openFoam context.
-		    if (c.outsign_list[j] == -1) {
-			// Face is already pointing out from the owner cell.
-			reverse_vtx_order_for_face[fid] = false;
-		    } else {
-			// Face is currently pointing in to the owner cell.
-			reverse_vtx_order_for_face[fid] = true;
-		    }
+		    other_cell_id = cellId[f.left_cell];
+		}
+		if (((i < other_cell_id) && (c.outsign_list[j] == 1)) ||
+		    ((i > other_cell_id) && (c.outsign_list[j] == -1))) {
+		    // Current face orientaion is consistent with openFoam arrangement.
+		    reverse_vtx_order_for_face[fid] = false;
+		} else {
+		    // Current face orientation is opposite to openFoam arrangement.
+		    reverse_vtx_order_for_face[fid] = true;
 		} // end if
+		face_already_checked[fid] = true;
 	    } // end foreach fid
 	} // end foreach c
 	//
