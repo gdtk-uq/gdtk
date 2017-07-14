@@ -1,0 +1,13 @@
+set term postscript eps enhanced 20
+set output 'stag-prof-50Pa.eps'
+set title 'Infinite cylinder simulated with Eilmer4, rev d9effd2844d0'
+set xlabel 'x, m'
+set ylabel 'T/T_{/Symbol \245}'
+set yrange [0:12]
+T_inf = 300.0
+plot 'giordano_50Pa_T.data' t 'Giordano et al. (1997)' w lines ls 1, \
+     'giordano_50Pa_Tvib.data' notitle w lines ls 1, \
+     'stag-prof-50Pa-Blackman.data' u 1:($21/T_inf) t 'Blackman data' w linespoints pt 4, \
+     'stag-prof-50Pa-Blackman.data' u 1:($23/T_inf) notitle w linespoints pt 4
+
+     
