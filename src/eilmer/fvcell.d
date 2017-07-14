@@ -495,20 +495,7 @@ public:
 	    dUdt[ftl].tke = vol_inv*integral + Q.tke;
 	    integral = 0.0;
 	    foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.omega*iface[i].area[gtl]; }
-	    /*
-	    if ( id == 117 ) {
-		writefln("EAST: id= %d, %.16e", iface[Face.east].id, iface[Face.east].F.omega);
-		writefln("NORTH: id= %d, %.16e", iface[Face.north].id, iface[Face.north].F.omega);
-		writefln("WEST: id= %d, %.16e", iface[Face.west].id, iface[Face.west].F.omega);
-		writefln("SOUTH: id= %d, %.16e", iface[Face.south].id, iface[Face.south].F.omega);
-	    }
-	    */
 	    dUdt[ftl].omega = vol_inv*integral + Q.omega;
-	    /*
-	      if ( id == 117 ) {
-		writefln("Q.omega= %.16e dOmegadt= %.16e", Q.omega, dUdt[ftl].omega);
-	    }
-	    */
 	} else {
 	    dUdt[ftl].tke = 0.0;
 	    dUdt[ftl].omega = 0.0;
