@@ -32,7 +32,7 @@
  +      i.e. 2 for a line (2D), 3 for a triangle (3D)
  +
  + example:
- + $ ./partition_core mesh_file.su2 4 2
+ + $ ./ugrid_partition mesh_file.su2 mapped_cells 4 2
 ++/
 
 import std.stdio;
@@ -48,6 +48,21 @@ import std.format;
 import std.math;
 import std.process;
 import std.getopt;
+
+
+void printHelp()
+{
+    writeln("Usage: ugrid_partition");
+    writeln("");
+    writeln(" > ugrid_parition grid-file.su2 mapped-cells.txt nParitions nDim");
+    writeln("");
+    writeln("   where:");
+    writeln("   grid-file.su2      : name of grid file in SU2 format.");
+    writeln("   mapped-cells.txt   : name of output file for mapped cells.");
+    writeln("   nPartitions        : integer number of desired partitions.");
+    writeln("   nDim               : integer (2 or 3) for dimensionality of grid.");
+    writeln("");
+}
 
 // -------------------------------------------------------------------------------------
 // Classes
@@ -577,6 +592,11 @@ void construct_blocks(string meshFile, string mappedCellsFilename, string partit
 }
 
 int main(string[] args){
+    if (args.length != 5) {
+	writeln("Wrong number of command line arguments.");
+	printHelp();
+	return 1;
+    }
     // assign command line arguments to variable names
     string inputMeshFile; string mappedCellsFilename; int nparts; int ncommon;
     inputMeshFile = args[1];
