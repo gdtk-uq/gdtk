@@ -266,6 +266,9 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		    outFile.writefln("  pos=(%s, %s, %s)m, volume=%s m^^3",
 				     soln.get_value_str(ib, i, "pos.x"), soln.get_value_str(ib, i, "pos.y"),
 				     soln.get_value_str(ib, i, "pos.z"), soln.get_value_str(ib, i, "volume"));
+		    outFile.writefln("  pos=(%s, %s, %s)m, volume=%s m^^3",
+				     soln.get_value_str(ib, i, "pos.x"), soln.get_value_str(ib, i, "pos.y"),
+				     soln.get_value_str(ib, i, "pos.z"), soln.get_value_str(ib, i, "volume"));
 		    outFile.writefln("  rho=%s kg/m^^3, p=%s Pa, Ttr=%s K, u=%s J/kg",
 				     soln.get_value_str(ib, i, "rho"), soln.get_value_str(ib, i, "p"),
 				     soln.get_value_str(ib, i, "Ttr"), soln.get_value_str(ib, i, "u"));
@@ -273,8 +276,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 				     soln.get_value_str(ib, i, "vel.x"), soln.get_value_str(ib, i, "vel.y"),
 				     soln.get_value_str(ib, i, "vel.z"), soln.get_value_str(ib, i, "a"));
 		    outFile.writefln("  M_local=%s, pitot_p=%s Pa, total_p=%s Pa, total_h=%s J/kg",
-		    		     soln.get_value_str(ib, i, "M_local"), soln.get_value_str(ib, i, "pitot_p"),
-		    		     soln.get_value_str(ib, i, "total_p"), soln.get_value_str(ib, i, "total_h"));
+				     soln.get_value_str(ib, i, "M_local"), soln.get_value_str(ib, i, "pitot_p"),
+				     soln.get_value_str(ib, i, "total_p"), soln.get_value_str(ib, i, "total_h"));
 		    outFile.writefln("  mu=%s Pa.s, k=%s W/(m.K)", soln.get_value_str(ib, i, "mu"),
 				     soln.get_value_str(ib, i, "k"));
 		    outFile.writefln("  mu_t=%s Pa.s, k_t=%s W/(m.K), tke=%s (m/s)^^2, omega=%s 1/s",
@@ -284,6 +287,32 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		}
 	    }
 	} // end foreach tindx
+
+	if (GlobalConfig.nSolidBlocks > 0) {
+	    foreach (tindx; tindx_list_to_plot) {
+		writeln("  tindx= ", tindx);
+		auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
+		if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+		if (outputFormat == "gnuplot") {
+		    outFile.writeln(soln.solidBlocks[0].variable_names_as_string());
+		}
+		foreach (ip; 0 .. xp.length) {
+		    auto nearest = soln.find_nearest_cell_centre(xp[ip], yp[ip], zp[ip]);
+		    size_t ib = nearest[0]; size_t i = nearest[1]; size_t j = nearest[2]; size_t k = nearest[3];
+		    if (outputFormat == "gnuplot") {
+			outFile.writeln(soln.solidBlocks[ib].values_as_string(i, j, k));
+		    } else {
+			// Assume that pretty format was requested.
+			outFile.writefln("SolidBlock[%d], cell[%d]:", ib, i);
+			outFile.writefln("  pos=(%s, %s, %s)m, volume=%s m^^3",
+					 soln.get_value_str(ib, i, j, k, "pos.x"), soln.get_value_str(ib, i, j, k, "pos.y"),
+					 soln.get_value_str(ib, i, j, k, "pos.z"), soln.get_value_str(ib, i, j, k, "volume"));
+			outFile.writefln("  e=%s J/kg, T=%s K",
+					 soln.get_value_str(ib, i, j, k, "e"), soln.get_value_str(ib, i, j, k, "T"));
+		    }
+		}
+	    } // end foreach tindx
+	} // end if nSolidBlocks > 0
     } // end if probeStr
     //
     if (sliceListStr.length > 0) {

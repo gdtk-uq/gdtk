@@ -140,6 +140,18 @@ public:
 	return [L1, L2, Linf, peak_pos[0], peak_pos[1], peak_pos[2]];
     } // end compute_volume_weighted_norms()
 
+    string get_value_str(size_t ib, size_t i, size_t j, size_t k, string varName)
+    {
+	string value;
+	if (canFind(solidBlocks[ib].variableNames, varName)) {
+	    value ~= format("%g", solidBlocks[ib][varName, i, j, k]);
+	} else {
+	    value ~= "nil";
+	}
+	return value;
+    } // end get_value_str()
+
+
 } // end class SolidSolution
 
 class SBlockSolid {
