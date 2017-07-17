@@ -160,7 +160,7 @@ function runCollapseEdges()
    end
 end
 
-function writePatchDict(grid, blks)
+function writeCreatePatchDict(grid, blks)
    if (vrbLvl >= 1) then
       print("Writing out file: createPatchDict.")
    end
@@ -240,6 +240,17 @@ function writePatchDict(grid, blks)
       print("   DONE: Writing out file: createPatchDict.")
    end
 end
+
+function runCreatePatchDict()
+   if (vrbLvl >= 1) then
+      print("Running OpenFOAM command: createPatchDict.")
+   end
+   os.execute("createPatchDict -overwrite")
+   if (vrbLvl >= 1) then
+      print("   DONE: Running OpenFOAM command: createPatchDict.")
+   end
+end
+
 
 function writeNoughtDir()
    if (vrbLvl >= 1) then
@@ -325,7 +336,8 @@ function main(verbosityLevel)
    if (axisymmetric) then
       runCollapseEdges()
    end
-   writePatchDict(myMesh, blks)
+   writeCreatePatchDict(myMesh, blks)
+   runCreatePatchDict()
    writeNoughtDir()
    runRenumberMesh()
 end   
