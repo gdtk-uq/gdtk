@@ -1710,6 +1710,8 @@ public:
 	    }
 	    boundaries ~= new BoundaryFaceSet(b.tag, new_face_id_list, new_outsign_list);
 	}
+	// Need to update nboundaries after adding new boundaries
+	nboundaries = boundaries.length;
 	return this; // allows us to chain joinGrid calls
     } // end joinGrid()
 

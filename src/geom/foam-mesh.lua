@@ -124,15 +124,25 @@ function FoamBlock:new(o)
 end
 
 function amendTags(grid, blks)
+   if (vrbLvl >= 2) then
+      print("Amending tags in master mesh.")
+   end
    nBoundaries = grid:get_nboundaries()
+   print("nBoundaries= ", nBoundaries)
    for iBndry=0,nBoundaries-1 do
       origTag = grid:get_boundaryset_tag(iBndry)
       newTag = string.format("%s-%04d", origTag, math.floor(iBndry/6))
       grid:set_boundaryset_tag(iBndry, newTag)
    end
+   if (vrbLvl >= 2) then
+      print("   DONE: Amending tags in master mesh.")
+   end
 end
 
 function runCollapseEdges()
+   if (vrbLvl >= 1) then
+      print("Running OpenFOAM command: collapseEdges.")
+   end
    -- A 2-step process:
    -- 1. Place the collapseDict file in place.
    dgdDir = os.getenv("DGD")
@@ -146,9 +156,15 @@ function runCollapseEdges()
    -- 2. Run the collapeEdges command   
    cmd = "collapseEdges -overwrite"
    os.execute(cmd)
+   if (vrbLvl >= 1) then
+      print("   DONE: Running OpenFOAM command: collapseEdges.")
+   end
 end
 
 function writePatchDict(grid, blks)
+   if (vrbLvl >= 1) then
+      print("Writing out file: createPatchDict.")
+   end
    retVal = os.execute("test -d system")
    if retVal ~= 0 then
       os.execute("mkdir system")
@@ -221,9 +237,15 @@ function writePatchDict(grid, blks)
    end
    f:write(");\n")
    f:close()
+   if (vrbLvl >= 1) then
+      print("   DONE: Writing out file: createPatchDict.")
+   end
 end
 
 function writeNoughtDir()
+   if (vrbLvl >= 1) then
+      print("Creating templates.")
+   end
    -- Check if 0 exists.
    retVal = os.execute("test -d 0")
    if retVal == 0 then
@@ -240,6 +262,9 @@ function writeNoughtDir()
    if retVal ~= 0 then
       os.execute("mkdir "..dirName)
    end
+   if (vrbLvl >= 1) then
+      print("Templates will go in: ", dirName)
+   end
    -- Now copy required template files in place.
    foamTmpltDir = os.getenv("DGD").."/share/foamMesh-templates"
    filesToCopy = {"p", "U"}
@@ -255,30 +280,54 @@ function writeNoughtDir()
       cmd = string.format("cp %s/%s %s/", foamTmpltDir, f, dirName)
       os.execute(cmd)
    end
+   if (vrbLvl >= 1) then
+      print("   DONE: Creating templates.")
+   end
 end
 
 function writeMesh()
-   if #blks > 1 then
-      print("foamMesh only works on the first block presently.")
-   end
    if (vrbLvl >= 1) then
-      print("Writing out grid into 'polyMesh/'")
+      print("Writing out grid into 'constant/polyMesh/'")
    end
-   blks[1].ugrid:writeOpenFoamPolyMesh("constant")
+   myMesh:writeOpenFoamPolyMesh("constant")
+   if (vrbLvl >= 1) then
+      print("   DONE: Writing out grid into 'constant/polyMesh/'")
+   end
 end
 
 function runRenumberMesh()
+   if (vrbLvl >= 1) then
+      print("Running OpenFOAM command: renumberMesh.")
+   end
    os.execute("renumberMesh -overwrite")
+   if (vrbLvl >= 1) then
+      print("   DONE: Running OpenFOAM command: renumberMesh.")
+   end
 end
 
 function main(verbosityLevel)
    vrbLvl = verbosityLevel
-   amendTags(blks[1].ugrid)
+   -- Join all grids together.
+   if (vrbLvl >= 1) then
+      print("Joining all grids together.")
+   end
+   myMesh = blks[1].ugrid
+   for ib=2,#blks do
+      if (vrbLvl >= 2) then
+	 print("Joining blk ", ib, " to master mesh.")
+      end
+      myMesh:joinGrid(blks[ib].ugrid)
+      print("myMesh:get_nboundaries()= ", myMesh:get_nboundaries())
+   end
+   if (vrbLvl >= 1) then
+      print("   DONE: Joining all grids together.")
+   end
+   amendTags(myMesh)
    writeMesh()
    if (axisymmetric) then
       runCollapseEdges()
    end
-   writePatchDict(blks[1].ugrid, blks)
+   writePatchDict(myMesh, blks)
    writeNoughtDir()
    runRenumberMesh()
 end   

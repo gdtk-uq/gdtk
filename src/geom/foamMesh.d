@@ -40,7 +40,7 @@ int main(string[] args)
 
     string msg = "Usage:                               Comment:\n";
     msg       ~= "foamMesh [--job=<string>]            Job/filename (without .lua extension)\n";
-    msg       ~= "         [--verbosity=<int>]         defaults to 0\n";
+    msg       ~= "         [--verbosity=<int>]         defaults to 1\n";
     msg       ~= "         [--help]                    writes this message\n";
     msg       ~= "\n";
 
