@@ -1,3 +1,3 @@
 #!/bin/bash
 
-foamMesh --job=one-block
+foamMesh --job=one-block 

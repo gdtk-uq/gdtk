@@ -1,4 +1,6 @@
 -- This example builds a unit square and converts it to a wedge.
+
+axisymmetric = true
 -- Corners of blocks
 a = Vector3:new{x=0.0, y=0.0}
 b = Vector3:new{x=1.0, y=0.0}
@@ -18,11 +20,8 @@ quad0 = CoonsPatch:new{north=cd, east=bd, south=ab, west=ac}
 nxcells = 10; nycells = 5
 grid0 = StructuredGrid:new{psurface=quad0, niv=nxcells+1, njv=nycells+1}
 
--- Create a 3D wedge grid from the 2D structured grid
-wedge0 = grid0:makeWedgeGrid{dtheta=0.2, symmetric=true, label="wedge0"}
-
 -- Define OpenFoam block (a "grid" with labels)
-blk0 = FoamBlock:new{grid=wedge0,
+blk0 = FoamBlock:new{grid=grid0,
 		     bndry_labels={west="i-00", south="w-00", east="o-00"}}
 
 
