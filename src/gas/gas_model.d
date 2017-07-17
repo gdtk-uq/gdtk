@@ -1285,6 +1285,7 @@ import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
 import gas.powers_aslam_gas;
+import gas.two_temperature_reacting_argon;
 import gas.ideal_dissociating_gas;
 import gas.two_temperature_nitrogen;
 import gas.fuel_air_mix;
@@ -1359,6 +1360,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
     case "PowersAslamGas":
 	gm = new PowersAslamGas(L);
 	break;
+    case "TwoTemperatureReactingArgon":
+	gm = new TwoTemperatureReactingArgon(L);
+	break;
     case "IdealDissociatingGas":
 	gm = new IdealDissociatingGas(L);
 	break;
@@ -1389,6 +1393,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     }
     if ((cast(PowersAslamGas) gmodel) !is null) {
 	reactor = new UpdateAB(fileName, gmodel);
+    }
+    if ((cast(TwoTemperatureReactingArgon) gmodel) !is null) {
+	reactor = new UpdateArgonFrac(fileName, gmodel);
     }
     if ((cast(IdealDissociatingGas) gmodel) !is null) {
 	reactor = new UpdateIDG(fileName, gmodel);
