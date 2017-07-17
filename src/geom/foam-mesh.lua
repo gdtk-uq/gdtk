@@ -128,7 +128,6 @@ function amendTags(grid, blks)
       print("Amending tags in master mesh.")
    end
    nBoundaries = grid:get_nboundaries()
-   print("nBoundaries= ", nBoundaries)
    for iBndry=0,nBoundaries-1 do
       origTag = grid:get_boundaryset_tag(iBndry)
       newTag = string.format("%s-%04d", origTag, math.floor(iBndry/6))
@@ -317,7 +316,6 @@ function main(verbosityLevel)
 	 print("Joining blk ", ib, " to master mesh.")
       end
       myMesh:joinGrid(blks[ib].ugrid)
-      print("myMesh:get_nboundaries()= ", myMesh:get_nboundaries())
    end
    if (vrbLvl >= 1) then
       print("   DONE: Joining all grids together.")
