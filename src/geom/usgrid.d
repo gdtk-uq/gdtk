@@ -1521,6 +1521,31 @@ public:
 	}
 	f.writeln(")");
 	f.close();
+	//
+	// Finally, write the face sets using openFoam index order for the faces.
+	// So far these faceSets  are named for the objects in the boundary file.
+	string setsDir = topLevelDir ~ "/polyMesh/sets";
+	if (!exists(setsDir)) { mkdirRecurse(setsDir); }
+	startFace = internal_face_id_list.length;
+	foreach (i, b; boundaries) {
+	    size_t nf = b.face_id_list.length;
+	    if (nf == 0) continue; // skip past empty sets 
+	    string objName = b.tag; // Nominally, we would like to use the assigned tag
+	    // but, if it is not useful, make up something that is.
+	    if (objName.length == 0) { label = format("boundary%04d", i); }
+	    f = File(setsDir~"/"~objName, "w");
+	    f.writeln("FoamFile\n{");
+	    f.writeln(" version   2.0;");
+	    f.writeln(" format    ascii;");
+	    f.writeln(" class     faceSet;");
+	    f.writeln(" location  \"constant/polyMesh/sets\";");
+	    f.writefln(" object    %s;", objName);
+	    f.writeln("}");
+	    f.writefln("%d\n(", nf);
+	    foreach (j; 0 .. nf) { f.writefln(" %d", j+startFace); }
+	    f.writeln(")");
+	    startFace += nf; // for the next boundary
+	} // end foreach boundary
     } // end write_openFoam_polyMesh()
     
     UnstructuredGrid joinGrid(const UnstructuredGrid other,
