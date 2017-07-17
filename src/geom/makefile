@@ -53,12 +53,13 @@ clean:
 	- rm -r test_openFoam
 	- cd $(LUA_DIR); make clean
 
-install: foamMesh foam-mesh.lua
+install: foamMesh foam-mesh.lua 
 	- mkdir -p $(INSTALL_DIR)
 	cp foamMesh $(BUILD_DIR)/bin/
 	cp foam-mesh.lua $(BUILD_DIR)/bin/
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
+	cp -r foamMesh-templates $(INSTALL_DIR)/share/
 
 
 $(LIBLUA):
