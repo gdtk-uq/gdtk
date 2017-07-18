@@ -6,7 +6,7 @@
 
 -- Global settings
 turbulence_model = "none" -- Options are: "S-A" and "k-epsilon"
-axisymmetric = true
+axisymmetric = false
 dtheta = 0.2
 dz = 0.2
 
@@ -109,10 +109,10 @@ function FoamBlock:new(o)
       o.bndry_labels.top = "wedge-front"
       o.bndry_labels.bottom = "wedge-rear"
    else
-      o.bndry_labels.top = "empty"
-      o.bndry_labels.bottom = "empty"
+      o.bndry_labels.top = "FrontAndBack"
+      o.bndry_labels.bottom = "FrontAndBack"
    end
-   -- Populate the unset bndry_labels with the internal defaults
+   -- Populate the unset bndry_labels with the defaults
    for _,face in ipairs({"north", "east", "south", "west"}) do
       o.bndry_labels[face] = o.bndry_labels[face] or "unassigned"
    end
@@ -153,7 +153,7 @@ function runCollapseEdges()
    cmd = string.format("cp %s system/", collapseDictFile)
    os.execute(cmd)
    -- 2. Run the collapeEdges command   
-   cmd = "collapseEdges -overwrite"
+   cmd = "collapseEdges -overwrite -noZero"
    os.execute(cmd)
    if (vrbLvl >= 1) then
       print("   DONE: Running OpenFOAM command: collapseEdges.")
@@ -187,7 +187,7 @@ function writeCreatePatchDict(grid, blks)
    f:write("(\n")
    for label,_ in pairs(globalBndryLabels) do
       bType = "patch"
-      if label == "empty" then
+      if label == "FrontAndBack" then
 	 bType = "empty"
       end
       if label == "wedge-front" or label == "wedge-rear" then
@@ -201,11 +201,9 @@ function writeCreatePatchDict(grid, blks)
 	 bType = "wall"
       end
       if labelPrefix == "i-" then
-	 -- [TODO:IJ] Please check.
 	 bType = "patch"
       end
       if labelPrefix == "o-" then
-	 -- [TODO:IJ] Please check.
 	 bType = "patch"
       end
       if labelPrefix == "s-" then
@@ -227,7 +225,9 @@ function writeCreatePatchDict(grid, blks)
 	    if (bndryLabel == label) then
 	       iBndry = 6*(ib-1) + faceMap[bndry]
 	       tag = grid:get_boundaryset_tag(iBndry)
-	       f:write(string.format("            %s \n", tag))
+           if (not grid:is_boundaryset_empty(iBndry)) then
+	          f:write(string.format("            %s \n", tag))
+           end
 	    end
 	 end
       end
@@ -245,11 +245,35 @@ function runCreatePatchDict()
    if (vrbLvl >= 1) then
       print("Running OpenFOAM command: createPatchDict.")
    end
-   os.execute("createPatchDict -overwrite")
+   os.execute("createPatch -overwrite")
    if (vrbLvl >= 1) then
-      print("   DONE: Running OpenFOAM command: createPatchDict.")
+      print("   DONE: Running OpenFOAM command: createPatch.")
    end
 end
+
+function runCreatePatchDict_empty()
+   if (vrbLvl >= 1) then
+      print("Creating template.")
+   end
+   -- Now copy required template files in place.
+   foamTmpltDir = os.getenv("DGD").."/share/foamMesh-templates"
+   filesToCopy = {"createPatchDict"}
+   for _,f in ipairs(filesToCopy) do
+      cmd = string.format("cp %s/%s %s/", foamTmpltDir, f, "system")
+      os.execute(cmd)
+   end
+   if (vrbLvl >= 1) then
+      print("   DONE: Creating templates.")
+   end
+   if (vrbLvl >= 1) then
+      print("Running OpenFOAM command: createPatchDict.")
+   end
+   os.execute("createPatch -overwrite")
+   if (vrbLvl >= 1) then
+      print("   DONE: Running OpenFOAM command: createPatch.")
+   end
+end
+
 
 
 function writeNoughtDir()
@@ -309,9 +333,43 @@ function runRenumberMesh()
    if (vrbLvl >= 1) then
       print("Running OpenFOAM command: renumberMesh.")
    end
-   os.execute("renumberMesh -overwrite")
+   -- Check if 0 exists.
+   retVal = os.execute("test -d 0")
+   if retVal == 0 then
+      -- 0/ already exists. We don't want renumberMesh
+      if (vrbLvl >= 1) then
+         print("   SKIPPED: Running OpenFOAM command: renumberMesh.") 
+         print("   Run manually once /0 is set-up.")
+      end
+   else
+      os.execute("renumberMesh -overwrite -noZero")
+      if (vrbLvl >= 1) then
+         print("   DONE: Running OpenFOAM command: renumberMesh.")
+      end      
+   end
+end
+
+function runCheckMesh()
    if (vrbLvl >= 1) then
-      print("   DONE: Running OpenFOAM command: renumberMesh.")
+      print("Running OpenFOAM command: checkMesh.")
+   end
+   os.execute("checkMesh")
+   if (vrbLvl >= 1) then
+      print("   DONE: Running OpenFOAM command: checkMesh.")
+   end
+end
+
+function clearPolyMesh()
+   if (vrbLvl >= 1) then
+      print("Clearing PolyMesh folder.")
+   end
+   -- Check if constant/polyMesh exists.
+   retVal = os.execute("test -d constant/polyMesh")
+   if retVal == 0 then
+       os.execute("rm -r constant/polyMesh")  
+   end
+   if (vrbLvl >= 1) then
+      print("   DONE: existing polyMesh folder deleted.")
    end
 end
 
@@ -332,13 +390,16 @@ function main(verbosityLevel)
       print("   DONE: Joining all grids together.")
    end
    amendTags(myMesh)
+   clearPolyMesh()
    writeMesh()
+   writeCreatePatchDict(myMesh, blks)
+   runCreatePatchDict()
    if (axisymmetric) then
       runCollapseEdges()
    end
-   writeCreatePatchDict(myMesh, blks)
-   runCreatePatchDict()
-   writeNoughtDir()
+   runCreatePatchDict_empty()  -- required to remove empty patches
    runRenumberMesh()
+   writeNoughtDir()
+   runCheckMesh()
 end   
 

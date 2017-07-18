@@ -31,7 +31,7 @@
 
 -- use dofile ([filename]) to load table saved as strings in file. I.e. autmactially recrete the table.
 
-
+require 'lua_helper'  -- loads lua helper functions
 
 function interface(args) -- only needed for viscous simualtions.
    -- Function that returns the conditions at the boundary 
@@ -500,4 +500,5 @@ function convective_flux(args)
 
    return flux
 end
+
 

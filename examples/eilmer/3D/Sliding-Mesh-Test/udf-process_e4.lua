@@ -4,6 +4,8 @@
 
 -- Version 3 is based on vtx locations and implements a conservative scheme. I.e. overalpping areas are considered to set correct fluxes.
 
+require 'lua_helper'  -- loads lua helper functions
+
 
 function atTimestepStart(sim_time,steps,gasBlocks)
    --print("in supervisor function --> atTimeStepStart")
@@ -590,4 +592,7 @@ function source_vector(args, cell_data)
    src.species = {[0]=0.0,}
    return src
 end
+
+
+
 

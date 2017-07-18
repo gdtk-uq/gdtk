@@ -17,6 +17,8 @@
 --   return cell, cell
 --end
 
+require 'lua_helper'  -- loads lua helper functions
+
 function interface(args)
    --print("Shouldnt be here")
    -- Function that returns the conditions at the boundary 
@@ -529,3 +531,5 @@ function convective_flux(args)
 
    return flux
 end
+
+
