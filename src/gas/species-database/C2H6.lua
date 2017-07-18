@@ -13,6 +13,18 @@ db.C2H6.gamma = {
    description = 'ratio of specific heats at 300.0K',
    reference = 'evaluated using Cp/R from Chemkin-II coefficients'
 }
+db.C2H6.sigma = {
+   value = 4.302,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.C2H6.epsilon = {
+   value = 252.300,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.C2H6.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 

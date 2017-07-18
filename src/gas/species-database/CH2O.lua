@@ -13,6 +13,19 @@ db.CH2O.gamma = {
    description = 'ratio of specific heats at 300.0K',
    reference = 'evaluated using Cp/R from Chemkin-II coefficients'
 }
+db.CH2O.sigma = {
+   value = 3.590,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CH2O.epsilon = {
+   value = 498.000,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+
 db.CH2O.ceaThermoCoeffs = {
    notes = 'converted data from Eilmer 3, origin. Chemkin Thermo. Database Kee et al. (1993)',
    nsegments = 2, 

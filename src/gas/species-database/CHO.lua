@@ -13,6 +13,18 @@ db.CHO.gamma = {
    description = 'ratio of specific heats at room temperature (= Cp/(Cp - R))',
    reference = "Gokel (2004), Dean's Handbook of Organic Chemistry",
 }
+db.CHO.sigma = {
+   value = 3.590,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CHO.epsilon = {
+   value = 498.000,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.CHO.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 

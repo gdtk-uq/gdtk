@@ -9,6 +9,18 @@ db.CO2.gamma = {
    value = 1.3,
    note = "valid at low temperatures"
 }
+db.CO2.sigma = {
+   value = 3.763,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CO2.epsilon = {
+   value = 244.000,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.CO2.entropyRefValues = {
    s1 = 0.0,
    T1 = 298.15,

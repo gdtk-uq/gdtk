@@ -13,6 +13,18 @@ db.CH4.gamma = {
    description = 'ratio of specific heats at room temperature (= Cp/(Cp - R))',
    reference = 'using Cp evaluated from CEA2 coefficients at T=300.0 K'
 }
+db.CH4.sigma = {
+   value = 3.746,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CH4.epsilon = {
+   value = 141.400,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.CH4.grimechThermoCoeffs = {
    notes = 'data from GRIMECH 3.0',
    nsegments = 2, 

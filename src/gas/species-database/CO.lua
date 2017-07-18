@@ -13,7 +13,18 @@ db.CO.gamma = {
    description = 'ratio of specific heats at 300.0K',
    reference = 'evaluated using Cp/R from Chemkin-II coefficients'
 }
-
+db.CO.sigma = {
+   value = 3.650,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.CO.epsilon = {
+   value = 98.100,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 
 db.CO.ceaThermoCoeffs = {
    nsegments = 3,

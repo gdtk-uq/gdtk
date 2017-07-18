@@ -13,6 +13,18 @@ db.O.gamma = {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'monatomic gas'
 }
+db.O.sigma = {
+   value = 2.750,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.O.epsilon = {
+   value = 80.000,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.O.ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {
