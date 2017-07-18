@@ -55,11 +55,14 @@ clean:
 
 install: foamMesh foam-mesh.lua 
 	- mkdir -p $(INSTALL_DIR)
+	- mkdir -p $(BUILD_DIR)/bin
+	- mkdir -p $(BUILD_DIR)/lib
+	- mkdir -p $(BUILD_DIR)/share
 	cp foamMesh $(BUILD_DIR)/bin/
 	cp foam-mesh.lua $(BUILD_DIR)/bin/
+	cp -r foamMesh-templates $(BUILD_DIR)/share/
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
-	cp -r foamMesh-templates $(INSTALL_DIR)/share/
 
 
 $(LIBLUA):
