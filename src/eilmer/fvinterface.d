@@ -229,8 +229,8 @@ public:
 		assert(0, "Oops, don't seem to have a cell available.");
 	    }
 	}
-        double k_eff = viscous_factor * (fs.gas.k + fs.k_t);
-	double mu_eff =  viscous_factor * (fs.gas.mu + fs.mu_t);
+        double k_eff = viscous_factor * (k_laminar + fs.k_t);
+	double mu_eff = viscous_factor * (mu_laminar + fs.mu_t);
 	double lmbda = -2.0/3.0 * mu_eff;
 
 	// We separate diffusion based on laminar or turbulent
