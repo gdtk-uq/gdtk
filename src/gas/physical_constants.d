@@ -13,3 +13,5 @@ module gas.physical_constants;
 immutable R_universal = 8.31451; // J/(mol.K) -- Tipler (1991)
 // One atmosphere, in Pascals
 immutable P_atm = 101.325e3;          // Pa
+immutable Kb = 1.38065e-23; //Boltzmann constant
+immutable Av = 6.02214e23; //Avogadro number
