@@ -148,6 +148,10 @@ function FluidBlock:new(o)
    -- Must have a grid and fillCondition
    assert(o.grid, "need to supply a grid")
    assert(o.fillCondition, "need to supply a fillCondition")
+   if getmetatable(o.fillCondition) == FlowSolution then
+      -- Let's build a fillCondition function here from a FlowSolution.
+      o.fillCondition = makeFillConditionFn(o.fillCondition)
+   end
    -- Fill in default values, if already not set
    if o.active == nil then
       o.active = true
