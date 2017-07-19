@@ -253,7 +253,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    if (outputFormat == "gnuplot") {
-		outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+		outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
 	    }
 	    foreach (ip; 0 .. xp.length) {
 		auto nearest = soln.find_nearest_cell_centre(xp[ip], yp[ip], zp[ip]);
@@ -331,7 +331,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    //
-	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
 	    foreach (sliceStr; sliceListStr.split(";")) {
 		auto rangeStrings = sliceStr.split(",");
 		auto blk_range = decode_range_indices(rangeStrings[0], 0, soln.nBlocks);
@@ -498,7 +498,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string());
+	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
 	    size_t[2][] cells_found; // accumulate the identies of the cells found here
 	    foreach(lineStr; extractLineStr.split(";")) {
 		auto items = lineStr.split(",");

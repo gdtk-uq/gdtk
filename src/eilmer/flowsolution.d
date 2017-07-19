@@ -432,12 +432,17 @@ public:
 	return _data[single_index(i,j,k)][variableIndex[varName]];
     }
 
-    string variable_names_as_string()
+    string variable_names_as_string(bool with_column_pos=false)
     {
 	auto writer = appender!string();
 	formattedWrite(writer, "#");
-	foreach(name; variableNames) {
-	    formattedWrite(writer, " \"%s\"", name);
+	foreach (i, name; variableNames) {
+	    if (with_column_pos) {
+		formattedWrite(writer, " %d:%s", i+1, name);
+	    }
+	    else {
+		formattedWrite(writer, " \"%s\"", name);
+	    }
 	}
 	return writer.data;
     }
