@@ -1137,6 +1137,10 @@ function write_config_file(fileName)
    f:write(string.format('"nkb": %d,\n', config.nkb))
    f:write(string.format('"propagate_inflow_data": %s,\n',
 			 tostring(config.propagate_inflow_data)))
+   f:write(string.format('"boundary_group_for_loads": "%s",\n',
+			 config.boundary_group_for_loads))
+   f:write(string.format('"compute_loads": %s,\n',
+			 tostring(config.compute_loads)))
    f:write(string.format('"nhcell": %d,\n', #historyCells))
    for i,hcell in ipairs(historyCells) do
       f:write(string.format('"history-cell-%d": [%d, %d],\n', i-1, hcell.ib, hcell.i))

@@ -930,6 +930,8 @@ void read_config_file()
     mixin(update_int("njb", "njb"));
     mixin(update_int("nkb", "nkb"));
     mixin(update_bool("propagate_inflow_data", "propagate_inflow_data"));
+    mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
+    mixin(update_bool("compute_loads", "compute_loads"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
 	writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
@@ -940,6 +942,8 @@ void read_config_file()
 	writeln("  njb: ", GlobalConfig.njb);
 	writeln("  nkb: ", GlobalConfig.nkb);
 	writeln("  propagate_inflow_data: ", GlobalConfig.propagate_inflow_data);
+	writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
+	writeln("  compute_loads: ", GlobalConfig.compute_loads);
     }
 
     int nhcell = getJSONint(jsonData, "nhcell", 0);
@@ -1088,8 +1092,6 @@ void read_control_file()
     mixin(update_double("dt_plot", "dt_plot"));
     mixin(update_double("dt_history", "dt_history"));
     mixin(update_double("dt_loads", "dt_loads"));
-    mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
-    mixin(update_bool("compute_loads", "compute_loads"));
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
@@ -1106,8 +1108,6 @@ void read_control_file()
 	writeln("  dt_plot: ", GlobalConfig.dt_plot);
 	writeln("  dt_history: ", GlobalConfig.dt_history);
 	writeln("  dt_loads: ", GlobalConfig.dt_loads);
-	writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
-	writeln("  compute_loads: ", GlobalConfig.compute_loads);
 	writeln("  halt_now: ", GlobalConfig.halt_now);
     }
     
