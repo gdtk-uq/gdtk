@@ -196,7 +196,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 
     	//Determine the current number densities
         double n_e = Q.rho/_mol_masses[2]*Q.massf[2]*Av; // number density of electrons
-	double n_Ar = Q.rho/_mol_masses[1]*Q.massf[1]*Av; // number density of Ar
+	double n_Ar = Q.rho/_mol_masses[0]*Q.massf[0]*Av; // number density of Ar
 
     	//Determine the current rate coefficients
         double kfA = 1.68e-26*pow(Q.Ttr,1.5)*(_theta_A1star/Q.Ttr+2)*exp(-_theta_A1star/Q.Ttr);
@@ -228,7 +228,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 		throw new GasModelException("Electron Temperature Too high for collision cross section model");
 	}
     	 
-    	double Q_ei = 1.95e-10*pow(Q.T_modes[0],-20)*log(1.53e8*pow(Q.T_modes[0],3)/n_e);
+    	double Q_ei = 1.95e-10*pow(Q.T_modes[0],-2)*log(1.53e8*pow(Q.T_modes[0],3)/n_e);
         //find the collision frequencies
         double v_ea = (1-alpha)*Q.rho/m_Ar*pow(8*Kb*Q.T_modes[0]/PI/m_e,0.5)*Q_ea;//electron-Ar collisions
         double v_ei = alpha*Q.rho/m_Ar*pow(8*Kb*Q.T_modes[0]/PI/m_e,0.5)*Q_ei;//electron-Ar+ collisions
@@ -236,8 +236,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         //update the energy of each state
         double u_trans_ionisation = ne_dot_e*Kb*_theta_ion;// energy transferred to electron mode through ionisation
         double u_trans_collisions = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.Ttr-Q.T_modes[0]);// energy transferred to electron mode through collisions
-        Q.u = Q.u - u_trans_collisions - u_trans_ionisation;
-        Q.e_modes[0] = Q.e_modes[0] + u_trans_collisions + u_trans_ionisation;
+        Q.u = Q.u + u_trans_collisions*tInterval - u_trans_ionisation*tInterval;
+        Q.e_modes[0] = Q.e_modes[0] - u_trans_collisions*tInterval + u_trans_ionisation*tInterval;
 
 	// Since the internal energy and density in the (isolated) reactor is fixed,
 	// we need to evaluate the new temperature, pressure, etc.
