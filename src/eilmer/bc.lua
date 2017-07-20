@@ -338,7 +338,8 @@ BoundaryCondition = {
    convective_flux_computed_in_bc = false,
    preReconAction = {},
    postConvFluxAction = {},
-   preSpatialDerivAction = {},
+   preSpatialDerivActionAtBndryFaces = {},
+   preSpatialDerivActionAtBndryCells = {},
    postDiffFluxAction = {}
 }
 function BoundaryCondition:new(o)
@@ -346,7 +347,11 @@ function BoundaryCondition:new(o)
    setmetatable(o, self)
    self.__index = self
    -- If any of the actions are set, then we assume the boundary condition is configured.
-   if ( #o.preReconAction > 0 or #o.postConvFluxAction > 0 or #o.preSpatialDerivAction > 0 or #o.postDiffFluxAction > 0 ) then
+   if ( #o.preReconAction > 0 or
+	#o.postConvFluxAction > 0 or
+	#o.preSpatialDerivActionAtBndryFaces > 0 or
+	#o.preSpatialDerivActionAtBndryCells > 0 or   
+	#o.postDiffFluxAction > 0 ) then
       o.is_configured = true
    end
    return o
@@ -374,10 +379,16 @@ function BoundaryCondition:tojson()
       if i ~= #self.postConvFluxAction then str = str .. "," end
    end
    str = str .. '\n        ],\n'
-   str = str .. '        "pre_spatial_deriv_action": [\n'
-   for i,effect in ipairs(self.preSpatialDerivAction) do
+   str = str .. '        "pre_spatial_deriv_action_at_bndry_faces": [\n'
+   for i,effect in ipairs(self.preSpatialDerivActionAtBndryFaces) do
       str = str .. effect:tojson()
-      if i ~= #self.preSpatialDerivAction then str = str .. "," end
+      if i ~= #self.preSpatialDerivActionAtBndryFaces then str = str .. "," end
+   end
+   str = str .. '\n        ],\n'
+   str = str .. '        "pre_spatial_deriv_action_at_bndry_cells": [\n'
+   for i,effect in ipairs(self.preSpatialDerivActionAtBndryCells) do
+      str = str .. effect:tojson()
+      if i ~= #self.preSpatialDerivActionAtBndryCells then str = str .. "," end
    end
    str = str .. '\n        ],\n'
    str = str .. '        "post_diff_flux_action": [\n'
@@ -398,7 +409,7 @@ function WallBC_WithSlip:new(o)
    assert(flag, "Invalid name for item supplied to WallBC_WithSlip constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
@@ -411,14 +422,14 @@ function WallBC_NoSlip_FixedT:new(o)
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
-			       FixedT:new{Twall=o.Twall},
-			       UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+					   FixedT:new{Twall=o.Twall},
+					   UpdateThermoTransCoeffs:new() }
    if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
       if o.wall_function then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallFunction:new()
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallFunction:new()
       end
    end
    o.is_configured = true
@@ -433,12 +444,12 @@ function WallBC_NoSlip_Adiabatic:new(o)
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
    if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
       if o.wall_function then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallFunction:new()
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallFunction:new()
       end
    end
    o.is_configured = true
@@ -461,12 +472,12 @@ function WallBC_TranslatingSurface_FixedT:new(o)
    o.v_trans.x = o.v_trans.x or 0.0
    o.v_trans.y = o.v_trans.y or 0.0
    o.v_trans.z = o.v_trans.z or 0.0
-   o.preSpatialDerivAction = { CopyCellData:new(),
-			       TranslatingSurface:new{v_trans=o.v_trans},
-			       FixedT:new{Twall=o.Twall},
-			       UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
+					   TranslatingSurface:new{v_trans=o.v_trans},
+					   FixedT:new{Twall=o.Twall},
+					   UpdateThermoTransCoeffs:new() }
    if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
    return o
@@ -488,10 +499,10 @@ function WallBC_TranslatingSurface_Adiabatic:new(o)
    o.v_trans.x = o.v_trans.x or 0.0
    o.v_trans.y = o.v_trans.y or 0.0
    o.v_trans.z = o.v_trans.z or 0.0
-   o.preSpatialDerivAction = { CopyCellData:new(),
-			       TranslatingSurface:new{v_trans=o.v_trans} }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
+					   TranslatingSurface:new{v_trans=o.v_trans} }
    if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
    return o
@@ -520,12 +531,12 @@ function WallBC_RotatingSurface_FixedT:new(o)
    o.centre.x = o.centre.x or 0.0
    o.centre.y = o.centre.y or 0.0
    o.centre.z = o.centre.z or 0.0
-   o.preSpatialDerivAction = { CopyCellData:new(),
-			       RotatingSurface:new{r_omega=o.r_omega, centre=o.centre},
-			       FixedT:new{Twall=o.Twall},
-			       UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
+					   RotatingSurface:new{r_omega=o.r_omega, centre=o.centre},
+					   FixedT:new{Twall=o.Twall},
+					   UpdateThermoTransCoeffs:new() }
    if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
    return o
@@ -554,10 +565,10 @@ function WallBC_RotatingSurface_Adiabatic:new(o)
    o.centre.x = o.centre.x or 0.0
    o.centre.y = o.centre.y or 0.0
    o.centre.z = o.centre.z or 0.0
-   o.preSpatialDerivAction = { CopyCellData:new(),
-			       RotatingSurface:new{r_omega=o.r_omega, centre=o.centre} }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(),
+					   RotatingSurface:new{r_omega=o.r_omega, centre=o.centre} }
    if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end
    o.is_configured = true
    return o
@@ -571,7 +582,7 @@ function InFlowBC_Supersonic:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
-   o.preSpatialDerivAction = { FlowStateCopyToInterface:new{flowCondition=o.flowCondition} }
+   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowCondition=o.flowCondition} }
    o.is_configured = true      
    return o
 end
@@ -587,7 +598,7 @@ function InFlowBC_StaticProfile:new(o)
    o.match = o.match or "xyz-to-xyz"
    o.filename = o.filename or o.fileName
    o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename, match=o.match} }
-   o.preSpatialDerivAction = { FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match} }
+   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyFromProfileToInterface:new{filename=o.filename, match=o.match} }
    o.is_configured = true      
    return o
 end
@@ -603,7 +614,7 @@ function InFlowBC_ConstFlux:new(o)
    o.convective_flux_computed_in_bc = true
    o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
@@ -619,7 +630,7 @@ function InFlowBC_ShockFitting:new(o)
    o.convective_flux_computed_in_bc = true
    o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
@@ -643,7 +654,7 @@ function InFlowBC_FromStagnation:new(o)
 					   alpha=o.alpha, beta=o.beta,
 					   mass_flux=o.mass_flux,
 					   relax_factor=o.relax_factor} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
@@ -672,7 +683,7 @@ function OutFlowBC_FixedP:new(o)
    o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedP:new{p_outside=o.p_outside} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
@@ -688,7 +699,7 @@ function OutFlowBC_FixedPT:new(o)
    o.is_wall = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedPT:new{p_outside=o.p_outside, T_outside=o.T_outside} }
-   o.preSpatialDerivAction = { CopyCellData:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
@@ -708,7 +719,7 @@ function ExchangeBC_FullFace:new(o)
 						 orientation=o.orientation,
 						 reorient_vector_quantities=o.reorient_vector_quantities,
 						 Rmatrix=o.Rmatrix} }
-   o.preSpatialDerivAction = { UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new() }
    o.is_configured = true
    return o
 end
@@ -733,7 +744,7 @@ function ExchangeBC_MappedCell:new(o)
 						   list_mapped_cells=o.list_mapped_cells,
 						   reorient_vector_quantities=o.reorient_vector_quantities,
 						   Rmatrix=o.Rmatrix} }
-   o.preSpatialDerivAction = { UpdateThermoTransCoeffs:new() }
+   o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new() }
    o.is_configured = true
    return o
 end
@@ -747,7 +758,7 @@ function UserDefinedBC:new(o)
    o = BoundaryCondition.new(self, o)
    o.fileName = o.fileName or o.filename
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
-   o.preSpatialDerivAction = { UserDefinedInterface:new{fileName=o.fileName}, UpdateThermoTransCoeffs:new() } 
+   o.preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName=o.fileName}, UpdateThermoTransCoeffs:new() } 
    o.is_configured = true
    return o
 end
@@ -762,13 +773,13 @@ function WallBC_AdjacentToSolid:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivAction = { CopyCellData:new(), ZeroVelocity:new(),
-			       TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
-							    otherFace=o.otherFace,
-							    orientation=o.orientation} }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+					   TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
+										otherFace=o.otherFace,
+										orientation=o.orientation} }
    
    if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivAction[#o.preSpatialDerivAction+1] = WallKOmega:new()
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end		
    o.postDiffFluxAction = { EnergyFluxFromAdjacentSolid:new{otherBlock=o.otherBlock,
 							    otherFace=o.otherFace,

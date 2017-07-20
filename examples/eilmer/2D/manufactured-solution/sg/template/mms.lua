@@ -47,26 +47,26 @@ if case == 1 or case == 3 then
 else
    bcList[north] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
-      preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
-				UpdateThermoTransCoeffs:new()
+      preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
+					    UpdateThermoTransCoeffs:new()
       }
    }
    bcList[east] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
-      preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
-				UpdateThermoTransCoeffs:new()
+      preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
+					    UpdateThermoTransCoeffs:new()
       }
    }
    bcList[south] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
-      preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
-				UpdateThermoTransCoeffs:new()
+      preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
+					    UpdateThermoTransCoeffs:new()
       }
    }
    bcList[west] = BoundaryCondition:new{
       preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },
-      preSpatialDerivAction = { UserDefinedInterface:new{fileName='udf-bc.lua'},
-				UpdateThermoTransCoeffs:new()
+      preSpatialDerivActionAtBndryFaces = { UserDefinedInterface:new{fileName='udf-bc.lua'},
+					    UpdateThermoTransCoeffs:new()
       }
    }
 end

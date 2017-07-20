@@ -907,7 +907,7 @@ void evalRHS(double pseudoSimTime, int ftl)
     }
     if (GlobalConfig.viscous) {
 	foreach (blk; gasBlocks) {
-	    blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
+	    blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, 0, ftl);
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
 	    blk.flow_property_derivatives(0); 

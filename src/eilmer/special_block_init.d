@@ -46,7 +46,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
 
     // Cells along a wall get the properties at the wall.
     foreach (bcId; noSlipWalls.byKey()) {
-	blk.bc[bcId].applyPreSpatialDerivAction(0.0, 0, 0);
+	blk.bc[bcId].applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
     }
     foreach (cell; cellsAlongWalls) {
 	foreach (face; cell.iface) {

@@ -720,11 +720,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(gasBlocks,1)) {
-		if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 	    }
 	} else {
 	    foreach (blk; gasBlocks) {
-		if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 	    }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
@@ -862,11 +862,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	    if (GlobalConfig.apply_bcs_in_parallel) {
 		foreach (blk; parallel(gasBlocks,1)) {
-		    if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		    if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 		}
 	    } else {
 		foreach (blk; gasBlocks) {
-		    if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		    if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 		}
 	    }
 	    foreach (blk; parallel(gasBlocks,1)) {
@@ -1002,11 +1002,11 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	    if (GlobalConfig.apply_bcs_in_parallel) {
 		foreach (blk; parallel(gasBlocks,1)) {
-		    if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		    if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 		}
 	    } else {
 		foreach (blk; gasBlocks) {
-		    if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		    if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 		}
 	    }
 	    foreach (blk; parallel(gasBlocks,1)) {
@@ -1185,11 +1185,11 @@ void gasdynamic_explicit_increment_with_moving_grid()
     if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	if (GlobalConfig.apply_bcs_in_parallel) {
 	    foreach (blk; parallel(gasBlocks,1)) {
-		if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 	    }
 	} else {
 	    foreach (blk; gasBlocks) {
-		if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 	    }
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
@@ -1319,11 +1319,11 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	if (GlobalConfig.viscous && !GlobalConfig.separate_update_for_viscous_terms) {
 	    if (GlobalConfig.apply_bcs_in_parallel) {
 		foreach (blk; parallel(gasBlocks,1)) {
-		    if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		    if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 		}
 	    } else {
 		foreach (blk; gasBlocks) {
-		    if (blk.active) { blk.applyPreSpatialDerivAction(sim_time, gtl, ftl); }
+		    if (blk.active) { blk.applyPreSpatialDerivActionAtBndryFaces(sim_time, gtl, ftl); }
 		}
 	    }
 	    foreach (blk; parallel(gasBlocks,1)) {

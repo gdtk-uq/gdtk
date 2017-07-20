@@ -31,6 +31,7 @@ import sblock;
 import fluxcalc;
 import ghost_cell_effect;
 import boundary_interface_effect;
+import boundary_cell_effect;
 import boundary_flux_effect;
 import user_defined_effects;
 import lua_helper;
@@ -46,23 +47,28 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     newBC.ghost_cell_data_available = getJSONbool(jsonData, "ghost_cell_data_available", true);
     newBC.convective_flux_computed_in_bc = getJSONbool(jsonData, "convective_flux_computed_in_bc", false);
     // Assemble list of preReconAction effects
-    auto preReconActionList = jsonData["pre_recon_action"].array;
-    foreach ( jsonObj; preReconActionList ) {
+    auto preReconActions = jsonData["pre_recon_action"].array;
+    foreach ( jsonObj; preReconActions ) {
 	newBC.preReconAction ~= make_GCE_from_json(jsonObj, blk_id, boundary);
     }
-    auto postConvFluxActionList = jsonData["post_conv_flux_action"].array;
-    foreach ( jsonObj; postConvFluxActionList ) {
+    auto postConvFluxActions = jsonData["post_conv_flux_action"].array;
+    foreach ( jsonObj; postConvFluxActions ) {
 	newBC.postConvFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
     }
-    auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
-    foreach ( jsonObj; preSpatialDerivActionList ) {
-	newBC.preSpatialDerivAction ~= make_BIE_from_json(jsonObj, blk_id, boundary);
+    auto preSpatialDerivActionsAtBndryFaces = jsonData["pre_spatial_deriv_action_at_bndry_faces"].array;
+    foreach ( jsonObj; preSpatialDerivActionsAtBndryFaces ) {
+	newBC.preSpatialDerivActionAtBndryFaces ~= make_BIE_from_json(jsonObj, blk_id, boundary);
     }
-    auto postDiffFluxActionList = jsonData["post_diff_flux_action"].array;
-    foreach ( jsonObj; postDiffFluxActionList ) {
+    auto preSpatialDerivActionsAtBndryCells = jsonData["pre_spatial_deriv_action_at_bndry_faces"].array;
+    /* [TODO] Connect this up
+    foreach ( jsonObj; preSpatialDerivActionsAtBndryCells ) {
+	newBC.preSpatialDerivActionAtBndryCells ~= make_BCE_from_json(jsonObj, blk_id, boundary);
+    }
+    */
+    auto postDiffFluxActions = jsonData["post_diff_flux_action"].array;
+    foreach ( jsonObj; postDiffFluxActions ) {
 	newBC.postDiffFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
     }
-    // [TODO] Only need to the post convective flux option now.
     return newBC;
 } // end make_BC_from_json()
 
@@ -118,7 +124,8 @@ public:
     {
 	foreach (gce; preReconAction) gce.post_bc_construction();
 	foreach (bfe; postConvFluxAction) bfe.post_bc_construction();
-	foreach (bie; preSpatialDerivAction) bie.post_bc_construction();
+	foreach (bie; preSpatialDerivActionAtBndryFaces) bie.post_bc_construction();
+	foreach (bce; preSpatialDerivActionAtBndryCells) bce.post_bc_construction();
 	foreach (bfe; postDiffFluxAction) bfe.post_bc_construction();
     }
 
@@ -128,6 +135,8 @@ public:
     // 1. pre reconstruction
     // 2. post convective flux evaluation
     // 3. pre spatial derivative estimate
+    //    (a) apply a boundary interface effect
+    //    (b) apply a boundary cell effect
     // 4. post diffusive flux evaluation
     // Note the object may be called more than 4 times depending
     // on the type of time-stepping used to advance the solution.
@@ -136,7 +145,8 @@ public:
     // state. We will call this series of effects an action.
     GhostCellEffect[] preReconAction;
     BoundaryFluxEffect[] postConvFluxAction;
-    BoundaryInterfaceEffect[] preSpatialDerivAction;
+    BoundaryInterfaceEffect[] preSpatialDerivActionAtBndryFaces;
+    BoundaryCellEffect[] preSpatialDerivActionAtBndryCells;
     BoundaryFluxEffect[] postDiffFluxAction;
 
     override string toString() const
@@ -161,10 +171,17 @@ public:
 	    }
 	    repr ~= "]";
 	}
-	if ( preSpatialDerivAction.length > 0 ) {
-	    repr ~= ", preSpatialDerivAction=[" ~ to!string(preSpatialDerivAction[0]);
-	    foreach (i; 1 .. preSpatialDerivAction.length) {
-		repr ~= ", " ~ to!string(preSpatialDerivAction[i]);
+	if ( preSpatialDerivActionAtBndryFaces.length > 0 ) {
+	    repr ~= ", preSpatialDerivActionAtBndryFaces=[" ~ to!string(preSpatialDerivActionAtBndryFaces[0]);
+	    foreach (i; 1 .. preSpatialDerivActionAtBndryFaces.length) {
+		repr ~= ", " ~ to!string(preSpatialDerivActionAtBndryFaces[i]);
+	    }
+	    repr ~= "]";
+	}
+	if ( preSpatialDerivActionAtBndryCells.length > 0 ) {
+	    repr ~= ", preSpatialDerivActionAtBndryCells=[" ~ to!string(preSpatialDerivActionAtBndryCells[0]);
+	    foreach (i; 1 .. preSpatialDerivActionAtBndryCells.length) {
+		repr ~= ", " ~ to!string(preSpatialDerivActionAtBndryCells[i]);
 	    }
 	    repr ~= "]";
 	}
@@ -189,9 +206,14 @@ public:
 	foreach ( bfe; postConvFluxAction ) bfe.apply(t, gtl, ftl);
     }
     
-    final void applyPreSpatialDerivAction(double t, int gtl, int ftl)
+    final void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl)
     {
-	foreach ( bie; preSpatialDerivAction ) bie.apply(t, gtl, ftl);
+	foreach ( bie; preSpatialDerivActionAtBndryFaces ) bie.apply(t, gtl, ftl);
+    }
+
+    final void applyPreSpatialDerivActionAtBndryCells(double t, int gtl, int ftl)
+    {
+	foreach ( bce; preSpatialDerivActionAtBndryCells ) bce.apply(t, gtl, ftl);
     }
     
     final void applyPostDiffFluxAction(double t, int gtl, int ftl)

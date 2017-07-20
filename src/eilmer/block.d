@@ -606,9 +606,14 @@ public:
 	foreach(boundary; bc) { boundary.applyPostConvFluxAction(t, gtl, ftl); }
     }
 
-    void applyPreSpatialDerivAction(double t, int gtl, int ftl)
+    void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl)
     {
-	foreach(boundary; bc) { boundary.applyPreSpatialDerivAction(t, gtl, ftl); }
+	foreach(boundary; bc) { boundary.applyPreSpatialDerivActionAtBndryFaces(t, gtl, ftl); }
+    }
+
+    void applyPreSpatialDerivActionAtBndryCells(double t, int gtl, int ftl)
+    {
+	foreach(boundary; bc) { boundary.applyPreSpatialDerivActionAtBndryCells(t, gtl, ftl); }
     }
 
     void applyPostDiffFluxAction(double t, int gtl, int ftl)
