@@ -251,9 +251,9 @@ function WallKOmega:tojson()
    return str
 end
 
-WallFunction = BoundaryInterfaceEffect:new()
-WallFunction.type = "wall_function"
-function WallFunction:tojson()
+WallFunctionInterfaceEffect = BoundaryInterfaceEffect:new()
+WallFunctionInterfaceEffect.type = "wall_function_interface_effect"
+function WallFunctionInterfaceEffect:tojson()
    local str = string.format('          {"type" : "%s"}', self.type)
    return str
 end
@@ -277,6 +277,25 @@ function UserDefinedInterface:tojson()
    str = str .. '}'
    return str
 end
+
+-- Base class and subclasses for BoundaryCellEffect
+BoundaryCellEffect = {
+   type = ""
+}
+function BoundaryCellEffect:new(o)
+   o = o or {}
+   setmetatable(o, self)
+   self.__index = self
+   return o
+end
+
+WallFunctionCellEffect = BoundaryCellEffect:new()
+WallFunctionCellEffect.type = "wall_function_cell_effect"
+function WallFunctionCellEffect:tojson()
+   local str = string.format('          {"type" : "%s"}', self.type)
+   return str
+end
+
 
 -- Base class and subclasses for BoundaryFluxEffect
 BoundaryFluxEffect = {
@@ -429,7 +448,8 @@ function WallBC_NoSlip_FixedT:new(o)
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
       if o.wall_function then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallFunction:new()
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallFunctionInterfaceEffect:new()
+	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
       end
    end
    o.is_configured = true
@@ -449,7 +469,8 @@ function WallBC_NoSlip_Adiabatic:new(o)
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
       if o.wall_function then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
-	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallFunction:new()
+	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallFunctionInterfaceEffect:new()
+	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
       end
    end
    o.is_configured = true

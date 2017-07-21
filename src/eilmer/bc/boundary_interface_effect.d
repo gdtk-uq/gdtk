@@ -75,7 +75,7 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
     case "wall_k_omega":
 	newBIE = new BIE_WallKOmega(blk_id, boundary);
 	break;
-    case "wall_function":
+    case "wall_function_interface_effect":
 	newBIE = new BIE_WallFunction(blk_id, boundary);
 	break;
     case "temperature_from_gas_solid_interface":
@@ -92,7 +92,7 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
 	break;
     default:
 	string errMsg = format("ERROR: The BoundaryInterfaceEffect type: '%s' is unknown.", bieType);
-	throw new Exception(errMsg);
+	throw new FlowSolverException(errMsg);
     }
     return newBIE;
 }
@@ -1103,22 +1103,17 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 class BIE_WallFunction : BoundaryInterfaceEffect {
     this(int id, int boundary)
     {
-	super(id, boundary, "WallFunction");
+	super(id, boundary, "WallFunction_InterfaceEffect");
     }
 
     override string toString() const 
     {
-	return "WallFunction()";
+	return "WallFunction_InterfaceEffect()";
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	BoundaryCondition bc = blk.bc[which_boundary];
-	foreach (i, f; bc.faces) {
-	    // TODO: Wilson please fill me in.
-	    //       In fact, you could leave the unstructured version unimplemented for the moment.
-	    throw new FlowSolverException("WallFunction bc not implemented for unstructured grids.");
-	} // end foreach face
+	throw new FlowSolverException("WallFunction_InterfaceEffect bc not implemented for unstructured grids.");
     }
     
     override void apply_structured_grid(double t, int gtl, int ftl)
