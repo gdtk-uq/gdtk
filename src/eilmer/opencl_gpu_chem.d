@@ -83,7 +83,7 @@ public:
     {
 	writeln("GPUChem:this()");
 	_gmodel = GlobalConfig.gmodel_master;
-	auto myChemUpdate = cast(ChemistryUpdate) gasBlocks[0].myConfig.chemUpdate;
+	auto myChemUpdate = cast(ChemistryUpdate) gasBlocks[0].myConfig.thermochemUpdate;
 	if (myChemUpdate !is null) { 
 	    _rmech = myChemUpdate.rmech.dup();
 	} else {
@@ -223,7 +223,7 @@ public:
 	//writeln("vendor= ", vendor);
     }
 
-    void chemical_increment(double dt_flow)
+    void thermochemical_increment(double dt_flow)
     {
 	size_t nsp = _gmodel.n_species();
 	size_t nreac = _rmech.n_reactions();

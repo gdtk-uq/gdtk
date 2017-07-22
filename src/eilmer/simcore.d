@@ -455,12 +455,12 @@ void integrate_in_time(double target_time_as_requested)
 	// 2e. Chemistry step. 
 	if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
 	    version (gpu_chem) {
-		GlobalConfig.gpuChem.chemical_increment(dt_global);
+		GlobalConfig.gpuChem.thermochemical_increment(dt_global);
 	    } else { // without GPU accelerator
 		foreach (blk; parallel(gasBlocks,1)) {
 		    if (blk.active) {
 			double local_dt_global = dt_global;
-			foreach (cell; blk.cells) { cell.chemical_increment(local_dt_global); }
+			foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt_global); }
 		    }
 		}
 	    }

@@ -59,7 +59,7 @@ public:
     // Reset and checked at points through the update so that we don't stagger on
     // with bad data poisoning the simulation.
     //
-    bool fr_reactions_allowed; // if true, will call chemical_increment (also thermal_increment)
+    bool fr_reactions_allowed; // if true, will call thermochemical_increment
     double dt_chem; // acceptable time step for finite-rate chemistry
     double dt_therm; // acceptable time step for thermal relaxation
     bool in_turbulent_zone; // if true, we will keep the turbulence viscosity
@@ -799,7 +799,7 @@ public:
 	return;
     } // end stage_2_update_for_flow_on_moving_grid()
 
-    void chemical_increment(double dt) 
+    void thermochemical_increment(double dt) 
     // Use the finite-rate chemistry module to update the species fractions
     // and the other thermochemical properties.
     {
@@ -823,14 +823,14 @@ public:
 	}
 
 	try {
-	    myConfig.chemUpdate(fs.gas, dt, dt_chem, params);
+	    myConfig.thermochemUpdate(fs.gas, dt, dt_chem, params);
 	    if (myConfig.ignition_zone_active) {
 		// Restore actual gas temperature
 		fs.gas.Ttr = T_save;
 	    }
 	} catch(ChemistryUpdateException err) {
 	    string msg = format("caught %s", err.msg);
-	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
+	    msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);
 	    msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
 	    msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
@@ -844,7 +844,7 @@ public:
 	}
 	catch (Exception err) {
 	    string msg = format("caught %s", err.msg);
-	    msg ~= format("The chemical_increment() failed for cell: %d\n", id);
+	    msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);
 	    	msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
 	    msg ~= "This failure occurred when trying to update the thermo state after\n";
@@ -868,33 +868,7 @@ public:
 	foreach(imode; 0 .. U[0].energies.length) {
 	    U[0].energies[imode] = fs.gas.rho * fs.gas.u_modes[imode];
 	}
-    } // end chemical_increment()
-
-    void thermal_increment(double dt, double T_frozen_energy, GasModel gmodel) 
-    // Use the nonequilibrium multi-Temperature module to update the
-    // energy values and the other thermochemical properties.
-    // We are assuming that this is done after a successful gas-dynamic update
-    // and that the current conserved quantities are held in U[0].
-    {
-	if ( !fr_reactions_allowed || fs.gas.Ttr <= T_frozen_energy ) return;
-	// auto eeupdate = myConfig.energy_exchange_update_scheme;
-	// eeupdate.update_state(fs.gas, dt, dt_therm, gmodel);
-	// The update only changes modal energies, we need to impose
-	// a thermodynamic constraint based on a call to the equation
-	// of state.
-	gmodel.update_thermo_from_rhou(fs.gas);
-	// If we are doing a viscous sim, we'll need to ensure
-	// viscous properties are up-to-date
-	if ( myConfig.viscous ) gmodel.update_trans_coeffs(fs.gas);
-	// if ( myConfig.diffusion ) gmodel.update_diff_coeffs(fs.gas);
-	// Finally, we have to manually update the conservation quantities
-	// for the gas-dynamics time integration.
-	// Independent energies energy: Joules per unit volume.
-	foreach(imode; 0 .. U[0].energies.length) {
-	    U[0].energies[imode] = fs.gas.rho * fs.gas.u_modes[imode];
-	}
-	assert(false, "[TODO] thermal_increment() not yet ready for use");
-    } // end thermal_increment()
+    } // end thermochemical_increment()
 
     double signal_frequency()
     // [TODO] unstructured-grid adaption to be done.
@@ -1408,9 +1382,9 @@ public:
 	    Q.momentum.refy += fs.gas.p * areaxy[gtl] / volume[gtl];
 	}
 	// Species production (other than chemistry).
-	// For the chemistry, see chemical_increment().
+	// For the chemistry and other-internal energy exchange,
+	// see thermochemical_increment().
 	// Individual energies (other than energy exchange)
-	// For the energy exchange, see thermal_increment()
 	// Radiation can potentially be removed from both the electronic and
 	// total energy source terms.
 	if (myConfig.radiation) {

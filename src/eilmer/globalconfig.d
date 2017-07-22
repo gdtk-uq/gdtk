@@ -577,7 +577,7 @@ public:
 
     GasModel gmodel;
     bool include_quality;
-    ThermochemicalReactor chemUpdate;
+    ThermochemicalReactor thermochemUpdate;
 
     int verbosity_level;
 
@@ -666,7 +666,7 @@ public:
 	}
 	include_quality = GlobalConfig.include_quality;
 	if (GlobalConfig.reacting) {
-	    chemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file);
+	    thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file);
 	}
 	//
 	verbosity_level = GlobalConfig.verbosity_level;
