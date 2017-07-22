@@ -154,7 +154,7 @@ public:
     {
 	return R_universal/_mol_masses[0];
     }
-    override double internal_energy(in GasState Q) const
+    override @nogc double internal_energy(in GasState Q) const
     {
 	return Q.u;
     }

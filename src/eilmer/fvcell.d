@@ -298,27 +298,23 @@ public:
 	myU.B.set(fs.B);
 	myU.psi = fs.psi;
 	myU.divB = fs.divB;
-	// Total Energy / unit volume = (specific internal energy + kinetic energy/unit mass).
-	double e = fs.gas.u; foreach(elem; fs.gas.u_modes) { e += elem; }
+	// Total Energy / unit volume
+	double u = myConfig.gmodel.internal_energy(fs.gas);
 	double ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
 	if (with_k_omega) {
 	    myU.tke = fs.gas.rho * fs.tke;
 	    myU.omega = fs.gas.rho * fs.omega;
-	    myU.total_energy = fs.gas.rho*(e + ke + fs.tke);
+	    myU.total_energy = fs.gas.rho*(u + ke + fs.tke);
 	} else {
 	    myU.tke = 0.0;
 	    myU.omega = fs.gas.rho * 1.0;
-	    myU.total_energy = fs.gas.rho*(e + ke);
+	    myU.total_energy = fs.gas.rho*(u + ke);
 	}
 	if (myConfig.MHD) {
 	    double me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
 	    myU.total_energy += me;
 	}
-	// Species densities: mass of species is per unit volume.
-	foreach(isp; 0 .. myU.massf.length) {
-	    myU.massf[isp] = fs.gas.rho*fs.gas.massf[isp];
-	}
-	// Individual energies: energy in mode per unit volume
+	// Other internal energies: energy in mode per unit volume.
 	foreach(imode; 0 .. myU.energies.length) {
 	    myU.energies[imode] = fs.gas.rho*fs.gas.u_modes[imode];
 	}
@@ -336,8 +332,12 @@ public:
 	    // where rotating frame velocity  u = omegaz * r.
 	    myU.total_energy -= rho*0.5*omegaz*omegaz*rsq;
 	}
+	// Species densities: mass of species is per unit volume.
+	foreach(isp; 0 .. myU.massf.length) {
+	    myU.massf[isp] = fs.gas.rho*fs.gas.massf[isp];
+	}
 	assert(U[ftl].mass > 0.0, "invalid density in conserved quantities vector" ~
-	       " when leaving FVCell.encode_conserved().");
+	       " at end of FVCell.encode_conserved().");
 	return;
     } // end encode_conserved()
 
@@ -346,8 +346,8 @@ public:
 	auto gmodel = myConfig.gmodel;
 	ConservedQuantities myU = U[ftl];
 	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
-	double e, ke, dinv, rE, me;
-	// Mass / unit volume = Density
+	// The conserved quantities are carried as quantity per unit volume.
+	// mass / unit volume = density
 	if (!(myU.mass > 0.0)) {
 	    writeln("FVCell.decode_conserved(): Density invalid in conserved quantities.");
 	    writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
@@ -358,7 +358,15 @@ public:
 	}
 	double rho = myU.mass;
 	fs.gas.rho = rho; // This is limited to nonnegative and finite values.
-	dinv = 1.0 / rho;
+	double dinv = 1.0 / rho;
+	// Velocities from momenta.
+	fs.vel.set(myU.momentum.x*dinv, myU.momentum.y*dinv, myU.momentum.z*dinv);
+	// Magnetic field.
+	fs.B.set(myU.B);
+	fs.psi = myU.psi;
+	fs.divB = myU.divB;
+	// Divide up the total energy per unit volume.
+	double rE;
 	if (omegaz != 0.0) {
 	    // Rotating frame.
 	    // The conserved quantity is rothalpy so we need to convert
@@ -371,38 +379,31 @@ public:
 	    // Non-rotating frame.
 	    rE = myU.total_energy;
 	}
-	// Velocities from momenta.
-	fs.vel.set(myU.momentum.x*dinv, myU.momentum.y*dinv, myU.momentum.z*dinv);
-	// Magnetic field
-	fs.B.set(myU.B);
-	fs.psi = myU.psi;
-	fs.divB = myU.divB;
-	// Specific internal energy from total energy per unit volume.
-	ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
-	if ( myConfig.MHD ) {
-	    me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
-	} else {
-	    me = 0.0;
-	}
+	double ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
+	double me = 0.0;
+	if ( myConfig.MHD ) { me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z); }
+	// Internal energy is what remains.
+	double u;
 	if (with_k_omega) {
 	    fs.tke = myU.tke * dinv;
 	    fs.omega = myU.omega * dinv;
-	    e = (rE - myU.tke - me) * dinv - ke;
+	    u = (rE - myU.tke - me) * dinv - ke;
 	} else {
 	    fs.tke = 0.0;
 	    fs.omega = 1.0;
-	    e = (rE - me) * dinv - ke;
+	    u = (rE - me) * dinv - ke;
 	}
+	if (gmodel.n_modes > 0) {
+	    foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU.energies[imode] * dinv; } 
+	    double u_other = 0.0; foreach(ei; fs.gas.u_modes) { u_other += ei; }
+	    fs.gas.u = u - u_other;
+	} else {
+	    fs.gas.u = u;
+	}
+	// Thermochemical species.
 	foreach(isp; 0 .. gmodel.n_species) fs.gas.massf[isp] = myU.massf[isp] * dinv; 
 	if (gmodel.n_species > 1) scale_mass_fractions(fs.gas.massf);
-	foreach(imode; 0 .. gmodel.n_modes) fs.gas.u_modes[imode] = myU.energies[imode] * dinv; 
-	// We can recompute thermal energy from total energy and internal energies.
-	if (gmodel.n_modes > 0) {
-	    double e_tmp = 0.0; foreach(ei; fs.gas.u_modes) e_tmp += ei;
-	    fs.gas.u = e - e_tmp;
-	} else {
-	    fs.gas.u = e;
-	}
+	//
 	// Fill out the other variables: P, T, a, and viscous transport coefficients.
 	try {
 	    gmodel.update_thermo_from_rhou(fs.gas);
