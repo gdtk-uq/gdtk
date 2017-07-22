@@ -114,7 +114,7 @@ public:
     double[3][] massf;
     double[3] rho, p;
     double[3] Ttr, u;
-    double[3][] T_modes, e_modes;
+    double[3][] T_modes, u_modes;
 
     double velxPhi, velyPhi, velzPhi;
     double BxPhi, ByPhi, BzPhi, psiPhi;
@@ -122,7 +122,7 @@ public:
     double[] massfPhi;
     double rhoPhi, pPhi;
     double TtrPhi, uPhi;
-    double[] T_modesPhi, e_modesPhi;
+    double[] T_modesPhi, u_modesPhi;
 
     double velxMax, velyMax, velzMax;
     double BxMax, ByMax, BzMax, psiMax;
@@ -130,32 +130,32 @@ public:
     double[] massfMax;
     double rhoMax, pMax;
     double TtrMax, uMax;
-    double[] T_modesMax, e_modesMax;
+    double[] T_modesMax, u_modesMax;
     double velxMin, velyMin, velzMin;
     double BxMin, ByMin, BzMin, psiMin;
     double tkeMin, omegaMin;
     double[] massfMin;
     double rhoMin, pMin;
     double TtrMin, uMin;
-    double[] T_modesMin, e_modesMin;
+    double[] T_modesMin, u_modesMin;
 
     this(size_t nsp, size_t nmodes)
     {
 	massf.length = nsp;
 	T_modes.length = nmodes;
-	e_modes.length = nmodes;
+	u_modes.length = nmodes;
 
 	massfPhi.length = nsp;
 	T_modesPhi.length = nmodes;
-	e_modesPhi.length = nmodes;
+	u_modesPhi.length = nmodes;
 
 	massfMax.length = nsp;
 	T_modesMax.length = nmodes;
-	e_modesMax.length = nmodes;
+	u_modesMax.length = nmodes;
 
 	massfMin.length = nsp;
 	T_modesMin.length = nmodes;
-	e_modesMin.length = nmodes;
+	u_modesMin.length = nmodes;
     }
 
     this(ref const LSQInterpGradients other)
@@ -172,9 +172,9 @@ public:
 	foreach(i; 0 .. other.massf.length) { massf[i][] = other.massf[i][]; }
 	rho[] = other.rho[]; p[] = other.p[];
 	Ttr[] = other.Ttr[]; u[] = other.u[];
-	T_modes.length = other.T_modes.length; e_modes.length = other.e_modes.length;
+	T_modes.length = other.T_modes.length; u_modes.length = other.u_modes.length;
 	foreach(i; 0 .. other.T_modes.length) {
-	    T_modes[i][] = other.T_modes[i][]; e_modes[i][] = other.e_modes[i][];
+	    T_modes[i][] = other.T_modes[i][]; u_modes[i][] = other.u_modes[i][];
 	}
 
 	velxPhi = other.velxPhi; velyPhi = other.velyPhi; velzPhi = other.velzPhi;
@@ -184,9 +184,9 @@ public:
 	foreach(i; 0 .. other.massf.length) { massfPhi[i] = other.massfPhi[i]; }
 	rhoPhi = other.rhoPhi; pPhi = other.pPhi;
 	TtrPhi = other.TtrPhi; uPhi = other.uPhi;
-	T_modesPhi.length = other.T_modesPhi.length; e_modesPhi.length = other.e_modesPhi.length;
+	T_modesPhi.length = other.T_modesPhi.length; u_modesPhi.length = other.u_modesPhi.length;
 	foreach(i; 0 .. other.T_modesPhi.length) {
-	    T_modesPhi[i] = other.T_modesPhi[i]; e_modesPhi[i] = other.e_modesPhi[i];
+	    T_modesPhi[i] = other.T_modesPhi[i]; u_modesPhi[i] = other.u_modesPhi[i];
 	}
 
 	velxMax = other.velxMax; velyMax = other.velyMax; velzMax = other.velzMax;
@@ -196,9 +196,9 @@ public:
 	foreach(i; 0 .. other.massf.length) { massfMax[i] = other.massfMax[i]; }
 	rhoMax = other.rhoMax; pMax = other.pMax;
 	TtrMax = other.TtrMax; uMax = other.uMax;
-	T_modesMax.length = other.T_modesMax.length; e_modesMax.length = other.e_modesMax.length;
+	T_modesMax.length = other.T_modesMax.length; u_modesMax.length = other.u_modesMax.length;
 	foreach(i; 0 .. other.T_modesMax.length) {
-	    T_modesMax[i] = other.T_modesMax[i]; e_modesMax[i] = other.e_modesMax[i];
+	    T_modesMax[i] = other.T_modesMax[i]; u_modesMax[i] = other.u_modesMax[i];
 	}
 
 	velxMin = other.velxMin; velyMin = other.velyMin; velzMin = other.velzMin;
@@ -208,9 +208,9 @@ public:
 	foreach(i; 0 .. other.massf.length) { massfMin[i] = other.massfMin[i]; }
 	rhoMin = other.rhoMin; pMin = other.pMin;
 	TtrMin = other.TtrMin; uMin = other.uMin;
-	T_modesMin.length = other.T_modesMin.length; e_modesMin.length = other.e_modesMin.length;
+	T_modesMin.length = other.T_modesMin.length; u_modesMin.length = other.u_modesMin.length;
 	foreach(i; 0 .. other.T_modesMin.length) {
-	    T_modesMin[i] = other.T_modesMin[i]; e_modesMin[i] = other.e_modesMin[i];
+	    T_modesMin[i] = other.T_modesMin[i]; u_modesMin[i] = other.u_modesMin[i];
 	}
     } // end copy_values_from()
     
@@ -291,8 +291,8 @@ public:
 	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
 	    mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
 	    foreach (imode; 0 .. nmodes) {
-		mixin(codeForLimits("gas.e_modes[imode]", "e_modes[imode]", "e_modesPhi[imode]",
-				    "e_modesMax[imode]", "e_modesMin[imode]"));
+		mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+				    "u_modesMax[imode]", "u_modesMin[imode]"));
 	    }
 	    break;
 	case InterpolateOption.rhop:
@@ -390,8 +390,8 @@ public:
 	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
 	    mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
 	    foreach (imode; 0 .. nmodes) {
-		mixin(codeForLimits("gas.e_modes[imode]", "e_modes[imode]", "e_modesPhi[imode]",
-				    "e_modesMax[imode]", "e_modesMin[imode]"));
+		mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+				    "u_modesMax[imode]", "u_modesMin[imode]"));
 	    }
 	    break;
 	case InterpolateOption.rhop:
@@ -475,8 +475,8 @@ public:
 	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
 	    mixin(codeForGradients("gas.u", "u", "uMax", "uMin"));
 	    foreach (imode; 0 .. nmodes) {
-		mixin(codeForGradients("gas.e_modes[imode]", "e_modes[imode]",
-				       "e_modesMax[imode]", "e_modesMin[imode]"));
+		mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
+				       "u_modesMax[imode]", "u_modesMin[imode]"));
 	    }
 	    break;
 	case InterpolateOption.rhop:
@@ -702,8 +702,8 @@ public:
 		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
 		mixin(codeForReconstruction("gas.u", "u", "gas.u", "uPhi"));
 		foreach (imode; 0 .. nmodes) {
-		    mixin(codeForReconstruction("gas.e_modes[imode]", "e_modes[imode]",
-						"gas.e_modes[imode]", "e_modesPhi[imode]"));
+		    mixin(codeForReconstruction("gas.u_modes[imode]", "u_modes[imode]",
+						"gas.u_modes[imode]", "u_modesPhi[imode]"));
 		}
 		mixin(codeForThermoUpdate("rhou"));
 		break;

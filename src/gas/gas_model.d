@@ -192,7 +192,7 @@ public:
     // The array length will be determined by the specific model and,
     // to get the total internal energy,
     // the gas-dynamics part of the code will need to sum the array elements.
-    double[] e_modes;  /// specific internal energies for thermal nonequilibrium model, J/kg
+    double[] u_modes;  /// specific internal energies for thermal nonequilibrium model, J/kg
     double[] T_modes;  /// temperatures for internal energies for thermal nonequilibrium, K
     /// Transport properties
     double mu;   /// viscosity, Pa.s
@@ -209,7 +209,7 @@ public:
     this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
 	massf.length = n_species;
-	e_modes.length = n_modes;
+	u_modes.length = n_modes;
 	T_modes.length = n_modes;
 	k_modes.length = n_modes;
 	if (includeSavedData) { ceaSavedData = new CEASavedData; }
@@ -230,7 +230,7 @@ public:
 	Ttr = Ttr_init;
 	T_modes.length = gm.n_modes;
 	foreach(i; 0 .. gm.n_modes) { T_modes[i] = T_modes_init[i]; }
-	e_modes.length = gm.n_modes;
+	u_modes.length = gm.n_modes;
 	k_modes.length = gm.n_modes;
 	massf.length = gm.n_species;
 	foreach(i; 0 .. gm.n_species) {
@@ -267,7 +267,7 @@ public:
 	Ttr = other.Ttr;
 	u = other.u;
 	a = other.a;
-	e_modes = other.e_modes.dup;
+	u_modes = other.u_modes.dup;
 	T_modes = other.T_modes.dup;
 	mu = other.mu;
 	k = other.k;
@@ -288,7 +288,7 @@ public:
 	u = other.u;
 	p_e = other.p_e;
 	a = other.a;
-	foreach (i; 0 .. e_modes.length) { e_modes[i] = other.e_modes[i]; }
+	foreach (i; 0 .. u_modes.length) { u_modes[i] = other.u_modes[i]; }
 	foreach (i; 0 .. T_modes.length) { T_modes[i] = other.T_modes[i]; }
 	mu = other.mu;
 	k = other.k;
@@ -307,7 +307,7 @@ public:
 	u = 0.5 * (gs0.u + gs1.u);
 	p_e = 0.5 * (gs0.p_e + gs1.p_e);
 	a = 0.5 * (gs0.a + gs1.a);
-	foreach(i; 0 .. e_modes.length) { e_modes[i] = 0.5 * (gs0.e_modes[i] + gs1.e_modes[i]); }
+	foreach(i; 0 .. u_modes.length) { u_modes[i] = 0.5 * (gs0.u_modes[i] + gs1.u_modes[i]); }
 	foreach(i; 0 .. T_modes.length) { T_modes[i] = 0.5 * (gs0.T_modes[i] + gs1.T_modes[i]); }
 	mu = 0.5 * (gs0.mu + gs1.mu);
 	k = 0.5 * (gs0.k + gs1.k);
@@ -372,14 +372,14 @@ public:
 	    // if (print_message) writeln("Transrotational temperature invalid: ", Ttr);
 	    is_data_valid = false;
 	}
-	auto nmodes = e_modes.length;
+	auto nmodes = u_modes.length;
 	foreach(imode; 0 .. nmodes) {
 	    if (!isFinite(T_modes[imode]) || T_modes[imode] < 1.01 * TMIN) {
 		// if (print_message) writeln("Temperature[", imode, "] invalid: ", T_modes[imode]);
 		is_data_valid = false;
 	    }
-	    if ( !isFinite(e_modes[imode]) ) {
-		// if (print_message) writeln("Energy[", imode, "] invalid: ", e_modes[imode]);
+	    if ( !isFinite(u_modes[imode]) ) {
+		// if (print_message) writeln("Energy[", imode, "] invalid: ", u_modes[imode]);
 		is_data_valid = false;
 	    }
 	}
@@ -414,7 +414,7 @@ public:
 	repr ~= ", p_e=" ~ to!string(p_e);
 	repr ~= ", a=" ~ to!string(a);
 	repr ~= ", T_modes=" ~ to!string(T_modes);
-	repr ~= ", e_modes=" ~ to!string(e_modes);
+	repr ~= ", u_modes=" ~ to!string(u_modes);
 	repr ~= ", mu=" ~ to!string(mu);
 	repr ~= ", k=" ~ to!string(k);
 	repr ~= ", k_modes=" ~ to!string(k_modes);

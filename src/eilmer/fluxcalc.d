@@ -115,7 +115,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs)
     double vt1 = fs.vel.y;
     double vt2 = fs.vel.z;
     double p = fs.gas.p;
-    double e = fs.gas.u; foreach(elem; fs.gas.e_modes) { e += elem; }
+    double e = fs.gas.u; foreach(elem; fs.gas.u_modes) { e += elem; }
     double ke = 0.5 * (un*un + vt1*vt1 + vt2*vt2); // Kinetic energy per unit volume.
     //
     // Fluxes (quantity / unit time / unit area)
@@ -125,7 +125,7 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs)
     F.tke = F.mass * fs.tke;  // turbulence kinetic energy
     F.omega = F.mass * fs.omega;  // pseudo vorticity
     foreach (isp; 0 .. F.massf.length) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
-    foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.e_modes[imode]; }
+    foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.u_modes[imode]; }
 } // end set_flux_vector_in_local_frame()
 
 @nogc
@@ -186,7 +186,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
     double uL = Lft.vel.x;
     double vL = Lft.vel.y;
     double wL = Lft.vel.z;
-    double eL = Lft.gas.u; foreach(elem; Lft.gas.e_modes) { eL += elem; }
+    double eL = Lft.gas.u; foreach(elem; Lft.gas.u_modes) { eL += elem; }
     double aL = Lft.gas.a;
     double keL = 0.5*(uL*uL + vL*vL + wL*wL);
     double HL = eL + pLrL + keL + Lft.tke;
@@ -197,7 +197,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
     double uR = Rght.vel.x;
     double vR = Rght.vel.y;
     double wR = Rght.vel.z;
-    double eR = Rght.gas.u; foreach(elem; Rght.gas.e_modes) { eR += elem; }
+    double eR = Rght.gas.u; foreach(elem; Rght.gas.u_modes) { eR += elem; }
     double aR = Rght.gas.a;
     double keR = 0.5*(uR*uR + vR*vR + wR*wR);
     double HR = eR + pRrR + keR + Rght.tke;
@@ -263,7 +263,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
 	F.tke = ru_half*Lft.tke;
 	F.omega = ru_half*Lft.omega;
 	foreach (isp; 0 .. nsp) { F.massf[isp] = ru_half*Lft.gas.massf[isp]; }
-	foreach (imode; 0 .. nmodes) { F.energies[imode] = ru_half*Lft.gas.e_modes[imode]; }
+	foreach (imode; 0 .. nmodes) { F.energies[imode] = ru_half*Lft.gas.u_modes[imode]; }
 	// NOTE: - the following relies on the free-electron mode being the last mode
 	//       - for single temp models F_renergies isn't used
 	//       - for multitemp modes with no free-electrons p_e is zero
@@ -276,7 +276,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
 	F.tke = ru_half*Rght.tke;
 	F.omega = ru_half*Rght.omega;
 	foreach (isp; 0 .. nsp) { F.massf[isp] = ru_half*Rght.gas.massf[isp]; }
-	foreach (imode; 0 .. nmodes) { F.energies[imode] = ru_half*Rght.gas.e_modes[imode]; }
+	foreach (imode; 0 .. nmodes) { F.energies[imode] = ru_half*Rght.gas.u_modes[imode]; }
 	// FIX-ME F.energies[nmodes-1] += ru_half * Rght.gas.p_e / Rght.gas.rho;
     }
     //
@@ -301,7 +301,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
 	    F.massf[isp] -= d_ua*(rR*Rght.gas.massf[isp] - rL*Lft.gas.massf[isp]);
 	}
 	foreach (imode; 0 .. nmodes) {
-	    F.energies[imode] -= d_ua*(rR*Rght.gas.e_modes[imode] - rL*Lft.gas.e_modes[imode]);
+	    F.energies[imode] -= d_ua*(rR*Rght.gas.u_modes[imode] - rL*Lft.gas.u_modes[imode]);
 	}
     } // end of entropy fix (d_ua != 0)
 } // end ausmdv()
@@ -349,7 +349,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     // Unpack Left flow state.
     rhoL = Lft.gas.rho;
     presL = Lft.gas.p;
-    eL = Lft.gas.u; foreach(elem; Lft.gas.e_modes) { eL += elem; }
+    eL = Lft.gas.u; foreach(elem; Lft.gas.u_modes) { eL += elem; }
     hL = eL + presL/rhoL + Lft.tke; // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.Ttr;
     vnL = Lft.vel.x;
@@ -358,7 +358,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     // Unpack Right flow state.
     rhoR = Rght.gas.rho;
     presR = Rght.gas.p;
-    eR = Rght.gas.u; foreach(elem; Rght.gas.e_modes) { eR += elem; }
+    eR = Rght.gas.u; foreach(elem; Rght.gas.u_modes) { eR += elem; }
     hR = eR + presR/rhoR + Rght.tke;
     tR = Rght.gas.Ttr;
     vnR = Rght.vel.x;
@@ -418,7 +418,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
 	F.tke = F.mass * Lft.tke;
 	F.omega = F.mass * Lft.omega;
 	foreach (isp; 0 .. F.massf.length) { F.massf[isp] = (F.mass) * Lft.gas.massf[isp]; }
-	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = (F.mass) * Lft.gas.e_modes[imode]; }
+	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = (F.mass) * Lft.gas.u_modes[imode]; }
 	// NOTE: - the following relies on the free-electron mode being the last mode
 	//       - for single temp models F_renergies isn't used
 	//       - for multitemp modes with no free-electrons p_e is zero
@@ -428,7 +428,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
 	F.tke = F.mass * Rght.tke;
 	F.omega = F.mass * Rght.omega;
 	foreach (isp; 0 .. F.massf.length) { F.massf[isp] = (F.mass) * Rght.gas.massf[isp]; }
-	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass * Rght.gas.e_modes[imode]; }
+	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass * Rght.gas.u_modes[imode]; }
 	// F.energies[nmodes-1] += F.mass * Rght.gas.p_e / Rght.gas.rho; [TODO]
     }
 } // end efmflx()
@@ -559,7 +559,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double uL = Lft.vel.x;
     double vL = Lft.vel.y;
     double wL = Lft.vel.z;
-    double eL = Lft.gas.u; foreach(elem; Lft.gas.e_modes) { eL += elem; }
+    double eL = Lft.gas.u; foreach(elem; Lft.gas.u_modes) { eL += elem; }
     double aL = Lft.gas.a;
     double keL = 0.5 * (uL * uL + vL * vL + wL * wL);
     double HL = eL + pL/rL + keL + Lft.tke;
@@ -569,7 +569,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double uR = Rght.vel.x;
     double vR = Rght.vel.y;
     double wR = Rght.vel.z;
-    double eR = Rght.gas.u; foreach(elem; Rght.gas.e_modes) { eR += elem; }
+    double eR = Rght.gas.u; foreach(elem; Rght.gas.u_modes) { eR += elem; }
     double aR = Rght.gas.a;
     double keR = 0.5 * (uR * uR + vR * vR + wR * wR);
     double HR = eR + pR/rR + keR + Rght.tke;
@@ -636,7 +636,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
 	F.tke = ru_half * Lft.tke;
 	F.omega = ru_half * Lft.omega;
 	foreach (isp; 0 .. F.massf.length) { F.massf[isp] = ru_half * Lft.gas.massf[isp]; }
-	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = ru_half * Lft.gas.e_modes[imode]; }
+	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = ru_half * Lft.gas.u_modes[imode]; }
 	// NOTE: - the following relies on the free-electron mode being the last mode
 	//       - for single temp models F_renergies isn't used
 	//       - for multitemp modes with no free-electrons p_e is zero
@@ -649,7 +649,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
 	F.tke = ru_half * Rght.tke;
 	F.omega = ru_half * Rght.omega;
 	foreach (isp; 0 .. F.massf.length) { F.massf[isp] = ru_half * Rght.gas.massf[isp]; }
-	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = ru_half * Rght.gas.e_modes[imode]; }
+	foreach (imode; 0 .. F.energies.length) { F.energies[imode] = ru_half * Rght.gas.u_modes[imode]; }
 	// F.energies[nmodes-1] += ru_half * Rght.gas.p_e / Rght.gas.rho;
     }
 } // end ausm_plus_up()
@@ -811,7 +811,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
     if (F.mass >= 0.0) {
 	/* Wind is blowing from the left */
 	for (size_t imode = 0; imode < F.energies.length; ++imode ) {
-	    F.energies[imode] = F.mass * Lft.gas.e_modes[imode];
+	    F.energies[imode] = F.mass * Lft.gas.u_modes[imode];
 	}
 	// NOTE: - the following relies on the free-electron mode being the last mode
 	//       - for single temp models F_renergies isn't used
@@ -821,7 +821,7 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
     } else {
 	/* Wind is blowing from the right */
 	for (size_t imode = 0; imode < F.energies.length; ++imode ) {
-	    F.energies[imode] = F.mass * Rght.gas.e_modes[imode];
+	    F.energies[imode] = F.mass * Rght.gas.u_modes[imode];
 	}
 	// NOTE: - the following relies on the free-electron mode being the last mode
 	//       - for single temp models F_renergies isn't used

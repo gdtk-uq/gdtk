@@ -39,13 +39,13 @@ public:
     {
 	Q.rho = Q.p/(Q.Ttr*_R_N2);
 	Q.u = (5./2.)*Q.Ttr*_R_N2;
-	Q.e_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
+	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
     }
 
     override void update_thermo_from_rhou(GasState Q) const
     {
 	Q.Ttr = Q.u/((5./2.)*_R_N2);
-	Q.T_modes[0] = _theta_N2/log((_R_N2*_theta_N2/Q.e_modes[0]) + 1.0);
+	Q.T_modes[0] = _theta_N2/log((_R_N2*_theta_N2/Q.u_modes[0]) + 1.0);
 	Q.p = Q.rho*_R_N2*Q.Ttr;
     }
 
@@ -53,7 +53,7 @@ public:
     {
 	Q.p = Q.rho*_R_N2*Q.Ttr;
 	Q.u = (5./2.)*Q.Ttr*_R_N2;
-	Q.e_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
+	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
     }
     
     override void update_thermo_from_rhop(GasState Q) const
@@ -61,7 +61,7 @@ public:
 	Q.Ttr = Q.p/(Q.rho*_R_N2);
 	// Assume Q.T_modes[0] is set independently, and correct.
 	Q.u = (5./2.)*Q.Ttr*_R_N2;
-	Q.e_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
+	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
     }
 
     override void update_thermo_from_ps(GasState Q, double s) const
@@ -135,16 +135,16 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
 	double pAtm = Q.p/P_atm;
 	double tau = (7.12e-9/pAtm)*exp(124.07/pow(Q.Ttr, 1./3.));
 	// Find the total internal energy in the gas
-	double uTotal = Q.u + Q.e_modes[0];
+	double uTotal = Q.u + Q.u_modes[0];
 	// Find the vib energy at equilibrium with Ttr
 	_Q_eq.Ttr = Q.Ttr;
 	_Q_eq.T_modes[0] = Q.Ttr;
 	_Q_eq.p = Q.p;
 	_gmodel.update_thermo_from_pT(_Q_eq);
-	double u_v_eq = _Q_eq.e_modes[0];
-	double u_v = Q.e_modes[0];
-	Q.e_modes[0] = u_v_eq + (u_v - u_v_eq)*exp(-tInterval/tau);
-	Q.u = uTotal - Q.e_modes[0];
+	double u_v_eq = _Q_eq.u_modes[0];
+	double u_v = Q.u_modes[0];
+	Q.u_modes[0] = u_v_eq + (u_v - u_v_eq)*exp(-tInterval/tau);
+	Q.u = uTotal - Q.u_modes[0];
 	_gmodel.update_thermo_from_rhou(Q);
 	_gmodel.update_sound_speed(Q);
     }

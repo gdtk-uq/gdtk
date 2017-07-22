@@ -273,7 +273,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     mixin(pushGasVar("Ttr", "T"));
     mixin(pushGasVarArray("T_modes"));
     mixin(pushGasVar("u"));
-    mixin(pushGasVarArray("e_modes"));
+    mixin(pushGasVarArray("u_modes"));
     mixin(pushGasVar("quality"));
     // -- massf as key-val table
     lua_newtable(L);

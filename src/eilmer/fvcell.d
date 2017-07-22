@@ -299,7 +299,7 @@ public:
 	myU.psi = fs.psi;
 	myU.divB = fs.divB;
 	// Total Energy / unit volume = (specific internal energy + kinetic energy/unit mass).
-	double e = fs.gas.u; foreach(elem; fs.gas.e_modes) { e += elem; }
+	double e = fs.gas.u; foreach(elem; fs.gas.u_modes) { e += elem; }
 	double ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
 	if (with_k_omega) {
 	    myU.tke = fs.gas.rho * fs.tke;
@@ -320,7 +320,7 @@ public:
 	}
 	// Individual energies: energy in mode per unit volume
 	foreach(imode; 0 .. myU.energies.length) {
-	    myU.energies[imode] = fs.gas.rho*fs.gas.e_modes[imode];
+	    myU.energies[imode] = fs.gas.rho*fs.gas.u_modes[imode];
 	}
 	if (omegaz != 0.0) {
 	    // Rotating frame.
@@ -395,10 +395,10 @@ public:
 	}
 	foreach(isp; 0 .. gmodel.n_species) fs.gas.massf[isp] = myU.massf[isp] * dinv; 
 	if (gmodel.n_species > 1) scale_mass_fractions(fs.gas.massf);
-	foreach(imode; 0 .. gmodel.n_modes) fs.gas.e_modes[imode] = myU.energies[imode] * dinv; 
+	foreach(imode; 0 .. gmodel.n_modes) fs.gas.u_modes[imode] = myU.energies[imode] * dinv; 
 	// We can recompute thermal energy from total energy and internal energies.
 	if (gmodel.n_modes > 0) {
-	    double e_tmp = 0.0; foreach(ei; fs.gas.e_modes) e_tmp += ei;
+	    double e_tmp = 0.0; foreach(ei; fs.gas.u_modes) e_tmp += ei;
 	    fs.gas.u = e - e_tmp;
 	} else {
 	    fs.gas.u = e;
@@ -866,7 +866,7 @@ public:
 	}
 	// Independent energies energy: Joules per unit volume.
 	foreach(imode; 0 .. U[0].energies.length) {
-	    U[0].energies[imode] = fs.gas.rho * fs.gas.e_modes[imode];
+	    U[0].energies[imode] = fs.gas.rho * fs.gas.u_modes[imode];
 	}
     } // end chemical_increment()
 
@@ -891,7 +891,7 @@ public:
 	// for the gas-dynamics time integration.
 	// Independent energies energy: Joules per unit volume.
 	foreach(imode; 0 .. U[0].energies.length) {
-	    U[0].energies[imode] = fs.gas.rho * fs.gas.e_modes[imode];
+	    U[0].energies[imode] = fs.gas.rho * fs.gas.u_modes[imode];
 	}
 	assert(false, "[TODO] thermal_increment() not yet ready for use");
     } // end thermal_increment()
@@ -1590,10 +1590,10 @@ string cell_data_as_string(ref const(Vector3) pos, double volume, ref const(Flow
     foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); } 
     if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
     formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.Ttr); 
-    foreach (imode; 0 .. fs.gas.e_modes.length) {
-	formattedWrite(writer, " %.18e %.18e", fs.gas.e_modes[imode], fs.gas.T_modes[imode]);
+    foreach (imode; 0 .. fs.gas.u_modes.length) {
+	formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode], fs.gas.T_modes[imode]);
     }
-    if (fs.gas.e_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); } 
+    if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); } 
     return writer.data;
 } // end cell_data_as_string()
 
@@ -1670,11 +1670,11 @@ void scan_cell_data_from_string(string buffer,
     }
     fs.gas.u = to!double(items.front); items.popFront();
     fs.gas.Ttr = to!double(items.front); items.popFront();
-    foreach(i; 0 .. fs.gas.e_modes.length) {
-	fs.gas.e_modes[i] = to!double(items.front); items.popFront();
+    foreach(i; 0 .. fs.gas.u_modes.length) {
+	fs.gas.u_modes[i] = to!double(items.front); items.popFront();
 	fs.gas.T_modes[i] = to!double(items.front); items.popFront();
     }
-    if (fs.gas.e_modes.length > 0) {
+    if (fs.gas.u_modes.length > 0) {
 	dt_therm = to!double(items.front); items.popFront(); 
     }
 } // end scan_values_from_string()
@@ -1702,7 +1702,7 @@ string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
     if (gmodel.n_species > 1) { list ~= ["dt_chem"]; }
     list ~= ["u", "Ttr"];
     foreach(i; 0 .. gmodel.n_modes) {
-	list ~= ["e_modes[" ~ to!string(i) ~ "]", "T_modes[" ~ to!string(i) ~ "]"];
+	list ~= ["u_modes[" ~ to!string(i) ~ "]", "T_modes[" ~ to!string(i) ~ "]"];
     }
     if (gmodel.n_modes > 0) { list ~= ["dt_therm"]; }
     return list;

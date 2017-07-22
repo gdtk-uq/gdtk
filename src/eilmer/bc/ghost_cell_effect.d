@@ -730,7 +730,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -758,7 +758,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -809,7 +809,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -837,7 +837,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -887,7 +887,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -915,7 +915,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -964,7 +964,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -992,7 +992,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -1042,7 +1042,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -1070,7 +1070,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -1120,7 +1120,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {
@@ -1148,7 +1148,7 @@ public:
 			dest_cell.fs.gas.rho = 2.0*cell_1.fs.gas.rho - cell_2.fs.gas.rho;
 			dest_cell.fs.gas.u = 2.0*cell_1.fs.gas.u - cell_2.fs.gas.u;
 			for ( size_t imode = 0; imode < nmodes; ++imode ) {
-			    dest_cell.fs.gas.e_modes[imode] = 2.0*cell_1.fs.gas.e_modes[imode] - cell_2.fs.gas.e_modes[imode];
+			    dest_cell.fs.gas.u_modes[imode] = 2.0*cell_1.fs.gas.u_modes[imode] - cell_2.fs.gas.u_modes[imode];
 			}
 			if ( nsp > 1 ) {
 			    for ( size_t isp = 0; isp < nsp; ++isp ) {

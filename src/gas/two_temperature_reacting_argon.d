@@ -75,13 +75,13 @@ public:
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
 	Q.rho = Q.p/(_Rgas*(Q.Ttr + alpha*Q.T_modes[0]));				//update rho      			Q.p/(Q.Ttr*_Rgas); //ideal gas law
 	Q.u = 3/2*_Rgas*Q.Ttr;		 					//update internal energy of heavy particles 	//_Cv*Q.Ttr- Q.massf[1]*_q;
-	Q.e_modes[0] = 3/2*_Rgas*alpha*Q.T_modes[0]+alpha*_Rgas*_theta_ion;	//update energy of electronic mode...
+	Q.u_modes[0] = 3/2*_Rgas*alpha*Q.T_modes[0]+alpha*_Rgas*_theta_ion;	//update energy of electronic mode...
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
 	Q.Ttr = 2/3*Q.u/_Rgas;								//Q.u/_Cv;//(Q.u + Q.massf[1]*_q)/_Cv;
-	Q.T_modes[0] = 	2/3*(Q.e_modes[0]-alpha*_Rgas*_theta_ion)/(_Rgas*alpha);		//
+	Q.T_modes[0] = 	2/3*(Q.u_modes[0]-alpha*_Rgas*_theta_ion)/(_Rgas*alpha);		//
 	Q.p = Q.rho*_Rgas*(Q.Ttr+alpha*Q.T_modes[0]);					// Q.rho*_Rgas*Q.Ttr;
     }
     override void update_thermo_from_rhoT(GasState Q) const
@@ -89,7 +89,7 @@ public:
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
 	Q.p = Q.rho*_Rgas*(Q.Ttr+alpha*Q.T_modes[0]);	//Q.rho*_Rgas*Q.Ttr;
 	Q.u = 3/2*_Rgas*Q.Ttr;			//_Cv*Q.Ttr; //- Q.massf[1]*_q;
-    	Q.e_modes[0] = 3/2*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;		//
+    	Q.u_modes[0] = 3/2*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;		//
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
@@ -97,7 +97,7 @@ public:
 	Q.Ttr = Q.p/Q.rho/_Rgas-alpha*Q.T_modes[0];		// Q.p/(Q.rho*_Rgas);// Assume Q.T_modes[0] is set independently, and correct.
 	// Assume Q.T_modes[0] is set independently, and correct.
 	Q.u = 3/2*_Rgas*Q.Ttr;			// _Cv*Q.Ttr; //- Q.massf[1]*_q;
-	Q.e_modes[0] = 3/2*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;		//
+	Q.u_modes[0] = 3/2*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;		//
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
@@ -266,7 +266,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 	//        u_trans_ionisation_Ar= ne_dot_A*Kb*_theta_ion*dt;
 	//        u_trans_collisions = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.Ttr-Q.T_modes[0])*dt;// energy transferred to electron mode through collisions
 	//        Q.u = Q.u - u_trans_collisions;
-	//        Q.e_modes[0] = Q.e_modes[0] + u_trans_collisions - u_trans_ionisation_e;
+	//        Q.u_modes[0] = Q.u_modes[0] + u_trans_collisions - u_trans_ionisation_e;
 	//	_gmodel.update_thermo_from_rhou(Q);
 
  //   	}
