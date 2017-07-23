@@ -56,13 +56,13 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
         efmflx(Lft, Rght, IFace, myConfig.gmodel);
 	break;
     case FluxCalculator.ausmdv:
-        ausmdv(Lft, Rght, IFace);
+        ausmdv(Lft, Rght, IFace, myConfig.gmodel);
 	break;
     case FluxCalculator.adaptive:
         adaptive_flux(Lft, Rght, IFace, myConfig);
 	break;
     case FluxCalculator.ausm_plus_up:
-        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf);
+        ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, myConfig.gmodel);
 	break;
     case FluxCalculator.hlle:
         hlle(Lft, Rght, IFace, myConfig.gmodel);
@@ -108,20 +108,21 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
 } // end compute_interface_flux()
 
 @nogc
-void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs)
+void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs, 
+				    ref LocalConfig myConfig)
 {
     double rho = fs.gas.rho;
-    double un = fs.vel.x;
+    double vn = fs.vel.x;
     double vt1 = fs.vel.y;
     double vt2 = fs.vel.z;
     double p = fs.gas.p;
-    double e = fs.gas.u; foreach(elem; fs.gas.u_modes) { e += elem; }
-    double ke = 0.5 * (un*un + vt1*vt1 + vt2*vt2); // Kinetic energy per unit volume.
+    double u = myConfig.gmodel.internal_energy(fs.gas);
+    double ke = 0.5 * (vn*vn + vt1*vt1 + vt2*vt2); // Kinetic energy per unit volume.
     //
     // Fluxes (quantity / unit time / unit area)
-    F.mass = rho * un; // The mass flux is relative to the moving interface.
-    F.momentum.set(F.mass*un + p, F.mass*vt1, F.mass*vt2);
-    F.total_energy = F.mass * (e + ke) + p * un + fs.tke;
+    F.mass = rho * vn; // The mass flux is relative to the moving interface.
+    F.momentum.set(F.mass*vn + p, F.mass*vt1, F.mass*vt2);
+    F.total_energy = F.mass*(u+ke) + p*vn + fs.tke;
     F.tke = F.mass * fs.tke;  // turbulence kinetic energy
     F.omega = F.mass * fs.omega;  // pseudo vorticity
     foreach (isp; 0 .. F.massf.length) { F.massf[isp] = F.mass*fs.gas.massf[isp]; }
@@ -142,7 +143,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
     // also transform the magnetic field
     if (myConfig.MHD) { fs.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
-    set_flux_vector_in_local_frame(IFace.F, fs);
+    set_flux_vector_in_local_frame(IFace.F, fs, myConfig);
     if (omegaz != 0.0) {
 	// Rotating frame.
 	double x = IFace.pos.x;
@@ -169,7 +170,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 } // end set_flux_vector_in_global_frame()
 
 @nogc
-void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
+void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 // Wada and Liou's flux calculator.
 // 
 // Implemented from details in their AIAA paper 
@@ -186,7 +187,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
     double uL = Lft.vel.x;
     double vL = Lft.vel.y;
     double wL = Lft.vel.z;
-    double eL = Lft.gas.u; foreach(elem; Lft.gas.u_modes) { eL += elem; }
+    double eL = gmodel.internal_energy(Lft.gas);
     double aL = Lft.gas.a;
     double keL = 0.5*(uL*uL + vL*vL + wL*wL);
     double HL = eL + pLrL + keL + Lft.tke;
@@ -197,7 +198,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace)
     double uR = Rght.vel.x;
     double vR = Rght.vel.y;
     double wR = Rght.vel.z;
-    double eR = Rght.gas.u; foreach(elem; Rght.gas.u_modes) { eR += elem; }
+    double eR = gmodel.internal_energy(Rght.gas);
     double aR = Rght.gas.a;
     double keR = 0.5*(uR*uR + vR*vR + wR*wR);
     double HR = eR + pRrR + keR + Rght.tke;
@@ -349,7 +350,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     // Unpack Left flow state.
     rhoL = Lft.gas.rho;
     presL = Lft.gas.p;
-    eL = Lft.gas.u; foreach(elem; Lft.gas.u_modes) { eL += elem; }
+    eL = gmodel.internal_energy(Lft.gas);
     hL = eL + presL/rhoL + Lft.tke; // bundle turbulent energy, PJ 2017-06-17
     tL = Lft.gas.Ttr;
     vnL = Lft.vel.x;
@@ -358,7 +359,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     // Unpack Right flow state.
     rhoR = Rght.gas.rho;
     presR = Rght.gas.p;
-    eR = Rght.gas.u; foreach(elem; Rght.gas.u_modes) { eR += elem; }
+    eR = gmodel.internal_energy(Rght.gas);
     hR = eR + presR/rhoR + Rght.tke;
     tR = Rght.gas.Ttr;
     vnR = Rght.vel.x;
@@ -486,12 +487,13 @@ void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, r
     if ( (Lft.S == 1 || Rght.S == 1) && shear_is_small ) {
 	efmflx(Lft, Rght, IFace, myConfig.gmodel);
     } else {
-	ausmdv(Lft, Rght, IFace);
+	ausmdv(Lft, Rght, IFace, myConfig.gmodel);
     }
 } // end adaptive_flux()
 
 @nogc
-void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, double M_inf)
+void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
+		  double M_inf, GasModel gmodel)
 // Liou's 2006 AUSM+up flux calculator
 //
 // A new version of the AUSM-family schemes, based 
@@ -559,7 +561,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double uL = Lft.vel.x;
     double vL = Lft.vel.y;
     double wL = Lft.vel.z;
-    double eL = Lft.gas.u; foreach(elem; Lft.gas.u_modes) { eL += elem; }
+    double eL = gmodel.internal_energy(Lft.gas);
     double aL = Lft.gas.a;
     double keL = 0.5 * (uL * uL + vL * vL + wL * wL);
     double HL = eL + pL/rL + keL + Lft.tke;
@@ -569,7 +571,7 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, do
     double uR = Rght.vel.x;
     double vR = Rght.vel.y;
     double wR = Rght.vel.z;
-    double eR = Rght.gas.u; foreach(elem; Rght.gas.u_modes) { eR += elem; }
+    double eR = gmodel.internal_energy(Rght.gas);
     double aR = Rght.gas.a;
     double keR = 0.5 * (uR * uR + vR * vR + wR * wR);
     double HR = eR + pR/rR + keR + Rght.tke;
