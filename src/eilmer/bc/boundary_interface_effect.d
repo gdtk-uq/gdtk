@@ -76,7 +76,10 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
 	newBIE = new BIE_WallKOmega(blk_id, boundary);
 	break;
     case "wall_function_interface_effect":
-	newBIE = new BIE_WallFunction(blk_id, boundary);
+	string thermalCond = getJSONstring(jsonData, "thermal_condition", "FIXED_T");
+	thermalCond = toUpper(thermalCond);
+	double Twall = getJSONdouble(jsonData, "Twall", 300.0);
+	newBIE = new BIE_WallFunction(blk_id, boundary, thermalCond, Twall);
 	break;
     case "temperature_from_gas_solid_interface":
 	int otherBlock = getJSONint(jsonData, "other_block", -1);
@@ -1101,9 +1104,11 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 } // end class BIE_WallKOmega
 
 class BIE_WallFunction : BoundaryInterfaceEffect {
-    this(int id, int boundary)
+    this(int id, int boundary, string thermalCond, double Twall)
     {
 	super(id, boundary, "WallFunction_InterfaceEffect");
+	_isFixedTWall = (thermalCond == "FIXED_T") ? true : false;
+	_Twall = Twall;
     }
 
     override string toString() const 
@@ -1195,6 +1200,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    break;
 	} // end switch which_boundary
     } // end apply()
+
+private:
+    bool _isFixedTWall;
+    double _Twall;
 
 } // end class BIE_WallFunction
 
