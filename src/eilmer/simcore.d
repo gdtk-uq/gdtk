@@ -475,11 +475,11 @@ void integrate_in_time(double target_time_as_requested)
             // Print the current time-stepping status.
 	    auto writer = appender!string();
 	    formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ", step, sim_time, dt_global);
-	    long wall_clock_elapsed = (Clock.currTime() - wall_clock_start).total!"seconds"();
-	    double wall_clock_per_step = to!double(wall_clock_elapsed) / step;
+	    double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0; // convert to seconds with precision of milliseconds
+	    double wall_clock_per_step = wall_clock_elapsed / step;
 	    double WCtFT = (GlobalConfig.max_time - sim_time) / dt_global * wall_clock_per_step;
 	    double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
-	    formattedWrite(writer, "WC=%d WCtFT=%.1f WCtMS=%.1f", 
+	    formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f", 
 			   wall_clock_elapsed, WCtFT, WCtMS);
 	    if (GlobalConfig.verbosity_level > 0) { writeln(writer.data); }
 	    if (GlobalConfig.report_residuals) {
