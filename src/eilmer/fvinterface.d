@@ -52,6 +52,8 @@ public:
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
+    Vector3 tau;           // shear at face (used by wall-function BCs)
+    double q;              // heat-flux across face (used by wall-function BCs)
     //
     // Viscous-flux-related quantities.
     FlowGradients grad;
@@ -111,6 +113,8 @@ public:
 	t2 = other.t2;
 	fs = new FlowState(other.fs, gm);
 	F = new ConservedQuantities(other.F);
+	tau.set(other.tau);
+	q = other.q;
 	grad = new FlowGradients(other.grad);
 	if (other.ws_grad) ws_grad = new WLSQGradWorkspace(other.ws_grad);
 	// Because we copy the following pointers and references,
@@ -136,6 +140,8 @@ public:
 	case CopyDataOption.all_flow:
 	    fs.copy_values_from(other.fs);
 	    F.copy_values_from(other.F);
+	    tau.set(other.tau);
+	    q = other.q;
 	    break;
 	case CopyDataOption.grid:
 	    pos.set(other.pos);
@@ -156,6 +162,8 @@ public:
 	    n.set(other.n); t1.set(other.t1); t2.set(other.t2);
 	    fs.copy_values_from(other.fs);
 	    F.copy_values_from(other.F);
+	    tau.set(other.tau);
+	    q = other.q;
 	    grad.copy_values_from(other.grad);
 	    // omit scratch workspace ws_grad
 	} // end switch
@@ -186,6 +194,8 @@ public:
 	repr ~= ", t1=" ~ to!string(t1);
 	repr ~= ", t2=" ~ to!string(t2);
 	repr ~= ", fs=" ~ to!string(fs);
+	repr ~= ", tau=" ~ to!string(tau);
+	repr ~= ", q=" ~ to!string(q);
 	repr ~= ", F=" ~ to!string(F);
 	repr ~= ", grad=" ~ to!string(grad);
 	repr ~= ", cloud_pos=" ~ to!string(cloud_pos);
