@@ -17,7 +17,8 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/ideal_dissociating_gas.d \
 	$(GAS_DIR)/two_temperature_nitrogen.d \
 	$(GAS_DIR)/fuel_air_mix.d \
-	$(GAS_DIR)/ideal_air_fortran.o
+	$(GAS_DIR)/ideal_air_fortran.o \
+	$(GAS_DIR)/steam.d
 
 THERMO_FILES := \
 	$(GAS_DIR)/thermo/cea_thermo_curves.d \
