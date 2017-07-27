@@ -200,6 +200,7 @@ final class UpdateIDG : ThermochemicalReactor {
 	doLuaFile(L, fname);
 	lua_getglobal(L, "IdealDissociatingGas");
 	_W = getDouble(L, -1, "W"); // molecular weight, g/mole
+	_Rnn = R_universal / _W * 1000; // gas constant for molecule, J/kg/K
 	_T_d = getDouble(L, -1, "T_d"); // characteristic dissociation temperature, K
 	_rho_d = getDouble(L, -1, "rho_d"); // characteristic density, g/cm^3
 	// Rate constants follow.
@@ -214,17 +215,67 @@ final class UpdateIDG : ThermochemicalReactor {
     override void opCall(GasState Q, double tInterval, ref double dtSuggest,
 			 ref double[] params)
     {
-	double alpha = Q.massf[1];
-	//
+	// Initial state.
+	double alpha0 = Q.massf[1];
+	double T0 = Q.Ttr;
+	double rho = Q.rho;
+	// The IDG rate equations as functions.
+	double X(double alpha, double T)
+	{
+	    return (2.0*_C1*T^^_n1*alpha + _C2*T^^_n2*(1-alpha)) / _W;
+	}
+	double f1(double alpha, double T, double rho)
+	// This is the time derivative d(alpha)/dt.
+	// See PJ workbook page 48, 23-Apr-2017
+	{
+	    return rho*X(alpha,T)*((1.0-alpha)*exp(-_T_d/T) - rho*alpha*alpha/_rho_d);
+	}
+	// The nonlinear constraint functions for the backward-Euler solve.
+	double g1(double alpha1, double T1, double rho)
+	{
+	    return alpha1 - alpha0 - tInterval*f1(alpha1, T1, rho);
+	}
+	double f2(double alpha1, double T1)
+	{
+	    return _Rnn*alpha1*_T_d + _Rnn*3.0*T1;
+	}
+	// Updated state, initially guessed as the same.
+	double alpha1 = alpha0;
+	double T1 = T0;
+	foreach (i; 0 .. 3) {
+	    writefln("start of iteration %d alpha1=%g T1=%g", i, alpha1, T1); // DEBUG
+	    double g1_nominal = g1(alpha1,T1,Q.rho);
+	    double f2_nominal = f2(alpha1,T1);
+	    writefln("g1=%g f2=%g", g1_nominal, f2_nominal); // DEBUG
+	    // Derivatives for the linear equations in the Newton update.
+	    double df2da1 = -_Rnn*_T_d;
+	    double df2dT1 = -3.0 * _Rnn;
+	    double del_alpha = (alpha1 > 0.5) ? -0.001: 0.001;
+	    double dg1da1 = (g1(alpha1+del_alpha, T1, Q.rho) - g1_nominal)/del_alpha;
+	    double dg1dT1 = g1(alpha1, T1+1.0, Q.rho) - g1_nominal;
+	    // Solve the linear equations for the increments
+	    double determinant = df2da1*dg1dT1 - dg1da1*df2dT1;
+	    double dalpha1 = (f2_nominal*dg1dT1 - g1_nominal*df2dT1)/determinant;
+	    double dT1 = (df2da1*g1_nominal - dg1da1*f2_nominal)/determinant;
+	    writefln("dalpha1=%g dT1=%g", dalpha1, dT1); //DEBUG
+	    alpha1 += dalpha1;
+	    alpha1 = fmax(0.0, fmin(alpha1, 1.0));
+	    T1 += dT1;
+	    if (fabs(dT1) < 0.001 && fabs(dalpha1) < 1.0e-6) { break; } // close enough
+	}
+	Q.massf[0] = 1.0 - alpha1;
+	Q.massf[1] = alpha1;
 	// Since the internal energy and density in the (isolated) reactor is fixed,
 	// we need to evaluate the new temperature, pressure, etc.
 	_gmodel.update_thermo_from_rhou(Q);
+	assert(fabs(Q.Ttr - T1) < 0.1, "Oops, Temperature doesn't match after thermo update.");
 	_gmodel.update_sound_speed(Q);
     }
 
 private:
     // Thermodynamic constants
     double _W; // Molecular mass in g/mole
+    double _Rnn; // gas constant for molecule in J/kg/K
     double _T_d; // characteristic dissociation temperature, K
     double _rho_d; // characteristic density, g/cm^3
     // Rate constants
@@ -270,6 +321,12 @@ version(ideal_dissociating_gas_test) {
 	assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
 
+	auto reactor = new UpdateIDG("sample-data/idg-nitrogen.lua", gm);
+	double[] params; // empty
+	double dtSuggest; // to receive value
+	reactor(gd, 1.0e-6, dtSuggest, params);
+	// [TODO] set and check for a reasonable chemical update at a high temperature.
+	
 	return 0;
     }
 }
