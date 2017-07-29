@@ -42,7 +42,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		  string surfaceListStr, string extractStreamStr,
 		  string extractLineStr, string computeLoadsOnGroupStr,
 		  string probeStr, string outputFormat,
-		  string normsStr, string regionStr)
+		  string normsStr, string regionStr,
+		  string extractSolidLineStr)
 {
     read_config_file();
     string jobName = GlobalConfig.base_file_name;
@@ -502,6 +503,12 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    size_t[2][] cells_found; // accumulate the identies of the cells found here
 	    foreach(lineStr; extractLineStr.split(";")) {
 		auto items = lineStr.split(",");
+		if (items.length != 7) {
+		    string errMsg = "The 'extract-line' string requires exactly 7 values.\n";
+		    errMsg ~= format("You have provided %d items.\n", items.length);
+		    errMsg ~= format("The problematic string is: %s\n", lineStr);
+		    throw new Error(errMsg);
+		}
 		Vector3 p0 = Vector3(to!double(items[0]), to!double(items[1]), to!double(items[2]));
 		Vector3 p1 = Vector3(to!double(items[3]), to!double(items[4]), to!double(items[5]));
 		size_t n = to!size_t(items[6]);
@@ -514,6 +521,45 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    }
 	} // end foreach tindx
     } // end if extractLineStr
+
+    if (extractSolidLineStr.length > 0) {
+	writeln("Extracting data along a straight line between end points in solid domains.");
+	// The output may go to a user-specified file, or stdout.
+	File outFile;
+	if (outputFileName.length > 0) {
+	    outFile = File(outputFileName, "w");
+	    writeln("Output will be sent to File: ", outputFileName);
+	} else {
+	    outFile = stdout;
+	}
+	extractSolidLineStr = extractSolidLineStr.strip();
+	extractSolidLineStr = extractSolidLineStr.replaceAll(regex("\""), "");
+	foreach (tindx; tindx_list_to_plot) {
+	    writeln("  tindx= ", tindx);
+	    auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+	    outFile.writeln(soln.solidBlocks[0].variable_names_as_string(true));
+	    size_t[2][] cells_found; // accumulate the identies of the cells found here
+	    foreach(lineStr; extractSolidLineStr.split(";")) {
+		auto items = lineStr.split(",");
+		if (items.length != 7) {
+		    string errMsg = "The 'extract-solid-line' string requires exactly 7 values.\n";
+		    errMsg ~= format("You have provided %d items.\n", items.length);
+		    errMsg ~= format("The problematic string is: %s\n", lineStr);
+		    throw new Error(errMsg);
+		}
+		Vector3 p0 = Vector3(to!double(items[0]), to!double(items[1]), to!double(items[2]));
+		Vector3 p1 = Vector3(to!double(items[3]), to!double(items[4]), to!double(items[5]));
+		size_t n = to!size_t(items[6]);
+		auto count = soln.find_enclosing_cells_along_line(p0, p1, n, cells_found);
+		writeln("# Info: Found ", count, " cells from point ", p0, " to point ", p1);
+	    } // end foreach lineStr
+	    foreach(i; 0 .. cells_found.length) {
+		size_t ib = cells_found[i][0]; size_t idx = cells_found[i][1];
+		outFile.writeln(soln.solidBlocks[ib].values_as_string(idx));
+	    }
+	} // end foreach tindx
+    } // end if extractSolidLineStr
     //
     if (computeLoadsOnGroupStr.length > 0) {
 	writeln("Computing loads on group: " ~ computeLoadsOnGroupStr ~ " .");

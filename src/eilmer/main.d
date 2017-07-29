@@ -99,7 +99,8 @@ int main(string[] args)
     msg       ~= "         [--slice-list=\"blk-range,i-range,j-range,k-range;...\"]\n";
     msg       ~= "         [--surface-list=\"blk,surface-id;...\"]\n";
     msg       ~= "         [--extract-streamline=\"x,y,z;...\"]        streamline locus points\n";
-    msg       ~= "         [--extract-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line\n";
+    msg       ~= "         [--extract-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line in flow blocks\n";
+    msg       ~= "         [--extract-solid-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line in solid blocks\n";
     msg       ~= "         [--compute-loads-on-group=\"\"]    group tag\n";
     msg       ~= "         [--probe=\"x,y,z;...\"]       locations to sample flow data\n";
     msg       ~= "         [--output-format=<string>]  gnuplot|pretty\n";
@@ -140,6 +141,7 @@ int main(string[] args)
     string surfaceListStr = "";
     string extractStreamStr = "";
     string extractLineStr = "";
+    string extractSolidLineStr = "";
     string computeLoadsOnGroupStr = "";
     string probeStr = "";
     string outputFormat = "gnuplot";
@@ -173,6 +175,7 @@ int main(string[] args)
 	       "surface-list", &surfaceListStr,
 	       "extract-streamline", &extractStreamStr,
 	       "extract-line", &extractLineStr,
+	       "extract-solid-line", &extractSolidLineStr,
 	       "compute-loads-on-group", &computeLoadsOnGroupStr,
 	       "probe", &probeStr,
 	       "output-format", &outputFormat,
@@ -334,6 +337,7 @@ int main(string[] args)
 	    writeln("  surfaceListStr: ", surfaceListStr);
 	    writeln("  extractStreamStr: ", extractStreamStr);
 	    writeln("  extractLineStr: ", extractLineStr);
+	    writeln("  extractSolidLineStr: ", extractSolidLineStr);
 	    writeln("  computeLoadsOnGroupStr: ", computeLoadsOnGroupStr);
 	    writeln("  probeStr: ", probeStr);
 	    writeln("  outputFormat: ", outputFormat);
@@ -345,7 +349,7 @@ int main(string[] args)
 		     vtkxmlFlag, binaryFormat, tecplotBinaryFlag, tecplotAsciiFlag,
 		     outputFileName, sliceListStr, surfaceListStr,
 		     extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
-		     probeStr, outputFormat, normsStr, regionStr);
+		     probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr);
 	if (verbosityLevel > 0) { writeln("Done postprocessing."); }
     } // end if postFlag
 
