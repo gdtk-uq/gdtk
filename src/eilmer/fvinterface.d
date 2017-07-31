@@ -32,6 +32,7 @@ public:
     size_t id;  // allows us to work out where, in the block, the interface is
     bool is_on_boundary = false;  // by default, assume not on boundary
     size_t bc_id;  // if the face is on a block boundary, which one
+    bool use_wall_function_shear_and_heat_flux = false; // for use in viscous_flux_calc()
     //
     // Geometry
     Vector3 pos;           // position of the (approx) midpoint
@@ -103,6 +104,9 @@ public:
     this(FVInterface other, GasModel gm)
     {
 	id = other.id;
+	is_on_boundary = other.is_on_boundary;
+	bc_id = other.bc_id;
+	use_wall_function_shear_and_heat_flux = other.use_wall_function_shear_and_heat_flux;
 	pos = other.pos;
 	gvel = other.gvel;
 	Ybar = other.Ybar;
@@ -299,19 +303,19 @@ public:
 		// Axisymmetric terms no longer include the radial multiplier
 		// as that has been absorbed into the interface area calculation.
 		double ybar = Ybar;
-                if (ybar > 1.0e-10) { // something very small for a cell height
-                    tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy + fs.vel.y / ybar);
-                    tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy + fs.vel.y / ybar);
-                } else {
-                    tau_xx = 0.0;
-                    tau_yy = 0.0;
-                }
-                tau_xy = mu_eff * (dudy + dvdx);
+		if (ybar > 1.0e-10) { // something very small for a cell height
+		    tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy + fs.vel.y / ybar);
+		    tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy + fs.vel.y / ybar);
+		} else {
+		    tau_xx = 0.0;
+		    tau_yy = 0.0;
+		}
+		tau_xy = mu_eff * (dudy + dvdx);
 	    } else {
 		// 2-dimensional-planar stresses.
-                tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy);
-                tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy);
-                tau_xy = mu_eff * (dudy + dvdx);
+		tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy);
+		tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy);
+		tau_xy = mu_eff * (dudy + dvdx);
 	    }
 	}
 	// Thermal conductivity (NOTE: q is total energy flux)
@@ -360,24 +364,50 @@ public:
 	double nx = n.x;
 	double ny = n.y;
 	double nz = n.z;
-	// Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
-	F.momentum.refx -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
-	F.momentum.refy -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
-	F.momentum.refz -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
-	F.total_energy -=
-	    (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
-	    (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
-	    (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
-	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-	    F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
-	    F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
-	}
-	if (myConfig.turbulence_model != TurbulenceModel.none ||
-	    myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-	    foreach (isp; 0 .. n_species) {
-		F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+	// In some cases, the shear and heat fluxes have been previously
+	// computed by the wall functions in the boundary condition call.
+	if (use_wall_function_shear_and_heat_flux) {
+	    // [TODO] Use value stored at interface.
+	    /*
+	    F.momentum.refx -= tau_xx*nx + tau_wall_xy*ny + tau_xz*nz;
+	    F.momentum.refy -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
+	    F.momentum.refz -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
+	    F.total_energy -=
+		(tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
+		(tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
+		(tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
+	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+		F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
+		F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
 	    }
+	    if (myConfig.turbulence_model != TurbulenceModel.none ||
+		myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+		foreach (isp; 0 .. n_species) {
+		    F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+		}
+	    }
+	    */
 	}
+	else { // proceed with locally computed shear and heat flux
+	    // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
+	    F.momentum.refx -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
+	    F.momentum.refy -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
+	    F.momentum.refz -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
+	    F.total_energy -=
+		(tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
+		(tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
+		(tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
+	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+		F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
+		F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+	    }
+	    if (myConfig.turbulence_model != TurbulenceModel.none ||
+		myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+		foreach (isp; 0 .. n_species) {
+		    F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+		}
+	    }
+	} // end if (use_wall_function_shear_and_heat_flux)
 	// [TODO] Rowan, Modal energy flux?
     } // end viscous_flux_calc()
 

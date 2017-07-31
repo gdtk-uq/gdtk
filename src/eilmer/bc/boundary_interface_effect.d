@@ -1138,6 +1138,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.north];
+		    IFace.use_wall_function_shear_and_heat_flux = true;
 		    FlowState fs = IFace.fs;
 
 		} // end i loop
