@@ -35,7 +35,7 @@ test number-of-steps {The main simulation takes a certain number of steps.} -bod
 
 test run-postprocessor {Run the postprocessing stage.} -body {
     if { [catch {exec e4shared --job=inf_cyl --post \
-		     --slice-list="0,:,0,0" \
+		     --slice-list=0,:,0,0 \
 		     --output-file=stag-prof-50Pa-Blackman.data \
 		     > LOGFILE_POST} results] } {
         puts "e4shared postprocessing command failed"
