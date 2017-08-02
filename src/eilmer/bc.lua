@@ -7,6 +7,44 @@
 
 module(..., package.seeall)
 
+local MASSF_ERROR_TOL = 1.0e-6
+
+function convertSpeciesTableToArray(massfTable)
+   -- This function is essentially the Lua version of:
+   -- luagas_model.d:getSpeciesValsFromTable
+   local gm = getGasModel()
+   local nsp = gm:nSpecies()
+   -- 1. Check all keys are valid species names
+   for sp,_ in pairs(massfTable) do
+      isp = gm:speciesIndex(sp)
+      if isp == -1 then
+	 errMsg = "Species name used in table does not exist: " .. sp
+	 Error(errMsg)
+      end
+   end
+   -- 2. Set all values to 0.0
+   massfArray = {}
+   for isp=0,nsp-1 do
+      massfArray[isp] = 0.0
+   end
+   -- 3. Then populate those that are specified explicitly
+   for sp,massf in pairs(massfTable) do
+      isp = gm:speciesIndex(sp)
+      massfArray[isp] = massf
+   end
+   -- 4. Do a check and possible scale of mass fractions
+   massfSum = 0.0
+   for isp=0,nsp-1 do massfSum = massfSum + massfArray[isp] end
+   if math.abs(massfSum - 1) > MASSF_ERROR_TOL then
+      errMsg = "The given mass faction values to do sum to 1.0\n"
+      errMsg = errMsg .. string.format("The sum value is: %e\n", massfSum)
+      errMsg = errMsg .. string.format("The error is larger than the tolerance: %e\n", MASSF_ERR_TOL)
+      Error(errMsg)
+   end
+   -- otherwise, perform a scaling
+   for isp=0,nsp-1 do massfArray[isp] = massfArray[isp]/massfSum end
+   return massfArray
+end
 -- -----------------------------------------------------------------------
 -- Classes for constructing boundary conditions.
 -- Each "complete" boundary condition is composed of lists of actions to do
@@ -237,6 +275,22 @@ function FixedT:tojson()
    return str
 end
 
+FixedComposition = BoundaryInterfaceEffect:new{wall_massf_composition={}}
+FixedComposition.type = "fixed_composition"
+function FixedComposition:tojson()
+   local gm = getGasModel()
+   local nsp = gm:nSpecies()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. ' "wall_massf_composition": [ '
+   for isp=0,nsp-2 do
+      str = str .. string.format("%.18e, ", self.wall_massf_composition[isp])
+   end
+   str = str .. string.format("%.18e ]\n", self.wall_massf_composition[nsp-1])
+   str = str .. '}'
+   return str
+end
+
+
 UpdateThermoTransCoeffs = BoundaryInterfaceEffect:new()
 UpdateThermoTransCoeffs.type = "update_thermo_trans_coeffs"
 function UpdateThermoTransCoeffs:tojson()
@@ -439,7 +493,9 @@ WallBC_NoSlip_FixedT = BoundaryCondition:new()
 WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
 function WallBC_NoSlip_FixedT:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"Twall", "wall_function", "label", "group"})
+   local flag = checkAllowedNames(o, {"Twall", "wall_function", 
+				      "catalytic_type", "wall_massf_composition",
+				      "label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -455,6 +511,10 @@ function WallBC_NoSlip_FixedT:new(o)
 	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
       end
    end
+   if o.catalytic_type and o.catalytic_type ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+	 FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   end
    o.is_configured = true
    return o
 end
@@ -463,7 +523,9 @@ WallBC_NoSlip_Adiabatic = BoundaryCondition:new()
 WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
 function WallBC_NoSlip_Adiabatic:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"wall_function", "label", "group"})
+   local flag = checkAllowedNames(o, {"wall_function",
+				      "catalytic_type", "wall_massf_composition",
+				      "label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -476,6 +538,10 @@ function WallBC_NoSlip_Adiabatic:new(o)
 	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
 	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
       end
+   end
+   if o.catalytic_type and o.catalytic_type ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+	 FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o

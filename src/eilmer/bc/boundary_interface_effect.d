@@ -70,6 +70,12 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
 	double Twall = getJSONdouble(jsonData, "Twall", 300.0);
 	newBIE = new BIE_FixedT(blk_id, boundary, Twall);
 	break;
+    case "fixed_composition":
+	double[] massfAtWall = getJSONdoublearray(jsonData, "wall_massf_composition", [1.0,]);
+	// TODO[Kyle]: please complete construction
+	string errMsg = "TODO for Kyle: Implement me please.";
+	throw new FlowSolverException(errMsg);
+	//break;
     case "update_thermo_trans_coeffs":
 	newBIE = new BIE_UpdateThermoTransCoeffs(blk_id, boundary);
 	break;
