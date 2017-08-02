@@ -53,7 +53,7 @@ public:
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
-    Vector3 tau;           // shear at face (used by wall-function BCs)
+    double tau_wall_x, tau_wall_y, tau_wall_z; // shear at face (used by wall-function BCs)
     double q;              // heat-flux across face (used by wall-function BCs)
     //
     // Viscous-flux-related quantities.
@@ -117,7 +117,9 @@ public:
 	t2 = other.t2;
 	fs = new FlowState(other.fs, gm);
 	F = new ConservedQuantities(other.F);
-	tau.set(other.tau);
+	tau_wall_x = other.tau_wall_x;
+	tau_wall_y = other.tau_wall_y;
+	tau_wall_z = other.tau_wall_z;
 	q = other.q;
 	grad = new FlowGradients(other.grad);
 	if (other.ws_grad) ws_grad = new WLSQGradWorkspace(other.ws_grad);
@@ -144,7 +146,9 @@ public:
 	case CopyDataOption.all_flow:
 	    fs.copy_values_from(other.fs);
 	    F.copy_values_from(other.F);
-	    tau.set(other.tau);
+	    tau_wall_x = other.tau_wall_x;
+	    tau_wall_y = other.tau_wall_y;
+	    tau_wall_z = other.tau_wall_z;
 	    q = other.q;
 	    break;
 	case CopyDataOption.grid:
@@ -166,7 +170,9 @@ public:
 	    n.set(other.n); t1.set(other.t1); t2.set(other.t2);
 	    fs.copy_values_from(other.fs);
 	    F.copy_values_from(other.F);
-	    tau.set(other.tau);
+	    tau_wall_x = other.tau_wall_x;
+	    tau_wall_y = other.tau_wall_y;
+	    tau_wall_z = other.tau_wall_z;
 	    q = other.q;
 	    grad.copy_values_from(other.grad);
 	    // omit scratch workspace ws_grad
@@ -198,7 +204,9 @@ public:
 	repr ~= ", t1=" ~ to!string(t1);
 	repr ~= ", t2=" ~ to!string(t2);
 	repr ~= ", fs=" ~ to!string(fs);
-	repr ~= ", tau=" ~ to!string(tau);
+	repr ~= ", tau_wall_x=" ~ to!string(tau_wall_x);
+	repr ~= ", tau_wall_y=" ~ to!string(tau_wall_y);
+	repr ~= ", tau_wall_z=" ~ to!string(tau_wall_z);
 	repr ~= ", q=" ~ to!string(q);
 	repr ~= ", F=" ~ to!string(F);
 	repr ~= ", grad=" ~ to!string(grad);
@@ -367,26 +375,16 @@ public:
 	// In some cases, the shear and heat fluxes have been previously
 	// computed by the wall functions in the boundary condition call.
 	if (use_wall_function_shear_and_heat_flux) {
-	    // [TODO] Use value stored at interface.
-	    /*
-	    F.momentum.refx -= tau_xx*nx + tau_wall_xy*ny + tau_xz*nz;
-	    F.momentum.refy -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
-	    F.momentum.refz -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
+	    // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
+	    // [TODO] As per Jason's recommendation, we need to do something 
+	    // to correct for corner cells. 
+	    // [TODO] Currently implemented for 2D; need to extend to 3D.
+	    F.momentum.refx -= tau_xx*nx + tau_wall_x;
+	    F.momentum.refy -= tau_yy*ny + tau_wall_y;
+	    F.momentum.refz -= tau_zz*nz + tau_wall_z;
 	    F.total_energy -=
-		(tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
-		(tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
-		(tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
-	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-		F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
-		F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
-	    }
-	    if (myConfig.turbulence_model != TurbulenceModel.none ||
-		myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-		foreach (isp; 0 .. n_species) {
-		    F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
-		}
-	    }
-	    */
+		tau_xx*fs.vel.x*nx + tau_yy*fs.vel.y*ny + tau_zz*fs.vel.z*nz +
+		tau_wall_x*fs.vel.x + tau_wall_y*fs.vel.y + tau_wall_z*fs.vel.z + q;
 	}
 	else { // proceed with locally computed shear and heat flux
 	    // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
@@ -397,18 +395,18 @@ public:
 		(tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
 		(tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
 		(tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
-	    if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-		F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
-		F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
-	    }
-	    if (myConfig.turbulence_model != TurbulenceModel.none ||
-		myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-		foreach (isp; 0 .. n_species) {
-		    F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
-		}
-	    }
 	} // end if (use_wall_function_shear_and_heat_flux)
 	// [TODO] Rowan, Modal energy flux?
+	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+	    F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
+	    F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+	}
+	if (myConfig.turbulence_model != TurbulenceModel.none ||
+	    myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+	    foreach (isp; 0 .. n_species) {
+		F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+	    }
+	}
     } // end viscous_flux_calc()
 
 } // end of class FV_Interface

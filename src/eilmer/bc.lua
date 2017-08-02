@@ -255,8 +255,7 @@ WallFunctionInterfaceEffect = BoundaryInterfaceEffect:new()
 WallFunctionInterfaceEffect.type = "wall_function_interface_effect"
 function WallFunctionInterfaceEffect:tojson()
    local str = string.format('          {"type" : "%s",', self.type)
-   str = str .. string.format(' "thermal_condition" : "%s",', self.thermal_condition)
-   str = str .. string.format(' "Twall" : %.18e', self.Twall)
+   str = str .. string.format(' "thermal_condition" : "%s"', self.thermal_condition)
    str = str .. '}'
    return str
 end
@@ -452,7 +451,7 @@ function WallBC_NoSlip_FixedT:new(o)
       if o.wall_function then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
-	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T', Twall=o.Twall}
+	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
 	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
       end
    end
@@ -474,7 +473,7 @@ function WallBC_NoSlip_Adiabatic:new(o)
       if o.wall_function then
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
-	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC', Twall=-1.0}
+	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
 	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
       end
    end
