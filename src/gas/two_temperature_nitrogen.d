@@ -38,8 +38,8 @@ public:
     override void update_thermo_from_pT(GasState Q) const
     {
 	Q.rho = Q.p/(Q.Ttr*_R_N2);
-	Q.u = (5./2.)*Q.Ttr*_R_N2;
-	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
+	Q.u = (5./2.)*Q.Ttr*_R_N2; // translational+rotational modes
+	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0); // vib
     }
 
     override void update_thermo_from_rhou(GasState Q) const
@@ -105,11 +105,11 @@ public:
     }
     override double internal_energy(in GasState Q) const
     {
-	return Q.u;
+	return Q.u + Q.u_modes[0]; // all internal energy
     }
     override double enthalpy(in GasState Q) const
     {
-	return Q.u + Q.p/Q.rho;
+	return Q.u + Q.u_modes[0] + Q.p/Q.rho;
     }
     override double entropy(in GasState Q) const
     {
