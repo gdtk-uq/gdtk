@@ -1306,7 +1306,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	} else {
 	    // Make diff_q smaller than tolerance so that while loop
             // will only check for diff_tau for adiabatic wall cases
-	    diff_q = tolerance / 2.0; 
+	    diff_q = tolerance / 10.0; 
 	}
 	double tau_wall = 0.0, q_wall = 0.0;
         double u_tau = 0.0, u_plus = 0.0;
@@ -1315,7 +1315,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	//
 	// Iteratively solve for the wall-function corrected shear stress
         // (and heat flux for fixed temperature walls)
-	while ( diff_tau > tolerance && diff_q > tolerance) {
+	while ( diff_tau > tolerance || diff_q > tolerance) {
 	    // Friction velocity and u+ (Eq 2)
 	    u_tau = sqrt( tau_wall_old / rho_wall );
 	    u_plus = du / u_tau;
