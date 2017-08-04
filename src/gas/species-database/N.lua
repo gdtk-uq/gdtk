@@ -12,6 +12,18 @@ db.N.gamma =  {
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'monatomic gas'
 }
+db.N.sigma = {
+   value = 3.298,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance.',
+   reference = 'Svehla (1962)'
+}
+db.N.epsilon = {
+   value = 71.4, 
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'Svehla (1962)'
+}
 db.N.ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {

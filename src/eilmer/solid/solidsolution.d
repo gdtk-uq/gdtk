@@ -22,6 +22,7 @@ import std.array;
 import std.math;
 
 import util.lua;
+import geom;
 import gzip;
 import fileutil;
 import sgrid;
@@ -52,6 +53,58 @@ public:
 	this.nBlocks = nBlocks;
 	sim_time = solidBlocks[0].sim_time;
     } // end constructor
+
+    size_t[] find_enclosing_cell(ref const(Vector3) p)
+    {
+	size_t[] cell_identity = [0, 0, 0]; // blk_id, i, found_flag
+	foreach (ib; 0 .. nBlocks) {
+	    bool found = false;
+	    size_t indx = 0;
+	    gridBlocks[ib].find_enclosing_cell(p, indx, found);
+	    if (found) {
+		cell_identity = [ib, indx, (found)?1:0];
+		break;
+	    }
+	} // foreach ib
+	return cell_identity;
+    } // end find_enclosing_cell()
+
+    size_t[] find_enclosing_cell(double x, double y, double z=0.0)
+    {
+	Vector3 p = Vector3(x, y, z);
+	return find_enclosing_cell(p);
+    }
+
+    size_t find_enclosing_cells_along_line(ref const(Vector3) p0, ref const(Vector3) p1,
+					   size_t n, ref size_t[2][] cells_found)
+    // Locate cells along the line p0 --> p1, accumulating the block index and the cell index
+    // into the cells_found array.
+    {
+	size_t count = 0;
+	foreach (ip; 0 .. n) {
+	    double frac = double(ip) / double(n-1);
+	    Vector3 p = p0*(1.0-frac) + p1*frac;
+	    auto identity = find_enclosing_cell(p);
+	    size_t ib = identity[0]; size_t idx = identity[1];
+	    size_t found = identity[2];
+	    if (found == 0) { // out of domain bounds
+		writeln("# Info: Cell not found for point ", p);
+		continue;
+	    } else { // maybe store cell data
+		// It is convenient to omit repeated cells so that we can specify
+		// tiny steps and be sure of sampling all cells and also be able
+		// to specify multiple lines that get concatenated, again without
+		// repeated cells in the output stream.
+		if ((cells_found.length == 0) ||
+		    (cells_found[$-1][0] != ib) || (cells_found[$-1][1] != idx)) {
+		    cells_found ~= [ib, idx]; // Add a "new" cell.
+		    count += 1;
+		}
+	    }
+	} // end foreach ip
+	return count;
+    } // end find_enclosing_cells_along_line()
+
 
     size_t[] find_nearest_cell_centre(double x, double y, double z=0.0)
     {
@@ -157,7 +210,7 @@ public:
 class SBlockSolid {
 public:
     size_t nic;
-        size_t njc;
+    size_t njc;
     size_t nkc;
     string[] variableNames;
     size_t[string] variableIndex;
@@ -202,17 +255,36 @@ public:
 	} // foreach k
     } // end constructor from file
 
+    size_t[] to_ijk_indices(size_t gid) const
+    {
+	size_t k = gid / (njc * nic);
+	size_t j = (gid - k * (njc * nic)) / nic;
+	size_t i = gid - k * (njc * nic) - j * nic;
+	return [i, j, k];
+    }
+
     ref double opIndex(string varName, size_t i, size_t j, size_t k=0)
     {
 	return _data[i][j][k][variableIndex[varName]];
     }
 
-    string variable_names_as_string()
+    ref double opIndex(string varName, size_t i)
+    {
+	size_t[] ijk = to_ijk_indices(i);
+	return _data[ijk[0]][ijk[1]][ijk[2]][variableIndex[varName]];
+    }
+
+    string variable_names_as_string(bool with_column_pos=false)
     {
 	auto writer = appender!string();
 	formattedWrite(writer, "#");
-	foreach(name; variableNames) {
-	    formattedWrite(writer, " \"%s\"", name);
+	foreach (i, name; variableNames) {
+	    if (with_column_pos) {
+		formattedWrite(writer, " %d:%s", i+1, name);
+	    }
+	    else {
+		formattedWrite(writer, " \"%s\"", name);
+	    }
 	}
 	return writer.data;
     }
@@ -225,6 +297,12 @@ public:
 	    formattedWrite(writer, " %.18e", _data[i][j][k][ivar]);
 	}
 	return writer.data;
+    }
+
+    string values_as_string(size_t i)
+    {
+	size_t[] ijk = to_ijk_indices(i);
+	return values_as_string(ijk[0], ijk[1], ijk[2]);
     }
 
     void subtract_ref_soln(lua_State* L)

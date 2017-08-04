@@ -51,8 +51,8 @@ wanting to simulate gas flows as part of their study.
 
 ### Documentation
 The documentation for users of the code is in a set of PDF reports
-in the `dgd/doc` subdirectory.
-Presently there is a user guide for the main simulation code,
+at the Eilmer web site http://cfcfd.mechmining.uq.edu.au/eilmer/
+Presently there are user guides for the main simulation code,
 the geometry package and the gas model package.
 More documents will appear as they are completed.
 
