@@ -1910,5 +1910,5 @@ public:
     }
 
 private:
-    IAPWS _IAPWS; // [TODO] need to attend to the initialization.
+    IAPWS _IAPWS; // = new IAPWS(Q.p, Q.Ttr, Q.quality); // [TODO] need to attend to the initialization.
 } // end class Steam
