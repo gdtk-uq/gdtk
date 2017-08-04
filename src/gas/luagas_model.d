@@ -64,6 +64,14 @@ extern(C) int nSpecies(lua_State* L)
     return 1;
 }
 
+extern(C) int speciesIndex(lua_State* L)
+{
+    auto gm = checkGasModel(L, 1);
+    string spName = to!string(luaL_checkstring(L, 2));
+    lua_pushnumber(L, gm.species_index(spName));
+    return 1;
+}
+
 extern(C) int nModes(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
@@ -916,6 +924,8 @@ void registerGasModel(lua_State* L, int tblIdx)
     lua_setfield(L, -2, "molMasses");
     lua_pushcfunction(L, &speciesName);
     lua_setfield(L, -2, "speciesName");
+    lua_pushcfunction(L, &speciesIndex);
+    lua_setfield(L, -2, "speciesIndex");
     lua_pushcfunction(L, &createTableForGasState);
     lua_setfield(L, -2, "createGasState");
     lua_pushcfunction(L, &thermoPT);
