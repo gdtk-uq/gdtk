@@ -72,10 +72,8 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
 	break;
     case "fixed_composition":
 	double[] massfAtWall = getJSONdoublearray(jsonData, "wall_massf_composition", [1.0,]);
-	// TODO[Kyle]: please complete construction
-	string errMsg = "TODO for Kyle: Implement me please.";
-	throw new FlowSolverException(errMsg);
-	//break;
+	newBIE = new BIE_FixedComposition(blk_id, boundary, massfAtWall);
+	break;
     case "update_thermo_trans_coeffs":
 	newBIE = new BIE_UpdateThermoTransCoeffs(blk_id, boundary);
 	break;
@@ -861,6 +859,125 @@ public:
 	} // end switch which_boundary
     } // end apply()
 } // end class BIE_FixedT
+
+class BIE_FixedComposition : BoundaryInterfaceEffect {
+public:    
+    double[] massfAtWall;
+    
+    this(int id, int boundary, double[] massfAtWall)
+    {
+	super(id, boundary, "FixedComposition");
+	this.massfAtWall = massfAtWall;
+    }
+
+    override string toString() const 
+    {
+	return "FixedComposition(massfAtWall=" ~ to!string(massfAtWall) ~ ")";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	auto gmodel = blk.myConfig.gmodel;	
+	int nsp = gmodel.n_species;
+	BoundaryCondition bc = blk.bc[which_boundary];
+	foreach (i, f; bc.faces) {
+	    FlowState fs = f.fs;
+	    for(int isp; isp<nsp; isp++) {
+                fs.gas.massf[isp] = massfAtWall[isp];	
+	    }	
+	} // end foreach face
+    }
+
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+	size_t i, j, k;
+	FVCell cell;
+	FVInterface IFace;
+	auto gmodel = blk.myConfig.gmodel;
+	int nsp = gmodel.n_species;
+
+	final switch (which_boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.north];
+		    FlowState fs = IFace.fs;
+		    for(int isp; isp<nsp; isp++) {
+                	fs.gas.massf[isp] = massfAtWall[isp];	
+	    	    }
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.east];
+		    FlowState fs = IFace.fs;
+		    for(int isp; isp<nsp; isp++) {
+			fs.gas.massf[isp] = massfAtWall[isp];	
+		    }
+                } // en for j loop
+	    } // end for k
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.south];
+		    FlowState fs = IFace.fs;
+		    for(int isp; isp<nsp; isp++) {
+                	fs.gas.massf[isp] = massfAtWall[isp];	
+	    	    }
+		} // end i loop
+	    } // end for k
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.west];
+		    FlowState fs = IFace.fs;
+		    for(int isp; isp<nsp; isp++) {
+                	fs.gas.massf[isp] = massfAtWall[isp];	
+	    	    }
+		} // end j loop
+	    } // end for k
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.top];
+		    FlowState fs = IFace.fs;
+		    for(int isp; isp<nsp; isp++) {
+                	fs.gas.massf[isp] = massfAtWall[isp];	
+	    	    }
+		} // end j loop
+	    } // end for i
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    cell = blk.get_cell(i,j,k);
+		    IFace = cell.iface[Face.bottom];
+		    FlowState fs = IFace.fs;
+		    for(int isp; isp<nsp; isp++) {
+                	fs.gas.massf[isp] = massfAtWall[isp];	
+	    	    }
+		} // end j loop
+	    } // end for i
+	    break;
+	} // end switch which_boundary
+    } // end apply()
+} // end class BIE_FixedComposition
 
 
 class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
