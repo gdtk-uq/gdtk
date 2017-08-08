@@ -10,6 +10,8 @@ import std.math;
 import std.json;
 import util.lua;
 import nm.bbla;
+import util.lua_service;
+import gas.luagas_model;
 import geom;
 import grid;
 import sgrid;
@@ -119,7 +121,10 @@ public:
 	// It will be available for computing user-defined source terms.
 	myL = luaL_newstate();
 	luaL_openlibs(myL);
-	lua_pushinteger(myL, id); lua_setglobal(myL, "blkId");
+	lua_pushinteger(myL, id);
+	lua_setglobal(myL, "blkId");
+	pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
+	lua_setglobal(myL, "gmodel");
 	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_species);
 	lua_setglobal(myL, "n_species");
 	lua_pushinteger(myL, dedicatedConfig[id].gmodel.n_modes);
