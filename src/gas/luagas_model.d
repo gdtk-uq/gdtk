@@ -360,12 +360,32 @@ extern(C) int molef2massf(lua_State* L)
     return 1;
 }
 
+/**
+ * Two forms are supported for this method.
+ * 1. A GasState table as input:
+ *
+ *    gmodel:massf2conc(Q)
+ *
+ * 2. Density and a mass fractions table as input.
+ *
+ *    gmodel:massf2conc(rho, massf)
+ */
 extern(C) int massf2conc(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
-    getGasStateFromTable(L, gm, 2, Q);
     double[] conc; conc.length = gm.n_species;
+    int nargs = lua_gettop(L);
+    if ( nargs == 2 ) { // Support for option 1.
+	getGasStateFromTable(L, gm, 2, Q);
+    }
+    else {
+	double rho = luaL_checknumber(L, 2);
+	double[] massf; massf.length = gm.n_species;
+	getSpeciesValsFromTable(L, gm, 3, massf, "massf");
+	Q.rho = rho;
+	Q.massf[] = massf[];
+    }
     gm.massf2conc(Q, conc);
     // Place conc in an array and leave at at
     // top-of-stack as a return to the caller.
