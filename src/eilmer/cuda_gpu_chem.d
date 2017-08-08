@@ -162,9 +162,9 @@ public:
 	//prepareKernelArgsForGPU(dt_flow);
 
 	// Define an index space for work items
-	size_t blkDimx = _ncell;
+	size_t blkDimx = 1;
 	size_t blkDimy = 1;
-	size_t grdDimx = 1;
+	size_t grdDimx = _ncell;
 	size_t grdDimy = 1;
 
 	// Execute the kernel

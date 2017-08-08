@@ -25,7 +25,7 @@ int flag;
 double e = 0.001;                                                           
 double epsilon = e/2.0;                                                      
 int step_fail;                                                             
-int idx = threadIdx.x;                                                        
+int idx = blockIdx.x;                                                        
 double dt_chem;                                                              
 dt_chem = h[idx];                                                                     
 int max_iterations = 10;                                                     
