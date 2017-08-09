@@ -55,9 +55,12 @@ MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusi
 }
 
 class FicksFirstLaw : MassDiffusion {
-    this(GasModel gmodel, bool withMassFluxCorrection=true)
+    this(GasModel gmodel, bool withMassFluxCorrection=true, bool withConstantLewisNumber=false, double Lewis=1.0)
     {
 	_withMassFluxCorrection = withMassFluxCorrection;
+	_withConstantLewisNumber = withConstantLewisNumber;
+	_Le = Lewis;
+	
 	_gmodel = gmodel;
 	_nsp = gmodel.n_species;
 	
@@ -101,8 +104,15 @@ class FicksFirstLaw : MassDiffusion {
     void update_mass_fluxes(const FlowState fs, const FlowGradients grad, double[] jx, double[] jy, double[] jz)
     {
 	_gmodel.massf2molef(fs.gas, _molef);
-	computeBinaryDiffCoeffs(fs.gas.Ttr, fs.gas.p);
-	computeAvgDiffCoeffs();
+	if (_withConstantLewisNumber) {
+	    double Cp = _gmodel.Cp(fs.gas);
+	    double alpha = fs.gas.k/(fs.gas.rho*Cp);
+	    foreach (isp; 0 .. _nsp) _D_avg[isp] = alpha/_Le;
+	}
+	else {
+	    computeBinaryDiffCoeffs(fs.gas.Ttr, fs.gas.p);
+	    computeAvgDiffCoeffs();
+	}
 	foreach (isp; 0 .. _nsp) {
 	    jx[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][0];
 	    jy[isp] = -fs.gas.rho * _D_avg[isp] * grad.massf[isp][1];
@@ -130,6 +140,8 @@ private:
     GasModel _gmodel;
     size_t _nsp;
     bool _withMassFluxCorrection;
+    bool _withConstantLewisNumber;
+    double _Le = 1.0;
     double[][] _sigma;
     double[][] _eps;
     double[][] _D;
@@ -194,7 +206,5 @@ private:
 	}
     }
 }
-
-
 
 
