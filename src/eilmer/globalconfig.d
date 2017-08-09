@@ -309,6 +309,7 @@ final class GlobalConfig {
     // to be interpolated are pressure+temperature, density+temperature and
     // density+pressure.
     shared static InterpolateOption thermo_interpolator = InterpolateOption.rhou;
+    shared static bool allow_reconstruction_for_energy_modes = true;
     shared static bool apply_limiter = true;
     shared static bool extrema_clipping = true;
     shared static bool interpolate_in_local_frame = true; // only for structured-grid
@@ -519,6 +520,7 @@ public:
     FlowStateLimits flowstate_limits;
     int interpolation_order;
     InterpolateOption thermo_interpolator;
+    bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
     bool extrema_clipping;
     bool interpolate_in_local_frame;
@@ -604,6 +606,7 @@ public:
 	flowstate_limits = GlobalConfig.flowstate_limits;
 	interpolation_order = GlobalConfig.interpolation_order;
 	thermo_interpolator = GlobalConfig.thermo_interpolator;
+	allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
 	apply_limiter = GlobalConfig.apply_limiter;
 	extrema_clipping = GlobalConfig.extrema_clipping;
 	interpolate_in_local_frame = GlobalConfig.interpolate_in_local_frame;
@@ -797,6 +800,7 @@ void read_config_file()
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
     mixin(update_int("interpolation_order", "interpolation_order"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
+    mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
     mixin(update_bool("extrema_clipping", "extrema_clipping"));
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));

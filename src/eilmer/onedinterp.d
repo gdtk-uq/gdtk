@@ -262,18 +262,32 @@ public:
 	    case InterpolateOption.pt: 
 		interp_both_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
 		interp_both_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, gR1.Ttr, Lft.gas.Ttr, Rght.gas.Ttr);
-		foreach (i; 0 .. nmodes) {
-		    interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
-				       gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+		if (myConfig.allow_reconstruction_for_energy_modes) {
+		    foreach (i; 0 .. nmodes) {
+			interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
+					   gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+		    }
+		} else {
+		    foreach (i; 0 .. nmodes) {
+			Lft.gas.T_modes[i] = gL0.T_modes[i];
+			Rght.gas.T_modes[i] = gR0.T_modes[i];
+		    }
 		}
 		mixin(codeForThermoUpdateBoth("pT"));
 		break;
 	    case InterpolateOption.rhou:
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
 		interp_both_scalar(gL1.u, gL0.u, gR0.u, gR1.u, Lft.gas.u, Rght.gas.u);
-		foreach (i; 0 .. nmodes) {
-		    interp_both_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i],
-				       gR1.u_modes[i], Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+		if (myConfig.allow_reconstruction_for_energy_modes) {
+		    foreach (i; 0 .. nmodes) {
+			interp_both_scalar(gL1.u_modes[i], gL0.u_modes[i], gR0.u_modes[i],
+					   gR1.u_modes[i], Lft.gas.u_modes[i], Rght.gas.u_modes[i]);
+		    }
+		} else {
+		    foreach (i; 0 .. nmodes) {
+			Lft.gas.u_modes[i] = gL0.u_modes[i];
+			Rght.gas.u_modes[i] = gR0.u_modes[i];
+		    }
 		}
 		mixin(codeForThermoUpdateBoth("rhou"));
 		break;
@@ -285,9 +299,16 @@ public:
 	    case InterpolateOption.rhot: 
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
 		interp_both_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, gR1.Ttr, Lft.gas.Ttr, Rght.gas.Ttr);
-		foreach (i; 0 .. nmodes) {
-		    interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
-				       gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+		if (myConfig.allow_reconstruction_for_energy_modes) {
+		    foreach (i; 0 .. nmodes) {
+			interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
+					   gR1.T_modes[i], Lft.gas.T_modes[i], Rght.gas.T_modes[i]);
+		    }
+		} else {
+		    foreach (i; 0 .. nmodes) {
+			Lft.gas.T_modes[i] = gL0.T_modes[i];
+			Rght.gas.T_modes[i] = gR0.T_modes[i];
+		    }
 		}
 		mixin(codeForThermoUpdateBoth("rhoT"));
 		break;

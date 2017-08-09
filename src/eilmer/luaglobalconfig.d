@@ -113,6 +113,7 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_int_field("interpolation_order", "interpolation_order"));
     mixin(get_enum_field("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
+    mixin(get_bool_field("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(get_bool_field("apply_limiter", "apply_limiter"));
     mixin(get_bool_field("extrema_clipping", "extrema_clipping"));
     mixin(get_bool_field("interpolate_in_local_frame", "interpolate_in_local_frame"));
@@ -247,6 +248,7 @@ extern(C) int configGet(lua_State* L)
 	//
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
+    case "allow_reconstruction_for_energy_modes": lua_pushboolean(L, GlobalConfig.allow_reconstruction_for_energy_modes); break;
     case "apply_limiter": lua_pushboolean(L, GlobalConfig.apply_limiter); break;
     case "extrema_clipping": lua_pushboolean(L, GlobalConfig.extrema_clipping); break;
     case "interpolate_in_local_frame": lua_pushboolean(L, GlobalConfig.interpolate_in_local_frame); break;
