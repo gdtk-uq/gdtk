@@ -32,6 +32,7 @@ public:
     double T;
     double[] e;
     double[] dedt;
+    double de_prev;
     // Cell source term
     double Q;
     // Connections
