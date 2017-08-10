@@ -95,6 +95,7 @@ public:
     // this flag might not be needed.
     // Such a change will need a big rework of boundary condition code.
     bool will_have_valid_flow; 
+    bool allow_k_omega_update = true; // turbulent wall functions may turn this off
     FlowState fs; // Flow properties
     ConservedQuantities[] U;  // Conserved flow quantities for the update stages.
     ConservedQuantities[] dUdt; // Time derivatives for the update stages.
@@ -228,6 +229,7 @@ public:
 	repr ~= ", in_turbulent_zone=" ~ to!string(in_turbulent_zone);
 	repr ~= ", fr_reactions_allowed=" ~ to!string(fr_reactions_allowed);
 	repr ~= ", will_have_valid_flow=" ~ to!string(will_have_valid_flow);
+	repr ~= ", allow_k_omega_update=" ~ to!string(allow_k_omega_update);
 	repr ~= ",\n... fs=" ~ to!string(fs);
 	repr ~= ",\n... U=" ~ to!string(U);
 	repr ~= ",\n... dUdt=" ~ to!string(dUdt);
@@ -490,7 +492,7 @@ public:
 	foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.total_energy*iface[i].area[gtl]; }
 	dUdt[ftl].total_energy = vol_inv*integral + Q.total_energy;
     
-	if (with_k_omega) {
+	if (with_k_omega && allow_k_omega_update) {
 	    integral = 0.0;
 	    foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.tke*iface[i].area[gtl]; }
 	    dUdt[ftl].tke = vol_inv*integral + Q.tke;
@@ -566,7 +568,7 @@ public:
 	    U1.divB = 0.0;
 	}
 	U1.total_energy = U0.total_energy + dt * gamma_1 * dUdt0.total_energy;
-	if (with_k_omega) {
+	if (with_k_omega && allow_k_omega_update) {
 	    U1.tke = U0.tke + dt * gamma_1 * dUdt0.tke;
 	    U1.tke = fmax(U1.tke, 0.0);
 	    U1.omega = U0.omega + dt * gamma_1 * dUdt0.omega;
@@ -633,7 +635,7 @@ public:
 	    U2.divB = 0.0;
 	}
 	U2.total_energy = U_old.total_energy + dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy);
-	if ( with_k_omega ) {
+	if (with_k_omega && allow_k_omega_update) {
 	    U2.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke);
 	    U2.tke = fmax(U2.tke, 0.0);
 	    U2.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega);
@@ -694,7 +696,7 @@ public:
 	}
 	U3.total_energy = U_old.total_energy + 
 	    dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy + gamma_3*dUdt2.total_energy);
-	if (with_k_omega) {
+	if (with_k_omega && allow_k_omega_update) {
 	    U3.tke = U_old.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke + gamma_3*dUdt2.tke);
 	    U3.tke = fmax(U3.tke, 0.0);
 	    U3.omega = U_old.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega + gamma_3*dUdt2.omega);
@@ -735,7 +737,7 @@ public:
 	    U1.B.set(0.0, 0.0, 0.0);
 	}
 	U1.total_energy = vr*(U0.total_energy + dt*gamma_1*dUdt0.total_energy);
-	if (with_k_omega) {
+	if (with_k_omega  && allow_k_omega_update) {
 	    U1.tke = vr*(U0.tke + dt*gamma_1*dUdt0.tke);
 	    U1.tke = fmax(U1.tke, 0.0);
 	    U1.omega = vr*(U0.omega + dt*gamma_1*dUdt0.omega);
@@ -780,7 +782,7 @@ public:
 	}
 	U2.total_energy = vol_inv*(v_old*U0.total_energy +
 				   dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy));
-	if (with_k_omega) {
+	if (with_k_omega && allow_k_omega_update) {
 	    U2.tke = vol_inv*(v_old*U0.tke + dt*(gamma_1*dUdt0.tke + gamma_2*dUdt1.tke));
 	    U2.tke = fmax(U2.tke, 0.0);
 	    U2.omega = vol_inv*(v_old*U0.omega + dt*(gamma_1*dUdt0.omega + gamma_2*dUdt1.omega));
@@ -1115,7 +1117,7 @@ public:
     void update_k_omega_properties(double dt) 
     {
 	// Do not update k_omega properties if we are in laminar block
-	if ( !in_turbulent_zone ) return;
+	if ( !in_turbulent_zone || !allow_k_omega_update) return;
 
 	double DrtkeDt_perturbTke, DromegaDt_perturbTke;
 	double DrtkeDt_perturbOmega, DromegaDt_perturbOmega;
@@ -1221,7 +1223,8 @@ public:
     //           All "fs->tke" and "fs->omega" instances are replaced with tke and omega.
     // Jul 2014: Port to D by PJ
     {
-	if ( myConfig.turbulence_model != TurbulenceModel.k_omega ) {
+	if (myConfig.turbulence_model != TurbulenceModel.k_omega ||
+	    !allow_k_omega_update) {
 	    // [TODO] may need to do something better if another turbulence model is active.
 	    Q_rtke = 0.0;
 	    Q_romega = 0.0;
@@ -1429,7 +1432,7 @@ public:
 	    Q.momentum.refy -= tau_00 * areaxy[0] / volume[0];
 	} // end if ( myConfig.axisymmetric )
 
-	if (with_k_omega) {
+	if (with_k_omega && allow_k_omega_update) {
 	    double Q_tke = 0.0; double Q_omega = 0.0;
 	    if ( in_turbulent_zone ) {
 		this.k_omega_time_derivatives(Q_tke, Q_omega, fs.tke, fs.omega);

@@ -1231,6 +1231,62 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     {
 	super(id, boundary, "WallFunction_InterfaceEffect");
 	_isFixedTWall = (thermalCond == "FIXED_T") ? true : false;
+
+	if (blk.grid_type == Grid_t.unstructured_grid) {
+	    throw new Error("Wall function not available for unstructured grids.");
+	}
+	
+	size_t i, j, k;
+	final switch (boundary) {
+	case Face.north:
+	    j = blk.jmax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    blk.get_cell(i,j,k).iface[Face.north].use_wall_function_shear_and_heat_flux = true;
+		}
+	    }
+	    break;
+	case Face.east:
+	    i = blk.imax;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    blk.get_cell(i,j,k).iface[Face.east].use_wall_function_shear_and_heat_flux = true;
+		}
+	    }
+	    break;
+	case Face.south:
+	    j = blk.jmin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    blk.get_cell(i,j,k).iface[Face.south].use_wall_function_shear_and_heat_flux = true;
+		}
+	    }
+	    break;
+	case Face.west:
+	    i = blk.imin;
+	    for (k = blk.kmin; k <= blk.kmax; ++k) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    blk.get_cell(i,j,k).iface[Face.west].use_wall_function_shear_and_heat_flux = true;
+		}
+	    }
+	    break;
+	case Face.top:
+	    k = blk.kmax;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    blk.get_cell(i,j,k).iface[Face.top].use_wall_function_shear_and_heat_flux = true;
+		}
+	    }
+	    break;
+	case Face.bottom:
+	    k = blk.kmin;
+	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (j = blk.jmin; j <= blk.jmax; ++j) {
+		    blk.get_cell(i,j,k).iface[Face.bottom].use_wall_function_shear_and_heat_flux = true;
+		}
+	    }
+	    break;
+	} // end switch which_boundary
     }
 
     override string toString() const 
@@ -1259,11 +1315,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 		    cell = blk.get_cell(i,j,k);
 		    second_cell_from_wall = blk.get_cell(i,j-1,k);
 		    IFace = cell.iface[Face.north];
-		    IFace.use_wall_function_shear_and_heat_flux = true;
-		    FlowState fs = IFace.fs;
-	            corrected_turb_props = wall_function_correction(cell, second_cell_from_wall, IFace); 
-		    fs.tke = corrected_turb_props[0];
-		    fs.omega = corrected_turb_props[1];
+	            wall_function(cell, second_cell_from_wall, IFace); 
 		} // end i loop
 	    } // end for k
 	    break;
@@ -1274,11 +1326,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 		    cell = blk.get_cell(i,j,k);
                     second_cell_from_wall = blk.get_cell(i-1,j,k);
 		    IFace = cell.iface[Face.east];
-		    IFace.use_wall_function_shear_and_heat_flux = true;
-		    FlowState fs = IFace.fs;
-                    corrected_turb_props = wall_function_correction(cell, second_cell_from_wall, IFace);
-                    fs.tke = corrected_turb_props[0];
-                    fs.omega = corrected_turb_props[1];
+                    wall_function(cell, second_cell_from_wall, IFace);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -1289,11 +1337,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 		    cell = blk.get_cell(i,j,k);
                     second_cell_from_wall = blk.get_cell(i,j+1,k);
 		    IFace = cell.iface[Face.south];
-		    IFace.use_wall_function_shear_and_heat_flux = true;
-		    FlowState fs = IFace.fs;
-                    corrected_turb_props = wall_function_correction(cell, second_cell_from_wall, IFace);
-                    fs.tke = corrected_turb_props[0];
-                    fs.omega = corrected_turb_props[1];
+                    wall_function(cell, second_cell_from_wall, IFace);
 		} // end i loop
 	    } // end for k
 	    break;
@@ -1304,11 +1348,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 		    cell = blk.get_cell(i,j,k);
                     second_cell_from_wall = blk.get_cell(i+1,j,k);
 		    IFace = cell.iface[Face.west];
-		    IFace.use_wall_function_shear_and_heat_flux = true;
-		    FlowState fs = IFace.fs;
-                    corrected_turb_props = wall_function_correction(cell, second_cell_from_wall, IFace);
-                    fs.tke = corrected_turb_props[0];
-                    fs.omega = corrected_turb_props[1];
+                    wall_function(cell, second_cell_from_wall, IFace);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -1319,11 +1359,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 		    cell = blk.get_cell(i,j,k);
                     second_cell_from_wall = blk.get_cell(i,j,k-1);
 		    IFace = cell.iface[Face.top];
-		    IFace.use_wall_function_shear_and_heat_flux = true;
-		    FlowState fs = IFace.fs;
-                    corrected_turb_props = wall_function_correction(cell, second_cell_from_wall, IFace);
-                    fs.tke = corrected_turb_props[0];
-                    fs.omega = corrected_turb_props[1];
+                    wall_function(cell, second_cell_from_wall, IFace);
 		} // end j loop
 	    } // end for i
 	    break;
@@ -1334,24 +1370,22 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 		    cell = blk.get_cell(i,j,k);
                     second_cell_from_wall = blk.get_cell(i,j,k-1);
 		    IFace = cell.iface[Face.bottom];
-		    IFace.use_wall_function_shear_and_heat_flux = true;
-		    FlowState fs = IFace.fs;
-                    corrected_turb_props = wall_function_correction(cell, second_cell_from_wall, IFace);
-                    fs.tke = corrected_turb_props[0];
-                    fs.omega = corrected_turb_props[1];
+                    wall_function(cell, second_cell_from_wall, IFace);
 		} // end j loop
 	    } // end for i
 	    break;
 	} // end switch which_boundary
     } // end apply()
 
-    double[] wall_function_correction(FVCell cell, FVCell second_cell_from_wall, FVInterface IFace)
+    void wall_function(const FVCell cell, const FVCell second_cell_from_wall, FVInterface IFace)
     // Implement Nichols' and Nelson's wall function boundary condition
     // Reference:
     //  Nichols RH & Nelson CC (2004)
     //  Wall Function Boundary Conditions Inclding Heat Transfer
     //  and Compressibility.
     //  AIAA Journal, 42:6, pp. 1107--1114
+    // NOTE: IFace.fs will receive updated values of tke and omega for later copying
+    //       to boundary cells.
     {
 	auto gmodel = blk.myConfig.gmodel; 
 	//
@@ -1361,18 +1395,18 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	double gas_constant = gmodel.R(cell.fs.gas);
 	double recovery = pow(Pr, (1.0/3.0));
 	// Compute tangent velocity at nearest interior point and wall interface
-        cell.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); 
-	IFace.fs.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-	double cell_tangent = sqrt( pow(cell.fs.vel.y, 2.0) + pow(cell.fs.vel.z, 2.0) );
-	double face_tangent = sqrt( pow(IFace.fs.vel.y, 2.0) + pow(IFace.fs.vel.z, 2.0) );
+	Vector3 cellVel = cell.fs.vel;
+	Vector3 faceVel = IFace.fs.vel;
+        cellVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); 
+	faceVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+	double cell_tangent = sqrt( pow(cellVel.y, 2.0) + pow(cellVel.z, 2.0) );
+	double face_tangent = sqrt( pow(faceVel.y, 2.0) + pow(faceVel.z, 2.0) );
 	//TODO 3D formulation (not implemented)
-	//double cell_tangent0 = cell.fs.vel.y;
-	//double cell_tangent1 = cell.fs.vel.z;
-	//double face_tangent0 = IFace.fs.vel.y;
-	//double face_tangent1 = IFace.fs.vel.z;
-	//double vt1_2_angle = atan2(fabs(cell.fs.vel.z - IFace.fs.vel.z), fabs(cell.fs.vel.y - IFace.fs.vel.y));
-        cell.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); 
-        IFace.fs.vel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+	//double cell_tangent0 = cellVel.y;
+	//double cell_tangent1 = cellVel.z;
+	//double face_tangent0 = faceVel.y;
+	//double face_tangent1 = faceVel.z;
+	//double vt1_2_angle = atan2(fabs(cellVel.z - faceVel.z), fabs(cellVel.y - faceVel.y));
 	// Compute normal distance of the interior point from the wall
 	//TODO Check if the half_cell_width_at_wall gives same result as old formulation
         //double wall_dist = fabs( dot((cell.pos[0] - IFace.pos), IFace.n) ); 
@@ -1425,10 +1459,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             // will only check for diff_tau for adiabatic wall cases
 	    diff_q = tolerance / 10.0; 
 	}
-	double tau_wall = 0.0, q_wall = 0.0;
-        double u_tau = 0.0, u_plus = 0.0;
-        double Gam = 0.0, Beta = 0.0, Q = 0.0, Phi = 0.0;
-        double y_plus_white = 0.0, y_plus;
+	double tau_wall = 0.0; double q_wall = 0.0;
+        double u_tau = 0.0; double u_plus = 0.0;
+        double Gam = 0.0; double Beta = 0.0; double Q = 0.0; double Phi = 0.0;
+        double y_plus_white = 0.0; double y_plus = 0.0;
 	//
 	// Iteratively solve for the wall-function corrected shear stress
         // (and heat flux for fixed temperature walls)
@@ -1534,8 +1568,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    //double wall_dist2 = second_cell_from_wall.distance_to_nearest_wall;
 	    tke = wall_dist*wall_dist / ( wall_dist2*wall_dist2 ) * second_cell_from_wall.fs.tke;
 	}
-	return [tke, omega];
-    }
+	IFace.fs.tke = tke;
+	IFace.fs.omega = omega;
+	return;
+    } // end wall_function()
 
 private:
     bool _isFixedTWall;
