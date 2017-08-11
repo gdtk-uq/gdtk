@@ -147,11 +147,13 @@ public:
     }
     override double dudT_const_v(in GasState Q) const
     {
-	return _Cv;
+    	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+	return 3.0/2.0*_Rgas*(1+alpha) + alpha-_Rgas*alpha*(1-alpha)/(2-alpha)*pow((3.0/2.0*Q.Ttr+alpha*_theta_ion)/Q.Ttr,2);
     }
     override double dhdT_const_p(in GasState Q) const
     {
-	return _Cp;
+    	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+    	return 5.0/2.0*_Rgas*(1+alpha) + _Rgas/2*alpha*(1-pow(alpha,2))*pow((5.0/2.0*Q.Ttr+alpha*_theta_ion)/Q.Ttr,2);
     }
     override double dpdrho_const_T(in GasState Q) const
     {
@@ -211,6 +213,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 	_mol_masses[2] = 5.485799e-7; // Units are kg/mol
 	_mol_masses[1] = _mol_masses[0] - _mol_masses[2]; // Units are kg/mol	
 	_ion_tol = getDouble(L, -1, "ion_tol");
+	_chem_dt = getDouble(L, -1, "chem_dt");
 	lua_pop(L, 1); // dispose of the table
 	lua_close(L);
     }
@@ -251,11 +254,11 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         double u_trans_ionisation_electron;
         double u_trans_collisions;
 
-        double dt = 1.0e-12;
-        int NumberSteps = to!int(tInterval/dt + 1);
+        double _chem_dt = 1.0e-11;
+        int NumberSteps = to!int(tInterval/_chem_dt + 1);
         if (NumberSteps == 0) {NumberSteps = 1;}
-        dt = tInterval/NumberSteps;
-        //writeln("dt = ", dt);
+        _chem_dt = tInterval/NumberSteps;
+        //writeln("_chem_dt = ", _chem_dt);
   	//alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
 
     	//Determine the current number densities
@@ -301,8 +304,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 	    	//writeln("ne_dot = ", ne_dot);
 
 	    	//determine the new number densities
-	    	n_e = n_e + ne_dot*dt;
-	    	n_Ar = n_Ar - ne_dot*dt;
+	    	n_e = n_e + ne_dot*_chem_dt;
+	    	n_Ar = n_Ar - ne_dot*_chem_dt;
 
 	    	alpha = n_e/(n_e + n_Ar);
 
@@ -317,7 +320,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 			Q.T_modes[0] = _T_modes_ref;
 			Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
 		} else {
-			Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion - ne_dot_e*Kb*_theta_ion*dt/Q.rho;
+			Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion - ne_dot_e*Kb*_theta_ion*_chem_dt/Q.rho;
 			Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
 		}
 
@@ -373,7 +376,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 	        v_ei = alpha*Q.rho/m_Ar*sqrt(8*Kb*Q.T_modes[0]/PI/m_e)*Q_ei; //electron-Ar+ collisions
 
 	        //update the energy of each state
-	        u_trans_collisions    = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.Ttr-Q.T_modes[0])*dt/Q.rho;// energy transferred to electron mode through collisions
+	        u_trans_collisions    = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.Ttr-Q.T_modes[0])*_chem_dt/Q.rho;// energy transferred to electron mode through collisions
 	        //writeln("u_trans_collisions = ", u_trans_collisions);
 	        Q.u -= u_trans_collisions;
 	        Q.u_modes[0] += u_trans_collisions;
@@ -407,7 +410,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 		writeln("kfe = ", kfe);
 		writeln("krA = ", krA);
 		writeln("kre = ", kre);
-		writeln("dt = ", dt);
+		writeln("_chem_dt = ", _chem_dt);
 		writeln("NumberSteps = ", NumberSteps);
 		writeln("tInterval = ", tInterval);
 		throw new GasModelException("mass fraction far from 1...");
@@ -432,6 +435,7 @@ private:
     double[] _mol_masses;
     double _ion_tol;
     double _T_modes_ref;
+    double _chem_dt;
 } // end class UpdateAB
 
 
@@ -535,18 +539,18 @@ version(two_temperature_reacting_argon_test) {
 	double new_vel; 
 
 	//pre-shock conditions
-	double rho1 = 0.00058175;//0.021366;
-	double T1 = 35704.674;//300;
-	double u1 = 6283;//6.1e3;
-	double M1 = 16.124;//18.9;
+	double rho1 = 0.021366;
+	double T1 = 300;
+	double u1 = 6.1e3;
+	double M1 = 18.9;
 
 	//inital gas properties
 	auto GS = new GasState(3, 1);
-	GS.p = 17084.44;//GS.p = 594945.77;
-	GS.Ttr = 35704.674;//GS.Ttr = 33750.78;
+	GS.p = GS.p = 594945.77;
+	GS.Ttr = GS.Ttr = 33750.78;
 	GS.T_modes[0] = 10000;
 	GS.massf[0] = 1.0; GS.massf[1] = 0.0; GS.massf[2] = 0.0;
-	double vel = 1588.88;//1537; // m/s
+	double vel = 1537; // m/s
 	double x = 0.0;
 
 	double e_new;
@@ -556,7 +560,7 @@ version(two_temperature_reacting_argon_test) {
 	gm.update_sound_speed(GS); // upate sound speed (not necessary)
 
 	// some time stepping information
-	double maxtime = 5.0e-5; // max time for the simulation
+	double maxtime = 4.0e-6; // max time for the simulation
 	double dt = 1.312e-11; // time step for chemistry update
 	int maxsteps = to!int(maxtime/dt + 1); // number of steps in which to iterate through
 	int printfreq = maxsteps/10;
