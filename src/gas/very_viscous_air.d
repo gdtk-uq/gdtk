@@ -43,7 +43,7 @@ public:
     {
 	this();
 	lua_getglobal(L, "VeryViscousAir");
-	// Possibly override k and mu
+	// Possibly override k,  mu and number of species
 	lua_getfield(L, -1, "mu");
 	if ( !lua_isnil(L, -1) ) {
 	    _mu = to!double(lua_tonumber(L, -1));
@@ -52,6 +52,11 @@ public:
 	lua_getfield(L, -1, "k");
 	if ( !lua_isnil(L, -1) ) {
 	    _k = to!double(lua_tonumber(L, -1));
+	}
+	lua_pop(L, 1);
+	lua_getfield(L, -1, "number_species");
+	if ( !lua_isnil(L, -1) ) {
+	    _n_species = luaL_checkint(L, -1);
 	}
 	lua_pop(L, 1);
     }
