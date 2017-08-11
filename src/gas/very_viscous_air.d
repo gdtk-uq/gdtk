@@ -59,6 +59,14 @@ public:
 	    _n_species = luaL_checkint(L, -1);
 	}
 	lua_pop(L, 1);
+
+	if (_n_species > 1) {
+	    // Let's rename the species.
+	    _species_names.length = _n_species;
+	    foreach (isp; 0 .. _n_species) {
+		_species_names[isp] = format("air-%d", isp);
+	    }
+	}
     }
 
     override string toString() const
