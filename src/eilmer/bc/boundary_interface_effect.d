@@ -1231,62 +1231,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     {
 	super(id, boundary, "WallFunction_InterfaceEffect");
 	_isFixedTWall = (thermalCond == "FIXED_T") ? true : false;
-
-	if (blk.grid_type == Grid_t.unstructured_grid) {
-	    throw new Error("Wall function not available for unstructured grids.");
-	}
-	
-	size_t i, j, k;
-	final switch (boundary) {
-	case Face.north:
-	    j = blk.jmax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    blk.get_cell(i,j,k).iface[Face.north].use_wall_function_shear_and_heat_flux = true;
-		}
-	    }
-	    break;
-	case Face.east:
-	    i = blk.imax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).iface[Face.east].use_wall_function_shear_and_heat_flux = true;
-		}
-	    }
-	    break;
-	case Face.south:
-	    j = blk.jmin;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    blk.get_cell(i,j,k).iface[Face.south].use_wall_function_shear_and_heat_flux = true;
-		}
-	    }
-	    break;
-	case Face.west:
-	    i = blk.imin;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).iface[Face.west].use_wall_function_shear_and_heat_flux = true;
-		}
-	    }
-	    break;
-	case Face.top:
-	    k = blk.kmax;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).iface[Face.top].use_wall_function_shear_and_heat_flux = true;
-		}
-	    }
-	    break;
-	case Face.bottom:
-	    k = blk.kmin;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).iface[Face.bottom].use_wall_function_shear_and_heat_flux = true;
-		}
-	    }
-	    break;
-	} // end switch which_boundary
+	_faces_need_to_be_flagged = true;
     }
 
     override string toString() const 
@@ -1302,6 +1247,63 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
+	if (_faces_need_to_be_flagged) {
+	    // Flag faces, just once.
+	    final switch (which_boundary) {
+	    case Face.north:
+		j = blk.jmax;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (i = blk.imin; i <= blk.imax; ++i) {
+			blk.get_cell(i,j,k).iface[Face.north].use_wall_function_shear_and_heat_flux = true;
+		    }
+		}
+		break;
+	    case Face.east:
+		i = blk.imax;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).iface[Face.east].use_wall_function_shear_and_heat_flux = true;
+		    }
+		}
+		break;
+	    case Face.south:
+		j = blk.jmin;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (i = blk.imin; i <= blk.imax; ++i) {
+			blk.get_cell(i,j,k).iface[Face.south].use_wall_function_shear_and_heat_flux = true;
+		    }
+		}
+		break;
+	    case Face.west:
+		i = blk.imin;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).iface[Face.west].use_wall_function_shear_and_heat_flux = true;
+		    }
+		}
+		break;
+	    case Face.top:
+		k = blk.kmax;
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).iface[Face.top].use_wall_function_shear_and_heat_flux = true;
+		    }
+		}
+		break;
+	    case Face.bottom:
+		k = blk.kmin;
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).iface[Face.bottom].use_wall_function_shear_and_heat_flux = true;
+		    }
+		}
+		break;
+	    } // end switch which_boundary
+	    _faces_need_to_be_flagged = false;
+	} // end if _faces_need_to_be_flagged
+	//
+	// Do some real work.
+	//
 	FVCell cell, second_cell_from_wall;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
@@ -1575,8 +1577,9 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 
 private:
     bool _isFixedTWall;
-
+    bool _faces_need_to_be_flagged = true;
 } // end class BIE_WallFunction
+
 
 // NOTE: This GAS DOMAIN boundary effect has a large
 //       and important side-effect:

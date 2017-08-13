@@ -82,62 +82,7 @@ public:
     this(int id, int boundary)
     {
 	super(id, boundary, "WallFunction_CellEffect");
-
-	if (blk.grid_type == Grid_t.unstructured_grid) {
-	    throw new Error("Wall function not available for unstructured grids.");
-	}
-
-	size_t i, j, k;
-	final switch (boundary) {
-	case Face.north:
-	    j = blk.jmax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    blk.get_cell(i,j,k).allow_k_omega_update = false;
-		}
-	    }
-	    break;
-	case Face.east:
-	    i = blk.imax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).allow_k_omega_update = false;
-		}
-	    }
-	    break;
-	case Face.south:
-	    j = blk.jmin;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    blk.get_cell(i,j,k).allow_k_omega_update = false;
-		}
-	    }
-	    break;
-	case Face.west:
-	    i = blk.imin;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).allow_k_omega_update = false;
-		}
-	    }
-	    break;
-	case Face.top:
-	    k = blk.kmax;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).allow_k_omega_update = false;
-		}
-	    }
-	    break;
-	case Face.bottom:
-	    k = blk.kmin;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    blk.get_cell(i,j,k).allow_k_omega_update = false;
-		}
-	    }
-	    break;
-	} // end switch
+	_cells_need_to_be_flagged = true;
     } // end constructor
 
     override string toString() const
@@ -153,6 +98,62 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
+	if (_cells_need_to_be_flagged) {
+	    // Apply the cell flags, just once.
+	    final switch (which_boundary) {
+	    case Face.north:
+		j = blk.jmax;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (i = blk.imin; i <= blk.imax; ++i) {
+			blk.get_cell(i,j,k).allow_k_omega_update = false;
+		    }
+		}
+		break;
+	    case Face.east:
+		i = blk.imax;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).allow_k_omega_update = false;
+		    }
+		}
+		break;
+	    case Face.south:
+		j = blk.jmin;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (i = blk.imin; i <= blk.imax; ++i) {
+			blk.get_cell(i,j,k).allow_k_omega_update = false;
+		    }
+		}
+		break;
+	    case Face.west:
+		i = blk.imin;
+		for (k = blk.kmin; k <= blk.kmax; ++k) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).allow_k_omega_update = false;
+		    }
+		}
+		break;
+	    case Face.top:
+		k = blk.kmax;
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).allow_k_omega_update = false;
+		    }
+		}
+		break;
+	    case Face.bottom:
+		k = blk.kmin;
+		for (i = blk.imin; i <= blk.imax; ++i) {
+		    for (j = blk.jmin; j <= blk.jmax; ++j) {
+			blk.get_cell(i,j,k).allow_k_omega_update = false;
+		    }
+		}
+		break;
+	    } // end switch
+	    _cells_need_to_be_flagged = false;
+	} // end if _cells_need_to_be_flagged
+	//
+	// Do some real work.
 	FVCell cell;
 	FVInterface iface;
 
@@ -226,4 +227,6 @@ public:
 	} // end switch
     } // end apply_structured_grid()
 
+private:
+    bool _cells_need_to_be_flagged = true;
 } // end class BCE_WallFunction
