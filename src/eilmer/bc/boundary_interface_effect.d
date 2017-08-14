@@ -1307,7 +1307,6 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	FVCell cell, second_cell_from_wall;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
-	double[] corrected_turb_props;
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -1409,78 +1408,77 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	//double face_tangent0 = faceVel.y;
 	//double face_tangent1 = faceVel.z;
 	//double vt1_2_angle = atan2(fabs(cellVel.z - faceVel.z), fabs(cellVel.y - faceVel.y));
-	// Compute normal distance of the interior point from the wall
-	//TODO Check if the half_cell_width_at_wall gives same result as old formulation
-        //double wall_dist = fabs( dot((cell.pos[0] - IFace.pos), IFace.n) ); 
-	double wall_dist = cell.half_cell_width_at_wall;
-	// Compute wall shear stess (and heat flux for fixed temperature wall) using 
-	// the surface stress tensor. This provides initial values to solve for
-	// tau_wall and q_wall iteratively
 	double du = fabs(cell_tangent - face_tangent);
 	//TODO 3D formulation (not implemented)
 	//double du = sqrt( pow((cell_tangent0-face_tangent0),2.0) + pow((cell_tangent1-face_tangent1),2.0) );
+	// Compute wall gas properties from either ...
+	double T_wall, rho_wall;
+	if ( _isFixedTWall ) {
+	    // ... user-specified wall temperature, or ... 
+	    T_wall = IFace.fs.gas.Ttr; 
+	    rho_wall = IFace.fs.gas.rho;
+	} else {
+	    // ... using Crocco-Busemann relation (Eq 11) 
+	    T_wall = cell.fs.gas.Ttr + recovery * du * du / (2.0 * cp);
+	    // Update gas properties at the wall, assuming static pressure
+	    // at the wall is the same as that in the first wall cell
+	    IFace.fs.gas.Ttr = T_wall;
+	    IFace.fs.gas.p = cell.fs.gas.p;
+	    gmodel.update_thermo_from_pT(IFace.fs.gas);
+	    gmodel.update_trans_coeffs(IFace.fs.gas);
+	    rho_wall = IFace.fs.gas.rho;
+	}
+	// Compute wall shear stess (and heat flux for fixed temperature wall) 
+	// using the surface stress tensor. This provides initial values to solve
+	// for tau_wall and q_wall iteratively
+	double wall_dist = cell.half_cell_width_at_wall;
 	double dudy = du / wall_dist;
 	double mu_lam_wall = IFace.fs.gas.mu;
 	double mu_lam = cell.fs.gas.mu;
-        double tau_wall_old = mu_lam_wall * dudy;
-	double dT, dTdy, k_lam, q_wall_old;
+	double tau_wall_old = mu_lam_wall * dudy;
+	double dT, dTdy, k_lam_wall, q_wall_old;
 	if ( _isFixedTWall ) {
-            dT = fabs( cell.fs.gas.Ttr - IFace.fs.gas.Ttr );
-            dTdy = dT / wall_dist;
-	    k_lam = IFace.fs.gas.k;
-	    q_wall_old = k_lam * dTdy;
+	    dT = fabs( cell.fs.gas.Ttr - IFace.fs.gas.Ttr );
+	    dTdy = dT / wall_dist;
+	    k_lam_wall = IFace.fs.gas.k;
+	    q_wall_old = k_lam_wall * dTdy;
 	}
-	// Compute wall temperature using Crocco-Busemann relation (Eq 11)
-	double T_wall, rho_wall;
-	if ( _isFixedTWall ) {
-	    T_wall = IFace.fs.gas.Ttr; 
-	    rho_wall = IFace.fs.gas.rho;
-	} else {  
-	    T_wall = cell.fs.gas.Ttr + recovery * du * du / (2.0 * cp);
-	    // Calculate wall density using perfect equation of state
-            // TODO replace with non-ideal equation of state
-            //IFace.fs.gas.T = T_wall;
-            //IFace.fs.gas.p = cell.fs.gas.p
-            //gmodel.update_thermo_from_pT(IFace.fs.gas);
-            //double rho_wall = IFace.fs.gas.rho
-	    rho_wall = cell.fs.gas.p / (gas_constant*T_wall);
-	}
-        // Constants from Spalding's Law of the Wall theory
-        double kappa = 0.4;
-        double B = 5.5;
-        double C_mu = 0.09;
-	// Constants for Nichols' wall function implementation
+	// Constants from Spalding's Law of the Wall theory and 
+	// Nichols' wall function implementation
+	double kappa = 0.4;
+	double B = 5.5;
+	double C_mu = 0.09;
 	size_t counter = 0; 
 	double tolerance = 1.0e-10;
 	double diff_tau = 100.0;
 	double diff_q;
 	if ( _isFixedTWall ) {
-            diff_q = 100.0;
+	    diff_q = 100.0;
 	} else {
 	    // Make diff_q smaller than tolerance so that while loop
-            // will only check for diff_tau for adiabatic wall cases
+	    // will only check for diff_tau for adiabatic wall cases
 	    diff_q = tolerance / 10.0; 
 	}
 	double tau_wall = 0.0; double q_wall = 0.0;
-        double u_tau = 0.0; double u_plus = 0.0;
-        double Gam = 0.0; double Beta = 0.0; double Q = 0.0; double Phi = 0.0;
-        double y_plus_white = 0.0; double y_plus = 0.0;
+	double u_tau = 0.0; double u_plus = 0.0;
+	double Gam = 0.0; double Beta = 0.0; double Q = 0.0; double Phi = 0.0;
+	double y_plus_white = 0.0; double y_plus = 0.0;
 	//
 	// Iteratively solve for the wall-function corrected shear stress
-        // (and heat flux for fixed temperature walls)
+	// (and heat flux for fixed temperature walls)
 	while ( diff_tau > tolerance || diff_q > tolerance) {
 	    // Friction velocity and u+ (Eq 2)
 	    u_tau = sqrt( tau_wall_old / rho_wall );
 	    u_plus = du / u_tau;
 	    // Gamma, Beta, Qm and Phi (Eq 7)
-	    Gam = recovery * u_tau * u_tau / ( 2.0 * cp * T_wall ); 
-	    if ( _isFixedTWall ) {
-		Beta = q_wall_old * mu_lam / ( rho_wall*T_wall*k_lam*u_tau );
+	    Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall); 
+	    if (_isFixedTWall) {
+		Beta = q_wall_old * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
 	    } else {
 		Beta = 0.0;
 	    }
-	    Q = sqrt( Beta*Beta + 4.0*Gam );
-	    Phi = asin( -1.0 * Beta / Q );
+	    Q = sqrt(Beta*Beta + 4.0*Gam);
+	    Phi = asin(-1.0 * Beta / Q);
 	    // y+ defined by White and Christoph (Eq 9)
 	    y_plus_white = exp((kappa/sqrt(Gam))*(asin((2.0*Gam*u_plus - Beta)/Q) - Phi))*exp(-1.0*kappa*B);
 	    // Spalding's unified form for defining y+ (Eq 8)
@@ -1489,12 +1487,12 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 								       + pow((kappa*u_plus), 3.0) / 6.0 );
 	    // Calculate an updated value for the wall shear stress and heat flux 
 	    tau_wall = 1.0/rho_wall * pow(y_plus*mu_lam_wall/wall_dist, 2.0);
-	    if ( _isFixedTWall ) {
-		Beta = ( cell.fs.gas.Ttr/T_wall - 1.0 + Gam*u_plus*u_plus ) / u_plus;
-		q_wall = Beta * ( rho_wall*T_wall*k_lam*u_tau ) / mu_lam;
+	    if (_isFixedTWall) {
+		Beta = (cell.fs.gas.Ttr/T_wall - 1.0 + Gam*u_plus*u_plus) / u_plus;
+		q_wall = Beta * (rho_wall*T_wall*k_lam_wall*u_tau) / mu_lam_wall;
 	    }
 	    // Difference between old and new tau_wall and q_wall. Update old value
-	    diff_tau = fabs( tau_wall - tau_wall_old );
+	    diff_tau = fabs(tau_wall - tau_wall_old);
 	    tau_wall_old += 0.25 * (tau_wall - tau_wall_old);
 	    if ( _isFixedTWall ) {
 		diff_q = fabs( q_wall - q_wall_old );
@@ -1525,7 +1523,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    //local_tau_wall_x = 0.0
 	    //local_tau_wall_y = -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle);
 	    //local_tau_wall_z = -1.0 * reverse_flag1 * tau_wall * sin(vt1_2_angle);
-	    if ( _isFixedTWall ) {
+	    if (_isFixedTWall) {
 		IFace.q = -1.0 * q_wall;
 	    } else {
 		IFace.q = 0.0;
@@ -1550,25 +1548,23 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	//
 	// Turbulence model boundary conditions (Eq 15 & 14)
 	double y_white_y_plus = 2.0 * y_plus_white * kappa*sqrt(Gam)/Q
-		* pow( (1.0 - pow(2.0*Gam*u_plus-Beta,2.0)/(Q*Q)), -0.5 );
+		* pow((1.0 - pow(2.0*Gam*u_plus-Beta,2.0)/(Q*Q)), 0.5);
 	double mu_coeff = 1.0 + y_white_y_plus
-		- kappa*exp(-1.0*kappa*B) * ( 1.0 + kappa*u_plus + kappa*u_plus*kappa*u_plus/2.0 )
+		- kappa*exp(-1.0*kappa*B) * (1.0 + kappa*u_plus + kappa*u_plus*kappa*u_plus/2.0)
 		- mu_lam/mu_lam_wall;
 	double mu_t = mu_lam_wall * mu_coeff;
 	// omega (Eq 19 - 21)
-	double omega_i = 6.0*mu_lam_wall / ( 0.075*rho_wall*wall_dist*wall_dist );
-	double omega_o = u_tau / ( sqrt(C_mu)*kappa*wall_dist );
-	double omega = sqrt( omega_i*omega_i + omega_o*omega_o );
+	double omega_i = 6.0*mu_lam_wall / (0.075*rho_wall*wall_dist*wall_dist);
+	double omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
+	double omega = sqrt(omega_i*omega_i + omega_o*omega_o);
 	// tke (Eq 22)
 	double tke = omega * mu_t / cell.fs.gas.rho;
 	// tke may be negative at initial stages. When this happens, we just use a value of
 	// tke that is scaled based off the squared of the ratio of distance between the
 	// first and second cells from the wall <- this was implemented by Jason Qin in E3.
 	if ( tke < 0.0 || isNaN(tke) != 0 ) { 
-	    double wall_dist2 = fabs( dot((second_cell_from_wall.pos[0] - IFace.pos), IFace.n) );
-	    //TODO check: does all cells have property distance_to_nearest_wall??
-	    //double wall_dist2 = second_cell_from_wall.distance_to_nearest_wall;
-	    tke = wall_dist*wall_dist / ( wall_dist2*wall_dist2 ) * second_cell_from_wall.fs.tke;
+	    double wall_dist2 = second_cell_from_wall.distance_to_nearest_wall;
+	    tke = wall_dist*wall_dist / (wall_dist2*wall_dist2) * second_cell_from_wall.fs.tke;
 	}
 	IFace.fs.tke = tke;
 	IFace.fs.omega = omega;
