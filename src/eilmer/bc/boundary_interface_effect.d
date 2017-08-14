@@ -1304,7 +1304,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	//
 	// Do some real work.
 	//
-	FVCell cell, second_cell_from_wall;
+	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
 
@@ -1314,9 +1314,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
-		    second_cell_from_wall = blk.get_cell(i,j-1,k);
 		    IFace = cell.iface[Face.north];
-	            wall_function(cell, second_cell_from_wall, IFace); 
+	            wall_function(cell, IFace); 
 		} // end i loop
 	    } // end for k
 	    break;
@@ -1325,9 +1324,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-                    second_cell_from_wall = blk.get_cell(i-1,j,k);
 		    IFace = cell.iface[Face.east];
-                    wall_function(cell, second_cell_from_wall, IFace);
+                    wall_function(cell, IFace);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -1336,9 +1334,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
-                    second_cell_from_wall = blk.get_cell(i,j+1,k);
 		    IFace = cell.iface[Face.south];
-                    wall_function(cell, second_cell_from_wall, IFace);
+                    wall_function(cell, IFace);
 		} // end i loop
 	    } // end for k
 	    break;
@@ -1347,9 +1344,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-                    second_cell_from_wall = blk.get_cell(i+1,j,k);
 		    IFace = cell.iface[Face.west];
-                    wall_function(cell, second_cell_from_wall, IFace);
+                    wall_function(cell, IFace);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -1358,9 +1354,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-                    second_cell_from_wall = blk.get_cell(i,j,k-1);
 		    IFace = cell.iface[Face.top];
-                    wall_function(cell, second_cell_from_wall, IFace);
+                    wall_function(cell, IFace);
 		} // end j loop
 	    } // end for i
 	    break;
@@ -1369,16 +1364,15 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    for (i = blk.imin; i <= blk.imax; ++i) {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
-                    second_cell_from_wall = blk.get_cell(i,j,k-1);
 		    IFace = cell.iface[Face.bottom];
-                    wall_function(cell, second_cell_from_wall, IFace);
+                    wall_function(cell, IFace);
 		} // end j loop
 	    } // end for i
 	    break;
 	} // end switch which_boundary
     } // end apply()
 
-    void wall_function(const FVCell cell, const FVCell second_cell_from_wall, FVInterface IFace)
+    void wall_function(const FVCell cell, FVInterface IFace)
     // Implement Nichols' and Nelson's wall function boundary condition
     // Reference:
     //  Nichols RH & Nelson CC (2004)
@@ -1558,14 +1552,12 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	double omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
 	double omega = sqrt(omega_i*omega_i + omega_o*omega_o);
 	// tke (Eq 22)
+	assert(cell.fs.gas.rho > 0.0, "density not positive");
+	assert(mu_t > 0.0, "mu_t not greater than zero");
+	assert(omega > 0.0, "omega not greater than zero");
 	double tke = omega * mu_t / cell.fs.gas.rho;
-	// tke may be negative at initial stages. When this happens, we just use a value of
-	// tke that is scaled based off the squared of the ratio of distance between the
-	// first and second cells from the wall <- this was implemented by Jason Qin in E3.
-	if ( tke < 0.0 || isNaN(tke) != 0 ) { 
-	    double wall_dist2 = second_cell_from_wall.distance_to_nearest_wall;
-	    tke = wall_dist*wall_dist / (wall_dist2*wall_dist2) * second_cell_from_wall.fs.tke;
-	}
+	// Assign updated values of tke and omega to IFace.fs for later copying
+	// to boundary cells.
 	IFace.fs.tke = tke;
 	IFace.fs.omega = omega;
 	return;
