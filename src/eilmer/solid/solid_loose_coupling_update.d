@@ -71,7 +71,7 @@ Matrix e_vec(int ftl)
 	foreach(scell; sblk.activeCells){
 	    test1 ~= scell.e[ftl];
 	}
-    }
+    } 
     auto len = test1.length; 
     Matrix ret = zeros(len, 1); 
     int count = 0;
@@ -98,7 +98,7 @@ Matrix copy_vec(Matrix mat)
 // Returns: Matrix of doubles
 {
     auto n = mat.nrows; 
-    auto cop = zeros(n, 1);
+    auto cop = zeros(n, 1); 
     foreach(i; 0 .. n){
 	cop[i, 0] = mat[i, 0];
     }
@@ -288,6 +288,7 @@ void post(Matrix eip1, Matrix dei)
 void solid_domains_backward_euler_update(double sim_time, double dt_global) 
 // Executes implicit method
 {  
+    writeln("== Begin Step ==");
     auto t0 = Clock.currTime();
     int n = 0;
     foreach (sblk; parallel(solidBlocks, 1)) {
@@ -306,19 +307,17 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     
     auto ei = e_vec(0); 
     // retrieving guess
-    auto eip1 = e_vec(1);
+    auto eip1 = e_vec(0);
     // Begin prepping for newton loop
     auto Xk = copy_vec(eip1);
     auto Xkp1 = Xk + eps;
     auto Fk = F(Xk, ei, dt_global, sim_time); 
     auto Fkp1 = F(Xkp1, ei, dt_global, sim_time); // done so that fabs(normfk - normfkp1) satisfied
-
     int count = 0;
     Matrix Jk;
     Matrix mFk; // e.g. minusFk --> mFk
-    Matrix dX;  
-
-    while(fabs(norm(Fk) - norm(Fkp1)) > eps){
+    Matrix dX;   
+    while(fabs(norm(Fk) - norm(Fkp1)) > eps){ 
 	count += 1; 
 	if (count != 1){
 	    Xk = Xkp1; 
@@ -341,5 +340,6 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     Matrix dei = eip1 - ei;
     Fk = Fkp1;
     post(eip1, dei); // post processing incl. writing solns for e, de and updating T.
+    writeln("== End Step ==");
 }
 
