@@ -64,9 +64,13 @@ public:
 	    // Let's rename the species.
 	    _species_names.length = _n_species;
 	    foreach (isp; 0 .. _n_species) {
-		_species_names[isp] = format("air-%d", isp);
+		_species_names[isp] = format("air%d", isp);
 	    }
+	    // Let's fix the _mol_masses array.
+	    _mol_masses.length = _n_species;
+	    foreach (isp; 0 .. _n_species) _mol_masses[isp] = R_universal/_Rgas;
 	}
+	create_species_reverse_lookup();
     }
 
     override string toString() const

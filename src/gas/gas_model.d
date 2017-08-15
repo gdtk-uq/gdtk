@@ -64,6 +64,7 @@ public:
 
     void create_species_reverse_lookup()
     {
+	_species_indices.clear;
 	foreach ( int isp; 0 .. _n_species ) {
 	    _species_indices[_species_names[isp]] = isp;
 	}
