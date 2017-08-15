@@ -19,7 +19,7 @@ function convertSpeciesTableToArray(massfTable)
       isp = gm:speciesIndex(sp)
       if isp == -1 then
 	 errMsg = "Species name used in table does not exist: " .. sp
-	 Error(errMsg)
+	 error(errMsg)
       end
    end
    -- 2. Set all values to 0.0
@@ -39,7 +39,7 @@ function convertSpeciesTableToArray(massfTable)
       errMsg = "The given mass faction values to do sum to 1.0\n"
       errMsg = errMsg .. string.format("The sum value is: %e\n", massfSum)
       errMsg = errMsg .. string.format("The error is larger than the tolerance: %e\n", MASSF_ERR_TOL)
-      Error(errMsg)
+      error(errMsg)
    end
    -- otherwise, perform a scaling
    for isp=0,nsp-1 do massfArray[isp] = massfArray[isp]/massfSum end

@@ -394,6 +394,8 @@ final class GlobalConfig {
     shared static double viscous_delay = 0.0;
     shared static MassDiffusionModel mass_diffusion_model = MassDiffusionModel.none;
     static MassDiffusion massDiffusion;
+    shared static bool constant_lewis_number = false;
+    shared static double lewis_number = 1.0;
 
     shared static TurbulenceModel turbulence_model = TurbulenceModel.none;
     shared static double turbulence_prandtl_number = 0.89;
@@ -549,6 +551,8 @@ public:
     double viscous_factor;
     MassDiffusionModel mass_diffusion_model;
     MassDiffusion massDiffusion;
+    bool constant_lewis_number;
+    double lewis_number;
 
     bool stringent_cfl;
     double viscous_signal_factor;
@@ -635,6 +639,8 @@ public:
 	    GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
 	viscous_factor = GlobalConfig.viscous_factor;
 	mass_diffusion_model = GlobalConfig.mass_diffusion_model;
+	constant_lewis_number = GlobalConfig.constant_lewis_number;
+	lewis_number = GlobalConfig.lewis_number;
 	//
 	stringent_cfl = GlobalConfig.stringent_cfl;
 	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
@@ -665,7 +671,8 @@ public:
 	//
 	gmodel = init_gas_model(GlobalConfig.gas_model_file);
 	if (mass_diffusion_model != MassDiffusionModel.none) {
-	    massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model);
+	    massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model,
+					      GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
 	}
 	include_quality = GlobalConfig.include_quality;
 	if (GlobalConfig.reacting) {
@@ -868,6 +875,8 @@ void read_config_file()
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
+    mixin(update_bool("constant_lewis_number", "constant_lewis_number"));
+    mixin(update_double("lewis_number", "lewis_number"));
     mixin(update_bool("separate_update_for_viscous_terms", "separate_update_for_viscous_terms"));
     mixin(update_bool("separate_update_for_k_omega_source", "separate_update_for_k_omega_source"));
     mixin(update_enum("turbulence_model", "turbulence_model", "turbulence_model_from_name"));
@@ -884,6 +893,8 @@ void read_config_file()
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
 	writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
+	writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
+	writeln("  lewis_number: ", GlobalConfig.lewis_number);
 	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
 	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
 	writeln("  turbulence_model: ", turbulence_model_name(GlobalConfig.turbulence_model));
@@ -896,7 +907,8 @@ void read_config_file()
     configCheckPoint3();
 
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
-	GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.mass_diffusion_model);
+	GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.mass_diffusion_model,
+						       GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
     }
     // User-defined source terms
     mixin(update_bool("udf_source_terms", "udf_source_terms"));

@@ -44,11 +44,11 @@ interface MassDiffusion {
     void update_mass_fluxes(const FlowState fs, const FlowGradients grad, double[] jx, double[] jy, double[] jz);
 }
 
-MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusion_model)
+MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusion_model, bool withConstantLewisNumber, double Lewis)
 {
     switch (mass_diffusion_model) {
     case MassDiffusionModel.ficks_first_law:
-	return new FicksFirstLaw(gmodel, true);
+	return new FicksFirstLaw(gmodel, true, withConstantLewisNumber, Lewis);
     default:
 	throw new FlowSolverException("Selected mass diffusion model is not available.");
     }
@@ -86,18 +86,20 @@ class FicksFirstLaw : MassDiffusion {
 		_M[isp][jsp] *= 1.0e3; // from kg/mol to g/mol
 	    }
 	}
-	// Compute sigma_ij terms
-	foreach (isp; 0 .. _nsp) {
-	    foreach (jsp; 0 .. _nsp) {
-		if (isp == jsp) continue;
-		_sigma[isp][jsp] = 0.5*(gmodel.LJ_sigmas[isp] + gmodel.LJ_sigmas[jsp]);
+	if (!withConstantLewisNumber) { 
+	    // Compute sigma_ij terms
+	    foreach (isp; 0 .. _nsp) {
+		foreach (jsp; 0 .. _nsp) {
+		    if (isp == jsp) continue;
+		    _sigma[isp][jsp] = 0.5*(gmodel.LJ_sigmas[isp] + gmodel.LJ_sigmas[jsp]);
+		}
 	    }
-	}
-	// Compute eps_ij terms
-	foreach (isp; 0 .. _nsp) {
-	    foreach (jsp; 0 .. _nsp) {
-		if (isp == jsp) continue;
-		_eps[isp][jsp] = sqrt(gmodel.LJ_epsilons[isp] * gmodel.LJ_epsilons[jsp]);
+	    // Compute eps_ij terms
+	    foreach (isp; 0 .. _nsp) {
+		foreach (jsp; 0 .. _nsp) {
+		    if (isp == jsp) continue;
+		    _eps[isp][jsp] = sqrt(gmodel.LJ_epsilons[isp] * gmodel.LJ_epsilons[jsp]);
+		}
 	    }
 	}
     }
