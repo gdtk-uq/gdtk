@@ -121,6 +121,7 @@ public:
 	// It will be available for computing user-defined source terms.
 	myL = luaL_newstate();
 	luaL_openlibs(myL);
+	registerGasModel(myL, LUA_GLOBALSINDEX);
 	lua_pushinteger(myL, id);
 	lua_setglobal(myL, "blkId");
 	pushObj!(GasModel, GasModelMT)(myL, dedicatedConfig[id].gmodel);
