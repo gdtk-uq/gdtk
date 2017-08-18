@@ -926,6 +926,9 @@ void read_config_file()
     mixin(update_double("T_frozen", "T_frozen"));
     mixin(update_double("T_frozen_energy", "T_frozen_energy"));
     mixin(update_enum("tci_model", "tci_model", "tci_model_from_name"));
+    mixin(update_double("ignition_time_start", "ignition_time_start"));
+    mixin(update_double("ignition_time_stop", "ignition_time_stop"));
+	  
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  reacting: ", GlobalConfig.reacting);
 	writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
@@ -933,6 +936,8 @@ void read_config_file()
 	writeln("  T_frozen: ", GlobalConfig.T_frozen);
 	writeln("  T_frozen_energy: ", GlobalConfig.T_frozen_energy);
 	writeln("  tci_model: ", tci_model_name(GlobalConfig.tci_model));
+	writeln("  ignition_time_start: ", GlobalConfig.ignition_time_start);
+	writeln("  ignition_time_stop: ", GlobalConfig.ignition_time_start);
     }
 
     // Parameters controlling other simulation options
@@ -983,6 +988,7 @@ void read_config_file()
 	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
 	GlobalConfig.reaction_zones ~= new BlockZone(p0, p1);
     }
+    
     int n_ignition_zones = getJSONint(jsonData, "n-ignition-zones", 0);
     foreach (i; 0 .. n_ignition_zones) {
 	string jsonKey = format("ignition-zone-%d", i);

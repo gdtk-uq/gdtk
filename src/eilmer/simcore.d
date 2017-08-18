@@ -357,6 +357,21 @@ void integrate_in_time(double target_time_as_requested)
 		throw new FlowSolverException(errMsg);
 	    }
 	}
+	// We might need to activate or deactivate the IgnitionZones depending on
+	// what simulation time we are up to.
+	if (sim_time >= GlobalConfig.ignition_time_start && sim_time <= GlobalConfig.ignition_time_stop) {
+	    foreach (blk; gasBlocks) {
+		blk.myConfig.ignition_zone_active = true;
+	    }
+	    GlobalConfig.ignition_zone_active = true;
+	}
+	else {
+	    foreach (blk; gasBlocks) {
+		blk.myConfig.ignition_zone_active = false;
+	    }
+	    GlobalConfig.ignition_zone_active = false;
+
+	}
 	//
 	// 1. Set the size of the time step to be the minimum allowed for any active block.
 	if (!GlobalConfig.fixed_time_step && 

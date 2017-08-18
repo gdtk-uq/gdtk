@@ -1126,6 +1126,8 @@ function write_config_file(fileName)
    f:write(string.format('"T_frozen": %.18e,\n', config.T_frozen))
    f:write(string.format('"T_frozen_energy": %.18e,\n', config.T_frozen_energy))
    f:write(string.format('"tci_model": "%s",\n', string.lower(config.tci_model)))
+   f:write(string.format('"ignition_time_start": %.18e,\n', config.ignition_time_start))
+   f:write(string.format('"ignition_time_stop": %.18e,\n', config.ignition_time_stop))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
    f:write(string.format('"nblock": %d,\n', #(fluidBlocks)))
