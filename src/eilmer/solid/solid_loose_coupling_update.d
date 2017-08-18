@@ -141,105 +141,109 @@ Matrix Jac(Matrix Yip1, Matrix Yi, double dt, double sim_time, double eps = 1e-2
 }
 
 
-Matrix GMRES(Matrix A, Matrix b, Matrix x0)
+void GMRES(Matrix A, Matrix b, Matrix x0, Matrix xm)
 // Executes GMRES_step, can be used to repeat GMRES steps checking for multiple iterations, otherwise relatively useless 
 
 // Returns: Matrix of doubles
 {    
-    auto m = 10;
-    auto xm = GMRES_step(A, b, x0, m);
-    
-    return xm;
+    double tol = 1.0e-3;
+    GMRES_step(A, b, x0, xm, tol);
 }
 
+// Working space for GMRES_step
+bool GMRES_space_allocated = false;
+int m = 10;
+Matrix r0;
+Matrix v;
+Matrix vi;
+Matrix wj;
+Matrix H;
+Matrix e1;
+Matrix b1;
 
-Matrix GMRES_step(Matrix A, Matrix b, Matrix x0, int m)
+void GMRES_step(Matrix A, Matrix b, Matrix x0, Matrix xm, double tol)
 // Takes a single GMRES step using Arnoldi 
 // Minimisation problem is solved using Least Squares via Gauss Jordan (see function below) 
 
-// Returns: Matrix of doubles
-{ 
-    auto r0 = b - dot(A, x0);
+// On return, xm is updated with result.
+{
+    if (!GMRES_space_allocated) {
+	// Do one-time memory allocation
+	size_t n = b.nrows;
+	r0 = new Matrix(n, 1);
+	v = new Matrix(n, m+1);
+	vi = new Matrix(n, 1);
+	wj = new Matrix(n, 1);
+	H = new Matrix(m+1, m);
+	e1 = new Matrix(m+1, 1);
+	b1 = new Matrix(m+1, 1);
+	GMRES_space_allocated = true;
+    }
+    // r0 = b - A*x0
+    dot(A, x0, r0);
+    foreach (i; 0 .. r0.nrows) r0[i,0] = b[i,0] - r0[i,0];
     double beta = norm(r0);  
-    auto v = vstack([r0])/beta; 
-    auto H = zeros(m+1, m); 
-    auto e1 = zeros(m+1, 1); 
-    e1[0, 0] = 1; 
-    auto b1 = beta*e1;
-    Matrix vi; 
-    Matrix wj; 
-    Matrix temp;
+    v.zeros();
+    foreach (i; 0 .. r0.nrows) v[i,0] = r0[i,0]/beta;
+    foreach (i; 0 .. v.nrows) vi[i,0] = v[i,0];
+    H.zeros();
+    e1.zeros();
+    e1[0, 0] = 1;
+    foreach (i; 0 .. e1.nrows) b1[i,0] = beta*e1[i,0];
     double hjp1j;
-    Matrix H1;
-    Matrix b2; 
     Matrix y; 
     double hij;
-    double tol = 1e-3;
-    foreach(j; 0 .. m){
-	if(j==0){
-	    wj = dot(A, v);
-	    hij = dot(flatten(wj), v)[0, 0]; 
-	    H[0, 0] = hij; 
-	    wj = wj - hij*v;  
-	    wj = flatten(wj);
+    foreach (j; 0 .. m) {
+	if (j == 0) {
+	    dot(A, vi, wj);
+	    hij = 0.0;
+	    foreach (k; 0 .. wj.nrows) hij += wj[k,0]*vi[k,0];
+	    H[0,0] = hij;
+	    foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*vi[k,0];
 	}
-	else{
-	    wj = flatten(dot(A, v.sliceDup(0, v.nrows, j, j+1)));
-	    foreach(i; 0 .. j){ 
-		vi = v.sliceDup(0, v.nrows, i, i+1); 
-		hij = dot(wj, vi)[0, 0];
-		H[i, j] = hij;  
-		wj = vertit(wj);
-		wj = wj - hij*vi;   
-		wj = flatten(wj);
+	else {
+	    // Extract vi from v
+	    foreach (k; 0 .. vi.nrows) vi[k,0] = v[k,j];
+	    dot(A, vi, wj);
+	    foreach (i; 0 .. j) {
+		hij = 0.0;
+		foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
+		H[i,j] = hij;
+		foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*v[k,i];
 	    } 
 	}
-	wj = vertit(wj);
 	hjp1j = norm(wj);
 	H[j+1, j] = hjp1j;    
-	if(fabs(hjp1j) < tol){   
-	    H1 = H.sliceDup(0, j+1, 0, j+1); 
-	    b2 = b1.sliceDup(0, j+1, 0, b1.ncols);  
-	    return x0 + dot(v, lsq_gmres(H1, b2)); 
+	if (fabs(hjp1j) < tol) {   
+	    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	    // We're doing memory allocation here.
+	    // It would be better to fix this, but here
+	    // it only occurs once per call.
+	    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	    auto H1 = H.sliceDup(0, j+1, 0, j+1); 
+	    auto b2 = b1.sliceDup(0, j+1, 0, b1.ncols);  
+	    foreach (k; 0 .. x0.nrows) xm[k,0] = x0[k,0];
+	    auto tmp = dot(v, lsq_gmres(H1, b2));
+	    foreach (k; 0 .. xm.nrows) xm[k,0] += tmp[k,0];
+	    return;
 	}
-	else{
-	    if(j==0){
-		v = hstack([v, wj/hjp1j]);
-	    }
-	    else{
-		v = hstack([v, wj/hjp1j]); 
+	else {
+	    // Add new column to 'v'
+	    foreach (k; 0 .. v.nrows) {
+		v[k,j+1] = wj[k,0]/hjp1j;
 	    }
 	}
     }
-    return x0 + dot(v.sliceDup(0, v.nrows, 0, v.ncols-1), lsq_gmres(H, b1)); 
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // We're doing memory allocation here.
+    // It would be better to fix this, but here
+    // it only occurs once per call.
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    foreach (k; 0 .. x0.nrows) xm[k,0] = x0[k,0];
+    auto tmp = dot(v.sliceDup(0, v.nrows, 0, v.ncols-1), lsq_gmres(H, b1));
+    foreach (k; 0 .. xm.nrows) xm[k,0] += tmp[k,0];
+    return;
 }
-
-Matrix flatten(Matrix vec)
-// E.g. Takes Matrix[[1], [2], [3]] and returns Matrix[[1, 2, 3]]
-
-// Returns: Matrix of doubles
-{
-    auto len = vec.nrows;
-    Matrix ret = zeros(1, len);
-    foreach(i; 0 .. len){
-	ret[0, i] = vec[i, 0];
-    }
-    return ret;
-} 
-
-Matrix vertit(Matrix vec)
-// E.g. Takes Matrix[[1, 2, 3]] and returns Matrix [[1], [2], [3]]
-
-// Returns: Matrix of doubles
-{
-    auto len = vec.ncols; 
-    Matrix ret = zeros(len, 1); 
-    foreach(i; 0 .. len){
-	ret[i, 0] = vec[0, i];
-    }
-    return ret; 
-}
-    
 
 Matrix lsq_gmres(Matrix A, Matrix b)
 // Solves the minimisation problem using least squares and direct solution (Gauss Jordan elimination)
@@ -285,9 +289,13 @@ void post(Matrix eip1, Matrix dei)
     }
 }
 
+bool matrix_dX_allocated = false;
+Matrix dX; 
+
 void solid_domains_backward_euler_update(double sim_time, double dt_global) 
 // Executes implicit method
 {  
+
     writeln("== Begin Step ==");
     auto t0 = Clock.currTime();
     int n = 0;
@@ -301,6 +309,10 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 	    scell.e[1] = scell.e[0] + scell.de_prev; 
 	    n += 1;
 	}
+    }
+    if (!matrix_dX_allocated) {
+	dX = new Matrix(n, 1);
+	matrix_dX_allocated = true;
     }
     double eps = 1e-2;
     double omega = 0.01;
@@ -316,7 +328,6 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     int count = 0;
     Matrix Jk;
     Matrix mFk; // e.g. minusFk --> mFk
-    Matrix dX;   
     while(fabs(norm(Fk) - norm(Fkp1)) > eps){ 
 	count += 1; 
 	if (count != 1){
@@ -325,7 +336,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 	}
 	Jk = Jac(Xk, ei, dt_global, sim_time);
 	mFk = -1*Fk;
-	dX = GMRES(Jk, mFk, Xk);
+	GMRES(Jk, mFk, Xk, dX);
 	
 	Xkp1 = Xk + dX; 
 	Fkp1 = F(Xkp1, ei, dt_global, sim_time); 
