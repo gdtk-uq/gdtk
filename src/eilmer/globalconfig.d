@@ -124,6 +124,14 @@ SolidDomainCoupling solidDomainCouplingFromName(string name)
     }
 }
 
+struct SolidDomainLooseUpdateOptions {
+    int maxNewtonIterations = 10;
+    double toleranceNewtonUpdate = 1.0e-2;
+    int maxGMRESIterations = 10;
+    double toleranceGMRESSolve = 1.0e-3;
+    double perturbationSize = 1.0e-2;
+}
+
 class BlockZone {
     // Note that these data are not shared across threads
     // because we will want to access them frequently at the lower levels of the code.
@@ -254,6 +262,7 @@ final class GlobalConfig {
 
     // Parameters controlling solid domain update
     shared static SolidDomainCoupling coupling_with_solid_domains = SolidDomainCoupling.tight;
+    shared static SolidDomainLooseUpdateOptions sdluOptions; 
 
     // Parameters related to possible motion of the grid.
     shared static grid_motion = GridMotion.none;
@@ -1006,6 +1015,19 @@ void read_config_file()
 	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
 	GlobalConfig.turbulent_zones ~= new BlockZone(p0, p1);
     }
+
+    auto sdluOptions = jsonData["solid_domain_loose_update_options"];
+    GlobalConfig.sdluOptions.maxNewtonIterations = 
+	getJSONint(sdluOptions, "max_newton_iterations", GlobalConfig.sdluOptions.maxNewtonIterations);
+    GlobalConfig.sdluOptions.toleranceNewtonUpdate = 
+	getJSONdouble(sdluOptions, "tolerance_newton_update", GlobalConfig.sdluOptions.toleranceNewtonUpdate);
+    GlobalConfig.sdluOptions.maxGMRESIterations = 
+	getJSONint(sdluOptions, "max_gmres_iterations", GlobalConfig.sdluOptions.maxGMRESIterations);
+    GlobalConfig.sdluOptions.toleranceGMRESSolve = 
+	getJSONdouble(sdluOptions, "tolerance_gmres_solve", GlobalConfig.sdluOptions.toleranceGMRESSolve);
+    GlobalConfig.sdluOptions.perturbationSize = 
+	getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
+    
 
     // Now, configure blocks that make up the flow domain.
     //

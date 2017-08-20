@@ -158,6 +158,9 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	mySolidBlk.computePrimaryCellGeometricData();
 	mySolidBlk.assignVtxLocationsForDerivCalc();
     }
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
+	initSolidLooseCouplingUpdate();
+    }
     // All cells are in place, so now we can initialise any history cell files.
     init_history_cell_files();
     // create the loads directory, maybe

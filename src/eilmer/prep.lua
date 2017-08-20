@@ -93,6 +93,36 @@ sssOptionsHidden = { -- hidden from user
 SteadyStateSolver = {}
 setmetatable(SteadyStateSolver, sssOptionsHidden)
 
+-- Storage for solid domain loose update settings
+sdluOptionsHidden = { -- hidden from user
+   -- set defaults here
+   max_newton_iterations = 10,
+   tolerance_newton_update = 1.0e-2,
+   max_gmres_iterations = 10,
+   tolerance_gmres_solve = 1.0e-3,
+   perturbation_size = 1.0e-2,
+
+   __index = function (t, k) 
+      return sdluOptionsHidden[k]
+   end,
+   __newindex = function (t, k, v)
+      if sdluOptionsHidden[k] == nil then
+	 print(string.format("The field '%s' cannot be set in 'SolidDomainLooseUpdate' table.", k))
+      else
+	 sdluOptionsHidden[k] = v
+      end
+   end,
+   __call = function (_, t)
+      for k, v in pairs(t) do
+	 sdluOptionsHidden.__newindex(t, k, v)
+      end
+   end
+}
+
+SolidDomainLooseUpdate = {}
+setmetatable(SolidDomainLooseUpdate, sdluOptionsHidden)
+
+
 -- Storage for later definitions of Block objects
 fluidBlocks = {}
 
@@ -1051,6 +1081,14 @@ function write_config_file(fileName)
 			 config.gasdynamic_update_scheme))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))
+   f:write('"solid_domain_loose_update_options" : {\n')
+   f:write(string.format('   "max_newton_iterations" : %d,\n', SolidDomainLooseUpdate.max_newton_iterations))
+   f:write(string.format('   "tolerance_newton_update" : %.18e,\n', SolidDomainLooseUpdate.tolerance_newton_update))
+   f:write(string.format('   "max_gmres_iterations" : %d,\n', SolidDomainLooseUpdate.max_gmres_iterations))
+   f:write(string.format('   "tolerance_gmres_solve" : %.18e,\n', SolidDomainLooseUpdate.tolerance_gmres_solve))
+   f:write(string.format('   "perturbation_size" : %.18e \n', SolidDomainLooseUpdate.perturbation_size))
+   -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
+   f:write('},\n')
    f:write(string.format('"MHD": %s,\n', tostring(config.MHD)))
    f:write(string.format('"MHD_static_field": %s,\n', tostring(config.MHD_static_field)))
    f:write(string.format('"MHD_resistive": %s,\n', tostring(config.MHD_resistive)))

@@ -19,6 +19,34 @@ import solidprops;
 import std.datetime; 
 import solid_udf_source_terms;
 
+// Working space for update.
+// Declared here as globals for this module.
+
+Matrix r0;
+Matrix v;
+Matrix vi;
+Matrix wj;
+Matrix H;
+Matrix e1;
+Matrix b1;
+Matrix dX; 
+
+void initSolidLooseCouplingUpdate()
+{
+    int ncells = 0;
+    int m = GlobalConfig.sdluOptions.maxGMRESIterations;
+    foreach (sblk; solidBlocks) {
+	ncells += sblk.activeCells.length;
+    }
+    r0 = new Matrix(ncells, 1);
+    v = new Matrix(ncells, m+1);
+    vi = new Matrix(ncells, 1);
+    wj = new Matrix(ncells, 1);
+    H = new Matrix(m+1, m);
+    e1 = new Matrix(m+1, 1);
+    b1 = new Matrix(m+1, 1);
+    dX = new Matrix(ncells, 1);
+}
 
 Matrix eval_dedts(Matrix eip1, int ftl, double sim_time)
 // Evaulates the energy derivatives of all the cells in the solid block and puts them into an array (Matrix object)
@@ -119,11 +147,12 @@ double norm(Matrix vec)
     return ret; 
 } 
 
-Matrix Jac(Matrix Yip1, Matrix Yi, double dt, double sim_time, double eps = 1e-2)
+Matrix Jac(Matrix Yip1, Matrix Yi, double dt, double sim_time)
 // Jacobian of F 
 
 // Returns: Matrix of doubles
 { 
+    double eps = GlobalConfig.sdluOptions.perturbationSize;
     auto n = Yip1.nrows;
     auto ret = eye(n);
     Matrix Fout;
@@ -146,20 +175,9 @@ void GMRES(Matrix A, Matrix b, Matrix x0, Matrix xm)
 
 // Returns: Matrix of doubles
 {    
-    double tol = 1.0e-3;
+    double tol = GlobalConfig.sdluOptions.toleranceGMRESSolve;
     GMRES_step(A, b, x0, xm, tol);
 }
-
-// Working space for GMRES_step
-bool GMRES_space_allocated = false;
-int m = 10;
-Matrix r0;
-Matrix v;
-Matrix vi;
-Matrix wj;
-Matrix H;
-Matrix e1;
-Matrix b1;
 
 void GMRES_step(Matrix A, Matrix b, Matrix x0, Matrix xm, double tol)
 // Takes a single GMRES step using Arnoldi 
@@ -167,18 +185,7 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, Matrix xm, double tol)
 
 // On return, xm is updated with result.
 {
-    if (!GMRES_space_allocated) {
-	// Do one-time memory allocation
-	size_t n = b.nrows;
-	r0 = new Matrix(n, 1);
-	v = new Matrix(n, m+1);
-	vi = new Matrix(n, 1);
-	wj = new Matrix(n, 1);
-	H = new Matrix(m+1, m);
-	e1 = new Matrix(m+1, 1);
-	b1 = new Matrix(m+1, 1);
-	GMRES_space_allocated = true;
-    }
+    int m = GlobalConfig.sdluOptions.maxGMRESIterations;
     // r0 = b - A*x0
     dot(A, x0, r0);
     foreach (i; 0 .. r0.nrows) r0[i,0] = b[i,0] - r0[i,0];
@@ -289,9 +296,6 @@ void post(Matrix eip1, Matrix dei)
     }
 }
 
-bool matrix_dX_allocated = false;
-Matrix dX; 
-
 void solid_domains_backward_euler_update(double sim_time, double dt_global) 
 // Executes implicit method
 {  
@@ -310,11 +314,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 	    n += 1;
 	}
     }
-    if (!matrix_dX_allocated) {
-	dX = new Matrix(n, 1);
-	matrix_dX_allocated = true;
-    }
-    double eps = 1e-2;
+    double eps = GlobalConfig.sdluOptions.toleranceNewtonUpdate;
     double omega = 0.01;
     
     auto ei = e_vec(0); 
@@ -326,6 +326,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     auto Fk = F(Xk, ei, dt_global, sim_time); 
     auto Fkp1 = F(Xkp1, ei, dt_global, sim_time); // done so that fabs(normfk - normfkp1) satisfied
     int count = 0;
+    int maxCount = GlobalConfig.sdluOptions.maxNewtonIterations;
     Matrix Jk;
     Matrix mFk; // e.g. minusFk --> mFk
     while(fabs(norm(Fk) - norm(Fkp1)) > eps){ 
@@ -342,7 +343,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 	Fkp1 = F(Xkp1, ei, dt_global, sim_time); 
 	
 	// Break out if stuck or taking too many computations
-	if (count == 10){
+	if (count == maxCount){
 	    break;
 	}
 
