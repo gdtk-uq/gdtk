@@ -148,7 +148,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 		string pvtuFileName = jobName~format("-solid-t%04d", tindx)~".pvtu";
 		add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
-		File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.solidBlocks[0].variableNames);
+		File pvtuFile = begin_PVTU_file(plotDir~"/"~pvtuFileName, soln.solidBlocks[0].variableNames, false);
 		foreach (jb; 0 .. soln.nBlocks) {
 		    string vtuFileName = jobName~format("-solid-b%04d-t%04d.vtu", jb, tindx);
 		    add_piece_to_PVTU_file(pvtuFile, vtuFileName);
@@ -724,7 +724,7 @@ void finish_PVD_file(File f)
     f.close();
 }
 
-File begin_PVTU_file(string fileName, string[] variableNames)
+File begin_PVTU_file(string fileName, string[] variableNames, bool includeVelocity=true)
 {
     File f = File(fileName, "w");
     f.write("<VTKFile type=\"PUnstructuredGrid\">\n");
@@ -736,7 +736,9 @@ File begin_PVTU_file(string fileName, string[] variableNames)
     foreach (var; variableNames) {
         f.writef(" <DataArray Name=\"%s\" type=\"Float32\" NumberOfComponents=\"1\"/>\n", var);
     }
-    f.write(" <PDataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
+    if (includeVelocity) {
+	f.write(" <PDataArray Name=\"vel.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
+    }
     if (canFind(variableNames,"c.x")) {
 	f.write(" <PDataArray Name=\"c.vector\" type=\"Float32\" NumberOfComponents=\"3\"/>\n");
     }
