@@ -230,7 +230,7 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, Matrix xm, double tol)
 	    auto H1 = H.sliceDup(0, j+1, 0, j+1); 
 	    auto b2 = b1.sliceDup(0, j+1, 0, b1.ncols);  
 	    foreach (k; 0 .. x0.nrows) xm[k,0] = x0[k,0];
-	    auto tmp = dot(v, lsq_gmres(H1, b2));
+	    auto tmp = dot(v.sliceDup(0, v.nrows, 0, j+1), lsq_gmres(H1, b2));
 	    foreach (k; 0 .. xm.nrows) xm[k,0] += tmp[k,0];
 	    return;
 	}
