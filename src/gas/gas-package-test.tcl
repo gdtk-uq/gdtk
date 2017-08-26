@@ -64,6 +64,10 @@ test ideal-dissociating-gas-test {Testing ideal_dissociating_gas.d} -body {
     exec ./ideal_dissociating_gas_test
 } -result {} -returnCodes {0}
 
+test steam-test {Testing steam.d} -body {
+    exec ./steam_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"

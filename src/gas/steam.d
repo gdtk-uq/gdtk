@@ -1683,11 +1683,12 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const
     {
+	IAPWS _IAPWS = new IAPWS(Q.p, Q.Ttr, Q.quality);
 	Q.rho = _IAPWS.rho;
 	Q.a = _IAPWS.a;
 	Q.u = _IAPWS.u;
-	/*4*/	//Q.mu = _IAPWS.mu;
-		//Q.k = _IAPWS.k;
+	Q.mu = _IAPWS.mu;
+	Q.k = _IAPWS.k;
     }//end void 
 
     override void update_thermo_from_rhou(GasState Q) const
@@ -1869,28 +1870,31 @@ public:
 
     override void update_sound_speed(GasState Q) const
     {
+    IAPWS _IAPWS = new IAPWS(Q.p, Q.Ttr, Q.quality);
 	Q.a = _IAPWS.a;
     }
 
     override void update_trans_coeffs(GasState Q) const
     {
+	IAPWS _IAPWS = new IAPWS(Q.p, Q.Ttr, Q.quality);
 	Q.mu = _IAPWS.mu;
 	Q.k = _IAPWS.k;
     }
 
     override double dudT_const_v(in GasState Q) const
     {
-	return _IAPWS.Cv;
+		IAPWS _IAPWS = new IAPWS(Q.p, Q.Ttr, Q.quality);
+		return _IAPWS.Cv;
     }
     override double dhdT_const_p(in GasState Q) const
     {
-    	return _IAPWS.Cp;
+	    IAPWS _IAPWS = new IAPWS(Q.p, Q.Ttr, Q.quality);	
+	    return _IAPWS.Cp;
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	/*7*/  	//not sure what should be put here
-    	//using Newton's symmetric difference quotient?
-	return 0.0;
+  	//not sure what should be put here
+		return 0.0;
     }
     override double gas_constant(in GasState Q) const
     {
@@ -1898,17 +1902,24 @@ public:
     }
     override double internal_energy(in GasState Q) const
     {
-    	return _IAPWS.u;
+    	return Q.u;
     }
     override double enthalpy(in GasState Q) const
     {
+    	IAPWS _IAPWS = new IAPWS(Q.p, Q.Ttr, Q.quality);
+    	
     	return _IAPWS.h;
     }
     override double entropy(in GasState Q) const
     {
+    	IAPWS _IAPWS = new IAPWS(Q.p, Q.Ttr, Q.quality);
     	return _IAPWS.s;
     }
-
-private:
-    IAPWS _IAPWS; // = new IAPWS(Q.p, Q.Ttr, Q.quality); // [TODO] need to attend to the initialization.
 } // end class Steam
+
+version(steam_test){
+	int main(){
+		//[put unit test values here]
+		return 0;
+	}
+}
