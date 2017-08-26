@@ -195,8 +195,8 @@ public:
 	}
 	gas.copy_average_values_from(gasList, gm);
 	// Accumulate from a clean slate and then divide.
-	vel.set(0.0, 0.0, 0.0);
-	B.set(0.0, 0.0, 0.0);
+	vel.clear();
+	B.clear();
 	psi = 0.0;
 	divB = 0.0;
 	tke = 0.0;

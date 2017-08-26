@@ -131,6 +131,13 @@ struct Vector3 {
 	return this;
     }
 
+    @nogc ref Vector3 clear()
+    // Convenience function for setting-to-zero the components of an existing object.
+    {
+	_p[0] = 0.0; _p[1] = 0.0; _p[2] = 0.0;
+	return this;
+    }
+
     @nogc ref Vector3 add(ref const(Vector3) other)
     // Convenience function for adding the components of an existing object.
     // This avoids the temporary associated with += (below)

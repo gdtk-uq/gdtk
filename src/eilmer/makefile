@@ -147,7 +147,7 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -g -debug
     endif
     ifeq ($(TARGET), profile)
-        DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off
+        DFLAGS := -profile -w -O -release -inline -boundscheck=off
     endif
     ifeq ($(TARGET), fast)
         DFLAGS := -w -O -release -inline -boundscheck=off
@@ -163,7 +163,7 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -w -g -debug
     endif
     ifeq ($(TARGET), profile)
-        DFLAGS := -profile -vgc -w -O -release -inline -boundscheck=off
+        DFLAGS := -profile -w -O -release -inline -boundscheck=off
     endif
     ifeq ($(TARGET), fast)
         DFLAGS := -w -O -release -inline -boundscheck=off

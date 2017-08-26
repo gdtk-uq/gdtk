@@ -90,6 +90,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     if (GlobalConfig.verbosity_level > 0) {
 	writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
     }
+    GC.disable(); scope(exit) { GC.enable(); GC.collect(); }
     foreach (myblk; gasBlocks) {
 	// [TODO] Note that this loop is serial; Can we do some in parallel?
 	if (GlobalConfig.verbosity_level > 1) { writeln("myblk=", myblk); }
@@ -208,7 +209,6 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	writeln("Done init_simulation().");
 	stdout.flush();
     }
-    GC.collect();
     return;
 } // end init_simulation()
 
@@ -643,13 +643,13 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
     final switch(GlobalConfig.grid_motion){
 	case GridMotion.none:
 	    foreach (blk; parallel(gasBlocks,1)) {
-		if (blk.active) { foreach (iface; blk.faces) iface.gvel = Vector3(0.0, 0.0, 0.0); }
+		if (blk.active) { foreach (iface; blk.faces) { iface.gvel.clear(); } }
 	    }
 	    break;
 	case GridMotion.user_defined:
 	    // First set all velocities to zero.
 	    foreach (blk; parallel(gasBlocks,1)) {
-		if (blk.active) { foreach (iface; blk.faces) iface.gvel = Vector3(0.0, 0.0, 0.0); }
+		if (blk.active) { foreach (iface; blk.faces) { iface.gvel.clear(); } }
 	    }
 	    // Then rely on use to set those with actual velocities.
 	    assign_vertex_velocities_via_udf(sim_time, dt_global);

@@ -454,9 +454,9 @@ public:
     // Initialization of data for later computing residuals.
     {
 	mass_residual = 0.0;
-	mass_residual_loc.set(0.0, 0.0, 0.0);
+	mass_residual_loc.clear();
 	energy_residual = 0.0;
-	energy_residual_loc.set(0.0, 0.0, 0.0);
+	energy_residual_loc.clear();
 	foreach(FVCell cell; cells) {
 	    cell.rho_at_start_of_step = cell.fs.gas.rho;
 	    cell.rE_at_start_of_step = cell.U[0].total_energy;
@@ -477,9 +477,9 @@ public:
     // with their location. 
     {
 	mass_residual = 0.0;
-	mass_residual_loc.set(0.0, 0.0, 0.0);
+	mass_residual_loc.clear();
 	energy_residual = 0.0;
-	energy_residual_loc.set(0.0, 0.0, 0.0);
+	energy_residual_loc.clear();
 	foreach(FVCell cell; cells) {
 	    double local_residual = (cell.fs.gas.rho - cell.rho_at_start_of_step) / cell.fs.gas.rho;
 	    local_residual = fabs(local_residual);

@@ -482,7 +482,7 @@ public:
 		dUdt[ftl].psi = vol_inv*integral + Q.psi;
 	    }
 	} else {
-	    dUdt[ftl].B.set(0.0, 0.0, 0.0);
+	    dUdt[ftl].B.clear();
 	    dUdt[ftl].psi = 0.0;
 	    dUdt[ftl].divB = 0.0;
 	}
@@ -563,7 +563,7 @@ public:
 		U1.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
-	    U1.B.set(0.0, 0.0, 0.0);
+	    U1.B.clear();
 	    U1.psi = 0.0;
 	    U1.divB = 0.0;
 	}
@@ -630,7 +630,7 @@ public:
 		U2.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
-	    U2.B.set(0.0, 0.0, 0.0);
+	    U2.B.clear();
 	    U2.psi = 0.0;
 	    U2.divB = 0.0;
 	}
@@ -691,7 +691,7 @@ public:
 		U3.psi *= divergence_damping_factor(dt, myConfig.c_h, myConfig.divB_damping_length);
 	    }
 	} else {
-	    U3.B.set(0.0, 0.0, 0.0);
+	    U3.B.clear();
 	    U3.psi = 0.0;
 	}
 	U3.total_energy = U_old.total_energy + 
@@ -734,7 +734,7 @@ public:
 		     vr*(U0.B.y + dt*gamma_1*dUdt0.B.y),
 		     vr*(U0.B.z + dt*gamma_1*dUdt0.B.z));
 	} else {
-	    U1.B.set(0.0, 0.0, 0.0);
+	    U1.B.clear();
 	}
 	U1.total_energy = vr*(U0.total_energy + dt*gamma_1*dUdt0.total_energy);
 	if (with_k_omega  && allow_k_omega_update) {
@@ -778,7 +778,7 @@ public:
 		     vol_inv*(v_old*U0.B.y + dt*(gamma_1*dUdt0.B.y + gamma_2*dUdt1.B.y)),
 		     vol_inv*(v_old*U0.B.z + dt*(gamma_1*dUdt0.B.z + gamma_2*dUdt1.B.z)));
 	} else {
-	    U2.B.set(0.0, 0.0, 0.0);
+	    U2.B.clear();
 	}
 	U2.total_energy = vol_inv*(v_old*U0.total_energy +
 				   dt*(gamma_1*dUdt0.total_energy + gamma_2*dUdt1.total_energy));
@@ -1348,8 +1348,8 @@ public:
     // have to start with a clean slate, so to speak.
     {
 	Q.mass = 0.0;
-	Q.momentum.set(0.0, 0.0, 0.0);
-	Q.B.set(0.0, 0.0, 0.0);
+	Q.momentum.clear();
+	Q.B.clear();
 	Q.total_energy = 0.0;
 	Q.tke = 0.0;
 	Q.omega = 0.0;
@@ -1602,8 +1602,7 @@ void scan_cell_data_from_string(string buffer,
 	    fs.psi = 0.0;
 	}
     } else {
-	fs.B.set(0.0, 0.0, 0.0);
-	fs.psi = 0.0; fs.divB = 0.0;
+	fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
     }
     if (include_quality) {
 	fs.gas.quality = to!double(items.front); items.popFront();

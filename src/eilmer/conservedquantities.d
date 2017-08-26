@@ -63,8 +63,8 @@ public:
     @nogc void clear_values()
     {
 	mass = 0.0;
-	momentum.set(0.0, 0.0, 0.0);
-	B.set(0.0, 0.0, 0.0);
+	momentum.clear();
+	B.clear();
 	total_energy = 0.0;
 	foreach(ref mf; massf) { mf = 0.0; }
 	foreach(ref e; energies) { e = 0.0; }
