@@ -201,24 +201,13 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, Matrix xm, double tol)
     Matrix y; 
     double hij;
     foreach (j; 0 .. m) {
-	if (j == 0) {
-	    dot(A, vi, wj);
+	dot(A, vi, wj);
+	foreach (i; 0 .. j+1) {
 	    hij = 0.0;
-	    foreach (k; 0 .. wj.nrows) hij += wj[k,0]*vi[k,0];
-	    H[0,0] = hij;
-	    foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*vi[k,0];
-	}
-	else {
-	    // Extract vi from v
-	    foreach (k; 0 .. vi.nrows) vi[k,0] = v[k,j];
-	    dot(A, vi, wj);
-	    foreach (i; 0 .. j) {
-		hij = 0.0;
-		foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
-		H[i,j] = hij;
-		foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*v[k,i];
-	    } 
-	}
+	    foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
+	    H[i,j] = hij;
+	    foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*v[k,i];
+	} 
 	hjp1j = norm(wj);
 	H[j+1, j] = hjp1j;    
 	if (fabs(hjp1j) < tol) {   
@@ -234,11 +223,10 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, Matrix xm, double tol)
 	    foreach (k; 0 .. xm.nrows) xm[k,0] += tmp[k,0];
 	    return;
 	}
-	else {
-	    // Add new column to 'v'
-	    foreach (k; 0 .. v.nrows) {
-		v[k,j+1] = wj[k,0]/hjp1j;
-	    }
+	// Add new column to 'v'
+	foreach (k; 0 .. v.nrows) {
+	    vi[k,0] = wj[k,0]/hjp1j;
+	    v[k,j+1] = vi[k,0];
 	}
     }
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
