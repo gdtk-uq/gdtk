@@ -394,6 +394,15 @@ struct Vector3 {
 
 } // end class Vector3
 
+/**
+ * Returns the distance between two points.
+ */
+@nogc
+double distance_between(ref const Vector3 v1, ref const Vector3 v2)
+{
+    double d = sqrt((v1.x-v2.x)^^2 + (v1.y-v2.y)^^2 + (v1.z-v2.z)^^2);
+    return d;
+}
 
 /**
  * Returns the scalar dot product of two vectors.

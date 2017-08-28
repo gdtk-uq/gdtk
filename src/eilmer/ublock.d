@@ -906,7 +906,7 @@ public:
 	outfile.finish();
     } // end write_solution()
 
-    override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
+    @nogc override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
     // Used for the turbulence modelling.
     {
 	foreach (cell; cells) {
@@ -917,20 +917,17 @@ public:
 		auto nf = bndry.face_id_list.length;
 		foreach (j; 0 .. nf) {
 		    auto my_face = faces[bndry.face_id_list[j]];
-		    auto dp = cell.pos[gtl] - my_face.pos;
-		    double distance = abs(dp);
+		    double distance = distance_between(cell.pos[gtl], my_face.pos);
 		    if (distance < min_distance) {
 			min_distance =  distance;
 			auto my_outsign = bndry.outsign_list[j];
 			if (my_outsign == 1) {
 			    auto inside0 = my_face.left_cell;
-			    dp = inside0.pos[gtl] - my_face.pos;
-			    cell_half_width = abs(dp);
+			    cell_half_width = distance_between(inside0.pos[gtl], my_face.pos);
 			    cell_id_at_nearest_wall = inside0.id;
 			} else {
 			    auto inside0 = my_face.right_cell;
-			    dp = inside0.pos[gtl] - my_face.pos;
-			    cell_half_width = abs(dp);
+			    cell_half_width = distance_between(inside0.pos[gtl], my_face.pos);
 			    cell_id_at_nearest_wall = inside0.id;
 			}
 		    }

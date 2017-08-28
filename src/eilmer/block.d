@@ -157,7 +157,7 @@ public:
     abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract void compute_primary_cell_geometric_data(int gtl);
-    abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
+    @nogc abstract void compute_distance_to_nearest_wall_for_all_cells(int gtl);
     abstract void compute_least_squares_setup_for_reconstruction(int gtl);
     abstract void read_grid(string filename, size_t gtl=0);
     abstract void write_grid(string filename, double sim_time, size_t gtl=0);

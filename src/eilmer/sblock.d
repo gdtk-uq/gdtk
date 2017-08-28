@@ -192,12 +192,14 @@ public:
 	return k * (_njdim * _nidim) + j * _nidim + i; 
     } // end to_global_index()
 
-    size_t[] to_ijk_indices(size_t gid) const
+    @nogc size_t[3] to_ijk_indices(size_t gid) const
     {
+	size_t[3] ijk;
 	size_t k = gid / (_njdim * _nidim);
 	size_t j = (gid - k * (_njdim * _nidim)) / _nidim;
 	size_t i = gid - k * (_njdim * _nidim) - j * _nidim;
-	return [i, j, k];
+	ijk[0] = i; ijk[1] = j; ijk[2] = k;
+	return ijk;
     } // end to_ijk_indices()
 
     @nogc
@@ -746,7 +748,7 @@ public:
 	}
     } // end compute_primary_cell_geometric_data()
 
-    override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
+    @nogc override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
     // Used for the turbulence modelling.
     {
 	FVCell[6] cell_at_wall;
@@ -761,47 +763,35 @@ public:
 	    // straight to the bounding walls.
 	    // North
 	    face_at_wall = get_ifj(i,jmax+1,k);
-	    Vector3 dp = cell.pos[gtl] - face_at_wall.pos;
-	    dist[Face.north] = abs(dp);
+	    dist[Face.north] = distance_between(cell.pos[gtl], face_at_wall.pos);
 	    cell_at_wall[Face.north] = get_cell(i,jmax,k);
-	    dp = cell_at_wall[Face.north].pos[gtl] - face_at_wall.pos;
-	    half_width[Face.north] = abs(dp);
+	    half_width[Face.north] = distance_between(cell_at_wall[Face.north].pos[gtl], face_at_wall.pos);
 	    // East
 	    face_at_wall = get_ifi(imax+1,j,k);
-	    dp = cell.pos[gtl] - face_at_wall.pos;
-	    dist[Face.east] = abs(dp);
+	    dist[Face.east] = distance_between(cell.pos[gtl], face_at_wall.pos);
 	    cell_at_wall[Face.east] = get_cell(imax,j,k);
-	    dp = cell_at_wall[Face.east].pos[gtl] - face_at_wall.pos;
-	    half_width[Face.east] = abs(dp);
+	    half_width[Face.east] = distance_between(cell_at_wall[Face.east].pos[gtl], face_at_wall.pos);
 	    // South
 	    face_at_wall = get_ifj(i,jmin,k);
-	    dp = cell.pos[gtl] - face_at_wall.pos;
-	    dist[Face.south] = abs(dp);
+	    dist[Face.south] = distance_between(cell.pos[gtl], face_at_wall.pos);
 	    cell_at_wall[Face.south] = get_cell(i,jmin,k);
-	    dp = cell_at_wall[Face.south].pos[gtl] - face_at_wall.pos;
-	    half_width[Face.south] = abs(dp);
+	    half_width[Face.south] = distance_between(cell_at_wall[Face.south].pos[gtl], face_at_wall.pos);
 	    // West
 	    face_at_wall = get_ifi(imin,j,k);
-	    dp = cell.pos[gtl] - face_at_wall.pos;
-	    dist[Face.west] = abs(dp);
+	    dist[Face.west] = distance_between(cell.pos[gtl], face_at_wall.pos);
 	    cell_at_wall[Face.west] = get_cell(imin,j,k);
-	    dp = cell_at_wall[Face.west].pos[gtl] - face_at_wall.pos;
-	    half_width[Face.west] = abs(dp);
+	    half_width[Face.west] = distance_between(cell_at_wall[Face.west].pos[gtl], face_at_wall.pos);
 	    if ( myConfig.dimensions == 3 ) {
 		// Top
 		face_at_wall = get_ifk(i,j,kmax+1);
-		dp = cell.pos[gtl] - face_at_wall.pos;
-		dist[Face.top] = abs(dp);
+		dist[Face.top] = distance_between(cell.pos[gtl], face_at_wall.pos);
 		cell_at_wall[Face.top] = get_cell(i,j,kmax);
-		dp = cell_at_wall[Face.top].pos[gtl] - face_at_wall.pos;
-		half_width[Face.top] = abs(dp);
+		half_width[Face.top] = distance_between(cell_at_wall[Face.top].pos[gtl], face_at_wall.pos);
 		// Bottom
 		face_at_wall = get_ifk(i,j,kmin);
-		dp = cell.pos[gtl] - face_at_wall.pos;
-		dist[Face.bottom] = abs(dp);
+		dist[Face.bottom] = distance_between(cell.pos[gtl], face_at_wall.pos);
 		cell_at_wall[Face.bottom] = get_cell(i,j,kmin);
-		dp = cell_at_wall[Face.bottom].pos[gtl] - face_at_wall.pos;
-		half_width[Face.bottom] = abs(dp);
+		half_width[Face.bottom] = distance_between(cell_at_wall[Face.bottom].pos[gtl], face_at_wall.pos);
 	    }
 
 	    // Step 2: Just in case there are no real walls for this block...
