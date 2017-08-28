@@ -26,10 +26,16 @@ Matrix r0;
 Matrix v;
 Matrix vi;
 Matrix wj;
-Matrix H;
-Matrix e1;
-Matrix b1;
 Matrix dX; 
+double[] h;
+double[] hR;
+double[] g0;
+double[] g1;
+Matrix H0;
+Matrix H1;
+Matrix Gamma;
+Matrix Q0;
+Matrix Q1;
 
 void initSolidLooseCouplingUpdate()
 {
@@ -42,10 +48,16 @@ void initSolidLooseCouplingUpdate()
     v = new Matrix(ncells, m+1);
     vi = new Matrix(ncells, 1);
     wj = new Matrix(ncells, 1);
-    H = new Matrix(m+1, m);
-    e1 = new Matrix(m+1, 1);
-    b1 = new Matrix(m+1, 1);
     dX = new Matrix(ncells, 1);
+    g0.length = m+1;
+    g1.length = m+1;
+    h.length = m+1;
+    hR.length = m+1;
+    H0 = new Matrix(m+1, m);
+    H1 = new Matrix(m+1, m);
+    Gamma = new Matrix(m+1, m+1);
+    Q0 = new Matrix(m+1, m+1);
+    Q1 = new Matrix(m+1, m+1);
 }
 
 Matrix eval_dedts(Matrix eip1, int ftl, double sim_time)
@@ -176,67 +188,105 @@ void GMRES(Matrix A, Matrix b, Matrix x0, Matrix xm)
 // Returns: Matrix of doubles
 {    
     double tol = GlobalConfig.sdluOptions.toleranceGMRESSolve;
-    GMRES_step(A, b, x0, xm, tol);
+    double[] xmV;
+    xmV.length = xm.nrows;
+    foreach (i; 0 .. xmV.length) xmV[i] = xm[i,0];
+    GMRES_step(A, b, x0, xmV, tol);
+    foreach (i; 0 .. xmV.length) xm[i,0] = xmV[i];
 }
 
-void GMRES_step(Matrix A, Matrix b, Matrix x0, Matrix xm, double tol)
+void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
 // Takes a single GMRES step using Arnoldi 
 // Minimisation problem is solved using Least Squares via Gauss Jordan (see function below) 
 
 // On return, xm is updated with result.
 {
+    immutable double ZERO_TOL = 1.0e-15;
     int m = GlobalConfig.sdluOptions.maxGMRESIterations;
+    int maxIters = m;
+    int iterCount;
+    double residual;
+    H0.zeros();
+    H1.zeros();
+    Q0.zeros();
+    g0[] = 0.0;
+    g1[] = 0.0;
     // r0 = b - A*x0
     dot(A, x0, r0);
     foreach (i; 0 .. r0.nrows) r0[i,0] = b[i,0] - r0[i,0];
     double beta = norm(r0);  
+    g0[0] = beta;
+    double residTol = tol*beta;
     v.zeros();
     foreach (i; 0 .. r0.nrows) v[i,0] = r0[i,0]/beta;
     foreach (i; 0 .. v.nrows) vi[i,0] = v[i,0];
-    H.zeros();
-    e1.zeros();
-    e1[0, 0] = 1;
-    foreach (i; 0 .. e1.nrows) b1[i,0] = beta*e1[i,0];
     double hjp1j;
     Matrix y; 
     double hij;
     foreach (j; 0 .. m) {
+	iterCount = j+1;
 	dot(A, vi, wj);
 	foreach (i; 0 .. j+1) {
 	    hij = 0.0;
 	    foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
-	    H[i,j] = hij;
+	    H0[i,j] = hij;
 	    foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*v[k,i];
 	} 
 	hjp1j = norm(wj);
-	H[j+1, j] = hjp1j;    
-	if (fabs(hjp1j) < tol) {   
-	    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	    // We're doing memory allocation here.
-	    // It would be better to fix this, but here
-	    // it only occurs once per call.
-	    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	    auto H1 = H.sliceDup(0, j+1, 0, j+1); 
-	    auto b2 = b1.sliceDup(0, j+1, 0, b1.ncols);  
-	    foreach (k; 0 .. x0.nrows) xm[k,0] = x0[k,0];
-	    auto tmp = dot(v.sliceDup(0, v.nrows, 0, j+1), lsq_gmres(H1, b2));
-	    foreach (k; 0 .. xm.nrows) xm[k,0] += tmp[k,0];
-	    return;
-	}
+	H0[j+1, j] = hjp1j;    
+
 	// Add new column to 'v'
 	foreach (k; 0 .. v.nrows) {
 	    vi[k,0] = wj[k,0]/hjp1j;
 	    v[k,j+1] = vi[k,0];
 	}
+	// Build rotated Hessenberg progressively
+	if (j != 0) {
+	    // Extract final column in H0
+	    foreach (i; 0 .. j+1) h[i] = H0[i,j];
+	    // Rotate column by previous rotations
+	    // stored in Q0
+	    nm.bbla.dot(Q0, j+1, j+1, h, hR);
+	    // Place column back in H
+	    foreach (i; 0 .. j+1) H0[i,j] = hR[i];
+	}
+	// Now form new Gamma
+	Gamma.eye();
+	double c_j, s_j, denom;
+	denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
+	s_j = H0[j+1,j]/denom; 
+	c_j = H0[j,j]/denom;
+	Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
+	Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
+	// Apply rotations
+	nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
+	nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+	// Accumulate Gamma rotations in Q.
+	if (j == 0) {
+	    copy(Gamma, Q1);
+	}
+	else {
+	    nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+	}
+	// Prepare for next step
+	copy(H1, H0);
+	g0[] = g1[];
+	copy(Q1, Q0);
+	// Get residual
+	residual = fabs(g1[j+1]);
+	if (residual <= residTol) {
+	    m = j+1;
+	    break;
+	}
     }
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // We're doing memory allocation here.
-    // It would be better to fix this, but here
-    // it only occurs once per call.
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    foreach (k; 0 .. x0.nrows) xm[k,0] = x0[k,0];
-    auto tmp = dot(v.sliceDup(0, v.nrows, 0, v.ncols-1), lsq_gmres(H, b1));
-    foreach (k; 0 .. xm.nrows) xm[k,0] += tmp[k,0];
+    if ( iterCount == maxIters )
+	m = maxIters;
+    
+    // At end H := R up to row m
+    //        g := gm up to row m
+    upperSolve(H1, m, g1);
+    nm.bbla.dot(v, v.nrows(), m, g1, xm);
+    foreach (k; 0 .. xm.length) xm[k] += x0[k,0];
     return;
 }
 
@@ -326,7 +376,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 	Jk = Jac(Xk, ei, dt_global, sim_time);
 	mFk = -1*Fk;
 	GMRES(Jk, mFk, Xk, dX);
-	
+
 	Xkp1 = Xk + dX; 
 	Fkp1 = F(Xkp1, ei, dt_global, sim_time); 
 	
