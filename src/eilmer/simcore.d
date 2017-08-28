@@ -90,7 +90,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     if (GlobalConfig.verbosity_level > 0) {
 	writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
     }
-    GC.disable(); scope(exit) { GC.enable(); GC.collect(); }
+    // GC.disable(); scope(exit) { GC.enable(); GC.collect(); }
     foreach (myblk; gasBlocks) {
 	// [TODO] Note that this loop is serial; Can we do some in parallel?
 	if (GlobalConfig.verbosity_level > 1) { writeln("myblk=", myblk); }
