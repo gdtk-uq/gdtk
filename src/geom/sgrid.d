@@ -105,6 +105,9 @@ public:
 	case "gziptext":
 	    read_from_gzip_file(fileName);
 	    break;
+	case "rawbinary":
+	    read_from_raw_binary_file(fileName);
+	    break;
 	case "vtk":
 	    read_from_text_file(fileName, true);
 	    break;
@@ -606,6 +609,55 @@ public:
 	} // foreach k
     } // end read_grid_from_gzip_file()
 
+    override void read_from_raw_binary_file(string fileName, double scale=1.0)
+    // scale = unit length in metres
+    {
+	auto f = File(fileName, "rb");
+	string expected_header = "structured_grid 1.0";
+	char[] found_header = new char[expected_header.length];
+	f.rawRead(found_header);
+	if (found_header != expected_header) {
+	    throw new Error("StructuredGrid.read_from_raw_binary_file(): " ~
+			    "unexpected header: " ~ to!string(found_header)); 
+	}
+	size_t[1] buf1; f.rawRead(buf1);
+	size_t label_length = buf1[0];
+	if (label_length > 0) {
+	    char[] found_label = new char[buf1[0]];
+	    f.rawRead(found_label);
+	    label = to!string(found_label);
+	}
+	size_t[4] buf4; f.rawRead(buf4);
+	dimensions = to!int(buf4[0]);
+	niv = buf4[1]; njv = buf4[2]; nkv = buf4[3];
+	if (nkv == 1) {
+	    if (njv == 1) {
+		ncells = niv-1;
+	    } else {
+		ncells = (niv-1)*(njv-1);
+	    }
+	} else {
+	    ncells = (niv-1)*(njv-1)*(nkv-1);
+	}
+	nvertices = niv*njv*nkv;
+	vertices.length = nvertices;
+	vtx_id.length = nvertices;
+	// Standard order of vertices.
+	size_t ivtx = 0;
+	double[3] xyz;
+	foreach (k; 0 .. nkv) {
+	    foreach (j; 0 .. njv) {
+		foreach (i; 0 .. niv) {
+		    f.rawRead(xyz);
+		    this[i,j,k].set(scale*xyz[0], scale*xyz[1], scale*xyz[2]);
+		    vtx_id[single_index(i,j,k)] = ivtx;
+		    ivtx++;
+		} // foreach i
+	    } // foreach j
+	} // foreach k
+	f.close();
+    } // end read_grid_from_raw_binary_file()
+
     override void write_to_gzip_file(string fileName)
     // This function essentially defines the Eilmer4 native format.
     {
@@ -630,6 +682,32 @@ public:
 	}
 	f.finish();
     } // end write_grid_to_gzip_file()
+
+    override void write_to_raw_binary_file(string fileName)
+    // This function essentially defines the Eilmer4 native raw-binary format.
+    {
+	auto f = new File(fileName, "wb");
+	f.rawWrite("structured_grid 1.0");
+	if (label.length > 0) {
+	    size_t[1] buf1; buf1[0] = label.length; f.rawWrite(buf1);
+	    f.rawWrite(label);
+	}
+	size_t[4] buf4; buf4[0] = to!size_t(dimensions);
+	buf4[1] = niv; buf4[2] = njv; buf4[3] = nkv;
+	f.rawWrite(buf4);
+	double[3] xyz;
+	foreach (k; 0 .. nkv) {
+	    foreach (j; 0 .. njv) {
+		foreach (i; 0 .. niv) {
+		    xyz[0] = this[i,j,k].x;
+		    xyz[1] = this[i,j,k].y;
+		    xyz[2] = this[i,j,k].z;
+		    f.rawWrite(xyz);
+		}
+	    }
+	}
+	f.close();
+    } // end write_grid_to_raw_binary_file()
 
     override void write_to_vtk_file(string fileName)
     {

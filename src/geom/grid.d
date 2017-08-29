@@ -95,7 +95,9 @@ class Grid {
     abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const; 
     abstract size_t[] get_vtx_id_list_for_cell(size_t indx) const;
     abstract void read_from_gzip_file(string fileName, double scale=1.0);
+    abstract void read_from_raw_binary_file(string fileName, double scale=1.0);
     abstract void write_to_gzip_file(string fileName);
+    abstract void write_to_raw_binary_file(string fileName);
     abstract void write_to_vtk_file(string fileName);
     abstract void write_to_su2_file(string fileName, double scale=1.0,
 				    bool use_gmsh_order_for_wedges=true);

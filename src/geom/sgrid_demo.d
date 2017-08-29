@@ -22,9 +22,16 @@ void main()
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     my_grid.write_to_vtk_file("test_grid-2D.vtk");
+
+    // write then read standard gzip format
     my_grid.write_to_gzip_file("test_grid-2D.gz");
     auto my_grid2 = new StructuredGrid("test_grid-2D.gz", "gziptext");
     my_grid2.write_to_vtk_file("test_grid2-2D.vtk");
+
+    // write then read raw binary
+    my_grid.write_to_raw_binary_file("test_grid-2D.bin");
+    auto my_grid2b = new StructuredGrid("test_grid-2D.bin", "rawbinary");
+    my_grid2b.write_to_vtk_file("test_grid2b-2D.vtk");
 
     writeln("SlabGrid");
     auto my_grid3 = my_grid.makeSlabGrid(0.2);

@@ -628,6 +628,7 @@ public:
 	// dimensions will be reset on reading grid
 	switch (fmt) {
 	case "gziptext": read_from_gzip_file(fileName, scale); break;
+	case "rawbinary": read_from_raw_binary_file(fileName, scale); break;
 	case "su2text": read_from_su2_file(fileName, scale, expect_gmsh_order_for_wedges); break;
 	case "vtktext": read_from_vtk_text_file(fileName, scale); break;
 	case "vtkxml": throw new Error("Reading from VTK XML format not implemented.");
@@ -897,6 +898,61 @@ public:
 	    boundaries ~= new BoundaryFaceSet(line);
 	}
     } // end read_from_gzip_file()
+    
+    override void read_from_raw_binary_file(string fileName, double scale=1.0)
+    // This function, together with the constructors (from strings) for
+    // the classes USGFace, USGCell and BoundaryFaceSet (above),
+    // define the Eilmer4 native format.
+    // For output, there is the matching write_to_gzip_file() below.
+    // scale = unit length in metres
+    {
+	// [TODO] Actually implement...
+	auto byLine = new GzipByLine(fileName);
+	auto line = byLine.front; byLine.popFront();
+	string format_version;
+	formattedRead(line, "unstructured_grid %s", &format_version);
+	if (format_version != "1.0") {
+	    throw new Error("UnstructuredGrid.read_from_gzip_file(): " ~
+			    "format version found: " ~ format_version); 
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "label: %s", &label);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "dimensions: %d", &dimensions);
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "vertices: %d", &nvertices);
+	double x, y, z;
+	vertices.length = 0;
+	foreach (i; 0 .. nvertices) {
+	    line = byLine.front; byLine.popFront();
+	    // Note that the line starts with whitespace.
+	    formattedRead(line, " %g %g %g", &x, &y, &z);
+	    vertices ~= Vector3(scale*x, scale*y, scale*z);
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "faces: %d", &nfaces);
+	faces.length = 0;
+	foreach (i; 0 .. nfaces) {
+	    line = byLine.front; byLine.popFront();
+	    auto myFace = new USGFace(line);
+	    faceIndices[makeFaceTag(myFace.vtx_id_list)] = faces.length;
+	    faces ~= myFace;
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "cells: %d", &ncells);
+	cells.length = 0;
+	foreach (i; 0 .. ncells) {
+	    line = byLine.front; byLine.popFront();
+	    cells ~= new USGCell(line);
+	}
+	line = byLine.front; byLine.popFront();
+	formattedRead(line, "boundaries: %d", &nboundaries);
+	boundaries.length = 0;
+	foreach (i; 0 .. nboundaries) {
+	    line = byLine.front; byLine.popFront();
+	    boundaries ~= new BoundaryFaceSet(line);
+	}
+    } // end read_from_raw_binary_file()
 
     void read_from_su2_file(string fileName, double scale=1.0,
 			    bool expect_gmsh_order_for_wedges=true)
@@ -1233,6 +1289,30 @@ public:
 	foreach (b; boundaries) { fout.compress(b.toIOString ~ "\n"); }
 	fout.finish();
     } // end write_to_gzip_file()
+
+    override void write_to_raw_binary_file(string fileName)
+    // This function, together with the toIOstring methods for
+    // the classes USGFace, USGCell and BoundaryFaceSet (way above)
+    // define the Eilmer4 native format.
+    // For input, there is the matching read_from_gzip_file(), above.
+    {
+	// [TODO] Actually implement...
+	auto fout = new GzipOut(fileName);
+	fout.compress("unstructured_grid 1.0\n");
+	fout.compress(format("label: %s\n", label));
+	fout.compress(format("dimensions: %d\n", dimensions));
+	fout.compress(format("vertices: %d\n", nvertices));
+	foreach (v; vertices) {
+	    fout.compress(format("%.18e %.18e %.18e\n", v.x, v.y, v.z));
+	}
+	fout.compress(format("faces: %d\n", nfaces));
+	foreach (f; faces) { fout.compress(f.toIOString ~ "\n"); }
+	fout.compress(format("cells: %d\n", ncells));
+	foreach (c; cells) { fout.compress(c.toIOString ~ "\n"); }
+	fout.compress(format("boundaries: %d\n", boundaries.length));
+	foreach (b; boundaries) { fout.compress(b.toIOString ~ "\n"); }
+	fout.finish();
+    } // end write_to_raw_binary_file()
 
     override void write_to_vtk_file(string fileName)
     {
