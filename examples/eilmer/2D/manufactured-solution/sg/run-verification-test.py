@@ -21,11 +21,13 @@ import shutil
 from math import log
 
 simFiles = ['mms.lua',
+            'constants.txt',
             'very-viscous-air.lua',
             'analytic_solution.py',
-            'make_source_terms.py',
+            'make_lua_files.py',
             'udf-source-template.lua',
-            'udf-bc.lua']
+            'udf-bc-template.lua',
+            'ref-soln-template.lua']
 
 tmpltDir = 'template'
 
@@ -39,13 +41,13 @@ def buildCaseStr(case, ncells, fluxCalc, derivCalc, blocking):
     return str
 
 def buildRunStr(threading):
-    str = "python make_source_terms.py\n"
+    str = "python make_lua_files.py\n"
     str += "e4shared --job=mms --prep\n"
     str += "e4shared --job=mms --run"
     if threading == 'single':
         str += " --max-cpus=1"
     str += "\n"
-    str += 'e4shared --job=mms --post --tindx-plot=20 --ref-soln=udf-bc.lua  --norms="rho" | tail -3 > rho-norms.txt\n'
+    str += 'e4shared --job=mms --post --tindx-plot=20 --ref-soln=ref-soln.lua  --norms="rho" | tail -3 > rho-norms.txt\n'
     return str
 
 def prepareCases(case, ncellsList, fluxCalc, derivCalc, blocking, threading):

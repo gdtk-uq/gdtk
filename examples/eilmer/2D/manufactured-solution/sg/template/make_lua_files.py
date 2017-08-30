@@ -10,27 +10,25 @@
 # This is an exercise in using sympy to generate the source
 # terms. It is a transliteration of PJ's original work
 # done using Maxima.
+#
+# UPDATE: 25-Apr-2016
+#         Script now generates source terms file
+#                              BCs file
+#                              reference solution file.
+
 
 from sympy import *
 from analytic_solution import *
+import re
+from sympy.utilities.codegen import codegen
 
-Rgas, g, Prandtl, Cv, Cp = symbols('Rgas g Prandtl Cv Cp')
-Rgas = 287.0
-g = 1.4
-Prandtl = 1.0
-Cv = Rgas/(g-1)
-Cp = g*Cv
-
-mu, k = symbols('mu k')
-mu = 10.0
-k = Cp*mu/Prandtl
 if case == 1 or case == 3:
     mu = 0.0
     k = 0.0
 
 # Thermodynamic behvaiour, equation of state and energy equation
 e, T, et = symbols('e T et')
-e = p/rho/(g-1)
+e = p/rho/(gamma-1)
 T = e/Cv
 et = e + u*u/2 + v*v/2
 
@@ -52,18 +50,23 @@ fxmom = diff(rho*u, t) + diff(rho*u*u+p-tauxx, x) + diff(rho*u*v-tauxy, y)
 fymom = diff(rho*v, t) + diff(rho*v*u-tauxy, x) + diff(rho*v*v+p-tauyy, y)
 fe = diff(rho*et, t) + diff(rho*u*et+p*u-u*tauxx-v*tauxy+qx, x) + diff(rho*v*et+p*v-u*tauxy-v*tauyy+qy, y)
 
-if __name__ == '__main__':
-    import re
-    from sympy.utilities.codegen import codegen
-    print 'Generating manufactured source terms.'
+def generateSource(varList):
+    """This function generates Lua source code based on a selection
+    of the expressions defined above. The selection is defined in the
+    varList. The varList is a list of tuples of the form:
+
+    varList = [("fmass", fmass), ("fxmom", fxmom)]
+
+    This functions returns the generated source as a string.
+    """
     [(f_name, f_code), (h_name, f_header)] = codegen(
-        [("fmass", fmass), ("fxmom", fxmom), ("fymom", fymom), ("fe", fe)],
-        "F95", "test", header=False)
+        varList, "F95", "test", header=False)
     # Convert F95 to Lua code
     # This is heavily borrowed PJ's script: f90_to_lua.py
     # First we'll do some replacements
     f_code = f_code.replace('**', '^')
     f_code = f_code.replace('d0', '')
+    f_code = f_code.replace('d-','e-')
     # Now we'll break into lines so that we can completely remove
     # some lines and tidy others
     lines = f_code.split('\n')
@@ -72,28 +75,45 @@ if __name__ == '__main__':
                                                not l.startswith('end')) ]
     # Now reassemble but collect the split lines into a large line
     buf = ""
-    f_code = ""
+    sourceCode = ""
     for i,l in enumerate(lines):
         if l.endswith('&'):
             buf = buf + l[:-2]
         else:
             if buf == "":
-                f_code = f_code + l + '\n'
+                sourceCode = sourceCode + l + '\n'
             else:
-                f_code = f_code + buf + l + '\n'
+                sourceCode = sourceCode + buf + l + '\n'
                 buf = ""
+    return sourceCode
 
-    fin = open('udf-source-template.lua', 'r')
-    template_text = fin.read()
+def createFileFromTemplate(sourceCode, templateName, fileName):
+    """Given some source code and template file, do the text substitution
+    and create the real file."""
+    fin = open(templateName, 'r')
+    templateText = fin.read()
     fin.close()
-    lua_text = template_text.replace('<insert-source-terms-here>',
-                                     f_code)
+    luaText = templateText.replace('<insert-expressions-here>',
+                                   sourceCode)
 
-    fout = open('udf-source-terms.lua', 'w')
-    fout.write(lua_text)
+    fout = open(fileName, 'w')
+    fout.write(luaText)
     fout.close()
-    print 'Done converting to Lua.'
+    return
 
+if __name__ == '__main__':
+    taskList = [ {'fName': "udf-source-terms.lua", 'tName': "udf-source-template.lua",
+                  'varList': [("fmass", fmass), ("fxmom", fxmom), ("fymom", fymom), ("fe", fe)]},
+                 {'fName': "udf-bc.lua", 'tName': "udf-bc-template.lua",
+                  'varList': [("tab.p", p), ("tab.T", T), ("tab.velx", u), ("tab.vely", v)]},
+                 {'fName': "ref-soln.lua", 'tName': "ref-soln-template.lua",
+                  'varList': [("tab.rho", rho), ("tab.p", p), ("tab['T']", T),
+                              ("tab['vel.x']", u), ("tab['vel.y']", v)]},
+        ]
+
+    for task in taskList:
+        sourceCode = generateSource(task['varList'])
+        createFileFromTemplate(sourceCode, task['tName'], task['fName'])
     
 
 
