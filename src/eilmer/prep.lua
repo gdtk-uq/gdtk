@@ -643,8 +643,16 @@ function SolidBlock:new(o)
    assert(o.grid:get_type() == "structured_grid", "grid must be structured") -- for the moment
    assert(o.initTemperature, "need to supply an initTemperature")
    assert(o.properties, "need to supply physical properties for the block")
-   local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp"})
+   local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp",
+						  "k11", "k12", "k13",
+						  "k21", "k22", "k23",
+						  "k31", "k32", "k33"})
    assert(flag2, "Invalid name for item supplied in SolidBlock properties table.")
+   -- Fill in the k values as 0.0 if not set.
+   kProps = {"k", "k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
+   for _,kName in ipairs(kProps) do
+      o.properties[kName] = o.properties[kName] or 0.0
+   end
    -- Fill in some defaults, if not already set
    if o.active == nil then
       o.active = true
@@ -693,7 +701,16 @@ function SolidBlock:tojson()
    str = str .. '    "properties": {\n'
    str = str .. string.format('       "rho": %.18e,\n', self.properties.rho)
    str = str .. string.format('       "k": %.18e,\n', self.properties.k)
-   str = str .. string.format('       "Cp": %.18e\n', self.properties.Cp)
+   str = str .. string.format('       "Cp": %.18e,\n', self.properties.Cp)
+   str = str .. string.format('       "k11": %.18e,\n', self.properties.k11)
+   str = str .. string.format('       "k12": %.18e,\n', self.properties.k12)
+   str = str .. string.format('       "k13": %.18e,\n', self.properties.k13)
+   str = str .. string.format('       "k21": %.18e,\n', self.properties.k21)
+   str = str .. string.format('       "k22": %.18e,\n', self.properties.k22)
+   str = str .. string.format('       "k23": %.18e,\n', self.properties.k23)
+   str = str .. string.format('       "k31": %.18e,\n', self.properties.k31)
+   str = str .. string.format('       "k32": %.18e,\n', self.properties.k32)
+   str = str .. string.format('       "k33": %.18e\n', self.properties.k33)
    str = str .. '    },\n'
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
@@ -1081,6 +1098,8 @@ function write_config_file(fileName)
 			 config.gasdynamic_update_scheme))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',
 			 config.coupling_with_solid_domains))
+   f:write(string.format('"solid_has_isotropic_properties": %s,\n', tostring(config.solid_has_isotropic_properties)))
+   f:write(string.format('"solid_has_homogeneous_properties": %s,\n', tostring(config.solid_has_homogeneous_properties)))
    f:write('"solid_domain_loose_update_options" : {\n')
    f:write(string.format('   "max_newton_iterations" : %d,\n', SolidDomainLooseUpdate.max_newton_iterations))
    f:write(string.format('   "tolerance_newton_update" : %.18e,\n', SolidDomainLooseUpdate.tolerance_newton_update))

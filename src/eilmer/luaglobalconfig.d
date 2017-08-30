@@ -101,6 +101,8 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_enum_field("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
     mixin(get_enum_field("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
+    mixin(get_bool_field("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
+    mixin(get_bool_field("solid_has_homogeneous_properties", "solid_has_homogeneous_properties"));
     mixin(get_bool_field("apply_bcs_in_parallel", "apply_bcs_in_parallel"));
     mixin(get_double_field("flowstate_limits_max_velocity", "flowstate_limits.max_velocity"));
     mixin(get_double_field("flowstate_limits_max_tke", "flowstate_limits.max_tke"));
@@ -241,6 +243,8 @@ extern(C) int configGet(lua_State* L)
 	//
     case "gasdynamic_update_scheme": lua_pushstring(L, gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme).toStringz); break;
     case "coupling_with_solid_domains": lua_pushstring(L, solidDomainCouplingName(GlobalConfig.coupling_with_solid_domains).toStringz); break;
+    case "solid_has_isotropic_properties": lua_pushboolean(L, GlobalConfig.solid_has_isotropic_properties); break;
+    case "solid_has_homogeneous_properties": lua_pushboolean(L, GlobalConfig.solid_has_homogeneous_properties); break;
     case "apply_bcs_in_parallel": lua_pushboolean(L, GlobalConfig.apply_bcs_in_parallel); break;
     case "flowstate_limits_max_velocity": lua_pushnumber(L, GlobalConfig.flowstate_limits.max_velocity); break;
     case "flowstate_limits_max_tke": lua_pushnumber(L, GlobalConfig.flowstate_limits.max_tke); break;

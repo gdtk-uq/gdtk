@@ -263,6 +263,8 @@ final class GlobalConfig {
     // Parameters controlling solid domain update
     shared static SolidDomainCoupling coupling_with_solid_domains = SolidDomainCoupling.tight;
     shared static SolidDomainLooseUpdateOptions sdluOptions; 
+    shared static bool solid_has_isotropic_properties = true;
+    shared static bool solid_has_homogeneous_properties = true;
 
     // Parameters related to possible motion of the grid.
     shared static grid_motion = GridMotion.none;
@@ -526,6 +528,9 @@ public:
     int shock_fitting_interpolation_order;
     double shock_fitting_scale_factor;
 
+    bool solid_has_isotropic_properties;
+    bool solid_has_homogeneous_properties;
+
     bool adjust_invalid_cell_data;
     bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
@@ -613,6 +618,9 @@ public:
 	//
 	shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
 	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
+	//
+	solid_has_isotropic_properties = GlobalConfig.solid_has_isotropic_properties;
+	solid_has_homogeneous_properties = GlobalConfig.solid_has_homogeneous_properties;
 	//
 	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
 	report_invalid_cells = GlobalConfig.report_invalid_cells;
@@ -802,6 +810,8 @@ void read_config_file()
     mixin(update_double("shock_fitting_scale_factor", "shock_fitting_scale_factor"));
 
     mixin(update_enum("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
+    mixin(update_bool("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
+    mixin(update_bool("solid_has_homogeneous_properties", "solid_has_homogeneous_properties"));
 
     // Parameters controlling convective update in detail
     //
@@ -847,6 +857,8 @@ void read_config_file()
 	writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
 	writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
 	writeln("  coupling_with_solid_domains: ", GlobalConfig.coupling_with_solid_domains);
+	writeln("  solid_has_isotropic_properties: ", GlobalConfig.solid_has_isotropic_properties);
+	writeln("  solid_has_homogeneous_properties: ", GlobalConfig.solid_has_homogeneous_properties);
 	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
 	writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
 	writeln("  flowstate_limits_max_tke: ", GlobalConfig.flowstate_limits.max_tke);

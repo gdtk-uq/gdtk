@@ -23,19 +23,21 @@ public:
     double rho;
     double k;
     double Cp;
-    double k11;
-    double k12;
-    double k22;
+    double k11, k12, k13;
+    double k21, k22, k23;
+    double k31, k32, k33;
 
     this(double rho_, double k_, double Cp_,
-	 double k11_=0.0, double k12_=0.0, double k22_=0.0)
+	 double k11_=0.0, double k12_=0.0, double k13_=0.0,
+	 double k21_=0.0, double k22_=0.0, double k23_=0.0,
+	 double k31_=0.0, double k32_=0.0, double k33_=0.0)
     {
 	rho = rho_;
 	k = k_;
 	Cp = Cp_;
-	k11 = k11_;
-	k12 = k12_;
-	k22 = k22_;
+	k11 = k11_; k12 = k12_; k13 = k13_;
+	k21 = k21_; k22 = k22_; k23 = k23_;
+	k31 = k31_; k32 = k32_; k33 = k33_;
     }
 }
 
@@ -44,7 +46,19 @@ SolidProps makeSolidPropsFromJson(JSONValue jsonData)
     auto rho = getJSONdouble(jsonData, "rho", 8960.0);
     auto k = getJSONdouble(jsonData, "k", 401.0);
     auto Cp = getJSONdouble(jsonData, "Cp", 386.0);
-    return new SolidProps(rho, k, Cp);
+    auto k11 = getJSONdouble(jsonData, "k11", 0.0);
+    auto k12 = getJSONdouble(jsonData, "k12", 0.0);
+    auto k13 = getJSONdouble(jsonData, "k13", 0.0);
+    auto k21 = getJSONdouble(jsonData, "k21", 0.0);
+    auto k22 = getJSONdouble(jsonData, "k22", 0.0);
+    auto k23 = getJSONdouble(jsonData, "k23", 0.0);
+    auto k31 = getJSONdouble(jsonData, "k31", 0.0);
+    auto k32 = getJSONdouble(jsonData, "k32", 0.0);
+    auto k33 = getJSONdouble(jsonData, "k33", 0.0);
+    return new SolidProps(rho, k, Cp,
+			  k11, k12, k13,
+			  k21, k22, k23,
+			  k31, k32, k33);
 }
 
 double updateEnergy(SolidProps sp, double T)
