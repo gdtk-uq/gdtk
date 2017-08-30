@@ -375,6 +375,14 @@ end
 
 function main(verbosityLevel)
    vrbLvl = verbosityLevel
+   -- Before doing anything, test if the user has defined any blocks.
+   if (vrbLvl >= 1) then
+      print("Number of blocks defined: ", #blks)
+   end
+   if #blks == 0 then
+      error("WARNING: No FoamBlocks were defined.")
+   end
+   
    -- Join all grids together.
    if (vrbLvl >= 1) then
       print("Joining all grids together.")
@@ -401,5 +409,17 @@ function main(verbosityLevel)
    runRenumberMesh()
    writeNoughtDir()
    runCheckMesh()
+   -- Print a warning at end if there are unassigned boundary labels
+   if globalBndryLabels.unassigned then
+      print("WARNING: Not all boundary faces defined. Undefined boundaries have been grouped in the boundary patch 'unassigned'.")
+      print("The following boundaries are unassigned.")
+       for ib, blk in ipairs(blks) do
+	 for bndry, bndryLabel in pairs(blk.bndry_labels) do
+	    if (bndryLabel == "unassigned") then
+	       print("   blk: ", ib, " bndry: ", bndry)
+	    end
+	 end
+       end
+   end
 end   
 
