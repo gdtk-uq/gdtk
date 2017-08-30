@@ -620,15 +620,15 @@ public:
 	    throw new Error("StructuredGrid.read_from_raw_binary_file(): " ~
 			    "unexpected header: " ~ to!string(found_header)); 
 	}
-	size_t[1] buf1; f.rawRead(buf1);
-	size_t label_length = buf1[0];
+	int[1] buf1; f.rawRead(buf1);
+	int label_length = buf1[0];
 	if (label_length > 0) {
-	    char[] found_label = new char[buf1[0]];
+	    char[] found_label = new char[label_length];
 	    f.rawRead(found_label);
 	    label = to!string(found_label);
 	}
-	size_t[4] buf4; f.rawRead(buf4);
-	dimensions = to!int(buf4[0]);
+	int[4] buf4; f.rawRead(buf4);
+	dimensions = buf4[0];
 	niv = buf4[1]; njv = buf4[2]; nkv = buf4[3];
 	if (nkv == 1) {
 	    if (njv == 1) {
@@ -687,13 +687,11 @@ public:
     // This function essentially defines the Eilmer4 native raw-binary format.
     {
 	auto f = new File(fileName, "wb");
-	f.rawWrite("structured_grid 1.0");
-	if (label.length > 0) {
-	    size_t[1] buf1; buf1[0] = label.length; f.rawWrite(buf1);
-	    f.rawWrite(label);
-	}
-	size_t[4] buf4; buf4[0] = to!size_t(dimensions);
-	buf4[1] = niv; buf4[2] = njv; buf4[3] = nkv;
+	f.rawWrite(to!(char[])("structured_grid 1.0"));
+	int[1] buf1; buf1[0] = to!int(label.length); f.rawWrite(buf1);
+	if (label.length > 0) { f.rawWrite(to!(char[])(label)); }
+	int[4] buf4; buf4[0] = to!int(dimensions);
+	buf4[1] = to!int(niv); buf4[2] = to!int(njv); buf4[3] = to!int(nkv);
 	f.rawWrite(buf4);
 	double[3] xyz;
 	foreach (k; 0 .. nkv) {
