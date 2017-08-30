@@ -79,6 +79,15 @@ int main(string[] args)
 	exitFlag = 0;
 	return exitFlag;
     }
+
+    // Check that file actually exists in directory.
+    auto fileName = jobName~".lua";
+    if (!exists(fileName)) {
+	writeln(format("ERROR: The job file '%s' does not appear to exist in the working directory.", fileName));
+	exitFlag = 1;
+	return exitFlag;
+    }
+	
     
     auto L = luaL_newstate();
     luaL_openlibs(L);
