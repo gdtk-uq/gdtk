@@ -24,9 +24,14 @@ void main()
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     auto usg = new UnstructuredGrid(my_grid);
     usg.write_to_vtk_file("test_grid.vtk");
+
     usg.write_to_gzip_file("test_grid.gz");
     auto usg2 = new UnstructuredGrid("test_grid.gz", "gziptext");
     usg2.write_to_vtk_file("test_grid_2.vtk");
+
+    usg.write_to_raw_binary_file("test_grid.bin");
+    auto usg2b = new UnstructuredGrid("test_grid.bin", "rawbinary");
+    usg2b.write_to_vtk_file("test_grid_2b.vtk");
 
     writeln("3D grid");
     Vector3[8] p;

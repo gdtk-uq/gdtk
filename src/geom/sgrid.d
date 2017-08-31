@@ -612,7 +612,7 @@ public:
     override void read_from_raw_binary_file(string fileName, double scale=1.0)
     // scale = unit length in metres
     {
-	auto f = File(fileName, "rb");
+	File f = File(fileName, "rb");
 	string expected_header = "structured_grid 1.0";
 	char[] found_header = new char[expected_header.length];
 	f.rawRead(found_header);
@@ -686,7 +686,7 @@ public:
     override void write_to_raw_binary_file(string fileName)
     // This function essentially defines the Eilmer4 native raw-binary format.
     {
-	auto f = new File(fileName, "wb");
+	File f = File(fileName, "wb");
 	f.rawWrite(to!(char[])("structured_grid 1.0"));
 	int[1] buf1; buf1[0] = to!int(label.length); f.rawWrite(buf1);
 	if (label.length > 0) { f.rawWrite(to!(char[])(label)); }

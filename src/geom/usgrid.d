@@ -165,12 +165,28 @@ public:
 	foreach(i; 0 .. vtx_id_list.length) { vtx_id_list[i] = to!int(tokens[i+1]); }
     }
 
+    this(ref File fin)
+    // constructor from raw binary file content.
+    {
+	int[1] buf1;
+	fin.rawRead(buf1); vtx_id_list.length = buf1[0];
+	foreach(i; 0 .. vtx_id_list.length) { fin.rawRead(buf1); vtx_id_list[i] = buf1[0]; }
+    }
+
     string toIOString()
     // Defines the format for output to a text stream.
     {
 	string str = to!string(vtx_id_list.length);
 	foreach (vtx_id; vtx_id_list) { str ~= " " ~ to!string(vtx_id); }
 	return str;
+    }
+
+    void rawWrite(ref File fout)
+    {
+	int[1] buf1;
+	buf1 = to!int(vtx_id_list.length); fout.rawWrite(buf1);
+	foreach (vtx_id; vtx_id_list) { buf1 = to!int(vtx_id); fout.rawWrite(buf1); }
+	return;
     }
 } // end class USGFace
 
@@ -222,7 +238,24 @@ public:
 	foreach(i; 0 .. outsign_list.length) {
 	    outsign_list[i] = to!int(tokens[itok++]);
 	}
-    }
+    } // end constructor from string
+
+    this(ref File fin)
+    // constructor from raw binary file content
+    {
+	int[1] buf1;
+	fin.rawRead(buf1);
+	cell_type = to!USGCell_type(buf1[0]);
+	if (cell_type == USGCell_type.none) {
+	    throw new Exception("Unexpected cell type: " ~ to!string(cell_type));
+	}
+	fin.rawRead(buf1); vtx_id_list.length = buf1[0];
+	foreach(i; 0 .. vtx_id_list.length) { fin.rawRead(buf1); vtx_id_list[i] = buf1[0]; }
+	fin.rawRead(buf1); face_id_list.length = buf1[0];
+	foreach(i; 0 .. face_id_list.length) { fin.rawRead(buf1); face_id_list[i] = buf1[0]; }
+	fin.rawRead(buf1); outsign_list.length = buf1[0];
+	foreach(i; 0 .. outsign_list.length) { fin.rawRead(buf1);  outsign_list[i] = buf1[0]; }
+    } // end constructor from raw binary file content
 
     string toIOString()
     // Defines the format for output to a text stream.
@@ -235,6 +268,19 @@ public:
 	str ~= " outsigns " ~ to!string(outsign_list.length);
 	foreach (outsign; outsign_list) { str ~= " " ~ to!string(outsign); }
 	return str;
+    }
+
+    void rawWrite(ref File fout)
+    {
+	int[1] buf1;
+	buf1 = to!int(cell_type); fout.rawWrite(buf1);
+	buf1 = to!int(vtx_id_list.length); fout.rawWrite(buf1);
+	foreach (vtx_id; vtx_id_list) { buf1 = to!int(vtx_id); fout.rawWrite(buf1); }
+	buf1 = to!int(face_id_list.length); fout.rawWrite(buf1);
+	foreach (face_id; face_id_list) { buf1 = to!int(face_id); fout.rawWrite(buf1); }
+	buf1 = to!int(outsign_list.length); fout.rawWrite(buf1);
+	foreach (outsign; outsign_list) { buf1 = to!int(outsign); fout.rawWrite(buf1); }
+	return;
     }
 } // end class USGCell
 
@@ -276,6 +322,21 @@ public:
 		   "Mismatch in numbers of faces and outsigns");
 	}
     } // end constructor from a string
+
+    this(ref File fin)
+    {
+	int[1] buf1; fin.rawRead(buf1);
+	int tag_length = buf1[0];
+	if (tag_length > 0) {
+	    char[] found_tag = new char[tag_length];
+	    fin.rawRead(found_tag);
+	    tag = to!string(found_tag);
+	}
+	fin.rawRead(buf1); face_id_list.length = buf1[0];
+	foreach(i; 0 .. face_id_list.length) { fin.rawRead(buf1); face_id_list[i] = buf1[0]; }
+	fin.rawRead(buf1); outsign_list.length = buf1[0];
+	foreach(i; 0 .. outsign_list.length) { fin.rawRead(buf1);  outsign_list[i] = buf1[0]; }
+    } // end constructor from raw file content
     
     this(const BoundaryFaceSet other)
     {
@@ -293,6 +354,18 @@ public:
 	str ~= " outsigns " ~ to!string(outsign_list.length);
 	foreach (outsign; outsign_list) { str ~= " " ~ to!string(outsign); }
 	return str;
+    }
+
+    void rawWrite(ref File fout)
+    {
+	int[1] buf1;
+	buf1 = to!int(tag.length); fout.rawWrite(buf1);
+	fout.rawWrite(to!(char[])(tag));
+	buf1 = to!int(face_id_list.length); fout.rawWrite(buf1);
+	foreach (face_id; face_id_list) { buf1 = to!int(face_id); fout.rawWrite(buf1); }
+	buf1 = to!int(outsign_list.length); fout.rawWrite(buf1);
+	foreach (outsign; outsign_list) { buf1 = to!int(outsign); fout.rawWrite(buf1); }
+	return;
     }
 } // end class BoundaryFaceSet
 
@@ -900,58 +973,50 @@ public:
     } // end read_from_gzip_file()
     
     override void read_from_raw_binary_file(string fileName, double scale=1.0)
-    // This function, together with the constructors (from strings) for
+    // This function, together with the constructors (from a binary file) for
     // the classes USGFace, USGCell and BoundaryFaceSet (above),
     // define the Eilmer4 native format.
-    // For output, there is the matching write_to_gzip_file() below.
+    // For output, there is the matching write_to_raw_binary_file() below.
     // scale = unit length in metres
     {
-	// [TODO] Actually implement...
-	auto byLine = new GzipByLine(fileName);
-	auto line = byLine.front; byLine.popFront();
-	string format_version;
-	formattedRead(line, "unstructured_grid %s", &format_version);
-	if (format_version != "1.0") {
-	    throw new Error("UnstructuredGrid.read_from_gzip_file(): " ~
-			    "format version found: " ~ format_version); 
+	File fin = File(fileName, "rb");
+	string expected_header = "unstructured_grid 1.0";
+	char[] found_header = new char[expected_header.length];
+	fin.rawRead(found_header);
+	if (found_header != expected_header) {
+	    throw new Error("UnstructuredGrid.read_from_raw_binary_file(): " ~
+			    "unexpected header: " ~ to!string(found_header)); 
 	}
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "label: %s", &label);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "dimensions: %d", &dimensions);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "vertices: %d", &nvertices);
+	int[1] buf1; fin.rawRead(buf1);
+	int label_length = buf1[0];
+	if (label_length > 0) {
+	    char[] found_label = new char[label_length];
+	    fin.rawRead(found_label);
+	    label = to!string(found_label);
+	}
+	int[5] buf5; fin.rawRead(buf5);
+	dimensions = buf5[0];
+	nvertices = buf5[1];
+	nfaces = buf5[2];
+	ncells = buf5[3];
+	int nboundaries = buf5[4];
+	double[3] xyz;
 	double x, y, z;
 	vertices.length = 0;
 	foreach (i; 0 .. nvertices) {
-	    line = byLine.front; byLine.popFront();
-	    // Note that the line starts with whitespace.
-	    formattedRead(line, " %g %g %g", &x, &y, &z);
-	    vertices ~= Vector3(scale*x, scale*y, scale*z);
+	    fin.rawRead(xyz);
+	    vertices ~= Vector3(scale*xyz[0], scale*xyz[1], scale*xyz[2]);
 	}
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "faces: %d", &nfaces);
 	faces.length = 0;
 	foreach (i; 0 .. nfaces) {
-	    line = byLine.front; byLine.popFront();
-	    auto myFace = new USGFace(line);
+	    auto myFace = new USGFace(fin);
 	    faceIndices[makeFaceTag(myFace.vtx_id_list)] = faces.length;
 	    faces ~= myFace;
 	}
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "cells: %d", &ncells);
 	cells.length = 0;
-	foreach (i; 0 .. ncells) {
-	    line = byLine.front; byLine.popFront();
-	    cells ~= new USGCell(line);
-	}
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "boundaries: %d", &nboundaries);
+	foreach (i; 0 .. ncells) { cells ~= new USGCell(fin); }
 	boundaries.length = 0;
-	foreach (i; 0 .. nboundaries) {
-	    line = byLine.front; byLine.popFront();
-	    boundaries ~= new BoundaryFaceSet(line);
-	}
+	foreach (i; 0 .. nboundaries) { boundaries ~= new BoundaryFaceSet(fin); }
     } // end read_from_raw_binary_file()
 
     void read_from_su2_file(string fileName, double scale=1.0,
@@ -1269,8 +1334,8 @@ public:
 
     override void write_to_gzip_file(string fileName)
     // This function, together with the toIOstring methods for
-    // the classes USGFace, USGCell and BoundaryFaceSet (way above)
-    // define the Eilmer4 native format.
+    // the classes USGFace, USGCell and BoundaryFaceSet (way above),
+    // defines the Eilmer4 native format.
     // For input, there is the matching read_from_gzip_file(), above.
     {
 	auto fout = new GzipOut(fileName);
@@ -1292,26 +1357,29 @@ public:
 
     override void write_to_raw_binary_file(string fileName)
     // This function, together with the toIOstring methods for
-    // the classes USGFace, USGCell and BoundaryFaceSet (way above)
-    // define the Eilmer4 native format.
-    // For input, there is the matching read_from_gzip_file(), above.
+    // the classes USGFace, USGCell and BoundaryFaceSet (way above),
+    // defines the Eilmer4 native binary format.
+    // For input, there is the matching read_from_raw_binary_file(), above.
     {
-	// [TODO] Actually implement...
-	auto fout = new GzipOut(fileName);
-	fout.compress("unstructured_grid 1.0\n");
-	fout.compress(format("label: %s\n", label));
-	fout.compress(format("dimensions: %d\n", dimensions));
-	fout.compress(format("vertices: %d\n", nvertices));
+	File fout = File(fileName, "wb");
+	fout.rawWrite(to!(char[])("unstructured_grid 1.0"));
+	int[1] buf1; buf1[0] = to!int(label.length); fout.rawWrite(buf1);
+	if (label.length > 0) { fout.rawWrite(to!(char[])(label)); }
+	int[5] buf5; buf5[0] = to!int(dimensions);
+	buf5[1] = to!int(nvertices);
+	buf5[2] = to!int(nfaces);
+	buf5[3] = to!int(ncells);
+	buf5[4] = to!int(boundaries.length);
+	fout.rawWrite(buf5);
+	double[3] xyz;
 	foreach (v; vertices) {
-	    fout.compress(format("%.18e %.18e %.18e\n", v.x, v.y, v.z));
+	    xyz[0] = v.x; xyz[1] = v.y; xyz[2] = v.z;
+	    fout.rawWrite(xyz);
 	}
-	fout.compress(format("faces: %d\n", nfaces));
-	foreach (f; faces) { fout.compress(f.toIOString ~ "\n"); }
-	fout.compress(format("cells: %d\n", ncells));
-	foreach (c; cells) { fout.compress(c.toIOString ~ "\n"); }
-	fout.compress(format("boundaries: %d\n", boundaries.length));
-	foreach (b; boundaries) { fout.compress(b.toIOString ~ "\n"); }
-	fout.finish();
+	foreach (f; faces) { f.rawWrite(fout); }
+	foreach (c; cells) { c.rawWrite(fout); }
+	foreach (b; boundaries) { b.rawWrite(fout); }
+	fout.close();
     } // end write_to_raw_binary_file()
 
     override void write_to_vtk_file(string fileName)
