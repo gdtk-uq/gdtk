@@ -83,6 +83,8 @@ extern(C) int configSetFromTable(lua_State* L)
     // This will allow us to check for and warn about fields that have been 
     // accidentally set in the Lua table.
     mixin(get_string_field("base_file_name", "base_file_name"));
+    mixin(get_string_field("grid_format", "grid_format"));
+    mixin(get_string_field("flow_format", "flow_format"));
     mixin(get_string_field("title", "title"));
     mixin(get_string_field("gas_model_file", "gas_model_file"));
     mixin(get_string_field("udf_supervisor_file", "udf_supervisor_file"));
@@ -224,6 +226,8 @@ extern(C) int configGet(lua_State* L)
     // PJ 2016-06-23
     switch (fieldName) {
     case "base_file_name": lua_pushstring(L, GlobalConfig.base_file_name.toStringz); break;
+    case "grid_format": lua_pushstring(L, GlobalConfig.grid_format.toStringz); break;
+    case "flow_format": lua_pushstring(L, GlobalConfig.flow_format.toStringz); break;
     case "title": lua_pushstring(L, GlobalConfig.title.toStringz); break;
     case "gas_model_file": lua_pushstring(L, GlobalConfig.gas_model_file.toStringz); break;
     case "udf_supervisor_file": lua_pushstring(L, toStringz(GlobalConfig.udf_supervisor_file)); break;

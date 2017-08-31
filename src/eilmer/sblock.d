@@ -1879,7 +1879,7 @@ public:
     {
 	size_t nivtx, njvtx, nkvtx;
 	if (myConfig.verbosity_level > 1) { writeln("read_grid(): Start block ", id); }
-	grid = new StructuredGrid(filename, "gziptext");
+	grid = new StructuredGrid(filename, myConfig.grid_format);
 	grid.sort_cells_into_bins();
 	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
 	if ( myConfig.dimensions == 3 ) {
@@ -1933,7 +1933,11 @@ public:
 		} // for i
 	    } // for j
 	} // for k
-	grid.write_to_gzip_file(filename);
+	switch (myConfig.grid_format) {
+	case "gziptext": grid.write_to_gzip_file(filename); break;
+	case "rawbinary": grid.write_to_raw_binary_file(filename); break;
+	default: grid.write_to_gzip_file(filename);
+	}
     } // end write_grid()
 
     override double read_solution(string filename, bool overwrite_geometry_data)

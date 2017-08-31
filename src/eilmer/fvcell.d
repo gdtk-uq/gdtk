@@ -1575,6 +1575,51 @@ string cell_data_as_string(ref const(Vector3) pos, double volume, ref const(Flow
     return writer.data;
 } // end cell_data_as_string()
 
+void cell_data_to_raw_binary(ref File fout,
+			     ref const(Vector3) pos, double volume, ref const(FlowState) fs,
+			     double Q_rad_org, double f_rad_org, double Q_rE_rad,
+			     double dt_chem, double dt_therm,
+			     bool include_quality, bool MHD, bool divergence_cleaning,
+			     bool radiation)
+{
+    // This function should match function cell_data_as_string()
+    // which is considered the master definition of the data format.
+    // We have tried to keep the same code layout.  There is some history.
+    //
+    // Fixed-length buffers to hold data for sending.
+    int[1] int1; double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
+    //
+    dbl4[0] = pos.x; dbl4[1] = pos.y; dbl4[2] = pos.z; dbl4[3] = volume;
+    fout.rawWrite(dbl4);
+    dbl4[0] = fs.gas.rho; dbl4[1] = fs.vel.x; dbl4[2] = fs.vel.y; dbl4[3] = fs.vel.z;
+    fout.rawWrite(dbl4);
+    if (MHD) {
+	dbl4[0] = fs.B.x; dbl4[1] = fs.B.y; dbl4[2] = fs.B.z; dbl4[3] = fs.divB;
+	fout.rawWrite(dbl4);
+    }
+    if (MHD && divergence_cleaning) { dbl1[0] = fs.psi; fout.rawWrite(dbl1); }
+    if (include_quality) { dbl1[0] = fs.gas.quality; fout.rawWrite(dbl1); }
+    dbl4[0] = fs.gas.p; dbl4[1] = fs.gas.a; dbl4[2] = fs.gas.mu; dbl4[3] = fs.gas.k;
+    fout.rawWrite(dbl4);
+    foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue; fout.rawWrite(dbl1); } 
+    dbl2[0] = fs.mu_t; dbl2[1] = fs.k_t; fout.rawWrite(dbl2);
+    int1[0] = fs.S; fout.rawWrite(int1);
+    if (radiation) {
+	dbl3[0] = Q_rad_org; dbl3[1] = f_rad_org; dbl3[2] = Q_rE_rad;
+	fout.rawWrite(dbl3);
+    }
+    dbl2[0] = fs.tke; dbl2[1] = fs.omega; fout.rawWrite(dbl2);
+    fout.rawWrite(fs.gas.massf); 
+    if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); } 
+    dbl2[0] = fs.gas.u; dbl2[1] = fs.gas.Ttr; fout.rawWrite(dbl2); 
+    foreach (imode; 0 .. fs.gas.u_modes.length) {
+	dbl2[0] = fs.gas.u_modes[imode]; dbl2[1] = fs.gas.T_modes[imode];
+	fout.rawWrite(dbl2);
+    }
+    if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); } 
+    return;
+} // end cell_data_to_raw_binary()
+
 void scan_cell_data_from_string(string buffer,
 				ref Vector3 pos, ref double volume, ref FlowState fs,
 				ref double Q_rad_org, ref double f_rad_org, ref double Q_rE_rad,
@@ -1655,6 +1700,64 @@ void scan_cell_data_from_string(string buffer,
 	dt_therm = to!double(items.front); items.popFront(); 
     }
 } // end scan_values_from_string()
+
+void raw_binary_to_cell_data(ref File fin,
+			     ref Vector3 pos, ref double volume, ref FlowState fs,
+			     ref double Q_rad_org, ref double f_rad_org, ref double Q_rE_rad,
+			     ref double dt_chem, ref double dt_therm,
+			     bool include_quality, bool MHD, bool divergence_cleaning,
+			     bool radiation)
+{
+    // This function needs to be kept consistent with cell_data_to_raw_binary() above.
+    //
+    // Fixed-length buffers to hold data for sending.
+    int[1] int1; double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
+    fin.rawRead(dbl4);
+    pos.set(dbl4[0], dbl4[1], dbl4[2]);
+    volume = dbl4[3];
+    fin.rawRead(dbl4);
+    fs.gas.rho = dbl4[0];
+    fs.vel.set(dbl4[1], dbl4[2], dbl4[3]);
+    if (MHD) {
+	fin.rawRead(dbl4);
+	fs.B.set(dbl4[0], dbl4[1], dbl4[2]);
+	fs.divB = dbl4[3];
+	if (divergence_cleaning) {
+	    fin.rawRead(dbl1); fs.psi = dbl1[0];
+	} else {
+	    fs.psi = 0.0;
+	}
+    } else {
+	fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
+    }
+    if (include_quality) {
+	fin.rawRead(dbl1); fs.gas.quality = dbl1[0];
+    } else {
+	fs.gas.quality = 1.0;
+    }
+    fin.rawRead(dbl4);
+    fs.gas.p = dbl4[0]; fs.gas.a = dbl4[1]; fs.gas.mu = dbl4[2]; fs.gas.k = dbl4[3];
+    foreach(i; 0 .. fs.gas.k_modes.length) {
+	fin.rawRead(dbl1); fs.gas.k_modes[i] = dbl1[0];
+    }
+    fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
+    fin.rawRead(int1); fs.S = int1[0];
+    if (radiation) {
+	fin.rawRead(dbl3);
+	Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];
+    } else {
+	Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+    }
+    fin.rawRead(dbl2); fs.tke = dbl2[0]; fs.omega = dbl2[1];
+    fin.rawRead(fs.gas.massf);
+    if (fs.gas.massf.length > 1) { fin.rawRead(dbl1); dt_chem = dbl1[0]; }
+    fin.rawRead(dbl2);
+    fs.gas.u = dbl2[0]; fs.gas.Ttr = dbl2[1];
+    foreach(i; 0 .. fs.gas.u_modes.length) {
+	fin.rawRead(dbl2); fs.gas.u_modes[i] = dbl2[0]; fs.gas.T_modes[i] = dbl2[1];
+    }
+    if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
+} // end raw_binary_to_cell_data()
 
 string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
 				bool MHD, bool divergence_cleaning, bool radiation)

@@ -240,6 +240,8 @@ struct SteadyStateSolverOptions {
 
 final class GlobalConfig {
     shared static string base_file_name = "job"; // Change this to suit at run time.
+    shared static string grid_format = "gziptext"; // alternative is "rawbinary"
+    shared static string flow_format = "gziptext";
     shared static string title = "Eilmer4 simulation"; // Change this to suit at run time.
     shared static string gas_model_file = "gas-model.lua";
     // Note that the following reference to the GasModel is NOT shared.
@@ -517,6 +519,8 @@ final class GlobalConfig {
 class LocalConfig {
 public:
     int universe_blk_id;
+    string grid_format;
+    string flow_format;
     int dimensions;
     bool axisymmetric;
     GasdynamicUpdate gasdynamic_update_scheme;
@@ -608,6 +612,8 @@ public:
     this(int universe_blk_id) 
     {
 	this.universe_blk_id = universe_blk_id;
+	grid_format = GlobalConfig.grid_format;
+	flow_format = GlobalConfig.flow_format;
 	dimensions = GlobalConfig.dimensions;
 	axisymmetric = GlobalConfig.axisymmetric;
 	gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
@@ -769,6 +775,8 @@ void read_config_file()
     // Note that some of the lines below are much longer than PJ would normally tolerate.
     // The trade-off for ease of reading with one line per entry won out... 
     //
+    mixin(update_string("grid_format", "grid_format"));
+    mixin(update_string("flow_format", "flow_format"));
     mixin(update_string("title", "title"));
     mixin(update_string("gas_model_file", "gas_model_file"));
     GlobalConfig.gmodel_master = init_gas_model(GlobalConfig.gas_model_file);
@@ -777,6 +785,8 @@ void read_config_file()
     mixin(update_int("dimensions", "dimensions"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
     if (GlobalConfig.verbosity_level > 1) {
+	writeln("  grid_format: ", to!string(GlobalConfig.grid_format));
+	writeln("  flow_format: ", to!string(GlobalConfig.flow_format));
 	writeln("  title: ", to!string(GlobalConfig.title));
 	writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
 	writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
