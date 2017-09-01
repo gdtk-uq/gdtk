@@ -14,7 +14,10 @@
 package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {start body error}
- 
+
+# Begin by cleaning up any old block* 
+catch {eval exec -ignorestderr rm [glob block_*] mapped_cells}
+
 test prepare-metis-grid {Partition grid with metis.} -body {
     exec ugrid_partition cone20.su2 mapped_cells 4 2 > LOGFILE_PREP_METIS
 } -result {} -returnCodes {0}
