@@ -275,6 +275,22 @@ public:
 	}
     } // end scan_values_from_string()
 
+    void read_values_from_raw_binary(ref File fin, bool overwrite_geometry_data)
+    // Note that the position data is read into grid_time_level 0.
+    {
+	Vector3 new_pos;
+	double new_volume;
+	raw_binary_to_cell_data(fin, new_pos, new_volume, fs,
+				Q_rad_org, f_rad_org, Q_rE_rad,
+				dt_chem, dt_therm,
+				myConfig.include_quality, myConfig.MHD,
+				myConfig.divergence_cleaning, myConfig.radiation);
+	if (overwrite_geometry_data) {
+	    pos[0].set(new_pos);
+	    volume[0] = new_volume;
+	}
+    } // end read_values_from_raw_binary()
+
     string write_values_to_string() const
     {
 	return cell_data_as_string(pos[0], volume[0], fs,

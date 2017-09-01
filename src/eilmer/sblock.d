@@ -1949,13 +1949,56 @@ public:
     {
 	if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
 	double sim_time; // to be read from file
+	string myLabel;
+	int nvariables;
+	string[] variable_list;
 	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
 							     myConfig.MHD, myConfig.divergence_cleaning,
 							     myConfig.radiation);
 	switch (myConfig.flow_format) {
 	case "gziptext": goto default;
 	case "rawbinary":
-	    // [TODO] today 2017-09-01
+	    File fin = File(filename, "rb");
+	    string expected_header = "structured_grid_flow 1.0";
+	    char[] found_header = new char[expected_header.length];
+	    fin.rawRead(found_header);
+	    if (found_header != expected_header) {
+		throw new FlowSolverException("SBlock.read_solution from raw_binary_file: " ~
+					      "unexpected header: " ~ to!string(found_header)); 
+	    }
+	    int[1] int1; fin.rawRead(int1);
+	    int label_length = int1[0];
+	    if (label_length > 0) {
+		char[] found_label = new char[label_length];
+		fin.rawRead(found_label);
+		myLabel = to!string(found_label);
+	    }
+	    double[1] dbl1; fin.rawRead(dbl1); sim_time = dbl1[0];
+	    fin.rawRead(int1); nvariables = int1[0];
+	    foreach(i; 0 .. nvariables) {
+		char[] varname; fin.rawRead(int1); varname.length = int1[0]; 
+		fin.rawRead(varname);
+	    }
+	    int[4] int4; fin.rawRead(int4);
+	    int my_dimensions = int4[0];
+	    size_t nic = int4[1]; size_t njc = int4[2]; size_t nkc = int4[3];
+	    if (my_dimensions != myConfig.dimensions) {
+		string msg = text("dimensions found: " ~ to!string(my_dimensions));
+		throw new FlowSolverException(msg);
+	    }
+	    if (nic != nicell || njc != njcell || 
+		nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
+		string msg = text("For block[", id, "] we have a mismatch in solution size.",
+				  " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
+		throw new FlowSolverException(msg);
+	    }	
+	    for ( size_t k = kmin; k <= kmax; ++k ) {
+		for ( size_t j = jmin; j <= jmax; ++j ) {
+		    for ( size_t i = imin; i <= imax; ++i ) {
+			get_cell(i,j,k).read_values_from_raw_binary(fin, overwrite_geometry_data);
+		    }
+		}
+	    }
 	    break;
 	default:
 	    auto byLine = new GzipByLine(filename);
@@ -1967,15 +2010,13 @@ public:
 		throw new FlowSolverException(msg); 
 	    }
 	    line = byLine.front; byLine.popFront();
-	    string myLabel;
 	    formattedRead(line, "label: %s", &myLabel);
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "sim_time: %g", &sim_time);
 	    line = byLine.front; byLine.popFront();
-	    size_t nvariables;
 	    formattedRead(line, "variables: %d", &nvariables);
 	    line = byLine.front; byLine.popFront();
-	    auto variable_list = line.strip().split();
+	    variable_list = line.strip().split();
 	    if (variable_list.length != expected_variable_list.length) {
 		throw new FlowSolverException("Mismatch in variable lists");
 	    }
@@ -2037,7 +2078,7 @@ public:
 		int1[0] = to!int(varname.length); outfile.rawWrite(int1);
 		outfile.rawWrite(to!(char[])(varname));
 	    }
-	    int4[0] = to!int(myConfig.dimensions);
+	    int4[0] = myConfig.dimensions;
 	    int4[1] = to!int(nicell); int4[2] = to!int(njcell); int4[3] = to!int(nkcell);
 	    outfile.rawWrite(int4);
 	    for ( size_t k = kmin; k <= kmax; ++k ) {
