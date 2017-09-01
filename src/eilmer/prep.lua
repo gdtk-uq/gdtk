@@ -1086,6 +1086,8 @@ function write_config_file(fileName)
    local f = assert(io.open(fileName, "w"))
    f:write("{\n")
    f:write(string.format('"title": "%s",\n', config.title))
+   f:write(string.format('"grid_format": "%s",\n', config.grid_format))
+   f:write(string.format('"flow_format": "%s",\n', config.flow_format))
    f:write(string.format('"gas_model_file": "%s",\n', config.gas_model_file))
    f:write(string.format('"udf_supervisor_file": "%s",\n', tostring(config.udf_supervisor_file)))
    f:write(string.format('"include_quality": %s,\n',
@@ -1283,7 +1285,13 @@ function build_job_files(job)
       local id = fluidBlocks[i].id
       print("FluidBlock id=", id)
       local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000.gz", id)
-      fluidBlocks[i].grid:write_to_gzip_file(fileName)
+      if (config.grid_format == "gziptext") then
+	 fluidBlocks[i].grid:write_to_gzip_file(fileName)
+      elseif (config.grid_format == "rawbinary") then
+	 fluidBlocks[i].grid:write_to_raw_binary_file(fileName)
+      else
+	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
+      end
       local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000.gz", id)
       if fluidBlocks[i].grid:get_type() == "structured_grid" then
 	 write_initial_sg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].fillCondition, 0.0)

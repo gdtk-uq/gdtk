@@ -90,3 +90,12 @@ extern(C) int write_to_gzip_file(T, string MTname)(lua_State* L)
     grid.write_to_gzip_file(fileName);
     return 0;
 }
+
+extern(C) int write_to_raw_binary_file(T, string MTname)(lua_State* L)
+{
+    int narg = lua_gettop(L); // assume narg == 2;
+    auto grid = checkObj!(T, MTname)(L, 1);
+    auto fileName = to!string(luaL_checkstring(L, 2));
+    grid.write_to_raw_binary_file(fileName);
+    return 0;
+}

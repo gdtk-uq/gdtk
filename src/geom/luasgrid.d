@@ -512,6 +512,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "write_to_vtk_file");
     lua_pushcfunction(L, &write_to_gzip_file!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "write_to_gzip_file");
+    lua_pushcfunction(L, &write_to_raw_binary_file!(StructuredGrid, StructuredGridMT));
+    lua_setfield(L, -2, "write_to_raw_binary_file");
     lua_pushcfunction(L, &joinGrid);
     lua_setfield(L, -2, "joinGrid");
     lua_pushcfunction(L, &find_nearest_cell_centre_sg);

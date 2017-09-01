@@ -341,6 +341,8 @@ void registerUnstructuredGrid(lua_State* L)
     lua_setfield(L, -2, "cellVolume");
     lua_pushcfunction(L, &write_to_gzip_file!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "write_to_gzip_file");
+    lua_pushcfunction(L, &write_to_raw_binary_file!(UnstructuredGrid, UnstructuredGridMT));
+    lua_setfield(L, -2, "write_to_raw_binary_file");
     lua_pushcfunction(L, &write_to_vtk_file!(UnstructuredGrid, UnstructuredGridMT));
     lua_setfield(L, -2, "write_to_vtk_file");
     lua_pushcfunction(L, &write_to_su2_file!(UnstructuredGrid, UnstructuredGridMT));
