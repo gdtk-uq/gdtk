@@ -714,7 +714,8 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 	    if ( nWrittenSnapshots <= nTotalSnapshots ) {
 		ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
 		foreach ( iblk, blk; gasBlocks ) {
-		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nWrittenSnapshots);
+		    // [TODO] PJ 2017-09-02 need to set the file extension properly (here and a few lines below).
+		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nWrittenSnapshots, "gz");
 		    blk.write_solution(fileName, pseudoSimTime);
 		}
 		restartInfo.pseudoSimTime = pseudoSimTime;
@@ -729,14 +730,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 		// We need to shuffle all of the snapshots...
 		foreach ( iSnap; 2 .. nTotalSnapshots+1) {
 		    foreach ( iblk; 0 .. gasBlocks.length ) {
-			auto fromName = make_file_name!"flow"(jobName, to!int(iblk), iSnap);
-			auto toName = make_file_name!"flow"(jobName, to!int(iblk), iSnap-1);
+			auto fromName = make_file_name!"flow"(jobName, to!int(iblk), iSnap, "gz");
+			auto toName = make_file_name!"flow"(jobName, to!int(iblk), iSnap-1, "gz");
 			rename(fromName, toName);
 		    }
 		}
 		// ... and add the new snapshot.
 		foreach ( iblk, blk; gasBlocks ) {
-		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nTotalSnapshots);	
+		    auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nTotalSnapshots, "gz");	
 		    blk.write_solution(fileName, pseudoSimTime);
 		}
 		remove(times, 1);

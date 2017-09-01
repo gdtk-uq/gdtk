@@ -2068,7 +2068,6 @@ public:
 	    File outfile = File(filename, "wb");
 	    int[1] int1; int[4] int4; double[1] dbl1; // buffer arrays
 	    string header = "structured_grid_flow 1.0";
-	    int1[0] = to!int(header.length); outfile.rawWrite(int1);
 	    outfile.rawWrite(to!(char[])(header));
 	    int1[0] = to!int(label.length); outfile.rawWrite(int1);
 	    if (label.length > 0) { outfile.rawWrite(to!(char[])(label)); }

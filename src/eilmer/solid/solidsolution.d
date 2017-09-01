@@ -43,10 +43,10 @@ public:
 	    string fileName;
 	    // Presently, don't allow moving grid for solid domain,
 	    // so tindx is always 0 for solid-grid
-	    fileName = make_file_name!"solid-grid"(jobName, to!int(ib), 0);
+	    fileName = make_file_name!"solid-grid"(jobName, to!int(ib), 0, "gz");
 	    fileName = dir ~ "/" ~ fileName;
 	    gridBlocks ~= new StructuredGrid(fileName, "gziptext");
-	    fileName = make_file_name!"solid"(jobName, to!int(ib), tindx);
+	    fileName = make_file_name!"solid"(jobName, to!int(ib), tindx, "gz");
 	    fileName = dir ~ "/" ~ fileName;
 	    solidBlocks ~= new SBlockSolid(fileName);
 	} // end foreach ib

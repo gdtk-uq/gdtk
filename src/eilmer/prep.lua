@@ -1284,15 +1284,22 @@ function build_job_files(job)
    for i = 1, #fluidBlocks do
       local id = fluidBlocks[i].id
       print("FluidBlock id=", id)
-      local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000.gz", id)
+      local fileName = "grid/t0000/" .. job .. string.format(".grid.b%04d.t0000", id)
       if (config.grid_format == "gziptext") then
-	 fluidBlocks[i].grid:write_to_gzip_file(fileName)
+	 fluidBlocks[i].grid:write_to_gzip_file(fileName .. ".gz")
       elseif (config.grid_format == "rawbinary") then
-	 fluidBlocks[i].grid:write_to_raw_binary_file(fileName)
+	 fluidBlocks[i].grid:write_to_raw_binary_file(fileName .. ".bin")
       else
 	 error(string.format("Oops, invalid grid_format: %s", config.grid_format))
       end
-      local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000.gz", id)
+      local fileName = "flow/t0000/" .. job .. string.format(".flow.b%04d.t0000", id)
+      if (config.flow_format == "gziptext") then
+	 fileName = fileName .. ".gz"
+      elseif (config.flow_format == "rawbinary") then
+	 fileName = fileName .. ".bin"
+      else
+	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
+      end
       if fluidBlocks[i].grid:get_type() == "structured_grid" then
 	 write_initial_sg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].fillCondition, 0.0)
       else

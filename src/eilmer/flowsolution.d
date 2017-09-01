@@ -88,21 +88,23 @@ public:
 	    }
 	    auto gridType = gridTypeFromName(gridTypeName);
 	    string fileName;
+	    string gridFileExt = "gz"; if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
+	    string flowFileExt = "gz"; if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
 	    if (GlobalConfig.grid_motion != GridMotion.none) {
-		fileName = make_file_name!"grid"(jobName, to!int(ib), tindx);
+		fileName = make_file_name!"grid"(jobName, to!int(ib), tindx, gridFileExt);
 	    } else {
-		fileName = make_file_name!"grid"(jobName, to!int(ib), 0);
+		fileName = make_file_name!"grid"(jobName, to!int(ib), 0, gridFileExt);
 	    }
 	    fileName = dir ~ "/" ~ fileName;
 	    final switch (gridType) {
 	    case Grid_t.structured_grid:
-		gridBlocks ~= new StructuredGrid(fileName, "gziptext");
+		gridBlocks ~= new StructuredGrid(fileName, GlobalConfig.grid_format);
 		break;
 	    case Grid_t.unstructured_grid:
-		gridBlocks ~= new UnstructuredGrid(fileName, "gziptext");
+		gridBlocks ~= new UnstructuredGrid(fileName, GlobalConfig.grid_format);
 	    }
 	    gridBlocks[$-1].sort_cells_into_bins();
-	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx);
+	    fileName = make_file_name!"flow"(jobName, to!int(ib), tindx, flowFileExt);
 	    fileName = dir ~ "/" ~ fileName;
             flowBlocks ~= new BlockFlow(fileName, ib, jsonData, gridType);
 	} // end foreach ib
@@ -332,64 +334,69 @@ public:
 	// 3. write_initial_sg_flow_file_from_lua() in luaflowstate.d
 	// 4. write_initial_usg_flow_file_from_lua() in luaflowstate.d.
 	//
-	string[] tokens;
-	auto byLine = new GzipByLine(filename);
-	auto line = byLine.front; byLine.popFront();
-	string format_version;
-	final switch (gridType) {
-	case Grid_t.structured_grid:
-	    formattedRead(line, "structured_grid_flow %s", &format_version);
-	    break;
-	case Grid_t.unstructured_grid:
-	    formattedRead(line, "unstructured_grid_flow %s", &format_version);
-	}
-	if (format_version != "1.0") {
-	    string msg = text("BlockFlow.read_solution(): " ~
-			      "format version found: " ~ format_version);
-	    throw new FlowSolverException(msg); 
-	}
-	string myLabel;
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "label: %s", &myLabel);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "sim_time: %g", &sim_time);
-	size_t nvariables;
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "variables: %d", &nvariables);
-	line = byLine.front; byLine.popFront();
-	variableNames = line.strip().split();
-	foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
-	foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "dimensions: %d", &dimensions);
-	final switch (gridType) {
-	case Grid_t.structured_grid:
-	    line = byLine.front; byLine.popFront();
-	    formattedRead(line, "nicell: %d", &nic);
-	    line = byLine.front; byLine.popFront();
-	    formattedRead(line, "njcell: %d", &njc);
-	    line = byLine.front; byLine.popFront();
-	    formattedRead(line, "nkcell: %d", &nkc);
-	    ncells = nic*njc*nkc;
-	    break;
-	case Grid_t.unstructured_grid:
-	    line = byLine.front; byLine.popFront();
-	    formattedRead(line, "ncells: %d", &ncells);
-	    nic = ncells; njc = 1; nkc = 1;
-	}
-	// Scan the remainder of the file, extracting our data.
-	// Assume it is in standard cell order.
-	_data.length = ncells;
-	foreach (i; 0 .. ncells) {
-	    line = byLine.front; byLine.popFront();
-	    tokens = line.strip().split();
-	    assert(tokens.length == variableNames.length,
-		   "wrong number of items for variable data");
-	    _data[i].length = variableNames.length;
-	    foreach (ivar; 0 .. variableNames.length) {
-		_data[i][ivar] = to!double(tokens[ivar]);
+	switch (GlobalConfig.flow_format) {
+	case "gziptext": goto default;
+	case "rawbinary": throw new Error("Finish this implementation PJ 2017-09-02");
+	default:
+	    string[] tokens;
+	    auto byLine = new GzipByLine(filename);
+	    auto line = byLine.front; byLine.popFront();
+	    string format_version;
+	    final switch (gridType) {
+	    case Grid_t.structured_grid:
+		formattedRead(line, "structured_grid_flow %s", &format_version);
+		break;
+	    case Grid_t.unstructured_grid:
+		formattedRead(line, "unstructured_grid_flow %s", &format_version);
 	    }
-	} // foreach i
+	    if (format_version != "1.0") {
+		string msg = text("BlockFlow.read_solution(): " ~
+				  "format version found: " ~ format_version);
+		throw new FlowSolverException(msg); 
+	    }
+	    string myLabel;
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "label: %s", &myLabel);
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "sim_time: %g", &sim_time);
+	    size_t nvariables;
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "variables: %d", &nvariables);
+	    line = byLine.front; byLine.popFront();
+	    variableNames = line.strip().split();
+	    foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
+	    foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "dimensions: %d", &dimensions);
+	    final switch (gridType) {
+	    case Grid_t.structured_grid:
+		line = byLine.front; byLine.popFront();
+		formattedRead(line, "nicell: %d", &nic);
+		line = byLine.front; byLine.popFront();
+		formattedRead(line, "njcell: %d", &njc);
+		line = byLine.front; byLine.popFront();
+		formattedRead(line, "nkcell: %d", &nkc);
+		ncells = nic*njc*nkc;
+		break;
+	    case Grid_t.unstructured_grid:
+		line = byLine.front; byLine.popFront();
+		formattedRead(line, "ncells: %d", &ncells);
+		nic = ncells; njc = 1; nkc = 1;
+	    }
+	    // Scan the remainder of the file, extracting our data.
+	    // Assume it is in standard cell order.
+	    _data.length = ncells;
+	    foreach (i; 0 .. ncells) {
+		line = byLine.front; byLine.popFront();
+		tokens = line.strip().split();
+		assert(tokens.length == variableNames.length,
+		       "wrong number of items for variable data");
+		_data[i].length = variableNames.length;
+		foreach (ivar; 0 .. variableNames.length) {
+		    _data[i][ivar] = to!double(tokens[ivar]);
+		}
+	    } // foreach i
+	} // end switch flow_format
         // Fill boundary group list
 	size_t nboundaries = getJSONint(jsonData["block_" ~ to!string(blkID)], "nboundaries", 0);
 	for (size_t i=0; i < nboundaries; i++) {

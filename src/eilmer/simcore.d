@@ -72,6 +72,9 @@ shared static bool loads_just_written = true;
 static SysTime wall_clock_start;
 static int maxWallClockSeconds;
 
+string gridFileExt = "gz";
+string flowFileExt = "gz";
+
 //----------------------------------------------------------------------------
 
 void init_simulation(int tindx, int maxCPUs, int maxWallClock)
@@ -81,6 +84,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
+    if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
+    if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
     setupIndicesForConservedQuantities(); 
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
@@ -90,15 +95,14 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     if (GlobalConfig.verbosity_level > 0) {
 	writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
     }
-    // GC.disable(); scope(exit) { GC.enable(); GC.collect(); }
     foreach (myblk; gasBlocks) {
-	// [TODO] Note that this loop is serial; Can we do some in parallel?
+	// [TODO] Note that this loop is serial; Can we do some in parallel? <<<<<<<  PJ 2017-09-02 <<<<<<<<<<<<<<<<<<<<<
 	if (GlobalConfig.verbosity_level > 1) { writeln("myblk=", myblk); }
 	if (GlobalConfig.grid_motion != GridMotion.none) {
-	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, tindx)); 
+	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, tindx, gridFileExt)); 
 	} else {
 	    // Assume there is only a single, static grid stored at tindx=0
-	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0)); 
+	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, gridFileExt)); 
 	}
 	myblk.compute_primary_cell_geometric_data(0);
 	myblk.compute_distance_to_nearest_wall_for_all_cells(0);
@@ -106,7 +110,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	myblk.identify_turbulent_zones(0);
 	// I don't mind if blocks write over sim_time.  
 	// They should all have the same value for it.
-	sim_time = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, tindx), false);
+	sim_time = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, tindx, flowFileExt), false);
 	foreach (cell; myblk.cells) {
 	    cell.encode_conserved(0, 0, myblk.omegaz);
 	    // Even though the following call appears redundant at this point,
@@ -154,8 +158,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	mySolidBlk.assembleArrays();
 	mySolidBlk.bindFacesAndVerticesToCells();
 	writeln("mySolidBlk= ", mySolidBlk);
-	mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0)); // tindx==0 fixed grid
-	mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx));
+	mySolidBlk.readGrid(make_file_name!"solid-grid"(job_name, mySolidBlk.id, 0, "gz")); // tindx==0 fixed grid
+	mySolidBlk.readSolution(make_file_name!"solid"(job_name, mySolidBlk.id, tindx, "gz"));
 	mySolidBlk.computePrimaryCellGeometricData();
 	mySolidBlk.assignVtxLocationsForDerivCalc();
     }
@@ -522,18 +526,18 @@ void integrate_in_time(double target_time_as_requested)
 	    ensure_directory_is_present(make_path_name!"flow"(current_tindx));
 	    auto job_name = GlobalConfig.base_file_name;
 	    foreach (myblk; parallel(gasBlocks,1)) {
-		auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx);
+		auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt);
 		myblk.write_solution(file_name, sim_time);
 	    }
 	    ensure_directory_is_present(make_path_name!"solid"(current_tindx));
 	    foreach (ref mySolidBlk; solidBlocks) {
-		auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx);
+		auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx, "gz");
 		mySolidBlk.writeSolution(fileName, sim_time);
 	    }
 	    if (GlobalConfig.grid_motion != GridMotion.none) {
 		ensure_directory_is_present(make_path_name!"grid"(current_tindx));
 		foreach (blk; parallel(gasBlocks,1)) { 
-		    auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx);
+		    auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
 		    blk.write_grid(fileName, sim_time, 0);
 		}
 	    }
@@ -612,18 +616,18 @@ void finalize_simulation()
 	ensure_directory_is_present(make_path_name!"flow"(current_tindx));
 	auto job_name = GlobalConfig.base_file_name;
 	foreach (myblk; parallel(gasBlocks,1)) {
-	    auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx);
+	    auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt);
 	    myblk.write_solution(file_name, sim_time);
 	}
 	ensure_directory_is_present(make_path_name!"solid"(current_tindx));
 	foreach (ref mySolidBlk; solidBlocks) {
-	    auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx);
+	    auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx, "gz");
 	    mySolidBlk.writeSolution(fileName, sim_time);
 	}
 	if (GlobalConfig.grid_motion != GridMotion.none) {
 	    ensure_directory_is_present(make_path_name!"grid"(current_tindx));
 	    foreach (blk; parallel(gasBlocks,1)) {
-		auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx);
+		auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
 		blk.write_grid(fileName, sim_time);
 	    }
 	}

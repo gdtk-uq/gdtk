@@ -80,28 +80,33 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	writeln("  Flow Variables:");
 	// Dip into the top of a solution file that is likely to be present
 	// to get the variable names, as saved by the simulation.
-	string fileName = make_file_name!"flow"(jobName, to!int(0), 0);
-	auto byLine = new GzipByLine(fileName);
-	auto line = byLine.front; byLine.popFront();
 	double sim_time;
-	formattedRead(line, " %g", &sim_time);
-	line = byLine.front; byLine.popFront();
-	auto variableNames = line.strip().split();
-	foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
-	foreach (i; 0 .. variableNames.length) {
-	    writeln(format("%4d %s", i, variableNames[i]));
-	}
+	switch (GlobalConfig.flow_format) {
+	case "gziptext": goto default;
+	case "rawbinary": throw new Error("not yet implemented PJ 2017-09-02");
+	default:
+	    string fileName = make_file_name!"flow"(jobName, to!int(0), 0, "gz");
+	    auto byLine = new GzipByLine(fileName);
+	    auto line = byLine.front; byLine.popFront();
+	    formattedRead(line, " %g", &sim_time);
+	    line = byLine.front; byLine.popFront();
+	    auto variableNames = line.strip().split();
+	    foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
+	    foreach (i; 0 .. variableNames.length) {
+		writeln(format("%4d %s", i, variableNames[i]));
+	    }
+	} // end switch flow_format
 	if ( GlobalConfig.nSolidBlocks > 0 ) {
 	    writeln("  Solid Variables:");
 	    // Dip into the top of a solid solution file that is
 	    // likely to be present to get the variable names
 	    // as saved by the simulation.
-	    fileName = make_file_name!"solid"(jobName, 0, 0);
-	    byLine = new GzipByLine(fileName);
-	    line = byLine.front; byLine.popFront();
+	    string fileName = make_file_name!"solid"(jobName, 0, 0, "gz");
+	    auto byLine = new GzipByLine(fileName);
+	    auto line = byLine.front; byLine.popFront();
 	    formattedRead(line, " %g", &sim_time);
 	    line = byLine.front; byLine.popFront();
-	    variableNames = line.strip().split();
+	    auto variableNames = line.strip().split();
 	    foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
 	    foreach (i; 0 .. variableNames.length) {
 		writeln(format("%4d %s", i, variableNames[i]));
@@ -383,7 +388,6 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		}
 		string vtuFileName = format("%s-t%04d-blk-%04d-surface-%s.vtu",
 					 surfaceCollectionName, tindx, blk_indx, boundary_id);
-		writeln("vtuFileName=", vtuFileName); // DEBUG
 		auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
 		size_t[] surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
 		size_t new_dimensions = surf_grid.dimensions;
