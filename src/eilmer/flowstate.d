@@ -340,58 +340,109 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
     auto njcell = grid.njv - 1;
     auto nkcell = grid.nkv - 1;
     if (GlobalConfig.dimensions == 2) nkcell = 1;
-    //	
-    // Write the data for the whole structured block.
-    auto outfile = new GzipOut(fileName);
-    auto writer = appender!string();
-    formattedWrite(writer, "structured_grid_flow 1.0\n");
-    formattedWrite(writer, "label: %s\n", grid.label);
-    formattedWrite(writer, "sim_time: %.18e\n", t0);
     auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality, 
 						GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
 						GlobalConfig.radiation);
-    formattedWrite(writer, "variables: %d\n", variable_list.length);
-    // Variable list for cell on one line.
-    foreach(varname; variable_list) {
-	formattedWrite(writer, " \"%s\"", varname);
-    }
-    formattedWrite(writer, "\n");
-    // Numbers of cells
-    formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
-    formattedWrite(writer, "nicell: %d\n", nicell);
-    formattedWrite(writer, "njcell: %d\n", njcell);
-    formattedWrite(writer, "nkcell: %d\n", nkcell);
-    outfile.compress(writer.data);
-    // The actual cell data.
-    foreach (k; 0 .. nkcell) {
-	foreach (j; 0 .. njcell) {
-	    foreach (i; 0 .. nicell) {
-		Vector3 p000 = *grid[i,j,k];
-		Vector3 p100 = *grid[i+1,j,k];
-		Vector3 p110 = *grid[i+1,j+1,k];
-		Vector3 p010 = *grid[i,j+1,k];
-		// [TODO] provide better calculation using geom module.
-		// For the moment, it doesn't matter greatly because the solver 
-		// will compute it's own approximations
-		auto pos = 0.25*(p000 + p100 + p110 + p010);
-		double volume = 0.0; 
-		if (GlobalConfig.dimensions == 3) {
-		    Vector3 p001 = *grid[i,j,k+1];
-		    Vector3 p101 = *grid[i+1,j,k+1];
-		    Vector3 p111 = *grid[i+1,j+1,k+1];
-		    Vector3 p011 = *grid[i,j+1,k+1];
-		    pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+    //	
+    // Write the data for the whole structured block.
+    switch (GlobalConfig.flow_format) {
+    case "gziptext": goto default;
+    case "rawbinary":
+	File outfile = File(fileName, "wb");
+	int[1] int1; int[4] int4; double[1] dbl1; // buffer arrays
+	string header = "structured_grid_flow 1.0";
+	int1[0] = to!int(header.length); outfile.rawWrite(int1);
+	outfile.rawWrite(to!(char[])(header));
+	int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
+	if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
+	dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
+	int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
+	foreach(varname; variable_list) {
+	    int1[0] = to!int(varname.length); outfile.rawWrite(int1);
+	    outfile.rawWrite(to!(char[])(varname));
+	}
+	int4[0] = to!int(GlobalConfig.dimensions);
+	int4[1] = to!int(nicell); int4[2] = to!int(njcell); int4[3] = to!int(nkcell);
+	outfile.rawWrite(int4);
+	foreach (k; 0 .. nkcell) {
+	    foreach (j; 0 .. njcell) {
+		foreach (i; 0 .. nicell) {
+		    Vector3 p000 = *grid[i,j,k];
+		    Vector3 p100 = *grid[i+1,j,k];
+		    Vector3 p110 = *grid[i+1,j+1,k];
+		    Vector3 p010 = *grid[i,j+1,k];
+		    // [TODO] provide better calculation using geom module.
+		    // For the moment, it doesn't matter greatly because the solver 
+		    // will compute it's own approximations
+		    auto pos = 0.25*(p000 + p100 + p110 + p010);
+		    double volume = 0.0; 
+		    if (GlobalConfig.dimensions == 3) {
+			Vector3 p001 = *grid[i,j,k+1];
+			Vector3 p101 = *grid[i+1,j,k+1];
+			Vector3 p111 = *grid[i+1,j+1,k+1];
+			Vector3 p011 = *grid[i,j+1,k+1];
+			pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+		    }
+		    cell_data_to_raw_binary(outfile, pos, volume, fs,
+					    0.0, 0.0, 0.0, -1.0, -1.0,
+					    GlobalConfig.include_quality,
+					    GlobalConfig.MHD,
+					    GlobalConfig.divergence_cleaning,
+					    GlobalConfig.radiation);
 		}
-		outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-							   0.0, 0.0, 0.0, -1.0, -1.0,
-							   GlobalConfig.include_quality,
-							   GlobalConfig.MHD,
-							   GlobalConfig.divergence_cleaning,
-							   GlobalConfig.radiation) ~ "\n");
 	    }
 	}
-    }
-    outfile.finish();
+	outfile.close();
+	break;
+    default:
+	auto outfile = new GzipOut(fileName);
+	auto writer = appender!string();
+	formattedWrite(writer, "structured_grid_flow 1.0\n");
+	formattedWrite(writer, "label: %s\n", grid.label);
+	formattedWrite(writer, "sim_time: %.18e\n", t0);
+	formattedWrite(writer, "variables: %d\n", variable_list.length);
+	// Variable list for cell on one line.
+	foreach(varname; variable_list) {
+	    formattedWrite(writer, " \"%s\"", varname);
+	}
+	formattedWrite(writer, "\n");
+	// Numbers of cells
+	formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+	formattedWrite(writer, "nicell: %d\n", nicell);
+	formattedWrite(writer, "njcell: %d\n", njcell);
+	formattedWrite(writer, "nkcell: %d\n", nkcell);
+	outfile.compress(writer.data);
+	// The actual cell data.
+	foreach (k; 0 .. nkcell) {
+	    foreach (j; 0 .. njcell) {
+		foreach (i; 0 .. nicell) {
+		    Vector3 p000 = *grid[i,j,k];
+		    Vector3 p100 = *grid[i+1,j,k];
+		    Vector3 p110 = *grid[i+1,j+1,k];
+		    Vector3 p010 = *grid[i,j+1,k];
+		    // [TODO] provide better calculation using geom module.
+		    // For the moment, it doesn't matter greatly because the solver 
+		    // will compute it's own approximations
+		    auto pos = 0.25*(p000 + p100 + p110 + p010);
+		    double volume = 0.0; 
+		    if (GlobalConfig.dimensions == 3) {
+			Vector3 p001 = *grid[i,j,k+1];
+			Vector3 p101 = *grid[i+1,j,k+1];
+			Vector3 p111 = *grid[i+1,j+1,k+1];
+			Vector3 p011 = *grid[i,j+1,k+1];
+			pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+		    }
+		    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+							       0.0, 0.0, 0.0, -1.0, -1.0,
+							       GlobalConfig.include_quality,
+							       GlobalConfig.MHD,
+							       GlobalConfig.divergence_cleaning,
+							       GlobalConfig.radiation) ~ "\n");
+		}
+	    }
+	}
+	outfile.finish();
+    } // end switch flow_format
     return;
 } // end write_initial_flow_file() StructuredGrid version
  

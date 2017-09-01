@@ -824,7 +824,8 @@ public:
     // use of read_grid().
     {
 	throw new FlowSolverException("write_grid function not yet implemented for unstructured grid.");
-	// [TODO]
+	// [TODO] we will eventually need this for moving grid simulations
+	// Just delegate the work to the grid object.
     } // end write_grid()
 
     override double read_solution(string filename, bool overwrite_geometry_data)
@@ -834,41 +835,51 @@ public:
     // Returns sim_time from file.
     {
 	if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
-	auto byLine = new GzipByLine(filename);
-	auto line = byLine.front; byLine.popFront();
-	string format_version;
-	formattedRead(line, "unstructured_grid_flow %s", &format_version);
-	if (format_version != "1.0") {
-	    string msg = text("UBlock.read_solution(): " ~ "format version found: "
-			      ~ format_version);
-	    throw new FlowSolverException(msg); 
-	}
-	string myLabel;
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "label: %s", &myLabel);
-	double sim_time;
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "sim_time: %g", &sim_time);
-	size_t nvariables;
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "variables: %d", &nvariables);
-	line = byLine.front; byLine.popFront();
-	// ingore variableNames = line.strip().split();
-	line = byLine.front; byLine.popFront();
-	int my_dimensions;
-	formattedRead(line, "dimensions: %d", &my_dimensions);
-	line = byLine.front; byLine.popFront();
-	size_t nc;
-	formattedRead(line, "ncells: %d", &nc);
-	if (nc != ncells) {
-	    string msg = text("For block[", id, "] we have a mismatch in solution size.",
-			      " Have read nc=", nc, " ncells=", ncells);
-	    throw new FlowSolverException(msg);
-	}	
-	foreach (i; 0 .. ncells) {
+	double sim_time; // to be read from file
+	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
+							     myConfig.MHD, myConfig.divergence_cleaning,
+							     myConfig.radiation);
+	switch (myConfig.flow_format) {
+	case "gziptext": goto default;
+	case "rawbinary":
+	    // [TODO] today 2017-09-01
+	    break;
+	default:
+	    auto byLine = new GzipByLine(filename);
+	    auto line = byLine.front; byLine.popFront();
+	    string format_version;
+	    formattedRead(line, "unstructured_grid_flow %s", &format_version);
+	    if (format_version != "1.0") {
+		string msg = text("UBlock.read_solution(): " ~ "format version found: "
+				  ~ format_version);
+		throw new FlowSolverException(msg); 
+	    }
+	    string myLabel;
 	    line = byLine.front; byLine.popFront();
-	    cells[i].scan_values_from_string(line, overwrite_geometry_data);
-	}
+	    formattedRead(line, "label: %s", &myLabel);
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "sim_time: %g", &sim_time);
+	    size_t nvariables;
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "variables: %d", &nvariables);
+	    line = byLine.front; byLine.popFront();
+	    // ingore variableNames = line.strip().split();
+	    line = byLine.front; byLine.popFront();
+	    int my_dimensions;
+	    formattedRead(line, "dimensions: %d", &my_dimensions);
+	    line = byLine.front; byLine.popFront();
+	    size_t nc;
+	    formattedRead(line, "ncells: %d", &nc);
+	    if (nc != ncells) {
+		string msg = text("For block[", id, "] we have a mismatch in solution size.",
+				  " Have read nc=", nc, " ncells=", ncells);
+		throw new FlowSolverException(msg);
+	    }	
+	    foreach (i; 0 .. ncells) {
+		line = byLine.front; byLine.popFront();
+		cells[i].scan_values_from_string(line, overwrite_geometry_data);
+	    }
+	} // end switch flow_format
 	return sim_time;
     } // end read_solution()
 
@@ -880,30 +891,36 @@ public:
     // write_initial_flow_file() from flowstate.d.
     {
 	if (myConfig.verbosity_level > 1) { writeln("write_solution(): Start block ", id); }
-	auto outfile = new GzipOut(filename);
-	auto writer = appender!string();
-	formattedWrite(writer, "unstructured_grid_flow 1.0\n");
-	formattedWrite(writer, "label: %s\n", label);
-	formattedWrite(writer, "sim_time: %.18e\n", sim_time);
-	auto gmodel = myConfig.gmodel;
-	auto variable_list = variable_list_for_cell(gmodel, myConfig.include_quality,
+	auto variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
 						    myConfig.MHD, myConfig.divergence_cleaning,
 						    myConfig.radiation);
-	formattedWrite(writer, "variables: %d\n", variable_list.length);
-	// Variable list for cell on one line.
-	foreach(varname; variable_list) {
-	    formattedWrite(writer, " \"%s\"", varname);
-	}
-	formattedWrite(writer, "\n");
-	// Numbers of cells
-	formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
-	formattedWrite(writer, "ncells: %d\n", ncells);
-	outfile.compress(writer.data);
-	// The actual cell data.
-	foreach(cell; cells) {
-	    outfile.compress(" " ~ cell.write_values_to_string() ~ "\n");
-	}
-	outfile.finish();
+	switch (myConfig.flow_format) {
+	case "gziptext": goto default;
+	case "rawbinary":
+	    // [TODO] today 2017-09-01
+	    break;
+	default:
+	    auto outfile = new GzipOut(filename);
+	    auto writer = appender!string();
+	    formattedWrite(writer, "unstructured_grid_flow 1.0\n");
+	    formattedWrite(writer, "label: %s\n", label);
+	    formattedWrite(writer, "sim_time: %.18e\n", sim_time);
+	    formattedWrite(writer, "variables: %d\n", variable_list.length);
+	    // Variable list for cell on one line.
+	    foreach(varname; variable_list) {
+		formattedWrite(writer, " \"%s\"", varname);
+	    }
+	    formattedWrite(writer, "\n");
+	    // Numbers of cells
+	    formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
+	    formattedWrite(writer, "ncells: %d\n", ncells);
+	    outfile.compress(writer.data);
+	    // The actual cell data.
+	    foreach(cell; cells) {
+		outfile.compress(" " ~ cell.write_values_to_string() ~ "\n");
+	    }
+	    outfile.finish();
+	} // end switch flow_format
     } // end write_solution()
 
     @nogc override void compute_distance_to_nearest_wall_for_all_cells(int gtl)

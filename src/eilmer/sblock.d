@@ -1948,96 +1948,130 @@ public:
     // and write_solution below.
     {
 	if (myConfig.verbosity_level > 1) { writeln("read_solution(): Start block ", id); }
-	auto byLine = new GzipByLine(filename);
-	auto line = byLine.front; byLine.popFront();
-	string format_version;
-	formattedRead(line, "structured_grid_flow %s", &format_version);
-	if (format_version != "1.0") {
-	    string msg = text("File format version found: " ~ format_version);
-	    throw new FlowSolverException(msg); 
-	}
-	line = byLine.front; byLine.popFront();
-	string myLabel;
-	formattedRead(line, "label: %s", &myLabel);
-	line = byLine.front; byLine.popFront();
-	double sim_time;
-	formattedRead(line, "sim_time: %g", &sim_time);
-	line = byLine.front; byLine.popFront();
-	size_t nvariables;
-	formattedRead(line, "variables: %d", &nvariables);
-	line = byLine.front; byLine.popFront();
-	auto variable_list = line.strip().split();
+	double sim_time; // to be read from file
 	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
 							     myConfig.MHD, myConfig.divergence_cleaning,
 							     myConfig.radiation);
-	if (variable_list.length != expected_variable_list.length) {
-	    throw new FlowSolverException("Mismatch in variable lists");
-	}
-	// [TODO] We should test the incoming strings against the current variable names.
-	line = byLine.front; byLine.popFront();
-	size_t my_dimensions, nic, njc, nkc;
-	formattedRead(line, "dimensions: %d", &my_dimensions);
-	if (my_dimensions != myConfig.dimensions) {
-	    string msg = text("dimensions found: " ~ to!string(my_dimensions));
-	    throw new FlowSolverException(msg);
-	}
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "nicell: %d", &nic);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "njcell: %d", &njc);
-	line = byLine.front; byLine.popFront();
-	formattedRead(line, "nkcell: %d", &nkc);
-	if (nic != nicell || njc != njcell || 
-	    nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
-	    string msg = text("For block[", id, "] we have a mismatch in solution size.",
-			      " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
-	    throw new FlowSolverException(msg);
-	}	
-	for ( size_t k = kmin; k <= kmax; ++k ) {
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t i = imin; i <= imax; ++i ) {
-		    line = byLine.front; byLine.popFront();
-		    get_cell(i,j,k).scan_values_from_string(line, overwrite_geometry_data);
-		} // for i
-	    } // for j
-	} // for k
+	switch (myConfig.flow_format) {
+	case "gziptext": goto default;
+	case "rawbinary":
+	    // [TODO] today 2017-09-01
+	    break;
+	default:
+	    auto byLine = new GzipByLine(filename);
+	    auto line = byLine.front; byLine.popFront();
+	    string format_version;
+	    formattedRead(line, "structured_grid_flow %s", &format_version);
+	    if (format_version != "1.0") {
+		string msg = text("File format version found: " ~ format_version);
+		throw new FlowSolverException(msg); 
+	    }
+	    line = byLine.front; byLine.popFront();
+	    string myLabel;
+	    formattedRead(line, "label: %s", &myLabel);
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "sim_time: %g", &sim_time);
+	    line = byLine.front; byLine.popFront();
+	    size_t nvariables;
+	    formattedRead(line, "variables: %d", &nvariables);
+	    line = byLine.front; byLine.popFront();
+	    auto variable_list = line.strip().split();
+	    if (variable_list.length != expected_variable_list.length) {
+		throw new FlowSolverException("Mismatch in variable lists");
+	    }
+	    // [TODO] We should test the incoming strings against the current variable names.
+	    line = byLine.front; byLine.popFront();
+	    size_t my_dimensions, nic, njc, nkc;
+	    formattedRead(line, "dimensions: %d", &my_dimensions);
+	    if (my_dimensions != myConfig.dimensions) {
+		string msg = text("dimensions found: " ~ to!string(my_dimensions));
+		throw new FlowSolverException(msg);
+	    }
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "nicell: %d", &nic);
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "njcell: %d", &njc);
+	    line = byLine.front; byLine.popFront();
+	    formattedRead(line, "nkcell: %d", &nkc);
+	    if (nic != nicell || njc != njcell || 
+		nkc != ((myConfig.dimensions == 3) ? nkcell : 1)) {
+		string msg = text("For block[", id, "] we have a mismatch in solution size.",
+				  " Have read nic=", nic, " njc=", njc, " nkc=", nkc);
+		throw new FlowSolverException(msg);
+	    }	
+	    for ( size_t k = kmin; k <= kmax; ++k ) {
+		for ( size_t j = jmin; j <= jmax; ++j ) {
+		    for ( size_t i = imin; i <= imax; ++i ) {
+			line = byLine.front; byLine.popFront();
+			get_cell(i,j,k).scan_values_from_string(line, overwrite_geometry_data);
+		    } // for i
+		} // for j
+	    } // for k
+	} // end switch flow_format
 	return sim_time;
     } // end read_solution()
 
     override void write_solution(string filename, double sim_time)
     // Write the flow solution (i.e. the primary variables at the cell centers)
     // for a single block.
-    // This is almost Tecplot POINT format.
-    // Keep in sync with write_initial_flow_file() in flowstate.d
-    // and read_solution above.
+    // The text format is almost Tecplot POINT format; the raw binary format has the same layout.
+    // Keep in sync with write_initial_flow_file() in flowstate.d and read_solution above.
     {
 	if (myConfig.verbosity_level > 1) { writeln("write_solution(): Start block ", id); }
-	auto outfile = new GzipOut(filename);
-	auto writer = appender!string();
-	formattedWrite(writer, "structured_grid_flow 1.0\n");
-	formattedWrite(writer, "label: %s\n", label);
-	formattedWrite(writer, "sim_time: %.18e\n", sim_time);
 	auto variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
 						    myConfig.MHD, myConfig.divergence_cleaning,
 						    myConfig.radiation);
-	formattedWrite(writer, "variables: %d\n", variable_list.length);
-	foreach(varname; variable_list) {
-	    formattedWrite(writer, " \"%s\"", varname);
-	}
-	formattedWrite(writer, "\n");
-	formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
-	formattedWrite(writer, "nicell: %d\n", nicell);
-	formattedWrite(writer, "njcell: %d\n", njcell);
-	formattedWrite(writer, "nkcell: %d\n", nkcell);
-	outfile.compress(writer.data);
-	for ( size_t k = kmin; k <= kmax; ++k ) {
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t i = imin; i <= imax; ++i ) {
-		    outfile.compress(" " ~ get_cell(i,j,k).write_values_to_string() ~ "\n");
-		} // for i
-	    } // for j
-	} // for k
-	outfile.finish();
+	switch (myConfig.flow_format) {
+	case "gziptext": goto default;
+	case "rawbinary":
+	    File outfile = File(filename, "wb");
+	    int[1] int1; int[4] int4; double[1] dbl1; // buffer arrays
+	    string header = "structured_grid_flow 1.0";
+	    int1[0] = to!int(header.length); outfile.rawWrite(int1);
+	    outfile.rawWrite(to!(char[])(header));
+	    int1[0] = to!int(label.length); outfile.rawWrite(int1);
+	    if (label.length > 0) { outfile.rawWrite(to!(char[])(label)); }
+	    dbl1[0] = sim_time; outfile.rawWrite(dbl1);
+	    int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
+	    foreach(varname; variable_list) {
+		int1[0] = to!int(varname.length); outfile.rawWrite(int1);
+		outfile.rawWrite(to!(char[])(varname));
+	    }
+	    int4[0] = to!int(myConfig.dimensions);
+	    int4[1] = to!int(nicell); int4[2] = to!int(njcell); int4[3] = to!int(nkcell);
+	    outfile.rawWrite(int4);
+	    for ( size_t k = kmin; k <= kmax; ++k ) {
+		for ( size_t j = jmin; j <= jmax; ++j ) {
+		    for ( size_t i = imin; i <= imax; ++i ) {
+			get_cell(i,j,k).write_values_to_raw_binary(outfile);
+		    }
+		}
+	    }
+	    outfile.close();
+	    break;
+	default:
+	    auto outfile = new GzipOut(filename);
+	    auto writer = appender!string();
+	    formattedWrite(writer, "structured_grid_flow 1.0\n");
+	    formattedWrite(writer, "label: %s\n", label);
+	    formattedWrite(writer, "sim_time: %.18e\n", sim_time);
+	    formattedWrite(writer, "variables: %d\n", variable_list.length);
+	    foreach(varname; variable_list) { formattedWrite(writer, " \"%s\"", varname); }
+	    formattedWrite(writer, "\n");
+	    formattedWrite(writer, "dimensions: %d\n", myConfig.dimensions);
+	    formattedWrite(writer, "nicell: %d\n", nicell);
+	    formattedWrite(writer, "njcell: %d\n", njcell);
+	    formattedWrite(writer, "nkcell: %d\n", nkcell);
+	    outfile.compress(writer.data);
+	    for ( size_t k = kmin; k <= kmax; ++k ) {
+		for ( size_t j = jmin; j <= jmax; ++j ) {
+		    for ( size_t i = imin; i <= imax; ++i ) {
+			outfile.compress(" " ~ get_cell(i,j,k).write_values_to_string() ~ "\n");
+		    }
+		}
+	    }
+	    outfile.finish();
+	} // end switch flow_format
     } // end write_solution()
 
     override void propagate_inflow_data_west_to_east()

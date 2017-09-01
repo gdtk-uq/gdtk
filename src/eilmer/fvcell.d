@@ -284,6 +284,15 @@ public:
 				   myConfig.divergence_cleaning, myConfig.radiation);
     } // end write_values_to_string()
 
+    void write_values_to_raw_binary(ref File fout) const
+    {
+	cell_data_to_raw_binary(fout, pos[0], volume[0], fs,
+				Q_rad_org, f_rad_org, Q_rE_rad,
+				dt_chem, dt_therm,
+				myConfig.include_quality, myConfig.MHD,
+				myConfig.divergence_cleaning, myConfig.radiation);
+    } // end write_values_to_raw_binary()
+
     @nogc
     void encode_conserved(int gtl, int ftl, double omegaz)
     // gtl = grid time level
