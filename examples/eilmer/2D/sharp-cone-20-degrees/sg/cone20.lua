@@ -61,5 +61,7 @@ config.dt_init = 1.0e-6
 config.cfl_value = 0.5
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
+config.flow_format = "rawbinary"
+config.grid_format = "rawbinary"
 
 dofile("sketch-domain.lua")

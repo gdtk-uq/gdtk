@@ -55,6 +55,8 @@ public:
     this(string jobName, string dir, int tindx, size_t nBlocks)
     {
         // -- initialising JSONData
+	// We need to set a few things here if we are constructing this object
+	// in a custom-postprocessing context.
 	string configFileName = dir ~ "/" ~ jobName ~ ".config";
         string content;
         try {
@@ -72,10 +74,16 @@ public:
             writeln("Message is: ", e.msg);
             exit(1);
         }
+	GlobalConfig.grid_format = jsonData["grid_format"].str;
+	GlobalConfig.flow_format = jsonData["flow_format"].str;
+	string gridFileExt = "gz"; if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
+	string flowFileExt = "gz"; if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
         // -- end initialising JSONData
+	//
 	// Use job.list to get a hint of the type of each block.
 	auto listFile = File(dir ~ "/" ~ jobName ~ ".list");
 	auto listFileLine = listFile.readln().chomp(); // only comments on the first line
+	//
 	foreach (ib; 0 .. nBlocks) {
 	    listFileLine = listFile.readln().chomp();
 	    int ib_chk;
@@ -88,9 +96,7 @@ public:
 	    }
 	    auto gridType = gridTypeFromName(gridTypeName);
 	    string fileName;
-	    string gridFileExt = "gz"; if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
-	    string flowFileExt = "gz"; if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
-	    if (GlobalConfig.grid_motion != GridMotion.none) {
+	    if (GlobalConfig.grid_motion != GridMotion.none) { // [TODO] suspect that this is just default.
 		fileName = make_file_name!"grid"(jobName, to!int(ib), tindx, gridFileExt);
 	    } else {
 		fileName = make_file_name!"grid"(jobName, to!int(ib), 0, gridFileExt);
@@ -326,6 +332,8 @@ public:
     this(string filename, size_t blkID, JSONValue jsonData, Grid_t gridType)
     {
 	this.gridType = gridType;
+	string myLabel;
+	size_t nvariables;
 	// Read in the flow data for a single block.
 	//
 	// Keep in sync with: 
@@ -336,7 +344,50 @@ public:
 	//
 	switch (GlobalConfig.flow_format) {
 	case "gziptext": goto default;
-	case "rawbinary": throw new Error("Finish this implementation PJ 2017-09-02");
+	case "rawbinary":
+	    File fin = File(filename, "rb");
+	    string expected_header;
+	    final switch (gridType) {
+	    case Grid_t.structured_grid: expected_header = "structured_grid_flow 1.0"; break;
+	    case Grid_t.unstructured_grid: expected_header = "unstructured_grid_flow 1.0";
+	    }
+	    char[] found_header = new char[expected_header.length];
+	    fin.rawRead(found_header);
+	    if (found_header != expected_header) {
+		throw new FlowSolverException("BlockFlow constructor, read_solution from raw_binary_file: "
+					      ~ "unexpected header: " ~ to!string(found_header)); 
+	    }
+	    int[1] int1; fin.rawRead(int1);
+	    int label_length = int1[0];
+	    if (label_length > 0) {
+		char[] found_label = new char[label_length];
+		fin.rawRead(found_label);
+		myLabel = to!string(found_label);
+	    }
+	    double[1] dbl1; fin.rawRead(dbl1); sim_time = dbl1[0];
+	    fin.rawRead(int1); nvariables = int1[0];
+	    foreach(i; 0 .. nvariables) {
+		char[] varname; fin.rawRead(int1); varname.length = int1[0]; 
+		fin.rawRead(varname); variableNames ~= to!string(varname);
+	    }
+	    fin.rawRead(int1); int my_dimensions = int1[0];
+	    final switch (gridType) {
+	    case Grid_t.structured_grid:
+		int[3] int3; fin.rawRead(int3);
+		nic = int3[0]; njc = int3[1]; nkc = int3[2];
+		ncells = nic*njc*nkc;
+		break;
+	    case Grid_t.unstructured_grid:
+		fin.rawRead(int1); ncells = int1[0];
+		nic = ncells; njc = 1; nkc = 1;
+	    }
+	    // Assume the remaining data is all double type and is in standard cell order.
+	    _data.length = ncells;
+	    foreach (i; 0 .. ncells) {
+		_data[i].length = nvariables;
+		fin.rawRead(_data[i]);
+	    }
+	    break;
 	default:
 	    string[] tokens;
 	    auto byLine = new GzipByLine(filename);
@@ -354,18 +405,15 @@ public:
 				  "format version found: " ~ format_version);
 		throw new FlowSolverException(msg); 
 	    }
-	    string myLabel;
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "label: %s", &myLabel);
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "sim_time: %g", &sim_time);
-	    size_t nvariables;
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "variables: %d", &nvariables);
 	    line = byLine.front; byLine.popFront();
 	    variableNames = line.strip().split();
 	    foreach (ref var; variableNames) { var = var.replaceAll(regex("\""), ""); }
-	    foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "dimensions: %d", &dimensions);
 	    final switch (gridType) {
@@ -397,6 +445,7 @@ public:
 		}
 	    } // foreach i
 	} // end switch flow_format
+	foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
         // Fill boundary group list
 	size_t nboundaries = getJSONint(jsonData["block_" ~ to!string(blkID)], "nboundaries", 0);
 	for (size_t i=0; i < nboundaries; i++) {

@@ -999,7 +999,7 @@ public:
 	nvertices = buf5[1];
 	nfaces = buf5[2];
 	ncells = buf5[3];
-	int nboundaries = buf5[4];
+	nboundaries = buf5[4];
 	double[3] xyz;
 	double x, y, z;
 	vertices.length = 0;

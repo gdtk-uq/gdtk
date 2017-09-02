@@ -72,8 +72,8 @@ shared static bool loads_just_written = true;
 static SysTime wall_clock_start;
 static int maxWallClockSeconds;
 
-string gridFileExt = "gz";
-string flowFileExt = "gz";
+shared static string gridFileExt = "gz";
+shared static string flowFileExt = "gz";
 
 //----------------------------------------------------------------------------
 

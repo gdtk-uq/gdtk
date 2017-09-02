@@ -1610,9 +1610,11 @@ void cell_data_to_raw_binary(ref File fout,
     // This function should match function cell_data_as_string()
     // which is considered the master definition of the data format.
     // We have tried to keep the same code layout.  There is some history.
+    // 2017-09-02:
+    // Change to using all double values so that the FlowSolution reader becomes simpler.
     //
     // Fixed-length buffers to hold data for sending.
-    int[1] int1; double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
+    double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
     //
     dbl4[0] = pos.x; dbl4[1] = pos.y; dbl4[2] = pos.z; dbl4[3] = volume;
     fout.rawWrite(dbl4);
@@ -1628,7 +1630,7 @@ void cell_data_to_raw_binary(ref File fout,
     fout.rawWrite(dbl4);
     foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue; fout.rawWrite(dbl1); } 
     dbl2[0] = fs.mu_t; dbl2[1] = fs.k_t; fout.rawWrite(dbl2);
-    int1[0] = fs.S; fout.rawWrite(int1);
+    dbl1[0] = to!double(fs.S); fout.rawWrite(dbl1);
     if (radiation) {
 	dbl3[0] = Q_rad_org; dbl3[1] = f_rad_org; dbl3[2] = Q_rE_rad;
 	fout.rawWrite(dbl3);
@@ -1736,7 +1738,7 @@ void raw_binary_to_cell_data(ref File fin,
     // This function needs to be kept consistent with cell_data_to_raw_binary() above.
     //
     // Fixed-length buffers to hold data for sending.
-    int[1] int1; double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
+    double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
     fin.rawRead(dbl4);
     pos.set(dbl4[0], dbl4[1], dbl4[2]);
     volume = dbl4[3];
@@ -1766,7 +1768,7 @@ void raw_binary_to_cell_data(ref File fin,
 	fin.rawRead(dbl1); fs.gas.k_modes[i] = dbl1[0];
     }
     fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
-    fin.rawRead(int1); fs.S = int1[0];
+    fin.rawRead(dbl1); fs.S = to!int(dbl1[0]);
     if (radiation) {
 	fin.rawRead(dbl3);
 	Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];

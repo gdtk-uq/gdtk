@@ -65,6 +65,8 @@ config.cfl_value = 0.5
 -- config.dt_max = 10.0e-6
 config.dt_plot = 1.5e-3
 config.dt_history = 10.0e-5
+config.flow_format = "rawbinary"
+config.grid_format = "rawbinary"
 
 -- add history point at nose of cone
 setHistoryPoint{x=b.x, y=b.y}

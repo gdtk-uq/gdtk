@@ -451,40 +451,74 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;
-    //	
-    // Write the data for the whole unstructured block.
-    auto outfile = new GzipOut(fileName);
-    auto writer = appender!string();
-    formattedWrite(writer, "unstructured_grid_flow 1.0\n");
-    formattedWrite(writer, "label: %s\n", grid.label);
-    formattedWrite(writer, "sim_time: %.18e\n", t0);
     auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
 						GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
 						GlobalConfig.radiation);
-    formattedWrite(writer, "variables: %d\n", variable_list.length);
-    // Variable list for cell on one line.
-    foreach(varname; variable_list) {
-	formattedWrite(writer, " \"%s\"", varname);
-    }
-    formattedWrite(writer, "\n");
-    // Numbers of cells
-    formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
-    formattedWrite(writer, "ncells: %d\n", ncells);
-    outfile.compress(writer.data);
-    // The actual cell data.
-    foreach (i; 0 .. ncells) {
-	Vector3 pos = Vector3(0.0, 0.0, 0.0);
-	foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
-	pos /= grid.cells[i].vtx_id_list.length;
-	double volume = 0.0; 
-	outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-						   0.0, 0.0, 0.0, -1.0, -1.0,
-						   GlobalConfig.include_quality,
-						   GlobalConfig.MHD,
-						   GlobalConfig.divergence_cleaning,
-						   GlobalConfig.radiation) ~ "\n");
-    }
-    outfile.finish();
+    //	
+    // Write the data for the whole unstructured block.
+    switch (GlobalConfig.flow_format) {
+    case "gziptext": goto default;
+    case "rawbinary":
+	File outfile = File(fileName, "wb");
+	int[1] int1; int[2] int2; double[1] dbl1; // buffer arrays
+	string header = "unstructured_grid_flow 1.0";
+	outfile.rawWrite(to!(char[])(header));
+	int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
+	if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
+	dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
+	int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
+	foreach(varname; variable_list) {
+	    int1[0] = to!int(varname.length); outfile.rawWrite(int1);
+	    outfile.rawWrite(to!(char[])(varname));
+	}
+	int2[0] = to!int(GlobalConfig.dimensions);
+	int2[1] = to!int(ncells);
+	outfile.rawWrite(int2);
+	foreach (i; 0 .. ncells) {
+	    Vector3 pos = Vector3(0.0, 0.0, 0.0);
+	    foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
+	    pos /= grid.cells[i].vtx_id_list.length;
+	    double volume = 0.0; 
+	    cell_data_to_raw_binary(outfile, pos, volume, fs,
+				    0.0, 0.0, 0.0, -1.0, -1.0,
+				    GlobalConfig.include_quality,
+				    GlobalConfig.MHD,
+				    GlobalConfig.divergence_cleaning,
+				    GlobalConfig.radiation);
+	}
+	outfile.close();
+	break;
+    default:
+	auto outfile = new GzipOut(fileName);
+	auto writer = appender!string();
+	formattedWrite(writer, "unstructured_grid_flow 1.0\n");
+	formattedWrite(writer, "label: %s\n", grid.label);
+	formattedWrite(writer, "sim_time: %.18e\n", t0);
+	formattedWrite(writer, "variables: %d\n", variable_list.length);
+	// Variable list for cell on one line.
+	foreach(varname; variable_list) {
+	    formattedWrite(writer, " \"%s\"", varname);
+	}
+	formattedWrite(writer, "\n");
+	// Numbers of cells
+	formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+	formattedWrite(writer, "ncells: %d\n", ncells);
+	outfile.compress(writer.data);
+	// The actual cell data.
+	foreach (i; 0 .. ncells) {
+	    Vector3 pos = Vector3(0.0, 0.0, 0.0);
+	    foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
+	    pos /= grid.cells[i].vtx_id_list.length;
+	    double volume = 0.0; 
+	    outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+						       0.0, 0.0, 0.0, -1.0, -1.0,
+						       GlobalConfig.include_quality,
+						       GlobalConfig.MHD,
+						       GlobalConfig.divergence_cleaning,
+						       GlobalConfig.radiation) ~ "\n");
+	}
+	outfile.finish();
+    } // end switch flow_format
     return;
 } // end write_initial_flow_file() UnstructuredGrid version
 

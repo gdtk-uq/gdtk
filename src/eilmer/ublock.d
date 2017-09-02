@@ -154,7 +154,7 @@ public:
 
     override void init_grid_and_flow_arrays(string gridFileName)
     {
-	grid = new UnstructuredGrid(gridFileName, "gziptext");
+	grid = new UnstructuredGrid(gridFileName, myConfig.grid_format);
 	if (grid.nvertices != nvertices) {
 	    string msg = format("UnstructuredGrid: incoming grid has %d vertices " ~
 				"but expected %d vertices.", grid.nvertices, nvertices);
@@ -839,10 +839,47 @@ public:
 	auto expected_variable_list = variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
 							     myConfig.MHD, myConfig.divergence_cleaning,
 							     myConfig.radiation);
+	string myLabel;
+	size_t nvariables;
+	int my_dimensions;
+	size_t nc;
 	switch (myConfig.flow_format) {
 	case "gziptext": goto default;
 	case "rawbinary":
-	    // [TODO] today 2017-09-01
+	    File fin = File(filename, "rb");
+	    string expected_header = "unstructured_grid_flow 1.0";
+	    char[] found_header = new char[expected_header.length];
+	    fin.rawRead(found_header);
+	    if (found_header != expected_header) {
+		throw new FlowSolverException("UBlock.read_solution from raw_binary_file: " ~
+					      "unexpected header: " ~ to!string(found_header)); 
+	    }
+	    int[1] int1; fin.rawRead(int1);
+	    int label_length = int1[0];
+	    if (label_length > 0) {
+		char[] found_label = new char[label_length];
+		fin.rawRead(found_label);
+		myLabel = to!string(found_label);
+	    }
+	    double[1] dbl1; fin.rawRead(dbl1); sim_time = dbl1[0];
+	    fin.rawRead(int1); nvariables = int1[0];
+	    foreach(i; 0 .. nvariables) {
+		char[] varname; fin.rawRead(int1); varname.length = int1[0]; 
+		fin.rawRead(varname);
+	    }
+	    int[2] int2; fin.rawRead(int2); my_dimensions = int2[0]; nc = int2[1];
+	    if (my_dimensions != myConfig.dimensions) {
+		string msg = text("dimensions found: " ~ to!string(my_dimensions));
+		throw new FlowSolverException(msg);
+	    }
+	    if (nc != ncells) {
+		string msg = text("For block[", id, "] we have a mismatch in solution size.",
+				  " Have read nc=", nc, " ncells=", ncells);
+		throw new FlowSolverException(msg);
+	    }	
+	    foreach (i; 0 .. ncells) {
+		cells[i].read_values_from_raw_binary(fin, overwrite_geometry_data);
+	    }
 	    break;
 	default:
 	    auto byLine = new GzipByLine(filename);
@@ -854,21 +891,17 @@ public:
 				  ~ format_version);
 		throw new FlowSolverException(msg); 
 	    }
-	    string myLabel;
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "label: %s", &myLabel);
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "sim_time: %g", &sim_time);
-	    size_t nvariables;
 	    line = byLine.front; byLine.popFront();
 	    formattedRead(line, "variables: %d", &nvariables);
 	    line = byLine.front; byLine.popFront();
 	    // ingore variableNames = line.strip().split();
 	    line = byLine.front; byLine.popFront();
-	    int my_dimensions;
 	    formattedRead(line, "dimensions: %d", &my_dimensions);
 	    line = byLine.front; byLine.popFront();
-	    size_t nc;
 	    formattedRead(line, "ncells: %d", &nc);
 	    if (nc != ncells) {
 		string msg = text("For block[", id, "] we have a mismatch in solution size.",
@@ -897,7 +930,21 @@ public:
 	switch (myConfig.flow_format) {
 	case "gziptext": goto default;
 	case "rawbinary":
-	    // [TODO] today 2017-09-01
+	    File outfile = File(filename, "wb");
+	    int[1] int1; int[2] int2; double[1] dbl1; // buffer arrays
+	    string header = "unstructured_grid_flow 1.0";
+	    outfile.rawWrite(to!(char[])(header));
+	    int1[0] = to!int(label.length); outfile.rawWrite(int1);
+	    if (label.length > 0) { outfile.rawWrite(to!(char[])(label)); }
+	    dbl1[0] = sim_time; outfile.rawWrite(dbl1);
+	    int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
+	    foreach(varname; variable_list) {
+		int1[0] = to!int(varname.length); outfile.rawWrite(int1);
+		outfile.rawWrite(to!(char[])(varname));
+	    }
+	    int2[0] = myConfig.dimensions; int2[1] = to!int(ncells); outfile.rawWrite(int2);
+	    foreach(cell; cells) { cell.write_values_to_raw_binary(outfile); }
+	    outfile.close();
 	    break;
 	default:
 	    auto outfile = new GzipOut(filename);
