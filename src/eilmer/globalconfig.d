@@ -416,6 +416,7 @@ final class GlobalConfig {
     shared static double max_mu_t_factor = 300.0;
     shared static double transient_mu_t_factor = 1.0;
     static BlockZone[] turbulent_zones;
+    static shared bool do_compute_distance_to_nearest_wall = false; // don't do this unless we really want
 
     // Indicate presence of user-defined source terms
     shared static string udf_source_terms_file = "dummy-source-terms.txt";

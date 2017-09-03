@@ -105,7 +105,9 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, gridFileExt)); 
 	}
 	myblk.compute_primary_cell_geometric_data(0);
-	myblk.compute_distance_to_nearest_wall_for_all_cells(0);
+	if (GlobalConfig.do_compute_distance_to_nearest_wall) {
+	    myblk.compute_distance_to_nearest_wall_for_all_cells(0);
+	}
 	myblk.identify_reaction_zones(0);
 	myblk.identify_turbulent_zones(0);
 	// I don't mind if blocks write over sim_time.  
@@ -115,7 +117,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	    cell.encode_conserved(0, 0, myblk.omegaz);
 	    // Even though the following call appears redundant at this point,
 	    // fills in some gas properties such as Prandtl number that is
-	    // needed for both the cfd_check and the BLomax turbulence model.
+	    // needed for both the cfd_check and the BaldwinLomax turbulence model.
 	    cell.decode_conserved(0, 0, myblk.omegaz);
 	}
 	myblk.set_cell_dt_chem(-1.0);
@@ -461,12 +463,15 @@ void integrate_in_time(double target_time_as_requested)
 	    foreach (blk; gasBlocks) {
 		if (blk.active) {
 		    blk.compute_primary_cell_geometric_data(0);
-		    blk.compute_distance_to_nearest_wall_for_all_cells(0);
-		    if ((blk.grid_type == Grid_t.unstructured_grid) && (blk.myConfig.interpolation_order > 1)) { 
+		    if (GlobalConfig.do_compute_distance_to_nearest_wall) {
+			blk.compute_distance_to_nearest_wall_for_all_cells(0);
+		    }
+		    if ((blk.grid_type == Grid_t.unstructured_grid) &&
+			(blk.myConfig.interpolation_order > 1)) { 
 			blk.compute_least_squares_setup_for_reconstruction(0);
 		    }
-		}
-	    }	    
+		} // end if active
+	    } // end foreach blk
 	}
 	// 2d. Solid domain update (if loosely coupled)
 	//     (If tight coupling, then this has been performed in the gasdynamic_explicit_increment()
