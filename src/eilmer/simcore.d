@@ -56,6 +56,7 @@ version (cuda_gpu_chem) {
 // Needs to be seen by all of the coordination functions.
 shared static int current_tindx;
 shared static double sim_time;  // present simulation time, tracked by code
+shared static double[] sim_time_array;
 shared static int step;
 shared static double dt_global;     // simulation time step determined by code
 shared static double dt_allow;      // allowable global time step determined by code
@@ -95,24 +96,25 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     if (GlobalConfig.verbosity_level > 0) {
 	writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
     }
-    foreach (myblk; gasBlocks) {
-	// [TODO] Note that this loop is serial; Can we do some in parallel? <<<<<<<  PJ 2017-09-02 <<<<<<<<<<<<<<<<<<<<<
-	if (GlobalConfig.verbosity_level > 1) { writeln("myblk=", myblk); }
+    foreach (myblk; parallel(gasBlocks,1)) {
 	if (GlobalConfig.grid_motion != GridMotion.none) {
-	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, tindx, gridFileExt)); 
+	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, current_tindx, gridFileExt)); 
 	} else {
 	    // Assume there is only a single, static grid stored at tindx=0
 	    myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, 0, gridFileExt)); 
 	}
 	myblk.compute_primary_cell_geometric_data(0);
-	if (GlobalConfig.do_compute_distance_to_nearest_wall) {
-	    myblk.compute_distance_to_nearest_wall_for_all_cells(0);
-	}
+    }
+    if (GlobalConfig.do_compute_distance_to_nearest_wall) {
+	foreach (myblk; parallel(gasBlocks,1)) { myblk.compute_distance_to_nearest_wall_for_all_cells(0); }
+    }
+    sim_time_array.length = gasBlocks.length;
+    foreach (i, myblk; parallel(gasBlocks,1)) {
 	myblk.identify_reaction_zones(0);
 	myblk.identify_turbulent_zones(0);
 	// I don't mind if blocks write over sim_time.  
 	// They should all have the same value for it.
-	sim_time = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, tindx, flowFileExt), false);
+	sim_time_array[i] = myblk.read_solution(make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt), false);
 	foreach (cell; myblk.cells) {
 	    cell.encode_conserved(0, 0, myblk.omegaz);
 	    // Even though the following call appears redundant at this point,
@@ -122,6 +124,8 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	}
 	myblk.set_cell_dt_chem(-1.0);
     }
+    sim_time = sim_time_array[0]; // Pick one; they should all be the same.
+    //
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.
@@ -212,7 +216,9 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     dt_global = GlobalConfig.dt_init; 
     //
     if (GlobalConfig.verbosity_level > 0) {
-	writeln("Done init_simulation().");
+	// For reporting wall-clock time, convert to seconds with precision of milliseconds.
+	double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0;
+	writefln("Done init_simulation() at wall-clock(WC)= %.1g sec", wall_clock_elapsed);
 	stdout.flush();
     }
     return;
@@ -502,7 +508,8 @@ void integrate_in_time(double target_time_as_requested)
             // Print the current time-stepping status.
 	    auto writer = appender!string();
 	    formattedWrite(writer, "Step=%7d t=%10.3e dt=%10.3e ", step, sim_time, dt_global);
-	    double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0; // convert to seconds with precision of milliseconds
+	    // For reporting wall-clock time, convert to seconds with precision of milliseconds.
+	    double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0;
 	    double wall_clock_per_step = wall_clock_elapsed / step;
 	    double WCtFT = (GlobalConfig.max_time - sim_time) / dt_global * wall_clock_per_step;
 	    double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
