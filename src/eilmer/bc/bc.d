@@ -60,11 +60,9 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
 	newBC.preSpatialDerivActionAtBndryFaces ~= make_BIE_from_json(jsonObj, blk_id, boundary);
     }
     auto preSpatialDerivActionsAtBndryCells = jsonData["pre_spatial_deriv_action_at_bndry_faces"].array;
-    /* [TODO] Connect this up
     foreach ( jsonObj; preSpatialDerivActionsAtBndryCells ) {
 	newBC.preSpatialDerivActionAtBndryCells ~= make_BCE_from_json(jsonObj, blk_id, boundary);
     }
-    */
     auto postDiffFluxActions = jsonData["post_diff_flux_action"].array;
     foreach ( jsonObj; postDiffFluxActions ) {
 	newBC.postDiffFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
