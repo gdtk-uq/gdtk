@@ -27,7 +27,7 @@ BoundaryCellEffect make_BCE_from_json(JSONValue jsonData, int blk_id, int bounda
 	newBCE = new BCE_WallFunction(blk_id, boundary);
 	break;
     default:
-	string errMsg = format("ERROR: The BoundarCellEffect type: '%s' is unknown.", bceType);
+	string errMsg = format("ERROR: The BoundaryCellEffect type: '%s' is unknown.", bceType);
 	throw new FlowSolverException(errMsg);
     }
     return newBCE;
