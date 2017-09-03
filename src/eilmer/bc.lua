@@ -352,7 +352,6 @@ function WallFunctionCellEffect:tojson()
    return str
 end
 
-
 -- Base class and subclasses for BoundaryFluxEffect
 BoundaryFluxEffect = {
    type = ""
@@ -508,7 +507,7 @@ function WallBC_NoSlip_FixedT:new(o)
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
 	    WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
-	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
+	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
    end
    if o.catalytic_type and o.catalytic_type ~= "none" then
@@ -536,7 +535,7 @@ function WallBC_NoSlip_Adiabatic:new(o)
 	 -- Only makes sense to add a wall function if the k-omega model is active.
 	 o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
 	    WallFunctionInterfaceEffect:new{thermal_condition='ADIABATIC'}
-	 o.preSpatialDerivActionAtBndryCells[#o.preSpatialDerivActionAtBndryCells+1] = WallFunctionCellEffect:new()
+	 o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
       end
    end
    if o.catalytic_type and o.catalytic_type ~= "none" then
