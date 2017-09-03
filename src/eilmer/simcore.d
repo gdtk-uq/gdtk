@@ -218,7 +218,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     if (GlobalConfig.verbosity_level > 0) {
 	// For reporting wall-clock time, convert to seconds with precision of milliseconds.
 	double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0;
-	writefln("Done init_simulation() at wall-clock(WC)= %.1g sec", wall_clock_elapsed);
+	writefln("Done init_simulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
 	stdout.flush();
     }
     return;
