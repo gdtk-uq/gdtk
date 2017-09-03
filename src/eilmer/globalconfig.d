@@ -1344,6 +1344,10 @@ void configCheckPoint3()
 	    throw new FlowSolverException(msg);
 	}
     }
+    // Switch on computing nearest distance to wall if using turbulence model.
+    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
+	GlobalConfig.do_compute_distance_to_nearest_wall = true;
+    }
     return;
 }
 
