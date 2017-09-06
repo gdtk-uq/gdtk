@@ -1,4 +1,4 @@
--- back.py
+-- back.lua
 -- Conical nozzle from Back, Massier and Gier (1965)
 -- Peter J. 2015-10-21 adpated from the Python version.
 --          
@@ -20,7 +20,7 @@ end
 low_pressure_gas = FlowState:new{p=30.0, T=300.0}
 
 -- Define geometry.
--- The original paper specifies sizes in inches, Eilmer3 works in metres.
+-- The original paper specifies sizes in inches, Eilmer works in metres.
 inch = 0.0254 -- metres
 L_subsonic = 3.0 * inch
 L_nozzle = 3.0 * inch
