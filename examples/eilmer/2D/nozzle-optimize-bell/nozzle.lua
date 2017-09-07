@@ -117,6 +117,8 @@ setHistoryPoint{ib=1, i=nx1-1, j=1}
 identifyBlockConnections()
 -- then, directly specify the stagnation conditions for the subsonic inflow.
 subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas}
+-- to get loads on thrust surface, add that boundary condition to the group
+supersonic_region.bcList[north] = WallBC_WithSlip:new{group="loads"}
 downstream_region.bcList[east] = OutFlowBC_Simple:new{}
 external_region.bcList[east] = OutFlowBC_Simple:new{}
 external_region.bcList[west] = InFlowBC_Supersonic:new{flowCondition=external_stream}
@@ -129,4 +131,5 @@ config.max_step = 50000
 config.dt_init = 1.0e-7
 config.dt_plot = 0.1e-3
 config.dt_history = 10.0e-6
+config.dt_loads = 1.0e-3
 
