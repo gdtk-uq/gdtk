@@ -557,15 +557,20 @@ extern(C) int newSubRangedSurface(lua_State* L)
 A table with input parameters is expected as the first argument.`;
 	luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 1, ["underlying_psurface", "r0", "r1", "s0", "s1"])) {
+    if (!checkAllowedNames(L, 1, ["underlying_psurface", "underlying_surface", "r0", "r1", "s0", "s1"])) {
 	string errMsg = "Error in call to SubRangedSurface:new{}. Invalid name in table.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // Expect a Surface object at the first array position in the table.
+    // Expect a ParametricSurface object at the first array position in the table.
+    // I couldn't decide which field name was clearer and/or more consistent, so I've allowed both.
     lua_getfield(L, 1, "underlying_psurface");
-    if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to SubRangedSurface:new{}. No underlying_psurface field found.";
-	luaL_error(L, errMsg.toStringz());
+    if (lua_isnil(L, -1)) {
+	lua_pop(L, 1); // dispose of the nil value
+	lua_getfield(L, 1, "underlying_surface"); // try alternate name
+	if (lua_isnil(L, -1)) {
+	    string errMsg = "Error in call to SubRangedSurface:new{}. No underlying_psurface field found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
     }
     auto psurf = checkSurface(L, -1);
     lua_pop(L, 1);
