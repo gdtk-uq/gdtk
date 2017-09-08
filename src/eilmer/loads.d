@@ -162,39 +162,50 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
     double mu_wall = fs.gas.mu;
     double k_wall = fs.gas.k;
     double P = fs.gas.p;
-    double dTtrdx = grad.Ttr[0]; double dTtrdy = grad.Ttr[1]; double dTtrdz = grad.Ttr[2]; 
-    double dudx = grad.vel[0][0]; double dudy = grad.vel[0][1]; double dudz = grad.vel[0][2];
-    double dvdx = grad.vel[1][0]; double dvdy = grad.vel[1][1]; double dvdz = grad.vel[1][2];
-    double dwdx = grad.vel[2][0]; double dwdy = grad.vel[2][1]; double dwdz = grad.vel[2][2];
-    // compute heat load
-    double dTdn = dTtrdx*nx + dTtrdy*ny + dTtrdz*nz; // dot product
-    double q = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
-    // compute stress tensor at interface in global reference frame
-    double lmbda = -2.0/3.0 * mu_wall;
-    double tau_xx = 2.0*mu_wall*dudx + lmbda*(dudx + dvdy + dwdz);
-    double tau_yy = 2.0*mu_wall*dvdy + lmbda*(dudx + dvdy + dwdz);
-    double tau_zz = 2.0*mu_wall*dwdz + lmbda*(dudx + dvdy + dwdz);
-    double tau_xy = mu_wall * (dudy + dvdx);
-    double tau_xz = mu_wall * (dudz + dwdx);
-    double tau_yz = mu_wall * (dvdz + dwdy);
-    double sigma_x = P + tau_xx;
-    double sigma_y = P + tau_yy;
-    double sigma_z = P + tau_zz;
-    // compute direction cosines for interface normal
-    double l = nx / sqrt(nx*nx + ny*ny + nz*nz);
-    double m = ny / sqrt(nx*nx + ny*ny + nz*nz);
-    double n = nz / sqrt(nx*nx + ny*ny + nz*nz);
-    // transform stress tensor -- we only need stress on a single surface
-    // we can avoid performing the entire transformation by following
-    // the procedure in Roark's Formulas for Stress and Strain (Young and Budynas) pg. 21.
-    double sigma_wall = sigma_x*l*l+sigma_y*m*m+sigma_z*n*n+2.0*tau_xy*l*m+2.0*tau_yz*m*n+2.0*tau_xz*n*l;
-    double tau_wall = sqrt((sigma_x*l+tau_xy*m+tau_xz*n)*(sigma_x*l+tau_xy*m+tau_xz*n)
-		    +(tau_xy*l+sigma_y*m+tau_yz*n)*(tau_xy*l+sigma_y*m+tau_yz*n)
-		    +(tau_xz*l+tau_yz*m+sigma_z*n)*(tau_xz*l+tau_yz*m+sigma_z*n)-sigma_wall*sigma_wall);
-    // tau_wall directional cosines
-    double l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
-    double m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
-    double n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
+    double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q;
+    if (GlobalConfig.viscous) {
+	double dTtrdx = grad.Ttr[0]; double dTtrdy = grad.Ttr[1]; double dTtrdz = grad.Ttr[2]; 
+	double dudx = grad.vel[0][0]; double dudy = grad.vel[0][1]; double dudz = grad.vel[0][2];
+	double dvdx = grad.vel[1][0]; double dvdy = grad.vel[1][1]; double dvdz = grad.vel[1][2];
+	double dwdx = grad.vel[2][0]; double dwdy = grad.vel[2][1]; double dwdz = grad.vel[2][2];
+	// compute heat load
+	double dTdn = dTtrdx*nx + dTtrdy*ny + dTtrdz*nz; // dot product
+	q = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
+	// compute stress tensor at interface in global reference frame
+	double lmbda = -2.0/3.0 * mu_wall;
+	double tau_xx = 2.0*mu_wall*dudx + lmbda*(dudx + dvdy + dwdz);
+	double tau_yy = 2.0*mu_wall*dvdy + lmbda*(dudx + dvdy + dwdz);
+	double tau_zz = 2.0*mu_wall*dwdz + lmbda*(dudx + dvdy + dwdz);
+	double tau_xy = mu_wall * (dudy + dvdx);
+	double tau_xz = mu_wall * (dudz + dwdx);
+	double tau_yz = mu_wall * (dvdz + dwdy);
+	double sigma_x = P + tau_xx;
+	double sigma_y = P + tau_yy;
+	double sigma_z = P + tau_zz;
+	// compute direction cosines for interface normal
+	// [TODO] Kyle, shouldn't the nx, ny and nz values already be direction cosines? PJ 2017-09-09
+	double l = nx / sqrt(nx*nx + ny*ny + nz*nz);
+	double m = ny / sqrt(nx*nx + ny*ny + nz*nz);
+	double n = nz / sqrt(nx*nx + ny*ny + nz*nz);
+	// transform stress tensor -- we only need stress on a single surface
+	// we can avoid performing the entire transformation by following
+	// the procedure in Roark's Formulas for Stress and Strain (Young and Budynas) pg. 21.
+	sigma_wall = sigma_x*l*l+sigma_y*m*m+sigma_z*n*n+2.0*tau_xy*l*m+2.0*tau_yz*m*n+2.0*tau_xz*n*l;
+	tau_wall = sqrt((sigma_x*l+tau_xy*m+tau_xz*n)*(sigma_x*l+tau_xy*m+tau_xz*n)
+			+(tau_xy*l+sigma_y*m+tau_yz*n)*(tau_xy*l+sigma_y*m+tau_yz*n)
+			+(tau_xz*l+tau_yz*m+sigma_z*n)*(tau_xz*l+tau_yz*m+sigma_z*n)
+			-sigma_wall*sigma_wall);
+	// tau_wall directional cosines
+	l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
+	m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
+	n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
+    } else {
+	// For an inviscid simulation, we have only pressure.
+	sigma_wall = P;
+	tau_wall = 0.0;
+	l_tau = 0.0; m_tau = 0.0; n_tau = 0.0;
+	q = 0.0;
+    }
     // store in file
     auto writer = format("%f %f %f %f %f %f %f %f %f %f %f %f %f \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz);
     append(fname, writer);    
