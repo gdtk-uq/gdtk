@@ -207,6 +207,6 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
 	q = 0.0;
     }
     // store in file
-    auto writer = format("%f %f %f %f %f %f %f %f %f %f %f %f %f \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz);
+    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz);
     append(fname, writer);    
 } // end compute_and_store_loads()
