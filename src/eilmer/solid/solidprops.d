@@ -18,22 +18,20 @@ import sgrid;
 import globalconfig;
 import solidfvcell;
 
-class SolidProps {
+struct SolidProps {
 public:
-    double rho;
-    double k;
-    double Cp;
-    double k11, k12, k13;
-    double k21, k22, k23;
-    double k31, k32, k33;
-
-    this()
-    {
-	rho = 0.0; k = 0.0; Cp = 0.0;
-	k11 = 0.0; k12 = 0.0; k13 = 0.0;
-	k21 = 0.0; k22 = 0.0; k23 = 0.0;
-	k31 = 0.0; k32 = 0.0; k33 = 0.0;
-    }
+    double rho = 0.0;
+    double k = 0.0;
+    double Cp = 0.0;
+    double k11 = 0.0;
+    double k12 = 0.0;
+    double k13 = 0.0;
+    double k21 = 0.0;
+    double k22 = 0.0;
+    double k23 = 0.0;
+    double k31 = 0.0;
+    double k32 = 0.0;
+    double k33 = 0.0;
 
     this(double rho_, double k_, double Cp_,
 	 double k11_=0.0, double k12_=0.0, double k13_=0.0,
@@ -68,32 +66,12 @@ public:
 
 }
 
-SolidProps makeSolidPropsFromJson(JSONValue jsonData)
-{
-    auto rho = getJSONdouble(jsonData, "rho", 8960.0);
-    auto k = getJSONdouble(jsonData, "k", 401.0);
-    auto Cp = getJSONdouble(jsonData, "Cp", 386.0);
-    auto k11 = getJSONdouble(jsonData, "k11", 0.0);
-    auto k12 = getJSONdouble(jsonData, "k12", 0.0);
-    auto k13 = getJSONdouble(jsonData, "k13", 0.0);
-    auto k21 = getJSONdouble(jsonData, "k21", 0.0);
-    auto k22 = getJSONdouble(jsonData, "k22", 0.0);
-    auto k23 = getJSONdouble(jsonData, "k23", 0.0);
-    auto k31 = getJSONdouble(jsonData, "k31", 0.0);
-    auto k32 = getJSONdouble(jsonData, "k32", 0.0);
-    auto k33 = getJSONdouble(jsonData, "k33", 0.0);
-    return new SolidProps(rho, k, Cp,
-			  k11, k12, k13,
-			  k21, k22, k23,
-			  k31, k32, k33);
-}
-
-double updateEnergy(SolidProps sp, double T)
+double updateEnergy(ref SolidProps sp, double T)
 {
     return sp.rho*sp.Cp*T;
 }
 
-double updateTemperature(SolidProps sp, double e)
+double updateTemperature(ref SolidProps sp, double e)
 {
     return e/(sp.rho*sp.Cp);
 }

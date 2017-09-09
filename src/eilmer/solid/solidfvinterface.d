@@ -58,7 +58,7 @@ void initPropertiesAtSolidInterfaces(SSolidBlock[] sblks)
 		    Rght = Lft;
 		}
 		IFace = blk.getIfi(i,j,k);
-		IFace.sp = new SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
+		IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
 	    }
 	}
 	// Do j-facing interfaces
@@ -75,7 +75,7 @@ void initPropertiesAtSolidInterfaces(SSolidBlock[] sblks)
 		    Rght = Lft;
 		}
 		IFace = blk.getIfj(i,j,k);
-		IFace.sp = new SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
+		IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
 	    }
 	}
     }

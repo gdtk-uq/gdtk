@@ -43,7 +43,7 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 	double kS = 0.0;
 	if (GlobalConfig.solid_has_isotropic_properties) {
 	    kS = getDouble(L, 4, "k");
-	    sp = new SolidProps(rho, kS, Cp);
+	    sp = SolidProps(rho, kS, Cp);
 	}
 	else {
 	    double k11, k12, k13;
@@ -58,9 +58,9 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 	    k31 = getDouble(L, 4, "k31");
 	    k32 = getDouble(L, 4, "k32");
 	    k33 = getDouble(L, 4, "k33");
-	    sp = new SolidProps(rho, kS, Cp,
-				k11, k12, k13,
-				k21, k22, k23,
+	    sp = SolidProps(rho, kS, Cp,
+			    k11, k12, k13,
+			    k21, k22, k23,
 				k31, k32, k33);
 	}
 	writeInitialSolidFile(fname, grid, T_init, sp, t0);
@@ -82,7 +82,7 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 	double kS = 0.0;
 	if (GlobalConfig.solid_has_isotropic_properties) {
 	    kS = getDouble(L, 4, "k");
-	    sp = new SolidProps(rho, kS, Cp);
+	    sp = SolidProps(rho, kS, Cp);
 	}
 	else {
 	    double k11, k12, k13;
@@ -97,10 +97,10 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 	    k31 = getNumberFromTable(L, -1, "k31", true, 0.0, true, "\nproblem with k31 value");
 	    k32 = getNumberFromTable(L, -1, "k32", true, 0.0, true, "\nproblem with k31 value");
 	    k33 = getNumberFromTable(L, -1, "k33", false, 0.0, true, "\nproblem with k33 value");
-	    sp = new SolidProps(rho, kS, Cp,
-				k11, k12, k13,
-				k21, k22, k23,
-				k31, k32, k33);
+	    sp = SolidProps(rho, kS, Cp,
+			    k11, k12, k13,
+			    k21, k22, k23,
+			    k31, k32, k33);
 	}
     }
     else {
@@ -161,7 +161,7 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 	    double kS = 0.0;
 	    if (GlobalConfig.solid_has_isotropic_properties) {
 		kS = getDouble(L, -1, "k");
-		sp = new SolidProps(rho, kS, Cp);
+		sp = SolidProps(rho, kS, Cp);
 	    }
 	    else {
 		double k11, k12, k13;
@@ -176,10 +176,10 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 		k31 = getNumberFromTable(L, -1, "k31", false, 0.0, true, "\nproblem with k31 value");
 		k32 = getNumberFromTable(L, -1, "k32", false, 0.0, true, "\nproblem with k31 value");
 		k33 = getNumberFromTable(L, -1, "k33", false, 0.0, true, "\nproblem with k33 value");
-		sp = new SolidProps(rho, kS, Cp,
-				    k11, k12, k13,
-				    k21, k22, k23,
-				    k31, k32, k33);
+		sp = SolidProps(rho, kS, Cp,
+				k11, k12, k13,
+				k21, k22, k23,
+				k31, k32, k33);
 	    }
 	    lua_pop(L, 1);
 	}

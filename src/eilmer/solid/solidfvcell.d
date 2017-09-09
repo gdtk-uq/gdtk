@@ -51,7 +51,6 @@ public:
 	this.myConfig = myConfig;
 	e.length = myConfig.n_flow_time_levels;
 	dedt.length = myConfig.n_flow_time_levels;
-	sp = new SolidProps();
     }
 
     void scanValuesFromString(string buffer)
