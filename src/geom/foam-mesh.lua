@@ -123,6 +123,18 @@ function FoamBlock:new(o)
    return o
 end
 
+function markInternalBoundaries(grid, blks)
+   for ib, blk in ipairs(blks) do
+      for bndry,_ in pairs(blk.bndry_labels) do
+	 -- Convert to boundaryset in master grid
+	 iBndry = (ib-1)*6 + faceMap[bndry]
+	 if grid:is_boundaryset_empty(iBndry) then
+	    blk.bndry_labels[bndry] = "internal"
+	 end
+      end
+   end
+end
+
 function amendTags(grid, blks)
    if (vrbLvl >= 2) then
       print("Amending tags in master mesh.")
@@ -225,9 +237,9 @@ function writeCreatePatchDict(grid, blks)
 	    if (bndryLabel == label) then
 	       iBndry = 6*(ib-1) + faceMap[bndry]
 	       tag = grid:get_boundaryset_tag(iBndry)
-           if (not grid:is_boundaryset_empty(iBndry)) then
+	       if (not grid:is_boundaryset_empty(iBndry)) then
 	          f:write(string.format("            %s \n", tag))
-           end
+	       end
 	    end
 	 end
       end
@@ -397,6 +409,7 @@ function main(verbosityLevel)
    if (vrbLvl >= 1) then
       print("   DONE: Joining all grids together.")
    end
+   markInternalBoundaries(myMesh, blks)
    amendTags(myMesh)
    clearPolyMesh()
    writeMesh()
@@ -410,10 +423,21 @@ function main(verbosityLevel)
    writeNoughtDir()
    runCheckMesh()
    -- Print a warning at end if there are unassigned boundary labels
-   if globalBndryLabels.unassigned then
+   -- First do a re-sweep for any 'unassigned' boundaries.
+   local unassigned = false
+   for ib, blk in ipairs(blks) do
+      for bndry, bndryLabel in pairs(blk.bndry_labels) do
+	 if (bndryLabel == "unassigned") then
+	    unassigned = true
+	    break
+	 end
+      end
+      if unassigned == true then break end
+   end
+   if unassiged then
       print("WARNING: Not all boundary faces defined. Undefined boundaries have been grouped in the boundary patch 'unassigned'.")
       print("The following boundaries are unassigned.")
-       for ib, blk in ipairs(blks) do
+      for ib, blk in ipairs(blks) do
 	 for bndry, bndryLabel in pairs(blk.bndry_labels) do
 	    if (bndryLabel == "unassigned") then
 	       print("   blk: ", ib, " bndry: ", bndry)
