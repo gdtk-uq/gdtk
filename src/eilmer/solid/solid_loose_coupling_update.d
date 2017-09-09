@@ -91,7 +91,7 @@ Matrix eval_dedts(Matrix eip1, int ftl, double sim_time)
 		addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
 	    }
 	    scell.e[ftl] = eip1[i, 0];
-	    scell.T = updateTemperature(sblk.sp, scell.e[ftl]);
+	    scell.T = updateTemperature(scell.sp, scell.e[ftl]);
 	    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 	    ret[i, 0] = scell.dedt[ftl];
 	    i += 1;
@@ -328,7 +328,7 @@ void post(Matrix eip1, Matrix dei)
 	    double eicell = eip1[i, 0];
 	    scell.e[0] = eicell;
 	    scell.de_prev = dei[i, 0];
-	    scell.T = updateTemperature(sblk.sp, eicell); //not necesary? 
+	    scell.T = updateTemperature(scell.sp, eicell); //not necesary? 
 	    i += 1; 
 	}
     }
@@ -345,7 +345,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 	foreach (scell; sblk.activeCells) {
 	    if (sim_time-dt_global == 0){ 
 		// initialise e0 values
-		scell.e[0] = updateEnergy(sblk.sp, scell.T); 
+		scell.e[0] = updateEnergy(scell.sp, scell.T); 
 	    }
 	    // make a guess for e[1]
 	    scell.e[1] = scell.e[0] + scell.de_prev; 

@@ -28,6 +28,8 @@ public:
     double volume;
     double areaxy;
     Vector3 pos;
+    // Cell material properties
+    SolidProps sp;
     // Cell state
     double T;
     double[] e;
@@ -49,6 +51,7 @@ public:
 	this.myConfig = myConfig;
 	e.length = myConfig.n_flow_time_levels;
 	dedt.length = myConfig.n_flow_time_levels;
+	sp = new SolidProps();
     }
 
     void scanValuesFromString(string buffer)
@@ -60,13 +63,30 @@ public:
 	volume = to!double(items.front); items.popFront();
 	e[0] = to!double(items.front); items.popFront();
 	T = to!double(items.front); items.popFront();
+	sp.rho = to!double(items.front); items.popFront();
+	sp.Cp = to!double(items.front); items.popFront();
+	sp.k = to!double(items.front); items.popFront();
+	sp.k11 = to!double(items.front); items.popFront();
+	sp.k12 = to!double(items.front); items.popFront();
+	sp.k13 = to!double(items.front); items.popFront();
+	sp.k21 = to!double(items.front); items.popFront();
+	sp.k22 = to!double(items.front); items.popFront();
+	sp.k23 = to!double(items.front); items.popFront();
+	sp.k31 = to!double(items.front); items.popFront();
+	sp.k32 = to!double(items.front); items.popFront();
+	sp.k33 = to!double(items.front); items.popFront();
+	
     }
 
     string writeValuesToString() const
     {
 	auto writer = appender!string();
-	formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e",
-		       pos.x, pos.y, pos.z, volume, e[0], T);
+	formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
+		       pos.x, pos.y, pos.z, volume, e[0], T,
+		       sp.rho, sp.Cp, sp.k,
+		       sp.k11, sp.k12, sp.k13,
+		       sp.k21, sp.k22, sp.k23,
+		       sp.k31, sp.k32, sp.k33);
 	return writer.data;
     }
 
@@ -152,5 +172,9 @@ string[] varListForSolidCell()
     string[] list;
     list ~= ["pos.x", "pos.y", "pos.z", "volume"];
     list ~= ["e", "T"];
+    list ~= ["rho", "Cp", "k"];
+    list ~= ["k11", "k12", "k13"];
+    list ~= ["k21", "k22", "k23"];
+    list ~= ["k31", "k32", "k33"];
     return list;
 }

@@ -20,7 +20,7 @@ import fvinterface;
 import solidfvcell;
 import solidfvinterface;
 
-void computeFluxesAndTemperatures(int ftl, double kS, FVCell[] gasCells, FVInterface[] gasIFaces,
+void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasIFaces,
 				  SolidFVCell[] solidCells, SolidFVInterface[] solidIFaces)
 {
     double dxG, dyG, dnG, dxS, dyS, dnS;
@@ -40,7 +40,7 @@ void computeFluxesAndTemperatures(int ftl, double kS, FVCell[] gasCells, FVInter
 	dnS = fabs(cosA*dxS + cosB*dyS);
 
 	kG_dnG = gasCells[i].fs.gas.k / dnG;
-	kS_dnS = kS / dnS;
+	kS_dnS = solidCells[i].sp.k / dnS;
 
 	T = (gasCells[i].fs.gas.Ttr*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
 	q = -kG_dnG * (T - gasCells[i].fs.gas.Ttr);

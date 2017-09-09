@@ -27,6 +27,14 @@ public:
     double k21, k22, k23;
     double k31, k32, k33;
 
+    this()
+    {
+	rho = 0.0; k = 0.0; Cp = 0.0;
+	k11 = 0.0; k12 = 0.0; k13 = 0.0;
+	k21 = 0.0; k22 = 0.0; k23 = 0.0;
+	k31 = 0.0; k32 = 0.0; k33 = 0.0;
+    }
+
     this(double rho_, double k_, double Cp_,
 	 double k11_=0.0, double k12_=0.0, double k13_=0.0,
 	 double k21_=0.0, double k22_=0.0, double k23_=0.0,
@@ -39,6 +47,25 @@ public:
 	k21 = k21_; k22 = k22_; k23 = k23_;
 	k31 = k31_; k32 = k32_; k33 = k33_;
     }
+
+    // Create a new SolidProps object as a weighted average
+    // of two other objects.
+    this(SolidProps A, SolidProps B, double wA, double wB)
+    {
+	rho = wA*A.rho + wB*B.rho;
+	k = wA*A.k + wB*B.k;
+	Cp = wA*A.Cp + wB*B.Cp;
+	k11 = wA*A.k11 + wB*B.k11;
+	k12 = wA*A.k12 + wB*B.k12;
+	k13 = wA*A.k13 + wB*B.k13;
+	k21 = wA*A.k21 + wB*B.k21;
+	k22 = wA*A.k22 + wB*B.k22;
+	k23 = wA*A.k23 + wB*B.k23;
+	k31 = wA*A.k31 + wB*B.k31;
+	k32 = wA*A.k32 + wB*B.k32;
+	k33 = wA*A.k33 + wB*B.k33;
+    }
+
 }
 
 SolidProps makeSolidPropsFromJson(JSONValue jsonData)
@@ -103,8 +130,12 @@ void writeInitialSolidFile(string fileName, ref StructuredGrid grid,
 	}
 	// Should match SolidFVCell.writeValuesToString()
 	auto writer = appender!string();
-	formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e",
-		       pos.x, pos.y, pos.z, volume, e, T);
+	formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
+		       pos.x, pos.y, pos.z, volume, e, T,
+		       sp.rho, sp.Cp, sp.k,
+		       sp.k11, sp.k12, sp.k13,
+		       sp.k21, sp.k22, sp.k23,
+		       sp.k31, sp.k32, sp.k33);
 	return writer.data;
     }
 

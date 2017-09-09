@@ -1612,10 +1612,7 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-	double kS = solidBlocks[neighbourSolidBlk].sp.k;
-	computeFluxesAndTemperatures(ftl, kS,
-				     _gasCells, _gasIFaces,
-				     _solidCells, _solidIFaces);
+	computeFluxesAndTemperatures(ftl, _gasCells, _gasIFaces, _solidCells, _solidIFaces);
     }
 
 private:

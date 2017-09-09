@@ -74,7 +74,6 @@ public:
 	label = getJSONstring(jsonData, "label", "");
 	this(id, nicell, njcell, nkcell, label);
 	active = getJSONbool(jsonData, "active", true);
-	sp = makeSolidPropsFromJson(jsonData["properties"]);
     }
 
     override void initLuaGlobals()
@@ -692,9 +691,9 @@ public:
 		vtx2 = getVtx(i, j);
 		dTdx = 0.5*(vtx1.dTdx + vtx2.dTdx);
 		dTdy = 0.5*(vtx1.dTdy + vtx2.dTdy);
-		if (myConfig.solid_has_isotropic_properties && myConfig.solid_has_homogeneous_properties) {
-		    qx = -sp.k * dTdx;
-		    qy = -sp.k * dTdy;
+		if (myConfig.solid_has_isotropic_properties) {
+		    qx = -IFace.sp.k * dTdx;
+		    qy = -IFace.sp.k * dTdy;
 		}
 		IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
 	    }
@@ -711,9 +710,9 @@ public:
 		vtx2 = getVtx(i+1, j);
 		dTdx = 0.5*(vtx1.dTdx + vtx2.dTdx);
 		dTdy = 0.5*(vtx1.dTdy + vtx2.dTdy);
-		if (myConfig.solid_has_isotropic_properties && myConfig.solid_has_homogeneous_properties) {
-		    qx = -sp.k * dTdx;
-		    qy = -sp.k * dTdy;
+		if (myConfig.solid_has_isotropic_properties) {
+		    qx = -IFace.sp.k * dTdx;
+		    qy = -IFace.sp.k * dTdy;
 		}
 		IFace.flux = qx * IFace.n.x + qy * IFace.n.y;
 	    }

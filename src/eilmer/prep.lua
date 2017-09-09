@@ -643,15 +643,17 @@ function SolidBlock:new(o)
    assert(o.grid:get_type() == "structured_grid", "grid must be structured") -- for the moment
    assert(o.initTemperature, "need to supply an initTemperature")
    assert(o.properties, "need to supply physical properties for the block")
-   local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp",
-						  "k11", "k12", "k13",
-						  "k21", "k22", "k23",
-						  "k31", "k32", "k33"})
-   assert(flag2, "Invalid name for item supplied in SolidBlock properties table.")
-   -- Fill in the k values as 0.0 if not set.
-   kProps = {"k", "k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
-   for _,kName in ipairs(kProps) do
-      o.properties[kName] = o.properties[kName] or 0.0
+   if (type(o.properties) == 'table') then
+      local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp",
+						     "k11", "k12", "k13",
+						     "k21", "k22", "k23",
+						     "k31", "k32", "k33"})
+      assert(flag2, "Invalid name for item supplied in SolidBlock properties table.")
+      -- Fill in the k values as 0.0 if not set.
+      kProps = {"k", "k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
+      for _,kName in ipairs(kProps) do
+	 o.properties[kName] = o.properties[kName] or 0.0
+      end
    end
    -- Fill in some defaults, if not already set
    if o.active == nil then
@@ -698,20 +700,6 @@ function SolidBlock:tojson()
    str = str .. string.format('    "nic": %d,\n', self.nic)
    str = str .. string.format('    "njc": %d,\n', self.njc)
    str = str .. string.format('    "nkc": %d,\n', self.nkc)
-   str = str .. '    "properties": {\n'
-   str = str .. string.format('       "rho": %.18e,\n', self.properties.rho)
-   str = str .. string.format('       "k": %.18e,\n', self.properties.k)
-   str = str .. string.format('       "Cp": %.18e,\n', self.properties.Cp)
-   str = str .. string.format('       "k11": %.18e,\n', self.properties.k11)
-   str = str .. string.format('       "k12": %.18e,\n', self.properties.k12)
-   str = str .. string.format('       "k13": %.18e,\n', self.properties.k13)
-   str = str .. string.format('       "k21": %.18e,\n', self.properties.k21)
-   str = str .. string.format('       "k22": %.18e,\n', self.properties.k22)
-   str = str .. string.format('       "k23": %.18e,\n', self.properties.k23)
-   str = str .. string.format('       "k31": %.18e,\n', self.properties.k31)
-   str = str .. string.format('       "k32": %.18e,\n', self.properties.k32)
-   str = str .. string.format('       "k33": %.18e\n', self.properties.k33)
-   str = str .. '    },\n'
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
       if not self.bcList[face].is_solid_domain_bc then

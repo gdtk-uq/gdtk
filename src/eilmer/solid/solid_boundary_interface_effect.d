@@ -344,7 +344,7 @@ public:
 			Rght = neighbourBlk.getCell(neighbourBlk.imin, j);
 			IFace = blk.getIfi(blk.imax+1, j);
 			computeBoundaryFlux(Lft, Rght, IFace,
-					    blk.sp.k, neighbourBlk.sp.k);
+					    Lft.sp.k, Rght.sp.k);
 		    }
 		    break;
 		default:
@@ -363,7 +363,7 @@ public:
 			Rght = blk.getCell(blk.imin, j);
 			IFace = blk.getIfi(blk.imin, j);
 			computeBoundaryFlux(Lft, Rght, IFace,
-					    neighbourBlk.sp.k, blk.sp.k);
+					    Lft.sp.k, Rght.sp.k);
 		    }
 		    break;
 		case Face.south:

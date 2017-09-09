@@ -34,6 +34,7 @@ import block;
 import sblock;
 import ssolidblock;
 import solidprops;
+import solidfvinterface;
 import solid_loose_coupling_update;
 import bc;
 import ghost_cell_effect;
@@ -170,6 +171,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	mySolidBlk.computePrimaryCellGeometricData();
 	mySolidBlk.assignVtxLocationsForDerivCalc();
     }
+    initPropertiesAtSolidInterfaces(solidBlocks);
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
 	initSolidLooseCouplingUpdate();
     }
@@ -861,7 +863,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 		scell.stage1Update(dt_global);
-		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 	    } // end foreach scell
 	} // end foreach sblk
     } // end if tight solid domain coupling.
@@ -1008,7 +1010,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		    }
 		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 		    scell.stage2Update(dt_global);
-		    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		    scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 		} // end foreach cell
 	    } // end foreach blk
 	} // end if tight solid domain coupling.
@@ -1156,7 +1158,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 		    }
 		    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 		    scell.stage3Update(dt_global);
-		    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		    scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 		} // end foreach cell
 	    } // end foreach blk
 	} // end if tight solid domain coupling.
@@ -1337,7 +1339,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    }
 	    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 	    scell.stage1Update(dt_global);
-	    scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+	    scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 	} // end foreach scell
     } // end foreach sblk
     /////
@@ -1478,7 +1480,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 		}
 		scell.timeDerivatives(ftl, GlobalConfig.dimensions);
 		scell.stage2Update(dt_global);
-		scell.T = updateTemperature(sblk.sp, scell.e[ftl+1]);
+		scell.T = updateTemperature(scell.sp, scell.e[ftl+1]);
 	    } // end foreach cell
 	} // end foreach blk
     } // end if number_of_stages_for_update_scheme >= 2 
