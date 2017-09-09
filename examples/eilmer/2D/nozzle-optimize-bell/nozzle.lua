@@ -29,17 +29,19 @@ R_curve = 1.55 * inch -- radius of curvature of throat profile
 -- part of the nozzle.
 -- The profile is defined by a circular arc, followed by a Bezier-curve
 -- with 5 defining points {b0, b1, b2, b3, b4} whose positions are set
--- by the angles theta, alpha, beta.
--- With theta defining the nominally-straight conical nozzle,
--- theta is to remain fixed.
+-- by the angles theta_init, alpha, beta, theta_cone.
+-- With theta_init=theta_cone defining the nominally-straight conical nozzle,
+-- theta_cone is to remain fixed.
 -- You may vary alpha and beta away from zero, to generate a curve
 -- to replace the straight profile of the nominal cone.
 -- The values alpha=0 and beta=0 will give you a Bezier curve that
--- happens to be a straight line. 
+-- happens to be a straight line.
+-- Set theta_init > theta_cone to get a rapidly expanding thrust surface.
 --
-theta = 30.0 * math.pi/180.0 -- nominal straight-cone angle, in radians
-alpha = 10.0 * math.pi/180.0  -- angle for setting b2 in Bezier curve
-beta = 10.0 * math.pi/180.0  -- angle for setting b3 in Bezier curve
+theta_cone = math.rad(30.0) -- nominal straight-cone angle, keep fixed
+theta_init = math.rad(30.0) -- starting angle for thrust nozzle, adjust
+alpha = math.rad(0.0)  -- angle for setting b2 in Bezier curve, adjust
+beta = math.rad(0.0)  -- angle for setting b3 in Bezier curve, adjust
 
 -- Compute the centres of curvature for the contraction profile.
 height = R_throat + R_curve
@@ -61,17 +63,18 @@ z3 = Vector3:new{x=0.0, y=0.0}
 p3 = Vector3:new{x=0.0, y=R_throat}
 -- Compute the details of the conical nozzle.
 -- Circular arc to p4, followed by straight line at angle theta to p5.
-p4 = Vector3:new{x=R_curve*math.sin(theta), y=height-R_curve*math.cos(theta)}
+p4 = Vector3:new{x=R_curve*math.sin(theta_init),
+		 y=height-R_curve*math.cos(theta_init)}
 z4 = Vector3:new{x=p4.x, y=0.0}
 L_cone = L_nozzle - p4.x
-R_exit = p4.y + L_cone*math.tan(theta)
+R_exit = p4.y + L_cone*math.tan(theta_cone)
 p5 = Vector3:new{x=p4.x+L_cone, y=R_exit}
 z5 = Vector3:new{x=p5.x, y=0.0}
 -- Final nodes define the Bezier curve.
 b0 = p4
-b1 = p4 + 0.2*L_cone*Vector3:new{x=1.0, y=math.tan(theta)}
-b2 = p4 + 0.4*L_cone*Vector3:new{x=1.0, y=math.tan(theta+alpha)}
-b3 = p5 - 0.3*L_cone*Vector3:new{x=1.0, y=math.tan(theta-beta)}
+b1 = p4 + 0.2*L_cone*Vector3:new{x=1.0, y=math.tan(theta_init)}
+b2 = p4 + 0.4*L_cone*Vector3:new{x=1.0, y=math.tan(theta_init+alpha)}
+b3 = p5 - 0.3*L_cone*Vector3:new{x=1.0, y=math.tan(theta_cone-beta)}
 b4 = p5
 -- Some space downstream of the nozzle exit
 z6 = Vector3:new{x=z5.x+L_nozzle, y=0.0}
