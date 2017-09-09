@@ -427,23 +427,23 @@ function main(verbosityLevel)
    local unassigned = false
    for ib, blk in ipairs(blks) do
       for bndry, bndryLabel in pairs(blk.bndry_labels) do
-	 if (bndryLabel == "unassigned") then
-	    unassigned = true
-	    break
-	 end
+	     if (bndryLabel == "unassigned") then
+	        unassigned = true
+	        break
+	     end
       end
       if unassigned == true then break end
    end
-   if unassiged then
-      print("WARNING: Not all boundary faces defined. Undefined boundaries have been grouped in the boundary patch 'unassigned'.")
+   if unassigned == true then
+      print("WARNING: Not all boundary faces defined. Undefined boundaries have been grouped in the boundary patch 'unassigned'. (Note: Counter starts from 1)")
       print("The following boundaries are unassigned.")
       for ib, blk in ipairs(blks) do
-	 for bndry, bndryLabel in pairs(blk.bndry_labels) do
-	    if (bndryLabel == "unassigned") then
-	       print("   blk: ", ib, " bndry: ", bndry)
-	    end
-	 end
-       end
+	     for bndry, bndryLabel in pairs(blk.bndry_labels) do
+	        if (bndryLabel == "unassigned") then
+	           print("   blk: ", ib, " bndry: ", bndry)
+	        end
+	     end
+      end
    end
 end   
 
