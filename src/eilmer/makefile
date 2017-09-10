@@ -205,6 +205,17 @@ endif
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
+tarball: install
+	- rm dgd-for-mech4480.tgz
+	hg archive -p dgd dgd-for-mech4480.tar
+	cd ../geom; make TARGET=$(TARGET) INSTALL_DIR=$(INSTALL_DIR) install
+	tar -C $(INSTALL_DIR)/.. -r dgdinst -f dgd-for-mech4480.tar
+	gzip dgd-for-mech4480.tar
+	mv dgd-for-mech4480.tar.gz dgd-for-mech4480.tgz
+
+sync-tarball: tarball
+	rsync -av dgd-for-mech4480.tgz cfcfd:/opt/local/share/httpd/htdocs/eilmer/tarball/
+	rsync -av dgd-for-mech4480.tgz mango:dropbox/
 
 demo: $(DEMO_PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
@@ -219,6 +230,7 @@ clean:
 	- rm main_with_rev_string.d
 	- rm steadystate_solver_with_rev_string.d
 	- rm mpi_main_with_rev_string.d e4mpi
+	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
