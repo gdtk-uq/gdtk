@@ -171,7 +171,9 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	mySolidBlk.computePrimaryCellGeometricData();
 	mySolidBlk.assignVtxLocationsForDerivCalc();
     }
-    initPropertiesAtSolidInterfaces(solidBlocks);
+    if (solidBlocks.length > 0) {
+	initPropertiesAtSolidInterfaces(solidBlocks);
+    }
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
 	initSolidLooseCouplingUpdate();
     }
