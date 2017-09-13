@@ -30,18 +30,17 @@ R_curve = 1.55 * inch -- radius of curvature of throat profile
 -- The profile is defined by a circular arc, followed by a Bezier-curve
 -- with 5 defining points {b0, b1, b2, b3, b4} whose positions are set
 -- by the angles theta_init, alpha, beta, theta_cone.
--- With theta_init=theta_cone defining the nominally-straight conical nozzle,
--- theta_cone is to remain fixed.
+-- With theta_init=theta_cone defining the nominally-straight conical nozzle.
 -- You may vary alpha and beta away from zero, to generate a curve
 -- to replace the straight profile of the nominal cone.
 -- The values alpha=0 and beta=0 will give you a Bezier curve that
 -- happens to be a straight line.
 -- Set theta_init > theta_cone to get a rapidly expanding thrust surface.
 --
-theta_cone = math.rad(30.0) -- nominal straight-cone angle, keep fixed
-theta_init = math.rad(30.0) -- starting angle for thrust nozzle, adjust
-alpha = math.rad(0.0)  -- angle for setting b2 in Bezier curve, adjust
-beta = math.rad(0.0)  -- angle for setting b3 in Bezier curve, adjust
+theta_cone = math.rad(30.0) -- nominal straight-cone angle
+theta_init = math.rad(30.0) -- starting angle for thrust nozzle
+alpha = math.rad(0.0)  -- angle for setting b2 in Bezier curve
+beta = math.rad(0.0)  -- angle for setting b3 in Bezier curve
 
 -- Compute the centres of curvature for the contraction profile.
 height = R_throat + R_curve
