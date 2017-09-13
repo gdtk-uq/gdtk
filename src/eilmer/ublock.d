@@ -349,7 +349,7 @@ public:
 	// We will now store the cloud of points in cloud_pos for viscous derivative calcualtions.
 	// This is equivalent to store_references_for_derivative_calc(size_t gtl) in sblock.d
 	// first we define some functions to make the code cleaner (assume gtl=0)
-	void boundary_face_cloud_wall(FVInterface f, ulong i, BoundaryCondition bc, ulong bndary_idx, BoundaryFaceSet boundary) {
+	void boundary_face_cloud_wall(FVInterface f, size_t i, BoundaryCondition bc, size_t bndary_idx, BoundaryFaceSet boundary) {
 	    FVCell cell;
 	    // store the interface
 	    f.cloud_pos ~= &(f.pos);
@@ -374,7 +374,7 @@ public:
 		}
 	    }
 	} // end void boundary_face_cloud_wall()
-	void boundary_face_cloud_generic(FVInterface f, ulong i, BoundaryCondition bc, ulong bndary_idx, BoundaryFaceSet boundary){
+	void boundary_face_cloud_generic(FVInterface f, size_t i, BoundaryCondition bc, size_t bndary_idx, BoundaryFaceSet boundary){
 	    double[] cell_cloud_face_ids;
 	    double[] cell_cloud_cell_ids;
 	    FVCell[] cell_list;
@@ -451,7 +451,7 @@ public:
 		} // end foreach (fvtx; f.vtx)
 	    } // end if (f.cloud_pos.length <= 3) {
 	} // end void boundary_face_cloud_generic()
-	void internal_face_cloud_interfaces(FVInterface f, ulong i) {
+	void internal_face_cloud_interfaces(FVInterface f, size_t i) {
 	    if ( f.is_on_boundary) { return;} // boundaries already set
 	    // store interface
 	    f.cloud_pos ~= &(f.pos);
@@ -472,7 +472,7 @@ public:
 		} // end foreach (other_face; cell.iface)
 	    } // end foreach (cell; cell_list)
 	} // end void internal_face_cloud_interfaces()
-	void internal_face_cloud_cells(FVInterface f, ulong i) {
+	void internal_face_cloud_cells(FVInterface f, size_t i) {
 	    if ( f.is_on_boundary) { return;} // boundaries already set
 	    double[] cell_cloud_face_ids;
 	    double[] cell_cloud_cell_ids;
