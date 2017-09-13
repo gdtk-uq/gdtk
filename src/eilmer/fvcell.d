@@ -411,13 +411,15 @@ public:
 	if ( myConfig.MHD ) { me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z); }
 	// Internal energy is what remains.
 	double u;
-	if (with_k_omega && allow_k_omega_update) {
-	    fs.tke = myU.tke * dinv;
-	    fs.omega = myU.omega * dinv;
-	    u = (rE - myU.tke - me) * dinv - ke;
-	} else if (with_k_omega && !allow_k_omega_update) {
-	    // Do nothing about fs.tke and fs.omega
-	    u = (rE - me) * dinv - fs.tke - ke;
+	if (with_k_omega) {
+	    if (allow_k_omega_update) {
+		fs.tke = myU.tke * dinv;
+		fs.omega = myU.omega * dinv;
+		u = (rE - myU.tke - me) * dinv - ke;
+	    } else {
+		// Do nothing about fs.tke and fs.omega
+		u = (rE - me) * dinv - fs.tke - ke;
+	    }
 	} else {
 	    fs.tke = 0.0;
 	    fs.omega = 1.0;
