@@ -1210,7 +1210,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
     // Engineering Applications.
     // AIAA Journal, 32:8, pp. 1598--1605
     {
-	auto wall_gas = cell.cell_at_nearest_wall.fs.gas;
+	auto wall_gas = cell.fs.gas;
 	double d0 = cell.half_cell_width_at_wall;
 	double nu = wall_gas.mu / wall_gas.rho;
 	double beta1 = 0.075;
