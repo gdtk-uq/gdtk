@@ -46,22 +46,30 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 	    sp = SolidProps(rho, kS, Cp);
 	}
 	else {
-	    double k11, k12, k13;
-	    double k21, k22, k23;
-	    double k31, k32, k33;
+	    double k11 = 0.0;
+            double k12 = 0.0;
+	    double k13 = 0.0;
+	    double k21 = 0.0; 
+	    double k22 = 0.0;
+	    double k23 = 0.0;
+	    double k31 = 0.0;
+	    double k32 = 0.0;
+	    double k33 = 0.0;
 	    k11 = getDouble(L, 4, "k11");
 	    k12 = getDouble(L, 4, "k12");
-	    k13 = getDouble(L, 4, "k13");
 	    k21 = getDouble(L, 4, "k21");
 	    k22 = getDouble(L, 4, "k22");
-	    k23 = getDouble(L, 4, "k23");
-	    k31 = getDouble(L, 4, "k31");
-	    k32 = getDouble(L, 4, "k32");
-	    k33 = getDouble(L, 4, "k33");
+	    if (GlobalConfig.dimensions == 3) {
+		k13 = getDouble(L, 4, "k13");
+		k23 = getDouble(L, 4, "k23");
+		k31 = getDouble(L, 4, "k31");
+		k32 = getDouble(L, 4, "k32");
+		k33 = getDouble(L, 4, "k33");
+	    }
 	    sp = SolidProps(rho, kS, Cp,
 			    k11, k12, k13,
 			    k21, k22, k23,
-				k31, k32, k33);
+			    k31, k32, k33);
 	}
 	writeInitialSolidFile(fname, grid, T_init, sp, t0);
 	return 0;
@@ -85,18 +93,26 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 	    sp = SolidProps(rho, kS, Cp);
 	}
 	else {
-	    double k11, k12, k13;
-	    double k21, k22, k23;
-	    double k31, k32, k33;
-	    k11 = getNumberFromTable(L, -1, "k11", true, 0.0, true, "\nproblem with k11 value");
-	    k12 = getNumberFromTable(L, -1, "k12", true, 0.0, true, "\nproblem with k12 value");
-	    k13 = getNumberFromTable(L, -1, "k13", false, 0.0, true, "\nproblem with k13 value");
-	    k21 = getNumberFromTable(L, -1, "k21", true, 0.0, true, "\nproblem with k21 value");
-	    k22 = getNumberFromTable(L, -1, "k22", true, 0.0, true, "\nproblem with k21 value");
-	    k23 = getNumberFromTable(L, -1, "k23", false, 0.0, true, "\nproblem with k23 value");
-	    k31 = getNumberFromTable(L, -1, "k31", true, 0.0, true, "\nproblem with k31 value");
-	    k32 = getNumberFromTable(L, -1, "k32", true, 0.0, true, "\nproblem with k31 value");
-	    k33 = getNumberFromTable(L, -1, "k33", false, 0.0, true, "\nproblem with k33 value");
+	    double k11 = 0.0;
+            double k12 = 0.0;
+	    double k13 = 0.0;
+	    double k21 = 0.0; 
+	    double k22 = 0.0;
+	    double k23 = 0.0;
+	    double k31 = 0.0;
+	    double k32 = 0.0;
+	    double k33 = 0.0;
+	    k11 = getNumberFromTable(L, 4, "k11", true, 0.0, true, "\nproblem with k11 value");
+	    k12 = getNumberFromTable(L, 4, "k12", true, 0.0, true, "\nproblem with k12 value");
+	    k21 = getNumberFromTable(L, 4, "k21", true, 0.0, true, "\nproblem with k21 value");
+	    k22 = getNumberFromTable(L, 4, "k22", true, 0.0, true, "\nproblem with k21 value");
+	    if (GlobalConfig.dimensions == 3) {
+		k13 = getNumberFromTable(L, 4, "k13", true, 0.0, true, "\nproblem with k13 value");
+		k23 = getNumberFromTable(L, 4, "k23", true, 0.0, true, "\nproblem with k23 value");
+		k31 = getNumberFromTable(L, 4, "k31", true, 0.0, true, "\nproblem with k31 value");
+		k32 = getNumberFromTable(L, 4, "k32", true, 0.0, true, "\nproblem with k31 value");
+		k33 = getNumberFromTable(L, 4, "k33", true, 0.0, true, "\nproblem with k33 value");
+	    }
 	    sp = SolidProps(rho, kS, Cp,
 			    k11, k12, k13,
 			    k21, k22, k23,
@@ -164,18 +180,26 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
 		sp = SolidProps(rho, kS, Cp);
 	    }
 	    else {
-		double k11, k12, k13;
-		double k21, k22, k23;
-		double k31, k32, k33;
+		double k11 = 0.0;
+		double k12 = 0.0;
+		double k13 = 0.0;
+		double k21 = 0.0; 
+		double k22 = 0.0;
+		double k23 = 0.0;
+		double k31 = 0.0;
+		double k32 = 0.0;
+		double k33 = 0.0;
 		k11 = getNumberFromTable(L, -1, "k11", true, 0.0, true, "\nproblem with k11 value");
 		k12 = getNumberFromTable(L, -1, "k12", true, 0.0, true, "\nproblem with k12 value");
-		k13 = getNumberFromTable(L, -1, "k13", false, 0.0, true, "\nproblem with k13 value");
 		k21 = getNumberFromTable(L, -1, "k21", true, 0.0, true, "\nproblem with k21 value");
 		k22 = getNumberFromTable(L, -1, "k22", true, 0.0, true, "\nproblem with k21 value");
-		k23 = getNumberFromTable(L, -1, "k23", false, 0.0, true, "\nproblem with k23 value");
-		k31 = getNumberFromTable(L, -1, "k31", false, 0.0, true, "\nproblem with k31 value");
-		k32 = getNumberFromTable(L, -1, "k32", false, 0.0, true, "\nproblem with k31 value");
-		k33 = getNumberFromTable(L, -1, "k33", false, 0.0, true, "\nproblem with k33 value");
+		if (GlobalConfig.dimensions == 3) {
+		    k13 = getNumberFromTable(L, -1, "k13", true, 0.0, true, "\nproblem with k13 value");
+		    k23 = getNumberFromTable(L, -1, "k23", true, 0.0, true, "\nproblem with k23 value");
+		    k31 = getNumberFromTable(L, -1, "k31", true, 0.0, true, "\nproblem with k31 value");
+		    k32 = getNumberFromTable(L, -1, "k32", true, 0.0, true, "\nproblem with k31 value");
+		    k33 = getNumberFromTable(L, -1, "k33", true, 0.0, true, "\nproblem with k33 value");
+		}
 		sp = SolidProps(rho, kS, Cp,
 				k11, k12, k13,
 				k21, k22, k23,
