@@ -12,7 +12,7 @@ nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
 initial = FlowState:new{p=5955.0, T=304.0, velx=0.0}
 -- Compute inflow from Mach number.
-Q = inflow:toTable()
+inflow_gas = FlowState:new{p=95.84e3, T=1103.0}; Q = inflow_gas:toTable()
 print("T=", Q.T, "density=", Q.rho, "sound speed= ", Q.a)
 M = 1.5
 Vx = M * Q.a
