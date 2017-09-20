@@ -36,7 +36,12 @@ function writeIdealGas(f, sp, db, optsTable)
    f:write(string.format("      T1 = %.8f,\n", db[s].entropyRefValues.T1))
    f:write(string.format("      p1 = %.8e,\n", db[s].entropyRefValues.p1))
    f:write("   },\n")
-   if optsTable and optsTable.viscosity == "CEA" then
+   -- Our default choice for an ideal gas is a simple Sutherland viscosity
+   -- model, but there are two reasons we might NOT use that.
+   -- 1. We override that choice using an option in the options table.
+   -- 2. The Sutherland viscosity model is not available for the particular
+   --    species, so we fall back to CEA coefficients.
+   if (optsTable and optsTable.viscosity == "CEA") or (db[s].sutherlandVisc == nil) then
       f:write("   viscosity = {\n")
       f:write("      model = 'CEA',\n")
       secName = "ceaViscosity"
@@ -63,11 +68,13 @@ function writeIdealGas(f, sp, db, optsTable)
       f:write(string.format("      S = %.8f,\n", db[s].sutherlandVisc.S))
       f:write("   },\n")
    end
+   -- As with viscosity, we'll prefer Sutherland over CEA, unless we can't find Sutherland
+   -- values for this species.
    f:write("   thermCondModel = {\n")
    if optsTable and optsTable.Prandtl then
       f:write("      model = 'constPrandtl',\n")
       f:write(string.format("      Prandtl = %.8f\n", optsTable.Prandtl))
-   elseif optsTable and optsTable.thermal_conductivity == "CEA" then
+   elseif (optsTable and optsTable.thermal_conductivity == "CEA") or (db[s].sutherlandThermCond == nil) then
       f:write("      model = 'CEA',\n")
       secName = "ceaThermCond"
       t = db[s][secName]
