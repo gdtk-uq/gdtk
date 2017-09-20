@@ -25,6 +25,11 @@ db.Ar.epsilon = {
    description = 'Lennard-Jones potential well depth.',
    reference = 'GRI-Mech 3.0 transport file.'
 }
+db.Ar.entropyRefValues = {
+   s1 = 0.0,
+   T1 = 298.15,
+   p1 = 101.325e3
+}
 db.Ar.ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {
