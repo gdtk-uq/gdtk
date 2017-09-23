@@ -211,18 +211,24 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	    }
 	}
     }
-    // We simply use the cell count as an estimate of load.
-    Tuple!(int,int)[] blockLoads;
-    blockLoads.length = GlobalConfig.nBlocks;
-    foreach (iblk, blk; gasBlocks) {
-	// Here 'iblk' is equal to the id of the block.
-	blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
-    }
-    sort!("a[1] > b[1]")(blockLoads);
-
+    // We conditionally sort the blocks, based on numbers of cells,
+    // in an attempt to balance the load for shared-memory parallel runs.
     gasBlocksBySize.length = 0;
-    foreach (blk; blockLoads) {
-	gasBlocksBySize ~= gasBlocks[blk[0]]; // [0] holds the block id
+    if (GlobalConfig.block_marching) {
+	// Keep the original block order, else we stuff up block-marching.
+	foreach (blk; gasBlocks) { gasBlocksBySize ~= blk; }
+    } else {
+	// We simply use the cell count as an estimate of load.
+	Tuple!(int,int)[] blockLoads;
+	blockLoads.length = GlobalConfig.nBlocks;
+	foreach (iblk, blk; gasBlocks) {
+	    // Here 'iblk' is equal to the id of the block.
+	    blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
+	}
+	sort!("a[1] > b[1]")(blockLoads);
+	foreach (blk; blockLoads) {
+	    gasBlocksBySize ~= gasBlocks[blk[0]]; // [0] holds the block id
+	}
     }
 
     // Flags to indicate that the saved output is fresh.
