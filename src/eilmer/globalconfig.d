@@ -1386,8 +1386,12 @@ void init_master_lua_State()
     // Lua state.
     lua_pushnumber(L, GlobalConfig.nBlocks);
     lua_setglobal(L, "nBlocks");
-    lua_pushnumber(L, nghost);
+    lua_pushnumber(L, GlobalConfig.nBlocks);
+    lua_setglobal(L, "nFlowBlocks");
+    lua_pushnumber(L, n_ghost_cell_layers);
     lua_setglobal(L, "nGhost");
+    lua_pushnumber(L, n_ghost_cell_layers);
+    lua_setglobal(L, "nGhostCellLayers");
     // Give the user a table that holds information about
     // all of the blocks
     lua_newtable(L);

@@ -186,6 +186,8 @@ public:
 	    faces ~= new_face;
 	}
 	foreach (i, c; grid.cells) {
+	    // Note that the cell id and the index in the cells array are the same.
+	    // We will reply upon this connection in other parts of the flow code.
 	    auto new_cell = new FVCell(myConfig, i);
 	    new_cell.will_have_valid_flow = true;
 	    cells ~= new_cell;
@@ -253,7 +255,7 @@ public:
 		int my_outsign = bndry.outsign_list[j];
 		// Make ghost-cell id values distinct from FVCell ids so that
 		// the warning/error messages are somewhat informative. 
-		FVCell ghost0 = new FVCell(myConfig, 1000000+ghost_cell_count);
+		FVCell ghost0 = new FVCell(myConfig, ghost_cell_start_id+ghost_cell_count);
 		ghost_cell_count++;
 		ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
 		bc[i].faces ~= my_face;
@@ -494,12 +496,14 @@ public:
 		    FVInterface other_face = faces[other_face_id];
 		    if (cell_cloud_face_ids.canFind(other_face.id) == false) {
 		        // store left and right cell
-		        if (cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false && other_face.left_cell.id < 1000000) {
+		        if (cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false &&
+			    other_face.left_cell.id < ghost_cell_start_id) {
 			    f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
 			    f.cloud_fs ~= other_face.left_cell.fs;
 			    cell_cloud_cell_ids ~= other_face.left_cell.id;
 			}
-			if (cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false && other_face.right_cell.id < 1000000) {
+			if (cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false &&
+			    other_face.right_cell.id < ghost_cell_start_id) {
 			    f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
 			    f.cloud_fs ~= other_face.right_cell.fs;
 			    cell_cloud_cell_ids ~= other_face.right_cell.id;

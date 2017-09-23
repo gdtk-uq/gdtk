@@ -39,6 +39,8 @@ import block;
 import bc;
 import grid_motion;
 
+enum n_ghost_cell_layers = 2; // Ghost-cell layers surround the active cells of a block.
+
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
 immutable double EPSILON = 1.0e-8;
@@ -77,20 +79,20 @@ private:
     OneDInterpolator one_d;
 
 public:
-    this(int id, size_t nicell, size_t njcell, size_t nkcell, string label)
+    this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
     {
-	super(id, Grid_t.structured_grid, label);
+	super(blk_id, Grid_t.structured_grid, label);
 	this.nicell = nicell;
 	this.njcell = njcell;
 	this.nkcell = nkcell;
 	// Fill in other data sizes.
-	_nidim = nicell + 2 * nghost;
-	_njdim = njcell + 2 * nghost;
+	_nidim = nicell + 2 * n_ghost_cell_layers;
+	_njdim = njcell + 2 * n_ghost_cell_layers;
 	// Indices, in each grid direction for the active cells.
 	// These limits are inclusive. The mincell and max cell
 	// are both within the active set of cells.
-	imin = nghost; imax = imin + nicell - 1;
-	jmin = nghost; jmax = jmin + njcell - 1;
+	imin = n_ghost_cell_layers; imax = imin + nicell - 1;
+	jmin = n_ghost_cell_layers; jmax = jmin + njcell - 1;
 	if ( GlobalConfig.dimensions == 2 ) {
 	    // In 2D simulations, the k range is from 0 to 0 for the
 	    // storage arrays of cells and relevant faces.
@@ -102,8 +104,8 @@ public:
 	    kmin = 0; kmax = 0;
 	} else {
 	    // In 3D simulations the k index is just like the i and j indices.
-	    _nkdim = nkcell + 2 * nghost;
-	    kmin = nghost; kmax = kmin + nkcell - 1;
+	    _nkdim = nkcell + 2 * n_ghost_cell_layers;
+	    kmin = n_ghost_cell_layers; kmax = kmin + nkcell - 1;
 	}
 	this.ncells = nicell * njcell * nkcell;
 	// Workspace for flux_calc method.
@@ -111,13 +113,13 @@ public:
 
     } // end constructor
 
-    this(in int id, JSONValue json_data)
+    this(int blk_id, JSONValue json_data)
     {
 	nicell = getJSONint(json_data, "nic", 0);
 	njcell = getJSONint(json_data, "njc", 0);
 	nkcell = getJSONint(json_data, "nkc", 0);
 	label = getJSONstring(json_data, "label", "");
-	this(id, nicell, njcell, nkcell, label);
+	this(blk_id, nicell, njcell, nkcell, label);
 	active = getJSONbool(json_data, "active", true);
 	omegaz = getJSONdouble(json_data, "omegaz", 0.0);
     } // end constructor from json
@@ -307,10 +309,15 @@ public:
 	    // Create the cell and interface objects for the entire structured block.
 	    // This includes the layer of surrounding ghost cells.
 	    foreach (gid; 0 .. ntot) {
-		_ctr ~= new FVCell(myConfig, gid);
-		auto ijk = to_ijk_indices(gid);
+		// auto ijk = to_ijk_indices(gid);
+		// We will reassign cell-id a few lines below.
+		// It will be used for indexing in other parts of the code.
+		_ctr ~= new FVCell(myConfig, 0);
+		// We want distinct numbers for i, j and k interface id values, so add offsets.
+		// Note that we expect to only ever use these id values to help with
+		// identifying faces and vertices in debug printing.
+		// We don't expect to have any other significance attached to the id value.
 		_ifi ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
-		// We want distinct numbers for i, j and k interface ids, so add offsets.
 		_ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid+ntot);
 		if ( myConfig.dimensions == 3 ) {
 		    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid+2*ntot);
@@ -319,6 +326,8 @@ public:
 	    } // gid loop
 	    // Now, assemble the lists of references to the cells, vertices and faces
 	    // in standard order for a structured grid.
+	    // These arrays are held by the Block base class and allow us to handle
+	    // a structured-grid block much as we would an unstructured-grid block.
 	    if (myConfig.dimensions == 2) {
 		foreach (j; jmin .. jmax+1) {
 		    foreach (i; imin .. imax+1) {
@@ -373,6 +382,39 @@ public:
 		    foreach (j; jmin .. jmax+1) {
 			foreach (i; imin .. imax+1) {
 			    faces ~= get_ifk(i, j, k);
+			}
+		    }
+		}
+	    } // end if dimensions
+	    //
+	    // Make the cell.id consistent with the index in the cells array.
+	    // We will depend on this equality in other parts of the flow solver.
+	    foreach (i, c; cells) { c.id = i; }
+	    // Alter the id values of the ghost cells to be a bit like those in the
+	    // unstructured-grid block.
+	    size_t cell_id = ghost_cell_start_id;
+	    if (myConfig.dimensions == 2) {
+		foreach (j; 0 .. _njdim) {
+		    foreach (i; 0 .. _nidim) {
+			if ((j < jmin) || (j > jmax) || (i < imin) || (i > imax)) {
+			    auto c = get_cell(i, j);
+			    assert(c.id == 0, "Oops, did not expect nonzero cell id in a ghost cell.");
+			    c.id = cell_id;
+			    ++cell_id;
+			}
+		    }
+		}
+	    } else { // assume 3D
+		foreach (k; 0 .. _nkdim) {
+		    foreach (j; 0 .. _njdim) {
+			foreach (i; 0 .. _nidim) {
+			    if ((j < jmin) || (j > jmax) || (i < imin) || (i > imax) ||
+				(k < kmin) || (k > kmax)) {
+				auto c = get_cell(i, j, k);
+				assert(c.id == 0, "Oops, did not expect nonzero cell id in a ghost cell.");
+				c.id = cell_id;
+				++cell_id;
+			    }
 			}
 		    }
 		}

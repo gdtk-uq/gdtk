@@ -1,5 +1,5 @@
 // block.d
-// Base class for blocks of cells, for use within Eilmer3.
+// Base class for blocks of cells, for use within the Eilmer flow solver.
 // Peter J. 2014-07-18 first cut.
 
 module block;
@@ -31,10 +31,15 @@ import conservedquantities;
 import lua_helper;
 import grid_motion;
 
-enum
-    nghost = 2; // Number of ghost cells surrounding the active cells.
+// To distinguish ghost cells from active cells, we start their id values at
+// an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
+// if you start using grids larger I expect.
+enum ghost_cell_start_id = 1_000_000;
 
 
+// The flow solver handles structured- and unstructured-grid blocks via this base class.
+// Mostly, we view the block as an unstructured bag of cells because that requires least
+// knowledge in the calling code.
 class Block {
 public:
     int id; // block identifier: assumed to be the same as the block number.

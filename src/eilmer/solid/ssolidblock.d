@@ -20,6 +20,7 @@ import geom;
 import sgrid;
 import globalconfig;
 import block;
+import sblock;
 import solidblock;
 import solidfvcell;
 import solidfvinterface;
@@ -103,13 +104,13 @@ public:
     void fillInOtherSizeData()
     // Helper function for the constructor
     {
-	_nidim = nicell + 2 * nghost;
-	_njdim = njcell + 2 * nghost;
+	_nidim = nicell + 2 * n_ghost_cell_layers;
+	_njdim = njcell + 2 * n_ghost_cell_layers;
 	// Indices, in each grid direction for the active cells.
 	// These limits are inclusive. The mincell and max cell
 	// are both within the active set of cells.
-	imin = nghost; imax = imin + nicell - 1;
-	jmin = nghost; jmax = jmin + njcell - 1;
+	imin = n_ghost_cell_layers; imax = imin + nicell - 1;
+	jmin = n_ghost_cell_layers; jmax = jmin + njcell - 1;
 	if ( myConfig.dimensions == 2 ) {
 	    // In 2D simulations, the k range is from 0 to 0 for the
 	    // storage arrays of cells and relevant faces.
@@ -121,8 +122,8 @@ public:
 	    kmin = 0; kmax = 0;
 	} else {
 	    // In 3D simulations the k index is just like the i and j indices.
-	    _nkdim = nkcell + 2 * nghost;
-	    kmin = nghost; kmax = kmin + nkcell - 1;
+	    _nkdim = nkcell + 2 * n_ghost_cell_layers;
+	    kmin = n_ghost_cell_layers; kmax = kmin + nkcell - 1;
 	}
     } // end fill_in_other_size_data()
 
