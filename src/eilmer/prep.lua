@@ -1163,6 +1163,8 @@ function write_config_file(fileName)
 			 config.turbulence_schmidt_number))
    f:write(string.format('"max_mu_t_factor": %.18e,\n', config.max_mu_t_factor))
    f:write(string.format('"transient_mu_t_factor": %.18e,\n', config.transient_mu_t_factor))
+   f:write(string.format('"limit_tke_production": %s,\n', tostring(config.limit_tke_production)))
+   f:write(string.format('"tke_production_limit_in_kelvins": %.18e,\n', config.tke_production_limit_in_kelvins))
 
    f:write(string.format('"udf_source_terms_file": "%s",\n', config.udf_source_terms_file))
    f:write(string.format('"udf_source_terms": %s,\n', tostring(config.udf_source_terms)))

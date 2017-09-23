@@ -156,6 +156,8 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("turbulence_schmidt_number", "turbulence_schmidt_number"));
     mixin(get_double_field("max_mu_t_factor", "max_mu_t_factor"));
     mixin(get_double_field("transient_mu_t_factor", "transient_mu_t_factor"));
+    mixin(get_bool_field("limit_tke_production", "limit_tke_production"));
+    mixin(get_double_field("tke_production_limit_in_kelvins", "tke_production_limit_in_kelvins"));
     //
     mixin(get_enum_field("tci_model", "tci_model", "tci_model_from_name"));
     //
@@ -300,6 +302,8 @@ extern(C) int configGet(lua_State* L)
     case "turbulence_schmidt_number": lua_pushnumber(L, GlobalConfig.turbulence_schmidt_number); break;
     case "max_mu_t_factor": lua_pushnumber(L, GlobalConfig.max_mu_t_factor); break;
     case "transient_mu_t_factor": lua_pushnumber(L, GlobalConfig.transient_mu_t_factor); break;
+    case "limit_tke_production": lua_pushboolean(L, GlobalConfig.limit_tke_production); break;
+    case "tke_production_limit_in_kelvins": lua_pushnumber(L, GlobalConfig.tke_production_limit_in_kelvins); break;
 	//
     case "tci_model": lua_pushstring(L, tci_model_name(GlobalConfig.tci_model).toStringz); break;
 	//

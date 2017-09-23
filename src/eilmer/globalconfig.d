@@ -415,6 +415,8 @@ final class GlobalConfig {
     shared static double turbulence_schmidt_number = 0.75;
     shared static double max_mu_t_factor = 300.0;
     shared static double transient_mu_t_factor = 1.0;
+    shared static bool limit_tke_production = false;
+    shared static double tke_production_limit_in_kelvins = 5.0;
     static BlockZone[] turbulent_zones;
     static shared bool do_compute_distance_to_nearest_wall = false; // don't do this unless we really want
 
@@ -584,6 +586,8 @@ public:
     double turbulence_schmidt_number;
     double max_mu_t_factor;
     double transient_mu_t_factor;
+    bool limit_tke_production;
+    double tke_production_limit_in_kelvins;
     BlockZone[] turbulent_zones;
 
     bool udf_source_terms;
@@ -677,6 +681,8 @@ public:
 	turbulence_schmidt_number = GlobalConfig.turbulence_schmidt_number;
 	max_mu_t_factor = GlobalConfig.max_mu_t_factor;
 	transient_mu_t_factor = GlobalConfig.transient_mu_t_factor;
+	limit_tke_production = GlobalConfig.limit_tke_production;
+	tke_production_limit_in_kelvins = GlobalConfig.tke_production_limit_in_kelvins;
 	foreach (bz; GlobalConfig.turbulent_zones) { turbulent_zones ~= new BlockZone(bz); }
 	//
 	udf_source_terms = GlobalConfig.udf_source_terms;
@@ -916,6 +922,8 @@ void read_config_file()
     mixin(update_double("turbulence_schmidt_number", "turbulence_schmidt_number"));
     mixin(update_double("max_mu_t_factor", "max_mu_t_factor"));
     mixin(update_double("transient_mu_t_factor", "transient_mu_t_factor"));
+    mixin(update_bool("limit_tke_production", "limit_tke_production"));
+    mixin(update_double("tke_production_limit_in_kelvins", "tke_production_limit_in_kelvins"));
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  viscous: ", GlobalConfig.viscous);
 	writeln("  use_viscosity_from_cells: ", GlobalConfig.use_viscosity_from_cells);
@@ -934,6 +942,8 @@ void read_config_file()
 	writeln("  turbulence_schmidt_number: ", GlobalConfig.turbulence_schmidt_number);
 	writeln("  max_mu_t_factor: ", GlobalConfig.max_mu_t_factor);
 	writeln("  transient_mu_t_factor: ", GlobalConfig.transient_mu_t_factor);
+	writeln("  limit_tke_production: ", GlobalConfig.limit_tke_production);
+	writeln("  tke_production_limit_in_kelvins: ", GlobalConfig.tke_production_limit_in_kelvins);
     }
 
     configCheckPoint3();

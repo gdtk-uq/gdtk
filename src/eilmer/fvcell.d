@@ -26,6 +26,7 @@ import fvinterface;
 import globalconfig;
 import lsqinterp;
 import gas.fuel_air_mix;
+import simcore : dt_global;
 
 // The following functions are used at compile time.
 // Look for mixin statements further down in the file. 
@@ -1240,7 +1241,6 @@ public:
 	} // End of Newton-solve loop for implicit update scheme
     } // end update_k_omega_properties()
 
-    @nogc
     void k_omega_time_derivatives(ref double Q_rtke, ref double Q_romega, double tke, double omega) 
     // Compute k-omega source terms.
     //
@@ -1368,6 +1368,15 @@ public:
 
 	Q_rtke = P_K - D_K;
 	Q_romega = P_W - D_W;
+
+	if (myConfig.limit_tke_production) {
+	    // Apply a final limit on the rate of tke production, related to the local thermodynamic energy
+	    double dt = dt_global;
+	    double deltaT = myConfig.tke_production_limit_in_kelvins;
+	    double Cv = myConfig.gmodel.Cv(fs.gas);
+	    double maxRateBasedOnLimit = fs.gas.rho*Cv*deltaT/dt;
+	    Q_rtke = fmin(maxRateBasedOnLimit, Q_rtke);
+	}
     } // end k_omega_time_derivatives()
 
     @nogc
@@ -1431,7 +1440,6 @@ public:
 	return;
     } // end add_inviscid_source_vector()
 
-    @nogc
     void add_viscous_source_vector(bool with_k_omega) 
     {
 	if (myConfig.axisymmetric) {
