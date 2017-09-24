@@ -1179,7 +1179,7 @@ function write_config_file(fileName)
    f:write(string.format('"ignition_time_stop": %.18e,\n', config.ignition_time_stop))
 
    f:write(string.format('"control_count": %d,\n', config.control_count))
-   f:write(string.format('"nblock": %d,\n', #(fluidBlocks)))
+   f:write(string.format('"nfluidblock": %d,\n', #(fluidBlocks)))
 
    f:write(string.format('"diffuse_wall_bcs_on_init": %s,\n', tostring(config.diffuse_wall_bcs_on_init)))
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))

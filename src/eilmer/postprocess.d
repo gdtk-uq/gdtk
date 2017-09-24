@@ -74,7 +74,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
     //
     if (listInfoFlag) {
 	writeln("Some information about this simulation.");
-	writeln("  nBlocks= ", GlobalConfig.nBlocks);
+	writeln("  nFluidBlocks= ", GlobalConfig.nFluidBlocks);
 	writeln("  nSolidBlocks= ", GlobalConfig.nSolidBlocks);
 	writeln("  last tindx= ", tindx_list[$-1]);
 	writeln("  Flow Variables:");
@@ -120,11 +120,11 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	writeln("writing flow-solution VTK-XML files to directory \"", plotDir, "\"");
 	File visitFile = File(plotDir~"/"~jobName~".visit", "w");
 	// For each time index, the visit justs lists the names of the files for individual blocks.
-	visitFile.writef("!NBLOCKS %d\n", GlobalConfig.nBlocks);
+	visitFile.writef("!NBLOCKS %d\n", GlobalConfig.nFluidBlocks);
 	File pvdFile = begin_PVD_file(plotDir~"/"~jobName~".pvd");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    string pvtuFileName = jobName~format("-t%04d", tindx)~".pvtu";
@@ -145,7 +145,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    writeln("writing solid VTK-XML files to directory \"", plotDir, "\"");
 	    visitFile = File(plotDir~"/"~jobName~"-solid.visit", "w");
 	    // For each time index, the visit justs lists the names of the files for individual blocks.
-	    visitFile.writef("!NBLOCKS %d\n", GlobalConfig.nBlocks);
+	    visitFile.writef("!NBLOCKS %d\n", GlobalConfig.nSolidBlocks);
 	    pvdFile = begin_PVD_file(plotDir~"/"~jobName~"-solid.pvd");
 	    foreach (tindx; tindx_list_to_plot) {
 		writeln("  tindx= ", tindx);
@@ -174,14 +174,14 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
 	    double timeStamp = times_dict[tindx];
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    string fname = format("%s/%s.t%04d", plotDir, jobName, tindx);
 	    if ( writeTecplotBinaryHeader(jobName, tindx, fname, soln.flowBlocks[0].variableNames) != 0 ) {
 		string errMsg = format("Tecplot binary output failed for tindx: %d", tindx);
 		throw new FlowSolverException(errMsg);
 	    }
-	    foreach (jb; 0 .. GlobalConfig.nBlocks) {
+	    foreach (jb; 0 .. GlobalConfig.nFluidBlocks) {
 		int zoneType;
 		size_t[][] connList;
 		prepareGridConnectivity(soln.gridBlocks[jb], zoneType, connList);
@@ -210,7 +210,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	writeln("writing Tecplot file(s) to directory \"", plotDir, "\"");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    // Temporary check for unstructured grids. Remove when unstructured version is implemented.
 	    foreach ( grid; soln.gridBlocks ) {
 		if ( grid.grid_type == Grid_t.unstructured_grid ) {
@@ -255,7 +255,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	}
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    if (outputFormat == "gnuplot") {
@@ -333,7 +333,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	}
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    //
@@ -371,7 +371,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	File pvdFile = begin_PVD_file(plotDir~"/"~surfaceCollectionName~".pvd");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    string pvtuFileName = surfaceCollectionName~format("-t%04d", tindx)~".pvtu";
 	    add_time_stamp_to_PVD_file(pvdFile, soln.sim_time, pvtuFileName);
@@ -431,7 +431,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	double xNew, yNew, zNew;
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    outFile.writeln("xStreamPos ", "yStreamPos ", "zStreamPos ", "relDistance ",
@@ -500,7 +500,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	extractLineStr = extractLineStr.replaceAll(regex("\""), "");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    outFile.writeln(soln.flowBlocks[0].variable_names_as_string(true));
@@ -578,11 +578,11 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	string groupTag = computeLoadsOnGroupStr;
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    double Fx = 0.0; double Fy = 0.0; double Fz = 0.0; double F = 0.0; double q = 0.0;
-	    foreach (blk_indx; 0..GlobalConfig.nBlocks) {
+	    foreach (blk_indx; 0..GlobalConfig.nFluidBlocks) {
 		foreach (boundary_indx; 0..soln.flowBlocks[blk_indx].bcGroups.length) {
 		    auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
 		    size_t[] surf_cells = soln.gridBlocks[blk_indx].get_list_of_boundary_cells(boundary_indx);
@@ -607,7 +607,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	normsStr = normsStr.replaceAll(regex("\""), "");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    //
@@ -1299,6 +1299,6 @@ void write_Tecplot_file(string jobName, string plotDir, FlowSolution soln, int t
 		}
 	    }
 	}
-    } // end for block in nBlocks
+    } // end for jb in 0..nBlocks
     fp.close();
 }

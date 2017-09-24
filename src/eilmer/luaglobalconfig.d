@@ -90,7 +90,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_string_field("udf_supervisor_file", "udf_supervisor_file"));
     mixin(get_bool_field("include_quality", "include_quality"));
     //
-    mixin(get_int_field("nBlocks","nBlocks"));
+    mixin(get_int_field("nFluidBlocks","nFluidBlocks"));
     mixin(get_int_field("dimensions","dimensions"));
     mixin(get_bool_field("axisymmetric","axisymmetric"));
     //
@@ -235,7 +235,7 @@ extern(C) int configGet(lua_State* L)
     case "udf_supervisor_file": lua_pushstring(L, toStringz(GlobalConfig.udf_supervisor_file)); break;
     case "include_quality": lua_pushboolean(L, GlobalConfig.include_quality); break;
 	//
-    case "nBlocks": lua_pushnumber(L, GlobalConfig.nBlocks); break;
+    case "nFluidBlocks": lua_pushnumber(L, GlobalConfig.nFluidBlocks); break;
     case "dimensions": lua_pushnumber(L, GlobalConfig.dimensions); break;
     case "axisymmetric": lua_pushboolean(L, GlobalConfig.axisymmetric); break;
 	//

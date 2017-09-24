@@ -291,7 +291,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     bool inexactNewtonPhase = false;
 
     // No need to have more task threads than blocks
-    auto nThreadsInPool = min(maxCPUs-1, GlobalConfig.nBlocks-1);
+    auto nThreadsInPool = min(maxCPUs-1, GlobalConfig.nFluidBlocks-1);
     defaultPoolThreads(nThreadsInPool);
     writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
 

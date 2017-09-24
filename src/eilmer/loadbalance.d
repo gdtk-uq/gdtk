@@ -106,7 +106,7 @@ void main(string[] args)
     // Determine compute load per block.
     // We simply use the cell count as an estimate of load.
     Tuple!(int,int)[] blockLoads;
-    blockLoads.length = GlobalConfig.nBlocks;
+    blockLoads.length = GlobalConfig.nFluidBlocks;
     foreach (iblk, blk; gasBlocks)
 	blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
     sort!("a[1] > b[1]")(blockLoads);

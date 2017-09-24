@@ -92,7 +92,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     setupIndicesForConservedQuantities(); 
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
-    auto nBlocksInParallel = max(GlobalConfig.nBlocks, GlobalConfig.nSolidBlocks);
+    auto nBlocksInParallel = max(GlobalConfig.nFluidBlocks, GlobalConfig.nSolidBlocks);
     auto nThreadsInPool = min(maxCPUs-1, nBlocksInParallel-1); // no need to have more task threads than blocks
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
     if (GlobalConfig.verbosity_level > 0) {
@@ -220,7 +220,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     } else {
 	// We simply use the cell count as an estimate of load.
 	Tuple!(int,int)[] blockLoads;
-	blockLoads.length = GlobalConfig.nBlocks;
+	blockLoads.length = GlobalConfig.nFluidBlocks;
 	foreach (iblk, blk; gasBlocks) {
 	    // Here 'iblk' is equal to the id of the block.
 	    blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
@@ -263,9 +263,9 @@ void march_over_blocks()
     int nib = GlobalConfig.nib;
     int njb = GlobalConfig.njb;
     int nkb = GlobalConfig.nkb;
-    if (nib*njb*nkb != GlobalConfig.nBlocks) {
+    if (nib*njb*nkb != GlobalConfig.nFluidBlocks) {
 	string errMsg = text("march_over_blocks(): inconsistent numbers of blocks\n",
-			     "    nBlocks=", GlobalConfig.nBlocks,
+			     "    nFluidBlocks=", GlobalConfig.nFluidBlocks,
 			     " nib=", nib, " njb=", njb, " nkb=", nkb);
 	throw new FlowSolverException(errMsg);
     }

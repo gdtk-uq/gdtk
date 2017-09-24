@@ -253,7 +253,7 @@ final class GlobalConfig {
     shared static string udf_supervisor_file; // empty to start
     shared static bool include_quality = false; // if true, we include quality in the solution file  
 
-    shared static int nBlocks = 0; // Number of blocks in the overall simulation.
+    shared static int nFluidBlocks = 0; // Number of fluid blocks in the overall simulation.
     shared static int nSolidBlocks = 0; // Number of solid blocks in the overall simulation.
     shared static int dimensions = 2; // default is 2, other valid option is 3
     shared static bool axisymmetric = false;
@@ -1066,13 +1066,13 @@ void read_config_file()
     //
     // This is done in phases.  The blocks need valid references to LocalConfig objects
     // and the boundary conditions need valid references to Sblock objects.
-    mixin(update_int("nblock", "nBlocks"));
-    if (GlobalConfig.verbosity_level > 1) { writeln("  nBlocks: ", GlobalConfig.nBlocks); }
+    mixin(update_int("nfluidblock", "nFluidBlocks"));
+    if (GlobalConfig.verbosity_level > 1) { writeln("  nFluidBlocks: ", GlobalConfig.nFluidBlocks); }
     // Set up dedicated copies of the configuration parameters for the threads.
-    foreach (i; 0 .. GlobalConfig.nBlocks) {
+    foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
 	dedicatedConfig ~= new LocalConfig(i);
     }
-    foreach (i; 0 .. GlobalConfig.nBlocks) {
+    foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
 	auto jsonDataForBlock = jsonData["block_" ~ to!string(i)];
 	string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
 	switch (gridType) {
@@ -1384,12 +1384,12 @@ void init_master_lua_State()
     luaL_dostring(L, "require 'lua_helper'");
     // Set some globally available constants for the
     // Lua state.
-    lua_pushnumber(L, GlobalConfig.nBlocks);
-    lua_setglobal(L, "nBlocks");
-    lua_pushnumber(L, GlobalConfig.nBlocks);
-    lua_setglobal(L, "nFlowBlocks");
+    lua_pushnumber(L, GlobalConfig.nFluidBlocks);
+    lua_setglobal(L, "nBlocks"); // to keep the old name
+    lua_pushnumber(L, GlobalConfig.nFluidBlocks);
+    lua_setglobal(L, "nFluidBlocks");
     lua_pushnumber(L, n_ghost_cell_layers);
-    lua_setglobal(L, "nGhost");
+    lua_setglobal(L, "nGhost"); // to keep the old name
     lua_pushnumber(L, n_ghost_cell_layers);
     lua_setglobal(L, "nGhostCellLayers");
     // Give the user a table that holds information about
