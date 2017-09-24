@@ -540,7 +540,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	extractSolidLineStr = extractSolidLineStr.replaceAll(regex("\""), "");
 	foreach (tindx; tindx_list_to_plot) {
 	    writeln("  tindx= ", tindx);
-	    auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nBlocks);
+	    auto soln = new SolidSolution(jobName, ".", tindx, GlobalConfig.nSolidBlocks);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
 	    outFile.writeln(soln.solidBlocks[0].variable_names_as_string(true));
 	    size_t[2][] cells_found; // accumulate the identies of the cells found here
