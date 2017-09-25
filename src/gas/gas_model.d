@@ -590,11 +590,18 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     double fp_tol_fail = 0.02 * p_given;
     double fT_tol_fail = 0.02 * T_given;
 
+    // If rho and u are set, then assume these are a reasonable starting guess.
+    // We will assume rho is not set if it is 0.0 or the init value.
+    if ( (Q.rho == 0.0) || (isNaN(Q.rho)) ) {
+	Q.rho = 1.0; // kg/m**3
+    }
+    // We will assume u is not set if it is the init value.
+    if ( isNaN(Q.u) ) {
+	Q.u = 2.0e5; // J/kg
+    }
     // Get an idea of the gas properties by calling the original
-    // equation of state with some dummy values for density
+    // equation of state with some starting values for density
     // and internal energy.
-    Q.rho = 1.0; // kg/m**3 
-    Q.u = 2.0e5; // J/kg 
     gmodel.update_thermo_from_rhou(Q);
     
     T_old = Q.Ttr;
