@@ -11,6 +11,7 @@ import std.math;
 import std.stdio;
 import std.conv;
 import std.algorithm;
+import std.format;
 import geom;
 
 //-----------------------------------------------------------------
@@ -106,7 +107,61 @@ class Grid {
     abstract int get_cell_type(size_t i);
     abstract Grid get_boundary_grid(size_t boundary_indx);
     abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
-    abstract double cell_volume(size_t indx);
+    
+    void compute_cell_properties(size_t indx, ref Vector3 centroid, ref double volume)
+    {
+	double iLen, jLen, kLen, Lmin;
+	size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
+
+	if (dimensions == 2) {
+	    switch (vtx_ids.length) {
+	    case 3:
+		xyplane_triangle_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], vertices[vtx_ids[2]],
+						  centroid, volume, iLen, jLen, Lmin);
+		return;
+	    case 4:
+		xyplane_quad_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
+					     vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+					     centroid, volume, iLen, jLen, Lmin);
+		return;
+	    default:
+		string msg = "Grid.compute_cell_properties(): ";
+		msg ~= format("Unhandled number of vertices: %d", vtx_ids.length);
+		throw new Error(msg);
+	    } // end switch
+	} // end: if 2D
+	// else, 3D
+	switch (vtx_ids.length) {
+	case 4:
+	    tetrahedron_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+				   vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+				   centroid, volume);
+	    return;
+	case 8:
+	    hex_cell_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+				vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+				vertices[vtx_ids[4]], vertices[vtx_ids[5]],
+				vertices[vtx_ids[6]], vertices[vtx_ids[7]],
+				centroid, volume, iLen, jLen, kLen);
+	    return;
+	case 5:
+	    pyramid_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]], 
+			       vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+			       vertices[vtx_ids[4]], 
+			       centroid, volume);
+	    return;
+	case 6:
+	    wedge_properties(vertices[vtx_ids[0]], vertices[vtx_ids[1]],
+			     vertices[vtx_ids[2]], vertices[vtx_ids[3]],
+			     vertices[vtx_ids[4]], vertices[vtx_ids[5]],
+			     centroid, volume);
+	    return;
+	default:
+	    string msg = "Grid.compute_cell_properties(): ";
+	    msg ~= format("Unhandled number of vertices: %d", vtx_ids.length);
+	    throw new Error(msg);
+	} // end switch
+    } // end compute_cell_properties()
 
     bool point_is_inside_cell(ref const(Vector3) p, size_t i)
     {

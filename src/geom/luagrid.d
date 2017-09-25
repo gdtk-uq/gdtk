@@ -19,6 +19,7 @@ import std.string;
 
 import util.lua;
 import util.lua_service;
+import geom;
 import grid;
 import sgrid;
 import usgrid;
@@ -59,8 +60,10 @@ extern(C) int cellVolume(T, string MTname)(lua_State *L)
 {
     auto grid = checkObj!(T, MTname)(L, 1);
     size_t indx = to!size_t(luaL_checkint(L, 2));
-    double vol = grid.cell_volume(indx);
-    lua_pushnumber(L, vol);
+    double volume;
+    Vector3 centroid;
+    grid.compute_cell_properties(indx, centroid, volume);
+    lua_pushnumber(L, volume);
     return 1;
 }
 
