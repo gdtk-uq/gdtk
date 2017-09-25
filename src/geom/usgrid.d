@@ -1123,7 +1123,7 @@ public:
 	// Now that we have the full list of cells and vertices assigned to each cell,
 	// we can construct the faces between cells and along the boundaries.
 	//
-	void add_face_to_cell(ref USGCell cell, size_t[] corners)
+	void add_face_to_cell(ref USGCell cell, size_t[] corners, ref Vector3 cell_centroid)
 	{
 	    // If the face is new, we add it to the list, else we use the face
 	    // already stored within the list, so that it may no longer be
@@ -1153,12 +1153,6 @@ public:
 	    foreach (i; 0 .. corners.length) {
 		v ~= &vertices[faces[face_indx].vtx_id_list[i]];
 	    }
-	    // Location of mid-point of cell.
-	    Vector3 cell_mid = Vector3(vertices[cell.vtx_id_list[0]]);
-	    foreach(i; 1 .. cell.vtx_id_list.length) {
-		cell_mid += vertices[cell.vtx_id_list[i]];
-	    }
-	    cell_mid /= cell.vtx_id_list.length;
 	    //
 	    // Determine if cell is on left- or right-side of face.
 	    //
@@ -1167,7 +1161,7 @@ public:
 	    case 2:
 		// Two-dimensional simulation:
 		// The face is a line in the xy-plane.
-		onLeft = on_left_of_xy_line(*(v[0]), *(v[1]), cell_mid);
+		onLeft = on_left_of_xy_line(*(v[0]), *(v[1]), cell_centroid);
 		break;
 	    case 3:
 		// Three-dimensional simulation:
@@ -1175,7 +1169,7 @@ public:
 		// a counter-clockwise cycle when viewed from outside of the cell.
 		// We expect negative volumes for the pyramid having the cell's
 		// midpoint as its apex.
-		onLeft = (tetrahedron_volume(*(v[0]), *(v[1]), *(v[2]), cell_mid) < 0.0);
+		onLeft = (tetrahedron_volume(*(v[0]), *(v[1]), *(v[2]), cell_centroid) < 0.0);
 		break;
 	    case 4:
 		// Three-dimensional simulation:
@@ -1185,7 +1179,7 @@ public:
 		// midpoint as its apex.
 		Vector3 vmid = 0.25*( *(v[0]) + *(v[1]) + *(v[2]) + *(v[3]) );
 		onLeft = (tetragonal_dipyramid_volume(*(v[0]), *(v[1]), *(v[2]), *(v[3]),
-						      vmid, cell_mid) < 0.0);
+						      vmid, cell_centroid) < 0.0);
 		break;
 	    default:
 		throw new Exception("invalid number of corners on face.");
@@ -1213,18 +1207,21 @@ public:
 	    // In 3D, a counter-clockwise cycles of points plus the right-hand rule
 	    // define the face normal. Whether a face points out of or into a cell
 	    // will be determined and remembered when we add the face to the cell.
+	    Vector3 centroid;
+	    double volume;
+	    compute_cell_properties(i, centroid, volume);
 	    if (dimensions == 2) {
 		switch(cell.cell_type) {
 		case USGCell_type.triangle:
-		    add_face_to_cell(cell, [0,1]);
-		    add_face_to_cell(cell, [1,2]);
-		    add_face_to_cell(cell, [2,0]);
+		    add_face_to_cell(cell, [0,1], centroid);
+		    add_face_to_cell(cell, [1,2], centroid);
+		    add_face_to_cell(cell, [2,0], centroid);
 		    break;
 		case USGCell_type.quad:
-		    add_face_to_cell(cell, [2,3]); // north
-		    add_face_to_cell(cell, [1,2]); // east
-		    add_face_to_cell(cell, [0,1]); // south
-		    add_face_to_cell(cell, [3,0]); // west
+		    add_face_to_cell(cell, [2,3], centroid); // north
+		    add_face_to_cell(cell, [1,2], centroid); // east
+		    add_face_to_cell(cell, [0,1], centroid); // south
+		    add_face_to_cell(cell, [3,0], centroid); // west
 		    break;
 		default:
 		    throw new Exception("invalid cell type in 2D");
@@ -1233,32 +1230,32 @@ public:
 		assert(dimensions == 3, "invalid dimensions");
 		switch(cell.cell_type) {
 		case USGCell_type.tetra:
-		    add_face_to_cell(cell, [0,1,2]);
-		    add_face_to_cell(cell, [0,1,3]);
-		    add_face_to_cell(cell, [1,2,3]);
-		    add_face_to_cell(cell, [2,0,3]);
+		    add_face_to_cell(cell, [0,1,2], centroid);
+		    add_face_to_cell(cell, [0,1,3], centroid);
+		    add_face_to_cell(cell, [1,2,3], centroid);
+		    add_face_to_cell(cell, [2,0,3], centroid);
 		    break;
 		case USGCell_type.hexahedron:
-		    add_face_to_cell(cell, [2,3,7,6]); // north
-		    add_face_to_cell(cell, [1,2,6,5]); // east
-		    add_face_to_cell(cell, [1,0,4,5]); // south
-		    add_face_to_cell(cell, [0,3,7,4]); // west
-		    add_face_to_cell(cell, [4,5,6,7]); // top
-		    add_face_to_cell(cell, [0,1,2,3]); // bottom
+		    add_face_to_cell(cell, [2,3,7,6], centroid); // north
+		    add_face_to_cell(cell, [1,2,6,5], centroid); // east
+		    add_face_to_cell(cell, [1,0,4,5], centroid); // south
+		    add_face_to_cell(cell, [0,3,7,4], centroid); // west
+		    add_face_to_cell(cell, [4,5,6,7], centroid); // top
+		    add_face_to_cell(cell, [0,1,2,3], centroid); // bottom
 		    break;
 		case USGCell_type.wedge:
-		    add_face_to_cell(cell, [0,1,2]);
-		    add_face_to_cell(cell, [3,4,5]);
-		    add_face_to_cell(cell, [0,2,5,3]);
-		    add_face_to_cell(cell, [0,3,4,1]);
-		    add_face_to_cell(cell, [1,4,5,2]);
+		    add_face_to_cell(cell, [0,1,2], centroid);
+		    add_face_to_cell(cell, [3,4,5], centroid);
+		    add_face_to_cell(cell, [0,2,5,3], centroid);
+		    add_face_to_cell(cell, [0,3,4,1], centroid);
+		    add_face_to_cell(cell, [1,4,5,2], centroid);
 		    break;
 		case USGCell_type.pyramid:
-		    add_face_to_cell(cell, [0,1,2,3]);
-		    add_face_to_cell(cell, [0,1,4]);
-		    add_face_to_cell(cell, [1,2,4]);
-		    add_face_to_cell(cell, [2,3,4]);
-		    add_face_to_cell(cell, [3,0,4]);
+		    add_face_to_cell(cell, [0,1,2,3], centroid);
+		    add_face_to_cell(cell, [0,1,4], centroid);
+		    add_face_to_cell(cell, [1,2,4], centroid);
+		    add_face_to_cell(cell, [2,3,4], centroid);
+		    add_face_to_cell(cell, [3,0,4], centroid);
 		    break;
 		default:
 		    throw new Exception("invalid cell type in 3D");
