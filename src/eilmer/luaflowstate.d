@@ -379,6 +379,11 @@ extern(C) int fromTable(lua_State* L)
 			 GlobalConfig.gmodel_master.n_modes);
 	luaL_error(L, errMsg.toStringz);
     }
+    // Let's try to find rho and u so that the pT thermo call
+    // has a good set of starting values.
+    mixin(checkGasVar("rho"));
+    mixin(checkGasVar("u"));
+
     // We should call equation of state to make sure gas state is consistent.
     GlobalConfig.gmodel_master.update_thermo_from_pT(fs.gas);
     GlobalConfig.gmodel_master.update_sound_speed(fs.gas);
