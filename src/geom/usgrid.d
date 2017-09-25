@@ -913,6 +913,50 @@ public:
 	    throw new Error(msg);
 	} // end switch
     } // end cell_volume()
+
+    // Function for checking if defined regions are fully closed.
+    Vector3 vectorAreaOfFacet(size_t[] vtx_id_list)
+    {
+	size_t nv = vtx_id_list.length;
+	assert(nv > 1, "do not have a valid list of vertex ids");
+	Vector3 varea = Vector3(0,0,0);
+	switch (nv) {
+	case 2:
+	    auto p0 = vertices[vtx_id_list[0]];
+	    auto p1 = vertices[vtx_id_list[1]];
+	    varea = cross(p1-p0, Vector3(0,0,1.0));
+	    break;
+	case 3:
+	    auto p0 = vertices[vtx_id_list[0]];
+	    auto p1 = vertices[vtx_id_list[1]];
+	    auto p2 = vertices[vtx_id_list[2]];
+	    varea = cross(p1-p0, p2-p0);
+	    break;
+	default:
+	    Vector3 pmid = Vector3(0,0,0);
+	    foreach (vid; vtx_id_list) { pmid += vertices[vid]; }
+	    pmid /= nv;
+	    // Compute the vector area is triangle sections.
+	    foreach (i; 0 .. nv-1) {
+		auto p0 = vertices[vtx_id_list[i]];
+		auto p1 = vertices[vtx_id_list[i+1]];
+		varea += 0.5 * cross(p1-p0, pmid-p0);
+	    }
+	    auto p0 = vertices[vtx_id_list[nv-1]];
+	    auto p1 = vertices[vtx_id_list[0]];
+	    varea += 0.5 * cross(p1-p0, pmid-p0);
+	}
+	return varea;
+    } // end vectorAreaOfFacet
+
+    Vector3 vectorAreaOfCell(const USGCell c)
+    {
+	Vector3 varea = Vector3(0,0,0);
+	foreach (j, fid; c.face_id_list) {
+	    varea += c.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
+	}
+	return varea;
+    } // end vectorAreaOfCell
     
     // ------------------------
     // Import-from-file methods.
@@ -1218,7 +1262,7 @@ public:
 	    return;
 	} // end add_face_to_cell()
 	//
-	foreach(cell; cells) {
+	foreach(i, cell; cells) {
 	    if (!cell) continue;
 	    // Attach the faces to each cell. In 2D, faces are defined as lines.
 	    // As we progress along the line the face normal is pointing to the right.
@@ -1275,6 +1319,13 @@ public:
 		default:
 		    throw new Exception("invalid cell type in 3D");
 		}
+	    }
+	    Vector3 varea = vectorAreaOfCell(cell);
+	    double relTol=1.0e-9; double absTol=1.0e-9;
+	    if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
+		string errMsg = format("cell id=%d, non-zero vector area=%s",
+				       i, to!string(varea));
+		throw new Exception(errMsg);
 	    }
 	} // end foreach cell
 	nfaces = faces.length;
@@ -1870,48 +1921,10 @@ public:
 	foreach (i, b; boundaries) {
 	    writefln("  BoundarySet[%d] tag=%s nfaces=%d", i, b.tag, b.face_id_list.length);
 	}
-	// Function for checking if defined regions are fully closed.
-	Vector3 vectorArea(size_t[] vtx_id_list)
-	{
-	    size_t nv = vtx_id_list.length;
-	    assert(nv > 1, "do not have a valid list of vertex ids");
-	    Vector3 varea = Vector3(0,0,0);
-	    switch (nv) {
-	    case 2:
-		auto p0 = vertices[vtx_id_list[0]];
-		auto p1 = vertices[vtx_id_list[1]];
-		varea = cross(p1-p0, Vector3(0,0,1.0));
-		break;
-	    case 3:
-		auto p0 = vertices[vtx_id_list[0]];
-		auto p1 = vertices[vtx_id_list[1]];
-		auto p2 = vertices[vtx_id_list[2]];
-		varea = cross(p1-p0, p2-p0);
-		break;
-	    default:
-		Vector3 pmid = Vector3(0,0,0);
-		foreach (vid; vtx_id_list) { pmid += vertices[vid]; }
-		pmid /= nv;
-		// Compute the vector area is triangle sections.
-		foreach (i; 0 .. nv-1) {
-		    auto p0 = vertices[vtx_id_list[i]];
-		    auto p1 = vertices[vtx_id_list[i+1]];
-		    varea += 0.5 * cross(p1-p0, pmid-p0);
-		}
-		auto p0 = vertices[vtx_id_list[nv-1]];
-		auto p1 = vertices[vtx_id_list[0]];
-		varea += 0.5 * cross(p1-p0, pmid-p0);
-	    }
-	    return varea;
-	} // end vectorArea
-	//
 	writeln("Check that each of the cells is closed.");
 	bool allOK = true;
 	foreach (i, c; cells) {
-	    Vector3 varea = Vector3(0,0,0);
-	    foreach (j, fid; c.face_id_list) {
-		varea += c.outsign_list[j] * vectorArea(faces[fid].vtx_id_list);
-	    }
+	    Vector3 varea = vectorAreaOfCell(c);
 	    if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
 		writefln("  cell id=%d, non-zero vector area=%s", i, to!string(varea));
 		allOK = false;
@@ -1923,7 +1936,7 @@ public:
 	Vector3 varea = Vector3(0,0,0);
 	foreach (b; boundaries) {
 	    foreach (j, fid; b.face_id_list) {
-		varea += b.outsign_list[j] * vectorArea(faces[fid].vtx_id_list);
+		varea += b.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
 	    }
 	}  
 	if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
