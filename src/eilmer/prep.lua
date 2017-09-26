@@ -3,6 +3,9 @@
 -- 
 print("Loading prep.lua...")
 
+require 'lua_helper'
+local deepclone = lua_helper.deepclone
+
 function checkAllowedNames(myTable, allowedNames)
    local setOfNames = {}
    local namesOk = true
@@ -188,7 +191,11 @@ function FluidBlock:new(o)
    end
    o.label = o.label or string.format("BLOCK-%d", o.id)
    o.omegaz = o.omegaz or 0.0
-   o.bcList = o.bcList or {} -- boundary conditions passed in, maybe
+   if o.bcList then
+      o.bcList = deepclone(o.bcList, false)
+   else
+      o.bcList = {}
+   end
    o.hcellList = o.hcellList or {}
    o.xforceList = o.xforceList or {}
    -- Check the grid information.
@@ -569,6 +576,7 @@ function FluidBlockArray(t)
 	    if jb == t.njb then
 	       bcList[north] = t.bcList[north]
 	    end
+	    print("Calling FluidBlock...")
 	    new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
 				       fillCondition=t.fillCondition, bcList=bcList}
 	    blockArray[ib][jb] = new_block
@@ -660,7 +668,11 @@ function SolidBlock:new(o)
       o.active = true
    end
    o.label = o.label or string.format("SOLIDBLOCK-%d", o.id)
-   o.bcList = o.bcList or {} -- boundary conditions
+   if o.bcList then
+      o.bcList = deepclone(o.bcList, false)
+   else
+      o.bcList =  {} -- boundary conditions
+   end
    for _,face in ipairs(faceList(config.dimensions)) do
       o.bcList[face] = o.bcList[face] or SolidAdiabaticBC:new{}
    end

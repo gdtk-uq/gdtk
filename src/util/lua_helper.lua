@@ -18,6 +18,9 @@ Following functions are inluded:
 
 Author: Ingo Jahn
 Last Modified: 17/05/2017
+
+Update:
+   2017-09-26 RJG added deepcopy
 --]]
 
 module(..., package.seeall)
@@ -123,6 +126,34 @@ function table.load( sfile )
       end
    end
    return tables[1]
+end
+
+function deepclone (t, nometa)
+  local r = {}
+  if not nometa then
+    setmetatable (r, getmetatable (t))
+  end
+  local d = {[t] = r}
+  local function copy (o, x)
+    for i, v in pairs (x) do
+      if type (v) == "table" then
+        if not d[v] then
+          d[v] = {}
+          if not nometa then
+            setmetatable (d[v], getmetatable (v))
+          end
+          local q = copy (d[v], v)
+          o[i] = q
+        else
+          o[i] = d[v]
+        end
+      else
+        o[i] = v
+      end
+    end
+    return o
+  end
+  return copy (r, t)
 end
 
 -- // print Variable Function
