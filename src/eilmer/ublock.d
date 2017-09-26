@@ -283,7 +283,7 @@ public:
 	    }
 	}
 	// At this point, all faces should have either one finite-volume cell
-	// or one ghost cells attached to a side -- check that this is true.
+	// or one ghost cell attached to each side -- check that this is true.
 	foreach (f; faces) {
 	    bool ok = true;
 	    string msg = " ";
@@ -292,7 +292,7 @@ public:
 		    ok = true;
 		} else {
 		    ok = false;
-		    msg ~= "Boundary face does not have correct number of cells per side.";
+		    msg ~= "Boundary face does not have a cell attached to each side.";
 		}
 	    } else {
 		// not on a boundary, should have one cell only per side.
@@ -300,11 +300,15 @@ public:
 		    ok = true;
 		} else {
 		    ok = false;
-		    msg ~= "Non-boundary face does not have correct number of cells per side.";
+		    msg ~= "Non-boundary face does not have a cell attached to each side.";
 		}
 	    }
 	    if (!ok) {
 		msg = format("After adding ghost cells to face %d: ", f.id) ~ msg;
+		writeln("Oops... ", msg);
+		writeln("grid.faces[f.id].vtx_id_list=", grid.faces[f.id].vtx_id_list);
+		if (f.left_cell) writeln("f.left_cell=", f.left_cell); else writeln("no left cell");
+		if (f.right_cell) writeln("f.right_cell=", f.right_cell); else writeln("no right cell");
 		throw new FlowSolverException(msg);
 	    }
 	} // end foreach f

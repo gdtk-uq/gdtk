@@ -143,6 +143,7 @@ public:
     // in the USGFace copy constructor.  Beware.
     USGCell left_cell;
     USGCell right_cell;
+    bool is_on_boundary = false; // presume not on boundary until marked as such
 
     this(const size_t[] vtx_id_list) 
     {
@@ -1278,6 +1279,7 @@ public:
 	// Now that we have a full set of cells and faces,
 	// make lists of the boundary faces.
 	//
+	foreach (myface; faces) { myface.is_on_boundary = false; } // will remark boundary faces below
 	nboundaries = to!size_t(getHeaderContent("NMARK"));
 	foreach(i; 0 .. nboundaries) {
 	    string tag = getHeaderContent("MARKER_TAG");
@@ -1295,8 +1297,7 @@ public:
 		if (faceTag in faceIndices) {
 		    size_t face_indx = faceIndices[faceTag];
 		    USGFace my_face = faces[face_indx];
-		    assert(my_face.left_cell || my_face.right_cell,
-			   "face is not properly connected");
+		    assert(my_face.left_cell || my_face.right_cell, "face is not properly connected");
 		    if (my_face.left_cell && !(my_face.right_cell)) {
 			outsign_list ~= 1;
 		    } else if ((!my_face.left_cell) && my_face.right_cell) {
@@ -1305,12 +1306,53 @@ public:
 			throw new Exception("appears to be an interior face");
 		    }
 		    face_id_list ~= face_indx;
+		    my_face.is_on_boundary = true;
 		} else {
 		    throw new Exception("cannot find face in collection");
 		}
 	    } // end foreach j
 	    boundaries ~= new BoundaryFaceSet(tag, face_id_list, outsign_list);
 	} // end foreach i
+	//
+	// At this point, all interior faces should have a cell attached to both
+	// left- and right-sides while boundary faces should have a cell attached
+	// to one-side only. -- Check that this is true.
+	foreach (i, myface; faces) {
+	    bool ok = true;
+	    string msg = " ";
+	    if (myface.is_on_boundary) {
+		if (myface.left_cell && !(myface.right_cell)) {
+		    ok = true;
+		} else if (!(myface.left_cell) && myface.right_cell) {
+		    ok = true;
+		} else {
+		    ok = false;
+		    msg ~= "Boundary face does not have one cell attached.";
+		}
+	    } else {
+		// face not on a boundary, should have one cell attached to each side.
+		if (myface.left_cell && myface.right_cell) {
+		    ok = true;
+		} else {
+		    ok = false;
+		    msg ~= "Non-boundary face does not have two cells attached.";
+		}
+	    }
+	    if (!ok) {
+		msg = format("When checking face %d: ", i) ~ msg;
+		writeln("Oops... ", msg);
+		writeln("myface.vtx_id_list=", myface.vtx_id_list);
+		if (myface.left_cell)
+		    writeln("myface.left_cell=", myface.left_cell.toIOString());
+		else
+		    writeln("no left cell");
+		if (myface.right_cell)
+		    writeln("myface.right_cell=", myface.right_cell.toIOString());
+		else
+		    writeln("no right cell");
+		throw new Exception(msg);
+	    }
+	} // end foreach f
 	//
 	// Check that the region bounded by the grid is closed.
 	Vector3 varea = Vector3(0,0,0);
