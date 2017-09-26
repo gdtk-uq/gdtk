@@ -1311,6 +1311,22 @@ public:
 	    } // end foreach j
 	    boundaries ~= new BoundaryFaceSet(tag, face_id_list, outsign_list);
 	} // end foreach i
+	//
+	// Check that the region bounded by the grid is closed.
+	Vector3 varea = Vector3(0,0,0);
+	foreach (b; boundaries) {
+	    foreach (j, fid; b.face_id_list) {
+		varea += b.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
+	    }
+	}  
+	double relTol=1.0e-9; double absTol=1.0e-9;
+	if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
+	    string errMsg = format("SU2 grid has non-zero bounding vector area=", varea);
+	    throw new Exception(errMsg);
+	}
+	//
+	// If we arrive here, the import of the SU2 grid seems to have been successful
+	return;
     } // end read_from_su2_text_file()
 
     void read_from_vtk_text_file(string fileName, double scale=1.0)
