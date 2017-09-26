@@ -868,13 +868,13 @@ public:
 	case 2:
 	    auto p0 = vertices[vtx_id_list[0]];
 	    auto p1 = vertices[vtx_id_list[1]];
-	    varea = cross(p1-p0, Vector3(0,0,1.0));
+	    varea = cross(p1-p0, Vector3(0,0,1.0)); // unit depth in z for this 2D face
 	    break;
 	case 3:
 	    auto p0 = vertices[vtx_id_list[0]];
 	    auto p1 = vertices[vtx_id_list[1]];
 	    auto p2 = vertices[vtx_id_list[2]];
-	    varea = cross(p1-p0, p2-p0);
+	    varea = 0.5 * cross(p1-p0, p2-p0);
 	    break;
 	default:
 	    Vector3 pmid = Vector3(0,0,0);
@@ -1264,8 +1264,12 @@ public:
 	    Vector3 varea = vectorAreaOfCell(cell);
 	    double relTol=1.0e-9; double absTol=1.0e-9;
 	    if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {
-		string errMsg = format("cell id=%d, non-zero vector area=%s",
-				       i, to!string(varea));
+		string errMsg = format("cell id=%d, non-zero vector area=%s\n   cell is %s",
+				       i, to!string(varea), cell.toIOString());
+		foreach (j, fid; cell.face_id_list) {
+		    errMsg ~= format("\n    j=", j, " outsign=", cell.outsign_list[j],
+				     " vectorArea=", vectorAreaOfFacet(faces[fid].vtx_id_list));
+		}
 		throw new Exception(errMsg);
 	    }
 	} // end foreach cell
