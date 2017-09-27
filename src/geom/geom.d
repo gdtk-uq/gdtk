@@ -1322,6 +1322,64 @@ bool inside_tetrahedron(ref const(Vector3) p0, ref const(Vector3) p1,
     return true;
 } // end inside_tetrahedron()
 
+bool inside_pyramid(ref const(Vector3) p0, ref const(Vector3) p1,
+		    ref const(Vector3) p2, ref const(Vector3) p3,
+		    ref const(Vector3) p4, ref const(Vector3) p)
+// Returns true is the point p is inside or on the pyramid surface.
+//
+// The test consists of using the quadrilateral faces as the bases of the pyramid
+// with the sample point p as the apex.
+// The cycle of vertices defining each base is such that the base normal
+// will be point out of the cell.
+// If any of the pyramid volumes are positive (i.e. p is on the positive 
+// side of a face) and we assume a convex cell, it means that the point 
+// is outside the cell and we may say so without further testing.
+//
+// If the logic looks a bit round-about, there is history, since this function
+// was adapted from the inside_hexagon function, below.
+{
+    // Mid-points of quadrilateral base.
+    Vector3 pmid = 0.25*(p3+p2+p1+p0);
+    // Test the volume of the single pyramid.
+    if (tetragonal_dipyramid_volume(p3, p2, p1, p0, pmid, p) > 0.0) return false; // Bottom
+    // If we arrive here, we haven't determined that the point is outside...
+    // And the tetrahedra formed with the triangular faces.
+    if ((tetrahedron_volume(p0, p1, p4, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p1, p2, p4, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p2, p3, p4, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p3, p0, p4, p)) > 0.0) return false;
+    return true;
+} // end inside_pyramid()
+
+bool inside_wedge(ref const(Vector3) p0, ref const(Vector3) p1,
+		  ref const(Vector3) p2, ref const(Vector3) p3,
+		  ref const(Vector3) p4, ref const(Vector3) p5,
+		  ref const(Vector3) p)
+// Returns true is the point p is inside or on the wedge surface.
+//
+// The test consists of using the 3 quadrilateral faces as the bases of pyramids
+// with the sample point p as the apex of each.
+// The cycle of vertices defining each base is such that the base normal
+// will be point out of the cell.
+// If any of the pyramid volumes are positive (i.e. p is on the positive 
+// side of a face) and we assume a convex cell, it means that the point 
+// is outside the cell and we may say so without further testing.
+{
+    // Mid-points of quadrilateral faces.
+    Vector3 pmA = 0.25*(p0+p3+p4+p1);
+    Vector3 pmB = 0.25*(p2+p1+p4+p5);
+    Vector3 pmC = 0.25*(p0+p2+p5+p3);
+    // Test the volume of each pyramid.
+    if (tetragonal_dipyramid_volume(p0, p3, p4, p1, pmA, p) > 0.0) return false;
+    if (tetragonal_dipyramid_volume(p2, p1, p4, p5, pmB, p) > 0.0) return false;
+    if (tetragonal_dipyramid_volume(p0, p2, p5, p3, pmC, p) > 0.0) return false;
+    // And the tetrahedra formed with the triangular faces.
+    if ((tetrahedron_volume(p0, p1, p2, p)) > 0.0) return false;
+    if ((tetrahedron_volume(p3, p5, p4, p)) > 0.0) return false;
+    // If we arrive here, we haven't determined that the point is outside...
+    return true;
+} // end inside_wedge()
+
 bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
 		       ref const(Vector3) p2, ref const(Vector3) p3,
 		       ref const(Vector3) p4, ref const(Vector3) p5,

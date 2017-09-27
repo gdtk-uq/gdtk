@@ -1316,43 +1316,26 @@ public:
 	//
 	// At this point, all interior faces should have a cell attached to both
 	// left- and right-sides while boundary faces should have a cell attached
-	// to one-side only. -- Check that this is true.
+	// to one-side only.
+	// If there are any faces that have only one cell attached and are not in
+	// a boundary-set already, assign them to the orphan-faces boundary set.
+	size_t[] orphan_face_id_list;
+	int[] orphan_face_outsign_list;
 	foreach (i, myface; faces) {
-	    bool ok = true;
-	    string msg = " ";
-	    if (myface.is_on_boundary) {
-		if (myface.left_cell && !(myface.right_cell)) {
-		    ok = true;
-		} else if (!(myface.left_cell) && myface.right_cell) {
-		    ok = true;
-		} else {
-		    ok = false;
-		    msg ~= "Boundary face does not have one cell attached.";
-		}
-	    } else {
-		// face not on a boundary, should have one cell attached to each side.
-		if (myface.left_cell && myface.right_cell) {
-		    ok = true;
-		} else {
-		    ok = false;
-		    msg ~= "Non-boundary face does not have two cells attached.";
-		}
+	    if (myface.is_on_boundary) continue;
+	    if (myface.left_cell && myface.right_cell) continue; // interior face with two cells
+	    orphan_face_id_list ~= i;
+	    if (myface.left_cell && !(myface.right_cell)) {
+		orphan_face_outsign_list ~= 1;
+	    } else if (!(myface.left_cell) && myface.right_cell) {
+		orphan_face_outsign_list ~= -1;
 	    }
-	    if (!ok) {
-		msg = format("When checking face %d: ", i) ~ msg;
-		writeln("Oops... ", msg);
-		writeln("myface.vtx_id_list=", myface.vtx_id_list);
-		if (myface.left_cell)
-		    writeln("myface.left_cell=", myface.left_cell.toIOString());
-		else
-		    writeln("no left cell");
-		if (myface.right_cell)
-		    writeln("myface.right_cell=", myface.right_cell.toIOString());
-		else
-		    writeln("no right cell");
-		throw new Exception(msg);
-	    }
-	} // end foreach f
+	} // end foreach
+	if (orphan_face_id_list.length > 0) {
+	    boundaries ~= new BoundaryFaceSet("ORPHAN_FACES", orphan_face_id_list,
+					      orphan_face_outsign_list);
+	    nboundaries = boundaries.length;
+	}
 	//
 	// Check that the region bounded by the grid is closed.
 	Vector3 varea = Vector3(0,0,0);

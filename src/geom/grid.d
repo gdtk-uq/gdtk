@@ -196,9 +196,15 @@ class Grid {
 						vertices[vtx_id[6]], vertices[vtx_id[7]], p); 
 		break;
 	    case 5:
-		throw new Exception("need to implement inside pyramid cell");
+		inside_cell = inside_pyramid(vertices[vtx_id[0]], vertices[vtx_id[1]],
+					     vertices[vtx_id[2]], vertices[vtx_id[3]],
+					     vertices[vtx_id[4]], p); 
+		break;
 	    case 6:
-		throw new Exception("need to implement inside wedge cell");
+		inside_cell = inside_wedge(vertices[vtx_id[0]], vertices[vtx_id[1]],
+					   vertices[vtx_id[2]], vertices[vtx_id[3]],
+					   vertices[vtx_id[4]], vertices[vtx_id[5]], p); 
+		break;
 	    default:
 		assert(0);
 	    } // end switch (vtx_id.length)
