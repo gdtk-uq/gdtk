@@ -1555,7 +1555,7 @@ public:
 
     void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face, bool outwardNormal=false)
     {
-	switch ( direction_type ) {
+	switch (direction_type) {
 	case "uniform":
 	    // Given a flow direction.
 	    vel.refx = speed * direction_vector.x;
@@ -1584,11 +1584,8 @@ public:
 	    vel.refx = speed * face.n.x;
 	    vel.refy = speed * face.n.y;
 	    vel.refz = speed * face.n.z;
-	    if ( outwardNormal ) {
-		// Correct the direction so flow is *into* the domain
-		vel = -vel;
-	    }
-	
+	    // Maybe "correct" the direction so flow is *into* the domain
+	    if (outwardNormal) { vel = -vel; }
 	}
     } // end set_velocity_components()
 
@@ -1615,7 +1612,7 @@ public:
 	final switch (which_boundary) {
 	case Face.north:
 	    j = blk.jmax;
-        // First, estimate the current bulk inflow condition.
+	    // First, estimate the current bulk inflow condition.
 	    double area = 0.0;
 	    double rhoUA = 0.0; // current mass_flux through boundary
 	    double rhovxA = 0.0; // mass-weighted x-velocity
@@ -1624,20 +1621,21 @@ public:
 	    double rhoA = 0.0;
 	    double pA = 0.0;
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
 		    auto cell = blk.get_cell(i,j,k);
 		    face = cell.iface[Face.north];
 		    area += face.area[0];
 		    double local_rhoA = cell.fs.gas.rho * face.area[0];
 		    rhoA += local_rhoA;
-		    rhoUA += local_rhoA * dot(cell.fs.vel, face.n);
+		    // North faces have unit normals that nominally point outward from the domain.
+		    rhoUA += local_rhoA * dot(cell.fs.vel, face.n); // mass flux
 		    rhovxA += local_rhoA * cell.fs.vel.x;
 		    rhovyA += local_rhoA * cell.fs.vel.y;
 		    rhovzA += local_rhoA * cell.fs.vel.z;
 		    pA += cell.fs.gas.p * face.area[0];
 		} // end i loop
 	    } // end k loop
-        if ( mass_flux > 0.0 && ftl == 0 ) {
+	    if (mass_flux > 0.0 && ftl == 0) {
 		// Adjust the stagnation pressure to better achieve the specified mass flux.
 		// Note that we only do this adjustment once, at the start of a
 		// multi-level gas-dynamic update.
@@ -1657,7 +1655,7 @@ public:
 	    gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
 	    // Now, apply the ghost-cell conditions
 	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-	    for (i = blk.imin; i <= blk.imax; ++i) {
+		for (i = blk.imin; i <= blk.imax; ++i) {
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.north];
 		    // Velocity components may vary with position on the block face.
@@ -1670,7 +1668,7 @@ public:
 	    } // end k loop
 	    break;
 	case Face.east:
-        i = blk.imax;
+	    i = blk.imax;
 	    // First, estimate the current bulk inflow condition.
 	    double area = 0.0;
 	    double rhoUA = 0.0; // current mass_flux through boundary
@@ -1693,7 +1691,7 @@ public:
 		    pA += cell.fs.gas.p * face.area[0];
 		} // end j loop
 	    } // end k loop
-	    if ( mass_flux > 0.0 && ftl == 0 ) {
+	    if (mass_flux > 0.0 && ftl == 0) {
 		// Adjust the stagnation pressure to better achieve the specified mass flux.
 		// Note that we only do this adjustment once, at the start of a
 		// multi-level gas-dynamic update.
@@ -1727,7 +1725,7 @@ public:
 	    break;
 	case Face.south:
 	    j = blk.jmin;
-        // First, estimate the current bulk inflow condition.
+	    // First, estimate the current bulk inflow condition.
 	    double area = 0.0;
 	    double rhoUA = 0.0; // current mass_flux through boundary
 	    double rhovxA = 0.0; // mass-weighted x-velocity
@@ -1749,7 +1747,7 @@ public:
 		    pA += cell.fs.gas.p * face.area[0];
 		} // end i loop
 	    } // end k loop
-        if ( mass_flux > 0.0 && ftl == 0 ) {
+	    if ( mass_flux > 0.0 && ftl == 0 ) {
 		// Adjust the stagnation pressure to better achieve the specified mass flux.
 		// Note that we only do this adjustment once, at the start of a
 		// multi-level gas-dynamic update.
@@ -1798,6 +1796,7 @@ public:
 		    area += face.area[0];
 		    double local_rhoA = cell.fs.gas.rho * face.area[0];
 		    rhoA += local_rhoA;
+		    // West faces have unit normals that nominally point inward to the domain.
 		    rhoUA += local_rhoA * dot(cell.fs.vel, face.n);
 		    rhovxA += local_rhoA * cell.fs.vel.x;
 		    rhovyA += local_rhoA * cell.fs.vel.y;
@@ -1805,13 +1804,13 @@ public:
 		    pA += cell.fs.gas.p * face.area[0];
 		} // end j loop
 	    } // end k loop
-	    if ( mass_flux > 0.0 && ftl == 0 ) {
+	    if (mass_flux > 0.0 && ftl == 0) {
 		// Adjust the stagnation pressure to better achieve the specified mass flux.
 		// Note that we only do this adjustment once, at the start of a
 		// multi-level gas-dynamic update.
 		double p = pA / area;
 		double dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
-		    (mass_flux*mass_flux - rhoUA*rhoUA/(area*area)) / p;
+		    (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
 		double new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
 		new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
 		stagnation_condition.gas.p = new_p0;
@@ -1820,6 +1819,7 @@ public:
 		stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
 	    }
 	    double bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
+	    if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
 	    // Assume an isentropic process from a known total enthalpy.
 	    double enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
 	    gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
@@ -1839,7 +1839,7 @@ public:
 	    break;
 	case Face.top:
 	    k = blk.kmax;
-        // First, estimate the current bulk inflow condition.
+	    // First, estimate the current bulk inflow condition.
 	    double area = 0.0;
 	    double rhoUA = 0.0; // current mass_flux through boundary
 	    double rhovxA = 0.0; // mass-weighted x-velocity
@@ -1861,7 +1861,7 @@ public:
 		    pA += cell.fs.gas.p * face.area[0];
 		} // end i loop
 	    } // end j loop
-        if ( mass_flux > 0.0 && ftl == 0 ) {
+	    if (mass_flux > 0.0 && ftl == 0) {
 		// Adjust the stagnation pressure to better achieve the specified mass flux.
 		// Note that we only do this adjustment once, at the start of a
 		// multi-level gas-dynamic update.
@@ -1895,7 +1895,7 @@ public:
 	    break;
 	case Face.bottom:
 	    k = blk.kmin;
-        // First, estimate the current bulk inflow condition.
+	    // First, estimate the current bulk inflow condition.
 	    double area = 0.0;
 	    double rhoUA = 0.0; // current mass_flux through boundary
 	    double rhovxA = 0.0; // mass-weighted x-velocity
@@ -1917,7 +1917,7 @@ public:
 		    pA += cell.fs.gas.p * face.area[0];
 		} // end i loop
 	    } // end j loop
-        if ( mass_flux > 0.0 && ftl == 0 ) {
+	    if (mass_flux > 0.0 && ftl == 0) {
 		// Adjust the stagnation pressure to better achieve the specified mass flux.
 		// Note that we only do this adjustment once, at the start of a
 		// multi-level gas-dynamic update.
