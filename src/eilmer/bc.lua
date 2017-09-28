@@ -482,6 +482,9 @@ function WallBC_WithSlip:new(o)
    local flag = checkAllowedNames(o, {"label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_WithSlip constructor.")
    o = BoundaryCondition.new(self, o)
+   -- In a turbulence model sense, a slip wall is NOT a wall
+   -- We mean a wall where the speed of the gas matches the speed of the wall
+   o.is_wall = false
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
