@@ -521,6 +521,7 @@ public:
     void add_aux_variables(string[] addVarsList)
     // Adds variables to the data for each cell.
     {
+	GasState Q = new GasState(GlobalConfig.gmodel_master);
 	// We assume a lot about the data that has been read in so,
 	// we need to skip this function if all is not in place
 	bool ok_to_proceed = true;
@@ -536,6 +537,7 @@ public:
 	bool add_total_p = canFind(addVarsList, "total-p");
 	bool add_total_h = canFind(addVarsList, "total-h");
 	bool add_total_T = canFind(addVarsList, "total-T");
+	bool add_entropy = canFind(addVarsList, "entropy");
 	//
 	if (add_mach) {
 	    variableNames ~= "M_local";
@@ -556,6 +558,10 @@ public:
 	if (add_total_T) {
 	    variableNames ~= "total_T";
 	    variableIndex["total_T"] = variableNames.length - 1;
+	}
+	if (add_entropy) {
+	    variableNames ~= "entropy";
+	    variableIndex["entropy"] = variableNames.length - 1;
 	}
 	//
 	// Be careful to add auxiliary variable values in the code below 
@@ -607,6 +613,18 @@ public:
 	    if (add_total_T) {
 		double total_T = T * (1.0 + 0.5 * (g - 1.0) * M*M);
 		_data[i] ~= total_T;
+	    }
+	    if (add_entropy) {
+		foreach (isp; 0 .. Q.massf.length) {
+		    auto name = cast(char[]) GlobalConfig.gmodel_master.species_name(to!int(isp));
+		    name = tr(name, " \t", "--", "s");
+		    string key = "massf[" ~ to!string(isp) ~ "]-" ~ to!string(name);
+		    Q.massf[isp] = _data[i][variableIndex[key]];
+		}
+		Q.p = p;
+		Q.Ttr = T;
+		double entropy = GlobalConfig.gmodel_master.entropy(Q);
+		_data[i] ~= entropy;
 	    }
 	} // foreach i
     } // end add_aux_variables()

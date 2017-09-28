@@ -88,7 +88,7 @@ int main(string[] args)
     msg       ~= "         [--post]                    post-process simulation data\n";
     msg       ~= "         [--list-info]               report some details of this simulation\n";
     msg       ~= "         [--tindx-plot=<int>|all|last|9999]  default to last\n";
-    msg       ~= "         [--add-vars=\"mach,pitot,total-h,total-p\"]\n";
+    msg       ~= "         [--add-vars=\"mach,pitot,total-h,total-p,entropy\"]\n";
     msg       ~= "         [--ref-soln=<filename>]     Lua file for reference solution\n";
     msg       ~= "         [--vtk-xml]                 produce XML VTK-format plot files\n";
     msg       ~= "         [--binary-format]           use binary within the VTK-XML\n";
