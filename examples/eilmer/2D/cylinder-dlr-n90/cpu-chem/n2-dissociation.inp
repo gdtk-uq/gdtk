@@ -1,0 +1,20 @@
+! Chemkin-style input file
+! Prepared by: Rowan J. Gollan
+! Date: 2017-09-23
+!
+! This is an example to test out the chemkin2eilmer converter.
+
+ELEMENTS
+N
+END
+
+SPECIES
+N2 N
+END
+
+REACTIONS
+N2 + N2 <=> N + N + N2       7.00e21  -1.6    224951.04
+                        REV/ 1.09e16  -0.5    0.0       /
+N2 + N <=> N + N + N         3.00e22  -1.6    224951.04
+                        REV/ 2.32e21  -1.5    0.0       /
+END
