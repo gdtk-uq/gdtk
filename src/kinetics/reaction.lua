@@ -130,7 +130,7 @@ local Reaction = lpeg.V"Reaction"
 local Mechanism = lpeg.V"Mechanism"
 
 G = lpeg.P{ Mechanism,
-	    Mechanism = lpeg.Ct(Reaction * ( RArrow + FArrow ) * Reaction),
+	    Mechanism = lpeg.Ct(Reaction * ( FRArrow + FArrow ) * Reaction),
 	    Reaction = lpeg.Ct(Participant * (Plus * Participant)^0 * (PressureDependent / pdstring)^0 ) * Space,
 	    Participant = lpeg.Ct(lpeg.C(Number^0) * Space * Species * Space)
 	 }
@@ -450,6 +450,16 @@ function arrayIntsToStr(array)
    return str
 end
 
+function arrayNumbersToStr(array)
+   local str = "{"
+   for _,val in ipairs(array) do
+      str = str..string.format(" %12.6e,", val)
+   end
+   str = str.."}"
+   return str
+end
+
+
 function reacToLuaStr(r, i)
    local rstr = string.format("reaction[%d] = {\n", i)
    rstr = rstr .. string.format("  equation = \"%s\",\n", r.equation)
@@ -460,9 +470,9 @@ function reacToLuaStr(r, i)
       rstr = rstr .. string.format("  ec = %s,\n", ecModelToLuaStr(r.ec))
    end
    rstr = rstr .. string.format("  reacIdx = %s,\n", arrayIntsToStr(r.reacIdx))
-   rstr = rstr .. string.format("  reacCoeffs = %s,\n", arrayIntsToStr(r.reacCoeffs))
+   rstr = rstr .. string.format("  reacCoeffs = %s,\n", arrayNumbersToStr(r.reacCoeffs))
    rstr = rstr .. string.format("  prodIdx = %s,\n", arrayIntsToStr(r.prodIdx))
-   rstr = rstr .. string.format("  prodCoeffs = %s,\n", arrayIntsToStr(r.prodCoeffs))
+   rstr = rstr .. string.format("  prodCoeffs = %s,\n", arrayNumbersToStr(r.prodCoeffs))
    if r.efficiencies then
       rstr = rstr .. string.format("  efficiencies = {\n")
       -- Sort indices

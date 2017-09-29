@@ -6,21 +6,38 @@
 --   15-Feb-2013 : extracted common elements from reac.lua and exch.lua
 module(..., package.seeall)
 
-Space = lpeg.S(" \n\t")^0
-Number = lpeg.R("09")^1
-Underscore = lpeg.S("_")
-Element = ((lpeg.R("AZ") * lpeg.R("az")^0) + lpeg.P("e"))
-Solid = lpeg.P("S")
-ElecLevel = (lpeg.R("az", "AZ", "09"))^-3 -- ^-3 says to match at most 3 occurrences
-PM = lpeg.S("+-")
-Species = lpeg.C(((Element * Number^0)^1 * PM^0)^1 * (Underscore * (Solid + ElecLevel))^0)
-Tilde = lpeg.P("~")
-Dash = lpeg.P("-") * Space
-Comma = Space * lpeg.P(",") * Space
-Colon = lpeg.P(":") * Space
+local S = lpeg.S
+local R = lpeg.R
+local C = lpeg.C
+local P = lpeg.P
+
+Digit = R("09")
+Integer = (S("+-") ^ -1) * (Digit   ^  1)
+Fractional = (P(".")   ) * (Digit ^ 1)
+Decimal = 
+     (Integer *              -- Integer
+     (Fractional ^ -1)) +    -- Fractional
+     (S("+-") * Fractional)  -- Completely fractional number
+Scientific = 
+     Decimal * -- Decimal number
+     S("Ee") * -- E or e
+     Integer   -- Exponent
+Number = Decimal + Scientific
+
+Space = S(" \n\t")^0
+Underscore = S("_")
+Element = ((R("AZ") * R("az")^0) + P("e"))
+Solid = P("S")
+ElecLevel = (R("az", "AZ", "09"))^-3 -- ^-3 says to match at most 3 occurrences
+PM = S("+-")
+Species = C(((Element * Number^0)^1 * PM^0)^1 * (Underscore * (Solid + ElecLevel))^0)
+Tilde = P("~")
+Dash = P("-") * Space
+Comma = Space * P(",") * Space
+Colon = P(":") * Space
 Open = "(" * Space
 Close = Space * ")" * Space
-FArrow = lpeg.C(lpeg.P("=>")) * Space
-RArrow = lpeg.C(lpeg.P("<=>")) * Space
-Plus = lpeg.P("+") * Space
+FArrow = C(P("=>")) * Space
+FRArrow = C(P("<=>")) * Space
+Plus = P("+") * Space
 
