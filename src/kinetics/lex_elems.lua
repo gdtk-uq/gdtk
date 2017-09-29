@@ -12,8 +12,8 @@ local C = lpeg.C
 local P = lpeg.P
 
 Digit = R("09")
-Integer = (S("+-") ^ -1) * (Digit   ^  1)
-Fractional = (P(".")   ) * (Digit ^ 1)
+Integer = (S("+-") ^ -1) * (Digit^1)
+Fractional = (P(".")   ) * (Digit^1)
 Decimal = 
      (Integer *              -- Integer
      (Fractional ^ -1)) +    -- Fractional
@@ -22,7 +22,7 @@ Scientific =
      Decimal * -- Decimal number
      S("Ee") * -- E or e
      Integer   -- Exponent
-Number = Decimal + Scientific
+Number = Scientific + Decimal
 
 Space = S(" \n\t")^0
 Underscore = S("_")
@@ -34,6 +34,7 @@ Species = C(((Element * Number^0)^1 * PM^0)^1 * (Underscore * (Solid + ElecLevel
 Tilde = P("~")
 Dash = P("-") * Space
 Comma = Space * P(",") * Space
+Slash = Space * P("/") * Space
 Colon = P(":") * Space
 Open = "(" * Space
 Close = Space * ")" * Space

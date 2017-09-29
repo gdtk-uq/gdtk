@@ -16,6 +16,13 @@
 require 'lex_elems'
 require 'reaction'
 
+function split (s, sep)
+  sep = lpeg.P(sep)
+  local elem = lpeg.C((1 - sep)^0)
+  local p = lpeg.Ct(elem * (sep * elem)^0)   -- make a table capture
+  return lpeg.match(p, s)
+end
+
 -- lexical elements for parsing the whole reaction string
 -- get common elements from lex_elems.lua
 for k,v in pairs(lex_elems) do
@@ -26,29 +33,28 @@ local PressureDependent = Open * Plus * "M" * Space * Close
 local function pdstring() return "pressure dependent" end
 
 -- Grammar
+local Comment = lpeg.P("!")
 local Participant = lpeg.V"Participant"
 local Reaction = lpeg.V"Reaction"
 local Mechanism = lpeg.V"Mechanism"
 local ForwardRate = lpeg.V"ForwardRate"
 local MechanismWithForwardRate = lpeg.V"MechanismWithForwardRate"
 
+
 R1 = lpeg.P{MechanismWithForwardRate,
-	    MechanismWithForwardRate = lpeg.Ct(Mechanism * Space * ForwardRate),
-	    Mechanism = lpeg.Ct(Reaction * ( RArrow + FArrow ) * Reaction),
-	    Reaction = lpeg.Ct(Participant * (Plus * Participant)^0 * (PressureDependent / pdstring)^0 ) * Space,
-	    Participant = lpeg.Ct(lpeg.C(Number^0) * Space * Species * Space),
-	    ForwardRate = lpeg.Ct(lpeg.C(Number) * Space * lpeg.C(Number) * Space * lpeg.C(Number))
-	 }
+	    MechanismWithForwardRate = lpeg.Ct(Mechanism * Space * ForwardRate * Space);
+	    Mechanism = lpeg.Ct(Reaction * ( FRArrow + FArrow ) * Reaction);
+	    Reaction = lpeg.Ct(Participant * (Plus * Participant)^0 * (PressureDependent / pdstring)^0 ) * Space;
+	    Participant = lpeg.Ct(lpeg.C(Number^0) * Space * Species * Space);
+	    ForwardRate = lpeg.Ct(lpeg.C(Number) * Space * lpeg.C(Number) * Space * lpeg.C(Number));
+	   }
 
 R1 = Space * R1 * -1
 
-
-
-
-
-local parseReactionString = reaction.parseReactionString
-
-local Species = lex_elems.Species
+function parseMechanismWithRate(str)
+   t = lpeg.match(R1, str)
+   return t
+end
 
 function printHelp()
    print("chemkin2eilmer -- Converts a Chemkin format input file into gas and chemistry files ready for eilmer.")
@@ -114,8 +120,17 @@ function parseChemkinFileForSpecies(f)
 	 os.exit(1)
       end
       tks = split_string(line)
-      if tks[1] == 'SPECIES' then
-	 inSpeciesSection = true
+      if #tks > 0 then
+	 if tks[1]:sub(1,4) == 'SPEC' then
+	    inSpeciesSection = true
+	 end
+	 if #tks > 1 then
+	    table.remove(tks, 1)
+	    -- For all other cases, we should have legitimate species as tokens
+	    for _,tk in ipairs(tks) do
+	       species[#species+1] = lpeg.match(lpeg.C(Species), tk)
+	    end
+	 end
       end
    end
 
@@ -127,13 +142,25 @@ function parseChemkinFileForSpecies(f)
 	 os.exit(1)
       end
       tks = split_string(line)
-      if tks[1] == 'END' then
-	 inSpeciesSection = false
-	 break
-      end
-      -- For all other cases, we should have legitimate species as tokens
-      for _,tk in ipairs(tks) do
-	 species[#species+1] = lpeg.match(lpeg.C(Species), tk)
+      if #tks > 0 then
+	 if tks[1] == 'END' then
+	    inSpeciesSection = false
+	    break
+	 end
+	 for _,tk in ipairs(tks) do
+	    if tk == 'END' then
+	       inSpeciesSection = false
+	       break
+	    end
+	    -- For all other cases, we should have legitimate species as tokens
+	    sp = lpeg.match(lpeg.C(Species), tk)
+	    if not sp then
+	       print("Error trying to match species in 'SPECIES' section.")
+	       print("Bad string: ", tk)
+	       error("Syntax error", 2)
+	    end
+	    species[#species+1] = lpeg.match(lpeg.C(Species), tk)
+	 end
       end
    end
    return species
@@ -163,15 +190,53 @@ function parseChemkinFileForReactions(f)
 	 print("Exiting.")
 	 os.exit(1)
       end
+      print("line= ", line)
+      tks = split_string(line)
+      if tks[1] == 'END' then
+	 inReactionsSection = false
+	 break
+      end
+
       -- Try to determine if we have a:
       -- 1. a reaction line
       -- 2. a continuation line associated with the reaction before
       -- 3. a comment line
 
+      -- Break apart line and throw away anything with a comment, then reassemble.
+      iC = -1
+      for i,tk in ipairs(tks) do
+	 if tk:sub(1,1) == "!" then
+	    iC = i -- index of comment start
+	    break
+	 end
+      end
+      if iC > 0 then
+	 line = ""
+	 for i=1,iC-1 do
+	    line = line .. tks[i] .. "  "
+	 end
+      end
       
-      
+      print("line-after= ", line)
       -- Attempt to parse a reaction string
-      reac = parseReactionString(
+      reac = parseMechanismWithRate(line)
+      print("reac= ", reac)
+      if reac then
+	 reactions[#reactions+1] = {}
+	 reactions[#reactions].mechanism = reac[1]
+	 reactions[#reactions].forwardRate = reac[2]
+      else
+	 -- We really should find a line with extra info
+	 -- about the earlier reaction line
+	 reacInfo = split(line, "/")
+	 if reacInfo then
+	    for i,info in ipairs(reacInfo) do
+	       print("i= ", i, " info= ", info)
+	    end
+	 end
+      end
+
+   end
 
 end
 
