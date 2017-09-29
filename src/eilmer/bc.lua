@@ -971,6 +971,14 @@ function SolidBFE_ConstantFlux:tojson()
    return str
 end
 
+SolidBFE_UserDefined = SolidBoundaryFluxEffect:new{fileName='user-defined-solid-bc.lua'}
+SolidBFE_UserDefined.type = "user_defined"
+function SolidBFE_UserDefined:tojson()
+   local str = string.format('          {"type": "%s", ', self.type)
+   str = str .. string.format('"filename": "%s" }', self.fileName)
+   return str
+end
+
 -- Class for SolidBoundaryCondition
 -- This class is a convenience class: it translates a high-level
 -- user name for the boundary condition into a sequence of
@@ -1046,7 +1054,12 @@ SolidUserDefinedBC = SolidBoundaryCondition:new()
 SolidUserDefinedBC.type = "SolidUserDefined"
 function SolidUserDefinedBC:new(o)
    o = SolidBoundaryCondition.new(self, o)
-   o.preSpatialDerivAction = { SolidBIE_UserDefined:new{fileName=o.fileName} }
+   if (o.specifyFlux) then
+      o.postFluxAction = { SolidBFE_UserDefined:new{fileName=o.fileName} }
+      o.setsFluxDirectly = true
+   else
+      o.preSpatialDerivAction = { SolidBIE_UserDefined:new{fileName=o.fileName} }
+   end
    return o
 end
 

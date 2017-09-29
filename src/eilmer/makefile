@@ -190,7 +190,7 @@ default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
 	@echo "Eilmer4 simulation code built."
 
-install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem $(SHARE_FILES) ugrid_partition
+install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer $(SHARE_FILES) ugrid_partition
 	- mkdir -p $(INSTALL_DIR)
 	- mkdir -p $(BUILD_DIR)/bin
 	- mkdir -p $(BUILD_DIR)/lib
@@ -245,6 +245,10 @@ ugrid_partition:
 
 prep-chem:
 	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-prep-chem
+
+chemkin2eilmer:
+	cd $(KINETICS_DIR); make BUILD_DIR=$(BUILD_DIR) build-chemkin2eilmer
+
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
