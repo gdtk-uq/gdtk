@@ -406,7 +406,7 @@ BoundaryCondition = {
    type = "",
    group = "",
    is_gas_domain_bc = true,
-   is_wall = true,
+   is_wall_with_viscous_effects = true,
    is_configured = false,
    ghost_cell_data_available = true,
    convective_flux_computed_in_bc = false,
@@ -435,7 +435,7 @@ function BoundaryCondition:tojson()
    str = str .. string.format('"label": "%s", \n', self.label)
    str = str .. string.format('        "type": "%s", \n', self.type)
    str = str .. string.format('        "group": "%s", \n', self.group)
-   str = str .. string.format('        "is_wall": %s, \n', tostring(self.is_wall))
+   str = str .. string.format('        "is_wall_with_viscous_effects": %s, \n', tostring(self.is_wall_with_viscous_effects))
    str = str .. string.format('        "ghost_cell_data_available": %s, \n',
 			      tostring(self.ghost_cell_data_available))
    str = str .. string.format('        "convective_flux_computed_in_bc": %s, \n',
@@ -484,7 +484,7 @@ function WallBC_WithSlip:new(o)
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
@@ -673,7 +673,7 @@ function InFlowBC_Supersonic:new(o)
    local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_Supersonic constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
    o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowCondition=o.flowCondition} }
    o.is_configured = true      
@@ -687,7 +687,7 @@ function InFlowBC_StaticProfile:new(o)
    local flag = checkAllowedNames(o, {"filename", "fileName", "match", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_StaticProfile constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.match = o.match or "xyz-to-xyz"
    o.filename = o.filename or o.fileName
    o.preReconAction = { FlowStateCopyFromProfile:new{filename=o.filename, match=o.match} }
@@ -703,7 +703,7 @@ function InFlowBC_ConstFlux:new(o)
    local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_ConstFlux constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
    o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
@@ -719,7 +719,7 @@ function InFlowBC_ShockFitting:new(o)
    local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_ShockFitting constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
    o.ghost_cell_data_available = false
    o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
@@ -738,7 +738,7 @@ function InFlowBC_FromStagnation:new(o)
 				      "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_FromStagnation constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.preReconAction = { FromStagnation:new{stagCondition=o.stagCondition,
 					   direction_type=o.direction_type,
 					   direction_x=o.direction_x,
@@ -759,7 +759,7 @@ function OutFlowBC_Simple:new(o)
    local flag = checkAllowedNames(o, {"xOrder", "label", "group"})
    assert(flag, "Invalid name for item supplied to OutFlowBC_Simple constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
    o.preSpatialDerivAction = { CopyCellData:new() }
    o.is_configured = true
@@ -773,7 +773,7 @@ function OutFlowBC_FixedP:new(o)
    local flag = checkAllowedNames(o, {"xOrder", "p_outside", "label", "group"})
    assert(flag, "Invalid name for item supplied to OutFlowBC_FixedP constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedP:new{p_outside=o.p_outside} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
@@ -789,7 +789,7 @@ function OutFlowBC_FixedPT:new(o)
 				      "label", "group"})
    assert(flag, "Invalid name for item supplied to OutFlowBC_FixedPT constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
 			FixedPT:new{p_outside=o.p_outside, T_outside=o.T_outside} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
@@ -806,7 +806,7 @@ function ExchangeBC_FullFace:new(o)
 				      "label", "group"})
    assert(flag, "Invalid name for item supplied to ExchangeBC_FullFace constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.preReconAction = { FullFaceExchangeCopy:new{otherBlock=o.otherBlock,
 						 otherFace=o.otherFace,
 						 orientation=o.orientation,
@@ -828,7 +828,7 @@ function ExchangeBC_MappedCell:new(o)
 				      "label", "group"})
    assert(flag, "Invalid name for item supplied to ExchangeBC_MappedCell constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = false
+   o.is_wall_with_viscous_effects = false
    o.fileName = o.fileName or o.filename
    o.preReconAction = { MappedCellExchangeCopy:new{cell_mapping_from_file=o.cell_mapping_from_file,
 						   fileName=o.fileName,
@@ -864,7 +864,7 @@ function WallBC_AdjacentToSolid:new(o)
 				      "label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_AdjacentToSolid constructor.")
    o = BoundaryCondition.new(self, o)
-   o.is_wall = true
+   o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
 					   TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,

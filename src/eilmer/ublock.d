@@ -537,8 +537,10 @@ public:
 		    //        at these interfaces. We are working towards removing ghost cell data from
 		    //        wall type boundaries. In the mean time we will apply a temporary fix by using the
 		    //        point cloud stencil which does not use any ghost cell data at walls. KD 17/06/2016
-		    if (bc.is_wall || myConfig.include_ghost_cells_in_spatial_deriv_clouds == false) {
-			// If the bc type is WALL OR we're not using ghost cell data then only use internal data 
+		    if (bc.is_wall_with_viscous_effects ||
+			myConfig.include_ghost_cells_in_spatial_deriv_clouds == false) {
+			// If the bc type is WALL OR we're not using ghost cell data then
+			// only use internal data 
 			foreach (i, f; bc.faces) { 
 			    boundary_face_cloud_wall(f, i, bc, bndary_idx, boundary);
 			} // end foreach (i, f; bc.faces)

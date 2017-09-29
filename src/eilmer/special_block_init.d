@@ -27,7 +27,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
     // Determine which walls if any are no-slip walls
     bool[size_t] noSlipWalls;
     foreach (bcId, bc; blk.bc) {
-	if (bc.is_wall) {
+	if (bc.is_wall_with_viscous_effects) {
 	    noSlipWalls[bcId] = true;
 	}
     }

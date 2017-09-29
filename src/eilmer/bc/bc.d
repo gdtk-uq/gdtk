@@ -43,7 +43,7 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     newBC.label = getJSONstring(jsonData, "label", "");
     newBC.type = getJSONstring(jsonData, "type", "");
     newBC.group = getJSONstring(jsonData, "group", "");
-    newBC.is_wall = getJSONbool(jsonData, "is_wall", true);
+    newBC.is_wall_with_viscous_effects = getJSONbool(jsonData, "is_wall_with_viscous_effects", true);
     newBC.ghost_cell_data_available = getJSONbool(jsonData, "ghost_cell_data_available", true);
     newBC.convective_flux_computed_in_bc = getJSONbool(jsonData, "convective_flux_computed_in_bc", false);
     // Assemble list of preReconAction effects
@@ -88,7 +88,7 @@ public:
     string group;
     // Nature of the boundary condition that may be checked 
     // by other parts of the CFD code.
-    bool is_wall = true;
+    bool is_wall_with_viscous_effects = true;
     bool ghost_cell_data_available = true;
     bool convective_flux_computed_in_bc = false;
     double emissivity = 0.0;
@@ -101,13 +101,14 @@ private:
     FlowState _Lft, _Rght;
 
 public:
-    this(int id, int boundary, bool isWall=true, bool ghostCellDataAvailable=true, double _emissivity=0.0)
+    this(int id, int boundary, bool isWallWithViscousEffects=true,
+	 bool ghostCellDataAvailable=true, double _emissivity=0.0)
     {
 	blk = gasBlocks[id];  // pick the relevant block out of the collection
 	which_boundary = boundary;
 	type = "";
 	group = "";
-	is_wall = isWall;
+	is_wall_with_viscous_effects = isWallWithViscousEffects;
 	ghost_cell_data_available = ghostCellDataAvailable;
 	emissivity = _emissivity;
 	auto gm = GlobalConfig.gmodel_master;
@@ -152,7 +153,7 @@ public:
 	char[] repr;
 	repr ~= "BoundaryCondition(";
 	repr ~= "label= \"" ~ label ~ "\", type= \"" ~ type ~ "\", group= \"" ~ group;
-	repr ~= "\", is_wall= " ~ to!string(is_wall);
+	repr ~= "\", is_wall_with_viscous_effects= " ~ to!string(is_wall_with_viscous_effects);
 	repr ~= ", ghost_cell_data_available= " ~ to!string(ghost_cell_data_available);
 	repr ~= ", convective_flux_computed_in_bc= " ~ to!string(convective_flux_computed_in_bc);
 	if ( preReconAction.length > 0 ) {

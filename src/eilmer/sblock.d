@@ -855,10 +855,9 @@ public:
 		
 	    // Step 3: find the closest real wall.
 	    for ( size_t iface = 0; iface < num_faces; ++iface ) {
-		if ( bc[iface].is_wall && 
-		     // bc[iface].type_code == BCCode.slip_wall &&
-		     // Isn't it enough that is_wal is true?
+		if ( bc[iface].is_wall_with_viscous_effects && 
 		     dist[iface] < cell.distance_to_nearest_wall ) {
+		    // What about slip walls? PJ, 2017-09-29
 		    cell.distance_to_nearest_wall = dist[iface];
 		    cell.half_cell_width_at_wall = half_width[iface];
 		    cell.cell_at_nearest_wall = cell_at_wall[iface];
