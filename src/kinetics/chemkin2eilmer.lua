@@ -203,7 +203,8 @@ function parseChemkinFileForReactions(f)
       -- Try to determine if we have a:
       -- 1. a reaction line
       -- 2. a continuation line associated with the reaction before
-      -- 3. a comment line
+      -- 3. a line marking a DUPLICATE reaction
+      -- 4. a comment line
 
       -- Break apart line and throw away anything with a comment, then reassemble.
       iC = -1
@@ -233,7 +234,13 @@ function parseChemkinFileForReactions(f)
 	 if reacInfo then
 	    -- Remove trailing entry
 	    reacInfo[#reacInfo] = nil
-	    reactions[#reactions].extraInfo = reacInfo
+	    if not reactions[#reactions].extraInfo then
+	       reactions[#reactions].extraInfo = reacInfo
+	    else
+	       for _,entry in ipairs(reacInfo) do
+		  reactions[#reactions].extraInfo[#(reactions[#reactions].extraInfo)+1] = entry
+	       end
+	    end
 	 end
       end
    end
@@ -251,9 +258,16 @@ function transformReactions(reactions)
       for i=1,#reac.extraInfo,2 do
 	 key = trim(reac.extraInfo[i])
 	 val = trim(reac.extraInfo[i+1])
+	 species = lpeg.match(Species, key)
+	 -- Note: the pattern matching will actually match against 'REV' as
+	 -- a legitimate species name, it thinks it's a species composed of
+	 -- elements 'R', 'E', and 'V'. That's why we test and action on 
+	 -- 'REV' first before trying to use the token as a species.
 	 if key == 'REV' then
 	    tks = split_string(val)
 	    reac.br = {'Arrhenius', A=tonumber(tks[1]), n=tonumber(tks[2]), C=tonumber(tks[3])/R_U_Cal}
+	 elseif species then
+	    reac.efficiencies[#(reac.efficiencies)+1] = {species, tonumber(val)}
 	 end
       end
    end
@@ -270,6 +284,13 @@ function writeReactionsToFile(fname, reactions)
 			     reac.fr[1], reac.fr.A, reac.fr.n, reac.fr.C))
       of:write(string.format("        br={'%s', A=%12.6e, n=%12.6e, C=%12.6e},\n",
 			     reac.br[1], reac.br.A, reac.br.n, reac.br.C))
+      if #(reac.efficiencies) > 0 then
+	 of:write("        efficiencies={")
+	 for _,eff in ipairs(reac.efficiencies) do
+	    of:write(string.format("%s=%12.6e, ", eff[1], eff[2]))
+	 end
+	 of:write("},\n")
+      end
       of:write("}\n")
       of:write("\n")
    end
