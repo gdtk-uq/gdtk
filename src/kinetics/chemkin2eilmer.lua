@@ -49,7 +49,7 @@ local MechanismWithForwardRate = lpeg.V"MechanismWithForwardRate"
 
 R1 = lpeg.P{MechanismWithForwardRate,
 	    MechanismWithForwardRate = lpeg.Ct(lpeg.C(Mechanism) * Space * ForwardRate * Space);
-	    Mechanism = Reaction * Space * ( FRArrow + FArrow ) * Space * Reaction;
+	    Mechanism = Reaction * Space * ( FRArrow + FArrow + Equals ) * Space * Reaction;
 	    Reaction = Participant * (Plus * Participant)^0 * (PressureDependent)^0;
 	    Participant = Number^0 * Space * Species * Space;
 	    ForwardRate = lpeg.Ct(lpeg.C(Number) * Space * lpeg.C(Number) * Space * lpeg.C(Number));
@@ -232,8 +232,21 @@ function parseChemkinFileForReactions(f)
 	 -- about the earlier reaction line
 	 reacInfo = split(line, "/")
 	 if reacInfo then
-	    -- Remove trailing entry
 	    reacInfo[#reacInfo] = nil
+	    -- Remove any tokens after a comment is found.
+	    iC = -1
+	    for i,tk in ipairs(reacInfo) do
+	       if tk:sub(1,1) == "!" then
+		  iC = i
+		  break
+	       end
+	    end
+	    if iC > 0 then
+	       for i=iC,#reacInfo do
+		  table.remove(reacInfo)
+	       end
+	    end
+
 	    if not reactions[#reactions].extraInfo then
 	       reactions[#reactions].extraInfo = reacInfo
 	    else
@@ -266,6 +279,18 @@ function transformReactions(reactions)
 	 if key == 'REV' then
 	    tks = split_string(val)
 	    reac.br = {'Arrhenius', A=tonumber(tks[1]), n=tonumber(tks[2]), C=tonumber(tks[3])/R_U_Cal}
+	 elseif key == 'LOW' then
+	    tks = split_string(val)
+	    reac.fr = {'pressure dependent',
+		       kInf={A=reac.fr.A, n=reac.fr.n, C=reac.fr.C},
+		       k0={A=tonumber(tks[1]), n=tonumber(tks[2]), C=tonumber(tks[3])/R_U_Cal}
+	    }
+	 elseif key == 'TROE' then
+	    tks = split_string(val)
+	    reac.fr.Troe = {a=tonumber(tks[1]), T3=tonumber(tks[2]), T1=tonumber(tks[3])}
+	    if tks[4] then
+	       reac.fr.Troe.T2 = tonumber(tks[4])
+	    end
 	 elseif species then
 	    reac.efficiencies[#(reac.efficiencies)+1] = {species, tonumber(val)}
 	 end
@@ -280,10 +305,30 @@ function writeReactionsToFile(fname, reactions)
    for i,reac in ipairs(reactions) do
       of:write("Reaction{\n")
       of:write(string.format("        '%s',\n", reac.mechanism))
-      of:write(string.format("        fr={'%s', A=%12.6e, n=%12.6e, C=%12.6e},\n",
-			     reac.fr[1], reac.fr.A, reac.fr.n, reac.fr.C))
-      of:write(string.format("        br={'%s', A=%12.6e, n=%12.6e, C=%12.6e},\n",
-			     reac.br[1], reac.br.A, reac.br.n, reac.br.C))
+      if reac.fr[1] == 'Arrhenius' then
+	 of:write(string.format("        fr={'%s', A=%12.6e, n=%12.6e, C=%12.6e},\n",
+				reac.fr[1], reac.fr.A, reac.fr.n, reac.fr.C))
+      else
+	 -- Assume pressure dependent
+	 of:write(string.format("        fr={'%s',\n", reac.fr[1]))
+	 of:write(string.format("            kInf={A=%12.6e, n=%12.6e, C=%12.6e},\n",
+				reac.fr.kInf.A, reac.fr.kInf.n, reac.fr.kInf.C))
+	 of:write(string.format("            k0={A=%12.6e, n=%12.6e, C=%12.6e},\n",
+				reac.fr.k0.A, reac.fr.k0.n, reac.fr.k0.C))
+	 if reac.fr.Troe then
+	    of:write(string.format("            Troe={a=%12.6e, T3=%12.6e, T1=%12.6e, ",
+				   reac.fr.Troe.a, reac.fr.Troe.T3, reac.fr.Troe.T1))
+	    if reac.fr.Troe.T2 then
+	       of:write(string.format("T2=%12.6e ", reac.fr.Troe.T2))
+	    end
+	    of:write("},\n")
+	 end
+	 of:write("        },\n")
+      end
+      if reac.br then
+	 of:write(string.format("        br={'%s', A=%12.6e, n=%12.6e, C=%12.6e},\n",
+				reac.br[1], reac.br.A, reac.br.n, reac.br.C))
+      end
       if #(reac.efficiencies) > 0 then
 	 of:write("        efficiencies={")
 	 for _,eff in ipairs(reac.efficiencies) do

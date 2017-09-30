@@ -40,5 +40,6 @@ Open = "(" * Space
 Close = Space * ")" * Space
 FArrow = C(P("=>")) * Space
 FRArrow = C(P("<=>")) * Space
+Equals = C(P("=")) * Space
 Plus = P("+") * Space
 
