@@ -164,4 +164,17 @@ On a more serious note, please use your full name in the 'username' field.
 This will help identifying the contributors to the code over 
 the long-term history of development.
 
+### Other editors
+If you are using an editor other than emacs,
+please configure your editor so that it uses 8-spaces
+per tab-stop and indentation level of 4.
+An easy way to configure your editor of choice
+is to use the plugins provided at:
 
+http://editorconfig.org/
+
+In the same directory as this note is an `.editorconfig` that
+has the appropriate settings to play nicely with our preffered
+indentation style. The file is named `editorconfig` here so
+that it isn't hidden from view, but it should be renamed as
+`.editorconfig` if one wants to use it with a plugin.
