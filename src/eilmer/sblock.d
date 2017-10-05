@@ -204,6 +204,16 @@ public:
 	return ijk;
     } // end to_ijk_indices()
 
+    @nogc size_t[3] cell_id_to_ijk_indices(size_t id) const
+    {
+	size_t[3] ijk;
+	size_t k = id / (njcell * nicell);
+	size_t j = (id - k * (njcell * nicell)) / nicell;
+	size_t i = id - k * (njcell * nicell) - j * nicell;
+	ijk[0] = i; ijk[1] = j; ijk[2] = k;
+	return ijk;
+    } // end cell_id_to_ijk_indices()
+
     @nogc
     override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
     {
@@ -308,10 +318,15 @@ public:
 	try {
 	    // Create the cell and interface objects for the entire structured block.
 	    // This includes the layer of surrounding ghost cells.
+	    // The for each cell, face and vertex, the global index (gid)
+	    // will be the index into the array held privately by this class.
+	    //
+	    // In the Block base class, we will keep an array of "active" cells
+	    // that may be accessed directly by other parts of the code.
+	    // Providing such access brings the structured-grid code a little closer
+	    // to the flavour of the unstructured-grid code.
 	    foreach (gid; 0 .. ntot) {
-		// auto ijk = to_ijk_indices(gid);
 		// We will reassign cell-id a few lines below.
-		// It will be used for indexing in other parts of the code.
 		_ctr ~= new FVCell(myConfig, 0);
 		// We want distinct numbers for i, j and k interface id values, so add offsets.
 		// Note that we expect to only ever use these id values to help with
@@ -323,7 +338,7 @@ public:
 		    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid+2*ntot);
 		}
 		_vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices, gid);
-	    } // gid loop
+	    }
 	    // Now, assemble the lists of references to the cells, vertices and faces
 	    // in standard order for a structured grid.
 	    // These arrays are held by the Block base class and allow us to handle
@@ -798,7 +813,7 @@ public:
 	FVInterface face_at_wall;
 
 	foreach(ref FVCell cell; cells) {
-	    auto ijk = to_ijk_indices(cell.id);
+	    auto ijk = cell_id_to_ijk_indices(cell.id);
 	    size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2];
 	    // Step 1: get distances to all boundaries along all index directions.
 	    // If the block is not too distorted, these directions should take us
