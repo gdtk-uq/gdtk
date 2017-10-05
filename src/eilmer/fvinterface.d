@@ -66,9 +66,8 @@ public:
     double[] jz; // diffusive mass flux in z
     //
     // Rowan's implicit solver workspace.
-    version(steadystate) {
-    double[][] dFdU_L;
-    double[][] dFdU_R;
+    version(adjoint) {
+    double[][] dFdU;
     }
 
     this(LocalConfig myConfig,
@@ -93,11 +92,14 @@ public:
 	jx.length = n_species;
 	jy.length = n_species;
 	jz.length = n_species;
-	version(steadystate) {
-	dFdU_L.length = 5; // number of conserved variables
-	foreach (ref a; dFdU_L) a.length = 5;
-	dFdU_R.length = 5;
-	foreach (ref a; dFdU_R) a.length = 5;
+	version(adjoint) {
+	    dFdU.length = 5; // number of conserved variables
+	    foreach (ref a; dFdU) a.length = 5;
+	    foreach (i; 0..dFdU.length) {
+		foreach (j; 0..dFdU[i].length) {
+		    dFdU[i][j] = 0.0;
+		}
+	    }
 	}
     }
 

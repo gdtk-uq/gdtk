@@ -24,7 +24,7 @@ ifneq ($(TECPLOT_BIN_DIR), unavailable)
 endif
 
 
-PROGRAMS := e4shared e4sss
+PROGRAMS := e4shared e4sss e4adjoint
 SHARE_FILES := 
 
 ifeq ($(WITH_MPI),1)
@@ -229,6 +229,7 @@ clean:
 	- rm -r plot/ flow/ grid/
 	- rm main_with_rev_string.d
 	- rm steadystate_solver_with_rev_string.d
+	- rm adjoint_solver_with_rev_string.d
 	- rm mpi_main_with_rev_string.d e4mpi
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
@@ -356,6 +357,16 @@ e4sss: steadystate_solver.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > steadystate_solver_with_rev_string.d
 	$(DMD) -version=steady_state $(DFLAGS) $(OF)e4sss \
 		steadystate_solver_with_rev_string.d $(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
+		$(DLINKFLAGS)
+
+e4adjoint: adjoint_solver.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' adjoint_solver.d > adjoint_solver_with_rev_string.d
+	$(DMD) -version=adjoint $(DFLAGS) $(OF)e4adjoint \
+		adjoint_solver_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
