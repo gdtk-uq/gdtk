@@ -1050,3 +1050,63 @@ void writeGridsAsPlot3D(string fname, StructuredGrid[] grids, int dim)
     }
     f.close();
 }
+
+StructuredGrid rotate_gridpro_blocks(StructuredGrid grid, string rotateSouthToThis="South", string rotateWestToThis="West")
+{
+    StructuredGrid new_grid;
+
+    if (rotateSouthToThis == "East" && rotateWestToThis == "South") {
+    new_grid = new StructuredGrid(grid.njv, grid.niv);
+        foreach (j; 0 .. grid.niv) {
+            foreach (i; 0 .. grid.njv) {
+                new_grid[i,j,0].set(grid[(grid.niv-1)-j,i].x, grid[(grid.niv-1)-j,i].y, grid[(grid.niv-1)-j,i].z);
+            }
+        }
+    return new_grid;
+    }
+
+    else if (rotateSouthToThis == "North" && rotateWestToThis == "East") {
+    new_grid = new StructuredGrid(grid.niv, grid.njv);
+        foreach (j; 0 .. grid.njv) {
+            foreach (i; 0 .. grid.niv) {
+                new_grid[i,j,0].set(grid[(grid.niv-1)-i,(grid.njv-1)-j].x, grid[(grid.niv-1)-i,(grid.njv-1)-j].y, grid[(grid.niv-1)-i,(grid.njv-1)-j].z);
+            }
+        }
+    return new_grid;
+    }
+
+    else if (rotateSouthToThis == "West" && rotateWestToThis == "North") {
+    new_grid = new StructuredGrid(grid.njv, grid.niv);
+        foreach (j; 0 .. grid.niv) {
+            foreach (i; 0 .. grid.njv) {
+                new_grid[i,j,0].set(grid[j,(grid.njv-1)-i].x, grid[j,(grid.njv-1)-i].y, grid[j,(grid.njv-1)-i].z);
+            }
+        }
+    return new_grid;
+    }
+    return grid;
+}
+
+StructuredGrid grid_faceswap(StructuredGrid grid,  bool swapNorthToSouth=false, bool swapEastToWest=false)
+{
+    StructuredGrid new_grid;
+
+    if (swapNorthToSouth == true) {
+    new_grid = new StructuredGrid(grid.niv, grid.njv);
+        foreach (j; 0 .. grid.njv) {
+            foreach (i; 0 .. grid.niv) {
+                new_grid[i,j,0].set(grid[i,(grid.njv-1)-j].x, grid[i,(grid.njv-1)-j].y, grid[i,(grid.njv-1)-j].z);
+            }
+        }
+    }
+
+    if (swapEastToWest == true) {
+    new_grid = new StructuredGrid(grid.niv, grid.njv);
+        foreach (j; 0 .. grid.njv) {
+            foreach (i; 0 .. grid.niv) {
+                new_grid[i,j,0].set(grid[(grid.niv-1)-i,j].x, grid[(grid.niv-1)-i,j].y, grid[(grid.niv-1)-i,j].z);
+            }
+        }
+    }
+    return new_grid;
+}

@@ -471,6 +471,37 @@ extern(C) int writeGridsAsPlot3D(lua_State *L)
     return 0;
 }
 
+extern(C) int rotateGridproBlocks(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (narg != 3) {
+	string errMsg = "Error in call to rotateGridproBlocks(). " ~
+	    "3 arguments are required: grid, rotateSouthToThis, rotateWestToThis";
+	luaL_error(L, errMsg.toStringz);
+    }
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    auto rotateSouthToThis = to!string(luaL_checkstring(L, 2));
+    auto rotateWestToThis = to!string(luaL_checkstring(L, 3));
+    auto newGrid = rotate_gridpro_blocks(grid, rotateSouthToThis, rotateWestToThis);
+    structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, newGrid);
+    return 1;
+}
+
+extern(C) int gridFaceSwap(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    if (narg != 3) {
+	string errMsg = "Error in call to gridFaceSwap(). " ~
+	    "3 arguments are required: grid, swapNorthToSouth, swapEastToWest";
+	luaL_error(L, errMsg.toStringz);
+    }
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    auto swapNorthToSouth = to!bool(lua_toboolean(L, 2));
+    auto swapEastToWest = to!bool(lua_toboolean(L, 3));
+    auto newGrid = grid_faceswap(grid, swapNorthToSouth, swapEastToWest);
+    structuredGridStore ~= pushObj!(StructuredGrid, StructuredGridMT)(L, newGrid);
+    return 1;
+}
 
 void registerStructuredGrid(lua_State* L)
 {
@@ -530,7 +561,10 @@ void registerStructuredGrid(lua_State* L)
     lua_setglobal(L, "importGridproGrid");
     lua_pushcfunction(L, &writeGridsAsPlot3D);
     lua_setglobal(L, "writeGridsAsPlot3D");
-
+    lua_pushcfunction(L, &rotateGridproBlocks);
+    lua_setglobal(L, "rotateGridproBlocks");
+    lua_pushcfunction(L, &gridFaceSwap);
+    lua_setglobal(L, "gridFaceSwap");
 
 } // end registerStructuredGrid()
     
