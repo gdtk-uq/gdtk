@@ -1659,7 +1659,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.north];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face, false);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face, true);
 		    dest_cell = blk.get_cell(i,j+1,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i,j+2,k);
