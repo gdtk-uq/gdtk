@@ -1411,6 +1411,9 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
     if ((cast(TwoTemperatureNitrogen) gmodel) !is null) {
 	reactor = new VibRelaxNitrogen(fileName, gmodel);
     }
+    if ((cast(VibSpecificNitrogen) gmodel) !is null) {
+	reactor = new VibSpecificNitrogenRelaxtion(fileName, gmodel);
+    }
     if (reactor is null) {
 	throw new ChemistryUpdateException("Oops, failed to set up a ThermochemicalReactor.");
     }
