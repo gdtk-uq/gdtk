@@ -1697,7 +1697,7 @@ public:
 		// multi-level gas-dynamic update.
 		double p = pA / area;
 		double dp_over_p = relax_factor * 0.5 / (rhoA/area) * 
-		    (mass_flux*mass_flux - rhoUA*rhoUA/(area*area)) / p;
+		    (mass_flux*mass_flux - rhoUA*fabs(rhoUA)/(area*area)) / p;
 		double new_p0 = (1.0 + dp_over_p) * stagnation_condition.gas.p;
 		new_p0 = fmin(fmax(new_p0, p0_min), p0_max);
 		stagnation_condition.gas.p = new_p0;
@@ -1706,6 +1706,7 @@ public:
 		stagnation_entropy = gmodel.entropy(stagnation_condition.gas);
 	    }
 	    double bulk_speed = sqrt((rhovxA/rhoA)^^2 + (rhovyA/rhoA)^^2 + (rhovzA/rhoA)^^2);
+	    if (rhoUA < 0.0) { bulk_speed = 0.0; } // Block any outflow with stagnation condition.
 	    // Assume an isentropic process from a known total enthalpy.
 	    double enthalpy = stagnation_enthalpy - 0.5 * bulk_speed^^2;
 	    gmodel.update_thermo_from_hs(inflow_condition.gas, enthalpy, stagnation_entropy);
