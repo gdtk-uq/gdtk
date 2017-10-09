@@ -1627,8 +1627,8 @@ public:
 		    area += face.area[0];
 		    double local_rhoA = cell.fs.gas.rho * face.area[0];
 		    rhoA += local_rhoA;
-		    // North faces have unit normals that nominally point outward from the domain.
-		    rhoUA += local_rhoA * dot(cell.fs.vel, face.n); // mass flux
+		    // North faces have unit normals that nominally point outward from the domain, hence '-='
+		    rhoUA -= local_rhoA * dot(cell.fs.vel, face.n); // mass flux
 		    rhovxA += local_rhoA * cell.fs.vel.x;
 		    rhovyA += local_rhoA * cell.fs.vel.y;
 		    rhovzA += local_rhoA * cell.fs.vel.z;
@@ -1684,7 +1684,8 @@ public:
 		    area += face.area[0];
 		    double local_rhoA = cell.fs.gas.rho * face.area[0];
 		    rhoA += local_rhoA;
-		    rhoUA += local_rhoA * dot(cell.fs.vel, face.n);
+		    // East interfaces have normal that points outwards, hence '-='
+		    rhoUA -= local_rhoA * dot(cell.fs.vel, face.n);
 		    rhovxA += local_rhoA * cell.fs.vel.x;
 		    rhovyA += local_rhoA * cell.fs.vel.y;
 		    rhovzA += local_rhoA * cell.fs.vel.z;
@@ -1855,7 +1856,8 @@ public:
 		    area += face.area[0];
 		    double local_rhoA = cell.fs.gas.rho * face.area[0];
 		    rhoA += local_rhoA;
-		    rhoUA += local_rhoA * dot(cell.fs.vel, face.n);
+		    // Top interfaces have normal that points outwards, hence '-='
+		    rhoUA -= local_rhoA * dot(cell.fs.vel, face.n);
 		    rhovxA += local_rhoA * cell.fs.vel.x;
 		    rhovyA += local_rhoA * cell.fs.vel.y;
 		    rhovzA += local_rhoA * cell.fs.vel.z;
