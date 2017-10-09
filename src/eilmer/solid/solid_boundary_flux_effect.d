@@ -9,6 +9,7 @@ import util.lua;
 
 import simcore;
 import json_helper;
+import lua_helper;
 import geom;
 import globaldata;
 import globalconfig;
@@ -199,6 +200,8 @@ public:
 	    lua_pushinteger(L, Face.west); lua_setglobal(L, "west");
 	    lua_pushinteger(L, Face.top); lua_setglobal(L, "top");
 	    lua_pushinteger(L, Face.bottom); lua_setglobal(L, "bottom");
+	    lua_pushcfunction(L, &luafn_sampleSolidCell);
+	    lua_setglobal(L, "sampleSolidCell");
 	}
 	luaL_dofile(blk.bc[whichBoundary].myL, luafname.toStringz);
     }

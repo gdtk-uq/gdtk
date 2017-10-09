@@ -20,6 +20,7 @@ import fvinterface;
 import luaflowstate;
 import globalconfig;
 import globaldata;
+import solidfvcell;
 
 // -----------------------------------------------------
 // Convenience functions for user's Lua script
@@ -153,8 +154,48 @@ void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face,
     pushFlowStateToTable(L, tblIdx, face.fs, gmodel);
 } // end pushFluidFaceToTable()
 
+// ----------------------------------------------------------------------
+// Functions related to solid domains
+extern(C) int luafn_sampleSolidCell(lua_State *L)
+{
+    // Get arguments from lua_stack
+    auto blkId = lua_tointeger(L, 1);
+    auto i = lua_tointeger(L, 2);
+    auto j = lua_tointeger(L, 3);
+    auto k = lua_tointeger(L, 4);
 
+    // Grab the appropriate cell
+    auto cell = solidBlocks[blkId].getCell(i, j, k);
+    
+    // Return the interesting bits as a table.
+    lua_newtable(L);
+    int tblIdx = lua_gettop(L);
+    pushSolidCellToTable(L, tblIdx, cell);
+    return 1;
+} // end luafn_sampleFluidCell()
 
+void pushSolidCellToTable(lua_State* L, int tblIdx, ref const(SolidFVCell) cell)
+{
+    lua_pushnumber(L, cell.pos.x); lua_setfield(L, tblIdx, "x");
+    lua_pushnumber(L, cell.pos.y); lua_setfield(L, tblIdx, "y");
+    lua_pushnumber(L, cell.pos.z); lua_setfield(L, tblIdx, "z");
+    lua_pushnumber(L, cell.volume); lua_setfield(L, tblIdx, "vol");
+    lua_pushnumber(L, cell.T); lua_setfield(L, tblIdx, "T");
+    lua_pushnumber(L, cell.sp.rho); lua_setfield(L, tblIdx, "rho");
+    lua_pushnumber(L, cell.sp.Cp); lua_setfield(L, tblIdx, "Cp");
+    lua_pushnumber(L, cell.sp.k); lua_setfield(L, tblIdx, "k");
+
+    lua_pushnumber(L, cell.sp.k11); lua_setfield(L, tblIdx, "k11");
+    lua_pushnumber(L, cell.sp.k12); lua_setfield(L, tblIdx, "k12");
+    lua_pushnumber(L, cell.sp.k13); lua_setfield(L, tblIdx, "k13");
+    lua_pushnumber(L, cell.sp.k21); lua_setfield(L, tblIdx, "k21");
+    lua_pushnumber(L, cell.sp.k22); lua_setfield(L, tblIdx, "k22");
+    lua_pushnumber(L, cell.sp.k23); lua_setfield(L, tblIdx, "k23");
+    lua_pushnumber(L, cell.sp.k31); lua_setfield(L, tblIdx, "k31");
+    lua_pushnumber(L, cell.sp.k32); lua_setfield(L, tblIdx, "k32");
+    lua_pushnumber(L, cell.sp.k33); lua_setfield(L, tblIdx, "k33");
+
+} // end pushSolidCellToTable()
 
 
 
