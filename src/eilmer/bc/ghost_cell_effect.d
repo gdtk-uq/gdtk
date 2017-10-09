@@ -1553,14 +1553,12 @@ public:
 	    ", relax_factor=" ~ to!string(relax_factor) ~ ")";
     }
 
-    void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face, bool outwardNormal=false)
+    void set_velocity_components(ref Vector3 vel, double speed, ref FVInterface face)
     {
 	switch (direction_type) {
 	case "uniform":
 	    // Given a flow direction.
-	    vel.refx = speed * direction_vector.x;
-   	    vel.refy = speed * direction_vector.y;
-	    vel.refz = speed * direction_vector.z;
+	    vel.set(speed*direction_vector.x, speed*direction_vector.y, speed*direction_vector.z);
 	    break;
 	case "axial":
 	    // Axial-flow through a presumably circular surface.
@@ -1575,17 +1573,24 @@ public:
 	    double x = face.pos.x;
 	    double y = face.pos.y;
 	    double rxy = sqrt(x*x + y*y);
-	    vel.refx = vr * x/rxy - vt * y/rxy;
-   	    vel.refy = vt * x/rxy + vr * y/rxy;
-	    vel.refz = vz;
+	    vel.set(vr*x/rxy - vt*y/rxy, vt*x/rxy + vr*y/rxy, vz);
 	    break;
 	case "normal":
 	default:
-	    vel.refx = speed * face.n.x;
-	    vel.refy = speed * face.n.y;
-	    vel.refz = speed * face.n.z;
-	    // Maybe "correct" the direction so flow is *into* the domain
-	    if (outwardNormal) { vel = -vel; }
+	    // The flow direction is into the block along the local face normal.
+	    final switch (which_boundary) {
+	    case Face.north:
+	    case Face.east:
+	    case Face.top:
+		// Outward-facing normal.
+		vel.set(-speed*face.n.x, -speed*face.n.y, -speed*face.n.z);
+		break;
+	    case Face.west:
+	    case Face.south:
+	    case Face.bottom:
+		// Inward-facing normal.
+		vel.set(speed*face.n.x, speed*face.n.y, speed*face.n.z);
+	    }
 	}
     } // end set_velocity_components()
 
@@ -1660,7 +1665,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.north];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face, true);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
 		    dest_cell = blk.get_cell(i,j+1,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i,j+2,k);
@@ -1718,7 +1723,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.east];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face, true);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
 		    dest_cell = blk.get_cell(i+1,j,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i+2,j,k);
@@ -1775,7 +1780,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.south];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face, false);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
 		    dest_cell = blk.get_cell(i,j-1,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i,j-2,k);
@@ -1833,7 +1838,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.west];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face, false);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
 		    dest_cell = blk.get_cell(i-1,j,k);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i-2,j,k);
@@ -1891,7 +1896,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.top];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face, false);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
 		    dest_cell = blk.get_cell(i,j,k+1);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i,j,k+2);
@@ -1948,7 +1953,7 @@ public:
 		    src_cell = blk.get_cell(i,j,k);
 		    face = src_cell.iface[Face.bottom];
 		    // Velocity components may vary with position on the block face.
-		    set_velocity_components(inflow_condition.vel, bulk_speed, face, false);
+		    set_velocity_components(inflow_condition.vel, bulk_speed, face);
 		    dest_cell = blk.get_cell(i,j,k-1);
 		    dest_cell.fs.copy_values_from(inflow_condition);
 		    dest_cell = blk.get_cell(i,j,k-2);
