@@ -46,16 +46,6 @@ import conservedquantities;
 import postprocess;
 import loads;
 
-import std.math;
-import std.stdio;
-import std.conv;
-import std.format;
-import std.string;
-import std.regex;
-import std.algorithm;
-import std.bitmanip;
-import std.stdint;
-import std.range;
 import gzip;
 import fvcore;
 import fileutil;
@@ -143,7 +133,7 @@ void main(string[] args) {
     FVInterface ifacePm;
 
     double[][] Jac;
-    size_t nc = 3; // number of primitive variables
+    size_t nc = 4; // number of primitive variables
     size_t ncells = gasBlocks[0].ncells;
     // currently stores the entire Jacobian -- this is quite wasteful
     // TODO: sparse matrix storage
@@ -264,15 +254,11 @@ void main(string[] args) {
 		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
 		iface.dFdU[1][0] = diff/(2.0*h);
 
-		//diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
-		//iface.dFdU[2][0] = diff/(2.0*h);
+		diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
+		iface.dFdU[2][0] = diff/(2.0*h);
 
 		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
-		//writef("iface.id = %d", ifacePp.id);
-		//writef(", diff/(2h) = %.16f \n", diff/(2.0*h));
-		//writef(", perturbed flux = %.16f", ifacePp.F.total_energy);
-		//writef(", unperturbed flux = %.16f \n", ifacePm.F.total_energy);
-		iface.dFdU[2][0] = diff/(2.0*h);
+		iface.dFdU[3][0] = diff/(2.0*h);
 	    }
 	    // -----------------------------------------------------
 	    // perturb u
@@ -363,38 +349,33 @@ void main(string[] args) {
 		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
 		iface.dFdU[1][1] = diff/(2.0*h);
 
-		//diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
-		//iface.dFdU[2][1] = diff/(2.0*h);
+		diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
+		iface.dFdU[2][1] = diff/(2.0*h);
 	    
 		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
-		//writef("iface.id = %d", ifacePp.id);
-		//writef(", diff/(2h) = %.16f \n", diff/(2.0*h));
-		//writef(", perturbed flux = %.16f", ifacePp.F.total_energy);
-		//writef(", unperturbed flux = %.16f \n", ifacePm.F.total_energy);
-		iface.dFdU[2][1] = diff/(2.0*h);
+		iface.dFdU[3][1] = diff/(2.0*h);
 	    }
 	    // -----------------------------------------------------
 	    // perturb v
 	    // -----------------------------------------------------
-	    /*
 	    h = cell.fs.vel.refy * EPSILON + EPSILON;
 	    cellPm.copy_values_from(cell, CopyDataOption.all);
 	    cellPm.fs.vel.refy -= h;
 	    cellPp.copy_values_from(cell, CopyDataOption.all);
 	    cellPp.fs.vel.refy += h;
-
 	    foreach(iface; cell.iface) {
 		// - perturbation
 		// apply bcs
 		if (iface.is_on_boundary) {
+		    cell.fs.vel.refy -= h;
 		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
 		    blk.applyPostConvFluxAction(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
 		    blk.applyPostDiffFluxAction(0.0, 0, 0);
+		    cell.fs.vel.refy += h;
 		}
 		
-		ifacePm.copy_values_from(iface, CopyDataOption.all);
 		if(iface.left_cell.id == cellPm.id) {
 		    cellR = iface.right_cell;
 		    cellL = cellPm;
@@ -403,32 +384,34 @@ void main(string[] args) {
 		    cellR = cellPm;
 		    cellL = iface.left_cell;
 		}
-		
+
 		blk.Lft.copy_values_from(cellL.fs);
 		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, ifacePm, blk.myConfig, blk.omegaz);
+		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
 
 		// apply bcs
 		if (iface.is_on_boundary) {
+		    cell.fs.vel.refy -= h;
 		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
 		    blk.applyPostConvFluxAction(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
 		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    ifacePm.copy_values_from(iface, CopyDataOption.all);
+		    cell.fs.vel.refy += h;
 		}
-		
+		ifacePm.copy_values_from(iface, CopyDataOption.all);
 		// + perturbation
 		// apply bcs
 		if (iface.is_on_boundary) {
+		    cell.fs.vel.refy += h;
 		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
 		    blk.applyPostConvFluxAction(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
 		    blk.applyPostDiffFluxAction(0.0, 0, 0);
+		    cell.fs.vel.refy -= h;
 		}
-
-		ifacePp.copy_values_from(iface, CopyDataOption.all);
+		
 		if(iface.left_cell.id == cellPp.id) {
 		    cellR = iface.right_cell;
 		    cellL = cellPp;
@@ -440,21 +423,23 @@ void main(string[] args) {
 
 		blk.Lft.copy_values_from(cellL.fs);
 		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, ifacePp, blk.myConfig, blk.omegaz);
+		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
 
 		// apply bcs
 		if (iface.is_on_boundary) {
+		    cell.fs.vel.refy += h;
 		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
 		    blk.applyPostConvFluxAction(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
 		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
 		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    ifacePp.copy_values_from(iface, CopyDataOption.all);
+		    cell.fs.vel.refy -= h;
 		}
+		ifacePp.copy_values_from(iface, CopyDataOption.all);
 		
 		diff = ifacePp.F.mass - ifacePm.F.mass;
 		iface.dFdU[0][2] = diff/(2.0*h);
-		
+	    
 		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
 		iface.dFdU[1][2] = diff/(2.0*h);
 
@@ -464,7 +449,6 @@ void main(string[] args) {
 		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
 		iface.dFdU[3][2] = diff/(2.0*h);
 	    }
-	    */
 	    // -----------------------------------------------------
 	    // perturb p
 	    // -----------------------------------------------------
@@ -564,16 +548,16 @@ void main(string[] args) {
 		ifacePp.copy_values_from(iface, CopyDataOption.all);
 
 		diff = ifacePp.F.mass - ifacePm.F.mass;
-		iface.dFdU[0][2] = diff/(2.0*h);
+		iface.dFdU[0][3] = diff/(2.0*h);
 	    
 		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
-		iface.dFdU[1][2] = diff/(2.0*h);
+		iface.dFdU[1][3] = diff/(2.0*h);
 
-		//diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
-		//iface.dFdU[2][3] = diff/(2.0*h);
+		diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
+		iface.dFdU[2][3] = diff/(2.0*h);
 	    
 		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
-		iface.dFdU[2][2] = diff/(2.0*h);
+		iface.dFdU[3][3] = diff/(2.0*h);
 	    }
 	    // -----------------------------------------------------
 	    // loop through influenced cells and fill out Jacobian 
@@ -589,14 +573,9 @@ void main(string[] args) {
 		    for ( size_t jc = 0; jc < nc; ++jc ) {
 			integral = 0.0;
 			J = cell.id*nc + jc; // column index
-			//writeln("--------------------------------");
 			foreach(fi, iface; c.iface) {
-			    //writeln(iface.dFdU);
-			    //writeln("iface.id = ", iface.id, ", pcell.id = ", cell.id, ", icell.id = ", c.id, ", ", iface.dFdU[ic][jc], ", 1/vol = ", volInv, ", iface.area", iface.area[0]);
 			    integral -= c.outsign[fi] * iface.dFdU[ic][jc] * iface.area[0]; // gtl=0
 			}
-			//writeln(I, ", ", J, ", ", volInv * integral);
-			//writeln("--------------------------------");
 			Jac[I][J] = volInv * integral;
 		    }
 		}
@@ -612,23 +591,9 @@ void main(string[] args) {
 	}
     }
 
-    writeln(Jac.length);
     //--------------------------------------------------------
     // Transpose Jac
     //--------------------------------------------------------
-    /*
-    Jac[297][297] = -1386.69;
-    Jac[297][298] = -11.5109;
-    Jac[297][299] = -0.00748001;
-    Jac[298][297] = -192213;
-    Jac[298][298] = -8342.65;
-    Jac[298][299] = -5.49689;
-    Jac[299][297] = -1.34348e+07;
-    Jac[299][298] = -6.26195e+06;
-    Jac[299][299] = -8717.94;
-    */
-    writeln("J = ", Jac);
-    
     double[][] JacT;
     foreach (i; 0..nc*ncells) {
 	double[] row;
@@ -637,9 +602,6 @@ void main(string[] args) {
 	}
 	JacT ~= row;
     }
-    //writeln("JT = ", JacT);
-    writeln("-------------------------------------------------------------------------------------");
-    //writeln("JacT = ", JacT);
     // -----------------------------------------------------
     //  Form cost function sensitvity
     // -----------------------------------------------------
@@ -660,7 +622,7 @@ void main(string[] args) {
 	foreach(i, cell; blk.cells) {
 	    dJdV ~= 0.0;
 	    dJdV ~= 0.0;
-	    //dJdV ~= 0.0;
+	    dJdV ~= 0.0;
 	    dJdV ~= 0.5*(2.0*cell.fs.gas.p - 2.0*p_target[i]);
 	}
     }
@@ -670,65 +632,30 @@ void main(string[] args) {
     // -----------------------------------------------------
 
     // form augmented matrix aug = [A|B] = [Jac|dJdQ]
-    writeln("-------------------------------------------------------------");
-    writeln("dJdV = ", dJdV);
-    size_t ncols = nc*ncells*2;
+    size_t ncols = nc*ncells+1;
     size_t nrows = nc*ncells;
-    double[600][300] aug;
+    Matrix aug;
+    aug = new Matrix(nrows, ncols);
     foreach (i; 0 .. JacT.length) {
-	foreach (j; 0 .. (Jac[i].length*2) ) {
-	    if (j < JacT[i].length) aug[i][j] =  JacT[i][j];
-	    else if (j-300 == i) aug[i][j] = 1.0;
-	    else aug[i][j] = 0.0;
+	foreach (j; 0 .. (Jac[i].length+1) ) {
+	    if (j < JacT[i].length) aug[i,j] =  JacT[i][j];
+	    else aug[i,j] = -dJdV[i];
 	}
     }
-
-    //writeln(aug);
-    //writeln("aug = ", aug);
 
     // solve for adjoint variables
-    //gaussJordanElimination(aug);
-    computeInverse!(300,300)(aug, 1.0e-16);
+    gaussJordanElimination(aug);
 
-    //writeln(aug);
-    
-    //writeln("sol = ", aug);
-    
-    double[300] psi;
-    //foreach (i; 0 .. nrows) {
-    //	psi ~= aug[i][ncols-1];
-    //}
-    foreach (i; 0 .. 100) {
-	double temp1 = 0.0; double temp2 = 0.0; double temp3 = 0.0;
-	foreach (j; 0 .. JacT.length) {
-	    temp1 += aug[i*3][j+300] * -dJdV[j];
-	    temp2 += aug[i*3+1][j+300] * -dJdV[j];
-	    temp3 += aug[i*3+2][j+300] * -dJdV[j];
-	}
-	psi[i*3] = temp1;
-	psi[i*3+1] = temp2;
-	psi[i*3+2] = temp3;
+    double[] psi;
+    foreach (i; 0 .. nrows) {
+	psi ~= aug[i,ncols-1];
     }
-    
-    writeln("psi = ", psi);
 
-    double[3*100] temp;
-    foreach (i; 0 .. 100) {
-	double temp1 = 0.0; double temp2 = 0.0; double temp3 = 0.0;
-	foreach (j; 0 .. JacT.length) {
-	    temp1 += JacT[i*3][j] * psi[j];
-	    temp2 += JacT[i*3+1][j] * psi[j];
-	    temp3 += JacT[i*3+2][j] * psi[j];
-	}
-	temp[i*3] = temp1;
-	temp[i*3+1] = temp2;
-	temp[i*3+2] = temp3;
-    }
-    //writeln(temp);
+    writeln(psi);
     
-    foreach(i; 0 .. ncells) {
+    foreach(i; 0 .. 100) {
 	FVCell cell = gasBlocks[0].cells[i];
-	auto writer = format("%f %f %f %f \n", cell.pos[0].x, psi[i*3], psi[i*3+1], psi[i*3+2]);
+	auto writer = format("%f %f %f %f %f \n", cell.pos[0].x, psi[i*nc], psi[i*nc+1], psi[i*nc+2], psi[i*nc+3]);
 	append("e4_adjoint_vars.dat", writer);
     }
     
