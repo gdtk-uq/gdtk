@@ -147,418 +147,16 @@ void main(string[] args) {
     // hard-coded for perturbing rho, u, v, P
     foreach (blk; gasBlocks) {
 	foreach(ci, cell; blk.cells) {
-	    cellPp = new FVCell(dedicatedConfig[blk.id]);
-	    ifacePp = new FVInterface(dedicatedConfig[blk.id], false);
-	    cellPm = new FVCell(dedicatedConfig[blk.id]);
-	    ifacePm = new FVInterface(dedicatedConfig[blk.id], false);
+	    // 0th perturbation: rho
+	    mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
+	    // 1st perturbation: u
+	    mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+	    // 2nd perturbation: v
+	    mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+	    // 3rd perturbation: P
+	    mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
 	    
-	    // -----------------------------------------------------
-	    // perturb rho
-	    // -----------------------------------------------------
-	    h = cell.fs.gas.rho * EPSILON + EPSILON;
-	    cellPm.copy_values_from(cell, CopyDataOption.all);
-	    cellPm.fs.gas.rho -= h;
-	    cellPp.copy_values_from(cell, CopyDataOption.all);
-	    cellPp.fs.gas.rho += h;
 	    
-	    foreach(iface; cell.iface) {
-		// - perturbation
-		// update thermo
-		blk.myConfig.gmodel.update_thermo_from_rhop(cellPm.fs.gas);
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.rho -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.rho += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-
-		if(iface.left_cell.id == cellPm.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPm;
-		}
-		else {
-		    cellR = cellPm;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.rho -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.rho += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-		ifacePm.copy_values_from(iface, CopyDataOption.all);
-		
-		// + perturbation
-		// update thermo
-		blk.myConfig.gmodel.update_thermo_from_rhop(cellPp.fs.gas);
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.rho += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.rho -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-		
-		if(iface.left_cell.id == cellPp.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPp;
-		}
-		else {
-		    cellR = cellPp;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.rho += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.rho -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-		ifacePp.copy_values_from(iface, CopyDataOption.all);
-		
-		diff = ifacePp.F.mass - ifacePm.F.mass;
-		iface.dFdU[0][0] = diff/(2.0*h);
-	    
-		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
-		iface.dFdU[1][0] = diff/(2.0*h);
-
-		diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
-		iface.dFdU[2][0] = diff/(2.0*h);
-
-		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
-		iface.dFdU[3][0] = diff/(2.0*h);
-	    }
-	    // -----------------------------------------------------
-	    // perturb u
-	    // -----------------------------------------------------
-
-	    h = cell.fs.vel.refx * EPSILON + EPSILON;
-	    cellPm.copy_values_from(cell, CopyDataOption.all);
-	    cellPm.fs.vel.refx -= h;
-	    cellPp.copy_values_from(cell, CopyDataOption.all);
-	    cellPp.fs.vel.refx += h;
-	    foreach(iface; cell.iface) {
-		// - perturbation
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refx -= h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refx += h;
-		}
-		
-		if(iface.left_cell.id == cellPm.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPm;
-		}
-		else {
-		    cellR = cellPm;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refx -= h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refx += h;
-		}
-		ifacePm.copy_values_from(iface, CopyDataOption.all);
-		// + perturbation
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refx += h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refx -= h;
-		}
-		
-		if(iface.left_cell.id == cellPp.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPp;
-		}
-		else {
-		    cellR = cellPp;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refx += h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refx -= h;
-		}
-		ifacePp.copy_values_from(iface, CopyDataOption.all);
-		
-		diff = ifacePp.F.mass - ifacePm.F.mass;
-		iface.dFdU[0][1] = diff/(2.0*h);
-	    
-		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
-		iface.dFdU[1][1] = diff/(2.0*h);
-
-		diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
-		iface.dFdU[2][1] = diff/(2.0*h);
-	    
-		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
-		iface.dFdU[3][1] = diff/(2.0*h);
-	    }
-	    // -----------------------------------------------------
-	    // perturb v
-	    // -----------------------------------------------------
-	    h = cell.fs.vel.refy * EPSILON + EPSILON;
-	    cellPm.copy_values_from(cell, CopyDataOption.all);
-	    cellPm.fs.vel.refy -= h;
-	    cellPp.copy_values_from(cell, CopyDataOption.all);
-	    cellPp.fs.vel.refy += h;
-	    foreach(iface; cell.iface) {
-		// - perturbation
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refy -= h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refy += h;
-		}
-		
-		if(iface.left_cell.id == cellPm.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPm;
-		}
-		else {
-		    cellR = cellPm;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refy -= h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refy += h;
-		}
-		ifacePm.copy_values_from(iface, CopyDataOption.all);
-		// + perturbation
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refy += h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refy -= h;
-		}
-		
-		if(iface.left_cell.id == cellPp.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPp;
-		}
-		else {
-		    cellR = cellPp;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.vel.refy += h;
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.vel.refy -= h;
-		}
-		ifacePp.copy_values_from(iface, CopyDataOption.all);
-		
-		diff = ifacePp.F.mass - ifacePm.F.mass;
-		iface.dFdU[0][2] = diff/(2.0*h);
-	    
-		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
-		iface.dFdU[1][2] = diff/(2.0*h);
-
-		diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
-		iface.dFdU[2][2] = diff/(2.0*h);
-	    
-		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
-		iface.dFdU[3][2] = diff/(2.0*h);
-	    }
-	    // -----------------------------------------------------
-	    // perturb p
-	    // -----------------------------------------------------
-
-	    h = cell.fs.gas.p * EPSILON + EPSILON;
-	    cellPm.copy_values_from(cell, CopyDataOption.all);
-	    cellPm.fs.gas.p -= h;
-	    cellPp.copy_values_from(cell, CopyDataOption.all);
-	    cellPp.fs.gas.p += h;
-	    foreach(iface; cell.iface) {
-		// - perturbation
-		// update thermo
-		blk.myConfig.gmodel.update_thermo_from_rhop(cellPm.fs.gas);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.p -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.p += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-		
-		if(iface.left_cell.id == cellPm.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPm;
-		}
-		else {
-		    cellR = cellPm;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.p -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.p += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-		ifacePm.copy_values_from(iface, CopyDataOption.all);
-			
-		// + perturbation
-		// update thermo
-		blk.myConfig.gmodel.update_thermo_from_rhop(cellPp.fs.gas);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.p += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.p -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-		
-		if(iface.left_cell.id == cellPp.id) {
-		    cellR = iface.right_cell;
-		    cellL = cellPp;
-		}
-		else {
-		    cellR = cellPp;
-		    cellL = iface.left_cell;
-		}
-
-		blk.Lft.copy_values_from(cellL.fs);
-		blk.Rght.copy_values_from(cellR.fs);
-		compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-
-		// apply bcs
-		if (iface.is_on_boundary) {
-		    cell.fs.gas.p += h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-		    blk.applyPostConvFluxAction(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-		    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
-		    blk.applyPostDiffFluxAction(0.0, 0, 0);
-		    cell.fs.gas.p -= h;
-		    blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-		}
-		ifacePp.copy_values_from(iface, CopyDataOption.all);
-
-		diff = ifacePp.F.mass - ifacePm.F.mass;
-		iface.dFdU[0][3] = diff/(2.0*h);
-	    
-		diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;
-		iface.dFdU[1][3] = diff/(2.0*h);
-
-		diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;
-		iface.dFdU[2][3] = diff/(2.0*h);
-	    
-		diff = ifacePp.F.total_energy - ifacePm.F.total_energy;
-		iface.dFdU[3][3] = diff/(2.0*h);
-	    }
 	    // -----------------------------------------------------
 	    // loop through influenced cells and fill out Jacobian 
 	    // -----------------------------------------------------
@@ -590,7 +188,7 @@ void main(string[] args) {
 	    }
 	}
     }
-
+    
     //--------------------------------------------------------
     // Transpose Jac
     //--------------------------------------------------------
@@ -662,3 +260,129 @@ void main(string[] args) {
     writeln("Done simulation.");
 }
 
+string computeFluxDerivativesAroundCell(string varName, string posInArray, bool includeThermoUpdate)
+{
+    string codeStr;
+    codeStr ~= "cellPp = new FVCell(dedicatedConfig[blk.id]);";
+    codeStr ~= "ifacePp = new FVInterface(dedicatedConfig[blk.id], false);";
+    codeStr ~= "cellPm = new FVCell(dedicatedConfig[blk.id]);";
+    codeStr ~= "ifacePm = new FVInterface(dedicatedConfig[blk.id], false);";
+    codeStr ~= "h = cell.fs."~varName~" * EPSILON + EPSILON;";
+    codeStr ~= "cellPm.copy_values_from(cell, CopyDataOption.all);";
+    codeStr ~= "cellPm.fs."~varName~" -= h;";
+    codeStr ~= "cellPp.copy_values_from(cell, CopyDataOption.all);";
+    codeStr ~= "cellPp.fs."~varName~" += h;";
+    codeStr ~= "foreach(iface; cell.iface) {";
+    // ------------------ negative perturbation ------------------
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cellPm.fs.gas);";
+    }
+    // ------------------ apply cell effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "cell.fs."~varName~" -= h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);";  // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "cell.fs."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "}";
+    // ------------------ compute interflux ------------------
+    codeStr ~= "if(iface.left_cell.id == cellPm.id) {";
+    codeStr ~= "cellR = iface.right_cell;";
+    codeStr ~= "cellL = cellPm;";
+    codeStr ~= "}";
+    codeStr ~= "else {";
+    codeStr ~= "cellR = cellPm;";
+    codeStr ~= "cellL = iface.left_cell;";
+    codeStr ~= "}";
+    codeStr ~= "blk.Lft.copy_values_from(cellL.fs);";
+    codeStr ~= "blk.Rght.copy_values_from(cellR.fs);";
+    codeStr ~= "compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);";
+    // ------------------ apply interface effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "cell.fs."~varName~" -= h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);"; // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "cell.fs."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "}";
+    codeStr ~= "ifacePm.copy_values_from(iface, CopyDataOption.all);";
+    // ------------------ positive perturbation ------------------
+    // update thermo
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cellPp.fs.gas);";
+    }
+    // ------------------ apply cell effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "cell.fs."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);"; // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "cell.fs."~varName~" -= h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "}";
+    // ------------------ compute interface flux ------------------
+    codeStr ~= "if(iface.left_cell.id == cellPp.id) {";
+    codeStr ~= "cellR = iface.right_cell;";
+    codeStr ~= "cellL = cellPp;";
+    codeStr ~= "}";
+    codeStr ~= "else {";
+    codeStr ~= "cellR = cellPp;";
+    codeStr ~= "cellL = iface.left_cell;";
+    codeStr ~= "}";
+    codeStr ~= "blk.Lft.copy_values_from(cellL.fs);";
+    codeStr ~= "blk.Rght.copy_values_from(cellR.fs);";
+    codeStr ~= "compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);";
+    // ------------------ apply interface effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "cell.fs."~varName~" += h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);"; // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "cell.fs."~varName~" -= h;";
+    if ( includeThermoUpdate ) {
+	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
+    }
+    codeStr ~= "}";
+    codeStr ~= "ifacePp.copy_values_from(iface, CopyDataOption.all);";
+    // ------------------ compute interface flux derivatives ------------------
+    codeStr ~= "diff = ifacePp.F.mass - ifacePm.F.mass;";
+    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = diff/(2.0*h);";	    
+    codeStr ~= "diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;";
+    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = diff/(2.0*h);";
+    codeStr ~= "diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;";
+    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = diff/(2.0*h);";
+    codeStr ~= "diff = ifacePp.F.total_energy - ifacePm.F.total_energy;";
+    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
+    //
+    codeStr ~= "}";
+
+    return codeStr;
+}
