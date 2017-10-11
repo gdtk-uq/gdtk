@@ -60,7 +60,7 @@ string generate_boundary_load_file(int current_tindx, double sim_time, string gr
     if (!exists(fname)) {
 	auto f = File(fname, "w");
 	f.writeln("# t = ", sim_time);
-	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z \n");
+	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:Ttr\n");
 	f.close();
     }
     return fname;
@@ -162,6 +162,7 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
     double mu_wall = fs.gas.mu;
     double k_wall = fs.gas.k;
     double P = fs.gas.p;
+    double wall_temp = fs.gas.Ttr;
     double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q;
     if (GlobalConfig.viscous) {
 	double dTtrdx = grad.Ttr[0]; double dTtrdy = grad.Ttr[1]; double dTtrdz = grad.Ttr[2]; 
@@ -207,6 +208,6 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
 	q = 0.0;
     }
     // store in file
-    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz);
+    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, wall_temp);
     append(fname, writer);    
 } // end compute_and_store_loads()
