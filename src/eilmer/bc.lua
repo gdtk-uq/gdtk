@@ -275,6 +275,15 @@ function FixedT:tojson()
    return str
 end
 
+EnergyBalance = BoundaryInterfaceEffect:new{emissivity=nil}
+EnergyBalance.type = "energy_balance"
+function EnergyBalance:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "emissivity": %.18e', self.emissivity)
+   str = str .. '}'
+   return str
+end
+
 FixedComposition = BoundaryInterfaceEffect:new{wall_massf_composition={}}
 FixedComposition.type = "fixed_composition"
 function FixedComposition:tojson()
@@ -516,6 +525,36 @@ function WallBC_NoSlip_FixedT:new(o)
    if o.catalytic_type and o.catalytic_type ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
 	 FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   end
+   o.is_configured = true
+   return o
+end
+
+WallBC_ThermionicEmission = BoundaryCondition:new()
+WallBC_ThermionicEmission.type = "wall_thermionic_emission"
+function WallBC_ThermionicEmission:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"emissivity", "wall_function", 
+                  "catalytic_type", "wall_massf_composition",
+                  "label", "group"})
+   assert(flag, "Invalid name for item supplied to WallBC_ThermionicEmission constructor.")
+   o = BoundaryCondition.new(self, o)
+   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+                  EnergyBalance:new{emissivity=o.emissivity},
+                  UpdateThermoTransCoeffs:new() }
+   if config.turbulence_model == "k_omega" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
+      if o.wall_function then
+    -- Only makes sense to add a wall function if the k-omega model is active.
+    o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
+       WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
+    o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
+      end
+   end
+   if o.catalytic_type and o.catalytic_type ~= "none" then
+      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
+    FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
    end
    o.is_configured = true
    return o
