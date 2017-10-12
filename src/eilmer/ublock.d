@@ -39,6 +39,7 @@ import bc;
 
 class UBlock: Block {
 public:
+    size_t ncells;
     size_t nvertices;
     size_t nfaces;
     size_t nboundaries;

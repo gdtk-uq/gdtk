@@ -117,8 +117,10 @@ void main(string[] args) {
 	    FVCell[] cell_refs;
 	    cell_refs ~= cell; // add the parent cell as the first reference
 	    foreach(f; cell.iface) {
-		if (f.left_cell.id != cell.id && f.left_cell.id < 1000000) cell_refs ~= f.left_cell;
-		if (f.right_cell.id != cell.id && f.right_cell.id < 1000000) cell_refs ~= f.right_cell;
+		if (f.left_cell.id != cell.id &&
+		    f.left_cell.id < ghost_cell_start_id) { cell_refs ~= f.left_cell; }
+		if (f.right_cell.id != cell.id &&
+		    f.right_cell.id < ghost_cell_start_id) { cell_refs ~= f.right_cell; }
 	    }
 	    stencils ~= cell_refs;
 	}
@@ -134,7 +136,7 @@ void main(string[] args) {
 
     double[][] Jac;
     size_t nc = 4; // number of primitive variables
-    size_t ncells = gasBlocks[0].ncells;
+    size_t ncells = gasBlocks[0].cells.length;
     // currently stores the entire Jacobian -- this is quite wasteful
     // TODO: sparse matrix storage
     foreach (i; 0..nc*ncells) {

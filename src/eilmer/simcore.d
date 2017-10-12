@@ -223,7 +223,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
 	blockLoads.length = GlobalConfig.nFluidBlocks;
 	foreach (iblk, blk; gasBlocks) {
 	    // Here 'iblk' is equal to the id of the block.
-	    blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
+	    blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].cells.length)); 
 	}
 	sort!("a[1] > b[1]")(blockLoads);
 	foreach (blk; blockLoads) {

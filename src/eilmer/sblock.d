@@ -107,7 +107,6 @@ public:
 	    _nkdim = nkcell + 2 * n_ghost_cell_layers;
 	    kmin = n_ghost_cell_layers; kmax = kmin + nkcell - 1;
 	}
-	this.ncells = nicell * njcell * nkcell;
 	// Workspace for flux_calc method.
 	one_d = new OneDInterpolator(dedicatedConfig[id]);
 
