@@ -19,6 +19,7 @@ import gas.luagas_model;
 import nm.luabbla;
 import json_helper;
 import geom;
+import grid: Grid_t;
 import sgrid;
 import fvcore;
 import globalconfig;
@@ -238,16 +239,20 @@ public:
 	lua_setglobal(myL, "n_species");
 	lua_pushinteger(myL, blk.myConfig.gmodel.n_modes);
 	lua_setglobal(myL, "n_modes");
-	// Structured-block-specific data
-	lua_pushinteger(myL, blk.nicell); lua_setglobal(myL, "nicell");
-	lua_pushinteger(myL, blk.njcell); lua_setglobal(myL, "njcell");
-	lua_pushinteger(myL, blk.nkcell); lua_setglobal(myL, "nkcell");
-	lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
-	lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
-	lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
-	lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
-	lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
-	lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
+	if (blk.grid_type == Grid_t.structured_grid) {
+	    // Structured-block-specific data
+	    SBlock sblk = cast(SBlock) blk;
+	    assert(sblk !is null, "Oops, this should be an SBlock object.");
+	    lua_pushinteger(myL, sblk.nicell); lua_setglobal(myL, "nicell");
+	    lua_pushinteger(myL, sblk.njcell); lua_setglobal(myL, "njcell");
+	    lua_pushinteger(myL, sblk.nkcell); lua_setglobal(myL, "nkcell");
+	    lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
+	    lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
+	    lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
+	    lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
+	    lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
+	    lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
+	}
 	// Boundary-specific data
 	lua_pushinteger(myL, which_boundary); lua_setglobal(myL, "boundaryId");
 	lua_pushstring(myL, label.toStringz); lua_setglobal(myL, "boundaryLabel");

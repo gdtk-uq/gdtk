@@ -51,6 +51,13 @@ public:
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     size_t[] micell, mjcell, mkcell; // locations of monitor cells
 
+    size_t nicell;
+    size_t njcell;
+    size_t nkcell;
+    size_t imin, imax; 
+    size_t jmin, jmax;
+    size_t kmin, kmax;
+
 private:
     StructuredGrid grid; // for reading and writing
     // Total number of cells in each direction for this block.
@@ -2282,11 +2289,11 @@ public:
     }
 
     @nogc
-    override void copy_into_ghost_cells(int destination_face,
-					ref Block src_blk, int src_face, int src_orientation,
-					int type_of_copy, bool with_encode,
-					bool reorient_vector_quantities,
-					ref const(double[]) Rmatrix)
+    void copy_into_ghost_cells(int destination_face,
+			       ref SBlock src_blk, int src_face, int src_orientation,
+			       int type_of_copy, bool with_encode,
+			       bool reorient_vector_quantities,
+			       ref const(double[]) Rmatrix)
     {
 	size_t i_dest, i_src, j_dest, j_src, k_dest, k_src, i, j, k;
 	FVCell src0, dest0, src1, dest1;

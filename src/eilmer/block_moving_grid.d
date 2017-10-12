@@ -27,7 +27,7 @@ import geom;
 import boundary_flux_effect;
 import ghost_cell_effect;
 
-int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
+int set_gcl_interface_properties(SBlock blk, size_t gtl, double dt) {
     size_t i, j, k;
     FVVertex vtx1, vtx2;
     FVInterface IFace;
@@ -89,7 +89,7 @@ int set_gcl_interface_properties(Block blk, size_t gtl, double dt) {
     return 0;
 }
 
-void predict_vertex_positions(Block blk, size_t dimensions, double dt, int gtl) {
+void predict_vertex_positions(SBlock blk, size_t dimensions, double dt, int gtl) {
     size_t krangemax = ( dimensions == 2 ) ? blk.kmax : blk.kmax+1;
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
 	for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
@@ -105,7 +105,7 @@ void predict_vertex_positions(Block blk, size_t dimensions, double dt, int gtl) 
     return;
 }
 
-void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
+void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
     /++ for a given block, loop through cell vertices and update the vertex
       + velocities. The boundary vertex velocities are set via the methodology laid out
       + in Ian Johnston's thesis available on the cfcfd website. The internal velocities
@@ -158,8 +158,9 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 	    if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
 	        auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
 	        int neighbourBlock =  ffeBC.neighbourBlock.id;
-		cell_botrght =
-		    gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
+		SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
+		assert(nbblk !is null, "Oops, this should be an SBlock object.");
+		cell_botrght = nbblk.get_cell(nbblk.imin, nbblk.jmax, k);
 	    }
 	    else // else grab data from neighbour cell in current block
 		cell_botrght = blk.get_cell(i, j-1, k);
@@ -167,8 +168,9 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 	    if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
 		auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
 		int neighbourBlock =  ffeBC.neighbourBlock.id;
-		cell_toprght =
-		    gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
+		SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
+		assert(nbblk !is null, "Oops, this should be an SBlock object.");
+		cell_toprght = nbblk.get_cell(nbblk.imin, nbblk.jmin, k);
 	    }
 	    else // else grab data from neighbour cell in current block
 		cell_toprght = blk.get_cell(i, j, k);            
@@ -177,10 +179,10 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 		    // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
 		    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
 		    int neighbourBlock =  ffeBC.neighbourBlock.id;
-		    bot_cell_R1 =
-			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+1, gasBlocks[neighbourBlock].jmax, k);
-		    bot_cell_R2 =
-			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+2, gasBlocks[neighbourBlock].jmax, k);
+		    SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
+		    assert(nbblk !is null, "Oops, this should be an SBlock object.");
+		    bot_cell_R1 = nbblk.get_cell(nbblk.imin+1, nbblk.jmax, k);
+		    bot_cell_R2 = nbblk.get_cell(nbblk.imin+2, nbblk.jmax, k);
 		}
 		else { // else if reconstruction is true and vtx is not on block edge
 		    bot_cell_R1 = blk.get_cell(i+1, j-1, k);
@@ -190,10 +192,10 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 		    // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
 		    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
 		    int neighbourBlock =  ffeBC.neighbourBlock.id;
-		    top_cell_R1 =
-			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+1, gasBlocks[neighbourBlock].jmin, k);
-		    top_cell_R2 =
-			gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin+2, gasBlocks[neighbourBlock].jmin, k);
+		    SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
+		    assert(nbblk !is null, "Oops, this should be an SBlock object.");
+		    top_cell_R1 = nbblk.get_cell(nbblk.imin+1, nbblk.jmin, k);
+		    top_cell_R2 = nbblk.get_cell(nbblk.imin+2, nbblk.jmin, k);
 		}
 		else { // else if reconstruction is true and vtx is not on block edge
 		    top_cell_R1 = blk.get_cell(i+1, j, k);
@@ -246,14 +248,18 @@ void shock_fitting_vertex_velocities(Block blk, int step, double sim_time) {
 		    if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face" && jOffSet == 1) {
 			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
 			int neighbourBlock =  ffeBC.neighbourBlock.id;
-			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
-			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmax, k);
+			SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
+			assert(nbblk !is null, "Oops, this should be an SBlock object.");
+			cell = nbblk.get_cell(nbblk.imin, nbblk.jmax, k);
+			iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmax, k);
 		    }
 		    if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face" && jOffSet == 0) {
 			auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
 			int neighbourBlock =  ffeBC.neighbourBlock.id;
-			cell = gasBlocks[neighbourBlock].get_cell(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
-			iface_neighbour = gasBlocks[neighbourBlock].get_ifi(gasBlocks[neighbourBlock].imin, gasBlocks[neighbourBlock].jmin, k);
+			SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
+			assert(nbblk !is null, "Oops, this should be an SBlock object.");
+			cell = nbblk.get_cell(nbblk.imin, nbblk.jmin, k);
+			iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmin, k);
 		    }
 		    if (interpolation_order == 2) {
 			cell_R1 = blk.get_cell(i+1, j-jOffSet, k);

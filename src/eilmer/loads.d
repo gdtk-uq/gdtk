@@ -28,6 +28,8 @@ import flowgradients;
 import geom;
 import grid;
 import block;
+import sblock: SBlock;
+import ublock: UBlock;
 import fvinterface;
 import bc;
 
@@ -43,10 +45,14 @@ void write_boundary_loads_to_file(double sim_time, int current_tindx) {
 	if (blk.active) {
 	    final switch (blk.grid_type) {
 	    case Grid_t.unstructured_grid: 
-		apply_unstructured_grid(blk, sim_time, current_tindx);
+		UBlock ublk = cast(UBlock) blk;
+		assert(ublk !is null, "Oops, this should be a UBlock object.");
+		apply_unstructured_grid(ublk, sim_time, current_tindx);
 		break;
 	    case Grid_t.structured_grid:
-		apply_structured_grid(blk, sim_time, current_tindx);
+		SBlock sblk = cast(SBlock) blk;
+		assert(sblk !is null, "Oops, this should be an SBlock object.");
+		apply_structured_grid(sblk, sim_time, current_tindx);
 	    } // end final switch
 	} // if (blk.active)
     } // end foreach
@@ -66,7 +72,7 @@ string generate_boundary_load_file(int current_tindx, double sim_time, string gr
     return fname;
 }
 
-void apply_unstructured_grid(Block blk, double sim_time, int current_tindx) {
+void apply_unstructured_grid(UBlock blk, double sim_time, int current_tindx) {
     foreach (bndary; blk.bc) {
 	if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
 	    string fname = generate_boundary_load_file(current_tindx, sim_time, bndary.group);
@@ -77,7 +83,7 @@ void apply_unstructured_grid(Block blk, double sim_time, int current_tindx) {
     } // end if (bndary.group != "")
 } // foreach (bndary; blk.bc)
 
-void apply_structured_grid(Block blk, double sim_time, int current_tindx) {
+void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
     foreach (bndary; blk.bc) {
 	if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
 	    string fname = generate_boundary_load_file(current_tindx, sim_time, bndary.group);

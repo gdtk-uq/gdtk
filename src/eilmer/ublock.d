@@ -1105,16 +1105,5 @@ public:
 	    compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
 	} // end foreach face
     } // end convective_flux-phase1()
-    
-    @nogc
-    override void copy_into_ghost_cells(int destination_face,
-					ref Block src_blk, int src_face, int src_orientation,
-					int type_of_copy, bool with_encode,
-					bool reorient_vector_quantities,
-					ref const(double[]) Rmatrix)
-    {
-	assert(false, "copy_into_ghost_cells function not implemented for unstructured grid.");
-	// [TODO]
-    }
 
 } // end class UBlock

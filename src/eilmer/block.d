@@ -66,18 +66,6 @@ public:
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
 
-    // Although the following limits are for the structured grid, 
-    // the boundary condition objects need to see them through
-    // references to objects of this Block class.
-    // They should be unused for unstructured-grid blocks but
-    // the SBlock constructor should set appropriate values.
-    size_t nicell;
-    size_t njcell;
-    size_t nkcell;
-    size_t imin, imax; 
-    size_t jmin, jmax;
-    size_t kmin, kmax;
-
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     FlowState Lft;
@@ -166,12 +154,6 @@ public:
     abstract void propagate_inflow_data_west_to_east();
     abstract void convective_flux_phase0();
     abstract void convective_flux_phase1();
-    @nogc
-    abstract void copy_into_ghost_cells(int destination_face,
-					ref Block src_blk, int src_face, int src_orientation,
-					int type_of_copy, bool with_encode,
-					bool reorient_vector_quantities,
-					ref const(double[]) Rmatrix);
 
     void identify_reaction_zones(int gtl)
     // Set the reactions-allowed flag for cells in this block.

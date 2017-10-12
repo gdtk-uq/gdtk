@@ -15,6 +15,7 @@ import fvinterface;
 import geom;
 import grid;
 import block;
+import sblock: SBlock;
 import globaldata;
 import json_helper;
 
@@ -98,6 +99,9 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
 	size_t i, j, k;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
+
 	if (_cells_need_to_be_flagged) {
 	    // Apply the cell flags, just once.
 	    final switch (which_boundary) {

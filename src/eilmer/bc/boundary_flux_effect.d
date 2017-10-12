@@ -161,6 +161,8 @@ public:
     void initGasCellsAndIFaces()
     {
 	size_t i, j, k;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 	switch ( which_boundary ) {
 	case Face.north:
 	    j = blk.jmax;
@@ -226,6 +228,9 @@ public:
 	FVInterface IFace;
 	size_t i, j, k;
 	double _u_rel, _v_rel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
+
         switch(which_boundary){
 	case Face.west:
 	    i = blk.imin;

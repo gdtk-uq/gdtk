@@ -704,7 +704,11 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 		if (blk.active) { blk.applyPreReconAction(sim_time, 0, 0); }
 	    }
 	    foreach (blk; gasBlocksBySize) {
-		if (blk.active) { shock_fitting_vertex_velocities(blk, step, sim_time); }
+		if (blk.active) {
+		    SBlock sblk = cast(SBlock) blk;
+		    assert(sblk !is null, "Oops, this should be an SBlock object.");
+		    shock_fitting_vertex_velocities(sblk, step, sim_time);
+		}
 	    }
 	    break;		
     }
@@ -1218,15 +1222,18 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // Moving Grid - predict new vertex positions for moving grid              
     foreach (blk; gasBlocksBySize) {
 	if (!blk.active) continue;
+	SBlock sblk = cast(SBlock) blk;
+	assert(sblk !is null, "Oops, this should be an SBlock object.");
 	// move vertices
-	predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global, gtl);
+	predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
 	// recalculate cell geometry with new vertex positions @ gtl = 1
 	blk.compute_primary_cell_geometric_data(gtl+1);
-	if ((blk.grid_type == Grid_t.unstructured_grid) && (blk.myConfig.interpolation_order > 1)) { 
+	if ((blk.grid_type == Grid_t.unstructured_grid) &&
+	    (blk.myConfig.interpolation_order > 1)) { 
 	    blk.compute_least_squares_setup_for_reconstruction(gtl+1);
 	}
 	// determine interface velocities using GCL for gtl = 1
-	set_gcl_interface_properties(blk, gtl+1, dt_global);
+	set_gcl_interface_properties(sblk, gtl+1, dt_global);
     }
     gtl = 1; // update gtl now that grid has moved
     if (GlobalConfig.apply_bcs_in_parallel) {
@@ -1364,11 +1371,14 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	// Moving Grid - update geometry to gtl 2
 	foreach (blk; gasBlocksBySize) {
 	    if (blk.active) {
+		SBlock sblk = cast(SBlock) blk;
+		assert(sblk !is null, "Oops, this should be an SBlock object.");
 		// move vertices - this is a formality since pos[2] = pos[1]
-		predict_vertex_positions(blk, GlobalConfig.dimensions, dt_global, gtl);
+		predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
 		// recalculate cell geometry with new vertex positions
 		blk.compute_primary_cell_geometric_data(gtl+1);
-		if ((blk.grid_type == Grid_t.unstructured_grid) && (blk.myConfig.interpolation_order > 1)) { 
+		if ((blk.grid_type == Grid_t.unstructured_grid) &&
+		    (blk.myConfig.interpolation_order > 1)) { 
 		    blk.compute_least_squares_setup_for_reconstruction(gtl+1);
 		}
 		// grid remains at pos[gtl=1], thus let's use old interface velocities

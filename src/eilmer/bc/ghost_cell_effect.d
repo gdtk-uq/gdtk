@@ -249,6 +249,8 @@ public:
 	FVCell src_cell, dest_cell;
 	FVInterface IFace;
 	auto copy_opt = CopyDataOption.minimal_flow;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -438,6 +440,8 @@ public:
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
 	FVInterface dest_face;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -556,6 +560,8 @@ public:
 	FVCell src_cell, dest_cell;
 	FVInterface dest_face;
 	FlowState fstate;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -708,6 +714,8 @@ public:
 	auto gmodel = blk.myConfig.gmodel;
 	size_t nsp = gmodel.n_species;
 	size_t nmodes = gmodel.n_modes;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -1225,6 +1233,8 @@ public:
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -1375,6 +1385,8 @@ public:
 	size_t i, j, k;
 	FVCell src_cell, dest_cell;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -1610,6 +1622,8 @@ public:
 	FVCell src_cell, dest_cell;
 	FVInterface face;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	double p_stag = 0.0;
 	double T_stag = 0.0; // temporary
@@ -2013,8 +2027,12 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
+	SBlock nbblk = cast(SBlock) this.neighbourBlock;
+	assert(nbblk !is null, "Oops, this should be an SBlock object.");
 	blk.copy_into_ghost_cells(which_boundary, 
-				  neighbourBlock,
+				  nbblk,
 				  neighbourFace, neighbourOrientation,
 				  CopyDataOption.all, true,
 				  reorient_vector_quantities, Rmatrix);
@@ -2201,6 +2219,8 @@ public:
 	    break;
 	case Grid_t.structured_grid:
 	    size_t i, j, k;
+	    SBlock blk = cast(SBlock) this.blk;
+	    assert(blk !is null, "Oops, this should be an SBlock object.");
 	    final switch (which_boundary) {
 	    case Face.north:
 		j = blk.jmax;

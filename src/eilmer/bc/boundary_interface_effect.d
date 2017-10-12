@@ -170,6 +170,8 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -269,6 +271,8 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -375,6 +379,8 @@ public:
 	FVCell cell;
 	FVInterface f;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -479,6 +485,8 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -578,6 +586,8 @@ class BIE_TranslatingSurface : BoundaryInterfaceEffect {
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -681,6 +691,8 @@ class BIE_RotatingSurface : BoundaryInterfaceEffect {
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -786,6 +798,8 @@ public:
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -896,176 +910,177 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-		if ( emissivity < 0.0 || emissivity > 1.0 ) {
-			// Check if emissivity value is valid
-			throw new FlowSolverException("emissivity should be 0.0<=e<=1.0");
-		} else {
-		    {
-			size_t i, j, k;
-			FVCell cell;
-			FVInterface IFace;
-			auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
+	if ( emissivity < 0.0 || emissivity > 1.0 ) {
+	    // Check if emissivity value is valid
+	    throw new FlowSolverException("emissivity should be 0.0<=e<=1.0");
+	} else {
+	    {
+		size_t i, j, k;
+		FVCell cell;
+		FVInterface IFace;
+		auto gmodel = blk.myConfig.gmodel;
 
-			final switch (which_boundary) {
+		final switch (which_boundary) {
 
-			//// Bounds of SOUTH FACE
+		    //// Bounds of SOUTH FACE
 	    	case Face.south:
-	    		j = blk.jmin;
-	    		for (k = blk.kmin; k <= blk.kmax; ++k) {
-				for (i = blk.imin; i <= blk.imax; ++i) {
-		    		cell = blk.get_cell(i,j,k);
-		    		IFace = cell.iface[Face.south];
-		    		double dn = distance_between(cell.pos[0], IFace.pos);
-                    	solve_for_wall_temperature(cell, IFace, dn, false);
-				} // end i loop
-			    } // end for k
-			    break;
+		    j = blk.jmin;
+		    for (k = blk.kmin; k <= blk.kmax; ++k) {
+			for (i = blk.imin; i <= blk.imax; ++i) {
+			    cell = blk.get_cell(i,j,k);
+			    IFace = cell.iface[Face.south];
+			    double dn = distance_between(cell.pos[0], IFace.pos);
+			    solve_for_wall_temperature(cell, IFace, dn, false);
+			} // end i loop
+		    } // end for k
+		    break;
 
-			} // end switch which_boundary
-			// Start by making bounds of SOUTH FACE work
-		    } // end apply()
-		}
+		} // end switch which_boundary
+		// Start by making bounds of SOUTH FACE work
+	    } // end apply()
+	}
 	}
 
     void solve_for_wall_temperature(const FVCell cell, FVInterface IFace, double dn, bool outwardNormal)
     // Modify the wall function method from BIE_WallFunction to 
     // iteratively converge on wall temp
     {
-
 	auto gmodel = blk.myConfig.gmodel; 
 
 	double dT, dTdy, k_lam_wall;
 
-    double tolerance = 1.0e-4; 
-    size_t counter = 0;
-    size_t max_iterations = 100;
-    double f_relax = 0.01;
-    double q_total, q_total_prev = 0.0;
-    double Twall;
-    double Twall_prev = IFace.fs.gas.Ttr;
-    double q_rad, q_cond; 
+	double tolerance = 1.0e-4; 
+	size_t counter = 0;
+	size_t max_iterations = 100;
+	double f_relax = 0.01;
+	double q_total, q_total_prev = 0.0;
+	double Twall;
+	double Twall_prev = IFace.fs.gas.Ttr;
+	double q_rad, q_cond; 
 	//double viscous_factor = blk.myConfig.viscous_factor;
-    // 0. Check that given interface temperature is a reasonable initial guess
-    //if ( IFace.fs.gas.Ttr >= cell.fs.gas.Ttr ) {
-    //	Twall_prev = cell.fs.gas.Ttr / 2.0;
-    //	//for ( size_t itm=0; itm<IFace->fs->gas->T.size(); ++itm ) // I think this is just for other temperature modes
-    //	//    IFace->fs->gas->T[itm] = Twall_prev;
-    //}
-    //printf("\n");
+	// 0. Check that given interface temperature is a reasonable initial guess
+	//if ( IFace.fs.gas.Ttr >= cell.fs.gas.Ttr ) {
+	//	Twall_prev = cell.fs.gas.Ttr / 2.0;
+	//	//for ( size_t itm=0; itm<IFace->fs->gas->T.size(); ++itm ) // I think this is just for other temperature modes
+	//	//    IFace->fs->gas->T[itm] = Twall_prev;
+	//}
+	//printf("\n");
 
 	// Iteratively solve for the wall temperature
 	while ( counter < max_iterations) {
 
-		// Update the thermodynamic and transport properties at IFace
+	    // Update the thermodynamic and transport properties at IFace
 	    IFace.fs.gas.Ttr = Twall_prev;
 	    //printf("T %.2f\n", Twall_prev);
 	    //printf("Cell %.2f\n", cell.half_cell_width_at_wall);
 
-		//printf("cell.fs.gas.p %.2f \n", cell.fs.gas.p);
+	    //printf("cell.fs.gas.p %.2f \n", cell.fs.gas.p);
 	    IFace.fs.gas.p = cell.fs.gas.p;
 	    gmodel.update_thermo_from_pT(IFace.fs.gas);
 	    gmodel.update_trans_coeffs(IFace.fs.gas);
 
-		//FlowState fs = IFace.fs;
-  		//FlowGradients grad = IFace.grad;
+	    //FlowState fs = IFace.fs;
+	    //FlowGradients grad = IFace.grad;
 
-		//double k_wall = fs.gas.k;
-		//double nx = IFace.n.x; double ny = IFace.n.y; double nz = IFace.n.z;
+	    //double k_wall = fs.gas.k;
+	    //double nx = IFace.n.x; double ny = IFace.n.y; double nz = IFace.n.z;
 
-		//double dTtrdx = grad.Ttr[0]; double dTtrdy = grad.Ttr[1]; double dTtrdz = grad.Ttr[2]; 
-		//// compute heat load
-		//double dTdn = dTtrdx*nx + dTtrdy*ny + dTtrdz*nz; // dot product
-		//q_total = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
-		//printf("counter=%d\n", counter);
-		//printf("q_total=%.2f\n", q_total);
-		//printf("dTdn=%.2f, nx=%.2f, ny=%.2f, nz=%.2f\n", dTdn,nx,ny,nz);
-		//printf("dTtrdx=%.2f, dTtrdy=%.2f, dTtrdz=%.2f\n", dTtrdx,dTtrdy,dTtrdz);
+	    //double dTtrdx = grad.Ttr[0]; double dTtrdy = grad.Ttr[1]; double dTtrdz = grad.Ttr[2]; 
+	    //// compute heat load
+	    //double dTdn = dTtrdx*nx + dTtrdy*ny + dTtrdz*nz; // dot product
+	    //q_total = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
+	    //printf("counter=%d\n", counter);
+	    //printf("q_total=%.2f\n", q_total);
+	    //printf("dTdn=%.2f, nx=%.2f, ny=%.2f, nz=%.2f\n", dTdn,nx,ny,nz);
+	    //printf("dTtrdx=%.2f, dTtrdy=%.2f, dTtrdz=%.2f\n", dTtrdx,dTtrdy,dTtrdz);
 
-		//// --- Gradient of temperature calc.
-		//// Only works in 2D on structured grids
-		//FVVertex vtx;
-		//vtx = IFace.vtx[0];
-		//vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
-		//vtx = IFace.vtx[1];
-		//vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
-		//IFace.average_vertex_deriv_values();
-		//// Gas conduction energy flux
-		//double k_laminar = IFace.fs.gas.k;
-		//double k_eff = viscous_factor*(k_laminar + IFace.fs.k_t);
-		//double qx = k_eff * IFace.grad.Ttr[0];
-		//double qy = k_eff * IFace.grad.Ttr[1];	
+	    //// --- Gradient of temperature calc.
+	    //// Only works in 2D on structured grids
+	    //FVVertex vtx;
+	    //vtx = IFace.vtx[0];
+	    //vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
+	    //vtx = IFace.vtx[1];
+	    //vtx.grad.gradients_xy_div(vtx.cloud_fs, vtx.cloud_pos);
+	    //IFace.average_vertex_deriv_values();
+	    //// Gas conduction energy flux
+	    //double k_laminar = IFace.fs.gas.k;
+	    //double k_eff = viscous_factor*(k_laminar + IFace.fs.k_t);
+	    //double qx = k_eff * IFace.grad.Ttr[0];
+	    //double qy = k_eff * IFace.grad.Ttr[1];	
 
 	    //printf("qx = %.4f\n", qx);
 	    //printf("qy = %.4f\n", qy);
 	    //printf("k_laminar = %.4f\n", k_laminar);
 
-	     //Determine convective heat flux at current iteration with Twall_prev    
+	    //Determine convective heat flux at current iteration with Twall_prev    
 	    dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr); // Positive is heat into wall
 	    if (dT < 0.0){
-	  //  	while (dT < 0.0){
-	  //  		//printf("Did we get here?\n");
-		 //   	IFace.fs.gas.Ttr = 0.9*IFace.fs.gas.Ttr;
-		 //   	IFace.fs.gas.p = cell.fs.gas.p;
-		 //   	gmodel.update_thermo_from_pT(IFace.fs.gas);
-	  //  		gmodel.update_trans_coeffs(IFace.fs.gas);
-		 //   	dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr);
-			//}
-			IFace.fs.gas.Ttr = 0.9*cell.fs.gas.Ttr;
-			Twall_prev = IFace.fs.gas.Ttr;
-			dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr);
+		//  	while (dT < 0.0){
+		//  		//printf("Did we get here?\n");
+		//   	IFace.fs.gas.Ttr = 0.9*IFace.fs.gas.Ttr;
+		//   	IFace.fs.gas.p = cell.fs.gas.p;
+		//   	gmodel.update_thermo_from_pT(IFace.fs.gas);
+		//  		gmodel.update_trans_coeffs(IFace.fs.gas);
+		//   	dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr);
+		//}
+		IFace.fs.gas.Ttr = 0.9*cell.fs.gas.Ttr;
+		Twall_prev = IFace.fs.gas.Ttr;
+		dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr);
 	    }
 
-    	dTdy = dT / dn;
-    	k_lam_wall = IFace.fs.gas.k;
-    	q_cond = k_lam_wall * dTdy;
+	    dTdy = dT / dn;
+	    k_lam_wall = IFace.fs.gas.k;
+	    q_cond = k_lam_wall * dTdy;
 
-		if (outwardNormal) {
-				q_cond = -q_cond;
-		}
+	    if (outwardNormal) {
+		q_cond = -q_cond;
+	    }
 
-	 	// Get total q to/from the wall - we want this to reach zero!
-    	q_total = (q_cond);
+	    // Get total q to/from the wall - we want this to reach zero!
+	    q_total = (q_cond);
 
 	    // If we reach our tolerance value, we break. Tolerance based off heat loads
 	    // as it is apparently very surceptable to minor changes in Twall
 	    if ( fabs((q_total - q_total_prev)/q_total) < tolerance) {
-			//printf("Convergence reached?\n");
-		 //   printf("Twall = %.2f\n", Twall);
-		 //   printf("Calculated q_rad out = %.2f\n", pow(Twall,4)*emissivity*SB_sigma_SI);
-		 //   printf("cell.fs.gas.Ttr = %.2f\n", cell.fs.gas.Ttr);
-		 //   printf("q_total = %.2f\n", q_total);
-		 //   printf("q_total_prev = %.2f\n", q_total_prev);
-		    //printf("\n");
-
-		    // Update your wall temp with your final value
-    	    IFace.fs.gas.Ttr = Twall;
-		    IFace.fs.gas.p = cell.fs.gas.p;
-		    gmodel.update_thermo_from_pT(IFace.fs.gas);
-		    gmodel.update_trans_coeffs(IFace.fs.gas);
-	    	break;
-		}
-	
-    	// Ok on that guess it probably wasn't zero, so what wall temperature would it
-    	// actually reach under radiative equilibrium
-    	Twall = pow( q_total / ( emissivity * SB_sigma_SI ), 0.25 );
-
-	    // Determine new guess as a weighted average so we don't take too much of a step.
-        Twall = f_relax * Twall + ( 1.0 - f_relax ) * Twall_prev;
-
-
-		//printf("counter=%d\n", counter);
-		//printf("dn %.4g m\n", dn);
-		//printf("dTdy %.2f  K/m\n", dTdy);
-		//printf("k_lam_wall %.4g\n", k_lam_wall);
-	 //   printf("q_total = %.2f\n", q_total);
-	 //   printf("q_total_prev = %.2f\n", q_total_prev);
-	 //   printf("Twall_prev = %.2f\n", Twall_prev);
-	 //   printf("Twall = %.2f\n", Twall);
-	 //   printf("cell.fs.gas.Ttr = %.2f\n", cell.fs.gas.Ttr);
+		//printf("Convergence reached?\n");
+		//   printf("Twall = %.2f\n", Twall);
+		//   printf("Calculated q_rad out = %.2f\n", pow(Twall,4)*emissivity*SB_sigma_SI);
+		//   printf("cell.fs.gas.Ttr = %.2f\n", cell.fs.gas.Ttr);
+		//   printf("q_total = %.2f\n", q_total);
+		//   printf("q_total_prev = %.2f\n", q_total_prev);
 		//printf("\n");
 
-    	Twall_prev = Twall;
-    	q_total_prev = q_total;
+		// Update your wall temp with your final value
+		IFace.fs.gas.Ttr = Twall;
+		IFace.fs.gas.p = cell.fs.gas.p;
+		gmodel.update_thermo_from_pT(IFace.fs.gas);
+		gmodel.update_trans_coeffs(IFace.fs.gas);
+	    	break;
+	    }
+	
+	    // Ok on that guess it probably wasn't zero, so what wall temperature would it
+	    // actually reach under radiative equilibrium
+	    Twall = pow( q_total / ( emissivity * SB_sigma_SI ), 0.25 );
+
+	    // Determine new guess as a weighted average so we don't take too much of a step.
+	    Twall = f_relax * Twall + ( 1.0 - f_relax ) * Twall_prev;
+
+
+	    //printf("counter=%d\n", counter);
+	    //printf("dn %.4g m\n", dn);
+	    //printf("dTdy %.2f  K/m\n", dTdy);
+	    //printf("k_lam_wall %.4g\n", k_lam_wall);
+	    //   printf("q_total = %.2f\n", q_total);
+	    //   printf("q_total_prev = %.2f\n", q_total_prev);
+	    //   printf("Twall_prev = %.2f\n", Twall_prev);
+	    //   printf("Twall = %.2f\n", Twall);
+	    //   printf("cell.fs.gas.Ttr = %.2f\n", cell.fs.gas.Ttr);
+	    //printf("\n");
+
+	    Twall_prev = Twall;
+	    q_total_prev = q_total;
 
 	    // Add to counter
 	    counter++;
@@ -1122,6 +1137,8 @@ public:
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
 	int nsp = gmodel.n_species;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -1241,6 +1258,8 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -1349,6 +1368,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 	FVCell cell;
 	FVInterface IFace;
 	auto gmodel = blk.myConfig.gmodel;
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 
 	final switch (which_boundary) {
 	case Face.north:
@@ -1473,6 +1494,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 	size_t i, j, k;
 	if (_faces_need_to_be_flagged) {
 	    // Flag faces, just once.
@@ -1874,6 +1897,8 @@ public:
 
     void initGasCellsAndIFaces()
     {
+	SBlock blk = cast(SBlock) this.blk;
+	assert(blk !is null, "Oops, this should be an SBlock object.");
 	size_t i, j, k;
 	switch ( which_boundary ) {
 	case Face.north:

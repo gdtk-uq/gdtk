@@ -1402,23 +1402,25 @@ void init_master_lua_State()
 	lua_pushnumber(L, blk.vertices.length);
 	lua_setfield(L, -2, "nVertices");
 	if ( blk.grid_type == Grid_t.structured_grid ) {
-	    lua_pushnumber(L, blk.nicell);
+	    SBlock sblk = cast(SBlock) blk;
+	    assert(sblk !is null, "Oops, this should be an SBlock object.");
+	    lua_pushnumber(L, sblk.nicell);
 	    lua_setfield(L, -2, "niCells");
-	    lua_pushnumber(L, blk.njcell);
+	    lua_pushnumber(L, sblk.njcell);
 	    lua_setfield(L, -2, "njCells");
-	    lua_pushnumber(L, blk.nkcell);
+	    lua_pushnumber(L, sblk.nkcell);
 	    lua_setfield(L, -2, "nkCells");
-	    lua_pushnumber(L, blk.imin);
+	    lua_pushnumber(L, sblk.imin);
 	    lua_setfield(L, -2, "vtxImin");
-	    lua_pushnumber(L, blk.imax+1);
+	    lua_pushnumber(L, sblk.imax+1);
 	    lua_setfield(L, -2, "vtxImax");
-	    lua_pushnumber(L, blk.jmin);
+	    lua_pushnumber(L, sblk.jmin);
 	    lua_setfield(L, -2, "vtxJmin");
-	    lua_pushnumber(L, blk.jmax+1);
+	    lua_pushnumber(L, sblk.jmax+1);
 	    lua_setfield(L, -2, "vtxJmax");
-	    lua_pushnumber(L, blk.kmin);
+	    lua_pushnumber(L, sblk.kmin);
 	    lua_setfield(L, -2, "vtxKmin");
-	    lua_pushnumber(L, blk.kmax+1);
+	    lua_pushnumber(L, sblk.kmax+1);
 	    lua_setfield(L, -2, "vtxKmax");
 	}
 	lua_rawseti(L, -2, i);
