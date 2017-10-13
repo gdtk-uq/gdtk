@@ -434,7 +434,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 	    auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
 	    soln.add_aux_variables(addVarsList);
 	    if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-	    outFile.writeln("xStreamPos ", "yStreamPos ", "zStreamPos ", "relDistance ",
+	    outFile.writeln("# xStreamPos ", "yStreamPos ", "zStreamPos ", "relDistance ",
 			    soln.flowBlocks[0].variable_names_as_string());
 	    foreach (ip; 0 .. xp.length) {
 	        outFile.writeln("# streamline locus point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
