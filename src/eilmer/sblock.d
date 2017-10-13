@@ -332,18 +332,13 @@ public:
 	    // Providing such access brings the structured-grid code a little closer
 	    // to the flavour of the unstructured-grid code.
 	    foreach (gid; 0 .. ntot) {
-		// We will reassign cell-id a few lines below.
-		_ctr ~= new FVCell(myConfig, 0);
-		// We want distinct numbers for i, j and k interface id values, so add offsets.
-		// Note that we expect to only ever use these id values to help with
-		// identifying faces and vertices in debug printing.
-		// We don't expect to have any other significance attached to the id value.
-		_ifi ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid);
-		_ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid+ntot);
+		_ctr ~= new FVCell(myConfig);
+		_ifi ~= new FVInterface(myConfig, lsq_workspace_at_faces);
+		_ifj ~= new FVInterface(myConfig, lsq_workspace_at_faces);
 		if ( myConfig.dimensions == 3 ) {
-		    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces, gid+2*ntot);
+		    _ifk ~= new FVInterface(myConfig, lsq_workspace_at_faces);
 		}
-		_vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices, gid);
+		_vtx ~= new FVVertex(myConfig, lsq_workspace_at_vertices);
 	    }
 	    // Now, assemble the lists of references to the cells, vertices and faces
 	    // in standard order for a structured grid.
@@ -351,92 +346,41 @@ public:
 	    // a structured-grid block much as we would an unstructured-grid block.
 	    if (myConfig.dimensions == 2) {
 		foreach (j; jmin .. jmax+1) {
-		    foreach (i; imin .. imax+1) {
-			cells ~= get_cell(i, j);
-		    }
+		    foreach (i; imin .. imax+1) { cells ~= get_cell(i, j); }
 		}
 		foreach (j; jmin .. jmax+2) {
-		    foreach (i; imin .. imax+2) {
-			vertices ~= get_vtx(i, j);
-		    }
+		    foreach (i; imin .. imax+2) { vertices ~= get_vtx(i, j); }
 		}
 		foreach (j; jmin .. jmax+1) {
-		    foreach (i; imin .. imax+2) {
-			faces ~= get_ifi(i, j);
-		    }
+		    foreach (i; imin .. imax+2) { faces ~= get_ifi(i, j); }
 		}
 		foreach (j; jmin .. jmax+2) {
-		    foreach (i; imin .. imax+1) {
-			faces ~= get_ifj(i, j);
-		    }
+		    foreach (i; imin .. imax+1) { faces ~= get_ifj(i, j); }
 		}
 	    } else { // assume 3D
 		foreach (k; kmin .. kmax+1) {
 		    foreach (j; jmin .. jmax+1) {
-			foreach (i; imin .. imax+1) {
-			    cells ~= get_cell(i, j, k);
-			}
+			foreach (i; imin .. imax+1) { cells ~= get_cell(i, j, k); }
 		    }
 		}
 		foreach (k; kmin .. kmax+2) {
 		    foreach (j; jmin .. jmax+2) {
-			foreach (i; imin .. imax+2) {
-			    vertices ~= get_vtx(i, j, k);
-			}
+			foreach (i; imin .. imax+2) { vertices ~= get_vtx(i, j, k); }
 		    }
 		}
 		foreach (k; kmin .. kmax+1) {
 		    foreach (j; jmin .. jmax+1) {
-			foreach (i; imin .. imax+2) {
-			    faces ~= get_ifi(i, j, k);
-			}
+			foreach (i; imin .. imax+2) { faces ~= get_ifi(i, j, k); }
 		    }
 		}
 		foreach (k; kmin .. kmax+1) {
 		    foreach (j; jmin .. jmax+2) {
-			foreach (i; imin .. imax+1) {
-			    faces ~= get_ifj(i, j, k);
-			}
+			foreach (i; imin .. imax+1) { faces ~= get_ifj(i, j, k); }
 		    }
 		}
 		foreach (k; kmin .. kmax+2) {
 		    foreach (j; jmin .. jmax+1) {
-			foreach (i; imin .. imax+1) {
-			    faces ~= get_ifk(i, j, k);
-			}
-		    }
-		}
-	    } // end if dimensions
-	    //
-	    // Make the cell.id consistent with the index in the cells array.
-	    // We will depend on this equality in other parts of the flow solver.
-	    foreach (i, c; cells) { c.id = i; }
-	    // Alter the id values of the ghost cells to be a bit like those in the
-	    // unstructured-grid block.
-	    size_t cell_id = ghost_cell_start_id;
-	    if (myConfig.dimensions == 2) {
-		foreach (j; 0 .. _njdim) {
-		    foreach (i; 0 .. _nidim) {
-			if ((j < jmin) || (j > jmax) || (i < imin) || (i > imax)) {
-			    auto c = get_cell(i, j);
-			    assert(c.id == 0, "Oops, did not expect nonzero cell id in a ghost cell.");
-			    c.id = cell_id;
-			    ++cell_id;
-			}
-		    }
-		}
-	    } else { // assume 3D
-		foreach (k; 0 .. _nkdim) {
-		    foreach (j; 0 .. _njdim) {
-			foreach (i; 0 .. _nidim) {
-			    if ((j < jmin) || (j > jmax) || (i < imin) || (i > imax) ||
-				(k < kmin) || (k > kmax)) {
-				auto c = get_cell(i, j, k);
-				assert(c.id == 0, "Oops, did not expect nonzero cell id in a ghost cell.");
-				c.id = cell_id;
-				++cell_id;
-			    }
-			}
+			foreach (i; imin .. imax+1) { faces ~= get_ifk(i, j, k); }
 		    }
 		}
 	    } // end if dimensions
@@ -449,6 +393,39 @@ public:
 	    writefln("System message: %s", e.msg);
 	    throw new FlowSolverException("Block.assemble_arrays() failed.");
 	}
+	//
+	// Make the cell. vertex. and face.id consistent with the index in the array.
+	// We will depend on this equality in other parts of the flow solver.
+	foreach (i, c; cells) { c.id = to!int(i); }
+	foreach (i, v; vertices) { v.id = to!int(i); }
+	foreach (i, f; faces) { f.id = to!int(i); }
+	// Alter the id values of the ghost cells to be a bit like those in the
+	// unstructured-grid block.
+	int cell_id = ghost_cell_start_id;
+	int face_id = ghost_cell_start_id;
+	int vtx_id = ghost_cell_start_id;
+	if (myConfig.dimensions == 2) {
+	    foreach (j; 0 .. _njdim) {
+		foreach (i; 0 .. _nidim) {
+		    auto c = get_cell(i, j); if (c.id == -1) { c.id = cell_id; ++cell_id; }
+		    auto f = get_ifi(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
+		    f = get_ifj(i,j); if (f.id == -1) { f.id = face_id; ++face_id; }
+		    auto v = get_vtx(i,j); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
+		}
+	    }
+	} else { // assume 3D
+	    foreach (k; 0 .. _nkdim) {
+		foreach (j; 0 .. _njdim) {
+		    foreach (i; 0 .. _nidim) {
+			auto c = get_cell(i, j, k); if (c.id == -1) { c.id = cell_id; ++cell_id; }
+			auto f = get_ifi(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
+			f = get_ifj(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
+			f = get_ifk(i,j,k); if (f.id == -1) { f.id = face_id; ++face_id; }
+			auto v = get_vtx(i,j,k); if (v.id == -1) { v.id = vtx_id; ++vtx_id; }
+		    }
+		}
+	    }
+	} // end if dimensions
 	if ( myConfig.verbosity_level >= 2 ) {
 	    writefln("Done assembling arrays for %d cells.", ntot);
 	}

@@ -29,7 +29,7 @@ import mass_diffusion;
 
 class FVInterface {
 public:
-    size_t id;  // allows us to work out where, in the block, the interface is
+    int id;
     bool is_on_boundary = false;  // by default, assume not on boundary
     size_t bc_id;  // if the face is on a block boundary, which one
     bool use_wall_function_shear_and_heat_flux = false; // for use in viscous_flux_calc()
@@ -72,7 +72,7 @@ public:
 
     this(LocalConfig myConfig,
 	 bool allocate_spatial_deriv_lsq_workspace,
-	 size_t id_init=0)
+	 int id_init=-1)
     {
 	id = id_init;
 	area.length = myConfig.n_grid_time_levels;

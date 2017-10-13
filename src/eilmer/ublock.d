@@ -176,20 +176,20 @@ public:
 	bool lsq_workspace_at_vertices = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
 	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
 	foreach (i, v; grid.vertices) {
-	    auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, i);
+	    auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
 	    new_vtx.pos[0] = v;
 	    vertices ~= new_vtx;
 	}
 	bool lsq_workspace_at_faces = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
 	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
 	foreach (i, f; grid.faces) {
-	    auto new_face = new FVInterface(myConfig, lsq_workspace_at_faces, i);
+	    auto new_face = new FVInterface(myConfig, lsq_workspace_at_faces, to!int(i));
 	    faces ~= new_face;
 	}
 	foreach (i, c; grid.cells) {
 	    // Note that the cell id and the index in the cells array are the same.
 	    // We will reply upon this connection in other parts of the flow code.
-	    auto new_cell = new FVCell(myConfig, i);
+	    auto new_cell = new FVCell(myConfig, to!int(i));
 	    new_cell.will_have_valid_flow = true;
 	    cells ~= new_cell;
 	}
@@ -241,7 +241,7 @@ public:
 				nboundaries, grid.nboundaries);
 	    throw new FlowSolverException(msg);
 	}
-	size_t ghost_cell_count = 0;
+	int ghost_cell_count = 0;
 	foreach (i, bndry; grid.boundaries) {
 	    auto nf = bndry.face_id_list.length;
 	    if (nf != bndry.outsign_list.length) {

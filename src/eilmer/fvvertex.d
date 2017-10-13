@@ -19,7 +19,7 @@ import flowgradients;
 
 class FVVertex {
 public:
-    size_t id;  // allows us to work out where, in the block, the vertex is
+    size_t id;
     // Geometry
     Vector3[] pos;  // x,y,z-Coordinates for time-levels, m
     Vector3[] vel;  // vertex velocity for time-levels, m/s
@@ -31,7 +31,7 @@ public:
     
     this(LocalConfig myConfig,
 	 bool allocate_spatial_deriv_lsq_workspace,
-	 size_t id_init=0)
+	 int id_init=-1)
     {
 	id = id_init;
 	pos.length = myConfig.n_grid_time_levels;

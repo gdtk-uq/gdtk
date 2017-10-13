@@ -47,15 +47,7 @@ string avg_over_iface_list(string quantity, string result)
 
 class FVCell {
 public:
-    size_t id;  // allows us to work out where, in the block, the cell is
-    // Note to future-self while in a very intense debugging session:
-    // For the StructuredGrid block, the id value is not the same 
-    // as the single index into the cells array.
-    // With the halo of ghost cells around the block of active cells,
-    // cells[0] will have an id value much larger than 0.
-    // Also, for the StructuredGrid block, there is a mapping from id 
-    // back to the i,j,k indices that is sometimes handy.
-    //
+    int id;  // allows us to work out where, in the block, the cell is
     bool thermo_data_is_known_bad; // Set to false at the start of an update.
     // Reset and checked at points through the update so that we don't stagger on
     // with bad data poisoning the simulation.
@@ -118,7 +110,7 @@ private:
     LocalConfig myConfig;
 
 public:
-    this(LocalConfig myConfig, size_t id_init=0)
+    this(LocalConfig myConfig, int id_init=-1)
     {
 	this.myConfig = myConfig;
 	id = id_init;
