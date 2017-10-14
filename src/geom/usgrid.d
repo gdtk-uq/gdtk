@@ -421,7 +421,6 @@ public:
 		this.cells ~= new USGCell(cell_type, c.point_IDs, c.face_IDs, c.outsigns);
 	    }
 	}
-	assembleFaceIndexListPerVertex();
 	niv = vertices.length; njv = 1; nkv = 1;
     } //end paved grid constructor
 
@@ -440,7 +439,6 @@ public:
 	}
 	foreach(c; other.cells) { cells ~= new USGCell(c); }
 	foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
-	assembleFaceIndexListPerVertex();
 	niv = vertices.length; njv = 1; nkv = 1;
     } // end constructor from another
 
@@ -690,7 +688,6 @@ public:
 	assert(nvertices == vertices.length, "mismatch in number of vertices");
 	assert(nfaces == faces.length, "mismatch in number of faces");
 	assert(ncells == cells.length, "mismatch in number of cells");
-	assembleFaceIndexListPerVertex();
 	niv = vertices.length; njv = 1; nkv = 1;
     } // end constructor from StructuredGrid object
 
@@ -709,28 +706,12 @@ public:
 	default: throw new Error("Import an UnstructuredGrid, unknown format: " ~ fmt);
 	}
 	if (new_label != "") { label = new_label; }
-	assembleFaceIndexListPerVertex();
 	niv = vertices.length; njv = 1; nkv = 1;
     } // end constructor from data imported from a file
 
     UnstructuredGrid dup() const
     {
 	return new UnstructuredGrid(this);
-    }
-
-    // ---------------------------------
-    // Helper functions for constructors.
-    // ---------------------------------
-    
-    void assembleFaceIndexListPerVertex()
-    // Work through the collection of faces and record, for each vertex,
-    // that this face is attached to the vertex.
-    {
-	assert(nvertices == vertices.length, "Inconsistent record of vertices.");
-	faceIndexListPerVertex.length = vertices.length;
-	foreach (i, f; faces) {
-	    foreach (vtxid; f.vtx_id_list) { faceIndexListPerVertex[vtxid] ~= i; }
-	}
     }
 
     

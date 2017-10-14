@@ -46,11 +46,6 @@ class Grid {
     // For structured grids, the numbers have an obvious significance.
     // For unstructured grids, niv==vertices.length, njv==1, nkv==1
     size_t niv, njv, nkv;
-    // The following array can be used to get a list of faces attached to a vertex.
-    // We have only filled in its data for unstructured grids, however,
-    // we need to access the data via a this base class.
-    // I think that my abstractions are leaking.
-    size_t[][] faceIndexListPerVertex;
     //
     // For fast searches, we should sort the cells according
     // to location, so that we may limit the number of cells that

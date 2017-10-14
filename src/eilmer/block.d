@@ -47,11 +47,11 @@ public:
     string label;
     LocalConfig myConfig;
     lua_State* myL;
-
+    //
     bool active; // if true, block participates in the time integration
     // The active flag is used principally for the block-marching calculation,
     // where we want to integrate a few blocks at a time.
-
+    //
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
                    // There is only one component, about the z-axis.
     double mass_residual, energy_residual; // monitor these for steady state
@@ -60,12 +60,18 @@ public:
     double c_h, divB_damping_length; //divergence cleaning parameters for MHD
     int mncell;                 // number of monitor cells
     double[] initial_T_value; // for monitor cells to check against
-    
-    FVCell[] cells; // collection of references to be used in foreach statements.
-    FVInterface[] faces; // collection of references to all in-use interfaces
+    //
+    // Collections of cells, vertices and faces are held as arrays of references.
+    // These allow us to conveniently work through the items via foreach statements.
+    FVCell[] cells;
+    FVInterface[] faces;
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
-
+    //
+    // Sometimes we need to look up cells and faces that are attached to a vertex.
+    size_t[][] cellIndexListPerVertex;
+    size_t[][] faceIndexListPerVertex;
+    //
     // Work-space that gets reused.
     // The following objects are used in the convective_flux method.
     FlowState Lft;
@@ -91,7 +97,6 @@ public:
     double[] v_inner, w_inner;
     double[] g0_inner, g1_inner, h_inner, hR_inner;
     Matrix V_inner, W_inner, H0_inner, H1_inner, Gamma_inner, Q0_inner, Q1_inner;
-
     }
 
     this(int id, Grid_t grid_type, string label)
@@ -154,7 +159,7 @@ public:
     abstract void propagate_inflow_data_west_to_east();
     abstract void convective_flux_phase0();
     abstract void convective_flux_phase1();
-
+    
     void identify_reaction_zones(int gtl)
     // Set the reactions-allowed flag for cells in this block.
     {

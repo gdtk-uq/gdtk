@@ -235,6 +235,18 @@ public:
 		}
 	    }
 	} // end foreach cells
+	//
+	// Set up the lists of indices for look-up of cells and faces
+	// from a given vertex.
+	cellIndexListPerVertex.length = vertices.length;
+	foreach (i, c; cells) {
+	    foreach (vtx; c.vtx) { cellIndexListPerVertex[vtx.id] ~= i; }
+	}
+	faceIndexListPerVertex.length = vertices.length;
+	foreach (i, f; faces) {
+	    foreach (vtx; f.vtx) { faceIndexListPerVertex[vtx.id] ~= i; }
+	}
+	//
 	// Work through the faces on the boundaries and add ghost cells.
 	if (nboundaries != grid.nboundaries) {
 	    string msg = format("Mismatch in number of boundaries: %d %d",
@@ -415,7 +427,7 @@ public:
 		}
 	    }
 	    foreach (fvtx; f.vtx) {
-		foreach (other_face_id; grid.faceIndexListPerVertex[fvtx.id]) {
+		foreach (other_face_id; faceIndexListPerVertex[fvtx.id]) {
 		    FVInterface other_face = faces[other_face_id];
 		    if (other_face.is_on_boundary &&
 			other_face.bc_id == bndary_idx &&
@@ -438,7 +450,7 @@ public:
 	    // in some instances we might have a degenerate cloud, let's make sure we have enough points
 	    if (f.cloud_pos.length <= 3) {
 		foreach (fvtx; f.vtx) {
-		    foreach (other_face_id; grid.faceIndexListPerVertex[fvtx.id]) {
+		    foreach (other_face_id; faceIndexListPerVertex[fvtx.id]) {
 			FVInterface other_face = faces[other_face_id];
 			if (other_face.is_on_boundary && cell_cloud_face_ids.canFind(other_face.id) == false) {
 			    // store left and right cell
@@ -497,7 +509,7 @@ public:
 	    f.cloud_fs ~= f.right_cell.fs;
 	    cell_cloud_cell_ids ~= f.right_cell.id;
 	    foreach (fvtx; f.vtx) {
-	        foreach (other_face_id; grid.faceIndexListPerVertex[fvtx.id]) {
+	        foreach (other_face_id; faceIndexListPerVertex[fvtx.id]) {
 		    FVInterface other_face = faces[other_face_id];
 		    if (cell_cloud_face_ids.canFind(other_face.id) == false) {
 		        // store left and right cell

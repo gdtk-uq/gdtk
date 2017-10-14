@@ -265,28 +265,24 @@ public:
 		bc[Face.north].outsigns ~= 1;
 	    }
 	}
-
 	foreach (k; kmin .. kmax+1) {
 	    foreach (j; jmin .. jmax+1) {
 		bc[Face.east].faces ~= get_ifi(imax+1, j, k);
 		bc[Face.east].outsigns ~= 1;
 	    }
 	}
-
 	foreach (k; kmin .. kmax+1) {
 	    foreach (i; imin .. imax+1) {
 		bc[Face.south].faces ~= get_ifj(i, jmin, k);
 		bc[Face.south].outsigns ~= -1;
 	    }
 	}
-
 	foreach (k; kmin .. kmax+1) {
 	    foreach (j; jmin .. jmax+1) {
 		bc[Face.west].faces ~= get_ifi(imin, j, k);
 		bc[Face.west].outsigns ~= -1;
 	    }
 	}
-
 	if (myConfig.dimensions == 3) {
 	    foreach (j; jmin .. jmax+1) {
 		foreach (i; imin .. imax+1) {
@@ -294,15 +290,25 @@ public:
 		    bc[Face.top].outsigns ~= 1;
 		}
 	    }
-
 	    foreach (j; jmin .. jmax+1) {
 		foreach (i; imin .. imax+1) {
 		    bc[Face.bottom].faces ~= get_ifk(i, j, kmin);
 		    bc[Face.bottom].outsigns ~= -1;
 		}
 	    }
+	} // end if dimensions == 3
+	//
+	// Set up the lists of indices for look-up of cells and faces
+	// from a given vertex.
+	cellIndexListPerVertex.length = vertices.length;
+	foreach (i, c; cells) {
+	    foreach (vtx; c.vtx) { cellIndexListPerVertex[vtx.id] ~= i; }
 	}
-    }
+	faceIndexListPerVertex.length = vertices.length;
+	foreach (i, f; faces) {
+	    foreach (vtx; f.vtx) { faceIndexListPerVertex[vtx.id] ~= i; }
+	}
+    } // end init_grid_and_flow_arrays()
 
     void assemble_arrays()
     // We shouldn't be calling this until the essential bits of the GlobalConfig
