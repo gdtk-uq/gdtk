@@ -15,6 +15,7 @@ import std.stdio;
 
 import std.conv;
 import std.format;
+import std.math: sqrt;
 import geom;
 import gas;
 import fvcore;
@@ -217,6 +218,57 @@ public:
 	repr ~= ")";
 	return to!string(repr);
     }
+
+    void update_2D_geometric_data(size_t gtl, bool axisymmetric)
+    {
+	double xA = vtx[0].pos[gtl].x;
+	double yA = vtx[0].pos[gtl].y;
+	double xB = vtx[1].pos[gtl].x;
+	double yB = vtx[1].pos[gtl].y;
+	double LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
+	// Direction cosines for the unit normal and two tangential directions.
+	if (LAB > 1.0e-12) {
+	    // normal is purely in the xy-plane
+	    n.set((yB-yA)/LAB, -(xB-xA)/LAB, 0.0);
+	    t2 = Vector3(0.0, 0.0, 1.0);
+	    t1 = cross(n, t2);
+	    length = LAB; // Length in the XY-plane.
+	} else {
+	    n = Vector3(1.0, 0.0, 0.0); // Arbitrary direction
+	    t2 = Vector3(0.0, 0.0, 1.0);
+	    t1 = Vector3(0.0, 1.0, 0.0);
+	    length = 0.0; // Zero length in the xy-plane
+	}
+	// Mid-point and area.
+	// [TODO] think about using a better estimate for Ybar.
+	Ybar = 0.5 * (yA + yB);
+	if (axisymmetric) {
+	    area[gtl] = LAB * Ybar; // Face area per radian.
+	} else {
+	    area[gtl] = LAB; // Assume unit depth in the Z-direction.
+	}
+	pos = (vtx[0].pos[gtl] + vtx[1].pos[gtl])/2.0;
+    } // end update_2D_geometric_data()
+
+    void update_3D_geometric_data(size_t gtl)
+    {
+	switch (vtx.length) {
+	case 3:
+	    triangle_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
+				vtx[2].pos[gtl],
+				pos, n, t1, t2, area[gtl]);
+	    break;
+	case 4:
+	    quad_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
+			    vtx[2].pos[gtl], vtx[3].pos[gtl],
+			    pos, n, t1, t2, area[gtl]);
+	    break;
+	default:
+	    string msg = "FVInterface.update_3D_geometric_data(): ";
+	    msg ~= format("Unhandled number of vertices: %d", vtx.length);
+	    throw new FlowSolverException(msg);
+	} // end switch	    
+    } // end update_3D_geometric_data()
 
     @nogc
     void average_vertex_deriv_values()

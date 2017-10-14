@@ -230,6 +230,83 @@ public:
 	return to!string(repr);
     }
 
+    void update_2D_geometric_data(size_t gtl, bool axisymmetric)
+    {
+	double vol, xyplane_area;
+	switch (vtx.length) {
+	case 3:
+	    xyplane_triangle_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl],
+					     pos[gtl], xyplane_area, iLength, jLength, L_min);
+	    break;
+	case 4:
+	    xyplane_quad_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
+					 vtx[2].pos[gtl], vtx[3].pos[gtl],
+					 pos[gtl], xyplane_area, iLength, jLength, L_min);
+	    break;
+	default:
+	    string msg = "FVCell.update_2D_geometric_data(): ";
+	    msg ~= format("Unhandled number of vertices: %d", vtx.length);
+	    throw new FlowSolverException(msg);
+	} // end switch
+	// Cell Volume.
+	if (axisymmetric) {
+	    // Volume per radian = centroid y-ordinate * cell area
+	    vol = xyplane_area * pos[gtl].y;
+	} else {
+	    // Assume unit depth in the z-direction.
+	    vol = xyplane_area;
+	}
+	if (vol < 0.0) {
+	    string msg = text("FVCell.update_2D_geometric_data: " ~
+			      "Negative cell volume for cell[", id, "]= ", vol);
+	    throw new FlowSolverException(msg);
+	}
+	volume[gtl] = vol;
+	areaxy[gtl] = xyplane_area;
+	kLength = 0.0;
+    } // end update_2D_geometric_data()
+
+    void update_3D_geometric_data(size_t gtl)
+    {
+	switch (vtx.length) {
+	case 4:
+	    tetrahedron_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
+				   vtx[2].pos[gtl], vtx[3].pos[gtl],
+				   pos[gtl], volume[gtl]);
+	    L_min = pow(volume[gtl], 1.0/3.0);
+	    iLength = L_min; jLength = L_min; kLength = L_min;
+	    break;
+	case 8:
+	    hex_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl], vtx[3].pos[gtl],
+				vtx[4].pos[gtl], vtx[5].pos[gtl], vtx[6].pos[gtl], vtx[7].pos[gtl],
+				pos[gtl], volume[gtl], iLength, jLength, kLength);
+	    L_min = min(iLength, jLength, kLength);
+	    break;
+	case 5:
+	    pyramid_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl], vtx[3].pos[gtl],
+			       vtx[4].pos[gtl], pos[gtl], volume[gtl]);
+	    L_min = pow(volume[gtl], 1.0/3.0);
+	    iLength = L_min; jLength = L_min; kLength = L_min;
+	    break;
+	case 6:
+	    wedge_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl],
+			     vtx[3].pos[gtl], vtx[4].pos[gtl], vtx[5].pos[gtl],
+			     pos[gtl], volume[gtl]);
+	    L_min = pow(volume[gtl], 1.0/3.0);
+	    iLength = L_min; jLength = L_min; kLength = L_min;
+	    break;
+	default:
+	    string msg = "FVCell.update_3D_geometric_data() cells: ";
+	    msg ~= format("Unhandled number of vertices: %d", vtx.length);
+	    throw new FlowSolverException(msg);
+	} // end switch
+	if (volume[gtl] <= 0.0) {
+	    string msg = "FVCell.update_3D_geometric_data(): ";
+	    msg ~= format("Invalid volume %g for cell %d", volume[gtl], id);
+	    throw new FlowSolverException(msg);
+	}
+    } // end update_3D_geometric_data()
+    
     void replace_flow_data_with_average(in FVCell[] others) 
     {
 	auto gmodel = myConfig.gmodel;
