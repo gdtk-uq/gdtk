@@ -584,92 +584,14 @@ public:
 	size_t i, j, k;
 	Vector3 dummy;
 	Vector3 ds;
-	if ( myConfig.dimensions == 2 ) {
-	    // There is some history as to why the functions are in pieces as below.
-	    // These functions go way back in time to the days of cns4u.
-	    calc_volumes_2D(gtl);
-	    calc_faces_2D(gtl);
-	    calc_ghost_cell_geom_2D(gtl);
-	    if (myConfig.viscous && myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
-		// Needed for flow gradient calculations that feed into the viscous fluxes.
-		compute_leastsq_weights(gtl);
-	    }
-	    return;
+	if (myConfig.dimensions == 2) {
+	    foreach (c; cells) { c.update_2D_geometric_data(gtl, myConfig.axisymmetric); }
+	    foreach (f; faces) { f.update_2D_geometric_data(gtl, myConfig.axisymmetric); }
+	} else { // 3D
+	    foreach (c; cells) { c.update_3D_geometric_data(gtl); }
+	    foreach (f; faces) { f.update_3D_geometric_data(gtl); }
 	}
-	// Cell properties of volume and position.
-	// Estimates of cross-cell distances for use in high-order reconstruction.
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( j = jmin; j <= jmax; ++j ) {
-		for ( k = kmin; k <= kmax; ++k ) {
-		    auto cell = get_cell(i,j,k);
-		    auto p0 = get_vtx(i,j,k).pos[gtl];
-		    auto p1 = get_vtx(i+1,j,k).pos[gtl];
-		    auto p2 = get_vtx(i+1,j+1,k).pos[gtl];
-		    auto p3 = get_vtx(i,j+1,k).pos[gtl];
-		    auto p4 = get_vtx(i,j,k+1).pos[gtl];
-		    auto p5 = get_vtx(i+1,j,k+1).pos[gtl];
-		    auto p6 = get_vtx(i+1,j+1,k+1).pos[gtl];
-		    auto p7 = get_vtx(i,j+1,k+1).pos[gtl];
-		    hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, 
-					cell.pos[gtl], cell.volume[gtl], cell.iLength,
-					cell.jLength, cell.kLength);
-		    cell.L_min = cell.iLength;
-		    if ( cell.jLength < cell.L_min ) cell.L_min = cell.jLength;
-		    if ( cell.kLength < cell.L_min ) cell.L_min = cell.kLength;
-		}
-	    }
-	}
-	// work on ifi face as a WEST face
-	// t1 in the j-ordinate direction
-	// t2 in the k-ordinate direction
-	for ( i = imin; i <= imax + 1; ++i ) {
-	    for ( j = jmin; j <= jmax; ++j ) {
-		for ( k = kmin; k <= kmax; ++k ) {
-		    auto iface = get_ifi(i,j,k);
-		    auto p0 = get_vtx(i,j,k).pos[gtl];
-		    auto p3 = get_vtx(i,j+1,k).pos[gtl];
-		    auto p7 = get_vtx(i,j+1,k+1).pos[gtl];
-		    auto p4 = get_vtx(i,j,k+1).pos[gtl];
-		    quad_properties(p0, p3, p7, p4,
-				    iface.pos, iface.n, iface.t1, iface.t2,
-				    iface.area[gtl]);
-		}
-	    }
-	}
-	// work on ifj face as a SOUTH face
-	// t1 in the k-ordinate direction
-	// t2 in the i-ordinate direction
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( j = jmin; j <= jmax + 1; ++j ) {
-		for ( k = kmin; k <= kmax; ++k ) {
-		    auto iface = get_ifj(i,j,k);
-		    auto p0 = get_vtx(i,j,k).pos[gtl];
-		    auto p4 = get_vtx(i,j,k+1).pos[gtl];
-		    auto p5 = get_vtx(i+1,j,k+1).pos[gtl];
-		    auto p1 = get_vtx(i+1,j,k).pos[gtl];
-		    quad_properties(p0, p4, p5, p1,
-				    iface.pos, iface.n, iface.t1, iface.t2,
-				    iface.area[gtl]);
-		}
-	    }
-	}
-	// work on ifk face as a BOTTOM face
-	// t1 in the i-ordinate direction
-	// t2 in the j-ordinate direction
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( j = jmin; j <= jmax; ++j ) {
-		for ( k = kmin; k <= kmax + 1; ++k ) {
-		    auto iface = get_ifk(i,j,k);
-		    auto p0 = get_vtx(i,j,k).pos[gtl];
-		    auto p1 = get_vtx(i+1,j,k).pos[gtl];
-		    auto p2 = get_vtx(i+1,j+1,k).pos[gtl];
-		    auto p3 = get_vtx(i,j+1,k).pos[gtl];
-		    quad_properties(p0, p1, p2, p3,
-				    iface.pos, iface.n, iface.t1, iface.t2,
-				    iface.area[gtl]);
-		}
-	    }
-	}
+	//
 	// Propagate cross-cell lengths into the ghost cells.
 	// 25-Feb-2014
 	// Jason Qin and Paul Petrie-Repar have identified the lack of exact symmetry in
@@ -678,8 +600,8 @@ public:
 	// linear extrapolation used for the positions and volumes in the next section.
 	// [TODO] -- think about this carefully.
 	auto option = CopyDataOption.cell_lengths_only;
-	for ( j = jmin; j <= jmax; ++j ) {
-	    for ( k = kmin; k <= kmax; ++k ) {
+	for (j = jmin; j <= jmax; ++j) {
+	    for (k = kmin; k <= kmax; ++k) {
 		i = imin;
 		get_cell(i-1,j,k).copy_values_from(get_cell(i,j,k), option);
 		get_cell(i-2,j,k).copy_values_from(get_cell(i+1,j,k), option);
@@ -688,8 +610,8 @@ public:
 		get_cell(i+2,j,k).copy_values_from(get_cell(i-1,j,k), option);
 	    }
 	}
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( k = kmin; k <= kmax; ++k ) {
+	for (i = imin; i <= imax; ++i) {
+	    for (k = kmin; k <= kmax; ++k) {
 		j = jmin;
 		get_cell(i,j-1,k).copy_values_from(get_cell(i,j,k), option);
 		get_cell(i,j-2,k).copy_values_from(get_cell(i,j+1,k), option);
@@ -698,20 +620,22 @@ public:
 		get_cell(i,j+2,k).copy_values_from(get_cell(i,j-1,k), option);
 	    }
 	}
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( j = jmin; j <= jmax; ++j ) {
-		k = kmin;
-		get_cell(i,j,k-1).copy_values_from(get_cell(i,j,k), option);
-		get_cell(i,j,k-2).copy_values_from(get_cell(i,j,k+1), option);
-		k = kmax;
-		get_cell(i,j,k+1).copy_values_from(get_cell(i,j,k), option);
-		get_cell(i,j,k+2).copy_values_from(get_cell(i,j,k-1), option);
+	if (myConfig.dimensions == 3) {
+	    for (i = imin; i <= imax; ++i) {
+		for (j = jmin; j <= jmax; ++j) {
+		    k = kmin;
+		    get_cell(i,j,k-1).copy_values_from(get_cell(i,j,k), option);
+		    get_cell(i,j,k-2).copy_values_from(get_cell(i,j,k+1), option);
+		    k = kmax;
+		    get_cell(i,j,k+1).copy_values_from(get_cell(i,j,k), option);
+		    get_cell(i,j,k+2).copy_values_from(get_cell(i,j,k-1), option);
+		}
 	    }
-	}
+	} // end if dimensions == 3
 	/* Extrapolate (with first-order) cell positions and volumes to ghost cells. */
 	// TODO -- think about how to make these things consistent.
-	for ( j = jmin; j <= jmax; ++j ) {
-	    for ( k = kmin; k <= kmax; ++k ) {
+	for (j = jmin; j <= jmax; ++j) {
+	    for (k = kmin; k <= kmax; ++k) {
 		i = imin;
 		auto cell_1 = get_cell(i,j,k);
 		auto cell_2 = get_cell(i+1,j,k);
@@ -736,8 +660,8 @@ public:
 		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
 	    }
 	}
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( k = kmin; k <= kmax; ++k ) {
+	for (i = imin; i <= imax; ++i) {
+	    for (k = kmin; k <= kmax; ++k) {
 		j = jmin;
 		auto cell_1 = get_cell(i,j,k);
 		auto cell_2 = get_cell(i,j+1,k);
@@ -762,32 +686,34 @@ public:
 		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
 	    }
 	}
-	for ( i = imin; i <= imax; ++i ) {
-	    for ( j = jmin; j <= jmax; ++j ) {
-		k = kmin;
-		auto cell_1 = get_cell(i,j,k);
-		auto cell_2 = get_cell(i,j,k+1);
-		auto ghost_cell = get_cell(i,j,k-1);
-		ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-		cell_2 = cell_1;
-		cell_1 = ghost_cell;
-		ghost_cell = get_cell(i,j,k-2);
-		ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-		k = kmax;
-		cell_1 = get_cell(i,j,k);
-		cell_2 = get_cell(i,j,k-1);
-		ghost_cell = get_cell(i,j,k+1);
-		ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-		cell_2 = cell_1;
-		cell_1 = ghost_cell;
-		ghost_cell = get_cell(i,j,k+2);
-		ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-		ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+	if (myConfig.dimensions == 3) {
+	    for (i = imin; i <= imax; ++i) {
+		for (j = jmin; j <= jmax; ++j) {
+		    k = kmin;
+		    auto cell_1 = get_cell(i,j,k);
+		    auto cell_2 = get_cell(i,j,k+1);
+		    auto ghost_cell = get_cell(i,j,k-1);
+		    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+		    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+		    cell_2 = cell_1;
+		    cell_1 = ghost_cell;
+		    ghost_cell = get_cell(i,j,k-2);
+		    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+		    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+		    k = kmax;
+		    cell_1 = get_cell(i,j,k);
+		    cell_2 = get_cell(i,j,k-1);
+		    ghost_cell = get_cell(i,j,k+1);
+		    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+		    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+		    cell_2 = cell_1;
+		    cell_1 = ghost_cell;
+		    ghost_cell = get_cell(i,j,k+2);
+		    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
+		    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
+		}
 	    }
-	}
+	} // end if dimensions == 3
 	if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
 	    // Needed for flow gradient calculations that feed into the viscous fluxes.
 	    compute_leastsq_weights(gtl);
@@ -827,7 +753,7 @@ public:
 	    dist[Face.west] = distance_between(cell.pos[gtl], face_at_wall.pos);
 	    cell_at_wall[Face.west] = get_cell(imin,j,k);
 	    half_width[Face.west] = distance_between(cell_at_wall[Face.west].pos[gtl], face_at_wall.pos);
-	    if ( myConfig.dimensions == 3 ) {
+	    if (myConfig.dimensions == 3) {
 		// Top
 		face_at_wall = get_ifk(i,j,kmax+1);
 		dist[Face.top] = distance_between(cell.pos[gtl], face_at_wall.pos);
@@ -869,241 +795,6 @@ public:
 	    }
 	} // end foreach cell
     } // end compute_distance_to_nearest_wall_for_all_cells()
-
-    void calc_volumes_2D(int gtl)
-    // Compute the PRIMARY cell volumes, areas, and centers 
-    //  from the vertex positions.
-    //
-    // For 2D planar, assume unit length in the Z-direction.
-    // For axisymmetry, compute a volume per radian.
-    //
-    // Determine minimum length and aspect ratio, also.
-    {
-	for (size_t i = imin; i <= imax; ++i) {
-	    for (size_t j = jmin; j <= jmax; ++j) {
-		FVCell cell = get_cell(i,j);
-		double vol, xyplane_area;
-		xyplane_quad_cell_properties(cell.vtx[0].pos[gtl], cell.vtx[1].pos[gtl],
-					     cell.vtx[2].pos[gtl], cell.vtx[3].pos[gtl],
-					     cell.pos[gtl], xyplane_area,
-					     cell.iLength, cell.jLength, cell.L_min);
-		// Cell Volume.
-		if ( myConfig.axisymmetric ) {
-		    vol = xyplane_area * cell.pos[gtl].y; // Volume per radian
-		} else {
-		    vol = xyplane_area; // Assume unit depth in the z-direction.
-		}
-		if (vol < 0.0) {
-		    string msg = text("Negative cell volume: Block ", id,
-				      " vol for cell[", i, " ,", j, "]= ", vol);
-		    throw new FlowSolverException(msg);
-		}
-		cell.volume[gtl] = vol;
-		cell.areaxy[gtl] = xyplane_area;
-		cell.kLength = 0.0;
-	    } // j loop
-	} // i loop
-
-	// We now need to mirror the cell iLength and jLength
-	// around the boundaries.
-	// Those boundaries that are adjacent to another block
-	// will be updated later with the other-block's cell lengths.
-	FVCell source_cell, target_cell;
-	for (size_t i = imin; i <= imax; ++i) {
-	    // North boundary
-	    size_t j = jmax;
-	    source_cell = get_cell(i,j);
-	    target_cell = get_cell(i,j+1);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	    source_cell = get_cell(i,j-1);
-	    target_cell = get_cell(i,j+2);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	    // South boundary
-	    j = jmin;
-	    source_cell = get_cell(i,j);
-	    target_cell = get_cell(i,j-1);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	    source_cell = get_cell(i,j+1);
-	    target_cell = get_cell(i,j-2);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	} // end for i
-
-	for (size_t j = jmin; j <= jmax; ++j) {
-	    // East boundary
-	    size_t i = imax;
-	    source_cell = get_cell(i,j);
-	    target_cell = get_cell(i+1,j);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	    source_cell = get_cell(i-1,j);
-	    target_cell = get_cell(i+2,j);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	    // West boundary
-	    i = imin;
-	    source_cell = get_cell(i,j);
-	    target_cell = get_cell(i-1,j);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	    source_cell = get_cell(i+1,j);
-	    target_cell = get_cell(i-2,j);
-	    target_cell.iLength = source_cell.iLength;
-	    target_cell.jLength = source_cell.jLength;
-	    target_cell.kLength = 0.0;
-	} // end for j
-    } // end calc_volumes_2D()
-
-    void calc_faces_2D(int gtl)
-    {
-	FVInterface iface;
-	size_t i, j;
-	double xA, xB, yA, yB, xC, yC;
-	double LAB, LBC;
-
-	// East-facing interfaces.
-	for (i = imin; i <= imax+1; ++i) {
-	    for (j = jmin; j <= jmax; ++j) {
-		iface = get_ifi(i,j);
-		// These are the corners.
-		xA = get_vtx(i,j).pos[gtl].x; 
-		yA = get_vtx(i,j).pos[gtl].y;
-		xB = get_vtx(i,j+1).pos[gtl].x; 
-		yB = get_vtx(i,j+1).pos[gtl].y;
-		LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
-		if (LAB < 1.0e-9) {
-		    writefln("Zero length ifi[%d,%d]: %.18e", i, j, LAB);
-		}
-		// Direction cosines for the unit normal.
-		iface.n.set((yB-yA)/LAB, -(xB-xA)/LAB, 0.0);
-		iface.t2 = Vector3(0.0, 0.0, 1.0);
-		iface.t1 = cross(iface.n, iface.t2);
-		// Length in the XY-plane.
-		iface.length = LAB;
-		// Mid-point and area.
-		iface.Ybar = 0.5 * (yA + yB);
-		if ( myConfig.axisymmetric ) {
-		    // Interface area per radian.
-		    iface.area[gtl] = LAB * iface.Ybar;
-		} else {
-		    // Assume unit depth in the Z-direction.
-		    iface.area[gtl] = LAB;
-		}
-		iface.pos = (get_vtx(i,j).pos[gtl] + get_vtx(i,j+1).pos[gtl])/2.0;
-	    
-	    } // j loop
-	} // i loop
-    
-	// North-facing interfaces.
-	for (i = imin; i <= imax; ++i) {
-	    for (j = jmin; j <= jmax+1; ++j) {
-		iface = get_ifj(i,j);
-		// These are the corners.
-		xB = get_vtx(i+1,j).pos[gtl].x;
-		yB = get_vtx(i+1,j).pos[gtl].y;
-		xC = get_vtx(i,j).pos[gtl].x;
-		yC = get_vtx(i,j).pos[gtl].y;
-		LBC = sqrt((xC - xB) * (xC - xB) + (yC - yB) * (yC - yB));
-		if (LBC < 1.0e-9) {
-		    writefln("Zero length ifj[%d,%d]: %.18e", i, j, LBC);
-		}
-		// Direction cosines for the unit normal.
-		iface.n.set((yC-yB)/LBC, -(xC-xB)/LBC, 0.0);
-		iface.t2 = Vector3(0.0, 0.0, 1.0);
-		iface.t1 = cross(iface.n, iface.t2);
-		// Length in the XY-plane.
-		iface.length = LBC;
-		// Mid-point and area.
-		iface.Ybar = 0.5 * (yC + yB);
-		if ( myConfig.axisymmetric ) {
-		    // Interface area per radian.
-		    iface.area[gtl] = LBC * iface.Ybar;
-		} else {
-		    // Assume unit depth in the Z-direction.
-		    iface.area[gtl] = LBC;
-		}
-		iface.pos = (get_vtx(i+1,j).pos[gtl] + get_vtx(i,j).pos[gtl])/2.0;
-	    } // j loop
-	} // i loop
-    } // end calc_faces_2D()
-
-    void calc_ghost_cell_geom_2D(int gtl)
-    // Compute the ghost cell positions and volumes.
-    //
-    // 'Compute' is a bit too strong to describe what we do here.
-    //  Rather this is a first-order extrapolation
-    // from interior cells to estimate the position
-    // and volume of the ghost cells.
-    {
-	size_t i, j;
-	FVCell cell_1, cell_2, ghost_cell;
-	// East boundary
-	i = imax;
-	for ( j = jmin; j <= jmax; ++j ) {
-	    cell_1 = get_cell(i,j);
-	    cell_2 = get_cell(i-1,j);
-	    ghost_cell = get_cell(i+1,j);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	    cell_2 = cell_1;
-	    cell_1 = ghost_cell;
-	    ghost_cell = get_cell(i+2,j);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	}
-	// West boundary
-	i = imin;
-	for ( j = jmin; j <= jmax; ++j ) {
-	    cell_1 = get_cell(i,j);
-	    cell_2 = get_cell(i+1,j);
-	    ghost_cell = get_cell(i-1,j);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	    cell_2 = cell_1;
-	    cell_1 = ghost_cell;
-	    ghost_cell = get_cell(i-2,j);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	}
-	// North boundary
-	j = jmax;
-	for ( i = imin; i <= imax; ++i ) {
-	    cell_1 = get_cell(i,j);
-	    cell_2 = get_cell(i,j-1);
-	    ghost_cell = get_cell(i,j+1);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	    cell_2 = cell_1;
-	    cell_1 = ghost_cell;
-	    ghost_cell = get_cell(i,j+2);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	}
-	// South boundary
-	j = jmin;
-	for ( i = imin; i <= imax; ++i ) {
-	    cell_1 = get_cell(i,j);
-	    cell_2 = get_cell(i,j+1);
-	    ghost_cell = get_cell(i,j-1);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	    cell_2 = cell_1;
-	    cell_1 = ghost_cell;
-	    ghost_cell = get_cell(i,j-2);
-	    ghost_cell.pos[gtl] = 2.0*cell_1.pos[gtl] - cell_2.pos[gtl];
-	    ghost_cell.volume[gtl] = 2.0*cell_1.volume[gtl] - cell_2.volume[gtl];
-	}
-    } // end calc_ghost_cell_geom_2D()
 
     void store_references_for_derivative_calc(size_t gtl)
     {
