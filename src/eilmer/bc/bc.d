@@ -264,7 +264,10 @@ public:
 	setSampleHelperFunctions(myL);
 	setGridMotionHelperFunctions(myL);
 	// Finally, do the actual user-supplied file.
-	luaL_dofile(myL, luafname.toStringz);
+	if ( luaL_dofile(myL, luafname.toStringz) != 0 ) {
+	    luaL_error(myL, "error while loading user-defined b.c. file '%s':\n %s\n",
+		       luafname.toStringz, lua_tostring(myL, -1));
+	}
     }
 } // end class BoundaryCondition
 

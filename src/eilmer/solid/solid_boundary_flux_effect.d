@@ -203,7 +203,10 @@ public:
 	    lua_pushcfunction(L, &luafn_sampleSolidCell);
 	    lua_setglobal(L, "sampleSolidCell");
 	}
-	luaL_dofile(blk.bc[whichBoundary].myL, luafname.toStringz);
+	if ( luaL_dofile(blk.bc[whichBoundary].myL, luafname.toStringz) != 0 ) {
+	    luaL_error(blk.bc[whichBoundary].myL, "error while loading user-defined b.c. file '%s':\n %s\n",
+		       luafname.toStringz, lua_tostring(blk.bc[whichBoundary].myL, -1));
+	}
     }
     override void apply(double t, int tLevel)
     {
