@@ -34,7 +34,7 @@ import core.stdc.stdlib : exit;
 // is hard-coded. We'd like to test at small number
 // then increase this to 10.
 // Eventually, we might remove the hard-coded number.
-immutable int N_VIB_LEVELS = 3;
+immutable int N_VIB_LEVELS = 10;
 
 class VibSpecificNitrogen: GasModel {
 public:
@@ -70,7 +70,10 @@ public:
     {
 	Q.Ttr = 0.4 * Q.u * (1/_R_N2);
 	Q.p = Q.rho * _R_N2 * Q.Ttr;
-	Q.T_modes[0] = compute_Tvib(Q, 200.0, 1000.0, 1e-4);
+	Q.T_modes[0] = compute_Tvib(Q, 300.0, 1000.0, 1e-4);
+	foreach (i; 1 .. N_VIB_LEVELS) {
+	        Q.T_modes[i] = Q.T_modes[0];
+	}       
 
     }
     override void update_thermo_from_rhoT(GasState Q) const
@@ -85,12 +88,16 @@ public:
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	Q.Ttr = 0.4 * Q.u * (1/_R_N2);
+	//Q.Ttr = 0.4 * Q.u * (1/_R_N2);
+	Q.Ttr = Q.p / (Q.rho * _R_N2);
 	Q.u = 2.5 * _R_N2 * Q.Ttr;
 	foreach (imode; 0 .. _n_modes) {
-	     Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
+	     Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode); 
 	}
-	Q.T_modes[0] = compute_Tvib(Q, 200.0, 1000.0, 1e-4);
+	Q.T_modes[0] = compute_Tvib(Q, 300.0, 1000.0, 1e-4);
+	foreach (i; 1 .. N_VIB_LEVELS) {
+	        Q.T_modes[i] = Q.T_modes[0];
+	}       
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
@@ -164,11 +171,11 @@ private:
      {
         double summ = 0;
         
-        foreach(ei; 0 .. N_VIB_LEVELS) {
-             summ += exp(-vib_energy(ei) / (kB*Tf1));
+        foreach(ej; 0 .. N_VIB_LEVELS) {
+             summ += exp(-vib_energy(ej) / (kB*Tf1));
         }        
-        double e1 = vib_energy(0);
-        double temp_func = (exp(-e1/(kB*Tf1)) / summ);
+        double ei = vib_energy(0);
+        double temp_func = (exp(-ei/(kB*Tf1)) / summ);
         return temp_func;   
      }
      
@@ -195,7 +202,6 @@ private:
      
     
      
-
 } // end class VibSpecificNitrogen
 
 version(vib_specific_nitrogen_test) {
@@ -250,31 +256,42 @@ final class VibSpecificNitrogenRelaxtion : ThermochemicalReactor {
     override void opCall(GasState Q, double tInterval, ref double dtSuggest,
 			 ref double[] params)
     {
+        int nsteps = 10;
+        double dt = tInterval/nsteps;
+        foreach(step; 0 .. nsteps) {
+        
+        
         // Replenishing and depleting equations 
         foreach(imode; 1 .. N_VIB_LEVELS-1) {
-            double rho_dot = (Q.rho/_M_N2) * (B_coeff(imode,Q.Ttr)*Q.massf[imode-1] +
+            double rho_dot = (Q.rho*Q.rho/_M_N2) * (B_coeff(imode,Q.Ttr)*Q.massf[imode-1] +
                                 (-F_coeff(imode, Q.Ttr) - B_coeff(imode+1, Q.Ttr))*Q.massf[imode] 
                                  + F_coeff(imode+1, Q.Ttr)*Q.massf[imode+1]);
             
-            double rho_i = (rho_dot * tInterval) + Q.massf[imode]*Q.rho;
+           
+            double rho_i = (rho_dot * dt) + Q.massf[imode]*Q.rho;
             Q.massf[imode] = rho_i / Q.rho;
         }
         //Hard coding the replenishing equation (ground state)
-        double rho_dot_0 = (Q.rho/_M_N2) * ((-B_coeff(1, Q.Ttr)*Q.massf[0]) 
+        double rho_dot_0 = (Q.rho*Q.rho/_M_N2) * ((-B_coeff(1, Q.Ttr)*Q.massf[0]) 
                                  + (F_coeff(1, Q.Ttr)*Q.massf[1])); 
-        double rho_0 = (rho_dot_0 * tInterval) + Q.massf[0]*Q.rho;
+        double rho_0 = (rho_dot_0 * dt) + Q.massf[0]*Q.rho;
         Q.massf[0] = rho_0 / Q.rho;
         
         
         //Hard coding the depleting equation (last quantum level)
-        double rho_dot_l = (Q.rho/_M_N2) * (B_coeff(N_VIB_LEVELS-1, Q.Ttr)*Q.massf[N_VIB_LEVELS-1-1] +
+        double rho_dot_l = (Q.rho*Q.rho/_M_N2) * (B_coeff(N_VIB_LEVELS-1, Q.Ttr)*Q.massf[N_VIB_LEVELS-1-1] +
                                 (-F_coeff(N_VIB_LEVELS-1, Q.Ttr))*Q.massf[N_VIB_LEVELS-1]); 
                                              
-        double rho_l = (rho_dot_l * tInterval) + Q.massf[N_VIB_LEVELS-1]*Q.rho;
+        double rho_l = (rho_dot_l * dt) + Q.massf[N_VIB_LEVELS-1]*Q.rho;
         Q.massf[N_VIB_LEVELS-1] = rho_l / Q.rho;
+        //writeln("Gas state: ");
+        //writeln(Q);
+        scale_mass_fractions(Q.massf, 1.0e-6, 1.0e-3);
+        }
         
-        _gmodel.update_thermo_from_rhop(Q);
-        assert(fabs(1.0 - sum(Q.massf)) < 1e-6, "Oops, total mass fraction is not 1.0");
+        //_gmodel.update_thermo_from_rhop(Q);
+        _gmodel.update_thermo_from_pT(Q);
+        //assert(fabs(1.0 - sum(Q.massf)) < 1e-6, "Oops, total mass fraction is not 1.0");
 	_gmodel.update_sound_speed(Q);
         
     } // end opCall
@@ -300,8 +317,8 @@ private:
      double F_coeff(int i, double Temp) const
      {
         double I = i + 1;
-        double ft = 10e-6 * Avogadro_number * exp(-3.24093 - (140.69597/Temp^^0.2));
-        double delta_t = 0.26679 - (6.99237e5 * Temp) + (4.70073e-9 * Temp^^2);
+        double ft = 1e-6 * Avogadro_number * exp(-3.24093 - (140.69597/Temp^^0.2));
+        double delta_t = 0.26679 - (6.99237e-5 * Temp) + (4.70073e-9 * Temp^^2);
         double f = (I-1) * ft * exp((I-2)*delta_t);
         return f;     
      }   
@@ -311,7 +328,9 @@ private:
         double B = F_coeff(i,Temp) * exp(-(vib_energy(i) - vib_energy(i-1)) / (kB * Temp));
         // F_coeff already uses i+1
         return B;
-     } 
+     }
+
+
 
 } // end class 
 
