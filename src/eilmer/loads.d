@@ -3,6 +3,7 @@
  *
  * Author: Kyle Damm
  * First code: 2017-03-17
+ * Edits by Will Landsberg and Tim Cullen
  */
 
 module loads;
@@ -66,7 +67,7 @@ string generate_boundary_load_file(int current_tindx, double sim_time, string gr
     if (!exists(fname)) {
 	auto f = File(fname, "w");
 	f.writeln("# t = ", sim_time);
-	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:Ttr\n");
+	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:Ttr 15:Re_wall\n ");
 	f.close();
     }
     return fname;
@@ -76,8 +77,14 @@ void apply_unstructured_grid(UBlock blk, double sim_time, int current_tindx) {
     foreach (bndary; blk.bc) {
 	if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
 	    string fname = generate_boundary_load_file(current_tindx, sim_time, bndary.group);
-		foreach (iface; bndary.faces) {
-		    compute_and_store_loads(iface, sim_time, current_tindx, fname);
+		foreach (i, iface; bndary.faces) {
+			double cellWidthNormalToSurface;			
+			if (bndary.outsigns[i] == 1) {
+			cellWidthNormalToSurface = iface.left_cell.L_min;
+			} else {
+			cellWidthNormalToSurface = iface.right_cell.L_min;
+			}
+			compute_and_store_loads(iface, cellWidthNormalToSurface, sim_time, current_tindx, fname);
 		} // end foreach face
 	} // end foreach (iface; bndary.faces)
     } // end if (bndary.group != "")
@@ -90,6 +97,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 	    size_t i, j, k;
 	    FVCell cell;
 	    FVInterface IFace;
+	    double cellWidthNormalToSurface;
 	    final switch (bndary.which_boundary) {
 	    case Face.north:
 		j = blk.jmax;
@@ -97,7 +105,8 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 		    for (i = blk.imin; i <= blk.imax; ++i) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.north];
-			compute_and_store_loads(IFace, sim_time, current_tindx, fname);
+			cellWidthNormalToSurface = cell.jLength;
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
 		    } // end i loop
 		} // end for k
 		break;
@@ -107,7 +116,8 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 		    for (j = blk.jmin; j <= blk.jmax; ++j) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.east];
-			compute_and_store_loads(IFace, sim_time, current_tindx, fname);
+			cellWidthNormalToSurface = cell.iLength;
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
 		    } // end j loop
 		} // end for k
 		break;
@@ -117,7 +127,8 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 		    for (i = blk.imin; i <= blk.imax; ++i) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.south];
-			compute_and_store_loads(IFace, sim_time, current_tindx, fname);
+			cellWidthNormalToSurface = cell.jLength;			
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
 		    } // end i loop
 		} // end for k
 		break;
@@ -127,7 +138,8 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 		    for (j = blk.jmin; j <= blk.jmax; ++j) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.west];
-			compute_and_store_loads(IFace, sim_time, current_tindx, fname);
+			cellWidthNormalToSurface = cell.iLength;
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
 		    } // end j loop
 		} // end for k
 		break;
@@ -137,7 +149,8 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 		    for (j = blk.jmin; j <= blk.jmax; ++j) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.top];
-			compute_and_store_loads(IFace, sim_time, current_tindx, fname);
+			cellWidthNormalToSurface = cell.kLength;
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
 		    } // end j loop
 		} // end for i
 		break;
@@ -147,7 +160,8 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 		    for (j = blk.jmin; j <= blk.jmax; ++j) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.bottom];
-			compute_and_store_loads(IFace, sim_time, current_tindx, fname);
+			cellWidthNormalToSurface = cell.kLength;
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
 		    } // end j loop
 		} // end for i
 		break;
@@ -156,7 +170,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
     }
 }
 
-void compute_and_store_loads(FVInterface iface, double sim_time, int current_tindx, string fname)
+void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface, double sim_time, int current_tindx, string fname)
 {
     FlowState fs = iface.fs;
     FlowGradients grad = iface.grad;
@@ -169,7 +183,9 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
     double k_wall = fs.gas.k;
     double P = fs.gas.p;
     double wall_temp = fs.gas.Ttr;
-    double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q;
+    double a_wall = fs.gas.a;
+    double rho_wall = fs.gas.rho;
+    double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q, Re_wall;
     if (GlobalConfig.viscous) {
 	double dTtrdx = grad.Ttr[0]; double dTtrdy = grad.Ttr[1]; double dTtrdz = grad.Ttr[2]; 
 	double dudx = grad.vel[0][0]; double dudy = grad.vel[0][1]; double dudz = grad.vel[0][2];
@@ -206,14 +222,17 @@ void compute_and_store_loads(FVInterface iface, double sim_time, int current_tin
 	l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
 	m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
 	n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
+	// compute cell Reynolds number
+	Re_wall = rho_wall * a_wall * cellWidthNormalToSurface / mu_wall;
     } else {
 	// For an inviscid simulation, we have only pressure.
 	sigma_wall = P;
 	tau_wall = 0.0;
 	l_tau = 0.0; m_tau = 0.0; n_tau = 0.0;
 	q = 0.0;
+	Re_wall = 0.0;
     }
     // store in file
-    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, wall_temp);
+    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, wall_temp, Re_wall);
     append(fname, writer);    
 } // end compute_and_store_loads()
