@@ -31,11 +31,24 @@ function writeIdealGas(f, sp, db, optsTable)
    f:write(string.format("   speciesName = '%s',\n", s))
    f:write(string.format("   mMass = %.8f,\n", db[s].M.value))
    f:write(string.format("   gamma = %.8f,\n", db[s].gamma.value))
-   f:write("   entropyRefValues = {\n")
-   f:write(string.format("      s1 = %.8e,\n", db[s].entropyRefValues.s1))
-   f:write(string.format("      T1 = %.8f,\n", db[s].entropyRefValues.T1))
-   f:write(string.format("      p1 = %.8e,\n", db[s].entropyRefValues.p1))
-   f:write("   },\n")
+   if (db[s].entropyRefValues) then
+      f:write("   entropyRefValues = {\n")
+      f:write(string.format("      s1 = %.8e,\n", db[s].entropyRefValues.s1))
+      f:write(string.format("      T1 = %.8f,\n", db[s].entropyRefValues.T1))
+      f:write(string.format("      p1 = %.8e,\n", db[s].entropyRefValues.p1))
+      f:write("   },\n")
+   else
+      -- Use some default value.
+      -- This should NOT be an issue. We only need correct enthalpy
+      -- values for computing equilibrium constants in a reacting
+      -- gas. We should not be doing reacting flows with a mixture
+      -- of ideal gases.
+      f:write("   entropyRefValues = {\n")
+      f:write(string.format("      s1 = %.8e,\n", db.default.entropyRefValues.s1))
+      f:write(string.format("      T1 = %.8f,\n", db.default.entropyRefValues.T1))
+      f:write(string.format("      p1 = %.8e,\n", db.default.entropyRefValues.p1))
+      f:write("   },\n")
+   end
    -- Our default choice for an ideal gas is a simple Sutherland viscosity
    -- model, but there are two reasons we might NOT use that.
    -- 1. We override that choice using an option in the options table.
