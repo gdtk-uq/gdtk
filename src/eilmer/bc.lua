@@ -905,11 +905,7 @@ function WallBC_AdjacentToSolid:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
-					   TemperatureFromGasSolidInterface:new{otherBlock=o.otherBlock,
-										otherFace=o.otherFace,
-										orientation=o.orientation} }
-   
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }   
    if config.turbulence_model == "k_omega" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
    end		
