@@ -35,6 +35,7 @@ import sblock;
 import ublock;
 import fvcell;
 import fvinterface;
+import fvvertex;
 import sblock;
 import globaldata;
 import globalconfig;
@@ -100,8 +101,7 @@ void main(string[] args) {
     int maxCPUs = 1;
     int maxWallClock = 5*24*3600; // 5 days default
     init_simulation(last_tindx, maxCPUs, maxWallClock);
-    //auto soln = new FlowSolution(jobName, ".", last_tindx, GlobalConfig.nBlocks);
-    
+        
     writeln("simulation initialised");
     
     // -----------------------------------------------------
@@ -111,7 +111,7 @@ void main(string[] args) {
     // NB: currently only for 1st order interpolation
     // TODO: high order interpolation
     
-    FVCell[][] stencils;
+    FVCell[][] cellStencil;
     foreach (blk; gasBlocks) {
 	foreach(i, cell; blk.cells) {
 	    FVCell[] cell_refs;
@@ -122,7 +122,7 @@ void main(string[] args) {
 		if (f.right_cell.id != cell.id &&
 		    f.right_cell.id < ghost_cell_start_id) { cell_refs ~= f.right_cell; }
 	    }
-	    stencils ~= cell_refs;
+	    cellStencil ~= cell_refs;
 	}
     }
 
@@ -137,6 +137,8 @@ void main(string[] args) {
     double[][] Jac;
     size_t nc = 4; // number of primitive variables
     size_t ncells = gasBlocks[0].cells.length;
+    size_t nvertices = gasBlocks[0].vertices.length;
+    size_t ndim = gasBlocks[0].myConfig.dimensions;
     // currently stores the entire Jacobian -- this is quite wasteful
     // TODO: sparse matrix storage
     foreach (i; 0..nc*ncells) {
@@ -146,17 +148,16 @@ void main(string[] args) {
 	}
 	Jac ~= row;
     }
-    // hard-coded for perturbing rho, u, v, P
     foreach (blk; gasBlocks) {
 	foreach(ci, cell; blk.cells) {
 	    // 0th perturbation: rho
-	    mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
+	    mixin(computeFluxFlowVariableDerivativesAroundCell("gas.rho", "0", true));
 	    // 1st perturbation: u
-	    mixin(computeFluxDerivativesAroundCell("vel.refx", "1", false));
+	    mixin(computeFluxFlowVariableDerivativesAroundCell("vel.refx", "1", false));
 	    // 2nd perturbation: v
-	    mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
+	    mixin(computeFluxFlowVariableDerivativesAroundCell("vel.refy", "2", false));
 	    // 3rd perturbation: P
-	    mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
+	    mixin(computeFluxFlowVariableDerivativesAroundCell("gas.p", "3", true));
 	    
 	    
 	    // -----------------------------------------------------
@@ -164,7 +165,7 @@ void main(string[] args) {
 	    // -----------------------------------------------------
 	    // at this point we can use the cell counter ci to access
 	    // the correct stencil
-	    foreach(c; stencils[ci]) {
+	    foreach(c; cellStencil[ci]) {
 		size_t I, J; // indices in Jacobian matrix
 		double integral;
 		double volInv = 1.0 / c.volume[0];
@@ -188,8 +189,8 @@ void main(string[] args) {
 		    }
 		}
 	    }
-	}
-    }
+	} // end foreach cell
+    } // end foreach block
     
     //--------------------------------------------------------
     // Transpose Jac
@@ -259,10 +260,129 @@ void main(string[] args) {
 	append("e4_adjoint_vars.dat", writer);
     }
     
+    // -----------------------------------------------------
+    // form dR/dX 
+    // -----------------------------------------------------
+    FVCell[][] vtxStencil;
+    foreach (blk; gasBlocks) {
+	foreach(i, vtx; blk.vertices) {
+	    FVCell[] cell_refs;
+	    foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
+		cell_refs ~= blk.cells[cid];
+	    }
+	    vtxStencil ~= cell_refs;
+	}
+    }
+
+    FVVertex verticePp; FVVertex verticePm;
+    // currently stores the entire Jacobian -- this is quite wasteful
+    // TODO: sparse matrix storage
+    Matrix dRdX;
+    dRdX = new Matrix(ncells*nc, nvertices*ndim);
+    dRdX.zeros();
+    
+    foreach (blk; gasBlocks) {
+	foreach(vi, vtx; blk.vertices) {
+	    // 0th perturbation: x
+	    mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refx", "0"));
+	    // 1st perturbation: y
+	    mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refy", "1"));
+	    // -----------------------------------------------------
+	    // loop through influenced cells and fill out Jacobian 
+	    // -----------------------------------------------------
+	    // at this point we can use the cell counter ci to access
+	    // the correct stencil
+	    foreach(c; vtxStencil[vi]) {
+		size_t I, J; // indices in Jacobian matrix
+		double integral;
+		double volInv = 1.0 / c.volume[0];
+		for ( size_t ic = 0; ic < nc; ++ic ) {
+		    I = c.id*nc + ic; // row index
+		    for ( size_t jc = 0; jc < ndim; ++jc ) {
+			integral = 0.0;
+			J = vtx.id*ndim + jc; //vtx.id*nc + jc; // column index
+			foreach(fi, iface; c.iface) {
+			    integral -= c.outsign[fi] * iface.dFdU[ic][jc] * iface.area[0]; // gtl=0
+			}
+			dRdX[I,J] = volInv * integral;
+		    }
+		}
+	    }
+	    // clear the flux Jacobian entries
+	    foreach (iface; blk.faceIndexListPerVertex[vtx.id]) {
+		foreach (i; 0..blk.faces[iface].dFdU.length) {
+		    foreach (j; 0..blk.faces[iface].dFdU[i].length) {
+			blk.faces[iface].dFdU[i][j] = 0.0;
+		    }
+		}
+	    }
+	} // end foreach cell
+    } // end foreach block
+    // -----------------------------------------------------
+    // form dX/dD -- mesh perturbation specific code
+    // -----------------------------------------------------
+    size_t nvar = 3; // number of design variables
+    size_t nsurfnodes = 101; // number of surface nodes
+    // sensitivity of mesh points to movements of the surface mesh points
+    Matrix dXdXb;
+    dXdXb = new Matrix(nvertices*ndim, nsurfnodes*ndim);
+    dXdXb.zeros();
+    foreach (blk; gasBlocks) {
+	SBlock sblk = cast(SBlock) blk;
+	foreach(vi, vtx; sblk.vertices) {
+	    size_t[3] ijk;
+	    ijk = sblk.to_ijk_indices(vtx.id);
+	    foreach(vbi; 0..nsurfnodes) {
+		if (ijk[0] == vbi) dXdXb[2*ijk[0]+1,2*vbi+1] = 1.0 - (sblk.jmax - ijk[1])/sblk.jmax;
+	    }
+	}
+    } 
+
+    // sensitivity of surface mesh points to movements of design variables
+    Matrix dXbdD;
+    dXbdD = new Matrix(ndim*nsurfnodes, nvar);
+    dXbdD.zeros();
+    // shape parameters
+    double scale = 1.5;
+    double b = 0.07;
+    double c = 0.8;
+    double d = 3.8;
+    foreach (blk; gasBlocks) {
+	SBlock sblk = cast(SBlock) blk;
+	foreach(vi; 0..nsurfnodes) {
+	    FVVertex vtx = sblk.get_vtx(vi+2,sblk.jmin,sblk.kmin);
+	    writeln(vtx.pos[0].x);
+	    dXbdD[vi*ndim+0,0] = 0.0;
+	    dXbdD[vi*ndim+0,1] = 0.0;
+	    dXbdD[vi*ndim+0,2] = 0.0;
+	    dXbdD[vi*ndim+1,0] = tanh(d/scale) + tanh((c*vtx.pos[0].x - d)/scale);
+	    dXbdD[vi*ndim+1,1] = b*vtx.pos[0].x*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
+	    dXbdD[vi*ndim+1,2] = b*(-pow(tanh(d/scale),2) + 1)/scale - b*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
+	}
+    } 
+    // sensitivity of mesh points to movements of the design variables
+    Matrix dXdD;
+    dXdD = new Matrix(ndim*nvertices, nvar);
+    dot(dXdXb, dXbdD, dXdD);
+
+    // compute transposes
+    Matrix dXdD_T; Matrix dRdX_T;
+    dXdD_T = transpose(dXdD);
+    dRdX_T = transpose(dRdX);
+    // temp matrix multiplication
+    Matrix tempMatrix;
+    tempMatrix = new Matrix(nvar, ncells*nc);
+    dot(dXdD_T, dRdX_T, tempMatrix);
+    // compute gradient
+    double[3] grad;
+    dot(tempMatrix, psi, grad);
+
+    writeln(grad);
+    
     writeln("Done simulation.");
 }
 
-string computeFluxDerivativesAroundCell(string varName, string posInArray, bool includeThermoUpdate)
+string computeFluxFlowVariableDerivativesAroundCell(string varName, string posInArray, bool includeThermoUpdate)
 {
     string codeStr;
     codeStr ~= "cellPp = new FVCell(dedicatedConfig[blk.id]);";
@@ -388,3 +508,103 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
 
     return codeStr;
 }
+
+string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArray)
+{
+    string codeStr;
+    codeStr ~= "ifacePp = new FVInterface(dedicatedConfig[blk.id], false);";
+    codeStr ~= "ifacePm = new FVInterface(dedicatedConfig[blk.id], false);";
+    codeStr ~= "h = vtx."~varName~" * EPSILON + EPSILON;";
+    codeStr ~= "foreach (faceid; blk.faceIndexListPerVertex[vtx.id]) { ";
+    codeStr ~= "FVInterface iface = blk.faces[faceid];";
+    // ------------------ negative perturbation ------------------
+    codeStr ~= "vtx."~varName~" -= h;";
+    // ------------------ apply grid metrics ------------------
+    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "blk.compute_primary_cell_geometric_data(0);";
+    //codeStr ~= "if (GlobalConfig.do_compute_distance_to_nearest_wall) {";
+    //codeStr ~= "blk.compute_distance_to_nearest_wall_for_all_cells(0);";
+    //codeStr ~= "}";
+    //codeStr ~= "if ((blk.grid_type == Grid_t.unstructured_grid) &&";
+    //codeStr ~= "(blk.myConfig.interpolation_order > 1)) {"; 
+    //codeStr ~= "blk.compute_least_squares_setup_for_reconstruction(0);";
+    //codeStr ~= "}";
+    // ------------------ apply cell effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);";  // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "}";
+    // ------------------ compute interflux ------------------
+    codeStr ~= "cellR = iface.right_cell;";
+    codeStr ~= "cellL = iface.left_cell;";
+    codeStr ~= "blk.Lft.copy_values_from(cellL.fs);";
+    codeStr ~= "blk.Rght.copy_values_from(cellR.fs);";
+    codeStr ~= "compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);";
+    // ------------------ apply interface effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);"; // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "}";
+    codeStr ~= "ifacePm.copy_values_from(iface, CopyDataOption.all);";
+    codeStr ~= "vtx."~varName~" += h;";
+    // ------------------ positive perturbation ------------------
+    codeStr ~= "vtx."~varName~" += h;";
+    // ------------------ apply grid metrics ------------------
+    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "if (GlobalConfig.do_compute_distance_to_nearest_wall) {";
+    //codeStr ~= "blk.compute_distance_to_nearest_wall_for_all_cells(0);";
+    //codeStr ~= "}";
+    //codeStr ~= "if ((blk.grid_type == Grid_t.unstructured_grid) &&";
+    //codeStr ~= "(blk.myConfig.interpolation_order > 1)) {"; 
+    //codeStr ~= "blk.compute_least_squares_setup_for_reconstruction(0);";
+    //codeStr ~= "}";
+    // ------------------ apply cell effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);"; // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "}";
+    // ------------------ compute interface flux ------------------
+    codeStr ~= "cellR = iface.right_cell;";
+    codeStr ~= "cellL = iface.left_cell;";
+    codeStr ~= "blk.Lft.copy_values_from(cellL.fs);";
+    codeStr ~= "blk.Rght.copy_values_from(cellR.fs);";
+    codeStr ~= "compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);";
+    // ------------------ apply interface effect bcs ------------------
+    codeStr ~= "if (iface.is_on_boundary) {";
+    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);"; // assume sim_time = 0.0, gtl = 0, ftl = 0
+    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
+    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);";
+    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
+    codeStr ~= "}";
+    codeStr ~= "ifacePp.copy_values_from(iface, CopyDataOption.all);";
+    codeStr ~= "vtx."~varName~" -= h;";
+    // ------------------ compute interface flux derivatives ------------------
+    codeStr ~= "diff = ifacePp.F.mass - ifacePm.F.mass;";
+    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = diff/(2.0*h);";	    
+    codeStr ~= "diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;";
+    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = diff/(2.0*h);";
+    codeStr ~= "diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;";
+    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = diff/(2.0*h);";
+    codeStr ~= "diff = ifacePp.F.total_energy - ifacePm.F.total_energy;";
+    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
+    // ------------------ restore original geometry ------------------
+    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //
+    codeStr ~= "}";
+
+    return codeStr;
+}
+
