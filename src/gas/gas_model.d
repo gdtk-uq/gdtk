@@ -1291,6 +1291,7 @@ import gas.ideal_dissociating_gas;
 import gas.two_temperature_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
+import gas.steam : Steam;
 import core.stdc.stdlib : exit;
 
 
@@ -1328,7 +1329,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         exit(1);
     }
     GasModel gm;
-    switch ( gas_model_name ) {
+    switch (gas_model_name) {
     case "IdealGas":
 	gm = new IdealGas(L);
 	break;
@@ -1376,6 +1377,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
 	break;
     case "FuelAirMix":
 	gm = new FuelAirMix(L);
+	break;
+    case "Steam":
+	gm = new Steam();
 	break;
     default:
 	string errMsg = format("The gas model '%s' is not available.", gas_model_name);
