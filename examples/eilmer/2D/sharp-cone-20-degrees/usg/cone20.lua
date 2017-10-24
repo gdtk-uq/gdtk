@@ -52,7 +52,7 @@ blk1 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid1},
 		      hcellList={9,0}}
 -- Set boundary conditions.
 -- identifyBlockConnections()
-blk0.bcList[3] = InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}
+blk0.bcList[3] = InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"}
 blk0.bcList[1] = ExchangeBC_MappedCell:new{}
 blk1.bcList[3] = ExchangeBC_MappedCell:new{}
 blk1.bcList[1] = OutFlowBC_Simple:new{label="outflow-boundary"}

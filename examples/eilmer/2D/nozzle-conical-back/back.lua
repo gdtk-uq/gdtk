@@ -81,11 +81,11 @@ setHistoryPoint{ib=1, i=nx1-1, j=1}
 identifyBlockConnections()
 if fixed_pressure then
    -- Directly specify the stagnation conditions for the subsonic inflow.
-   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas,
+   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas,
 							      label="inflow-boundary"}
 else
    -- Specify the inflow mass_flux (kg/s/m^^2) across inlet and guess the stagnation condition.
-   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas,
+   subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas,
 							      mass_flux=275.16,
 							      relax_factor=0.2,
 							      label="inflow-boundary"}

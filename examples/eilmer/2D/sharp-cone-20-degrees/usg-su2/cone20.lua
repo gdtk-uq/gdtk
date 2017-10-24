@@ -18,7 +18,7 @@ for i=0,3 do
    fileName = string.format("cone20_grid%d.su2", i)
    grids[i] = UnstructuredGrid:new{filename=fileName, fmt="su2text"}
 end
-my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowCondition=inflow},
+my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowState=inflow},
 	     OUTFLOW=OutFlowBC_Simple:new{},
 	     SLIP_WALL=WallBC_WithSlip:new{},
 	     INTERIOR=ExchangeBC_MappedCell:new{list_mapped_cells=true},

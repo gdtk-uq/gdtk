@@ -71,11 +71,11 @@ function InternalCopyThenReflect:tojson()
    return str
 end
 
-FlowStateCopy = GhostCellEffect:new{flowCondition=nil}
+FlowStateCopy = GhostCellEffect:new{flowState=nil}
 FlowStateCopy.type = "flowstate_copy"
 function FlowStateCopy:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "flowstate": %s', self.flowCondition:toJSONString())
+   str = str .. string.format(' "flowstate": %s', self.flowState:toJSONString())
    str = str .. '}'
    return str
 end
@@ -113,7 +113,7 @@ function FixedPT:tojson()
    return str
 end
 
-FromStagnation = GhostCellEffect:new{stagCondition=nil,
+FromStagnation = GhostCellEffect:new{stagnationState=nil,
 				     direction_type="normal",
                                      direction_x=1.0, direction_y=0.0, direction_z=0.0,
                                      alpha=0.0, beta=0.0,
@@ -123,7 +123,7 @@ FromStagnation.type = "from_stagnation_condition"
 function FromStagnation:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "stagnation_condition": %s,',
-			      self.stagCondition:toJSONString())
+			      self.stagnationState:toJSONString())
    str = str .. string.format(' "direction_type": "%s",', self.direction_type)
    str = str .. string.format(' "direction_x": %.18e, "direction_y": %.18e, "direction_z": %.18e,',
 			      self.direction_x, self.direction_y, self.direction_z)
@@ -216,11 +216,11 @@ function CopyCellData:tojson()
    return str
 end
 
-FlowStateCopyToInterface = BoundaryInterfaceEffect:new{flowCondition=nil}
+FlowStateCopyToInterface = BoundaryInterfaceEffect:new{flowState=nil}
 FlowStateCopyToInterface.type = "flow_state_copy_to_interface"
 function FlowStateCopyToInterface:tojson()
    local str = string.format('          {"type": "%s",', self.type)
-   str = str .. string.format(' "flowstate": %s', self.flowCondition:toJSONString())
+   str = str .. string.format(' "flowstate": %s', self.flowState:toJSONString())
    str = str .. '}'
    return str
 end
@@ -371,11 +371,11 @@ function BoundaryFluxEffect:new(o)
    self.__index = self
    return o
 end
-ConstFlux = BoundaryFluxEffect:new{flowCondition=nil}
+ConstFlux = BoundaryFluxEffect:new{flowState=nil}
 ConstFlux.type = "const_flux"
 function ConstFlux:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
-   str = str .. string.format(' "flowstate": %s', self.flowCondition:toJSONString())
+   str = str .. string.format(' "flowstate": %s', self.flowState:toJSONString())
    str = str .. '}'
    return str
 end
@@ -709,12 +709,13 @@ end
 InFlowBC_Supersonic = BoundaryCondition:new()
 InFlowBC_Supersonic.type = "inflow_supersonic"
 function InFlowBC_Supersonic:new(o)
-   local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
+   local flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_Supersonic constructor.")
+   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = { FlowStateCopy:new{flowCondition=o.flowCondition} }
-   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowCondition=o.flowCondition} }
+   o.preReconAction = { FlowStateCopy:new{flowState=o.flowState} }
+   o.preSpatialDerivActionAtBndryFaces = { FlowStateCopyToInterface:new{flowState=o.flowState} }
    o.is_configured = true      
    return o
 end
@@ -739,13 +740,14 @@ InFlowBC_ConstFlux = BoundaryCondition:new()
 InFlowBC_ConstFlux.type = "inflow_const_flux"
 function InFlowBC_ConstFlux:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
+   local flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_ConstFlux constructor.")
+   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
    o.ghost_cell_data_available = false
-   o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
+   o.postConvFluxAction = { ConstFlux:new{flowState=o.flowState} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
@@ -755,13 +757,14 @@ InFlowBC_ShockFitting = BoundaryCondition:new()
 InFlowBC_ShockFitting.type = "inflow_shock_fitting"
 function InFlowBC_ShockFitting:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"flowCondition", "label", "group"})
+   local flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_ShockFitting constructor.")
+   if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
    o.ghost_cell_data_available = false
-   o.postConvFluxAction = { ConstFlux:new{flowCondition=o.flowCondition} }
+   o.postConvFluxAction = { ConstFlux:new{flowState=o.flowState} }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
@@ -771,14 +774,15 @@ InFlowBC_FromStagnation = BoundaryCondition:new()
 InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
 function InFlowBC_FromStagnation:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"stagCondition", "direction_type",
+   local flag = checkAllowedNames(o, {"stagnationState", "stagCondition", "direction_type",
 				      "direction_x", "direction_y", "direction_z",
 				      "alpha", "mass_flux", "relax_factor",
 				      "label", "group"})
    assert(flag, "Invalid name for item supplied to InFlowBC_FromStagnation constructor.")
+   if o.stagnationState == nil then o.stagnationState = o.stagCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = { FromStagnation:new{stagCondition=o.stagCondition,
+   o.preReconAction = { FromStagnation:new{stagnationState=o.stagnationState,
 					   direction_type=o.direction_type,
 					   direction_x=o.direction_x,
 					   direction_y=o.direction_y,
