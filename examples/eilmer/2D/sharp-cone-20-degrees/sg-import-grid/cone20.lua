@@ -23,8 +23,8 @@ for i=0, 1 do
 end
 
 -- Define the flow-solution blocks.
-blk0 = FluidBlock:new{grid=grids[0], fillCondition=inflow}
-blk1 = FluidBlock:new{grid=grids[1], fillCondition=initial}
+blk0 = FluidBlock:new{grid=grids[0], initialState=inflow}
+blk1 = FluidBlock:new{grid=grids[1], initialState=initial}
 -- Set boundary conditions.
 identifyBlockConnections()
 blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}

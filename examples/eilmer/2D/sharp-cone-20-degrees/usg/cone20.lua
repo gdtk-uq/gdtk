@@ -45,9 +45,9 @@ grid0 = StructuredGrid:new{psurface=quad0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=quad1, niv=nx1+1, njv=ny+1}
 -- Define the flow-solution blocks.
 blk0 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid0},
-		      fillCondition=inflow, label="BLOCK-0"}
+		      initialState=inflow, label="BLOCK-0"}
 blk1 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid1}, 
-		      fillCondition=initial,
+		      initialState=initial,
 		      label="BLOCK-1",
 		      hcellList={9,0}}
 -- Set boundary conditions.

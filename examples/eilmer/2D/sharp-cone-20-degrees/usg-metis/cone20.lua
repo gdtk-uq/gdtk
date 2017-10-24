@@ -37,7 +37,7 @@ my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boun
 
 blks = {}
 for i=0,nblocks-1 do
-   blks[i] = FluidBlock:new{grid=grids[i], fillCondition=inflow, bcDict=my_bcDict}
+   blks[i] = FluidBlock:new{grid=grids[i], initialState=inflow, bcDict=my_bcDict}
 end
 
 -- There are 8 boundaries within the single unstructured-grid

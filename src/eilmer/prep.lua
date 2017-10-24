@@ -168,22 +168,23 @@ FluidBlock = {
 
 function FluidBlock:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"grid", "fillCondition", "active",
+   local flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition", "active",
 				      "label", "omegaz", "bcList", "bcDict",
 				      "hcellList", "xforceList"})
    assert(flag, "Invalid name for item supplied to FluidBlock constructor.")
+   if o.initialState == nil then o.initialState = o.fillCondition end -- try old name
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new block, for later construction of the config file.
    -- Note that we want block id to start at zero for the D code.
    o.id = #(fluidBlocks)
    fluidBlocks[#(fluidBlocks)+1] = o
-   -- Must have a grid and fillCondition
+   -- Must have a grid and initialState
    assert(o.grid, "need to supply a grid")
-   assert(o.fillCondition, "need to supply a fillCondition")
-   if getmetatable(o.fillCondition) == FlowSolution then
-      -- Let's build a fillCondition function here from a FlowSolution.
-      o.fillCondition = makeFillConditionFn(o.fillCondition)
+   assert(o.initialState, "need to supply a initialState")
+   if getmetatable(o.initialState) == FlowSolution then
+      -- Let's build a initialState function here from a FlowSolution.
+      o.initialState = makeFillConditionFn(o.initialState)
    end
    -- Fill in default values, if already not set
    if o.active == nil then
@@ -340,7 +341,7 @@ function SBlock2UBlock(blk)
       end
    end
    ublk = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=blk.grid},
-			 fillCondition=blk.fillCondition,
+			 initialState=blk.initialState,
 			 active=blk.active,
 			 label=blk.label,
 			 omegaz=blk.omegaz,
@@ -509,13 +510,14 @@ end
 function FluidBlockArray(t)
    -- Expect one table as argument, with named fields.
    -- Returns an array of FluidBlocks defined over a single region.
-   local flag = checkAllowedNames(t, {"grid", "fillCondition", "active",
-				      "label", "omegaz", "bcList",
+   local flag = checkAllowedNames(t, {"grid", "initialState", "fillCondition",
+				      "active", "label", "omegaz", "bcList",
 				      "nib", "njb", "nkb"})
    assert(flag, "Invalid name for item supplied to FluidBlockArray.")
    assert(t.grid, "need to supply a grid")
    assert(t.grid:get_type() == "structured_grid", "grid must be structured")
-   assert(t.fillCondition, "need to supply a fillCondition")
+   if t.initialState == nil then t.initialState = t.fillCondition end -- try old name
+   assert(t.initialState, "need to supply an initialState")
    t.omegaz = t.omegaz or 0.0
    t.bcList = t.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
@@ -578,7 +580,7 @@ function FluidBlockArray(t)
 	    end
 	    print("Calling FluidBlock...")
 	    new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
-				       fillCondition=t.fillCondition, bcList=bcList}
+				       initialState=t.initialState, bcList=bcList}
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
 	 else
@@ -613,7 +615,7 @@ function FluidBlockArray(t)
 		  bcList[top] = t.bcList[top]
 	       end
 	       new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
-					  fillCondition=t.fillCondition,
+					  initialState=t.initialState,
 					  bcList=bcList}
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
@@ -911,11 +913,11 @@ function setSolidHistoryPoint(args)
 end
 
 
-function makeFillConditionFn(flowSol)
+function makeFlowStateFn(flowSol)
    local gm = getGasModel()
    local sp = gm:speciesName(0)
    local dummyFS = FlowState:new{p=1.0e5, T=300, massf={[sp]=1}}
-   function fillFn(x, y, z)
+   function flowFn(x, y, z)
       -- We try to find an enclosing cell.
       cell = flowSol:find_enclosing_cell{x=x, y=y, z=z}
       -- If that fails, we'll just grab a 'nearest' cell.
@@ -927,7 +929,7 @@ function makeFillConditionFn(flowSol)
       dummyFS:fromTable(flowSol:get_cell_data(cell))
       return dummyFS
    end
-   return fillFn
+   return flowFn
 end
 
 function checkCellVolumes(t)
@@ -1303,9 +1305,9 @@ function build_job_files(job)
 	 error(string.format("Oops, invalid flow_format: %s", config.flow_format))
       end
       if fluidBlocks[i].grid:get_type() == "structured_grid" then
-	 write_initial_sg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].fillCondition, 0.0)
+	 write_initial_sg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].initialState, 0.0)
       else
-	 write_initial_usg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].fillCondition, 0.0)
+	 write_initial_usg_flow_file(fileName, fluidBlocks[i].grid, fluidBlocks[i].initialState, 0.0)
       end
    end
    for i = 1, #solidBlocks do

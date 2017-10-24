@@ -71,9 +71,9 @@ patch1 = makePatch{north=north1, east=east1, south=south1, west=east0west1}
 nx0 = 50; nx1 = 60; ny = 30
 grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
-subsonic_region = FluidBlock:new{grid=grid0, fillCondition=stagnation_gas,
+subsonic_region = FluidBlock:new{grid=grid0, initialState=stagnation_gas,
 				 label="subsonic-region"}
-supersonic_region = FluidBlock:new{grid=grid1, fillCondition=low_pressure_gas,
+supersonic_region = FluidBlock:new{grid=grid1, initialState=low_pressure_gas,
 				   label="supersonic-region"} 
 -- History locations near throat and exit
 setHistoryPoint{ib=1, i=1, j=1}
