@@ -1962,7 +1962,6 @@ public:
 	return;
     }
 
-    @nogc
     void copy_into_ghost_cells(int destination_face,
 			       ref SBlock src_blk, int src_face, int src_orientation,
 			       int type_of_copy, bool with_encode,
@@ -1973,7 +1972,6 @@ public:
 	FVCell src0, dest0, src1, dest1;
 	int gtl = 0; // Do the encode only for grid-time-level zero.
 	//
-	@nogc
 	void copy_pair_of_cells(FVCell src0, FVCell dest0, 
 				FVCell src1, FVCell dest1)
 	{

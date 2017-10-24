@@ -107,7 +107,6 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     return;
 } // end compute_interface_flux()
 
-@nogc
 void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs, 
 				    ref LocalConfig myConfig)
 {
@@ -129,7 +128,6 @@ void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs,
     foreach (imode; 0 .. F.energies.length) { F.energies[imode] = F.mass*fs.gas.u_modes[imode]; }
 } // end set_flux_vector_in_local_frame()
 
-@nogc
 void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs, 
 				     ref LocalConfig myConfig, double omegaz=0.0)
 {
@@ -169,7 +167,6 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     fs.vel.set(vx, vy, vz); // restore fs.vel
 } // end set_flux_vector_in_global_frame()
 
-@nogc
 void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
 // Wada and Liou's flux calculator.
 // 
@@ -491,7 +488,6 @@ void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, r
     }
 } // end adaptive_flux()
 
-@nogc
 void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
 		  double M_inf, GasModel gmodel)
 // Liou's 2006 AUSM+up flux calculator

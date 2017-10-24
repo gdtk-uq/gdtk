@@ -379,7 +379,6 @@ public:
 				myConfig.divergence_cleaning, myConfig.radiation);
     } // end write_values_to_raw_binary()
 
-    @nogc
     void encode_conserved(int gtl, int ftl, double omegaz)
     // gtl = grid time level
     // ftl = flow time level

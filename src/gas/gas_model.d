@@ -90,7 +90,7 @@ public:
     abstract double dhdT_const_p(in GasState Q); 
     abstract double dpdrho_const_T(in GasState Q); 
     abstract double gas_constant(in GasState Q);
-    abstract @nogc double internal_energy(in GasState Q);
+    abstract double internal_energy(in GasState Q);
     abstract double enthalpy(in GasState Q);
     double enthalpy(in GasState Q, int isp)
     {
