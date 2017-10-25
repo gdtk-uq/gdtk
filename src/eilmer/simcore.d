@@ -92,6 +92,9 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     setupIndicesForConservedQuantities(); 
     current_tindx = tindx;
     auto job_name = GlobalConfig.base_file_name;
+    if (GlobalConfig.nFluidBlocks == 0) {
+	throw new FlowSolverException("No FluidBlocks; no point in continuing to initialize simulation.");
+    }
     auto nBlocksInParallel = max(GlobalConfig.nFluidBlocks, GlobalConfig.nSolidBlocks);
     auto nThreadsInPool = min(maxCPUs-1, nBlocksInParallel-1); // no need to have more task threads than blocks
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool

@@ -1320,7 +1320,8 @@ function build_job_files(job)
 			    solidBlocks[i].initTemperature, solidBlocks[i].properties, 0.0)
       os.execute("gzip -f " .. fileName)
    end
-
+   --
+   if #fluidBlocks == 0 then print("Warning: number of FluidBlocks is zero.") end
    print("Done building files.")
 end
 
