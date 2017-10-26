@@ -41,28 +41,42 @@ void init_loads_dir()
     ensure_directory_is_present(loadsDir);
 }
 
-void write_boundary_loads_to_file(double sim_time, int current_tindx) {
+void init_loads_times_file()
+{
+    string fname = "loads/" ~ GlobalConfig.base_file_name ~ "-loads.times";
+    auto f = File(fname, "w");
+    f.write("# 1:loads_index 2:sim_time\n");
+}
+
+void update_loads_times_file(double sim_time, int current_loads_tindx)
+{
+    auto writer = appender!string();
+    formattedWrite(writer, "%04d %.18e \n", current_loads_tindx, sim_time);
+    append("loads/" ~ GlobalConfig.base_file_name ~ "-loads.times", writer.data);
+}
+
+void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
     foreach (blk; gasBlocks) { //foreach (blk; parallel(gasBlocks,1)) {
 	if (blk.active) {
 	    final switch (blk.grid_type) {
 	    case Grid_t.unstructured_grid: 
 		UBlock ublk = cast(UBlock) blk;
 		assert(ublk !is null, "Oops, this should be a UBlock object.");
-		apply_unstructured_grid(ublk, sim_time, current_tindx);
+		apply_unstructured_grid(ublk, sim_time, current_loads_tindx);
 		break;
 	    case Grid_t.structured_grid:
 		SBlock sblk = cast(SBlock) blk;
 		assert(sblk !is null, "Oops, this should be an SBlock object.");
-		apply_structured_grid(sblk, sim_time, current_tindx);
+		apply_structured_grid(sblk, sim_time, current_loads_tindx);
 	    } // end final switch
 	} // if (blk.active)
     } // end foreach
 } // end write_boundary_loads_to_file
 
-string generate_boundary_load_file(int current_tindx, double sim_time, string group) {
+string generate_boundary_load_file(int current_loads_tindx, double sim_time, string group) {
     // generate data file -- naming format tindx_groupname.dat
-    string fname = format("%s/t%d-%s.dat", 
-			  loadsDir, current_tindx, group);
+    string fname = format("%s/t%04d-%s.dat", 
+			  loadsDir, current_loads_tindx, group);
     // check if file exists already, if not create file
     if (!exists(fname)) {
 	auto f = File(fname, "w");
@@ -73,10 +87,10 @@ string generate_boundary_load_file(int current_tindx, double sim_time, string gr
     return fname;
 }
 
-void apply_unstructured_grid(UBlock blk, double sim_time, int current_tindx) {
+void apply_unstructured_grid(UBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
 	if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
-	    string fname = generate_boundary_load_file(current_tindx, sim_time, bndary.group);
+	    string fname = generate_boundary_load_file(current_loads_tindx, sim_time, bndary.group);
 		foreach (i, iface; bndary.faces) {
 			double cellWidthNormalToSurface;			
 			if (bndary.outsigns[i] == 1) {
@@ -84,16 +98,16 @@ void apply_unstructured_grid(UBlock blk, double sim_time, int current_tindx) {
 			} else {
 			cellWidthNormalToSurface = iface.right_cell.L_min;
 			}
-			compute_and_store_loads(iface, cellWidthNormalToSurface, sim_time, current_tindx, fname);
+			compute_and_store_loads(iface, cellWidthNormalToSurface, sim_time, fname);
 		} // end foreach face
 	} // end foreach (iface; bndary.faces)
     } // end if (bndary.group != "")
 } // foreach (bndary; blk.bc)
 
-void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
+void apply_structured_grid(SBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
 	if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
-	    string fname = generate_boundary_load_file(current_tindx, sim_time, bndary.group);
+	    string fname = generate_boundary_load_file(current_loads_tindx, sim_time, bndary.group);
 	    size_t i, j, k;
 	    FVCell cell;
 	    FVInterface IFace;
@@ -106,7 +120,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.north];
 			cellWidthNormalToSurface = cell.jLength;
-			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
 		    } // end i loop
 		} // end for k
 		break;
@@ -117,7 +131,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.east];
 			cellWidthNormalToSurface = cell.iLength;
-			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
 		    } // end j loop
 		} // end for k
 		break;
@@ -128,7 +142,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.south];
 			cellWidthNormalToSurface = cell.jLength;			
-			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
 		    } // end i loop
 		} // end for k
 		break;
@@ -139,7 +153,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.west];
 			cellWidthNormalToSurface = cell.iLength;
-			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
 		    } // end j loop
 		} // end for k
 		break;
@@ -150,7 +164,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.top];
 			cellWidthNormalToSurface = cell.kLength;
-			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
 		    } // end j loop
 		} // end for i
 		break;
@@ -161,7 +175,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
 			cell = blk.get_cell(i,j,k);
 			IFace = cell.iface[Face.bottom];
 			cellWidthNormalToSurface = cell.kLength;
-			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, current_tindx, fname);
+			compute_and_store_loads(IFace, cellWidthNormalToSurface, sim_time, fname);
 		    } // end j loop
 		} // end for i
 		break;
@@ -170,7 +184,7 @@ void apply_structured_grid(SBlock blk, double sim_time, int current_tindx) {
     }
 }
 
-void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface, double sim_time, int current_tindx, string fname)
+void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface, double sim_time, string fname)
 {
     FlowState fs = iface.fs;
     FlowGradients grad = iface.grad;

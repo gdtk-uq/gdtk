@@ -57,6 +57,7 @@ version (cuda_gpu_chem) {
 // State data for simulation.
 // Needs to be seen by all of the coordination functions.
 shared static int current_tindx;
+shared static int current_loads_tindx;
 shared static double sim_time;  // present simulation time, tracked by code
 shared static double[] sim_time_array;
 shared static int step;
@@ -91,6 +92,14 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
     setupIndicesForConservedQuantities(); 
     current_tindx = tindx;
+    /* Presently, we'll always start from 0 for the loads files
+     * even on a restart. If there is a need to continue the 
+     * sequence of loads on a restart, then we'll need the user
+     * to supply the loads index from which to pick up.
+     * When that use-case arises, we'll need to think more carefully
+     * about how to initialise current_loads_tindx.
+     */
+    current_loads_tindx = 0;
     auto job_name = GlobalConfig.base_file_name;
     if (GlobalConfig.nFluidBlocks == 0) {
 	throw new FlowSolverException("No FluidBlocks; no point in continuing to initialize simulation.");
@@ -183,7 +192,10 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     // All cells are in place, so now we can initialise any history cell files.
     init_history_cell_files();
     // create the loads directory, maybe
-    if (GlobalConfig.compute_loads) { init_loads_dir(); }
+    if (GlobalConfig.compute_loads) {
+	init_loads_dir();
+	init_loads_times_file();
+    }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
@@ -597,8 +609,10 @@ void integrate_in_time(double target_time_as_requested)
 	    GC.collect();
         }
 	if ( GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written ) {
-	    write_boundary_loads_to_file(sim_time, current_tindx);
+	    write_boundary_loads_to_file(sim_time, current_loads_tindx);
+	    update_loads_times_file(sim_time, current_loads_tindx);
 	    loads_just_written = true;
+	    current_loads_tindx = current_loads_tindx + 1;
             t_loads = t_loads + GlobalConfig.dt_loads;
 	    GC.collect();
         }
