@@ -103,6 +103,24 @@ extern(C) int thermoPT(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.p <= 0.0 || isNaN(Q.p) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
+	errMsg ~= "        The supplied pressure value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'p' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
+	errMsg ~= "        Supplied temperature value is negative,  0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     gm.update_thermo_from_pT(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
@@ -113,6 +131,24 @@ extern(C) int thermoRHOU(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.rho <= 0.0 || isNaN(Q.rho) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromRHOU'\n";
+	errMsg ~= "        The supplied density value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'rho' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
+    if ( isNaN(Q.u) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromRHOU'\n";
+	errMsg ~= "        The energy value has not been set.\n";
+	errMsg ~= "        Check that the 'u' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     gm.update_thermo_from_rhou(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
@@ -123,6 +159,24 @@ extern(C) int thermoRHOT(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.rho <= 0.0 || isNaN(Q.rho) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromRHOT'\n";
+	errMsg ~= "        The supplied density value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'rho' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromRHOT'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     gm.update_thermo_from_rhoT(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
@@ -133,6 +187,24 @@ extern(C) int thermoRHOP(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.rho <= 0.0 || isNaN(Q.rho) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromRHOP'\n";
+	errMsg ~= "        The supplied density value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'rho' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
+    if ( Q.p <= 0.0 || isNaN(Q.p) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromRHOP'\n";
+	errMsg ~= "        The supplied pressure value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'p' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     gm.update_thermo_from_rhop(Q);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
@@ -143,6 +215,15 @@ extern(C) int thermoPS(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.p <= 0.0 || isNaN(Q.p) ) {
+	string errMsg = "ERROR: when calling 'updateThermoFromPS'\n";
+	errMsg ~= "        The supplied pressure value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'p' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     auto s = lua_tonumber(L, 3);
     gm.update_thermo_from_ps(Q, s);
     setGasStateInTable(L, gm, 2, Q);
@@ -165,7 +246,16 @@ extern(C) int soundSpeed(lua_State* L)
 {
    auto gm = checkGasModel(L, 1);
    auto Q = new GasState(gm);
-   getGasStateFromTable(L, gm, 2, Q); 
+   getGasStateFromTable(L, gm, 2, Q);
+   if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'updateSoundSpeed'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+   }
    gm.update_sound_speed(Q);
    setGasStateInTable(L, gm, 2, Q);
    return 0;
@@ -176,6 +266,15 @@ extern(C) int transCoeffs(lua_State* L)
    auto gm = checkGasModel(L, 1);
    auto Q = new GasState(gm);
    getGasStateFromTable(L, gm, 2, Q); 
+   if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'updateTransCoeffs'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+   }
    gm.update_trans_coeffs(Q);
    setGasStateInTable(L, gm, 2, Q);
    return 0;
@@ -189,6 +288,15 @@ extern(C) int dpdrhoConstT(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'dpdrhoConstT'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     auto dpdrho = gm.dpdrho_const_T(Q);
     lua_pushnumber(L, dpdrho);
     return 1;
@@ -201,6 +309,15 @@ extern(C) int intEnergy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'intEnergy'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
     auto e = gm.internal_energy(Q);
@@ -213,6 +330,15 @@ extern(C) int enthalpy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'enthalpy'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
     double h;
@@ -232,6 +358,15 @@ extern(C) int entropy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'entropy'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
     double s;
@@ -251,6 +386,15 @@ extern(C) int gibbsFreeEnergy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'gibbsFreeEnergy'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     int narg = lua_gettop(L);
     double G;
     int isp = luaL_checkint(L, 3);
@@ -265,6 +409,15 @@ extern(C) int Cv(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'Cv'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     auto Cv = gm.Cv(Q);
     lua_pushnumber(L, Cv);
     return 1;
@@ -275,6 +428,15 @@ extern(C) int Cp(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'Cp'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     auto Cp = gm.Cp(Q);
     lua_pushnumber(L, Cp);
     return 1;
@@ -285,6 +447,15 @@ extern(C) int R(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'R'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     auto R = gm.R(Q);
     lua_pushnumber(L, R);
     return 1;
@@ -295,6 +466,15 @@ extern(C) int gamma(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
+    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+	string errMsg = "ERROR: when calling 'gamma'\n";
+	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
+	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
+	errMsg ~= "        The complete gas state is:\n";
+	errMsg ~= Q.toString();
+	errMsg ~= "\nBailing out\n";
+	throw new Error(errMsg);
+    }
     auto gamma = gm.gamma(Q);
     lua_pushnumber(L, gamma);
     return 1;
