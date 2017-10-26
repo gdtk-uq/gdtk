@@ -62,7 +62,7 @@ import solidsolution;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
-immutable double EPSILON = 1.0e-08;
+immutable double EPSILON = 1.0e-06;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
 
 
@@ -74,6 +74,7 @@ void init_adjoint_dir()
 }
 
 void main(string[] args) {
+    
     init_adjoint_dir();
     
     writeln("Eilmer compressible-flow simulation code -- adjoint solver.");
@@ -114,6 +115,13 @@ void main(string[] args) {
     init_simulation(last_tindx, maxCPUs, maxWallClock);
         
     writeln("simulation initialised");
+
+    // save original mesh
+    foreach (blk; gasBlocks) {
+	ensure_directory_is_present(make_path_name!"grid-original"(0));
+	auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
+	blk.write_grid(fileName, 0.0, 0);
+    }
     
     // -----------------------------------------------------
     // 2. store the stencil of effected cells for each cell
@@ -263,7 +271,7 @@ void main(string[] args) {
 	psi ~= aug[i,ncols-1];
     }
 
-    writeln(psi);
+    //writeln(psi);
     
     foreach(i; 0 .. 100) {
 	FVCell cell = gasBlocks[0].cells[i];
@@ -293,6 +301,8 @@ void main(string[] args) {
     dRdX.zeros();
     
     foreach (blk; gasBlocks) {
+	//blk.convective_flux_phase0();
+	//blk.convective_flux_phase1();
 	foreach(vi, vtx; blk.vertices) {
 	    // 0th perturbation: x
 	    mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refx", "0"));
@@ -303,6 +313,18 @@ void main(string[] args) {
 	    // -----------------------------------------------------
 	    // at this point we can use the cell counter ci to access
 	    // the correct stencil
+	    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
+	    blk.applyPostConvFluxAction(0.0, 0, 0);
+	    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+	    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
+	    blk.applyPostDiffFluxAction(0.0, 0, 0);
+	    blk.convective_flux_phase0();
+	    blk.convective_flux_phase1();
+	    blk.applyPreReconAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
+	    blk.applyPostConvFluxAction(0.0, 0, 0);
+	    blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+	    blk.applyPreSpatialDerivActionAtBndryCells(0.0, 0, 0);
+	    blk.applyPostDiffFluxAction(0.0, 0, 0);
 	    foreach(c; vtxStencil[vi]) {
 		size_t I, J; // indices in Jacobian matrix
 		double integral;
@@ -310,12 +332,167 @@ void main(string[] args) {
 		for ( size_t ic = 0; ic < nc; ++ic ) {
 		    I = c.id*nc + ic; // row index
 		    for ( size_t jc = 0; jc < ndim; ++jc ) {
+			// 1. dRdF * dFdX ---------------------------
 			integral = 0.0;
 			J = vtx.id*ndim + jc; //vtx.id*nc + jc; // column index
 			foreach(fi, iface; c.iface) {
-			    integral -= c.outsign[fi] * iface.dFdU[ic][jc] * iface.area[0]; // gtl=0
+			    integral -= c.outsign[fi] * iface.dFdU[ic][jc]* iface.area[0]; // gtl=0
 			}
 			dRdX[I,J] = volInv * integral;
+			// 2. dRdA * dAdX ---------------------------
+			integral = 0.0;
+			double dAdX; double A0; double A1;
+			if (ic == 0 ) {
+			    foreach(fi, iface; c.iface) {
+				if (jc == 0) { // x-dimension
+				    h = vtx.pos[0].x * EPSILON + EPSILON;
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refx -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				} else if (jc == 1) { // y-dimension
+				    h = vtx.pos[0].y * EPSILON + EPSILON;
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refy -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				}
+				integral -= c.outsign[fi]*iface.F.mass*dAdX;
+			    }
+			}
+			else if (ic == 1) {
+			    foreach(fi, iface; c.iface) {
+				if (jc == 0) { // x-dimension
+				    h = vtx.pos[0].x * EPSILON + EPSILON;
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refx -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				} else if (jc == 1) { // y-dimension
+				    h = vtx.pos[0].y * EPSILON + EPSILON;
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refy -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				}
+				integral -= c.outsign[fi]*iface.F.momentum.x*dAdX;
+			    }
+			}
+			else if (ic == 2) {
+			    foreach(fi, iface; c.iface){
+				if (jc == 0) { // x-dimension
+				    h = vtx.pos[0].x * EPSILON + EPSILON;
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refx -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				} else if (jc == 1) { // y-dimension
+				    h = vtx.pos[0].y * EPSILON + EPSILON;
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refy -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				}
+				integral -= c.outsign[fi]*iface.F.momentum.y*dAdX;
+			    }
+			}
+			else if (ic == 3) {
+			    foreach(fi, iface; c.iface){
+				if (jc == 0) { // x-dimension
+				    h = vtx.pos[0].x * EPSILON + EPSILON;
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refx -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refx += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				} else if (jc == 1) { // y-dimension
+				    h = vtx.pos[0].y * EPSILON + EPSILON;
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A1 = iface.area[0];
+				    vtx.pos[0].refy -= 2*h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				    A0 = iface.area[0];
+				    dAdX = (A1-A0)/(2*h);
+				    vtx.pos[0].refy += h;
+				    iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+				}
+				integral -= c.outsign[fi]*iface.F.total_energy*dAdX;
+			    }
+			}
+			dRdX[I,J] += volInv * integral;
+			// 3. dRdV * dVdX ---------------------------
+			double dVdX; double V0; double V1;
+			integral = 0.0;
+			if (ic == 0 ) {
+			    foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.mass*iface.area[0]; }
+			}
+			else if (ic == 1) {
+			    foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.momentum.x*iface.area[0]; }
+			}
+			else if (ic == 2) {
+			    foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.momentum.y*iface.area[0]; }
+			}
+			else if (ic == 3) {
+			    foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.total_energy*iface.area[0]; }
+			}
+			if (jc == 0) { // x-dimension
+			    h = vtx.pos[0].x * EPSILON + EPSILON;
+			    vtx.pos[0].refx += h;
+			    c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+			    V1 = c.volume[0];
+			    vtx.pos[0].refx -= 2*h;
+			    c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+			    V0 = c.volume[0];
+			    vtx.pos[0].refx += h;
+			    c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+			} else if (jc == 1) { // y-dimension
+			    h = vtx.pos[0].y * EPSILON + EPSILON;
+			    vtx.pos[0].refy += h;
+			    c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+			    V1 = c.volume[0];
+			    vtx.pos[0].refy -= 2*h;
+			    c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+			    V0 = c.volume[0];
+			    vtx.pos[0].refy += h;
+			    c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+			}
+			dVdX = (V1-V0)/(2*h);
+			dRdX[I,J] -= volInv*volInv*integral * dVdX;
 		    }
 		}
 	    }
@@ -341,14 +518,24 @@ void main(string[] args) {
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
 	foreach(vi, vtx; sblk.vertices) {
-	    size_t[3] ijk;
-	    ijk = sblk.to_ijk_indices(vtx.id);
+	    ulong i; ulong j;
+	    /*
+	    if (vi < sblk.imax) {
+		i = vi;
+		j = 0;
+	    }
+	    else {
+		i = vi - sblk.imax;
+		j = 1;
+	    }
+	    */
+	    j = vtx.id/(sblk.imax);
+	    i = vtx.id - j*(sblk.imax);
 	    foreach(vbi; 0..nsurfnodes) {
-		if (ijk[0] == vbi) dXdXb[2*ijk[0]+1,2*vbi+1] = 1.0 - (sblk.jmax - ijk[1])/sblk.jmax;
+		if (i == vbi) dXdXb[2*i+1,2*vbi+1] = -1.0*(1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1));
 	    }
 	}
     } 
-
     // sensitivity of surface mesh points to movements of design variables
     Matrix dXbdD;
     dXbdD = new Matrix(ndim*nsurfnodes, nvar);
@@ -387,17 +574,26 @@ void main(string[] args) {
     double[3] grad;
     dot(tempMatrix, psi, grad);
 
-    writeln(grad);
+    writeln("adjoint gradients [dLdB, dLdC, dLdD] = ", grad);
 
     // -----------------------------------------------------
     // Finite difference verification
     // -----------------------------------------------------
+    /*
     // save original mesh
     foreach (blk; gasBlocks) {
 	ensure_directory_is_present(make_path_name!"grid-original"(0));
 	auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
 	blk.write_grid(fileName, 0.0, 0);
     }
+    */
+    // read original grid in
+    foreach (blk; gasBlocks) { 
+    	//blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
+	ensure_directory_is_present(make_path_name!"grid-original"(0));
+	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
+    }
+
     
     //double J0 = 0.0;
     //foreach (blk; gasBlocks) {
@@ -413,20 +609,21 @@ void main(string[] args) {
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
 	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double del;
+	    double delta;
+	    double y_old;
 	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
-		size_t[3] ijk;
-		ijk = sblk.to_ijk_indices(vtx.id);
-		del = vtx.pos[0].refy;
+		y_old = vtx.pos[0].refy;
 		if (j == sblk.jmax+1) {
 		    double yo = 0.105;
 		    double a = yo - b*tanh(-d/scale);
-		    double yx = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = yx;
-		    del = vtx.pos[0].refy - del;
+		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+		    vtx.pos[0].refy = y_new;
+		    delta = y_new - y_old;
+		    //writeln(j, ", ", sblk.jmax, ", ", delta, ", ", y_old, ", ", y_new);
 		} else {
-		    vtx.pos[0].refy += (1.0 - (sblk.jmax - ijk[1])/sblk.jmax) * del;
+		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
+		    //writeln(j, ", ", sblk.jmax, ", ", delta, ", ", vtx.pos[0].refy);
 		}
 	    }
 	}
@@ -469,29 +666,28 @@ void main(string[] args) {
     
     // perturb b -ve --------------------------------------------------------------------------------
     b -= 2.0*del_b;
-
     // perturb mesh
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
 	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double del;
+	    double delta;
+	    double y_old;
 	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
-		size_t[3] ijk;
-		ijk = sblk.to_ijk_indices(vtx.id);
-		del = vtx.pos[0].refy;
+		y_old = vtx.pos[0].refy;
 		if (j == sblk.jmax+1) {
 		    double yo = 0.105;
 		    double a = yo - b*tanh(-d/scale);
-		    double yx = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = yx;
-		    del = vtx.pos[0].refy - del;
+		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+		    vtx.pos[0].refy = y_new;
+		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - (sblk.jmax - ijk[1])/sblk.jmax) * del;
+		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
 		}
 	    }
 	}
     }
+    
     // save mesh
     foreach (blk; gasBlocks) {
 	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
@@ -513,10 +709,13 @@ void main(string[] args) {
 	foreach (i, cell; blk.cells) {
 	    J0 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
 	}
-	}
+    }
     //writef("%.16f, %.16f \n", J1, J0);
-    double grad_b = (J1-J0)/(2.0*del_b);
-    writeln(grad_b);
+    double grad_b = (J1 -J0)/(2.0*del_b);
+    writeln("FD dLdB = ", grad_b, ", % error = ", abs((grad_b - grad[0])/grad_b * 100));
+
+    // clear old simulation files
+    output = executeShell(command0);
 
     // perturb c +ve --------------------------------------------------------------------------------
     // read original grid in
@@ -533,20 +732,19 @@ void main(string[] args) {
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
 	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double del;
+	    double delta;
+	    double y_old;
 	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
-		size_t[3] ijk;
-		ijk = sblk.to_ijk_indices(vtx.id);
-		del = vtx.pos[0].refy;
+		y_old = vtx.pos[0].refy;
 		if (j == sblk.jmax+1) {
 		    double yo = 0.105;
 		    double a = yo - b*tanh(-d/scale);
-		    double yx = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = yx;
-		    del = vtx.pos[0].refy - del;
+		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+		    vtx.pos[0].refy = y_new;
+		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - (sblk.jmax - ijk[1])/sblk.jmax) * del;
+		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
 		}
 	    }
 	}
@@ -589,29 +787,28 @@ void main(string[] args) {
     
     // perturb c -ve --------------------------------------------------------------------------------
     c -= 2.0*del_c;
-
     // perturb mesh
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
 	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double del;
+	    double delta;
+	    double y_old;
 	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
-		size_t[3] ijk;
-		ijk = sblk.to_ijk_indices(vtx.id);
-		del = vtx.pos[0].refy;
+		y_old = vtx.pos[0].refy;
 		if (j == sblk.jmax+1) {
 		    double yo = 0.105;
 		    double a = yo - b*tanh(-d/scale);
-		    double yx = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = yx;
-		    del = vtx.pos[0].refy - del;
+		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+		    vtx.pos[0].refy = y_new;
+		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - (sblk.jmax - ijk[1])/sblk.jmax) * del;
+		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
 		}
 	    }
 	}
     }
+    
     // save mesh
     foreach (blk; gasBlocks) {
 	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
@@ -636,7 +833,9 @@ void main(string[] args) {
     }
     //writef("%.16f, %.16f \n", J1, J0);
     double grad_c = (J1-J0)/(2.0*del_c);
-    writeln(grad_c);
+    writeln("FD dLdC = ", grad_c, ", % error = ", abs((grad_c - grad[1])/grad_c * 100));
+
+    output = executeShell(command0);
     
     // perturb d +ve --------------------------------------------------------------------------------
     // read original grid in
@@ -653,20 +852,19 @@ void main(string[] args) {
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
 	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double del;
+	    double delta;
+	    double y_old;
 	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
-		size_t[3] ijk;
-		ijk = sblk.to_ijk_indices(vtx.id);
-		del = vtx.pos[0].refy;
+		y_old = vtx.pos[0].refy;
 		if (j == sblk.jmax+1) {
 		    double yo = 0.105;
 		    double a = yo - b*tanh(-d/scale);
-		    double yx = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = yx;
-		    del = vtx.pos[0].refy - del;
+		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+		    vtx.pos[0].refy = y_new;
+		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - (sblk.jmax - ijk[1])/sblk.jmax) * del;
+		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
 		}
 	    }
 	}
@@ -709,25 +907,23 @@ void main(string[] args) {
     
     // perturb c -ve --------------------------------------------------------------------------------
     d -= 2.0*del_d;
-
-    // perturb mesh
+        // perturb mesh
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
 	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double del;
+	    double delta;
+	    double y_old;
 	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
-		size_t[3] ijk;
-		ijk = sblk.to_ijk_indices(vtx.id);
-		del = vtx.pos[0].refy;
+		y_old = vtx.pos[0].refy;
 		if (j == sblk.jmax+1) {
 		    double yo = 0.105;
 		    double a = yo - b*tanh(-d/scale);
-		    double yx = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = yx;
-		    del = vtx.pos[0].refy - del;
+		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+		    vtx.pos[0].refy = y_new;
+		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - (sblk.jmax - ijk[1])/sblk.jmax) * del;
+		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
 		}
 	    }
 	}
@@ -756,7 +952,7 @@ void main(string[] args) {
     }
     //writef("%.16f, %.16f \n", J1, J0);
     double grad_d = (J1-J0)/(2.0*del_d);
-    writeln(grad_d);
+    writeln("FD dLdD = ", grad_d, ", % error = ", abs((grad_d - grad[2])/grad_d * 100));
     
     writeln("Done simulation.");
 }
@@ -942,7 +1138,7 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     //codeStr ~= "blk.compute_distance_to_nearest_wall_for_all_cells(0);";
     //codeStr ~= "}";
     //codeStr ~= "if ((blk.grid_type == Grid_t.unstructured_grid) &&";
-    //codeStr ~= "(blk.myConfig.interpolation_order > 1)) {"; 
+     //codeStr ~= "(blk.myConfig.interpolation_order > 1)) {"; 
     //codeStr ~= "blk.compute_least_squares_setup_for_reconstruction(0);";
     //codeStr ~= "}";
     // ------------------ apply cell effect bcs ------------------
