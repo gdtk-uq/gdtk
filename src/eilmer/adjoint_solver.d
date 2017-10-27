@@ -999,8 +999,12 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     // ------------------ negative perturbation ------------------
     codeStr ~= "vtx."~varName~" -= h;";
     // ------------------ apply grid metrics ------------------
-    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
-    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    codeStr ~= "iface.right_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "iface.left_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+
     //codeStr ~= "blk.compute_primary_cell_geometric_data(0);";
     //codeStr ~= "if (GlobalConfig.do_compute_distance_to_nearest_wall) {";
     //codeStr ~= "blk.compute_distance_to_nearest_wall_for_all_cells(0);";
@@ -1036,8 +1040,13 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     // ------------------ positive perturbation ------------------
     codeStr ~= "vtx."~varName~" += h;";
     // ------------------ apply grid metrics ------------------
-    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
-    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+
+    codeStr ~= "iface.right_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "iface.left_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    
     //codeStr ~= "if (GlobalConfig.do_compute_distance_to_nearest_wall) {";
     //codeStr ~= "blk.compute_distance_to_nearest_wall_for_all_cells(0);";
     //codeStr ~= "}";
@@ -1079,8 +1088,11 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "diff = ifacePp.F.total_energy - ifacePm.F.total_energy;";
     codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
     // ------------------ restore original geometry ------------------
-    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
-    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) { blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    //codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) { blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric); }";
+    codeStr ~= "iface.right_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "iface.left_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     //
     codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
     codeStr ~= "}";
