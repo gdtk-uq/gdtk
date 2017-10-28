@@ -14,10 +14,12 @@
  *			of state properties.
  *	2.Local functions to calculate (p,T).
  *		2.1 Get (p,T) from (rho,u) using 2D Newton-Raphson Method
- *			(only valid for gas phase). 
+ *			(only valid for IAPWS Region 2).
+ *		2.2 Get (p,T) from (p,s) using 1D Newton-Raphson Method
+ *			(only valid for IAPWS Region 2). 
  *	3.Steam gasmodel class.    
  * Author: Jiasheng(Jason) Liang
- * Version: 25/10/2017
+ * Version: 28/10/2017
  */
 
 module gas.steam;
@@ -1430,7 +1432,9 @@ private:
 		else{
 			string msg;
 		    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-		    msg ~= format("    Input state is out of the valid range of IAPWS formulations of state.\n"); 
+		    msg ~= format("    Input state is out of the valid range for IAPWS formulations of state.\n");
+		    msg ~= format("	   Input pressure %.2f [Pa] and temperature %.2f [K]\n", p, T);
+		    msg ~= format("	   please check http://www.iapws.org/relguide/ for more information."); 
 		    writeln(msg);
 		}
 		return region;
@@ -1967,17 +1971,40 @@ public:
 
 //---------------------------------------------------------------------------------
 //PART 2.1. Get (p,T) from (rho,u) using 2D Newton-Raphson Method
-//			(only valid for gas phase)
+//			(only valid for IAPWS Region 2)
 //			(inspired by fill-in functions in gas_model.d)
 //---------------------------------------------------------------------------------
 
+//local function to automatically check and fix the update (p,T) to ensure it is 
+//in either Region 2 or Region 5 
+void good_pT(ref double p, ref double T)
+{
+	if(T<273.15){T = 273.15; p = get_ps(T);}
+	else if((273.15<T && T<=623.15) && p>get_ps(T) )
+	{
+		p = get_ps(T);
+	}
+	else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
+	{
+		p = get_pb23(T);
+	}
+	else if((863.15<T && T<=1073.15) && p>100e6)
+	{
+		p = 100e6;
+	}
+	else if((1073.15<T && T<=2273.15) && p>50e6)
+	{
+		p = 50e6;
+	}
+	else if(T>2273.15){T=2273.15;}
+}
 double[] getpT_from_rhou(double rho, double u)
 { 
 	//local thermal update method for (rho,u)
 	//a guess of p & T is iterated on update_thermo_from_pT using 
 	//the  Newton-Raphson method.
 	
-	double dp, p_old, p_new, T_old, T_new, dT;
+	double dp, p_old, p_new, T_old, T_old_1, T_new, dT;
 	double dp_sign, dT_sign;
 	double Cv_eff, R_eff, u_old, u_new, rho_old, rho_new;
 	double frho_old, fu_old, frho_new, fu_new;
@@ -1985,7 +2012,31 @@ double[] getpT_from_rhou(double rho, double u)
 	int converged, count;
 
 	immutable MAX_RELATIVE_STEP = 0.1;
-	immutable MAX_STEPS = 200;
+	immutable MAX_STEPS = 300;
+
+	//local function to automatically check and fix the update 
+	//(p,T) to ensure it is in either Region 2 or Region 5 
+	void good_pT(ref double p, ref double T)
+	{
+		if(T<273.15){T = 273.15;}
+		else if((273.15<T && T<=623.15) && p>get_ps(T) )
+		{
+			p = get_ps(T);
+		}
+		else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
+		{
+			p = get_pb23(T);
+		}
+		else if((863.15<T && T<=1073.15) && p>100e6)
+		{
+			p = 100e6;
+		}
+		else if((1073.15<T && T<=2273.15) && p>100e6)
+		{
+			p = 100e6;
+		}
+		else if(T>2273.15){T=2273.15;}
+	}
 
 	// When using single-sided finite-differences on the
 	// curve-fit EOS functions, we really cannot expect 
@@ -2001,19 +2052,30 @@ double[] getpT_from_rhou(double rho, double u)
 	// Get an idea of the gas properties by calling the pT
 	// equation of state with some dummy values for pressure
 	// and thermal temperature. the iteration start from vapour phase
-	p_old = 1.0e4; // [Pa] 
-	T_old = 523.15; // [k]
+	if(rho<=5 && (1900e3<=u && u<=2700e3))
+	{
+		//when the input (rho,u) is in the low-p-low-T region
+		//initial guess closer to this region is required 
+		T_old = 273.15; 
+		p_old = get_ps(T_old); 
+	}
+	else 
+	{
+		//input (rho,u) is possibly in IAPWS region2
+		p_old = 1.0e4;  
+		T_old = 523.15; 
+	}
 	auto _IAPWS = new IAPWS(); 
       
 	u_old = _IAPWS.SpecificInternalEnergy(p_old,T_old,1);
 	rho_old =  _IAPWS.Density(p_old,T_old,1);
 	R_eff = p_old / ( rho_old * u);
-	dT = 0.01 * T_old;
-	T_old += dT;
+	T_old_1 = 1.01*T_old;
 
-	
-	try { u_new = _IAPWS.SpecificInternalEnergy(p_old,T_old,1);
-	rho_new = _IAPWS.Density(p_old,T_old,1);}
+	good_pT(p_old,T_old_1);
+	dT = T_old_1 - T_old;
+	try { u_new = _IAPWS.SpecificInternalEnergy(p_old,T_old_1,1);
+	rho_new = _IAPWS.Density(p_old,T_old_1,1);}
 	catch (Exception caughtException) {
 	    string msg;
 	    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
@@ -2024,9 +2086,10 @@ double[] getpT_from_rhou(double rho, double u)
 	Cv_eff = (u_new - u_old) / dT;
 	// Now, get a better guess for the appropriate pressure and
 	// thermal temperature.
-	p_old = R_eff * (rho- rho_new) * T_old + p_old;    
-	T_old = (u - u_new)/Cv_eff + T_old;
+	p_old = R_eff * (rho- rho_new) * T_old_1 + p_old;    
+	T_old = (u - u_new)/Cv_eff + T_old_1;
 	// Evaluate state variables using this guess.
+	good_pT(p_old,T_old);
 	try { u_new = _IAPWS.SpecificInternalEnergy(p_old,T_old,1);
 	rho_new = _IAPWS.Density(p_old,T_old,1);}
 	catch (Exception caughtException) {
@@ -2048,6 +2111,7 @@ double[] getpT_from_rhou(double rho, double u)
 	    // Perturb first dimension to get derivatives.
 	    p_new = p_old * 1.0001;
 	    T_new = T_old;
+	    good_pT(p_new,T_new);
 		try { u_new = _IAPWS.SpecificInternalEnergy(p_new, T_new,1);
 		rho_new = _IAPWS.Density(p_new, T_new,1);}
 	    catch (Exception caughtException) {
@@ -2065,6 +2129,7 @@ double[] getpT_from_rhou(double rho, double u)
 	    // Perturb other dimension to get derivatives.
 	    p_new = p_old;
 	    T_new = T_old * 1.0001;
+	    good_pT(p_new,T_new);
 		try { u_new = _IAPWS.SpecificInternalEnergy(p_new, T_new, 1);
 		rho_new = _IAPWS.Density(p_new, T_new,1);}
 	    catch (Exception caughtException) {
@@ -2101,6 +2166,7 @@ double[] getpT_from_rhou(double rho, double u)
 	    p_old += dp;
 	    T_old += dT;
 	    // Make sure of consistent thermo state.
+	    good_pT(p_old,T_old);
 		try { u_new = _IAPWS.SpecificInternalEnergy(p_old, T_old,1);
 		rho_new = _IAPWS.Density(p_old, T_old,1);}
 	    catch (Exception caughtException) {
@@ -2122,8 +2188,9 @@ double[] getpT_from_rhou(double rho, double u)
 	    string msg;
 	    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
 	    msg ~= format("    Iterations did not converge.\n");
+	    msg ~= format("    Last iterated p=%.10s, T=%.10s\n",p_old, T_old);
 	    msg ~= format("    frho_old = %g, fu_old = %g\n", frho_old, fu_old);
-	    msg ~= format("    rho = %.10s, u, %.5s\n", rho, u); 
+	    msg ~= format("    rho = %.10s, u=%.5s\n", rho, u); 
 	    writeln(msg);
 
 	}
@@ -2139,6 +2206,134 @@ double[] getpT_from_rhou(double rho, double u)
 
 	return [p_old, T_old];
 }//end getpT_from_rhou
+
+//---------------------------------------------------------------------------------
+//PART 2.2. Get T from (p,s) using 1D Newton-Raphson Method
+//			(only valid for IAPWS Region 2)
+//			(inspired by the fill-in functions in gas_model.d)
+//---------------------------------------------------------------------------------
+
+//local function to automatically check and alter the update T to ensure it is 
+//in either Region 2 or Region 5 while p is fixed
+void good_T(double p, ref double T)
+{
+	if(T<273.15){T = 273.15;}
+	else if((273.15<T && T<=623.15) && p>get_ps(T) )
+	{
+		while(p>get_ps(T))
+		{
+			T = get_Ts(p)+0.01;
+		}
+	}
+	else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
+	{
+		while(p>get_pb23(T))
+		{
+			T*=1.001;
+		}
+	}
+	else if((1073.15<T && T<=2273.15) && p>50e6)
+	{
+		T = 1073.15;
+	}
+	else if(T>2273.15){T=2273.15;}
+}
+
+double getT_from_ps(double p, double T0, double s)
+{
+	double T_old, T_new;
+	double f0, f_old, f_new;
+	double df, dT;
+	int converged, count;
+
+	immutable MAX_RELATIVE_STEP = 0.1;
+	immutable MAX_STEPS = 200;
+
+	//similar tolerence as in the fill-in functions
+	double f_tol = 1.0e-6*s;
+	double f_tol_fail = 0.02*s;
+
+	//target function to minimize during the iteration
+	auto _IAPWS = new IAPWS();
+	double f_T(double T)
+	{
+		return _IAPWS.SpecificEntropy(p,T,1)-s;
+	}
+
+	// assuming T0 is good enough to be the first guess
+	try{f0 = f_T(T0);}
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+
+	// second guess on T
+	T_old = 1.01*T0;
+	good_T(p,T_old);
+	try{f_old = f_T(T_old);}
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	df = f_old - f0;
+	dT = T_old - T0;
+
+	//update the guess using 1D Newton method with the 
+	//partial derivatives calculated using F.D.
+	converged = (fabs(f_old) < f_tol);
+	count =0;
+	while(!converged && count < MAX_STEPS)
+	{
+			T_new = - f_old/df*dT + T_old;
+			good_T(p,T_new);
+
+			//update target function
+			try{f_new = f_T(T_new);}
+			catch (Exception caughtException) {
+			    string msg;
+			    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+			    msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
+			    msg ~= to!string(caughtException);
+			    throw new Exception(msg);
+			}
+			//prepare for next iteration
+			df = f_new - f_old;
+			dT = T_new - T_old;
+			T_old = T_new;
+			f_old = f_new;
+			converged = (fabs(f_old) < f_tol);
+			++count;
+	} //end while
+
+	if(count >= MAX_STEPS)
+	{
+		string msg;
+	    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+	    msg ~= format("    Iterations did not converge.\n");
+	    msg ~= format("    Last iterated p=%.10s, T=%.10s\n",p, T_old);
+	    msg ~= format("    update entropy %.10s\n", _IAPWS.SpecificEntropy(p,T_old,1));
+	    msg ~= format("    given entropy %.10s\n", s); 
+	    writeln(msg);
+	}
+	if(fabs(f_old) > f_tol_fail)
+	{
+		string msg;
+	    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+	    msg ~= format("    Iterations failed badly.\n");
+	    msg ~= format("    Last iterated p=%.10s, T=%.10s\n",p, T_old);
+	    msg ~= format("    update entropy %.10s\n", _IAPWS.SpecificEntropy(p,T_old,1));
+	    msg ~= format("    given entropy %.10s\n", s); 
+	    writeln(msg);
+	}
+
+	return T_old;
+}//end getT_from_ps
 
 //---------------------------------------------------------------------------------
 //PART 3. Steam class inheritting from GasModel class
@@ -2185,7 +2380,7 @@ public:
 		}
 		else 
 		{
-			assert(0, "Not in gas phase, implement me");
+			assert(0, "Not in gas IAPWS-Region2, implement me");
 		}
     } 
     
@@ -2201,7 +2396,18 @@ public:
     
     override void update_thermo_from_ps(GasState Q, double s)
     {
-	assert(0, "Implement me");
+		if(Q.quality==1)
+		{
+			Q.Ttr = getT_from_ps(Q.p, Q.Ttr, s);
+			Q.a = _IAPWS.SoundSpeed(Q.p,Q.Ttr,Q.quality);
+			Q.u = _IAPWS.SpecificInternalEnergy(Q.p,Q.Ttr,Q.quality);
+			Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.Ttr,Q.quality);
+			Q.k = _IAPWS.ThermalConductivity(Q.p,Q.Ttr,Q.quality);
+		}
+		else 
+		{
+			assert(0, "Not in IAPWS-Region2, implement me");
+		}
     }
     
     override void update_thermo_from_hs(GasState Q, double h, double s)
@@ -2273,6 +2479,7 @@ version(steam_test){
 	gm.update_thermo_from_pT(gd);
 	gm.update_sound_speed(gd);
 
+	//check update_thermo_from_rhou()
 	/*
 	*Reference:
 	*		Zittau´s Fluid Property Calculator 
@@ -2281,11 +2488,18 @@ version(steam_test){
 	*		Engineering
 	*		Department of Technical Thermodynamics
 	*/
+	//-1. (p,T) in Region 2
 	gd.rho = 5.0;
 	gd.u = 2.8e6;
 	gm.update_thermo_from_rhou(gd);
 	assert(approxEqual(1298110.3, gd.p, 1.0e-6*gd.p), failedUnitTest());
 	assert(approxEqual(580.408, gd.Ttr, 1.0e-6*gd.Ttr), failedUnitTest());
+	//-2. (p,T) in low-p-low-T region
+	gd.rho = 0.00670708;
+	gd.u = 2445304.2;
+	gm.update_thermo_from_rhou(gd);
+	assert(approxEqual(1000, gd.p, 1.0e-6*gd.p), failedUnitTest());
+	assert(approxEqual(323.15, gd.Ttr, 1.0e-6*gd.Ttr), failedUnitTest());
 
 	/*
 	*Reference:
@@ -2304,7 +2518,11 @@ version(steam_test){
 	assert(approxEqual(0.144132662e4, gm.dudT_const_v(gd), 1.0e-2), failedUnitTest());
 	gm.update_sound_speed(gd);
 	assert(approxEqual(0.427920172e3, gd.a, 1.0e-3), failedUnitTest());
-
+	//check update_thermo_from_ps(gd)
+	double s = gm.entropy(gd);
+	gd.Ttr = 380;
+	gm.update_thermo_from_ps(gd,s);
+	assert(approxEqual(300, gd.Ttr, 1.0e-6*gd.Ttr),failedUnitTest());
 	/*
 	*Reference:
 	*	 IAPWS release R15-11 table 8. 
@@ -2313,7 +2531,7 @@ version(steam_test){
 	gd.Ttr = 650;
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(0.522311024e-1, gd.k, 1.0e-7), failedUnitTest());
-	assert(approxEqual(0.234877453e-4, gd.mu, 1.0e-9), failedUnitTest());	
+	assert(approxEqual(0.234877453e-4, gd.mu, 1.0e-9), failedUnitTest());
 	return 0;
     }
 }
