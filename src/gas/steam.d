@@ -2014,30 +2014,6 @@ double[] getpT_from_rhou(double rho, double u)
 	immutable MAX_RELATIVE_STEP = 0.1;
 	immutable MAX_STEPS = 300;
 
-	//local function to automatically check and fix the update 
-	//(p,T) to ensure it is in either Region 2 or Region 5 
-	void good_pT(ref double p, ref double T)
-	{
-		if(T<273.15){T = 273.15;}
-		else if((273.15<T && T<=623.15) && p>get_ps(T) )
-		{
-			p = get_ps(T);
-		}
-		else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
-		{
-			p = get_pb23(T);
-		}
-		else if((863.15<T && T<=1073.15) && p>100e6)
-		{
-			p = 100e6;
-		}
-		else if((1073.15<T && T<=2273.15) && p>100e6)
-		{
-			p = 100e6;
-		}
-		else if(T>2273.15){T=2273.15;}
-	}
-
 	// When using single-sided finite-differences on the
 	// curve-fit EOS functions, we really cannot expect 
 	// much more than 0.1% tolerance here.
