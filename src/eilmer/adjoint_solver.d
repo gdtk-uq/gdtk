@@ -103,7 +103,7 @@ void main(string[] args) {
     // TODO: currently assume we only want 1 CPU
     int maxCPUs = 1;
     int maxWallClock = 5*24*3600; // 5 days default
-    init_simulation(last_tindx, maxCPUs, maxWallClock);
+    init_simulation(last_tindx, -1, maxCPUs, maxWallClock);
         
     writeln("simulation initialised");
 

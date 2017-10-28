@@ -80,6 +80,7 @@ int main(string[] args)
     msg       ~= "\n";
     msg       ~= "         [--run]                     run the simulation over time\n";
     msg       ~= "         [--tindx-start=<int>|last|9999]  defaults to 0\n";
+    msg       ~= "         [--next-loads-indx=<int>]   defaults to (final index + 1) of loads.times file\n";
     msg       ~= "         [--max-cpus=<int>]          defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
     msg       ~= "         [--max-wall-clock=<int>]    in seconds\n";
@@ -123,6 +124,7 @@ int main(string[] args)
     bool runFlag = false;
     string tindxStartStr = "0";
     int tindxStart = 0;
+    int nextLoadsIndx = -1;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool reportResiduals = false;
@@ -157,6 +159,7 @@ int main(string[] args)
 	       "prep", &prepFlag,
 	       "run", &runFlag,
 	       "tindx-start", &tindxStartStr,
+	       "next-loads-indx", &nextLoadsIndx,
 	       "max-cpus", &maxCPUs,
 	       "max-wall-clock", &maxWallClock,
 	       "report-residuals", &reportResiduals,
@@ -297,7 +300,7 @@ int main(string[] args)
 	    writeln("  maxCPUs: ", maxCPUs);
 	}
 	
-	init_simulation(tindxStart, maxCPUs, maxWallClock);
+	init_simulation(tindxStart, nextLoadsIndx, maxCPUs, maxWallClock);
 	if (verbosityLevel > 0) { writeln("starting simulation time= ", simcore.sim_time); }
 	if (GlobalConfig.block_marching) {
 	    march_over_blocks();

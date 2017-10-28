@@ -81,7 +81,7 @@ shared static string flowFileExt = "gz";
 
 //----------------------------------------------------------------------------
 
-void init_simulation(int tindx, int maxCPUs, int maxWallClock)
+void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock)
 {
     if (GlobalConfig.verbosity_level > 0) { writeln("Begin init_simulation()..."); }
     maxWallClockSeconds = maxWallClock;
@@ -92,14 +92,21 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
     setupIndicesForConservedQuantities(); 
     current_tindx = tindx;
-    /* Presently, we'll always start from 0 for the loads files
-     * even on a restart. If there is a need to continue the 
-     * sequence of loads on a restart, then we'll need the user
-     * to supply the loads index from which to pick up.
-     * When that use-case arises, we'll need to think more carefully
-     * about how to initialise current_loads_tindx.
-     */
-    current_loads_tindx = 0;
+    current_loads_tindx = nextLoadsIndx;
+    if ( current_loads_tindx == -1 ) {
+	// This is used to indicate that we should look at the old -loads.times file
+	// to find the index where the previous simulation stopped.
+	string fname = "loads/" ~ GlobalConfig.base_file_name ~ "-loads.times";
+	if ( exists(fname) ) {
+	    auto f = File(fname, "r");
+	    auto finalLine = readText(fname).splitLines()[$-1];
+	    current_loads_tindx = to!int(finalLine.split[0]) + 1;
+	    f.close();
+	}
+	else {
+	    current_loads_tindx = 0;
+	}
+    }
     auto job_name = GlobalConfig.base_file_name;
     if (GlobalConfig.nFluidBlocks == 0) {
 	throw new FlowSolverException("No FluidBlocks; no point in continuing to initialize simulation.");
@@ -192,7 +199,7 @@ void init_simulation(int tindx, int maxCPUs, int maxWallClock)
     // All cells are in place, so now we can initialise any history cell files.
     init_history_cell_files();
     // create the loads directory, maybe
-    if (GlobalConfig.compute_loads) {
+    if (GlobalConfig.compute_loads && (current_loads_tindx == 0)) {
 	init_loads_dir();
 	init_loads_times_file();
     }
