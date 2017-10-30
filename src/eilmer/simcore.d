@@ -100,7 +100,14 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
 	if ( exists(fname) ) {
 	    auto f = File(fname, "r");
 	    auto finalLine = readText(fname).splitLines()[$-1];
-	    current_loads_tindx = to!int(finalLine.split[0]) + 1;
+	    if (finalLine[0] == '#') {
+		// looks like we found a single comment line.
+		current_loads_tindx = 0;
+	    }
+	    else {
+		// assume we have a valid line to work with
+		current_loads_tindx = to!int(finalLine.split[0]) + 1;
+	    }
 	    f.close();
 	}
 	else {
