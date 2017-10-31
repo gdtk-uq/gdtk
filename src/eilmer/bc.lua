@@ -401,6 +401,18 @@ function EnergyFluxFromAdjacentSolid:tojson()
    return str
 end
 
+EnergyBalanceThermionic = BoundaryFluxEffect:new{emissivity=nil, Ar=nil, phi=nil,ThermionicEmissionActive=1}
+EnergyBalanceThermionic.type = "energy_balance_thermionic"
+function EnergyBalanceThermionic:tojson()
+   local str = string.format('          {"type": "%s",', self.type)
+   str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
+   str = str .. string.format(' "Ar": %.18e,', self.Ar)
+   str = str .. string.format(' "phi": %.18e,', self.phi)
+   str = str .. string.format(' "ThermionicEmissionActive": %d', self.ThermionicEmissionActive)
+   str = str .. '}'
+   return str
+end
+
 -- Class for (complete) BoundaryCondition
 --
 -- BoundaryConditions consist of lists of actions to be done
@@ -534,28 +546,32 @@ WallBC_ThermionicEmission = BoundaryCondition:new()
 WallBC_ThermionicEmission.type = "wall_thermionic_emission"
 function WallBC_ThermionicEmission:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"emissivity", "wall_function", 
-                  "catalytic_type", "wall_massf_composition",
+   local flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
+                  "wall_function", "catalytic_type", "wall_massf_composition",
                   "label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_ThermionicEmission constructor.")
    o = BoundaryCondition.new(self, o)
-   o.preReconAction = { InternalCopyThenReflect:new() }
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
-                  EnergyBalance:new{emissivity=o.emissivity},
-                  UpdateThermoTransCoeffs:new() }
-   if config.turbulence_model == "k_omega" then
-      o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = WallKOmega:new()
-      if o.wall_function then
-    -- Only makes sense to add a wall function if the k-omega model is active.
-    o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] = 
-       WallFunctionInterfaceEffect:new{thermal_condition='FIXED_T'}
-    o.preSpatialDerivActionAtBndryCells = { WallFunctionCellEffect:new() }
-      end
+   if o.emissivity <= 0.4 then
+         print("");
+         print("##### SOLVER NOT OPTIMISED FOR LOW EMISSIVITY VALUES #####");
+         print("");
    end
+   o.preReconAction = { InternalCopyThenReflect:new() }
+
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+                  UpdateThermoTransCoeffs:new() }
+   -- o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
+                  -- EnergyBalanceThermionic:new{emissivity=o.emissivity, 
+                  -- Ar=o.Ar, phi=o.phi,ThermionicEmissionActive=o.ThermionicEmissionActive},
+                  -- UpdateThermoTransCoeffs:new() }
    if o.catalytic_type and o.catalytic_type ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
     FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
    end
+   -- Added update for wall temperature following the computation of spatial derivaitives
+   o.postDiffFluxAction = {EnergyBalanceThermionic:new{emissivity=o.emissivity, 
+      Ar=o.Ar, phi=o.phi,ThermionicEmissionActive=o.ThermionicEmissionActive}}
+
    o.is_configured = true
    return o
 end

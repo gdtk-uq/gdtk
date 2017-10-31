@@ -13,6 +13,7 @@ import std.stdio;
 import std.json;
 import std.string;
 import std.conv;
+import std.math;
 
 import geom;
 import grid;
@@ -54,6 +55,13 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
 	newBFE = new BFE_EnergyFluxFromAdjacentSolid(blk_id, boundary,
 						     otherBlock, face_index(otherFaceName),
 						     neighbourOrientation);
+	break;
+	case "energy_balance_thermionic":
+	double emissivity = getJSONdouble(jsonData, "emissivity", 0.0);
+	double Ar = getJSONdouble(jsonData, "Ar", 0.0);
+	double phi = getJSONdouble(jsonData, "phi", 0.0);
+	int ThermionicEmissionActive = getJSONint(jsonData, "ThermionicEmissionActive", 1);
+	newBFE = new BFE_EnergyBalanceThermionic(blk_id, boundary, emissivity, Ar, phi, ThermionicEmissionActive);
 	break;
     default:
 	string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
@@ -269,3 +277,172 @@ public:
 	}
     }
 }
+
+class BFE_EnergyBalanceThermionic : BoundaryFluxEffect {
+public:
+    FlowState fstate;
+
+	// Function inputs from Eilmer4 .lua simulation input
+    double emissivity;					// Input emissivity, 0<e<=1.0. Assumed black body radiation out from wall
+    double Ar;							// Richardson constant, material-dependent
+    double phi;							// Work function, material dependent. Input units in eV, 
+    									// this get's converted to Joules by multiplying by Elementary charge, Qe
+    int ThermionicEmissionActive;       // Whether or not Thermionic Emmision is active. Default is 'on'
+
+	// Constants used in analysis
+    double SB_sigma_SI = 5.670373e-8;   // Stefan-Boltzmann constant. 	Units: W/(m^2 K^4)
+    double kb = 1.38064852e-23;			// Boltzmann constant. 			Units: (m^2 kg)/(s^2 K^1)
+    double Qe = 1.60217662e-19; 		// Elementary charge. 			Units: C
+ 
+    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive)
+    {
+	super(id, boundary, "EnergyBalanceThermionic");
+	this.emissivity = emissivity;
+	this.Ar = Ar;
+	this.phi = phi*Qe;  // Convert phi from input 'eV' to 'J'
+	this.ThermionicEmissionActive = ThermionicEmissionActive;
+    }
+
+    override string toString() const 
+    {
+		return "BFE_EnergyBalanceThermionic(ThermionicEmissionActive=" ~ to!string(ThermionicEmissionActive) ~ 
+		", Work Function =" ~ to!string(phi/Qe) ~
+		"eV , emissivity=" ~ to!string(emissivity) ~ 
+		", Richardson Constant=" ~ to!string(Ar) ~
+		")";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+	throw new Error("BFE_EnergyBalanceThermionic.apply_unstructured_grid() not yet implemented");
+    }
+    
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+    	SBlock blk = cast(SBlock) this.blk;
+		assert(blk !is null, "Oops, this should be an SBlock object.");
+		if ( emissivity < 0.0 || emissivity > 1.0 ) {
+			// Check if emissivity value is valid
+			throw new Error("emissivity should be 0.0<=e<=1.0");
+		} else if ( Ar == 0.0){
+			throw new Error("Ar should be set!");			
+		} else if ( phi == 0.0){
+			throw new Error("Phi should be set!");			
+		} else {
+
+		FVInterface IFace;
+		size_t i, j, k;
+		FVCell cell;
+	
+    	switch(which_boundary){
+			case Face.south:
+			    j = blk.jmin;
+			    for (k = blk.kmin; k <= blk.kmax; ++k) {
+				for (i = blk.imin; i <= blk.imax; ++i) {
+					// Set cell/face properties
+		    		cell = blk.get_cell(i,j,k);
+		    		IFace = cell.iface[Face.south];
+		    		FlowState fs = IFace.fs;
+		    		double dn = distance_between(cell.pos[0], IFace.pos);
+                	solve_for_wall_temperature(cell, IFace, dn, false);
+				    // [TODO]: Kyle, separate energy modes for multi-species simulations.
+				} // end j loop
+			    } // end k loop
+			    break;
+			default:
+			    throw new Error("Const_Flux only implemented for WEST gas face.");
+		} // end switch which_boundary
+		// Start by making bounds of SOUTH FACE work	
+	    } // end apply()
+	}
+
+	void solve_for_wall_temperature(const FVCell cell, FVInterface IFace, double dn, bool outwardNormal)
+    // Modify the wall function method from BIE_WallFunction to 
+    // iteratively converge on wall temp
+    {
+
+	auto gmodel = blk.myConfig.gmodel; 
+	double f_relax = 0.01;
+
+    double dT, dTdy, k_lam_wall;
+
+    double tolerance = 1.0e-4; 
+    size_t counter = 0;
+    size_t Twall_counter = 0;
+    size_t max_iterations = 100;
+    size_t Twall_max_iterations = 10;
+    double q_total, q_total_prev = 0.0;
+    double Twall;
+
+	double Twall_prev = IFace.fs.gas.Ttr;
+    double q_cond; 
+
+    // Newtons method stuff
+	double Tw_1;
+	double Tw_0;
+	double funcTw, dTw_funcTw;
+
+	// Iteratively solve for the wall temperature
+	while ( counter < max_iterations) {
+
+		// Update the thermodynamic and transport properties at IFace
+	    IFace.fs.gas.Ttr = Twall_prev;
+	    IFace.fs.gas.p = cell.fs.gas.p;
+	    gmodel.update_thermo_from_pT(IFace.fs.gas);
+	    gmodel.update_trans_coeffs(IFace.fs.gas);
+
+	     //Determine convective heat flux at current iteration with Twall_prev    
+	    dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr); // Positive is heat into wall
+	    if (dT < 0.0){
+			IFace.fs.gas.Ttr = 0.9*cell.fs.gas.Ttr;
+			Twall_prev = IFace.fs.gas.Ttr;
+			dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr);
+	    }
+
+    	dTdy = dT / dn;
+    	k_lam_wall = IFace.fs.gas.k;
+    	q_cond = k_lam_wall * dTdy;
+
+		if (outwardNormal) {
+				q_cond = -q_cond;
+		}
+
+	 	// Get total q into wall at current Twall
+	 	// To do: Mass diffusion heat transfer
+    	q_total = (q_cond);
+
+	    // If we reach our tolerance value, we break. Tolerance based off heat loads
+	    // as it is apparently very surceptable to minor changes in Twall
+	    if ( fabs((q_total - q_total_prev)/q_total) < tolerance) {
+			printf("Convergence reached?\n");
+		    printf("Twall = %.4g\n", Twall);
+		    printf("Calculated q_rad out = %.4g\n", pow(Twall,4)*emissivity*SB_sigma_SI);
+		    printf("cell.fs.gas.Ttr = %.4g\n", cell.fs.gas.Ttr);
+		    printf("q_total = %.4g\n", q_total);
+		    printf("q_total_prev = %.4g\n", q_total_prev);
+		    printf("dTdy = %.4g\n", dTdy);
+		    printf("k = %.4g\n", k_lam_wall);
+		    printf("\n");
+		    // Update your wall temp with your final value
+    	    IFace.fs.gas.Ttr = Twall;
+		    IFace.fs.gas.p = cell.fs.gas.p;
+		    gmodel.update_thermo_from_pT(IFace.fs.gas);
+		    gmodel.update_trans_coeffs(IFace.fs.gas);
+	    	break;
+		}
+	
+    	// What wall temperature would reach radiative equilibrium at current q_total
+    	Twall = pow( q_total / ( emissivity * SB_sigma_SI ), 0.25 );
+
+	    // Determine new guess as a weighted average so we don't take too much of a step.
+        Twall = f_relax * Twall + ( 1.0 - f_relax ) * Twall_prev;
+
+    	Twall_prev = Twall;
+    	q_total_prev = q_total;
+
+	    // Add to counter
+	    counter++;
+	}
+return;
+    } // end solve_for_wall_temperature()
+} // end class BIE_EnergyBalanceThermionic
