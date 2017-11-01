@@ -196,7 +196,7 @@ void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface,
     double mu_wall = fs.gas.mu;
     double k_wall = fs.gas.k;
     double P = fs.gas.p;
-    double wall_temp = fs.gas.Ttr;
+    double T_wall = fs.gas.Ttr;
     double a_wall = fs.gas.a;
     double rho_wall = fs.gas.rho;
     double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q, Re_wall;
@@ -247,6 +247,6 @@ void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface,
 	Re_wall = 0.0;
     }
     // store in file
-    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, wall_temp, Re_wall);
+    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, T_wall, Re_wall);
     append(fname, writer);    
 } // end compute_and_store_loads()
