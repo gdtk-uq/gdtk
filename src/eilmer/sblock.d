@@ -449,7 +449,8 @@ public:
 	    kstart = 0;
 	    kend = 0;
 	}
-	// With the ranges above, we also do the first layer of ghost cells.
+	// With the ranges above and in the following nested loops,
+	// we make connections for the first layer of ghost cells, also.
 	for ( size_t k = kstart; k <= kend; ++k ) {
 	    for ( size_t j = jmin-1; j <= jmax+1; ++j ) {
 		for ( size_t i = imin-1; i <= imax+1; ++i ) {
@@ -480,69 +481,68 @@ public:
 	// with information about the vertices that define it and also
 	// the cells that adjoin it.
 	//
-	// ifi interfaces are East-facing interfaces.
-	// In 2D, vtx0==p10, vtx1==p11.
+	// ifi interfaces are west interfaces, with their unit normal pointing east.
+	// In 2D, vtx0==p00, vtx1==p01.
 	// In 3D, the cycle [vtx0,vtx1,vtx2,vtx3] progresses counter-clockwise around 
 	// the periphery of the face when the normal unit vector is pointing toward you.
 	// t1 vector aligned with j-index direction
 	// t2 vector aligned with k-index direction
-	// The i,j,k indices are effectively cell indices in the following loops.
-	for ( size_t k = kmin; k <= kmax; ++k ) {
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t i = imin-1; i <= imax; ++i ) {
-		    auto IFace = get_ifi(i+1,j,k);
+	for (size_t k = kmin; k <= kmax; ++k) {
+	    for (size_t j = jmin; j <= jmax; ++j) {
+		for (size_t i = imin; i <= imax+1; ++i) {
+		    auto IFace = get_ifi(i,j,k);
 		    IFace.vtx.length = 0;
 		    if (myConfig.dimensions == 3) {
-			IFace.vtx ~= get_vtx(i+1,j,k);
-			IFace.vtx ~= get_vtx(i+1,j+1,k);
-			IFace.vtx ~= get_vtx(i+1,j+1,k+1);
-			IFace.vtx ~= get_vtx(i+1,j,k+1);
-			IFace.left_cell = get_cell(i,j,k);
-			IFace.right_cell = get_cell(i+1,j,k);
+			IFace.vtx ~= get_vtx(i,j,k);
+			IFace.vtx ~= get_vtx(i,j+1,k);
+			IFace.vtx ~= get_vtx(i,j+1,k+1);
+			IFace.vtx ~= get_vtx(i,j,k+1);
+			IFace.left_cell = get_cell(i-1,j,k);
+			IFace.right_cell = get_cell(i,j,k);
 		    } else {
-			IFace.vtx ~= get_vtx(i+1,j);
-			IFace.vtx ~= get_vtx(i+1,j+1);
-			IFace.left_cell = get_cell(i,j);
-			IFace.right_cell = get_cell(i+1,j);
+			IFace.vtx ~= get_vtx(i,j);
+			IFace.vtx ~= get_vtx(i,j+1);
+			IFace.left_cell = get_cell(i-1,j);
+			IFace.right_cell = get_cell(i,j);
 		    }
-		    if (i == imin-1) {
+		    if (i == imin) {
 			IFace.is_on_boundary = true;
 			IFace.bc_id = Face.west;
 		    }
-		    if (i == imax) {
+		    if (i == imax+1) {
 			IFace.is_on_boundary = true;
 			IFace.bc_id = Face.east;
 		    }
 		} // i loop
 	    } // j loop
 	} // for k
-	// ifj interfaces are North-facing interfaces.
-	// In 2D, vtx0==p11, vtx1==p01.
+	// ifj interfaces are south interfaces, with their unit normal pointing north.
+	// In 2D, vtx0==p10, vtx1==p00.
 	// t1 vector aligned with k-index direction
 	// t2 vector aligned with i-index direction
-	for ( size_t k = kmin; k <= kmax; ++k ) {
-	    for ( size_t i = imin; i <= imax; ++i ) {
-		for ( size_t j = jmin-1; j <= jmax; ++j ) {
-		    auto IFace = get_ifj(i,j+1,k);
+	for (size_t k = kmin; k <= kmax; ++k) {
+	    for (size_t i = imin; i <= imax; ++i) {
+		for (size_t j = jmin; j <= jmax+1; ++j) {
+		    auto IFace = get_ifj(i,j,k);
 		    IFace.vtx.length = 0;
 		    if (myConfig.dimensions == 3) {
-			IFace.vtx ~= get_vtx(i,j+1,k);
-			IFace.vtx ~= get_vtx(i,j+1,k+1);
-			IFace.vtx ~= get_vtx(i+1,j+1,k+1);
-			IFace.vtx ~= get_vtx(i+1,j+1,k);
-			IFace.left_cell = get_cell(i,j,k);
-			IFace.right_cell = get_cell(i,j+1,k);
+			IFace.vtx ~= get_vtx(i,j,k);
+			IFace.vtx ~= get_vtx(i,j,k+1);
+			IFace.vtx ~= get_vtx(i+1,j,k+1);
+			IFace.vtx ~= get_vtx(i+1,j,k);
+			IFace.left_cell = get_cell(i,j-1,k);
+			IFace.right_cell = get_cell(i,j,k);
 		    } else {
-			IFace.vtx ~= get_vtx(i+1,j+1);
-			IFace.vtx ~= get_vtx(i,j+1);
-			IFace.left_cell = get_cell(i,j);
-			IFace.right_cell = get_cell(i,j+1);
+			IFace.vtx ~= get_vtx(i+1,j);
+			IFace.vtx ~= get_vtx(i,j);
+			IFace.left_cell = get_cell(i,j-1);
+			IFace.right_cell = get_cell(i,j);
 		    }
-		    if (j == jmin-1) {
+		    if (j == jmin) {
 			IFace.is_on_boundary = true;
 			IFace.bc_id = Face.south;
 		    }
-		    if (j == jmax) {
+		    if (j == jmax+1) {
 			IFace.is_on_boundary = true;
 			IFace.bc_id = Face.north;
 		    }
@@ -550,25 +550,25 @@ public:
 	    } // i loop
 	} // for k
 	if (myConfig.dimensions == 2) return;
-	// ifk interfaces are Top-facing interfaces.
+	// ifk interfaces are bottom interfaces, with unit normal pointing to top.
 	// t1 vector aligned with i-index direction
 	// t2 vector aligned with j-index direction
-	for ( size_t i = imin; i <= imax; ++i ) {
-	    for ( size_t j = jmin; j <= jmax; ++j ) {
-		for ( size_t k = kmin-1; k <= kmax; ++k ) {
-		    auto IFace = get_ifk(i,j,k+1);
+	for (size_t i = imin; i <= imax; ++i) {
+	    for (size_t j = jmin; j <= jmax; ++j) {
+		for (size_t k = kmin; k <= kmax+1; ++k) {
+		    auto IFace = get_ifk(i,j,k);
 		    IFace.vtx.length = 0;
-		    IFace.vtx ~= get_vtx(i,j,k+1);
-		    IFace.vtx ~= get_vtx(i+1,j,k+1);
-		    IFace.vtx ~= get_vtx(i+1,j+1,k+1);
-		    IFace.vtx ~= get_vtx(i,j+1,k+1);
-		    IFace.left_cell = get_cell(i,j,k);
-		    IFace.right_cell = get_cell(i,j,k+1);
-		    if (k == kmin-1) {
+		    IFace.vtx ~= get_vtx(i,j,k);
+		    IFace.vtx ~= get_vtx(i+1,j,k);
+		    IFace.vtx ~= get_vtx(i+1,j+1,k);
+		    IFace.vtx ~= get_vtx(i,j+1,k);
+		    IFace.left_cell = get_cell(i,j,k-1);
+		    IFace.right_cell = get_cell(i,j,k);
+		    if (k == kmin) {
 			IFace.is_on_boundary = true;
 			IFace.bc_id = Face.bottom;
 		    }
-		    if (k == kmax) {
+		    if (k == kmax+1) {
 			IFace.is_on_boundary = true;
 			IFace.bc_id = Face.top;
 		    }
