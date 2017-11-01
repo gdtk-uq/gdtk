@@ -15,7 +15,7 @@ import std.stdio;
 
 import std.conv;
 import std.format;
-import std.math: sqrt;
+import std.math: sqrt, fmin;
 import geom;
 import gas;
 import fvcore;
@@ -409,6 +409,8 @@ public:
 	    // Turbulence contribution to heat transfer.
 	    double sigma_star = 0.6;
 	    double mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
+	    // Apply a limit on mu_effective in the same manner as that applied to mu_t.
+	    mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
 	    qx += mu_effective * grad.tke[0];
 	    qy += mu_effective * grad.tke[1];
 	    if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
@@ -418,6 +420,8 @@ public:
 	    if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
 	    double sigma = 0.5;
 	    mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
+	    // Apply a limit on mu_effective in the same manner as that applied to mu_t.
+	    mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
 	    tau_wx = mu_effective * grad.omega[0]; 
 	    tau_wy = mu_effective * grad.omega[1]; 
 	    if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
