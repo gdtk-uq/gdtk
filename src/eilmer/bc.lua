@@ -547,26 +547,30 @@ WallBC_ThermionicEmission.type = "wall_thermionic_emission"
 function WallBC_ThermionicEmission:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
-                  "wall_function", "catalytic_type", "wall_massf_composition",
+                  "catalytic_type", "wall_massf_composition",
                   "label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_ThermionicEmission constructor.")
    o = BoundaryCondition.new(self, o)
-   if o.emissivity <= 0.4 then
+   if o.emissivity < 0.4 or o.phi < 0.7 then
          print("");
-         print("##### SOLVER NOT OPTIMISED FOR LOW EMISSIVITY VALUES #####");
+         print("Solver may not converge for emissivity < 0.4, or phi < 0.7 eV");
+         print("Try increasing number of subiterations in BFE_EnergyBalanceThermionic");
+         print("Increase max_iterations for low emissivity");
+         print("Increase newton_count_max for low phi")
          print("");
    end
    o.preReconAction = { InternalCopyThenReflect:new() }
 
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
                   UpdateThermoTransCoeffs:new() }
-   -- o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
-                  -- EnergyBalanceThermionic:new{emissivity=o.emissivity, 
-                  -- Ar=o.Ar, phi=o.phi,ThermionicEmissionActive=o.ThermionicEmissionActive},
-                  -- UpdateThermoTransCoeffs:new() }
    if o.catalytic_type and o.catalytic_type ~= "none" then
       o.preSpatialDerivActionAtBndryFaces[#o.preSpatialDerivActionAtBndryFaces+1] =
     FixedComposition:new{wall_massf_composition=convertSpeciesTableToArray(o.wall_massf_composition)}
+   end
+   if o.ThermionicEmissionActive == 0 then
+      print("Thermionic Emission not activated. Running radiation equilibrium only");
+   else
+      print("Thermionic Emission activated");
    end
    -- Added update for wall temperature following the computation of spatial derivaitives
    o.postDiffFluxAction = {EnergyBalanceThermionic:new{emissivity=o.emissivity, 
