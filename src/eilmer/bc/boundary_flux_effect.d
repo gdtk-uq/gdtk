@@ -62,7 +62,10 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
 	double Ar = getJSONdouble(jsonData, "Ar", 0.0);
 	double phi = getJSONdouble(jsonData, "phi", 0.0);
 	int ThermionicEmissionActive = getJSONint(jsonData, "ThermionicEmissionActive", 1);
-	newBFE = new BFE_EnergyBalanceThermionic(blk_id, boundary, emissivity, Ar, phi, ThermionicEmissionActive);
+	int Twall_iterations = getJSONint(jsonData, "Twall_iterations", 200);
+	int Twall_subiterations = getJSONint(jsonData, "Twall_subiterations", 20);
+	newBFE = new BFE_EnergyBalanceThermionic(blk_id, boundary, emissivity, Ar, phi,
+				 ThermionicEmissionActive, Twall_iterations, Twall_subiterations);
 	break;
     default:
 	string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
@@ -281,7 +284,6 @@ public:
 
 class BFE_EnergyBalanceThermionic : BoundaryFluxEffect {
 public:
-    FlowState fstate;
 	// Function inputs from Eilmer4 .lua simulation input
     double emissivity;					// Input emissivity, 0<e<=1.0. Assumed black body radiation out from wall
     double Ar;							// Richardson constant, material-dependent
@@ -289,18 +291,25 @@ public:
     									// this gets converted to Joules by multiplying by Elementary charge, Qe
     int ThermionicEmissionActive;       // Whether or not Thermionic Emission is active. Default is 'on'
 
+    // Solver iteration counts
+    int Twall_iterations;				// Iterations for primary Twall calculations. Default = 200
+    int Twall_subiterations;			// Iterations for newton method when ThermionicEmissionActive==1. Default = 20
+
 	// Constants used in analysis
-    double SB_sigma_SI = 5.670373e-8;   // Stefan-Boltzmann constant. 	Units: W/(m^2 K^4)
+    double SB_sigma = 5.670373e-8;   	// Stefan-Boltzmann constant. 	Units: W/(m^2 K^4)
     double kb = 1.38064852e-23;			// Boltzmann constant. 			Units: (m^2 kg)/(s^2 K^1)
     double Qe = 1.60217662e-19; 		// Elementary charge. 			Units: C
  
-    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive)
+    this(int id, int boundary, double emissivity, double Ar, double phi, int ThermionicEmissionActive,
+    	int Twall_iterations, int Twall_subiterations)
     {
 	super(id, boundary, "EnergyBalanceThermionic");
 	this.emissivity = emissivity;
 	this.Ar = Ar;
 	this.phi = phi*Qe;  // Convert phi from input 'eV' to 'J'
 	this.ThermionicEmissionActive = ThermionicEmissionActive;
+	this.Twall_iterations = Twall_iterations;
+	this.Twall_subiterations = Twall_subiterations;
     }
 
     override string toString() const 
@@ -321,9 +330,9 @@ public:
     {
     	SBlock blk = cast(SBlock) this.blk;
 		assert(blk !is null, "Oops, this should be an SBlock object.");
-		if ( emissivity < 0.0 || emissivity > 1.0 ) {
+		if ( emissivity <= 0.0 || emissivity > 1.0 ) {
 			// Check if emissivity value is valid
-			throw new Error("emissivity should be 0.0<=e<=1.0\n");
+			throw new Error("emissivity should be 0.0<e<=1.0\n");
 		} else if ( Ar == 0.0){
 			throw new Error("Ar should be set!\n");			
 		} else if ( phi == 0.0){
@@ -350,27 +359,25 @@ public:
 			    } // end k loop
 			    break;
 			default:
-			    throw new Error("WallBC_ThermionicEmission only implemented for SOUTH gas face.");
+			    throw new Error("WallBC_ThermionicEmission only implemented for SOUTH face.");
 		} // end switch which_boundary
 		// Start by making bounds of SOUTH FACE work	
 	    } // end apply_structured_grid()
 	}
 
 	void solve_for_wall_temperature(const FVCell cell, FVInterface IFace, double dn, bool outwardNormal)
-    // Modify the wall function method from BIE_WallFunction to 
-    // iteratively converge on wall temp
+    // Iteratively converge on wall temp
     {
 
 	auto gmodel = blk.myConfig.gmodel; 
-	double f_relax = 0.05;
     double dT, dTdn, dTdnx, dTdny, dTdnz, qx, qy, qz, k_eff, k_lam_wall, h, q_cond, Twall;
+	double f_relax = 0.05;
     double tolerance = 1.0e-3; 
 	double Twall_prev = IFace.fs.gas.Ttr;
 	double Twall_prev_backup = IFace.fs.gas.Ttr;
     double q_total, q_total_prev, q_total_prev_backup = 0.0;
-    size_t max_iterations = 200;
-    size_t iteration;
-    int check = 0;
+    size_t Twall_iteration_count;
+    int iteration_check, subiteration_check = 0;
     // IFace orientation
     double nx = IFace.n.x; double ny = IFace.n.y; double nz = IFace.n.z;
     // IFace properties.
@@ -390,10 +397,12 @@ public:
 
 	// Newton method to find Twall when thermionic active
 	double f_rad, f_thermionic, f_drv, Twall_1, Twall_0;
-	size_t newton_count;
-	size_t newton_count_max = 20;
+	size_t Twall_subiteration_count;
+
+	// Electron creation
+
 	// Iteratively solve for the wall temperature
-	for (iteration=0; iteration <= max_iterations; ++iteration) {
+	for (Twall_iteration_count=0; Twall_iteration_count <= Twall_iterations; ++Twall_iteration_count) {
 
 		// Update the thermodynamic and transport properties at IFace
 	    IFace.fs.gas.Ttr = Twall_prev;
@@ -444,7 +453,7 @@ public:
 	    if ( fabs((q_total - q_total_prev)/q_total) < tolerance) {
 			//printf("Convergence reached\n");
 		 //   printf("Twall = %.4g\n", Twall);
-		    //printf("Calculated q_rad out = %.4g\n", pow(Twall,4)*emissivity*SB_sigma_SI);
+		    //printf("Calculated q_rad out = %.4g\n", pow(Twall,4)*emissivity*SB_sigma);
 		 //   printf("cell.fs.gas.Ttr = %.4g\n", cell.fs.gas.Ttr);
 		 //   printf("q_total = %.4g\n", q_total);
 		 //   printf("q_total_prev = %.4g\n", q_total_prev);
@@ -465,38 +474,28 @@ public:
 		    grad.Ttr[0] = dTdnx;
 		    grad.Ttr[1] = dTdny;
 		    grad.Ttr[2] = dTdnz;
-		    check = 1;
+		    iteration_check = 1;
 	    	break;
 		}
 
     	// What wall temperature would reach radiative equilibrium at current q_total
     	if (ThermionicEmissionActive == 0){
-    		Twall = pow( q_total / ( emissivity * SB_sigma_SI ), 0.25 );
-    		//printf("Twall = %.4g\n", Twall);
+    		Twall = pow( q_total / ( emissivity * SB_sigma ), 0.25 );
     	} else {
     		Twall_0 = Twall_prev;
-    		for (newton_count=0; newton_count < newton_count_max; ++newton_count) {
-	    		//printf("Twall_0=%.4g\n", Twall_0);
-
-	    		f_rad = emissivity*SB_sigma_SI*Twall_0*Twall_0*Twall_0*Twall_0;
-	    		//printf("f_rad=%.4g\n", f_rad);
-
+    		for (Twall_subiteration_count=0; Twall_subiteration_count < Twall_subiterations; ++Twall_subiteration_count) {
+	    		f_rad = emissivity*SB_sigma*Twall_0*Twall_0*Twall_0*Twall_0;
 	    		f_thermionic = phi/Qe*Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0));
-	    		//printf("f_thermionic=%.4g\n", f_thermionic);
-
 	    		f_drv = f_rad*4/Twall_0 + Ar*exp(-phi/(kb*Twall_0))/(Qe*kb)*(phi*(phi + 2*kb*Twall_0) + 2*kb*Twall_0*(phi + 3*kb*Twall_0));
-	    		//printf("f_rad=%.4g\n", f_rad);
-
 	    		Twall_1 = Twall_0 - (f_rad + f_thermionic - q_total)/f_drv;
-	    		//printf("Twall_1=%.4g\n", Twall_1);
-
-	    		if (fabs((Twall_1 - Twall_0))/Twall_0 <= 0.01) {
-		    		//printf("Diff=%.4g\n", (fabs((Twall_1 - Twall_0))/Twall_0*100));
-		    		//printf("\n");
+	    		if (fabs((Twall_1 - Twall_0))/Twall_0 <= 0.001) {
+	    			subiteration_check = 1;
 	    			break;
 	    		}
+	    		Twall_0 = Twall_1;
     		}
     		Twall = Twall_1;
+    		//printf("\n");
     	}
 	    // Determine new guess as a weighted average so we don't take too much of a step.
         Twall = f_relax * Twall + ( 1.0 - f_relax ) * Twall_prev;
@@ -505,25 +504,15 @@ public:
     	q_total_prev_backup = q_total_prev;
     	q_total_prev = q_total;
 	}
-	if (check == 0){
-		printf("Yo! Your iteration's didn't converge :(\n");
-        printf("Twall = %.4f\n", Twall);
-        printf("Twall_prev = %.4f\n", Twall_prev_backup);
-        printf("q_total = %.4f\n", q_total);
-        printf("q_total_prev = %.4f\n", q_total_prev_backup);
-        printf("q_total_rad = %.4f\n", f_rad);
-        printf("q_total_therm = %.4f\n", f_thermionic);
+	if (iteration_check == 0){
+		printf("Iteration's didn't converge\n");
+        printf("Increase Twall_iterations from default 200 value\n");
         printf("\n");
 
-	} else{
-		//printf("CONVERGED\n");
-  //      printf("Twall = %.4f\n", Twall);
-  //      printf("Twall_prev = %.4f\n", Twall_prev_backup);
-  //      printf("q_total = %.4f\n", q_total);
-  //      printf("q_total_prev = %.4f\n", q_total_prev_backup);
-  //      printf("q_total_rad = %.4f\n", f_rad);
-  //      printf("q_total_therm = %.4f\n", f_thermionic);
-		//printf("\n");
+	} else if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
+		printf("Subiteration's didn't converge\n");
+        printf("Increase Twall_subiterations from default 20 value\n");
+        printf("\n");
 	}
 return;
     } // end solve_for_wall_temperature()

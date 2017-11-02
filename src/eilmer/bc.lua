@@ -401,14 +401,17 @@ function EnergyFluxFromAdjacentSolid:tojson()
    return str
 end
 
-EnergyBalanceThermionic = BoundaryFluxEffect:new{emissivity=nil, Ar=nil, phi=nil,ThermionicEmissionActive=1}
+EnergyBalanceThermionic = BoundaryFluxEffect:new{emissivity=nil, Ar=nil, phi=nil,
+                          ThermionicEmissionActive=1, Twall_iterations=200, Twall_subiterations=20}
 EnergyBalanceThermionic.type = "energy_balance_thermionic"
 function EnergyBalanceThermionic:tojson()
    local str = string.format('          {"type": "%s",', self.type)
    str = str .. string.format(' "emissivity": %.18e,', self.emissivity)
    str = str .. string.format(' "Ar": %.18e,', self.Ar)
    str = str .. string.format(' "phi": %.18e,', self.phi)
-   str = str .. string.format(' "ThermionicEmissionActive": %d', self.ThermionicEmissionActive)
+   str = str .. string.format(' "ThermionicEmissionActive": %d,', self.ThermionicEmissionActive)
+   str = str .. string.format(' "Twall_iterations": %d,', self.Twall_iterations)
+   str = str .. string.format(' "Twall_subiterations": %d', self.Twall_subiterations)
    str = str .. '}'
    return str
 end
@@ -547,16 +550,15 @@ WallBC_ThermionicEmission.type = "wall_thermionic_emission"
 function WallBC_ThermionicEmission:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
-                  "catalytic_type", "wall_massf_composition",
-                  "label", "group"})
+                  "Twall_iterations", "Twall_subiterations",
+                  "catalytic_type", "wall_massf_composition","label", "group"})
    assert(flag, "Invalid name for item supplied to WallBC_ThermionicEmission constructor.")
    o = BoundaryCondition.new(self, o)
-   if o.emissivity < 0.4 or o.phi < 0.7 then
+   if o.emissivity < 0.4 or o.phi < 0.5 then
          print("");
-         print("Solver may not converge for emissivity < 0.4, or phi < 0.7 eV");
-         print("Try increasing number of subiterations in BFE_EnergyBalanceThermionic");
-         print("Increase max_iterations for low emissivity");
-         print("Increase newton_count_max for low phi")
+         print("Solver may not converge for emissivity < 0.4, or phi < 0.5 eV");
+         print("Increase BC input Twall_iterations to > default 200 for low emissivity");
+         print("Increase BC input Twall_subiterations to > default 20 for low phi")
          print("");
    end
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -574,7 +576,8 @@ function WallBC_ThermionicEmission:new(o)
    end
    -- Added update for wall temperature following the computation of spatial derivaitives
    o.postDiffFluxAction = {EnergyBalanceThermionic:new{emissivity=o.emissivity, 
-      Ar=o.Ar, phi=o.phi,ThermionicEmissionActive=o.ThermionicEmissionActive}}
+      Ar=o.Ar, phi=o.phi,ThermionicEmissionActive=o.ThermionicEmissionActive,
+      Twall_iterations=o.Twall_iterations, Twall_subiterations=o.Twall_subiterations}}
 
    o.is_configured = true
    return o
