@@ -775,6 +775,7 @@ public:
 	    size_t num_faces = (myConfig.dimensions == 3) ? 6 : 4;
 	    cell.distance_to_nearest_wall = dist[0];
 	    cell.half_cell_width_at_wall = half_width[0];
+	    cell.cell_at_nearest_wall = cell_at_wall[0];
 	    for ( size_t iface = 1; iface < num_faces; ++iface ) {
 		if (dist[iface] > cell.distance_to_nearest_wall ) {
 		    cell.distance_to_nearest_wall = dist[iface];
