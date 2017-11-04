@@ -207,6 +207,7 @@ public:
 	char[] repr;
 	repr ~= "FVCell(";
 	repr ~= "id=" ~ to!string(id);
+	repr ~= ", universe_blk_id=" ~ to!string(myConfig.universe_blk_id);
 	repr ~= ", pos=" ~ to!string(pos);
 	repr ~= ", iface_ids=["; foreach (f; iface) { repr ~= format("%d,", f.id); } repr ~= "]";
 	repr ~= ", outsigns=["; foreach (osgn; outsign) { repr ~= format("%.18e,", osgn); } repr ~= "]";

@@ -70,11 +70,15 @@ public:
     version(adjoint) {
     double[][] dFdU;
     }
+private:
+    LocalConfig myConfig;
 
+public:
     this(LocalConfig myConfig,
 	 bool allocate_spatial_deriv_lsq_workspace,
 	 int id_init=-1)
     {
+	this.myConfig = myConfig;
 	id = id_init;
 	area.length = myConfig.n_grid_time_levels;
 	gvel = Vector3(0.0,0.0,0.0); // default to fixed grid
@@ -107,6 +111,9 @@ public:
     this(FVInterface other, GasModel gm)
     {
 	id = other.id;
+	// We are sort-of promising not to alter the myConfig object,
+	// so the rest of the code had better honour that deal...
+	myConfig = cast(LocalConfig)other.myConfig;
 	is_on_boundary = other.is_on_boundary;
 	bc_id = other.bc_id;
 	use_wall_function_shear_and_heat_flux = other.use_wall_function_shear_and_heat_flux;
@@ -165,6 +172,9 @@ public:
 	case CopyDataOption.all: 
 	default:
 	    id = other.id;
+	    // We are sort-of promising not to alter the myConfig object,
+	    // so the rest of the code had better honour that deal...
+	    myConfig = cast(LocalConfig)other.myConfig;
 	    pos.set(other.pos);
 	    gvel.set(other.gvel);
 	    Ybar = other.Ybar;
@@ -193,6 +203,7 @@ public:
 	char[] repr;
 	repr ~= "FVInterface(";
 	repr ~= "id=" ~ to!string(id);
+	repr ~= ", universe_blk_id=" ~ to!string(myConfig.universe_blk_id);
 	repr ~= ", pos=" ~ to!string(pos);
 	repr ~= ", vtx_ids=[";
 	foreach (v; vtx) { repr ~= format("%d,", v.id); }
@@ -280,7 +291,7 @@ public:
 
     //@nogc
     // Removed presently because of call to GasModel.enthalpy.
-    void viscous_flux_calc(ref LocalConfig myConfig)
+    void viscous_flux_calc()
     // Unified 2D and 3D viscous-flux calculation.
     // Note that the gradient values need to be in place before calling this procedure.
     {

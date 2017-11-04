@@ -433,7 +433,7 @@ public:
 
     void viscous_flux()
     {
-	foreach (iface; faces) { iface.viscous_flux_calc(myConfig); } 
+	foreach (iface; faces) { iface.viscous_flux_calc(); } 
     }
 
     @nogc
