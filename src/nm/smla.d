@@ -183,6 +183,77 @@ void decompILU0(SMatrix a)
     }
 }
 
+/**
+ * An ILU(p) decomposition.
+ *
+ * This algorithm changes the matrix a in place leaving
+ * an L/U matrix. The algorithm is an IKJ variant that
+ * is useful for row contiguous data storage as is
+ * used here.
+ *
+ * This implements Algorithm 10.5 in Saad (2003)
+ */
+
+SMatrix decompILUp(SMatrix s, int p)
+{
+    size_t n = s.ia.length-1;
+    // TODO: use sparse matrix
+    Matrix a = new Matrix(n, n); // LU factorisation
+    Matrix lev = new Matrix(n, n); // fill levels
+
+    // store input sparse matrix in full matrix format
+    foreach(i; 0 .. n) {
+	foreach(j; 0 .. n) {
+	    a[i,j] = s[i,j];
+	}
+    }
+    
+    // assign initial fill levels
+    foreach ( i; 0 .. n ) { 
+	foreach ( j; 0 .. n ) { 
+	    if (a[i,j] == 0.0) lev[i,j] = n-1;
+	    else lev[i,j] = 0;
+	}
+    }
+    
+    // factorise matrix
+    foreach ( i; 1 .. n ) { // Begin from 2nd row
+	foreach ( k; 0 .. i ) {
+	    if (lev[i,k] <= p && a[k,k] != 0.0) {
+		a[i,k] = a[i,k]/a[k,k];
+		foreach (j; k+1 .. n) {
+		    a[i,j] = a[i,j] - a[i,k]*a[k,j];
+		    if (lev[i,j] > lev[i,k] + lev[k,j] + 1) {
+			lev[i,j] = lev[i,k] + lev[k,j] +1;
+		    } // end if
+		} // end for
+	    } // end if
+	} // end for
+	foreach(k; 0 .. n) {
+	    if (lev[i,k] > p) a[i,k] = 0.0;
+	} // end for
+    }
+
+    // convert back in sparse matrix
+    auto M = new SMatrix();
+    foreach(i; 0..n) {
+	bool first_nonzero_val_in_row = false;
+	foreach(j; 0..n) {
+	    if (a[i,j] != 0.0) {
+		M.aa ~= a[i,j]; 
+		M.ja ~= j;
+		if (first_nonzero_val_in_row == false) {
+		    M.ia ~= M.aa.length-1;
+		    first_nonzero_val_in_row = true;
+		}
+	    }
+	}
+	if (i == n-1) M.ia ~= M.aa.length;
+    }
+
+    return M;
+}
+
 void solve(SMatrix LU, double[] b)
 {
     int n = to!int(LU.ia.length-1);
@@ -730,7 +801,28 @@ version(smla_test) {
 	foreach ( i; 0 .. C.length ) {
 	    assert(approxEqual(C[i], C_exp[i]), failedUnitTest());
 	}
-
+	
+	// Let's test the ILU(p) method
+	SMatrix s = new SMatrix([1., 1., 4., 2., 4., 1., 2., 1., 8., 2., 4., 1., 3., 6., 2., 1.],
+				[0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
+				[0, 3, 6, 10, 12, 16]);
+	int p;
+	SMatrix m = new SMatrix();
+	// test for ILU(p=0)
+	p = 0;
+	m = decompILUp(s, p);
+	auto sol0 = new SMatrix([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., 0.4, 0.2, 3., 1.5, -0.4, -12.5],
+				[0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
+				[0, 3, 6, 10, 12, 16]);
+	assert(approxEqualMatrix(m, sol0), failedUnitTest());
+	// test for ILU(p=2)
+	p = 2;
+	m = decompILUp(s, p);
+	auto sol2 = new SMatrix([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., -7.5, 0.4, 0.2, 3., 3., 1.5, -0.4, 4., -27.5],
+				[0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
+				[0, 3, 6, 11, 14, 19]);
+	assert(approxEqualMatrix(m, sol2), failedUnitTest());
+	
 	// Test GMRES on Faires and Burden problem.
 
 	auto g = new SMatrix();
