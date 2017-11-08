@@ -53,7 +53,7 @@ import flowsolution;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
-immutable double EPSILON = 1.0e-08;
+immutable double EPSILON = 1.0e-05;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
 
 string adjointDir = "adjoint";
@@ -94,7 +94,6 @@ void main(string[] args) {
 	write(msg);
 	exit(1);
     }
-
     GlobalConfig.base_file_name = jobName;
     auto times_dict = readTimesFile(jobName);
     auto tindx_list = times_dict.keys;
@@ -103,8 +102,8 @@ void main(string[] args) {
     // TODO: currently assume we only want 1 CPU
     int maxCPUs = 1;
     int maxWallClock = 5*24*3600; // 5 days default
-    init_simulation(last_tindx, -1, maxCPUs, maxWallClock);
-        
+    init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
+    
     writeln("simulation initialised");
 
     // save a copy of the original mesh
@@ -113,7 +112,7 @@ void main(string[] args) {
 	auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
 	blk.write_grid(fileName, 0.0, 0);
     }
-    
+
     // -----------------------------------------------------
     // 2. store the stencil of effected cells for each cell
     // -----------------------------------------------------
@@ -153,7 +152,16 @@ void main(string[] args) {
     Matrix Jac;
     Jac = new Matrix(ncells*nc, ncells*nc);
     Jac.zeros();
+    //double[][] aa;
+    //double[][] ja;
+    //double[][] ia;
 
+    //foreach(i; 0..nc*ncells) {
+    //	aa ~= [null];
+    //	ja ~= [null];
+    //	ia ~= [null];
+    //}
+    
     foreach (blk; gasBlocks) {
 	foreach(ci, cell; blk.cells) {
 	    // 0th perturbation: rho
@@ -183,6 +191,9 @@ void main(string[] args) {
 			    integral -= c.outsign[fi] * iface.dFdU[ic][jc] * iface.area[0]; // gtl=0
 			}
 			Jac[I,J] = volInv * integral;
+			//aa[I] ~= volInv * integral;
+			//ja[I] ~= J;
+			//if (I == 0) ia[I] ~= aa[I].length-1;
 		    }
 		}
 	    }
@@ -196,19 +207,41 @@ void main(string[] args) {
 	    }
 	} // end foreach cell
     } // end foreach block
-    
+  
     //--------------------------------------------------------
     // Transpose Jac
     //--------------------------------------------------------
     Matrix JacT;
     JacT = transpose(Jac);
 
+    double[] aa;
+    size_t[] ja;
+    size_t[] ia;
+
+    foreach(i; 0..nc*ncells) {
+	bool first_nonzero_val_in_row = false;
+	foreach(j; 0..nc*ncells) {
+	    if (JacT[i,j] != 0.0) {
+		aa ~= JacT[i,j]; 
+		ja ~= j;
+		if (first_nonzero_val_in_row == false) {
+		    ia ~= aa.length-1;
+		    first_nonzero_val_in_row = true;
+		}
+	    }
+	}
+	if (i == nc*ncells-1) ia ~= aa.length;
+    }
+    
+    
+    auto JacT_sparse = new SMatrix(aa, ja, ia);
+    
     // -----------------------------------------------------
     //  Form cost function sensitvity
     // -----------------------------------------------------
 
     // TODO: how to handle this for multiple cost functions...
-
+    
     // Analytically form dJdV by hand differentiation
     // cost function is defined as: J(Q) = 0.5*integral[0->l] (p-p*)^2
     double[] dJdV;
@@ -230,11 +263,11 @@ void main(string[] args) {
 	    dJdV ~= 0.5*(2.0*cell.fs.gas.p - 2.0*p_target[i]);
 	}
     }
-
     // -----------------------------------------------------
     // 4. Solve adjoint equations
     // -----------------------------------------------------
 
+    /*
     // form augmented matrix aug = [A|B] = [Jac|dJdQ]
     size_t ncols = nc*ncells+1;
     size_t nrows = nc*ncells;
@@ -246,15 +279,68 @@ void main(string[] args) {
 	    else aug[i,j] = -dJdV[i];
 	}
     }
-
+   
     // solve for adjoint variables
     gaussJordanElimination(aug);
-
+    
     double[] psi;
     foreach (i; 0 .. nrows) {
 	psi ~= aug[i,ncols-1];
     }
+    */
 
+    int maxInnerIters = 85;
+    int maxOuterIters = 1000;
+    int nIter = 0;
+    double normRef = 0.0;
+    double normNew = 0.0;
+    double residTol = 1.0e-10;
+    double[] psi0;
+    double[] psiN;
+    foreach(i; 0..nc*ncells) psi0 ~= 1.0;
+    foreach(i; 0..nc*ncells) psiN ~= 1.0;
+    double[] residVec;
+    residVec.length = dJdV.length;
+    foreach(i; 0..dJdV.length) dJdV[i] = -1.0 * dJdV[i];
+
+    // compute ILU[0] for preconditioning
+    SMatrix m = new SMatrix(JacT_sparse);
+    auto M = decompILUp(m, 6);
+
+    // compute reference norm
+    multiply(JacT_sparse, psi0, residVec);
+    foreach (i; 0..nc*ncells) residVec[i] = dJdV[i] - residVec[i];
+    foreach (i; 0..nc*ncells) normRef += residVec[i]*residVec[i];
+    normRef = sqrt(fabs(normRef));
+    auto gws = GMRESWorkSpace(psi0.length, maxInnerIters);
+    
+    while (nIter < maxOuterIters) {
+	// compute psi
+	//psiN = gmres2(JacT_sparse, dJdV, psi0, maxInnerIters, residTol);
+	rpcGMRES(JacT_sparse, M, dJdV, psi0, psiN, maxInnerIters, residTol, gws);
+	    
+	// compute new norm
+	normNew = 0.0;
+	multiply(JacT_sparse, psiN, residVec);
+	foreach (i; 0..nc*ncells) residVec[i] = dJdV[i] - residVec[i];
+	foreach (i; 0..nc*ncells) normNew += residVec[i]*residVec[i];
+	normNew = sqrt(fabs(normNew));
+
+	// tolerance check
+	if (normNew/normRef < residTol) break;
+	writeln("iter = ", nIter, ", resid = ", normNew/normRef,
+		", adjoint: rho = ", psiN[0], ", velx = ", psiN[1], ", vely = ", psiN[2], ", p = ", psiN[3]);
+	nIter += 1;
+
+	foreach(i; 0..nc*ncells) psi0[i] = psiN[i];
+    }
+    
+    writeln(psiN[0]);
+    double[] psi;
+    psi.length = psiN.length;
+    foreach(i; 0..nc*ncells) psi[i] = psiN[i];
+    
+    
     //writeln(psi);
 
     // store adjoint variables
@@ -445,7 +531,7 @@ void main(string[] args) {
     dot(tempMatrix, psi, grad);
 
     writeln("adjoint gradients [dLdB, dLdC, dLdD] = ", grad);
-
+    
     // -----------------------------------------------------
     // Finite difference verification
     // -----------------------------------------------------
