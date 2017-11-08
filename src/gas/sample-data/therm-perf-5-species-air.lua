@@ -4,7 +4,8 @@ N2 = {}
 N2.M = 0.0280134
 N2.sigma = 3.621
 N2.epsilon = 97.530
-N2.ceaViscosity = {
+N2.viscosity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       A = 0.62526577,
@@ -31,7 +32,8 @@ N2.ceaViscosity = {
       D = -0.53503838,
     },
 }
-N2.ceaThermCond = {
+N2.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       A = 0.85439436,
@@ -110,7 +112,8 @@ O2 = {}
 O2.M = 0.0319988
 O2.sigma = 3.458
 O2.epsilon = 107.400
-O2.ceaViscosity = {
+O2.viscosity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       A = 0.6091618,
@@ -137,7 +140,8 @@ O2.ceaViscosity = {
       D = 0.9093178,
    },
 }
-O2.ceaThermCond = {
+O2.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       A = 0.77229167,
@@ -216,7 +220,8 @@ NO = {}
 NO.M = 0.0300061
 NO.sigma = 3.621
 NO.epsilon = 97.530
-NO.ceaViscosity = {
+NO.viscosity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       A = 0.60262029,
@@ -243,7 +248,8 @@ NO.ceaViscosity = {
       D = 0.2651645,
     },
 }
-NO.ceaThermCond = {
+NO.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       A = 0.95028758,
@@ -322,7 +328,8 @@ N = {}
 N.M = 0.0140067
 N.sigma = 3.298 
 N.epsilon = 71.400 
-N.ceaViscosity = {
+N.viscosity = {
+   model = 'CEA',
    nsegments = 2,
    segment0 = {
       A = 0.83724737,
@@ -341,7 +348,8 @@ N.ceaViscosity = {
       D = -0.55811716,
     },
 }
-N.ceaThermCond = {
+N.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 2,
    segment0 = {
       A = 0.83771661,
@@ -412,7 +420,8 @@ O = {}
 O.M = 0.0159994
 O.sigma = 2.750
 O.epsilon = 80.000
-O.ceaViscosity = {
+O.viscosity = {
+   model = 'CEA',
    nsegments = 2,
    segment0 = {
       A = 0.77269241,
@@ -431,7 +440,8 @@ O.ceaViscosity = {
       D = -0.18001077,
    },
 }
-O.ceaThermCond = {
+O.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 2,
    segment0 = {
       A = 0.77271664,

@@ -8,6 +8,16 @@
 
 module gas.therm_perf_gas;
 
+import std.math;
+import std.stdio;
+import std.string;
+import std.conv : to;
+import util.lua;
+import util.lua_service;
+import nm.brent; 
+import nm.bracketing;
+import core.stdc.stdlib : exit;
+
 import gas.gas_model;
 import gas.physical_constants;
 import gas.thermo.cea_thermo_curves;
@@ -17,16 +27,10 @@ import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;
 import gas.diffusion.cea_viscosity;
 import gas.diffusion.cea_therm_cond;
+import gas.diffusion.sutherland_viscosity;
+import gas.diffusion.sutherland_therm_cond;
 import gas.diffusion.wilke_mixing_viscosity;
 import gas.diffusion.wilke_mixing_therm_cond;
-import std.math;
-import std.stdio;
-import std.string;
-import util.lua;
-import util.lua_service;
-import nm.brent; 
-import nm.bracketing;
-import core.stdc.stdlib : exit;
 
 class ThermallyPerfectGas: GasModel {
 public:
@@ -74,8 +78,22 @@ public:
 	Viscosity[] vms;
 	foreach ( isp; 0.._n_species ) {
 	    lua_getglobal(L, _species_names[isp].toStringz);
-	    lua_getfield(L, -1, "ceaViscosity");
-	    vms ~= createCEAViscosity(L);
+	    lua_getfield(L, -1, "viscosity");
+	    lua_getfield(L, -1, "model");
+	    string model = to!string(luaL_checkstring(L, -1));
+	    lua_pop(L, 1);
+	    switch (model) {
+	    case "CEA":
+		vms ~= createCEAViscosity(L);
+		break;
+	    case "Sutherland":
+		vms ~= createSutherlandViscosity(L);
+		break;
+	    default:
+		string errMsg = format("The viscosity model '%s' is not available.\n", model);
+		errMsg ~= format("This error occurred for species %d when constructing the thermally perfect gas mix.\n");
+		throw new Error(errMsg);
+	    }
 	    lua_pop(L, 1);
 	    lua_pop(L, 1);
 	}
@@ -84,11 +102,24 @@ public:
 	ThermalConductivity[] tcms;
 	foreach (isp; 0.._n_species ) {
 	    lua_getglobal(L, _species_names[isp].toStringz);
-	    lua_getfield(L, -1, "ceaThermCond");
-	    tcms ~= createCEAThermalConductivity(L);
+	    lua_getfield(L, -1, "thermal_conductivity");
+	    lua_getfield(L, -1, "model");
+	    string model = to!string(luaL_checkstring(L, -1));
+	    lua_pop(L, 1);
+	    switch (model) {
+	    case "CEA":
+		tcms ~= createCEAThermalConductivity(L);
+		break;
+	    case "Sutherland":
+		tcms ~=  createSutherlandThermalConductivity(L);
+		break;
+	    default:
+		string errMsg = format("The thermal conductivity model '%s' is not available.\n", model);
+		errMsg ~= format("This error occurred for species %d when constructing the thermally perfect gas mix.\n");
+		throw new Error(errMsg);
+	    }
 	    lua_pop(L, 1);
 	    lua_pop(L, 1);
-
 	}
 	_thermCondModel = new WilkeMixingThermCond(tcms, _mol_masses);
 	create_species_reverse_lookup();

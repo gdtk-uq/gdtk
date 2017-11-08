@@ -157,7 +157,7 @@ function writeCeaThermoCoeffs(f, sp, db, optsTable)
    f:write("}\n")
 end
 
-function writeCeaTransCoeffs(f, sp, db, name)
+function writeCeaTransCoeffs(f, sp, db, name, key)
    secName = "cea"..name
    if ( not db[sp][secName] ) then
       print("")
@@ -169,7 +169,8 @@ function writeCeaTransCoeffs(f, sp, db, name)
       db[sp][secName] = db.default[secName]
    end
    t = db[sp][secName]
-   f:write(string.format("%s.%s = {\n", sp, secName))
+   f:write(string.format("%s.%s = {\n", sp, key))
+   f:write("   model = 'CEA',\n")
    f:write(string.format("   nsegments = %d,\n", t.nsegments))
    for i=0,t.nsegments-1 do
       seg = "segment"..i
@@ -205,8 +206,30 @@ function writeThermPerfGas(f, species, db, optsTable)
       end
       f:write(string.format("%s.epsilon = %.8f\n", sp, epsilon))
       writeCeaThermoCoeffs(f, sp, db, optsTable)
-      writeCeaTransCoeffs(f, sp, db, "Viscosity")
-      writeCeaTransCoeffs(f, sp, db, "ThermCond")
+      -- Our preference is to use CEA transport properties where available,
+      -- however we intercept on 'air' as a special case and use the
+      -- the Sutherland model because CEA do not have a curve fit
+      -- form for the transport properties of air.
+      if ( sp == 'air' ) then
+	 f:write("air.viscosity = {\n")
+	 f:write("   model = 'Sutherland',\n");
+	 f:write(string.format("   mu_ref = %.8e,\n", db['air'].sutherlandVisc.mu_ref))
+	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandVisc.T_ref))
+	 f:write(string.format("   S = %.8f,\n", db['air'].sutherlandVisc.S))
+	 f:write("}\n")
+      else 
+	 writeCeaTransCoeffs(f, sp, db, "Viscosity", "viscosity")
+      end
+      if ( sp == 'air' ) then 
+	 f:write("air.thermal_conductivity = {\n")
+	 f:write("   model = 'Sutherland',\n")
+	 f:write(string.format("   k_ref = %.8e,\n", db['air'].sutherlandThermCond.k_ref))
+	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandThermCond.T_ref))
+	 f:write(string.format("   S = %.8f,\n", db['air'].sutherlandThermCond.S))
+	 f:write("}\n")
+      else 
+	 writeCeaTransCoeffs(f, sp, db, "ThermCond", "thermal_conductivity")
+      end
    end
 end
 function writeCO2Gas(f, sp, db)
