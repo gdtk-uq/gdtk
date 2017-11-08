@@ -384,9 +384,10 @@ public:
     Vector3 ydsh; // local y-axis, unit vector
     Vector3 zdsh; // local z-axis, unit vector
     double r0, r1; // starting and ending radii
-    double theta01; // angle (in radians) from starting point to ending point
+    double theta01; // angle (in radians) from starting point to ending point,
     // assuming the right-hand screw convention.
-    // Helix constructed from fundamental quantities.
+    //
+    // Helix constructed from fundamental parameters.
     this(in Vector3 a0, in Vector3 a1, in Vector3 xlocal,
 	 double r0, double r1, double dtheta)
     {
@@ -398,8 +399,9 @@ public:
 	zdsh = a1 - a0; zdsh.normalize(); // along the axis of the helix
 	ydsh = cross(zdsh, xdsh); // normal to both
     }
-    // Helix constructed from point_start to point_end
-    // about an axis from axis0 to axis1.
+    // Helix constructed from point_start to point_end about an axis
+    // from axis0 to axis1.
+    // We will compute the fundamantal parameters from these points.
     this(in Vector3 point_start, in Vector3 point_end, 
 	 in Vector3 axis0, in Vector3 axis1) 
     {
@@ -463,7 +465,7 @@ unittest {
     auto p = h1(0.5);
     assert(approxEqualVectors(p, Vector3(0.5, 0.7071068, 0.7071068)), "Helix");
     auto a0 = Vector3([0.0, 0.0, 0.0]);
-    auto a1 = Vector3([1.0, 0.0, 0.0]); // axis is in z-direction
+    auto a1 = Vector3([1.0, 0.0, 0.0]); // axis is in global-frame x-direction
     auto xlocal = Vector3([0.0, 1.0, 0.0]); // pointing at start point
     auto r0 = 1.0;
     auto r1 = 1.0;

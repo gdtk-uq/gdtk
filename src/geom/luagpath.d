@@ -374,6 +374,9 @@ extern(C) int newArc3(lua_State* L)
  * pstart = Vector3:new{y=1}
  * pend = Vector3:new{x=1, z=1}
  * h1 = Helix:new{point_start=pstart, point_end=pend, axis0=axis0, axis1=axis1}
+ * h2 = Helix:new{a0=Vector3:new{x=0.0}, a1=Vector3:new{x=1.0},
+ *                xlocal=Vector3:new{y=1.0},
+ *                r0=1.0, r1=1.0, dtheta=math.pi/2};
  * ---------------------------------
  */
 extern(C) int newHelix(lua_State* L)
@@ -490,7 +493,7 @@ extern(C) int newHelix(lua_State* L)
 	    "The value should be a number.";
 	double r0 = getNumberFromTable(L, 1, "r0", true, 1.0, true, format(errMsgTmplt, "r0"));
 	double r1 = getNumberFromTable(L, 1, "r1", true, 1.0, true, format(errMsgTmplt, "r1"));
-	double dtheta = getNumberFromTable(L, 1, "dtheta", false, 0.0, true, format(errMsgTmplt, "dtheta"));
+	double dtheta = getNumberFromTable(L, 1, "dtheta", true, 0.0, true, format(errMsgTmplt, "dtheta"));
 	my_helix = new Helix(*a0, *a1, *xlocal, r0, r1, dtheta);
     }
     assert(my_helix !is null, "Did not successfully make a Helix object.");

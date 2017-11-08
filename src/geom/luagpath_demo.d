@@ -58,6 +58,12 @@ pend = Vector3:new{x=1, z=1}
 h1 = Helix:new{point_start=pstart, point_end=pend, axis0=axis0, axis1=axis1}
 ddd = h1(0.5)
 print("ddd=", ddd, "expected approximately Vector3([0.5, 0.7071068, 0.7071068])")
+-- Define equivalent Helix using fundamental parameters.
+h2 = Helix:new{a0=Vector3:new{x=0.0}, a1=Vector3:new{x=1.0},
+               xlocal=Vector3:new{y=1.0},
+               r0=1.0, r1=1.0, dtheta=math.pi/2};
+ddd2 = h2(0.5);
+print("ddd2=", ddd2, "expected approximately Vector3([0.5, 0.7071068, 0.7071068])")
 --
 print("Bezier")
 adb = Bezier:new{points={a, d, b}}
