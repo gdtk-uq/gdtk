@@ -33,6 +33,15 @@ void main()
     auto adb = new Arc3(a, d, b);
     writeln("adb(0.5)= ", adb(0.5));
 
+    writeln("Helix");
+    auto axis0 = Vector3([0.0, 0.0, 0.0]);
+    auto axis1 = Vector3([1.0, 0.0, 0.0]);
+    auto pstart = Vector3([0.0, 1.0, 0.0]);
+    auto pend = Vector3([1.0, 0.0, 1.0]);
+    auto h1 = new Helix(pstart, pend, axis0, axis1);
+    writeln("helix= ", h1);
+    writeln("helix(0.5)=", h1(0.5));
+
     writeln("Bezier");
     auto bez_adb = new Bezier([a, d, b]);
     writeln("Bezier adb= ", bez_adb);
