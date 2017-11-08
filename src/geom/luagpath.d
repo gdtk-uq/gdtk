@@ -20,6 +20,7 @@ import luageom;
 immutable string LineMT = "Line"; // Name of Line metatable
 immutable string ArcMT = "Arc";
 immutable string Arc3MT = "Arc3";
+immutable string HelixMT = "Helix";
 immutable string BezierMT = "Bezier";
 immutable string PolylineMT = "Polyline";
 immutable string SplineMT = "Spline";
@@ -45,6 +46,9 @@ Path checkPath(lua_State* L, int index) {
     }
     if ( isObjType(L, index, Arc3MT) ) {
 	return checkObj!(Arc3, Arc3MT)(L, index);
+    }
+    if ( isObjType(L, index, HelixMT) ) {
+	return checkObj!(Helix, HelixMT)(L, index);
     }
     if ( isObjType(L, index, BezierMT) ) {
 	return checkObj!(Bezier, BezierMT)(L, index);
@@ -358,6 +362,141 @@ extern(C) int newArc3(lua_State* L)
     pathStore ~= pushObj!(Arc3, Arc3MT)(L, my_arc);
     return 1;
 } // end newArc3()
+
+
+/**
+ * The Lua constructor for a Helix.
+ *
+ * Example construction in Lua:
+ * ---------------------------------
+ * axis0 = Vector3:new{x=0}
+ * axis1 = Vector3:new{x=1}
+ * pstart = Vector3:new{y=1}
+ * pend = Vector3:new{x=1, z=1}
+ * h1 = Helix:new{point_start=pstart, point_end=pend, axis0=axis0, axis1=axis1}
+ * ---------------------------------
+ */
+extern(C) int newHelix(lua_State* L)
+{
+    lua_remove(L, 1); // remove first argument "this"
+    int narg = lua_gettop(L);
+    if ( narg == 0 || !lua_istable(L, 1) ) {
+	string errMsg = "Error in call to Helix:new{}.; " ~
+	    "A table containing arguments is expected, but no table was found.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!checkAllowedNames(L, 1, ["a0", "a1", "xlocal", "r0", "r1", "dtheta",
+				  "point_start", "point_end", "axis0", "axis1"])) {
+	string errMsg = "Error in call to Helix:new{}. Invalid name in table.";
+	luaL_error(L, errMsg.toStringz);
+    }
+    // There are two ways to specify the Helix:
+    // (a) with the fundamental parameters defining the local axis, radii and angles
+    // (b) with start and end points about an axis.
+    Helix my_helix;
+    lua_getfield(L, 1, "a0");
+    if (lua_isnil(L, -1)) {
+	// Since we did not find the beginning point on the local axis,
+	// we assume that the specification is with start and end points
+	// about an axis.
+	lua_pop(L, 1);
+	// Expect Vector3 for start point.
+	lua_getfield(L, 1, "point_start");
+	auto pstart = checkVector3(L, -1);
+	if (pstart is null) {
+	    string errMsg = "Error in call to Helix:new{}. " ~
+		"A Vector3 object is expected as the point_start argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	lua_pop(L, 1);
+	// Expect Vector3 at end point.
+	lua_getfield(L, 1, "point_end");
+	if (lua_isnil(L, -1)) {
+	    string errMsg = "Error in call to Helix:new{}. No point_end entry found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	auto pend = checkVector3(L, -1);
+	if (pend is null) {
+	    string errMsg = "Error in call to Helix:new{}. " ~
+		"A Vector3 object is expected as the point_end argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	lua_pop(L, 1);
+	// Expect Vector3 specifying start of axis.
+	lua_getfield(L, 1, "axis0");
+	if (lua_isnil(L, -1)) {
+	    string errMsg = "Error in call to Helix:new{}. No axis0 entry found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	auto axis0 = checkVector3(L, -1);
+	if (axis0 is null) {
+	    string errMsg = "Error in call to Helix:new{}. " ~
+		"A Vector3 object is expected as the axis0 argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	lua_pop(L, 1);
+	// Expect Vector3 at end of axis, axis1.
+	lua_getfield(L, 1, "axis1");
+	if (lua_isnil(L, -1)) {
+	    string errMsg = "Error in call to Helix:new{}. No axis1 entry found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	auto axis1 = checkVector3(L, -1);
+	if (axis1 is null) {
+	    string errMsg = "Error in call to Helix:new{}. " ~
+		"A Vector3 object is expected as the axis1 argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	lua_pop(L, 1);
+	my_helix = new Helix(*pstart, *pend, *axis0, *axis1);
+    } else {
+	// Proceed with the specification using fundamental parameters.
+	// Expect Vector3 for start point on local axis, a0.
+	auto a0 = checkVector3(L, -1);
+	if (a0 is null) {
+	    string errMsg = "Error in call to Helix:new{}. " ~
+		"A Vector3 object is expected as the a0 argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	lua_pop(L, 1);
+	// Expect Vector3 at end point on local axis, a1.
+	lua_getfield(L, 1, "a1");
+	if (lua_isnil(L, -1)) {
+	    string errMsg = "Error in call to Helix:new{}. No a1 entry found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	auto a1 = checkVector3(L, -1);
+	if (a1 is null) {
+	    string errMsg = "Error in call to Helix:new{}. " ~
+		"A Vector3 object is expected as the a1 argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	lua_pop(L, 1);
+	// Expect Vector3 specifying local x-direction.
+	lua_getfield(L, 1, "xlocal");
+	if (lua_isnil(L, -1)) {
+	    string errMsg = "Error in call to Helix:new{}. No xlocal entry found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	auto xlocal = checkVector3(L, -1);
+	if (xlocal is null) {
+	    string errMsg = "Error in call to Helix:new{}. " ~
+		"A Vector3 object is expected as the xlocal argument. No valid Vector3 was found.";
+	    luaL_error(L, errMsg.toStringz());
+	}
+	lua_pop(L, 1);
+	string errMsgTmplt = "Error in call to Helix:new{}. " ~
+	    "A valid value for '%s' was not found in list of arguments. " ~
+	    "The value should be a number.";
+	double r0 = getNumberFromTable(L, 1, "r0", true, 1.0, true, format(errMsgTmplt, "r0"));
+	double r1 = getNumberFromTable(L, 1, "r1", true, 1.0, true, format(errMsgTmplt, "r1"));
+	double dtheta = getNumberFromTable(L, 1, "dtheta", false, 0.0, true, format(errMsgTmplt, "dtheta"));
+	my_helix = new Helix(*a0, *a1, *xlocal, r0, r1, dtheta);
+    }
+    assert(my_helix !is null, "Did not successfully make a Helix object.");
+    pathStore ~= pushObj!(Helix, HelixMT)(L, my_helix);
+    return 1;
+} // end newHelix()
 
 
 /**
@@ -1105,6 +1244,26 @@ void registerPaths(lua_State* L)
     lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, Arc3MT.toStringz);
+
+    // Register the Helix object
+    luaL_newmetatable(L, HelixMT.toStringz);
+    
+    /* metatable.__index = metatable */
+    lua_pushvalue(L, -1); // duplicates the current metatable
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, &newHelix);
+    lua_setfield(L, -2, "new");
+    lua_pushcfunction(L, &opCallPath!(Helix, HelixMT));
+    lua_setfield(L, -2, "__call");
+    lua_pushcfunction(L, &opCallPath!(Helix, HelixMT));
+    lua_setfield(L, -2, "eval");
+    lua_pushcfunction(L, &toStringObj!(Helix, HelixMT));
+    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &copyPath!(Helix, HelixMT));
+    lua_setfield(L, -2, "copy");
+
+    lua_setglobal(L, HelixMT.toStringz);
 
     // Register the Bezier object
     luaL_newmetatable(L, BezierMT.toStringz);

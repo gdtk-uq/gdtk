@@ -50,6 +50,15 @@ amb = Arc3:new{p0=a, pmid=m, p1=b}
 dd = amb(0.5)
 print("dd=", dd, "expected approximately Vector3([1.7071068, 2.0, 0.7071068])")
 --
+print("Helix")
+axis0 = Vector3:new{x=0}
+axis1 = Vector3:new{x=1}
+pstart = Vector3:new{y=1}
+pend = Vector3:new{x=1, z=1}
+h1 = Helix:new{point_start=pstart, point_end=pend, axis0=axis0, axis1=axis1}
+ddd = h1(0.5)
+print("ddd=", ddd, "expected approximately Vector3([0.5, 0.7071068, 0.7071068])")
+--
 print("Bezier")
 adb = Bezier:new{points={a, d, b}}
 e = adb(0.5)

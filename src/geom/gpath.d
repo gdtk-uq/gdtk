@@ -462,6 +462,16 @@ unittest {
     auto h1 = new Helix(pstart, pend, axis0, axis1);
     auto p = h1(0.5);
     assert(approxEqualVectors(p, Vector3(0.5, 0.7071068, 0.7071068)), "Helix");
+    auto a0 = Vector3([0.0, 0.0, 0.0]);
+    auto a1 = Vector3([1.0, 0.0, 0.0]); // axis is in z-direction
+    auto xlocal = Vector3([0.0, 1.0, 0.0]); // pointing at start point
+    auto r0 = 1.0;
+    auto r1 = 1.0;
+    auto dtheta = PI/2;
+    auto h2 = new Helix(a0, a1, xlocal, r0, r1, dtheta);
+    auto p2 = h2(0.5);
+    assert(approxEqualVectors(p2, Vector3(0.5, 0.7071068, 0.7071068)),
+	   "Helix from fundamental parameters");
 }
 
 
