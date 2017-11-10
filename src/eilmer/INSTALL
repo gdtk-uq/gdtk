@@ -54,6 +54,20 @@ On Mac, we need to give the make command an extra hint:
 
 > make PLATFORM=macosx INSTALL_DIR=$HOME/dgdinst install
 
+If you encounter difficulties running the program and would like
+more error output, then you should recompile and reinstall the
+code using the 'debug' compile option:
+
+> make TARGET=degug INSTALL_DIR=$HOME/dgdinst install
+
+The default build and install will only compile the shared-memory
+explicit solver version of Eilmer. If you would also like to
+use the steady-state solver (e4sss), then you will need to
+request that at build and install stage:
+
+> make WITH_SSS=1 install
+
+
 Compiling with support for Tecplot binary output
 ------------------------------------------------
 There are some extra steps involved if you would like to

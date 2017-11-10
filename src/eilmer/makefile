@@ -1,7 +1,17 @@
 # makefile for Eilmer
 # Builds main simulation program by default.
 # For example:
-# make TARGET=fast install
+# make install
+#
+# As default, we compile with the 'fast' option.
+# For the DMD compiler, the 'fast' option requests
+# production mode and to include optimisations.
+#
+# When more detail is required in the error output,
+# we recommend compiling with the 'debug' option.
+# For the DMD compiler, this invokes all of the assert
+# checks. It also does bounds checks on all of the
+# array accesses.
 
 # We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
 # when invoking this makefile.  Can also ask for gdc.
@@ -11,9 +21,11 @@ GPP ?= g++
 
 # TARGET options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
-TARGET ?= debug
+TARGET ?= fast
 
 PLATFORM ?= linux
+WITH_SSS ?= 0
+WITH_ADJOINT ?= 0
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
 
@@ -24,8 +36,16 @@ ifneq ($(TECPLOT_BIN_DIR), unavailable)
 endif
 
 
-PROGRAMS := e4shared e4sss e4adjoint
+PROGRAMS := e4shared 
 SHARE_FILES := 
+
+ifeq ($(WITH_SSS),1)
+    PROGRAMS += e4sss
+endif
+
+ifeq ($(WITH_ADJOINT),1)
+    PROGRAMS += e4adjoint
+endif
 
 ifeq ($(WITH_MPI),1)
     PROGRAMS += e4mpi
