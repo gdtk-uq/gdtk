@@ -15,6 +15,7 @@ import std.algorithm;
 import util.lua;
 import util.lua_service;
 import gas;
+import kinetics.thermochemical_reactor;
 import kinetics.reaction_mechanism;
 
 immutable double DT_INCREASE_PERCENT = 10.0; // allowable percentage increase on succesful step
@@ -208,7 +209,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
 		    if ( h < H_MIN ) {
 			string errMsg = format("Hit the minimum allowable timestep in chemistry update: dt= %.4e", H_MIN);
 			Q.copy_values_from(_Qinit);
-			throw new ChemistryUpdateException(errMsg);
+			throw new ThermochemicalReactorUpdateException(errMsg);
 		    }
 		}
 	    } // end attempts at single subcycle.
@@ -217,7 +218,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
 		// We did poorly. Let's put the original GasState back in place,
 		// and let the outside world know via an Exception.
 		Q.copy_values_from(_Qinit);
-		throw new ChemistryUpdateException(errMsg);
+		throw new ThermochemicalReactorUpdateException(errMsg);
 	    }
 	    /* Otherwise, we've done well.
 	     * If tight temperature coupling is requested, we can reevaluate

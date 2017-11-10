@@ -56,7 +56,8 @@ H2.thermoCoeffs = {
     }
   },
 }
-H2.ceaViscosity = {
+H2.viscosity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       T_lower = 200.0,
@@ -83,7 +84,8 @@ H2.ceaViscosity = {
       D = -2.3254928e+00,
    },
 }
-H2.ceaThermCond = {
+H2.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       T_lower = 200.0,
@@ -148,7 +150,8 @@ I2.thermoCoeffs = {
     }
   },
 }
-I2.ceaViscosity = {
+I2.viscosity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       T_lower = 200.0,
@@ -175,7 +178,8 @@ I2.ceaViscosity = {
       D = -5.3503838e-01,
    },
 }
-I2.ceaThermCond = {
+I2.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       T_lower = 200.0,
@@ -240,7 +244,8 @@ HI.thermoCoeffs = {
     }
   },
 }
-HI.ceaViscosity = {
+HI.viscosity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       T_lower = 200.0,
@@ -267,7 +272,8 @@ HI.ceaViscosity = {
       D = -5.3503838e-01,
    },
 }
-HI.ceaThermCond = {
+HI.thermal_conductivity = {
+   model = 'CEA',
    nsegments = 3,
    segment0 = {
       T_lower = 200.0,

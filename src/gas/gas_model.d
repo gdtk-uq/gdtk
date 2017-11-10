@@ -6,19 +6,18 @@
  *      specific gas models should behave.
  *   2. The GasState class which specifies the storage arrangement
  *      for the data defining a gas state.
- *   3. The ThermochemicalReactor base class for specifying how a particular
- *      GasState should evolve over time in an isolated system.
- *   4. Utility functions to transform mass-fraction and mole-fraction
+ *   3. Utility functions to transform mass-fraction and mole-fraction
  *      data arrays.
- *   5. Fill-in functions for gas model classes that don't implement
+ *   4. Fill-in functions for gas model classes that don't implement
  *      some of the functions declared in the base class.
- *   6. Utility functions to create GasModel and ThermochemicalReactor objects.
- *   7. Unit tests for the module.
+ *   5. Utility functions to create GasModel objects.
+ *   6. Unit tests for the module.
  *
  * Authors: Peter J. and Rowan G.
  * Version: 2014-06-22, first cut, exploring the options.
  *          2015--2016, lots of experiments
  *          2017-01-06, introduce ChemicalReactor base class
+ *          2017-11-10, move ThermochemicalReactor to its own module in kinetics package
  */
 
 module gas.gas_model;
@@ -428,44 +427,7 @@ public:
 } // end class GasState
 
 //----------------------------------------------------------------------------------------
-// PART 3. ThermochemicalReactor base class
-//----------------------------------------------------------------------------------------
-
-class ChemistryUpdateException : Exception {
-    this(string message, string file=__FILE__, size_t line=__LINE__,
-	 Throwable next=null)
-    {
-	super(message, file, line, next);
-    }
-}
-
-class ThermochemicalReactor {
-public:
-    this(GasModel gmodel)
-    {
-	// We need a reference to the original gas model object
-	// to update the GasState data at a later time.
-	_gmodel = gmodel;
-    }
-
-    // All the work happens when calling the concrete object
-    // which updates the GasState over the (small) time, tInterval.
-    //
-    // The array params is there to allow extra information to be passed in.
-    // For example, the mixing-limited combustion model by JJ Hoste needs
-    // some information about the local flow state beyond the usual gas state.
-    abstract void opCall(GasState Q, double tInterval, ref double dtSuggest,
-			 ref double[] params);
-    
-public:
-    // We will need to access this referenced model from the Lua functions
-    // so it needs to be public.
-    GasModel _gmodel;
-} // end class ThermochemicalReactor
-
-
-//----------------------------------------------------------------------------------------
-// PART 4. Utility functions for mass-fraction and mole-fraction data
+// PART 3. Utility functions for mass-fraction and mole-fraction data
 //----------------------------------------------------------------------------------------
 
 @nogc void scale_mass_fractions(ref double[] massf, double tolerance=0.0,
@@ -545,7 +507,7 @@ body {
 
 
 //----------------------------------------------------------------------------------------
-// PART 5. Fill-in functions for gas models that don't define all functions
+// PART 4. Fill-in functions for gas models that don't define all functions
 //         specified in the base class GasModel
 //----------------------------------------------------------------------------------------
 
@@ -1270,7 +1232,7 @@ double dp, p_old, p_new, T_old, T_new, dT;
 
 
 //----------------------------------------------------------------------------------------
-// PART 6. Utility functions to make GasModel and ChemicalReactor objects
+// PART 5. Utility functions to make GasModel and ChemicalReactor objects
 //----------------------------------------------------------------------------------------
 
 // Utility function to construct specific gas models needs to know about
@@ -1390,43 +1352,8 @@ GasModel init_gas_model(string file_name="gas-model.lua")
 } // end init_gas_model()
 
 
-// The utility function to make new ThermochemicalReactor objects needs to know about
-// the schemes that are available.
-import kinetics.chemistry_update;
-
-ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileName="")
-{
-    ThermochemicalReactor reactor; // start with a null reference
-    if ((cast(ThermallyPerfectGas) gmodel) !is null) {
-	reactor = new ChemistryUpdate(fileName, gmodel);
-    }
-    if ((cast(PowersAslamGas) gmodel) !is null) {
-	reactor = new UpdateAB(fileName, gmodel);
-    }
-    if ((cast(TwoTemperatureReactingArgon) gmodel) !is null) {
-	reactor = new UpdateArgonFrac(fileName, gmodel);
-    }
-    if ((cast(IdealDissociatingGas) gmodel) !is null) {
-	reactor = new UpdateIDG(fileName, gmodel);
-    }
-    if ((cast(FuelAirMix) gmodel) !is null) {
-	reactor = new MixingLimitedUpdate(fileName, gmodel);
-    }
-    if ((cast(TwoTemperatureNitrogen) gmodel) !is null) {
-	reactor = new VibRelaxNitrogen(fileName, gmodel);
-    }
-    if ((cast(VibSpecificNitrogen) gmodel) !is null) {
-	reactor = new VibSpecificNitrogenRelaxtion(fileName, gmodel);
-    }
-    if (reactor is null) {
-	throw new ChemistryUpdateException("Oops, failed to set up a ThermochemicalReactor.");
-    }
-    return reactor;
-} // end init_thermochemical_reactor()
-
-
 //----------------------------------------------------------------------------------------
-// PART 7. Unit tests for the module
+// PART 6. Unit tests for the module
 //----------------------------------------------------------------------------------------
 
 version(gas_model_test) {

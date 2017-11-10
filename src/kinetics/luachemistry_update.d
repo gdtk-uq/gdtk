@@ -13,7 +13,9 @@ import util.lua_service;
 import gas;
 import gas.luagas_model;
 
+import kinetics.thermochemical_reactor;
 import kinetics.chemistry_update;
+
 
 // name for ChemistryUpdate in Lua scripts
 immutable string ChemistryUpdateMT = "ChemistryUpdate";
@@ -104,7 +106,7 @@ extern(C) int updateState(lua_State* L)
     try {
 	chemUpdate(Q, tInterval, dtSuggest, params);
     }
-    catch (ChemistryUpdateException e) {
+    catch (ThermochemicalReactorUpdateException e) {
 	string errMsg = "Error in call to chemistry update. " ~
 	    "Caught exception: " ~ to!string(e);
 	luaL_error(L, errMsg.toStringz);

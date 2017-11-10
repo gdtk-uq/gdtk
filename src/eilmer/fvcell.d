@@ -931,7 +931,7 @@ public:
 		// Restore actual gas temperature
 		fs.gas.Ttr = T_save;
 	    }
-	} catch(ChemistryUpdateException err) {
+	} catch(ThermochemicalReactorUpdateException err) {
 	    string msg = format("caught %s", err.msg);
 	    msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
 	    msg ~= format("This cell is located at: %s\n", pos[0]);
