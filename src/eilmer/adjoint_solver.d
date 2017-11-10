@@ -121,15 +121,33 @@ void main(string[] args) {
     FVCell[][] cellStencil;
     foreach (blk; gasBlocks) {
 	foreach(i, cell; blk.cells) {
-	    FVCell[] cell_refs;
-	    cell_refs ~= cell; // add the parent cell as the first reference
+	    FVCell[] cell_refs_ordered;
+	    FVCell[] cell_refs_unordered;
+	    size_t[size_t] array_pos; // a dictionary which uses the cellid
+	                        // as an index to retrieve the array pos in cell_refs
+	    size_t[] ids;
+	    cell_refs_unordered ~= cell; // add the parent cell as the first reference
+	    array_pos[cell.id] = cell_refs_unordered.length-1;
+	    ids ~= cell.id;
 	    foreach(f; cell.iface) {
 		if (f.left_cell.id != cell.id &&
-		    f.left_cell.id < ghost_cell_start_id) { cell_refs ~= f.left_cell; }
+		    f.left_cell.id < ghost_cell_start_id) {
+		    cell_refs_unordered ~= f.left_cell;
+		    array_pos[f.left_cell.id] = cell_refs_unordered.length-1;
+		    ids ~= f.left_cell.id;
+		}
 		if (f.right_cell.id != cell.id &&
-		    f.right_cell.id < ghost_cell_start_id) { cell_refs ~= f.right_cell; }
+		    f.right_cell.id < ghost_cell_start_id) {
+		    cell_refs_unordered ~= f.right_cell;
+		    array_pos[f.right_cell.id] = cell_refs_unordered.length-1;
+		    ids ~= f.right_cell.id;
+		}
 	    }
-	    cellStencil ~= cell_refs;
+	    ids.sort(); // sort ids
+	    foreach(id; ids) {
+		cell_refs_ordered ~= cell_refs_unordered[array_pos[id]];
+	    }
+	    cellStencil ~= cell_refs_ordered;
 	}
     }
 
@@ -149,18 +167,15 @@ void main(string[] args) {
     size_t ndim = gasBlocks[0].myConfig.dimensions;
 
     // TODO: sparse matrix storage, currently stores the entire Jacobian
-    Matrix Jac;
-    Jac = new Matrix(ncells*nc, ncells*nc);
-    Jac.zeros();
-    //double[][] aa;
-    //double[][] ja;
-    //double[][] ia;
-
-    //foreach(i; 0..nc*ncells) {
-    //	aa ~= [null];
-    //	ja ~= [null];
-    //	ia ~= [null];
-    //}
+    //SMatrix JacT;
+    //JacT = new SMatrix();
+    double[][] aa;
+    size_t[][] ja;
+    bool[] first_nonzero_filled;
+    foreach(i; 0..nc*ncells) {
+	aa ~= [null];
+	ja ~= [null];
+    }
     
     foreach (blk; gasBlocks) {
 	foreach(ci, cell; blk.cells) {
@@ -178,6 +193,8 @@ void main(string[] args) {
 	    // loop through influenced cells and fill out Jacobian 
 	    // -----------------------------------------------------
 	    // at this point we can use the cell counter ci to access the correct stencil
+	    // because the stencil is not necessarily in cell id order, we need to
+	    // do some shuffling
 	    foreach(c; cellStencil[ci]) {
 		size_t I, J; // indices in Jacobian matrix
 		double integral;
@@ -190,10 +207,11 @@ void main(string[] args) {
 			foreach(fi, iface; c.iface) {
 			    integral -= c.outsign[fi] * iface.dFdU[ic][jc] * iface.area[0]; // gtl=0
 			}
-			Jac[I,J] = volInv * integral;
-			//aa[I] ~= volInv * integral;
-			//ja[I] ~= J;
-			//if (I == 0) ia[I] ~= aa[I].length-1;
+			double JacEntry = volInv * integral;
+			if (JacEntry != 0.0) {
+			    aa[J] ~= volInv * integral;
+			    ja[J] ~= I; //J;
+			}
 		    }
 		}
 	    }
@@ -207,10 +225,19 @@ void main(string[] args) {
 	    }
 	} // end foreach cell
     } // end foreach block
-  
+    SMatrix JacT = new SMatrix();
+    size_t ia = 0;
+    foreach(i; 0 .. nc*ncells) {
+	JacT.aa ~= aa[i];
+	JacT.ja ~= ja[i];
+	JacT.ia ~= ia;
+	ia += aa[i].length;
+    }
+    JacT.ia ~= JacT.aa.length;
     //--------------------------------------------------------
     // Transpose Jac
     //--------------------------------------------------------
+    /*
     Matrix JacT;
     JacT = transpose(Jac);
 
@@ -232,9 +259,9 @@ void main(string[] args) {
 	}
 	if (i == nc*ncells-1) ia ~= aa.length;
     }
+    */
     
-    
-    auto JacT_sparse = new SMatrix(aa, ja, ia);
+    //auto JacT_sparse = new SMatrix(aa, ja, ia);
     
     // -----------------------------------------------------
     //  Form cost function sensitvity
@@ -304,11 +331,11 @@ void main(string[] args) {
     foreach(i; 0..dJdV.length) dJdV[i] = -1.0 * dJdV[i];
 
     // compute ILU[0] for preconditioning
-    SMatrix m = new SMatrix(JacT_sparse);
+    SMatrix m = new SMatrix(JacT);
     auto M = decompILUp(m, 6);
 
     // compute reference norm
-    multiply(JacT_sparse, psi0, residVec);
+    multiply(JacT, psi0, residVec);
     foreach (i; 0..nc*ncells) residVec[i] = dJdV[i] - residVec[i];
     foreach (i; 0..nc*ncells) normRef += residVec[i]*residVec[i];
     normRef = sqrt(fabs(normRef));
@@ -316,32 +343,34 @@ void main(string[] args) {
     
     while (nIter < maxOuterIters) {
 	// compute psi
-	//psiN = gmres2(JacT_sparse, dJdV, psi0, maxInnerIters, residTol);
-	rpcGMRES(JacT_sparse, M, dJdV, psi0, psiN, maxInnerIters, residTol, gws);
+	//psiN = gmres2(JacT, dJdV, psi0, maxInnerIters, residTol);
+	rpcGMRES(JacT, M, dJdV, psi0, psiN, maxInnerIters, residTol, gws);
 	    
 	// compute new norm
 	normNew = 0.0;
-	multiply(JacT_sparse, psiN, residVec);
+	multiply(JacT, psiN, residVec);
 	foreach (i; 0..nc*ncells) residVec[i] = dJdV[i] - residVec[i];
 	foreach (i; 0..nc*ncells) normNew += residVec[i]*residVec[i];
 	normNew = sqrt(fabs(normNew));
-
-	// tolerance check
-	if (normNew/normRef < residTol) break;
+	
 	writeln("iter = ", nIter, ", resid = ", normNew/normRef,
 		", adjoint: rho = ", psiN[0], ", velx = ", psiN[1], ", vely = ", psiN[2], ", p = ", psiN[3]);
 	nIter += 1;
-
+	// tolerance check
+	if (normNew/normRef < residTol) {
+	    writeln("final residual: ", normNew/normRef);
+	    break;
+	}
 	foreach(i; 0..nc*ncells) psi0[i] = psiN[i];
     }
     
-    writeln(psiN[0]);
+    //writeln(psiN[0]);
     double[] psi;
     psi.length = psiN.length;
     foreach(i; 0..nc*ncells) psi[i] = psiN[i];
     
-    
-    //writeln(psi);
+    //writeln(Jac);
+    //writeln(psiN);
 
     // store adjoint variables
     // TODO: formalise this
@@ -404,7 +433,7 @@ void main(string[] args) {
 			integral = 0.0;
 			J = vtx.id*ndim + jc; //vtx.id*nc + jc; // column index
 			foreach(fi, iface; c.iface) {
-			    integral -= c.outsign[fi] * iface.dFdU[ic][jc]* iface.area[0]; // gtl=0
+			    integral -= c.outsign[fi] * iface.dFdU[ic][jc]*iface.area[0]; // gtl=0
 			}
 			dRdX[I,J] = volInv * integral;
 			// 2. dRdA * dAdX ---------------------------
@@ -457,7 +486,7 @@ void main(string[] args) {
 			}
 			if (jc == 0) mixin(computeCellVolumeSensitivity("pos[0].refx")); // x-dimension
 			else if (jc == 1) mixin(computeCellVolumeSensitivity("pos[0].refy")); // y-dimension
-			dVdX = (V1-V0)/(2*h);
+			//dVdX = (V1-V0)/(2*h);
 			dRdX[I,J] -= volInv*volInv*integral * dVdX;
 		    }
 		}
@@ -472,6 +501,7 @@ void main(string[] args) {
 	    }
 	} // end foreach cell
     } // end foreach block
+    
     // -----------------------------------------------------
     // form dX/dD -- mesh perturbation specific code
     // -----------------------------------------------------
@@ -488,7 +518,7 @@ void main(string[] args) {
 	    j = vtx.id/(sblk.imax);
 	    i = vtx.id - j*(sblk.imax);
 	    foreach(vbi; 0..nsurfnodes) {
-		if (i == vbi) dXdXb[2*i+1,2*vbi+1] = -1.0*(1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1));
+		if (i != 0 && i == vbi) dXdXb[2*i+1,2*vbi+1] = -1.0*(1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1));
 	    }
 	}
     } 
@@ -517,7 +547,6 @@ void main(string[] args) {
     Matrix dXdD;
     dXdD = new Matrix(ndim*nvertices, nvar);
     dot(dXdXb, dXbdD, dXdD);
-
     // compute transposes
     Matrix dXdD_T; Matrix dRdX_T;
     dXdD_T = transpose(dXdD);
@@ -923,7 +952,7 @@ string computeCellVolumeSensitivity(string varName)
     codeStr ~= "vtx."~varName~" -= 2*h;";
     codeStr ~= "c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "V0 = c.volume[0];";
-    codeStr ~= "dAdX = (A1-A0)/(2*h);";
+    codeStr ~= "dVdX = (V1-V0)/(2*h);";
     codeStr ~= "vtx."~varName~" += h;";
     codeStr ~= "c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     return codeStr;
