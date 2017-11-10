@@ -53,24 +53,24 @@ LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=T_wall}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 
 cone1 = FluidBlockArray{grid=grdCone1, nib=6, njb=2,
-			fillCondition=inflow,
-			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+			initialState=inflow,
+			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				east=None,
 				south=LaminarWallBC,
-				west=InFlowBC_Supersonic:new{flowCondition=inflow}},
+				west=InFlowBC_Supersonic:new{flowState=inflow}},
 			label="cone1"}
 
 cone2 = FluidBlockArray{grid=grdCone2, nib=6, njb=2,
-			fillCondition=initial,
-			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+			initialState=initial,
+			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				east=None,
 				south=LaminarWallBC,
 				west=None},
 			label="cone2"}  
 
 cone3 = FluidBlockArray{grid=grdCone3, nib=2, njb=2,
-			fillCondition=initial,
-			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+			initialState=initial,
+			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				east=OutFlowBC_FixedP:new{p_outside=p_inf/5.0},
 				south=LaminarWallBC,
 				west=None},

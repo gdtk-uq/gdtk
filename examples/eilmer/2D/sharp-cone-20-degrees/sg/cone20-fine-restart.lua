@@ -21,7 +21,7 @@ print("dynamic pressure q=", 1/2*Q.rho*1.0e6)
 
 -- Get the initial condition from a previous simulation.
 prevSoln = FlowSolution:new{jobName='cone20', dir='.', tindx=4, nBlocks=2}
-initial = makeFillConditionFn(prevSoln)
+initial = makeFlowStateFn(prevSoln)
 
 -- Set up two quadrilaterals in the (x,y)-plane by first defining
 -- the corner nodes, then the lines between those corners.

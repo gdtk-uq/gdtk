@@ -66,8 +66,8 @@ grd = StructuredGrid:new{psurface=patch,
 
 -- Assemble the block from the grid and boundary data.
 blks = FluidBlockArray{grid=grd, nib=22, njb=2, 
-		       fillCondition=inflow,
+		       initialState=inflow,
 		       bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
 			       east=OutFlowBC_Simple:new{},
-			       south=InFlowBC_Supersonic:new{flowCondition=inflow},
-			       west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+			       south=InFlowBC_Supersonic:new{flowState=inflow},
+			       west=InFlowBC_Supersonic:new{flowState=inflow}}}

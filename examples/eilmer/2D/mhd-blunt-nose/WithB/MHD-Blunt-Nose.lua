@@ -91,13 +91,13 @@ grid1 = StructuredGrid:new{psurface = makePatch{north=eb, east=ab, south=da, wes
 grid2 = StructuredGrid:new{psurface = makePatch{north=be, east=fe, south=cf, west=cb}, cfList = {north=inversecluster, south=inversecluster},niv= nx + 1, njv=ny + 1}
 
 --Create blocks
-blk_1 = FluidBlock:new{grid = grid1, fillCondition = Static}
-blk_2 = FluidBlock:new{grid = grid2, fillCondition = Static}
+blk_1 = FluidBlock:new{grid = grid1, initialState = Static}
+blk_2 = FluidBlock:new{grid = grid2, initialState = Static}
 
 --Set boundary conditions
 identifyBlockConnections()
 blk_1.bcList[east] = WallBC_WithSlip:new{}
-blk_1.bcList[west] = InFlowBC_Supersonic:new{flowCondition = Inflow}
+blk_1.bcList[west] = InFlowBC_Supersonic:new{flowState = Inflow}
 blk_2.bcList[west] = WallBC_WithSlip:new{}
 blk_2.bcList[east] = OutFlowBC_Simple:new{}
 

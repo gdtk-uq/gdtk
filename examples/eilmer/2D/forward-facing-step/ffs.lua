@@ -39,19 +39,19 @@ grid2 = StructuredGrid:new{psurface=surf2, niv=nbc+1, njv=n12+1}
 
 -- Set boundary conditions that we care about.
 bcList0 = {north=nil, east=nil, south=nil, 
-	   west=InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}}
+	   west=InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"}}
 bcList1 = {north=nil, east=nil, south=nil,
-	   west=InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"}}
+	   west=InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"}}
 bcList2 = {north=nil, east=OutFlowBC_Simple:new{label="outflow-boundary"},
 	   south=nil, west=nil}
 
 -- Define the flow-solution blocks and stitch them together.
 blk0 = FluidBlockArray{grid=grid0, nib=1, njb=1, 
-		       fillCondition=inflow, bcList=bcList0, label="BLOCK-0"}
+		       initialState=inflow, bcList=bcList0, label="BLOCK-0"}
 blk1 = FluidBlockArray{grid=grid1, nib=1, njb=4,
-		       fillCondition=inflow, bcList=bcList1, label="BLOCK-1"}
+		       initialState=inflow, bcList=bcList1, label="BLOCK-1"}
 blk2 = FluidBlockArray{grid=grid2, nib=4, njb=4,
-		       fillCondition=inflow, bcList=bcList2, label="BLOCK-2"}
+		       initialState=inflow, bcList=bcList2, label="BLOCK-2"}
 identifyBlockConnections()
 
 -- Do a little more setting of global data.

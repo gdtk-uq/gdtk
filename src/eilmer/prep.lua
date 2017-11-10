@@ -184,7 +184,7 @@ function FluidBlock:new(o)
    assert(o.initialState, "need to supply a initialState")
    if getmetatable(o.initialState) == FlowSolution then
       -- Let's build a initialState function here from a FlowSolution.
-      o.initialState = makeFillConditionFn(o.initialState)
+      o.initialState = makeFlowStateFn(o.initialState)
    end
    -- Fill in default values, if already not set
    if o.active == nil then

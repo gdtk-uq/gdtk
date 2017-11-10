@@ -33,13 +33,13 @@ function tube_gas(x, y, z)
       -- and the right-half with low-pressure gas.
       p = 1.0e4; T = 278.8
    end
-   -- We use the FlowCondition object to conveniently set all of
+   -- We use the FlowState object to conveniently set all of
    -- the relevant properties. 
    return FlowState:new{p=p, velx=0.0, vely=0.0, T=T}
 end
 
 -- Define a single block for the tube and fill it with gas conditions.
-FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid0}, fillCondition=tube_gas}
+FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid0}, initialState=tube_gas}
 
 config.flux_calculator = "ausmdv"
 config.max_time = 0.6e-3  -- seconds

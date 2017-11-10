@@ -113,13 +113,13 @@ grid1 = StructuredGrid:new{psurface = makePatch{north=ef, east=cf, south=bc, wes
 grid2 = StructuredGrid:new{psurface = makePatch{north=hi, east=fi, south=ef, west=eh}, niv=N/2 + 1, njv=N + 1}
 grid3 = StructuredGrid:new{psurface = makePatch{north=gh, east=eh, south=de, west=dg}, niv=N/2 + 1, njv=N + 1}
 
-blk_0 = FluidBlock:new{grid = grid0, fillCondition=UDF_flow, label="flow"}
+blk_0 = FluidBlock:new{grid = grid0, initialState=UDF_flow, label="flow"}
 
-blk_1 = FluidBlock:new{grid = grid1, fillCondition=UDF_flow, label="flow"}
+blk_1 = FluidBlock:new{grid = grid1, initialState=UDF_flow, label="flow"}
                 
-blk_2 = FluidBlock:new{grid = grid2, fillCondition=UDF_flow, label="flow"}
+blk_2 = FluidBlock:new{grid = grid2, initialState=UDF_flow, label="flow"}
 
-blk_3 = FluidBlock:new{grid = grid3, fillCondition=UDF_flow, label="flow"}
+blk_3 = FluidBlock:new{grid = grid3, initialState=UDF_flow, label="flow"}
 
 identifyBlockConnections()
 

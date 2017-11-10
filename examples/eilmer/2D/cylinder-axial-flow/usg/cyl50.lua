@@ -33,11 +33,11 @@ LaminarWallBC = WallBC_NoSlip_FixedT:new{Twall=222.0}
 table.remove(LaminarWallBC.preSpatialDerivAction, 5)
 -- Assemble the block from the grid and boundary data.
 blks = FluidBlockArray{grid=grd, nib=2, njb=2, 
-		       fillCondition=inflow,
-		       bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+		       initialState=inflow,
+		       bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 			       east=OutFlowBC_Simple:new{},
 			       south=LaminarWallBC,
-			       west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+			       west=InFlowBC_Supersonic:new{flowState=inflow}}}
 -- convert structured blocks to unstructured blocks
 for i=1,4 do
    SBlock2UBlock(blocks[i])

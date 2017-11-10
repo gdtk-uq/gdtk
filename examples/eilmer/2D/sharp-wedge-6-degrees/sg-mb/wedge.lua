@@ -85,11 +85,11 @@ grid = StructuredGrid:new{psurface=makePatch{north=de, east=ce, south=abc, west=
 			  niv=nx+1, njv=ny+1}
 
 -- Set up block
-blks = FluidBlockArray{grid=grid, fillCondition=inflow, nib=2, njb=1,
+blks = FluidBlockArray{grid=grid, initialState=inflow, nib=2, njb=1,
 		       bcList={north=OutFlowBC_Simple:new{},
 			       east=OutFlowBC_Simple:new{},
 			       south=WallBC_WithSlip:new{},
-			       west=InFlowBC_Supersonic:new{flowCondition=inflow}}
+			       west=InFlowBC_Supersonic:new{flowState=inflow}}
 }
 
 -- Set simulation parameters

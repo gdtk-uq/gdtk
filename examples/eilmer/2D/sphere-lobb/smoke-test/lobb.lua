@@ -101,8 +101,8 @@ grid = StructuredGrid:new{psurface=psurf, niv=ncells+1, njv=ncells+1}
 print "Done building grid."
 
 print "Construct block."
-blk = FluidBlockArray{grid=grid, fillCondition=initial, label='blk',
-		      bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
+blk = FluidBlockArray{grid=grid, initialState=initial, label='blk',
+		      bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
 			      north=OutFlowBC_Simple:new{}},
 		      nib=1, njb=njb}
 print "Done constructing block."

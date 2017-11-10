@@ -65,14 +65,14 @@ grid2 = StructuredGrid:new{psurface=patch2, niv=2*ni0+1, njv=nj0+1,
 --
 -- Build the flow blocks and attach boundary conditions.
 --
-blk0 = FluidBlockArray{grid=grid0, fillCondition=inflow, nib=1, njb=2,
-		       bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+blk0 = FluidBlockArray{grid=grid0, initialState=inflow, nib=1, njb=2,
+		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
 			       north=WallBC_WithSlip:new{},
 			       south=WallBC_WithSlip:new{}}}
-blk1 = FluidBlockArray{grid=grid1, fillCondition=inflow, nib=7, njb=2,
+blk1 = FluidBlockArray{grid=grid1, initialState=inflow, nib=7, njb=2,
 		       bcList={south=WallBC_NoSlip_Adiabatic:new{},
 			       north=WallBC_WithSlip:new{}}}
-blk2 = FluidBlockArray{grid=grid2, fillCondition=inflow, nib=2, njb=2,
+blk2 = FluidBlockArray{grid=grid2, initialState=inflow, nib=2, njb=2,
 		       bcList={south=WallBC_NoSlip_Adiabatic:new{},
 			       north=WallBC_WithSlip:new{},
 			       east=OutFlowBC_FixedPT:new{p_outside=p_inf,

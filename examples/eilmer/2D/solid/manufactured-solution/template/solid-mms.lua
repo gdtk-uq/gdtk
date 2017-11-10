@@ -109,7 +109,7 @@ patch1 = makePatch{north=Line:new{p0=e, p1=f},
 grid0 = StructuredGrid:new{psurface=patch0, niv=3, njv=3}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx+1, njv=ny+1}
 
-blk0 = FluidBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
+blk0 = FluidBlock:new{grid=grid0, initialState=initial, label="blk0"}
 
 blk0.bcList[north] = BoundaryCondition:new{
    preReconAction = { UserDefinedGhostCell:new{fileName='udf-bc.lua'} },

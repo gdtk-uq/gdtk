@@ -34,7 +34,7 @@ local dx = 0.010
 for i = 0, 2 do
    local nx = math.floor((Ls[i+1]-Ls[i])/dx); local ny = 2
    grids[i] = StructuredGrid:new{psurface=quads[i], niv=nx+1, njv=ny+1}
-   blks[i] = FluidBlock:new{grid=grids[i], fillCondition=fill_gases[i]}
+   blks[i] = FluidBlock:new{grid=grids[i], initialState=fill_gases[i]}
 end
 identifyBlockConnections()
 -- The diaphragm boundary condition is between FluidBlocks [1] and [2]

@@ -50,13 +50,13 @@ grid1 = StructuredGrid:new{psurface=patch1, niv=math.floor(ni0/10)+1, njv=nj0+1,
 			   cfList={east=rcfy, west=rcfy}}
 
 wedge = FluidBlockArray{grid=grid0, nib=10, njb=2,
-			fillCondition=inflow, label="wedge",
-			bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+			initialState=inflow, label="wedge",
+			bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 				south=WallBC_NoSlip_FixedT:new{Twall=T_wall,group="loads"},
-				west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+				west=InFlowBC_Supersonic:new{flowState=inflow}}}
 tail = FluidBlockArray{grid=grid1, nib=1, njb=2,
-		       fillCondition=initial, label="tail",
-		       bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+		       initialState=initial, label="tail",
+		       bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 			       south=WallBC_NoSlip_FixedT:new{Twall=T_wall},
 			       east=OutFlowBC_FixedP:new{p_outside=p_inf/5}}}
 identifyBlockConnections()

@@ -73,10 +73,10 @@ else
 end
 config.apply_bcs_in_parallel = false
 if blocking == 'single' then
-    blk = FluidBlock:new{grid=grid, fillCondition=initial, bcList=bcList,
+    blk = FluidBlock:new{grid=grid, initialState=initial, bcList=bcList,
 			 label='blk'}
 else 
-   blks = FluidBlockArray{grid=grid, fillCondition=initial, bcList=bcList, 
+   blks = FluidBlockArray{grid=grid, initialState=initial, bcList=bcList, 
 			  nib=2, njb=2, label="blk"}
 end
 

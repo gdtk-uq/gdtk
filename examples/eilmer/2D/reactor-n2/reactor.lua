@@ -26,7 +26,7 @@ patch0 = makePatch{north = Line:new{p0=b, p1=d},
 		   west = Line:new{p0=a, p1=b}}
 
 grid0 = StructuredGrid:new{psurface=patch0, niv=3, njv=3}
-blk0 = FluidBlock:new{grid=grid0, fillCondition=initial, label="blk0"}
+blk0 = FluidBlock:new{grid=grid0, initialState=initial, label="blk0"}
 setHistoryPoint{ib=0, i=0, j=0}
 -- Finish off config
 config.max_time = 2.0e-4

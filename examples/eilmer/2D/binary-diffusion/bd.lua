@@ -41,7 +41,7 @@ quad = CoonsPatch:new{p00=a, p10=b, p01=c, p11=d}
 nnx = 100; nny = 10
 grid = StructuredGrid:new{psurface=quad, niv=nnx+1, njv=nny+1}
 blk = FluidBlock:new{grid=grid,
-		     fillCondition=initialFill}
+		     initialState=initialFill}
 blk.bcList[north] = WallBC_NoSlip_Adiabatic:new{}
 blk.bcList[east] = WallBC_NoSlip_Adiabatic:new{}
 blk.bcList[south] = WallBC_NoSlip_Adiabatic:new{}

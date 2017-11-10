@@ -94,11 +94,11 @@ vol = SweptSurfaceVolume:new{face0123=surf, edge04=zaxis}
 grid = StructuredGrid:new{pvolume=vol, niv=nx+1, njv=ny+1, nkv=nz+1}
 
 -- Set up block
-blk = FluidBlock:new{grid=grid, fillCondition=inflow, label="block-0"}
+blk = FluidBlock:new{grid=grid, initialState=inflow, label="block-0"}
 blk.bcList[north] = OutFlowBC_Simple:new{}
 blk.bcList[east] = OutFlowBC_Simple:new{}
 blk.bcList[south] = WallBC_WithSlip:new{}
-blk.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
+blk.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
 blk.bcList[top] = WallBC_WithSlip:new{}
 blk.bcList[bottom] = WallBC_WithSlip:new{}
 

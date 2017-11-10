@@ -48,11 +48,11 @@ grid1 = StructuredGrid:new{psurface=makePatch{north=ed, east=cd, south=bc, west=
 			   cfList={north=clusterx,south=clusterx,west=clustery},
 			   niv=81, njv=ny+1}
 -- Define the flow-solution blocks.
-blk0 = FluidBlock:new{grid=grid0, fillCondition=inflow}
-blk1 = FluidBlock:new{grid=grid1, fillCondition=initial}
+blk0 = FluidBlock:new{grid=grid0, initialState=inflow}
+blk1 = FluidBlock:new{grid=grid1, initialState=initial}
 -- Set boundary conditions.
 identifyBlockConnections()
-blk0.bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
+blk0.bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
 blk1.bcList[east] = OutFlowBC_Simple:new{}
 
 config.max_time = 15.0e-3  -- seconds

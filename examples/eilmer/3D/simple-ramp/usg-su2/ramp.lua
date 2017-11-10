@@ -22,9 +22,9 @@ inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0, vely=0.0}
 -- Define the flow domain using an imported grid.
 grid0 = UnstructuredGrid:new{filename="grid0.su2", fmt="su2text"}
 grid1 = UnstructuredGrid:new{filename="grid1.su2", fmt="su2text"}
-my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowCondition=inflow, label="inflow-boundary"},
+my_bcDict = {INFLOW=InFlowBC_Supersonic:new{flowState=inflow, label="inflow-boundary"},
 	     OUTFLOW=OutFlowBC_Simple:new{label="outflow-boundary"},
 	     RAMP_SURFACE=WallBC_WithSlip:new{},
 	     INTERIOR=ExchangeBC_MappedCell:new{list_mapped_cells=true}}
-blk0 = FluidBlock:new{grid=grid0, fillCondition=inflow, bcDict=my_bcDict}
-blk1 = FluidBlock:new{grid=grid1, fillCondition=initial, bcDict=my_bcDict}
+blk0 = FluidBlock:new{grid=grid0, initialState=inflow, bcDict=my_bcDict}
+blk1 = FluidBlock:new{grid=grid1, initialState=initial, bcDict=my_bcDict}

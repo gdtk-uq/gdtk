@@ -105,10 +105,10 @@ grid0 = StructuredGrid:new{psurface=patch0, niv=nx0+1, njv=ny+1}
 grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
 grid2 = StructuredGrid:new{psurface=patch2, niv=nx2+1, njv=ny+1}
 grid3 = StructuredGrid:new{psurface=patch3, niv=nx2+1, njv=ny+1}
-subsonic_region = FluidBlock:new{grid=grid0, fillCondition=stagnation_gas}
-supersonic_region = FluidBlock:new{grid=grid1, fillCondition=low_pressure_gas}
-downstream_region = FluidBlock:new{grid=grid2, fillCondition=low_pressure_gas}
-external_region = FluidBlock:new{grid=grid3, fillCondition=external_stream}
+subsonic_region = FluidBlock:new{grid=grid0, initialState=stagnation_gas}
+supersonic_region = FluidBlock:new{grid=grid1, initialState=low_pressure_gas}
+downstream_region = FluidBlock:new{grid=grid2, initialState=low_pressure_gas}
+external_region = FluidBlock:new{grid=grid3, initialState=external_stream}
 
 -- History locations near throat and exit
 setHistoryPoint{ib=1, i=1, j=1}
@@ -118,12 +118,12 @@ setHistoryPoint{ib=1, i=nx1-1, j=1}
 -- First stitch together adjoining blocks,
 identifyBlockConnections()
 -- then, directly specify the stagnation conditions for the subsonic inflow.
-subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagCondition=stagnation_gas}
+subsonic_region.bcList[west] = InFlowBC_FromStagnation:new{stagnationState=stagnation_gas}
 -- to get loads on thrust surface, add that boundary condition to the group
 supersonic_region.bcList[north] = WallBC_WithSlip:new{group="loads"}
 downstream_region.bcList[east] = OutFlowBC_Simple:new{}
 external_region.bcList[east] = OutFlowBC_Simple:new{}
-external_region.bcList[west] = InFlowBC_Supersonic:new{flowCondition=external_stream}
+external_region.bcList[west] = InFlowBC_Supersonic:new{flowState=external_stream}
 
 -- Do a little more setting of global data.
 config.axisymmetric = 1

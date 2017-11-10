@@ -127,6 +127,6 @@ bwest   = WallBC_RotatingSurface_FixedT:new{Twall=T_1, r_omega={x=0.0, y=0.0, z=
 btop    = WallBC_WithSlip:new{}
 bbottom = WallBC_WithSlip:new{}
 bclist = {north=bnorth, east=beast, south=bsouth, west=bwest, top=btop, bottom=bbottom}
-blk = FluidBlockArray{grid=grid, nib=1, njb=4, nkb=1, bcList=bclist, fillCondition=inflow, label="block-0"}
+blk = FluidBlockArray{grid=grid, nib=1, njb=4, nkb=1, bcList=bclist, initialState=inflow, label="block-0"}
 
 identifyBlockConnections()

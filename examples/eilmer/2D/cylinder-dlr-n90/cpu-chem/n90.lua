@@ -40,8 +40,8 @@ psurf = makePatch{north=Bezier:new{points={i, j, k, e}},
 grid = StructuredGrid:new{psurface=psurf, niv=61, njv=41}
 
 -- We can leave east and south as slip-walls
-blk0 = FluidBlockArray{grid=grid, fillCondition=initial, label="blk",
-		       bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+blk0 = FluidBlockArray{grid=grid, initialState=initial, label="blk",
+		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
 			       north=OutFlowBC_Simple:new{}}, 
 		       nib=1, njb=4}
 

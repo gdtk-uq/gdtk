@@ -21,7 +21,7 @@ grids = importGridproGrid(gproGrid, scale)
 -- Now we attach the grids to blocks
 blks = {}
 for i,g in ipairs(grids) do
-   blks[#blks+1] = FluidBlock:new{grid=g, fillCondition=inflow}
+   blks[#blks+1] = FluidBlock:new{grid=g, initialState=inflow}
 end
 
 print("Number of blocks constructed: ", #blks)

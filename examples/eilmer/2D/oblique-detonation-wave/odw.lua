@@ -50,10 +50,10 @@ grid1 = StructuredGrid:new{psurface=patch1, niv=nx1+1, njv=ny+1}
 -- Define the flow-solution blocks and set boundary conditions.
 -- We split the patches into roughly equal blocks so that
 -- we make good use of our multicore machines.
-blk0 = FluidBlockArray{grid=grid0, fillCondition=inflow, nib=1, njb=2,
-		       bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
+blk0 = FluidBlockArray{grid=grid0, initialState=inflow, nib=1, njb=2,
+		       bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
 			       north=OutFlowBC_Simple:new{}}}
-blk1 = FluidBlockArray{grid=grid1, fillCondition=initial, nib=7, njb=2,
+blk1 = FluidBlockArray{grid=grid1, initialState=initial, nib=7, njb=2,
 		       bcList={east=OutFlowBC_Simple:new{},
 			       north=OutFlowBC_Simple:new{}}}
 identifyBlockConnections()

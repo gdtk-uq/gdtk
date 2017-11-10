@@ -51,6 +51,6 @@ config.fixed_time_step = true
 config.dt_plot = 0.1
 
 -- Set a dummy flow block
-dummy = FluidBlock:new{grid=grid0, fillCondition=initial, label="dummy", active=false}
+dummy = FluidBlock:new{grid=grid0, initialState=initial, label="dummy", active=false}
 
 

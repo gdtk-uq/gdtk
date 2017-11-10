@@ -57,11 +57,11 @@ config.apply_bcs_in_parallel = false
 -- setup blocks
 
 if blocking == 'single' then
-    blk = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid}, fillCondition=initial,
+    blk = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid}, initialState=initial,
 			 bcList=bcList, label='blk'}
 else 
    error("[TODO] Make a block array on a structured-grid, then convert to unstructured blocks")
-   blks = FluidBlockArray{grid=UnstructuredGrid:new{sgrid=grid}, fillCondition=initial, bcList=bcList, 
+   blks = FluidBlockArray{grid=UnstructuredGrid:new{sgrid=grid}, initialState=initial, bcList=bcList, 
 		      nib=2, njb=2, label="blk"}
 end
 

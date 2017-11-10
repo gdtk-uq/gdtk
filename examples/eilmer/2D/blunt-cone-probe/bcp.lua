@@ -43,14 +43,14 @@ grd2 = StructuredGrid:new{psurface=patch2, niv=ni2+1, njv=nj+1,
 			  cfList={west=cfy1,east=cfy1,north=cfx2,south=cfx2}}
 
 -- Assemble the block from the grid and boundary data.
-blk0 = FluidBlock:new{grid=grd0, fillCondition=inflow,
-		      bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow}}}
-blk1 = FluidBlock:new{grid=grd1, fillCondition=inflow,
-		      bcList={west=InFlowBC_Supersonic:new{flowCondition=inflow},
-			      north=InFlowBC_Supersonic:new{flowCondition=inflow}}}
+blk0 = FluidBlock:new{grid=grd0, initialState=inflow,
+		      bcList={west=InFlowBC_Supersonic:new{flowState=inflow}}}
+blk1 = FluidBlock:new{grid=grd1, initialState=inflow,
+		      bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
+			      north=InFlowBC_Supersonic:new{flowState=inflow}}}
 blks = FluidBlockArray{grid=grd2, nib=10, njb=1, 
-		       fillCondition=initial,
-		       bcList={north=InFlowBC_Supersonic:new{flowCondition=inflow},
+		       initialState=initial,
+		       bcList={north=InFlowBC_Supersonic:new{flowState=inflow},
 			       east=OutFlowBC_Simple:new{},
 			       south=WallBC_NoSlip_FixedT:new{Twall=300.0}}}
 identifyBlockConnections()

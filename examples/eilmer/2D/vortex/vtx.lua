@@ -36,7 +36,7 @@ bcList = {north=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  east=OutFlowBC_Simple:new{},
 	  south=UserDefinedBC:new{fileName='udf-vortex-flow.lua'},
 	  west=UserDefinedBC:new{fileName='udf-vortex-flow.lua'}}
-blk0 = FluidBlock:new{grid=grid0, fillCondition=initial, bcList=bcList,
+blk0 = FluidBlock:new{grid=grid0, initialState=initial, bcList=bcList,
 		      label="Duct"}
 
 -- Do a little more setting of global data.

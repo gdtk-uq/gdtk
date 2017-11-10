@@ -49,11 +49,11 @@ psurf1 = makePatch{north=gc, east=bc, south=fb, west=fg}
 grid1 = StructuredGrid:new{psurface=psurf1, cfList=cflist1, niv=60, njv=100}
 
 -- We can leave east and south as slip-walls
-blk0 = FluidBlockArray{grid=grid0, fillCondition=initial,
-		       bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow}},
+blk0 = FluidBlockArray{grid=grid0, initialState=initial,
+		       bcList={west=InFlowBC_ShockFitting:new{flowState=inflow}},
 		       nib=1, njb=4}
-blk1 = FluidBlockArray{grid=grid1, fillCondition=initial,
-		       bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
+blk1 = FluidBlockArray{grid=grid1, initialState=initial,
+		       bcList={west=InFlowBC_ShockFitting:new{flowState=inflow},
 			       north=OutFlowBC_Simple:new{}}, nib=1, njb=4}
 identifyBlockConnections()
 

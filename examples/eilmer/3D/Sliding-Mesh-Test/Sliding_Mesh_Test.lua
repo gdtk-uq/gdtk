@@ -128,11 +128,11 @@ n3 = 6
 n4 = 5
 n5 = 4
 
-blk0 = SBlock:new{grid=StructuredGrid:new{pvolume=vol0, niv=n1, njv=n2, nkv=n3}, fillCondition=initial1, label="block-0"}
-blk1 = SBlock:new{grid=StructuredGrid:new{pvolume=vol1, niv=n1, njv=n2, nkv=n3}, fillCondition=initial2, label="block-1"}
+blk0 = SBlock:new{grid=StructuredGrid:new{pvolume=vol0, niv=n1, njv=n2, nkv=n3}, initialState=initial1, label="block-0"}
+blk1 = SBlock:new{grid=StructuredGrid:new{pvolume=vol1, niv=n1, njv=n2, nkv=n3}, initialState=initial2, label="block-1"}
 
-blk2 = SBlock:new{grid=StructuredGrid:new{pvolume=vol2, niv=n1, njv=n1, nkv=n4}, fillCondition=initial3, label="block-2"}
-blk3 = SBlock:new{grid=StructuredGrid:new{pvolume=vol3, niv=n1, njv=n1, nkv=n5}, fillCondition=initial3, label="block-3"}
+blk2 = SBlock:new{grid=StructuredGrid:new{pvolume=vol2, niv=n1, njv=n1, nkv=n4}, initialState=initial3, label="block-2"}
+blk3 = SBlock:new{grid=StructuredGrid:new{pvolume=vol3, niv=n1, njv=n1, nkv=n5}, initialState=initial3, label="block-3"}
 
 -- Looking radially outwards at upstream patch faces
 --    +------+------+
@@ -202,8 +202,8 @@ end
 
 if true then
     -- supersonic flow in the radial inwards direction
-    blk0.bcList[east] = InFlowBC_Supersonic:new{flowCondition=stagnation1}
-    blk1.bcList[east] = InFlowBC_Supersonic:new{flowCondition=stagnation2}
+    blk0.bcList[east] = InFlowBC_Supersonic:new{flowState=stagnation1}
+    blk1.bcList[east] = InFlowBC_Supersonic:new{flowState=stagnation2}
 
     blk2.bcList[north] = OutFlowBC_Simple:new{}
     blk3.bcList[north] = OutFlowBC_Simple:new{}
@@ -214,14 +214,14 @@ if false then
     blk0.bcList[east] = OutFlowBC_Simple:new{}
     blk1.bcList[east] = OutFlowBC_Simple:new{}
 
-    blk2.bcList[north] = InFlowBC_Supersonic:new{flowCondition=stagnation1}
-    blk3.bcList[north] = InFlowBC_Supersonic:new{flowCondition=stagnation2}
+    blk2.bcList[north] = InFlowBC_Supersonic:new{flowState=stagnation1}
+    blk3.bcList[north] = InFlowBC_Supersonic:new{flowState=stagnation2}
 end
 
 if false then
     -- subsonic flow in the radial inwards direction
-    blk0.bcList[east] = InFlowBC_FromStagnation:new{stagCondition=stagnation1} 
-    blk1.bcList[east] = InFlowBC_FromStagnation:new{stagCondition=stagnation2} 
+    blk0.bcList[east] = InFlowBC_FromStagnation:new{stagnationState=stagnation1} 
+    blk1.bcList[east] = InFlowBC_FromStagnation:new{stagnationState=stagnation2} 
 
     blk2.bcList[north] = OutFlowBC_FixedP:new{p_outside=Pout}
     blk3.bcList[north] = OutFlowBC_FixedP:new{p_outside=Pout}
@@ -233,8 +233,8 @@ if false then
     blk0.bcList[east] = OutFlowBC_FixedP:new{p_outside=Pout}
     blk1.bcList[east] = OutFlowBC_FixedP:new{p_outside=Pout}
 
-    blk2.bcList[north] = InFlowBC_FromStagnation:new{stagCondition=stagnation1} 
-    blk3.bcList[north] = InFlowBC_FromStagnation:new{stagCondition=stagnation2} 
+    blk2.bcList[north] = InFlowBC_FromStagnation:new{stagnationState=stagnation1} 
+    blk3.bcList[north] = InFlowBC_FromStagnation:new{stagnationState=stagnation2} 
 end
 
 

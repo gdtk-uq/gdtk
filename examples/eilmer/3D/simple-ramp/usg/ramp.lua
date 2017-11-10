@@ -55,11 +55,11 @@ grid1 = StructuredGrid:new{pvolume=TFIVolume:new{vertices=blk1Corners},
 			   niv=31, njv=5, nkv=41, cfList=cflist}
 
 blk0 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid0}, 
-		      label="first-block", fillCondition=initial}
-blk0.bcList[3] = InFlowBC_Supersonic:new{flowCondition=inflow}
+		      label="first-block", initialState=initial}
+blk0.bcList[3] = InFlowBC_Supersonic:new{flowState=inflow}
 blk0.bcList[1] = ExchangeBC_MappedCell:new{list_mapped_cells=true}
 blk1 = FluidBlock:new{grid=UnstructuredGrid:new{sgrid=grid1},
-		      label="second-block", fillCondition=initial}
+		      label="second-block", initialState=initial}
 blk1.bcList[3] = ExchangeBC_MappedCell:new{}
 blk1.bcList[1] = OutFlowBC_Simple:new{}
 

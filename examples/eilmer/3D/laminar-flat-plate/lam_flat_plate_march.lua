@@ -77,12 +77,12 @@ grd = StructuredGrid:new{pvolume=vol, cfList=cflist, niv=221, njv=193, nkv=3}
 -- Assemble the block from the grid and boundary data.
 bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
 	east=OutFlowBC_Simple:new{},
-	south=InFlowBC_Supersonic:new{flowCondition=inflow},
-	west=InFlowBC_Supersonic:new{flowCondition=inflow},
+	south=InFlowBC_Supersonic:new{flowState=inflow},
+	west=InFlowBC_Supersonic:new{flowState=inflow},
 	bottom=WallBC_WithSlip:new{},
 	top=WallBC_WithSlip:new{}}
 blks = FluidBlockArray{grid=grd, nib=22, njb=2, nkb=1,
-		       bcList=bcList, fillCondition=inflow}
+		       bcList=bcList, initialState=inflow}
 
 config.block_marching = true
 config.nib = 22

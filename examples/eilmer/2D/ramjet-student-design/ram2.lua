@@ -178,13 +178,13 @@ grid[15] = StructuredGrid:new{psurface=quad[15], niv=nx3+1, njv=ny2+1}
 
 blk = {}
 for ib = 0, 15 do
-   blk[ib] = FluidBlock:new{grid=grid[ib], fillCondition=initial}
+   blk[ib] = FluidBlock:new{grid=grid[ib], initialState=initial}
 end
 
 -- Boundary conditions
 identifyBlockConnections()
 for ib = 0, 2 do
-   blk[ib].bcList[west] = InFlowBC_Supersonic:new{flowCondition=inflow}
+   blk[ib].bcList[west] = InFlowBC_Supersonic:new{flowState=inflow}
 end
 blk[14].bcList[east] = OutFlowBC_Simple:new{}
 blk[15].bcList[east] = OutFlowBC_Simple:new{}
