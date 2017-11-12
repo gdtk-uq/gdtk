@@ -287,7 +287,14 @@ double expand_from_stagnation(const(GasState) state0, double p_over_p0,
     assert (abs(gm.entropy(state1) - s0)/abs(s0) < 0.001, "Bad entropy value.");
     double static_enthalpy = gm.enthalpy(state1);
     double total_enthalpy = gm.enthalpy(state0);
-    double V = sqrt(2.0*(total_enthalpy - static_enthalpy));
+    // In case we are given a pressure-ratio of 1.0 and the noise in the
+    // CEA calculations lead to a situation where the new static enthalpy
+    // is just slightly larger than the total enthalpy value, we fall back
+    // to a zero value for velocity.
+    double V = 0.0;
+    if (total_enthalpy > static_enthalpy) {
+	V = sqrt(2.0*(total_enthalpy - static_enthalpy));
+    }
     return V;
 } // end expand_from_stagnation()
 
@@ -316,14 +323,17 @@ double expand_to_mach(const(GasState) state0, double mach,
 	double a = state1.a;
 	return mach - V/a;
     };
-    if (bracket!error_in_mach(p_over_p0_guess1, p_over_p0_guess2) < 0) {
+    if (bracket!error_in_mach(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6, 1.0) < 0) {
 	throw new Exception("expand_to_mach() could not bracket the pressure ratio.");
     }
     double p_over_p0 = solve!error_in_mach(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6);
     state1.p = state0.p * p_over_p0;
     gm.update_thermo_from_ps(state1, s0);
     double static_enthalpy = gm.enthalpy(state1);
-    double V = sqrt(2.0*(total_enthalpy - static_enthalpy));
+    double V = 0.0;
+    if (total_enthalpy > static_enthalpy) {
+	V = sqrt(2.0*(total_enthalpy - static_enthalpy));
+    }
     return V;
 } // end expand_to_mach()
 
