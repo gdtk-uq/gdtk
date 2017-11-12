@@ -216,7 +216,12 @@ public:
 	size_t k = id / (njcell * nicell);
 	size_t j = (id - k * (njcell * nicell)) / nicell;
 	size_t i = id - k * (njcell * nicell) - j * nicell;
-	ijk[0] = i; ijk[1] = j; ijk[2] = k;
+	ijk[0] = i + n_ghost_cell_layers; ijk[1] = j + n_ghost_cell_layers; 
+	if ( GlobalConfig.dimensions == 2 ) {
+	    ijk[2] = k;
+	} else {
+	    ijk[2] = k + n_ghost_cell_layers;
+	}
 	return ijk;
     } // end cell_id_to_ijk_indices()
 
