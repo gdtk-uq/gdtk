@@ -387,7 +387,7 @@ extern(C) int gasflow_finite_wave_dp(lua_State* L)
 extern(C) int gasflow_finite_wave_dv(lua_State* L)
 {
     // Function signature in Lua domain:
-    // state2, V2 = gasflow.finite_wave_dp(state1, V1, characteristic, V2_target,
+    // state2, V2 = gasflow.finite_wave_dv(state1, V1, characteristic, V2_target,
     //                                     steps, Tmin)
     // Input:
     //   state1: a GasState table for condition at station 1
@@ -491,7 +491,7 @@ extern(C) int gasflow_theta_oblique(lua_State* L)
 extern(C) int gasflow_beta_oblique(lua_State* L)
 {
     // Function signature in Lua domain:
-    // beta = gasflow.theta_oblique(state1, V1, beta)
+    // beta = gasflow.theta_oblique(state1, V1, theta)
     // Input:
     //   state1: a GasState table for condition before shock
     //   V1: velocity of gas before shock
