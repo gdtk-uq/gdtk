@@ -106,6 +106,11 @@ public:
                           // value for all of the update stages.
     // Data for computing residuals.
     double rho_at_start_of_step, rE_at_start_of_step;
+    // adjoint solver workspace.
+    version(adjoint) {
+	FVCell[] jacobian_stencil;
+    }
+
 private:
     LocalConfig myConfig;
 

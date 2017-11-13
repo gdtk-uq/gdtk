@@ -62,7 +62,11 @@ void init_adjoint_dir()
 }
 
 void main(string[] args) {
-    
+
+    // -------------------------------------------
+    // 0. Some house-keeping, and initialisations
+    // -------------------------------------------	 
+
     init_adjoint_dir();
     writeln("Eilmer compressible-flow simulation code -- adjoint solver:");
     writeln("Revision: PUT_REVISION_STRING_HERE");
@@ -122,44 +126,14 @@ void main(string[] args) {
 	blk.write_grid(fileName, 0.0, 0);
     }
 
-    // -----------------------------------------------------
-    // 2. store the stencil of effected cells for each cell
-    // -----------------------------------------------------
+    // ----------------------------------------------
+    // 1. store stencils used in forming the Jacobian
+    //-----------------------------------------------	 
 
-    // TODO: high order interpolation, currently only for 1st order interpolation    
-    FVCell[][] cellStencil;
-    foreach (blk; gasBlocks) {
-	foreach(i, cell; blk.cells) {
-	    FVCell[] cell_refs_ordered;
-	    FVCell[] cell_refs_unordered;
-	    size_t[size_t] array_pos; // a dictionary which uses the cellid
-	                        // as an index to retrieve the array pos in cell_refs
-	    size_t[] ids;
-	    cell_refs_unordered ~= cell; // add the parent cell as the first reference
-	    array_pos[cell.id] = cell_refs_unordered.length-1;
-	    ids ~= cell.id;
-	    foreach(f; cell.iface) {
-		if (f.left_cell.id != cell.id &&
-		    f.left_cell.id < ghost_cell_start_id) {
-		    cell_refs_unordered ~= f.left_cell;
-		    array_pos[f.left_cell.id] = cell_refs_unordered.length-1;
-		    ids ~= f.left_cell.id;
-		}
-		if (f.right_cell.id != cell.id &&
-		    f.right_cell.id < ghost_cell_start_id) {
-		    cell_refs_unordered ~= f.right_cell;
-		    array_pos[f.right_cell.id] = cell_refs_unordered.length-1;
-		    ids ~= f.right_cell.id;
-		}
-	    }
-	    ids.sort(); // sort ids
-	    foreach(id; ids) {
-		cell_refs_ordered ~= cell_refs_unordered[array_pos[id]];
-	    }
-	    cellStencil ~= cell_refs_ordered;
-	}
+    foreach (myblk; parallel(gasBlocks,1)) {
+	construct_jacobian_stencils(myblk);
     }
-
+    
     // ------------------------------------------------------------
     // 3. Compute and store perturbed flux (form residual Jacobian)
     // ------------------------------------------------------------
@@ -204,7 +178,7 @@ void main(string[] args) {
 	    // at this point we can use the cell counter ci to access the correct stencil
 	    // because the stencil is not necessarily in cell id order, we need to
 	    // do some shuffling
-	    foreach(c; cellStencil[ci]) {
+	    foreach(c; cell.jacobian_stencil) {
 		size_t I, J; // indices in Jacobian matrix
 		double integral;
 		double volInv = 1.0 / c.volume[0];
@@ -1008,6 +982,51 @@ void main(string[] args) {
     
     writeln("Done simulation.");
 }
+
+void construct_jacobian_stencils(Block blk) {
+    /++
+     + This stencil holds references to the cells effected by a 
+     perturbation in the parent cell.
+     + For inviscid simulations, stencils are made up of the cells used in the
+     reconstruction step for each of the cells interfaces.
+     + For viscous simulations, stencils are made up of the inviscid stencil, plus
+     any cells that are additionally used in the viscous flux computations.
+     + NB. we need the stencils in cell id order, so that we can sequentially fill
+     a row in the transposed Jacobian in Compressed Row Storage format.
+
+     TODO: high order interpolation
+     ++/
+    foreach(c; blk.cells) {
+	FVCell[] cell_refs_ordered;
+	FVCell[] cell_refs_unordered;
+	size_t[size_t] array_pos; // a dictionary which uses the cell id
+	                          // as an index to retrieve the array position in cell_refs_unordered
+	size_t[] ids;
+	cell_refs_unordered ~= c; // add the parent cell as the first reference
+	array_pos[c.id] = cell_refs_unordered.length-1;
+	ids ~= c.id;
+	foreach(f; c.iface) {
+	    if (f.left_cell.id != c.id &&
+		f.left_cell.id < ghost_cell_start_id) {
+		cell_refs_unordered ~= f.left_cell;
+		array_pos[f.left_cell.id] = cell_refs_unordered.length-1;
+		ids ~= f.left_cell.id;
+	    }
+	    if (f.right_cell.id != c.id &&
+		f.right_cell.id < ghost_cell_start_id) {
+		cell_refs_unordered ~= f.right_cell;
+		array_pos[f.right_cell.id] = cell_refs_unordered.length-1;
+		ids ~= f.right_cell.id;
+	    }
+	}
+	ids.sort(); // sort ids
+	foreach(id; ids) {
+	    cell_refs_ordered ~= cell_refs_unordered[array_pos[id]];
+	}
+	c.jacobian_stencil ~= cell_refs_ordered;
+    }
+}
+
 
 string computeCellVolumeSensitivity(string varName)
 {
