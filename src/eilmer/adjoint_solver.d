@@ -53,7 +53,7 @@ import flowsolution;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
-immutable double EPSILON = 1.0e-05;
+immutable double EPSILON = 1.0e-07;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
 
 string adjointDir = "adjoint";
@@ -399,10 +399,15 @@ void main(string[] args) {
     }
 
     // TODO: sparse matrix storage, currently stores the entire Jacobian
-    Matrix dRdX;
-    dRdX = new Matrix(ncells*nc, nvertices*ndim);
-    dRdX.zeros();
+    //Matrix dRdX;
+    //dRdX = new Matrix(ncells*nc, nvertices*ndim);
+    //dRdX.zeros();
 
+    foreach(i; 0..nc*ncells) {
+	aa[i] = [];
+	ja[i] = [];
+    }
+    
     FVInterface ifaceOrig;
     foreach (blk; gasBlocks) {
 	// we need to compute the converged flow solution fluxes
@@ -413,14 +418,15 @@ void main(string[] args) {
 	blk.applyPostConvFluxAction(0.0, 0, 0);
 	foreach(vi, vtx; blk.vertices) {
 	    // 0th perturbation: x
-	    mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refx", "0"));
+	    //mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refx", "0"));
 	    // 1st perturbation: y
-	    mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refy", "1"));
+	    mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refy", "0"));
 	    // -----------------------------------------------------
 	    // loop through influenced cells and fill out Jacobian 
 	    // -----------------------------------------------------
 	    // at this point we can use the vertex counter vi to access
 	    // the correct stencil
+	    ndim = 1;
 	    foreach(c; vtxStencil[vi]) {
 		size_t I, J; // indices in Jacobian matrix
 		double integral;
@@ -428,6 +434,7 @@ void main(string[] args) {
 		for ( size_t ic = 0; ic < nc; ++ic ) {
 		    I = c.id*nc + ic; // row index
 		    for ( size_t jc = 0; jc < ndim; ++jc ) {
+			double JacEntry = 0.0;
 			// there are three contributions, dRdX = dRdF * dFdX + dRdA * dAdX + dRdV * dVdX
 			// 1. dRdF * dFdX ---------------------------
 			integral = 0.0;
@@ -435,40 +442,41 @@ void main(string[] args) {
 			foreach(fi, iface; c.iface) {
 			    integral -= c.outsign[fi] * iface.dFdU[ic][jc]*iface.area[0]; // gtl=0
 			}
-			dRdX[I,J] = volInv * integral;
+			//dRdX[I,J] = volInv * integral;
+			JacEntry += volInv * integral;
 			// 2. dRdA * dAdX ---------------------------
 			integral = 0.0;
 			double dAdX; double A0; double A1;
 			if (ic == 0 ) {
 			    foreach(fi, iface; c.iface) {
-				if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
-				else if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
+				if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
+				else if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
 				integral -= c.outsign[fi]*iface.F.mass*dAdX;
 			    }
 			}
 			else if (ic == 1) {
 			    foreach(fi, iface; c.iface) {
-				if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
-				else if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
+				if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
+				else if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
 				integral -= c.outsign[fi]*iface.F.momentum.x*dAdX;
 			    }
 			}
 			else if (ic == 2) {
 			    foreach(fi, iface; c.iface){
-				if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
-				else if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
+				if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
+				else if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
 				integral -= c.outsign[fi]*iface.F.momentum.y*dAdX;
 			    }
 			}
 			else if (ic == 3) {
 			    foreach(fi, iface; c.iface){
-				if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
-				else if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
+				if (jc == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
+				else if (jc == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
 				integral -= c.outsign[fi]*iface.F.total_energy*dAdX;
 			    }
 			}
-			dRdX[I,J] += volInv * integral;
-
+			//dRdX[I,J] += volInv * integral;
+			JacEntry += volInv * integral;
 			// 3. dRdV * dVdX ---------------------------
 			double dVdX; double V0; double V1;
 			integral = 0.0;
@@ -484,10 +492,15 @@ void main(string[] args) {
 			else if (ic == 3) {
 			    foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.total_energy*iface.area[0]; }
 			}
-			if (jc == 0) mixin(computeCellVolumeSensitivity("pos[0].refx")); // x-dimension
-			else if (jc == 1) mixin(computeCellVolumeSensitivity("pos[0].refy")); // y-dimension
+			if (jc == 1) mixin(computeCellVolumeSensitivity("pos[0].refx")); // x-dimension
+			else if (jc == 0) mixin(computeCellVolumeSensitivity("pos[0].refy")); // y-dimension
 			//dVdX = (V1-V0)/(2*h);
-			dRdX[I,J] -= volInv*volInv*integral * dVdX;
+			//dRdX[I,J] -= volInv*volInv*integral * dVdX;
+			JacEntry -= volInv*volInv*integral * dVdX;
+			if (JacEntry != 0.0) {
+			    aa[J] ~= JacEntry;
+			    ja[J] ~= I; //J;
+			}
 		    }
 		}
 	    }
@@ -501,7 +514,16 @@ void main(string[] args) {
 	    }
 	} // end foreach cell
     } // end foreach block
-    
+    SMatrix dRdX_T = new SMatrix();
+    ia = 0;
+    foreach(i; 0 .. nc*ncells) {
+	dRdX_T.aa ~= aa[i];
+	dRdX_T.ja ~= ja[i];
+	dRdX_T.ia ~= ia;
+	ia += aa[i].length;
+    }
+    dRdX_T.ia ~= dRdX_T.aa.length;
+
     // -----------------------------------------------------
     // form dX/dD -- mesh perturbation specific code
     // -----------------------------------------------------
@@ -509,7 +531,7 @@ void main(string[] args) {
     size_t nsurfnodes = 101; // number of surface nodes
     // sensitivity of mesh points to movements of the surface mesh points
     Matrix dXdXb;
-    dXdXb = new Matrix(nvertices*ndim, nsurfnodes*ndim);
+    dXdXb = new Matrix(nvertices, nsurfnodes);
     dXdXb.zeros();
     foreach (blk; gasBlocks) {
 	SBlock sblk = cast(SBlock) blk;
@@ -518,13 +540,19 @@ void main(string[] args) {
 	    j = vtx.id/(sblk.imax);
 	    i = vtx.id - j*(sblk.imax);
 	    foreach(vbi; 0..nsurfnodes) {
-		if (i != 0 && i == vbi) dXdXb[2*i+1,2*vbi+1] = -1.0*(1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1));
+		if (i == vbi) {
+		    double jmax = to!double(sblk.jmax);
+		    double jd = to!double(j);
+		    double entry = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0)); 
+		    //writeln(i, ", ", j, ", ", entry, ", ", 2*vi+1, ", ", 2*vbi+1);
+		    dXdXb[vi,vbi] = entry;
+		}
 	    }
 	}
-    } 
+    }
     // sensitivity of surface mesh points to movements of design variables
     Matrix dXbdD;
-    dXbdD = new Matrix(ndim*nsurfnodes, nvar);
+    dXbdD = new Matrix(nsurfnodes, nvar);
     dXbdD.zeros();
     // shape parameters
     double scale = 1.5;
@@ -535,26 +563,36 @@ void main(string[] args) {
 	SBlock sblk = cast(SBlock) blk;
 	foreach(vi; 0..nsurfnodes) {
 	    FVVertex vtx = sblk.get_vtx(vi+2,sblk.jmin,sblk.kmin);
-	    dXbdD[vi*ndim+0,0] = 0.0;
-	    dXbdD[vi*ndim+0,1] = 0.0;
-	    dXbdD[vi*ndim+0,2] = 0.0;
-	    dXbdD[vi*ndim+1,0] = tanh(d/scale) + tanh((c*vtx.pos[0].x - d)/scale);
-	    dXbdD[vi*ndim+1,1] = b*vtx.pos[0].x*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
-	    dXbdD[vi*ndim+1,2] = b*(-pow(tanh(d/scale),2) + 1)/scale - b*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
+	    dXbdD[vi,0] = tanh(d/scale) + tanh((c*vtx.pos[0].x - d)/scale);
+	    dXbdD[vi,1] = b*vtx.pos[0].x*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
+	    dXbdD[vi,2] = b*(-pow(tanh(d/scale),2) + 1)/scale - b*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
 	}
     } 
     // sensitivity of mesh points to movements of the design variables
     Matrix dXdD;
-    dXdD = new Matrix(ndim*nvertices, nvar);
+    dXdD = new Matrix(nvertices, nvar);
+    //writeln(dXbdD);
+    //writeln("-------");
+    //writeln(dXdXb);
     dot(dXdXb, dXbdD, dXdD);
+    //writeln("-------");
+    //writeln(dXdD);
     // compute transposes
-    Matrix dXdD_T; Matrix dRdX_T;
+    Matrix dXdD_T; //Matrix dRdX_T;
     dXdD_T = transpose(dXdD);
-    dRdX_T = transpose(dRdX);
+    //dRdX_T = transpose(dRdX);
     // temp matrix multiplication
     Matrix tempMatrix;
     tempMatrix = new Matrix(nvar, ncells*nc);
-    dot(dXdD_T, dRdX_T, tempMatrix);
+    //matrixMultiply(dXdD_T, dRdX_T, tempMatrix);
+    for (int i = 0; i < nvar; i++) {
+        for (int j = 0; j < nc*ncells; j++) {
+            tempMatrix[i,j] = 0;
+            for (int k = 0; k < nvertices; k++) {
+                tempMatrix[i,j] += dXdD_T[i,k]*dRdX_T[k,j];
+	    }
+	}
+    }
     // compute gradient
     double[3] grad;
     dot(tempMatrix, psi, grad);
@@ -598,6 +636,7 @@ void main(string[] args) {
 	    double y_old;
 	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
+		//writeln(i, ", ", j, ", ", vtx.pos[0].x, ", ", vtx.pos[0].y);
 		y_old = vtx.pos[0].refy;
 		if (j == sblk.jmax+1) {
 		    double yo = 0.105;
@@ -607,7 +646,11 @@ void main(string[] args) {
 		    delta = y_new - y_old;
 		    //writeln(j, ", ", sblk.jmax, ", ", delta, ", ", y_old, ", ", y_new);
 		} else {
-		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
+		    double jmax = to!double(sblk.jmax);
+		    double jd = to!double(j)-2.0;
+		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
+		    //writeln(i, ", ", j, ", ", jmax, ", ", jd, ", ", p);
+		    vtx.pos[0].refy += p*delta;
 		    //writeln(j, ", ", sblk.jmax, ", ", delta, ", ", vtx.pos[0].refy);
 		}
 	    }
@@ -667,7 +710,10 @@ void main(string[] args) {
 		    vtx.pos[0].refy = y_new;
 		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
+		    double jmax = to!double(sblk.jmax);
+		    double jd = to!double(j)-2.0;
+		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
+		    vtx.pos[0].refy += p*delta;
 		}
 	    }
 	}
@@ -729,7 +775,10 @@ void main(string[] args) {
 		    vtx.pos[0].refy = y_new;
 		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
+		    double jmax = to!double(sblk.jmax);
+		    double jd = to!double(j)-2.0;
+		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
+		    vtx.pos[0].refy += p*delta;
 		}
 	    }
 	}
@@ -788,7 +837,10 @@ void main(string[] args) {
 		    vtx.pos[0].refy = y_new;
 		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
+		    double jmax = to!double(sblk.jmax);
+		    double jd = to!double(j)-2.0;
+		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
+		    vtx.pos[0].refy += p*delta;
 		}
 	    }
 	}
@@ -849,7 +901,10 @@ void main(string[] args) {
 		    vtx.pos[0].refy = y_new;
 		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
+		    double jmax = to!double(sblk.jmax);
+		    double jd = to!double(j)-2.0;
+		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
+		    vtx.pos[0].refy += p*delta;
 		}
 	    }
 	}
@@ -908,7 +963,10 @@ void main(string[] args) {
 		    vtx.pos[0].refy = y_new;
 		    delta = y_new - y_old;
 		} else {
-		    vtx.pos[0].refy += (1.0 - ((sblk.jmax-1) - (j-2))/(sblk.jmax-1)) * delta;
+		    double jmax = to!double(sblk.jmax);
+		    double jd = to!double(j)-2.0;
+		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
+		    vtx.pos[0].refy += p*delta;
 		}
 	    }
 	}
