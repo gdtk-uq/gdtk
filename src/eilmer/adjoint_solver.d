@@ -22,11 +22,9 @@ import std.array;
 import std.math;
 import std.datetime;
 import std.process;
-
 import nm.smla;
 import nm.bbla;
 import nm.rsla;
-
 import fluxcalc;
 import grid;
 import sgrid;
@@ -66,25 +64,30 @@ void init_adjoint_dir()
 void main(string[] args) {
     
     init_adjoint_dir();
-    
     writeln("Eilmer compressible-flow simulation code -- adjoint solver:");
-    
-    // -----------------------------------------------------
-    // 1. Read in flow solution
-    // -----------------------------------------------------
+    writeln("Revision: PUT_REVISION_STRING_HERE");
 
     string msg = "Usage:                              Comment:\n";
-    msg       ~= "e4adjoint  [--job=<string>]     name of job\n";
-    
+    msg       ~= "e4adjoint  [--job=<string>]            name of job\n";
+    msg       ~= "           [--max-cpus=<int>]          defaults to ";
+    msg       ~= to!string(totalCPUs) ~" on this machine\n";
+    msg       ~= "           [--max-wall-clock=<int>]    in seconds\n";
+    msg       ~= "           [--help]                    writes this message\n";
     if ( args.length < 2 ) {
 	writeln("Too few arguments.");
 	write(msg);
 	exit(1);
     }
     string jobName = "";
+    int maxCPUs = totalCPUs;
+    int maxWallClock = 5*24*3600; // 5 days default
+    bool helpWanted = false;
     try {
 	getopt(args,
 	       "job", &jobName,
+	       "max-cpus", &maxCPUs,
+	       "max-wall-clock", &maxWallClock,
+	       "help", &helpWanted
 	       );
     } catch (Exception e) {
 	writeln("Problem parsing command-line options.");
@@ -94,20 +97,26 @@ void main(string[] args) {
 	write(msg);
 	exit(1);
     }
+    if (helpWanted) {
+	write(msg);
+	exit(0);
+    }
+    if (jobName.length == 0) {
+	writeln("Need to specify a job name.");
+	write(msg);
+	exit(1);
+    }
     GlobalConfig.base_file_name = jobName;
+    maxCPUs = min(max(maxCPUs, 1), totalCPUs); // don't ask for more than available
     auto times_dict = readTimesFile(jobName);
     auto tindx_list = times_dict.keys;
     auto last_tindx = tindx_list[$-1];
 
-    // TODO: currently assume we only want 1 CPU
-    int maxCPUs = 1;
-    int maxWallClock = 5*24*3600; // 5 days default
+    writefln("Initialising simulation from snapshot: %d", last_tindx);
     init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
     
-    writeln("simulation initialised");
-
     // save a copy of the original mesh
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	ensure_directory_is_present(make_path_name!"grid-original"(0));
 	auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
 	blk.write_grid(fileName, 0.0, 0);
