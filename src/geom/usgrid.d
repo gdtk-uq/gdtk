@@ -1249,7 +1249,7 @@ public:
 		string errMsg = format("cell id=%d, non-zero vector area=%s\n   cell is %s",
 				       i, to!string(varea), cell.toIOString());
 		foreach (j, fid; cell.face_id_list) {
-		    errMsg ~= format("\n    j=%d outsign=%g vectorArea=%s", j, cell.outsign_list[j],
+		    errMsg ~= format("\n    j=%d outsign=%d vectorArea=%s", j, cell.outsign_list[j],
 				     vectorAreaOfFacet(faces[fid].vtx_id_list));
 		}
 		throw new Exception(errMsg);
