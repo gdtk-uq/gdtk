@@ -358,6 +358,21 @@ public:
 				} // end j loop
 			    } // end k loop
 			    break;
+			case Face.east:
+			    i = blk.imax;
+			    for (k = blk.kmin; k <= blk.kmax; ++k) {
+				for (j = blk.jmin; j <= blk.jmax; ++j) {
+					// Set cell/face properties
+		    		cell = blk.get_cell(i,j,k);
+		    		IFace = cell.iface[Face.east];
+		    		double dn = distance_between(cell.pos[0], IFace.pos);
+		    		// Flux equations
+                	// Energy balance by solving for the wall surface temperature
+                	solve_for_wall_temperature(cell, IFace, dn, false);
+
+				} // end j loop
+			    } // end k loop
+			    break;
 			default:
 			    throw new Error("WallBC_ThermionicEmission only implemented for SOUTH face.");
 		} // end switch which_boundary

@@ -402,7 +402,7 @@ function EnergyFluxFromAdjacentSolid:tojson()
 end
 
 EnergyBalanceThermionic = BoundaryFluxEffect:new{emissivity=nil, Ar=nil, phi=nil,
-                          ThermionicEmissionActive=1, Twall_iterations=200, Twall_subiterations=20}
+                          ThermionicEmissionActive=1, Twall_iterations=200, Twall_subiterations=50}
 EnergyBalanceThermionic.type = "energy_balance_thermionic"
 function EnergyBalanceThermionic:tojson()
    local str = string.format('          {"type": "%s",', self.type)
