@@ -16,6 +16,7 @@ import gas;
 import globalconfig;
 import flowstate;
 import flowgradients;
+import fvcell;
 
 class FVVertex {
 public:
@@ -28,6 +29,9 @@ public:
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
     WLSQGradWorkspace ws_grad;
+    version(adjoint) {
+	FVCell[] jacobian_stencil;
+    }
     
     this(LocalConfig myConfig,
 	 bool allocate_spatial_deriv_lsq_workspace,

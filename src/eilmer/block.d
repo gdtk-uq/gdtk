@@ -77,6 +77,13 @@ public:
     FlowState Lft;
     FlowState Rght;
 
+    // adjoint solver workspace.
+    version(adjoint) {
+	// Compressed Row Storage information for the transpose Jacobian 
+	double[][] aa;
+	size_t[][] ja;
+    }
+    
     version(steady_state)
     {
     // Work-space for steady-state solver
