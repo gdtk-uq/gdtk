@@ -1126,9 +1126,11 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    if (bc.outsigns[i] == 1) {
-		f.fs.omega = ideal_omega_at_wall(f.left_cell);
+		double d0 = distance_between(f.left_cell.pos[gtl], f.pos);
+		f.fs.omega = ideal_omega_at_wall(f.left_cell, d0);
 	    } else {
-		f.fs.omega = ideal_omega_at_wall(f.right_cell);
+		double d0 = distance_between(f.right_cell.pos[gtl], f.pos);
+		f.fs.omega = ideal_omega_at_wall(f.right_cell, d0);
 	    }
 	    f.fs.tke = 0.0;
 	} // end foreach face
@@ -1150,9 +1152,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.north];
+		    double d0 = distance_between(cell.pos[gtl], IFace.pos);
 		    FlowState fs = IFace.fs;
 		    fs.tke = 0.0;
-		    fs.omega = ideal_omega_at_wall(cell);
+		    fs.omega = ideal_omega_at_wall(cell, d0);
 		} // end i loop
 	    } // end for k
 	    break;
@@ -1162,9 +1165,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.east];
+		    double d0 = distance_between(cell.pos[gtl], IFace.pos);
 		    FlowState fs = IFace.fs;
 		    fs.tke = 0.0;
-		    fs.omega = ideal_omega_at_wall(cell);
+		    fs.omega = ideal_omega_at_wall(cell, d0);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -1174,9 +1178,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 		for (i = blk.imin; i <= blk.imax; ++i) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.south];
+		    double d0 = distance_between(cell.pos[gtl], IFace.pos);
 		    FlowState fs = IFace.fs;
 		    fs.tke = 0.0;
-		    fs.omega = ideal_omega_at_wall(cell);
+		    fs.omega = ideal_omega_at_wall(cell, d0);
 		} // end i loop
 	    } // end for k
 	    break;
@@ -1186,9 +1191,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.west];
+		    double d0 = distance_between(cell.pos[gtl], IFace.pos);
 		    FlowState fs = IFace.fs;
 		    fs.tke = 0.0;
-		    fs.omega = ideal_omega_at_wall(cell);
+		    fs.omega = ideal_omega_at_wall(cell, d0);
 		} // end j loop
 	    } // end for k
 	    break;
@@ -1198,9 +1204,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.top];
+		    double d0 = distance_between(cell.pos[gtl], IFace.pos);
 		    FlowState fs = IFace.fs;
 		    fs.tke = 0.0;
-		    fs.omega = ideal_omega_at_wall(cell);
+		    fs.omega = ideal_omega_at_wall(cell, d0);
 		} // end j loop
 	    } // end for i
 	    break;
@@ -1210,9 +1217,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
 		for (j = blk.jmin; j <= blk.jmax; ++j) {
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.bottom];
+		    double d0 = distance_between(cell.pos[gtl], IFace.pos);
 		    FlowState fs = IFace.fs;
 		    fs.tke = 0.0;
-		    fs.omega = ideal_omega_at_wall(cell);
+		    fs.omega = ideal_omega_at_wall(cell, d0);
 		} // end j loop
 	    } // end for i
 	    break;
@@ -1220,7 +1228,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
     } // end apply()
 
     @nogc
-    double ideal_omega_at_wall(in FVCell cell)
+    double ideal_omega_at_wall(in FVCell cell, double d0)
     // As recommended by Wilson Chan, we use Menter's correction
     // for omega values at the wall. This appears as Eqn A12 in 
     // Menter's paper.
@@ -1231,18 +1239,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
     // AIAA Journal, 32:8, pp. 1598--1605
     {
 	auto wall_gas = cell.fs.gas;
-	double d0 = cell.half_cell_width_at_wall;
+	// Note: d0 is half_cell_width_at_wall.
 	double nu = wall_gas.mu / wall_gas.rho;
 	double beta1 = 0.075;
 	return 10 * (6 * nu) / (beta1 * d0 * d0);
-    }
-
-    @nogc
-    double ideal_omega(in FVCell cell)
-    {
-	double d0 = cell.half_cell_width_at_wall;
-	double d = cell.distance_to_nearest_wall;
-	return ideal_omega_at_wall(cell) * (d0 * d0) / ((d0 + d) * (d0 + d));
     }
 } // end class BIE_WallKOmega
 
@@ -1447,7 +1447,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	// Compute wall shear stess (and heat flux for fixed temperature wall) 
 	// using the surface stress tensor. This provides initial values to solve
 	// for tau_wall and q_wall iteratively
-	double wall_dist = cell.half_cell_width_at_wall;
+	double wall_dist = distance_between(cell.pos[0], IFace.pos);
 	double dudy = du / wall_dist;
 	double mu_lam_wall = IFace.fs.gas.mu;
 	double mu_lam = cell.fs.gas.mu;

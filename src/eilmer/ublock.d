@@ -858,39 +858,6 @@ public:
 	} // end switch flow_format
     } // end write_solution()
 
-    @nogc override void compute_distance_to_nearest_wall_for_all_cells(int gtl)
-    // Used for the turbulence modelling.
-    {
-	foreach (cell; cells) {
-	    double min_distance = 1.0e30; // something arbitrarily large; will be replaced
-	    double cell_half_width = 1.0;
-	    size_t cell_id_at_nearest_wall = 0; 
-	    foreach (bndry; grid.boundaries) {
-		auto nf = bndry.face_id_list.length;
-		foreach (j; 0 .. nf) {
-		    auto my_face = faces[bndry.face_id_list[j]];
-		    double distance = distance_between(cell.pos[gtl], my_face.pos);
-		    if (distance < min_distance) {
-			min_distance =  distance;
-			auto my_outsign = bndry.outsign_list[j];
-			if (my_outsign == 1) {
-			    auto inside0 = my_face.left_cell;
-			    cell_half_width = distance_between(inside0.pos[gtl], my_face.pos);
-			    cell_id_at_nearest_wall = inside0.id;
-			} else {
-			    auto inside0 = my_face.right_cell;
-			    cell_half_width = distance_between(inside0.pos[gtl], my_face.pos);
-			    cell_id_at_nearest_wall = inside0.id;
-			}
-		    }
-		}
-	    } // end foreach bndry
-	    cell.distance_to_nearest_wall = min_distance;
-	    cell.half_cell_width_at_wall = cell_half_width;
-	    cell.cell_at_nearest_wall = cells[cell_id_at_nearest_wall];
-	} // end foreach cell
-    } // end compute_distance_to_nearest_wall_for_all_cells()
-
     override void propagate_inflow_data_west_to_east()
     {
 	string msg = "propagate_inflow_data_west_to_east() " ~ 

@@ -418,7 +418,6 @@ final class GlobalConfig {
     shared static bool limit_tke_production = false;
     shared static double tke_production_limit_in_kelvins = 5.0;
     static BlockZone[] turbulent_zones;
-    static shared bool do_compute_distance_to_nearest_wall = false; // don't do this unless we really want
 
     // Indicate presence of user-defined source terms
     shared static string udf_source_terms_file = "dummy-source-terms.txt";
@@ -1353,10 +1352,6 @@ void configCheckPoint3()
 	    msg ~= " is incompatible with the k-omega turbulence model.";
 	    throw new FlowSolverException(msg);
 	}
-    }
-    // Switch on computing nearest distance to wall if using turbulence model.
-    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-	GlobalConfig.do_compute_distance_to_nearest_wall = true;
     }
     return;
 }

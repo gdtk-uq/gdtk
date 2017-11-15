@@ -71,9 +71,6 @@ public:
     // More geometry
     double[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
     double[] areaxy; // (x,y)-plane area for time-levels, m**2
-    double distance_to_nearest_wall; // for turbulence model correction.
-    double half_cell_width_at_wall;  // ditto
-    FVCell cell_at_nearest_wall;   // ditto
     // Flow
     // Although most do, some boundary conditions will not fill in
     // valid flow state data for the ghost cell. The following flag

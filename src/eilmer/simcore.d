@@ -133,9 +133,6 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
 	}
 	myblk.compute_primary_cell_geometric_data(0);
     }
-    if (GlobalConfig.do_compute_distance_to_nearest_wall) {
-	foreach (myblk; parallel(gasBlocks,1)) { myblk.compute_distance_to_nearest_wall_for_all_cells(0); }
-    }
     sim_time_array.length = gasBlocks.length;
     foreach (i, myblk; parallel(gasBlocks,1)) {
 	myblk.identify_reaction_zones(0);
@@ -525,9 +522,6 @@ void integrate_in_time(double target_time_as_requested)
 	    foreach (blk; gasBlocksBySize) {
 		if (blk.active) {
 		    blk.compute_primary_cell_geometric_data(0);
-		    if (GlobalConfig.do_compute_distance_to_nearest_wall) {
-			blk.compute_distance_to_nearest_wall_for_all_cells(0);
-		    }
 		    if ((blk.grid_type == Grid_t.unstructured_grid) &&
 			(blk.myConfig.interpolation_order > 1)) { 
 			blk.compute_least_squares_setup_for_reconstruction(0);
