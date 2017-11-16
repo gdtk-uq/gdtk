@@ -48,11 +48,13 @@ import gzip;
 import geom;
 import gas;
 import flowsolution;
+import onedinterp;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
 immutable double EPSILON = 1.0e-06;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
+immutable bool withFiniteDiffVerification = true;
 
 string adjointDir = "adjoint";
 
@@ -263,6 +265,11 @@ void main(string[] args) {
 	append("e4_adjoint_vars.dat", writer);
     }
 
+    // clear the global Jacobian from memory
+    globalJacobianT.aa = [];
+    globalJacobianT.ja = [];
+    globalJacobianT.ia = [];
+    
     // ---------------------------------------------------------------------
     // 4.a store stencils used in forming the mesh Jacobian 
     // ---------------------------------------------------------------------
@@ -299,69 +306,36 @@ void main(string[] args) {
     globaldRdXT.ia ~= globaldRdXT.aa.length;
     
     // -----------------------------------------------------
-    // form dX/dD -- mesh perturbation specific code
+    // 5. form dX/dD via finite-differences
     // -----------------------------------------------------
-    size_t nvar = 3; // number of design variables
-    size_t nsurfnodes = 101; // number of surface nodes
-    // sensitivity of mesh points to movements of the surface mesh points
-    Matrix dXdXb;
-    dXdXb = new Matrix(nvertices*ndim, nsurfnodes*ndim);
-    dXdXb.zeros();
-    foreach (blk; gasBlocks) {
-	SBlock sblk = cast(SBlock) blk;
-	foreach(vi, vtx; sblk.vertices) {
-	    ulong i; ulong j;
-	    j = vtx.id/(sblk.imax);
-	    i = vtx.id - j*(sblk.imax);
-	    foreach(vbi; 0..nsurfnodes) {
-		if (i == vbi) {
-		    double jmax = to!double(sblk.jmax);
-		    double jd = to!double(j);
-		    double entry = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0)); 
-		    //writeln(i, ", ", j, ", ", entry, ", ", 2*vi+1, ", ", 2*vbi+1);
-		    dXdXb[vi*ndim+1,vbi*ndim+1] = entry;
-		}
-	    }
-	}
-    }
-    // sensitivity of surface mesh points to movements of design variables
-    Matrix dXbdD;
-    dXbdD = new Matrix(nsurfnodes*ndim, nvar);
-    dXbdD.zeros();
-    // shape parameters
-    double scale = 1.5;
-    double b = 0.07;
-    double c = 0.8;
-    double d = 3.8;
-    foreach (blk; gasBlocks) {
-	SBlock sblk = cast(SBlock) blk;
-	foreach(vi; 0..nsurfnodes) {
-	    FVVertex vtx = sblk.get_vtx(vi+2,sblk.jmin,sblk.kmin);
-	    dXbdD[vi*ndim,0] = 0.0;
-	    dXbdD[vi*ndim,1] = 0.0;
-	    dXbdD[vi*ndim,2] = 0.0;
-	    dXbdD[vi*ndim+1,0] = tanh(d/scale) + tanh((c*vtx.pos[0].x - d)/scale);
-	    dXbdD[vi*ndim+1,1] = b*vtx.pos[0].x*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
-	    dXbdD[vi*ndim+1,2] = b*(-pow(tanh(d/scale),2) + 1)/scale - b*(-pow(tanh((c*vtx.pos[0].x - d)/scale),2) + 1)/scale;
-	}
-    } 
-    // sensitivity of mesh points to movements of the design variables
+    double[3] D = [0.07, 0.8, 3.8]; // array of design variables 
+    auto D0 = D;
+    size_t nvar = D.length; 
     Matrix dXdD;
     dXdD = new Matrix(nvertices*ndim, nvar);
-    //writeln(dXbdD);
-    //writeln("-------");
-    //writeln(dXdXb);
-    dot(dXdXb, dXbdD, dXdD);
-    //writeln("-------");
-    //writeln(dXdD);
-    // compute transposes
-    Matrix dXdD_T; //Matrix dRdX_T;
+    foreach (i; 0..D.length) {
+	foreach (myblk; parallel(gasBlocks,1)) {
+	    double dD = D[i]*EPSILON + EPSILON;
+	    D[i] = D0[i] + dD; 
+	    auto meshPp = perturbMesh(myblk, D);
+	    D[i] = D0[i] - dD; 
+	    auto meshPm = perturbMesh(myblk, D);
+	    foreach(j; 0..meshPm.length) {
+		dXdD[j*ndim,i] = (meshPp[j][0] - meshPm[j][0])/(2.0*dD);
+		dXdD[j*ndim+1,i] = (meshPp[j][1] - meshPm[j][1])/(2.0*dD);
+	    }
+	    D[i] = D0[i];
+	}
+    }
+    Matrix dXdD_T;
     dXdD_T = transpose(dXdD);
-    //dRdX_T = transpose(dRdX);
+    // -----------------------------------------------------
+    // 7. Compute adjoint gradients
+    // -----------------------------------------------------
+
     // temp matrix multiplication
     Matrix tempMatrix;
     tempMatrix = new Matrix(nvar, ncells*np);
-    //matrixMultiply(dXdD_T, dRdX_T, tempMatrix);
     for (int i = 0; i < nvar; i++) {
         for (int j = 0; j < np*ncells; j++) {
             tempMatrix[i,j] = 0;
@@ -370,412 +344,146 @@ void main(string[] args) {
 	    }
 	}
     }
-    // compute gradient
     double[3] grad;
-    dot(tempMatrix, psi, grad);
-    
+    dot(tempMatrix, psi, grad);    
     writeln("adjoint gradients [dLdB, dLdC, dLdD] = ", grad);
     
     // -----------------------------------------------------
     // Finite difference verification
     // -----------------------------------------------------
-    /*
-    // save original mesh
-    foreach (blk; gasBlocks) {
-    ensure_directory_is_present(make_path_name!"grid-original"(0));
-    auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-    blk.write_grid(fileName, 0.0, 0);
-    }
-    */
-    // read original grid in
-    foreach (blk; gasBlocks) { 
-    	//blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
-	ensure_directory_is_present(make_path_name!"grid-original"(0));
-	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
-    }
-    
 
+    if (withFiniteDiffVerification) {
     
-    //double J0 = 0.0;
-    //foreach (blk; gasBlocks) {
-    // 	foreach (i, cell; blk.cells) {
-    //	    J0 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
-    //	}
-    //}
-    
-    // perturb b +ve --------------------------------------------------------------------------------
-    double del_b = b*EPSILON + EPSILON;
-    b += del_b;
-    // perturb mesh
-    foreach (blk; gasBlocks) {
+	double J1; double J0;
+	
+	// read original grid in
+	foreach (blk; gasBlocks) { 
+	    //blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
+	    ensure_directory_is_present(make_path_name!"grid-original"(0));
+	    blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
+	}
+	// perturb b +ve --------------------------------------------------------------------------------
+	double del_b = D[0]*EPSILON + EPSILON;
+	D[0] = D0[0] + del_b;
+	J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+	// perturb b -ve --------------------------------------------------------------------------------
+	D[0] = D0[0] - del_b;
+	J0 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+	D[0] = D0[0];
+	double grad_b = (J1 -J0)/(2.0*del_b);
+	writeln("FD dLdB = ", grad_b, ", % error = ", abs((grad_b - grad[0])/grad_b * 100));
+	
+	// perturb c +ve --------------------------------------------------------------------------------
+	double del_c = D[1]*EPSILON + EPSILON;
+	D[1] = D0[1] + del_c;
+	J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+	// perturb c -ve --------------------------------------------------------------------------------
+	D[1] = D0[1] - del_c;
+	J0 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+	D[1] = D0[1];
+	double grad_c = (J1 -J0)/(2.0*del_c);
+	writeln("FD dLdC = ", grad_c, ", % error = ", abs((grad_c - grad[1])/grad_c * 100));
+	
+	// perturb d +ve --------------------------------------------------------------------------------
+	double del_d = D[2]*EPSILON + EPSILON;
+	D[2] = D0[2] + del_d;
+	J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+	// perturb d -ve --------------------------------------------------------------------------------
+	D[2] = D0[2] - del_d;
+	J0 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+	D[2] = D0[2];
+	double grad_d = (J1 -J0)/(2.0*del_d);
+	writeln("FD dLdD = ", grad_d, ", % error = ", abs((grad_d - grad[2])/grad_d * 100));
+    }
+    writeln("Simulation complete.");
+}
+
+double[][] perturbMesh(Block blk, double[] D) {
+    // compute new nozzle surface, and delta
+    SBlock sblk = cast(SBlock) blk;
+    double y0; double y1;
+    double[size_t] delta;
+    double scale = 1.5;
+    double b = D[0]; double c = D[1]; double d = D[2];
+    double yo = 0.105;
+    double a = yo - b*tanh(-d/scale);
+    for (size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
+	FVVertex vtx = sblk.get_vtx(i,sblk.jmax+1,0);
+	y0 = vtx.pos[0].refy;
+	y1 = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+	delta[i] = y1-y0;
+    }
+    double[][] meshP;
+    meshP.length = sblk.vertices.length;
+    // perturb mesh by linearly scaling the nozzle surface movement
+    size_t vtxID = 0;
+    for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
+	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
+	    meshP[vtxID].length = 2;
+	    double[2] point;
+	    FVVertex vtx = sblk.get_vtx(i,j,0);
+	    double jmax = to!double(sblk.jmax);
+	    double jd = to!double(j)-2.0;
+	    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
+	    point = [vtx.pos[0].refx, vtx.pos[0].refy+p*delta[i]];
+	    meshP[vtxID][0] = point[0];
+	    meshP[vtxID][1] = point[1];
+	    vtxID += 1;
+	}
+    }
+    return meshP;
+}
+
+double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks, double[] p_target, double[] D) {
+
+    foreach (blk; parallel(gasBlocks,1)) {
+	auto meshP = perturbMesh(blk, D);
 	SBlock sblk = cast(SBlock) blk;
-	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double delta;
-	    double y_old;
-	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
+	size_t vtxID = 0;
+	for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
+	    for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
 		FVVertex vtx = sblk.get_vtx(i,j,0);
-		//writeln(i, ", ", j, ", ", vtx.pos[0].x, ", ", vtx.pos[0].y);
-		y_old = vtx.pos[0].refy;
-		if (j == sblk.jmax+1) {
-		    double yo = 0.105;
-		    double a = yo - b*tanh(-d/scale);
-		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = y_new;
-		    delta = y_new - y_old;
-		    //writeln(j, ", ", sblk.jmax, ", ", delta, ", ", y_old, ", ", y_new);
-		} else {
-		    double jmax = to!double(sblk.jmax);
-		    double jd = to!double(j)-2.0;
-		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
-		    //writeln(i, ", ", j, ", ", jmax, ", ", jd, ", ", p);
-		    vtx.pos[0].refy += p*delta;
-		    //writeln(j, ", ", sblk.jmax, ", ", delta, ", ", vtx.pos[0].refy);
-		}
+		vtx.pos[0].refy = meshP[vtxID][1];
+		vtxID += 1;
 	    }
 	}
     }
+    
     // save mesh
-    foreach (blk; gasBlocks) {
+    foreach (blk; parallel(gasBlocks,1)) {
 	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
 	auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
 	blk.write_grid(fileName, 0.0, 0);
     }
-
+    
     // run simulation
     string command = "bash run-perturb.sh";
     auto output = executeShell(command);
-    //writeln(output[1]);
-    //int status = output[0];
-
-    foreach (blk; gasBlocks) {
+    
+    // read perturbed solution
+    foreach (blk; parallel(gasBlocks,1)) {
 	blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
     }
-    
-    double J1 = 0.0;
-    foreach (blk; gasBlocks) {
+
+    // compute cost function
+    double J = 0.0;
+    foreach (blk; parallel(gasBlocks,1)) {
 	foreach (i, cell; blk.cells) {
-	    J1 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
+	    J += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
 	}
     }
 
-    
     // read original grid in
-    foreach (blk; gasBlocks) { 
-    	//blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
+    foreach (blk; parallel(gasBlocks,1)) { 
 	ensure_directory_is_present(make_path_name!"grid-original"(0));
 	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
     }
-
+    
     // clear old simulation files
     string command0 = "bash clear.sh";
     output = executeShell(command0);
-    
-    // perturb b -ve --------------------------------------------------------------------------------
-    b -= 2.0*del_b;
-    // perturb mesh
-    foreach (blk; gasBlocks) {
-	SBlock sblk = cast(SBlock) blk;
-	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double delta;
-	    double y_old;
-	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
-		FVVertex vtx = sblk.get_vtx(i,j,0);
-		y_old = vtx.pos[0].refy;
-		if (j == sblk.jmax+1) {
-		    double yo = 0.105;
-		    double a = yo - b*tanh(-d/scale);
-		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = y_new;
-		    delta = y_new - y_old;
-		} else {
-		    double jmax = to!double(sblk.jmax);
-		    double jd = to!double(j)-2.0;
-		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
-		    vtx.pos[0].refy += p*delta;
-		}
-	    }
-	}
-    }
-    
-    // save mesh
-    foreach (blk; gasBlocks) {
-	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
-	auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.write_grid(fileName, 0.0, 0);
-    }
-    
-    // run simulation
-    output = executeShell(command);
-    //writeln(output[1]);
-    //int status = output[0];
 
-    foreach (blk; gasBlocks) {
-	blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
-    }
-    
-    double J0 = 0.0;
-    foreach (blk; gasBlocks) {
-	foreach (i, cell; blk.cells) {
-	    J0 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
-	}
-    }
-    //writef("%.16f, %.16f \n", J1, J0);
-    double grad_b = (J1 -J0)/(2.0*del_b);
-    writeln("FD dLdB = ", grad_b, ", % error = ", abs((grad_b - grad[0])/grad_b * 100));
-
-    // clear old simulation files
-    output = executeShell(command0);
-
-    // perturb c +ve --------------------------------------------------------------------------------
-    // read original grid in
-    foreach (blk; gasBlocks) { 
-    	//blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
-	ensure_directory_is_present(make_path_name!"grid-original"(0));
-	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
-    }
-
-    b += del_b; // return b to original state
-    double del_c = c*EPSILON + EPSILON;
-    c += del_c;
-    // perturb mesh
-    foreach (blk; gasBlocks) {
-	SBlock sblk = cast(SBlock) blk;
-	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double delta;
-	    double y_old;
-	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
-		FVVertex vtx = sblk.get_vtx(i,j,0);
-		y_old = vtx.pos[0].refy;
-		if (j == sblk.jmax+1) {
-		    double yo = 0.105;
-		    double a = yo - b*tanh(-d/scale);
-		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = y_new;
-		    delta = y_new - y_old;
-		} else {
-		    double jmax = to!double(sblk.jmax);
-		    double jd = to!double(j)-2.0;
-		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
-		    vtx.pos[0].refy += p*delta;
-		}
-	    }
-	}
-    }
-    // save mesh
-    foreach (blk; gasBlocks) {
-	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
-	auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.write_grid(fileName, 0.0, 0);
-    }
-
-    // run simulation
-    command = "bash run-perturb.sh";
-    output = executeShell(command);
-    //writeln(output[1]);
-    //int status = output[0];
-
-    foreach (blk; gasBlocks) {
-	blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
-    }
-    
-    J1 = 0.0;
-    foreach (blk; gasBlocks) {
-	foreach (i, cell; blk.cells) {
-	    J1 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
-	}
-    }
-
-    
-    // read original grid in
-    foreach (blk; gasBlocks) { 
-    	//blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
-	ensure_directory_is_present(make_path_name!"grid-original"(0));
-	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
-    }
-
-    // clear old simulation files
-    command0 = "bash clear.sh";
-    output = executeShell(command0);
-    
-    // perturb c -ve --------------------------------------------------------------------------------
-    c -= 2.0*del_c;
-    // perturb mesh
-    foreach (blk; gasBlocks) {
-	SBlock sblk = cast(SBlock) blk;
-	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double delta;
-	    double y_old;
-	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
-		FVVertex vtx = sblk.get_vtx(i,j,0);
-		y_old = vtx.pos[0].refy;
-		if (j == sblk.jmax+1) {
-		    double yo = 0.105;
-		    double a = yo - b*tanh(-d/scale);
-		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = y_new;
-		    delta = y_new - y_old;
-		} else {
-		    double jmax = to!double(sblk.jmax);
-		    double jd = to!double(j)-2.0;
-		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
-		    vtx.pos[0].refy += p*delta;
-		}
-	    }
-	}
-    }
-    
-    // save mesh
-    foreach (blk; gasBlocks) {
-	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
-	auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.write_grid(fileName, 0.0, 0);
-    }
-    
-    // run simulation
-    output = executeShell(command);
-    //writeln(output[1]);
-    //int status = output[0];
-
-    foreach (blk; gasBlocks) {
-	blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
-    }
-    
-    J0 = 0.0;
-    foreach (blk; gasBlocks) {
-	foreach (i, cell; blk.cells) {
-	    J0 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
-	}
-    }
-    //writef("%.16f, %.16f \n", J1, J0);
-    double grad_c = (J1-J0)/(2.0*del_c);
-    writeln("FD dLdC = ", grad_c, ", % error = ", abs((grad_c - grad[1])/grad_c * 100));
-
-    output = executeShell(command0);
-    
-    // perturb d +ve --------------------------------------------------------------------------------
-    // read original grid in
-    foreach (blk; gasBlocks) { 
-    	//blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
-	ensure_directory_is_present(make_path_name!"grid-original"(0));
-	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
-    }
-
-    c += del_c; // return c to original state
-    double del_d = d*EPSILON + EPSILON;
-    d += del_d;
-    // perturb mesh
-    foreach (blk; gasBlocks) {
-	SBlock sblk = cast(SBlock) blk;
-	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double delta;
-	    double y_old;
-	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
-		FVVertex vtx = sblk.get_vtx(i,j,0);
-		y_old = vtx.pos[0].refy;
-		if (j == sblk.jmax+1) {
-		    double yo = 0.105;
-		    double a = yo - b*tanh(-d/scale);
-		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = y_new;
-		    delta = y_new - y_old;
-		} else {
-		    double jmax = to!double(sblk.jmax);
-		    double jd = to!double(j)-2.0;
-		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
-		    vtx.pos[0].refy += p*delta;
-		}
-	    }
-	}
-    }
-    // save mesh
-    foreach (blk; gasBlocks) {
-	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
-	auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.write_grid(fileName, 0.0, 0);
-    }
-
-    // run simulation
-    command = "bash run-perturb.sh";
-    output = executeShell(command);
-    //writeln(output[1]);
-    //int status = output[0];
-
-    foreach (blk; gasBlocks) {
-	blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
-    }
-    
-    J1 = 0.0;
-    foreach (blk; gasBlocks) {
-	foreach (i, cell; blk.cells) {
-	    J1 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
-	}
-    }
-
-    
-    // read original grid in
-    foreach (blk; gasBlocks) { 
-    	//blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
-	ensure_directory_is_present(make_path_name!"grid-original"(0));
-	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
-    }
-
-    // clear old simulation files
-    command0 = "bash clear.sh";
-    output = executeShell(command0);
-    
-    // perturb c -ve --------------------------------------------------------------------------------
-    d -= 2.0*del_d;
-        // perturb mesh
-    foreach (blk; gasBlocks) {
-	SBlock sblk = cast(SBlock) blk;
-	for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-	    double delta;
-	    double y_old;
-	    for ( size_t j = sblk.jmax+1; j >= sblk.jmin; --j ) {
-		FVVertex vtx = sblk.get_vtx(i,j,0);
-		y_old = vtx.pos[0].refy;
-		if (j == sblk.jmax+1) {
-		    double yo = 0.105;
-		    double a = yo - b*tanh(-d/scale);
-		    double y_new = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-		    vtx.pos[0].refy = y_new;
-		    delta = y_new - y_old;
-		} else {
-		    double jmax = to!double(sblk.jmax);
-		    double jd = to!double(j)-2.0;
-		    double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
-		    vtx.pos[0].refy += p*delta;
-		}
-	    }
-	}
-    }
-    // save mesh
-    foreach (blk; gasBlocks) {
-	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
-	auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.write_grid(fileName, 0.0, 0);
-    }
-    
-    // run simulation
-    output = executeShell(command);
-    //writeln(output[1]);
-    //int status = output[0];
-
-    foreach (blk; gasBlocks) {
-	blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
-    }
-    
-    J0 = 0.0;
-    foreach (blk; gasBlocks) {
-	foreach (i, cell; blk.cells) {
-	    J0 += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
-	}
-    }
-    //writef("%.16f, %.16f \n", J1, J0);
-    double grad_d = (J1-J0)/(2.0*del_d);
-    writeln("FD dLdD = ", grad_d, ", % error = ", abs((grad_d - grad[2])/grad_d * 100));
-    
-    writeln("Done simulation.");
+    return J;
 }
 
 void construct_residual_jacobian(Block blk, size_t ndim, size_t np) {
@@ -848,32 +556,31 @@ void construct_residual_jacobian(Block blk, size_t ndim, size_t np) {
 
 void construct_flow_jacobian_stencils(Block blk) {
     /++
-     + This stencil holds references to the cells effected by a 
+     
+     This stencil holds references to the cells effected by a 
      perturbation in the parent cell.
-     + For inviscid simulations, stencils are made up of the cells used in the
+     
+     For inviscid simulations, stencils are made up of the cells used in the
      reconstruction step for each of the cells interfaces.
-     + For viscous simulations, stencils are made up of the inviscid stencil, plus
+     
+     For viscous simulations, stencils are made up of the inviscid stencil, plus
      any cells that are additionally used in the viscous flux computations.
-     + NB. we need the stencils in cell id order, so that we can sequentially fill
+     
+     NB. we need the stencils in cell id order, so that we can sequentially fill
      a row in the transposed Jacobian in Compressed Row Storage format.
-
-     TODO: high order interpolation
+     
      ++/
     foreach(c; blk.cells) {
 	FVCell[] refs_ordered;
 	FVCell[] refs_unordered;
-	size_t[size_t] pos_array;
-	// pos_array is a dictionary which uses the cell id
-	// as an index to retrieve the array position in refs_unordered
+	size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
 	size_t[] cell_ids;
 
-	// add the parent cell as the first reference
-	refs_unordered ~= c;
-	pos_array[c.id] = refs_unordered.length-1;
-	cell_ids ~= c.id;
-
-	// now fill out the rest of rest stencil
 	if (blk.myConfig.interpolation_order < 2) { 
+	    // add the parent cell as the first reference
+	    refs_unordered ~= c;
+	    pos_array[c.id] = refs_unordered.length-1;
+	    cell_ids ~= c.id;
 	    foreach(f; c.iface) {
 		if (f.left_cell.id != c.id && f.left_cell.id < ghost_cell_start_id) {
 		    refs_unordered ~= f.left_cell;
@@ -884,63 +591,35 @@ void construct_flow_jacobian_stencils(Block blk) {
 		    refs_unordered ~= f.right_cell;
 		    pos_array[f.right_cell.id] = refs_unordered.length-1;
 		    cell_ids ~= f.right_cell.id;
-		}
-	    }
-	}
+		} else continue;
+	    } // end foreach
+	} // end if interpolation order < 2
 	else { // higher-order interpolation
 	    if (blk.grid_type == Grid_t.structured_grid) {
+		// add the parent cell as the first reference
+		refs_unordered ~= c;
+		pos_array[c.id] = refs_unordered.length-1;
+		cell_ids ~= c.id;
 		//throw new Error("adjoint: 2nd order interpolation for structured_grid() not yet implemented");
 		SBlock sblk = cast(SBlock) blk;
 		FVCell c0;
 		size_t[3] ijk = sblk.cell_id_to_ijk_indices(c.id);
 		size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
-		c0 = sblk.get_cell(i-2, j, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
-		}
-		c0 = sblk.get_cell(i-1, j, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
-		}
-		c0 = sblk.get_cell(i+1, j, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
-		}
-		c0 = sblk.get_cell(i+2, j, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
-		}
-		c0 = sblk.get_cell(i, j-2, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
-		}
-		c0 = sblk.get_cell(i, j-1, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
-		}
-		c0 = sblk.get_cell(i, j+1, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
-		}
-		c0 = sblk.get_cell(i, j+2, k);
-		if (c0.id < ghost_cell_start_id) {
-		    refs_unordered ~= c0;
-		    pos_array[c0.id] = refs_unordered.length-1;
-		    cell_ids ~= c0.id;
+		FVCell[] cells;
+		cells ~= sblk.get_cell(i-2, j, k);
+		cells ~= sblk.get_cell(i-1, j, k);
+		cells ~= sblk.get_cell(i+1, j, k);
+		cells ~= sblk.get_cell(i+2, j, k);
+		cells ~= sblk.get_cell(i, j-2, k);
+		cells ~= sblk.get_cell(i, j-1, k);
+		cells ~= sblk.get_cell(i, j+1, k);
+		cells ~= sblk.get_cell(i, j+2, k);
+		foreach(cell; cells) {
+		    if (cell.id < ghost_cell_start_id) {
+			refs_unordered ~= cell;
+			pos_array[cell.id] = refs_unordered.length-1;
+			cell_ids ~= cell.id;
+		    } else continue;
 		}
 	    }
 	    else { // unstructured grid
@@ -958,22 +637,65 @@ void construct_flow_jacobian_stencils(Block blk) {
  
 void construct_mesh_jacobian_stencils(Block blk) {
     /++
-     + This stencil holds references to the cells effected by a 
-     perturbation in the parent vertice.
-     + NB. we need the stencils in cell id order, so that we can sequentially fill
-     a row in the transposed Jacobian in Compressed Row Storage format -- fortuitosly
-     the cellIndexListPerVertex is already in the correct order.
+     
+     This stencil holds references to the cells effected by a 
+     perturbation in the parent vertex.
+     
+     NB. we need the stencils in cell id order, so that we can sequentially fill
+     a row in the transposed Jacobian in Compressed Row Storage format.
+     
      ++/
     
-    foreach(i, vtx; blk.vertices) {
-	FVCell[] cell_refs;
-	foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
-	    cell_refs ~= blk.cells[cid];
+    if (blk.myConfig.interpolation_order < 2) { // first-order
+	foreach(i, vtx; blk.vertices) {
+	    FVCell[] cell_refs;
+	    foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
+		cell_refs ~= blk.cells[cid];
+	    }
+	    vtx.jacobian_stencil ~= cell_refs;
 	}
-	vtx.jacobian_stencil ~= cell_refs;
+    } else { // higher-order interpolation
+	FVCell[] refs_ordered;
+	FVCell[] refs_unordered;
+	size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
+	size_t[] cell_ids;
+	if (blk.grid_type == Grid_t.structured_grid) {
+	    SBlock sblk = cast(SBlock) blk;
+	    foreach(vtx; blk.vertices) {
+		foreach (cid; sblk.cellIndexListPerVertex[vtx.id]) {
+		    size_t[3] ijk = sblk.cell_id_to_ijk_indices(cid);
+		    size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2];  
+		    FVCell[] cells;
+		    cells ~= sblk.get_cell(i, j, k);
+		    cells ~= sblk.get_cell(i-1, j, k);
+		    cells ~= sblk.get_cell(i-2, j, k);
+		    cells ~= sblk.get_cell(i+1, j, k);
+		    cells ~= sblk.get_cell(i+2, j, k);
+		    cells ~= sblk.get_cell(i, j-1, k);
+		    cells ~= sblk.get_cell(i, j-2, k);
+		    cells ~= sblk.get_cell(i, j+1, k);
+		    cells ~= sblk.get_cell(i, j+2, k);
+		    foreach(c; cells) {
+			if (cell_ids.canFind(c.id) == false && c.id < ghost_cell_start_id) {
+			    refs_unordered ~= c;
+			    pos_array[c.id] = refs_unordered.length-1;
+			    cell_ids ~= c.id;
+			} else continue;
+		    }
+		}
+		cell_ids.sort();
+		foreach(id; cell_ids) {
+		    refs_ordered ~= refs_unordered[pos_array[id]];
+		}
+		vtx.jacobian_stencil ~= refs_ordered;
+	    }
+	}
+	else { // unstructured grid
+	    throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+	}
     }
 }
- 
+
 void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
@@ -1099,22 +821,108 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
 }
 
 void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
-    FVCell cellL;
-    FVCell cellR;
-    // apply cell effect bcs ------------------
-    if (iface.is_on_boundary) {
+    /++
+     This method computes a perturbed flux at a given interface. 
+
+     NB. The accuracy of the adjoint solver is largely dependent on how well this
+     routine replicates the flow solver flux update procedures.
+     ++/
+    
+    // pre-reconstrucion stage
+    if (iface.is_on_boundary) { // only apply bc's for cells on boundary
 	blk.applyPreReconAction(0.0, 0, 0);  // assume sim_time = 0.0, gtl = 0, ftl = 0
     }
-    // compute interflux ------------------
-    cellR = iface.right_cell;
-    cellL = iface.left_cell;
-    blk.Lft.copy_values_from(cellL.fs);
-    blk.Rght.copy_values_from(cellR.fs);
-    compute_interface_flux(blk.Lft, blk.Rght, iface, blk.myConfig, blk.omegaz);
-    // apply interface effect bcs ------------------
-    if (iface.is_on_boundary) {
-	blk.applyPostConvFluxAction(0.0, 0, 0);
+
+    // Convective flux update
+    if (blk.grid_type == Grid_t.structured_grid) {
+	// we need to cast an SBlock here to reach some methods and data
+	SBlock sblk = cast(SBlock) blk;
+	// create a workspace for the one_d interpolator
+	OneDInterpolator one_d;
+	one_d = new OneDInterpolator(dedicatedConfig[sblk.id]);
+	size_t imin = sblk.imin; size_t imax = sblk.imax; size_t jmin = sblk.jmin; size_t jmax = sblk.jmax;
+	foreach(faceIdentity, face; iface.left_cell.iface) { // use of left_cell is arbitrary -- could use right_cell
+	    if (face == iface) {
+		if (faceIdentity == 1 || faceIdentity == 3) { // east-facing faces 
+		    // get iface ijk indices
+		    size_t[3] ijk;
+		    size_t i; size_t j; size_t k; 
+		    if (iface.left_cell.id < ghost_cell_start_id) {
+			ijk = sblk.cell_id_to_ijk_indices(iface.left_cell.id);
+			if (faceIdentity == 1) i = ijk[0]+1;
+			if (faceIdentity == 3) i = ijk[0];
+			j = ijk[1]; k = ijk[2];
+		    }
+		    else {
+			ijk = sblk.cell_id_to_ijk_indices(iface.right_cell.id);
+			if (faceIdentity == 1) i = ijk[0]+1-1;
+			if (faceIdentity == 3) i = ijk[0]-1;
+			j = ijk[1]; k = ijk[2];
+		    }
+		    auto cL0 = sblk.get_cell(i-1,j,k); auto cL1 = sblk.get_cell(i-2,j,k);
+		    auto cR0 = sblk.get_cell(i,j,k); auto cR1 = sblk.get_cell(i+1,j,k);
+		    if ((i == imin) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
+			sblk.Lft.copy_values_from(cR0.fs); sblk.Rght.copy_values_from(cR0.fs);
+		    } else if ((i == imin+1) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
+			one_d.interp_right(iface, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
+		    } else if ((i == imax) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
+			one_d.interp_left(iface, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, sblk.Lft, sblk.Rght);
+		    } else if ((i == imax+1) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
+			sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
+		    } else { // General symmetric reconstruction.
+			one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
+		    }
+		    iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
+		    if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) continue;
+		    if ((i == imax+1) && (sblk.bc[Face.east].convective_flux_computed_in_bc == true)) continue;
+		    compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
+		}
+		else if (faceIdentity == 0 || faceIdentity == 2) { // north-facing faces 
+		    // get iface ijk indices
+		    size_t[3] ijk;
+		    size_t i; size_t j; size_t k; 
+		    if (iface.left_cell.id < ghost_cell_start_id) {
+			ijk = sblk.cell_id_to_ijk_indices(iface.left_cell.id);
+			if (faceIdentity == 0) j = ijk[1]+1;
+			if (faceIdentity == 2) j = ijk[1];
+			i = ijk[0]; k = ijk[2];
+		    }
+		    else {
+			ijk = sblk.cell_id_to_ijk_indices(iface.right_cell.id);
+			if (faceIdentity == 0) j = ijk[1]+1-1;
+			if (faceIdentity == 2) j = ijk[1]-1;
+			i = ijk[0]; k = ijk[2];
+		    }
+		    auto cL0 = sblk.get_cell(i,j-1,k); auto cL1 = sblk.get_cell(i,j-2,k);
+		    auto cR0 = sblk.get_cell(i,j,k); auto cR1 = sblk.get_cell(i,j+1,k);
+		    if ((j == jmin) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
+			sblk.Lft.copy_values_from(cR0.fs); sblk.Rght.copy_values_from(cR0.fs);
+		    } else if ((j == jmin+1) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
+			one_d.interp_right(iface, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
+		    } else if ((j == jmax) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
+			one_d.interp_left(iface, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, sblk.Lft, sblk.Rght);
+		    } else if ((j == jmax+1) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
+			sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
+ 		    } else { // General symmetric reconstruction.
+ 			one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
+ 		    }
+		    iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
+		    if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) continue;
+		    if ((j == jmax+1) && (sblk.bc[Face.north].convective_flux_computed_in_bc == true)) continue;
+		    compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
+		}
+	    }
+	}
     }
+    else { // unstructured grid
+	throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+    }
+    
+    if (iface.is_on_boundary) {
+	blk.applyPostConvFluxAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
+    }
+
+    // copy perturbed flux
     ifaceP.copy_values_from(iface, CopyDataOption.all);
 }
 
@@ -1127,7 +935,8 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
     codeStr ~= "ifacePm = new FVInterface(dedicatedConfig[blk.id], false);";
     codeStr ~= "h = cell.fs."~varName~" * EPSILON + EPSILON;";
     codeStr ~= "cellOrig.copy_values_from(cell, CopyDataOption.all);";
-    codeStr ~= "foreach(iface; cell.iface) {";
+    codeStr ~= "foreach(stencilCell; cell.jacobian_stencil) {";
+    codeStr ~= "foreach(iface; stencilCell.iface) {";
     codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
     // ------------------ negative perturbation ------------------
     codeStr ~= "cell.fs."~varName~" -= h;";
@@ -1154,6 +963,7 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
     // ------------------ restore original values ------------------
     codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
     codeStr ~= "cell.copy_values_from(cellOrig, CopyDataOption.all);";
+    codeStr ~= "}";
     codeStr ~= "}";
     return codeStr;
 }
@@ -1197,20 +1007,18 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "ifacePm = new FVInterface(dedicatedConfig[blk.id], false);";
     codeStr ~= "ifaceOrig = new FVInterface(dedicatedConfig[blk.id], false);";
     codeStr ~= "h = vtx."~varName~" * EPSILON + EPSILON;";
-    codeStr ~= "foreach (faceid; blk.faceIndexListPerVertex[vtx.id]) { ";
-    codeStr ~= "FVInterface iface = blk.faces[faceid];";
+    codeStr ~= "foreach (stencilCell; vtx.jacobian_stencil) {";
+    codeStr ~= "foreach (iface; stencilCell.iface) { ";
     codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
     // ------------------ negative perturbation ------------------
     codeStr ~= "vtx."~varName~" -= h;";
-    codeStr ~= "iface.right_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "iface.left_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (cell; vtx.jacobian_stencil) cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePm);";
     codeStr ~= "vtx."~varName~" += h;";
     // ------------------ positive perturbation ------------------
     codeStr ~= "vtx."~varName~" += h;";
-    codeStr ~= "iface.right_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "iface.left_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (cell; vtx.jacobian_stencil) cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePp);";
     codeStr ~= "vtx."~varName~" -= h;";
@@ -1225,11 +1033,10 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
     codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
     // ------------------ restore original values ------------------
-    codeStr ~= "iface.right_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "iface.left_cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (cell; vtx.jacobian_stencil) cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "}";
-
+    codeStr ~= "}";
     return codeStr;
 }
 
