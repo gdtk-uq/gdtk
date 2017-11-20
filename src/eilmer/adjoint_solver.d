@@ -355,7 +355,7 @@ void main(string[] args) {
 
     if (withFiniteDiffVerification) {
     
-	double J1; double J0; double EPSILON0 = 1.0e-06;
+	double J1; double J0; double EPSILON0 = 1.0e-07;
 	
 	// read original grid in
 	foreach (blk; gasBlocks) { 
@@ -840,17 +840,14 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
      ++/
     
     // pre-reconstrucion stage
-    if (iface.is_on_boundary) { // only apply bc's for cells on boundary
-	blk.applyPreReconAction(0.0, 0, 0);  // assume sim_time = 0.0, gtl = 0, ftl = 0
-    }
+    //if (iface.is_on_boundary) { // only apply bc's for cells on boundary
+    blk.applyPreReconAction(0.0, 0, 0);  // assume sim_time = 0.0, gtl = 0, ftl = 0
+    //}
 
     // Convective flux update
     if (blk.grid_type == Grid_t.structured_grid) {
 	// we need to cast an SBlock here to reach some methods and data
 	SBlock sblk = cast(SBlock) blk;
-	// create a workspace for the one_d interpolator
-	OneDInterpolator one_d;
-	one_d = new OneDInterpolator(dedicatedConfig[sblk.id]);
 	size_t imin = sblk.imin; size_t imax = sblk.imax; size_t jmin = sblk.jmin; size_t jmax = sblk.jmax;
 	foreach(faceIdentity, face; iface.left_cell.iface) { // use of left_cell is arbitrary -- could use right_cell
 	    if (face == iface) {
@@ -875,13 +872,13 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
 		    if ((i == imin) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
 			sblk.Lft.copy_values_from(cR0.fs); sblk.Rght.copy_values_from(cR0.fs);
 		    } else if ((i == imin+1) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
-			one_d.interp_right(iface, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
+			sblk.one_d.interp_right(iface, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
 		    } else if ((i == imax) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
-			one_d.interp_left(iface, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, sblk.Lft, sblk.Rght);
+			sblk.one_d.interp_left(iface, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, sblk.Lft, sblk.Rght);
 		    } else if ((i == imax+1) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
 			sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
 		    } else { // General symmetric reconstruction.
-			one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
+			sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
 		    }
 		    iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
 		    if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) continue;
@@ -909,13 +906,13 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
 		    if ((j == jmin) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
 			sblk.Lft.copy_values_from(cR0.fs); sblk.Rght.copy_values_from(cR0.fs);
 		    } else if ((j == jmin+1) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
-			one_d.interp_right(iface, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
+			sblk.one_d.interp_right(iface, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
 		    } else if ((j == jmax) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
-			one_d.interp_left(iface, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, sblk.Lft, sblk.Rght);
+			sblk.one_d.interp_left(iface, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, sblk.Lft, sblk.Rght);
 		    } else if ((j == jmax+1) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
 			sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
  		    } else { // General symmetric reconstruction.
- 			one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
+ 			sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
  		    }
 		    iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
 		    if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) continue;
@@ -929,9 +926,9 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
 	throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
     }
     
-    if (iface.is_on_boundary) {
-	blk.applyPostConvFluxAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-    }
+    //if (iface.is_on_boundary) {
+    blk.applyPostConvFluxAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
+	//}
 
     // copy perturbed flux
     ifaceP.copy_values_from(iface, CopyDataOption.all);
@@ -1016,18 +1013,14 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
     // ------------------ negative perturbation ------------------
     codeStr ~= "vtx."~varName~" -= h;";
-    codeStr ~= "foreach (cell; vtx.jacobian_stencil) {";
-    codeStr ~= "cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "foreach(face; cell.iface) face.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "}";
+    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePm);";
     codeStr ~= "vtx."~varName~" += h;";
     // ------------------ positive perturbation ------------------
     codeStr ~= "vtx."~varName~" += h;";
-    codeStr ~= "foreach (cell; vtx.jacobian_stencil) {";
-    codeStr ~= "cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "foreach(face; cell.iface) face.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "}";
+    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePp);";
     codeStr ~= "vtx."~varName~" -= h;";
     // ------------------ compute interface flux derivatives ------------------
@@ -1041,10 +1034,8 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
     codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
     // ------------------ restore original values ------------------
-    codeStr ~= "foreach (cell; vtx.jacobian_stencil) {";
-    codeStr ~= "cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "foreach(face; cell.iface) face.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "}";
+    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "}";
     codeStr ~= "}";
     return codeStr;
