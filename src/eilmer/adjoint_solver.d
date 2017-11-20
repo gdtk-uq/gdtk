@@ -10,6 +10,7 @@
 **/
 
 import core.stdc.stdlib : exit;
+import core.memory;
 import std.stdio;
 import std.file;
 import std.format;
@@ -52,7 +53,8 @@ import onedinterp;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
-immutable double EPSILON = 1.0e-06;
+immutable double EPSILON = 1.0e-4;
+immutable double MU = 1.0e-4;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
 immutable bool withFiniteDiffVerification = true;
 
@@ -153,7 +155,7 @@ void main(string[] args) {
     }
 
     foreach (myblk; parallel(gasBlocks,1)) {
-	construct_residual_jacobian(myblk, ndim, np);
+	construct_flow_jacobian(myblk, ndim, np);
     }
 
     // ------------------------------------------------------------
@@ -175,7 +177,6 @@ void main(string[] args) {
 	myblk.ja = [];
     }
     globalJacobianT.ia ~= globalJacobianT.aa.length;
-
     // -----------------------------------------------------
     // 2. Form cost function sensitvity
     // -----------------------------------------------------
@@ -194,7 +195,6 @@ void main(string[] args) {
 	auto tokens = lineContent.split();
 	p_target ~= to!double(tokens[8]);
     }
-	
     writeln("target pressure imported");
     foreach (blk; gasBlocks) {
 	foreach(i, cell; blk.cells) {
@@ -266,10 +266,8 @@ void main(string[] args) {
     }
 
     // clear the global Jacobian from memory
-    globalJacobianT.aa = [];
-    globalJacobianT.ja = [];
-    globalJacobianT.ia = [];
-    
+    destroy(globalJacobianT);
+    GC.minimize();
     // ---------------------------------------------------------------------
     // 4.a store stencils used in forming the mesh Jacobian 
     // ---------------------------------------------------------------------
@@ -277,7 +275,6 @@ void main(string[] args) {
     foreach (myblk; parallel(gasBlocks,1)) {
 	construct_mesh_jacobian_stencils(myblk);
     }
-
     // ------------------------------------------------------------
     // 4.b construct local mesh Jacobian via Frechet derivatives
     // ------------------------------------------------------------
@@ -304,31 +301,29 @@ void main(string[] args) {
 	myblk.ja = [];
     }
     globaldRdXT.ia ~= globaldRdXT.aa.length;
-    
     // -----------------------------------------------------
     // 5. form dX/dD via finite-differences
     // -----------------------------------------------------
     double[3] D = [0.07, 0.8, 3.8]; // array of design variables 
     auto D0 = D;
     size_t nvar = D.length; 
-    Matrix dXdD;
-    dXdD = new Matrix(nvertices*ndim, nvar);
+    Matrix dXdD_T;
+    dXdD_T = new Matrix(nvar, nvertices*ndim);
     foreach (i; 0..D.length) {
 	foreach (myblk; parallel(gasBlocks,1)) {
-	    double dD = D[i]*EPSILON + EPSILON;
+	    double dD = (abs(D[i]) + MU)*EPSILON;
 	    D[i] = D0[i] + dD; 
 	    auto meshPp = perturbMesh(myblk, D);
 	    D[i] = D0[i] - dD; 
 	    auto meshPm = perturbMesh(myblk, D);
 	    foreach(j; 0..meshPm.length) {
-		dXdD[j*ndim,i] = (meshPp[j][0] - meshPm[j][0])/(2.0*dD);
-		dXdD[j*ndim+1,i] = (meshPp[j][1] - meshPm[j][1])/(2.0*dD);
+		dXdD_T[i, j*ndim] = (meshPp[j][0] - meshPm[j][0])/(2.0*dD);
+		dXdD_T[i, j*ndim+1] = (meshPp[j][1] - meshPm[j][1])/(2.0*dD);
 	    }
 	    D[i] = D0[i];
 	}
     }
-    Matrix dXdD_T;
-    dXdD_T = transpose(dXdD);
+
     // -----------------------------------------------------
     // 7. Compute adjoint gradients
     // -----------------------------------------------------
@@ -347,6 +342,12 @@ void main(string[] args) {
     double[3] grad;
     dot(tempMatrix, psi, grad);    
     writeln("adjoint gradients [dLdB, dLdC, dLdD] = ", grad);
+
+    // clear the sensitivity matrices from memory
+    destroy(globaldRdXT);
+    destroy(dXdD_T);
+    destroy(tempMatrix);
+    GC.minimize();
     
     // -----------------------------------------------------
     // Finite difference verification
@@ -354,7 +355,7 @@ void main(string[] args) {
 
     if (withFiniteDiffVerification) {
     
-	double J1; double J0;
+	double J1; double J0; double EPSILON0 = 1.0e-06;
 	
 	// read original grid in
 	foreach (blk; gasBlocks) { 
@@ -363,7 +364,7 @@ void main(string[] args) {
 	    blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
 	}
 	// perturb b +ve --------------------------------------------------------------------------------
-	double del_b = D[0]*EPSILON + EPSILON;
+	double del_b = EPSILON0;
 	D[0] = D0[0] + del_b;
 	J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
 	// perturb b -ve --------------------------------------------------------------------------------
@@ -374,7 +375,7 @@ void main(string[] args) {
 	writeln("FD dLdB = ", grad_b, ", % error = ", abs((grad_b - grad[0])/grad_b * 100));
 	
 	// perturb c +ve --------------------------------------------------------------------------------
-	double del_c = D[1]*EPSILON + EPSILON;
+	double del_c = EPSILON0;
 	D[1] = D0[1] + del_c;
 	J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
 	// perturb c -ve --------------------------------------------------------------------------------
@@ -385,7 +386,7 @@ void main(string[] args) {
 	writeln("FD dLdC = ", grad_c, ", % error = ", abs((grad_c - grad[1])/grad_c * 100));
 	
 	// perturb d +ve --------------------------------------------------------------------------------
-	double del_d = D[2]*EPSILON + EPSILON;
+	double del_d = EPSILON0;
 	D[2] = D0[2] + del_d;
 	J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
 	// perturb d -ve --------------------------------------------------------------------------------
@@ -486,7 +487,7 @@ double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks,
     return J;
 }
 
-void construct_residual_jacobian(Block blk, size_t ndim, size_t np) {
+void construct_flow_jacobian(Block blk, size_t ndim, size_t np) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
      Row Storage (CSR) format.     
@@ -503,11 +504,16 @@ void construct_residual_jacobian(Block blk, size_t ndim, size_t np) {
     FVCell cellOrig; FVCell cellL; FVCell cellR;
     FVInterface ifaceOrig; FVInterface ifacePp; FVInterface ifacePm;
     double h; double diff;
+
+    cellOrig = new FVCell(dedicatedConfig[blk.id]);
+    ifaceOrig = new FVInterface(dedicatedConfig[blk.id], false);
+    ifacePp = new FVInterface(dedicatedConfig[blk.id], false);
+    ifacePm = new FVInterface(dedicatedConfig[blk.id], false);
+
     foreach(i; 0..np*ncells) {
 	blk.aa ~= [null];
 	blk.ja ~= [null];
     }
-
     foreach(ci, cell; blk.cells) {
 	// 0th perturbation: rho
 	mixin(computeFluxFlowVariableDerivativesAroundCell("gas.rho", "0", true));
@@ -655,13 +661,13 @@ void construct_mesh_jacobian_stencils(Block blk) {
 	    vtx.jacobian_stencil ~= cell_refs;
 	}
     } else { // higher-order interpolation
-	FVCell[] refs_ordered;
-	FVCell[] refs_unordered;
-	size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
-	size_t[] cell_ids;
 	if (blk.grid_type == Grid_t.structured_grid) {
 	    SBlock sblk = cast(SBlock) blk;
 	    foreach(vtx; blk.vertices) {
+		FVCell[] refs_ordered;
+		FVCell[] refs_unordered;
+		size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
+		size_t[] cell_ids;
 		foreach (cid; sblk.cellIndexListPerVertex[vtx.id]) {
 		    size_t[3] ijk = sblk.cell_id_to_ijk_indices(cid);
 		    size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2];  
@@ -713,11 +719,18 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
     FVCell cellOrig; FVCell cellL; FVCell cellR;
     FVInterface ifaceOrig; FVInterface ifacePp; FVInterface ifacePm;
     double h; double diff;
+
+    cellOrig = new FVCell(dedicatedConfig[blk.id]);
+    ifaceOrig = new FVInterface(dedicatedConfig[blk.id], false);
+    ifacePp = new FVInterface(dedicatedConfig[blk.id], false);
+    ifacePm = new FVInterface(dedicatedConfig[blk.id], false);
+
     foreach(i; 0..np*ncells) {
 	blk.aa ~= [null];
 	blk.ja ~= [null];
     }
 
+    blk.clear_fluxes_of_conserved_quantities();
     blk.applyPreReconAction(0.0, 0, 0);
     blk.convective_flux_phase0();
     blk.convective_flux_phase1();
@@ -732,7 +745,7 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
 	// -----------------------------------------------------
 	// at this point we can use the vertex counter vi to access
 	// the correct stencil
-	foreach(c; vtx.jacobian_stencil) {
+	foreach(ci, c; vtx.jacobian_stencil) {
 	    size_t I, J; // indices in Jacobian matrix
 	    double integral;
 	    double volInv = 1.0 / c.volume[0];
@@ -752,28 +765,28 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
 		    // 2. dRdA * dAdX ---------------------------
 		    integral = 0.0;
 		    double dAdX; double A0; double A1;
-		    if (ip == 0 ) {
+		    if (ip == 0 ) { // mass
 			foreach(fi, iface; c.iface) {
 			    if (jp == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
 			    else if (jp == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
 			    integral -= c.outsign[fi]*iface.F.mass*dAdX;
 			}
 		    }
-		    else if (ip == 1) {
+		    else if (ip == 1) { // x-momentum
 			foreach(fi, iface; c.iface) {
 			    if (jp == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
 			    else if (jp == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
 			    integral -= c.outsign[fi]*iface.F.momentum.x*dAdX;
 			}
 		    }
-		    else if (ip == 2) {
+		    else if (ip == 2) { // y-momentum
 			foreach(fi, iface; c.iface){
 			    if (jp == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
 			    else if (jp == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
 			    integral -= c.outsign[fi]*iface.F.momentum.y*dAdX;
 			}
 		    }
-		    else if (ip == 3) {
+		    else if (ip == 3) { // total energy
 			foreach(fi, iface; c.iface){
 			    if (jp == 0) mixin(computeInterfaceAreaSensitivity("pos[0].refx"));  // x-dimension
 			    else if (jp == 1) mixin(computeInterfaceAreaSensitivity("pos[0].refy")); // y-dimension
@@ -785,22 +798,20 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
 		    // 3. dRdV * dVdX ---------------------------
 		    double dVdX; double V0; double V1;
 		    integral = 0.0;
-		    if (ip == 0 ) {
+		    if (ip == 0 ) { // mass
 			foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.mass*iface.area[0]; }
 		    }
-		    else if (ip == 1) {
+		    else if (ip == 1) { // x-momentum
 			foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.momentum.x*iface.area[0]; }
 		    }
-		    else if (ip == 2) {
+		    else if (ip == 2) { // y-momentum
 			foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.momentum.y*iface.area[0]; }
 		    }
-		    else if (ip == 3) {
+		    else if (ip == 3) { // total energy
 			foreach(fi, iface; c.iface) { integral -= c.outsign[fi]*iface.F.total_energy*iface.area[0]; }
 		    }
 		    if (jp == 0) mixin(computeCellVolumeSensitivity("pos[0].refx")); // x-dimension
 		    else if (jp == 1) mixin(computeCellVolumeSensitivity("pos[0].refy")); // y-dimension
-		    //dVdX = (V1-V0)/(2*h);
-		    //dRdX[I,J] -= volInv*volInv*integral * dVdX;
 		    JacEntry -= volInv*volInv*integral * dVdX;
 		    if (JacEntry != 0.0) {
 			blk.aa[J] ~= JacEntry;
@@ -817,7 +828,7 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
 		}
 	    }
 	}
-    } // end foreach cell
+    } // end foreach vtx
 }
 
 void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
@@ -929,11 +940,7 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
 string computeFluxFlowVariableDerivativesAroundCell(string varName, string posInArray, bool includeThermoUpdate)
 {
     string codeStr;
-    codeStr ~= "cellOrig = new FVCell(dedicatedConfig[blk.id]);";
-    codeStr ~= "ifaceOrig = new FVInterface(dedicatedConfig[blk.id], false);";
-    codeStr ~= "ifacePp = new FVInterface(dedicatedConfig[blk.id], false);";
-    codeStr ~= "ifacePm = new FVInterface(dedicatedConfig[blk.id], false);";
-    codeStr ~= "h = cell.fs."~varName~" * EPSILON + EPSILON;";
+    codeStr ~= "h = (abs(cell.fs."~varName~") + MU) * EPSILON;";
     codeStr ~= "cellOrig.copy_values_from(cell, CopyDataOption.all);";
     codeStr ~= "foreach(stencilCell; cell.jacobian_stencil) {";
     codeStr ~= "foreach(iface; stencilCell.iface) {";
@@ -971,7 +978,7 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
 string computeCellVolumeSensitivity(string varName)
 {
     string codeStr;
-    codeStr ~= "h = vtx."~varName~" * EPSILON + EPSILON;";
+    codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
     codeStr ~= "vtx."~varName~" += h;";
     codeStr ~= "c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "V1 = c.volume[0];";
@@ -987,7 +994,7 @@ string computeCellVolumeSensitivity(string varName)
 string computeInterfaceAreaSensitivity(string varName)
 {
     string codeStr;
-    codeStr ~= "h = vtx."~varName~" * EPSILON + EPSILON;";
+    codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
     codeStr ~= "vtx."~varName~" += h;";
     codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "A1 = iface.area[0];";
@@ -1003,23 +1010,24 @@ string computeInterfaceAreaSensitivity(string varName)
 string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArray)
 {
     string codeStr;
-    codeStr ~= "ifacePp = new FVInterface(dedicatedConfig[blk.id], false);";
-    codeStr ~= "ifacePm = new FVInterface(dedicatedConfig[blk.id], false);";
-    codeStr ~= "ifaceOrig = new FVInterface(dedicatedConfig[blk.id], false);";
-    codeStr ~= "h = vtx."~varName~" * EPSILON + EPSILON;";
+    codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
     codeStr ~= "foreach (stencilCell; vtx.jacobian_stencil) {";
     codeStr ~= "foreach (iface; stencilCell.iface) { ";
     codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
     // ------------------ negative perturbation ------------------
     codeStr ~= "vtx."~varName~" -= h;";
-    codeStr ~= "foreach (cell; vtx.jacobian_stencil) cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (cell; vtx.jacobian_stencil) {";
+    codeStr ~= "cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach(face; cell.iface) face.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "}";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePm);";
     codeStr ~= "vtx."~varName~" += h;";
     // ------------------ positive perturbation ------------------
     codeStr ~= "vtx."~varName~" += h;";
-    codeStr ~= "foreach (cell; vtx.jacobian_stencil) cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (cell; vtx.jacobian_stencil) {";
+    codeStr ~= "cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach(face; cell.iface) face.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "}";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePp);";
     codeStr ~= "vtx."~varName~" -= h;";
     // ------------------ compute interface flux derivatives ------------------
@@ -1033,8 +1041,10 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
     codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
     // ------------------ restore original values ------------------
-    codeStr ~= "foreach (cell; vtx.jacobian_stencil) cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach (cell; vtx.jacobian_stencil) {";
+    codeStr ~= "cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "foreach(face; cell.iface) face.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "}";
     codeStr ~= "}";
     codeStr ~= "}";
     return codeStr;

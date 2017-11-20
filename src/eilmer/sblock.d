@@ -58,6 +58,10 @@ public:
     size_t jmin, jmax;
     size_t kmin, kmax;
 
+    // Work-space that gets reused.
+    // The following objects are used in the convective_flux method.
+    OneDInterpolator one_d;
+    
 private:
     StructuredGrid grid; // for reading and writing
     // Total number of cells in each direction for this block.
@@ -81,9 +85,6 @@ private:
     FVInterface[] _sifi;
     FVInterface[] _sifj;
     FVInterface[] _sifk;
-    // Work-space that gets reused.
-    // The following objects are used in the convective_flux method.
-    OneDInterpolator one_d;
 
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
