@@ -392,7 +392,7 @@ public:
 	double Twall_prev_backup = IFace.fs.gas.Ttr;
     double q_total, q_total_prev, q_total_prev_backup = 0.0;
     size_t Twall_iteration_count;
-    int iteration_check, subiteration_check = 0;
+    //int iteration_check, subiteration_check = 0;
     // IFace orientation
     double nx = IFace.n.x; double ny = IFace.n.y; double nz = IFace.n.z;
     // IFace properties.
@@ -436,25 +436,27 @@ public:
 
 	    // Calculate thermal conductivity 
     	k_eff = viscous_factor * (IFace.fs.gas.k + IFace.fs.k_t);
+
     	// Temperature gradient of cell centred value, to the present wall temperature
     	dTdn = dT / dn;
     	// Break up into components to remove mass diffusion Cartesian components
     	dTdnx = dTdn*nx; dTdny = dTdn*ny; dTdnz = dTdn*nz; 
     	qx = k_eff*dTdnx; qy = k_eff*dTdny; qz = k_eff*dTdnz; 
 
-		// Apply molecular diffusion for the present laminar flow
-		foreach (isp; 0 .. n_species) {
-		    jx[isp] *= viscous_factor;
-		    jy[isp] *= viscous_factor;
-		    jz[isp] *= viscous_factor;
-		}
-		// Subtract mass diffusion contribution to heat transfer
-		foreach (isp; 0 .. n_species) {
-			h = gmodel.enthalpy(IFace.fs.gas, to!int(isp));
-			qx -= jx[isp] * h;
-			qy -= jy[isp] * h;
-			qz -= jz[isp] * h;
-		}
+		//// Apply molecular diffusion for the present laminar flow
+		//foreach (isp; 0 .. n_species) {
+		//    jx[isp] *= viscous_factor;
+		//    jy[isp] *= viscous_factor;
+		//    jz[isp] *= viscous_factor;
+		//}
+		//// Subtract mass diffusion contribution to heat transfer
+		//foreach (isp; 0 .. n_species) {
+		//	h = gmodel.enthalpy(IFace.fs.gas, to!int(isp));
+		//	qx -= jx[isp] * h;
+		//	qy -= jy[isp] * h;
+		//	qz -= jz[isp] * h;
+		//}
+		//printf("%.4g\n", qx);
 
 		// Don't nest pow functions. It is very slow....
 		q_total = pow(qx*qx + qy*qy + qz*qz, 0.5);
@@ -468,7 +470,7 @@ public:
 	    if ( fabs((q_total - q_total_prev)/q_total) < tolerance) {
 			//printf("Convergence reached\n");
 		 //   printf("Twall = %.4g\n", Twall);
-		    //printf("Calculated q_rad out = %.4g\n", pow(Twall,4)*emissivity*SB_sigma);
+		 //   printf("Calculated q_rad out = %.4g\n", pow(Twall,4)*emissivity*SB_sigma);
 		 //   printf("cell.fs.gas.Ttr = %.4g\n", cell.fs.gas.Ttr);
 		 //   printf("q_total = %.4g\n", q_total);
 		 //   printf("q_total_prev = %.4g\n", q_total_prev);
@@ -489,7 +491,7 @@ public:
 		    grad.Ttr[0] = dTdnx;
 		    grad.Ttr[1] = dTdny;
 		    grad.Ttr[2] = dTdnz;
-		    iteration_check = 1;
+		    //iteration_check = 1;
 	    	break;
 		}
 
@@ -504,7 +506,7 @@ public:
 	    		f_drv = f_rad*4/Twall_0 + Ar*exp(-phi/(kb*Twall_0))/(Qe*kb)*(phi*(phi + 2*kb*Twall_0) + 2*kb*Twall_0*(phi + 3*kb*Twall_0));
 	    		Twall_1 = Twall_0 - (f_rad + f_thermionic - q_total)/f_drv;
 	    		if (fabs((Twall_1 - Twall_0))/Twall_0 <= 0.001) {
-	    			subiteration_check = 1;
+	    			//subiteration_check = 1;
 	    			break;
 	    		}
 	    		Twall_0 = Twall_1;
@@ -519,16 +521,16 @@ public:
     	q_total_prev_backup = q_total_prev;
     	q_total_prev = q_total;
 	}
-	if (iteration_check == 0){
-		printf("Iteration's didn't converge\n");
-        printf("Increase Twall_iterations from default 200 value\n");
-        printf("\n");
+	//if (iteration_check == 0){
+	//	printf("Iteration's didn't converge\n");
+ //       printf("Increase Twall_iterations from default 200 value\n");
+ //       printf("\n");
 
-	} else if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
-		printf("Subiteration's didn't converge\n");
-        printf("Increase Twall_subiterations from default 20 value\n");
-        printf("\n");
-	}
+	//} else if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
+	//	printf("Subiteration's didn't converge\n");
+ //       printf("Increase Twall_subiterations from default 20 value\n");
+ //       printf("\n");
+	//}
 return;
     } // end solve_for_wall_temperature()
 } // end class BIE_EnergyBalanceThermionic
