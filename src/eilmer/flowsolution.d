@@ -521,7 +521,18 @@ public:
     void add_aux_variables(string[] addVarsList)
     // Adds variables to the data for each cell.
     {
-	GasState Q = new GasState(GlobalConfig.gmodel_master);
+	GasModel gmodel = GlobalConfig.gmodel_master;
+	GasState Q = new GasState(gmodel);
+	// Gather massf species names in a list for later use as keys.
+	string[] massf_names;
+	foreach (isp; 0 .. gmodel.n_species) {
+	    auto name = cast(char[]) gmodel.species_name(to!int(isp));
+	    name = tr(name, " \t", "--", "s");
+	    massf_names ~= "massf[" ~ to!string(isp) ~ "]-" ~ to!string(name);
+	}
+	double[] molef; // mole-fractions may be needed
+	double[] conc; // concentrations or number-densities may be needed
+	//
 	// We assume a lot about the data that has been read in so,
 	// we need to skip this function if all is not in place
 	bool ok_to_proceed = true;
@@ -538,6 +549,8 @@ public:
 	bool add_total_h = canFind(addVarsList, "total-h");
 	bool add_total_T = canFind(addVarsList, "total-T");
 	bool add_entropy = canFind(addVarsList, "entropy");
+	bool add_molef = canFind(addVarsList, "molef");
+	bool add_conc = canFind(addVarsList, "conc"); // concentrations
 	//
 	if (add_mach) {
 	    variableNames ~= "M_local";
@@ -562,6 +575,22 @@ public:
 	if (add_entropy) {
 	    variableNames ~= "entropy";
 	    variableIndex["entropy"] = variableNames.length - 1;
+	}
+	if (add_molef) {
+	    molef.length = gmodel.n_species;
+	    foreach (name; massf_names) {
+		string new_name = name.replaceAll(regex("massf"), "molef");
+		variableNames ~= new_name;
+		variableIndex[new_name] = variableNames.length - 1;
+	    }
+	}
+	if (add_conc) {
+	    conc.length = gmodel.n_species;
+	    foreach (name; massf_names) {
+		string new_name = name.replaceAll(regex("massf"), "conc");
+		variableNames ~= new_name;
+		variableIndex[new_name] = variableNames.length - 1;
+	    }
 	}
 	//
 	// Be careful to add auxiliary variable values in the code below 
@@ -616,15 +645,27 @@ public:
 	    }
 	    if (add_entropy) {
 		foreach (isp; 0 .. Q.massf.length) {
-		    auto name = cast(char[]) GlobalConfig.gmodel_master.species_name(to!int(isp));
-		    name = tr(name, " \t", "--", "s");
-		    string key = "massf[" ~ to!string(isp) ~ "]-" ~ to!string(name);
-		    Q.massf[isp] = _data[i][variableIndex[key]];
+		    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
 		}
-		Q.p = p;
-		Q.Ttr = T;
-		double entropy = GlobalConfig.gmodel_master.entropy(Q);
+		Q.p = p; Q.Ttr = T;
+		double entropy = gmodel.entropy(Q);
 		_data[i] ~= entropy;
+	    }
+	    if (add_molef) {
+		foreach (isp; 0 .. Q.massf.length) {
+		    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
+		}
+		Q.p = p; Q.rho = rho; Q.Ttr = T;
+		gmodel.massf2molef(Q, molef);
+		foreach (mf; molef) { _data[i] ~= mf; }
+	    }
+	    if (add_conc) {
+		foreach (isp; 0 .. Q.massf.length) {
+		    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
+		}
+		Q.p = p; Q.rho = rho; Q.Ttr = T;
+		gmodel.massf2conc(Q, conc);
+		foreach (c; conc) { _data[i] ~= c; }
 	    }
 	} // foreach i
     } // end add_aux_variables()
