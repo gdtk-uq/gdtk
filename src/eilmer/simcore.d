@@ -132,6 +132,9 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
 	}
 	myblk.compute_primary_cell_geometric_data(0);
     }
+    foreach (i, myblk; gasBlocks) {
+	myblk.globalCellIdStart = (i == 0) ? 0 : gasBlocks[i-1].globalCellIdStart + gasBlocks[i-1].cells.length;
+    }
     sim_time_array.length = gasBlocks.length;
     foreach (i, myblk; parallel(gasBlocks,1)) {
 	myblk.identify_reaction_zones(0);

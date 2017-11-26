@@ -66,6 +66,8 @@ public:
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
     //
+    size_t globalCellIdStart = 0; // needed to compute globalCellId
+    //
     // Sometimes we need to look up cells and faces that are attached to a vertex.
     size_t[][] cellIndexListPerVertex;
     size_t[][] faceIndexListPerVertex;
@@ -140,11 +142,11 @@ public:
 	lua_close(myL);
     }
 
-    @nogc abstract int get_interpolation_order();
-    @nogc void set_interpolation_order(int order);
-
     override string toString() const { return "Block(id=" ~ to!string(id) ~ ")"; }
+    @nogc size_t globalCellId(size_t localCellId) { return globalCellIdStart + localCellId; }
 
+    @nogc abstract int get_interpolation_order();
+    @nogc abstract void set_interpolation_order(int order);
     abstract void init_lua_globals();
     abstract void init_boundary_conditions(JSONValue json_data);
     @nogc abstract ref FVCell get_cell(size_t i, size_t j, size_t k=0);
