@@ -1,5 +1,7 @@
 # makefile for the Numerical Methods package
-# Builds all of the demonstration programs
+#
+# We can specify the LDC2 compiler as DMD=ldmd2 on the command-line
+# when invoking this makefile.  Can also ask for gdc.
 DMD ?= dmd
 PLATFORM ?= linux
 
@@ -48,40 +50,29 @@ ifeq ($(DMD), gdc)
     DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl
 endif
 
-demo: ${DEMO_PROGRAMS}
-	echo "Demo codes built."
+# ----------------------------------------------------------------------
+# Here begins the list of targets, starting with the top-level actions.
+#
+# The default target is test, because that is most likely your interest
+# if you are invoking this makefile from within the gas models directory.
+# ----------------------------------------------------------------------
 
 test: ${TEST_PROGRAMS}
 	tclsh nm-package-test.tcl
+
+demo: ${DEMO_PROGRAMS}
+	echo "Demo codes built."
 
 clean:
 	- rm *.o
 	- rm ${DEMO_PROGRAMS}
 	- rm ${TEST_PROGRAMS}
+	- cd $(LUA); make clean
+
+# Specific targets, for individual artefacts.
 
 $(LIBLUA):
 	cd $(LUA); make linux local
-
-ridder_demo: ridder_demo.d ridder.d bracketing.d
-	dmd -g ridder_demo.d ridder.d bracketing.d
-
-linesearch_demo: linesearch_demo.d linesearch.d
-	dmd -g linesearch_demo.d linesearch.d
-
-nelmin_demo: nelmin_demo.d nelmin.d
-	dmd -g nelmin_demo.d nelmin.d
-
-rungekutta_demo: rungekutta_demo.d rungekutta.d
-	dmd -g rungekutta_demo.d rungekutta.d
-
-newtoncotes_demo: newtoncotes_demo.d newtoncotes.d
-	dmd -g newtoncotes_demo.d newtoncotes.d
-
-gaussquad_demo: gaussquad_demo.d gaussquad.d
-	dmd -g gaussquad_demo.d gaussquad.d
-
-bbla_demo: bbla_demo.d bbla.d
-	dmd -g bbla_demo.d bbla.d
 
 bbla_test: bbla.d $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
@@ -126,3 +117,28 @@ rsla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 luabbla_test: luabbla.d bbla.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
 	dmd -of$@ -debug -g -w -version=$@ \
 		luabbla.d bbla.d $(UTIL_FILES) $(DLINKFLAGS)
+
+# Some demo targets. These are left over from the early days of development.
+# They should continue to work and provide a minimal example of how to get
+# going with particular modules.
+
+ridder_demo: ridder_demo.d ridder.d bracketing.d
+	dmd -g ridder_demo.d ridder.d bracketing.d
+
+linesearch_demo: linesearch_demo.d linesearch.d
+	dmd -g linesearch_demo.d linesearch.d
+
+nelmin_demo: nelmin_demo.d nelmin.d
+	dmd -g nelmin_demo.d nelmin.d
+
+rungekutta_demo: rungekutta_demo.d rungekutta.d
+	dmd -g rungekutta_demo.d rungekutta.d
+
+newtoncotes_demo: newtoncotes_demo.d newtoncotes.d
+	dmd -g newtoncotes_demo.d newtoncotes.d
+
+gaussquad_demo: gaussquad_demo.d gaussquad.d
+	dmd -g gaussquad_demo.d gaussquad.d
+
+bbla_demo: bbla_demo.d bbla.d
+	dmd -g bbla_demo.d bbla.d
