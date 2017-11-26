@@ -1,8 +1,11 @@
 /**
- * geom_demo.d Demonstrate some of the behaviour of the geometric primitives.
+ * vector3_demo.d
+ * Demonstrate some of the behaviour of the geometric primitives.
  *
  * Author: Peter J.
- * Version: 2014-06-16
+ * Version: 
+ *  2014-06-16
+ *  2017-11-26: Refactor package.        
  */
 
 import std.stdio;

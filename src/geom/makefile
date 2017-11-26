@@ -7,7 +7,7 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
-DEMO_PROGRAMS := geom_demo gpath_demo surface_demo volume_demo \
+DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
 	luaunifunction_demo \
@@ -74,65 +74,50 @@ foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(N
 	dmd $(DFLAGS_LUA) foamMesh_with_rev_string.d $(OF)foamMesh \
 	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA) 
 
-sketch_demo: sketch_demo.d sketch.d svg.d geom.d gpath.d surface.d volume.d \
-	grid.d sgrid.d usgrid.d paver.d univariatefunctions.d $(NM_FILES)
+sketch_demo: sketch_demo.d $(GEOM_D_FILES) $(NM_FILES)
 	dmd $(DFLAGS) sketch_demo.d $(OF)sketch_demo \
-		sketch.d svg.d geom.d gpath.d surface.d volume.d \
-		grid.d sgrid.d usgrid.d paver.d univariatefunctions.d \
-		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 svg_demo: svg_demo.d svg.d
 	dmd $(DFLAGS) svg_demo.d $(OF)svg_demo svg.d $(DLINKFLAGS)
 
-geom_demo: geom_demo.d geom.d
-	dmd $(DFLAGS) geom_demo.d $(OF)geom_demo \
-		geom.d $(DLINKFLAGS)
+vector3_demo: elements/vector3_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) elements/vector3_demo.d $(OF)vector3_demo \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-gpath_demo: gpath_demo.d gpath.d geom.d $(NM_FILES)
+gpath_demo: gpath_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) gpath_demo.d $(OF)gpath_demo \
-		gpath.d geom.d $(NM_FILES) $(DLINKFLAGS)
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-surface_demo: surface_demo.d volume.d grid.d sgrid.d usgrid.d paver.d surface.d gpath.d geom.d \
-	univariatefunctions.d $(NM_FILES)
+surface_demo: surface_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) surface_demo.d $(OF)surface_demo \
-		grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
-		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-volume_demo: volume_demo.d grid.d sgrid.d paver.d usgrid.d volume.d surface.d gpath.d geom.d \
-	univariatefunctions.d $(NM_FILES)
+volume_demo: volume_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) volume_demo.d $(OF)volume_demo \
-		grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d univariatefunctions.d \
-		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 univariatefunctions_demo: univariatefunctions_demo.d univariatefunctions.d
 	dmd $(DFLAGS) univariatefunctions_demo.d $(OF)univariatefunctions_demo \
 		univariatefunctions.d $(DLINKFLAGS)
 
-sgrid_demo: sgrid_demo.d grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d \
-	univariatefunctions.d \
-	$(GZIP_FILES) $(NM_FILES)
+sgrid_demo: sgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) sgrid_demo.d $(OF)sgrid_demo \
-		grid.d sgrid.d usgrid.d paver.d volume.d surface.d gpath.d geom.d \
-		univariatefunctions.d \
-		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-usgrid_demo: usgrid_demo.d grid.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
-	univariatefunctions.d \
-	$(GZIP_FILES) $(NM_FILES)
+usgrid_demo: usgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) usgrid_demo.d $(OF)usgrid_demo \
-		grid.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
-		univariatefunctions.d \
-		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+		 $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-luageom_demo: luageom_demo.d luageom.d geom.d $(LIBLUA)
+luageom_demo: luageom_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	dmd $(DFLAGS_LUA) luageom_demo.d $(OF)luageom_demo \
-		luageom.d geom.d $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
+		$(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luagpath_demo: luagpath_demo.d luagpath.d luageom.d geom.d gpath.d \
-	$(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+luagpath_demo: luagpath_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	dmd $(DFLAGS_LUA) luagpath_demo.d $(OF)luagpath_demo \
-		luagpath.d luageom.d geom.d gpath.d \
-		$(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
+		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
+		$(UTIL_FILES) $(DLINKFLAGS_LUA)
 
 luasurface_demo: luasurface_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
 	dmd $(DFLAGS_LUA) luasurface_demo.d $(OF)luasurface_demo \
@@ -160,11 +145,7 @@ luausgrid_demo: luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_
 	dmd $(DFLAGS_LUA) luausgrid_demo.d $(OF)luausgrid_demo \
 		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-paver_demo: paver_demo.d usgrid.d paver.d grid.d sgrid.d volume.d surface.d \
-	gpath.d geom.d univariatefunctions.d \
-	$(GZIP_FILES) $(NM_FILES)
+paver_demo: paver_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) paver_demo.d $(OF)paver_demo \
-		grid.d usgrid.d paver.d sgrid.d volume.d surface.d gpath.d geom.d \
-		univariatefunctions.d \
-		$(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
