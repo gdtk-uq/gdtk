@@ -134,7 +134,7 @@ print("circle=", circle)
 print("circle(5.0/8)=", circle(5.0/8))
 --
 print("Spline2 (Polyline)")
-circle2 = Spline2:new{filename="test-spline2.dat"}
+circle2 = Spline2:new{filename="sample-data/test-spline2.dat"}
 print("circle2=", circle2)
 print("circle2(5.0/8)=", circle2(5.0/8))
 --
