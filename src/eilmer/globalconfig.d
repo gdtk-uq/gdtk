@@ -26,8 +26,7 @@ import lua_helper;
 import gas;
 import kinetics;
 import geom;
-import luageom;
-import grid;
+import geom.luawrap;
 import fvcore;
 version (opencl_gpu_chem) {
     import opencl_gpu_chem;

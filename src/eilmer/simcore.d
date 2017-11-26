@@ -24,7 +24,6 @@ import util.lua;
 import util.lua_service;
 import fileutil;
 import geom;
-import grid;
 import gas;
 import fvcore;
 import globalconfig;

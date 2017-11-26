@@ -13,8 +13,6 @@ import nm.bbla;
 import util.lua_service;
 import gas.luagas_model;
 import geom;
-import grid;
-import sgrid;
 import gas;
 import kinetics;
 import globalconfig;

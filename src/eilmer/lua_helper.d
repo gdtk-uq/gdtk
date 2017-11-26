@@ -13,8 +13,8 @@ import std.conv;
 import std.string;
 import util.lua;
 
-import grid;
 import gas;
+import geom: gridTypeName, Grid_t;
 import fvcell;
 import fvinterface;
 import luaflowstate;

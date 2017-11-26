@@ -15,7 +15,6 @@ import std.stdio;
 import std.math;
 
 import geom;
-import grid;
 import json_helper;
 import globalconfig;
 import globaldata;

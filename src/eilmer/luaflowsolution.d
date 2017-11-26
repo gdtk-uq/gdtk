@@ -19,9 +19,7 @@ import util.lua;
 import util.lua_service;
 import globalconfig;
 import geom;
-import luageom;
-import sgrid;
-import luasgrid;
+import geom.luawrap;
 import flowsolution;
 import postprocess;
 

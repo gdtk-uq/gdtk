@@ -11,7 +11,6 @@ import std.file;
 import std.algorithm;
 
 import geom;
-import grid;
 import json_helper;
 import globalconfig;
 import globaldata;

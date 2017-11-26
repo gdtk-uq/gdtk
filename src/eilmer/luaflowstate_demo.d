@@ -9,7 +9,7 @@
 import std.stdio;
 
 import util.lua;
-import luageom;
+import geom.luawrap;
 import luaflowstate;
 import luaglobalconfig;
 

@@ -21,8 +21,6 @@ import json_helper;
 import lua_helper;
 import gzip;
 import geom;
-import grid;
-import sgrid;
 import gas;
 import kinetics;
 import globalconfig;

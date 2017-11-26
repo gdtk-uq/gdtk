@@ -25,8 +25,6 @@ import gzip;
 import fvcore;
 import fileutil;
 import geom;
-import sgrid;
-import grid;
 import gas;
 import globalconfig;
 import flowsolution;

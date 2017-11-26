@@ -22,8 +22,6 @@ import geom;
 import gas;
 import fvcore;
 import fvcell;
-import sgrid;
-import usgrid;
 import globalconfig;
 
 class FlowState {

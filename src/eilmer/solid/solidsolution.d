@@ -25,7 +25,6 @@ import util.lua;
 import geom;
 import gzip;
 import fileutil;
-import sgrid;
 import globalconfig;
 
 class SolidSolution {

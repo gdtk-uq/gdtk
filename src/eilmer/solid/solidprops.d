@@ -14,7 +14,6 @@ import std.json;
 
 import json_helper;
 import geom;
-import sgrid;
 import globalconfig;
 import solidfvcell;
 

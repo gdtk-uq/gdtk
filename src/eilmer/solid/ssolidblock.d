@@ -17,7 +17,6 @@ import util.lua;
 import json_helper;
 import gzip;
 import geom;
-import sgrid;
 import globalconfig;
 import block;
 import sblock;

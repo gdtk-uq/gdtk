@@ -13,7 +13,6 @@ import fvcore: FlowSolverException;
 import fvcell;
 import fvinterface;
 import geom;
-import grid;
 import block;
 import sblock: SBlock;
 import globaldata;

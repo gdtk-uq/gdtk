@@ -19,8 +19,6 @@ import gas.luagas_model;
 import nm.luabbla;
 import json_helper;
 import geom;
-import grid: Grid_t;
-import sgrid;
 import fvcore;
 import globalconfig;
 import globaldata;

@@ -13,9 +13,8 @@ import lua_helper;
 import fvcore;
 import globalconfig;
 import globaldata;
-import luageom;
-import grid;
-import sgrid;
+import geom;
+import geom.luawrap;
 import block;
 import std.stdio;
 

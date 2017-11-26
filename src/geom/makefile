@@ -74,12 +74,12 @@ foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(N
 	dmd $(DFLAGS_LUA) foamMesh_with_rev_string.d $(OF)foamMesh \
 	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA) 
 
-sketch_demo: sketch_demo.d $(GEOM_D_FILES) $(NM_FILES)
-	dmd $(DFLAGS) sketch_demo.d $(OF)sketch_demo \
+sketch_demo: misc/sketch_demo.d $(GEOM_D_FILES) $(NM_FILES)
+	dmd $(DFLAGS) misc/sketch_demo.d $(OF)sketch_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-svg_demo: svg_demo.d svg.d
-	dmd $(DFLAGS) svg_demo.d $(OF)svg_demo svg.d $(DLINKFLAGS)
+svg_demo: misc/svg_demo.d misc/svg.d
+	dmd $(DFLAGS) misc/svg_demo.d $(OF)svg_demo misc/svg.d $(DLINKFLAGS)
 
 vector3_demo: elements/vector3_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) elements/vector3_demo.d $(OF)vector3_demo \
@@ -89,63 +89,63 @@ gpath_demo: gpath/gpath_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) gpath/gpath_demo.d $(OF)gpath_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-surface_demo: surface_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
-	dmd $(DFLAGS) surface_demo.d $(OF)surface_demo \
+surface_demo: surface/surface_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) surface/surface_demo.d $(OF)surface_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-volume_demo: volume_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
-	dmd $(DFLAGS) volume_demo.d $(OF)volume_demo \
+volume_demo: volume/volume_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) volume/volume_demo.d $(OF)volume_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-univariatefunctions_demo: univariatefunctions_demo.d univariatefunctions.d
-	dmd $(DFLAGS) univariatefunctions_demo.d $(OF)univariatefunctions_demo \
-		univariatefunctions.d $(DLINKFLAGS)
+univariatefunctions_demo: misc/univariatefunctions_demo.d misc/univariatefunctions.d
+	dmd $(DFLAGS) misc/univariatefunctions_demo.d $(OF)univariatefunctions_demo \
+		misc/univariatefunctions.d $(DLINKFLAGS)
 
-sgrid_demo: sgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
-	dmd $(DFLAGS) sgrid_demo.d $(OF)sgrid_demo \
+sgrid_demo: grid/sgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) grid/sgrid_demo.d $(OF)sgrid_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-usgrid_demo: usgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
-	dmd $(DFLAGS) usgrid_demo.d $(OF)usgrid_demo \
+usgrid_demo: grid/usgrid_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) grid/usgrid_demo.d $(OF)usgrid_demo \
 		 $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-luageom_demo: luageom_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
-	dmd $(DFLAGS_LUA) luageom_demo.d $(OF)luageom_demo \
+luageom_demo: luawrap/luageom_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+	dmd $(DFLAGS_LUA) luawrap/luageom_demo.d $(OF)luageom_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
 		$(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luagpath_demo: luagpath_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
-	dmd $(DFLAGS_LUA) luagpath_demo.d $(OF)luagpath_demo \
+luagpath_demo: luawrap/luagpath_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+	dmd $(DFLAGS_LUA) luawrap/luagpath_demo.d $(OF)luagpath_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) \
 		$(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luasurface_demo: luasurface_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
-	dmd $(DFLAGS_LUA) luasurface_demo.d $(OF)luasurface_demo \
+luasurface_demo: luawrap/luasurface_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+	dmd $(DFLAGS_LUA) luawrap/luasurface_demo.d $(OF)luasurface_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luasketch_demo: luasketch_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
-	dmd $(DFLAGS_LUA) luasketch_demo.d $(OF)luasketch_demo \
+luasketch_demo: luawrap/luasketch_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+	dmd $(DFLAGS_LUA) luawrap/luasketch_demo.d $(OF)luasketch_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luavolume_demo: luavolume_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
-	dmd $(DFLAGS_LUA) luavolume_demo.d $(OF)luavolume_demo \
+luavolume_demo: luawrap/luavolume_demo.d $(GEOM_FILES) $(NM_FILES) $(UTIL_FILES) $(LIBLUA)
+	dmd $(DFLAGS_LUA) luawrap/luavolume_demo.d $(OF)luavolume_demo \
 		$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luaunifunction_demo: luaunifunction_demo.d luaunifunction.d univariatefunctions.d \
-	$(UTIL_FILES) $(LIBLUA)
-	dmd $(DFLAGS_LUA) luaunifunction_demo.d $(OF)luaunifunction_demo \
-		luaunifunction.d univariatefunctions.d \
+luaunifunction_demo: luawrap/luaunifunction_demo.d luawrap/luaunifunction.d \
+	misc/univariatefunctions.d $(UTIL_FILES) $(LIBLUA)
+	dmd $(DFLAGS_LUA) luawrap/luaunifunction_demo.d $(OF)luaunifunction_demo \
+		luawrap/luaunifunction.d misc/univariatefunctions.d \
 		$(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luasgrid_demo: luasgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
-	dmd $(DFLAGS_LUA) luasgrid_demo.d $(OF)luasgrid_demo \
+luasgrid_demo: luawrap/luasgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
+	dmd $(DFLAGS_LUA) luawrap/luasgrid_demo.d $(OF)luasgrid_demo \
 		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-luausgrid_demo: luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
-	dmd $(DFLAGS_LUA) luausgrid_demo.d $(OF)luausgrid_demo \
+luausgrid_demo: luawrap/luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) 
+	dmd $(DFLAGS_LUA) luawrap/luausgrid_demo.d $(OF)luausgrid_demo \
 		$(GEOM_FILES) $(NM_FILES) $(GZIP_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA)
 
-paver_demo: paver_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
-	dmd $(DFLAGS) paver_demo.d $(OF)paver_demo \
+paver_demo: grid/paver_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) grid/paver_demo.d $(OF)paver_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 

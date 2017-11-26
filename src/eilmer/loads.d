@@ -27,7 +27,6 @@ import solidblock;
 import flowstate;
 import flowgradients;
 import geom;
-import grid;
 import block;
 import sblock: SBlock;
 import ublock: UBlock;

@@ -18,7 +18,7 @@ import util.lua;
 import util.lua_service;
 import geom;
 import globalconfig;
-import luasgrid;
+import geom.luawrap;
 import solidfvcell;
 import solidprops;
 
