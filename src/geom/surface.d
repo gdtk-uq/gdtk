@@ -12,7 +12,6 @@ import std.stdio;
 import std.conv;
 import std.algorithm;
 import geom;
-import gpath;
 import sgrid;
 
 // Nomenclature for the parametric distances, bounding paths and corners.

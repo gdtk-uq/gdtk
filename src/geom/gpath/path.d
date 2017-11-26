@@ -1,4 +1,4 @@
-/** gpath.d
+/** path.d
  * Geometry-building elements for our 3D world -- one-parameter elements.
  * Note that these are geometric paths, as distinct from the file-system paths.
  *
@@ -6,9 +6,10 @@
  * Version: 2015-02-19 first code
  *          2015-04-21 added Arc, Bezier, Polyline
  *          2015-07-02 simplify classes
+ *          2017-11-26 refactor package
  */
 
-module gpath;
+module geom.gpath.path;
 
 import std.conv;
 import std.math;
@@ -16,7 +17,6 @@ import std.stdio;
 import std.string;
 import geom;
 import nm.bbla;
-//import numeric : findRoot;
 
 class Path {
 public:

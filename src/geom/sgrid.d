@@ -18,7 +18,6 @@ import gzip;
 
 import grid;
 import geom;
-import gpath;
 import surface;
 import volume;
 import univariatefunctions;

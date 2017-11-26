@@ -7,7 +7,6 @@ Heather Muir - Undergraduate Thesis
 import std.stdio;
 import std.conv;
 import geom;
-import gpath;
 import surface;
 import volume;
 import univariatefunctions;

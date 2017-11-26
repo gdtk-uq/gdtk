@@ -16,7 +16,6 @@ import std.uni;
 import util.lua;
 import util.lua_service;
 import geom;
-import gpath;
 import surface;
 import luageom;
 import luagpath;

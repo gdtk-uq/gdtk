@@ -6,7 +6,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/elements/properties.d \
 	$(GEOM_DIR)/elements/projection.d \
 	$(GEOM_DIR)/univariatefunctions.d \
-	$(GEOM_DIR)/gpath.d \
+	$(GEOM_DIR)/gpath/path.d \
 	$(GEOM_DIR)/surface.d \
 	$(GEOM_DIR)/volume.d \
 	$(GEOM_DIR)/grid.d \

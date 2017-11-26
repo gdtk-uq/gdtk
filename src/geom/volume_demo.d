@@ -7,7 +7,6 @@
 
 import std.stdio;
 import geom;
-import gpath;
 import surface;
 import volume;
 

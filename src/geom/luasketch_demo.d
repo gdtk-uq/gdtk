@@ -10,7 +10,6 @@ import std.conv;
 import std.string;
 import util.lua;
 import geom;
-import gpath;
 import surface;
 import volume;
 import sketch;

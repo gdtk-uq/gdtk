@@ -25,7 +25,6 @@ import std.algorithm;
 
 import svg;
 import geom;
-import gpath;
 import surface;
 import volume;
 

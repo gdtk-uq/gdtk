@@ -18,7 +18,6 @@ import std.math;
 import gzip;
 
 import geom;
-import gpath;
 import surface;
 import volume;
 import univariatefunctions;

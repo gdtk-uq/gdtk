@@ -11,7 +11,6 @@ import std.math;
 import std.stdio;
 import std.conv;
 import geom;
-import gpath;
 import surface;
 
 // Nomenclature for the parametric distances, bounding surfaces, paths and corners.

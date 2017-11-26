@@ -14,7 +14,6 @@ import std.string;
 import std.conv;
 import util.lua_service;
 import geom;
-import gpath;
 import surface;
 import volume;
 import sketch;

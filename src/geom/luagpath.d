@@ -14,7 +14,6 @@ import std.string;
 import std.conv;
 import util.lua_service;
 import geom;
-import gpath;
 import luageom;
 
 immutable string LineMT = "Line"; // Name of Line metatable

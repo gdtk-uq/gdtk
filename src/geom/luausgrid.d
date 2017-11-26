@@ -14,7 +14,6 @@ import util.lua;
 import util.lua_service;
 import univariatefunctions;
 import geom;
-import gpath;
 import surface;
 import volume;
 import grid;

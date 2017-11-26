@@ -85,8 +85,8 @@ vector3_demo: elements/vector3_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) elements/vector3_demo.d $(OF)vector3_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-gpath_demo: gpath_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
-	dmd $(DFLAGS) gpath_demo.d $(OF)gpath_demo \
+gpath_demo: gpath/gpath_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) gpath/gpath_demo.d $(OF)gpath_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 surface_demo: surface_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
