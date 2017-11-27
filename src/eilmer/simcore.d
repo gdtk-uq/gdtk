@@ -31,6 +31,7 @@ import globaldata;
 import flowstate;
 import block;
 import sblock;
+import ublock;
 import ssolidblock;
 import solidprops;
 import solidfvinterface;
@@ -170,8 +171,9 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     // Now that we know the ghost-cell locations, we can set up the least-squares subproblems
     // for reconstruction prior to convective flux calculation for the unstructured-grid blocks.
     foreach (myblk; gasBlocks) {
-	if ((myblk.grid_type == Grid_t.unstructured_grid) && (myblk.myConfig.interpolation_order > 1)) { 
-	    myblk.compute_least_squares_setup_for_reconstruction(0);
+	if ((myblk.grid_type == Grid_t.unstructured_grid) && (myblk.myConfig.interpolation_order > 1)) {
+	    auto myUBlock = cast(UBlock) myblk;
+	    myUBlock.compute_least_squares_setup(0);
 	}
     }
 
@@ -495,7 +497,7 @@ void integrate_in_time(double target_time_as_requested)
 	    if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
 		foreach (blk; parallel(gasBlocksBySize,1)) {
 		    if (blk.active) {
-			blk.flow_property_derivatives(0); 
+			blk.flow_property_spatial_derivatives(0); 
 			blk.estimate_turbulence_viscosity();
 		    }
 		}
@@ -526,7 +528,8 @@ void integrate_in_time(double target_time_as_requested)
 		    blk.compute_primary_cell_geometric_data(0);
 		    if ((blk.grid_type == Grid_t.unstructured_grid) &&
 			(blk.myConfig.interpolation_order > 1)) { 
-			blk.compute_least_squares_setup_for_reconstruction(0);
+			auto myUBlock = cast(UBlock) blk;
+			myUBlock.compute_least_squares_setup(0);
 		    }
 		} // end if active
 	    } // end foreach blk
@@ -827,7 +830,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	}
 	foreach (blk; parallel(gasBlocksBySize,1)) {
 	    if (blk.active) {
-		blk.flow_property_derivatives(gtl); 
+		blk.flow_property_spatial_derivatives(gtl); 
 		blk.estimate_turbulence_viscosity();
 		blk.viscous_flux();
 	    }
@@ -977,7 +980,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	    foreach (blk; parallel(gasBlocksBySize,1)) {
 		if (blk.active) {
-		    blk.flow_property_derivatives(gtl); 
+		    blk.flow_property_spatial_derivatives(gtl); 
 		    blk.estimate_turbulence_viscosity();
 		    blk.viscous_flux();
 		}
@@ -1125,7 +1128,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
 	    }
 	    foreach (blk; parallel(gasBlocksBySize,1)) {
 		if (blk.active) {
-		    blk.flow_property_derivatives(gtl); 
+		    blk.flow_property_spatial_derivatives(gtl); 
 		    blk.estimate_turbulence_viscosity();
 		    blk.viscous_flux();
 		}
@@ -1257,7 +1260,8 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	blk.compute_primary_cell_geometric_data(gtl+1);
 	if ((blk.grid_type == Grid_t.unstructured_grid) &&
 	    (blk.myConfig.interpolation_order > 1)) { 
-	    blk.compute_least_squares_setup_for_reconstruction(gtl+1);
+	    auto myUBlock = cast(UBlock) blk;
+	    myUBlock.compute_least_squares_setup(gtl+1);
 	}
 	// determine interface velocities using GCL for gtl = 1
 	set_gcl_interface_properties(sblk, gtl+1, dt_global);
@@ -1319,7 +1323,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	}
 	foreach (blk; parallel(gasBlocksBySize,1)) {
 	    if (blk.active) {
-		blk.flow_property_derivatives(gtl); 
+		blk.flow_property_spatial_derivatives(gtl); 
 		blk.estimate_turbulence_viscosity();
 		blk.viscous_flux();
 	    }
@@ -1406,7 +1410,8 @@ void gasdynamic_explicit_increment_with_moving_grid()
 		blk.compute_primary_cell_geometric_data(gtl+1);
 		if ((blk.grid_type == Grid_t.unstructured_grid) &&
 		    (blk.myConfig.interpolation_order > 1)) { 
-		    blk.compute_least_squares_setup_for_reconstruction(gtl+1);
+		    auto myUBlock = cast(UBlock) blk;
+		    myUBlock.compute_least_squares_setup(gtl+1);
 		}
 		// grid remains at pos[gtl=1], thus let's use old interface velocities
 		// thus no need to set_gcl_interface_properties(blk, 2, dt_global);
@@ -1464,7 +1469,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
 	    }
 	    foreach (blk; parallel(gasBlocksBySize,1)) {
 		if (blk.active) {
-		    blk.flow_property_derivatives(gtl); 
+		    blk.flow_property_spatial_derivatives(gtl); 
 		    blk.estimate_turbulence_viscosity();
 		    blk.viscous_flux();
 		}

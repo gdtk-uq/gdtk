@@ -157,7 +157,6 @@ public:
     abstract void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found);
     abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract void compute_primary_cell_geometric_data(int gtl);
-    abstract void compute_least_squares_setup_for_reconstruction(int gtl);
     abstract void read_grid(string filename, size_t gtl=0);
     abstract void write_grid(string filename, double sim_time, size_t gtl=0);
     abstract double read_solution(string filename, bool overwrite_geometry_data);
@@ -355,28 +354,8 @@ public:
 	} // foreach cell
 	return number_of_invalid_cells;
     } // end count_invalid_cells()
-
-    void compute_leastsq_weights(int gtl)
-    // Update the least-squares geometric weights and the workspaces,
-    // if appropriate.
-    // The weights should be calculated when the grid is initialised or moved.
-    // For this reason it is called in ublock and sblock class method
-    // compute_primary_cell_geomtric_data()
-    {
-	if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
-	    foreach(iface; faces) {
-		iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos,
-						    false, iface.ws_grad);
-	    }	
-	} else { // vertices
-	    foreach(vtx; vertices) {
-		vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl],
-						  true, vtx.ws_grad);
-	    }
-	}
-    } // end compute_leastsq_geometric_weights()
     
-    void flow_property_derivatives(int gtl)
+    void flow_property_spatial_derivatives(int gtl)
     {
 	final switch (myConfig.spatial_deriv_locn) {
 	case SpatialDerivLocn.vertices:
@@ -429,7 +408,7 @@ public:
 		} // end switch
 	    } // end if (myConfig.dimensions)
 	} // end switch (myConfig.spatial_deriv_locn)
-    } // end flow_property_derivatives()
+    } // end flow_property_spatial_derivatives()
     
     @nogc
     void clear_fluxes_of_conserved_quantities()

@@ -614,90 +614,90 @@ public:
 	} // end foreach bndry
     } // end compute_primary_cell_geometric_data()
 
-    override void compute_least_squares_setup_for_reconstruction(int gtl)
+    void compute_least_squares_setup(int gtl)
     {
 	if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
 	    // LSQ weights are used in the calculation of flow gradients for the viscous terms.
 	    // At this point in the initialisation stage, the domain cells, and the ghost cells, all
 	    // have the correct cell centre values -- hence we can now compute the lsq weights.
-	    compute_leastsq_weights(gtl);
+	    if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
+		foreach(iface; faces) {
+		    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+		}	
+	    } else { // myConfig.spatial_deriv_locn == vertices
+		foreach(vtx; vertices) {
+		    vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
+		}
+	    }
 	}
-	// The LSQ linear model for the flow field is fitted using 
+	// The LSQ linear model for the flow field reconstruction is fitted using 
 	// information on the locations of the points. 
-	foreach (c; cells) {
-	    /++ 
-	     In some instances the point cloud used for the reconstruction may not have adequate variation in all
-	     dimenions, in the case the standard deviation of the points in the cloud are less than some fraction
-	     of a cell length, store a larger cloud -- ideally this should be carried out where the clouds are
-	     originally constructed, but at that stage the code hasn't set the necessary geometric data.
-		    		    
-	     We do this before assembling and inverting the least-squares matrix.
-	     ++/
-	    double[3] avg, sigma;
-	    avg[0] = 0.0; avg[1] = 0.0; avg[2] = 0.0;
-	    sigma[0] = 0.0; sigma[1] = 0.0; sigma[2] = 0.0;
-	    auto n = c.cell_cloud.length;
-	    foreach(i; 0..n) {
-		avg[0] += c.cell_cloud[i].pos[gtl].x; 
-		avg[1] += c.cell_cloud[i].pos[gtl].y;
-		if (myConfig.dimensions == 3) avg[2] += c.cell_cloud[i].pos[gtl].z;
-	    }
-	    avg[0] /= n;
-	    avg[1] /= n;
-	    if (myConfig.dimensions == 3) avg[2] /= n;
-	    foreach (i; 0..n) {
-		sigma[0] += (c.cell_cloud[i].pos[gtl].x - avg[0])*(c.cell_cloud[i].pos[gtl].x - avg[0]);
-		sigma[1] += (c.cell_cloud[i].pos[gtl].y - avg[1])*(c.cell_cloud[i].pos[gtl].y - avg[1]);
-		if (myConfig.dimensions == 3) sigma[2] += (c.cell_cloud[i].pos[gtl].z - avg[2])*(c.cell_cloud[i].pos[gtl].z - avg[2]);
-		    
-	    }
-	    sigma[0] /= n;
-	    sigma[0] = sqrt(sigma[0]);
-	    sigma[1] /= n;
-	    sigma[1] = sqrt(sigma[1]);
-	    if (myConfig.dimensions == 3) sigma[2] = sqrt(sigma[2]/n);
+	foreach (c; cells) { compute_least_squares_setup_for_cell(c, gtl, true); }
+    } // end compute_least_squares_setup()
 
+    void compute_least_squares_setup_for_cell(FVCell c, int gtl, bool allowCloudToExpand)
+    // In the unstructured-grid context, set up the least-squares workspace for a cell
+    // so that spatial derivatives can be computed in later flow-field reconstructions.
+    {
+	/++ 
+	 In some instances the point cloud used for the reconstruction may not have adequate variation in all
+	 dimenions, in the case the standard deviation of the points in the cloud are less than some fraction
+	 of a cell length, store a larger cloud -- ideally this should be carried out where the clouds are
+	 originally constructed, but at that stage the code hasn't set the necessary geometric data.
+		    		    
+	 We do this before assembling and inverting the least-squares matrix.
+	 ++/
+	double[3] avg, sigma;
+	avg[0] = 0.0; avg[1] = 0.0; avg[2] = 0.0;
+	sigma[0] = 0.0; sigma[1] = 0.0; sigma[2] = 0.0;
+	auto n = c.cell_cloud.length;
+	foreach(i; 0..n) {
+	    avg[0] += c.cell_cloud[i].pos[gtl].x; 
+	    avg[1] += c.cell_cloud[i].pos[gtl].y;
+	    if (myConfig.dimensions == 3) { avg[2] += c.cell_cloud[i].pos[gtl].z; }
+	}
+	avg[0] /= n;
+	avg[1] /= n;
+	if (myConfig.dimensions == 3) { avg[2] /= n; }
+	foreach (i; 0..n) {
+	    sigma[0] += (c.cell_cloud[i].pos[gtl].x - avg[0])^^2;
+	    sigma[1] += (c.cell_cloud[i].pos[gtl].y - avg[1])^^2;
+	    if (myConfig.dimensions == 3) { sigma[2] += (c.cell_cloud[i].pos[gtl].z - avg[2])^^2; }
+	}
+	sigma[0] = sqrt(sigma[0]/n);
+	sigma[1] = sqrt(sigma[1]/n);
+	double min_sig = min(sigma[0], sigma[1]);
+	if (myConfig.dimensions == 3) {
+	    sigma[2] = sqrt(sigma[2]/n);
+	    min_sig = min(min_sig, sigma[2]);
+	}
+	if (allowCloudToExpand && (min_sig < 0.6*c.L_min)) {
+	    // Increase the cloud size by collecting the face neighbours of the nearest-neighbour cloud cells,
+	    // but be careful not to include cells multiple times.
 	    size_t[] cell_cloud_ids;
-	    foreach(i; 0..n) {
-		cell_cloud_ids ~= c.cell_cloud[i].id;
-	    }
-	    double min_sig;
-	    min_sig = min(sigma[0], sigma[1]);
-	    if (myConfig.dimensions == 3) min_sig = min(min_sig, sigma[2]);
-	    
-	    double avg_cell_length;
-	    if (myConfig.dimensions == 3) avg_cell_length = (1.0/3.0)*(c.iLength+c.jLength+c.kLength);
-	    else avg_cell_length = (1.0/2.0)*(c.iLength+c.jLength);
-	    
-	    if (min_sig < 0.6*avg_cell_length) {
-		// collect the face neighbours of the nearest-neighbour cloud cells
-		foreach (j; 1 .. n) {
-		    foreach (i, f; c.cell_cloud[j].iface) {
-			if (f.right_cell && f.right_cell.will_have_valid_flow) {
-			    if (cell_cloud_ids.canFind(f.right_cell.id) == false) {
-				c.cell_cloud ~= f.right_cell;
-				cell_cloud_ids ~= f.right_cell.id;
-			    }
-			}
-			if (f.left_cell && f.left_cell.will_have_valid_flow) {
-			    if (cell_cloud_ids.canFind(f.left_cell.id) == false) {
-				c.cell_cloud ~= f.left_cell;
-				cell_cloud_ids ~= f.left_cell.id;
-			    }
-			}
+	    foreach(i; 0 .. n) { cell_cloud_ids ~= c.cell_cloud[i].id; }
+	    foreach (j; 1 .. n) {
+		foreach (i, f; c.cell_cloud[j].iface) {
+		    if (f.right_cell && f.right_cell.will_have_valid_flow && !cell_cloud_ids.canFind(f.right_cell.id)) {
+			c.cell_cloud ~= f.right_cell;
+			cell_cloud_ids ~= f.right_cell.id;
+		    }
+		    if (f.left_cell && f.left_cell.will_have_valid_flow && !cell_cloud_ids.canFind(f.left_cell.id)) {
+			c.cell_cloud ~= f.left_cell;
+			cell_cloud_ids ~= f.left_cell.id;
 		    }
 		}
 	    }
-	    try {
-		c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
-	    } catch (Exception e) {
-		writefln("In compute_least_squares_setup_for_reconstruction()," ~
-			 " we have failed to assemble and invert normal matrix for cell id=%d",
-			 c.id);
-		throw e;
-	    }
 	}
-    } // end compute_least_squares_setup_for_reconstruction()
+	try {
+	    c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
+	} catch (Exception e) {
+	    writefln("In compute_least_squares_setup_for_cell()," ~
+		     " we have failed to assemble and invert normal matrix for cell id=%d",
+		     c.id);
+	    throw e;
+	}
+    } // end compute_least_squares_setup_for_cell()
     
     override void read_grid(string filename, size_t gtl=0)
     {

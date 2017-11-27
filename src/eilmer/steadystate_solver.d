@@ -911,7 +911,7 @@ void evalRHS(double pseudoSimTime, int ftl)
 	    blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, 0, ftl);
 	}
 	foreach (blk; parallel(gasBlocks,1)) {
-	    blk.flow_property_derivatives(0); 
+	    blk.flow_property_spatial_derivatives(0); 
 	    blk.estimate_turbulence_viscosity();
 	    blk.viscous_flux();
 	}
@@ -1038,7 +1038,7 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
     //    blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);
     if (GlobalConfig.viscous) {
 	//  blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
-	blk.flow_property_derivatives(0); 
+	blk.flow_property_spatial_derivatives(0); 
 	blk.estimate_turbulence_viscosity();
 	blk.viscous_flux();
 	blk.applyPostDiffFluxAction(pseudoSimTime, 0, ftl);

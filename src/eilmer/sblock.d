@@ -716,8 +716,18 @@ public:
 	    }
 	} // end if dimensions == 3
 	if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
-	    // Needed for flow gradient calculations that feed into the viscous fluxes.
-	    compute_leastsq_weights(gtl);
+	    // Update the least-squares geometric weights and the workspaces, if appropriate.
+	    // The weights should be calculated when the grid is initialised or moved.
+	    // They are needed for flow gradient calculations that feed into the viscous fluxes.
+	    if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
+		foreach(iface; faces) {
+		    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+		}	
+	    } else { // myConfig.spatial_deriv_locn == vertices
+		foreach(vtx; vertices) {
+		    vtx.grad.set_up_workspace_leastsq(vtx.cloud_pos, vtx.pos[gtl], true, vtx.ws_grad);
+		}
+	    }
 	}
     } // end compute_primary_cell_geometric_data()
 
@@ -1528,12 +1538,6 @@ public:
 	} // end if (myConfig.dimensions
     } // end store_references_for_derivative_calc_at_vertices()
 
-    override void compute_least_squares_setup_for_reconstruction(int gtl)
-    {
-	// Nothing needs doing for the structured grid
-	// because we have another approach for reconstruction.
-    }
-    
     override void read_grid(string filename, size_t gtl=0)
     // Read the grid vertices from a gzip file.
     // We delegate the actual file reading to the StructuredGrid class.
