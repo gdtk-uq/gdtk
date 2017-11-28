@@ -358,7 +358,10 @@ void main(string[] args) {
 	foreach (blk; gasBlocks) { 
 	    //blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
 	    ensure_directory_is_present(make_path_name!"grid-original"(0));
-	    blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
+	    string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
+	    blk.grid = new StructuredGrid(gridFilename, blk.myConfig.grid_format);
+	    blk.grid.sort_cells_into_bins();
+	    blk.sync_underlying_grid_to_vertices(0);
 	}
 	// perturb b +ve --------------------------------------------------------------------------------
 	double del_b = EPSILON0;
@@ -474,7 +477,10 @@ double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks,
     // read original grid in
     foreach (blk; parallel(gasBlocks,1)) { 
 	ensure_directory_is_present(make_path_name!"grid-original"(0));
-	blk.read_grid(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"), 0);
+	string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
+	blk.grid = new StructuredGrid(gridFilename, blk.myConfig.grid_format);
+	blk.grid.sort_cells_into_bins();
+	blk.sync_underlying_grid_to_vertices(0);
     }
     
     // clear old simulation files

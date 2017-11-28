@@ -177,6 +177,7 @@ public:
 	    new_vtx.pos[0] = v;
 	    vertices ~= new_vtx;
 	}
+	// sync_vertices_from_underlying_grid(0); // redundant, if done just above
 	bool lsq_workspace_at_faces = (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)
 	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces);
 	foreach (i, f; grid.faces) {
@@ -675,7 +676,7 @@ public:
 	    // Increase the cloud size by collecting the face neighbours of the nearest-neighbour cloud cells,
 	    // but be careful not to include cells multiple times.
 	    size_t[] cell_cloud_ids;
-	    foreach(i; 0 .. n) { cell_cloud_ids ~= c.cell_cloud[i].id; }
+	    foreach (i; 0 .. n) { cell_cloud_ids ~= c.cell_cloud[i].id; }
 	    foreach (j; 1 .. n) {
 		foreach (i, f; c.cell_cloud[j].iface) {
 		    if (f.right_cell && f.right_cell.will_have_valid_flow && !cell_cloud_ids.canFind(f.right_cell.id)) {
@@ -698,15 +699,13 @@ public:
 	    throw e;
 	}
     } // end compute_least_squares_setup_for_cell()
-    
-    override void read_grid(string filename, size_t gtl=0)
-    {
-	throw new FlowSolverException("read_grid function NOT implemented for unstructured grid.");
-    }
 
+    override void sync_vertices_from_underlying_grid(size_t gtl=0)
+    {
+	foreach (i; 0 .. vertices.length) { vertices[i].pos[gtl].set(*(grid[i])); }
+    }
+    
     override void write_grid(string filename, double sim_time, size_t gtl=0)
-    // Note that we reuse the StructuredGrid object that was created on the
-    // use of read_grid().
     {
 	throw new FlowSolverException("write_grid function not yet implemented for unstructured grid.");
 	// [TODO] we will eventually need this for moving grid simulations

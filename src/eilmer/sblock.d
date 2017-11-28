@@ -257,7 +257,10 @@ public:
 	assemble_arrays();
 	bind_interfaces_vertices_and_cells();
 	store_references_for_derivative_calc(0);
-	read_grid(gridFileName, 0);
+	if (myConfig.verbosity_level > 1) { writeln("init_grid_and_flow_arrays(): Start block ", id); }
+	grid = new StructuredGrid(gridFileName, myConfig.grid_format);
+	grid.sort_cells_into_bins();
+	sync_vertices_from_underlying_grid(0);
 	// Set references to boundary faces in bc objects.
 	// north boundary
 	foreach (k; kmin .. kmax+1) {
@@ -1538,24 +1541,19 @@ public:
 	} // end if (myConfig.dimensions
     } // end store_references_for_derivative_calc_at_vertices()
 
-    override void read_grid(string filename, size_t gtl=0)
-    // Read the grid vertices from a gzip file.
-    // We delegate the actual file reading to the StructuredGrid class.
+    override void sync_vertices_from_underlying_grid(size_t gtl=0)
     {
 	size_t nivtx, njvtx, nkvtx;
-	if (myConfig.verbosity_level > 1) { writeln("read_grid(): Start block ", id); }
-	grid = new StructuredGrid(filename, myConfig.grid_format);
-	grid.sort_cells_into_bins();
 	nivtx = grid.niv; njvtx = grid.njv; nkvtx = grid.nkv;
-	if ( myConfig.dimensions == 3 ) {
+	if (myConfig.dimensions == 3) {
 	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx-1 != nkcell ) {
 		string msg = text("For block[", id, "] we have a mismatch in 3D grid size.",
 				  " Have read nivtx=", nivtx, " njvtx=", njvtx, " nkvtx=", nkvtx);
 		throw new FlowSolverException(msg);
 	    }
-	    for ( size_t k = kmin; k <= kmax+1; ++k ) {
-		for ( size_t j = jmin; j <= jmax+1; ++j ) {
-		    for ( size_t i = imin; i <= imax+1; ++i ) {
+	    for (size_t k = kmin; k <= kmax+1; ++k) {
+		for (size_t j = jmin; j <= jmax+1; ++j) {
+		    for (size_t i = imin; i <= imax+1; ++i) {
 			auto vtx = get_vtx(i,j,k);
 			auto src_vtx = grid[i-imin,j-jmin,k-kmin];
 			vtx.pos[gtl].set(*src_vtx);
@@ -1563,24 +1561,24 @@ public:
 		} // for j
 	    } // for k
 	} else { // 2D case
-	    if ( nivtx-1 != nicell || njvtx-1 != njcell || nkvtx != 1 ) {
+	    if (nivtx-1 != nicell || njvtx-1 != njcell || nkvtx != 1) {
 		string msg = text("For block[", id, "] we have a mismatch in 2D grid size.",
 				  " Have read nivtx=", nivtx, " njvtx=", njvtx, " nkvtx=", nkvtx);
 		throw new FlowSolverException(msg);
 	    }
-	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
-		for ( size_t i = imin; i <= imax+1; ++i ) {
+	    for (size_t j = jmin; j <= jmax+1; ++j) {
+		for (size_t i = imin; i <= imax+1; ++i) {
 		    auto vtx = get_vtx(i,j);
 		    auto src_vtx = grid[i-imin,j-jmin];
 		    vtx.pos[gtl].set(src_vtx.x, src_vtx.y, 0.0);
 		} // for i
 	    } // for j
 	}
-    } // end read_grid()
-
+    } // end sync_vertices-from_underlying_grid()
+    
     override void write_grid(string filename, double sim_time, size_t gtl=0)
     // Note that we reuse the StructuredGrid object that was created on the
-    // use of read_grid().
+    // use of init_grid_and_flow_arrays().
     {
 	if (myConfig.verbosity_level > 1) { writeln("write_grid(): Start block ", id); }
 	size_t kmaxrange;
