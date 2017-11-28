@@ -497,26 +497,19 @@ public:
     } // end compute_Linf_residuals()
 
     double update_c_h(double dt_current)
-    //Update the c_h value for the divergence cleaning mechanism
+    // Update the c_h value for the divergence cleaning mechanism.
     {
-	//Update the c_h value
-	double min_L_for_block = 1.0;
-	double cfl_local, cfl_max;
+	double min_L_for_block, cfl_local, cfl_max;
 	bool first = true;
 	foreach(FVCell cell; cells) {
-	    //Search for the minimum length scale in the block
-	    if (cell.iLength < min_L_for_block) { min_L_for_block = cell.iLength; }
-	    if (cell.jLength < min_L_for_block) { min_L_for_block = cell.jLength; }
-	    if (GlobalConfig.dimensions == 3) {
-		//Shouldn't be necessary as current HLLE solver does not work in 3D
-		if (cell.kLength < min_L_for_block) { min_L_for_block = cell.kLength; }
-	    }
-	    //Search for the maximum CFL value in the block
+	    // Search for the minimum length scale and the maximum CFL value in the block.
 	    if (first) {
+		min_L_for_block = cell.L_min;
 		cfl_local = cell.signal_frequency() * dt_current;
 		cfl_max = cfl_local;
 		first = false;
 	    } else {
+		min_L_for_block = fmin(cell.L_min, min_L_for_block);
 		cfl_local = cell.signal_frequency() * dt_current;
 		cfl_max = fmax(cfl_local, cfl_max);
 	    }
