@@ -1574,35 +1574,37 @@ public:
 		} // for i
 	    } // for j
 	}
-    } // end sync_vertices-from_underlying_grid()
+    } // end sync_vertices_from_underlying_grid()
     
-    override void write_grid(string filename, double sim_time, size_t gtl=0)
+    override void sync_vertices_to_underlying_grid(size_t gtl=0)
     // Note that we reuse the StructuredGrid object that was created on the
     // use of init_grid_and_flow_arrays().
     {
-	if (myConfig.verbosity_level > 1) { writeln("write_grid(): Start block ", id); }
-	size_t kmaxrange;
-	if ( myConfig.dimensions == 3 ) {
-	    kmaxrange = kmax + 1;
-	} else { // 2D case
-	    kmaxrange = kmax;
-	}
-	for ( size_t k = kmin; k <= kmaxrange; ++k ) {
-	    for ( size_t j = jmin; j <= jmax+1; ++j ) {
-		for ( size_t i = imin; i <= imax+1; ++i ) {
+	size_t kmaxrange = (myConfig.dimensions == 3) ? kmax+1 : kmax;
+	for (size_t k = kmin; k <= kmaxrange; ++k) {
+	    for (size_t j = jmin; j <= jmax+1; ++j) {
+		for (size_t i = imin; i <= imax+1; ++i) {
 		    auto vtx = get_vtx(i,j,k);
 		    auto dest_vtx = grid[i-imin,j-jmin,k-kmin];
 		    dest_vtx.set(vtx.pos[gtl]);
 		} // for i
 	    } // for j
 	} // for k
-	switch (myConfig.grid_format) {
-	case "gziptext": grid.write_to_gzip_file(filename); break;
-	case "rawbinary": grid.write_to_raw_binary_file(filename); break;
-	default: grid.write_to_gzip_file(filename);
-	}
-    } // end write_grid()
+    } // end sync_vertices_to_underlying_grid()
 
+    override void read_new_underlying_grid(string fileName)
+    {
+	if (myConfig.verbosity_level > 1) { writeln("read_new_underlying_grid() for block ", id); }
+	grid = new StructuredGrid(fileName, myConfig.grid_format);
+	grid.sort_cells_into_bins();
+    }
+
+    override void write_underlying_grid(string fileName)
+    {
+	if (myConfig.verbosity_level > 1) { writeln("write_underlying_grid() for block ", id); }
+	grid.write(fileName, myConfig.grid_format);
+    }
+    
     override double read_solution(string filename, bool overwrite_geometry_data)
     // Note that the position data is read into grid-time-level 0
     // by scan_values_from_string(). 

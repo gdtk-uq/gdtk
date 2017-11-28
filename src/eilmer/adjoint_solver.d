@@ -122,9 +122,10 @@ void main(string[] args) {
     
     // save a copy of the original mesh
     foreach (blk; parallel(gasBlocks,1)) {
+	blk.sync_vertices_to_underlying_grid(0);
 	ensure_directory_is_present(make_path_name!"grid-original"(0));
 	auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.write_grid(fileName, 0.0, 0);
+	blk.write_underlying_grid(fileName);
     }
     
     // ----------------------------------------------------
@@ -359,9 +360,8 @@ void main(string[] args) {
 	    //blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
 	    ensure_directory_is_present(make_path_name!"grid-original"(0));
 	    string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-	    blk.grid = new StructuredGrid(gridFilename, blk.myConfig.grid_format);
-	    blk.grid.sort_cells_into_bins();
-	    blk.sync_underlying_grid_to_vertices(0);
+	    blk.read_new_underlying_grid(gridFileName);
+	    blk.sync_vertices_from_underlying_grid(0);
 	}
 	// perturb b +ve --------------------------------------------------------------------------------
 	double del_b = EPSILON0;
@@ -452,9 +452,10 @@ double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks,
     
     // save mesh
     foreach (blk; parallel(gasBlocks,1)) {
+	blk.sync_vertices_to_underlying_grid(0);
 	ensure_directory_is_present(make_path_name!"grid-perturb"(0));
 	auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.write_grid(fileName, 0.0, 0);
+	blk.write_underlying_grid(fileName);
     }
     
     // run simulation
@@ -478,9 +479,8 @@ double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks,
     foreach (blk; parallel(gasBlocks,1)) { 
 	ensure_directory_is_present(make_path_name!"grid-original"(0));
 	string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-	blk.grid = new StructuredGrid(gridFilename, blk.myConfig.grid_format);
-	blk.grid.sort_cells_into_bins();
-	blk.sync_underlying_grid_to_vertices(0);
+	blk.read_new_underlying_grid(gridFileName);
+	blk.sync_vertices_from_underlying_grid(0);
     }
     
     // clear old simulation files

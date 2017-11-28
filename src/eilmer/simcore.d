@@ -588,7 +588,7 @@ void integrate_in_time(double target_time_as_requested)
 
         // 4. (Occasionally) Write out an intermediate solution
         if ( (sim_time >= t_plot) && !output_just_written ) {
-	    if (GlobalConfig.verbosity_level > 0) { writeln("Writing solution."); }
+	    if (GlobalConfig.verbosity_level > 0) { writeln("Write flow solution."); }
 	    current_tindx = current_tindx + 1;
 	    ensure_directory_is_present(make_path_name!"flow"(current_tindx));
 	    auto job_name = GlobalConfig.base_file_name;
@@ -603,9 +603,11 @@ void integrate_in_time(double target_time_as_requested)
 	    }
 	    if (GlobalConfig.grid_motion != GridMotion.none) {
 		ensure_directory_is_present(make_path_name!"grid"(current_tindx));
+		if (GlobalConfig.verbosity_level > 0) { writeln("Write grid"); }
 		foreach (blk; parallel(gasBlocksBySize,1)) { 
+		    blk.sync_vertices_to_underlying_grid(0);
 		    auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
-		    blk.write_grid(fileName, sim_time, 0);
+		    blk.write_underlying_grid(fileName);
 		}
 	    }
 	    update_times_file();
@@ -680,7 +682,7 @@ void finalize_simulation()
 {
     if (GlobalConfig.verbosity_level > 0) { writeln("Finalize the simulation."); }
     if (!output_just_written) {
-	if (GlobalConfig.verbosity_level > 0) { writeln("Writing solution."); }
+	if (GlobalConfig.verbosity_level > 0) { writeln("Write flow solution."); }
 	current_tindx = current_tindx + 1;
 	ensure_directory_is_present(make_path_name!"flow"(current_tindx));
 	auto job_name = GlobalConfig.base_file_name;
@@ -695,9 +697,11 @@ void finalize_simulation()
 	}
 	if (GlobalConfig.grid_motion != GridMotion.none) {
 	    ensure_directory_is_present(make_path_name!"grid"(current_tindx));
+	    if (GlobalConfig.verbosity_level > 0) { writeln("Write grid"); }
 	    foreach (blk; parallel(gasBlocksBySize,1)) {
+		blk.sync_vertices_to_underlying_grid(0);
 		auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
-		blk.write_grid(fileName, sim_time);
+		blk.write_underlying_grid(fileName);
 	    }
 	}
 	update_times_file();

@@ -90,13 +90,23 @@ class Grid {
     abstract Vector3* opIndex(size_t indx);
     abstract size_t[] get_vtx_id_list_for_cell(size_t i, size_t j, size_t k=0) const; 
     abstract size_t[] get_vtx_id_list_for_cell(size_t indx) const;
+    
     abstract void read_from_gzip_file(string fileName, double scale=1.0);
     abstract void read_from_raw_binary_file(string fileName, double scale=1.0);
+    void write(string fileName, string fmt)
+    {
+	switch (fmt) {
+	case "gziptext": write_to_gzip_file(fileName); break;
+	case "rawbinary": write_to_raw_binary_file(fileName); break;
+	default: write_to_gzip_file(fileName);
+	}
+    }
     abstract void write_to_gzip_file(string fileName);
     abstract void write_to_raw_binary_file(string fileName);
     abstract void write_to_vtk_file(string fileName);
     abstract void write_to_su2_file(string fileName, double scale=1.0,
 				    bool use_gmsh_order_for_wedges=true);
+    
     abstract size_t number_of_vertices_for_cell(size_t i);
     abstract int vtk_element_type_for_cell(size_t i);
     abstract int get_cell_type(size_t i);

@@ -705,12 +705,23 @@ public:
 	foreach (i; 0 .. vertices.length) { vertices[i].pos[gtl].set(*(grid[i])); }
     }
     
-    override void write_grid(string filename, double sim_time, size_t gtl=0)
+    override void sync_vertices_to_underlying_grid(size_t gtl=0)
     {
-	throw new FlowSolverException("write_grid function not yet implemented for unstructured grid.");
-	// [TODO] we will eventually need this for moving grid simulations
-	// Just delegate the work to the grid object.
-    } // end write_grid()
+	foreach (i; 0 .. vertices.length) { (*grid[i]).set(vertices[i].pos[gtl]); }
+    }
+
+    override void read_new_underlying_grid(string fileName)
+    {
+	if (myConfig.verbosity_level > 1) { writeln("read_new_underlying_grid() for block ", id); }
+	grid = new UnstructuredGrid(fileName, myConfig.grid_format);
+	grid.sort_cells_into_bins();
+    }
+    
+    override void write_underlying_grid(string fileName)
+    {
+	if (myConfig.verbosity_level > 1) { writeln("write_underlying_grid() for block ", id); }
+	grid.write(fileName, myConfig.grid_format);
+    }
 
     override double read_solution(string filename, bool overwrite_geometry_data)
     // Note that this function needs to be kept in sync with the BlockFlow class

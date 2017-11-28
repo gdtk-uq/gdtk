@@ -25,7 +25,8 @@ void main()
 	writeln("blk=", blk);
 	blk.grid = new StructuredGrid("sample-data/cone20.grid.b0000.t0000.gz", "gziptext");
 	blk.sync_vertices_from_underlying_grid(0);
-	blk.write_grid("test-grid.txt.gz", 0.0);
+	blk.sync_vertices_to_underlying_grid(0);
+	blk.write_underlying_grid("test-grid.txt.gz");
 	auto sim_time = blk.read_solution("sample-data/cone20.flow.b0000.t0000.gz");
 	blk.write_solution("test-flow.txt.gz", 1.0);
 

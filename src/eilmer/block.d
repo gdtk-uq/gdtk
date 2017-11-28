@@ -158,7 +158,9 @@ public:
     abstract void init_grid_and_flow_arrays(string gridFileName);
     abstract void compute_primary_cell_geometric_data(int gtl);
     abstract void sync_vertices_from_underlying_grid(size_t gtl=0);
-    abstract void write_grid(string filename, double sim_time, size_t gtl=0);
+    abstract void sync_vertices_to_underlying_grid(size_t gtl=0);
+    abstract void read_new_underlying_grid(string fileName);
+    abstract void write_underlying_grid(string fileName);
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
     abstract void propagate_inflow_data_west_to_east();
