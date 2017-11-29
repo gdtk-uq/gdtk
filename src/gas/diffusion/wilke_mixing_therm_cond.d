@@ -22,6 +22,7 @@ module gas.diffusion.wilke_mixing_therm_cond;
 
 import std.math;
 import gas.gas_model;
+import gas.gas_state;
 import gas.diffusion.therm_cond;
 import util.msg_service;
 

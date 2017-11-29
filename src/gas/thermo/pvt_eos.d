@@ -22,6 +22,7 @@
 module gas.thermo.pvt_eos;
 
 import gas.gas_model;
+import gas.gas_state;
 
 /++
   PVT_EOS defines the services provided by a p-v-T equation

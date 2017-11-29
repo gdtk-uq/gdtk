@@ -23,6 +23,7 @@ import std.stdio;
 import std.string;
 import core.stdc.stdlib : exit;
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import gas.thermo.evt_eos;
 import gas.thermo.cea_thermo_curves;

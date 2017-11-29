@@ -15,6 +15,7 @@ import std.conv;
 import std.stdio;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import gas.diffusion.cea_viscosity;
 

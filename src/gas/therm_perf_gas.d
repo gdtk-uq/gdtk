@@ -19,6 +19,7 @@ import nm.bracketing;
 import core.stdc.stdlib : exit;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import gas.thermo.cea_thermo_curves;
 import gas.thermo.perf_gas_mix_eos;

@@ -10,6 +10,7 @@
 module gas.very_viscous_air;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import std.math;
 import std.stdio;

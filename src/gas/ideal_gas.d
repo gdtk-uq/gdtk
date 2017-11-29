@@ -9,6 +9,7 @@
 module gas.ideal_gas;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;

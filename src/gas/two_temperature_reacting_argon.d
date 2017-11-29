@@ -15,6 +15,7 @@
 module gas.two_temperature_reacting_argon;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import gas.diffusion.viscosity;
 import gas.diffusion.therm_cond;

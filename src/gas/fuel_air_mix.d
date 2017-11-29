@@ -10,6 +10,7 @@
 module gas.fuel_air_mix;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import gas.therm_perf_gas;
 import gas.thermo.cea_thermo_curves;

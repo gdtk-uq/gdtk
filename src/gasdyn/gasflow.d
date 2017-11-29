@@ -33,7 +33,7 @@ import nm.bbla;
 import nm.bracketing;
 import nm.ridder;
 import nm.linesearch;
-import gas.gas_model;
+import gas;
 import gas.cea_gas;
 
 

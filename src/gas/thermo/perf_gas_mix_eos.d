@@ -11,6 +11,7 @@
 module gas.thermo.perf_gas_mix_eos;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.thermo.pvt_eos;
 
 /++

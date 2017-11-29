@@ -12,6 +12,7 @@ import std.string;
 import util.lua;
 import util.lua_service;
 import gas.gas_model;
+import gas.gas_state;
 import gas.diffusion.sutherland_viscosity;
 import gas.diffusion.cea_viscosity;
 

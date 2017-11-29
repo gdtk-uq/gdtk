@@ -17,6 +17,7 @@
 module gas.thermo.evt_eos;
 
 import gas.gas_model;
+import gas.gas_state;
 
 /++
   EVT_EOS defines the services provied by a caloric equation

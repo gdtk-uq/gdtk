@@ -18,6 +18,7 @@ import std.string;
 import std.conv;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import util.lua;
 import util.lua_service;

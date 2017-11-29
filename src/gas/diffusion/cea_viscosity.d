@@ -9,6 +9,7 @@
 module gas.diffusion.cea_viscosity;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.diffusion.viscosity;
 import std.math;
 import util.lua;

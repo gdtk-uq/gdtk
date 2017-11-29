@@ -9,6 +9,7 @@
 module gas.co2gas;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.physical_constants;
 import gas.diffusion.sutherland_viscosity;
 import gas.diffusion.sutherland_therm_cond;

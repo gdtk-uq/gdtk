@@ -9,6 +9,7 @@
 module gas.diffusion.cea_therm_cond;
 
 import gas.gas_model;
+import gas.gas_state;
 import gas.diffusion.therm_cond;
 import std.math;
 import util.lua;

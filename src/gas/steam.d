@@ -31,6 +31,7 @@ import std.conv;
 
 import gas.physical_constants;
 import gas.gas_model;
+import gas.gas_state;
 
 //steam constants:
 immutable double R=461.526; /// specific gas constant[J/kg/K]

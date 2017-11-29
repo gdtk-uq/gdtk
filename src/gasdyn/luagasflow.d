@@ -13,7 +13,7 @@ import std.conv;
 import std.algorithm;
 import util.lua;
 import util.lua_service;
-import gas.gas_model;
+import gas;
 import gas.cea_gas;
 import gas.luagas_model;
 import idealgasflow;

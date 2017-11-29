@@ -12,6 +12,7 @@ import std.string;
 import util.lua;
 import util.lua_service;
 import gas.gas_model;
+import gas.gas_state;
 import gas.diffusion.sutherland_therm_cond;
 import gas.diffusion.cea_therm_cond;
 

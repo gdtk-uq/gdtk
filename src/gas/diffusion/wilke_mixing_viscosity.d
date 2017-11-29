@@ -22,6 +22,7 @@ module gas.diffusion.wilke_mixing_viscosity;
 
 import std.math;
 import gas.gas_model;
+import gas.gas_state;
 import gas.diffusion.viscosity;
 import util.msg_service;
 
