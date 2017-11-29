@@ -7,7 +7,7 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
-TEST_PROGRAMS :=
+TEST_PROGRAMS := wedgevolume_test
 
 DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
@@ -53,7 +53,7 @@ DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
 # ----------------------------------------------------------------------
 
 test: $(TEST_PROGRAMS)
-	@echo "[TODO] promote the unittest bits to test programs, as done in nm package"
+	tclsh geom-package-test.tcl
 
 demo: $(DEMO_PROGRAMS)
 	@echo "Demo codes built."
@@ -72,6 +72,7 @@ install: foamMesh foam-mesh.lua
 clean:
 	- rm *.o
 	- rm $(DEMO_PROGRAMS)
+	- rm $(TEST_PROGRAMS)
 	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2 test*.bin
 	- rm -r test_openFoam
 	- cd $(LUA_DIR); make clean
@@ -91,6 +92,14 @@ foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(N
 
 	dmd $(DFLAGS_LUA) foamMesh_with_rev_string.d $(OF)foamMesh \
 	$(GEOM_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_FILES) $(DLINKFLAGS_LUA) 
+
+# The test artefacts.
+
+wedgevolume_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=$@ \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+# The original demo artefacts.
 
 sketch_demo: misc/sketch_demo.d $(GEOM_D_FILES) $(NM_FILES)
 	dmd $(DFLAGS) misc/sketch_demo.d $(OF)sketch_demo \

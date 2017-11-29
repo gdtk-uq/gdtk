@@ -77,17 +77,21 @@ private:
     } // end sweep_through_arc()
 } // end WedgeVolume
 
-unittest {
-    Vector3[8] p;
-    p[0] = Vector3(0.0, 0.1, 0.0);
-    p[1] = Vector3(1.0, 0.1, 0.0);
-    p[2] = Vector3(1.0, 1.1, 0.0);
-    p[3] = Vector3(0.0, 1.1, 0.0);
-
-    ParametricSurface my_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
-    auto my_box = new WedgeVolume(my_face, 0.1);
-    auto d = my_box(0.1, 0.1, 0.5);
-    writeln("my_box=", my_box, " d=", d);
-    // expect p0.x=0.1 p0.y=0.2 and have set t=0.5, dtheta=0.1
-    assert(approxEqualVectors(d, Vector3(0.1, 0.2*cos(0.05), 0.2*sin(0.05))), "WedgeVolume my_box");
-} // end unittest
+version(wedgevolume_test) {
+    import util.msg_service;
+    int main() {
+	Vector3[8] p;
+	p[0] = Vector3(0.0, 0.1, 0.0);
+	p[1] = Vector3(1.0, 0.1, 0.0);
+	p[2] = Vector3(1.0, 1.1, 0.0);
+	p[3] = Vector3(0.0, 1.1, 0.0);
+	ParametricSurface my_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
+	auto my_box = new WedgeVolume(my_face, 0.1);
+	auto d = my_box(0.1, 0.1, 0.5);
+	// writeln("my_box=", my_box, " d=", d);
+	// expect p0.x=0.1 p0.y=0.2 and have set t=0.5, dtheta=0.1
+	assert(approxEqualVectors(d, Vector3(0.1, 0.2*cos(0.05), 0.2*sin(0.05))),
+	       failedUnitTest());
+	return 0;
+    }
+} // end wedgevolume_test
