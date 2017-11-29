@@ -16,14 +16,7 @@ import std.file;
 import util.lua;
 
 import geom;
-import luageom;
-import luagpath;
-import luasurface;
-import luavolume;
-import luaunifunction;
-import luasgrid;
-import luausgrid;
-import luasketch;
+import geom.luawrap;
 
 class FoamMeshException : Exception {
     this(string message, string file=__FILE__, size_t line=__LINE__,
