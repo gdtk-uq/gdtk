@@ -17,7 +17,13 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/gpath/polyline.d \
 	$(GEOM_DIR)/gpath/modifiedpath.d \
 	$(GEOM_DIR)/surface/package.d \
-	$(GEOM_DIR)/surface/surface.d \
+	$(GEOM_DIR)/surface/parametricsurface.d \
+	$(GEOM_DIR)/surface/coonspatch.d \
+	$(GEOM_DIR)/surface/aopatch.d \
+	$(GEOM_DIR)/surface/channelpatch.d \
+	$(GEOM_DIR)/surface/sweptpathpatch.d \
+	$(GEOM_DIR)/surface/meshpatch.d \
+	$(GEOM_DIR)/surface/subrangedsurface.d \
 	$(GEOM_DIR)/volume/package.d \
 	$(GEOM_DIR)/volume/volume.d \
 	$(GEOM_DIR)/grid/package.d \
