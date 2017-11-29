@@ -25,7 +25,13 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/surface/meshpatch.d \
 	$(GEOM_DIR)/surface/subrangedsurface.d \
 	$(GEOM_DIR)/volume/package.d \
-	$(GEOM_DIR)/volume/volume.d \
+	$(GEOM_DIR)/volume/parametricvolume.d \
+	$(GEOM_DIR)/volume/tfivolume.d \
+	$(GEOM_DIR)/volume/slabvolume.d \
+	$(GEOM_DIR)/volume/wedgevolume.d \
+	$(GEOM_DIR)/volume/sweptsurfacevolume.d \
+	$(GEOM_DIR)/volume/meshvolume.d \
+	$(GEOM_DIR)/volume/subrangedvolume.d \
 	$(GEOM_DIR)/grid/package.d \
 	$(GEOM_DIR)/grid/grid.d \
 	$(GEOM_DIR)/grid/sgrid.d \
