@@ -7,6 +7,8 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
+TEST_PROGRAMS :=
+
 DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	univariatefunctions_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
@@ -43,15 +45,18 @@ DLINKFLAGS := -L-ldl
 DFLAGS_LUA := -w -g -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
 
-demo: $(DEMO_PROGRAMS)
-	echo "Demo codes built."
+# ----------------------------------------------------------------------
+# Here begins the list of targets, starting with the top-level actions.
+#
+# The default target is test, because that is most likely your interest
+# if you are invoking this makefile from within the gas models directory.
+# ----------------------------------------------------------------------
 
-clean:
-	- rm *.o
-	- rm $(DEMO_PROGRAMS)
-	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2 test*.bin
-	- rm -r test_openFoam
-	- cd $(LUA_DIR); make clean
+test: $(TEST_PROGRAMS)
+	@echo "[TODO] promote the unittest bits to test programs, as done in nm package"
+
+demo: $(DEMO_PROGRAMS)
+	@echo "Demo codes built."
 
 install: foamMesh foam-mesh.lua 
 	- mkdir -p $(INSTALL_DIR)
@@ -64,6 +69,19 @@ install: foamMesh foam-mesh.lua
 	@echo "Installing to $(INSTALL_DIR)"
 	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)
 
+clean:
+	- rm *.o
+	- rm $(DEMO_PROGRAMS)
+	- rm gpgrid*.vtk test*.vtk test*.gz test*.svg test*.su2 test*.bin
+	- rm -r test_openFoam
+	- cd $(LUA_DIR); make clean
+
+all-clean:
+	- make clean
+	- rm -r foamMesh foamMesh_with_rev_string.d
+	- rm -r $(BUILD_DIR)
+
+# Specific targets, for individual artefacts.
 
 $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
