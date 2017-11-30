@@ -98,14 +98,18 @@ public:
 } // end class CoonsPatch
 
 
-unittest {
-    auto p00 = Vector3([0.0, 0.1, 3.0]);
-    auto p10 = Vector3(1.0, 0.1, 3.0);
-    auto p11 = Vector3(1.0, 1.1, 3.0);
-    auto p01 = Vector3(0.0, 1.1, 3.0);
-    auto my_patch = new CoonsPatch(p00, p10, p11, p01);
-    auto c = my_patch(0.5, 0.5);
-    assert(approxEqualVectors(c, Vector3(0.5, 0.6, 3.0)), "CoonsPatch mid");
-    c = my_patch(0.1, 0.1);
-    assert(approxEqualVectors(c, Vector3(0.1, 0.2, 3.0)), "CoonsPatch lower-left");
+version(coonspatch_test) {
+    import util.msg_service;
+    int main() {
+	auto p00 = Vector3([0.0, 0.1, 3.0]);
+	auto p10 = Vector3(1.0, 0.1, 3.0);
+	auto p11 = Vector3(1.0, 1.1, 3.0);
+	auto p01 = Vector3(0.0, 1.1, 3.0);
+	auto my_patch = new CoonsPatch(p00, p10, p11, p01);
+	auto c = my_patch(0.5, 0.5);
+	assert(approxEqualVectors(c, Vector3(0.5, 0.6, 3.0)), failedUnitTest());
+	c = my_patch(0.1, 0.1);
+	assert(approxEqualVectors(c, Vector3(0.1, 0.2, 3.0)), failedUnitTest());
+	return 0;
+    }
 }

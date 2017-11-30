@@ -224,16 +224,20 @@ private:
     } // end compute_background_mesh()
 } // end class AOPatch
 
-unittest {
-    auto p00 = Vector3([0.0, 0.1, 3.0]);
-    auto p10 = Vector3(1.0, 0.4, 3.0);
-    auto p11 = Vector3(1.0, 1.1, 3.0);
-    auto p01 = Vector3(0.0, 1.1, 3.0);
-    auto my_patch = new AOPatch(p00, p10, p11, p01);
-    auto c = my_patch(0.5, 0.5);
-    assert(approxEqualVectors(c, Vector3(0.443775, 0.652291, 3.0)),
-	   "AOPatch mid");
-    c = my_patch(0.1, 0.1);
-    assert(approxEqualVectors(c, Vector3(0.0892476, 0.215529, 3.0)),
-	   "AOPatch lower-left");
-}
+version(aopatch_test) {
+    import util.msg_service;
+    int main() {
+	auto p00 = Vector3([0.0, 0.1, 3.0]);
+	auto p10 = Vector3(1.0, 0.4, 3.0);
+	auto p11 = Vector3(1.0, 1.1, 3.0);
+	auto p01 = Vector3(0.0, 1.1, 3.0);
+	auto my_patch = new AOPatch(p00, p10, p11, p01);
+	auto c = my_patch(0.5, 0.5);
+	assert(approxEqualVectors(c, Vector3(0.443775, 0.652291, 3.0)),
+	       failedUnitTest());
+	c = my_patch(0.1, 0.1);
+	assert(approxEqualVectors(c, Vector3(0.0892476, 0.215529, 3.0)),
+	       failedUnitTest());
+	return 0;
+    }
+} // end aopatch_test

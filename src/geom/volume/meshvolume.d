@@ -12,6 +12,3 @@ import geom.volume.parametricvolume;
 class MeshVolume : ParametricVolume {
     // TODO some day...
 } // end class MeshVolume
-
-unittest {
-}

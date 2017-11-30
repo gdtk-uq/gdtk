@@ -145,30 +145,34 @@ public:
     } // end toString
 } // end class TFIVolume
 
-unittest {
-    Vector3[8] p;
-    p[0] = Vector3(0.0, 0.1, 0.0);
-    p[1] = Vector3(1.0, 0.1, 0.0);
-    p[2] = Vector3(1.0, 1.1, 0.0);
-    p[3] = Vector3(0.0, 1.1, 0.0);
+version(tfivolume_test) {
+    import util.msg_service;
+    int main() {
+	Vector3[8] p;
+	p[0] = Vector3(0.0, 0.1, 0.0);
+	p[1] = Vector3(1.0, 0.1, 0.0);
+	p[2] = Vector3(1.0, 1.1, 0.0);
+	p[3] = Vector3(0.0, 1.1, 0.0);
 
-    p[4] = Vector3(0.0, 0.1, 3.0);
-    p[5] = Vector3(1.0, 0.1, 3.0);
-    p[6] = Vector3(1.0, 1.1, 3.0);
-    p[7] = Vector3(0.0, 1.1, 3.0);
+	p[4] = Vector3(0.0, 0.1, 3.0);
+	p[5] = Vector3(1.0, 0.1, 3.0);
+	p[6] = Vector3(1.0, 1.1, 3.0);
+	p[7] = Vector3(0.0, 1.1, 3.0);
 
-    auto simple_box = new TFIVolume(p);
-    auto c = simple_box(0.1, 0.1, 0.5);
-    assert(approxEqualVectors(c, Vector3(0.1, 0.2, 1.5)), "TFIVolume simple_box");
+	auto simple_box = new TFIVolume(p);
+	auto c = simple_box(0.1, 0.1, 0.5);
+	assert(approxEqualVectors(c, Vector3(0.1, 0.2, 1.5)), failedUnitTest());
 
-    ParametricSurface[6] my_faces;
-    my_faces[Face.north] = new CoonsPatch(p[3], p[2], p[6], p[7]);
-    my_faces[Face.south] = new CoonsPatch(p[0], p[1], p[5], p[4]);
-    my_faces[Face.east] = new CoonsPatch(p[1], p[2], p[6], p[5]);
-    my_faces[Face.west] = new CoonsPatch(p[0], p[3], p[7], p[4]);
-    my_faces[Face.top] = new CoonsPatch(p[4], p[5], p[6], p[7]);
-    my_faces[Face.bottom] = new CoonsPatch(p[0], p[1], p[2], p[3]);
-    auto generic_box = new TFIVolume(my_faces);
-    auto d = generic_box(0.1, 0.1, 0.5);
-    assert(approxEqualVectors(d, Vector3(0.1, 0.2, 1.5)), "TFIVolume generic_box");
-} // end unittest
+	ParametricSurface[6] my_faces;
+	my_faces[Face.north] = new CoonsPatch(p[3], p[2], p[6], p[7]);
+	my_faces[Face.south] = new CoonsPatch(p[0], p[1], p[5], p[4]);
+	my_faces[Face.east] = new CoonsPatch(p[1], p[2], p[6], p[5]);
+	my_faces[Face.west] = new CoonsPatch(p[0], p[3], p[7], p[4]);
+	my_faces[Face.top] = new CoonsPatch(p[4], p[5], p[6], p[7]);
+	my_faces[Face.bottom] = new CoonsPatch(p[0], p[1], p[2], p[3]);
+	auto generic_box = new TFIVolume(my_faces);
+	auto d = generic_box(0.1, 0.1, 0.5);
+	assert(approxEqualVectors(d, Vector3(0.1, 0.2, 1.5)), failedUnitTest());
+	return 0;
+    }
+} // end tfivolume_test

@@ -87,3 +87,5 @@ public:
 	}
     } // end make_bridging_path()
 } // end class ChannelPatch
+
+// [TODO] version(channelpatch_test)

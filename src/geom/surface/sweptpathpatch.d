@@ -50,3 +50,5 @@ public:
 	return "SweptPathPatch(cA=" ~ to!string(cA) ~ ", cB=" ~ to!string(cB) ~ ")";
     }
 } // end class SweptPathPatch
+
+// [TODO] version(sweptpathpatch)

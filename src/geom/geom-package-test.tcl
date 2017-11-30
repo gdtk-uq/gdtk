@@ -10,7 +10,8 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
-set module_names [list wedgevolume]
+set module_names [list coonspatch aopatch \
+		      tfivolume sweptsurfacevolume slabvolume wedgevolume]
 
 foreach name $module_names {
     test $name-test "Testing $name.d" \

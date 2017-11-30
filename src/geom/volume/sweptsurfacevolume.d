@@ -64,20 +64,24 @@ public:
     } // end toString
 } // end SweptSurfaceVolume
 
-unittest {
-    Vector3[8] p;
-    p[0] = Vector3(0.0, 0.1, 0.0);
-    p[1] = Vector3(1.0, 0.1, 0.0);
-    p[2] = Vector3(1.0, 1.1, 0.0);
-    p[3] = Vector3(0.0, 1.1, 0.0);
+version(sweptsurfacevolume_test) {
+    import util.msg_service;
+    int main() {
+	Vector3[8] p;
+	p[0] = Vector3(0.0, 0.1, 0.0);
+	p[1] = Vector3(1.0, 0.1, 0.0);
+	p[2] = Vector3(1.0, 1.1, 0.0);
+	p[3] = Vector3(0.0, 1.1, 0.0);
 
-    p[4] = Vector3(0.0, 0.1, 3.0);
-    p[5] = Vector3(1.0, 0.1, 3.0);
-    p[6] = Vector3(1.0, 1.1, 3.0);
-    p[7] = Vector3(0.0, 1.1, 3.0);
+	p[4] = Vector3(0.0, 0.1, 3.0);
+	p[5] = Vector3(1.0, 0.1, 3.0);
+	p[6] = Vector3(1.0, 1.1, 3.0);
+	p[7] = Vector3(0.0, 1.1, 3.0);
 
-    ParametricSurface my_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
-    auto my_box = new SweptSurfaceVolume(my_face, new Line(p[0],p[4]));
-    auto d = my_box(0.1, 0.1, 0.5);
-    assert(approxEqualVectors(d, Vector3(0.1, 0.2, 1.5)), "SweptSurfaceVolume my_box");
-} // end unittest
+	ParametricSurface my_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
+	auto my_box = new SweptSurfaceVolume(my_face, new Line(p[0],p[4]));
+	auto d = my_box(0.1, 0.1, 0.5);
+	assert(approxEqualVectors(d, Vector3(0.1, 0.2, 1.5)), failedUnitTest());
+	return 0;
+    }
+} // sweptsurfacevolume_test
