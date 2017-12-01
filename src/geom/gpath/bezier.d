@@ -93,20 +93,24 @@ protected:
 } // end class Bezier
 
 
-unittest {
-    import geom.gpath.arc;
-    auto a = Vector3([2.0, 2.0, 0.0]);
-    auto b = Vector3([1.0, 2.0, 1.0]);
-    auto c = Vector3([1.0, 2.0, 0.0]);
-    auto abc = new Arc(a, b, c);
-    auto d = abc(0.5);
-    auto adb = new Bezier([a, d, b]);
-    auto e = adb(0.5);
-    assert(approxEqualVectors(e, Vector3(1.60355, 2, 0.603553)), "Bezier");
-    auto ab = new Bezier([a, b]);
-    assert(approxEqualVectors(ab.dpdt(0.5), Vector3(-1, 0, 1)), "Bezier");
-    assert(approxEqualVectors(ab.d2pdt2(0.5), Vector3(0)), "Bezier");
-    auto acb = new Bezier([a, c, b]);
-    assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1)), "Bezier");
-    assert(approxEqualVectors(acb.d2pdt2(0.5), Vector3(2,0,2)), "Bezier");
-}
+version(bezier_test) {
+    import util.msg_service;
+    int main() {
+	import geom.gpath.arc;
+	auto a = Vector3([2.0, 2.0, 0.0]);
+	auto b = Vector3([1.0, 2.0, 1.0]);
+	auto c = Vector3([1.0, 2.0, 0.0]);
+	auto abc = new Arc(a, b, c);
+	auto d = abc(0.5);
+	auto adb = new Bezier([a, d, b]);
+	auto e = adb(0.5);
+	assert(approxEqualVectors(e, Vector3(1.60355, 2, 0.603553)), failedUnitTest());
+	auto ab = new Bezier([a, b]);
+	assert(approxEqualVectors(ab.dpdt(0.5), Vector3(-1, 0, 1)), failedUnitTest());
+	assert(approxEqualVectors(ab.d2pdt2(0.5), Vector3(0)), failedUnitTest());
+	auto acb = new Bezier([a, c, b]);
+	assert(approxEqualVectors(acb.dpdt(0.5), Vector3(-1, 0, 1)), failedUnitTest());
+	assert(approxEqualVectors(acb.d2pdt2(0.5), Vector3(2,0,2)), failedUnitTest());
+	return 0;
+    }
+} // end bezier_test

@@ -60,20 +60,24 @@ public:
 } // end class Line
 
 
-unittest {
-    auto a = Vector3([1.0, 2.2, 3.0]);
-    auto b = Vector3(1.0);
-    auto ab = new Line(a, b);
-    auto c = ab(0.5);
-    assert(approxEqualVectors(c, Vector3(1.0, 1.1, 1.5)), "Line");
-    auto ab2 = ab.dup();
-    auto d = ab2(0.5);
-    assert(approxEqualVectors(c, d), "Line.dup");
-    auto pth = new Line(Vector3(0.0,1.0), Vector3(1.0,1.0));
-    auto ps = Vector3(0.5,0.5);
-    auto dir = Vector3(0.0,1.0);
-    double t;
-    auto found = pth.intersect2D(ps, dir, t);
-    assert(found, "intersect2D not found on Line");
-    assert(approxEqual(t,0.5), "intersect2D parametric location on Line");
-}
+version(line_test) {
+    import util.msg_service;
+    int main() {
+	auto a = Vector3([1.0, 2.2, 3.0]);
+	auto b = Vector3(1.0);
+	auto ab = new Line(a, b);
+	auto c = ab(0.5);
+	assert(approxEqualVectors(c, Vector3(1.0, 1.1, 1.5)), failedUnitTest());
+	auto ab2 = ab.dup();
+	auto d = ab2(0.5);
+	assert(approxEqualVectors(c, d), failedUnitTest());
+	auto pth = new Line(Vector3(0.0,1.0), Vector3(1.0,1.0));
+	auto ps = Vector3(0.5,0.5);
+	auto dir = Vector3(0.0,1.0);
+	double t;
+	auto found = pth.intersect2D(ps, dir, t);
+	assert(found, failedUnitTest()); // "intersect2D not found on Line"
+	assert(approxEqual(t,0.5), failedUnitTest()); // "intersect2D parametric location on Line"
+	return 0;
+    }
+} // end line_test

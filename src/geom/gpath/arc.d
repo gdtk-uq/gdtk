@@ -156,22 +156,27 @@ class Arc3 : Arc {
     }
 } // end class Arc3
 
-unittest {
-    auto a = Vector3([2.0, 2.0, 0.0]);
-    auto b = Vector3([1.0, 2.0, 1.0]);
-    auto c = Vector3([1.0, 2.0, 0.0]);
-    auto abc = new Arc(a, b, c);
-    auto d = abc(0.5);
-    assert(approxEqualVectors(d, Vector3(1.7071068, 2.0, 0.7071068)), "Arc");
-    auto adb = new Arc3(a, d, b);
-    assert(approxEqualVectors(d, adb(0.5)), "Arc3");
-    //
-    auto pth = new Arc3(Vector3(0.0,1.0), Vector3(0.5,1.2), Vector3(1.0,1.0));
-    auto ps = Vector3(0.5,0.5);
-    auto dir = Vector3(0.0,1.0);
-    double t;
-    auto found = pth.intersect2D(ps, dir, t, 10);
-    assert(found, "intersect2D not found on Arc3");
-    assert(approxEqual(t,0.5), "intersect2D parametric location on Arc3");
-}
+version(arc_test) {
+    import util.msg_service;
+    int main() {
+	auto a = Vector3([2.0, 2.0, 0.0]);
+	auto b = Vector3([1.0, 2.0, 1.0]);
+	auto c = Vector3([1.0, 2.0, 0.0]);
+	auto abc = new Arc(a, b, c);
+	auto d = abc(0.5);
+	assert(approxEqualVectors(d, Vector3(1.7071068, 2.0, 0.7071068)),
+	       failedUnitTest());
+	auto adb = new Arc3(a, d, b);
+	assert(approxEqualVectors(d, adb(0.5)), "Arc3");
+	//
+	auto pth = new Arc3(Vector3(0.0,1.0), Vector3(0.5,1.2), Vector3(1.0,1.0));
+	auto ps = Vector3(0.5,0.5);
+	auto dir = Vector3(0.0,1.0);
+	double t;
+	auto found = pth.intersect2D(ps, dir, t, 10);
+	assert(found, failedUnitTest()); // intersect2D not found on Arc3
+	assert(approxEqual(t,0.5), failedUnitTest()); // intersect2D parametric location on Arc3
+	return 0;
+    }
+} // end arc_test
 

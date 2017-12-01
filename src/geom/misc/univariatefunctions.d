@@ -137,11 +137,15 @@ double roberts_original(double eta, double alpha, double beta)
 } // end roberts_original()
 
 
-unittest {
-    auto cf = new RobertsFunction(false, true, 1.1);
-    assert(approxEqual(cf(0.1), 0.166167), "RobertsFunction");
-    assert(approxEqual(cf(0.9), 0.96657), "RobertsFunction");
-    auto cf2 = new LinearFunction(1.0, 0.0);
-    assert(approxEqual(cf2(0.1), 0.9), "LinearFunction");
-    assert(approxEqual(cf2(0.9), 0.1), "LinearFunction");
-}
+version(univariatefunctions_test) {
+    import util.msg_service;
+    int main() {
+	auto cf = new RobertsFunction(false, true, 1.1);
+	assert(approxEqual(cf(0.1), 0.166167), failedUnitTest());
+	assert(approxEqual(cf(0.9), 0.96657), failedUnitTest());
+	auto cf2 = new LinearFunction(1.0, 0.0);
+	assert(approxEqual(cf2(0.1), 0.9), failedUnitTest());
+	assert(approxEqual(cf2(0.9), 0.1), failedUnitTest());
+	return 0;
+    }
+} // end univariatefunctions_test

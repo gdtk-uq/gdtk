@@ -160,12 +160,16 @@ private:
 } // end class Polyline
 
 
-unittest {
-    auto a = Vector3([2.0, 2.0, 0.0]);
-    auto b = Vector3([1.0, 2.0, 1.0]);
-    auto c = Vector3([1.0, 2.0, 0.0]);
-    auto abc = new Arc(a, b, c);
-    auto polyline = new Polyline([abc, new Line(b, c)]);
-    auto f = polyline(0.5);
-    assert(approxEqualVectors(f, Vector3(1.28154, 2, 0.95955)), "Polyline");
-}
+version(polyline_test) {
+    import util.msg_service;
+    int main() {
+	auto a = Vector3([2.0, 2.0, 0.0]);
+	auto b = Vector3([1.0, 2.0, 1.0]);
+	auto c = Vector3([1.0, 2.0, 0.0]);
+	auto abc = new Arc(a, b, c);
+	auto polyline = new Polyline([abc, new Line(b, c)]);
+	auto f = polyline(0.5);
+	assert(approxEqualVectors(f, Vector3(1.28154, 2, 0.95955)), failedUnitTest());
+	return 0;
+    }
+} // end polyline_test

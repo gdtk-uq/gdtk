@@ -10,8 +10,12 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
-set module_names [list coonspatch aopatch \
-		      tfivolume sweptsurfacevolume slabvolume wedgevolume]
+set module_names [list vector3 projection properties \
+		      line arc bezier helix polyline \
+		      coonspatch aopatch \
+		      tfivolume sweptsurfacevolume slabvolume wedgevolume \
+		      sgrid \
+		      univariatefunctions svg ]
 
 foreach name $module_names {
     test $name-test "Testing $name.d" \

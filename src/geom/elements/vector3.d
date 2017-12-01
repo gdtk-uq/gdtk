@@ -439,75 +439,79 @@ bool approxEqualVectors(in Vector3 v1, in Vector3 v2,
 	    approxEqual(v1._p[2], v2._p[2], maxRelDiff, maxAbsDiff));
 }
 
-unittest {
-    // Check that we have separate data with the correct values.
-    Vector3 a = Vector3([1.0, 2.2, 3.0]);
-    Vector3 b = Vector3(1.0);
-    assert(a.x == 1.0, "a.x fail");
-    assert(a.y == 2.2, "a.y fail");
-    assert(a.z == 3.0, "a.z fail");
-    assert(a.x == b.x, "a.x == b.x fail");
-    assert(b.y == 0.0, "b.y fail");
-    assert(b.z == 0.0, "b.z fail");
-    b.set(a);
-    assert(a.x == b.x && a.y == b.y && a.z == b.z, "b.set(a) fail");
-    b.set(1.0, 0.0, 0.0);
-    assert(b.x == 1.0 && b.y == 0.0 && b.z == 0.0, "b.set(1.0,0.0,0.0) fail");
+version(vector3_test) {
+    import util.msg_service;
+    int main() {
+	// Check that we have separate data with the correct values.
+	Vector3 a = Vector3([1.0, 2.2, 3.0]);
+	Vector3 b = Vector3(1.0);
+	assert(a.x == 1.0, failedUnitTest());
+	assert(a.y == 2.2, failedUnitTest());
+	assert(a.z == 3.0, failedUnitTest());
+	assert(a.x == b.x, failedUnitTest());
+	assert(b.y == 0.0, failedUnitTest());
+	assert(b.z == 0.0, failedUnitTest());
+	b.set(a);
+	assert(a.x == b.x && a.y == b.y && a.z == b.z, failedUnitTest());
+	b.set(1.0, 0.0, 0.0);
+	assert(b.x == 1.0 && b.y == 0.0 && b.z == 0.0, failedUnitTest());
 
-    // Check operators
-    b = -a;
-    assert(b.x == -a.x && b.y == -a.y && b.z == -a.z, "unary negation");
+	// Check operators
+	b = -a;
+	assert(b.x == -a.x && b.y == -a.y && b.z == -a.z, failedUnitTest());
 
-    b = Vector3(1.0);
-    Vector3 c = a + b;
-    assert(c.y == a.y+b.y, "vector addition");
-    c = a - b;
-    assert(c.y == a.y-b.y, "vector subtraction");
-    Vector3 d = a.dup;
-    a.refy = 99.0;
-    assert(a.y == 99.0 && d.y == 2.2, "dup followed by vector change");
-    Vector3 d2 = a;
-    a.refy = 3.3;
-    assert(a.y == 3.3 && d2.y == 99.0, "assignment followed by vector change");
+	b = Vector3(1.0);
+	Vector3 c = a + b;
+	assert(c.y == a.y+b.y, failedUnitTest());
+	c = a - b;
+	assert(c.y == a.y-b.y, failedUnitTest());
+	Vector3 d = a.dup;
+	a.refy = 99.0;
+	assert(a.y == 99.0 && d.y == 2.2, failedUnitTest());
+	Vector3 d2 = a;
+	a.refy = 3.3;
+	assert(a.y == 3.3 && d2.y == 99.0, failedUnitTest());
 
-    Vector3 e = a * 2.0;
-    Vector3 f = 3.0 * d;
-    assert(e.z == 6.0 && f.z == 9.0, "scalar multiply");
-    Vector3 g = d / 3.0;
-    assert(g.z == 1.0, "scalar division");
+	Vector3 e = a * 2.0;
+	Vector3 f = 3.0 * d;
+	assert(e.z == 6.0 && f.z == 9.0, failedUnitTest());
+	Vector3 g = d / 3.0;
+	assert(g.z == 1.0, failedUnitTest());
 
-    g += f;
-    assert(g.z == 10.0, "plus-assign");
-    g /= 2.0;
-    assert(g.z == 5.0, "divide-assign");
+	g += f;
+	assert(g.z == 10.0, failedUnitTest());
+	g /= 2.0;
+	assert(g.z == 5.0, failedUnitTest());
 
-    a = Vector3(1.0, 0.0, 0.0);
-    a.rotate_about_zaxis(PI/4);
-    assert(approxEqualVectors(a, Vector3(0.7071, 0.7071, 0)), "rotate_about_zaxis");
+	a = Vector3(1.0, 0.0, 0.0);
+	a.rotate_about_zaxis(PI/4);
+	assert(approxEqualVectors(a, Vector3(0.7071, 0.7071, 0)), failedUnitTest());
 
-    a = Vector3(1.0, 0.0, 0.0);
-    Vector3 point = Vector3(0.0, 1.0, 0.0);
-    Vector3 normal = Vector3(0.0, 1.0, 0.0);
-    a.mirror_image(point, normal);
-    assert(approxEqualVectors(a, Vector3(1.0, 2.0, 0)), "mirror_image");
+	a = Vector3(1.0, 0.0, 0.0);
+	Vector3 point = Vector3(0.0, 1.0, 0.0);
+	Vector3 normal = Vector3(0.0, 1.0, 0.0);
+	a.mirror_image(point, normal);
+	assert(approxEqualVectors(a, Vector3(1.0, 2.0, 0)), failedUnitTest());
 
-    Vector3 u = unit(g);
-    assert(approxEqual(abs(u), 1.0), "unit, dot, abs");
+	Vector3 u = unit(g);
+	assert(approxEqual(abs(u), 1.0), failedUnitTest());
 
-    Vector3 x = Vector3(1.0, 0.0, 0.0);
-    Vector3 y = Vector3(0.0, 1.0, 0.0);
-    Vector3 z = cross(x,y);
-    Vector3 zref = Vector3(0.0,0.0,1.0);
-    assert(approxEqualVectors(z, zref), "cross product");
+	Vector3 x = Vector3(1.0, 0.0, 0.0);
+	Vector3 y = Vector3(0.0, 1.0, 0.0);
+	Vector3 z = cross(x,y);
+	Vector3 zref = Vector3(0.0,0.0,1.0);
+	assert(approxEqualVectors(z, zref), failedUnitTest());
 
-    Vector3 n = Vector3(1.0,1.0,0.0); n = unit(n);
-    Vector3 t1 = Vector3(-1.0,1.0,0.0); t1 = unit(t1);
-    Vector3 t2 = cross(n, t1);
-    Vector3 h = Vector3(1.0,0.0,1.0);
-    Vector3 h_ref = Vector3(h);
-    h.transform_to_local_frame(n, t1, t2);
-    assert(approxEqualVectors(h, Vector3(sqrt(1.0/2.0), -sqrt(1.0/2.0), 1.0)),
-	   "to_local_frame");
-    h.transform_to_global_frame(n, t1, t2);
-    assert(approxEqualVectors(h, h_ref), "to_global_frame");
-}
+	Vector3 n = Vector3(1.0,1.0,0.0); n = unit(n);
+	Vector3 t1 = Vector3(-1.0,1.0,0.0); t1 = unit(t1);
+	Vector3 t2 = cross(n, t1);
+	Vector3 h = Vector3(1.0,0.0,1.0);
+	Vector3 h_ref = Vector3(h);
+	h.transform_to_local_frame(n, t1, t2);
+	assert(approxEqualVectors(h, Vector3(sqrt(1.0/2.0), -sqrt(1.0/2.0), 1.0)),
+	       failedUnitTest());
+	h.transform_to_global_frame(n, t1, t2);
+	assert(approxEqualVectors(h, h_ref), failedUnitTest());
+	return 0;
+    }
+} // end vector3_test

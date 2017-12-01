@@ -26,15 +26,6 @@ bool inside_bounding_box(ref const(Vector3) p,
     return is_inside;
 } // end inside_bounding_box()
 
-unittest {
-    Vector3 bb0 = Vector3(1.0, 1.0, 1.0);
-    Vector3 bb1 = Vector3(2.0, 2.0, 2.0);
-    Vector3 p = 0.5*(bb0 + bb1);
-    assert(inside_bounding_box(p, bb0, bb1, 3), "bounding box test 1");
-    p += Vector3(0.0, 0.0, 1.0);
-    assert(!inside_bounding_box(p, bb0, bb1, 3), "bounding box test 2");
-    assert(inside_bounding_box(p, bb0, bb1, 2), "bounding box test 3");
-}
 
 //------------------------------------------------------------------------
 // Utility functions for cell properties in the finite-volume code.
@@ -496,68 +487,6 @@ void hex_cell_properties(ref const(Vector3)[] p,
 			centroid, volume, iLen, jLen, kLen);
 }
 
-unittest {
-    Vector3 p0 = Vector3(0.0, 0.0, 1.0);
-    Vector3 p1 = Vector3(1.0, 0.0, 1.0);
-    Vector3 p2 = Vector3(1.0, 1.0, 1.0);
-    Vector3 p3 = Vector3(0.0, 1.0, 1.0);
-    Vector3 centroid, n, t1, t2;
-    double area;
-    triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
-    assert(approxEqual(area, 0.5), "triangle_properties area");
-    assert(approxEqualVectors(centroid, Vector3(2.0/3,1.0/3,1.0)), "triangle_properties centroid");
-    assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), "triangle_properties normal");
-    assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), "triangle_properties t1");
-    assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), "triangle_properties t2");
-
-    quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
-    assert(approxEqual(area, 1.0), "quad_properties area");
-    assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0)), "quad_properties centroid");
-    assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), "quad_properties normal");
-    assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), "quad_properties t1");
-    assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), "quad_properties t2");
-
-    // Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
-    p0 = Vector3(0, 0, 0);
-    p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
-    p2 = Vector3(0.0, 1.0, 0.0);
-    double dx = 0.5 * tan(radians(30));
-    double dL = cos(radians(30));
-    double dz = sqrt(dL*dL - dx*dx);
-    p3 = Vector3(dx, 0.5, dz);
-    double volume;
-    tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
-    assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), "tetrahedron centroid");
-    assert(approxEqual(volume, cos(radians(30))*0.5*dz/3), "tetrahedron volume");
-
-    // Build a wedge with the same equilateral-triangle base.
-    Vector3 incz = Vector3(0, 0, -1.0);
-    p3 = p0 + incz;
-    Vector3 p4 = p1 + incz;
-    Vector3 p5 = p2 + incz;
-    wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
-    assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), "wedge centroid");
-    assert(approxEqual(volume, cos(radians(30))*0.5*1.0), "wedge volume");
-
-    // Pyramid
-    p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
-    p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
-    p4 = Vector3(0.5,0.5,1); // peak
-    pyramid_properties(p0, p1, p2, p3, p4, centroid, volume);
-    assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0/4)), "pyramid centroid");
-    assert(approxEqual(volume, 1.0/3), "pyramid volume");
-
-    // Simple cube for the hex cell.
-    p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
-    p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
-    p4 = Vector3(0,0,1); p5 = Vector3(1,0,1);
-    Vector3 p6 = Vector3(1,1,1); Vector3 p7 = Vector3(0,1,1);
-    double iLen, jLen, kLen;
-    hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, centroid, volume,
-			iLen, jLen, kLen);
-    assert(approxEqualVectors(centroid, Vector3(0.5,0.5,0.5)), "hex centroid");
-    assert(approxEqual(volume, 1.0), "hex volume");
-}
 
 //------------------------------------------------------------------------
 // Utility functions for searching cells in the finite-volume code.
@@ -638,27 +567,6 @@ bool inside_xy_quad(ref const(Vector3) p0, ref const(Vector3) p1,
     return (count_on_left == 4);
 } // end inside_xy_quad()
 
-unittest {
-    Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
-    Vector3 b = Vector3(1.0, 1.0, 0.0);
-    Vector3 c = Vector3(0.5, 0.0, 0.0);
-    Vector3 d = Vector3(0.65, 0.0, 0.0);
-    assert(inside_triangle(d, a, b, c) > 0, "inside triangle");
-    Vector3 e = Vector3(0.65, -0.1, 0.0);
-    assert(!inside_triangle(e, a, b, c), "outside triangle");
-
-    auto p0 = Vector3(0.0, 0.0);
-    auto p1 = Vector3(1.0, -0.1);
-    auto p2 = Vector3(1.0, 1.0);
-    auto p3 = Vector3(0.0, 1.0);
-    Vector3[] poly = [p0, p1, p2, p3];
-    assert(inside_xy_polygon(poly, d), "inside polygon");
-    assert(!inside_xy_polygon(poly, e), "outside polygon");
-    assert(inside_xy_triangle(p0, p1, p2, d), "inside xy triangle");
-    assert(!inside_xy_triangle(p0, p1, p2, e), "outside xy triangle");
-    assert(inside_xy_quad(p0, p1, p2, p3, d), "inside xy quadrangle");
-    assert(!inside_xy_quad(p0, p1, p2, p3, e), "outside xy quadrangle");
-}
 
 // Functions for 3D cells.
 
@@ -766,29 +674,124 @@ bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
     return true;
 } // end inside_hexahedron()
 
-unittest {
-    Vector3 d = Vector3(0.65, 0.0, 0.0);
-    Vector3 e = Vector3(0.65, -0.1, 0.0);
 
-    auto p0 = Vector3(0.0, 0.0, 0.0);
-    auto p1 = Vector3(1.0, -0.1, 0.0);
-    auto p2 = Vector3(1.0, 1.0, 0.0);
-    auto p3 = Vector3(0.0, 1.0, 0.0);
-    auto p4 = Vector3(0.0, 0.0, 1.0);
-    auto p5 = Vector3(1.0, -0.1, 1.0);
-    auto p6 = Vector3(1.0, 1.0, 1.0);
-    auto p7 = Vector3(0.0, 1.0, 1.0);
-    assert(inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, d), "inside hexahedron");
-    assert(!inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, e), "outside hexahedron");
+version(properties_test) {
+    import util.msg_service;
+    int main() {
+	Vector3 bb0 = Vector3(1.0, 1.0, 1.0);
+	Vector3 bb1 = Vector3(2.0, 2.0, 2.0);
+	Vector3 p = 0.5*(bb0 + bb1);
+	assert(inside_bounding_box(p, bb0, bb1, 3), failedUnitTest());
+	p += Vector3(0.0, 0.0, 1.0);
+	assert(!inside_bounding_box(p, bb0, bb1, 3), failedUnitTest());
+	assert(inside_bounding_box(p, bb0, bb1, 2), failedUnitTest());
 
-    auto f = Vector3(0.1, 0.0, 0.5);
-    assert(inside_tetrahedron(p0, p1, p2, p4, f), "inside_tetrahedron");
-    f = Vector3(0.0, 0.2, 0.5);
-    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
-    f = Vector3(0.0, -0.2, 0.5);
-    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
-    f = Vector3(1.0, 0.0, 1.0);
-    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
-    f = Vector3(0.0, 0.0, -0.5);
-    assert(!inside_tetrahedron(p0, p1, p2, p4, f), "outside_tetrahedron");
-}
+	Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
+	Vector3 b = Vector3(1.0, 1.0, 0.0);
+	Vector3 c = Vector3(0.5, 0.0, 0.0);
+	Vector3 d = Vector3(0.65, 0.0, 0.0);
+	assert(inside_triangle(d, a, b, c) > 0, failedUnitTest());
+	Vector3 e = Vector3(0.65, -0.1, 0.0);
+	assert(!inside_triangle(e, a, b, c), failedUnitTest());
+
+	auto p0 = Vector3(0.0, 0.0);
+	auto p1 = Vector3(1.0, -0.1);
+	auto p2 = Vector3(1.0, 1.0);
+	auto p3 = Vector3(0.0, 1.0);
+	Vector3[] poly = [p0, p1, p2, p3];
+	assert(inside_xy_polygon(poly, d), failedUnitTest());
+	assert(!inside_xy_polygon(poly, e), failedUnitTest());
+	assert(inside_xy_triangle(p0, p1, p2, d), failedUnitTest());
+	assert(!inside_xy_triangle(p0, p1, p2, e), failedUnitTest());
+	assert(inside_xy_quad(p0, p1, p2, p3, d), failedUnitTest());
+	assert(!inside_xy_quad(p0, p1, p2, p3, e), failedUnitTest());
+
+	p0 = Vector3(0.0, 0.0, 1.0);
+	p1 = Vector3(1.0, 0.0, 1.0);
+	p2 = Vector3(1.0, 1.0, 1.0);
+	p3 = Vector3(0.0, 1.0, 1.0);
+	Vector3 centroid, n, t1, t2;
+	double area;
+	triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
+	assert(approxEqual(area, 0.5), failedUnitTest());
+	assert(approxEqualVectors(centroid, Vector3(2.0/3,1.0/3,1.0)), failedUnitTest());
+	assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), failedUnitTest());
+	assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
+	assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), failedUnitTest());
+
+	quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
+	assert(approxEqual(area, 1.0), failedUnitTest());
+	assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0)), failedUnitTest());
+	assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), failedUnitTest());
+	assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
+	assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), failedUnitTest());
+
+	// Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
+	p0 = Vector3(0, 0, 0);
+	p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
+	p2 = Vector3(0.0, 1.0, 0.0);
+	double dx = 0.5 * tan(radians(30));
+	double dL = cos(radians(30));
+	double dz = sqrt(dL*dL - dx*dx);
+	p3 = Vector3(dx, 0.5, dz);
+	double volume;
+	tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
+	assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), failedUnitTest());
+	assert(approxEqual(volume, cos(radians(30))*0.5*dz/3), failedUnitTest());
+
+	// Build a wedge with the same equilateral-triangle base.
+	Vector3 incz = Vector3(0, 0, -1.0);
+	p3 = p0 + incz;
+	Vector3 p4 = p1 + incz;
+	Vector3 p5 = p2 + incz;
+	wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
+	assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), failedUnitTest());
+	assert(approxEqual(volume, cos(radians(30))*0.5*1.0), failedUnitTest());
+
+	// Pyramid
+	p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
+	p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
+	p4 = Vector3(0.5,0.5,1); // peak
+	pyramid_properties(p0, p1, p2, p3, p4, centroid, volume);
+	assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0/4)), failedUnitTest());
+	assert(approxEqual(volume, 1.0/3), failedUnitTest());
+
+	// Simple cube for the hex cell.
+	p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
+	p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
+	p4 = Vector3(0,0,1); p5 = Vector3(1,0,1);
+	Vector3 p6 = Vector3(1,1,1); Vector3 p7 = Vector3(0,1,1);
+	double iLen, jLen, kLen;
+	hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, centroid, volume,
+			    iLen, jLen, kLen);
+	assert(approxEqualVectors(centroid, Vector3(0.5,0.5,0.5)), failedUnitTest());
+	assert(approxEqual(volume, 1.0), failedUnitTest());
+
+	d = Vector3(0.65, 0.0, 0.0);
+	e = Vector3(0.65, -0.1, 0.0);
+
+	p0 = Vector3(0.0, 0.0, 0.0);
+	p1 = Vector3(1.0, -0.1, 0.0);
+	p2 = Vector3(1.0, 1.0, 0.0);
+	p3 = Vector3(0.0, 1.0, 0.0);
+	p4 = Vector3(0.0, 0.0, 1.0);
+	p5 = Vector3(1.0, -0.1, 1.0);
+	p6 = Vector3(1.0, 1.0, 1.0);
+	p7 = Vector3(0.0, 1.0, 1.0);
+	assert(inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, d), failedUnitTest());
+	assert(!inside_hexahedron(p0, p1, p2, p3, p4, p5, p6, p7, e), failedUnitTest());
+
+	auto f = Vector3(0.1, 0.0, 0.5);
+	assert(inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
+	f = Vector3(0.0, 0.2, 0.5);
+	assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
+	f = Vector3(0.0, -0.2, 0.5);
+	assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
+	f = Vector3(1.0, 0.0, 1.0);
+	assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
+	f = Vector3(0.0, 0.0, -0.5);
+	assert(!inside_tetrahedron(p0, p1, p2, p4, f), failedUnitTest());
+	
+	return 0;
+    }
+} // end properties_test
