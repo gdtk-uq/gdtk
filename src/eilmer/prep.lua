@@ -184,7 +184,7 @@ function FlowState:new(o)
       for i = 2, nsp do massf[names[i]] = 0.0 end
       FlowState_defaults.massf = massf
       local T_modes = {}
-      for i = 1, nmodes do T_modes[#Tmodes+1] = FlowState_defaults.T end
+      for i = 1, nmodes do T_modes[#T_modes+1] = FlowState_defaults.T end
       FlowState_defaults.T_modes = T_modes
    end
    -- Now, fill in default values for the FlowState object being constructed.
@@ -206,14 +206,22 @@ function FlowState:new(o)
    end
    Q.massf = massf
    if FlowState.nModes > 0 then
-      if o.T_modes and not(#o.T_modes == FlowState.nModes) then
-	 error("Wrong number of T_modes values.")
-      end
       if o.T_modes == nil then
-	 -- We did not receive any T_modes, assume equilibrium.
+	 -- We did not receive any T_modes, assume in equilibrium with Ttr.
 	 local T_modes = {}
 	 for i = 1, FlowState.nModes do T_modes[#T_modes] = o.T end
 	 o.T_modes = T_modes
+      else
+	 -- We have been given something, which is expected
+	 -- to be either an array or a single number.
+	 if type(o.T_modes) == "number" then
+	    local my_array = {}
+	    for i = 1, FlowState.nModes do my_array[#my_array+1] = o.T_modes end
+	    o.T_modes = my_array
+	 end
+      end
+      if not(#o.T_modes == FlowState.nModes) then
+	 error(string.format("Wrong number of T_modes values: %d.", #o.T_modes))
       end
       Q.T_modes = o.T_modes
    end
