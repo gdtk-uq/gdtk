@@ -10,7 +10,7 @@ config.dimensions = 2
 nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
 initial = FlowState:new{p=101.325e3, T=300.0}
-sspeed = initial:toTable().a
+sspeed = initial.a
 print("sound speed=", sspeed)
 inflow = FlowState:new{p=101.325e3, T=300.0, velx=3.0*sspeed, vely=0.0}
 

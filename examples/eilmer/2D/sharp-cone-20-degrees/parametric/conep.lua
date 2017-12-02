@@ -12,13 +12,13 @@ nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 print("GasModel set to ideal air. nsp= ", nsp, " nmodes= ", nmodes)
 initial = FlowState:new{p=5955.0, T=304.0, velx=0.0}
 -- Compute inflow from Mach number.
-inflow_gas = FlowState:new{p=95.84e3, T=1103.0}; Q = inflow_gas:toTable()
-print("T=", Q.T, "density=", Q.rho, "sound speed= ", Q.a)
+inflow_gas = FlowState:new{p=95.84e3, T=1103.0}
 M = 1.5
-Vx = M * Q.a
+Vx = M * inflow_gas.a
 print("inflow velocity Vx=", Vx)
-print("dynamic pressure q=", 1/2*Q.rho*Vx*Vx)
+print("dynamic pressure q=", 1/2*inflow_gas.rho*Vx*Vx)
 inflow = FlowState:new{p=95.84e3, T=1103.0, velx=Vx}
+print("T=", inflow.T, "density=", inflow.rho, "sound speed= ", inflow.a)
 
 -- Parameters defining cone and flow domain.
 theta = 20 -- cone half-angle, degrees

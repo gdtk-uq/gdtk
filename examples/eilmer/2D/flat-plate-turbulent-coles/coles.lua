@@ -16,7 +16,7 @@ nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
 p_inf = 1.358e3  -- Pa
 u_inf = 677.4    -- m/s
 T_inf = 83.34    -- K
-gas_inf = FlowState:new{p=p_inf, T=T_inf}:toTable()
+gas_inf = FlowState:new{p=p_inf, T=T_inf}
 -- Turbulence quantities estimate
 tke_inf = 1.5 * (u_inf * 0.05)^2
 mu_t_inf = 100.0 * gas_inf.mu

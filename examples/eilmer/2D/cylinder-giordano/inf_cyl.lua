@@ -35,9 +35,8 @@ config.reacting = true
 M_inf = 6.5
 T_inf = 300.0 -- K
 p_inf = 50.0 -- Pa, low pressure case
-dummy = FlowState:new{p=p_inf, T=T_inf, T_modes=T_inf}
-Q = dummy:toTable()
-velx_inf = M_inf*Q.a
+inflow_gas = FlowState:new{p=p_inf, T=T_inf, T_modes=T_inf}
+velx_inf = M_inf*inflow_gas.a
 
 inflow = FlowState:new{p=p_inf, T=T_inf, T_modes=T_inf, velx=velx_inf}
 initial = FlowState:new{p=p_inf/3, T=T_inf, T_modes=T_inf}

@@ -17,10 +17,9 @@ initial = FlowState:new{p=5955.0, T=304.0, velx=0.0}
 inflow = FlowState:new{p=95.84e3, T=1103.0, velx=1000.0}
 
 -- Demo: Verify Mach number of inflow and compute dynamic pressure.
-Q = inflow:toTable()
-print("T=", Q.T, "density=", Q.rho, "sound speed= ", Q.a)
-print("inflow Mach number=", 1000.0/Q.a)
-print("dynamic pressure q=", 1/2*Q.rho*1.0e6)
+print("T=", inflow.T, "density=", inflow.rho, "sound speed= ", inflow.a)
+print("inflow Mach number=", 1000.0/inflow.a)
+print("dynamic pressure q=", 1/2*inflow.rho*1.0e6)
 
 -- Set up two quadrilaterals in the (x,y)-plane by first defining
 -- the corner nodes, then the lines between those corners.
