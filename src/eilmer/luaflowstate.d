@@ -27,13 +27,23 @@ import globalconfig;
 import luaglobalconfig;
 import fvcell;
 
-/// name for FlowState object in Lua scripts.
-immutable string FlowStateMT = "FlowState";
+// Name for FlowState object in Lua scripts.
+// PJ, 2017-12-02: Note the preceding underscore in the name.
+// We intend the user to interact with another (table-based) class
+// in their scripts but continue to want this D-wrapped class
+// to be available in the Lua domain.
+immutable string FlowStateMT = "_FlowState";
+
+// 2017-12-02: We have increased the number of fileds so that the constructor
+// is tolerant of tables passed in from Lua that have been constructed as
+// pure Lua FlowState objects.  Such tables will have more fields than needed
+// to initialize the Dlang FlowState object but they should all be valid.
 immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
 					   "quality", "massf",
 					   "velx", "vely", "velz",
-					   "Bx", "By", "Bz", "psi",
-					   "tke", "omega", "mu_t", "k_t"];
+					   "Bx", "By", "Bz", "psi", "divB",
+					   "tke", "omega", "mu_t", "k_t", "S",
+					   "rho", "a"];
 static const(FlowState)[] flowStateStore;
 
 // Makes it a little more consistent to make this
@@ -66,25 +76,37 @@ FlowState checkFlowState(lua_State* L, int index)
 extern(C) int newFlowState(lua_State* L)
 {
     auto managedGasModel = GlobalConfig.gmodel_master;
-    if ( managedGasModel is null ) {
+    if (managedGasModel is null) {
 	string errMsg = `Error in call to FlowState:new.
 It appears that you have not yet set the GasModel.
 Be sure to call setGasModel(fname) before using a FlowState object.`;
 	luaL_error(L, errMsg.toStringz);
     }
-
     lua_remove(L, 1); // Remove first argument "this".
     FlowState fs;
-
     int narg = lua_gettop(L);
-    if ( narg == 0 ) {
+    if (narg == 0) {
+	// Make an empty FlowState
 	fs = new FlowState(managedGasModel);
 	flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
 	return 1;
     }
-    // else narg >= 1
-    if ( !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to FlowState:new. A table is expected as first argument.";
+    fs = makeFlowStateFromTable(L, 1);
+    flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
+    return 1;
+}
+
+FlowState makeFlowStateFromTable(lua_State* L, int tblindx)
+{
+    auto managedGasModel = GlobalConfig.gmodel_master;
+    if (managedGasModel is null) {
+	string errMsg = `Error in call to makeFlowStateFromTable.
+It appears that you have not yet set the GasModel.
+Be sure to call setGasModel(fname) before using a FlowState object.`;
+	luaL_error(L, errMsg.toStringz);
+    }
+    if (!lua_istable(L, tblindx)) {
+	string errMsg = "Error in call to makeFlowStateFromTable. A table is expected as first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
     // At this point we have a table at idx=1. Let's check that all
@@ -92,50 +114,48 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
     bool allFieldsAreValid = true;
     string errMsg;
     lua_pushnil(L);
-    while ( lua_next(L, 1) != 0 ) {
+    while (lua_next(L, tblindx) != 0) {
 	string key = to!string(lua_tostring(L, -2));
 	if ( find(validFlowStateFields, key).empty ) {
 	    allFieldsAreValid = false;
-	    errMsg ~= format("ERROR: '%s' is not a valid input in FlowState:new{}\n", key);
+	    errMsg ~= format("ERROR: '%s' is not a valid input in makeFlowStateFromTable\n", key);
 	}
 	lua_pop(L, 1);
     }
-    if ( !allFieldsAreValid ) {
+    if (!allFieldsAreValid) {
 	luaL_error(L, errMsg.toStringz);
     }
     // Now we are committed to using the first constructor
     // in class FlowState. So we have to find at least
     // a pressure and temperature(s).
-    errMsg = `Error in call to FlowState:new.
+    errMsg = `Error in call to makeFlowStateFromTable.
 A valid pressure value 'p' is not found in arguments.
 The value should be a number.`;
-    double p = getNumberFromTable(L, 1, "p", true, double.init, true, errMsg);
+    double p = getNumberFromTable(L, tblindx, "p", true, double.init, true, errMsg);
 
-    errMsg = `Error in call to FlowState:new.
+    errMsg = `Error in call to makeFlowStateFromTable.
 A valid pressure value 'T' is not found in arguments.
 The value should be a number.`;
-    double Ttr = getNumberFromTable(L, 1, "T", true, double.init, true, errMsg);
+    double Ttr = getNumberFromTable(L, tblindx, "T", true, double.init, true, errMsg);
 
     // Now everything else is optional. If it has been set, then we will 
     // ensure that it can be retrieved correctly, or signal the user.
 
     // Next test for T_modes and see if it is a scalar or an array.
     double[] T_modes;
-    lua_getfield(L, 1, "T_modes");
-    if ( lua_isnumber(L, -1 ) ) {
+    lua_getfield(L, tblindx, "T_modes");
+    if (lua_isnumber(L, -1)) {
 	double Tval = lua_tonumber(L, -1);
 	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Tval; }
-    }
-    else if ( lua_istable(L, -1 ) ) {
-	getArrayOfDoubles(L, 1, "T_modes", T_modes);
+    } else if (lua_istable(L, -1)) {
+	getArrayOfDoubles(L, tblindx, "T_modes", T_modes);
 	if ( T_modes.length != managedGasModel.n_modes ) {
-	    errMsg = "Error in call to FlowState:new.";
+	    errMsg = "Error in call to makeFlowStateFromTable.";
 	    errMsg ~= "Length of T_modes vector does not match number of modes in gas model.";
 	    errMsg ~= format("T_modes.length= %d; n_modes= %d\n", T_modes.length, managedGasModel.n_modes);
 	    throw new LuaInputException(errMsg);
 	}
-    }
-    else  {
+    } else {
 	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Ttr; }
     }
     lua_pop(L, 1);
@@ -143,36 +163,33 @@ The value should be a number.`;
     double velx = 0.0;
     double vely = 0.0;
     double velz = 0.0;
-    string errMsgTmplt = "Error in call to FlowState:new.\n";
+    string errMsgTmplt = "Error in call to makeFlowStateFromTable.\n";
     errMsgTmplt ~= "A valid value for '%s' is not found in arguments.\n";
     errMsgTmplt ~= "The value, if present, should be a number.";
-    velx = getNumberFromTable(L, 1, "velx", false, 0.0, true, format(errMsgTmplt, "velx"));
-    vely = getNumberFromTable(L, 1, "vely", false, 0.0, true, format(errMsgTmplt, "vely"));
-    velz = getNumberFromTable(L, 1, "velz", false, 0.0, true, format(errMsgTmplt, "velz"));
+    velx = getNumberFromTable(L, tblindx, "velx", false, 0.0, true, format(errMsgTmplt, "velx"));
+    vely = getNumberFromTable(L, tblindx, "vely", false, 0.0, true, format(errMsgTmplt, "vely"));
+    velz = getNumberFromTable(L, tblindx, "velz", false, 0.0, true, format(errMsgTmplt, "velz"));
     auto vel = Vector3(velx, vely, velz);
 
     // Values related to mass fractions.
     double[] massf;
     auto nsp = managedGasModel.n_species();
     massf.length = nsp;
-    lua_getfield(L, 1, "massf");
-    if ( lua_isnil(L, -1) ) {
-	if ( nsp == 1 ) {
+    lua_getfield(L, tblindx, "massf");
+    if (lua_isnil(L, -1)) {
+	if (nsp == 1) {
 	    massf[0] = 1.0;
-	}
-	else {
-	    errMsg = "ERROR: in call to FlowState:new{}.\n";
+	} else {
+	    errMsg = "ERROR: in call to makeFlowStateFromTable.\n";
 	    errMsg ~= format("You are using a multi-component gas with n_species= %d\n", nsp);
 	    errMsg ~= "However, you have not set any mass fraction values.\n";
 	    throw new LuaInputException(errMsg);
 	}
-    }
-    else if ( lua_istable(L, -1) ) {
+    } else if (lua_istable(L, -1)) {
 	int massfIdx = lua_gettop(L);
 	getSpeciesValsFromTable(L, managedGasModel, massfIdx, massf, "massf");
-    }
-    else  {
-	errMsg = "Error in call to FlowState:new{}.\n";
+    } else {
+	errMsg = "Error in call to makeFlowStateFromTable.\n";
 	errMsg ~= "A field for mass fractions was found, but the contents are not valid.";
 	errMsg ~= "The mass fraction should be given as a table of key-value pairs { speciesName=val }.";
 	throw new LuaInputException(errMsg);
@@ -180,37 +197,36 @@ The value should be a number.`;
     lua_pop(L, 1);
 
     // Value for quality
-    double quality = getNumberFromTable(L, 1, "quality", false, 1.0, true, format(errMsgTmplt, "quality"));
+    double quality = getNumberFromTable(L, tblindx, "quality", false, 1.0, true, format(errMsgTmplt, "quality"));
     
     // Values for B (magnetic field)
     double Bx = 0.0;
     double By = 0.0;
     double Bz = 0.0;
-    Bx = getNumberFromTable(L, 1, "Bx", false, 0.0, true, format(errMsgTmplt, "Bx"));
-    By = getNumberFromTable(L, 1, "By", false, 0.0, true, format(errMsgTmplt, "By"));
-    Bz = getNumberFromTable(L, 1, "Bz", false, 0.0, true, format(errMsgTmplt, "Bz"));
+    Bx = getNumberFromTable(L, tblindx, "Bx", false, 0.0, true, format(errMsgTmplt, "Bx"));
+    By = getNumberFromTable(L, tblindx, "By", false, 0.0, true, format(errMsgTmplt, "By"));
+    Bz = getNumberFromTable(L, tblindx, "Bz", false, 0.0, true, format(errMsgTmplt, "Bz"));
     auto B = Vector3(Bx, By, Bz);
     
     //Divergence of the magnetic field
-    double divB = getNumberFromTable(L, 1, "divB", false, 0.0, true, format(errMsgTmplt, "divB"));
+    double divB = getNumberFromTable(L, tblindx, "divB", false, 0.0, true, format(errMsgTmplt, "divB"));
     //Divergence cleaning parameter psi for MHD
-    double psi = getNumberFromTable(L, 1, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
+    double psi = getNumberFromTable(L, tblindx, "psi", false, 0.0, true, format(errMsgTmplt, "psi"));
     
     // Values related to k-omega model.
-    double tke = getNumberFromTable(L, 1, "tke", false, 0.0, true, format(errMsgTmplt, "tke"));
-    double omega = getNumberFromTable(L, 1, "omega", false, 1.0, true, format(errMsgTmplt, "omega"));
-    double mu_t = getNumberFromTable(L, 1, "mu_t", false, 0.0, true, format(errMsgTmplt, "mu_t"));
-    double k_t = getNumberFromTable(L, 1, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
+    double tke = getNumberFromTable(L, tblindx, "tke", false, 0.0, true, format(errMsgTmplt, "tke"));
+    double omega = getNumberFromTable(L, tblindx, "omega", false, 1.0, true, format(errMsgTmplt, "omega"));
+    double mu_t = getNumberFromTable(L, tblindx, "mu_t", false, 0.0, true, format(errMsgTmplt, "mu_t"));
+    double k_t = getNumberFromTable(L, tblindx, "k_t", false, 0.0, true, format(errMsgTmplt, "k_t"));
 
-    // We won't let user set 'S' -- shock detector value.
-    int S = 0;
+    // Shock detector value.
+    int S = getIntegerFromTable(L, tblindx, "S", false, 0, true, format(errMsgTmplt, "S"));
 
-    fs = new FlowState(managedGasModel, p, Ttr, T_modes, vel, massf, quality, B,
-		       psi, divB, tke, omega, mu_t, k_t);
-    flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
-    return 1;
-}
-
+    auto fs = new FlowState(managedGasModel, p, Ttr, T_modes, vel, massf, quality, B,
+			    psi, divB, tke, omega, mu_t, k_t, S);
+    return fs;
+} // end makeFlowStateFromTable()
+    
 /**
  * Provide a peek into the FlowState data as a Lua table.
  *
@@ -444,13 +460,13 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
     double t0 = luaL_checknumber(L, 4);
     FlowState fs;
     // Test if we have a simple flow state or something more exotic
-    if ( isObjType(L, 3, "FlowState") ) {
+    if ( isObjType(L, 3, "_FlowState") ) {
 	fs = checkFlowState(L, 3);
 	write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
 	return 0;
     }
     // Else, we might have a callable lua function
-    if ( lua_isfunction(L, 3) ) {
+    if (lua_isfunction(L, 3)) {
 	// Assume we can use the function then.
 	// A lot of code borrowed from flowstate.d
 	// Keep in sync with write_initial_flow_file() function in that file.
@@ -508,16 +524,20 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			lua_pushnumber(L, pos.x);
 			lua_pushnumber(L, pos.y);
 			lua_pushnumber(L, pos.z);
-			if ( lua_pcall(L, 3, 1, 0) != 0 ) {
+			if (lua_pcall(L, 3, 1, 0) != 0) {
 			    string errMsg = "Error in Lua function call for setting FlowState\n";
 			    errMsg ~= "as a function of postion (x, y, z).\n";
 			    luaL_error(L, errMsg.toStringz);
 			}
-			fs = checkFlowState(L, -1);
-			if ( !fs ) {
+			if (lua_istable(L, -1)) {
+			    fs = makeFlowStateFromTable(L, lua_gettop(L));
+			} else {
+			    fs = checkFlowState(L, -1);
+			}
+			if (!fs) {
 			    string errMsg = "Error in from Lua function call for setting FlowState\n";
 			    errMsg ~= "as a function of postion (x, y, z).\n";
-			    errMsg ~= "The returned object is not a proper FlowState object.";
+			    errMsg ~= "The returned object is not a proper _FlowState object or table.";
 			    luaL_error(L, errMsg.toStringz);
 			}
 			cell_data_to_raw_binary(outfile, pos, volume, fs,
@@ -574,16 +594,20 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			lua_pushnumber(L, pos.x);
 			lua_pushnumber(L, pos.y);
 			lua_pushnumber(L, pos.z);
-			if ( lua_pcall(L, 3, 1, 0) != 0 ) {
+			if (lua_pcall(L, 3, 1, 0) != 0) {
 			    string errMsg = "Error in Lua function call for setting FlowState\n";
 			    errMsg ~= "as a function of postion (x, y, z).\n";
 			    luaL_error(L, errMsg.toStringz);
 			}
-			fs = checkFlowState(L, -1);
-			if ( !fs ) {
+			if (lua_istable(L, -1)) {
+			    fs = makeFlowStateFromTable(L, lua_gettop(L));
+			} else {
+			    fs = checkFlowState(L, -1);
+			}
+			if (!fs) {
 			    string errMsg = "Error in from Lua function call for setting FlowState\n";
 			    errMsg ~= "as a function of postion (x, y, z).\n";
-			    errMsg ~= "The returned object is not a proper FlowState object.";
+			    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
 			    luaL_error(L, errMsg.toStringz);
 			}
 			outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
@@ -609,7 +633,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
     double t0 = luaL_checknumber(L, 4);
     FlowState fs;
     // Test if we have a simple flow state or something more exotic
-    if ( isObjType(L, 3, "FlowState") ) {
+    if ( isObjType(L, 3, "_FlowState") ) {
 	fs = checkFlowState(L, 3);
 	write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
 	return 0;
@@ -656,16 +680,20 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		lua_pushnumber(L, pos.x);
 		lua_pushnumber(L, pos.y);
 		lua_pushnumber(L, pos.z);
-		if ( lua_pcall(L, 3, 1, 0) != 0 ) {
+		if (lua_pcall(L, 3, 1, 0) != 0) {
 		    string errMsg = "Error in Lua function call for setting FlowState\n";
 		    errMsg ~= "as a function of postion (x, y, z).\n";
 		    luaL_error(L, errMsg.toStringz);
 		}
-		fs = checkFlowState(L, -1);
-		if ( !fs ) {
+		if (lua_istable(L, -1)) {
+		    fs = makeFlowStateFromTable(L, lua_gettop(L));
+		} else {
+		    fs = checkFlowState(L, -1);
+		}
+		if (!fs) {
 		    string errMsg = "Error in from Lua function call for setting FlowState\n";
 		    errMsg ~= "as a function of postion (x, y, z).\n";
-		    errMsg ~= "The returned object is not a proper FlowState object.";
+		    errMsg ~= "The returned object is not a proper _FlowState object or a suitable table.";
 		    luaL_error(L, errMsg.toStringz);
 		}
 		cell_data_to_raw_binary(outfile, pos, volume, fs,
@@ -704,16 +732,20 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		lua_pushnumber(L, pos.x);
 		lua_pushnumber(L, pos.y);
 		lua_pushnumber(L, pos.z);
-		if ( lua_pcall(L, 3, 1, 0) != 0 ) {
+		if (lua_pcall(L, 3, 1, 0) != 0) {
 		    string errMsg = "Error in Lua function call for setting FlowState\n";
 		    errMsg ~= "as a function of postion (x, y, z).\n";
 		    luaL_error(L, errMsg.toStringz);
 		}
-		fs = checkFlowState(L, -1);
-		if ( !fs ) {
+		if (lua_istable(L, -1)) {
+		    fs = makeFlowStateFromTable(L, lua_gettop(L));
+		} else {
+		    fs = checkFlowState(L, -1);
+		}
+		if (!fs) {
 		    string errMsg = "Error in from Lua function call for setting FlowState\n";
 		    errMsg ~= "as a function of postion (x, y, z).\n";
-		    errMsg ~= "The returned object is not a proper FlowState object.";
+		    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
 		    luaL_error(L, errMsg.toStringz);
 		}
 		outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
