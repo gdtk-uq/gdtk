@@ -17,6 +17,7 @@ import globalconfig;
 import flowstate;
 import flowgradients;
 import fvcell;
+import fvinterface;
 
 class FVVertex {
 public:
@@ -30,7 +31,9 @@ public:
     FlowState[] cloud_fs; // References to flow states at those points.
     WLSQGradWorkspace ws_grad;
     version(adjoint) {
-	FVCell[] jacobian_stencil;
+	FVCell[] jacobian_cell_stencil;
+	FVInterface[] jacobian_ifi_stencil;
+	FVInterface[] jacobian_ifj_stencil;
     }
     
     this(LocalConfig myConfig,

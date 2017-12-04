@@ -706,7 +706,7 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
 	// do some shuffling
 	int count = 0;
 	//writef("perturbed cell: %d effected cells: ", cell.id);
-	foreach(c; cell.jacobian_stencil) {
+	foreach(c; cell.jacobian_cell_stencil) {
 	    size_t I, J; // indices in Jacobian matrix
 	    double integral;
 	    double volInv = 1.0 / c.volume[0];
@@ -760,18 +760,38 @@ void construct_flow_jacobian_stencils(Block blk) {
      a row in the transposed Jacobian in Compressed Row Storage format.
      
      ++/
-    foreach(c; blk.cells) {
-	FVCell[] refs_ordered;
-	FVCell[] refs_unordered;
-	size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
-	size_t[] cell_ids;
 
-	if (blk.myConfig.interpolation_order < 2) { 
+    // for first-order simulations the structured, unstructured stencils are identical
+    if (blk.myConfig.interpolation_order < 2) { 
+	foreach(c; blk.cells) {
+	    FVCell[] refs_ordered;
+	    FVCell[] refs_unordered;
+	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
+	    size_t[] cell_ids;
+	    
 	    // add the parent cell as the first reference
 	    refs_unordered ~= c;
 	    pos_array[c.id] = refs_unordered.length-1;
 	    cell_ids ~= c.id;
+
+	    // for the structured grid store face in interfaces stencil
+	    if (blk.grid_type == Grid_t.structured_grid) {
+		SBlock sblk = cast(SBlock) blk;
+		size_t[3] ijk = sblk.cell_id_to_ijk_indices(c.id);
+		size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
+		// add i-interfaces to stencil
+		c.jacobian_ifi_stencil ~= sblk.get_ifi(i, j, k);
+		c.jacobian_ifi_stencil ~= sblk.get_ifi(i+1, j, k);
+		// add j-interfaces to stencil
+		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j+1, k);
+		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j, k);
+	    }
+	    
 	    foreach(f; c.iface) {
+		// for the unstructured grid store face in interfaces stencil
+		if (blk.grid_type == Grid_t.unstructured_grid) c.jacobian_ifi_stencil ~= f;
+		
+		// store (non-ghost) neighbour cells in cells stencil
 		if (f.left_cell.id != c.id && f.left_cell.id < ghost_cell_start_id) {
 		    refs_unordered ~= f.left_cell;
 		    pos_array[f.left_cell.id] = refs_unordered.length-1;
@@ -782,17 +802,35 @@ void construct_flow_jacobian_stencils(Block blk) {
 		    pos_array[f.right_cell.id] = refs_unordered.length-1;
 		    cell_ids ~= f.right_cell.id;
 		} else continue;
-	    } // end foreach
-	} // end if interpolation order < 2
-	else { // higher-order interpolation
+	    } // end foreach face
+
+	    // finally sort ids, and store sorted cell references
+	    cell_ids.sort();
+	    foreach(id; cell_ids) {
+		refs_ordered ~= refs_unordered[pos_array[id]];
+	    }
+	    c.jacobian_cell_stencil ~= refs_ordered;
+
+	} // end foreach cell
+    } // end if interpolation order < 2
+    
+    else { // higher-order
+	foreach(c; blk.cells) {
+	    FVCell[] refs_ordered;
+	    FVCell[] refs_unordered;
+	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
+	    size_t[] cell_ids;
+	    
 	    if (blk.grid_type == Grid_t.structured_grid) {
+
+		// add cells to stencil
 		// add the parent cell as the first reference
 		refs_unordered ~= c;
 		pos_array[c.id] = refs_unordered.length-1;
 		cell_ids ~= c.id;
-		//throw new Error("adjoint: 2nd order interpolation for structured_grid() not yet implemented");
+
+		// collect other cells in stencil
 		SBlock sblk = cast(SBlock) blk;
-		FVCell c0;
 		size_t[3] ijk = sblk.cell_id_to_ijk_indices(c.id);
 		size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
 		FVCell[] cells;
@@ -811,11 +849,24 @@ void construct_flow_jacobian_stencils(Block blk) {
 			cell_ids ~= cell.id;
 		    } else continue;
 		}
+
+		// add i-interfaces to stencil
+		c.jacobian_ifi_stencil ~= sblk.get_ifi(i, j, k);
+		c.jacobian_ifi_stencil ~= sblk.get_ifi(i-1, j, k);
+		c.jacobian_ifi_stencil ~= sblk.get_ifi(i+1, j, k);
+		c.jacobian_ifi_stencil ~= sblk.get_ifi(i+2, j, k);
+		// add j-interfaces to stencil
+		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j+1, k);
+		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j+2, k);
+		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j, k);
+		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j-1, k);
 	    }
+	    
 	    else { // unstructured grid
-		//throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+		size_t[] face_ids;
 		foreach(cell; c.cell_cloud) {
 		    foreach(f; cell.iface) {
+			// add cells to stencil
 			if (f.left_cell.id < ghost_cell_start_id && cell_ids.canFind(f.left_cell.id) == false) {
 			    refs_unordered ~= f.left_cell;
 			    pos_array[f.left_cell.id] = refs_unordered.length-1;
@@ -826,16 +877,19 @@ void construct_flow_jacobian_stencils(Block blk) {
 			    pos_array[f.right_cell.id] = refs_unordered.length-1;
 			    cell_ids ~= f.right_cell.id;
 			}
+			// add faces to stencil
+			if (face_ids.canFind(f.id) == false) c.jacobian_ifi_stencil ~= f;
 		    }
 		}
 	    }
+
+	    // finally sort ids, and store sorted cell references
+	    cell_ids.sort();
+	    foreach(id; cell_ids) {
+		refs_ordered ~= refs_unordered[pos_array[id]];
+	    }
+	    c.jacobian_cell_stencil ~= refs_ordered;
 	}
-	// finally sort ids, and store sorted cell references
-	cell_ids.sort();
-	foreach(id; cell_ids) {
-	    refs_ordered ~= refs_unordered[pos_array[id]];
-	}
-	c.jacobian_stencil ~= refs_ordered;
     }
 }
 
@@ -849,62 +903,101 @@ void construct_mesh_jacobian_stencils(Block blk) {
      a row in the transposed Jacobian in Compressed Row Storage format.
      
      ++/
-    
-    if (blk.myConfig.interpolation_order < 2) { // first-order
+
+    // for first-order simulations the structured, unstructured stencils are identical
+    if (blk.myConfig.interpolation_order < 2) {
 	foreach(i, vtx; blk.vertices) {
 	    FVCell[] cell_refs;
+	    FVInterface[] ifi_refs;
+	    FVInterface[] ifj_refs;
+	    size_t[] ifi_ids;        		    
+	    size_t[] ifj_ids;
 	    foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
+		// add cells to stencil
 		cell_refs ~= blk.cells[cid];
+
+		// add faces to stencil
+		if (blk.grid_type == Grid_t.unstructured_grid) {
+		    foreach (face; blk.cells[cid].iface) {
+			if (ifi_ids.canFind(face.id) == false)
+			    ifi_refs ~= face; ifi_ids ~= face.id;
+		    }
+		}
+		else { // structured 
+		    foreach (face; blk.cells[cid].jacobian_ifi_stencil) {
+			if (ifi_ids.canFind(face.id) == false)
+			    ifi_refs ~= face; ifi_ids ~= face.id;
+		    }
+		    foreach (face; blk.cells[cid].jacobian_ifj_stencil) {
+			if (ifj_ids.canFind(face.id) == false)
+			    ifj_refs ~= face; ifj_ids ~= face.id;
+		    }
+		}
 	    }
-	    vtx.jacobian_stencil ~= cell_refs;
+	    // the cells are already in cell id order from cellIndexListPerVertex
+	    vtx.jacobian_cell_stencil ~= cell_refs;
+	    vtx.jacobian_ifi_stencil = ifi_refs;
+	    vtx.jacobian_ifj_stencil = ifj_refs; // for unstructured grids this will be empty
 	}
-    } else { // higher-order interpolation
+    }
+    else { // high-order interpolation
 	foreach(vtx; blk.vertices) {
 	    FVCell[] refs_ordered;
 	    FVCell[] refs_unordered;
-	    size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
+	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
 	    size_t[] cell_ids;
+	    size_t[] ifi_ids;
+	    size_t[] ifj_ids;
+	    FVInterface[] ifi_refs;
+	    FVInterface[] ifj_refs;
 	    if (blk.grid_type == Grid_t.structured_grid) {
 		SBlock sblk = cast(SBlock) blk;
 		foreach (cid; sblk.cellIndexListPerVertex[vtx.id]) {
-		    size_t[3] ijk = sblk.cell_id_to_ijk_indices(cid);
-		    size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2];  
-		    FVCell[] cells;
-		    cells ~= sblk.get_cell(i, j, k);
-		    cells ~= sblk.get_cell(i-1, j, k);
-		    cells ~= sblk.get_cell(i-2, j, k);
-		    cells ~= sblk.get_cell(i+1, j, k);
-		    cells ~= sblk.get_cell(i+2, j, k);
-		    cells ~= sblk.get_cell(i, j-1, k);
-		    cells ~= sblk.get_cell(i, j-2, k);
-		    cells ~= sblk.get_cell(i, j+1, k);
-		    cells ~= sblk.get_cell(i, j+2, k);
-		    foreach(c; cells) {
-			if (cell_ids.canFind(c.id) == false && c.id < ghost_cell_start_id) {
+		    // add cells to stencil
+		    foreach(c; sblk.cells[cid].jacobian_cell_stencil) {
+			if (cell_ids.canFind(c.id) == false) {
 			    refs_unordered ~= c;
 			    pos_array[c.id] = refs_unordered.length-1;
 			    cell_ids ~= c.id;
 			} else continue;
 		    }
+		    // add faces to stencil
+		    foreach (face; blk.cells[cid].jacobian_ifi_stencil) {
+			if (ifi_ids.canFind(face.id) == false)
+			    ifi_refs ~= face; ifi_ids ~= face.id;
+		    }
+		    foreach (face; blk.cells[cid].jacobian_ifj_stencil) {
+			if (ifj_ids.canFind(face.id) == false)
+			    ifj_refs ~= face; ifj_ids ~= face.id;
+		    }
 		}
 	    }
 	    else { // unstructured grid
-		//throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
 		foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
-		    foreach (c; blk.cells[cid].jacobian_stencil) {
-			if (cell_ids.canFind(c.id) == false && c.id < ghost_cell_start_id) {
+		    foreach (c; blk.cells[cid].jacobian_cell_stencil) {
+			// add cells to stencil
+			if (cell_ids.canFind(c.id) == false) {
 			    refs_unordered ~= c;
 			    pos_array[c.id] = refs_unordered.length-1;
 			    cell_ids ~= c.id;
 			}
+			// add faces to stencil
+			foreach (face; c.iface) {
+			    if (ifi_ids.canFind(face.id) == false)
+				ifi_refs ~= face; ifi_ids ~= face.id;
+			}
 		    }
 		}
 	    }
+	    
+	    // finally sort cell ids
 	    cell_ids.sort();
 	    foreach(id; cell_ids) {
 		refs_ordered ~= refs_unordered[pos_array[id]];
 	    }
-	    vtx.jacobian_stencil ~= refs_ordered;
+	    vtx.jacobian_cell_stencil ~= refs_ordered;
+	    vtx.jacobian_ifi_stencil = ifi_refs;
+	    vtx.jacobian_ifj_stencil = ifj_refs; // for unstructured grids this will be empty
 	}
     }
 }
@@ -952,7 +1045,7 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
 	// -----------------------------------------------------
 	// at this point we can use the vertex counter vi to access
 	// the correct stencil
-	foreach(ci, c; vtx.jacobian_stencil) {
+	foreach(ci, c; vtx.jacobian_cell_stencil) {
 	    size_t I, J; // indices in Jacobian matrix
 	    double integral;
 	    double volInv = 1.0 / c.volume[0];
@@ -1226,6 +1319,15 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
     blk.applyPostConvFluxAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
     //}
 
+    if (GlobalConfig.viscous) {
+	blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+	// only for least-squares at faces
+	iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad); // blk.flow_property_spatial_derivatives(0); 
+	//blk.estimate_turbulence_viscosity();
+	iface.viscous_flux_calc(); // blk.viscous_flux();
+	blk.applyPostDiffFluxAction(0.0, 0, 0);
+    }
+    
     // copy perturbed flux
     ifaceP.copy_values_from(iface, CopyDataOption.all);
 }
@@ -1235,7 +1337,7 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
     string codeStr;
     codeStr ~= "h = (abs(cell.fs."~varName~") + MU) * EPSILON;";
     codeStr ~= "cellOrig.copy_values_from(cell, CopyDataOption.all);";
-    codeStr ~= "foreach(stencilCell; cell.jacobian_stencil) {";
+    codeStr ~= "foreach(stencilCell; cell.jacobian_cell_stencil) {";
     codeStr ~= "foreach(iface; stencilCell.iface) {";
     codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
     // ------------------ negative perturbation ------------------
@@ -1304,7 +1406,7 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
 {
     string codeStr;
     codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
-    codeStr ~= "foreach (stencilCell; vtx.jacobian_stencil) {";
+    codeStr ~= "foreach (stencilCell; vtx.jacobian_cell_stencil) {";
     codeStr ~= "foreach (iface; stencilCell.iface) { ";
     codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
     // ------------------ negative perturbation ------------------

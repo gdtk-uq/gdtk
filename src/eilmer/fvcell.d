@@ -105,7 +105,10 @@ public:
     double rho_at_start_of_step, rE_at_start_of_step;
     // adjoint solver workspace.
     version(adjoint) {
-	FVCell[] jacobian_stencil;
+	FVCell[] jacobian_cell_stencil;
+	// for usg solver we will just use ifi array
+	FVInterface[] jacobian_ifi_stencil;
+	FVInterface[] jacobian_ifj_stencil;
     }
 
 private:
