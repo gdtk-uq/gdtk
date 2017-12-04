@@ -47,13 +47,15 @@ import gzip;
 import gas;
 import flowsolution;
 import onedinterp;
+import lsqinterp;
+import bc;
 
 // EPSILON parameter for numerical differentiation of flux jacobian
 // Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
-immutable double EPSILON = 1.0e-4;
-immutable double MU = 1.0e-4;
+//immutable double EPSILON = 1.0e-4;
+//immutable double MU = 1.0e-4;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
-immutable bool withFiniteDiffVerification = true;
+//immutable bool withFiniteDiffVerification = true;
 
 string adjointDir = "adjoint";
 
@@ -77,6 +79,10 @@ void main(string[] args) {
     msg       ~= "           [--max-cpus=<int>]          defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
     msg       ~= "           [--max-wall-clock=<int>]    in seconds\n";
+    msg       ~= "           [--epsilon=<double>]    \n";
+    msg       ~= "           [--mu=<double>]    \n";
+    msg       ~= "           [--epsilon-finite-diff=<double>]    \n";
+    msg       ~= "           [--with-finite-diff-verification=<bool>]    \n";
     msg       ~= "           [--help]                    writes this message\n";
     if ( args.length < 2 ) {
 	writeln("Too few arguments.");
@@ -86,12 +92,20 @@ void main(string[] args) {
     string jobName = "";
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
+    double EPSILON = 1.0e-4;
+    double MU = 1.0e-4;
+    double EPSILON0 = 1.0e-4;
+    bool withFiniteDiffVerification = true;
     bool helpWanted = false;
     try {
 	getopt(args,
 	       "job", &jobName,
 	       "max-cpus", &maxCPUs,
 	       "max-wall-clock", &maxWallClock,
+	       "epsilon", &EPSILON,
+	       "mu", &MU,
+	       "epsilon-finite-diff", &EPSILON0,
+	       "with-finite-diff-verification", &withFiniteDiffVerification,
 	       "help", &helpWanted
 	       );
     } catch (Exception e) {
@@ -153,7 +167,7 @@ void main(string[] args) {
     }
 
     foreach (myblk; parallel(gasBlocks,1)) {
-	construct_flow_jacobian(myblk, ndim, np);
+	construct_flow_jacobian(myblk, ndim, np, EPSILON, MU);
     }
 
     // ------------------------------------------------------------
@@ -175,6 +189,11 @@ void main(string[] args) {
 	myblk.ja = [];
     }
     globalJacobianT.ia ~= globalJacobianT.aa.length;
+    foreach(i; 0..gasBlocks[0].cells.length*np) {
+	foreach(j; 0..gasBlocks[0].cells.length*np) {
+	    //if (globalJacobianT[i,j] != 0.0) writeln(i, ", ", j, ", ", globalJacobianT[i,j]);
+	}
+    }
     // -----------------------------------------------------
     // 2. Form cost function sensitvity
     // -----------------------------------------------------
@@ -182,6 +201,7 @@ void main(string[] args) {
     // cost function is defined as: J(Q) = 0.5*integral[0->l] (p-p*)^2
     double[] dJdV;
     double[] p_target;
+    // TODO: remove dependency on setting ncells and nvertices in main code
     size_t ncells = gasBlocks[0].cells.length;
     size_t nvertices = gasBlocks[0].vertices.length;
 
@@ -202,6 +222,7 @@ void main(string[] args) {
 	    dJdV ~= 0.5*(2.0*cell.fs.gas.p - 2.0*p_target[i]);
 	}
     }
+
     // -----------------------------------------------------
     // 3. Solve for the adjoint variables 
     // -----------------------------------------------------
@@ -220,7 +241,7 @@ void main(string[] args) {
     residVec.length = dJdV.length;
     foreach(i; 0..dJdV.length) dJdV[i] = -1.0 * dJdV[i];
 
-    // compute ILU[0] for preconditioning
+    // compute ILU[p] for preconditioning
     SMatrix m = new SMatrix(globalJacobianT);
     auto M = decompILUp(m, 6);
 
@@ -257,12 +278,106 @@ void main(string[] args) {
     psi.length = psiN.length;
     foreach(i; 0..np*ncells) psi[i] = psiN[i];
     
-    foreach(i; 0 .. ncells) {
-	FVCell cell = gasBlocks[0].cells[i];
-	auto writer = format("%f %f %f %f %f \n", cell.pos[0].x, psi[i*np], psi[i*np+1], psi[i*np+2], psi[i*np+3]);
-	append("e4_adjoint_vars.dat", writer);
+    // write out adjoint variables in VTK-format
+    if (gasBlocks[0].grid_type == Grid_t.structured_grid) {
+	SBlock sblk = cast(SBlock) gasBlocks[0]; 
+	File outFile = File("adjointVars.vtk", "w");
+	outFile.writef("# vtk DataFile Version 3.0 \n");
+	outFile.writef("%s \n", jobName);
+	outFile.writef("ASCII \n");
+	outFile.writef("DATASET STRUCTURED_GRID \n");
+	outFile.writef("DIMENSIONS %d %d %d \n", sblk.imax, sblk.jmax, sblk.kmax+1);
+	outFile.writef("POINTS %d double \n", nvertices);
+	// write grid data
+	foreach(i, vtx; gasBlocks[0].vertices) {
+	    outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
+	}
+	// write cell data
+	outFile.writef("CELL_DATA %d \n", ncells);
+
+	outFile.writef("SCALARS adjoint_density double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i]);
+	}
+
+	outFile.writef("SCALARS adjoint_velx double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i+1]);
+	}
+
+	outFile.writef("SCALARS adjoint_vely double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i+2]);
+	}
+
+	outFile.writef("SCALARS adjoint_pressure double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i+3]);
+	}
+
     }
 
+    if (gasBlocks[0].grid_type == Grid_t.unstructured_grid) {
+	UBlock ublk = cast(UBlock) gasBlocks[0]; 
+	File outFile = File("adjointVars.vtk", "w");
+	outFile.writef("# vtk DataFile Version 3.0 \n");
+	outFile.writef("%s \n", jobName);
+	outFile.writef("ASCII \n");
+	outFile.writef("DATASET UNSTRUCTURED_GRID \n");
+	outFile.writef("POINTS %d double \n", nvertices);
+	// write grid data
+	foreach(i, vtx; gasBlocks[0].vertices) {
+	    outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
+	}
+	// write cell connectivity
+	size_t size = ncells + 4*ncells; // TODO: only for quads, need to generalise
+	outFile.writef("CELLS %d %d \n", ncells, size);
+	foreach(i, cell; ublk.grid.cells) {
+	    outFile.writef("%d ", cell.vtx_id_list.length);
+	    foreach(vid; cell.vtx_id_list) {
+		outFile.writef("%d ", vid);
+	    }
+	    outFile.writef("\n");
+	}
+	outFile.writef("CELL_TYPES %d \n", ncells);
+	foreach(i, cell; ublk.grid.cells) {
+	    outFile.writef("%d \n", ublk.grid.vtk_element_type_for_cell(i)); //cell.cell_type);
+	}
+	
+	// write cell data
+	outFile.writef("CELL_DATA %d \n", ncells);
+
+	outFile.writef("SCALARS adjoint_density double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i]);
+	}
+
+	outFile.writef("SCALARS adjoint_velx double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i+1]);
+	}
+
+	outFile.writef("SCALARS adjoint_vely double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i+2]);
+	}
+
+	outFile.writef("SCALARS adjoint_pressure double \n");
+	outFile.writef("LOOKUP_TABLE default \n");
+	foreach(i; 0..ncells) {
+	    outFile.writef("%.16f \n", psi[np*i+3]);
+	}
+
+    }
+
+    
     // clear the global Jacobian from memory
     destroy(globalJacobianT);
     GC.minimize();
@@ -278,7 +393,7 @@ void main(string[] args) {
     // ------------------------------------------------------------
 
     foreach (myblk; parallel(gasBlocks,1)) {
-	construct_mesh_jacobian(myblk, ndim, np);
+	construct_mesh_jacobian(myblk, ndim, np, EPSILON, MU);
     }
     // ------------------------------------------------------------
     // 4.c construct global mesh Jacobian transpose
@@ -310,10 +425,13 @@ void main(string[] args) {
     foreach (i; 0..D.length) {
 	foreach (myblk; parallel(gasBlocks,1)) {
 	    double dD = (abs(D[i]) + MU)*EPSILON;
-	    D[i] = D0[i] + dD; 
-	    auto meshPp = perturbMesh(myblk, D);
+	    D[i] = D0[i] + dD;
+	    double[][] meshPp; double[][] meshPm;
+	    if (myblk.grid_type == Grid_t.structured_grid) meshPp = perturbMeshSG(myblk, D);
+	    else meshPp = perturbMeshUSG(myblk, D);
 	    D[i] = D0[i] - dD; 
-	    auto meshPm = perturbMesh(myblk, D);
+	    if (myblk.grid_type == Grid_t.structured_grid) meshPm = perturbMeshSG(myblk, D);
+	    else meshPm = perturbMeshUSG(myblk, D);
 	    foreach(j; 0..meshPm.length) {
 		dXdD_T[i, j*ndim] = (meshPp[j][0] - meshPm[j][0])/(2.0*dD);
 		dXdD_T[i, j*ndim+1] = (meshPp[j][1] - meshPm[j][1])/(2.0*dD);
@@ -321,7 +439,6 @@ void main(string[] args) {
 	    D[i] = D0[i];
 	}
     }
-
     // -----------------------------------------------------
     // 7. Compute adjoint gradients
     // -----------------------------------------------------
@@ -353,8 +470,7 @@ void main(string[] args) {
 
     if (withFiniteDiffVerification) {
     
-	double J1; double J0; double EPSILON0 = 1.0e-07;
-	
+	double J1; double J0; //double EPSILON0 = 1.0e-07;
 	// read original grid in
 	foreach (blk; gasBlocks) { 
 	    //blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
@@ -399,7 +515,7 @@ void main(string[] args) {
     writeln("Simulation complete.");
 }
 
-double[][] perturbMesh(Block blk, double[] D) {
+double[][] perturbMeshSG(Block blk, double[] D) {
     // compute new nozzle surface, and delta
     SBlock sblk = cast(SBlock) blk;
     double y0; double y1;
@@ -435,21 +551,78 @@ double[][] perturbMesh(Block blk, double[] D) {
     return meshP;
 }
 
+double[][] perturbMeshUSG(Block blk, double[] D) {
+    // compute new nozzle surface, and delta
+    double y0; double y1;
+    double[size_t] delta;
+    double[size_t] yTotal;
+    size_t uniqueID;
+    double scale = 1.5;
+    double b = D[0]; double c = D[1]; double d = D[2];
+    double yo = 0.105;
+    double a = yo - b*tanh(-d/scale);
+    double[] vtxIDs;
+    foreach (bndary; blk.bc) {
+	if (canFind(bndary.group, "wall")) {
+	    foreach (i, iface; bndary.faces) {
+		foreach (j, vtx; iface.vtx) {
+		    if(vtxIDs.canFind(vtx.id) == false) {
+			y0 = vtx.pos[0].refy;
+			y1 = a + b*tanh((c*vtx.pos[0].x-d)/scale);
+			uniqueID = to!size_t(1.0e6/(vtx.pos[0].refx+0.001));
+			delta[uniqueID] = y1-y0;
+			yTotal[uniqueID] = y0;
+			vtxIDs ~= vtx.id;
+		    }
+		}
+	    } // end foreach face
+	} // end foreach (iface; bndary.faces)
+    } // end if (bndary.group != "")
+    
+    
+    double[][] meshP;
+    meshP.length = blk.vertices.length;
+    // perturb mesh by linearly scaling the nozzle surface movement
+    size_t vtxID = 0;
+    foreach(vtx; blk.vertices) {
+	meshP[vtxID].length = 2;
+	double[2] point;
+	uniqueID = to!size_t(1.0e6/(vtx.pos[0].refx+0.001));
+	double ymax = yTotal[uniqueID];
+	double p = (vtx.pos[0].refy)/(ymax);
+	point = [vtx.pos[0].refx, vtx.pos[0].refy+p*delta[uniqueID]];
+	meshP[vtxID][0] = point[0];
+	meshP[vtxID][1] = point[1];
+	vtxID += 1;
+    }
+    return meshP;
+}
+
 double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks, double[] p_target, double[] D) {
 
     foreach (blk; parallel(gasBlocks,1)) {
-	auto meshP = perturbMesh(blk, D);
-	SBlock sblk = cast(SBlock) blk;
-	size_t vtxID = 0;
-	for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
-	    for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
-		FVVertex vtx = sblk.get_vtx(i,j,0);
+	double[][] meshP; 
+	if (blk.grid_type == Grid_t.structured_grid) {
+	    meshP = perturbMeshSG(blk, D);
+	    SBlock sblk = cast(SBlock) blk;
+	    size_t vtxID = 0;
+	    for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
+		for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
+		    FVVertex vtx = sblk.get_vtx(i,j,0);
+		    vtx.pos[0].refy = meshP[vtxID][1];
+		    vtxID += 1;
+		}
+	    }
+	}
+	else {
+	    meshP = perturbMeshUSG(blk, D);
+	    size_t vtxID = 0;
+	    foreach (vtx; blk.vertices) {
 		vtx.pos[0].refy = meshP[vtxID][1];
 		vtxID += 1;
 	    }
 	}
     }
-    
     // save mesh
     foreach (blk; parallel(gasBlocks,1)) {
 	blk.sync_vertices_to_underlying_grid(0);
@@ -490,7 +663,7 @@ double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks,
     return J;
 }
 
-void construct_flow_jacobian(Block blk, size_t ndim, size_t np) {
+void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, double MU) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
      Row Storage (CSR) format.     
@@ -499,7 +672,6 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np) {
 
      TODO: turbulence, 3D
      ++/
-
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
     
@@ -532,6 +704,8 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np) {
 	// at this point we can use the cell counter ci to access the correct stencil
 	// because the stencil is not necessarily in cell id order, we need to
 	// do some shuffling
+	int count = 0;
+	//writef("perturbed cell: %d effected cells: ", cell.id);
 	foreach(c; cell.jacobian_stencil) {
 	    size_t I, J; // indices in Jacobian matrix
 	    double integral;
@@ -545,13 +719,20 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np) {
 			integral -= c.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
 		    }
 		    double JacEntry = volInv * integral;
-		    if (JacEntry != 0.0) {
+		    
+		    if (abs(JacEntry) > 1e-05) {
+			if (ip == 0 && jp == 0) {
+			    //writef("%d ", c.id);
+			    count += 1;
+			}
+			//writeln("col: ", I, ", row: ", J, ", p-cell: ", cell.id, ", e-cell: ", c.id, ", ip: ", ip, ", jp: ", jp, ", val: ", JacEntry);
 			blk.aa[J] ~= JacEntry;
 			blk.ja[J] ~= I; //J;
 		    }
 		}
 	    }
 	}
+	//writef(" total effected cells: %d cell in stencil: %d \n", count, cell.jacobian_stencil.length);
 	// clear the interface flux Jacobian entries
 	foreach (iface; cell.iface) {
 	    foreach (i; 0..iface.dFdU.length) {
@@ -632,7 +813,21 @@ void construct_flow_jacobian_stencils(Block blk) {
 		}
 	    }
 	    else { // unstructured grid
-		throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+		//throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+		foreach(cell; c.cell_cloud) {
+		    foreach(f; cell.iface) {
+			if (f.left_cell.id < ghost_cell_start_id && cell_ids.canFind(f.left_cell.id) == false) {
+			    refs_unordered ~= f.left_cell;
+			    pos_array[f.left_cell.id] = refs_unordered.length-1;
+			    cell_ids ~= f.left_cell.id;
+			}
+			if (f.right_cell.id < ghost_cell_start_id && cell_ids.canFind(f.right_cell.id) == false) {
+			    refs_unordered ~= f.right_cell;
+			    pos_array[f.right_cell.id] = refs_unordered.length-1;
+			    cell_ids ~= f.right_cell.id;
+			}
+		    }
+		}
 	    }
 	}
 	// finally sort ids, and store sorted cell references
@@ -643,7 +838,7 @@ void construct_flow_jacobian_stencils(Block blk) {
 	c.jacobian_stencil ~= refs_ordered;
     }
 }
- 
+
 void construct_mesh_jacobian_stencils(Block blk) {
     /++
      
@@ -664,13 +859,13 @@ void construct_mesh_jacobian_stencils(Block blk) {
 	    vtx.jacobian_stencil ~= cell_refs;
 	}
     } else { // higher-order interpolation
-	if (blk.grid_type == Grid_t.structured_grid) {
-	    SBlock sblk = cast(SBlock) blk;
-	    foreach(vtx; blk.vertices) {
-		FVCell[] refs_ordered;
-		FVCell[] refs_unordered;
-		size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
-		size_t[] cell_ids;
+	foreach(vtx; blk.vertices) {
+	    FVCell[] refs_ordered;
+	    FVCell[] refs_unordered;
+	    size_t[size_t] pos_array; // this is a dictionary that uses a cell id to reference the position of that cell in the unordered reference array
+	    size_t[] cell_ids;
+	    if (blk.grid_type == Grid_t.structured_grid) {
+		SBlock sblk = cast(SBlock) blk;
 		foreach (cid; sblk.cellIndexListPerVertex[vtx.id]) {
 		    size_t[3] ijk = sblk.cell_id_to_ijk_indices(cid);
 		    size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2];  
@@ -692,20 +887,29 @@ void construct_mesh_jacobian_stencils(Block blk) {
 			} else continue;
 		    }
 		}
-		cell_ids.sort();
-		foreach(id; cell_ids) {
-		    refs_ordered ~= refs_unordered[pos_array[id]];
-		}
-		vtx.jacobian_stencil ~= refs_ordered;
 	    }
-	}
-	else { // unstructured grid
-	    throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+	    else { // unstructured grid
+		//throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+		foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
+		    foreach (c; blk.cells[cid].jacobian_stencil) {
+			if (cell_ids.canFind(c.id) == false && c.id < ghost_cell_start_id) {
+			    refs_unordered ~= c;
+			    pos_array[c.id] = refs_unordered.length-1;
+			    cell_ids ~= c.id;
+			}
+		    }
+		}
+	    }
+	    cell_ids.sort();
+	    foreach(id; cell_ids) {
+		refs_ordered ~= refs_unordered[pos_array[id]];
+	    }
+	    vtx.jacobian_stencil ~= refs_ordered;
 	}
     }
 }
 
-void construct_mesh_jacobian(Block blk, size_t ndim, size_t np) {
+void construct_mesh_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, double MU) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
      Row Storage (CSR) format.     
@@ -926,12 +1130,101 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
 	}
     }
     else { // unstructured grid
-	throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+	if (blk.myConfig.interpolation_order > 1) {
+	    FVCell[] cells;
+	    if (iface.left_cell.id < ghost_cell_start_id) cells ~= iface.left_cell;
+	    if (iface.right_cell.id < ghost_cell_start_id) cells ~= iface.right_cell;
+	    foreach (c; cells) {
+		c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
+		// It is more efficient to determine limiting factor here for some usg limiters.
+		final switch (blk.myConfig.unstructured_limiter) {
+		case UnstructuredLimiter.van_albada:
+		    // do nothing now
+		    break;
+		case UnstructuredLimiter.min_mod:
+		    // do nothing now
+		    break;
+		case UnstructuredLimiter.barth:
+		    c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
+		    break;
+		case UnstructuredLimiter.venkat:
+		    c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig);
+		    break;
+		} // end switch
+	    } // end foreach c
+	} // end if interpolation_order > 1
+	/*
+	if (blk.myConfig.interpolation_order > 1) {
+	    // Fill in gradients for ghost cells so that left- and right- cells at all faces,
+	    // including those along block boundaries, have the latest gradient values.
+	    foreach (bcond; blk.bc) {
+		bool found_mapped_cell_bc = false;
+		foreach (gce; bcond.preReconAction) {
+		    if (gce.type == "MappedCellExchangeCopy") {
+			found_mapped_cell_bc = true;
+			// There is a mapped-cell backing the ghost cell, so we can copy its gradients.
+			foreach (i, f; bcond.faces) {
+			    // Only FVCell objects in an unstructured-grid are expected to have
+			    // precomputed gradients.  There will be an initialized reference
+			    // in the FVCell object of a structured-grid block, so we need to
+			    // test and avoid copying from such a reference.
+			    auto mapped_cell_grad = gce.get_mapped_cell(i).gradients;
+			    if (bcond.outsigns[i] == 1) {
+				if (mapped_cell_grad) {
+				    f.right_cell.gradients.copy_values_from(mapped_cell_grad);
+				} else {
+				    // Fall back to looking over the face for suitable gradient data.
+				    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+				}
+			    } else {
+				if (mapped_cell_grad) {
+				    f.left_cell.gradients.copy_values_from(mapped_cell_grad);
+				} else {
+				    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+				}
+			    }
+			} // end foreach f
+		    } // end if gce.type
+		} // end foreach gce
+		if (!found_mapped_cell_bc) {
+		    // There are no other cells backing the ghost cells on this boundary.
+		    // Fill in ghost-cell gradients from the other side of the face.
+		    foreach (i, f; bcond.faces) {
+			if (bcond.outsigns[i] == 1) {
+			    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+			} else {
+			    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+			}
+		    } // end foreach f
+		} // end if !found_mapped_cell_bc
+	    } // end foreach bcond
+	} // end if interpolation_order > 1
+	*/
+
+	if (blk.myConfig.interpolation_order > 1) {
+	    // Fill in gradients for ghost cells so that left- and right- cells at all faces,
+	    // including those along block boundaries, have the latest gradient values.
+	    foreach (bcond; blk.bc) {
+		foreach (i, f; bcond.faces) {
+		    if (bcond.outsigns[i] == 1) {
+			f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+		    } else {
+			f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+		    }
+		} // end foreach f
+	    } // end if !found_mapped_cell_bc
+	} // end foreach bcond
+
+	UBlock ublk = cast(UBlock) blk;
+	ublk.lsq.interp_both(iface, 0, ublk.Lft, ublk.Rght); // gtl assumed 0
+	iface.fs.copy_average_values_from(ublk.Lft, ublk.Rght);
+	compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
+	//throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
     }
     
     //if (iface.is_on_boundary) {
     blk.applyPostConvFluxAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-	//}
+    //}
 
     // copy perturbed flux
     ifaceP.copy_values_from(iface, CopyDataOption.all);
@@ -1017,12 +1310,20 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     // ------------------ negative perturbation ------------------
     codeStr ~= "vtx."~varName~" -= h;";
     codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "if (blk.grid_type == Grid_t.unstructured_grid) {";
+    codeStr ~= "UBlock ublk = cast(UBlock) blk;";
+    codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
+    codeStr ~= "}";
     codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePm);";
     codeStr ~= "vtx."~varName~" += h;";
     // ------------------ positive perturbation ------------------
     codeStr ~= "vtx."~varName~" += h;";
     codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "if (blk.grid_type == Grid_t.unstructured_grid) {";
+    codeStr ~= "UBlock ublk = cast(UBlock) blk;";
+    codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
+    codeStr ~= "}";
     codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "compute_perturbed_flux(blk, iface, ifacePp);";
     codeStr ~= "vtx."~varName~" -= h;";
@@ -1038,6 +1339,10 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
     // ------------------ restore original values ------------------
     codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "if (blk.grid_type == Grid_t.unstructured_grid) {";
+    codeStr ~= "UBlock ublk = cast(UBlock) blk;";
+    codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
+    codeStr ~= "}";
     codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "}";
     codeStr ~= "}";
