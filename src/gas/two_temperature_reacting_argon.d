@@ -77,8 +77,8 @@ public:
     override void update_thermo_from_pT(GasState Q) const 
     {
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-	Q.rho = Q.p/(_Rgas*(Q.Ttr + alpha*Q.T_modes[0]));
-	Q.u = 3.0/2.0*_Rgas*Q.Ttr;
+	Q.rho = Q.p/(_Rgas*(Q.T + alpha*Q.T_modes[0]));
+	Q.u = 3.0/2.0*_Rgas*Q.T;
 	if (alpha<=_ion_tol) {
 		Q.T_modes[0] = _T_modes_ref;
 		Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
@@ -89,21 +89,21 @@ public:
     override void update_thermo_from_rhou(GasState Q) const
     {
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-	Q.Ttr = 2.0/3.0*Q.u/_Rgas;
+	Q.T = 2.0/3.0*Q.u/_Rgas;
 	if (alpha <= _ion_tol) {
 		Q.T_modes[0] = _T_modes_ref;
 		Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
 	} else {
 		Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
 	}
-	Q.p = Q.rho*_Rgas*(Q.Ttr+alpha*Q.T_modes[0]);					// Q.rho*_Rgas*Q.Ttr;
+	Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);					// Q.rho*_Rgas*Q.T;
     }
 
     override void update_thermo_from_rhoT(GasState Q) const
     {
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-	Q.p = Q.rho*_Rgas*(Q.Ttr+alpha*Q.T_modes[0]);	//Q.rho*_Rgas*Q.Ttr;
-	Q.u = 3.0/2.0*_Rgas*Q.Ttr;
+	Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);	//Q.rho*_Rgas*Q.T;
+	Q.u = 3.0/2.0*_Rgas*Q.T;
 	if (alpha <= _ion_tol) {
 		Q.T_modes[0] = _T_modes_ref;
 		Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
@@ -115,9 +115,9 @@ public:
     override void update_thermo_from_rhop(GasState Q) const
     {
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-	Q.Ttr = Q.p/Q.rho/_Rgas - alpha*Q.T_modes[0];
+	Q.T = Q.p/Q.rho/_Rgas - alpha*Q.T_modes[0];
 	// Assume Q.T_modes[0] is set independently, and correct.
-	Q.u = 3.0/2.0*_Rgas*Q.Ttr;
+	Q.u = 3.0/2.0*_Rgas*Q.T;
 	if (alpha <= _ion_tol) {
 		Q.T_modes[0] = _T_modes_ref;
 		Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
@@ -136,7 +136,7 @@ public:
     override void update_sound_speed(GasState Q) const
     {
     	double _gamma = dhdT_const_p(Q)/dudT_const_v(Q);
-	Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
+	Q.a = sqrt(_gamma*_Rgas*Q.T);
 	//[TODO] update the _Cv and _Cp properties to be dependant on alpha...
     }
     override void update_trans_coeffs(GasState Q)
@@ -149,16 +149,16 @@ public:
     override double dudT_const_v(in GasState Q) const
     {
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-	return 3.0/2.0*_Rgas*(1+alpha) + alpha-_Rgas*alpha*(1-alpha)/(2-alpha)*pow((3.0/2.0*Q.Ttr+alpha*_theta_ion)/Q.Ttr,2);
+	return 3.0/2.0*_Rgas*(1+alpha) + alpha-_Rgas*alpha*(1-alpha)/(2-alpha)*pow((3.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
     }
     override double dhdT_const_p(in GasState Q) const
     {
     	double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
-    	return 5.0/2.0*_Rgas*(1+alpha) + _Rgas/2*alpha*(1-pow(alpha,2))*pow((5.0/2.0*Q.Ttr+alpha*_theta_ion)/Q.Ttr,2);
+    	return 5.0/2.0*_Rgas*(1+alpha) + _Rgas/2*alpha*(1-pow(alpha,2))*pow((5.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	return _Rgas*Q.Ttr; //TODO (Daniel) Check this
+	return _Rgas*Q.T; //TODO (Daniel) Check this
     }
     override double gas_constant(in GasState Q) const
     {
@@ -205,7 +205,7 @@ version(two_temperature_reacting_argon_test) {
 	lua_close(L);
 	auto gd = new GasState(3, 1);
 	gd.p = 1.0e5;
-	gd.Ttr = 300.0;
+	gd.T = 300.0;
 	gd.T_modes[0] = 300;
 	gd.massf[0] = 1.0; gd.massf[1] = 0.0; gd.massf[2] = 0.0;
 
@@ -213,7 +213,7 @@ version(two_temperature_reacting_argon_test) {
 	assert(gm.n_modes == 1, failedUnitTest());
 	assert(gm.n_species == 3, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[2], 0.0, 1.0e-6), failedUnitTest());
@@ -238,7 +238,7 @@ version(two_temperature_reacting_argon_test) {
 
 		//writeln("Testing the chemistry...");
 
-		//gd.Ttr = 4000; // Set temperature to 3000K - this should be enmough to initiate some ionisation	
+		//gd.T = 4000; // Set temperature to 3000K - this should be enmough to initiate some ionisation	
 		//gm.update_thermo_from_pT(gd); // update gas state
 		//gm.update_sound_speed(gd); // upate sound speed (not necessary)
 
@@ -248,7 +248,7 @@ version(two_temperature_reacting_argon_test) {
 		//writeln("mass fraction Argon+ = ", gd.massf[1]);
 		//writeln("mass fraction electron = ", gd.massf[2]);
 		//writeln("Pressure = ", gd.p);
-		//writeln("Temperature = ", gd.Ttr);
+		//writeln("Temperature = ", gd.T);
 		//writeln("T modes = ", gd.T_modes[0]);
 		//writeln("density = ", gd.rho);
 		//writeln("internal energy = ", gd.u);
@@ -266,7 +266,7 @@ version(two_temperature_reacting_argon_test) {
 		//writeln("mass fraction Argon+ = ", gd.massf[1]);
 		//writeln("mass fraction electron = ", gd.massf[2]);
 		//writeln("Pressure = ", gd.p);
-		//writeln("Temperature = ", gd.Ttr);
+		//writeln("Temperature = ", gd.T);
 		//writeln("T modes = ", gd.T_modes[0]);
 		//writeln("density = ", gd.rho);
 		//writeln("internal energy = ", gd.u);
@@ -301,7 +301,7 @@ version(two_temperature_reacting_argon_test) {
 	//inital gas properties
 	auto GS = new GasState(3, 1);
 	GS.p = GS.p = 594945.77;
-	GS.Ttr = GS.Ttr = 33750.78;
+	GS.T = GS.T = 33750.78;
 	GS.T_modes[0] = 10000;
 	GS.massf[0] = 1.0; GS.massf[1] = 0.0; GS.massf[2] = 0.0;
 	double vel = 1537; // m/s
@@ -333,7 +333,7 @@ version(two_temperature_reacting_argon_test) {
 	//initial values for storage arrays
 	t_list ~= 0.0;
 	x_list ~= x;
-	T_list ~= GS.Ttr;
+	T_list ~= GS.T;
 	T_modes_list ~= GS.T_modes[0];
 	P_list ~= GS.p;
 	u_list ~= vel;
@@ -370,7 +370,7 @@ version(two_temperature_reacting_argon_test) {
 
 			t_list ~= i*dt;
 			x_list ~= x;
-			T_list ~= GS.Ttr;
+			T_list ~= GS.T;
 			T_modes_list ~= GS.T_modes[0];
 			P_list ~= GS.p;
 			u_list ~= vel;
@@ -407,7 +407,7 @@ version(two_temperature_reacting_argon_test) {
 
 //	    	if (isNaN(kfA)) {
 //		    	writeln("Q.u = ", Q.u);
-//		    	writeln("Q.Ttr = ", Q.Ttr);
+//		    	writeln("Q.T = ", Q.T);
 //	    		throw new GasModelException("kfA not a number.");
 //	    	}
 
@@ -445,7 +445,7 @@ version(two_temperature_reacting_argon_test) {
 
 //	    	if (isNaN(u_trans_collisions)) {
 //	    		writeln("Q.T_modes[0] = ",Q.T_modes[0]);
-//	    		writeln("Q.Ttr = ",Q.Ttr);
+//	    		writeln("Q.T = ",Q.T);
 //	    		writeln("v_ea = ", v_ea);
 //	    		writeln("v_ei = ", v_ei);
 //	    		writeln("alpha = ", alpha);

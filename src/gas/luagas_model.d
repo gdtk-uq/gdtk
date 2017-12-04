@@ -113,7 +113,7 @@ extern(C) int thermoPT(lua_State* L)
 	errMsg ~= "\nBailing out\n";
 	throw new Error(errMsg);
     }
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'updateThermoFromPT'\n";
 	errMsg ~= "        Supplied temperature value is negative,  0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -169,7 +169,7 @@ extern(C) int thermoRHOT(lua_State* L)
 	errMsg ~= "\nBailing out\n";
 	throw new Error(errMsg);
     }
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'updateThermoFromRHOT'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -248,7 +248,7 @@ extern(C) int soundSpeed(lua_State* L)
    auto gm = checkGasModel(L, 1);
    auto Q = new GasState(gm);
    getGasStateFromTable(L, gm, 2, Q);
-   if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+   if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'updateSoundSpeed'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -267,7 +267,7 @@ extern(C) int transCoeffs(lua_State* L)
    auto gm = checkGasModel(L, 1);
    auto Q = new GasState(gm);
    getGasStateFromTable(L, gm, 2, Q); 
-   if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+   if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'updateTransCoeffs'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -289,7 +289,7 @@ extern(C) int dpdrhoConstT(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'dpdrhoConstT'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -310,7 +310,7 @@ extern(C) int intEnergy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'intEnergy'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -331,7 +331,7 @@ extern(C) int enthalpy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'enthalpy'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -359,7 +359,7 @@ extern(C) int entropy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'entropy'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -387,7 +387,7 @@ extern(C) int gibbsFreeEnergy(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'gibbsFreeEnergy'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -410,7 +410,7 @@ extern(C) int Cv(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'Cv'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -429,7 +429,7 @@ extern(C) int Cp(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'Cp'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -448,7 +448,7 @@ extern(C) int R(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'R'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -467,7 +467,7 @@ extern(C) int gamma(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    if ( Q.Ttr <= 0.0 || isNaN(Q.Ttr) ) {
+    if ( Q.T <= 0.0 || isNaN(Q.T) ) {
 	string errMsg = "ERROR: when calling 'gamma'\n";
 	errMsg ~= "        The supplied temperature value is negative, 0 or has not been set.\n";
 	errMsg ~= "        Check that the 'T' field is set with a valid value.\n";
@@ -740,7 +740,7 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     
     lua_getfield(L, idx, "T");
     if ( lua_isnumber(L, -1) ) {
-	Q.Ttr = lua_tonumber(L, -1);
+	Q.T = lua_tonumber(L, -1);
     }
     else if ( lua_isnil(L, -1) ) {
 	// leave untouched
@@ -968,7 +968,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_pushnumber(L, Q.p);
     lua_setfield(L, idx, "p");
 
-    lua_pushnumber(L, Q.Ttr);
+    lua_pushnumber(L, Q.T);
     lua_setfield(L, idx, "T");
 
     lua_pushnumber(L, Q.p_e);

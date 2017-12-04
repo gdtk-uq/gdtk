@@ -112,7 +112,7 @@ version(wilke_mixing_therm_cond_test) {
 	auto tcm = new WilkeMixingThermCond([tcm_N2, tcm_O2], [28.0e-3, 32.0e-3]);
 	
 	auto gd = new GasState(2, 0);
-	gd.Ttr = T;
+	gd.T = T;
 	gd.massf[0] = 0.8;
 	gd.massf[1] = 0.2;
 	tcm.update_thermal_conductivity(gd);

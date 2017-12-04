@@ -52,7 +52,8 @@ immutable double[10] table_2_19=
      -0.32325550322333e7,0.1491510861353e2,-0.48232657361591e4,0.40511340542057e6,
      -0.23855557567849,0.65017534844798e3];
 
-double get_pb23(double T){
+double get_pb23(double T)
+{
     /*
      *	calculate boundary value of pressre with a given temperature using eqn 2.1 
      *	and the coefficients inf table 2.1.
@@ -60,7 +61,8 @@ double get_pb23(double T){
 
     return 1e6*(0.34805185628969e3-0.11671859879975e1*T +0.10192970039326e-2*T^^2);
 } 
-double get_ps(double T){
+double get_ps(double T)
+{
     /*
      *	calculate saturation pressure with a given temperature using eqn 2.12b,
      * 	eqn 2.13 and the coefficients in table 2.19.
@@ -74,7 +76,8 @@ double get_ps(double T){
 	+table_2_19[7];
     return 1e6*(2*C/(-1*B+(B^^2-4*A*C)^^0.5))^^4;
 }
-double get_Ts(double p){
+double get_Ts(double p)
+{
     /*
      *	calculate saturation Temperature with a given pressure using eqn 2.12a, 
      *	eqn 2.14 and the coefficients in table 2.19
@@ -90,7 +93,7 @@ double get_Ts(double p){
 //---------------------------------------------------------------------------------
 //PART 1.2. IAPWS-Region2 formulation struct
 //---------------------------------------------------------------------------------	
-struct Region2{
+struct Region2 {
 private:
     //state properties
     double p,T;	//pressure & temperature
@@ -145,7 +148,8 @@ private:
 	init;
     }
 
-    void init(){
+    void init()
+    {
 	/*
 	 * contains all properties and coefficients required to proceed calculation in Region 2.
 	 */
@@ -153,107 +157,105 @@ private:
 	tau=540/T;
 
 	//pure steam
-	if(quality==1.0 || quality==-1)
-	    {
-		//table 2.9, derivatives of gamma_o
-		///container for summing value during calculation
-		double sum=0;
-		double sum_tau=0;
-		double sum_tautau=0;
-		foreach (i; 0 .. 9){
-		    sum += table_2_6[i][1]*(tau^^table_2_6[i][0]);
-		    sum_tau += table_2_6[i][1]*table_2_6[i][0]*(tau)^^(table_2_6[i][0]-1);
-		    sum_tautau += table_2_6[i][1]*table_2_6[i][0]*(table_2_6[i][0]-1)
-			*(tau)^^(table_2_6[i][0]-2);
-		}
-		gamma_o = log(pi) + sum;
-		gamma_o_tau = sum_tau;
-		gamma_o_tautau = sum_tautau;
-		gamma_o_pi = 1/pi; 
-		gamma_o_pipi = -(pi)^^(-2); 
-		gamma_o_pitau = 0;
-
-		//table 2.10, derivatives of gamma_r
-		sum=0;
-		sum_tau=0;
-		sum_tautau=0;
-		double sum_pi=0;
-		double sum_pipi=0;
-		double sum_pitau=0;
-		foreach (i; 0 .. 43){
-		    sum += table_2_7[i][2]*((pi)^^(table_2_7[i][0]))
-			*((tau-0.5)^^(table_2_7[i][1]));
-		    sum_tau += table_2_7[i][2]*((pi)^^(table_2_7[i][0]))
-			*((tau-0.5)^^(table_2_7[i][1]-1))*table_2_7[i][1];
-		    sum_pi += table_2_7[i][2]*table_2_7[i][0]*(pi^^(table_2_7[i][0]-1))
-			*((tau-0.5)^^(table_2_7[i][1]));
-		    sum_tautau += table_2_7[i][2]*((pi)^^(table_2_7[i][0]))
-			*((tau-0.5)^^(table_2_7[i][1]-2))*table_2_7[i][1]*(table_2_7[i][1]-1);
-		    sum_pipi += table_2_7[i][2]*table_2_7[i][0]*(table_2_7[i][0]-1)
-			*(pi^^(table_2_7[i][0]-2))*((tau-0.5)^^(table_2_7[i][1])); 
-		    sum_pitau += table_2_7[i][2]*table_2_7[i][0]*(pi^^(table_2_7[i][0]-1))
-			*table_2_7[i][1]*((tau-0.5)^^(table_2_7[i][1]-1));		
-		}
-		gamma_r = sum;
-		gamma_r_tau = sum_tau;
-		gamma_r_pi = sum_pi; 
-		gamma_r_tautau = sum_tautau;
-		gamma_r_pipi = sum_pipi;
-		gamma_r_pitau = sum_pitau;
+	if (quality==1.0 || quality==-1) {
+	    //table 2.9, derivatives of gamma_o
+	    ///container for summing value during calculation
+	    double sum=0;
+	    double sum_tau=0;
+	    double sum_tautau=0;
+	    foreach (i; 0 .. 9) {
+		sum += table_2_6[i][1]*(tau^^table_2_6[i][0]);
+		sum_tau += table_2_6[i][1]*table_2_6[i][0]*(tau)^^(table_2_6[i][0]-1);
+		sum_tautau += table_2_6[i][1]*table_2_6[i][0]*(table_2_6[i][0]-1)
+		    *(tau)^^(table_2_6[i][0]-2);
 	    }
+	    gamma_o = log(pi) + sum;
+	    gamma_o_tau = sum_tau;
+	    gamma_o_tautau = sum_tautau;
+	    gamma_o_pi = 1/pi; 
+	    gamma_o_pipi = -(pi)^^(-2); 
+	    gamma_o_pitau = 0;
+
+	    //table 2.10, derivatives of gamma_r
+	    sum=0;
+	    sum_tau=0;
+	    sum_tautau=0;
+	    double sum_pi=0;
+	    double sum_pipi=0;
+	    double sum_pitau=0;
+	    foreach (i; 0 .. 43) {
+		sum += table_2_7[i][2]*((pi)^^(table_2_7[i][0]))
+		    *((tau-0.5)^^(table_2_7[i][1]));
+		sum_tau += table_2_7[i][2]*((pi)^^(table_2_7[i][0]))
+		    *((tau-0.5)^^(table_2_7[i][1]-1))*table_2_7[i][1];
+		sum_pi += table_2_7[i][2]*table_2_7[i][0]*(pi^^(table_2_7[i][0]-1))
+		    *((tau-0.5)^^(table_2_7[i][1]));
+		sum_tautau += table_2_7[i][2]*((pi)^^(table_2_7[i][0]))
+		    *((tau-0.5)^^(table_2_7[i][1]-2))*table_2_7[i][1]*(table_2_7[i][1]-1);
+		sum_pipi += table_2_7[i][2]*table_2_7[i][0]*(table_2_7[i][0]-1)
+		    *(pi^^(table_2_7[i][0]-2))*((tau-0.5)^^(table_2_7[i][1])); 
+		sum_pitau += table_2_7[i][2]*table_2_7[i][0]*(pi^^(table_2_7[i][0]-1))
+		    *table_2_7[i][1]*((tau-0.5)^^(table_2_7[i][1]-1));		
+	    }
+	    gamma_r = sum;
+	    gamma_r_tau = sum_tau;
+	    gamma_r_pi = sum_pi; 
+	    gamma_r_tautau = sum_tautau;
+	    gamma_r_pipi = sum_pipi;
+	    gamma_r_pitau = sum_pitau;
+	}
 
 	//metastable-vapour region		
-	if((quality<1.0)&&(quality>=0.95))
-	    {
-		//according to eqn 2.9, the gamma_o and its derivatives 
-		//within supplementary equation for metastable-vapour region
-		double sum=0;
-		double sum_tau=0;
-		double sum_tautau=0;
-		table_2_6[0][1] = -0.96937268393049e1;
-		table_2_6[1][1] = 0.10087275970006e2;
-		foreach (i; 0 .. 9){
-		    sum += table_2_6[i][1]*(tau^^table_2_6[i][0]);
-		    sum_tau += table_2_6[i][1]*table_2_6[i][0]*(tau)^^(table_2_6[i][0]-1);
-		    sum_tautau += table_2_6[i][1]*table_2_6[i][0]*(table_2_6[i][0]-1)
-			*(tau)^^(table_2_6[i][0]-2);
-		}
-		gamma_o = log(pi) + sum;
-		gamma_o_tau = sum_tau;
-		gamma_o_tautau = sum_tautau;
-		gamma_o_pi = 1/pi;
-		gamma_o_pipi = -(pi)^^(-2);
-		gamma_o_pitau = 0;
-
-		//table 2.13, the gamma_r and its derivaties within supplementary 
-		//equation for metastable-vapour region
-		sum=0;
-		sum_tau=0;
-		sum_tautau=0;
-		double sum_pi=0;
-		double sum_pipi=0;
-		double sum_pitau=0;
-		foreach (i; 0 .. 13){
-		    sum += table_2_12[i][2]*((pi)^^(table_2_12[i][0]))
-			*((tau-0.5)^^(table_2_12[i][1]));
-		    sum_tau += table_2_12[i][2]*((pi)^^(table_2_12[i][0]))
-			*((tau-0.5)^^(table_2_12[i][1]-1))*table_2_12[i][1];
-		    sum_pi += table_2_12[i][2]*table_2_12[i][0]*(pi^^(table_2_12[i][0]-1))
-			*((tau-0.5)^^(table_2_12[i][1]));
-		    sum_tautau += table_2_12[i][2]*((pi)^^(table_2_12[i][0]))
-			*((tau-0.5)^^(table_2_12[i][1]-2))*table_2_12[i][1]*(table_2_12[i][1]-1);
-		    sum_pipi += table_2_12[i][2]*table_2_12[i][0]*(table_2_12[i][0]-1)
-			*(pi^^(table_2_12[i][0]-2))*((tau-0.5)^^(table_2_12[i][1])); 
-		    sum_pitau += table_2_12[i][2]*table_2_12[i][0]*(pi^^(table_2_12[i][0]-1))
-			*table_2_12[i][1]*((tau-0.5)^^(table_2_12[i][1]-1));		
-		}
-		gamma_r = sum;
-		gamma_r_tau = sum_tau;
-		gamma_r_pi = sum_pi;
-		gamma_r_tautau = sum_tautau;
-		gamma_r_pipi = sum_pipi;
-		gamma_r_pitau = sum_pitau;
+	if ( (quality<1.0) && (quality>=0.95) ) {
+	    //according to eqn 2.9, the gamma_o and its derivatives 
+	    //within supplementary equation for metastable-vapour region
+	    double sum=0;
+	    double sum_tau=0;
+	    double sum_tautau=0;
+	    table_2_6[0][1] = -0.96937268393049e1;
+	    table_2_6[1][1] = 0.10087275970006e2;
+	    foreach (i; 0 .. 9) {
+		sum += table_2_6[i][1]*(tau^^table_2_6[i][0]);
+		sum_tau += table_2_6[i][1]*table_2_6[i][0]*(tau)^^(table_2_6[i][0]-1);
+		sum_tautau += table_2_6[i][1]*table_2_6[i][0]*(table_2_6[i][0]-1)
+		    *(tau)^^(table_2_6[i][0]-2);
 	    }
+	    gamma_o = log(pi) + sum;
+	    gamma_o_tau = sum_tau;
+	    gamma_o_tautau = sum_tautau;
+	    gamma_o_pi = 1/pi;
+	    gamma_o_pipi = -(pi)^^(-2);
+	    gamma_o_pitau = 0;
+
+	    //table 2.13, the gamma_r and its derivaties within supplementary 
+	    //equation for metastable-vapour region
+	    sum=0;
+	    sum_tau=0;
+	    sum_tautau=0;
+	    double sum_pi=0;
+	    double sum_pipi=0;
+	    double sum_pitau=0;
+	    foreach (i; 0 .. 13) {
+		sum += table_2_12[i][2]*((pi)^^(table_2_12[i][0]))
+		    *((tau-0.5)^^(table_2_12[i][1]));
+		sum_tau += table_2_12[i][2]*((pi)^^(table_2_12[i][0]))
+		    *((tau-0.5)^^(table_2_12[i][1]-1))*table_2_12[i][1];
+		sum_pi += table_2_12[i][2]*table_2_12[i][0]*(pi^^(table_2_12[i][0]-1))
+		    *((tau-0.5)^^(table_2_12[i][1]));
+		sum_tautau += table_2_12[i][2]*((pi)^^(table_2_12[i][0]))
+		    *((tau-0.5)^^(table_2_12[i][1]-2))*table_2_12[i][1]*(table_2_12[i][1]-1);
+		sum_pipi += table_2_12[i][2]*table_2_12[i][0]*(table_2_12[i][0]-1)
+		    *(pi^^(table_2_12[i][0]-2))*((tau-0.5)^^(table_2_12[i][1])); 
+		sum_pitau += table_2_12[i][2]*table_2_12[i][0]*(pi^^(table_2_12[i][0]-1))
+		    *table_2_12[i][1]*((tau-0.5)^^(table_2_12[i][1]-1));		
+	    }
+	    gamma_r = sum;
+	    gamma_r_tau = sum_tau;
+	    gamma_r_pi = sum_pi;
+	    gamma_r_tautau = sum_tautau;
+	    gamma_r_pipi = sum_pipi;
+	    gamma_r_pitau = sum_pitau;
+	}
 
 	//eqn 2.6 & eqn 2.9
 	g = (gamma_r + gamma_o)*R*T;
@@ -261,26 +263,33 @@ private:
 
 public:
     //table 2.8, relations of thermodynamic properties to gamma_o and gamma_r 
-    double SpecificVolume(){
+    double SpecificVolume()
+    {
 	return (pi*(gamma_o_pi+gamma_r_pi))*R*T/p;
     } 
-    double SpecificEnthalpy(){
+    double SpecificEnthalpy()
+    {
 	return tau*(gamma_o_tau + gamma_r_tau)*R*T;
     }  
-    double SpecificInternalEnergy(){
+    double SpecificInternalEnergy()
+    {
 	return SpecificEnthalpy - SpecificVolume*p;
     } 
-    double SpecificEntropy(){
+    double SpecificEntropy()
+    {
 	return SpecificEnthalpy/T - (gamma_o+gamma_r)*R;
     }  
-    double SpecificIsobaricHeatCapacity(){
+    double SpecificIsobaricHeatCapacity()
+    {
 	return -(tau^^2)*(gamma_o_tautau+gamma_r_tautau)*R;
     } 
-    double SpecificIsochoricHeatCapacity(){
+    double SpecificIsochoricHeatCapacity()
+    {
 	return SpecificIsobaricHeatCapacity
 	    -(((1+pi*gamma_r_pi-tau*pi*gamma_r_pitau)^^2)/(1-pi^^2*gamma_r_pipi))*R;
     }
-    double SoundSpeed(){
+    double SoundSpeed()
+    {
 	double _a,_b,_c,_d;
 	_a = 1+2*pi*gamma_r_pi+pi^^2*gamma_r_pi^^2;
 	_b = 1-pi^^2*gamma_r_pipi;
@@ -288,11 +297,13 @@ public:
 	_d = tau^^2*(gamma_o_tautau+gamma_r_tautau);
 	return sqrt((_a/(_b+(_c/_d)))*R*T);
     } 	
-    double IsobaricCubicExpansionCoefficient(){
+    double IsobaricCubicExpansionCoefficient()
+    {
 	return (1+pi*gamma_r_pi - tau*pi*gamma_r_pitau)
 	    /(1+pi*gamma_r_pi)/T;
     }
-    double IsothermalCompressibility(){
+    double IsothermalCompressibility()
+    {
 	return (1-pi^^2*gamma_r_pipi)/(1+pi*gamma_r_pi)/p;
     }
 } // end struct Region2
@@ -301,7 +312,7 @@ public:
 //PART 1.3. IAPWS-Region5 formulation struct
 //--------------------------------------------------------------------------------
 
-struct Region5{
+struct Region5 {
 private:
     //state property
     double p,T; //pressure & temperature 
@@ -325,13 +336,15 @@ private:
 	 [1,1,0.15736404855259e-2], [1,2,0.90153761673944e-3], [1,3,-0.50270077677648e-2],
 	 [2,3,0.22440037409485e-5], [2,9,-0.41163275453471e-5], [3,7,0.37919454822955e-7] ];
 	
-    this(double _p, double _T){
+    this(double _p, double _T)
+    {
 	p = _p;
 	T = _T;
 	init;
     }
 
-    void init(){
+    void init()
+    {
 	/*
 	 * contains all the properties and coefficient required to proceed calculation in 
 	 * Region 5.
@@ -344,7 +357,7 @@ private:
 	double sum=0;
 	double sum_tau=0;
 	double sum_tautau=0;
-	foreach (i; 0 .. 6){
+	foreach (i; 0 .. 6) {
 	    sum += table_2_22[i][1]*(tau^^table_2_22[i][0]);
 	    sum_tau += table_2_22[i][1]*table_2_22[i][0]*(tau)^^(table_2_22[i][0]-1);
 	    sum_tautau += table_2_22[i][1]*table_2_22[i][0]*(table_2_22[i][0]-1)
@@ -364,7 +377,7 @@ private:
 	double sum_pi=0;
 	double sum_pipi=0;
 	double sum_pitau=0;
-	foreach (i; 0 .. 6){
+	foreach (i; 0 .. 6) {
 	    sum += table_2_23[i][2]*((pi)^^(table_2_23[i][0]))*((tau)^^(table_2_23[i][1]));
 	    sum_tau += table_2_23[i][2]*((pi)^^(table_2_23[i][0]))
 		*((tau)^^(table_2_23[i][1]-1))*table_2_23[i][1];
@@ -387,26 +400,33 @@ private:
 
 public:
     //table 2.24 
-    double SpecificVolume(){
+    double SpecificVolume()
+    {
 	return (pi*(gamma_o_pi+gamma_r_pi))*R*T/p;
     } 
-    double SpecificEnthalpy(){
+    double SpecificEnthalpy()
+    {
 	return tau*(gamma_o_tau + gamma_r_tau)*R*T;
     }  
-    double SpecificInternalEnergy(){
+    double SpecificInternalEnergy()
+    {
 	return SpecificEnthalpy - SpecificVolume*p;
     } 
-    double SpecificEntropy(){
+    double SpecificEntropy()
+    {
 	return SpecificEnthalpy/T - (gamma_o+gamma_r)*R;
     }  
-    double SpecificIsobaricHeatCapacity(){
+    double SpecificIsobaricHeatCapacity()
+    {
 	return -(tau^^2)*(gamma_o_tautau+gamma_r_tautau)*R;
     } 
-    double SpecificIsochoricHeatCapacity(){
+    double SpecificIsochoricHeatCapacity()
+    {
 	return SpecificIsobaricHeatCapacity
 	    -(((1+pi*gamma_r_pi-tau*pi*gamma_r_pitau)^^2)/(1-pi^^2*gamma_r_pipi))*R;
     }
-    double SoundSpeed(){
+    double SoundSpeed()
+    {
 	double _a,_b,_c,_d;
 	_a = 1+2*pi*gamma_r_pi+pi^^2*gamma_r_pi^^2;
 	_b = 1-pi^^2*gamma_r_pipi;
@@ -414,11 +434,13 @@ public:
 	_d = tau^^2*(gamma_o_tautau+gamma_r_tautau);
 	return sqrt((_a/(_b+(_c/_d)))*R*T);
     }
-    double IsobaricCubicExpansionCoefficient(){
+    double IsobaricCubicExpansionCoefficient()
+    {
 	return (1+pi*gamma_r_pi - tau*pi*gamma_r_pitau)
 	    /(1+pi*gamma_r_pi)/T;
     }
-    double IsothermalCompressibility(){
+    double IsothermalCompressibility()
+    {
 	return (1-pi^^2*gamma_r_pipi)/(1+pi*gamma_r_pi)/p;
     }
 }//end struct Region5
@@ -426,7 +448,7 @@ public:
 //---------------------------------------------------------------------------------
 //PART 1.4. IAPWS-Region3 formulation struct  
 //---------------------------------------------------------------------------------
-struct Region3{
+struct Region3 {
 private:
     //state property
     double p,T,quality,v,rho; // pressure, temperature, vapour fraction, specific volume, density 
@@ -938,7 +960,8 @@ private:
 		  0.873371668682417e3]] ];
 
     //backward equations
-    void eqn_2_68(){
+    void eqn_2_68()
+    {
 	//intermediate properties in eqn 2.68
 	v_star = table_2_103[subregion_i][0];
 	p_star = table_2_103[subregion_i][1];
@@ -967,7 +990,8 @@ private:
 	v = v_star*(sum^^_e);
     }
 
-    void eqn_2_69(){
+    void eqn_2_69()
+    {
 	//intermediate properties in eqn 2.69
 	v_star = table_2_103[13][0];
 	p_star = table_2_103[13][1];
@@ -1081,83 +1105,86 @@ private:
 	    {SubRegion = 't';}
 
 	//table 2.127, determine region 3u~3z
-	else if(p<=p_c)
-	    {
-		if(21.93161551e6<p && T<=get_Ts(p))
-		    {
-			if(eqn_2_65(7)<T && T<=eqn_2_65(9))
-			    {SubRegion = 'u';quality=0;}
-			else if(T>eqn_2_65(9))
-			    {SubRegion = 'y';quality=0;}
+	else if(p<=p_c) {
+	    if(21.93161551e6<p && T<=get_Ts(p)) {
+		if(eqn_2_65(7)<T && T<=eqn_2_65(9)) {
+		    SubRegion = 'u';
+		    quality=0;
+		}
+		else if (T>eqn_2_65(9)) {
+		    SubRegion = 'y';
+		    quality=0;
+		}
+		else if ((21.04336732e6<p && p<=21.93161551e6) && T>eqn_2_65(7) && T<=get_Ts(p)) {
+		    SubRegion ='u';
+		    quality=0;
+		}
+		else if(21.90096265e6<p && T>=get_Ts(p)) {
+		    if(T<=eqn_2_66(10)) {
+			SubRegion = 'z';
 		    }
-		else if((21.04336732e6<p && p<=21.93161551e6) && T>eqn_2_65(7)
-			&& T<=get_Ts(p))
-		    {SubRegion ='u';quality=0;}
-			
-		else if(21.90096265e6<p && T>=get_Ts(p))
-		    {
-			if(T<=eqn_2_66(10))
-			    {SubRegion = 'z';}
-			else if(eqn_2_66(10)<T && T<=eqn_2_65(8))
-			    {SubRegion = 'x';}
+		    else if(eqn_2_66(10)<T && T<=eqn_2_65(8)) {
+			SubRegion = 'x';
 		    }
-			
-		else if((21.04336732e6<p && p<=21.90096265e6) && T<=eqn_2_65(8) 
-			&& T>=get_Ts(p))
-		    {SubRegion = 'x';}
+		}
+		else if((21.04336732e6<p && p<=21.90096265e6) && T<=eqn_2_65(8) && T>=get_Ts(p)) {
+		    SubRegion = 'x';
+		}
 	    }
-		
-	else if(p>p_c)
-	    {
-		if((p_c<p && p<=22.5e6) && (eqn_2_65(7)<T && T<=eqn_2_65(9)))
-		    {SubRegion = 'u';}
-			
-		else if((p_c<p && p<=22.5e6) && (eqn_2_66(10)<T && T<=eqn_2_65(8)))
-		    {SubRegion = 'x';}
-			
-		else if(p_c<p && p<=22.11e6)
-		    {
-			if(eqn_2_67<T && T<=eqn_2_66(10))
-			    {SubRegion = 'z';}
-			else if(eqn_2_65(9)<T && T<=eqn_2_67)
-			    {SubRegion = 'y';}
+	    else if(p>p_c) {
+		if((p_c<p && p<=22.5e6) && (eqn_2_65(7)<T && T<=eqn_2_65(9))) {
+		    SubRegion = 'u';
+		}
+		else if ((p_c<p && p<=22.5e6) && (eqn_2_66(10)<T && T<=eqn_2_65(8))) {
+		    SubRegion = 'x';
+		}
+		else if(p_c<p && p<=22.11e6) {
+		    if(eqn_2_67<T && T<=eqn_2_66(10)) { 
+			SubRegion = 'z';
 		    }
-			
-		else if(22.11e6<p && p<=22.5e6)
-		    {
-			if(eqn_2_67<T && T<=eqn_2_66(10))
-			    {SubRegion = 'w';}
-			else if(eqn_2_65(9)<T && T<=eqn_2_67)
-			    {SubRegion = 'v';}
+		    else if(eqn_2_65(9)<T && T<=eqn_2_67) {
+			SubRegion = 'y';
 		    }
+		}
+			
+		else if (22.11e6<p && p<=22.5e6) {
+		    if (eqn_2_67<T && T<=eqn_2_66(10)) {
+			SubRegion = 'w';
+		    }
+		    else if (eqn_2_65(9)<T && T<=eqn_2_67) {
+			SubRegion = 'v';
+		    }
+		}
 	    }
+	}
     }
 	
-    this(double _p, double _T )
-    {	
+    this(double _p, double _T ) {	
 	p = _p; T = _T;
 	init;	
     }
 
-    void init()
-    {
+    void init() {
 	/*
 	 * contains all properties and coefficients before using basic equation to 
 	 * calculate thermaldynamic properties.
 	 */
 	get_subregion;
-
+	
 	//(Region3 backward equation) preparation to proceed calculation of specific volume  
-	foreach(int i,element;_subregion_char){
-	    if(element==SubRegion){
-		subregion_i=i;}
+	foreach(int i,element;_subregion_char) {
+	    if (element==SubRegion) {
+		subregion_i=i;
+	    }
 	}
 	//for subregion 3n
-	if(subregion_i==13){
+	if (subregion_i==13) {
 	    eqn_2_69;
 	}
 	//for subregion 3a~3z apart from 3n
-	else{eqn_2_68;}
+	else {
+	    eqn_2_68;
+	}
 	
 	//assign density with the obtained specific volume
 	rho=1/v;
@@ -1167,7 +1194,7 @@ private:
 	//summation container for for loop
 	double sum=0,sum_tau=0,sum_delta=0,sum_tautau=0,sum_deltadelta=0,sum_deltatau=0;
 	//table 2.17
-	foreach(i; 0 .. 40){
+	foreach (i; 0 .. 40) {
 	    sum += table_2_15[i][2]*delta^^table_2_15[i][0]*tau^^table_2_15[i][1];
 	    sum_tau += table_2_15[i][2]*delta^^table_2_15[i][0]
 		*tau^^(table_2_15[i][1]-1)*table_2_15[i][1];
@@ -1189,32 +1216,43 @@ private:
     }
 
 public:
-    double SpecificVolume(){return v;}
+    double SpecificVolume() 
+    {
+	return v;
+    }
     //(Region3 basic equation)table 2.16
-    double SpecificEnthalpy(){
+    double SpecificEnthalpy()
+    {
 	return R*T*(tau*phi_tau+delta*phi_delta);
     }
-    double SpecificInternalEnergy(){
+    double SpecificInternalEnergy()
+    {
 	return R*T*(tau*phi_tau);
     }
-    double SpecificEntropy(){
+    double SpecificEntropy()
+    {
 	return R*(tau*phi_tau-phi);
     }
-    double SpecificIsobaricHeatCapacity(){
+    double SpecificIsobaricHeatCapacity()
+    {
 	return R*(-tau^^2*phi_tautau+((delta*phi_delta-delta*tau*phi_deltatau)^^2)
 		  /(2*delta*phi_delta+delta^^2*phi_deltadelta));
     }
-    double SpecificIsochoricHeatCapacity(){
+    double SpecificIsochoricHeatCapacity()
+    {
 	return R*(-tau^^2*phi_tautau);
     }
-    double SoundSpeed(){
+    double SoundSpeed()
+    {
 	return sqrt(R*T*(2*delta*phi_delta+delta^^2*phi_deltadelta
 			 -((delta*phi_delta-delta*tau*phi_deltatau)^^2)/(tau^^2*phi_tautau)));
     }
-    double IsobaricCubicExpansionCoefficient(){
+    double IsobaricCubicExpansionCoefficient()
+    {
 	return (phi_delta-tau*phi_deltatau)/(2*phi_delta+delta*phi_deltadelta)/T;
     }
-    double IsothermalCompressibility(){
+    double IsothermalCompressibility()
+    {
 	return (1/(2*delta*phi_delta+delta^^2*phi_deltadelta))/(rho*R*T);
     }
 }//end struct Region3
@@ -1222,7 +1260,7 @@ public:
 //---------------------------------------------------------------------------------
 //PART 1.5. IAPWS-Region1 formulation struct
 //---------------------------------------------------------------------------------
-struct Region1{
+struct Region1 {
 private:
     //state property
     double p,T; // pressure & temperature 
@@ -1253,12 +1291,14 @@ private:
 	  1.822809458140400E-24,-9.353708729245800E-26]
 	 ];
 
-    this(double _p, double _T){
+    this(double _p, double _T)
+    {
 	p = _p; T = _T;
 	init;
     }
 
-    void init(){
+    void init()
+    {
 	/*
 	 * contains all the properties and coefficient required to proceed calculation in 
 	 * Region 1.
@@ -1267,7 +1307,7 @@ private:
 	tau=1386/T;
 
 	//table 2.4, derivatives of gamma
-	foreach (i; 0 .. 34){
+	foreach (i; 0 .. 34) {
 	    gamma += table_2_2[2][i]*(7.1-pi)^^table_2_2[0][i]*(tau-1.222)^^table_2_2[1][i];
 	    gamma_tau += table_2_2[2][i]*(7.1-pi)^^table_2_2[0][i]*(tau-1.222)^^
 		(table_2_2[1][i]-1)*table_2_2[1][i];
@@ -1284,31 +1324,39 @@ private:
 
 public:
     //table 2.3 
-    double SpecificVolume(){
+    double SpecificVolume()
+    {
 	return R*T/p*pi*gamma_pi;
     } 
-    double SpecificEnthalpy(){
+    double SpecificEnthalpy()
+    {
 	return tau*gamma_tau*R*T;
     }  
-    double SpecificInternalEnergy(){
+    double SpecificInternalEnergy()
+    {
 	return SpecificEnthalpy - SpecificVolume*p;
     } 
-    double SpecificEntropy(){
+    double SpecificEntropy()
+    {
 	return (tau*gamma_tau-gamma)*R;
     }  
-    double SpecificIsobaricHeatCapacity(){
+    double SpecificIsobaricHeatCapacity()
+    {
 	return (-1*tau^^2*gamma_tautau)*R;
     } 
-    double SpecificIsochoricHeatCapacity(){
+    double SpecificIsochoricHeatCapacity()
+    {
 	return SpecificIsobaricHeatCapacity
 	    +((gamma_pi-tau*gamma_pitau)^^2/gamma_pipi)*R;
     }
-    double SoundSpeed(){
+    double SoundSpeed()
+    {
 	double _a,_b,_c,_d;
 	_a = (gamma_pi-tau*gamma_pitau)^^2/(tau^^2*gamma_tautau);
 	return sqrt((gamma_pi^^2/(_a-gamma_pipi))*R*T);
     }
-    double IsobaricCubicExpansionCoefficient(){
+    double IsobaricCubicExpansionCoefficient()
+    {
 	return (1-tau*gamma_pitau/gamma_pi)/T;
     }
     double IsothermalCompressibility(){
@@ -1356,525 +1404,526 @@ private:
 	 [1.97815050331519,-5.54349664571295,-2.16866274479712,-0.965458722086812,-0.503243546373828]];
 
 	//determine which region the input (p,T) lies in
-    string set_region(double p, double T, double quality){
+    string set_region(double p, double T, double quality)
+    {
     	string region;
-		//(p,T) lies in region 2
-		if(((0<T)&&(T<623.15))&&(p<=get_ps(T)) ||
-		   ((623.15<=T&&T<=863.15) &&(get_pb23(T)>=p))||((863.15<=T)&&(T<=1073.15))) {
-		    if(quality==1.0 || quality==-1)
-			{
-			    region = "2";
-			}
-		    else if(quality>=0 && quality<1)
-			{
-				if(abs(p-get_ps(T))/get_ps(T)<5e-4) 
-				//acceptable percentage uncertainty (International Steam Table, Fig. 2.30)
-				{
-					region = "12m";
-				}
-				else
-				{
-				    string msg;
-				    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-				    msg ~= format(
-				    	"    Input state is not a gas or g-v mixture but in IAPWS-Region 2 vapour phase.\n");
-				    msg ~= format("		Pressure adjusted from %.2f to %.2f", p, get_ps(T)); 
-				    writeln(msg);
-				    region = "12m";
-				}	
-			}
-		} 
-		//(p,T) lies in region 5
-		else if((1073.15<=T && T<=2273.15) && p<=50e6){
-		    region = "5";
+	//(p,T) lies in region 2
+	if(((0<T)&&(T<623.15))&&(p<=get_ps(T)) ||
+	   ((623.15<=T&&T<=863.15) &&(get_pb23(T)>=p))||((863.15<=T)&&(T<=1073.15))) {
+	    if(quality==1.0 || quality==-1) {
+		region = "2";
+	    }
+	    else if(quality>=0 && quality<1) {
+		if(abs(p-get_ps(T))/get_ps(T)<5e-4) {//acceptable percentage uncertainty (International Steam Table, Fig. 2.30)
+		    region = "12m";
 		}
-		//(p,T) lies in region 3
-		else if((623.15<=T&&T<=863.15)&&(get_pb23(T)<=p)){
-		    if(quality>0 && quality<1.0) 
-			{
-			    string msg;
-			    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-			    msg ~= format("    Input state is in IAPWS-Region 3 mixture phase.\n"); 
-			    writeln(msg);
-			    region = "3m"; //liquid-vapour mixture
-			}
-		    else
-			{
-			    region = "3"; 
-			}
-		}
-		//(p,T) lies in region 1
-		else if(((273.15<=T&&T<=623.15)&&(get_ps(T)<p&&p<=100E6))){
-		    if(quality==0 || quality ==-1)
-			{
-			    region = "1";	
-			}
-		    else if(0<quality && quality<=1.0)
-			{
-			    if(abs(p-get_ps(T))/get_ps(T)<5e-4) 
-				//acceptable percentage uncertainty (International Steam Table, Fig. 2.30)
-				{
-					region = "12m";
-				}
-				else
-				{
-				    string msg;
-				    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-				    msg ~= format(
-				    	"    Input state is not a liquid state but in IAPWS-Region 1 liquid phase.\n");
-				    msg ~= format("		Pressure adjusted from %.2f to %.2f", p, get_ps(T)); 
-				    writeln(msg);
-				    region = "12m";
-				}	
-			}
-		}
-		else if(p!=p || T!=T) //when p or T is Nan
-		{}
-		else{
-			string msg;
+		else {
+		    string msg;
 		    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-		    msg ~= format("    Input state is out of the valid range for IAPWS formulations of state.\n");
-		    msg ~= format("	   Input pressure %.2f [Pa] and temperature %.2f [K]\n", p, T);
-		    msg ~= format("	   please check http://www.iapws.org/relguide/ for more information."); 
+		    msg ~= format(
+				  "    Input state is not a gas or g-v mixture but in IAPWS-Region 2 vapour phase.\n");
+		    msg ~= format("		Pressure adjusted from %.2f to %.2f", p, get_ps(T)); 
 		    writeln(msg);
+		    region = "12m";
+		}	
+	    }
+	} 
+	//(p,T) lies in region 5
+	else if((1073.15<=T && T<=2273.15) && p<=50e6) {
+	    region = "5";
+	}
+	//(p,T) lies in region 3
+	else if((623.15<=T&&T<=863.15)&&(get_pb23(T)<=p)) {
+	    if(quality>0 && quality<1.0) {
+		string msg;
+		msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+		msg ~= format("    Input state is in IAPWS-Region 3 mixture phase.\n"); 
+		writeln(msg);
+		region = "3m"; //liquid-vapour mixture
+	    }
+	    else {
+		region = "3"; 
+	    }
+	}
+	//(p,T) lies in region 1
+	else if(((273.15<=T&&T<=623.15)&&(get_ps(T)<p&&p<=100E6))) {
+	    if(quality==0 || quality ==-1) {
+		region = "1";	
+	    }
+	    else if(0<quality && quality<=1.0) {
+		if(abs(p-get_ps(T))/get_ps(T)<5e-4) {//acceptable percentage uncertainty (International Steam Table, Fig. 2.30)
+		    region = "12m";
 		}
-		return region;
+		else {
+		    string msg;
+		    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+		    msg ~= format(
+				  "    Input state is not a liquid state but in IAPWS-Region 1 liquid phase.\n");
+		    msg ~= format("		Pressure adjusted from %.2f to %.2f", p, get_ps(T)); 
+		    writeln(msg);
+		    region = "12m";
+		}	
+	    }
+	}
+	else if(p!=p || T!=T) { //when p or T is Nan
+	}
+	else {
+	    string msg;
+	    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+	    msg ~= format("    Input state is out of the valid range for IAPWS formulations of state.\n");
+	    msg ~= format("	   Input pressure %.2f [Pa] and temperature %.2f [K]\n", p, T);
+	    msg ~= format("	   please check http://www.iapws.org/relguide/ for more information."); 
+	    writeln(msg);
+	}
+	return region;
     }//end set_region
 
 public:
     
-    double SpecificVolume(double p, double T, double quality){
+    double SpecificVolume(double p, double T, double quality)
+    {
     	string region = set_region(p, T, quality);
     	double v;
     	switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    v = _IAPWS.SpecificVolume; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T); 
-		    v = _IAPWS.SpecificVolume; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		    v = _IAPWS.SpecificVolume; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    v = _IAPWS.SpecificVolume; 
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    v = quality*_v.SpecificVolume - (quality-1)*_l.SpecificVolume; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    v = quality * (_v.SpecificVolume - _l.SpecificVolume) + _l.SpecificVolume; 
-		    break;
-
-		default:
-		    break;
-		}//end switch
-		return v; 
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    v = _IAPWS.SpecificVolume; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T); 
+	    v = _IAPWS.SpecificVolume; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    v = _IAPWS.SpecificVolume; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    v = _IAPWS.SpecificVolume; 
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    v = quality*_v.SpecificVolume - (quality-1)*_l.SpecificVolume; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    v = quality * (_v.SpecificVolume - _l.SpecificVolume) + _l.SpecificVolume; 
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return v; 
     }
 
-    double Density(double p, double T, double quality){
+    double Density(double p, double T, double quality)
+    {
     	return 1./SpecificVolume(p,T,quality);
     }
 
-    double SoundSpeed(double p, double T, double quality){
+    double SoundSpeed(double p, double T, double quality)
+    {
     	string region = set_region(p, T, quality);
     	double a;
     	switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    a = _IAPWS.SoundSpeed; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T); 
-		    a = _IAPWS.SoundSpeed; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		    a = _IAPWS.SoundSpeed; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    a = _IAPWS.SoundSpeed; 
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    a = quality*_v.SoundSpeed - (quality-1)*_l.SoundSpeed; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    a = quality * (_v.SoundSpeed - _l.SoundSpeed) + _l.SoundSpeed; 
-		    break;
-
-		default:
-		    break;
-		}//end switch 
-		return a;
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    a = _IAPWS.SoundSpeed; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T); 
+	    a = _IAPWS.SoundSpeed; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    a = _IAPWS.SoundSpeed; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    a = _IAPWS.SoundSpeed; 
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    a = quality*_v.SoundSpeed - (quality-1)*_l.SoundSpeed; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    a = quality * (_v.SoundSpeed - _l.SoundSpeed) + _l.SoundSpeed; 
+	    break;
+	    
+	default:
+	    break;
+	}//end switch 
+	return a;
     }
 
-    double SpecificIsochoricHeatCapacity(double p, double T, double quality){
+    double SpecificIsochoricHeatCapacity(double p, double T, double quality)
+    {
     	string region = set_region(p, T, quality);
     	double Cv;
     	switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T);
-		    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T); 
-		    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    Cv = quality*_v.SpecificIsochoricHeatCapacity - (quality-1)*_l.SpecificIsochoricHeatCapacity; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    Cv = quality * (_v.SpecificIsochoricHeatCapacity 
-				    - _l.SpecificIsochoricHeatCapacity)
-					+ _l.SpecificIsochoricHeatCapacity; 
-		    break;
-
-		default:
-		    break;
-		}//end switch
-		return Cv; 
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T);
+	    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T); 
+	    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    Cv = _IAPWS.SpecificIsochoricHeatCapacity; 
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    Cv = quality*_v.SpecificIsochoricHeatCapacity - (quality-1)*_l.SpecificIsochoricHeatCapacity; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    Cv = quality * (_v.SpecificIsochoricHeatCapacity 
+			    - _l.SpecificIsochoricHeatCapacity)
+		+ _l.SpecificIsochoricHeatCapacity; 
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return Cv; 
     }
 
-    double SpecificIsobaricHeatCapacity(double p, double T, double quality){
+    double SpecificIsobaricHeatCapacity(double p, double T, double quality)
+    {
     	string region = set_region(p, T, quality);
     	double Cp;
     	switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    Cp = _IAPWS.SpecificIsobaricHeatCapacity; 
-		    break;	 
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    Cp = _IAPWS.SpecificIsobaricHeatCapacity; 
+	    break;	 
 				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T);
-		    Cp = _IAPWS.SpecificIsobaricHeatCapacity; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		    Cp = _IAPWS.SpecificIsobaricHeatCapacity; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    Cp = _IAPWS.SpecificIsobaricHeatCapacity;
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    Cp = quality*_v.SpecificIsobaricHeatCapacity - (quality-1)*_l.SpecificIsobaricHeatCapacity; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    Cp = quality * (_v.SpecificIsobaricHeatCapacity
-				    - _l.SpecificIsobaricHeatCapacity)
-			+ _l.SpecificIsobaricHeatCapacity;
-		    break;
-
-		default:
-		    break;
-		}//end switch
-		return Cp; 
+	case "5":
+	    Region5 _IAPWS = Region5(p,T);
+	    Cp = _IAPWS.SpecificIsobaricHeatCapacity; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    Cp = _IAPWS.SpecificIsobaricHeatCapacity; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    Cp = _IAPWS.SpecificIsobaricHeatCapacity;
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    Cp = quality*_v.SpecificIsobaricHeatCapacity - (quality-1)*_l.SpecificIsobaricHeatCapacity; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    Cp = quality * (_v.SpecificIsobaricHeatCapacity
+			    - _l.SpecificIsobaricHeatCapacity)
+		+ _l.SpecificIsobaricHeatCapacity;
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return Cp; 
     }
 
-    double SpecificInternalEnergy(double p, double T, double quality){
+    double SpecificInternalEnergy(double p, double T, double quality)
+    {
     	string region = set_region(p, T, quality);
     	double u;
     	switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    u = _IAPWS.SpecificInternalEnergy; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T);
-		    u = _IAPWS.SpecificInternalEnergy; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		    u = _IAPWS.SpecificInternalEnergy; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    u = _IAPWS.SpecificInternalEnergy;
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    u = quality*_v.SpecificInternalEnergy - (quality-1)*_l.SpecificInternalEnergy; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    u = quality * (_v.SpecificInternalEnergy - _l.SpecificInternalEnergy)
-					+ _l.SpecificInternalEnergy;
-		    break;
-
-		default:
-		    break;
-		}//end switch
-		return u;
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    u = _IAPWS.SpecificInternalEnergy; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T);
+	    u = _IAPWS.SpecificInternalEnergy; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    u = _IAPWS.SpecificInternalEnergy; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    u = _IAPWS.SpecificInternalEnergy;
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    u = quality*_v.SpecificInternalEnergy - (quality-1)*_l.SpecificInternalEnergy; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    u = quality * (_v.SpecificInternalEnergy - _l.SpecificInternalEnergy)
+		+ _l.SpecificInternalEnergy;
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return u;
     }
 
-    double SpecificEnthalpy(double p, double T, double quality){
+    double SpecificEnthalpy(double p, double T, double quality)
+    {
     	string region = set_region(p, T, quality);
     	double h;
     	switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    h = _IAPWS.SpecificEnthalpy; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T);
-		    h = _IAPWS.SpecificEnthalpy; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		    h = _IAPWS.SpecificEnthalpy; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    h = _IAPWS.SpecificEnthalpy;
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    h = quality*_v.SpecificEnthalpy - (quality-1)*_l.SpecificEnthalpy; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    h = quality * (_v.SpecificEnthalpy - _l.SpecificEnthalpy)
-					+ _l.SpecificEnthalpy;
-		    break;
-
-		default:
-		    break;
-		}//end switch
-		return h; 
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    h = _IAPWS.SpecificEnthalpy; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T);
+	    h = _IAPWS.SpecificEnthalpy; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    h = _IAPWS.SpecificEnthalpy; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    h = _IAPWS.SpecificEnthalpy;
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    h = quality*_v.SpecificEnthalpy - (quality-1)*_l.SpecificEnthalpy; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    h = quality * (_v.SpecificEnthalpy - _l.SpecificEnthalpy)
+		+ _l.SpecificEnthalpy;
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return h; 
     }
-
-    double SpecificEntropy(double p, double T, double quality){
+    
+    double SpecificEntropy(double p, double T, double quality)
+    {
     	string region = set_region(p, T, quality);
     	double s;
     	switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		   s = _IAPWS.SpecificEntropy; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T);
-		   s = _IAPWS.SpecificEntropy; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		   s = _IAPWS.SpecificEntropy; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		   s = _IAPWS.SpecificEntropy;
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		   s = quality*_v.SpecificEntropy - (quality-1)*_l.SpecificEntropy; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		   s = quality * (_v.SpecificEntropy - _l.SpecificEntropy)
-			       + _l.SpecificEntropy;
-		    break;
-
-		default:
-		    break;
-		}//end switch
-		return s; 
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    s = _IAPWS.SpecificEntropy; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T);
+	    s = _IAPWS.SpecificEntropy; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    s = _IAPWS.SpecificEntropy; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    s = _IAPWS.SpecificEntropy;
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    s = quality*_v.SpecificEntropy - (quality-1)*_l.SpecificEntropy; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    s = quality * (_v.SpecificEntropy - _l.SpecificEntropy)
+		+ _l.SpecificEntropy;
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return s; 
     }
-    double IsobaricCubicExpansionCoefficient(double p, double T, double quality){
-		string region = set_region(p, T, quality);
-		double alpha_v;
-		switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T);
-		    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient;
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    alpha_v = quality*_v.IsobaricCubicExpansionCoefficient - 
-		    	(quality-1)*_l.IsobaricCubicExpansionCoefficient; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    alpha_v = quality * (_v.IsobaricCubicExpansionCoefficient 
-		    	- _l.IsobaricCubicExpansionCoefficient)
-			    + _l.IsobaricCubicExpansionCoefficient;
-		    break;
-
-		default:
-		    break;
-		}//end switch
-		return alpha_v; 
-	}  
-
-	double IsothermalCompressibility(double p, double T, double quality){
-		string region = set_region(p, T, quality);
-		double kappa_T;
-		switch (region) {
-		case "2":
-		    Region2 _IAPWS = Region2(p,T,quality);
-		    kappa_T = _IAPWS.IsothermalCompressibility; 
-		    break;	 
-				
-		case "5":
-		    Region5 _IAPWS = Region5(p,T);
-		    kappa_T = _IAPWS.IsothermalCompressibility; 
-		    break;
-				
-		case "3":
-		    Region3 _IAPWS = Region3(p,T);
-		    kappa_T = _IAPWS.IsothermalCompressibility; 
-		    break;
-
-		case "1":
-		    Region1 _IAPWS = Region1(p,T);
-		    kappa_T = _IAPWS.IsothermalCompressibility;
-		    break;
-
-		case "3m":
-			//slightly adjust the pressure value to make sure it is in 
-			//the desired phase
-		    Region3 _l = Region3(p+100,T); //liquid phase
-		    Region3 _v = Region3(p-100,T); // vapour phase
-		    kappa_T = quality*_v.IsothermalCompressibility - 
-		    	(quality-1)*_l.IsothermalCompressibility; 
-		    break;
-
-		case "12m":
-		    Region1 _l = Region1(get_ps(T),T); //liquid phase
-		    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
-		    kappa_T = quality * (_v.IsothermalCompressibility
-				    - _l.IsothermalCompressibility)
-					+ _l.IsothermalCompressibility;
-		    break;
-
-		default:
-			break;
-		}//end switch
-		return kappa_T; 
-	}
+   
+    double IsobaricCubicExpansionCoefficient(double p, double T, double quality)
+    {
+	string region = set_region(p, T, quality);
+	double alpha_v;
+	switch (region) {
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T);
+	    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    alpha_v = _IAPWS.IsobaricCubicExpansionCoefficient;
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    alpha_v = quality*_v.IsobaricCubicExpansionCoefficient - 
+		(quality-1)*_l.IsobaricCubicExpansionCoefficient; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    alpha_v = quality * (_v.IsobaricCubicExpansionCoefficient 
+				 - _l.IsobaricCubicExpansionCoefficient)
+		+ _l.IsobaricCubicExpansionCoefficient;
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return alpha_v; 
+    }  
+    
+    double IsothermalCompressibility(double p, double T, double quality)
+    {
+	string region = set_region(p, T, quality);
+	double kappa_T;
+	switch (region) {
+	case "2":
+	    Region2 _IAPWS = Region2(p,T,quality);
+	    kappa_T = _IAPWS.IsothermalCompressibility; 
+	    break;	 
+	    
+	case "5":
+	    Region5 _IAPWS = Region5(p,T);
+	    kappa_T = _IAPWS.IsothermalCompressibility; 
+	    break;
+	    
+	case "3":
+	    Region3 _IAPWS = Region3(p,T);
+	    kappa_T = _IAPWS.IsothermalCompressibility; 
+	    break;
+	    
+	case "1":
+	    Region1 _IAPWS = Region1(p,T);
+	    kappa_T = _IAPWS.IsothermalCompressibility;
+	    break;
+	    
+	case "3m":
+	    //slightly adjust the pressure value to make sure it is in 
+	    //the desired phase
+	    Region3 _l = Region3(p+100,T); //liquid phase
+	    Region3 _v = Region3(p-100,T); // vapour phase
+	    kappa_T = quality*_v.IsothermalCompressibility - 
+		(quality-1)*_l.IsothermalCompressibility; 
+	    break;
+	    
+	case "12m":
+	    Region1 _l = Region1(get_ps(T),T); //liquid phase
+	    Region2 _v = Region2(get_ps(T),T,-1); //vapour phase
+	    kappa_T = quality * (_v.IsothermalCompressibility
+				 - _l.IsothermalCompressibility)
+		+ _l.IsothermalCompressibility;
+	    break;
+	    
+	default:
+	    break;
+	}//end switch
+	return kappa_T; 
+    }
 
     //function to compute dynamic viscosity but not in IAPWS-IF97
     //parameter: rho, T
     //valid in: 273.15K <= T <= 1173.15K and p <= 100 MPa
-    double DynamicViscosity(double p, double T, double quality){	
+    double DynamicViscosity(double p, double T, double quality)
+    {	
 	//intermediate properties
 	double rho = Density(p,T,quality);
 	double delta=rho/rho_c;
 	double theta=T/T_c;
 	double psi_0,psi_1;
 	double sum=0;
-		
+	
 	//eqn 3.2
-	foreach (i;0 .. 4){
+	foreach (i;0 .. 4) {
 	    sum += table_3_1[i]*theta^^(-i);
 	}
 	psi_0 = theta^^0.5*(sum)^^-1;
 
 	//eqn 3.3
 	sum=0;
-	foreach (i; 0 .. 21){
+	foreach (i; 0 .. 21) {
 	    sum += table_3_2[i][2]*(delta-1)^^(table_3_2[i][0])
 		*((theta^^-1-1)^^(table_3_2[i][1])); 
 	}
@@ -1884,7 +1933,8 @@ public:
 	return 1e-6*psi_0*psi_1;
     }
 	
-    double ThermalConductivity(double p, double T, double quality){
+    double ThermalConductivity(double p, double T, double quality)
+    {
 	/*	
 	 * contains everything implementing from IAPWS R15-11 for industrial use
 	 * reference:
@@ -1917,13 +1967,18 @@ public:
 	double sum_1=0;
 
 	//eqn 16
-	foreach (i; 0 .. 5){sum += table_1[i]/(T_bar^^i);} 
+	foreach (i; 0 .. 5) {
+	    sum += table_1[i]/(T_bar^^i);
+	} 
 	lambda_0 = sqrt(T_bar)/sum;
 	//eqn 17
 	sum=0;
-	foreach (i; 0 .. 5){
-	    foreach (j; 0 .. 6){sum_1 += table_2[i][j]*(rho_bar-1)^^j;}
-	    sum += ((T_bar^^-1-1)^^i)*sum_1;sum_1=0;}
+	foreach (i; 0 .. 5) {
+	    foreach (j; 0 .. 6) {
+		sum_1 += table_2[i][j]*(rho_bar-1)^^j;
+	    }
+	    sum += ((T_bar^^-1-1)^^i)*sum_1;sum_1=0;
+	}
 	lambda_1 = exp(rho_bar*sum);	
 
 	/*
@@ -1931,7 +1986,7 @@ public:
 	 *	refer to http://www.twt.mpei.ac.ru/mcs/worksheets/iapws/wspTCPT.xmcd	
 	 *	for more details
 	 */
-	if((Cp_bar<0)||(Cp_bar>1e13)){
+	if((Cp_bar<0)||(Cp_bar>1e13)) {
 	    Cp_bar = 1e13;Cp = Cp_bar*R;kappa = Cp/Cv;
 	}	
 	dvdp_T = -kappa_T*v;
@@ -1980,208 +2035,209 @@ public:
 //in either Region 2 or Region 5 
 void good_pT(ref double p, ref double T)
 {
-	if(T<273.15){T = 273.15; p = get_ps(T);}
-	else if((273.15<T && T<=623.15) && p>get_ps(T) )
+    if(T<273.15){T = 273.15; p = get_ps(T);}
+    else if((273.15<T && T<=623.15) && p>get_ps(T) )
 	{
-		p = get_ps(T);
+	    p = get_ps(T);
 	}
-	else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
+    else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
 	{
-		p = get_pb23(T);
+	    p = get_pb23(T);
 	}
-	else if((863.15<T && T<=1073.15) && p>100e6)
+    else if((863.15<T && T<=1073.15) && p>100e6)
 	{
-		p = 100e6;
+	    p = 100e6;
 	}
-	else if((1073.15<T && T<=2273.15) && p>50e6)
+    else if((1073.15<T && T<=2273.15) && p>50e6)
 	{
-		p = 50e6;
+	    p = 50e6;
 	}
-	else if(T>2273.15){T=2273.15;}
+    else if(T>2273.15){T=2273.15;}
 }
+
 double[] getpT_from_rhou(double rho, double u)
 { 
-	//local thermal update method for (rho,u)
-	//a guess of p & T is iterated on update_thermo_from_pT using 
-	//the  Newton-Raphson method.
-	
-	double dp, p_old, p_new, T_old, T_old_1, T_new, dT;
-	double dp_sign, dT_sign;
-	double Cv_eff, R_eff, u_old, u_new, rho_old, rho_new;
-	double frho_old, fu_old, frho_new, fu_new;
-	double dfrho_dp, dfu_dp, dfrho_dT, dfu_dT, det;
-	int converged, count;
-
-	immutable MAX_RELATIVE_STEP = 0.1;
-	immutable MAX_STEPS = 300;
-
-	// When using single-sided finite-differences on the
-	// curve-fit EOS functions, we really cannot expect 
-	// much more than 0.1% tolerance here.
-	// However, we want a tighter tolerance so that the starting values
-	// don't get shifted noticeably (according to gas_model.d).
- 
-	double fu_tol = 1.0e-6 * u;
-	double frho_tol = 1.0e-6 * rho;
-	double frho_tol_fail = 0.02 * rho;
-	double fu_tol_fail = 0.02 * u;
-
-	// Get an idea of the gas properties by calling the pT
-	// equation of state with some dummy values for pressure
-	// and thermal temperature. the iteration start from vapour phase
-	if(rho<=5 && (1900e3<=u && u<=2700e3))
+    //local thermal update method for (rho,u)
+    //a guess of p & T is iterated on update_thermo_from_pT using 
+    //the  Newton-Raphson method.
+    
+    double dp, p_old, p_new, T_old, T_old_1, T_new, dT;
+    double dp_sign, dT_sign;
+    double Cv_eff, R_eff, u_old, u_new, rho_old, rho_new;
+    double frho_old, fu_old, frho_new, fu_new;
+    double dfrho_dp, dfu_dp, dfrho_dT, dfu_dT, det;
+    int converged, count;
+    
+    immutable MAX_RELATIVE_STEP = 0.1;
+    immutable MAX_STEPS = 300;
+    
+    // When using single-sided finite-differences on the
+    // curve-fit EOS functions, we really cannot expect 
+    // much more than 0.1% tolerance here.
+    // However, we want a tighter tolerance so that the starting values
+    // don't get shifted noticeably (according to gas_model.d).
+    
+    double fu_tol = 1.0e-6 * u;
+    double frho_tol = 1.0e-6 * rho;
+    double frho_tol_fail = 0.02 * rho;
+    double fu_tol_fail = 0.02 * u;
+    
+    // Get an idea of the gas properties by calling the pT
+    // equation of state with some dummy values for pressure
+    // and thermal temperature. the iteration start from vapour phase
+    if(rho<=5 && (1900e3<=u && u<=2700e3))
 	{
-		//when the input (rho,u) is in the low-p-low-T region
-		//initial guess closer to this region is required 
-		T_old = 273.15; 
-		p_old = get_ps(T_old); 
+	    //when the input (rho,u) is in the low-p-low-T region
+	    //initial guess closer to this region is required 
+	    T_old = 273.15; 
+	    p_old = get_ps(T_old); 
 	}
-	else 
+    else 
 	{
-		//input (rho,u) is possibly in IAPWS region2
-		p_old = 1.0e4;  
-		T_old = 523.15; 
+	    //input (rho,u) is possibly in IAPWS region2
+	    p_old = 1.0e4;  
+	    T_old = 523.15; 
 	}
-	auto _IAPWS = new IAPWS(); 
-      
-	u_old = _IAPWS.SpecificInternalEnergy(p_old,T_old,1);
-	rho_old =  _IAPWS.Density(p_old,T_old,1);
-	R_eff = p_old / ( rho_old * u);
-	T_old_1 = 1.01*T_old;
-
-	good_pT(p_old,T_old_1);
-	dT = T_old_1 - T_old;
-	try { u_new = _IAPWS.SpecificInternalEnergy(p_old,T_old_1,1);
+    auto _IAPWS = new IAPWS(); 
+    
+    u_old = _IAPWS.SpecificInternalEnergy(p_old,T_old,1);
+    rho_old =  _IAPWS.Density(p_old,T_old,1);
+    R_eff = p_old / ( rho_old * u);
+    T_old_1 = 1.01*T_old;
+    
+    good_pT(p_old,T_old_1);
+    dT = T_old_1 - T_old;
+    try { u_new = _IAPWS.SpecificInternalEnergy(p_old,T_old_1,1);
 	rho_new = _IAPWS.Density(p_old,T_old_1,1);}
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	Cv_eff = (u_new - u_old) / dT;
-	// Now, get a better guess for the appropriate pressure and
-	// thermal temperature.
-	p_old = R_eff * (rho- rho_new) * T_old_1 + p_old;    
-	T_old = (u - u_new)/Cv_eff + T_old_1;
-	// Evaluate state variables using this guess.
-	good_pT(p_old,T_old);
-	try { u_new = _IAPWS.SpecificInternalEnergy(p_old,T_old,1);
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+    Cv_eff = (u_new - u_old) / dT;
+    // Now, get a better guess for the appropriate pressure and
+    // thermal temperature.
+    p_old = R_eff * (rho- rho_new) * T_old_1 + p_old;    
+    T_old = (u - u_new)/Cv_eff + T_old_1;
+    // Evaluate state variables using this guess.
+    good_pT(p_old,T_old);
+    try { u_new = _IAPWS.SpecificInternalEnergy(p_old,T_old,1);
 	rho_new = _IAPWS.Density(p_old,T_old,1);}
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+    frho_old = rho - rho_new;
+    fu_old = u - u_new;
+    
+    // Update the guess using Newton iterations
+    // with the partial derivatives being estimated
+    // via finite differences.
+    converged = (fabs(frho_old) < frho_tol) && (fabs(fu_old) < fu_tol);
+    count = 0;
+    while ( !converged && count < MAX_STEPS ) {
+	// Perturb first dimension to get derivatives.
+	p_new = p_old * 1.0001;
+	T_new = T_old;
+	good_pT(p_new,T_new);
+	try { u_new = _IAPWS.SpecificInternalEnergy(p_new, T_new,1);
+	    rho_new = _IAPWS.Density(p_new, T_new,1);}
 	catch (Exception caughtException) {
 	    string msg;
-	    msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
+	    msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__); 
 	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
+	frho_new = rho - rho_new;
+	fu_new = u - u_new;
+	dfrho_dp = (frho_new - frho_old) / (p_new - p_old);
+	dfu_dp = (fu_new - fu_old) / (p_new - p_old);
+	
+	// Perturb other dimension to get derivatives.
+	p_new = p_old;
+	T_new = T_old * 1.0001;
+	good_pT(p_new,T_new);
+	try { u_new = _IAPWS.SpecificInternalEnergy(p_new, T_new, 1);
+	    rho_new = _IAPWS.Density(p_new, T_new,1);}
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed at call B in %", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	frho_new = rho - rho_new;
+	fu_new = u - u_new;
+	dfrho_dT = (frho_new - frho_old) / (T_new - T_old);
+	dfu_dT = (fu_new - fu_old) / (T_new - T_old);
+	//Jacobian matrix determinant 
+	det = dfrho_dp * dfu_dT - dfu_dp * dfrho_dT;
+	if( fabs(det) < 1.0e-12 ) {
+	    string msg;
+	    msg ~= format("Error in function %s\n", __FUNCTION__);
+	    msg ~= format("    Nearly zero determinant, det = ", det);
+	    throw new Exception(msg);
+	}
+	dp = (-dfu_dT * frho_old + dfrho_dT * fu_old) / det;
+	dT = (dfu_dp * frho_old - dfrho_dp * fu_old) / det;
+	if( fabs(dp) > MAX_RELATIVE_STEP * p_old ) {
+	    // move a little toward the goal 
+	    dp_sign = (dp > 0.0 ? 1.0 : -1.0);
+	    dp = dp_sign * MAX_RELATIVE_STEP * p_old;
+	} 
+	if( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
+	    // move a little toward the goal
+	    dT_sign = (dT > 0.0 ? 1.0 : -1.0);
+	    dT = dT_sign * MAX_RELATIVE_STEP * T_old;
+	} 
+	p_old += dp;
+	T_old += dT;
+	// Make sure of consistent thermo state.
+	good_pT(p_old,T_old);
+	try { u_new = _IAPWS.SpecificInternalEnergy(p_old, T_old,1);
+	    rho_new = _IAPWS.Density(p_old, T_old,1);}
+	catch (Exception caughtException) {
+	    string msg;
+	    msg ~= format("Iteration %s failed in %s\n", count, __FUNCTION__);
+	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+	    msg ~= to!string(caughtException);
+	    throw new Exception(msg);
+	}
+	// Prepare for next iteration.
 	frho_old = rho - rho_new;
 	fu_old = u - u_new;
-
-	// Update the guess using Newton iterations
-	// with the partial derivatives being estimated
-	// via finite differences.
 	converged = (fabs(frho_old) < frho_tol) && (fabs(fu_old) < fu_tol);
-	count = 0;
-	while ( !converged && count < MAX_STEPS ) {
-	    // Perturb first dimension to get derivatives.
-	    p_new = p_old * 1.0001;
-	    T_new = T_old;
-	    good_pT(p_new,T_new);
-		try { u_new = _IAPWS.SpecificInternalEnergy(p_new, T_new,1);
-		rho_new = _IAPWS.Density(p_new, T_new,1);}
-	    catch (Exception caughtException) {
-		string msg;
-		msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__); 
-		msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-		msg ~= to!string(caughtException);
-		throw new Exception(msg);
-	    }
-	    frho_new = rho - rho_new;
-	    fu_new = u - u_new;
-	    dfrho_dp = (frho_new - frho_old) / (p_new - p_old);
-	    dfu_dp = (fu_new - fu_old) / (p_new - p_old);
-
-	    // Perturb other dimension to get derivatives.
-	    p_new = p_old;
-	    T_new = T_old * 1.0001;
-	    good_pT(p_new,T_new);
-		try { u_new = _IAPWS.SpecificInternalEnergy(p_new, T_new, 1);
-		rho_new = _IAPWS.Density(p_new, T_new,1);}
-	    catch (Exception caughtException) {
-		string msg;
-		msg ~= format("Iteration %s failed at call B in %", count, __FUNCTION__);
-		msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-		msg ~= to!string(caughtException);
-		throw new Exception(msg);
-	    }
-	    frho_new = rho - rho_new;
-	    fu_new = u - u_new;
-	    dfrho_dT = (frho_new - frho_old) / (T_new - T_old);
-	    dfu_dT = (fu_new - fu_old) / (T_new - T_old);
-	    //Jacobian matrix determinant 
-	    det = dfrho_dp * dfu_dT - dfu_dp * dfrho_dT;
-	    if( fabs(det) < 1.0e-12 ) {
-		string msg;
-		msg ~= format("Error in function %s\n", __FUNCTION__);
-		msg ~= format("    Nearly zero determinant, det = ", det);
-		throw new Exception(msg);
-	    }
-	    dp = (-dfu_dT * frho_old + dfrho_dT * fu_old) / det;
-	    dT = (dfu_dp * frho_old - dfrho_dp * fu_old) / det;
-	    if( fabs(dp) > MAX_RELATIVE_STEP * p_old ) {
-		// move a little toward the goal 
-		dp_sign = (dp > 0.0 ? 1.0 : -1.0);
-		dp = dp_sign * MAX_RELATIVE_STEP * p_old;
-	    } 
-	    if( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
-		// move a little toward the goal
-		dT_sign = (dT > 0.0 ? 1.0 : -1.0);
-		dT = dT_sign * MAX_RELATIVE_STEP * T_old;
-	    } 
-	    p_old += dp;
-	    T_old += dT;
-	    // Make sure of consistent thermo state.
-	    good_pT(p_old,T_old);
-		try { u_new = _IAPWS.SpecificInternalEnergy(p_old, T_old,1);
-		rho_new = _IAPWS.Density(p_old, T_old,1);}
-	    catch (Exception caughtException) {
-		string msg;
-		msg ~= format("Iteration %s failed in %s\n", count, __FUNCTION__);
-		msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-		msg ~= to!string(caughtException);
-		throw new Exception(msg);
-	    }
-	    // Prepare for next iteration.
-	    frho_old = rho - rho_new;
-	    fu_old = u - u_new;
-	    converged = (fabs(frho_old) < frho_tol) && (fabs(fu_old) < fu_tol);
-	    ++count;
-
-	} // end while 
-
-	if ( count >= MAX_STEPS ) {
-	    string msg;
-	    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-	    msg ~= format("    Iterations did not converge.\n");
-	    msg ~= format("    Last iterated p=%.10s, T=%.10s\n",p_old, T_old);
-	    msg ~= format("    frho_old = %g, fu_old = %g\n", frho_old, fu_old);
-	    msg ~= format("    rho = %.10s, u=%.5s\n", rho, u); 
-	    writeln(msg);
-
-	}
-
-	if( (fabs(frho_old) > frho_tol_fail) || (fabs(fu_old) > fu_tol_fail) ) {
-	    string msg;
-	    msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	    msg ~= format("    Iterations failed badly.\n");
-	    msg ~= format("    rho = %.10s, u, %.5s\n", rho, u); 
-	    msg ~= format("    frho_old = %g, fu_old = %g\n", frho_old, fu_old);
-	    throw new Exception(msg);
-	}
-
-	return [p_old, T_old];
+	++count;
+	
+    } // end while 
+    
+    if ( count >= MAX_STEPS ) {
+	string msg;
+	msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations did not converge.\n");
+	msg ~= format("    Last iterated p=%.10s, T=%.10s\n",p_old, T_old);
+	msg ~= format("    frho_old = %g, fu_old = %g\n", frho_old, fu_old);
+	msg ~= format("    rho = %.10s, u=%.5s\n", rho, u); 
+	writeln(msg);
+	
+    }
+    
+    if( (fabs(frho_old) > frho_tol_fail) || (fabs(fu_old) > fu_tol_fail) ) {
+	string msg;
+	msg ~= format("Error in function: %s:\n", __FUNCTION__);
+	msg ~= format("    Iterations failed badly.\n");
+	msg ~= format("    rho = %.10s, u, %.5s\n", rho, u); 
+	msg ~= format("    frho_old = %g, fu_old = %g\n", frho_old, fu_old);
+	throw new Exception(msg);
+    }
+    
+    return [p_old, T_old];
 }//end getpT_from_rhou
 
 //---------------------------------------------------------------------------------
@@ -2194,103 +2250,103 @@ double[] getpT_from_rhou(double rho, double u)
 //in either Region 2 or Region 5 while p is fixed
 void good_T(double p, ref double T)
 {
-	if(T<273.15){T = 273.15;}
-	else if((273.15<T && T<=623.15) && p>get_ps(T) )
+    if(T<273.15){T = 273.15;}
+    else if((273.15<T && T<=623.15) && p>get_ps(T) )
 	{
-		while(p>get_ps(T))
+	    while(p>get_ps(T))
 		{
-			T = get_Ts(p)+0.01;
+		    T = get_Ts(p)+0.01;
 		}
 	}
-	else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
+    else if((623.15<T && T<=863.15) && p>get_pb23(T)) 
 	{
-		while(p>get_pb23(T))
+	    while(p>get_pb23(T))
 		{
-			T*=1.001;
+		    T*=1.001;
 		}
 	}
-	else if((1073.15<T && T<=2273.15) && p>50e6)
+    else if((1073.15<T && T<=2273.15) && p>50e6)
 	{
-		T = 1073.15;
+	    T = 1073.15;
 	}
-	else if(T>2273.15){T=2273.15;}
+    else if(T>2273.15){T=2273.15;}
 }
 
 double getT_from_ps(double p, double T0, double s)
 {
-	double T_old, T_new;
-	double f0, f_old, f_new;
-	double df, dT;
-	int converged, count;
-
-	immutable MAX_RELATIVE_STEP = 0.1;
-	immutable MAX_STEPS = 200;
-
-	//similar tolerence as in the fill-in functions
-	double f_tol = 1.0e-6*s;
-	double f_tol_fail = 0.02*s;
-
-	//target function to minimize during the iteration
-	auto _IAPWS = new IAPWS();
-	double f_T(double T)
+    double T_old, T_new;
+    double f0, f_old, f_new;
+    double df, dT;
+    int converged, count;
+    
+    immutable MAX_RELATIVE_STEP = 0.1;
+    immutable MAX_STEPS = 200;
+    
+    //similar tolerence as in the fill-in functions
+    double f_tol = 1.0e-6*s;
+    double f_tol_fail = 0.02*s;
+    
+    //target function to minimize during the iteration
+    auto _IAPWS = new IAPWS();
+    double f_T(double T)
+    {
+	return _IAPWS.SpecificEntropy(p,T,1)-s;
+    }
+    
+    // assuming T0 is good enough to be the first guess
+    try{f0 = f_T(T0);}
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+    
+    // second guess on T
+    T_old = 1.01*T0;
+    good_T(p,T_old);
+    try{f_old = f_T(T_old);}
+    catch (Exception caughtException) {
+	string msg;
+	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+	msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
+	msg ~= to!string(caughtException);
+	throw new Exception(msg);
+    }
+    df = f_old - f0;
+    dT = T_old - T0;
+    
+    //update the guess using 1D Newton method with the 
+    //partial derivatives calculated using F.D.
+    converged = (fabs(f_old) < f_tol);
+    count =0;
+    while(!converged && count < MAX_STEPS)
 	{
-		return _IAPWS.SpecificEntropy(p,T,1)-s;
-	}
-
-	// assuming T0 is good enough to be the first guess
-	try{f0 = f_T(T0);}
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-
-	// second guess on T
-	T_old = 1.01*T0;
-	good_T(p,T_old);
-	try{f_old = f_T(T_old);}
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	df = f_old - f0;
-	dT = T_old - T0;
-
-	//update the guess using 1D Newton method with the 
-	//partial derivatives calculated using F.D.
-	converged = (fabs(f_old) < f_tol);
-	count =0;
-	while(!converged && count < MAX_STEPS)
-	{
-			T_new = - f_old/df*dT + T_old;
-			good_T(p,T_new);
-
-			//update target function
-			try{f_new = f_T(T_new);}
-			catch (Exception caughtException) {
-			    string msg;
-			    msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-			    msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
-			    msg ~= to!string(caughtException);
-			    throw new Exception(msg);
-			}
-			//prepare for next iteration
-			df = f_new - f_old;
-			dT = T_new - T_old;
-			T_old = T_new;
-			f_old = f_new;
-			converged = (fabs(f_old) < f_tol);
-			++count;
-	} //end while
-
-	if(count >= MAX_STEPS)
-	{
+	    T_new = - f_old/df*dT + T_old;
+	    good_T(p,T_new);
+	    
+	    //update target function
+	    try{f_new = f_T(T_new);}
+	    catch (Exception caughtException) {
 		string msg;
+		msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+		msg ~= format("Excpetion message from update_thermo_from_ps() was:\n\n");
+		msg ~= to!string(caughtException);
+		throw new Exception(msg);
+	    }
+	    //prepare for next iteration
+	    df = f_new - f_old;
+	    dT = T_new - T_old;
+	    T_old = T_new;
+	    f_old = f_new;
+	    converged = (fabs(f_old) < f_tol);
+	    ++count;
+	} //end while
+    
+    if(count >= MAX_STEPS)
+	{
+	    string msg;
 	    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
 	    msg ~= format("    Iterations did not converge.\n");
 	    msg ~= format("    Last iterated p=%.10s, T=%.10s\n",p, T_old);
@@ -2298,9 +2354,9 @@ double getT_from_ps(double p, double T0, double s)
 	    msg ~= format("    given entropy %.10s\n", s); 
 	    writeln(msg);
 	}
-	if(fabs(f_old) > f_tol_fail)
+    if(fabs(f_old) > f_tol_fail)
 	{
-		string msg;
+	    string msg;
 	    msg ~= format("Warning in function: %s:\n", __FUNCTION__);
 	    msg ~= format("    Iterations failed badly.\n");
 	    msg ~= format("    Last iterated p=%.10s, T=%.10s\n",p, T_old);
@@ -2308,8 +2364,8 @@ double getT_from_ps(double p, double T0, double s)
 	    msg ~= format("    given entropy %.10s\n", s); 
 	    writeln(msg);
 	}
-
-	return T_old;
+    
+    return T_old;
 }//end getT_from_ps
 
 //---------------------------------------------------------------------------------
@@ -2318,7 +2374,7 @@ double getT_from_ps(double p, double T0, double s)
 
 class Steam: GasModel{
 private:
-	auto _IAPWS = new IAPWS();
+    auto _IAPWS = new IAPWS();
 public:
     
     this()
@@ -2337,28 +2393,26 @@ public:
 
     override void update_thermo_from_pT(GasState Q) 
     {
-		Q.rho = _IAPWS.Density(Q.p,Q.Ttr,Q.quality);
-		Q.a = _IAPWS.SoundSpeed(Q.p,Q.Ttr,Q.quality);
-		Q.u = _IAPWS.SpecificInternalEnergy(Q.p,Q.Ttr,Q.quality);
-		Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.Ttr,Q.quality);
-		Q.k = _IAPWS.ThermalConductivity(Q.p,Q.Ttr,Q.quality);
+	Q.rho = _IAPWS.Density(Q.p,Q.T,Q.quality);
+	Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
+	Q.u = _IAPWS.SpecificInternalEnergy(Q.p,Q.T,Q.quality);
+	Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
+	Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality);
     }
 
     override void update_thermo_from_rhou(GasState Q)
     {
-		if(Q.quality==1)
-		{
-			double[2] pT = getpT_from_rhou(Q.rho, Q.u);
-			Q.p = pT[0];
-			Q.Ttr = pT[1];
-			Q.a = _IAPWS.SoundSpeed(Q.p,Q.Ttr,Q.quality);
-			Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.Ttr,Q.quality);
-			Q.k = _IAPWS.ThermalConductivity(Q.p,Q.Ttr,Q.quality); 
-		}
-		else 
-		{
-			assert(0, "Not in gas IAPWS-Region2, implement me");
-		}
+	if (Q.quality == 1) {
+	    double[2] pT = getpT_from_rhou(Q.rho, Q.u);
+	    Q.p = pT[0];
+	    Q.T = pT[1];
+	    Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
+	    Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
+	    Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality); 
+	}
+	else {
+	    assert(0, "Not in gas IAPWS-Region2, implement me");
+	}
     } 
     
     override void update_thermo_from_rhoT(GasState Q)
@@ -2372,19 +2426,17 @@ public:
     }
     
     override void update_thermo_from_ps(GasState Q, double s)
-    {
-		if(Q.quality==1)
-		{
-			Q.Ttr = getT_from_ps(Q.p, Q.Ttr, s);
-			Q.a = _IAPWS.SoundSpeed(Q.p,Q.Ttr,Q.quality);
-			Q.u = _IAPWS.SpecificInternalEnergy(Q.p,Q.Ttr,Q.quality);
-			Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.Ttr,Q.quality);
-			Q.k = _IAPWS.ThermalConductivity(Q.p,Q.Ttr,Q.quality);
-		}
-		else 
-		{
-			assert(0, "Not in IAPWS-Region2, implement me");
-		}
+    { 
+	if(Q.quality==1) {
+	    Q.T = getT_from_ps(Q.p, Q.T, s);
+	    Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
+	    Q.u = _IAPWS.SpecificInternalEnergy(Q.p,Q.T,Q.quality);
+	    Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
+	    Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality);
+	}
+	else {
+	    assert(0, "Not in IAPWS-Region2, implement me");
+	}
     }
     
     override void update_thermo_from_hs(GasState Q, double h, double s)
@@ -2392,30 +2444,29 @@ public:
 	assert(0, "Implement me");
     }
     
-
     override void update_sound_speed(GasState Q)
     {
-		Q.a = _IAPWS.SoundSpeed(Q.p,Q.Ttr,Q.quality);
+	Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
     }
 
     override void update_trans_coeffs(GasState Q)
     {
-		Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.Ttr,Q.quality);
-		Q.k = _IAPWS.ThermalConductivity(Q.p,Q.Ttr,Q.quality);
+	Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
+	Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality);
     }
 
     override double dudT_const_v(in GasState Q)
     {
-		return _IAPWS.SpecificIsochoricHeatCapacity(Q.p,Q.Ttr,Q.quality);
+	return _IAPWS.SpecificIsochoricHeatCapacity(Q.p,Q.T,Q.quality);
     }
     override double dhdT_const_p(in GasState Q)
     {
-		return _IAPWS.SpecificIsobaricHeatCapacity(Q.p,Q.Ttr,Q.quality);
+	return _IAPWS.SpecificIsobaricHeatCapacity(Q.p,Q.T,Q.quality);
     }
     override double dpdrho_const_T(in GasState Q)
     {
-		//no defined function for this
-		return 0.0;
+	//no defined function for this
+	return 0.0;
     }
     override double gas_constant(in GasState Q)
     {
@@ -2423,15 +2474,15 @@ public:
     }
     override double internal_energy(in GasState Q)
     {
-		return _IAPWS.SpecificInternalEnergy(Q.p,Q.Ttr,Q.quality);
+	return _IAPWS.SpecificInternalEnergy(Q.p,Q.T,Q.quality);
     }
     override double enthalpy(in GasState Q)
     {
-		return _IAPWS.SpecificEnthalpy(Q.p,Q.Ttr,Q.quality);
+	return _IAPWS.SpecificEnthalpy(Q.p,Q.T,Q.quality);
     }
     override double entropy(in GasState Q)
     {
-		return _IAPWS.SpecificEntropy(Q.p,Q.Ttr,Q.quality);
+	return _IAPWS.SpecificEntropy(Q.p,Q.T,Q.quality);
     }
 } // end class Steam
 
@@ -2443,14 +2494,14 @@ version(steam_test){
 	auto gm = new Steam();
 	auto gd = new GasState(1, 0);
 	gd.p = 1.0e5;
-	gd.Ttr = 600.0;
+	gd.T = 600.0;
 	gd.massf[0] = 1.0;
 	gd.quality = 1.0;
 	assert(approxEqual(gm.R(gd), 461.5, 1.0e-4), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.Ttr, 600.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T, 600.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 
 	gm.update_thermo_from_pT(gd);
@@ -2470,13 +2521,13 @@ version(steam_test){
 	gd.u = 2.8e6;
 	gm.update_thermo_from_rhou(gd);
 	assert(approxEqual(1298110.3, gd.p, 1.0e-6*gd.p), failedUnitTest());
-	assert(approxEqual(580.408, gd.Ttr, 1.0e-6*gd.Ttr), failedUnitTest());
+	assert(approxEqual(580.408, gd.T, 1.0e-6*gd.T), failedUnitTest());
 	//-2. (p,T) in low-p-low-T region
 	gd.rho = 0.00670708;
 	gd.u = 2445304.2;
 	gm.update_thermo_from_rhou(gd);
 	assert(approxEqual(1000, gd.p, 1.0e-6*gd.p), failedUnitTest());
-	assert(approxEqual(323.15, gd.Ttr, 1.0e-6*gd.Ttr), failedUnitTest());
+	assert(approxEqual(323.15, gd.T, 1.0e-6*gd.T), failedUnitTest());
 
 	/*
 	*Reference:
@@ -2485,7 +2536,7 @@ version(steam_test){
 	*	 table 2.11
 	*/
 	gd.p = 0.0035e6;
-	gd.Ttr = 300;
+	gd.T = 300;
 	gm.update_thermo_from_pT(gd);
 	assert(approxEqual(1./0.394913866e2,gd.rho, 1.0e-6),failedUnitTest());
 	assert(approxEqual(0.241169160e7, gm.internal_energy(gd), 1.0e1), failedUnitTest());
@@ -2497,15 +2548,15 @@ version(steam_test){
 	assert(approxEqual(0.427920172e3, gd.a, 1.0e-3), failedUnitTest());
 	//check update_thermo_from_ps(gd)
 	double s = gm.entropy(gd);
-	gd.Ttr = 380;
+	gd.T = 380;
 	gm.update_thermo_from_ps(gd,s);
-	assert(approxEqual(300, gd.Ttr, 1.0e-6*gd.Ttr),failedUnitTest());
+	assert(approxEqual(300, gd.T, 1.0e-6*gd.T),failedUnitTest());
 	/*
 	*Reference:
 	*	 IAPWS release R15-11 table 8. 
 	*/
 	gd.p = 0.3e6;
-	gd.Ttr = 650;
+	gd.T = 650;
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(0.522311024e-1, gd.k, 1.0e-7), failedUnitTest());
 	assert(approxEqual(0.234877453e-4, gd.mu, 1.0e-9), failedUnitTest());

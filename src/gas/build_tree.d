@@ -49,7 +49,7 @@ double e_max = 5.0e5;
 	gd.u = e;
 	gm.update_thermo_from_rhou(gd);
 	//gm.update_sound_speed(gd);
-	return gd.Ttr;
+	return gd.T;
 	}
 static double[2] F_transform(double x, double y){
 	CO2GasSW gm = new CO2GasSW();
@@ -63,7 +63,7 @@ static double[2] F_transform(double x, double y){
 	gd.u = e;
 	gm.update_thermo_from_rhou(gd);
 	//gm.update_sound_speed(gd);
-	return gd.Ttr;
+	return gd.T;
 	}
 static double[2] F_transform(double x, double y){
 	return [x,y];

@@ -29,8 +29,8 @@ double compute_equilibrium_constant(GasModel gmodel, GasState Q,
 	dG += nu[isp] * gmodel.gibbs_free_energy(Q, isp) * gmodel.mol_masses()[isp];
 	nuSum += nu[isp];
     }
-    double K_p = exp(-dG/(R_universal*Q.Ttr));
-    double K_c = K_p*pow(P_atm/(R_universal*Q.Ttr), nuSum);
+    double K_p = exp(-dG/(R_universal*Q.T));
+    double K_c = K_p*pow(P_atm/(R_universal*Q.T), nuSum);
     return K_c;
 }
 
@@ -196,7 +196,7 @@ public:
     }
     override void eval_equilibrium_constant(in GasState Q)
     {
-	_Qw.Ttr = Q.Ttr;
+	_Qw.T = Q.T;
 	_K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
     override double production(int isp) const
@@ -311,7 +311,7 @@ public:
     }
     override void eval_equilibrium_constant(in GasState Q)
     {
-	_Qw.Ttr = Q.Ttr;
+	_Qw.T = Q.T;
 	_K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
     override double production(int isp) const
@@ -453,7 +453,7 @@ version(reaction_test) {
 	double[] conc = [4.54, 4.54, 0.0];
 	auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
 	auto gd = new GasState(3, 1);
-	gd.Ttr = 700.0;
+	gd.T = 700.0;
 	auto reaction = new ElementaryReaction(rc, rc, gm, [0, 1], [1.0, 1.0],
 					       [2], [2.0], 3);
 	reaction.eval_rate_constants(gd);

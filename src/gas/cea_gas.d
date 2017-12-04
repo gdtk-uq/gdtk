@@ -242,7 +242,7 @@ public:
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	return Q.ceaSavedData.Rgas * Q.Ttr;
+	return Q.ceaSavedData.Rgas * Q.T;
     }
     override double gas_constant(in GasState Q) const
     {
@@ -360,9 +360,9 @@ private:
 	    writer.put("problem case=CEAGas tp");
             if (_withIons) { writer.put(" ions"); }
 	    writer.put("\n");
-            assert(Q.p > 0.0 && Q.Ttr > 0.0, "CEAGas: Invalid pT");
+            assert(Q.p > 0.0 && Q.T > 0.0, "CEAGas: Invalid pT");
             writer.put(format("   p(bar)      %e\n", Q.p / 1.0e5));
-            writer.put(format("   t(k)        %e\n", Q.Ttr));
+            writer.put(format("   t(k)        %e\n", Q.T));
 	    break;
 	case "rhoe":
 	    writer.put("problem case=CEAGas vu");
@@ -377,9 +377,9 @@ private:
 	    writer.put("problem case=CEAGas tv");
             if (_withIons) { writer.put(" ions"); }
 	    writer.put("\n");
-            assert(Q.rho > 0.0 && Q.Ttr > 0.0, "CEAGas: Invalid rhoT");
+            assert(Q.rho > 0.0 && Q.T > 0.0, "CEAGas: Invalid rhoT");
             writer.put(format("   rho,kg/m**3 %e\n", Q.rho));
-            writer.put(format("   t(k)        %e\n", Q.Ttr));
+            writer.put(format("   t(k)        %e\n", Q.T));
 	    break;
 	case "ps":
 	    writer.put("problem case=CEAGas ps");
@@ -389,7 +389,7 @@ private:
             writer.put(format("   p(bar)      %e\n", Q.p / 1.0e5));
 	    // R_universal is in J/mol/K and s from flow solver is in J/kg/K
             writer.put(format("   s/r         %e\n", s/R_universal/1000.0));
-            writer.put(format("   t(k)        %e\n", Q.Ttr));
+            writer.put(format("   t(k)        %e\n", Q.T));
 	    break;
 	default: 
 	    throw new Exception("Unknown problemType for CEA.");
@@ -498,7 +498,7 @@ private:
 	    Q.a = Q.ceaSavedData.a;
 	    break;
 	case "rhoe":
-	    Q.Ttr = Q.ceaSavedData.T;
+	    Q.T = Q.ceaSavedData.T;
 	    Q.p = Q.ceaSavedData.p;
 	    Q.a = Q.ceaSavedData.a;
 	    break;
@@ -508,7 +508,7 @@ private:
 	    Q.a = Q.ceaSavedData.a;
 	    break;
 	case "ps":
-	    Q.Ttr = Q.ceaSavedData.T;
+	    Q.T = Q.ceaSavedData.T;
 	    Q.rho = Q.ceaSavedData.rho;
 	    Q.u = Q.ceaSavedData.u;
 	    Q.a = Q.ceaSavedData.a;
@@ -533,14 +533,14 @@ version(cea_gas_test) {
 
 	auto gd = new GasState(1, 0, true);
 	gd.p = 1.0e5;
-	gd.Ttr = 300.0;
+	gd.T = 300.0;
 	gd.massf[0] = 1.0;
 	gm.update_thermo_from_pT(gd);
 	assert(approxEqual(gm.R(gd), 288.198, 0.01), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 1, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.rho, 1.1566, 1.0e-4), failedUnitTest());
 	assert(approxEqual(gd.u, -84587.0, 0.1), failedUnitTest());
@@ -556,11 +556,11 @@ version(cea_gas_test) {
 
 	gm.update_thermo_from_ps(gd, gd.ceaSavedData.s);
 	assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
-	assert(approxEqual(gd.Ttr, 300.0, 0.1), failedUnitTest());
+	assert(approxEqual(gd.T, 300.0, 0.1), failedUnitTest());
 
 	gm.update_thermo_from_rhou(gd);
 	assert(approxEqual(gd.p, 1.0e5, 1.0), failedUnitTest());
-	assert(approxEqual(gd.Ttr, 300.0, 0.1), failedUnitTest());
+	assert(approxEqual(gd.T, 300.0, 0.1), failedUnitTest());
 
 	return 0;
     }

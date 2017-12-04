@@ -250,21 +250,21 @@ public:
 	    (1.0 - efrac) * lrfrac         * _g_hat[ie][ir+1];
    
 	// Reconstruct the thermodynamic properties.
-	Q.Ttr = Q.u / Cv_eff;
-	Q.p = Q.rho*R_eff*Q.Ttr;
-	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
-	if ( Q.Ttr < T_MIN ) {
+	Q.T = Q.u / Cv_eff;
+	Q.p = Q.rho*R_eff*Q.T;
+	Q.a = sqrt(g_eff*R_eff*Q.T);
+	if ( Q.T < T_MIN ) {
 	    string msg;
 	    msg ~= format("Error in function  %s\n", __FUNCTION__);
 	    msg ~= format("Low temperature, rho = %.5s ", Q.rho);
-	    msg ~= format("e= %.8s  T= %.5s \n", Q.u, Q.Ttr);
+	    msg ~= format("e= %.8s  T= %.5s \n", Q.u, Q.T);
 	    msg ~= format(    "Supplied Q: %s ", Q);
 	    throw new Exception(msg);
 	}
 
 	// Fix meaningless values if they arise
 	if ( Q.p < 0.0 ) Q.p = 0.0;
-	if ( Q.Ttr < 0.0 ) Q.Ttr = 0.0;
+	if ( Q.T < 0.0 ) Q.T = 0.0;
 	if ( Q.a < 0.0 ) Q.a = 0.0;
     }  
 
@@ -444,7 +444,7 @@ public:
 	    double Cp = R + _Cv_hat[ie][ir];
 	    const double T1 = 300.0; // degrees K: This value and the next was type constexpr
 	    const double p1 = 100.0e3; // Pa
-	    s = Cp * log(Q.Ttr/T1) - R * log(Q.p/p1);
+	    s = Cp * log(Q.T/T1) - R * log(Q.p/p1);
 	} 
 	return s;
     }
@@ -504,7 +504,7 @@ public:
 	    (1.0 - efrac) * lrfrac         * _g_hat[ie][ir+1];
    
 	// Reconstruct the thermodynamic properties.
-	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
+	Q.a = sqrt(g_eff*R_eff*Q.T);
     }
  
 

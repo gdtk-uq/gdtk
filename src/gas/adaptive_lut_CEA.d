@@ -298,13 +298,13 @@ public:
 	g_eff = node.interpolate(lr, Q.u, "gamma_hat");
 
 	// Reconstruct the thermodynamic properties.
-	Q.Ttr = Q.u / Cv_eff;
-	Q.p = Q.rho*R_eff*Q.Ttr;
-	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
+	Q.T = Q.u / Cv_eff;
+	Q.p = Q.rho*R_eff*Q.T;
+	Q.a = sqrt(g_eff*R_eff*Q.T);
 
 	// Fix meaningless values if they arise
 	if ( Q.p < 0.0 ) Q.p = 0.0;
-	if ( Q.Ttr < 0.0 ) Q.Ttr = 0.0;
+	if ( Q.T < 0.0 ) Q.T = 0.0;
 	if ( Q.a < 0.0 ) Q.a = 0.0;
 
     }
@@ -324,7 +324,7 @@ public:
 	double g_eff = node.interpolate(lr, Q.u, "gamma_hat");
 
 	// Reconstruct the thermodynamic properties.
-	Q.a = sqrt(g_eff*R_eff*Q.Ttr);
+	Q.a = sqrt(g_eff*R_eff*Q.T);
     }
 
     override void update_trans_coeffs(GasState Q) const

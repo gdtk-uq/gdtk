@@ -54,18 +54,18 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	Q.rho = Q.p/(_R_N2*Q.Ttr);
+	Q.rho = Q.p/(_R_N2*Q.T);
 	
 	foreach (imode; 0 .. _n_modes) {
 	     Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
 	}
-	Q.u = 2.5 * _R_N2 * Q.Ttr;
+	Q.u = 2.5 * _R_N2 * Q.T;
 	
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.Ttr = 0.4 * Q.u * (1/_R_N2);
-	Q.p = Q.rho * _R_N2 * Q.Ttr;
+	Q.T = 0.4 * Q.u * (1/_R_N2);
+	Q.p = Q.rho * _R_N2 * Q.T;
 	Q.T_modes[0] = compute_Tvib(Q, 300.0, 1000.0, 1e-4);
 	foreach (i; 1 .. N_VIB_LEVELS) {
 	        Q.T_modes[i] = Q.T_modes[0];
@@ -74,8 +74,8 @@ public:
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	Q.p = Q.rho * _R_N2 * Q.Ttr;
-	Q.u = 2.5 * _R_N2 * Q.Ttr;
+	Q.p = Q.rho * _R_N2 * Q.T;
+	Q.u = 2.5 * _R_N2 * Q.T;
 	
 	foreach (imode; 0 .. _n_modes) {
 	     Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
@@ -84,9 +84,9 @@ public:
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	//Q.Ttr = 0.4 * Q.u * (1/_R_N2);
-	Q.Ttr = Q.p / (Q.rho * _R_N2);
-	Q.u = 2.5 * _R_N2 * Q.Ttr;
+	//Q.T = 0.4 * Q.u * (1/_R_N2);
+	Q.T = Q.p / (Q.rho * _R_N2);
+	Q.u = 2.5 * _R_N2 * Q.T;
 	foreach (imode; 0 .. _n_modes) {
 	     Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode); 
 	}
@@ -109,7 +109,7 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = (_gamma * _R_N2 * Q.Ttr)^^0.5; 
+	Q.a = (_gamma * _R_N2 * Q.T)^^0.5; 
     }
     override void update_trans_coeffs(GasState Q)
     {
@@ -208,7 +208,7 @@ version(vib_specific_nitrogen_test) {
 	auto gm = new VibSpecificNitrogen();
 	auto Q = new GasState(N_VIB_LEVELS, N_VIB_LEVELS);
 	Q.p = 1.0e5;
-	Q.Ttr = 300.0;
+	Q.T = 300.0;
 	foreach (imode; 0 .. gm.n_modes()) {
 	    Q.T_modes[imode] = 300.0;
 	}

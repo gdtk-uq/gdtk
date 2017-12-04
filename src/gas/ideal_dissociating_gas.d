@@ -86,41 +86,41 @@ public:
     override void update_thermo_from_pT(GasState Q) const 
     {
 	double alpha = Q.massf[1];
-	Q.rho = Q.p/(Q.Ttr*_Rnn*(1+alpha));
-	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.Ttr;
+	Q.rho = Q.p/(Q.T*_Rnn*(1+alpha));
+	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.T;
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
 	double alpha = Q.massf[1];
-	Q.Ttr = (Q.u - _Rnn*alpha*_T_d)/(_Rnn*3);
-	Q.p = Q.rho*(1+alpha)*_Rnn*Q.Ttr;
+	Q.T = (Q.u - _Rnn*alpha*_T_d)/(_Rnn*3);
+	Q.p = Q.rho*(1+alpha)*_Rnn*Q.T;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
 	double alpha = Q.massf[1];
-	Q.p = Q.rho*(1+alpha)*_Rnn*Q.Ttr;
-	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.Ttr;
+	Q.p = Q.rho*(1+alpha)*_Rnn*Q.T;
+	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.T;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
 	double alpha = Q.massf[1];
-	Q.Ttr = Q.p/(Q.rho*(1+alpha)*_Rnn*Q.Ttr);
-	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.Ttr;
+	Q.T = Q.p/(Q.rho*(1+alpha)*_Rnn*Q.T);
+	Q.u = _Rnn*alpha*_T_d + _Rnn*3*Q.T;
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
 	// For frozen composition.
 	double alpha = Q.massf[1];
-	Q.Ttr = _Tref * exp((1.0/((4+alpha)*_Rnn))*(s+(1+alpha)*_Rnn*log(Q.p/_pref)));
+	Q.T = _Tref * exp((1.0/((4+alpha)*_Rnn))*(s+(1+alpha)*_Rnn*log(Q.p/_pref)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
 	// For frozen composition.
 	double alpha = Q.massf[1];
-	Q.Ttr = (h - _Rnn*alpha*_T_d) / ((4+alpha)*_Rnn);
-	Q.p = _pref * exp(((4+alpha)*_Rnn*log(Q.Ttr/_Tref)-s)/((4+alpha)*_Rnn));
+	Q.T = (h - _Rnn*alpha*_T_d) / ((4+alpha)*_Rnn);
+	Q.p = _pref * exp(((4+alpha)*_Rnn*log(Q.T/_Tref)-s)/((4+alpha)*_Rnn));
 	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
@@ -129,7 +129,7 @@ public:
 	double alpha = Q.massf[1];
 	double gamma = (4+alpha)/3.0;
 	double Rgas = (1+alpha)*_Rnn;
-	Q.a = sqrt(gamma*Rgas*Q.Ttr);
+	Q.a = sqrt(gamma*Rgas*Q.T);
     }
     override void update_trans_coeffs(GasState Q)
     {
@@ -150,7 +150,7 @@ public:
     override double dpdrho_const_T(in GasState Q) const
     {
 	double alpha = Q.massf[1];
-	return _Rnn*(1+alpha)*Q.Ttr; // frozen alpha
+	return _Rnn*(1+alpha)*Q.T; // frozen alpha
     }
     override double gas_constant(in GasState Q) const
     {
@@ -170,7 +170,7 @@ public:
 	// Presume that we have a fixed composition mixture and that
 	// Entropy for each species is zero at reference condition.
 	double alpha = Q.massf[1];
-	return (4+alpha)*log(Q.Ttr/_Tref) - (1+alpha)*_Rnn*log(Q.p/_pref);
+	return (4+alpha)*log(Q.T/_Tref) - (1+alpha)*_Rnn*log(Q.p/_pref);
     }
 
 private:
@@ -199,14 +199,14 @@ version(ideal_dissociating_gas_test) {
 	lua_close(L);
 	auto gd = new GasState(2, 0);
 	gd.p = 1.0e5;
-	gd.Ttr = 300.0;
+	gd.T = 300.0;
 	gd.massf[0] = 1.0; gd.massf[1] = 0.0;
 	double Rgas = R_universal / 0.028;
 	assert(approxEqual(gm.R(gd), Rgas, 1.0e-4), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 2, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[1], 0.0, 1.0e-6), failedUnitTest());
 
@@ -227,7 +227,7 @@ version(ideal_dissociating_gas_test) {
 	// Let's set a higher temperature condition so that we can see some reaction.
 	// [TODO]: move this test to kinetics/ideal_dissociating_gas_kinetics.d
 	/*
-	gd.Ttr = 5000.0;
+	gd.T = 5000.0;
 	gd.p = 1.0e5;
 	gm.update_thermo_from_pT(gd);
 	auto reactor = new UpdateIDG("sample-data/idg-nitrogen.lua", gm);

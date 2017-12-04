@@ -77,70 +77,70 @@ real(c_double) function iaf_mol_mass(i) result (mm) bind(C, name='iaf_mol_mass')
   mm = mMass ! We have only the one species in this model.
 end function iaf_mol_mass
 	
-subroutine update_thermo_from_pT(p, Ttr, rho, u, massf) bind(C, name='iaf_update_thermo_from_pT')
+subroutine update_thermo_from_pT(p, T, rho, u, massf) bind(C, name='iaf_update_thermo_from_pT')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  rho = p/(Ttr*Rgas)
-  u = Cv*Ttr
+  rho = p/(T*Rgas)
+  u = Cv*T
 end subroutine update_thermo_from_pT
 	
-subroutine update_thermo_from_rhou(p, Ttr, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhou')
+subroutine update_thermo_from_rhou(p, T, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhou')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  Ttr = u/Cv
-  p = rho*Rgas*Ttr
+  T = u/Cv
+  p = rho*Rgas*T
 end subroutine update_thermo_from_rhou
 	
-subroutine update_thermo_from_rhoT(p, Ttr, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhoT')
+subroutine update_thermo_from_rhoT(p, T, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhoT')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  p = rho*Rgas*Ttr
-  u = Cv*Ttr
+  p = rho*Rgas*T
+  u = Cv*T
 end subroutine update_thermo_from_rhoT
 	
-subroutine update_thermo_from_rhop(p, Ttr, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhop')
+subroutine update_thermo_from_rhop(p, T, rho, u, massf) bind(C, name='iaf_update_thermo_from_rhop')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  Ttr = p/(rho*Rgas)
-  u = Cv*Ttr
+  T = p/(rho*Rgas)
+  u = Cv*T
 end subroutine update_thermo_from_rhop
 	
-subroutine update_thermo_from_ps(p, Ttr, rho, u, massf, s) bind(C, name='iaf_update_thermo_from_ps')
+subroutine update_thermo_from_ps(p, T, rho, u, massf, s) bind(C, name='iaf_update_thermo_from_ps')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
   real(c_double) :: s
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  Ttr = T1 * exp((1.0/Cp)*((s - s1) + Rgas * log(p/p1)))
-  call update_thermo_from_pT(p, Ttr, rho, u, massf)
+  T = T1 * exp((1.0/Cp)*((s - s1) + Rgas * log(p/p1)))
+  call update_thermo_from_pT(p, T, rho, u, massf)
 end subroutine update_thermo_from_ps
 	
-subroutine update_thermo_from_hs(p, Ttr, rho, u, massf, h, s) bind(C, name='iaf_update_thermo_from_hs')
+subroutine update_thermo_from_hs(p, T, rho, u, massf, h, s) bind(C, name='iaf_update_thermo_from_hs')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
@@ -148,26 +148,26 @@ subroutine update_thermo_from_hs(p, Ttr, rho, u, massf, h, s) bind(C, name='iaf_
   real(c_double) :: s
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  Ttr = h/Cp
-  p = p1 * exp((1.0/Rgas)*(s1 - s + Cp*log(Ttr/T1)))
-  call update_thermo_from_pT(p, Ttr, rho, u, massf)
+  T = h/Cp
+  p = p1 * exp((1.0/Rgas)*(s1 - s + Cp*log(T/T1)))
+  call update_thermo_from_pT(p, T, rho, u, massf)
 end subroutine update_thermo_from_hs
 	
-subroutine update_sound_speed(p, Ttr, rho, u, massf, a) bind(C, name='iaf_update_sound_speed')
+subroutine update_sound_speed(p, T, rho, u, massf, a) bind(C, name='iaf_update_sound_speed')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
   real(c_double) :: a
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  a = sqrt(gamma*Rgas*Ttr)
+  a = sqrt(gamma*Rgas*T)
 end subroutine update_sound_speed
 	
-subroutine update_trans_coeffs(p, Ttr, rho, u, massf, mu, k) bind(C, name='iaf_update_trans_coeffs')
+subroutine update_trans_coeffs(p, T, rho, u, massf, mu, k) bind(C, name='iaf_update_trans_coeffs')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(c_double) :: rho
   real(c_double) :: u
   real(c_double) :: massf(*)
@@ -175,8 +175,8 @@ subroutine update_trans_coeffs(p, Ttr, rho, u, massf, mu, k) bind(C, name='iaf_u
   real(c_double) :: k
   real(kind=8) mu_ref, T_ref_mu, S_mu, k_ref, T_ref_k, S_k
   common /iaf_trans/ mu_ref, T_ref_mu, S_mu, k_ref, T_ref_k, S_k
-  mu = mu_ref*sqrt(Ttr/T_ref_mu)*(Ttr/T_ref_mu)*(T_ref_mu + S_mu)/(Ttr + S_mu)
-  k = k_ref*sqrt(Ttr/T_ref_k)*(Ttr/T_ref_k)*(T_ref_k + S_k)/(Ttr + S_k)
+  mu = mu_ref*sqrt(T/T_ref_mu)*(T/T_ref_mu)*(T_ref_mu + S_mu)/(T + S_mu)
+  k = k_ref*sqrt(T/T_ref_k)*(T/T_ref_k)*(T_ref_k + S_k)/(T + S_k)
 end subroutine update_trans_coeffs
 
 real(c_double) function get_Cv() result (val) bind(C, name='iaf_get_Cv')
@@ -200,12 +200,12 @@ real(c_double) function get_Rgas() result (val) bind(C, name='iaf_get_Rgas')
   return
 end function get_Rgas
 
-real(c_double) function entropy(p, Ttr) result (val) bind(C, name='iaf_entropy')
+real(c_double) function entropy(p, T) result (val) bind(C, name='iaf_entropy')
   real(c_double) :: p
-  real(c_double) :: Ttr
+  real(c_double) :: T
   real(kind=8) Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
   common /iaf_thermo/ Runiv, mMass, Rgas, gamma, Cv, Cp, s1, T1, p1
-  val = s1 + Cp * log(Ttr/T1) - Rgas * log(p/p1)
+  val = s1 + Cp * log(T/T1) - Rgas * log(p/p1)
   return
 end function entropy
 

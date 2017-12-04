@@ -40,24 +40,24 @@ final class VibSpecificNitrogenRelaxtion : ThermochemicalReactor {
         
         // Replenishing and depleting equations 
         foreach(imode; 1 .. N_VIB_LEVELS-1) {
-            double rho_dot = (Q.rho*Q.rho/_M_N2) * (B_coeff(imode,Q.Ttr)*Q.massf[imode-1] +
-                                (-F_coeff(imode, Q.Ttr) - B_coeff(imode+1, Q.Ttr))*Q.massf[imode] 
-                                 + F_coeff(imode+1, Q.Ttr)*Q.massf[imode+1]);
+            double rho_dot = (Q.rho*Q.rho/_M_N2) * (B_coeff(imode,Q.T)*Q.massf[imode-1] +
+                                (-F_coeff(imode, Q.T) - B_coeff(imode+1, Q.T))*Q.massf[imode] 
+                                 + F_coeff(imode+1, Q.T)*Q.massf[imode+1]);
             
            
             double rho_i = (rho_dot * dt) + Q.massf[imode]*Q.rho;
             Q.massf[imode] = rho_i / Q.rho;
         }
         //Hard coding the replenishing equation (ground state)
-        double rho_dot_0 = (Q.rho*Q.rho/_M_N2) * ((-B_coeff(1, Q.Ttr)*Q.massf[0]) 
-                                 + (F_coeff(1, Q.Ttr)*Q.massf[1])); 
+        double rho_dot_0 = (Q.rho*Q.rho/_M_N2) * ((-B_coeff(1, Q.T)*Q.massf[0]) 
+                                 + (F_coeff(1, Q.T)*Q.massf[1])); 
         double rho_0 = (rho_dot_0 * dt) + Q.massf[0]*Q.rho;
         Q.massf[0] = rho_0 / Q.rho;
         
         
         //Hard coding the depleting equation (last quantum level)
-        double rho_dot_l = (Q.rho*Q.rho/_M_N2) * (B_coeff(N_VIB_LEVELS-1, Q.Ttr)*Q.massf[N_VIB_LEVELS-1-1] +
-                                (-F_coeff(N_VIB_LEVELS-1, Q.Ttr))*Q.massf[N_VIB_LEVELS-1]); 
+        double rho_dot_l = (Q.rho*Q.rho/_M_N2) * (B_coeff(N_VIB_LEVELS-1, Q.T)*Q.massf[N_VIB_LEVELS-1-1] +
+                                (-F_coeff(N_VIB_LEVELS-1, Q.T))*Q.massf[N_VIB_LEVELS-1]); 
                                              
         double rho_l = (rho_dot_l * dt) + Q.massf[N_VIB_LEVELS-1]*Q.rho;
         Q.massf[N_VIB_LEVELS-1] = rho_l / Q.rho;

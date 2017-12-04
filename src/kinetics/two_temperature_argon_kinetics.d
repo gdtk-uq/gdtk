@@ -50,7 +50,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     override void opCall(GasState Q, double tInterval, ref double dtSuggest,
 			 ref double[] params)
     {
-    	if (Q.Ttr > 3000.0) {
+    	if (Q.T > 3000.0) {
     	//writeln("Running a single step of the chemistry update");
 
     	double m_Ar = 6.6335209e-26; //mass of argon (kg)
@@ -98,7 +98,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     	double orig_n = n_e + n_Ar;
     	double n_sum;
 
-	double internal_energy_initial = 3.0/2.0*_Rgas*(Q.Ttr+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
+	double internal_energy_initial = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
 
         //writeln("mass fraction electrons = ", Q.massf[2]);
 
@@ -113,9 +113,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     		//writeln("number = ", number);
     		//CHEMISTRY PART----------------------------------------------------------------------------------
 	    	//Determine the current rate coefficients
-	        kfA = 1.68e-26*Q.Ttr*sqrt(Q.Ttr)*(_theta_A1star/Q.Ttr+2)*exp(-_theta_A1star/Q.Ttr);
+	        kfA = 1.68e-26*Q.T*sqrt(Q.T)*(_theta_A1star/Q.T+2)*exp(-_theta_A1star/Q.T);
 	        kfe = 3.75e-22*Q.T_modes[0]*sqrt(Q.T_modes[0])*(_theta_A1star/Q.T_modes[0]+2)*exp(-_theta_A1star/Q.T_modes[0]);
-	        krA = 5.8e-49*(_theta_A1star/Q.Ttr+2)*exp((_theta_ion-_theta_A1star)/Q.Ttr);
+	        krA = 5.8e-49*(_theta_A1star/Q.T+2)*exp((_theta_ion-_theta_A1star)/Q.T);
 	        kre = 1.29e-44*(_theta_A1star/Q.T_modes[0]+2)*exp((_theta_ion-_theta_A1star)/Q.T_modes[0]);
 
 	        //writeln("kfA = ", kfA);
@@ -154,7 +154,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 		}
 
 		Q.u = internal_energy_initial - Q.u_modes[0];
-		Q.Ttr = 2.0/3.0*Q.u/_Rgas;
+		Q.T = 2.0/3.0*Q.u/_Rgas;
 
 	    	if (n_e <= 0.0) { // if the number densities of electrons go below zero, then force this to not occur and update thermo.
 	    		Q.u = internal_energy_initial;
@@ -165,7 +165,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 	    		alpha = n_e/(n_e + n_Ar);
 	    		//energy
 	    		//temperature
-			Q.Ttr =  2.0/3.0*Q.u/_Rgas;
+			Q.T =  2.0/3.0*Q.u/_Rgas;
 	    		Q.T_modes[0] = _T_modes_ref;
 	    	} else {
 	    	n_sum = orig_n/(n_e + n_Ar);
@@ -184,7 +184,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 			Q_ea = (-0.35 + 0.775e-4*50000)*1.0e-20;
 			//writeln("Q.u = ", Q.u);
 			//writeln("Q.u_modes[0] = ", Q.u_modes[0]);
-			//writeln("Q.Ttr = ", Q.Ttr);
+			//writeln("Q.T = ", Q.T);
 			//writeln("Q.T_modes[0] = ", Q.T_modes[0]);
 			////writeln("u_trans_ionisation = ", u_trans_ionisation);
 			//writeln("ne_dot ", ne_dot);
@@ -205,13 +205,13 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 	        v_ei = alpha*Q.rho/m_Ar*sqrt(8*Kb*Q.T_modes[0]/PI/m_e)*Q_ei; //electron-Ar+ collisions
 
 	        //update the energy of each state
-	        u_trans_collisions    = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.Ttr-Q.T_modes[0])*_chem_dt/Q.rho;// energy transferred to electron mode through collisions
+	        u_trans_collisions    = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.T-Q.T_modes[0])*_chem_dt/Q.rho;// energy transferred to electron mode through collisions
 	        //writeln("u_trans_collisions = ", u_trans_collisions);
 	        Q.u -= u_trans_collisions;
 	        Q.u_modes[0] += u_trans_collisions;
 
 	        //update thermo properties based on energy transfer
-		Q.Ttr = 2.0/3.0*Q.u/_Rgas;
+		Q.T = 2.0/3.0*Q.u/_Rgas;
 		Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
 
 		} // end if alpha > ion tol
@@ -228,7 +228,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
 		writeln("mass fraction sum = ", Q.massf[0] + Q.massf[1] + Q.massf[2]);
 		writeln("Q.u = ", Q.u);
 		writeln("Q.u_modes[0] = ", Q.u_modes[0]);
-		writeln("Q.Ttr = ", Q.Ttr);
+		writeln("Q.T = ", Q.T);
 		writeln("Q.T_modes[0] = ", Q.T_modes[0]);
 		//writeln("u_trans_ionisation = ", u_trans_ionisation);
 		writeln("ne_dot =", ne_dot);

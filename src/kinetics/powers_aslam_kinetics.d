@@ -42,7 +42,7 @@ final class UpdateAB : ThermochemicalReactor {
     override void opCall(GasState Q, double tInterval, ref double dtSuggest,
 			 ref double[] params)
     {
-	if (Q.Ttr > _Ti) {
+	if (Q.T > _Ti) {
 	    // We are above the ignition point, proceed with reaction.
 	    double massfA = Q.massf[0];
 	    double massfB = Q.massf[1];

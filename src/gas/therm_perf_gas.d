@@ -164,15 +164,15 @@ public:
     {
 	double TOL = 1.0e-6;
 	double delT = 100.0;
-	double T1 = Q.Ttr;
-	// It's possible that Ttr is 'nan' if it's never been set, so:
+	double T1 = Q.T;
+	// It's possible that T is 'nan' if it's never been set, so:
 	if ( isNaN(T1) )
 	    T1 = 300.0; // Just set at some value to get started.
 	double Tsave = T1;
 	double T2 = T1 + delT;
 
 	auto zeroFun = delegate (double T) {
-	    Q.Ttr = T;
+	    Q.T = T;
 	    double s_guess = entropy(Q);
 	    return s - s_guess;
 	};
@@ -188,7 +188,7 @@ public:
 	    T1 = T_MIN;
 	
 	try {
-	    Q.Ttr = solve!zeroFun(T1, T2, TOL);
+	    Q.T = solve!zeroFun(T1, T2, TOL);
 	}
 	catch ( Exception e ) {
 	    string msg = "There was a problem iterating to find temperature\n";
@@ -210,15 +210,15 @@ public:
 	// First, from enthalpy we compute temperature.
 	double TOL = 1.0e-6;
 	double delT = 100.0;
-	double T1 = Q.Ttr;
-	// It's possible that Ttr is 'nan' if it's never been set, so:
+	double T1 = Q.T;
+	// It's possible that T is 'nan' if it's never been set, so:
 	if ( isNaN(T1) )
 	    T1 = 300.0; // Just set at some value to get started.
 	double Tsave = T1;
 	double T2 = T1 + delT;
 
 	auto zeroFun = delegate (double T) {
-	    Q.Ttr = T;
+	    Q.T = T;
 	    double h_guess = enthalpy(Q);
 	    return h - h_guess;
 	};
@@ -234,7 +234,7 @@ public:
 	    T1 = T_MIN;
 	
 	try {
-	    Q.Ttr = solve!zeroFun(T1, T2, TOL);
+	    Q.T = solve!zeroFun(T1, T2, TOL);
 	}
 	catch ( Exception e ) {
 	    string msg = "There was a problem iterating to find temperature\n";
@@ -313,18 +313,18 @@ public:
     override double dudT_const_v(in GasState Q)
     {
 	// Noting that Cv = Cp - R
-	foreach ( i; 0.._n_species ) _Cv[i] = _curves[i].eval_Cp(Q.Ttr) - _R[i];
+	foreach ( i; 0.._n_species ) _Cv[i] = _curves[i].eval_Cp(Q.T) - _R[i];
 	return mass_average(Q, _Cv);
     }
     override double dhdT_const_p(in GasState Q)
     {
-	foreach ( i; 0.._n_species ) _Cp[i] = _curves[i].eval_Cp(Q.Ttr);
+	foreach ( i; 0.._n_species ) _Cp[i] = _curves[i].eval_Cp(Q.T);
 	return mass_average(Q, _Cp);
     }
     override double dpdrho_const_T(in GasState Q)
     {
 	double R = gas_constant(Q);
-	return R*Q.Ttr;
+	return R*Q.T;
     }
     override double gas_constant(in GasState Q)
     {
@@ -337,24 +337,24 @@ public:
     override double enthalpy(in GasState Q)
     {
 	foreach ( isp; 0.._n_species) {
-	    _h[isp] = _curves[isp].eval_h(Q.Ttr);
+	    _h[isp] = _curves[isp].eval_h(Q.T);
 	}
 	return mass_average(Q, _h);
     }
     override double enthalpy(in GasState Q, int isp)
     {
-	return _curves[isp].eval_h(Q.Ttr);
+	return _curves[isp].eval_h(Q.T);
     }
     override double entropy(in GasState Q)
     {
 	foreach ( isp; 0.._n_species ) {
-	    _s[isp] = _curves[isp].eval_s(Q.Ttr) - _R[isp]*log(Q.p/P_atm);
+	    _s[isp] = _curves[isp].eval_s(Q.T) - _R[isp]*log(Q.p/P_atm);
 	}
 	return mass_average(Q, _s);
     }
     override double entropy(in GasState Q, int isp)
     {
-	return _curves[isp].eval_s(Q.Ttr);
+	return _curves[isp].eval_s(Q.T);
     }
 
 private:
@@ -379,7 +379,7 @@ version(therm_perf_gas_test) {
 	assert(approxEqual(97.530, gm.LJ_epsilons[0]), failedUnitTest());
 	       
 	gd.p = 1.0e6;
-	gd.Ttr = 2000.0;
+	gd.T = 2000.0;
 	gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];
 	gm.update_thermo_from_pT(gd);
 	assert(approxEqual(11801825.6, gd.u, 1.0e-6), failedUnitTest());
@@ -389,9 +389,9 @@ version(therm_perf_gas_test) {
 	gd.u = 14.0e6;
 	gm.update_thermo_from_rhou(gd);
 	assert(approxEqual(3373757.4, gd.p, 1.0e-6), failedUnitTest());
-	assert(approxEqual(4331.944, gd.Ttr, 1.0e-6), failedUnitTest());
+	assert(approxEqual(4331.944, gd.T, 1.0e-6), failedUnitTest());
     
-	gd.Ttr = 10000.0;
+	gd.T = 10000.0;
 	gd.rho = 1.5;
 	gm.update_thermo_from_rhoT(gd);
 	assert(approxEqual(5841068.3, gd.p, 1.0e-6), failedUnitTest());
@@ -401,24 +401,24 @@ version(therm_perf_gas_test) {
 	gd.p = 5.0e6;
 	gm.update_thermo_from_rhop(gd);
 	assert(approxEqual(11164648.5, gd.u, 1.0e-6), failedUnitTest());
-	assert(approxEqual(1284.012, gd.Ttr, 1.0e-6), failedUnitTest());
+	assert(approxEqual(1284.012, gd.T, 1.0e-6), failedUnitTest());
 
 	gd.p = 1.0e6;
 	double s = 10000.0;
 	gm.update_thermo_from_ps(gd, s);
-	assert(approxEqual(2560.118, gd.Ttr, 1.0e-6), failedUnitTest());
+	assert(approxEqual(2560.118, gd.T, 1.0e-6), failedUnitTest());
 	assert(approxEqual(12313952.52, gd.u, 1.0e-6), failedUnitTest());
 	assert(approxEqual(1.00309, gd.rho, 1.0e-6), failedUnitTest());
 
 	s = 11000.0;
 	double h = 17.0e6;
 	gm.update_thermo_from_hs(gd, h, s);
-	assert(approxEqual(5273.103, gd.Ttr, 1.0e-6), failedUnitTest());
+	assert(approxEqual(5273.103, gd.T, 1.0e-6), failedUnitTest());
 	assert(approxEqual(14946629.7, gd.u, 1.0e-6), failedUnitTest());
 	assert(approxEqual(0.4603513, gd.rho, 1.0e-6), failedUnitTest());
 	assert(approxEqual(945271.84, gd.p, 1.0e-4), failedUnitTest());
 
-	gd.Ttr = 4000.0;
+	gd.T = 4000.0;
 	gm.update_trans_coeffs(gd);
 	assert(approxEqual(0.00012591, gd.mu, 1.0e-6), failedUnitTest());
 	assert(approxEqual(0.2448263, gd.k, 1.0e-6), failedUnitTest());

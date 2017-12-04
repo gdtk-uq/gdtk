@@ -91,23 +91,23 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	Q.rho = updateRho_PT(Q.p, Q.Ttr);
-	Q.u = updateEnergy_rhoT(Q.rho, Q.Ttr);
+	Q.rho = updateRho_PT(Q.p, Q.T);
+	Q.u = updateEnergy_rhoT(Q.rho, Q.T);
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.Ttr = updateTemperature_rhou(Q.rho, Q.u);
-	Q.p = updatePressure_rhoT(Q.rho,Q.Ttr);
+	Q.T = updateTemperature_rhou(Q.rho, Q.u);
+	Q.p = updatePressure_rhoT(Q.rho,Q.T);
     }
     override void update_thermo_from_rhoT(GasState Q) const//DONE
     {
-	Q.p = updatePressure_rhoT(Q.rho, Q.Ttr);
+	Q.p = updatePressure_rhoT(Q.rho, Q.T);
 	Q.u = updateEnergy_rhoT(Q.rho, Q.u);
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
 	Q.u = updateEnergy_Prho(Q.p, Q.rho);//might want to fix the order that this solves in
-	Q.Ttr = updateTemperature_rhou(Q.rho, Q.u);
+	Q.T = updateTemperature_rhou(Q.rho, Q.u);
     }
     override void update_thermo_from_ps(GasState Q, double s) const
     {
@@ -119,12 +119,12 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = updateSoundSpeed_rhoT(Q.rho, Q.Ttr);
+	Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T);
     }
     override void update_trans_coeffs(GasState Q) const
     {
-	Q.mu = sutherland_viscosity(Q.Ttr, _T_mu, _mu_ref, _S_mu);
-	Q.k = sutherland_thermal_conductivity(Q.Ttr, _T_k, _k_ref, _S_k);
+	Q.mu = sutherland_viscosity(Q.T, _T_mu, _mu_ref, _S_mu);
+	Q.k = sutherland_thermal_conductivity(Q.T, _T_k, _k_ref, _S_k);
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {
@@ -133,7 +133,7 @@ public:
     */
     override double dudT_const_v(in GasState Q) const
     {
-	return get_de_dT(Q.rho,Q.Ttr);
+	return get_de_dT(Q.rho,Q.T);
     }
     override double dhdT_const_p(in GasState Q) const
     {
@@ -142,7 +142,7 @@ public:
     override double dpdrho_const_T(in GasState Q) const
     {
 	double R = gas_constant(Q);
-	return R*Q.Ttr;
+	return R*Q.T;
     }
     override double gas_constant(in GasState Q) const
     {
@@ -284,7 +284,7 @@ unittest {//need to write these properly
     assert(gm.n_modes == 0, failedUnitTest());
     assert(gm.n_species == 1, failedUnitTest());
     assert(approxEqual(gd.p, 1.0e5), failedUnitTest());
-    assert(approxEqual(gd.Ttr, 300.0), failedUnitTest());
+    assert(approxEqual(gd.T, 300.0), failedUnitTest());
     assert(approxEqual(gd.massf[0], 1.0), failedUnitTest());
 
     gm.update_thermo_from_pT(gd);
@@ -303,7 +303,7 @@ unittest {//need to write these properly
     assert(gm.n_modes == 0, failedUnitTest());
     assert(gm.n_species == 1, failedUnitTest());
     assert(approxEqual(gd.p, 1.0e5), failedUnitTest());
-    assert(approxEqual(gd.Ttr, 300.0), failedUnitTest());
+    assert(approxEqual(gd.T, 300.0), failedUnitTest());
     assert(approxEqual(gd.massf[0], 1.0), failedUnitTest());
 
     gm.update_thermo_from_pT(gd);

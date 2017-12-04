@@ -24,12 +24,12 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
     {
 	// Hard-code Blackman relaxation time for present.
 	double pAtm = Q.p/P_atm;
-	double tau = (7.12e-9/pAtm)*exp(124.07/pow(Q.Ttr, 1./3.));
+	double tau = (7.12e-9/pAtm)*exp(124.07/pow(Q.T, 1./3.));
 	// Find the total internal energy in the gas
 	double uTotal = Q.u + Q.u_modes[0];
-	// Find the vib energy at equilibrium with Ttr
-	_Q_eq.Ttr = Q.Ttr;
-	_Q_eq.T_modes[0] = Q.Ttr;
+	// Find the vib energy at equilibrium with T
+	_Q_eq.T = Q.T;
+	_Q_eq.T_modes[0] = Q.T;
 	_Q_eq.p = Q.p;
 	_gmodel.update_thermo_from_pT(_Q_eq);
 	double u_v_eq = _Q_eq.u_modes[0];

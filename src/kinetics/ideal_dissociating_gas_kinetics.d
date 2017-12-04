@@ -53,7 +53,7 @@ final class UpdateIDG : ThermochemicalReactor {
 	//
 	// Initial state.
 	double alpha0 = Q.massf[1];
-	double T0 = Q.Ttr;
+	double T0 = Q.T;
 	//
 	// The IDG rate equations as functions.
 	// See PJ workbook page 48, 23-Apr-2017
@@ -105,7 +105,7 @@ final class UpdateIDG : ThermochemicalReactor {
 	// Since the internal energy and density in the (isolated) reactor is fixed,
 	// we need to evaluate the new temperature, pressure, etc.
 	_gmodel.update_thermo_from_rhou(Q);
-	assert(fabs(Q.Ttr - T1) < 0.1, "Oops, Temperature doesn't match after thermo update.");
+	assert(fabs(Q.T - T1) < 0.1, "Oops, Temperature doesn't match after thermo update.");
 	_gmodel.update_sound_speed(Q);
     } // end opCall
 

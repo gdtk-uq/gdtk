@@ -83,23 +83,23 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	Q.rho = Q.p/(Q.Ttr*_Rgas);
-	Q.u = _Cv*Q.Ttr;
+	Q.rho = Q.p/(Q.T*_Rgas);
+	Q.u = _Cv*Q.T;
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.Ttr = Q.u/_Cv;
-	Q.p = Q.rho*_Rgas*Q.Ttr;
+	Q.T = Q.u/_Cv;
+	Q.p = Q.rho*_Rgas*Q.T;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	Q.p = Q.rho*_Rgas*Q.Ttr;
-	Q.u = _Cv*Q.Ttr;
+	Q.p = Q.rho*_Rgas*Q.T;
+	Q.u = _Cv*Q.T;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	Q.Ttr = Q.p/(Q.rho*_Rgas);
-	Q.u = _Cv*Q.Ttr;
+	Q.T = Q.p/(Q.rho*_Rgas);
+	Q.u = _Cv*Q.T;
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
@@ -112,7 +112,7 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
+	Q.a = sqrt(_gamma*_Rgas*Q.T);
     }
     override void update_trans_coeffs(GasState Q) const
     {
@@ -135,7 +135,7 @@ public:
     override double dpdrho_const_T(in GasState Q) const
     {
 	double R = gas_constant(Q);
-	return R*Q.Ttr;
+	return R*Q.T;
     }
     override double gas_constant(in GasState Q) const
     {
@@ -151,7 +151,7 @@ public:
     }
     override double entropy(in GasState Q) const
     {
-	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
+	return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
 
 private:

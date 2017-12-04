@@ -110,7 +110,7 @@ version(wilke_mixing_viscosity_test) {
 	auto vm = new WilkeMixingViscosity([vm_N2, vm_O2], [28.0e-3, 32.0e-3]);
 
 	auto gd = new GasState(2, 0);
-	gd.Ttr = T;
+	gd.T = T;
 	gd.massf[0] = 0.8;
 	gd.massf[1] = 0.2;
 	vm.update_viscosity(gd);

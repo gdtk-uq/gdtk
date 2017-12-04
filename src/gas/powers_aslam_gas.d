@@ -84,39 +84,39 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	Q.rho = Q.p/(Q.Ttr*_Rgas);
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
+	Q.rho = Q.p/(Q.T*_Rgas);
+	Q.u = _Cv*Q.T - Q.massf[1]*_q;
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.Ttr = (Q.u + Q.massf[1]*_q)/_Cv;
-	Q.p = Q.rho*_Rgas*Q.Ttr;
+	Q.T = (Q.u + Q.massf[1]*_q)/_Cv;
+	Q.p = Q.rho*_Rgas*Q.T;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	Q.p = Q.rho*_Rgas*Q.Ttr;
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
+	Q.p = Q.rho*_Rgas*Q.T;
+	Q.u = _Cv*Q.T - Q.massf[1]*_q;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	Q.Ttr = Q.p/(Q.rho*_Rgas);
-	Q.u = _Cv*Q.Ttr - Q.massf[1]*_q;
+	Q.T = Q.p/(Q.rho*_Rgas);
+	Q.u = _Cv*Q.T - Q.massf[1]*_q;
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	Q.Ttr = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
+	Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
 	update_thermo_from_pT(Q);
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	Q.Ttr = h / _Cp;
-	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.Ttr/_T1)));
+	Q.T = h / _Cp;
+	Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
 	update_thermo_from_pT(Q);
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = sqrt(_gamma*_Rgas*Q.Ttr);
+	Q.a = sqrt(_gamma*_Rgas*Q.T);
     }
     override void update_trans_coeffs(GasState Q)
     {
@@ -135,7 +135,7 @@ public:
     override double dpdrho_const_T(in GasState Q) const
     {
 	double R = gas_constant(Q);
-	return R*Q.Ttr;
+	return R*Q.T;
     }
     override double gas_constant(in GasState Q) const
     {
@@ -151,7 +151,7 @@ public:
     }
     override double entropy(in GasState Q) const
     {
-	return _s1 + _Cp * log(Q.Ttr/_T1) - _Rgas * log(Q.p/_p1);
+	return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
 
 private:
@@ -186,13 +186,13 @@ version(powers_aslam_gas_test) {
 	lua_close(L);
 	auto gd = new GasState(2, 0);
 	gd.p = 1.0e5;
-	gd.Ttr = 300.0;
+	gd.T = 300.0;
 	gd.massf[0] = 0.75; gd.massf[1] = 0.25;
 	assert(approxEqual(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
 	assert(gm.n_modes == 0, failedUnitTest());
 	assert(gm.n_species == 2, failedUnitTest());
 	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), failedUnitTest());
+	assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
 	assert(approxEqual(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
 

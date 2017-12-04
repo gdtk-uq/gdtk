@@ -65,7 +65,7 @@ public:
     }
     override double eval(in GasState Q)
     {
-	double T = Q.Ttr;
+	double T = Q.T;
 	return _A*pow(T, _n)*exp(-_C/T);
     }
 private:
@@ -195,7 +195,7 @@ public:
 	double k0 = _k0.eval(Q);
 	double p_r = k0*M/kInf;
 	double log_p_r = log10(max(p_r, essentially_zero));
-	double T = Q.Ttr;
+	double T = Q.T;
 	
 	if ( !_Fcent_supplied ) {
 	    _Fcent = (1.0 - _a)*exp(-T/_T3) + _a*exp(-T/_T1);
@@ -283,7 +283,7 @@ public:
 	double k0 = _k0.eval(Q);
 	double p_r = k0*M/kInf;
 	double log_p_r = log(p_r);
-	double T = Q.Ttr;
+	double T = Q.T;
 
 	double Fc = _a*exp(-_b/T) + (1.0 - _a)*exp(-_c/T);
 	double xt = 1.0/(1.0 + log_p_r*log_p_r);
@@ -334,7 +334,7 @@ version(rate_constant_test) {
 	// Test 1. Rate constant for H2 + I2 reaction.
 	auto rc = new ArrheniusRateConstant(1.94e14*1e-6, 0.0, 20620.0);
 	auto gd = new GasState(1, 1);
-	gd.Ttr = 700.0;
+	gd.T = 700.0;
 	assert(approxEqual(3.10850956e-5, rc.eval(gd), 1.0e-6), failedUnitTest());
 	// Test 2. Read rate constant parameters for nitrogen dissociation
 	// from Lua input and compute rate constant at 4000.0 K
@@ -342,7 +342,7 @@ version(rate_constant_test) {
 	luaL_dofile(L, "sample-input/N2-diss.lua");
 	lua_getglobal(L, "rate");
 	auto rc2 = new ArrheniusRateConstant(L);
-	gd.Ttr = 4000.0;
+	gd.T = 4000.0;
 	assert(approxEqual(0.00159439, rc2.eval(gd), 1.0e-6), failedUnitTest());
 
 	return 0;

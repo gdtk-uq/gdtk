@@ -50,13 +50,13 @@ public:
     override void update_energy(ref GasState Q)
     {
 	foreach ( isp, ref e; _energy ) {
-	    e = _curves[isp].eval_h(Q.Ttr) - _R[isp]*Q.Ttr;
+	    e = _curves[isp].eval_h(Q.T) - _R[isp]*Q.T;
 	}
 	Q.u = mass_average(Q, _energy);
     }
     override void update_temperature(ref GasState Q)
     {
-	double Tsave = Q.Ttr; // Keep a copy for diagnostics purpose.
+	double Tsave = Q.T; // Keep a copy for diagnostics purpose.
 	// We'll adjust the temperature estimate until the energy is within TOL Joules.
 	// Surely 1/100 of a Joule is sufficient precision when we are talking of megaJoules.
 	double TOL = 1.0e-2;
@@ -73,7 +73,7 @@ public:
 	// be enough robustness in the bracketing and
 	// the function-solving method to handle this.
 	double delT = 10.0;
-	double T1 = fmax(Q.Ttr - delT/2, T_MIN);
+	double T1 = fmax(Q.T - delT/2, T_MIN);
 	double T2 = T1 + delT;
 
 	if ( bracket(T1, T2, e_tgt, Q, T_MIN) == -1 ) {
@@ -87,7 +87,7 @@ public:
 	    throw new Exception(msg);
 	}
 	try {
-	    Q.Ttr = solve(T1, T2, TOL, e_tgt, Q);
+	    Q.T = solve(T1, T2, TOL, e_tgt, Q);
 	}
 	catch ( Exception e ) {
 	    string msg = "There was a problem iterating to find temperature\n";
@@ -123,7 +123,7 @@ private:
     double zeroFun(double T, double e_tgt, ref GasState Q)
     // Helper function for update_temperature.
     {
-	Q.Ttr = T;
+	Q.T = T;
 	update_energy(Q);
 	return e_tgt - Q.u;
     }
@@ -277,16 +277,16 @@ version(therm_perf_gas_mix_eos_test) {
 	ThermallyPerfectGasMixEOS tpgm = createThermallyPerfectGasMixEOS(species, L);
 	auto Q = new GasState(3, 1);
 	Q.massf[0] = 0.2; Q.massf[1] = 0.7; Q.massf[2] = 0.1;
-	Q.Ttr = 1000.0;
+	Q.T = 1000.0;
 	tpgm.update_energy(Q);
 	assert(approxEqual(1031849.875, Q.u, 1.0e-6), failedUnitTest());
-	// Now set Ttr a little off, say 1500.0.
+	// Now set T a little off, say 1500.0.
 	// Using Newton iterations, finding a temperature near the
 	// CEA polynomial breaks was problematic. Brent's method
 	// should do better.
-	Q.Ttr = 1500.0;
+	Q.T = 1500.0;
 	tpgm.update_temperature(Q);
-	assert(approxEqual(1000.0, Q.Ttr, 1.0e-6), failedUnitTest());
+	assert(approxEqual(1000.0, Q.T, 1.0e-6), failedUnitTest());
 
 	return 0;
     }

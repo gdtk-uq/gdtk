@@ -39,30 +39,30 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const
     {
-	Q.rho = Q.p/(Q.Ttr*_R_N2);
-	Q.u = (5./2.)*Q.Ttr*_R_N2; // translational+rotational modes
+	Q.rho = Q.p/(Q.T*_R_N2);
+	Q.u = (5./2.)*Q.T*_R_N2; // translational+rotational modes
 	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0); // vib
     }
 
     override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.Ttr = Q.u/((5./2.)*_R_N2);
+	Q.T = Q.u/((5./2.)*_R_N2);
 	Q.T_modes[0] = _theta_N2/log((_R_N2*_theta_N2/Q.u_modes[0]) + 1.0);
-	Q.p = Q.rho*_R_N2*Q.Ttr;
+	Q.p = Q.rho*_R_N2*Q.T;
     }
 
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	Q.p = Q.rho*_R_N2*Q.Ttr;
-	Q.u = (5./2.)*Q.Ttr*_R_N2;
+	Q.p = Q.rho*_R_N2*Q.T;
+	Q.u = (5./2.)*Q.T*_R_N2;
 	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
     }
     
     override void update_thermo_from_rhop(GasState Q) const
     {
-	Q.Ttr = Q.p/(Q.rho*_R_N2);
+	Q.T = Q.p/(Q.rho*_R_N2);
 	// Assume Q.T_modes[0] is set independently, and correct.
-	Q.u = (5./2.)*Q.Ttr*_R_N2;
+	Q.u = (5./2.)*Q.T*_R_N2;
 	Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
     }
 
@@ -78,7 +78,7 @@ public:
 
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = sqrt(_gamma*_R_N2*Q.Ttr);
+	Q.a = sqrt(_gamma*_R_N2*Q.T);
     }
 
     override void update_trans_coeffs(GasState Q) const
@@ -88,14 +88,14 @@ public:
 	// Constants are from Wright et al.
 	// For details see Daniel Potter's PhD thesis.
 	double kB = Boltzmann_constant;
-	double T = Q.Ttr;
+	double T = Q.T;
 	double expnt = _A_22*(log(T))^^2 + _B_22*log(T) + _C_22;
 	double pi_sig2_Omega_22 = exp(_D_22)*pow(T, expnt) * 1.0e-20; // Ang^2 --> m^2
 	double Delta_22 = (16./5)*sqrt(2.0*_mu/(PI*kB*T))*pi_sig2_Omega_22;
 	Q.mu = _m / Delta_22;
 	
 	double k_trans = (15./4)*kB*(1./(alpha*Delta_22));
-	// Compute k_rot as function of Ttr
+	// Compute k_rot as function of T
 	expnt = _A_11*(log(T))^^2 + _B_11*log(T) + _C_11;
 	double pi_sig2_Omega_11 = exp(_D_11)*pow(T, expnt) * 1.0e-20; // Ang^2 --> m^2
 	double Delta_11 = (8./3)*sqrt(2.0*_mu/(PI*kB*T))*pi_sig2_Omega_11;
@@ -120,7 +120,7 @@ public:
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	return _R_N2*Q.Ttr;
+	return _R_N2*Q.T;
     }
     override double gas_constant(in GasState Q) const
     {

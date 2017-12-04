@@ -20,8 +20,8 @@ public:
     double a;    /// sound speed, m/s
     // For a gas in thermal equilibrium, all of the internal energies
     // are bundled together into u and are represented by a single
-    // temperature Ttr.
-    double Ttr;  /// thermal temperature, K
+    // temperature T.
+    double T;    /// temperature, K
     double u;    /// specific thermal energy, J/kg
     // For a gas in thermal nonequilibrium, the internal energies are
     // stored unbundled, with u being the trans-rotational thermal energy.
@@ -57,13 +57,13 @@ public:
 	if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
     }
 
-    this(GasModel gm, in double p_init, in double Ttr_init, in double[] T_modes_init,
+    this(GasModel gm, in double p_init, in double T_init, in double[] T_modes_init,
 	 in double[] massf_init=[1.0,], in double quality_init=1.0,
 	 in double sigma_init=0.0)
     {
 	p = p_init;
 	p_e = p_init;
-	Ttr = Ttr_init;
+	T = T_init;
 	T_modes.length = gm.n_modes;
 	foreach(i; 0 .. gm.n_modes) { T_modes[i] = T_modes_init[i]; }
 	u_modes.length = gm.n_modes;
@@ -100,7 +100,7 @@ public:
 	rho = other.rho;
 	p = other.p;
 	p_e = other.p_e;
-	Ttr = other.Ttr;
+	T = other.T;
 	u = other.u;
 	a = other.a;
 	u_modes = other.u_modes.dup;
@@ -120,7 +120,7 @@ public:
     {
 	rho = other.rho;
 	p = other.p;
-	Ttr = other.Ttr;
+	T = other.T;
 	u = other.u;
 	p_e = other.p_e;
 	a = other.a;
@@ -139,7 +139,7 @@ public:
     {
 	rho = 0.5 * (gs0.rho + gs1.rho);
 	p = 0.5 * (gs0.p + gs1.p);
-	Ttr = 0.5 * (gs0.Ttr + gs1.Ttr);
+	T = 0.5 * (gs0.T + gs1.T);
 	u = 0.5 * (gs0.u + gs1.u);
 	p_e = 0.5 * (gs0.p_e + gs1.p_e);
 	a = 0.5 * (gs0.a + gs1.a);
@@ -163,7 +163,7 @@ public:
 	}
 	// Accumulate from a clean slate and then divide.
 	p = 0.0;
-	Ttr = 0.0;
+	T = 0.0;
 	u = 0.0;
 	p_e = 0.0;
 	foreach(ref elem; T_modes) { elem = 0.0; }
@@ -172,7 +172,7 @@ public:
 	quality = 0.0;
 	foreach(other; others) {
 	    p += other.p;
-	    Ttr += other.Ttr;
+	    T += other.T;
 	    u += other.u;
 	    p_e += other.p_e;
 	    foreach(i; 0 .. T_modes.length) { T_modes[i] += other.T_modes[i]; }
@@ -181,7 +181,7 @@ public:
 	    quality += other.quality;
 	}
 	p /= n;
-	Ttr /= n;
+	T /= n;
 	u /= n;
 	p_e /= n;
 	foreach(ref elem; T_modes) { elem /= n; }
@@ -204,8 +204,8 @@ public:
 	    // if (print_message) writeln("Density invalid: ", rho);
 	    is_data_valid = false;
 	}
-	if (!isFinite(Ttr) || Ttr < 1.01 * TMIN) {
-	    // if (print_message) writeln("Transrotational temperature invalid: ", Ttr);
+	if (!isFinite(T) || T < 1.01 * TMIN) {
+	    // if (print_message) writeln("Temperature invalid: ", T);
 	    is_data_valid = false;
 	}
 	auto nmodes = u_modes.length;
@@ -245,7 +245,7 @@ public:
 	repr ~= "GasState(";
 	repr ~= "rho=" ~ to!string(rho);
 	repr ~= ", p=" ~ to!string(p);
-	repr ~= ", Ttr=" ~ to!string(Ttr);
+	repr ~= ", T=" ~ to!string(T);
 	repr ~= ", u=" ~ to!string(u);
 	repr ~= ", p_e=" ~ to!string(p_e);
 	repr ~= ", a=" ~ to!string(a);

@@ -106,7 +106,7 @@ public:
     {
 	double h = enthalpy(Q, isp);
 	double s = entropy(Q, isp);
-	double g = h - Q.Ttr*s;
+	double g = h - Q.T*s;
 	return g;
     }
     
@@ -277,7 +277,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     int converged, count;
 
     double p_given = Q.p;
-    double T_given = Q.Ttr;
+    double T_given = Q.T;
     // When using single-sided finite-differences on the
     // curve-fit EOS functions, we really cannot expect 
     // much more than 0.1% tolerance here.
@@ -296,7 +296,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     // and internal energy.
     gmodel.update_thermo_from_rhou(Q);
     
-    T_old = Q.Ttr;
+    T_old = Q.T;
     R_eff = Q.p / (Q.rho * T_old);
     de = 0.01 * Q.u;
     Q.u += de;
@@ -310,10 +310,10 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	throw new Exception(msg);
     }
 
-    Cv_eff = de / (Q.Ttr - T_old);
+    Cv_eff = de / (Q.T - T_old);
     // Now, get a better guess for the appropriate density and
     // internal energy.
-    e_old = Q.u + (T_given - Q.Ttr) * Cv_eff;
+    e_old = Q.u + (T_given - Q.T) * Cv_eff;
     rho_old = p_given / (R_eff * T_given);
 
     // Evaluate state variables using this guess.
@@ -330,7 +330,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     }
 
     fp_old = p_given - Q.p;
-    fT_old = T_given - Q.Ttr;
+    fT_old = T_given - Q.T;
     // Update the guess using Newton iterations
     // with the partial derivatives being estimated
     // via finite differences.
@@ -351,7 +351,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	    throw new Exception(msg);
 	}
 	fp_new = p_given - Q.p;
-	fT_new = T_given - Q.Ttr;
+	fT_new = T_given - Q.T;
 	dfp_drho = (fp_new - fp_old) / (rho_new - rho_old);
 	dfT_drho = (fT_new - fT_old) / (rho_new - rho_old);
 	// Perturb other dimension to get derivatives.
@@ -370,7 +370,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	}
 
 	fp_new = p_given - Q.p;
-	fT_new = T_given - Q.Ttr;
+	fT_new = T_given - Q.T;
 	dfp_de = (fp_new - fp_old) / (e_new - e_old);
 	dfT_de = (fT_new - fT_old) / (e_new - e_old);
 	det = dfp_drho * dfT_de - dfT_drho * dfp_de;
@@ -407,7 +407,7 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 	}
 	// Prepare for next iteration.
 	fp_old = p_given - Q.p;
-	fT_old = T_given - Q.Ttr;
+	fT_old = T_given - Q.T;
 	converged = (fabs(fp_old) < fp_tol) && (fabs(fT_old) < fT_tol);
 	++count;
     } // end while 
@@ -443,7 +443,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     int converged, count;
 
     double rho_given = Q.rho;
-    double T_given = Q.Ttr;
+    double T_given = Q.T;
     // When using single-sided finite-differences on the
     // curve-fit EOS functions, we really cannot expect 
     // much more than 0.1% tolerance here.
@@ -460,7 +460,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     Q.u = 2.0e5; // J/kg 
     gmodel.update_thermo_from_rhou(Q);
 
-    T_old = Q.Ttr;
+    T_old = Q.T;
     de = 0.01 * Q.u;
     Q.u += de;
 
@@ -474,9 +474,9 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     }
    
    
-    Cv_eff = de / (Q.Ttr - T_old);
+    Cv_eff = de / (Q.T - T_old);
     // Now, get a better guess for the appropriate density and internal energy.
-    e_old = Q.u + (T_given - Q.Ttr) * Cv_eff;
+    e_old = Q.u + (T_given - Q.T) * Cv_eff;
     // Evaluate state variables using this guess.
     Q.rho = rho_given;
     Q.u = e_old;
@@ -490,7 +490,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 	throw new Exception(msg);
     }
    
-    fT_old = T_given - Q.Ttr;
+    fT_old = T_given - Q.T;
     // Perturb to get derivative.
     e_new = e_old * 1.001;
     Q.rho = rho_given;
@@ -505,7 +505,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 	throw new Exception(msg);
     }
 
-    fT_new = T_given - Q.Ttr;
+    fT_new = T_given - Q.T;
     dfT_de = (fT_new - fT_old) / (e_new - e_old);
 
     // At the start of iteration, we want *_old to be the best guess.
@@ -536,7 +536,7 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 	    msg ~= to!string(caughtException);
 	    throw new Exception(msg);
 	}
-	fT_new = T_given - Q.Ttr;
+	fT_new = T_given - Q.T;
 	dfT_de = (fT_new - fT_old) / (e_new - e_old);
 	// Prepare for the next iteration.
 	++count;
@@ -738,7 +738,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
     double fs_tol_fail = 0.02 * s_given;
 
     // Guess the thermo state assuming that T is a good guess.
-    T_old = Q.Ttr;
+    T_old = Q.T;
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
   	string msg;
@@ -752,7 +752,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
     fs_old = s_given - s_old;
     // Perturb T to get a derivative estimate
     T_new = T_old * 1.001;
-    Q.Ttr = T_new;
+    Q.T = T_new;
 
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
@@ -783,7 +783,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
 	    dT = dT_sign * MAX_RELATIVE_STEP * fabs(T_old);
 	} 
 	T_new = T_old + dT;
-	Q.Ttr = T_new;
+	Q.T = T_new;
 	try { gmodel.update_thermo_from_pT(Q); }
 	catch (Exception caughtException) {
 	    string msg;
@@ -802,7 +802,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
 	converged = (fabs(fs_old) < fs_tol);
     }   // end while 
     // Ensure that we have the current data for all EOS variables.
-    Q.Ttr = T_old;
+    Q.T = T_old;
 
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
@@ -854,7 +854,7 @@ double dp, p_old, p_new, T_old, T_new, dT;
 
     // Use current gas state as guess
     p_old = Q.p;
-    T_old = Q.Ttr;
+    T_old = Q.T;
     double h_new = gmodel.enthalpy(Q);
     double s_new = gmodel.entropy(Q);
     fh_old = h_given - h_new;
@@ -870,7 +870,7 @@ double dp, p_old, p_new, T_old, T_new, dT;
 	p_new = p_old * 1.001;
 	T_new = T_old;
 	Q.p = p_new;
-	Q.Ttr = T_new;
+	Q.T = T_new;
 	try { gmodel.update_thermo_from_pT(Q); }
 	catch (Exception caughtException) {
 	    string msg;
@@ -889,7 +889,7 @@ double dp, p_old, p_new, T_old, T_new, dT;
 	p_new = p_old;
 	T_new = T_old * 1.001;
 	Q.p = p_new;
-	Q.Ttr = T_new;
+	Q.T = T_new;
 	try { gmodel.update_thermo_from_pT(Q); }
 	catch (Exception caughtException) {
 	    string msg;
@@ -929,7 +929,7 @@ double dp, p_old, p_new, T_old, T_new, dT;
 	T_old += dT;
 	// Make sure of consistent thermo state.
 	Q.p = p_old;
-	Q.Ttr = T_old;
+	Q.T = T_old;
 	try { gmodel.update_thermo_from_pT(Q); }
 	catch (Exception caughtException) {
 	    string msg;
@@ -1121,7 +1121,7 @@ version(gas_model_test) {
 	assert(gm.n_modes == 0, "number of energy modes");
 	assert(gm.n_species == 1, "number of species");
 	assert(approxEqual(gd.p, 1.0e5), "pressure");
-	assert(approxEqual(gd.Ttr, 300.0, 1.0e-6), "static temperature");
+	assert(approxEqual(gd.T, 300.0, 1.0e-6), "static temperature");
 	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), "massf[0]");
 
 	gm.update_thermo_from_pT(gd);
@@ -1142,12 +1142,12 @@ version(gas_model_test) {
 	Q.rho = rho_given;
 	gm.update_thermo_from_rhou(Q);
 	double p_given = Q.p;
-	double T_given = Q.Ttr;
+	double T_given = Q.T;
 	
 	// Initialise the same state from the different property combinations
 	// Test pT iterative update
 	Q.p = p_given;
-	Q.Ttr = T_given;
+	Q.T = T_given;
      	update_thermo_state_pT(gm, Q); 
 	// Determine correct entropy/enthalpy for updates that use them
 	double s_given = gm.entropy(Q); 
@@ -1156,23 +1156,23 @@ version(gas_model_test) {
 	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
 	// Test rhoT iterative update
 	Q.rho = rho_given;
-	Q.Ttr = T_given;
+	Q.T = T_given;
 	update_thermo_state_rhoT(gm, Q);
 	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.p, p_given, 1.0e-6),  failedUnitTest());
 	// Test rhop iterative update
 	Q.rho = rho_given;
 	Q.p = p_given;
-	assert(approxEqual(Q.Ttr, T_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
 	// Test  ps iterative update
   	Q.p = p_given;
 	update_thermo_state_ps(gm, Q, s_given);	
-	assert(approxEqual(Q.Ttr, T_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
 	// Test hs iterative update
-	assert(approxEqual(Q.Ttr, T_given, 1.0e-6), failedUnitTest());
+	assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
 	assert(approxEqual(Q.p, p_given, 1.0e-6), failedUnitTest());

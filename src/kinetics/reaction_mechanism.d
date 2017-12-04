@@ -43,12 +43,12 @@ public:
     
     final void eval_rate_constants(GasState Q)
     {
-	double T_save = Q.Ttr;
-	if ( Q.Ttr < _T_lower_limit ) { Q.Ttr = _T_lower_limit; }
-	if ( Q.Ttr > _T_upper_limit ) { Q.Ttr = _T_upper_limit; }
+	double T_save = Q.T;
+	if ( Q.T < _T_lower_limit ) { Q.T = _T_lower_limit; }
+	if ( Q.T > _T_upper_limit ) { Q.T = _T_upper_limit; }
 	foreach ( ref r; _reactions ) r.eval_rate_constants(Q);
 	// Always reset Q.T[0] on exit
-	Q.Ttr = T_save;
+	Q.T = T_save;
     }
 
     final void eval_rates(in double[] conc, double[] rates)
@@ -194,7 +194,7 @@ version(reaction_mechanism_test) {
 	double[] conc = [4.54, 4.54, 0.0];
 	auto rc = new ArrheniusRateConstant(1.94e14, 0.0, 20620.0);
 	auto gd = new GasState(3, 1);
-	gd.Ttr = 700.0;
+	gd.T = 700.0;
 	auto reaction = new ElementaryReaction(rc, rc, gmodel, [0, 1], [1, 1],
 					       [2], [2], 3);
 	auto reacMech = new ReactionMechanism([reaction], 3, 100.0, 10000.0);
