@@ -53,7 +53,8 @@ nsp, nmodes, gm = setGasModel('cea-lut-air.lua')
 print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
 -- The inflow for the simulation is at the nozzle throat.
 inflow = FlowState:new{p=state6.p, T=state6.T, velx=V6}
-initial = FlowState:new{p=0.3*state7.p, T=300.0}
+p_dump = 0.1*state7.p -- something low, relative to the expected exit pressure
+initial = FlowState:new{p=p_dump, T=300.0}
 
 print "Building grid."
 -- Coordinates are from the nenzfr file Bezier-control-pts-t4-m4.data.
@@ -106,7 +107,7 @@ throat_blk = FluidBlockArray{grid=throat_grid, initialState=initial, label="thro
 			     nib=1, njb=2}
 exp_blk = FluidBlockArray{grid=exp_grid, initialState=initial, label="expansion",
 			  bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
-				  east=OutFlowBC_Simple:new{}}, 
+				  east=OutFlowBC_FixedP:new{p_outside=p_dump}}, 
 			  nib=30, njb=2}
 identifyBlockConnections()
 
