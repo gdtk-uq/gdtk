@@ -9,5 +9,3 @@ function refSoln(t, x, y, z)
    return tab
 end
 
-refSolidSoln = refSoln
-

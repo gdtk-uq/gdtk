@@ -307,6 +307,14 @@ public:
     void subtract_ref_soln(lua_State* L)
     {
 	string luaFnName = "refSolidSoln";
+	// Test if the user has supplied a reference solution for the flow domain.
+	lua_getglobal(L, luaFnName.toStringz);
+	if ( lua_isnil(L, -1) ) {
+	    // Do nothing. Just return.
+	    lua_pop(L, 1);
+	    return;
+	}
+	lua_pop(L, 1);
 	foreach (k; 0 .. nkc) {
 	    foreach (j; 0 .. njc) {
 		foreach (i; 0 .. nic) {
@@ -319,7 +327,7 @@ public:
 		    lua_pushnumber(L, _data[i][j][k][variableIndex["pos.z"]]);
 		    if ( lua_pcall(L, 4, 1, 0) != 0 ) {
 			string errMsg = "Error in call to " ~ luaFnName ~ 
-			    " from LuaFnPath:opCall(): " ~ 
+			    " from user-supplied reference solution file: " ~ 
 			    to!string(lua_tostring(L, -1));
 			luaL_error(L, errMsg.toStringz);
 		    }

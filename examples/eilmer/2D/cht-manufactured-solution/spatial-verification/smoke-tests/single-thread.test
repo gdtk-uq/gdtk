@@ -29,11 +29,11 @@ test computed-norms {Check the temperature norms.} -body {
     set L1s_ref 1.5686653737239453e-01
     set L2s_ref 1.9360403909941618e-01
     set Linfs_ref 4.2435529004256978e-01	
-    exec e4shared --job=coupled-mms --post --tindx-plot=last --ref-soln=ref-soln.lua --norms="T" > T-norms.txt
-    set fp [open T-norms.txt r]
+    exec e4shared --job=coupled-mms --post --tindx-plot=last --ref-soln=ref-soln.lua --norms="T" > Tg-norms.txt
+    set fp [open Tg-norms.txt r]
     set contents [read $fp]
     close $fp
-    # Skip through the output, looking for the two lines of interesting data.
+    # Skip through the output, looking for one line of interesting data.
     set foundState 0
     foreach line [split $contents "\n"] {
 	if {[string first "L1=" $line] >= 0} {
@@ -41,15 +41,28 @@ test computed-norms {Check the temperature norms.} -body {
 	}
 	if {$foundState == 1} {
 	    set tokens [split [string trim $line]]
-	    # puts "tokens= $tokens"
 	    set L1g [lindex $tokens 1]
 	    set L2g [lindex $tokens 3]
 	    set Linfg [lindex $tokens 5]
 	    incr foundState
 	}
-	if {$foundState == 3} {
+    }
+    # Repeat the exercise for solid domain.
+    exec e4shared --job=coupled-mms --post --tindx-plot=last --ref-soln=ref-solid-soln.lua --norms="T" > Ts-norms.txt
+    set fp [open Ts-norms.txt r]
+    set contents [read $fp]
+    close $fp
+    # Skip through the output, looking for one line of interesting data.
+    # We need to skip past the first mention of L1 because that will contain
+    # values associated with the gas domains.
+    # Hence, we are interested when the foundState counter gets to 2.
+    set foundState 0
+    foreach line [split $contents "\n"] {
+	if {[string first "L1=" $line] >= 0} {
+	    incr foundState
+	}
+	if {$foundState == 2} {
 	    set tokens [split [string trim $line]]
-	    # puts "tokens= $tokens"
 	    set L1s [lindex $tokens 1]
 	    set L2s [lindex $tokens 3]
 	    set Linfs [lindex $tokens 5]

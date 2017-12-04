@@ -671,6 +671,14 @@ public:
     void subtract_ref_soln(lua_State* L)
     {
 	string luaFnName = "refSoln";
+	// Test if the user has supplied a reference solution for the flow domain.
+	lua_getglobal(L, luaFnName.toStringz);
+	if ( lua_isnil(L, -1) ) {
+	    // Do nothing. Just return.
+	    lua_pop(L, 1);
+	    return;
+	}
+	lua_pop(L, 1);
 	foreach (i; 0 .. ncells) {
 	    // Call back to the Lua function to get a table of values.
 	    // function refSoln(x, y, z)
