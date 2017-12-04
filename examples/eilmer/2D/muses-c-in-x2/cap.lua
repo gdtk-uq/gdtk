@@ -7,6 +7,7 @@ print(job_title)
 config.dimensions = 2
 config.title = job_title
 config.axisymmetric = true
+config.flowstate_limits_max_temp = 200000
 
 nsp, nmodes, gm = setGasModel('ideal-air-13-gas-model.lua')
 print("GasModel set to ideal air gamma=1.3. nsp= ", nsp, " nmodes= ", nmodes)
@@ -84,4 +85,5 @@ config.max_time = 80.0e-6  -- seconds
 config.max_step = 50000
 config.dt_init = 0.5e-8
 config.cfl_value = 0.5
-config.dt_plot = 5.0e-6
+config.dt_plot = config.max_time/200.0
+
