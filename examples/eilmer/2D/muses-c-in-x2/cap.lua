@@ -85,5 +85,5 @@ config.max_time = 80.0e-6  -- seconds
 config.max_step = 50000
 config.dt_init = 0.5e-8
 config.cfl_value = 0.5
-config.dt_plot = config.max_time/200.0
+config.dt_plot = 5.0e-6
 
