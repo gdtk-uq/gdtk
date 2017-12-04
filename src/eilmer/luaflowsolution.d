@@ -542,7 +542,7 @@ void plottingTableToFlowStateTable(lua_State *L)
     lua_setfield(L, tblIdx, "Bz");
 
     // 3. Convert temperatures
-    lua_getfield(L, tblIdx, "Ttr");
+    lua_getfield(L, tblIdx, "T"); // 2017-12-04, CHECK ME, redundant with today's name change
     lua_setfield(L, tblIdx, "T");
     lua_newtable(L);
     foreach ( i; 0 .. n_modes ) {

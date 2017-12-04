@@ -122,9 +122,9 @@ public:
 	auto gmodel = myConfig.gmodel;
 	int n_species = gmodel.n_species;
 	int n_modes = gmodel.n_modes;
-	double Ttr = 300.0;
+	double T = 300.0;
 	double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-	fs = new FlowState(gmodel, 100.0e3, Ttr, T_modes, Vector3(0.0,0.0,0.0));
+	fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
 	foreach(i; 0 .. myConfig.n_flow_time_levels) {
 	    U ~= new ConservedQuantities(n_species, n_modes);
 	    dUdt ~= new ConservedQuantities(n_species, n_modes);
@@ -908,12 +908,12 @@ public:
     // Use the finite-rate chemistry module to update the species fractions
     // and the other thermochemical properties.
     {
-	if (!fr_reactions_allowed || fs.gas.Ttr <= myConfig.T_frozen) return;
-	double T_save = fs.gas.Ttr;
+	if (!fr_reactions_allowed || fs.gas.T <= myConfig.T_frozen) return;
+	double T_save = fs.gas.T;
 	if (myConfig.ignition_zone_active) {
 	    // When active, replace gas temperature with an effective ignition temperature
 	    foreach(zone; myConfig.ignition_zones) {
-		if ( zone.is_inside(pos[0], myConfig.dimensions) ) fs.gas.Ttr = zone.Tig; 
+		if ( zone.is_inside(pos[0], myConfig.dimensions) ) fs.gas.T = zone.Tig; 
 	    }
 	}
 
@@ -931,7 +931,7 @@ public:
 	    myConfig.thermochemUpdate(fs.gas, dt, dt_chem, params);
 	    if (myConfig.ignition_zone_active) {
 		// Restore actual gas temperature
-		fs.gas.Ttr = T_save;
+		fs.gas.T = T_save;
 	    }
 	} catch(ThermochemicalReactorUpdateException err) {
 	    string msg = format("caught %s", err.msg);
@@ -1599,7 +1599,7 @@ public:
 	Q_rad_org = Q_rE_rad;
 	// 2. Compute the scaling factor based on local gas properties
 	// NOTE: - The idea is that f_rad_org is proportional to actual value
-	double T = fs.gas.Ttr;
+	double T = fs.gas.T;
 	if ( Q_rad_org <= 0.0 ) {
 	    // This cell is a net emitter
 	    f_rad_org = fs.gas.rho * pow(T, 4);
@@ -1612,7 +1612,7 @@ public:
     void rescale_Q_rE_rad() 
     {
 	// 1. Compute the current scaling factor based on local gas properties
-	double T = fs.gas.Ttr;
+	double T = fs.gas.T;
 	double f_rad_new = 1.0;
 	if ( Q_rad_org <= 0.0 ) {
 	    // This cell is a net emitter
@@ -1634,7 +1634,7 @@ public:
     double rad_scaling_ratio() 
     {
 	// 1. Compute the current scaling factor based on local gas properties
-	double T = fs.gas.Ttr;
+	double T = fs.gas.T;
 	double f_rad = 1.0;
 	if ( Q_rE_rad <= 0.0 ) {
 	    // This cell is a net emitter
@@ -1675,7 +1675,7 @@ string cell_data_as_string(ref const(Vector3) pos, double volume, ref const(Flow
     formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
     foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); } 
     if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
-    formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.Ttr); 
+    formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.T); 
     foreach (imode; 0 .. fs.gas.u_modes.length) {
 	formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode], fs.gas.T_modes[imode]);
     }
@@ -1721,7 +1721,7 @@ void cell_data_to_raw_binary(ref File fout,
     dbl2[0] = fs.tke; dbl2[1] = fs.omega; fout.rawWrite(dbl2);
     fout.rawWrite(fs.gas.massf); 
     if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); } 
-    dbl2[0] = fs.gas.u; dbl2[1] = fs.gas.Ttr; fout.rawWrite(dbl2); 
+    dbl2[0] = fs.gas.u; dbl2[1] = fs.gas.T; fout.rawWrite(dbl2); 
     foreach (imode; 0 .. fs.gas.u_modes.length) {
 	dbl2[0] = fs.gas.u_modes[imode]; dbl2[1] = fs.gas.T_modes[imode];
 	fout.rawWrite(dbl2);
@@ -1801,7 +1801,7 @@ void scan_cell_data_from_string(string buffer,
 	dt_chem = to!double(items.front); items.popFront();
     }
     fs.gas.u = to!double(items.front); items.popFront();
-    fs.gas.Ttr = to!double(items.front); items.popFront();
+    fs.gas.T = to!double(items.front); items.popFront();
     foreach(i; 0 .. fs.gas.u_modes.length) {
 	fs.gas.u_modes[i] = to!double(items.front); items.popFront();
 	fs.gas.T_modes[i] = to!double(items.front); items.popFront();
@@ -1862,7 +1862,7 @@ void raw_binary_to_cell_data(ref File fin,
     fin.rawRead(fs.gas.massf);
     if (fs.gas.massf.length > 1) { fin.rawRead(dbl1); dt_chem = dbl1[0]; }
     fin.rawRead(dbl2);
-    fs.gas.u = dbl2[0]; fs.gas.Ttr = dbl2[1];
+    fs.gas.u = dbl2[0]; fs.gas.T = dbl2[1];
     foreach(i; 0 .. fs.gas.u_modes.length) {
 	fin.rawRead(dbl2); fs.gas.u_modes[i] = dbl2[0]; fs.gas.T_modes[i] = dbl2[1];
     }
@@ -1890,7 +1890,7 @@ string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,
 	list ~= ["massf[" ~ to!string(i) ~ "]-" ~ to!string(name)];
     }
     if (gmodel.n_species > 1) { list ~= ["dt_chem"]; }
-    list ~= ["u", "Ttr"];
+    list ~= ["u", "T"];
     foreach(i; 0 .. gmodel.n_modes) {
 	list ~= ["u_modes[" ~ to!string(i) ~ "]", "T_modes[" ~ to!string(i) ~ "]"];
     }

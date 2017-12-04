@@ -782,7 +782,7 @@ public:
 	BoundaryCondition bc = blk.bc[which_boundary];
 	foreach (i, f; bc.faces) {
 	    FlowState fs = f.fs;
-	    fs.gas.Ttr = Twall;
+	    fs.gas.T = Twall;
 	    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 	} // end foreach face
     }
@@ -804,7 +804,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.north];
 		    FlowState fs = IFace.fs;
-		    fs.gas.Ttr = Twall;
+		    fs.gas.T = Twall;
 		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end i loop
 	    } // end for k
@@ -816,7 +816,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.east];
 		    FlowState fs = IFace.fs;
-		    fs.gas.Ttr = Twall;
+		    fs.gas.T = Twall;
 		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for k
@@ -828,7 +828,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.south];
 		    FlowState fs = IFace.fs;
-		    fs.gas.Ttr = Twall;
+		    fs.gas.T = Twall;
 		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end i loop
 	    } // end for k
@@ -840,7 +840,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.west];
 		    FlowState fs = IFace.fs;
-		    fs.gas.Ttr = Twall;
+		    fs.gas.T = Twall;
 		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for k
@@ -852,7 +852,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.top];
 		    FlowState fs = IFace.fs;
-		    fs.gas.Ttr = Twall;
+		    fs.gas.T = Twall;
 		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for i
@@ -864,7 +864,7 @@ public:
 		    cell = blk.get_cell(i,j,k);
 		    IFace = cell.iface[Face.bottom];
 		    FlowState fs = IFace.fs;
-		    fs.gas.Ttr = Twall;
+		    fs.gas.T = Twall;
 		    foreach(ref elem; fs.gas.T_modes) { elem = Twall; }
 		} // end j loop
 	    } // end for i
@@ -1430,14 +1430,14 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	double T_wall, rho_wall;
 	if ( _isFixedTWall ) {
 	    // ... user-specified wall temperature, or ... 
-	    T_wall = IFace.fs.gas.Ttr; 
+	    T_wall = IFace.fs.gas.T; 
 	    rho_wall = IFace.fs.gas.rho;
 	} else {
 	    // ... using Crocco-Busemann relation (Eq 11) 
-	    T_wall = cell.fs.gas.Ttr + recovery * du * du / (2.0 * cp);
+	    T_wall = cell.fs.gas.T + recovery * du * du / (2.0 * cp);
 	    // Update gas properties at the wall, assuming static pressure
 	    // at the wall is the same as that in the first wall cell
-	    IFace.fs.gas.Ttr = T_wall;
+	    IFace.fs.gas.T = T_wall;
 	    IFace.fs.gas.p = cell.fs.gas.p;
 	    gmodel.update_thermo_from_pT(IFace.fs.gas);
 	    gmodel.update_trans_coeffs(IFace.fs.gas);
@@ -1453,7 +1453,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	double tau_wall_old = mu_lam_wall * dudy;
 	double dT, dTdy, k_lam_wall, q_wall_old;
 	if ( _isFixedTWall ) {
-	    dT = fabs( cell.fs.gas.Ttr - IFace.fs.gas.Ttr );
+	    dT = fabs( cell.fs.gas.T - IFace.fs.gas.T );
 	    dTdy = dT / wall_dist;
 	    k_lam_wall = IFace.fs.gas.k;
 	    q_wall_old = k_lam_wall * dTdy;
@@ -1503,7 +1503,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	    // Calculate an updated value for the wall shear stress and heat flux 
 	    tau_wall = 1.0/rho_wall * pow(y_plus*mu_lam_wall/wall_dist, 2.0);
 	    if (_isFixedTWall) {
-		Beta = (cell.fs.gas.Ttr/T_wall - 1.0 + Gam*u_plus*u_plus) / u_plus;
+		Beta = (cell.fs.gas.T/T_wall - 1.0 + Gam*u_plus*u_plus) / u_plus;
 		q_wall = Beta * (rho_wall*T_wall*k_lam_wall*u_tau) / mu_lam_wall;
 	    }
 	    // Difference between old and new tau_wall and q_wall. Update old value

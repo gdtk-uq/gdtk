@@ -39,7 +39,7 @@ public:
 
     this(GasModel gm,
 	 in double p_init,
-	 in double Ttr_init,
+	 in double T_init,
 	 in double[] T_modes_init,
 	 in Vector3 vel_init,
 	 in double[] massf_init=[1.0,],
@@ -50,7 +50,7 @@ public:
 	 in double mu_t_init=0.0, in double k_t_init=0.0,
 	 in int S_init=0)
     {
-	gas = new GasState(gm, p_init, Ttr_init, T_modes_init,
+	gas = new GasState(gm, p_init, T_init, T_modes_init,
 			   massf_init, quality_init);
 	vel = vel_init;
 	B = B_init;
@@ -65,7 +65,7 @@ public:
 
     this(in FlowState other, GasModel gm)
     {
-	gas = new GasState(gm, other.gas.p, other.gas.Ttr, other.gas.T_modes,
+	gas = new GasState(gm, other.gas.p, other.gas.T, other.gas.T_modes,
 			   other.gas.massf, other.gas.quality); 
 	vel = other.vel;
 	B = other.B;
@@ -111,13 +111,13 @@ public:
     this(in JSONValue json_data, GasModel gm)
     {
 	double p = getJSONdouble(json_data, "p", 100.0e3);
-	double Ttr = getJSONdouble(json_data, "Ttr", 300.0e3);
+	double T = getJSONdouble(json_data, "T", 300.0e3);
 	double[] T_modes;
-	foreach(i; 0 .. gm.n_modes) { T_modes ~= Ttr; }
+	foreach(i; 0 .. gm.n_modes) { T_modes ~= T; }
 	T_modes = getJSONdoublearray(json_data, "T_modes", []);
 	double[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
 	double quality = getJSONdouble(json_data, "quality", 1.0);
-	gas = new GasState(gm, p, Ttr, T_modes, massf, quality);
+	gas = new GasState(gm, p, T, T_modes, massf, quality);
 	double velx = getJSONdouble(json_data, "velx", 0.0);
 	double vely = getJSONdouble(json_data, "vely", 0.0);
 	double velz = getJSONdouble(json_data, "velz", 0.0);
@@ -247,7 +247,7 @@ public:
 	auto writer = appender!string();
 	formattedWrite(writer, "{");
 	formattedWrite(writer, "\"p\": %.18e", gas.p);
-	formattedWrite(writer, ", \"Ttr\": %.18e", gas.Ttr);
+	formattedWrite(writer, ", \"T\": %.18e", gas.T);
 	// zero or more T_modes
 	formattedWrite(writer, ", \"T_modes\": [");
 	if (gas.T_modes.length > 0) { formattedWrite(writer, " %.18e", gas.T_modes[0]); }
@@ -299,12 +299,12 @@ public:
 	    writeln("Turbulence KE above maximum ", tke);
 	    is_data_valid = false;
 	}
-	if (gas.Ttr < flowstate_limits.min_temp) {
-	    writeln("Temperature below minimum ", gas.Ttr);
+	if (gas.T < flowstate_limits.min_temp) {
+	    writeln("Temperature below minimum ", gas.T);
 	    is_data_valid = false;
 	}
-	if (gas.Ttr > flowstate_limits.max_temp) {
-	    writeln("Temperature above maximum ", gas.Ttr);
+	if (gas.T > flowstate_limits.max_temp) {
+	    writeln("Temperature above maximum ", gas.T);
 	    is_data_valid = false;
 	}
 	if (!isFinite(omega)) {

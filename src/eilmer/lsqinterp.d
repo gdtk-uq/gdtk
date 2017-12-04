@@ -113,7 +113,7 @@ public:
     double[3] tke, omega;
     double[3][] massf;
     double[3] rho, p;
-    double[3] Ttr, u;
+    double[3] T, u;
     double[3][] T_modes, u_modes;
 
     double velxPhi, velyPhi, velzPhi;
@@ -121,7 +121,7 @@ public:
     double tkePhi, omegaPhi;
     double[] massfPhi;
     double rhoPhi, pPhi;
-    double TtrPhi, uPhi;
+    double TPhi, uPhi;
     double[] T_modesPhi, u_modesPhi;
 
     double velxMax, velyMax, velzMax;
@@ -129,14 +129,14 @@ public:
     double tkeMax, omegaMax;
     double[] massfMax;
     double rhoMax, pMax;
-    double TtrMax, uMax;
+    double TMax, uMax;
     double[] T_modesMax, u_modesMax;
     double velxMin, velyMin, velzMin;
     double BxMin, ByMin, BzMin, psiMin;
     double tkeMin, omegaMin;
     double[] massfMin;
     double rhoMin, pMin;
-    double TtrMin, uMin;
+    double TMin, uMin;
     double[] T_modesMin, u_modesMin;
 
     this(size_t nsp, size_t nmodes)
@@ -171,7 +171,7 @@ public:
 	massf.length = other.massf.length;
 	foreach(i; 0 .. other.massf.length) { massf[i][] = other.massf[i][]; }
 	rho[] = other.rho[]; p[] = other.p[];
-	Ttr[] = other.Ttr[]; u[] = other.u[];
+	T[] = other.T[]; u[] = other.u[];
 	T_modes.length = other.T_modes.length; u_modes.length = other.u_modes.length;
 	foreach(i; 0 .. other.T_modes.length) {
 	    T_modes[i][] = other.T_modes[i][]; u_modes[i][] = other.u_modes[i][];
@@ -183,7 +183,7 @@ public:
 	massfPhi.length = other.massfPhi.length;
 	foreach(i; 0 .. other.massf.length) { massfPhi[i] = other.massfPhi[i]; }
 	rhoPhi = other.rhoPhi; pPhi = other.pPhi;
-	TtrPhi = other.TtrPhi; uPhi = other.uPhi;
+	TPhi = other.TPhi; uPhi = other.uPhi;
 	T_modesPhi.length = other.T_modesPhi.length; u_modesPhi.length = other.u_modesPhi.length;
 	foreach(i; 0 .. other.T_modesPhi.length) {
 	    T_modesPhi[i] = other.T_modesPhi[i]; u_modesPhi[i] = other.u_modesPhi[i];
@@ -195,7 +195,7 @@ public:
 	massfMax.length = other.massfMax.length;
 	foreach(i; 0 .. other.massf.length) { massfMax[i] = other.massfMax[i]; }
 	rhoMax = other.rhoMax; pMax = other.pMax;
-	TtrMax = other.TtrMax; uMax = other.uMax;
+	TMax = other.TMax; uMax = other.uMax;
 	T_modesMax.length = other.T_modesMax.length; u_modesMax.length = other.u_modesMax.length;
 	foreach(i; 0 .. other.T_modesMax.length) {
 	    T_modesMax[i] = other.T_modesMax[i]; u_modesMax[i] = other.u_modesMax[i];
@@ -207,7 +207,7 @@ public:
 	massfMin.length = other.massfMin.length;
 	foreach(i; 0 .. other.massf.length) { massfMin[i] = other.massfMin[i]; }
 	rhoMin = other.rhoMin; pMin = other.pMin;
-	TtrMin = other.TtrMin; uMin = other.uMin;
+	TMin = other.TMin; uMin = other.uMin;
 	T_modesMin.length = other.T_modesMin.length; u_modesMin.length = other.u_modesMin.length;
 	foreach(i; 0 .. other.T_modesMin.length) {
 	    T_modesMin[i] = other.T_modesMin[i]; u_modesMin[i] = other.u_modesMin[i];
@@ -281,7 +281,7 @@ public:
 	final switch (myConfig.thermo_interpolator) {
 	case InterpolateOption.pt: 
 	    mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
-	    mixin(codeForLimits("gas.Ttr", "Ttr", "TtrPhi", "TtrMax", "TtrMin"));
+	    mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
 	    foreach (imode; 0 .. nmodes) {
 		mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
 				    "T_modesMax[imode]", "T_modesMin[imode]"));
@@ -301,7 +301,7 @@ public:
 	    break;
 	case InterpolateOption.rhot: 
 	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
-	    mixin(codeForLimits("gas.Ttr", "Ttr", "TtrPhi", "TtrMax", "TtrMin"));
+	    mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
 	    foreach (imode; 0 .. nmodes) {
 		mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
 				    "T_modesMax[imode]", "T_modesMin[imode]"));
@@ -380,7 +380,7 @@ public:
 	final switch (myConfig.thermo_interpolator) {
 	case InterpolateOption.pt: 
 	    mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
-	    mixin(codeForLimits("gas.Ttr", "Ttr", "TtrPhi", "TtrMax", "TtrMin"));
+	    mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
 	    foreach (imode; 0 .. nmodes) {
 		mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
 				    "T_modesMax[imode]", "T_modesMin[imode]"));
@@ -400,7 +400,7 @@ public:
 	    break;
 	case InterpolateOption.rhot: 
 	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
-	    mixin(codeForLimits("gas.Ttr", "Ttr", "TtrPhi", "TtrMax", "TtrMin"));
+	    mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
 	    foreach (imode; 0 .. nmodes) {
 		mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
 				    "T_modesMax[imode]", "T_modesMin[imode]"));
@@ -465,7 +465,7 @@ public:
 	final switch (myConfig.thermo_interpolator) {
 	case InterpolateOption.pt: 
 	    mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
-	    mixin(codeForGradients("gas.Ttr", "Ttr", "TtrMax", "TtrMin"));
+	    mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
 	    foreach (imode; 0 .. nmodes) {
 		mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
 				       "T_modesMax[imode]", "T_modesMin[imode]"));
@@ -485,7 +485,7 @@ public:
 	    break;
 	case InterpolateOption.rhot: 
 	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
-	    mixin(codeForGradients("gas.Ttr", "Ttr", "TtrMax", "TtrMin"));
+	    mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
 	    foreach (imode; 0 .. nmodes) {
 		mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
 				       "T_modesMax[imode]", "T_modesMin[imode]"));
@@ -694,7 +694,7 @@ public:
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		mixin(codeForReconstruction("gas.p", "p", "gas.p", "pPhi"));
-		mixin(codeForReconstruction("gas.Ttr", "Ttr", "gas.Ttr", "TtrPhi"));
+		mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
 		foreach (imode; 0 .. nmodes) {
 		    mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
 						"gas.T_modes[imode]", "T_modesPhi[imode]"));
@@ -717,7 +717,7 @@ public:
 		break;
 	    case InterpolateOption.rhot: 
 		mixin(codeForReconstruction("gas.rho", "rho", "gas.rho", "rhoPhi"));
-		mixin(codeForReconstruction("gas.Ttr", "Ttr", "gas.Ttr", "TtrPhi"));
+		mixin(codeForReconstruction("gas.T", "T", "gas.T", "TPhi"));
 		foreach (imode; 0 .. nmodes) {
 		    mixin(codeForReconstruction("gas.T_modes[imode]", "T_modes[imode]",
 						"gas.T_modes[imode]", "T_modesPhi[imode]"));

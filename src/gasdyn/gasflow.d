@@ -59,7 +59,7 @@ double[] shock_ideal(const(GasState) state1, double Vs, GasState state2, GasMode
     //
     state2.rho = state1.rho * (gam+1.0)*M1*M1 / (2.0+(gam-1.0)*M1*M1);
     state2.p = state1.p * (2.0*gam*M1*M1 - (gam-1.0)) / (gam+1.0);
-    state2.Ttr = state2.p / (R*state2.rho);
+    state2.T = state2.p / (R*state2.rho);
     gm.update_thermo_from_pT(state2);
     gm.update_sound_speed(state2);
     //
@@ -96,7 +96,7 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
 	// Mach number for his adjustments to the ideal-gas initial guess, however,
 	// this is Chris James' simple adjustment that seems to allow the calculation
 	// to proceed.
-	state2.Ttr = fmin(state2.Ttr, 20000.0);
+	state2.T = fmin(state2.T, 20000.0);
 	gm.update_thermo_from_pT(state2);
     }
     // We assume that state2 now contains a fair initial guess
@@ -109,7 +109,7 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
     {
 	// Constraint equations for state2 from the normal shock relations.
 	// The correct post-shock values allow this vector to evaluate to zeros.
-	state2.rho = rho2; state2.Ttr = T2;
+	state2.rho = rho2; state2.T = T2;
 	gm.update_thermo_from_rhoT(state2);
 	V2 = V1 * state1.rho / rho2; // mass conservation
         double f1 = momentum - state2.p - state2.rho*V2*V2;
@@ -130,7 +130,7 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
     // iteration is computed.
     foreach (count; 0 .. 20) {
         double rho_save = state2.rho;
-        double T_save = state2.Ttr;
+        double T_save = state2.T;
         double[] f_save = Fvector(rho_save, T_save);
         // Use finite differences to compute the Jacobian.
         double d_rho = rho_save * 0.01;
@@ -150,7 +150,7 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
         rho_delta = copysign(fmin(abs(rho_delta),0.2*abs(rho_save)), rho_delta);
         T_delta = copysign(fmin(abs(T_delta),0.2*abs(T_save)), T_delta);
         state2.rho = rho_save + rho_delta;
-        state2.Ttr = T_save + T_delta;
+        state2.T = T_save + T_delta;
         gm.update_thermo_from_rhoT(state2);
         // Check convergence.
         if (abs(rho_delta) < rho_tol && abs(T_delta) < T_tol) { break; }
@@ -582,7 +582,7 @@ double finite_wave_dv(const(GasState) state1, double V1,
         state2.p += dp;
         gm.update_thermo_from_ps(state2, s1);
 	gm.update_sound_speed(state2);
-        if (state2.Ttr < Tmin) { break; }
+        if (state2.T < Tmin) { break; }
     }
     return V2;
 } // end finite_wave_dv()
@@ -689,7 +689,7 @@ double[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
     // and again, for the change in u, holding p constant.
     state_new.copy_values_from(state_0);
     state_new.p = state_0.p;
-    state_new.Ttr = state_0.Ttr + dT;
+    state_new.T = state_0.T + dT;
     gm.update_thermo_from_pT(state_new);
     double drhodu = (state_new.rho - rho_0) / du;
     // Assume that these first-order differences will suffice.

@@ -108,7 +108,7 @@ if __name__ == '__main__':
                  {'fName': "udf-bc.lua", 'tName': "udf-bc-template.lua",
                   'varList': [("tab.p", p), ("tab.T", T), ("tab.velx", u), ("tab.vely", v)]},
                  {'fName': "ref-soln.lua", 'tName': "ref-soln-template.lua",
-                  'varList': [("tab.rho", rho), ("tab.p", p), ("tab.Ttr", T), ("tab.T", T_s),
+                  'varList': [("tab.rho", rho), ("tab.p", p), ("tab.T", T), ("tab.T", T_s),
                               ("tab['vel.x']", u), ("tab['vel.y']", v)]},
                  {'fName': "fill-fn.lua", 'tName': "fill-fn-template.lua",
                   'varList': [("p", p), ("T", T), ("velx", u), ("vely", v)]},

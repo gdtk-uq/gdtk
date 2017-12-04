@@ -207,7 +207,7 @@ function FlowState:new(o)
    Q.massf = massf
    if FlowState.nModes > 0 then
       if o.T_modes == nil then
-	 -- We did not receive any T_modes, assume in equilibrium with Ttr.
+	 -- We did not receive any T_modes, assume in equilibrium with T.
 	 local T_modes = {}
 	 for i = 1, FlowState.nModes do T_modes[#T_modes] = o.T end
 	 o.T_modes = T_modes

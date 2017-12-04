@@ -597,7 +597,7 @@ public:
 	    double a = _data[i][variableIndex["a"]];
 	    double p = _data[i][variableIndex["p"]];
 	    double rho = _data[i][variableIndex["rho"]];
-	    double T = _data[i][variableIndex["Ttr"]];
+	    double T = _data[i][variableIndex["T"]];
 	    double g = a*a*rho/p; // approximation for gamma
 	    // Velocity in the block frame of reference that
 	    // may be rotating for turbomachinery calculations.
@@ -644,7 +644,7 @@ public:
 		foreach (isp; 0 .. Q.massf.length) {
 		    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
 		}
-		Q.p = p; Q.Ttr = T;
+		Q.p = p; Q.T = T;
 		double entropy = gmodel.entropy(Q);
 		_data[i] ~= entropy;
 	    }
@@ -652,7 +652,7 @@ public:
 		foreach (isp; 0 .. Q.massf.length) {
 		    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
 		}
-		Q.p = p; Q.rho = rho; Q.Ttr = T;
+		Q.p = p; Q.rho = rho; Q.T = T;
 		gmodel.massf2molef(Q, molef);
 		foreach (mf; molef) { _data[i] ~= mf; }
 	    }
@@ -660,7 +660,7 @@ public:
 		foreach (isp; 0 .. Q.massf.length) {
 		    Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
 		}
-		Q.p = p; Q.rho = rho; Q.Ttr = T;
+		Q.p = p; Q.rho = rho; Q.T = T;
 		gmodel.massf2conc(Q, conc);
 		foreach (c; conc) { _data[i] ~= c; }
 	    }

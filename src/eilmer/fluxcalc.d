@@ -349,7 +349,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     presL = Lft.gas.p;
     eL = gmodel.internal_energy(Lft.gas);
     hL = eL + presL/rhoL + Lft.tke; // bundle turbulent energy, PJ 2017-06-17
-    tL = Lft.gas.Ttr;
+    tL = Lft.gas.T;
     vnL = Lft.vel.x;
     vpL = Lft.vel.y;
     vqL = Lft.vel.z;
@@ -358,7 +358,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     presR = Rght.gas.p;
     eR = gmodel.internal_energy(Rght.gas);
     hR = eR + presR/rhoR + Rght.tke;
-    tR = Rght.gas.Ttr;
+    tR = Rght.gas.T;
     vnR = Rght.vel.x;
     vpR = Rght.vel.y;
     vqR = Rght.vel.z;

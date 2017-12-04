@@ -80,7 +80,7 @@ string generate_boundary_load_file(int current_loads_tindx, double sim_time, str
     if (!exists(fname)) {
 	auto f = File(fname, "w");
 	f.writeln("# t = ", sim_time);
-	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:Ttr 15:Re_wall\n ");
+	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:T 15:Re_wall\n ");
 	f.close();
     }
     return fname;
@@ -195,17 +195,17 @@ void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface,
     double mu_wall = fs.gas.mu;
     double k_wall = fs.gas.k;
     double P = fs.gas.p;
-    double T_wall = fs.gas.Ttr;
+    double T_wall = fs.gas.T;
     double a_wall = fs.gas.a;
     double rho_wall = fs.gas.rho;
     double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q, Re_wall;
     if (GlobalConfig.viscous) {
-	double dTtrdx = grad.Ttr[0]; double dTtrdy = grad.Ttr[1]; double dTtrdz = grad.Ttr[2]; 
+	double dTdx = grad.T[0]; double dTdy = grad.T[1]; double dTdz = grad.T[2]; 
 	double dudx = grad.vel[0][0]; double dudy = grad.vel[0][1]; double dudz = grad.vel[0][2];
 	double dvdx = grad.vel[1][0]; double dvdy = grad.vel[1][1]; double dvdz = grad.vel[1][2];
 	double dwdx = grad.vel[2][0]; double dwdy = grad.vel[2][1]; double dwdz = grad.vel[2][2];
 	// compute heat load
-	double dTdn = dTtrdx*nx + dTtrdy*ny + dTtrdz*nz; // dot product
+	double dTdn = dTdx*nx + dTdy*ny + dTdz*nz; // dot product
 	q = k_wall * dTdn; // heat load (positive sign means heat flows to the wall)
 	// compute stress tensor at interface in global reference frame
 	double lmbda = -2.0/3.0 * mu_wall;

@@ -273,9 +273,9 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 		    outFile.writefln("  pos=(%s, %s, %s)m, volume=%s m^^3",
 				     soln.get_value_str(ib, i, "pos.x"), soln.get_value_str(ib, i, "pos.y"),
 				     soln.get_value_str(ib, i, "pos.z"), soln.get_value_str(ib, i, "volume"));
-		    outFile.writefln("  rho=%s kg/m^^3, p=%s Pa, Ttr=%s K, u=%s J/kg",
+		    outFile.writefln("  rho=%s kg/m^^3, p=%s Pa, T=%s K, u=%s J/kg",
 				     soln.get_value_str(ib, i, "rho"), soln.get_value_str(ib, i, "p"),
-				     soln.get_value_str(ib, i, "Ttr"), soln.get_value_str(ib, i, "u"));
+				     soln.get_value_str(ib, i, "T"), soln.get_value_str(ib, i, "u"));
 		    outFile.writefln("  vel=(%s, %s, %s)m/s, a=%s m/s",
 				     soln.get_value_str(ib, i, "vel.x"), soln.get_value_str(ib, i, "vel.y"),
 				     soln.get_value_str(ib, i, "vel.z"), soln.get_value_str(ib, i, "a"));

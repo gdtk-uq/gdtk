@@ -85,9 +85,9 @@ public:
 	auto gmodel = myConfig.gmodel;
 	int n_species = gmodel.n_species;
 	int n_modes = gmodel.n_modes;
-	double Ttr = 300.0;
+	double T = 300.0;
 	double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-	fs = new FlowState(gmodel, 100.0e3, Ttr, T_modes, Vector3(0.0,0.0,0.0));
+	fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
 	F = new ConservedQuantities(n_species, n_modes);
 	F.clear_values();
 	grad = new FlowGradients(myConfig);
@@ -392,9 +392,9 @@ public:
 	    }
 	}
 	// Thermal conductivity (NOTE: q is total energy flux)
-	double qx = k_eff * grad.Ttr[0];
-	double qy = k_eff * grad.Ttr[1];
-	double qz = k_eff * grad.Ttr[2];
+	double qx = k_eff * grad.T[0];
+	double qy = k_eff * grad.T[1];
+	double qz = k_eff * grad.T[2];
 	if (myConfig.turbulence_model != TurbulenceModel.none ||
 	    myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
 	    foreach (isp; 0 .. n_species) {

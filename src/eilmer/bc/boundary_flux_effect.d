@@ -387,8 +387,8 @@ public:
     double dT, dTdn, dTdnx, dTdny, dTdnz, qx, qy, qz, k_eff, k_lam_wall, h, q_cond, Twall;
 	double f_relax = 0.05;
     double tolerance = 1.0e-3; 
-	double Twall_prev = IFace.fs.gas.Ttr;
-	double Twall_prev_backup = IFace.fs.gas.Ttr;
+	double Twall_prev = IFace.fs.gas.T;
+	double Twall_prev_backup = IFace.fs.gas.T;
     double q_total, q_total_prev, q_total_prev_backup = 0.0;
     size_t Twall_iteration_count;
     //int iteration_check, subiteration_check = 0;
@@ -419,18 +419,18 @@ public:
 	for (Twall_iteration_count=0; Twall_iteration_count <= Twall_iterations; ++Twall_iteration_count) {
 
 		// Update the thermodynamic and transport properties at IFace
-	    IFace.fs.gas.Ttr = Twall_prev;
+	    IFace.fs.gas.T = Twall_prev;
 	    IFace.fs.gas.p = cell.fs.gas.p;
 	    gmodel.update_thermo_from_pT(IFace.fs.gas);
 	    gmodel.update_trans_coeffs(IFace.fs.gas);
 
 	     //Determine convective heat flux at current iteration with Twall_prev    
-	    dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr); // Positive is heat into wall
+	    dT = (cell.fs.gas.T - IFace.fs.gas.T); // Positive is heat into wall
 	    if (dT < 0.0){
 	    	// Catch in case the iteration goes negative (radiation would become imaginary)
-			IFace.fs.gas.Ttr = 0.9*cell.fs.gas.Ttr;
-			Twall_prev = IFace.fs.gas.Ttr;
-			dT = (cell.fs.gas.Ttr - IFace.fs.gas.Ttr);
+			IFace.fs.gas.T = 0.9*cell.fs.gas.T;
+			Twall_prev = IFace.fs.gas.T;
+			dT = (cell.fs.gas.T - IFace.fs.gas.T);
 	    }
 
 	    // Calculate thermal conductivity 
@@ -470,14 +470,14 @@ public:
 			//printf("Convergence reached\n");
 		 //   printf("Twall = %.4g\n", Twall);
 		 //   printf("Calculated q_rad out = %.4g\n", pow(Twall,4)*emissivity*SB_sigma);
-		 //   printf("cell.fs.gas.Ttr = %.4g\n", cell.fs.gas.Ttr);
+		 //   printf("cell.fs.gas.T = %.4g\n", cell.fs.gas.T);
 		 //   printf("q_total = %.4g\n", q_total);
 		 //   printf("q_total_prev = %.4g\n", q_total_prev);
 		 //   printf("dTdn = %.4g\n", dTdn);
 		 //   printf("k = %.4g\n", k_eff);
 		 //   printf("\n");
 		    // Update your wall temp with your final value
-    	    IFace.fs.gas.Ttr = Twall;
+    	    IFace.fs.gas.T = Twall;
 		    IFace.fs.gas.p = cell.fs.gas.p;
 		    gmodel.update_thermo_from_pT(IFace.fs.gas);
 		    gmodel.update_trans_coeffs(IFace.fs.gas);
@@ -487,9 +487,9 @@ public:
 		    // Hence, unless we alter these parameters, the exported heat transfer 
 		    // will equal zero. It is assumed that there is no heat transfer
 		    // between boundary cells (ie no conjugate heat transfer)
-		    grad.Ttr[0] = dTdnx;
-		    grad.Ttr[1] = dTdny;
-		    grad.Ttr[2] = dTdnz;
+		    grad.T[0] = dTdnx;
+		    grad.T[1] = dTdny;
+		    grad.T[2] = dTdnz;
 		    //iteration_check = 1;
 	    	break;
 		}

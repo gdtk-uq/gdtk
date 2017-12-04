@@ -160,7 +160,7 @@ private:
 	auto gmodel = blk.myConfig.gmodel;
 	try {
 	    ghostCell.fs.gas.p = getDouble(L, tblIdx, "p");
-	    ghostCell.fs.gas.Ttr = getDouble(L, tblIdx, "T");
+	    ghostCell.fs.gas.T = getDouble(L, tblIdx, "T");
 	    if (gmodel.n_modes > 0) {
 		getArrayOfDoubles(L, tblIdx, "T_modes", ghostCell.fs.gas.T_modes);
 	    }
@@ -389,7 +389,7 @@ private:
 	
 	lua_getfield(L, tblIdx, "T");
 	if ( !lua_isnil(L, -1) ) {
-	    fs.gas.Ttr = getDouble(L, tblIdx, "T");
+	    fs.gas.T = getDouble(L, tblIdx, "T");
 	}
 	lua_pop(L, 1);
 

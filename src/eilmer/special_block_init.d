@@ -52,10 +52,10 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
 	foreach (face; cell.iface) {
 	    if (face.is_on_boundary && (face.bc_id in noSlipWalls)) {
 		if (Twall > 0.0) {
-		    cell.fs.gas.Ttr = Twall;
+		    cell.fs.gas.T = Twall;
 		}
 		else {
-		    cell.fs.gas.Ttr = face.fs.gas.Ttr;
+		    cell.fs.gas.T = face.fs.gas.T;
 		}
 		cell.fs.vel.set(face.fs.vel);
 		cell.fs.tke = face.fs.tke;
@@ -113,7 +113,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
 		if (face.left_cell.id == cell.id) {
 		    // Then right cell must be a neighbour
 		    ++nNbrCells;
-		    T_avg += face.right_cell.fs.gas.Ttr;
+		    T_avg += face.right_cell.fs.gas.T;
 		    velx_avg += face.right_cell.fs.vel.x;
 		    vely_avg += face.right_cell.fs.vel.y;
 		    velz_avg += face.right_cell.fs.vel.z;
@@ -125,7 +125,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
 		else {
 		    // The left cell must be a neighbour;
 		    ++nNbrCells;
-		    T_avg += face.left_cell.fs.gas.Ttr;
+		    T_avg += face.left_cell.fs.gas.T;
 		    velx_avg += face.left_cell.fs.vel.x;
 		    vely_avg += face.left_cell.fs.vel.y;
 		    velz_avg += face.left_cell.fs.vel.z;
@@ -136,7 +136,7 @@ void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
 		}
 	    }
 	    // Place the averaged value in cell.
-	    cell.fs.gas.Ttr = T_avg / nNbrCells;
+	    cell.fs.gas.T = T_avg / nNbrCells;
 	    cell.fs.vel.refx = velx_avg / nNbrCells;
 	    cell.fs.vel.refy = vely_avg / nNbrCells;
 	    cell.fs.vel.refz = velz_avg / nNbrCells;

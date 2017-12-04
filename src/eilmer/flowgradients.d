@@ -61,7 +61,7 @@ public:
     //  [dv/dx dv/dy dv/dz]
     //  [dw/dx dw/dy dw/dz]]
     double[3][] massf; // mass fraction derivatives
-    double[3] Ttr; // Temperature derivatives
+    double[3] T; // Temperature derivatives
     double[3] tke; // turbulence kinetic energy
     double[3] omega; // pseudo vorticity for k-omega turbulence
 private:
@@ -79,7 +79,7 @@ public:
 	foreach(i; 0 .. 3) vel[i][] = other.vel[i][];
 	massf.length = other.massf.length;
 	foreach(isp; 0 .. other.massf.length) { massf[isp][] = other.massf[isp][]; }
-	Ttr[] = other.Ttr[];
+	T[] = other.T[];
 	tke[] = other.tke[];
 	omega[] = other.omega[];
     }
@@ -89,7 +89,7 @@ public:
     {
 	foreach (i; 0 .. 3) { vel[i][] = other.vel[i][]; }
 	foreach (isp; 0 .. other.massf.length) { massf[isp][] = other.massf[isp][]; }
-	Ttr[] = other.Ttr[];
+	T[] = other.T[];
 	tke[] = other.tke[];
 	omega[] = other.omega[];
     }
@@ -99,7 +99,7 @@ public:
     {
 	foreach (i; 0 .. 3) { vel[i][] += other.vel[i][]; }
 	foreach (isp; 0 .. massf.length) { massf[isp][] += other.massf[isp][]; }
-	Ttr[] += other.Ttr[];
+	T[] += other.T[];
 	tke[] += other.tke[];
 	omega[] += other.omega[];
     }
@@ -109,7 +109,7 @@ public:
     {
 	foreach (i; 0 .. 3) { vel[i][] *= factor; } 
 	foreach (isp; 0 .. massf.length) { massf[isp][] *= factor; } 
-	Ttr[] *= factor;
+	T[] *= factor;
 	tke[] *= factor;
 	omega[] *= factor;
     }
@@ -128,7 +128,7 @@ public:
 	repr ~= ", massf=[" ~ to!string(massf[0]);
 	foreach (i; 1 .. massf.length) repr ~= ", " ~ to!string(massf);
 	repr ~= "]";
-	repr ~= ", Ttr=" ~ to!string(Ttr);
+	repr ~= ", T=" ~ to!string(T);
 	repr ~= ", tke=" ~ to!string(tke);
 	repr ~= ", omega=" ~ to!string(omega);
 	repr ~= ")";
@@ -197,10 +197,10 @@ public:
 	vel[2][1] = 0.0;
 	vel[2][2] = 0.0;
 	//
-	mixin(codeForGradients("gas.Ttr"));
-	Ttr[0] = gradient_x * area_inv;
-	Ttr[1] = -gradient_y * area_inv;
-	Ttr[2] = 0.0;
+	mixin(codeForGradients("gas.T"));
+	T[0] = gradient_x * area_inv;
+	T[1] = -gradient_y * area_inv;
+	T[2] = 0.0;
 	//
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (myConfig.turbulence_model != TurbulenceModel.none ||
@@ -390,7 +390,7 @@ public:
 	    // 2D z-velocity
 	    vel[2][0] = 0.0; vel[2][1] = 0.0; vel[2][2] = 0.0;
 	}
-	mixin(codeForGradients("gas.Ttr", "Ttr"));
+	mixin(codeForGradients("gas.T", "T"));
 	// massf
 	size_t nsp = cloud_fs[0].gas.massf.length;
 	if (myConfig.turbulence_model != TurbulenceModel.none ||

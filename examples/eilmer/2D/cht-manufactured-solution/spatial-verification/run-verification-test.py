@@ -49,7 +49,7 @@ def buildRunStr():
     str = "python make_lua_files.py\n"
     str += "e4shared --job=coupled-mms --prep\n"
     str += "e4shared --job=coupled-mms --run --max-cpus=1\n"
-    str += 'e4shared --job=coupled-mms --post --tindx-plot=40 --ref-soln=ref-soln.lua  --norms="Ttr,T" | sed -n -e 8p -e 17p > T-norms.txt\n'
+    str += 'e4shared --job=coupled-mms --post --tindx-plot=40 --ref-soln=ref-soln.lua  --norms="T" | sed -n -e 8p -e 17p > T-norms.txt\n'
     return str
 
 def prepareCases(ncellsList):

@@ -112,7 +112,7 @@ class FicksFirstLaw : MassDiffusion {
 	    foreach (isp; 0 .. _nsp) _D_avg[isp] = alpha/_Le;
 	}
 	else {
-	    computeBinaryDiffCoeffs(fs.gas.Ttr, fs.gas.p);
+	    computeBinaryDiffCoeffs(fs.gas.T, fs.gas.p);
 	    computeAvgDiffCoeffs();
 	}
 	foreach (isp; 0 .. _nsp) {

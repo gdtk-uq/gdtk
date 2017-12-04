@@ -1373,7 +1373,7 @@ public:
 	    }
 	    ghost0.fs.copy_values_from(src_cell.fs);
 	    ghost0.fs.gas.p = p_outside;
-	    ghost0.fs.gas.Ttr = T_outside;
+	    ghost0.fs.gas.T = T_outside;
 	    foreach(ref elem; ghost0.fs.gas.T_modes) { elem = T_outside; } 
 	    gmodel.update_thermo_from_pT(ghost0.fs.gas);
 	} // end foreach face
@@ -1396,13 +1396,13 @@ public:
 		    dest_cell = blk.get_cell(i,j+1,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j+2,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
@@ -1416,13 +1416,13 @@ public:
 		    dest_cell = blk.get_cell(i+1,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i+2,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
@@ -1436,13 +1436,13 @@ public:
 		    dest_cell = blk.get_cell(i,j-1,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; }
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j-2,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end i loop
@@ -1456,13 +1456,13 @@ public:
 		    dest_cell = blk.get_cell(i-1,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i-2,j,k);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
@@ -1476,13 +1476,13 @@ public:
 		    dest_cell = blk.get_cell(i,j,k+1);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k+2);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop
@@ -1496,13 +1496,13 @@ public:
 		    dest_cell = blk.get_cell(i,j,k-1);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; }
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		    dest_cell = blk.get_cell(i,j,k-2);
 		    dest_cell.copy_values_from(src_cell, CopyDataOption.minimal_flow);
 		    dest_cell.fs.gas.p = p_outside;
-		    dest_cell.fs.gas.Ttr = T_outside;
+		    dest_cell.fs.gas.T = T_outside;
 		    foreach(ref elem; dest_cell.fs.gas.T_modes) { elem = T_outside; } 
 		    gmodel.update_thermo_from_pT(dest_cell.fs.gas);
 		} // end j loop

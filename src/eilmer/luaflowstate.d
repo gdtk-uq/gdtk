@@ -136,7 +136,7 @@ The value should be a number.`;
     errMsg = `Error in call to makeFlowStateFromTable.
 A valid pressure value 'T' is not found in arguments.
 The value should be a number.`;
-    double Ttr = getNumberFromTable(L, tblindx, "T", true, double.init, true, errMsg);
+    double T = getNumberFromTable(L, tblindx, "T", true, double.init, true, errMsg);
 
     // Now everything else is optional. If it has been set, then we will 
     // ensure that it can be retrieved correctly, or signal the user.
@@ -156,7 +156,7 @@ The value should be a number.`;
 	    throw new LuaInputException(errMsg);
 	}
     } else {
-	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Ttr; }
+	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= T; }
     }
     lua_pop(L, 1);
     // Values related to velocity.
@@ -222,7 +222,7 @@ The value should be a number.`;
     // Shock detector value.
     int S = getIntegerFromTable(L, tblindx, "S", false, 0, true, format(errMsgTmplt, "S"));
 
-    auto fs = new FlowState(managedGasModel, p, Ttr, T_modes, vel, massf, quality, B,
+    auto fs = new FlowState(managedGasModel, p, T, T_modes, vel, massf, quality, B,
 			    psi, divB, tke, omega, mu_t, k_t, S);
     return fs;
 } // end makeFlowStateFromTable()
@@ -282,7 +282,7 @@ lua_setfield(L, tblIdx, "`~var~`z");`;
 void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gmodel)
 {
     mixin(pushGasVar("p"));
-    mixin(pushGasVar("Ttr", "T"));
+    mixin(pushGasVar("T", "T")); // now same in Lua and Dlang domains, 2017-12-04
     mixin(pushGasVarArray("T_modes"));
     mixin(pushGasVar("u"));
     mixin(pushGasVarArray("u_modes"));
@@ -374,7 +374,7 @@ extern(C) int fromTable(lua_State* L)
     // Look for gas variables: "p" and "quality"
     mixin(checkGasVar("p"));
     mixin(checkGasVar("quality"));
-    mixin(checkGasVar("Ttr", "T")); // not same name in Lua domain
+    mixin(checkGasVar("T", "T")); // now same name in Lua domain
     // Look for a table with mass fraction info
     lua_getfield(L, 2, "massf");
     if ( lua_istable(L, -1) ) {

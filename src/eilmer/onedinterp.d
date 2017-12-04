@@ -264,7 +264,7 @@ public:
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_both_scalar(gL1.p, gL0.p, gR0.p, gR1.p, Lft.gas.p, Rght.gas.p);
-		interp_both_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, gR1.Ttr, Lft.gas.Ttr, Rght.gas.Ttr);
+		interp_both_scalar(gL1.T, gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
 		if (myConfig.allow_reconstruction_for_energy_modes) {
 		    foreach (i; 0 .. nmodes) {
 			interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
@@ -301,7 +301,7 @@ public:
 		break;
 	    case InterpolateOption.rhot: 
 		interp_both_scalar(gL1.rho, gL0.rho, gR0.rho, gR1.rho, Lft.gas.rho, Rght.gas.rho);
-		interp_both_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, gR1.Ttr, Lft.gas.Ttr, Rght.gas.Ttr);
+		interp_both_scalar(gL1.T, gL0.T, gR0.T, gR1.T, Lft.gas.T, Rght.gas.T);
 		if (myConfig.allow_reconstruction_for_energy_modes) {
 		    foreach (i; 0 .. nmodes) {
 			interp_both_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i],
@@ -404,7 +404,7 @@ public:
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_left_scalar(gL1.p, gL0.p, gR0.p, Lft.gas.p);
-		interp_left_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, Lft.gas.Ttr);
+		interp_left_scalar(gL1.T, gL0.T, gR0.T, Lft.gas.T);
 		foreach (i; 0 .. nmodes) {
 		    interp_left_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], Lft.gas.T_modes[i]);
 		}
@@ -425,7 +425,7 @@ public:
 		break;
 	    case InterpolateOption.rhot: 
 		interp_left_scalar(gL1.rho, gL0.rho, gR0.rho, Lft.gas.rho);
-		interp_left_scalar(gL1.Ttr, gL0.Ttr, gR0.Ttr, Lft.gas.Ttr);
+		interp_left_scalar(gL1.T, gL0.T, gR0.T, Lft.gas.T);
 		foreach (i; 0 .. nmodes) {
 		    interp_left_scalar(gL1.T_modes[i], gL0.T_modes[i], gR0.T_modes[i], Lft.gas.T_modes[i]);
 		}
@@ -522,7 +522,7 @@ public:
 	    final switch (myConfig.thermo_interpolator) {
 	    case InterpolateOption.pt: 
 		interp_right_scalar(gL0.p, gR0.p, gR1.p, Rght.gas.p);
-		interp_right_scalar(gL0.Ttr, gR0.Ttr, gR1.Ttr, Rght.gas.Ttr);
+		interp_right_scalar(gL0.T, gR0.T, gR1.T, Rght.gas.T);
 		foreach (i; 0 .. nmodes) {
 		    interp_right_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], Rght.gas.T_modes[i]);
 		}
@@ -543,7 +543,7 @@ public:
 		break;
 	    case InterpolateOption.rhot: 
 		interp_right_scalar(gL0.rho, gR0.rho, gR1.rho, Rght.gas.rho);
-		interp_right_scalar(gL0.Ttr, gR0.Ttr, gR1.Ttr, Rght.gas.Ttr);
+		interp_right_scalar(gL0.T, gR0.T, gR1.T, Rght.gas.T);
 		foreach (i; 0 .. nmodes) {
 		    interp_right_scalar(gL0.T_modes[i], gR0.T_modes[i], gR1.T_modes[i], Rght.gas.T_modes[i]);
 		}

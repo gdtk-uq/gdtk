@@ -99,7 +99,7 @@ void main(){
     writeln("    p2/p1=", s10b.p/s10a.p, " expected ", 0.8430/0.9725);
     //
     writeln("\nFinite wave process along a cplus characteristic, stepping in pressure.");
-    V1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
+    V1 = 0.0; s1.p = 1.0e5; s1.T = 320.0; // ideal air, not high T
     gm.update_sound_speed(s1);
     double Jplus = V1 + 2*s1.a/(1.4-1);
     V2 = finite_wave_dp(s1, V1, "cplus", 60.0e3, s2, gm);
@@ -108,7 +108,7 @@ void main(){
     writeln("    ideal V2=", Jplus - 2*s2.a/(1.4-1));
     //
     writeln("\nFinite wave process along a cplus characteristic, stepping in velocity.");
-    V1 = 0.0; s1.p = 1.0e5; s1.Ttr = 320.0; // ideal air, not high T
+    V1 = 0.0; s1.p = 1.0e5; s1.T = 320.0; // ideal air, not high T
     gm.update_sound_speed(s1);
     Jplus = V1 + 2*s1.a/(1.4-1);
     V2 = finite_wave_dv(s1, V1, "cplus", 125.0, s2, gm);
@@ -118,7 +118,7 @@ void main(){
     //
     double M1 = 1.5;
     writefln("\nOblique-shock demo for M1=%g.", M1);
-    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
     gm.update_thermo_from_pT(s1); 
     gm.update_sound_speed(s1);
     double beta = 45.0 * PI/180.0;
@@ -137,7 +137,7 @@ void main(){
     writeln("    beta2(degrees)=", beta2*180/PI);
     //
     M1 = 1.5;
-    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
     gm.update_thermo_from_pT(s1); 
     gm.update_sound_speed(s1);
     writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
@@ -154,7 +154,7 @@ void main(){
     writeln("    state_c:", state_c);
     //
     M1 = 1.5;
-    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
     gm.update_thermo_from_pT(s1); 
     gm.update_sound_speed(s1);
     writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
@@ -170,7 +170,7 @@ void main(){
     writeln("    state_c:", state_c);
     //
     M1 = 1.8;
-    s1.p = 1.0e5; s1.Ttr = 300.0; // ideal air, not high T
+    s1.p = 1.0e5; s1.T = 300.0; // ideal air, not high T
     gm.update_thermo_from_pT(s1); 
     gm.update_sound_speed(s1);
     writefln("\nTaylor-Maccoll cone flow demo with M1=%g", M1);
