@@ -1344,6 +1344,8 @@ function write_config_file(fileName)
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
 			 tostring(config.include_ghost_cells_in_spatial_deriv_clouds)))
+   f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
+			 tostring(config.suppress_reconstruction_at_boundaries)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
    f:write(string.format('"mass_diffusion_model": "%s",\n',
 			 string.lower(config.mass_diffusion_model)))

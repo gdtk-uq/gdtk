@@ -560,6 +560,9 @@ public:
 	// the viscous-transport and diffusion coefficients.
 	Lft.copy_values_from(cL0.fs);
 	Rght.copy_values_from(cR0.fs);
+	// for some simulations we would like to have the boundaries to remain 1st order
+	if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) return;
+	// else apply higher-order interpolation to all faces
 	if (myConfig.interpolation_order > 1) {
 	    // High-order reconstruction for some properties.
 	    //

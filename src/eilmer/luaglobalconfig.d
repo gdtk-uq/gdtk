@@ -141,6 +141,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_enum_field("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(get_enum_field("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(get_bool_field("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(get_bool_field("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(get_double_field("viscous_factor_increment", "viscous_factor_increment"));
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("viscous_signal_factor", "viscous_signal_factor"));
@@ -287,6 +288,7 @@ extern(C) int configGet(lua_State* L)
     case "spatial_deriv_calc": lua_pushstring(L, spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc).toStringz); break;
     case "spatial_deriv_locn": lua_pushstring(L, spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn).toStringz); break;
     case "include_ghost_cells_in_spatial_deriv_clouds": lua_pushboolean(L, GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds); break;
+    case "suppress_reconstruction_at_boundaries": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_boundaries); break;
     case "viscous_factor_increment": lua_pushnumber(L, GlobalConfig.viscous_factor_increment); break;
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "viscous_signal_factor": lua_pushnumber(L, GlobalConfig.viscous_signal_factor); break;

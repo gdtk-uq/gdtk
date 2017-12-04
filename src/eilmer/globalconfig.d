@@ -396,6 +396,7 @@ final class GlobalConfig {
     shared static SpatialDerivCalc spatial_deriv_calc = SpatialDerivCalc.least_squares;
     shared static SpatialDerivLocn spatial_deriv_locn = SpatialDerivLocn.faces;
     shared static bool include_ghost_cells_in_spatial_deriv_clouds = true;
+    shared static bool suppress_reconstruction_at_boundaries = false;
     //
     // A factor to scale the viscosity in order to achieve a soft start. 
     // The soft-start for viscous effects may be handy for impulsively-started flows.
@@ -567,6 +568,7 @@ public:
     SpatialDerivCalc spatial_deriv_calc;
     SpatialDerivLocn spatial_deriv_locn;
     bool include_ghost_cells_in_spatial_deriv_clouds;
+    bool suppress_reconstruction_at_boundaries;
     double viscous_factor;
     MassDiffusionModel mass_diffusion_model;
     MassDiffusion massDiffusion;
@@ -663,6 +665,8 @@ public:
 	spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
 	include_ghost_cells_in_spatial_deriv_clouds = 
 	    GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
+	suppress_reconstruction_at_boundaries =
+	    GlobalConfig.suppress_reconstruction_at_boundaries;
 	viscous_factor = GlobalConfig.viscous_factor;
 	mass_diffusion_model = GlobalConfig.mass_diffusion_model;
 	constant_lewis_number = GlobalConfig.constant_lewis_number;
@@ -908,6 +912,7 @@ void read_config_file()
     mixin(update_enum("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(update_enum("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(update_bool("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
+    mixin(update_bool("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
@@ -928,6 +933,7 @@ void read_config_file()
 	writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
 	writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
 	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
+	writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
 	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
 	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
 	writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
