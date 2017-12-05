@@ -50,12 +50,7 @@ import onedinterp;
 import lsqinterp;
 import bc;
 
-// EPSILON parameter for numerical differentiation of flux jacobian
-// Value used based on Vanden and Orkwis (1996), AIAA J. 34:6 pp. 1125-1129
-//immutable double EPSILON = 1.0e-4;
-//immutable double MU = 1.0e-4;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
-//immutable bool withFiniteDiffVerification = true;
 
 string adjointDir = "adjoint";
 
@@ -131,6 +126,15 @@ void main(string[] args) {
     auto tindx_list = times_dict.keys;
     auto last_tindx = tindx_list[$-1];
 
+    if ( !GlobalConfig.suppress_reconstruction_at_boundaries ) {
+	writeln("WARNING:");
+	writeln("   suppress_reconstruction_at_boundaries is set to false.");
+	writeln("   This setting must be true when using the adjoint solver.");
+	writeln("   Its use will likely cause errorneous values for boundary fluxes.");
+	writeln("   Continuing with simulation anyway.");
+	writeln("END WARNING.");
+    }
+    
     writefln("Initialising simulation from tindx: %d", last_tindx);
     init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
     
@@ -189,15 +193,11 @@ void main(string[] args) {
 	myblk.ja = [];
     }
     globalJacobianT.ia ~= globalJacobianT.aa.length;
-    foreach(i; 0..gasBlocks[0].cells.length*np) {
-	foreach(j; 0..gasBlocks[0].cells.length*np) {
-	    //if (globalJacobianT[i,j] != 0.0) writeln(i, ", ", j, ", ", globalJacobianT[i,j]);
-	}
-    }
+
     // -----------------------------------------------------
     // 2. Form cost function sensitvity
     // -----------------------------------------------------
-     // Analytically form dJdV by hand differentiation
+    // Analytically form dJdV by hand differentiation
     // cost function is defined as: J(Q) = 0.5*integral[0->l] (p-p*)^2
     double[] dJdV;
     double[] p_target;
@@ -676,15 +676,21 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
     size_t nvertices = blk.vertices.length;
     
     // some data objects used in forming the Jacobian
+    immutable size_t MAX_PERTURBED_INTERFACES = 40; 
+
     FVCell cellOrig; FVCell cellL; FVCell cellR;
-    FVInterface ifaceOrig; FVInterface ifacePp; FVInterface ifacePm;
+    FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
+    FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
+    FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
     double h; double diff;
 
     cellOrig = new FVCell(dedicatedConfig[blk.id]);
-    ifaceOrig = new FVInterface(dedicatedConfig[blk.id], false);
-    ifacePp = new FVInterface(dedicatedConfig[blk.id], false);
-    ifacePm = new FVInterface(dedicatedConfig[blk.id], false);
-
+    foreach(i; 0..MAX_PERTURBED_INTERFACES) {
+	ifaceOrig[i] = new FVInterface(dedicatedConfig[blk.id], false);
+	ifacePp[i] = new FVInterface(dedicatedConfig[blk.id], false);
+	ifacePm[i] = new FVInterface(dedicatedConfig[blk.id], false);
+    }
+	
     foreach(i; 0..np*ncells) {
 	blk.aa ~= [null];
 	blk.ja ~= [null];
@@ -720,7 +726,7 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
 		    }
 		    double JacEntry = volInv * integral;
 		    
-		    if (abs(JacEntry) > 1e-05) {
+		    if (JacEntry != 0.0) {
 			if (ip == 0 && jp == 0) {
 			    //writef("%d ", c.id);
 			    count += 1;
@@ -734,7 +740,7 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
 	}
 	//writef(" total effected cells: %d cell in stencil: %d \n", count, cell.jacobian_stencil.length);
 	// clear the interface flux Jacobian entries
-	foreach (iface; cell.iface) {
+	foreach (iface; cell.jacobian_face_stencil) {
 	    foreach (i; 0..iface.dFdU.length) {
 		foreach (j; 0..iface.dFdU[i].length) {
 		    iface.dFdU[i][j] = 0.0;
@@ -774,22 +780,9 @@ void construct_flow_jacobian_stencils(Block blk) {
 	    pos_array[c.id] = refs_unordered.length-1;
 	    cell_ids ~= c.id;
 
-	    // for the structured grid store face in interfaces stencil
-	    if (blk.grid_type == Grid_t.structured_grid) {
-		SBlock sblk = cast(SBlock) blk;
-		size_t[3] ijk = sblk.cell_id_to_ijk_indices(c.id);
-		size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
-		// add i-interfaces to stencil
-		c.jacobian_ifi_stencil ~= sblk.get_ifi(i, j, k);
-		c.jacobian_ifi_stencil ~= sblk.get_ifi(i+1, j, k);
-		// add j-interfaces to stencil
-		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j+1, k);
-		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j, k);
-	    }
-	    
 	    foreach(f; c.iface) {
-		// for the unstructured grid store face in interfaces stencil
-		if (blk.grid_type == Grid_t.unstructured_grid) c.jacobian_ifi_stencil ~= f;
+		// add face to interfaces stencil
+		c.jacobian_face_stencil ~= f;
 		
 		// store (non-ghost) neighbour cells in cells stencil
 		if (f.left_cell.id != c.id && f.left_cell.id < ghost_cell_start_id) {
@@ -820,7 +813,7 @@ void construct_flow_jacobian_stencils(Block blk) {
 	    FVCell[] refs_unordered;
 	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
 	    size_t[] cell_ids;
-	    
+	    size_t[] face_ids;
 	    if (blk.grid_type == Grid_t.structured_grid) {
 
 		// add cells to stencil
@@ -843,27 +836,28 @@ void construct_flow_jacobian_stencils(Block blk) {
 		cells ~= sblk.get_cell(i, j+1, k);
 		cells ~= sblk.get_cell(i, j+2, k);
 		foreach(cell; cells) {
+		    // add cell to cell stencil
 		    if (cell.id < ghost_cell_start_id) {
 			refs_unordered ~= cell;
 			pos_array[cell.id] = refs_unordered.length-1;
 			cell_ids ~= cell.id;
-		    } else continue;
+		    }
 		}
-
-		// add i-interfaces to stencil
-		c.jacobian_ifi_stencil ~= sblk.get_ifi(i, j, k);
-		c.jacobian_ifi_stencil ~= sblk.get_ifi(i-1, j, k);
-		c.jacobian_ifi_stencil ~= sblk.get_ifi(i+1, j, k);
-		c.jacobian_ifi_stencil ~= sblk.get_ifi(i+2, j, k);
-		// add j-interfaces to stencil
-		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j+1, k);
-		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j+2, k);
-		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j, k);
-		c.jacobian_ifj_stencil ~= sblk.get_ifj(i, j-1, k);
+		cells = [];
+		cells ~= sblk.get_cell(i, j, k);
+		cells ~= sblk.get_cell(i-1, j, k);
+		cells ~= sblk.get_cell(i+1, j, k);
+		cells ~= sblk.get_cell(i, j+1, k);
+		cells ~= sblk.get_cell(i, j-1, k);
+		// add faces to interface stencil
+		foreach(cell; cells) {
+		    foreach(face; cell.iface) {
+			if (face_ids.canFind(face.id) == false && cell.id < ghost_cell_start_id)
+			    c.jacobian_face_stencil ~= face; face_ids ~= face.id;
+		    }
+		}
 	    }
-	    
 	    else { // unstructured grid
-		size_t[] face_ids;
 		foreach(cell; c.cell_cloud) {
 		    foreach(f; cell.iface) {
 			// add cells to stencil
@@ -878,7 +872,8 @@ void construct_flow_jacobian_stencils(Block blk) {
 			    cell_ids ~= f.right_cell.id;
 			}
 			// add faces to stencil
-			if (face_ids.canFind(f.id) == false) c.jacobian_ifi_stencil ~= f;
+			if (face_ids.canFind(f.id) == false)
+			    c.jacobian_face_stencil ~= f; face_ids ~= f.id;
 		    }
 		}
 	    }
@@ -889,6 +884,11 @@ void construct_flow_jacobian_stencils(Block blk) {
 		refs_ordered ~= refs_unordered[pos_array[id]];
 	    }
 	    c.jacobian_cell_stencil ~= refs_ordered;
+	    //writeln("cellID: ", c.id, ", numCellsInStencil: ", c.jacobian_cell_stencil.length, ", numFacesInStencil: ", c.jacobian_face_stencil.length);
+	    //foreach(cell; c.jacobian_cell_stencil) {
+	    //writef(" %d ", cell.id);
+	    //}
+	    //writef("\n");
 	}
     }
 }
@@ -900,7 +900,7 @@ void construct_mesh_jacobian_stencils(Block blk) {
      perturbation in the parent vertex.
      
      NB. we need the stencils in cell id order, so that we can sequentially fill
-     a row in the transposed Jacobian in Compressed Row Storage format.
+     a row in the transposed Jacobian in Compressed Row Storageema format.
      
      ++/
 
@@ -908,10 +908,8 @@ void construct_mesh_jacobian_stencils(Block blk) {
     if (blk.myConfig.interpolation_order < 2) {
 	foreach(i, vtx; blk.vertices) {
 	    FVCell[] cell_refs;
-	    FVInterface[] ifi_refs;
-	    FVInterface[] ifj_refs;
-	    size_t[] ifi_ids;        		    
-	    size_t[] ifj_ids;
+	    FVInterface[] face_refs;
+	    size_t[] face_ids;        		    
 	    foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
 		// add cells to stencil
 		cell_refs ~= blk.cells[cid];
@@ -919,25 +917,20 @@ void construct_mesh_jacobian_stencils(Block blk) {
 		// add faces to stencil
 		if (blk.grid_type == Grid_t.unstructured_grid) {
 		    foreach (face; blk.cells[cid].iface) {
-			if (ifi_ids.canFind(face.id) == false)
-			    ifi_refs ~= face; ifi_ids ~= face.id;
+			if (face_ids.canFind(face.id) == false)
+			    face_refs ~= face; face_ids ~= face.id;
 		    }
 		}
 		else { // structured 
-		    foreach (face; blk.cells[cid].jacobian_ifi_stencil) {
-			if (ifi_ids.canFind(face.id) == false)
-			    ifi_refs ~= face; ifi_ids ~= face.id;
-		    }
-		    foreach (face; blk.cells[cid].jacobian_ifj_stencil) {
-			if (ifj_ids.canFind(face.id) == false)
-			    ifj_refs ~= face; ifj_ids ~= face.id;
+		    foreach (face; blk.cells[cid].jacobian_face_stencil) {
+			if (face_ids.canFind(face.id) == false)
+			    face_refs ~= face; face_ids ~= face.id;
 		    }
 		}
 	    }
 	    // the cells are already in cell id order from cellIndexListPerVertex
 	    vtx.jacobian_cell_stencil ~= cell_refs;
-	    vtx.jacobian_ifi_stencil = ifi_refs;
-	    vtx.jacobian_ifj_stencil = ifj_refs; // for unstructured grids this will be empty
+	    vtx.jacobian_face_stencil ~= face_refs;
 	}
     }
     else { // high-order interpolation
@@ -946,10 +939,8 @@ void construct_mesh_jacobian_stencils(Block blk) {
 	    FVCell[] refs_unordered;
 	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
 	    size_t[] cell_ids;
-	    size_t[] ifi_ids;
-	    size_t[] ifj_ids;
-	    FVInterface[] ifi_refs;
-	    FVInterface[] ifj_refs;
+	    size_t[] face_ids;
+	    FVInterface[] face_refs;
 	    if (blk.grid_type == Grid_t.structured_grid) {
 		SBlock sblk = cast(SBlock) blk;
 		foreach (cid; sblk.cellIndexListPerVertex[vtx.id]) {
@@ -962,13 +953,9 @@ void construct_mesh_jacobian_stencils(Block blk) {
 			} else continue;
 		    }
 		    // add faces to stencil
-		    foreach (face; blk.cells[cid].jacobian_ifi_stencil) {
-			if (ifi_ids.canFind(face.id) == false)
-			    ifi_refs ~= face; ifi_ids ~= face.id;
-		    }
-		    foreach (face; blk.cells[cid].jacobian_ifj_stencil) {
-			if (ifj_ids.canFind(face.id) == false)
-			    ifj_refs ~= face; ifj_ids ~= face.id;
+		    foreach (face; blk.cells[cid].jacobian_face_stencil) {
+			if (face_ids.canFind(face.id) == false)
+			    face_refs ~= face; face_ids ~= face.id;
 		    }
 		}
 	    }
@@ -981,10 +968,12 @@ void construct_mesh_jacobian_stencils(Block blk) {
 			    pos_array[c.id] = refs_unordered.length-1;
 			    cell_ids ~= c.id;
 			}
+		    }
+		    foreach (c; blk.cells[cid].cell_cloud) {
 			// add faces to stencil
 			foreach (face; c.iface) {
-			    if (ifi_ids.canFind(face.id) == false)
-				ifi_refs ~= face; ifi_ids ~= face.id;
+			    if (face_ids.canFind(face.id) == false)
+				face_refs ~= face; face_ids ~= face.id;
 			}
 		    }
 		}
@@ -996,8 +985,7 @@ void construct_mesh_jacobian_stencils(Block blk) {
 		refs_ordered ~= refs_unordered[pos_array[id]];
 	    }
 	    vtx.jacobian_cell_stencil ~= refs_ordered;
-	    vtx.jacobian_ifi_stencil = ifi_refs;
-	    vtx.jacobian_ifj_stencil = ifj_refs; // for unstructured grids this will be empty
+	    vtx.jacobian_face_stencil ~= face_refs;
 	}
     }
 }
@@ -1014,16 +1002,23 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
     
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
-    
+
+
     // some data objects used in forming the Jacobian
+    immutable size_t MAX_PERTURBED_INTERFACES = 40; 
+
     FVCell cellOrig; FVCell cellL; FVCell cellR;
-    FVInterface ifaceOrig; FVInterface ifacePp; FVInterface ifacePm;
+    FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
+    FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
+    FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
     double h; double diff;
 
     cellOrig = new FVCell(dedicatedConfig[blk.id]);
-    ifaceOrig = new FVInterface(dedicatedConfig[blk.id], false);
-    ifacePp = new FVInterface(dedicatedConfig[blk.id], false);
-    ifacePm = new FVInterface(dedicatedConfig[blk.id], false);
+    foreach(i; 0..MAX_PERTURBED_INTERFACES) {
+	ifaceOrig[i] = new FVInterface(dedicatedConfig[blk.id], false);
+	ifacePp[i] = new FVInterface(dedicatedConfig[blk.id], false);
+	ifacePm[i] = new FVInterface(dedicatedConfig[blk.id], false);
+    }
 
     foreach(i; 0..np*ncells) {
 	blk.aa ~= [null];
@@ -1121,113 +1116,113 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
 	    }
 	}
 	// clear the flux Jacobian entries
-	foreach (iface; blk.faceIndexListPerVertex[vtx.id]) {
-	    foreach (i; 0..blk.faces[iface].dFdU.length) {
-		foreach (j; 0..blk.faces[iface].dFdU[i].length) {
-		    blk.faces[iface].dFdU[i][j] = 0.0;
+	foreach (iface;  vtx.jacobian_face_stencil) {
+	    foreach (i; 0..iface.dFdU.length) {
+		foreach (j; 0..iface.dFdU[i].length) {
+		    iface.dFdU[i][j] = 0.0;
 		}
 	    }
 	}
     } // end foreach vtx
 }
 
-void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
+void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_list, FVInterface[] ifaceP_list) {
     /++
      This method computes a perturbed flux at a given interface. 
 
      NB. The accuracy of the adjoint solver is largely dependent on how well this
      routine replicates the flow solver flux update procedures.
      ++/
-    
-    // pre-reconstrucion stage
-    //if (iface.is_on_boundary) { // only apply bc's for cells on boundary
-    blk.applyPreReconAction(0.0, 0, 0);  // assume sim_time = 0.0, gtl = 0, ftl = 0
-    //}
 
+    foreach(iface; iface_list) iface.F.clear_values();
+
+    // currently apply bc's for every cell -- TODO: only update for perturbed boundary cells
+    blk.applyPreReconAction(0.0, 0, 0);  // assume sim_time = 0.0, gtl = 0, ftl = 0
+    
     // Convective flux update
     if (blk.grid_type == Grid_t.structured_grid) {
-	// we need to cast an SBlock here to reach some methods and data
-	SBlock sblk = cast(SBlock) blk;
-	size_t imin = sblk.imin; size_t imax = sblk.imax; size_t jmin = sblk.jmin; size_t jmax = sblk.jmax;
-	foreach(faceIdentity, face; iface.left_cell.iface) { // use of left_cell is arbitrary -- could use right_cell
-	    if (face == iface) {
-		if (faceIdentity == 1 || faceIdentity == 3) { // east-facing faces 
-		    // get iface ijk indices
-		    size_t[3] ijk;
-		    size_t i; size_t j; size_t k; 
-		    if (iface.left_cell.id < ghost_cell_start_id) {
-			ijk = sblk.cell_id_to_ijk_indices(iface.left_cell.id);
-			if (faceIdentity == 1) i = ijk[0]+1;
-			if (faceIdentity == 3) i = ijk[0];
-			j = ijk[1]; k = ijk[2];
-		    }
-		    else {
-			ijk = sblk.cell_id_to_ijk_indices(iface.right_cell.id);
-			if (faceIdentity == 1) i = ijk[0]+1-1;
-			if (faceIdentity == 3) i = ijk[0]-1;
-			j = ijk[1]; k = ijk[2];
-		    }
-		    auto cL0 = sblk.get_cell(i-1,j,k); auto cL1 = sblk.get_cell(i-2,j,k);
-		    auto cR0 = sblk.get_cell(i,j,k); auto cR1 = sblk.get_cell(i+1,j,k);
-		    if ((i == imin) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
+	foreach(iface; iface_list) { 
+	    // we need to cast an SBlock here to reach some methods and data
+	    SBlock sblk = cast(SBlock) blk;
+	    size_t imin = sblk.imin; size_t imax = sblk.imax; size_t jmin = sblk.jmin; size_t jmax = sblk.jmax;
+	    foreach(faceIdentity, face; iface.left_cell.iface) { // use of left_cell is arbitrary -- could use right_cell
+		if (face == iface) {
+		    if (faceIdentity == 1 || faceIdentity == 3) { // east-facing faces 
+			// get iface ijk indices
+			size_t[3] ijk;
+			size_t i; size_t j; size_t k; 
+			if (iface.left_cell.id < ghost_cell_start_id) {
+			    ijk = sblk.cell_id_to_ijk_indices(iface.left_cell.id);
+			    if (faceIdentity == 1) i = ijk[0]+1;
+			    if (faceIdentity == 3) i = ijk[0];
+			    j = ijk[1]; k = ijk[2];
+			}
+			else {
+			    ijk = sblk.cell_id_to_ijk_indices(iface.right_cell.id);
+			    if (faceIdentity == 1) i = ijk[0]+1-1;
+			    if (faceIdentity == 3) i = ijk[0]-1;
+			    j = ijk[1]; k = ijk[2];
+			}
+			auto cL0 = sblk.get_cell(i-1,j,k); auto cL1 = sblk.get_cell(i-2,j,k);
+			auto cR0 = sblk.get_cell(i,j,k); auto cR1 = sblk.get_cell(i+1,j,k);
+			if ((i == imin) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
 			sblk.Lft.copy_values_from(cR0.fs); sblk.Rght.copy_values_from(cR0.fs);
-		    } else if ((i == imin+1) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
-			sblk.one_d.interp_right(iface, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
-		    } else if ((i == imax) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
-			sblk.one_d.interp_left(iface, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, sblk.Lft, sblk.Rght);
-		    } else if ((i == imax+1) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
-			sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
-		    } else { // General symmetric reconstruction.
-			sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
+			} else if ((i == imin+1) && (sblk.bc[Face.west].ghost_cell_data_available == false)) {
+			    sblk.one_d.interp_right(iface, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
+			} else if ((i == imax) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
+			    sblk.one_d.interp_left(iface, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, sblk.Lft, sblk.Rght);
+			} else if ((i == imax+1) && (sblk.bc[Face.east].ghost_cell_data_available == false)) {
+			    sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
+			} else { // General symmetric reconstruction.
+			    sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
+			}
+			iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
+			if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) continue;
+			if ((i == imax+1) && (sblk.bc[Face.east].convective_flux_computed_in_bc == true)) continue;
+			compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
 		    }
-		    iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
-		    if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) continue;
-		    if ((i == imax+1) && (sblk.bc[Face.east].convective_flux_computed_in_bc == true)) continue;
-		    compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
-		}
-		else if (faceIdentity == 0 || faceIdentity == 2) { // north-facing faces 
-		    // get iface ijk indices
-		    size_t[3] ijk;
-		    size_t i; size_t j; size_t k; 
-		    if (iface.left_cell.id < ghost_cell_start_id) {
-			ijk = sblk.cell_id_to_ijk_indices(iface.left_cell.id);
-			if (faceIdentity == 0) j = ijk[1]+1;
-			if (faceIdentity == 2) j = ijk[1];
-			i = ijk[0]; k = ijk[2];
+		    else if (faceIdentity == 0 || faceIdentity == 2) { // north-facing faces 
+			// get iface ijk indices
+			size_t[3] ijk;
+			size_t i; size_t j; size_t k; 
+			if (iface.left_cell.id < ghost_cell_start_id) {
+			    ijk = sblk.cell_id_to_ijk_indices(iface.left_cell.id);
+			    if (faceIdentity == 0) j = ijk[1]+1;
+			    if (faceIdentity == 2) j = ijk[1];
+			    i = ijk[0]; k = ijk[2];
+			}
+			else {
+			    ijk = sblk.cell_id_to_ijk_indices(iface.right_cell.id);
+			    if (faceIdentity == 0) j = ijk[1]+1-1;
+			    if (faceIdentity == 2) j = ijk[1]-1;
+			    i = ijk[0]; k = ijk[2];
+			}
+			auto cL0 = sblk.get_cell(i,j-1,k); auto cL1 = sblk.get_cell(i,j-2,k);
+			auto cR0 = sblk.get_cell(i,j,k); auto cR1 = sblk.get_cell(i,j+1,k);
+			if ((j == jmin) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
+			    sblk.Lft.copy_values_from(cR0.fs); sblk.Rght.copy_values_from(cR0.fs);
+			} else if ((j == jmin+1) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
+			    sblk.one_d.interp_right(iface, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
+			} else if ((j == jmax) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
+			    sblk.one_d.interp_left(iface, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, sblk.Lft, sblk.Rght);
+			} else if ((j == jmax+1) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
+			    sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
+			} else { // General symmetric reconstruction.
+			    sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
+			}
+			iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
+			if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) continue;
+			if ((j == jmax+1) && (sblk.bc[Face.north].convective_flux_computed_in_bc == true)) continue;
+			compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
 		    }
-		    else {
-			ijk = sblk.cell_id_to_ijk_indices(iface.right_cell.id);
-			if (faceIdentity == 0) j = ijk[1]+1-1;
-			if (faceIdentity == 2) j = ijk[1]-1;
-			i = ijk[0]; k = ijk[2];
-		    }
-		    auto cL0 = sblk.get_cell(i,j-1,k); auto cL1 = sblk.get_cell(i,j-2,k);
-		    auto cR0 = sblk.get_cell(i,j,k); auto cR1 = sblk.get_cell(i,j+1,k);
-		    if ((j == jmin) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
-			sblk.Lft.copy_values_from(cR0.fs); sblk.Rght.copy_values_from(cR0.fs);
-		    } else if ((j == jmin+1) && (sblk.bc[Face.south].ghost_cell_data_available == false)) {
-			sblk.one_d.interp_right(iface, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
-		    } else if ((j == jmax) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
-			sblk.one_d.interp_left(iface, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, sblk.Lft, sblk.Rght);
-		    } else if ((j == jmax+1) && (sblk.bc[Face.north].ghost_cell_data_available == false)) {
-			sblk.Lft.copy_values_from(cL0.fs); sblk.Rght.copy_values_from(cL0.fs);
- 		    } else { // General symmetric reconstruction.
- 			sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
- 		    }
-		    iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
-		    if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) continue;
-		    if ((j == jmax+1) && (sblk.bc[Face.north].convective_flux_computed_in_bc == true)) continue;
-		    compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
 		}
 	    }
 	}
     }
     else { // unstructured grid
+	// compute new gradients for all cells in the stencil
 	if (blk.myConfig.interpolation_order > 1) {
-	    FVCell[] cells;
-	    if (iface.left_cell.id < ghost_cell_start_id) cells ~= iface.left_cell;
-	    if (iface.right_cell.id < ghost_cell_start_id) cells ~= iface.right_cell;
-	    foreach (c; cells) {
+	    foreach(c; cell_list) {
 		c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
 		// It is more efficient to determine limiting factor here for some usg limiters.
 		final switch (blk.myConfig.unstructured_limiter) {
@@ -1246,90 +1241,44 @@ void compute_perturbed_flux(Block blk, FVInterface iface, FVInterface ifaceP) {
 		} // end switch
 	    } // end foreach c
 	} // end if interpolation_order > 1
-	/*
-	if (blk.myConfig.interpolation_order > 1) {
-	    // Fill in gradients for ghost cells so that left- and right- cells at all faces,
-	    // including those along block boundaries, have the latest gradient values.
-	    foreach (bcond; blk.bc) {
-		bool found_mapped_cell_bc = false;
-		foreach (gce; bcond.preReconAction) {
-		    if (gce.type == "MappedCellExchangeCopy") {
-			found_mapped_cell_bc = true;
-			// There is a mapped-cell backing the ghost cell, so we can copy its gradients.
-			foreach (i, f; bcond.faces) {
-			    // Only FVCell objects in an unstructured-grid are expected to have
-			    // precomputed gradients.  There will be an initialized reference
-			    // in the FVCell object of a structured-grid block, so we need to
-			    // test and avoid copying from such a reference.
-			    auto mapped_cell_grad = gce.get_mapped_cell(i).gradients;
-			    if (bcond.outsigns[i] == 1) {
-				if (mapped_cell_grad) {
-				    f.right_cell.gradients.copy_values_from(mapped_cell_grad);
-				} else {
-				    // Fall back to looking over the face for suitable gradient data.
-				    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-				}
-			    } else {
-				if (mapped_cell_grad) {
-				    f.left_cell.gradients.copy_values_from(mapped_cell_grad);
-				} else {
-				    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-				}
-			    }
-			} // end foreach f
-		    } // end if gce.type
-		} // end foreach gce
-		if (!found_mapped_cell_bc) {
-		    // There are no other cells backing the ghost cells on this boundary.
-		    // Fill in ghost-cell gradients from the other side of the face.
-		    foreach (i, f; bcond.faces) {
-			if (bcond.outsigns[i] == 1) {
-			    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-			} else {
-			    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-			}
-		    } // end foreach f
-		} // end if !found_mapped_cell_bc
-	    } // end foreach bcond
-	} // end if interpolation_order > 1
-	*/
 
-	if (blk.myConfig.interpolation_order > 1) {
-	    // Fill in gradients for ghost cells so that left- and right- cells at all faces,
-	    // including those along block boundaries, have the latest gradient values.
-	    foreach (bcond; blk.bc) {
-		foreach (i, f; bcond.faces) {
-		    if (bcond.outsigns[i] == 1) {
-			f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-		    } else {
-			f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-		    }
-		} // end foreach f
-	    } // end if !found_mapped_cell_bc
-	} // end foreach bcond
-
-	UBlock ublk = cast(UBlock) blk;
-	ublk.lsq.interp_both(iface, 0, ublk.Lft, ublk.Rght); // gtl assumed 0
-	iface.fs.copy_average_values_from(ublk.Lft, ublk.Rght);
-	compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
-	//throw new Error("adjoint: 2nd order interpolation for unstructured_grid() not yet implemented");
+	// compute flux
+	foreach(iface; iface_list) {
+	    UBlock ublk = cast(UBlock) blk;
+	    ublk.lsq.interp_both(iface, 0, ublk.Lft, ublk.Rght); // gtl assumed 0
+	    iface.fs.copy_average_values_from(ublk.Lft, ublk.Rght);
+	    compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
+	}
     }
-    
-    //if (iface.is_on_boundary) {
+
+    // currently apply bc's for every cell -- TODO: only update for perturbed boundary cells
     blk.applyPostConvFluxAction(0.0, 0, 0); // assume sim_time = 0.0, gtl = 0, ftl = 0
-    //}
 
     if (GlobalConfig.viscous) {
+
+	// currently apply bc's for every cell -- TODO: only update for perturbed boundary cells
 	blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+
+	
 	// only for least-squares at faces
-	iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad); // blk.flow_property_spatial_derivatives(0); 
+	foreach(iface; iface_list) {
+	    iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad); // blk.flow_property_spatial_derivatives(0); 
+	}
+	
 	//blk.estimate_turbulence_viscosity();
-	iface.viscous_flux_calc(); // blk.viscous_flux();
+	foreach(iface; iface_list) {
+	    iface.viscous_flux_calc(); // blk.viscous_flux();
+	}
+	
+	// currently apply bc's for every cell -- TODO: only update for perturbed boundary cells
 	blk.applyPostDiffFluxAction(0.0, 0, 0);
     }
     
     // copy perturbed flux
-    ifaceP.copy_values_from(iface, CopyDataOption.all);
+    foreach(i, iface; iface_list) {
+	ifaceP_list[i].copy_values_from(iface, CopyDataOption.all);
+    }
+    
 }
 
 string computeFluxFlowVariableDerivativesAroundCell(string varName, string posInArray, bool includeThermoUpdate)
@@ -1337,35 +1286,30 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
     string codeStr;
     codeStr ~= "h = (abs(cell.fs."~varName~") + MU) * EPSILON;";
     codeStr ~= "cellOrig.copy_values_from(cell, CopyDataOption.all);";
-    codeStr ~= "foreach(stencilCell; cell.jacobian_cell_stencil) {";
-    codeStr ~= "foreach(iface; stencilCell.iface) {";
-    codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
     // ------------------ negative perturbation ------------------
     codeStr ~= "cell.fs."~varName~" -= h;";
     if ( includeThermoUpdate ) {
 	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
     }
-    codeStr ~= "compute_perturbed_flux(blk, iface, ifacePm);";
-    // ------------------ positive perturbation ------------------
+    codeStr ~= "compute_perturbed_flux(blk, cell.jacobian_cell_stencil, cell.jacobian_face_stencil, ifacePm);"; 
     codeStr ~= "cell.copy_values_from(cellOrig, CopyDataOption.all);";
+    // ------------------ positive perturbation ------------------
     codeStr ~= "cell.fs."~varName~" += h;";
     if ( includeThermoUpdate ) {
 	codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
     }
-    codeStr ~= "compute_perturbed_flux(blk, iface, ifacePp);";
-    // ------------------ compute interface flux derivatives ------------------
-    codeStr ~= "diff = ifacePp.F.mass - ifacePm.F.mass;";
-    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = diff/(2.0*h);";	    
-    codeStr ~= "diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;";
-    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;";
-    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = ifacePp.F.total_energy - ifacePm.F.total_energy;";
-    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
-    // ------------------ restore original values ------------------
-    codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
+    codeStr ~= "compute_perturbed_flux(blk,  cell.jacobian_cell_stencil, cell.jacobian_face_stencil, ifacePp);"; 
     codeStr ~= "cell.copy_values_from(cellOrig, CopyDataOption.all);";
-    codeStr ~= "}";
+    // ------------------ compute interface flux derivatives ------------------
+    codeStr ~= "foreach (i, iface; cell.jacobian_face_stencil) {";
+    codeStr ~= "diff = ifacePp[i].F.mass - ifacePm[i].F.mass;";
+    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = diff/(2.0*h);";	    
+    codeStr ~= "diff = ifacePp[i].F.momentum.x - ifacePm[i].F.momentum.x;";
+    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = diff/(2.0*h);";
+    codeStr ~= "diff = ifacePp[i].F.momentum.y - ifacePm[i].F.momentum.y;";
+    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = diff/(2.0*h);";
+    codeStr ~= "diff = ifacePp[i].F.total_energy - ifacePm[i].F.total_energy;";
+    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
     codeStr ~= "}";
     return codeStr;
 }
@@ -1402,13 +1346,14 @@ string computeInterfaceAreaSensitivity(string varName)
     return codeStr;
 }
 
+
 string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArray)
 {
     string codeStr;
     codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
-    codeStr ~= "foreach (stencilCell; vtx.jacobian_cell_stencil) {";
-    codeStr ~= "foreach (iface; stencilCell.iface) { ";
-    codeStr ~= "ifaceOrig.copy_values_from(iface, CopyDataOption.all);";
+    codeStr ~= "foreach (i, iface; vtx.jacobian_face_stencil) {";
+    codeStr ~= "ifaceOrig[i].copy_values_from(iface, CopyDataOption.all);";
+    codeStr ~= "}";
     // ------------------ negative perturbation ------------------
     codeStr ~= "vtx."~varName~" -= h;";
     codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
@@ -1417,7 +1362,7 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
     codeStr ~= "}";
     codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "compute_perturbed_flux(blk, iface, ifacePm);";
+    codeStr ~= "compute_perturbed_flux(blk, vtx.jacobian_cell_stencil, vtx.jacobian_face_stencil, ifacePm);";
     codeStr ~= "vtx."~varName~" += h;";
     // ------------------ positive perturbation ------------------
     codeStr ~= "vtx."~varName~" += h;";
@@ -1427,18 +1372,19 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
     codeStr ~= "}";
     codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "compute_perturbed_flux(blk, iface, ifacePp);";
+    codeStr ~= "compute_perturbed_flux(blk, vtx.jacobian_cell_stencil, vtx.jacobian_face_stencil, ifacePp);"; 
     codeStr ~= "vtx."~varName~" -= h;";
     // ------------------ compute interface flux derivatives ------------------
-    codeStr ~= "diff = ifacePp.F.mass - ifacePm.F.mass;";
+    codeStr ~= "foreach (i, iface; vtx.jacobian_face_stencil) {";
+    codeStr ~= "diff = ifacePp[i].F.mass - ifacePm[i].F.mass;";
     codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = diff/(2.0*h);";	    
-    codeStr ~= "diff = ifacePp.F.momentum.x - ifacePm.F.momentum.x;";
+    codeStr ~= "diff = ifacePp[i].F.momentum.x - ifacePm[i].F.momentum.x;";
     codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = ifacePp.F.momentum.y - ifacePm.F.momentum.y;";
+    codeStr ~= "diff = ifacePp[i].F.momentum.y - ifacePm[i].F.momentum.y;";
     codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = ifacePp.F.total_energy - ifacePm.F.total_energy;";
+    codeStr ~= "diff = ifacePp[i].F.total_energy - ifacePm[i].F.total_energy;";
     codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "iface.copy_values_from(ifaceOrig, CopyDataOption.all);";
+    codeStr ~= "}";
     // ------------------ restore original values ------------------
     codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "if (blk.grid_type == Grid_t.unstructured_grid) {";
@@ -1446,7 +1392,8 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
     codeStr ~= "}";
     codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "}";
+    codeStr ~= "foreach (i, iface; vtx.jacobian_face_stencil) {";
+    codeStr ~= "iface.copy_values_from(ifaceOrig[i], CopyDataOption.all);";
     codeStr ~= "}";
     return codeStr;
 }

@@ -106,9 +106,7 @@ public:
     // adjoint solver workspace.
     version(adjoint) {
 	FVCell[] jacobian_cell_stencil;
-	// for usg solver we will just use ifi array
-	FVInterface[] jacobian_ifi_stencil;
-	FVInterface[] jacobian_ifj_stencil;
+	FVInterface[] jacobian_face_stencil;
     }
 
 private:

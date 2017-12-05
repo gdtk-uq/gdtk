@@ -32,8 +32,7 @@ public:
     WLSQGradWorkspace ws_grad;
     version(adjoint) {
 	FVCell[] jacobian_cell_stencil;
-	FVInterface[] jacobian_ifi_stencil;
-	FVInterface[] jacobian_ifj_stencil;
+	FVInterface[] jacobian_face_stencil;
     }
     
     this(LocalConfig myConfig,
