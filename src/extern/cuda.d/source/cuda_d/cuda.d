@@ -1874,7 +1874,7 @@ CUresult cuDeviceGet (CUdevice* device, int ordinal);
 
 CUresult cuDeviceGetCount (int* count);
 
-CUresult cuDeviceGetName (char* name, int len, CUdevice dev);
+CUresult cuDeviceGetName (char[64]* name, int len, CUdevice dev);
 
 CUresult cuDeviceTotalMem_v2 (size_t* bytes, CUdevice dev);
 
