@@ -122,6 +122,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("extrema_clipping", "extrema_clipping"));
     mixin(get_bool_field("interpolate_in_local_frame", "interpolate_in_local_frame"));
     mixin(get_enum_field("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
+    mixin(get_bool_field("do_use_extended_stencil", "do_use_extended_stencil"));
     mixin(get_enum_field("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(get_double_field("shear_tolerance", "shear_tolerance"));
     mixin(get_double_field("M_inf", "M_inf"));
@@ -269,6 +270,7 @@ extern(C) int configGet(lua_State* L)
     case "extrema_clipping": lua_pushboolean(L, GlobalConfig.extrema_clipping); break;
     case "interpolate_in_local_frame": lua_pushboolean(L, GlobalConfig.interpolate_in_local_frame); break;
     case "unstructured_limiter": lua_pushstring(L, unstructured_limiter_name(GlobalConfig.unstructured_limiter).toStringz); break;
+    case "do_use_extended_stencil": lua_pushboolean(L, GlobalConfig.do_use_extended_stencil); break;
     case "flux_calculator": lua_pushstring(L, flux_calculator_name(GlobalConfig.flux_calculator).toStringz); break;
     case "shear_tolerance": lua_pushnumber(L, GlobalConfig.shear_tolerance); break;
     case "M_inf": lua_pushnumber(L, GlobalConfig.M_inf); break;

@@ -672,7 +672,7 @@ public:
 	    sigma[2] = sqrt(sigma[2]/n);
 	    min_sig = min(min_sig, sigma[2]);
 	}
-	if (allowCloudToExpand && (min_sig < 0.6*c.L_min)) {
+	if (myConfig.do_use_extended_stencil && allowCloudToExpand && (min_sig < 0.6*c.L_min)) {
 	    // Increase the cloud size by collecting the face neighbours of the nearest-neighbour cloud cells,
 	    // but be careful not to include cells multiple times.
 	    size_t[] cell_cloud_ids;
