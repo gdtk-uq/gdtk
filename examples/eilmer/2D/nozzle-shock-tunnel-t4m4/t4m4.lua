@@ -53,6 +53,10 @@ nsp, nmodes, gm = setGasModel('cea-lut-air.lua')
 print("GasModel set nsp= ", nsp, " nmodes= ", nmodes)
 -- The inflow for the simulation is at the nozzle throat.
 inflow = FlowState:new{p=state6.p, T=state6.T, velx=V6}
+print("Species mass fractions at throat, according to CEA gas model")
+for k, v in pairs(state6.ceaSavedData.massf) do
+   print(string.format("massf[%s] = %g", k, v))
+end
 p_dump = 0.1*state7.p -- something low, relative to the expected exit pressure
 initial = FlowState:new{p=p_dump, T=300.0}
 
