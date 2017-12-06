@@ -252,8 +252,8 @@ function FlowState:fromTable(t)
    -- This function provides compatibility with the old wrapped class
    -- so that user scripts will continue to work.
    my_t = {}
-   for k, v in t do
-      if FlowState_defaults[k] then my_[k] = t[k] end
+   for k, v in pairs(t) do
+      if FlowState_defaults[k] then my_t[k] = v end
    end
    return self:new(my_t)
 end
