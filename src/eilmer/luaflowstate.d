@@ -683,6 +683,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		if (lua_pcall(L, 3, 1, 0) != 0) {
 		    string errMsg = "Error in Lua function call for setting FlowState\n";
 		    errMsg ~= "as a function of postion (x, y, z).\n";
+		    errMsg ~= format("LUA ERROR: %s\n", lua_tostring(L, -1));
 		    luaL_error(L, errMsg.toStringz);
 		}
 		if (lua_istable(L, -1)) {
