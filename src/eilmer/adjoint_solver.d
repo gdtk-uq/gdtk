@@ -126,7 +126,10 @@ void main(string[] args) {
     auto tindx_list = times_dict.keys;
     auto last_tindx = tindx_list[$-1];
 
-    if ( !GlobalConfig.suppress_reconstruction_at_boundaries ) {
+    writefln("Initialising simulation from tindx: %d", last_tindx);
+    init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
+
+    if ( GlobalConfig.suppress_reconstruction_at_boundaries == false) {
 	writeln("WARNING:");
 	writeln("   suppress_reconstruction_at_boundaries is set to false.");
 	writeln("   This setting must be true when using the adjoint solver.");
@@ -134,9 +137,7 @@ void main(string[] args) {
 	writeln("   Continuing with simulation anyway.");
 	writeln("END WARNING.");
     }
-    
-    writefln("Initialising simulation from tindx: %d", last_tindx);
-    init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
+
     
     // save a copy of the original mesh
     foreach (blk; parallel(gasBlocks,1)) {
@@ -193,7 +194,6 @@ void main(string[] args) {
 	myblk.ja = [];
     }
     globalJacobianT.ia ~= globalJacobianT.aa.length;
-
     // -----------------------------------------------------
     // 2. Form cost function sensitvity
     // -----------------------------------------------------
@@ -803,7 +803,6 @@ void construct_flow_jacobian_stencils(Block blk) {
 		refs_ordered ~= refs_unordered[pos_array[id]];
 	    }
 	    c.jacobian_cell_stencil ~= refs_ordered;
-
 	} // end foreach cell
     } // end if interpolation order < 2
     
@@ -1256,6 +1255,11 @@ void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_l
 
     if (GlobalConfig.viscous) {
 
+	// we should have the least-squares weights up to date
+	foreach(iface; iface_list) {
+	    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+	}
+	
 	// currently apply bc's for every cell -- TODO: only update for perturbed boundary cells
 	blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
 
@@ -1264,8 +1268,29 @@ void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_l
 	foreach(iface; iface_list) {
 	    iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad); // blk.flow_property_spatial_derivatives(0); 
 	}
+
+	//writeln("BEFORE");
+	//foreach(cell; cell_list) writeln(cell);
+	// estimate turbulent viscosity
+	final switch (blk.myConfig.turbulence_model) {
+	case TurbulenceModel.none:
+	    foreach (cell; cell_list) cell.turbulence_viscosity_zero();
+	    break;
+	case TurbulenceModel.baldwin_lomax:
+	    throw new FlowSolverException("need to port baldwin_lomax_turbulence_model");
+	case TurbulenceModel.spalart_allmaras:
+	    throw new FlowSolverException("Should implement Spalart-Allmaras some day.");
+	case TurbulenceModel.k_omega:
+	    foreach (cell; cell_list) cell.turbulence_viscosity_k_omega();
+	    break;
+	    
+	}
+	foreach (cell; cell_list) {
+	    cell.turbulence_viscosity_factor(blk.myConfig.transient_mu_t_factor);
+	    cell.turbulence_viscosity_limit(blk.myConfig.max_mu_t_factor);
+	    cell.turbulence_viscosity_zero_if_not_in_zone();
+	}
 	
-	//blk.estimate_turbulence_viscosity();
 	foreach(iface; iface_list) {
 	    iface.viscous_flux_calc(); // blk.viscous_flux();
 	}
