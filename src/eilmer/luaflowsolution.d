@@ -525,6 +525,12 @@ void plottingTableToFlowStateTable(lua_State *L)
     auto managedGasModel = GlobalConfig.gmodel_master;
     auto n_species = managedGasModel.n_species;
     auto n_modes = managedGasModel.n_modes;
+    
+    // 0. Set a type string so that we may later identify this table as
+    // having all the relevant data for making a FlowState object.
+    lua_pushstring(L, toStringz("CellData"));
+    lua_setfield(L, tblIdx, toStringz("myType"));
+    
     // 1. Convert velocities
     lua_getfield(L, tblIdx, "vel.x");
     lua_setfield(L, tblIdx, "velx");

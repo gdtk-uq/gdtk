@@ -34,16 +34,11 @@ import fvcell;
 // to be available in the Lua domain.
 immutable string FlowStateMT = "_FlowState";
 
-// 2017-12-02: We have increased the number of fileds so that the constructor
-// is tolerant of tables passed in from Lua that have been constructed as
-// pure Lua FlowState objects.  Such tables will have more fields than needed
-// to initialize the Dlang FlowState object but they should all be valid.
 immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
 					   "quality", "massf",
 					   "velx", "vely", "velz",
 					   "Bx", "By", "Bz", "psi", "divB",
-					   "tke", "omega", "mu_t", "k_t", "S",
-					   "rho", "a"]; // [TODO] other cell data names
+					   "tke", "omega", "mu_t", "k_t", "S"];
 static const(FlowState)[] flowStateStore;
 
 // Makes it a little more consistent to make this
@@ -104,35 +99,48 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
 
 FlowState makeFlowStateFromTable(lua_State* L, int tblindx)
 {
+    string errMsg;
     auto managedGasModel = GlobalConfig.gmodel_master;
     if (managedGasModel is null) {
-	string errMsg = `Error in call to makeFlowStateFromTable.
+	errMsg = `Error in call to makeFlowStateFromTable.
 It appears that you have not yet set the GasModel.
 Be sure to call setGasModel(fname) before using a FlowState object.`;
 	luaL_error(L, errMsg.toStringz);
     }
     if (!lua_istable(L, tblindx)) {
-	string errMsg = "Error in call to makeFlowStateFromTable. A table is expected as first argument.";
+	errMsg = "Error in call to makeFlowStateFromTable. A table is expected as first argument.";
 	luaL_error(L, errMsg.toStringz);
     }
-    // At this point we have a table at idx=1. Let's check that all
-    // fields in the table are valid.
+    // At this point we have a table at idx=1.
+    //
+    // If we have received a table that happens to be a Lua FlowState or CellData,
+    // we should be able to trust the content of the table and so will not check fields.
+    // Otherwise, we don't trust the table contents and we will check
+    // that all fields in the table are valid.
     bool allFieldsAreValid = true;
-    string errMsg;
-    lua_pushnil(L);
-    while (lua_next(L, tblindx) != 0) {
-	string key = to!string(lua_tostring(L, -2));
-	if ( find(validFlowStateFields, key).empty ) {
-	    allFieldsAreValid = false;
-	    errMsg ~= format("ERROR: '%s' is not a valid input in makeFlowStateFromTable\n", key);
+    lua_getfield(L, tblindx, "myType");
+    string myType = "";
+    if (lua_isstring(L, -1)) {
+	myType = to!string(lua_tostring(L, -1));
+    }
+    lua_pop(L, 1);
+    if (myType != "FlowState" && myType != "CellData") {
+	// Proceed to check all entries.
+	lua_pushnil(L);
+	while (lua_next(L, tblindx) != 0) {
+	    string key = to!string(lua_tostring(L, -2));
+	    if (find(validFlowStateFields, key).empty) {
+		allFieldsAreValid = false;
+		errMsg ~= format("ERROR: '%s' is not a valid input in makeFlowStateFromTable\n", key);
+	    }
+	    lua_pop(L, 1);
 	}
-	lua_pop(L, 1);
     }
     if (!allFieldsAreValid) {
 	luaL_error(L, errMsg.toStringz);
     }
     // Now we are committed to using the first constructor
-    // in class FlowState. So we have to find at least
+    // in class _FlowState. So we have to find at least
     // a pressure and temperature(s).
     errMsg = `Error in call to makeFlowStateFromTable.
 A valid pressure value 'p' is not found in arguments.

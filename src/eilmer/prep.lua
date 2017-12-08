@@ -161,6 +161,9 @@ FlowState = {
 
 function FlowState:new(o)
    o = o or {}
+   -- We limit the names of the entries so that the user does not supply items
+   -- (such as density or energy) thinking that we will be setting the FlowState
+   -- object using those values.
    local flag =  checkAllowedNames(o, {"p", "T", "T_modes", "p_e",
 				       "quality", "massf",
 				       "velx", "vely", "velz",
@@ -188,8 +191,20 @@ function FlowState:new(o)
       FlowState_defaults.T_modes = T_modes
    end
    -- Now, fill in default values for the FlowState object being constructed.
+   -- If an item is not already present, copy the default value into the object,
+   -- being careful to make new tables for massf and T_modes.
    for k, v in pairs(FlowState_defaults) do
-      if o[k] == nil then o[k] = v end -- [TODO] Beware that we need copies of tables!
+      if o[k] == nil then
+	 if k == "massf" then
+	    o.massf = {}
+	    for species, fraction in pairs(v) do o.massf[species] = fraction end
+	 elseif k == "T_modes" then
+	    o.T_modes = {}
+	    for i,temperature in ipairs(v) do o.T_modes[i] = temperature end
+	 else
+	    o[k] = v
+	 end
+      end
    end
    -- On first use, we will not yet have a background gas state object.
    if FlowState.Q == nil then FlowState.Q = GasState:new{FlowState.gm} end
@@ -204,7 +219,7 @@ function FlowState:new(o)
    else
       massf[FlowState.speciesNames[1]] = 1.0
    end
-   Q.massf = massf -- [TODO] does this need to be a copy?
+   Q.massf = massf
    if FlowState.nModes > 0 then
       if o.T_modes == nil then
 	 -- We did not receive any T_modes, assume in equilibrium with T.
@@ -253,7 +268,17 @@ function FlowState:fromTable(t)
    -- so that user scripts will continue to work.
    my_t = {}
    for k, v in pairs(t) do
-      if FlowState_defaults[k] then my_t[k] = v end -- [TODO] do we need to copy tables?
+      if FlowState_defaults[k] then
+	 if k == "massf" then
+	    my_t.massf = {}
+	    for species, fraction in pairs(v) do my_t.massf[species] = fraction end
+	 elseif k == "T_modes" then
+	    my_t.T_modes = {}
+	    for i,temperature in ipairs(v) do my_t.T_modes[i] = temperature end
+	 else
+	    my_t[k] = v
+	 end
+      end
    end
    return self:new(my_t)
 end
