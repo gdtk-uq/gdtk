@@ -43,7 +43,7 @@ immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
 					   "velx", "vely", "velz",
 					   "Bx", "By", "Bz", "psi", "divB",
 					   "tke", "omega", "mu_t", "k_t", "S",
-					   "rho", "a"];
+					   "rho", "a"]; // [TODO] other cell data names
 static const(FlowState)[] flowStateStore;
 
 // Makes it a little more consistent to make this
@@ -56,12 +56,12 @@ FlowState checkFlowState(lua_State* L, int index)
 /** 
  * This function implements our constructor for the Lua interface.
  *
- * Construction of a FlowState object from in Lua will accept:
+ * Construction of a _FlowState object from in Lua will accept:
  * -----------------
- * fs = FlowState:new{p=1.0e5, T=300.0, velx=1000.0, vely=200.0, massf={spName=1.0}}
- * fs = FlowState:new{p=1.0e7, T=300.0}
- * fs = FlowState:new()
- * fs = FlowState:new{}
+ * fs = _FlowState:new{p=1.0e5, T=300.0, velx=1000.0, vely=200.0, massf={spName=1.0}}
+ * fs = _FlowState:new{p=1.0e7, T=300.0}
+ * fs = _FlowState:new()
+ * fs = _FlowState:new{}
  * -----------------
  * Missing velocity components are set to 0.0.
  * Missing mass fraction list is set to {1.0}.
@@ -72,6 +72,12 @@ FlowState checkFlowState(lua_State* L, int index)
  * in flowstate.d
  * The empty constructors forward through to PJ's
  * constructor that accepts a GasModel argument only.
+ *
+ * 2017-12-08 
+ * Note that the user is not expected to use this constructor
+ * directly in their input script, however, we want it available
+ * so that we can call the toJSONString function when writing
+ * the config file.
  */
 extern(C) int newFlowState(lua_State* L)
 {

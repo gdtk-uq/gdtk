@@ -179,7 +179,7 @@ function FlowState:new(o)
       FlowState.nSpecies = nsp
       FlowState.speciesNames = names
       FlowState.nModes = nmodes
-      -- Patch a couple of teh default values, to be consistent with the GasModel
+      -- Patch a couple of the default values, to be consistent with the GasModel
       local massf = {[names[1]]=1.0, }
       for i = 2, nsp do massf[names[i]] = 0.0 end
       FlowState_defaults.massf = massf
@@ -189,7 +189,7 @@ function FlowState:new(o)
    end
    -- Now, fill in default values for the FlowState object being constructed.
    for k, v in pairs(FlowState_defaults) do
-      if o[k] == nil then o[k] = v end
+      if o[k] == nil then o[k] = v end -- [TODO] Beware that we need copies of tables!
    end
    -- On first use, we will not yet have a background gas state object.
    if FlowState.Q == nil then FlowState.Q = GasState:new{FlowState.gm} end
@@ -204,7 +204,7 @@ function FlowState:new(o)
    else
       massf[FlowState.speciesNames[1]] = 1.0
    end
-   Q.massf = massf
+   Q.massf = massf -- [TODO] does this need to be a copy?
    if FlowState.nModes > 0 then
       if o.T_modes == nil then
 	 -- We did not receive any T_modes, assume in equilibrium with T.
@@ -253,7 +253,7 @@ function FlowState:fromTable(t)
    -- so that user scripts will continue to work.
    my_t = {}
    for k, v in pairs(t) do
-      if FlowState_defaults[k] then my_t[k] = v end
+      if FlowState_defaults[k] then my_t[k] = v end -- [TODO] do we need to copy tables?
    end
    return self:new(my_t)
 end
@@ -1495,12 +1495,13 @@ function build_job_files(job)
       end
       local ifs = fluidBlocks[i].initialState
       if type(ifs) == "table" and ifs.myType == "FlowState" then
-	 -- We have one of the pure-Lua FlowState objects.
+	 -- We have one of the pure-Lua FlowState objects and we convert it to
+	 -- a wrapped-D-language _FlowState object.
 	 ifs = _FlowState:new(ifs)
       elseif type(ifs) == "function" then
 	 -- leave alone
       elseif type(ifs) == "userdata" then
-	 -- presume to be a _FlowState object already
+	 -- presume to be a wrapped-D-language _FlowState object already
       else
 	 error("Unexpected type for initial flow state in block.")
       end
