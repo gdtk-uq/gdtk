@@ -391,13 +391,14 @@ void main(string[] args) {
     // ------------------------------------------------------------
     // 4.b construct local mesh Jacobian via Frechet derivatives
     // ------------------------------------------------------------
-
+    writeln("4.b.");
     foreach (myblk; parallel(gasBlocks,1)) {
 	construct_mesh_jacobian(myblk, ndim, np, EPSILON, MU);
     }
     // ------------------------------------------------------------
     // 4.c construct global mesh Jacobian transpose
     // ------------------------------------------------------------
+    writeln("4.c.");
     SMatrix globaldRdXT = new SMatrix();    
     // we must do this in serial
     ia = 0;
@@ -417,6 +418,7 @@ void main(string[] args) {
     // -----------------------------------------------------
     // 5. form dX/dD via finite-differences
     // -----------------------------------------------------
+    writeln("5.");
     double[3] D = [0.07, 0.8, 3.8]; // array of design variables 
     auto D0 = D;
     size_t nvar = D.length; 
@@ -442,7 +444,7 @@ void main(string[] args) {
     // -----------------------------------------------------
     // 7. Compute adjoint gradients
     // -----------------------------------------------------
-
+    
     // temp matrix multiplication
     Matrix tempMatrix;
     tempMatrix = new Matrix(nvar, ncells*np);
@@ -1024,11 +1026,20 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
 	blk.ja ~= [null];
     }
 
+    // perform a flux computation
     blk.clear_fluxes_of_conserved_quantities();
     blk.applyPreReconAction(0.0, 0, 0);
     blk.convective_flux_phase0();
     blk.convective_flux_phase1();
     blk.applyPostConvFluxAction(0.0, 0, 0);
+    if (GlobalConfig.viscous) {
+	blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+	blk.flow_property_spatial_derivatives(0); 
+	blk.estimate_turbulence_viscosity();
+	blk.viscous_flux();
+	blk.applyPostDiffFluxAction(0.0, 0, 0);
+    }
+    
     foreach(vi, vtx; blk.vertices) {
 	// 0th perturbation: x
 	mixin(computeFluxMeshPointDerivativesAroundCell("pos[0].refx", "0"));
@@ -1256,9 +1267,9 @@ void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_l
     if (GlobalConfig.viscous) {
 
 	// we should have the least-squares weights up to date
-	foreach(iface; iface_list) {
-	    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
-	}
+	//foreach(iface; iface_list) {
+	//    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+	//}
 	
 	// currently apply bc's for every cell -- TODO: only update for perturbed boundary cells
 	blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
@@ -1381,22 +1392,12 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "}";
     // ------------------ negative perturbation ------------------
     codeStr ~= "vtx."~varName~" -= h;";
-    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "if (blk.grid_type == Grid_t.unstructured_grid) {";
-    codeStr ~= "UBlock ublk = cast(UBlock) blk;";
-    codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
-    codeStr ~= "}";
-    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "update_geometry(blk, vtx);";
     codeStr ~= "compute_perturbed_flux(blk, vtx.jacobian_cell_stencil, vtx.jacobian_face_stencil, ifacePm);";
     codeStr ~= "vtx."~varName~" += h;";
     // ------------------ positive perturbation ------------------
     codeStr ~= "vtx."~varName~" += h;";
-    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "if (blk.grid_type == Grid_t.unstructured_grid) {";
-    codeStr ~= "UBlock ublk = cast(UBlock) blk;";
-    codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
-    codeStr ~= "}";
-    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "update_geometry(blk, vtx);";
     codeStr ~= "compute_perturbed_flux(blk, vtx.jacobian_cell_stencil, vtx.jacobian_face_stencil, ifacePp);"; 
     codeStr ~= "vtx."~varName~" -= h;";
     // ------------------ compute interface flux derivatives ------------------
@@ -1411,15 +1412,34 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
     codeStr ~= "}";
     // ------------------ restore original values ------------------
-    codeStr ~= "foreach (cid; blk.cellIndexListPerVertex[vtx.id]) blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
-    codeStr ~= "if (blk.grid_type == Grid_t.unstructured_grid) {";
-    codeStr ~= "UBlock ublk = cast(UBlock) blk;";
-    codeStr ~= "foreach (cid; ublk.cellIndexListPerVertex[vtx.id]) ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);";
-    codeStr ~= "}";
-    codeStr ~= "foreach (fid; blk.faceIndexListPerVertex[vtx.id]) blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
+    codeStr ~= "update_geometry(blk, vtx);";
     codeStr ~= "foreach (i, iface; vtx.jacobian_face_stencil) {";
     codeStr ~= "iface.copy_values_from(ifaceOrig[i], CopyDataOption.all);";
     codeStr ~= "}";
     return codeStr;
 }
 
+void update_geometry(Block blk, FVVertex vtx) {
+
+    // update cell geometry
+    foreach (cid; blk.cellIndexListPerVertex[vtx.id])
+	blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+
+    // update face geometry
+    foreach (fid; blk.faceIndexListPerVertex[vtx.id])
+	blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+    
+    // for USG grid, update least-squares weights
+    if (blk.grid_type == Grid_t.unstructured_grid) {
+	UBlock ublk = cast(UBlock) blk;
+	foreach (cid; ublk.cellIndexListPerVertex[vtx.id])
+	    ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);
+    }
+    
+    if (GlobalConfig.viscous) {
+	// we should have the spatial derivatives least-squares weights up to date as well
+	foreach(iface; vtx.jacobian_face_stencil) {
+	    iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
+	}
+    }
+}
