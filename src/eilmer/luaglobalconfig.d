@@ -199,6 +199,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_int_field("njb", "njb"));
     mixin(get_int_field("nkb", "nkb"));
     mixin(get_bool_field("propagate_inflow_data", "propagate_inflow_data"));
+    mixin(get_bool_field("save_intermediate_results", "save_intermediate_results"));
     //
     mixin(get_string_field("udf_source_terms_file", "udf_source_terms_file"));
     mixin(get_bool_field("udf_source_terms", "udf_source_terms"));
@@ -347,6 +348,7 @@ extern(C) int configGet(lua_State* L)
     case "njb": lua_pushnumber(L, GlobalConfig.njb); break;
     case "nkb": lua_pushnumber(L, GlobalConfig.nkb); break;
     case "propagate_inflow_data": lua_pushboolean(L, GlobalConfig.propagate_inflow_data); break;
+    case "save_intermediate_results": lua_pushboolean(L, GlobalConfig.save_intermediate_results); break;
 	//
     case "udf_source_terms_file": lua_pushstring(L, GlobalConfig.udf_source_terms_file.toStringz); break;
     case "udf_source_terms": lua_pushboolean(L, GlobalConfig.udf_source_terms); break;

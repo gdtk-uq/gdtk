@@ -496,6 +496,7 @@ final class GlobalConfig {
     shared static int njb = 1;
     shared static int nkb = 1;
     shared static bool propagate_inflow_data = false;
+    shared static bool save_intermediate_results = false;
 
     // Parameters related to the solid domain and conjugate coupling
     shared static bool udfSolidSourceTerms = false;
@@ -1004,6 +1005,7 @@ void read_config_file()
     mixin(update_int("njb", "njb"));
     mixin(update_int("nkb", "nkb"));
     mixin(update_bool("propagate_inflow_data", "propagate_inflow_data"));
+    mixin(update_bool("save_intermediate_results", "save_intermediate_results"));
     mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
     mixin(update_bool("compute_loads", "compute_loads"));
     if (GlobalConfig.verbosity_level > 1) {
@@ -1016,6 +1018,7 @@ void read_config_file()
 	writeln("  njb: ", GlobalConfig.njb);
 	writeln("  nkb: ", GlobalConfig.nkb);
 	writeln("  propagate_inflow_data: ", GlobalConfig.propagate_inflow_data);
+	writeln("  save_intermediate_results: ", GlobalConfig.save_intermediate_results);
 	writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
 	writeln("  compute_loads: ", GlobalConfig.compute_loads);
     }

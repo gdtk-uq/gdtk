@@ -1420,6 +1420,8 @@ function write_config_file(fileName)
    f:write(string.format('"nkb": %d,\n', config.nkb))
    f:write(string.format('"propagate_inflow_data": %s,\n',
 			 tostring(config.propagate_inflow_data)))
+   f:write(string.format('"save_intermediate_results": %s,\n',
+			 tostring(config.save_intermediate_results)))
    f:write(string.format('"boundary_group_for_loads": "%s",\n',
 			 config.boundary_group_for_loads))
    f:write(string.format('"compute_loads": %s,\n',

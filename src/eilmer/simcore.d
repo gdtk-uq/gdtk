@@ -56,8 +56,6 @@ version (cuda_gpu_chem) {
 
 // State data for simulation.
 // Needs to be seen by all of the coordination functions.
-shared static int current_tindx;
-shared static int current_loads_tindx;
 shared static double sim_time;  // present simulation time, tracked by code
 shared static double[] sim_time_array;
 shared static int step;
@@ -65,19 +63,30 @@ shared static double dt_global;     // simulation time step determined by code
 shared static double dt_allow;      // allowable global time step determined by code
 shared static double[] local_dt_allow; // each block will put its result into this array
 shared static int[] local_invalid_cell_count;
-shared static double t_plot;        // time to write next soln
+
+// We want to write sets of output files periodically.
+// The following periods set the cadence for output.
+shared static double t_plot;
+shared static double t_history;
+shared static double t_loads;
+// Once we write some data to files, we don't want to write another set of files
+// until we have done some more stepping.  The following flags help us remember
+// the state of the solution output.
 shared static bool output_just_written = true;
-shared static double t_history;     // time to write next sample
-shared static double t_loads;     // time to write next loads file
 shared static bool history_just_written = true;
 shared static bool loads_just_written = true;
-
- // For working how long the simulation has been running.
-static SysTime wall_clock_start;
-static int maxWallClockSeconds;
-
+// We connect the sets of files to the simulation time at which they were written
+// with an index that gets incremented each time we write a set of files.
+shared static int current_tindx;
+shared static int current_loads_tindx;
+// Depending on the format of the contained data, grid and solution files will have
+// a particular file extension.
 shared static string gridFileExt = "gz";
 shared static string flowFileExt = "gz";
+
+// For working out how long the simulation has been running.
+static SysTime wall_clock_start;
+static int maxWallClockSeconds;
 
 //----------------------------------------------------------------------------
 
@@ -279,12 +288,35 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     return;
 } // end init_simulation()
 
-void update_times_file()
+void write_solution_files()
 {
+    if (GlobalConfig.verbosity_level > 0) { writeln("Write flow solution."); }
+    current_tindx = current_tindx + 1;
+    ensure_directory_is_present(make_path_name!"flow"(current_tindx));
+    auto job_name = GlobalConfig.base_file_name;
+    foreach (myblk; parallel(gasBlocksBySize,1)) {
+	auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt);
+	myblk.write_solution(file_name, sim_time);
+    }
+    ensure_directory_is_present(make_path_name!"solid"(current_tindx));
+    foreach (ref mySolidBlk; solidBlocks) {
+	auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx, "gz");
+	mySolidBlk.writeSolution(fileName, sim_time);
+    }
+    if (GlobalConfig.grid_motion != GridMotion.none) {
+	ensure_directory_is_present(make_path_name!"grid"(current_tindx));
+	if (GlobalConfig.verbosity_level > 0) { writeln("Write grid"); }
+	foreach (blk; parallel(gasBlocksBySize,1)) {
+	    blk.sync_vertices_to_underlying_grid(0);
+	    auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
+	    blk.write_underlying_grid(fileName);
+	}
+    }
+    // Update times file, connecting the tindx value to sim_time.
     auto writer = appender!string();
     formattedWrite(writer, "%04d %.18e %.18e\n", current_tindx, sim_time, dt_global);
     append(GlobalConfig.base_file_name ~ ".times", writer.data);
-}
+} // end write_solution_files()
 
 void march_over_blocks()
 {
@@ -330,6 +362,12 @@ void march_over_blocks()
 	}
     }
     double time_slice = GlobalConfig.max_time / (nib - 1);
+    // At most, we want to write out a set of solution files, only at the end
+    // of integrating in time for each pair of block-slices.
+    // To be sure that we don't write out lots of solutions,
+    // we force dt_plot to be large enough.
+    GlobalConfig.dt_plot = max(GlobalConfig.dt_plot, time_slice+1.0);
+    // Let's start integrating for the first pair of block slices.
     integrate_in_time(sim_time+time_slice);
     // Now, move along one block in i-direction at a time and do the rest.
     foreach (i; 2 .. nib) {
@@ -348,6 +386,7 @@ void march_over_blocks()
 	}
 	if (GlobalConfig.verbosity_level > 0) { writeln("march over blocks i=", i); }
 	integrate_in_time(sim_time+time_slice);
+	if (GlobalConfig.save_intermediate_results) { write_solution_files(); }
     }
 } // end march_over_blocks()
 
@@ -587,43 +626,21 @@ void integrate_in_time(double target_time_as_requested)
 	}
 
         // 4. (Occasionally) Write out an intermediate solution
-        if ( (sim_time >= t_plot) && !output_just_written ) {
-	    if (GlobalConfig.verbosity_level > 0) { writeln("Write flow solution."); }
-	    current_tindx = current_tindx + 1;
-	    ensure_directory_is_present(make_path_name!"flow"(current_tindx));
-	    auto job_name = GlobalConfig.base_file_name;
-	    foreach (myblk; parallel(gasBlocksBySize,1)) {
-		auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt);
-		myblk.write_solution(file_name, sim_time);
-	    }
-	    ensure_directory_is_present(make_path_name!"solid"(current_tindx));
-	    foreach (ref mySolidBlk; solidBlocks) {
-		auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx, "gz");
-		mySolidBlk.writeSolution(fileName, sim_time);
-	    }
-	    if (GlobalConfig.grid_motion != GridMotion.none) {
-		ensure_directory_is_present(make_path_name!"grid"(current_tindx));
-		if (GlobalConfig.verbosity_level > 0) { writeln("Write grid"); }
-		foreach (blk; parallel(gasBlocksBySize,1)) { 
-		    blk.sync_vertices_to_underlying_grid(0);
-		    auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
-		    blk.write_underlying_grid(fileName);
-		}
-	    }
-	    update_times_file();
+        if ((sim_time >= t_plot) && !output_just_written) {
+	    write_solution_files();
 	    output_just_written = true;
             t_plot = t_plot + GlobalConfig.dt_plot;
 	    GC.collect();
         }
 
         // 4a. (Occasionally) Write out the cell history data and loads on boundary groups data
-        if ( (sim_time >= t_history) && !history_just_written ) {
+        if ((sim_time >= t_history) && !history_just_written) {
 	    write_history_cells_to_files(sim_time);
 	    history_just_written = true;
             t_history = t_history + GlobalConfig.dt_history;
 	    GC.collect();
         }
-	if ( GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written ) {
+	if (GlobalConfig.compute_loads && (sim_time >= t_loads) && !loads_just_written) {
 	    write_boundary_loads_to_file(sim_time, current_loads_tindx);
 	    update_loads_times_file(sim_time, current_loads_tindx);
 	    loads_just_written = true;
@@ -651,15 +668,15 @@ void integrate_in_time(double target_time_as_requested)
 	//    Note that the max_time and max_step control parameters can also
 	//    be found in the control-parameter file (which may be edited
 	//    while the code is running).
-        if ( sim_time >= target_time ) {
+        if (sim_time >= target_time) {
             finished_time_stepping = true;
-            if( GlobalConfig.verbosity_level >= 1)
-		writeln("Integration stopped: reached maximum simulation time.");
+            if(GlobalConfig.verbosity_level >= 1)
+		writefln("Integration stopped: reached target simulation time of %g seconds.", target_time);
         }
         if (step >= GlobalConfig.max_step) {
             finished_time_stepping = true;
             if (GlobalConfig.verbosity_level >= 1)
-		writeln("Integration stopped: reached maximum number of steps.");
+		writefln("Integration stopped: reached maximum number of steps with step=%d.", step);
         }
         if (GlobalConfig.halt_now == 1) {
             finished_time_stepping = true;
@@ -670,7 +687,8 @@ void integrate_in_time(double target_time_as_requested)
 	if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
             finished_time_stepping = true;
             if (GlobalConfig.verbosity_level >= 1)
-		writeln("Integration stopped: reached maximum wall-clock time.");
+		writefln("Integration stopped: reached maximum wall-clock time with elapsed time %s.",
+			 to!string(wall_clock_elapsed));
 	}
     } // end while !finished_time_stepping
 
@@ -681,34 +699,8 @@ void integrate_in_time(double target_time_as_requested)
 void finalize_simulation()
 {
     if (GlobalConfig.verbosity_level > 0) { writeln("Finalize the simulation."); }
-    if (!output_just_written) {
-	if (GlobalConfig.verbosity_level > 0) { writeln("Write flow solution."); }
-	current_tindx = current_tindx + 1;
-	ensure_directory_is_present(make_path_name!"flow"(current_tindx));
-	auto job_name = GlobalConfig.base_file_name;
-	foreach (myblk; parallel(gasBlocksBySize,1)) {
-	    auto file_name = make_file_name!"flow"(job_name, myblk.id, current_tindx, flowFileExt);
-	    myblk.write_solution(file_name, sim_time);
-	}
-	ensure_directory_is_present(make_path_name!"solid"(current_tindx));
-	foreach (ref mySolidBlk; solidBlocks) {
-	    auto fileName = make_file_name!"solid"(job_name, mySolidBlk.id, current_tindx, "gz");
-	    mySolidBlk.writeSolution(fileName, sim_time);
-	}
-	if (GlobalConfig.grid_motion != GridMotion.none) {
-	    ensure_directory_is_present(make_path_name!"grid"(current_tindx));
-	    if (GlobalConfig.verbosity_level > 0) { writeln("Write grid"); }
-	    foreach (blk; parallel(gasBlocksBySize,1)) {
-		blk.sync_vertices_to_underlying_grid(0);
-		auto fileName = make_file_name!"grid"(job_name, blk.id, current_tindx, gridFileExt);
-		blk.write_underlying_grid(fileName);
-	    }
-	}
-	update_times_file();
-    }
-    if (!history_just_written) {
-	write_history_cells_to_files(sim_time);
-    }
+    if (!output_just_written) { write_solution_files(); }
+    if (!history_just_written) { write_history_cells_to_files(sim_time); }
     GC.collect();
     if (GlobalConfig.verbosity_level > 0) { writeln("Step= ", step, " final-t= ", sim_time); }
 } // end finalize_simulation()
