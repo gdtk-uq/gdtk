@@ -1023,6 +1023,8 @@ void read_config_file()
 	writeln("  compute_loads: ", GlobalConfig.compute_loads);
     }
 
+    configCheckPoint4();
+    
     int nhcell = getJSONint(jsonData, "nhcell", 0);
     foreach (i; 0 .. nhcell) {
 	string jsonKey = format("history-cell-%d", i);
@@ -1371,6 +1373,18 @@ void configCheckPoint3()
     return;
 }
 
+void configCheckPoint4()
+{
+    // the adjoint solver shouldn't apply diffuse_bcs_on_init_flag
+    version(adjoint) {
+	if (GlobalConfig.diffuseWallBCsOnInit) {
+	    GlobalConfig.diffuseWallBCsOnInit = false;
+	    writeln("Warning diffuse_bcs_on_init_flag set to false for adjoint solver.");
+	}
+    } 
+    return;
+}
+
 void checkGlobalConfig()
 // Bundle all of the checks together so that they may be conveniently applied
 // at the end of processing the user's Lua input script.
@@ -1378,6 +1392,7 @@ void checkGlobalConfig()
     configCheckPoint1();
     configCheckPoint2();
     configCheckPoint3();
+    configCheckPoint4();
     return;
 }
 
