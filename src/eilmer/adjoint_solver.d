@@ -391,14 +391,12 @@ void main(string[] args) {
     // ------------------------------------------------------------
     // 4.b construct local mesh Jacobian via Frechet derivatives
     // ------------------------------------------------------------
-    writeln("4.b.");
     foreach (myblk; parallel(gasBlocks,1)) {
 	construct_mesh_jacobian(myblk, ndim, np, EPSILON, MU);
     }
     // ------------------------------------------------------------
     // 4.c construct global mesh Jacobian transpose
     // ------------------------------------------------------------
-    writeln("4.c.");
     SMatrix globaldRdXT = new SMatrix();    
     // we must do this in serial
     ia = 0;
@@ -418,7 +416,6 @@ void main(string[] args) {
     // -----------------------------------------------------
     // 5. form dX/dD via finite-differences
     // -----------------------------------------------------
-    writeln("5.");
     double[3] D = [0.07, 0.8, 3.8]; // array of design variables 
     auto D0 = D;
     size_t nvar = D.length; 
