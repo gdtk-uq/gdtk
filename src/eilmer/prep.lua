@@ -252,44 +252,6 @@ function FlowState:new(o)
    return o
 end
 
---[[
--- I had wanted to make the FlowState objects read-only after their construction
--- so I added the following metamethod to prevent the updating of attributes.
--- Unfortunately, this isn't really compatible with Rowan's deepclone function
--- that we use when copying boundary condition lists.
-function FlowState:__newindex(k, v)
-   error("FlowState objects are read-only after construction.", 2)
-end
---]]
-
-function FlowState:fromTable(t)
-   -- Pick out the bits of interest, setting default values as needed.
-   -- This function provides compatibility with the old wrapped class
-   -- so that user scripts will continue to work.
-   my_t = {}
-   for k, v in pairs(t) do
-      if FlowState_defaults[k] then
-	 if k == "massf" then
-	    my_t.massf = {}
-	    for species, fraction in pairs(v) do my_t.massf[species] = fraction end
-	 elseif k == "T_modes" then
-	    my_t.T_modes = {}
-	    for i,temperature in ipairs(v) do my_t.T_modes[i] = temperature end
-	 else
-	    my_t[k] = v
-	 end
-      end
-   end
-   return self:new(my_t)
-end
-
-function FlowState:toTable()
-   -- This Lua object is already a table, so we can just return it.
-   -- This function provides compatibility with the old wrapped class
-   -- so that user scripts will continue to work.
-   return self
-end
-
 function FlowState:toJSONString()
    -- Since writing the JSON data is all about getting the values
    -- into the Dlang domain, we'll just delegate this work to the
@@ -1125,9 +1087,6 @@ end
 
 
 function makeFlowStateFn(flowSol)
-   local gm = getGasModel()
-   local sp = gm:speciesName(0)
-   local dummyFS = FlowState:new{p=1.0e5, T=300, massf={[sp]=1}}
    function flowFn(x, y, z)
       -- We try to find an enclosing cell.
       cell = flowSol:find_enclosing_cell{x=x, y=y, z=z}
@@ -1137,8 +1096,8 @@ function makeFlowStateFn(flowSol)
 	 cell = flowSol:find_nearest_cell_centre{x=x, y=y, z=z}
       end
       cell.fmt = "FlowState"
-      dummyFS:fromTable(flowSol:get_cell_data(cell))
-      return dummyFS
+      -- The table for a cell's data should be enough to set the FlowState.
+      return flowSol:get_cell_data(cell) 
    end
    return flowFn
 end

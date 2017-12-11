@@ -57,12 +57,10 @@ local fsol
 if useOldSoln then
    fsol = FlowSolution:new{jobName=oldSoln_jobName, dir=oldSoln_dir,
 			   tindx=oldSoln_tindx, nBlocks=njb}
-   dummyFS = FlowState:new{p=1.0e5, T=300, massf={N2=1}}
    function initial(x, y, z)
       cell = fsol:find_nearest_cell_centre{x=x, y=y, z=z}
       cell.fmt = "FlowState"
-      dummyFS:fromTable(fsol:get_cell_data(cell))
-      return dummyFS
+      return fsol:get_cell_data(cell)
    end
 else
    initial = inflow

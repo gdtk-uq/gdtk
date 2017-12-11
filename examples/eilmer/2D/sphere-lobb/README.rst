@@ -162,7 +162,7 @@ by using the previous coarser grid solution as an initial condition.
 As mentioned earlier, this is crude, yet still effective, form of
 multi-grid. Eilmer provides two options for setting an initial flow
 conditions: 1) a fixed condition set from a `FlowState` object;
-or 2) a user-provided function that returns a `FlowState` as a function
+or 2) a user-provided function that returns the flow state as a function
 of x, y and z. This second option allows for a spatially-varying
 initial condition. Since using a coarse grid solution is a
 spatially-varying initial condition, we will make use of this second option
@@ -176,22 +176,16 @@ that has been done in the "lobb.lua" file. ::
 
    fsol = FlowSolution:new{jobName='lobb', dir='../stage-1',
 			   tindx=100, nBlocks=4}
-   dummyFS = FlowState:new{p=1.0e5, T=300, massf={N2=1}}
    function initial(x, y, z)
       cell = fsol:find_nearest_cell_centre{x=x, y=y, z=z}
       cell.fmt = "FlowState"
-      dummyFS:fromTable(fsol:get_cell_data(cell))
-      return dummyFS
+      return fsol:get_cell_data(cell)
    end
 
 What we are interested in here is setting up a function of x, y and z
-that returns a `FlowState` each time the function is called. Here that
+that returns the flow state each time the function is called. Here that
 function is called `initial`. This function depends on a `FlowSolution` object
-and a dummy `FlowState` object. The `FlowSolution` object is the real powerhouse
-and we'll begin our discussion with that. The dummy `FlowState` object is included
-as a bit of an efficiency. We'll get to that in a minute.
-
-As mentioned, the `FlowSolution` object is the real workhorse in this procedure.
+which is the real workhorse in this procedure.
 A `FlowSolution` object is initialised based on a job name, a directory where the
 job was run, a particular time index and information about how many blocks in that
 old simulation. The `FlowSolution` object will then pick up the flow data at that
@@ -212,11 +206,13 @@ then starts looping over all cells in the block (it knows where the cells are ba
 grid that has been provided). Each cell has an (x,y,z) coordinate position. Eilmer then
 takes that position and passes it to the user's *fillFunction*. That's why the user's
 function must accept three parameters, *x*, *y*, and *z* (and in that order) because
-this is what eilmer expects. Eilmer also expects are `FlowState` object in return.
+this is what eilmer expects. Eilmer also expects are `FlowState` object or
+equivalent table in return.
 These are the stipulations that eilmer makes. The user is free to do whatever they want
 within their function --- it can be as complex or simple as they like --- so long
 as they play by those rules: accept three arguments *x*, *y* and *z*, return a `FlowState`
-object. We can see then that our `initial` function fits that pattern. We have defined
+object or equivalent.
+We can see then that our `initial` function fits that pattern. We have defined
 `initial` as a function of *x*, *y* and *z*. Then on the first line of the function
 we use those arguments and pass them to the inspection method `find_nearest_cell_center{}`.
 Based on those (x,y,z) coordinates, `find_nearest_cell_centre{}` then searches the flow
@@ -231,30 +227,8 @@ a block index *ib* and a cell index *i*. On the following line, we add to that t
 and cell index, we pass that information to `get_cell_data{}` so that we can get complete
 flow information. That flow information can be returned in various formats. Since we set
 the *fmt* type to "FlowState", we get information back as a table that is ready for use
-in a `FlowState` object. That's what we see in the call to `fromTable`. It says to convert
-the data from a table into a bona fide `FlowState` object. Just to reiterate, here's a hint
-on how to read the line:
+as a `FlowState` object.
 
-dummyFS:fromTable(fsol:get_cell_data(cell))
-
-As is common in object-oriented programming, it's easiest to read from the inside out.
-Starting with the inner most method call, one can read this line as:
-"Get me the cell data from `fsol` in `FlowState` format, and pass this data to the
-`fromTable` method of `dummyFS`. At the end of this chain, `dummyFS` has a new set of
-flow values in place. The last step of our `initial` function is to return that `FlowState`
-object that was part of the contract we made with eilmer when we chose to provide a
-*fillFunction*.
-
-I mentioned that we made an efficiency choice by using a `dummyFS` variable. We'll discuss
-that now. The `initial` function is called many times --- once for each point in the grid.
-If we created a new `FlowState` object at each, it becomes a bit memory hungry because the
-implementation stores all of those constructed `FlowState` objects (even though they are
-temporary objects) until the preparation program is finished. Instead, we choose to recycle
-the dummy `FlowState` object. In the proceeding paragraph, I said that the `FlowState` object
-had its flow values changed *in place*. That is the key to the memory efficiency: we only
-ever use the one `FlowState` object but we change its values over and over again on each call
-to `initial`. This memory saving efficiency is not so critical in 2D grids, but can become the
-difference between make-or-break in 3D grids.
 
 Transfer of grid from coarser simulation to finer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
