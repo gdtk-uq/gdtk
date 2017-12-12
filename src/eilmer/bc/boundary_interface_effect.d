@@ -1411,21 +1411,24 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	double gas_constant = gmodel.R(cell.fs.gas);
 	double recovery = pow(Pr, (1.0/3.0));
 	// Compute tangent velocity at nearest interior point and wall interface
+	double du, vt1_2_angle;
+	double cell_tangent0, cell_tangent1, face_tangent0, face_tangent1;
 	Vector3 cellVel = cell.fs.vel;
 	Vector3 faceVel = IFace.fs.vel;
         cellVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); 
 	faceVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-	double cell_tangent = sqrt( pow(cellVel.y, 2.0) + pow(cellVel.z, 2.0) );
-	double face_tangent = sqrt( pow(faceVel.y, 2.0) + pow(faceVel.z, 2.0) );
-	//TODO 3D formulation (not implemented)
-	//double cell_tangent0 = cellVel.y;
-	//double cell_tangent1 = cellVel.z;
-	//double face_tangent0 = faceVel.y;
-	//double face_tangent1 = faceVel.z;
-	//double vt1_2_angle = atan2(fabs(cellVel.z - faceVel.z), fabs(cellVel.y - faceVel.y));
-	double du = fabs(cell_tangent - face_tangent);
-	//TODO 3D formulation (not implemented)
-	//double du = sqrt( pow((cell_tangent0-face_tangent0),2.0) + pow((cell_tangent1-face_tangent1),2.0) );
+	if ( blk.myConfig.dimensions == 2 ) {
+	    cell_tangent0 = sqrt( pow(cellVel.y, 2.0) + pow(cellVel.z, 2.0) );
+	    face_tangent0 = sqrt( pow(faceVel.y, 2.0) + pow(faceVel.z, 2.0) );
+	    du = fabs(cell_tangent0 - face_tangent0);
+	} else {
+	    cell_tangent0 = cellVel.y;
+	    cell_tangent1 = cellVel.z;
+	    face_tangent0 = faceVel.y;
+	    face_tangent1 = faceVel.z;
+	    vt1_2_angle = atan2(fabs(cellVel.z - faceVel.z), fabs(cellVel.y - faceVel.y));
+	    du = sqrt( pow((cell_tangent0-face_tangent0),2.0) + pow((cell_tangent1-face_tangent1),2.0) );
+	}
 	// Compute wall gas properties from either ...
 	double T_wall, rho_wall;
 	if ( _isFixedTWall ) {
@@ -1521,46 +1524,49 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
 	// Store wall shear stress and heat flux to be used later to replace viscous stress 
 	// in flux calculations. Also, for wall shear stress, transform value back to the
 	// global frame of reference.
-	double reverse_flag = 1.0;
-	if ( face_tangent > cell_tangent ) reverse_flag = -1.0;
-	//TODO 3D formulation (not implemented)
-	//double reverse_flag0 = 1.0;
-	//double reverse_flag1 = 1.0;
-	//if ( face_tangent0  > cell_tangent0 ) reverse_flag0 = -1.0;\
-	//if ( face_tangent1  > cell_tangent1 ) reverse_flag1 = -1.0;
-	double tau_wall_x, tau_wall_y, tau_wall_z;
+	double reverse_flag0 = 1.0; double reverse_flag1 = 1.0;
+	Vector3 local_tau_wall;
+	if ( blk.myConfig.dimensions == 2 ) {
+	    if ( face_tangent0 > cell_tangent0 ) reverse_flag0 = -1.0;
+	} else {
+            if ( face_tangent0 > cell_tangent0 ) reverse_flag0 = -1.0;
+            if ( face_tangent1 > cell_tangent1 ) reverse_flag1 = -1.0;
+	}
 	if ( IFace.bc_id == Face.north || IFace.bc_id == Face.east || IFace.bc_id == Face.top ) {
-	    // TODO 2D formulation (to be integrated with 3D)
-	    IFace.tau_wall_x = -1.0 * reverse_flag * tau_wall * IFace.n.y;
-	    IFace.tau_wall_y = -1.0 * reverse_flag * tau_wall * IFace.n.x;
-	    IFace.tau_wall_z = 0.0;
-	    //TODO 3D formulation (not implemented)
-	    //local_tau_wall_x = 0.0
-	    //local_tau_wall_y = -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle);
-	    //local_tau_wall_z = -1.0 * reverse_flag1 * tau_wall * sin(vt1_2_angle);
+	    if ( blk.myConfig.dimensions == 2 ) {
+		IFace.tau_wall_x = -1.0 * reverse_flag0 * tau_wall * IFace.n.y;
+		IFace.tau_wall_y = -1.0 * reverse_flag0 * tau_wall * IFace.n.x;
+		IFace.tau_wall_z = 0.0;
+	    } else {
+		local_tau_wall = Vector3(0.0, -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle),
+					 -1.0 * reverse_flag1 * tau_wall * sin(vt1_2_angle));
+	    }
 	    if (_isFixedTWall) {
 		IFace.q = -1.0 * q_wall;
 	    } else {
 		IFace.q = 0.0;
 	    }
 	} else { // South, West and Bottom
-	    // 2D formulation (to be integrated with 3D)
-	    IFace.tau_wall_x = reverse_flag * tau_wall * IFace.n.y;
-	    IFace.tau_wall_y = reverse_flag * tau_wall * IFace.n.x;
-            IFace.tau_wall_z = 0.0;
-	    //TODO 3D formulation (not implemented)
-	    //local_tau_wall_x = 0.0
-	    //local_tau_wall_y = reverse_flag0 * tau_wall * cos(vt1_2_angle);
-	    //local_tau_wall_z = reverse_flag1 * tau_wall * sin(vt1_2_angle);
+	    if ( blk.myConfig.dimensions == 2 ) {
+		IFace.tau_wall_x = reverse_flag0 * tau_wall * IFace.n.y;
+		IFace.tau_wall_y = reverse_flag0 * tau_wall * IFace.n.x;
+        	IFace.tau_wall_z = 0.0;
+	    } else {
+		local_tau_wall = Vector3(0.0, reverse_flag0 * tau_wall * cos(vt1_2_angle),
+					 reverse_flag1 * tau_wall * sin(vt1_2_angle));
+	    }
 	    if ( _isFixedTWall ) {
 		IFace.q = q_wall;
             } else {
 		IFace.q = 0.0;
             }
 	}
-	//TODO 3D formulation (not implemented)
-	//IFace.tau.transform_to_global(IFace.n, IFace.t1, IFace.t2);
-	//
+	if ( blk.myConfig.dimensions == 3 ) {
+	    local_tau_wall.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+	    IFace.tau_wall_x = local_tau_wall.x;
+	    IFace.tau_wall_y = local_tau_wall.y;
+	    IFace.tau_wall_z = local_tau_wall.z;
+	}
 	// Turbulence model boundary conditions (Eq 15 & 14)
 	double y_white_y_plus = 2.0 * y_plus_white * kappa*sqrt(Gam)/Q
 		* pow((1.0 - pow(2.0*Gam*u_plus-Beta,2.0)/(Q*Q)), 0.5);
