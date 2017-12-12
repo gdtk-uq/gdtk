@@ -540,7 +540,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			lua_pushnumber(L, pos.z);
 			if (lua_pcall(L, 3, 1, 0) != 0) {
 			    string errMsg = "Error in Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of postion (x, y, z).\n";
+			    errMsg ~= "as a function of position (x, y, z).\n";
 			    luaL_error(L, errMsg.toStringz);
 			}
 			if (lua_istable(L, -1)) {
@@ -550,7 +550,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			}
 			if (!fs) {
 			    string errMsg = "Error in from Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of postion (x, y, z).\n";
+			    errMsg ~= "as a function of position (x, y, z).\n";
 			    errMsg ~= "The returned object is not a proper _FlowState object or table.";
 			    luaL_error(L, errMsg.toStringz);
 			}
@@ -610,7 +610,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			lua_pushnumber(L, pos.z);
 			if (lua_pcall(L, 3, 1, 0) != 0) {
 			    string errMsg = "Error in Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of postion (x, y, z).\n";
+			    errMsg ~= "as a function of position (x, y, z).\n";
 			    luaL_error(L, errMsg.toStringz);
 			}
 			if (lua_istable(L, -1)) {
@@ -620,7 +620,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
 			}
 			if (!fs) {
 			    string errMsg = "Error in from Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of postion (x, y, z).\n";
+			    errMsg ~= "as a function of position (x, y, z).\n";
 			    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
 			    luaL_error(L, errMsg.toStringz);
 			}
@@ -696,7 +696,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		lua_pushnumber(L, pos.z);
 		if (lua_pcall(L, 3, 1, 0) != 0) {
 		    string errMsg = "Error in Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of postion (x, y, z).\n";
+		    errMsg ~= "as a function of position (x, y, z).\n";
 		    errMsg ~= format("LUA ERROR: %s\n", lua_tostring(L, -1));
 		    luaL_error(L, errMsg.toStringz);
 		}
@@ -707,7 +707,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		}
 		if (!fs) {
 		    string errMsg = "Error in from Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of postion (x, y, z).\n";
+		    errMsg ~= "as a function of position (x, y, z).\n";
 		    errMsg ~= "The returned object is not a proper _FlowState object or a suitable table.";
 		    luaL_error(L, errMsg.toStringz);
 		}
@@ -749,7 +749,8 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		lua_pushnumber(L, pos.z);
 		if (lua_pcall(L, 3, 1, 0) != 0) {
 		    string errMsg = "Error in Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of postion (x, y, z).\n";
+		    errMsg ~= "as a function of position (x, y, z).\n";
+		    errMsg ~= format("LUA ERROR: %s\n", lua_tostring(L, -1));
 		    luaL_error(L, errMsg.toStringz);
 		}
 		if (lua_istable(L, -1)) {
@@ -759,7 +760,7 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
 		}
 		if (!fs) {
 		    string errMsg = "Error in from Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of postion (x, y, z).\n";
+		    errMsg ~= "as a function of position (x, y, z).\n";
 		    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
 		    luaL_error(L, errMsg.toStringz);
 		}
