@@ -453,7 +453,13 @@ public:
 	    writeln("  universe-blk-id= ", myConfig.universe_blk_id, " cell-id= ", id);
 	    writeln("  x= ", pos[gtl].x, " y= ", pos[gtl].y, " z= ", pos[gtl].z);
 	    writeln("  gas= ", fs.gas);
-	    writeln("  U= ", myU);
+	    writeln("  ftl= ", ftl, " (flow-time-level)");
+	    writeln("  U[ftl]= ", myU);
+	    writeln("  U[0]= ", U[0]);
+	    writeln("  interfaces:", iface.length);
+	    foreach(i, f; iface) {
+		writeln("    iface[", i, "]= ", f);
+	    }
 	    throw new FlowSolverException("Bad cell, give up.");
 	}
 	double rho = myU.mass;
