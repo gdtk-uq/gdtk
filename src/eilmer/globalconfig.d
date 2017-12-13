@@ -1097,6 +1097,7 @@ void read_config_file()
 	    break;
 	case "unstructured_grid":
 	    gasBlocks ~= new UBlock(i, jsonDataForBlock);
+	    dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
 	    break;
 	default:
 	    throw new Error(format("Construction of fluidblock[%d], unknown grid type: %s",

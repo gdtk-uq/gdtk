@@ -1037,7 +1037,7 @@ public:
 	}
 	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
 			     !myConfig.separate_update_for_k_omega_source);
-	// [TODO] scale factor to turn this component down/off.
+	// [TODO] Think about scale factor to turn this component down/off.
 	if (with_k_omega) { signal = fmax(signal, 1.0*fs.omega); }
 	//
 	return signal;
