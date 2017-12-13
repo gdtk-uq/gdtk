@@ -1,4 +1,4 @@
-# mms-ns-least-sq.test
+# mms-ns-least-sq-at-faces.test
 #
 # Run the method of manufactured solutions test case to exercise
 # various options in the code. These cases are all run on a single
@@ -38,7 +38,7 @@ test number-of-steps {Iteration of the final block in a certain number of steps.
 	    set final_steps [lindex [split $line] 1]
 	}
     }
-    expr abs($final_steps - 1678) < 3
+    expr abs($final_steps - 1562) < 3
 } -result {1}
 
 test computed-norms {Check the density norms.} -body {
