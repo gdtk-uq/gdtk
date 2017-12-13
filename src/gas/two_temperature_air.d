@@ -6,7 +6,7 @@
 
 module gas.two_temperature_air;
 
-import std.math;
+import std.math : fabs, sqrt;
 import std.conv;
 import std.stdio;
 import std.string;
@@ -22,74 +22,8 @@ static bool[string] molecularSpecies;
 static double[string] del_hf;
 static double[7][5][string] thermoCoeffs;
 
-static this()
-{
-    molecularSpecies["N2"] = true;
-    molecularSpecies["O2"] = true;
-    molecularSpecies["NO"] = true;
-    molecularSpecies["N2+"] = true;
-    molecularSpecies["O2+"] = true;
-    molecularSpecies["NO+"] = true;
-
-    /**
-     * See Table B1 in Gupta et al.
-     */
-    del_hf["N"]   = 112.973*4184;
-    del_hf["O"]   = 59.553*4184;
-    del_hf["N2"]  = 0.0;
-    del_hf["O2"]  = 0.0;
-    del_hf["NO"]  = 21.580*4184;
-    del_hf["N+"]  = 449.840*4184;
-    del_hf["O+"]  = 374.949*4184;
-    del_hf["N2+"] = 360.779*4184;
-    del_hf["O2+"] = 279.849*4184;
-    del_hf["e-"]  =  0.0;
-
-    thermoCoeffs["N2"] = 
-	[
-	 [  0.36748e+01, -0.12081e-02,  0.23240e-05, -0.63218e-09, -0.22577e-12, -0.10430e+04,  0.23580e+01 ], // 300 -- 1000 K
-	 [  0.32125e+01,  0.10137e-02, -0.30467e-06,  0.41091e-10, -0.20170e-14, -0.10430e+04,  0.43661e+01 ], // 1000 -- 6000 K
-	 [  0.31811e+01,  0.89745e-03, -0.20216e-06,  0.18266e-10, -0.50334e-15, -0.10430e+04,  0.46264e+01 ], // 6000 -- 15000 K
-	 [  0.96377e+01, -0.25728e-02,  0.33020e-06, -0.14315e-10,  0.20333e-15, -0.10430e+04, -0.37587e+02 ], // 15000 -- 25000 K
-	 [ -0.51681e+01,  0.23337e-02, -0.12953e-06,  0.27872e-11, -0.21360e-16, -0.10430e+04,  0.66217e+02 ] // 25000 -- 30000 K
-	 ];
-
-    thermoCoeffs["O2"] = 
-	[
-	 [  0.36146e+01, -0.18598e-02,  0.70814e-05, -0.68070e-08,  0.21628e-11, -0.10440e+04,  0.43628e+01 ], // 300 -- 1000 K
-	 [  0.35949e+01,  0.75213e-03, -0.18732e-06,  0.27913e-10, -0.15774e-14, -0.10440e+04,  0.38353e+01 ], // 1000 -- 6000 K
-	 [  0.38599e+01,  0.32510e-03, -0.92131e-08, -0.78684e-12,  0.29426e-16, -0.10440e+04,  0.23789e+01 ], // 6000 -- 15000 K
-	 [  0.34867e+01,  0.52384e-03, -0.39123e-07,  0.10094e-11, -0.88718e-17, -0.10440e+04,  0.48179e+01 ], // 15000 -- 25000 K
-	 [  0.39620e+01,  0.39446e-03, -0.29506e-07,  0.73975e-12, -0.64209e-17, -0.10440e+04,  0.13985e+01 ]
-	 ];
-
-    thermoCoeffs["N"] = 
-	[
-	 [  0.25031e+01, -0.21800e-04,  0.54205e-07, -0.56476e-10,  0.20999e-13,  0.56130e+05,  0.41676e+01 ], // 300 -- 1000 K
-	 [  0.24820e+01,  0.69258e-04, -0.63065e-07,  0.18387e-10, -0.11747e-14,  0.56130e+05,  0.42618e+01 ], // 1000 -- 6000 K
-	 [  0.27480e+01, -0.39090e-03,  0.13380e-06, -0.11910e-10,  0.33690e-15,  0.56130e+05,  0.28720e+01 ], // 6000 -- 15000 K
-	 [ -0.12280e+01,  0.19268e-02, -0.24370e-06,  0.12193e-10, -0.19918e-15,  0.56130e+05,  0.28469e+02 ], // 15000 -- 25000 K
-	 [  0.15520e+02, -0.38858e-02,  0.32288e-06, -0.96053e-11,  0.95472e-16,  0.56130e+05, -0.88120e+02 ]  // 25000 -- 30000 K
-	 ];
-
-    thermoCoeffs["O"] = 
-	[
-	 [  0.28236e+01, -0.89478e-03,  0.83060e-06, -0.16837e-09, -0.73205e-13,  0.29150e+05,  0.35027e+01 ], // 300 -- 1000 K
-	 [  0.25421e+01, -0.27551e-04, -0.31028e-08,  0.45511e-11, -0.43681e-15,  0.29150e+05,  0.49203e+01 ], // 1000 -- 6000 K
-	 [  0.25460e+01, -0.59520e-04,  0.27010e-07, -0.27980e-11,  0.93800e-16,  0.29150e+05,  0.50490e+01 ], // 6000 -- 15000 K
-	 [ -0.97871e-02,  0.12450e-02, -0.16154e-06,  0.80380e-11, -0.12624e-15,  0.29150e+05,  0.21711e+02 ], // 15000 -- 25000 K
-	 [  0.16428e+02, -0.39313e-02,  0.29840e-06, -0.81613e-11,  0.75004e-16,  0.29150e+05, -0.94358e+02 ], // 25000 -- 30000 K
-	 ];
-	
-    thermoCoeffs["NO"] =
-	[
-	 [  0.35887e+01, -0.12479e-02,  0.39786e-05, -0.28651e-08,  0.63015e-12,  0.97640e+04,  0.51497e+01 ], // 300 -- 1000 K
-	 [  0.32047e+01,  0.12705e-02, -0.46603e-06,  0.75007e-10, -0.42314e-14,  0.97640e+04,  0.66867e+01 ], // 1000 -- 6000 K
-	 [  0.38543e+01,  0.23409e-03, -0.21354e-07,  0.16689e-11, -0.49070e-16,  0.97640e+04,  0.31541e+01 ], // 6000 -- 15000 K
-	 [  0.43309e+01, -0.58086e-04,  0.28059e-07, -0.15694e-11,  0.24104e-16,  0.97640e+04,  0.10735e+00 ], // 15000 -- 25000 K
-	 [  0.23507e+01,  0.58643e-03, -0.31316e-07,  0.60495e-12, -0.40557e-17,  0.97640e+04,  0.14026e+02 ], // 25000 -- 30000 K
-	 ];
-}
+// For table parameters see end of file.
+// They are declared in the static this() function.
 
 class TwoTemperatureAir : GasModel {
 public:
@@ -109,6 +43,8 @@ public:
 	    create_species_reverse_lookup();
 	    break;
 	case "7-species":
+	    throw new Error("Two temperature air not available presently with 7 species.");
+	    /*
 	    _n_species = 7;
 	    _n_modes = 1;
 	    _species_names.length = 7;
@@ -122,7 +58,10 @@ public:
 	    _species_names[6] = "e-"; _mol_masses[6] = 0.000548579903e-3;
 	    create_species_reverse_lookup();
 	    break;
+	    */
 	case "11-species":
+	    throw new Error("Two temperature air not available presently with 11 species.");
+	    /*
 	    _n_species = 11;
 	    _n_modes = 1;
 	    _species_names.length = 11;
@@ -140,6 +79,7 @@ public:
 	    _species_names[10] = "e-"; _mol_masses[10] = 0.000548579903e-3;
 	    create_species_reverse_lookup();
 	    break;
+	    */
 	default:
 	    string errMsg = format("The model name '%s' is not a valid selection for the two-temperature air model.", model);
 	    throw new Error(errMsg);
@@ -175,6 +115,9 @@ public:
 
     override void update_thermo_from_pT(GasState Q)
     {
+	// ----- TESTING ------
+	Q.T_modes[0] = Q.T;
+	// ----- END TESTING -----
 	_pgMixEOS.update_density(Q);
 	Q.u = transRotEnergy(Q);
 	Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
@@ -203,6 +146,9 @@ public:
 
     override void update_thermo_from_rhoT(GasState Q)
     {
+	// ----- TESTING ------
+	Q.T_modes[0] = Q.T;
+	// ----- END TESTING -----
 	_pgMixEOS.update_pressure(Q);
 	Q.u = transRotEnergy(Q);
 	Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
@@ -229,26 +175,43 @@ public:
 
     override void update_sound_speed(GasState Q)
     {
-	
-	
+	// We compute the frozen sound speed based on an effective gamma
+	double R = gas_constant(Q);
+	Q.a = sqrt(gamma(Q)*R*Q.T);
     }
 
     override void update_trans_coeffs(GasState Q)
     {
-
+	throw new GasModelException("update_trans_coeffs not implemented in TwoTemperatureAir.");
     }
 
     override double dudT_const_v(in GasState Q)
     {
-	return 0.0;
+	double Cv = 0.0;
+	double Cv_tr_rot, Cv_vib;
+	foreach (isp; 0 .. _n_species) {
+	    Cv_tr_rot = transRotSpecHeatConstV(isp);
+	    Cv_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
+	    Cv += Q.massf[isp] * (Cv_tr_rot + Cv_vib);
+	} 
+	return Cv;
     }
     override double dhdT_const_p(in GasState Q)
     {
-	return 0.0;
+	// Using the fact that internal structure specific heats
+	// are equal, that is, Cp_vib = Cv_vib
+	double Cp = 0.0;
+	double Cp_vib;
+	foreach (isp; 0 .. _n_species) {
+	    Cp_vib = vibSpecHeatConstV(Q.T_modes[0], isp);
+	    Cp += Q.massf[isp] * (_Cp_tr_rot[isp] + Cp_vib);
+	}
+	return Cp;
     }
     override double dpdrho_const_T(in GasState Q)
     {
-	return 0.0;
+	double R = gas_constant(Q);
+	return R * Q.T;
     }
     override double gas_constant(in GasState Q)
     {
@@ -260,7 +223,9 @@ public:
     }
     override double enthalpy(in GasState Q)
     {
-	return 0.0;
+	double e = transRotEnergy(Q) + vibEnergy(Q, Q.T_modes[0]);
+	double h = e + Q.p/Q.rho;
+	return h;
     }
     override double entropy(in GasState Q)
     {
@@ -420,6 +385,20 @@ private:
 	return Cv_vib;
     }
 
+    double transRotSpecHeatConstV(int isp)
+    {
+	return _Cp_tr_rot[isp] - _R[isp];
+    }
+
+    double transRotSpecHeatConstV(in GasState Q)
+    {
+	double Cv = 0.0;
+	foreach (isp; 0 .. _n_species) {
+	    Cv += Q.massf[isp]*transRotSpecHeatConstV(isp);
+	}
+	return Cv;
+    }
+
     double vibTemperature(in GasState Q)
     {
 	int MAX_ITERATIONS = 20;
@@ -463,4 +442,76 @@ private:
     }
 
 }
+
+
+
+static this()
+{
+    molecularSpecies["N2"] = true;
+    molecularSpecies["O2"] = true;
+    molecularSpecies["NO"] = true;
+    molecularSpecies["N2+"] = true;
+    molecularSpecies["O2+"] = true;
+    molecularSpecies["NO+"] = true;
+
+    /**
+     * See Table B1 in Gupta et al.
+     */
+    del_hf["N"]   = 112.973*4184;
+    del_hf["O"]   = 59.553*4184;
+    del_hf["N2"]  = 0.0;
+    del_hf["O2"]  = 0.0;
+    del_hf["NO"]  = 21.580*4184;
+    del_hf["N+"]  = 449.840*4184;
+    del_hf["O+"]  = 374.949*4184;
+    del_hf["N2+"] = 360.779*4184;
+    del_hf["O2+"] = 279.849*4184;
+    del_hf["e-"]  =  0.0;
+
+    thermoCoeffs["N2"] = 
+	[
+	 [  0.36748e+01, -0.12081e-02,  0.23240e-05, -0.63218e-09, -0.22577e-12, -0.10430e+04,  0.23580e+01 ], // 300 -- 1000 K
+	 [  0.32125e+01,  0.10137e-02, -0.30467e-06,  0.41091e-10, -0.20170e-14, -0.10430e+04,  0.43661e+01 ], // 1000 -- 6000 K
+	 [  0.31811e+01,  0.89745e-03, -0.20216e-06,  0.18266e-10, -0.50334e-15, -0.10430e+04,  0.46264e+01 ], // 6000 -- 15000 K
+	 [  0.96377e+01, -0.25728e-02,  0.33020e-06, -0.14315e-10,  0.20333e-15, -0.10430e+04, -0.37587e+02 ], // 15000 -- 25000 K
+	 [ -0.51681e+01,  0.23337e-02, -0.12953e-06,  0.27872e-11, -0.21360e-16, -0.10430e+04,  0.66217e+02 ] // 25000 -- 30000 K
+	 ];
+
+    thermoCoeffs["O2"] = 
+	[
+	 [  0.36146e+01, -0.18598e-02,  0.70814e-05, -0.68070e-08,  0.21628e-11, -0.10440e+04,  0.43628e+01 ], // 300 -- 1000 K
+	 [  0.35949e+01,  0.75213e-03, -0.18732e-06,  0.27913e-10, -0.15774e-14, -0.10440e+04,  0.38353e+01 ], // 1000 -- 6000 K
+	 [  0.38599e+01,  0.32510e-03, -0.92131e-08, -0.78684e-12,  0.29426e-16, -0.10440e+04,  0.23789e+01 ], // 6000 -- 15000 K
+	 [  0.34867e+01,  0.52384e-03, -0.39123e-07,  0.10094e-11, -0.88718e-17, -0.10440e+04,  0.48179e+01 ], // 15000 -- 25000 K
+	 [  0.39620e+01,  0.39446e-03, -0.29506e-07,  0.73975e-12, -0.64209e-17, -0.10440e+04,  0.13985e+01 ]
+	 ];
+
+    thermoCoeffs["N"] = 
+	[
+	 [  0.25031e+01, -0.21800e-04,  0.54205e-07, -0.56476e-10,  0.20999e-13,  0.56130e+05,  0.41676e+01 ], // 300 -- 1000 K
+	 [  0.24820e+01,  0.69258e-04, -0.63065e-07,  0.18387e-10, -0.11747e-14,  0.56130e+05,  0.42618e+01 ], // 1000 -- 6000 K
+	 [  0.27480e+01, -0.39090e-03,  0.13380e-06, -0.11910e-10,  0.33690e-15,  0.56130e+05,  0.28720e+01 ], // 6000 -- 15000 K
+	 [ -0.12280e+01,  0.19268e-02, -0.24370e-06,  0.12193e-10, -0.19918e-15,  0.56130e+05,  0.28469e+02 ], // 15000 -- 25000 K
+	 [  0.15520e+02, -0.38858e-02,  0.32288e-06, -0.96053e-11,  0.95472e-16,  0.56130e+05, -0.88120e+02 ]  // 25000 -- 30000 K
+	 ];
+
+    thermoCoeffs["O"] = 
+	[
+	 [  0.28236e+01, -0.89478e-03,  0.83060e-06, -0.16837e-09, -0.73205e-13,  0.29150e+05,  0.35027e+01 ], // 300 -- 1000 K
+	 [  0.25421e+01, -0.27551e-04, -0.31028e-08,  0.45511e-11, -0.43681e-15,  0.29150e+05,  0.49203e+01 ], // 1000 -- 6000 K
+	 [  0.25460e+01, -0.59520e-04,  0.27010e-07, -0.27980e-11,  0.93800e-16,  0.29150e+05,  0.50490e+01 ], // 6000 -- 15000 K
+	 [ -0.97871e-02,  0.12450e-02, -0.16154e-06,  0.80380e-11, -0.12624e-15,  0.29150e+05,  0.21711e+02 ], // 15000 -- 25000 K
+	 [  0.16428e+02, -0.39313e-02,  0.29840e-06, -0.81613e-11,  0.75004e-16,  0.29150e+05, -0.94358e+02 ], // 25000 -- 30000 K
+	 ];
+	
+    thermoCoeffs["NO"] =
+	[
+	 [  0.35887e+01, -0.12479e-02,  0.39786e-05, -0.28651e-08,  0.63015e-12,  0.97640e+04,  0.51497e+01 ], // 300 -- 1000 K
+	 [  0.32047e+01,  0.12705e-02, -0.46603e-06,  0.75007e-10, -0.42314e-14,  0.97640e+04,  0.66867e+01 ], // 1000 -- 6000 K
+	 [  0.38543e+01,  0.23409e-03, -0.21354e-07,  0.16689e-11, -0.49070e-16,  0.97640e+04,  0.31541e+01 ], // 6000 -- 15000 K
+	 [  0.43309e+01, -0.58086e-04,  0.28059e-07, -0.15694e-11,  0.24104e-16,  0.97640e+04,  0.10735e+00 ], // 15000 -- 25000 K
+	 [  0.23507e+01,  0.58643e-03, -0.31316e-07,  0.60495e-12, -0.40557e-17,  0.97640e+04,  0.14026e+02 ], // 25000 -- 30000 K
+	 ];
+}
+
 
