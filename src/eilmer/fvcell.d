@@ -983,121 +983,63 @@ public:
     } // end thermochemical_increment()
 
     double signal_frequency()
-    // [TODO] unstructured-grid adaption to be done.
-    // The current direction-by-direction checking assumes a structured grid.
-    // For the moment, things should work OK for an unstructured grid if 
-    // the stringent_cfl is true.
+    // Remember to use stringent_cfl=true for unstructured-grid.
     {
-	auto gmodel = myConfig.gmodel;
-	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
-			     !myConfig.separate_update_for_k_omega_source);
-	double signal;
-	double un_N, un_E, un_T, u_mag;
-	double Bn_N = 0.0;
-	double Bn_E = 0.0;
-	double Bn_T = 0.0;
-	double B_mag = 0.0;
-	double ca2 = 0.0;
-	double cfast = 0.0;
-	double gam_eff;
-	int statusf;
+	double signal; // Signal speed is something like a frequency, with units 1/s.
 	//
-	// Get the local normal velocities by rotating the local frame of reference.
-	// Also, compute the velocity magnitude and recall the minimum length.
-	un_N = fabs(fs.vel.dot(iface[Face.north].n));
-	un_E = fabs(fs.vel.dot(iface[Face.east].n));
-	size_t third_face = min(Face.top, iface.length-1);
-	if (myConfig.dimensions == 3) {
-	    un_T = fabs(fs.vel.dot(iface[third_face].n));
-	    u_mag = sqrt(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
-	} else {
-	    un_T = 0.0;
-	    u_mag = sqrt(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y);
-	}
-	if (myConfig.MHD) {
-	    Bn_N = fabs(fs.B.dot(iface[Face.north].n));
-	    Bn_E = fabs(fs.B.dot(iface[Face.east].n));
-	    if (myConfig.dimensions == 3) {
-		Bn_T = fabs(fs.B.dot(iface[third_face].n));
-	    }
-	    u_mag = sqrt(fs.vel.x * fs.vel.x + fs.vel.y * fs.vel.y + fs.vel.z * fs.vel.z);
-	    B_mag = sqrt(fs.B.x * fs.B.x + fs.B.y * fs.B.y + fs.B.z * fs.B.z);
-	}
-	// Check the INVISCID time step limit first,
+	// Check the convective/wave-driven time step limit first,
 	// then add a component to ensure viscous stability.
 	// Note: MHD seems to only works if stringent_cfl is used.
 	if (myConfig.stringent_cfl || myConfig.MHD) {
-	    // Make the worst case assumptions.
+	    // Ignoring flow and index directions, make the worst case assumptions.
+	    double u_mag_sq = (fs.vel.x)^^2 + (fs.vel.y)^^2;
+	    if (myConfig.dimensions == 3) { u_mag_sq += (fs.vel.z)^^2; }
+	    double u_mag = sqrt(u_mag_sq);
 	    if (myConfig.MHD) {
 		// MHD signal speed
-		ca2 = B_mag*B_mag / fs.gas.rho;
-		cfast = sqrt(ca2 + fs.gas.a * fs.gas.a);
+		double B_mag_sq = (fs.B.x)^^2 + (fs.B.y)^^2 + (fs.B.z)^^2;
+		double ca2 = B_mag_sq / fs.gas.rho;
+		double cfast = sqrt(ca2 + (fs.gas.a)^^2);
 		signal = (u_mag + cfast) / L_min;
 	    } else {
 		// Hydrodynamics only
 		signal = (u_mag + fs.gas.a) / L_min;
 	    }
 	} else {
-	    // Standard signal speeds along each face.
-	    double signalN, signalE, signalT;
-	    if (myConfig.MHD) {
-		double catang2_N, catang2_E, cfast_N, cfast_E;
-		ca2 = B_mag * B_mag / fs.gas.rho;
-		ca2 = ca2 + fs.gas.a * fs.gas.a;
-		catang2_N = Bn_N * Bn_N / fs.gas.rho;
-		cfast_N = 0.5 * ( ca2 + sqrt( ca2*ca2 - 4.0 * (fs.gas.a * fs.gas.a * catang2_N) ) );
-		cfast_N = sqrt(cfast_N);
-		catang2_E = Bn_E * Bn_E / fs.gas.rho;
-		cfast_E = 0.5 * ( ca2 + sqrt( ca2*ca2 - 4.0 * (fs.gas.a * fs.gas.a * catang2_E) ) );
-		cfast_E = sqrt(cfast_E);
-		if (myConfig.dimensions == 3) {
-		    double catang2_T, cfast_T;
-		    catang2_T = Bn_T * Bn_T / fs.gas.rho;
-		    cfast_T = 0.5 * ( ca2 + sqrt( ca2*ca2 - 4.0 * (fs.gas.a * fs.gas.a * catang2_T) ) );
-		    cfast_T = sqrt(cfast_T);
-		    signalN = (un_N + cfast_N) / jLength; signal = signalN;
-		    signalE = (un_E + cfast_E) / iLength; signal = fmax(signal, signalE);
-		    signalT = (un_T + cfast_T) / kLength; signal = fmax(signal, signalT);
-		} else {
-		    signalN = (un_N + cfast) / jLength;
-		    signalE = (un_E + cfast) / iLength;
-		    signal = fmax(signalN, signalE);
-		}
-	    } else if (myConfig.dimensions == 3) {
-		// gasdynamics only, 3D cells
-		signalN = (un_N + fs.gas.a) / jLength; signal = signalN;
-		signalE = (un_E + fs.gas.a) / iLength; signal = fmax(signal, signalE);
-		signalT = (un_T + fs.gas.a) / kLength; signal = fmax(signal, signalT);
-	    } else {
-		// gasdynamics only, 2D cells
-		// The velocity normal to the north face is assumed to run
-		// along the length of the east face.
-		signalN = (un_N + fs.gas.a) / jLength;
-		signalE = (un_E + fs.gas.a) / iLength;
-		signal = fmax(signalN, signalE);
+	    // Look at signal speeds along each face.
+	    // This works for gas-dynamics only (not MHD), on a structured grid.
+	    //
+	    // Get the local normal velocities by rotating the local frame of reference.
+	    // Also, compute the velocity magnitude and recall the minimum length.
+	    double un_N = fabs(fs.vel.dot(iface[Face.north].n));
+	    double un_E = fabs(fs.vel.dot(iface[Face.east].n));
+	    // just in case we are given a non-hex cell
+	    size_t third_face = min(Face.top, iface.length-1);
+	    double un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : 0.0;
+	    double signalN = (un_N + fs.gas.a) / jLength; signal = signalN;
+	    double signalE = (un_E + fs.gas.a) / iLength; signal = fmax(signal, signalE);
+	    if (myConfig.dimensions == 3) {
+		double signalT = (un_T + fs.gas.a) / kLength; signal = fmax(signal, signalT);
 	    }
 	}
 	if (myConfig.viscous && (fs.gas.mu > 10.0e-23)) {
 	    // Factor for the viscous time limit.
-	    // This factor is not included if viscosity is zero.
 	    // See Swanson, Turkel and White (1991)
-	    gam_eff = gmodel.gamma(fs.gas);
+	    // This factor is not included if viscosity is zero.
+	    auto gmodel = myConfig.gmodel;
+	    double gam_eff = gmodel.gamma(fs.gas);
 	    // Need to sum conductivities for thermal nonequilibrium.
 	    double k_total = fs.gas.k; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
 	    double Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
-	    if (myConfig.dimensions == 3) {
-		signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
-		    * gam_eff / (Prandtl * fs.gas.rho)
-		    * (1.0/(iLength*iLength) + 1.0/(jLength*jLength) + 1.0/(kLength*kLength))
-		    * myConfig.viscous_signal_factor;
-	    } else {
-		signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t) 
-		    * gam_eff / (Prandtl * fs.gas.rho)
-		    * (1.0/(iLength*iLength) + 1.0/(jLength*jLength))
-		    * myConfig.viscous_signal_factor;
-	    }
+	    signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
+		* gam_eff / (Prandtl * fs.gas.rho)
+		* 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
 	}
-	if (with_k_omega) { signal = fmax(signal, fs.omega); }
+	bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
+			     !myConfig.separate_update_for_k_omega_source);
+	// [TODO] scale factor to turn this component down/off.
+	if (with_k_omega) { signal = fmax(signal, 1.0*fs.omega); }
+	//
 	return signal;
     } // end signal_frequency()
 
