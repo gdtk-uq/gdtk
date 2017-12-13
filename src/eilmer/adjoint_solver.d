@@ -129,7 +129,9 @@ void main(string[] args) {
     writefln("Initialising simulation from tindx: %d", last_tindx);
     init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
 
-    if ( GlobalConfig.suppress_reconstruction_at_boundaries == false) {
+    // perform some config checks
+    if ( GlobalConfig.interpolation_order > 1 &&
+	 GlobalConfig.suppress_reconstruction_at_boundaries == false) {
 	writeln("WARNING:");
 	writeln("   suppress_reconstruction_at_boundaries is set to false.");
 	writeln("   This setting must be true when using the adjoint solver.");
@@ -137,7 +139,15 @@ void main(string[] args) {
 	writeln("   Continuing with simulation anyway.");
 	writeln("END WARNING.");
     }
-
+    
+    if (GlobalConfig.diffuseWallBCsOnInit) {
+	writeln("WARNING:");
+	writeln("   diffuse_wall_bcs_on_init is set to true.");
+	writeln("   This setting must be false when using the adjoint solver.");
+	writeln("   Its use will likely cause errorneous values for gradients.");
+	writeln("   Continuing with simulation anyway.");
+	writeln("END WARNING.");
+    }
     
     // save a copy of the original mesh
     foreach (blk; parallel(gasBlocks,1)) {
@@ -150,13 +160,12 @@ void main(string[] args) {
     // ----------------------------------------------------
     // 1.a store stencils used in forming the flow Jacobian
     //-----------------------------------------------------
-
     foreach (myblk; parallel(gasBlocks,1)) {
 	construct_flow_jacobian_stencils(myblk);
     }
     
     // ------------------------------------------------------------
-    // 1.b construct local flow Jacobian via Frechet derivatives
+    // 1.b construct local flow Jacobian via finite differences
     // ------------------------------------------------------------
     size_t ndim = GlobalConfig.dimensions;
     // number of primitive variables
@@ -1422,15 +1431,21 @@ void update_geometry(Block blk, FVVertex vtx) {
     foreach (cid; blk.cellIndexListPerVertex[vtx.id])
 	blk.cells[cid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
 
+    //foreach (cell; vtx.jacobian_cell_stencil)
+    //	cell.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+    
     // update face geometry
     foreach (fid; blk.faceIndexListPerVertex[vtx.id])
-	blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+    	blk.faces[fid].update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
+
+    //foreach (face; vtx.jacobian_face_stencil)
+    //	face.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);
     
     // for USG grid, update least-squares weights
     if (blk.grid_type == Grid_t.unstructured_grid) {
 	UBlock ublk = cast(UBlock) blk;
-	foreach (cid; ublk.cellIndexListPerVertex[vtx.id])
-	    ublk.compute_least_squares_setup_for_cell(ublk.cells[cid], 0, false);
+	foreach (cell; vtx.jacobian_cell_stencil)
+	    ublk.compute_least_squares_setup_for_cell(cell, 0, false);
     }
     
     if (GlobalConfig.viscous) {
