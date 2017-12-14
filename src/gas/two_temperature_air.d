@@ -10,6 +10,7 @@ import std.math : fabs, sqrt;
 import std.conv;
 import std.stdio;
 import std.string;
+import std.algorithm : canFind;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -18,7 +19,8 @@ import gas.thermo.perf_gas_mix_eos;
 
 
 immutable double T_REF = 298.15; // K
-static bool[string] molecularSpecies;
+static string[] molecularSpecies = ["N2", "O2", "NO", "N2+", "O2+", "NO+"];
+static double[string] __mol_masses;
 static double[string] del_hf;
 static double[7][5][string] thermoCoeffs;
 
@@ -27,19 +29,41 @@ static double[7][5][string] thermoCoeffs;
 
 class TwoTemperatureAir : GasModel {
 public:
-    this(string model)
+    this(string model, string[] species)
     {
+	// For each of the cases, 5-, 7- and 11-species, we know which species
+	// must be supplied, however, we don't know what order the user will
+	// hand them to us. So we do a little dance below in which we check
+	// that the species handed to us are correct and then set the 
+	// appropriate properties.
 	switch (model) {
 	case "5-species":
+	    if (species.length != 5) {
+		string errMsg = "You have selected the 5-species 2-T air model but have not supplied 5 species.\n";
+		errMsg ~= format("Instead, you have supplied %d species.\n", species.length);
+		errMsg ~= "The valid species for the 5-species 2-T air model are:\n";
+		errMsg ~= "   'N', 'O', 'N2', 'O2', 'NO'\n";
+		throw new Error(errMsg);
+	    }
 	    _n_species = 5;
 	    _n_modes = 1;
 	    _species_names.length = 5;
 	    _mol_masses.length = 5;
-	    _species_names[0] = "N"; _mol_masses[0] = 14.0067e-3;
-	    _species_names[1] = "O"; _mol_masses[1] = 0.01599940;
-	    _species_names[2] = "N2"; _mol_masses[2] = 28.0134e-3;
-	    _species_names[3] = "O2"; _mol_masses[3] = 0.03199880;
-	    _species_names[4] = "NO"; _mol_masses[4] = 0.03000610;
+	    bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true];
+	    foreach (isp, sp; species) {
+		if (sp in validSpecies) {
+		    _species_names[isp] = sp;
+		    _mol_masses[isp] = __mol_masses[sp];
+		}
+		else {
+		    string errMsg = "The species you supplied is not part of the 5-species 2-T air model,\n";
+		    errMsg ~= "or you have supplied a duplicate species.\n";
+		    errMsg ~= format("The error occurred for supplied species: %s\n", sp);
+		    errMsg ~= "The valid species for the 5-species 2-T air model are:\n";
+		    errMsg ~= "   'N', 'O', 'N2', 'O2', 'NO'\n";
+		    throw new Error(errMsg);
+		}
+	    }
 	    create_species_reverse_lookup();
 	    break;
 	case "7-species":
@@ -99,7 +123,7 @@ public:
 	_Cp_tr_rot.length = _n_species;
 	foreach (isp; 0 .. _n_species) {
 	    _Cp_tr_rot[isp] = (5./2.)*_R[isp];
-	    if (_species_names[isp] in molecularSpecies) {
+	    if (canFind(molecularSpecies, _species_names[isp])) {
 		_Cp_tr_rot[isp] += _R[isp];
 		_molecularSpecies ~= isp;
 	    }
@@ -115,9 +139,6 @@ public:
 
     override void update_thermo_from_pT(GasState Q)
     {
-	// ----- TESTING ------
-	Q.T_modes[0] = Q.T;
-	// ----- END TESTING -----
 	_pgMixEOS.update_density(Q);
 	Q.u = transRotEnergy(Q);
 	Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
@@ -131,10 +152,10 @@ public:
 	double sumA = 0.0;
 	double sumB = 0.0;
 	foreach (isp; 0 .. _n_species) {
-	    sumA += Q.massf[isp]*(_Cp_tr_rot[isp] - _del_hf[isp]);
-	    sumB += Q.massf[isp]*_Cp_tr_rot[isp];
+	    sumA += Q.massf[isp]*(_Cp_tr_rot[isp]*T_REF - _del_hf[isp]);
+	    sumB += Q.massf[isp]*(_Cp_tr_rot[isp] - _R[isp]);
 	}
-	Q.T = (Q.u - sumA)/sumB;
+	Q.T = (Q.u + sumA)/sumB;
 	// Next, we can compute Q.T_modes by iteration.
 	// We'll use a Newton method since the function
 	// should vary smoothly at the polynomial breaks.
@@ -146,11 +167,8 @@ public:
 
     override void update_thermo_from_rhoT(GasState Q)
     {
-	// ----- TESTING ------
-	Q.T_modes[0] = Q.T;
-	// ----- END TESTING -----
 	_pgMixEOS.update_pressure(Q);
-	Q.u = transRotEnergy(Q);
+	Q.u = transRotEnergy(Q); 
 	Q.u_modes[0] = vibEnergy(Q, Q.T_modes[0]);
     }
     
@@ -182,7 +200,9 @@ public:
 
     override void update_trans_coeffs(GasState Q)
     {
-	throw new GasModelException("update_trans_coeffs not implemented in TwoTemperatureAir.");
+	Q.mu = 0.0;
+	Q.k = 0.0;
+	Q.k_modes[0] = 0.0;
     }
 
     override double dudT_const_v(in GasState Q)
@@ -219,12 +239,13 @@ public:
     }
     override double internal_energy(in GasState Q)
     {
-	return Q.u + Q.u_modes[0]; // all internal energy
+	return Q.u + Q.u_modes[0];
     }
     override double enthalpy(in GasState Q)
     {
 	double e = transRotEnergy(Q) + vibEnergy(Q, Q.T_modes[0]);
-	double h = e + Q.p/Q.rho;
+	double R = gas_constant(Q);
+	double h = e + R*Q.T;
 	return h;
     }
     override double entropy(in GasState Q)
@@ -257,9 +278,7 @@ private:
 	if (T >= 800.0 && T <= 1200.0) {
 	    double wB = (1./400.0)*(T - 800.0);
 	    double wA = 1.0 - wB;
-	    foreach (i; 0 .. 7) {
-		_A[isp] = wA*thermoCoeffs[spName][0][i] + wB*thermoCoeffs[spName][1][i];
-	    }
+	    _A[] = wA*thermoCoeffs[spName][0][] + wB*thermoCoeffs[spName][1][];
 	}
 	if (T > 1200.0 && T < 5500.0) {
 	    _A[] = thermoCoeffs[spName][1][];
@@ -267,9 +286,7 @@ private:
 	if (T >= 5500.0 && T <= 6500.0) {
 	    double wB = (1./1000.0)*(T - 5500.0);
 	    double wA = 1.0 - wB;
-	    foreach (i; 0 .. 7) {
-		_A[isp] = wA*thermoCoeffs[spName][1][i] + wB*thermoCoeffs[spName][2][i];
-	    }
+	    _A[] = wA*thermoCoeffs[spName][1][] + wB*thermoCoeffs[spName][2][];
 	}
 	if (T > 6500.0 && T < 14500.0) {
 	    _A[] = thermoCoeffs[spName][2][];
@@ -277,22 +294,18 @@ private:
 	if (T >= 14500.0 && T <= 15500.0) {
 	    double wB = (1./1000.0)*(T - 14500.0);
 	    double wA = 1.0 - wB;
-	    foreach (i; 0 .. 7) {
-		_A[isp] = wA*thermoCoeffs[spName][2][i] + wB*thermoCoeffs[spName][3][i];
-	    }
+	    _A[] = wA*thermoCoeffs[spName][2][] + wB*thermoCoeffs[spName][3][];
 	}
 	if (T > 15500.0 && T < 24500.0) {
 	    _A[] = thermoCoeffs[spName][3][];
 	}
 	if (T >= 24500.0 && T <= 25500.0) {
-	    double wB = (1./1000.0)*(T - 14500.0);
+	    double wB = (1./1000.0)*(T - 24500.0);
 	    double wA = 1.0 - wB;
-	    foreach (i; 0 .. 7) {
-		_A[isp] = wA*thermoCoeffs[spName][3][i] + wB*thermoCoeffs[spName][4][i];
-	    }
+	    _A[] = wA*thermoCoeffs[spName][3][] + wB*thermoCoeffs[spName][4][];
 	}
 	if ( T > 25500.0) {
-	    _A[] = thermoCoeffs[spName][3][];
+	    _A[] = thermoCoeffs[spName][4][];
 	}
     }
 
@@ -304,9 +317,11 @@ private:
 	 */
 	if (T < 300.0) {
 	    determineCoefficients(300.0, isp);
+	    T = 300.0;
 	}
 	if (T > 30000.0) {
 	    determineCoefficients(30000.0, isp);
+	    T = 30000.0;
 	}
 	// For all other cases, use supplied temperature
 	determineCoefficients(T, isp);
@@ -316,7 +331,6 @@ private:
 	double Cp = (_A[0] + _A[1]*T + _A[2]*T2 + _A[3]*T3 + _A[4]*T4);
 	Cp *= (R_universal/_mol_masses[isp]);
 	return Cp;
-
     }
 
     double enthalpyFromCurveFits(double T, int isp)
@@ -331,10 +345,12 @@ private:
 	if (T < 300.0) {
 	    double Cp = CpFromCurveFits(300.0, isp);
 	    double h = Cp*(T - T_REF) + _del_hf[isp];
+	    return h;
 	}
 	if ( T > 30000.0) {
 	    double Cp = CpFromCurveFits(300000.0, isp);
 	    double h = Cp*(T - 30000.0) + enthalpyFromCurveFits(30000.0, isp);
+	    return h;
 	}
 	// For all other, determine coefficients and compute specific enthalpy.
 	determineCoefficients(T, isp);
@@ -366,7 +382,8 @@ private:
     {
 	double e_tr_rot = 0.0;
 	foreach (isp; 0 .. _n_species) {
-	    e_tr_rot += Q.massf[isp]*(_Cp_tr_rot[isp]*(Q.T - T_REF) + _del_hf[isp]);
+	    double h_tr_rot = _Cp_tr_rot[isp]*(Q.T - T_REF) + _del_hf[isp];
+	    e_tr_rot += Q.massf[isp]*(h_tr_rot - _R[isp]*Q.T);
 	}
 	return e_tr_rot;
     }
@@ -427,10 +444,11 @@ private:
 	    if (fabs(dT) < TOL) {
 		break;
 	    }
+	    f_guess = vibEnergy(Q, T_guess) - Q.u_modes[0];
 	    count++;
 	}
 	
-	if (count == (MAX_ITERATIONS-1)) {
+	if (count == MAX_ITERATIONS) {
 	    string msg = "The 'vibTemperature' function failed to converge.\n";
 	    msg ~= format("The final value for Tvib was: %12.6f\n", T_guess);
 	    msg ~= "The supplied GasState was:\n";
@@ -443,29 +461,69 @@ private:
 
 }
 
+version(two_temperature_air_test) {
+    int main()
+    {
+	auto gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
+	auto Q = new GasState(5, 1);
+	
+	Q.p = 666.0;
+	Q.T = 293;
+	Q.T_modes[0] = 293;
+	Q.massf = [0.78, 0.22, 0.0, 0.0, 0.0];
+	gm.update_thermo_from_pT(Q);
+
+	writeln(Q);
+
+	gm.update_thermo_from_rhou(Q);
+	
+	writeln(Q);
+
+	return 0;
+
+	   
+					
+    }
+}
+
 
 
 static this()
 {
+    /*
     molecularSpecies["N2"] = true;
     molecularSpecies["O2"] = true;
     molecularSpecies["NO"] = true;
     molecularSpecies["N2+"] = true;
     molecularSpecies["O2+"] = true;
     molecularSpecies["NO+"] = true;
+    */
+
+    __mol_masses["N"] = 14.0067e-3;
+    __mol_masses["O"] = 0.01599940; 
+    __mol_masses["N2"] = 28.0134e-3;
+    __mol_masses["O2"] = 0.03199880;
+    __mol_masses["NO"] = 0.03000610;
+    __mol_masses["N+"] = 14.0061514e-3;
+    __mol_masses["O+"] = 15.9988514e-3;
+    __mol_masses["N2+"] = 28.0128514e-3;
+    __mol_masses["O2+"] = 31.9982514e-3;
+    __mol_masses["NO+"] = 30.0055514e-3;
+    __mol_masses["e-"] = 0.000548579903e-3;
 
     /**
      * See Table B1 in Gupta et al.
      */
-    del_hf["N"]   = 112.973*4184;
-    del_hf["O"]   = 59.553*4184;
+    del_hf["N"]   = 112.973*4184*__mol_masses["N"];
+    del_hf["O"]   = 59.553*4184*__mol_masses["O"];
     del_hf["N2"]  = 0.0;
     del_hf["O2"]  = 0.0;
-    del_hf["NO"]  = 21.580*4184;
-    del_hf["N+"]  = 449.840*4184;
-    del_hf["O+"]  = 374.949*4184;
-    del_hf["N2+"] = 360.779*4184;
-    del_hf["O2+"] = 279.849*4184;
+    del_hf["NO"]  = 21.580*4184*__mol_masses["NO"];
+    del_hf["N+"]  = 449.840*4184* __mol_masses["N+"];
+    del_hf["O+"]  = 374.949*4184*__mol_masses["O+"];
+    del_hf["N2+"] = 360.779*4184*__mol_masses["N2+"];
+    del_hf["O2+"] = 279.849*4184*__mol_masses["O2+"];
+    del_hf["NO+"] = 236.660*4184*__mol_masses["NO+"];
     del_hf["e-"]  =  0.0;
 
     thermoCoeffs["N2"] = 
