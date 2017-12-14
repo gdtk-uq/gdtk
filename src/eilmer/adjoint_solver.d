@@ -161,7 +161,8 @@ void main(string[] args) {
     // 1.a store stencils used in forming the flow Jacobian
     //-----------------------------------------------------
     foreach (myblk; parallel(gasBlocks,1)) {
-	construct_flow_jacobian_stencils(myblk);
+	if (GlobalConfig.viscous) construct_viscous_flow_jacobian_stencils(myblk);
+	else construct_inviscid_flow_jacobian_stencils(myblk);
     }
     
     // ------------------------------------------------------------
@@ -395,7 +396,8 @@ void main(string[] args) {
     // ---------------------------------------------------------------------
 
     foreach (myblk; parallel(gasBlocks,1)) {
-	construct_mesh_jacobian_stencils(myblk);
+	if (GlobalConfig.viscous) construct_viscous_mesh_jacobian_stencils(myblk);
+	else construct_inviscid_mesh_jacobian_stencils(myblk);
     }
     // ------------------------------------------------------------
     // 4.b construct local mesh Jacobian via Frechet derivatives
@@ -758,7 +760,7 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
     } // end foreach cell
 }
 
-void construct_flow_jacobian_stencils(Block blk) {
+void construct_inviscid_flow_jacobian_stencils(Block blk) {
     /++
      
      This stencil holds references to the cells effected by a 
@@ -900,7 +902,77 @@ void construct_flow_jacobian_stencils(Block blk) {
     }
 }
 
-void construct_mesh_jacobian_stencils(Block blk) {
+void construct_viscous_flow_jacobian_stencils(Block blk) {
+    /++
+     
+     This stencil holds references to the cells effected by a 
+     perturbation in the parent cell.
+     
+     For inviscid simulations, stencils are made up of the cells used in the
+     reconstruction step for each of the cells interfaces.
+     
+     For viscous simulations, stencils are made up of the inviscid stencil, plus
+     any cells that are additionally used in the viscous flux computations.
+     
+     NB. we need the stencils in cell id order, so that we can sequentially fill
+     a row in the transposed Jacobian in Compressed Row Storage format.
+     
+     ++/
+
+    // for first-order simulations the structured, unstructured stencils are identical
+    foreach(c; blk.cells) {
+	FVCell[] refs_ordered;
+	FVCell[] refs_unordered;
+	size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
+	size_t[] cell_ids;
+	size_t[] face_ids;
+	
+	// first loop around and store faces in stencil
+	foreach(f; c.iface) {
+	    // store face
+	    c.jacobian_face_stencil ~= f; face_ids ~= f.id;
+	    
+	    // loop around neighbour
+	    if (f.left_cell.id != c.id && f.left_cell.id < ghost_cell_start_id) {
+		foreach(face; f.left_cell.iface) {
+		    if (face_ids.canFind(face.id) == false )
+			{ c.jacobian_face_stencil ~= face; face_ids ~= face.id; }
+		}
+	    }
+	    if (f.right_cell.id != c.id && f.right_cell.id < ghost_cell_start_id) {
+		foreach(face; f.right_cell.iface) {
+		    if (face_ids.canFind(face.id) == false )
+			{ c.jacobian_face_stencil ~= face; face_ids ~= face.id; }
+		}
+	    } else continue;
+	}
+	
+	// now loop through face stencil and add left, and right cells
+	foreach(f; c.jacobian_face_stencil) {
+	    // store (non-ghost) neighbour cells in cells stencil
+	    if (cell_ids.canFind(f.left_cell.id) == false && f.left_cell.id < ghost_cell_start_id) {
+		refs_unordered ~= f.left_cell;
+		pos_array[f.left_cell.id] = refs_unordered.length-1;
+		cell_ids ~= f.left_cell.id;
+	    }
+	    if (cell_ids.canFind(f.right_cell.id) == false && f.right_cell.id < ghost_cell_start_id) {
+		refs_unordered ~= f.right_cell;
+		pos_array[f.right_cell.id] = refs_unordered.length-1;
+		cell_ids ~= f.right_cell.id;
+	    } else continue;
+	} // end foreach face
+	
+	// finally sort ids, and store sorted cell references
+	cell_ids.sort();
+	foreach(id; cell_ids) {
+	    refs_ordered ~= refs_unordered[pos_array[id]];
+	}
+	c.jacobian_cell_stencil ~= refs_ordered;
+	//writeln("cell: ", c.jacobian_cell_stencil.length, ", ", c.jacobian_face_stencil.length);
+    } // end foreach cell
+}
+
+void construct_inviscid_mesh_jacobian_stencils(Block blk) {
     /++
      
      This stencil holds references to the cells effected by a 
@@ -994,6 +1066,50 @@ void construct_mesh_jacobian_stencils(Block blk) {
 	    vtx.jacobian_cell_stencil ~= refs_ordered;
 	    vtx.jacobian_face_stencil ~= face_refs;
 	}
+    }
+}
+
+void construct_viscous_mesh_jacobian_stencils(Block blk) {
+    /++
+     
+     This stencil holds references to the cells effected by a 
+     perturbation in the parent vertex.
+     
+     NB. we need the stencils in cell id order, so that we can sequentially fill
+     a row in the transposed Jacobian in Compressed Row Storageema format.
+     
+     ++/
+
+    // for first-order simulations the structured, unstructured stencils are identical
+    foreach(i, vtx; blk.vertices) {
+	FVCell[] refs_ordered;
+	FVCell[] refs_unordered;
+	size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
+	size_t[] cell_ids;
+	size_t[] face_ids;
+	
+	foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
+	    // add cells to stencil
+	    FVCell c = blk.cells[cid];
+	    
+	    foreach(f; c.jacobian_face_stencil) {
+		if (face_ids.canFind(f.id) == false)
+		    { vtx.jacobian_face_stencil ~= f; face_ids ~= f.id; }
+	    }
+	    
+	    foreach(cell; c.jacobian_cell_stencil) {
+		if (cell_ids.canFind(cell.id) == false)
+		    { refs_unordered ~= cell; pos_array[cell.id] = refs_unordered.length-1; cell_ids ~= cell.id; } 
+	    }
+	}
+	// finally sort cell ids
+	//writeln(cell_ids);
+	cell_ids.sort();
+	foreach(id; cell_ids) {
+	    refs_ordered ~= refs_unordered[pos_array[id]];
+	}
+	vtx.jacobian_cell_stencil ~= refs_ordered;
+	//writeln("vtx: ", vtx.jacobian_cell_stencil.length, ", ", vtx.jacobian_face_stencil.length);
     }
 }
 
