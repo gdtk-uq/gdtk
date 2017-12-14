@@ -276,8 +276,7 @@ public:
 	case 4:
 	    tetrahedron_properties(vtx[0].pos[gtl], vtx[1].pos[gtl],
 				   vtx[2].pos[gtl], vtx[3].pos[gtl],
-				   pos[gtl], volume[gtl]);
-	    L_min = pow(volume[gtl], 1.0/3.0);
+				   pos[gtl], volume[gtl], L_min);
 	    iLength = L_min; jLength = L_min; kLength = L_min;
 	    break;
 	case 8:
@@ -288,15 +287,13 @@ public:
 	    break;
 	case 5:
 	    pyramid_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl], vtx[3].pos[gtl],
-			       vtx[4].pos[gtl], pos[gtl], volume[gtl]);
-	    L_min = pow(volume[gtl], 1.0/3.0);
+			       vtx[4].pos[gtl], pos[gtl], volume[gtl], L_min);
 	    iLength = L_min; jLength = L_min; kLength = L_min;
 	    break;
 	case 6:
 	    wedge_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl],
 			     vtx[3].pos[gtl], vtx[4].pos[gtl], vtx[5].pos[gtl],
-			     pos[gtl], volume[gtl]);
-	    L_min = pow(volume[gtl], 1.0/3.0);
+			     pos[gtl], volume[gtl], L_min);
 	    iLength = L_min; jLength = L_min; kLength = L_min;
 	    break;
 	default:

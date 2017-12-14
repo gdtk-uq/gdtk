@@ -265,6 +265,7 @@ double tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 			    ref const(Vector3) p2, ref const(Vector3) p3,
 			    ref Vector3 centroid, ref double volume)
+// Variant without L_min calculation.
 {
     centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
 		 0.25*(p0.y + p1.y + p2.y + p3.y),
@@ -277,6 +278,35 @@ void tetrahedron_properties(ref const(Vector3)[] p,
 			    ref Vector3 centroid, ref double volume)
 {
     tetrahedron_properties(p[0], p[1], p[2], p[3], centroid, volume);
+}
+
+@nogc
+void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+			    ref const(Vector3) p2, ref const(Vector3) p3,
+			    ref Vector3 centroid, ref double volume, ref double L_min)
+// Variant including L_min calculation.
+{
+    centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
+		 0.25*(p0.y + p1.y + p2.y + p3.y),
+		 0.25*(p0.z + p1.z + p2.z + p3.z));
+    volume = tetrahedron_volume(p0, p1, p2, p3);
+    double third = 1.0/3.0;
+    L_min = pow(volume, third);
+    Vector3 pmid = Vector3(third*(p0.x+p1.x+p2.x), third*(p0.y+p1.y+p2.y), third*(p0.z+p1.z+p2.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(third*(p0.x+p1.x+p3.x), third*(p0.y+p1.y+p3.y), third*(p0.z+p1.z+p3.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(third*(p1.x+p2.x+p3.x), third*(p1.y+p2.y+p3.y), third*(p1.z+p2.z+p3.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(third*(p2.x+p0.x+p3.x), third*(p2.y+p0.y+p3.y), third*(p2.z+p0.z+p3.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+} // end tetrahedron_properties()
+
+@nogc
+void tetrahedron_properties(ref const(Vector3)[] p,
+			    ref Vector3 centroid, ref double volume, ref double L_min)
+{
+    tetrahedron_properties(p[0], p[1], p[2], p[3], centroid, volume, L_min);
 }
 
 // Because of the way we lose precision when reading and writing files,
@@ -342,6 +372,7 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     //    
     moment /= volume; // to get overall centroid
     centroid = moment;
+    //
     return; 
 } // end pyramid_properties()
 
@@ -350,6 +381,56 @@ void pyramid_properties(ref const(Vector3)[] p,
 			ref Vector3 centroid, ref double volume)
 {
     pyramid_properties(p[0], p[1], p[2], p[3], p[4], centroid, volume);
+}
+
+@nogc
+void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+			ref const(Vector3) p2, ref const(Vector3) p3,
+			ref const(Vector3) p4, 
+			ref Vector3 centroid, ref double volume, ref double L_min)
+{
+    // p0-p1-p2-p3 is the quadrilateral base, p4 is the peak.
+    // cycle of base vertices is counterclockwise, viewed from p4.
+    //
+    // Split into 4 tetrahedra and sum contributions to volume and moment.
+    Vector3 pmB; // Mid-point of quadrilateral base.
+    pmB.set(0.25*(p0.x+p1.x+p2.x+p3.x),
+	    0.25*(p0.y+p1.y+p2.y+p3.y),
+	    0.25*(p0.z+p1.z+p2.z+p3.z));
+    //
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    double tet_volume; Vector3 tet_centroid;
+    tetrahedron_properties(p0, p1, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    tetrahedron_properties(p1, p2, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    tetrahedron_properties(p2, p3, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    tetrahedron_properties(p3, p0, pmB, p4, tet_centroid, tet_volume);
+    volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
+    //    
+    moment /= volume; // to get overall centroid
+    centroid = moment;
+    //
+    double third = 1.0/3.0;
+    L_min = fmin(pow(volume, third), 2.0*distance_between(pmB, centroid));
+    Vector3 pmid = Vector3(third*(p0.x+p1.x+p4.x), third*(p0.y+p1.y+p4.y), third*(p0.z+p1.z+p4.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(third*(p1.x+p2.x+p4.x), third*(p1.y+p2.y+p4.y), third*(p1.z+p2.z+p4.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(third*(p2.x+p3.x+p4.x), third*(p2.y+p3.y+p4.y), third*(p2.z+p3.z+p4.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(third*(p3.x+p0.x+p4.x), third*(p3.y+p0.y+p4.y), third*(p3.z+p0.z+p4.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    //
+    return; 
+} // end pyramid_properties()
+
+@nogc
+void pyramid_properties(ref const(Vector3)[] p,
+			ref Vector3 centroid, ref double volume, ref double L_min)
+{
+    pyramid_properties(p[0], p[1], p[2], p[3], p[4], centroid, volume, L_min);
 }
 
 @nogc
@@ -379,6 +460,7 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     //    
     moment /= volume; // to get overall centroid
     centroid = moment;
+    //
     return; 
 } // end wedge_properties()
 
@@ -387,6 +469,57 @@ void wedge_properties(ref const(Vector3)[] p,
 		      ref Vector3 centroid, ref double volume)
 {
     wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
+}
+
+@nogc
+void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
+		      ref const(Vector3) p2, ref const(Vector3) p3,
+		      ref const(Vector3) p4, ref const(Vector3) p5, 
+		      ref Vector3 centroid, ref double volume, ref double L_min)
+{
+    // Use the average of the vertex points to get a rough centroid of the wedge.
+    centroid.set(1.0/6.0*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x),
+		 1.0/6.0*(p0.y+p1.y+p2.y+p3.y+p4.y+p5.y),
+		 1.0/6.0*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z));
+    // Split the wedge into three pyramids and two tetrahedra
+    // using this centroid as the peak of each sub-volume.
+    double sub_volume; Vector3 sub_centroid;
+    volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
+    pyramid_properties(p3, p5, p2, p0, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p1, p2, p5, p4, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    pyramid_properties(p0, p1, p4, p3, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    tetrahedron_properties(p0, p2, p1, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    tetrahedron_properties(p3, p4, p5, centroid, sub_centroid, sub_volume);
+    volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
+    //    
+    moment /= volume; // to get overall centroid
+    centroid = moment;
+    //
+    double third = 1.0/3.0;
+    L_min = pow(volume, third);
+    Vector3 pmid = Vector3(third*(p0.x+p2.x+p1.x), third*(p0.y+p2.y+p1.y), third*(p0.z+p2.z+p1.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(third*(p3.x+p4.x+p5.x), third*(p3.y+p4.y+p5.y), third*(p3.z+p4.z+p5.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(0.25*(p3.x+p5.x+p2.x+p0.x), 0.25*(p3.y+p5.y+p2.y+p0.y), 0.25*(p3.z+p5.z+p2.z+p0.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(0.25*(p1.x+p2.x+p5.x+p4.x), 0.25*(p1.y+p2.y+p5.y+p4.y), 0.25*(p1.z+p2.z+p5.z+p4.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    pmid = Vector3(0.25*(p0.x+p1.x+p4.x+p3.x), 0.25*(p0.y+p1.y+p4.y+p3.y), 0.25*(p0.z+p1.z+p4.z+p3.z));
+    L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
+    //
+    return; 
+} // end wedge_properties()
+
+@nogc
+void wedge_properties(ref const(Vector3)[] p,
+		      ref Vector3 centroid, ref double volume, ref double L_min)
+{
+    wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume, L_min);
 }
 
 @nogc
