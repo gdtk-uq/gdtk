@@ -249,6 +249,7 @@ SpatialDerivLocn spatial_deriv_locn_from_name(string name)
 enum UnstructuredLimiter {
     van_albada,
     min_mod,
+    mlp,
     barth,
     venkat
 }
@@ -258,6 +259,7 @@ string unstructured_limiter_name(UnstructuredLimiter ul)
     final switch ( ul ) {
     case UnstructuredLimiter.van_albada: return "van_albada";
     case UnstructuredLimiter.min_mod: return "min_mod";
+    case UnstructuredLimiter.mlp: return "mlp";
     case UnstructuredLimiter.barth: return "barth";
     case UnstructuredLimiter.venkat: return "venkat";
     }
@@ -268,6 +270,7 @@ UnstructuredLimiter unstructured_limiter_from_name(string name)
     switch ( name ) {
     case "van_albada": return UnstructuredLimiter.van_albada;
     case "min_mod": return UnstructuredLimiter.min_mod;
+    case "mlp": return UnstructuredLimiter.mlp;
     case "barth": return UnstructuredLimiter.barth;
     case "venkat": return UnstructuredLimiter.venkat;
     default:

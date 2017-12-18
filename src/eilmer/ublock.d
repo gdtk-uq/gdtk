@@ -174,6 +174,8 @@ public:
 	    && (myConfig.spatial_deriv_locn == SpatialDerivLocn.vertices);
 	foreach (i, v; grid.vertices) {
 	    auto new_vtx = new FVVertex(myConfig, lsq_workspace_at_vertices, to!int(i));
+	    if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp)
+		new_vtx.gradients = new LSQInterpGradients(myConfig.gmodel.n_species, myConfig.gmodel.n_modes);
 	    new_vtx.pos[0] = v;
 	    vertices ~= new_vtx;
 	}
@@ -330,24 +332,59 @@ public:
 	// (Will be used for the convective fluxes).
 	auto nsp = myConfig.gmodel.n_species;
 	auto nmodes = myConfig.gmodel.n_modes;
-	foreach (c; cells) {
-	    // First cell in the cloud is the cell itself.  Differences are taken about it.
-	    c.cell_cloud ~= c;
-	    // Subsequent cells are the surrounding cells.
-	    foreach (i, f; c.iface) {
-		if (c.outsign[i] > 0.0) {
-		    if (f.right_cell && f.right_cell.will_have_valid_flow) {
-			c.cell_cloud ~= f.right_cell;
-		    }
+	if (myConfig.use_extended_stencil) {
+	    foreach (c; cells) {
+		// First cell in the cloud is the cell itself.  Differences are taken about it.
+		c.cell_cloud ~= c;
+		size_t[] cell_ids;
+		cell_ids ~= c.id;
+		// Subsequent cells are the surrounding cells.
+		bool is_on_boundary = false;
+		foreach(face; c.iface) if (face.is_on_boundary) is_on_boundary = true;
+		if (is_on_boundary) {
+		    // apply nearest-face neighbour
+		    foreach (i, f; c.iface) {
+			if (c.outsign[i] > 0.0) {
+			    if (f.right_cell && f.right_cell.will_have_valid_flow) {
+				c.cell_cloud ~= f.right_cell;
+			    }
+			} else {
+			    if (f.left_cell && f.left_cell.will_have_valid_flow) {
+				c.cell_cloud ~= f.left_cell;
+			    }
+			}
+		    } // end foreach face
 		} else {
-		    if (f.left_cell && f.left_cell.will_have_valid_flow) {
-			c.cell_cloud ~= f.left_cell;
+		    // apply nearest-node neighbour
+		    foreach(vtx; c.vtx) {
+			foreach(cid; cellIndexListPerVertex[vtx.id])
+			    if (cell_ids.canFind(cid) == false && cells[cid].will_have_valid_flow)
+				{ c.cell_cloud ~= cells[cid]; cell_ids ~= cid; } 
 		    }
-		}
-	    } // end foreach face
-	    c.ws = new LSQInterpWorkspace();
-	    c.gradients = new LSQInterpGradients(nsp, nmodes);
-	} // end foreach cell
+		} 
+		c.ws = new LSQInterpWorkspace();
+		c.gradients = new LSQInterpGradients(nsp, nmodes);
+	    } // end foreach cell
+	} else {
+	    foreach (c; cells) {
+		// First cell in the cloud is the cell itself.  Differences are taken about it.
+		c.cell_cloud ~= c;
+		// Subsequent cells are the surrounding cells.
+		foreach (i, f; c.iface) {
+		    if (c.outsign[i] > 0.0) {
+			if (f.right_cell && f.right_cell.will_have_valid_flow) {
+			    c.cell_cloud ~= f.right_cell;
+			}
+		    } else {
+			if (f.left_cell && f.left_cell.will_have_valid_flow) {
+			    c.cell_cloud ~= f.left_cell;
+			}
+		    }
+		} // end foreach face
+		c.ws = new LSQInterpWorkspace();
+		c.gradients = new LSQInterpGradients(nsp, nmodes);
+	    } // end foreach cell
+	} // end else
 	// We will also need derivative storage in ghostcells because the
 	// reconstruction functions will expect to be able to access the gradients
 	// either side of each interface.
@@ -640,56 +677,6 @@ public:
     // In the unstructured-grid context, set up the least-squares workspace for a cell
     // so that spatial derivatives can be computed in later flow-field reconstructions.
     {
-	/++ 
-	 In some instances the point cloud used for the reconstruction may not have adequate variation in all
-	 dimenions, in the case the standard deviation of the points in the cloud are less than some fraction
-	 of a cell length, store a larger cloud -- ideally this should be carried out where the clouds are
-	 originally constructed, but at that stage the code hasn't set the necessary geometric data.
-		    		    
-	 We do this before assembling and inverting the least-squares matrix.
-	 ++/
-	double[3] avg, sigma;
-	avg[0] = 0.0; avg[1] = 0.0; avg[2] = 0.0;
-	sigma[0] = 0.0; sigma[1] = 0.0; sigma[2] = 0.0;
-	auto n = c.cell_cloud.length;
-	foreach(i; 0..n) {
-	    avg[0] += c.cell_cloud[i].pos[gtl].x; 
-	    avg[1] += c.cell_cloud[i].pos[gtl].y;
-	    if (myConfig.dimensions == 3) { avg[2] += c.cell_cloud[i].pos[gtl].z; }
-	}
-	avg[0] /= n;
-	avg[1] /= n;
-	if (myConfig.dimensions == 3) { avg[2] /= n; }
-	foreach (i; 0..n) {
-	    sigma[0] += (c.cell_cloud[i].pos[gtl].x - avg[0])^^2;
-	    sigma[1] += (c.cell_cloud[i].pos[gtl].y - avg[1])^^2;
-	    if (myConfig.dimensions == 3) { sigma[2] += (c.cell_cloud[i].pos[gtl].z - avg[2])^^2; }
-	}
-	sigma[0] = sqrt(sigma[0]/n);
-	sigma[1] = sqrt(sigma[1]/n);
-	double min_sig = min(sigma[0], sigma[1]);
-	if (myConfig.dimensions == 3) {
-	    sigma[2] = sqrt(sigma[2]/n);
-	    min_sig = min(min_sig, sigma[2]);
-	}
-	if (myConfig.do_use_extended_stencil && allowCloudToExpand && (min_sig < 0.6*c.L_min)) {
-	    // Increase the cloud size by collecting the face neighbours of the nearest-neighbour cloud cells,
-	    // but be careful not to include cells multiple times.
-	    size_t[] cell_cloud_ids;
-	    foreach (i; 0 .. n) { cell_cloud_ids ~= c.cell_cloud[i].id; }
-	    foreach (j; 1 .. n) {
-		foreach (i, f; c.cell_cloud[j].iface) {
-		    if (f.right_cell && f.right_cell.will_have_valid_flow && !cell_cloud_ids.canFind(f.right_cell.id)) {
-			c.cell_cloud ~= f.right_cell;
-			cell_cloud_ids ~= f.right_cell.id;
-		    }
-		    if (f.left_cell && f.left_cell.will_have_valid_flow && !cell_cloud_ids.canFind(f.left_cell.id)) {
-			c.cell_cloud ~= f.left_cell;
-			cell_cloud_ids ~= f.left_cell.id;
-		    }
-		}
-	    }
-	}
 	try {
 	    c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
 	} catch (Exception e) {
@@ -877,15 +864,28 @@ public:
     // To be used, later, in the convective flux calculation.
     {
 	if (myConfig.interpolation_order > 1) {
+
+	    // for the MLP limiter we need to first loop over the vertices
+	    if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp) {
+		foreach (vtx; vertices) {
+		    FVCell[] cell_cloud;
+		    foreach(cid; cellIndexListPerVertex[vtx.id]) cell_cloud ~= cells[cid];
+		    vtx.gradients.store_max_min_values_for_mlp_limiter(cell_cloud, myConfig);
+		}
+	    }
+	    
 	    foreach (c; cells) {
 		c.gradients.compute_lsq_values(c.cell_cloud, c.ws, myConfig);
 		// It is more efficient to determine limiting factor here for some usg limiters.
 		final switch (myConfig.unstructured_limiter) {
 		    case UnstructuredLimiter.van_albada:
-			// do nothing now
+		        // do nothing now
 		        break;
 		    case UnstructuredLimiter.min_mod:
 			// do nothing now
+		        break;
+		    case UnstructuredLimiter.mlp:
+		        c.gradients.mlp_limit(c.cell_cloud, c.ws, myConfig);
 		        break;
 		    case UnstructuredLimiter.barth:
 		        c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);

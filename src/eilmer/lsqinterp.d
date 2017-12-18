@@ -310,6 +310,187 @@ public:
 	} // end switch thermo_interpolator
     } // end compute_lsq_gradients()
 
+    void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    {
+	// The implementation of the MLP limiter follows the implementation in VULCAN
+	// i.e. it uses the MLP approach, and the Van Leer limiting function
+	// as outlined in the NASA publication on VULCAN's unstructured solver [White et al 2017]
+	size_t dimensions = myConfig.dimensions;
+	double eps, a, b, U, phi, h, denom, numer, s;
+	immutable double w = 1.0e-12;
+	if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[0]);  
+        else h = sqrt(cell_cloud[0].volume[0]);
+	eps = 1.0e-12;
+	// The following function to be used at compile time.
+	string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
+	{
+	    string code = "{
+            U = cell_cloud[0].fs."~qname~";
+            phi = 1.0;
+            foreach (i, vtx; cell_cloud[0].vtx) {
+                double dx = vtx.pos[0].x - cell_cloud[0].pos[0].x; 
+                double dy = vtx.pos[0].y - cell_cloud[0].pos[0].y; 
+                double dz = vtx.pos[0].z - cell_cloud[0].pos[0].z;
+                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
+		if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
+		b = sgn(b) * (fabs(b) + w); 
+                if (b > 0.0) a = 0.5*(vtx.gradients."~qMaxname~" - U); 
+                else if (b < 0.0) a = 0.5*(vtx.gradients."~qMinname~" - U); 
+                numer = b*abs(a) + a*abs(b);
+                denom = abs(a) + abs(b) + eps;
+                s = (1.0/b) * (numer/denom);                    
+                phi = min(phi, s);
+	        if (b == 0.0) phi = 1.0;
+            }
+            "~limFactorname~" = phi;
+            }
+            ";
+	    return code;
+	}
+	// x-velocity
+	mixin(codeForLimits("vel.x", "velx", "velxPhi", "velxMax", "velxMin"));
+	mixin(codeForLimits("vel.y", "vely", "velyPhi", "velyMax", "velyMin"));
+	mixin(codeForLimits("vel.z", "velz", "velzPhi", "velzMax", "velzMin"));
+	if (myConfig.MHD) {
+	    mixin(codeForLimits("B.x", "Bx", "BxPhi", "BxMax", "BxMin"));
+	    mixin(codeForLimits("B.y", "By", "ByPhi", "ByMax", "ByMin"));
+	    mixin(codeForLimits("B.z", "Bz", "BzPhi", "BzMax", "BzMin"));
+	    if (myConfig.divergence_cleaning) {
+		mixin(codeForLimits("psi", "psi", "psiPhi", "psiMax", "psiMin"));
+	    }
+	}
+	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+	    mixin(codeForLimits("tke", "tke", "tkePhi", "tkeMax", "tkeMin"));
+	    mixin(codeForLimits("omega", "omega", "omegaPhi", "omegaMax", "omegaMin"));
+	}
+	auto nsp = myConfig.gmodel.n_species;
+	if (nsp > 1) {
+	    // Multiple species.
+	    foreach (isp; 0 .. nsp) {
+		mixin(codeForLimits("gas.massf[isp]", "massf[isp]", "massfPhi[isp]",
+				    "massfMax[isp]", "massfMin[isp]"));
+	    }
+	} else {
+	    // Only one possible gradient value for a single species.
+	    massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+	}
+	// Interpolate on two of the thermodynamic quantities, 
+	// and fill in the rest based on an EOS call. 
+	auto nmodes = myConfig.gmodel.n_modes;
+	final switch (myConfig.thermo_interpolator) {
+	case InterpolateOption.pt: 
+	    mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
+	    mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+				    "T_modesMax[imode]", "T_modesMin[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhou:
+	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+	    mixin(codeForLimits("gas.u", "u", "uPhi", "uMax", "uMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForLimits("gas.u_modes[imode]", "u_modes[imode]", "u_modesPhi[imode]",
+				    "u_modesMax[imode]", "u_modesMin[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhop:
+	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+	    mixin(codeForLimits("gas.p", "p", "pPhi", "pMax", "pMin"));
+	    break;
+	case InterpolateOption.rhot: 
+	    mixin(codeForLimits("gas.rho", "rho", "rhoPhi", "rhoMax", "rhoMin"));
+	    mixin(codeForLimits("gas.T", "T", "TPhi", "TMax", "TMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForLimits("gas.T_modes[imode]", "T_modes[imode]", "T_modesPhi[imode]",
+				    "T_modesMax[imode]", "T_modesMin[imode]"));
+	    }
+	    break;
+	} // end switch thermo_interpolator
+    } // end compute_lsq_gradients()
+
+    void store_max_min_values_for_mlp_limiter(FVCell[] cell_cloud, ref LocalConfig myConfig)
+    {
+	// the MLP limiter stores the maximum, and minimum flowstate values that surround a node, at the node
+	size_t dimensions = myConfig.dimensions;
+	auto np = cell_cloud.length;
+	// The following function to be used at compile time.
+	string codeForGradients(string qname, string gname, string qMaxname, string qMinname)
+	{
+	    string code = "{
+                double q0 = cell_cloud[0].fs."~qname~";
+                "~qMaxname~" = q0;
+                "~qMinname~" = q0;
+                foreach (i; 1 .. np) {
+                    "~qMaxname~" = max("~qMaxname~", cell_cloud[i].fs."~qname~");
+                    "~qMinname~" = min("~qMinname~", cell_cloud[i].fs."~qname~");
+                }
+                }
+                ";
+	    return code;
+	}
+	// x-velocity
+	mixin(codeForGradients("vel.x", "velx", "velxMax", "velxMin"));
+	mixin(codeForGradients("vel.y", "vely", "velyMax", "velyMin"));
+	mixin(codeForGradients("vel.z", "velz", "velzMax", "velzMin"));
+	if (myConfig.MHD) {
+	    mixin(codeForGradients("B.x", "Bx", "BxMax", "BxMin"));
+	    mixin(codeForGradients("B.y", "By", "ByMax", "ByMin"));
+	    mixin(codeForGradients("B.z", "Bz", "BzMax", "BzMin"));
+	    if (myConfig.divergence_cleaning) {
+		mixin(codeForGradients("psi", "psi", "psiMax", "psiMin"));
+	    }
+	}
+	if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+	    mixin(codeForGradients("tke", "tke", "tkeMax", "tkeMin"));
+	    mixin(codeForGradients("omega", "omega", "omegaMax", "omegaMin"));
+	}
+	auto nsp = myConfig.gmodel.n_species;
+	if (nsp > 1) {
+	    // Multiple species.
+	    foreach (isp; 0 .. nsp) {
+		mixin(codeForGradients("gas.massf[isp]", "massf[isp]", "massfMax[isp]", "massfMin[isp]"));
+	    }
+	} else {
+	    // Only one possible gradient value for a single species.
+	    massf[0][0] = 0.0; massf[0][1] = 0.0; massf[0][2] = 0.0;
+	}
+	// Interpolate on two of the thermodynamic quantities, 
+	// and fill in the rest based on an EOS call. 
+	auto nmodes = myConfig.gmodel.n_modes;
+	final switch (myConfig.thermo_interpolator) {
+	case InterpolateOption.pt: 
+	    mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
+	    mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
+				       "T_modesMax[imode]", "T_modesMin[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhou:
+	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
+	    mixin(codeForGradients("gas.u", "u", "uMax", "uMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.u_modes[imode]", "u_modes[imode]",
+				       "u_modesMax[imode]", "u_modesMin[imode]"));
+	    }
+	    break;
+	case InterpolateOption.rhop:
+	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
+	    mixin(codeForGradients("gas.p", "p", "pMax", "pMin"));
+	    break;
+	case InterpolateOption.rhot: 
+	    mixin(codeForGradients("gas.rho", "rho", "rhoMax", "rhoMin"));
+	    mixin(codeForGradients("gas.T", "T", "TMax", "TMin"));
+	    foreach (imode; 0 .. nmodes) {
+		mixin(codeForGradients("gas.T_modes[imode]", "T_modes[imode]",
+				       "T_modesMax[imode]", "T_modesMin[imode]"));
+	    }
+	    break;
+	} // end switch thermo_interpolator
+    } // end compute_lsq_gradients()
+
+    
    void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
    {
 	size_t dimensions = myConfig.dimensions;
@@ -607,6 +788,8 @@ public:
                         min_mod_limit(mygradL[1], mygradR[1]);
                         min_mod_limit(mygradL[2], mygradR[2]);
                         break;
+                    case UnstructuredLimiter.mlp:
+                        goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:

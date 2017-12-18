@@ -1364,6 +1364,9 @@ void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_l
 		case UnstructuredLimiter.min_mod:
 		    // do nothing now
 		    break;
+		case UnstructuredLimiter.mlp:
+		    c.gradients.mlp_limit(c.cell_cloud, c.ws, blk.myConfig);
+		    break;
 		case UnstructuredLimiter.barth:
 		    c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
 		    break;

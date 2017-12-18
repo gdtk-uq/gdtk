@@ -18,6 +18,7 @@ import flowstate;
 import flowgradients;
 import fvcell;
 import fvinterface;
+import lsqinterp;
 
 class FVVertex {
 public:
@@ -30,6 +31,7 @@ public:
     Vector3*[] cloud_pos; // Positions of flow points for derivative calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
     WLSQGradWorkspace ws_grad;
+    LSQInterpGradients gradients; // needed for the MLP limiter
     version(adjoint) {
 	FVCell[] jacobian_cell_stencil;
 	FVInterface[] jacobian_face_stencil;
