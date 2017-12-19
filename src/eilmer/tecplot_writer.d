@@ -16,7 +16,7 @@ import std.conv;
 import std.string;
 
 import tecio;
-import grid;
+import geom;
 import flowsolution;
 import fvcore: FlowSolverException;
 import sgrid: uflowz;
