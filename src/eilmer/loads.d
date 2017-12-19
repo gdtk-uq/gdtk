@@ -80,7 +80,7 @@ string generate_boundary_load_file(int current_loads_tindx, double sim_time, str
     if (!exists(fname)) {
 	auto f = File(fname, "w");
 	f.writeln("# t = ", sim_time);
-	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:T 15:Re_wall\n ");
+	f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:T 15:Re_wall 16:y+ 17:cellWidthNormalToSurface\n ");
 	f.close();
     }
     return fname;
@@ -198,7 +198,7 @@ void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface,
     double T_wall = fs.gas.T;
     double a_wall = fs.gas.a;
     double rho_wall = fs.gas.rho;
-    double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q, Re_wall;
+    double sigma_wall, tau_wall, l_tau, m_tau, n_tau, q, Re_wall, nu_wall, u_star, y_plus;
     if (GlobalConfig.viscous) {
 	double dTdx = grad.T[0]; double dTdy = grad.T[1]; double dTdz = grad.T[2]; 
 	double dudx = grad.vel[0][0]; double dudy = grad.vel[0][1]; double dudz = grad.vel[0][2];
@@ -235,6 +235,10 @@ void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface,
 	l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
 	m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
 	n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
+	// compute y+
+	nu_wall = mu_wall / rho_wall;
+	u_star = sqrt(tau_wall / rho_wall);
+	y_plus = u_star*(cellWidthNormalToSurface/2.0) / nu_wall;
 	// compute cell Reynolds number
 	Re_wall = rho_wall * a_wall * cellWidthNormalToSurface / mu_wall;
     } else {
@@ -244,8 +248,10 @@ void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface,
 	l_tau = 0.0; m_tau = 0.0; n_tau = 0.0;
 	q = 0.0;
 	Re_wall = 0.0;
+	y_plus = 0.0;
     }
     // store in file
-    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e \n", iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, T_wall, Re_wall);
+    auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+			 iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, T_wall, Re_wall, y_plus, cellWidthNormalToSurface);
     append(fname, writer);    
 } // end compute_and_store_loads()
