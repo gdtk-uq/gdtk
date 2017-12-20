@@ -139,6 +139,9 @@ FlowState_defaults = {
    massf = {["air"]=1.0, }, -- mass fractions
    T_modes = {}, -- temperatures for other internal energy modes, K
    --
+   mu = 0.0,
+   k = 0.0,
+   --
    velx = 0.0, -- velocity component in x-direction, m/s
    vely = 0.0, -- velocity component in y-direction, m/s
    velz = 0.0, -- velocity component in z-direction, m/s
@@ -243,10 +246,13 @@ function FlowState:new(o)
    local gm = FlowState.gm
    gm:updateThermoFromPT(Q)
    gm:updateSoundSpeed(Q)
+   gm:updateTransCoeffs(Q)
    -- If we add entries here, be sure to keep in sync with list
    -- of validFlowStateFields in luaflowstate.d.
    o.rho = Q.rho
    o.a = Q.a
+   o.mu = Q.mu
+   o.k = Q.k
    setmetatable(o, self)
    self.__index = self
    return o

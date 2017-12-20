@@ -36,6 +36,7 @@ immutable string FlowStateMT = "_FlowState";
 
 immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
 					   "quality", "massf",
+					   "mu", "k", 
 					   "velx", "vely", "velz",
 					   "Bx", "By", "Bz", "psi", "divB",
 					   "tke", "omega", "mu_t", "k_t", "S"];
