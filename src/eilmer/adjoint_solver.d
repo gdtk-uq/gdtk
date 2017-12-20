@@ -381,7 +381,7 @@ void main(string[] args) {
 
 	outFile.writef("SCALARS adjoint_pressure double \n");
 	outFile.writef("LOOKUP_TABLE default \n");
-	foreach(i; 0..ncells) {
+	foreach(i; 0..ncells) { 
 	    outFile.writef("%.16f \n", psi[np*i+3]);
 	}
 
@@ -396,8 +396,7 @@ void main(string[] args) {
     // ---------------------------------------------------------------------
 
     foreach (myblk; parallel(gasBlocks,1)) {
-	if (GlobalConfig.viscous) construct_viscous_mesh_jacobian_stencils(myblk);
-	else construct_inviscid_mesh_jacobian_stencils(myblk);
+	construct_mesh_jacobian_stencils(myblk);
     }
     // ------------------------------------------------------------
     // 4.b construct local mesh Jacobian via Frechet derivatives
@@ -762,89 +761,83 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
 
 void construct_inviscid_flow_jacobian_stencils(Block blk) {
     /++
+     This is the stencil of surrounding cells (and faces) that are effected by a perturbation in a 
+     cells flowstate variables, for inviscid flow.
      
-     This stencil holds references to the cells effected by a 
-     perturbation in the parent cell.
+     We must have the cells stored in id order, for efficient storage of the Jacobian.
      
-     For inviscid simulations, stencils are made up of the cells used in the
-     reconstruction step for each of the cells interfaces.
-     
-     For viscous simulations, stencils are made up of the inviscid stencil, plus
-     any cells that are additionally used in the viscous flux computations.
-     
-     NB. we need the stencils in cell id order, so that we can sequentially fill
-     a row in the transposed Jacobian in Compressed Row Storage format.
-     
+     The general formula is to first collect the faces that will have a perturbed flux from the perturbation of the
+     parent cell, then collect the left and right neighbouring cells of faces in the face stencil. For 2nd order structured
+     grids though it is more efficient to first collect collect cells first.
+
+     pcell = perturbed cell
      ++/
 
     // for first-order simulations the structured, unstructured stencils are identical
     if (blk.myConfig.interpolation_order < 2) { 
-	foreach(c; blk.cells) {
+	foreach(pcell; blk.cells) {
 	    FVCell[] refs_ordered;
 	    FVCell[] refs_unordered;
 	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
 	    size_t[] cell_ids;
-	    
-	    // add the parent cell as the first reference
-	    refs_unordered ~= c;
-	    pos_array[c.id] = refs_unordered.length-1;
-	    cell_ids ~= c.id;
 
-	    foreach(f; c.iface) {
-		// add face to interfaces stencil
-		c.jacobian_face_stencil ~= f;
-		
-		// store (non-ghost) neighbour cells in cells stencil
-		if (f.left_cell.id != c.id && f.left_cell.id < ghost_cell_start_id) {
-		    refs_unordered ~= f.left_cell;
-		    pos_array[f.left_cell.id] = refs_unordered.length-1;
-		    cell_ids ~= f.left_cell.id;
-		}
-		if (f.right_cell.id != c.id && f.right_cell.id < ghost_cell_start_id) {
-		    refs_unordered ~= f.right_cell;
-		    pos_array[f.right_cell.id] = refs_unordered.length-1;
-		    cell_ids ~= f.right_cell.id;
-		} else continue;
-	    } // end foreach face
-
-	    // finally sort ids, and store sorted cell references
-	    cell_ids.sort();
-	    foreach(id; cell_ids) {
-		refs_ordered ~= refs_unordered[pos_array[id]];
+	    // collect faces
+	    foreach(face; pcell.iface) {
+		pcell.jacobian_face_stencil ~= face;
 	    }
-	    c.jacobian_cell_stencil ~= refs_ordered;
+
+	    // for each effected face, add the neighbouring cells
+	    foreach(face; pcell.jacobian_face_stencil) {
+		// collect (non-ghost) neighbour cells
+		if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+		    refs_unordered ~= face.left_cell;
+		    pos_array[face.left_cell.id] = refs_unordered.length-1;
+		    cell_ids ~= face.left_cell.id;
+		}
+		if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+		    refs_unordered ~= face.right_cell;
+		    pos_array[face.right_cell.id] = refs_unordered.length-1;
+		    cell_ids ~= face.right_cell.id;
+		}
+		else continue;
+	    }
+	    
+	    // sort ids, and store sorted cell references
+	    cell_ids.sort();
+	    foreach(id; cell_ids) refs_ordered ~= refs_unordered[pos_array[id]];
+	    pcell.jacobian_cell_stencil ~= refs_ordered;
+
 	} // end foreach cell
     } // end if interpolation order < 2
     
     else { // higher-order
-	foreach(c; blk.cells) {
+	foreach(pcell; blk.cells) {
 	    FVCell[] refs_ordered;
 	    FVCell[] refs_unordered;
 	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
 	    size_t[] cell_ids;
 	    size_t[] face_ids;
+
 	    if (blk.grid_type == Grid_t.structured_grid) {
 
-		// add cells to stencil
-		// add the parent cell as the first reference
-		refs_unordered ~= c;
-		pos_array[c.id] = refs_unordered.length-1;
-		cell_ids ~= c.id;
+		// collect cells
+		refs_unordered ~= pcell;
+		pos_array[pcell.id] = refs_unordered.length-1;
+		cell_ids ~= pcell.id;
 
-		// collect other cells in stencil
 		SBlock sblk = cast(SBlock) blk;
-		size_t[3] ijk = sblk.cell_id_to_ijk_indices(c.id);
+		size_t[3] ijk = sblk.cell_id_to_ijk_indices(pcell.id);
 		size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
-		FVCell[] cells;
-		cells ~= sblk.get_cell(i-2, j, k);
-		cells ~= sblk.get_cell(i-1, j, k);
-		cells ~= sblk.get_cell(i+1, j, k);
-		cells ~= sblk.get_cell(i+2, j, k);
-		cells ~= sblk.get_cell(i, j-2, k);
-		cells ~= sblk.get_cell(i, j-1, k);
-		cells ~= sblk.get_cell(i, j+1, k);
-		cells ~= sblk.get_cell(i, j+2, k);
-		foreach(cell; cells) {
+		FVCell[] stencil_cells;
+		stencil_cells ~= sblk.get_cell(i-2, j, k);
+		stencil_cells ~= sblk.get_cell(i-1, j, k);
+		stencil_cells ~= sblk.get_cell(i+1, j, k);
+		stencil_cells ~= sblk.get_cell(i+2, j, k);
+		stencil_cells ~= sblk.get_cell(i, j-2, k);
+		stencil_cells ~= sblk.get_cell(i, j-1, k);
+		stencil_cells ~= sblk.get_cell(i, j+1, k);
+		stencil_cells ~= sblk.get_cell(i, j+2, k);
+		foreach(cell; stencil_cells) {
 		    // add cell to cell stencil
 		    if (cell.id < ghost_cell_start_id) {
 			refs_unordered ~= cell;
@@ -852,264 +845,203 @@ void construct_inviscid_flow_jacobian_stencils(Block blk) {
 			cell_ids ~= cell.id;
 		    }
 		}
-		cells = [];
-		cells ~= sblk.get_cell(i, j, k);
-		cells ~= sblk.get_cell(i-1, j, k);
-		cells ~= sblk.get_cell(i+1, j, k);
-		cells ~= sblk.get_cell(i, j+1, k);
-		cells ~= sblk.get_cell(i, j-1, k);
-		// add faces to interface stencil
-		foreach(cell; cells) {
+		// collect faces
+		stencil_cells = [];
+		stencil_cells ~= sblk.get_cell(i, j, k);
+		stencil_cells ~= sblk.get_cell(i-1, j, k);
+		stencil_cells ~= sblk.get_cell(i+1, j, k);
+		stencil_cells ~= sblk.get_cell(i, j+1, k);
+		stencil_cells ~= sblk.get_cell(i, j-1, k);
+		foreach(cell; stencil_cells) {
 		    foreach(face; cell.iface) {
 			if (face_ids.canFind(face.id) == false && cell.id < ghost_cell_start_id)
-			    c.jacobian_face_stencil ~= face; face_ids ~= face.id;
+			    pcell.jacobian_face_stencil ~= face; face_ids ~= face.id;
 		    }
 		}
 	    }
 	    else { // unstructured grid
-		foreach(cell; c.cell_cloud) {
-		    foreach(f; cell.iface) {
-			// add cells to stencil
-			if (f.left_cell.id < ghost_cell_start_id && cell_ids.canFind(f.left_cell.id) == false) {
-			    refs_unordered ~= f.left_cell;
-			    pos_array[f.left_cell.id] = refs_unordered.length-1;
-			    cell_ids ~= f.left_cell.id;
+		foreach(cell; pcell.cell_cloud) {
+		    // collect faces
+		    foreach(face; cell.iface) {
+			if (face_ids.canFind(face.id) == false) {
+			    cell.jacobian_face_stencil ~= face;
+			    face_ids ~= face.id;
 			}
-			if (f.right_cell.id < ghost_cell_start_id && cell_ids.canFind(f.right_cell.id) == false) {
-			    refs_unordered ~= f.right_cell;
-			    pos_array[f.right_cell.id] = refs_unordered.length-1;
-			    cell_ids ~= f.right_cell.id;
-			}
-			// add faces to stencil
-			if (face_ids.canFind(f.id) == false)
-			    c.jacobian_face_stencil ~= f; face_ids ~= f.id;
 		    }
 		}
+		
+		// for each effected face, add the neighbouring cells
+		foreach(face; pcell.jacobian_face_stencil) {
+		    // collect (non-ghost) neighbour cells
+		    if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+			refs_unordered ~= face.left_cell;
+			pos_array[face.left_cell.id] = refs_unordered.length-1;
+			cell_ids ~= face.left_cell.id;
+		    }
+		    if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+			refs_unordered ~= face.right_cell;
+			pos_array[face.right_cell.id] = refs_unordered.length-1;
+			cell_ids ~= face.right_cell.id;
+		    }
+		    else continue;
+		}
 	    }
-
+	    
 	    // finally sort ids, and store sorted cell references
 	    cell_ids.sort();
 	    foreach(id; cell_ids) {
 		refs_ordered ~= refs_unordered[pos_array[id]];
 	    }
-	    c.jacobian_cell_stencil ~= refs_ordered;
-	    //writeln("cellID: ", c.id, ", numCellsInStencil: ", c.jacobian_cell_stencil.length, ", numFacesInStencil: ", c.jacobian_face_stencil.length);
-	    //foreach(cell; c.jacobian_cell_stencil) {
-	    //writef(" %d ", cell.id);
-	    //}
-	    //writef("\n");
+	    pcell.jacobian_cell_stencil ~= refs_ordered;	    
 	}
     }
 }
 
 void construct_viscous_flow_jacobian_stencils(Block blk) {
     /++
+
+     This is the stencil of surrounding cells (and faces) that are effected by a perturbation in a 
+     cells flowstate variables, for viscous flow.
      
-     This stencil holds references to the cells effected by a 
-     perturbation in the parent cell.
+     We must have the cells stored in id order, for efficient storage of the Jacobian.
      
-     For inviscid simulations, stencils are made up of the cells used in the
-     reconstruction step for each of the cells interfaces.
-     
-     For viscous simulations, stencils are made up of the inviscid stencil, plus
-     any cells that are additionally used in the viscous flux computations.
-     
-     NB. we need the stencils in cell id order, so that we can sequentially fill
-     a row in the transposed Jacobian in Compressed Row Storage format.
+     The general formula is to first collect the faces that will have a perturbed flux from the perturbation of the
+     parent cell, then collect the left and right neighbouring cells of faces in the face stencil. For 2nd order structured
+     grids though it is more efficient to first collect collect cells first.
+
+     pcell = perturbed cell
      
      ++/
 
     // for first-order simulations the structured, unstructured stencils are identical
-    foreach(c; blk.cells) {
+    foreach(pcell; blk.cells) {
 	FVCell[] refs_ordered;
 	FVCell[] refs_unordered;
 	size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
 	size_t[] cell_ids;
 	size_t[] face_ids;
-	
-	// first loop around and store faces in stencil
-	foreach(f; c.iface) {
-	    // store face
-	    c.jacobian_face_stencil ~= f; face_ids ~= f.id;
+
+	if (blk.grid_type == Grid_t.structured_grid) {
+	    // first loop around and store faces in stencil
+	    foreach(f; pcell.iface) {
+		// store face
+		pcell.jacobian_face_stencil ~= f; face_ids ~= f.id;
+		
+		// loop around neighbour
+		if (f.left_cell.id != pcell.id && f.left_cell.id < ghost_cell_start_id) {
+		    foreach(face; f.left_cell.iface) {
+			if (face_ids.canFind(face.id) == false )
+			    { pcell.jacobian_face_stencil ~= face; face_ids ~= face.id; }
+		    }
+		}
+		if (f.right_cell.id != pcell.id && f.right_cell.id < ghost_cell_start_id) {
+		    foreach(face; f.right_cell.iface) {
+			if (face_ids.canFind(face.id) == false )
+			    { pcell.jacobian_face_stencil ~= face; face_ids ~= face.id; }
+		    }
+		} else continue;
+	    }
 	    
-	    // loop around neighbour
-	    if (f.left_cell.id != c.id && f.left_cell.id < ghost_cell_start_id) {
-		foreach(face; f.left_cell.iface) {
-		    if (face_ids.canFind(face.id) == false )
-			{ c.jacobian_face_stencil ~= face; face_ids ~= face.id; }
+	    // now loop through face stencil and add left, and right cells
+	    foreach(f; pcell.jacobian_face_stencil) {
+		// store (non-ghost) neighbour cells in cells stencil
+		if (cell_ids.canFind(f.left_cell.id) == false && f.left_cell.id < ghost_cell_start_id) {
+		    refs_unordered ~= f.left_cell;
+		    pos_array[f.left_cell.id] = refs_unordered.length-1;
+		    cell_ids ~= f.left_cell.id;
 		}
-	    }
-	    if (f.right_cell.id != c.id && f.right_cell.id < ghost_cell_start_id) {
-		foreach(face; f.right_cell.iface) {
-		    if (face_ids.canFind(face.id) == false )
-			{ c.jacobian_face_stencil ~= face; face_ids ~= face.id; }
-		}
-	    } else continue;
+		if (cell_ids.canFind(f.right_cell.id) == false && f.right_cell.id < ghost_cell_start_id) {
+		    refs_unordered ~= f.right_cell;
+		    pos_array[f.right_cell.id] = refs_unordered.length-1;
+		    cell_ids ~= f.right_cell.id;
+		} else continue;
+	    } // end foreach face
 	}
-	
-	// now loop through face stencil and add left, and right cells
-	foreach(f; c.jacobian_face_stencil) {
-	    // store (non-ghost) neighbour cells in cells stencil
-	    if (cell_ids.canFind(f.left_cell.id) == false && f.left_cell.id < ghost_cell_start_id) {
-		refs_unordered ~= f.left_cell;
-		pos_array[f.left_cell.id] = refs_unordered.length-1;
-		cell_ids ~= f.left_cell.id;
+	else { // unstructured grid
+	    foreach(cell; pcell.cell_cloud) {
+		// collect faces
+		foreach(face; cell.iface) {
+		    if (face_ids.canFind(face.id) == false) {
+			cell.jacobian_face_stencil ~= face;
+			face_ids ~= face.id;
+		    }
+		}
 	    }
-	    if (cell_ids.canFind(f.right_cell.id) == false && f.right_cell.id < ghost_cell_start_id) {
-		refs_unordered ~= f.right_cell;
-		pos_array[f.right_cell.id] = refs_unordered.length-1;
-		cell_ids ~= f.right_cell.id;
-	    } else continue;
-	} // end foreach face
+	    
+	    // for each effected face, add the neighbouring cells
+	    foreach(face; pcell.jacobian_face_stencil) {
+		// collect (non-ghost) neighbour cells
+		if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+		    refs_unordered ~= face.left_cell;
+		    pos_array[face.left_cell.id] = refs_unordered.length-1;
+		    cell_ids ~= face.left_cell.id;
+		}
+		if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+		    refs_unordered ~= face.right_cell;
+		    pos_array[face.right_cell.id] = refs_unordered.length-1;
+		    cell_ids ~= face.right_cell.id;
+		}
+		else continue;
+	    }
+	}
 	
 	// finally sort ids, and store sorted cell references
 	cell_ids.sort();
 	foreach(id; cell_ids) {
 	    refs_ordered ~= refs_unordered[pos_array[id]];
 	}
-	c.jacobian_cell_stencil ~= refs_ordered;
-	//writeln("cell: ", c.jacobian_cell_stencil.length, ", ", c.jacobian_face_stencil.length);
+	pcell.jacobian_cell_stencil ~= refs_ordered;
     } // end foreach cell
 }
 
-void construct_inviscid_mesh_jacobian_stencils(Block blk) {
+void construct_mesh_jacobian_stencils(Block blk) {
     /++
      
-     This stencil holds references to the cells effected by a 
-     perturbation in the parent vertex.
+     This is the stencil of surrounding cells (and faces) that are effected by a perturbation in a 
+     vertex, for viscous flow.
      
-     NB. we need the stencils in cell id order, so that we can sequentially fill
-     a row in the transposed Jacobian in Compressed Row Storageema format.
+     We must have the cells stored in id order, for efficient storage of the Jacobian.
+     
+     This stencil is a superposition of the flow Jacobian stencils for the cells that share the perturbed vertex.
+     The general formula is to loop around the cells that share the perturbed vertex, and collect the cells, and faces
+     from that cells flow Jacobian stencil.
+
+     pvtx = perturbed vertex.
      
      ++/
 
-    // for first-order simulations the structured, unstructured stencils are identical
-    if (blk.myConfig.interpolation_order < 2) {
-	foreach(i, vtx; blk.vertices) {
-	    FVCell[] cell_refs;
-	    FVInterface[] face_refs;
-	    size_t[] face_ids;        		    
-	    foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
-		// add cells to stencil
-		cell_refs ~= blk.cells[cid];
-
-		// add faces to stencil
-		if (blk.grid_type == Grid_t.unstructured_grid) {
-		    foreach (face; blk.cells[cid].iface) {
-			if (face_ids.canFind(face.id) == false)
-			    face_refs ~= face; face_ids ~= face.id;
-		    }
-		}
-		else { // structured 
-		    foreach (face; blk.cells[cid].jacobian_face_stencil) {
-			if (face_ids.canFind(face.id) == false)
-			    face_refs ~= face; face_ids ~= face.id;
-		    }
-		}
-	    }
-	    // the cells are already in cell id order from cellIndexListPerVertex
-	    vtx.jacobian_cell_stencil ~= cell_refs;
-	    vtx.jacobian_face_stencil ~= face_refs;
-	}
-    }
-    else { // high-order interpolation
-	foreach(vtx; blk.vertices) {
-	    FVCell[] refs_ordered;
-	    FVCell[] refs_unordered;
-	    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
-	    size_t[] cell_ids;
-	    size_t[] face_ids;
-	    FVInterface[] face_refs;
-	    if (blk.grid_type == Grid_t.structured_grid) {
-		SBlock sblk = cast(SBlock) blk;
-		foreach (cid; sblk.cellIndexListPerVertex[vtx.id]) {
-		    // add cells to stencil
-		    foreach(c; sblk.cells[cid].jacobian_cell_stencil) {
-			if (cell_ids.canFind(c.id) == false) {
-			    refs_unordered ~= c;
-			    pos_array[c.id] = refs_unordered.length-1;
-			    cell_ids ~= c.id;
-			} else continue;
-		    }
-		    // add faces to stencil
-		    foreach (face; blk.cells[cid].jacobian_face_stencil) {
-			if (face_ids.canFind(face.id) == false)
-			    face_refs ~= face; face_ids ~= face.id;
-		    }
-		}
-	    }
-	    else { // unstructured grid
-		foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
-		    foreach (c; blk.cells[cid].jacobian_cell_stencil) {
-			// add cells to stencil
-			if (cell_ids.canFind(c.id) == false) {
-			    refs_unordered ~= c;
-			    pos_array[c.id] = refs_unordered.length-1;
-			    cell_ids ~= c.id;
-			}
-		    }
-		    foreach (c; blk.cells[cid].cell_cloud) {
-			// add faces to stencil
-			foreach (face; c.iface) {
-			    if (face_ids.canFind(face.id) == false)
-				face_refs ~= face; face_ids ~= face.id;
-			}
-		    }
-		}
-	    }
-	    
-	    // finally sort cell ids
-	    cell_ids.sort();
-	    foreach(id; cell_ids) {
-		refs_ordered ~= refs_unordered[pos_array[id]];
-	    }
-	    vtx.jacobian_cell_stencil ~= refs_ordered;
-	    vtx.jacobian_face_stencil ~= face_refs;
-	}
-    }
-}
-
-void construct_viscous_mesh_jacobian_stencils(Block blk) {
-    /++
-     
-     This stencil holds references to the cells effected by a 
-     perturbation in the parent vertex.
-     
-     NB. we need the stencils in cell id order, so that we can sequentially fill
-     a row in the transposed Jacobian in Compressed Row Storageema format.
-     
-     ++/
-
-    // for first-order simulations the structured, unstructured stencils are identical
-    foreach(i, vtx; blk.vertices) {
+    foreach(i, pvtx; blk.vertices) {
 	FVCell[] refs_ordered;
 	FVCell[] refs_unordered;
 	size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
 	size_t[] cell_ids;
 	size_t[] face_ids;
-	
-	foreach (cid; blk.cellIndexListPerVertex[vtx.id]) {
-	    // add cells to stencil
-	    FVCell c = blk.cells[cid];
-	    
-	    foreach(f; c.jacobian_face_stencil) {
-		if (face_ids.canFind(f.id) == false)
-		    { vtx.jacobian_face_stencil ~= f; face_ids ~= f.id; }
+
+	foreach (cid; blk.cellIndexListPerVertex[pvtx.id]) {
+
+	    // collect cells from cells flow Jacobian stencil
+	    foreach(cell; blk.cells[cid].jacobian_cell_stencil) {
+		if (cell_ids.canFind(cell.id) == false) {
+		    refs_unordered ~= cell;
+		    pos_array[cell.id] = refs_unordered.length-1;
+		    cell_ids ~= cell.id;
+		}
 	    }
-	    
-	    foreach(cell; c.jacobian_cell_stencil) {
-		if (cell_ids.canFind(cell.id) == false)
-		    { refs_unordered ~= cell; pos_array[cell.id] = refs_unordered.length-1; cell_ids ~= cell.id; } 
+
+	    // collect faces from faces flow Jacobian stencil
+	    foreach(face; blk.cells[cid].jacobian_face_stencil) {
+		if (face_ids.canFind(face.id) == false) {
+		    pvtx.jacobian_face_stencil ~= face;
+		    face_ids ~= face.id;
+		}
 	    }
 	}
-	// finally sort cell ids
-	//writeln(cell_ids);
+	// finally sort ids, and store sorted cell references
 	cell_ids.sort();
 	foreach(id; cell_ids) {
 	    refs_ordered ~= refs_unordered[pos_array[id]];
 	}
-	vtx.jacobian_cell_stencil ~= refs_ordered;
-	//writeln("vtx: ", vtx.jacobian_cell_stencil.length, ", ", vtx.jacobian_face_stencil.length);
+	pvtx.jacobian_cell_stencil ~= refs_ordered;
     }
 }
 
