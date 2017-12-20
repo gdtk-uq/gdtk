@@ -19,7 +19,6 @@ import tecio;
 import geom;
 import flowsolution;
 import fvcore: FlowSolverException;
-import sgrid: uflowz;
 
 string[] zones =
     [
