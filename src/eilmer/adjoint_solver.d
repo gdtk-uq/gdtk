@@ -864,7 +864,7 @@ void construct_inviscid_flow_jacobian_stencils(Block blk) {
 		    // collect faces
 		    foreach(face; cell.iface) {
 			if (face_ids.canFind(face.id) == false) {
-			    cell.jacobian_face_stencil ~= face;
+			    pcell.jacobian_face_stencil ~= face;
 			    face_ids ~= face.id;
 			}
 		    }
@@ -962,7 +962,7 @@ void construct_viscous_flow_jacobian_stencils(Block blk) {
 		// collect faces
 		foreach(face; cell.iface) {
 		    if (face_ids.canFind(face.id) == false) {
-			cell.jacobian_face_stencil ~= face;
+			pcell.jacobian_face_stencil ~= face;
 			face_ids ~= face.id;
 		    }
 		}
