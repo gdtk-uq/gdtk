@@ -1,7 +1,23 @@
 /++ 
-    1D (with area change) Euler-Adjoint solver for a supersonic nozzle
-    author: Kyle Damm, 13/07/2017
+ Quasi-One Dimensional Adjoint Solver (QUODAS)
+
+ Flow Solver 
+ + Quasi-1D Euler equations.
+ + Finite-volume, cell-centered formulation.
+ + MUSCL-type reconstruction with Limiting via a Modified Van Albada method.
+ + Van Leer or AUSMDV flux calculators.
+
+ Adjoint Solver
+ + Finite-difference sensitivities.
+ + Adjoint system formulated in terms of primitive, and conservative variables.
+
+ Optimiser
+ + Conjugate gradient method.
+ 
+ author: Kyle Damm, July 2017
+ location: South Korea
 ++/
+
 import std.stdio;
 import std.math;
 import std.string;
@@ -14,14 +30,383 @@ import std.exception;
 // Set global simulations parameters
 //-----------------------------------------------------
 
-immutable double length = 10.0;            // length of nozzle in metres
-immutable size_t ncells = 100;             // number of cells
-immutable size_t nghost = 4;              // number of ghost cells
-immutable size_t ninterfaces = ncells+1;  // number of interfaces
+immutable size_t np = 3;                      // number of primitive variables
+immutable size_t nd = 3;                      // number of design variables
+immutable double length = 10.0;               // length of nozzle in metres
+immutable size_t ncells = 300;                // number of cells
+immutable size_t nghost = 4;                  // number of ghost cells
+immutable size_t ninterfaces = ncells+1;      // number of interfaces
+immutable string data_dir = "dat-files/";      // input/output files directory
+immutable double eps0 = 1.0e-10;              // adjoint finite difference perturbation
+immutable double eps1 = 1.0e-07;              // dRdD finite difference perturbation 
+immutable double eps2 = 1.0e-06;              // brute-force finite difference perturbation
 
 //-----------------------------------------------------
-// Classes and helper functions
+// Main Body
 //-----------------------------------------------------
+
+void main() {
+    //-----------------------------------------------------
+    // Select Simulation type
+     //-----------------------------------------------------
+    string simulation_type = "nozzle"; // options: Sod's Shocktube, Nozzle
+
+    //-----------------------------------------------------
+    // Set simulations parameters
+    //-----------------------------------------------------
+    string solver = "optimisation"; // options: simulation, optimisation, verification
+   
+    // flow solver
+    double dt = 1.0e-05;                                // flow solver time step, s
+    size_t max_step = 100000000;                        // maximum number of flow solver steps
+    double final_time;                                  // final simulation time, s
+    if (simulation_type == "sod") final_time = 6.0e-04; 
+    else if (simulation_type == "nozzle") final_time = 2.0; 
+    string flux_calc = "ausmdv"; // options: van_leer, ausmdv
+    size_t interpolation_order = 1;
+    size_t outflow_bc_order = 1;
+    double outflow_bc_back_pressure_factor = 0.5;
+    
+    // adjoint solver
+    string adjoint_form = "primitive";           // options: conservative form, primtive form
+    double tol = 1.0e-04;                        // optimisation tolerance
+
+    // geometry parameters for nozzle
+
+    // nozzle shock removal/addition: with bp factor 0.5
+    // with shock: b = 0.5, c = 1.0, d = 3.8 
+    // without shock: b = 0.347, c = 0.8, d = 4.0
+
+    double b = 0.347;
+    double c = 0.8;
+    double d = 4.0;
+    double yo = 0.105;
+    double scale = 1.0;
+
+    // gas properties
+    double gamma = 1.4; // ideal air
+    
+    //-----------------------------------------------------
+    // Create directory for simulation result files
+    //-----------------------------------------------------
+    if (exists(data_dir) && isDir(data_dir)) {} //do nothing;
+    else {
+	try {
+	    mkdirRecurse(data_dir);
+	} catch (FileException e) {
+	    string msg = text("Failed to ensure directory is present: ", data_dir);
+	    throw new Error(msg);
+	}
+    }
+
+    //-----------------------------------------------------
+    // Construct Mesh
+    //-----------------------------------------------------
+
+    fvcell[ncells+nghost] global_cells;
+    double dx = length/ncells; // cell width
+
+    // construct ghost cells ---------------------
+
+    global_cells[0] = new fvcell(10000001, -1.5*dx, dx);
+    global_cells[1] = new fvcell(10000002, -0.5*dx, dx);
+    global_cells[ncells+2] = new fvcell(10000003, length+0.5*dx, dx);
+    global_cells[ncells+3] = new fvcell(10000004, length+1.5*dx, dx);
+
+    // construct inner domain cells --------------------
+
+    double temp_pos = 0.5*dx;
+    foreach(i; 0 .. ncells) {
+	global_cells[i+2] = new fvcell(i, temp_pos, dx);
+	temp_pos += dx ;
+    }
+    
+    // construct interfaces ----------------------
+    
+    fvinterface[ninterfaces] global_interfaces;
+    fvinterface[ninterfaces] perturbed_interfaces; // for implicit solver
+    temp_pos = 0.0;
+    foreach(i; 0 .. ninterfaces) {
+	global_interfaces[i] = new fvinterface(i, temp_pos);
+	perturbed_interfaces[i] = new fvinterface(i, temp_pos);
+	temp_pos += dx;
+    }
+
+    // compute interface area, and set cell volume
+    compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+
+    //-----------------------------------------------------
+    // Initial Condiions
+    //-----------------------------------------------------
+    set_initial_and_inflow_conditions(simulation_type, global_cells, gamma);
+    
+    // ---------------------------------------------------------------------------------- //
+    // Now we're ready to perform some finite volume calculations on the cells
+    // ---------------------------------------------------------------------------------- //
+    // set some internal parameters
+    double sim_time = 0.0;                              // current simulation time, s
+    size_t step = 0;
+    size_t opt_iter = 0;
+    double dLdB_old = 0.0; double dLdC_old = 0.0; double dLdD_old = 0.0;
+    double dLdB = 1e10; double dLdC = 1e10; double dLdD = 1e10;
+    double Jref = 0.0;
+    double[np*ncells] psi;
+    
+    // optimisation routine arrays
+    double[nd] pk;
+    double[nd] pk_old;
+    double[] tol_hist;
+    
+    if (solver == "simulation") {
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	// write out geometry, and flow-field
+	write_out_solution(global_cells, global_interfaces, tol_hist, psi, "target_contour.dat", "target_output.dat");
+    }
+    else if(solver == "verification") {
+
+	// make sure the target pressure file exists
+	if (exists(data_dir~"/target_output.dat")) {} //do nothing;
+	else {
+		string msg = text("target pressure file (naming format: target_output.dat) does not exist in user specified data directory: ", data_dir);
+		throw new Error(msg);
+	}
+	// read in target pressure
+	double[ncells] p_target;
+	read_target_pressure_file(p_target);
+	
+	writeln("-- computing gradient via adjoint method");
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	adjoint_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		       flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor,
+		       psi, dLdB, dLdC, dLdD, dx, gamma, b, c, d, yo, scale, solver, adjoint_form, p_target);
+	double adjoint_dLdB = dLdB; double adjoint_dLdC = dLdC; double adjoint_dLdD = dLdD;
+
+	writeln("-- computing gradient via finite-difference method");
+	double Jminus; double Jplus;
+
+	// perturb b
+	writeln("-- -- perturb b");
+	double fd_dLdB;
+	double b_orig = b;
+	b = b_orig + (b_orig*eps2 + eps2);
+	compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	Jplus = objective_function_evaluation(global_cells, p_target);
+	b = b_orig - (b_orig*eps2 + eps2);
+	compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	Jminus = objective_function_evaluation(global_cells, p_target);
+	fd_dLdB = (Jplus - Jminus)/(2.0 * (b_orig*eps2 + eps2));
+	b = b_orig;
+
+	// perturb c
+	writeln("-- -- perturb c");
+	double fd_dLdC;
+	double c_orig = c;
+	c = c_orig + (c_orig*eps2 + eps2);
+	compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	Jplus = objective_function_evaluation(global_cells, p_target);
+        c = c_orig - (c_orig*eps2 + eps2);
+	compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	Jminus = objective_function_evaluation(global_cells, p_target);
+	fd_dLdC = (Jplus - Jminus)/(2.0 * (c_orig*eps2 + eps2));
+	c = c_orig;
+
+	// perturb d
+	writeln("-- -- perturb d");
+	double fd_dLdD;
+	double d_orig = d;
+	d = d_orig + (d_orig*eps2 + eps2);
+	compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	Jplus = objective_function_evaluation(global_cells, p_target);
+        d = d_orig - (d_orig*eps2 + eps2);
+	compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+		    flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	Jminus = objective_function_evaluation(global_cells, p_target);
+	fd_dLdD = (Jplus - Jminus)/(2.0 * (d_orig*eps2 + eps2));
+	d = d_orig;
+
+	writeln("--------------------");
+	writeln("Verification Results:");
+	writeln("--------------------");
+	writeln("fd_b = ", fd_dLdB);
+	writeln("adjoint_b = ", adjoint_dLdB);
+	writeln("% error b = ", (adjoint_dLdB-fd_dLdB)/adjoint_dLdB * 100.0);
+	writeln("fd_c = ", fd_dLdC);
+	writeln("adjoint_c = ", adjoint_dLdC);
+	writeln("% error c = ", (adjoint_dLdC-fd_dLdC)/adjoint_dLdC * 100.0);
+	writeln("fd_d = ", fd_dLdD);
+	writeln("adjoint_d = ", adjoint_dLdD);
+	writeln("% error d = ", (adjoint_dLdD-fd_dLdD)/adjoint_dLdD * 100.0);
+    }
+    else if (solver == "optimisation") {
+
+	// make sure the target pressure file exists
+	if (exists(data_dir~"/target_output.dat")) {} //do nothing;
+	else {
+	    string msg = text("target pressure file (naming format: target_output.dat) does not exist in user specified data directory: ", data_dir);
+	    throw new Error(msg);
+	}
+	// read in target pressure
+	double[ncells] p_target;
+	read_target_pressure_file(p_target);
+
+	writeln("BASELINE GEOMETRY (b, c, d): ", b, ", ", c, ", ", d);
+	while (opt_iter < 1e6) {
+	    //-----------------------------------------------------
+	    // conjugate gradient update
+	    //-----------------------------------------------------
+	    	    	    
+	    // 1. compute flow solution, gradients, and objective function for current geometry
+	    flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+			flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	    adjoint_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step,
+			   max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor,
+			   psi, dLdB, dLdC, dLdD, dx, gamma, b, c, d, yo, scale, solver, adjoint_form, p_target);
+
+	    if (opt_iter == 0) {
+		// write out optimisaed geometry, and flow-field
+		write_out_solution(global_cells, global_interfaces, tol_hist, psi, "initial_contour.dat", "initial_output.dat");
+	    }
+	    double J = objective_function_evaluation(global_cells, p_target);
+
+
+	    // if on the first step, then set the reference J
+	    if (opt_iter == 0) Jref = J;
+
+	    tol_hist ~= J/Jref;
+	    writeln("--------------------------------------------------------------------------");
+	    writeln(opt_iter, ". J/Jref = ", J/Jref, ", b = ", b, ", c = ", c, ", d = ", d);
+	    writeln("gradients: ", ", dLdB = ", dLdB,  ", dLdC = ", dLdC,  ", dLdD = ", dLdD);
+	    writeln("--------------------------------------------------------------------------");
+	    
+	    // if the gradients and cost function are small enough then we are at a minimum
+	    if (J/Jref < tol) break;
+	    
+	    // 2. compute search direction
+	    double beta;
+	    if (opt_iter == 0) { // first step uses the steepest direction method
+		double norm = sqrt(dLdB*dLdB + dLdC*dLdC + dLdD*dLdD);
+		pk[0] = -dLdB/norm;
+		pk[1] = -dLdC/norm;
+		pk[2] = -dLdD/norm;
+	    }
+	    else if( ( opt_iter % 3 ) == 0) { // we perform restarts for robustness
+		double norm = sqrt(dLdB*dLdB + dLdC*dLdC + dLdD*dLdD);
+		pk[0] = -dLdB/norm;
+		pk[1] = -dLdC/norm;
+		pk[2] = -dLdD/norm;
+	    }
+	    else { // else let's use the previous gradient knowledge to improve our step
+		double norm = sqrt(dLdB*dLdB + dLdC*dLdC + dLdD*dLdD);
+		double beta_numer = dLdB*dLdB + dLdC*dLdC + dLdD*dLdD;
+		double beta_denom = dLdB_old*dLdB_old + dLdC_old*dLdC_old + dLdD_old*dLdD_old;
+		beta = beta_numer/beta_denom;
+		pk[0] = -dLdB/norm + beta*pk_old[0]; 
+		pk[1] = -dLdC/norm + beta*pk_old[1]; 
+		pk[2] = -dLdD/norm + beta*pk_old[2]; 
+	    }
+	    
+	    // 3. perform line search to find step size ak (this is the expenseive stage)
+	    double rho = 0.5;
+	    double mu = 1.0e-3; // this has a strong effect on convergence
+	    double ak = 1.0;
+	    double bb = b;
+	    double cc = c;
+	    double dd = d;
+	    double Jk = J;
+	    
+	    // update geometry
+	    compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	    flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+			flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	    double Jk1 = objective_function_evaluation(global_cells, p_target);
+
+	    bool are_design_vars_negative = true; // assume negative to begin with
+	    while (Jk1 >= Jk + ak*mu*(dLdB*pk[0]+dLdC*pk[1]+dLdD*pk[2])) {
+
+	      // add in constraint to ensure positive design variables
+	      if (are_design_vars_negative) {
+		while (are_design_vars_negative) {
+		  ak = ak*rho;
+		  b = bb + ak*pk[0];
+		  c = cc + ak*pk[1];
+		  d = dd + ak*pk[2];
+
+		  compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+
+		  size_t num_negative_areas = 0;
+		  foreach (iface; global_interfaces) {
+		    if (iface.area < 0.0) num_negative_areas += 1;
+		  }
+		  if (b > 0.0 && num_negative_areas == 0 &&  global_interfaces[0].area <  global_interfaces[$-1].area) are_design_vars_negative  = false; 
+		}
+	      }
+	      else {
+		ak = ak*rho;
+		b = bb + ak*pk[0];
+		c = cc + ak*pk[1];
+		d = dd + ak*pk[2];
+	      }
+	      
+	      // update geometry
+	      compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	      flow_solver(global_cells, global_interfaces, perturbed_interfaces, dt, sim_time, final_time, step, max_step,
+			  flux_calc, simulation_type, interpolation_order, outflow_bc_order, outflow_bc_back_pressure_factor, dx, gamma);
+	      Jk1 = objective_function_evaluation(global_cells, p_target);
+	    }
+
+	    // update geometry
+	    compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+	    
+	    dLdB_old = dLdB; 
+	    dLdC_old = dLdC;
+	    dLdD_old = dLdD; 
+	    pk_old[0] = pk[0];
+	    pk_old[1] = pk[1];
+	    pk_old[2] = pk[2];
+	    opt_iter += 1;
+	}
+	writeln("FINAL GEOMETRY (b, c, d):", b, ", ", c, ", ", d);
+
+	// write out optimisaed geometry, and flow-field
+	write_out_solution(global_cells, global_interfaces, tol_hist, psi, "optimised_contour.dat", "optimised_output.dat");
+    }
+}
+
+//-----------------------------------------------------
+// Classes and Functions
+//-----------------------------------------------------
+
+void write_out_solution(fvcell[] global_cells, fvinterface[] global_interfaces, double[] tol_hist, double[] psi, string contourFilename, string solutionFilename) {
+    foreach(i; 0 .. ncells) {
+        fvcell cell = global_cells[i+2];
+        auto writer = format("%f %f %f %f %f %f %f \n", cell.xpos, cell.rho, cell.p, cell.u, psi[i*np], psi[i*np+1], psi[i*np+2]);
+        append(data_dir ~ solutionFilename, writer);
+    }
+    foreach(i; 0 .. ninterfaces) {
+        fvinterface f = global_interfaces[i];
+        auto writer = format("%f %f \n", f.xpos, f.area/2.0);
+        append(data_dir ~ contourFilename, writer);
+    }
+    int count = 0;
+    foreach(i; 0 .. tol_hist.length) {
+        auto writer = format("%d %f \n", count, tol_hist[i]);
+        append(data_dir ~ "tol_hist.dat", writer);
+	count += 1;
+    }
+}
 
 struct flowstate
 {
@@ -66,81 +451,234 @@ public:
     }
 }
 
-void first_order_interpolation(fvcell L0, fvcell R0, fvinterface f) {
-    // First order interpolation -- copies data from cell center to interface left, and right flowstates.
+void read_target_pressure_file(double[] p_target) {
+    // target pressure distribution saved in file target_output.dat
+    auto file = File(data_dir ~ "/target_output.dat", "r");
+    foreach(i; 0 .. ncells) {
+	auto lineContent = file.readln().strip();
+	auto tokens = lineContent.split();
+	p_target[i] = to!double(tokens[2]);
+    }
+} // end read_target_pressure_file
 
+double objective_function_evaluation(fvcell[] global_cells, double[] p_target) {
+    // J(Q) = 0.5*integral[0->l] (p-p*)^2 dx
+    double J = 0.0;
+    foreach (i; 0..ncells) {
+	J += 0.5*(global_cells[i+2].p - p_target[i])*(global_cells[i+2].p - p_target[i]);
+    }
+    return J;
+} // end objective_function_evaluation
+
+void compute_geometry(string simulation_type, fvinterface[] global_interfaces, fvinterface[] perturbed_interfaces,
+		      fvcell[] global_cells, double b, double c, double d, double yo, double scale) {
+    // compute interface area
+    double inlet_area; double exit_area;
+    if (simulation_type == "sod") {
+	// shock tube geometry has no area variaton
+	foreach(i; 0 .. ninterfaces) {
+	    global_interfaces[i].area = 1.0;
+	    perturbed_interfaces[i].area = 1.0;
+	}
+    }
+    else if (simulation_type == "nozzle") {
+	// symmetric nozzle is defined by hyperbolic function
+	double a = yo - b*tanh(-d/scale);
+	foreach(i; 0 .. ninterfaces) {
+	    double height = a + b*tanh((c*global_interfaces[i].xpos -d)/scale);
+	    global_interfaces[i].area =  2.0*height;
+	    perturbed_interfaces[i].area = 2.0*height;
+	}
+    }
+    // compute cell volume ---------------------------
+    foreach(i; 0 .. ncells) {
+	global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
+    }
+} // end compute_geometry
+
+void set_initial_and_inflow_conditions(string simulation_type, fvcell[] global_cells, double gamma) {
+    if (simulation_type == "sod" ) {
+	// left fill state
+	double p_init = 1.0e05; // Pa
+	double rho_init = 1.0; // kg/m^3
+	double u_init = 0.0; // m/s
+	foreach(i; 0 .. to!int(0.5*ncells)) {
+	    global_cells[i+2].p = p_init;
+	    global_cells[i+2].rho = rho_init;
+	    global_cells[i+2].u = u_init;
+	}	
+	// right fill state
+	p_init = 1.0e04; // Pa
+	rho_init = 0.125; // kg/m^3
+	u_init = 0.0; // m/s
+	foreach(i; to!int(0.5*ncells) .. ncells) {
+	    global_cells[i+2].p = p_init;
+	    global_cells[i+2].rho = rho_init;
+	    global_cells[i+2].u = u_init;
+	}
+    }
+    else if (simulation_type == "nozzle") {
+	// set inflow conditions
+	double Mach = 1.5;
+	double p_inflow = 101.325e3;                          // Pa
+	double rho_inflow = 1.0;                              // kg/m^3
+	double a_inflow = sqrt((p_inflow*gamma)/rho_inflow);  // m/s
+	double u_inflow = Mach * a_inflow;                    // m/s
+
+	foreach(i; 0 .. ncells) {
+	    global_cells[i+2].p = p_inflow;
+	    global_cells[i+2].rho = rho_inflow;
+	    global_cells[i+2].u = 0.6 * a_inflow;
+	}
+
+	// Nozzle inflow state ----------------------------------------------
+	global_cells[0].p = p_inflow; global_cells[1].p = p_inflow;
+	global_cells[0].rho = rho_inflow; global_cells[1].rho = rho_inflow;
+	global_cells[0].u = u_inflow; global_cells[1].u = u_inflow;
+
+	global_cells[ncells+2].p = global_cells[ncells+1].p; global_cells[ncells+3].p = global_cells[ncells+1].p;
+	global_cells[ncells+2].rho =  global_cells[ncells+1].rho; global_cells[ncells+3].rho =  global_cells[ncells+1].rho;
+	global_cells[ncells+2].u =  global_cells[ncells+1].u; global_cells[ncells+3].u =  global_cells[ncells+1].u;	
+    }
+}
+
+void compute_flux(string flux_calc, fvcell[] global_cells, fvinterface[] global_interfaces, size_t interpolation_order, size_t ninterfaces, double gamma) {
+    // Interpolate cell centered values to interface
+    foreach(i; 0 .. ninterfaces) {
+	if (interpolation_order == 1)
+	    {first_order_interpolation(global_cells[i+1],global_cells[i+2],global_interfaces[i]);}
+	else
+	    {second_order_interpolation_with_van_albada_limiting(global_cells[i+1],global_cells[i],global_cells[i+2],global_cells[i+3],global_interfaces[i]);}
+    }
+    // Compute Interface Flux
+    foreach(i; 0 .. ninterfaces) {
+	if (flux_calc == "van_leer") van_leer_flux_calculator(global_interfaces[i], gamma);
+	else if (flux_calc == "ausmdv") ausmdv_flux_calculator(global_interfaces[i], gamma);
+    }
+} // end compute_flux
+
+void apply_post_flux_bcs(string simulation_type, fvinterface[] global_interfaces, fvcell[] global_cells, double gamma) {
+    if (simulation_type == "nozzle") {
+	// for the nozzle simulation we should overwrite the inflow interface flux for the supersonic bc
+	fvcell cell = global_cells[0];
+	double e = cell.p / (cell.rho*(gamma - 1.0));
+	double ke = 0.5*cell.u*cell.u;
+	global_interfaces[0].mass = cell.rho*cell.u;
+	global_interfaces[0].momentum = cell.p+cell.rho*cell.u*cell.u;
+	global_interfaces[0].energy = (cell.rho*e + cell.rho*ke +cell.p)*cell.u;
+    }
+} // end apply_post_flux_bcs
+
+void apply_pre_flux_bcs(string simulation_type, size_t outflow_bc_order, double outflow_bc_back_pressure_factor, fvcell[] global_cells, double dx) {
+    if (simulation_type == "sod") {
+	// left boundary -- wall
+	global_cells[0].rho = global_cells[2].rho;
+	global_cells[1].rho = global_cells[2].rho;
+	global_cells[0].u = -global_cells[2].u;
+	global_cells[1].u = -global_cells[2].u;
+	global_cells[0].p = global_cells[2].p;
+	global_cells[1].p = global_cells[2].p;
+	// right boundary -- wall
+	global_cells[ncells+2].rho = global_cells[ncells+1].rho;
+	global_cells[ncells+3].rho = global_cells[ncells+1].rho;
+	global_cells[ncells+2].u = -global_cells[ncells+1].u;
+	global_cells[ncells+3].u = -global_cells[ncells+1].u;
+	global_cells[ncells+2].p = global_cells[ncells+1].p;
+	global_cells[ncells+3].p = global_cells[ncells+1].p;
+    }
+    else if (simulation_type == "nozzle") {
+	// left boundary -- inflow
+	global_cells[0].rho = global_cells[0].rho;
+	global_cells[1].rho = global_cells[1].rho;
+	global_cells[0].u = global_cells[0].u;
+	global_cells[1].u = global_cells[1].u;
+	global_cells[0].p = global_cells[0].p;
+	global_cells[1].p = global_cells[1].p;
+	// right boundary - outflow
+	if (outflow_bc_order == 1) { // first order
+	    global_cells[ncells+2].rho = global_cells[ncells+1].rho;
+	    global_cells[ncells+3].rho = global_cells[ncells+1].rho;
+	    global_cells[ncells+2].u = global_cells[ncells+1].u;
+	    global_cells[ncells+3].u = global_cells[ncells+1].u;
+	    global_cells[ncells+2].p = outflow_bc_back_pressure_factor*global_cells[0].p;
+	    global_cells[ncells+3].p = outflow_bc_back_pressure_factor*global_cells[0].p;
+
+	}
+	else { // second order
+	    double drhodx; double dudx; double dpdx;
+	    drhodx = (global_cells[ncells+1].rho - global_cells[ncells].rho)/dx;
+	    dudx = (global_cells[ncells+1].u - global_cells[ncells].u)/dx;
+	    dpdx = (global_cells[ncells+1].p - global_cells[ncells].p)/dx;
+	    
+	    global_cells[ncells+2].rho = global_cells[ncells+1].rho+drhodx*dx;
+	    global_cells[ncells+3].rho = global_cells[ncells+1].rho+drhodx*2.0*dx;
+	    global_cells[ncells+2].u = global_cells[ncells+1].u+dudx*dx;
+	    global_cells[ncells+3].u = global_cells[ncells+1].u+dudx*2.0*dx;
+	    global_cells[ncells+2].p = outflow_bc_back_pressure_factor*global_cells[0].p;
+	    global_cells[ncells+3].p = outflow_bc_back_pressure_factor*global_cells[0].p;
+	}		    
+    }
+} // apply_pre_flux_bcs
+
+void first_order_interpolation(fvcell L0, fvcell R0, fvinterface f) {
+    // copies data from cell center to interface left, and right flowstates.
     // left flow state
     f.left_fs.p = L0.p; f.left_fs.rho = L0.rho; f.left_fs.u = L0.u;
-
     // right flow state
     f.right_fs.p = R0.p; f.right_fs.rho = R0.rho; f.right_fs.u = R0.u;
-
 } // end first_order_interpolation
 
 void second_order_interpolation_with_van_albada_limiting(fvcell L0, fvcell L1, fvcell R0, fvcell R1, fvinterface f) {
     // Second order interpolation with Van albada limiting (as outlined in Johnston's thesis [1999]).
-
     double delta_minus; double delta_plus; double S; double eps = 1.0e-12; double k = 0.0;
-
     // left fs state
     // pressure
     delta_minus = (L0.p - L1.p)/(0.5*(L0.dx+L1.dx));
     delta_plus = (R0.p - L0.p)/(0.5*(R0.dx+L0.dx));
     S = (2.0*delta_plus*delta_minus+eps)/(delta_plus*delta_plus+delta_minus*delta_minus+eps);
     f.left_fs.p = L0.p + (L0.dx*S)/4.0 * ((1.0-S*k)*delta_minus+(1.0+S*k)*delta_plus);
-
     // density
     delta_minus = (L0.rho - L1.rho)/(0.5*(L0.dx+L1.dx));
     delta_plus = (R0.rho - L0.rho)/(0.5*(R0.dx+L0.dx));
     S = (2.0*delta_plus*delta_minus+eps)/(delta_plus*delta_plus+delta_minus*delta_minus+eps);
     f.left_fs.rho = L0.rho+ (L0.dx*S)/4.0 * ((1.0-S*k)*delta_minus+(1.0+S*k)*delta_plus);
-
     // velocity
     delta_minus = (L0.u - L1.u)/(0.5*(L0.dx+L1.dx));
     delta_plus = (R0.u - L0.u)/(0.5*(R0.dx+L0.dx));
     S = (2.0*delta_plus*delta_minus+eps)/(delta_plus*delta_plus+delta_minus*delta_minus+eps);
     f.left_fs.u = L0.u + (L0.dx*S)/4.0 * ((1.0-S*k)*delta_minus+(1.0+S*k)*delta_plus);
-
     // right flow state
     // pressure
     delta_minus = (R0.p - L0.p)/(0.5*(R0.dx+L0.dx));
     delta_plus = (R1.p - R0.p)/(0.5*(R0.dx+R1.dx));
     S = (2.0*delta_plus*delta_minus+eps)/(delta_plus*delta_plus+delta_minus*delta_minus+eps);
     f.right_fs.p = R0.p + (R0.dx*S)/4.0 * ((1.0-S*k)*delta_minus+(1.0+S*k)*delta_plus);
-
     // density
     delta_minus = (R0.rho - L0.rho)/(0.5*(R0.dx+L0.dx));
     delta_plus = (R1.rho - R0.rho)/(0.5*(R0.dx+R1.dx));
     S = (2.0*delta_plus*delta_minus+eps)/(delta_plus*delta_plus+delta_minus*delta_minus+eps);
     f.right_fs.rho = R0.rho + (R0.dx*S)/4.0 * ((1.0-S*k)*delta_minus+(1.0+S*k)*delta_plus);
-
     // velocity
     delta_minus = (R0.u - L0.u)/(0.5*(R0.dx+L0.dx));
     delta_plus = (R1.u - R0.u)/(0.5*(R0.dx+R1.dx));
     S = (2.0*delta_plus*delta_minus+eps)/(delta_plus*delta_plus+delta_minus*delta_minus+eps);
     f.right_fs.u = R0.u + (R0.dx*S)/4.0 * ((1.0-S*k)*delta_minus+(1.0+S*k)*delta_plus);
-
 } // end second_order_interpolation_with_van_albada_limiting
 
 void van_leer_flux_calculator(fvinterface f, double gamma) {
     // note lft == plus, rght == minus
-
     double F_lft; double M_lft; double a_lft;
     double F_rght; double M_rght; double a_rght;
     double lft_rho = f.left_fs.rho; double rght_rho = f.right_fs.rho;
     double lft_u = f.left_fs.u; double rght_u = f.right_fs.u;
     double lft_p = f.left_fs.p; double rght_p = f.right_fs.p;
-
     // left state
     a_lft = sqrt( (gamma*lft_p)/lft_rho );
     M_lft = lft_u/a_lft;
-
     // right state
     a_rght = sqrt( (gamma*rght_p)/rght_rho );
     M_rght = rght_u/a_rght;
-
     double M = 0.5*(M_lft+M_rght); // average Mach number
-        
     if (M >= 1.0) {
 	// mass flux
 	f.mass = lft_rho * a_lft * M_lft;
@@ -175,155 +713,8 @@ void van_leer_flux_calculator(fvinterface f, double gamma) {
     }
 } // end van_leer_flux_calculator
 
-void ausm_plus_up_flux_calculator(fvinterface f, double M_inf, double gamma)
-// Liou's 2006 AUSM+up flux calculator
-//
-// A new version of the AUSM-family schemes, based 
-// on the low Mach number asymptotic analysis.
-// Ironically, this flux calculator causes simulations
-// initialised with 0.0 m/s velocities to crash.
-//
-// RJG -- 26-Apr-2013
-// Added a (+ EPSILON) to help with any divide by zero problems.
-// That being said, I'm not sure this helps with the 
-// crashes at zero velocity because it would seem that the flow
-// of control would pass through a different branch for these cases.
-//
-// M. -S. Liou (2006)
-// A sequel to AUSM, Part II: AUSM+-up for all speeds
-// Journal of Computational Physics, Vol 214, pp 137-170
-//
-// This code: W. Y. K. Chan & P. A. Jacobs
-{
-    // Some helper functions
-    double M1plus(double M) { return 0.5*(M + fabs(M)); }
-    double M1minus(double M) { return 0.5*(M - fabs(M)); }
-    double M2plus(double M) { return 0.25*(M + 1.0)*(M + 1.0); }
-    double M2minus(double M) { return -0.25*(M - 1.0)*(M - 1.0); } 
-    double M4plus(double M, double beta) {
-	if ( fabs(M) >= 1.0 ) {
-	    return M1plus(M);
-	} else {
-	    double M2p = M2plus(M);
-	    double M2m = M2minus(M);
-	    return M2p*(1.0 - 16.0*beta*M2m);
-	}
-    }
-    double M4minus(double M, double beta) {
-	if ( fabs(M) >= 1.0 ) {
-	    return M1minus(M);
-	} else {
-	    double M2p = M2plus(M);
-	    double M2m = M2minus(M);
-	    return M2m*(1.0 + 16.0*beta*M2p);
-	}
-    }
-    double P5plus(double M, double alpha) {
-	if ( fabs(M) >= 1.0 ) {
-	    return (1.0/M)*M1plus(M);
-	} else {
-	    double M2p = M2plus(M);
-	    double M2m = M2minus(M);
-	    return M2p*((2.0 - M) - 16.0*alpha*M*M2m);
-	}
-    }
-    double P5minus(double M, double alpha) {
-	if ( fabs(M) >= 1.0 ) {
-	    return (1.0/M)*M1minus(M);
-	} else {
-	    double M2p = M2plus(M);
-	    double M2m = M2minus(M);
-	    return M2m*((-2.0 - M) + 16.0*alpha*M*M2p);
-	}
-    }
-    // Unpack the flow-state vectors for either side of the interface.
-    // Store in work vectors, those quantities that will be neede later.
-    double rL = f.left_fs.rho;
-    double pL = f.left_fs.p;
-    double pLrL = pL / rL;
-    double uL = f.left_fs.u;
-    double eL = pL/((gamma-1.0)*rL);
-    double aL = sqrt((pL*gamma)/rL);
-    double keL = 0.5 * (uL * uL);
-    double HL = eL + pLrL + keL;
-    //
-    double rR = f.right_fs.rho;
-    double pR = f.right_fs.p;
-    double pRrR = pR / rR;
-    double uR = f.right_fs.u;
-    double eR = pR/((gamma-1.0)*rR);
-    double aR = sqrt((pR*gamma)/rR);
-    double keR = 0.5 * (uR * uR);
-    double HR = eR + pRrR + keR;
-
-    //
-    // This is the main part of the flux calculator.
-    //
-    // Interface sound speed (eqns 28 & 30). 
-    // An approximation is used instead of these equations as
-    // suggested by Liou in his paper (see line below eqn 69).
-    double a_half = 0.5 * (aR + aL);
-    // Left and right state Mach numbers (eqn 69).
-    double ML = uL / a_half;
-    double MR = uR / a_half;
-    // Mean local Mach number (eqn 70).
-    double MbarSq = (uL*uL + uR*uR) / (2.0 * a_half *a_half);
-    // Reference Mach number (eqn 71).
-    double M0Sq = fmin(1.0, fmax(MbarSq, M_inf));
-     // Some additional parameters.
-    double fa = sqrt(M0Sq) * (2.0 - sqrt(M0Sq));   // eqn 72
-    double alpha = 0.1875 * (-4.0 + 5 * fa * fa);  // eqn 76
-    double beta = 0.125;                           // eqn 76
-    // Left state: 
-    // M4plus(ML)
-    // P5plus(ML)
-    double M4plus_ML = M4plus(ML, beta);
-    double P5plus_ML = P5plus(ML, alpha);
-    // Right state: 
-    // M4minus(MR)
-    // P5minus(MR)
-    double M4minus_MR = M4minus(MR, beta);
-    double P5minus_MR = P5minus(MR, alpha);
-    // Pressure diffusion modification for 
-    // mass flux (eqn 73) and pressure flux (eqn 75).
-    const double KP = 0.25;
-    const double KU = 0.75;
-    const double SIGMA = 1.0;
-    double r_half = 0.5*(rL + rR);
-    double Mp = -KP / fa * fmax((1.0 - SIGMA * MbarSq), 0.0) * (pR - pL) / (r_half*a_half*a_half);
-    double Pu = -KU * P5plus_ML * P5minus_MR * (rL + rR) * fa * a_half * (uR - uL);
-    // Mass Flux (eqns 73 & 74).
-    double M_half = M4plus_ML + M4minus_MR + Mp;
-    double ru_half = a_half * M_half;
-    if ( M_half > 0.0 ) {
-       ru_half *= rL;
-    } else {
-       ru_half *= rR;
-    }
-    // Pressure flux (eqn 75).
-    double p_half = P5plus_ML*pL + P5minus_MR*pR + Pu;
-    // Momentum flux: normal direction
-    double ru2_half;
-    if (ru_half >= 0.0) {
-	ru2_half = ru_half * uL;
-    } else {
-	ru2_half = ru_half * uR;
-    }
-    // Assemble components of the flux vector.
-    f.mass = ru_half;
-    if (ru_half >= 0.0) {
-	// Wind is blowing from the left.
-	f.momentum = ru2_half+p_half;
-	f.energy = ru_half * HL;
-    } else {
-	// Wind is blowing from the right.
-	f.momentum = ru2_half+p_half;
-	f.energy = ru_half * HR;
-    }
-} // end ausm_plus_up()
-
-
 void ausmdv_flux_calculator(fvinterface f, double gamma) {
+    // implementation taken from Eilmer4 flow solver (http://cfcfd.mechmining.uq.edu.au/eilmer/)
     double K_SWITCH = 10.0;
     double C_EFIX = 0.125;
     double rL, rR;
@@ -339,13 +730,10 @@ void ausmdv_flux_calculator(fvinterface f, double gamma) {
     double pLplus, pRminus;
     double uLplus, uRminus;
     double duL, duR;
-
     double p_half, ru_half, ru2_half;
     double dp, s, ru2_AUSMV, ru2_AUSMD;
-
     int caseA, caseB;
     double d_ua;
-    
     /*
      * Unpack the flow-state vectors for either side of the interface.
      * Store in work vectors, those quantities that will be neede later.
@@ -473,7 +861,6 @@ void encode_conserved_variables(fvcell cell, double gamma) {
     double ke = 0.5*cell.u*cell.u;
     cell.ru = cell.rho * cell.u;
     cell.rE = cell.rho*(e + ke);
-
 } // end encode_conserved_variables
 
 void decode_conserved_variables(fvcell cell, double gamma) {
@@ -483,52 +870,21 @@ void decode_conserved_variables(fvcell cell, double gamma) {
     cell.p = cell.rho*e*(gamma-1.0);
 } // end decode_conserved_variables
 
-void matrixMult(ref double[3*ncells][3*ncells] A, ref double[3*ncells][3*ncells] B, ref double[3*ncells][3*ncells] C) {
-    for (int i = 0; i < 3*ncells; i++) {
-        for (int j = 0; j < 3*ncells; j++) {
+void matrix_mult(ref double[np*ncells][np*ncells] A, ref double[np*ncells][np*ncells] B, ref double[np*ncells][np*ncells] C) {
+    for (int i = 0; i < np*ncells; i++) {
+        for (int j = 0; j < np*ncells; j++) {
             C[i][j] = 0;
-            for (int k = 0; k < 3*ncells; k++) {
+            for (int k = 0; k < np*ncells; k++) {
                 C[i][j] += A[i][k]*B[k][j];
 	    }
 	}
     }
-} // end matrixMult
+} // end matrix_mult
 
-void linearSolve(ref double[3*ncells+1][3*ncells] c, double very_small_value=1.0e-16) {
-    // solves Ax=b using Gauss Jordan eilimination,
-    // where c = [A|b] output is [I|x] where x is the solution vector.
-    
-    void swapRows(ref double[3*ncells+1][3*ncells] c, size_t i1, size_t i2) {
-	swap(c[i1], c[i2]);
-    }
-    
-    foreach(j; 0 .. c.length) {
-	// Select pivot.
-	size_t p = j;
-	foreach(i; j+1 .. c.length) {
-	    if ( abs(c[i][j]) > abs(c[p][j]) ) p = i;
-	}
-	if ( abs(c[p][j]) < very_small_value ) {
-	    throw new Exception("matrix is essentially singular");
-	}
-	if ( p != j ) swapRows(c, p,j);
-	// Scale row j to get unity on the diagonal.
-	double cjj = c[j][j];
-	foreach(col; 0 .. c[0].length) c[j][col] /= cjj;
-	// Do the elimination to get zeros in all off diagonal values in column j.
-	foreach(i; 0 .. c.length) {
-	    if ( i == j ) continue;
-	    double cij = c[i][j];
-	    foreach(col; 0 .. c.length) c[i][col] -= cij * c[j][col]; 
-	}
-    } // end foreach j
-} // end linearSolve
-
-void matrixInv(ref double[3*ncells][3*ncells] matrix, ref double[3*ncells][3*ncells] inverse) {
+void matrix_inv(ref double[np*ncells][np*ncells] matrix, ref double[np*ncells][np*ncells] inverse) {
     // gauss jordan elimination of [A|I] where the output is [I|B] where B is the inverse of A.
-
-    int N = 3*ncells;
-    static double[2*3*ncells][3*ncells] c;
+    int N = np*ncells;
+    static double[2*np*ncells][np*ncells] c;
     foreach(i; 0 .. N) {
 	foreach(j; 0.. N) {
 	    c[i][j] = matrix[i][j];
@@ -542,64 +898,40 @@ void matrixInv(ref double[3*ncells][3*ncells] matrix, ref double[3*ncells][3*nce
 		c[i][j] = 0.0;
 	    }
 	}
-    }
+    }    
     foreach(j; 0 .. N) {
-	    // Select pivot.
-	    size_t p = j;
-	    foreach(i; j+1 .. N) {
-		if ( abs(c[i][j]) > abs(c[p][j]) ) p = i;
+	// Select pivot.
+	size_t p = j;
+	foreach(i; j+1 .. N) {
+	    if ( abs(c[i][j]) > abs(c[p][j]) ) p = i;
+	}
+	//if (abs(c[p][j]) <= very_small_value) return -1; // singular
+	if ( p != j ) { // Swap rows
+	    foreach(col; 0 .. 2*N) {
+		double tmp = c[p][col]; c[p][col] = c[j][col]; c[j][col] = tmp;
 	    }
-	    //if (abs(c[p][j]) <= very_small_value) return -1; // singular
-	    if ( p != j ) { // Swap rows
-		foreach(col; 0 .. 2*N) {
-		    double tmp = c[p][col]; c[p][col] = c[j][col]; c[j][col] = tmp;
-		}
-	    }
-	    // Scale row j to get unity on the diagonal.
-	    double cjj = c[j][j];
-	    foreach(col; 0 .. 2*N) c[j][col] /= cjj;
-	    // Do the elimination to get zeros in all off diagonal values in column j.
-	    foreach(i; 0 .. N) {
-		if ( i == j ) continue;
-		double cij = c[i][j];
-		foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
-	    }
+	}
+	// Scale row j to get unity on the diagonal.
+	double cjj = c[j][j];
+	foreach(col; 0 .. 2*N) c[j][col] /= cjj;
+	// Do the elimination to get zeros in all off diagonal values in column j.
+	foreach(i; 0 .. N) {
+	    if ( i == j ) continue;
+	    double cij = c[i][j];
+	    foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
+	}
     } // end foreach j
     foreach(i; 0 .. N) {
 	foreach(j; N .. 2*N) {
 	    inverse[i][j-N] = c[i][j];
 	}
     }
-} // end matrixInv
+} // end matrix_inv
 
-void solve(ref fvcell[ncells+nghost] global_cells,
-	   ref fvinterface[ninterfaces] global_interfaces,
-	   ref fvinterface[ninterfaces] perturbed_interfaces,
-	   double dt, double sim_time, double final_time, size_t step, size_t max_step, string flux_calc, string simulation_type,
-	   size_t interpolation_order, size_t outflow_bc_order, ref double[3*ncells][3*ncells] JV,
-	   ref double[3*ncells][3*ncells] JU, ref double[3*ncells][3*ncells] transform,
-	   ref double[3*ncells] R, ref double[3*ncells] dJdV, ref double[3*ncells] dJdU, ref double[3*ncells][3*ncells] JUT,
-	   ref double[3*ncells][3*ncells] invJUT, ref double[3*ncells][3*ncells] JVT,
-	   ref double[3*ncells][3*ncells] invJVT, ref double[3*ncells] psi,
-	   double eps, ref double J, ref double dLdB, ref double dLdC, ref double dLdD, double dx, double gamma,
-	   double b, double c, double d, double yo, double scale, string solver, string adjoint_form) {
-    //-----------------------------------------------------
-    // Explicit Flow Solver
-    //-----------------------------------------------------
-
-    // set initial conditions
-    double Mach = 1.5;
-    double p_inflow = 101.325e3; // Pa
-    double rho_inflow = 1.0;   // kg/m^3
-    double a_inflow = sqrt((p_inflow*gamma)/rho_inflow);
-    double u_inflow = Mach * a_inflow;  // m/s
-    
-    foreach(i; 0 .. ncells) {
-	global_cells[i+2].p = p_inflow;
-	global_cells[i+2].rho = rho_inflow;
-	global_cells[i+2].u = 0.6 * a_inflow;
-    }
-    
+void flow_solver(ref fvcell[ncells+nghost] global_cells, ref fvinterface[ninterfaces] global_interfaces, ref fvinterface[ninterfaces] perturbed_interfaces,
+		 double dt, double sim_time, double final_time, size_t step, size_t max_step, string flux_calc, string simulation_type, size_t interpolation_order,
+		 size_t outflow_bc_order, double outflow_bc_back_pressure_factor, double dx, double gamma) {
+    set_initial_and_inflow_conditions(simulation_type, global_cells, gamma);
     
     // begin by computing conserved quantities at cell centers
     foreach(i; 0 .. ncells+nghost) {
@@ -607,112 +939,21 @@ void solve(ref fvcell[ncells+nghost] global_cells,
     }
     
     while (sim_time <= final_time && step < max_step) {
-	//writeln("==================================");
-	//writeln("STEP: ", step, " TIME: ", sim_time);
-	//writeln("==================================");
-	
 	//-----------------------------------------------------
 	// Apply Boundary Conditions
 	//-----------------------------------------------------
-	
-	if (simulation_type == "sod") {
-	    // Sod's shocktube bcs
-	    
-	    // left boundary -- wall
-	    global_cells[0].rho = global_cells[2].rho;
-	    global_cells[1].rho = global_cells[2].rho;
-	    global_cells[0].u = -global_cells[2].u;
-	    global_cells[1].u = -global_cells[2].u;
-	    global_cells[0].p = global_cells[2].p;
-	    global_cells[1].p = global_cells[2].p;
-	    // right boundary -- wall
-	    global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+2].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+3].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+2].p = global_cells[ncells+1].p;
-	    global_cells[ncells+3].p = global_cells[ncells+1].p;
-	}
-	else if (simulation_type == "nozzle") {
-	    // Nozzle bcs
-	    
-	    // left boundary -- inflow
-	    global_cells[0].rho = global_cells[0].rho;
-	    global_cells[1].rho = global_cells[1].rho;
-	    global_cells[0].u = global_cells[0].u;
-	    global_cells[1].u = global_cells[1].u;
-	    global_cells[0].p = global_cells[0].p;
-	    global_cells[1].p = global_cells[1].p;
-	    
-	    if (outflow_bc_order == 1) {
-		// right boundary -- outflow
+	apply_pre_flux_bcs(simulation_type, outflow_bc_order, outflow_bc_back_pressure_factor, global_cells, dx);
+
+	//-----------------------------------------------------
+	// Compute Flux
+	//-----------------------------------------------------
+	compute_flux(flux_calc, global_cells, global_interfaces, interpolation_order, ninterfaces, gamma);
+
+	//-----------------------------------------------------
+	// Apply Boundary Conditions
+	//-----------------------------------------------------
+	apply_post_flux_bcs(simulation_type, global_interfaces, global_cells, gamma);
 		
-		// first order
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+2].u = global_cells[ncells+1].u;
-		global_cells[ncells+3].u = global_cells[ncells+1].u;
-		global_cells[ncells+2].p = 2.5*global_cells[0].p;
-		global_cells[ncells+3].p = 2.5*global_cells[0].p;
-		//global_cells[ncells+2].p = global_cells[ncells+1].p;
-		//global_cells[ncells+3].p = global_cells[ncells+1].p;
-	    }
-	    else {
-		// second order
-		double drhodx; double dudx; double dpdx;
-		drhodx = (global_cells[ncells+1].rho - global_cells[ncells].rho)/dx;
-		dudx = (global_cells[ncells+1].u - global_cells[ncells].u)/dx;
-		dpdx = (global_cells[ncells+1].p - global_cells[ncells].p)/dx;
-		
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho+drhodx*dx;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho+drhodx*2.0*dx;
-		global_cells[ncells+2].u = global_cells[ncells+1].u+dudx*dx;
-		global_cells[ncells+3].u = global_cells[ncells+1].u+dudx*2.0*dx;
-		global_cells[ncells+2].p = global_cells[ncells+1].p+dpdx*dx;
-		global_cells[ncells+3].p = global_cells[ncells+1].p+dpdx*2.0*dx;
-	    }
-	}
-	
-	//-----------------------------------------------------
-	// Interpolate cell centered values to interface
-	//-----------------------------------------------------
-	
-	foreach(i; 0 .. ninterfaces) {
-	    if (interpolation_order == 1){first_order_interpolation(global_cells[i+1],
-								    global_cells[i+2],
-								    global_interfaces[i]);}
-	    else { second_order_interpolation_with_van_albada_limiting(global_cells[i+1],
-								       global_cells[i],
-								       global_cells[i+2],
-								       global_cells[i+3],
-								       global_interfaces[i]); }
-	}
-	
-	//-----------------------------------------------------
-	// Compute Interface Flux
-	//-----------------------------------------------------
-	
-	foreach(i; 0 .. ninterfaces) {
-	    if (flux_calc == "van_leer") van_leer_flux_calculator(global_interfaces[i], gamma);
-	    else if (flux_calc == "ausmdv") ausmdv_flux_calculator(global_interfaces[i], gamma);
-	    else if (flux_calc == "ausm_plus_up") {
-		double M_inf = global_cells[0].u/(sqrt((global_cells[0].p*gamma)/global_cells[0].rho));
-		ausm_plus_up_flux_calculator(global_interfaces[i], M_inf, gamma);
-	    }
-	}
-	
-	if (simulation_type == "nozzle") {
-	    // for the nozzle simulation we must overwrite the inflow interface flux
-	    
-	    fvcell cell = global_cells[0];
-	    double e = cell.p / (cell.rho*(gamma - 1.0));
-	    double ke = 0.5*cell.u*cell.u;
-	    
-	    global_interfaces[0].mass = cell.rho*cell.u;
-	    global_interfaces[0].momentum = cell.p+cell.rho*cell.u*cell.u;
-	    global_interfaces[0].energy = (cell.rho*e + cell.rho*ke +cell.p)*cell.u;
-	}
-	
 	//-----------------------------------------------------
 	// Integrate flux and update cells
 	//-----------------------------------------------------
@@ -736,140 +977,42 @@ void solve(ref fvcell[ncells+nghost] global_cells,
 	    cell.rE = cell.rE + delta_energy;
 	    
 	    decode_conserved_variables(global_cells[i+2], gamma);
-	    //writef("%f, %f, %f \n", cell.rho, cell.u, cell.p);
 	}
 	
 	// update time and step
 	sim_time += dt;
 	step += 1;
     } // end while loop
+}
 
-    if (solver == "simulation") return;
+void adjoint_solver(ref fvcell[ncells+nghost] global_cells,
+		    ref fvinterface[ninterfaces] global_interfaces,
+		    ref fvinterface[ninterfaces] perturbed_interfaces,
+		    double dt, double sim_time, double final_time, size_t step, size_t max_step, string flux_calc, string simulation_type,
+		    size_t interpolation_order, size_t outflow_bc_order, double outflow_bc_back_pressure_factor, double[np*ncells] psi,
+		    ref double dLdB, ref double dLdC, ref double dLdD, double dx, double gamma,
+		    double b, double c, double d, double yo, double scale, string solver, string adjoint_form, double[] p_target) {
+
+    // intialise some arrays  ------------------------
+    static double[np*ncells][np*ncells] JV;        // flow Jacobian w.r.t. primitive variables
+    static double[np*ncells][np*ncells] JU;        // flow Jacobian w.r.t. conserved variables
+    static double[np*ncells][np*ncells] transform; // transform matrix (JV to JU)
+    static double[np*ncells] R;                    // R.H.S. resiudal vector
+    static double[np*ncells] dJdV;                 // sensitivty of cost function (J) w.r.t. primitive variables
+    static double[np*ncells] dJdU;                 // sensitivty of cost function (J) w.r.t. conserved variables
+    static double[np*ncells][np*ncells] JUT;       // JU transpose
+    static double[np*ncells][np*ncells] invJUT;    // JU transpose inverse
+    static double[np*ncells][np*ncells] JVT;       // JV transpose
+    static double[np*ncells][np*ncells] invJVT;    // JV transpose inverse
     
-    //-----------------------------------------------------
-    // Construct Jacobian
-    //-----------------------------------------------------
-    
-    //-----------------------------------------------------
-    // Apply Boundary Conditions
-    //-----------------------------------------------------
-    
-    if (simulation_type == "sod") {
-	// Sod's shocktube bcs
-	
-	// left boundary -- wall
-	global_cells[0].rho = global_cells[2].rho; global_cells[1].rho = global_cells[2].rho;
-	global_cells[0].u = -global_cells[2].u; global_cells[1].u = -global_cells[2].u;
-	global_cells[0].p = global_cells[2].p; global_cells[1].p = global_cells[2].p;
-	// right boundary -- wall
-	global_cells[ncells+2].rho = global_cells[ncells+1].rho; global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-	global_cells[ncells+2].u = -global_cells[ncells+1].u; global_cells[ncells+3].u = -global_cells[ncells+1].u;
-	global_cells[ncells+2].p = global_cells[ncells+1].p; global_cells[ncells+3].p = global_cells[ncells+1].p;
-    }
-    else if (simulation_type == "nozzle") {
-	// Nozzle bcs
-	
-	// left boundary -- inflow
-	global_cells[0].rho = global_cells[0].rho; global_cells[1].rho = global_cells[1].rho;
-	global_cells[0].u = global_cells[0].u; global_cells[1].u = global_cells[1].u;
-	global_cells[0].p = global_cells[0].p; global_cells[1].p = global_cells[1].p;
-	
-	if (outflow_bc_order == 1) {
-	    // right boundary -- outflow
-	    
-	    // first order
-	    global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+2].u = global_cells[ncells+1].u;
-	    global_cells[ncells+3].u = global_cells[ncells+1].u;
-	    global_cells[ncells+2].p = 2.5*global_cells[0].p;
-	    global_cells[ncells+3].p = 2.5*global_cells[0].p;
-	    //global_cells[ncells+2].p = global_cells[ncells+1].p;
-	    //global_cells[ncells+3].p = global_cells[ncells+1].p;
-	}
-	else {
-	    // second order
-	    double drhodx; double dudx; double dpdx;
-	    drhodx = (global_cells[ncells+1].rho - global_cells[ncells].rho)/dx;
-	    dudx = (global_cells[ncells+1].u - global_cells[ncells].u)/dx;
-	    dpdx = (global_cells[ncells+1].p - global_cells[ncells].p)/dx;
-	    
-	    global_cells[ncells+2].rho = global_cells[ncells+1].rho+drhodx*dx;
-	    global_cells[ncells+3].rho = global_cells[ncells+1].rho+drhodx*2.0*dx;
-	    global_cells[ncells+2].u = global_cells[ncells+1].u+dudx*dx;
-	    global_cells[ncells+3].u = global_cells[ncells+1].u+dudx*2.0*dx;
-	    global_cells[ncells+2].p = 2.5*global_cells[0].p+dpdx*dx;
-	    global_cells[ncells+3].p = 2.5*global_cells[0].p+dpdx*2.0*dx;
-	    //global_cells[ncells+2].p = global_cells[ncells+1].p;
-	    //global_cells[ncells+3].p = global_cells[ncells+1].p;
-	}
-    }
-    
-    //-----------------------------------------------------
-    // Interpolate cell centered values to interface
-    //-----------------------------------------------------
-    
-    foreach(i; 0 .. ninterfaces) {
-	if (interpolation_order == 1){first_order_interpolation(global_cells[i+1],
-								global_cells[i+2],
-								global_interfaces[i]);}
-	else { second_order_interpolation_with_van_albada_limiting(global_cells[i+1],
-								   global_cells[i],
-								   global_cells[i+2],
-								   global_cells[i+3],
-								   global_interfaces[i]); }
-    }
-    
-    //-----------------------------------------------------
-    // Compute Interface Flux
-    //-----------------------------------------------------
-    
-    foreach(i; 0 .. ninterfaces) {
-	if (flux_calc == "van_leer") van_leer_flux_calculator(global_interfaces[i], gamma);
-	else if (flux_calc == "ausmdv") ausmdv_flux_calculator(global_interfaces[i], gamma);
-	else if (flux_calc == "ausm_plus_up") {
-	    double M_inf = global_cells[0].u/(sqrt((global_cells[0].p*gamma)/global_cells[0].rho));
-	    ausm_plus_up_flux_calculator(global_interfaces[i], M_inf, gamma);
-	}
-    }
-    
-    
-    if (simulation_type == "nozzle") {
-	// for the nozzle simulation we must overwrite the inflow interface flux
-	
-	fvcell cell = global_cells[0];
-	double e = cell.p / (cell.rho*(gamma - 1.0));
-	double ke = 0.5*cell.u*cell.u;
-	
-	global_interfaces[0].mass = cell.rho*cell.u;
-	global_interfaces[0].momentum = cell.p+cell.rho*cell.u*cell.u;
-	global_interfaces[0].energy = (cell.rho*e + cell.rho*ke +cell.p)*cell.u;
-    }
-    
-    
-    // Numerical Jacobian
-    //-----------------------------------------------------
-    // Construct R.H.S. residual vector (R)
-    //-----------------------------------------------------
+    //-------------------------------------------------------------------------------
+    // Construct flow Jacobian w.r.t. primitive variables (JV) via finite-differences
+    //-------------------------------------------------------------------------------
     
     foreach(i; 0 .. ncells) {
-	fvinterface fin = global_interfaces[i];
-	fvinterface fout = global_interfaces[i+1];
-	fvcell cell = global_cells[i+2];
-	// mass flux
-	R[i*3] = -1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
-	// momentum flux
-	R[i*3+1] = -1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
-	// total energy flux
-	R[i*3+2] = -1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
-    }
-    //--------------------------------------------------------
-    // Construct flow Jacobian w.r.t. primitive variables (JV)
-    //--------------------------------------------------------
-    
-    foreach(i; 0 .. ncells) {
-	// save current cells original flowstate
-	
+	//-----------------------------------------------
+	// Save copy of current cells primitive variables
+	//-----------------------------------------------
 	double orig_rho = global_cells[i+2].rho;
 	double orig_u = global_cells[i+2].u;
 	double orig_p = global_cells[i+2].p;
@@ -877,113 +1020,18 @@ void solve(ref fvcell[ncells+nghost] global_cells,
 	//--------------------------------
 	// perturb density in current cell
 	//--------------------------------
-	
-	global_cells[i+2].rho += (global_cells[i+2].rho*eps+eps);
-	
-	//-----------------------------------------------------
-	// Apply Boundary Conditions
-	//-----------------------------------------------------
-	
-	if (simulation_type == "sod") {
-	    // Sod's shocktube bcs
-	    
-	    // left boundary -- wall
-	    global_cells[0].rho = global_cells[2].rho;
-	    global_cells[1].rho = global_cells[2].rho;
-	    global_cells[0].u = -global_cells[2].u;
-	    global_cells[1].u = -global_cells[2].u;
-	    global_cells[0].p = global_cells[2].p;
-	    global_cells[1].p = global_cells[2].p;
-	    // right boundary -- wall
-	    global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+2].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+3].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+2].p = global_cells[ncells+1].p;
-	    global_cells[ncells+3].p = global_cells[ncells+1].p;
-	}
-	else if (simulation_type == "nozzle") {
-	    // Nozzle bcs
-	    
-	    // left boundary -- inflow
-	    global_cells[0].rho = global_cells[0].rho;
-	    global_cells[1].rho = global_cells[1].rho;
-	    global_cells[0].u = global_cells[0].u;
-	    global_cells[1].u = global_cells[1].u;
-	    global_cells[0].p = global_cells[0].p;
-	    global_cells[1].p = global_cells[1].p;
-	    
-	    if (outflow_bc_order == 1) {
-		// right boundary -- outflow
-		
-		// first order
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+2].u = global_cells[ncells+1].u;
-		global_cells[ncells+3].u = global_cells[ncells+1].u;
-		global_cells[ncells+2].p = 2.5*global_cells[0].p;
-		global_cells[ncells+3].p = 2.5*global_cells[0].p;
-	    }
-	    else {
-		// second order
-		double drhodx; double dudx; double dpdx;
-		drhodx = (global_cells[ncells+1].rho - global_cells[ncells].rho)/dx;
-		dudx = (global_cells[ncells+1].u - global_cells[ncells].u)/dx;
-		dpdx = (global_cells[ncells+1].p - global_cells[ncells].p)/dx;
-		
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho+drhodx*dx;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho+drhodx*2.0*dx;
-		global_cells[ncells+2].u = global_cells[ncells+1].u+dudx*dx;
-		global_cells[ncells+3].u = global_cells[ncells+1].u+dudx*2.0*dx;
-		global_cells[ncells+2].p = global_cells[ncells+1].p+dpdx*dx;
-		global_cells[ncells+3].p = global_cells[ncells+1].p+dpdx*2.0*dx;
-	    }		    
-	}
+	global_cells[i+2].rho += (global_cells[i+2].rho*eps0+eps0);
 	
 	//-----------------------------------------------------
-	// Interpolate cell centered values to interface
+	// perform residual vector computation
 	//-----------------------------------------------------
+	apply_pre_flux_bcs(simulation_type, outflow_bc_order, outflow_bc_back_pressure_factor, global_cells, dx);
+	compute_flux(flux_calc, global_cells, perturbed_interfaces, interpolation_order, ninterfaces, gamma);
+	apply_post_flux_bcs(simulation_type, perturbed_interfaces, global_cells, gamma);
 	
-	foreach(j; 0 .. ninterfaces) {
-	    if (interpolation_order == 1){first_order_interpolation(global_cells[j+1],
-								    global_cells[j+2],
-								    perturbed_interfaces[j]);}
-	    else { second_order_interpolation_with_van_albada_limiting(global_cells[j+1],
-								       global_cells[j],
-								       global_cells[j+2],
-								       global_cells[j+3],
-								       perturbed_interfaces[j]); }
-	}
-	
-	//-----------------------------------------------------
-	// Compute Interface Flux
-	//-----------------------------------------------------
-	
-	foreach(j; 0 .. ninterfaces) {
-	    if (flux_calc == "van_leer") van_leer_flux_calculator(perturbed_interfaces[j], gamma);
-	    else if (flux_calc == "ausmdv") ausmdv_flux_calculator(perturbed_interfaces[j], gamma);
-	    else if (flux_calc == "ausm_plus_up") {
-		double M_inf = global_cells[0].u/(sqrt((global_cells[0].p*gamma)/global_cells[0].rho));
-		ausm_plus_up_flux_calculator(perturbed_interfaces[j], M_inf, gamma);
-	    }
-	}
-	
-	if (simulation_type == "nozzle") {
-	    // for the nozzle simulation we must overwrite the inflow interface flux
-	    
-	    fvcell cell = global_cells[0];
-	    double e = cell.p / (cell.rho*(gamma - 1.0));
-	    double ke = 0.5*cell.u*cell.u;
-	    
-	    perturbed_interfaces[0].mass = cell.rho*cell.u;
-	    perturbed_interfaces[0].momentum = cell.p+cell.rho*cell.u*cell.u;
-	    perturbed_interfaces[0].energy = (cell.rho*e + cell.rho*ke +cell.p)*cell.u;
-	}
-	
-	//-----------------------------------------------------
-	// Fill column of Jacobian via Frechet derivative
-	//-----------------------------------------------------
-	
+	//------------------------
+	// Fill column of Jacobian
+	//------------------------
 	foreach(j; 0 .. ncells) {
 	    double resd0;
 	    double resd1;
@@ -996,156 +1044,51 @@ void solve(ref fvcell[ncells+nghost] global_cells,
 	    // mass flux
 	    resd0 = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
 	    resd1 = 1.0/cell.vol * (pfin.mass*pfin.area - pfout.mass*pfout.area);
-	    //if(i==0 && j==ncells-1) writeln(resd0, ", ", resd1, ", ",
-	    //fin.mass, ", ", pfin.mass, ", ",
-	    //pfout.mass, ", ", fout.mass);
-	    JV[j*3][i*3] = (resd1-resd0)/(orig_rho*eps+eps);
+	    JV[j*np][i*np] = (resd1-resd0)/(orig_rho*eps0+eps0);
 	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3][i*3] = 1.0;
-	    else transform[j*3][i*3] = 0.0;
+	    if (i==j) transform[j*np][i*np] = 1.0;
+	    else transform[j*np][i*np] = 0.0;
 	    
 	    // momentum flux
 	    resd0 = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
 	    resd1 = 1.0/cell.vol * (pfin.momentum*pfin.area-pfout.momentum*pfout.area+ cell.p*(pfout.area-pfin.area));
-	    JV[j*3+1][i*3] = (resd1-resd0)/(orig_rho*eps+eps);
+	    JV[j*np+1][i*np] = (resd1-resd0)/(orig_rho*eps0+eps0);
 	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3+1][i*3] = -orig_u/orig_rho;
-	    else transform[j*3+1][i*3] = 0.0;
+	    if (i==j) transform[j*np+1][i*np] = -orig_u/orig_rho;
+	    else transform[j*np+1][i*np] = 0.0;
 	    
 	    // total energy flux
 	    resd0 = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
 	    resd1 = 1.0/cell.vol * (pfin.energy*pfin.area - pfout.energy*pfout.area);
-	    JV[j*3+2][i*3] = (resd1-resd0)/(orig_rho*eps+eps);
+	    JV[j*np+2][i*np] = (resd1-resd0)/(orig_rho*eps0+eps0);
 
-	    //writeln("coords: ", j*3+2, ", ", i*3);
-	    //writef("dFe/drho = %.16f", (pfout.energy-fout.energy)/(orig_rho*eps+eps));
-	    //writef(", perturbed flux = %.16f", pfout.energy);
-	    //writef(", unperturbed flux = %.16f \n", fout.energy);
-	    	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3+2][i*3] = 0.5*(gamma-1.0)*orig_u*orig_u;
-	    else transform[j*3+2][i*3] = 0.0;
+	    if (i==j) transform[j*np+2][i*np] = 0.5*(gamma-1.0)*orig_u*orig_u;
+	    else transform[j*np+2][i*np] = 0.0;
 	}
 	
 	//--------------------------------
 	// restore density in current cell
 	//--------------------------------
-	
 	global_cells[i+2].rho = orig_rho;
 	
 	//--------------------------------
 	// perturb velocity in current cell
 	//--------------------------------
-	
-	global_cells[i+2].u += (global_cells[i+2].u*eps+eps);
-	
+	global_cells[i+2].u += (global_cells[i+2].u*eps0+eps0);
+
 	//-----------------------------------------------------
-	// Apply Boundary Conditions
+	// perform residual vector computation
 	//-----------------------------------------------------
-	
-	if (simulation_type == "sod") {
-	    // Sod's shocktube bcs
-	    
-	    // left boundary -- wall
-	    global_cells[0].rho = global_cells[2].rho;
-	    global_cells[1].rho = global_cells[2].rho;
-	    global_cells[0].u = -global_cells[2].u;
-	    global_cells[1].u = -global_cells[2].u;
-	    global_cells[0].p = global_cells[2].p;
-	    global_cells[1].p = global_cells[2].p;
-	    // right boundary -- wall
-	    global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+2].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+3].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+2].p = global_cells[ncells+1].p;
-	    global_cells[ncells+3].p = global_cells[ncells+1].p;
-	}
-	else if (simulation_type == "nozzle") {
-	    // Nozzle bcs
-	    
-	    // left boundary -- inflow
-	    global_cells[0].rho = global_cells[0].rho;
-	    global_cells[1].rho = global_cells[1].rho;
-	    global_cells[0].u = global_cells[0].u;
-	    global_cells[1].u = global_cells[1].u;
-	    global_cells[0].p = global_cells[0].p;
-	    global_cells[1].p = global_cells[1].p;
-	    
-	    if (outflow_bc_order == 1) {
-		// right boundary -- outflow
+	apply_pre_flux_bcs(simulation_type, outflow_bc_order, outflow_bc_back_pressure_factor, global_cells, dx);
+	compute_flux(flux_calc, global_cells, perturbed_interfaces, interpolation_order, ninterfaces, gamma);
+	apply_post_flux_bcs(simulation_type, perturbed_interfaces, global_cells, gamma);
 		
-		// first order
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+2].u = global_cells[ncells+1].u;
-		global_cells[ncells+3].u = global_cells[ncells+1].u;
-		global_cells[ncells+2].p = 2.5*global_cells[0].p;
-		global_cells[ncells+3].p = 2.5*global_cells[0].p;
-	    }
-	    else {
-		// second order
-		double drhodx; double dudx; double dpdx;
-		drhodx = (global_cells[ncells+1].rho - global_cells[ncells].rho)/dx;
-		dudx = (global_cells[ncells+1].u - global_cells[ncells].u)/dx;
-		dpdx = (global_cells[ncells+1].p - global_cells[ncells].p)/dx;
-		
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho+drhodx*dx;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho+drhodx*2.0*dx;
-		global_cells[ncells+2].u = global_cells[ncells+1].u+dudx*dx;
-		global_cells[ncells+3].u = global_cells[ncells+1].u+dudx*2.0*dx;
-		global_cells[ncells+2].p = global_cells[ncells+1].p+dpdx*dx;
-		global_cells[ncells+3].p = global_cells[ncells+1].p+dpdx*2.0*dx;
-	    }
-	}
-	
-	//-----------------------------------------------------
-	// Interpolate cell centered values to interface
-	//-----------------------------------------------------
-	
-	foreach(j; 0 .. ninterfaces) {
-	    if (interpolation_order == 1){first_order_interpolation(global_cells[j+1],
-								    global_cells[j+2],
-								    perturbed_interfaces[j]);}
-	    else { second_order_interpolation_with_van_albada_limiting(global_cells[j+1],
-								       global_cells[j],
-								       global_cells[j+2],
-								       global_cells[j+3],
-								       perturbed_interfaces[j]); }
-	}
-	
-	//-----------------------------------------------------
-	// Compute Interface Flux
-	//-----------------------------------------------------
-	
-	foreach(j; 0 .. ninterfaces) {
-	    if (flux_calc == "van_leer") van_leer_flux_calculator(perturbed_interfaces[j], gamma);
-	    else if (flux_calc == "ausmdv") ausmdv_flux_calculator(perturbed_interfaces[j], gamma);
-	    else if (flux_calc == "ausm_plus_up") {
-		double M_inf = global_cells[0].u/(sqrt((global_cells[0].p*gamma)/global_cells[0].rho));
-		ausm_plus_up_flux_calculator(perturbed_interfaces[j], M_inf, gamma);
-	    }
-	}
-	
-	if (simulation_type == "nozzle") {
-	    // for the nozzle simulation we must overwrite the inflow interface flux
-	    
-	    fvcell cell = global_cells[0];
-	    double e = cell.p / (cell.rho*(gamma - 1.0));
-	    double ke = 0.5*cell.u*cell.u;
-	    
-	    perturbed_interfaces[0].mass = cell.rho*cell.u;
-	    perturbed_interfaces[0].momentum = cell.p+cell.rho*cell.u*cell.u;
-	    perturbed_interfaces[0].energy = (cell.rho*e + cell.rho*ke +cell.p)*cell.u;
-	}
-	
-	
-	//-----------------------------------------------------
-	// Fill column of Jacobian via Frechet derivative
-	//-----------------------------------------------------
-	
+	//------------------------
+	// Fill column of Jacobian
+	//------------------------	
 	foreach(j; 0 .. ncells) {
 	    double resd0;
 	    double resd1;
@@ -1158,151 +1101,50 @@ void solve(ref fvcell[ncells+nghost] global_cells,
 	    // mass flux
 	    resd0 = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
 	    resd1 = 1.0/cell.vol * (pfin.mass*pfin.area - pfout.mass*pfout.area);
-	    JV[j*3][i*3+1] = (resd1-resd0)/(orig_u*eps+eps);
+	    JV[j*np][i*np+1] = (resd1-resd0)/(orig_u*eps0+eps0);
 	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3][i*3+1] = 0.0;
-	    else transform[j*3][i*3+1] = 0.0;
+	    if (i==j) transform[j*np][i*np+1] = 0.0;
+	    else transform[j*np][i*np+1] = 0.0;
 	    
 	    // momentum flux
 	    resd0 = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
 	    resd1 = 1.0/cell.vol * (pfin.momentum*pfin.area-pfout.momentum*pfout.area+cell.p*(pfout.area-pfin.area));
-	    JV[j*3+1][i*3+1] = (resd1-resd0)/(orig_u*eps+eps);
+	    JV[j*np+1][i*np+1] = (resd1-resd0)/(orig_u*eps0+eps0);
 	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3+1][i*3+1] = 1.0/orig_rho;
-	    else transform[j*3+1][i*3+1] = 0.0;
+	    if (i==j) transform[j*np+1][i*np+1] = 1.0/orig_rho;
+	    else transform[j*np+1][i*np+1] = 0.0;
 	    
 	    // total energy flux
 	    resd0 = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
 	    resd1 = 1.0/cell.vol * (pfin.energy*pfin.area - pfout.energy*pfout.area);
-	    JV[j*3+2][i*3+1] = (resd1-resd0)/(orig_u*eps+eps);
+	    JV[j*np+2][i*np+1] = (resd1-resd0)/(orig_u*eps0+eps0);
 
-	    //writeln("coords = ", j*3+2, ", ", i*3);
-	    //writef("dFe/du = %.16f", (pfout.energy-fout.energy)/(orig_u*eps+eps));
-	    //writef(", perturbed flux = %.16f ", pfout.energy);
-	    //writef(", unperturbed flux = %.16f \n", fout.energy);
-	    // fill transform matrix
-	    if (i==j) transform[j*3+2][i*3+1] = -(gamma-1.0)*orig_u;
-	    else transform[j*3+2][i*3+1] = 0.0;
+	    if (i==j) transform[j*np+2][i*np+1] = -(gamma-1.0)*orig_u;
+	    else transform[j*np+2][i*np+1] = 0.0;
 	}
 	
 	//--------------------------------
 	// restore velocity in current cell
 	//--------------------------------
-	
 	global_cells[i+2].u = orig_u;
 	
 	//--------------------------------
 	// perturb pressure in current cell
 	//--------------------------------
-	
-	global_cells[i+2].p += (global_cells[i+2].p*eps+eps);
-	
-	//-----------------------------------------------------
-	// Apply Boundary Conditions
-	//-----------------------------------------------------
-	
-	if (simulation_type == "sod") {
-	    // Sod's shocktube bcs
-	    
-	    // left boundary -- wall
-	    global_cells[0].rho = global_cells[2].rho;
-	    global_cells[1].rho = global_cells[2].rho;
-	    global_cells[0].u = -global_cells[2].u;
-	    global_cells[1].u = -global_cells[2].u;
-	    global_cells[0].p = global_cells[2].p;
-	    global_cells[1].p = global_cells[2].p;
-	    // right boundary -- wall
-	    global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-	    global_cells[ncells+2].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+3].u = -global_cells[ncells+1].u;
-	    global_cells[ncells+2].p = global_cells[ncells+1].p;
-	    global_cells[ncells+3].p = global_cells[ncells+1].p;
-	}
-	else if (simulation_type == "nozzle") {
-	    // Nozzle bcs
-	    
-	    // left boundary -- inflow
-	    global_cells[0].rho = global_cells[0].rho;
-	    global_cells[1].rho = global_cells[1].rho;
-	    global_cells[0].u = global_cells[0].u;
-	    global_cells[1].u = global_cells[1].u;
-	    global_cells[0].p = global_cells[0].p;
-	    global_cells[1].p = global_cells[1].p;
-	    
-	    if (outflow_bc_order == 1) {
-		// right boundary -- outflow
+	global_cells[i+2].p += (global_cells[i+2].p*eps0+eps0);
+
+	//-------------------------------------
+	//  perform residual vector computation
+	//------------------------------------
+	apply_pre_flux_bcs(simulation_type, outflow_bc_order, outflow_bc_back_pressure_factor, global_cells, dx);
+	compute_flux(flux_calc, global_cells, perturbed_interfaces, interpolation_order, ninterfaces, gamma);
+	apply_post_flux_bcs(simulation_type, perturbed_interfaces, global_cells, gamma);
 		
-		// first order
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho;
-		global_cells[ncells+2].u = global_cells[ncells+1].u;
-		global_cells[ncells+3].u = global_cells[ncells+1].u;
-		global_cells[ncells+2].p = 2.5*global_cells[0].p;
-		global_cells[ncells+3].p = 2.5*global_cells[0].p;
-	    }
-	    else {
-		// second order
-		double drhodx; double dudx; double dpdx;
-		drhodx = (global_cells[ncells+1].rho - global_cells[ncells].rho)/dx;
-		dudx = (global_cells[ncells+1].u - global_cells[ncells].u)/dx;
-		dpdx = (global_cells[ncells+1].p - global_cells[ncells].p)/dx;
-		
-		global_cells[ncells+2].rho = global_cells[ncells+1].rho+drhodx*dx;
-		global_cells[ncells+3].rho = global_cells[ncells+1].rho+drhodx*2.0*dx;
-		global_cells[ncells+2].u = global_cells[ncells+1].u+dudx*dx;
-		global_cells[ncells+3].u = global_cells[ncells+1].u+dudx*2.0*dx;
-		global_cells[ncells+2].p = global_cells[ncells+1].p+dpdx*dx;
-		global_cells[ncells+3].p = global_cells[ncells+1].p+dpdx*2.0*dx;
-	    }
-	}
-	
-	//-----------------------------------------------------
-	// Interpolate cell centered values to interface
-	//-----------------------------------------------------
-	
-	foreach(j; 0 .. ninterfaces) {
-	    if (interpolation_order == 1){first_order_interpolation(global_cells[j+1],
-								    global_cells[j+2],
-								    perturbed_interfaces[j]);}
-	    else { second_order_interpolation_with_van_albada_limiting(global_cells[j+1],
-								       global_cells[j],
-								       global_cells[j+2],
-								       global_cells[j+3],
-								       perturbed_interfaces[j]); }
-	}
-	
-	//-----------------------------------------------------
-	// Compute Interface Flux
-	//-----------------------------------------------------
-	
-	foreach(j; 0 .. ninterfaces) {
-	    if (flux_calc == "van_leer") van_leer_flux_calculator(perturbed_interfaces[j], gamma);
-	    else if (flux_calc == "ausmdv") ausmdv_flux_calculator(perturbed_interfaces[j], gamma);
-	    else if (flux_calc == "ausm_plus_up") {
-		double M_inf = global_cells[0].u/(sqrt((global_cells[0].p*gamma)/global_cells[0].rho));
-		ausm_plus_up_flux_calculator(perturbed_interfaces[j], M_inf, gamma);
-	    }
-	}
-	
-	if (simulation_type == "nozzle") {
-	    // for the nozzle simulation we must overwrite the inflow interface flux
-	    
-	    fvcell cell = global_cells[0];
-	    double e = cell.p / (cell.rho*(gamma - 1.0));
-	    double ke = 0.5*cell.u*cell.u;
-	    
-	    perturbed_interfaces[0].mass = cell.rho*cell.u;
-	    perturbed_interfaces[0].momentum = cell.p+cell.rho*cell.u*cell.u;
-	    perturbed_interfaces[0].energy = (cell.rho*e + cell.rho*ke +cell.p)*cell.u;
-	}
-	
-	//-----------------------------------------------------
-	// Fill column of Jacobian via Frechet derivative
-	//-----------------------------------------------------
-	
+	//------------------------
+	// Fill column of Jacobian
+	//------------------------	
 	foreach(j; 0 .. ncells) {
 	    double resd0;
 	    double resd1;
@@ -1315,1032 +1157,204 @@ void solve(ref fvcell[ncells+nghost] global_cells,
 	    // mass flux
 	    resd0 = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
 	    resd1 = 1.0/cell.vol * (pfin.mass*pfin.area - pfout.mass*fout.area);
-	    JV[j*3][i*3+2] = (resd1-resd0)/(orig_p*eps+eps);
+	    JV[j*np][i*np+2] = (resd1-resd0)/(orig_p*eps0+eps0);
 	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3][i*3+2] = 0.0;
-	    else transform[j*3][i*3+2] = 0.0;
+	    if (i==j) transform[j*np][i*np+2] = 0.0;
+	    else transform[j*np][i*np+2] = 0.0;
 	    
 	    // momentum flux
 	    if (i == j) resd0 = 1.0/cell.vol *(fin.momentum*fin.area-fout.momentum*fout.area+orig_p*(fout.area-fin.area));
 	    else resd0 = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area+cell.p*(fout.area-fin.area));
 	    resd1 = 1.0/cell.vol * (pfin.momentum*pfin.area-pfout.momentum*pfout.area+cell.p*(pfout.area-pfin.area));
-	    JV[j*3+1][i*3+2] = (resd1-resd0)/(orig_p*eps+eps);
+	    JV[j*np+1][i*np+2] = (resd1-resd0)/(orig_p*eps0+eps0);
 	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3+1][i*3+2] = 0.0;
-	    else transform[j*3+1][i*3+2] = 0.0;
+	    if (i==j) transform[j*np+1][i*np+2] = 0.0;
+	    else transform[j*np+1][i*np+2] = 0.0;
 	    
 	    // total energy flux
 	    resd0 = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
 	    resd1 = 1.0/cell.vol * (pfin.energy*pfin.area - pfout.energy*pfout.area);
-	    JV[j*3+2][i*3+2] = (resd1-resd0)/(orig_p*eps+eps);
+	    JV[j*np+2][i*np+2] = (resd1-resd0)/(orig_p*eps0+eps0);
 	    
 	    // fill transform matrix
-	    if (i==j) transform[j*3+2][i*3+2] = gamma-1.0;
-	    else transform[j*3+2][i*3+2] = 0.0;
+	    if (i==j) transform[j*np+2][i*np+2] = gamma-1.0;
+	    else transform[j*np+2][i*np+2] = 0.0;
 	}
 	
 	//--------------------------------
 	// restore pressure in current cell
 	//--------------------------------
-	
 	global_cells[i+2].p = orig_p;
 	
     }
-    
-    /*
-    // Transform matrix
-    foreach(i; 0 .. ncells) {
-    // save current cells original flowstate
-    double orig_rho = global_cells[i+2].rho;
-    double orig_u = global_cells[i+2].u;
-    double orig_p = global_cells[i+2].p;
-    
-    foreach(j; 0 .. ncells) {
-    // fill transform matrix
-    if (i==j) transform[j*3][i*3] = 1.0;
-    else transform[j*3][i*3] = 0.0;
-    
-    // fill transform matrix
-    if (i==j) transform[j*3+1][i*3] = -orig_u/orig_rho;
-    else transform[j*3+1][i*3] = 0.0;
-    
-    // fill transform matrix
-    if (i==j) transform[j*3+2][i*3] = 0.5*(gamma-1.0)*orig_u*orig_u;
-    else transform[j*3+2][i*3] = 0.0;
-    }
-    
-    foreach(j; 0 .. ncells) {
-    // fill transform matrix
-    if (i==j) transform[j*3][i*3+1] = 0.0;
-    else transform[j*3][i*3+1] = 0.0;
-    
-    // fill transform matrix
-    if (i==j) transform[j*3+1][i*3+1] = 1.0/orig_rho;
-    else transform[j*3+1][i*3+1] = 0.0;
-    
-    // fill transform matrix
-    if (i==j) transform[j*3+2][i*3+1] = -(gamma-1.0)*orig_u;
-    else transform[j*3+2][i*3+1] = 0.0;
-    }
-    
-    foreach(j; 0 .. ncells) {
-    // fill transform matrix
-    if (i==j) transform[j*3][i*3+2] = 0.0;
-    else transform[j*3][i*3+2] = 0.0;
-    
-    // fill transform matrix
-    if (i==j) transform[j*3+1][i*3+2] = 0.0;
-    else transform[j*3+1][i*3+2] = 0.0;
-    
-    // fill transform matrix
-    if (i==j) transform[j*3+2][i*3+2] = gamma-1.0;
-    else transform[j*3+2][i*3+2] = 0.0;
-    }
-    }
-    
-    // Analytical Jacobian
-    foreach(i; 0..ncells) {
-    
-    //--------------------------------
-    // Density derivatives
-    //--------------------------------
-    
-    foreach(j; 0 .. ncells) {
-    fvinterface fin = global_interfaces[j];
-    fvinterface fout = global_interfaces[j+1];
-    fvcell lftcell = global_cells[j+1];
-    fvcell cell = global_cells[j+2];
-    
-    double in_dFmassdrho; double in_dFmomdrho; double in_dFedrho;
-    double out_dFmassdrho; double out_dFmomdrho; double out_dFedrho;
-    
-    // first determine left interface Mach number
-    // left state
-    double aL = sqrt( (gamma*fin.left_fs.p)/fin.left_fs.rho );
-    double ML = fin.left_fs.u/aL;
-    
-    // right state
-    double aR = sqrt( (gamma*fin.right_fs.p)/fin.right_fs.rho );
-    double MR = fin.right_fs.u/aR;
-    
-    double Min = 0.5*(ML+MR); // average Mach number
-    
-    // next determine right interface Mach number
-    // left state
-    aL = sqrt( (gamma*fout.left_fs.p)/fout.left_fs.rho );
-    ML = fout.left_fs.u/aL;
-    
-    // right state
-    aR = sqrt( (gamma*fout.right_fs.p)/fout.right_fs.rho );
-    MR = fout.right_fs.u/aR;
-    
-    double Mout = 0.5*(ML+MR); // average Mach number
-    
-    if (i == j-1) {
-    if (Min >= 1.0) {
-    double uL = fin.left_fs.u;
-    in_dFmassdrho = uL;
-    in_dFmomdrho = uL*uL;
-    in_dFedrho = 0.5*uL*uL*uL;
-    }
-    else if (Min <= -1.0) {	
-    in_dFmassdrho = 0.0;
-    in_dFmomdrho = 0.0;
-    in_dFedrho = 0.0;
-    }
-    else {
-    double rhoL = fin.left_fs.rho; double rhoR = fin.right_fs.rho;
-    double uL = fin.left_fs.u; double uR = fin.right_fs.u;
-    double pL = fin.left_fs.p; double pR = fin.right_fs.p;
-    double g = gamma;
-    
-    in_dFmassdrho = 0.25*uL*(uL/sqrt(g*pL/rhoL)+1)+0.125*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2);
-    in_dFmomdrho = 0.25*pL*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/(rhoL*sqrt(g*pL/rhoL))
-    + 0.5*pL*uL*(uL/sqrt(g*pL/rhoL) + 1)*(uL*(g/2.0- 0.5)/sqrt(g*pL/rhoL) + 1)/(rhoL*sqrt(g*pL/rhoL)); 
-    in_dFedrho = 0.5*g*pL*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/(rhoL*(pow(g,2) - 1))
-    + 0.5*g*pL*uL*(uL/sqrt(g*pL/rhoL)+1)*pow((uL*(g/2.0-0.5)/sqrt(g*pL/rhoL)+1),2)/(rhoL*(pow(g,2)-1))
-    - 0.25*g*pL*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(rhoL*(pow(g,2) - 1));
-    }
-    // mass flux
-    JV[j*3][i*3] = -1.0/cell.vol * (in_dFmassdrho*fin.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3] = -1.0/cell.vol * (in_dFmomdrho*fin.area);
-    
-    // energy flux
-    JV[j*3+2][i*3] = -1.0/cell.vol * (in_dFedrho*fin.area);
-    }
-    
-    else if (i == j+1) {
-    if (Mout >= 1.0) {
-    out_dFmassdrho = 0.0;
-    out_dFmomdrho = 0.0;
-    out_dFedrho = 0.0;
-    }
-    else if (Mout <= -1.0) {
-    double uR = fout.right_fs.u;
-    out_dFmassdrho = uR;
-    out_dFmomdrho = uR*uR;
-    out_dFedrho = 0.5*uR*uR*uR;
-    }
-    else {
-    double rhoL = fout.left_fs.rho; double rhoR = fout.right_fs.rho;
-    double uL = fout.left_fs.u; double uR = fout.right_fs.u;
-    double pL = fout.left_fs.p; double pR = fout.right_fs.p;
-    double g = gamma;
-    
-    out_dFmassdrho =0.25*uR*(-uR/sqrt(g*pR/rhoR)+1)-0.125*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2);
-    out_dFmomdrho = -0.25*pR*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/(rhoR*sqrt(g*pR/rhoR))
-    + 0.5*pR*uR*(-uR/sqrt(g*pR/rhoR) + 1)*(uR*(g/2.0-0.5)/sqrt(g*pR/rhoR) - 1)/(rhoR*sqrt(g*pR/rhoR));
-    out_dFedrho = -0.5*g*pR*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/(rhoR*(pow(g,2) - 1))
-    + 0.5*g*pR*uR*(-uR/sqrt(g*pR/rhoR) + 1)
-    *pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(rhoR*(pow(g,2) - 1))
-    + 0.25*g*pR*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(rhoR*(pow(g,2) - 1));
-    }
-    // mass flux
-    JV[j*3][i*3] = -1.0/cell.vol * (-out_dFmassdrho*fout.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3] = -1.0/cell.vol * (-out_dFmomdrho*fout.area);
-    
-    // energy flux
-    JV[j*3+2][i*3] = -1.0/cell.vol * (-out_dFedrho*fout.area);
-    }
-    
-    else if (i == j) {
-    if (Min >= 1.0) {
-    in_dFmassdrho = 0.0;
-    in_dFmomdrho = 0.0;
-    in_dFedrho = 0.0;
-    }
-    else if (Min <= -1.0) {
-    double uR = fin.right_fs.u;
-    in_dFmassdrho = uR;
-    in_dFmomdrho = uR*uR;
-    in_dFedrho = 0.5*uR*uR*uR;
-    }
-    else {
-    double rhoL = fin.left_fs.rho; double rhoR = fin.right_fs.rho;
-    double uL = fin.left_fs.u; double uR = fin.right_fs.u;
-    double pL = fin.left_fs.p; double pR = fin.right_fs.p;
-    double g = gamma;
-    
-    in_dFmassdrho = 0.25*uR*(-uR/sqrt(g*pR/rhoR)+1)-0.125*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2);
-    in_dFmomdrho = -0.25*pR*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/(rhoR*sqrt(g*pR/rhoR))
-    + 0.5*pR*uR*(-uR/sqrt(g*pR/rhoR) + 1)*(uR*(g/2.0-0.5)/sqrt(g*pR/rhoR) - 1)/(rhoR*sqrt(g*pR/rhoR));
-    in_dFedrho = -0.5*g*pR*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/(rhoR*(pow(g,2) - 1))
-    + 0.5*g*pR*uR*(-uR/sqrt(g*pR/rhoR) + 1)
-    *pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(rhoR*(pow(g,2) - 1))
-    + 0.25*g*pR*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(rhoR*(pow(g,2) - 1));
-    }
-    
-    if (Mout >= 1.0) {
-    double uL = fout.left_fs.u;
-    out_dFmassdrho = uL;
-    out_dFmomdrho = uL*uL;
-    out_dFedrho = 0.5*uL*uL*uL;
-    }
-    else if (Mout <= -1.0) {	
-    out_dFmassdrho = 0.0;
-    out_dFmomdrho = 0.0;
-    out_dFedrho = 0.0;
-    }
-    else {
-    double rhoL = fout.left_fs.rho; double rhoR = fout.right_fs.rho;
-    double uL = fout.left_fs.u; double uR = fout.right_fs.u;
-    double pL = fout.left_fs.p; double pR = fout.right_fs.p;
-    double g = gamma;
-    
-    out_dFmassdrho = 0.25*uL*(uL/sqrt(g*pL/rhoL)+1)+0.125*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2);
-    out_dFmomdrho = 0.25*pL*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/(rhoL*sqrt(g*pL/rhoL))
-    + 0.5*pL*uL*(uL/sqrt(g*pL/rhoL) + 1)*(uL*(g/2.0-0.5)/sqrt(g*pL/rhoL) + 1)/(rhoL*sqrt(g*pL/rhoL)); 
-    out_dFedrho = 0.5*g*pL*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/(rhoL*(pow(g,2) - 1))
-    + 0.5*g*pL*uL*(uL/sqrt(g*pL/rhoL)+1)*pow((uL*(g/2.0-0.5)/sqrt(g*pL/rhoL)+1),2)/(rhoL*(pow(g,2)-1))
-    - 0.25*g*pL*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(rhoL*(pow(g,2) - 1));
-    }
-    
-    // mass flux
-    JV[j*3][i*3] = -1.0/cell.vol * (in_dFmassdrho*fin.area-out_dFmassdrho*fout.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3] = -1.0/cell.vol * (in_dFmomdrho*fin.area-out_dFmomdrho*fout.area);
-    
-    // energy flux
-    JV[j*3+2][i*3] = -1.0/cell.vol * (in_dFedrho*fin.area-out_dFedrho*fout.area);
-    }
-    
-    else {
-    // mass flux
-    JV[j*3][i*3] = 0.0;
-    
-    // momentum flux
-    JV[j*3+1][i*3] = 0.0;
-    
-    // energy flux
-    JV[j*3+2][i*3] = 0.0;
-    }
-    }
-    //--------------------------------
-    // velocity derivatives
-    //--------------------------------
-    foreach(j; 0 .. ncells) {
-    fvinterface fin = global_interfaces[j];
-    fvinterface fout = global_interfaces[j+1];
-    fvcell lftcell = global_cells[j+1];
-    fvcell cell = global_cells[j+2];
-    
-    double in_dFmassdu; double in_dFmomdu; double in_dFedu;
-    double out_dFmassdu; double out_dFmomdu; double out_dFedu;
-    
-    // first determine left interface Mach number
-    // left state
-    double aL = sqrt( (gamma*fin.left_fs.p)/fin.left_fs.rho );
-    double ML = fin.left_fs.u/aL;
-    
-    // right state
-    double aR = sqrt( (gamma*fin.right_fs.p)/fin.right_fs.rho );
-    double MR = fin.right_fs.u/aR;
-    
-    double Min = 0.5*(ML+MR); // average Mach number
-    
-    // next determine right interface Mach number
-    // left state
-    aL = sqrt( (gamma*fout.left_fs.p)/fout.left_fs.rho );
-    ML = fout.left_fs.u/aL;
-    
-    // right state
-    aR = sqrt( (gamma*fout.right_fs.p)/fout.right_fs.rho );
-    MR = fout.right_fs.u/aR;
-    
-    double Mout = 0.5*(ML+MR); // average Mach number
-    
-    if (i == j-1) {
-    if (Min >= 1.0) {
-    double rhoL = fin.left_fs.rho;
-    double uL = fin.left_fs.u;
-    double pL = fin.left_fs.p;
-    
-    in_dFmassdu = rhoL;
-    in_dFmomdu = 2*rhoL*uL;
-    in_dFedu = (3.0/2.0) * rhoL*uL*uL + (pL*gamma)/(gamma-1);
-    }
-    else if (Min <= -1.0) {	
-    in_dFmassdu = 0.0;
-    in_dFmomdu = 0.0;
-    in_dFedu = 0.0;
-    }
-    else {
-    double rhoL = fin.left_fs.rho; double rhoR = fin.right_fs.rho;
-    double uL = fin.left_fs.u; double uR = fin.right_fs.u;
-    double pL = fin.left_fs.p; double pR = fin.right_fs.p;
-    double g = gamma;
-    
-    in_dFmassdu = 0.5*rhoL*(uL/sqrt(g*pL/rhoL) + 1);
-    in_dFmomdu = 0.5*pL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/sqrt(g*pL/rhoL)
-    + 1.0*pL*(uL/sqrt(g*pL/rhoL) + 1)*(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/sqrt(g*pL/rhoL);
-    in_dFedu = 1.0*g*pL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/(pow(g,2) - 1)
-    + 1.0*g*pL*(uL/sqrt(g*pL/rhoL) + 1)*pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(pow(g,2) - 1);
-    }
-    // mass flux
-    JV[j*3][i*3+1] = -1.0/cell.vol * (in_dFmassdu*fin.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3+1] = -1.0/cell.vol * (in_dFmomdu*fin.area);
-    
-    // energy flux
-    JV[j*3+2][i*3+1] = -1.0/cell.vol * (in_dFedu*fin.area);
-    }
-    
-    else if (i == j+1) {
-    if (Mout >= 1.0) {
-    out_dFmassdu = 0.0;
-    out_dFmomdu = 0.0;
-    out_dFedu = 0.0;
-    }
-    else if (Mout <= -1.0) {
-    double rhoR = fout.right_fs.rho;
-    double uR = fout.right_fs.u;
-    double pR = fout.right_fs.p;
-    
-    out_dFmassdu = rhoR;
-    out_dFmomdu = 2.0*rhoR*uR;
-    out_dFedu = (3.0/2.0) *rhoR*uR*uR + (pR*gamma)/(gamma-1);
-    }
-    else {
-    double rhoL = fout.left_fs.rho; double rhoR = fout.right_fs.rho;
-    double uL = fout.left_fs.u; double uR = fout.right_fs.u;
-    double pL = fout.left_fs.p; double pR = fout.right_fs.p;
-    double g = gamma;
-    
-    out_dFmassdu = 0.5*rhoR*(-uR/sqrt(g*pR/rhoR) + 1);
-    out_dFmomdu = -0.5*pR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/sqrt(g*pR/rhoR)
-    + 1.0*pR*(-uR/sqrt(g*pR/rhoR) + 1)*(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/sqrt(g*pR/rhoR);
-    out_dFedu = -1.0*g*pR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/(pow(g,2) - 1)
-    + 1.0*g*pR*(-uR/sqrt(g*pR/rhoR) + 1)*pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(pow(g,2) - 1);
-    }
-    // mass flux
-    JV[j*3][i*3+1] = -1.0/cell.vol * (-out_dFmassdu*fout.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3+1] = -1.0/cell.vol * (-out_dFmomdu*fout.area);
-    
-    // energy flux
-    JV[j*3+2][i*3+1] = -1.0/cell.vol * (-out_dFedu*fout.area);
-    }
-    
-    else if (i == j) {
-    if (Min >= 1.0) {
-    in_dFmassdu = 0.0;
-    in_dFmomdu = 0.0;
-    in_dFedu = 0.0;
-    }
-    else if (Min <= -1.0) {
-    double rhoR = fin.right_fs.rho;
-    double uR = fin.right_fs.u;
-    double pR = fin.right_fs.p;
-    
-    in_dFmassdu = rhoR;
-    in_dFmomdu = 2.0*rhoR*uR;
-    in_dFedu = (3.0/2.0) *rhoR*uR*uR + (pR*gamma)/(gamma-1);
-    }
-    else {
-    double rhoL = fin.left_fs.rho; double rhoR = fin.right_fs.rho;
-    double uL = fin.left_fs.u; double uR = fin.right_fs.u;
-    double pL = fin.left_fs.p; double pR = fin.right_fs.p;
-    double g = gamma;
-    
-    in_dFmassdu = 0.5*rhoR*(-uR/sqrt(g*pR/rhoR) + 1);
-    in_dFmomdu = -0.5*pR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/sqrt(g*pR/rhoR)
-    + 1.0*pR*(-uR/sqrt(g*pR/rhoR) + 1)*(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/sqrt(g*pR/rhoR);
-    in_dFedu = -1.0*g*pR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/(pow(g,2) - 1)
-    + 1.0*g*pR*(-uR/sqrt(g*pR/rhoR) + 1)*pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(pow(g,2) - 1);
-    }
-    
-    if (Mout >= 1.0) {
-    double rhoL = fout.left_fs.rho;
-    double uL = fout.left_fs.u;
-    double pL = fout.left_fs.p;
-    
-    out_dFmassdu = rhoL;
-    out_dFmomdu = 2*rhoL*uL;
-    out_dFedu = (3.0/2.0) *rhoL*uL*uL + (pL*gamma)/(gamma-1);
-    }
-    else if (Mout <= -1.0) {	
-    out_dFmassdu = 0.0;
-    out_dFmomdu = 0.0;
-    out_dFedu = 0.0;
-    }
-    else {
-    double rhoL = fout.left_fs.rho; double rhoR = fout.right_fs.rho;
-    double uL = fout.left_fs.u; double uR = fout.right_fs.u;
-    double pL = fout.left_fs.p; double pR = fout.right_fs.p;
-    double g = gamma;
-    
-    out_dFmassdu = 0.5*rhoL*(uL/sqrt(g*pL/rhoL) + 1);
-    out_dFmomdu = 0.5*pL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/sqrt(g*pL/rhoL)
-    + 1.0*pL*(uL/sqrt(g*pL/rhoL) + 1)*(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/sqrt(g*pL/rhoL);
-    out_dFedu = 1.0*g*pL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/(pow(g,2) - 1)
-    + 1.0*g*pL*(uL/sqrt(g*pL/rhoL) + 1)*pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(pow(g,2) - 1);
-    }
-    
-    // mass flux
-    JV[j*3][i*3+1] = -1.0/cell.vol * (in_dFmassdu*fin.area-out_dFmassdu*fout.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3+1] = -1.0/cell.vol * (in_dFmomdu*fin.area-out_dFmomdu*fout.area);
-    
-    // energy flux
-    JV[j*3+2][i*3+1] = -1.0/cell.vol * (in_dFedu*fin.area-out_dFedu*fout.area);
-    }
-    
-    else {
-    // mass flux
-    JV[j*3][i*3+1] = 0.0;
-    
-    // momentum flux
-    JV[j*3+1][i*3+1] = 0.0;
-    
-    // energy flux
-    JV[j*3+2][i*3+1] = 0.0;
-    }
-    }
-    //--------------------------------
-    // pressure derivatives
-    //--------------------------------
-    foreach(j; 0 .. ncells) {
-    fvinterface fin = global_interfaces[j];
-    fvinterface fout = global_interfaces[j+1];
-    fvcell lftcell = global_cells[j+1];
-    fvcell cell = global_cells[j+2];
-    
-    double in_dFmassdp; double in_dFmomdp; double in_dFedp;
-    double out_dFmassdp; double out_dFmomdp; double out_dFedp;
-    
-    // first determine left interface Mach number
-    // left state
-    double aL = sqrt( (gamma*fin.left_fs.p)/fin.left_fs.rho );
-    double ML = fin.left_fs.u/aL;
-    
-    // right state
-    double aR = sqrt( (gamma*fin.right_fs.p)/fin.right_fs.rho );
-    double MR = fin.right_fs.u/aR;
-    
-    double Min = 0.5*(ML+MR); // average Mach number
-    
-    // next determine right interface Mach number
-    // left state
-    aL = sqrt( (gamma*fout.left_fs.p)/fout.left_fs.rho );
-    ML = fout.left_fs.u/aL;
-    
-    // right state
-    aR = sqrt( (gamma*fout.right_fs.p)/fout.right_fs.rho );
-    MR = fout.right_fs.u/aR;
-    
-    double Mout = 0.5*(ML+MR); // average Mach number
-    
-    if (i == j-1) {
-    if (Min >= 1.0) {
-    double rhoL = fin.left_fs.rho;
-    double uL = fin.left_fs.u;
-    double pL = fin.left_fs.p;
-    
-    in_dFmassdp = 0.0;
-    in_dFmomdp = 1.0;
-    in_dFedp = (uL*gamma)/(gamma-1);
-    }
-    else if (Min <= -1.0) {	
-    in_dFmassdp = 0.0;
-    in_dFmomdp = 0.0;
-    in_dFedp = 0.0;
-    }
-    else {
-    double rhoL = fin.left_fs.rho; double rhoR = fin.right_fs.rho;
-    double uL = fin.left_fs.u; double uR = fin.right_fs.u;
-    double pL = fin.left_fs.p; double pR = fin.right_fs.p;
-    double g = gamma;
-    
-    in_dFmassdp = -0.25*rhoL*uL*(uL/sqrt(g*pL/rhoL) + 1)/pL
-    + 0.125*rhoL*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/pL;
-    in_dFmomdp = -0.25*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/sqrt(g*pL/rhoL)
-    - 0.5*uL*(uL/sqrt(g*pL/rhoL) + 1)*(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/sqrt(g*pL/rhoL)
-    + 0.5*pow((uL/sqrt(g*pL/rhoL) + 1),2)*(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1);
-    in_dFedp = -0.5*g*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/(pow(g,2) - 1) - 0.5*g*uL*(uL/sqrt(g*pL/rhoL) + 1)
-    *pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(pow(g,2) - 1)
-    + 0.75*g*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(pow(g,2) - 1);
-    }
-    // mass flux
-    JV[j*3][i*3+2] = -1.0/cell.vol * (in_dFmassdp*fin.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3+2] = -1.0/cell.vol * (in_dFmomdp*fin.area);
-    
-    // energy flux
-    JV[j*3+2][i*3+2] = -1.0/cell.vol * (in_dFedp*fin.area);
-    }
-	
-    else if (i == j+1) {
-    if (Mout >= 1.0) {
-    out_dFmassdp = 0.0;
-    out_dFmomdp = 0.0;
-    out_dFedp = 0.0;
-    }
-    else if (Mout <= -1.0) {
-    double rhoR = fout.right_fs.rho;
-    double uR = fout.right_fs.u;
-    double pR = fout.right_fs.p;
-    
-    out_dFmassdp = 0.0;
-    out_dFmomdp = 1.0;
-    out_dFedp = (uR*gamma)/(gamma-1);
-    }
-    else {
-    double rhoL = fout.left_fs.rho; double rhoR = fout.right_fs.rho;
-    double uL = fout.left_fs.u; double uR = fout.right_fs.u;
-    double pL = fout.left_fs.p; double pR = fout.right_fs.p;
-    double g = gamma;
-    
-    out_dFmassdp = -0.25*rhoR*uR*(-uR/sqrt(g*pR/rhoR) + 1)/pR
-    - 0.125*rhoR*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/pR;
-    out_dFmomdp = 0.25*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/sqrt(g*pR/rhoR)
-    - 0.5*uR*(-uR/sqrt(g*pR/rhoR) + 1)*(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/sqrt(g*pR/rhoR)
-    - 0.5*pow((-uR/sqrt(g*pR/rhoR) + 1),2)*(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1);
-    out_dFedp = 0.5*g*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/(pow(g,2) - 1)
-    - 0.5*g*uR*(-uR/sqrt(g*pR/rhoR) + 1)*pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(pow(g,2) - 1)
-    - 0.75*g*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(pow(g,2) - 1);
-    }
-    // mass flux
-    JV[j*3][i*3+2] = -1.0/cell.vol * (-out_dFmassdp*fout.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3+2] = -1.0/cell.vol * (-out_dFmomdp*fout.area);
-    
-    // energy flux
-    JV[j*3+2][i*3+2] = -1.0/cell.vol * (-out_dFedp*fout.area);
-    }
-	
-    else if (i == j) {
-    if (Min >= 1.0) {
-    in_dFmassdp = 0.0;
-    in_dFmomdp = 0.0;
-    in_dFedp = 0.0;
-    }
-    else if (Min <= -1.0) {
-    double rhoR = fin.right_fs.rho;
-    double uR = fin.right_fs.u;
-    double pR = fin.right_fs.p;
-    
-    in_dFmassdp = 0.0;
-    in_dFmomdp = 1.0;
-    in_dFedp = (uR*gamma)/(gamma-1);
-    }
-    else {
-    double rhoL = fin.left_fs.rho; double rhoR = fin.right_fs.rho;
-    double uL = fin.left_fs.u; double uR = fin.right_fs.u;
-    double pL = fin.left_fs.p; double pR = fin.right_fs.p;
-    double g = gamma;
-	
-    in_dFmassdp = -0.25*rhoR*uR*(-uR/sqrt(g*pR/rhoR) + 1)/pR
-    - 0.125*rhoR*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/pR;
-    in_dFmomdp = 0.25*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)/sqrt(g*pR/rhoR)
-    - 0.5*uR*(-uR/sqrt(g*pR/rhoR) + 1)*(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/sqrt(g*pR/rhoR)
-    - 0.5*pow((-uR/sqrt(g*pR/rhoR) + 1),2)*(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1);
-    in_dFedp = 0.5*g*uR*(g/2.0 - 0.5)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *(uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1)/(pow(g,2) - 1)
-    - 0.5*g*uR*(-uR/sqrt(g*pR/rhoR) + 1)*pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(pow(g,2) - 1)
-    - 0.75*g*sqrt(g*pR/rhoR)*pow((-uR/sqrt(g*pR/rhoR) + 1),2)
-    *pow((uR*(g/2.0 - 0.5)/sqrt(g*pR/rhoR) - 1),2)/(pow(g,2) - 1);
-    }
-    
-    if (Mout >= 1.0) {
-    double rhoL = fout.left_fs.rho;
-    double uL = fout.left_fs.u;
-    double pL = fout.left_fs.p;
-    
-    out_dFmassdp = 0.0;
-    out_dFmomdp = 1.0;
-    out_dFedp = (uL*gamma)/(gamma-1);
-    }
-    else if (Mout <= -1.0) {	
-    out_dFmassdp = 0.0;
-    out_dFmomdp = 0.0;
-    out_dFedp = 0.0;
-    }
-    else {
-    double rhoL = fout.left_fs.rho; double rhoR = fout.right_fs.rho;
-    double uL = fout.left_fs.u; double uR = fout.right_fs.u;
-    double pL = fout.left_fs.p; double pR = fout.right_fs.p;
-    double g = gamma;
-    
-    out_dFmassdp = -0.25*rhoL*uL*(uL/sqrt(g*pL/rhoL) + 1)/pL
-    + 0.125*rhoL*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/pL;
-    out_dFmomdp = -0.25*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)/sqrt(g*pL/rhoL)
-    - 0.5*uL*(uL/sqrt(g*pL/rhoL) + 1)*(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/sqrt(g*pL/rhoL)
-    + 0.5*pow((uL/sqrt(g*pL/rhoL) + 1),2)*(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1);
-    out_dFedp = -0.5*g*uL*(g/2.0 - 0.5)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *(uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1)/(pow(g,2) - 1) - 0.5*g*uL*(uL/sqrt(g*pL/rhoL) + 1)
-    *pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(pow(g,2) - 1)
-    + 0.75*g*sqrt(g*pL/rhoL)*pow((uL/sqrt(g*pL/rhoL) + 1),2)
-    *pow((uL*(g/2.0 - 0.5)/sqrt(g*pL/rhoL) + 1),2)/(pow(g,2) - 1);
-    }
-    
-    // mass flux
-    JV[j*3][i*3+2] = -1.0/cell.vol * (in_dFmassdp*fin.area-out_dFmassdp*fout.area);
-    
-    // momentum flux
-    JV[j*3+1][i*3+2] = -1.0/cell.vol * (in_dFmomdp*fin.area-out_dFmomdp*fout.area +1.0*(fout.area-fin.area));
-    
-    // energy flux
-    JV[j*3+2][i*3+2] = -1.0/cell.vol * (in_dFedp*fin.area-out_dFedp*fout.area);
-    }
-    
-    else {
-    // mass flux
-    JV[j*3][i*3+2] = 0.0;
-    
-    // momentum flux
-    JV[j*3+1][i*3+2] = 0.0;
-    
-    // energy flux
-    JV[j*3+2][i*3+2] = 0.0;
-    }
-    }
-    } // end analytical Jacobian
-    */
-    //writeln(JV);
-    //-----------------------------------------------------
-    // Transform JV to JU
-    //-----------------------------------------------------
-    //writeln("J = ", JV);
-    //writeln(JV.length);
-    matrixMult(JV, transform, JU); 
-    
-    //--------------------------------------------------------
-    // Adjoint Solver -- [JU]^T * psi = -dJdU
-    //--------------------------------------------------------
-    
-    // cost function is defined as:
-    // J(Q) = 0.5*integral[0->l] (p-p*)^2 dx
-    
-    // target pressure distribution saved in file target.dat
-    double[ncells] p_target;
-    auto file = File("target_output.dat", "r");
-    foreach(i; 0 .. ncells) {
-	auto lineContent = file.readln().strip();
-	auto tokens = lineContent.split();
-	p_target[i] = to!double(tokens[2]);
-    }
-    
-    //--------------------------------------------------------
-    // Transpose JU
-    //--------------------------------------------------------
-    
-    // transpose
-    foreach (i; 0 .. JU.length) {
-	foreach (j; 0 .. JU.length) {
+
+    if (adjoint_form == "conservative") matrix_mult(JV, transform, JU); // transform JV to JU
+    
+    //-------------------
+    // Transpose Jacobian
+    //-------------------
+    if (adjoint_form == "conservative") {
+	foreach (i; 0 .. JU.length) {
+	    foreach (j; 0 .. JU.length) {
 		JUT[i][j] = JU[j][i];
+	    }
+	}
+    } else { // primitive variable
+	foreach (i; 0 .. JV.length) {
+	    foreach (j; 0 .. JV.length) {
 		JVT[i][j] = JV[j][i];
+	    }
 	}
     }
-    //writeln("--------------------------------------------------");
-    //writeln("JVT = ", JVT);
-    //--------------------------------------------------------
-    // Invert [JU]^T
-    //--------------------------------------------------------
+
+    //----------------
+    // Invert Jacobian
+    //----------------
+    if (adjoint_form == "conservative") matrix_inv(JUT, invJUT);
+    else matrix_inv(JVT, invJVT);
     
-    matrixInv(JUT, invJUT);
-    matrixInv(JVT, invJVT);
-    //writeln(invJVT);
-    //--------------------------------------------------------
-    // Construct dJdV vector
-    //--------------------------------------------------------
-	
-    // first calculate un-perturbed (J)
-    //double J = 0.0;
-    J = 0.0;
-    foreach (i; 0..ncells) {
-	J += 0.5*(global_cells[i+2].p - p_target[i])*(global_cells[i+2].p - p_target[i]); //*global_cells[i+2].dx;
-    }
-    //writeln(J, ", ", b, ", ", c, ", ", d, ", ", p_target[50], ", ", global_cells[52].p, ", ", global_cells[52].dx);
-    //writef("%.16f, %f, %f, %f \n", J, b, c, d);
-    //writef("J = %.18f \n", J);
-    
-    /*
-    // Numerically form dJdV using Frechet Derivatives
-    
-    double J_perturb;	    
-    
-    // now loop through cells and perturb primitive variables
-    foreach (i; 0 .. ncells) {
-    // store original cell flowstate
-    double orig_rho = global_cells[i+2].rho;
-    double orig_u = global_cells[i+2].u;
-    double orig_p = global_cells[i+2].p;
-    
-    // perturb density
-    global_cells[i+2].rho += (global_cells[i+2].rho*eps+eps);
-    J_perturb = 0.0;
-    foreach (j; 0..ncells) {
-    J_perturb += 0.5*(global_cells[j+2].p - p_target[j])*(global_cells[j+2].p - p_target[j])*global_cells[j+2].dx;
-    }
-    dJdV[i*3] = (J_perturb-J)/(orig_rho*eps+eps);
-    global_cells[i+2].rho = orig_rho;
-    
-    // perturb velocity
-    global_cells[i+2].u += (global_cells[i+2].u*eps+eps);
-    J_perturb = 0.0;
-    foreach (j; 0..ncells) {
-    J_perturb += 0.5*(global_cells[j+2].p - p_target[j])*(global_cells[j+2].p - p_target[j])*global_cells[j+2].dx;
-    }
-    dJdV[i*3+1] = (J_perturb-J)/(orig_u*eps+eps);
-    global_cells[i+2].u = orig_u;
-    
-    // perturb pressure
-    global_cells[i+2].p += (global_cells[i+2].p*eps+eps);
-    J_perturb = 0.0;
-    foreach (j; 0..ncells) {
-    J_perturb += 0.5*(global_cells[j+2].p - p_target[j])*(global_cells[j+2].p - p_target[j])*global_cells[j+2].dx;
-    }
-    dJdV[i*3+2] = (J_perturb-J)/(orig_p*eps+eps);
-    global_cells[i+2].p = orig_p;
-    }
-    */
-    
-    // Analytically form dJdV by hand differentiation
-    foreach (i; 0..ncells) {
-	foreach (j; 0..ncells) {
-	    dJdV[i*3] = 0.0;
-	    dJdV[i*3+1] = 0.0;
-	    dJdV[i*3+2] = 0.5*(2.0*global_cells[i+2].p-2.0*p_target[i]); //global_cells[i+2].dx
+    //-------------------------------------
+    // Construct dJdV vector (analytically)
+    //-------------------------------------
+    if (adjoint_form == "conservative") {
+	foreach (i; 0..ncells) {
+	    double U1 = global_cells[i+2].rho; double U2 = global_cells[i+2].ru; double U3 = global_cells[i+2].rE;
+	    double pstar = p_target[i];
+	    dJdU[i*np] = 1.0/2.0 * (U3*(gamma-1.0)*(gamma-1.0)*U2*U2/(U1*U1)
+				    -U2*U2*U2*U2*(gamma-1.0)*(gamma-1.0)/(2.0*U1*U1*U1)
+				    -U2*U2/(U1*U1)*(gamma-1.0)*pstar);
+	    dJdU[i*np+1] = 1.0/2.0 * (-2.0*U3*(gamma-1.0)*(gamma-1.0)*U2/U1
+				      +U2*U2*U2*(gamma-1.0)*(gamma-1.0)/(U1*U1)
+				      +2.0*U2/U1*(gamma-1.0)*pstar);
+	    dJdU[i*np+2] = 1.0/2.0 * (2.0*U3*(gamma-1.0)*(gamma-1.0)
+				      -(gamma-1.0)*(gamma-1.0)*U2*U2/(U1)
+				      -2.0*(gamma-1.0)*pstar);
+	}
+    } else { // primitive
+	foreach (i; 0..ncells) {
+	    foreach (j; 0..ncells) {
+		dJdV[i*np] = 0.0;
+		dJdV[i*np+1] = 0.0;
+		dJdV[i*np+2] = 0.5*(2.0*global_cells[i+2].p-2.0*p_target[i]);
+	    }
 	}
     }
-    //writeln("-------------------------------------------------------------------");
-    //writeln("dJdV = ", dJdV);
-    /*
-    //--------------------------------------------------------
-    // Transform dJdV to dJdU
-    //--------------------------------------------------------
-	
-    foreach (i; 0 .. transform.length) {
-	dJdU[i] = 0.0;
-	foreach (j; 0 .. transform.length) {
-	    dJdU[i] += dJdV[j] * transform[j][i];
-	}
-    }
-    */
-    
-    
-    // We can also construct dJdU directly by hand differentiating J w.r.t. the conserved variables
-    foreach (i; 0..ncells) {
-	double U1 = global_cells[i+2].rho; double U2 = global_cells[i+2].ru; double U3 = global_cells[i+2].rE;
-	double delx = global_cells[i+2].dx; double pstar = p_target[i];
-	dJdU[i*3] = delx/2.0 * (U3*(gamma-1.0)*(gamma-1.0)*U2*U2/(U1*U1)
-				-U2*U2*U2*U2*(gamma-1.0)*(gamma-1.0)/(2.0*U1*U1*U1)
-				-U2*U2/(U1*U1)*(gamma-1.0)*pstar);
-	dJdU[i*3+1] = delx/2.0 * (-2.0*U3*(gamma-1.0)*(gamma-1.0)*U2/U1
-				  +U2*U2*U2*(gamma-1.0)*(gamma-1.0)/(U1*U1)
-				  +2.0*U2/U1*(gamma-1.0)*pstar);
-	dJdU[i*3+2] = delx/2.0 * (2.0*U3*(gamma-1.0)*(gamma-1.0)
-				  -(gamma-1.0)*(gamma-1.0)*U2*U2/(U1)
-				  -2.0*(gamma-1.0)*pstar);
-    }
     
     //--------------------------------------------------------
-    // Compute inv[JU]^T * -dJdQ
+    // Compute adjoint variables via inv[Jacobian]^T * -dJdQ
     //--------------------------------------------------------
-    
-    // We can use the inverse of JU directly
     foreach (i; 0 .. ncells) {
 	double psi_rho = 0.0; double psi_ru = 0.0; double psi_rE = 0.0;
 	foreach (j; 0 .. invJUT.length) {
 	    if (adjoint_form == "conservative") {
-		psi_rho += invJUT[i*3][j] * -dJdU[j];
-		psi_ru += invJUT[i*3+1][j] * -dJdU[j];
-		psi_rE += invJUT[i*3+2][j] * -dJdU[j];
+		psi_rho += invJUT[i*np][j] * -dJdU[j];
+		psi_ru += invJUT[i*np+1][j] * -dJdU[j];
+		psi_rE += invJUT[i*np+2][j] * -dJdU[j];
+	    } else { // primitive
+		psi_rho += invJVT[i*np][j] * -dJdV[j];
+		psi_ru += invJVT[i*np+1][j] * -dJdV[j];
+		psi_rE += invJVT[i*np+2][j] * -dJdV[j];
 	    }
-	    else if (adjoint_form == "primitive") {
-		psi_rho += invJVT[i*3][j] * -dJdV[j];
-		psi_ru += invJVT[i*3+1][j] * -dJdV[j];
-		psi_rE += invJVT[i*3+2][j] * -dJdV[j];
-	    }
-	    else writeln("-------------------- unknown adjoint form --------------------");
 	}
-	psi[i*3] = psi_rho;
-	psi[i*3+1] = psi_ru;
-	psi[i*3+2] = psi_rE;
+	psi[i*np] = psi_rho;
+	psi[i*np+1] = psi_ru;
+	psi[i*np+2] = psi_rE;
     }
-    //writeln(psi);
+    
+    //---------------------------------------
+    // Construct dR/dD via finite-differences
+    //---------------------------------------
+    static double[nd][np*ncells] dRdD;
 
-    double[3*ncells] temp;
-    foreach (i; 0 .. ncells) {
-	double temp1 = 0.0; double temp2 = 0.0; double temp3 = 0.0;
-	foreach (j; 0 .. invJUT.length) {
-	    temp1 += JVT[i*3][j] * psi[j];
-	    //writeln(temp1, ", ", JVT[i*3][j], ", ", psi[j]);
-	    temp2 += JVT[i*3+1][j] * psi[j];
-	    temp3 += JVT[i*3+2][j] * psi[j];
-	}
-	temp[i*3] = temp1;
-	temp[i*3+1] = temp2;
-	temp[i*3+2] = temp3;
-    }
-    //writeln(temp);
-
-    //writeln(invJVT);
-    
-    /*
-    // We can also solve the system proposed by many researchers iteratively
-    // {1.0/dt * [I] + [dRdU]^T} * dpsi_n = -dJdU - [dRdU]^T * psi_n
-    
-    static double[3*ncells][3*ncells] LHS;
-    static double[3*ncells][3*ncells] invLHS;
-    static double[3*ncells] psiJUT;
-    static double[3*ncells] RHS;
-    
-    // initial psi guess
-    foreach (i; 0 .. psi.length) {
-    psi[i] = 1.0;
-    }
-    
-    // construct L.H.S.
-    foreach (i; 0 .. JUT.length) {
-    foreach (j; 0 .. JUT.length) {
-    if (i == j) LHS[i][j] = JUT[i][j] + 1.0/dt;
-    else LHS[i][j] = JUT[i][j];
-    }
-    }
-    
-    // invert L.H.S.
-    matrixInv(LHS, invLHS);
-    
-    size_t psi_step = 0;
-    while (psi_step < 10000) {
-    
-    // Construct R.H.S.
-    foreach (i; 0 .. JUT.length) {
-    psiJUT[i] = 0.0;
-    foreach (j; 0 .. JUT.length) {
-    psiJUT[i] += JUT[i][j] * psi[j];
-    }
-    }
-    
-    foreach (i; 0 .. JUT.length) {
-    RHS[i] = -dJdU[i] - psiJUT[i];
-    }
-    
-    // perform Matrix/vector multiplication
-    foreach (i; 0 .. ncells) {
-    double psi_rho = 0.0; double psi_ru = 0.0; double psi_rE = 0.0;
-    foreach (j; 0 .. R.length) {
-    psi_rho += invLHS[i*3][j] * RHS[j];
-    psi_ru += invLHS[i*3+1][j] * RHS[j];
-    psi_rE += invLHS[i*3+2][j] * RHS[j];
-    }
-    psi[i*3] += psi_rho;
-    psi[i*3+1] += psi_ru;
-    psi[i*3+2] += psi_rE;	
-    }
-    psi_step += 1;
-    }
-    */
-    
-    //-----------------------------------------------------
-    // Construct dR/dD note: dRdD = dRdA * dAdD
-    //-----------------------------------------------------
-    static double[3][3*ncells] dRdD;
-    static double[ninterfaces][3*ncells] dRdA;
-    static double[3][ninterfaces] dAdD;
-    
-    /*
-    // Numerically constrcut dRdA using Frechet derivative
     // first compute current residual vector
     foreach(i; 0 .. ncells) {
-    fvinterface fin = global_interfaces[i];
-    fvinterface fout = global_interfaces[i+1];
-    fvcell cell = global_cells[i+2];
-    // mass flux
-    R[i*3] = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
-    // momentum flux
-    R[i*3+1] = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
-    // total energy flux
-    R[i*3+2] = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
+	fvinterface fin = global_interfaces[i];
+	fvinterface fout = global_interfaces[i+1];
+	fvcell cell = global_cells[i+2];
+	R[i*np] = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
+	R[i*np+1] = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
+	R[i*np+2] = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
     }
-    
-    foreach (i; 0..ninterfaces) {
-    // Perturb the areas
-    double orig_area = perturbed_interfaces[i].area;
-    perturbed_interfaces[i].area += perturbed_interfaces[i].area*eps+eps;
-    
-    // set perturbed cell volume ---------------------------
-    foreach(j; 0 .. ncells) {
-    global_cells[j+2].vol = 0.5*global_cells[j+2].dx*(perturbed_interfaces[j].area+perturbed_interfaces[j+1].area);
-    }
-    
-    // now construct dR/dA using Frechet derivative
-    foreach(j; 0 .. ncells) {
-    double R_perturbed;
-    fvinterface fin = perturbed_interfaces[j];
-    fvinterface fout = perturbed_interfaces[j+1];
-    fvcell cell = global_cells[j+2];
-    
-    // mass flux
-    R_perturbed = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
-    dRdA[i][j*3] = (R_perturbed-R[j*3])/(orig_area*eps+eps);
-    
-    // momentum flux
-    R_perturbed = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
-    dRdA[i][j*3+1] = (R_perturbed-R[j*3+1])/(orig_area*eps+eps);
-    
-    // total energy flux
-    R_perturbed = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
-    dRdA[i][j*3+2] = (R_perturbed-R[j*3+2])/(orig_area*eps+eps);
-    }
-    perturbed_interfaces[i].area = orig_area;
-    }
-    */
-    
-    /*
-    // Analytically construct dAdD by hand differentiation
-    foreach (i; 0..ninterfaces) {
-    dAdD[i] = global_interfaces[i].xpos;
-    }
-    */
-    /*
-    // Numerically construct dAdD by Frechet derivatives
-    //perturb b
+
     double b_orig = b;
-    b += b*eps + eps;
-    a = yo - b*tanh(-d);
-    foreach(i; 0 .. ninterfaces) {
-    double radius = a + b*tanh(c*global_interfaces[i].xpos -d);
-    perturbed_interfaces[i].area = PI*radius*radius;
-    }
-     foreach(i; 0..ninterfaces) {
-    dAdD[i][0] = (perturbed_interfaces[i].area - global_interfaces[i].area)/(b*eps + eps);
+    b += b*eps1+eps1;
+    compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+
+    // now construct dR/dD using finite-differences
+    foreach(j; 0 .. ncells) {
+	double R_perturbed;
+	fvinterface fin = perturbed_interfaces[j];
+	fvinterface fout = perturbed_interfaces[j+1];
+	fvcell cell = global_cells[j+2];
+	
+	// mass flux
+	R_perturbed = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
+	dRdD[j*np][0] = (R_perturbed-R[j*np])/(b*eps1+eps1);
+	
+	// momentum flux
+	R_perturbed = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
+	dRdD[j*np+1][0] = (R_perturbed-R[j*np+1])/(b*eps1+eps1);
+	
+	// total energy flux
+	R_perturbed = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
+	dRdD[j*np+2][0] = (R_perturbed-R[j*np+2])/(b*eps1+eps1);
     }
     b = b_orig;
-    a = yo - b*tanh(-d);
-    */
-    // Analytically construct dRdA by hand differentiation
-    foreach (i; 0..ncells) {
-	foreach(j; 0 .. ninterfaces) {
-	    fvinterface fin = global_interfaces[i];
-	    fvinterface fout = global_interfaces[i+1];
-	    fvcell cell = global_cells[i+2];
-	    
-	    // mass flux
-	    if (i == j) dRdA[i*3][j] = -1.0* -fin.mass/cell.vol;
-	    else if (j == i+1) dRdA[i*3][j] = -1.0* fout.mass/cell.vol;
-	    else dRdA[i*3][j] = 0.0;
-	    
-	    // momentum flux
-	    if (i == j) dRdA[i*3+1][j] = -1.0* -(fin.momentum-cell.p)/cell.vol;
-	    else if (j == i+1) dRdA[i*3+1][j] = -1.0* -(-fout.momentum+cell.p)/cell.vol;
-	    else dRdA[i*3+1][j] = 0.0;
-	    
-	    // total energy flux
-	    if (i == j) dRdA[i*3+2][j] = -1.0* -fin.energy/cell.vol;
-	    else if (j == i+1) dRdA[i*3+2][j] = -1.0* fout.energy/cell.vol;
-	    else dRdA[i*3+2][j] = 0.0;
-	}
+
+    double c_orig = c;
+    c += c*eps1+eps1;
+    compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+
+    // now construct dR/dD using finite-differences 
+    foreach(j; 0 .. ncells) {
+	double R_perturbed;
+	fvinterface fin = perturbed_interfaces[j];
+	fvinterface fout = perturbed_interfaces[j+1];
+	fvcell cell = global_cells[j+2];
+	
+	// mass flux
+	R_perturbed = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
+	dRdD[j*np][1] = (R_perturbed-R[j*np])/(c*eps1+eps1);
+	
+	// momentum flux
+	R_perturbed = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
+	dRdD[j*np+1][1] = (R_perturbed-R[j*np+1])/(c*eps1+eps1);
+	
+	// total energy flux
+	R_perturbed = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
+	dRdD[j*np+2][1] = (R_perturbed-R[j*np+2])/(c*eps1+eps1);
     }
-    foreach(i; 0..ninterfaces) {
-	fvinterface F = global_interfaces[i];
-	dAdD[i][0] = 2.0*tanh(d/scale) + 2.0*tanh((c*F.xpos - d)/scale);
-	dAdD[i][1] = 2.0*b*F.xpos*(-pow(tanh((c*F.xpos - d)/scale),2) + 1)/scale;
-	dAdD[i][2] = 2.0*b*(-pow(tanh(d/scale),2) + 1)/scale + 2.0*b*(pow(tanh((c*F.xpos - d)/scale),2) - 1)/scale;
+    c = c_orig;
+
+    double d_orig = d;
+    d += d*eps1+eps1;
+    compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+
+    // now construct dR/dD using finite-differences 
+    foreach(j; 0 .. ncells) {
+	double R_perturbed;
+	fvinterface fin = perturbed_interfaces[j];
+	fvinterface fout = perturbed_interfaces[j+1];
+	fvcell cell = global_cells[j+2];
+	
+	// mass flux
+	R_perturbed = 1.0/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
+	dRdD[j*np][2] = (R_perturbed-R[j*np])/(d*eps1+eps1);
+	
+	// momentum flux
+	R_perturbed = 1.0/cell.vol * (fin.momentum*fin.area - fout.momentum*fout.area + cell.p*(fout.area-fin.area));
+	dRdD[j*np+1][2] = (R_perturbed-R[j*np+1])/(d*eps1+eps1);
+	
+	// total energy flux
+	R_perturbed = 1.0/cell.vol * (fin.energy*fin.area - fout.energy*fout.area);
+	dRdD[j*np+2][2] = (R_perturbed-R[j*np+2])/(d*eps1+eps1);
     }
-    // dRdD = dRdA*dAdD
-    foreach(i; 0..ncells*3 ) {
-	dRdD[i][0] = 0.0;
-	dRdD[i][1] = 0.0;
-	dRdD[i][2] = 0.0;
-	foreach(j; 0..ninterfaces ) {
-	    dRdD[i][0] += dRdA[i][j]*dAdD[j][0];
-	    dRdD[i][1] += dRdA[i][j]*dAdD[j][1];
-	    dRdD[i][2] += dRdA[i][j]*dAdD[j][2];
-	}
-    }
+    d = d_orig;
     
     //-----------------------------------------------------
-    // Compute dLdD = dRdD * psi
+    // Compute gradients via  dLdD = dRdD * psi
     //-----------------------------------------------------
     dLdB = 0.0;
     dLdC = 0.0;
@@ -2350,513 +1364,4 @@ void solve(ref fvcell[ncells+nghost] global_cells,
 	dLdC += dRdD[j][1] * psi[j];
 	dLdD += dRdD[j][2] * psi[j];
     }
-}
-
-//-----------------------------------------------------
-// Main Body
-//-----------------------------------------------------
-
-void main() {
-    //-----------------------------------------------------
-    // Select Simulation type
-    //-----------------------------------------------------
-    string simulation_type = "nozzle"; // options: sod, nozzle
-    
-    //-----------------------------------------------------
-    // Construct Mesh
-    //-----------------------------------------------------
-
-    fvcell[ncells+nghost] global_cells;
-    double dx = length/ncells; // cell width
-
-    // construct ghost cells ---------------------
-
-    global_cells[0] = new fvcell(10000001, -1.5*dx, dx);
-    global_cells[1] = new fvcell(10000002, -0.5*dx, dx);
-    global_cells[ncells+2] = new fvcell(10000003, length+0.5*dx, dx);
-    global_cells[ncells+3] = new fvcell(10000004, length+1.5*dx, dx);
-
-    // construct inner domain cells --------------------
-
-    double temp_pos = 0.5*dx;
-    foreach(i; 0 .. ncells) {
-	global_cells[i+2] = new fvcell(i, temp_pos, dx);
-	temp_pos += dx ;
-    }
-
-    // construct interfaces ----------------------
-
-    fvinterface[ninterfaces] global_interfaces;
-    fvinterface[ninterfaces] perturbed_interfaces; // for implicit solver
-    temp_pos = 0.0;
-    foreach(i; 0 .. ninterfaces) {
-	global_interfaces[i] = new fvinterface(i, temp_pos);
-	perturbed_interfaces[i] = new fvinterface(i, temp_pos);
-	temp_pos += dx;
-    }
-
-    // set interface areas -----------------------
-    double inlet_area; double exit_area;
-    double yo; double a; double b; double c; double d; double scale;
-    if (simulation_type == "sod") {
-	// shock tube geometry (no area variaton)
-	foreach(i; 0 .. ninterfaces) {
-	    global_interfaces[i].area = 1.0;
-	    perturbed_interfaces[i].area = 1.0;
-	}
-    }
-    else if (simulation_type == "nozzle") {
-	// linear nozzle, with design variable a
-	// target double b = 0.347, c = 0.8, d = 4.0, yo = 1.05
-	//yo = 1.05;
-	//b = 0.32, c = 1.0, d = 3.8;
-	// current target: b = 0.05, c = 0.85, d = 4.0;
-	b = 0.07, c = 0.8, d = 3.8;
-	//b = 0.05, c = 0.85, d = 4.0;
-	yo = 0.105;
-	scale = 1.5;
-	a = yo - b*tanh(-d/scale);
-	foreach(i; 0 .. ninterfaces) {
-	    double radius = a + b*tanh((c*global_interfaces[i].xpos -d)/scale);
-	    global_interfaces[i].area =  2.0*radius;
-	    perturbed_interfaces[i].area = 2.0*radius;
-	}
-    }
-    // set cell volume ---------------------------
-    
-    foreach(i; 0 .. ncells) {
-	global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-    }
-
-    //-----------------------------------------------------
-    // Set air properties
-    //-----------------------------------------------------
-    
-    double gamma = 1.4;
-   
-    //-----------------------------------------------------
-    // Initial Condiions
-    //-----------------------------------------------------
-    if (simulation_type == "sod" ) {
-	//-----------------------------------------------------
-	// Initial Conditions -- Sod's Shocktube
-	//-----------------------------------------------------
-	// left fill state
-	double p_init = 1.0e05; // Pa
-	double rho_init = 1.0; // kg/m^3
-	double u_init = 0.0; // m/s
-	foreach(i; 0 .. to!int(0.5*ncells)) {
-	    global_cells[i+2].p = p_init;
-	    global_cells[i+2].rho = rho_init;
-	    global_cells[i+2].u = u_init;
-	}
-	
-	// right fill state
-	p_init = 1.0e04; // Pa
-	rho_init = 0.125; // kg/m^3
-	u_init = 0.0; // m/s
-	foreach(i; to!int(0.5*ncells) .. ncells) {
-	    global_cells[i+2].p = p_init;
-	    global_cells[i+2].rho = rho_init;
-	    global_cells[i+2].u = u_init;
-	}
-    }
-    else if (simulation_type == "nozzle") {
-	//-----------------------------------------------------
-	// Initial and Inflow Conditions -- Nozzle
-	//-----------------------------------------------------
-
-	// use the analytical solution as initial guess (based on inflow conditions) 
-	/*
-	double p_init; double rho_init; double u_init;
-      	foreach(i; 0 .. ncells) {
-	    double cA = 0.5*(global_interfaces[i].area+global_interfaces[i+1].area);
-	    double AStar = 5.925925926e-03;
-	    double rhoStar = 3.19933979;
-	    double pStar = 413351.3941;
-	    double tolerance = 0.001;
-	    double delta = 100.0;
-	    double M = 2.0;  // Mach number
-	    double dM = 0.00001;
-	    while (abs(delta) > tolerance) {
-		M += dM;
-		delta = (cA/AStar)*(cA/AStar) -
-		    1.0/(M*M)*pow(( (2.0/(gamma+1)) * (1.0 + (gamma-1.0)/2.0 * (M*M))), (gamma+1.0)/(gamma-1.0));
-	    }
-	    p_init = pStar *
-		pow((1.0 + (gamma-1.0)/2.0 * M*M), -gamma/(gamma-1.0)) / pow((1.0 + (gamma-1.0)/2.0), -gamma/(gamma-1.0));
-	    rho_init = rhoStar *
-		pow((1.0 + (gamma-1.0)/2.0 * M*M), -1.0/(gamma-1.0)) / pow((1.0 + (gamma-1.0)/2.0), -1.0/(gamma-1.0));
-	    u_init = M * sqrt((p_init*gamma)/rho_init);
-	    // overriding the anlytical condition with the inflow conditions
-	    global_cells[i+2].p = p_init;
-	    global_cells[i+2].rho = rho_init;
-	    global_cells[i+2].u = u_init;
-	    }
-	*/
-
-	// set inflow conditions
-	double Mach = 1.5;
-	double p_inflow = 101.325e3; // Pa
-	double rho_inflow = 1.0;   // kg/m^3
-	double a_inflow = sqrt((p_inflow*gamma)/rho_inflow);
-	double u_inflow = Mach * a_inflow;  // m/s
-
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].p = p_inflow;
-	    global_cells[i+2].rho = rho_inflow;
-	    global_cells[i+2].u = 0.6 * a_inflow;
-	}
-
-	// Nozzle inflow state ----------------------------------------------
-	global_cells[0].p = p_inflow; global_cells[1].p = p_inflow;
-	global_cells[0].rho = rho_inflow; global_cells[1].rho = rho_inflow;
-	global_cells[0].u = u_inflow; global_cells[1].u = u_inflow;
-
-	global_cells[ncells+2].p = global_cells[ncells+1].p; global_cells[ncells+3].p = global_cells[ncells+1].p;
-	global_cells[ncells+2].rho =  global_cells[ncells+1].rho; global_cells[ncells+3].rho =  global_cells[ncells+1].rho;
-	global_cells[ncells+2].u =  global_cells[ncells+1].u; global_cells[ncells+3].u =  global_cells[ncells+1].u;	
-    }
-    // ---------------------------------------------------------------------------------- //
-    // Now we're ready to perform some finite volume calculations on the cells
-    // ---------------------------------------------------------------------------------- //
-
-    //-----------------------------------------------------
-    // Set some more  simulations parameters
-    //-----------------------------------------------------
-    double dt = 1.0e-06;                                // time step size, s
-    double sim_time = 0.0;                              // current simulation time, s
-    double final_time;                                  // final simulation time, s
-    if (simulation_type == "sod") final_time = 6.0e-04; 
-    else if (simulation_type == "nozzle") final_time = 2.0; 
-    string flux_calc = "ausmdv"; // van_leer, ausmdv, ausm_plus_up
-    size_t step = 0;
-    size_t opt_iter = 0;
-    size_t max_step = 100000000;
-    size_t interpolation_order = 1;
-    size_t outflow_bc_order = 1;
-    string solver = "verification"; // options: simulation, optimisation, verification
-
-    double dLdB_old = 0.0; double dLdC_old = 0.0; double dLdD_old = 0.0;
-    double dLdB = 1e10; double dLdC = 1e10; double dLdD = 1e10;
-    double J = 0.0;
-    double Jref = 0.0;
-    // implicit solver settings and arrays  ------------------------
-    string adjoint_form = "primitive";            // options: conservative form, primtive form
-    static double[3*ncells][3*ncells] JV;        // flow Jacobian w.r.t. primitive variables
-    static double[3*ncells][3*ncells] JU;        // flow Jacobian w.r.t. conserved variables
-    static double[3*ncells][3*ncells] transform; // transform from JV to JU
-    static double[3*ncells] R;                   // R.H.S. resiudal vector
-    
-    // adjoint solver arrays ---------------------------------------
-    static double[3*ncells] dJdV;                // sensitivty of cost function (J)
-                                                 // w.r.t. primitive flow varaibles (V)
-    static double[3*ncells] dJdU;                // sensitivty of cost function (J)
-                                                 // w.r.t. conserved flow varaibles (U)
-    static double[3*ncells][3*ncells] JUT;       // JU transpose
-    static double[3*ncells][3*ncells] invJUT;    // JU transpose inverse
-    static double[3*ncells][3*ncells] JVT;       // JU transpose
-    static double[3*ncells][3*ncells] invJVT;    // JU transpose inverse
-    static double[3*ncells] psi;                 // adjoint variables
-	
-    double eps = 1.0e-8;                         // finite difference epsilon
-    double tol = 1.0e-05;
-
-    double[3] pk;
-    double[3] pk_old;
-    if (solver == "simulation") {
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD, dx,
-	      gamma, b, c, d, yo, scale, solver, adjoint_form);
-    }
-    else if(solver == "verification") {
-	writeln("-------------------------------------");
-	writeln("Compute gradient via adjoint method");
-	writeln("-------------------------------------");
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD, dx,
-	      gamma, b, c, d, yo, scale, solver, adjoint_form);
-	double adjoint_dLdB = dLdB; double adjoint_dLdC = dLdC; double adjoint_dLdD = dLdD;
-	writeln("-------------------------------------");
-	writeln("Compute gradient via finite difference method");
-	writeln("-------------------------------------");
-	// perturb b
-	writeln("-- perturb b --");
-	double fd_dLdB;
-	double pertb = b + 1.0e-06;
-	// update interface areas ---------------------------
-	a = yo - pertb*tanh(-d/scale);
-	foreach(i; 0 .. ninterfaces) {
-	    double radius = a + pertb*tanh((c*global_interfaces[i].xpos -d)/scale);
-	    global_interfaces[i].area =  2.0*radius;
- 	    perturbed_interfaces[i].area = 2.0*radius;
-	}
-	// update cell volumes ---------------------------
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	}
-	double Jminus; double Jplus;
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD, dx,
-	      gamma, pertb, c, d, yo, scale, solver, adjoint_form);
-	Jplus = J;
-        pertb = b - 1.0e-06;
-	// update interface areas ---------------------------
-	a = yo - pertb*tanh(-d/scale);
-	foreach(i; 0 .. ninterfaces) {
-	    double radius = a + pertb*tanh((c*global_interfaces[i].xpos -d)/scale);
-	    global_interfaces[i].area =  2.0*radius;
-	    perturbed_interfaces[i].area = 2.0*radius;
-	}
-	// update cell volumes ---------------------------
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	}
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD, dx,
-	      gamma, pertb, c, d, yo, scale, solver, adjoint_form);
-	Jminus = J;
-	fd_dLdB = (Jplus - Jminus)/(2.0 * 1.0e-06);
-	// perturb c
-	writeln("-- perturb c --");
-	double fd_dLdC;
-	double pertc = c + 1.0e-06;
-	// update interface areas ---------------------------
-	a = yo - b*tanh(-d/scale);
-	foreach(i; 0 .. ninterfaces) {
-	    double radius = a + b*tanh((pertc*global_interfaces[i].xpos -d)/scale);
-	    global_interfaces[i].area =  2.0*radius;
-	    perturbed_interfaces[i].area = 2.0*radius;
-	}
-	// update cell volumes ---------------------------
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	}
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD, dx,
-	      gamma, b, pertc, d, yo, scale, solver, adjoint_form);
-	Jplus = J;
-	pertc = c - 1.0e-06;
-	// update interface areas ---------------------------
-	a = yo - b*tanh(-d/scale);
-	foreach(i; 0 .. ninterfaces) {
-	    double radius = a + b*tanh((pertc*global_interfaces[i].xpos -d)/scale);
-	    global_interfaces[i].area =  2.0*radius;
-	    perturbed_interfaces[i].area = 2.0*radius;
-	}
-	// update cell volumes ---------------------------
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	}
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD, dx,
-	      gamma, b, pertc, d, yo, scale, solver, adjoint_form);
-	Jminus = J;
-	fd_dLdC = (Jplus - Jminus)/(2.0 * 1.0e-06);
-	// perturb d
-	writeln("-- perturb d --");
-	double fd_dLdD;
-	double pertd = d + 1.0e-06;
-	// update interface areas ---------------------------
-	a = yo - b*tanh(-pertd/scale);
-	foreach(i; 0 .. ninterfaces) {
-	    double radius = a + b*tanh((c*global_interfaces[i].xpos -pertd)/scale);
-	    global_interfaces[i].area =  2.0*radius;
-	    perturbed_interfaces[i].area = 2.0*radius;
-	}
-	// update cell volumes ---------------------------
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	}
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD,
-	      dx, gamma, b, c, pertd, yo, scale, solver, adjoint_form);
-	Jplus = J;
-	pertd = d - 1.0e-06;
-	// update interface areas ---------------------------
-	a = yo - b*tanh(-pertd/scale);
-	foreach(i; 0 .. ninterfaces) {
-	    double radius = a + b*tanh((c*global_interfaces[i].xpos -pertd)/scale);
-	    global_interfaces[i].area =  2.0*radius;
-	    perturbed_interfaces[i].area = 2.0*radius;
-	}
-	// update cell volumes ---------------------------
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	}
-	solve(global_cells, global_interfaces, perturbed_interfaces,
-	      dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-	      JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD,
-	      dx, gamma, b, c, pertd, yo, scale, solver, adjoint_form);
-	Jminus = J;
-	fd_dLdD = (Jplus - Jminus)/(2.0 * 1.0e-06);
-	writeln("-------------------------------------");
-	writeln("Results");
-	writeln("-------------------------------------");
-	writeln("fd_b = ", fd_dLdB);
-	writeln("adjoint_b = ", adjoint_dLdB);
-	writeln("% error b = ", (adjoint_dLdB-fd_dLdB)/adjoint_dLdB * 100.0);
-	writeln("fd_c = ", fd_dLdC);
-	writeln("adjoint_c = ", adjoint_dLdC);
-	writeln("% error c = ", (adjoint_dLdC-fd_dLdC)/adjoint_dLdC * 100.0);
-	writeln("fd_d = ", fd_dLdD);
-	writeln("adjoint_d = ", adjoint_dLdD);
-	writeln("% error d = ", (adjoint_dLdD-fd_dLdD)/adjoint_dLdD * 100.0);
-    }
-    else if (solver == "optimisation") {
-	writeln(b, ", ", c, ", ", d);
-	while (opt_iter < 1e6) {
-	    //-----------------------------------------------------
-	    // conjugate gradient update
-	    //-----------------------------------------------------
-	    	    	    
-	    // 1. compute flow solution and gradients for current geometry
-	    solve(global_cells, global_interfaces, perturbed_interfaces,
-		  dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-		  JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD,
-		  dx, gamma, b, c, d, yo, scale, solver, adjoint_form);
-
-	    // if on the first step, then set the reference J
-	    if (opt_iter == 0) Jref = J;
-
-	    // if the gradients and cost function are small enough then we are at a minimum
-	    if (J/Jref < tol) break; // && abs(dLdB) < 1.0 && abs(dLdC) < 1.0 && abs(dLdD) < 1.0) break;
-	    
-	    // 2. compute search direction
-	    double beta;
-	    if (dLdB_old == 0.0 && dLdC_old == 0.0 && dLdD_old == 0.0) {
-		double norm = sqrt(dLdB*dLdB + dLdC*dLdC + dLdD*dLdD);
-		pk[0] = -dLdB/norm;
-		pk[1] = -dLdC/norm;
-		pk[2] = -dLdD/norm;
-	    }
-	    else if( (opt_iter/70.0 - trunc(opt_iter/70.0)) == 0.0) {
-		double norm = sqrt(dLdB*dLdB + dLdC*dLdC + dLdD*dLdD);
-		pk[0] = -dLdB/norm;
-		pk[1] = -dLdC/norm;
-		pk[2] = -dLdD/norm;
-	    }
-	    else {
-		double norm = sqrt(dLdB*dLdB + dLdC*dLdC + dLdD*dLdD);
-		double beta_numer = dLdB*dLdB + dLdC*dLdC + dLdD*dLdD;
-		double beta_denom = dLdB_old*dLdB_old + dLdC_old*dLdC_old + dLdD_old*dLdD_old;
-		beta = beta_numer/beta_denom;
-		pk[0] = -dLdB/norm + beta*pk_old[0]; 
-		pk[1] = -dLdC/norm + beta*pk_old[1]; 
-		pk[2] = -dLdD/norm + beta*pk_old[2]; 
-	    }
-	    // 3. perform line search to find step size ak
-	    double rho = 0.5;
-	    double mu = 1.0e-4;
-	    double ak = 1.0;
-	    double bb = b;
-	    double cc = c;
-	    double dd = d;
-	    double Jk = J;
-	    double dLdBB = dLdB;
-	    double dLdCC = dLdC;
-	    double dLdDD = dLdD;
-	    
-	    b = b + ak*pk[0];
-	    c = c + ak*pk[1];
-	    d = d + ak*pk[2];
-
-	    // update interface areas ---------------------------
-	    a = yo - b*tanh(-d/scale);
-	    foreach(i; 0 .. ninterfaces) {
-		double radius = a + b*tanh((c*global_interfaces[i].xpos -d)/scale);
-		global_interfaces[i].area =  2.0*radius;
-		perturbed_interfaces[i].area = 2.0*radius;
-	    }
-	    // update cell volumes ---------------------------
-	    foreach(i; 0 .. ncells) {
-		global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	    }
-	    
-	    solve(global_cells, global_interfaces, perturbed_interfaces,
-		  dt, sim_time, final_time, step, max_step, flux_calc, simulation_type, interpolation_order, outflow_bc_order,
-		  JV, JU, transform, R, dJdV, dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD,
-		  dx, gamma, b, c, d, yo, scale, solver, adjoint_form);
-
-	    double Jk1 = J;
-	    while (Jk1 > Jk + mu*ak*(dLdBB*pk[0]+dLdCC*pk[1]+dLdDD*pk[2])) {
-		    ak = ak*rho;
-		    b = bb + ak*pk[0];
-		    c = cc + ak*pk[1];
-		    d = dd + ak*pk[2];
-
-		    // update interface areas ---------------------------
-		    a = yo - b*tanh(-d/scale);
-		    foreach(i; 0 .. ninterfaces) {
-			double radius = a + b*tanh((c*global_interfaces[i].xpos -d)/scale);
-			global_interfaces[i].area =  2.0*radius;
-			perturbed_interfaces[i].area = 2.0*radius;
-		    }
-		    // update cell volumes ---------------------------
-		    foreach(i; 0 .. ncells) {
-			global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-		    }
-		    
-		    solve(global_cells, global_interfaces, perturbed_interfaces,
-			  dt, sim_time, final_time, step, max_step, flux_calc, simulation_type,
-			  interpolation_order, outflow_bc_order, JV, JU, transform, R, dJdV,
-			  dJdU, JUT, invJUT, JVT, invJVT, psi, eps, J, dLdB, dLdC, dLdD, dx,
-			  gamma, b, c, d, yo, scale, solver, adjoint_form);
-		    Jk1 = J;
-		    //writeln("ak = ", ak, ", J_k = ", Jk, ", J_k+1 = ", Jk1,  ", b = ", b, " c = ", c, ", d = ", d);
-	    }
-
-	    // update interface areas ---------------------------
-	    a = yo - b*tanh(-d/scale);
-	    foreach(i; 0 .. ninterfaces) {
-		double radius = a + b*tanh((c*global_interfaces[i].xpos -d)/scale);
-		global_interfaces[i].area =  2.0*radius;
-		perturbed_interfaces[i].area = 2.0*radius;
-	    }
-	    // update cell volumes ---------------------------
-	    foreach(i; 0 .. ncells) {
-		global_cells[i+2].vol = 0.5*global_cells[i+2].dx*(global_interfaces[i].area+global_interfaces[i+1].area);
-	    }
-
-	    dLdB_old = dLdB; 
-	    dLdC_old = dLdC;
-	    dLdD_old = dLdD; 
-	    pk_old[0] = pk[0];
-	    pk_old[1] = pk[1];
-	    pk_old[2] = pk[2];
-	    opt_iter += 1;
-	    writeln("--------------------------------------------------------------------------");
-	    writeln(opt_iter, ". J/Jref = ", J/Jref, ", b = ", b, ", c = ", c, ", d = ", d);
-	    writeln("gradients: ", ", dLdB = ", dLdB,  ", dLdC = ", dLdC,  ", dLdD = ", dLdD);
-	    writeln("--------------------------------------------------------------------------");
-	}
-    writeln(b, ", ", c, ", ", d);
-    }
-
-    writeln("--------------------------------------------------------------------------");
-    writeln("FINAL RESULTS:", " b = ", b, ", c = ", c, ", d = ", d);
-    writeln("gradients: ", ", dLdB = ", dLdB,  ", dLdC = ", dLdC,  ", dLdD = ", dLdD);
-    writeln("--------------------------------------------------------------------------");
-
-    //--------------------------------------------------------
-    // Write properties out for plotting at end of simulation
-    //--------------------------------------------------------
-    
-    foreach(i; 0 .. ncells) {
-	fvcell cell = global_cells[i+2];
-	auto writer = format("%f %f %f %f %f %f %f \n", cell.xpos, cell.rho, cell.p, cell.u, psi[i*3], psi[i*3+1], psi[i*3+2]);
-	append("output.dat", writer);
-    }
-    foreach(i; 0 .. ninterfaces) {
-	fvinterface f = global_interfaces[i];
-	auto writer = format("%f %f \n", f.xpos, f.area/2.0);
-	append("contour.dat", writer);
-    }   
 }
