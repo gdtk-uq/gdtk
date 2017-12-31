@@ -80,7 +80,18 @@ public:
 	    _k_f = eval_forward_rate_constant(Q);
 	    if ( _backward is null ) { // we need the equilibrium constant
 		eval_equilibrium_constant(Q);
-		_k_b = _k_f/(_K_eq + EPS);
+		// Let's take assume that n_modes >= 1 indicates a multi-temperature
+		// simulation. In which case, we need to evaluate the k_f at equilibrium
+		// with the translational temperature in order to determine k_b.
+		if (_gmodel.n_modes >= 1) {
+		    _Qw.T = Q.T;
+		    _Qw.T_modes[] = Q.T;
+		    double kf_eq = eval_forward_rate_constant(_Qw);
+		    _k_b = kf_eq/(_K_eq + EPS);
+		}
+		else {
+		    _k_b = _k_f/(_K_eq + EPS);
+		}
 	    }
 	    else {
 		_k_b = eval_backward_rate_constant(Q);

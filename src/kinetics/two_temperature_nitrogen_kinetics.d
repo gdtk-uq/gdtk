@@ -20,7 +20,9 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
 	_Q_eq = new GasState(gmodel);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest, ref double[] params)
+    override void opCall(GasState Q, double tInterval,
+			 ref double dtChemSuggest, ref double dtThermSuggest, 
+			 ref double[] params)
     {
 	// Hard-code Blackman relaxation time for present.
 	double pAtm = Q.p/P_atm;

@@ -20,15 +20,13 @@ import gas.thermo.perf_gas_mix_eos;
 
 immutable double T_REF = 298.15; // K
 static string[] molecularSpecies = ["N2", "O2", "NO", "N2+", "O2+", "NO+"];
-static double[string] __mol_masses;
-static double[string] del_hf;
-static double[7][5][string] thermoCoeffs;
 
 // For table parameters see end of file.
 // They are declared in the static this() function.
 
 class TwoTemperatureAir : GasModel {
 public:
+    int[] molecularSpecies;
     this(string model, string[] species)
     {
 	// For each of the cases, 5-, 7- and 11-species, we know which species
@@ -125,7 +123,7 @@ public:
 	    _Cp_tr_rot[isp] = (5./2.)*_R[isp];
 	    if (canFind(molecularSpecies, _species_names[isp])) {
 		_Cp_tr_rot[isp] += _R[isp];
-		_molecularSpecies ~= isp;
+		molecularSpecies ~= isp;
 	    }
 	}
     }
@@ -253,13 +251,20 @@ public:
 	throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
     }
 
+    double vibEnergy(double Tve, int isp)
+    {
+	double h_at_Tve = enthalpyFromCurveFits(Tve, isp);
+	double h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
+	return h_ve;
+    }
+
 private:
     PerfectGasMixEOS _pgMixEOS;
     double[] _R;
     double[] _del_hf;
     double[] _Cp_tr_rot;
     double[7] _A; // working storage of coefficients
-    int[] _molecularSpecies;
+
 
     /**
      * In order to get smooth variations in thermodynamic properties
@@ -362,17 +367,10 @@ private:
 	return h;
     }
 
-    double vibEnergy(double Tve, int isp)
-    {
-	double h_at_Tve = enthalpyFromCurveFits(Tve, isp);
-	double h_ve = h_at_Tve - _Cp_tr_rot[isp]*(Tve - T_REF) - _del_hf[isp];
-	return h_ve;
-    }
-
     double vibEnergy(in GasState Q, double Tve)
     {
 	double e_ve = 0.0;
-	foreach (isp; _molecularSpecies) {
+	foreach (isp; molecularSpecies) {
 	    e_ve += Q.massf[isp] * vibEnergy(Tve, isp);
 	}
 	return e_ve;
@@ -396,7 +394,7 @@ private:
     double vibSpecHeatConstV(in GasState Q, double Tve)
     {
 	double Cv_vib = 0.0;
-	foreach (isp; _molecularSpecies) {
+	foreach (isp; molecularSpecies) {
 	    Cv_vib += Q.massf[isp] * vibSpecHeatConstV(Tve, isp);
 	}
 	return Cv_vib;
@@ -486,7 +484,9 @@ version(two_temperature_air_test) {
     }
 }
 
-
+static double[string] __mol_masses;
+static double[string] del_hf;
+static double[7][5][string] thermoCoeffs;
 
 static this()
 {

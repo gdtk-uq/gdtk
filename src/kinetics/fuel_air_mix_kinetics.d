@@ -155,7 +155,9 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
 	return -1.0 * _A_edm / _tau_edm * min(Ys[0],Ys[1]/_sRatio,_B_edm*Ys[2]/(1.0+_sRatio));
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,ref double[] params)
+    override void opCall(GasState Q, double tInterval,
+			 ref double dtChemSuggest, ref double dtThermSuggest,
+			 ref double[] params)
     {
 	double local_dt_global=tInterval;
 	double omega = params[0];

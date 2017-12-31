@@ -441,6 +441,7 @@ final class GlobalConfig {
     shared static double ignition_time_stop = 0.0;
     static IgnitionZone[] ignition_zones;
     shared static bool ignition_zone_active = false;
+    shared static string energy_exchange_file = "energy-exchange.lua";
     // JJ Hoste's Turbulence-Chemistry Interaction model
     shared static TCIModel tci_model = TCIModel.none;
 
@@ -714,7 +715,7 @@ public:
 	}
 	include_quality = GlobalConfig.include_quality;
 	if (GlobalConfig.reacting) {
-	    thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file);
+	    thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file, GlobalConfig.energy_exchange_file);
 	}
 	//
 	verbosity_level = GlobalConfig.verbosity_level;
@@ -982,6 +983,7 @@ void read_config_file()
     mixin(update_enum("tci_model", "tci_model", "tci_model_from_name"));
     mixin(update_double("ignition_time_start", "ignition_time_start"));
     mixin(update_double("ignition_time_stop", "ignition_time_stop"));
+    mixin(update_string("energy_exchange_file", "energy_exchange_file"));
 	  
     if (GlobalConfig.verbosity_level > 1) {
 	writeln("  reacting: ", GlobalConfig.reacting);
@@ -992,6 +994,7 @@ void read_config_file()
 	writeln("  tci_model: ", tci_model_name(GlobalConfig.tci_model));
 	writeln("  ignition_time_start: ", GlobalConfig.ignition_time_start);
 	writeln("  ignition_time_stop: ", GlobalConfig.ignition_time_start);
+	writeln("  energy_exchange_file: ", GlobalConfig.energy_exchange_file);
     }
 
     // Parameters controlling other simulation options

@@ -30,7 +30,8 @@ final class VibSpecificNitrogenRelaxtion : ThermochemicalReactor {
 	super(gmodel); // hang on to a reference to the gas model
     }
     
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(GasState Q, double tInterval,
+			 ref double dtChemSuggest, ref double dtThermSuggest, 
 			 ref double[] params)
     {
         int nsteps = 10;

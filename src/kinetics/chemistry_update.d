@@ -113,7 +113,8 @@ final class ChemistryUpdate : ThermochemicalReactor {
 	lua_close(L);
     }
 
-    override void opCall(GasState Q, double tInterval, ref double dtSuggest,
+    override void opCall(GasState Q, double tInterval,
+			 ref double dtChemSuggest, ref double dtThermSuggest,
 			 ref double[] params)
     {
 	_Qinit.copy_values_from(Q);
@@ -126,12 +127,12 @@ final class ChemistryUpdate : ThermochemicalReactor {
 	double t = 0.0;
 	double h;
 	double dtSave;
-	if ( dtSuggest > tInterval )
+	if ( dtChemSuggest > tInterval )
 	    h = tInterval;
-	else if ( dtSuggest <= 0.0 )
+	else if ( dtChemSuggest <= 0.0 )
 	    h = rmech.estimateStepSize(_conc0);
 	else
-	    h = dtSuggest;
+	    h = dtChemSuggest;
 	
 	// 2. Now do the interesting stuff, increment species change
 	int cycle = 0;
@@ -143,11 +144,11 @@ final class ChemistryUpdate : ThermochemicalReactor {
 	     * want to store the fractional step of (tInterval - t)
 	     * that is taken as the last step.
 	     */
-	    dtSave = dtSuggest;
+	    dtSave = dtChemSuggest;
 	    h = min(h, tInterval - t);
 	    attempt= 0;
 	    for ( ; attempt < maxAttempts; ++attempt ) {
-		ResultOfStep result = cstep(_conc0, h, _concOut, dtSuggest);
+		ResultOfStep result = cstep(_conc0, h, _concOut, dtChemSuggest);
 		bool passesMassFractionTest = true;
 		if ( result  == ResultOfStep.success ) {
 		    /* We succesfully took a step of size h according to the ODE method.
@@ -174,12 +175,12 @@ final class ChemistryUpdate : ThermochemicalReactor {
 		     * if the step was successful there shouldn't be any
 		     * need (stability wise or accuracy related) to warrant 
 		     * a reduction. Thus if the step is successful and
-		     * the dtSuggest comes back lower, let's just set
+		     * the dtChemSuggest comes back lower, let's just set
 		     * h as the original value for the successful step.
 		     */
 		    double hMax = h*(1.0 + DT_INCREASE_PERCENT/100.0);
-		    if (dtSuggest > h) {
-			/* It's possible that dtSuggest is less than h.
+		    if (dtChemSuggest > h) {
+			/* It's possible that dtChemSuggest is less than h.
 			 * When that occurs, we've made the decision to ignore
 			 * the new timestep suggestion supplied by the ODE step.
 			 * Our reasoning is that we'd like push for an aggressive
@@ -191,7 +192,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
 			 * is much larger than what we just used. For that
 			 * case, we cap it at hMax. That's the following line.
 			 */
-			h = min(dtSuggest, hMax);
+			h = min(dtChemSuggest, hMax);
 		    }
 		    break;
 		}
@@ -245,10 +246,10 @@ final class ChemistryUpdate : ThermochemicalReactor {
 
 	    if ( t >= tInterval ) { // We've done enough work.
 		// If we've only take one cycle, then we would like to use
-		// dtSuggest rather than using the dtSuggest from the
+		// dtChemSuggest rather than using the dtChemSuggest from the
 		// penultimate step.
 		if (cycle == 0) {
-		    dtSave = dtSuggest;
+		    dtSave = dtChemSuggest;
 		}
 		break;
 	    }
@@ -268,7 +269,7 @@ chemistry update.";
 	_gmodel.conc2massf(_concOut, Q);
 	auto massfTotal = sum(Q.massf);
 	foreach (ref mf; Q.massf) mf /= massfTotal;
-	dtSuggest = dtSave;
+	dtChemSuggest = dtSave;
     }
 
 private:
@@ -678,10 +679,11 @@ version(chemistry_update_test) {
 	 *    complete hydrogen-iodine system.
 	 */
 
-	double dtSuggest = 200.0;
+	double dtChemSuggest = 200.0;
+	double dtThermSuggest = 0.0;
 	auto chemUpdate = new ChemistryUpdate("sample-input/H2-I2-inp.lua", gmodel);
 	double[] params;
-	chemUpdate(gd, tInterval, dtSuggest, params);
+	chemUpdate(gd, tInterval, dtChemSuggest, dtThermSuggest, params);
 	double[] conc;
 	conc.length = 3;
 	gmodel.massf2conc(gd, conc);

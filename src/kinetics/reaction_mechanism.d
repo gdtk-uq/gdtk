@@ -82,6 +82,17 @@ public:
     {
 	return _reactions[ir].production(isp) - _reactions[ir].loss(isp);
     }
+    final bool reactionHasParticipant(int ir, int isp)
+    {
+	foreach (p; _reactions[ir].participants) {
+	    if (p == isp) {
+		return true;
+	    }
+	}
+	// If we fall out of the loop, then isp was not found among
+	// the participants.
+	return false;
+    }
     /++
      + Selects an approriate chemistry time step based on rate of change information.
      +

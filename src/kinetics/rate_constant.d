@@ -297,7 +297,43 @@ private:
     GasModel _gmodel;
 }
 
+/++
+ Park2TRateConstant uses the Arrhenius model to compute
+ a chemical rate constant with a modified rate-controlling
+ temperature. The rate-controlling temperature is a geometric
+ average of the transrotaional and vibroelectronic temperature.
 
++/
+
+class Park2TRateConstant : RateConstant {
+public:
+    this(double A, double n, double C, double s)
+    {
+	_A = A;
+	_n = n;
+	_C = C;
+	_s = s;
+    }
+    this(lua_State* L)
+    {
+	_A = getDouble(L, -1, "A");
+	_n = getDouble(L, -1, "n");
+	_C = getDouble(L, -1, "C");
+	_s = getDouble(L, -1, "s");
+    }
+    Park2TRateConstant dup()
+    {
+	return new Park2TRateConstant(_A, _n, _C, _s);
+    }
+    override double eval(in GasState Q)
+    {
+	double T = pow(Q.T, _s)*pow(Q.T_modes[0], 1.0 - _s);
+	return _A*pow(T, _n)*exp(-_C/T);
+    }
+
+private:
+    double _A, _n, _C, _s;
+}
 
 /++
  + Create a RateConstant object based on information in a LuaTable.
@@ -319,6 +355,8 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
 	return new TroeRateConstant(L, efficiencies, gmodel);
     case "Yungster-Rabinowitz":
 	return new YRRateConstant(L, efficiencies, gmodel);
+    case "Park-2T":
+	return new Park2TRateConstant(L);
     case "fromEqConst":
 	return null;
     default:
@@ -326,7 +364,6 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
 	throw new Exception(msg);
     }
 }
-
 
 version(rate_constant_test) {
     import util.msg_service;

@@ -99,12 +99,13 @@ extern(C) int updateState(lua_State* L)
     // Arg 3 is tInterval
     double tInterval = luaL_checknumber(L, 3);
     // Arg 4 is dtSuggest
-    double dtSuggest = luaL_checknumber(L, 4);
+    double dtChemSuggest = luaL_checknumber(L, 4);
     // Extra parameters are not considered, presently. PJ 2017-04-22
     double[] params;
 
     try {
-	chemUpdate(Q, tInterval, dtSuggest, params);
+	double dummyDouble;
+	chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
 	string errMsg = "Error in call to chemistry update. " ~
@@ -114,8 +115,8 @@ extern(C) int updateState(lua_State* L)
     // Update gas table
     setGasStateInTable(L, gm, 2, Q);
     
-    // Return new dtSuggest
-    lua_pushnumber(L, dtSuggest);
+    // Return new dtChemSuggest
+    lua_pushnumber(L, dtChemSuggest);
     return 1;
 }
 
