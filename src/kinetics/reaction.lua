@@ -36,6 +36,11 @@ function transformRateConstant(t, coeffs, anonymousCollider)
       m.A = t.A*convFactor
       m.n = t.n
       m.C = t.C
+   elseif m.model == 'Park' then
+      m.A = t.A*convFactor
+      m.n = t.n
+      m.C = t.C
+      m.s = t.s
    elseif m.model == 'pressure dependent' then
       m.kInf = {}
       m.kInf.A = t.kInf.A * convFactor
@@ -70,6 +75,8 @@ function rateConstantToLuaStr(rc)
    local str = ""
    if rc.model == 'Arrhenius' then
       str = string.format("{model='Arrhenius', A=%16.12e, n=%f, C=%16.12e }", rc.A, rc.n, rc.C)
+   elseif rc.model == 'Park' then
+      str = string.format("{model='Park', A=%16.12e, n=%f, C=%16.12e, s=%f }", rc.A, rc.n, rc.C, rc.s)
    elseif rc.model == 'Lindemann-Hinshelwood' then
       str = "{model='Lindemann-Hinshelwood',\n"
       str = str .. string.format(" kInf={A=%16.12e, n=%f, C=%16.12e},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)

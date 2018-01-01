@@ -355,7 +355,7 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
 	return new TroeRateConstant(L, efficiencies, gmodel);
     case "Yungster-Rabinowitz":
 	return new YRRateConstant(L, efficiencies, gmodel);
-    case "Park-2T":
+    case "Park":
 	return new Park2TRateConstant(L);
     case "fromEqConst":
 	return null;
