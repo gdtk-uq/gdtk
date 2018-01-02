@@ -80,10 +80,10 @@ public:
         Q.rho = Q.p/(_Rgas*(Q.T + alpha*Q.T_modes[0]));
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha<=_ion_tol) {
-                Q.T_modes[0] = _T_modes_ref;
-                Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+            Q.T_modes[0] = _T_modes_ref;
+            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
-                Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         }
     }
     override void update_thermo_from_rhou(GasState Q) const
@@ -91,10 +91,10 @@ public:
         double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         Q.T = 2.0/3.0*Q.u/_Rgas;
         if (alpha <= _ion_tol) {
-                Q.T_modes[0] = _T_modes_ref;
-                Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+            Q.T_modes[0] = _T_modes_ref;
+            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
-                Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
+            Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
         }
         Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);                                     // Q.rho*_Rgas*Q.T;
     }
@@ -105,10 +105,10 @@ public:
         Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);     //Q.rho*_Rgas*Q.T;
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha <= _ion_tol) {
-                Q.T_modes[0] = _T_modes_ref;
-                Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+            Q.T_modes[0] = _T_modes_ref;
+            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
-                Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         }
     }
 
@@ -119,10 +119,10 @@ public:
         // Assume Q.T_modes[0] is set independently, and correct.
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha <= _ion_tol) {
-                Q.T_modes[0] = _T_modes_ref;
-                Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+            Q.T_modes[0] = _T_modes_ref;
+            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         } else {
-                Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+            Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         }
     }
     override void update_thermo_from_ps(GasState Q, double s) const
@@ -236,42 +236,42 @@ version(two_temperature_reacting_argon_test) {
         assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
         assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
 
-                //writeln("Testing the chemistry...");
+        //writeln("Testing the chemistry...");
 
-                //gd.T = 4000; // Set temperature to 3000K - this should be enmough to initiate some ionisation 
-                //gm.update_thermo_from_pT(gd); // update gas state
-                //gm.update_sound_speed(gd); // upate sound speed (not necessary)
+        //gd.T = 4000; // Set temperature to 3000K - this should be enmough to initiate some ionisation 
+        //gm.update_thermo_from_pT(gd); // update gas state
+        //gm.update_sound_speed(gd); // upate sound speed (not necessary)
 
-                //writeln("------------------------------------------");
-                //writeln("Before:");
-                //writeln("mass fraction argon = ", gd.massf[0]);
-                //writeln("mass fraction Argon+ = ", gd.massf[1]);
-                //writeln("mass fraction electron = ", gd.massf[2]);
-                //writeln("Pressure = ", gd.p);
-                //writeln("Temperature = ", gd.T);
-                //writeln("T modes = ", gd.T_modes[0]);
-                //writeln("density = ", gd.rho);
-                //writeln("internal energy = ", gd.u);
-                //writeln("U modes = ", gd.u_modes[0]);
+        //writeln("------------------------------------------");
+        //writeln("Before:");
+        //writeln("mass fraction argon = ", gd.massf[0]);
+        //writeln("mass fraction Argon+ = ", gd.massf[1]);
+        //writeln("mass fraction electron = ", gd.massf[2]);
+        //writeln("Pressure = ", gd.p);
+        //writeln("Temperature = ", gd.T);
+        //writeln("T modes = ", gd.T_modes[0]);
+        //writeln("density = ", gd.rho);
+        //writeln("internal energy = ", gd.u);
+        //writeln("U modes = ", gd.u_modes[0]);
 
-                //auto reactor = new UpdateArgonFrac("sample-data/two-temperature-reacting-argon-model.lua", gm);
-                //double[] params;
-                //double dtSuggest;
-                //writeln("----");
-                //reactor.opCall(gd,1.0,dtSuggest,params);
+        //auto reactor = new UpdateArgonFrac("sample-data/two-temperature-reacting-argon-model.lua", gm);
+        //double[] params;
+        //double dtSuggest;
+        //writeln("----");
+        //reactor.opCall(gd,1.0,dtSuggest,params);
 
-                //writeln("----");
-                //writeln("After:");
-                //writeln("mass fraction argon = ", gd.massf[0]);
-                //writeln("mass fraction Argon+ = ", gd.massf[1]);
-                //writeln("mass fraction electron = ", gd.massf[2]);
-                //writeln("Pressure = ", gd.p);
-                //writeln("Temperature = ", gd.T);
-                //writeln("T modes = ", gd.T_modes[0]);
-                //writeln("density = ", gd.rho);
-                //writeln("internal energy = ", gd.u);
-                //writeln("U modes = ", gd.u_modes[0]);
-                //writeln("Unit test completed");
+        //writeln("----");
+        //writeln("After:");
+        //writeln("mass fraction argon = ", gd.massf[0]);
+        //writeln("mass fraction Argon+ = ", gd.massf[1]);
+        //writeln("mass fraction electron = ", gd.massf[2]);
+        //writeln("Pressure = ", gd.p);
+        //writeln("Temperature = ", gd.T);
+        //writeln("T modes = ", gd.T_modes[0]);
+        //writeln("density = ", gd.rho);
+        //writeln("internal energy = ", gd.u);
+        //writeln("U modes = ", gd.u_modes[0]);
+        //writeln("Unit test completed");
 
         // [TODO] Move kinetics test to kinetics package.
         /*
