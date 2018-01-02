@@ -110,9 +110,9 @@ Files that you have laboured over and don't want to lose.
 unrelated features or fixes.  It is usually desirable to split 
 these into multiple commits with one issue per commit.
 * Source code changes that are just white-space changes made because
-your editor behaves differently to `emacs` with `c-basic-offset` set to 4.
+your editor behaves differently to `emacs` on Linux 
+with `c-basic-offset` set to 4 and `indent-tabs-mode` set to `nil`.
 Note that Lua files have 3 spaces per indent level.
-Tabs are fine so long as they are set to a width of 8 spaces.
 Gratuitous changes to whitespace add to the burden of reviewing commits.
 * Program executable codes that can be regenerated from the source.
 Do a `make clean` before committing.
@@ -133,7 +133,8 @@ Here is the content of my `.emacs` file:
       ;; If you edit it by hand, you could mess it up, so be careful.
       ;; Your init file should contain only one such instance.
       ;; If there is more than one, they won't work right.
-     '(c-basic-offset 4))
+     '(c-basic-offset 4)
+     '(indent-tabs-mode nil))
     (custom-set-faces
       ;; custom-set-faces was added by Custom.
       ;; If you edit it by hand, you could mess it up, so be careful.
@@ -165,16 +166,20 @@ This will help identifying the contributors to the code over
 the long-term history of development.
 
 ### Other editors
-If you are using an editor other than emacs,
-please configure your editor so that it uses 8-spaces
-per tab-stop and indentation level of 4.
+If you are using an editor other than emacs, please configure your editor 
+so that it uses an indentation level of 4 spaces for D-language files
+and 3 spaces for Lua files.
+Use spaces for indentation, not tab characters.
+Although we have moved away from using tab characters, 
+we continue with the convention that tab stops are every 8th column.
+
 An easy way to configure your editor of choice
 is to use the plugins provided at:
 
 http://editorconfig.org/
 
 In the same directory as this note is an `.editorconfig` that
-has the appropriate settings to play nicely with our preffered
+has the appropriate settings to play nicely with our preferred
 indentation style. The file is named `editorconfig` here so
 that it isn't hidden from view, but it should be renamed as
-`.editorconfig` if one wants to use it with a plugin.
+`.editorconfig` if you want to use it with a plugin.
