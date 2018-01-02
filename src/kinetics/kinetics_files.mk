@@ -14,4 +14,5 @@ KINETICS_FILES := $(KINETICS_DIR)/package.d \
 	$(KINETICS_DIR)/vib_specific_nitrogen_kinetics.d
 
 KINETICS_LUA_FILES := $(KINETICS_DIR)/luachemistry_update.d \
-	$(KINETICS_DIR)/luareaction_mechanism.d
+	$(KINETICS_DIR)/luareaction_mechanism.d \
+	$(KINETICS_DIR)/luatwo_temperature_air_kinetics.d
