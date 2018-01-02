@@ -10,6 +10,7 @@
 
 module kinetics.two_temperature_air_kinetics;
 
+import std.stdio;
 import std.conv;
 import std.string;
 import std.math;
@@ -78,7 +79,7 @@ private:
     double[][] _mu;
     int[][] _reactionsByMolecule;
     // Numerics control
-    int _maxSubcycles = 50;
+    int _maxSubcycles = 1000;
     int _maxAttempts = 3;
     double _energyAbsTolerance = 1.0e-2;
     double _energyRelTolerance = 1.0e-3;
@@ -276,7 +277,6 @@ private:
     double evalRelaxationTime(GasState Q, int isp)
     {
 	double tauInv = 0.0;
-	massf2molef(Q.massf, _airModel.mol_masses, _molef);
 	foreach (csp; 0 .. _airModel.n_species) {
 	    // We exclude electrons in the vibrational relaxation time.
 	    if (_airModel.species_name(csp) == "e-") {
@@ -293,7 +293,7 @@ private:
 	double k = Boltzmann_constant;
 	double nd = Q.p/(k*Q.T); // 1/m^3
 	nd *= 1.0e-6; // convert 1/m^3 --> 1/cm^3
-	double c = sqrt(8*k*Q.T/PI*_particleMass[isp]);
+	double c = sqrt(8*k*Q.T/(PI*_particleMass[isp]));
 	c *= 100.0; // convert m/s --> cm/s
 	double sigmaDash = 3.0e-17; // cm^2
 	double sigma = sigmaDash*((50000.0/Q.T)^^2); // cm^2
@@ -341,32 +341,32 @@ private:
 	double k1 = evalRate(Q);
 	Q.u_modes[0] = _Q0.u_modes[0] + h*(a21*k1);
 	Q.u = _eTotal - Q.u_modes[0];
-	_airModel.update_thermo_from_rhoT(Q);
+	_airModel.update_thermo_from_rhou(Q);
 
 	double k2 = evalRate(Q);
 	Q.u_modes[0] = _Q0.u_modes[0] + h*(a31*k1 + a32*k2);
 	Q.u = _eTotal - Q.u_modes[0];
-	_airModel.update_thermo_from_rhoT(Q);
+	_airModel.update_thermo_from_rhou(Q);
 
 	double k3 = evalRate(Q);
 	Q.u_modes[0] = _Q0.u_modes[0] + h*(a41*k1 + a42*k2 + a43*k3);
 	Q.u = _eTotal - Q.u_modes[0];
-	_airModel.update_thermo_from_rhoT(Q);
+	_airModel.update_thermo_from_rhou(Q);
 
 	double k4 = evalRate(Q);
 	Q.u_modes[0] = _Q0.u_modes[0] + h*(a51*k1 + a52*k2 + a53*k3 + a54*k4);
 	Q.u = _eTotal - Q.u_modes[0];
-	_airModel.update_thermo_from_rhoT(Q);
+	_airModel.update_thermo_from_rhou(Q);
 
 	double k5 = evalRate(Q);
 	Q.u_modes[0] = _Q0.u_modes[0] + h*(a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5);
 	Q.u = _eTotal - Q.u_modes[0];
-	_airModel.update_thermo_from_rhoT(Q);
+	_airModel.update_thermo_from_rhou(Q);
 
 	double k6 = evalRate(Q);
 	Q.u_modes[0] = _Q0.u_modes[0] + h*(b51*k1 + b53*k3 + b54*k4 + b56*k6);
 	Q.u = _eTotal - Q.u_modes[0];
-	_airModel.update_thermo_from_rhoT(Q);
+	_airModel.update_thermo_from_rhou(Q);
 
 	// Compute error estimate.
 	double errEst = Q.u_modes[0] - (_Q0.u_modes[0] + h*(b41*k1 + b43*k3 + b44*k4 + b45*k5 + b46*k6));
