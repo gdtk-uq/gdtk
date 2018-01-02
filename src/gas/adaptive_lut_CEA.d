@@ -54,171 +54,171 @@ public:
             msg ~= format("   Error in look-up table input file.\n"); 
             msg ~= format("   A table of 'data' is expected, but not found.\n");
             throw new Exception(msg);
-            }
+        }
 
         size_t np = lua_objlen(L, -1); // Determine number of patches
-        for (int i = 1; i != np+1 ; ++i) // For each patch in the data_tree
-            {
-                lua_rawgeti(L, -1, i); // Push patch i in data_tree on to stack
+        for (int i = 1; i != np+1 ; ++i) {
+            // For each patch in the data_tree
+            lua_rawgeti(L, -1, i); // Push patch i in data_tree on to stack
                 
-                lua_rawgeti(L, -1, 1); // Push table 1 containing ID's/split data
-                lua_rawgeti(L, -1, 1); // Push ID
-                size_t ID = luaL_checkinteger(L, -1);
-                lua_pop(L, 1);
-                lua_rawgeti(L, -1, 2); // Push splitID
-                string splitID = to!string(lua_tostring(L, -1));
-                lua_pop(L, 1);
-                lua_rawgeti(L, -1, 3); // Push child_left_ID
-                size_t child_left_ID = luaL_checkinteger(L, -1);
-                lua_pop(L, 1);
-                lua_rawgeti(L, -1, 4); // Push child_right_ID
-                size_t child_right_ID = luaL_checkinteger(L, -1);
-                lua_pop(L, 1);
-                lua_pop(L, 1); // Pop off table 1 of patch i
+            lua_rawgeti(L, -1, 1); // Push table 1 containing ID's/split data
+            lua_rawgeti(L, -1, 1); // Push ID
+            size_t ID = luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 2); // Push splitID
+            string splitID = to!string(lua_tostring(L, -1));
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 3); // Push child_left_ID
+            size_t child_left_ID = luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 4); // Push child_right_ID
+            size_t child_right_ID = luaL_checkinteger(L, -1);
+            lua_pop(L, 1);
+            lua_pop(L, 1); // Pop off table 1 of patch i
 
-                lua_rawgeti(L, -1, 2); // Push table 2 of patch i containing patch coords
-                lua_rawgeti(L, -1, 1); // Push lr_lo
-                double lr_lo = luaL_checknumber(L, -1);
-                lua_pop(L, 1);
-                lua_rawgeti(L, -1, 2); // Push lr_hi
-                double lr_hi = luaL_checknumber(L,-1);
-                lua_pop(L, 1);
-                lua_rawgeti(L, -1, 3); // Push e_lo
-                double e_lo = luaL_checknumber(L, -1);
-                lua_pop(L, 1);
-                lua_rawgeti(L, -1, 4);
-                double e_hi = luaL_checknumber(L, -1);
-                lua_pop(L, 1);
+            lua_rawgeti(L, -1, 2); // Push table 2 of patch i containing patch coords
+            lua_rawgeti(L, -1, 1); // Push lr_lo
+            double lr_lo = luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 2); // Push lr_hi
+            double lr_hi = luaL_checknumber(L,-1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 3); // Push e_lo
+            double e_lo = luaL_checknumber(L, -1);
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 4);
+            double e_hi = luaL_checknumber(L, -1);
+            lua_pop(L, 1);
 
-                lua_pop(L, 1); // Pop off table 2 of patch i
+            lua_pop(L, 1); // Pop off table 2 of patch i
                 
-                if (splitID == "n") {
-                    /* Patches with splitID=="n" are leaf nodes. Only leaf nodes have 
-                       bezier control point data. This block reads the data differently
-                       depending on whether interpolation method is bezier or linear */
+            if (splitID == "n") {
+                /* Patches with splitID=="n" are leaf nodes. Only leaf nodes have 
+                   bezier control point data. This block reads the data differently
+                   depending on whether interpolation method is bezier or linear */
 
-                    switch ( _interp_method ) {
-                    case "bezier":
-                        lua_rawgeti(L, -1, 3); // push data table of all control points
-                        // create arrays for 16 control points for all 7 properties
-                        double[16] Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k;
+                switch ( _interp_method ) {
+                case "bezier":
+                    lua_rawgeti(L, -1, 3); // push data table of all control points
+                    // create arrays for 16 control points for all 7 properties
+                    double[16] Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k;
                         
-                        /* Loop through all 16 control points.The '+1' in the for statement and
-                           '-1' in the arary index is because lua indexing starts at 1 */
+                    /* Loop through all 16 control points.The '+1' in the for statement and
+                       '-1' in the arary index is because lua indexing starts at 1 */
                         
-                        for(int j= 1; j<16+1; j++) { 
-                            lua_rawgeti(L, -1, j); // Push lua_table of control point j 
+                    for(int j= 1; j<16+1; j++) { 
+                        lua_rawgeti(L, -1, j); // Push lua_table of control point j 
                             
-                            lua_rawgeti(L, -1, 1); // Push control point j for Cv_hat
-                            Cv_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1); //Pop cp j, Cv_hat
-                            lua_rawgeti(L, -1, 2); // Push CP j for Cv
-                            Cv[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 3); // Push CP j for R_hat
-                            R_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 4); // Push CP j for Cp_hat
-                            Cp_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 5); // Push CP j for gamma_hat
-                            gamma_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 6); // Push CP j for mu
-                            mu[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 7); // Push Cp j for k
-                            k[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 1); // Push control point j for Cv_hat
+                        Cv_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1); //Pop cp j, Cv_hat
+                        lua_rawgeti(L, -1, 2); // Push CP j for Cv
+                        Cv[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 3); // Push CP j for R_hat
+                        R_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 4); // Push CP j for Cp_hat
+                        Cp_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 5); // Push CP j for gamma_hat
+                        gamma_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 6); // Push CP j for mu
+                        mu[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 7); // Push Cp j for k
+                        k[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
                             
-                            lua_pop(L, 1); // Pop lua_table of control point j
-                        } // End for loop (through all control points)
-                        lua_pop(L, 1); // Pop 2D lua_table of all control points
+                        lua_pop(L, 1); // Pop lua_table of control point j
+                    } // End for loop (through all control points)
+                    lua_pop(L, 1); // Pop 2D lua_table of all control points
                         
-                        _tree[ID] = new BezierPatch( lr_lo,  lr_hi,  e_lo, e_hi, ID, 
-                                                     child_left_ID, child_right_ID, splitID,
-                                                     Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k);
-                        break; // End case 'bezier' for leaf nodes of binary tree
+                    _tree[ID] = new BezierPatch( lr_lo,  lr_hi,  e_lo, e_hi, ID, 
+                                                 child_left_ID, child_right_ID, splitID,
+                                                 Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k);
+                    break; // End case 'bezier' for leaf nodes of binary tree
                     
-                    case "linear":
+                case "linear":
 
-                        lua_rawgeti(L, -1, 3); // push data table of corner properties
+                    lua_rawgeti(L, -1, 3); // push data table of corner properties
                         
-                        double[4] Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k;
+                    double[4] Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k;
                 
-                        for(int j= 1; j<4+1; j++) { 
-                            lua_rawgeti(L, -1, j); // Push lua_table of data at point j
+                    for(int j= 1; j<4+1; j++) { 
+                        lua_rawgeti(L, -1, j); // Push lua_table of data at point j
                             
-                            lua_rawgeti(L, -1, 1); // Push  j for Cv_hat
-                            Cv_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1); //Pop cp j, Cv_hat
-                            lua_rawgeti(L, -1, 2); // Push point j for Cv
-                            Cv[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 3); // Push point j for R_hat
-                            R_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 4); // Push point j for Cp_hat
-                            Cp_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 5); // Push point j for gamma_hat
-                            gamma_hat[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 6); // Push point j for mu
-                            mu[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
-                            lua_rawgeti(L, -1, 7); // Push point j for k
-                            k[j-1] = luaL_checknumber(L, -1);
-                            lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 1); // Push  j for Cv_hat
+                        Cv_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1); //Pop cp j, Cv_hat
+                        lua_rawgeti(L, -1, 2); // Push point j for Cv
+                        Cv[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 3); // Push point j for R_hat
+                        R_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 4); // Push point j for Cp_hat
+                        Cp_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 5); // Push point j for gamma_hat
+                        gamma_hat[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 6); // Push point j for mu
+                        mu[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 7); // Push point j for k
+                        k[j-1] = luaL_checknumber(L, -1);
+                        lua_pop(L, 1);
 
-                            lua_pop(L, 1); // Pop lua_table of control point j
-                        }
+                        lua_pop(L, 1); // Pop lua_table of control point j
+                    }
                         
-                        lua_pop(L, 1); // Pop 2D lua_table of all properties
-                        _tree[ID] = new LinearPatch( lr_lo,  lr_hi,  e_lo, e_hi, ID, 
-                                                         child_left_ID, child_right_ID, splitID,
-                                                         Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k);
-                        break; // end case 'linear' for leaf nodes of binary tree
+                    lua_pop(L, 1); // Pop 2D lua_table of all properties
+                    _tree[ID] = new LinearPatch( lr_lo,  lr_hi,  e_lo, e_hi, ID, 
+                                                 child_left_ID, child_right_ID, splitID,
+                                                 Cv_hat, Cv, R_hat, Cp_hat, gamma_hat, mu, k);
+                    break; // end case 'linear' for leaf nodes of binary tree
 
-                    default:
-                        string msg;
-                        msg ~= "No valid value of interpolation_method could be ";
-                        msg ~= "found in adaptive lut file. Valid options are ";
-                        msg ~= "'bezier' or 'linear'.";
-                        throw new Exception(msg);
-                    } // End switch/case block
-                
-                } // End if statement (writing data to leaf nodes - patches with data)
-                    
-                else if (splitID == "e" || splitID == "lr") {
-                    /* Non-leaf nodes still need to be in the tree, but they don't need cntrl
-                       point data - so they are Patch (non BezierPatch objects) */
-                        
-                    _tree[ID] = new Patch( lr_lo,  lr_hi,  e_lo,  e_hi, ID, child_left_ID,
-                                               child_right_ID, splitID);
-                }
-                else {
+                default:
                     string msg;
-                    msg ~= "Constructing the AdaptiveLUT gas model failed in the constructor ";
-                    msg ~= "the patches because splitID of patch ID " ~ to!string(ID);
-                    msg ~= " was not defined as 'n', 'lr' or 'e'.";
-                    throw new Exception(msg);                      
-                }
-
-                lua_pop(L, 1); // Pop patch i in data tree 
+                    msg ~= "No valid value of interpolation_method could be ";
+                    msg ~= "found in adaptive lut file. Valid options are ";
+                    msg ~= "'bezier' or 'linear'.";
+                    throw new Exception(msg);
+                } // End switch/case block
+                
+            } // End if statement (writing data to leaf nodes - patches with data)
+                    
+            else if (splitID == "e" || splitID == "lr") {
+                /* Non-leaf nodes still need to be in the tree, but they don't need cntrl
+                   point data - so they are Patch (non BezierPatch objects) */
+                        
+                _tree[ID] = new Patch( lr_lo,  lr_hi,  e_lo,  e_hi, ID, child_left_ID,
+                                       child_right_ID, splitID);
             }
+            else {
+                string msg;
+                msg ~= "Constructing the AdaptiveLUT gas model failed in the constructor ";
+                msg ~= "the patches because splitID of patch ID " ~ to!string(ID);
+                msg ~= " was not defined as 'n', 'lr' or 'e'.";
+                throw new Exception(msg);                      
+            }
+
+            lua_pop(L, 1); // Pop patch i in data tree 
+        }
             
         // The patches have all been read - assign pointers to 'child nodes'
-            foreach(ID, ref node; _tree) {
-                if (node._splitID != "n") {
+        foreach(ID, ref node; _tree) {
+            if (node._splitID != "n") {
                 node._child_left = &_tree[node._child_left_ID];
                 node._child_right = &_tree[node._child_right_ID];
-                }
-                // The interger address of the child nodes are no longer needed
-                // since we are using pointers instead
+            }
+            // The interger address of the child nodes are no longer needed
+            // since we are using pointers instead
             destroy(node._child_right_ID);
             destroy(node._child_left_ID);
-            }
+        }
 
         // Save the first patch as the root node as a starting point for tree searches
         this._root_node = &_tree[0];
@@ -362,8 +362,8 @@ public:
 
     override double dpdrho_const_T(in GasState Q)
     {
-    // Cannot be directly computed from look up table
-    // Apply forward finite difference in calling update from p, rho
+        // Cannot be directly computed from look up table
+        // Apply forward finite difference in calling update from p, rho
         // Make a copy of the GasState object, to avoid modifying Q
         auto Q_temp = new GasState(this);
         Q_temp.copy_values_from(Q);
@@ -379,7 +379,7 @@ public:
         this.update_thermo_from_rhoT(Q_temp);
         double p_step = Q_temp.p;
         return ( (p_step - p) / h);
-     }
+    }
 
 
 
@@ -543,14 +543,14 @@ public:
 
     double interpolate( double lr,  double e, string prop) const
     {
-    // Interpolate functions to be overridden
-    // The error message is the same for all these functions
-    // The message explains what the problem is
-    string msg;
-    msg ~= "The interpolate function is been called on a Patch object. ";
-    msg ~= "This should only be called on leaf nodes of the search tree, ";
-    msg ~= "which must be of the inherited class BezierPatch or LinearPatch.";
-    throw new Exception(msg);
+        // Interpolate functions to be overridden
+        // The error message is the same for all these functions
+        // The message explains what the problem is
+        string msg;
+        msg ~= "The interpolate function is been called on a Patch object. ";
+        msg ~= "This should only be called on leaf nodes of the search tree, ";
+        msg ~= "which must be of the inherited class BezierPatch or LinearPatch.";
+        throw new Exception(msg);
     }
       
 private:
@@ -563,7 +563,7 @@ private:
     static double _e_lo_global, _e_hi_global, _de_global;
     static double _lr_lo_global, _lr_hi_global, _dlr_global;
 
- }
+}
 
 
 class BezierPatch : Patch
@@ -662,8 +662,8 @@ class LinearPatch : Patch
 public:
     this(double lr_lo, double lr_hi, double e_lo, double e_hi, size_t ID,
          size_t child_left_ID, size_t child_right_ID, string splitID,  double[4] Cv_hat,
-          double[4] Cv,  double[4] R_hat,  double[4] Cp_hat, 
-          double[4] gamma_hat,  double[4] mu,  double[4] k )
+         double[4] Cv,  double[4] R_hat,  double[4] Cp_hat, 
+         double[4] gamma_hat,  double[4] mu,  double[4] k )
     {   
         super(lr_lo, lr_hi, e_lo, e_hi, ID, child_left_ID, 
               child_right_ID, splitID);
@@ -678,7 +678,7 @@ public:
         
     }
 
-override double interpolate( double lr,  double e, string prop) const
+    override double interpolate( double lr,  double e, string prop) const
     {
         // Check if the values requrested are oustide the table
         check_interpolation_bounds(lr,  e);
@@ -712,15 +712,15 @@ override double interpolate( double lr,  double e, string prop) const
         // Properties are in this order:
         // (lr_lo, e_lo), (lr_hi, e_lo),(lr_lo, e_hi),(lr_hi, e_hi) 
 
-         double lrfrac = (lr - _lr_lo) / (_lr_hi - _lr_lo);
-         double efrac = (e - _e_lo) / (_e_hi - _e_lo);
+        double lrfrac = (lr - _lr_lo) / (_lr_hi - _lr_lo);
+        double efrac = (e - _e_lo) / (_e_hi - _e_lo);
          
-         double res = (1.0 - efrac) * (1.0 - lrfrac) * data[0] +
-             efrac         * (1.0 - lrfrac)          * data[2] +
-             efrac         * lrfrac                  * data[3] +
-             (1.0 - efrac) * lrfrac                  * data[1];
+        double res = (1.0 - efrac) * (1.0 - lrfrac) * data[0] +
+            efrac         * (1.0 - lrfrac)          * data[2] +
+            efrac         * lrfrac                  * data[3] +
+            (1.0 - efrac) * lrfrac                  * data[1];
 
-         return res;
+        return res;
     }
 
 private:
