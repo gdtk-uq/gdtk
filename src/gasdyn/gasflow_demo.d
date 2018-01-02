@@ -150,7 +150,7 @@ void main(){
     writeln("    theta_c(deg)=", theta_c*180.0/PI);
     writeln("    expected 20deg, surface speed V_c=", V_c);
     writeln("    surface pressure coefficient=",
-	    (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.385");
+            (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.385");
     writeln("    state_c:", state_c);
     //
     M1 = 1.5;
@@ -166,7 +166,7 @@ void main(){
     writeln("    theta_c(deg)=", theta_c*180.0/PI);
     writeln("    expected 20deg, surface speed V_c=", V_c);
     writeln("    surface pressure coefficient=",
-	    (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.385");
+            (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.385");
     writeln("    state_c:", state_c);
     //
     M1 = 1.8;
@@ -182,7 +182,7 @@ void main(){
     writeln("    theta_c(deg)=", theta_c*180.0/PI);
     writeln("    expected 24deg, surface speed V_c=", V_c);
     writeln("    surface pressure coefficient=",
-	    (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.466");
+            (state_c.p - s1.p)/(0.5*s1.rho*V1*V1), " expected 0.466");
     writeln("    state_c:", state_c);
     //
     M1 = 1.5;

@@ -34,8 +34,8 @@ myrf = RobertsFunction:new{end0=true, end1=false, beta=1.01}
 print("myrf(0.5)=", myrf(0.5))
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
-	writeln("There was a problem interpreting the test code.");
-	writeln(to!string(lua_tostring(L, -1)));
+        writeln("There was a problem interpreting the test code.");
+        writeln(to!string(lua_tostring(L, -1)));
     }
     writeln("Done with luaunifunction_demo.");
 }

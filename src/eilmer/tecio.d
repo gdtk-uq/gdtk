@@ -43,19 +43,19 @@ string[] zneLst = [
 // libtecio exposed functions below
 //
 extern (C) int tecini142(const char* Title, const char* Variables,
-			 const char* FName, const char* ScratchDir,
-			 int* FileFormat, int* FileType,
-			 int* Debug, int* VIsDouble);
+                         const char* FName, const char* ScratchDir,
+                         int* FileFormat, int* FileType,
+                         int* Debug, int* VIsDouble);
 
 extern (C) int tecend142();
 
 extern (C) int teczne142(const char* ZoneTitle, int* ZoneType, int* IMxOrNumPts,
-			 int* JMxOrNumElements, int* KMxOrNumFaces, int* ICellMax, int* JCellMax,
-			 int* KCellMax, double* SolutionTime, int* StrandId, int* ParentZone,
-			 int* IsBlock, int* NumFaceConnections, int* FaceNeighborMode,
-			 int* TotalNumFaceNodes, int* NumConnectedBoundaryFaces,
-			 int* TotalNumBoundaryConnections, int* PassiveVarList, int* ValueLocation,
-			 int* shaveVarFromZone, int* ShareConnectivityFromZone);
+                         int* JMxOrNumElements, int* KMxOrNumFaces, int* ICellMax, int* JCellMax,
+                         int* KCellMax, double* SolutionTime, int* StrandId, int* ParentZone,
+                         int* IsBlock, int* NumFaceConnections, int* FaceNeighborMode,
+                         int* TotalNumFaceNodes, int* NumConnectedBoundaryFaces,
+                         int* TotalNumBoundaryConnections, int* PassiveVarList, int* ValueLocation,
+                         int* shaveVarFromZone, int* ShareConnectivityFromZone);
 
 //extern (C) int tecdat142(int* N, float* Data, int* IsDouble); // function overloaded to accept both float and doubles
 extern (C) int tecdat142(int* N, double* Data, int* IsDouble); //
@@ -80,12 +80,12 @@ extern (C) int tecnode142(int* N, int* ConnData);
  */
 
 int dtecini142(string title, string vars, string fname,
-	       string scratchDir=".", int fileFmt=1,
-	       int fileType=0, int dbg=0, int VIsDouble=0)
+               string scratchDir=".", int fileFmt=1,
+               int fileType=0, int dbg=0, int VIsDouble=0)
 {
     return tecini142(title.toStringz, vars.toStringz,
-		     fname.toStringz, scratchDir.toStringz,
-		     &fileFmt, &fileType, &dbg, &VIsDouble);
+                     fname.toStringz, scratchDir.toStringz,
+                     &fileFmt, &fileType, &dbg, &VIsDouble);
 }
 
 /*******************
@@ -122,11 +122,11 @@ int* checknull(int[] var)
  */
 
 int dteczne142(string zoneTitle, int zoneType, int imaxOrNumPts,
-	       int jmaxOrNumElems, int kmaxOrNumFaces=0,
-	       double solTime=0.0, int strandId=0,
-	       int[] valLoc=[1,1,0], int parentZone=0,
-	       int numFaceConns=0, int faceNbrMode=0,
-	       int totalNumBndryConns=1, int[] passiveVarList=null)
+               int jmaxOrNumElems, int kmaxOrNumFaces=0,
+               double solTime=0.0, int strandId=0,
+               int[] valLoc=[1,1,0], int parentZone=0,
+               int numFaceConns=0, int faceNbrMode=0,
+               int totalNumBndryConns=1, int[] passiveVarList=null)
 {
     int iCellMax, jCellMax, kCellMax;
     int isBlockFmt = 1; // Always use this.
@@ -136,13 +136,13 @@ int dteczne142(string zoneTitle, int zoneType, int imaxOrNumPts,
     int shareConnFromZone = 0;
 
     return  teczne142(zoneTitle.toStringz, &zoneType,
-		      &imaxOrNumPts, &jmaxOrNumElems, &kmaxOrNumFaces,
-		      &iCellMax, &jCellMax, &kCellMax,
-		      &solTime, &strandId, &parentZone, &isBlockFmt,
-		      &numFaceConns, &faceNbrMode, &totalNumFaceNodes,
-		      &numConnectedBndryFaces, &totalNumBndryConns,
-		      checknull(passiveVarList), checknull(valLoc),
-		      checknull(shareVarFromZone), &shareConnFromZone);
+                      &imaxOrNumPts, &jmaxOrNumElems, &kmaxOrNumFaces,
+                      &iCellMax, &jCellMax, &kCellMax,
+                      &solTime, &strandId, &parentZone, &isBlockFmt,
+                      &numFaceConns, &faceNbrMode, &totalNumFaceNodes,
+                      &numConnectedBndryFaces, &totalNumBndryConns,
+                      checknull(passiveVarList), checknull(valLoc),
+                      checknull(shareVarFromZone), &shareConnFromZone);
 }
 
 /**************************

@@ -15,23 +15,23 @@ class UnivariateFunction {
 public:
     double opCall(double t) const
     {
-	return t; // expect this to be overridden
+        return t; // expect this to be overridden
     }
     override string toString() const
     {
-	return "UnivariateFunction()";
+        return "UnivariateFunction()";
     }
     double[] distribute_parameter_values(size_t n, double t0=0.0, double t1=1.0) const
     // Returns an array of parameter values, distributed from t0 though t1.
     // The subclass determines the form of distribution.
     {
-	double[] tv;
-	double dt = 1.0 / (n-1);
-	foreach (i; 0 .. n) {
-	    double t = opCall(dt*i); // first mapping is done by the specific function
-	    tv ~= (1.0-t)*t0 + t*t1; // map to specified range and save
-	}
-	return tv;
+        double[] tv;
+        double dt = 1.0 / (n-1);
+        foreach (i; 0 .. n) {
+            double t = opCall(dt*i); // first mapping is done by the specific function
+            tv ~= (1.0-t)*t0 + t*t1; // map to specified range and save
+        }
+        return tv;
     } // end distribute_parameter_values()
 } // end class
 
@@ -41,25 +41,25 @@ public:
     double t1;
     this(double t0=0.0, double t1=1.0)
     {
-	this.t0 = t0;
-	this.t1 = t1;
+        this.t0 = t0;
+        this.t1 = t1;
     }
     this(const LinearFunction other)
     {
-	t0 = other.t0;
-	t1 = other.t1;
+        t0 = other.t0;
+        t1 = other.t1;
     }
     LinearFunction dup() const
     {
-	return new LinearFunction(this);
+        return new LinearFunction(this);
     }
     override double opCall(double t) const
     {
-	return (1.0-t) * t0 + t * t1;
+        return (1.0-t) * t0 + t * t1;
     }
     override string toString() const
     {
-	return "LinearFunction(t0=" ~ to!string(t0) ~ ", t1=" ~ to!string(t1) ~ ")";
+        return "LinearFunction(t0=" ~ to!string(t0) ~ ", t1=" ~ to!string(t1) ~ ")";
     }
 } // end class LinearFunction
 
@@ -74,50 +74,50 @@ public:
     bool cluster = true;
     this(bool end0, bool end1, double beta)
     {
-	this.end0 = end0;
-	this.end1 = end1;
-	this.beta = beta;
-	if (!end0 && !end1) cluster = false;
-	if (beta <= 1.0) cluster = false;
-	if (end0 && end1) alpha = 0.5;
-	if (end0 && !end1) {
-	    reverse = true;
-	    alpha   = 0.0;
-	}
-	if (!end0 && end1) {
-	    reverse = 0;
-	    alpha   = 0.0;
-	}
+        this.end0 = end0;
+        this.end1 = end1;
+        this.beta = beta;
+        if (!end0 && !end1) cluster = false;
+        if (beta <= 1.0) cluster = false;
+        if (end0 && end1) alpha = 0.5;
+        if (end0 && !end1) {
+            reverse = true;
+            alpha   = 0.0;
+        }
+        if (!end0 && end1) {
+            reverse = 0;
+            alpha   = 0.0;
+        }
     }
     this(const RobertsFunction other)
     {
-	this.end0 = end0;
-	this.end1 = end1;
-	beta = other.beta;
-	alpha = other.alpha;
-	reverse = other.reverse;
-	cluster = other.cluster;
+        this.end0 = end0;
+        this.end1 = end1;
+        beta = other.beta;
+        alpha = other.alpha;
+        reverse = other.reverse;
+        cluster = other.cluster;
     }
     RobertsFunction dup() const
     {
-	return new RobertsFunction(this);
+        return new RobertsFunction(this);
     }
     override double opCall(double t) const
     {
-	double tbar;
-	if (reverse) t = 1.0 - t;
-	if (cluster) {
-	    tbar = roberts_original(t, alpha, beta);
-	} else { 
-	    tbar = t;
-	}
-	if (reverse) tbar = 1.0 - tbar;
-	return tbar;
+        double tbar;
+        if (reverse) t = 1.0 - t;
+        if (cluster) {
+            tbar = roberts_original(t, alpha, beta);
+        } else { 
+            tbar = t;
+        }
+        if (reverse) tbar = 1.0 - tbar;
+        return tbar;
     }
     override string toString() const
     {
-	return "RobertsFunction(end0=" ~ to!string(end0) ~ 
-	    ", end1=" ~ to!string(end1) ~ ", beta=" ~ to!string(beta) ~ ")";
+        return "RobertsFunction(end0=" ~ to!string(end0) ~ 
+            ", end1=" ~ to!string(end1) ~ ", beta=" ~ to!string(beta) ~ ")";
     }
 } // end class RobertsFunction()
 
@@ -140,12 +140,12 @@ double roberts_original(double eta, double alpha, double beta)
 version(univariatefunctions_test) {
     import util.msg_service;
     int main() {
-	auto cf = new RobertsFunction(false, true, 1.1);
-	assert(approxEqual(cf(0.1), 0.166167), failedUnitTest());
-	assert(approxEqual(cf(0.9), 0.96657), failedUnitTest());
-	auto cf2 = new LinearFunction(1.0, 0.0);
-	assert(approxEqual(cf2(0.1), 0.9), failedUnitTest());
-	assert(approxEqual(cf2(0.9), 0.1), failedUnitTest());
-	return 0;
+        auto cf = new RobertsFunction(false, true, 1.1);
+        assert(approxEqual(cf(0.1), 0.166167), failedUnitTest());
+        assert(approxEqual(cf(0.9), 0.96657), failedUnitTest());
+        auto cf2 = new LinearFunction(1.0, 0.0);
+        assert(approxEqual(cf2(0.1), 0.9), failedUnitTest());
+        assert(approxEqual(cf2(0.9), 0.1), failedUnitTest());
+        return 0;
     }
 } // end univariatefunctions_test

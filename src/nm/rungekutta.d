@@ -45,14 +45,14 @@ double[][] allocate_rk45_workspace(uint n)
  *     the final value of the dependent variable
  */
 double rkf45_step(alias f)(double t0, double h, double[] y0,
-			   ref double[] y1, ref double[] err,
-			   ref double[][] work_arrays)
+                           ref double[] y1, ref double[] err,
+                           ref double[][] work_arrays)
     if ( is(typeof(f(0.0, [0.0,0.0])) == double[]) )
 {
     // Assuming a system of equations, we need arrays for the intermediate data.
     double[] k1 = work_arrays[1];
     if ( k1.length != y0.length ) {
-	throw new Exception("Array lengths don't match the workspace and.");
+        throw new Exception("Array lengths don't match the workspace and.");
     }
     double[] k2 = work_arrays[2];
     double[] k3 = work_arrays[3]; 
@@ -69,19 +69,19 @@ double rkf45_step(alias f)(double t0, double h, double[] y0,
     ytmp[] = y0[] + 3.0*h*k1[]/32.0 + 9.0*h*k2[]/32.0;
     k3[] = f(t0 + 3.0*h/8.0, ytmp);
     ytmp[] = y0[] + 1932.0*h*k1[]/2197.0 - 7200.0*h*k2[]/2197.0 + 
-	7296.0*h*k3[]/2197.0;
+        7296.0*h*k3[]/2197.0;
     k4[] = f(t0 + 12.0*h/13.0, ytmp);
     ytmp[] = y0[] + 439.0*h*k1[]/216.0 - 8.0*h*k2[] + 
-	3680.0*h*k3[]/513.0 - 845.0*h*k4[]/4104.0;
+        3680.0*h*k3[]/513.0 - 845.0*h*k4[]/4104.0;
     k5[] = f(t0 + h, ytmp);
     ytmp[] = y0[] - 8.0*h*k1[]/27.0 + 2.0*h*k2[] - 
-	3544.0*h*k3[]/2565.0 + 1859.0*h*k4[]/4104.0 - 11.0*h*k5[]/40.0;
+        3544.0*h*k3[]/2565.0 + 1859.0*h*k4[]/4104.0 - 11.0*h*k5[]/40.0;
     k6[] = f(t0 + h/2.0, ytmp);
     // Now, do the integration as a weighting of the sampled data.
     y1[] = y0[] + 16.0*h*k1[]/135.0 + 6656.0*h*k3[]/12825.0 + 
-	28561.0*h*k4[]/56430.0 - 9.0*h*k5[]/50.0 + 2.0*h*k6[]/55.0;
+        28561.0*h*k4[]/56430.0 - 9.0*h*k5[]/50.0 + 2.0*h*k6[]/55.0;
     err[] = h*k1[]/360.0 - 128.0*h*k3[]/4275.0 - 2197.0*h*k4[]/75240.0 + 
-	h*k5[]/50.0 + 2.0*h*k6[]/55.0;
+        h*k5[]/50.0 + 2.0*h*k6[]/55.0;
     foreach(ref e; err) e = fabs(e);
     return t0 + h;
 } // end rkf45_step()
@@ -89,27 +89,27 @@ double rkf45_step(alias f)(double t0, double h, double[] y0,
 version(rungekutta_test) {
     import util.msg_service;
     int main() {
-	double[] testSystem1(double t, double[] x)
-	{
-	    double dx0dt =  -8.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 12.0;
-	    double dx1dt = -17.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 29.0;
-	    double dx2dt = -35.0/3.0*x[0] + 14.0/3.0*x[1] - 2.0*x[2] + 48.0;
-	    return [dx0dt, dx1dt, dx2dt];
-	}
-	double[] solution1(double t)
-	{
-	    double x = exp(-3.0*t)/6.0*(6.0-50.0*exp(t)+10.0*exp(2.0*t)+34.0*exp(3.0*t));
-	    double y = exp(-3.0*t)/6.0*(12.0-125.0*exp(t)+40.0*exp(2.0*t)+73.0*exp(3.0*t));
-	    double z = exp(-3.0*t)/6.0*(14.0-200.0*exp(t)+70.0*exp(2.0*t)+116.0*exp(3.0*t));
-	    return [x, y, z];
-	}
-	double[] x0=[0.0, 0.0, 0.0];
-	double[] x1=x0.dup;
-	double[] err=x0.dup;
-	auto work = allocate_rk45_workspace(3);
-	double t1 = rkf45_step!(testSystem1)(0.0, 0.2, x0, x1, err, work);
-	assert(approxEqual(x1, solution1(t1), 1.0e-5), failedUnitTest());
+        double[] testSystem1(double t, double[] x)
+        {
+            double dx0dt =  -8.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 12.0;
+            double dx1dt = -17.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 29.0;
+            double dx2dt = -35.0/3.0*x[0] + 14.0/3.0*x[1] - 2.0*x[2] + 48.0;
+            return [dx0dt, dx1dt, dx2dt];
+        }
+        double[] solution1(double t)
+        {
+            double x = exp(-3.0*t)/6.0*(6.0-50.0*exp(t)+10.0*exp(2.0*t)+34.0*exp(3.0*t));
+            double y = exp(-3.0*t)/6.0*(12.0-125.0*exp(t)+40.0*exp(2.0*t)+73.0*exp(3.0*t));
+            double z = exp(-3.0*t)/6.0*(14.0-200.0*exp(t)+70.0*exp(2.0*t)+116.0*exp(3.0*t));
+            return [x, y, z];
+        }
+        double[] x0=[0.0, 0.0, 0.0];
+        double[] x1=x0.dup;
+        double[] err=x0.dup;
+        auto work = allocate_rk45_workspace(3);
+        double t1 = rkf45_step!(testSystem1)(0.0, 0.2, x0, x1, err, work);
+        assert(approxEqual(x1, solution1(t1), 1.0e-5), failedUnitTest());
 
-	return 0;
+        return 0;
     }
 }

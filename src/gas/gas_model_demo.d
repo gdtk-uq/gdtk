@@ -12,7 +12,7 @@ void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes...");
     auto gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
     foreach(i; 0 .. gm.n_species) {
-	writeln("species[", i, "] name=", gm.species_name(i));
+        writeln("species[", i, "] name=", gm.species_name(i));
     }
     auto gd = new GasState(gm, 100.0e3, 300.0);
     writefln("R= %s, pressure= %s, temperature= %s", gm.R(gd), gd.p, gd.T);

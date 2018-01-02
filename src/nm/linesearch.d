@@ -29,20 +29,20 @@ void minimize(alias f)(ref double a, ref double b, double tol=1.0e-4)
     double FR = f(xR);
 
     while ( (xR - xL) > tol ) {
-	if ( FR > FL ) {
-	    b = xR;
+        if ( FR > FL ) {
+            b = xR;
             xR = xL;
             FR = FL;
             xL = a + (1.0-r)*(b-a);
             FL = f(xL);
-	} else {
+        } else {
             a = xL;
             xL = xR;
             FL = FR;
             xR = a + r*(b-a);
             FR = f(xR);
-	}
-	//writeln("xL=", xL, " xR=", xR, " FL=", FL, " FR=", FR);
+        }
+        //writeln("xL=", xL, " xR=", xR, " FL=", FL, " FR=", FR);
     }
     a = xL;
     b = xR;
@@ -53,16 +53,16 @@ version(linesearch_test) {
     import std.math;
     import util.msg_service;
     int main() {
-	double fdemo(double x) {
-	    return exp(x) + 2.0 - cos(x);
-	}
-	double a = -3;
-	double b = 1;
-	minimize!fdemo(a, b, 1.0e-6);
-	double xminimum = -0.588534;
-	assert(abs(a - xminimum) < 1.0e-4, failedUnitTest());
-	assert(abs(b - xminimum) < 1.0e-4, failedUnitTest());
+        double fdemo(double x) {
+            return exp(x) + 2.0 - cos(x);
+        }
+        double a = -3;
+        double b = 1;
+        minimize!fdemo(a, b, 1.0e-6);
+        double xminimum = -0.588534;
+        assert(abs(a - xminimum) < 1.0e-4, failedUnitTest());
+        assert(abs(b - xminimum) < 1.0e-4, failedUnitTest());
 
-	return 0;
+        return 0;
     }
 }

@@ -13,7 +13,7 @@ void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes using CO2 Span Wagner...");
     auto gm = init_gas_model("sample-data/co2sw-gas-model.lua");
     foreach(i; 0 .. gm.n_species) {
-	writeln("species[", i, "] name=", gm.species_name(i));
+        writeln("species[", i, "] name=", gm.species_name(i));
     }
     auto gd = new GasState(gm, 6.0e6, 300.0);
     writefln("R= %s, pressure= %.8f, temperature= %.8f", gm.R(gd), gd.p, gd.T);

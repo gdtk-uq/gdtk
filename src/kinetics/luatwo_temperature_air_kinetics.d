@@ -32,43 +32,43 @@ extern(C) int newTwoTemperatureAirKinetics(lua_State* L)
 
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
-	    "A table containing named arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
+            "A table containing named arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect to find a 'chemFilen' entry
     lua_getfield(L, 1, "chemFile");
     if ( !lua_isstring(L, -1) ) {
-	string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
-	    "A string was expected as the chemFile argument. " ~
-	    "No valid string was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
+            "A string was expected as the chemFile argument. " ~
+            "No valid string was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     auto chemFile = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
     // Expect to find a 'energyExchFile' entry
     lua_getfield(L, 1, "energyExchFile");
     if ( !lua_isstring(L, -1) ) {
-	string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
-	    "A string was expected as the energyExchFile argument. " ~
-	    "No valid string was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
+            "A string was expected as the energyExchFile argument. " ~
+            "No valid string was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     auto energyExchFile = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
     // Expect to find a 'gasModel' entry
     lua_getfield(L, 1, "gasModel");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
-	    "No gasmodel entry found in named arguments.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
+            "No gasmodel entry found in named arguments.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto gmodel = checkGasModel(L, -1);
     if ( gmodel is null ) {
-	string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
-	    "A GasModel object was expected as the gasmodel argument. " ~
-	    "No valid GasModel was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to TwoTemperatureAirKinetics:new{}. " ~
+            "A GasModel object was expected as the gasmodel argument. " ~
+            "No valid GasModel was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     
@@ -97,12 +97,12 @@ extern(C) int updateTwoTempAirState(lua_State *L)
     double[] params;
 
     try {
-	twoTempAirKinetics(Q, tInterval, dtChemSuggest, dtThermSuggest, params);
+        twoTempAirKinetics(Q, tInterval, dtChemSuggest, dtThermSuggest, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
-	string errMsg = "Error in call to two temperature air kinetics update. " ~
-	    "Caught exception: " ~ to!string(e);
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to two temperature air kinetics update. " ~
+            "Caught exception: " ~ to!string(e);
+        luaL_error(L, errMsg.toStringz);
     }
     // Update gas table.
     setGasStateInTable(L, gm, 2, Q);

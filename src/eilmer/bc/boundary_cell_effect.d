@@ -24,11 +24,11 @@ BoundaryCellEffect make_BCE_from_json(JSONValue jsonData, int blk_id, int bounda
     BoundaryCellEffect newBCE;
     switch (bceType) {
     case "wall_function_cell_effect":
-	newBCE = new BCE_WallFunction(blk_id, boundary);
-	break;
+        newBCE = new BCE_WallFunction(blk_id, boundary);
+        break;
     default:
-	string errMsg = format("ERROR: The BoundaryCellEffect type: '%s' is unknown.", bceType);
-	throw new FlowSolverException(errMsg);
+        string errMsg = format("ERROR: The BoundaryCellEffect type: '%s' is unknown.", bceType);
+        throw new FlowSolverException(errMsg);
     }
     return newBCE;
 }
@@ -41,9 +41,9 @@ public:
 
     this(int id, int boundary, string _type)
     {
-	blk = gasBlocks[id];
-	which_boundary = boundary;
-	type = _type;
+        blk = gasBlocks[id];
+        which_boundary = boundary;
+        type = _type;
     }
     // Most boundary cell effects will not need to do anything
     // special after construction.
@@ -53,17 +53,17 @@ public:
     void post_bc_construction() {}
     override string toString() const
     {
-	return "BoundaryCellEffect()";
+        return "BoundaryCellEffect()";
     }
     void apply(double t, int gtl, int ftl)
     {
-	final switch (blk.grid_type) {
-	case Grid_t.unstructured_grid: 
-	    apply_unstructured_grid(t, gtl, ftl);
-	    break;
-	case Grid_t.structured_grid:
-	    apply_structured_grid(t, gtl, ftl);
-	}
+        final switch (blk.grid_type) {
+        case Grid_t.unstructured_grid: 
+            apply_unstructured_grid(t, gtl, ftl);
+            break;
+        case Grid_t.structured_grid:
+            apply_structured_grid(t, gtl, ftl);
+        }
     }
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
@@ -81,153 +81,153 @@ class BCE_WallFunction : BoundaryCellEffect {
 public:
     this(int id, int boundary)
     {
-	super(id, boundary, "WallFunction_CellEffect");
-	_cells_need_to_be_flagged = true;
+        super(id, boundary, "WallFunction_CellEffect");
+        _cells_need_to_be_flagged = true;
     } // end constructor
 
     override string toString() const
     {
-	return "WallFunction_CellEffect()";
+        return "WallFunction_CellEffect()";
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-	throw new FlowSolverException("WallFunction_CellEffect bc not implemented for unstructured grids.");
+        throw new FlowSolverException("WallFunction_CellEffect bc not implemented for unstructured grids.");
     } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-	size_t i, j, k;
-	SBlock blk = cast(SBlock) this.blk;
-	assert(blk !is null, "Oops, this should be an SBlock object.");
+        size_t i, j, k;
+        SBlock blk = cast(SBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SBlock object.");
 
-	if (_cells_need_to_be_flagged) {
-	    // Apply the cell flags, just once.
-	    final switch (which_boundary) {
-	    case Face.north:
-		j = blk.jmax;
-		for (k = blk.kmin; k <= blk.kmax; ++k) {
-		    for (i = blk.imin; i <= blk.imax; ++i) {
-			blk.get_cell(i,j,k).allow_k_omega_update = false;
-		    }
-		}
-		break;
-	    case Face.east:
-		i = blk.imax;
-		for (k = blk.kmin; k <= blk.kmax; ++k) {
-		    for (j = blk.jmin; j <= blk.jmax; ++j) {
-			blk.get_cell(i,j,k).allow_k_omega_update = false;
-		    }
-		}
-		break;
-	    case Face.south:
-		j = blk.jmin;
-		for (k = blk.kmin; k <= blk.kmax; ++k) {
-		    for (i = blk.imin; i <= blk.imax; ++i) {
-			blk.get_cell(i,j,k).allow_k_omega_update = false;
-		    }
-		}
-		break;
-	    case Face.west:
-		i = blk.imin;
-		for (k = blk.kmin; k <= blk.kmax; ++k) {
-		    for (j = blk.jmin; j <= blk.jmax; ++j) {
-			blk.get_cell(i,j,k).allow_k_omega_update = false;
-		    }
-		}
-		break;
-	    case Face.top:
-		k = blk.kmax;
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    for (j = blk.jmin; j <= blk.jmax; ++j) {
-			blk.get_cell(i,j,k).allow_k_omega_update = false;
-		    }
-		}
-		break;
-	    case Face.bottom:
-		k = blk.kmin;
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    for (j = blk.jmin; j <= blk.jmax; ++j) {
-			blk.get_cell(i,j,k).allow_k_omega_update = false;
-		    }
-		}
-		break;
-	    } // end switch
-	    _cells_need_to_be_flagged = false;
-	} // end if _cells_need_to_be_flagged
-	//
-	// Do some real work.
-	FVCell cell;
-	FVInterface iface;
+        if (_cells_need_to_be_flagged) {
+            // Apply the cell flags, just once.
+            final switch (which_boundary) {
+            case Face.north:
+                j = blk.jmax;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (i = blk.imin; i <= blk.imax; ++i) {
+                        blk.get_cell(i,j,k).allow_k_omega_update = false;
+                    }
+                }
+                break;
+            case Face.east:
+                i = blk.imax;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        blk.get_cell(i,j,k).allow_k_omega_update = false;
+                    }
+                }
+                break;
+            case Face.south:
+                j = blk.jmin;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (i = blk.imin; i <= blk.imax; ++i) {
+                        blk.get_cell(i,j,k).allow_k_omega_update = false;
+                    }
+                }
+                break;
+            case Face.west:
+                i = blk.imin;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        blk.get_cell(i,j,k).allow_k_omega_update = false;
+                    }
+                }
+                break;
+            case Face.top:
+                k = blk.kmax;
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        blk.get_cell(i,j,k).allow_k_omega_update = false;
+                    }
+                }
+                break;
+            case Face.bottom:
+                k = blk.kmin;
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        blk.get_cell(i,j,k).allow_k_omega_update = false;
+                    }
+                }
+                break;
+            } // end switch
+            _cells_need_to_be_flagged = false;
+        } // end if _cells_need_to_be_flagged
+        //
+        // Do some real work.
+        FVCell cell;
+        FVInterface iface;
 
-	final switch (which_boundary) {
-	case Face.north:
-	    j = blk.jmax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    cell = blk.get_cell(i,j,k);
-		    iface = cell.iface[Face.north];
-		    cell.fs.tke = iface.fs.tke;
-		    cell.fs.omega = iface.fs.omega;
-		} // end i loop
-	    } // for k
-	    break;
-	case Face.east:
-	    i = blk.imax;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    cell = blk.get_cell(i,j,k);
-		    iface = cell.iface[Face.east];
-		    cell.fs.tke = iface.fs.tke;
-		    cell.fs.omega = iface.fs.omega;
-		} // end j loop
-	    } // for k
-	    break;
-	case Face.south:
-	    j = blk.jmin;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (i = blk.imin; i <= blk.imax; ++i) {
-		    cell = blk.get_cell(i,j,k);
-		    iface = cell.iface[Face.south];
-		    cell.fs.tke = iface.fs.tke;
-		    cell.fs.omega = iface.fs.omega;
-		} // end i loop
-	    } // for k
-	    break;
-	case Face.west:
-	    i = blk.imin;
-	    for (k = blk.kmin; k <= blk.kmax; ++k) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    cell = blk.get_cell(i,j,k);
-		    iface = cell.iface[Face.west];
-		    cell.fs.tke = iface.fs.tke;
-		    cell.fs.omega = iface.fs.omega;
-		} // end j loop
-	    } // for k
-	    break;
-	case Face.top:
-	    k = blk.kmax;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    cell = blk.get_cell(i,j,k);
-		    iface = cell.iface[Face.top];
-		    cell.fs.tke = iface.fs.tke;
-		    cell.fs.omega = iface.fs.omega;
-		} // end j loop
-	    } // for i
-	    break;
-	case Face.bottom:
-	    k = blk.kmin;
-	    for (i = blk.imin; i <= blk.imax; ++i) {
-		for (j = blk.jmin; j <= blk.jmax; ++j) {
-		    cell = blk.get_cell(i,j,k);
-		    iface = cell.iface[Face.bottom];
-		    cell.fs.tke = iface.fs.tke;
-		    cell.fs.omega = iface.fs.omega;
-		} // end j loop
-	    } // for i
-	    break;
-	} // end switch
+        final switch (which_boundary) {
+        case Face.north:
+            j = blk.jmax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    iface = cell.iface[Face.north];
+                    cell.fs.tke = iface.fs.tke;
+                    cell.fs.omega = iface.fs.omega;
+                } // end i loop
+            } // for k
+            break;
+        case Face.east:
+            i = blk.imax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    iface = cell.iface[Face.east];
+                    cell.fs.tke = iface.fs.tke;
+                    cell.fs.omega = iface.fs.omega;
+                } // end j loop
+            } // for k
+            break;
+        case Face.south:
+            j = blk.jmin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    cell = blk.get_cell(i,j,k);
+                    iface = cell.iface[Face.south];
+                    cell.fs.tke = iface.fs.tke;
+                    cell.fs.omega = iface.fs.omega;
+                } // end i loop
+            } // for k
+            break;
+        case Face.west:
+            i = blk.imin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    iface = cell.iface[Face.west];
+                    cell.fs.tke = iface.fs.tke;
+                    cell.fs.omega = iface.fs.omega;
+                } // end j loop
+            } // for k
+            break;
+        case Face.top:
+            k = blk.kmax;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    iface = cell.iface[Face.top];
+                    cell.fs.tke = iface.fs.tke;
+                    cell.fs.omega = iface.fs.omega;
+                } // end j loop
+            } // for i
+            break;
+        case Face.bottom:
+            k = blk.kmin;
+            for (i = blk.imin; i <= blk.imax; ++i) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    cell = blk.get_cell(i,j,k);
+                    iface = cell.iface[Face.bottom];
+                    cell.fs.tke = iface.fs.tke;
+                    cell.fs.omega = iface.fs.omega;
+                } // end j loop
+            } // for i
+            break;
+        } // end switch
     } // end apply_structured_grid()
 
 private:

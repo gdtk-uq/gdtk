@@ -17,9 +17,9 @@ string getJSONstring(JSONValue jsonData, string key, string defaultValue)
 {
     string value;
     try {
-	value = to!string(jsonData[key].str);
+        value = to!string(jsonData[key].str);
     } catch (Exception e) {
-	value = defaultValue;
+        value = defaultValue;
     }
     return value;
 } // end getJSONstring()
@@ -28,9 +28,9 @@ int getJSONint(JSONValue jsonData, string key, int defaultValue)
 {
     int value;
     try {
-	value = to!int(jsonData[key].integer);
+        value = to!int(jsonData[key].integer);
     } catch (Exception e) {
-	value = defaultValue;
+        value = defaultValue;
     }
     return value;
 } // end getJSONint()
@@ -39,9 +39,9 @@ double getJSONdouble(JSONValue jsonData, string key, double defaultValue)
 {
     double value;
     try {
-	value = to!double(jsonData[key].floating);
+        value = to!double(jsonData[key].floating);
     } catch (Exception e) {
-	value = defaultValue;
+        value = defaultValue;
     }
     return value;
 } // end getJSONdouble()
@@ -50,9 +50,9 @@ bool getJSONbool(JSONValue jsonData, string key, bool defaultValue)
 {
     bool value;
     try {
-	value = jsonData[key].type is JSON_TYPE.TRUE;
+        value = jsonData[key].type is JSON_TYPE.TRUE;
     } catch (Exception e) {
-	value = defaultValue;
+        value = defaultValue;
     }
     return value;
 } // end getJSONbool()
@@ -61,12 +61,12 @@ int[] getJSONintarray(JSONValue jsonData, string key, int[] defaultValue)
 {
     int[] value;
     try {
-	auto json_values = jsonData[key].array;
-	foreach (json_val; json_values) {
-	    value ~= to!int(json_val.integer);
-	}
+        auto json_values = jsonData[key].array;
+        foreach (json_val; json_values) {
+            value ~= to!int(json_val.integer);
+        }
     } catch (Exception e) {
-	value = defaultValue;
+        value = defaultValue;
     }
     return value;
 } // end getJSONintarray()
@@ -75,12 +75,12 @@ double[] getJSONdoublearray(JSONValue jsonData, string key, double[] defaultValu
 {
     double[] value;
     try {
-	auto json_values = jsonData[key].array;
-	foreach (json_val; json_values) {
-	    value ~= to!double(json_val.floating);
-	}
+        auto json_values = jsonData[key].array;
+        foreach (json_val; json_values) {
+            value ~= to!double(json_val.floating);
+        }
     } catch (Exception e) {
-	value = defaultValue;
+        value = defaultValue;
     }
     return value;
 } // end getJSONdoublearray()
@@ -91,17 +91,17 @@ Vector3 getJSONVector3(JSONValue jsonData, string key, Vector3 defaultValue)
 {
     Vector3 value;
     try {
-	auto json_values = jsonData[key].array;
-	foreach (i, json_val; json_values) {
-	    switch (i) {
-	    case 0: value.refx = to!double(json_val.floating); break;
-	    case 1: value.refy = to!double(json_val.floating); break;
-	    case 2: value.refz = to!double(json_val.floating); break;
-	    default:
-	    }
-	}
+        auto json_values = jsonData[key].array;
+        foreach (i, json_val; json_values) {
+            switch (i) {
+            case 0: value.refx = to!double(json_val.floating); break;
+            case 1: value.refy = to!double(json_val.floating); break;
+            case 2: value.refz = to!double(json_val.floating); break;
+            default:
+            }
+        }
     } catch (Exception e) {
-	value = defaultValue;
+        value = defaultValue;
     }
     return value;
 } // end getJSONVector3()

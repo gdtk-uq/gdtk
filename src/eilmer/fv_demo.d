@@ -36,7 +36,7 @@ void main()
     writeln("-----------------------");
     writeln("face_name[face_index(\"south\")]=", face_name[face_index("south")]);
     writeln("update_scheme_name[update_scheme_index[\"classic_rk3\"]]=",
-	    gasdynamic_update_scheme_name(update_scheme_from_name("classic_rk3")));
+            gasdynamic_update_scheme_name(update_scheme_from_name("classic_rk3")));
 
     writeln("-----------------------");
     auto iface = new FVInterface(gm, false, false);
@@ -52,10 +52,10 @@ void main()
     LocalConfig myConfig = new LocalConfig();
     auto cell = new FVCell(myConfig);
     writeln("variable_list_for_cell=", variable_list_for_cell(myConfig.gmodel, myConfig.include_quality,
-							      myConfig.MHD, myConfig.divergence_cleaning,
-							      myConfig.radiation));
+                                                              myConfig.MHD, myConfig.divergence_cleaning,
+                                                              myConfig.radiation));
     string sample = "1.0 2.0 3.0 0.000999 0.1 1.1 1.2 1.3 100.0e3 345.0 1.8e-5 "
-	~ "0.0123 0.999 0.0888 1 0.05 1.009 1.0 2.65e5 311";
+        ~ "0.0123 0.999 0.0888 1 0.05 1.009 1.0 2.65e5 311";
     cell.scan_values_from_string(sample, true);
     cell.encode_conserved(0, 0, 0.0);
     cell.decode_conserved(0, 0, 0.0);

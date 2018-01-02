@@ -38,8 +38,8 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, Ga
     int number_results = 1;
 
     if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-	    luaL_error(L, "error running user soure terms function: %s\n",
-		       lua_tostring(L, -1));
+            luaL_error(L, "error running user soure terms function: %s\n",
+                       lua_tostring(L, -1));
     }
     
     // Grab values from user-returned table at TOS
@@ -53,46 +53,46 @@ void addUDFSourceTermsToCell(lua_State* L, FVCell cell, size_t gtl, double t, Ga
     cell.Q.omega += getNumberFromTable(L, -1, "omega", false, 0.0);
     lua_getfield(L, -1, "species");
     if ( lua_istable(L, -1) ) {
-	// Iterate over species by names.
-	int idx = lua_gettop(L);
-	lua_pushnil(L);
-	while ( lua_next(L, idx) != 0 ) {
-	    string key = to!string(lua_tostring(L, -2));
-	    auto isp = gmodel.species_index(key);
-	    if ( isp == -1 ) {
-		string errMsg = format("ERROR: In the user-defined source terms, the species name '%s'\n", key);
-		errMsg ~= "in the species table is not a valid species name.\n";
-		lua_pop(L, 1);
-		throw new LuaInputException(errMsg);
-	    }
-	    cell.Q.massf[isp] += lua_tonumber(L, -1);
-	    lua_pop(L, 1);
-	}
-	lua_pop(L, 1);
+        // Iterate over species by names.
+        int idx = lua_gettop(L);
+        lua_pushnil(L);
+        while ( lua_next(L, idx) != 0 ) {
+            string key = to!string(lua_tostring(L, -2));
+            auto isp = gmodel.species_index(key);
+            if ( isp == -1 ) {
+                string errMsg = format("ERROR: In the user-defined source terms, the species name '%s'\n", key);
+                errMsg ~= "in the species table is not a valid species name.\n";
+                lua_pop(L, 1);
+                throw new LuaInputException(errMsg);
+            }
+            cell.Q.massf[isp] += lua_tonumber(L, -1);
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
     }
     else {
-	// Get rid of species table first.
-	lua_pop(L, 1);
-	// For the single-species case, we just set the 
-	// source terms of the single-species to equal
-	// that of the mass term.
-	if ( n_species == 1 ) {
-	    cell.Q.massf[0] += getNumberFromTable(L, -1, "mass", false, 0.0);
-	}
-	// For multi-component gases, there is really no sensible
-	// decision, so leave it alone.
+        // Get rid of species table first.
+        lua_pop(L, 1);
+        // For the single-species case, we just set the 
+        // source terms of the single-species to equal
+        // that of the mass term.
+        if ( n_species == 1 ) {
+            cell.Q.massf[0] += getNumberFromTable(L, -1, "mass", false, 0.0);
+        }
+        // For multi-component gases, there is really no sensible
+        // decision, so leave it alone.
     }
 
     if (n_modes > 0) {
-	lua_getfield(L, -1, "energies");
-	if ( !lua_isnil(L, -1) ) {
-	    for ( int imode = 0; imode < n_modes; ++imode ) {
-		lua_rawgeti(L, -1, imode+1);
-		cell.Q.energies[imode] += lua_tonumber(L, -1);
-		lua_pop(L, 1);
-	    }
-	}
-	lua_pop(L, 1);
+        lua_getfield(L, -1, "energies");
+        if ( !lua_isnil(L, -1) ) {
+            for ( int imode = 0; imode < n_modes; ++imode ) {
+                lua_rawgeti(L, -1, imode+1);
+                cell.Q.energies[imode] += lua_tonumber(L, -1);
+                lua_pop(L, 1);
+            }
+        }
+        lua_pop(L, 1);
     }
 
     // Clear stack.

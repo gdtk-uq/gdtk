@@ -39,8 +39,8 @@ void addUDFSourceTermsToSolidCell(lua_State* L, SolidFVCell cell, double t)
     int number_results = 1;
 
     if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
-	luaL_error(L, "error running solid source terms function: %s\n",
-		   lua_tostring(L, -1));
+        luaL_error(L, "error running solid source terms function: %s\n",
+                   lua_tostring(L, -1));
     }
     
     // Grab the energy source term

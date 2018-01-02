@@ -27,8 +27,8 @@ lua_State* init_lua_State()
 void doLuaFile(lua_State* L, string fname)
 {
     if ( luaL_dofile(L, fname.toStringz) != 0 ) {
-	string errMsg = to!string(lua_tostring(L, -1));
-	throw new Error(errMsg);
+        string errMsg = to!string(lua_tostring(L, -1));
+        throw new Error(errMsg);
     }
 }
 
@@ -36,9 +36,9 @@ string getString(lua_State* L, int tblIdx, string key)
 {
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isstring(L, -1) ) {
-	string errMsg = format("A string was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("A string was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     string val = to!string(lua_tostring(L, -1));
     lua_pop(L, 1);
@@ -49,9 +49,9 @@ double getDouble(lua_State* L, int tblIdx, string key)
 {
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isnumber(L, -1) ) {
-	string errMsg = format("A double was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("A double was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     double val = lua_tonumber(L, -1);
     lua_pop(L, 1);
@@ -62,9 +62,9 @@ int getInt(lua_State* L, int tblIdx, string key)
 {
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isnumber(L, -1) ) {
-	string errMsg = format("An integer was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("An integer was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     int val = to!int(lua_tointeger(L, -1));
     lua_pop(L, 1);
@@ -75,9 +75,9 @@ bool getBool(lua_State* L, int tblIdx, string key)
 {
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_isboolean(L, -1) ) {
-	string errMsg = format("A boolean value was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("A boolean value was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     bool val = to!bool(lua_toboolean(L, -1));
     lua_pop(L, 1);
@@ -89,16 +89,16 @@ void getArrayOfStrings(lua_State* L, int tblIdx, string key, out string[] values
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
-	string errMsg = format("A table of strings was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("A table of strings was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     auto n = to!int(lua_objlen(L, -1));
     foreach ( i; 1..n+1 ) {
-	lua_rawgeti(L, -1, i);
-	if ( lua_isstring(L, -1) ) values ~= to!string(lua_tostring(L, -1));
-	// Silently ignore anything that isn't a string value.
-	lua_pop(L, 1);
+        lua_rawgeti(L, -1, i);
+        if ( lua_isstring(L, -1) ) values ~= to!string(lua_tostring(L, -1));
+        // Silently ignore anything that isn't a string value.
+        lua_pop(L, 1);
     }
     lua_pop(L, 1);
 }
@@ -112,16 +112,16 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
-	string errMsg = format("A table of numbers was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("A table of numbers was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     auto n = to!int(lua_objlen(L, -1));
     foreach ( i; 1..n+1 ) {
-	lua_rawgeti(L, -1, i);
-	if ( lua_isnumber(L, -1) ) values ~= lua_tonumber(L, -1);
-	// Silently ignore anything that isn't a value.
-	lua_pop(L, 1);
+        lua_rawgeti(L, -1, i);
+        if ( lua_isnumber(L, -1) ) values ~= lua_tonumber(L, -1);
+        // Silently ignore anything that isn't a value.
+        lua_pop(L, 1);
     }
     lua_pop(L, 1);
 }
@@ -135,16 +135,16 @@ void getArrayOfInts(lua_State* L, int tblIdx, string key, out int[] values)
     values.length = 0;
     lua_getfield(L, tblIdx, key.toStringz);
     if ( !lua_istable(L, -1) ) {
-	string errMsg = format("A table of integers was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("A table of integers was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     auto n = to!int(lua_objlen(L, -1));
     foreach ( i; 1..n+1 ) {
-	lua_rawgeti(L, -1, i);
-	if ( lua_isnumber(L, -1) ) values ~= to!int(lua_tointeger(L, -1));
-	// Silently ignore anything that isn't a value.
-	lua_pop(L, 1);
+        lua_rawgeti(L, -1, i);
+        if ( lua_isnumber(L, -1) ) values ~= to!int(lua_tointeger(L, -1));
+        // Silently ignore anything that isn't a value.
+        lua_pop(L, 1);
     }
     lua_pop(L, 1);
 }
@@ -153,12 +153,12 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double
 {
     lua_getfield(L, -1, key.toStringz);
     if ( !lua_istable(L, -1) ) {
-	string errMsg = format("A table with key and values (doubles) was expected in field: %s", key);
-	lua_pop(L, 1);
-	throw new Error(errMsg);
+        string errMsg = format("A table with key and values (doubles) was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
     }
     foreach (p; pList) {
-	params[p] = getDouble(L, -1, p);
+        params[p] = getDouble(L, -1, p);
     }
     lua_pop(L, 1);
 } 
@@ -224,15 +224,15 @@ bool isObjType(lua_State* L, int index, string tname)
     bool result;
     void *p = lua_touserdata(L, index);
     if ( p ) {  // value is a userdata? 
-	if (lua_getmetatable(L, index)) {  // does it have a metatable? 
-	    luaL_getmetatable(L, tname.toStringz);  // get correct metatable 
-	    if ( lua_rawequal(L, -1, -2) )  // the same? 
-		result = true;
-	    else
-		result = false;
-	    lua_pop(L, 2);  // remove both metatables 
-	    return result;
-	}
+        if (lua_getmetatable(L, index)) {  // does it have a metatable? 
+            luaL_getmetatable(L, tname.toStringz);  // get correct metatable 
+            if ( lua_rawequal(L, -1, -2) )  // the same? 
+                result = true;
+            else
+                result = false;
+            lua_pop(L, 2);  // remove both metatables 
+            return result;
+        }
     }
     return false;  // value is not a userdata with a metatable
 }
@@ -268,28 +268,28 @@ extern(C) int toStringObj(T, string metatableName)(lua_State* L)
  */
 
 double getNumberFromTable(lua_State* L, int index, string field,
-			  bool errorIfNotFound=false, double valIfError=double.init,
-			  bool errorIfNotValid=false, string errMsg="")
+                          bool errorIfNotFound=false, double valIfError=double.init,
+                          bool errorIfNotValid=false, string errMsg="")
 {
     lua_getfield(L, index, field.toStringz);
     if ( lua_isnil(L, -1) ) {
-	if ( errorIfNotFound ) {
-	    luaL_error(L, errMsg.toStringz);
-	}
-	else { // We didn't really care
-	    lua_pop(L, 1);
-	    return valIfError;
-	}
+        if ( errorIfNotFound ) {
+            luaL_error(L, errMsg.toStringz);
+        }
+        else { // We didn't really care
+            lua_pop(L, 1);
+            return valIfError;
+        }
     }
     // Presumably then we have something to look at.
     if ( lua_isnumber(L, -1) ) {
-	auto val = lua_tonumber(L, -1);
-	lua_pop(L, 1);
-	return val;
+        auto val = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        return val;
     }
     // else, failed to find a number value.
     if ( errorIfNotValid ) {
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     // We didn't want to fail, so give back double.init
     lua_pop(L, 1);
@@ -299,54 +299,54 @@ double getNumberFromTable(lua_State* L, int index, string field,
 
 
 int getIntegerFromTable(lua_State* L, int index, string field,
-			bool errorIfNotFound=false, int valIfError=int.init,
-			bool errorIfNotValid=false, string errMsg="")
+                        bool errorIfNotFound=false, int valIfError=int.init,
+                        bool errorIfNotValid=false, string errMsg="")
 {
     lua_getfield(L, index, field.toStringz);
     if ( lua_isnil(L, -1) ) {
-	if ( errorIfNotFound ) {
-	    luaL_error(L, errMsg.toStringz);
-	}
-	else { // We didn't really care
-	    return valIfError;
-	}
+        if ( errorIfNotFound ) {
+            luaL_error(L, errMsg.toStringz);
+        }
+        else { // We didn't really care
+            return valIfError;
+        }
     }
     // Presumably then we have something to look at.
     if ( lua_isnumber(L, -1) ) {
-	auto val = to!int(lua_tointeger(L, -1));
-	lua_pop(L, 1);
-	return val;
+        auto val = to!int(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        return val;
     }
     // else, failed to find an integer value.
     if ( errorIfNotValid ) {
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     // We didn't want to fail, so give back int.init
     return valIfError;
 } // end getIntegerFromTable()
 
 bool getBooleanFromTable(lua_State* L, int index, string field,
-			 bool errorIfNotFound=false, bool valIfError=bool.init,
-			 bool errorIfNotValid=false, string errMsg="")
+                         bool errorIfNotFound=false, bool valIfError=bool.init,
+                         bool errorIfNotValid=false, string errMsg="")
 {
     lua_getfield(L, index, field.toStringz);
     if ( lua_isnil(L, -1) ) {
-	if ( errorIfNotFound ) {
-	    luaL_error(L, errMsg.toStringz);
-	}
-	else { // We didn't really care
-	    return valIfError;
-	}
+        if ( errorIfNotFound ) {
+            luaL_error(L, errMsg.toStringz);
+        }
+        else { // We didn't really care
+            return valIfError;
+        }
     }
     // Presumably then we have something to look at.
     if ( lua_isboolean(L, -1) ) {
-	auto val = lua_toboolean(L, -1);
-	lua_pop(L, 1);
-	return val;
+        auto val = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        return val;
     }
     // else, failed to find a boolean value.
     if ( errorIfNotValid ) {
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     // We didn't want to fail, so give back bool.init
     return valIfError;
@@ -358,13 +358,13 @@ bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
     // Iterate through the table and check each key (name).
     lua_pushnil(L); // first key
     while (lua_next(L, tblIndx) != 0) {
-	// next key is left on stack at -2, value at -1
-	string key = to!string(lua_tostring(L, -2));
-	if (!canFind(allowedNames, key)) {
-	    writeln("Warning: Invalid name: ", key);
-	    namesOk = false;
-	}
-	lua_pop(L, 1); // discard value but keep key for next
+        // next key is left on stack at -2, value at -1
+        string key = to!string(lua_tostring(L, -2));
+        if (!canFind(allowedNames, key)) {
+            writeln("Warning: Invalid name: ", key);
+            namesOk = false;
+        }
+        lua_pop(L, 1); // discard value but keep key for next
     } // end while
     return namesOk;
 } // end checkAllowedNames()
@@ -381,9 +381,9 @@ bool checkAllowedNames(lua_State* L, int tblIndx, string[] allowedNames)
  */
 class LuaInputException : Exception {
     this(string message, string file=__FILE__, size_t line=__LINE__,
-	 Throwable next=null)
+         Throwable next=null)
     {
-	super(message, file, line, next);
+        super(message, file, line, next);
     }
 }
 
@@ -427,10 +427,10 @@ unittest
     /// Test 5. Expect an exit exception when we go for an invalid key.
     keys3[0] = "AA";
     try {
-	getValues(t, keys3, vals, "test6");
+        getValues(t, keys3, vals, "test6");
     }
     catch (Exception e) {
-	assert(e);
+        assert(e);
     }
 }
 */

@@ -32,7 +32,7 @@ version (opencl_gpu_chem) {
     import opencl_gpu_chem;
 }
 version (cuda_gpu_chem) {
-     import cuda_gpu_chem;	
+     import cuda_gpu_chem;      
 }
 import json_helper;
 import globaldata;
@@ -136,44 +136,44 @@ class BlockZone {
     // because we will want to access them frequently at the lower levels of the code.
     Vector3 p0, p1;
     this(in Vector3 p0, in Vector3 p1) {
-	this.p0 = p0;
-	this.p1 = p1;
+        this.p0 = p0;
+        this.p1 = p1;
     }
     this(const BlockZone other)
     {
-	p0 = other.p0;
-	p1 = other.p1;
+        p0 = other.p0;
+        p1 = other.p1;
     }
     override string toString() {
-	return text("BlockZone(p0=", to!string(p0), ", p1=", to!string(p1), ")");
+        return text("BlockZone(p0=", to!string(p0), ", p1=", to!string(p1), ")");
     }
     bool is_inside(in Vector3 p, int dimensions) {
-	if ( p.x >= p0.x && p.x <= p1.x &&
-	     p.y >= p0.y && p.y <= p1.y ) {
-	    if ( dimensions == 2 ) {
-		return true;
-	    } else if ( p.z >= p0.z && p.z <= p1.z ) {
-		return true;
-	    }
-	}
-	return false;
+        if ( p.x >= p0.x && p.x <= p1.x &&
+             p.y >= p0.y && p.y <= p1.y ) {
+            if ( dimensions == 2 ) {
+                return true;
+            } else if ( p.z >= p0.z && p.z <= p1.z ) {
+                return true;
+            }
+        }
+        return false;
     } // end is_inside()
 }
 
 class IgnitionZone : BlockZone {
     double Tig; // temperature to apply within reaction_update ensure ignition
     this(in Vector3 p0, in Vector3 p1, double Tig) {
-	super(p0, p1);
-	this.Tig = Tig;
+        super(p0, p1);
+        this.Tig = Tig;
     }
     this(const IgnitionZone other)
     {
-	super(other.p0, other.p1);
-	Tig = other.Tig;
+        super(other.p0, other.p1);
+        Tig = other.Tig;
     }
     override string toString() {
-	return text("IgnitionZone(p0=", to!string(p0), ", p1=", to!string(p1), 
-		    ", Tig=", Tig, ")");
+        return text("IgnitionZone(p0=", to!string(p0), ", p1=", to!string(p1), 
+                    ", Tig=", Tig, ")");
     }
 }
 
@@ -505,16 +505,16 @@ final class GlobalConfig {
 
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
-	static GPUChem gpuChem;
+        static GPUChem gpuChem;
     }
 
     version (steady_state) {
-	static SteadyStateSolverOptions sssOptions;
+        static SteadyStateSolverOptions sssOptions;
     }
 
     ~this()
     {
-	lua_close(master_lua_State);
+        lua_close(master_lua_State);
     }
 
 } // end class GlobalConfig
@@ -617,119 +617,119 @@ public:
     int verbosity_level;
 
     version (steady_state) {
-	SteadyStateSolverOptions sssOptions;
+        SteadyStateSolverOptions sssOptions;
     }
 
     this(int universe_blk_id) 
     {
-	this.universe_blk_id = universe_blk_id;
-	grid_format = GlobalConfig.grid_format;
-	flow_format = GlobalConfig.flow_format;
-	dimensions = GlobalConfig.dimensions;
-	axisymmetric = GlobalConfig.axisymmetric;
-	gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
-	n_flow_time_levels = GlobalConfig.n_flow_time_levels;
-	grid_motion = GlobalConfig.grid_motion;
-	udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
-	n_grid_time_levels = GlobalConfig.n_grid_time_levels;
-	//
-	shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
-	shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
-	//
-	solid_has_isotropic_properties = GlobalConfig.solid_has_isotropic_properties;
-	solid_has_homogeneous_properties = GlobalConfig.solid_has_homogeneous_properties;
-	//
-	adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
-	report_invalid_cells = GlobalConfig.report_invalid_cells;
-	flowstate_limits = GlobalConfig.flowstate_limits;
-	interpolation_order = GlobalConfig.interpolation_order;
-	thermo_interpolator = GlobalConfig.thermo_interpolator;
-	allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
-	apply_limiter = GlobalConfig.apply_limiter;
-	extrema_clipping = GlobalConfig.extrema_clipping;
-	interpolate_in_local_frame = GlobalConfig.interpolate_in_local_frame;
-	unstructured_limiter = GlobalConfig.unstructured_limiter;
-	use_extended_stencil = GlobalConfig.use_extended_stencil;
-	flux_calculator = GlobalConfig.flux_calculator;
-	shear_tolerance = GlobalConfig.shear_tolerance;
-	M_inf = GlobalConfig.M_inf;
-	compression_tolerance = GlobalConfig.compression_tolerance;
-	artificial_compressibility = GlobalConfig.artificial_compressibility;
-	ac_alpha = GlobalConfig.ac_alpha;
-	//
-	radiation = GlobalConfig.radiation;
-	electric_field_work = GlobalConfig.electric_field_work;
-	MHD = GlobalConfig.MHD;
-	MHD_static_field = GlobalConfig.MHD_static_field;
-	MHD_resistive = GlobalConfig.MHD_resistive;
-	divergence_cleaning = GlobalConfig.divergence_cleaning;
-	c_h = GlobalConfig.c_h;
-	divB_damping_length = GlobalConfig.divB_damping_length;
-	//
-	viscous = GlobalConfig.viscous;
-	use_viscosity_from_cells = GlobalConfig.use_viscosity_from_cells;
-	spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
-	spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
-	include_ghost_cells_in_spatial_deriv_clouds = 
-	    GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
-	suppress_reconstruction_at_boundaries =
-	    GlobalConfig.suppress_reconstruction_at_boundaries;
-	viscous_factor = GlobalConfig.viscous_factor;
-	mass_diffusion_model = GlobalConfig.mass_diffusion_model;
-	constant_lewis_number = GlobalConfig.constant_lewis_number;
-	lewis_number = GlobalConfig.lewis_number;
-	//
-	stringent_cfl = GlobalConfig.stringent_cfl;
-	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
-	//
-	separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
-	separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
-	//
-	turbulence_model = GlobalConfig.turbulence_model;
-	turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
-	turbulence_schmidt_number = GlobalConfig.turbulence_schmidt_number;
-	max_mu_t_factor = GlobalConfig.max_mu_t_factor;
-	transient_mu_t_factor = GlobalConfig.transient_mu_t_factor;
-	limit_tke_production = GlobalConfig.limit_tke_production;
-	tke_production_limit_in_kelvins = GlobalConfig.tke_production_limit_in_kelvins;
-	foreach (bz; GlobalConfig.turbulent_zones) { turbulent_zones ~= new BlockZone(bz); }
-	//
-	udf_source_terms = GlobalConfig.udf_source_terms;
-	//
-	reacting = GlobalConfig.reacting;
-	reaction_time_delay = GlobalConfig.reaction_time_delay;
-	T_frozen = GlobalConfig.T_frozen;
-	T_frozen_energy = GlobalConfig.T_frozen_energy;
-	foreach (rz; GlobalConfig.reaction_zones) { reaction_zones ~= new BlockZone(rz); }
-	tci_model = GlobalConfig.tci_model;
-	//
-	ignition_time_start = GlobalConfig.ignition_time_start;
-	ignition_time_stop = GlobalConfig.ignition_time_stop;
-	ignition_zone_active = GlobalConfig.ignition_zone_active;
-	foreach (iz; GlobalConfig.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
-	//
-	gmodel = init_gas_model(GlobalConfig.gas_model_file);
-	if (mass_diffusion_model != MassDiffusionModel.none) {
-	    massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model,
-					      GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
-	}
-	include_quality = GlobalConfig.include_quality;
-	if (GlobalConfig.reacting) {
-	    thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file, GlobalConfig.energy_exchange_file);
-	}
-	//
-	verbosity_level = GlobalConfig.verbosity_level;
-	//
-	version (steady_state) {
-	    sssOptions = GlobalConfig.sssOptions;
-	}
+        this.universe_blk_id = universe_blk_id;
+        grid_format = GlobalConfig.grid_format;
+        flow_format = GlobalConfig.flow_format;
+        dimensions = GlobalConfig.dimensions;
+        axisymmetric = GlobalConfig.axisymmetric;
+        gasdynamic_update_scheme = GlobalConfig.gasdynamic_update_scheme;
+        n_flow_time_levels = GlobalConfig.n_flow_time_levels;
+        grid_motion = GlobalConfig.grid_motion;
+        udf_grid_motion_file = GlobalConfig.udf_grid_motion_file;
+        n_grid_time_levels = GlobalConfig.n_grid_time_levels;
+        //
+        shock_fitting_interpolation_order = GlobalConfig.shock_fitting_interpolation_order;
+        shock_fitting_scale_factor = GlobalConfig.shock_fitting_scale_factor;
+        //
+        solid_has_isotropic_properties = GlobalConfig.solid_has_isotropic_properties;
+        solid_has_homogeneous_properties = GlobalConfig.solid_has_homogeneous_properties;
+        //
+        adjust_invalid_cell_data = GlobalConfig.adjust_invalid_cell_data;
+        report_invalid_cells = GlobalConfig.report_invalid_cells;
+        flowstate_limits = GlobalConfig.flowstate_limits;
+        interpolation_order = GlobalConfig.interpolation_order;
+        thermo_interpolator = GlobalConfig.thermo_interpolator;
+        allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
+        apply_limiter = GlobalConfig.apply_limiter;
+        extrema_clipping = GlobalConfig.extrema_clipping;
+        interpolate_in_local_frame = GlobalConfig.interpolate_in_local_frame;
+        unstructured_limiter = GlobalConfig.unstructured_limiter;
+        use_extended_stencil = GlobalConfig.use_extended_stencil;
+        flux_calculator = GlobalConfig.flux_calculator;
+        shear_tolerance = GlobalConfig.shear_tolerance;
+        M_inf = GlobalConfig.M_inf;
+        compression_tolerance = GlobalConfig.compression_tolerance;
+        artificial_compressibility = GlobalConfig.artificial_compressibility;
+        ac_alpha = GlobalConfig.ac_alpha;
+        //
+        radiation = GlobalConfig.radiation;
+        electric_field_work = GlobalConfig.electric_field_work;
+        MHD = GlobalConfig.MHD;
+        MHD_static_field = GlobalConfig.MHD_static_field;
+        MHD_resistive = GlobalConfig.MHD_resistive;
+        divergence_cleaning = GlobalConfig.divergence_cleaning;
+        c_h = GlobalConfig.c_h;
+        divB_damping_length = GlobalConfig.divB_damping_length;
+        //
+        viscous = GlobalConfig.viscous;
+        use_viscosity_from_cells = GlobalConfig.use_viscosity_from_cells;
+        spatial_deriv_calc = GlobalConfig.spatial_deriv_calc;
+        spatial_deriv_locn = GlobalConfig.spatial_deriv_locn;
+        include_ghost_cells_in_spatial_deriv_clouds = 
+            GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
+        suppress_reconstruction_at_boundaries =
+            GlobalConfig.suppress_reconstruction_at_boundaries;
+        viscous_factor = GlobalConfig.viscous_factor;
+        mass_diffusion_model = GlobalConfig.mass_diffusion_model;
+        constant_lewis_number = GlobalConfig.constant_lewis_number;
+        lewis_number = GlobalConfig.lewis_number;
+        //
+        stringent_cfl = GlobalConfig.stringent_cfl;
+        viscous_signal_factor = GlobalConfig.viscous_signal_factor;
+        //
+        separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
+        separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
+        //
+        turbulence_model = GlobalConfig.turbulence_model;
+        turbulence_prandtl_number = GlobalConfig.turbulence_prandtl_number;
+        turbulence_schmidt_number = GlobalConfig.turbulence_schmidt_number;
+        max_mu_t_factor = GlobalConfig.max_mu_t_factor;
+        transient_mu_t_factor = GlobalConfig.transient_mu_t_factor;
+        limit_tke_production = GlobalConfig.limit_tke_production;
+        tke_production_limit_in_kelvins = GlobalConfig.tke_production_limit_in_kelvins;
+        foreach (bz; GlobalConfig.turbulent_zones) { turbulent_zones ~= new BlockZone(bz); }
+        //
+        udf_source_terms = GlobalConfig.udf_source_terms;
+        //
+        reacting = GlobalConfig.reacting;
+        reaction_time_delay = GlobalConfig.reaction_time_delay;
+        T_frozen = GlobalConfig.T_frozen;
+        T_frozen_energy = GlobalConfig.T_frozen_energy;
+        foreach (rz; GlobalConfig.reaction_zones) { reaction_zones ~= new BlockZone(rz); }
+        tci_model = GlobalConfig.tci_model;
+        //
+        ignition_time_start = GlobalConfig.ignition_time_start;
+        ignition_time_stop = GlobalConfig.ignition_time_stop;
+        ignition_zone_active = GlobalConfig.ignition_zone_active;
+        foreach (iz; GlobalConfig.ignition_zones) { ignition_zones ~= new IgnitionZone(iz); }
+        //
+        gmodel = init_gas_model(GlobalConfig.gas_model_file);
+        if (mass_diffusion_model != MassDiffusionModel.none) {
+            massDiffusion = initMassDiffusion(gmodel, mass_diffusion_model,
+                                              GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
+        }
+        include_quality = GlobalConfig.include_quality;
+        if (GlobalConfig.reacting) {
+            thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file, GlobalConfig.energy_exchange_file);
+        }
+        //
+        verbosity_level = GlobalConfig.verbosity_level;
+        //
+        version (steady_state) {
+            sssOptions = GlobalConfig.sssOptions;
+        }
     } // end constructor
 
     void update_control_parameters()
     // to be used after reading job.control file.
     {
-	stringent_cfl = GlobalConfig.stringent_cfl;
-	viscous_signal_factor = GlobalConfig.viscous_signal_factor;
+        stringent_cfl = GlobalConfig.stringent_cfl;
+        viscous_signal_factor = GlobalConfig.viscous_signal_factor;
     }
 } // end class LocalConfig
 
@@ -759,10 +759,10 @@ string update_enum(string key, string field, string enum_from_name)
     return "{ // start new block scope
     auto mySaveValue = GlobalConfig."~field~";
     try {
-	string name = jsonData[\""~key~"\"].str;
-	GlobalConfig."~field~" = "~enum_from_name~"(name);
+        string name = jsonData[\""~key~"\"].str;
+        GlobalConfig."~field~" = "~enum_from_name~"(name);
     } catch (Exception e) {
-	GlobalConfig."~field~" = mySaveValue;
+        GlobalConfig."~field~" = mySaveValue;
     }
     }";
 }
@@ -775,17 +775,17 @@ void read_config_file()
     try {
         content = readText(fileName);
     } catch (Exception e) {
-	writeln("Failed to read config file: ", fileName);
-	writeln("Message is: ", e.msg);
-	exit(1);
+        writeln("Failed to read config file: ", fileName);
+        writeln("Message is: ", e.msg);
+        exit(1);
     }
     JSONValue jsonData;
     try {
-	jsonData = parseJSON!string(content);
+        jsonData = parseJSON!string(content);
     } catch (Exception e) {
-	writeln("Failed to parse JSON from config file: ", fileName);
-	writeln("Message is: ", e.msg);
-	exit(1);
+        writeln("Failed to parse JSON from config file: ", fileName);
+        writeln("Message is: ", e.msg);
+        exit(1);
     }
     // Now that we have parsed JSON data, proceed to update those config values.
     // Note that some of the lines below are much longer than PJ would normally tolerate.
@@ -801,14 +801,14 @@ void read_config_file()
     mixin(update_int("dimensions", "dimensions"));
     mixin(update_bool("axisymmetric", "axisymmetric"));
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  grid_format: ", to!string(GlobalConfig.grid_format));
-	writeln("  flow_format: ", to!string(GlobalConfig.flow_format));
-	writeln("  title: ", to!string(GlobalConfig.title));
-	writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
-	writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
-	writeln("  include_quality: ", GlobalConfig.include_quality);
-	writeln("  dimensions: ", GlobalConfig.dimensions);
-	writeln("  axisymmetric: ", GlobalConfig.axisymmetric);
+        writeln("  grid_format: ", to!string(GlobalConfig.grid_format));
+        writeln("  flow_format: ", to!string(GlobalConfig.flow_format));
+        writeln("  title: ", to!string(GlobalConfig.title));
+        writeln("  gas_model_file: ", to!string(GlobalConfig.gas_model_file));
+        writeln("  udf_supervisor_file: ", to!string(GlobalConfig.udf_supervisor_file));
+        writeln("  include_quality: ", GlobalConfig.include_quality);
+        writeln("  dimensions: ", GlobalConfig.dimensions);
+        writeln("  axisymmetric: ", GlobalConfig.axisymmetric);
     }
 
     // Parameters controlling convective update and size of storage arrays
@@ -817,9 +817,9 @@ void read_config_file()
     GlobalConfig.n_flow_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
     mixin(update_enum("grid_motion", "grid_motion", "grid_motion_from_name"));
     if (GlobalConfig.grid_motion == GridMotion.none) {
-	GlobalConfig.n_grid_time_levels = 1;
+        GlobalConfig.n_grid_time_levels = 1;
     } else {
-	GlobalConfig.n_grid_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
+        GlobalConfig.n_grid_time_levels = 1 + number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme);
     }
     mixin(update_bool("write_vertex_velocities", "write_vertex_velocities"));
     mixin(update_string("udf_grid_motion_file", "udf_grid_motion_file"));
@@ -876,41 +876,41 @@ void read_config_file()
     configCheckPoint1();
 
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
-	writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
-	writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
-	writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
-	writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
-	writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
-	writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
-	writeln("  coupling_with_solid_domains: ", GlobalConfig.coupling_with_solid_domains);
-	writeln("  solid_has_isotropic_properties: ", GlobalConfig.solid_has_isotropic_properties);
-	writeln("  solid_has_homogeneous_properties: ", GlobalConfig.solid_has_homogeneous_properties);
-	writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
-	writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
-	writeln("  flowstate_limits_max_tke: ", GlobalConfig.flowstate_limits.max_tke);
-	writeln("  flowstate_limits_min_tke: ", GlobalConfig.flowstate_limits.min_tke);
-	writeln("  flowstate_limits_max_temp: ", GlobalConfig.flowstate_limits.max_temp);
-	writeln("  flowstate_limits_min_temp: ", GlobalConfig.flowstate_limits.min_temp);
-	writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
-	writeln("  report_invalid_cells: ", GlobalConfig.report_invalid_cells);
-	writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
-	writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
-	writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
-	writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
-	writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
-	writeln("  use_extended_stencil: ", GlobalConfig.use_extended_stencil);
-	writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
-	writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
-	writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
-	writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
-	writeln("  M_inf: ", GlobalConfig.M_inf);
-	writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
-	writeln("  MHD: ", GlobalConfig.MHD);
-	writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
-	writeln("  MHD_resistive: ", GlobalConfig.MHD_resistive);
-	writeln("  divergence_cleaning: ", GlobalConfig.divergence_cleaning);
-	writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
+        writeln("  gasdynamic_update_scheme: ", gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme));
+        writeln("  grid_motion: ", grid_motion_name(GlobalConfig.grid_motion));
+        writeln("  write_vertex_velocities: ", GlobalConfig.write_vertex_velocities);
+        writeln("  udf_grid_motion_file: ", to!string(GlobalConfig.udf_grid_motion_file));
+        writeln("  shock_fitting_delay: ", GlobalConfig.shock_fitting_delay);
+        writeln("  shock_fitting_interpolation_order: ", GlobalConfig.shock_fitting_interpolation_order);
+        writeln("  shock_fitting_scale_factor: ", GlobalConfig.shock_fitting_scale_factor);
+        writeln("  coupling_with_solid_domains: ", GlobalConfig.coupling_with_solid_domains);
+        writeln("  solid_has_isotropic_properties: ", GlobalConfig.solid_has_isotropic_properties);
+        writeln("  solid_has_homogeneous_properties: ", GlobalConfig.solid_has_homogeneous_properties);
+        writeln("  apply_bcs_in_parallel: ", GlobalConfig.apply_bcs_in_parallel);
+        writeln("  flowstate_limits_max_velocity: ", GlobalConfig.flowstate_limits.max_velocity);
+        writeln("  flowstate_limits_max_tke: ", GlobalConfig.flowstate_limits.max_tke);
+        writeln("  flowstate_limits_min_tke: ", GlobalConfig.flowstate_limits.min_tke);
+        writeln("  flowstate_limits_max_temp: ", GlobalConfig.flowstate_limits.max_temp);
+        writeln("  flowstate_limits_min_temp: ", GlobalConfig.flowstate_limits.min_temp);
+        writeln("  adjust_invalid_cell_data: ", GlobalConfig.adjust_invalid_cell_data);
+        writeln("  report_invalid_cells: ", GlobalConfig.report_invalid_cells);
+        writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
+        writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
+        writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
+        writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
+        writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
+        writeln("  use_extended_stencil: ", GlobalConfig.use_extended_stencil);
+        writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
+        writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
+        writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
+        writeln("  shear_tolerance: ", GlobalConfig.shear_tolerance);
+        writeln("  M_inf: ", GlobalConfig.M_inf);
+        writeln("  compression_tolerance: ", GlobalConfig.compression_tolerance);
+        writeln("  MHD: ", GlobalConfig.MHD);
+        writeln("  MHD_static_field: ", GlobalConfig.MHD_static_field);
+        writeln("  MHD_resistive: ", GlobalConfig.MHD_resistive);
+        writeln("  divergence_cleaning: ", GlobalConfig.divergence_cleaning);
+        writeln("  divB_damping_length: ", GlobalConfig.divB_damping_length);
     }
     configCheckPoint2();
 
@@ -937,40 +937,40 @@ void read_config_file()
     mixin(update_bool("limit_tke_production", "limit_tke_production"));
     mixin(update_double("tke_production_limit_in_kelvins", "tke_production_limit_in_kelvins"));
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  viscous: ", GlobalConfig.viscous);
-	writeln("  use_viscosity_from_cells: ", GlobalConfig.use_viscosity_from_cells);
-	writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
-	writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
-	writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
-	writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
-	writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
-	writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
-	writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
-	writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
-	writeln("  lewis_number: ", GlobalConfig.lewis_number);
-	writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
-	writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
-	writeln("  turbulence_model: ", turbulence_model_name(GlobalConfig.turbulence_model));
-	writeln("  turbulence_prandtl_number: ", GlobalConfig.turbulence_prandtl_number);
-	writeln("  turbulence_schmidt_number: ", GlobalConfig.turbulence_schmidt_number);
-	writeln("  max_mu_t_factor: ", GlobalConfig.max_mu_t_factor);
-	writeln("  transient_mu_t_factor: ", GlobalConfig.transient_mu_t_factor);
-	writeln("  limit_tke_production: ", GlobalConfig.limit_tke_production);
-	writeln("  tke_production_limit_in_kelvins: ", GlobalConfig.tke_production_limit_in_kelvins);
+        writeln("  viscous: ", GlobalConfig.viscous);
+        writeln("  use_viscosity_from_cells: ", GlobalConfig.use_viscosity_from_cells);
+        writeln("  spatial_deriv_calc: ", spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc));
+        writeln("  spatial_deriv_locn: ", spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn));
+        writeln("  include_ghost_cells_in_spatial_deriv_clouds: ", GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds);
+        writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
+        writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
+        writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
+        writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
+        writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
+        writeln("  lewis_number: ", GlobalConfig.lewis_number);
+        writeln("  separate_update_for_viscous_terms: ", GlobalConfig.separate_update_for_viscous_terms);
+        writeln("  separate_update_for_k_omega_source: ", GlobalConfig.separate_update_for_k_omega_source);
+        writeln("  turbulence_model: ", turbulence_model_name(GlobalConfig.turbulence_model));
+        writeln("  turbulence_prandtl_number: ", GlobalConfig.turbulence_prandtl_number);
+        writeln("  turbulence_schmidt_number: ", GlobalConfig.turbulence_schmidt_number);
+        writeln("  max_mu_t_factor: ", GlobalConfig.max_mu_t_factor);
+        writeln("  transient_mu_t_factor: ", GlobalConfig.transient_mu_t_factor);
+        writeln("  limit_tke_production: ", GlobalConfig.limit_tke_production);
+        writeln("  tke_production_limit_in_kelvins: ", GlobalConfig.tke_production_limit_in_kelvins);
     }
 
     configCheckPoint3();
 
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
-	GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.mass_diffusion_model,
-						       GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
+        GlobalConfig.massDiffusion = initMassDiffusion(GlobalConfig.gmodel_master, GlobalConfig.mass_diffusion_model,
+                                                       GlobalConfig.constant_lewis_number, GlobalConfig.lewis_number);
     }
     // User-defined source terms
     mixin(update_bool("udf_source_terms", "udf_source_terms"));
     mixin(update_string("udf_source_terms_file", "udf_source_terms_file"));
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  udf_source_terms: ", GlobalConfig.udf_source_terms);
-	writeln("  udf_source_terms_file: ", to!string(GlobalConfig.udf_source_terms_file));
+        writeln("  udf_source_terms: ", GlobalConfig.udf_source_terms);
+        writeln("  udf_source_terms_file: ", to!string(GlobalConfig.udf_source_terms_file));
     }
 
     // Parameters controlling thermochemistry
@@ -984,17 +984,17 @@ void read_config_file()
     mixin(update_double("ignition_time_start", "ignition_time_start"));
     mixin(update_double("ignition_time_stop", "ignition_time_stop"));
     mixin(update_string("energy_exchange_file", "energy_exchange_file"));
-	  
+          
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  reacting: ", GlobalConfig.reacting);
-	writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
-	writeln("  reaction_time_delay: ", GlobalConfig.reaction_time_delay);
-	writeln("  T_frozen: ", GlobalConfig.T_frozen);
-	writeln("  T_frozen_energy: ", GlobalConfig.T_frozen_energy);
-	writeln("  tci_model: ", tci_model_name(GlobalConfig.tci_model));
-	writeln("  ignition_time_start: ", GlobalConfig.ignition_time_start);
-	writeln("  ignition_time_stop: ", GlobalConfig.ignition_time_start);
-	writeln("  energy_exchange_file: ", GlobalConfig.energy_exchange_file);
+        writeln("  reacting: ", GlobalConfig.reacting);
+        writeln("  reactions_file: ", to!string(GlobalConfig.reactions_file));
+        writeln("  reaction_time_delay: ", GlobalConfig.reaction_time_delay);
+        writeln("  T_frozen: ", GlobalConfig.T_frozen);
+        writeln("  T_frozen_energy: ", GlobalConfig.T_frozen_energy);
+        writeln("  tci_model: ", tci_model_name(GlobalConfig.tci_model));
+        writeln("  ignition_time_start: ", GlobalConfig.ignition_time_start);
+        writeln("  ignition_time_stop: ", GlobalConfig.ignition_time_start);
+        writeln("  energy_exchange_file: ", GlobalConfig.energy_exchange_file);
     }
 
     // Parameters controlling other simulation options
@@ -1012,73 +1012,73 @@ void read_config_file()
     mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
     mixin(update_bool("compute_loads", "compute_loads"));
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
-	writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
-	writeln("  wall_temperature_on_init: ", GlobalConfig.initTWall);
-	writeln("  control_count: ", GlobalConfig.control_count);
-	writeln("  block_marching: ", GlobalConfig.block_marching);
-	writeln("  nib: ", GlobalConfig.nib);
-	writeln("  njb: ", GlobalConfig.njb);
-	writeln("  nkb: ", GlobalConfig.nkb);
-	writeln("  propagate_inflow_data: ", GlobalConfig.propagate_inflow_data);
-	writeln("  save_intermediate_results: ", GlobalConfig.save_intermediate_results);
-	writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
-	writeln("  compute_loads: ", GlobalConfig.compute_loads);
+        writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
+        writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
+        writeln("  wall_temperature_on_init: ", GlobalConfig.initTWall);
+        writeln("  control_count: ", GlobalConfig.control_count);
+        writeln("  block_marching: ", GlobalConfig.block_marching);
+        writeln("  nib: ", GlobalConfig.nib);
+        writeln("  njb: ", GlobalConfig.njb);
+        writeln("  nkb: ", GlobalConfig.nkb);
+        writeln("  propagate_inflow_data: ", GlobalConfig.propagate_inflow_data);
+        writeln("  save_intermediate_results: ", GlobalConfig.save_intermediate_results);
+        writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
+        writeln("  compute_loads: ", GlobalConfig.compute_loads);
     }
 
     configCheckPoint4();
     
     int nhcell = getJSONint(jsonData, "nhcell", 0);
     foreach (i; 0 .. nhcell) {
-	string jsonKey = format("history-cell-%d", i);
-	auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
-	GlobalConfig.hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
+        string jsonKey = format("history-cell-%d", i);
+        auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
+        GlobalConfig.hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
     }
     int nsolidhcell = getJSONint(jsonData, "nsolidhcell", 0);
     foreach (i; 0 .. nsolidhcell) {
-	string jsonKey = format("solid-history-cell-%d", i);
-	auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
-	GlobalConfig.solid_hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
+        string jsonKey = format("solid-history-cell-%d", i);
+        auto hcell = getJSONintarray(jsonData, jsonKey, [0, 0]);
+        GlobalConfig.solid_hcells ~= tuple(cast(size_t) hcell[0], cast(size_t) hcell[1]);
     }
 
     int n_reaction_zones = getJSONint(jsonData, "n-reaction-zones", 0);
     foreach (i; 0 .. n_reaction_zones) {
-	string jsonKey = format("reaction-zone-%d", i);
-	auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
-	Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
-	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
-	GlobalConfig.reaction_zones ~= new BlockZone(p0, p1);
+        string jsonKey = format("reaction-zone-%d", i);
+        auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+        Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+        GlobalConfig.reaction_zones ~= new BlockZone(p0, p1);
     }
     
     int n_ignition_zones = getJSONint(jsonData, "n-ignition-zones", 0);
     foreach (i; 0 .. n_ignition_zones) {
-	string jsonKey = format("ignition-zone-%d", i);
-	auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 300.0]);
-	Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
-	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
-	double Tig = zone_data[6];
-	GlobalConfig.ignition_zones ~= new IgnitionZone(p0, p1, Tig);
+        string jsonKey = format("ignition-zone-%d", i);
+        auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 300.0]);
+        Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+        Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+        double Tig = zone_data[6];
+        GlobalConfig.ignition_zones ~= new IgnitionZone(p0, p1, Tig);
     }
     int n_turbulent_zones = getJSONint(jsonData, "n-turbulent-zones", 0);
     foreach (i; 0 .. n_turbulent_zones) {
-	string jsonKey = format("turbulent-zone-%d", i);
-	auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
-	Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
-	Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
-	GlobalConfig.turbulent_zones ~= new BlockZone(p0, p1);
+        string jsonKey = format("turbulent-zone-%d", i);
+        auto zone_data = getJSONdoublearray(jsonData, jsonKey, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        Vector3 p0 = Vector3(zone_data[0], zone_data[1], zone_data[2]);
+        Vector3 p1 = Vector3(zone_data[3], zone_data[4], zone_data[5]);
+        GlobalConfig.turbulent_zones ~= new BlockZone(p0, p1);
     }
 
     auto sdluOptions = jsonData["solid_domain_loose_update_options"];
     GlobalConfig.sdluOptions.maxNewtonIterations = 
-	getJSONint(sdluOptions, "max_newton_iterations", GlobalConfig.sdluOptions.maxNewtonIterations);
+        getJSONint(sdluOptions, "max_newton_iterations", GlobalConfig.sdluOptions.maxNewtonIterations);
     GlobalConfig.sdluOptions.toleranceNewtonUpdate = 
-	getJSONdouble(sdluOptions, "tolerance_newton_update", GlobalConfig.sdluOptions.toleranceNewtonUpdate);
+        getJSONdouble(sdluOptions, "tolerance_newton_update", GlobalConfig.sdluOptions.toleranceNewtonUpdate);
     GlobalConfig.sdluOptions.maxGMRESIterations = 
-	getJSONint(sdluOptions, "max_gmres_iterations", GlobalConfig.sdluOptions.maxGMRESIterations);
+        getJSONint(sdluOptions, "max_gmres_iterations", GlobalConfig.sdluOptions.maxGMRESIterations);
     GlobalConfig.sdluOptions.toleranceGMRESSolve = 
-	getJSONdouble(sdluOptions, "tolerance_gmres_solve", GlobalConfig.sdluOptions.toleranceGMRESSolve);
+        getJSONdouble(sdluOptions, "tolerance_gmres_solve", GlobalConfig.sdluOptions.toleranceGMRESSolve);
     GlobalConfig.sdluOptions.perturbationSize = 
-	getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
+        getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
     
 
     // Now, configure blocks that make up the flow domain.
@@ -1089,61 +1089,61 @@ void read_config_file()
     if (GlobalConfig.verbosity_level > 1) { writeln("  nFluidBlocks: ", GlobalConfig.nFluidBlocks); }
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
-	dedicatedConfig ~= new LocalConfig(i);
+        dedicatedConfig ~= new LocalConfig(i);
     }
     foreach (i; 0 .. GlobalConfig.nFluidBlocks) {
-	auto jsonDataForBlock = jsonData["block_" ~ to!string(i)];
-	string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
-	switch (gridType) {
-	case "structured_grid": 
-	    gasBlocks ~= new SBlock(i, jsonDataForBlock);
-	    break;
-	case "unstructured_grid":
-	    gasBlocks ~= new UBlock(i, jsonDataForBlock);
-	    dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
-	    break;
-	default:
-	    throw new Error(format("Construction of fluidblock[%d], unknown grid type: %s",
-				   i, gridType));
-	} // end switch gridType
+        auto jsonDataForBlock = jsonData["block_" ~ to!string(i)];
+        string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
+        switch (gridType) {
+        case "structured_grid": 
+            gasBlocks ~= new SBlock(i, jsonDataForBlock);
+            break;
+        case "unstructured_grid":
+            gasBlocks ~= new UBlock(i, jsonDataForBlock);
+            dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
+            break;
+        default:
+            throw new Error(format("Construction of fluidblock[%d], unknown grid type: %s",
+                                   i, gridType));
+        } // end switch gridType
     }
     foreach (blk; gasBlocks) {
-	blk.init_lua_globals();
-	blk.init_boundary_conditions(jsonData["block_" ~ to!string(blk.id)]);
-	if (GlobalConfig.udf_source_terms) {
-	    luaL_dofile(blk.myL, GlobalConfig.udf_source_terms_file.toStringz);
-	}
+        blk.init_lua_globals();
+        blk.init_boundary_conditions(jsonData["block_" ~ to!string(blk.id)]);
+        if (GlobalConfig.udf_source_terms) {
+            luaL_dofile(blk.myL, GlobalConfig.udf_source_terms_file.toStringz);
+        }
     } 
     // After fully constructing blocks and their boundary conditions,
     // we can optionally print their representation for checking.
     if (GlobalConfig.verbosity_level > 1) {
-	foreach (i, blk; gasBlocks) { writeln("  Block[", i, "]: ", blk); }
+        foreach (i, blk; gasBlocks) { writeln("  Block[", i, "]: ", blk); }
     }
     // Read in any blocks in the solid domain.
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);
     GlobalConfig.udfSolidSourceTermsFile = jsonData["udf_solid_source_terms_file"].str;
     GlobalConfig.nSolidBlocks = getJSONint(jsonData, "nsolidblock", 0);
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  nSolidBlocks: ", GlobalConfig.nSolidBlocks);
-	writeln("  udf_solid_source_terms: ", GlobalConfig.udfSolidSourceTerms);
-	writeln("  udf_solid_source_terms_file: ", to!string(GlobalConfig.udfSolidSourceTermsFile));
+        writeln("  nSolidBlocks: ", GlobalConfig.nSolidBlocks);
+        writeln("  udf_solid_source_terms: ", GlobalConfig.udfSolidSourceTerms);
+        writeln("  udf_solid_source_terms_file: ", to!string(GlobalConfig.udfSolidSourceTermsFile));
     }
     // Set up dedicated copies of the configuration parameters for the threads.
     foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
-	dedicatedSolidConfig ~= new LocalConfig(i);
+        dedicatedSolidConfig ~= new LocalConfig(i);
     }
     foreach (i; 0 .. GlobalConfig.nSolidBlocks) {
-	solidBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);
-	if (GlobalConfig.verbosity_level > 1) {
-	    writeln("  SolidBlock[", i, "]: ", solidBlocks[i]);
-	}
+        solidBlocks ~= new SSolidBlock(i, jsonData["solid_block_" ~ to!string(i)]);
+        if (GlobalConfig.verbosity_level > 1) {
+            writeln("  SolidBlock[", i, "]: ", solidBlocks[i]);
+        }
     }
     foreach (sblk; solidBlocks) {
-	sblk.initLuaGlobals();
-	sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
-	if ( GlobalConfig.udfSolidSourceTerms ) {
-	    initUDFSolidSourceTerms(sblk.myL, GlobalConfig.udfSolidSourceTermsFile);
-	}
+        sblk.initLuaGlobals();
+        sblk.initBoundaryConditions(jsonData["solid_block_" ~ to!string(sblk.id)]);
+        if ( GlobalConfig.udfSolidSourceTerms ) {
+            initUDFSolidSourceTerms(sblk.myL, GlobalConfig.udfSolidSourceTermsFile);
+        }
     }
 
     // Now that the blocks are configured, we can initialize
@@ -1151,10 +1151,10 @@ void read_config_file()
     // for simulation supervision and for defining grid motion.
     init_master_lua_State();
     if (GlobalConfig.udf_supervisor_file.length > 0) {
-	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_supervisor_file);
+        doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_supervisor_file);
     }
     if (GlobalConfig.grid_motion == GridMotion.user_defined) {
-	doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
+        doLuaFile(GlobalConfig.master_lua_State, GlobalConfig.udf_grid_motion_file);
     }
 } // end read_config_file()
 
@@ -1166,15 +1166,15 @@ void read_control_file()
     try {
         content = readText(fileName);
     } catch (Exception e) {
-	writeln("Failed to read control file: ", fileName);
-	exit(1);
+        writeln("Failed to read control file: ", fileName);
+        exit(1);
     }
     JSONValue jsonData;
     try {
-	jsonData = parseJSON!string(content);
+        jsonData = parseJSON!string(content);
     } catch (Exception e) {
-	writeln("Failed to parse JSON from control file: ", fileName);
-	exit(1);
+        writeln("Failed to parse JSON from control file: ", fileName);
+        exit(1);
     }
     mixin(update_double("dt_init", "dt_init"));
     mixin(update_double("dt_max", "dt_max"));
@@ -1192,97 +1192,97 @@ void read_control_file()
     mixin(update_int("halt_now", "halt_now"));
     //
     if (GlobalConfig.verbosity_level > 1) {
-	writeln("  dt_init: ", GlobalConfig.dt_init);
-	writeln("  dt_max: ", GlobalConfig.dt_max);
-	writeln("  cfl_value: ", GlobalConfig.cfl_value);
-	writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
-	writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
-	writeln("  fixed_time_step: ", GlobalConfig.fixed_time_step);
-	writeln("  print_count: ", GlobalConfig.print_count);
-	writeln("  cfl_count: ", GlobalConfig.cfl_count);
-	writeln("  max_time: ", GlobalConfig.max_time);
-	writeln("  max_step: ", GlobalConfig.max_step);
-	writeln("  dt_plot: ", GlobalConfig.dt_plot);
-	writeln("  dt_history: ", GlobalConfig.dt_history);
-	writeln("  dt_loads: ", GlobalConfig.dt_loads);
-	writeln("  halt_now: ", GlobalConfig.halt_now);
+        writeln("  dt_init: ", GlobalConfig.dt_init);
+        writeln("  dt_max: ", GlobalConfig.dt_max);
+        writeln("  cfl_value: ", GlobalConfig.cfl_value);
+        writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
+        writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
+        writeln("  fixed_time_step: ", GlobalConfig.fixed_time_step);
+        writeln("  print_count: ", GlobalConfig.print_count);
+        writeln("  cfl_count: ", GlobalConfig.cfl_count);
+        writeln("  max_time: ", GlobalConfig.max_time);
+        writeln("  max_step: ", GlobalConfig.max_step);
+        writeln("  dt_plot: ", GlobalConfig.dt_plot);
+        writeln("  dt_history: ", GlobalConfig.dt_history);
+        writeln("  dt_loads: ", GlobalConfig.dt_loads);
+        writeln("  halt_now: ", GlobalConfig.halt_now);
     }
     
     version (steady_state) {
     auto sssOptions = jsonData["steady_state_solver_options"];
     GlobalConfig.sssOptions.usePreconditioning = getJSONbool(sssOptions, "use_preconditioning", GlobalConfig.sssOptions.usePreconditioning);
     GlobalConfig.sssOptions.nPreSteps = 
-	getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
+        getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
     GlobalConfig.sssOptions.nTotalSteps = 
-	getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);    
+        getJSONint(sssOptions, "number_total_steps", GlobalConfig.sssOptions.nTotalSteps);    
     GlobalConfig.sssOptions.maxNumberAttempts = 
-	getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
+        getJSONint(sssOptions, "max_number_attempts", GlobalConfig.sssOptions.maxNumberAttempts);
     GlobalConfig.sssOptions.stopOnRelGlobalResid =
-	getJSONdouble(sssOptions, "stop_on_relative_global_residual", GlobalConfig.sssOptions.stopOnRelGlobalResid);
+        getJSONdouble(sssOptions, "stop_on_relative_global_residual", GlobalConfig.sssOptions.stopOnRelGlobalResid);
     GlobalConfig.sssOptions.stopOnAbsGlobalResid =
-	getJSONdouble(sssOptions, "stop_on_absolute_global_residual", GlobalConfig.sssOptions.stopOnAbsGlobalResid);
+        getJSONdouble(sssOptions, "stop_on_absolute_global_residual", GlobalConfig.sssOptions.stopOnAbsGlobalResid);
     GlobalConfig.sssOptions.maxOuterIterations = 
-	getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
+        getJSONint(sssOptions, "max_outer_iterations", GlobalConfig.sssOptions.maxOuterIterations);
     GlobalConfig.sssOptions.maxRestarts = 
-	getJSONint(sssOptions, "max_restarts", GlobalConfig.sssOptions.maxRestarts);
+        getJSONint(sssOptions, "max_restarts", GlobalConfig.sssOptions.maxRestarts);
     GlobalConfig.sssOptions.nInnerIterations = 
-	getJSONint(sssOptions, "number_inner_iterations", GlobalConfig.sssOptions.nInnerIterations);
+        getJSONint(sssOptions, "number_inner_iterations", GlobalConfig.sssOptions.nInnerIterations);
     // Settings for start-up phase
     GlobalConfig.sssOptions.nStartUpSteps = 
-	getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
+        getJSONint(sssOptions, "number_start_up_steps", GlobalConfig.sssOptions.nStartUpSteps);
     GlobalConfig.sssOptions.cfl0 =
-	getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
+        getJSONdouble(sssOptions, "cfl0", GlobalConfig.sssOptions.cfl0);
     GlobalConfig.sssOptions.eta0 =
-	getJSONdouble(sssOptions, "eta0", GlobalConfig.sssOptions.eta0);
+        getJSONdouble(sssOptions, "eta0", GlobalConfig.sssOptions.eta0);
     GlobalConfig.sssOptions.tau0 =
-	getJSONdouble(sssOptions, "tau0", GlobalConfig.sssOptions.tau0);
+        getJSONdouble(sssOptions, "tau0", GlobalConfig.sssOptions.tau0);
     GlobalConfig.sssOptions.sigma0 =
-	getJSONdouble(sssOptions, "sigma0", GlobalConfig.sssOptions.sigma0);
+        getJSONdouble(sssOptions, "sigma0", GlobalConfig.sssOptions.sigma0);
     // Setting for inexact Newton phase
     GlobalConfig.sssOptions.cfl1 =
-	getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
+        getJSONdouble(sssOptions, "cfl1", GlobalConfig.sssOptions.cfl1);
     GlobalConfig.sssOptions.tau1 =
-	getJSONdouble(sssOptions, "tau1", GlobalConfig.sssOptions.tau1);
+        getJSONdouble(sssOptions, "tau1", GlobalConfig.sssOptions.tau1);
     GlobalConfig.sssOptions.sigma1 =
-	getJSONdouble(sssOptions, "sigma1", GlobalConfig.sssOptions.sigma1);
+        getJSONdouble(sssOptions, "sigma1", GlobalConfig.sssOptions.sigma1);
     { 
-	auto mySaveValue = GlobalConfig.sssOptions.etaStrategy;
-	try {
-	    string name = sssOptions["eta_strategy"].str;
-	    GlobalConfig.sssOptions.etaStrategy = etaStrategyFromName(name);
-	} catch (Exception e) {
-	    GlobalConfig.sssOptions.etaStrategy = mySaveValue;
-	}
+        auto mySaveValue = GlobalConfig.sssOptions.etaStrategy;
+        try {
+            string name = sssOptions["eta_strategy"].str;
+            GlobalConfig.sssOptions.etaStrategy = etaStrategyFromName(name);
+        } catch (Exception e) {
+            GlobalConfig.sssOptions.etaStrategy = mySaveValue;
+        }
     }
     GlobalConfig.sssOptions.eta1 =
-	getJSONdouble(sssOptions, "eta1", GlobalConfig.sssOptions.eta1);
+        getJSONdouble(sssOptions, "eta1", GlobalConfig.sssOptions.eta1);
     GlobalConfig.sssOptions.eta1_max =
-	getJSONdouble(sssOptions, "eta1_max", GlobalConfig.sssOptions.eta1_max);
+        getJSONdouble(sssOptions, "eta1_max", GlobalConfig.sssOptions.eta1_max);
     GlobalConfig.sssOptions.eta1_min =
-	getJSONdouble(sssOptions, "eta1_min", GlobalConfig.sssOptions.eta1_min);
+        getJSONdouble(sssOptions, "eta1_min", GlobalConfig.sssOptions.eta1_min);
     GlobalConfig.sssOptions.etaRatioPerStep =
-	getJSONdouble(sssOptions, "eta_ratio_per_step", GlobalConfig.sssOptions.etaRatioPerStep);
+        getJSONdouble(sssOptions, "eta_ratio_per_step", GlobalConfig.sssOptions.etaRatioPerStep);
     GlobalConfig.sssOptions.gamma =
-	getJSONdouble(sssOptions, "gamma", GlobalConfig.sssOptions.gamma);
+        getJSONdouble(sssOptions, "gamma", GlobalConfig.sssOptions.gamma);
     GlobalConfig.sssOptions.alpha =
-	getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
+        getJSONdouble(sssOptions, "alpha", GlobalConfig.sssOptions.alpha);
     // Settings for writing out snapshots and diagnostics
     GlobalConfig.sssOptions.snapshotsCount = 
-	getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
+        getJSONint(sssOptions, "snapshots_count", GlobalConfig.sssOptions.snapshotsCount);
     GlobalConfig.sssOptions.nTotalSnapshots = 
-	getJSONint(sssOptions, "number_total_snapshots", GlobalConfig.sssOptions.nTotalSnapshots);
+        getJSONint(sssOptions, "number_total_snapshots", GlobalConfig.sssOptions.nTotalSnapshots);
     GlobalConfig.sssOptions.writeDiagnosticsCount = 
-	getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
+        getJSONint(sssOptions, "write_diagnostics_count", GlobalConfig.sssOptions.writeDiagnosticsCount);
     GlobalConfig.sssOptions.writeLoadsCount = 
-	getJSONint(sssOptions, "write_loads_count", GlobalConfig.sssOptions.writeLoadsCount);
+        getJSONint(sssOptions, "write_loads_count", GlobalConfig.sssOptions.writeLoadsCount);
     }
 
     // Propagate new values to the local copies of config.
     foreach (localConfig; dedicatedConfig) {
-	localConfig.update_control_parameters();
+        localConfig.update_control_parameters();
     }
     foreach (localConfig; dedicatedSolidConfig) {
-	localConfig.update_control_parameters();
+        localConfig.update_control_parameters();
     }
 
 } // end read_control_file()
@@ -1296,18 +1296,18 @@ void setupIndicesForConservedQuantities()
     xMomIdx = 1;
     yMomIdx = 2;
     if ( GlobalConfig.dimensions == 2 ) {
-	totEnergyIdx = 3;
-	nConservedQuantities = 4;
+        totEnergyIdx = 3;
+        nConservedQuantities = 4;
     }
     else { // 3D simulations
-	zMomIdx = 3;
-	totEnergyIdx = 4;
-	nConservedQuantities = 5;
+        zMomIdx = 3;
+        totEnergyIdx = 4;
+        nConservedQuantities = 5;
     }
     if ( GlobalConfig.turbulence_model == TurbulenceModel.k_omega ) {
-	tkeIdx = nConservedQuantities;
-	omegaIdx = tkeIdx + 1;
-	nConservedQuantities += 2;
+        tkeIdx = nConservedQuantities;
+        omegaIdx = tkeIdx + 1;
+        nConservedQuantities += 2;
     }
     // TODO: Add this line when multi-species are handled correctly
     //       by steady-state solver.
@@ -1325,9 +1325,9 @@ void setupIndicesForConservedQuantities()
 void configCheckPoint1()
 {
     if (GlobalConfig.grid_motion == GridMotion.shock_fitting &&
-	GlobalConfig.apply_bcs_in_parallel) {
-	writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
-	GlobalConfig.apply_bcs_in_parallel = false;
+        GlobalConfig.apply_bcs_in_parallel) {
+        writeln("NOTE: apply_bcs_in_parallel is set to false when shock_fitting is used.");
+        GlobalConfig.apply_bcs_in_parallel = false;
     }
     return;
 } // end configCheckPoint1()
@@ -1336,21 +1336,21 @@ void configCheckPoint2()
 {
     // More checking of constraints on the config parameters.
     if (GlobalConfig.grid_motion != GridMotion.none) {
-	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
-	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
-	    // pass, we have a consistent selection.
-	} else {
-	    string msg = "We have some grid_motion but not a valid GasdynamicUpdate scheme" ~
-		" for grid motion.";
-	    throw new FlowSolverException(msg);
-	}
+        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
+            GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
+            // pass, we have a consistent selection.
+        } else {
+            string msg = "We have some grid_motion but not a valid GasdynamicUpdate scheme" ~
+                " for grid motion.";
+            throw new FlowSolverException(msg);
+        }
     } else {
-	if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
-	    GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
-	    string msg = "We have no grid_motion but have asked for a GasdynamicUpdate scheme" ~
-		" for grid motion.";
-	    throw new FlowSolverException(msg);
-	}
+        if (GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_1_stage ||
+            GlobalConfig.gasdynamic_update_scheme == GasdynamicUpdate.moving_grid_2_stage) {
+            string msg = "We have no grid_motion but have asked for a GasdynamicUpdate scheme" ~
+                " for grid motion.";
+            throw new FlowSolverException(msg);
+        }
     }
     return;
 } // end configCheckPoint2()
@@ -1359,20 +1359,20 @@ void configCheckPoint3()
 {
     // Check the compatibility of the gas model if mass diffusion is selected.
     if (GlobalConfig.mass_diffusion_model != MassDiffusionModel.none) {
-	if (GlobalConfig.gmodel_master.n_species == 1) {
-	    string msg = format("The selected mass diffusion model '%s'", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
-	    msg ~= " makes no sense when number of species = 1.\n";
-	    throw new FlowSolverException(msg);
-	}
+        if (GlobalConfig.gmodel_master.n_species == 1) {
+            string msg = format("The selected mass diffusion model '%s'", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
+            msg ~= " makes no sense when number of species = 1.\n";
+            throw new FlowSolverException(msg);
+        }
     }
     // Check the compatibility of turbulence model selection and flux calculator.
     if (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) {
-	if (GlobalConfig.flux_calculator == FluxCalculator.hlle) {
-	    string msg = format("The selected flux calculator '%s'",
-				flux_calculator_name(GlobalConfig.flux_calculator));
-	    msg ~= " is incompatible with the k-omega turbulence model.";
-	    throw new FlowSolverException(msg);
-	}
+        if (GlobalConfig.flux_calculator == FluxCalculator.hlle) {
+            string msg = format("The selected flux calculator '%s'",
+                                flux_calculator_name(GlobalConfig.flux_calculator));
+            msg ~= " is incompatible with the k-omega turbulence model.";
+            throw new FlowSolverException(msg);
+        }
     }
     return;
 }
@@ -1381,10 +1381,10 @@ void configCheckPoint4()
 {
     // the adjoint solver shouldn't apply diffuse_bcs_on_init_flag
     version(adjoint) {
-	if (GlobalConfig.diffuseWallBCsOnInit) {
-	    GlobalConfig.diffuseWallBCsOnInit = false;
-	    writeln("Warning diffuse_bcs_on_init_flag set to false for adjoint solver.");
-	}
+        if (GlobalConfig.diffuseWallBCsOnInit) {
+            GlobalConfig.diffuseWallBCsOnInit = false;
+            writeln("Warning diffuse_bcs_on_init_flag set to false for adjoint solver.");
+        }
     } 
     return;
 }
@@ -1425,34 +1425,34 @@ void init_master_lua_State()
     // all of the blocks
     lua_newtable(L);
     foreach (int i, blk; gasBlocks) {
-	lua_newtable(L);
-	lua_pushnumber(L, blk.cells.length);
-	lua_setfield(L, -2, "nCells");
-	lua_pushnumber(L, blk.vertices.length);
-	lua_setfield(L, -2, "nVertices");
-	if ( blk.grid_type == Grid_t.structured_grid ) {
-	    SBlock sblk = cast(SBlock) blk;
-	    assert(sblk !is null, "Oops, this should be an SBlock object.");
-	    lua_pushnumber(L, sblk.nicell);
-	    lua_setfield(L, -2, "niCells");
-	    lua_pushnumber(L, sblk.njcell);
-	    lua_setfield(L, -2, "njCells");
-	    lua_pushnumber(L, sblk.nkcell);
-	    lua_setfield(L, -2, "nkCells");
-	    lua_pushnumber(L, sblk.imin);
-	    lua_setfield(L, -2, "vtxImin");
-	    lua_pushnumber(L, sblk.imax+1);
-	    lua_setfield(L, -2, "vtxImax");
-	    lua_pushnumber(L, sblk.jmin);
-	    lua_setfield(L, -2, "vtxJmin");
-	    lua_pushnumber(L, sblk.jmax+1);
-	    lua_setfield(L, -2, "vtxJmax");
-	    lua_pushnumber(L, sblk.kmin);
-	    lua_setfield(L, -2, "vtxKmin");
-	    lua_pushnumber(L, sblk.kmax+1);
-	    lua_setfield(L, -2, "vtxKmax");
-	}
-	lua_rawseti(L, -2, i);
+        lua_newtable(L);
+        lua_pushnumber(L, blk.cells.length);
+        lua_setfield(L, -2, "nCells");
+        lua_pushnumber(L, blk.vertices.length);
+        lua_setfield(L, -2, "nVertices");
+        if ( blk.grid_type == Grid_t.structured_grid ) {
+            SBlock sblk = cast(SBlock) blk;
+            assert(sblk !is null, "Oops, this should be an SBlock object.");
+            lua_pushnumber(L, sblk.nicell);
+            lua_setfield(L, -2, "niCells");
+            lua_pushnumber(L, sblk.njcell);
+            lua_setfield(L, -2, "njCells");
+            lua_pushnumber(L, sblk.nkcell);
+            lua_setfield(L, -2, "nkCells");
+            lua_pushnumber(L, sblk.imin);
+            lua_setfield(L, -2, "vtxImin");
+            lua_pushnumber(L, sblk.imax+1);
+            lua_setfield(L, -2, "vtxImax");
+            lua_pushnumber(L, sblk.jmin);
+            lua_setfield(L, -2, "vtxJmin");
+            lua_pushnumber(L, sblk.jmax+1);
+            lua_setfield(L, -2, "vtxJmax");
+            lua_pushnumber(L, sblk.kmin);
+            lua_setfield(L, -2, "vtxKmin");
+            lua_pushnumber(L, sblk.kmax+1);
+            lua_setfield(L, -2, "vtxKmax");
+        }
+        lua_rawseti(L, -2, i);
     }
     lua_setglobal(L, "blockData");
     //

@@ -19,23 +19,23 @@ void main() {
     for (int dev=0; dev < count; dev++) {
    
         cuDeviceGetProperties( &prop, dev );
-	CUresult cuDeviceGetPropertiesReturnState = cuDeviceGetProperties( &prop, dev );
+        CUresult cuDeviceGetPropertiesReturnState = cuDeviceGetProperties( &prop, dev );
         if (cuDeviceGetPropertiesReturnState == 0) writeln("Successfully collected properties for Device ", dev); 
-      	
-	writef( "--- General Information for device %d ---\n", dev );
-	char[64] name;
-	int len = 64;		
-	cuDeviceGetName (&name, len, dev);
-	writeln( "Name: ", name );
+        
+        writef( "--- General Information for device %d ---\n", dev );
+        char[64] name;
+        int len = 64;           
+        cuDeviceGetName (&name, len, dev);
+        writeln( "Name: ", name );
 
-	int major; int minor;
-	cuDeviceComputeCapability (&major, &minor, dev);
-	writef( "Compute capability: %d.%d \n", major, minor);
-	
-	writef( "Clock rate: %d kilohertz\n", prop.clockRate );
+        int major; int minor;
+        cuDeviceComputeCapability (&major, &minor, dev);
+        writef( "Compute capability: %d.%d \n", major, minor);
+        
+        writef( "Clock rate: %d kilohertz\n", prop.clockRate );
         
         writef( "--- Memory Information for device %d ---\n", dev );
-	size_t bytes;
+        size_t bytes;
         cuDeviceTotalMem_v2 (&bytes, dev);
         writef( "Total global mem: %d\n", bytes );
         
@@ -44,7 +44,7 @@ void main() {
         writef( "Texture Alignment: %d\n", prop.textureAlign );
         writef( "--- MP Information for device %d ---\n", dev );
 
-       	writef( "Shared mem per mp: %d\n", prop.sharedMemPerBlock );
+        writef( "Shared mem per mp: %d\n", prop.sharedMemPerBlock );
         writef( "Registers per mp: %d\n", prop.regsPerBlock );
         
         writef( "Threads in warp: %d\n", prop.SIMDWidth );
@@ -52,6 +52,6 @@ void main() {
         writef( "Max threads per block: %d\n", prop.maxThreadsPerBlock );
         writef( "Max thread dimensions: (%d, %d, %d)\n", prop.maxThreadsDim[0], prop.maxThreadsDim[1], prop.maxThreadsDim[2] );
         writef( "Max grid dimensions: (%d, %d, %d)\n", prop.maxGridSize[0], prop.maxGridSize[1], prop.maxGridSize[2] );
-	writef("\n");
+        writef("\n");
     }
 }

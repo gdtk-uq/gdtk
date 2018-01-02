@@ -157,8 +157,8 @@ assert(approxEqual(beta, beta2), "shock wave angle fail")
 print("Done.")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
-	writeln("There was a problem interpreting the test code.");
-	writeln(to!string(lua_tostring(L, -1)));
+        writeln("There was a problem interpreting the test code.");
+        writeln(to!string(lua_tostring(L, -1)));
     }
     writeln("End luagasflow_demo.");
 }

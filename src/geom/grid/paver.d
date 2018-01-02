@@ -38,37 +38,37 @@ class Point
     size_t rowID;
 
     this(size_t ID, double x, double y){
-	this.ID = ID;
-	this.x = x;
-	this.y = y;
+        this.ID = ID;
+        this.x = x;
+        this.y = y;
     }
 
     void store_node_angle(double node_angle){
-	this.interior_angle = node_angle;
+        this.interior_angle = node_angle;
     }
 
     void store_node_cat(string node_cat){
-	if (this.node_cat == "none") {
-	    this.node_cat = node_cat;
-	}
+        if (this.node_cat == "none") {
+            this.node_cat = node_cat;
+        }
     }
 
     void store_vectors(double[2] vr, double[2] vl){
-	this.V_R = vr;
-	this.V_L = vl;
+        this.V_R = vr;
+        this.V_L = vl;
     }
 
     void store_adjacent_points(Point pointL, Point pointR){
-	this.pointL = pointL;
-	this.pointR = pointR;
+        this.pointL = pointL;
+        this.pointR = pointR;
     }
 
     void store_rowID(size_t rowID){
-	this.rowID = rowID;
+        this.rowID = rowID;
     }
     
     string print(){
-	return format("row ID: %s | xyz(%s,%s,%s) \n interior angle: %s | node cat: %s",rowID,x,y,z,interior_angle,node_cat);
+        return format("row ID: %s | xyz(%s,%s,%s) \n interior angle: %s | node cat: %s",rowID,x,y,z,interior_angle,node_cat);
     }  
 
     static size_t ID_count;
@@ -84,11 +84,11 @@ class UFace
     size_t[2] point_IDs;
     
     this(size_t face_ID, size_t[2] point_IDs){
-	this.face_ID = face_ID;
-	this.point_IDs = point_IDs;
+        this.face_ID = face_ID;
+        this.point_IDs = point_IDs;
     }
     string print(){
-	return format("face ID: %s | contains points: [%s, %s])", face_ID, point_IDs[0], point_IDs[1]);
+        return format("face ID: %s | contains points: [%s, %s])", face_ID, point_IDs[0], point_IDs[1]);
     }  
 
     static size_t face_ID_count;
@@ -105,37 +105,37 @@ class Cell
     int[] outsigns; //order of outsigns corresponds to face_IDs
 
     this(size_t cell_ID){
-	this.cell_ID = cell_ID;
+        this.cell_ID = cell_ID;
     }
 
     void store_point_IDs(Point[] points){
-	foreach(p;points){
-	    this.point_IDs ~= p.ID;
-	}
+        foreach(p;points){
+            this.point_IDs ~= p.ID;
+        }
     }
 
     void store_face_IDs(UFace[] faces){
-	foreach(f;faces){
-	    this.face_IDs ~= f.face_ID;
-	}
+        foreach(f;faces){
+            this.face_IDs ~= f.face_ID;
+        }
     }
 
     void assign_outsigns(int[] outsigns){
-	foreach (o;outsigns){
-	    assert(o == -1 || o == 1);
-	}
-	this.outsigns ~= outsigns;
+        foreach (o;outsigns){
+            assert(o == -1 || o == 1);
+        }
+        this.outsigns ~= outsigns;
     }
 
     void auto_cell_type(){
-	int num_faces = to!int(this.face_IDs.length);
-	auto cell_type = cast(CellType)num_faces;
-	string cell = to!string(cell_type);
-	this.cell_type = cell;
+        int num_faces = to!int(this.face_IDs.length);
+        auto cell_type = cast(CellType)num_faces;
+        string cell = to!string(cell_type);
+        this.cell_type = cell;
     }
 
     string print(){
-	return format("cell ID: %s | cell type: %s | contains point IDs: %s and face IDs: %s",cell_ID,cell_type, point_IDs, face_IDs);
+        return format("cell ID: %s | cell type: %s | contains point IDs: %s and face IDs: %s",cell_ID,cell_type, point_IDs, face_IDs);
     }
 
     static size_t cell_ID_count;
@@ -172,7 +172,7 @@ double avr_area;
     //arbitrary angle rotation matrix
 
     double[2][2] matrix = [[cos(theta), sin(theta)],
-			[-sin(theta), cos(theta)]];
+                        [-sin(theta), cos(theta)]];
     return matrix;
 }
 
@@ -262,7 +262,7 @@ double squareness(Cell cell)
     double perimeter;
     Point[] points;
     for(int i; i<4; ++i){
-	points ~= POINT_LIST[cell.point_IDs[i]];
+        points ~= POINT_LIST[cell.point_IDs[i]];
     }
 
     area = 0.5*abs(vector2D(points[0], points[1])[0]*vector2D(points[0], points[3])[1] - vector2D(points[0], points[1])[1]*vector2D(points[0], points[3])[0]);
@@ -283,11 +283,11 @@ int winding_number(Point P, Point[] surface)
     Point b;
     Point Pr = new Point(0, P.x+1, P.y);
     foreach(node;surface){
-	a = node;
-	b = node.pointR;  
-	//point at unit vector to right of P
-	if(LeftorRight(P, Pr, b)==1 && LeftorRight(P,Pr,a)==-1 && LeftorRight(a,b,P)==1){ ++wn;}
-	if(LeftorRight(P, Pr, b)==-1 && LeftorRight(P,Pr,a)==1 && LeftorRight(a,b,P)==-1){ --wn;}
+        a = node;
+        b = node.pointR;  
+        //point at unit vector to right of P
+        if(LeftorRight(P, Pr, b)==1 && LeftorRight(P,Pr,a)==-1 && LeftorRight(a,b,P)==1){ ++wn;}
+        if(LeftorRight(P, Pr, b)==-1 && LeftorRight(P,Pr,a)==1 && LeftorRight(a,b,P)==-1){ --wn;}
     }
     return wn;
 }
@@ -304,7 +304,7 @@ double clockwise_check(Point[] surface)
     //The result is (twice?) the enclosed area, with a +/- convention.
     double sum = 0;
     foreach(p;surface){
-	sum += (p.x-p.pointL.x)*(p.y+p.pointL.y);
+        sum += (p.x-p.pointL.x)*(p.y+p.pointL.y);
     }
     double area = sum/2;
 
@@ -322,7 +322,7 @@ double calc_area(Point[] cell_points)
     double sum = 0;
     int n = to!int(cell_points.length);
     for(int i; i<n-1; ++i) { 
-	sum += (cell_points[i+1].x-cell_points[i].x)*(cell_points[i+1].y+cell_points[i].y);
+        sum += (cell_points[i+1].x-cell_points[i].x)*(cell_points[i+1].y+cell_points[i].y);
     }
     sum += (cell_points[0].x-cell_points[n-1].x)*(cell_points[0].y+cell_points[n-1].y);
     double area = abs(sum/2);
@@ -337,9 +337,9 @@ void closed_row_check(Point[] surface)
     //holding hands with eachother.
     //note that node properties must be assigned to check this
     foreach(point;surface){
-	if (point.pointL.pointR !is point){
-	    throw new Exception(format("this point is not linked correctly: \n %s", point.print()));
-	}
+        if (point.pointL.pointR !is point){
+            throw new Exception(format("this point is not linked correctly: \n %s", point.print()));
+        }
     }
 }
 
@@ -350,16 +350,16 @@ Point[4][] intersecting_boundary(Point[] surface)
     //note: if length == 0, no intersections found
     //node_properties must have been assigned
     foreach(point;surface){
-	foreach(otherpoint;surface){
-	    if (otherpoint !is point && otherpoint !is point.pointR && otherpoint !is point.pointL) {
-		Point a = otherpoint;
-		Point b = otherpoint.pointR;
-		if (LeftorRight(point, point.pointR, a) == -1*LeftorRight(point, point.pointR, b) && LeftorRight(a, b, point) == -1*LeftorRight(a,b,point.pointR)) {
-		    Point[4] points = [point, point.pointR, a, b];
-		    intersections ~= points;
-		}
-	    }
-	}
+        foreach(otherpoint;surface){
+            if (otherpoint !is point && otherpoint !is point.pointR && otherpoint !is point.pointL) {
+                Point a = otherpoint;
+                Point b = otherpoint.pointR;
+                if (LeftorRight(point, point.pointR, a) == -1*LeftorRight(point, point.pointR, b) && LeftorRight(a, b, point) == -1*LeftorRight(a,b,point.pointR)) {
+                    Point[4] points = [point, point.pointR, a, b];
+                    intersections ~= points;
+                }
+            }
+        }
     }
     return intersections;
 }
@@ -379,18 +379,18 @@ Point[4][] intersecting_faces(Point[] surface)
     //note: if length == 0, no intersections found
     //node_properties must have been assigned
     foreach(face;new_row_faces){
-	foreach(otherface;FACE_LIST){
-	    if (otherface !is face) {
-	        a = POINT_LIST[face.point_IDs[0]];
-	        b = POINT_LIST[face.point_IDs[1]];
-	        c = POINT_LIST[otherface.point_IDs[0]];
-	        d = POINT_LIST[otherface.point_IDs[1]];
-		if (LeftorRight(a,b,c) == -1*LeftorRight(a,b,d) && LeftorRight(c,d,a) == -1*LeftorRight(c,d,b)) {
-		    Point[4] points = [a,b,c,d];
-		    intersections ~= points;
-		}
-	    }
-	}
+        foreach(otherface;FACE_LIST){
+            if (otherface !is face) {
+                a = POINT_LIST[face.point_IDs[0]];
+                b = POINT_LIST[face.point_IDs[1]];
+                c = POINT_LIST[otherface.point_IDs[0]];
+                d = POINT_LIST[otherface.point_IDs[1]];
+                if (LeftorRight(a,b,c) == -1*LeftorRight(a,b,d) && LeftorRight(c,d,a) == -1*LeftorRight(c,d,b)) {
+                    Point[4] points = [a,b,c,d];
+                    intersections ~= points;
+                }
+            }
+        }
     }
     return intersections;
 }
@@ -400,8 +400,8 @@ Point[4][] intersecting_faces(Point[] surface)
     double sum = 0;
     int count;
     foreach(point;surface){
-	++count;
-	sum += point_dist(point, point.pointR);
+        ++count;
+        sum += point_dist(point, point.pointR);
     }
     double ans = sum/count;
     return ans;
@@ -416,7 +416,7 @@ double angle_between_vectors(double[2] a, double[2] b)
     Point pb = new Point(0, a[0], a[1]);
     Point X = new Point(0, b[0], b[1]);
     if (LeftorRight(pa,pb,X) != -1){
-	theta = 2*PI - theta;
+        theta = 2*PI - theta;
     }
     return theta;
 }
@@ -425,11 +425,11 @@ bool inside_prev_row_check(Point[] New_Row, Point[] Prev_Row){
     bool inside = 1;
     int wn;
     foreach(p; New_Row){
-	wn = winding_number(p, Prev_Row);
-	if(wn==0){
-	    inside = 0;
-	    break;
-	}
+        wn = winding_number(p, Prev_Row);
+        if(wn==0){
+            inside = 0;
+            break;
+        }
     }
     return inside;
 }
@@ -475,22 +475,22 @@ Cell makeCell(Point[] points)
     int[] outsigns;
 
     for(uint i; i<points.length; ++i){
-	auto a = i;
-	uint b;
-	if (a == points.length-1) {b = 0;}
-	else {b = a+1;}
-	UFace found1 = findFace([points[a].ID, points[b].ID], 1);
-	UFace found2 = findFace([points[b].ID, points[a].ID], 1);
-	if (found1 is null && found2 is null){
-	    faces ~= makeFace(points[a].ID, points[b].ID);
-	    outsigns ~= -1;
-	} else if (found1 is null) {
-	    faces ~= found2;
-	    outsigns ~= 1;
-	} else {
-	    faces ~= found1;
-	    outsigns ~= -1;
-	}
+        auto a = i;
+        uint b;
+        if (a == points.length-1) {b = 0;}
+        else {b = a+1;}
+        UFace found1 = findFace([points[a].ID, points[b].ID], 1);
+        UFace found2 = findFace([points[b].ID, points[a].ID], 1);
+        if (found1 is null && found2 is null){
+            faces ~= makeFace(points[a].ID, points[b].ID);
+            outsigns ~= -1;
+        } else if (found1 is null) {
+            faces ~= found2;
+            outsigns ~= 1;
+        } else {
+            faces ~= found1;
+            outsigns ~= -1;
+        }
     }
 
     Cell cell = new Cell(ID);
@@ -515,12 +515,12 @@ UFace findFace(size_t[2] pointIDs, bool directional)
     UFace found;
     size_t[2] reverse_case;
     if (directional == 0){
-	reverse_case = [pointIDs[1], pointIDs[0]];
+        reverse_case = [pointIDs[1], pointIDs[0]];
     }
     foreach(face;FACE_LIST){
-	if(face.point_IDs == pointIDs || face.point_IDs == reverse_case){
-	    found = face;
-	}
+        if(face.point_IDs == pointIDs || face.point_IDs == reverse_case){
+            found = face;
+        }
     }
     return found;
 }
@@ -541,67 +541,67 @@ void assign_node_properties(Point[] surface)
 
     for(size_t i; i<n; ++i){
 
-	size_t nodeID = i;
-	Point point0 = surface[nodeID];  
-	Point pointR; //must be created outside of conditional statements
-	Point pointL;
+        size_t nodeID = i;
+        Point point0 = surface[nodeID];  
+        Point pointR; //must be created outside of conditional statements
+        Point pointL;
 
-	if(nodeID==n-1){
-	    pointL = surface[nodeID-1];
-	    pointR = surface[0];
-	} else if(nodeID==0){
-	    pointL = surface[n-1];
-	    pointR = surface[nodeID+1];
-	} else {
-	    pointL = surface[nodeID-1];
-	    pointR = surface[nodeID+1];
-	}
+        if(nodeID==n-1){
+            pointL = surface[nodeID-1];
+            pointR = surface[0];
+        } else if(nodeID==0){
+            pointL = surface[n-1];
+            pointR = surface[nodeID+1];
+        } else {
+            pointL = surface[nodeID-1];
+            pointR = surface[nodeID+1];
+        }
 
-	/*------------Diagram--------------
+        /*------------Diagram--------------
                       
-	       R----<----0 
-	                 |  (exterior)
-	     (interior)  |  
-	                 ^  <- (indicates anti-clockwise
-	                 |             order)
-	                 |
-	                 L
-	  --------------------------------*/
+               R----<----0 
+                         |  (exterior)
+             (interior)  |  
+                         ^  <- (indicates anti-clockwise
+                         |             order)
+                         |
+                         L
+          --------------------------------*/
 
-	//good old cosine rule:
-	double c = point_dist(pointL, pointR);
-	double a = point_dist(pointL, point0);
-	double b = point_dist(pointR, point0);
-	double r = (a^^2+b^^2-c^^2)/(2*a*b);
-	assert(r<1.01 && r>-1.01); //checking calculated r is plausible
-	if (r >1.0) r=1.0;
-	if (r < -1.0) r=-1.0;
-	double angle = acos(r);
+        //good old cosine rule:
+        double c = point_dist(pointL, pointR);
+        double a = point_dist(pointL, point0);
+        double b = point_dist(pointR, point0);
+        double r = (a^^2+b^^2-c^^2)/(2*a*b);
+        assert(r<1.01 && r>-1.01); //checking calculated r is plausible
+        if (r >1.0) r=1.0;
+        if (r < -1.0) r=-1.0;
+        double angle = acos(r);
 
-	if (angle > 3.141 && angle < 3.142){
-	    //if angle is basically pi it doesn't need adjusting
-	} else {
-	    // determine if the interior or exterior angle was calculated
-	    // ie. cosine rule will just calculated smallest angle
-	    // see if point0 is on left or right of line L-->R
-	    // point0 should be to the right for interior angle calc
+        if (angle > 3.141 && angle < 3.142){
+            //if angle is basically pi it doesn't need adjusting
+        } else {
+            // determine if the interior or exterior angle was calculated
+            // ie. cosine rule will just calculated smallest angle
+            // see if point0 is on left or right of line L-->R
+            // point0 should be to the right for interior angle calc
 
-	    int ans = LeftorRight(pointL, pointR, point0);
-	    // function returns 1 for "left", -1 for "right" or 0 for "on line"
+            int ans = LeftorRight(pointL, pointR, point0);
+            // function returns 1 for "left", -1 for "right" or 0 for "on line"
 
-	    if (ans == 1) { //exterior angle was calculated - fix:
-		angle = 2*PI - angle;
-	    }
-	}
+            if (ans == 1) { //exterior angle was calculated - fix:
+                angle = 2*PI - angle;
+            }
+        }
 
-	//store the node information:
-	point0.store_node_angle(angle);
-	string node_cat = node_category(angle);
-	point0.store_node_cat(node_cat);
-	double[2] V_R = vector2D(point0, pointR);
-	double[2] V_L = vector2D(point0, pointL);
-	point0.store_vectors(V_R, V_L);
-	point0.store_adjacent_points(pointL, pointR);
+        //store the node information:
+        point0.store_node_angle(angle);
+        string node_cat = node_category(angle);
+        point0.store_node_cat(node_cat);
+        double[2] V_R = vector2D(point0, pointR);
+        double[2] V_L = vector2D(point0, pointL);
+        point0.store_vectors(V_R, V_L);
+        point0.store_adjacent_points(pointL, pointR);
 
     } 
 }
@@ -631,133 +631,133 @@ void adjust_row_ends(Point[] surface, double initial_size,  bool boundary)
     */
 
     bool conditions(Point node){
-	bool ans;
-	if(node is null){return ans;}
-	if(node.pointL.node_cat != "row end" && 
-	   node.pointR.node_cat != "row end" && 
-	   node.pointL.pointL.node_cat != "row end" && 
-	   node.pointR.pointR.node_cat != "row end" && 
-	   node.pointL.node_cat != "with row end" && 
-	   node.pointR.node_cat != "with row end" &&
-	   node.pointL.pointL.node_cat != "with row end" && 
-	   node.pointR.pointR.node_cat != "with row end" &&
-	   node.interior_angle < PI){
-	    ans = 1;
-	} else{ ans = 0;}
-	return ans;
+        bool ans;
+        if(node is null){return ans;}
+        if(node.pointL.node_cat != "row end" && 
+           node.pointR.node_cat != "row end" && 
+           node.pointL.pointL.node_cat != "row end" && 
+           node.pointR.pointR.node_cat != "row end" && 
+           node.pointL.node_cat != "with row end" && 
+           node.pointR.node_cat != "with row end" &&
+           node.pointL.pointL.node_cat != "with row end" && 
+           node.pointR.pointR.node_cat != "with row end" &&
+           node.interior_angle < PI){
+            ans = 1;
+        } else{ ans = 0;}
+        return ans;
     }
 
     bool conditions2(Point node){
-	bool ans;
-	if(node is null){return ans;}
-	if(node.pointL.node_cat != "row corner" && 
-	   node.pointR.node_cat != "row corner" && 
-	   node.pointL.node_cat != "row reversal" && 
-	   node.pointR.node_cat != "row reversal"){
-	    ans = 1;
-	} else{ ans = 0;}
-	return ans;
+        bool ans;
+        if(node is null){return ans;}
+        if(node.pointL.node_cat != "row corner" && 
+           node.pointR.node_cat != "row corner" && 
+           node.pointL.node_cat != "row reversal" && 
+           node.pointR.node_cat != "row reversal"){
+            ans = 1;
+        } else{ ans = 0;}
+        return ans;
     }
 
     //----------------------------------------------
     
     if (boundary == 0){
-	Point[] row_end_list;
-	double smallest_angle = 2*PI;
-	Point smallest_angle_node;
+        Point[] row_end_list;
+        double smallest_angle = 2*PI;
+        Point smallest_angle_node;
 
-	foreach (node;surface){
-	    if (node.node_cat == "row end") {
-		row_end_list ~= node;
-	    } else if (node.interior_angle < smallest_angle){
-		smallest_angle = node.interior_angle;
-		smallest_angle_node = node;
-	    }
-	}
-	//enforces a row end for the smallest angled node if no row ends exist in row
-	//writefln("there were %s row ends in this row", row_end_list.length);
-	if (row_end_list.length == 0){
-	    smallest_angle_node.node_cat = "row end";
-	    row_end_list ~= smallest_angle_node;
-	}
-	if (row_end_list.length == 1){
-	    size_t move = surface.length/2;
-	    Point node = smallest_angle_node;
-	    for(size_t i; i<move; ++i){
-		node = node.pointR;
-	    }
-	    if (node.interior_angle < PI){
-		node.node_cat = "row end";
-	        writeln("matching row end enforced");
-		row_end_list ~= node;
-	    } else {//throw new Exception(text("the node we wanted to enforce as a matching row 			end had too big of an angle... si is rejected"));
-	    }
-	}
-    	//asserting additional row ends to manage cell size reduction
-    	//and inserting wedges to manage cell size increases
-    	double biggest_growth = 0;
-    	double biggest_reduction = 1.0;
-    	double avr_face_length = average_face_length(surface);
-    	Point growth_node;
-    	Point shrink_node;
-    	foreach(node;surface){
-	    size_t[] point_IDs;
-	    size_t node_count;
-	    foreach(face; FACE_LIST){
-	    	point_IDs = face.point_IDs;
-	    	if (point_IDs.canFind(node.ID)){
-		    ++node_count;
-	    	}
-	    }
-	    if (node_count >= 4 && conditions(node)){
-	    	node.node_cat = "row end";
-	    }
-	    if (node.prev_node !is null){
-	    	double growth = (norm(node.V_L)+norm(node.V_R))/(norm(node.prev_node.V_L)+norm(node.prev_node.V_R));
-	    	if (node.growth == 0){node.growth = growth;}
-	    	else {node.growth = node.growth*growth;}
-	    	if (node.growth > biggest_growth && 
-		    (norm(node.V_L)+norm(node.V_R))>4*avr_face_length &&
-		    conditions2(node)){
-		    biggest_growth = node.growth;
-		    growth_node = node;
-	        }
-	        if (node.growth < biggest_reduction && 
-		    (norm(node.V_L)+norm(node.V_R))<1*avr_face_length &&
-		    conditions(node)){
-		    biggest_reduction = node.growth;
-		    shrink_node = node;
-	        }
-	    }
+        foreach (node;surface){
+            if (node.node_cat == "row end") {
+                row_end_list ~= node;
+            } else if (node.interior_angle < smallest_angle){
+                smallest_angle = node.interior_angle;
+                smallest_angle_node = node;
+            }
+        }
+        //enforces a row end for the smallest angled node if no row ends exist in row
+        //writefln("there were %s row ends in this row", row_end_list.length);
+        if (row_end_list.length == 0){
+            smallest_angle_node.node_cat = "row end";
+            row_end_list ~= smallest_angle_node;
+        }
+        if (row_end_list.length == 1){
+            size_t move = surface.length/2;
+            Point node = smallest_angle_node;
+            for(size_t i; i<move; ++i){
+                node = node.pointR;
+            }
+            if (node.interior_angle < PI){
+                node.node_cat = "row end";
+                writeln("matching row end enforced");
+                row_end_list ~= node;
+            } else {//throw new Exception(text("the node we wanted to enforce as a matching row                         end had too big of an angle... si is rejected"));
+            }
+        }
+        //asserting additional row ends to manage cell size reduction
+        //and inserting wedges to manage cell size increases
+        double biggest_growth = 0;
+        double biggest_reduction = 1.0;
+        double avr_face_length = average_face_length(surface);
+        Point growth_node;
+        Point shrink_node;
+        foreach(node;surface){
+            size_t[] point_IDs;
+            size_t node_count;
+            foreach(face; FACE_LIST){
+                point_IDs = face.point_IDs;
+                if (point_IDs.canFind(node.ID)){
+                    ++node_count;
+                }
+            }
+            if (node_count >= 4 && conditions(node)){
+                node.node_cat = "row end";
+            }
+            if (node.prev_node !is null){
+                double growth = (norm(node.V_L)+norm(node.V_R))/(norm(node.prev_node.V_L)+norm(node.prev_node.V_R));
+                if (node.growth == 0){node.growth = growth;}
+                else {node.growth = node.growth*growth;}
+                if (node.growth > biggest_growth && 
+                    (norm(node.V_L)+norm(node.V_R))>4*avr_face_length &&
+                    conditions2(node)){
+                    biggest_growth = node.growth;
+                    growth_node = node;
+                }
+                if (node.growth < biggest_reduction && 
+                    (norm(node.V_L)+norm(node.V_R))<1*avr_face_length &&
+                    conditions(node)){
+                    biggest_reduction = node.growth;
+                    shrink_node = node;
+                }
+            }
         }
         if (biggest_growth > 1.5){
-	    writeln("growth node detected - wedge inserted");
-	    growth_node.node_cat = "row corner";
-    	} 
+            writeln("growth node detected - wedge inserted");
+            growth_node.node_cat = "row corner";
+        } 
         if (biggest_reduction < 0.5){
-	    writeln("row end enforced to manage cell size reduction");
-	    shrink_node.node_cat = "row end";
-    	}        
+            writeln("row end enforced to manage cell size reduction");
+            shrink_node.node_cat = "row end";
+        }        
 
     }  
 
     foreach(node; surface){
-	if (node.node_cat == "row end" && node.pointR.node_cat == "row end"){
-	    node.node_cat = "row side";    
-	}
-	if(node.pointL.pointL.node_cat == "row end" &&
-	   node.pointR.pointR.node_cat == "row end"){
-	    node.node_cat = "row side";
-	}
-	if (node.node_cat == "row end") {
-	    if (node.pointL.pointL.node_cat != "row end" && 
-		node.pointL.pointL.node_cat != "with row end"){
-		node.pointL.node_cat = "with row end";
-	    } else {
-		node.pointR.node_cat = "with row end";
-		node.pointL.node_cat = "row side";
-	    }
-	}
+        if (node.node_cat == "row end" && node.pointR.node_cat == "row end"){
+            node.node_cat = "row side";    
+        }
+        if(node.pointL.pointL.node_cat == "row end" &&
+           node.pointR.pointR.node_cat == "row end"){
+            node.node_cat = "row side";
+        }
+        if (node.node_cat == "row end") {
+            if (node.pointL.pointL.node_cat != "row end" && 
+                node.pointL.pointL.node_cat != "with row end"){
+                node.pointL.node_cat = "with row end";
+            } else {
+                node.pointR.node_cat = "with row end";
+                node.pointL.node_cat = "row side";
+            }
+        }
     }
 }
 
@@ -776,16 +776,16 @@ string node_category(double angle)
     if (angle <= tols[0]) {node_cat = "row end";}
 
     else if ((tols[0] < angle) && (angle <= tols[1])) {
-	node_cat = "row side";
+        node_cat = "row side";
     }
     else if ((tols[1] < angle) && (angle <= tols[2])) {
-	node_cat = "row corner";
+        node_cat = "row corner";
     }
     else if ((tols[2] < angle) && (angle <= 2*PI)) {
-	node_cat = "row reversal";
+        node_cat = "row reversal";
     }
     else if (angle > 2*PI) {
-	throw new Error(text("calculated angle > 2*PI... error"));
+        throw new Error(text("calculated angle > 2*PI... error"));
     }
 
     return node_cat;
@@ -802,167 +802,167 @@ void node_gen(Point[] surface, size_t i, ref Point[] New_Nodes)
     Point node = surface[i];
     
     if (node.node_cat == "row end" || node.node_cat == "with row end"){
-	// no new nodes are generated
+        // no new nodes are generated
     }
     if (node.node_cat == "row side"){
-	// generates 1 new node
-	// makes 1 new cell
+        // generates 1 new node
+        // makes 1 new cell
 
-	/*----------------diagram:------------------
-	
-	            ............o  <-- (new node)
+        /*----------------diagram:------------------
+        
+                    ............o  <-- (new node)
                     .           |   
-		    .   new     | 
-		    .   cell    |
-		    .           |
+                    .   new     | 
+                    .   cell    |
+                    .           |
        (pointL) >   o-----------o-----------o  < (pointR)
-	                        ^ 
-		          (current node)
+                                ^ 
+                          (current node)
 
-	   -----------------------------------------*/
+           -----------------------------------------*/
 
-	double V_length = 0.5*(norm(node.V_L)+norm(node.V_R)/sin(node.interior_angle/2));
-	double[2] node_V = [node.x, node.y];
-	double[2] unit_V = unit_leftV(node.V_R, node.interior_angle/2);
-	double[2] node_pos = node_V[]+(V_length*unit_V[])[];
-	New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]);
-	New_Nodes[$-1].prev_node = node;
+        double V_length = 0.5*(norm(node.V_L)+norm(node.V_R)/sin(node.interior_angle/2));
+        double[2] node_V = [node.x, node.y];
+        double[2] unit_V = unit_leftV(node.V_R, node.interior_angle/2);
+        double[2] node_pos = node_V[]+(V_length*unit_V[])[];
+        New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]);
+        New_Nodes[$-1].prev_node = node;
 
-	if(node.pointL.node_cat == "row end") {
-	    makeCell([New_Nodes[$-1], node.pointL.pointL, node.pointL, node]);
-	    New_Nodes[$-1].node_cat = "row end";
-	    New_Nodes[$-1].prev_node = node.pointL;
-	    if (New_Nodes.length >= 2) {
-		makeCell([New_Nodes[$-1], New_Nodes[$-2], node.pointL.pointL.pointL, node.pointL.pointL]);
-	    } 
-	} else if(node.pointL.node_cat == "with row end"){
-	    if (New_Nodes.length >=2 ){
-		makeCell([New_Nodes[$-2], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
-		New_Nodes[$-2].node_cat = "row end";
-		New_Nodes[$-2].prev_node = node.pointL.pointL;
-		makeCell([New_Nodes[$-1], New_Nodes[$-2], node.pointL, node]);
-	    }	    
-	} else if(New_Nodes.length >=2) {
-	    makeCell([New_Nodes[$-1], New_Nodes[$-2], node.pointL, node]);
-	}
-		       
+        if(node.pointL.node_cat == "row end") {
+            makeCell([New_Nodes[$-1], node.pointL.pointL, node.pointL, node]);
+            New_Nodes[$-1].node_cat = "row end";
+            New_Nodes[$-1].prev_node = node.pointL;
+            if (New_Nodes.length >= 2) {
+                makeCell([New_Nodes[$-1], New_Nodes[$-2], node.pointL.pointL.pointL, node.pointL.pointL]);
+            } 
+        } else if(node.pointL.node_cat == "with row end"){
+            if (New_Nodes.length >=2 ){
+                makeCell([New_Nodes[$-2], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
+                New_Nodes[$-2].node_cat = "row end";
+                New_Nodes[$-2].prev_node = node.pointL.pointL;
+                makeCell([New_Nodes[$-1], New_Nodes[$-2], node.pointL, node]);
+            }       
+        } else if(New_Nodes.length >=2) {
+            makeCell([New_Nodes[$-1], New_Nodes[$-2], node.pointL, node]);
+        }
+                       
     }
     if (node.node_cat == "row corner") {
-	// generates 3 new nodes
-	// creates 2 new cells
+        // generates 3 new nodes
+        // creates 2 new cells
 
-	/*----------------diagram:------------------
-	
-	                   (new node1)
-	            ............o...........o (new node2)
+        /*----------------diagram:------------------
+        
+                           (new node1)
+                    ............o...........o (new node2)
                     .           |           .
-		    .   new     |    new    .
-		    .  cell1    |   cell2   .
-		    .           |           .
+                    .   new     |    new    .
+                    .  cell1    |   cell2   .
+                    .           |           .
        (pointL) >   o-----------o-----------o (new node3)
-	                      / |           
-		       current	|        
-		        node	|      
-				|           
-				o
-				^
-			     (PointR)
+                              / |           
+                       current  |        
+                        node    |      
+                                |           
+                                o
+                                ^
+                             (PointR)
 
-	   -----------------------------------------*/
+           -----------------------------------------*/
 
-	double V_length = 0.5*(norm(node.V_L)+norm(node.V_R)/sin(node.interior_angle/3));
-	double[2] node_V = [node.x, node.y];
-	double[2] unit_V = unit_leftV(node.V_R, 2*node.interior_angle/3);
-	double[2] node_pos = node_V[]+(V_length*unit_V[])[];
+        double V_length = 0.5*(norm(node.V_L)+norm(node.V_R)/sin(node.interior_angle/3));
+        double[2] node_V = [node.x, node.y];
+        double[2] unit_V = unit_leftV(node.V_R, 2*node.interior_angle/3);
+        double[2] node_pos = node_V[]+(V_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 1
-	New_Nodes[$-1].prev_node = node;
-	double V2_length = SQRT2*V_length;
-	unit_V = unit_leftV(node.V_R, node.interior_angle/2);
-	node_pos = node_V[]+(V2_length*unit_V[])[];
+        New_Nodes[$-1].prev_node = node;
+        double V2_length = SQRT2*V_length;
+        unit_V = unit_leftV(node.V_R, node.interior_angle/2);
+        node_pos = node_V[]+(V2_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 2
-	New_Nodes[$-1].prev_node = node;
-	unit_V = unit_leftV(node.V_R, node.interior_angle/3);
-	node_pos = node_V[]+(V_length*unit_V[])[];
+        New_Nodes[$-1].prev_node = node;
+        unit_V = unit_leftV(node.V_R, node.interior_angle/3);
+        node_pos = node_V[]+(V_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 3
-	New_Nodes[$-1].prev_node = node;
+        New_Nodes[$-1].prev_node = node;
 
-	if(node.pointL.node_cat == "row end"){
-	    makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL.pointL.pointL, node.pointL.pointL]);
-	    makeCell([New_Nodes[$-3], node.pointL.pointL, node.pointL, node]);
-	    New_Nodes[$-3].node_cat = "row end";
-	} else if (node.pointL.node_cat == "with row end"){
-	    makeCell([New_Nodes[$-4], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
-	    makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL, node]);
-	    New_Nodes[$-4].node_cat = "row end";
-	} else {
-	    //New_Nodes list should not be empty since start node is a row side 	    //ie. New_Nodes[$-4] should be accessible
-	    makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL, node]);
-	}
-	makeCell([New_Nodes[$-1], New_Nodes[$-2], New_Nodes[$-3], node]);
+        if(node.pointL.node_cat == "row end"){
+            makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL.pointL.pointL, node.pointL.pointL]);
+            makeCell([New_Nodes[$-3], node.pointL.pointL, node.pointL, node]);
+            New_Nodes[$-3].node_cat = "row end";
+        } else if (node.pointL.node_cat == "with row end"){
+            makeCell([New_Nodes[$-4], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
+            makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL, node]);
+            New_Nodes[$-4].node_cat = "row end";
+        } else {
+            //New_Nodes list should not be empty since start node is a row side             //ie. New_Nodes[$-4] should be accessible
+            makeCell([New_Nodes[$-3], New_Nodes[$-4], node.pointL, node]);
+        }
+        makeCell([New_Nodes[$-1], New_Nodes[$-2], New_Nodes[$-3], node]);
     }
     if (node.node_cat == "row reversal") {
-	// generates 5 new nodes
-	// creates 3 new cells
+        // generates 5 new nodes
+        // creates 3 new cells
 
-	/*----------------diagram:------------------
-	
-	                   (new node3)
+        /*----------------diagram:------------------
+        
+                           (new node3)
       (new node2) > o...........o...........o (new node4)
                     .           |           .
-		    .   new     |    new    .
-		    .  cell2    |   cell3   .
-		    .           |           .
+                    .   new     |    new    .
+                    .  cell2    |   cell3   .
+                    .           |           .
      (new node1) >  o-----------o-----------o (new node5)
-	           /           / \
-		  /   new     /   \
-		 /   cell1   /     \
-		/	    /       \    
-		o----------o	     o
-			   ^	     ^
-		       (PointL)   (PointR)
+                   /           / \
+                  /   new     /   \
+                 /   cell1   /     \
+                /           /       \    
+                o----------o         o
+                           ^         ^
+                       (PointL)   (PointR)
 
-	   -----------------------------------------*/
+           -----------------------------------------*/
 
-	double V_length = 0.5*(norm(node.V_L)+norm(node.V_R)/sin(node.interior_angle/4));
-	double[2] node_V = [node.x, node.y];
-	double[2] unit_V = unit_leftV(node.V_R, 3*node.interior_angle/4);
-	double[2] node_pos = node_V[]+(V_length*unit_V[])[];
+        double V_length = 0.5*(norm(node.V_L)+norm(node.V_R)/sin(node.interior_angle/4));
+        double[2] node_V = [node.x, node.y];
+        double[2] unit_V = unit_leftV(node.V_R, 3*node.interior_angle/4);
+        double[2] node_pos = node_V[]+(V_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 1
-	New_Nodes[$-1].prev_node = node;
-	double V2_length = SQRT2*V_length;
-	unit_V = unit_leftV(node.V_R, 5*node.interior_angle/8);
-	node_pos = node_V[]+(V2_length*unit_V[])[];
+        New_Nodes[$-1].prev_node = node;
+        double V2_length = SQRT2*V_length;
+        unit_V = unit_leftV(node.V_R, 5*node.interior_angle/8);
+        node_pos = node_V[]+(V2_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 2
-	New_Nodes[$-1].prev_node = node;
-	unit_V = unit_leftV(node.V_R, node.interior_angle/2);
-	node_pos = node_V[]+(V_length*unit_V[])[];
+        New_Nodes[$-1].prev_node = node;
+        unit_V = unit_leftV(node.V_R, node.interior_angle/2);
+        node_pos = node_V[]+(V_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 3
-	New_Nodes[$-1].prev_node = node;
-	unit_V = unit_leftV(node.V_R, 3*node.interior_angle/8);
-	node_pos = node_V[]+(V2_length*unit_V[])[];
+        New_Nodes[$-1].prev_node = node;
+        unit_V = unit_leftV(node.V_R, 3*node.interior_angle/8);
+        node_pos = node_V[]+(V2_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 4
-	New_Nodes[$-1].prev_node = node;
-	unit_V = unit_leftV(node.V_R, node.interior_angle/4);
-	node_pos = node_V[]+(V_length*unit_V[])[];
+        New_Nodes[$-1].prev_node = node;
+        unit_V = unit_leftV(node.V_R, node.interior_angle/4);
+        node_pos = node_V[]+(V_length*unit_V[])[];
         New_Nodes ~= make2DPoint(node_pos[0], node_pos[1]); //new node 5
-	New_Nodes[$-1].prev_node = node;
+        New_Nodes[$-1].prev_node = node;
 
-	if(node.pointL.node_cat == "row end"){
-	    makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL.pointL.pointL, node.pointL.pointL]);
-	    makeCell([New_Nodes[$-5], node.pointL.pointL, node.pointL, node]);
-	    New_Nodes[$-5].node_cat = "row end";
-	    //row end right beside row reversal
-	} else if (node.pointL.node_cat == "with row end"){
-	    makeCell([New_Nodes[$-6], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
-	    makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL, node]);
-	    New_Nodes[$-6].node_cat = "row end";
-	} else {
-	    //New_Nodes list should not be empty since start node is a row side 
-	    //ie. New_Nodes[$-6] should be accessible
-	    makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL, node]);
-	}
-	makeCell([New_Nodes[$-3], New_Nodes[$-4], New_Nodes[$-5], node]);
-	makeCell([New_Nodes[$-1], New_Nodes[$-2], New_Nodes[$-3], node]);
+        if(node.pointL.node_cat == "row end"){
+            makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL.pointL.pointL, node.pointL.pointL]);
+            makeCell([New_Nodes[$-5], node.pointL.pointL, node.pointL, node]);
+            New_Nodes[$-5].node_cat = "row end";
+            //row end right beside row reversal
+        } else if (node.pointL.node_cat == "with row end"){
+            makeCell([New_Nodes[$-6], node.pointL.pointL.pointL, node.pointL.pointL, node.pointL]);
+            makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL, node]);
+            New_Nodes[$-6].node_cat = "row end";
+        } else {
+            //New_Nodes list should not be empty since start node is a row side 
+            //ie. New_Nodes[$-6] should be accessible
+            makeCell([New_Nodes[$-5], New_Nodes[$-6], node.pointL, node]);
+        }
+        makeCell([New_Nodes[$-3], New_Nodes[$-4], New_Nodes[$-5], node]);
+        makeCell([New_Nodes[$-1], New_Nodes[$-2], New_Nodes[$-3], node]);
     }
 }
 
@@ -983,19 +983,19 @@ Point[] generate_new_row(Point[] surface)
        included to ensure this has been correctly enforced */
     Point start_node;
     foreach(node;surface){
-	if(node.node_cat == "row side" && node.pointL.node_cat == "row side") {
-	    start_node = node;
-	    break;
-	}
+        if(node.node_cat == "row side" && node.pointL.node_cat == "row side") {
+            start_node = node;
+            break;
+        }
     }
     if(start_node is null){throw new Exception("there are not 2 consecutive side nodes in this row");}
 
     //construct order from start node
     for(size_t i = start_node.rowID; i < n; ++i){
-	node_gen(surface, i, New_Nodes);
+        node_gen(surface, i, New_Nodes);
     }
     for(size_t i = 0; i < start_node.rowID; ++i){
-	node_gen(surface, i, New_Nodes);
+        node_gen(surface, i, New_Nodes);
     }
 
     // make final cell (known to be this case becasue of 
@@ -1005,8 +1005,8 @@ Point[] generate_new_row(Point[] surface)
     //assigning row IDs to the nodes in the new row
     size_t rowID;
     foreach(node;New_Nodes){
-	node.store_rowID(rowID);
-	++rowID;
+        node.store_rowID(rowID);
+        ++rowID;
     }
 
     return New_Nodes;
@@ -1023,11 +1023,11 @@ double summed_squareness(Point node)
     double summed_squareness = 0;
     size_t[] ID_list;
     foreach(cell; CELL_LIST) {
-	ID_list = cell.point_IDs;
-	if(ID_list.canFind(node.ID)) {
-	    ++cell_count;
-	    summed_squareness += squareness(cell);
-	}
+        ID_list = cell.point_IDs;
+        if(ID_list.canFind(node.ID)) {
+            ++cell_count;
+            summed_squareness += squareness(cell);
+        }
     }
     assert (cell_count != 0);
     summed_squareness /= cell_count;
@@ -1057,55 +1057,55 @@ double smoothing(Point[] surface, Point[] Prev_Row, bool boundary, bool first_ro
     double squareness;
 
     foreach(node;surface) {
-	if((boundary == 1 && node.node_cat != "row corner" && node.node_cat != "row reversal") ||
-	    (boundary == 0)){
-	    double[2][] vectors;
-	    foreach(face; FACE_LIST) {
-		size_t[] ID_list;
-		ID_list ~= face.point_IDs;
-		if(ID_list.canFind(node.ID)) {
-		    if (node.ID == face.point_IDs[0]) {
-			attached_point = POINT_LIST[face.point_IDs[1]];
-		    } else {
-			attached_point = POINT_LIST[face.point_IDs[0]];
-		    }
-		    vectors ~= [attached_point.x-node.x, attached_point.y-node.y];    
-		}
-	    }
+        if((boundary == 1 && node.node_cat != "row corner" && node.node_cat != "row reversal") ||
+            (boundary == 0)){
+            double[2][] vectors;
+            foreach(face; FACE_LIST) {
+                size_t[] ID_list;
+                ID_list ~= face.point_IDs;
+                if(ID_list.canFind(node.ID)) {
+                    if (node.ID == face.point_IDs[0]) {
+                        attached_point = POINT_LIST[face.point_IDs[1]];
+                    } else {
+                        attached_point = POINT_LIST[face.point_IDs[0]];
+                    }
+                    vectors ~= [attached_point.x-node.x, attached_point.y-node.y];    
+                }
+            }
 
-	    if (vectors.length == 0) {
-		writeln("apparently this node has no friends! \n", node.print());
-		//throw new Error(text("apparently this node has no friends!"));
-	    }
-	
-	    if(vectors.length != 0){
-		double[2] movement = vectors[0];
-		for (uint i = 1; i < vectors.length; ++i){
-		    movement[] += vectors[i][];
-		}
-		movement[] /= 2*to!int(vectors.length); 
-		move_length = norm(movement);
-		if (move_length > biggest_move) { biggest_move = move_length;}
+            if (vectors.length == 0) {
+                writeln("apparently this node has no friends! \n", node.print());
+                //throw new Error(text("apparently this node has no friends!"));
+            }
+        
+            if(vectors.length != 0){
+                double[2] movement = vectors[0];
+                for (uint i = 1; i < vectors.length; ++i){
+                    movement[] += vectors[i][];
+                }
+                movement[] /= 2*to!int(vectors.length); 
+                move_length = norm(movement);
+                if (move_length > biggest_move) { biggest_move = move_length;}
 
-		if (first_row == 0){
-		    double x_move = movement[0]/5.;
-		    double y_move = movement[1]/5.;
-		    for(int i; i<5; ++i) {
-		        prev_squareness = summed_squareness(node);
-		        x = node.x;
-		        y = node.y;
-		        node.x += x_move;
-		        node.y += y_move;
-		        squareness = summed_squareness(node);
-		        if(squareness < prev_squareness){
-		            node.x = x;
-		            node.y = y;
-			    break;
-		        }
-		    }
-		} else {node.x += movement[0]; node.y += movement[1];}
-	    }
-	}
+                if (first_row == 0){
+                    double x_move = movement[0]/5.;
+                    double y_move = movement[1]/5.;
+                    for(int i; i<5; ++i) {
+                        prev_squareness = summed_squareness(node);
+                        x = node.x;
+                        y = node.y;
+                        node.x += x_move;
+                        node.y += y_move;
+                        squareness = summed_squareness(node);
+                        if(squareness < prev_squareness){
+                            node.x = x;
+                            node.y = y;
+                            break;
+                        }
+                    }
+                } else {node.x += movement[0]; node.y += movement[1];}
+            }
+        }
     }
 
     return biggest_move;
@@ -1128,9 +1128,9 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
     Point[] inner_nodes;
     //special case - only 1 cell remianing to close
     if (closing == 1 && New_Row.length == 4){
-	makeCell([start, start.pointR, start.pointR.pointR, start.pointL]);
-	writeln("CLOSED (special)");
-	return New_Nodes;
+        makeCell([start, start.pointR, start.pointR.pointR, start.pointL]);
+        writeln("CLOSED (special)");
+        return New_Nodes;
     }
 
     double midx = (start.pointL.x+start.pointR.x)/2;
@@ -1149,110 +1149,110 @@ Point[] seam(Point start, ref Point[] New_Row, ref size_t[] adjust_IDs, ref size
     int loop;
 
     bool conditions(double theta, Point nextpointL, 
-		    Point nextpointR, size_t original_nodes_left){
-	bool conditions;
-	if(closing == 0){ //not doing the closing seam
-	    if (theta < PI/2 && 
-	        original_nodes_left > 2 &&
-	        point_dist(start, nextpointL) < 2*point_dist(start, nextpointR) &&
-	  	point_dist(start, nextpointR) < 2*point_dist(start, nextpointL) &&
-	  	!adjust_IDs.canFind(nextpointL.rowID) &&
-	  	!adjust_IDs.canFind(nextpointR.rowID)) { conditions = 1;}
-	    else{
-		writefln("there are %s remaining nodes \n (not closing seam)", original_nodes_left);
-		conditions = 0;}
-	} else if(closing == 1){
-	    if(original_nodes_left > 2){conditions = 1;}
-	    else{
-		writeln("less than 2 remaining nodes");
-		writefln("there are %s remaining nodes", original_nodes_left);
-		conditions = 0;}
-	}
-	return conditions;
+                    Point nextpointR, size_t original_nodes_left){
+        bool conditions;
+        if(closing == 0){ //not doing the closing seam
+            if (theta < PI/2 && 
+                original_nodes_left > 2 &&
+                point_dist(start, nextpointL) < 2*point_dist(start, nextpointR) &&
+                point_dist(start, nextpointR) < 2*point_dist(start, nextpointL) &&
+                !adjust_IDs.canFind(nextpointL.rowID) &&
+                !adjust_IDs.canFind(nextpointR.rowID)) { conditions = 1;}
+            else{
+                writefln("there are %s remaining nodes \n (not closing seam)", original_nodes_left);
+                conditions = 0;}
+        } else if(closing == 1){
+            if(original_nodes_left > 2){conditions = 1;}
+            else{
+                writeln("less than 2 remaining nodes");
+                writefln("there are %s remaining nodes", original_nodes_left);
+                conditions = 0;}
+        }
+        return conditions;
     }
-	     
+             
     int ind = 2; //reference index for joining (complicated)
     int nodes = 1;
     int Flag = 1;
     while(conditions(theta, nextpointL, 
-		     nextpointR, original_nodes_left)){
-	++loop;
-	double avr_length = (norm(a)+norm(b))/2;
-	if (point_dist(nextpointL.pointL, nextpointR.pointR) < 3*avr_length){
-	    if (Flag == 1){
-		midx = (nextpointL.pointL.x+nextpointR.pointR.x)/2;
-		midy = (nextpointL.pointL.y+nextpointR.pointR.y)/2;
-		New_Nodes ~= make2DPoint(midx, midy);
-		original_nodes_left -=2;
-		makeCell([New_Nodes[$-1], nextpointL.pointL, nextpointL, New_Nodes[$-ind]]);
-		makeCell([New_Nodes[$-1], New_Nodes[$-ind], nextpointR, nextpointR.pointR]);
-		ind = 2;
-		nodes = 1;
-	    } else if (Flag == 2){
-		ind = 4;
-		makeCell([New_Nodes[$-3], nextpointL.pointL, nextpointL, New_Nodes[$-2]]);
-		makeCell([New_Nodes[$-3], New_Nodes[$-1], nextpointR, nextpointR.pointR]);
-		original_nodes_left -=2;
-		nodes = 0;
-	    }
-	    Flag = 1;
-	} else if(closing==1 || point_dist(nextpointL.pointL, nextpointR.pointR)<5*avr_length){
-	    midx = (nextpointL.pointL.x+nextpointR.pointR.x)/2;
-	    midy = (nextpointL.pointL.y+nextpointR.pointR.y)/2;
-	    New_Nodes ~= make2DPoint(midx, midy);
-	    midx = (nextpointL.pointL.x+New_Nodes[$-1].x)/2;
-	    midy = (nextpointL.pointL.y+New_Nodes[$-1].y)/2;
-	    New_Nodes ~= make2DPoint(midx, midy);
-	    midx = (New_Nodes[$-2].x+nextpointR.pointR.x)/2;
-	    midy = (New_Nodes[$-2].y+nextpointR.pointR.y)/2;
-	    New_Nodes ~= make2DPoint(midx, midy);
-	    original_nodes_left -=2;
-	    if (Flag == 1){
-		if (nodes==0){
-		    ind = 6;
-		} else {ind=4;}
-		makeCell([New_Nodes[$-3], New_Nodes[$-2], New_Nodes[$-ind], New_Nodes[$-1]]);
-		makeCell([New_Nodes[$-2], nextpointL.pointL, nextpointL, New_Nodes[$-ind]]);
-		makeCell([New_Nodes[$-1], New_Nodes[$-ind], nextpointR, nextpointR.pointR, ]);
-		ind=4;
-	    } else if (Flag == 2){
-		makeCell([New_Nodes[$-2], nextpointL.pointL, nextpointL, New_Nodes[$-5]]);
-		makeCell([New_Nodes[$-3], New_Nodes[$-2], New_Nodes[$-5], New_Nodes[$-6]]);
-		makeCell([New_Nodes[$-1], New_Nodes[$-3], New_Nodes[$-6], New_Nodes[$-4]]);
-		makeCell([New_Nodes[$-1], New_Nodes[$-4], nextpointR, nextpointR.pointR, ]);
-	    }
+                     nextpointR, original_nodes_left)){
+        ++loop;
+        double avr_length = (norm(a)+norm(b))/2;
+        if (point_dist(nextpointL.pointL, nextpointR.pointR) < 3*avr_length){
+            if (Flag == 1){
+                midx = (nextpointL.pointL.x+nextpointR.pointR.x)/2;
+                midy = (nextpointL.pointL.y+nextpointR.pointR.y)/2;
+                New_Nodes ~= make2DPoint(midx, midy);
+                original_nodes_left -=2;
+                makeCell([New_Nodes[$-1], nextpointL.pointL, nextpointL, New_Nodes[$-ind]]);
+                makeCell([New_Nodes[$-1], New_Nodes[$-ind], nextpointR, nextpointR.pointR]);
+                ind = 2;
+                nodes = 1;
+            } else if (Flag == 2){
+                ind = 4;
+                makeCell([New_Nodes[$-3], nextpointL.pointL, nextpointL, New_Nodes[$-2]]);
+                makeCell([New_Nodes[$-3], New_Nodes[$-1], nextpointR, nextpointR.pointR]);
+                original_nodes_left -=2;
+                nodes = 0;
+            }
+            Flag = 1;
+        } else if(closing==1 || point_dist(nextpointL.pointL, nextpointR.pointR)<5*avr_length){
+            midx = (nextpointL.pointL.x+nextpointR.pointR.x)/2;
+            midy = (nextpointL.pointL.y+nextpointR.pointR.y)/2;
+            New_Nodes ~= make2DPoint(midx, midy);
+            midx = (nextpointL.pointL.x+New_Nodes[$-1].x)/2;
+            midy = (nextpointL.pointL.y+New_Nodes[$-1].y)/2;
+            New_Nodes ~= make2DPoint(midx, midy);
+            midx = (New_Nodes[$-2].x+nextpointR.pointR.x)/2;
+            midy = (New_Nodes[$-2].y+nextpointR.pointR.y)/2;
+            New_Nodes ~= make2DPoint(midx, midy);
+            original_nodes_left -=2;
+            if (Flag == 1){
+                if (nodes==0){
+                    ind = 6;
+                } else {ind=4;}
+                makeCell([New_Nodes[$-3], New_Nodes[$-2], New_Nodes[$-ind], New_Nodes[$-1]]);
+                makeCell([New_Nodes[$-2], nextpointL.pointL, nextpointL, New_Nodes[$-ind]]);
+                makeCell([New_Nodes[$-1], New_Nodes[$-ind], nextpointR, nextpointR.pointR, ]);
+                ind=4;
+            } else if (Flag == 2){
+                makeCell([New_Nodes[$-2], nextpointL.pointL, nextpointL, New_Nodes[$-5]]);
+                makeCell([New_Nodes[$-3], New_Nodes[$-2], New_Nodes[$-5], New_Nodes[$-6]]);
+                makeCell([New_Nodes[$-1], New_Nodes[$-3], New_Nodes[$-6], New_Nodes[$-4]]);
+                makeCell([New_Nodes[$-1], New_Nodes[$-4], nextpointR, nextpointR.pointR, ]);
+            }
 
-	    Flag = 2;
-	    nodes = 3;
-	} else { writeln("more than 5 cell spaces between joining nodes");
-	    if (closing == 0){break;}
-	    else { throw new Error(text("cannot terminate at >5 node seam for closing procedure - try recursion for closing"));}
-	}
+            Flag = 2;
+            nodes = 3;
+        } else { writeln("more than 5 cell spaces between joining nodes");
+            if (closing == 0){break;}
+            else { throw new Error(text("cannot terminate at >5 node seam for closing procedure - try recursion for closing"));}
+        }
 
-	nextpointL = nextpointL.pointL;
-	nextpointR = nextpointR.pointR;
-	a = vector2D(nextpointL, nextpointL.pointL);
-	b = vector2D(nextpointR, nextpointR.pointR);
-	theta = angle_between_vectors(a,b);
+        nextpointL = nextpointL.pointL;
+        nextpointR = nextpointR.pointR;
+        a = vector2D(nextpointL, nextpointL.pointL);
+        b = vector2D(nextpointR, nextpointR.pointR);
+        theta = angle_between_vectors(a,b);
     } 
     if (nodes == 1){
-	inner_nodes ~= New_Nodes[$-1];
+        inner_nodes ~= New_Nodes[$-1];
     } else if (nodes == 0){
-	inner_nodes ~= New_Nodes[$-3];
+        inner_nodes ~= New_Nodes[$-3];
     } else if (nodes == 3){
-	inner_nodes = [New_Nodes[$-2], New_Nodes[$-3], New_Nodes[$-1]];
+        inner_nodes = [New_Nodes[$-2], New_Nodes[$-3], New_Nodes[$-1]];
     }
     
     if(original_nodes_left == 1 && closing == 1){
-	writeln("closing final cells");
-	if(Flag == 1){
-	    makeCell([nextpointR.pointR, nextpointL, New_Nodes[$-(ind-1)], nextpointR]);
-	    writeln("CLOSED1");
-	} else if(Flag == 2){
-	    makeCell([nextpointR.pointR, nextpointL, New_Nodes[$-2], New_Nodes[$-3]]);
-	    makeCell([nextpointR.pointR, New_Nodes[$-3], New_Nodes[$-1], nextpointR]);
-	    writeln("CLOSED2");
-	}
+        writeln("closing final cells");
+        if(Flag == 1){
+            makeCell([nextpointR.pointR, nextpointL, New_Nodes[$-(ind-1)], nextpointR]);
+            writeln("CLOSED1");
+        } else if(Flag == 2){
+            makeCell([nextpointR.pointR, nextpointL, New_Nodes[$-2], New_Nodes[$-3]]);
+            makeCell([nextpointR.pointR, New_Nodes[$-3], New_Nodes[$-1], nextpointR]);
+            writeln("CLOSED2");
+        }
     }
     
     adjust_IDs ~= [nextpointL.rowID, nextpointR.rowID];
@@ -1271,9 +1271,9 @@ void closing_seam(Point[] Final_Row)
     assert(Final_Row.length%2 == 0, "final boundary not even number of nodes - this is not ok... and shouldn't have happened");
     Point start = Final_Row[0];
     foreach(node; Final_Row){
-	if(node.interior_angle < start.interior_angle){
-	    start = node;
-	}
+        if(node.interior_angle < start.interior_angle){
+            start = node;
+        }
     }
     size_t nodes_left = Final_Row.length;
     seam(start, Final_Row, adjust_IDs, nodes_left, 1);
@@ -1290,13 +1290,13 @@ void fix_IDs(UFace[] face_list, Cell[] cell_list)
 
     size_t index = 0;
     foreach(face; face_list){
-	face.face_ID = index;
-	++index;
+        face.face_ID = index;
+        ++index;
     }
     index = 0;
     foreach(cell;cell_list){
-	cell.cell_ID = index;
-	++index;
+        cell.cell_ID = index;
+        ++index;
     }
 }
 
@@ -1310,13 +1310,13 @@ double biggest_cell(Cell[] cells, double initial_size)
     double biggest_area = initial_size^^2;
     double current_area;
     foreach(cell;cells){
-	current_area = calc_area([POINT_LIST[cell.point_IDs[0]],
-				  POINT_LIST[cell.point_IDs[1]],
-				  POINT_LIST[cell.point_IDs[2]],
-				  POINT_LIST[cell.point_IDs[3]]]);
-	if (current_area > biggest_area){
-	    biggest_area = current_area;
-	}
+        current_area = calc_area([POINT_LIST[cell.point_IDs[0]],
+                                  POINT_LIST[cell.point_IDs[1]],
+                                  POINT_LIST[cell.point_IDs[2]],
+                                  POINT_LIST[cell.point_IDs[3]]]);
+        if (current_area > biggest_area){
+            biggest_area = current_area;
+        }
     }
     return biggest_area;
 }
@@ -1330,41 +1330,41 @@ void even_out_size(Point[] surface)
     double biggest = point_dist(start, start.pointL) + point_dist(start, start.pointR);
     double size;
     foreach (node; surface){
-	size = point_dist(node, node.pointL) + point_dist(node, node.pointR);
-	if (size > biggest){
-	    biggest = size;
-	    start = node;
-	}
+        size = point_dist(node, node.pointL) + point_dist(node, node.pointR);
+        if (size > biggest){
+            biggest = size;
+            start = node;
+        }
     }
 
     Point currentL = start;
     Point currentR = start;
     for (int i; i<(n/2+2);++i){
-	if(currentL.pointL.node_cat != "row corner" &&
-	   currentL.pointL.node_cat != "row reversal"){
-	currentL.pointL.x = (midpoint(currentL, currentL.pointL.pointL).x+
-			     currentL.pointL.x)/2;
-	currentL.pointL.y = (midpoint(currentL, currentL.pointL.pointL).y+
-			     currentL.pointL.y)/2;
-	}
-	if(currentR.pointR.node_cat != "row corner" &&
-	   currentR.pointR.node_cat != "row reversal"){		
-	currentR.pointR.x = (midpoint(currentR, currentR.pointR.pointR).x+
-			     currentR.pointR.x)/2;
-	currentR.pointR.y = (midpoint(currentR, currentR.pointR.pointR).y+
-			     currentR.pointR.y)/2;
-	}
-	currentL = currentL.pointL;
-	currentR = currentR.pointR;
+        if(currentL.pointL.node_cat != "row corner" &&
+           currentL.pointL.node_cat != "row reversal"){
+        currentL.pointL.x = (midpoint(currentL, currentL.pointL.pointL).x+
+                             currentL.pointL.x)/2;
+        currentL.pointL.y = (midpoint(currentL, currentL.pointL.pointL).y+
+                             currentL.pointL.y)/2;
+        }
+        if(currentR.pointR.node_cat != "row corner" &&
+           currentR.pointR.node_cat != "row reversal"){         
+        currentR.pointR.x = (midpoint(currentR, currentR.pointR.pointR).x+
+                             currentR.pointR.x)/2;
+        currentR.pointR.y = (midpoint(currentR, currentR.pointR.pointR).y+
+                             currentR.pointR.y)/2;
+        }
+        currentL = currentL.pointL;
+        currentR = currentR.pointR;
     }
 }
 
 void point_ID_check(){
     size_t npoints = POINT_LIST.length;
     for (size_t i; i<npoints; ++i) {
-	if (POINT_LIST[i].ID != i) {
-	    throw new Error(text("Point ID does not match position in POINT_LIST"));
-	}
+        if (POINT_LIST[i].ID != i) {
+            throw new Error(text("Point ID does not match position in POINT_LIST"));
+        }
     }
 }
 
@@ -1399,104 +1399,104 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
     Point[] second_prev_row = Prev_Row;
      
     while(true) {
-	++loop_counter;
-	point_list_backup = POINT_LIST;
-	point_count_backup = Point.ID_count;
-	face_list_backup = FACE_LIST;
-	face_count_backup = UFace.face_ID_count;
-	cell_list_backup = CELL_LIST;
-	cell_count_backup = Cell.cell_ID_count;
-	
-	try {New_Row = generate_new_row(New_Row);}
-	catch(Exception exc){
-	    writeln("caught the side node exception");
-	    side_node_Flag = 1;}
-	npoints_row = New_Row.length;
-	writefln("there are %s points in the new paving row", npoints_row);
-	assign_node_properties(New_Row);
-	adjust_row_ends(New_Row, initial_size, 0);
-	point_ID_check();
-	
+        ++loop_counter;
+        point_list_backup = POINT_LIST;
+        point_count_backup = Point.ID_count;
+        face_list_backup = FACE_LIST;
+        face_count_backup = UFace.face_ID_count;
+        cell_list_backup = CELL_LIST;
+        cell_count_backup = Cell.cell_ID_count;
+        
+        try {New_Row = generate_new_row(New_Row);}
+        catch(Exception exc){
+            writeln("caught the side node exception");
+            side_node_Flag = 1;}
+        npoints_row = New_Row.length;
+        writefln("there are %s points in the new paving row", npoints_row);
+        assign_node_properties(New_Row);
+        adjust_row_ends(New_Row, initial_size, 0);
+        point_ID_check();
+        
 
-	cell_index = CELL_LIST.length;
-	npoints_new_row = New_Row.length;
+        cell_index = CELL_LIST.length;
+        npoints_new_row = New_Row.length;
 
-	//smoothing process:
-	biggest_move = smoothing(New_Row, Prev_Row, 1, 0);
-	move = biggest_move;
-	uint reverse_count = 0;
-	for(int i; i<4; ++i){
-	    reverse(New_Row);
-	    move = smoothing(New_Row, Prev_Row, 1, 0);
-	    ++reverse_count;
-	}
-	if (reverse_count%2 != 0){reverse(New_Row);}
+        //smoothing process:
+        biggest_move = smoothing(New_Row, Prev_Row, 1, 0);
+        move = biggest_move;
+        uint reverse_count = 0;
+        for(int i; i<4; ++i){
+            reverse(New_Row);
+            move = smoothing(New_Row, Prev_Row, 1, 0);
+            ++reverse_count;
+        }
+        if (reverse_count%2 != 0){reverse(New_Row);}
 
 
-	remaining_area = clockwise_check(New_Row); 
-	intersections = intersecting_faces(New_Row) ~ intersecting_boundary(New_Row);
-	inside_prev = inside_prev_row_check(New_Row, Prev_Row);
+        remaining_area = clockwise_check(New_Row); 
+        intersections = intersecting_faces(New_Row) ~ intersecting_boundary(New_Row);
+        inside_prev = inside_prev_row_check(New_Row, Prev_Row);
 
-	if(remaining_area > 0 || to!int(intersections.length) > 0 || New_Row.length <= 6 || side_node_Flag == 1 ){
-	    POINT_LIST = point_list_backup;
-	    FACE_LIST = face_list_backup;
-	    CELL_LIST = cell_list_backup;
-	    Point.ID_count = point_count_backup;
-	    UFace.face_ID_count = face_count_backup;
-	    Cell.cell_ID_count = cell_count_backup;
-	    New_Row = Prev_Row;
-	    break;
-	}
-	//breaks loop at first case of new row intersecting itself
-	//or if new row completely inverts
-	//or has 6 or less nodes remaining in the paving boundary
-	//or if there are no longer 2 consecutive side nodes
-	//or if a point in the new row is outside the previous row
-	
-	//if (loop_counter == 1){break;}
+        if(remaining_area > 0 || to!int(intersections.length) > 0 || New_Row.length <= 6 || side_node_Flag == 1 ){
+            POINT_LIST = point_list_backup;
+            FACE_LIST = face_list_backup;
+            CELL_LIST = cell_list_backup;
+            Point.ID_count = point_count_backup;
+            UFace.face_ID_count = face_count_backup;
+            Cell.cell_ID_count = cell_count_backup;
+            New_Row = Prev_Row;
+            break;
+        }
+        //breaks loop at first case of new row intersecting itself
+        //or if new row completely inverts
+        //or has 6 or less nodes remaining in the paving boundary
+        //or if there are no longer 2 consecutive side nodes
+        //or if a point in the new row is outside the previous row
+        
+        //if (loop_counter == 1){break;}
 
-	//smooth all the inside nodes
-	//forwards then backwards order to improve symmetry
-	
-	inside_nodes = POINT_LIST[npoints_boundary..New_Row[0].ID];
-	move = biggest_move;
-	reverse(New_Row);
-	reverse_count = 1;
-	for(int i; i<1; ++i){
-	    move = smoothing(inside_nodes, Prev_Row, 0, 1);
-	    reverse(New_Row);
-	    ++reverse_count;
-	}
-	if (reverse_count%2 != 0){reverse(New_Row);}
-	
-	//even out size function:
-	even_out_size(New_Row);
-	
-	//final smooth
-	move = biggest_move;
-	reverse_count=0;
-	for(int i; i<2; ++i){
-	    move = smoothing(New_Row, Prev_Row, 1, 0);
-	    reverse(New_Row);
-	    ++reverse_count;
-	}
-	if (reverse_count%2 != 0){reverse(New_Row);}
+        //smooth all the inside nodes
+        //forwards then backwards order to improve symmetry
+        
+        inside_nodes = POINT_LIST[npoints_boundary..New_Row[0].ID];
+        move = biggest_move;
+        reverse(New_Row);
+        reverse_count = 1;
+        for(int i; i<1; ++i){
+            move = smoothing(inside_nodes, Prev_Row, 0, 1);
+            reverse(New_Row);
+            ++reverse_count;
+        }
+        if (reverse_count%2 != 0){reverse(New_Row);}
+        
+        //even out size function:
+        even_out_size(New_Row);
+        
+        //final smooth
+        move = biggest_move;
+        reverse_count=0;
+        for(int i; i<2; ++i){
+            move = smoothing(New_Row, Prev_Row, 1, 0);
+            reverse(New_Row);
+            ++reverse_count;
+        }
+        if (reverse_count%2 != 0){reverse(New_Row);}
 
-	even_out_size(New_Row);
+        even_out_size(New_Row);
 
-	second_prev_row = Prev_Row;
-	Prev_Row = New_Row;
-	
+        second_prev_row = Prev_Row;
+        Prev_Row = New_Row;
+        
     }//end: row generation loop
 
     move = biggest_move;
     uint reverse_count=0;
 
     if (loop_counter > 1) {
-    	for(int i; i<2; ++i){
-	    move = smoothing(New_Row, second_prev_row, 1, 0);
-	    reverse(New_Row);
-	    ++reverse_count;
+        for(int i; i<2; ++i){
+            move = smoothing(New_Row, second_prev_row, 1, 0);
+            reverse(New_Row);
+            ++reverse_count;
         }
         if (reverse_count%2 != 0){reverse(New_Row);}
     }
@@ -1506,17 +1506,17 @@ void pave_rows_until_intersection(ref Point[] New_Row, ref Point[] Prev_Row, in 
     /* if seam_next = 0 the code proceeds to the closing procedure */
     /* otherwise if seam_next = 1 the regular seaming procedure is commenced */
     if(to!int(intersections.length) > 0){
-	seam_next = 1; reason = "intersection detected";
-	if(inside_prev == 0){
-	    reason ~= " because a point in the new row was outside the previous row";}
+        seam_next = 1; reason = "intersection detected";
+        if(inside_prev == 0){
+            reason ~= " because a point in the new row was outside the previous row";}
     }
     else if(remaining_area > 0){
-	seam_next = 0; reason = "the new paving row fully inverted";}   
+        seam_next = 0; reason = "the new paving row fully inverted";}   
 
     if(npoints_new_row <= 6){
-	seam_next = 0; reason="there were 6 or less nodes in the new paving row";}
+        seam_next = 0; reason="there were 6 or less nodes in the new paving row";}
     else if(side_node_Flag == 1){
-	seam_next = 0; reason="there are not 2 consecutive side nodes in the paving boundary";}
+        seam_next = 0; reason="there are not 2 consecutive side nodes in the paving boundary";}
 
     writefln("reverted back to %s points in the new paving row because: \n %s", npoints_row, reason);
 
@@ -1536,58 +1536,58 @@ void seaming_procedure(ref Point[] New_Row)
     double smallest_angle = 2*PI;
     Point smallest_angle_node;
     foreach(node; New_Row){
-	if (node.interior_angle < smallest_angle && node.first_seam_flag == 0){
-	    smallest_angle = node.interior_angle;
-	    smallest_angle_node = node;
-	}
-	if(node.interior_angle < PI/2 && original_nodes_left > 2 && 
-	   !adjust_IDs.canFind(node.rowID) && node.first_seam_flag == 0){
-	    inner_nodes ~= [seam(node, New_Row, adjust_IDs, original_nodes_left, 0)];
-	}
+        if (node.interior_angle < smallest_angle && node.first_seam_flag == 0){
+            smallest_angle = node.interior_angle;
+            smallest_angle_node = node;
+        }
+        if(node.interior_angle < PI/2 && original_nodes_left > 2 && 
+           !adjust_IDs.canFind(node.rowID) && node.first_seam_flag == 0){
+            inner_nodes ~= [seam(node, New_Row, adjust_IDs, original_nodes_left, 0)];
+        }
     }
     if (inner_nodes.length == 0 && smallest_angle_node !is null){
-	writeln("seaming from smallest angle node:");
-	inner_nodes ~= [seam(smallest_angle_node, New_Row, adjust_IDs, original_nodes_left, 0)];
+        writeln("seaming from smallest angle node:");
+        inner_nodes ~= [seam(smallest_angle_node, New_Row, adjust_IDs, original_nodes_left, 0)];
     }
 
     if (inner_nodes.length > 0){
-	for(size_t i; i<inner_nodes.length; ++i){
-	    revised_New_Row ~= New_Row[adjust_IDs[2*i]];
-	    revised_New_Row ~= inner_nodes[i];
-	    size_t row_ID = adjust_IDs[2*i+1];
-	    revised_New_Row ~= New_Row[row_ID];
-	    row_ID = New_Row[row_ID].pointR.rowID;
-	    while(!adjust_IDs.canFind(row_ID)){		    
-		revised_New_Row ~= New_Row[row_ID];
-		row_ID = New_Row[row_ID].pointR.rowID;
-	    }
-	}
+        for(size_t i; i<inner_nodes.length; ++i){
+            revised_New_Row ~= New_Row[adjust_IDs[2*i]];
+            revised_New_Row ~= inner_nodes[i];
+            size_t row_ID = adjust_IDs[2*i+1];
+            revised_New_Row ~= New_Row[row_ID];
+            row_ID = New_Row[row_ID].pointR.rowID;
+            while(!adjust_IDs.canFind(row_ID)){             
+                revised_New_Row ~= New_Row[row_ID];
+                row_ID = New_Row[row_ID].pointR.rowID;
+            }
+        }
 
-	New_Row = revised_New_Row;
+        New_Row = revised_New_Row;
         size_t npoints_row = New_Row.length;
-	writefln("there are %s points in the new paving row after seaming process", npoints_row);
-	//reset row IDs and classifications:
-	size_t rowID;
-	foreach(node;New_Row){
-	    node.store_rowID(rowID);
-	    if (node.node_cat != "row end"){
-	    	node.node_cat = "none";
-	    }
-	    ++rowID;
-	}
+        writefln("there are %s points in the new paving row after seaming process", npoints_row);
+        //reset row IDs and classifications:
+        size_t rowID;
+        foreach(node;New_Row){
+            node.store_rowID(rowID);
+            if (node.node_cat != "row end"){
+                node.node_cat = "none";
+            }
+            ++rowID;
+        }
      
-	assign_node_properties(New_Row);
-	adjust_row_ends(New_Row, initial_size, 1);
+        assign_node_properties(New_Row);
+        adjust_row_ends(New_Row, initial_size, 1);
 
-	foreach(node;New_Row){
-	    if (node.first_seam_flag == 1 && node.pointL.first_seam_flag == 1 
-	        && node.pointR.first_seam_flag == 1 && node.pointL.pointL.first_seam_flag == 1 
-	        && node.pointR.pointR.first_seam_flag == 1){
-		node.first_seam_flag = 0;
-	    } 
-	}
+        foreach(node;New_Row){
+            if (node.first_seam_flag == 1 && node.pointL.first_seam_flag == 1 
+                && node.pointR.first_seam_flag == 1 && node.pointL.pointL.first_seam_flag == 1 
+                && node.pointR.pointR.first_seam_flag == 1){
+                node.first_seam_flag = 0;
+            } 
+        }
         
-	clockwise_check(New_Row);
+        clockwise_check(New_Row);
     }
 }
 
@@ -1606,126 +1606,126 @@ public:
     
     this(double[][] boundary_points)
     {
-	/*---------------import the boundary geometry---------------------*/
-	writeln("importing external boundary...");
-	foreach(p;boundary_points){
-	    make2DPoint(p[0], p[1]);
-	}
-    	foreach(point;POINT_LIST){
-	    point.store_rowID(point.ID);
-    	}
+        /*---------------import the boundary geometry---------------------*/
+        writeln("importing external boundary...");
+        foreach(p;boundary_points){
+            make2DPoint(p[0], p[1]);
+        }
+        foreach(point;POINT_LIST){
+            point.store_rowID(point.ID);
+        }
 
-	Point[] external_boundary = POINT_LIST;    
-	size_t npoints_boundary = external_boundary.length;
-	writefln("there are %s points in the external boundary", npoints_boundary);
-	if(npoints_boundary%2 != 0){
-	    throw new Error(text("imported boundary MUST contain an even number of nodes"));}
+        Point[] external_boundary = POINT_LIST;    
+        size_t npoints_boundary = external_boundary.length;
+        writefln("there are %s points in the external boundary", npoints_boundary);
+        if(npoints_boundary%2 != 0){
+            throw new Error(text("imported boundary MUST contain an even number of nodes"));}
 
-	/*----calculate the node information for the exterior boundary----*/
-	assign_node_properties(external_boundary);
-	adjust_row_ends(external_boundary, initial_size, 1);
-	
-	foreach(point;external_boundary){
-	    makeFace(point.ID, point.pointR.ID);
-    	}
-	//make faces first, in set order, to match boundary conditions
-	
-
-	/*----
-	  check the imported boundary is: anti-clockwise, closed, non-intersecting
-	  ----*/
-	if(clockwise_check(external_boundary) > 0) {
-	    throw new Error(text("imported external boundary must be anti-clockwise"));
-	} else {writeln("boundary is anti-clockwise and closed - good");}
-
-	if(to!int(intersecting_boundary(external_boundary).length) > 0){
-	    throw new Error(text("imported boundary intersects itself - not allowed"));
-	} else {writeln("boundary does not self-intersect - good");}
-
-	/*--------calculate initial properties for later use------------*/
-	initial_size = average_face_length(external_boundary);
-	avr_area = initial_size^^2;
-	
-
-	/*---------------generate the first new row---------------------*/
-	
-	writeln("generating first new row..."); 
-	Point[] New_Row = generate_new_row(external_boundary);
-	size_t npoints_row = New_Row.length;
-	writefln("there are %s points in the first new paving row", npoints_row);
-	assign_node_properties(New_Row);
-	Point[] Prev_Row = New_Row;
-	smoothing(New_Row, Prev_Row, 1, 0);    
-	even_out_size(New_Row);
-	
-	//search for special case of first row intersections and adjust if necessary
-	Point[4][] intersections = intersecting_boundary(New_Row);
-	bool effective_intersection = 0;
-	foreach (p; New_Row) { 
-	    if (p.interior_angle > 6.25 || p.interior_angle < 0.03 ){ effective_intersection = 1;}
-	} 
-	if (intersections.length != 0 || effective_intersection == 1){
-	    writeln("first new row intersected itself ... ");
-	    smoothing(New_Row, Prev_Row, 1, 1); 
-	    smoothing(New_Row, Prev_Row, 1, 0);
-	}
-	assign_node_properties(New_Row);
-	adjust_row_ends(New_Row, initial_size, 0);
-	
-	/*----
-	  continue generating/seaming rows until closing conditions are reached
-	  ----*/
-	
-	bool seam_next = 1;
-	int loop_counter;
-	while(true){
-	    ++loop_counter;
-	    writeln("paving new rows until intersection...");
-	    pave_rows_until_intersection(New_Row, Prev_Row, npoints_boundary, seam_next);
-	    //if(loop_counter == 20) {break;}
-	    if (seam_next==0){break;}
-	    smoothing(New_Row, Prev_Row, 1, 0);
-	    writeln("commencing seaming procedure...");
-	    seaming_procedure(New_Row);
-	    Prev_Row = New_Row;
-	    writeln("...completed seam.");
-	    //if(loop_counter == 5) {break;}
-	    even_out_size(New_Row);
-	}
-	
-	writeln("smoothing before closing");
-	Point[] inside_nodes = POINT_LIST[npoints_boundary..$];
-	double biggest_move = smoothing(inside_nodes, Prev_Row, 0, 1);
-	double move = biggest_move;
-	for(int i; i<1; ++i){
-	    move = smoothing(inside_nodes, Prev_Row, 0, 0);
-	}
-	
-	
-	/*---------------close the final region-------------------------*/
+        /*----calculate the node information for the exterior boundary----*/
+        assign_node_properties(external_boundary);
+        adjust_row_ends(external_boundary, initial_size, 1);
         
-	writeln("commencing closing seam...");
-	closing_seam(New_Row);  
-	  
-	writeln("completing final smoothing...");
-	//smooth all the inside nodes:    
-	inside_nodes = POINT_LIST[npoints_boundary..$];
-	biggest_move = smoothing(inside_nodes, Prev_Row, 0, 1);
-	move = biggest_move;
-	for(int i; i<2; ++i){
-	    move = smoothing(inside_nodes, Prev_Row, 0, 0);
-	}
-	writeln("DONE.");
+        foreach(point;external_boundary){
+            makeFace(point.ID, point.pointR.ID);
+        }
+        //make faces first, in set order, to match boundary conditions
+        
+
+        /*----
+          check the imported boundary is: anti-clockwise, closed, non-intersecting
+          ----*/
+        if(clockwise_check(external_boundary) > 0) {
+            throw new Error(text("imported external boundary must be anti-clockwise"));
+        } else {writeln("boundary is anti-clockwise and closed - good");}
+
+        if(to!int(intersecting_boundary(external_boundary).length) > 0){
+            throw new Error(text("imported boundary intersects itself - not allowed"));
+        } else {writeln("boundary does not self-intersect - good");}
+
+        /*--------calculate initial properties for later use------------*/
+        initial_size = average_face_length(external_boundary);
+        avr_area = initial_size^^2;
+        
+
+        /*---------------generate the first new row---------------------*/
+        
+        writeln("generating first new row..."); 
+        Point[] New_Row = generate_new_row(external_boundary);
+        size_t npoints_row = New_Row.length;
+        writefln("there are %s points in the first new paving row", npoints_row);
+        assign_node_properties(New_Row);
+        Point[] Prev_Row = New_Row;
+        smoothing(New_Row, Prev_Row, 1, 0);    
+        even_out_size(New_Row);
+        
+        //search for special case of first row intersections and adjust if necessary
+        Point[4][] intersections = intersecting_boundary(New_Row);
+        bool effective_intersection = 0;
+        foreach (p; New_Row) { 
+            if (p.interior_angle > 6.25 || p.interior_angle < 0.03 ){ effective_intersection = 1;}
+        } 
+        if (intersections.length != 0 || effective_intersection == 1){
+            writeln("first new row intersected itself ... ");
+            smoothing(New_Row, Prev_Row, 1, 1); 
+            smoothing(New_Row, Prev_Row, 1, 0);
+        }
+        assign_node_properties(New_Row);
+        adjust_row_ends(New_Row, initial_size, 0);
+        
+        /*----
+          continue generating/seaming rows until closing conditions are reached
+          ----*/
+        
+        bool seam_next = 1;
+        int loop_counter;
+        while(true){
+            ++loop_counter;
+            writeln("paving new rows until intersection...");
+            pave_rows_until_intersection(New_Row, Prev_Row, npoints_boundary, seam_next);
+            //if(loop_counter == 20) {break;}
+            if (seam_next==0){break;}
+            smoothing(New_Row, Prev_Row, 1, 0);
+            writeln("commencing seaming procedure...");
+            seaming_procedure(New_Row);
+            Prev_Row = New_Row;
+            writeln("...completed seam.");
+            //if(loop_counter == 5) {break;}
+            even_out_size(New_Row);
+        }
+        
+        writeln("smoothing before closing");
+        Point[] inside_nodes = POINT_LIST[npoints_boundary..$];
+        double biggest_move = smoothing(inside_nodes, Prev_Row, 0, 1);
+        double move = biggest_move;
+        for(int i; i<1; ++i){
+            move = smoothing(inside_nodes, Prev_Row, 0, 0);
+        }
+        
+        
+        /*---------------close the final region-------------------------*/
+        
+        writeln("commencing closing seam...");
+        closing_seam(New_Row);  
+          
+        writeln("completing final smoothing...");
+        //smooth all the inside nodes:    
+        inside_nodes = POINT_LIST[npoints_boundary..$];
+        biggest_move = smoothing(inside_nodes, Prev_Row, 0, 1);
+        move = biggest_move;
+        for(int i; i<2; ++i){
+            move = smoothing(inside_nodes, Prev_Row, 0, 0);
+        }
+        writeln("DONE.");
         writeln("total cell count: ", CELL_LIST.length);
-	
+        
 
-	/*-------section for size adjustments: not currently included----*/
+        /*-------section for size adjustments: not currently included----*/
 
 
-	this.nvertices = POINT_LIST.length;
-	this.nfaces = FACE_LIST.length;
-	this.ncells = CELL_LIST.length;
-	this.nboundaries = npoints_boundary;
+        this.nvertices = POINT_LIST.length;
+        this.nfaces = FACE_LIST.length;
+        this.ncells = CELL_LIST.length;
+        this.nboundaries = npoints_boundary;
 
     } //end: of constructor
 } //end: of class definition

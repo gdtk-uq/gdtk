@@ -23,13 +23,13 @@ static const(UnivariateFunction)[] functionStore;
 
 UnivariateFunction checkUnivariateFunction(lua_State* L, int index) {
     if ( isObjType(L, index, LinearFunctionMT) ) {
-	return checkObj!(LinearFunction, LinearFunctionMT)(L, index);
+        return checkObj!(LinearFunction, LinearFunctionMT)(L, index);
     }
     if ( isObjType(L, index, RobertsFunctionMT) ) {
-	return checkObj!(RobertsFunction, RobertsFunctionMT)(L, index);
+        return checkObj!(RobertsFunction, RobertsFunctionMT)(L, index);
     }
     if ( isObjType(L, index, LuaFnClusteringMT) ) {
-	return checkObj!(LuaFnUnivariateFunction, LuaFnClusteringMT)(L, index);
+        return checkObj!(LuaFnUnivariateFunction, LuaFnClusteringMT)(L, index);
     }
     // if all else fails
     return null;
@@ -66,13 +66,13 @@ extern(C) int newLinearFunction(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to LinearFunction:new{}.;
+        string errMsg = `Error in call to LinearFunction:new{}.;
 A table containing arguments is expected, but no table was found.`;
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["t0", "t1"])) {
-	string errMsg = "Error in call to LinearFunction:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LinearFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     //
     string errMsgTmplt = `Error in call to LinearFunction:new{}.
@@ -98,13 +98,13 @@ extern(C) int newRobertsFunction(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to RobertsFunction:new{}.;
+        string errMsg = `Error in call to RobertsFunction:new{}.;
 A table containing arguments is expected, but no table was found.`;
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["end0", "end1", "beta"])) {
-	string errMsg = "Error in call to RobertsFunction:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to RobertsFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
      //
     string errMsgTmpltNumber = `Error in call to RobertsFunction:new{}.
@@ -132,43 +132,43 @@ public:
 
     this(const lua_State *L, string luaFnName)
     {
-	this.L = cast(lua_State*)L;
-	this.luaFnName = luaFnName;
+        this.L = cast(lua_State*)L;
+        this.luaFnName = luaFnName;
     }
     this(ref const(LuaFnUnivariateFunction) other)
     {
-	L = cast(lua_State*)other.L;
-	luaFnName = other.luaFnName;
+        L = cast(lua_State*)other.L;
+        luaFnName = other.luaFnName;
     }
     LuaFnUnivariateFunction dup() const
     {
-	return new LuaFnUnivariateFunction(this.L, this.luaFnName);
+        return new LuaFnUnivariateFunction(this.L, this.luaFnName);
     }
     override double opCall(double t) const
     {
-	// Call back to the Lua function.
-	lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
-	lua_pushnumber(cast(lua_State*)L, t);
-	if ( lua_pcall(cast(lua_State*)L, 1, 1, 0) != 0 ) {
-	    string errMsg = "Error in call to " ~ luaFnName ~ 
-		" from LuaFnClustering:opCall(): " ~ 
-		to!string(lua_tostring(cast(lua_State*)L, -1));
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
-	}
-	// We are expecting a double value to be returned.
-	if ( !lua_isnumber(cast(lua_State*)L, -1) ) {
-	    string errMsg = "Error in call to LuaFnClustering:opCall().; " ~
-		"A single floating point number is expected, but none found.";
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
-	}
-	double u = luaL_checknumber(cast(lua_State*)L, -1);
-	lua_settop(cast(lua_State*)L, 0); // clear the stack
-	return u;
+        // Call back to the Lua function.
+        lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
+        lua_pushnumber(cast(lua_State*)L, t);
+        if ( lua_pcall(cast(lua_State*)L, 1, 1, 0) != 0 ) {
+            string errMsg = "Error in call to " ~ luaFnName ~ 
+                " from LuaFnClustering:opCall(): " ~ 
+                to!string(lua_tostring(cast(lua_State*)L, -1));
+            luaL_error(cast(lua_State*)L, errMsg.toStringz);
+        }
+        // We are expecting a double value to be returned.
+        if ( !lua_isnumber(cast(lua_State*)L, -1) ) {
+            string errMsg = "Error in call to LuaFnClustering:opCall().; " ~
+                "A single floating point number is expected, but none found.";
+            luaL_error(cast(lua_State*)L, errMsg.toStringz);
+        }
+        double u = luaL_checknumber(cast(lua_State*)L, -1);
+        lua_settop(cast(lua_State*)L, 0); // clear the stack
+        return u;
     } // end opCall()
 
     override string toString() const
     {
-	return "LuaFnUnivariateFunction()";
+        return "LuaFnUnivariateFunction()";
     }
 }
 
@@ -177,27 +177,27 @@ extern(C) int newLuaFnUnivariateFunction(lua_State *L)
     lua_remove(L, 1); // remove first arugment "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to LuaFnClustering:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnClustering:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["luaFnName"])) {
-	string errMsg = "Error in call to LuaFnUnivariateFunction:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnUnivariateFunction:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
      string fnName = "";
     lua_getfield(L, 1, toStringz("luaFnName"));
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to LuaFnUnivariateFunction.new{}. No luaFnName entry found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnUnivariateFunction.new{}. No luaFnName entry found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if ( lua_isstring(L, -1) ) {
-	fnName ~= to!string(lua_tostring(L, -1));
+        fnName ~= to!string(lua_tostring(L, -1));
     }
     lua_pop(L, 1);
     if ( fnName == "" ) {
-	string errMsg = "Error in call to LuaFnUnivariateFunction:new{}. No function name is empty.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnUnivariateFunction:new{}. No function name is empty.";
+        luaL_error(L, errMsg.toStringz);
     }
     auto lfc = new LuaFnUnivariateFunction(L, fnName);
     functionStore ~= pushObj!(LuaFnUnivariateFunction, LuaFnClusteringMT)(L, lfc);

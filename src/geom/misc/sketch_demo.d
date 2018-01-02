@@ -49,12 +49,12 @@ void main()
     s.setLineWidth(0.75);
     s.arc(Vector3(30.0,0.0), Vector3(60.0,30.0), Vector3(60.0,0.0), true);
     s.bezier3(Vector3(80.0,80.0), Vector3(40.0,80.0),
-	      Vector3(80.0,100.0), Vector3(40.0,100.0));
+              Vector3(80.0,100.0), Vector3(40.0,100.0));
     s.setLineWidth(0.01);
     s.dotlabel(Vector3(70.0,20.0), "a");
     s.setLineWidth(0.1);
     s.polygon([Vector3(60,10), Vector3(95,10), Vector3(95,50), Vector3(60,50)],
-	      true, true, true);
+              true, true, true);
     s.finish();
     //
     s = new Sketch("svg", "isometric");

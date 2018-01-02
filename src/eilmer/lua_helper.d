@@ -56,18 +56,18 @@ extern(C) int luafn_infoFluidBlock(lua_State *L)
     lua_pushstring(L, blk.label.toStringz); lua_setfield(L, tblIdx, "label");
     lua_pushstring(L, gridTypeName(blk.grid_type).toStringz); lua_setfield(L, tblIdx, "grid_type");
     if (blk.grid_type == Grid_t.structured_grid) {
-	SBlock sblk = cast(SBlock) blk;
-	assert(sblk !is null, "Oops, this should be an SBlock object.");
-	// For a structured_grid
-	lua_pushinteger(L, sblk.nicell); lua_setfield(L, tblIdx, "nicell");
-	lua_pushinteger(L, sblk.njcell); lua_setfield(L, tblIdx, "njcell");
-	lua_pushinteger(L, sblk.nkcell); lua_setfield(L, tblIdx, "nkcell");
-	lua_pushinteger(L, sblk.imin); lua_setfield(L, tblIdx, "imin");
-	lua_pushinteger(L, sblk.jmin); lua_setfield(L, tblIdx, "jmin");
-	lua_pushinteger(L, sblk.kmin); lua_setfield(L, tblIdx, "kmin");
-	lua_pushinteger(L, sblk.imax); lua_setfield(L, tblIdx, "imax");
-	lua_pushinteger(L, sblk.jmax); lua_setfield(L, tblIdx, "jmax");
-	lua_pushinteger(L, sblk.kmax); lua_setfield(L, tblIdx, "kmax");
+        SBlock sblk = cast(SBlock) blk;
+        assert(sblk !is null, "Oops, this should be an SBlock object.");
+        // For a structured_grid
+        lua_pushinteger(L, sblk.nicell); lua_setfield(L, tblIdx, "nicell");
+        lua_pushinteger(L, sblk.njcell); lua_setfield(L, tblIdx, "njcell");
+        lua_pushinteger(L, sblk.nkcell); lua_setfield(L, tblIdx, "nkcell");
+        lua_pushinteger(L, sblk.imin); lua_setfield(L, tblIdx, "imin");
+        lua_pushinteger(L, sblk.jmin); lua_setfield(L, tblIdx, "jmin");
+        lua_pushinteger(L, sblk.kmin); lua_setfield(L, tblIdx, "kmin");
+        lua_pushinteger(L, sblk.imax); lua_setfield(L, tblIdx, "imax");
+        lua_pushinteger(L, sblk.jmax); lua_setfield(L, tblIdx, "jmax");
+        lua_pushinteger(L, sblk.kmax); lua_setfield(L, tblIdx, "kmax");
     }
     // For an unstructured_grid or structured_grid
     lua_pushinteger(L, blk.cells.length); lua_setfield(L, tblIdx, "ncells");
@@ -127,7 +127,7 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
  *
  */
 void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell, 
-			  size_t gtl, GasModel gmodel)
+                          size_t gtl, GasModel gmodel)
 {
     lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");
     lua_pushnumber(L, cell.pos[gtl].y); lua_setfield(L, tblIdx, "y");
@@ -137,7 +137,7 @@ void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell,
 } // end pushFluidCellToTable()
 
 void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face, 
-			  size_t gtl, GasModel gmodel)
+                          size_t gtl, GasModel gmodel)
 {
     lua_pushnumber(L, face.pos.x); lua_setfield(L, tblIdx, "x");
     lua_pushnumber(L, face.pos.y); lua_setfield(L, tblIdx, "y");

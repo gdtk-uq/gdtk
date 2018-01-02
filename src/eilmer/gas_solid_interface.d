@@ -21,35 +21,35 @@ import solidfvcell;
 import solidfvinterface;
 
 void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasIFaces,
-				  SolidFVCell[] solidCells, SolidFVInterface[] solidIFaces)
+                                  SolidFVCell[] solidCells, SolidFVInterface[] solidIFaces)
 {
     double dxG, dyG, dnG, dxS, dyS, dnS;
     double kG_dnG, kS_dnS, cosA, cosB;
     double T, q;
 
     foreach ( i; 0 .. gasCells.length ) {
-	cosA = gasIFaces[i].n.x;
-	cosB = gasIFaces[i].n.y;
+        cosA = gasIFaces[i].n.x;
+        cosB = gasIFaces[i].n.y;
 
-	dxG = gasIFaces[i].pos.x - gasCells[i].pos[0].x;
-	dyG = gasIFaces[i].pos.y - gasCells[i].pos[0].y;
-	dnG = fabs(cosA*dxG + cosB*dyG);
+        dxG = gasIFaces[i].pos.x - gasCells[i].pos[0].x;
+        dyG = gasIFaces[i].pos.y - gasCells[i].pos[0].y;
+        dnG = fabs(cosA*dxG + cosB*dyG);
 
-	dxS = solidIFaces[i].pos.x - solidCells[i].pos.x;
-	dyS = solidIFaces[i].pos.y - solidCells[i].pos.y;
-	dnS = fabs(cosA*dxS + cosB*dyS);
+        dxS = solidIFaces[i].pos.x - solidCells[i].pos.x;
+        dyS = solidIFaces[i].pos.y - solidCells[i].pos.y;
+        dnS = fabs(cosA*dxS + cosB*dyS);
 
-	kG_dnG = gasCells[i].fs.gas.k / dnG;
-	kS_dnS = solidCells[i].sp.k / dnS;
+        kG_dnG = gasCells[i].fs.gas.k / dnG;
+        kS_dnS = solidCells[i].sp.k / dnS;
 
-	T = (gasCells[i].fs.gas.T*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
-	q = -kG_dnG * (T - gasCells[i].fs.gas.T);
-	// Finally update properties in interfaces
-	gasIFaces[i].fs.gas.T = T;
-	gasIFaces[i].F.total_energy = q; // CHECK ME: might only work for
-	                                 // NORTH-SOUTH orientation.
-	                                 // Need to think about sign.
-	solidIFaces[i].T = T;
-	solidIFaces[i].flux = q;
+        T = (gasCells[i].fs.gas.T*kG_dnG + solidCells[i].T*kS_dnS) / (kG_dnG + kS_dnS);
+        q = -kG_dnG * (T - gasCells[i].fs.gas.T);
+        // Finally update properties in interfaces
+        gasIFaces[i].fs.gas.T = T;
+        gasIFaces[i].F.total_energy = q; // CHECK ME: might only work for
+                                         // NORTH-SOUTH orientation.
+                                         // Need to think about sign.
+        solidIFaces[i].T = T;
+        solidIFaces[i].flux = q;
     }
 }

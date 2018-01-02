@@ -55,14 +55,14 @@ extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
     auto vel = checkVector3(L, 1);
 
     foreach ( blk; gasBlocks ) {
-	foreach ( vtx; blk.vertices ) {
-	    /* We assume that we'll only update grid positions
-	       at the start of the increment. This should work
-	       well except in the most critical cases of time
-	       accuracy.
-	    */
-	    vtx.vel[0] = *vel;
-	}
+        foreach ( vtx; blk.vertices ) {
+            /* We assume that we'll only update grid positions
+               at the start of the increment. This should work
+               well except in the most critical cases of time
+               accuracy.
+            */
+            vtx.vel[0] = *vel;
+        }
     }
     // In case, the user gave use more return values than
     // we used, just set the lua stack to empty and let
@@ -79,12 +79,12 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
     auto blkId = lua_tointeger(L, 2);
 
     foreach ( vtx; gasBlocks[blkId].vertices ) {
-	/* We assume that we'll only update grid positions
-	   at the start of the increment. This should work
-	   well except in the most critical cases of time
-	   accuracy.
-	*/
-	vtx.vel[0] = *vel;
+        /* We assume that we'll only update grid positions
+           at the start of the increment. This should work
+           well except in the most critical cases of time
+           accuracy.
+        */
+        vtx.vel[0] = *vel;
     }
     // In case, the user gave use more return values than
     // we used, just set the lua stack to empty and let
@@ -121,23 +121,23 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
     auto blkId = lua_tointeger(L, 2);
 
     if ( narg == 3 ) {
-	auto vtxId = lua_tointeger(L, 3);
-	gasBlocks[blkId].vertices[vtxId].vel[0] = *vel;
+        auto vtxId = lua_tointeger(L, 3);
+        gasBlocks[blkId].vertices[vtxId].vel[0] = *vel;
     }
     else if ( narg == 4 ) {
-	auto i = lua_tointeger(L, 3);
-	auto j = lua_tointeger(L, 4);
-	gasBlocks[blkId].get_vtx(i,j).vel[0] = *vel;
+        auto i = lua_tointeger(L, 3);
+        auto j = lua_tointeger(L, 4);
+        gasBlocks[blkId].get_vtx(i,j).vel[0] = *vel;
     }
     else if ( narg >= 5 ) {
-	auto i = lua_tointeger(L, 3);
-	auto j = lua_tointeger(L, 4);
-	auto k = lua_tointeger(L, 5);
-	gasBlocks[blkId].get_vtx(i,j,k).vel[0] = *vel;
+        auto i = lua_tointeger(L, 3);
+        auto j = lua_tointeger(L, 4);
+        auto k = lua_tointeger(L, 5);
+        gasBlocks[blkId].get_vtx(i,j,k).vel[0] = *vel;
     }
     else {
-	string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocity()\n";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocity()\n";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_settop(L, 0);
     return 0;
@@ -154,7 +154,7 @@ void assign_vertex_velocities_via_udf(double sim_time, double dt)
 
     if ( lua_pcall(L, number_args, number_results, 0) != 0 ) {
         string errMsg = "ERROR: while running user-defined function assignVtxVelocities()\n";
-	errMsg ~= to!string(lua_tostring(L, -1));
-	throw new FlowSolverException(errMsg);
+        errMsg ~= to!string(lua_tostring(L, -1));
+        throw new FlowSolverException(errMsg);
     }
 }

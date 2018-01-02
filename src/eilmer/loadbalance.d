@@ -33,9 +33,9 @@ void main(string[] args)
     msg       ~= "                                    reporting on load balance efficacy\n";
     msg       ~= "               [--help]             write this message\n";
     if ( args.length < 3 ) {
-	writeln("Too few arguments.");
-	write(msg);
-	exit(1);
+        writeln("Too few arguments.");
+        write(msg);
+        exit(1);
     }
     string jobName = "";
     int nTasks = 0;
@@ -44,55 +44,55 @@ void main(string[] args)
     int sweepMin, sweepMax;
     bool performSweep = false;
     try {
-	getopt(args,
-	       "job", &jobName,
-	       "ntasks", &nTasks,
-	       "sweep", &sweepStr,
-	       "help", &helpWanted,
-	       );
+        getopt(args,
+               "job", &jobName,
+               "ntasks", &nTasks,
+               "sweep", &sweepStr,
+               "help", &helpWanted,
+               );
     } catch (Exception e) {
-	writeln("Problem parsing command-line options.");
-	writeln("Arguments not processed:");
-	args = args[1 .. $]; // Dispose of program in first arg
-	foreach (arg; args) writeln("   arg: ", arg);
-	write(msg);
-	exit(1);
+        writeln("Problem parsing command-line options.");
+        writeln("Arguments not processed:");
+        args = args[1 .. $]; // Dispose of program in first arg
+        foreach (arg; args) writeln("   arg: ", arg);
+        write(msg);
+        exit(1);
     }
     if (helpWanted) {
-	write(msg);
-	exit(0);
+        write(msg);
+        exit(0);
     }
 
     if (jobName.length == 0) {
-	writeln("Need to specify a job name.");
-	write(msg);
-	exit(1);
+        writeln("Need to specify a job name.");
+        write(msg);
+        exit(1);
     }
 
     if (nTasks < 1) {
-	writeln("Need to specify 'ntasks' greater or equal to 1.");
-	write(msg);
-	exit(1);
+        writeln("Need to specify 'ntasks' greater or equal to 1.");
+        write(msg);
+        exit(1);
     }
 
     if (sweepStr.length > 0) {
-	auto sweepRange = sweepStr.split(",");
-	if (sweepRange.length != 2) {
-	    writeln("The sweep range should consist of two integers exactly.");
-	    write(msg);
-	    exit(1);
-	}
-	sweepMin = to!int(sweepRange[0]);
-	sweepMax = to!int(sweepRange[1]);
-	if ( sweepMax <= sweepMin ) {
-	    writeln("The sweep range should be given in order 'min,max'");
-	    writeln("The provided values are:");
-	    writeln("   sweepMin= ", sweepMin);
-	    writeln("   sweepMax= ", sweepMax);
-	    write(msg);
-	    exit(1);
-	}
-	performSweep = true;
+        auto sweepRange = sweepStr.split(",");
+        if (sweepRange.length != 2) {
+            writeln("The sweep range should consist of two integers exactly.");
+            write(msg);
+            exit(1);
+        }
+        sweepMin = to!int(sweepRange[0]);
+        sweepMax = to!int(sweepRange[1]);
+        if ( sweepMax <= sweepMin ) {
+            writeln("The sweep range should be given in order 'min,max'");
+            writeln("The provided values are:");
+            writeln("   sweepMin= ", sweepMin);
+            writeln("   sweepMax= ", sweepMax);
+            write(msg);
+            exit(1);
+        }
+        performSweep = true;
     }
       
     GlobalConfig.base_file_name = jobName;
@@ -108,7 +108,7 @@ void main(string[] args)
     Tuple!(int,int)[] blockLoads;
     blockLoads.length = GlobalConfig.nFluidBlocks;
     foreach (iblk, blk; gasBlocks)
-	blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
+        blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
     sort!("a[1] > b[1]")(blockLoads);
     
     // Perform load balance and write out.
@@ -127,15 +127,15 @@ void distributeBlocksToTasks(int nTasks, Tuple!(int,int)[] blockLoads, int[][] t
     taskLoads[] = 0;
 
     foreach (bLoad; blockLoads) {
-	// The algorithm is:
-	// Given a list sorted from heaviest load to lightest,
-	// at any stage, assign block to the processing task
-	// with the minimum load currently.
-	auto blkId = bLoad[0];
-	auto blkLoad = bLoad[1];
-	auto iMin = taskLoads.minIndex;
-	taskLoads[iMin] += blkLoad;
-	taskMap[iMin] ~= blkId;
+        // The algorithm is:
+        // Given a list sorted from heaviest load to lightest,
+        // at any stage, assign block to the processing task
+        // with the minimum load currently.
+        auto blkId = bLoad[0];
+        auto blkLoad = bLoad[1];
+        auto iMin = taskLoads.minIndex;
+        taskLoads[iMin] += blkLoad;
+        taskMap[iMin] ~= blkId;
     }
 
 }
@@ -148,15 +148,15 @@ void writeBlocksToTasksMap(string fName, int[][] taskMap, int[] taskLoads)
     f.writeln("{");
     f.writefln("\"ntasks\" :  %d,", nTasks);
     foreach (i, task; taskMap) {
-	f.writefln("\"task_%d\": {", i);
-	f.writefln("    \"load\" : %d,", taskLoads[i]);
-	f.writef("    \"blocks\" : [ ");
-	foreach (iblk; task[0 .. $-1]) {
-	    f.writef("%d, ", iblk);
-	}
-	// Write final entry WITHOUT trailing comma
-	f.writefln("%d ]", task[$-1]);
-	f.writeln("},");
+        f.writefln("\"task_%d\": {", i);
+        f.writefln("    \"load\" : %d,", taskLoads[i]);
+        f.writef("    \"blocks\" : [ ");
+        foreach (iblk; task[0 .. $-1]) {
+            f.writef("%d, ", iblk);
+        }
+        // Write final entry WITHOUT trailing comma
+        f.writefln("%d ]", task[$-1]);
+        f.writeln("},");
     }
     f.writeln("\"dummy_entry_without_trailing_comma\" : 0");
     f.writeln("}");

@@ -30,9 +30,9 @@ void main()
 
     auto zeroFun = delegate (double c_HI) {
         double tmp_a = sqrt(k_f * k_b);
-	double tmp_b = 1.0 / (4.0* c_0 * tMax);
-	double tmp_c = 2.0*c_0 + c_HI * (2.0*sqrt(k_b/k_f) - 1);
-	double tmp_d = 2.0*c_0 - c_HI * (2.0*sqrt(k_b/k_f) + 1);
+        double tmp_b = 1.0 / (4.0* c_0 * tMax);
+        double tmp_c = 2.0*c_0 + c_HI * (2.0*sqrt(k_b/k_f) - 1);
+        double tmp_d = 2.0*c_0 - c_HI * (2.0*sqrt(k_b/k_f) + 1);
         return tmp_a - tmp_b * to!double(log(tmp_c/tmp_d));
     };
 
@@ -71,21 +71,21 @@ void main()
     double[] err;
 
     foreach ( dt; dtVals ) {
-	numVals ~= numericalEstimate(dt, tMax, conc0, alphaStep);
-	err ~= analyticalVal - numVals[$-1];
+        numVals ~= numericalEstimate(dt, tMax, conc0, alphaStep);
+        err ~= analyticalVal - numVals[$-1];
     }
 
     writeln("|    dt    |  numerical value  |         error         |       ratio       |");
     writeln("|----------+-------------------+-----------------------+-------------------+");
     writefln("| %8.3f | %16.14f  | % 16.14e |                   |", dtVals[0], numVals[0], err[0]);
     foreach ( i; 1..dtVals.length ) {
-	writefln("| %8.3f | %16.14f  | % 16.14e | % 16.14f |", dtVals[i], numVals[i], err[i], err[i-1]/err[i]);
+        writefln("| %8.3f | %16.14f  | % 16.14e | % 16.14f |", dtVals[i], numVals[i], err[i], err[i-1]/err[i]);
     }
 
     auto f = File("rkf-verification-results.dat", "w");
     f.writeln("# dt   value    error    error-ratio");
     foreach ( i; 1..dtVals.length ) {
-	f.writefln("%12.6f  %20.16e  %20.16e %20.16e", dtVals[i], numVals[i], err[i], err[i-1]/err[i]);
+        f.writefln("%12.6f  %20.16e  %20.16e %20.16e", dtVals[i], numVals[i], err[i], err[i-1]/err[i]);
     }
     f.close();
 }
@@ -101,10 +101,10 @@ double numericalEstimate(double dt, double tMax, double[] conc0, AlphaQssStep st
     conc1.length = conc0.length;
     double dtDummy;
     while ( (tMax - t) > 1.0e-9 ) {
-	dt = min(dt, tMax - t);
-	step(conc0, dt, conc1, dtDummy);
-	t += dt;
-	conc0 = conc1.dup;
+        dt = min(dt, tMax - t);
+        step(conc0, dt, conc1, dtDummy);
+        t += dt;
+        conc0 = conc1.dup;
     }
     return conc1[2];
 }

@@ -66,32 +66,32 @@ extern(C) int newVector3(lua_State *L)
     auto vec = Vector3(0.0, 0.0, 0.0);
     lua_remove(L, 1); // remove first argument "this".
     int narg = lua_gettop(L);
-    if ( narg == 1 ) {	// Could be a table or a single Vector3 object
-	if ( lua_istable(L, 1) ) {
-	    // If it has a length >= 1, then it's been populated array style.
-	    // This style of setting beats any fields that are present.
-	    if ( lua_objlen(L, 1) >= 1 ) {
-		// A single item may be a Vector3 object already.
-		lua_rawgeti(L, 1, 1);
-		vec = *checkVector3(L, -1);
-		lua_pop(L, 1);
-	    } else {
-		// Look for named fields containing coordinate values.
-		lua_getfield(L, 1, "x");
-		if ( lua_isnumber(L, -1) ) vec.refx = lua_tonumber(L, -1);
-		lua_pop(L, 1);
-		lua_getfield(L, 1, "y");
-		if ( lua_isnumber(L, -1) ) vec.refy = lua_tonumber(L, -1);
-		lua_pop(L, 1);
-		lua_getfield(L, 1, "z");
-		if ( lua_isnumber(L, -1) ) vec.refz = lua_tonumber(L, -1);
-		lua_pop(L, 1);
-	    }
-	} else {
-	    vec = *checkVector3(L, -1);
-	}
+    if ( narg == 1 ) {  // Could be a table or a single Vector3 object
+        if ( lua_istable(L, 1) ) {
+            // If it has a length >= 1, then it's been populated array style.
+            // This style of setting beats any fields that are present.
+            if ( lua_objlen(L, 1) >= 1 ) {
+                // A single item may be a Vector3 object already.
+                lua_rawgeti(L, 1, 1);
+                vec = *checkVector3(L, -1);
+                lua_pop(L, 1);
+            } else {
+                // Look for named fields containing coordinate values.
+                lua_getfield(L, 1, "x");
+                if ( lua_isnumber(L, -1) ) vec.refx = lua_tonumber(L, -1);
+                lua_pop(L, 1);
+                lua_getfield(L, 1, "y");
+                if ( lua_isnumber(L, -1) ) vec.refy = lua_tonumber(L, -1);
+                lua_pop(L, 1);
+                lua_getfield(L, 1, "z");
+                if ( lua_isnumber(L, -1) ) vec.refz = lua_tonumber(L, -1);
+                lua_pop(L, 1);
+            }
+        } else {
+            vec = *checkVector3(L, -1);
+        }
     } else {
-	// Just leave the zero-filled values.
+        // Just leave the zero-filled values.
     } 
     // Regardless of how we filled in vec, we are now ready 
     // to place our new Vector3 on the stack as userdata.
@@ -105,16 +105,16 @@ extern(C) int indexVector3(lua_State* L)
     string key = to!string(luaL_checkstring(L, 2));
     // If we find an "x", "y" or "z", get value and return
     if ( key == "x" ) {
-	lua_pushnumber(L, a.x);
-	return 1;
+        lua_pushnumber(L, a.x);
+        return 1;
     }
     if ( key == "y" ) {
-	lua_pushnumber(L, a.y);
-	return 1;
+        lua_pushnumber(L, a.y);
+        return 1;
     }
     if ( key == "z") {
-	lua_pushnumber(L, a.z);
-	return 1;
+        lua_pushnumber(L, a.z);
+        return 1;
     }
     // else forward through to the metatable
     lua_getmetatable(L, 1);
@@ -129,16 +129,16 @@ extern(C) int newindexVector3(lua_State* L)
     double val = luaL_checknumber(L, 3);
     // If we find an "x", "y" or "z", get value and return
     if ( key == "x" ) {
-	a.refx = val;
-	return 0;
+        a.refx = val;
+        return 0;
     }
     if ( key == "y" ) {
-	a.refy = val;
-	return 0;
+        a.refy = val;
+        return 0;
     }
     if ( key == "z") {
-	a.refz = val;
-	return 0;
+        a.refz = val;
+        return 0;
     }
     // else just ignore the setter
     return 0;
@@ -190,20 +190,20 @@ extern(C) int mulVector3(lua_State *L)
     Vector3* a;
     double b;
     if ( lua_isuserdata(L, 1) ) {
-	if ( !lua_isnumber(L, 2) ) {
-	    string errMsg = "can't multiply Vector3 by non-number";
-	    luaL_error(L, errMsg.toStringz);
-	}
-	a = checkVector3(L, 1);
-	b = luaL_checknumber(L, 2);
+        if ( !lua_isnumber(L, 2) ) {
+            string errMsg = "can't multiply Vector3 by non-number";
+            luaL_error(L, errMsg.toStringz);
+        }
+        a = checkVector3(L, 1);
+        b = luaL_checknumber(L, 2);
     }
     else {
-	if ( !lua_isnumber(L, 1) ) {
-	    string errMsg = "can't multiply Vector3 by non-number";
-	    luaL_error(L, errMsg.toStringz);
-	}   
-	a = checkVector3(L, 2);
-	b = luaL_checknumber(L, 1);
+        if ( !lua_isnumber(L, 1) ) {
+            string errMsg = "can't multiply Vector3 by non-number";
+            luaL_error(L, errMsg.toStringz);
+        }   
+        a = checkVector3(L, 2);
+        b = luaL_checknumber(L, 1);
     }
     auto c = (*a) * b;
     return pushVector3(L, c);
@@ -223,16 +223,16 @@ extern(C) int divVector3(lua_State* L)
     Vector3* a;
     double b;
     if ( lua_isuserdata(L, 1) ) {
-	if ( !lua_isnumber(L, 2) ) {
-	    string errMsg = "can't divide Vector3 by non-number";
-	    luaL_error(L, errMsg.toStringz);
-	}
-	a = checkVector3(L, 1);
-	b = luaL_checknumber(L, 2);
+        if ( !lua_isnumber(L, 2) ) {
+            string errMsg = "can't divide Vector3 by non-number";
+            luaL_error(L, errMsg.toStringz);
+        }
+        a = checkVector3(L, 1);
+        b = luaL_checknumber(L, 2);
     }
     else {
-	string errMsg = "can't divide by a Vector3 object";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "can't divide by a Vector3 object";
+        luaL_error(L, errMsg.toStringz);
     }
     auto c = (*a) / b;
     return pushVector3(L, c);
@@ -329,48 +329,48 @@ extern(C) int crossVector3(lua_State* L)
 extern(C) int quadProperties(lua_State* L)
 {
     if ( lua_istable(L, 1) ) {
-	if (!checkAllowedNames(L, 1, ["p0", "p1", "p2", "p3"])) {
-	    string errMsg = "Error in call to quadProperties{}. Invalid name in table.";
-	    luaL_error(L, errMsg.toStringz);
-	}
-	lua_getfield(L, 1, "p0");
-	Vector3 p0 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p1");
-	Vector3 p1 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p2");
-	Vector3 p2 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p3");
+        if (!checkAllowedNames(L, 1, ["p0", "p1", "p2", "p3"])) {
+            string errMsg = "Error in call to quadProperties{}. Invalid name in table.";
+            luaL_error(L, errMsg.toStringz);
+        }
+        lua_getfield(L, 1, "p0");
+        Vector3 p0 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p1");
+        Vector3 p1 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p2");
+        Vector3 p2 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p3");
         Vector3 p3 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_settop(L, 0); // clear stack
+        lua_pop(L, 1);
+        lua_settop(L, 0); // clear stack
 
-	Vector3 centroid;
-	Vector3 n;
-	Vector3 t1;
-	Vector3 t2;
-	double area;
-	quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
+        Vector3 centroid;
+        Vector3 n;
+        Vector3 t1;
+        Vector3 t2;
+        double area;
+        quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
 
-	lua_newtable(L); // anonymous table { }
-	auto tblIndx = lua_gettop(L);
-	pushVector3(L, centroid);
-	lua_setfield(L, tblIndx, "centroid");
-	pushVector3(L, n);
-	lua_setfield(L, tblIndx, "n");
-	pushVector3(L, t1);
-	lua_setfield(L, tblIndx, "t1");
-	pushVector3(L, t2);
-	lua_setfield(L, tblIndx, "t2");
-	lua_pushnumber(L, area);
-	lua_setfield(L, tblIndx, "area");
-	return 1;
+        lua_newtable(L); // anonymous table { }
+        auto tblIndx = lua_gettop(L);
+        pushVector3(L, centroid);
+        lua_setfield(L, tblIndx, "centroid");
+        pushVector3(L, n);
+        lua_setfield(L, tblIndx, "n");
+        pushVector3(L, t1);
+        lua_setfield(L, tblIndx, "t1");
+        pushVector3(L, t2);
+        lua_setfield(L, tblIndx, "t2");
+        lua_pushnumber(L, area);
+        lua_setfield(L, tblIndx, "area");
+        return 1;
     } else {
-	string errMsg = "quadProperties expected a table with named corner points.";
-	luaL_error(L, errMsg.toStringz);
-	return 0;
+        string errMsg = "quadProperties expected a table with named corner points.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
     }
 } // end quadProperties()
 
@@ -381,59 +381,59 @@ extern(C) int quadProperties(lua_State* L)
 extern(C) int hexCellProperties(lua_State* L)
 {
     if ( lua_istable(L, 1) ) {
-	if (!checkAllowedNames(L, 1, ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"])) {
-	    string errMsg = "Error in call to hexCellProperties{}. Invalid name in table.";
-	    luaL_error(L, errMsg.toStringz);
-	}
-	lua_getfield(L, 1, "p0");
-	Vector3 p0 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p1");
-	Vector3 p1 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p2");
-	Vector3 p2 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p3");
+        if (!checkAllowedNames(L, 1, ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"])) {
+            string errMsg = "Error in call to hexCellProperties{}. Invalid name in table.";
+            luaL_error(L, errMsg.toStringz);
+        }
+        lua_getfield(L, 1, "p0");
+        Vector3 p0 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p1");
+        Vector3 p1 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p2");
+        Vector3 p2 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p3");
         Vector3 p3 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p4");
-	Vector3 p4 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p5");
-	Vector3 p5 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p6");
-	Vector3 p6 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_getfield(L, 1, "p7");
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p4");
+        Vector3 p4 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p5");
+        Vector3 p5 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p6");
+        Vector3 p6 = *checkVector3(L, -1);
+        lua_pop(L, 1);
+        lua_getfield(L, 1, "p7");
         Vector3 p7 = *checkVector3(L, -1);
-	lua_pop(L, 1);
-	lua_settop(L, 0); // clear stack
+        lua_pop(L, 1);
+        lua_settop(L, 0); // clear stack
 
-	Vector3 centroid;
-	double volume;
-	double iLen, jLen, kLen;
-	hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, 
-			    centroid, volume, iLen, jLen, kLen);
+        Vector3 centroid;
+        double volume;
+        double iLen, jLen, kLen;
+        hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, 
+                            centroid, volume, iLen, jLen, kLen);
 
-	lua_newtable(L); // anonymous table { }
-	auto tblIndx = lua_gettop(L);
-	pushVector3(L, centroid);
-	lua_setfield(L, tblIndx, "centroid");
-	lua_pushnumber(L, volume);
-	lua_setfield(L, tblIndx, "volume");
-	lua_pushnumber(L, iLen);
-	lua_setfield(L, tblIndx, "iLen");
-	lua_pushnumber(L, jLen);
-	lua_setfield(L, tblIndx, "jLen");
-	lua_pushnumber(L, kLen);
-	lua_setfield(L, tblIndx, "kLen");
-	return 1;
+        lua_newtable(L); // anonymous table { }
+        auto tblIndx = lua_gettop(L);
+        pushVector3(L, centroid);
+        lua_setfield(L, tblIndx, "centroid");
+        lua_pushnumber(L, volume);
+        lua_setfield(L, tblIndx, "volume");
+        lua_pushnumber(L, iLen);
+        lua_setfield(L, tblIndx, "iLen");
+        lua_pushnumber(L, jLen);
+        lua_setfield(L, tblIndx, "jLen");
+        lua_pushnumber(L, kLen);
+        lua_setfield(L, tblIndx, "kLen");
+        return 1;
     } else {
-	string errMsg = "hexCellProperties expected a table with named corner points.";
-	luaL_error(L, errMsg.toStringz);
-	return 0;
+        string errMsg = "hexCellProperties expected a table with named corner points.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
     }
 } // end hexCellProperties()
 

@@ -73,8 +73,8 @@ print("isVolume(my_volume)= ", isVolume(my_volume))
 print("Done luavolume_demo")
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
-	writeln("There was a problem interpreting the test code.");
-	writeln(to!string(lua_tostring(L, -1)));
+        writeln("There was a problem interpreting the test code.");
+        writeln(to!string(lua_tostring(L, -1)));
     }
     writeln("Done with luavolume_demo.");
 }

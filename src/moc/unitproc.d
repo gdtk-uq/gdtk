@@ -7,12 +7,12 @@
  * on information from other nodes.
  * The functions are computationally intensive and access 
  * the internals of the node data structure directly.
- * version: 	
- *		20 Mar 2015: initial port
- *		12 May 2015: use existing classes in cfcfd3
- *		22 Aug 2015: non-isentropic unit processes added
- *		16 Sep 2015: updated to accept new NodeData 
- *					 and FlowState classes
+ * version:     
+ *              20 Mar 2015: initial port
+ *              12 May 2015: use existing classes in cfcfd3
+ *              22 Aug 2015: non-isentropic unit processes added
+ *              16 Sep 2015: updated to accept new NodeData 
+ *                                       and FlowState classes
  */
 module unitproc;
 
@@ -33,9 +33,9 @@ int ISENTROPIC_FLAG = YES; // isentropic processes
 void SetIsentropicFlag(int value)
 {
     if(value == YES || value == NO){
-	ISENTROPIC_FLAG = value;
+        ISENTROPIC_FLAG = value;
     } else {
-	throw new Error(text("Invalid flag, set INSENTROPIC FLAG as YES or NO"));
+        throw new Error(text("Invalid flag, set INSENTROPIC FLAG as YES or NO"));
     } // end if
 } // end SetIsentropicFlag()
 
@@ -65,43 +65,43 @@ int GetIsentropicFlag()
 int InteriorNode(int node1,int node2,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     if(GetIsentropicFlag==YES){
-	return InteriorNode_0(node1,node2,node4,fs);
+        return InteriorNode_0(node1,node2,node4,fs);
     } // end if
     double g = GetRatioOfSpecificHeats();
     double R = GetGasConstant();
     int axiflag=GetAxiFlag();
     //first, assign the Node data
     if(node1 == node2){
-	throw new Error(text("InteriorNode: node1 & node2 have same id: ",node1));
+        throw new Error(text("InteriorNode: node1 & node2 have same id: ",node1));
     } // end if
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("InteriorNode: node1 doesn't exist, id: ",node1));
+        throw new Error(text("InteriorNode: node1 doesn't exist, id: ",node1));
     } // end if
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("InteriorNode: node2 doesn't exist, id: ",node2));
+        throw new Error(text("InteriorNode: node2 doesn't exist, id: ",node2));
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if 
     int node3 = InsertNode(node1,node2,-1,0.5);
     NodeData n3 = GetNodeData(node3);
     if (n3 is null){
-	throw new Error(text("InteriorNode: could not create node3, id: ",node3));
+        throw new Error(text("InteriorNode: could not create node3, id: ",node3));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     // define gas properties
     double mu1 = MachAngle(n1.Mach);
@@ -129,14 +129,14 @@ int InteriorNode(int node1,int node2,int node4,int fs=-1)
     int iteration_count=0;
     double delta_position=0.0;
     do {
-	++iteration_count;
-	xy3_old = n3.pos;
-	n3.x = (n2.y-n4.y-lambda12*n2.x+lambda0*n4.x)/(lambda0-lambda12);
-	n3.y = n4.y-lambda0*(n4.x-n3.x);
-	alpha = (n1.y-n2.y)/(n3.y-n2.y);
-	n3.theta = n2.theta+(n1.theta-n2.theta)/alpha;
-	lambda0 = tan(n3.theta);
-	delta_position = abs(xy3_old-n3.pos);
+        ++iteration_count;
+        xy3_old = n3.pos;
+        n3.x = (n2.y-n4.y-lambda12*n2.x+lambda0*n4.x)/(lambda0-lambda12);
+        n3.y = n4.y-lambda0*(n4.x-n3.x);
+        alpha = (n1.y-n2.y)/(n3.y-n2.y);
+        n3.theta = n2.theta+(n1.theta-n2.theta)/alpha;
+        lambda0 = tan(n3.theta);
+        delta_position = abs(xy3_old-n3.pos);
     } while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
     //remaining flow properties of point 3, for predictor
     n3.P = n2.P+(n1.P-n2.P)/alpha;
@@ -158,75 +158,75 @@ int InteriorNode(int node1,int node2,int node4,int fs=-1)
     int count=0;
     double P4_old,delta_p_corrector=0.0;
     do{
-	count++;
-	P4_old = n4.P;
-	//coefficients, for corrector
-	double pPlus = 0.5*(n2.P+n4.P);
-	double thetaPlus = 0.5*(n2.theta+n4.theta);
-	double VPlus = 0.5*(n2.V+n4.V);
-	double rhoPlus = 0.5*(n2.rho+n4.rho);
-	double yPlus = 0.5*(n2.y+n4.y);
-	double aPlus = sqrt(g*pPlus/rhoPlus);
-	double MPlus = VPlus/aPlus;
-	double muPlus = MachAngle(MPlus);
-	lambdaPlus = tan(thetaPlus+muPlus);
-	QPlus = sqrt(MPlus^^2-1.)/rhoPlus/VPlus^^2;
-	SPlus = axiflag*sin(thetaPlus)/yPlus/MPlus/cos(thetaPlus+muPlus);
-	//
-	double pMinus = 0.5*(n1.P+n4.P);
-	double thetaMinus = 0.5*(n1.theta+n4.theta);
-	double VMinus = 0.5*(n1.V+n4.V);
-	double rhoMinus = 0.5*(n1.rho+n4.rho);
-	double yMinus = 0.5*(n1.y+n4.y);
-	double aMinus = sqrt(g*pMinus/rhoMinus);
-	double MMinus = VMinus/aMinus;
-	double muMinus = MachAngle(MMinus);
-	lambdaMinus = tan(thetaMinus-muMinus);
-	QMinus = sqrt(MMinus^^2-1.)/rhoMinus/VMinus^^2;
-	SMinus = axiflag*sin(thetaMinus)/yMinus/MMinus/cos(thetaMinus-muMinus);
-	//location of point 4, for corrector
-	n4.x = (n1.y-n2.y-lambdaMinus*n1.x+lambdaPlus*n2.x)/(lambdaPlus-lambdaMinus);
-	n4.y = n2.y-lambdaPlus*(n2.x-n4.x);
-	//
-	TPlus = -SPlus*(n4.x-n2.x)+QPlus*n2.P+n2.theta;
-	TMinus = -SMinus*(n4.x-n1.x)+QMinus*n1.P-n1.theta;
-	//location of point 3, for corrector
-	lambda0 = tan(0.5*(n3.theta+n4.theta));
-	//
-	iteration_count=0;
-	delta_position=0.0;
-	do {
-	    ++iteration_count;
-	    Vector3 xy3 = n3.pos;
-	    n3.x = (n2.y-n4.y-lambda12*n2.x+lambda0*n4.x)/(lambda0-lambda12);
-	    n3.y = n4.y-lambda0*(n4.x-n3.x);
-	    alpha = (n1.y-n2.y)/(n3.y-n2.y);
-	    n3.theta = n2.theta+(n1.theta-n2.theta)/alpha;
-	    lambda0 = tan(n3.theta);
-	    delta_position = abs(xy3-n3.pos);
-	} while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
-	//remaining flow properties of point 3, for corrector
-	n3.P = n2.P+(n1.P-n2.P)/alpha;
-	n3.rho = n2.rho+(n1.rho-n2.rho)/alpha;
-	n3.T = n2.T+(n1.T-n2.T)/alpha;
-	n3.V = n2.V+(n1.V-n2.V)/alpha;
-	//flow properties of point 4, for corrector
-	double p3 = 0.5*(n3.P+n4.P);
-	double rho3 = 0.5*(n3.rho+n4.rho);
-	double a3 = sqrt(g*p3/rho3);
-	double V3 = 0.5*(n3.V+n4.V);
-	R0 = rho3*V3;
-	A0 = a3^^2;
-	Tee01 = R0*V3 + p3;
-	Tee02 = p3 - A0*rho3;
-	//
-	n4.P = (TPlus+TMinus)/(QPlus+QMinus);
-	n4.theta = TPlus-QPlus*n4.P;
-	n4.V = (Tee01-n4.P)/R0;
-	n4.rho = (n4.P-Tee02)/A0;
-	n4.T = n4.P/n4.rho/R;
-	//
-	delta_p_corrector = fabs(n4.P - P4_old);
+        count++;
+        P4_old = n4.P;
+        //coefficients, for corrector
+        double pPlus = 0.5*(n2.P+n4.P);
+        double thetaPlus = 0.5*(n2.theta+n4.theta);
+        double VPlus = 0.5*(n2.V+n4.V);
+        double rhoPlus = 0.5*(n2.rho+n4.rho);
+        double yPlus = 0.5*(n2.y+n4.y);
+        double aPlus = sqrt(g*pPlus/rhoPlus);
+        double MPlus = VPlus/aPlus;
+        double muPlus = MachAngle(MPlus);
+        lambdaPlus = tan(thetaPlus+muPlus);
+        QPlus = sqrt(MPlus^^2-1.)/rhoPlus/VPlus^^2;
+        SPlus = axiflag*sin(thetaPlus)/yPlus/MPlus/cos(thetaPlus+muPlus);
+        //
+        double pMinus = 0.5*(n1.P+n4.P);
+        double thetaMinus = 0.5*(n1.theta+n4.theta);
+        double VMinus = 0.5*(n1.V+n4.V);
+        double rhoMinus = 0.5*(n1.rho+n4.rho);
+        double yMinus = 0.5*(n1.y+n4.y);
+        double aMinus = sqrt(g*pMinus/rhoMinus);
+        double MMinus = VMinus/aMinus;
+        double muMinus = MachAngle(MMinus);
+        lambdaMinus = tan(thetaMinus-muMinus);
+        QMinus = sqrt(MMinus^^2-1.)/rhoMinus/VMinus^^2;
+        SMinus = axiflag*sin(thetaMinus)/yMinus/MMinus/cos(thetaMinus-muMinus);
+        //location of point 4, for corrector
+        n4.x = (n1.y-n2.y-lambdaMinus*n1.x+lambdaPlus*n2.x)/(lambdaPlus-lambdaMinus);
+        n4.y = n2.y-lambdaPlus*(n2.x-n4.x);
+        //
+        TPlus = -SPlus*(n4.x-n2.x)+QPlus*n2.P+n2.theta;
+        TMinus = -SMinus*(n4.x-n1.x)+QMinus*n1.P-n1.theta;
+        //location of point 3, for corrector
+        lambda0 = tan(0.5*(n3.theta+n4.theta));
+        //
+        iteration_count=0;
+        delta_position=0.0;
+        do {
+            ++iteration_count;
+            Vector3 xy3 = n3.pos;
+            n3.x = (n2.y-n4.y-lambda12*n2.x+lambda0*n4.x)/(lambda0-lambda12);
+            n3.y = n4.y-lambda0*(n4.x-n3.x);
+            alpha = (n1.y-n2.y)/(n3.y-n2.y);
+            n3.theta = n2.theta+(n1.theta-n2.theta)/alpha;
+            lambda0 = tan(n3.theta);
+            delta_position = abs(xy3-n3.pos);
+        } while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
+        //remaining flow properties of point 3, for corrector
+        n3.P = n2.P+(n1.P-n2.P)/alpha;
+        n3.rho = n2.rho+(n1.rho-n2.rho)/alpha;
+        n3.T = n2.T+(n1.T-n2.T)/alpha;
+        n3.V = n2.V+(n1.V-n2.V)/alpha;
+        //flow properties of point 4, for corrector
+        double p3 = 0.5*(n3.P+n4.P);
+        double rho3 = 0.5*(n3.rho+n4.rho);
+        double a3 = sqrt(g*p3/rho3);
+        double V3 = 0.5*(n3.V+n4.V);
+        R0 = rho3*V3;
+        A0 = a3^^2;
+        Tee01 = R0*V3 + p3;
+        Tee02 = p3 - A0*rho3;
+        //
+        n4.P = (TPlus+TMinus)/(QPlus+QMinus);
+        n4.theta = TPlus-QPlus*n4.P;
+        n4.V = (Tee01-n4.P)/R0;
+        n4.rho = (n4.P-Tee02)/A0;
+        n4.T = n4.P/n4.rho/R;
+        //
+        delta_p_corrector = fabs(n4.P - P4_old);
     }while (count<CORRECTOR_ITERATION && delta_p_corrector>PRES_TOL);
     // delete node3
     DeleteNode(node3);
@@ -240,18 +240,18 @@ int InteriorNode(int node1,int node2,int node4,int fs=-1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh
     if (n4.x>n1.x){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
     } else {
-	SetNodeData(node4,"CMinusDown",node1);
-	SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node1,"CMinusUp",node4);
     } // end if
     if (n4.x>n2.x){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
     } else {
-	SetNodeData(node4,"CPlusDown",node2);
-	SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node2,"CPlusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node
     return node4;
@@ -312,17 +312,17 @@ unittest {
 int CPlusWallNode(int iw,int node0,int node2,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     if(node0==-1 && GetIsentropicFlag==YES){
-	return CPlusWallNode_0(iw,node2,node4,fs);
+        return CPlusWallNode_0(iw,node2,node4,fs);
     } // end if
     if(node0 == node2){
-	throw new Error(text("CPlusWallNode: node0 & node2 have same index: ",node2));
+        throw new Error(text("CPlusWallNode: node0 & node2 have same index: ",node2));
     } // end if
     if(CheckSameLine(node0,node2,-1) != YES){
-	throw new Error(text("CPlusWallNode: node2 is not on C- char. of node0"));
+        throw new Error(text("CPlusWallNode: node2 is not on C- char. of node0"));
     } // end if
     double g = GetRatioOfSpecificHeats();
     double R = GetGasConstant();
@@ -330,26 +330,26 @@ int CPlusWallNode(int iw,int node0,int node2,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CPlusWallNode: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CPlusWallNode: node0 doesn't exist, id: ",node0));
     } // end if
     if(CheckPointOnWall(iw,n0.pos) != YES){
-	throw new Error(text("CPlusWallNode: node0, id:",node0," is not on wall, iw: ",iw));
+        throw new Error(text("CPlusWallNode: node0, id:",node0," is not on wall, iw: ",iw));
     } // end if
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("CPlusWallNode: node2 doesn't exist, id: ",node2));
+        throw new Error(text("CPlusWallNode: node2 doesn't exist, id: ",node2));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     // define gas properties
     double mu2 = MachAngle(n2.Mach);
@@ -379,43 +379,43 @@ int CPlusWallNode(int iw,int node0,int node2,int node4,int fs=-1)
     int count=0;
     double P4_old,delta_p_corrector=0.0;
     do{
-	count++;
-	P4_old = n4.P;
-	//coefficients, for corrector
-	double pPlus = 0.5*(n2.P+n4.P);
-	double thetaPlus = 0.5*(n2.theta+n4.theta);
-	double VPlus = 0.5*(n2.V+n4.V);
-	double rhoPlus = 0.5*(n2.rho+n4.rho);
-	double yPlus = 0.5*(n2.y+n4.y);
-	double aPlus = sqrt(g*pPlus/rhoPlus);
-	double MPlus = VPlus/aPlus;
-	double muPlus = MachAngle(MPlus);
-	lambdaPlus = tan(thetaPlus+muPlus);
-	QPlus = sqrt(MPlus^^2-1.)/rhoPlus/VPlus^^2;
-	SPlus = axiflag*sin(thetaPlus)/yPlus/MPlus/cos(thetaPlus+muPlus);
-	//location of point 4, for corrector
-	t = WallFindT(iw,n2.pos,cos(atan(lambdaPlus)),sin(atan(lambdaPlus)));
-	n4.pos = WallPos(iw,t);
-	//
-	TPlus = -SPlus*(n4.x-n2.x)+QPlus*n2.P+n2.theta;
-	lambda0 = WallSlope(iw,t);
-	n4.theta = atan(lambda0);
-	//flow properties of point 4, for corrector
-	double p0 = 0.5*(n0.P+n4.P);
-	double rho0 = 0.5*(n0.rho+n4.rho);
-	double a0 = sqrt(g*p0/rho0);
-	double V0 = 0.5*(n0.V+n4.V);
-	R0 = rho0*V0;
-	A0 = a0^^2;
-	Tee01 = R0*V0 + p0;
-	Tee02 = p0 - A0*rho0;
-	//
-	n4.P = (TPlus-n4.theta)/QPlus;
-	n4.V = (Tee01-n4.P)/R0;
-	n4.rho = (n4.P-Tee02)/A0;
-	n4.T = n4.P/n4.rho/R;
-	//
-	delta_p_corrector = fabs(n4.P - P4_old);
+        count++;
+        P4_old = n4.P;
+        //coefficients, for corrector
+        double pPlus = 0.5*(n2.P+n4.P);
+        double thetaPlus = 0.5*(n2.theta+n4.theta);
+        double VPlus = 0.5*(n2.V+n4.V);
+        double rhoPlus = 0.5*(n2.rho+n4.rho);
+        double yPlus = 0.5*(n2.y+n4.y);
+        double aPlus = sqrt(g*pPlus/rhoPlus);
+        double MPlus = VPlus/aPlus;
+        double muPlus = MachAngle(MPlus);
+        lambdaPlus = tan(thetaPlus+muPlus);
+        QPlus = sqrt(MPlus^^2-1.)/rhoPlus/VPlus^^2;
+        SPlus = axiflag*sin(thetaPlus)/yPlus/MPlus/cos(thetaPlus+muPlus);
+        //location of point 4, for corrector
+        t = WallFindT(iw,n2.pos,cos(atan(lambdaPlus)),sin(atan(lambdaPlus)));
+        n4.pos = WallPos(iw,t);
+        //
+        TPlus = -SPlus*(n4.x-n2.x)+QPlus*n2.P+n2.theta;
+        lambda0 = WallSlope(iw,t);
+        n4.theta = atan(lambda0);
+        //flow properties of point 4, for corrector
+        double p0 = 0.5*(n0.P+n4.P);
+        double rho0 = 0.5*(n0.rho+n4.rho);
+        double a0 = sqrt(g*p0/rho0);
+        double V0 = 0.5*(n0.V+n4.V);
+        R0 = rho0*V0;
+        A0 = a0^^2;
+        Tee01 = R0*V0 + p0;
+        Tee02 = p0 - A0*rho0;
+        //
+        n4.P = (TPlus-n4.theta)/QPlus;
+        n4.V = (Tee01-n4.P)/R0;
+        n4.rho = (n4.P-Tee02)/A0;
+        n4.T = n4.P/n4.rho/R;
+        //
+        delta_p_corrector = fabs(n4.P - P4_old);
     } while (count<CORRECTOR_ITERATION && delta_p_corrector>PRES_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -427,11 +427,11 @@ int CPlusWallNode(int iw,int node0,int node2,int node4,int fs=-1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh
     if (n4.x>n2.x){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
     } else {
-	SetNodeData(node4,"CPlusDown",node2);
-	SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node2,"CPlusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node
     return node4;
@@ -498,17 +498,17 @@ unittest {
 int CMinusWallNode(int iw,int node0,int node1,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     if(node0==-1 && GetIsentropicFlag==YES){
-	return CMinusWallNode_0(iw,node1,node4,fs);
+        return CMinusWallNode_0(iw,node1,node4,fs);
     } // end if
     if(node0 == node1){
-	throw new Error(text("CMinusWallNode: node0 & node1 have same index: ",node1));
+        throw new Error(text("CMinusWallNode: node0 & node1 have same index: ",node1));
     } // end if
     if(CheckSameLine(node0,node1,1) != YES){
-	throw new Error(text("CMinusWallNode: node1 is not on C+ char. of node0"));
+        throw new Error(text("CMinusWallNode: node1 is not on C+ char. of node0"));
     } // end if
     double g = GetRatioOfSpecificHeats();
     double R = GetGasConstant();
@@ -516,26 +516,26 @@ int CMinusWallNode(int iw,int node0,int node1,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CMinusWallNode: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CMinusWallNode: node0 doesn't exist, id: ",node0));
     } // end if
     if(CheckPointOnWall(iw,n0.pos) != YES){
-	throw new Error(text("CMinusWallNode: node0, id:",node0," is not on wall, iw: ",iw));
+        throw new Error(text("CMinusWallNode: node0, id:",node0," is not on wall, iw: ",iw));
     } // end if
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("CMinusWallNode: node1 doesn't exist, id: ",node1));
+        throw new Error(text("CMinusWallNode: node1 doesn't exist, id: ",node1));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     // define gas properties
     double mu1 = MachAngle(n1.Mach);
@@ -565,43 +565,43 @@ int CMinusWallNode(int iw,int node0,int node1,int node4,int fs=-1)
     int count=0;
     double P4_old,delta_p_corrector=0.0;
     do{
-	count++;
-	P4_old = n4.P;
-	//coefficients, for corrector
-	double pMinus = 0.5*(n1.P+n4.P);
-	double thetaMinus = 0.5*(n1.theta+n4.theta);
-	double VMinus = 0.5*(n1.V+n4.V);
-	double rhoMinus = 0.5*(n1.rho+n4.rho);
-	double yMinus = 0.5*(n1.y+n4.y);
-	double aMinus = sqrt(g*pMinus/rhoMinus);
-	double MMinus = VMinus/aMinus;
-	double muMinus = MachAngle(MMinus);
-	lambdaMinus = tan(thetaMinus-muMinus);
-	QMinus = sqrt(MMinus^^2-1.)/rhoMinus/VMinus^^2;
-	SMinus = axiflag*sin(thetaMinus)/yMinus/MMinus/cos(thetaMinus-muMinus);
-	//location of point 4, for corrector
-	t = WallFindT(iw,n1.pos,cos(atan(lambdaMinus)),sin(atan(lambdaMinus)));
-	n4.pos = WallPos(iw,t);
-	//
-	TMinus = -SMinus*(n4.x-n1.x)+QMinus*n1.P-n1.theta;
-	lambda0 = WallSlope(iw,t);
-	n4.theta = atan(lambda0);
-	//flow properties of point 4, for corrector
-	double p0 = 0.5*(n0.P+n4.P);
-	double rho0 = 0.5*(n0.rho+n4.rho);
-	double a0 = sqrt(g*p0/rho0);
-	double V0 = 0.5*(n0.V+n4.V);
-	R0 = rho0*V0;
-	A0 = a0^^2;
-	Tee01 = R0*V0 + p0;
-	Tee02 = p0 - A0*rho0;
-	//
-	n4.P = (TMinus+n4.theta)/QMinus;
-	n4.V = (Tee01-n4.P)/R0;
-	n4.rho = (n4.P-Tee02)/A0;
-	n4.T = n4.P/n4.rho/R;
-	//
-	delta_p_corrector = fabs(n4.P - P4_old);
+        count++;
+        P4_old = n4.P;
+        //coefficients, for corrector
+        double pMinus = 0.5*(n1.P+n4.P);
+        double thetaMinus = 0.5*(n1.theta+n4.theta);
+        double VMinus = 0.5*(n1.V+n4.V);
+        double rhoMinus = 0.5*(n1.rho+n4.rho);
+        double yMinus = 0.5*(n1.y+n4.y);
+        double aMinus = sqrt(g*pMinus/rhoMinus);
+        double MMinus = VMinus/aMinus;
+        double muMinus = MachAngle(MMinus);
+        lambdaMinus = tan(thetaMinus-muMinus);
+        QMinus = sqrt(MMinus^^2-1.)/rhoMinus/VMinus^^2;
+        SMinus = axiflag*sin(thetaMinus)/yMinus/MMinus/cos(thetaMinus-muMinus);
+        //location of point 4, for corrector
+        t = WallFindT(iw,n1.pos,cos(atan(lambdaMinus)),sin(atan(lambdaMinus)));
+        n4.pos = WallPos(iw,t);
+        //
+        TMinus = -SMinus*(n4.x-n1.x)+QMinus*n1.P-n1.theta;
+        lambda0 = WallSlope(iw,t);
+        n4.theta = atan(lambda0);
+        //flow properties of point 4, for corrector
+        double p0 = 0.5*(n0.P+n4.P);
+        double rho0 = 0.5*(n0.rho+n4.rho);
+        double a0 = sqrt(g*p0/rho0);
+        double V0 = 0.5*(n0.V+n4.V);
+        R0 = rho0*V0;
+        A0 = a0^^2;
+        Tee01 = R0*V0 + p0;
+        Tee02 = p0 - A0*rho0;
+        //
+        n4.P = (TMinus+n4.theta)/QMinus;
+        n4.V = (Tee01-n4.P)/R0;
+        n4.rho = (n4.P-Tee02)/A0;
+        n4.T = n4.P/n4.rho/R;
+        //
+        delta_p_corrector = fabs(n4.P - P4_old);
     } while (count<CORRECTOR_ITERATION && delta_p_corrector>PRES_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -613,11 +613,11 @@ int CMinusWallNode(int iw,int node0,int node1,int node4,int fs=-1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh
     if (n4.x>n1.x){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
     } else {
-	SetNodeData(node4,"CMinusDown",node1);
-	SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node1,"CMinusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node
     return node4;
@@ -683,17 +683,17 @@ unittest {
 int CPlusFreeBndyNode(int node0,int node2,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     if(GetIsentropicFlag==YES){
-	return CPlusFreeBndyNode_0(node0,node2,node4,fs);
+        return CPlusFreeBndyNode_0(node0,node2,node4,fs);
     } // end if
     if(node0 == node2){
-	throw new Error(text("CPlusFreeBndyNode: node0 & node2 have same index: ",node2));
+        throw new Error(text("CPlusFreeBndyNode: node0 & node2 have same index: ",node2));
     } // end if
     if(CheckSameLine(node0,node2,-1) != YES){
-	throw new Error(text("CPlusFreeBndyNode: node2 is not on C- char. of node0"));
+        throw new Error(text("CPlusFreeBndyNode: node2 is not on C- char. of node0"));
     } // end if
     double g = GetRatioOfSpecificHeats();
     double R = GetGasConstant();
@@ -701,23 +701,23 @@ int CPlusFreeBndyNode(int node0,int node2,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CPlusFreeBndyNode: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CPlusFreeBndyNode: node0 doesn't exist, id: ",node0));
     } // end if
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("CPlusFreeBndyNode: node2 doesn't exist, id: ",node2));
+        throw new Error(text("CPlusFreeBndyNode: node2 doesn't exist, id: ",node2));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     //gas properties along free boundary are constant
     n4.P = n0.P;
@@ -748,27 +748,27 @@ int CPlusFreeBndyNode(int node0,int node2,int node4,int fs=-1)
     int count=0;
     double delta_position;
     do{
-	count++;
-	xy4 = n4.pos;
-	//coefficients, for corrector
-	double thetaPlus = 0.5*(n2.theta+n4.theta);
-	//
-	double yPlus = 0.5*(n2.y+n4.y);
-	double aPlus = sqrt(g*pPlus/rhoPlus);
-	double MPlus = VPlus/aPlus;
-	double muPlus = MachAngle(MPlus);
-	lambdaPlus = tan(thetaPlus+muPlus);
-	QPlus = sqrt(MPlus^^2-1.)/rhoPlus/VPlus^^2;
-	SPlus = axiflag*sin(thetaPlus)/yPlus/MPlus/cos(thetaPlus+muPlus);
-	//location of point 4, for corrector
-	n4.x = (n0.y-n2.y-lambdaPlus*n2.x+lambda0*n0.x)/(lambda0-lambdaPlus);
-	n4.y = n0.y-lambda0*(n0.x-n4.x);
-	//
-	TPlus = -SPlus*(n4.x-n2.x)+QPlus*n2.P+n2.theta;
-	//
-	n4.theta = TPlus - QPlus*n4.P;
-	//
-	delta_position = abs(xy4-n4.pos);
+        count++;
+        xy4 = n4.pos;
+        //coefficients, for corrector
+        double thetaPlus = 0.5*(n2.theta+n4.theta);
+        //
+        double yPlus = 0.5*(n2.y+n4.y);
+        double aPlus = sqrt(g*pPlus/rhoPlus);
+        double MPlus = VPlus/aPlus;
+        double muPlus = MachAngle(MPlus);
+        lambdaPlus = tan(thetaPlus+muPlus);
+        QPlus = sqrt(MPlus^^2-1.)/rhoPlus/VPlus^^2;
+        SPlus = axiflag*sin(thetaPlus)/yPlus/MPlus/cos(thetaPlus+muPlus);
+        //location of point 4, for corrector
+        n4.x = (n0.y-n2.y-lambdaPlus*n2.x+lambda0*n0.x)/(lambda0-lambdaPlus);
+        n4.y = n0.y-lambda0*(n0.x-n4.x);
+        //
+        TPlus = -SPlus*(n4.x-n2.x)+QPlus*n2.P+n2.theta;
+        //
+        n4.theta = TPlus - QPlus*n4.P;
+        //
+        delta_position = abs(xy4-n4.pos);
     }while (count<CORRECTOR_ITERATION && delta_position>POS_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -780,11 +780,11 @@ int CPlusFreeBndyNode(int node0,int node2,int node4,int fs=-1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh
     if (n4.x>n2.x){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
     } else {
-	SetNodeData(node4,"CPlusDown",node2);
-	SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node2,"CPlusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node
     return node4;
@@ -848,17 +848,17 @@ unittest {
 int CMinusFreeBndyNode(int node0,int node1,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     if(GetIsentropicFlag==YES){
-	return CMinusFreeBndyNode_0(node1,node4,fs);
+        return CMinusFreeBndyNode_0(node1,node4,fs);
     } // end if
     if(node0 == node1){
-	throw new Error(text("CMinusFreeBndyNode: node0 & node1 have same index: ",node1));
+        throw new Error(text("CMinusFreeBndyNode: node0 & node1 have same index: ",node1));
     } // end if
     if(CheckSameLine(node0,node1,1) != YES){
-	throw new Error(text("CPlusFreeBndyNode: node1 is not on C+ char. of node0"));
+        throw new Error(text("CPlusFreeBndyNode: node1 is not on C+ char. of node0"));
     } // end if
     double g = GetRatioOfSpecificHeats();
     double R = GetGasConstant();
@@ -866,23 +866,23 @@ int CMinusFreeBndyNode(int node0,int node1,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CMinusFreeBndyNode: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CMinusFreeBndyNode: node0 doesn't exist, id: ",node0));
     } // end if
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("CMinusFreeBndyNode: node1 doesn't exist, id: ",node1));
+        throw new Error(text("CMinusFreeBndyNode: node1 doesn't exist, id: ",node1));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     //gas properties along free boundary are constant
     n4.P = n0.P;
@@ -913,28 +913,28 @@ int CMinusFreeBndyNode(int node0,int node1,int node4,int fs=-1)
     int count=0;
     double delta_position;
     do{
-	count++;
-	xy4 = n4.pos;
-	//coefficients, for corrector
-	double thetaMinus = 0.5*(n1.theta+n4.theta);
-	//
-	double yMinus = 0.5*(n1.y+n4.y);
-	double aMinus = sqrt(g*pMinus/rhoMinus);
-	double MMinus = VMinus/aMinus;
-	double muMinus = MachAngle(MMinus);
-	lambdaMinus = tan(thetaMinus-muMinus);
-	QMinus = sqrt(MMinus^^2-1.)/rhoMinus/VMinus^^2;
-	SMinus = axiflag*sin(thetaMinus)/yMinus/MMinus/cos(thetaMinus-muMinus);
-	lambda0 = tan(0.5*(n0.theta+n4.theta));
-	//location of point 4, for corrector
-	n4.x = (n0.y-n1.y-lambdaMinus*n1.x+lambda0*n0.x)/(lambda0-lambdaMinus);
-	n4.y = n0.y-lambda0*(n0.x-n4.x);
-	//
-	TMinus = -SMinus*(n4.x-n1.x)+QMinus*n1.P-n1.theta;
-	//
-	n4.theta = -TMinus + QMinus*n4.P;
-	//
-	delta_position = abs(xy4-n4.pos);
+        count++;
+        xy4 = n4.pos;
+        //coefficients, for corrector
+        double thetaMinus = 0.5*(n1.theta+n4.theta);
+        //
+        double yMinus = 0.5*(n1.y+n4.y);
+        double aMinus = sqrt(g*pMinus/rhoMinus);
+        double MMinus = VMinus/aMinus;
+        double muMinus = MachAngle(MMinus);
+        lambdaMinus = tan(thetaMinus-muMinus);
+        QMinus = sqrt(MMinus^^2-1.)/rhoMinus/VMinus^^2;
+        SMinus = axiflag*sin(thetaMinus)/yMinus/MMinus/cos(thetaMinus-muMinus);
+        lambda0 = tan(0.5*(n0.theta+n4.theta));
+        //location of point 4, for corrector
+        n4.x = (n0.y-n1.y-lambdaMinus*n1.x+lambda0*n0.x)/(lambda0-lambdaMinus);
+        n4.y = n0.y-lambda0*(n0.x-n4.x);
+        //
+        TMinus = -SMinus*(n4.x-n1.x)+QMinus*n1.P-n1.theta;
+        //
+        n4.theta = -TMinus + QMinus*n4.P;
+        //
+        delta_position = abs(xy4-n4.pos);
     }while (count<CORRECTOR_ITERATION && delta_position>POS_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -946,11 +946,11 @@ int CMinusFreeBndyNode(int node0,int node1,int node4,int fs=-1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh
     if (n4.x>n1.x){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
     } else {
-	SetNodeData(node4,"CMinusDown",node1);
-	SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node1,"CMinusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node
     return node4;
@@ -1017,40 +1017,40 @@ unittest {
 int CPlusOblShkNode(int node0,int node2,int node4,int fs=1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     fs = GetFlowState();
-	
+        
     if (CheckSameLine(node0,node2,-1) != 1){
-	throw new Error(text("CPlusOblShkNode: node0 and node2 are not on the same C- char. line"));
+        throw new Error(text("CPlusOblShkNode: node0 and node2 are not on the same C- char. line"));
     } // end if
 
     if(node0 == node2){
-	throw new Error(text("CPlusOblShkNode: node0 & node2 have same index: ",node2));
+        throw new Error(text("CPlusOblShkNode: node0 & node2 have same index: ",node2));
     } // end if
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CPlusOblShkNode: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CPlusOblShkNode: node0 doesn't exist, id: ",node0));
     } // end if
     if (GetNumberFlowStates(node0) < 2){
-	throw new Error(text("CPlusOblShkNode: node0 only has 1 flowstate"));
+        throw new Error(text("CPlusOblShkNode: node0 only has 1 flowstate"));
     } // end if
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("CPlusOblShkNode: node2 doesn't exist, id: ",node2));
+        throw new Error(text("CPlusOblShkNode: node2 doesn't exist, id: ",node2));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     }
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     n4.F[fs-1].T = n0.F[fs-1].T;
     n4.F[fs-1].P = n0.F[fs-1].P;
@@ -1070,46 +1070,46 @@ int CPlusOblShkNode(int node0,int node2,int node4,int fs=1)
     double beta_old1,beta_old2;
     double delta_pressure;
     do {
-	++iteration_count;
-	if (iteration_count>=3){
-	    beta4 = beta_old2+(beta_old2-beta_old1)*dP2/(dP1-dP2);
-	    beta_old1 = beta_old2; dP1 = dP2;
-	    beta_old2 = beta4; dP2 = delta_pressure;
-	} // end if
-	double lambda0 = tan(0.5*(n0.beta+beta4));
-	n4.theta = n4.F[fs-1].theta + theta_obl(n4.F[fs-1].Mach,beta4,g);
-	n4.P = n4.F[fs-1].P*p2_p1_obl(n4.F[fs-1].Mach,beta4,g);
-	n4.V = n4.F[fs-1].V*V2_V1_obl(n4.F[fs-1].Mach,beta4,n4.theta-n4.F[fs-1].theta,g);
-	n4.rho = n4.F[fs-1].rho*r2_r1_obl(n4.F[fs-1].Mach,beta4,g);
-	n4.T = n4.P/R/n4.rho;
-	//
-	double thetaPlus = 0.5*(n2.theta + n4.theta); 
-	double MPlus = 0.5*(n2.Mach + n4.Mach);
-	double pPlus = 0.5*(n2.P+n4.P);
-	double muPlus = MachAngle(MPlus);
-	double lambdaPlus = tan(muPlus+thetaPlus);
-	double x4 = (lambdaPlus*n2.x-lambda0*n0.x+n0.y-n2.y)/(lambdaPlus-lambda0);
-	double y4 = lambdaPlus*(x4-n2.x) + n2.y;
-	n4.pos = Vector3(x4,y4);
-	double QPlus = sqrt(MPlus^^2-1.0)/g/pPlus/(MPlus^^2);
-	double SPlus = axiflag*sin(thetaPlus)/y4/MPlus/cos(thetaPlus+muPlus);
-	double TPlus = -SPlus*(x4-n2.x) + QPlus*n2.P + n2.theta;
-	double P4_LRC = (TPlus-n4.theta)/QPlus;
+        ++iteration_count;
+        if (iteration_count>=3){
+            beta4 = beta_old2+(beta_old2-beta_old1)*dP2/(dP1-dP2);
+            beta_old1 = beta_old2; dP1 = dP2;
+            beta_old2 = beta4; dP2 = delta_pressure;
+        } // end if
+        double lambda0 = tan(0.5*(n0.beta+beta4));
+        n4.theta = n4.F[fs-1].theta + theta_obl(n4.F[fs-1].Mach,beta4,g);
+        n4.P = n4.F[fs-1].P*p2_p1_obl(n4.F[fs-1].Mach,beta4,g);
+        n4.V = n4.F[fs-1].V*V2_V1_obl(n4.F[fs-1].Mach,beta4,n4.theta-n4.F[fs-1].theta,g);
+        n4.rho = n4.F[fs-1].rho*r2_r1_obl(n4.F[fs-1].Mach,beta4,g);
+        n4.T = n4.P/R/n4.rho;
+        //
+        double thetaPlus = 0.5*(n2.theta + n4.theta); 
+        double MPlus = 0.5*(n2.Mach + n4.Mach);
+        double pPlus = 0.5*(n2.P+n4.P);
+        double muPlus = MachAngle(MPlus);
+        double lambdaPlus = tan(muPlus+thetaPlus);
+        double x4 = (lambdaPlus*n2.x-lambda0*n0.x+n0.y-n2.y)/(lambdaPlus-lambda0);
+        double y4 = lambdaPlus*(x4-n2.x) + n2.y;
+        n4.pos = Vector3(x4,y4);
+        double QPlus = sqrt(MPlus^^2-1.0)/g/pPlus/(MPlus^^2);
+        double SPlus = axiflag*sin(thetaPlus)/y4/MPlus/cos(thetaPlus+muPlus);
+        double TPlus = -SPlus*(x4-n2.x) + QPlus*n2.P + n2.theta;
+        double P4_LRC = (TPlus-n4.theta)/QPlus;
 
-	delta_pressure = P4_LRC - n4.P;
-	if (iteration_count==1){
-	    dP1 = delta_pressure;
-	    beta4 = beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
-	    beta_old1 = beta4;
-	} // end if
-	if (iteration_count==2){
-	    dP2 = delta_pressure;
-	    beta4 = beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
-	    beta_old2 = beta4;
-	} // end if
-	if (iteration_count>=3){
-	    dP2 = delta_pressure;
-	} // end if
+        delta_pressure = P4_LRC - n4.P;
+        if (iteration_count==1){
+            dP1 = delta_pressure;
+            beta4 = beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
+            beta_old1 = beta4;
+        } // end if
+        if (iteration_count==2){
+            dP2 = delta_pressure;
+            beta4 = beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
+            beta_old2 = beta4;
+        } // end if
+        if (iteration_count>=3){
+            dP2 = delta_pressure;
+        } // end if
     } while(iteration_count<MAX_ITERATION && fabs(delta_pressure)>PRES_TOL);
     //Save the solution-point properties
     SetNodeData(node4,"X",n4.x);
@@ -1121,11 +1121,11 @@ int CPlusOblShkNode(int node0,int node2,int node4,int fs=1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh.
     if (n4.x>n2.x){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
     } else {
-	SetNodeData(node4,"CPlusDown",node2);
-	SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node2,"CPlusUp",node4);
     } // end if
     return node4;
 } // end CPlusOblShkNode
@@ -1193,38 +1193,38 @@ unittest {
 int CMinusOblShkNode(int node0,int node1,int node4,int fs=1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     fs = GetFlowState();
     if (CheckSameLine(node0,node1,1) != 1){
-	throw new Error(text("CMinusOblShkNode: node0 and node1 are not on the same C- char. line"));
+        throw new Error(text("CMinusOblShkNode: node0 and node1 are not on the same C- char. line"));
     } // end if
     if(node0 == node1){
-	throw new Error(text("CMinusOblShkNode: node0 & node1 have same index: ",node1));
+        throw new Error(text("CMinusOblShkNode: node0 & node1 have same index: ",node1));
     } // end if
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CMinusOblShkNode: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CMinusOblShkNode: node0 doesn't exist, id: ",node0));
     } // end if
     if (GetNumberFlowStates(node0) < 2){
-	throw new Error(text("CMinusOblShkNode: node0 only has 1 flowstate"));
+        throw new Error(text("CMinusOblShkNode: node0 only has 1 flowstate"));
     } // end if
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("CMinusOblShkNode: node1 doesn't exist, id: ",node1));
+        throw new Error(text("CMinusOblShkNode: node1 doesn't exist, id: ",node1));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     }
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     n4.F[fs-1].T = n0.F[fs-1].T;
     n4.F[fs-1].P = n0.F[fs-1].P;
@@ -1244,46 +1244,46 @@ int CMinusOblShkNode(int node0,int node1,int node4,int fs=1)
     double beta_old1,beta_old2;
     double delta_pressure;
     do {
-	++iteration_count;
-	if (iteration_count>=3){
-	    beta4 = beta_old2+(beta_old2-beta_old1)*dP2/(dP1-dP2);
-	    beta_old1 = beta_old2; dP1 = dP2;
-	    beta_old2 = beta4; dP2 = delta_pressure;
-	} // end if
-	double lambda0 = tan(0.5*(n0.beta+beta4));
-	n4.theta = n4.F[fs-1].theta + theta_obl(n4.F[fs-1].Mach,beta4,g);
-	n4.P = n4.F[fs-1].P*p2_p1_obl(n4.F[fs-1].Mach,beta4,g);
-	n4.V = n4.F[fs-1].V*V2_V1_obl(n4.F[fs-1].Mach,beta4,n4.theta-n4.F[fs-1].theta,g);
-	n4.rho = n4.F[fs-1].rho*r2_r1_obl(n4.F[fs-1].Mach,beta4,g);
-	n4.T = n4.P/R/n4.rho;
-	//
-	double thetaMinus = 0.5*(n1.theta + n4.theta); 
-	double MMinus = 0.5*(n1.Mach + n4.Mach);
-	double pMinus = 0.5*(n1.P+n4.P);
-	double muMinus = MachAngle(MMinus);
-	double lambdaMinus = tan(thetaMinus-muMinus);
-	double x4 = (lambdaMinus*n1.x-lambda0*n0.x+n0.y-n1.y)/(lambdaMinus-lambda0);
-	double y4 = lambdaMinus*(x4-n1.x) + n1.y;
-	n4.pos = Vector3(x4,y4);
-	double QMinus = sqrt(MMinus^^2-1.0)/g/pMinus/(MMinus^^2);
-	double SMinus = axiflag*sin(thetaMinus)/y4/MMinus/cos(thetaMinus-muMinus);
-	double TMinus = -SMinus*(x4-n1.x) + QMinus*n1.P - n1.theta;
-	double P4_LRC = (TMinus+n4.theta)/QMinus;
+        ++iteration_count;
+        if (iteration_count>=3){
+            beta4 = beta_old2+(beta_old2-beta_old1)*dP2/(dP1-dP2);
+            beta_old1 = beta_old2; dP1 = dP2;
+            beta_old2 = beta4; dP2 = delta_pressure;
+        } // end if
+        double lambda0 = tan(0.5*(n0.beta+beta4));
+        n4.theta = n4.F[fs-1].theta + theta_obl(n4.F[fs-1].Mach,beta4,g);
+        n4.P = n4.F[fs-1].P*p2_p1_obl(n4.F[fs-1].Mach,beta4,g);
+        n4.V = n4.F[fs-1].V*V2_V1_obl(n4.F[fs-1].Mach,beta4,n4.theta-n4.F[fs-1].theta,g);
+        n4.rho = n4.F[fs-1].rho*r2_r1_obl(n4.F[fs-1].Mach,beta4,g);
+        n4.T = n4.P/R/n4.rho;
+        //
+        double thetaMinus = 0.5*(n1.theta + n4.theta); 
+        double MMinus = 0.5*(n1.Mach + n4.Mach);
+        double pMinus = 0.5*(n1.P+n4.P);
+        double muMinus = MachAngle(MMinus);
+        double lambdaMinus = tan(thetaMinus-muMinus);
+        double x4 = (lambdaMinus*n1.x-lambda0*n0.x+n0.y-n1.y)/(lambdaMinus-lambda0);
+        double y4 = lambdaMinus*(x4-n1.x) + n1.y;
+        n4.pos = Vector3(x4,y4);
+        double QMinus = sqrt(MMinus^^2-1.0)/g/pMinus/(MMinus^^2);
+        double SMinus = axiflag*sin(thetaMinus)/y4/MMinus/cos(thetaMinus-muMinus);
+        double TMinus = -SMinus*(x4-n1.x) + QMinus*n1.P - n1.theta;
+        double P4_LRC = (TMinus+n4.theta)/QMinus;
 
-	delta_pressure = P4_LRC - n4.P;
-	if (iteration_count==1){
-	    dP1 = delta_pressure;
-	    beta4 = -beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
-	    beta_old1 = beta4;
-	} // end if
-	if (iteration_count==2){
-	    dP2 = delta_pressure;
-	    beta4 = -beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
-	    beta_old2 = beta4;
-	} // end if
-	if (iteration_count>=3){
-	    dP2 = delta_pressure;
-	} // end if
+        delta_pressure = P4_LRC - n4.P;
+        if (iteration_count==1){
+            dP1 = delta_pressure;
+            beta4 = -beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
+            beta_old1 = beta4;
+        } // end if
+        if (iteration_count==2){
+            dP2 = delta_pressure;
+            beta4 = -beta_obl2(n4.F[fs-1].Mach,P4_LRC/n4.F[fs-1].P,g);
+            beta_old2 = beta4;
+        } // end if
+        if (iteration_count>=3){
+            dP2 = delta_pressure;
+        } // end if
     } while(iteration_count<MAX_ITERATION && fabs(delta_pressure)>PRES_TOL);
     //Save the solution-point properties
     SetNodeData(node4,"X",n4.x);
@@ -1295,11 +1295,11 @@ int CMinusOblShkNode(int node0,int node1,int node4,int fs=1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh.
     if (n4.x>n1.x){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
     } else{
-	SetNodeData(node4,"CMinusDown",node1);
-	SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node1,"CMinusUp",node4);
     } // end if
     return node4;
 } // end CMinusOblShkNode()
@@ -1343,7 +1343,7 @@ unittest {
     assert(approxEqual(n4.T,6.2095e5/R/3.6387), "CPlusOblShkNode unittest: temperature failure");
     assert(approxEqual(n4.V,702.31), "CPlusOblShkNode unittest: velocity failure");
     assert(approxEqual(n4.theta,-29.548*PI/180.), "CPlusOblShkNode unittest: theta failure");
-    DeleteNode(0);DeleteNode(1);DeleteNode(sol);	
+    DeleteNode(0);DeleteNode(1);DeleteNode(sol);        
 } // end CPlusOblShkNode unittest
 
 //************************************************************//
@@ -1367,7 +1367,7 @@ unittest {
 int InteriorNode_0(int node1,int node2,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     double g = GetRatioOfSpecificHeats();
@@ -1375,27 +1375,27 @@ int InteriorNode_0(int node1,int node2,int node4,int fs=-1)
     int axiflag=GetAxiFlag();
     //first, assign the Node data
     if(node1 == node2){
-	throw new Error(text("InteriorNode_0: node1 & node2 have same id: ",node1));
+        throw new Error(text("InteriorNode_0: node1 & node2 have same id: ",node1));
     } // end if
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("InteriorNode_0: node1 doesn't exist, id: ",node1));
+        throw new Error(text("InteriorNode_0: node1 doesn't exist, id: ",node1));
     } // end if
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("InteriorNode_0: node2 doesn't exist, id: ",node2));
+        throw new Error(text("InteriorNode_0: node2 doesn't exist, id: ",node2));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("InteriorNode_0: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("InteriorNode_0: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     // define gas properties
     double mu1 = MachAngle(n1.Mach);
@@ -1425,46 +1425,46 @@ int InteriorNode_0(int node1,int node2,int node4,int fs=-1)
     int iteration_count=0;
     double delta_position=0.0;
     do {
-	++iteration_count;
-	x4_old = n4.x;y4_old = n4.y;
-	//
-	double uPlus = 0.5*(u2+u4);
-	double vPlus = 0.5*(v2+v4);
-	double yPlus = 0.5*(n2.y+n4.y);
-	//
-	double uMinus = 0.5*(u1+u4);
-	double vMinus = 0.5*(v1+v4);
-	double yMinus = 0.5*(n1.y+n4.y);
-	//
-	double VPlus = sqrt(uPlus^^2+vPlus^^2);
-	double thetaPlus = atan(vPlus /uPlus);
-	double aPlus = sqrt(g*R*n2.T0 - 0.5*(g-1.)*VPlus^^2);
-	double muPlus = asin(aPlus/VPlus);
-	//
-	double VMinus = sqrt(uMinus^^2+vMinus^^2);
-	double thetaMinus = atan(vMinus /uMinus);
-	double aMinus = sqrt(g*R*n1.T0 - 0.5*(g-1.)*VMinus^^2);
-	double muMinus = asin(aMinus/VMinus);
-	//
-	lambdaPlus = tan(thetaPlus+muPlus);
-	QPlus = uPlus^^2-aPlus^^2;
-	RPlus = 2.*uPlus*vPlus - QPlus*lambdaPlus;
-	SPlus = axiflag*aPlus^^2*vPlus/yPlus;
-	//
-	lambdaMinus = tan(thetaMinus-muMinus);
-	QMinus = uMinus^^2-aMinus^^2;
-	RMinus = 2.*uMinus*vMinus - QMinus*lambdaMinus;
-	SMinus = axiflag*aMinus^^2*vMinus/yMinus;
-	//location of point 4, for corrector
-	n4.x = (n1.y-n2.y-lambdaMinus*n1.x+lambdaPlus*n2.x)/(lambdaPlus-lambdaMinus);
-	n4.y = n2.y-lambdaPlus*(n2.x-n4.x);
-	//
-	TPlus = SPlus*(n4.x-n2.x)+QPlus*u2+RPlus*v2;
-	TMinus = SMinus*(n4.x-n1.x)+QMinus*u1+RMinus*v1;
-	v4 = (TMinus-TPlus*QMinus/QPlus)/(RMinus-RPlus*QMinus/QPlus);
-	u4 = (TPlus-RPlus*v4)/QPlus;
-	//
-	delta_position=sqrt((n4.x-x4_old)^^2+(n4.y-y4_old)^^2);                 
+        ++iteration_count;
+        x4_old = n4.x;y4_old = n4.y;
+        //
+        double uPlus = 0.5*(u2+u4);
+        double vPlus = 0.5*(v2+v4);
+        double yPlus = 0.5*(n2.y+n4.y);
+        //
+        double uMinus = 0.5*(u1+u4);
+        double vMinus = 0.5*(v1+v4);
+        double yMinus = 0.5*(n1.y+n4.y);
+        //
+        double VPlus = sqrt(uPlus^^2+vPlus^^2);
+        double thetaPlus = atan(vPlus /uPlus);
+        double aPlus = sqrt(g*R*n2.T0 - 0.5*(g-1.)*VPlus^^2);
+        double muPlus = asin(aPlus/VPlus);
+        //
+        double VMinus = sqrt(uMinus^^2+vMinus^^2);
+        double thetaMinus = atan(vMinus /uMinus);
+        double aMinus = sqrt(g*R*n1.T0 - 0.5*(g-1.)*VMinus^^2);
+        double muMinus = asin(aMinus/VMinus);
+        //
+        lambdaPlus = tan(thetaPlus+muPlus);
+        QPlus = uPlus^^2-aPlus^^2;
+        RPlus = 2.*uPlus*vPlus - QPlus*lambdaPlus;
+        SPlus = axiflag*aPlus^^2*vPlus/yPlus;
+        //
+        lambdaMinus = tan(thetaMinus-muMinus);
+        QMinus = uMinus^^2-aMinus^^2;
+        RMinus = 2.*uMinus*vMinus - QMinus*lambdaMinus;
+        SMinus = axiflag*aMinus^^2*vMinus/yMinus;
+        //location of point 4, for corrector
+        n4.x = (n1.y-n2.y-lambdaMinus*n1.x+lambdaPlus*n2.x)/(lambdaPlus-lambdaMinus);
+        n4.y = n2.y-lambdaPlus*(n2.x-n4.x);
+        //
+        TPlus = SPlus*(n4.x-n2.x)+QPlus*u2+RPlus*v2;
+        TMinus = SMinus*(n4.x-n1.x)+QMinus*u1+RMinus*v1;
+        v4 = (TMinus-TPlus*QMinus/QPlus)/(RMinus-RPlus*QMinus/QPlus);
+        u4 = (TPlus-RPlus*v4)/QPlus;
+        //
+        delta_position=sqrt((n4.x-x4_old)^^2+(n4.y-y4_old)^^2);                 
     } while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -1476,18 +1476,18 @@ int InteriorNode_0(int node1,int node2,int node4,int fs=-1)
     SetNodeData(node4,"theta",atan(v4/u4));
     //connect the node into the characteristic mesh
     if (n4.x>n1.x){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
     } else {
-	SetNodeData(node4,"CMinusDown",node1);
-	SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node1,"CMinusUp",node4);
     } // end if
     if (n4.x>n2.x){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
     } else {
-	SetNodeData(node4,"CPlusDown",node2);
-	SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node2,"CPlusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node
     return node4;
@@ -1548,10 +1548,10 @@ int CPlusWallNode_0(int iw,int node2,int node4,int fs=-1)
 {
     // check wall exists
     if(WallIsPresent(iw) != YES){
-	throw new Error(text("CPlusWallNode_0: Wall %d is not present.",iw));
+        throw new Error(text("CPlusWallNode_0: Wall %d is not present.",iw));
     } // end if
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     double g = GetRatioOfSpecificHeats();
@@ -1560,19 +1560,19 @@ int CPlusWallNode_0(int iw,int node2,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("CPlusWallNode_0: node2 doesn't exist, id: ",node2));
+        throw new Error(text("CPlusWallNode_0: node2 doesn't exist, id: ",node2));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     // define gas properties
     double mu2 = MachAngle(n2.Mach);
@@ -1597,33 +1597,33 @@ int CPlusWallNode_0(int iw,int node2,int node4,int fs=-1)
     int iteration_count=0;
     double delta_position=0.0;
     do {
-	++iteration_count;
-	pos4_old = n4.pos;
-	//
-	double uPlus = 0.5*(u2+u4);
-	double vPlus = 0.5*(v2+v4);
-	double yPlus = 0.5*(n2.y+n4.y);
-	//
-	double VPlus = sqrt(uPlus^^2+vPlus^^2);
-	double thetaPlus = atan(vPlus /uPlus);
-	double aPlus = sqrt(g*R*n2.T0 - 0.5*(g-1.)*VPlus^^2);
-	double muPlus = asin(aPlus/VPlus);
-	//
-	lambdaPlus = tan(thetaPlus+muPlus);
-	QPlus = uPlus^^2-aPlus^^2;
-	RPlus = 2.*uPlus*vPlus - QPlus*lambdaPlus;
-	SPlus = axiflag*aPlus^^2*vPlus/yPlus;
-	//location of point 4, for corrector
-	t = WallFindT(iw,n2.pos,cos(atan(lambdaPlus)),sin(atan(lambdaPlus)));
-	n4.pos = WallPos(iw,t);
-	//
-	TPlus = SPlus*(n4.x-n2.x)+QPlus*u2+RPlus*v2;
-	lambda0 = WallSlope(iw,t);
-	n4.theta = atan(lambda0);
-	u4 = TPlus/(QPlus+lambda0*RPlus);
-	v4 = u4*lambda0;
-	//
-	delta_position = abs(pos4_old - n4.pos);              
+        ++iteration_count;
+        pos4_old = n4.pos;
+        //
+        double uPlus = 0.5*(u2+u4);
+        double vPlus = 0.5*(v2+v4);
+        double yPlus = 0.5*(n2.y+n4.y);
+        //
+        double VPlus = sqrt(uPlus^^2+vPlus^^2);
+        double thetaPlus = atan(vPlus /uPlus);
+        double aPlus = sqrt(g*R*n2.T0 - 0.5*(g-1.)*VPlus^^2);
+        double muPlus = asin(aPlus/VPlus);
+        //
+        lambdaPlus = tan(thetaPlus+muPlus);
+        QPlus = uPlus^^2-aPlus^^2;
+        RPlus = 2.*uPlus*vPlus - QPlus*lambdaPlus;
+        SPlus = axiflag*aPlus^^2*vPlus/yPlus;
+        //location of point 4, for corrector
+        t = WallFindT(iw,n2.pos,cos(atan(lambdaPlus)),sin(atan(lambdaPlus)));
+        n4.pos = WallPos(iw,t);
+        //
+        TPlus = SPlus*(n4.x-n2.x)+QPlus*u2+RPlus*v2;
+        lambda0 = WallSlope(iw,t);
+        n4.theta = atan(lambda0);
+        u4 = TPlus/(QPlus+lambda0*RPlus);
+        v4 = u4*lambda0;
+        //
+        delta_position = abs(pos4_old - n4.pos);              
     } while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -1635,12 +1635,12 @@ int CPlusWallNode_0(int iw,int node2,int node4,int fs=-1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh
     if (n4.x>n2.x){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
     }
     else{
-	SetNodeData(node4,"CPlusDown",node2);
-	SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node2,"CPlusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node.
     return node4;
@@ -1696,10 +1696,10 @@ int CMinusWallNode_0(int iw,int node1,int node4,int fs=-1)
 {
     // check wall exists
     if(WallIsPresent(iw) != YES){
-	throw new Error(text("CMinusWallNode_0: Wall %d is not present.",iw));
+        throw new Error(text("CMinusWallNode_0: Wall %d is not present.",iw));
     } // end if
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     double g = GetRatioOfSpecificHeats();
@@ -1708,19 +1708,19 @@ int CMinusWallNode_0(int iw,int node1,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("CMinusWallNode_0: node1 doesn't exist, id: ",node1));
+        throw new Error(text("CMinusWallNode_0: node1 doesn't exist, id: ",node1));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     // define gas properties
     double mu1 = MachAngle(n1.Mach);
@@ -1745,33 +1745,33 @@ int CMinusWallNode_0(int iw,int node1,int node4,int fs=-1)
     int iteration_count=0;
     double delta_position=0.0;
     do {
-	++iteration_count;
-	pos4_old = n4.pos;
-	//
-	double uMinus = 0.5*(u1+u4);
-	double vMinus = 0.5*(v1+v4);
-	double yMinus = 0.5*(n1.y+n4.y);
-	//
-	double VMinus = sqrt(uMinus^^2+vMinus^^2);
-	double thetaMinus = atan(vMinus/uMinus);
-	double aMinus = sqrt(g*R*n1.T0 - 0.5*(g-1.)*VMinus^^2);
-	double muMinus = asin(aMinus/VMinus);
-	//
-	lambdaMinus = tan(thetaMinus-muMinus);
-	QMinus = uMinus^^2-aMinus^^2;
-	RMinus = 2.*uMinus*vMinus - QMinus*lambdaMinus;
-	SMinus = axiflag*aMinus^^2*vMinus/yMinus;
-	//location of point 4, for corrector
-	t = WallFindT(iw,n1.pos,cos(atan(lambdaMinus)),sin(atan(lambdaMinus)));
-	n4.pos = WallPos(iw,t);
-	//
-	TMinus = SMinus*(n4.x-n1.x)+QMinus*u1+RMinus*v1;
-	lambda0 = WallSlope(iw,t);
-	n4.theta = atan(lambda0);
-	u4 = TMinus/(QMinus+lambda0*RMinus);
-	v4 = u4*lambda0;
-	//
-	delta_position = abs(pos4_old - n4.pos);              
+        ++iteration_count;
+        pos4_old = n4.pos;
+        //
+        double uMinus = 0.5*(u1+u4);
+        double vMinus = 0.5*(v1+v4);
+        double yMinus = 0.5*(n1.y+n4.y);
+        //
+        double VMinus = sqrt(uMinus^^2+vMinus^^2);
+        double thetaMinus = atan(vMinus/uMinus);
+        double aMinus = sqrt(g*R*n1.T0 - 0.5*(g-1.)*VMinus^^2);
+        double muMinus = asin(aMinus/VMinus);
+        //
+        lambdaMinus = tan(thetaMinus-muMinus);
+        QMinus = uMinus^^2-aMinus^^2;
+        RMinus = 2.*uMinus*vMinus - QMinus*lambdaMinus;
+        SMinus = axiflag*aMinus^^2*vMinus/yMinus;
+        //location of point 4, for corrector
+        t = WallFindT(iw,n1.pos,cos(atan(lambdaMinus)),sin(atan(lambdaMinus)));
+        n4.pos = WallPos(iw,t);
+        //
+        TMinus = SMinus*(n4.x-n1.x)+QMinus*u1+RMinus*v1;
+        lambda0 = WallSlope(iw,t);
+        n4.theta = atan(lambda0);
+        u4 = TMinus/(QMinus+lambda0*RMinus);
+        v4 = u4*lambda0;
+        //
+        delta_position = abs(pos4_old - n4.pos);              
     } while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -1783,12 +1783,12 @@ int CMinusWallNode_0(int iw,int node1,int node4,int fs=-1)
     SetNodeData(node4,"theta",n4.theta);
     //connect the node into the characteristic mesh
     if (n4.x>n1.x){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
     }
     else{
-	SetNodeData(node4,"CMinusDown",node1);
-	SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node1,"CMinusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node.
     return node4;
@@ -1845,13 +1845,13 @@ unittest {
 int CPlusFreeBndyNode_0(int node0,int node2,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     if(node2 == node0){
-	throw new Error(text("CPlusFreeBndyNode: node0 & node2 have same index: ",node2));
+        throw new Error(text("CPlusFreeBndyNode: node0 & node2 have same index: ",node2));
     } // end if
     if(CheckSameLine(node0,node2,-1) != YES){
-	throw new Error(text("CPlusFreeBndyNode: node2 is not on C- char. of node0"));
+        throw new Error(text("CPlusFreeBndyNode: node2 is not on C- char. of node0"));
     } // end if
     //
     double g = GetRatioOfSpecificHeats();
@@ -1860,23 +1860,23 @@ int CPlusFreeBndyNode_0(int node0,int node2,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CPlusFreeBndyNode_0: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CPlusFreeBndyNode_0: node0 doesn't exist, id: ",node0));
     } // end if
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("CPlusFreeBndyNode_0: node2 doesn't exist, id: ",node2));
+        throw new Error(text("CPlusFreeBndyNode_0: node2 doesn't exist, id: ",node2));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     n4 = n0.dup;
     // define gas properties
@@ -1903,33 +1903,33 @@ int CPlusFreeBndyNode_0(int node0,int node2,int node4,int fs=-1)
     int iteration_count=0;
     double delta_position=0.0;
     do {
-	++iteration_count;
-	x4_old = n4.x;y4_old = n4.y;
-	//
-	double uPlus = 0.5*(u2+u4);
-	double vPlus = 0.5*(v2+v4);
-	double yPlus = 0.5*(n2.y+n4.y);
-	//
-	double VPlus = sqrt(uPlus^^2+vPlus^^2);
-	double thetaPlus = atan(vPlus /uPlus);
-	double aPlus = sqrt(g*R*n2.T0 - 0.5*(g-1.)*VPlus^^2);
-	double muPlus = asin(aPlus/VPlus);
-	//
-	//
-	lambdaPlus = tan(thetaPlus+muPlus);
-	QPlus = uPlus^^2-aPlus^^2;
-	RPlus = 2.*uPlus*vPlus - QPlus*lambdaPlus;
-	SPlus = axiflag*aPlus^^2*vPlus/yPlus;
-	lambda0 = 0.5*(tan(n0.theta)+v4/u4);
-	//location of point 4, for corrector
-	n4.x = (n0.y-n2.y-lambdaPlus*n2.x+lambda0*n0.x)/(lambda0-lambdaPlus);
-	n4.y = n0.y-lambda0*(n0.x-n4.x);
-	//
-	TPlus = SPlus*(n4.x-n2.x)+QPlus*u2+RPlus*v2;
-	u4 = (QPlus*TPlus-RPlus*sqrt(n4.V^^2*(QPlus^^2+RPlus^^2)-TPlus^^2))/(QPlus^^2+RPlus^^2);
-	v4 = sqrt(n4.V^^2 - u4^^2) * sign;
-	//
-	delta_position=sqrt((n4.x-x4_old)^^2+(n4.y-y4_old)^^2);          
+        ++iteration_count;
+        x4_old = n4.x;y4_old = n4.y;
+        //
+        double uPlus = 0.5*(u2+u4);
+        double vPlus = 0.5*(v2+v4);
+        double yPlus = 0.5*(n2.y+n4.y);
+        //
+        double VPlus = sqrt(uPlus^^2+vPlus^^2);
+        double thetaPlus = atan(vPlus /uPlus);
+        double aPlus = sqrt(g*R*n2.T0 - 0.5*(g-1.)*VPlus^^2);
+        double muPlus = asin(aPlus/VPlus);
+        //
+        //
+        lambdaPlus = tan(thetaPlus+muPlus);
+        QPlus = uPlus^^2-aPlus^^2;
+        RPlus = 2.*uPlus*vPlus - QPlus*lambdaPlus;
+        SPlus = axiflag*aPlus^^2*vPlus/yPlus;
+        lambda0 = 0.5*(tan(n0.theta)+v4/u4);
+        //location of point 4, for corrector
+        n4.x = (n0.y-n2.y-lambdaPlus*n2.x+lambda0*n0.x)/(lambda0-lambdaPlus);
+        n4.y = n0.y-lambda0*(n0.x-n4.x);
+        //
+        TPlus = SPlus*(n4.x-n2.x)+QPlus*u2+RPlus*v2;
+        u4 = (QPlus*TPlus-RPlus*sqrt(n4.V^^2*(QPlus^^2+RPlus^^2)-TPlus^^2))/(QPlus^^2+RPlus^^2);
+        v4 = sqrt(n4.V^^2 - u4^^2) * sign;
+        //
+        delta_position=sqrt((n4.x-x4_old)^^2+(n4.y-y4_old)^^2);          
     } while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -1941,12 +1941,12 @@ int CPlusFreeBndyNode_0(int node0,int node2,int node4,int fs=-1)
     SetNodeData(node4,"theta",atan(v4/u4));
     //connect the node into the characteristic mesh
     if (n4.x>n2.x){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
     }
     else{
-	SetNodeData(node4,"CPlusDown",node2);
-	SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node2,"CPlusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node.
     return node4;
@@ -2012,13 +2012,13 @@ unittest {
 int CMinusFreeBndyNode_0(int node0,int node1,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     if(node1 == node0){
-	throw new Error(text("CMinusFreeBndyNode: node0 & node1 have same index: ",node1));
+        throw new Error(text("CMinusFreeBndyNode: node0 & node1 have same index: ",node1));
     } // end if
     if(CheckSameLine(node0,node1,1) != YES){
-	throw new Error(text("CMinusFreeBndyNode: node1 is not on C+ char. of node0"));
+        throw new Error(text("CMinusFreeBndyNode: node1 is not on C+ char. of node0"));
     } // end if
     //
     double g = GetRatioOfSpecificHeats();
@@ -2027,23 +2027,23 @@ int CMinusFreeBndyNode_0(int node0,int node1,int node4,int fs=-1)
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("CMinusFreeBndyNode_0: node0 doesn't exist, id: ",node0));
+        throw new Error(text("CMinusFreeBndyNode_0: node0 doesn't exist, id: ",node0));
     } // end if
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("CMinusFreeBndyNode_0: node1 doesn't exist, id: ",node1));
+        throw new Error(text("CMinusFreeBndyNode_0: node1 doesn't exist, id: ",node1));
     } // end if
     if (node4 == -1){
-	node4 = CreateNode(-1);
+        node4 = CreateNode(-1);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     n4 = n0.dup;
     // define gas properties
@@ -2070,33 +2070,33 @@ int CMinusFreeBndyNode_0(int node0,int node1,int node4,int fs=-1)
     int iteration_count=0;
     double delta_position=0.0;
     do {
-	++iteration_count;
-	x4_old = n4.x;y4_old = n4.y;
-	//
-	double uMinus = 0.5*(u1+u4);
-	double vMinus = 0.5*(v1+v4);
-	double yMinus = 0.5*(n1.y+n4.y);
-	//
-	double VMinus = sqrt(uMinus^^2+vMinus^^2);
-	double thetaMinus = atan(vMinus /uMinus);
-	double aMinus = sqrt(g*R*n1.T0 - 0.5*(g-1.)*VMinus^^2);
-	double muMinus = asin(aMinus/VMinus);
-	//
-	//
-	lambdaMinus = tan(thetaMinus-muMinus);
-	QMinus = uMinus^^2-aMinus^^2;
-	RMinus = 2.*uMinus*vMinus - QMinus*lambdaMinus;
-	SMinus = axiflag*aMinus^^2*vMinus/yMinus;
-	lambda0 = 0.5*(tan(n0.theta)+v4/u4);
-	//location of point 4, for corrector
-	n4.x = (n0.y-n1.y-lambdaMinus*n1.x+lambda0*n0.x)/(lambda0-lambdaMinus);
-	n4.y = n0.y-lambda0*(n0.x-n4.x);
-	//
-	TMinus = SMinus*(n4.x-n1.x)+QMinus*u1+RMinus*v1;
-	u4 = (QMinus*TMinus+RMinus*sqrt(n4.V^^2*(QMinus^^2+RMinus^^2)-TMinus^^2))/(QMinus^^2+RMinus^^2);
-	v4 = sqrt(n4.V^^2 - u4^^2) * sign;
-	//
-	delta_position=sqrt((n4.x-x4_old)^^2+(n4.y-y4_old)^^2);  
+        ++iteration_count;
+        x4_old = n4.x;y4_old = n4.y;
+        //
+        double uMinus = 0.5*(u1+u4);
+        double vMinus = 0.5*(v1+v4);
+        double yMinus = 0.5*(n1.y+n4.y);
+        //
+        double VMinus = sqrt(uMinus^^2+vMinus^^2);
+        double thetaMinus = atan(vMinus /uMinus);
+        double aMinus = sqrt(g*R*n1.T0 - 0.5*(g-1.)*VMinus^^2);
+        double muMinus = asin(aMinus/VMinus);
+        //
+        //
+        lambdaMinus = tan(thetaMinus-muMinus);
+        QMinus = uMinus^^2-aMinus^^2;
+        RMinus = 2.*uMinus*vMinus - QMinus*lambdaMinus;
+        SMinus = axiflag*aMinus^^2*vMinus/yMinus;
+        lambda0 = 0.5*(tan(n0.theta)+v4/u4);
+        //location of point 4, for corrector
+        n4.x = (n0.y-n1.y-lambdaMinus*n1.x+lambda0*n0.x)/(lambda0-lambdaMinus);
+        n4.y = n0.y-lambda0*(n0.x-n4.x);
+        //
+        TMinus = SMinus*(n4.x-n1.x)+QMinus*u1+RMinus*v1;
+        u4 = (QMinus*TMinus+RMinus*sqrt(n4.V^^2*(QMinus^^2+RMinus^^2)-TMinus^^2))/(QMinus^^2+RMinus^^2);
+        v4 = sqrt(n4.V^^2 - u4^^2) * sign;
+        //
+        delta_position=sqrt((n4.x-x4_old)^^2+(n4.y-y4_old)^^2);  
     } while (iteration_count<MAX_ITERATION && delta_position>POS_TOL);
     //Save the solution properties 
     SetNodeData(node4,"X",n4.x);
@@ -2108,12 +2108,12 @@ int CMinusFreeBndyNode_0(int node0,int node1,int node4,int fs=-1)
     SetNodeData(node4,"theta",atan(v4/u4));
     //connect the node into the characteristic mesh
     if (n4.x>n1.x){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
     }
     else{
-	SetNodeData(node4,"CMinusDown",node1);
-	SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node1,"CMinusUp",node4);
     } // end if
     //Assuming a successful calculation, return the index of the solution node.
     return node4;
@@ -2180,71 +2180,71 @@ unittest {
  * in the order that they are generated.
  */
 int MarchAlongC(out int[] nodemarchlist,int old_first,int new_first,
-		string char_line="minus",string dir="down",int fs=-1)
+                string char_line="minus",string dir="down",int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     if(old_first == new_first){
-	throw new Error(text("MarchAlongC: old_first & new_first have same index: ",old_first));
+        throw new Error(text("MarchAlongC: old_first & new_first have same index: ",old_first));
     } // end if
     NodeData n0 = GetNodeData(old_first);
     if (n0 is null){
-	throw new Error(text("MarchAlongC: old_first node doesn't exist, id: ",old_first));
+        throw new Error(text("MarchAlongC: old_first node doesn't exist, id: ",old_first));
     } // end if
     NodeData n1 = GetNodeData(new_first);
     if (n1 is null){
-	throw new Error(text("MarchAlongC: new_first node doesn't exist, id: ",new_first));
+        throw new Error(text("MarchAlongC: new_first node doesn't exist, id: ",new_first));
     } // end if
     //
     int char_flag;
     if(char_line=="minus" || char_line=="Minus" || char_line=="-"){
-	char_flag = -1;
+        char_flag = -1;
     } else if(char_line=="plus" || char_line=="Plus" || char_line=="+"){
-	char_flag = 1;
+        char_flag = 1;
     } else {
-	throw new Error(text("MarchAlongC: invalid input for char. line"));
+        throw new Error(text("MarchAlongC: invalid input for char. line"));
     } // end if
     //
     int dir_flag;
     if(dir=="down" || dir=="Down"){
-	dir_flag = 1;
+        dir_flag = 1;
     } else if(dir=="up" || dir=="Up"){
-	dir_flag = -1;
+        dir_flag = -1;
     } else {
-	throw new Error(text("MarchAlongC: invalid input for direction to march"));
+        throw new Error(text("MarchAlongC: invalid input for direction to march"));
     } // end if
     //
     int node1,node2,node4;
     if(char_flag == -1){
-	node1 = new_first;
-	node2 = old_first;
-	nodemarchlist ~= node1;
+        node1 = new_first;
+        node2 = old_first;
+        nodemarchlist ~= node1;
     } else if(char_flag == 1){
-	node1 = old_first;
-	node2 = new_first;
-	nodemarchlist ~= node2;
+        node1 = old_first;
+        node2 = new_first;
+        nodemarchlist ~= node2;
     } // end if
     //
     int more = YES;
     do{
-	node4 = InteriorNode(node1,node2,-1); //creates new solution node
-	nodemarchlist ~= node4;
-	if(char_flag == -1){
-	    node1 = node4;
-	    if(dir_flag == 1){
-		node2 = GetNodeData(node2).CMD;
-	    } else if(dir_flag == -1){
-		node2 = GetNodeData(node2).CMU;
-	    } // end if
-	} else if(char_flag == 1){
-	    node2 = node4;
-	    if(dir_flag == 1){
-		node1 = GetNodeData(node1).CPD;
-	    } else if(dir_flag == -1){node1 = GetNodeData(node1).CPU;
-	    } // end if
-	} // end if
-	if(node2 == NO_NODE || node1 == NO_NODE){more = NO;}
+        node4 = InteriorNode(node1,node2,-1); //creates new solution node
+        nodemarchlist ~= node4;
+        if(char_flag == -1){
+            node1 = node4;
+            if(dir_flag == 1){
+                node2 = GetNodeData(node2).CMD;
+            } else if(dir_flag == -1){
+                node2 = GetNodeData(node2).CMU;
+            } // end if
+        } else if(char_flag == 1){
+            node2 = node4;
+            if(dir_flag == 1){
+                node1 = GetNodeData(node1).CPD;
+            } else if(dir_flag == -1){node1 = GetNodeData(node1).CPU;
+            } // end if
+        } // end if
+        if(node2 == NO_NODE || node1 == NO_NODE){more = NO;}
     } while(more == YES);
     //
     return node4;
@@ -2270,31 +2270,31 @@ int MarchAlongC(out int[] nodemarchlist,int old_first,int new_first,
 int InsertNode(int node1,int node2,int node4,double alpha=0.5,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //first, assign the Node data
     if(node1 == node2){
-	throw new Error(text("InsertNode: node1 & node2 have same index"));
+        throw new Error(text("InsertNode: node1 & node2 have same index"));
     } // end if
     NodeData n1 = GetNodeData(node1);
     if (n1 is null){
-	throw new Error(text("InsertNode: node1 doesn't exist, id: ",node1));
+        throw new Error(text("InsertNode: node1 doesn't exist, id: ",node1));
     } // end if
     NodeData n2 = GetNodeData(node2);
     if (n2 is null){
-	throw new Error(text("InsertNode: node2 doesn't exist, id: ",node2));
+        throw new Error(text("InsertNode: node2 doesn't exist, id: ",node2));
     } // end if
     if (node4==-1){
-	node4 = CreateNode(node4);
+        node4 = CreateNode(node4);
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("InsertNode: couldn't create node4, id: ",node4));
-	} else {
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("InsertNode: couldn't create node4, id: ",node4));
+        } else {
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     // Enforce a 0.0..1.0 range for alpha
     if(alpha > 1.0){alpha = 1.0;}
@@ -2309,35 +2309,35 @@ int InsertNode(int node1,int node2,int node4,double alpha=0.5,int fs=-1)
     SetNodeData(node4,"theta",(1.0 - alpha) * n1.theta + alpha * n2.theta);
     // Connect into the mesh only if nodes 1 and 2 are adjacent.
     if(n1.CPD == n2.CPU){
-	SetNodeData(node4,"CPlusUp",node1);
-	SetNodeData(node1,"CPlusDown",node4);
-	SetNodeData(node2,"CPlusUp",node4);
-	SetNodeData(node4,"CPlusDown",node2);
+        SetNodeData(node4,"CPlusUp",node1);
+        SetNodeData(node1,"CPlusDown",node4);
+        SetNodeData(node2,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node2);
     } else if(n1.CPU == n2.CPD){
-	SetNodeData(node4,"CPlusUp",node2);
-	SetNodeData(node2,"CPlusDown",node4);
-	SetNodeData(node1,"CPlusUp",node4);
-	SetNodeData(node4,"CPlusDown",node1);
+        SetNodeData(node4,"CPlusUp",node2);
+        SetNodeData(node2,"CPlusDown",node4);
+        SetNodeData(node1,"CPlusUp",node4);
+        SetNodeData(node4,"CPlusDown",node1);
     } else if(n1.CMD == n2.CMU){
-	SetNodeData(node4,"CMinusUp",node1);
-	SetNodeData(node1,"CMinusDown",node4);
-	SetNodeData(node2,"CMinusUp",node4);
-	SetNodeData(node4,"CMinusDown",node2);
+        SetNodeData(node4,"CMinusUp",node1);
+        SetNodeData(node1,"CMinusDown",node4);
+        SetNodeData(node2,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node2);
     } else if(n1.CMU == n2.CMD){
-	SetNodeData(node4,"CMinusUp",node2);
-	SetNodeData(node2,"CMinusDown",node4);
-	SetNodeData(node1,"CMinusUp",node4);
-	SetNodeData(node4,"CMinusDown",node1);
+        SetNodeData(node4,"CMinusUp",node2);
+        SetNodeData(node2,"CMinusDown",node4);
+        SetNodeData(node1,"CMinusUp",node4);
+        SetNodeData(node4,"CMinusDown",node1);
     } else if(n1.C0D == n2.C0U){
-	SetNodeData(node4,"CZeroUp",node1);
-	SetNodeData(node1,"CZeroDown",node4);
-	SetNodeData(node2,"CZeroUp",node4);
-	SetNodeData(node4,"CZeroDown",node2);
+        SetNodeData(node4,"CZeroUp",node1);
+        SetNodeData(node1,"CZeroDown",node4);
+        SetNodeData(node2,"CZeroUp",node4);
+        SetNodeData(node4,"CZeroDown",node2);
     } else if(n1.C0U == n2.C0D){
-	SetNodeData(node4,"CZeroUp",node2);
-	SetNodeData(node2,"CZeroDown",node4);
-	SetNodeData(node1,"CZeroUp",node4);
-	SetNodeData(node4,"CZeroDown",node1);
+        SetNodeData(node4,"CZeroUp",node2);
+        SetNodeData(node2,"CZeroDown",node4);
+        SetNodeData(node1,"CZeroUp",node4);
+        SetNodeData(node4,"CZeroDown",node1);
     } // end if
     // Assuming a successful calculation, return the index of the solution node.
     return node4;
@@ -2361,9 +2361,9 @@ int InsertNode(int node1,int node2,int node4,double alpha=0.5,int fs=-1)
  * there are no nodes close enough to include in the interpolation phase. 
  */
 int StepStreamNode(int node0,int node4,double dL,int fs=-1)
-{	
+{       
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     double g = GetRatioOfSpecificHeats();
@@ -2372,22 +2372,22 @@ int StepStreamNode(int node0,int node4,double dL,int fs=-1)
     //first, assign the Node data
     NodeData n0 = GetNodeData(node0);
     if (n0 is null){
-	throw new Error(text("StepStreamNode: node0 doesn't exist, id: ",node0));
+        throw new Error(text("StepStreamNode: node0 doesn't exist, id: ",node0));
     } // end if
     int node4_created=NO;
     if (node4 == -1){
-	node4 = CreateNode(-1);
-	node4_created = YES;
+        node4 = CreateNode(-1);
+        node4_created = YES;
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
-	} else {
-	    node4_created = YES;
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("StepStreamNode: couldn't create node4, id: ",node4));
+        } else {
+            node4_created = YES;
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     //initial guess at solution point, will be very wrong but used to check convergence
     n4.x = n0.x + dL * cos(n0.theta); 
@@ -2400,48 +2400,48 @@ int StepStreamNode(int node0,int node4,double dL,int fs=-1)
     NodeData[] near_node_data;
     int near_node_count = FindNodesNear(n4.pos,Rad,near_node_array,MAX_NEAR);
     foreach(int j; near_node_array){
-	if(j != node4 && j != node0){
-	    NodeData np = GetNodeData(j);
-	    near_node_data ~= np;
-	} // end if
+        if(j != node4 && j != node0){
+            NodeData np = GetNodeData(j);
+            near_node_data ~= np;
+        } // end if
     } // end foreach
     near_node_count = to!int(near_node_data.length);
     if(near_node_count == 0){
-	if(node4_created==YES){
-	    DeleteNode(node4);
-	} // end if
-	return MOC_ERROR;
+        if(node4_created==YES){
+            DeleteNode(node4);
+        } // end if
+        return MOC_ERROR;
     } // end if
     // Compute the solution point position and flow properties.
     int iteration_count=0;
     double change_in_position;
     Vector3 old_pos;
     do {
-	++iteration_count;
-	old_pos = n4.pos;
-	// Interpolate the flow properties by Shepard interpolation over the near-by nodes.
-	double[] Xi, w;
-	double sum_Xi = 0.0;
-	n4.V = 0.0;
-	n4.theta = 0.0;
-	foreach(j; 0 .. near_node_count){
-	    NodeData n = near_node_data[j];
-	    double r = abs(n4.pos - n.pos);
-	    Xi ~= pow((1.0 - r/Rad),mu);
-	    sum_Xi += Xi[j];
-	} // end foreach
-	foreach(j; 0 .. near_node_count){
-	    w ~= Xi[j] / sum_Xi;
-	    NodeData n = near_node_data[j];
-	    n4.V += w[j] * n.V ;
-	    n4.theta += w[j] * n.theta ;
-	} // end foreach
-	// Locate solution point by using average slope.
-	double sinCzero = 0.5 * ( sin(n0.theta) + sin(n4.theta) );
-	double cosCzero = 0.5 * ( cos(n0.theta) + cos(n4.theta) );
-	n4.x = n0.x + cosCzero * dL;
-	n4.y = n0.y + sinCzero * dL;
-	change_in_position = abs(n4.pos - old_pos);
+        ++iteration_count;
+        old_pos = n4.pos;
+        // Interpolate the flow properties by Shepard interpolation over the near-by nodes.
+        double[] Xi, w;
+        double sum_Xi = 0.0;
+        n4.V = 0.0;
+        n4.theta = 0.0;
+        foreach(j; 0 .. near_node_count){
+            NodeData n = near_node_data[j];
+            double r = abs(n4.pos - n.pos);
+            Xi ~= pow((1.0 - r/Rad),mu);
+            sum_Xi += Xi[j];
+        } // end foreach
+        foreach(j; 0 .. near_node_count){
+            w ~= Xi[j] / sum_Xi;
+            NodeData n = near_node_data[j];
+            n4.V += w[j] * n.V ;
+            n4.theta += w[j] * n.theta ;
+        } // end foreach
+        // Locate solution point by using average slope.
+        double sinCzero = 0.5 * ( sin(n0.theta) + sin(n4.theta) );
+        double cosCzero = 0.5 * ( cos(n0.theta) + cos(n4.theta) );
+        n4.x = n0.x + cosCzero * dL;
+        n4.y = n0.y + sinCzero * dL;
+        change_in_position = abs(n4.pos - old_pos);
     }while(iteration_count<MAX_ITERATION && change_in_position>POS_TOL);
     // Save the solution-point properties and connect the node into the characteristic mesh.
     SetNodeData(node4,"X",n4.x);
@@ -2452,11 +2452,11 @@ int StepStreamNode(int node0,int node4,double dL,int fs=-1)
     SetNodeData(node4,"P",n0.P0 / p0_p(n4.Mach,g));
     SetNodeData(node4,"rho",n4.P/R/n4.T);
     if (n4.x>n0.x){
-	SetNodeData(node4,"CZeroUp",node0);
-	SetNodeData(node0,"CZeroDown",node4);
+        SetNodeData(node4,"CZeroUp",node0);
+        SetNodeData(node0,"CZeroDown",node4);
     } else {
-	SetNodeData(node4,"CZeroDown",node0);
-	SetNodeData(node0,"CZeroUp",node4);
+        SetNodeData(node4,"CZeroDown",node0);
+        SetNodeData(node0,"CZeroUp",node4);
     } // end if
     // Assuming a successful calculation, return the index of the solution node.
     return node4;
@@ -2479,7 +2479,7 @@ int StepStreamNode(int node0,int node4,double dL,int fs=-1)
 int InterpolateNode(Vector3 point,double Rad,int node4,int fs=-1)
 {
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     //
     double g = GetRatioOfSpecificHeats();
@@ -2488,35 +2488,35 @@ int InterpolateNode(Vector3 point,double Rad,int node4,int fs=-1)
     //first, assign the Node data
     int node4_created=NO;
     if (node4 == -1){
-	node4 = CreateNode(-1);
-	node4_created = YES;
+        node4 = CreateNode(-1);
+        node4_created = YES;
     } // end if
     NodeData n4 = GetNodeData(node4);
     if (n4 is null){
-	node4 = CreateNode(node4);
-	if(node4 == -1){
-	    throw new Error(text("InterpolateNode: couldn't create node4, id: ",node4));
-	} else {
-	    node4_created = YES;
-	    n4 = GetNodeData(node4);
-	} // end if
+        node4 = CreateNode(node4);
+        if(node4 == -1){
+            throw new Error(text("InterpolateNode: couldn't create node4, id: ",node4));
+        } else {
+            node4_created = YES;
+            n4 = GetNodeData(node4);
+        } // end if
     } // end if
     double mu = 2.0; // smoothing parameter for Shepard interpolation.
     int[] near_node_array;
     NodeData[] near_node_data;
     int near_node_count = FindNodesNear(point,Rad,near_node_array,MAX_NEAR);
     foreach(int j; near_node_array){
-	if(j != node4){
-	    NodeData np = GetNodeData(j);
-	    near_node_data ~= np;
-	} // end if
+        if(j != node4){
+            NodeData np = GetNodeData(j);
+            near_node_data ~= np;
+        } // end if
     } // end foreach
     near_node_count = to!int(near_node_data.length);
     if(near_node_count == 0){
-	if(node4_created==YES){
-	    DeleteNode(node4);
-	} // end if
-	return MOC_ERROR;
+        if(node4_created==YES){
+            DeleteNode(node4);
+        } // end if
+        return MOC_ERROR;
     } // end if
     // The location of the solution point is given.
     n4.pos = point;
@@ -2526,16 +2526,16 @@ int InterpolateNode(Vector3 point,double Rad,int node4,int fs=-1)
     n4.V = 0.0;
     n4.theta = 0.0;n4.T = 0.0;n4.P = 0.0;n4.rho = 0.0;
     foreach(j; 0 .. near_node_count){
-	NodeData n = near_node_data[j];
-	double r = abs(n4.pos - n.pos);
-	Xi ~= pow((1.0 - r/Rad),mu);
-	sum_Xi += Xi[j];
+        NodeData n = near_node_data[j];
+        double r = abs(n4.pos - n.pos);
+        Xi ~= pow((1.0 - r/Rad),mu);
+        sum_Xi += Xi[j];
     } // end foreach
     foreach(j; 0 .. near_node_count){
-	w ~= Xi[j] / sum_Xi;
-	NodeData n = near_node_data[j];
-	n4.V += w[j] * n.V ;
-	n4.theta += w[j] * n.theta ;
+        w ~= Xi[j] / sum_Xi;
+        NodeData n = near_node_data[j];
+        n4.V += w[j] * n.V ;
+        n4.theta += w[j] * n.theta ;
     } // end foreach
     // Save the solution-point properties and connect the node into the characteristic mesh.
     SetNodeData(node4,"X",n4.x);
@@ -2563,10 +2563,10 @@ int InterpolateNode(Vector3 point,double Rad,int node4,int fs=-1)
 void MakeOblShkNode(int node,string angle,double value,int fs=1)
 {
     if(fs == 0){
-	fs = 1;
+        fs = 1;
     } // end if
     if(fs != -1){
-	SetFlowState(fs);
+        SetFlowState(fs);
     } // end if
     double g = GetRatioOfSpecificHeats();
     double R = GetGasConstant();
@@ -2574,35 +2574,35 @@ void MakeOblShkNode(int node,string angle,double value,int fs=1)
     //
     NodeData n = GetNodeData(node);
     if (n is null){
-	throw new Error(text("MakeOblShkNode: node doesn't exist, id: ",node));
+        throw new Error(text("MakeOblShkNode: node doesn't exist, id: ",node));
     } // end if
     int addstates = fs-GetNumberFlowStates(node)+1;
     if(addstates > 0){
-	AddFlowState(node,addstates);
+        AddFlowState(node,addstates);
     } // end if
     double beta,theta;
     if(angle=="beta" || angle=="Beta"){
-	beta = value;
-	theta = theta_obl(n.F[fs-1].Mach,beta,g);
+        beta = value;
+        theta = theta_obl(n.F[fs-1].Mach,beta,g);
     } else if(angle=="theta" || angle=="Theta"){
-	theta = value;
-	beta = beta_obl(n.F[fs-1].Mach,theta,g);
+        theta = value;
+        beta = beta_obl(n.F[fs-1].Mach,theta,g);
     } else {
-	throw new Error(text("MakeOblShkNode: select beta or theta for angle input: ",angle));
+        throw new Error(text("MakeOblShkNode: select beta or theta for angle input: ",angle));
     }// end if
     if(axiflag==0){
-	SetNodeData(node,"T",n.F[fs-1].T * T2_T1_obl(n.F[fs-1].Mach,beta,g));
-	SetNodeData(node,"P",n.F[fs-1].P * p2_p1_obl(n.F[fs-1].Mach,beta,g));
-	SetNodeData(node,"rho",n.F[fs-1].rho * r2_r1_obl(n.F[fs-1].Mach,beta,g));
-	SetNodeData(node,"theta",n.F[fs-1].theta + theta);
-	SetNodeData(node,"V",n.F[fs-1].V * V2_V1_obl(n.F[fs-1].Mach,beta,theta,g));	
+        SetNodeData(node,"T",n.F[fs-1].T * T2_T1_obl(n.F[fs-1].Mach,beta,g));
+        SetNodeData(node,"P",n.F[fs-1].P * p2_p1_obl(n.F[fs-1].Mach,beta,g));
+        SetNodeData(node,"rho",n.F[fs-1].rho * r2_r1_obl(n.F[fs-1].Mach,beta,g));
+        SetNodeData(node,"theta",n.F[fs-1].theta + theta);
+        SetNodeData(node,"V",n.F[fs-1].V * V2_V1_obl(n.F[fs-1].Mach,beta,theta,g));     
     } else if (axiflag==1){
-	//TODO add in taylor mcnichol solutions
-	SetNodeData(node,"T",n.F[fs-1].T * T2_T1_obl(n.F[fs-1].Mach,beta,g));
-	SetNodeData(node,"P",n.F[fs-1].P * p2_p1_obl(n.F[fs-1].Mach,beta,g));
-	SetNodeData(node,"rho",n.F[fs-1].rho * r2_r1_obl(n.F[fs-1].Mach,beta,g));
-	SetNodeData(node,"theta",n.F[fs-1].theta + theta);
-	SetNodeData(node,"V",n.F[fs-1].V * V2_V1_obl(n.F[fs-1].Mach,beta,theta,g));
+        //TODO add in taylor mcnichol solutions
+        SetNodeData(node,"T",n.F[fs-1].T * T2_T1_obl(n.F[fs-1].Mach,beta,g));
+        SetNodeData(node,"P",n.F[fs-1].P * p2_p1_obl(n.F[fs-1].Mach,beta,g));
+        SetNodeData(node,"rho",n.F[fs-1].rho * r2_r1_obl(n.F[fs-1].Mach,beta,g));
+        SetNodeData(node,"theta",n.F[fs-1].theta + theta);
+        SetNodeData(node,"V",n.F[fs-1].V * V2_V1_obl(n.F[fs-1].Mach,beta,theta,g));
     } // end if
 } // end MakeOblShkNode()
 

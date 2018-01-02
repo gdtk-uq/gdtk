@@ -24,13 +24,13 @@ Here is our prototype wrapped function, kept for reference.
 extern(C) int idealgasflow_A_Astar(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) {
-	string errMsg = "Expected a number for M";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for M";
+        luaL_error(L, errMsg.toStringz);
     }
     double mach = to!double(luaL_checknumber(L, 1));
     double g = 1.4; // default value
     if (lua_isnumber(L, 2)) {
-	g = to!double(luaL_checknumber(L, 2));
+        g = to!double(luaL_checknumber(L, 2));
     }
     lua_pushnumber(L, A_Astar(mach, g));
     return 1;
@@ -47,46 +47,46 @@ string wrapfn(string fname, string[] args, int nreturn=1)
     // Determine our list of functions and their default values, if any.
     string[] anames; string[] values; bool[] default_flags;
     foreach(a; args) {
-	bool with_default = canFind(a, "=");
-	if (with_default) {
-	    auto items = split(a, "=");
-	    anames ~= strip(items[0]);
-	    values ~= strip(items[1]);
-	} else {
-	    anames ~= strip(a);
-	    values ~= "0.0";
-	}
-	default_flags ~= with_default;
+        bool with_default = canFind(a, "=");
+        if (with_default) {
+            auto items = split(a, "=");
+            anames ~= strip(items[0]);
+            values ~= strip(items[1]);
+        } else {
+            anames ~= strip(a);
+            values ~= "0.0";
+        }
+        default_flags ~= with_default;
     }
     // Generate Lua code to get each argument value.
     foreach(i,a; anames) {
-	// Lua argument is i+1
-	code ~= "    double "~a~" = "~values[i]~";\n";
-	if (default_flags[i]) {
-	    code ~= "    if (lua_isnumber(L, "~format("%d", i+1)~")) {\n";
-	    code ~= "        "~a~" = to!double(luaL_checknumber(L, "~format("%d", i+1)~"));\n";
-	    code ~= "    }\n";
-	} else {
-	    code ~= "    if (!lua_isnumber(L, "~format("%d", i+1)~")) {\n";
-	    code ~= "        string errMsg = \"Expected a number for "~a~"\";\n";
-	    code ~= "        luaL_error(L, errMsg.toStringz);\n";
-	    code ~= "    }\n";
-	    code ~= "    "~a~" = to!double(luaL_checknumber(L, "~format("%d", i+1)~"));\n";
-	}
+        // Lua argument is i+1
+        code ~= "    double "~a~" = "~values[i]~";\n";
+        if (default_flags[i]) {
+            code ~= "    if (lua_isnumber(L, "~format("%d", i+1)~")) {\n";
+            code ~= "        "~a~" = to!double(luaL_checknumber(L, "~format("%d", i+1)~"));\n";
+            code ~= "    }\n";
+        } else {
+            code ~= "    if (!lua_isnumber(L, "~format("%d", i+1)~")) {\n";
+            code ~= "        string errMsg = \"Expected a number for "~a~"\";\n";
+            code ~= "        luaL_error(L, errMsg.toStringz);\n";
+            code ~= "    }\n";
+            code ~= "    "~a~" = to!double(luaL_checknumber(L, "~format("%d", i+1)~"));\n";
+        }
     }
     // Now call the function and stack up the result(s).
     if (nreturn == 1) {
-	code ~= "    lua_pushnumber(L, "~fname~"(";
-	foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
-	code ~= "));\n";
-	code ~= "    return 1;\n";
+        code ~= "    lua_pushnumber(L, "~fname~"(";
+        foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
+        code ~= "));\n";
+        code ~= "    return 1;\n";
     } else {
-	assert(nreturn>1, "oops");
-	code ~= "    double[] results = "~fname~"(";
-	foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
-	code ~= ");\n";
-	code ~= "    foreach(res; results) { lua_pushnumber(L, res); }\n";
-	code ~= "    return to!int(results.length);\n";
+        assert(nreturn>1, "oops");
+        code ~= "    double[] results = "~fname~"(";
+        foreach(a; anames) { code ~= a~", "; } // a trailing comma is ok
+        code ~= ");\n";
+        code ~= "    foreach(res; results) { lua_pushnumber(L, res); }\n";
+        code ~= "    return to!int(results.length);\n";
     }
     code ~= "}\n";
     return to!string(code);
@@ -136,7 +136,7 @@ mixin(wrapfn("beta_cone2", ["M1", "theta", "R=287.1", "g=1.4"]));
 string registerfn(string fname)
 {
     return "    lua_pushcfunction(L, &idealgasflow_"~fname~");\n" ~
-	"    lua_setfield(L, -2, \""~fname~"\");";
+        "    lua_setfield(L, -2, \""~fname~"\");";
 }
 
 void registeridealgasflowFunctions(lua_State* L)

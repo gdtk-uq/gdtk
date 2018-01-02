@@ -18,7 +18,7 @@ import ssolidblock;
 import globaldata;
 
 SolidBoundaryCondition makeSolidBCFromJson(JSONValue jsonData, int blk_id, int boundary,
-					   size_t nicell, size_t njcell, size_t nkcell)
+                                           size_t nicell, size_t njcell, size_t nkcell)
 {
     auto setsFluxDirectly = getJSONbool(jsonData, "sets_flux_directly", false);
     auto newBC = new SolidBoundaryCondition(blk_id, boundary, setsFluxDirectly);
@@ -28,12 +28,12 @@ SolidBoundaryCondition makeSolidBCFromJson(JSONValue jsonData, int blk_id, int b
     // Assemble list of preSpatialDerivAction effects
     auto preSpatialDerivActionList = jsonData["pre_spatial_deriv_action"].array;
     foreach (jsonObj; preSpatialDerivActionList) {
-	newBC.preSpatialDerivAction ~= makeSolidBIEfromJson(jsonObj, blk_id, boundary);
+        newBC.preSpatialDerivAction ~= makeSolidBIEfromJson(jsonObj, blk_id, boundary);
     }
     // Assemble list of postFluxAction effects
     auto postFluxActionList = jsonData["post_flux_action"].array;
     foreach (jsonObj; postFluxActionList) {
-	newBC.postFluxAction ~= makeSolidBFEfromJson(jsonObj, blk_id, boundary);
+        newBC.postFluxAction ~= makeSolidBFEfromJson(jsonObj, blk_id, boundary);
     }
     return newBC;
 }
@@ -57,28 +57,28 @@ public:
 
     this(int blkId, int boundary, bool _setsFluxDirectly)
     {
-	blk = solidBlocks[blkId];
-	whichBoundary = boundary;
-	setsFluxDirectly = _setsFluxDirectly;
+        blk = solidBlocks[blkId];
+        whichBoundary = boundary;
+        setsFluxDirectly = _setsFluxDirectly;
     }
     ~this()
     {
-	if (myL != null) lua_close(myL);
+        if (myL != null) lua_close(myL);
     }
     void postBCconstruction()
     {
-	foreach (bie; preSpatialDerivAction) bie.postBCconstruction();
-	foreach (bfe; postFluxAction) bfe.postBCconstruction();
+        foreach (bie; preSpatialDerivAction) bie.postBCconstruction();
+        foreach (bfe; postFluxAction) bfe.postBCconstruction();
     }
 
     final void applyPreSpatialDerivAction(double t, int tLevel)
     {
-	foreach (bie; preSpatialDerivAction) bie.apply(t, tLevel);
+        foreach (bie; preSpatialDerivAction) bie.apply(t, tLevel);
     }
 
     final void applyPostFluxAction(double t, int tLevel)
     {
-	foreach (bfe; postFluxAction) bfe.apply(t, tLevel);
+        foreach (bfe; postFluxAction) bfe.apply(t, tLevel);
     }
 
 }

@@ -48,86 +48,86 @@ extern(C) int newMatrix(lua_State *L)
 {
     lua_remove(L, 1); // remove first argument "this".
     if ( !lua_istable(L, 1) ) {
-	string errMsg = "Error in Matrix:new{} constructor.\n";
-	errMsg ~= "A table of keyword arguments is expected.\n";
-	throw new Error(errMsg);
+        string errMsg = "Error in Matrix:new{} constructor.\n";
+        errMsg ~= "A table of keyword arguments is expected.\n";
+        throw new Error(errMsg);
     }
     
     // Look for square-matrix constructor: Matrix:new{n=...}
     lua_getfield(L, 1, "n");
     if ( !lua_isnil(L, -1) ) {
-	int n = luaL_checkint(L, -1);
-	lua_pop(L, 1);
-	auto mat = new Matrix(n);
-	matrixStore ~= pushObj!(Matrix, MatrixMT)(L, mat);
-	return 1;
+        int n = luaL_checkint(L, -1);
+        lua_pop(L, 1);
+        auto mat = new Matrix(n);
+        matrixStore ~= pushObj!(Matrix, MatrixMT)(L, mat);
+        return 1;
     }
     lua_pop(L, 1);
     
     // Look for matrix constructor: Matrix:new{nrows= ..., ncols= ....}
     lua_getfield(L, 1, "nrows");
     if ( !lua_isnil(L, -1) ) {
-	int nrows = luaL_checkint(L, -1);
-	lua_pop(L, 1);
+        int nrows = luaL_checkint(L, -1);
+        lua_pop(L, 1);
 
-	lua_getfield(L, 1, "ncols");
-	if ( !lua_isnumber(L, -1) ) {
-	    string errMsg = "Error in Matrix:new{} constructor.\n";
-	    errMsg ~= "You have supplied an 'nrows' value but not a corresponding 'ncols' value.\n";
-	    errMsg ~= "The form of this constructor is Matrix:new{nrows=..., ncols=...}\n";
-	    throw new Error(errMsg);
-	}
-	int ncols = luaL_checkint(L, -1);
-	lua_pop(L, 1);
+        lua_getfield(L, 1, "ncols");
+        if ( !lua_isnumber(L, -1) ) {
+            string errMsg = "Error in Matrix:new{} constructor.\n";
+            errMsg ~= "You have supplied an 'nrows' value but not a corresponding 'ncols' value.\n";
+            errMsg ~= "The form of this constructor is Matrix:new{nrows=..., ncols=...}\n";
+            throw new Error(errMsg);
+        }
+        int ncols = luaL_checkint(L, -1);
+        lua_pop(L, 1);
 
-	auto mat = new Matrix(nrows, ncols);
-	matrixStore ~=  pushObj!(Matrix, MatrixMT)(L, mat);
-	return 1;
+        auto mat = new Matrix(nrows, ncols);
+        matrixStore ~=  pushObj!(Matrix, MatrixMT)(L, mat);
+        return 1;
     }
     lua_pop(L, 1);
 
     // Look for matrix constructor: Matrix:new{other=...}
     lua_getfield(L, 1, "other");
     if ( !lua_isnil(L, -1) ) {
-	Matrix a = checkMatrix(L, -1);
-	if ( a is null ) {
-	    string errMsg = "Error in Matrix:new{} constructor.\n";
-	    errMsg ~= "You have used the 'other' keyword argument but have not supplied a valid Matrix object.\n";
-	    throw new Error(errMsg);
-	}
-	auto mat = new Matrix(a);
-	matrixStore ~= pushObj!(Matrix, MatrixMT)(L, mat);
-	return 1;
+        Matrix a = checkMatrix(L, -1);
+        if ( a is null ) {
+            string errMsg = "Error in Matrix:new{} constructor.\n";
+            errMsg ~= "You have used the 'other' keyword argument but have not supplied a valid Matrix object.\n";
+            throw new Error(errMsg);
+        }
+        auto mat = new Matrix(a);
+        matrixStore ~= pushObj!(Matrix, MatrixMT)(L, mat);
+        return 1;
     }
     lua_pop(L, 1);
 
     // Look for matrix constructor: Matrix:new{vec=..., orient=".."}
     lua_getfield(L, 1, "vec");
     if ( !lua_istable(L, -1) ) {
-	string errMsg = "Error in Matrix:new{} constructor.\n";
-	errMsg ~= "You have not supplied a valid array to 'vec' keyword.\n";
-	throw new Error(errMsg);
+        string errMsg = "Error in Matrix:new{} constructor.\n";
+        errMsg ~= "You have not supplied a valid array to 'vec' keyword.\n";
+        throw new Error(errMsg);
     }
     auto n = to!int(lua_objlen(L, -1));
     double[] vec;
     foreach (i; 1..n+1) {
-	lua_rawgeti(L, -1, i);
-	if ( lua_isnumber(L, -1) ) {
-	    vec ~= lua_tonumber(L, -1);
-	}
-	else {
-	    string errMsg = "Error in Matrix:new{} constructor.\n";
-	    errMsg ~= "One of the values in your 'vec' array is not a valid number.\n";
-	    throw new Error(errMsg);
-	}
-	lua_pop(L, 1);
+        lua_rawgeti(L, -1, i);
+        if ( lua_isnumber(L, -1) ) {
+            vec ~= lua_tonumber(L, -1);
+        }
+        else {
+            string errMsg = "Error in Matrix:new{} constructor.\n";
+            errMsg ~= "One of the values in your 'vec' array is not a valid number.\n";
+            throw new Error(errMsg);
+        }
+        lua_pop(L, 1);
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "orient");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in Matrix:new{} constructor.\n";
-	errMsg ~= "You supplied a 'vec' keyword argument, but no valid 'orient' argument.\n";
-	throw new Error(errMsg);
+        string errMsg = "Error in Matrix:new{} constructor.\n";
+        errMsg ~= "You supplied a 'vec' keyword argument, but no valid 'orient' argument.\n";
+        throw new Error(errMsg);
     }
     string orient = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
@@ -300,10 +300,10 @@ void registerBBLA(lua_State *L)
 version(luabbla_test) {
     import util.msg_service;
     int main() {
-	auto L = luaL_newstate();
-	luaL_openlibs(L);
-	registerBBLA(L);
-	string testCode = `
+        auto L = luaL_newstate();
+        luaL_openlibs(L);
+        registerBBLA(L);
+        string testCode = `
 a = Matrix:new{n=4}
 assert(a:nrows() == 4)
 assert(a:ncols() == 4)
@@ -335,9 +335,9 @@ assert(math.abs(x:get(2,0) - 0.333333) < 1.0e-6)
 assert(math.abs(x:get(3,0) - -2.0) < 1.0e-6)
 
 
-	`;
-	assert(luaL_dostring(L, toStringz(testCode)) == 0, failedUnitTest());
-	return 0;
+        `;
+        assert(luaL_dostring(L, toStringz(testCode)) == 0, failedUnitTest());
+        return 0;
     }
 }
 

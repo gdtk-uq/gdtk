@@ -1,0 +1,2 @@
+find . -name '*.d' ! -type d -exec bash -c 'expand -t 8 "$0" | sponge "$0"' {} \;
+

@@ -123,10 +123,10 @@ print("rp(0.75)=", rp(0.75))
 --
 print("Spline (Polyline)")
 pnts = {Vector3:new{ x=0.0, y=-1.0},
-	Vector3:new{x=-1.0,  y=0.0},
-	Vector3:new{ x=0.0,  y=1.0},
-	Vector3:new{ x=1.0,  y=0.0},
-	Vector3:new{ x=0.0, y=-1.0}}
+        Vector3:new{x=-1.0,  y=0.0},
+        Vector3:new{ x=0.0,  y=1.0},
+        Vector3:new{ x=1.0,  y=0.0},
+        Vector3:new{ x=0.0, y=-1.0}}
 circle = Spline:new{points=pnts}
 print("circle=", circle)
 print("circle(5.0/8)=", circle(5.0/8))
@@ -167,8 +167,8 @@ print("abc_rotated=", abc_rotated)
 print("abc_rotated(1.0)=", abc_rotated(1.0))
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
-	writeln("There was a problem interpreting the test code.");
-	writeln(to!string(lua_tostring(L, -1)));
+        writeln("There was a problem interpreting the test code.");
+        writeln(to!string(lua_tostring(L, -1)));
     }
     writeln("Done with luagpath_demo.");
 }

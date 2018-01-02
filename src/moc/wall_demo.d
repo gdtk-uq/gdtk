@@ -35,7 +35,7 @@ void main(){
     writefln("the slope here is %g",WallSlope(0,t));
     writeln("...done");
     writeln();
-	
+        
     writeln("Test: WallFindT...");
     auto a = Vector3(0.0,3.0);
     double cosine = 0.707, sine = -0.707;
@@ -44,12 +44,12 @@ void main(){
     writefln("The intersection is at %s, t=%g",WallPos(0,t),t);
     writeln("...done");
     writeln();
-	
+        
     writeln("Test: SaveWall...");
     SaveWall(0,"moc_wall_demo.txt");
     writeln("... wall 0 saved.");
     DeleteWall(0);
-	
+        
     writeln("Test: LoadWall...");
     LoadWall(0,"moc_wall_demo.txt");
     writeln("... wall 0 loaded.");
@@ -58,4 +58,4 @@ void main(){
     writeln();
     writeln("End moc_wall_demo.d");
 } // end main()
-	
+        

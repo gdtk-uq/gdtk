@@ -28,7 +28,7 @@ uint face_index(string name)
     case "top": return Face.top;
     case "bottom": return Face.bottom;
     default:
-	throw new Error(text("Invalid face name: ", name));
+        throw new Error(text("Invalid face name: ", name));
     }
 } // end face_index
 

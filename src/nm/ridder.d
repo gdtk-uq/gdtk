@@ -37,35 +37,35 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
     if ( abs(f1) == 0.0 ) return x1;
     if ( abs(f2) == 0.0 ) return x2;
     if ( x1 == x2 ) {
-	throw new Exception("Bad initial range given to bracket.");
+        throw new Exception("Bad initial range given to bracket.");
     }
     if ( f1 * f2 > 0.0 ) {
-	throw new Exception("Range does not clearly bracket a root.");
+        throw new Exception("Range does not clearly bracket a root.");
     }
     while ( abs(x2 - x1) > tol ) {
-	x3 = 0.5*(x1+x2);
-	f3 = f(x3);
-	if ( f3 == 0.0 ) return x3;
-	eps = (f3 + copysign(sqrt(f3*f3-f1*f2),f2))/f2;
-	x4 = x3 - f3*eps*(x1-x3)/(f1 - eps*f3);
-	f4 = f(x4);
-	if ( f4 == 0.0 ) return x4;
-	// Contract the bracket.
-	if ( f3*f2 < 0.0 ) {
-	    if ( f4*f2 < 0.0 ) {
-		x1 = x4; f1 = f4;
-	    } else {
-		x1 = x3; f1 = f3;
-		x2 = x4; f2 = f4;
-	    }
-	} else {
-	    if ( f4*f1 < 0.0 ) {
-		x2 = x4; f2 = f4;
-	    } else {
-		x1 = x4; f1 = f4;
-		x2 = x3; f2 = f3;
-	    }
-	}
+        x3 = 0.5*(x1+x2);
+        f3 = f(x3);
+        if ( f3 == 0.0 ) return x3;
+        eps = (f3 + copysign(sqrt(f3*f3-f1*f2),f2))/f2;
+        x4 = x3 - f3*eps*(x1-x3)/(f1 - eps*f3);
+        f4 = f(x4);
+        if ( f4 == 0.0 ) return x4;
+        // Contract the bracket.
+        if ( f3*f2 < 0.0 ) {
+            if ( f4*f2 < 0.0 ) {
+                x1 = x4; f1 = f4;
+            } else {
+                x1 = x3; f1 = f3;
+                x2 = x4; f2 = f4;
+            }
+        } else {
+            if ( f4*f1 < 0.0 ) {
+                x2 = x4; f2 = f4;
+            } else {
+                x1 = x4; f1 = f4;
+                x2 = x3; f2 = f3;
+            }
+        }
     } // end while
     return x4;
 } // end solve()
@@ -73,17 +73,17 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
 version(ridder_test) {
     import util.msg_service;
     int main() {
-	double test_fun_1(double x) {
-	    return pow(x,3) + pow(x,2) - 3*x - 3;
-	}
-	double test_fun_2(double x, double a) {
-	    return a*x + sin(x) - exp(x);
-	}
-	assert(abs(solve!test_fun_1(1, 2) - 1.732051) < 1.0e-5, failedUnitTest());
-	double my_a = 3.0;
-	auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
-	assert(abs(solve!test_fun_3(0, 1) - 0.3604217) < 1.0e-5, failedUnitTest());
+        double test_fun_1(double x) {
+            return pow(x,3) + pow(x,2) - 3*x - 3;
+        }
+        double test_fun_2(double x, double a) {
+            return a*x + sin(x) - exp(x);
+        }
+        assert(abs(solve!test_fun_1(1, 2) - 1.732051) < 1.0e-5, failedUnitTest());
+        double my_a = 3.0;
+        auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
+        assert(abs(solve!test_fun_3(0, 1) - 0.3604217) < 1.0e-5, failedUnitTest());
 
-	return 0;
+        return 0;
     }
 }

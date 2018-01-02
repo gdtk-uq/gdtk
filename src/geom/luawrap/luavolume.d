@@ -34,22 +34,22 @@ static const(ParametricVolume)[] volumeStore;
 ParametricVolume checkVolume(lua_State* L, int index) {
     // We have to do a brute force test for each object type, in turn.
     if (isObjType(L, index, TFIVolumeMT)) {
-	return checkObj!(TFIVolume, TFIVolumeMT)(L, index);
+        return checkObj!(TFIVolume, TFIVolumeMT)(L, index);
     }
     if (isObjType(L, index, SweptSurfaceVolumeMT)) {
-	return checkObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, index);
+        return checkObj!(SweptSurfaceVolume, SweptSurfaceVolumeMT)(L, index);
     }
     if (isObjType(L, index, SlabVolumeMT)) {
-	return checkObj!(SlabVolume, SlabVolumeMT)(L, index);
+        return checkObj!(SlabVolume, SlabVolumeMT)(L, index);
     }
     if (isObjType(L, index, WedgeVolumeMT)) {
-	return checkObj!(WedgeVolume, WedgeVolumeMT)(L, index);
+        return checkObj!(WedgeVolume, WedgeVolumeMT)(L, index);
     }
     if (isObjType(L, index, LuaFnVolumeMT)) {
-	return checkObj!(LuaFnVolume, LuaFnVolumeMT)(L, index);
+        return checkObj!(LuaFnVolume, LuaFnVolumeMT)(L, index);
     }
     if (isObjType(L, index, SubRangedVolumeMT)) {
-	return checkObj!(SubRangedVolume, SubRangedVolumeMT)(L, index);
+        return checkObj!(SubRangedVolume, SubRangedVolumeMT)(L, index);
     }
     // if no match found then
     return null;
@@ -58,9 +58,9 @@ ParametricVolume checkVolume(lua_State* L, int index) {
 extern(C) int isVolume(lua_State* L)
 {
     if (checkVolume(L, 1)) {
-	lua_pushboolean(L, 1);
+        lua_pushboolean(L, 1);
     } else {
-	lua_pushboolean(L, 0);
+        lua_pushboolean(L, 0);
     }
     return 1;
 }
@@ -81,16 +81,16 @@ ParametricSurface[] get6Surfaces(lua_State *L, string ctorName)
 {
     // Assume that table containing the Surfaces is at top of stack.
     string errMsgTmplt = "Error in call to %s:new. " ~
-	"The value set for the face[%s] was not of ParametricSurface type.";
+        "The value set for the face[%s] was not of ParametricSurface type.";
     string[] face_names = ["north", "east", "south", "west", "top", "bottom"];
     ParametricSurface[] faces;
     foreach(i, name; face_names) {
-	lua_getfield(L, -1, name.toStringz());
-	faces ~= checkSurface(L, -1);
-	if ( faces[i] is null ) {
-	    luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
-	}
-	lua_pop(L, 1);
+        lua_getfield(L, -1, name.toStringz());
+        faces ~= checkSurface(L, -1);
+        if ( faces[i] is null ) {
+            luaL_error(L, toStringz(format(errMsgTmplt, ctorName, name)));
+        }
+        lua_pop(L, 1);
     }
     return faces;
 } // end get6surfaces()
@@ -99,17 +99,17 @@ Vector3[] get8Vector3s(lua_State *L, string ctorName)
 {
     // Assume that table containing the Vector3 objects is at top of stack.
     string errMsgTmplt = "Error in call to %s:new. " ~
-	"The value set for the corner[%d] was not of Vector3 type.";
+        "The value set for the corner[%d] was not of Vector3 type.";
     Vector3[] corners;
     foreach(i; 0 .. 8) {
-	lua_rawgeti(L, -1, i+1);
-	auto ptr = checkVector3(L, -1);
-	if ( ptr is null ) {
-	    luaL_error(L, toStringz(format(errMsgTmplt, ctorName, i)));
-	} else {
-	    corners ~= *ptr;
-	}
-	lua_pop(L, 1);
+        lua_rawgeti(L, -1, i+1);
+        auto ptr = checkVector3(L, -1);
+        if ( ptr is null ) {
+            luaL_error(L, toStringz(format(errMsgTmplt, ctorName, i)));
+        } else {
+            corners ~= *ptr;
+        }
+        lua_pop(L, 1);
     }
     return corners;
 } // end get8Vector3s()
@@ -134,40 +134,40 @@ extern(C) int newTFIVolume(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = "Error in constructor TFIVolume:new. " ~
-	    "A table with input parameters is expected as the first argument.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor TFIVolume:new. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["north","south","west","east","top","bottom","vertices"])) {
-	string errMsg = "Error in call to TFIVolume:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to TFIVolume:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Look for named ParametricSurfaces. 
     // If found, proceed with construction from these faces.
     lua_getfield(L, 1, "north"); // test item
     if ( !lua_isnil(L, -1) ) {
-	lua_pop(L, 1); // discard the test item
-	auto faces = get6Surfaces(L, "TFIVolume");
-	lua_pop(L, 1);
-	auto tfivolume = new TFIVolume(faces);
-	volumeStore ~= pushObj!(TFIVolume, TFIVolumeMT)(L, tfivolume);
-	return 1;
+        lua_pop(L, 1); // discard the test item
+        auto faces = get6Surfaces(L, "TFIVolume");
+        lua_pop(L, 1);
+        auto tfivolume = new TFIVolume(faces);
+        volumeStore ~= pushObj!(TFIVolume, TFIVolumeMT)(L, tfivolume);
+        return 1;
     } else {
-	lua_pop(L, 1); // get rid of the non-table item
+        lua_pop(L, 1); // get rid of the non-table item
     }
     // Instead, look for an array of Vector3 objects.
     lua_getfield(L, 1, "vertices");
     if ( lua_istable(L, -1) ) {
-	auto corners = get8Vector3s(L, "TFIVolume");
-	lua_pop(L, 1);
-	auto tfivolume = new TFIVolume(corners);
-	volumeStore ~= pushObj!(TFIVolume, TFIVolumeMT)(L, tfivolume);
-	return 1;
+        auto corners = get8Vector3s(L, "TFIVolume");
+        lua_pop(L, 1);
+        auto tfivolume = new TFIVolume(corners);
+        volumeStore ~= pushObj!(TFIVolume, TFIVolumeMT)(L, tfivolume);
+        return 1;
     }
     lua_pop(L, 1);
     // If we make it here, there's been an error in construction.
     string errMsg = "There's a problem in call to TFIVolume.new. " ~
-	"Neither the set of 6 named surfaces nor a list of 8 vertices was found.";
+        "Neither the set of 6 named surfaces nor a list of 8 vertices was found.";
     luaL_error(L, errMsg.toStringz);
     return 0;
 } // end newTFIVolume()
@@ -190,28 +190,28 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if (!lua_istable(L, 1)) {
-	string errMsg = "Error in constructor SweptSurfaceVolume:new. " ~
-	    "A table with input parameters is expected as the first argument.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SweptSurfaceVolume:new. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["face0123","edge04"])) {
-	string errMsg = "Error in call to SweptSurfaceVolume:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to SweptSurfaceVolume:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Look for surface to sweep.
     lua_getfield(L, 1, "face0123");
     auto face0123 = checkSurface(L, -1);
     if (face0123 is null) {
-	string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find face0123.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find face0123.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Look for edge to sweep along.
     lua_getfield(L, 1, "edge04");
     auto edge04 = checkPath(L, -1);
     if (edge04 is null) {
-	string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find edge04.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find edge04.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Construct the actual surface.
@@ -235,28 +235,28 @@ extern(C) int newSlabVolume(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if (!lua_istable(L, 1)) {
-	string errMsg = "Error in constructor SlabVolume:new. " ~
-	    "A table with input parameters is expected as the first argument.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SlabVolume:new. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["face0123","dz"])) {
-	string errMsg = "Error in call to SlabVolume:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to SlabVolume:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Look for bottom surface.
     lua_getfield(L, 1, "face0123");
     auto face0123 = checkSurface(L, -1);
     if (face0123 is null) {
-	string errMsg = "Error in constructor SlabVolume:new. Couldn't find face0123.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SlabVolume:new. Couldn't find face0123.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Look for thickness vector.
     lua_getfield(L, 1, "dz");
     auto dz_ptr = checkVector3(L, -1);
     if (dz_ptr is null) {
-	string errMsg = "Error in constructor SlabVolume:new. Couldn't find dz.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SlabVolume:new. Couldn't find dz.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Construct the actual surface.
@@ -280,27 +280,27 @@ extern(C) int newWedgeVolume(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if (!lua_istable(L, 1)) {
-	string errMsg = "Error in constructor WedgeVolume:new. " ~
-	    "A table with input parameters is expected as the first argument.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor WedgeVolume:new. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["face0123","dtheta"])) {
-	string errMsg = "Error in call to WedgeVolume:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to WedgeVolume:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Look for bottom surface.
     lua_getfield(L, 1, "face0123");
     auto face0123 = checkSurface(L, -1);
     if (face0123 is null) {
-	string errMsg = "Error in constructor WedgeVolume:new. Couldn't find face0123.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor WedgeVolume:new. Couldn't find face0123.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Look for sweep angle, in radians.
     lua_getfield(L, 1, "dtheta");
     if (!lua_isnumber(L, -1)) {
-	string errMsg = "Error in constructor SlabVolume:new. Expected number for dtheta.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SlabVolume:new. Expected number for dtheta.";
+        luaL_error(L, errMsg.toStringz);
     }
     double dtheta = to!double(luaL_checknumber(L, -1));
     lua_pop(L, 1);
@@ -338,62 +338,62 @@ public:
     string luaFnName;
     this(const lua_State* L, string luaFnName)
     {
-	this.L = cast(lua_State*)L;
-	this.luaFnName = luaFnName;
+        this.L = cast(lua_State*)L;
+        this.luaFnName = luaFnName;
     }
     this(ref const(LuaFnVolume) other)
     {
-	L = cast(lua_State*)other.L;
-	luaFnName = other.luaFnName;
+        L = cast(lua_State*)other.L;
+        luaFnName = other.luaFnName;
     }
     override LuaFnVolume dup() const
     {
-	return new LuaFnVolume(L, luaFnName);
+        return new LuaFnVolume(L, luaFnName);
     }
     override Vector3 opCall(double r, double s, double t) const 
     {
-	// Call back to the Lua function.
-	lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
-	lua_pushnumber(cast(lua_State*)L, r);
-	lua_pushnumber(cast(lua_State*)L, s);
-	lua_pushnumber(cast(lua_State*)L, t);
-	if ( lua_pcall(cast(lua_State*)L, 3, 1, 0) != 0 ) {
-	    string errMsg = "Error in call to " ~ luaFnName ~ 
-		" from LuaFnVolume:opCall(): " ~ 
-		to!string(lua_tostring(cast(lua_State*)L, -1));
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
-	}
-	// We are expecting a table to be returned, containing three numbers.
-	if ( !lua_istable(cast(lua_State*)L, -1) ) {
-	    string errMsg = "Error in call to LuaFnVolume:opCall().; " ~
-		"A table containing arguments is expected, but no table was found.";
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
-	}
-	double x = 0.0; // default value
-	lua_getfield(cast(lua_State*)L, -1, "x".toStringz());
-	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
-	    x = to!double(lua_tonumber(cast(lua_State*)L, -1));
-	}
-	lua_pop(cast(lua_State*)L, 1);
-	double y = 0.0; // default value
-	lua_getfield(cast(lua_State*)L, -1, "y".toStringz());
-	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
-	    y = to!double(lua_tonumber(cast(lua_State*)L, -1));
-	}
-	lua_pop(cast(lua_State*)L, 1);
-	double z = 0.0; // default value
-	lua_getfield(cast(lua_State*)L, -1, "z".toStringz());
-	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
-	    z = to!double(lua_tonumber(cast(lua_State*)L, -1));
-	}
-	lua_pop(cast(lua_State*)L, 1);
-	//
-	lua_settop(cast(lua_State*)L, 0); // clear the stack
-	return Vector3(x, y, z);
+        // Call back to the Lua function.
+        lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
+        lua_pushnumber(cast(lua_State*)L, r);
+        lua_pushnumber(cast(lua_State*)L, s);
+        lua_pushnumber(cast(lua_State*)L, t);
+        if ( lua_pcall(cast(lua_State*)L, 3, 1, 0) != 0 ) {
+            string errMsg = "Error in call to " ~ luaFnName ~ 
+                " from LuaFnVolume:opCall(): " ~ 
+                to!string(lua_tostring(cast(lua_State*)L, -1));
+            luaL_error(cast(lua_State*)L, errMsg.toStringz);
+        }
+        // We are expecting a table to be returned, containing three numbers.
+        if ( !lua_istable(cast(lua_State*)L, -1) ) {
+            string errMsg = "Error in call to LuaFnVolume:opCall().; " ~
+                "A table containing arguments is expected, but no table was found.";
+            luaL_error(cast(lua_State*)L, errMsg.toStringz);
+        }
+        double x = 0.0; // default value
+        lua_getfield(cast(lua_State*)L, -1, "x".toStringz());
+        if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+            x = to!double(lua_tonumber(cast(lua_State*)L, -1));
+        }
+        lua_pop(cast(lua_State*)L, 1);
+        double y = 0.0; // default value
+        lua_getfield(cast(lua_State*)L, -1, "y".toStringz());
+        if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+            y = to!double(lua_tonumber(cast(lua_State*)L, -1));
+        }
+        lua_pop(cast(lua_State*)L, 1);
+        double z = 0.0; // default value
+        lua_getfield(cast(lua_State*)L, -1, "z".toStringz());
+        if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+            z = to!double(lua_tonumber(cast(lua_State*)L, -1));
+        }
+        lua_pop(cast(lua_State*)L, 1);
+        //
+        lua_settop(cast(lua_State*)L, 0); // clear the stack
+        return Vector3(x, y, z);
     } // end opCall()
     override string toString() const
     {
-	return "LuaFnVolume(luaFnName=\"" ~ luaFnName ~ "\")";
+        return "LuaFnVolume(luaFnName=\"" ~ luaFnName ~ "\")";
     }
 } // end class LuaFnVolume
 
@@ -402,28 +402,28 @@ extern(C) int newLuaFnVolume(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to LuaFnVolume:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnVolume:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["luaFnName"])) {
-	string errMsg = "Error in call to LuaFnVolume:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnVolume:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect function name in table.
     string fnName = "";
     lua_getfield(L, 1, "luaFnName".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to LuaFnVolume:new{}. No luaFnName entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to LuaFnVolume:new{}. No luaFnName entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     if ( lua_isstring(L, -1) ) {
-	fnName ~= to!string(lua_tostring(L, -1));
+        fnName ~= to!string(lua_tostring(L, -1));
     }
     lua_pop(L, 1);
     if ( fnName == "" ) {
-	string errMsg = "Error in call to LuaFnVolume:new{}. No function name found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to LuaFnVolume:new{}. No function name found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto lfv = new LuaFnVolume(L, fnName);
     volumeStore ~= pushObj!(LuaFnVolume, LuaFnVolumeMT)(L, lfv);
@@ -432,9 +432,9 @@ extern(C) int newLuaFnVolume(lua_State* L)
 
 
 void getRSandT(lua_State* L, string ctorName,
-	       out double r0, out double r1,
-	       out double s0, out double s1,
-	       out double t0, out double t1)
+               out double r0, out double r1,
+               out double s0, out double s1,
+               out double t0, out double t1)
 {
     // Table is at index 1
     string errMsgTmplt = format("Error in call to %s:new.", ctorName);
@@ -458,25 +458,25 @@ extern(C) int newSubRangedVolume(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     
     if ( !lua_istable(L, 1) ) {
-	string errMsg = "Error in constructor SubRangeVolume:new. " ~
-	    "A table with input parameters is expected as the first argument.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in constructor SubRangeVolume:new. " ~
+            "A table with input parameters is expected as the first argument.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["underlying_pvolume","r0","r1","s0","s1","t0","t1"])) {
-	string errMsg = "Error in call to SubRangedVolume:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to SubRangedVolume:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Look for the underlying ParametricVolume.
     lua_getfield(L, 1, "underlying_pvolume");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to SubRangedVolume:new{}. No underlying_pvolume field found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to SubRangedVolume:new{}. No underlying_pvolume field found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto pvolume = checkVolume(L, -1);
     lua_pop(L, 1);
     if ( pvolume is null ) {
-	string errMsg = "Error in call to SubRangedVolume:new{}. No valid Volume object found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to SubRangedVolume:new{}. No valid Volume object found.";
+        luaL_error(L, errMsg.toStringz());
     }
     double r0, r1, s0, s1, t0, t1;
     getRSandT(L, "SubRangedVolume", r0, r1, s0, s1, t0, t1);

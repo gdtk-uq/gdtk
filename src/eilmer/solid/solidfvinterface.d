@@ -36,7 +36,7 @@ public:
 void initPropertiesAtSolidInterfaces(SSolidBlock[] sblks)
 {
     if (GlobalConfig.dimensions == 3 ) {
-	throw new Error("initPropertiesAtSolidInterfaces not implemented for 3D calculations.");
+        throw new Error("initPropertiesAtSolidInterfaces not implemented for 3D calculations.");
     }
 
     SolidFVCell Lft, Rght;
@@ -44,40 +44,40 @@ void initPropertiesAtSolidInterfaces(SSolidBlock[] sblks)
     size_t k = 0;
 
     foreach (blk; sblks) {
-	// Do i-facing interfaces
-	for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
-	    for (size_t i = blk.imin; i <= blk.imax+1; ++i) {
-		Lft = blk.getCell(i-1,j,k);
-		Rght = blk.getCell(i,j,k);
-		if ( i == blk.imin ) {
-		    // There is no Lft cell, so
-		    Lft = Rght;
-		}
-		if ( i == blk.imax+1 ) {
-		    // There is no right cell, so
-		    Rght = Lft;
-		}
-		IFace = blk.getIfi(i,j,k);
-		IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
-	    }
-	}
-	// Do j-facing interfaces
-	for (size_t j = blk.jmin; j <= blk.jmax+1; ++j) {
-	    for (size_t i = blk.imin; i <= blk.imax; ++i) {
-		Lft = blk.getCell(i,j-1,k);
-		Rght = blk.getCell(i,j,k);
-		if ( j == blk.jmin ) {
-		    // There is no Lft cell, so
-		    Lft = Rght;
-		}
-		if ( j == blk.jmax+1 ) {
-		    // There is no right cell, so
-		    Rght = Lft;
-		}
-		IFace = blk.getIfj(i,j,k);
-		IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
-	    }
-	}
+        // Do i-facing interfaces
+        for (size_t j = blk.jmin; j <= blk.jmax; ++j) {
+            for (size_t i = blk.imin; i <= blk.imax+1; ++i) {
+                Lft = blk.getCell(i-1,j,k);
+                Rght = blk.getCell(i,j,k);
+                if ( i == blk.imin ) {
+                    // There is no Lft cell, so
+                    Lft = Rght;
+                }
+                if ( i == blk.imax+1 ) {
+                    // There is no right cell, so
+                    Rght = Lft;
+                }
+                IFace = blk.getIfi(i,j,k);
+                IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
+            }
+        }
+        // Do j-facing interfaces
+        for (size_t j = blk.jmin; j <= blk.jmax+1; ++j) {
+            for (size_t i = blk.imin; i <= blk.imax; ++i) {
+                Lft = blk.getCell(i,j-1,k);
+                Rght = blk.getCell(i,j,k);
+                if ( j == blk.jmin ) {
+                    // There is no Lft cell, so
+                    Lft = Rght;
+                }
+                if ( j == blk.jmax+1 ) {
+                    // There is no right cell, so
+                    Rght = Lft;
+                }
+                IFace = blk.getIfj(i,j,k);
+                IFace.sp = SolidProps(Lft.sp, Rght.sp, 0.5, 0.5);
+            }
+        }
     }
 }
 

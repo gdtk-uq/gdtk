@@ -48,23 +48,23 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     // Assemble list of preReconAction effects
     auto preReconActions = jsonData["pre_recon_action"].array;
     foreach ( jsonObj; preReconActions ) {
-	newBC.preReconAction ~= make_GCE_from_json(jsonObj, blk_id, boundary);
+        newBC.preReconAction ~= make_GCE_from_json(jsonObj, blk_id, boundary);
     }
     auto postConvFluxActions = jsonData["post_conv_flux_action"].array;
     foreach ( jsonObj; postConvFluxActions ) {
-	newBC.postConvFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
+        newBC.postConvFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
     }
     auto preSpatialDerivActionsAtBndryFaces = jsonData["pre_spatial_deriv_action_at_bndry_faces"].array;
     foreach ( jsonObj; preSpatialDerivActionsAtBndryFaces ) {
-	newBC.preSpatialDerivActionAtBndryFaces ~= make_BIE_from_json(jsonObj, blk_id, boundary);
+        newBC.preSpatialDerivActionAtBndryFaces ~= make_BIE_from_json(jsonObj, blk_id, boundary);
     }
     auto preSpatialDerivActionsAtBndryCells = jsonData["pre_spatial_deriv_action_at_bndry_cells"].array;
     foreach ( jsonObj; preSpatialDerivActionsAtBndryCells ) {
-	newBC.preSpatialDerivActionAtBndryCells ~= make_BCE_from_json(jsonObj, blk_id, boundary);
+        newBC.preSpatialDerivActionAtBndryCells ~= make_BCE_from_json(jsonObj, blk_id, boundary);
     }
     auto postDiffFluxActions = jsonData["post_diff_flux_action"].array;
     foreach ( jsonObj; postDiffFluxActions ) {
-	newBC.postDiffFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
+        newBC.postDiffFluxAction ~= make_BFE_from_json(jsonObj, blk_id, boundary);
     }
     return newBC;
 } // end make_BC_from_json()
@@ -101,30 +101,30 @@ private:
 
 public:
     this(int id, int boundary, bool isWallWithViscousEffects=true,
-	 bool ghostCellDataAvailable=true, double _emissivity=0.0)
+         bool ghostCellDataAvailable=true, double _emissivity=0.0)
     {
-	blk = gasBlocks[id];  // pick the relevant block out of the collection
-	which_boundary = boundary;
-	type = "";
-	group = "";
-	is_wall_with_viscous_effects = isWallWithViscousEffects;
-	ghost_cell_data_available = ghostCellDataAvailable;
-	emissivity = _emissivity;
-	auto gm = GlobalConfig.gmodel_master;
-	_Lft = new FlowState(gm);
-	_Rght = new FlowState(gm);
+        blk = gasBlocks[id];  // pick the relevant block out of the collection
+        which_boundary = boundary;
+        type = "";
+        group = "";
+        is_wall_with_viscous_effects = isWallWithViscousEffects;
+        ghost_cell_data_available = ghostCellDataAvailable;
+        emissivity = _emissivity;
+        auto gm = GlobalConfig.gmodel_master;
+        _Lft = new FlowState(gm);
+        _Rght = new FlowState(gm);
     }
     ~this()
     {
-	if (myL != null) lua_close(myL);
+        if (myL != null) lua_close(myL);
     }
     void post_bc_construction()
     {
-	foreach (gce; preReconAction) gce.post_bc_construction();
-	foreach (bfe; postConvFluxAction) bfe.post_bc_construction();
-	foreach (bie; preSpatialDerivActionAtBndryFaces) bie.post_bc_construction();
-	foreach (bce; preSpatialDerivActionAtBndryCells) bce.post_bc_construction();
-	foreach (bfe; postDiffFluxAction) bfe.post_bc_construction();
+        foreach (gce; preReconAction) gce.post_bc_construction();
+        foreach (bfe; postConvFluxAction) bfe.post_bc_construction();
+        foreach (bie; preSpatialDerivActionAtBndryFaces) bie.post_bc_construction();
+        foreach (bce; preSpatialDerivActionAtBndryCells) bce.post_bc_construction();
+        foreach (bfe; postDiffFluxAction) bfe.post_bc_construction();
     }
 
     // Action lists.
@@ -149,74 +149,74 @@ public:
 
     override string toString() const
     {
-	char[] repr;
-	repr ~= "BoundaryCondition(";
-	repr ~= "label= \"" ~ label ~ "\", type= \"" ~ type ~ "\", group= \"" ~ group;
-	repr ~= "\", is_wall_with_viscous_effects= " ~ to!string(is_wall_with_viscous_effects);
-	repr ~= ", ghost_cell_data_available= " ~ to!string(ghost_cell_data_available);
-	repr ~= ", convective_flux_computed_in_bc= " ~ to!string(convective_flux_computed_in_bc);
-	if ( preReconAction.length > 0 ) {
-	    repr ~= ", preReconAction=[" ~ to!string(preReconAction[0]);
-	    foreach (i; 1 .. preReconAction.length) {
-		repr ~= ", " ~ to!string(preReconAction[i]);
-	    }
-	    repr ~= "]";
-	}
-	if ( postConvFluxAction.length > 0 ) {
-	    repr ~= ", postConvFluxAction=[" ~ to!string(postConvFluxAction[0]);
-	    foreach (i; 1 .. postConvFluxAction.length) {
-		repr ~= ", " ~ to!string(postConvFluxAction[i]);
-	    }
-	    repr ~= "]";
-	}
-	if ( preSpatialDerivActionAtBndryFaces.length > 0 ) {
-	    repr ~= ", preSpatialDerivActionAtBndryFaces=[" ~ to!string(preSpatialDerivActionAtBndryFaces[0]);
-	    foreach (i; 1 .. preSpatialDerivActionAtBndryFaces.length) {
-		repr ~= ", " ~ to!string(preSpatialDerivActionAtBndryFaces[i]);
-	    }
-	    repr ~= "]";
-	}
-	if ( preSpatialDerivActionAtBndryCells.length > 0 ) {
-	    repr ~= ", preSpatialDerivActionAtBndryCells=[" ~ to!string(preSpatialDerivActionAtBndryCells[0]);
-	    foreach (i; 1 .. preSpatialDerivActionAtBndryCells.length) {
-		repr ~= ", " ~ to!string(preSpatialDerivActionAtBndryCells[i]);
-	    }
-	    repr ~= "]";
-	}
-	if ( postDiffFluxAction.length > 0 ) {
-	    repr ~= ", postDiffFluxAction=[" ~ to!string(postDiffFluxAction[0]);
-	    foreach (i; 1 .. postDiffFluxAction.length) {
-		repr ~= ", " ~ to!string(postDiffFluxAction[i]);
-	    }
-	    repr ~= "]";
-	}
-	repr ~= ")";
-	return to!string(repr);
+        char[] repr;
+        repr ~= "BoundaryCondition(";
+        repr ~= "label= \"" ~ label ~ "\", type= \"" ~ type ~ "\", group= \"" ~ group;
+        repr ~= "\", is_wall_with_viscous_effects= " ~ to!string(is_wall_with_viscous_effects);
+        repr ~= ", ghost_cell_data_available= " ~ to!string(ghost_cell_data_available);
+        repr ~= ", convective_flux_computed_in_bc= " ~ to!string(convective_flux_computed_in_bc);
+        if ( preReconAction.length > 0 ) {
+            repr ~= ", preReconAction=[" ~ to!string(preReconAction[0]);
+            foreach (i; 1 .. preReconAction.length) {
+                repr ~= ", " ~ to!string(preReconAction[i]);
+            }
+            repr ~= "]";
+        }
+        if ( postConvFluxAction.length > 0 ) {
+            repr ~= ", postConvFluxAction=[" ~ to!string(postConvFluxAction[0]);
+            foreach (i; 1 .. postConvFluxAction.length) {
+                repr ~= ", " ~ to!string(postConvFluxAction[i]);
+            }
+            repr ~= "]";
+        }
+        if ( preSpatialDerivActionAtBndryFaces.length > 0 ) {
+            repr ~= ", preSpatialDerivActionAtBndryFaces=[" ~ to!string(preSpatialDerivActionAtBndryFaces[0]);
+            foreach (i; 1 .. preSpatialDerivActionAtBndryFaces.length) {
+                repr ~= ", " ~ to!string(preSpatialDerivActionAtBndryFaces[i]);
+            }
+            repr ~= "]";
+        }
+        if ( preSpatialDerivActionAtBndryCells.length > 0 ) {
+            repr ~= ", preSpatialDerivActionAtBndryCells=[" ~ to!string(preSpatialDerivActionAtBndryCells[0]);
+            foreach (i; 1 .. preSpatialDerivActionAtBndryCells.length) {
+                repr ~= ", " ~ to!string(preSpatialDerivActionAtBndryCells[i]);
+            }
+            repr ~= "]";
+        }
+        if ( postDiffFluxAction.length > 0 ) {
+            repr ~= ", postDiffFluxAction=[" ~ to!string(postDiffFluxAction[0]);
+            foreach (i; 1 .. postDiffFluxAction.length) {
+                repr ~= ", " ~ to!string(postDiffFluxAction[i]);
+            }
+            repr ~= "]";
+        }
+        repr ~= ")";
+        return to!string(repr);
     }
 
     final void applyPreReconAction(double t, int gtl, int ftl)
     {
-	foreach ( gce; preReconAction ) gce.apply(t, gtl, ftl);
+        foreach ( gce; preReconAction ) gce.apply(t, gtl, ftl);
     }
 
     final void applyPostConvFluxAction(double t, int gtl, int ftl)
     {
-	foreach ( bfe; postConvFluxAction ) bfe.apply(t, gtl, ftl);
+        foreach ( bfe; postConvFluxAction ) bfe.apply(t, gtl, ftl);
     }
     
     final void applyPreSpatialDerivActionAtBndryFaces(double t, int gtl, int ftl)
     {
-	foreach ( bie; preSpatialDerivActionAtBndryFaces ) bie.apply(t, gtl, ftl);
+        foreach ( bie; preSpatialDerivActionAtBndryFaces ) bie.apply(t, gtl, ftl);
     }
 
     final void applyPreSpatialDerivActionAtBndryCells(double t, int gtl, int ftl)
     {
-	foreach ( bce; preSpatialDerivActionAtBndryCells ) bce.apply(t, gtl, ftl);
+        foreach ( bce; preSpatialDerivActionAtBndryCells ) bce.apply(t, gtl, ftl);
     }
     
     final void applyPostDiffFluxAction(double t, int gtl, int ftl)
     {
-	foreach ( bfe; postDiffFluxAction ) bfe.apply(t, gtl, ftl);
+        foreach ( bfe; postDiffFluxAction ) bfe.apply(t, gtl, ftl);
     }
 
     // The Lua interpreter for the user-defined boundary condition belongs to
@@ -224,48 +224,48 @@ public:
     // BoundaryInterfaceEffect objects may need to initialize it. 
     void init_lua_State(string luafname)
     {
-	myL = luaL_newstate();
-	luaL_openlibs(myL);
-	// Top-level, generic data.
-	lua_pushinteger(myL, blk.id); lua_setglobal(myL, "blkId");
-	registerGasModel(myL, LUA_GLOBALSINDEX);
-	registerBBLA(myL);
-	luaL_dostring(myL, "require 'lua_helper'");
-	pushObj!(GasModel, GasModelMT)(myL, blk.myConfig.gmodel);
-	lua_setglobal(myL, "gmodel");
-	lua_pushinteger(myL, blk.myConfig.gmodel.n_species);
-	lua_setglobal(myL, "n_species");
-	lua_pushinteger(myL, blk.myConfig.gmodel.n_modes);
-	lua_setglobal(myL, "n_modes");
-	if (blk.grid_type == Grid_t.structured_grid) {
-	    // Structured-block-specific data
-	    SBlock sblk = cast(SBlock) blk;
-	    assert(sblk !is null, "Oops, this should be an SBlock object.");
-	    lua_pushinteger(myL, sblk.nicell); lua_setglobal(myL, "nicell");
-	    lua_pushinteger(myL, sblk.njcell); lua_setglobal(myL, "njcell");
-	    lua_pushinteger(myL, sblk.nkcell); lua_setglobal(myL, "nkcell");
-	    lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
-	    lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
-	    lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
-	    lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
-	    lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
-	    lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
-	}
-	// Boundary-specific data
-	lua_pushinteger(myL, which_boundary); lua_setglobal(myL, "boundaryId");
-	lua_pushstring(myL, label.toStringz); lua_setglobal(myL, "boundaryLabel");
-	lua_pushstring(myL, type.toStringz); lua_setglobal(myL, "boundaryType");
-	lua_pushstring(myL, group.toStringz); lua_setglobal(myL, "boundaryGroup");
-	// Although we make the helper functions available within 
-	// the boundary-condition-specific Lua interpreter, we should use 
-	// those functions only in the context of the master thread.
-	setSampleHelperFunctions(myL);
-	setGridMotionHelperFunctions(myL);
-	// Finally, do the actual user-supplied file.
-	if ( luaL_dofile(myL, luafname.toStringz) != 0 ) {
-	    luaL_error(myL, "error while loading user-defined b.c. file '%s':\n %s\n",
-		       luafname.toStringz, lua_tostring(myL, -1));
-	}
+        myL = luaL_newstate();
+        luaL_openlibs(myL);
+        // Top-level, generic data.
+        lua_pushinteger(myL, blk.id); lua_setglobal(myL, "blkId");
+        registerGasModel(myL, LUA_GLOBALSINDEX);
+        registerBBLA(myL);
+        luaL_dostring(myL, "require 'lua_helper'");
+        pushObj!(GasModel, GasModelMT)(myL, blk.myConfig.gmodel);
+        lua_setglobal(myL, "gmodel");
+        lua_pushinteger(myL, blk.myConfig.gmodel.n_species);
+        lua_setglobal(myL, "n_species");
+        lua_pushinteger(myL, blk.myConfig.gmodel.n_modes);
+        lua_setglobal(myL, "n_modes");
+        if (blk.grid_type == Grid_t.structured_grid) {
+            // Structured-block-specific data
+            SBlock sblk = cast(SBlock) blk;
+            assert(sblk !is null, "Oops, this should be an SBlock object.");
+            lua_pushinteger(myL, sblk.nicell); lua_setglobal(myL, "nicell");
+            lua_pushinteger(myL, sblk.njcell); lua_setglobal(myL, "njcell");
+            lua_pushinteger(myL, sblk.nkcell); lua_setglobal(myL, "nkcell");
+            lua_pushinteger(myL, Face.north); lua_setglobal(myL, "north");
+            lua_pushinteger(myL, Face.east); lua_setglobal(myL, "east");
+            lua_pushinteger(myL, Face.south); lua_setglobal(myL, "south");
+            lua_pushinteger(myL, Face.west); lua_setglobal(myL, "west");
+            lua_pushinteger(myL, Face.top); lua_setglobal(myL, "top");
+            lua_pushinteger(myL, Face.bottom); lua_setglobal(myL, "bottom");
+        }
+        // Boundary-specific data
+        lua_pushinteger(myL, which_boundary); lua_setglobal(myL, "boundaryId");
+        lua_pushstring(myL, label.toStringz); lua_setglobal(myL, "boundaryLabel");
+        lua_pushstring(myL, type.toStringz); lua_setglobal(myL, "boundaryType");
+        lua_pushstring(myL, group.toStringz); lua_setglobal(myL, "boundaryGroup");
+        // Although we make the helper functions available within 
+        // the boundary-condition-specific Lua interpreter, we should use 
+        // those functions only in the context of the master thread.
+        setSampleHelperFunctions(myL);
+        setGridMotionHelperFunctions(myL);
+        // Finally, do the actual user-supplied file.
+        if ( luaL_dofile(myL, luafname.toStringz) != 0 ) {
+            luaL_error(myL, "error while loading user-defined b.c. file '%s':\n %s\n",
+                       luafname.toStringz, lua_tostring(myL, -1));
+        }
     }
 } // end class BoundaryCondition
 

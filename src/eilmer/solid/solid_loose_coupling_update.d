@@ -42,7 +42,7 @@ void initSolidLooseCouplingUpdate()
     int ncells = 0;
     int m = GlobalConfig.sdluOptions.maxGMRESIterations;
     foreach (sblk; solidBlocks) {
-	ncells += sblk.activeCells.length;
+        ncells += sblk.activeCells.length;
     }
     r0 = new Matrix(ncells, 1);
     v = new Matrix(ncells, m+1);
@@ -69,33 +69,33 @@ Matrix eval_dedts(Matrix eip1, int ftl, double sim_time)
     auto n = eip1.nrows;
     Matrix ret = zeros(n, 1); // array that will be returned (empty - to be populated)
     foreach (sblk; parallel(solidBlocks, 1)) {
-	if (!sblk.active) continue;
-	sblk.applyPreSpatialDerivAction(sim_time, ftl);
-	sblk.clearSources(); 
-	sblk.computeSpatialDerivatives(ftl); 
-	sblk.computeFluxes();
+        if (!sblk.active) continue;
+        sblk.applyPreSpatialDerivAction(sim_time, ftl);
+        sblk.clearSources(); 
+        sblk.computeSpatialDerivatives(ftl); 
+        sblk.computeFluxes();
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
-	foreach (sblk; parallel(solidBlocks, 1)) {
-	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
-	}
+        foreach (sblk; parallel(solidBlocks, 1)) {
+            if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+        }
     } else {
-	foreach (sblk; solidBlocks) {
-	    if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
-	}
+        foreach (sblk; solidBlocks) {
+            if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
+        }
     }
     int i = 0;
     foreach (sblk; parallel(solidBlocks, 1)) {
-	foreach (scell; sblk.activeCells) { 
-	    if (GlobalConfig.udfSolidSourceTerms) {
-		addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
-	    }
-	    scell.e[ftl] = eip1[i, 0];
-	    scell.T = updateTemperature(scell.sp, scell.e[ftl]);
-	    scell.timeDerivatives(ftl, GlobalConfig.dimensions);
-	    ret[i, 0] = scell.dedt[ftl];
-	    i += 1;
-	}
+        foreach (scell; sblk.activeCells) { 
+            if (GlobalConfig.udfSolidSourceTerms) {
+                addUDFSourceTermsToSolidCell(sblk.myL, scell, sim_time);
+            }
+            scell.e[ftl] = eip1[i, 0];
+            scell.T = updateTemperature(scell.sp, scell.e[ftl]);
+            scell.timeDerivatives(ftl, GlobalConfig.dimensions);
+            ret[i, 0] = scell.dedt[ftl];
+            i += 1;
+        }
     }
     return ret;
 }
@@ -108,16 +108,16 @@ Matrix e_vec(int ftl)
 {
     double[] test1;
     foreach (sblk; solidBlocks){ 
-	foreach(scell; sblk.activeCells){
-	    test1 ~= scell.e[ftl];
-	}
+        foreach(scell; sblk.activeCells){
+            test1 ~= scell.e[ftl];
+        }
     } 
     auto len = test1.length; 
     Matrix ret = zeros(len, 1); 
     int count = 0;
     foreach (entry; test1){ 
-	ret[count, 0] = entry; 
-	count += 1;
+        ret[count, 0] = entry; 
+        count += 1;
     }
     return ret;
 } 
@@ -140,7 +140,7 @@ Matrix copy_vec(Matrix mat)
     auto n = mat.nrows; 
     auto cop = zeros(n, 1); 
     foreach(i; 0 .. n){
-	cop[i, 0] = mat[i, 0];
+        cop[i, 0] = mat[i, 0];
     }
     return cop; 
 } 
@@ -152,8 +152,8 @@ double norm(Matrix vec)
 {
     auto n = vec.nrows;
     double total = 0; 
-    foreach(i;0 .. n){	    
-	total += pow(vec[i,0],2);
+    foreach(i;0 .. n){      
+        total += pow(vec[i,0],2);
     }
     double ret = pow(total, 0.5);
     return ret; 
@@ -171,12 +171,12 @@ Matrix Jac(Matrix Yip1, Matrix Yi, double dt, double sim_time)
     Matrix Fin = F(Yip1, Yi, dt, sim_time);
     Matrix cvec;
     foreach(i;0 .. n){ 
-	cvec = copy_vec(Yip1);
-	cvec[i, 0] += eps; 
-	Fout = F(cvec, Yi, dt, sim_time); 
-	foreach(j; 0 .. n){
-	    ret[j, i] = (Fout[j, 0] - Fin[j, 0])/(eps);		      
-	}
+        cvec = copy_vec(Yip1);
+        cvec[i, 0] += eps; 
+        Fout = F(cvec, Yi, dt, sim_time); 
+        foreach(j; 0 .. n){
+            ret[j, i] = (Fout[j, 0] - Fin[j, 0])/(eps);               
+        }
     }
     return ret;
 }
@@ -224,63 +224,63 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
     Matrix y; 
     double hij;
     foreach (j; 0 .. m) {
-	iterCount = j+1;
-	dot(A, vi, wj);
-	foreach (i; 0 .. j+1) {
-	    hij = 0.0;
-	    foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
-	    H0[i,j] = hij;
-	    foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*v[k,i];
-	} 
-	hjp1j = norm(wj);
-	H0[j+1, j] = hjp1j;    
+        iterCount = j+1;
+        dot(A, vi, wj);
+        foreach (i; 0 .. j+1) {
+            hij = 0.0;
+            foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
+            H0[i,j] = hij;
+            foreach (k; 0 .. wj.nrows) wj[k,0] -= hij*v[k,i];
+        } 
+        hjp1j = norm(wj);
+        H0[j+1, j] = hjp1j;    
 
-	// Add new column to 'v'
-	foreach (k; 0 .. v.nrows) {
-	    vi[k,0] = wj[k,0]/hjp1j;
-	    v[k,j+1] = vi[k,0];
-	}
-	// Build rotated Hessenberg progressively
-	if (j != 0) {
-	    // Extract final column in H0
-	    foreach (i; 0 .. j+1) h[i] = H0[i,j];
-	    // Rotate column by previous rotations
-	    // stored in Q0
-	    nm.bbla.dot(Q0, j+1, j+1, h, hR);
-	    // Place column back in H
-	    foreach (i; 0 .. j+1) H0[i,j] = hR[i];
-	}
-	// Now form new Gamma
-	Gamma.eye();
-	double c_j, s_j, denom;
-	denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
-	s_j = H0[j+1,j]/denom; 
-	c_j = H0[j,j]/denom;
-	Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
-	Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
-	// Apply rotations
-	nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
-	nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
-	// Accumulate Gamma rotations in Q.
-	if (j == 0) {
-	    copy(Gamma, Q1);
-	}
-	else {
-	    nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
-	}
-	// Prepare for next step
-	copy(H1, H0);
-	g0[] = g1[];
-	copy(Q1, Q0);
-	// Get residual
-	residual = fabs(g1[j+1]);
-	if (residual <= residTol) {
-	    m = j+1;
-	    break;
-	}
+        // Add new column to 'v'
+        foreach (k; 0 .. v.nrows) {
+            vi[k,0] = wj[k,0]/hjp1j;
+            v[k,j+1] = vi[k,0];
+        }
+        // Build rotated Hessenberg progressively
+        if (j != 0) {
+            // Extract final column in H0
+            foreach (i; 0 .. j+1) h[i] = H0[i,j];
+            // Rotate column by previous rotations
+            // stored in Q0
+            nm.bbla.dot(Q0, j+1, j+1, h, hR);
+            // Place column back in H
+            foreach (i; 0 .. j+1) H0[i,j] = hR[i];
+        }
+        // Now form new Gamma
+        Gamma.eye();
+        double c_j, s_j, denom;
+        denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
+        s_j = H0[j+1,j]/denom; 
+        c_j = H0[j,j]/denom;
+        Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
+        Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
+        // Apply rotations
+        nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
+        nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+        // Accumulate Gamma rotations in Q.
+        if (j == 0) {
+            copy(Gamma, Q1);
+        }
+        else {
+            nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+        }
+        // Prepare for next step
+        copy(H1, H0);
+        g0[] = g1[];
+        copy(Q1, Q0);
+        // Get residual
+        residual = fabs(g1[j+1]);
+        if (residual <= residTol) {
+            m = j+1;
+            break;
+        }
     }
     if ( iterCount == maxIters )
-	m = maxIters;
+        m = maxIters;
     
     // At end H := R up to row m
     //        g := gm up to row m
@@ -311,7 +311,7 @@ Matrix arr_2_vert_vec(double[] arr)
     auto len = arr.length;
     auto ret = zeros(len, 1);
     foreach(i; 0 .. len){
-	ret[i, 0] = arr[i];
+        ret[i, 0] = arr[i];
     }
     return ret; 
 }
@@ -324,13 +324,13 @@ void post(Matrix eip1, Matrix dei)
 {
     int i = 0;
     foreach (sblk; solidBlocks){ 
-	foreach(scell; sblk.activeCells){
-	    double eicell = eip1[i, 0];
-	    scell.e[0] = eicell;
-	    scell.de_prev = dei[i, 0];
-	    scell.T = updateTemperature(scell.sp, eicell); //not necesary? 
-	    i += 1; 
-	}
+        foreach(scell; sblk.activeCells){
+            double eicell = eip1[i, 0];
+            scell.e[0] = eicell;
+            scell.de_prev = dei[i, 0];
+            scell.T = updateTemperature(scell.sp, eicell); //not necesary? 
+            i += 1; 
+        }
     }
 }
 
@@ -342,15 +342,15 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     auto t0 = Clock.currTime();
     int n = 0;
     foreach (sblk; parallel(solidBlocks, 1)) {
-	foreach (scell; sblk.activeCells) {
-	    if (sim_time-dt_global == 0){ 
-		// initialise e0 values
-		scell.e[0] = updateEnergy(scell.sp, scell.T); 
-	    }
-	    // make a guess for e[1]
-	    scell.e[1] = scell.e[0] + scell.de_prev; 
-	    n += 1;
-	}
+        foreach (scell; sblk.activeCells) {
+            if (sim_time-dt_global == 0){ 
+                // initialise e0 values
+                scell.e[0] = updateEnergy(scell.sp, scell.T); 
+            }
+            // make a guess for e[1]
+            scell.e[1] = scell.e[0] + scell.de_prev; 
+            n += 1;
+        }
     }
     double eps = GlobalConfig.sdluOptions.toleranceNewtonUpdate;
     double omega = 0.01;
@@ -368,24 +368,24 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     Matrix Jk;
     Matrix mFk; // e.g. minusFk --> mFk
     while(fabs(norm(Fk) - norm(Fkp1)) > eps){ 
-	count += 1; 
-	if (count != 1){
-	    Xk = Xkp1; 
-	    Fk = Fkp1;  
-	}
-	Jk = Jac(Xk, ei, dt_global, sim_time);
-	mFk = -1*Fk;
-	GMRES(Jk, mFk, Xk, dX);
+        count += 1; 
+        if (count != 1){
+            Xk = Xkp1; 
+            Fk = Fkp1;  
+        }
+        Jk = Jac(Xk, ei, dt_global, sim_time);
+        mFk = -1*Fk;
+        GMRES(Jk, mFk, Xk, dX);
 
-	Xkp1 = Xk + dX; 
-	Fkp1 = F(Xkp1, ei, dt_global, sim_time); 
-	
-	// Break out if stuck or taking too many computations
-	if (count == maxCount){
-	    break;
-	}
+        Xkp1 = Xk + dX; 
+        Fkp1 = F(Xkp1, ei, dt_global, sim_time); 
+        
+        // Break out if stuck or taking too many computations
+        if (count == maxCount){
+            break;
+        }
 
-    }						
+    }                                           
     eip1 = Xkp1;
     Matrix dei = eip1 - ei;
     Fk = Fkp1;

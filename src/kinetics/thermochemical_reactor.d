@@ -28,9 +28,9 @@ import kinetics.two_temperature_air_kinetics;
 
 class ThermochemicalReactorUpdateException : Exception {
     this(string message, string file=__FILE__, size_t line=__LINE__,
-	 Throwable next=null)
+         Throwable next=null)
     {
-	super(message, file, line, next);
+        super(message, file, line, next);
     }
 }
 
@@ -38,9 +38,9 @@ class ThermochemicalReactor {
 public:
     this(GasModel gmodel)
     {
-	// We need a reference to the original gas model object
-	// to update the GasState data at a later time.
-	_gmodel = gmodel;
+        // We need a reference to the original gas model object
+        // to update the GasState data at a later time.
+        _gmodel = gmodel;
     }
 
     // All the work happens when calling the concrete object
@@ -50,8 +50,8 @@ public:
     // For example, the mixing-limited combustion model by JJ Hoste needs
     // some information about the local flow state beyond the usual gas state.
     abstract void opCall(GasState Q, double tInterval,
-			 ref double dtChemSuggest, ref double dtThermSuggest, 
-			 ref double[] params);
+                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double[] params);
     
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.
@@ -66,31 +66,31 @@ ThermochemicalReactor init_thermochemical_reactor(GasModel gmodel, string fileNa
 {
     ThermochemicalReactor reactor; // start with a null reference
     if ((cast(ThermallyPerfectGas) gmodel) !is null) {
-	reactor = new ChemistryUpdate(fileName1, gmodel);
+        reactor = new ChemistryUpdate(fileName1, gmodel);
     }
     if ((cast(PowersAslamGas) gmodel) !is null) {
-	reactor = new UpdateAB(fileName1, gmodel);
+        reactor = new UpdateAB(fileName1, gmodel);
     }
     if ((cast(TwoTemperatureReactingArgon) gmodel) !is null) {
-	reactor = new UpdateArgonFrac(fileName1, gmodel);
+        reactor = new UpdateArgonFrac(fileName1, gmodel);
     }
     if ((cast(IdealDissociatingGas) gmodel) !is null) {
-	reactor = new UpdateIDG(fileName1, gmodel);
+        reactor = new UpdateIDG(fileName1, gmodel);
     }
     if ((cast(FuelAirMix) gmodel) !is null) {
-	reactor = new MixingLimitedUpdate(fileName1, gmodel);
+        reactor = new MixingLimitedUpdate(fileName1, gmodel);
     }
     if ((cast(TwoTemperatureNitrogen) gmodel) !is null) {
-	reactor = new VibRelaxNitrogen(fileName1, gmodel);
+        reactor = new VibRelaxNitrogen(fileName1, gmodel);
     }
     if ((cast(VibSpecificNitrogen) gmodel) !is null) {
-	reactor = new VibSpecificNitrogenRelaxtion(fileName1, gmodel);
+        reactor = new VibSpecificNitrogenRelaxtion(fileName1, gmodel);
     }
     if ((cast(TwoTemperatureAir) gmodel) !is null) {
-	reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
+        reactor = new TwoTemperatureAirKinetics(fileName1, fileName2, gmodel);
     }
     if (reactor is null) {
-	throw new ThermochemicalReactorUpdateException("Oops, failed to set up a ThermochemicalReactor.");
+        throw new ThermochemicalReactorUpdateException("Oops, failed to set up a ThermochemicalReactor.");
     }
     return reactor;
 } // end init_thermochemical_reactor()

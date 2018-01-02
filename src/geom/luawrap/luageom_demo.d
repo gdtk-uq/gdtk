@@ -85,8 +85,8 @@ t = hexCellProperties{p0=Vector3:new{x=0.0, y=0.0, z=0.0},
 print("volume=", t.volume, "centroid=", t.centroid, "iLen=", t.iLen, "jLen=", t.jLen, "kLen=", t.kLen)
     `;
     if ( luaL_dostring(L, toStringz(test_code)) != 0 ) {
-	writeln("There was a problem interpreting the test code.");
-	writeln(to!string(lua_tostring(L, -1)));
+        writeln("There was a problem interpreting the test code.");
+        writeln(to!string(lua_tostring(L, -1)));
     }
     writeln("End luageom_demo.");
 }

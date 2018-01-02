@@ -21,7 +21,7 @@ interface Viscosity {
     Viscosity dup() const;
     final void update_viscosity(GasState Q) 
     {
-	Q.mu = eval(Q);
+        Q.mu = eval(Q);
     }
     double eval(in GasState Q);
 }
@@ -41,14 +41,14 @@ Viscosity createViscosityModel(lua_State *L)
     
     switch ( model ) {
     case "Sutherland":
-	vm = createSutherlandViscosity(L);
-	break;
+        vm = createSutherlandViscosity(L);
+        break;
     case "CEA":
-	vm = createCEAViscosity(L);
-	break;
+        vm = createCEAViscosity(L);
+        break;
     default:
-	string errMsg = format("The requested Viscosity model '%s' is not available.", model);
-	throw new Error(errMsg);
+        string errMsg = format("The requested Viscosity model '%s' is not available.", model);
+        throw new Error(errMsg);
     }
     
     return vm;

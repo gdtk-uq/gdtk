@@ -30,7 +30,7 @@ static const(UnstructuredGrid)[] unstructuredGridStore;
 
 UnstructuredGrid checkUnstructuredGrid(lua_State* L, int index) {
     if ( isObjType(L, index, UnstructuredGridMT) ) {
-	return checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, index);
+        return checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, index);
     }
     // all else fails
     return null;
@@ -75,9 +75,9 @@ extern(C) int get_boundaryset_tag(lua_State* L)
     auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
     size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
     if (i < grid.boundaries.length) {
-	lua_pushstring(L, grid.boundaries[i].tag.toStringz());
+        lua_pushstring(L, grid.boundaries[i].tag.toStringz());
     } else {
-	lua_pushnil(L);
+        lua_pushnil(L);
     }
     return 1;
 }
@@ -88,7 +88,7 @@ extern(C) int set_boundaryset_tag(lua_State* L)
     size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
     string tag = to!string(luaL_checkstring(L, 3));
     if (i < grid.boundaries.length) {
-	grid.boundaries[i].tag = tag;
+        grid.boundaries[i].tag = tag;
     }
     return 0;
 }
@@ -98,14 +98,14 @@ extern(C) int is_boundaryset_empty(lua_State* L)
     auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
     size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
     if (i < grid.boundaries.length) {
-	if (grid.boundaries[i].face_id_list.length == 0)
-	    lua_pushboolean(L, 1); // 1 is true, yes boundary is empty
-	else
-	    lua_pushboolean(L, 0); // zero is false, boundar is NOT empty
+        if (grid.boundaries[i].face_id_list.length == 0)
+            lua_pushboolean(L, 1); // 1 is true, yes boundary is empty
+        else
+            lua_pushboolean(L, 0); // zero is false, boundar is NOT empty
     }
     else {
-	// If there's no boundary, then it must be empty
-	lua_pushboolean(L, 1);
+        // If there's no boundary, then it must be empty
+        lua_pushboolean(L, 1);
     }
     return 1;
 }
@@ -116,9 +116,9 @@ extern(C) int add_boundaryset_faces_to_table(lua_State* L)
     size_t i = to!size_t(luaL_checkint(L, 2)); // Note that we expect 0 <= i < nboundaries
     int idx = to!int(lua_objlen(L, 3)); // Assuming table at location 3
     foreach (faceId; grid.boundaries[i].face_id_list) {
-	lua_pushnumber(L, faceId);
-	lua_rawseti(L, 3, idx+1);
-	idx++;
+        lua_pushnumber(L, faceId);
+        lua_rawseti(L, 3, idx+1);
+        idx++;
     }
     return 0;
 }
@@ -130,23 +130,23 @@ extern(C) int find_nearest_cell_centre_usg(lua_State *L)
     auto grid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
     lua_getfield(L, 2, "x");
     if ( !lua_isnil(L, -1) ) {
-	x = luaL_checknumber(L, -1);
+        x = luaL_checknumber(L, -1);
     } else {
-	x = 0.0;
+        x = 0.0;
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "y");
     if ( !lua_isnil(L, -1) ) {
-	y = luaL_checknumber(L, -1);
+        y = luaL_checknumber(L, -1);
     } else {
-	y = 0.0;
+        y = 0.0;
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "z");
     if ( !lua_isnil(L, -1) ) {
-	z = luaL_checknumber(L, -1);
+        z = luaL_checknumber(L, -1);
     } else {
-	z = 0.0;
+        z = 0.0;
     }
     lua_pop(L, 1);
     size_t indx;
@@ -170,78 +170,78 @@ extern(C) int newUnstructuredGrid(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = `Error in call to UnstructuredGrid:new{}.;
+        string errMsg = `Error in call to UnstructuredGrid:new{}.;
 A table containing arguments is expected, but no table was found.`;
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["sgrid","new_label","filename","fileName","scale","fmt",
-				  "expect_gmsh_order_for_wedges", "label"])) {
-	string errMsg = "Error in call to UnstructuredGrid:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+                                  "expect_gmsh_order_for_wedges", "label"])) {
+        string errMsg = "Error in call to UnstructuredGrid:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     //
     UnstructuredGrid usgrid;
     string label = "";
     lua_getfield(L, 1, "label".toStringz);
     if (lua_isstring(L, -1)) {
-	label = to!string(luaL_checkstring(L, -1));
+        label = to!string(luaL_checkstring(L, -1));
     }
     lua_pop(L, 1); // dispose of label entry, even if it is a nil
     //
     // First, look for a StructuredGrid field.
     lua_getfield(L, 1, "sgrid".toStringz);
     if ( !lua_isnil(L, -1) ) {
-	StructuredGrid sgrid = checkStructuredGrid(L, -1);
-	if (!sgrid) {
-	    string errMsg = "Error in UnstructuredGrid:new{}. sgrid not a StructuredGrid.";
-	    luaL_error(L, errMsg.toStringz);
-	}
-	usgrid = new UnstructuredGrid(sgrid, label);
+        StructuredGrid sgrid = checkStructuredGrid(L, -1);
+        if (!sgrid) {
+            string errMsg = "Error in UnstructuredGrid:new{}. sgrid not a StructuredGrid.";
+            luaL_error(L, errMsg.toStringz);
+        }
+        usgrid = new UnstructuredGrid(sgrid, label);
     }
     lua_pop(L, 1);
     //
     if (!usgrid) {
-	// We didn't find a sgrid entry, so try for a file name.
-	lua_getfield(L, 1, "filename".toStringz);
-	if (lua_isnil(L, -1)) {
-	    lua_pop(L, 1);
-	    lua_getfield(L, 1, "fileName".toStringz);
-	}
-	if ( !lua_isnil(L, -1) ) {
-	    string filename = to!string(luaL_checkstring(L, -1));
-	    double scale = 1.0;
-	    lua_getfield(L, 1, "scale".toStringz);
-	    if ( !lua_isnil(L, -1) ) { scale = to!double(luaL_checknumber(L, -1)); }
-	    lua_pop(L, 1); // dispose of scale item
-	    string fmt = "gziptext";
-	    lua_getfield(L, 1, "fmt".toStringz);
-	    if ( !lua_isnil(L, -1) ) { fmt = to!string(luaL_checkstring(L, -1)); }
-	    lua_pop(L, 1); // dispose of fmt item
-	    bool expect_gmsh_order_for_wedges = true;
-	    lua_getfield(L, 1, "expect_gmsh_order_for_wedges".toStringz);
-	    if ( !lua_isnil(L, -1) ) {
-		expect_gmsh_order_for_wedges = to!bool(lua_toboolean(L, -1));
-	    }
-	    lua_pop(L, 1); // dispose of expect_gmsh_order_for_wedges item
-	    if (filename.length > 0) {
-		usgrid = new UnstructuredGrid(filename, fmt, scale,
-					      expect_gmsh_order_for_wedges,
-					      label);
-	    }
-	} else {
-	    string errMsg = "Error in UnstructuredGrid:new{}. expected a string for filename.";
-	    luaL_error(L, errMsg.toStringz);
-	}
-	lua_pop(L, 1); // dispose of filename item
+        // We didn't find a sgrid entry, so try for a file name.
+        lua_getfield(L, 1, "filename".toStringz);
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            lua_getfield(L, 1, "fileName".toStringz);
+        }
+        if ( !lua_isnil(L, -1) ) {
+            string filename = to!string(luaL_checkstring(L, -1));
+            double scale = 1.0;
+            lua_getfield(L, 1, "scale".toStringz);
+            if ( !lua_isnil(L, -1) ) { scale = to!double(luaL_checknumber(L, -1)); }
+            lua_pop(L, 1); // dispose of scale item
+            string fmt = "gziptext";
+            lua_getfield(L, 1, "fmt".toStringz);
+            if ( !lua_isnil(L, -1) ) { fmt = to!string(luaL_checkstring(L, -1)); }
+            lua_pop(L, 1); // dispose of fmt item
+            bool expect_gmsh_order_for_wedges = true;
+            lua_getfield(L, 1, "expect_gmsh_order_for_wedges".toStringz);
+            if ( !lua_isnil(L, -1) ) {
+                expect_gmsh_order_for_wedges = to!bool(lua_toboolean(L, -1));
+            }
+            lua_pop(L, 1); // dispose of expect_gmsh_order_for_wedges item
+            if (filename.length > 0) {
+                usgrid = new UnstructuredGrid(filename, fmt, scale,
+                                              expect_gmsh_order_for_wedges,
+                                              label);
+            }
+        } else {
+            string errMsg = "Error in UnstructuredGrid:new{}. expected a string for filename.";
+            luaL_error(L, errMsg.toStringz);
+        }
+        lua_pop(L, 1); // dispose of filename item
     }
     //
     if (usgrid) {
-	unstructuredGridStore ~= pushObj!(UnstructuredGrid, UnstructuredGridMT)(L, usgrid);
-	return 1;
+        unstructuredGridStore ~= pushObj!(UnstructuredGrid, UnstructuredGridMT)(L, usgrid);
+        return 1;
     } else {
-	string errMsg = "Error in UnstructuredGrid:new{}. Failed to construct a grid.";
-	luaL_error(L, errMsg.toStringz);
-	return 0;
+        string errMsg = "Error in UnstructuredGrid:new{}. Failed to construct a grid.";
+        luaL_error(L, errMsg.toStringz);
+        return 0;
     }
 } // end newUnstructuredGrid()
 
@@ -251,13 +251,13 @@ extern(C) int usg_joinGrid(lua_State* L)
     int narg = lua_gettop(L);
     UnstructuredGrid master = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
     if (!master) {
-	string errMsg = "Error in UnstructuredGrid:joinGrid(). master grid not an UnstructuredGrid.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in UnstructuredGrid:joinGrid(). master grid not an UnstructuredGrid.";
+        luaL_error(L, errMsg.toStringz);
     }
     UnstructuredGrid other = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 2);
     if (!other) {
-	string errMsg = "Error in UnstructuredGrid:joinGrid(). other grid not an UnstructuredGrid.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in UnstructuredGrid:joinGrid(). other grid not an UnstructuredGrid.";
+        luaL_error(L, errMsg.toStringz);
     }
     master.joinGrid(other);
     lua_settop(L, 1); // We leave the master grid at stack position 1
@@ -269,8 +269,8 @@ extern(C) int usg_writeStats(lua_State* L)
     int narg = lua_gettop(L);
     UnstructuredGrid usgrid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
     if (!usgrid) {
-	string errMsg = "Error in UnstructuredGrid:writeStats(). grid not an UnstructuredGrid.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in UnstructuredGrid:writeStats(). grid not an UnstructuredGrid.";
+        luaL_error(L, errMsg.toStringz);
     }
     usgrid.writeStats();
     lua_settop(L, 0);
@@ -282,8 +282,8 @@ extern(C) int usg_writeOpenFoamPolyMesh(lua_State* L)
     int narg = lua_gettop(L);
     UnstructuredGrid usgrid = checkObj!(UnstructuredGrid, UnstructuredGridMT)(L, 1);
     if (!usgrid) {
-	string errMsg = "Error in UnstructuredGrid:writeOpenFoamPolyMesh(). grid not an UnstructuredGrid.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in UnstructuredGrid:writeOpenFoamPolyMesh(). grid not an UnstructuredGrid.";
+        luaL_error(L, errMsg.toStringz);
     }
     string topLevelDir = ".";
     if (lua_isstring(L, 2)) { topLevelDir = to!string(luaL_checkstring(L, 2)); }

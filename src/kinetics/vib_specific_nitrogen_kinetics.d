@@ -27,12 +27,12 @@ final class VibSpecificNitrogenRelaxtion : ThermochemicalReactor {
     
     this(string fname, GasModel gmodel)
     {
-	super(gmodel); // hang on to a reference to the gas model
+        super(gmodel); // hang on to a reference to the gas model
     }
     
     override void opCall(GasState Q, double tInterval,
-			 ref double dtChemSuggest, ref double dtThermSuggest, 
-			 ref double[] params)
+                         ref double dtChemSuggest, ref double dtThermSuggest, 
+                         ref double[] params)
     {
         int nsteps = 10;
         double dt = tInterval/nsteps;
@@ -70,7 +70,7 @@ final class VibSpecificNitrogenRelaxtion : ThermochemicalReactor {
         //_gmodel.update_thermo_from_rhop(Q);
         _gmodel.update_thermo_from_pT(Q);
         //assert(fabs(1.0 - sum(Q.massf)) < 1e-6, "Oops, total mass fraction is not 1.0");
-	_gmodel.update_sound_speed(Q);
+        _gmodel.update_sound_speed(Q);
         
     } // end opCall
 

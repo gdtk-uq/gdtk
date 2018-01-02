@@ -13,7 +13,7 @@ void main()
     auto p01 = Vector3(0.0, 1.1);
     auto my_patch = new AOPatch(p00, p10, p11, p01);
     auto cf = [new LinearFunction(), new LinearFunction(), 
-	       new LinearFunction(), new LinearFunction()];
+               new LinearFunction(), new LinearFunction()];
     auto my_grid = new StructuredGrid(my_patch, 11, 21, cf);
     writeln("grid point 5 5 at x=", my_grid[5,5].x, " y=", my_grid[5,5].y);
     my_grid.write_to_vtk_file("test_grid-2D.vtk");
@@ -57,10 +57,10 @@ void main()
     my_3Dgrid.find_enclosing_cell(my_point, cell_indx, found);
     writeln("Search for cell enclosing my_point= ", my_point);
     if (found) {
-	writeln("    cell found, index= ", cell_indx);
-	writeln("    cell barycentre= ", my_3Dgrid.cell_barycentre(cell_indx));
+        writeln("    cell found, index= ", cell_indx);
+        writeln("    cell barycentre= ", my_3Dgrid.cell_barycentre(cell_indx));
     } else {
-	writeln("    cell not found");
+        writeln("    cell not found");
     }
     //
     writeln("2D surface from the 3D grid");
@@ -70,7 +70,7 @@ void main()
     writeln("Import GridPro grid...");
     auto gpgrid = import_gridpro_grid("../../examples/eilmer/3D/gridpro-import/blk.tmp");
     foreach (i; 0 .. gpgrid.length) {
-	gpgrid[i].write_to_vtk_file("gpgrid-"~to!string(i)~".vtk");
+        gpgrid[i].write_to_vtk_file("gpgrid-"~to!string(i)~".vtk");
     }
     writeln("Done.");
 }

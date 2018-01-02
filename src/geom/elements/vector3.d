@@ -23,24 +23,24 @@ struct Vector3 {
 
     @nogc this(in double[] p)
     {
-	switch ( p.length ) {
-	case 0: _p[0] = _p[1] = _p[2] = 0.0; break;
-	case 1: _p[0] = p[0]; _p[1] = _p[2] = 0.0; break;
-	case 2: _p[0] = p[0]; _p[1] = p[1]; _p[2] = 0.0; break;
-	default: _p[0] = p[0]; _p[1] = p[1]; _p[2] = p[2]; break;
-	}
+        switch ( p.length ) {
+        case 0: _p[0] = _p[1] = _p[2] = 0.0; break;
+        case 1: _p[0] = p[0]; _p[1] = _p[2] = 0.0; break;
+        case 2: _p[0] = p[0]; _p[1] = p[1]; _p[2] = 0.0; break;
+        default: _p[0] = p[0]; _p[1] = p[1]; _p[2] = p[2]; break;
+        }
     }
 
     @nogc this(in double p0, in double p1=0.0, in double p2=0.0)
     {
- 	_p[0] = p0;
-	_p[1] = p1;
-	_p[2] = p2;
+        _p[0] = p0;
+        _p[1] = p1;
+        _p[2] = p2;
     }
 
     @nogc this(in Vector3 other)
     {
-	_p[] = other._p[];
+        _p[] = other._p[];
     }
 
     // Postblit constructor (Alexandrescu Section 7.1.3.4) so that
@@ -48,7 +48,7 @@ struct Vector3 {
     // its source.
     this(this)
     {
-	_p = _p.dup;
+        _p = _p.dup;
     }
 
     // For a lot of geometric work, it will be convenient to use
@@ -64,140 +64,140 @@ struct Vector3 {
 
     @property Vector3 dup() const
     {
-	return Vector3(this);
+        return Vector3(this);
     }
 
     @nogc ref Vector3 set(ref const(Vector3) other)
     // Convenience function for setting the components of an existing object.
     {
-	_p[] = other._p[];
-	return this;
+        _p[] = other._p[];
+        return this;
     }
 
     @nogc ref Vector3 set(double x, double y, double z)
     // Convenience function for setting the components of an existing object.
     {
-	_p[0] = x; _p[1] = y; _p[2] = z;
-	return this;
+        _p[0] = x; _p[1] = y; _p[2] = z;
+        return this;
     }
 
     @nogc ref Vector3 clear()
     // Convenience function for setting-to-zero the components of an existing object.
     {
-	_p[0] = 0.0; _p[1] = 0.0; _p[2] = 0.0;
-	return this;
+        _p[0] = 0.0; _p[1] = 0.0; _p[2] = 0.0;
+        return this;
     }
 
     @nogc ref Vector3 add(ref const(Vector3) other)
     // Convenience function for adding the components of an existing object.
     // This avoids the temporary associated with += (below)
     {
-	_p[] += other._p[];
-	return this;
+        _p[] += other._p[];
+        return this;
     }
     
     string toString() const
     {
-	return "Vector3(" ~ to!string(_p) ~ ")";
+        return "Vector3(" ~ to!string(_p) ~ ")";
     }
 
     // Some operators, at least those that make sense.
     Vector3 opUnary(string op)()
-	if (op == "+")
+        if (op == "+")
     {
-	Vector3 result;
-	result._p[] = this._p[];
-	return result;
+        Vector3 result;
+        result._p[] = this._p[];
+        return result;
     }
 
     Vector3 opUnary(string op)()
-	if (op == "-")
+        if (op == "-")
     {
-	Vector3 result;
-	result._p[] = - this._p[];
-	return result;
+        Vector3 result;
+        result._p[] = - this._p[];
+        return result;
     }
 
     Vector3 opBinary(string op)(in Vector3 rhs) const
-	if (op == "+")
+        if (op == "+")
     {
-	Vector3 result;
-	result._p[] = this._p[] + rhs._p[];
-	return result;
+        Vector3 result;
+        result._p[] = this._p[] + rhs._p[];
+        return result;
     }
 
     Vector3 opBinary(string op)(in Vector3 rhs) const
-	if (op == "-")
+        if (op == "-")
     {
-	Vector3 result;
-	result._p[] = this._p[] - rhs._p[];
-	return result;
+        Vector3 result;
+        result._p[] = this._p[] - rhs._p[];
+        return result;
     }
 
     Vector3 opBinary(string op)(in double rhs) const
-	if (op == "*")
+        if (op == "*")
     {
-	Vector3 result;
-	result._p[] = this._p[] * rhs;
-	return result;
+        Vector3 result;
+        result._p[] = this._p[] * rhs;
+        return result;
     }
 
     Vector3 opBinaryRight(string op)(in double lhs) const
-	if (op == "*")
+        if (op == "*")
     {
-	Vector3 result;
-	result._p[] = this._p[] * lhs;
-	return result;
+        Vector3 result;
+        result._p[] = this._p[] * lhs;
+        return result;
     }
 
     Vector3 opBinary(string op)(in double rhs) const
-	if (op == "/")
+        if (op == "/")
     {
-	Vector3 result;
-	result._p[] = this._p[] / rhs;
-	return result;
+        Vector3 result;
+        result._p[] = this._p[] / rhs;
+        return result;
     }
 
     // Assignment operators. (Alexandrescu Section 7.1.5.1)
     @nogc ref Vector3 opAssign(ref Vector3 rhs)
     {
-	_p[] = rhs._p[];
-	return this;
+        _p[] = rhs._p[];
+        return this;
     }
 
     @nogc ref Vector3 opAssign(Vector3 rhs)
     {
-	_p[] = rhs._p[];
-	return this;
+        _p[] = rhs._p[];
+        return this;
     }
 
     // Combined assignment operators do change the original object.
     @nogc ref Vector3 opOpAssign(string op)(in Vector3 rhs)
-	if (op == "+")
+        if (op == "+")
     {
-	this._p[] += rhs._p[];
-	return this;
+        this._p[] += rhs._p[];
+        return this;
     }
 
     @nogc ref Vector3 opOpAssign(string op)(in Vector3 rhs)
-	if (op == "-")
+        if (op == "-")
     {
-	this._p[] -= rhs._p[];
-	return this;
+        this._p[] -= rhs._p[];
+        return this;
     }
 
     @nogc ref Vector3 opOpAssign(string op)(in double rhs)
-	if (op == "*")
+        if (op == "*")
     {
-	this._p[] *= rhs;
-	return this;
+        this._p[] *= rhs;
+        return this;
     }
 
     @nogc ref Vector3 opOpAssign(string op)(in double rhs)
-	if (op == "/")
+        if (op == "/")
     {
-	this._p[] /= rhs;
-	return this;
+        this._p[] /= rhs;
+        return this;
     }
 
     // Other vector-specific operations.
@@ -208,23 +208,23 @@ struct Vector3 {
     @nogc ref Vector3 normalize()
     {
         double magnitude = sqrt(this.dot(this));
-	if ( magnitude > 0.0 ) {
-	    this._p[] /= magnitude; // need to do the divide on the _p[] array for DMD 2.069.0
-	} else {
-	    // Clean up, in case dot() underflows.
-	    this._p[0] = this._p[1] = this._p[2] = 0.0;
-	}
-	// Flush small components to zero.
-	if (fabs(this._p[0]) < 1.0e-14) { this._p[0] = 0.0; }
-	if (fabs(this._p[1]) < 1.0e-14) { this._p[1] = 0.0; }
-	if (fabs(this._p[2]) < 1.0e-14) { this._p[2] = 0.0; }
-	return this;
+        if ( magnitude > 0.0 ) {
+            this._p[] /= magnitude; // need to do the divide on the _p[] array for DMD 2.069.0
+        } else {
+            // Clean up, in case dot() underflows.
+            this._p[0] = this._p[1] = this._p[2] = 0.0;
+        }
+        // Flush small components to zero.
+        if (fabs(this._p[0]) < 1.0e-14) { this._p[0] = 0.0; }
+        if (fabs(this._p[1]) < 1.0e-14) { this._p[1] = 0.0; }
+        if (fabs(this._p[2]) < 1.0e-14) { this._p[2] = 0.0; }
+        return this;
     }
 
     @nogc double dot(ref const(Vector3) other) const
     {
-	return this._p[0] * other._p[0] + 
-	    this._p[1] * other._p[1] + this._p[2] * other._p[2];
+        return this._p[0] * other._p[0] + 
+            this._p[1] * other._p[1] + this._p[2] * other._p[2];
     }
 
     // Transform functions used to reorient vector values in the CFD codes.
@@ -237,63 +237,63 @@ struct Vector3 {
      * such a local system.
      */
     @nogc void transform_to_local_frame(ref const(Vector3) n,
-					ref const(Vector3) t1,
-					ref const(Vector3) t2)
+                                        ref const(Vector3) t1,
+                                        ref const(Vector3) t2)
     {
-	double v_x = this.dot(n); // normal component
-	double v_y = this.dot(t1); // tangential component 1
-	double v_z = this.dot(t2); // tangential component 2
-	_p[0] = v_x;
-	_p[1] = v_y;
-	_p[2] = v_z;
+        double v_x = this.dot(n); // normal component
+        double v_y = this.dot(t1); // tangential component 1
+        double v_z = this.dot(t2); // tangential component 2
+        _p[0] = v_x;
+        _p[1] = v_y;
+        _p[2] = v_z;
     }
 
     /**
      * Rotate v back into the global (xyz) coordinate system.
      */
     @nogc void transform_to_global_frame(ref const(Vector3) n,
-					 ref const(Vector3) t1,
-					 ref const(Vector3) t2)
+                                         ref const(Vector3) t1,
+                                         ref const(Vector3) t2)
     {
-	double v_x = _p[0]*n._p[0] + _p[1]*t1._p[0] + _p[2]*t2._p[0]; // global-x
-	double v_y = _p[0]*n._p[1] + _p[1]*t1._p[1] + _p[2]*t2._p[1]; // global-y
-	double v_z = _p[0]*n._p[2] + _p[1]*t1._p[2] + _p[2]*t2._p[2]; // global-z
-	_p[0] = v_x;
-	_p[1] = v_y;
-	_p[2] = v_z;
+        double v_x = _p[0]*n._p[0] + _p[1]*t1._p[0] + _p[2]*t2._p[0]; // global-x
+        double v_y = _p[0]*n._p[1] + _p[1]*t1._p[1] + _p[2]*t2._p[1]; // global-y
+        double v_z = _p[0]*n._p[2] + _p[1]*t1._p[2] + _p[2]*t2._p[2]; // global-z
+        _p[0] = v_x;
+        _p[1] = v_y;
+        _p[2] = v_z;
     }
     // Change of coordinate system; rotation with translation.
 
     // Transform coordinates from global frame to local (dash) frame.
     // Local frame is defined by unit vectors (n, t1 and t2) at location c.
     @nogc void transform_to_local_frame(ref const(Vector3) n,
-					ref const(Vector3) t1,
-					ref const(Vector3) t2,
-					ref const(Vector3) c)
+                                        ref const(Vector3) t1,
+                                        ref const(Vector3) t2,
+                                        ref const(Vector3) c)
     {
-	_p[0] -= c._p[0]; _p[1] -= c._p[1]; _p[2] -= c._p[2]; // shift to local origin
-	double v_x = this.dot(n); // normal component
-	double v_y = this.dot(t1); // tangential component 1
-	double v_z = this.dot(t2); // tangential component 2
-	_p[0] = v_x;
-	_p[1] = v_y;
-	_p[2] = v_z;
+        _p[0] -= c._p[0]; _p[1] -= c._p[1]; _p[2] -= c._p[2]; // shift to local origin
+        double v_x = this.dot(n); // normal component
+        double v_y = this.dot(t1); // tangential component 1
+        double v_z = this.dot(t2); // tangential component 2
+        _p[0] = v_x;
+        _p[1] = v_y;
+        _p[2] = v_z;
     }
 
     /**
      * Rotate v back into the global (xyz) coordinate system.
      */
     @nogc void transform_to_global_frame(ref const(Vector3) n,
-					 ref const(Vector3) t1,
-					 ref const(Vector3) t2,
-					 ref const(Vector3) c)
+                                         ref const(Vector3) t1,
+                                         ref const(Vector3) t2,
+                                         ref const(Vector3) c)
     {
-	double v_x = _p[0]*n._p[0] + _p[1]*t1._p[0] + _p[2]*t2._p[0] + c._p[0]; // global-x
-	double v_y = _p[0]*n._p[1] + _p[1]*t1._p[1] + _p[2]*t2._p[1] + c._p[1]; // global-y
-	double v_z = _p[0]*n._p[2] + _p[1]*t1._p[2] + _p[2]*t2._p[2] + c._p[2]; // global-z
-	_p[0] = v_x;
-	_p[1] = v_y;
-	_p[2] = v_z;
+        double v_x = _p[0]*n._p[0] + _p[1]*t1._p[0] + _p[2]*t2._p[0] + c._p[0]; // global-x
+        double v_y = _p[0]*n._p[1] + _p[1]*t1._p[1] + _p[2]*t2._p[1] + c._p[1]; // global-y
+        double v_z = _p[0]*n._p[2] + _p[1]*t1._p[2] + _p[2]*t2._p[2] + c._p[2]; // global-z
+        _p[0] = v_x;
+        _p[1] = v_y;
+        _p[2] = v_z;
     }
 
     /**
@@ -301,31 +301,31 @@ struct Vector3 {
      */
     @nogc void apply_matrix_transform(ref const(double[]) Rmatrix)
     {
-	// Write out the matrix multiplication, long-hand.
-	double old_p0 = _p[0];
-	double old_p1 = _p[1];
-	double old_p2 = _p[2];
-	_p[0] = Rmatrix[0]*old_p0 + Rmatrix[1]*old_p1 + Rmatrix[2]*old_p2;
-	_p[1] = Rmatrix[3]*old_p0 + Rmatrix[4]*old_p1 + Rmatrix[5]*old_p2;
-	_p[2] = Rmatrix[6]*old_p0 + Rmatrix[7]*old_p1 + Rmatrix[8]*old_p2;
+        // Write out the matrix multiplication, long-hand.
+        double old_p0 = _p[0];
+        double old_p1 = _p[1];
+        double old_p2 = _p[2];
+        _p[0] = Rmatrix[0]*old_p0 + Rmatrix[1]*old_p1 + Rmatrix[2]*old_p2;
+        _p[1] = Rmatrix[3]*old_p0 + Rmatrix[4]*old_p1 + Rmatrix[5]*old_p2;
+        _p[2] = Rmatrix[6]*old_p0 + Rmatrix[7]*old_p1 + Rmatrix[8]*old_p2;
     }
 
     /**
      * Compute mirror-image location for plane defined by point and normal.
      */
     @nogc ref Vector3 mirror_image(ref const(Vector3) point,
-				   ref const(Vector3) normal)
+                                   ref const(Vector3) normal)
     {
-	Vector3 n = Vector3(normal.x, normal.y, normal.z); n.normalize();
-	// Construct tangents to the plane.
-	Vector3 different = n + Vector3(1.0, 1.0, 1.0);
-	Vector3 t1; cross(t1, n, different); t1.normalize();
-	Vector3 t2; cross(t2, n, t1); t2.normalize();
-	// Mirror image the vector in a frame local to the plane.
-	transform_to_local_frame(n, t1, t2, point);
-	_p[0] = -_p[0];
-	transform_to_global_frame(n, t1, t2, point);
-	return this;
+        Vector3 n = Vector3(normal.x, normal.y, normal.z); n.normalize();
+        // Construct tangents to the plane.
+        Vector3 different = n + Vector3(1.0, 1.0, 1.0);
+        Vector3 t1; cross(t1, n, different); t1.normalize();
+        Vector3 t2; cross(t2, n, t1); t2.normalize();
+        // Mirror image the vector in a frame local to the plane.
+        transform_to_local_frame(n, t1, t2, point);
+        _p[0] = -_p[0];
+        transform_to_global_frame(n, t1, t2, point);
+        return this;
     }
 
     /**
@@ -333,13 +333,13 @@ struct Vector3 {
      */
     @nogc ref Vector3 rotate_about_zaxis(double dtheta)
     {
-	double x = _p[0];
-	double y = _p[1];
-	double theta = atan2(y,x) + dtheta;
-	double r = sqrt(x*x + y*y);
-	_p[0] = r * cos(theta);
-	_p[1] = r * sin(theta);
-	return this;
+        double x = _p[0];
+        double y = _p[1];
+        double theta = atan2(y,x) + dtheta;
+        double r = sqrt(x*x + y*y);
+        _p[0] = r * cos(theta);
+        _p[1] = r * sin(theta);
+        return this;
     }
 
 } // end class Vector3
@@ -419,7 +419,7 @@ double dot_product(double ax, double ay, double az, double bx, double by, double
 
 @nogc
 void cross_product(double ax, double ay, double az, double bx, double by, double bz,
-		   ref double cx, ref double cy, ref double cz)
+                   ref double cx, ref double cy, ref double cz)
 {
     cx = ay*bz - az*by;
     cy = az*bx - ax*bz;
@@ -432,86 +432,86 @@ void cross_product(double ax, double ay, double az, double bx, double by, double
  */
 @nogc
 bool approxEqualVectors(in Vector3 v1, in Vector3 v2,
-			double maxRelDiff=1.0e-2, double maxAbsDiff=1.0e-5)
+                        double maxRelDiff=1.0e-2, double maxAbsDiff=1.0e-5)
 {
     return (approxEqual(v1._p[0], v2._p[0], maxRelDiff, maxAbsDiff) && 
-	    approxEqual(v1._p[1], v2._p[1], maxRelDiff, maxAbsDiff) &&
-	    approxEqual(v1._p[2], v2._p[2], maxRelDiff, maxAbsDiff));
+            approxEqual(v1._p[1], v2._p[1], maxRelDiff, maxAbsDiff) &&
+            approxEqual(v1._p[2], v2._p[2], maxRelDiff, maxAbsDiff));
 }
 
 version(vector3_test) {
     import util.msg_service;
     int main() {
-	// Check that we have separate data with the correct values.
-	Vector3 a = Vector3([1.0, 2.2, 3.0]);
-	Vector3 b = Vector3(1.0);
-	assert(a.x == 1.0, failedUnitTest());
-	assert(a.y == 2.2, failedUnitTest());
-	assert(a.z == 3.0, failedUnitTest());
-	assert(a.x == b.x, failedUnitTest());
-	assert(b.y == 0.0, failedUnitTest());
-	assert(b.z == 0.0, failedUnitTest());
-	b.set(a);
-	assert(a.x == b.x && a.y == b.y && a.z == b.z, failedUnitTest());
-	b.set(1.0, 0.0, 0.0);
-	assert(b.x == 1.0 && b.y == 0.0 && b.z == 0.0, failedUnitTest());
+        // Check that we have separate data with the correct values.
+        Vector3 a = Vector3([1.0, 2.2, 3.0]);
+        Vector3 b = Vector3(1.0);
+        assert(a.x == 1.0, failedUnitTest());
+        assert(a.y == 2.2, failedUnitTest());
+        assert(a.z == 3.0, failedUnitTest());
+        assert(a.x == b.x, failedUnitTest());
+        assert(b.y == 0.0, failedUnitTest());
+        assert(b.z == 0.0, failedUnitTest());
+        b.set(a);
+        assert(a.x == b.x && a.y == b.y && a.z == b.z, failedUnitTest());
+        b.set(1.0, 0.0, 0.0);
+        assert(b.x == 1.0 && b.y == 0.0 && b.z == 0.0, failedUnitTest());
 
-	// Check operators
-	b = -a;
-	assert(b.x == -a.x && b.y == -a.y && b.z == -a.z, failedUnitTest());
+        // Check operators
+        b = -a;
+        assert(b.x == -a.x && b.y == -a.y && b.z == -a.z, failedUnitTest());
 
-	b = Vector3(1.0);
-	Vector3 c = a + b;
-	assert(c.y == a.y+b.y, failedUnitTest());
-	c = a - b;
-	assert(c.y == a.y-b.y, failedUnitTest());
-	Vector3 d = a.dup;
-	a.refy = 99.0;
-	assert(a.y == 99.0 && d.y == 2.2, failedUnitTest());
-	Vector3 d2 = a;
-	a.refy = 3.3;
-	assert(a.y == 3.3 && d2.y == 99.0, failedUnitTest());
+        b = Vector3(1.0);
+        Vector3 c = a + b;
+        assert(c.y == a.y+b.y, failedUnitTest());
+        c = a - b;
+        assert(c.y == a.y-b.y, failedUnitTest());
+        Vector3 d = a.dup;
+        a.refy = 99.0;
+        assert(a.y == 99.0 && d.y == 2.2, failedUnitTest());
+        Vector3 d2 = a;
+        a.refy = 3.3;
+        assert(a.y == 3.3 && d2.y == 99.0, failedUnitTest());
 
-	Vector3 e = a * 2.0;
-	Vector3 f = 3.0 * d;
-	assert(e.z == 6.0 && f.z == 9.0, failedUnitTest());
-	Vector3 g = d / 3.0;
-	assert(g.z == 1.0, failedUnitTest());
+        Vector3 e = a * 2.0;
+        Vector3 f = 3.0 * d;
+        assert(e.z == 6.0 && f.z == 9.0, failedUnitTest());
+        Vector3 g = d / 3.0;
+        assert(g.z == 1.0, failedUnitTest());
 
-	g += f;
-	assert(g.z == 10.0, failedUnitTest());
-	g /= 2.0;
-	assert(g.z == 5.0, failedUnitTest());
+        g += f;
+        assert(g.z == 10.0, failedUnitTest());
+        g /= 2.0;
+        assert(g.z == 5.0, failedUnitTest());
 
-	a = Vector3(1.0, 0.0, 0.0);
-	a.rotate_about_zaxis(PI/4);
-	assert(approxEqualVectors(a, Vector3(0.7071, 0.7071, 0)), failedUnitTest());
+        a = Vector3(1.0, 0.0, 0.0);
+        a.rotate_about_zaxis(PI/4);
+        assert(approxEqualVectors(a, Vector3(0.7071, 0.7071, 0)), failedUnitTest());
 
-	a = Vector3(1.0, 0.0, 0.0);
-	Vector3 point = Vector3(0.0, 1.0, 0.0);
-	Vector3 normal = Vector3(0.0, 1.0, 0.0);
-	a.mirror_image(point, normal);
-	assert(approxEqualVectors(a, Vector3(1.0, 2.0, 0)), failedUnitTest());
+        a = Vector3(1.0, 0.0, 0.0);
+        Vector3 point = Vector3(0.0, 1.0, 0.0);
+        Vector3 normal = Vector3(0.0, 1.0, 0.0);
+        a.mirror_image(point, normal);
+        assert(approxEqualVectors(a, Vector3(1.0, 2.0, 0)), failedUnitTest());
 
-	Vector3 u = unit(g);
-	assert(approxEqual(abs(u), 1.0), failedUnitTest());
+        Vector3 u = unit(g);
+        assert(approxEqual(abs(u), 1.0), failedUnitTest());
 
-	Vector3 x = Vector3(1.0, 0.0, 0.0);
-	Vector3 y = Vector3(0.0, 1.0, 0.0);
-	Vector3 z = cross(x,y);
-	Vector3 zref = Vector3(0.0,0.0,1.0);
-	assert(approxEqualVectors(z, zref), failedUnitTest());
+        Vector3 x = Vector3(1.0, 0.0, 0.0);
+        Vector3 y = Vector3(0.0, 1.0, 0.0);
+        Vector3 z = cross(x,y);
+        Vector3 zref = Vector3(0.0,0.0,1.0);
+        assert(approxEqualVectors(z, zref), failedUnitTest());
 
-	Vector3 n = Vector3(1.0,1.0,0.0); n = unit(n);
-	Vector3 t1 = Vector3(-1.0,1.0,0.0); t1 = unit(t1);
-	Vector3 t2 = cross(n, t1);
-	Vector3 h = Vector3(1.0,0.0,1.0);
-	Vector3 h_ref = Vector3(h);
-	h.transform_to_local_frame(n, t1, t2);
-	assert(approxEqualVectors(h, Vector3(sqrt(1.0/2.0), -sqrt(1.0/2.0), 1.0)),
-	       failedUnitTest());
-	h.transform_to_global_frame(n, t1, t2);
-	assert(approxEqualVectors(h, h_ref), failedUnitTest());
-	return 0;
+        Vector3 n = Vector3(1.0,1.0,0.0); n = unit(n);
+        Vector3 t1 = Vector3(-1.0,1.0,0.0); t1 = unit(t1);
+        Vector3 t2 = cross(n, t1);
+        Vector3 h = Vector3(1.0,0.0,1.0);
+        Vector3 h_ref = Vector3(h);
+        h.transform_to_local_frame(n, t1, t2);
+        assert(approxEqualVectors(h, Vector3(sqrt(1.0/2.0), -sqrt(1.0/2.0), 1.0)),
+               failedUnitTest());
+        h.transform_to_global_frame(n, t1, t2);
+        assert(approxEqualVectors(h, h_ref), failedUnitTest());
+        return 0;
     }
 } // end vector3_test

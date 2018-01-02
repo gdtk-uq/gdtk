@@ -34,7 +34,7 @@ double integrate(alias f)(double a, double b, double tol=1.0e-5)
     double I;
     if ( abs(I4 - I2) > tol ) {
         double mid = 0.5 * (a + b);
-	I = integrate!f(a, mid, tol/2.0) + integrate!f(mid, b, tol/2.0);
+        I = integrate!f(a, mid, tol/2.0) + integrate!f(mid, b, tol/2.0);
     } else {
         I = I4;
     }
@@ -45,10 +45,10 @@ double integrate(alias f)(double a, double b, double tol=1.0e-5)
 version(newtoncotes_test) {
     import util.msg_service;
     int main() {
-	double fun1(double x) { return abs(x) < 1.0 ? sqrt(1.0 - x*x): 0.0; }
-	double fun2(double x) { return 1.0 / (1.0 + x * x); }
-	assert(approxEqual(PI/4, integrate!fun1(0.0, 1.0), 1.0e-6), failedUnitTest()); 
-	assert(approxEqual(PI/4, integrate!fun2(0.0, 1.0), 1.0e-6), failedUnitTest()); 
-	return 0;
+        double fun1(double x) { return abs(x) < 1.0 ? sqrt(1.0 - x*x): 0.0; }
+        double fun2(double x) { return 1.0 / (1.0 + x * x); }
+        assert(approxEqual(PI/4, integrate!fun1(0.0, 1.0), 1.0e-6), failedUnitTest()); 
+        assert(approxEqual(PI/4, integrate!fun2(0.0, 1.0), 1.0e-6), failedUnitTest()); 
+        return 0;
     }
 }

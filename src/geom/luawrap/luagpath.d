@@ -38,44 +38,44 @@ static const(Path)[] pathStore;
 
 Path checkPath(lua_State* L, int index) {
     if ( isObjType(L, index, LineMT) ) {
-	return checkObj!(Line, LineMT)(L, index);
+        return checkObj!(Line, LineMT)(L, index);
     }
     if ( isObjType(L, index, ArcMT) ) {
-	return checkObj!(Arc, ArcMT)(L, index);
+        return checkObj!(Arc, ArcMT)(L, index);
     }
     if ( isObjType(L, index, Arc3MT) ) {
-	return checkObj!(Arc3, Arc3MT)(L, index);
+        return checkObj!(Arc3, Arc3MT)(L, index);
     }
     if ( isObjType(L, index, HelixMT) ) {
-	return checkObj!(Helix, HelixMT)(L, index);
+        return checkObj!(Helix, HelixMT)(L, index);
     }
     if ( isObjType(L, index, BezierMT) ) {
-	return checkObj!(Bezier, BezierMT)(L, index);
+        return checkObj!(Bezier, BezierMT)(L, index);
     }
     if ( isObjType(L, index, PolylineMT) ) {
-	return checkObj!(Polyline, PolylineMT)(L, index);
+        return checkObj!(Polyline, PolylineMT)(L, index);
     }
     if ( isObjType(L, index, LuaFnPathMT) ) {
-	return checkObj!(LuaFnPath, LuaFnPathMT)(L, index);
+        return checkObj!(LuaFnPath, LuaFnPathMT)(L, index);
     }
     if ( isObjType(L, index, ArcLengthParameterizedPathMT) ) {
-	return checkObj!(ArcLengthParameterizedPath,
-			 ArcLengthParameterizedPathMT)(L, index);
+        return checkObj!(ArcLengthParameterizedPath,
+                         ArcLengthParameterizedPathMT)(L, index);
     }
     if ( isObjType(L, index, SubRangedPathMT) ) {
-	return checkObj!(SubRangedPath, SubRangedPathMT)(L, index);
+        return checkObj!(SubRangedPath, SubRangedPathMT)(L, index);
     }
     if ( isObjType(L, index, ReversedPathMT) ) {
-	return checkObj!(ReversedPath, ReversedPathMT)(L, index);
+        return checkObj!(ReversedPath, ReversedPathMT)(L, index);
     }
     if ( isObjType(L, index, TranslatedPathMT) ) {
-	return checkObj!(TranslatedPath, TranslatedPathMT)(L, index);
+        return checkObj!(TranslatedPath, TranslatedPathMT)(L, index);
     }
     if ( isObjType(L, index, MirrorImagePathMT) ) {
-	return checkObj!(MirrorImagePath, MirrorImagePathMT)(L, index);
+        return checkObj!(MirrorImagePath, MirrorImagePathMT)(L, index);
     }
     if ( isObjType(L, index, RotatedAboutZAxisPathMT) ) {
-	return checkObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, index);
+        return checkObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, index);
     }
     // if all else fails
     return null;
@@ -104,50 +104,50 @@ extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
     auto path = checkObj!(T, MTname)(L, 1);
     int narg = lua_gettop(L);
     if ( narg == 1 || !lua_istable(L, 2) ) {
-	string errMsg = "Error in call to Path:intersect2D{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Path:intersect2D{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 2, ["ps", "d", "nseg"])) {
-	string errMsg = "Error in call to Path:intersect2D{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Path:intersect2D{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 for starting point.
     lua_getfield(L, 2, "ps");
     if (lua_isnil(L, -1)) {
-	string errMsg = "Error in call to Path:intersect2D{}. No ps entry found." ~
-	    "Check that the keyword argument 'ps' is present,\n" ~
-	    "and that a valid object is passed as value.\n";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Path:intersect2D{}. No ps entry found." ~
+            "Check that the keyword argument 'ps' is present,\n" ~
+            "and that a valid object is passed as value.\n";
+        luaL_error(L, errMsg.toStringz());
     }
     auto ps = checkVector3(L, -1);
     if (ps is null) {
-	string errMsg = "Error in call to Path:intersect2D{}. " ~
-	    "A Vector3 object is expected as the ps argument. " ~ 
-	    "No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Path:intersect2D{}. " ~
+            "A Vector3 object is expected as the ps argument. " ~ 
+            "No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Expect Vector3 for direction vector.
     lua_getfield(L, 2, "d");
     if (lua_isnil(L, -1)) {
-	string errMsg = "Error in call to Path:intersect2D{}. No d entry found.\n" ~ 
-	    "Check that the keyword argument 'd' is present,\n" ~
-	    "and that a valid object is passed as value.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Path:intersect2D{}. No d entry found.\n" ~ 
+            "Check that the keyword argument 'd' is present,\n" ~
+            "and that a valid object is passed as value.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto d = checkVector3(L, -1);
     if (d is null) {
-	string errMsg = "Error in call to Path:intersect2D{}. " ~
-	    "A Vector3 object is expected as the d argument. " ~
-	    "No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Path:intersect2D{}. " ~
+            "A Vector3 object is expected as the d argument. " ~
+            "No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     int nseg = 20; // default value
     lua_getfield(L, 2, "nseg");
     if (lua_isnumber(L, -1)) {
-	nseg = to!int(lua_tonumber(L, -1));
+        nseg = to!int(lua_tonumber(L, -1));
     }
     lua_pop(L, 1);
     //
@@ -176,44 +176,44 @@ extern(C) int newLine(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Line:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Line:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["p0", "p1"])) {
-	string errMsg = "Error in call to Line:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Line:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 for starting point.
     lua_getfield(L, 1, "p0");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Line:new{}. No p0 entry found." ~
-	    "Check that the keyword argument 'p0' is present,\n" ~
-	    "and that a valid object is passed as value.\n";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Line:new{}. No p0 entry found." ~
+            "Check that the keyword argument 'p0' is present,\n" ~
+            "and that a valid object is passed as value.\n";
+        luaL_error(L, errMsg.toStringz());
     }
     auto p0 = checkVector3(L, -1);
     if ( p0 is null ) {
-	string errMsg = "Error in call to Line:new{}. " ~
-	    "A Vector3 object is expected as the p0 argument. " ~ 
-	    "No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Line:new{}. " ~
+            "A Vector3 object is expected as the p0 argument. " ~ 
+            "No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Expect Vector3 for end point.
     lua_getfield(L, 1, "p1");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Line:new{}. No p1 entry found.\n" ~ 
-	    "Check that the keyword argument 'p1' is present,\n" ~
-	    "and that a valid object is passed as value.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Line:new{}. No p1 entry found.\n" ~ 
+            "Check that the keyword argument 'p1' is present,\n" ~
+            "and that a valid object is passed as value.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto p1 = checkVector3(L, -1);
     if ( p1 is null ) {
-	string errMsg = "Error in call to Line:new{}. " ~
-	    "A Vector3 object is expected as the p1 argument. " ~
-	    "No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Line:new{}. " ~
+            "A Vector3 object is expected as the p1 argument. " ~
+            "No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     auto my_line = new Line(*p0, *p1);
@@ -238,54 +238,54 @@ extern(C) int newArc(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Arc:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Arc:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["p0", "p1", "centre"])) {
-	string errMsg = "Error in call to Arc:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Arc:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 for starting point.
     lua_getfield(L, 1, "p0");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Arc:new{}. No p0 entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc:new{}. No p0 entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto p0 = checkVector3(L, -1);
     if ( p0 is null ) {
-	string errMsg = "Error in call to Arc:new{}. " ~
-	    "A Vector3 object is expected as the p0 argument. " ~ 
-	    "No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc:new{}. " ~
+            "A Vector3 object is expected as the p0 argument. " ~ 
+            "No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Expect Vector3 for end point.
     lua_getfield(L, 1, "p1");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Arc:new{}. No p1 entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc:new{}. No p1 entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto p1 = checkVector3(L, -1);
     if ( p1 is null ) {
-	string errMsg = "Error in call to Arc:new{}. " ~
-	    "A Vector3 object is expected as the p1 argument." ~ 
-	    " No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc:new{}. " ~
+            "A Vector3 object is expected as the p1 argument." ~ 
+            " No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Expect Vector3 at centre.
     lua_getfield(L, 1, "centre");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Arc:new{}. No centre entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc:new{}. No centre entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto centre = checkVector3(L, -1);
     if ( centre is null ) {
-	string errMsg = "Error in call to Arc:new{}. " ~
-	    "A Vector3 object is expected as the centre argument. " ~ 
-	    "No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc:new{}. " ~
+            "A Vector3 object is expected as the centre argument. " ~ 
+            "No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     auto my_arc = new Arc(*p0, *p1, *centre);
@@ -310,51 +310,51 @@ extern(C) int newArc3(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Arc3:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Arc3:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["p0", "pmid", "p1"])) {
-	string errMsg = "Error in call to Arc3:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Arc3:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 for start point p0.
     lua_getfield(L, 1, "p0");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Arc3:new{}. No p0 entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc3:new{}. No p0 entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto p0 = checkVector3(L, -1);
     if ( p0 is null ) {
-	string errMsg = "Error in call to Arc3:new{}. " ~
-	    "A Vector3 object is expected as the p0 argument. No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc3:new{}. " ~
+            "A Vector3 object is expected as the p0 argument. No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Expect Vector3 at mid-point pmid.
     lua_getfield(L, 1, "pmid");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Arc3:new{}. No pmid entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc3:new{}. No pmid entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto pmid = checkVector3(L, -1);
     if ( pmid is null ) {
-	string errMsg = "Error in call to Arc3:new{}. " ~
-	    "A Vector3 object is expected as the pmid argument. No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc3:new{}. " ~
+            "A Vector3 object is expected as the pmid argument. No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Expect Vector3 at end point p1.
     lua_getfield(L, 1, "p1");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Arc3:new{}. No p1 entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc3:new{}. No p1 entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto p1 = checkVector3(L, -1);
     if ( p1 is null ) {
-	string errMsg = "Error in call to Arc3:new{}. " ~
-	    "A Vector3 object is expected as the p1 argument. No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Arc3:new{}. " ~
+            "A Vector3 object is expected as the p1 argument. No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     auto my_arc = new Arc3(*p0, *pmid, *p1);
@@ -383,14 +383,14 @@ extern(C) int newHelix(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Helix:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Helix:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["a0", "a1", "xlocal", "r0", "r1", "dtheta",
-				  "point_start", "point_end", "axis0", "axis1"])) {
-	string errMsg = "Error in call to Helix:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+                                  "point_start", "point_end", "axis0", "axis1"])) {
+        string errMsg = "Error in call to Helix:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // There are two ways to specify the Helix:
     // (a) with the fundamental parameters defining the local axis, radii and angles
@@ -398,102 +398,102 @@ extern(C) int newHelix(lua_State* L)
     Helix my_helix;
     lua_getfield(L, 1, "a0");
     if (lua_isnil(L, -1)) {
-	// Since we did not find the beginning point on the local axis,
-	// we assume that the specification is with start and end points
-	// about an axis.
-	lua_pop(L, 1);
-	// Expect Vector3 for start point.
-	lua_getfield(L, 1, "point_start");
-	auto pstart = checkVector3(L, -1);
-	if (pstart is null) {
-	    string errMsg = "Error in call to Helix:new{}. " ~
-		"A Vector3 object is expected as the point_start argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	lua_pop(L, 1);
-	// Expect Vector3 at end point.
-	lua_getfield(L, 1, "point_end");
-	if (lua_isnil(L, -1)) {
-	    string errMsg = "Error in call to Helix:new{}. No point_end entry found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	auto pend = checkVector3(L, -1);
-	if (pend is null) {
-	    string errMsg = "Error in call to Helix:new{}. " ~
-		"A Vector3 object is expected as the point_end argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	lua_pop(L, 1);
-	// Expect Vector3 specifying start of axis.
-	lua_getfield(L, 1, "axis0");
-	if (lua_isnil(L, -1)) {
-	    string errMsg = "Error in call to Helix:new{}. No axis0 entry found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	auto axis0 = checkVector3(L, -1);
-	if (axis0 is null) {
-	    string errMsg = "Error in call to Helix:new{}. " ~
-		"A Vector3 object is expected as the axis0 argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	lua_pop(L, 1);
-	// Expect Vector3 at end of axis, axis1.
-	lua_getfield(L, 1, "axis1");
-	if (lua_isnil(L, -1)) {
-	    string errMsg = "Error in call to Helix:new{}. No axis1 entry found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	auto axis1 = checkVector3(L, -1);
-	if (axis1 is null) {
-	    string errMsg = "Error in call to Helix:new{}. " ~
-		"A Vector3 object is expected as the axis1 argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	lua_pop(L, 1);
-	my_helix = new Helix(*pstart, *pend, *axis0, *axis1);
+        // Since we did not find the beginning point on the local axis,
+        // we assume that the specification is with start and end points
+        // about an axis.
+        lua_pop(L, 1);
+        // Expect Vector3 for start point.
+        lua_getfield(L, 1, "point_start");
+        auto pstart = checkVector3(L, -1);
+        if (pstart is null) {
+            string errMsg = "Error in call to Helix:new{}. " ~
+                "A Vector3 object is expected as the point_start argument. No valid Vector3 was found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        lua_pop(L, 1);
+        // Expect Vector3 at end point.
+        lua_getfield(L, 1, "point_end");
+        if (lua_isnil(L, -1)) {
+            string errMsg = "Error in call to Helix:new{}. No point_end entry found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        auto pend = checkVector3(L, -1);
+        if (pend is null) {
+            string errMsg = "Error in call to Helix:new{}. " ~
+                "A Vector3 object is expected as the point_end argument. No valid Vector3 was found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        lua_pop(L, 1);
+        // Expect Vector3 specifying start of axis.
+        lua_getfield(L, 1, "axis0");
+        if (lua_isnil(L, -1)) {
+            string errMsg = "Error in call to Helix:new{}. No axis0 entry found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        auto axis0 = checkVector3(L, -1);
+        if (axis0 is null) {
+            string errMsg = "Error in call to Helix:new{}. " ~
+                "A Vector3 object is expected as the axis0 argument. No valid Vector3 was found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        lua_pop(L, 1);
+        // Expect Vector3 at end of axis, axis1.
+        lua_getfield(L, 1, "axis1");
+        if (lua_isnil(L, -1)) {
+            string errMsg = "Error in call to Helix:new{}. No axis1 entry found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        auto axis1 = checkVector3(L, -1);
+        if (axis1 is null) {
+            string errMsg = "Error in call to Helix:new{}. " ~
+                "A Vector3 object is expected as the axis1 argument. No valid Vector3 was found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        lua_pop(L, 1);
+        my_helix = new Helix(*pstart, *pend, *axis0, *axis1);
     } else {
-	// Proceed with the specification using fundamental parameters.
-	// Expect Vector3 for start point on local axis, a0.
-	auto a0 = checkVector3(L, -1);
-	if (a0 is null) {
-	    string errMsg = "Error in call to Helix:new{}. " ~
-		"A Vector3 object is expected as the a0 argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	lua_pop(L, 1);
-	// Expect Vector3 at end point on local axis, a1.
-	lua_getfield(L, 1, "a1");
-	if (lua_isnil(L, -1)) {
-	    string errMsg = "Error in call to Helix:new{}. No a1 entry found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	auto a1 = checkVector3(L, -1);
-	if (a1 is null) {
-	    string errMsg = "Error in call to Helix:new{}. " ~
-		"A Vector3 object is expected as the a1 argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	lua_pop(L, 1);
-	// Expect Vector3 specifying local x-direction.
-	lua_getfield(L, 1, "xlocal");
-	if (lua_isnil(L, -1)) {
-	    string errMsg = "Error in call to Helix:new{}. No xlocal entry found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	auto xlocal = checkVector3(L, -1);
-	if (xlocal is null) {
-	    string errMsg = "Error in call to Helix:new{}. " ~
-		"A Vector3 object is expected as the xlocal argument. No valid Vector3 was found.";
-	    luaL_error(L, errMsg.toStringz());
-	}
-	lua_pop(L, 1);
-	string errMsgTmplt = "Error in call to Helix:new{}. " ~
-	    "A valid value for '%s' was not found in list of arguments. " ~
-	    "The value should be a number.";
-	double r0 = getNumberFromTable(L, 1, "r0", true, 1.0, true, format(errMsgTmplt, "r0"));
-	double r1 = getNumberFromTable(L, 1, "r1", true, 1.0, true, format(errMsgTmplt, "r1"));
-	double dtheta = getNumberFromTable(L, 1, "dtheta", true, 0.0, true, format(errMsgTmplt, "dtheta"));
-	my_helix = new Helix(*a0, *a1, *xlocal, r0, r1, dtheta);
+        // Proceed with the specification using fundamental parameters.
+        // Expect Vector3 for start point on local axis, a0.
+        auto a0 = checkVector3(L, -1);
+        if (a0 is null) {
+            string errMsg = "Error in call to Helix:new{}. " ~
+                "A Vector3 object is expected as the a0 argument. No valid Vector3 was found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        lua_pop(L, 1);
+        // Expect Vector3 at end point on local axis, a1.
+        lua_getfield(L, 1, "a1");
+        if (lua_isnil(L, -1)) {
+            string errMsg = "Error in call to Helix:new{}. No a1 entry found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        auto a1 = checkVector3(L, -1);
+        if (a1 is null) {
+            string errMsg = "Error in call to Helix:new{}. " ~
+                "A Vector3 object is expected as the a1 argument. No valid Vector3 was found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        lua_pop(L, 1);
+        // Expect Vector3 specifying local x-direction.
+        lua_getfield(L, 1, "xlocal");
+        if (lua_isnil(L, -1)) {
+            string errMsg = "Error in call to Helix:new{}. No xlocal entry found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        auto xlocal = checkVector3(L, -1);
+        if (xlocal is null) {
+            string errMsg = "Error in call to Helix:new{}. " ~
+                "A Vector3 object is expected as the xlocal argument. No valid Vector3 was found.";
+            luaL_error(L, errMsg.toStringz());
+        }
+        lua_pop(L, 1);
+        string errMsgTmplt = "Error in call to Helix:new{}. " ~
+            "A valid value for '%s' was not found in list of arguments. " ~
+            "The value should be a number.";
+        double r0 = getNumberFromTable(L, 1, "r0", true, 1.0, true, format(errMsgTmplt, "r0"));
+        double r1 = getNumberFromTable(L, 1, "r1", true, 1.0, true, format(errMsgTmplt, "r1"));
+        double dtheta = getNumberFromTable(L, 1, "dtheta", true, 0.0, true, format(errMsgTmplt, "dtheta"));
+        my_helix = new Helix(*a0, *a1, *xlocal, r0, r1, dtheta);
     }
     assert(my_helix !is null, "Did not successfully make a Helix object.");
     pathStore ~= pushObj!(Helix, HelixMT)(L, my_helix);
@@ -518,40 +518,40 @@ extern(C) int newBezier(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Bezier:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Bezier:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["points"])) {
-	string errMsg = "Error in call to Bezier:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Bezier:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "points".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Bezier:new{}. No points entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Bezier:new{}. No points entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     if ( !lua_istable(L, -1) ) {
-	string errMsg = "Error in call to Bezier:new{}.; " ~
-	    "A table containing Vector3 points is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Bezier:new{}.; " ~
+            "A table containing Vector3 points is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 objects at array positions within that table.
     Vector3[] B;
     int position = 1;
     while ( true ) {
-	lua_rawgeti(L, -1, position);
-	if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
-	auto a = checkVector3(L, -1);
-	lua_pop(L, 1);
-	if ( a is null ) break;
-	B ~= *a;
-	++position;
+        lua_rawgeti(L, -1, position);
+        if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+        auto a = checkVector3(L, -1);
+        lua_pop(L, 1);
+        if ( a is null ) break;
+        B ~= *a;
+        ++position;
     }
     lua_pop(L, 1); // dispose of points table
     if ( B.length == 0 ) {
-	string errMsg = "Error in call to Bezier:new{}. No valid Vector3 objects found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Bezier:new{}. No valid Vector3 objects found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto bez = new Bezier(B);
     pathStore ~= pushObj!(Bezier, BezierMT)(L, bez);
@@ -579,40 +579,40 @@ extern(C) int newPolyline(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Polyline:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Polyline:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["segments"])) {
-	string errMsg = "Error in call to Polyline:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Polyline:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "segments".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Polyline:new{}. No segments entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Polyline:new{}. No segments entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     if ( !lua_istable(L, -1) ) {
-	string errMsg = "Error in call to Polyline:new{}.; " ~
-	    "A table containing Vector3 points is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Polyline:new{}.; " ~
+            "A table containing Vector3 points is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect Path objects at array positions within the segments table.
     Path[] segments;
     int position = 1;
     while ( true ) {
-	lua_rawgeti(L, -1, position);
-	if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
-	auto seg = checkPath(L, -1);
-	lua_pop(L, 1);
-	if ( seg is null ) break;
-	segments ~= seg;
-	++position;
+        lua_rawgeti(L, -1, position);
+        if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+        auto seg = checkPath(L, -1);
+        lua_pop(L, 1);
+        if ( seg is null ) break;
+        segments ~= seg;
+        ++position;
     }
     lua_pop(L, 1); // dispose of segments table
     if ( segments.length == 0 ) {
-	string errMsg = "Error in call to Polyline:new{}. No valid Path objects found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Polyline:new{}. No valid Path objects found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto poly = new Polyline(segments);
     pathStore ~= pushObj!(Polyline, PolylineMT)(L, poly);
@@ -639,40 +639,40 @@ extern(C) int newSpline(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Spline:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Spline:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["points"])) {
-	string errMsg = "Error in call to Spline:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Spline:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "points".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to Spline:new{}. No points entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Spline:new{}. No points entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     if ( !lua_istable(L, -1) ) {
-	string errMsg = "Error in call to Spline:new{}.; " ~
-	    "A table containing Vector3 points is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Spline:new{}.; " ~
+            "A table containing Vector3 points is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect Vector3 objects at array positions.
     Vector3[] B;
     int position = 1;
     while ( true ) {
-	lua_rawgeti(L, -1, position);
-	if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
-	auto a = checkVector3(L, -1);
-	lua_pop(L, 1);
-	if ( a is null ) break;
-	B ~= *a;
-	++position;
+        lua_rawgeti(L, -1, position);
+        if ( lua_isnil(L, -1) ) { lua_pop(L, 1); break; }
+        auto a = checkVector3(L, -1);
+        lua_pop(L, 1);
+        if ( a is null ) break;
+        B ~= *a;
+        ++position;
     }
     lua_pop(L, 1); // dispose of points table
     if ( B.length == 0 ) {
-	string errMsg = "Error in call to Spline:new{}. No valid Vector3 objects found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to Spline:new{}. No valid Vector3 objects found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto spline = new Polyline(B);
     pathStore ~= pushObj!(Polyline, PolylineMT)(L, spline);
@@ -694,19 +694,19 @@ extern(C) int newSpline2(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to Spline2:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Spline2:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["filename"])) {
-	string errMsg = "Error in call to Spline2:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Spline2:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     lua_getfield(L, 1, "filename".toStringz());
     if ( !lua_isstring(L, -1) ) {
-	string errMsg = "Error in call to Spline2:new{}.; " ~
-	    "A string containing the file name is expected, but no string was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to Spline2:new{}.; " ~
+            "A string containing the file name is expected, but no string was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     auto fileName = to!string(lua_tostring(L, -1));
     lua_pop(L, 1); // dispose of filename string
@@ -743,64 +743,64 @@ public:
     string luaFnName;
     this(const lua_State* L, string luaFnName)
     {
-	this.L = cast(lua_State*)L;
-	this.luaFnName = luaFnName;
+        this.L = cast(lua_State*)L;
+        this.luaFnName = luaFnName;
     }
     this(ref const(LuaFnPath) other)
     {
-	L = cast(lua_State*)other.L;
-	luaFnName = other.luaFnName;
+        L = cast(lua_State*)other.L;
+        luaFnName = other.luaFnName;
     }
     override LuaFnPath dup() const
     {
-	return new LuaFnPath(L, luaFnName);
+        return new LuaFnPath(L, luaFnName);
     }
     override Vector3 opCall(double t) const 
     {
-	// Call back to the Lua function.
-	lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
-	lua_pushnumber(cast(lua_State*)L, t);
-	if ( lua_pcall(cast(lua_State*)L, 1, 1, 0) != 0 ) {
-	    string errMsg = "Error in call to " ~ luaFnName ~ 
-		" from LuaFnPath:opCall(): " ~ 
-		to!string(lua_tostring(cast(lua_State*)L, -1));
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
-	}
-	// We are expecting a table to be returned, containing three numbers.
-	if ( !lua_istable(cast(lua_State*)L, -1) ) {
-	    string errMsg = "Error in call to LuaFnPath:opCall().; " ~
-		"A table containing arguments is expected, but no table was found.";
-	    luaL_error(cast(lua_State*)L, errMsg.toStringz);
-	}
-	double x = 0.0; // default value
-	lua_getfield(cast(lua_State*)L, -1, "x".toStringz());
-	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
-	    x = to!double(lua_tonumber(cast(lua_State*)L, -1));
-	}
-	lua_pop(cast(lua_State*)L, 1);
-	double y = 0.0; // default value
-	lua_getfield(cast(lua_State*)L, -1, "y".toStringz());
-	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
-	    y = to!double(lua_tonumber(cast(lua_State*)L, -1));
-	}
-	lua_pop(cast(lua_State*)L, 1);
-	double z = 0.0; // default value
-	lua_getfield(cast(lua_State*)L, -1, "z".toStringz());
-	if ( lua_isnumber(cast(lua_State*)L, -1) ) {
-	    z = to!double(lua_tonumber(cast(lua_State*)L, -1));
-	}
-	lua_pop(cast(lua_State*)L, 1);
-	//
-	lua_settop(cast(lua_State*)L, 0); // clear the stack
-	return Vector3(x, y, z);
+        // Call back to the Lua function.
+        lua_getglobal(cast(lua_State*)L, luaFnName.toStringz);
+        lua_pushnumber(cast(lua_State*)L, t);
+        if ( lua_pcall(cast(lua_State*)L, 1, 1, 0) != 0 ) {
+            string errMsg = "Error in call to " ~ luaFnName ~ 
+                " from LuaFnPath:opCall(): " ~ 
+                to!string(lua_tostring(cast(lua_State*)L, -1));
+            luaL_error(cast(lua_State*)L, errMsg.toStringz);
+        }
+        // We are expecting a table to be returned, containing three numbers.
+        if ( !lua_istable(cast(lua_State*)L, -1) ) {
+            string errMsg = "Error in call to LuaFnPath:opCall().; " ~
+                "A table containing arguments is expected, but no table was found.";
+            luaL_error(cast(lua_State*)L, errMsg.toStringz);
+        }
+        double x = 0.0; // default value
+        lua_getfield(cast(lua_State*)L, -1, "x".toStringz());
+        if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+            x = to!double(lua_tonumber(cast(lua_State*)L, -1));
+        }
+        lua_pop(cast(lua_State*)L, 1);
+        double y = 0.0; // default value
+        lua_getfield(cast(lua_State*)L, -1, "y".toStringz());
+        if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+            y = to!double(lua_tonumber(cast(lua_State*)L, -1));
+        }
+        lua_pop(cast(lua_State*)L, 1);
+        double z = 0.0; // default value
+        lua_getfield(cast(lua_State*)L, -1, "z".toStringz());
+        if ( lua_isnumber(cast(lua_State*)L, -1) ) {
+            z = to!double(lua_tonumber(cast(lua_State*)L, -1));
+        }
+        lua_pop(cast(lua_State*)L, 1);
+        //
+        lua_settop(cast(lua_State*)L, 0); // clear the stack
+        return Vector3(x, y, z);
     } // end opCall()
     override string toString() const
     {
-	return "LuaFnPath(luaFnName=\"" ~ luaFnName ~ "\")";
+        return "LuaFnPath(luaFnName=\"" ~ luaFnName ~ "\")";
     }
     override string classString() const
     {
-	return "LuaFnPath";
+        return "LuaFnPath";
     }
 } // end class LuaFnPath
 
@@ -809,28 +809,28 @@ extern(C) int newLuaFnPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to LuaFnPath:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnPath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["luaFnName"])) {
-	string errMsg = "Error in call to LuaFnPath:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to LuaFnPath:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect function name in table.
     string fnName = "";
     lua_getfield(L, 1, "luaFnName".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to LuaFnPath:new{}. No luaFnName entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to LuaFnPath:new{}. No luaFnName entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     if ( lua_isstring(L, -1) ) {
-	fnName ~= to!string(lua_tostring(L, -1));
+        fnName ~= to!string(lua_tostring(L, -1));
     }
     lua_pop(L, 1);
     if ( fnName == "" ) {
-	string errMsg = "Error in call to LuaFnPath:new{}. No function name found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to LuaFnPath:new{}. No function name found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto lfp = new LuaFnPath(L, fnName);
     pathStore ~= pushObj!(LuaFnPath, LuaFnPathMT)(L, lfp);
@@ -855,32 +855,32 @@ extern(C) int newArcLengthParameterizedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to ArcLengthParameterizedPath:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ArcLengthParameterizedPath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["underlying_path"])) {
-	string errMsg = "Error in call to ArcLengthParameterizedPath:new{}. " ~
-	    "Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ArcLengthParameterizedPath:new{}. " ~
+            "Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect the underlying_path object in the table.
     lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to ArcLengthParameterizedPath:new{}." ~
-	    " No underlying_path entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ArcLengthParameterizedPath:new{}." ~
+            " No underlying_path entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( underlying_path is null ) {
-	string errMsg = "Error in call to ArcLengthParameterizedPath:new{};" ~ 
-	    " Not a valid Path object.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ArcLengthParameterizedPath:new{};" ~ 
+            " Not a valid Path object.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto alp_path = new ArcLengthParameterizedPath(underlying_path);
     pathStore ~= pushObj!(ArcLengthParameterizedPath,
-			  ArcLengthParameterizedPathMT)(L, alp_path);
+                          ArcLengthParameterizedPathMT)(L, alp_path);
     return 1;
 } // end newArcLengthParameterizedPath()
 
@@ -902,31 +902,31 @@ extern(C) int newSubRangedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to SubRangedPath:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to SubRangedPath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["underlying_path", "t0", "t1"])) {
-	string errMsg = "Error in call to SubRangedPath:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to SubRangedPath:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect the underlying_path object in the table.
     lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to SubRangedPath:new{}." ~
-	    " No underlying_path entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to SubRangedPath:new{}." ~
+            " No underlying_path entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( underlying_path is null ) {
-	string errMsg = "Error in call to SubRangedPath:new{};" ~ 
-	    " Not a valid Path object.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to SubRangedPath:new{};" ~ 
+            " Not a valid Path object.";
+        luaL_error(L, errMsg.toStringz());
     }
     string errMsgTmplt = "Error in call to SubRangedPath:new{}. " ~
-	"A valid value for '%s' was not found in list of arguments. " ~
-	"The value, if present, should be a number.";
+        "A valid value for '%s' was not found in list of arguments. " ~
+        "The value, if present, should be a number.";
     double t0 = getNumberFromTable(L, 1, "t0", false, 0.0, true, format(errMsgTmplt, "t0"));
     double t1 = getNumberFromTable(L, 1, "t1", false, 1.0, true, format(errMsgTmplt, "t1"));
     auto alp_path = new SubRangedPath(underlying_path, t0, t1);
@@ -942,8 +942,8 @@ extern(C) int t0Path(T, string MTname)(lua_State* L)
     int narg = lua_gettop(L);
     auto path = checkObj!(T, MTname)(L, 1);
     if ( narg == 1 ) { // This is a getter
-	lua_pushnumber(L, path.t0);
-	return 1;
+        lua_pushnumber(L, path.t0);
+        return 1;
     }
     // else: treat as a setter
     path.t0 = luaL_checknumber(L, 2);
@@ -958,8 +958,8 @@ extern(C) int t1Path(T, string MTname)(lua_State* L)
     int narg = lua_gettop(L);
     auto path = checkObj!(T, MTname)(L, 1);
     if ( narg == 1 ) { // This is a getter
-	lua_pushnumber(L, path.t1);
-	return 1;
+        lua_pushnumber(L, path.t1);
+        return 1;
     }
     // else: treat as a setter
     path.t1 = luaL_checknumber(L, 2);
@@ -984,27 +984,27 @@ extern(C) int newReversedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to ReversedPath:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ReversedPath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["underlying_path"])) {
-	string errMsg = "Error in call to ReversedPath:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ReversedPath:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect the underlying_path object in the table.
     lua_getfield(L, 1, "underlying_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to ReversedPath:new{}." ~
-	    " No underlying_path entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ReversedPath:new{}." ~
+            " No underlying_path entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto underlying_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( underlying_path is null ) {
-	string errMsg = "Error in call to ReversedPath:new{};" ~ 
-	    " Not a valid Path object.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ReversedPath:new{};" ~ 
+            " Not a valid Path object.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto alp_path = new ReversedPath(underlying_path);
     pathStore ~= pushObj!(ReversedPath, ReversedPathMT)(L, alp_path);
@@ -1029,35 +1029,35 @@ extern(C) int newTranslatedPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to TranslatedPath:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to TranslatedPath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["original_path", "shift"])) {
-	string errMsg = "Error in call to TranslatedPath:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to TranslatedPath:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect the original_path object in the table.
     lua_getfield(L, 1, "original_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to TranslatedPath:new{}." ~
-	    " No original_path entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to TranslatedPath:new{}." ~
+            " No original_path entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto original_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( original_path is null ) {
-	string errMsg = "Error in call to TranslatedPath:new{};" ~ 
-	    " Not a valid Path object.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to TranslatedPath:new{};" ~ 
+            " Not a valid Path object.";
+        luaL_error(L, errMsg.toStringz());
     }
     // Expect Vector3 for key "shift".
     lua_getfield(L, 1, "shift".toStringz());
     auto shift = checkVector3(L, -1);
     if ( shift is null ) {
-	string errMsg = "Error in call to TranslatedPath:new{}. " ~
-	    "A Vector3 object is expected at key shift. No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to TranslatedPath:new{}. " ~
+            "A Vector3 object is expected at key shift. No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     auto tr_path = new TranslatedPath(original_path, *shift);
@@ -1084,43 +1084,43 @@ extern(C) int newMirrorImagePath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to MirrorImagePath:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to MirrorImagePath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["original_path", "point", "normal"])) {
-	string errMsg = "Error in call to MirrorImagePath:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to MirrorImagePath:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect the original_path object in the table.
     lua_getfield(L, 1, "original_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to MirrorImagePath:new{}." ~
-	    " No original_path entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to MirrorImagePath:new{}." ~
+            " No original_path entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto original_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( original_path is null ) {
-	string errMsg = "Error in call to MirrorImagePath:new{}. Not a valid Path object.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to MirrorImagePath:new{}. Not a valid Path object.";
+        luaL_error(L, errMsg.toStringz());
     }
     // Expect Vector3 for key "point".
     lua_getfield(L, 1, "point".toStringz());
     auto point = checkVector3(L, -1);
     if ( point is null ) {
-	string errMsg = "Error in call to MirrorImagePath:new{}. " ~
-	    "A Vector3 object is expected at key point. No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to MirrorImagePath:new{}. " ~
+            "A Vector3 object is expected at key point. No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Expect Vector3 for key "normal".
     lua_getfield(L, 1, "normal".toStringz());
     auto normal = checkVector3(L, -1);
     if ( normal is null ) {
-	string errMsg = "Error in call to MirrorImagePath:new{}. " ~
-	    "A Vector3 object is expected at key normal. No valid Vector3 was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to MirrorImagePath:new{}. " ~
+            "A Vector3 object is expected at key normal. No valid Vector3 was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     auto mi_path = new MirrorImagePath(original_path, *point, *normal);
@@ -1145,32 +1145,32 @@ extern(C) int newRotatedAboutZAxisPath(lua_State* L)
     lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}.; " ~
-	    "A table containing arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to RotatedAboutZAxisPath:new{}.; " ~
+            "A table containing arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["original_path", "angle"])) {
-	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}. Invalid name in table.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to RotatedAboutZAxisPath:new{}. Invalid name in table.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect the original_path object in the table.
     lua_getfield(L, 1, "original_path".toStringz());
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}." ~
-	    " No original_path entry found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to RotatedAboutZAxisPath:new{}." ~
+            " No original_path entry found.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto original_path = checkPath(L, -1);
     lua_pop(L, 1);
     if ( original_path is null ) {
-	string errMsg = "Error in call to RotatedAboutZAxisPath:new{}. Not a valid Path object.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to RotatedAboutZAxisPath:new{}. Not a valid Path object.";
+        luaL_error(L, errMsg.toStringz());
     }
     string errMsgTmplt = "Error in call to RotatedAboutZAxisPath:new{}. " ~
-	"A valid value for '%s' was not found in list of arguments. " ~
-	"The value, if present, should be a number.";
+        "A valid value for '%s' was not found in list of arguments. " ~
+        "The value, if present, should be a number.";
     double angle = getNumberFromTable(L, 1, "angle", false, 0.0, true, 
-				      format(errMsgTmplt, "angle"));
+                                      format(errMsgTmplt, "angle"));
     auto raza_path = new RotatedAboutZAxisPath(original_path, angle);
     pathStore ~= pushObj!(RotatedAboutZAxisPath, RotatedAboutZAxisPathMT)(L, raza_path);
     return 1;
@@ -1387,19 +1387,19 @@ void registerPaths(lua_State* L)
     lua_pushcfunction(L, &newArcLengthParameterizedPath);
     lua_setfield(L, -2, "new");
     lua_pushcfunction(L, &opCallPath!(ArcLengthParameterizedPath,
-				      ArcLengthParameterizedPathMT));
+                                      ArcLengthParameterizedPathMT));
     lua_setfield(L, -2, "__call");
     lua_pushcfunction(L, &opCallPath!(ArcLengthParameterizedPath,
-				      ArcLengthParameterizedPathMT));
+                                      ArcLengthParameterizedPathMT));
     lua_setfield(L, -2, "eval");
     lua_pushcfunction(L, &toStringObj!(ArcLengthParameterizedPath,
-				       ArcLengthParameterizedPathMT));
+                                       ArcLengthParameterizedPathMT));
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &copyPath!(ArcLengthParameterizedPath,
-				    ArcLengthParameterizedPathMT));
+                                    ArcLengthParameterizedPathMT));
     lua_setfield(L, -2, "copy");
     lua_pushcfunction(L, &pathIntersect2D!(ArcLengthParameterizedPath,
-					   ArcLengthParameterizedPathMT));
+                                           ArcLengthParameterizedPathMT));
     lua_setfield(L, -2, "intersect2D");
 
     lua_setglobal(L, ArcLengthParameterizedPathMT.toStringz);

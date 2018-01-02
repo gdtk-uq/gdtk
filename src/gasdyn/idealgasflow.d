@@ -114,7 +114,7 @@ unittest {
 double m2_shock(double M1, double g=1.4)
 {
     if (M1 < 1.0) {
-	throw new Error(text("r2_r1: subsonic Mach number: ", M1));
+        throw new Error(text("r2_r1: subsonic Mach number: ", M1));
     } // end if
     double numer = 1.0 + (g - 1.0) * 0.5 * M1^^2;
     double denom = g * M1^^2 - (g - 1.0) * 0.5;
@@ -130,7 +130,7 @@ double m2_shock(double M1, double g=1.4)
 double r2_r1(double M1, double g=1.4)
 {
     if (M1 < 1.0) {
-	throw new Error(text("r2_r1: subsonic Mach number: ", M1));
+        throw new Error(text("r2_r1: subsonic Mach number: ", M1));
     }
     double numer = (g + 1.0) * M1^^2;
     double denom = 2.0 + (g - 1.0) * M1^^2;
@@ -146,7 +146,7 @@ double r2_r1(double M1, double g=1.4)
 double u2_u1(double M1, double g=1.4)
 {
     if (M1 < 1.0) {
-	throw new Error(text("u2_u1: subsonic Mach number: ", M1));
+        throw new Error(text("u2_u1: subsonic Mach number: ", M1));
     }
     return 1.0 / r2_r1(M1, g);
 }
@@ -160,7 +160,7 @@ double u2_u1(double M1, double g=1.4)
 double p2_p1(double M1, double g=1.4)
 {
     if (M1 < 1.0) {
-	throw new Error(text("p2_p1: subsonic Mach number: ", M1));
+        throw new Error(text("p2_p1: subsonic Mach number: ", M1));
     }
     return 1.0 + 2.0 * g / (g + 1.0) * (M1^^2 - 1.0);
 }
@@ -215,11 +215,11 @@ double DS_Cv(double M1, double g=1.4)
 double pitot_p(double p1, double M1, double g=1.4)
 {
     if (M1 > 1.0) {
-	double p2 = p2_p1(M1,g)*p1;
-	double M2 = m2_shock(M1, g);
-	return p0_p(M2, g)*p2;
+        double p2 = p2_p1(M1,g)*p1;
+        double M2 = m2_shock(M1, g);
+        return p0_p(M2, g)*p2;
     } else {
-	return p0_p(M1, g)*p1;
+        return p0_p(M1, g)*p1;
     } // end if
 } // end pitot_p()
 
@@ -360,10 +360,10 @@ double PM1(double M,double g=1.4)
     double temp2 = M * M - 1.0;
     double nu = 0.0;
     if (temp2 < 0.0) {
-	throw new Error(text("PM1 received a subsonic Mach number: ", M ));
+        throw new Error(text("PM1 received a subsonic Mach number: ", M ));
     } else {
-	temp2 = sqrt(temp2);
-	nu = temp1 * atan(temp2 / temp1) - atan(temp2);
+        temp2 = sqrt(temp2);
+        nu = temp1 * atan(temp2 / temp1) - atan(temp2);
     } // end if
     return nu;
 } // end PM1()
@@ -379,7 +379,7 @@ double PM1(double M,double g=1.4)
 double PM2(double nu, double g=1.4, double tol=1.0e-6)
 {
     if (nu < 0.0) {
-	throw new Error("Given negative value for Prandtl-Meyer function.");
+        throw new Error("Given negative value for Prandtl-Meyer function.");
     } // end if
     //
     // Generate an initial guess and, it it is good, return it.
@@ -394,19 +394,19 @@ double PM2(double nu, double g=1.4, double tol=1.0e-6)
     double f_1  = nu - nu_1;
     int count = 0;
     do {
-	++count;
-	// Improve the guess to Mach number.
-	double slope = (f_1 - f_0) / (M_1 - M_0);
-	double M_2 = M_1 - f_1 / slope;
-	double nu_2 = PM1(M_2, g);
-	double f_2 = nu - nu_2;
-	// Prepare for next iteration.
-	M_0 = M_1; nu_0 = nu_1; f_0 = f_1;
-	M_1 = M_2; nu_1 = nu_2; f_1 = f_2;
+        ++count;
+        // Improve the guess to Mach number.
+        double slope = (f_1 - f_0) / (M_1 - M_0);
+        double M_2 = M_1 - f_1 / slope;
+        double nu_2 = PM1(M_2, g);
+        double f_2 = nu - nu_2;
+        // Prepare for next iteration.
+        M_0 = M_1; nu_0 = nu_1; f_0 = f_1;
+        M_1 = M_2; nu_1 = nu_2; f_1 = f_2;
     } while (fabs(f_1) > tol && count < 30);
     //
     if (fabs(f_1) > tol) {
-	throw new Error(text("PM2: iteration did not converge."));
+        throw new Error(text("PM2: iteration did not converge."));
     }
     return M_1;
 } // end PM2()
@@ -426,18 +426,18 @@ double MFromNu_approximate(double nu,double g=1.4)
     double M = 0.0;
     double nu_d = nu * 180.0 / PI;
     if (nu_d < 0.0) {
-	M = 0.0;
+        M = 0.0;
     } else if (nu_d < 5.0) {
-	M = 1.0 + 7.932e-2 * pow(nu_d, 2.0/3.0) * 
-	    (1.0 + nu_d * (3.681e-2 + nu_d * (-5.99e-3 + nu_d * 5.719e-4)) );
+        M = 1.0 + 7.932e-2 * pow(nu_d, 2.0/3.0) * 
+            (1.0 + nu_d * (3.681e-2 + nu_d * (-5.99e-3 + nu_d * 5.719e-4)) );
     } else if ( nu_d < 65.0 ) {
-	M = 1.071 + nu_d * (3.968e-2 + nu_d * (-4.615e-4 + nu_d *
-					       (1.513e-5 + nu_d * (-1.840e-7 + nu_d * 1.186e-9))));
+        M = 1.071 + nu_d * (3.968e-2 + nu_d * (-4.615e-4 + nu_d *
+                                               (1.513e-5 + nu_d * (-1.840e-7 + nu_d * 1.186e-9))));
     } else {
-	// Use an asymptotic expansion for large M.
-	double bigG = sqrt((g + 1.0) / (g - 1.0));
-	double nu_max = PI_2 * (bigG - 1.0);
-	M = (1.0 - bigG * bigG) / (nu - nu_max);
+        // Use an asymptotic expansion for large M.
+        double bigG = sqrt((g + 1.0) / (g - 1.0));
+        double nu_max = PI_2 * (bigG - 1.0);
+        M = (1.0 - bigG * bigG) / (nu - nu_max);
     } // end if
     return M;
 } // end MFromNu_approx()
@@ -451,9 +451,9 @@ double MFromNu_approximate(double nu,double g=1.4)
 double MachAngle(double M) 
 {
     if (M < 1.0) {
-	throw new Error(text("MachAngle: subsonic Mach number: ", M));
+        throw new Error(text("MachAngle: subsonic Mach number: ", M));
     } else {
-	return asin(1.0/M);
+        return asin(1.0/M);
     } // end if
 } // end MachAngle()
 
@@ -462,26 +462,26 @@ unittest {
     double g = 1.4;
     assert(approxEqual(PM1(M,g), 0.6413), "Prandtl-Meyer fail");
     try {
-	PM1(0.8,g);
+        PM1(0.8,g);
     }
     catch (Error e) {
-	auto found_subsonic = (indexOf(e.toString(), "subsonic") != -1);
-	assert(found_subsonic, "Prandtl-Meyer failed to catch subsonic M");
+        auto found_subsonic = (indexOf(e.toString(), "subsonic") != -1);
+        assert(found_subsonic, "Prandtl-Meyer failed to catch subsonic M");
     }
     double nu = 0.6413479572;
     assert(approxEqual(PM2(nu,g), 2.4), "Inverse Prandtl-Meyer fail");
     try {
-	PM2(-0.5,g);
+        PM2(-0.5,g);
     } catch (Error e) {
-	auto found_negative = (indexOf(e.toString(), "negative") != -1);
-	assert(found_negative, "Prandtl-Meyer failed to catch negative nu");
+        auto found_negative = (indexOf(e.toString(), "negative") != -1);
+        assert(found_negative, "Prandtl-Meyer failed to catch negative nu");
     }
     assert(approxEqual(MachAngle(M), 0.430), "Mach angle fail");
     try {
-	MachAngle(0.8);
+        MachAngle(0.8);
     } catch (Error e) {
-	auto found_subsonic = (indexOf(e.toString(), "subsonic") != -1);
-	assert(found_subsonic, "Mach angle failed to catch subsonic M");
+        auto found_subsonic = (indexOf(e.toString(), "subsonic") != -1);
+        assert(found_subsonic, "Mach angle failed to catch subsonic M");
     }
 } // end unittest
 
@@ -502,7 +502,7 @@ unittest {
 double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
 {
     if (M1 < 1.0) {
-	throw new Error(text("beta_obl: subsonic Mach number: ", M1));
+        throw new Error(text("beta_obl: subsonic Mach number: ", M1));
     } // end if
     int sign_beta = (theta < 0.0) ? -1 : 1;
     theta = fabs(theta);
@@ -529,10 +529,10 @@ double beta_obl(double M1, double theta, double g=1.4,double tol=1.0e-6)
 double beta_obl2(double M1, double p2_p1, double g=1.4)
 {
     if (M1 < 1.0) {
-	throw new Error(text("beta_obl2: subsonic Mach number: ",M1));
+        throw new Error(text("beta_obl2: subsonic Mach number: ",M1));
     } // end if
     if (p2_p1 < 1.0) {
-	throw new Error(text("beta_obl2: invalid p2_p1: ", p2_p1));
+        throw new Error(text("beta_obl2: invalid p2_p1: ", p2_p1));
     } // end if
     double dum1 = sqrt(((g+1.)*p2_p1+g-1.)/2./g);
     return asin(dum1/M1);
@@ -551,12 +551,12 @@ double theta_obl(double M1, double beta, double g=1.4)
     double M1n = M1 * fabs(sin(beta));
     if (fabs(M1n - 1) < 1.0e-9) return 0.0;
     if (M1n < 1.0) {
-	throw new Error(text("theta_obl: subsonic normal Mach number: ", M1n));
+        throw new Error(text("theta_obl: subsonic normal Mach number: ", M1n));
     }
     int sign_beta = (beta < 0.0) ? -1 : 1;
     beta = fabs(beta);
     if (dtan_theta(M1,beta,g) < 0.0){
-	throw new Error(text("theta_obl: shock is detached."));
+        throw new Error(text("theta_obl: shock is detached."));
     } // end if
     double t1 = 2.0 / tan(beta) * (M1n^^2 - 1.0); 
     double t2 = M1^^2 * (g + cos(2.0 * beta)) + 2.0;
@@ -577,8 +577,8 @@ double dtan_theta(double M1, double beta, double g=1.4)
     double dum1 = M1^^2*(cos(2.0*beta)+g)+2.0;
     double dum2 = M1^^2*sin(beta)^^2-1.0;
     return 4.0*M1^^2*cos(beta)^^2/dum1
-	+ 4.0*M1^^2*sin(2.0*beta)*dum2/(dum1^^2)/tan(beta)
-	- 2.0*dum2/dum1/(sin(beta)^^2);
+        + 4.0*M1^^2*sin(2.0*beta)*dum2/(dum1^^2)/tan(beta)
+        - 2.0*dum2/dum1/(sin(beta)^^2);
 } // end dtan_theta()
 
 /**
@@ -592,7 +592,7 @@ double M2_obl(double M1, double beta, double theta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-	throw new Error(text("M2_obl: subsonic normal Mach number: ", M1n));
+        throw new Error(text("M2_obl: subsonic normal Mach number: ", M1n));
     }
     double numer = 1.0 + (g - 1.0) * 0.5 * M1n^^2;
     double denom = g * M1n^^2 - (g - 1.0) * 0.5;
@@ -610,7 +610,7 @@ double r2_r1_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-	throw new Error(text("r2_r1_obl: subsonic normal Mach number: ", M1n));
+        throw new Error(text("r2_r1_obl: subsonic normal Mach number: ", M1n));
     }
     return r2_r1(M1n,g);
 } // end r2_r1_obl()
@@ -626,9 +626,9 @@ double Vn2_Vn1_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-	throw new Error(text("Vn2_Vn1_obl: subsonic normal Mach number: ", M1n));	
+        throw new Error(text("Vn2_Vn1_obl: subsonic normal Mach number: ", M1n));       
     }
-    return u2_u1(M1n,g);	
+    return u2_u1(M1n,g);        
 }
 
 /**
@@ -642,7 +642,7 @@ double V2_V1_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-	throw new Error(text("V2_V1_obl: subsonic normal Mach number: ", M1n));	
+        throw new Error(text("V2_V1_obl: subsonic normal Mach number: ", M1n)); 
     }
     return sqrt((sin(beta) / r2_r1_obl(M1, beta, g))^^2 + (cos(beta))^^2);
 }
@@ -658,7 +658,7 @@ double p2_p1_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-	throw new Error(text("p2_p1_obl: subsonic normal Mach number: ", M1n));
+        throw new Error(text("p2_p1_obl: subsonic normal Mach number: ", M1n));
     }
     return p2_p1(M1n,g);
 }
@@ -674,7 +674,7 @@ double T2_T1_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-	throw new Error(text("T2_T1_obl: subsonic normal Mach number: ", M1n));
+        throw new Error(text("T2_T1_obl: subsonic normal Mach number: ", M1n));
     }
     return T2_T1(M1n,g);
 }
@@ -690,7 +690,7 @@ double p02_p01_obl(double M1, double beta, double g=1.4)
 {
     double M1n = M1 * fabs(sin(beta));
     if (M1n < 1.0) {
-	throw new Error(text("p02_p01_obl: subsonic normal Mach number: ", M1n));
+        throw new Error(text("p02_p01_obl: subsonic normal Mach number: ", M1n));
     }
     return p02_p01(M1n,g);
 }
@@ -711,16 +711,16 @@ unittest {
     assert(approxEqual(Vn2_Vn1_obl(M, beta, g), 0.598), "Oblique shock, normal velocity ratio fail");
     assert(approxEqual(V2_V1_obl(M, beta, g),0.828), "Oblique shock, absolute velocity ratio fail");
     try {
-	beta_obl(M,40.*PI/180.,g);
+        beta_obl(M,40.*PI/180.,g);
     } catch (Error e) {
-	auto found_detached = (indexOf(e.toString(), "detached") != -1);
-	assert(found_detached, "beta_obl failed to catch detached shock");
+        auto found_detached = (indexOf(e.toString(), "detached") != -1);
+        assert(found_detached, "beta_obl failed to catch detached shock");
     }
     try {
-	T2_T1_obl(0.8,beta,g);
+        T2_T1_obl(0.8,beta,g);
     } catch (Error e) {
-	auto found_subsonic = (indexOf(e.toString(), "subsonic") != -1);
-	assert(found_subsonic, "Oblique shock relations failed to catch subsonic Mach");
+        auto found_subsonic = (indexOf(e.toString(), "subsonic") != -1);
+        assert(found_subsonic, "Oblique shock relations failed to catch subsonic Mach");
     }
 }
 
@@ -751,7 +751,7 @@ double[] taylor_maccoll_odes(double[] z, double theta, double g=1.4)
 }
 
 double[] theta_cone(double V1, double p1, double T1, double beta,
-		    double R=287.1, double g=1.4)
+                    double R=287.1, double g=1.4)
 {
     /**
     Compute the cone-surface angle and conditions given the shock wave angle.
@@ -803,9 +803,9 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
         // when the shock angle is only slightly larger than the Mach
         // angle. In this instance, find the value at LINEAR_INTER_SWITCH*mu
         // and linearly interpolate to find the value at beta
-	auto results = theta_cone(V1, p1, T1, beta2, R, g);
-	double theta2=results[0]; double V2=results[1];
-	double p2=results[2]; double T2=results[3];
+        auto results = theta_cone(V1, p1, T1, beta2, R, g);
+        double theta2=results[0]; double V2=results[1];
+        double p2=results[2]; double T2=results[3];
         double frac = (beta - mu)/(beta2 - mu);
         double theta_c = frac*theta2;
         double V = (1.0 - frac)*V1 + frac*V2;
@@ -855,7 +855,7 @@ double[] theta_cone(double V1, double p1, double T1, double beta,
 } // end theta_cone()
 
 double beta_cone(double V1, double p1, double T1, double theta,
-		 double R=287.1, double g=1.4)
+                 double R=287.1, double g=1.4)
 {
     /**
     Compute the conical shock wave angle given the cone-surface deflection angle.
@@ -883,7 +883,7 @@ double beta_cone(double V1, double p1, double T1, double theta,
     // We guess values of beta until this error measure is (close to) zero.
     auto error_in_theta = delegate (double beta_guess)
     {
-	double[] results = theta_cone(V1, p1, T1, beta_guess, R, g);
+        double[] results = theta_cone(V1, p1, T1, beta_guess, R, g);
         double theta_guess = results[0]; // here, we only care about this value
         return theta_guess - theta;
     };
@@ -930,7 +930,7 @@ unittest {
     assert(approxEqual(theta_c*180.0/PI, 19.96), "cone flow deflection angle fail");
     assert(approxEqual((p_c - p1)/(0.5*rho1*V1*V1), 0.386), "cone pressure coefficient fail");
     assert(approxEqual(beta_cone(V1, p1, T1, 20.0*PI/180)*180/PI, 49.0),
-	   "cone shock angle from deflection, V, p and T fail");
+           "cone shock angle from deflection, V, p and T fail");
     assert(approxEqual(beta_cone2(M1, 20.0*PI/180)*180/PI, 49.0),
-	   "cone shock angle from deflection and M fail");
+           "cone shock angle from deflection and M fail");
 }

@@ -40,12 +40,12 @@ public:
 
     this(int id, string label)
     {
-	this.id = id;
-	this.label = label;
-	myConfig = dedicatedSolidConfig[id];
-	myL = luaL_newstate();
-	luaL_openlibs(myL);
-	lua_pushinteger(myL, id); lua_setglobal(myL, "blkId");
+        this.id = id;
+        this.label = label;
+        myConfig = dedicatedSolidConfig[id];
+        myL = luaL_newstate();
+        luaL_openlibs(myL);
+        lua_pushinteger(myL, id); lua_setglobal(myL, "blkId");
     }
 
     override string toString() const { return "SolidBlock(id=" ~ to!string(id) ~ ")"; }

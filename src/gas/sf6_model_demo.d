@@ -12,7 +12,7 @@ void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes using SF6...");
     auto gm = init_gas_model("sample-data/SF6-gas-model.lua");
     foreach(i; 0 .. gm.n_species) {
-	writeln("species[", i, "] name=", gm.species_name(i));
+        writeln("species[", i, "] name=", gm.species_name(i));
     }
     auto gd = new GasState(gm, 101300, 400.0);
     writefln("R= %s, pressure= %s, temperature= %s", gm.R(gd), gd.p, gd.T);

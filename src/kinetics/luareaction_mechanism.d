@@ -47,52 +47,52 @@ extern(C) int newReactionMechanism(lua_State* L)
 
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to ReactionMechanism:new{}. " ~
-	    "A table containing named arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ReactionMechanism:new{}. " ~
+            "A table containing named arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect to find a 'filename' entry
     lua_getfield(L, 1, "filename");
     if ( !lua_isstring(L, -1) ) {
-	string errMsg = "Error in call to ReactionMechanism:new{}. " ~
-	    "A string was expected as the filename argument. " ~
-	    "No valid string was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ReactionMechanism:new{}. " ~
+            "A string was expected as the filename argument. " ~
+            "No valid string was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     auto fname = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
     // Expect to find a 'gasmodel' entry
     lua_getfield(L, 1, "gasmodel");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to ReactionMechanism:new{}. " ~
-	    "No gasmodel entry found in named arguments.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ReactionMechanism:new{}. " ~
+            "No gasmodel entry found in named arguments.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto gmodel = checkGasModel(L, -1);
     if ( gmodel is null ) {
-	string errMsg = "Error in call to ReactionMechanisms:new{}. " ~
-	    "A GasModel object was expected as the gasmodel argument. " ~
-	    "No valid GasModel was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ReactionMechanisms:new{}. " ~
+            "A GasModel object was expected as the gasmodel argument. " ~
+            "No valid GasModel was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     // Optionally look for T_lower and T_upper
     double T_lower;
     lua_getfield(L, 1, "T_lower");
     if ( lua_isnumber(L, -1) ) {
-	T_lower = luaL_checknumber(L, -1);
+        T_lower = luaL_checknumber(L, -1);
     }
     else {
-	T_lower = 300.0;
+        T_lower = 300.0;
     }
     lua_pop(L, 1);
     double T_upper;
     lua_getfield(L, 1, "T_upper");
     if ( lua_isnumber(L, -1) ) {
-	T_upper = luaL_checknumber(L, -1);
+        T_upper = luaL_checknumber(L, -1);
     }
     else {
-	T_upper = 30000.0;
+        T_upper = 30000.0;
     }
     lua_pop(L, 1);
 
@@ -143,8 +143,8 @@ extern(C) int evalRates(lua_State* L)
     rmech.eval_rates(conc, rates);
     lua_newtable(L);
     foreach (int isp; 1 .. gm.n_species+1) {
-	lua_pushnumber(L, rates[isp-1]);
-	lua_rawseti(L, -2, isp);
+        lua_pushnumber(L, rates[isp-1]);
+        lua_rawseti(L, -2, isp);
     }
     return 1;
 }

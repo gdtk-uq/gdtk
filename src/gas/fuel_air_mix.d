@@ -41,30 +41,30 @@ import kinetics.reaction;
 class FuelAirMix: ThermallyPerfectGas {
 public:
     this(lua_State *L) {
-	super(L); 
-	lua_getglobal(L, "FuelAirMix"); 
-	// Now, pull out the numeric value parameters.
-	_A_edm = getDouble(L, -1, "Aedm");
-	_B_edm = getDouble(L, -1, "Bedm");
-	_laminar_limit = getBool(L, -1, "lamLimit");
-	lua_pop(L, 1); // dispose of the table
+        super(L); 
+        lua_getglobal(L, "FuelAirMix"); 
+        // Now, pull out the numeric value parameters.
+        _A_edm = getDouble(L, -1, "Aedm");
+        _B_edm = getDouble(L, -1, "Bedm");
+        _laminar_limit = getBool(L, -1, "lamLimit");
+        lua_pop(L, 1); // dispose of the table
     } // end constructor
 
     override string toString() const
     {
-	char[] repr;
-	repr ~= "FuelAirMix =(";
-	repr ~= " Aedm=" ~ to!string(_A_edm);
-	repr ~= ", Bedm=" ~ to!string(_B_edm);
-	repr ~= ")";
-	return to!string(repr);
+        char[] repr;
+        repr ~= "FuelAirMix =(";
+        repr ~= " Aedm=" ~ to!string(_A_edm);
+        repr ~= ", Bedm=" ~ to!string(_B_edm);
+        repr ~= ")";
+        return to!string(repr);
     }
 
 private:
     //settings specific to EDM model
     double _A_edm;
     double _B_edm;
-    bool _laminar_limit;	
+    bool _laminar_limit;        
 } // end class FuelAirMix
 
 // Unit test of the basic gas model...
@@ -74,38 +74,38 @@ version(fuel_air_mix_test) {
     import util.msg_service;
 
     int main() {
-	lua_State* L = init_lua_State();
-	doLuaFile(L, "sample-data/fuel-air-mix-model.lua");
-	auto gm = new FuelAirMix(L);
-	lua_close(L);
-	auto gd = new GasState(2, 0);
-	gd.p = 1.0e5;
-	gd.T = 300.0;
-	gd.massf[0] = 0.75; gd.massf[1] = 0.25;
-	/+
-	 [FIX-ME]
-	assert(approxEqual(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
-	assert(gm.n_modes == 0, failedUnitTest());
-	assert(gm.n_species == 2, failedUnitTest());
-	assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
+        lua_State* L = init_lua_State();
+        doLuaFile(L, "sample-data/fuel-air-mix-model.lua");
+        auto gm = new FuelAirMix(L);
+        lua_close(L);
+        auto gd = new GasState(2, 0);
+        gd.p = 1.0e5;
+        gd.T = 300.0;
+        gd.massf[0] = 0.75; gd.massf[1] = 0.25;
+        /+
+         [FIX-ME]
+        assert(approxEqual(gm.R(gd), 287.0, 1.0e-4), failedUnitTest());
+        assert(gm.n_modes == 0, failedUnitTest());
+        assert(gm.n_species == 2, failedUnitTest());
+        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.massf[0], 0.75, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.massf[1], 0.25, 1.0e-6), failedUnitTest());
 
-	gm.update_thermo_from_pT(gd);
-	gm.update_sound_speed(gd);
-	double my_rho = 1.0e5 / (287.0 * 300.0);
-	assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
-	double my_Cv = gm.dudT_const_v(gd);
-	double my_u = my_Cv*300.0 - 0.25*300000.0; 
-	assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
-	double my_Cp = gm.dhdT_const_p(gd);
-	double my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
-	assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
-	gm.update_trans_coeffs(gd);
-	assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
-	+/
-	return 0;
+        gm.update_thermo_from_pT(gd);
+        gm.update_sound_speed(gd);
+        double my_rho = 1.0e5 / (287.0 * 300.0);
+        assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
+        double my_Cv = gm.dudT_const_v(gd);
+        double my_u = my_Cv*300.0 - 0.25*300000.0; 
+        assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
+        double my_Cp = gm.dhdT_const_p(gd);
+        double my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
+        assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
+        gm.update_trans_coeffs(gd);
+        assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gd.k, 0.0, 1.0e-6), failedUnitTest());
+        +/
+        return 0;
     }
 }

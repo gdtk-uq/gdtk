@@ -27,13 +27,13 @@ double testFunction2(double[] x)
 {
     double x1 = x[0]; double x2 = x[1];   // rename to match the paper
     if ( (x1 * x1 + x2 * x2) > 1.0 ) {
-	return 1.0e38;
+        return 1.0e38;
     } else {
-	double yp = 53.69 + 7.26 * x1 - 10.33 * x2 + 7.22 * x1 * x1 
-	    + 6.43 * x2 * x2 + 11.36 * x1 * x2;
-	double ys = 82.17 - 1.01 * x1 - 8.61 * x2 + 1.40 * x1 * x1 
-	    - 8.76 * x2 * x2 - 7.20 * x1 * x2;
-	return -yp + fabs(ys - 87.8);
+        double yp = 53.69 + 7.26 * x1 - 10.33 * x2 + 7.22 * x1 * x1 
+            + 6.43 * x2 * x2 + 11.36 * x1 * x2;
+        double ys = 82.17 - 1.01 * x1 - 8.61 * x2 + 1.40 * x1 * x1 
+            - 8.76 * x2 * x2 - 7.20 * x1 * x2;
+        return -yp + fabs(ys - 87.8);
     }
 }
  
@@ -47,10 +47,10 @@ double testFunction3(double[] z)
     double alpha1 = z[2]; double alpha2 = z[3];
     double sum_residuals = 0.0;
     foreach (i; 0 .. 6) {
-	double t = x[i];
-	double eta = a1 * exp(alpha1 * t) + a2 * exp(alpha2 * t);
-	double r = y[i] - eta;
-	sum_residuals += r * r;
+        double t = x[i];
+        double eta = a1 * exp(alpha1 * t) + a2 * exp(alpha2 * t);
+        double r = y[i] - eta;
+        sum_residuals += r * r;
     }
     return sum_residuals;
 }

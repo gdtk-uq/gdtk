@@ -54,18 +54,18 @@ size_t[] transformCellConnectivity(size_t[] ptOrder, int cellType)
         throw new FlowSolverException("Tecplot output for polygon data not avaiable");
     case 4: //tetra 01223333
         conn = [ptOrder[0], ptOrder[1], ptOrder[2], ptOrder[2],
-		ptOrder[3], ptOrder[3], ptOrder[3], ptOrder[3]];
+                ptOrder[3], ptOrder[3], ptOrder[3], ptOrder[3]];
         break;
     case 5: //wedge 01223455
         conn = [ptOrder[0], ptOrder[1], ptOrder[2], ptOrder[2],
-		ptOrder[3], ptOrder[4], ptOrder[5], ptOrder[5]];
+                ptOrder[3], ptOrder[4], ptOrder[5], ptOrder[5]];
         break;
     case 6: //hexa
         conn = ptOrder.dup;
         break;
     case 7: //pyramid 01234444
         conn = [ptOrder[0], ptOrder[1], ptOrder[2], ptOrder[3],
-		ptOrder[4], ptOrder[4], ptOrder[4], ptOrder[4]];
+                ptOrder[4], ptOrder[4], ptOrder[4], ptOrder[4]];
         break;
     }
     return conn;
@@ -98,27 +98,27 @@ void prepareGridConnectivity(Grid grid, ref int zoneType, ref size_t[][] connLis
     {
         auto cellType = grid.get_cell_type(i);
         if (specialCase) {
-	    connList ~= grid.get_vtx_id_list_for_cell(i);
-	    if (cellType != prevCellType ) {
-		// We won't be visiting this branch of code anymore.
-		specialCase = false;
-		// writeln("Non tria/tetra cell detected: switching to quad/hexa elements");
-		zoneType = (grid.dimensions == 2) ? 3 : 5;
-		// We need to convert all of our previous connList
-		foreach (j; 0 .. connList.length) {
-		    if ( grid.dimensions == 2 ) {
-			connList[j] = transformCellConnectivity(connList[j], 1);
-		    }
-		    else {
-			connList[j] = transformCellConnectivity(connList[j], 4);
-		    }
-		}
+            connList ~= grid.get_vtx_id_list_for_cell(i);
+            if (cellType != prevCellType ) {
+                // We won't be visiting this branch of code anymore.
+                specialCase = false;
+                // writeln("Non tria/tetra cell detected: switching to quad/hexa elements");
+                zoneType = (grid.dimensions == 2) ? 3 : 5;
+                // We need to convert all of our previous connList
+                foreach (j; 0 .. connList.length) {
+                    if ( grid.dimensions == 2 ) {
+                        connList[j] = transformCellConnectivity(connList[j], 1);
+                    }
+                    else {
+                        connList[j] = transformCellConnectivity(connList[j], 4);
+                    }
+                }
             }
             prevCellType = cellType;
         }
-	else {
-	    connList ~= transformCellConnectivity(grid.get_vtx_id_list_for_cell(i), cellType);
-	}
+        else {
+            connList ~= transformCellConnectivity(grid.get_vtx_id_list_for_cell(i), cellType);
+        }
     }
 }
 
@@ -126,8 +126,8 @@ int writeTecplotBinaryHeader(string jobName, int tindx, string fileName, string[
 {   
     string varstr;
     foreach (var; varNames) {
-	varstr ~= " ";
-	varstr ~= var;
+        varstr ~= " ";
+        varstr ~= var;
     }
     auto title = format("%s-t%04d", jobName, tindx);
     return dtecini142(title, varstr, fileName);
@@ -147,11 +147,11 @@ File writeTecplotAsciiHeader(string jobName, int tindx, string fileName, string[
 }
 
 int writeTecplotBinaryZoneHeader(BlockFlow flow, Grid grid, size_t idx,
-				 string[] varNames, double timestamp, int zoneType)
+                                 string[] varNames, double timestamp, int zoneType)
 {
     if (flow.ncells != grid.ncells) {
         string msg = format("Mismatch between grid and flow: grid.ncells= %d flow.ncells= %d\n",
-			    grid.ncells, flow.ncells);
+                            grid.ncells, flow.ncells);
         throw new FlowSolverException(msg);
     }
     int[] ValueLocation;
@@ -165,11 +165,11 @@ int writeTecplotBinaryZoneHeader(BlockFlow flow, Grid grid, size_t idx,
     }
     //k=0 and StrandId=0
     return dteczne142(zonetitle, zoneType, to!int(grid.nvertices), to!int(grid.ncells), 0,
-		      timestamp, 0, ValueLocation);
+                      timestamp, 0, ValueLocation);
 }
 
 void writeTecplotAsciiZoneHeader(BlockFlow flow, Grid grid, size_t idx, File fp,
-				 string[] varNames, double timestamp, int zoneType)
+                                 string[] varNames, double timestamp, int zoneType)
 {
     size_t NumberOfPoints = grid.nvertices;
     size_t NumberOfCells = flow.ncells;
@@ -177,7 +177,7 @@ void writeTecplotAsciiZoneHeader(BlockFlow flow, Grid grid, size_t idx, File fp,
 
     if (flow.ncells != grid.ncells) {
         string msg = format("Mismatch between grid and flow: grid.ncells= %d flow.ncells= %d\n",
-			    grid.ncells, flow.ncells);
+                            grid.ncells, flow.ncells);
         throw new FlowSolverException(msg);
     }
     fp.writef("ZONE T=\"block-%d\",", idx);
@@ -212,35 +212,35 @@ void writeTecplotBinaryZoneData(BlockFlow flow, Grid grid, string[] varNames, si
         z ~= grid[i].z;
     }
     if (dtecdat142(x) != 0)
-	throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+        throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
     if (dtecdat142(y) != 0)
-	throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+        throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
     if (dtecdat142(z) != 0)    
-	throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+        throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
 
     foreach (var; varNames) {
         if ((var == "pos.x") || (var == "pos.y") || (var == "pos.z")) {
             continue;
         }
         else {
-	    double[] v;
-	    foreach (i; 0 .. grid.ncells) v ~= flow[var,i];
-	    if (dtecdat142(v) != 0) 
-		throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+            double[] v;
+            foreach (i; 0 .. grid.ncells) v ~= flow[var,i];
+            if (dtecdat142(v) != 0) 
+                throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
         }
     }
     // Writing connectivity information
     foreach (connElem; conn) {
-	size_t[] c;
-	c.length = connElem.length;
-	c[] = connElem[] + 1; // Tecplot indices are 1-based
+        size_t[] c;
+        c.length = connElem.length;
+        c[] = connElem[] + 1; // Tecplot indices are 1-based
         if (dtecnode142(c) != 0)
-	    throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
+            throw new FlowSolverException("Error writing data in writeTecplotBinaryZoneData");
     }
 }
 
 void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
-			       string[] varNames, size_t[][] conn)
+                               string[] varNames, size_t[][] conn)
 {
     // Write the cell-centred flow data from a single block (index jb)
     // as an unstructured grid of finite-volume cells.
@@ -300,8 +300,8 @@ void writeTecplotAsciiZoneData(BlockFlow flow, Grid grid, File fp,
     // Writing connectivity information
     foreach (connElem; conn) {
         size_t[] c;
-	c.length = connElem.length;
-	c[] = connElem[] + 1; // Add 1 for 1-based indexing in Tecplot
+        c.length = connElem.length;
+        c[] = connElem[] + 1; // Add 1 for 1-based indexing in Tecplot
         foreach (id; c) fp.writef(" %d", id);
         fp.write("\n");
     }

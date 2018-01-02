@@ -47,20 +47,20 @@ body{
 class SutherlandThermCond : ThermalConductivity {
 public:
     this(in SutherlandThermCond src) {
-	_T_ref = src._T_ref;
-	_k_ref = src._k_ref;
-	_S = src._S;
+        _T_ref = src._T_ref;
+        _k_ref = src._k_ref;
+        _S = src._S;
     }
     this(double T_ref, double k_ref, double S) {
-	_T_ref = T_ref;
-	_k_ref = k_ref;
-	_S = S;
+        _T_ref = T_ref;
+        _k_ref = k_ref;
+        _S = S;
     }
     override SutherlandThermCond dup() const {
-	return new SutherlandThermCond(this);
+        return new SutherlandThermCond(this);
     }
     override double eval(ref const(GasState) Q, double T) const {
-	return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
+        return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
     }
 
 private:
@@ -79,19 +79,19 @@ SutherlandThermCond createSutherlandThermalConductivity(lua_State* L)
 
 version(sutherland_therm_cond_test) {
     int main() {
-	double T = 300.0;
-	double T_ref = 273.0; 
-	double k_ref = 0.0241;
-	double S = 194.0;
-	assert(approxEqual(sutherland_thermal_conductivity(T, T_ref, k_ref, S), 0.0262449, 1.0e-6), failedUnitTest());
+        double T = 300.0;
+        double T_ref = 273.0; 
+        double k_ref = 0.0241;
+        double S = 194.0;
+        assert(approxEqual(sutherland_thermal_conductivity(T, T_ref, k_ref, S), 0.0262449, 1.0e-6), failedUnitTest());
 
-	auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
-	auto gd = new GasState(1, 0);
-	gd.T = 300.0;
-	gd.k = 0.0;
-	tcm.update_thermal_conductivity(gd);
-	assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
+        auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
+        auto gd = new GasState(1, 0);
+        gd.T = 300.0;
+        gd.k = 0.0;
+        tcm.update_thermal_conductivity(gd);
+        assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
 
-	return 0;
+        return 0;
     }
 }

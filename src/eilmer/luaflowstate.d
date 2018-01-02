@@ -35,11 +35,11 @@ import fvcell;
 immutable string FlowStateMT = "_FlowState";
 
 immutable string[] validFlowStateFields = ["p", "T", "T_modes", "p_e",
-					   "quality", "massf",
-					   "mu", "k", 
-					   "velx", "vely", "velz",
-					   "Bx", "By", "Bz", "psi", "divB",
-					   "tke", "omega", "mu_t", "k_t", "S"];
+                                           "quality", "massf",
+                                           "mu", "k", 
+                                           "velx", "vely", "velz",
+                                           "Bx", "By", "Bz", "psi", "divB",
+                                           "tke", "omega", "mu_t", "k_t", "S"];
 static const(FlowState)[] flowStateStore;
 
 // Makes it a little more consistent to make this
@@ -79,19 +79,19 @@ extern(C) int newFlowState(lua_State* L)
 {
     auto managedGasModel = GlobalConfig.gmodel_master;
     if (managedGasModel is null) {
-	string errMsg = `Error in call to FlowState:new.
+        string errMsg = `Error in call to FlowState:new.
 It appears that you have not yet set the GasModel.
 Be sure to call setGasModel(fname) before using a FlowState object.`;
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     lua_remove(L, 1); // Remove first argument "this".
     FlowState fs;
     int narg = lua_gettop(L);
     if (narg == 0) {
-	// Make an empty FlowState
-	fs = new FlowState(managedGasModel);
-	flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
-	return 1;
+        // Make an empty FlowState
+        fs = new FlowState(managedGasModel);
+        flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
+        return 1;
     }
     fs = makeFlowStateFromTable(L, 1);
     flowStateStore ~= pushObj!(FlowState, FlowStateMT)(L, fs);
@@ -103,14 +103,14 @@ FlowState makeFlowStateFromTable(lua_State* L, int tblindx)
     string errMsg;
     auto managedGasModel = GlobalConfig.gmodel_master;
     if (managedGasModel is null) {
-	errMsg = `Error in call to makeFlowStateFromTable.
+        errMsg = `Error in call to makeFlowStateFromTable.
 It appears that you have not yet set the GasModel.
 Be sure to call setGasModel(fname) before using a FlowState object.`;
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     if (!lua_istable(L, tblindx)) {
-	errMsg = "Error in call to makeFlowStateFromTable. A table is expected as first argument.";
-	luaL_error(L, errMsg.toStringz);
+        errMsg = "Error in call to makeFlowStateFromTable. A table is expected as first argument.";
+        luaL_error(L, errMsg.toStringz);
     }
     // At this point we have a table at idx=1.
     //
@@ -122,23 +122,23 @@ Be sure to call setGasModel(fname) before using a FlowState object.`;
     lua_getfield(L, tblindx, "myType");
     string myType = "";
     if (lua_isstring(L, -1)) {
-	myType = to!string(lua_tostring(L, -1));
+        myType = to!string(lua_tostring(L, -1));
     }
     lua_pop(L, 1);
     if (myType != "FlowState" && myType != "CellData") {
-	// Proceed to check all entries.
-	lua_pushnil(L);
-	while (lua_next(L, tblindx) != 0) {
-	    string key = to!string(lua_tostring(L, -2));
-	    if (find(validFlowStateFields, key).empty) {
-		allFieldsAreValid = false;
-		errMsg ~= format("ERROR: '%s' is not a valid input in makeFlowStateFromTable\n", key);
-	    }
-	    lua_pop(L, 1);
-	}
+        // Proceed to check all entries.
+        lua_pushnil(L);
+        while (lua_next(L, tblindx) != 0) {
+            string key = to!string(lua_tostring(L, -2));
+            if (find(validFlowStateFields, key).empty) {
+                allFieldsAreValid = false;
+                errMsg ~= format("ERROR: '%s' is not a valid input in makeFlowStateFromTable\n", key);
+            }
+            lua_pop(L, 1);
+        }
     }
     if (!allFieldsAreValid) {
-	luaL_error(L, errMsg.toStringz);
+        luaL_error(L, errMsg.toStringz);
     }
     // Now we are committed to using the first constructor
     // in class _FlowState. So we have to find at least
@@ -160,18 +160,18 @@ The value should be a number.`;
     double[] T_modes;
     lua_getfield(L, tblindx, "T_modes");
     if (lua_isnumber(L, -1)) {
-	double Tval = lua_tonumber(L, -1);
-	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Tval; }
+        double Tval = lua_tonumber(L, -1);
+        foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= Tval; }
     } else if (lua_istable(L, -1)) {
-	getArrayOfDoubles(L, tblindx, "T_modes", T_modes);
-	if ( T_modes.length != managedGasModel.n_modes ) {
-	    errMsg = "Error in call to makeFlowStateFromTable.";
-	    errMsg ~= "Length of T_modes vector does not match number of modes in gas model.";
-	    errMsg ~= format("T_modes.length= %d; n_modes= %d\n", T_modes.length, managedGasModel.n_modes);
-	    throw new LuaInputException(errMsg);
-	}
+        getArrayOfDoubles(L, tblindx, "T_modes", T_modes);
+        if ( T_modes.length != managedGasModel.n_modes ) {
+            errMsg = "Error in call to makeFlowStateFromTable.";
+            errMsg ~= "Length of T_modes vector does not match number of modes in gas model.";
+            errMsg ~= format("T_modes.length= %d; n_modes= %d\n", T_modes.length, managedGasModel.n_modes);
+            throw new LuaInputException(errMsg);
+        }
     } else {
-	foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= T; }
+        foreach (i; 0 .. managedGasModel.n_modes) { T_modes ~= T; }
     }
     lua_pop(L, 1);
     // Values related to velocity.
@@ -192,22 +192,22 @@ The value should be a number.`;
     massf.length = nsp;
     lua_getfield(L, tblindx, "massf");
     if (lua_isnil(L, -1)) {
-	if (nsp == 1) {
-	    massf[0] = 1.0;
-	} else {
-	    errMsg = "ERROR: in call to makeFlowStateFromTable.\n";
-	    errMsg ~= format("You are using a multi-component gas with n_species= %d\n", nsp);
-	    errMsg ~= "However, you have not set any mass fraction values.\n";
-	    throw new LuaInputException(errMsg);
-	}
+        if (nsp == 1) {
+            massf[0] = 1.0;
+        } else {
+            errMsg = "ERROR: in call to makeFlowStateFromTable.\n";
+            errMsg ~= format("You are using a multi-component gas with n_species= %d\n", nsp);
+            errMsg ~= "However, you have not set any mass fraction values.\n";
+            throw new LuaInputException(errMsg);
+        }
     } else if (lua_istable(L, -1)) {
-	int massfIdx = lua_gettop(L);
-	getSpeciesValsFromTable(L, managedGasModel, massfIdx, massf, "massf");
+        int massfIdx = lua_gettop(L);
+        getSpeciesValsFromTable(L, managedGasModel, massfIdx, massf, "massf");
     } else {
-	errMsg = "Error in call to makeFlowStateFromTable.\n";
-	errMsg ~= "A field for mass fractions was found, but the contents are not valid.";
-	errMsg ~= "The mass fraction should be given as a table of key-value pairs { speciesName=val }.";
-	throw new LuaInputException(errMsg);
+        errMsg = "Error in call to makeFlowStateFromTable.\n";
+        errMsg ~= "A field for mass fractions was found, but the contents are not valid.";
+        errMsg ~= "The mass fraction should be given as a table of key-value pairs { speciesName=val }.";
+        throw new LuaInputException(errMsg);
     }
     lua_pop(L, 1);
 
@@ -238,7 +238,7 @@ The value should be a number.`;
     int S = getIntegerFromTable(L, tblindx, "S", false, 0, true, format(errMsgTmplt, "S"));
 
     auto fs = new FlowState(managedGasModel, p, T, T_modes, vel, massf, quality, B,
-			    psi, divB, tke, omega, mu_t, k_t, S);
+                            psi, divB, tke, omega, mu_t, k_t, S);
     return fs;
 } // end makeFlowStateFromTable()
     
@@ -305,8 +305,8 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     // -- massf as key-val table
     lua_newtable(L);
     foreach ( int isp, mf; fs.gas.massf ) {
-	lua_pushnumber(L, mf);
-	lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
+        lua_pushnumber(L, mf);
+        lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
     }
     lua_setfield(L, tblIdx, "massf");
     // -- done setting massf
@@ -384,7 +384,7 @@ extern(C) int fromTable(lua_State* L)
     auto managedGasModel = GlobalConfig.gmodel_master;
     auto fs = checkFlowState(L, 1);
     if ( !lua_istable(L, 2) ) {
-	return 0;
+        return 0;
     }
     // Look for gas variables: "p" and "quality"
     mixin(checkGasVar("p"));
@@ -393,18 +393,18 @@ extern(C) int fromTable(lua_State* L)
     // Look for a table with mass fraction info
     lua_getfield(L, 2, "massf");
     if ( lua_istable(L, -1) ) {
-	int massfIdx = lua_gettop(L);
-	getSpeciesValsFromTable(L, managedGasModel, massfIdx, fs.gas.massf, "massf");
+        int massfIdx = lua_gettop(L);
+        getSpeciesValsFromTable(L, managedGasModel, massfIdx, fs.gas.massf, "massf");
     }
     lua_pop(L, 1);
     // Look for an array of internal temperatures.
     mixin(checkGasVarArray("T_modes"));
     if ( fs.gas.T_modes.length != GlobalConfig.gmodel_master.n_modes ) {
-	string errMsg = "The temperature array ('T_modes') did not contain"~
-	    " the correct number of entries.\n";
-	errMsg ~= format("T_modes.length= %d; n_modes= %d\n", fs.gas.T_modes.length,
-			 GlobalConfig.gmodel_master.n_modes);
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "The temperature array ('T_modes') did not contain"~
+            " the correct number of entries.\n";
+        errMsg ~= format("T_modes.length= %d; n_modes= %d\n", fs.gas.T_modes.length,
+                         GlobalConfig.gmodel_master.n_modes);
+        luaL_error(L, errMsg.toStringz);
     }
     // Let's try to find rho and u so that the pT thermo call
     // has a good set of starting values.
@@ -419,33 +419,33 @@ extern(C) int fromTable(lua_State* L)
     // Look for velocity components: "velx", "vely", "velz"
     lua_getfield(L, 2, "velx");
     if ( !lua_isnil(L, -1 ) ) {
-	fs.vel.refx = luaL_checknumber(L, -1);
+        fs.vel.refx = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "vely");
     if ( !lua_isnil(L, -1 ) ) {
-	fs.vel.refy = luaL_checknumber(L, -1);
+        fs.vel.refy = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "velz");
     if ( !lua_isnil(L, -1 ) ) {
-	fs.vel.refz = luaL_checknumber(L, -1);
+        fs.vel.refz = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     // Look for B components: "Bx", "By", "Bz"
     lua_getfield(L, 2, "Bx");
     if ( !lua_isnil(L, -1 ) ) {
-	fs.B.refx = luaL_checknumber(L, -1);
+        fs.B.refx = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "By");
     if ( !lua_isnil(L, -1 ) ) {
-	fs.B.refy = luaL_checknumber(L, -1);
+        fs.B.refy = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
     lua_getfield(L, 2, "Bz");
     if ( !lua_isnil(L, -1 ) ) {
-	fs.B.refz = luaL_checknumber(L, -1);
+        fs.B.refz = luaL_checknumber(L, -1);
     }
     lua_pop(L, 1);
 
@@ -476,167 +476,167 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
     FlowState fs;
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
-	fs = checkFlowState(L, 3);
-	write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
-	return 0;
+        fs = checkFlowState(L, 3);
+        write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
+        return 0;
     }
     // Else, we might have a callable lua function
     if (lua_isfunction(L, 3)) {
-	// Assume we can use the function then.
-	// A lot of code borrowed from flowstate.d
-	// Keep in sync with write_initial_flow_file() function in that file.
-	//
-	// Numbers of cells derived from numbers of vertices in grid.
-	auto nicell = grid.niv - 1;
-	auto njcell = grid.njv - 1;
-	auto nkcell = grid.nkv - 1;
-	if (GlobalConfig.dimensions == 2) nkcell = 1;
-	//	
-	// Write the data for the whole structured block.
-	auto gmodel = GlobalConfig.gmodel_master;
-	auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
-						    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
-						    GlobalConfig.radiation);
-	switch (GlobalConfig.flow_format) {
-	case "gziptext": goto default;
-	case "rawbinary":
-	    File outfile = File(fname, "wb");
-	    int[1] int1; int[4] int4; double[1] dbl1; // buffer arrays
-	    string header = "structured_grid_flow 1.0";
-	    outfile.rawWrite(to!(char[])(header));
-	    int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
-	    if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
-	    dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
-	    int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
-	    foreach(varname; variable_list) {
-		int1[0] = to!int(varname.length); outfile.rawWrite(int1);
-		outfile.rawWrite(to!(char[])(varname));
-	    }
-	    int4[0] = to!int(GlobalConfig.dimensions);
-	    int4[1] = to!int(nicell); int4[2] = to!int(njcell); int4[3] = to!int(nkcell);
-	    outfile.rawWrite(int4);
-	    foreach (k; 0 .. nkcell) {
-		foreach (j; 0 .. njcell) {
-		    foreach (i; 0 .. nicell) {
-			Vector3 p000 = *grid[i,j,k];
-			Vector3 p100 = *grid[i+1,j,k];
-			Vector3 p110 = *grid[i+1,j+1,k];
-			Vector3 p010 = *grid[i,j+1,k];
-			// [TODO] provide better calculation using geom module.
-			// For the moment, it doesn't matter greatly because the solver 
-			// will compute it's own approximations
-			auto pos = 0.25*(p000 + p100 + p110 + p010);
-			double volume = 0.0; 
-			if (GlobalConfig.dimensions == 3) {
-			    Vector3 p001 = *grid[i,j,k+1];
-			    Vector3 p101 = *grid[i+1,j,k+1];
-			    Vector3 p111 = *grid[i+1,j+1,k+1];
-			    Vector3 p011 = *grid[i,j+1,k+1];
-			    pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
-			}
-			// Now grab flow state via Lua function call
-			lua_pushvalue(L, 3);
-			lua_pushnumber(L, pos.x);
-			lua_pushnumber(L, pos.y);
-			lua_pushnumber(L, pos.z);
-			if (lua_pcall(L, 3, 1, 0) != 0) {
-			    string errMsg = "Error in Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of position (x, y, z).\n";
-			    luaL_error(L, errMsg.toStringz);
-			}
-			if (lua_istable(L, -1)) {
-			    fs = makeFlowStateFromTable(L, lua_gettop(L));
-			} else {
-			    fs = checkFlowState(L, -1);
-			}
-			if (!fs) {
-			    string errMsg = "Error in from Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of position (x, y, z).\n";
-			    errMsg ~= "The returned object is not a proper _FlowState object or table.";
-			    luaL_error(L, errMsg.toStringz);
-			}
-			cell_data_to_raw_binary(outfile, pos, volume, fs,
-						0.0, 0.0, 0.0, -1.0, -1.0,
-						GlobalConfig.include_quality,
-						GlobalConfig.MHD,
-						GlobalConfig.divergence_cleaning,
-						GlobalConfig.radiation);
-		    }
-		}
-	    }
-	    outfile.close();
-	    break;
-	default:
-	    auto outfile = new GzipOut(fname);
-	    auto writer = appender!string();
-	    formattedWrite(writer, "structured_grid_flow 1.0\n");
-	    formattedWrite(writer, "label: %s\n", grid.label);
-	    formattedWrite(writer, "sim_time: %.18e\n", t0);
-	    formattedWrite(writer, "variables: %d\n", variable_list.length);
-	    // Variable list for cell on one line.
-	    foreach(varname; variable_list) {
-		formattedWrite(writer, " \"%s\"", varname);
-	    }
-	    formattedWrite(writer, "\n");
-	    // Numbers of cells
-	    formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
-	    formattedWrite(writer, "nicell: %d\n", nicell);
-	    formattedWrite(writer, "njcell: %d\n", njcell);
-	    formattedWrite(writer, "nkcell: %d\n", nkcell);
-	    outfile.compress(writer.data);
-	    // The actual cell data.
-	    foreach (k; 0 .. nkcell) {
-		foreach (j; 0 .. njcell) {
-		    foreach (i; 0 .. nicell) {
-			Vector3 p000 = *grid[i,j,k];
-			Vector3 p100 = *grid[i+1,j,k];
-			Vector3 p110 = *grid[i+1,j+1,k];
-			Vector3 p010 = *grid[i,j+1,k];
-			// [TODO] provide better calculation using geom module.
-			// For the moment, it doesn't matter greatly because the solver 
-			// will compute it's own approximations
-			auto pos = 0.25*(p000 + p100 + p110 + p010);
-			auto volume = 0.0;
-			if (GlobalConfig.dimensions == 3) {
-			    Vector3 p001 = *grid[i,j,k+1];
-			    Vector3 p101 = *grid[i+1,j,k+1];
-			    Vector3 p111 = *grid[i+1,j+1,k+1];
-			    Vector3 p011 = *grid[i,j+1,k+1];
-			    pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
-			}
-			// Now grab flow state via Lua function call
-			lua_pushvalue(L, 3);
-			lua_pushnumber(L, pos.x);
-			lua_pushnumber(L, pos.y);
-			lua_pushnumber(L, pos.z);
-			if (lua_pcall(L, 3, 1, 0) != 0) {
-			    string errMsg = "Error in Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of position (x, y, z).\n";
-			    luaL_error(L, errMsg.toStringz);
-			}
-			if (lua_istable(L, -1)) {
-			    fs = makeFlowStateFromTable(L, lua_gettop(L));
-			} else {
-			    fs = checkFlowState(L, -1);
-			}
-			if (!fs) {
-			    string errMsg = "Error in from Lua function call for setting FlowState\n";
-			    errMsg ~= "as a function of position (x, y, z).\n";
-			    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
-			    luaL_error(L, errMsg.toStringz);
-			}
-			outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-								   0.0, 0.0, 0.0, -1.0, -1.0,
-								   GlobalConfig.include_quality,
-								   GlobalConfig.MHD,
-								   GlobalConfig.divergence_cleaning,
-								   GlobalConfig.radiation) ~ "\n");
-		    } // end foreach i
-		} // end foreach j
-	    } // end foreach k
-	    outfile.finish();
-	} // end switch flow_format
-	return 0;
+        // Assume we can use the function then.
+        // A lot of code borrowed from flowstate.d
+        // Keep in sync with write_initial_flow_file() function in that file.
+        //
+        // Numbers of cells derived from numbers of vertices in grid.
+        auto nicell = grid.niv - 1;
+        auto njcell = grid.njv - 1;
+        auto nkcell = grid.nkv - 1;
+        if (GlobalConfig.dimensions == 2) nkcell = 1;
+        //      
+        // Write the data for the whole structured block.
+        auto gmodel = GlobalConfig.gmodel_master;
+        auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
+                                                    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+                                                    GlobalConfig.radiation);
+        switch (GlobalConfig.flow_format) {
+        case "gziptext": goto default;
+        case "rawbinary":
+            File outfile = File(fname, "wb");
+            int[1] int1; int[4] int4; double[1] dbl1; // buffer arrays
+            string header = "structured_grid_flow 1.0";
+            outfile.rawWrite(to!(char[])(header));
+            int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
+            if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
+            dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
+            int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
+            foreach(varname; variable_list) {
+                int1[0] = to!int(varname.length); outfile.rawWrite(int1);
+                outfile.rawWrite(to!(char[])(varname));
+            }
+            int4[0] = to!int(GlobalConfig.dimensions);
+            int4[1] = to!int(nicell); int4[2] = to!int(njcell); int4[3] = to!int(nkcell);
+            outfile.rawWrite(int4);
+            foreach (k; 0 .. nkcell) {
+                foreach (j; 0 .. njcell) {
+                    foreach (i; 0 .. nicell) {
+                        Vector3 p000 = *grid[i,j,k];
+                        Vector3 p100 = *grid[i+1,j,k];
+                        Vector3 p110 = *grid[i+1,j+1,k];
+                        Vector3 p010 = *grid[i,j+1,k];
+                        // [TODO] provide better calculation using geom module.
+                        // For the moment, it doesn't matter greatly because the solver 
+                        // will compute it's own approximations
+                        auto pos = 0.25*(p000 + p100 + p110 + p010);
+                        double volume = 0.0; 
+                        if (GlobalConfig.dimensions == 3) {
+                            Vector3 p001 = *grid[i,j,k+1];
+                            Vector3 p101 = *grid[i+1,j,k+1];
+                            Vector3 p111 = *grid[i+1,j+1,k+1];
+                            Vector3 p011 = *grid[i,j+1,k+1];
+                            pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+                        }
+                        // Now grab flow state via Lua function call
+                        lua_pushvalue(L, 3);
+                        lua_pushnumber(L, pos.x);
+                        lua_pushnumber(L, pos.y);
+                        lua_pushnumber(L, pos.z);
+                        if (lua_pcall(L, 3, 1, 0) != 0) {
+                            string errMsg = "Error in Lua function call for setting FlowState\n";
+                            errMsg ~= "as a function of position (x, y, z).\n";
+                            luaL_error(L, errMsg.toStringz);
+                        }
+                        if (lua_istable(L, -1)) {
+                            fs = makeFlowStateFromTable(L, lua_gettop(L));
+                        } else {
+                            fs = checkFlowState(L, -1);
+                        }
+                        if (!fs) {
+                            string errMsg = "Error in from Lua function call for setting FlowState\n";
+                            errMsg ~= "as a function of position (x, y, z).\n";
+                            errMsg ~= "The returned object is not a proper _FlowState object or table.";
+                            luaL_error(L, errMsg.toStringz);
+                        }
+                        cell_data_to_raw_binary(outfile, pos, volume, fs,
+                                                0.0, 0.0, 0.0, -1.0, -1.0,
+                                                GlobalConfig.include_quality,
+                                                GlobalConfig.MHD,
+                                                GlobalConfig.divergence_cleaning,
+                                                GlobalConfig.radiation);
+                    }
+                }
+            }
+            outfile.close();
+            break;
+        default:
+            auto outfile = new GzipOut(fname);
+            auto writer = appender!string();
+            formattedWrite(writer, "structured_grid_flow 1.0\n");
+            formattedWrite(writer, "label: %s\n", grid.label);
+            formattedWrite(writer, "sim_time: %.18e\n", t0);
+            formattedWrite(writer, "variables: %d\n", variable_list.length);
+            // Variable list for cell on one line.
+            foreach(varname; variable_list) {
+                formattedWrite(writer, " \"%s\"", varname);
+            }
+            formattedWrite(writer, "\n");
+            // Numbers of cells
+            formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+            formattedWrite(writer, "nicell: %d\n", nicell);
+            formattedWrite(writer, "njcell: %d\n", njcell);
+            formattedWrite(writer, "nkcell: %d\n", nkcell);
+            outfile.compress(writer.data);
+            // The actual cell data.
+            foreach (k; 0 .. nkcell) {
+                foreach (j; 0 .. njcell) {
+                    foreach (i; 0 .. nicell) {
+                        Vector3 p000 = *grid[i,j,k];
+                        Vector3 p100 = *grid[i+1,j,k];
+                        Vector3 p110 = *grid[i+1,j+1,k];
+                        Vector3 p010 = *grid[i,j+1,k];
+                        // [TODO] provide better calculation using geom module.
+                        // For the moment, it doesn't matter greatly because the solver 
+                        // will compute it's own approximations
+                        auto pos = 0.25*(p000 + p100 + p110 + p010);
+                        auto volume = 0.0;
+                        if (GlobalConfig.dimensions == 3) {
+                            Vector3 p001 = *grid[i,j,k+1];
+                            Vector3 p101 = *grid[i+1,j,k+1];
+                            Vector3 p111 = *grid[i+1,j+1,k+1];
+                            Vector3 p011 = *grid[i,j+1,k+1];
+                            pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+                        }
+                        // Now grab flow state via Lua function call
+                        lua_pushvalue(L, 3);
+                        lua_pushnumber(L, pos.x);
+                        lua_pushnumber(L, pos.y);
+                        lua_pushnumber(L, pos.z);
+                        if (lua_pcall(L, 3, 1, 0) != 0) {
+                            string errMsg = "Error in Lua function call for setting FlowState\n";
+                            errMsg ~= "as a function of position (x, y, z).\n";
+                            luaL_error(L, errMsg.toStringz);
+                        }
+                        if (lua_istable(L, -1)) {
+                            fs = makeFlowStateFromTable(L, lua_gettop(L));
+                        } else {
+                            fs = checkFlowState(L, -1);
+                        }
+                        if (!fs) {
+                            string errMsg = "Error in from Lua function call for setting FlowState\n";
+                            errMsg ~= "as a function of position (x, y, z).\n";
+                            errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
+                            luaL_error(L, errMsg.toStringz);
+                        }
+                        outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+                                                                   0.0, 0.0, 0.0, -1.0, -1.0,
+                                                                   GlobalConfig.include_quality,
+                                                                   GlobalConfig.MHD,
+                                                                   GlobalConfig.divergence_cleaning,
+                                                                   GlobalConfig.radiation) ~ "\n");
+                    } // end foreach i
+                } // end foreach j
+            } // end foreach k
+            outfile.finish();
+        } // end switch flow_format
+        return 0;
     } // end if lua_isfunction
     return -1;
 } // end write_initial_sg_flow_file_from_lua()
@@ -649,132 +649,132 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
     FlowState fs;
     // Test if we have a simple flow state or something more exotic
     if ( isObjType(L, 3, "_FlowState") ) {
-	fs = checkFlowState(L, 3);
-	write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
-	return 0;
+        fs = checkFlowState(L, 3);
+        write_initial_flow_file(fname, grid, fs, t0, GlobalConfig.gmodel_master);
+        return 0;
     }
     // Else, we might have a callable lua function
     if ( lua_isfunction(L, 3) ) {
-	// Assume we can use the function then.
-	// A lot of code borrowed from flowstate.d
-	// Keep in sync with write_initial_flow_file() function in that file.
-	//
-	// Numbers of cells derived from numbers of vertices in grid.
-	auto ncells = grid.ncells;
-	//	
-	// Write the data for the whole unstructured block.
-	auto gmodel = GlobalConfig.gmodel_master;
-	auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
-						    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
-						    GlobalConfig.radiation);
-	switch (GlobalConfig.flow_format) {
-	case "gziptext": goto default;
-	case "rawbinary":
-	    File outfile = File(fname, "wb");
-	    int[1] int1; int[2] int2; double[1] dbl1; // buffer arrays
-	    string header = "unstructured_grid_flow 1.0";
-	    outfile.rawWrite(to!(char[])(header));
-	    int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
-	    if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
-	    dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
-	    int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
-	    foreach(varname; variable_list) {
-		int1[0] = to!int(varname.length); outfile.rawWrite(int1);
-		outfile.rawWrite(to!(char[])(varname));
-	    }
-	    int2[0] = to!int(GlobalConfig.dimensions);
-	    int2[1] = to!int(ncells);
-	    outfile.rawWrite(int2);
-	    foreach (i; 0 .. ncells) {
-		Vector3 pos = Vector3(0.0, 0.0, 0.0);
-		foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
-		pos /= grid.cells[i].vtx_id_list.length;
-		double volume = 0.0; 
-		// Now grab flow state via Lua function call
-		lua_pushvalue(L, 3);
-		lua_pushnumber(L, pos.x);
-		lua_pushnumber(L, pos.y);
-		lua_pushnumber(L, pos.z);
-		if (lua_pcall(L, 3, 1, 0) != 0) {
-		    string errMsg = "Error in Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of position (x, y, z).\n";
-		    errMsg ~= format("LUA ERROR: %s\n", lua_tostring(L, -1));
-		    luaL_error(L, errMsg.toStringz);
-		}
-		if (lua_istable(L, -1)) {
-		    fs = makeFlowStateFromTable(L, lua_gettop(L));
-		} else {
-		    fs = checkFlowState(L, -1);
-		}
-		if (!fs) {
-		    string errMsg = "Error in from Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of position (x, y, z).\n";
-		    errMsg ~= "The returned object is not a proper _FlowState object or a suitable table.";
-		    luaL_error(L, errMsg.toStringz);
-		}
-		cell_data_to_raw_binary(outfile, pos, volume, fs,
-					0.0, 0.0, 0.0, -1.0, -1.0,
-					GlobalConfig.include_quality,
-					GlobalConfig.MHD,
-					GlobalConfig.divergence_cleaning,
-					GlobalConfig.radiation);
-	    }
-	    outfile.close();
-	break;
-	default:
-	    auto outfile = new GzipOut(fname);
-	    auto writer = appender!string();
-	    formattedWrite(writer, "unstructured_grid_flow 1.0\n");
-	    formattedWrite(writer, "label: %s\n", grid.label);
-	    formattedWrite(writer, "sim_time: %.18e\n", t0);
-	    formattedWrite(writer, "variables: %d\n", variable_list.length);
-	    // Variable list for cell on one line.
-	    foreach(varname; variable_list) {
-		formattedWrite(writer, " \"%s\"", varname);
-	    }
-	    formattedWrite(writer, "\n");
-	    // Numbers of cells
-	    formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
-	    formattedWrite(writer, "ncells: %d\n", ncells);
-	    outfile.compress(writer.data);
-	    // The actual cell data.
-	    foreach (i; 0 .. ncells) {
-		Vector3 pos = Vector3(0.0, 0.0, 0.0);
-		foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
-		pos /= grid.cells[i].vtx_id_list.length;
-		double volume = 0.0; 
-		// Now grab flow state via Lua function call
-		lua_pushvalue(L, 3);
-		lua_pushnumber(L, pos.x);
-		lua_pushnumber(L, pos.y);
-		lua_pushnumber(L, pos.z);
-		if (lua_pcall(L, 3, 1, 0) != 0) {
-		    string errMsg = "Error in Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of position (x, y, z).\n";
-		    errMsg ~= format("LUA ERROR: %s\n", lua_tostring(L, -1));
-		    luaL_error(L, errMsg.toStringz);
-		}
-		if (lua_istable(L, -1)) {
-		    fs = makeFlowStateFromTable(L, lua_gettop(L));
-		} else {
-		    fs = checkFlowState(L, -1);
-		}
-		if (!fs) {
-		    string errMsg = "Error in from Lua function call for setting FlowState\n";
-		    errMsg ~= "as a function of position (x, y, z).\n";
-		    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
-		    luaL_error(L, errMsg.toStringz);
-		}
-		outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-							   0.0, 0.0, 0.0, -1.0, -1.0,
-							   GlobalConfig.include_quality,
-							   GlobalConfig.MHD,
-							   GlobalConfig.divergence_cleaning,
-							   GlobalConfig.radiation) ~ "\n");
-	    } // end foreach i
-	    outfile.finish();
-	}
-	return 0;
+        // Assume we can use the function then.
+        // A lot of code borrowed from flowstate.d
+        // Keep in sync with write_initial_flow_file() function in that file.
+        //
+        // Numbers of cells derived from numbers of vertices in grid.
+        auto ncells = grid.ncells;
+        //      
+        // Write the data for the whole unstructured block.
+        auto gmodel = GlobalConfig.gmodel_master;
+        auto variable_list = variable_list_for_cell(gmodel, GlobalConfig.include_quality,
+                                                    GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
+                                                    GlobalConfig.radiation);
+        switch (GlobalConfig.flow_format) {
+        case "gziptext": goto default;
+        case "rawbinary":
+            File outfile = File(fname, "wb");
+            int[1] int1; int[2] int2; double[1] dbl1; // buffer arrays
+            string header = "unstructured_grid_flow 1.0";
+            outfile.rawWrite(to!(char[])(header));
+            int1[0] = to!int(grid.label.length); outfile.rawWrite(int1);
+            if (grid.label.length > 0) { outfile.rawWrite(to!(char[])(grid.label)); }
+            dbl1[0] = t0; outfile.rawWrite(dbl1); // sim_time
+            int1[0] = to!int(variable_list.length); outfile.rawWrite(int1);
+            foreach(varname; variable_list) {
+                int1[0] = to!int(varname.length); outfile.rawWrite(int1);
+                outfile.rawWrite(to!(char[])(varname));
+            }
+            int2[0] = to!int(GlobalConfig.dimensions);
+            int2[1] = to!int(ncells);
+            outfile.rawWrite(int2);
+            foreach (i; 0 .. ncells) {
+                Vector3 pos = Vector3(0.0, 0.0, 0.0);
+                foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
+                pos /= grid.cells[i].vtx_id_list.length;
+                double volume = 0.0; 
+                // Now grab flow state via Lua function call
+                lua_pushvalue(L, 3);
+                lua_pushnumber(L, pos.x);
+                lua_pushnumber(L, pos.y);
+                lua_pushnumber(L, pos.z);
+                if (lua_pcall(L, 3, 1, 0) != 0) {
+                    string errMsg = "Error in Lua function call for setting FlowState\n";
+                    errMsg ~= "as a function of position (x, y, z).\n";
+                    errMsg ~= format("LUA ERROR: %s\n", lua_tostring(L, -1));
+                    luaL_error(L, errMsg.toStringz);
+                }
+                if (lua_istable(L, -1)) {
+                    fs = makeFlowStateFromTable(L, lua_gettop(L));
+                } else {
+                    fs = checkFlowState(L, -1);
+                }
+                if (!fs) {
+                    string errMsg = "Error in from Lua function call for setting FlowState\n";
+                    errMsg ~= "as a function of position (x, y, z).\n";
+                    errMsg ~= "The returned object is not a proper _FlowState object or a suitable table.";
+                    luaL_error(L, errMsg.toStringz);
+                }
+                cell_data_to_raw_binary(outfile, pos, volume, fs,
+                                        0.0, 0.0, 0.0, -1.0, -1.0,
+                                        GlobalConfig.include_quality,
+                                        GlobalConfig.MHD,
+                                        GlobalConfig.divergence_cleaning,
+                                        GlobalConfig.radiation);
+            }
+            outfile.close();
+        break;
+        default:
+            auto outfile = new GzipOut(fname);
+            auto writer = appender!string();
+            formattedWrite(writer, "unstructured_grid_flow 1.0\n");
+            formattedWrite(writer, "label: %s\n", grid.label);
+            formattedWrite(writer, "sim_time: %.18e\n", t0);
+            formattedWrite(writer, "variables: %d\n", variable_list.length);
+            // Variable list for cell on one line.
+            foreach(varname; variable_list) {
+                formattedWrite(writer, " \"%s\"", varname);
+            }
+            formattedWrite(writer, "\n");
+            // Numbers of cells
+            formattedWrite(writer, "dimensions: %d\n", GlobalConfig.dimensions);
+            formattedWrite(writer, "ncells: %d\n", ncells);
+            outfile.compress(writer.data);
+            // The actual cell data.
+            foreach (i; 0 .. ncells) {
+                Vector3 pos = Vector3(0.0, 0.0, 0.0);
+                foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
+                pos /= grid.cells[i].vtx_id_list.length;
+                double volume = 0.0; 
+                // Now grab flow state via Lua function call
+                lua_pushvalue(L, 3);
+                lua_pushnumber(L, pos.x);
+                lua_pushnumber(L, pos.y);
+                lua_pushnumber(L, pos.z);
+                if (lua_pcall(L, 3, 1, 0) != 0) {
+                    string errMsg = "Error in Lua function call for setting FlowState\n";
+                    errMsg ~= "as a function of position (x, y, z).\n";
+                    errMsg ~= format("LUA ERROR: %s\n", lua_tostring(L, -1));
+                    luaL_error(L, errMsg.toStringz);
+                }
+                if (lua_istable(L, -1)) {
+                    fs = makeFlowStateFromTable(L, lua_gettop(L));
+                } else {
+                    fs = checkFlowState(L, -1);
+                }
+                if (!fs) {
+                    string errMsg = "Error in from Lua function call for setting FlowState\n";
+                    errMsg ~= "as a function of position (x, y, z).\n";
+                    errMsg ~= "The returned object is not a proper _FlowState object or suitable table.";
+                    luaL_error(L, errMsg.toStringz);
+                }
+                outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
+                                                           0.0, 0.0, 0.0, -1.0, -1.0,
+                                                           GlobalConfig.include_quality,
+                                                           GlobalConfig.MHD,
+                                                           GlobalConfig.divergence_cleaning,
+                                                           GlobalConfig.radiation) ~ "\n");
+            } // end foreach i
+            outfile.finish();
+        }
+        return 0;
     } // end if lua_isfunction
     return -1;
 } // end write_initial_usg_flow_file_from_lua()

@@ -25,133 +25,133 @@ import util.lua;
 class VeryViscousAir: GasModel {
 public:
     this() {
-	// Default model is mostly initialized in the private data below.
-	_n_species = 1;
-	_n_modes = 0;
-	_species_names ~= "very viscous";
-	_Rgas = 287.0;
-	_mol_masses ~= R_universal/_Rgas;
-	_gamma = 1.4;
-	_Cv = _Rgas / (_gamma - 1.0);
-	_Cp = _Rgas*_gamma/(_gamma - 1.0);
-	_mu = 10.0;
-	double Pr = 1.0;
-	_k = _mu * _Cp / Pr;
-	create_species_reverse_lookup();
+        // Default model is mostly initialized in the private data below.
+        _n_species = 1;
+        _n_modes = 0;
+        _species_names ~= "very viscous";
+        _Rgas = 287.0;
+        _mol_masses ~= R_universal/_Rgas;
+        _gamma = 1.4;
+        _Cv = _Rgas / (_gamma - 1.0);
+        _Cp = _Rgas*_gamma/(_gamma - 1.0);
+        _mu = 10.0;
+        double Pr = 1.0;
+        _k = _mu * _Cp / Pr;
+        create_species_reverse_lookup();
     }
 
     this(lua_State* L)
     {
-	this();
-	lua_getglobal(L, "VeryViscousAir");
-	// Possibly override k,  mu and number of species
-	lua_getfield(L, -1, "mu");
-	if ( !lua_isnil(L, -1) ) {
-	    _mu = to!double(lua_tonumber(L, -1));
-	}
-	lua_pop(L, 1);
-	lua_getfield(L, -1, "k");
-	if ( !lua_isnil(L, -1) ) {
-	    _k = to!double(lua_tonumber(L, -1));
-	}
-	lua_pop(L, 1);
-	lua_getfield(L, -1, "number_species");
-	if ( !lua_isnil(L, -1) ) {
-	    _n_species = luaL_checkint(L, -1);
-	}
-	lua_pop(L, 1);
+        this();
+        lua_getglobal(L, "VeryViscousAir");
+        // Possibly override k,  mu and number of species
+        lua_getfield(L, -1, "mu");
+        if ( !lua_isnil(L, -1) ) {
+            _mu = to!double(lua_tonumber(L, -1));
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "k");
+        if ( !lua_isnil(L, -1) ) {
+            _k = to!double(lua_tonumber(L, -1));
+        }
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "number_species");
+        if ( !lua_isnil(L, -1) ) {
+            _n_species = luaL_checkint(L, -1);
+        }
+        lua_pop(L, 1);
 
-	if (_n_species > 1) {
-	    // Let's rename the species.
-	    _species_names.length = _n_species;
-	    foreach (isp; 0 .. _n_species) {
-		_species_names[isp] = format("air%d", isp);
-	    }
-	    // Let's fix the _mol_masses array.
-	    _mol_masses.length = _n_species;
-	    foreach (isp; 0 .. _n_species) _mol_masses[isp] = R_universal/_Rgas;
-	}
-	create_species_reverse_lookup();
+        if (_n_species > 1) {
+            // Let's rename the species.
+            _species_names.length = _n_species;
+            foreach (isp; 0 .. _n_species) {
+                _species_names[isp] = format("air%d", isp);
+            }
+            // Let's fix the _mol_masses array.
+            _mol_masses.length = _n_species;
+            foreach (isp; 0 .. _n_species) _mol_masses[isp] = R_universal/_Rgas;
+        }
+        create_species_reverse_lookup();
     }
 
     override string toString() const
     {
-	char[] repr;
-	repr ~= "VeryViscousAir =()";
-	return to!string(repr);
+        char[] repr;
+        repr ~= "VeryViscousAir =()";
+        return to!string(repr);
     }
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-	Q.rho = Q.p/(Q.T*_Rgas);
-	Q.u = _Cv*Q.T;
+        Q.rho = Q.p/(Q.T*_Rgas);
+        Q.u = _Cv*Q.T;
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-	Q.T = Q.u/_Cv;
-	Q.p = Q.rho*_Rgas*Q.T;
+        Q.T = Q.u/_Cv;
+        Q.p = Q.rho*_Rgas*Q.T;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
-	Q.p = Q.rho*_Rgas*Q.T;
-	Q.u = _Cv*Q.T;
+        Q.p = Q.rho*_Rgas*Q.T;
+        Q.u = _Cv*Q.T;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-	Q.T = Q.p/(Q.rho*_Rgas);
-	Q.u = _Cv*Q.T;
+        Q.T = Q.p/(Q.rho*_Rgas);
+        Q.u = _Cv*Q.T;
     }
     
     override void update_thermo_from_ps(GasState Q, double s) const
     {
-	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
     override void update_thermo_from_hs(GasState Q, double h, double s) const
     {
-	throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
+        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
     override void update_sound_speed(GasState Q) const
     {
-	Q.a = sqrt(_gamma*_Rgas*Q.T);
+        Q.a = sqrt(_gamma*_Rgas*Q.T);
     }
     override void update_trans_coeffs(GasState Q) const
     {
-	Q.mu = _mu;
-	Q.k = _k;
+        Q.mu = _mu;
+        Q.k = _k;
     }
     /*
     override void eval_diffusion_coefficients(ref GasState Q) {
-	throw new Exception("not implemented");
+        throw new Exception("not implemented");
     }
     */
     override double dudT_const_v(in GasState Q) const
     {
-	return _Cv;
+        return _Cv;
     }
     override double dhdT_const_p(in GasState Q) const
     {
-	return _Cp;
+        return _Cp;
     }
     override double dpdrho_const_T(in GasState Q) const
     {
-	double R = gas_constant(Q);
-	return R*Q.T;
+        double R = gas_constant(Q);
+        return R*Q.T;
     }
     override double gas_constant(in GasState Q) const
     {
-	return _Rgas;
+        return _Rgas;
     }
     override double internal_energy(in GasState Q) const
     {
-	return Q.u;
+        return Q.u;
     }
     override double enthalpy(in GasState Q) const
     {
-	return Q.u + Q.p/Q.rho;
+        return Q.u + Q.p/Q.rho;
     }
     override double entropy(in GasState Q) const
     {
-	return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
+        return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
 
 private:
@@ -172,19 +172,19 @@ private:
 
 version(very_viscous_air_test) {
     int main() {
-	auto gm = new VeryViscousAir();
-	auto gs = new GasState(gm, 100.0e3, 300.0);
-	assert(approxEqual(gm.R(gs), 287.0, 1.0e-6), failedUnitTest());
+        auto gm = new VeryViscousAir();
+        auto gs = new GasState(gm, 100.0e3, 300.0);
+        assert(approxEqual(gm.R(gs), 287.0, 1.0e-6), failedUnitTest());
 
-	gm.update_thermo_from_pT(gs);
-	gm.update_sound_speed(gs);
-	assert(approxEqual(gs.rho, 1.16144, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gs.u, 215250, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gs.a, 347.189, 1.0e-6), failedUnitTest());
-	gm.update_trans_coeffs(gs);
-	assert(approxEqual(gs.mu, 10.0, 1.0e-6), failedUnitTest());
-	assert(approxEqual(gs.k, 10045, 1.0e-6), failedUnitTest());
+        gm.update_thermo_from_pT(gs);
+        gm.update_sound_speed(gs);
+        assert(approxEqual(gs.rho, 1.16144, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gs.u, 215250, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gs.a, 347.189, 1.0e-6), failedUnitTest());
+        gm.update_trans_coeffs(gs);
+        assert(approxEqual(gs.mu, 10.0, 1.0e-6), failedUnitTest());
+        assert(approxEqual(gs.k, 10045, 1.0e-6), failedUnitTest());
 
-	return 0;
+        return 0;
     }
 }

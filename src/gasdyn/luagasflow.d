@@ -48,17 +48,17 @@ extern(C) int gasflow_normal_shock(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for Vs";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for Vs";
+        luaL_error(L, errMsg.toStringz);
     }
     double Vs = to!double(luaL_checknumber(L, 2));
     double rho_tol=1.0e-6; // default value
     if (lua_isnumber(L, 3)) {
-	rho_tol = to!double(luaL_checknumber(L, 3));
+        rho_tol = to!double(luaL_checknumber(L, 3));
     }
     double T_tol = 0.1; // default value
     if (lua_isnumber(L, 4)) {
-	T_tol = to!double(luaL_checknumber(L, 4));
+        T_tol = to!double(luaL_checknumber(L, 4));
     }
     //
     double[] vel_results = normal_shock(state1, Vs, state2, gm, rho_tol, T_tol);
@@ -94,8 +94,8 @@ extern(C) int gasflow_normal_shock_p2p1(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for p2p1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for p2p1";
+        luaL_error(L, errMsg.toStringz);
     }
     double p2p1 = to!double(luaL_checknumber(L, 2));
     //
@@ -131,8 +131,8 @@ extern(C) int gasflow_reflected_shock(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state5); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for Vg";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for Vg";
+        luaL_error(L, errMsg.toStringz);
     }
     double Vg = to!double(luaL_checknumber(L, 2));
     //
@@ -167,8 +167,8 @@ extern(C) int gasflow_expand_from_stagnation(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for p_over_p0";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for p_over_p0";
+        luaL_error(L, errMsg.toStringz);
     }
     double p_over_p0 = to!double(luaL_checknumber(L, 2));
     //
@@ -203,8 +203,8 @@ extern(C) int gasflow_expand_to_mach(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state1); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for mach";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for mach";
+        luaL_error(L, errMsg.toStringz);
     }
     double mach = to!double(luaL_checknumber(L, 2));
     //
@@ -238,8 +238,8 @@ extern(C) int gasflow_total_condition(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state0); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for V1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V1";
+        luaL_error(L, errMsg.toStringz);
     }
     double V1 = to!double(luaL_checknumber(L, 2));
     //
@@ -272,8 +272,8 @@ extern(C) int gasflow_pitot_condition(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2pitot); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for V1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V1";
+        luaL_error(L, errMsg.toStringz);
     }
     double V1 = to!double(luaL_checknumber(L, 2));
     //
@@ -309,18 +309,18 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for V1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V1";
+        luaL_error(L, errMsg.toStringz);
     }
     double V1 = to!double(luaL_checknumber(L, 2));
     if (!lua_isnumber(L, 3)) {
-	string errMsg = "Expected a number for A2_over_A1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for A2_over_A1";
+        luaL_error(L, errMsg.toStringz);
     }
     double A2_over_A1 = to!double(luaL_checknumber(L, 3));
     double tol=1.0e-4; // default value
     if (lua_isnumber(L, 4)) {
-	tol = to!double(luaL_checknumber(L, 4));
+        tol = to!double(luaL_checknumber(L, 4));
     }
     //
     double V2 = steady_flow_with_area_change(state1, V1, A2_over_A1, state2, gm, tol);
@@ -357,23 +357,23 @@ extern(C) int gasflow_finite_wave_dp(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for V1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V1";
+        luaL_error(L, errMsg.toStringz);
     }
     double V1 = to!double(luaL_checknumber(L, 2));
     if (!lua_isstring(L, 3)) {
-	string errMsg = "Expected a string for characteristic";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a string for characteristic";
+        luaL_error(L, errMsg.toStringz);
     }
     string characteristic = to!string(luaL_checkstring(L, 3));
     if (!lua_isnumber(L, 4)) {
-	string errMsg = "Expected a number for p2";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for p2";
+        luaL_error(L, errMsg.toStringz);
     }
     double p2 = to!double(luaL_checknumber(L, 4));
     int steps = 100; // default value
     if (lua_isnumber(L, 5)) {
-	steps = to!int(luaL_checkint(L, 5));
+        steps = to!int(luaL_checkint(L, 5));
     }
     //
     double V2 = finite_wave_dp(state1, V1, characteristic, p2, state2, gm, steps);
@@ -412,31 +412,31 @@ extern(C) int gasflow_finite_wave_dv(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for V1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V1";
+        luaL_error(L, errMsg.toStringz);
     }
     double V1 = to!double(luaL_checknumber(L, 2));
     if (!lua_isstring(L, 3)) {
-	string errMsg = "Expected a string for characteristic";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a string for characteristic";
+        luaL_error(L, errMsg.toStringz);
     }
     string characteristic = to!string(luaL_checkstring(L, 3));
     if (!lua_isnumber(L, 4)) {
-	string errMsg = "Expected a number for V2_target";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V2_target";
+        luaL_error(L, errMsg.toStringz);
     }
     double V2_target = to!double(luaL_checknumber(L, 4));
     int steps = 100; // default value
     if (lua_isnumber(L, 5)) {
-	steps = to!int(luaL_checkint(L, 5));
+        steps = to!int(luaL_checkint(L, 5));
     }
     double Tmin = 200.0; // default value
     if (lua_isnumber(L, 6)) {
-	Tmin = to!double(luaL_checknumber(L, 6));
+        Tmin = to!double(luaL_checknumber(L, 6));
     }
     //
     double V2 = finite_wave_dv(state1, V1, characteristic, V2_target,
-			       state2, gm, steps, Tmin);
+                               state2, gm, steps, Tmin);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state2, gm);
@@ -469,13 +469,13 @@ extern(C) int gasflow_theta_oblique(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for V1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V1";
+        luaL_error(L, errMsg.toStringz);
     }
     double V1 = to!double(luaL_checknumber(L, 2));
     if (!lua_isnumber(L, 3)) {
-	string errMsg = "Expected a number for beta";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for beta";
+        luaL_error(L, errMsg.toStringz);
     }
     double beta = to!double(luaL_checknumber(L, 3));
     //
@@ -511,13 +511,13 @@ extern(C) int gasflow_beta_oblique(lua_State* L)
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(state2); }
     //
     if (!lua_isnumber(L, 2)) {
-	string errMsg = "Expected a number for V1";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for V1";
+        luaL_error(L, errMsg.toStringz);
     }
     double V1 = to!double(luaL_checknumber(L, 2));
     if (!lua_isnumber(L, 3)) {
-	string errMsg = "Expected a number for theta";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Expected a number for theta";
+        luaL_error(L, errMsg.toStringz);
     }
     double theta = to!double(luaL_checknumber(L, 3));
     //
@@ -531,7 +531,7 @@ extern(C) int gasflow_beta_oblique(lua_State* L)
 string registerfn(string fname)
 {
     return "    lua_pushcfunction(L, &gasflow_"~fname~");\n" ~
-	"    lua_setfield(L, -2, \""~fname~"\");";
+        "    lua_setfield(L, -2, \""~fname~"\");";
 }
 
 void registergasflowFunctions(lua_State* L)

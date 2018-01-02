@@ -29,53 +29,53 @@ extern(C) int configSetFromTable(lua_State* L)
     // the individual fields in the Lua table.
     string get_string_field(string lua_field, string config_field)
     {
-	string code = "lua_getfield(L, 1, \""~lua_field~"\");
-	if (!lua_isnil(L, -1)) {
-	    GlobalConfig."~config_field~" = to!string(luaL_checkstring(L, -1));
-	    lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
-	}
-	lua_pop(L, 1);";
-	return code;
+        string code = "lua_getfield(L, 1, \""~lua_field~"\");
+        if (!lua_isnil(L, -1)) {
+            GlobalConfig."~config_field~" = to!string(luaL_checkstring(L, -1));
+            lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
+        }
+        lua_pop(L, 1);";
+        return code;
     }
     string get_enum_field(string lua_field, string config_field, string enum_from_name)
     {
-	string code = "lua_getfield(L, 1, \""~lua_field~"\");
-	if (!lua_isnil(L, -1)) {
-	    GlobalConfig."~config_field~" = "~enum_from_name~"(to!string(luaL_checkstring(L, -1)));
-	    lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
-	}
-	lua_pop(L, 1);";
-	return code;
+        string code = "lua_getfield(L, 1, \""~lua_field~"\");
+        if (!lua_isnil(L, -1)) {
+            GlobalConfig."~config_field~" = "~enum_from_name~"(to!string(luaL_checkstring(L, -1)));
+            lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
+        }
+        lua_pop(L, 1);";
+        return code;
     }
     string get_bool_field(string lua_field, string config_field)
     {
-	string code = "lua_getfield(L, 1, \""~lua_field~"\");
-	if (!lua_isnil(L, -1)) {
-	    GlobalConfig."~config_field~" = to!bool(lua_toboolean(L, -1));
-	    lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
-	}
-	lua_pop(L, 1);";
-	return code;
+        string code = "lua_getfield(L, 1, \""~lua_field~"\");
+        if (!lua_isnil(L, -1)) {
+            GlobalConfig."~config_field~" = to!bool(lua_toboolean(L, -1));
+            lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
+        }
+        lua_pop(L, 1);";
+        return code;
     }
     string get_int_field(string lua_field, string config_field)
     {
-	string code = "lua_getfield(L, 1, \""~lua_field~"\");
-	if (!lua_isnil(L, -1)) {
-	    GlobalConfig."~config_field~" = luaL_checkint(L, -1);
-	    lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
-	}
-	lua_pop(L, 1);";
-	return code;
+        string code = "lua_getfield(L, 1, \""~lua_field~"\");
+        if (!lua_isnil(L, -1)) {
+            GlobalConfig."~config_field~" = luaL_checkint(L, -1);
+            lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
+        }
+        lua_pop(L, 1);";
+        return code;
     }
     string get_double_field(string lua_field, string config_field)
     {
-	string code = "lua_getfield(L, 1, \""~lua_field~"\");
-	if (!lua_isnil(L, -1)) {
-	    GlobalConfig."~config_field~" = to!double(luaL_checknumber(L, -1));
-	    lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
-	}
-	lua_pop(L, 1);";
-	return code;
+        string code = "lua_getfield(L, 1, \""~lua_field~"\");
+        if (!lua_isnil(L, -1)) {
+            GlobalConfig."~config_field~" = to!double(luaL_checknumber(L, -1));
+            lua_pushnil(L); lua_setfield(L, 1, \""~lua_field~"\");
+        }
+        lua_pop(L, 1);";
+        return code;
     }
     //
     // Look for fields that may be present in the Lua table.
@@ -211,11 +211,11 @@ extern(C) int configSetFromTable(lua_State* L)
     // has supplied. Give a warning.
     lua_pushnil(L);
     while ( lua_next(L, 1) != 0 ) {
-	string key = to!string(lua_tostring(L, -2));
-	writeln("WARNING: -----------------------------------------------------------------------------");
-	writeln(format("WARNING: The configuration option '%s' is not supported. It has been ignored.", key));
-	writeln("WARNING: -----------------------------------------------------------------------------");
-	lua_pop(L, 1);
+        string key = to!string(lua_tostring(L, -2));
+        writeln("WARNING: -----------------------------------------------------------------------------");
+        writeln(format("WARNING: The configuration option '%s' is not supported. It has been ignored.", key));
+        writeln("WARNING: -----------------------------------------------------------------------------");
+        lua_pop(L, 1);
     }
 
     return 0;
@@ -237,11 +237,11 @@ extern(C) int configGet(lua_State* L)
     case "gas_model_file": lua_pushstring(L, GlobalConfig.gas_model_file.toStringz); break;
     case "udf_supervisor_file": lua_pushstring(L, toStringz(GlobalConfig.udf_supervisor_file)); break;
     case "include_quality": lua_pushboolean(L, GlobalConfig.include_quality); break;
-	//
+        //
     case "nFluidBlocks": lua_pushnumber(L, GlobalConfig.nFluidBlocks); break;
     case "dimensions": lua_pushnumber(L, GlobalConfig.dimensions); break;
     case "axisymmetric": lua_pushboolean(L, GlobalConfig.axisymmetric); break;
-	//
+        //
     case "MHD": lua_pushboolean(L, GlobalConfig.MHD); break;
     case "MHD_static_field": lua_pushboolean(L, GlobalConfig.MHD_static_field); break;
     case "MHD_resistive": lua_pushboolean(L, GlobalConfig.MHD_resistive); break;
@@ -249,7 +249,7 @@ extern(C) int configGet(lua_State* L)
     case "divergence_cleaning": lua_pushboolean(L, GlobalConfig.divergence_cleaning); break;
     case "c_h": lua_pushnumber(L, GlobalConfig.c_h); break;
     case "divB_damping_length": lua_pushnumber(L, GlobalConfig.divB_damping_length); break;
-	//
+        //
     case "gasdynamic_update_scheme": lua_pushstring(L, gasdynamic_update_scheme_name(GlobalConfig.gasdynamic_update_scheme).toStringz); break;
     case "coupling_with_solid_domains": lua_pushstring(L, solidDomainCouplingName(GlobalConfig.coupling_with_solid_domains).toStringz); break;
     case "solid_has_isotropic_properties": lua_pushboolean(L, GlobalConfig.solid_has_isotropic_properties); break;
@@ -263,7 +263,7 @@ extern(C) int configGet(lua_State* L)
     case "adjust_invalid_cell_data": lua_pushboolean(L, GlobalConfig.adjust_invalid_cell_data); break;
     case "report_invalid_cells": lua_pushboolean(L, GlobalConfig.report_invalid_cells); break;
     case "max_invalid_cells": lua_pushnumber(L, GlobalConfig.max_invalid_cells); break;
-	//
+        //
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
     case "allow_reconstruction_for_energy_modes": lua_pushboolean(L, GlobalConfig.allow_reconstruction_for_energy_modes); break;
@@ -278,14 +278,14 @@ extern(C) int configGet(lua_State* L)
     case "compression_tolerance": lua_pushnumber(L, GlobalConfig.compression_tolerance); break;
     case "artificial_compressibility": lua_pushboolean(L, GlobalConfig.artificial_compressibility); break;
     case "ac_alpha": lua_pushnumber(L, GlobalConfig.ac_alpha); break;
-	//
+        //
     case "grid_motion": lua_pushstring(L, grid_motion_name(GlobalConfig.grid_motion).toStringz); break;
     case "write_vertex_velocities": lua_pushboolean(L, GlobalConfig.write_vertex_velocities); break;
     case "udf_grid_motion_file": lua_pushstring(L, toStringz(GlobalConfig.udf_grid_motion_file)); break;
     case "shock_fitting_delay": lua_pushnumber(L, GlobalConfig.shock_fitting_delay); break;
     case "shock_fitting_interpolation_order": lua_pushinteger(L, GlobalConfig.shock_fitting_interpolation_order); break;
     case "shock_fitting_scale_factor": lua_pushnumber(L, GlobalConfig.shock_fitting_scale_factor); break;
-	//
+        //
     case "viscous": lua_pushboolean(L, GlobalConfig.viscous); break;
     case "use_viscosity_from_cells": lua_pushboolean(L, GlobalConfig.use_viscosity_from_cells); break;
     case "spatial_deriv_calc": lua_pushstring(L, spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc).toStringz); break;
@@ -298,10 +298,10 @@ extern(C) int configGet(lua_State* L)
     case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;
     case "constant_lewis_number": lua_pushboolean(L, GlobalConfig.constant_lewis_number); break;
     case "lewis_number": lua_pushnumber(L, GlobalConfig.lewis_number); break;
-	//
+        //
     case "separate_update_for_viscous_terms": lua_pushboolean(L, GlobalConfig.separate_update_for_viscous_terms); break;
     case "separate_update_for_k_omega_source": lua_pushboolean(L, GlobalConfig.separate_update_for_k_omega_source); break;
-	//
+        //
     case "turbulence_model": lua_pushstring(L, turbulence_model_name(GlobalConfig.turbulence_model).toStringz); break;
     case "turbulence_prandtl_number": lua_pushnumber(L, GlobalConfig.turbulence_prandtl_number); break;
     case "turbulence_schmidt_number": lua_pushnumber(L, GlobalConfig.turbulence_schmidt_number); break;
@@ -309,9 +309,9 @@ extern(C) int configGet(lua_State* L)
     case "transient_mu_t_factor": lua_pushnumber(L, GlobalConfig.transient_mu_t_factor); break;
     case "limit_tke_production": lua_pushboolean(L, GlobalConfig.limit_tke_production); break;
     case "tke_production_limit_in_kelvins": lua_pushnumber(L, GlobalConfig.tke_production_limit_in_kelvins); break;
-	//
+        //
     case "tci_model": lua_pushstring(L, tci_model_name(GlobalConfig.tci_model).toStringz); break;
-	//
+        //
     case "reacting": lua_pushboolean(L, GlobalConfig.reacting); break;
     case "reactions_file": lua_pushstring(L, GlobalConfig.reactions_file.toStringz); break;
     case "reaction_time_delay": lua_pushnumber(L, GlobalConfig.reaction_time_delay); break;
@@ -320,7 +320,7 @@ extern(C) int configGet(lua_State* L)
     case "ignition_time_start": lua_pushnumber(L, GlobalConfig.ignition_time_start); break;
     case "ignition_time_stop": lua_pushnumber(L, GlobalConfig.ignition_time_stop); break;
     case "energy_exchange_file": lua_pushstring(L, GlobalConfig.energy_exchange_file.toStringz); break;
-	//
+        //
     case "max_step": lua_pushnumber(L, GlobalConfig.max_step); break;
     case "halt_now": lua_pushnumber(L, GlobalConfig.halt_now); break;
     case "print_count": lua_pushnumber(L, GlobalConfig.print_count); break;
@@ -338,23 +338,23 @@ extern(C) int configGet(lua_State* L)
     case "dt_loads": lua_pushnumber(L, GlobalConfig.dt_loads); break;
     case "boundary_group_for_loads": lua_pushstring(L, GlobalConfig.boundary_group_for_loads.toStringz); break;
     case "compute_loads": lua_pushboolean(L, GlobalConfig.compute_loads); break;
-	//
+        //
     case "diffuse_wall_bcs_on_init": lua_pushboolean(L, GlobalConfig.diffuseWallBCsOnInit); break;
     case "number_init_passes": lua_pushnumber(L, GlobalConfig.nInitPasses); break;
     case "wall_temperature_on_init": lua_pushnumber(L, GlobalConfig.initTWall); break;
-	//
+        //
     case "block_marching": lua_pushboolean(L, GlobalConfig.block_marching); break;
     case "nib": lua_pushnumber(L, GlobalConfig.nib); break;
     case "njb": lua_pushnumber(L, GlobalConfig.njb); break;
     case "nkb": lua_pushnumber(L, GlobalConfig.nkb); break;
     case "propagate_inflow_data": lua_pushboolean(L, GlobalConfig.propagate_inflow_data); break;
     case "save_intermediate_results": lua_pushboolean(L, GlobalConfig.save_intermediate_results); break;
-	//
+        //
     case "udf_source_terms_file": lua_pushstring(L, GlobalConfig.udf_source_terms_file.toStringz); break;
     case "udf_source_terms": lua_pushboolean(L, GlobalConfig.udf_source_terms); break;
     case "udf_solid_source_terms_file": lua_pushstring(L, GlobalConfig.udfSolidSourceTermsFile.toStringz); break;
     case "udf_solid_source_terms": lua_pushboolean(L, GlobalConfig.udfSolidSourceTerms); break;
-	//
+        //
     default: lua_pushnil(L);
     }
     return 1;
@@ -376,9 +376,9 @@ extern(C) int configSetFromValue(lua_State *L)
     // Let's first see if the value is non-nil. If nil,
     // we'd like to warn the user.
     if ( lua_isnil(L, 3) ) {
-	writeln("WARNING: -----------------------------------------------------------------------------");
-	writeln(format("WARNING: You tried to set the configuration option '%s' with a nil value. It has been ignored.", to!string(luaL_checkstring(L, 2))));
-	writeln("WARNING: -----------------------------------------------------------------------------");
+        writeln("WARNING: -----------------------------------------------------------------------------");
+        writeln(format("WARNING: You tried to set the configuration option '%s' with a nil value. It has been ignored.", to!string(luaL_checkstring(L, 2))));
+        writeln("WARNING: -----------------------------------------------------------------------------");
     }
     // We aren't interested in the table because we have
     // the GlobalConfig object to use.

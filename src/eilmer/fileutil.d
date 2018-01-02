@@ -27,8 +27,8 @@ string make_file_name(string mytype)(string base_file_name, int blk_id, int tind
 {
     auto writer = appender!string();
     formattedWrite(writer, "%s/t%04d/%s.%s.b%04d.t%04d.%s",
-		   mytype, tindx, base_file_name,
-		   mytype, blk_id, tindx, myext);
+                   mytype, tindx, base_file_name,
+                   mytype, blk_id, tindx, myext);
     return writer.data;
 }
 
@@ -36,9 +36,9 @@ void ensure_directory_is_present(string dir_name)
 {
     if (exists(dir_name) && isDir(dir_name)) return;
     try {
-	mkdirRecurse(dir_name);
+        mkdirRecurse(dir_name);
     } catch (FileException e) {
-	string msg = text("Failed to ensure directory is present: ", dir_name);
-	throw new FlowSolverException(msg);
+        string msg = text("Failed to ensure directory is present: ", dir_name);
+        throw new FlowSolverException(msg);
     }
 }

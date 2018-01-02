@@ -61,73 +61,73 @@ alias cl_uint cl_profiling_info;
 
 struct _cl_image_format
 {
-	cl_channel_order image_channel_order;
-	cl_channel_type image;
+        cl_channel_order image_channel_order;
+        cl_channel_type image;
 }
 
 alias _cl_image_format cl_image_format;
 
 struct _cl_buffer_region
 {
-	size_t origin;
-	size_t size;
+        size_t origin;
+        size_t size;
 }
 
 alias _cl_buffer_region cl_buffer_region;
 
 enum
 {
-	CL_SUCCESS = 0,
-	CL_DEVICE_NOT_FOUND = -1,
-	CL_DEVICE_NOT_AVAILABLE = -2,
-	CL_COMPILER_NOT_AVAILABLE = -3,
-	CL_MEM_OBJECT_ALLOCATION_FAILURE = -4,
-	CL_OUT_OF_RESOURCES = -5,
-	CL_OUT_OF_HOST_MEMORY = -6,
-	CL_PROFILING_INFO_NOT_AVAILABLE = -7,
-	CL_MEM_COPY_OVERLAP = -8,
-	CL_IMAGE_FORMAT_MISMATCH = -9,
-	CL_IMAGE_FORMAT_NOT_SUPPORTED = -10,
-	CL_BUILD_PROGRAM_FAILURE = -11,
-	CL_MAP_FAILURE = -12,
-	CL_MISALIGNED_SUB_BUFFER_OFFSET = -13,
-	CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST = -14,
+        CL_SUCCESS = 0,
+        CL_DEVICE_NOT_FOUND = -1,
+        CL_DEVICE_NOT_AVAILABLE = -2,
+        CL_COMPILER_NOT_AVAILABLE = -3,
+        CL_MEM_OBJECT_ALLOCATION_FAILURE = -4,
+        CL_OUT_OF_RESOURCES = -5,
+        CL_OUT_OF_HOST_MEMORY = -6,
+        CL_PROFILING_INFO_NOT_AVAILABLE = -7,
+        CL_MEM_COPY_OVERLAP = -8,
+        CL_IMAGE_FORMAT_MISMATCH = -9,
+        CL_IMAGE_FORMAT_NOT_SUPPORTED = -10,
+        CL_BUILD_PROGRAM_FAILURE = -11,
+        CL_MAP_FAILURE = -12,
+        CL_MISALIGNED_SUB_BUFFER_OFFSET = -13,
+        CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST = -14,
 
-	CL_INVALID_VALUE = -30,
-	CL_INVALID_DEVICE_TYPE = -31,
-	CL_INVALID_PLATFORM = -32,
-	CL_INVALID_DEVICE = -33,
-	CL_INVALID_CONTEXT = -34,
-	CL_INVALID_QUEUE_PROPERTIES = -35,
-	CL_INVALID_COMMAND_QUEUE = -36,
-	CL_INVALID_HOST_PTR = -37,
-	CL_INVALID_MEM_OBJECT = -38,
-	CL_INVALID_IMAGE_FORMAT_DESCRIPTOR = -39,
-	CL_INVALID_IMAGE_SIZE = -40,
-	CL_INVALID_SAMPLER = -41,
-	CL_INVALID_BINARY = -42,
-	CL_INVALID_BUILD_OPTIONS = -43,
-	CL_INVALID_PROGRAM = -44,
-	CL_INVALID_PROGRAM_EXECUTABLE = -45,
-	CL_INVALID_KERNEL_NAME = -46,
-	CL_INVALID_KERNEL_DEFINITION = -47,
-	CL_INVALID_KERNEL = -48,
-	CL_INVALID_ARG_INDEX = -49,
-	CL_INVALID_ARG_VALUE = -50,
-	CL_INVALID_ARG_SIZE = -51,
-	CL_INVALID_KERNEL_ARGS = -52,
-	CL_INVALID_WORK_DIMENSION = -53,
-	CL_INVALID_WORK_GROUP_SIZE = -54,
-	CL_INVALID_WORK_ITEM_SIZE = -55,
-	CL_INVALID_GLOBAL_OFFSET = -56,
-	CL_INVALID_EVENT_WAIT_LIST = -57,
-	CL_INVALID_EVENT = -58,
-	CL_INVALID_OPERATION = -59,
-	CL_INVALID_GL_OBJECT = -60,
-	CL_INVALID_BUFFER_SIZE = -61,
-	CL_INVALID_MIP_LEVEL = -62,
-	CL_INVALID_GLOBAL_WORK_SIZE = -63,
-	CL_INVALID_PROPERTY = -64
+        CL_INVALID_VALUE = -30,
+        CL_INVALID_DEVICE_TYPE = -31,
+        CL_INVALID_PLATFORM = -32,
+        CL_INVALID_DEVICE = -33,
+        CL_INVALID_CONTEXT = -34,
+        CL_INVALID_QUEUE_PROPERTIES = -35,
+        CL_INVALID_COMMAND_QUEUE = -36,
+        CL_INVALID_HOST_PTR = -37,
+        CL_INVALID_MEM_OBJECT = -38,
+        CL_INVALID_IMAGE_FORMAT_DESCRIPTOR = -39,
+        CL_INVALID_IMAGE_SIZE = -40,
+        CL_INVALID_SAMPLER = -41,
+        CL_INVALID_BINARY = -42,
+        CL_INVALID_BUILD_OPTIONS = -43,
+        CL_INVALID_PROGRAM = -44,
+        CL_INVALID_PROGRAM_EXECUTABLE = -45,
+        CL_INVALID_KERNEL_NAME = -46,
+        CL_INVALID_KERNEL_DEFINITION = -47,
+        CL_INVALID_KERNEL = -48,
+        CL_INVALID_ARG_INDEX = -49,
+        CL_INVALID_ARG_VALUE = -50,
+        CL_INVALID_ARG_SIZE = -51,
+        CL_INVALID_KERNEL_ARGS = -52,
+        CL_INVALID_WORK_DIMENSION = -53,
+        CL_INVALID_WORK_GROUP_SIZE = -54,
+        CL_INVALID_WORK_ITEM_SIZE = -55,
+        CL_INVALID_GLOBAL_OFFSET = -56,
+        CL_INVALID_EVENT_WAIT_LIST = -57,
+        CL_INVALID_EVENT = -58,
+        CL_INVALID_OPERATION = -59,
+        CL_INVALID_GL_OBJECT = -60,
+        CL_INVALID_BUFFER_SIZE = -61,
+        CL_INVALID_MIP_LEVEL = -62,
+        CL_INVALID_GLOBAL_WORK_SIZE = -63,
+        CL_INVALID_PROPERTY = -64
 }
 
 const int CL_VERSION_1_0 = 1;
@@ -441,11 +441,11 @@ clGetDeviceInfo(cl_device_id, cl_device_info, size_t, void *, size_t *);
 // Context APIs 
 cl_context
 clCreateContext(const cl_context_properties *, cl_uint, const cl_device_id *,
-	void function(const char *, const void *, size_t, void *), void *, cl_int *);
+        void function(const char *, const void *, size_t, void *), void *, cl_int *);
 
 cl_context
 clCreateContextFromType(const cl_context_properties *, cl_device_type,
-	void function(const char *, const void *, size_t, void *), void *, cl_int *);
+        void function(const char *, const void *, size_t, void *), void *, cl_int *);
 
 cl_int
 clRetainContext(cl_context);
@@ -473,7 +473,7 @@ deprecated
 {
 cl_int
 clSetCommandQueueProperty(cl_command_queue, cl_command_queue_properties, cl_bool,
-	cl_command_queue_properties *);
+        cl_command_queue_properties *);
 }
 
 // Memory Object APIs
@@ -482,15 +482,15 @@ clCreateBuffer(cl_context, cl_mem_flags, size_t, void *, cl_int *);
 
 cl_mem
 clCreateSubBuffer(cl_mem, cl_mem_flags, cl_buffer_create_type, const void *,
-	cl_int *);
+        cl_int *);
 
 cl_mem
 clCreateImage2D(cl_context, cl_mem_flags, const cl_image_format *, size_t, size_t,
-	size_t, void *, cl_int *);
+        size_t, void *, cl_int *);
 
 cl_mem
 clCreateImage3D(cl_context, cl_mem_flags, const cl_image_format *, size_t, size_t,
-	size_t, size_t, size_t, void *, cl_int *);
+        size_t, size_t, size_t, void *, cl_int *);
 
 cl_int
 clRetainMemObject(cl_mem);
@@ -500,7 +500,7 @@ clReleaseMemObject(cl_mem);
 
 cl_int
 clGetSupportedImageFormats(cl_context, cl_mem_flags, cl_mem_object_type, cl_uint,
-	cl_image_format *, cl_uint *);
+        cl_image_format *, cl_uint *);
 
 cl_int
 clGetMemObjectInfo(cl_mem, cl_mem_info, size_t, void *, size_t *);
@@ -527,11 +527,11 @@ clGetSamplerInfo(cl_sampler, cl_sampler_info, size_t, void *, size_t *);
 // Program Object APIs 
 cl_program
 clCreateProgramWithSource(cl_context, cl_uint, const char **, const size_t *,
-	cl_int *);
+        cl_int *);
 
 cl_program
 clCreateProgramWithBinary(cl_context, cl_uint, const cl_device_id *, const size_t *,
-	const ubyte **, cl_int *, cl_int *);
+        const ubyte **, cl_int *, cl_int *);
 
 cl_int
 clRetainProgram(cl_program);
@@ -541,7 +541,7 @@ clReleaseProgram(cl_program);
 
 cl_int
 clBuildProgram(cl_program, cl_uint, const cl_device_id *, const char *,
-	void function(cl_program, void *), void *);
+        void function(cl_program, void *), void *);
 
 cl_int
 clUnloadCompiler();
@@ -551,7 +551,7 @@ clGetProgramInfo(cl_program, cl_program_info, size_t, void *, size_t *);
 
 cl_int
 clGetProgramBuildInfo(cl_program, cl_device_id, cl_program_build_info, size_t,
-	void *, size_t *);
+        void *, size_t *);
 
 // Kernel Object APIs
 cl_kernel
@@ -574,7 +574,7 @@ clGetKernelInfo(cl_kernel, cl_kernel_info, size_t, void *, size_t *);
 
 cl_int
 clGetKernelWorkGroupInfo(cl_kernel, cl_device_id, cl_kernel_work_group_info,
-	size_t, void *, size_t *);
+        size_t, void *, size_t *);
 
 // Event Object APIs 
 cl_int
@@ -597,7 +597,7 @@ clSetUserEventStatus(cl_event, cl_int);
 
 cl_int
 clSetEventCallback( cl_event, cl_int, void function(cl_event, cl_int, void *),
-	void *);
+        void *);
 
 // Profiling APIs 
 cl_int
@@ -613,75 +613,75 @@ clFinish(cl_command_queue);
 // Enqueued Commands APIs
 cl_int
 clEnqueueReadBuffer(cl_command_queue, cl_mem, cl_bool, size_t, size_t, void *,
-	cl_uint, const cl_event *, cl_event *);
+        cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueReadBufferRect(cl_command_queue, cl_mem, cl_bool, const size_t *,
-	const size_t *, const size_t *, size_t, size_t, size_t, size_t,
-	void *, cl_uint, const cl_event *, cl_event *);
+        const size_t *, const size_t *, size_t, size_t, size_t, size_t,
+        void *, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueWriteBuffer(cl_command_queue, cl_mem, cl_bool, size_t, size_t,
-	const void *, cl_uint, const cl_event *, cl_event *);
+        const void *, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueWriteBufferRect(cl_command_queue, cl_mem, cl_bool, const size_t *,
-	const size_t *, const size_t *, size_t, size_t, size_t, size_t,
-	const void *, cl_uint, const cl_event *, cl_event *);
+        const size_t *, const size_t *, size_t, size_t, size_t, size_t,
+        const void *, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueCopyBuffer(cl_command_queue, cl_mem, cl_mem, size_t, size_t, size_t,
-	cl_uint, const cl_event *, cl_event *);
+        cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueCopyBufferRect(cl_command_queue, cl_mem, cl_mem, const size_t *,
-	const size_t *, const size_t *, size_t, size_t, size_t, size_t, cl_uint,
-	const cl_event *, cl_event *);
+        const size_t *, const size_t *, size_t, size_t, size_t, size_t, cl_uint,
+        const cl_event *, cl_event *);
 
 cl_int
 clEnqueueReadImage(cl_command_queue, cl_mem, cl_bool, const size_t *,
-	const size_t *, size_t, size_t, void *, cl_uint, const cl_event *, cl_event *);
+        const size_t *, size_t, size_t, void *, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueWriteImage(cl_command_queue, cl_mem, cl_bool, const size_t *,
-	const size_t *, size_t, size_t, const void *, cl_uint, const cl_event *,
-	cl_event *);
+        const size_t *, size_t, size_t, const void *, cl_uint, const cl_event *,
+        cl_event *);
 
 cl_int
 clEnqueueCopyImage(cl_command_queue, cl_mem, cl_mem, const size_t *,
-	const size_t *, const size_t *, cl_uint, const cl_event *, cl_event *);
+        const size_t *, const size_t *, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueCopyImageToBuffer(cl_command_queue, cl_mem, cl_mem, const size_t *,
-	const size_t *, size_t, cl_uint, const cl_event *, cl_event *);
+        const size_t *, size_t, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueCopyBufferToImage(cl_command_queue, cl_mem, cl_mem, size_t,
-	const size_t *, const size_t *, cl_uint, const cl_event *, cl_event *);
+        const size_t *, const size_t *, cl_uint, const cl_event *, cl_event *);
 
 void *
 clEnqueueMapBuffer(cl_command_queue, cl_mem, cl_bool, cl_map_flags, size_t,
-	size_t, cl_uint, const cl_event *, cl_event *, cl_int *);
+        size_t, cl_uint, const cl_event *, cl_event *, cl_int *);
 
 void *
 clEnqueueMapImage(cl_command_queue, cl_mem, cl_bool, cl_map_flags, const size_t *,
-	const size_t *, size_t *, size_t *, cl_uint, const cl_event *, cl_event *,
-	cl_int *);
+        const size_t *, size_t *, size_t *, cl_uint, const cl_event *, cl_event *,
+        cl_int *);
 
 cl_int
 clEnqueueUnmapMemObject(cl_command_queue, cl_mem, void *, cl_uint, const cl_event *,
-	cl_event *);
+        cl_event *);
 
 cl_int
 clEnqueueNDRangeKernel(cl_command_queue, cl_kernel, cl_uint, const size_t *,
-	const size_t *, const size_t *, cl_uint, const cl_event *, cl_event *);
+        const size_t *, const size_t *, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueTask(cl_command_queue, cl_kernel, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueNativeKernel(cl_command_queue, void function(void *), void *, size_t,
-	cl_uint, const cl_mem *, const void **, cl_uint, const cl_event *, cl_event *);
+        cl_uint, const cl_mem *, const void **, cl_uint, const cl_event *, cl_event *);
 
 cl_int
 clEnqueueMarker(cl_command_queue, cl_event *);

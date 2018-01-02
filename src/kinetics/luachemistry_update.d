@@ -46,33 +46,33 @@ extern(C) int newChemistryUpdate(lua_State* L)
 
     int narg = lua_gettop(L);
     if ( narg == 0 || !lua_istable(L, 1) ) {
-	string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
-	    "A table containing named arguments is expected, but no table was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
+            "A table containing named arguments is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     // Expect to find a 'filename' entry
     lua_getfield(L, 1, "filename");
     if ( !lua_isstring(L, -1) ) {
-	string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
-	    "A string was expected as the filename argument. " ~
-	    "No valid string was found.";
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
+            "A string was expected as the filename argument. " ~
+            "No valid string was found.";
+        luaL_error(L, errMsg.toStringz);
     }
     auto fname = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
     // Expect to find a 'gasmodel' entry
     lua_getfield(L, 1, "gasmodel");
     if ( lua_isnil(L, -1) ) {
-	string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
-	    "No gasmodel entry found in named arguments.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
+            "No gasmodel entry found in named arguments.";
+        luaL_error(L, errMsg.toStringz());
     }
     auto gmodel = checkGasModel(L, -1);
     if ( gmodel is null ) {
-	string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
-	    "A GasModel object was expected as the gasmodel argument. " ~
-	    "No valid GasModel was found.";
-	luaL_error(L, errMsg.toStringz());
+        string errMsg = "Error in call to ChemistryUpdate:new{}. " ~
+            "A GasModel object was expected as the gasmodel argument. " ~
+            "No valid GasModel was found.";
+        luaL_error(L, errMsg.toStringz());
     }
     lua_pop(L, 1);
     
@@ -104,13 +104,13 @@ extern(C) int updateState(lua_State* L)
     double[] params;
 
     try {
-	double dummyDouble;
-	chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
+        double dummyDouble;
+        chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
     }
     catch (ThermochemicalReactorUpdateException e) {
-	string errMsg = "Error in call to chemistry update. " ~
-	    "Caught exception: " ~ to!string(e);
-	luaL_error(L, errMsg.toStringz);
+        string errMsg = "Error in call to chemistry update. " ~
+            "Caught exception: " ~ to!string(e);
+        luaL_error(L, errMsg.toStringz);
     }
     // Update gas table
     setGasStateInTable(L, gm, 2, Q);

@@ -20,10 +20,10 @@ interface ThermalConductivity {
     ThermalConductivity dup() const;
     final void update_thermal_conductivity(GasState Q) 
     {
-	Q.k = eval(Q, Q.T);
-	for ( auto imode = 0; imode < Q.T_modes.length; ++imode) {
-	    Q.k_modes[imode] = eval(Q, Q.T_modes[imode]);
-	}
+        Q.k = eval(Q, Q.T);
+        for ( auto imode = 0; imode < Q.T_modes.length; ++imode) {
+            Q.k_modes[imode] = eval(Q, Q.T_modes[imode]);
+        }
     }
     double eval(ref const(GasState) Q, double T);
 }
@@ -43,14 +43,14 @@ ThermalConductivity createThermalConductivityModel(lua_State *L)
     
     switch ( model ) {
     case "Sutherland":
-	tcm = createSutherlandThermalConductivity(L);
-	break;
+        tcm = createSutherlandThermalConductivity(L);
+        break;
     case "CEA":
-	tcm = createCEAThermalConductivity(L);
-	break;
+        tcm = createCEAThermalConductivity(L);
+        break;
     default:
-	string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
-	throw new Error(errMsg);
+        string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
+        throw new Error(errMsg);
     }
     
     return tcm;

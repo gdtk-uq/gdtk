@@ -42,9 +42,9 @@ immutable double MASSF_ERROR_TOL = 1.0e-6;
 
 class GasModelException : Exception {
     this(string message, string file=__FILE__, size_t line=__LINE__,
-	 Throwable next=null)
+         Throwable next=null)
     {
-	super(message, file, line, next);
+        super(message, file, line, next);
     }
 }
 
@@ -60,10 +60,10 @@ public:
 
     void create_species_reverse_lookup()
     {
-	_species_indices.clear;
-	foreach ( int isp; 0 .. _n_species ) {
-	    _species_indices[_species_names[isp]] = isp;
-	}
+        _species_indices.clear;
+        foreach ( int isp; 0 .. _n_species ) {
+            _species_indices[_species_names[isp]] = isp;
+        }
     }
     // Methods to be overridden.
     //
@@ -90,24 +90,24 @@ public:
     abstract double enthalpy(in GasState Q);
     double enthalpy(in GasState Q, int isp)
     {
-	// For the single-species gases, provide a default implementation
-	// but we need to be careful to override this for multi-component gases.
-	return enthalpy(Q);
+        // For the single-species gases, provide a default implementation
+        // but we need to be careful to override this for multi-component gases.
+        return enthalpy(Q);
     }
     abstract double entropy(in GasState Q);
     double entropy(in GasState Q, int isp)
     {
-	// For the single-species gases, provide a default implementation
-	// but we need to be carefule to override this for multi-component gases.
-	return entropy(Q);
+        // For the single-species gases, provide a default implementation
+        // but we need to be carefule to override this for multi-component gases.
+        return entropy(Q);
     }
 
     double gibbs_free_energy(GasState Q, int isp)
     {
-	double h = enthalpy(Q, isp);
-	double s = entropy(Q, isp);
-	double g = h - Q.T*s;
-	return g;
+        double h = enthalpy(Q, isp);
+        double s = entropy(Q, isp);
+        double g = h - Q.T*s;
+        return g;
     }
     
     final double Cv(in GasState Q) { return dudT_const_v(Q); }
@@ -116,44 +116,44 @@ public:
     final double gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
     final double molecular_mass(in GasState Q) 
     in {
-	assert(Q.massf.length == _mol_masses.length, brokenPreCondition("Inconsistent array lengths."));
+        assert(Q.massf.length == _mol_masses.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
-	return mixture_molecular_mass(Q.massf, _mol_masses);
+        return mixture_molecular_mass(Q.massf, _mol_masses);
     }
     final void massf2molef(in GasState Q, double[] molef) 
     in {
-	assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
+        assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
-	gas.gas_model.massf2molef(Q.massf, _mol_masses, molef);
+        gas.gas_model.massf2molef(Q.massf, _mol_masses, molef);
     }
     final void molef2massf(in double[] molef, GasState Q) 
     in {
-	assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
+        assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
-	gas.gas_model.molef2massf(molef, _mol_masses, Q.massf);
+        gas.gas_model.molef2massf(molef, _mol_masses, Q.massf);
     }
     final void massf2conc(in GasState Q, double[] conc) 
     in {
-	assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
+        assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
-	foreach ( i; 0.._n_species ) {
-	    conc[i] = Q.massf[i]*Q.rho / _mol_masses[i];
-	    if ( conc[i] < MIN_MOLES ) conc[i] = 0.0;
-	}
+        foreach ( i; 0.._n_species ) {
+            conc[i] = Q.massf[i]*Q.rho / _mol_masses[i];
+            if ( conc[i] < MIN_MOLES ) conc[i] = 0.0;
+        }
     }
     final void conc2massf(in double[] conc, GasState Q) 
     in {
-	assert(Q.massf.length == conc.length, brokenPreCondition("Inconsisten array lengths."));
+        assert(Q.massf.length == conc.length, brokenPreCondition("Inconsisten array lengths."));
     }
     body {
-	foreach ( i; 0.._n_species ) {
-	    Q.massf[i] = conc[i]*_mol_masses[i] / Q.rho;
-	    if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
-	}
+        foreach ( i; 0.._n_species ) {
+            Q.massf[i] = conc[i]*_mol_masses[i] / Q.rho;
+            if ( Q.massf[i] < MIN_MASS_FRACTION ) Q.massf[i] = 0.0;
+        }
     }
 
 protected:
@@ -168,26 +168,26 @@ protected:
 } // end class GasModel
 
 @nogc void scale_mass_fractions(ref double[] massf, double tolerance=0.0,
-				double assert_error_tolerance=0.1)
+                                double assert_error_tolerance=0.1)
 {
     auto my_nsp = massf.length;
     if (my_nsp == 1) {
-	// Single species, always expect massf[0]==1.0, so we can take a short-cut.
-	assert(fabs(massf[0] - 1.0) < assert_error_tolerance,
-	       "Single species mass fraction far from 1.0");
-	massf[0] = 1.0;
+        // Single species, always expect massf[0]==1.0, so we can take a short-cut.
+        assert(fabs(massf[0] - 1.0) < assert_error_tolerance,
+               "Single species mass fraction far from 1.0");
+        massf[0] = 1.0;
     } else {
-	// Multiple species, do the full job.
-	double massf_sum = 0.0;
-	foreach(isp; 0 .. my_nsp) {
-	    massf[isp] = massf[isp] >= 0.0 ? massf[isp] : 0.0;
-	    massf_sum += massf[isp];
-	}
-	assert(fabs(massf_sum - 1.0) < assert_error_tolerance,
-	       "Sum of species mass fractions far from 1.0");
-	if ( fabs(massf_sum - 1.0) > tolerance ) {
-	    foreach(isp; 0 .. my_nsp) massf[isp] /= massf_sum;
-	}
+        // Multiple species, do the full job.
+        double massf_sum = 0.0;
+        foreach(isp; 0 .. my_nsp) {
+            massf[isp] = massf[isp] >= 0.0 ? massf[isp] : 0.0;
+            massf_sum += massf[isp];
+        }
+        assert(fabs(massf_sum - 1.0) < assert_error_tolerance,
+               "Sum of species mass fractions far from 1.0");
+        if ( fabs(massf_sum - 1.0) > tolerance ) {
+            foreach(isp; 0 .. my_nsp) massf[isp] /= massf_sum;
+        }
     }
     return;
 } // end scale_mass_fractions()
@@ -303,11 +303,11 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
     Cv_eff = de / (Q.T - T_old);
@@ -322,11 +322,11 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
     fp_old = p_given - Q.p;
@@ -337,100 +337,100 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
     converged = (fabs(fp_old) < fp_tol) && (fabs(fT_old) < fT_tol);
     count = 0;
     while ( !converged && count < MAX_STEPS ) {
-	// Perturb first dimension to get derivatives.
-	rho_new = rho_old * 1.001;
-	e_new = e_old;
-	Q.rho = rho_new;
-	Q.u = e_new;
-	try { gmodel.update_thermo_from_rhou(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__); 
-	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	fp_new = p_given - Q.p;
-	fT_new = T_given - Q.T;
-	dfp_drho = (fp_new - fp_old) / (rho_new - rho_old);
-	dfT_drho = (fT_new - fT_old) / (rho_new - rho_old);
-	// Perturb other dimension to get derivatives.
-	rho_new = rho_old;
-	e_new = e_old * 1.001;
-	Q.rho = rho_new;
-	Q.u = e_new;
+        // Perturb first dimension to get derivatives.
+        rho_new = rho_old * 1.001;
+        e_new = e_old;
+        Q.rho = rho_new;
+        Q.u = e_new;
+        try { gmodel.update_thermo_from_rhou(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s failed at call A in %s\n", count, __FUNCTION__); 
+            msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
+        fp_new = p_given - Q.p;
+        fT_new = T_given - Q.T;
+        dfp_drho = (fp_new - fp_old) / (rho_new - rho_old);
+        dfT_drho = (fT_new - fT_old) / (rho_new - rho_old);
+        // Perturb other dimension to get derivatives.
+        rho_new = rho_old;
+        e_new = e_old * 1.001;
+        Q.rho = rho_new;
+        Q.u = e_new;
 
-	try { gmodel.update_thermo_from_rhou(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s failed at call B in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
+        try { gmodel.update_thermo_from_rhou(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s failed at call B in %", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
 
-	fp_new = p_given - Q.p;
-	fT_new = T_given - Q.T;
-	dfp_de = (fp_new - fp_old) / (e_new - e_old);
-	dfT_de = (fT_new - fT_old) / (e_new - e_old);
-	det = dfp_drho * dfT_de - dfT_drho * dfp_de;
-       	if( fabs(det) < 1.0e-12 ) {
-	    string msg;
-	    msg ~= format("Error in function %s\n", __FUNCTION__);
-	    msg ~= format("    Nearly zero determinant, det = ", det);
-	    throw new Exception(msg);
-	}
-	drho = (-dfT_de * fp_old + dfp_de * fT_old) / det;
-	de = (dfT_drho * fp_old - dfp_drho * fT_old) / det;
-	if( fabs(drho) > MAX_RELATIVE_STEP * rho_old ) {
-	    // move a little toward the goal 
-	    drho_sign = (drho > 0.0 ? 1.0 : -1.0);
-	    drho = drho_sign * MAX_RELATIVE_STEP * rho_old;
-	} 
-	if( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
-	    // move a little toward the goal
-	    de_sign = (de > 0.0 ? 1.0 : -1.0);
-	    de = de_sign * MAX_RELATIVE_STEP * e_old;
-	} 
-	rho_old += drho;
-	e_old += de;
-	// Make sure of consistent thermo state.
-	Q.rho = rho_old;
-	Q.u = e_old;
-	try { gmodel.update_thermo_from_rhou(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s failed in %s\n", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	// Prepare for next iteration.
-	fp_old = p_given - Q.p;
-	fT_old = T_given - Q.T;
-	converged = (fabs(fp_old) < fp_tol) && (fabs(fT_old) < fT_tol);
-	++count;
+        fp_new = p_given - Q.p;
+        fT_new = T_given - Q.T;
+        dfp_de = (fp_new - fp_old) / (e_new - e_old);
+        dfT_de = (fT_new - fT_old) / (e_new - e_old);
+        det = dfp_drho * dfT_de - dfT_drho * dfp_de;
+        if( fabs(det) < 1.0e-12 ) {
+            string msg;
+            msg ~= format("Error in function %s\n", __FUNCTION__);
+            msg ~= format("    Nearly zero determinant, det = ", det);
+            throw new Exception(msg);
+        }
+        drho = (-dfT_de * fp_old + dfp_de * fT_old) / det;
+        de = (dfT_drho * fp_old - dfp_drho * fT_old) / det;
+        if( fabs(drho) > MAX_RELATIVE_STEP * rho_old ) {
+            // move a little toward the goal 
+            drho_sign = (drho > 0.0 ? 1.0 : -1.0);
+            drho = drho_sign * MAX_RELATIVE_STEP * rho_old;
+        } 
+        if( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
+            // move a little toward the goal
+            de_sign = (de > 0.0 ? 1.0 : -1.0);
+            de = de_sign * MAX_RELATIVE_STEP * e_old;
+        } 
+        rho_old += drho;
+        e_old += de;
+        // Make sure of consistent thermo state.
+        Q.rho = rho_old;
+        Q.u = e_old;
+        try { gmodel.update_thermo_from_rhou(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s failed in %s\n", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
+        // Prepare for next iteration.
+        fp_old = p_given - Q.p;
+        fT_old = T_given - Q.T;
+        converged = (fabs(fp_old) < fp_tol) && (fabs(fT_old) < fT_tol);
+        ++count;
     } // end while 
 
     if ( count >= MAX_STEPS ) {
-	string msg;
-	msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations did not converge.\n");
-	msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
-	msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
-	msg ~= "  Supplied Q:" ~ Q.toString();
-	writeln(msg);
+        string msg;
+        msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations did not converge.\n");
+        msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
+        msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString();
+        writeln(msg);
 
     }
 
     if( (fabs(fp_old) > fp_tol_fail) || (fabs(fT_old) > fT_tol_fail) ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations failed badly.\n");
-	msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
-	msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
-	msg ~= "  Supplied Q:" ~ Q.toString();
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations failed badly.\n");
+        msg ~= format("    p_given = %.10s, T_given, %.5s\n", p_given, T_given); 
+        msg ~= format("    fp_old = %g, fT_old = %g\n", fp_old, fT_old);
+        msg ~= "  Supplied Q:" ~ Q.toString();
+        throw new Exception(msg);
     }
 }
 
@@ -466,11 +466,11 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 0 failed in %s", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 0 failed in %s", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
    
    
@@ -483,11 +483,11 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-	string msg;
-	msg ~= format("Starting guess at iteration 1 failed in %s", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 1 failed in %s", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
    
     fT_old = T_given - Q.T;
@@ -498,11 +498,11 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-	string msg;
-	msg ~= format("Starting guess at iteration 2 failed in %s", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 2 failed in %s", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
     fT_new = T_given - Q.T;
@@ -510,8 +510,8 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 
     // At the start of iteration, we want *_old to be the best guess.
     if ( fabs(fT_new) < fabs(fT_old) ) {
-	tmp = fT_new; fT_new = fT_old; fT_old = tmp;
-	tmp = e_new; e_new = e_old; e_old = tmp;
+        tmp = fT_new; fT_new = fT_old; fT_old = tmp;
+        tmp = e_new; e_new = e_old; e_old = tmp;
     }
     // Update the guess using Newton iterations
     // with the partial derivatives being estimated
@@ -519,30 +519,30 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
     converged = (fabs(fT_old) < fT_tol);
     count = 0;
     while ( !converged && count < MAX_STEPS ) {
-	de = -fT_old / dfT_de;
-	if ( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
-	    // move a little toward the goal 
-	    de_sign = (de > 0.0 ? 1.0 : -1.0);
-	    de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
-	} 
-	e_new = e_old + de;
-	Q.rho = rho_given;
-	Q.u = e_new;
-	try { gmodel.update_thermo_from_rhou(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	fT_new = T_given - Q.T;
-	dfT_de = (fT_new - fT_old) / (e_new - e_old);
-	// Prepare for the next iteration.
-	++count;
-	fT_old = fT_new;
-	e_old = e_new;
-	converged = fabs(fT_old) < fT_tol;
+        de = -fT_old / dfT_de;
+        if ( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
+            // move a little toward the goal 
+            de_sign = (de > 0.0 ? 1.0 : -1.0);
+            de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
+        } 
+        e_new = e_old + de;
+        Q.rho = rho_given;
+        Q.u = e_new;
+        try { gmodel.update_thermo_from_rhou(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
+        fT_new = T_given - Q.T;
+        dfT_de = (fT_new - fT_old) / (e_new - e_old);
+        // Prepare for the next iteration.
+        ++count;
+        fT_old = fT_new;
+        e_old = e_new;
+        converged = fabs(fT_old) < fT_tol;
     }   // end while 
     // Ensure that we have the current data for all EOS variables.
     Q.rho = rho_given;
@@ -550,30 +550,30 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-	string msg;
-	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
      if ( count >= MAX_STEPS ) {
-	string msg;
-	msg ~= format("Warning in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations did not converge.\n");
-	msg ~= format("    fT_old = %g\n", fT_old);
-	msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
+        string msg;
+        msg ~= format("Warning in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations did not converge.\n");
+        msg ~= format("    fT_old = %g\n", fT_old);
+        msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
         msg ~= "  Supplied Q:" ~ Q.toString;
-	writeln(msg);
+        writeln(msg);
 
     }
     if ( fabs(fT_old) > fT_tol_fail ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations failed badly.\n");
-	msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
-	msg ~= "  Supplied Q:" ~ Q.toString();
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations failed badly.\n");
+        msg ~= format("    rho_given = %.5s, T_given, %.5s\n", rho_given, T_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString();
+        throw new Exception(msg);
     }  
 }
 
@@ -606,11 +606,11 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 0 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 0 failed in %s\n", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
     dedp = de / (Q.p - p_old);
@@ -624,11 +624,11 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
     fp_old = p_given - Q.p;
@@ -639,11 +639,11 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 2 failed in %s\n", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
     fp_new = p_given - Q.p;
@@ -651,8 +651,8 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 
     // At the start of iteration, we want *_old to be the best guess.
     if ( fabs(fp_new) < fabs(fp_old) ) {
-	tmp = fp_new; fp_new = fp_old; fp_old = tmp;
-	tmp = e_new; e_new = e_old; e_old = tmp;
+        tmp = fp_new; fp_new = fp_old; fp_old = tmp;
+        tmp = e_new; e_new = e_old; e_old = tmp;
     }
     // Update the guess using Newton iterations
     // with the partial derivatives being estimated
@@ -660,32 +660,32 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     converged = (fabs(fp_old) < fp_tol);
     count = 0;
     while ( !converged && count < MAX_STEPS ) {
-	de = -fp_old / dfp_de;
-	if ( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
-	    // move a little toward the goal
-	    de_sign = (de > 0.0 ? 1.0 : -1.0);
-	    de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
-	} 
-	e_new = e_old + de;
-	Q.rho = rho_given;
-	Q.u = e_new;
+        de = -fp_old / dfp_de;
+        if ( fabs(de) > MAX_RELATIVE_STEP * e_old ) {
+            // move a little toward the goal
+            de_sign = (de > 0.0 ? 1.0 : -1.0);
+            de = de_sign * MAX_RELATIVE_STEP * fabs(e_old);
+        } 
+        e_new = e_old + de;
+        Q.rho = rho_given;
+        Q.u = e_new;
 
-	try { gmodel.update_thermo_from_rhou(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
+        try { gmodel.update_thermo_from_rhou(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
 
-	fp_new = p_given - Q.p;
-	dfp_de = (fp_new - fp_old) / (e_new - e_old);
-	// Prepare for next iteration.
-	++count;
-	fp_old = fp_new;
-	e_old = e_new;
-	converged = fabs(fp_old) < fp_tol;
+        fp_new = p_given - Q.p;
+        dfp_de = (fp_new - fp_old) / (e_new - e_old);
+        // Prepare for next iteration.
+        ++count;
+        fp_old = fp_new;
+        e_old = e_new;
+        converged = fabs(fp_old) < fp_tol;
     }   // end while 
     // Ensure that we have the current data for all EOS variables.
     Q.rho = rho_given;
@@ -693,30 +693,30 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 
     try { gmodel.update_thermo_from_rhou(Q); }
     catch (Exception caughtException) {
-	string msg;
-	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_rhou() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
 
       if ( count >= MAX_STEPS ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations did not converge.\n");
-	msg ~= format("    fp_old = %g, e_old = %g\n", fp_old, e_old);
-	msg ~= format("    rho_given = %.5s, p_given, %.8s\n", rho_given, p_given); 
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations did not converge.\n");
+        msg ~= format("    fp_old = %g, e_old = %g\n", fp_old, e_old);
+        msg ~= format("    rho_given = %.5s, p_given, %.8s\n", rho_given, p_given); 
         msg ~= "  Supplied Q:" ~ Q.toString;
-	writeln(msg);
+        writeln(msg);
     }
 
     if ( fabs(fp_old) > fp_tol_fail ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations failed badly.\n");
-	msg ~= format("    rho_given = %.5s, T_given, %.8s\n", rho_given, p_given); 
-	msg ~= "  Supplied Q:" ~ Q.toString();
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations failed badly.\n");
+        msg ~= format("    rho_given = %.5s, T_given, %.8s\n", rho_given, p_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString();
+        throw new Exception(msg);
     }
 }
 
@@ -741,11 +741,11 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
     T_old = Q.T;
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 0 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 0 failed in %s\n", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
     ////**** Need to check this is the correct method - is called 2 more times*****/////
     double s_old = gmodel.entropy(Q);   
@@ -756,19 +756,19 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
 
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
-  	string msg;
-	msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Starting guess at iteration 1 failed in %s\n", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
     double s_new = gmodel.entropy(Q);
     fs_new = s_given - s_new;
     dfs_dT = (fs_new - fs_old)/(T_new - T_old);
     // At the start of iteration, we want *_old to be the best guess.
     if ( fabs(fs_new) < fabs(fs_old) ) {
-	tmp = fs_new; fs_new = fs_old; fs_old = tmp;
-	tmp = s_new; s_new = s_old; s_old = tmp;
+        tmp = fs_new; fs_new = fs_old; fs_old = tmp;
+        tmp = s_new; s_new = s_old; s_old = tmp;
     }
     // Update the guess using Newton iterations
     // with the partial derivatives being estimated
@@ -776,59 +776,59 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
     converged = (fabs(fs_old) < fs_tol);
     count = 0;
     while ( !converged && count < MAX_STEPS ) {
-	dT = -fs_old / dfs_dT;
-	if ( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
-	    // move a little toward the goal
-	    dT_sign = (dT > 0.0 ? 1.0 : -1.0);
-	    dT = dT_sign * MAX_RELATIVE_STEP * fabs(T_old);
-	} 
-	T_new = T_old + dT;
-	Q.T = T_new;
-	try { gmodel.update_thermo_from_pT(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	s_new = gmodel.entropy(Q);
-	fs_new = s_given - s_new;
-	dfs_dT = (fs_new - fs_old) / (T_new - T_old);
-	// Prepare for next iteration.
-	++count;
-	fs_old = fs_new;
-	T_old = T_new;
-	converged = (fabs(fs_old) < fs_tol);
+        dT = -fs_old / dfs_dT;
+        if ( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
+            // move a little toward the goal
+            dT_sign = (dT > 0.0 ? 1.0 : -1.0);
+            dT = dT_sign * MAX_RELATIVE_STEP * fabs(T_old);
+        } 
+        T_new = T_old + dT;
+        Q.T = T_new;
+        try { gmodel.update_thermo_from_pT(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s failed in %", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
+        s_new = gmodel.entropy(Q);
+        fs_new = s_given - s_new;
+        dfs_dT = (fs_new - fs_old) / (T_new - T_old);
+        // Prepare for next iteration.
+        ++count;
+        fs_old = fs_new;
+        T_old = T_new;
+        converged = (fabs(fs_old) < fs_tol);
     }   // end while 
     // Ensure that we have the current data for all EOS variables.
     Q.T = T_old;
 
     try { gmodel.update_thermo_from_pT(Q); }
     catch (Exception caughtException) {
-	string msg;
-	msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
-	msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
-	msg ~= to!string(caughtException);
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Function %s failed after finishing iterations", __FUNCTION__);
+        msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+        msg ~= to!string(caughtException);
+        throw new Exception(msg);
     }
     if ( count >= MAX_STEPS ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations did not converge.\n");
-	msg ~= format("    fs_old = %g\n", fs_old);
-	msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations did not converge.\n");
+        msg ~= format("    fs_old = %g\n", fs_old);
+        msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
         msg ~= "  Supplied Q:" ~ Q.toString;
-	writeln(msg);
+        writeln(msg);
     }
 
     if ( fabs(fs_old) > fs_tol_fail ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations failed badly.\n");
-	msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
-	msg ~= "  Supplied Q:" ~ Q.toString();
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations failed badly.\n");
+        msg ~= format("    p_given = %.8s, s_given, %.5s\n", p_given, s_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString();
+        throw new Exception(msg);
     }
 }
 
@@ -866,104 +866,104 @@ double dp, p_old, p_new, T_old, T_new, dT;
     converged = (fabs(fh_old) < fh_tol) && (fabs(fs_old) < fs_tol);
     count = 0;
     while ( !converged && count < MAX_STEPS ) {
-	// Perturb first dimension to get derivatives.
-	p_new = p_old * 1.001;
-	T_new = T_old;
-	Q.p = p_new;
-	Q.T = T_new;
-	try { gmodel.update_thermo_from_pT(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s at call A failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	h_new = gmodel.enthalpy(Q);
-	s_new = gmodel.entropy(Q);
-	fh_new = h_given - h_new;
-	fs_new = s_given - s_new;
-	dfh_dp = (fh_new - fh_old) / (p_new - p_old);
-	dfs_dp = (fs_new - fs_old) / (p_new - p_old);
-	// Perturb other dimension to get derivatives.
-	p_new = p_old;
-	T_new = T_old * 1.001;
-	Q.p = p_new;
-	Q.T = T_new;
-	try { gmodel.update_thermo_from_pT(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s at call B failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	h_new = gmodel.enthalpy(Q);
-	s_new = gmodel.entropy(Q);
-	fh_new = h_given - h_new;
-	fs_new = s_given - s_new;
-	dfh_dT = (fh_new - fh_old) / (T_new - T_old);
-	dfs_dT = (fs_new - fs_old) / (T_new - T_old);
+        // Perturb first dimension to get derivatives.
+        p_new = p_old * 1.001;
+        T_new = T_old;
+        Q.p = p_new;
+        Q.T = T_new;
+        try { gmodel.update_thermo_from_pT(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s at call A failed in %", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
+        h_new = gmodel.enthalpy(Q);
+        s_new = gmodel.entropy(Q);
+        fh_new = h_given - h_new;
+        fs_new = s_given - s_new;
+        dfh_dp = (fh_new - fh_old) / (p_new - p_old);
+        dfs_dp = (fs_new - fs_old) / (p_new - p_old);
+        // Perturb other dimension to get derivatives.
+        p_new = p_old;
+        T_new = T_old * 1.001;
+        Q.p = p_new;
+        Q.T = T_new;
+        try { gmodel.update_thermo_from_pT(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s at call B failed in %", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
+        h_new = gmodel.enthalpy(Q);
+        s_new = gmodel.entropy(Q);
+        fh_new = h_given - h_new;
+        fs_new = s_given - s_new;
+        dfh_dT = (fh_new - fh_old) / (T_new - T_old);
+        dfs_dT = (fs_new - fs_old) / (T_new - T_old);
 
-	det = dfh_dp * dfs_dT - dfs_dp * dfh_dT;
+        det = dfh_dp * dfs_dT - dfs_dp * dfh_dT;
       
-       	if( fabs(det) < 1.0e-12 ) {
-	    string msg;
-	    msg ~= format("Error in function %s\n", __FUNCTION__);
-	    msg ~= format("    Nearly zero determinant, det = ", det);
-	    throw new Exception(msg);
-	}
-	dp = (-dfs_dT * fh_old + dfh_dT * fs_old) / det;
-	dT = (dfs_dp * fh_old - dfh_dp * fs_old) / det;
-	if( fabs(dp) > MAX_RELATIVE_STEP * p_old ) {
-	    // move a little toward the goal 
-	    dp_sign = (dp > 0.0 ? 1.0 : -1.0);
-	    dp = dp_sign * MAX_RELATIVE_STEP * p_old;
-	} 
-	if( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
-	    // move a little toward the goal
-	    dT_sign = (dT > 0.0 ? 1.0 : -1.0);
-	    dT = dT_sign * MAX_RELATIVE_STEP * T_old;
-	} 
-	p_old += dp;
-	T_old += dT;
-	// Make sure of consistent thermo state.
-	Q.p = p_old;
-	Q.T = T_old;
-	try { gmodel.update_thermo_from_pT(Q); }
-	catch (Exception caughtException) {
-	    string msg;
-	    msg ~= format("Iteration %s at call C failed in %", count, __FUNCTION__);
-	    msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
-	    msg ~= to!string(caughtException);
-	    throw new Exception(msg);
-	}
-	h_new = gmodel.enthalpy(Q);
-	s_new = gmodel.entropy(Q);
-	// Prepare for next iteration.
-	fh_old = h_given - h_new;
-	fs_old = s_given - s_new;
-	converged = (fabs(fh_old) < fh_tol) && (fabs(fs_old) < fs_tol);
-	++count;
+        if( fabs(det) < 1.0e-12 ) {
+            string msg;
+            msg ~= format("Error in function %s\n", __FUNCTION__);
+            msg ~= format("    Nearly zero determinant, det = ", det);
+            throw new Exception(msg);
+        }
+        dp = (-dfs_dT * fh_old + dfh_dT * fs_old) / det;
+        dT = (dfs_dp * fh_old - dfh_dp * fs_old) / det;
+        if( fabs(dp) > MAX_RELATIVE_STEP * p_old ) {
+            // move a little toward the goal 
+            dp_sign = (dp > 0.0 ? 1.0 : -1.0);
+            dp = dp_sign * MAX_RELATIVE_STEP * p_old;
+        } 
+        if( fabs(dT) > MAX_RELATIVE_STEP * T_old ) {
+            // move a little toward the goal
+            dT_sign = (dT > 0.0 ? 1.0 : -1.0);
+            dT = dT_sign * MAX_RELATIVE_STEP * T_old;
+        } 
+        p_old += dp;
+        T_old += dT;
+        // Make sure of consistent thermo state.
+        Q.p = p_old;
+        Q.T = T_old;
+        try { gmodel.update_thermo_from_pT(Q); }
+        catch (Exception caughtException) {
+            string msg;
+            msg ~= format("Iteration %s at call C failed in %", count, __FUNCTION__);
+            msg ~= format("Excpetion message from update_thermo_from_pT() was:\n\n");
+            msg ~= to!string(caughtException);
+            throw new Exception(msg);
+        }
+        h_new = gmodel.enthalpy(Q);
+        s_new = gmodel.entropy(Q);
+        // Prepare for next iteration.
+        fh_old = h_given - h_new;
+        fs_old = s_given - s_new;
+        converged = (fabs(fh_old) < fh_tol) && (fabs(fs_old) < fs_tol);
+        ++count;
     } // end while 
 
     if ( count >= MAX_STEPS ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations did not converge.\n");
-	msg ~= format("    fh_old = %g, fs_old = %g\n", fh_old, fs_old);
-	msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given); 
-	msg ~= "  Supplied Q:" ~ Q.toString();
-	writeln(msg);
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations did not converge.\n");
+        msg ~= format("    fh_old = %g, fs_old = %g\n", fh_old, fs_old);
+        msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given); 
+        msg ~= "  Supplied Q:" ~ Q.toString();
+        writeln(msg);
     }
 
     if( (fabs(fh_old) > fh_tol_fail) || (fabs(fs_old) > fs_tol_fail) ) {
-	string msg;
-	msg ~= format("Error in function: %s:\n", __FUNCTION__);
-	msg ~= format("    Iterations failed badly.\n");
-	msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given); 	
-	msg ~= "  Supplied Q:" ~ Q.toString();
-	throw new Exception(msg);
+        string msg;
+        msg ~= format("Error in function: %s:\n", __FUNCTION__);
+        msg ~= format("    Iterations failed badly.\n");
+        msg ~= format("    h_given = %.10s, h_given, %.5s\n", h_given, s_given);        
+        msg ~= "  Supplied Q:" ~ Q.toString();
+        throw new Exception(msg);
     }
 } // end update_thermo_state_hs()
 
@@ -1010,83 +1010,83 @@ GasModel init_gas_model(string file_name="gas-model.lua")
    
     try { 
         L = init_lua_State();
-	doLuaFile(L, file_name);
+        doLuaFile(L, file_name);
     } catch (Exception e) {
         writeln("ERROR: in function init_gas_model() in gas_model.d");
         writeln("ERROR: There was a problem parsing the input file: ", file_name);
-	writeln("ERROR: There could be a Lua syntax error OR the file might not exist.");
-	writeln("ERROR: Quitting at this point.");
- 	exit(1);
+        writeln("ERROR: There could be a Lua syntax error OR the file might not exist.");
+        writeln("ERROR: Quitting at this point.");
+        exit(1);
     }
     string gas_model_name;
     try {
-    	gas_model_name = getString(L, LUA_GLOBALSINDEX, "model");
+        gas_model_name = getString(L, LUA_GLOBALSINDEX, "model");
     } catch (Exception e) {
         writeln("ERROR: in function init_gas_model() in gas_model.d");
         writeln("ERROR: There was a problem reading the 'model' name" );
-	writeln("ERROR: in the gas model input Lua file.");
-	writeln("ERROR: Quitting at this point.");
+        writeln("ERROR: in the gas model input Lua file.");
+        writeln("ERROR: Quitting at this point.");
         exit(1);
     }
     GasModel gm;
     switch (gas_model_name) {
     case "IdealGas":
-	gm = new IdealGas(L);
-	break;
+        gm = new IdealGas(L);
+        break;
     case "CEAGas":
-	gm = new CEAGas(L);
-	break;
+        gm = new CEAGas(L);
+        break;
     case "ThermallyPerfectGas":
-	gm = new ThermallyPerfectGas(L);
-	break;
+        gm = new ThermallyPerfectGas(L);
+        break;
     case "VeryViscousAir":
-	gm = new VeryViscousAir(L);
-	break;
+        gm = new VeryViscousAir(L);
+        break;
     case "CO2Gas":
-	gm = new CO2Gas(L);
-	break;
+        gm = new CO2Gas(L);
+        break;
     case "CO2GasSW":
-	gm = new CO2GasSW(L);
-	break;
+        gm = new CO2GasSW(L);
+        break;
     case "SF6Virial":
-	gm = new SF6Virial(L);
-	break;
+        gm = new SF6Virial(L);
+        break;
     case "look-up table":  
-	gm = new  UniformLUT(L);
-	break;
+        gm = new  UniformLUT(L);
+        break;
     case "CEA adaptive look-up table":
-	gm = new AdaptiveLUT(L);
-	break;
+        gm = new AdaptiveLUT(L);
+        break;
     case "IdealAirProxy":
-	gm = new IdealAirProxy(); // no further config in the Lua file
-	break;
+        gm = new IdealAirProxy(); // no further config in the Lua file
+        break;
     case "PowersAslamGas":
-	gm = new PowersAslamGas(L);
-	break;
+        gm = new PowersAslamGas(L);
+        break;
     case "TwoTemperatureReactingArgon":
-	gm = new TwoTemperatureReactingArgon(L);
-	break;
+        gm = new TwoTemperatureReactingArgon(L);
+        break;
     case "IdealDissociatingGas":
-	gm = new IdealDissociatingGas(L);
-	break;
+        gm = new IdealDissociatingGas(L);
+        break;
     case "TwoTemperatureAir":
-	gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
-	break;
+        gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
+        break;
     case "TwoTemperatureNitrogen":
-	gm = new TwoTemperatureNitrogen();
-	break;
+        gm = new TwoTemperatureNitrogen();
+        break;
     case "VibSpecificNitrogen":
-	gm = new VibSpecificNitrogen();
-	break;
+        gm = new VibSpecificNitrogen();
+        break;
     case "FuelAirMix":
-	gm = new FuelAirMix(L);
-	break;
+        gm = new FuelAirMix(L);
+        break;
     case "Steam":
-	gm = new Steam();
-	break;
+        gm = new Steam();
+        break;
     default:
-	string errMsg = format("The gas model '%s' is not available.", gas_model_name);
-	throw new Error(errMsg);
+        string errMsg = format("The gas model '%s' is not available.", gas_model_name);
+        throw new Error(errMsg);
     }
     lua_close(L);
     return gm;
@@ -1099,90 +1099,90 @@ GasModel init_gas_model(string file_name="gas-model.lua")
 
 version(gas_model_test) {
     int main() {
-	// Methods for testing gas state class
-	auto gd = new GasState(2, 1);
-	gd.massf[0] = 0.8;
-	gd.massf[1] = 0.2;
-	double[] phi = [9.0, 16.0];
-	assert(approxEqual(10.4, mass_average(gd, phi), 1.0e-6));
-	
-	// Iterative methods test using idealgas single species model
-	// These assume IdealGas class is working properly
-	GasModel gm;
-	try {
-	    gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
-	}
-	catch (Exception e) {
-	    writeln(e.msg);
-	    string msg;
-	    msg ~= "Test of iterative methods in gas_model.d require file:";
-	    msg ~= " ideal-air-gas-model.lua in directory: gas/sample_data";
-	    throw new Exception(msg);
-	}
+        // Methods for testing gas state class
+        auto gd = new GasState(2, 1);
+        gd.massf[0] = 0.8;
+        gd.massf[1] = 0.2;
+        double[] phi = [9.0, 16.0];
+        assert(approxEqual(10.4, mass_average(gd, phi), 1.0e-6));
+        
+        // Iterative methods test using idealgas single species model
+        // These assume IdealGas class is working properly
+        GasModel gm;
+        try {
+            gm = init_gas_model("sample-data/ideal-air-gas-model.lua");
+        }
+        catch (Exception e) {
+            writeln(e.msg);
+            string msg;
+            msg ~= "Test of iterative methods in gas_model.d require file:";
+            msg ~= " ideal-air-gas-model.lua in directory: gas/sample_data";
+            throw new Exception(msg);
+        }
 
-	gd = new GasState(gm, 100.0e3, 300.0);
-	assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), "gas constant");
-	assert(gm.n_modes == 0, "number of energy modes");
-	assert(gm.n_species == 1, "number of species");
-	assert(approxEqual(gd.p, 1.0e5), "pressure");
-	assert(approxEqual(gd.T, 300.0, 1.0e-6), "static temperature");
-	assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), "massf[0]");
+        gd = new GasState(gm, 100.0e3, 300.0);
+        assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), "gas constant");
+        assert(gm.n_modes == 0, "number of energy modes");
+        assert(gm.n_species == 1, "number of species");
+        assert(approxEqual(gd.p, 1.0e5), "pressure");
+        assert(approxEqual(gd.T, 300.0, 1.0e-6), "static temperature");
+        assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), "massf[0]");
 
-	gm.update_thermo_from_pT(gd);
-	gm.update_sound_speed(gd);
-	assert(approxEqual(gd.rho, 1.16109, 1.0e-4), "density");
-	assert(approxEqual(gd.u, 215314.0, 1.0e-4), "internal energy");
-	assert(approxEqual(gd.a, 347.241, 1.0e-4), "sound speed");
-	gm.update_trans_coeffs(gd);
-	assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), "viscosity");
-	assert(approxEqual(gd.k, 0.0262449, 1.0e-6), "conductivity");
+        gm.update_thermo_from_pT(gd);
+        gm.update_sound_speed(gd);
+        assert(approxEqual(gd.rho, 1.16109, 1.0e-4), "density");
+        assert(approxEqual(gd.u, 215314.0, 1.0e-4), "internal energy");
+        assert(approxEqual(gd.a, 347.241, 1.0e-4), "sound speed");
+        gm.update_trans_coeffs(gd);
+        assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), "viscosity");
+        assert(approxEqual(gd.k, 0.0262449, 1.0e-6), "conductivity");
 
-	// Select arbitrary energy and density and establish a set of 
-	// variables that are thermodynamically consistent
-	double e_given = 1.0e7;
-	double rho_given = 2.0;
-	auto Q = new GasState(gm);
-	Q.u = e_given;
-	Q.rho = rho_given;
-	gm.update_thermo_from_rhou(Q);
-	double p_given = Q.p;
-	double T_given = Q.T;
-	
-	// Initialise the same state from the different property combinations
-	// Test pT iterative update
-	Q.p = p_given;
-	Q.T = T_given;
-     	update_thermo_state_pT(gm, Q); 
-	// Determine correct entropy/enthalpy for updates that use them
-	double s_given = gm.entropy(Q); 
-	double h_given = gm.enthalpy(Q);
-	assert(approxEqual(Q.rho, rho_given, 1.0e-6),  failedUnitTest());
-	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-	// Test rhoT iterative update
-	Q.rho = rho_given;
-	Q.T = T_given;
-	update_thermo_state_rhoT(gm, Q);
-	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-	assert(approxEqual(Q.p, p_given, 1.0e-6),  failedUnitTest());
-	// Test rhop iterative update
-	Q.rho = rho_given;
-	Q.p = p_given;
-	assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
-	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-	// Test  ps iterative update
-  	Q.p = p_given;
-	update_thermo_state_ps(gm, Q, s_given);	
-	assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
-	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-	assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
-	// Test hs iterative update
-	assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
-	assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-	assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
-	assert(approxEqual(Q.p, p_given, 1.0e-6), failedUnitTest());
+        // Select arbitrary energy and density and establish a set of 
+        // variables that are thermodynamically consistent
+        double e_given = 1.0e7;
+        double rho_given = 2.0;
+        auto Q = new GasState(gm);
+        Q.u = e_given;
+        Q.rho = rho_given;
+        gm.update_thermo_from_rhou(Q);
+        double p_given = Q.p;
+        double T_given = Q.T;
+        
+        // Initialise the same state from the different property combinations
+        // Test pT iterative update
+        Q.p = p_given;
+        Q.T = T_given;
+        update_thermo_state_pT(gm, Q); 
+        // Determine correct entropy/enthalpy for updates that use them
+        double s_given = gm.entropy(Q); 
+        double h_given = gm.enthalpy(Q);
+        assert(approxEqual(Q.rho, rho_given, 1.0e-6),  failedUnitTest());
+        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
+        // Test rhoT iterative update
+        Q.rho = rho_given;
+        Q.T = T_given;
+        update_thermo_state_rhoT(gm, Q);
+        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
+        assert(approxEqual(Q.p, p_given, 1.0e-6),  failedUnitTest());
+        // Test rhop iterative update
+        Q.rho = rho_given;
+        Q.p = p_given;
+        assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
+        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
+        // Test  ps iterative update
+        Q.p = p_given;
+        update_thermo_state_ps(gm, Q, s_given); 
+        assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
+        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
+        assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
+        // Test hs iterative update
+        assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
+        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
+        assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
+        assert(approxEqual(Q.p, p_given, 1.0e-6), failedUnitTest());
 
-	// Try 
-	return 0;
+        // Try 
+        return 0;
     }
 }
 
