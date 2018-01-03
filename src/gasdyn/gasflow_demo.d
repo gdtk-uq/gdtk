@@ -5,7 +5,7 @@
  */
 
 import std.stdio, std.math;
-import gas.gas_model;
+import gas;
 import gasflow;
 import idealgasflow; // for the oblique shock relations
 

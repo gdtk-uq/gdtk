@@ -811,7 +811,7 @@ double beta_cone(const(GasState) state1, double V1, double theta, GasModel gm)
     double b1 = max(asin(1.0/M1), 1.1*theta); // to be stronger than a Mach wave
     double b2 = b1 * 1.05;
     auto error_in_theta = delegate(double beta_guess) {
-        double[] shock_results = theta_cone(state1, V1, beta_guess, state2, gm);
+        double[2] shock_results = theta_cone(state1, V1, beta_guess, state2, gm);
         double theta_guess = shock_results[0]; double V2 = shock_results[1]; 
         double error_value = theta_guess - theta;
         return error_value;
