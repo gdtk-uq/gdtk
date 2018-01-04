@@ -119,6 +119,7 @@ final class ChemistryUpdate : ThermochemicalReactor {
     {
         _Qinit.copy_values_from(Q);
         _gmodel.massf2conc(Q, _conc0);
+        double uTotal = _gmodel.internal_energy(Q);
 
         // 0. Evaluate the rate constants. 
         //    It helps to have these computed before doing other setup work.
@@ -269,6 +270,28 @@ chemistry update.";
         _gmodel.conc2massf(_concOut, Q);
         auto massfTotal = sum(Q.massf);
         foreach (ref mf; Q.massf) mf /= massfTotal;
+        if (_gmodel.n_modes >= 1) {
+            // Changing mass fractions does not change internal energies
+            // but it might have been redistributed.
+            try {
+                _gmodel.update_thermo_from_rhoT(Q);
+            }
+            catch (GasModelException err) {
+                string msg = format("caught %s", err.msg);
+                msg ~= "The call to update_thermo_from_rhoT in the chemistry update failed.\n";
+            throw new ThermochemicalReactorUpdateException(msg);
+            }
+            auto uOther = sum(Q.u_modes);
+            Q.u = uTotal - uOther;
+            try {
+                _gmodel.update_thermo_from_rhou(Q);
+            }
+            catch (GasModelException err) {
+                string msg = format("caught %s", err.msg);
+                msg ~= "The call to update_thermo_from_rhou in the chemistry update failed.\n";
+            throw new ThermochemicalReactorUpdateException(msg);
+            }
+        }
         dtChemSuggest = dtSave;
     }
 

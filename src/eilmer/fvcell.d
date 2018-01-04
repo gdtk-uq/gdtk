@@ -942,6 +942,7 @@ public:
             msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
             msg ~= format("This cell is located at: %s\n", pos[0]);
             msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
+            msg ~= format("The cell's id is: %d\n", id);
             msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
             throw new FlowSolverException(msg);
         }

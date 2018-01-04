@@ -53,6 +53,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref double[] params)
     {
+        
         double dummyDouble;
         // 1. Perform chemistry update.
         _chemUpdate(Q, tInterval, dtChemSuggest, dummyDouble, params);
@@ -63,7 +64,14 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
         // since the composition does not change
         // during energy exhange.
         massf2molef(Q.massf, _airModel.mol_masses, _molef);
-        energyUpdate(Q, tInterval, dtThermSuggest);
+        try {
+            energyUpdate(Q, tInterval, dtThermSuggest);
+        }
+        catch (GasModelException err) {
+            string msg = format("caught %s", err.msg);
+            msg ~= "The energy update in the two temperature air kinetics module failed.\n";
+            throw new ThermochemicalReactorUpdateException(msg);
+        }
     }
 
 private:
@@ -79,10 +87,10 @@ private:
     double[][] _mu;
     int[][] _reactionsByMolecule;
     // Numerics control
-    int _maxSubcycles = 1000;
+    int _maxSubcycles = 10000;
     int _maxAttempts = 3;
-    double _energyAbsTolerance = 1.0e-2;
-    double _energyRelTolerance = 1.0e-3;
+    double _energyAbsTolerance = 1.0e-9;
+    double _energyRelTolerance = 1.0e-9;
 
     void initModel(string energyExchFile)
     {

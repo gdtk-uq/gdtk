@@ -523,18 +523,18 @@ static this()
     __mol_masses["e-"] = 0.000548579903e-3;
 
     /**
-     * See Table B1 in Gupta et al.
+     * See Table I in Gnoffo et al.
      */
-    del_hf["N"]   = 112.973*4184*__mol_masses["N"];
-    del_hf["O"]   = 59.553*4184*__mol_masses["O"];
+    del_hf["N"]   = 112.951e3*4.184/__mol_masses["N"];
+    del_hf["O"]   = 59.544e3*4.184/__mol_masses["O"];
     del_hf["N2"]  = 0.0;
     del_hf["O2"]  = 0.0;
-    del_hf["NO"]  = 21.580*4184*__mol_masses["NO"];
-    del_hf["N+"]  = 449.840*4184* __mol_masses["N+"];
-    del_hf["O+"]  = 374.949*4184*__mol_masses["O+"];
-    del_hf["N2+"] = 360.779*4184*__mol_masses["N2+"];
-    del_hf["O2+"] = 279.849*4184*__mol_masses["O2+"];
-    del_hf["NO+"] = 236.660*4184*__mol_masses["NO+"];
+    del_hf["NO"]  = 21.6009e3*4.184/__mol_masses["NO"];
+    del_hf["N+"]  = 449.709e3*4.184/__mol_masses["N+"];
+    del_hf["O+"]  = 374.867e3*4.184/__mol_masses["O+"];
+    del_hf["N2+"] = 364.9392e3*4.184/__mol_masses["N2+"];
+    del_hf["O2+"] = 280.2099e3*4.184/__mol_masses["O2+"];
+    del_hf["NO+"] = 237.3239e3*4.184/__mol_masses["NO+"];
     del_hf["e-"]  =  0.0;
 
     thermoCoeffs["N2"] = 
