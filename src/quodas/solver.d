@@ -48,14 +48,14 @@ immutable double eps2 = 1.0e-07;              // brute-force finite difference p
 void main() {
     //-----------------------------------------------------
     // Select Simulation type
-     //-----------------------------------------------------
+    //-----------------------------------------------------
     string simulation_type = "nozzle"; // options: Sod's Shocktube, Nozzle
-
+    
     //-----------------------------------------------------
     // Set simulations parameters
     //-----------------------------------------------------
     string solver = "optimisation"; // options: simulation, optimisation, verification
-   
+    
     // flow solver
     double dt = 1.0e-05;                                // flow solver time step, s
     size_t max_step = 100000000;                        // maximum number of flow solver steps
@@ -68,8 +68,8 @@ void main() {
     double outflow_bc_back_pressure_factor = 0.5;
     
     // adjoint solver
-    string adjoint_form = "conservative";           // options: conservative form, primtive form
-    double tol = 1.0e-04;                        // optimisation tolerance
+    string adjoint_form = "primitive";           // options: conservative form, primtive form
+    double tol = 1.0e-05;                        // optimisation tolerance
 
     // geometry parameters for nozzle
 
@@ -134,6 +134,11 @@ void main() {
 
     // compute interface area, and set cell volume
     compute_geometry(simulation_type, global_interfaces, perturbed_interfaces, global_cells, b, c, d, yo, scale);
+
+    //-----------------------------------------------------
+    // Initial Condiions
+    //-----------------------------------------------------
+    set_initial_and_inflow_conditions(simulation_type, global_cells, gamma);
     
     // ---------------------------------------------------------------------------------- //
     // Now we're ready to perform some finite volume calculations on the cells
@@ -522,21 +527,20 @@ void set_initial_and_inflow_conditions(string simulation_type, fvcell[] global_c
 	double a_inflow = sqrt((p_inflow*gamma)/rho_inflow);  // m/s
 	double u_inflow = Mach * a_inflow;                    // m/s
 
+	foreach(i; 0 .. ncells) {
+	    global_cells[i+2].p = p_inflow;
+	    global_cells[i+2].rho = rho_inflow;
+	    global_cells[i+2].u = 0.6 * a_inflow;
+	}
+
 	// Nozzle inflow state ----------------------------------------------
 	global_cells[0].p = p_inflow; global_cells[1].p = p_inflow;
 	global_cells[0].rho = rho_inflow; global_cells[1].rho = rho_inflow;
 	global_cells[0].u = u_inflow; global_cells[1].u = u_inflow;
 
-	// Nozzle initial conditions
-	foreach(i; 0 .. ncells) {
-	    global_cells[i+2].p = 0.333 * p_inflow;
-	    global_cells[i+2].rho = 0.333 * rho_inflow;
-	    global_cells[i+2].u = 0.0 * a_inflow;
-	}
-
-	//global_cells[ncells+2].p = global_cells[ncells+1].p; global_cells[ncells+3].p = global_cells[ncells+1].p;
-	//global_cells[ncells+2].rho =  global_cells[ncells+1].rho; global_cells[ncells+3].rho =  global_cells[ncells+1].rho;
-	//global_cells[ncells+2].u =  global_cells[ncells+1].u; global_cells[ncells+3].u =  global_cells[ncells+1].u;	
+	global_cells[ncells+2].p = global_cells[ncells+1].p; global_cells[ncells+3].p = global_cells[ncells+1].p;
+	global_cells[ncells+2].rho =  global_cells[ncells+1].rho; global_cells[ncells+3].rho =  global_cells[ncells+1].rho;
+	global_cells[ncells+2].u =  global_cells[ncells+1].u; global_cells[ncells+3].u =  global_cells[ncells+1].u;	
     }
 }
 
@@ -681,9 +685,9 @@ void van_leer_flux_calculator(fvinterface f, double gamma) {
 	// mass flux
 	f.mass = lft_rho * a_lft * M_lft;
 	// momentum flux
-	f.momentum = lft_rho * a_lft*a_lft*(M_lft*M_lft+(1.0/gamma));
+	f.momentum = lft_rho * a_lft*a_lft*(M_lft*M_lft+1.0/gamma);
 	// energy flux
-	f.energy = lft_rho * a_lft*a_lft*a_lft * M_lft * (0.5*M_lft*M_lft + (1.0/(gamma-1.0)));
+	f.energy = lft_rho * a_lft*a_lft*a_lft * M_lft * (0.5*M_lft*M_lft + 1.0/(gamma-1.0));
     }
     else if (M <= -1.0) {
 	// mass flux
@@ -699,8 +703,8 @@ void van_leer_flux_calculator(fvinterface f, double gamma) {
 	F_rght = -0.25*rght_rho*a_rght*pow( (1.0-M_rght), 2.0 );
 	f.mass = F_lft+F_rght;
 	// momentum flux
-	F_lft = 0.25*lft_rho*a_lft*pow( (1.0+M_lft), 2.0 ) * ( (2.0*a_lft)/gamma * ( (gamma-1.0)/2.0 * M_lft + 1.0) );
-	F_rght = -0.25*rght_rho*a_rght*pow( (1.0-M_rght), 2.0 ) * ( (2.0*a_rght)/gamma * ( (gamma-1.0)/2.0 * M_rght - 1.0) );
+	F_lft = 0.25*lft_rho*a_lft*pow( (1.0+M_lft), 2.0 ) * ( 2.0*a_lft/gamma * ( (gamma-1.0)/2.0 * M_lft + 1.0) );
+	F_rght = -0.25*rght_rho*a_rght*pow( (1.0-M_rght), 2.0 ) * ( 2.0*a_rght/gamma * ( (gamma-1.0)/2.0 * M_rght - 1.0) );
 	f.momentum = F_lft+F_rght;
 	// energy flux
 	F_lft = 0.25*lft_rho*a_lft*pow( (1.0+M_lft), 2.0 ) *
@@ -929,8 +933,6 @@ void matrix_inv(ref double[np*ncells][np*ncells] matrix, ref double[np*ncells][n
 void flow_solver(ref fvcell[ncells+nghost] global_cells, ref fvinterface[ninterfaces] global_interfaces, ref fvinterface[ninterfaces] perturbed_interfaces,
 		 double dt, double sim_time, double final_time, size_t step, size_t max_step, string flux_calc, string simulation_type, size_t interpolation_order,
 		 size_t outflow_bc_order, double outflow_bc_back_pressure_factor, double dx, double gamma) {
-
-    // set initial, and inflow conditions
     set_initial_and_inflow_conditions(simulation_type, global_cells, gamma);
     
     // begin by computing conserved quantities at cell centers
@@ -963,7 +965,7 @@ void flow_solver(ref fvcell[ncells+nghost] global_cells, ref fvinterface[ninterf
 	    fvinterface fin = global_interfaces[i];
 	    fvinterface fout = global_interfaces[i+1];
 	    double delta_rho; double delta_momentum; double delta_energy;
-	    
+		
 	    // update mass
 	    delta_rho = dt/cell.vol * (fin.mass*fin.area - fout.mass*fout.area);
 	    cell.rho = delta_rho + cell.rho;
