@@ -174,7 +174,10 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
                     auto mygce = cast(GhostCellMappedCellCopy)gce;
                     mygce.set_up_cell_mapping();
                 }
-                // [TODO] for FullFaceCopy as well. PJ 2018-01-14
+                if (gce.type == "FullFaceCopy") {
+                    auto mygce = cast(GhostCellFullFaceCopy)gce;
+                    mygce.set_up_cell_mapping();
+                }
             }
         }
     }
