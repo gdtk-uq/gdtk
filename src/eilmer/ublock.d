@@ -908,7 +908,7 @@ public:
             foreach (bcond; bc) {
                 bool found_mapped_cell_bc = false;
                 foreach (gce; bcond.preReconAction) {
-                    if (gce.type == "MappedCellExchangeCopy") {
+                    if (gce.type == "MappedCellCopy") {
                         found_mapped_cell_bc = true;
                         // There is a mapped-cell backing the ghost cell, so we can copy its gradients.
                         foreach (i, f; bcond.faces) {

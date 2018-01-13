@@ -134,11 +134,11 @@ function FromStagnation:tojson()
    return str
 end
 
-FullFaceExchangeCopy = GhostCellEffect:new{otherBlock=nil, otherFace=nil, orientation=-1,
-					   reorient_vector_quantities=false,
-					   Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}
-FullFaceExchangeCopy.type = "full_face_exchange_copy"
-function FullFaceExchangeCopy:tojson()
+FullFaceCopy = GhostCellEffect:new{otherBlock=nil, otherFace=nil, orientation=-1,
+                                   reorient_vector_quantities=false,
+                                   Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}
+FullFaceCopy.type = "full_face_copy"
+function FullFaceCopy:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
    str = str .. string.format('"other_block": %d, ', self.otherBlock)
    str = str .. string.format('"other_face": "%s", ', self.otherFace)
@@ -154,17 +154,17 @@ function FullFaceExchangeCopy:tojson()
    str = str .. '}' -- end of JSON value
    return str
 end
-MappedCellExchangeCopy = GhostCellEffect:new{cell_mapping_from_file=false, fileName='mapped_cells',
-					     transform_position=false,
-					     c0=Vector3:new{x=0.0,y=0.0,z=0.0},
-					     n=Vector3:new{x=0.0,y=0.0,z=1.0},
-					     alpha=0.0,
-					     delta=Vector3:new{x=0.0,y=0.0,z=0.0},
-					     list_mapped_cells=false,
-					     reorient_vector_quantities=false,
-					     Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}
-MappedCellExchangeCopy.type = "mapped_cell_exchange_copy"
-function MappedCellExchangeCopy:tojson()
+MappedCellCopy = GhostCellEffect:new{cell_mapping_from_file=false, fileName='mapped_cells',
+                                     transform_position=false,
+                                     c0=Vector3:new{x=0.0,y=0.0,z=0.0},
+                                     n=Vector3:new{x=0.0,y=0.0,z=1.0},
+                                     alpha=0.0,
+                                     delta=Vector3:new{x=0.0,y=0.0,z=0.0},
+                                     list_mapped_cells=false,
+                                     reorient_vector_quantities=false,
+                                     Rmatrix={1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}}
+MappedCellCopy.type = "mapped_cell_copy"
+function MappedCellCopy:tojson()
    local str = string.format('          {"type": "%s", ', self.type)
    str = str .. string.format('"cell_mapping_from_file": %s, ',
 			      tostring(self.cell_mapping_from_file))
@@ -873,11 +873,11 @@ function ExchangeBC_FullFace:new(o)
    assert(flag, "Invalid name for item supplied to ExchangeBC_FullFace constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = { FullFaceExchangeCopy:new{otherBlock=o.otherBlock,
-						 otherFace=o.otherFace,
-						 orientation=o.orientation,
-						 reorient_vector_quantities=o.reorient_vector_quantities,
-						 Rmatrix=o.Rmatrix} }
+   o.preReconAction = { FullFaceCopy:new{otherBlock=o.otherBlock,
+                                         otherFace=o.otherFace,
+                                         orientation=o.orientation,
+                                         reorient_vector_quantities=o.reorient_vector_quantities,
+                                         Rmatrix=o.Rmatrix} }
    o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new() }
    o.is_configured = true
    return o
@@ -896,13 +896,13 @@ function ExchangeBC_MappedCell:new(o)
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.fileName = o.fileName or o.filename
-   o.preReconAction = { MappedCellExchangeCopy:new{cell_mapping_from_file=o.cell_mapping_from_file,
-						   fileName=o.fileName,
-						   transform_position=o.transform_position,
-						   c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
-						   list_mapped_cells=o.list_mapped_cells,
-						   reorient_vector_quantities=o.reorient_vector_quantities,
-						   Rmatrix=o.Rmatrix} }
+   o.preReconAction = { MappedCellCopy:new{cell_mapping_from_file=o.cell_mapping_from_file,
+                                           fileName=o.fileName,
+                                           transform_position=o.transform_position,
+                                           c0=o.c0, n=o.n, alpha=o.alpha, delta=o.delta,
+                                           list_mapped_cells=o.list_mapped_cells,
+                                           reorient_vector_quantities=o.reorient_vector_quantities,
+                                           Rmatrix=o.Rmatrix} }
    o.preSpatialDerivActionAtBndryFaces = { UpdateThermoTransCoeffs:new() }
    o.is_configured = true
    return o

@@ -170,10 +170,11 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     foreach (myblk; gasBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
-                if (gce.type == "MappedCellExchangeCopy") {
-                    auto mygce = cast(GhostCellMappedCellExchangeCopy)gce;
+                if (gce.type == "MappedCellCopy") {
+                    auto mygce = cast(GhostCellMappedCellCopy)gce;
                     mygce.set_up_cell_mapping();
                 }
+                // [TODO] for FullFaceCopy as well. PJ 2018-01-14
             }
         }
     }

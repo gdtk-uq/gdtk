@@ -156,7 +156,7 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
              ++/
             // if vtx is on block edge then grab cell data from neighbour block
             if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
-                auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
+                auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
                 int neighbourBlock =  ffeBC.neighbourBlock.id;
                 SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
                 assert(nbblk !is null, "Oops, this should be an SBlock object.");
@@ -166,7 +166,7 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
                 cell_botrght = blk.get_cell(i, j-1, k);
             // if vtx is on block edge then grab cell data from neighbour block
             if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
-                auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
+                auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
                 int neighbourBlock =  ffeBC.neighbourBlock.id;
                 SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
                 assert(nbblk !is null, "Oops, this should be an SBlock object.");
@@ -177,7 +177,7 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
             if (interpolation_order == 2) { 
                 if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
                     // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
-                    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
+                    auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
                     int neighbourBlock =  ffeBC.neighbourBlock.id;
                     SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
                     assert(nbblk !is null, "Oops, this should be an SBlock object.");
@@ -190,7 +190,7 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
                 }
                 if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
                     // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
-                    auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
+                    auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
                     int neighbourBlock =  ffeBC.neighbourBlock.id;
                     SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
                     assert(nbblk !is null, "Oops, this should be an SBlock object.");
@@ -246,7 +246,7 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
                     // retrieve the neighbouring vertex and interface to ensure the vertices on the connecting interface move together and
                     // do not move independently
                     if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face" && jOffSet == 1) {
-                        auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.south].preReconAction[0];
+                        auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
                         int neighbourBlock =  ffeBC.neighbourBlock.id;
                         SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
                         assert(nbblk !is null, "Oops, this should be an SBlock object.");
@@ -254,7 +254,7 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
                         iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmax, k);
                     }
                     if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face" && jOffSet == 0) {
-                        auto ffeBC = cast(GhostCellFullFaceExchangeCopy) blk.bc[Face.north].preReconAction[0];
+                        auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
                         int neighbourBlock =  ffeBC.neighbourBlock.id;
                         SBlock nbblk = cast(SBlock) gasBlocks[neighbourBlock];
                         assert(nbblk !is null, "Oops, this should be an SBlock object.");

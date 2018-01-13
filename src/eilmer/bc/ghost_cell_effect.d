@@ -113,19 +113,21 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
                                              alpha, beta,
                                              mass_flux, relax_factor);
         break;
-    case "full_face_exchange_copy":
+    case "full_face_copy":
+    case "full_face_exchange_copy": // old name is also allowed
         int otherBlock = getJSONint(jsonData, "other_block", -1);
         string otherFaceName = getJSONstring(jsonData, "other_face", "none");
         int neighbourOrientation = getJSONint(jsonData, "orientation", 0);
         bool rvq = getJSONbool(jsonData, "reorient_vector_quantities", false);
         double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
                                               [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
-        newGCE = new GhostCellFullFaceExchangeCopy(blk_id, boundary,
-                                                   otherBlock, face_index(otherFaceName),
-                                                   neighbourOrientation,
-                                                   rvq, Rmatrix);
+        newGCE = new GhostCellFullFaceCopy(blk_id, boundary,
+                                           otherBlock, face_index(otherFaceName),
+                                           neighbourOrientation,
+                                           rvq, Rmatrix);
         break;
-    case "mapped_cell_exchange_copy":
+    case "mapped_cell_copy":
+    case "mapped_cell_exchange_copy": // old name is also allowed
         bool cmff = getJSONbool(jsonData, "cell_mapping_from_file", false);
         string fname = getJSONstring(jsonData, "filename", "none");
         bool transform_pos = getJSONbool(jsonData, "transform_position", false);
@@ -137,10 +139,10 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
         bool rvq = getJSONbool(jsonData, "reorient_vector_quantities", false);
         double[] Rmatrix = getJSONdoublearray(jsonData, "Rmatrix",
                                               [1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0]);
-        newGCE = new GhostCellMappedCellExchangeCopy(blk_id, boundary,
-                                                     cmff, fname,
-                                                     transform_pos, c0, n, alpha, delta, lmc,
-                                                     rvq, Rmatrix);
+        newGCE = new GhostCellMappedCellCopy(blk_id, boundary,
+                                             cmff, fname,
+                                             transform_pos, c0, n, alpha, delta, lmc,
+                                             rvq, Rmatrix);
         break;
     case "user_defined":
         string fname = getJSONstring(jsonData, "filename", "none");
@@ -1978,7 +1980,7 @@ public:
     } // end apply()
 } // end class GhostCellFixedStagnationPT
 
-class GhostCellFullFaceExchangeCopy : GhostCellEffect {
+class GhostCellFullFaceCopy : GhostCellEffect {
 public:
     Block neighbourBlock;
     int neighbourFace;
@@ -1991,7 +1993,7 @@ public:
          bool reorient_vector_quantities,
          ref const(double[]) Rmatrix)
     {
-        super(id, boundary, "FullFaceExchangeCopy");
+        super(id, boundary, "FullFaceCopy");
         neighbourBlock = gasBlocks[otherBlock];
         neighbourFace = otherFace;
         neighbourOrientation = orient;
@@ -2001,7 +2003,7 @@ public:
 
     override string toString() const
     { 
-        string str = "FullFaceExchangeCopy(otherBlock=" ~ to!string(neighbourBlock.id) ~ 
+        string str = "FullFaceCopy(otherBlock=" ~ to!string(neighbourBlock.id) ~ 
             ", otherFace=" ~ to!string(neighbourFace) ~ 
             ", orient=" ~ to!string(neighbourOrientation) ~
             ", reorient_vector_quantities=" ~ to!string(reorient_vector_quantities) ~
@@ -2021,7 +2023,7 @@ public:
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        throw new Error("GhostCellFullFaceExchangeCopy.apply_unstructured_grid() not yet implemented");
+        throw new Error("GhostCellFullFaceCopy.apply_unstructured_grid() not yet implemented");
     }
 
     override void apply_structured_grid(double t, int gtl, int ftl)
@@ -2036,9 +2038,9 @@ public:
                                   CopyDataOption.all, true,
                                   reorient_vector_quantities, Rmatrix);
     }
-} // end class GhostCellFullFaceExchangeCopy
+} // end class GhostCellFullFaceCopy
 
-class GhostCellMappedCellExchangeCopy : GhostCellEffect {
+class GhostCellMappedCellCopy : GhostCellEffect {
 public:
     // For each ghost cell associated with the boundary,
     // we will have a corresponding "mapped cell" from which we will copy
@@ -2068,7 +2070,7 @@ public:
          bool reorient_vector_quantities,
          ref const(double[]) Rmatrix)
     {
-        super(id, boundary, "MappedCellExchangeCopy");
+        super(id, boundary, "MappedCellCopy");
         this.cell_mapping_from_file = cell_mapping_from_file;
         this.mapped_cells_filename = mapped_cells_filename;
         this.transform_position = transform_pos;
@@ -2083,7 +2085,7 @@ public:
 
     override string toString() const
     { 
-        string str = "MappedCellExchangeCopy(" ~
+        string str = "MappedCellCopy(" ~
             "cell_mapping_from_file=" ~ to!string(cell_mapping_from_file) ~
             ", mapped_cells_filename=" ~ to!string(mapped_cells_filename) ~
             ", transform_position=" ~ to!string(transform_position) ~
@@ -2361,5 +2363,5 @@ public:
             }
         }
     }
-} // end class GhostCellMappedCellExchangeCopy
+} // end class GhostCellMappedCellCopy
 
