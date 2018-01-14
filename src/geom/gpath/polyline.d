@@ -98,7 +98,7 @@ public:
         foreach (line; f.byLine) {
             auto tokens = line.strip().split();
             if (tokens.length == 0) continue; // ignore blank lines
-            if (tokens[0] == "#") continue; // ignote comment lines
+            if (tokens[0] == "#") continue; // ignore comment lines
             double x = to!double(tokens[0]);
             double y = 0.0; if (tokens.length > 1) { y = to!double(tokens[1]); }
             double z = 0.0; if (tokens.length > 2) { z = to!double(tokens[2]); }
