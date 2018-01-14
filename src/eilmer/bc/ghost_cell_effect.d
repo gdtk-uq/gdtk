@@ -2741,8 +2741,9 @@ public:
             if (reorient_vector_quantities) {
                 ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
             }
-            // [TODO] PJ 2018-01-14 We used to call encode_conserved() for gtl==0.
-            // Was it necessary, and should we put it back in?
+            // The following call to encode_conserved is needed for
+            // the block-marching process.
+            ghost_cells[i].encode_conserved(gtl, ftl, blk.omegaz);
         }
     }
 } // end class GhostCellFullFaceCopy
@@ -3058,6 +3059,9 @@ public:
             if (reorient_vector_quantities) {
                 ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
             }
+            // [TODO] PJ 2018-01-14 If unstructured blocks ever get used in
+            // the block-marching process, we will need a call to encode_conserved
+            // at this point.  See the GhostCellFullFaceCopy class.
         }
     }
 
