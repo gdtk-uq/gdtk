@@ -6,6 +6,7 @@
  */
 
 import core.memory;
+import core.thread;
 import core.stdc.stdlib : exit;
 import std.stdio;
 import std.string;
@@ -63,6 +64,14 @@ int main(string[] args)
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         MPI_Comm_size(MPI_COMM_WORLD, &size);
         scope(exit) { MPI_Finalize(); }
+        //
+        // We are in the context of an MPI task, presumably, one of many.
+        GlobalConfig.in_mpi_context = true;
+        GlobalConfig.is_master_task = (rank == 0);
+    } else {
+        // We are NOT in the context of an MPI task.
+        GlobalConfig.in_mpi_context = false;
+        GlobalConfig.is_master_task = true;
     }
     //
     string msg = "Usage:                               Comment:\n";
@@ -106,8 +115,11 @@ int main(string[] args)
     msg       ~= "\n";
     msg       ~= "         [--help]                    writes this message\n";
     if ( args.length < 2 ) {
-        writeln("Too few arguments.");
-        write(msg);
+        if (GlobalConfig.is_master_task) {
+            writeln("Too few arguments.");
+            write(msg);
+            stdout.flush();
+        }
         exitFlag = 1;
         return exitFlag;
     }
@@ -182,21 +194,33 @@ int main(string[] args)
                "help", &helpWanted
                );
     } catch (Exception e) {
-        writeln("Problem parsing command-line options.");
-        writeln("Arguments not processed: ");
-        args = args[1 .. $]; // Dispose of program name in first argument.
-        foreach (myarg; args) writeln("    arg: ", myarg);
-        write(msg);
+        if (GlobalConfig.is_master_task) {
+            writeln("Problem parsing command-line options.");
+            writeln("Arguments not processed: ");
+            args = args[1 .. $]; // Dispose of program name in first argument.
+            foreach (myarg; args) writeln("    arg: ", myarg);
+            write(msg);
+            stdout.flush();
+        }
         exitFlag = 1;
         return exitFlag;
     }
     if (verbosityLevel > 0) {
         version(mpi_parallel) {
-            if (rank == 0) {
+            MPI_Barrier(MPI_COMM_WORLD);
+            if (GlobalConfig.is_master_task) {
                 writeln("Eilmer4 compressible-flow simulation code.");
                 writeln("Revision: PUT_REVISION_STRING_HERE");
+                writefln("MPI-parallel, number of tasks %d", size);
             }
-            writefln("MPI rank=%d size=%d", rank, size);
+            stdout.flush();
+            // Give master_task a chance to be seen first.
+            Thread.sleep(dur!("msecs")(100));
+            MPI_Barrier(MPI_COMM_WORLD);
+            // Now, get all tasks to report.
+            writefln("MPI-parallel, start task %d", rank);
+            stdout.flush();
+            Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
         } else {
             writeln("Eilmer4 compressible-flow simulation code.");
@@ -205,60 +229,69 @@ int main(string[] args)
         }
     }
     if (helpWanted) {
-        write(msg);
+        if (GlobalConfig.is_master_task) { write(msg); stdout.flush(); }
         exitFlag = 0;
         return exitFlag;
     }
     //
     if (prepFlag) {
-        if (verbosityLevel > 0) { writeln("Begin preparation stage for a simulation."); }
-        if (jobName.length == 0) {
-            writeln("Need to specify a job name.");
-            write(msg);
+        version(mpi_parallel) {
+            if (GlobalConfig.is_master_task) {
+                writeln("Do not prepare for a simulation using MPI.");
+                stdout.flush();
+            }
             exitFlag = 1;
             return exitFlag;
-        }
-        if (verbosityLevel > 1) { writeln("Start lua connection."); }
-        auto L = luaL_newstate();
-        luaL_openlibs(L);
-        registerVector3(L);
-        registerGlobalConfig(L);
-        registerFlowSolution(L);
-        registerFlowState(L);
-        registerPaths(L);
-        registerSurfaces(L);
-        registerVolumes(L);
-        registerUnivariateFunctions(L);
-        registerStructuredGrid(L);
-        registerUnstructuredGrid(L);
-        registerSketch(L);
-        registerSolidProps(L);
-        registerGasModel(L, LUA_GLOBALSINDEX);
-        registeridealgasflowFunctions(L);
-        registergasflowFunctions(L);
-        registerBBLA(L);
-        // Before processing the Lua input files, move old .config and .control files.
-        // This should prevent a subsequent run of the simulation on old config files
-        // in the case that the processing of the input script fails.
-        moveFileToBackup(jobName~".config");
-        moveFileToBackup(jobName~".control");
-        if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
-            writeln("There was a problem in the Eilmer Lua code: prep.lua");
-            string errMsg = to!string(lua_tostring(L, -1));
-            throw new FlowSolverException(errMsg);
-        }
-        if ( luaL_dofile(L, toStringz(jobName~".lua")) != 0 ) {
-            writeln("There was a problem in the user-supplied input lua script: ", jobName~".lua");
-            string errMsg = to!string(lua_tostring(L, -1));
-            throw new FlowSolverException(errMsg);
-        }
-        checkGlobalConfig(); // We may not proceed if the config parameters are incompatible.
-        if ( luaL_dostring(L, toStringz("build_job_files(\""~jobName~"\")")) != 0 ) {
-            writeln("There was a problem in the Eilmer build function build_job_files() in prep.lua");
-            string errMsg = to!string(lua_tostring(L, -1));
-            throw new FlowSolverException(errMsg);
-        }
-        if (verbosityLevel > 0) { writeln("Done preparation."); }
+        } else { // NOT mpi_parallel
+            if (verbosityLevel > 0) { writeln("Begin preparation stage for a simulation."); }
+            if (jobName.length == 0) {
+                writeln("Need to specify a job name.");
+                write(msg);
+                exitFlag = 1;
+                return exitFlag;
+            }
+            if (verbosityLevel > 1) { writeln("Start lua connection."); }
+            auto L = luaL_newstate();
+            luaL_openlibs(L);
+            registerVector3(L);
+            registerGlobalConfig(L);
+            registerFlowSolution(L);
+            registerFlowState(L);
+            registerPaths(L);
+            registerSurfaces(L);
+            registerVolumes(L);
+            registerUnivariateFunctions(L);
+            registerStructuredGrid(L);
+            registerUnstructuredGrid(L);
+            registerSketch(L);
+            registerSolidProps(L);
+            registerGasModel(L, LUA_GLOBALSINDEX);
+            registeridealgasflowFunctions(L);
+            registergasflowFunctions(L);
+            registerBBLA(L);
+            // Before processing the Lua input files, move old .config and .control files.
+            // This should prevent a subsequent run of the simulation on old config files
+            // in the case that the processing of the input script fails.
+            moveFileToBackup(jobName~".config");
+            moveFileToBackup(jobName~".control");
+            if ( luaL_dofile(L, toStringz(dirName(thisExePath())~"/prep.lua")) != 0 ) {
+                writeln("There was a problem in the Eilmer Lua code: prep.lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            if ( luaL_dofile(L, toStringz(jobName~".lua")) != 0 ) {
+                writeln("There was a problem in the user-supplied input lua script: ", jobName~".lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            checkGlobalConfig(); // We may not proceed if the config parameters are incompatible.
+            if ( luaL_dostring(L, toStringz("build_job_files(\""~jobName~"\")")) != 0 ) {
+                writeln("There was a problem in the Eilmer build function build_job_files() in prep.lua");
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            if (verbosityLevel > 0) { writeln("Done preparation."); }
+        } // end NOT mpi_parallel
     } // end if prepFlag
 
     if (runFlag) {
@@ -284,104 +317,145 @@ int main(string[] args)
             // We assume that the command-line argument was an integer.
             tindxStart = to!int(tindxStartStr);
         } // end switch
-        if (verbosityLevel > 0) {
+        if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
             writeln("Begin simulation with command-line arguments.");
             writeln("  jobName: ", jobName);
             writeln("  tindxStart: ", tindxStart);
             writeln("  maxWallClock: ", maxWallClock);
             writeln("  verbosityLevel: ", verbosityLevel);
-            writeln("  maxCPUs: ", maxCPUs);
+            writeln("  maxCPUs: ", maxCPUs, " for shared memory-parallelism");
         }
-        
+        version(mpi_parallel) {
+            stdout.flush();
+            Thread.sleep(dur!("msecs")(100));
+            MPI_Barrier(MPI_COMM_WORLD);
+        }        
         init_simulation(tindxStart, nextLoadsIndx, maxCPUs, maxWallClock);
-        if (verbosityLevel > 0) { writeln("starting simulation time= ", simcore.sim_time); }
+        if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
+            writeln("starting simulation time= ", simcore.sim_time);
+        }
+        version(mpi_parallel) {
+            stdout.flush();
+            Thread.sleep(dur!("msecs")(100));
+            MPI_Barrier(MPI_COMM_WORLD);
+        }        
         if (GlobalConfig.block_marching) {
-            march_over_blocks();
+            version(mpi_parallel) {
+                if (GlobalConfig.is_master_task) {
+                    writeln("Do not run a block-marching simulation with MPI parallelism.");
+                    stdout.flush();
+                }
+                exitFlag = 1;
+                return exitFlag;
+            } else { // NOT mpi_parallel
+                march_over_blocks();
+                finalize_simulation();
+            }
         } else {
             integrate_in_time(GlobalConfig.max_time);
+            finalize_simulation();
         }
-        finalize_simulation();
-        if (verbosityLevel > 0) { writeln("Done simulation."); }
+        if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
+            writeln("Done simulation.");
+        }
     } // end if runFlag
 
     if (postFlag) {
-        if (jobName.length == 0) {
-            writeln("Need to specify a job name.");
-            write(msg);
+        version(mpi_parallel) {
+            if (GlobalConfig.is_master_task) {
+                writeln("Do not do postprocessing with MPI parallelism.");
+                stdout.flush();
+            }
             exitFlag = 1;
             return exitFlag;
-        }
-        GlobalConfig.base_file_name = jobName;
-        GlobalConfig.verbosity_level = verbosityLevel;
-        if (verbosityLevel > 0) {
-            writeln("Begin post-processing with command-line arguments.");
-            writeln("  jobName: ", jobName);
-            writeln("  verbosityLevel: ", verbosityLevel);
-        }
-        if (verbosityLevel > 1) {
-            writeln("  listInfoFlag: ", listInfoFlag);
-            writeln("  tindxPlot: ", tindxPlot);
-            writeln("  addVarsStr: ", addVarsStr);
-            writeln("  luaRefSoln: ", luaRefSoln);
-            writeln("  vtkxmlFlag: ", vtkxmlFlag);
-            writeln("  binaryFormat: ", binaryFormat);
-            writeln("  tecplotBinaryFlag: ", tecplotBinaryFlag);
-            writeln("  tecplotAsciiFlag: ", tecplotAsciiFlag);
-            writeln("  plotDir: ", plotDir);
-            writeln("  outputFileName: ", outputFileName);
-            writeln("  sliceListStr: ", sliceListStr);
-            writeln("  surfaceListStr: ", surfaceListStr);
-            writeln("  extractStreamStr: ", extractStreamStr);
-            writeln("  extractLineStr: ", extractLineStr);
-            writeln("  extractSolidLineStr: ", extractSolidLineStr);
-            writeln("  computeLoadsOnGroupStr: ", computeLoadsOnGroupStr);
-            writeln("  probeStr: ", probeStr);
-            writeln("  outputFormat: ", outputFormat);
-            writeln("  normsStr: ", normsStr);
-            writeln("  regionStr: ", regionStr);
-        }
-        post_process(plotDir, listInfoFlag, tindxPlot,
-                     addVarsStr, luaRefSoln,
-                     vtkxmlFlag, binaryFormat, tecplotBinaryFlag, tecplotAsciiFlag,
-                     outputFileName, sliceListStr, surfaceListStr,
-                     extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
-                     probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr);
-        if (verbosityLevel > 0) { writeln("Done postprocessing."); }
+        } else { // NOT mpi_parallel
+            if (jobName.length == 0) {
+                writeln("Need to specify a job name.");
+                write(msg);
+                exitFlag = 1;
+                return exitFlag;
+            }
+            GlobalConfig.base_file_name = jobName;
+            GlobalConfig.verbosity_level = verbosityLevel;
+            if (verbosityLevel > 0) {
+                writeln("Begin post-processing with command-line arguments.");
+                writeln("  jobName: ", jobName);
+                writeln("  verbosityLevel: ", verbosityLevel);
+            }
+            if (verbosityLevel > 1) {
+                writeln("  listInfoFlag: ", listInfoFlag);
+                writeln("  tindxPlot: ", tindxPlot);
+                writeln("  addVarsStr: ", addVarsStr);
+                writeln("  luaRefSoln: ", luaRefSoln);
+                writeln("  vtkxmlFlag: ", vtkxmlFlag);
+                writeln("  binaryFormat: ", binaryFormat);
+                writeln("  tecplotBinaryFlag: ", tecplotBinaryFlag);
+                writeln("  tecplotAsciiFlag: ", tecplotAsciiFlag);
+                writeln("  plotDir: ", plotDir);
+                writeln("  outputFileName: ", outputFileName);
+                writeln("  sliceListStr: ", sliceListStr);
+                writeln("  surfaceListStr: ", surfaceListStr);
+                writeln("  extractStreamStr: ", extractStreamStr);
+                writeln("  extractLineStr: ", extractLineStr);
+                writeln("  extractSolidLineStr: ", extractSolidLineStr);
+                writeln("  computeLoadsOnGroupStr: ", computeLoadsOnGroupStr);
+                writeln("  probeStr: ", probeStr);
+                writeln("  outputFormat: ", outputFormat);
+                writeln("  normsStr: ", normsStr);
+                writeln("  regionStr: ", regionStr);
+            }
+            post_process(plotDir, listInfoFlag, tindxPlot,
+                         addVarsStr, luaRefSoln,
+                         vtkxmlFlag, binaryFormat, tecplotBinaryFlag, tecplotAsciiFlag,
+                         outputFileName, sliceListStr, surfaceListStr,
+                         extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
+                         probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr);
+            if (verbosityLevel > 0) { writeln("Done postprocessing."); }
+        } // end NOT mpi_parallel
     } // end if postFlag
 
     if (customPostFlag) {
-        if (verbosityLevel > 0) { 
-            writeln("Begin custom post-processing using user-supplied script.");
-        }
-        // For this case, there is very little job context loaded and
-        // after loading all of the libraries, we pretty much hand over
-        // to a Lua file to do everything.
-        if (verbosityLevel > 1) { writeln("Start lua connection."); }
-        auto L = luaL_newstate();
-        luaL_openlibs(L);
-        registerVector3(L);
-        registerGlobalConfig(L);
-        registerFlowSolution(L);
-        registerFlowState(L);
-        registerPaths(L);
-        registerSurfaces(L);
-        registerVolumes(L);
-        registerUnivariateFunctions(L);
-        registerStructuredGrid(L);
-        registerUnstructuredGrid(L);
-        registerSketch(L);
-        registerSolidProps(L);
-        registerGasModel(L, LUA_GLOBALSINDEX);
-        registerReactionMechanism(L, LUA_GLOBALSINDEX);
-        registerChemistryUpdate(L, LUA_GLOBALSINDEX);
-        registeridealgasflowFunctions(L);
-        registergasflowFunctions(L);
-        if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
-            writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
-            string errMsg = to!string(lua_tostring(L, -1));
-            throw new FlowSolverException(errMsg);
-        }
-        if (verbosityLevel > 0) { writeln("Done custom postprocessing."); }
+        version(mpi_parallel) {
+            if (GlobalConfig.is_master_task) {
+                writeln("Do not do custom postprocessing using MPI.");
+                stdout.flush();
+            }
+            exitFlag = 1;
+            return exitFlag;
+        } else { // NOT mpi_parallel
+            if (verbosityLevel > 0) { 
+                writeln("Begin custom post-processing using user-supplied script.");
+            }
+            // For this case, there is very little job context loaded and
+            // after loading all of the libraries, we pretty much hand over
+            // to a Lua file to do everything.
+            if (verbosityLevel > 1) { writeln("Start lua connection."); }
+            auto L = luaL_newstate();
+            luaL_openlibs(L);
+            registerVector3(L);
+            registerGlobalConfig(L);
+            registerFlowSolution(L);
+            registerFlowState(L);
+            registerPaths(L);
+            registerSurfaces(L);
+            registerVolumes(L);
+            registerUnivariateFunctions(L);
+            registerStructuredGrid(L);
+            registerUnstructuredGrid(L);
+            registerSketch(L);
+            registerSolidProps(L);
+            registerGasModel(L, LUA_GLOBALSINDEX);
+            registerReactionMechanism(L, LUA_GLOBALSINDEX);
+            registerChemistryUpdate(L, LUA_GLOBALSINDEX);
+            registeridealgasflowFunctions(L);
+            registergasflowFunctions(L);
+            if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
+                writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
+                string errMsg = to!string(lua_tostring(L, -1));
+                throw new FlowSolverException(errMsg);
+            }
+            if (verbosityLevel > 0) { writeln("Done custom postprocessing."); }
+        } // end NOT mpi_parallel
     } // end if customPostFlag
     //
     return exitFlag;
