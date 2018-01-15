@@ -22,6 +22,7 @@ import geom.gpath.bezier;
 import geom.gpath.polyline;
 import geom.surface;
 import nm.bbla;
+import nm.linesearch;
 
 class Path {
 public:
@@ -144,4 +145,30 @@ public:
         }
         return false;
     } // end intersect2D()
+    double closestDistance(const Vector3 p) const
+    {
+        // This is the function we'll try to minimise with a line-search method.
+        double distanceToPoint(double t)
+        {
+            auto ptOnPath = opCall(t);
+            return distance_between(p, ptOnPath);
+        }
+        double tL = 0.0;
+        double tR = 1.0;
+        double tol = 1.0e-6;
+        minimize!distanceToPoint(tL, tR, tol);
+
+        Vector3 ptOnPath;
+        // Handle the special cases of being right at the end points.
+        if (tL == 0.0) {
+            ptOnPath = opCall(0.0);
+        }
+        if (tR == 1.0) {
+            ptOnPath = opCall(1.0);
+        }
+        // Otherwise take the mid-point of the bracket.
+        ptOnPath = opCall(0.5*(tL+tR));
+        return distance_between(p, ptOnPath);
+    } // end closestDistance
+
 } // end class Path

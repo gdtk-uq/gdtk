@@ -20,7 +20,8 @@ DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
 	luaunifunction_demo \
 	sgrid_demo luasgrid_demo usgrid_demo luausgrid_demo \
-	paver_demo svg_demo sketch_demo luasketch_demo
+	paver_demo svg_demo sketch_demo luasketch_demo \
+	gpath_utils_demo
 
 include geom_files.mk
 
@@ -34,7 +35,9 @@ UTIL_FILES := $(UTIL_DIR)/lua.d \
 
 NM_DIR := ../nm
 NM_FILES := $(NM_DIR)/ridder.d \
-	$(NM_DIR)/bbla.d
+	$(NM_DIR)/bbla.d \
+	$(NM_DIR)/linesearch.d \
+	$(NM_DIR)/nelmin.d
 
 LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
@@ -184,6 +187,10 @@ vector3_demo: elements/vector3_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 
 gpath_demo: gpath/gpath_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) gpath/gpath_demo.d $(OF)gpath_demo \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+gpath_utils_demo: gpath/gpath_utils_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) gpath/gpath_utils_demo.d $(OF)gpath_utils_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 surface_demo: surface/surface_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
