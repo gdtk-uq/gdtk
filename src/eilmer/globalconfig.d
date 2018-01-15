@@ -239,7 +239,10 @@ struct SteadyStateSolverOptions {
 
 final class GlobalConfig {
     shared static bool in_mpi_context = false; // Usual context is thread-parallel only.
+    shared static int mpi_size = 0; // Number of MPI tasks, overall.
+    shared static int mpi_rank = 0; // Rank of the local task.
     shared static bool is_master_task = true; // In an MPI run, only one task will be master.
+    //
     shared static string base_file_name = "job"; // Change this to suit at run time.
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"
     shared static string flow_format = "gziptext";

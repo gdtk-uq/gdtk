@@ -58,16 +58,17 @@ int main(string[] args)
         // This preamble copied directly from the OpenMPI hello-world example.
         int argc = cast(int)args.length;
         auto argv = args.toArgv();
-        int rank;
-        int size;
         MPI_Init(&argc, &argv);
+        int rank, size;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        GlobalConfig.mpi_rank = rank;
         MPI_Comm_size(MPI_COMM_WORLD, &size);
+        GlobalConfig.mpi_size = size;
         scope(exit) { MPI_Finalize(); }
         //
         // We are in the context of an MPI task, presumably, one of many.
         GlobalConfig.in_mpi_context = true;
-        GlobalConfig.is_master_task = (rank == 0);
+        GlobalConfig.is_master_task = (GlobalConfig.mpi_rank == 0);
     } else {
         // We are NOT in the context of an MPI task.
         GlobalConfig.in_mpi_context = false;
@@ -211,14 +212,14 @@ int main(string[] args)
             if (GlobalConfig.is_master_task) {
                 writeln("Eilmer4 compressible-flow simulation code.");
                 writeln("Revision: PUT_REVISION_STRING_HERE");
-                writefln("MPI-parallel, number of tasks %d", size);
+                writefln("MPI-parallel, number of tasks %d", GlobalConfig.mpi_size);
             }
             stdout.flush();
             // Give master_task a chance to be seen first.
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
             // Now, get all tasks to report.
-            writefln("MPI-parallel, start task %d", rank);
+            writefln("MPI-parallel, start task %d", GlobalConfig.mpi_rank);
             stdout.flush();
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
