@@ -308,6 +308,10 @@ end
 -- Storage for later definitions of Block objects
 fluidBlocks = {}
 
+-- The user may assign the MPI task id for eack block manually
+-- but, if they don't, a default distribution will be made.
+mpiTasks = nil
+
 -- Storgage for later definitions of SolidBlock objects
 solidBlocks = {}
 
@@ -684,7 +688,6 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    end -- for _,A
 end
 
--- ---------------------------------------------------------------------------
 
 function FluidBlockArray(t)
    -- Expect one table as argument, with named fields.
@@ -1108,6 +1111,7 @@ function makeFlowStateFn(flowSol)
    return flowFn
 end
 
+
 function checkCellVolumes(t)
    if not t then
       t = {}
@@ -1136,6 +1140,47 @@ function checkCellVolumes(t)
    end
 end
 
+
+function mpiDistributeBlocks(nTasks, option)
+   -- Assign blocks to MPI tasks, keeping a record of the MPI task
+   -- to which each block is assigned.
+   --
+   local nBlocks = #fluidBlocks
+   -- If nTasks is not given, assume that we want one per block.
+   nTasks = nTasks or nBlocks
+   if nTasks > nBlocks then
+      nTasks = nBlocks
+   end
+   option = option or "uniform"
+   --
+   local mpiTaskList = {}
+   if option == "uniform" then
+      -- For each block, assign to an MPI task, round-robin order.
+      local idTask = 0
+      for i=1,nBlocks do
+         mpiTaskList[#mpiTaskList+1] = idTask
+         idTask = idTask + 1
+         if idTask == nTasks then
+            idTask = 0
+         end
+      end
+   elseif option == "loadbalance" or option == "load-balance" then
+      -- [TODO] PJ 2018-01-16 Port Rowan's load-balance procedure.
+      -- For the moment, just distribute uniformly.
+      local idTask = 0
+      for i=1,nBlocks do
+         mpiTaskList[#mpiTaskList+1] = idTask
+         idTask = idTask + 1
+         if idTask == nTasks then
+            idTask = 0
+         end
+      end
+   else
+      error('Did not select one of "uniform" or "loadbalance". for mpiDistributeBlocks') 
+   end
+   return mpiTaskList
+end
+   
 -- -----------------------------------------------------------------------
 
 -- Classes for construction of zones.
@@ -1455,12 +1500,25 @@ function write_block_list_file(fileName)
    f:close()
 end
 
+function write_mpimap_file(fileName)
+   if not mpiTasks then
+      mpiTasks = mpiDistributeBlocks()
+   end
+   local f = assert(io.open(fileName, "w"))
+   f:write("# indx mpiTask\n")
+   for i = 1, #(fluidBlocks) do
+      f:write(string.format("%4d %4d\n", fluidBlocks[i].id, mpiTasks[i]))
+   end
+   f:close()
+end
+
 function build_job_files(job)
    print("Build job files for ", job)
    write_config_file(job .. ".config")
    write_control_file(job .. ".control")
    write_times_file(job .. ".times")
    write_block_list_file(job .. ".list")
+   write_mpimap_file(job .. ".mpimap")
    os.execute("mkdir -p grid/t0000")
    os.execute("mkdir -p flow/t0000")
    if #solidBlocks >= 1 then

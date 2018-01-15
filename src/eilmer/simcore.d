@@ -107,19 +107,15 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
         // to find the index where the previous simulation stopped.
         string fname = "loads/" ~ GlobalConfig.base_file_name ~ "-loads.times";
         if ( exists(fname) ) {
-            auto f = File(fname, "r");
             auto finalLine = readText(fname).splitLines()[$-1];
             if (finalLine[0] == '#') {
                 // looks like we found a single comment line.
                 current_loads_tindx = 0;
-            }
-            else {
+            } else {
                 // assume we have a valid line to work with
                 current_loads_tindx = to!int(finalLine.split[0]) + 1;
             }
-            f.close();
-        }
-        else {
+        } else {
             current_loads_tindx = 0;
         }
     }
@@ -127,6 +123,22 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     if (GlobalConfig.nFluidBlocks == 0) {
         throw new FlowSolverException("No FluidBlocks; no point in continuing to initialize simulation.");
     }
+    version(mpi_parallel) {
+        // Assign fluid blocks to MPI tasks.
+        auto lines = readText(job_name ~ ".mpimap").splitLines();
+        foreach (line; lines) {
+            auto content = line.strip();
+            if (content.startsWith("#")) continue; // Skip comment
+            auto tokens = content.split();
+            int blkid = to!int(tokens[0]);
+            int taskid = to!int(tokens[1]);
+            writeln("rank=", GlobalConfig.mpi_rank, " blkid=", blkid, " taskid=", taskid);
+        }
+        // [TODO] PJ 2018-01-16 Assign some blocks local.
+    } else {
+        // [TODO] PJ 2018-01-16 Assign all blocks local.
+    }
+    // Local blocks may be handled with thread-parallelism.
     auto nBlocksInParallel = max(GlobalConfig.nFluidBlocks, GlobalConfig.nSolidBlocks);
     auto nThreadsInPool = min(maxCPUs-1, nBlocksInParallel-1); // no need to have more task threads than blocks
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
