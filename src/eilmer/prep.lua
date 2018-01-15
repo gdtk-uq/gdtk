@@ -272,7 +272,7 @@ function FlowState:toJSONString()
 end
 
 function FlowState:__tostring()
-   str = "FlowState{p=" .. tostring(self.p)
+   local str = "FlowState{p=" .. tostring(self.p)
    str = str .. ", T=" .. tostring(self.T)
    str = str .. ", quality=" .. tostring(self.quality)
    str = str .. ", massf={"
@@ -332,7 +332,7 @@ function to_eilmer_axis_map(gridpro_ijk)
    if type(gridpro_ijk) ~= "string" then
       error("Expected a string or integer of three digits but got:"..tostring(gridpro_ijk))
    end
-   eilmer_ijk = axis_map[tonumber(string.sub(gridpro_ijk, 1, 1))] ..
+   local eilmer_ijk = axis_map[tonumber(string.sub(gridpro_ijk, 1, 1))] ..
       axis_map[tonumber(string.sub(gridpro_ijk, 2, 2))] ..
       axis_map[tonumber(string.sub(gridpro_ijk, 3, 3))]
    return eilmer_ijk
@@ -758,8 +758,8 @@ function FluidBlockArray(t)
 	       bcList[north] = t.bcList[north]
 	    end
 	    print("Calling FluidBlock...")
-	    new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
-				       initialState=t.initialState, bcList=bcList}
+	    local new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
+                                             initialState=t.initialState, bcList=bcList}
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
 	 else
@@ -793,9 +793,9 @@ function FluidBlockArray(t)
 	       if kb == t.nkb then
 		  bcList[top] = t.bcList[top]
 	       end
-	       new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
-					  initialState=t.initialState,
-					  bcList=bcList}
+	       local new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
+                                                initialState=t.initialState,
+                                                bcList=bcList}
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
 	    end -- kb loop
@@ -839,7 +839,7 @@ function SolidBlock:new(o)
 						     "k31", "k32", "k33"})
       assert(flag2, "Invalid name for item supplied in SolidBlock properties table.")
       -- Fill in the k values as 0.0 if not set.
-      kProps = {"k", "k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
+      local kProps = {"k", "k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
       for _,kName in ipairs(kProps) do
 	 o.properties[kName] = o.properties[kName] or 0.0
       end
@@ -896,7 +896,7 @@ function SolidBlock:tojson()
    -- Boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
       if not self.bcList[face].is_solid_domain_bc then
-	 errMsg = string.format("Boundary condition problem for solid block:%d, face:%s\n", self.id, face)
+	 local errMsg = string.format("Boundary condition problem for solid block:%d, face:%s\n", self.id, face)
 	 errMsg = errMsg .. "       This boundary condition should be a solid domain b.c.\n"
 	 errMsg = errMsg .. "       The preparation stage cannot complete successfully.\n"
 	 error(errMsg)
@@ -973,9 +973,9 @@ function SolidBlockArray(t)
 	    if jb == t.njb then
 	       bcList[north] = t.bcList[north]
 	    end
-	    new_block = SolidBlock:new{grid=subgrid, properties=t.properties,
-				       initTemperature=t.initTemperature,
-				       bcList=bcList}
+	    local new_block = SolidBlock:new{grid=subgrid, properties=t.properties,
+                                             initTemperature=t.initTemperature,
+                                             bcList=bcList}
 	    blockArray[ib][jb] = new_block
 	    blockCollection[#blockCollection+1] = new_block
 	 else
@@ -1003,16 +1003,16 @@ function setHistoryPoint(args)
    local flag = checkAllowedNames(args, {"x", "y", "z", "ib", "i", "j", "k"})
    assert(flag, "Invalid name for item supplied to setHistoryPoint.")
    -- First look for x,y,z
-   if ( args.x ) then
-      x = args.x
-      y = args.y
-      z = args.z or 0.0
-      minDist = 1.0e9 -- something very large
-      blkId = 0
-      cellId = 0
+   if (args.x) then
+      local x = args.x
+      local y = args.y
+      local z = args.z or 0.0
+      local minDist = 1.0e9 -- something very large
+      local blkId = 0
+      local cellId = 0
       for ib,blk in ipairs(fluidBlocks) do
-	 indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
-	 if ( dist < minDist ) then
+	 local indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
+	 if (dist < minDist) then
 	    minDist = dist
 	    blkId = ib
 	    cellId = indx
@@ -1024,15 +1024,15 @@ function setHistoryPoint(args)
       return
    end
    -- Still trying; look for integer indices.
-   if ( args.j ) then
-      ib = args.ib
-      i = args.i
-      j = args.j
-      k = args.k or 0
+   if (args.j) then
+      local ib = args.ib
+      local i = args.i
+      local j = args.j
+      local k = args.k or 0
       -- Convert back to single_index
-      nic = fluidBlocks[ib+1].nic
-      njc = fluidBlocks[ib+1].njc
-      cellId = k * (njc * nic) + j * nic + i
+      local nic = fluidBlocks[ib+1].nic
+      local njc = fluidBlocks[ib+1].njc
+      local cellId = k * (njc * nic) + j * nic + i
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       return
    end
@@ -1053,16 +1053,16 @@ function setSolidHistoryPoint(args)
    local flag = checkAllowedNames(args, {"x", "y", "z", "ib", "i", "j", "k"})
    assert(flag, "Invalid name for item supplied to setSolidHistoryPoint.")
    -- First look for x,y,z
-   if ( args.x ) then
-      x = args.x
-      y = args.y
-      z = args.z or 0.0
-      minDist = 1.0e9 -- something very large
-      blkId = 0
-      cellId = 0
+   if (args.x) then
+      local x = args.x
+      local y = args.y
+      local z = args.z or 0.0
+      local minDist = 1.0e9 -- something very large
+      local blkId = 0
+      local cellId = 0
       for ib,blk in ipairs(solidBlocks) do
-	 indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
-	 if ( dist < minDist ) then
+	 local indx, dist = blk.grid:find_nearest_cell_centre{x=x, y=y, z=z}
+	 if (dist < minDist) then
 	    minDist = dist
 	    blkId = ib
 	    cellId = indx
@@ -1074,15 +1074,15 @@ function setSolidHistoryPoint(args)
       return
    end
    -- Still trying; look for integer indices.
-   if ( args.j ) then
-      ib = args.ib
-      i = args.i
-      j = args.j
-      k = args.k or 0
+   if (args.j) then
+      local ib = args.ib
+      local i = args.i
+      local j = args.j
+      local k = args.k or 0
       -- Convert back to single_index
-      nic = solidBlocks[ib+1].nic
-      njc = solidBlocks[ib+1].njc
-      cellId = k * (njc * nic) + j * nic + i
+      local nic = solidBlocks[ib+1].nic
+      local njc = solidBlocks[ib+1].njc
+      local cellId = k * (njc * nic) + j * nic + i
       solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=cellId}
       return
    end
@@ -1095,7 +1095,7 @@ end
 function makeFlowStateFn(flowSol)
    function flowFn(x, y, z)
       -- We try to find an enclosing cell.
-      cell = flowSol:find_enclosing_cell{x=x, y=y, z=z}
+      local cell = flowSol:find_enclosing_cell{x=x, y=y, z=z}
       -- If that fails, we'll just grab a 'nearest' cell.
       -- This should never fail.
       if not cell.ib then
@@ -1113,13 +1113,13 @@ function checkCellVolumes(t)
       t = {}
    end
    -- Stop reporting cells after this limit
-   badCellLimit = t.badCellLimit or 20
-   badCells = {}
-   badCellCount = 0
+   local badCellLimit = t.badCellLimit or 20
+   local badCells = {}
+   local badCellCount = 0
    for ib,blk in ipairs(fluidBlocks) do
-      grid = blk.grid
+      local grid = blk.grid
       for idx=0,grid:get_ncells()-1 do
-	 vol = grid:cellVolume(idx)
+	 local vol = grid:cellVolume(idx)
 	 if vol <= 0 then
 	    badCellCount = badCellCount + 1
 	    badCells[#badCells+1] = {ib, idx}
