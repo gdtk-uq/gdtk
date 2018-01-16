@@ -44,7 +44,7 @@ enum n_ghost_cell_layers = 2; // Ghost-cell layers surround the active cells of 
 immutable double EPSILON = 1.0e-8;
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
 
-class SBlock: Block {
+class SFluidBlock: FluidBlock {
 public:
     size_t[] hicell, hjcell, hkcell; // locations of sample cells for history record
     size_t[] micell, mjcell, mkcell; // locations of monitor cells
@@ -172,7 +172,7 @@ public:
     override string toString() const
     {
         char[] repr;
-        repr ~= "SBlock(";
+        repr ~= "SFluidBlock(";
         repr ~= "id=" ~ to!string(id);
         repr ~= ", label=\"" ~ label ~ "\"";
         repr ~= ", active=" ~ to!string(active);
@@ -337,7 +337,7 @@ public:
             // The for each cell, face and vertex, the global index (gid)
             // will be the index into the array held privately by this class.
             //
-            // In the Block base class, we will keep an array of "active" cells
+            // In the FluidBlock base class, we will keep an array of "active" cells
             // that may be accessed directly by other parts of the code.
             // Providing such access brings the structured-grid code a little closer
             // to the flavour of the unstructured-grid code.
@@ -352,7 +352,7 @@ public:
             }
             // Now, assemble the lists of references to the cells, vertices and faces
             // in standard order for a structured grid.
-            // These arrays are held by the Block base class and allow us to handle
+            // These arrays are held by the FluidBlock base class and allow us to handle
             // a structured-grid block much as we would an unstructured-grid block.
             if (myConfig.dimensions == 2) {
                 foreach (j; jmin .. jmax+1) {
@@ -1628,7 +1628,7 @@ public:
             char[] found_header = new char[expected_header.length];
             fin.rawRead(found_header);
             if (found_header != expected_header) {
-                throw new FlowSolverException("SBlock.read_solution from raw_binary_file: " ~
+                throw new FlowSolverException("SFluidBlock.read_solution from raw_binary_file: " ~
                                               "unexpected header: " ~ to!string(found_header)); 
             }
             int[1] int1; fin.rawRead(int1);
@@ -1891,7 +1891,7 @@ public:
         return;
     }
 
-} // end class SBlock
+} // end class SFluidBlock
 
 
 /** Indexing of the data in 2D.

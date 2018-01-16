@@ -157,7 +157,7 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
 
 class GhostCellEffect {
 public:
-    Block blk;
+    FluidBlock blk;
     int which_boundary;
     string type;
 
@@ -250,8 +250,8 @@ public:
         FVCell src_cell, dest_cell;
         FVInterface IFace;
         auto copy_opt = CopyDataOption.minimal_flow;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -441,8 +441,8 @@ public:
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         FVInterface dest_face;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -561,8 +561,8 @@ public:
         FVCell src_cell, dest_cell;
         FVInterface dest_face;
         FlowState fstate;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -715,8 +715,8 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         size_t nsp = gmodel.n_species;
         size_t nmodes = gmodel.n_modes;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -1234,8 +1234,8 @@ public:
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -1386,8 +1386,8 @@ public:
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -1623,8 +1623,8 @@ public:
         FVCell src_cell, dest_cell;
         FVInterface face;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         double p_stag = 0.0;
         double T_stag = 0.0; // temporary
@@ -1982,7 +1982,7 @@ public:
 
 class GhostCellFullFaceCopy : GhostCellEffect {
 public:
-    Block neighbourBlock;
+    FluidBlock neighbourBlock;
     int neighbourFace;
     int neighbourOrientation;
     bool reorient_vector_quantities;
@@ -2023,10 +2023,10 @@ public:
 
     void set_up_cell_mapping()
     {
-        SBlock dest_blk = cast(SBlock) blk;
+        SFluidBlock dest_blk = cast(SFluidBlock) blk;
         assert(dest_blk, "Destination FlowBlock must be a structured-grid block.");
         int destination_face = which_boundary;
-        SBlock src_blk = cast(SBlock) neighbourBlock;
+        SFluidBlock src_blk = cast(SFluidBlock) neighbourBlock;
         assert(src_blk, "Source FlowBlock must be a structured-grid block.");
         int src_face = neighbourFace;
         int src_orientation = neighbourOrientation;
@@ -2731,10 +2731,10 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
-        SBlock nbblk = cast(SBlock) this.neighbourBlock;
-        assert(nbblk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+        SFluidBlock nbblk = cast(SFluidBlock) this.neighbourBlock;
+        assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
         foreach (i; 0 .. ghost_cells.length) {
             ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
             ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
@@ -2928,8 +2928,8 @@ public:
             break;
         case Grid_t.structured_grid:
             size_t i, j, k;
-            SBlock blk = cast(SBlock) this.blk;
-            assert(blk !is null, "Oops, this should be an SBlock object.");
+            SFluidBlock blk = cast(SFluidBlock) this.blk;
+            assert(blk !is null, "Oops, this should be an SFluidBlock object.");
             final switch (which_boundary) {
             case Face.north:
                 j = blk.jmax;

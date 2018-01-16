@@ -34,7 +34,7 @@ import lsqinterp;
 import block;
 import bc;
 
-class UBlock: Block {
+class UFluidBlock: FluidBlock {
 public:
     size_t ncells;
     size_t nvertices;
@@ -99,7 +99,7 @@ public:
     override string toString() const
     {
         char[] repr;
-        repr ~= "UBlock(unstructured_grid, ";
+        repr ~= "UFluidBlock(unstructured_grid, ";
         repr ~= "id=" ~ to!string(id);
         repr ~= " label=\"" ~ label ~ "\"";
         repr ~= ", active=" ~ to!string(active);
@@ -733,7 +733,7 @@ public:
             char[] found_header = new char[expected_header.length];
             fin.rawRead(found_header);
             if (found_header != expected_header) {
-                throw new FlowSolverException("UBlock.read_solution from raw_binary_file: " ~
+                throw new FlowSolverException("UFluidBlock.read_solution from raw_binary_file: " ~
                                               "unexpected header: " ~ to!string(found_header)); 
             }
             int[1] int1; fin.rawRead(int1);
@@ -769,7 +769,7 @@ public:
             string format_version;
             formattedRead(line, "unstructured_grid_flow %s", &format_version);
             if (format_version != "1.0") {
-                string msg = text("UBlock.read_solution(): " ~ "format version found: "
+                string msg = text("UFluidBlock.read_solution(): " ~ "format version found: "
                                   ~ format_version);
                 throw new FlowSolverException(msg); 
             }
@@ -957,4 +957,4 @@ public:
         } // end foreach face
     } // end convective_flux-phase1()
 
-} // end class UBlock
+} // end class UFluidBlock

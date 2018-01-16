@@ -106,7 +106,7 @@ BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int b
 
 class BoundaryInterfaceEffect {
 public:
-    Block blk;
+    FluidBlock blk;
     int which_boundary;
     string type;
 
@@ -165,8 +165,8 @@ class BIE_CopyCellData : BoundaryInterfaceEffect {
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -266,8 +266,8 @@ class BIE_FlowStateCopy : BoundaryInterfaceEffect {
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -374,8 +374,8 @@ public:
         FVCell cell;
         FVInterface f;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -480,8 +480,8 @@ class BIE_ZeroVelocity : BoundaryInterfaceEffect {
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -581,8 +581,8 @@ class BIE_TranslatingSurface : BoundaryInterfaceEffect {
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -686,8 +686,8 @@ class BIE_RotatingSurface : BoundaryInterfaceEffect {
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -793,8 +793,8 @@ public:
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -908,8 +908,8 @@ public:
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
         int nsp = gmodel.n_species;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -1029,8 +1029,8 @@ class BIE_UpdateThermoTransCoeffs : BoundaryInterfaceEffect {
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -1141,8 +1141,8 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
         FVCell cell;
         FVInterface IFace;
         auto gmodel = blk.myConfig.gmodel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -1265,8 +1265,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         size_t i, j, k;
         if (_faces_need_to_be_flagged) {
             // Flag faces, just once.
@@ -1674,8 +1674,8 @@ public:
 
     void initGasCellsAndIFaces()
     {
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         size_t i, j, k;
         switch ( which_boundary ) {
         case Face.north:

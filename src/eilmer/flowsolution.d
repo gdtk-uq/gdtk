@@ -298,7 +298,7 @@ class BlockFlow {
     // we are going to handle the data as a big chunk of numbers,
     // with the label for each variable coming the top of the file.
     //
-    // Note that this class is like the SBlock class but does not 
+    // Note that this class is like the SFluidBlock class but does not 
     // have all of the data space needed for a simulation.
     // The intention is that it is "lighter weight" and so allow
     // postprocessing of workstations that may be considerably smaller
@@ -334,8 +334,8 @@ public:
         // Read in the flow data for a single block.
         //
         // Keep in sync with: 
-        // 1. SBlock.write_solution(),
-        // 2. UBlock.write_solution()
+        // 1. SFluidBlock.write_solution(),
+        // 2. UFluidBlock.write_solution()
         // 3. write_initial_sg_flow_file_from_lua() in luaflowstate.d
         // 4. write_initial_usg_flow_file_from_lua() in luaflowstate.d.
         //

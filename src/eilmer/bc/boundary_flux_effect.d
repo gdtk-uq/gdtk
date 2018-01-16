@@ -76,7 +76,7 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
 
 class BoundaryFluxEffect {
 public:
-    Block blk;
+    FluidBlock blk;
     int which_boundary;
     string type;
     
@@ -172,8 +172,8 @@ public:
     void initGasCellsAndIFaces()
     {
         size_t i, j, k;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         switch ( which_boundary ) {
         case Face.north:
             j = blk.jmax;
@@ -239,8 +239,8 @@ public:
         FVInterface IFace;
         size_t i, j, k;
         double _u_rel, _v_rel;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         switch(which_boundary){
         case Face.west:
@@ -327,8 +327,8 @@ public:
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        SBlock blk = cast(SBlock) this.blk;
-                assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+                assert(blk !is null, "Oops, this should be an SFluidBlock object.");
                 if ( emissivity <= 0.0 || emissivity > 1.0 ) {
                         // Check if emissivity value is valid
                         throw new Error("emissivity should be 0.0<e<=1.0\n");

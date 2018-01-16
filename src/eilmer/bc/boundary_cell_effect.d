@@ -14,7 +14,7 @@ import fvcell;
 import fvinterface;
 import geom;
 import block;
-import sblock: SBlock;
+import sblock: SFluidBlock;
 import globaldata;
 import json_helper;
 
@@ -35,7 +35,7 @@ BoundaryCellEffect make_BCE_from_json(JSONValue jsonData, int blk_id, int bounda
 
 class BoundaryCellEffect {
 public:
-    Block blk;
+    FluidBlock blk;
     int which_boundary;
     string type;
 
@@ -98,8 +98,8 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         if (_cells_need_to_be_flagged) {
             // Apply the cell flags, just once.

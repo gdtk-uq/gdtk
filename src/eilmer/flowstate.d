@@ -331,7 +331,7 @@ public:
  
 void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                              in FlowState fs, double t0, GasModel gmodel)
-// Keep in sync with SBlock.write_solution.
+// Keep in sync with SFluidBlock.write_solution.
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto nicell = grid.niv - 1;
@@ -445,7 +445,7 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
  
 void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
                              in FlowState fs, double t0, GasModel gmodel)
-// Keep in sync with UBlock.write_solution.
+// Keep in sync with UFluidBlock.write_solution.
 {
     // Numbers of cells derived from numbers of vertices in grid.
     auto ncells = grid.ncells;

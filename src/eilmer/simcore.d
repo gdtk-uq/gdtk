@@ -197,7 +197,7 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     // for reconstruction prior to convective flux calculation for the unstructured-grid blocks.
     foreach (myblk; localFluidBlocks) {
         if ((myblk.grid_type == Grid_t.unstructured_grid) && (myblk.myConfig.interpolation_order > 1)) {
-            auto myUBlock = cast(UBlock) myblk;
+            auto myUBlock = cast(UFluidBlock) myblk;
             myUBlock.compute_least_squares_setup(0);
         }
     }
@@ -357,7 +357,7 @@ void march_over_blocks()
                              "    nib=", nib);
         throw new FlowSolverException(errMsg);
     }
-    Block[][][] gasBlockArray;
+    FluidBlock[][][] gasBlockArray;
     gasBlockArray.length = nib;
     foreach (i; 0 .. nib) {
         gasBlockArray[i].length = njb;
@@ -583,7 +583,7 @@ void integrate_in_time(double target_time_as_requested)
                     blk.compute_primary_cell_geometric_data(0);
                     if ((blk.grid_type == Grid_t.unstructured_grid) &&
                         (blk.myConfig.interpolation_order > 1)) { 
-                        auto myUBlock = cast(UBlock) blk;
+                        auto myUBlock = cast(UFluidBlock) blk;
                         myUBlock.compute_least_squares_setup(0);
                     }
                 } // end if active
@@ -747,8 +747,8 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
             }
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) {
-                    SBlock sblk = cast(SBlock) blk;
-                    assert(sblk !is null, "Oops, this should be an SBlock object.");
+                    SFluidBlock sblk = cast(SFluidBlock) blk;
+                    assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                     shock_fitting_vertex_velocities(sblk, step, sim_time);
                 }
             }
@@ -1264,15 +1264,15 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // Moving Grid - predict new vertex positions for moving grid              
     foreach (blk; localFluidBlocksBySize) {
         if (!blk.active) continue;
-        SBlock sblk = cast(SBlock) blk;
-        assert(sblk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock sblk = cast(SFluidBlock) blk;
+        assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
         // move vertices
         predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
         // recalculate cell geometry with new vertex positions @ gtl = 1
         blk.compute_primary_cell_geometric_data(gtl+1);
         if ((blk.grid_type == Grid_t.unstructured_grid) &&
             (blk.myConfig.interpolation_order > 1)) { 
-            auto myUBlock = cast(UBlock) blk;
+            auto myUBlock = cast(UFluidBlock) blk;
             myUBlock.compute_least_squares_setup(gtl+1);
         }
         // determine interface velocities using GCL for gtl = 1
@@ -1414,15 +1414,15 @@ void gasdynamic_explicit_increment_with_moving_grid()
         // Moving Grid - update geometry to gtl 2
         foreach (blk; localFluidBlocksBySize) {
             if (blk.active) {
-                SBlock sblk = cast(SBlock) blk;
-                assert(sblk !is null, "Oops, this should be an SBlock object.");
+                SFluidBlock sblk = cast(SFluidBlock) blk;
+                assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                 // move vertices - this is a formality since pos[2] = pos[1]
                 predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
                 // recalculate cell geometry with new vertex positions
                 blk.compute_primary_cell_geometric_data(gtl+1);
                 if ((blk.grid_type == Grid_t.unstructured_grid) &&
                     (blk.myConfig.interpolation_order > 1)) { 
-                    auto myUBlock = cast(UBlock) blk;
+                    auto myUBlock = cast(UFluidBlock) blk;
                     myUBlock.compute_least_squares_setup(gtl+1);
                 }
                 // grid remains at pos[gtl=1], thus let's use old interface velocities

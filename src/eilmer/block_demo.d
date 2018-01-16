@@ -1,6 +1,6 @@
 // block_demo.d
 // Exercise the Structured-grid blocks as we build them.
-// PJ 2014-07-20, 2015-05-05 gmodel now part of Block class.
+// PJ 2014-07-20, 2015-05-05 gmodel now part of FluidBlock class.
 
 import std.stdio;
 import geom;
@@ -11,7 +11,7 @@ import sblock;
 
 void main()
 {
-    writeln("Block demo, structured blocks only for now...");
+    writeln("FluidBlock demo, structured blocks only for now...");
     GlobalConfig.verbosity_level = 2;
     GlobalConfig.gas_model_file = "sample-data/ideal-air-gas-model.lua";
     auto myConfig = new LocalConfig();
@@ -19,7 +19,7 @@ void main()
     throw new Error("Bit rot has set in -- don't use this demo.");
 
     version(old_stuff) {
-        auto blk = new SBlock(1, 10, 40, 1, "test");
+        auto blk = new SFluidBlock(1, 10, 40, 1, "test");
         blk.assemble_arrays();
         blk.bind_interfaces_and_vertices_to_cells();
         writeln("blk=", blk);

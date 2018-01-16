@@ -13,10 +13,10 @@ import block;
 import ssolidblock;
 
 // Collections of blocks that we can iterate over in parallel.
-// The current (shared-memory) parallel code is based on having one SBlock object
+// The current (shared-memory) parallel code is based on having one FluidBlock object
 // or SSolidBlock object per thread.
-static Block[] localFluidBlocks;
-static Block[] localFluidBlocksBySize; // sorted largest to smallest  
+static FluidBlock[] localFluidBlocks;
+static FluidBlock[] localFluidBlocksBySize; // sorted largest to smallest  
 static SSolidBlock[] solidBlocks;
 
 // We also need to have a dedicated set of configuration parameters for each thread

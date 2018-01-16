@@ -28,8 +28,8 @@ import flowstate;
 import flowgradients;
 import geom;
 import block;
-import sblock: SBlock;
-import ublock: UBlock;
+import sblock: SFluidBlock;
+import ublock: UFluidBlock;
 import fvinterface;
 import bc;
 
@@ -59,13 +59,13 @@ void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
         if (blk.active) {
             final switch (blk.grid_type) {
             case Grid_t.unstructured_grid: 
-                UBlock ublk = cast(UBlock) blk;
-                assert(ublk !is null, "Oops, this should be a UBlock object.");
+                UFluidBlock ublk = cast(UFluidBlock) blk;
+                assert(ublk !is null, "Oops, this should be a UFluidBlock object.");
                 apply_unstructured_grid(ublk, sim_time, current_loads_tindx);
                 break;
             case Grid_t.structured_grid:
-                SBlock sblk = cast(SBlock) blk;
-                assert(sblk !is null, "Oops, this should be an SBlock object.");
+                SFluidBlock sblk = cast(SFluidBlock) blk;
+                assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                 apply_structured_grid(sblk, sim_time, current_loads_tindx);
             } // end final switch
         } // if (blk.active)
@@ -86,7 +86,7 @@ string generate_boundary_load_file(int current_loads_tindx, double sim_time, str
     return fname;
 }
 
-void apply_unstructured_grid(UBlock blk, double sim_time, int current_loads_tindx) {
+void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
         if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
             string fname = generate_boundary_load_file(current_loads_tindx, sim_time, bndary.group);
@@ -103,7 +103,7 @@ void apply_unstructured_grid(UBlock blk, double sim_time, int current_loads_tind
     } // end if (bndary.group != "")
 } // foreach (bndary; blk.bc)
 
-void apply_structured_grid(SBlock blk, double sim_time, int current_loads_tindx) {
+void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
         if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
             string fname = generate_boundary_load_file(current_loads_tindx, sim_time, bndary.group);

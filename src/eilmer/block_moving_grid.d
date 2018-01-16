@@ -27,7 +27,7 @@ import geom;
 import boundary_flux_effect;
 import ghost_cell_effect;
 
-int set_gcl_interface_properties(SBlock blk, size_t gtl, double dt) {
+int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
     size_t i, j, k;
     FVVertex vtx1, vtx2;
     FVInterface IFace;
@@ -89,7 +89,7 @@ int set_gcl_interface_properties(SBlock blk, size_t gtl, double dt) {
     return 0;
 }
 
-void predict_vertex_positions(SBlock blk, size_t dimensions, double dt, int gtl) {
+void predict_vertex_positions(SFluidBlock blk, size_t dimensions, double dt, int gtl) {
     size_t krangemax = ( dimensions == 2 ) ? blk.kmax : blk.kmax+1;
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
         for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
@@ -105,7 +105,7 @@ void predict_vertex_positions(SBlock blk, size_t dimensions, double dt, int gtl)
     return;
 }
 
-void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
+void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time) {
     /++ for a given block, loop through cell vertices and update the vertex
       + velocities. The boundary vertex velocities are set via the methodology laid out
       + in Ian Johnston's thesis available on the cfcfd website. The internal velocities
@@ -158,8 +158,8 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
             if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face") {
                 auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
                 int neighbourBlock =  ffeBC.neighbourBlock.id;
-                SBlock nbblk = cast(SBlock) localFluidBlocks[neighbourBlock];
-                assert(nbblk !is null, "Oops, this should be an SBlock object.");
+                SFluidBlock nbblk = cast(SFluidBlock) localFluidBlocks[neighbourBlock];
+                assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                 cell_botrght = nbblk.get_cell(nbblk.imin, nbblk.jmax, k);
             }
             else // else grab data from neighbour cell in current block
@@ -168,8 +168,8 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
             if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face") {
                 auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
                 int neighbourBlock =  ffeBC.neighbourBlock.id;
-                SBlock nbblk = cast(SBlock) localFluidBlocks[neighbourBlock];
-                assert(nbblk !is null, "Oops, this should be an SBlock object.");
+                SFluidBlock nbblk = cast(SFluidBlock) localFluidBlocks[neighbourBlock];
+                assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                 cell_toprght = nbblk.get_cell(nbblk.imin, nbblk.jmin, k);
             }
             else // else grab data from neighbour cell in current block
@@ -179,8 +179,8 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
                     // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
                     auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
                     int neighbourBlock =  ffeBC.neighbourBlock.id;
-                    SBlock nbblk = cast(SBlock) localFluidBlocks[neighbourBlock];
-                    assert(nbblk !is null, "Oops, this should be an SBlock object.");
+                    SFluidBlock nbblk = cast(SFluidBlock) localFluidBlocks[neighbourBlock];
+                    assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                     bot_cell_R1 = nbblk.get_cell(nbblk.imin+1, nbblk.jmax, k);
                     bot_cell_R2 = nbblk.get_cell(nbblk.imin+2, nbblk.jmax, k);
                 }
@@ -192,8 +192,8 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
                     // if reconsturction is true and vtx is on block edge grab rhs cell data from neighbour block
                     auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
                     int neighbourBlock =  ffeBC.neighbourBlock.id;
-                    SBlock nbblk = cast(SBlock) localFluidBlocks[neighbourBlock];
-                    assert(nbblk !is null, "Oops, this should be an SBlock object.");
+                    SFluidBlock nbblk = cast(SFluidBlock) localFluidBlocks[neighbourBlock];
+                    assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                     top_cell_R1 = nbblk.get_cell(nbblk.imin+1, nbblk.jmin, k);
                     top_cell_R2 = nbblk.get_cell(nbblk.imin+2, nbblk.jmin, k);
                 }
@@ -248,16 +248,16 @@ void shock_fitting_vertex_velocities(SBlock blk, int step, double sim_time) {
                     if (j == blk.jmin && blk.bc[Face.south].type =="exchange_over_full_face" && jOffSet == 1) {
                         auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.south].preReconAction[0];
                         int neighbourBlock =  ffeBC.neighbourBlock.id;
-                        SBlock nbblk = cast(SBlock) localFluidBlocks[neighbourBlock];
-                        assert(nbblk !is null, "Oops, this should be an SBlock object.");
+                        SFluidBlock nbblk = cast(SFluidBlock) localFluidBlocks[neighbourBlock];
+                        assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                         cell = nbblk.get_cell(nbblk.imin, nbblk.jmax, k);
                         iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmax, k);
                     }
                     if (j == blk.jmax+1 && blk.bc[Face.north].type=="exchange_over_full_face" && jOffSet == 0) {
                         auto ffeBC = cast(GhostCellFullFaceCopy) blk.bc[Face.north].preReconAction[0];
                         int neighbourBlock =  ffeBC.neighbourBlock.id;
-                        SBlock nbblk = cast(SBlock) localFluidBlocks[neighbourBlock];
-                        assert(nbblk !is null, "Oops, this should be an SBlock object.");
+                        SFluidBlock nbblk = cast(SFluidBlock) localFluidBlocks[neighbourBlock];
+                        assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
                         cell = nbblk.get_cell(nbblk.imin, nbblk.jmin, k);
                         iface_neighbour = nbblk.get_ifi(nbblk.imin, nbblk.jmin, k);
                     }

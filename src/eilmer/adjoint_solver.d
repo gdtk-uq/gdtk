@@ -290,7 +290,7 @@ void main(string[] args) {
     
     // write out adjoint variables in VTK-format
     if (localFluidBlocks[0].grid_type == Grid_t.structured_grid) {
-        SBlock sblk = cast(SBlock) localFluidBlocks[0]; 
+        SFluidBlock sblk = cast(SFluidBlock) localFluidBlocks[0]; 
         File outFile = File("adjointVars.vtk", "w");
         outFile.writef("# vtk DataFile Version 3.0 \n");
         outFile.writef("%s \n", jobName);
@@ -332,7 +332,7 @@ void main(string[] args) {
     }
 
     if (localFluidBlocks[0].grid_type == Grid_t.unstructured_grid) {
-        UBlock ublk = cast(UBlock) localFluidBlocks[0]; 
+        UFluidBlock ublk = cast(UFluidBlock) localFluidBlocks[0]; 
         File outFile = File("adjointVars.vtk", "w");
         outFile.writef("# vtk DataFile Version 3.0 \n");
         outFile.writef("%s \n", jobName);
@@ -526,7 +526,7 @@ void main(string[] args) {
 
 double[][] perturbMeshSG(Block blk, double[] D) {
     // compute new nozzle surface, and delta
-    SBlock sblk = cast(SBlock) blk;
+    SFluidBlock sblk = cast(SFluidBlock) blk;
     double y0; double y1;
     double[size_t] delta;
     double scale = 1.5;
@@ -607,13 +607,13 @@ double[][] perturbMeshUSG(Block blk, double[] D) {
     return meshP;
 }
 
-double finite_difference_grad(string jobName, int last_tindx, Block[] localFluidBlocks, double[] p_target, double[] D) {
+double finite_difference_grad(string jobName, int last_tindx, FluidBlock[] localFluidBlocks, double[] p_target, double[] D) {
 
     foreach (blk; parallel(localFluidBlocks,1)) {
         double[][] meshP; 
         if (blk.grid_type == Grid_t.structured_grid) {
             meshP = perturbMeshSG(blk, D);
-            SBlock sblk = cast(SBlock) blk;
+            SFluidBlock sblk = cast(SFluidBlock) blk;
             size_t vtxID = 0;
             for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
                 for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
@@ -825,7 +825,7 @@ void construct_inviscid_flow_jacobian_stencils(Block blk) {
                 pos_array[pcell.id] = refs_unordered.length-1;
                 cell_ids ~= pcell.id;
 
-                SBlock sblk = cast(SBlock) blk;
+                SFluidBlock sblk = cast(SFluidBlock) blk;
                 size_t[3] ijk = sblk.cell_id_to_ijk_indices(pcell.id);
                 size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
                 FVCell[] stencil_cells;
@@ -1206,8 +1206,8 @@ void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_l
     // Convective flux update
     if (blk.grid_type == Grid_t.structured_grid) {
         foreach(iface; iface_list) { 
-            // we need to cast an SBlock here to reach some methods and data
-            SBlock sblk = cast(SBlock) blk;
+            // we need to cast an SFluidBlock here to reach some methods and data
+            SFluidBlock sblk = cast(SFluidBlock) blk;
             size_t imin = sblk.imin; size_t imax = sblk.imax; size_t jmin = sblk.jmin; size_t jmax = sblk.jmax;
             foreach(faceIdentity, face; iface.left_cell.iface) { // use of left_cell is arbitrary -- could use right_cell
                 if (face == iface) {
@@ -1311,7 +1311,7 @@ void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_l
 
         // compute flux
         foreach(iface; iface_list) {
-            UBlock ublk = cast(UBlock) blk;
+            UFluidBlock ublk = cast(UFluidBlock) blk;
             ublk.lsq.interp_both(iface, 0, ublk.Lft, ublk.Rght); // gtl assumed 0
             iface.fs.copy_average_values_from(ublk.Lft, ublk.Rght);
             compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
@@ -1494,7 +1494,7 @@ void update_geometry(Block blk, FVVertex vtx) {
     
     // for USG grid, update least-squares weights
     if (blk.grid_type == Grid_t.unstructured_grid) {
-        UBlock ublk = cast(UBlock) blk;
+        UFluidBlock ublk = cast(UFluidBlock) blk;
         foreach (cell; vtx.jacobian_cell_stencil)
             ublk.compute_least_squares_setup_for_cell(cell, 0, false);
     }

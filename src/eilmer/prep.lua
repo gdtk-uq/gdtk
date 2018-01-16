@@ -305,7 +305,7 @@ end
 
 -- ---------------------------------------------------------------------------------------
 
--- Storage for later definitions of Block objects
+-- Storage for later definitions of FluidBlock objects
 fluidBlocks = {}
 
 -- The user may assign the MPI task id for eack block manually
@@ -344,10 +344,10 @@ end
 
 -- -----------------------------------------------------------------------
 
--- Class for gas dynamics Block construction (based on a StructuredGrid).
+-- Class for gas dynamics FluidBlock construction.
 FluidBlock = {
    myType = "FluidBlock",
-} -- end Block
+} -- end FluidBlock
 
 function FluidBlock:new(o)
    o = o or {}
@@ -534,7 +534,7 @@ function SBlock2UBlock(blk)
    fluidBlocks[origId+1], fluidBlocks[newId+1] = fluidBlocks[newId+1], fluidBlocks[origId+1]
    -- Fix id of ublk
    fluidBlocks[origId+1].id = origId
-   -- Now remove original SBlock (which is now in pos ublk.id+1)
+   -- Now remove original SFluidBlock (which is now in pos ublk.id+1)
    table.remove(fluidBlocks, newId+1)
 end
 
@@ -633,9 +633,9 @@ end
 function identifyBlockConnections(blockList, excludeList, tolerance)
    -- Identify block connections by trying to match corner points.
    -- Parameters:
-   -- blockList: the list of SBlock objects to be included in the search.
+   -- blockList: the list of SFluidBlock objects to be included in the search.
    --    If nil, the whole collection is searched.
-   -- excludeList: list of pairs of SBlock objects that should not be
+   -- excludeList: list of pairs of SFluidBlock objects that should not be
    --    included in the search for connections.
    -- tolerance: spatial tolerance for the colocation of vertices
    local myBlockList = {}
@@ -647,8 +647,8 @@ function identifyBlockConnections(blockList, excludeList, tolerance)
    -- Add solid domain block to search
    for _,blk in ipairs(solidBlocks) do myBlockList[#myBlockList+1] = blk end
    excludeList = excludeList or {}
-   -- Put UBlock objects into the exclude list because they don't
-   -- have a simple topology that can always be matched to an SBlock.
+   -- Put UFluidBlock objects into the exclude list because they don't
+   -- have a simple topology that can always be matched to an SFluidBlock.
    for _,A in ipairs(myBlockList) do
       if A.grid:get_type() == "unstructured_grid" then excludeList[#excludeList+1] = A end
    end

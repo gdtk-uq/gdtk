@@ -38,8 +38,8 @@ import json_helper;
 import globaldata;
 import flowstate;
 import block;
-import sblock;
-import ublock;
+import sblock: SFluidBlock, n_ghost_cell_layers;
+import ublock: UFluidBlock;
 import ssolidblock;
 import bc;
 import user_defined_source_terms;
@@ -1101,10 +1101,10 @@ void read_config_file()
         string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
         switch (gridType) {
         case "structured_grid": 
-            localFluidBlocks ~= new SBlock(i, jsonDataForBlock);
+            localFluidBlocks ~= new SFluidBlock(i, jsonDataForBlock);
             break;
         case "unstructured_grid":
-            localFluidBlocks ~= new UBlock(i, jsonDataForBlock);
+            localFluidBlocks ~= new UFluidBlock(i, jsonDataForBlock);
             dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
             break;
         default:
@@ -1436,8 +1436,8 @@ void init_master_lua_State()
         lua_pushnumber(L, blk.vertices.length);
         lua_setfield(L, -2, "nVertices");
         if ( blk.grid_type == Grid_t.structured_grid ) {
-            SBlock sblk = cast(SBlock) blk;
-            assert(sblk !is null, "Oops, this should be an SBlock object.");
+            SFluidBlock sblk = cast(SFluidBlock) blk;
+            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
             lua_pushnumber(L, sblk.nicell);
             lua_setfield(L, -2, "niCells");
             lua_pushnumber(L, sblk.njcell);

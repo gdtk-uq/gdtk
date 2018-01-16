@@ -38,7 +38,7 @@ enum ghost_cell_start_id = 1_000_000_000;
 // The flow solver handles structured- and unstructured-grid blocks via this base class.
 // Mostly, we view the block as an unstructured bag of cells because that requires least
 // knowledge in the calling code.
-class Block {
+class FluidBlock {
 public:
     int id; // block identifier: assumed to be the same as the block number.
     Grid_t grid_type; // structured or unstructured
@@ -555,7 +555,7 @@ public:
         } // foreach cell
         if ( cfl_max < 0.0 || cfl_max > cfl_allow ) {
             writeln( "determine_time_step_size(): bad CFL number was encountered");
-            writeln( "    cfl_max=", cfl_max, " for Block ", id);
+            writeln( "    cfl_max=", cfl_max, " for FluidBlock ", id);
             writeln( "    If this cfl_max value is not much larger than 1.0,");
             writeln( "    your simulation could probably be restarted successfully");
             writeln( "    with some minor tweaking.");
@@ -643,4 +643,4 @@ public:
         Q1_inner = new Matrix(mInner+1, mInner+1);
     }
     }
-} // end class Block
+} // end class FluidBlock

@@ -74,7 +74,7 @@ class BoundaryCondition {
     // Boundary condition is built from composable pieces.
 public:
     // Location of the boundary condition.
-    Block blk; // the block to which this BC is applied
+    FluidBlock blk; // the block to which this BC is applied
     int which_boundary; // identity/index of the relevant boundary
     lua_State* myL; // Lua context per BC for user-defined effects.
     // We may have a label for this specific boundary.
@@ -239,8 +239,8 @@ public:
         lua_setglobal(myL, "n_modes");
         if (blk.grid_type == Grid_t.structured_grid) {
             // Structured-block-specific data
-            SBlock sblk = cast(SBlock) blk;
-            assert(sblk !is null, "Oops, this should be an SBlock object.");
+            SFluidBlock sblk = cast(SFluidBlock) blk;
+            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
             lua_pushinteger(myL, sblk.nicell); lua_setglobal(myL, "nicell");
             lua_pushinteger(myL, sblk.njcell); lua_setglobal(myL, "njcell");
             lua_pushinteger(myL, sblk.nkcell); lua_setglobal(myL, "nkcell");

@@ -26,7 +26,7 @@ import flowstate;
 import fvcore;
 import fvcell;
 import fvinterface;
-import sblock: SBlock;
+import sblock: SFluidBlock;
 import globalconfig;
 import globaldata;
 import ghost_cell_effect;
@@ -79,8 +79,8 @@ public:
         size_t i, j, k;
         FVCell ghostCell0, ghostCell1;
         FVInterface IFace;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -304,8 +304,8 @@ public:
         size_t i, j, k;
         FVCell cell;
         FVInterface IFace;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:
@@ -535,8 +535,8 @@ public:
     {
         size_t i, j, k;
         FVInterface IFace;
-        SBlock blk = cast(SBlock) this.blk;
-        assert(blk !is null, "Oops, this should be an SBlock object.");
+        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
         case Face.north:

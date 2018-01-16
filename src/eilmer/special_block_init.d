@@ -17,7 +17,7 @@ import block;
 import fvcell;
 import fvinterface;
 
-void diffuseWallBCsIntoBlock(Block blk, int nPasses, double Twall)
+void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
 {
     FVCell[] cellsAlongWalls;
     FVCell[size_t] cellsInDiffusionZone;
