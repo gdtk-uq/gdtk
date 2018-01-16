@@ -524,7 +524,7 @@ void main(string[] args) {
     writeln("Simulation complete.");
 }
 
-double[][] perturbMeshSG(Block blk, double[] D) {
+double[][] perturbMeshSG(FluidBlock blk, double[] D) {
     // compute new nozzle surface, and delta
     SFluidBlock sblk = cast(SFluidBlock) blk;
     double y0; double y1;
@@ -560,7 +560,7 @@ double[][] perturbMeshSG(Block blk, double[] D) {
     return meshP;
 }
 
-double[][] perturbMeshUSG(Block blk, double[] D) {
+double[][] perturbMeshUSG(FluidBlock blk, double[] D) {
     // compute new nozzle surface, and delta
     double y0; double y1;
     double[size_t] delta;
@@ -672,7 +672,7 @@ double finite_difference_grad(string jobName, int last_tindx, FluidBlock[] local
     return J;
 }
 
-void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, double MU) {
+void construct_flow_jacobian(FluidBlock blk, size_t ndim, size_t np, double EPSILON, double MU) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
      Row Storage (CSR) format.     
@@ -759,7 +759,7 @@ void construct_flow_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
     } // end foreach cell
 }
 
-void construct_inviscid_flow_jacobian_stencils(Block blk) {
+void construct_inviscid_flow_jacobian_stencils(FluidBlock blk) {
     /++
      This is the stencil of surrounding cells (and faces) that are effected by a perturbation in a 
      cells flowstate variables, for inviscid flow.
@@ -897,7 +897,7 @@ void construct_inviscid_flow_jacobian_stencils(Block blk) {
     }
 }
 
-void construct_viscous_flow_jacobian_stencils(Block blk) {
+void construct_viscous_flow_jacobian_stencils(FluidBlock blk) {
     /++
 
      This is the stencil of surrounding cells (and faces) that are effected by a perturbation in a 
@@ -994,7 +994,7 @@ void construct_viscous_flow_jacobian_stencils(Block blk) {
     } // end foreach cell
 }
 
-void construct_mesh_jacobian_stencils(Block blk) {
+void construct_mesh_jacobian_stencils(FluidBlock blk) {
     /++
      
      This is the stencil of surrounding cells (and faces) that are effected by a perturbation in a 
@@ -1045,7 +1045,7 @@ void construct_mesh_jacobian_stencils(Block blk) {
     }
 }
 
-void construct_mesh_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, double MU) {
+void construct_mesh_jacobian(FluidBlock blk, size_t ndim, size_t np, double EPSILON, double MU) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
      Row Storage (CSR) format.     
@@ -1190,7 +1190,7 @@ void construct_mesh_jacobian(Block blk, size_t ndim, size_t np, double EPSILON, 
     } // end foreach vtx
 }
 
-void compute_perturbed_flux(Block blk, FVCell[] cell_list, FVInterface[] iface_list, FVInterface[] ifaceP_list) {
+void compute_perturbed_flux(FluidBlock blk, FVCell[] cell_list, FVInterface[] iface_list, FVInterface[] ifaceP_list) {
     /++
      This method computes a perturbed flux at a given interface. 
 
@@ -1476,7 +1476,7 @@ string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArr
     return codeStr;
 }
 
-void update_geometry(Block blk, FVVertex vtx) {
+void update_geometry(FluidBlock blk, FVVertex vtx) {
 
     // update cell geometry
     foreach (cid; blk.cellIndexListPerVertex[vtx.id])

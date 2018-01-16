@@ -1020,7 +1020,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-void evalRHS(Block blk, double pseudoSimTime, int ftl)
+void evalRHS(FluidBlock blk, double pseudoSimTime, int ftl)
 {
     bool local_with_k_omega = with_k_omega;
     // We don't want to get a false function count by counting
@@ -1058,7 +1058,7 @@ void evalRHS(Block blk, double pseudoSimTime, int ftl)
 }
 
 
-void evalJacobianVecProd(Block blk, double pseudoSimTime, double sigma)
+void evalJacobianVecProd(FluidBlock blk, double pseudoSimTime, double sigma)
 {
     bool local_with_k_omega = with_k_omega;
     // Make a stack-local copy of conserved quantities info
@@ -1462,7 +1462,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
 }
 
 
-void GMRES_solve(Block blk, double pseudoSimTime, double dt, double sigma)
+void GMRES_solve(FluidBlock blk, double pseudoSimTime, double dt, double sigma)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
