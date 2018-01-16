@@ -7,7 +7,7 @@
 require 'lua_helper'  -- loads lua helper functions
 
 
-function atTimestepStart(sim_time,steps,gasBlocks)
+function atTimestepStart(sim_time,steps,localFluidBlocks)
    --print("in supervisor function --> atTimeStepStart")
 
    -- Rport the rotational angle at regular intervals. 

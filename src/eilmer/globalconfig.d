@@ -1101,10 +1101,10 @@ void read_config_file()
         string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
         switch (gridType) {
         case "structured_grid": 
-            gasBlocks ~= new SBlock(i, jsonDataForBlock);
+            localFluidBlocks ~= new SBlock(i, jsonDataForBlock);
             break;
         case "unstructured_grid":
-            gasBlocks ~= new UBlock(i, jsonDataForBlock);
+            localFluidBlocks ~= new UBlock(i, jsonDataForBlock);
             dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
             break;
         default:
@@ -1112,7 +1112,7 @@ void read_config_file()
                                    i, gridType));
         } // end switch gridType
     }
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         blk.init_lua_globals();
         blk.init_boundary_conditions(jsonData["block_" ~ to!string(blk.id)]);
         if (GlobalConfig.udf_source_terms) {
@@ -1122,7 +1122,7 @@ void read_config_file()
     // After fully constructing blocks and their boundary conditions,
     // we can optionally print their representation for checking.
     if (GlobalConfig.verbosity_level > 1) {
-        foreach (i, blk; gasBlocks) { writeln("  Block[", i, "]: ", blk); }
+        foreach (i, blk; localFluidBlocks) { writeln("  Block[", i, "]: ", blk); }
     }
     // Read in any blocks in the solid domain.
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);
@@ -1429,7 +1429,7 @@ void init_master_lua_State()
     // Give the user a table that holds information about
     // all of the blocks
     lua_newtable(L);
-    foreach (int i, blk; gasBlocks) {
+    foreach (int i, blk; localFluidBlocks) {
         lua_newtable(L);
         lua_pushnumber(L, blk.cells.length);
         lua_setfield(L, -2, "nCells");

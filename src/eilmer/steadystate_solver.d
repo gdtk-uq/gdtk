@@ -140,7 +140,7 @@ void main(string[] args)
     init_simulation(snapshotStart, -1, maxCPUs, maxWallClock);
     // Additional memory allocation specific to steady-state solver
     allocate_global_workspace();
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         blk.allocate_GMRES_workspace();
     }
 
@@ -315,7 +315,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         // pre-step phase.
 
         writeln("Begin pre-iterations to establish sensible max residual.");
-        foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
+        foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(1);
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
@@ -328,7 +328,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                     dt = 0.1*dt;
                     break;
                 }
-                foreach (blk; parallel(gasBlocks,1)) {
+                foreach (blk; parallel(localFluidBlocks,1)) {
                     bool local_with_k_omega = with_k_omega;
                     int cellCount = 0;
                     foreach (cell; blk.cells) {
@@ -362,7 +362,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 
                 // If we get here, things are good. Put flow state into U[0]
                 // ready for next iteration.
-                foreach (blk; parallel(gasBlocks,1)) {
+                foreach (blk; parallel(localFluidBlocks,1)) {
                     foreach (cell; blk.cells) {
                         swap(cell.U[0], cell.U[1]);
                     }
@@ -389,7 +389,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             // Take initial residual as max residual
             evalRHS(0.0, 0);
             max_residuals(maxResiduals);
-            foreach (blk; parallel(gasBlocks, 1)) {
+            foreach (blk; parallel(localFluidBlocks, 1)) {
                 bool local_with_k_omega = with_k_omega;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
@@ -548,14 +548,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         }
         residualsUpToDate = false;
         if ( step <= nStartUpSteps ) {
-            foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(1);
+            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(1);
             withPreconditioning = false;
             eta = eta0;
             tau = tau0;
             sigma = sigma0;
         }
         else {
-            foreach (blk; parallel(gasBlocks,1)) blk.set_interpolation_order(interpOrderSave);
+            foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
             withPreconditioning = GlobalConfig.sssOptions.usePreconditioning;
             eta = eta1;
             tau = tau1;
@@ -574,7 +574,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                     dt = 0.1*dt;
                     continue;
             }
-            foreach (blk; parallel(gasBlocks,1)) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
                 bool local_with_k_omega = with_k_omega;
                 int cellCount = 0;
                 foreach (cell; blk.cells) {
@@ -607,7 +607,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
 
             // If we get here, things are good. Put flow state into U[0]
             // ready for next iteration.
-            foreach (blk; parallel(gasBlocks,1)) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (cell; blk.cells) {
                     swap(cell.U[0], cell.U[1]);
                 }
@@ -713,7 +713,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             nWrittenSnapshots++;
             if ( nWrittenSnapshots <= nTotalSnapshots ) {
                 ensure_directory_is_present(make_path_name!"flow"(nWrittenSnapshots));
-                foreach ( iblk, blk; gasBlocks ) {
+                foreach ( iblk, blk; localFluidBlocks ) {
                     // [TODO] PJ 2017-09-02 need to set the file extension properly (here and a few lines below).
                     auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nWrittenSnapshots, "gz");
                     blk.write_solution(fileName, pseudoSimTime);
@@ -729,14 +729,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             else {
                 // We need to shuffle all of the snapshots...
                 foreach ( iSnap; 2 .. nTotalSnapshots+1) {
-                    foreach ( iblk; 0 .. gasBlocks.length ) {
+                    foreach ( iblk; 0 .. localFluidBlocks.length ) {
                         auto fromName = make_file_name!"flow"(jobName, to!int(iblk), iSnap, "gz");
                         auto toName = make_file_name!"flow"(jobName, to!int(iblk), iSnap-1, "gz");
                         rename(fromName, toName);
                     }
                 }
                 // ... and add the new snapshot.
-                foreach ( iblk, blk; gasBlocks ) {
+                foreach ( iblk, blk; localFluidBlocks ) {
                     auto fileName = make_file_name!"flow"(jobName, to!int(iblk), nTotalSnapshots, "gz");        
                     blk.write_solution(fileName, pseudoSimTime);
                 }
@@ -845,7 +845,7 @@ double determine_initial_dt(double cflInit)
     double signal, dt_local, dt;
     bool first = true;
 
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         foreach (cell; blk.cells) {
             signal = cell.signal_frequency();
             dt_local = cflInit / signal;
@@ -863,7 +863,7 @@ double determine_min_cfl(double dt)
     double signal, cfl_local, cfl;
     bool first = true;
 
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         foreach (cell; blk.cells) {
             signal = cell.signal_frequency();
             cfl_local = dt * signal;
@@ -880,11 +880,11 @@ void evalRHS(double pseudoSimTime, int ftl)
 {
     fnCount++;
     
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
     }
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         blk.applyPreReconAction(pseudoSimTime, 0, ftl);
     }
     
@@ -892,35 +892,35 @@ void evalRHS(double pseudoSimTime, int ftl)
     // doing the Frechet derivative, so we'll only search for shock points
     // at ftl = 0, which is when the F(U) evaluation is made.
     if ( ftl == 0 && GlobalConfig.flux_calculator == FluxCalculator.adaptive) {
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
             blk.detect_shock_points();
         }
     }
     
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase0();
     }
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         blk.convective_flux_phase1();
     }
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);
     }
     if (GlobalConfig.viscous) {
-        foreach (blk; gasBlocks) {
+        foreach (blk; localFluidBlocks) {
             blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, 0, ftl);
         }
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
             blk.flow_property_spatial_derivatives(0); 
             blk.estimate_turbulence_viscosity();
             blk.viscous_flux();
         }
-        foreach (blk; gasBlocks) {
+        foreach (blk; localFluidBlocks) {
             blk.applyPostDiffFluxAction(pseudoSimTime, 0, ftl);
         }
     }
 
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         foreach (i, cell; blk.cells) {
             cell.add_inviscid_source_vector(0, 0.0);
@@ -949,7 +949,7 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
     size_t OMEGA = omegaIdx;
 
     // We perform a Frechet derivative to evaluate J*z
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
@@ -971,7 +971,7 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
         }
     }
     evalRHS(pseudoSimTime, 1);
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         int cellCount = 0;
         foreach (cell; blk.cells) {
@@ -994,28 +994,28 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
 string dot_over_blocks(string dot, string A, string B)
 {
     return `
-foreach (blk; parallel(gasBlocks,1)) {
+foreach (blk; parallel(localFluidBlocks,1)) {
    blk.dotAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
       blk.dotAcc += blk.`~A~`[k]*blk.`~B~`[k];
    }
 }
 `~dot~` = 0.0;
-foreach (blk; gasBlocks) `~dot~` += blk.dotAcc;`;
+foreach (blk; localFluidBlocks) `~dot~` += blk.dotAcc;`;
 
 }
 
 string norm2_over_blocks(string norm2, string blkMember)
 {
     return `
-foreach (blk; parallel(gasBlocks,1)) {
+foreach (blk; parallel(localFluidBlocks,1)) {
    blk.normAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
       blk.normAcc += blk.`~blkMember~`[k]*blk.`~blkMember~`[k];
    }
 }
 `~norm2~` = 0.0;
-foreach (blk; gasBlocks) `~norm2~` += blk.normAcc;
+foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 `~norm2~` = sqrt(`~norm2~`);`;
 
 }
@@ -1142,7 +1142,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
     // 1. Evaluate r0, beta, v1
     evalRHS(pseudoSimTime, 0);
     // Store dUdt[0] as F(U)
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         int cellCount = 0;
         blk.maxRate.mass = 0.0;
@@ -1187,7 +1187,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
     double maxEnergy = 0.0;
     double maxTke = 0.0;
     double maxOmega = 0.0;
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         maxMass = fmax(maxMass, blk.maxRate.mass);
         maxMomX = fmax(maxMomX, blk.maxRate.momentum.x);
         maxMomY = fmax(maxMomY, blk.maxRate.momentum.y);
@@ -1212,7 +1212,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
         maxOmega = fmax(maxOmega, minNonDimVal);
     }
 
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         blk.maxRate.mass = maxMass;
         blk.maxRate.momentum.refx = maxMomX;
         blk.maxRate.momentum.refy = maxMomY;
@@ -1236,7 +1236,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
     // Taking x0 = [0] (as is common) gives r0 = b = FU
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         blk.x0[] = 0.0;
         int cellCount = 0;
@@ -1259,7 +1259,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
     mixin(norm2_over_blocks("betaTmp", "r0"));
     double beta = betaTmp;
     g0_outer[0] = beta;
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) {
             blk.v_outer[k] = blk.r0[k]/beta;
             blk.V_outer[k,0] = blk.v_outer[k];
@@ -1275,22 +1275,22 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
         foreach (j; 0 .. m) {
             iterCount = j+1;
             if ( withPreconditioning ) {
-                foreach (blk; parallel(gasBlocks,1)) {
+                foreach (blk; parallel(localFluidBlocks,1)) {
                     GMRES_solve(blk, pseudoSimTime, dt, sigma);
                 }
             }
             else {
-                foreach (blk; parallel(gasBlocks,1)) {
+                foreach (blk; parallel(localFluidBlocks,1)) {
                     blk.z_outer[] = blk.v_outer[];
                 }
             }
             // Save z vector in Z.
-            foreach (blk; parallel(gasBlocks,1)) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars) blk.Z_outer[k,j] = blk.z_outer[k];
             }
 
             // Prepare 'w' with (I/dt)v term;
-            foreach (blk; parallel(gasBlocks,1)) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
                 double dtInv = 1.0/dt;
                 foreach (k; 0 .. blk.nvars) {
                     blk.w_outer[k] = dtInv*blk.z_outer[k];
@@ -1308,13 +1308,13 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
                 evalJacobianVecProd(pseudoSimTime, sigmaHalf);
             }
             // Now we can complete calculation of w
-            foreach (blk; parallel(gasBlocks,1)) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars)  blk.w_outer[k] += blk.z_outer[k];
             }
             // The remainder of the algorithm looks a lot like any standard
             // GMRES implementation (for example, see smla.d)
             foreach (i; 0 .. j+1) {
-                foreach (blk; parallel(gasBlocks,1)) {
+                foreach (blk; parallel(localFluidBlocks,1)) {
                     // Extract column 'i'
                     foreach (k; 0 .. blk.nvars ) blk.v_outer[k] = blk.V_outer[k,i]; 
                 }
@@ -1322,7 +1322,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
                 mixin(dot_over_blocks("H0_ij_tmp", "w_outer", "v_outer"));
                 double H0_ij = H0_ij_tmp;
                 H0_outer[i,j] = H0_ij;
-                foreach (blk; parallel(gasBlocks,1)) {
+                foreach (blk; parallel(localFluidBlocks,1)) {
                     foreach (k; 0 .. blk.nvars) blk.w_outer[k] -= H0_ij*blk.v_outer[k]; 
                 }
             }
@@ -1331,7 +1331,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
             double H0_jp1j = H0_jp1j_tmp;
             H0_outer[j+1,j] = H0_jp1j;
         
-            foreach (blk; parallel(gasBlocks,1)) {
+            foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars) {
                     blk.v_outer[k] = blk.w_outer[k]/H0_jp1j;
                     blk.V_outer[k,j+1] = blk.v_outer[k];
@@ -1389,11 +1389,11 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
         //        g := gm up to row m
         upperSolve(H1_outer, to!int(m), g1_outer);
         // In serial, distribute a copy of g1 to each block
-        foreach (blk; gasBlocks) blk.g1_outer[] = g1_outer[];
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; localFluidBlocks) blk.g1_outer[] = g1_outer[];
+        foreach (blk; parallel(localFluidBlocks,1)) {
             nm.bbla.dot(blk.Z_outer, blk.nvars, m, blk.g1_outer, blk.dU);
         }
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
         }
 
@@ -1404,27 +1404,27 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
         }
 
         // Else, we prepare for restart by computing r0 and setting x0
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
             blk.x0[] = blk.dU[];
             // store final Arnoldi vector in Z (unpreconditioned)
             foreach (k; 0 .. blk.nvars) blk.Z_outer[k,m] = blk.V_outer[k,m]; 
         }
         // In serial, distribute a copy of Q1 to each block
-        foreach (blk; gasBlocks) copy(Q1_outer, blk.Q1_outer);
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; localFluidBlocks) copy(Q1_outer, blk.Q1_outer);
+        foreach (blk; parallel(localFluidBlocks,1)) {
             nm.bbla.dot(blk.Z_outer, blk.nvars, m+1, blk.Q1_outer, m+1, blk.V_outer);
         }
         foreach (i; 0 .. m) g0_outer[i] = 0.0;
         // In serial, distribute a copy of g0 to each block
-        foreach (blk; gasBlocks) blk.g0_outer[] = g0_outer[];
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; localFluidBlocks) blk.g0_outer[] = g0_outer[];
+        foreach (blk; parallel(localFluidBlocks,1)) {
             nm.bbla.dot(blk.V_outer, blk.nvars, m+1, blk.g0_outer, blk.r0);
         }
 
         mixin(norm2_over_blocks("betaTmp", "r0"));
         beta = betaTmp;
         // DEBUG: writefln("OUTER: ON RESTART beta= %e", beta);
-        foreach (blk; parallel(gasBlocks,1)) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) {
                 blk.v_outer[k] = blk.r0[k]/beta;
                 blk.V_outer[k,0] = blk.v_outer[k];
@@ -1439,7 +1439,7 @@ void FGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, boo
         g0_outer[0] = beta;
     }
     // Rescale
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         int cellCount = 0;
         foreach (cell; blk.cells) {
@@ -1566,7 +1566,7 @@ void max_residuals(ConservedQuantities residuals)
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
 
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
         blk.residuals.copy_values_from(blk.cells[0].dUdt[0]);
         blk.residuals.mass = fabs(blk.residuals.mass);
@@ -1602,8 +1602,8 @@ void max_residuals(ConservedQuantities residuals)
             }
         }
     }
-    residuals.copy_values_from(gasBlocks[0].residuals);
-    foreach (blk; gasBlocks) {
+    residuals.copy_values_from(localFluidBlocks[0].residuals);
+    foreach (blk; localFluidBlocks) {
         residuals.mass = fmax(residuals.mass, blk.residuals.mass);
         residuals.momentum.refx = fmax(residuals.momentum.x, blk.residuals.momentum.x);
         residuals.momentum.refy = fmax(residuals.momentum.y, blk.residuals.momentum.y);

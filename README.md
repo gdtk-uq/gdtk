@@ -76,6 +76,8 @@ For the C and Fortran compilers, we use gcc and gfortran.
 Beyond having a standard Linux system with recent compilers,
 the build of the Lua interpreter requires the development packages for
 libreadline and libncurses.
+The MPI version of the code requires packages mpi-default-bin and mpi-default-dev
+(on Debian-flavoured Linux distributions).
 
 Going into the `dgd/src/eilmer` directory you will find a single `makefile`
 that allows the build to proceed with the command `make install`.
@@ -123,5 +125,5 @@ who has written what part of the code.
 The commit history is place to go to see further details. 
 
 ## Chief Gardeners
-Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2017-06-05
+Peter Jacobs and Rowan Gollan, 2015-08-31 -- 2018-01-16
 

@@ -55,7 +55,7 @@ void update_loads_times_file(double sim_time, int current_loads_tindx)
 }
 
 void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
-    foreach (blk; gasBlocks) { //foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; localFluidBlocks) { //foreach (blk; parallel(localFluidBlocks,1)) {
         if (blk.active) {
             final switch (blk.grid_type) {
             case Grid_t.unstructured_grid: 

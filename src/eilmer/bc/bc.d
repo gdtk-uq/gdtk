@@ -103,7 +103,7 @@ public:
     this(int id, int boundary, bool isWallWithViscousEffects=true,
          bool ghostCellDataAvailable=true, double _emissivity=0.0)
     {
-        blk = gasBlocks[id];  // pick the relevant block out of the collection
+        blk = localFluidBlocks[id];  // pick the relevant block out of the collection
         which_boundary = boundary;
         type = "";
         group = "";

@@ -83,7 +83,7 @@ public:
     {
         writeln("GPUChem:this()");
         _gmodel = GlobalConfig.gmodel_master;
-        auto myChemUpdate = cast(ChemistryUpdate) gasBlocks[0].myConfig.thermochemUpdate;
+        auto myChemUpdate = cast(ChemistryUpdate) localFluidBlocks[0].myConfig.thermochemUpdate;
         if (myChemUpdate !is null) { 
             _rmech = myChemUpdate.rmech.dup();
         } else {
@@ -123,7 +123,7 @@ public:
      */
     void storeReferencesToCells()
     {
-        foreach (blk; gasBlocks) {
+        foreach (blk; localFluidBlocks) {
             foreach (cell; blk.cells) {
                 _cells ~= cell;
             }

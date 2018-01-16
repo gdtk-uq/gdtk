@@ -150,7 +150,7 @@ void main(string[] args) {
     }
     
     // save a copy of the original mesh
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         blk.sync_vertices_to_underlying_grid(0);
         ensure_directory_is_present(make_path_name!"grid-original"(0));
         auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
@@ -160,7 +160,7 @@ void main(string[] args) {
     // ----------------------------------------------------
     // 1.a store stencils used in forming the flow Jacobian
     //-----------------------------------------------------
-    foreach (myblk; parallel(gasBlocks,1)) {
+    foreach (myblk; parallel(localFluidBlocks,1)) {
         if (GlobalConfig.viscous) construct_viscous_flow_jacobian_stencils(myblk);
         else construct_inviscid_flow_jacobian_stencils(myblk);
     }
@@ -181,7 +181,7 @@ void main(string[] args) {
         else np = 5; // rho, momentum(x,y,z), total energy, tke, omega
     }
 
-    foreach (myblk; parallel(gasBlocks,1)) {
+    foreach (myblk; parallel(localFluidBlocks,1)) {
         construct_flow_jacobian(myblk, ndim, np, EPSILON, MU);
     }
 
@@ -191,7 +191,7 @@ void main(string[] args) {
     SMatrix globalJacobianT = new SMatrix();    
     // we must do this in serial
     size_t ia = 0;
-    foreach (myblk; gasBlocks) {
+    foreach (myblk; localFluidBlocks) {
         size_t nrows = myblk.cells.length*np;
         foreach(i; 0 .. nrows) {
             globalJacobianT.aa ~= myblk.aa[i];
@@ -212,8 +212,8 @@ void main(string[] args) {
     double[] dJdV;
     double[] p_target;
     // TODO: remove dependency on setting ncells and nvertices in main code
-    size_t ncells = gasBlocks[0].cells.length;
-    size_t nvertices = gasBlocks[0].vertices.length;
+    size_t ncells = localFluidBlocks[0].cells.length;
+    size_t nvertices = localFluidBlocks[0].vertices.length;
 
     
     // target pressure distribution saved in file target.dat
@@ -224,7 +224,7 @@ void main(string[] args) {
         p_target ~= to!double(tokens[8]);
     }
     writeln("target pressure imported");
-    foreach (blk; gasBlocks) {
+    foreach (blk; localFluidBlocks) {
         foreach(i, cell; blk.cells) {
             dJdV ~= 0.0;
             dJdV ~= 0.0;
@@ -289,8 +289,8 @@ void main(string[] args) {
     foreach(i; 0..np*ncells) psi[i] = psiN[i];
     
     // write out adjoint variables in VTK-format
-    if (gasBlocks[0].grid_type == Grid_t.structured_grid) {
-        SBlock sblk = cast(SBlock) gasBlocks[0]; 
+    if (localFluidBlocks[0].grid_type == Grid_t.structured_grid) {
+        SBlock sblk = cast(SBlock) localFluidBlocks[0]; 
         File outFile = File("adjointVars.vtk", "w");
         outFile.writef("# vtk DataFile Version 3.0 \n");
         outFile.writef("%s \n", jobName);
@@ -299,7 +299,7 @@ void main(string[] args) {
         outFile.writef("DIMENSIONS %d %d %d \n", sblk.imax, sblk.jmax, sblk.kmax+1);
         outFile.writef("POINTS %d double \n", nvertices);
         // write grid data
-        foreach(i, vtx; gasBlocks[0].vertices) {
+        foreach(i, vtx; localFluidBlocks[0].vertices) {
             outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
         }
         // write cell data
@@ -331,8 +331,8 @@ void main(string[] args) {
 
     }
 
-    if (gasBlocks[0].grid_type == Grid_t.unstructured_grid) {
-        UBlock ublk = cast(UBlock) gasBlocks[0]; 
+    if (localFluidBlocks[0].grid_type == Grid_t.unstructured_grid) {
+        UBlock ublk = cast(UBlock) localFluidBlocks[0]; 
         File outFile = File("adjointVars.vtk", "w");
         outFile.writef("# vtk DataFile Version 3.0 \n");
         outFile.writef("%s \n", jobName);
@@ -340,7 +340,7 @@ void main(string[] args) {
         outFile.writef("DATASET UNSTRUCTURED_GRID \n");
         outFile.writef("POINTS %d double \n", nvertices);
         // write grid data
-        foreach(i, vtx; gasBlocks[0].vertices) {
+        foreach(i, vtx; localFluidBlocks[0].vertices) {
             outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
         }
         // write cell connectivity
@@ -395,13 +395,13 @@ void main(string[] args) {
     // 4.a store stencils used in forming the mesh Jacobian 
     // ---------------------------------------------------------------------
 
-    foreach (myblk; parallel(gasBlocks,1)) {
+    foreach (myblk; parallel(localFluidBlocks,1)) {
         construct_mesh_jacobian_stencils(myblk);
     }
     // ------------------------------------------------------------
     // 4.b construct local mesh Jacobian via Frechet derivatives
     // ------------------------------------------------------------
-    foreach (myblk; parallel(gasBlocks,1)) {
+    foreach (myblk; parallel(localFluidBlocks,1)) {
         construct_mesh_jacobian(myblk, ndim, np, EPSILON, MU);
     }
     // ------------------------------------------------------------
@@ -410,7 +410,7 @@ void main(string[] args) {
     SMatrix globaldRdXT = new SMatrix();    
     // we must do this in serial
     ia = 0;
-    foreach (myblk; gasBlocks) {
+    foreach (myblk; localFluidBlocks) {
         size_t nrows = myblk.cells.length*np;
         foreach(i; 0 .. nrows) {
             globaldRdXT.aa ~= myblk.aa[i];
@@ -432,7 +432,7 @@ void main(string[] args) {
     Matrix dXdD_T;
     dXdD_T = new Matrix(nvar, nvertices*ndim);
     foreach (i; 0..D.length) {
-        foreach (myblk; parallel(gasBlocks,1)) {
+        foreach (myblk; parallel(localFluidBlocks,1)) {
             double dD = (abs(D[i]) + MU)*EPSILON;
             D[i] = D0[i] + dD;
             double[][] meshPp; double[][] meshPm;
@@ -481,7 +481,7 @@ void main(string[] args) {
     
         double J1; double J0; //double EPSILON0 = 1.0e-07;
         // read original grid in
-        foreach (blk; gasBlocks) { 
+        foreach (blk; localFluidBlocks) { 
             //blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
             ensure_directory_is_present(make_path_name!"grid-original"(0));
             string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
@@ -491,10 +491,10 @@ void main(string[] args) {
         // perturb b +ve --------------------------------------------------------------------------------
         double del_b = EPSILON0;
         D[0] = D0[0] + del_b;
-        J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+        J1 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
         // perturb b -ve --------------------------------------------------------------------------------
         D[0] = D0[0] - del_b;
-        J0 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+        J0 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
         D[0] = D0[0];
         double grad_b = (J1 -J0)/(2.0*del_b);
         writeln("FD dLdB = ", grad_b, ", % error = ", abs((grad_b - grad[0])/grad_b * 100));
@@ -502,10 +502,10 @@ void main(string[] args) {
         // perturb c +ve --------------------------------------------------------------------------------
         double del_c = EPSILON0;
         D[1] = D0[1] + del_c;
-        J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+        J1 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
         // perturb c -ve --------------------------------------------------------------------------------
         D[1] = D0[1] - del_c;
-        J0 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+        J0 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
         D[1] = D0[1];
         double grad_c = (J1 -J0)/(2.0*del_c);
         writeln("FD dLdC = ", grad_c, ", % error = ", abs((grad_c - grad[1])/grad_c * 100));
@@ -513,10 +513,10 @@ void main(string[] args) {
         // perturb d +ve --------------------------------------------------------------------------------
         double del_d = EPSILON0;
         D[2] = D0[2] + del_d;
-        J1 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+        J1 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
         // perturb d -ve --------------------------------------------------------------------------------
         D[2] = D0[2] - del_d;
-        J0 = finite_difference_grad(jobName, last_tindx, gasBlocks, p_target, D);
+        J0 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
         D[2] = D0[2];
         double grad_d = (J1 -J0)/(2.0*del_d);
         writeln("FD dLdD = ", grad_d, ", % error = ", abs((grad_d - grad[2])/grad_d * 100));
@@ -607,9 +607,9 @@ double[][] perturbMeshUSG(Block blk, double[] D) {
     return meshP;
 }
 
-double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks, double[] p_target, double[] D) {
+double finite_difference_grad(string jobName, int last_tindx, Block[] localFluidBlocks, double[] p_target, double[] D) {
 
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         double[][] meshP; 
         if (blk.grid_type == Grid_t.structured_grid) {
             meshP = perturbMeshSG(blk, D);
@@ -633,7 +633,7 @@ double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks,
         }
     }
     // save mesh
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         blk.sync_vertices_to_underlying_grid(0);
         ensure_directory_is_present(make_path_name!"grid-perturb"(0));
         auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
@@ -645,20 +645,20 @@ double finite_difference_grad(string jobName, int last_tindx, Block[] gasBlocks,
     auto output = executeShell(command);
     
     // read perturbed solution
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
     }
 
     // compute cost function
     double J = 0.0;
-    foreach (blk; parallel(gasBlocks,1)) {
+    foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (i, cell; blk.cells) {
             J += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
         }
     }
 
     // read original grid in
-    foreach (blk; parallel(gasBlocks,1)) { 
+    foreach (blk; parallel(localFluidBlocks,1)) { 
         ensure_directory_is_present(make_path_name!"grid-original"(0));
         string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
         blk.read_new_underlying_grid(gridFileName);

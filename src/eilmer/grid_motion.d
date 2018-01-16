@@ -39,7 +39,7 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate vtx
-    auto vtx = gasBlocks[blkId].get_vtx(i, j, k);
+    auto vtx = localFluidBlocks[blkId].get_vtx(i, j, k);
     
     // Return the interesting bits as a table with entries x, y, z.
     lua_newtable(L);
@@ -54,7 +54,7 @@ extern(C) int luafn_setVtxVelocitiesForDomain(lua_State* L)
     // Expect a single argument: a Vector3 object
     auto vel = checkVector3(L, 1);
 
-    foreach ( blk; gasBlocks ) {
+    foreach ( blk; localFluidBlocks ) {
         foreach ( vtx; blk.vertices ) {
             /* We assume that we'll only update grid positions
                at the start of the increment. This should work
@@ -78,7 +78,7 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
     auto vel = checkVector3(L, 1);
     auto blkId = lua_tointeger(L, 2);
 
-    foreach ( vtx; gasBlocks[blkId].vertices ) {
+    foreach ( vtx; localFluidBlocks[blkId].vertices ) {
         /* We assume that we'll only update grid positions
            at the start of the increment. This should work
            well except in the most critical cases of time
@@ -122,18 +122,18 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
 
     if ( narg == 3 ) {
         auto vtxId = lua_tointeger(L, 3);
-        gasBlocks[blkId].vertices[vtxId].vel[0] = *vel;
+        localFluidBlocks[blkId].vertices[vtxId].vel[0] = *vel;
     }
     else if ( narg == 4 ) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
-        gasBlocks[blkId].get_vtx(i,j).vel[0] = *vel;
+        localFluidBlocks[blkId].get_vtx(i,j).vel[0] = *vel;
     }
     else if ( narg >= 5 ) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
         auto k = lua_tointeger(L, 5);
-        gasBlocks[blkId].get_vtx(i,j,k).vel[0] = *vel;
+        localFluidBlocks[blkId].get_vtx(i,j,k).vel[0] = *vel;
     }
     else {
         string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocity()\n";

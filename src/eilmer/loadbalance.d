@@ -107,8 +107,8 @@ void main(string[] args)
     // We simply use the cell count as an estimate of load.
     Tuple!(int,int)[] blockLoads;
     blockLoads.length = GlobalConfig.nFluidBlocks;
-    foreach (iblk, blk; gasBlocks)
-        blockLoads[iblk] = tuple(to!int(iblk), to!int(gasBlocks[iblk].ncells)); 
+    foreach (iblk, blk; localFluidBlocks)
+        blockLoads[iblk] = tuple(to!int(iblk), to!int(localFluidBlocks[iblk].ncells)); 
     sort!("a[1] > b[1]")(blockLoads);
     
     // Perform load balance and write out.

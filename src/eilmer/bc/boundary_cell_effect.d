@@ -41,7 +41,7 @@ public:
 
     this(int id, int boundary, string _type)
     {
-        blk = gasBlocks[id];
+        blk = localFluidBlocks[id];
         which_boundary = boundary;
         type = _type;
     }

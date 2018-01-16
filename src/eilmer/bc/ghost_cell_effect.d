@@ -163,7 +163,7 @@ public:
 
     this(int id, int boundary, string _type)
     {
-        blk = gasBlocks[id];
+        blk = localFluidBlocks[id];
         which_boundary = boundary;
         type = _type;
     }
@@ -1999,7 +1999,7 @@ public:
          ref const(double[]) Rmatrix)
     {
         super(id, boundary, "FullFaceCopy");
-        neighbourBlock = gasBlocks[otherBlock];
+        neighbourBlock = localFluidBlocks[otherBlock];
         neighbourFace = otherFace;
         neighbourOrientation = orient;
         this.reorient_vector_quantities = reorient_vector_quantities;
@@ -2892,12 +2892,12 @@ public:
                     ghost_cells ~= face.right_cell;
                     int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
                     int ghost_cell_id = mapped_cells_list[faceTag][1];
-                    mapped_cells ~= gasBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+                    mapped_cells ~= localFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
                 } else {
                     ghost_cells ~= face.left_cell;
                     int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
                     int ghost_cell_id = mapped_cells_list[faceTag][1];
-                    mapped_cells ~= gasBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+                    mapped_cells ~= localFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
                 }
                 if (list_mapped_cells) {
                     writeln("    ghost-cell-pos=", to!string(ghost_cells[$-1].pos[0]), 
@@ -3007,11 +3007,11 @@ public:
             // Because we need to access all of the gas blocks in the following search,
             // we have to run this set_up_cell_mapping function from a serial loop.
             // In parallel code, threads other than the main thread get uninitialized
-            // versions of the gasBlocks array.
+            // versions of the localFluidBlocks array.
             //
             // First, attempt to find the enclosing cell at the specified position.
             bool found = false;
-            foreach (ib, blk; gasBlocks) {
+            foreach (ib, blk; localFluidBlocks) {
                 found = false;
                 size_t indx = 0;
                 blk.find_enclosing_cell(mypos, indx, found);
@@ -3022,11 +3022,11 @@ public:
             }
             if (!found) {
                 // Fall back to nearest cell search.
-                FVCell closest_cell = gasBlocks[0].cells[0];
+                FVCell closest_cell = localFluidBlocks[0].cells[0];
                 Vector3 cellpos = closest_cell.pos[0];
                 Vector3 dp = cellpos - mypos;
                 double min_distance = abs(dp);
-                foreach (blk; gasBlocks) {
+                foreach (blk; localFluidBlocks) {
                     foreach (cell; blk.cells) {
                         dp = cell.pos[0] - mypos;
                         double distance = abs(dp);
