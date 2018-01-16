@@ -64,10 +64,10 @@ psurf = makePatch{north=Line:new{p0=d[#d], p1=c},
 		  south=Line:new{p0=d[1], p1=b},
 		  west=Bezier:new{points=d}}
 grid = StructuredGrid:new{psurface=psurf, niv=ni+1, njv=nj+1}
--- Set up block as SBlockArray
-blk = SBlockArray{grid=grid, fillCondition=initial, label='blk', nib=1, njb=4,
-		  bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
-			  north=OutFlowBC_Simple:new{}}}
+-- Set up blocks as an array
+blk = FluidBlockArray{grid=grid, fillCondition=initial, label='blk', nib=1, njb=4,
+                      bcList={west=InFlowBC_ShockFitting:new{flowCondition=inflow},
+                              north=OutFlowBC_Simple:new{}}}
 
 
 

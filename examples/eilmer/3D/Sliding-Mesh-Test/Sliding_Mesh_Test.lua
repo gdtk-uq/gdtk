@@ -1,5 +1,5 @@
--- \Sliding_Mesh_test.py
--- Script to simulat and test slidign meshes
+-- Sliding_Mesh_test.lua
+-- Script to simulate and test sliding meshes
 
 -- Author: Ingo Jahn
 -- Last modified: 25/04/2017 
@@ -9,7 +9,7 @@
 --####################################
 --### Setting up Basic Information ###
 --####################################
-config.title = "SLLIDING MESH TEST CASE"
+config.title = "SLIDING MESH TEST CASE"
 print(config.title)
 config.dimensions = 3
 config.axisymmetric = false
@@ -128,11 +128,11 @@ n3 = 6
 n4 = 5
 n5 = 4
 
-blk0 = SBlock:new{grid=StructuredGrid:new{pvolume=vol0, niv=n1, njv=n2, nkv=n3}, initialState=initial1, label="block-0"}
-blk1 = SBlock:new{grid=StructuredGrid:new{pvolume=vol1, niv=n1, njv=n2, nkv=n3}, initialState=initial2, label="block-1"}
+blk0 = FluidBlock:new{grid=StructuredGrid:new{pvolume=vol0, niv=n1, njv=n2, nkv=n3}, initialState=initial1, label="block-0"}
+blk1 = FluidBlock:new{grid=StructuredGrid:new{pvolume=vol1, niv=n1, njv=n2, nkv=n3}, initialState=initial2, label="block-1"}
 
-blk2 = SBlock:new{grid=StructuredGrid:new{pvolume=vol2, niv=n1, njv=n1, nkv=n4}, initialState=initial3, label="block-2"}
-blk3 = SBlock:new{grid=StructuredGrid:new{pvolume=vol3, niv=n1, njv=n1, nkv=n5}, initialState=initial3, label="block-3"}
+blk2 = FluidBlock:new{grid=StructuredGrid:new{pvolume=vol2, niv=n1, njv=n1, nkv=n4}, initialState=initial3, label="block-2"}
+blk3 = FluidBlock:new{grid=StructuredGrid:new{pvolume=vol3, niv=n1, njv=n1, nkv=n5}, initialState=initial3, label="block-3"}
 
 -- Looking radially outwards at upstream patch faces
 --    +------+------+
