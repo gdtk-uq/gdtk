@@ -27,9 +27,9 @@ import solidblock;
 import flowstate;
 import flowgradients;
 import geom;
-import block;
-import sblock: SFluidBlock;
-import ublock: UFluidBlock;
+import fluidblock;
+import sfluidblock: SFluidBlock;
+import ufluidblock: UFluidBlock;
 import fvinterface;
 import bc;
 

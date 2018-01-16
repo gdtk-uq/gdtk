@@ -13,8 +13,8 @@ import fvcore: FlowSolverException;
 import fvcell;
 import fvinterface;
 import geom;
-import block;
-import sblock: SFluidBlock;
+import fluidblock;
+import sfluidblock: SFluidBlock;
 import globaldata;
 import json_helper;
 

@@ -61,7 +61,7 @@ ifeq ($(WITH_CUDA_GPU_CHEM),1)
     SHARE_FILES += alpha_qss_kernel_cuda_tmplt.cu libcudakernel.so
 endif
 
-DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo block_demo \
+DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo fluidblock_demo \
 	luaflowstate_demo luaglobalconfig_demo
 
 EILMER_FILES := simcore.d fileutil.d json_helper.d \
@@ -69,7 +69,7 @@ EILMER_FILES := simcore.d fileutil.d json_helper.d \
 		fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d \
 		conservedquantities.d flowstate.d luaflowstate.d \
 		globalconfig.d luaglobalconfig.d globaldata.d \
-		block.d sblock.d ublock.d \
+		fluidblock.d sfluidblock.d ufluidblock.d \
 		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
 		postprocess.d flowsolution.d luaflowsolution.d grid_motion.d \
 		block_moving_grid.d history.d loads.d special_block_init.d \
@@ -327,7 +327,7 @@ fv_demo: fv_demo.d $(EILMER_FILES) $(SOLID_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
-block_demo: block_demo.d $(EILMER_FILES) $(SOLID_FILES) \
+fluidblock_demo: fluidblock_demo.d $(EILMER_FILES) $(SOLID_FILES) \
 	$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES)
 	$(DMD) $(DFLAGS) $(OF)block_demo block_demo.d \

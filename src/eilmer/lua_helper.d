@@ -21,7 +21,7 @@ import luaflowstate;
 import globalconfig;
 import globaldata;
 import solidfvcell;
-import sblock: SFluidBlock;
+import sfluidblock: SFluidBlock;
 
 // -----------------------------------------------------
 // Convenience functions for user's Lua script

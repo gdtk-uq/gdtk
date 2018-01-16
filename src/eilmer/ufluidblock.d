@@ -1,8 +1,8 @@
-// ublock.d
+// ufluidblock.d
 // Class for unstructured blocks of cells, for use within Eilmer4.
 // Peter J. 2014-11-07 first serious cut.
 
-module ublock;
+module ufluidblock;
 
 import std.conv;
 import std.file;
@@ -31,7 +31,7 @@ import fvvertex;
 import fvinterface;
 import fvcell;
 import lsqinterp;
-import block;
+import fluidblock;
 import bc;
 
 class UFluidBlock: FluidBlock {

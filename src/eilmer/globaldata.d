@@ -9,7 +9,7 @@
 module globaldata;
 
 import globalconfig;
-import block;
+import fluidblock;
 import ssolidblock;
 
 // Collections of blocks that we can iterate over in parallel.

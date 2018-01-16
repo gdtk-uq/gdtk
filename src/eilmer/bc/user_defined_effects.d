@@ -26,7 +26,7 @@ import flowstate;
 import fvcore;
 import fvcell;
 import fvinterface;
-import sblock: SFluidBlock;
+import sfluidblock: SFluidBlock;
 import globalconfig;
 import globaldata;
 import ghost_cell_effect;

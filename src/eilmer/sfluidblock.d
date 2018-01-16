@@ -1,11 +1,11 @@
-// sblock.d
+// sfluidblock.d
 // Class for structured blocks of cells, for use within Eilmer4.
 // This is the "classic" block within the mbcns/Eilmer series 
 // of flow simulation codes.
 
 // Peter J. 2014-07-20 first cut.
 
-module sblock;
+module sfluidblock;
 
 import std.conv;
 import std.file;
@@ -33,7 +33,7 @@ import fvvertex;
 import fvinterface;
 import fvcell;
 import onedinterp;
-import block;
+import fluidblock;
 import bc;
 import grid_motion;
 

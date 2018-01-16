@@ -13,7 +13,7 @@ import std.stdio;
 import std.algorithm.searching;
 
 import globalconfig;
-import block;
+import fluidblock;
 import fvcell;
 import fvinterface;
 

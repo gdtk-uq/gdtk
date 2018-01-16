@@ -1,4 +1,4 @@
-// block_demo.d
+// fluidblock_demo.d
 // Exercise the Structured-grid blocks as we build them.
 // PJ 2014-07-20, 2015-05-05 gmodel now part of FluidBlock class.
 
@@ -7,7 +7,7 @@ import geom;
 import gas;
 import globalconfig;
 import flowstate;
-import sblock;
+import sfluidblock;
 
 void main()
 {

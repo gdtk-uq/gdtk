@@ -1,8 +1,8 @@
-// block.d
+// fluidblock.d
 // Base class for blocks of cells, for use within the Eilmer flow solver.
 // Peter J. 2014-07-18 first cut.
 
-module block;
+module fluidblock;
 
 import std.conv;
 import std.stdio;

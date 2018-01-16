@@ -37,9 +37,9 @@ version (cuda_gpu_chem) {
 import json_helper;
 import globaldata;
 import flowstate;
-import block;
-import sblock: SFluidBlock, n_ghost_cell_layers;
-import ublock: UFluidBlock;
+import fluidblock;
+import sfluidblock: SFluidBlock, n_ghost_cell_layers;
+import ufluidblock: UFluidBlock;
 import ssolidblock;
 import bc;
 import user_defined_source_terms;

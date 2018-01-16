@@ -31,8 +31,8 @@ import std.datetime;
 import nm.smla;
 import nm.bbla;
 
-import block;
-import sblock;
+import fluidblock;
+import sfluidblock;
 import globaldata;
 import globalconfig;
 import simcore;

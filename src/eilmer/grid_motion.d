@@ -15,7 +15,7 @@ import globalconfig;
 import globaldata;
 import geom;
 import geom.luawrap;
-import block;
+import fluidblock;
 import std.stdio;
 
 void setGridMotionHelperFunctions(lua_State *L)
