@@ -29,10 +29,10 @@ void init_history_cell_files()
     foreach ( hcell; GlobalConfig.hcells ) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
-        if ( cellId >= localFluidBlocks[blkId].cells.length ) {
+        if ( cellId >= globalFluidBlocks[blkId].cells.length ) {
             string errMsg = "ERROR: init_history_cell_files()\n";
             errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
-            errMsg ~= format("This block only has %d cells.\n", localFluidBlocks[blkId].cells.length);
+            errMsg ~= format("This block only has %d cells.\n", globalFluidBlocks[blkId].cells.length);
             throw new FlowSolverException(errMsg);
         }
         string fname = format("%s/%s-blk-%d-cell-%d.dat", 
@@ -80,7 +80,7 @@ void write_history_cells_to_files(double sim_time)
         auto cellId = hcell[1];
         string fname = format("%s/%s-blk-%d-cell-%d.dat", 
                               histDir, GlobalConfig.base_file_name, blkId, cellId);
-        auto cell = localFluidBlocks[blkId].cells[cellId];
+        auto cell = globalFluidBlocks[blkId].cells[cellId];
         auto writer = appender!string();
         formattedWrite(writer, "%.18e %s\n", sim_time,
                        cell.write_values_to_string());

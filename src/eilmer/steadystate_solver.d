@@ -61,6 +61,9 @@ void main(string[] args)
 {
     writeln("Eilmer compressible-flow simulation code -- steady state solver.");
     writeln("Revision: PUT_REVISION_STRING_HERE");
+    version(mpi_parallel) {
+        assert(0, "Steady-state solver is not MPI parallel, yet.");
+    }
 
     string msg = "Usage:                               Comment:\n";
     msg       ~= "e4sss    [--job=<string>]            file names built from this string\n";

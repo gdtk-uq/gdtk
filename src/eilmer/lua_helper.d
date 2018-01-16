@@ -48,7 +48,7 @@ extern(C) int luafn_infoFluidBlock(lua_State *L)
 {
     // Expect FluidBlock index on the lua_stack.
     auto blkId = lua_tointeger(L, 1);
-    auto blk = localFluidBlocks[blkId];
+    auto blk = globalFluidBlocks[blkId];
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
@@ -85,12 +85,12 @@ extern(C) int luafn_sampleFluidCell(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate cell
-    auto cell = localFluidBlocks[blkId].get_cell(i, j, k);
+    auto cell = globalFluidBlocks[blkId].get_cell(i, j, k);
     
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushFluidCellToTable(L, tblIdx, cell, 0, localFluidBlocks[blkId].myConfig.gmodel);
+    pushFluidCellToTable(L, tblIdx, cell, 0, globalFluidBlocks[blkId].myConfig.gmodel);
     return 1;
 } // end luafn_sampleFluidCell()
 
@@ -106,16 +106,16 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
     FVInterface face;
     // Grab the appropriate face
     switch (which_face) {
-    case "i": face = localFluidBlocks[blkId].get_ifi(i, j, k); break;
-    case "j": face = localFluidBlocks[blkId].get_ifj(i, j, k); break;
-    case "k": face = localFluidBlocks[blkId].get_ifk(i, j, k); break;
-    case "u": face = localFluidBlocks[blkId].get_ifi(i, j, k); break; // unstructured grid
-    default:  face = localFluidBlocks[blkId].get_ifi(i, j, k);
+    case "i": face = globalFluidBlocks[blkId].get_ifi(i, j, k); break;
+    case "j": face = globalFluidBlocks[blkId].get_ifj(i, j, k); break;
+    case "k": face = globalFluidBlocks[blkId].get_ifk(i, j, k); break;
+    case "u": face = globalFluidBlocks[blkId].get_ifi(i, j, k); break; // unstructured grid
+    default:  face = globalFluidBlocks[blkId].get_ifi(i, j, k);
     }
     // Return the interesting bits as a table.
     lua_newtable(L);
     int tblIdx = lua_gettop(L);
-    pushFluidFaceToTable(L, tblIdx, face, 0, localFluidBlocks[blkId].myConfig.gmodel);
+    pushFluidFaceToTable(L, tblIdx, face, 0, globalFluidBlocks[blkId].myConfig.gmodel);
     return 1;
 } // end luafn_sampleFluidFace()
 

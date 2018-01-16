@@ -66,6 +66,9 @@ public:
     FVVertex[] vertices;
     BoundaryCondition[] bc; // collection of references to the boundary conditions
     //
+    // We need to know the number of cells even if the grid is not read
+    // for this block in the local process.
+    size_t ncells_expected;
     size_t globalCellIdStart = 0; // needed to compute globalCellId
     //
     // Sometimes we need to look up cells and faces that are attached to a vertex.
@@ -106,10 +109,11 @@ public:
     Matrix V_inner, W_inner, H0_inner, H1_inner, Gamma_inner, Q0_inner, Q1_inner;
     }
 
-    this(int id, Grid_t grid_type, string label)
+    this(int id, Grid_t grid_type, size_t ncells, string label)
     {
         this.id = id;
         this.grid_type = grid_type;
+        this.ncells_expected = ncells;
         this.label = label;
         myConfig = dedicatedConfig[id];
         Linf_residuals = new ConservedQuantities(dedicatedConfig[id].gmodel.n_species,

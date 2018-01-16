@@ -61,14 +61,13 @@ int main(string[] args)
         MPI_Init(&argc, &argv);
         int rank, size;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        GlobalConfig.mpi_rank = rank;
+        GlobalConfig.mpi_rank_for_local_task = rank;
         MPI_Comm_size(MPI_COMM_WORLD, &size);
         GlobalConfig.mpi_size = size;
         scope(exit) { MPI_Finalize(); }
-        //
-        // We are in the context of an MPI task, presumably, one of many.
+        // Make note that we are in the context of an MPI task, presumably, one of many.
         GlobalConfig.in_mpi_context = true;
-        GlobalConfig.is_master_task = (GlobalConfig.mpi_rank == 0);
+        GlobalConfig.is_master_task = (GlobalConfig.mpi_rank_for_local_task == 0);
     } else {
         // We are NOT in the context of an MPI task.
         GlobalConfig.in_mpi_context = false;
@@ -219,7 +218,7 @@ int main(string[] args)
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
             // Now, get all tasks to report.
-            writefln("MPI-parallel, start task %d", GlobalConfig.mpi_rank);
+            writefln("MPI-parallel, start task %d", GlobalConfig.mpi_rank_for_local_task);
             stdout.flush();
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);

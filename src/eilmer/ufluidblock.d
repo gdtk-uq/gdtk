@@ -49,8 +49,8 @@ public:
     this(in int id, JSONValue json_data)
     {
         label = getJSONstring(json_data, "label", "");
-        super(id, Grid_t.unstructured_grid, label);
         ncells = getJSONint(json_data, "ncells", 0);
+        super(id, Grid_t.unstructured_grid, ncells, label);
         nvertices = getJSONint(json_data, "nvertices", 0);
         nfaces = getJSONint(json_data, "nfaces", 0);
         nboundaries = getJSONint(json_data, "nboundaries", 0);

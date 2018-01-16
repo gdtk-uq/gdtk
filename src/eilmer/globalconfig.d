@@ -240,8 +240,9 @@ struct SteadyStateSolverOptions {
 final class GlobalConfig {
     shared static bool in_mpi_context = false; // Usual context is thread-parallel only.
     shared static int mpi_size = 0; // Number of MPI tasks, overall.
-    shared static int mpi_rank = 0; // Rank of the local task.
+    shared static int mpi_rank_for_local_task = 0;
     shared static bool is_master_task = true; // In an MPI run, only one task will be master.
+    shared static int[] mpi_rank_for_block; // To know where each block has been assigned.
     //
     shared static string base_file_name = "job"; // Change this to suit at run time.
     shared static string grid_format = "gziptext"; // alternative is "rawbinary"
@@ -1101,10 +1102,10 @@ void read_config_file()
         string gridType = getJSONstring(jsonDataForBlock, "grid_type", "");
         switch (gridType) {
         case "structured_grid": 
-            localFluidBlocks ~= new SFluidBlock(i, jsonDataForBlock);
+            globalFluidBlocks ~= new SFluidBlock(i, jsonDataForBlock);
             break;
         case "unstructured_grid":
-            localFluidBlocks ~= new UFluidBlock(i, jsonDataForBlock);
+            globalFluidBlocks ~= new UFluidBlock(i, jsonDataForBlock);
             dedicatedConfig[i].stringent_cfl = true; // for signal_frequency calc in FVCell.
             break;
         default:
@@ -1112,7 +1113,7 @@ void read_config_file()
                                    i, gridType));
         } // end switch gridType
     }
-    foreach (blk; localFluidBlocks) {
+    foreach (blk; globalFluidBlocks) {
         blk.init_lua_globals();
         blk.init_boundary_conditions(jsonData["block_" ~ to!string(blk.id)]);
         if (GlobalConfig.udf_source_terms) {
@@ -1122,7 +1123,7 @@ void read_config_file()
     // After fully constructing blocks and their boundary conditions,
     // we can optionally print their representation for checking.
     if (GlobalConfig.verbosity_level > 1) {
-        foreach (i, blk; localFluidBlocks) { writeln("  Block[", i, "]: ", blk); }
+        foreach (i, blk; globalFluidBlocks) { writeln("  Block[", i, "]: ", blk); }
     }
     // Read in any blocks in the solid domain.
     GlobalConfig.udfSolidSourceTerms = getJSONbool(jsonData, "udf_solid_source_terms", false);
@@ -1416,8 +1417,7 @@ void init_master_lua_State()
     // Load some Lua modules using 'require'.
     // There is no convenient C API expression to do the equivalent of "require"
     luaL_dostring(L, "require 'lua_helper'");
-    // Set some globally available constants for the
-    // Lua state.
+    // Set some globally available constants for the Lua state.
     lua_pushnumber(L, GlobalConfig.nFluidBlocks);
     lua_setglobal(L, "nBlocks"); // to keep the old name
     lua_pushnumber(L, GlobalConfig.nFluidBlocks);
@@ -1427,9 +1427,11 @@ void init_master_lua_State()
     lua_pushnumber(L, n_ghost_cell_layers);
     lua_setglobal(L, "nGhostCellLayers");
     // Give the user a table that holds information about
-    // all of the blocks
+    // all of the blocks in the full simulation.
+    // Note that not all of these blocks may be fully present
+    // in an MPI-parallel simulation.
     lua_newtable(L);
-    foreach (int i, blk; localFluidBlocks) {
+    foreach (int i, blk; globalFluidBlocks) {
         lua_newtable(L);
         lua_pushnumber(L, blk.cells.length);
         lua_setfield(L, -2, "nCells");

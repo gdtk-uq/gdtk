@@ -125,6 +125,7 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     }
     version(mpi_parallel) {
         // Assign fluid blocks to MPI tasks.
+        GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks;
         auto lines = readText(job_name ~ ".mpimap").splitLines();
         foreach (line; lines) {
             auto content = line.strip();
@@ -132,19 +133,30 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
             auto tokens = content.split();
             int blkid = to!int(tokens[0]);
             int taskid = to!int(tokens[1]);
-            writeln("rank=", GlobalConfig.mpi_rank, " blkid=", blkid, " taskid=", taskid);
+            writeln("rank=", GlobalConfig.mpi_rank_for_local_task, " blkid=", blkid, " taskid=", taskid);
+            GlobalConfig.mpi_rank_for_block[blkid] = taskid;
         }
         // [TODO] PJ 2018-01-16 Assign some blocks local.
     } else {
-        // [TODO] PJ 2018-01-16 Assign all blocks local.
+        // There is only one process and it deals with all blocks.
+        foreach (blk; globalFluidBlocks) { localFluidBlocks ~= blk; }
     }
     // Local blocks may be handled with thread-parallelism.
-    auto nBlocksInParallel = max(GlobalConfig.nFluidBlocks, GlobalConfig.nSolidBlocks);
-    auto nThreadsInPool = min(maxCPUs-1, nBlocksInParallel-1); // no need to have more task threads than blocks
+    auto nBlocksInThreadParallel = max(localFluidBlocks.length, GlobalConfig.nSolidBlocks);
+    // There is no need to have more task threads than blocks local to the process.
+    auto nThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
     if (GlobalConfig.verbosity_level > 0) {
-        writeln("Running with ", nThreadsInPool+1, " threads."); // +1 for main thread.
+        version(mpi_parallel) {
+            writeln("MPI-task with rank ", GlobalConfig.mpi_rank_for_local_task,
+                    " running with ", nThreadsInPool+1, " threads.");
+        } else {
+            writeln("Single process running with ", nThreadsInPool+1, " threads.");
+            // Remember +1 for main thread.
+        }
     }
+    // At this point, note that we initialize the grid and flow arrays for blocks
+    // that are in the current MPI-task or process, only.
     foreach (myblk; parallel(localFluidBlocks,1)) {
         if (GlobalConfig.grid_motion != GridMotion.none) {
             myblk.init_grid_and_flow_arrays(make_file_name!"grid"(job_name, myblk.id, current_tindx, gridFileExt)); 
@@ -154,8 +166,9 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
         }
         myblk.compute_primary_cell_geometric_data(0);
     }
-    foreach (i, myblk; localFluidBlocks) {
-        myblk.globalCellIdStart = (i == 0) ? 0 : localFluidBlocks[i-1].globalCellIdStart + localFluidBlocks[i-1].cells.length;
+    // Note that the global id is across all processes, not just the local collection of blocks.
+    foreach (i, myblk; globalFluidBlocks) {
+        myblk.globalCellIdStart = (i == 0) ? 0 : globalFluidBlocks[i-1].globalCellIdStart + globalFluidBlocks[i-1].ncells_expected;
     }
     sim_time_array.length = localFluidBlocks.length;
     foreach (i, myblk; parallel(localFluidBlocks,1)) {
@@ -178,7 +191,8 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.
-    // Serial loop because the cell-mapping function searches across all blocks
+    // Serial loop because the cell-mapping function searches across
+    // all local-to-process blocks.
     foreach (myblk; localFluidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
@@ -201,19 +215,19 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
             myUBlock.compute_least_squares_setup(0);
         }
     }
-
+    // We can apply a special initialisation to the flow field, if requested.
     if (GlobalConfig.diffuseWallBCsOnInit) {
-        // We can apply a special initialisation to the flow field, if requested
         writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
         writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
         foreach (blk; parallel(localFluidBlocks,1)) {
             diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
         }
     }
-
+    //
     version (gpu_chem) {
         initGPUChem();
     }
+    //
     foreach (ref mySolidBlk; solidBlocks) {
         mySolidBlk.assembleArrays();
         mySolidBlk.bindFacesAndVerticesToCells();
@@ -229,6 +243,11 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.loose) {
         initSolidLooseCouplingUpdate();
     }
+    //
+    ///////////////////////////////////////////////////////////////////////
+    // [TODO] PJ 2018-01-17 Up to here with thinking about MPI parallel. //
+    ///////////////////////////////////////////////////////////////////////
+    //
     // All cells are in place, so now we can initialise any history cell files.
     init_history_cell_files();
     // create the loads directory, maybe
@@ -266,7 +285,7 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
             }
         }
     }
-    // We conditionally sort the blocks, based on numbers of cells,
+    // We conditionally sort the local blocks, based on numbers of cells,
     // in an attempt to balance the load for shared-memory parallel runs.
     localFluidBlocksBySize.length = 0;
     if (GlobalConfig.block_marching) {
@@ -277,12 +296,12 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
         Tuple!(int,int)[] blockLoads;
         blockLoads.length = GlobalConfig.nFluidBlocks;
         foreach (iblk, blk; localFluidBlocks) {
-            // Here 'iblk' is equal to the id of the block.
+            // Here 'iblk' is equal to the local-to-process id of the block.
             blockLoads[iblk] = tuple(to!int(iblk), to!int(localFluidBlocks[iblk].cells.length)); 
         }
         sort!("a[1] > b[1]")(blockLoads);
-        foreach (blk; blockLoads) {
-            localFluidBlocksBySize ~= localFluidBlocks[blk[0]]; // [0] holds the block id
+        foreach (blkpair; blockLoads) {
+            localFluidBlocksBySize ~= localFluidBlocks[blkpair[0]]; // [0] holds the block id
         }
     }
 
@@ -336,6 +355,9 @@ void write_solution_files()
 
 void march_over_blocks()
 {
+    if (GlobalConfig.in_mpi_context) {
+        throw new FlowSolverException("March over blocks is not available in MPI-parallel calculations.");
+    }
     if (GlobalConfig.verbosity_level > 0) { writeln("March over blocks."); }
     // Organise the blocks into a regular array.
     int nib = GlobalConfig.nib;
@@ -365,7 +387,7 @@ void march_over_blocks()
             gasBlockArray[i][j].length = nkb;
             foreach (k; 0 .. nkb) {
                 int gid = k + nkb*(j + njb*i);
-                gasBlockArray[i][j][k] = localFluidBlocks[gid];
+                gasBlockArray[i][j][k] = globalFluidBlocks[gid];
             }
         }
     }

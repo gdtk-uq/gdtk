@@ -82,7 +82,7 @@ public:
     
     this(int id, int boundary, string _type)
     {
-        blk = localFluidBlocks[id];
+        blk = globalFluidBlocks[id];
         which_boundary = boundary;
         type = _type;
     }

@@ -39,7 +39,7 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     auto k = lua_tointeger(L, 4);
 
     // Grab the appropriate vtx
-    auto vtx = localFluidBlocks[blkId].get_vtx(i, j, k);
+    auto vtx = globalFluidBlocks[blkId].get_vtx(i, j, k);
     
     // Return the interesting bits as a table with entries x, y, z.
     lua_newtable(L);
@@ -78,7 +78,7 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
     auto vel = checkVector3(L, 1);
     auto blkId = lua_tointeger(L, 2);
 
-    foreach ( vtx; localFluidBlocks[blkId].vertices ) {
+    foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
         /* We assume that we'll only update grid positions
            at the start of the increment. This should work
            well except in the most critical cases of time
@@ -122,18 +122,18 @@ extern(C) int luafn_setVtxVelocity(lua_State* L)
 
     if ( narg == 3 ) {
         auto vtxId = lua_tointeger(L, 3);
-        localFluidBlocks[blkId].vertices[vtxId].vel[0] = *vel;
+        globalFluidBlocks[blkId].vertices[vtxId].vel[0] = *vel;
     }
     else if ( narg == 4 ) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
-        localFluidBlocks[blkId].get_vtx(i,j).vel[0] = *vel;
+        globalFluidBlocks[blkId].get_vtx(i,j).vel[0] = *vel;
     }
     else if ( narg >= 5 ) {
         auto i = lua_tointeger(L, 3);
         auto j = lua_tointeger(L, 4);
         auto k = lua_tointeger(L, 5);
-        localFluidBlocks[blkId].get_vtx(i,j,k).vel[0] = *vel;
+        globalFluidBlocks[blkId].get_vtx(i,j,k).vel[0] = *vel;
     }
     else {
         string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocity()\n";

@@ -108,7 +108,7 @@ void main(string[] args)
     Tuple!(int,int)[] blockLoads;
     blockLoads.length = GlobalConfig.nFluidBlocks;
     foreach (iblk, blk; localFluidBlocks)
-        blockLoads[iblk] = tuple(to!int(iblk), to!int(localFluidBlocks[iblk].ncells)); 
+        blockLoads[iblk] = tuple(to!int(iblk), to!int(globalFluidBlocks[iblk].ncells)); 
     sort!("a[1] > b[1]")(blockLoads);
     
     // Perform load balance and write out.

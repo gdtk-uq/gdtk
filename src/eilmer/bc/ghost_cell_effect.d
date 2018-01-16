@@ -163,7 +163,7 @@ public:
 
     this(int id, int boundary, string _type)
     {
-        blk = localFluidBlocks[id];
+        blk = globalFluidBlocks[id];
         which_boundary = boundary;
         type = _type;
     }
@@ -1998,8 +1998,11 @@ public:
          bool reorient_vector_quantities,
          ref const(double[]) Rmatrix)
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         super(id, boundary, "FullFaceCopy");
-        neighbourBlock = localFluidBlocks[otherBlock];
+        neighbourBlock = globalFluidBlocks[otherBlock];
         neighbourFace = otherFace;
         neighbourOrientation = orient;
         this.reorient_vector_quantities = reorient_vector_quantities;
@@ -2023,6 +2026,9 @@ public:
 
     void set_up_cell_mapping()
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         SFluidBlock dest_blk = cast(SFluidBlock) blk;
         assert(dest_blk, "Destination FlowBlock must be a structured-grid block.");
         int destination_face = which_boundary;
@@ -2721,6 +2727,9 @@ public:
     
     override ref FVCell get_mapped_cell(size_t i)
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         return mapped_cells[i];
     }
 
@@ -2731,6 +2740,9 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         SFluidBlock blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         SFluidBlock nbblk = cast(SFluidBlock) this.neighbourBlock;
@@ -2778,6 +2790,9 @@ public:
          bool reorient_vector_quantities,
          ref const(double[]) Rmatrix)
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         super(id, boundary, "MappedCellCopy");
         this.cell_mapping_from_file = cell_mapping_from_file;
         this.mapped_cells_filename = mapped_cells_filename;
@@ -2822,6 +2837,9 @@ public:
 
     void set_up_cell_mapping_from_file()
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         string makeFaceTag(const size_t[] node_id_list)
         {
             // We make a tag for this face out of the vertex id numbers
@@ -2892,12 +2910,12 @@ public:
                     ghost_cells ~= face.right_cell;
                     int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
                     int ghost_cell_id = mapped_cells_list[faceTag][1];
-                    mapped_cells ~= localFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+                    mapped_cells ~= globalFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
                 } else {
                     ghost_cells ~= face.left_cell;
                     int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
                     int ghost_cell_id = mapped_cells_list[faceTag][1];
-                    mapped_cells ~= localFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+                    mapped_cells ~= globalFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
                 }
                 if (list_mapped_cells) {
                     writeln("    ghost-cell-pos=", to!string(ghost_cells[$-1].pos[0]), 
@@ -2913,8 +2931,13 @@ public:
     
     void set_up_cell_mapping_via_search()
     {
-        // Stage-2 construction for this boundary condition.
-        // Needs to be called after the cell geometries have been computed.
+        // Stage-2 construction for this boundary condition,
+        // for the situation when we haven't been told where to find our mapped cells.
+        //
+        // Needs to be called after the cell geometries have been computed,
+        // because the search sifts through the cells in blocks
+        // that happen to be in the local process.
+        // The search does not extend to cells in blocks in other MPI tasks.
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid: 
             BoundaryCondition bc = blk.bc[which_boundary];
@@ -3048,11 +3071,17 @@ public:
 
     override ref FVCell get_mapped_cell(size_t i)
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         return mapped_cells[i];
     }
     
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         foreach (i; 0 .. ghost_cells.length) {
             ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
             ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
@@ -3067,6 +3096,9 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
+        version(mpi_parallel) {
+            // [TODO] PJ 2018-01-17 communication...
+        }
         foreach (i; 0 .. ghost_cells.length) {
             ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
             ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);

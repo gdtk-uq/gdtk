@@ -68,6 +68,9 @@ void main(string[] args) {
     init_adjoint_dir();
     writeln("Eilmer compressible-flow simulation code -- adjoint solver:");
     writeln("Revision: PUT_REVISION_STRING_HERE");
+    version(mpi_parallel) {
+        assert(0, "Adjoint solver is not MPI parallel, yet.");
+    }
 
     string msg = "Usage:                              Comment:\n";
     msg       ~= "e4adjoint  [--job=<string>]            name of job\n";

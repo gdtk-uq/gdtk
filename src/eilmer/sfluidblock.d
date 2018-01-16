@@ -87,7 +87,7 @@ private:
 public:
     this(int blk_id, size_t nicell, size_t njcell, size_t nkcell, string label)
     {
-        super(blk_id, Grid_t.structured_grid, label);
+        super(blk_id, Grid_t.structured_grid, nicell*njcell*nkcell, label);
         this.nicell = nicell;
         this.njcell = njcell;
         this.nkcell = nkcell;
