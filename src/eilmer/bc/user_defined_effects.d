@@ -79,7 +79,7 @@ public:
         size_t i, j, k;
         FVCell ghostCell0, ghostCell1;
         FVInterface IFace;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -304,7 +304,7 @@ public:
         size_t i, j, k;
         FVCell cell;
         FVInterface IFace;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -535,7 +535,7 @@ public:
     {
         size_t i, j, k;
         FVInterface IFace;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {

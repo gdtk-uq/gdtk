@@ -239,7 +239,7 @@ public:
         lua_setglobal(myL, "n_modes");
         if (blk.grid_type == Grid_t.structured_grid) {
             // Structured-block-specific data
-            SFluidBlock sblk = cast(SFluidBlock) blk;
+            auto sblk = cast(SFluidBlock) blk;
             assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
             lua_pushinteger(myL, sblk.nicell); lua_setglobal(myL, "nicell");
             lua_pushinteger(myL, sblk.njcell); lua_setglobal(myL, "njcell");

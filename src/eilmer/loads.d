@@ -59,12 +59,12 @@ void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
         if (blk.active) {
             final switch (blk.grid_type) {
             case Grid_t.unstructured_grid: 
-                UFluidBlock ublk = cast(UFluidBlock) blk;
+                auto ublk = cast(UFluidBlock) blk;
                 assert(ublk !is null, "Oops, this should be a UFluidBlock object.");
                 apply_unstructured_grid(ublk, sim_time, current_loads_tindx);
                 break;
             case Grid_t.structured_grid:
-                SFluidBlock sblk = cast(SFluidBlock) blk;
+                auto sblk = cast(SFluidBlock) blk;
                 assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                 apply_structured_grid(sblk, sim_time, current_loads_tindx);
             } // end final switch

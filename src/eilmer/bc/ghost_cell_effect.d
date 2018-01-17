@@ -250,7 +250,7 @@ public:
         FVCell src_cell, dest_cell;
         FVInterface IFace;
         auto copy_opt = CopyDataOption.minimal_flow;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -441,7 +441,7 @@ public:
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         FVInterface dest_face;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -561,7 +561,7 @@ public:
         FVCell src_cell, dest_cell;
         FVInterface dest_face;
         FlowState fstate;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -715,7 +715,7 @@ public:
         auto gmodel = blk.myConfig.gmodel;
         size_t nsp = gmodel.n_species;
         size_t nmodes = gmodel.n_modes;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -1234,7 +1234,7 @@ public:
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -1386,7 +1386,7 @@ public:
         size_t i, j, k;
         FVCell src_cell, dest_cell;
         auto gmodel = blk.myConfig.gmodel;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         final switch (which_boundary) {
@@ -1623,7 +1623,7 @@ public:
         FVCell src_cell, dest_cell;
         FVInterface face;
         auto gmodel = blk.myConfig.gmodel;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         double p_stag = 0.0;
@@ -2029,10 +2029,10 @@ public:
         version(mpi_parallel) {
             // [TODO] PJ 2018-01-17 communication...
         }
-        SFluidBlock dest_blk = cast(SFluidBlock) blk;
+        auto dest_blk = cast(SFluidBlock) blk;
         assert(dest_blk, "Destination FlowBlock must be a structured-grid block.");
         int destination_face = which_boundary;
-        SFluidBlock src_blk = cast(SFluidBlock) neighbourBlock;
+        auto src_blk = cast(SFluidBlock) neighbourBlock;
         assert(src_blk, "Source FlowBlock must be a structured-grid block.");
         int src_face = neighbourFace;
         int src_orientation = neighbourOrientation;
@@ -2743,7 +2743,7 @@ public:
         version(mpi_parallel) {
             // [TODO] PJ 2018-01-17 communication...
         }
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         SFluidBlock nbblk = cast(SFluidBlock) this.neighbourBlock;
         assert(nbblk !is null, "Oops, this should be an SFluidBlock object.");
@@ -2951,7 +2951,7 @@ public:
             break;
         case Grid_t.structured_grid:
             size_t i, j, k;
-            SFluidBlock blk = cast(SFluidBlock) this.blk;
+            auto blk = cast(SFluidBlock) this.blk;
             assert(blk !is null, "Oops, this should be an SFluidBlock object.");
             final switch (which_boundary) {
             case Face.north:

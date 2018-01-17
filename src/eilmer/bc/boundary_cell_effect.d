@@ -98,7 +98,7 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         size_t i, j, k;
-        SFluidBlock blk = cast(SFluidBlock) this.blk;
+        auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
         if (_cells_need_to_be_flagged) {

@@ -1438,7 +1438,7 @@ void init_master_lua_State()
         lua_pushnumber(L, blk.vertices.length);
         lua_setfield(L, -2, "nVertices");
         if ( blk.grid_type == Grid_t.structured_grid ) {
-            SFluidBlock sblk = cast(SFluidBlock) blk;
+            auto sblk = cast(SFluidBlock) blk;
             assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
             lua_pushnumber(L, sblk.nicell);
             lua_setfield(L, -2, "niCells");

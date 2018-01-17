@@ -56,7 +56,7 @@ extern(C) int luafn_infoFluidBlock(lua_State *L)
     lua_pushstring(L, blk.label.toStringz); lua_setfield(L, tblIdx, "label");
     lua_pushstring(L, gridTypeName(blk.grid_type).toStringz); lua_setfield(L, tblIdx, "grid_type");
     if (blk.grid_type == Grid_t.structured_grid) {
-        SFluidBlock sblk = cast(SFluidBlock) blk;
+        auto sblk = cast(SFluidBlock) blk;
         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
         // For a structured_grid
         lua_pushinteger(L, sblk.nicell); lua_setfield(L, tblIdx, "nicell");

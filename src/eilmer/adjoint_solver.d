@@ -293,8 +293,8 @@ void main(string[] args) {
     
     // write out adjoint variables in VTK-format
     if (localFluidBlocks[0].grid_type == Grid_t.structured_grid) {
-        SFluidBlock sblk = cast(SFluidBlock) localFluidBlocks[0]; 
-        File outFile = File("adjointVars.vtk", "w");
+        auto sblk = cast(SFluidBlock) localFluidBlocks[0]; 
+        auto outFile = File("adjointVars.vtk", "w");
         outFile.writef("# vtk DataFile Version 3.0 \n");
         outFile.writef("%s \n", jobName);
         outFile.writef("ASCII \n");
@@ -335,8 +335,8 @@ void main(string[] args) {
     }
 
     if (localFluidBlocks[0].grid_type == Grid_t.unstructured_grid) {
-        UFluidBlock ublk = cast(UFluidBlock) localFluidBlocks[0]; 
-        File outFile = File("adjointVars.vtk", "w");
+        auto ublk = cast(UFluidBlock) localFluidBlocks[0]; 
+        auto outFile = File("adjointVars.vtk", "w");
         outFile.writef("# vtk DataFile Version 3.0 \n");
         outFile.writef("%s \n", jobName);
         outFile.writef("ASCII \n");
@@ -529,7 +529,7 @@ void main(string[] args) {
 
 double[][] perturbMeshSG(FluidBlock blk, double[] D) {
     // compute new nozzle surface, and delta
-    SFluidBlock sblk = cast(SFluidBlock) blk;
+    auto sblk = cast(SFluidBlock) blk;
     double y0; double y1;
     double[size_t] delta;
     double scale = 1.5;
@@ -616,7 +616,7 @@ double finite_difference_grad(string jobName, int last_tindx, FluidBlock[] local
         double[][] meshP; 
         if (blk.grid_type == Grid_t.structured_grid) {
             meshP = perturbMeshSG(blk, D);
-            SFluidBlock sblk = cast(SFluidBlock) blk;
+            auto sblk = cast(SFluidBlock) blk;
             size_t vtxID = 0;
             for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
                 for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
@@ -828,7 +828,7 @@ void construct_inviscid_flow_jacobian_stencils(FluidBlock blk) {
                 pos_array[pcell.id] = refs_unordered.length-1;
                 cell_ids ~= pcell.id;
 
-                SFluidBlock sblk = cast(SFluidBlock) blk;
+                auto sblk = cast(SFluidBlock) blk;
                 size_t[3] ijk = sblk.cell_id_to_ijk_indices(pcell.id);
                 size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
                 FVCell[] stencil_cells;
@@ -1210,7 +1210,7 @@ void compute_perturbed_flux(FluidBlock blk, FVCell[] cell_list, FVInterface[] if
     if (blk.grid_type == Grid_t.structured_grid) {
         foreach(iface; iface_list) { 
             // we need to cast an SFluidBlock here to reach some methods and data
-            SFluidBlock sblk = cast(SFluidBlock) blk;
+            auto sblk = cast(SFluidBlock) blk;
             size_t imin = sblk.imin; size_t imax = sblk.imax; size_t jmin = sblk.jmin; size_t jmax = sblk.jmax;
             foreach(faceIdentity, face; iface.left_cell.iface) { // use of left_cell is arbitrary -- could use right_cell
                 if (face == iface) {
@@ -1314,7 +1314,7 @@ void compute_perturbed_flux(FluidBlock blk, FVCell[] cell_list, FVInterface[] if
 
         // compute flux
         foreach(iface; iface_list) {
-            UFluidBlock ublk = cast(UFluidBlock) blk;
+            auto ublk = cast(UFluidBlock) blk;
             ublk.lsq.interp_both(iface, 0, ublk.Lft, ublk.Rght); // gtl assumed 0
             iface.fs.copy_average_values_from(ublk.Lft, ublk.Rght);
             compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
@@ -1497,7 +1497,7 @@ void update_geometry(FluidBlock blk, FVVertex vtx) {
     
     // for USG grid, update least-squares weights
     if (blk.grid_type == Grid_t.unstructured_grid) {
-        UFluidBlock ublk = cast(UFluidBlock) blk;
+        auto ublk = cast(UFluidBlock) blk;
         foreach (cell; vtx.jacobian_cell_stencil)
             ublk.compute_least_squares_setup_for_cell(cell, 0, false);
     }

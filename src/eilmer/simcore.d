@@ -769,7 +769,7 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
             }
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) {
-                    SFluidBlock sblk = cast(SFluidBlock) blk;
+                    auto sblk = cast(SFluidBlock) blk;
                     assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                     shock_fitting_vertex_velocities(sblk, step, sim_time);
                 }
@@ -1286,7 +1286,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     // Moving Grid - predict new vertex positions for moving grid              
     foreach (blk; localFluidBlocksBySize) {
         if (!blk.active) continue;
-        SFluidBlock sblk = cast(SFluidBlock) blk;
+        auto sblk = cast(SFluidBlock) blk;
         assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
         // move vertices
         predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
@@ -1436,7 +1436,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         // Moving Grid - update geometry to gtl 2
         foreach (blk; localFluidBlocksBySize) {
             if (blk.active) {
-                SFluidBlock sblk = cast(SFluidBlock) blk;
+                auto sblk = cast(SFluidBlock) blk;
                 assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
                 // move vertices - this is a formality since pos[2] = pos[1]
                 predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
