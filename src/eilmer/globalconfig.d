@@ -1419,11 +1419,7 @@ void init_master_lua_State()
     luaL_dostring(L, "require 'lua_helper'");
     // Set some globally available constants for the Lua state.
     lua_pushnumber(L, GlobalConfig.nFluidBlocks);
-    lua_setglobal(L, "nBlocks"); // to keep the old name
-    lua_pushnumber(L, GlobalConfig.nFluidBlocks);
     lua_setglobal(L, "nFluidBlocks");
-    lua_pushnumber(L, n_ghost_cell_layers);
-    lua_setglobal(L, "nGhost"); // to keep the old name
     lua_pushnumber(L, n_ghost_cell_layers);
     lua_setglobal(L, "nGhostCellLayers");
     // Give the user a table that holds information about
