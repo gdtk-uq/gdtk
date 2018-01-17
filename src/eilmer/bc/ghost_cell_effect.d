@@ -2035,171 +2035,157 @@ public:
         int src_face = neighbourFace;
         int src_orientation = neighbourOrientation;
         //
-        size_t i_dest, i_src, j_dest, j_src, k_dest, k_src;
-        FVCell dest0, dest1;
-        size_t src0id, src1id;
+        // For the source cells, we use indices into the hypothetical block of active cells. 
+        size_t i_src, j_src, k_src;
+        // For ghost-cell indices into the destination block, we use the raw indices into the
+        // larger underlying block array that includes the surrounding layers of ghost cells.
+        size_t i_dest, j_dest, k_dest;
         //
         if (blk.myConfig.dimensions == 2) {
             // Handle the 2D case separately.
             switch (destination_face) {
             case Face.north:
                 j_dest = dest_blk.jmax;  // index of the north-most plane of active cells
-                for (size_t i = 0; i < dest_blk.nicell; ++i) {
+                foreach (i; 0 .. dest_blk.nicell) {
                     i_dest = i + dest_blk.imin;
+                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+1);
+                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+2);
                     switch (src_face) {
                     case Face.north:
-                        i_src = (src_blk.nicell - i - 1) + src_blk.imin;
-                        j_src = src_blk.jmax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1);
+                        j_src = src_blk.njcell - 1; 
+                        i_src = src_blk.nicell - i - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        j_src = i + src_blk.jmin;
-                        i_src = src_blk.imax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src);
+                        i_src = src_blk.nicell - 1; 
+                        j_src = i;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
-                        i_src = i + src_blk.imin;
-                        j_src = src_blk.jmin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1);
+                        j_src = 0; 
+                        i_src = i;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
-                        j_src = (src_blk.njcell - i - 1) + src_blk.jmin;
-                        i_src = src_blk.imin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src,k_src);
+                        i_src = 0; 
+                        j_src = src_blk.njcell - i - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
                     } // end switch src_face
-                    dest0 = dest_blk.get_cell(i_dest,j_dest+1);
-                    dest1 = dest_blk.get_cell(i_dest,j_dest+2);
-                    ghost_cells ~= dest0;
-                    ghost_cells ~= dest1;
-                    mapped_cell_ids ~= src0id;
-                    mapped_cell_ids ~= src1id;
                 } // i loop
                 break;
             case Face.east:
                 i_dest = dest_blk.imax;  // index of the east-most plane of active cells
-                for (size_t j = 0; j < dest_blk.njcell; ++j) {
+                foreach (j; 0 .. dest_blk.njcell) {
                     j_dest = j + dest_blk.jmin;
+                    ghost_cells ~= dest_blk.get_cell(i_dest+1,j_dest);
+                    ghost_cells ~= dest_blk.get_cell(i_dest+2,j_dest);
                     switch (src_face) {
                     case Face.north:
-                        i_src = j + src_blk.imin;
-                        j_src = src_blk.jmax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1);
+                        j_src = src_blk.njcell - 1; 
+                        i_src = j;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        j_src = (src_blk.njcell - j - 1) + src_blk.jmin;
-                        i_src = src_blk.imax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src);
+                        i_src = src_blk.nicell - 1; 
+                        j_src = src_blk.njcell - j - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
-                        i_src = (src_blk.nicell - j - 1) + src_blk.imin;
-                        j_src = src_blk.jmin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1);
+                        j_src = 0; 
+                        i_src = src_blk.nicell - j - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
-                        j_src = j + src_blk.jmin;
-                        i_src = src_blk.imin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src);
+                        i_src = 0; 
+                        j_src = j;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
                     } // end switch src_face
-                    dest0 = dest_blk.get_cell(i_dest+1,j_dest);
-                    dest1 = dest_blk.get_cell(i_dest+2,j_dest);
-                    ghost_cells ~= dest0;
-                    ghost_cells ~= dest1;
-                    mapped_cell_ids ~= src0id;
-                    mapped_cell_ids ~= src1id;
                 } // j loop
                 break;
             case Face.south:
                 j_dest = dest_blk.jmin;  // index of the south-most plane of active cells
-                for (size_t i = 0; i < dest_blk.nicell; ++i) {
+                foreach (i; 0 .. dest_blk.nicell) {
                     i_dest = i + dest_blk.imin;
+                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-1);
+                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-2);
                     switch (src_face) {
                     case Face.north:
-                        i_src = i + src_blk.imin;
-                        j_src = src_blk.jmax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1);
+                        j_src = src_blk.njcell - 1; 
+                        i_src = i;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        j_src = (src_blk.njcell - i - 1) + src_blk.jmin;
-                        i_src = src_blk.imax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src);
+                        i_src = src_blk.nicell - 1; 
+                        j_src = src_blk.njcell - i - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
-                        i_src = (src_blk.nicell - i - 1) + src_blk.imin;
-                        j_src = src_blk.jmin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1);
+                        j_src = 0; 
+                        i_src = src_blk.nicell - i - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
-                        j_src = i + src_blk.jmin;
-                        i_src = src_blk.imin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src);
+                        i_src = 0; 
+                        j_src = i;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
                     } // end switch src_face
-                    dest0 = dest_blk.get_cell(i_dest,j_dest-1);
-                    dest1 = dest_blk.get_cell(i_dest,j_dest-2);
-                    ghost_cells ~= dest0;
-                    ghost_cells ~= dest1;
-                    mapped_cell_ids ~= src0id;
-                    mapped_cell_ids ~= src1id;
                 } // i loop
                 break;
             case Face.west:
                 i_dest = dest_blk.imin;  // index of the west-most plane of active cells
-                for (size_t j = 0; j < dest_blk.njcell; ++j) {
+                foreach (j; 0 .. dest_blk.njcell) {
                     j_dest = j + dest_blk.jmin;
+                    ghost_cells ~= dest_blk.get_cell(i_dest-1,j_dest);
+                    ghost_cells ~= dest_blk.get_cell(i_dest-2,j_dest);
                     switch (src_face) {
                     case Face.north:
-                        i_src = (src_blk.nicell - j - 1) + src_blk.imin;
-                        j_src = src_blk.jmax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1);
+                        j_src = src_blk.njcell - 1; 
+                        i_src = src_blk.nicell - j - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        j_src = j + src_blk.jmin;
-                        i_src = src_blk.imax; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src);
+                        i_src = src_blk.nicell - 1; 
+                        j_src = j;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
-                        i_src = j + src_blk.imin;
-                        j_src = src_blk.jmin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1);
+                        j_src = 0; 
+                        i_src = j;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
-                        j_src = (src_blk.njcell - j - 1) + src_blk.jmin;
-                        i_src = src_blk.imin; 
-                        src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src);
-                        src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src);
+                        i_src = 0; 
+                        j_src = src_blk.njcell - j - 1;
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
                     } // end switch src_face
-                    dest0 = dest_blk.get_cell(i_dest-1,j_dest);
-                    dest1 = dest_blk.get_cell(i_dest-2,j_dest);
-                    ghost_cells ~= dest0;
-                    ghost_cells ~= dest1;
-                    mapped_cell_ids ~= src0id;
-                    mapped_cell_ids ~= src1id;
                 } // j loop
                 break;
             default:
@@ -2211,529 +2197,469 @@ public:
             final switch (destination_face) {
             case Face.north:
                 j_dest = dest_blk.jmax;  // index of the north-most plane of active cells
-                for (size_t i = 0; i < dest_blk.nicell; ++i) {
+                foreach (i; 0 .. dest_blk.nicell) {
                     i_dest = i + dest_blk.imin;
-                    for (size_t k = 0; k < dest_blk.nkcell; ++k) {
+                    foreach (k; 0 .. dest_blk.nkcell) {
                         k_dest = k + dest_blk.kmin;
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+1,k_dest);
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+2,k_dest);
                         final switch (src_face) {
                         case Face.north:
+                            j_src = src_blk.njcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; k_src = k; break;
                             case 1: i_src = k; k_src = i; break;
                             case 2: i_src = i; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmax; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
+                            i_src = src_blk.nicell - 1; 
                             final switch (src_orientation) {
                             case 0: j_src = i; k_src = k; break;
                             case 1: j_src = src_blk.njcell - k - 1; k_src = i; break;
                             case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = k; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imax; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
+                            j_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = i; k_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; k_src = i; break;
                             case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = k; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmin; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
+                            i_src = 0; 
                             final switch (src_orientation) {
                             case 0: j_src = src_blk.njcell - i - 1; k_src = k; break;
                             case 1: j_src = k; k_src = i; break;
                             case 2: j_src = i; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imin; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
+                            k_src = src_blk.nkcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = i; j_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; j_src = i; break;
                             case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = k; j_src = src_blk.njcell - i - 1;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmax; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src-1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
+                            k_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; j_src = k; break;
                             case 1: i_src = k; j_src = i; break;
                             case 2: i_src = i; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - i - 1;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmin; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src+1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
                         } // end switch (src_face)
-                        dest0 = dest_blk.get_cell(i_dest,j_dest+1,k_dest);
-                        dest1 = dest_blk.get_cell(i_dest,j_dest+2,k_dest);
-                        ghost_cells ~= dest0;
-                        ghost_cells ~= dest1;
-                        mapped_cell_ids ~= src0id;
-                        mapped_cell_ids ~= src1id;
                     } // k loop
                 } // i loop
                 break;
             case Face.east:
                 i_dest = dest_blk.imax;  // index of the east-most plane of active cells
-                for (size_t j = 0; j < dest_blk.njcell; ++j) {
+                foreach (j; 0 .. dest_blk.njcell) {
                     j_dest = j + dest_blk.jmin;
-                    for (size_t k = 0; k < dest_blk.nkcell; ++k) {
+                    foreach (k; 0 .. dest_blk.nkcell) {
                         k_dest = k + dest_blk.kmin;
+                        ghost_cells ~= dest_blk.get_cell(i_dest+1,j_dest,k_dest);
+                        ghost_cells ~= dest_blk.get_cell(i_dest+2,j_dest,k_dest);
                         final switch (src_face) {
                         case Face.north:
+                            j_src = src_blk.njcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = j; k_src = k; break;
                             case 1: i_src = k; k_src = src_blk.nkcell - j - 1; break;
                             case 2: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; k_src = j;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmax; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
+                            i_src = src_blk.nicell - 1; 
                             final switch (src_orientation) {
                             case 0: j_src = src_blk.njcell - j - 1; k_src = k; break;
                             case 1: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - j - 1; break;
                             case 2: j_src = j; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = k; k_src = j;
                             }
-                            i_src = src_blk.imax; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
+                            j_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - j - 1; k_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - j - 1; break;
                             case 2: i_src = j; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = k; k_src = j;
                             }
-                            j_src = src_blk.jmin; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
+                            i_src = 0; 
                             final switch (src_orientation) {
                             case 0: j_src = j; k_src = k; break;
                             case 1: j_src = k; k_src = src_blk.nkcell - j - 1; break;
                             case 2: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = src_blk.njcell - k - 1; k_src = j;
                             }
-                            i_src = src_blk.imin; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
+                            k_src = src_blk.nkcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - j - 1; j_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - j - 1; break;
                             case 2: i_src = j; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = k; j_src = j;
                             }
-                            k_src = src_blk.kmax; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src-1);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
+                            k_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = j; j_src = k; break;
                             case 1: i_src = k; j_src = src_blk.njcell - j - 1; break;
                             case 2: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; j_src = j;
                             }
-                            k_src = src_blk.kmin; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src+1);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
                         } // end switch (src_face)
-                        dest0 = dest_blk.get_cell(i_dest+1,j_dest,k_dest);
-                        dest1 = dest_blk.get_cell(i_dest+2,j_dest,k_dest);
-                        ghost_cells ~= dest0;
-                        ghost_cells ~= dest1;
-                        mapped_cell_ids ~= src0id;
-                        mapped_cell_ids ~= src1id;
                     } // k loop
                 } // j loop
                 break;
             case Face.south:
                 j_dest = dest_blk.jmin;  // index of the south-most plane of active cells
-                for (size_t i = 0; i < dest_blk.nicell; ++i) {
+                foreach (i; 0 .. dest_blk.nicell) {
                     i_dest = i + dest_blk.imin;
-                    for (size_t k = 0; k < dest_blk.nkcell; ++k) {
+                    foreach (k; 0 .. dest_blk.nkcell) {
                         k_dest = k + dest_blk.kmin;
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-1,k_dest);
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-2,k_dest);
                         final switch (src_face) {
                         case Face.north:
+                            j_src = src_blk.njcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = i; k_src = k; break;
                             case 1: i_src = k; k_src = src_blk.nkcell - i - 1; break;
                             case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; k_src = i;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmax; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
+                            i_src = src_blk.nicell - 1; 
                             final switch (src_orientation) {
                             case 0: j_src = src_blk.njcell - i - 1; k_src = k; break;
                             case 1: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - i - 1; break;
                             case 2: j_src = i; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = k; k_src = i;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imax; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
+                            j_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; k_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - i - 1; break;
                             case 2: i_src = i; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = k; k_src = i;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmin; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
+                            i_src = 0; 
                             final switch (src_orientation) {
                             case 0: j_src = i; k_src = k; break;
                             case 1: j_src = k; k_src = src_blk.nkcell - i - 1; break;
                             case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = src_blk.njcell - k - 1; k_src = i;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imin; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
+                            k_src = src_blk.nkcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; j_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - i - 1; break;
                             case 2: i_src = i; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = k; j_src = i;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmax; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src-1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
+                            k_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = i; j_src = k; break;
                             case 1: i_src = k; j_src = src_blk.njcell - i - 1; break;
                             case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; j_src = i;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmin; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src+1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
                         } // end switch (src_face)
-                        dest0 = dest_blk.get_cell(i_dest,j_dest-1,k_dest);
-                        dest1 = dest_blk.get_cell(i_dest,j_dest-2,k_dest);
-                        ghost_cells ~= dest0;
-                        ghost_cells ~= dest1;
-                        mapped_cell_ids ~= src0id;
-                        mapped_cell_ids ~= src1id;
                     } // k loop
                 } // i loop
                 break;
             case Face.west:
                 i_dest = dest_blk.imin;  // index of the west-most plane of active cells
-                for (size_t j = 0; j < dest_blk.njcell; ++j) {
+                foreach (j; 0 .. dest_blk.njcell) {
                     j_dest = j + dest_blk.jmin;
-                    for (size_t k = 0; k < dest_blk.nkcell; ++k) {
+                    foreach (k; 0 .. dest_blk.nkcell) {
                         k_dest = k + dest_blk.kmin;
+                        ghost_cells ~= dest_blk.get_cell(i_dest-1,j_dest,k_dest);
+                        ghost_cells ~= dest_blk.get_cell(i_dest-2,j_dest,k_dest);
                         final switch (src_face) {
                         case Face.north:
+                            j_src = src_blk.njcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - j - 1; k_src = k; break;
                             case 1: i_src = k; k_src = j; break;
                             case 2: i_src = j; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - j - 1;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmax; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
+                            i_src = src_blk.nicell - 1; 
                             final switch (src_orientation) {
                             case 0: j_src = j; k_src = k; break;
                             case 1: j_src = src_blk.njcell - k - 1; k_src = j; break;
                             case 2: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = k; k_src = src_blk.nkcell - j - 1;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imax; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
+                            j_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = j; k_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; k_src = j; break;
                             case 2: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - k - 1; break;
                             case 3: i_src = k; k_src = src_blk.nkcell - j - 1;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmin; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
+                            i_src = 0; 
                             final switch (src_orientation) {
                             case 0: j_src = src_blk.njcell - j - 1; k_src = k; break;
                             case 1: j_src = k; k_src = j; break;
                             case 2: j_src = j; k_src = src_blk.nkcell - k - 1; break;
                             case 3: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - j - 1;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imin; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
+                            k_src = src_blk.nkcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = j; j_src = k; break;
                             case 1: i_src = src_blk.nicell - k - 1; j_src = j; break;
                             case 2: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = k; j_src = src_blk.njcell - j - 1;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmax; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src-1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
+                            k_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - j - 1; j_src = k; break;
                             case 1: i_src = k; j_src = j; break;
                             case 2: i_src = j; j_src = src_blk.njcell - k - 1; break;
                             case 3: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - j - 1;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmin; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src+1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
                         } // end switch (src_face)
-                        dest0 = dest_blk.get_cell(i_dest-1,j_dest,k_dest);
-                        dest1 = dest_blk.get_cell(i_dest-2,j_dest,k_dest);
-                        ghost_cells ~= dest0;
-                        ghost_cells ~= dest1;
-                        mapped_cell_ids ~= src0id;
-                        mapped_cell_ids ~= src1id;
                     } // k loop
                 } // j loop
                 break;
             case Face.top:
                 k_dest = dest_blk.kmax;  // index of the top-most plane of active cells
-                for (size_t j = 0; j < dest_blk.njcell; ++j) {
+                foreach (j; 0 .. dest_blk.njcell) {
                     j_dest = j + dest_blk.jmin;
-                    for (size_t i = 0; i < dest_blk.nicell; ++i) {
+                    foreach (i; 0 .. dest_blk.nicell) {
                         i_dest = i + dest_blk.imin;
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest+1);
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest+2);
                         final switch (src_face) {
                         case Face.north:
+                            j_src = src_blk.njcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = i; k_src = j; break;
                             case 1: i_src = j; k_src = src_blk.nkcell - i - 1; break;
                             case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - j - 1; break;
                             case 3: i_src = src_blk.nicell - j - 1; k_src = i;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmax; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
+                            i_src = src_blk.nicell - 1; 
                             final switch (src_orientation) {
                             case 0: j_src = src_blk.njcell - i - 1; k_src = j; break;
                             case 1: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - i - 1; break;
                             case 2: j_src = i; k_src = src_blk.nkcell - j - 1; break;
                             case 3: j_src = j; k_src = i;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imax; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
+                            j_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; k_src = j; break;
                             case 1: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - i - 1; break;
                             case 2: i_src = i; k_src = src_blk.nkcell - j - 1; break;
                             case 3: i_src = j; k_src = i;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmin; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
+                            i_src = 0; 
                             final switch (src_orientation) {
                             case 0: j_src = i; k_src = j; break;
                             case 1: j_src = j; k_src = src_blk.nkcell - i - 1; break;
                             case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - j - 1; break;
                             case 3: j_src = src_blk.njcell - j - 1; k_src = i;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imin; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
+                            k_src = src_blk.nkcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; j_src = j; break;
                             case 1: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - i - 1; break;
                             case 2: i_src = i; j_src = src_blk.njcell - j - 1; break;
                             case 3: i_src = j; j_src = i;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmax; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src-1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
+                            k_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = i; j_src = j; break;
                             case 1: i_src = j; j_src = src_blk.njcell - i - 1; break;
                             case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - j - 1; break;
                             case 3: i_src = src_blk.nicell - j - 1; j_src = i;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmin; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src+1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
                         } // end switch (src_face)
-                        dest0 = dest_blk.get_cell(i_dest,j_dest,k_dest+1);
-                        dest1 = dest_blk.get_cell(i_dest,j_dest,k_dest+2);
-                        ghost_cells ~= dest0;
-                        ghost_cells ~= dest1;
-                        mapped_cell_ids ~= src0id;
-                        mapped_cell_ids ~= src1id;
                     } // i loop
                 } // j loop
                 break;
             case Face.bottom:
                 k_dest = dest_blk.kmin;  // index of the bottom-most plane of active cells
-                for (size_t j = 0; j < dest_blk.njcell; ++j) {
+                foreach (j; 0 .. dest_blk.njcell) {
                     j_dest = j + dest_blk.jmin;
-                    for (size_t i = 0; i < dest_blk.nicell; ++i) {
+                    foreach (i; 0 .. dest_blk.nicell) {
                         i_dest = i + dest_blk.imin;
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest-1);
+                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest-2);
                         final switch (src_face) {
                         case Face.north:
+                            j_src = src_blk.njcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; k_src = j; break;
                             case 1: i_src = j; k_src = i; break;
                             case 2: i_src = i; k_src = src_blk.nkcell - j - 1; break;
                             case 3: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmax; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src-1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
+                            i_src = src_blk.nicell - 1; 
                             final switch (src_orientation) {
                             case 0: j_src = i; k_src = j; break;
                             case 1: j_src = src_blk.njcell - j - 1; k_src = i; break;
                             case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - j - 1; break;
                             case 3: j_src = j; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imax; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src-1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
+                            j_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = i; k_src = j; break;
                             case 1: i_src = src_blk.nicell - j - 1; k_src = i; break;
                             case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - j - 1; break;
                             case 3: i_src = j; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            j_src = src_blk.jmin; 
-                            i_src += src_blk.imin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src+1,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
+                            i_src = 0; 
                             final switch (src_orientation) {
                             case 0: j_src = src_blk.njcell - i - 1; k_src = j; break;
                             case 1: j_src = j; k_src = i; break;
                             case 2: j_src = i; k_src = src_blk.nkcell - j - 1; break;
                             case 3: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - i - 1;
-                            } // end switch (src_orientation)
-                            i_src = src_blk.imin; 
-                            j_src += src_blk.jmin; k_src += src_blk.kmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src+1,j_src,k_src);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
+                            k_src = src_blk.nkcell - 1; 
                             final switch (src_orientation) {
                             case 0: i_src = i; j_src = j; break;
                             case 1: i_src = src_blk.nicell - j - 1; j_src = i; break;
                             case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - j - 1; break;
                             case 3: i_src = j; j_src = src_blk.njcell - i - 1;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmax; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src-1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
+                            k_src = 0; 
                             final switch (src_orientation) {
                             case 0: i_src = src_blk.nicell - i - 1; j_src = j; break;
                             case 1: i_src = j; j_src = i; break;
                             case 2: i_src = i; j_src = src_blk.njcell - j - 1; break;
                             case 3: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - i - 1;
-                            } // end switch (src_orientation)
-                            k_src = src_blk.kmin; 
-                            i_src += src_blk.imin; j_src += src_blk.jmin;
-                            src0id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src);
-                            src1id = src_blk.ijk_indices_to_cell_id(i_src,j_src,k_src+1);
+                            }
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
                         } // end switch src_face
-                        dest0 = dest_blk.get_cell(i_dest,j_dest,k_dest-1);
-                        dest1 = dest_blk.get_cell(i_dest,j_dest,k_dest-2);
-                        ghost_cells ~= dest0;
-                        ghost_cells ~= dest1;
-                        mapped_cell_ids ~= src0id;
-                        mapped_cell_ids ~= src1id;
                     } // i loop
                 } // j loop
             } // end switch destination_face
@@ -2742,6 +2668,8 @@ public:
         version(mpi_parallel) {
             // [TODO] PJ 2018-01-17 communication...
         } else {
+            // For a single process,
+            // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
                 mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
             }

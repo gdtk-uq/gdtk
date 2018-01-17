@@ -196,7 +196,7 @@ public:
         assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
     }
     body {
-        return k * (_njdim * _nidim) + j * _nidim + i; 
+        return k*_njdim*_nidim + j*_nidim + i; 
     } // end to_single_index()
 
     @nogc size_t[3] to_ijk_indices(size_t gid) const
@@ -209,16 +209,20 @@ public:
         return ijk;
     } // end to_ijk_indices()
 
-    // Within a structured-grid block,
-    // cell_id = k*(njcell*nicell) + j*nicell + i
+    @nogc size_t ijk_0n_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
+    // ijk indices into the hypothetical block of active cells.
     // where 0<k<nkcell, 0<j<njcell, 0<i<nicell are the indices
     // into the hypothetical block of active cells.
     // This cell_id also the index into the single-dimensional cells array,
     // that is held in the FluidBlock base class.
     // Note that the hypothetical block of active cells is embedded in
     // a larger array that includes surrounding layers of ghost cells.
+    {
+        return k*njcell*nicell + j*nicell + i;
+    }
 
     @nogc size_t ijk_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
+    // ijk indices into the underlying block array.
     {
         i -= n_ghost_cell_layers;
         j -= n_ghost_cell_layers;
