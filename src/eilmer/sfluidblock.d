@@ -191,13 +191,13 @@ public:
     } // end toString()
 
     @nogc
-    size_t to_global_index(size_t i, size_t j, size_t k) const
+    size_t to_single_index(size_t i, size_t j, size_t k) const
     in {
         assert(i < _nidim && j < _njdim && k < _nkdim, "Index out of bounds.");
     }
     body {
         return k * (_njdim * _nidim) + j * _nidim + i; 
-    } // end to_global_index()
+    } // end to_single_index()
 
     @nogc size_t[3] to_ijk_indices(size_t gid) const
     {
@@ -209,12 +209,20 @@ public:
         return ijk;
     } // end to_ijk_indices()
 
+    // Within a structured-grid block,
+    // cell_id = k*(njcell*nicell) + j*nicell + i
+    // where 0<k<nkcell, 0<j<njcell, 0<i<nicell.
+    // This id also the index into the single-dimensional cells array,
+    // that is held in the FluidBlock base class.
+    
     @nogc size_t[3] cell_id_to_ijk_indices(size_t id) const
     {
         size_t[3] ijk;
+        // Invert the cell_id calculation given above.
         size_t k = (myConfig.dimensions == 2) ? 0 : id/(njcell*nicell);
         size_t j = (id - k*(njcell*nicell))/nicell;
         size_t i = id - k*(njcell*nicell) - j*nicell;
+        // Add on the ghost-cell offset.
         ijk[0] = i + n_ghost_cell_layers;
         ijk[1] = j + n_ghost_cell_layers;
         ijk[2] = (myConfig.dimensions == 2) ? 0 : k + n_ghost_cell_layers;
@@ -224,27 +232,27 @@ public:
     @nogc
     override ref FVCell get_cell(size_t i, size_t j, size_t k=0) 
     {
-        return _ctr[to_global_index(i,j,k)];
+        return _ctr[to_single_index(i,j,k)];
     }
     @nogc 
     override ref FVInterface get_ifi(size_t i, size_t j, size_t k=0) 
     {
-        return _ifi[to_global_index(i,j,k)];
+        return _ifi[to_single_index(i,j,k)];
     }
     @nogc
     override ref FVInterface get_ifj(size_t i, size_t j, size_t k=0)
     {
-        return _ifj[to_global_index(i,j,k)];
+        return _ifj[to_single_index(i,j,k)];
     }
     @nogc
     override ref FVInterface get_ifk(size_t i, size_t j, size_t k=0)
     {
-        return _ifk[to_global_index(i,j,k)];
+        return _ifk[to_single_index(i,j,k)];
     }
     @nogc
     override ref FVVertex get_vtx(size_t i, size_t j, size_t k=0)
     {
-        return _vtx[to_global_index(i,j,k)];
+        return _vtx[to_single_index(i,j,k)];
     }
 
     override void find_enclosing_cell(ref const(Vector3) p, ref size_t indx, ref bool found)
