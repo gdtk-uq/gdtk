@@ -1,12 +1,16 @@
-/** adjoint_solver.d
- * Code to construct, and solve the adjoint equations.
+/** adjoint_gradient.d
+ * 
+ * Code to compute shape sensitivities via a discrete adjoint method.
+ * Solvers/Calculators included:
+ * 1. adjoint variable solver.
+ * 2. mesh sensitivity calculators:
+ * 2.1 sensitivity of cell residuals w.r.t. mesh point perturbations,
+ * 2.2 sensitivity of mesh points w.r.t. design variable perturbations.
+ * 3. gradient calculator to compute the shape sensitivities.
  *
  * Author: Kyle D.
  * Date: 2017-09-18
  *
- *
- * History:
- *   2017-09-18 : started -- 2D, 1st order, single-block, structured grid, Euler solver.
 **/
 
 import core.stdc.stdlib : exit;
@@ -159,22 +163,26 @@ void main(string[] args) {
         auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
         blk.write_underlying_grid(fileName);
     }
+
+    // --------------
+    // --------------
+    // ADJOINT SOLVER
+    //---------------
+    // --------------
+    FluidBlock myblk = localFluidBlocks[0]; // currently only compatible with single block simulations
     
-    // ----------------------------------------------------
-    // 1.a store stencils used in forming the flow Jacobian
-    //-----------------------------------------------------
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        if (GlobalConfig.viscous) construct_viscous_flow_jacobian_stencils(myblk);
-        else construct_inviscid_flow_jacobian_stencils(myblk);
-    }
-    
+    // ------------------------------------
+    // 1.a construct flow Jacobian stencils
+    //-------------------------------------
+    if (GlobalConfig.viscous) construct_viscous_flow_jacobian_stencils(myblk);
+    else construct_inviscid_flow_jacobian_stencils(myblk);
+        
     // ------------------------------------------------------------
-    // 1.b construct local flow Jacobian via finite differences
+    // 1.b construct flow Jacobian transpose via finite differences
     // ------------------------------------------------------------
     size_t ndim = GlobalConfig.dimensions;
-    // number of primitive variables
     bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
-    size_t np;
+    size_t np; // number of primitive variables
     if (GlobalConfig.dimensions == 2) {
         if (with_k_omega) np = 6; // rho, momentum(x,y), total energy, tke, omega
         else np = 4; // rho, momentum(x,y), total energy
@@ -184,278 +192,111 @@ void main(string[] args) {
         else np = 5; // rho, momentum(x,y,z), total energy, tke, omega
     }
 
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        construct_flow_jacobian(myblk, ndim, np, EPSILON, MU);
-    }
-
-    // ------------------------------------------------------------
+    construct_flow_jacobian(myblk, ndim, np, EPSILON, MU);
+    
+    // --------------------------------------------
     // 1.c construct global flow Jacobian transpose
-    // ------------------------------------------------------------
+    // --------------------------------------------
     SMatrix globalJacobianT = new SMatrix();    
-    // we must do this in serial
     size_t ia = 0;
-    foreach (myblk; localFluidBlocks) {
-        size_t nrows = myblk.cells.length*np;
-        foreach(i; 0 .. nrows) {
-            globalJacobianT.aa ~= myblk.aa[i];
-            globalJacobianT.ja ~= myblk.ja[i];
-            globalJacobianT.ia ~= ia;
-            ia += myblk.aa[i].length;
-        }
-        // clear local Jacobian memory
-        myblk.aa = [];
-        myblk.ja = [];
+    foreach(i; 0 .. myblk.cells.length*np) { // 0..nrows
+        globalJacobianT.aa ~= myblk.aa[i];
+        globalJacobianT.ja ~= myblk.ja[i];
+        globalJacobianT.ia ~= ia;
+        ia += myblk.aa[i].length;
     }
+    // clear local Jacobian memory
+    myblk.aa = [];
+    myblk.ja = [];
     globalJacobianT.ia ~= globalJacobianT.aa.length;
-    // -----------------------------------------------------
-    // 2. Form cost function sensitvity
-    // -----------------------------------------------------
-    // Analytically form dJdV by hand differentiation
-    // cost function is defined as: J(Q) = 0.5*integral[0->l] (p-p*)^2
-    double[] dJdV;
+    
+    // --------------------------------------
+    // 1.d construct cost function sensitvity
+    // --------------------------------------
+    double[] dJdV; // const function sensitivity
     double[] p_target;
-    // TODO: remove dependency on setting ncells and nvertices in main code
-    size_t ncells = localFluidBlocks[0].cells.length;
-    size_t nvertices = localFluidBlocks[0].vertices.length;
-
+    construct_cost_function_sensitivity(myblk, dJdV, p_target);
     
-    // target pressure distribution saved in file target.dat
-    auto file = File("target.dat", "r");
-    foreach(line; 0..ncells) {
-        auto lineContent = file.readln().strip();
-        auto tokens = lineContent.split();
-        p_target ~= to!double(tokens[8]);
-    }
-    writeln("target pressure imported");
-    foreach (blk; localFluidBlocks) {
-        foreach(i, cell; blk.cells) {
-            dJdV ~= 0.0;
-            dJdV ~= 0.0;
-            dJdV ~= 0.0;
-            dJdV ~= 0.5*(2.0*cell.fs.gas.p - 2.0*p_target[i]);
-        }
-    }
-
-    // -----------------------------------------------------
-    // 3. Solve for the adjoint variables 
-    // -----------------------------------------------------
-    // restarted-GMRES settings
-    int maxInnerIters = 85;
-    int maxOuterIters = 1000;
-    int nIter = 0;
-    double normRef = 0.0;
-    double normNew = 0.0;
-    double residTol = 1.0e-10;
-    double[] psi0;
-    double[] psiN;
-    foreach(i; 0..np*ncells) psi0 ~= 1.0;
-    foreach(i; 0..np*ncells) psiN ~= 1.0;
-    double[] residVec;
-    residVec.length = dJdV.length;
-    foreach(i; 0..dJdV.length) dJdV[i] = -1.0 * dJdV[i];
-
-    // compute ILU[p] for preconditioning
-    SMatrix m = new SMatrix(globalJacobianT);
-    auto M = decompILUp(m, 6);
-
-    // compute reference norm
-    multiply(globalJacobianT, psi0, residVec);
-    foreach (i; 0..np*ncells) residVec[i] = dJdV[i] - residVec[i];
-    foreach (i; 0..np*ncells) normRef += residVec[i]*residVec[i];
-    normRef = sqrt(fabs(normRef));
-    auto gws = GMRESWorkSpace(psi0.length, maxInnerIters);
-    
-    while (nIter < maxOuterIters) {
-        // compute psi
-        rpcGMRES(globalJacobianT, M, dJdV, psi0, psiN, maxInnerIters, residTol, gws);
-            
-        // compute new norm
-        normNew = 0.0;
-        multiply(globalJacobianT, psiN, residVec);
-        foreach (i; 0..np*ncells) residVec[i] = dJdV[i] - residVec[i];
-        foreach (i; 0..np*ncells) normNew += residVec[i]*residVec[i];
-        normNew = sqrt(fabs(normNew));
-        
-        writeln("iter = ", nIter, ", resid = ", normNew/normRef,
-                ", adjoint: rho = ", psiN[0], ", velx = ", psiN[1], ", vely = ", psiN[2], ", p = ", psiN[3]);
-        nIter += 1;
-        // tolerance check
-        if (normNew/normRef < residTol) {
-            writeln("final residual: ", normNew/normRef);
-            break;
-        }
-        foreach(i; 0..np*ncells) psi0[i] = psiN[i];
-    }
-    
+    // ------------------------
+    // 1.e solve adjoint system 
+    // ------------------------
     double[] psi;
-    psi.length = psiN.length;
-    foreach(i; 0..np*ncells) psi[i] = psiN[i];
+    psi = adjoint_solver(globalJacobianT, dJdV, myblk, np);
     
-    // write out adjoint variables in VTK-format
-    if (localFluidBlocks[0].grid_type == Grid_t.structured_grid) {
-        auto sblk = cast(SFluidBlock) localFluidBlocks[0]; 
-        auto outFile = File("adjointVars.vtk", "w");
-        outFile.writef("# vtk DataFile Version 3.0 \n");
-        outFile.writef("%s \n", jobName);
-        outFile.writef("ASCII \n");
-        outFile.writef("DATASET STRUCTURED_GRID \n");
-        outFile.writef("DIMENSIONS %d %d %d \n", sblk.imax, sblk.jmax, sblk.kmax+1);
-        outFile.writef("POINTS %d double \n", nvertices);
-        // write grid data
-        foreach(i, vtx; localFluidBlocks[0].vertices) {
-            outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
-        }
-        // write cell data
-        outFile.writef("CELL_DATA %d \n", ncells);
-
-        outFile.writef("SCALARS adjoint_density double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", psi[np*i]);
-        }
-
-        outFile.writef("SCALARS adjoint_velx double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", psi[np*i+1]);
-        }
-
-        outFile.writef("SCALARS adjoint_vely double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", psi[np*i+2]);
-        }
-
-        outFile.writef("SCALARS adjoint_pressure double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", psi[np*i+3]);
-        }
-
-    }
-
-    if (localFluidBlocks[0].grid_type == Grid_t.unstructured_grid) {
-        auto ublk = cast(UFluidBlock) localFluidBlocks[0]; 
-        auto outFile = File("adjointVars.vtk", "w");
-        outFile.writef("# vtk DataFile Version 3.0 \n");
-        outFile.writef("%s \n", jobName);
-        outFile.writef("ASCII \n");
-        outFile.writef("DATASET UNSTRUCTURED_GRID \n");
-        outFile.writef("POINTS %d double \n", nvertices);
-        // write grid data
-        foreach(i, vtx; localFluidBlocks[0].vertices) {
-            outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
-        }
-        // write cell connectivity
-        size_t size = ncells + 4*ncells; // TODO: only for quads, need to generalise
-        outFile.writef("CELLS %d %d \n", ncells, size);
-        foreach(i, cell; ublk.grid.cells) {
-            outFile.writef("%d ", cell.vtx_id_list.length);
-            foreach(vid; cell.vtx_id_list) {
-                outFile.writef("%d ", vid);
-            }
-            outFile.writef("\n");
-        }
-        outFile.writef("CELL_TYPES %d \n", ncells);
-        foreach(i, cell; ublk.grid.cells) {
-            outFile.writef("%d \n", ublk.grid.vtk_element_type_for_cell(i)); //cell.cell_type);
-        }
-        
-        // write cell data
-        outFile.writef("CELL_DATA %d \n", ncells);
-
-        outFile.writef("SCALARS adjoint_density double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", psi[np*i]);
-        }
-
-        outFile.writef("SCALARS adjoint_velx double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", psi[np*i+1]);
-        }
-
-        outFile.writef("SCALARS adjoint_vely double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", psi[np*i+2]);
-        }
-
-        outFile.writef("SCALARS adjoint_pressure double \n");
-        outFile.writef("LOOKUP_TABLE default \n");
-        foreach(i; 0..ncells) { 
-            outFile.writef("%.16f \n", psi[np*i+3]);
-        }
-
-    }
-
+    // -------------------------------
+    // 1.f write out adjoint variables 
+    // -------------------------------
+    write_adjoint_variables_to_file(myblk, psi, np, jobName);
     
     // clear the global Jacobian from memory
     destroy(globalJacobianT);
     GC.minimize();
-    // ---------------------------------------------------------------------
-    // 4.a store stencils used in forming the mesh Jacobian 
-    // ---------------------------------------------------------------------
 
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        construct_mesh_jacobian_stencils(myblk);
-    }
+    // -------------------
+    // -------------------
+    // GRADIENT CALCULATOR
+    //--------------------
+    // -------------------
+
+    // ------------------------------------
+    // 2.a construct flow Jacobian stencils 
+    // ------------------------------------
+    construct_mesh_jacobian_stencils(myblk);
+    
     // ------------------------------------------------------------
-    // 4.b construct local mesh Jacobian via Frechet derivatives
+    // 2.b construct mesh Jacobian transpose via finite differences
     // ------------------------------------------------------------
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        construct_mesh_jacobian(myblk, ndim, np, EPSILON, MU);
-    }
-    // ------------------------------------------------------------
-    // 4.c construct global mesh Jacobian transpose
-    // ------------------------------------------------------------
+    construct_mesh_jacobian(myblk, ndim, np, EPSILON, MU);
+    
+    // --------------------------------------------
+    // 2.c construct global mesh Jacobian transpose
+    // --------------------------------------------
     SMatrix globaldRdXT = new SMatrix();    
     // we must do this in serial
     ia = 0;
-    foreach (myblk; localFluidBlocks) {
-        size_t nrows = myblk.cells.length*np;
-        foreach(i; 0 .. nrows) {
-            globaldRdXT.aa ~= myblk.aa[i];
-            globaldRdXT.ja ~= myblk.ja[i];
-            globaldRdXT.ia ~= ia;
-            ia += myblk.aa[i].length;
-        }
-        // clear local Jacobian memory
-        myblk.aa = [];
-        myblk.ja = [];
+    foreach(i; 0 .. myblk.cells.length*np) { // 0..nrows
+        globaldRdXT.aa ~= myblk.aa[i];
+        globaldRdXT.ja ~= myblk.ja[i];
+        globaldRdXT.ia ~= ia;
+        ia += myblk.aa[i].length;
     }
+    // clear local Jacobian memory
+    myblk.aa = [];
+    myblk.ja = [];
+
     globaldRdXT.ia ~= globaldRdXT.aa.length;
-    // -----------------------------------------------------
-    // 5. form dX/dD via finite-differences
-    // -----------------------------------------------------
+
+    // ------------------------------------------------------------------------------------------------
+    // 2.d construct mesh point sensitivity w.r.t. design variable perturbations via finite-differences
+    // ------------------------------------------------------------------------------------------------
+    size_t nvertices = myblk.vertices.length;
     double[3] D = [0.07, 0.8, 3.8]; // array of design variables 
     auto D0 = D;
     size_t nvar = D.length; 
     Matrix dXdD_T;
     dXdD_T = new Matrix(nvar, nvertices*ndim);
     foreach (i; 0..D.length) {
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            double dD = (abs(D[i]) + MU)*EPSILON;
-            D[i] = D0[i] + dD;
-            double[][] meshPp; double[][] meshPm;
-            if (myblk.grid_type == Grid_t.structured_grid) meshPp = perturbMeshSG(myblk, D);
-            else meshPp = perturbMeshUSG(myblk, D);
-            D[i] = D0[i] - dD; 
-            if (myblk.grid_type == Grid_t.structured_grid) meshPm = perturbMeshSG(myblk, D);
-            else meshPm = perturbMeshUSG(myblk, D);
-            foreach(j; 0..meshPm.length) {
-                dXdD_T[i, j*ndim] = (meshPp[j][0] - meshPm[j][0])/(2.0*dD);
-                dXdD_T[i, j*ndim+1] = (meshPp[j][1] - meshPm[j][1])/(2.0*dD);
-            }
-            D[i] = D0[i];
+        double dD = (abs(D[i]) + MU)*EPSILON;
+        D[i] = D0[i] + dD;
+        double[][] meshPp; double[][] meshPm;
+        if (myblk.grid_type == Grid_t.structured_grid) meshPp = perturbMeshSG(myblk, D);
+        else meshPp = perturbMeshUSG(myblk, D);
+        D[i] = D0[i] - dD; 
+        if (myblk.grid_type == Grid_t.structured_grid) meshPm = perturbMeshSG(myblk, D);
+        else meshPm = perturbMeshUSG(myblk, D);
+        foreach(j; 0..meshPm.length) {
+            dXdD_T[i, j*ndim] = (meshPp[j][0] - meshPm[j][0])/(2.0*dD);
+            dXdD_T[i, j*ndim+1] = (meshPp[j][1] - meshPm[j][1])/(2.0*dD);
         }
+        D[i] = D0[i];
     }
-    // -----------------------------------------------------
-    // 7. Compute adjoint gradients
-    // -----------------------------------------------------
+    
+    // ------------------------------
+    // 3. Compute shape sensitivities
+    // ------------------------------
     
     // temp matrix multiplication
+    size_t ncells = myblk.cells.length;
     Matrix tempMatrix;
     tempMatrix = new Matrix(nvar, ncells*np);
     for (int i = 0; i < nvar; i++) {
@@ -484,20 +325,18 @@ void main(string[] args) {
     
         double J1; double J0; //double EPSILON0 = 1.0e-07;
         // read original grid in
-        foreach (blk; localFluidBlocks) { 
-            //blk.init_grid_and_flow_arrays(make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz"));
-            ensure_directory_is_present(make_path_name!"grid-original"(0));
-            string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-            blk.read_new_underlying_grid(gridFileName);
-            blk.sync_vertices_from_underlying_grid(0);
-        }
+        ensure_directory_is_present(make_path_name!"grid-original"(0));
+        string gridFileName = make_file_name!"grid-original"(jobName, myblk.id, 0, gridFileExt = "gz");
+        myblk.read_new_underlying_grid(gridFileName);
+        myblk.sync_vertices_from_underlying_grid(0);
+        
         // perturb b +ve --------------------------------------------------------------------------------
         double del_b = EPSILON0;
         D[0] = D0[0] + del_b;
-        J1 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
+        J1 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
         // perturb b -ve --------------------------------------------------------------------------------
         D[0] = D0[0] - del_b;
-        J0 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
+        J0 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
         D[0] = D0[0];
         double grad_b = (J1 -J0)/(2.0*del_b);
         writeln("FD dLdB = ", grad_b, ", % error = ", abs((grad_b - grad[0])/grad_b * 100));
@@ -505,10 +344,10 @@ void main(string[] args) {
         // perturb c +ve --------------------------------------------------------------------------------
         double del_c = EPSILON0;
         D[1] = D0[1] + del_c;
-        J1 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
+        J1 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
         // perturb c -ve --------------------------------------------------------------------------------
         D[1] = D0[1] - del_c;
-        J0 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
+        J0 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
         D[1] = D0[1];
         double grad_c = (J1 -J0)/(2.0*del_c);
         writeln("FD dLdC = ", grad_c, ", % error = ", abs((grad_c - grad[1])/grad_c * 100));
@@ -516,10 +355,10 @@ void main(string[] args) {
         // perturb d +ve --------------------------------------------------------------------------------
         double del_d = EPSILON0;
         D[2] = D0[2] + del_d;
-        J1 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
+        J1 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
         // perturb d -ve --------------------------------------------------------------------------------
         D[2] = D0[2] - del_d;
-        J0 = finite_difference_grad(jobName, last_tindx, localFluidBlocks, p_target, D);
+        J0 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
         D[2] = D0[2];
         double grad_d = (J1 -J0)/(2.0*del_d);
         writeln("FD dLdD = ", grad_d, ", % error = ", abs((grad_d - grad[2])/grad_d * 100));
@@ -610,64 +449,55 @@ double[][] perturbMeshUSG(FluidBlock blk, double[] D) {
     return meshP;
 }
 
-double finite_difference_grad(string jobName, int last_tindx, FluidBlock[] localFluidBlocks, double[] p_target, double[] D) {
+double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, double[] p_target, double[] D) {
 
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        double[][] meshP; 
-        if (blk.grid_type == Grid_t.structured_grid) {
-            meshP = perturbMeshSG(blk, D);
-            auto sblk = cast(SFluidBlock) blk;
-            size_t vtxID = 0;
-            for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
-                for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
-                    FVVertex vtx = sblk.get_vtx(i,j,0);
-                    vtx.pos[0].refy = meshP[vtxID][1];
-                    vtxID += 1;
-                }
-            }
-        }
-        else {
-            meshP = perturbMeshUSG(blk, D);
-            size_t vtxID = 0;
-            foreach (vtx; blk.vertices) {
+    double[][] meshP; 
+    if (blk.grid_type == Grid_t.structured_grid) {
+        meshP = perturbMeshSG(blk, D);
+        auto sblk = cast(SFluidBlock) blk;
+        size_t vtxID = 0;
+        for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
+            for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
+                FVVertex vtx = sblk.get_vtx(i,j,0);
                 vtx.pos[0].refy = meshP[vtxID][1];
                 vtxID += 1;
             }
         }
     }
-    // save mesh
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.sync_vertices_to_underlying_grid(0);
-        ensure_directory_is_present(make_path_name!"grid-perturb"(0));
-        auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
-        blk.write_underlying_grid(fileName);
+    else {
+        meshP = perturbMeshUSG(blk, D);
+        size_t vtxID = 0;
+        foreach (vtx; blk.vertices) {
+            vtx.pos[0].refy = meshP[vtxID][1];
+            vtxID += 1;
+        }
     }
+
+    // save mesh
+    blk.sync_vertices_to_underlying_grid(0);
+    ensure_directory_is_present(make_path_name!"grid-perturb"(0));
+    auto fileName = make_file_name!"grid-perturb"(jobName, blk.id, 0, gridFileExt = "gz");
+    blk.write_underlying_grid(fileName);
     
     // run simulation
     string command = "bash run-perturb.sh";
     auto output = executeShell(command);
     
     // read perturbed solution
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
-    }
-
+    blk.read_solution(make_file_name!"flow"(jobName ~ "-perturb", blk.id, last_tindx, flowFileExt), false);
+    
     // compute cost function
     double J = 0.0;
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        foreach (i, cell; blk.cells) {
-            J += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
-        }
-    }
-
-    // read original grid in
-    foreach (blk; parallel(localFluidBlocks,1)) { 
-        ensure_directory_is_present(make_path_name!"grid-original"(0));
-        string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-        blk.read_new_underlying_grid(gridFileName);
-        blk.sync_vertices_from_underlying_grid(0);
+    foreach (i, cell; blk.cells) {
+        J += 0.5*(cell.fs.gas.p - p_target[i])*(cell.fs.gas.p - p_target[i]);
     }
     
+    // read original grid in
+    ensure_directory_is_present(make_path_name!"grid-original"(0));
+    string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
+    blk.read_new_underlying_grid(gridFileName);
+    blk.sync_vertices_from_underlying_grid(0);
+        
     // clear old simulation files
     string command0 = "bash clear.sh";
     output = executeShell(command0);
@@ -1507,5 +1337,186 @@ void update_geometry(FluidBlock blk, FVVertex vtx) {
         foreach(iface; vtx.jacobian_face_stencil) {
             iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
         }
+    }
+}
+
+void construct_cost_function_sensitivity(FluidBlock blk, ref double[] dJdV, ref double[] p_target) {
+    // for the moment we just have a hard-coded cost function
+    // J = 0.5*integral[over domain] (p-p*)^2
+
+    size_t ncells = blk.cells.length;
+    size_t nvertices = blk.vertices.length;
+
+    // target pressure distribution saved in file target.dat
+    auto file = File("target.dat", "r");
+    foreach(line; 0..ncells) {
+        auto lineContent = file.readln().strip();
+        auto tokens = lineContent.split();
+        p_target ~= to!double(tokens[8]);
+    }
+    writeln("target pressure imported");
+
+    // hand-differentiated code
+    foreach(i, cell; blk.cells) {
+        dJdV ~= 0.0; // rho
+        dJdV ~= 0.0; // x-vel
+        dJdV ~= 0.0; // y-vel
+        dJdV ~= 0.5*(2.0*cell.fs.gas.p - 2.0*p_target[i]); // P
+    }
+}
+
+double[] adjoint_solver(SMatrix globalJacobianT, double[] dJdV, FluidBlock blk, size_t np) {
+    size_t ncells = blk.cells.length;
+    // restarted-GMRES settings
+    int maxInnerIters = 85;
+    int maxOuterIters = 1000;
+    int nIter = 0;
+    double normRef = 0.0;
+    double normNew = 0.0;
+    double residTol = 1.0e-10;
+    double[] psi0;
+    double[] psiN;
+    foreach(i; 0..np*ncells) psi0 ~= 1.0;
+    foreach(i; 0..np*ncells) psiN ~= 1.0;
+    double[] residVec;
+    residVec.length = dJdV.length;
+    foreach(i; 0..dJdV.length) dJdV[i] = -1.0 * dJdV[i];
+
+    // compute ILU[p] for preconditioning
+    SMatrix m = new SMatrix(globalJacobianT);
+    auto M = decompILUp(m, 6);
+
+    // compute reference norm
+    multiply(globalJacobianT, psi0, residVec);
+    foreach (i; 0..np*ncells) residVec[i] = dJdV[i] - residVec[i];
+    foreach (i; 0..np*ncells) normRef += residVec[i]*residVec[i];
+    normRef = sqrt(fabs(normRef));
+    auto gws = GMRESWorkSpace(psi0.length, maxInnerIters);
+    
+    while (nIter < maxOuterIters) {
+        // compute psi
+        rpcGMRES(globalJacobianT, M, dJdV, psi0, psiN, maxInnerIters, residTol, gws);
+            
+        // compute new norm
+        normNew = 0.0;
+        multiply(globalJacobianT, psiN, residVec);
+        foreach (i; 0..np*ncells) residVec[i] = dJdV[i] - residVec[i];
+        foreach (i; 0..np*ncells) normNew += residVec[i]*residVec[i];
+        normNew = sqrt(fabs(normNew));
+        
+        writeln("iter = ", nIter, ", resid = ", normNew/normRef,
+                ", adjoint: rho = ", psiN[0], ", velx = ", psiN[1], ", vely = ", psiN[2], ", p = ", psiN[3]);
+        nIter += 1;
+        // tolerance check
+        if (normNew/normRef < residTol) {
+            writeln("final residual: ", normNew/normRef);
+            break;
+        }
+        foreach(i; 0..np*ncells) psi0[i] = psiN[i];
+    }
+    
+    return psiN;
+}
+
+void write_adjoint_variables_to_file(FluidBlock blk, double[] psi, size_t np, string jobName) {
+    size_t ncells = blk.cells.length;
+    size_t nvertices = blk.vertices.length;
+    // write out adjoint variables in VTK-format
+    if (blk.grid_type == Grid_t.structured_grid) {
+        auto sblk = cast(SFluidBlock) blk; 
+        auto outFile = File("adjointVars.vtk", "w");
+        outFile.writef("# vtk DataFile Version 3.0 \n");
+        outFile.writef("%s \n", jobName);
+        outFile.writef("ASCII \n");
+        outFile.writef("DATASET STRUCTURED_GRID \n");
+        outFile.writef("DIMENSIONS %d %d %d \n", sblk.imax, sblk.jmax, sblk.kmax+1);
+        outFile.writef("POINTS %d double \n", nvertices);
+        // write grid data
+        foreach(i, vtx; blk.vertices) {
+            outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
+        }
+        // write cell data
+        outFile.writef("CELL_DATA %d \n", ncells);
+
+        outFile.writef("SCALARS adjoint_density double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) {
+            outFile.writef("%.16f \n", psi[np*i]);
+        }
+
+        outFile.writef("SCALARS adjoint_velx double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) {
+            outFile.writef("%.16f \n", psi[np*i+1]);
+        }
+
+        outFile.writef("SCALARS adjoint_vely double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) {
+            outFile.writef("%.16f \n", psi[np*i+2]);
+        }
+
+        outFile.writef("SCALARS adjoint_pressure double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) {
+            outFile.writef("%.16f \n", psi[np*i+3]);
+        }
+
+    }
+
+    if (blk.grid_type == Grid_t.unstructured_grid) {
+        auto ublk = cast(UFluidBlock) blk; 
+        auto outFile = File("adjointVars.vtk", "w");
+        outFile.writef("# vtk DataFile Version 3.0 \n");
+        outFile.writef("%s \n", jobName);
+        outFile.writef("ASCII \n");
+        outFile.writef("DATASET UNSTRUCTURED_GRID \n");
+        outFile.writef("POINTS %d double \n", nvertices);
+        // write grid data
+        foreach(i, vtx; blk.vertices) {
+            outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
+        }
+        // write cell connectivity
+        size_t size = ncells + 4*ncells; // TODO: only for quads, need to generalise
+        outFile.writef("CELLS %d %d \n", ncells, size);
+        foreach(i, cell; ublk.grid.cells) {
+            outFile.writef("%d ", cell.vtx_id_list.length);
+            foreach(vid; cell.vtx_id_list) {
+                outFile.writef("%d ", vid);
+            }
+            outFile.writef("\n");
+        }
+        outFile.writef("CELL_TYPES %d \n", ncells);
+        foreach(i, cell; ublk.grid.cells) {
+            outFile.writef("%d \n", ublk.grid.vtk_element_type_for_cell(i)); //cell.cell_type);
+        }
+        
+        // write cell data
+        outFile.writef("CELL_DATA %d \n", ncells);
+
+        outFile.writef("SCALARS adjoint_density double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) {
+            outFile.writef("%.16f \n", psi[np*i]);
+        }
+
+        outFile.writef("SCALARS adjoint_velx double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) {
+            outFile.writef("%.16f \n", psi[np*i+1]);
+        }
+
+        outFile.writef("SCALARS adjoint_vely double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) {
+            outFile.writef("%.16f \n", psi[np*i+2]);
+        }
+
+        outFile.writef("SCALARS adjoint_pressure double \n");
+        outFile.writef("LOOKUP_TABLE default \n");
+        foreach(i; 0..ncells) { 
+            outFile.writef("%.16f \n", psi[np*i+3]);
+        }
+
     }
 }
