@@ -211,9 +211,20 @@ public:
 
     // Within a structured-grid block,
     // cell_id = k*(njcell*nicell) + j*nicell + i
-    // where 0<k<nkcell, 0<j<njcell, 0<i<nicell.
-    // This id also the index into the single-dimensional cells array,
+    // where 0<k<nkcell, 0<j<njcell, 0<i<nicell are the indices
+    // into the hypothetical block of active cells.
+    // This cell_id also the index into the single-dimensional cells array,
     // that is held in the FluidBlock base class.
+    // Note that the hypothetical block of active cells is embedded in
+    // a larger array that includes surrounding layers of ghost cells.
+
+    @nogc size_t ijk_indices_to_cell_id(size_t i, size_t j, size_t k=0) const
+    {
+        i -= n_ghost_cell_layers;
+        j -= n_ghost_cell_layers;
+        k = (myConfig.dimensions == 2) ? 0 : k - n_ghost_cell_layers;
+        return k*njcell*nicell + j*nicell + i;
+    }
     
     @nogc size_t[3] cell_id_to_ijk_indices(size_t id) const
     {
