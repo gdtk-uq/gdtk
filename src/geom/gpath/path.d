@@ -145,7 +145,7 @@ public:
         }
         return false;
     } // end intersect2D()
-    double closestDistance(const Vector3 p) const
+    double closestDistance(const Vector3 p, ref double t) const
     {
         // This is the function we'll try to minimise with a line-search method.
         double distanceToPoint(double t)
@@ -161,13 +161,15 @@ public:
         Vector3 ptOnPath;
         // Handle the special cases of being right at the end points.
         if (tL == 0.0) {
-            ptOnPath = opCall(0.0);
+	    t = 0.0;
         }
-        if (tR == 1.0) {
-            ptOnPath = opCall(1.0);
+        else if (tR == 1.0) {
+            t = 1.0;
         }
-        // Otherwise take the mid-point of the bracket.
-        ptOnPath = opCall(0.5*(tL+tR));
+	else {
+	    t = 0.5*(tL+tR);
+	}
+        ptOnPath = opCall(t);
         return distance_between(p, ptOnPath);
     } // end closestDistance
 
