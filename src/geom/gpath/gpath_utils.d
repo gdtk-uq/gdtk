@@ -28,8 +28,9 @@ void readPointsFromFile(string fileName, ref Vector3[] points)
     f.close();
 }
 
-Bezier optimiseBezierPoints(string fileName, int nCtrlPts, int dim=2)
+Bezier optimiseBezierPoints(string fileName, int nCtrlPts, ref double[] ts, int dim=2)
 {
+    double t;
     // Read in points.
     Vector3[] points;
     readPointsFromFile(fileName, points);
@@ -42,6 +43,7 @@ Bezier optimiseBezierPoints(string fileName, int nCtrlPts, int dim=2)
         errMsg ~= format("No. of desired control points: %d", nCtrlPts);
         throw new Error(errMsg);
     }
+    ts.length = points.length;
     // ------------------------------------------------------------------
     // Establish an initial guess for the location of the control points.
     // ------------------------------------------------------------------
@@ -97,7 +99,7 @@ Bezier optimiseBezierPoints(string fileName, int nCtrlPts, int dim=2)
         // Evaluate error between data points and Bezier curve
         double err = 0.0;
         foreach (p; points) {
-            err += myBez.closestDistance(p);
+            err += myBez.closestDistance(p, t);
         }
         return err;
     }
@@ -126,6 +128,13 @@ Bezier optimiseBezierPoints(string fileName, int nCtrlPts, int dim=2)
                 myBez.B[i].refz = d[3*i - 1];
             }
         }
+	// Populate ts vector with all the t-values associated with the data points.
+	ts[0] = 0.0;
+	foreach (i; 1 .. points.length-1) {
+            myBez.closestDistance(points[i], t);
+	    ts[i] = t;
+        }
+	ts[$-1] = 1.0;
         return myBez;
     }
     // Otherwise, we failed in the optimiser.
