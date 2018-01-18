@@ -50,12 +50,12 @@ class SolidBoundaryInterfaceEffect {
 public:
     SSolidBlock blk;
     int whichBoundary;
-    string type;
+    string desc;
     
-    this(int id, int boundary, string _type) {
+    this(int id, int boundary, string description) {
         blk = solidBlocks[id];
         whichBoundary = boundary;
-        type = _type;
+        desc = description;
     }
     void postBCconstruction() {}
     abstract void apply(double t, int tLevel);

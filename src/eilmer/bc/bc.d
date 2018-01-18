@@ -80,7 +80,9 @@ public:
     // We may have a label for this specific boundary.
     string label;
     // We have a symbolic name for the type of boundary condition
-    // when thinking about the flow problem conceptually. 
+    // when thinking about the flow problem conceptually.
+    // Since BC's are composed of generic arrays of effects to be applied,
+    // we need a concise way to distinguish one boundary condition from another.
     string type;
     // Sometimes it is convenient to think of individual boundaries
     // grouped together.

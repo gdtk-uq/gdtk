@@ -159,13 +159,13 @@ class GhostCellEffect {
 public:
     FluidBlock blk;
     int which_boundary;
-    string type;
+    string desc;
 
-    this(int id, int boundary, string _type)
+    this(int id, int boundary, string description)
     {
         blk = globalFluidBlocks[id];
         which_boundary = boundary;
-        type = _type;
+        desc = description;
     }
     // Most ghost cell effects will not need to do anything
     // special after construction.

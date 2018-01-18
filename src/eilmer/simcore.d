@@ -196,14 +196,10 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     foreach (myblk; localFluidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
-                if (gce.type == "MappedCellCopy") {
-                    auto mygce = cast(GhostCellMappedCellCopy)gce;
-                    mygce.set_up_cell_mapping();
-                }
-                if (gce.type == "FullFaceCopy") {
-                    auto mygce = cast(GhostCellFullFaceCopy)gce;
-                    mygce.set_up_cell_mapping();
-                }
+                auto mygce1 = cast(GhostCellMappedCellCopy)gce;
+                if (mygce1) { mygce1.set_up_cell_mapping(); }
+                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
+                if (mygce2) { mygce2.set_up_cell_mapping(); }
             }
         }
     }
@@ -264,8 +260,9 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach (bc; myblk.bc) {
                 foreach (bfe; bc.postDiffFluxAction) {
-                    if (bfe.type == "EnergyFluxFromAdjacentSolid") {
-                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(bfe);
+                    auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
+                    if (mybfe) {
+                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
                         adjSolidBC.initGasCellsAndIFaces();
                         adjSolidBC.initSolidCellsAndIFaces();
                     }
@@ -276,8 +273,9 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
         foreach (myblk; localFluidBlocks) {
             foreach (bc; myblk.bc) {
                 foreach (bfe; bc.postDiffFluxAction) {
-                    if (bfe.type == "EnergyFluxFromAdjacentSolid") {
-                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(bfe);
+                    auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
+                    if (mybfe) {
+                        auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
                         adjSolidBC.initGasCellsAndIFaces();
                         adjSolidBC.initSolidCellsAndIFaces();
                     }

@@ -773,7 +773,7 @@ public:
     // The weighted least squares calculation is expecting the interface
     // at which the gradient is being calculated to be stored in position [0].
     // However the divergence calculation is expecting a specific ordering of
-    // the cloud points, as such we must reference the spatiail_deriv_calc type
+    // the cloud points, as such we must look up the spatial_deriv_calc type
     // to decide which cloud to use.
         size_t i, j, k;
         if (myConfig.dimensions == 2) {
