@@ -934,7 +934,7 @@ public:
                                 }
                             }
                         } // end foreach f
-                    } // end if gce.type
+                    } // end if (mygce)
                 } // end foreach gce
                 if (!found_mapped_cell_bc) {
                     // There are no other cells backing the ghost cells on this boundary.
