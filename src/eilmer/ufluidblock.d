@@ -33,6 +33,7 @@ import fvcell;
 import lsqinterp;
 import fluidblock;
 import bc;
+import ghost_cell_effect: GhostCellMappedCellCopy;
 
 class UFluidBlock: FluidBlock {
 public:
@@ -908,7 +909,8 @@ public:
             foreach (bcond; bc) {
                 bool found_mapped_cell_bc = false;
                 foreach (gce; bcond.preReconAction) {
-                    if (gce.type == "MappedCellCopy") {
+                    auto mygce = cast(GhostCellMappedCellCopy)gce;
+                    if (mygce) {
                         found_mapped_cell_bc = true;
                         // There is a mapped-cell backing the ghost cell, so we can copy its gradients.
                         foreach (i, f; bcond.faces) {
@@ -916,7 +918,7 @@ public:
                             // precomputed gradients.  There will be an initialized reference
                             // in the FVCell object of a structured-grid block, so we need to
                             // test and avoid copying from such a reference.
-                            auto mapped_cell_grad = gce.get_mapped_cell(i).gradients;
+                            auto mapped_cell_grad = mygce.get_mapped_cell(i).gradients;
                             if (bcond.outsigns[i] == 1) {
                                 if (mapped_cell_grad) {
                                     f.right_cell.gradients.copy_values_from(mapped_cell_grad);

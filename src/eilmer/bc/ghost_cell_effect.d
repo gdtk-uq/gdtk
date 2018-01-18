@@ -189,7 +189,6 @@ public:
     }
     abstract void apply_unstructured_grid(double t, int gtl, int ftl);
     abstract void apply_structured_grid(double t, int gtl, int ftl);
-    abstract ref FVCell get_mapped_cell(size_t i);
 } // end class GhostCellEffect
 
 class GhostCellInternalCopyThenReflect : GhostCellEffect {
@@ -203,11 +202,6 @@ public:
     override string toString() const 
     {
         return "InternalCopyThenReflect()";
-    }
-
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -415,11 +409,6 @@ public:
         return "flowStateCopy(fstate=" ~ to!string(fstate) ~ ")";
     }
 
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
-    }
-
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         FVCell ghost0;
@@ -531,11 +520,6 @@ public:
     {
         return format("flowStateCopyFromProfile(filename=\"%s\", match=\"%s\")",
                       fprofile.fileName, fprofile.posMatch);
-    }
-
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -676,11 +660,6 @@ public:
     override string toString() const 
     {
         return "ExtrapolateCopy(x_order=" ~ to!string(xOrder) ~ ")";
-    }
-
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -1205,11 +1184,6 @@ public:
         return "FixedP(p_outside=" ~ to!string(p_outside) ~ ")";
     }
 
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
-    }
-
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         FVCell src_cell, ghost0;
@@ -1353,11 +1327,6 @@ public:
     override string toString() const 
     {
         return "FixedPT(p_outside=" ~ to!string(p_outside) ~ ", T_outside=" ~ to!string(T_outside) ~")";
-    }
-
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -1606,11 +1575,6 @@ public:
             }
         }
     } // end set_velocity_components()
-
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
-    }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
@@ -2679,7 +2643,7 @@ public:
         }
     } // end set_up_cell_mapping()
     
-    override ref FVCell get_mapped_cell(size_t i)
+    ref FVCell get_mapped_cell(size_t i)
     {
         version(mpi_parallel) {
             // [TODO] PJ 2018-01-17 communication...
@@ -3023,7 +2987,7 @@ public:
         } // end foreach mygc
     } // end set_up_cell_mapping()
 
-    override ref FVCell get_mapped_cell(size_t i)
+    ref FVCell get_mapped_cell(size_t i)
     {
         version(mpi_parallel) {
             // [TODO] PJ 2018-01-17 communication...

@@ -54,11 +54,6 @@ public:
         return "UserDefinedGhostCellEffect(fname=" ~ luafname ~ ")";
     }
 
-    override ref FVCell get_mapped_cell(size_t i)
-    {
-        assert(0, "not implemented for this ghost_cell_effect");
-    }
-
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
         size_t j = 0, k = 0;
