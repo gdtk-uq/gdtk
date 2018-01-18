@@ -91,7 +91,8 @@ void main()
     ab.p0 = Vector3(0.0, 0.0, 0.0);
     ab.p1 = Vector3(1.0, 0.0, 0.0);
     c = Vector3(0.5, 0.5, 0.0);
-    double dist = ab.closestDistance(c);
+    double t;
+    double dist = ab.closestDistance(c, t);
     writeln("closest distance of point (0.5,0.5) to line (0.0,0.0) -> (1.0,0.0) is: ", dist);
     
     writeln("Done gpath_demo.");

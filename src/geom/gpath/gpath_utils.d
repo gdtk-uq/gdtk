@@ -30,11 +30,17 @@ void readPointsFromFile(string fileName, ref Vector3[] points)
 
 Bezier optimiseBezierPoints(string fileName, int nCtrlPts, ref double[] ts, int dim=2)
 {
-    double t;
     // Read in points.
     Vector3[] points;
     readPointsFromFile(fileName, points);
+    // call bezier optimiser
+    Bezier myBez = optimiseBezierPoints(points, nCtrlPts, ts);
+    return myBez;
+}
 
+Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, int dim=2)
+{
+    double t;
     // Check that there are more data points than
     // desired control points
     if (points.length < nCtrlPts) {
