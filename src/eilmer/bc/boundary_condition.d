@@ -1,11 +1,11 @@
-// bc/bc.d
+// bc/boundary_condition.d
 // Base class for boundary condition objects, for use in Eilmer4
 //
 // Peter J. 2014-07-20 : first cut.
 // RG & PJ  2015-12-03 : Decompose boundary conditions into lists of actions
 //    
 
-module bc;
+module bc.boundary_condition;
 
 import std.conv;
 import std.json;
@@ -28,11 +28,11 @@ import fvcell;
 import fluidblock;
 import sfluidblock;
 import fluxcalc;
-import ghost_cell_effect;
-import boundary_interface_effect;
-import boundary_cell_effect;
-import boundary_flux_effect;
-import user_defined_effects;
+import bc.ghost_cell_effect;
+import bc.boundary_interface_effect;
+import bc.boundary_cell_effect;
+import bc.boundary_flux_effect;
+import bc.user_defined_effects;
 import lua_helper;
 import grid_motion;
 

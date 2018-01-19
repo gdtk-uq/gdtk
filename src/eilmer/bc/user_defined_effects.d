@@ -13,6 +13,8 @@
 // using the file name that it possesses.  Thus, you need to have
 // all of your user-defined effects within the one file.
 
+module bc.user_defined_effects;
+
 import std.string;
 import std.stdio;
 import util.lua;
@@ -29,9 +31,6 @@ import fvinterface;
 import sfluidblock: SFluidBlock;
 import globalconfig;
 import globaldata;
-import ghost_cell_effect;
-import boundary_interface_effect;
-import boundary_flux_effect;
 import luaflowstate;
 import bc;
 
@@ -713,4 +712,4 @@ private:
         lua_settop(L, 0);
     }
 
-} // end class UserDefinedFluxEffect
+} // end class BFE_UserDefined

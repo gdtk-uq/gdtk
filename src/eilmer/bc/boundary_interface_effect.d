@@ -6,7 +6,7 @@
 //    the break-up of the Fixed_T boundary condition.
 //
 
-module boundary_interface_effect;
+module bc.boundary_interface_effect;
 
 import std.json;
 import std.string;
@@ -25,11 +25,11 @@ import fvcell;
 import fluidblock;
 import sfluidblock;
 import gas;
-import user_defined_effects;
+import bc;
 import solidfvcell;
 import solidfvinterface;
 import gas_solid_interface;
-import bc;
+
 
 BoundaryInterfaceEffect make_BIE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {

@@ -24,8 +24,7 @@ import bc;
 import fluidblock;
 import sfluidblock;
 import geom;
-import boundary_flux_effect;
-import ghost_cell_effect;
+
 
 int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
     size_t i, j, k;

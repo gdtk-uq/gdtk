@@ -80,8 +80,19 @@ ifneq ($(TECPLOT_BIN_DIR), unavailable)
 endif
 
 
-BC_FILES := bc/bc.d \
-	bc/ghost_cell_effect.d \
+BC_FILES := bc/package.d \
+	bc/boundary_condition.d \
+	bc/ghost_cell_effect/package.d \
+	bc/ghost_cell_effect/ghost_cell.d \
+	bc/ghost_cell_effect/internal_copy_then_reflect.d \
+	bc/ghost_cell_effect/flow_state_copy.d \
+	bc/ghost_cell_effect/flow_state_copy_from_profile.d \
+	bc/ghost_cell_effect/extrapolate_copy.d \
+	bc/ghost_cell_effect/fixed_p.d \
+	bc/ghost_cell_effect/fixed_pt.d \
+	bc/ghost_cell_effect/from_stagnation.d \
+	bc/ghost_cell_effect/full_face_copy.d \
+	bc/ghost_cell_effect/mapped_cell_copy.d \
 	bc/user_defined_effects.d \
 	bc/boundary_flux_effect.d \
 	bc/boundary_cell_effect.d \

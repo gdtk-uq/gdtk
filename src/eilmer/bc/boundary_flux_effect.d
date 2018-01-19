@@ -1,5 +1,5 @@
 /**
- * boundary_flux_effct.d
+ * boundary_flux_effect.d
  *
  * Authors: RG and PJ
  * Date: 2015-05-07
@@ -7,7 +7,7 @@
  * Date: 2015-11-10
  **/
 
-module boundary_flux_effect;
+module bc.boundary_flux_effect;
 
 import std.stdio;
 import std.json;
@@ -29,7 +29,7 @@ import solidfvinterface;
 import gas_solid_interface;
 import flowstate;
 import gas;
-import user_defined_effects;
+import bc;
 import flowgradients;
 
 BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int boundary)

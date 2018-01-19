@@ -6,6 +6,8 @@
  * Date: 2017-07-20
  */
 
+module bc.boundary_cell_effect;
+
 import std.json;
 import std.string;
 

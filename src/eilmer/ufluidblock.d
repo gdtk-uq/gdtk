@@ -33,7 +33,7 @@ import fvcell;
 import lsqinterp;
 import fluidblock;
 import bc;
-import ghost_cell_effect: GhostCellMappedCellCopy;
+
 
 class UFluidBlock: FluidBlock {
 public:
