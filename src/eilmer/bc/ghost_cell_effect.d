@@ -9,6 +9,10 @@ import std.stdio;
 import std.math;
 import std.file;
 import std.algorithm;
+version(mpi_parallel) {
+    import mpi;
+    import mpi.util;
+}
 
 import geom;
 import json_helper;
@@ -155,11 +159,29 @@ GhostCellEffect make_GCE_from_json(JSONValue jsonData, int blk_id, int boundary)
     return newGCE;
 }
 
+// ----------------------------------------------------------------------------------
+// MPI-specific services.
+
+int make_mpi_tag(int blk_id, int bndry_id)
+{
+    return blk_id*1000 + bndry_id;
+}
+
+// ----------------------------------------------------------------------------------
+
 class GhostCellEffect {
 public:
     FluidBlock blk;
     int which_boundary;
     string desc;
+    //
+    version(mpi_parallel) {
+        // Buffers for the exchange of messages/data.
+        int[] outgoing_int_buf;
+        int[] incoming_int_buf;
+        double[] outgoing_double_buf;
+        double[] incoming_double_buf;
+    }
 
     this(int id, int boundary, string description)
     {
@@ -1944,6 +1966,7 @@ public:
     } // end apply()
 } // end class GhostCellFixedStagnationPT
 
+
 class GhostCellFullFaceCopy : GhostCellEffect {
 public:
     FluidBlock neighbourBlock;
@@ -1952,11 +1975,18 @@ public:
     bool reorient_vector_quantities;
     double[] Rmatrix;
     // For each ghost cell associated with the boundary,
-    // we will have a corresponding "mapped cell" from which we will copy
-    // the flow conditions.
+    // we will have a corresponding "mapped" or "source" cell
+    // from which we will copy the flow conditions.
     FVCell[] ghost_cells;
     FVCell[] mapped_cells;
     size_t[] mapped_cell_ids;
+    version(mpi_parallel) {
+        // This GhostCellEffect is somewhat symmetric in that for each ghost-cell
+        // source-cell mapping, there should be a corresponding mapping over in
+        // the other source block so these the cells in the current block
+        // for which data should be sent to the source block.
+        size_t[] outgoing_mapped_cell_ids;
+    }
 
     this(int id, int boundary,
          int otherBlock, int otherFace, int orient,
@@ -2627,7 +2657,73 @@ public:
         } // end if dimensions == ...
         //
         version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
+            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
+                // The source block is in another MPI process, go fetch the data via messages.
+                //
+                // For this particular GhostCellEffect, we are expecting somewhat symmetric
+                // interaction with the other MPI process.  This block has to receive
+                // a list of mapped source cells from the other block and it has to send its own
+                // list of mapped source cells from which it wants geometry and flow data.
+                //
+                // Post non-blocking receive for data that we expect to receive later
+                // from the src_blk MPI process.
+                size_t ne = ghost_cells.length;
+                if (incoming_int_buf.length < ne) { incoming_int_buf.length = ne; }
+                int tag = make_mpi_tag(src_blk.id, src_face);
+                int src_blk_rank = GlobalConfig.mpi_rank_for_block[src_blk.id];
+                int dest_blk_rank = GlobalConfig.mpi_rank_for_local_task;
+                MPI_Request my_request;
+                MPI_Status my_status;
+                MPI_Irecv(incoming_int_buf.ptr, to!int(ne), MPI_INT, src_blk_rank, tag,
+                          MPI_COMM_WORLD, &my_request);
+                debug {
+                    writeln("read posted by rank=", dest_blk_rank,
+                            " blk=", dest_blk.id, " bndry=", which_boundary,
+                            " src_blk=", src_blk.id, " src_face=", src_face);
+                }
+                // Blocking send to corresponding non-blocking receive that was posted
+                // at in src_blk MPI process.
+                assert(ne == mapped_cell_ids.length, "oops, wrong length");
+                if (outgoing_int_buf.length < ne) { outgoing_int_buf.length = ne; }
+                tag = make_mpi_tag(dest_blk.id, destination_face);
+                foreach (i; 0 .. ne) { outgoing_int_buf[i] = to!int(mapped_cell_ids[i]); }
+                MPI_Send(outgoing_int_buf.ptr, to!int(ne), MPI_INT, src_blk_rank, tag, MPI_COMM_WORLD);
+                debug {
+                    writeln("send finished by rank=", dest_blk_rank,
+                            " blk=", dest_blk.id, " bndry=", which_boundary,
+                            " src_blk=", src_blk.id, " src_face=", src_face);
+                }
+                // Wait for non-blocking receive to complete.
+                // Once complete, copy the data back into the local context.
+		MPI_Wait(&my_request, &my_status);
+                debug {
+                    writeln("receive OK by rank=", dest_blk_rank,
+                            " blk=", dest_blk.id, " bndry=", which_boundary,
+                            " src_blk=", src_blk.id, " src_face=", src_face);
+                }
+                outgoing_mapped_cell_ids.length = ne;
+                foreach (i; 0 .. ne) { outgoing_mapped_cell_ids[i] = to!size_t(incoming_int_buf[i]); }
+                debug {
+                    foreach (i; 0 .. ne) {
+                        writeln("  rank=", dest_blk_rank, " blk=", dest_blk.id, " bndry=", which_boundary,
+                                " outgoing_mapped_cell_ids[", i, "]=", outgoing_mapped_cell_ids[i]);
+                    }
+                }
+                //
+                // ////////////////////////////////////////////////////////////////////////////
+                // [TODO] PJ 2018-01-19 we're not done with this MPI code -- geometry data now.
+                // ////////////////////////////////////////////////////////////////////////////
+                //
+            } else {
+                // The source block happens to be in this MPI process so
+                // we know that we can just access the source-cell data directly.
+                foreach (i; 0 .. ghost_cells.length) {
+                    mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
+                }
+                foreach (i; 0 .. ghost_cells.length) {
+                    ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
+                }
+            }
         } else {
             // For a single process,
             // we know that we can just access the data directly.
@@ -2822,8 +2918,6 @@ public:
         // Stage 2 -- get references to map cells,
         // but only if the source block is in localFluidBlocks.
         //
-        int[] localBlockIds; foreach (b; localFluidBlocks) { localBlockIds ~= b.id; }
-        //
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid: 
             BoundaryCondition bc = blk.bc[which_boundary];
@@ -2833,7 +2927,7 @@ public:
                 ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
                 int mapped_cell_blk_id = mapped_cells_list[faceTag][0];
                 int mapped_cell_id = mapped_cells_list[faceTag][1];
-                if (!find(localBlockIds, mapped_cell_blk_id).empty) {
+                if (!find(GlobalConfig.localBlockIds, mapped_cell_blk_id).empty) {
                     mapped_cells ~= globalFluidBlocks[mapped_cell_blk_id].cells[mapped_cell_id];
                 } else {
                     throw new FlowSolverException(format("block id %d is not in localFluidBlocks",

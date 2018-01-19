@@ -53,6 +53,10 @@ version (opencl_gpu_chem) {
 version (cuda_gpu_chem) {
     import cuda_gpu_chem;       
 }
+version(mpi_parallel) {
+    import mpi;
+    import mpi.util;
+}
 
 // State data for simulation.
 // Needs to be seen by all of the coordination functions.
@@ -92,7 +96,9 @@ static int maxWallClockSeconds;
 
 void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock)
 {
-    if (GlobalConfig.verbosity_level > 0) { writeln("Begin init_simulation()..."); }
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+        writeln("Begin init_simulation()...");
+    }
     maxWallClockSeconds = maxWallClock;
     wall_clock_start = Clock.currTime();
     read_config_file();  // most of the configuration is in here
@@ -120,11 +126,13 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
         }
     }
     auto job_name = GlobalConfig.base_file_name;
-    if (GlobalConfig.nFluidBlocks == 0) {
+    if (GlobalConfig.nFluidBlocks == 0 && GlobalConfig.is_master_task) {
         throw new FlowSolverException("No FluidBlocks; no point in continuing to initialize simulation.");
     }
     version(mpi_parallel) {
-        // Assign fluid blocks to MPI tasks.
+        // Assign particular fluid blocks to this MPI task and keep a record
+        // of the MPI rank for all blocks.
+        int my_rank = GlobalConfig.mpi_rank_for_local_task;
         GlobalConfig.mpi_rank_for_block.length = GlobalConfig.nFluidBlocks;
         auto lines = readText(job_name ~ ".mpimap").splitLines();
         foreach (line; lines) {
@@ -133,14 +141,15 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
             auto tokens = content.split();
             int blkid = to!int(tokens[0]);
             int taskid = to!int(tokens[1]);
-            writeln("rank=", GlobalConfig.mpi_rank_for_local_task, " blkid=", blkid, " taskid=", taskid);
             GlobalConfig.mpi_rank_for_block[blkid] = taskid;
+            if (taskid == my_rank) { localFluidBlocks ~= globalFluidBlocks[blkid]; }
         }
-        // [TODO] PJ 2018-01-16 Assign some blocks local.
     } else {
         // There is only one process and it deals with all blocks.
         foreach (blk; globalFluidBlocks) { localFluidBlocks ~= blk; }
     }
+    foreach (blk; localFluidBlocks) { GlobalConfig.localBlockIds ~= blk.id; }
+    //
     // Local blocks may be handled with thread-parallelism.
     auto nBlocksInThreadParallel = max(localFluidBlocks.length, GlobalConfig.nSolidBlocks);
     // There is no need to have more task threads than blocks local to the process.
@@ -148,11 +157,13 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
     if (GlobalConfig.verbosity_level > 0) {
         version(mpi_parallel) {
-            writeln("MPI-task with rank ", GlobalConfig.mpi_rank_for_local_task,
-                    " running with ", nThreadsInPool+1, " threads.");
+            writeln("MPI-task with rank ", my_rank, " running with ", nThreadsInPool+1, " threads.");
+            debug {
+                foreach (blk; localFluidBlocks) { writeln("rank=", my_rank, " blk.id=", blk.id); }
+            }
         } else {
             writeln("Single process running with ", nThreadsInPool+1, " threads.");
-            // Remember +1 for main thread.
+            // Remember the +1 for the main thread.
         }
     }
     // At this point, note that we initialize the grid and flow arrays for blocks
