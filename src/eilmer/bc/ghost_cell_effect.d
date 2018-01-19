@@ -1963,9 +1963,6 @@ public:
          bool reorient_vector_quantities,
          ref const(double[]) Rmatrix)
     {
-        version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
-        }
         super(id, boundary, "FullFaceCopy");
         neighbourBlock = globalFluidBlocks[otherBlock];
         neighbourFace = otherFace;
@@ -2645,10 +2642,11 @@ public:
     
     ref FVCell get_mapped_cell(size_t i)
     {
-        version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
+        if (i < mapped_cells.length) {
+            return mapped_cells[i];
+        } else {
+            throw new FlowSolverException(format("Reference to requested mapped-cell[%d] is not available.", i));
         }
-        return mapped_cells[i];
     }
 
     override void apply_unstructured_grid(double t, int gtl, int ftl)
@@ -2678,11 +2676,19 @@ public:
     }
 } // end class GhostCellFullFaceCopy
 
+
 class GhostCellMappedCellCopy : GhostCellEffect {
 public:
     // For each ghost cell associated with the boundary,
-    // we will have a corresponding "mapped cell" from which we will copy
-    // the flow conditions.
+    // we will have a corresponding "mapped cell"
+    // from which we will copy the flow conditions.
+    //
+    // This boundary condition may be used in an MPI-parallel simulation
+    // but there is a restriction that the mapped-cell must be in a block
+    // that is also in the localFluidBlocks array.
+    //
+    // [TODO] PJ 2017-01-19 Some day, remove the restriction mentioned above.
+    //
     FVCell[] ghost_cells;
     FVCell[] mapped_cells;
     // Parameters for the calculation of the mapped-cell location.
@@ -2708,9 +2714,6 @@ public:
          bool reorient_vector_quantities,
          ref const(double[]) Rmatrix)
     {
-        version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
-        }
         super(id, boundary, "MappedCellCopy");
         this.cell_mapping_from_file = cell_mapping_from_file;
         this.mapped_cells_filename = mapped_cells_filename;
@@ -2755,9 +2758,6 @@ public:
 
     void set_up_cell_mapping_from_file()
     {
-        version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
-        }
         string makeFaceTag(const size_t[] node_id_list)
         {
             // We make a tag for this face out of the vertex id numbers
@@ -2780,11 +2780,14 @@ public:
             return tag;
         }
         int[2][string] mapped_cells_list; // list of cells to be mapped to ghost cells,
-                                          // referenced by the neighbour cells id. 
+                                          // referenced by the neighbour cells id.
+        //
         // Stage 1 -- read mapped_cells file
+        //
         if (!exists(mapped_cells_filename)) {
-            assert(0, "mapped_cells file does not exist.");
-        } // else if the file exists
+            throw new FlowSolverException(format("mapped_cells file %s does not exist.",
+                                                 mapped_cells_filename));
+        }
         auto f = File(mapped_cells_filename, "r");
         string getHeaderContent(string target)
         // Helper function to proceed through file, line-by-line,
@@ -2815,25 +2818,26 @@ public:
             mapped_cell[1] = secondary_cell_id;
             mapped_cells_list[faceTag] = mapped_cell;
         }
-        // Stage 2 -- map cells
+        //
+        // Stage 2 -- get references to map cells,
+        // but only if the source block is in localFluidBlocks.
+        //
+        int[] localBlockIds; foreach (b; localFluidBlocks) { localBlockIds ~= b.id; }
+        //
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid: 
             BoundaryCondition bc = blk.bc[which_boundary];
             foreach (i, face; bc.faces) {
-                size_t[] my_vtx_list;
-                foreach(vtx; face.vtx)
-                    my_vtx_list ~= vtx.id;
+                size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
                 string faceTag =  makeFaceTag(my_vtx_list);
-                if (bc.outsigns[i] == 1) {
-                    ghost_cells ~= face.right_cell;
-                    int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
-                    int ghost_cell_id = mapped_cells_list[faceTag][1];
-                    mapped_cells ~= globalFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+                ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
+                int mapped_cell_blk_id = mapped_cells_list[faceTag][0];
+                int mapped_cell_id = mapped_cells_list[faceTag][1];
+                if (!find(localBlockIds, mapped_cell_blk_id).empty) {
+                    mapped_cells ~= globalFluidBlocks[mapped_cell_blk_id].cells[mapped_cell_id];
                 } else {
-                    ghost_cells ~= face.left_cell;
-                    int ghost_cell_blk_id = mapped_cells_list[faceTag][0];
-                    int ghost_cell_id = mapped_cells_list[faceTag][1];
-                    mapped_cells ~= globalFluidBlocks[ghost_cell_blk_id].cells[ghost_cell_id];
+                    throw new FlowSolverException(format("block id %d is not in localFluidBlocks",
+                                                         mapped_cell_blk_id));
                 }
                 if (list_mapped_cells) {
                     writeln("    ghost-cell-pos=", to!string(ghost_cells[$-1].pos[0]), 
@@ -2845,7 +2849,7 @@ public:
         case Grid_t.structured_grid:
             throw new Error("mapped cells from file not implemented for structured grids");
         }
-    }
+    } // end set_up_cell_mapping_from_file()
     
     void set_up_cell_mapping_via_search()
     {
@@ -2855,7 +2859,12 @@ public:
         // Needs to be called after the cell geometries have been computed,
         // because the search sifts through the cells in blocks
         // that happen to be in the local process.
+        //
         // The search does not extend to cells in blocks in other MPI tasks.
+        // If a search for the enclosing cell fails in the MPI context,
+        // we will throw an exception rather than continuing the search
+        // for the nearest cell.
+        //
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid: 
             BoundaryCondition bc = blk.bc[which_boundary];
@@ -2961,6 +2970,14 @@ public:
                     break;
                 }
             }
+            version (mpi_parallel) {
+                if (!found && GlobalConfig.in_mpi_context) {
+                    string msg = "MappedCellCopy: search for mapped cell did not find an enclosing cell\n";
+                    msg ~= "  at position " ~ to!string(mypos) ~ "\n";
+                    msg ~= "  This may be because the appropriate cell is not in localFluidBlocks array.\n";
+                    throw new FlowSolverException(msg);
+                }
+            }
             if (!found) {
                 // Fall back to nearest cell search.
                 FVCell closest_cell = localFluidBlocks[0].cells[0];
@@ -2989,17 +3006,15 @@ public:
 
     ref FVCell get_mapped_cell(size_t i)
     {
-        version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
+        if (i < mapped_cells.length) {
+            return mapped_cells[i];
+        } else {
+            throw new FlowSolverException(format("Reference to requested mapped-cell[%d] is not available.", i));
         }
-        return mapped_cells[i];
     }
     
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
-        }
         foreach (i; 0 .. ghost_cells.length) {
             ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
             ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
@@ -3014,9 +3029,6 @@ public:
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        version(mpi_parallel) {
-            // [TODO] PJ 2018-01-17 communication...
-        }
         foreach (i; 0 .. ghost_cells.length) {
             ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
             ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
