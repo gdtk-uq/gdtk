@@ -4,6 +4,9 @@
  * Author: Kyle Damm
  * First code: 2017-03-17
  * Edits by Will Landsberg and Tim Cullen
+ * 
+ * 2018-01-20 Some code clean up by PJ;
+ * [TODO] more is needed for MPI context.
  */
 
 module loads;
@@ -35,27 +38,20 @@ import bc;
 
 string loadsDir = "loads";
 
-void init_loads_dir()
-{
-    ensure_directory_is_present(loadsDir);
-}
-
 void init_loads_times_file()
 {
-    string fname = "loads/" ~ GlobalConfig.base_file_name ~ "-loads.times";
-    auto f = File(fname, "w");
-    f.write("# 1:loads_index 2:sim_time\n");
+    string fname = loadsDir ~ "/" ~ GlobalConfig.base_file_name ~ "-loads.times";
+    std.file.write(fname, "# 1:loads_index 2:sim_time\n");
 }
 
 void update_loads_times_file(double sim_time, int current_loads_tindx)
 {
-    auto writer = appender!string();
-    formattedWrite(writer, "%04d %.18e \n", current_loads_tindx, sim_time);
-    append("loads/" ~ GlobalConfig.base_file_name ~ "-loads.times", writer.data);
+    string fname = loadsDir ~ "/" ~ GlobalConfig.base_file_name ~ "-loads.times";
+    std.file.append(fname, format("%04d %.18e \n", current_loads_tindx, sim_time));
 }
 
 void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
-    foreach (blk; localFluidBlocks) { //foreach (blk; parallel(localFluidBlocks,1)) {
+    foreach (blk; localFluidBlocks) {
         if (blk.active) {
             final switch (blk.grid_type) {
             case Grid_t.unstructured_grid: 
@@ -70,38 +66,36 @@ void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
             } // end final switch
         } // if (blk.active)
     } // end foreach
-} // end write_boundary_loads_to_file
+} // end write_boundary_loads_to_file()
 
-string generate_boundary_load_file(int current_loads_tindx, double sim_time, string group) {
+string generate_boundary_load_file(int current_loads_tindx, double sim_time, string group)
+{
     // generate data file -- naming format tindx_groupname.dat
-    string fname = format("%s/t%04d-%s.dat", 
-                          loadsDir, current_loads_tindx, group);
+    string fname = format("%s/t%04d-%s.dat", loadsDir, current_loads_tindx, group);
     // check if file exists already, if not create file
     if (!exists(fname)) {
         auto f = File(fname, "w");
         f.writeln("# t = ", sim_time);
-        f.write("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma 11:n.x 12:n.y 13:n.z 14:T 15:Re_wall 16:y+ 17:cellWidthNormalToSurface\n ");
+        f.writeln("# 1:pos.x 2:pos.y 3:pos.z 4:area 5:q 6:tau 7:l_tau 8:m_tau 9:n_tau 10:sigma "~
+                  "11:n.x 12:n.y 13:n.z 14:T 15:Re_wall 16:y+ 17:cellWidthNormalToSurface");
         f.close();
     }
     return fname;
-}
+} // end generate_boundary_load_file()
 
-void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads_tindx) {
+void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads_tindx)
+{
     foreach (bndary; blk.bc) {
         if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
             string fname = generate_boundary_load_file(current_loads_tindx, sim_time, bndary.group);
-                foreach (i, iface; bndary.faces) {
-                        double cellWidthNormalToSurface;                        
-                        if (bndary.outsigns[i] == 1) {
-                        cellWidthNormalToSurface = iface.left_cell.L_min;
-                        } else {
-                        cellWidthNormalToSurface = iface.right_cell.L_min;
-                        }
-                        compute_and_store_loads(iface, cellWidthNormalToSurface, sim_time, fname);
-                } // end foreach face
-        } // end foreach (iface; bndary.faces)
-    } // end if (bndary.group != "")
-} // foreach (bndary; blk.bc)
+            foreach (i, iface; bndary.faces) {
+                // cell width normal to surface
+                double w = (bndary.outsigns[i] == 1) ? iface.left_cell.L_min : iface.right_cell.L_min;
+                compute_and_store_loads(iface, w, sim_time, fname);
+            }
+        }
+    }
+} // end apply_unstructured_grid()
 
 void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
@@ -179,9 +173,9 @@ void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_t
                 } // end for i
                 break;
             } // end switch which_boundary
-        }
-    }
-}
+        } // end if
+    } // end foreach
+} // end apply_structured_grid()
 
 void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface, double sim_time, string fname)
 {
@@ -253,5 +247,5 @@ void compute_and_store_loads(FVInterface iface, double cellWidthNormalToSurface,
     // store in file
     auto writer = format("%e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
                          iface.pos.x, iface.pos.y, iface.pos.z, iface.area[0], q, tau_wall, l_tau, m_tau, n_tau, sigma_wall, nx, ny, nz, T_wall, Re_wall, y_plus, cellWidthNormalToSurface);
-    append(fname, writer);    
+    std.file.append(fname, writer);    
 } // end compute_and_store_loads()

@@ -255,8 +255,9 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     init_history_cell_files();
     //
     // create the loads directory, maybe
-    if (GlobalConfig.compute_loads && (current_loads_tindx == 0) && GlobalConfig.is_master_task) {
-        init_loads_dir();
+    if (GlobalConfig.compute_loads && (current_loads_tindx == 0)) {
+        if (GlobalConfig.is_master_task) { ensure_directory_is_present("loads"); }
+        version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         init_loads_times_file();
     }
     version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
@@ -441,10 +442,8 @@ void integrate_in_time(double target_time_as_requested)
 {
     ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
                                                                  GlobalConfig.gmodel_master.n_modes);
-    ///////////////////////////////////////////////////////////////////////
-    // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel. //
-    ///////////////////////////////////////////////////////////////////////
-    if (GlobalConfig.verbosity_level > 0) {
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Integrate in time.");
         stdout.flush();
     }
@@ -478,6 +477,12 @@ void integrate_in_time(double target_time_as_requested)
     //
     local_dt_allow.length = localFluidBlocks.length; // prepare array for use
     local_invalid_cell_count.length = localFluidBlocks.length;
+    //
+    ///////////////////////////////////////////////////////////////////////
+    // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel. //
+    ///////////////////////////////////////////////////////////////////////
+    //    
+    //
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
     shared bool finished_time_stepping = (sim_time >= target_time) || (step >= GlobalConfig.max_step);
