@@ -297,13 +297,14 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     // We conditionally sort the local blocks, based on numbers of cells,
     // in an attempt to balance the load for shared-memory parallel runs.
     localFluidBlocksBySize.length = 0;
-    if (GlobalConfig.block_marching) {
+    if (GlobalConfig.block_marching || localFluidBlocks.length < 2) {
         // Keep the original block order, else we stuff up block-marching.
+        // No point in sorting if there is only one local block.
         foreach (blk; localFluidBlocks) { localFluidBlocksBySize ~= blk; }
     } else {
         // We simply use the cell count as an estimate of load.
         Tuple!(int,int)[] blockLoads;
-        blockLoads.length = GlobalConfig.nFluidBlocks;
+        blockLoads.length = localFluidBlocks.length;
         foreach (iblk, blk; localFluidBlocks) {
             // Here 'iblk' is equal to the local-to-process id of the block.
             blockLoads[iblk] = tuple(to!int(iblk), to!int(localFluidBlocks[iblk].cells.length)); 
@@ -335,7 +336,11 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
 
 void write_solution_files()
 {
-    if (GlobalConfig.verbosity_level > 0) { writeln("Write flow solution."); }
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+        writeln("Write flow solution.");
+        stdout.flush();
+    }
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     current_tindx = current_tindx + 1;
     ensure_directory_is_present(make_path_name!"flow"(current_tindx));
     auto job_name = GlobalConfig.base_file_name;
@@ -475,13 +480,8 @@ void integrate_in_time(double target_time_as_requested)
         myblk.myConfig.viscous_factor = GlobalConfig.viscous_factor; 
     }
     //
-    local_dt_allow.length = localFluidBlocks.length; // prepare array for use
+    local_dt_allow.length = localFluidBlocks.length; // prepare array for use later
     local_invalid_cell_count.length = localFluidBlocks.length;
-    //
-    ///////////////////////////////////////////////////////////////////////
-    // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel. //
-    ///////////////////////////////////////////////////////////////////////
-    //    
     //
     // Normally, we can terminate upon either reaching 
     // a maximum time or upon reaching a maximum iteration count.
@@ -543,19 +543,30 @@ void integrate_in_time(double target_time_as_requested)
             // Check occasionally 
             do_cfl_check_now = true;
         } // end if step == 0
+        version(mpi_parallel) {
+            // If one task is doing a time-step check, all tasks have to.
+            bool myFlag = do_cfl_check_now;
+            MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
+            do_cfl_check_now = myFlag;
+        }
         if (do_cfl_check_now) {
             // Adjust the time step...
             //
             // First, check what each block thinks should be the allowable step size.
             foreach (i, myblk; parallel(localFluidBlocksBySize,1)) {
-                // Note 'i' is not necessarily the block id.
-                // Not important here, just need a unique spot to poke into local_dt_allow.
+                // Note 'i' is not necessarily the block id but
+                // that is not important here, just need a unique spot to poke into local_dt_allow.
                 if (myblk.active) { local_dt_allow[i] = myblk.determine_time_step_size(dt_global); }
             }
-            // Second, reduce this estimate across all blocks.
+            // Second, reduce this estimate across all local blocks.
             dt_allow = double.max; // to be sure it is replaced.
             foreach (i, myblk; localFluidBlocks) { // serial loop
                 if (myblk.active) { dt_allow = min(dt_allow, local_dt_allow[i]); } 
+            }
+            version(mpi_parallel) {
+                double my_dt_allow = dt_allow;
+                MPI_Allreduce(MPI_IN_PLACE, &my_dt_allow, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                dt_allow = my_dt_allow;
             }
             // Now, change the actual time step, as needed.
             if (dt_allow <= dt_global) {
@@ -582,6 +593,11 @@ void integrate_in_time(double target_time_as_requested)
                     GlobalConfig.c_h = fmin(blk.update_c_h(dt_global), GlobalConfig.c_h);
                 }
             }
+            version(mpi_parallel) {
+                double my_c_h = GlobalConfig.c_h;
+                MPI_Allreduce(MPI_IN_PLACE, &my_c_h, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                GlobalConfig.c_h = my_c_h;
+            }
         } // end if (GlobalConfig.divergence_cleaning)
 
         // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
@@ -603,6 +619,11 @@ void integrate_in_time(double target_time_as_requested)
         // 2a. Moving Grid - let's start by calculating vertex velocties
         //     if GridMotion.none then set_grid_velocities to 0 m/s
         //     else moving grid vertex velocities will be set.
+            //
+            ///////////////////////////////////////////////////////////////////////
+            // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel. //
+            ///////////////////////////////////////////////////////////////////////
+            //
         set_grid_velocities(sim_time, step, 0, dt_global);
         //
         // 2b. Explicit or implicit update of the convective terms.
@@ -664,7 +685,11 @@ void integrate_in_time(double target_time_as_requested)
             double WCtMS = (GlobalConfig.max_step - step) * wall_clock_per_step;
             formattedWrite(writer, "WC=%.1f WCtFT=%.1f WCtMS=%.1f", 
                            wall_clock_elapsed, WCtFT, WCtMS);
-            if (GlobalConfig.verbosity_level > 0) { writeln(writer.data); }
+            if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+                writeln(writer.data);
+                stdout.flush();
+            }
+            version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
             if (GlobalConfig.report_residuals) {
                 // We also compute the residual information and write to screen
                 auto wallClock2 = 1.0e-3*(Clock.currTime() - wall_clock_start).total!"msecs"();
@@ -678,6 +703,7 @@ void integrate_in_time(double target_time_as_requested)
                 writeln(writer2.data);
             }
             stdout.flush();
+            version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         }
 
         // 4. (Occasionally) Write out an intermediate solution
@@ -723,41 +749,50 @@ void integrate_in_time(double target_time_as_requested)
         //    Note that the max_time and max_step control parameters can also
         //    be found in the control-parameter file (which may be edited
         //    while the code is running).
-        if (sim_time >= target_time) {
-            finished_time_stepping = true;
-            if(GlobalConfig.verbosity_level >= 1)
-                writefln("Integration stopped: reached target simulation time of %g seconds.", target_time);
-        }
-        if (step >= GlobalConfig.max_step) {
-            finished_time_stepping = true;
-            if (GlobalConfig.verbosity_level >= 1)
-                writefln("Integration stopped: reached maximum number of steps with step=%d.", step);
-        }
-        if (GlobalConfig.halt_now == 1) {
-            finished_time_stepping = true;
-            if (GlobalConfig.verbosity_level >= 1)
-                writeln("Integration stopped: Halt set in control file.");
-        }
+        if (sim_time >= target_time) { finished_time_stepping = true; }
+        if (step >= GlobalConfig.max_step) { finished_time_stepping = true; }
+        if (GlobalConfig.halt_now == 1) { finished_time_stepping = true; }
         auto wall_clock_elapsed = (Clock.currTime() - wall_clock_start).total!"seconds"();
         if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
             finished_time_stepping = true;
-            if (GlobalConfig.verbosity_level >= 1)
-                writefln("Integration stopped: reached maximum wall-clock time with elapsed time %s.",
-                         to!string(wall_clock_elapsed));
+        }
+        version(mpi_parallel) {
+            // If one task is finished time-stepping, all tasks have to finish.
+            myFlag = finished_time_stepping;
+            MPI_Allreduce(MPI_IN_PLACE, &myFlag, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD);
+            finished_time_stepping = myFlag;
+        }
+        if(finished_time_stepping && GlobalConfig.verbosity_level >= 1 && GlobalConfig.is_master_task) {
+            // Make an announcement about why we are finishing time-stepping.
+            write("Integration stopped: "); 
+            if (sim_time >= target_time) { writefln("Reached target simulation time of %g seconds.", target_time); }
+            if (step >= GlobalConfig.max_step) { writefln("Reached maximum number of steps with step=%d.", step); }
+            if (GlobalConfig.halt_now == 1) { writeln("Halt set in control file."); }
+            if (maxWallClockSeconds > 0 && (wall_clock_elapsed > maxWallClockSeconds)) {
+                writefln("Reached maximum wall-clock time with elapsed time %s.", to!string(wall_clock_elapsed));
+            }
+            stdout.flush();
         }
     } // end while !finished_time_stepping
 
-    if (GlobalConfig.verbosity_level > 0) writeln("Done integrate_in_time().");
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+        writeln("Done integrate_in_time().");
+        stdout.flush();
+    }
     return;
 } // end integrate_in_time()
 
 void finalize_simulation()
 {
-    if (GlobalConfig.verbosity_level > 0) { writeln("Finalize the simulation."); }
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
+        writeln("Finalize the simulation.");
+    }
     if (!output_just_written) { write_solution_files(); }
     if (!history_just_written) { write_history_cells_to_files(sim_time); }
     GC.collect();
-    if (GlobalConfig.verbosity_level > 0) { writeln("Step= ", step, " final-t= ", sim_time); }
+    if (GlobalConfig.verbosity_level > 0  && GlobalConfig.is_master_task) {
+        writeln("Step= ", step, " final-t= ", sim_time);
+    }
 } // end finalize_simulation()
 
 //---------------------------------------------------------------------------
@@ -779,6 +814,10 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
             assign_vertex_velocities_via_udf(sim_time, dt_global);
             break;
         case GridMotion.shock_fitting:
+            if (GlobalConfig.in_mpi_context) {
+                throw new Error("oops, should not be doing shock fitting in MPI.");
+                // [TODO] 2018-01-20 PJ should do something to lift this restriction.
+            }
             // apply boundary conditions here because ...
             // shockfitting algorithm requires ghost cells to be up to date.
             foreach (blk; localFluidBlocksBySize) {
@@ -896,8 +935,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
         }
     } // end if viscous
-    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-        auto i = blk.id;
+    foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
         if (!blk.active) continue;
         int local_ftl = ftl;
         int local_gtl = gtl;
@@ -921,8 +959,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
     } // end foreach blk
-    foreach (blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
-        auto i = blk.id;
+    //
+    // [TODO] 2018-01-20 PJ, We need to be more careful when throwing the following exception in MPI.
+    //
+    foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
         if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
             string msg = format("Following first-stage gasdynamic update: " ~
                                 "%d bad cells in block[%d].",
@@ -931,8 +971,12 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
     }
     //
-    if ( GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight ) {
+    if (GlobalConfig.coupling_with_solid_domains == SolidDomainCoupling.tight) {
         // Next do solid domain update IMMEDIATELY after at same flow time level
+        if (GlobalConfig.in_mpi_context && solidBlocks.length > 0) {
+            throw new Error("oops, should not be doing coupling with solid domains in MPI.");
+            // [TODO] 2018-01-20 PJ should do something to lift this restriction.
+        }
         foreach (sblk; parallel(solidBlocks, 1)) {
             if (!sblk.active) continue;
             sblk.clearSources();
@@ -961,7 +1005,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         } // end foreach sblk
     } // end if tight solid domain coupling.
     //
-    if ( number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2 ) {
+    if (number_of_stages_for_update_scheme(GlobalConfig.gasdynamic_update_scheme) >= 2) {
         // Preparation for second-stage of gas-dynamic update.
         sim_time = t0 + c2 * dt_global;
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1046,8 +1090,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 }
             }
         } // end if viscous
-        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            auto i = blk.id;
+        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
             if (!blk.active) continue;
             int local_ftl = ftl;
             int local_gtl = gtl;
@@ -1069,8 +1112,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
         } // end foreach blk
-        foreach (blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
-            auto i = blk.id;
+        foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
             if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
                 string msg = format("Following second-stage gasdynamic update: " ~
                                     "%d bad cells in block[%d].",
@@ -1194,8 +1236,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
                 }
             }
         } // end if viscous
-        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            auto i = blk.id;
+        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
             if (!blk.active) continue;
             int local_ftl = ftl;
             int local_gtl = gtl;
@@ -1217,8 +1258,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
         } // end foreach blk
-        foreach (blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
-            auto i = blk.id;
+        foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
             if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
                 string msg = format("Following third-stage gasdynamic update: " ~
                                     "%d bad cells in block[%d].",
@@ -1389,8 +1429,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             }
         }
     } // end if viscous
-    foreach (blk; parallel(localFluidBlocksBySize,1)) {
-        auto i = blk.id;
+    foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
         if (!blk.active) continue;
         int local_ftl = ftl;
         int local_gtl = gtl;
@@ -1413,8 +1452,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         } // end foreach cell
         local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
     } // end foreach blk
-    foreach (blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
-        auto i = blk.id;
+    foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
         if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
             string msg = format("Following first-stage gasdynamic update: " ~
                                 "%d bad cells in block[%d].",
@@ -1535,8 +1573,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 }
             }
         } // end if viscous
-        foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            auto i = blk.id;
+        foreach (i, blk; parallel(localFluidBlocksBySize,1)) {
             if (!blk.active) continue;
             int local_ftl = ftl;
             int local_gtl = gtl;
@@ -1558,8 +1595,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
             } // end foreach cell
             local_invalid_cell_count[i] = blk.count_invalid_cells(local_gtl, local_ftl+1);
         } // end foreach blk
-        foreach (blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
-            auto i = blk.id;
+        foreach (i, blk; localFluidBlocksBySize) { // serial loop for possibly throwing exception
             if (local_invalid_cell_count[i] > GlobalConfig.max_invalid_cells) {
                 string msg = format("Following first-stage gasdynamic update: " ~
                                     "%d bad cells in block[%d].",
@@ -1623,4 +1659,4 @@ void compute_Linf_residuals(ConservedQuantities Linf_residuals)
         Linf_residuals.total_energy = fmax(Linf_residuals.total_energy, fabs(blk.Linf_residuals.total_energy));
 
     }
-}
+} // end compute_Linf_residuals()

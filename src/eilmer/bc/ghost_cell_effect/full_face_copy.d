@@ -753,11 +753,6 @@ public:
                 MPI_Status my_status;
                 MPI_Irecv(incoming_int_buf.ptr, to!int(ne), MPI_INT, src_blk_rank, tag,
                           MPI_COMM_WORLD, &my_request);
-                debug {
-                    writeln("index read posted by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 //
                 // Blocking send to corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
@@ -765,30 +760,14 @@ public:
                 tag = make_mpi_tag(dest_blk.id, destination_face, 0);
                 foreach (i; 0 .. ne) { outgoing_int_buf[i] = to!int(mapped_cell_ids[i]); }
                 MPI_Send(outgoing_int_buf.ptr, to!int(ne), MPI_INT, src_blk_rank, tag, MPI_COMM_WORLD);
-                debug {
-                    writeln("index send finished by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&my_request, &my_status);
-                debug {
-                    writeln("index receive OK by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 outgoing_mapped_cell_ids.length = ne;
                 foreach (i; 0 .. ne) { outgoing_mapped_cell_ids[i] = to!size_t(incoming_int_buf[i]); }
                 outgoing_mapped_cells.length = 0;
                 foreach (i; outgoing_mapped_cell_ids) { outgoing_mapped_cells ~= dest_blk.cells[i]; }
-                debug {
-                    foreach (i; 0 .. ne) {
-                        writeln("  rank=", dest_blk_rank, " blk=", dest_blk.id, " bndry=", which_boundary,
-                                " outgoing_mapped_cell_ids[", i, "]=", outgoing_mapped_cell_ids[i]);
-                    }
-                }
                 //
                 // Exchange geometry data for the boundary cells.
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
@@ -802,11 +781,6 @@ public:
                 tag = make_mpi_tag(src_blk.id, src_face, 1);
                 MPI_Irecv(incoming_double_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank, tag,
                           MPI_COMM_WORLD, &my_request);
-                debug {
-                    writeln("geometry read posted by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 // Blocking send of this block's geometry data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
@@ -826,19 +800,9 @@ public:
                     outgoing_double_buf[ii++] = c.L_min;
                 }
                 MPI_Send(outgoing_double_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank, tag, MPI_COMM_WORLD);
-                debug {
-                    writeln("geometry send finished by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&my_request, &my_status);
-                debug {
-                    writeln("geometry receive OK by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 ii = 0;
@@ -854,12 +818,6 @@ public:
                     c.jLength = incoming_double_buf[ii++];
                     c.kLength = incoming_double_buf[ii++];
                     c.L_min = incoming_double_buf[ii++];
-                }
-                debug {
-                    foreach (i; 0 .. ghost_cells.length) {
-                        writeln("  rank=", dest_blk_rank, " blk=", dest_blk.id, " bndry=", which_boundary,
-                                " ghost_cells[", i, "].L_min=", ghost_cells[i].L_min);
-                    }
                 }
             } else {
                 // The source block happens to be in this MPI process so
@@ -946,8 +904,8 @@ public:
                 // }
                 //
                 auto gmodel = dest_blk.myConfig.gmodel;
-                size_t nspecies = gmodel.n_modes();
-                size_t nmodes = gmodel.n_species();
+                size_t nspecies = gmodel.n_species();
+                size_t nmodes = gmodel.n_modes();
                 size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
                 if (incoming_double_buf.length < ne) { incoming_double_buf.length = ne; }
                 if (outgoing_double_buf.length < ne) { outgoing_double_buf.length = ne; }
@@ -961,11 +919,6 @@ public:
                 MPI_Status my_status;
                 MPI_Irecv(incoming_double_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank, tag,
                           MPI_COMM_WORLD, &my_request);
-                debug {
-                    writeln("flowstate read posted by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
@@ -1003,19 +956,9 @@ public:
                     outgoing_double_buf[ii++] = to!double(fs.S);
                 }
                 MPI_Send(outgoing_double_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank, tag, MPI_COMM_WORLD);
-                debug {
-                    writeln("flowstate send finished by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&my_request, &my_status);
-                debug {
-                    writeln("flowstate receive OK by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 ii = 0;
@@ -1050,12 +993,6 @@ public:
                     fs.k_t = incoming_double_buf[ii++];
                     fs.S = to!int(incoming_double_buf[ii++]);
                 }
-                debug {
-                    foreach (i; 0 .. ghost_cells.length) {
-                        writeln("  rank=", dest_blk_rank, " blk=", dest_blk.id, " bndry=", which_boundary,
-                                " ghost_cells[", i, "].fs.gas.rho=", ghost_cells[i].fs.gas.rho);
-                    }
-                }
                 //
                 // Exchange geometry data for the boundary cells.
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
@@ -1069,11 +1006,6 @@ public:
                 tag = make_mpi_tag(src_blk.id, src_face, 1);
                 MPI_Irecv(incoming_double_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank, tag,
                           MPI_COMM_WORLD, &my_request);
-                debug {
-                    writeln("geometry read posted by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 // Blocking send of this block's geometry data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
@@ -1093,19 +1025,9 @@ public:
                     outgoing_double_buf[ii++] = c.L_min;
                 }
                 MPI_Send(outgoing_double_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank, tag, MPI_COMM_WORLD);
-                debug {
-                    writeln("geometry send finished by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&my_request, &my_status);
-                debug {
-                    writeln("geometry receive OK by rank=", dest_blk_rank,
-                            " blk=", dest_blk.id, " bndry=", which_boundary,
-                            " src_blk=", src_blk.id, " src_face=", src_face);
-                }
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 ii = 0;
@@ -1121,12 +1043,6 @@ public:
                     c.jLength = incoming_double_buf[ii++];
                     c.kLength = incoming_double_buf[ii++];
                     c.L_min = incoming_double_buf[ii++];
-                }
-                debug {
-                    foreach (i; 0 .. ghost_cells.length) {
-                        writeln("  rank=", dest_blk_rank, " blk=", dest_blk.id, " bndry=", which_boundary,
-                                " ghost_cells[", i, "].L_min=", ghost_cells[i].L_min);
-                    }
                 }
             } else {
                 // The source block happens to be in this MPI process so
