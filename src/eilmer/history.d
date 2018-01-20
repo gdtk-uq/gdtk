@@ -12,6 +12,7 @@ import std.string;
 import std.file;
 import std.array;
 import std.format;
+import std.algorithm: find;
 
 import fvcore;
 import globalconfig;
@@ -25,10 +26,10 @@ string histDir = "hist";
 
 void init_history_cell_files()
 {
-    ensure_directory_is_present(histDir);
-    foreach ( hcell; GlobalConfig.hcells ) {
+    foreach (hcell; GlobalConfig.hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
+        if (find(GlobalConfig.localBlockIds, blkId).empty) { continue; }
         if ( cellId >= globalFluidBlocks[blkId].cells.length ) {
             string errMsg = "ERROR: init_history_cell_files()\n";
             errMsg ~= format("The requested history cell index %d is not valid for block %d.\n", cellId, blkId);
@@ -42,18 +43,19 @@ void init_history_cell_files()
                                                GlobalConfig.MHD, GlobalConfig.divergence_cleaning,
                                                GlobalConfig.radiation);
         f.write("# 1:t ");
-        foreach ( i, var; cellVars ) {
+        foreach (i, var; cellVars) {
             f.write(format("%d:%s ", i+2, var));
         }
         f.write("\n");
         f.close();
-    }
-
+    } // end foreach hcell
+    //
     // And history cells in solid domain, if present
-    foreach ( hcell; GlobalConfig.solid_hcells ) {
+    foreach (hcell; GlobalConfig.solid_hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
-        if ( cellId >= solidBlocks[blkId].activeCells.length ) {
+        if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
+        if (cellId >= solidBlocks[blkId].activeCells.length) {
             string errMsg = "ERROR: init_history_cell_files()\n";
             errMsg ~= format("The requested history cell index %d is not valid for solid block %d.\n", cellId, blkId);
             errMsg ~= format("This solid block only has %d cells.\n", solidBlocks[blkId].activeCells.length);
@@ -69,15 +71,15 @@ void init_history_cell_files()
         }
         f.write("\n");
         f.close();
-    }    
-
-}
+    } // end foreach hcell
+} // end init_history_cell_files()
 
 void write_history_cells_to_files(double sim_time)
 {
-    foreach ( hcell; GlobalConfig.hcells ) {
+    foreach (hcell; GlobalConfig.hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
+        if (find(GlobalConfig.localBlockIds, blkId).empty) { continue; }
         string fname = format("%s/%s-blk-%d-cell-%d.dat", 
                               histDir, GlobalConfig.base_file_name, blkId, cellId);
         auto cell = globalFluidBlocks[blkId].cells[cellId];
@@ -85,12 +87,12 @@ void write_history_cells_to_files(double sim_time)
         formattedWrite(writer, "%.18e %s\n", sim_time,
                        cell.write_values_to_string());
         append(fname, writer.data);
-    }
-
+    } // end foreach hcell
     // And history cells in solid domain, if present
-    foreach ( hcell; GlobalConfig.solid_hcells ) {
+    foreach (hcell; GlobalConfig.solid_hcells) {
         auto blkId = hcell[0];
         auto cellId = hcell[1];
+        if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
         string fname = format("%s/%s-solid-blk-%d-cell-%d.dat", 
                               histDir, GlobalConfig.base_file_name, blkId, cellId);
         auto cell = solidBlocks[blkId].activeCells[cellId];
@@ -98,6 +100,5 @@ void write_history_cells_to_files(double sim_time)
         formattedWrite(writer, "%.18e %s\n", sim_time,
                        cell.writeValuesToString());
         append(fname, writer.data);
-    }
-
-}
+    } // end foreach hcell
+} // end write_history_cells_to_files()

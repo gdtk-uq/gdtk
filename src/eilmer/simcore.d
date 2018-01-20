@@ -249,28 +249,28 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
         initSolidLooseCouplingUpdate();
     }
     //
-    ///////////////////////////////////////////////////////////////////////
-    // [TODO] PJ 2018-01-17 Up to here with thinking about MPI parallel. //
-    ///////////////////////////////////////////////////////////////////////
-    //
     // All cells are in place, so now we can initialise any history cell files.
+    if (GlobalConfig.is_master_task) { ensure_directory_is_present(histDir); }
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     init_history_cell_files();
+    //
     // create the loads directory, maybe
-    if (GlobalConfig.compute_loads && (current_loads_tindx == 0)) {
+    if (GlobalConfig.compute_loads && (current_loads_tindx == 0) && GlobalConfig.is_master_task) {
         init_loads_dir();
         init_loads_times_file();
     }
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
     // Finally when both gas AND solid domains are setup..
     // Look for a solid-adjacent bc, if there is one,
     // then we can set up the cells and interfaces that
-    // internal to the bc. They are only known after
-    // this point.
+    // internal to the bc. They are only known after this point.
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach (bc; myblk.bc) {
                 foreach (bfe; bc.postDiffFluxAction) {
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
+                        if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
                         auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
                         adjSolidBC.initGasCellsAndIFaces();
                         adjSolidBC.initSolidCellsAndIFaces();
@@ -284,6 +284,7 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
                 foreach (bfe; bc.postDiffFluxAction) {
                     auto mybfe = cast(BFE_EnergyFluxFromAdjacentSolid)bfe;
                     if (mybfe) {
+                        if (GlobalConfig.in_mpi_context) { throw new Error("[TODO] not available in MPI context."); }
                         auto adjSolidBC = to!BFE_EnergyFluxFromAdjacentSolid(mybfe);
                         adjSolidBC.initGasCellsAndIFaces();
                         adjSolidBC.initSolidCellsAndIFaces();
@@ -321,7 +322,8 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     // set the global time step to the initial value.
     dt_global = GlobalConfig.dt_init; 
     //
-    if (GlobalConfig.verbosity_level > 0) {
+    version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
+    if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         // For reporting wall-clock time, convert to seconds with precision of milliseconds.
         double wall_clock_elapsed = to!double((Clock.currTime() - wall_clock_start).total!"msecs"()) / 1000.0;
         writefln("Done init_simulation() at wall-clock(WC)= %.1f sec", wall_clock_elapsed);
@@ -439,6 +441,9 @@ void integrate_in_time(double target_time_as_requested)
 {
     ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
                                                                  GlobalConfig.gmodel_master.n_modes);
+    ///////////////////////////////////////////////////////////////////////
+    // [TODO] PJ 2018-01-20 Up to here with thinking about MPI parallel. //
+    ///////////////////////////////////////////////////////////////////////
     if (GlobalConfig.verbosity_level > 0) {
         writeln("Integrate in time.");
         stdout.flush();
