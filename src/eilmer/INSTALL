@@ -12,6 +12,12 @@ To build eilmer, you will require:
   + readline development package
   + ncurses development package
 
+To build the MPI version, you will need openmpi and its development packages
+installed. No other flavour of MPI is supported presently:
+
+  + openmpi
+  + openmpi-dev (on Debian/Ubuntu); openmpi-devel (on RedHat/CentOS/Fedora)
+
 Additionally, if you want to run the test suite, you will require:
 
   + TCL package
@@ -58,7 +64,7 @@ If you encounter difficulties running the program and would like
 more error output, then you should recompile and reinstall the
 code using the 'debug' compile option:
 
-> make TARGET=degug INSTALL_DIR=$HOME/dgdinst install
+> make TARGET=debug INSTALL_DIR=$HOME/dgdinst install
 
 The default build and install will only compile the shared-memory
 explicit solver version of Eilmer. If you would also like to
@@ -67,6 +73,44 @@ request that at build and install stage:
 
 > make WITH_SSS=1 install
 
+Compiling the MPI version
+-------------------------
+
+The MPI version is compiled as follows:
+
+> make WITH_MPI=1 install
+
+### Notes for compiling and running MPI on RedHat/CentOS/Fedora
+
+On modern RedHat-family systems, you will need to install
+the `openmpi` and `openmpi-devel` pacakges. After install,
+you will need to load the openmpi module to have access 
+to the libraries for compiling and running.
+
+> module load mpi/openmpi-x86_64
+
+I find it easiest to place this in my `.bashrc` file so
+that I know that it is loaded everytime I start a session.
+
+At compile time, you will also need to set the `LIBRARY_PATH`
+variable so that the linker knows where to look for the
+openmpi libraries. On a modern system, the libraries are located
+in `/usr/lib64/openmpi/lib`, so you could instruct an MPI build
+on a RedHat system using:
+
+> LIBRARY_PATH=/usr/lib64/openmpi/lib make WITH_MPI=1 install
+
+Of course, you could put both of these items in your `.bashrc`
+file so that you don't have to worry about remembering this.
+I have added the following two lines to my `.bashrc` file::
+
+   module load mpi/openmpi-x86_64
+   export LIBRARY_PATH=/usr/lib64/openmpi/lib
+
+Having done all that, you would compile the MPI version like any
+other linux user, using the command given earlier:
+
+> make WITH_MPI=1 install
 
 Compiling with support for Tecplot binary output
 ------------------------------------------------
