@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os, sys
+from fpdiff import count_differences
+
 RUN_CMD = 'e4shared --job=connection-test --run'
 of = open('test-results.txt', 'w')
 
@@ -37,8 +39,7 @@ for fA in faces:
                 print "Problem post-processing case: ", fA, fB, ornt
                 sys.exit(1)
             # Check if test passed
-            cmd = 'diff ref.out post.out'
-            val = os.system(cmd)
+            val = count_differences('ref.out', 'post.out')
     
             of.write('CASE %03d: faceA=%s, faceB=%s, orientation=%d  \t' % 
                      (count, fA, fB, ornt))
