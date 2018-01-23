@@ -49,6 +49,8 @@ endif
 
 ifeq ($(WITH_MPI),1)
     PROGRAMS += e4mpi
+    MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
+    MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
 endif
 
 ifeq ($(WITH_OPENCL_GPU_CHEM),1)
@@ -376,7 +378,7 @@ e4mpi: main.d $(EILMER_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
 	cd $(OPENMPI_DIR); gen/setup.sh
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > mpi_main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4mpi -version=mpi_parallel -I$(OPENMPI_DIR) \
+	$(DMD) $(DFLAGS) $(OF)e4mpi -version=mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		mpi_main_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
