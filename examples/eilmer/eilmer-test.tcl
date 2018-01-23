@@ -38,6 +38,7 @@ if { [auto_execok gpmetis] != "" } {
 }
 lappend test_scripts "3D/sod-shock-tube/sg/sod.test"
 lappend test_scripts "3D/sod-shock-tube/usg/sod.test"
+lappend test_scripts "3D/connection-test/connection-shared-memory.test"
 # lappend test_scripts "2D/sod/N2-O2/sod.test"
 lappend test_scripts "2D/sphere-sawada/fixed-grid/ss3.test"
 lappend test_scripts "2D/nozzle-conical-back/back.test"
