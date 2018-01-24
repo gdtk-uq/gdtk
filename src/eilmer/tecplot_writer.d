@@ -163,9 +163,10 @@ int writeTecplotBinaryZoneHeader(BlockFlow flow, Grid grid, size_t idx,
         else
             ValueLocation ~= 0;
     }
-    //k=0 and StrandId=0
+    //k=0 
+    //strandId=idx+1 allows tecplot to be timeaware
     return dteczne142(zonetitle, zoneType, to!int(grid.nvertices), to!int(grid.ncells), 0,
-                      timestamp, 0, ValueLocation);
+                      timestamp, to!int(idx+1), ValueLocation);
 }
 
 void writeTecplotAsciiZoneHeader(BlockFlow flow, Grid grid, size_t idx, File fp,
