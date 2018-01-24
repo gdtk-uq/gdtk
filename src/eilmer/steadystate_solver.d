@@ -887,6 +887,7 @@ void evalRHS(double pseudoSimTime, int ftl)
         blk.clear_fluxes_of_conserved_quantities();
         foreach (cell; blk.cells) cell.clear_source_vector();
     }
+    exchange_ghost_cell_boundary_data(pseudoSimTime, 0, ftl);
     foreach (blk; localFluidBlocks) {
         blk.applyPreReconAction(pseudoSimTime, 0, ftl);
     }
@@ -1035,6 +1036,7 @@ void evalRHS(FluidBlock blk, double pseudoSimTime, int ftl)
     foreach (cell; blk.cells) cell.clear_source_vector();
     // We do NOT do boundary conditions, since these are fixed
     // during the preconditioner.
+    //    exchange_ghost_cell_boundary_data(pseudoSimTime, 0, ftl);
     //    blk.applyPreReconAction(pseudoSimTime, 0, ftl);
     blk.convective_flux_phase0();
     blk.convective_flux_phase1();

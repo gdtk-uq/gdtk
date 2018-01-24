@@ -200,15 +200,33 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     // Now that the cells for all gas blocks have been initialized,
     // we can sift through the boundary condition effects and
     // set up the ghost-cell mapping for the appropriate boundaries.
-    // Serial loop because the cell-mapping function searches across
-    // all local-to-process blocks.
+    // Serial loops because the cell-mapping function searches across
+    // all blocks local to the process.
+    // Also, there are several loops because the MPI communication,
+    // if there is any, needs to be done in phases of posting of non-blocking reads,
+    // followed by all of the sends and then waiting for all requests to be filled.
+    //
     foreach (myblk; localFluidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
                 auto mygce1 = cast(GhostCellMappedCellCopy)gce;
                 if (mygce1) { mygce1.set_up_cell_mapping(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
                 auto mygce2 = cast(GhostCellFullFaceCopy)gce;
-                if (mygce2) { mygce2.set_up_cell_mapping(); }
+                if (mygce2) { mygce2.set_up_cell_mapping_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
+                if (mygce2) { mygce2.set_up_cell_mapping_phase1(); }
             }
         }
     }
@@ -434,6 +452,10 @@ void march_over_blocks()
                     blk.applyPreReconAction(sim_time, 0, 0);
                     // and propagate it across the domain.
                     blk.propagate_inflow_data_west_to_east();
+                    // [TODO] 2018-01-24 PJ, Something to consider.
+                    // Now that we have moved some of the ghost-cell-effect
+                    // out of the apply_structured_grid for FullFaceCopy,
+                    // do we need to manually exchange data at this point?
                 }
             }
         }
@@ -797,6 +819,34 @@ void finalize_simulation()
 
 //---------------------------------------------------------------------------
 
+void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
+// We have hoisted the exchange of ghost-cell data out of the GhostCellEffect class
+// that used to live only inside the boundary condition attached to a block.
+// The motivation for allowing this leakage of abstraction is that the MPI
+// exchange of messages requires a coordination of actions that spans blocks.
+// Sigh...  2017-01-24 PJ
+// p.s. The data for that coordination is still buried in the FullFaceCopy class.
+// No need to have all its guts hanging out.
+{
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy) gce;
+                if (mygce) { mygce.exchange_flowstate_phase0(t, gtl, ftl); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy) gce;
+                if (mygce) { mygce.exchange_flowstate_phase1(t, gtl, ftl); }
+            }
+        }
+    }
+} // end exchange_ghost_cell_boundary_data()
+
+
 void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
 {
     final switch(GlobalConfig.grid_motion){
@@ -820,6 +870,7 @@ void set_grid_velocities(double sim_time, int step, int gtl, double dt_global)
             }
             // apply boundary conditions here because ...
             // shockfitting algorithm requires ghost cells to be up to date.
+            exchange_ghost_cell_boundary_data(sim_time, 0, 0);
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) { blk.applyPreReconAction(sim_time, 0, 0); }
             }
@@ -867,6 +918,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     // First-stage of gas-dynamic update.
     shared int ftl = 0; // time-level within the overall convective-update
     shared int gtl = 0; // grid time-level remains at zero for the non-moving grid
+    exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
@@ -1017,6 +1069,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // Second stage of gas-dynamic update.
         ftl = 1;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
+        exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
@@ -1163,6 +1216,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         // Third stage of gas-dynamic update.
         ftl = 2;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
+        exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
@@ -1358,6 +1412,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         set_gcl_interface_properties(sblk, gtl+1, dt_global);
     }
     gtl = 1; // update gtl now that grid has moved
+    exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
@@ -1509,6 +1564,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         ftl = 1;
         gtl = 2;
         // We are relying on exchanging boundary data as a pre-reconstruction activity.
+        exchange_ghost_cell_boundary_data(sim_time, gtl, ftl);
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
                 if (blk.active) { blk.applyPreReconAction(sim_time, gtl, ftl); }
