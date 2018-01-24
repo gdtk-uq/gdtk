@@ -166,14 +166,6 @@ public:
     FluidBlock blk;
     int which_boundary;
     string desc;
-    //
-    version(mpi_parallel) {
-        // Buffers for the exchange of messages/data.
-        int[] outgoing_int_buf;
-        int[] incoming_int_buf;
-        double[] outgoing_double_buf;
-        double[] incoming_double_buf;
-    }
 
     this(int id, int boundary, string description)
     {
