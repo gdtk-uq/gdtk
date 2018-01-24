@@ -191,11 +191,21 @@ string etaStrategyName(EtaStrategy i)
 
 EtaStrategy etaStrategyFromName(string name)
 {
-    final switch (name) {
+    switch (name) {
     case "constant": return EtaStrategy.constant;
     case "geometric": return EtaStrategy.geometric;
     case "adaptive": return EtaStrategy.adaptive;
     case "adaptive_capped": return EtaStrategy.adaptive_capped;
+    default:
+	string errMsg = "The selected 'eta_strategy' is unavailable.\n";
+	errMsg ~= format("You selected: '%s'\n", name);
+	errMsg ~= "The available strategies are: \n";
+	errMsg ~= "   'constant'\n";
+	errMsg ~= "   'geometric'\n";
+	errMsg ~= "   'adaptive'\n";
+	errMsg ~= "   'adaptive_capped'\n";
+	errMsg ~= "Check your selection or its spelling in the input file.\n";
+	throw new Error(errMsg);
     }
 } // end etaStrategyFromName()
 
