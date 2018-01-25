@@ -230,6 +230,38 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
             }
         }
     }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
+                if (mygce2) { mygce2.set_up_cell_mapping_phase2(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
+                if (mygce2) { mygce2.exchange_geometry_phase0(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
+                if (mygce2) { mygce2.exchange_geometry_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
+                if (mygce2) { mygce2.exchange_geometry_phase2(); }
+            }
+        }
+    }
     // Now that we know the ghost-cell locations, we can set up the least-squares subproblems
     // for reconstruction prior to convective flux calculation for the unstructured-grid blocks.
     foreach (myblk; localFluidBlocks) {
@@ -832,6 +864,30 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
         foreach(bc; blk.bc) {
             foreach (gce; bc.preReconAction) {
                 auto mygce = cast(GhostCellFullFaceCopy) gce;
+                if (mygce) { mygce.exchange_geometry_phase0(); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy) gce;
+                if (mygce) { mygce.exchange_geometry_phase1(); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy) gce;
+                if (mygce) { mygce.exchange_geometry_phase2(); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy) gce;
                 if (mygce) { mygce.exchange_flowstate_phase0(t, gtl, ftl); }
             }
         }
@@ -841,6 +897,14 @@ void exchange_ghost_cell_boundary_data(double t, int gtl, int ftl)
             foreach (gce; bc.preReconAction) {
                 auto mygce = cast(GhostCellFullFaceCopy) gce;
                 if (mygce) { mygce.exchange_flowstate_phase1(t, gtl, ftl); }
+            }
+        }
+    }
+    foreach (blk; localFluidBlocks) {
+        foreach(bc; blk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy) gce;
+                if (mygce) { mygce.exchange_flowstate_phase2(t, gtl, ftl); }
             }
         }
     }

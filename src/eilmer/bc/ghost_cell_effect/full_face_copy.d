@@ -773,20 +773,105 @@ public:
                 //
                 size_t ne = ghost_cells.length;
                 if (incoming_cell_ids_buf.length < ne) { incoming_cell_ids_buf.length = ne; }
-                if (outgoing_cell_ids_buf.length < ne) { outgoing_cell_ids_buf.length = ne; }
                 //
                 // Post non-blocking receive for data that we expect to receive later
                 // from the src_blk MPI process.
                 incoming_cell_ids_tag = make_mpi_tag(src_blk.id, src_face, 0);
                 MPI_Irecv(incoming_cell_ids_buf.ptr, to!int(ne), MPI_INT, src_blk_rank,
                           incoming_cell_ids_tag, MPI_COMM_WORLD, &incoming_cell_ids_request);
+            } else {
+                // The source block happens to be in this MPI process so
+                // we know that we can just access the source-cell data directly
+                // in the final phase.
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly,
+            // in the final phase.
+        }
+    } // end set_up_cell_mapping_phase0()
+
+    void set_up_cell_mapping_phase1()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
+                // The source block is in another MPI process, go fetch the data via messages.
+                // Blocking send to corresponding non-blocking receive that was posted
+                // at in src_blk MPI process.
+                size_t ne = ghost_cells.length;
+                if (outgoing_cell_ids_buf.length < ne) { outgoing_cell_ids_buf.length = ne; }
+                assert(ne == mapped_cell_ids.length, "oops, wrong length");
+                outgoing_cell_ids_tag = make_mpi_tag(dest_blk.id, destination_face, 0);
+                foreach (i; 0 .. ne) { outgoing_cell_ids_buf[i] = to!int(mapped_cell_ids[i]); }
+                MPI_Send(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, src_blk_rank,
+                         outgoing_cell_ids_tag, MPI_COMM_WORLD);
+            } else {
+                // The source block happens to be in this MPI process so
+                // we know that we can just access the source-cell data directly
+                // in the final phase.
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    } // end set_up_cell_mapping_send()
+
+    void set_up_cell_mapping_phase2()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
+                // The source block is in another MPI process, go fetch the data via messages.
+                // Once complete, copy the data back into the local context.
+		MPI_Wait(&incoming_cell_ids_request, &incoming_cell_ids_status);
+                size_t ne = ghost_cells.length;
+                outgoing_mapped_cell_ids.length = ne;
+                foreach (i; 0 .. ne) { outgoing_mapped_cell_ids[i] = to!size_t(incoming_cell_ids_buf[i]); }
+                outgoing_mapped_cells.length = 0;
+                foreach (id; outgoing_mapped_cell_ids) { outgoing_mapped_cells ~= dest_blk.cells[id]; }
+                assert(outgoing_mapped_cells.length == ghost_cells.length,
+                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+            } else {
+                // The source block happens to be in this MPI process so
+                // we know that we can just access the source-cell data directly.
+                foreach (i; 0 .. ghost_cells.length) {
+                    mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
+                }
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly.
+            foreach (i; 0 .. ghost_cells.length) {
+                mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
+            }
+        }
+    } // end set_up_cell_mapping_phase2()
+    
+    ref FVCell get_mapped_cell(size_t i)
+    {
+        if (i < mapped_cells.length) {
+            return mapped_cells[i];
+        } else {
+            throw new FlowSolverException(format("Reference to requested mapped-cell[%d] is not available.", i));
+        }
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        throw new Error("GhostCellFullFaceCopy.apply_unstructured_grid() not implemented");
+    }
+
+    void exchange_geometry_phase0()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
+                // The source block is in another MPI process, go fetch the geometry data via messages.
                 //
                 // Prepare to exchange geometry data for the boundary cells.
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
                 //
-                ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
+                size_t ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
                 if (incoming_geometry_buf.length < ne) { incoming_geometry_buf.length = ne; }
-                if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
                 // from the src_blk MPI process.
@@ -796,47 +881,27 @@ public:
             } else {
                 // The source block happens to be in this MPI process so
                 // we know that we can just access the source-cell data directly
-                // in phase1.
+                // in the final phase.
             }
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly,
-            // in phase1.
+            // in the final phase.
         }
-    } // end set_up_cell_mapping_phase0()
+    } // end exchange_geometry_phase0()
 
-    void set_up_cell_mapping_phase1()
+    void exchange_geometry_phase1()
     {
         version(mpi_parallel) {
             if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
                 // The source block is in another MPI process, go fetch the data via messages.
                 //
-                // For this particular GhostCellEffect, we are expecting somewhat symmetric
-                // interaction with the other MPI process.  This block has to receive
-                // a list of mapped source cells from the other block and it has to send its own
-                // list of mapped source cells from which it wants geometry and flow data.
-                //
-                // Blocking send to corresponding non-blocking receive that was posted
-                // at in src_blk MPI process.
-                size_t ne = ghost_cells.length;
-                assert(ne == mapped_cell_ids.length, "oops, wrong length");
-                outgoing_cell_ids_tag = make_mpi_tag(dest_blk.id, destination_face, 0);
-                foreach (i; 0 .. ne) { outgoing_cell_ids_buf[i] = to!int(mapped_cell_ids[i]); }
-                MPI_Send(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, src_blk_rank,
-                         outgoing_cell_ids_tag, MPI_COMM_WORLD);
-                //
-                // Wait for non-blocking receive to complete.
-                // Once complete, copy the data back into the local context.
-		MPI_Wait(&incoming_cell_ids_request, &incoming_cell_ids_status);
-                outgoing_mapped_cell_ids.length = ne;
-                foreach (i; 0 .. ne) { outgoing_mapped_cell_ids[i] = to!size_t(incoming_cell_ids_buf[i]); }
-                outgoing_mapped_cells.length = 0;
-                foreach (id; outgoing_mapped_cell_ids) { outgoing_mapped_cells ~= dest_blk.cells[id]; }
-                //
                 // Blocking send of this block's geometry data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
                 outgoing_geometry_tag = make_mpi_tag(dest_blk.id, destination_face, 1);
+                size_t ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
+                if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
                     foreach (j; 0 .. dest_blk.myConfig.n_grid_time_levels) {
@@ -851,15 +916,30 @@ public:
                     outgoing_geometry_buf[ii++] = c.kLength;
                     outgoing_geometry_buf[ii++] = c.L_min;
                 }
-                ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
                 MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
                          outgoing_geometry_tag, MPI_COMM_WORLD);
+            } else {
+                // The source block happens to be in this MPI process so
+                // we know that we can just access the source-cell data directly
+                // in the final phase.
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+    } // end exchange_geometry_phase1()
+
+    void exchange_geometry_phase2()
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
+                // The source block is in another MPI process, go fetch the data via messages.
+                //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
-                assert(outgoing_mapped_cells.length == ghost_cells.length,
-                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
-                ii = 0;
+                size_t ii = 0;
                 foreach (c; ghost_cells) {
                     foreach (j; 0 .. dest_blk.myConfig.n_grid_time_levels) {
                         c.pos[j].refx = incoming_geometry_buf[ii++];
@@ -877,9 +957,6 @@ public:
                 // The source block happens to be in this MPI process so
                 // we know that we can just access the source-cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
-                    mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
-                }
-                foreach (i; 0 .. ghost_cells.length) {
                     ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
                 }
             }
@@ -887,27 +964,10 @@ public:
             // For a single process,
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
-                mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
-            }
-            foreach (i; 0 .. ghost_cells.length) {
                 ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
             }
         }
-    } // end set_up_cell_mapping_phase1()
-    
-    ref FVCell get_mapped_cell(size_t i)
-    {
-        if (i < mapped_cells.length) {
-            return mapped_cells[i];
-        } else {
-            throw new FlowSolverException(format("Reference to requested mapped-cell[%d] is not available.", i));
-        }
-    }
-
-    override void apply_unstructured_grid(double t, int gtl, int ftl)
-    {
-        throw new Error("GhostCellFullFaceCopy.apply_unstructured_grid() not implemented");
-    }
+    } // end exchange_geometry_phase2()
 
     void exchange_flowstate_phase0(double t, int gtl, int ftl)
     {
@@ -928,35 +988,21 @@ public:
                 size_t nmodes = gmodel.n_modes();
                 size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
                 if (incoming_flowstate_buf.length < ne) { incoming_flowstate_buf.length = ne; }
-                if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
                 // from the src_blk MPI process.
                 incoming_flowstate_tag = make_mpi_tag(src_blk.id, src_face, 0);
                 MPI_Irecv(incoming_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
                           incoming_flowstate_tag, MPI_COMM_WORLD, &incoming_flowstate_request);
-                //
-                // Exchange geometry data for the boundary cells.
-                // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
-                //
-                ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
-                if (incoming_geometry_buf.length < ne) { incoming_geometry_buf.length = ne; }
-                if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
-                //
-                // Post non-blocking receive for geometry data that we expect to receive later
-                // from the src_blk MPI process.
-                incoming_geometry_tag = make_mpi_tag(src_blk.id, src_face, 1);
-                MPI_Irecv(incoming_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
-                          incoming_geometry_tag, MPI_COMM_WORLD, &incoming_geometry_request);
             } else {
                 // The source block happens to be in this MPI process so
                 // we know that we can just access the source-cell data directly
-                // in phase1.
+                // in the final phase.
             }
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly
-            // in phase 1.
+            // in the final phase.
         }
         // Done with setting up all non-blocking reads for MPI.
     } // end exchange_flowstate_phase0()
@@ -1006,11 +1052,14 @@ public:
                 auto gmodel = dest_blk.myConfig.gmodel;
                 size_t nspecies = gmodel.n_species();
                 size_t nmodes = gmodel.n_modes();
-                size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
+                assert(outgoing_mapped_cells.length == ghost_cells.length,
+                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
                 //
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
                 // at in src_blk MPI process.
+                size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
+                if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
                 outgoing_flowstate_tag = make_mpi_tag(dest_blk.id, destination_face, 0);
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
@@ -1046,12 +1095,35 @@ public:
                 }
                 MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
                          outgoing_flowstate_tag, MPI_COMM_WORLD);
+            } else {
+                // The source block happens to be in this MPI process so
+                // we know that we can just access the source-cell data directly
+                // in the final phase.
+            }
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+        }
+        // Done with copying from source cells.
+    } // end exchange_flowstate_phase1()
+    
+    void exchange_flowstate_phase2(double t, int gtl, int ftl)
+    {
+        version(mpi_parallel) {
+            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
+                // The source block is in another MPI process, go fetch the data via messages.
+                //
+                auto gmodel = dest_blk.myConfig.gmodel;
+                size_t nspecies = gmodel.n_species();
+                size_t nmodes = gmodel.n_modes();
+                assert(outgoing_mapped_cells.length == ghost_cells.length,
+                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
+                //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&incoming_flowstate_request, &incoming_flowstate_status);
-                assert(outgoing_mapped_cells.length == ghost_cells.length,
-                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
-                ii = 0;
+                size_t ii = 0;
                 foreach (c; ghost_cells) {
                     FlowState fs = c.fs;
                     GasState gs = fs.gas;
@@ -1083,53 +1155,11 @@ public:
                     fs.k_t = incoming_flowstate_buf[ii++];
                     fs.S = to!int(incoming_flowstate_buf[ii++]);
                 }
-                //
-                // Blocking send of this block's geometry data
-                // to the corresponding non-blocking receive that was posted
-                // at in src_blk MPI process.
-                outgoing_geometry_tag = make_mpi_tag(dest_blk.id, destination_face, 1);
-                ii = 0;
-                foreach (c; outgoing_mapped_cells) {
-                    foreach (j; 0 .. dest_blk.myConfig.n_grid_time_levels) {
-                        outgoing_geometry_buf[ii++] = c.pos[j].x;
-                        outgoing_geometry_buf[ii++] = c.pos[j].y;
-                        outgoing_geometry_buf[ii++] = c.pos[j].z;
-                        outgoing_geometry_buf[ii++] = c.volume[j];
-                        outgoing_geometry_buf[ii++] = c.areaxy[j];
-                    }
-                    outgoing_geometry_buf[ii++] = c.iLength;
-                    outgoing_geometry_buf[ii++] = c.jLength;
-                    outgoing_geometry_buf[ii++] = c.kLength;
-                    outgoing_geometry_buf[ii++] = c.L_min;
-                }
-                ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
-                MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
-                         outgoing_geometry_tag, MPI_COMM_WORLD);
-                // Wait for non-blocking receive to complete.
-                // Once complete, copy the data back into the local context.
-		MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
-                assert(outgoing_mapped_cells.length == ghost_cells.length,
-                       "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
-                ii = 0;
-                foreach (c; ghost_cells) {
-                    foreach (j; 0 .. dest_blk.myConfig.n_grid_time_levels) {
-                        c.pos[j].refx = incoming_geometry_buf[ii++];
-                        c.pos[j].refy = incoming_geometry_buf[ii++];
-                        c.pos[j].refz = incoming_geometry_buf[ii++];
-                        c.volume[j] = incoming_geometry_buf[ii++];
-                        c.areaxy[j] = incoming_geometry_buf[ii++];
-                    }
-                    c.iLength = incoming_geometry_buf[ii++];
-                    c.jLength = incoming_geometry_buf[ii++];
-                    c.kLength = incoming_geometry_buf[ii++];
-                    c.L_min = incoming_geometry_buf[ii++];
-                }
             } else {
                 // The source block happens to be in this MPI process so
                 // we know that we can just access the source-cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
                     ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
-                    ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
                 }
             }
         } else { // not mpi_parallel
@@ -1137,11 +1167,10 @@ public:
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
                 ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
-                ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
             }
         }
         // Done with copying from source cells.
-    } // end exchange_flowstate_phase1()
+    } // end exchange_flowstate_phase2()
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
