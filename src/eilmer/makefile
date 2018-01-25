@@ -130,6 +130,7 @@ GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
 
 GRID_DIR := ../grid_utils
+include $(GRID_DIR)/grid_utils_files.mk
 
 KINETICS_DIR := ../kinetics
 include $(KINETICS_DIR)/kinetics_files.mk
@@ -217,7 +218,7 @@ ifeq ($(DMD), gdc)
     OF := -o
     DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl -lcurl
 endif
-DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GZIP_DIR)
+DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 
 default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"
@@ -288,151 +289,151 @@ $(LIBLUA):
 	cd $(LUA_DIR); make $(PLATFORM) local
 
 globalconfig_demo: globalconfig_demo.d globalconfig.d fvcore.d \
-	$(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GZIP_FILES)
 	$(DMD) $(DFLAGS) $(OF)globalconfig_demo \
 		globalconfig_demo.d globalconfig.d fvcore.d \
-		$(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)  
 
 luaglobalconfig_demo: luaglobalconfig_demo.d luaglobalconfig.d globalconfig.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
 	flowstate.d json_helper.d \
-	$(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GZIP_FILES)
 	$(DMD) $(DFLAGS) $(OF)luaglobalconfig_demo \
 		luaglobalconfig_demo.d luaglobalconfig.d globalconfig.d \
 		fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
 		flowstate.d json_helper.d \
-		$(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)  
 
 flowstate_demo: flowstate_demo.d flowstate.d \
 	fvcore.d fvcell.d fvvertex.d fvinterface.d conservedquantities.d \
 	globalconfig.d json_helper.d \
-	$(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GZIP_FILES)
 	$(DMD) $(DFLAGS) $(OF)flowstate_demo flowstate_demo.d \
 		fvcore.d flowstate.d fvcell.d fvvertex.d fvinterface.d \
 		conservedquantities.d globalconfig.d json_helper.d \
-		$(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 luaflowstate_demo: luaflowstate_demo.d $(EILMER_FILES) \
-	$(GEOM_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) \
+	$(GEOM_FILES) $(GRID_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) \
 	$(LIBLUA) $(UTIL_FILES) $(NM_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GZIP_FILES)
 	$(DMD) $(DFLAGS) $(OF)luaflowstate_demo luaflowstate_demo.d \
 		$(EILMER_FILES) \
-		$(GEOM_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(GEOM_FILES) $(GRID_FILES) $(BC_FILES) $(SOLID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 fv_demo: fv_demo.d $(EILMER_FILES) $(SOLID_FILES) \
-	$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES)
 	$(DMD) $(DFLAGS) $(OF)fv_demo fv_demo.d \
 		$(EILMER_FILES) $(SOLID_FILES) \
-		$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 fluidblock_demo: fluidblock_demo.d $(EILMER_FILES) $(SOLID_FILES) \
-	$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(UTIL_FILES) $(NM_FILES) $(NM_LUA_FILES)
 	$(DMD) $(DFLAGS) $(OF)block_demo block_demo.d \
 		$(EILMER_FILES) $(SOLID_FILES) \
-		$(BC_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 e4shared: main.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4shared -version=$(TECPLOT_BIN_VERSION_STR) \
 		main_with_rev_string.d $(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
 e4shared_w_tecio: main.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4shared_w_tecio \
 		main_with_rev_string.d $(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) tecplot_writer.d ../extern/tecio/tecio.d $(DLINKFLAGS) -L/home/gollan/opt/tecplot-2017/360ex_2017r1/bin/libtecio.so -L/home/gollan/opt/tecplot-2017/360ex_2017r1/bin/sys/libstdc++.so.6
 
 
 e4mpi: main.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
 	cd $(OPENMPI_DIR); gen/setup.sh
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > mpi_main_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4mpi -version=mpi_parallel -I$(OPENMPI_DIR) $(MPI_LIB_DIRS_SEARCH) \
 		mpi_main_with_rev_string.d $(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) $(DLINKFLAGS) -L-lmpi
 
 e4sss: steadystate_solver.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > steadystate_solver_with_rev_string.d
 	$(DMD) -version=steady_state $(DFLAGS) $(OF)e4sss \
 		steadystate_solver_with_rev_string.d $(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
 
 e4adjoint: adjoint_solver.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' adjoint_solver.d > adjoint_solver_with_rev_string.d
 	$(DMD) -version=adjoint $(DFLAGS) $(OF)e4adjoint \
 		adjoint_solver_with_rev_string.d $(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
 
 e4loadbalance: loadbalance.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' loadbalance.d > loadbalance_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4loadbalance \
 		loadbalance_with_rev_string.d $(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
 
 
 eilmer-opencl-gpu-chem: main.d opencl_gpu_chem.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(OPENCL_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(OPENCL_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
 	$(DMD) -version=gpu_chem -version=opencl_gpu_chem  $(DFLAGS) $(OF)eilmer-opencl-gpu-chem \
 		main_with_rev_string.d $(EILMER_FILES) opencl_gpu_chem.d \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)\
 		$(DLINKFLAGS) -I$(OPENCL_DIR) -L-L/usr/lib64/nvidia -L-lOpenCL
 
 eilmer-cuda-gpu-chem: main.d cuda_gpu_chem.d alpha_qss_kernel_cuda_tmplt.cu $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(CUDA_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) $(CUDA_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
 	$(NVCC) --shared -o libcudakernel.so alpha_qss_kernel_cuda_tmplt.cu --compiler-options '-fPIC'
 	$(DMD) -version=gpu_chem -version=cuda_gpu_chem $(DFLAGS) $(OF)eilmer-cuda-gpu-chem \
 		main_with_rev_string.d $(EILMER_FILES) cuda_gpu_chem.d \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) $(OPENCL_FILES)\
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) $(GASDYN_FILES)\
 		$(DLINKFLAGS) -I$(CUDA_DIR) $(CUDA_FILES) -L-L$(CUDA_LIB_DIR) -L-lcuda -L-lcudart -L-L. -L-lcudakernel
 
