@@ -24,6 +24,7 @@ import globalconfig;
 import globaldata;
 import flowstate;
 import fvinterface;
+import fvvertex;
 import fvcell;
 import fluidblock;
 import sfluidblock;
@@ -96,6 +97,15 @@ public:
     FVInterface[] faces;
     FVCell[] ghostcells;
     int[] outsigns;
+
+    FVVertex[] vertices;
+    version(adjoint) {
+	Bezier bezier;
+	double[] ts;
+	int nCntrlPts;
+	Vector3[] surfacePoints;
+	//FVVertex[] vertices;
+    }
 
 private:
     // Working storage for boundary flux derivatives

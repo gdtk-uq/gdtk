@@ -53,6 +53,7 @@ import flowsolution;
 import onedinterp;
 import lsqinterp;
 import bc;
+import grid_deform;
 
 immutable double ESSENTIALLY_ZERO = 1.0e-15;
 
@@ -94,9 +95,10 @@ void main(string[] args) {
     string jobName = "";
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
-    double EPSILON = 1.0e-4;
-    double MU = 1.0e-4;
-    double EPSILON0 = 1.0e-4;
+    double EPSILON = 1.0e-04;
+    double MU = 1.0e-04;
+    double ETA = 1.0e-04;
+    double OMEGA = 1.0e-04;
     bool withFiniteDiffVerification = true;
     bool helpWanted = false;
     try {
@@ -106,8 +108,9 @@ void main(string[] args) {
                "max-wall-clock", &maxWallClock,
                "epsilon", &EPSILON,
                "mu", &MU,
-               "epsilon-finite-diff", &EPSILON0,
-               "with-finite-diff-verification", &withFiniteDiffVerification,
+	       "omega", &OMEGA, 
+               "eta", &ETA,
+               "verification", &withFiniteDiffVerification,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -135,6 +138,12 @@ void main(string[] args) {
 
     writefln("Initialising simulation from tindx: %d", last_tindx);
     init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
+
+    writeln("Finite Difference Parameters:");
+    writeln("EPSILON  = ", EPSILON);
+    writeln("MU  = ", MU);
+    writeln("OMEGA = ", OMEGA);
+    writeln("ETA = ", ETA);
 
     // perform some config checks
     if ( GlobalConfig.interpolation_order > 1 &&
@@ -246,7 +255,7 @@ void main(string[] args) {
     // ------------------------------------------------------------
     // 2.b construct mesh Jacobian transpose via finite differences
     // ------------------------------------------------------------
-    construct_mesh_jacobian(myblk, ndim, np, EPSILON, MU);
+    construct_mesh_jacobian(myblk, ndim, np, OMEGA, MU);
     
     // --------------------------------------------
     // 2.c construct global mesh Jacobian transpose
@@ -269,37 +278,108 @@ void main(string[] args) {
     // ------------------------------------------------------------------------------------------------
     // 2.d construct mesh point sensitivity w.r.t. design variable perturbations via finite-differences
     // ------------------------------------------------------------------------------------------------
-    size_t nvertices = myblk.vertices.length;
-    double[3] D = [0.07, 0.8, 3.8]; // array of design variables 
-    auto D0 = D;
-    size_t nvar = D.length; 
-    Matrix dXdD_T;
-    dXdD_T = new Matrix(nvar, nvertices*ndim);
-    foreach (i; 0..D.length) {
-        double dD = (abs(D[i]) + MU)*EPSILON;
-        D[i] = D0[i] + dD;
-        double[][] meshPp; double[][] meshPm;
-        if (myblk.grid_type == Grid_t.structured_grid) meshPp = perturbMeshSG(myblk, D);
-        else meshPp = perturbMeshUSG(myblk, D);
-        D[i] = D0[i] - dD; 
-        if (myblk.grid_type == Grid_t.structured_grid) meshPm = perturbMeshSG(myblk, D);
-        else meshPm = perturbMeshUSG(myblk, D);
-        foreach(j; 0..meshPm.length) {
-            dXdD_T[i, j*ndim] = (meshPp[j][0] - meshPm[j][0])/(2.0*dD);
-            dXdD_T[i, j*ndim+1] = (meshPp[j][1] - meshPm[j][1])/(2.0*dD);
-        }
-        D[i] = D0[i];
-    }
     
+    /++ 
+     + To compute dXdD, we need to determine the current design variables, since we will perturb these to find the effect
+     + on the mesh via finite-dfferences. Currently we parameterise surfaces to be optimised via bezier curves, 
+     + that have been optimised to best fit the user specified design surfaces/boundaries. The mesh points along the 
+     + design surfaces are used as the supplied data points for the bezier curve parameterisation code. 
+    ++/
+
+    // parameterise the user defined design surfaces (for now let's just tag the boundaries here)
+    string[] designSurfaces;
+    designSurfaces ~= "design";
+    int[string] nCntrlPtsList;
+    nCntrlPtsList["design"] = 5; 
+    size_t ndvars = 0; // number of design variables
+        
+    foreach (bndary; myblk.bc) {
+        if (designSurfaces.canFind(bndary.group)) {
+	    // gather boundary vertices
+            size_t[] vtx_id_list;
+            foreach(face; bndary.faces) {
+                foreach(vtx; face.vtx) {
+                    if (vtx_id_list.canFind(vtx.id) == false) {
+                        bndary.vertices ~= vtx;
+                        bndary.surfacePoints ~= Vector3(vtx.pos[0].refx, vtx.pos[0].refy, vtx.pos[0].refz);
+			vtx_id_list ~= vtx.id;
+			myblk.boundaryVtxIndexList ~= vtx.id;
+                    }
+                }
+            }
+	    
+	    
+            // compute bezier control points
+            bndary.nCntrlPts = nCntrlPtsList[bndary.group];
+	    bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.nCntrlPts, bndary.ts);
+            ndvars += bndary.nCntrlPts*2;
+        }
+	else {
+	    size_t[] vtx_id_list;
+            foreach(face; bndary.faces) {
+                foreach(vtx; face.vtx) {
+                    if (vtx_id_list.canFind(vtx.id) == false) {
+                        bndary.vertices ~= vtx;
+			vtx_id_list ~= vtx.id;
+			myblk.boundaryVtxIndexList ~= vtx.id;
+                    }
+                }
+            }
+	}
+    }
+
+    size_t nvertices = myblk.vertices.length;
+    Matrix dXdD_T;
+    dXdD_T = new Matrix(ndvars, nvertices*ndim);
+    foreach (bndary; myblk.bc) {
+        if (designSurfaces.canFind(bndary.group)) {
+	    foreach (i; 0 .. bndary.bezier.B.length) {
+		// could loop over all x, y, z coordinates here -- for now just use y-coordinates
+		foreach(otherBndary; myblk.bc) {
+		    foreach(j, vtx; otherBndary.vertices) {
+			    vtx.pos[1].refx = vtx.pos[0].x;
+			    vtx.pos[1].refy = vtx.pos[0].y;
+			    vtx.pos[2].refx = vtx.pos[0].x;
+			    vtx.pos[2].refy = vtx.pos[0].y;
+		    }
+		}
+		size_t gtl;
+		auto P0 = bndary.bezier.B[i].y;
+		double dP = ETA;
+		gtl = 1;
+		bndary.bezier.B[i].refy = P0 + dP;
+		foreach(j, vtx; bndary.vertices) {
+		    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+		    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+		}
+		inverse_distance_weighting(myblk, gtl);
+		gtl = 2;
+		bndary.bezier.B[i].refy = P0 - dP;
+		foreach(j, vtx; bndary.vertices) {
+		    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+		    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+		}
+		inverse_distance_weighting(myblk, gtl);
+		foreach(j, vtx; myblk.vertices) {
+		    dXdD_T[i*ndim, j*ndim] = 0.0;
+		    dXdD_T[i*ndim, j*ndim+1] = 0.0;
+		    dXdD_T[i*ndim+1, j*ndim] = (vtx.pos[1].x - vtx.pos[2].x)/(2.0*dP);
+		    dXdD_T[i*ndim+1, j*ndim+1] = (vtx.pos[1].y - vtx.pos[2].y)/(2.0*dP);
+		}
+		bndary.bezier.B[i].refy = P0;
+	    }
+	}
+    }
+
     // ------------------------------
     // 3. Compute shape sensitivities
     // ------------------------------
-    
+    writeln("compute shape sensitivities");
     // temp matrix multiplication
     size_t ncells = myblk.cells.length;
     Matrix tempMatrix;
-    tempMatrix = new Matrix(nvar, ncells*np);
-    for (int i = 0; i < nvar; i++) {
+    tempMatrix = new Matrix(ndvars, ncells*np);
+    for (int i = 0; i < ndvars; i++) {
         for (int j = 0; j < np*ncells; j++) {
             tempMatrix[i,j] = 0;
             for (int k = 0; k < nvertices*ndim; k++) {
@@ -307,9 +387,10 @@ void main(string[] args) {
             }
         }
     }
-    double[3] grad;
-    dot(tempMatrix, psi, grad);    
-    writeln("adjoint gradients [dLdB, dLdC, dLdD] = ", grad);
+    double[] adjointGradients;
+    adjointGradients.length = tempMatrix.nrows;
+    dot(tempMatrix, psi, adjointGradients);    
+    writeln("adjoint gradients = ", adjointGradients);
 
     // clear the sensitivity matrices from memory
     destroy(globaldRdXT);
@@ -322,155 +403,62 @@ void main(string[] args) {
     // -----------------------------------------------------
 
     if (withFiniteDiffVerification) {
-    
-        double J1; double J0; //double EPSILON0 = 1.0e-07;
+        double[] finiteDiffGradients; double J1; double J0;
+        
         // read original grid in
         ensure_directory_is_present(make_path_name!"grid-original"(0));
         string gridFileName = make_file_name!"grid-original"(jobName, myblk.id, 0, gridFileExt = "gz");
         myblk.read_new_underlying_grid(gridFileName);
         myblk.sync_vertices_from_underlying_grid(0);
-        
-        // perturb b +ve --------------------------------------------------------------------------------
-        double del_b = EPSILON0;
-        D[0] = D0[0] + del_b;
-        J1 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
-        // perturb b -ve --------------------------------------------------------------------------------
-        D[0] = D0[0] - del_b;
-        J0 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
-        D[0] = D0[0];
-        double grad_b = (J1 -J0)/(2.0*del_b);
-        writeln("FD dLdB = ", grad_b, ", % error = ", abs((grad_b - grad[0])/grad_b * 100));
-        
-        // perturb c +ve --------------------------------------------------------------------------------
-        double del_c = EPSILON0;
-        D[1] = D0[1] + del_c;
-        J1 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
-        // perturb c -ve --------------------------------------------------------------------------------
-        D[1] = D0[1] - del_c;
-        J0 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
-        D[1] = D0[1];
-        double grad_c = (J1 -J0)/(2.0*del_c);
-        writeln("FD dLdC = ", grad_c, ", % error = ", abs((grad_c - grad[1])/grad_c * 100));
-        
-        // perturb d +ve --------------------------------------------------------------------------------
-        double del_d = EPSILON0;
-        D[2] = D0[2] + del_d;
-        J1 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
-        // perturb d -ve --------------------------------------------------------------------------------
-        D[2] = D0[2] - del_d;
-        J0 = finite_difference_grad(jobName, last_tindx, myblk, p_target, D);
-        D[2] = D0[2];
-        double grad_d = (J1 -J0)/(2.0*del_d);
-        writeln("FD dLdD = ", grad_d, ", % error = ", abs((grad_d - grad[2])/grad_d * 100));
+
+        foreach (bndary; myblk.bc) {
+	    if (designSurfaces.canFind(bndary.group)) {
+		foreach (i; 0 .. bndary.bezier.B.length) {
+		    writeln("computing finite difference gradient for variable ", i+1, " out of ", bndary.bezier.B.length, " variables");
+		    // could loop over all x, y, z coordinates here -- for now just use y-coordinates
+		    auto P0 = bndary.bezier.B[i].refy;
+		    double dP = ETA;                
+		    bndary.bezier.B[i].refy = P0 + dP;
+		    J0 = finite_difference_grad(jobName, last_tindx, myblk, bndary, p_target);
+		    bndary.bezier.B[i].refy = P0 - dP;
+		    J1 = finite_difference_grad(jobName, last_tindx, myblk, bndary, p_target);
+		    finiteDiffGradients ~= (J0 - J1)/(2.0*dP);
+		    bndary.bezier.B[i].refy = P0;
+		}
+	    }
+	}
+        writeln("finite difference gradients = ", finiteDiffGradients);
+	foreach (bndary; myblk.bc) {
+	    if (designSurfaces.canFind(bndary.group)) {
+		foreach (i; 0 .. bndary.bezier.B.length) {
+		    double err = ((adjointGradients[i*2+1] - finiteDiffGradients[i])/finiteDiffGradients[i]) * 100.0;
+		    writeln("% error for variable ", i+1, ": ", abs(err));
+		}
+	    }
+	}
     }
     writeln("Simulation complete.");
 }
 
-double[][] perturbMeshSG(FluidBlock blk, double[] D) {
-    // compute new nozzle surface, and delta
-    auto sblk = cast(SFluidBlock) blk;
-    double y0; double y1;
-    double[size_t] delta;
-    double scale = 1.5;
-    double b = D[0]; double c = D[1]; double d = D[2];
-    double yo = 0.105;
-    double a = yo - b*tanh(-d/scale);
-    for (size_t i = sblk.imin; i <= sblk.imax+1; ++i ) {
-        FVVertex vtx = sblk.get_vtx(i,sblk.jmax+1,0);
-        y0 = vtx.pos[0].refy;
-        y1 = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-        delta[i] = y1-y0;
+double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, BoundaryCondition bndary, double[] p_target) {
+    size_t gtl = 1;
+    foreach(otherBndary; blk.bc) {
+	foreach(j, vtx; otherBndary.vertices) {
+	    vtx.pos[1].refx = vtx.pos[0].x;
+	    vtx.pos[1].refy = vtx.pos[0].y;
+	    vtx.pos[2].refx = vtx.pos[0].x;
+	    vtx.pos[2].refy = vtx.pos[0].y;
+	}
     }
-    double[][] meshP;
-    meshP.length = sblk.vertices.length;
-    // perturb mesh by linearly scaling the nozzle surface movement
-    size_t vtxID = 0;
-    for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
-        for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
-            meshP[vtxID].length = 2;
-            double[2] point;
-            FVVertex vtx = sblk.get_vtx(i,j,0);
-            double jmax = to!double(sblk.jmax);
-            double jd = to!double(j)-2.0;
-            double p = 1.0*(1.0 - ((jmax-1.0) - (jd))/(jmax-1.0));
-            point = [vtx.pos[0].refx, vtx.pos[0].refy+p*delta[i]];
-            meshP[vtxID][0] = point[0];
-            meshP[vtxID][1] = point[1];
-            vtxID += 1;
-        }
+    foreach(j, vtx; bndary.vertices) {
+	vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+	vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
     }
-    return meshP;
-}
+    inverse_distance_weighting(blk, gtl);
 
-double[][] perturbMeshUSG(FluidBlock blk, double[] D) {
-    // compute new nozzle surface, and delta
-    double y0; double y1;
-    double[size_t] delta;
-    double[size_t] yTotal;
-    size_t uniqueID;
-    double scale = 1.5;
-    double b = D[0]; double c = D[1]; double d = D[2];
-    double yo = 0.105;
-    double a = yo - b*tanh(-d/scale);
-    double[] vtxIDs;
-    foreach (bndary; blk.bc) {
-        if (canFind(bndary.group, "wall")) {
-            foreach (i, iface; bndary.faces) {
-                foreach (j, vtx; iface.vtx) {
-                    if(vtxIDs.canFind(vtx.id) == false) {
-                        y0 = vtx.pos[0].refy;
-                        y1 = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-                        uniqueID = to!size_t(1.0e6/(vtx.pos[0].refx+0.001));
-                        delta[uniqueID] = y1-y0;
-                        yTotal[uniqueID] = y0;
-                        vtxIDs ~= vtx.id;
-                    }
-                }
-            } // end foreach face
-        } // end foreach (iface; bndary.faces)
-    } // end if (bndary.group != "")
-    
-    
-    double[][] meshP;
-    meshP.length = blk.vertices.length;
-    // perturb mesh by linearly scaling the nozzle surface movement
-    size_t vtxID = 0;
-    foreach(vtx; blk.vertices) {
-        meshP[vtxID].length = 2;
-        double[2] point;
-        uniqueID = to!size_t(1.0e6/(vtx.pos[0].refx+0.001));
-        double ymax = yTotal[uniqueID];
-        double p = (vtx.pos[0].refy)/(ymax);
-        point = [vtx.pos[0].refx, vtx.pos[0].refy+p*delta[uniqueID]];
-        meshP[vtxID][0] = point[0];
-        meshP[vtxID][1] = point[1];
-        vtxID += 1;
-    }
-    return meshP;
-}
-
-double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, double[] p_target, double[] D) {
-
-    double[][] meshP; 
-    if (blk.grid_type == Grid_t.structured_grid) {
-        meshP = perturbMeshSG(blk, D);
-        auto sblk = cast(SFluidBlock) blk;
-        size_t vtxID = 0;
-        for ( size_t j = sblk.jmin; j <= sblk.jmax+1; ++j ) {
-            for ( size_t i = sblk.imin; i <= sblk.imax+1; ++i) {
-                FVVertex vtx = sblk.get_vtx(i,j,0);
-                vtx.pos[0].refy = meshP[vtxID][1];
-                vtxID += 1;
-            }
-        }
-    }
-    else {
-        meshP = perturbMeshUSG(blk, D);
-        size_t vtxID = 0;
-        foreach (vtx; blk.vertices) {
-            vtx.pos[0].refy = meshP[vtxID][1];
-            vtxID += 1;
-        }
+    foreach(j, vtx; blk.vertices) {
+	vtx.pos[0].refx = vtx.pos[gtl].x;
+	vtx.pos[0].refy = vtx.pos[gtl].y;
     }
 
     // save mesh
@@ -480,7 +468,7 @@ double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, do
     blk.write_underlying_grid(fileName);
     
     // run simulation
-    string command = "bash run-perturb.sh";
+    string command = "bash run-flow-solver-on-perturbed-mesh.sh";
     auto output = executeShell(command);
     
     // read perturbed solution
@@ -878,7 +866,7 @@ void construct_mesh_jacobian_stencils(FluidBlock blk) {
     }
 }
 
-void construct_mesh_jacobian(FluidBlock blk, size_t ndim, size_t np, double EPSILON, double MU) {
+void construct_mesh_jacobian(FluidBlock blk, size_t ndim, size_t np, double OMEGA, double MU) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
      Row Storage (CSR) format.     
@@ -1117,7 +1105,7 @@ void compute_perturbed_flux(FluidBlock blk, FVCell[] cell_list, FVInterface[] if
         }
     }
     else { // unstructured grid
-        // compute new gradients for all cells in the stencil
+	// compute new gradients for all cells in the stencil
         if (blk.myConfig.interpolation_order > 1) {
             foreach(c; cell_list) {
                 c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
@@ -1243,7 +1231,7 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
 string computeCellVolumeSensitivity(string varName)
 {
     string codeStr;
-    codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
+    codeStr ~= "h = OMEGA;";
     codeStr ~= "vtx."~varName~" += h;";
     codeStr ~= "c.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "V1 = c.volume[0];";
@@ -1259,7 +1247,7 @@ string computeCellVolumeSensitivity(string varName)
 string computeInterfaceAreaSensitivity(string varName)
 {
     string codeStr;
-    codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
+    codeStr ~= "h = OMEGA;";
     codeStr ~= "vtx."~varName~" += h;";
     codeStr ~= "iface.update_2D_geometric_data(0, dedicatedConfig[blk.id].axisymmetric);";
     codeStr ~= "A1 = iface.area[0];";
@@ -1276,7 +1264,7 @@ string computeInterfaceAreaSensitivity(string varName)
 string computeFluxMeshPointDerivativesAroundCell(string varName, string posInArray)
 {
     string codeStr;
-    codeStr ~= "h = (abs(vtx."~varName~") + MU) * EPSILON;";
+    codeStr ~= "h = OMEGA;";
     codeStr ~= "foreach (i, iface; vtx.jacobian_face_stencil) {";
     codeStr ~= "ifaceOrig[i].copy_values_from(iface, CopyDataOption.all);";
     codeStr ~= "}";

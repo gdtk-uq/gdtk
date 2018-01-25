@@ -1398,8 +1398,9 @@ void configCheckPoint4()
 {
     // the adjoint solver shouldn't apply diffuse_bcs_on_init_flag
     version(adjoint) {
+	GlobalConfig.n_grid_time_levels = 3;
         if (GlobalConfig.diffuseWallBCsOnInit) {
-            GlobalConfig.diffuseWallBCsOnInit = false;
+	    GlobalConfig.diffuseWallBCsOnInit = false;
             writeln("Warning diffuse_bcs_on_init_flag set to false for adjoint solver.");
         }
     } 

@@ -28,6 +28,7 @@ import user_defined_source_terms;
 import conservedquantities;
 import lua_helper;
 import grid_motion;
+import grid_deform;
 
 // To distinguish ghost cells from active cells, we start their id values at
 // an arbitrarily high value.  It seem high to me (PJ) but feel free to adjust it
@@ -80,11 +81,16 @@ public:
     FlowState Lft;
     FlowState Rght;
 
+    // list of vertex id's that makeup the fluidblock boundary
+    size_t[] boundaryVtxIndexList;
+
     // adjoint solver workspace.
     version(adjoint) {
         // Compressed Row Storage information for the transpose Jacobian 
         double[][] aa;
         size_t[][] ja;
+	// list of vertex id's that makeup the fluidblock boundary
+	//size_t[] boundaryVtxIndexList;
     }
     
     version(steady_state)
