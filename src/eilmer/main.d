@@ -83,14 +83,15 @@ int main(string[] args)
     msg       ~= "         [--run]                     run the simulation over time\n";
     msg       ~= "         [--tindx-start=<int>|last|9999]  defaults to 0\n";
     msg       ~= "         [--next-loads-indx=<int>]   defaults to (final index + 1) of loads.times file\n";
-    msg       ~= "         [--max-cpus=<int>]          defaults to ";
+    msg       ~= "         [--max-cpus=<int>]          (e4shared only) defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
+    msg       ~= "         [--threads-per-mpi-task=<int>] (e4mpi only) defaults to 1\n";
     msg       ~= "         [--max-wall-clock=<int>]    in seconds\n";
     msg       ~= "         [--report-residuals]        include residual reporting in console output\n";
     msg       ~= "\n";
     msg       ~= "         [--post]                    post-process simulation data\n";
     msg       ~= "         [--list-info]               report some details of this simulation\n";
-    msg       ~= "         [--tindx-plot=<int>|all|last|9999]  default to last\n";
+    msg       ~= "         [--tindx-plot=<int>|all|last|9999]  defaults to last\n";
     msg       ~= "         [--add-vars=\"mach,pitot,total-h,total-p,entropy,molef,conc\"]\n";
     msg       ~= "         [--ref-soln=<filename>]     Lua file for reference solution\n";
     msg       ~= "         [--vtk-xml]                 produce XML VTK-format plot files\n";
@@ -131,6 +132,7 @@ int main(string[] args)
     int tindxStart = 0;
     int nextLoadsIndx = -1;
     int maxCPUs = totalCPUs;
+    int threadsPerMPITask = 1;
     int maxWallClock = 5*24*3600; // 5 days default
     bool reportResiduals = false;
     bool postFlag = false;
@@ -166,6 +168,7 @@ int main(string[] args)
                "tindx-start", &tindxStartStr,
                "next-loads-indx", &nextLoadsIndx,
                "max-cpus", &maxCPUs,
+               "threads-per-mpi-task", &threadsPerMPITask,
                "max-wall-clock", &maxWallClock,
                "report-residuals", &reportResiduals,
                "post", &postFlag,
@@ -304,7 +307,9 @@ int main(string[] args)
         GlobalConfig.base_file_name = jobName;
         GlobalConfig.verbosity_level = verbosityLevel;
         GlobalConfig.report_residuals = reportResiduals;
-        maxCPUs = min(max(maxCPUs, 1), totalCPUs); // don't ask for more than available
+        // don't ask for more CPUs than available to this process
+        maxCPUs = min(max(maxCPUs, 1), totalCPUs);
+        threadsPerMPITask = min(threadsPerMPITask, totalCPUs);
         switch (tindxStartStr) {
         case "9999":
         case "last":
@@ -323,14 +328,18 @@ int main(string[] args)
             writeln("  tindxStart: ", tindxStart);
             writeln("  maxWallClock: ", maxWallClock);
             writeln("  verbosityLevel: ", verbosityLevel);
-            writeln("  maxCPUs: ", maxCPUs, " for shared memory-parallelism");
+            version(mpi_parallel) {
+                writeln("  threadsPerMPITask: ", threadsPerMPITask);
+            } else {
+                writeln("  maxCPUs: ", maxCPUs, " for shared memory-parallelism");
+            }
         }
         version(mpi_parallel) {
             stdout.flush();
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
         }        
-        init_simulation(tindxStart, nextLoadsIndx, maxCPUs, maxWallClock);
+        init_simulation(tindxStart, nextLoadsIndx, maxCPUs, threadsPerMPITask, maxWallClock);
         if (verbosityLevel > 0 && GlobalConfig.is_master_task) {
             writeln("starting simulation time= ", simcore.sim_time);
         }

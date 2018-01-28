@@ -137,7 +137,7 @@ void main(string[] args) {
     auto last_tindx = tindx_list[$-1];
 
     writefln("Initialising simulation from tindx: %d", last_tindx);
-    init_simulation(last_tindx, 0, maxCPUs, maxWallClock);
+    init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
 
     writeln("Finite Difference Parameters:");
     writeln("EPSILON  = ", EPSILON);

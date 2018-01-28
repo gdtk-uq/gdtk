@@ -92,7 +92,8 @@ static int maxWallClockSeconds;
 
 //----------------------------------------------------------------------------
 
-void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock)
+void init_simulation(int tindx, int nextLoadsIndx,
+                     int maxCPUs, int threadsPerMPITask, int maxWallClock)
 {
     if (GlobalConfig.verbosity_level > 0 && GlobalConfig.is_master_task) {
         writeln("Begin init_simulation()...");
@@ -151,16 +152,21 @@ void init_simulation(int tindx, int nextLoadsIndx, int maxCPUs, int maxWallClock
     // Local blocks may be handled with thread-parallelism.
     auto nBlocksInThreadParallel = max(localFluidBlocks.length, GlobalConfig.nSolidBlocks);
     // There is no need to have more task threads than blocks local to the process.
-    auto nThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
-    defaultPoolThreads(nThreadsInPool); // total = main thread + threads-in-Pool
+    int extraThreadsInPool;
+    version(mpi_parallel) {
+        extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
+    } else {
+        extraThreadsInPool = min(threadsPerMPITask-1, nBlocksInThreadParallel-1);
+    }
+    defaultPoolThreads(extraThreadsInPool); // total = main thread + extra-threads-in-Pool
     if (GlobalConfig.verbosity_level > 0) {
         version(mpi_parallel) {
-            writeln("MPI-task with rank ", my_rank, " running with ", nThreadsInPool+1, " threads.");
+            writeln("MPI-task with rank ", my_rank, " running with ", extraThreadsInPool+1, " threads.");
             debug {
                 foreach (blk; localFluidBlocks) { writeln("rank=", my_rank, " blk.id=", blk.id); }
             }
         } else {
-            writeln("Single process running with ", nThreadsInPool+1, " threads.");
+            writeln("Single process running with ", extraThreadsInPool+1, " threads.");
             // Remember the +1 for the main thread.
         }
     }

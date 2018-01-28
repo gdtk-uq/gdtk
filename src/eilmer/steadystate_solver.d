@@ -140,7 +140,7 @@ void main(string[] args)
     }
 
     writefln("Initialising simulation from snapshot: %d", snapshotStart);
-    init_simulation(snapshotStart, -1, maxCPUs, maxWallClock);
+    init_simulation(snapshotStart, -1, maxCPUs, 1, maxWallClock);
     // Additional memory allocation specific to steady-state solver
     allocate_global_workspace();
     foreach (blk; localFluidBlocks) {
