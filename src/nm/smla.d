@@ -222,16 +222,26 @@ void decompILUp(SMatrix a, int p)
     // zero during the factorisation.
 
     size_t n = a.ia.length-1;
-    Matrix lev = new Matrix(n, n); // fill levels
 
+    double[] aa; size_t[] ja; size_t[] ia;
+    SMatrix lev = new SMatrix(aa, ja, ia); // fill levels
     // assign initial fill levels
     foreach ( i; 0 .. n ) { 
-        foreach ( j; 0 .. n ) { 
-            if (a[i,j] == 0.0) lev[i,j] = n-1;
-            else lev[i,j] = 0;
+        bool first_entry_in_row_stored = false;
+        foreach ( j; 0 .. n ) {
+            if (a[i,j] < 1.0e-16) {
+                lev.aa ~= n-1;
+                lev.ja ~= j;
+                if (!first_entry_in_row_stored) {
+                    lev.ia ~= lev.aa.length-1;
+                    first_entry_in_row_stored = true;
+                }
+            }
+            else continue; // we set lev[i,j] = 0
         }
     }
-    
+    lev.ia ~= lev.aa.length;
+   
     // factorise matrix
     foreach ( i; 1 .. n ) { // Begin from 2nd row
         foreach ( k; 0 .. i ) {
