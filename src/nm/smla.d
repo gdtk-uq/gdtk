@@ -97,9 +97,7 @@ public:
         return 0.0;
     }
     
-    // Presently we allow assignment if and only if the element
-    // is already non-zero. Otherwise, we'd have to shuffle all
-    // the elements around.
+    // We now allow assingment to zero entries.
     ref double opIndexAssign(double c, size_t row, size_t col) {
         foreach ( j; ia[row] .. ia[row+1] ) {
             if ( ja[j] == col ) {
@@ -107,10 +105,29 @@ public:
                 return aa[j];
             }
         }
-        // If we get here, we tried to assign to a zero value.
-        throw new Error("ERROR: Tried to assign a value to a zero entry in sparse matrix.");
+        // If we get here, we tried to assign to a zero value,
+        // so to add the entry we will need to shuffle all the elements
+        // shuffle ia entries
+        foreach ( j; row+1 .. ia.length ) this.ia[j] += 1;
+        // shuffle aa, ja entries
+        foreach ( j; ia[row] .. ia[row+1] ) {
+            if ( col == 0 || col < ja[j] || j == ia[row+1]-1) {
+                // make space for the new entry
+                aa.length += 1; ja.length += 1;
+                // shuffle all entries after new entry by 1 position
+                for (size_t i=aa.length-1; i > j; i--) { 
+                    aa[i] = aa[i-1];
+                    ja[i] = ja[i-1];
+                }
+                // fill in new entry
+                this.aa[j] = c; this.ja[j] = col;
+                return aa[j];
+            }
+        }
+        // if we get here, something has gone wrong
+        throw new Error("ERROR: An error occured while assigning a value to an entry in the sparse matrix.");
     }
-
+    
     override string toString() {
         string s = "SMatrix[\n";
         foreach (row; 0 .. ia.length-1) {
@@ -877,6 +894,17 @@ version(smla_test) {
             assert(approxEqual(x[i], C1_exp[i]), failedUnitTest());
         }
 
+        // This example tests the addition of values to zero-entries
+        auto z = new SMatrix([3., 4., 5., 6., 7., 3., 1., 4., 7.],
+                             [0, 2, 3, 0, 1, 1, 2, 0, 3],
+                             [0, 3, 5, 7, 9]);
+        z[1,2] = 99.0;
+        z[2,0] = 99.0;
+        z[2,3] = 99.0;
+        auto w = new SMatrix([3., 4., 5., 6., 7., 99., 99., 3., 1., 99., 4., 7.],
+                             [0, 2, 3, 0, 1, 2, 0, 1, 2, 3, 0, 3],
+                             [0, 3, 6, 10, 12]);
+        assert(approxEqualMatrix(z, w), failedUnitTest());
         return 0;
     }
 }
