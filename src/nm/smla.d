@@ -105,6 +105,10 @@ public:
                 return aa[j];
             }
         }
+
+        // if the new entry is 0.0
+        if (c == 0.0) return aa[0];
+
         // If we get here, we tried to assign to a zero value,
         // so to add the entry we will need to shuffle all the elements
         // shuffle ia entries
@@ -211,20 +215,15 @@ void decompILU0(SMatrix a)
  * This implements Algorithm 10.5 in Saad (2003)
  */
 
-SMatrix decompILUp(SMatrix s, int p)
+void decompILUp(SMatrix a, int p)
 {
-    size_t n = s.ia.length-1;
-    // TODO: use sparse matrix
-    Matrix a = new Matrix(n, n); // LU factorisation
+    // NB. This pre-conditioner uses a sparse matrix, however some stored entries will be zero,
+    // this is a result of entries starting as non-zero in the original matrix, and then becoming
+    // zero during the factorisation.
+
+    size_t n = a.ia.length-1;
     Matrix lev = new Matrix(n, n); // fill levels
 
-    // store input sparse matrix in full matrix format
-    foreach(i; 0 .. n) {
-        foreach(j; 0 .. n) {
-            a[i,j] = s[i,j];
-        }
-    }
-    
     // assign initial fill levels
     foreach ( i; 0 .. n ) { 
         foreach ( j; 0 .. n ) { 
@@ -250,25 +249,6 @@ SMatrix decompILUp(SMatrix s, int p)
             if (lev[i,k] > p) a[i,k] = 0.0;
         } // end for
     }
-
-    // convert back in sparse matrix
-    auto M = new SMatrix();
-    foreach(i; 0..n) {
-        bool first_nonzero_val_in_row = false;
-        foreach(j; 0..n) {
-            if (a[i,j] != 0.0) {
-                M.aa ~= a[i,j]; 
-                M.ja ~= j;
-                if (first_nonzero_val_in_row == false) {
-                    M.ia ~= M.aa.length-1;
-                    first_nonzero_val_in_row = true;
-                }
-            }
-        }
-        if (i == n-1) M.ia ~= M.aa.length;
-    }
-
-    return M;
 }
 
 void solve(SMatrix LU, double[] b)
@@ -824,22 +804,35 @@ version(smla_test) {
                                 [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
                                 [0, 3, 6, 10, 12, 16]);
         int p;
-        SMatrix m = new SMatrix();
         // test for ILU(p=0)
         p = 0;
-        m = decompILUp(s, p);
+        decompILUp(s, p);
         auto sol0 = new SMatrix([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., 0.4, 0.2, 3., 1.5, -0.4, -12.5],
                                 [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
                                 [0, 3, 6, 10, 12, 16]);
-        assert(approxEqualMatrix(m, sol0), failedUnitTest());
+
+        // As a result of the note in decompILUp() we don't expect an exact match of the SMatrix classes
+        foreach ( i; 0 .. 5) {
+            foreach ( j; 0 .. 5) {
+                assert(approxEqual(s[i,j], sol0[i,j]), failedUnitTest());
+            }
+        }
+
         // test for ILU(p=2)
+        s = new SMatrix([1., 1., 4., 2., 4., 1., 2., 1., 8., 2., 4., 1., 3., 6., 2., 1.],
+                        [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
+                        [0, 3, 6, 10, 12, 16]);
         p = 2;
-        m = decompILUp(s, p);
-        auto sol2 = new SMatrix([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., -7.5, 0.4, 0.2, 3., 3., 1.5, -0.4, 4., -27.5],
+        decompILUp(s, p);
+        auto sol1 = new SMatrix([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., -7.5, 0.4, 0.2, 3., 3., 1.5, -0.4, 4., -27.5],
                                 [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
                                 [0, 3, 6, 11, 14, 19]);
-        assert(approxEqualMatrix(m, sol2), failedUnitTest());
-        
+        // As a result of the note in decompILUp() we don't expect an exact match of the SMatrix classes
+        foreach ( i; 0 .. 5) {
+            foreach ( j; 0 .. 5) {
+                assert(approxEqual(s[i,j], sol1[i,j]), failedUnitTest());
+            }
+        }
         // Test GMRES on Faires and Burden problem.
 
         auto g = new SMatrix();
