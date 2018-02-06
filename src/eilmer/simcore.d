@@ -154,9 +154,9 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // There is no need to have more task threads than blocks local to the process.
     int extraThreadsInPool;
     version(mpi_parallel) {
-        extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
-    } else {
         extraThreadsInPool = min(threadsPerMPITask-1, nBlocksInThreadParallel-1);
+    } else {
+        extraThreadsInPool = min(maxCPUs-1, nBlocksInThreadParallel-1);
     }
     defaultPoolThreads(extraThreadsInPool); // total = main thread + extra-threads-in-Pool
     if (GlobalConfig.verbosity_level > 0) {
