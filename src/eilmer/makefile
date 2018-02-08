@@ -264,7 +264,7 @@ clean:
 	- rm main_with_rev_string.d
 	- rm steadystate_solver_with_rev_string.d
 	- rm adjoint_solver_with_rev_string.d
-	- rm mpi_main_with_rev_string.d e4mpi
+	- rm mpi_main_with_rev_string.d e4mpi loadbalance_with_rev_string.d
 	- rm dgd-for-mech4480.tgz
 	- cd $(OPENMPI_DIR); make clean
 	- cd $(LUA_DIR); make clean

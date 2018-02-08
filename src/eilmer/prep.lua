@@ -1158,22 +1158,33 @@ function mpiDistributeBlocks(nTasks, option)
       -- For each block, assign to an MPI task, round-robin order.
       local idTask = 0
       for i=1,nBlocks do
-         mpiTaskList[#mpiTaskList+1] = idTask
+         mpiTaskList[i] = idTask
          idTask = idTask + 1
-         if idTask == nTasks then
-            idTask = 0
-         end
+         if idTask == nTasks then idTask = 0 end
       end
    elseif option == "loadbalance" or option == "load-balance" then
-      -- [TODO] PJ 2018-01-16 Port Rowan's load-balance procedure.
-      -- For the moment, just distribute uniformly.
-      local idTask = 0
+      -- Load-balance procedure first sorts the blocks by size...
+      local blksNcells = {}
       for i=1,nBlocks do
-         mpiTaskList[#mpiTaskList+1] = idTask
-         idTask = idTask + 1
-         if idTask == nTasks then
-            idTask = 0
-         end
+	 local blk = fluidBlocks[i]
+	 blksNcells[i] = {i, blk.grid:get_ncells()}
+      end
+      table.sort(blksNcells, function (a,b) return a[2] > b[2] end)
+      -- ...then distributes the blocks to the tasks,
+      -- biggest block first into the task with the smallest load.
+      local taskLoads = {}
+      for i=1,nTasks do taskLoads[i] = 0 end
+      for _,v in pairs(blksNcells) do
+	 local ib = v[1]; local ncells = v[2]
+	 -- Add the block to the task with smallest load.
+	 local indxSmallest = 1; local smallestLoad = taskLoads[1]
+	 for i=2,#taskLoads do
+	    if taskLoads[i] < smallestLoad then
+	       indxSmallest = i; smallestLoad = taskLoads[i]
+	    end
+	 end
+	 mpiTaskList[ib] = indxSmallest-1 -- MPI task ids start from zero
+	 taskLoads[indxSmallest] = taskLoads[indxSmallest] + ncells
       end
    else
       error('Did not select one of "uniform" or "loadbalance". for mpiDistributeBlocks') 
