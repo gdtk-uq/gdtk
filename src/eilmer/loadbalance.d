@@ -102,26 +102,36 @@ void main(string[] args)
     taskMap.length = nTasks;
     int[] taskLoads;
     taskLoads.length = nTasks;
+    // For each fluid block, there will be an assigned MPI task.
+    int[] taskIds;
+    taskIds.length = GlobalConfig.nFluidBlocks;
 
     // Determine compute load per block.
     // We simply use the cell count as an estimate of load.
     Tuple!(int,int)[] blockLoads;
     blockLoads.length = GlobalConfig.nFluidBlocks;
-    foreach (iblk, blk; localFluidBlocks)
-        blockLoads[iblk] = tuple(to!int(iblk), to!int(globalFluidBlocks[iblk].ncells)); 
+    foreach (iblk, blk; globalFluidBlocks) {
+	int ncells = to!int(globalFluidBlocks[iblk].ncells_expected);
+        blockLoads[iblk] = tuple(to!int(iblk), ncells);
+    }
     sort!("a[1] > b[1]")(blockLoads);
     
     // Perform load balance and write out.
-    distributeBlocksToTasks(nTasks, blockLoads, taskMap, taskLoads);
+    distributeBlocksToTasks(nTasks, blockLoads, taskMap, taskLoads, taskIds);
     string fName = jobName~".mpimap";
-    writeBlocksToTasksMap(fName, taskMap, taskLoads);
-
+    // writeBlocksToTasksMap(fName, taskMap, taskLoads);
+    auto f = File(fName, "w");
+    f.writeln("# indx mpiTask");
+    foreach (blkId, taskId; taskIds) {
+	f.writefln("%4d %4d", blkId, taskId);
+    }
     writeln("Done.");
 }
 
 
 
-void distributeBlocksToTasks(int nTasks, Tuple!(int,int)[] blockLoads, int[][] taskMap, int[] taskLoads)
+void distributeBlocksToTasks(int nTasks, Tuple!(int,int)[] blockLoads,
+			     int[][] taskMap, int[] taskLoads, int[] taskIds)
 {
     taskLoads.length = nTasks;
     taskLoads[] = 0;
@@ -136,6 +146,7 @@ void distributeBlocksToTasks(int nTasks, Tuple!(int,int)[] blockLoads, int[][] t
         auto iMin = taskLoads.minIndex;
         taskLoads[iMin] += blkLoad;
         taskMap[iMin] ~= blkId;
+	taskIds[blkId] = to!int(iMin); 
     }
 
 }

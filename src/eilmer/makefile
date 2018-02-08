@@ -48,7 +48,7 @@ ifeq ($(WITH_ADJOINT),1)
 endif
 
 ifeq ($(WITH_MPI),1)
-    PROGRAMS += e4mpi
+    PROGRAMS += e4mpi e4loadbalance
     MPI_LIBRARY_DIRS = $(shell mpicc --showme:libdirs)
     MPI_LIB_DIRS_SEARCH = $(foreach d, $(MPI_LIBRARY_DIRS), -L-L$d)
 endif
