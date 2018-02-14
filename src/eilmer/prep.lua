@@ -39,6 +39,7 @@ require 'gridpro'
 -- Make these functions global so that users may call them
 -- in the configuration script
 applyGridproConnectivity = gridpro.applyGridproConnectivity
+applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 
 -- Storage for steady-state solver settings
 sssOptionsHidden = { -- hidden from user

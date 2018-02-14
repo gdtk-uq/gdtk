@@ -4,7 +4,6 @@
 -- Authors: RJG and PJ
 -- Date: 2015-10-01
 --
--- TODO: Port apply BCs function
 
 module(..., package.seeall)
 
@@ -110,7 +109,63 @@ function applyGridproConnectivity(fname, blks)
 
 end
 
-	 
-      
-
-      
+function applyGridproBoundaryConditions(fname, blks, bcMap, dim)
+   local dim = dim or 3
+   f = assert(io.open(fname, "r"))
+   local line = f:read("*line")
+   local tks = split_string(line)
+   nBlocks = tonumber(tks[1])
+   if nBlocks ~= #blks then
+      print("Error in applyGridproBoundaryConditions(): mismatch in number of blocks.")
+      print("The number of blocks given in the Gridpro property file (.pty) is ", nBlocks)
+      print("But the number of blocks supplied in the block list is ", #blks)
+      print("Bailing out.")
+      os.exit(1)
+   end
+   bcs = {}
+   for i=1,nBlocks do
+      -- Loop past comment lines
+      while true do
+	 line = f:read("*line")
+	 tks = split_string(line)
+	 if string.sub(tks[1], 1, 1) ~= '#' then
+	    -- We have a valid line.
+	    break
+	 end
+      end
+      bcs[#bcs+1] = {west=tonumber(tks[5]),
+		     east=tonumber(tks[7]),
+		     south=tonumber(tks[9]),
+		     north=tonumber(tks[11])}
+      if dim == 3 then
+	 bcs[#bcs].bottom = tonumber(tks[13])
+	 bcs[#bcs].top = tonumber(tks[15])
+      end
+   end
+   -- Read labels and discard
+   line = f:read("*line")
+   tks = split_string(line)
+   nLabels = tonumber(tks[1])
+   for i=1,nLabels do
+      f:read("*line")
+   end
+   -- Read bcTypes and do something with them.
+   line = f:read("*line")
+   tks = split_string(line)
+   nBCTypes = tonumber(tks[1])
+   BCTypeMap = {}
+   for ibc=1,nBCTypes do
+      line = f:read("*line")
+      tks = split_string(line)
+      BCTypeMap[tonumber(tks[1])] = tks[2]
+   end
+   f:close()
+   -- At this point all of the information has been gathered.
+   -- Now loop over the blocks, and apply the BCs as appropriate.
+   for ib, blk in ipairs(blks) do
+      for face, bcID in pairs(bcs[ib]) do
+	 bcLabel = BCTypeMap[bcID]
+	 blk.bcList.face = bcMap.bcLabel
+      end
+   end
+end
