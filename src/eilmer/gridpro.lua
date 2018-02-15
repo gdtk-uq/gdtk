@@ -165,7 +165,9 @@ function applyGridproBoundaryConditions(fname, blks, bcMap, dim)
    for ib, blk in ipairs(blks) do
       for face, bcID in pairs(bcs[ib]) do
 	 bcLabel = BCTypeMap[bcID]
-	 blk.bcList.face = bcMap.bcLabel
+	 if bcMap[bcLabel] then
+	    blk.bcList[face] = bcMap[bcLabel]
+         end
       end
    end
 end
