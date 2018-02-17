@@ -23,22 +23,35 @@ import sfluidblock;
 import gas;
 import bc;
 
+struct BlockAndCellId {
+    size_t blkId;
+    size_t cellId;
+
+    this(size_t bid, size_t cid)
+    {
+	blkId = bid;
+	cellId = cid;
+    }
+}
 
 class GhostCellMappedCellCopy : GhostCellEffect {
 public:
-    // For each ghost cell associated with the boundary,
-    // we will have a corresponding "mapped cell"
-    // from which we will copy the flow conditions.
-    //
-    // This boundary condition may be used in an MPI-parallel simulation
-    // but it does not do any MPI communication.
-    // Thus there is a restriction that the mapped-cell must be in a block
-    // that is also in the localFluidBlocks array.
-    //
-    // [TODO] PJ 2017-01-19 Some day, remove the restriction mentioned above.
-    //
+    // For each ghost cell associated with the current boundary,
     FVCell[] ghost_cells;
+    // we will have a corresponding "mapped cell", also known as "source cell"
+    // from which we will copy the flow conditions.
+    // In the shared-memory flavour of the code, it is easy to get a direct
+    // reference to each such mapped cell and store that for easy access.
     FVCell[] mapped_cells;
+    // In the MPI-parallel code, we do not have such direct access and so
+    // we store the integral ids of the source cell and block and send messages
+    // to the source blocks to get the relevant geometry and flow data.
+    // The mapped_file has one line per mapped cell and that is identified
+    // by the faceTag of the boundary interface.
+    BlockAndCellId[string][] mapped_cells_list;
+    // size_t[] mapped_cell_ids;
+    // size_t[] mapped_cell_blkids;
+    //
     // Parameters for the calculation of the mapped-cell location.
     bool cell_mapping_from_file;
     string mapped_cells_filename;
@@ -98,51 +111,48 @@ public:
 
     void set_up_cell_mapping()
     {
-        if (cell_mapping_from_file)
+        if (cell_mapping_from_file) {
             set_up_cell_mapping_from_file();
-        else
+        } else {
             set_up_cell_mapping_via_search();
-    }
+	}
+        foreach (i, mygc; ghost_cells) {
+            mygc.copy_values_from(mapped_cells[i], CopyDataOption.grid);
+	    if (list_mapped_cells) {
+		writeln("    ghost-cell-pos=", to!string(mygc.pos[0]), 
+			" mapped-cell-pos=", to!string(mapped_cells[i].pos[0]));
+	    }
+	}
+    } // end set_up_cell_mapping()
 
     void set_up_cell_mapping_from_file()
     {
-        string makeFaceTag(const size_t[] node_id_list)
-        {
-            // We make a tag for this face out of the vertex id numbers
-            // sorted in ascending order, to be used as a key in an
-            // associative array of indices.  Any cycle of the same vertices
-            // should define the same face, so we will use this tag as
-            // a way to check if we have made a particular face before.
-            // Of course, permutations of the same values that are not
-            // correct cycles will produce the same tag, however,
-            // we'll not worry about that for now because we should only
-            // ever be providing correct cycles.
-            size_t[] my_id_list = node_id_list.dup();
-            sort(my_id_list);
-            string tag = "";
-            size_t n = my_id_list.length;
-            foreach(i; 0 .. n) {
-                if (i > 0) { tag ~= "-"; }
-                tag ~= format("%d", my_id_list[i]);
-            }
-            return tag;
-        }
-        int[2][string] mapped_cells_list; // list of cells to be mapped to ghost cells,
-                                          // referenced by the neighbour cells id.
+        // First, read the entire mapped_cells file.
+	// The single mapped_cell file contains the indices mapped cells
+	// for all boundary faces in all blocks.
+	//
+	// They are in sections labelled by the block id.
+	// Each boundary face is identified by its "faceTag"
+	// which is a string composed of the vertex indices, in ascending order.
+	//
+	// For the shared memory code, we only need the section for the block
+	// associated with the current boundary.
+	// For the MPI-parallel code, we need the mappings for all blocks,
+	// so that we know what requests for data to expect from other blocks.
         //
-        // Stage 1 -- read mapped_cells file
+	mapped_cells_list.length = GlobalConfig.nFluidBlocks;
         //
         if (!exists(mapped_cells_filename)) {
-            throw new FlowSolverException(format("mapped_cells file %s does not exist.",
-                                                 mapped_cells_filename));
+	    string msg = format("mapped_cells file %s does not exist.", mapped_cells_filename);
+            throw new FlowSolverException(msg);
         }
         auto f = File(mapped_cells_filename, "r");
         string getHeaderContent(string target)
-        // Helper function to proceed through file, line-by-line,
-        // looking for a particular header line.
-        // Returns the content from the header line and leaves the file
-        // at the next line to be read, presumably with expected data.
         {
+	    // Helper function to proceed through file, line-by-line,
+	    // looking for a particular header line.
+	    // Returns the content from the header line and leaves the file
+	    // at the next line to be read, presumably with expected data.
             while (!f.eof) {
                 auto line = f.readln().strip();
                 if (canFind(line, target)) {
@@ -152,44 +162,41 @@ public:
             } // end while
             return ""; // didn't find the target
         }
-        string blk_id_str = to!string(blk.id);
-        string mapped_cells_tag = "NMappedCells in BLOCK[" ~ blk_id_str ~ "]";
-        auto nfaces  = to!int(getHeaderContent(mapped_cells_tag));
-        foreach(i; 0..nfaces) {
-            auto lineContent = f.readln().strip();
-            auto tokens = lineContent.split();
-            int secondary_blk_id = to!int(tokens[1]);
-            int secondary_cell_id = to!int(tokens[2]);
-            auto faceTag = tokens[0];
-            int[2] mapped_cell;
-            mapped_cell[0] = secondary_blk_id;
-            mapped_cell[1] = secondary_cell_id;
-            mapped_cells_list[faceTag] = mapped_cell;
-        }
+	foreach (bid; 0 .. GlobalConfig.nFluidBlocks) {
+	    string txt = getHeaderContent(format("NMappedCells in BLOCK[%d]", bid));
+	    if (!txt.length) {
+		string msg = format("Did not find mapped cells section for block id=%d.", bid);
+		throw new FlowSolverException(msg);
+	    }
+	    size_t nfaces  = to!size_t(txt);
+	    foreach(i; 0 .. nfaces) {
+		auto lineContent = f.readln().strip();
+		auto tokens = lineContent.split();
+		string faceTag = tokens[0];
+		size_t src_blk_id = to!size_t(tokens[1]);
+		size_t src_cell_id = to!size_t(tokens[2]);
+		mapped_cells_list[bid][faceTag] = BlockAndCellId(src_blk_id, src_cell_id);
+	    }
+	} // end foreach bid
         //
-        // Stage 2 -- get references to map cells,
-        // but only if the source block is in localFluidBlocks.
+        // For the shared-memory code, get references to the mapped-cells for the current block,
+        // but only if the source block for each mapped cell is in localFluidBlocks.
         //
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid: 
             BoundaryCondition bc = blk.bc[which_boundary];
             foreach (i, face; bc.faces) {
+                ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
                 size_t[] my_vtx_list; foreach(vtx; face.vtx) { my_vtx_list ~= vtx.id; }
                 string faceTag =  makeFaceTag(my_vtx_list);
-                ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
-                int mapped_cell_blk_id = mapped_cells_list[faceTag][0];
-                int mapped_cell_id = mapped_cells_list[faceTag][1];
-                if (!find(GlobalConfig.localBlockIds, mapped_cell_blk_id).empty) {
-                    mapped_cells ~= globalFluidBlocks[mapped_cell_blk_id].cells[mapped_cell_id];
+                auto src_blk_id = mapped_cells_list[blk.id][faceTag].blkId;
+                auto src_cell_id = mapped_cells_list[blk.id][faceTag].cellId;
+                if (!find(GlobalConfig.localBlockIds, src_blk_id).empty) {
+                    mapped_cells ~= globalFluidBlocks[src_blk_id].cells[src_cell_id];
                 } else {
-                    throw new FlowSolverException(format("block id %d is not in localFluidBlocks",
-                                                         mapped_cell_blk_id));
+		    auto msg = format("block id %d is not in localFluidBlocks", src_blk_id);
+                    throw new FlowSolverException(msg);
                 }
-                if (list_mapped_cells) {
-                    writeln("    ghost-cell-pos=", to!string(ghost_cells[$-1].pos[0]), 
-                            " mapped-cell-pos=", to!string(mapped_cells[$-1].pos[0]));
-                }
-                ghost_cells[$-1].copy_values_from(mapped_cells[$-1], CopyDataOption.grid);
             } // end foreach face
             break;
         case Grid_t.structured_grid:
@@ -214,13 +221,9 @@ public:
         final switch (blk.grid_type) {
         case Grid_t.unstructured_grid: 
             BoundaryCondition bc = blk.bc[which_boundary];
-            foreach (i, f; bc.faces) {
-                if (bc.outsigns[i] == 1) {
-                    ghost_cells ~= f.right_cell;
-                } else {
-                    ghost_cells ~= f.left_cell;
-                }
-            } // end foreach face
+            foreach (i, face; bc.faces) {
+                ghost_cells ~= (bc.outsigns[i] == 1) ? face.right_cell : face.left_cell;
+            }
             break;
         case Grid_t.structured_grid:
             size_t i, j, k;
@@ -346,9 +349,8 @@ public:
                 writeln("    ghost-cell-pos=", to!string(mygc.pos[0]), 
                         " mapped-cell-pos=", to!string(mapped_cells[$-1].pos[0]));
             }
-            mygc.copy_values_from(mapped_cells[$-1], CopyDataOption.grid);
         } // end foreach mygc
-    } // end set_up_cell_mapping()
+    } // end set_up_cell_mapping_via_search()
 
     ref FVCell get_mapped_cell(size_t i)
     {
