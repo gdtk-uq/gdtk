@@ -109,23 +109,33 @@ public:
         return str;
     }
 
-    void set_up_cell_mapping()
+    void set_up_cell_mapping_phase0()
     {
-        if (cell_mapping_from_file) {
-            set_up_cell_mapping_from_file();
-        } else {
-            set_up_cell_mapping_via_search();
+        if (cell_mapping_from_file) { read_cell_mapping_from_file(); }
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
 	}
-        foreach (i, mygc; ghost_cells) {
-            mygc.copy_values_from(mapped_cells[i], CopyDataOption.grid);
-	    if (list_mapped_cells) {
-		writeln("    ghost-cell-pos=", to!string(mygc.pos[0]), 
-			" mapped-cell-pos=", to!string(mapped_cells[i].pos[0]));
-	    }
-	}
-    } // end set_up_cell_mapping()
+    } // end set_up_cell_mapping_phase0()
 
-    void set_up_cell_mapping_from_file()
+    void set_up_cell_mapping_phase1()
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+	}
+    } // end set_up_cell_mapping_phase1()
+
+    void set_up_cell_mapping_phase2()
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+	    if (!cell_mapping_from_file) { set_up_cell_mapping_via_search(); }
+	}
+    } // end set_up_cell_mapping_phase2()
+    
+    void read_cell_mapping_from_file()
     {
         // First, read the entire mapped_cells file.
 	// The single mapped_cell file contains the indices mapped cells
@@ -200,14 +210,14 @@ public:
             } // end foreach face
             break;
         case Grid_t.structured_grid:
-            throw new Error("mapped cells from file not implemented for structured grids");
+            throw new Error("reading mapped cells from file not implemented for structured grids");
         }
     } // end set_up_cell_mapping_from_file()
     
     void set_up_cell_mapping_via_search()
     {
-        // Stage-2 construction for this boundary condition,
-        // for the situation when we haven't been told where to find our mapped cells.
+        // For the situation when we haven't been given a file to specify
+	// where to find our mapped cells.
         //
         // Needs to be called after the cell geometries have been computed,
         // because the search sifts through the cells in blocks
@@ -345,10 +355,6 @@ public:
                 }
                 mapped_cells ~= closest_cell;
             }
-            if (list_mapped_cells) {
-                writeln("    ghost-cell-pos=", to!string(mygc.pos[0]), 
-                        " mapped-cell-pos=", to!string(mapped_cells[$-1].pos[0]));
-            }
         } // end foreach mygc
     } // end set_up_cell_mapping_via_search()
 
@@ -360,29 +366,96 @@ public:
             throw new FlowSolverException(format("Reference to requested mapped-cell[%d] is not available.", i));
         }
     }
+
+    void exchange_geometry_phase0()
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+	}
+    } // end exchange_geometry_phase0()
+
+    void exchange_geometry_phase1()
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+	}
+    } // end exchange_geometry_phase1()
+
+    void exchange_geometry_phase2()
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+            // For a single process, just access the data directly.
+	    foreach (i, mygc; ghost_cells) {
+		mygc.copy_values_from(mapped_cells[i], CopyDataOption.grid);
+	    }
+	}
+    } // end exchange_geometry_phase2()
+
+    void exchange_flowstate_phase0(double t, int gtl, int ftl)
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+	}
+    } // end exchange_flowstate_phase0()
+
+    void exchange_flowstate_phase1(double t, int gtl, int ftl)
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+            // For a single process,
+            // we know that we can just access the data directly
+            // in the final phase.
+	}
+    } // end exchange_flowstate_phase1()
+
+    void exchange_flowstate_phase2(double t, int gtl, int ftl)
+    {
+        version(mpi_parallel) {
+	    assert(0, "oops, have yet to finish this code");
+        } else { // not mpi_parallel
+            // For a single process, just access the data directly.
+	    foreach (i, mygc; ghost_cells) {
+		mygc.fs.copy_values_from(mapped_cells[i].fs);
+	    }
+	}
+    } // end exchange_flowstate_phase2()
     
     override void apply_unstructured_grid(double t, int gtl, int ftl)
     {
-        foreach (i; 0 .. ghost_cells.length) {
-            ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
-            ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
-            if (reorient_vector_quantities) {
-                ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
+        // We presume that all of the exchange of data happened earlier,
+        // and that the ghost cells have been filled with flow state data
+        // from their respective source cells.
+	foreach (i, mygc; ghost_cells) {
+	    if (reorient_vector_quantities) {
+                mygc.fs.reorient_vector_quantities(Rmatrix);
             }
-            // [TODO] PJ 2018-01-14 If unstructured blocks ever get used in
-            // the block-marching process, we will need a call to encode_conserved
-            // at this point.  See the GhostCellFullFaceCopy class.
+	    // [TODO] PJ 2018-01-14 If unstructured blocks ever get used in
+	    // the block-marching process, we will need a call to encode_conserved
+	    // at this point.  See the GhostCellFullFaceCopy class.
         }
-    }
+    } // end apply_unstructured_grid()
 
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
-        foreach (i; 0 .. ghost_cells.length) {
-            ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
-            ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
-            if (reorient_vector_quantities) {
-                ghost_cells[i].fs.reorient_vector_quantities(Rmatrix);
+	foreach (i, mygc; ghost_cells) {
+	    if (reorient_vector_quantities) {
+                mygc.fs.reorient_vector_quantities(Rmatrix);
             }
         }
-    }
+    } // end apply_unstructured_grid()
 } // end class GhostCellMappedCellCopy

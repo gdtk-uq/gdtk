@@ -856,11 +856,6 @@ public:
         }
     }
 
-    override void apply_unstructured_grid(double t, int gtl, int ftl)
-    {
-        throw new Error("GhostCellFullFaceCopy.apply_unstructured_grid() not implemented");
-    }
-
     void exchange_geometry_phase0()
     {
         version(mpi_parallel) {
@@ -1171,6 +1166,11 @@ public:
         }
         // Done with copying from source cells.
     } // end exchange_flowstate_phase2()
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        throw new Error("GhostCellFullFaceCopy.apply_unstructured_grid() not implemented");
+    }
     
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
