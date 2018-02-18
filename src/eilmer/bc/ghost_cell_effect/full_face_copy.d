@@ -58,11 +58,10 @@ public:
     size_t[] mapped_cell_ids;
     // Later, it is convenient to use a different notation for the data exchange.
     // Also, note that we require structured-grid blocks.
-    SFluidBlock dest_blk;
-    int destination_face;
-    SFluidBlock src_blk;
-    int src_face;
-    int src_orientation;
+    SFluidBlock this_blk;
+    SFluidBlock other_blk;
+    int other_face;
+    int other_orientation;
     version(mpi_parallel) {
         // This GhostCellEffect is somewhat symmetric in that for each ghost-cell
         // source-cell mapping, there should be a corresponding mapping over in
@@ -70,8 +69,7 @@ public:
         // for which data should be sent to the source block.
         size_t[] outgoing_mapped_cell_ids;
         FVCell[] outgoing_mapped_cells;
-        int src_blk_rank;
-        int dest_blk_rank;
+        int other_blk_rank;
         int outgoing_cell_ids_tag, incoming_cell_ids_tag;
         MPI_Request incoming_cell_ids_request;
         MPI_Status incoming_cell_ids_status;
@@ -120,16 +118,14 @@ public:
         //
         // The following references and names will be handy for the data exchange
         // that occurs for this ghost-cell effect.
-        dest_blk = cast(SFluidBlock) blk;
-        assert(dest_blk, "Destination FlowBlock must be a structured-grid block.");
-        destination_face = which_boundary;
-        src_blk = cast(SFluidBlock) neighbourBlock;
-        assert(src_blk, "Source FlowBlock must be a structured-grid block.");
-        src_face = neighbourFace;
-        src_orientation = neighbourOrientation;
+        this_blk = cast(SFluidBlock) blk;
+        assert(this_blk, "Destination FlowBlock must be a structured-grid block.");
+        other_blk = cast(SFluidBlock) neighbourBlock;
+        assert(other_blk, "Source FlowBlock must be a structured-grid block.");
+        other_face = neighbourFace;
+        other_orientation = neighbourOrientation;
         version(mpi_parallel) {
-            src_blk_rank = GlobalConfig.mpi_rank_for_block[src_blk.id];
-            dest_blk_rank = GlobalConfig.mpi_rank_for_local_task;
+            other_blk_rank = GlobalConfig.mpi_rank_for_block[other_blk.id];
         }
         //
         // For the source cells, we use indices into the hypothetical block of active cells. 
@@ -140,631 +136,631 @@ public:
         //
         if (blk.myConfig.dimensions == 2) {
             // Handle the 2D case separately.
-            switch (destination_face) {
+            switch (which_boundary) {
             case Face.north:
-                j_dest = dest_blk.jmax;  // index of the north-most plane of active cells
-                foreach (i; 0 .. dest_blk.nicell) {
-                    i_dest = i + dest_blk.imin;
-                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+1);
-                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+2);
-                    switch (src_face) {
+                j_dest = this_blk.jmax;  // index of the north-most plane of active cells
+                foreach (i; 0 .. this_blk.nicell) {
+                    i_dest = i + this_blk.imin;
+                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest+1);
+                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest+2);
+                    switch (other_face) {
                     case Face.north:
-                        j_src = src_blk.njcell - 1; 
-                        i_src = src_blk.nicell - i - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
+                        j_src = other_blk.njcell - 1; 
+                        i_src = other_blk.nicell - i - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        i_src = src_blk.nicell - 1; 
+                        i_src = other_blk.nicell - 1; 
                         j_src = i;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
                         j_src = 0; 
                         i_src = i;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
                         i_src = 0; 
-                        j_src = src_blk.njcell - i - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
+                        j_src = other_blk.njcell - i - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
-                    } // end switch src_face
+                    } // end switch other_face
                 } // i loop
                 break;
             case Face.east:
-                i_dest = dest_blk.imax;  // index of the east-most plane of active cells
-                foreach (j; 0 .. dest_blk.njcell) {
-                    j_dest = j + dest_blk.jmin;
-                    ghost_cells ~= dest_blk.get_cell(i_dest+1,j_dest);
-                    ghost_cells ~= dest_blk.get_cell(i_dest+2,j_dest);
-                    switch (src_face) {
+                i_dest = this_blk.imax;  // index of the east-most plane of active cells
+                foreach (j; 0 .. this_blk.njcell) {
+                    j_dest = j + this_blk.jmin;
+                    ghost_cells ~= this_blk.get_cell(i_dest+1,j_dest);
+                    ghost_cells ~= this_blk.get_cell(i_dest+2,j_dest);
+                    switch (other_face) {
                     case Face.north:
-                        j_src = src_blk.njcell - 1; 
+                        j_src = other_blk.njcell - 1; 
                         i_src = j;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        i_src = src_blk.nicell - 1; 
-                        j_src = src_blk.njcell - j - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
+                        i_src = other_blk.nicell - 1; 
+                        j_src = other_blk.njcell - j - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
                         j_src = 0; 
-                        i_src = src_blk.nicell - j - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
+                        i_src = other_blk.nicell - j - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
                         i_src = 0; 
                         j_src = j;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
-                    } // end switch src_face
+                    } // end switch other_face
                 } // j loop
                 break;
             case Face.south:
-                j_dest = dest_blk.jmin;  // index of the south-most plane of active cells
-                foreach (i; 0 .. dest_blk.nicell) {
-                    i_dest = i + dest_blk.imin;
-                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-1);
-                    ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-2);
-                    switch (src_face) {
+                j_dest = this_blk.jmin;  // index of the south-most plane of active cells
+                foreach (i; 0 .. this_blk.nicell) {
+                    i_dest = i + this_blk.imin;
+                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest-1);
+                    ghost_cells ~= this_blk.get_cell(i_dest,j_dest-2);
+                    switch (other_face) {
                     case Face.north:
-                        j_src = src_blk.njcell - 1; 
+                        j_src = other_blk.njcell - 1; 
                         i_src = i;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        i_src = src_blk.nicell - 1; 
-                        j_src = src_blk.njcell - i - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
+                        i_src = other_blk.nicell - 1; 
+                        j_src = other_blk.njcell - i - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
                         j_src = 0; 
-                        i_src = src_blk.nicell - i - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
+                        i_src = other_blk.nicell - i - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
                         i_src = 0; 
                         j_src = i;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
-                    } // end switch src_face
+                    } // end switch other_face
                 } // i loop
                 break;
             case Face.west:
-                i_dest = dest_blk.imin;  // index of the west-most plane of active cells
-                foreach (j; 0 .. dest_blk.njcell) {
-                    j_dest = j + dest_blk.jmin;
-                    ghost_cells ~= dest_blk.get_cell(i_dest-1,j_dest);
-                    ghost_cells ~= dest_blk.get_cell(i_dest-2,j_dest);
-                    switch (src_face) {
+                i_dest = this_blk.imin;  // index of the west-most plane of active cells
+                foreach (j; 0 .. this_blk.njcell) {
+                    j_dest = j + this_blk.jmin;
+                    ghost_cells ~= this_blk.get_cell(i_dest-1,j_dest);
+                    ghost_cells ~= this_blk.get_cell(i_dest-2,j_dest);
+                    switch (other_face) {
                     case Face.north:
-                        j_src = src_blk.njcell - 1; 
-                        i_src = src_blk.nicell - j - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
+                        j_src = other_blk.njcell - 1; 
+                        i_src = other_blk.nicell - j - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1);
                         break;
                     case Face.east:
-                        i_src = src_blk.nicell - 1; 
+                        i_src = other_blk.nicell - 1; 
                         j_src = j;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src);
                         break;
                     case Face.south:
                         j_src = 0; 
                         i_src = j;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1);
                         break;
                     case Face.west:
                         i_src = 0; 
-                        j_src = src_blk.njcell - j - 1;
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
-                        mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
+                        j_src = other_blk.njcell - j - 1;
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src);
+                        mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src);
                         break;
                     default:
                         assert(false, "Incorrect boundary connection, source face.");
-                    } // end switch src_face
+                    } // end switch other_face
                 } // j loop
                 break;
             default:
-                assert(false, "Incorrect boundary connection, destination face.");
-            } // end switch destination_face
+                assert(false, "Incorrect boundary connection, which_boundary.");
+            } // end switch which_boundary
         } else {
             // presume dimensions == 3
             // Continue on with 3D work...
-            final switch (destination_face) {
+            final switch (which_boundary) {
             case Face.north:
-                j_dest = dest_blk.jmax;  // index of the north-most plane of active cells
-                foreach (i; 0 .. dest_blk.nicell) {
-                    i_dest = i + dest_blk.imin;
-                    foreach (k; 0 .. dest_blk.nkcell) {
-                        k_dest = k + dest_blk.kmin;
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+1,k_dest);
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest+2,k_dest);
-                        final switch (src_face) {
+                j_dest = this_blk.jmax;  // index of the north-most plane of active cells
+                foreach (i; 0 .. this_blk.nicell) {
+                    i_dest = i + this_blk.imin;
+                    foreach (k; 0 .. this_blk.nkcell) {
+                        k_dest = k + this_blk.kmin;
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest+1,k_dest);
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest+2,k_dest);
+                        final switch (other_face) {
                         case Face.north:
-                            j_src = src_blk.njcell - 1; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; k_src = k; break;
+                            j_src = other_blk.njcell - 1; 
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; k_src = k; break;
                             case 1: i_src = k; k_src = i; break;
-                            case 2: i_src = i; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - i - 1;
+                            case 2: i_src = i; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
-                            i_src = src_blk.nicell - 1; 
-                            final switch (src_orientation) {
+                            i_src = other_blk.nicell - 1; 
+                            final switch (other_orientation) {
                             case 0: j_src = i; k_src = k; break;
-                            case 1: j_src = src_blk.njcell - k - 1; k_src = i; break;
-                            case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: j_src = k; k_src = src_blk.nkcell - i - 1;
+                            case 1: j_src = other_blk.njcell - k - 1; k_src = i; break;
+                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: j_src = k; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
                             j_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: i_src = i; k_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; k_src = i; break;
-                            case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: i_src = k; k_src = src_blk.nkcell - i - 1;
+                            case 1: i_src = other_blk.nicell - k - 1; k_src = i; break;
+                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: i_src = k; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
                             i_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: j_src = src_blk.njcell - i - 1; k_src = k; break;
+                            final switch (other_orientation) {
+                            case 0: j_src = other_blk.njcell - i - 1; k_src = k; break;
                             case 1: j_src = k; k_src = i; break;
-                            case 2: j_src = i; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - i - 1;
+                            case 2: j_src = i; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = src_blk.nkcell - 1; 
-                            final switch (src_orientation) {
+                            k_src = other_blk.nkcell - 1; 
+                            final switch (other_orientation) {
                             case 0: i_src = i; j_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; j_src = i; break;
-                            case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - k - 1; break;
-                            case 3: i_src = k; j_src = src_blk.njcell - i - 1;
+                            case 1: i_src = other_blk.nicell - k - 1; j_src = i; break;
+                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - k - 1; break;
+                            case 3: i_src = k; j_src = other_blk.njcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
                             k_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; j_src = k; break;
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; j_src = k; break;
                             case 1: i_src = k; j_src = i; break;
-                            case 2: i_src = i; j_src = src_blk.njcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - i - 1;
+                            case 2: i_src = i; j_src = other_blk.njcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                        } // end switch (src_face)
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
+                        } // end switch (other_face)
                     } // k loop
                 } // i loop
                 break;
             case Face.east:
-                i_dest = dest_blk.imax;  // index of the east-most plane of active cells
-                foreach (j; 0 .. dest_blk.njcell) {
-                    j_dest = j + dest_blk.jmin;
-                    foreach (k; 0 .. dest_blk.nkcell) {
-                        k_dest = k + dest_blk.kmin;
-                        ghost_cells ~= dest_blk.get_cell(i_dest+1,j_dest,k_dest);
-                        ghost_cells ~= dest_blk.get_cell(i_dest+2,j_dest,k_dest);
-                        final switch (src_face) {
+                i_dest = this_blk.imax;  // index of the east-most plane of active cells
+                foreach (j; 0 .. this_blk.njcell) {
+                    j_dest = j + this_blk.jmin;
+                    foreach (k; 0 .. this_blk.nkcell) {
+                        k_dest = k + this_blk.kmin;
+                        ghost_cells ~= this_blk.get_cell(i_dest+1,j_dest,k_dest);
+                        ghost_cells ~= this_blk.get_cell(i_dest+2,j_dest,k_dest);
+                        final switch (other_face) {
                         case Face.north:
-                            j_src = src_blk.njcell - 1; 
-                            final switch (src_orientation) {
+                            j_src = other_blk.njcell - 1; 
+                            final switch (other_orientation) {
                             case 0: i_src = j; k_src = k; break;
-                            case 1: i_src = k; k_src = src_blk.nkcell - j - 1; break;
-                            case 2: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; k_src = j;
+                            case 1: i_src = k; k_src = other_blk.nkcell - j - 1; break;
+                            case 2: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; k_src = j;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
-                            i_src = src_blk.nicell - 1; 
-                            final switch (src_orientation) {
-                            case 0: j_src = src_blk.njcell - j - 1; k_src = k; break;
-                            case 1: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - j - 1; break;
-                            case 2: j_src = j; k_src = src_blk.nkcell - k - 1; break;
+                            i_src = other_blk.nicell - 1; 
+                            final switch (other_orientation) {
+                            case 0: j_src = other_blk.njcell - j - 1; k_src = k; break;
+                            case 1: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - j - 1; break;
+                            case 2: j_src = j; k_src = other_blk.nkcell - k - 1; break;
                             case 3: j_src = k; k_src = j;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
                             j_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - j - 1; k_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - j - 1; break;
-                            case 2: i_src = j; k_src = src_blk.nkcell - k - 1; break;
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - j - 1; k_src = k; break;
+                            case 1: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - j - 1; break;
+                            case 2: i_src = j; k_src = other_blk.nkcell - k - 1; break;
                             case 3: i_src = k; k_src = j;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
                             i_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: j_src = j; k_src = k; break;
-                            case 1: j_src = k; k_src = src_blk.nkcell - j - 1; break;
-                            case 2: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: j_src = src_blk.njcell - k - 1; k_src = j;
+                            case 1: j_src = k; k_src = other_blk.nkcell - j - 1; break;
+                            case 2: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: j_src = other_blk.njcell - k - 1; k_src = j;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = src_blk.nkcell - 1; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - j - 1; j_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - j - 1; break;
-                            case 2: i_src = j; j_src = src_blk.njcell - k - 1; break;
+                            k_src = other_blk.nkcell - 1; 
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - j - 1; j_src = k; break;
+                            case 1: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - j - 1; break;
+                            case 2: i_src = j; j_src = other_blk.njcell - k - 1; break;
                             case 3: i_src = k; j_src = j;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
                             k_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: i_src = j; j_src = k; break;
-                            case 1: i_src = k; j_src = src_blk.njcell - j - 1; break;
-                            case 2: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; j_src = j;
+                            case 1: i_src = k; j_src = other_blk.njcell - j - 1; break;
+                            case 2: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; j_src = j;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                        } // end switch (src_face)
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
+                        } // end switch (other_face)
                     } // k loop
                 } // j loop
                 break;
             case Face.south:
-                j_dest = dest_blk.jmin;  // index of the south-most plane of active cells
-                foreach (i; 0 .. dest_blk.nicell) {
-                    i_dest = i + dest_blk.imin;
-                    foreach (k; 0 .. dest_blk.nkcell) {
-                        k_dest = k + dest_blk.kmin;
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-1,k_dest);
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest-2,k_dest);
-                        final switch (src_face) {
+                j_dest = this_blk.jmin;  // index of the south-most plane of active cells
+                foreach (i; 0 .. this_blk.nicell) {
+                    i_dest = i + this_blk.imin;
+                    foreach (k; 0 .. this_blk.nkcell) {
+                        k_dest = k + this_blk.kmin;
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest-1,k_dest);
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest-2,k_dest);
+                        final switch (other_face) {
                         case Face.north:
-                            j_src = src_blk.njcell - 1; 
-                            final switch (src_orientation) {
+                            j_src = other_blk.njcell - 1; 
+                            final switch (other_orientation) {
                             case 0: i_src = i; k_src = k; break;
-                            case 1: i_src = k; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; k_src = i;
+                            case 1: i_src = k; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
-                            i_src = src_blk.nicell - 1; 
-                            final switch (src_orientation) {
-                            case 0: j_src = src_blk.njcell - i - 1; k_src = k; break;
-                            case 1: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: j_src = i; k_src = src_blk.nkcell - k - 1; break;
+                            i_src = other_blk.nicell - 1; 
+                            final switch (other_orientation) {
+                            case 0: j_src = other_blk.njcell - i - 1; k_src = k; break;
+                            case 1: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: j_src = i; k_src = other_blk.nkcell - k - 1; break;
                             case 3: j_src = k; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
                             j_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; k_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: i_src = i; k_src = src_blk.nkcell - k - 1; break;
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; k_src = k; break;
+                            case 1: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: i_src = i; k_src = other_blk.nkcell - k - 1; break;
                             case 3: i_src = k; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
                             i_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: j_src = i; k_src = k; break;
-                            case 1: j_src = k; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: j_src = src_blk.njcell - k - 1; k_src = i;
+                            case 1: j_src = k; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: j_src = other_blk.njcell - k - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = src_blk.nkcell - 1; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; j_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - i - 1; break;
-                            case 2: i_src = i; j_src = src_blk.njcell - k - 1; break;
+                            k_src = other_blk.nkcell - 1; 
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; j_src = k; break;
+                            case 1: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - i - 1; break;
+                            case 2: i_src = i; j_src = other_blk.njcell - k - 1; break;
                             case 3: i_src = k; j_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
                             k_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: i_src = i; j_src = k; break;
-                            case 1: i_src = k; j_src = src_blk.njcell - i - 1; break;
-                            case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; j_src = i;
+                            case 1: i_src = k; j_src = other_blk.njcell - i - 1; break;
+                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; j_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                        } // end switch (src_face)
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
+                        } // end switch (other_face)
                     } // k loop
                 } // i loop
                 break;
             case Face.west:
-                i_dest = dest_blk.imin;  // index of the west-most plane of active cells
-                foreach (j; 0 .. dest_blk.njcell) {
-                    j_dest = j + dest_blk.jmin;
-                    foreach (k; 0 .. dest_blk.nkcell) {
-                        k_dest = k + dest_blk.kmin;
-                        ghost_cells ~= dest_blk.get_cell(i_dest-1,j_dest,k_dest);
-                        ghost_cells ~= dest_blk.get_cell(i_dest-2,j_dest,k_dest);
-                        final switch (src_face) {
+                i_dest = this_blk.imin;  // index of the west-most plane of active cells
+                foreach (j; 0 .. this_blk.njcell) {
+                    j_dest = j + this_blk.jmin;
+                    foreach (k; 0 .. this_blk.nkcell) {
+                        k_dest = k + this_blk.kmin;
+                        ghost_cells ~= this_blk.get_cell(i_dest-1,j_dest,k_dest);
+                        ghost_cells ~= this_blk.get_cell(i_dest-2,j_dest,k_dest);
+                        final switch (other_face) {
                         case Face.north:
-                            j_src = src_blk.njcell - 1; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - j - 1; k_src = k; break;
+                            j_src = other_blk.njcell - 1; 
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - j - 1; k_src = k; break;
                             case 1: i_src = k; k_src = j; break;
-                            case 2: i_src = j; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; k_src = src_blk.nkcell - j - 1;
+                            case 2: i_src = j; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; k_src = other_blk.nkcell - j - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
-                            i_src = src_blk.nicell - 1; 
-                            final switch (src_orientation) {
+                            i_src = other_blk.nicell - 1; 
+                            final switch (other_orientation) {
                             case 0: j_src = j; k_src = k; break;
-                            case 1: j_src = src_blk.njcell - k - 1; k_src = j; break;
-                            case 2: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: j_src = k; k_src = src_blk.nkcell - j - 1;
+                            case 1: j_src = other_blk.njcell - k - 1; k_src = j; break;
+                            case 2: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: j_src = k; k_src = other_blk.nkcell - j - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
                             j_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: i_src = j; k_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; k_src = j; break;
-                            case 2: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: i_src = k; k_src = src_blk.nkcell - j - 1;
+                            case 1: i_src = other_blk.nicell - k - 1; k_src = j; break;
+                            case 2: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: i_src = k; k_src = other_blk.nkcell - j - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
                             i_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: j_src = src_blk.njcell - j - 1; k_src = k; break;
+                            final switch (other_orientation) {
+                            case 0: j_src = other_blk.njcell - j - 1; k_src = k; break;
                             case 1: j_src = k; k_src = j; break;
-                            case 2: j_src = j; k_src = src_blk.nkcell - k - 1; break;
-                            case 3: j_src = src_blk.njcell - k - 1; k_src = src_blk.nkcell - j - 1;
+                            case 2: j_src = j; k_src = other_blk.nkcell - k - 1; break;
+                            case 3: j_src = other_blk.njcell - k - 1; k_src = other_blk.nkcell - j - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = src_blk.nkcell - 1; 
-                            final switch (src_orientation) {
+                            k_src = other_blk.nkcell - 1; 
+                            final switch (other_orientation) {
                             case 0: i_src = j; j_src = k; break;
-                            case 1: i_src = src_blk.nicell - k - 1; j_src = j; break;
-                            case 2: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - k - 1; break;
-                            case 3: i_src = k; j_src = src_blk.njcell - j - 1;
+                            case 1: i_src = other_blk.nicell - k - 1; j_src = j; break;
+                            case 2: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - k - 1; break;
+                            case 3: i_src = k; j_src = other_blk.njcell - j - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
                             k_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - j - 1; j_src = k; break;
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - j - 1; j_src = k; break;
                             case 1: i_src = k; j_src = j; break;
-                            case 2: i_src = j; j_src = src_blk.njcell - k - 1; break;
-                            case 3: i_src = src_blk.nicell - k - 1; j_src = src_blk.njcell - j - 1;
+                            case 2: i_src = j; j_src = other_blk.njcell - k - 1; break;
+                            case 3: i_src = other_blk.nicell - k - 1; j_src = other_blk.njcell - j - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                        } // end switch (src_face)
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
+                        } // end switch (other_face)
                     } // k loop
                 } // j loop
                 break;
             case Face.top:
-                k_dest = dest_blk.kmax;  // index of the top-most plane of active cells
-                foreach (j; 0 .. dest_blk.njcell) {
-                    j_dest = j + dest_blk.jmin;
-                    foreach (i; 0 .. dest_blk.nicell) {
-                        i_dest = i + dest_blk.imin;
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest+1);
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest+2);
-                        final switch (src_face) {
+                k_dest = this_blk.kmax;  // index of the top-most plane of active cells
+                foreach (j; 0 .. this_blk.njcell) {
+                    j_dest = j + this_blk.jmin;
+                    foreach (i; 0 .. this_blk.nicell) {
+                        i_dest = i + this_blk.imin;
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+1);
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest+2);
+                        final switch (other_face) {
                         case Face.north:
-                            j_src = src_blk.njcell - 1; 
-                            final switch (src_orientation) {
+                            j_src = other_blk.njcell - 1; 
+                            final switch (other_orientation) {
                             case 0: i_src = i; k_src = j; break;
-                            case 1: i_src = j; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - j - 1; break;
-                            case 3: i_src = src_blk.nicell - j - 1; k_src = i;
+                            case 1: i_src = j; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - j - 1; break;
+                            case 3: i_src = other_blk.nicell - j - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
-                            i_src = src_blk.nicell - 1; 
-                            final switch (src_orientation) {
-                            case 0: j_src = src_blk.njcell - i - 1; k_src = j; break;
-                            case 1: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: j_src = i; k_src = src_blk.nkcell - j - 1; break;
+                            i_src = other_blk.nicell - 1; 
+                            final switch (other_orientation) {
+                            case 0: j_src = other_blk.njcell - i - 1; k_src = j; break;
+                            case 1: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: j_src = i; k_src = other_blk.nkcell - j - 1; break;
                             case 3: j_src = j; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
                             j_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; k_src = j; break;
-                            case 1: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: i_src = i; k_src = src_blk.nkcell - j - 1; break;
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; k_src = j; break;
+                            case 1: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: i_src = i; k_src = other_blk.nkcell - j - 1; break;
                             case 3: i_src = j; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
                             i_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: j_src = i; k_src = j; break;
-                            case 1: j_src = j; k_src = src_blk.nkcell - i - 1; break;
-                            case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - j - 1; break;
-                            case 3: j_src = src_blk.njcell - j - 1; k_src = i;
+                            case 1: j_src = j; k_src = other_blk.nkcell - i - 1; break;
+                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - j - 1; break;
+                            case 3: j_src = other_blk.njcell - j - 1; k_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = src_blk.nkcell - 1; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; j_src = j; break;
-                            case 1: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - i - 1; break;
-                            case 2: i_src = i; j_src = src_blk.njcell - j - 1; break;
+                            k_src = other_blk.nkcell - 1; 
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; j_src = j; break;
+                            case 1: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - i - 1; break;
+                            case 2: i_src = i; j_src = other_blk.njcell - j - 1; break;
                             case 3: i_src = j; j_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
                             k_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: i_src = i; j_src = j; break;
-                            case 1: i_src = j; j_src = src_blk.njcell - i - 1; break;
-                            case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - j - 1; break;
-                            case 3: i_src = src_blk.nicell - j - 1; j_src = i;
+                            case 1: i_src = j; j_src = other_blk.njcell - i - 1; break;
+                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - j - 1; break;
+                            case 3: i_src = other_blk.nicell - j - 1; j_src = i;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                        } // end switch (src_face)
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
+                        } // end switch (other_face)
                     } // i loop
                 } // j loop
                 break;
             case Face.bottom:
-                k_dest = dest_blk.kmin;  // index of the bottom-most plane of active cells
-                foreach (j; 0 .. dest_blk.njcell) {
-                    j_dest = j + dest_blk.jmin;
-                    foreach (i; 0 .. dest_blk.nicell) {
-                        i_dest = i + dest_blk.imin;
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest-1);
-                        ghost_cells ~= dest_blk.get_cell(i_dest,j_dest,k_dest-2);
-                        final switch (src_face) {
+                k_dest = this_blk.kmin;  // index of the bottom-most plane of active cells
+                foreach (j; 0 .. this_blk.njcell) {
+                    j_dest = j + this_blk.jmin;
+                    foreach (i; 0 .. this_blk.nicell) {
+                        i_dest = i + this_blk.imin;
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-1);
+                        ghost_cells ~= this_blk.get_cell(i_dest,j_dest,k_dest-2);
+                        final switch (other_face) {
                         case Face.north:
-                            j_src = src_blk.njcell - 1; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; k_src = j; break;
+                            j_src = other_blk.njcell - 1; 
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; k_src = j; break;
                             case 1: i_src = j; k_src = i; break;
-                            case 2: i_src = i; k_src = src_blk.nkcell - j - 1; break;
-                            case 3: i_src = src_blk.nicell - j - 1; k_src = src_blk.nkcell - i - 1;
+                            case 2: i_src = i; k_src = other_blk.nkcell - j - 1; break;
+                            case 3: i_src = other_blk.nicell - j - 1; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src-1,k_src);
                             break;
                         case Face.east:
-                            i_src = src_blk.nicell - 1; 
-                            final switch (src_orientation) {
+                            i_src = other_blk.nicell - 1; 
+                            final switch (other_orientation) {
                             case 0: j_src = i; k_src = j; break;
-                            case 1: j_src = src_blk.njcell - j - 1; k_src = i; break;
-                            case 2: j_src = src_blk.njcell - i - 1; k_src = src_blk.nkcell - j - 1; break;
-                            case 3: j_src = j; k_src = src_blk.nkcell - i - 1;
+                            case 1: j_src = other_blk.njcell - j - 1; k_src = i; break;
+                            case 2: j_src = other_blk.njcell - i - 1; k_src = other_blk.nkcell - j - 1; break;
+                            case 3: j_src = j; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src-1,j_src,k_src);
                             break;
                         case Face.south:
                             j_src = 0; 
-                            final switch (src_orientation) {
+                            final switch (other_orientation) {
                             case 0: i_src = i; k_src = j; break;
-                            case 1: i_src = src_blk.nicell - j - 1; k_src = i; break;
-                            case 2: i_src = src_blk.nicell - i - 1; k_src = src_blk.nkcell - j - 1; break;
-                            case 3: i_src = j; k_src = src_blk.nkcell - i - 1;
+                            case 1: i_src = other_blk.nicell - j - 1; k_src = i; break;
+                            case 2: i_src = other_blk.nicell - i - 1; k_src = other_blk.nkcell - j - 1; break;
+                            case 3: i_src = j; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src+1,k_src);
                             break;
                         case Face.west:
                             i_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: j_src = src_blk.njcell - i - 1; k_src = j; break;
+                            final switch (other_orientation) {
+                            case 0: j_src = other_blk.njcell - i - 1; k_src = j; break;
                             case 1: j_src = j; k_src = i; break;
-                            case 2: j_src = i; k_src = src_blk.nkcell - j - 1; break;
-                            case 3: j_src = src_blk.njcell - j - 1; k_src = src_blk.nkcell - i - 1;
+                            case 2: j_src = i; k_src = other_blk.nkcell - j - 1; break;
+                            case 3: j_src = other_blk.njcell - j - 1; k_src = other_blk.nkcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src+1,j_src,k_src);
                             break;
                         case Face.top:
-                            k_src = src_blk.nkcell - 1; 
-                            final switch (src_orientation) {
+                            k_src = other_blk.nkcell - 1; 
+                            final switch (other_orientation) {
                             case 0: i_src = i; j_src = j; break;
-                            case 1: i_src = src_blk.nicell - j - 1; j_src = i; break;
-                            case 2: i_src = src_blk.nicell - i - 1; j_src = src_blk.njcell - j - 1; break;
-                            case 3: i_src = j; j_src = src_blk.njcell - i - 1;
+                            case 1: i_src = other_blk.nicell - j - 1; j_src = i; break;
+                            case 2: i_src = other_blk.nicell - i - 1; j_src = other_blk.njcell - j - 1; break;
+                            case 3: i_src = j; j_src = other_blk.njcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src-1);
                             break;
                         case Face.bottom:
                             k_src = 0; 
-                            final switch (src_orientation) {
-                            case 0: i_src = src_blk.nicell - i - 1; j_src = j; break;
+                            final switch (other_orientation) {
+                            case 0: i_src = other_blk.nicell - i - 1; j_src = j; break;
                             case 1: i_src = j; j_src = i; break;
-                            case 2: i_src = i; j_src = src_blk.njcell - j - 1; break;
-                            case 3: i_src = src_blk.nicell - j - 1; j_src = src_blk.njcell - i - 1;
+                            case 2: i_src = i; j_src = other_blk.njcell - j - 1; break;
+                            case 3: i_src = other_blk.nicell - j - 1; j_src = other_blk.njcell - i - 1;
                             }
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
-                            mapped_cell_ids ~= src_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
-                        } // end switch src_face
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src);
+                            mapped_cell_ids ~= other_blk.ijk_0n_indices_to_cell_id(i_src,j_src,k_src+1);
+                        } // end switch other_face
                     } // i loop
                 } // j loop
-            } // end switch destination_face
+            } // end switch which_boundary
         } // end if dimensions == ...
         //
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
                 //
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
                 // interaction with the other MPI process.  This block has to receive
@@ -775,13 +771,13 @@ public:
                 if (incoming_cell_ids_buf.length < ne) { incoming_cell_ids_buf.length = ne; }
                 //
                 // Post non-blocking receive for data that we expect to receive later
-                // from the src_blk MPI process.
-                incoming_cell_ids_tag = make_mpi_tag(src_blk.id, src_face, 0);
-                MPI_Irecv(incoming_cell_ids_buf.ptr, to!int(ne), MPI_INT, src_blk_rank,
+                // from the other_blk MPI process.
+                incoming_cell_ids_tag = make_mpi_tag(other_blk.id, other_face, 0);
+                MPI_Irecv(incoming_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
                           incoming_cell_ids_tag, MPI_COMM_WORLD, &incoming_cell_ids_request);
             } else {
                 // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly
+                // we know that we can just access the cell data directly
                 // in the final phase.
             }
         } else { // not mpi_parallel
@@ -794,20 +790,20 @@ public:
     void set_up_cell_mapping_phase1()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
                 // Blocking send to corresponding non-blocking receive that was posted
-                // at in src_blk MPI process.
+                // at in other_blk MPI process.
                 size_t ne = ghost_cells.length;
                 if (outgoing_cell_ids_buf.length < ne) { outgoing_cell_ids_buf.length = ne; }
                 assert(ne == mapped_cell_ids.length, "oops, wrong length");
-                outgoing_cell_ids_tag = make_mpi_tag(dest_blk.id, destination_face, 0);
+                outgoing_cell_ids_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 foreach (i; 0 .. ne) { outgoing_cell_ids_buf[i] = to!int(mapped_cell_ids[i]); }
-                MPI_Send(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, src_blk_rank,
+                MPI_Send(outgoing_cell_ids_buf.ptr, to!int(ne), MPI_INT, other_blk_rank,
                          outgoing_cell_ids_tag, MPI_COMM_WORLD);
             } else {
-                // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly
                 // in the final phase.
             }
         } else { // not mpi_parallel
@@ -820,29 +816,29 @@ public:
     void set_up_cell_mapping_phase2()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&incoming_cell_ids_request, &incoming_cell_ids_status);
                 size_t ne = ghost_cells.length;
                 outgoing_mapped_cell_ids.length = ne;
                 foreach (i; 0 .. ne) { outgoing_mapped_cell_ids[i] = to!size_t(incoming_cell_ids_buf[i]); }
                 outgoing_mapped_cells.length = 0;
-                foreach (id; outgoing_mapped_cell_ids) { outgoing_mapped_cells ~= dest_blk.cells[id]; }
+                foreach (id; outgoing_mapped_cell_ids) { outgoing_mapped_cells ~= this_blk.cells[id]; }
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
                        "oops, mismatch in outgoing_mapped_cells and ghost_cells.");
             } else {
-                // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly.
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
-                    mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
+                    mapped_cells ~= other_blk.cells[mapped_cell_ids[i]];
                 }
             }
         } else { // not mpi_parallel
             // For a single process,
             // we know that we can just access the data directly.
             foreach (i; 0 .. ghost_cells.length) {
-                mapped_cells ~= src_blk.cells[mapped_cell_ids[i]];
+                mapped_cells ~= other_blk.cells[mapped_cell_ids[i]];
             }
         }
     } // end set_up_cell_mapping_phase2()
@@ -859,23 +855,23 @@ public:
     void exchange_geometry_phase0()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the geometry data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the geometry data via messages.
                 //
                 // Prepare to exchange geometry data for the boundary cells.
                 // To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
                 //
-                size_t ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
+                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
                 if (incoming_geometry_buf.length < ne) { incoming_geometry_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
-                // from the src_blk MPI process.
-                incoming_geometry_tag = make_mpi_tag(src_blk.id, src_face, 1);
-                MPI_Irecv(incoming_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
+                // from the other_blk MPI process.
+                incoming_geometry_tag = make_mpi_tag(other_blk.id, other_face, 1);
+                MPI_Irecv(incoming_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
                           incoming_geometry_tag, MPI_COMM_WORLD, &incoming_geometry_request);
             } else {
                 // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly
+                // we know that we can just access the cell data directly
                 // in the final phase.
             }
         } else { // not mpi_parallel
@@ -888,18 +884,18 @@ public:
     void exchange_geometry_phase1()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
                 //
                 // Blocking send of this block's geometry data
                 // to the corresponding non-blocking receive that was posted
-                // at in src_blk MPI process.
-                outgoing_geometry_tag = make_mpi_tag(dest_blk.id, destination_face, 1);
-                size_t ne = ghost_cells.length * (dest_blk.myConfig.n_grid_time_levels * 5 + 4);
+                // in the other MPI process.
+                outgoing_geometry_tag = make_mpi_tag(blk.id, which_boundary, 1);
+                size_t ne = ghost_cells.length * (this_blk.myConfig.n_grid_time_levels * 5 + 4);
                 if (outgoing_geometry_buf.length < ne) { outgoing_geometry_buf.length = ne; }
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
-                    foreach (j; 0 .. dest_blk.myConfig.n_grid_time_levels) {
+                    foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
                         outgoing_geometry_buf[ii++] = c.pos[j].x;
                         outgoing_geometry_buf[ii++] = c.pos[j].y;
                         outgoing_geometry_buf[ii++] = c.pos[j].z;
@@ -911,11 +907,11 @@ public:
                     outgoing_geometry_buf[ii++] = c.kLength;
                     outgoing_geometry_buf[ii++] = c.L_min;
                 }
-                MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
+                MPI_Send(outgoing_geometry_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
                          outgoing_geometry_tag, MPI_COMM_WORLD);
             } else {
-                // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly
                 // in the final phase.
             }
         } else { // not mpi_parallel
@@ -928,15 +924,15 @@ public:
     void exchange_geometry_phase2()
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
                 //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
 		MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
-                    foreach (j; 0 .. dest_blk.myConfig.n_grid_time_levels) {
+                    foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
                         c.pos[j].refx = incoming_geometry_buf[ii++];
                         c.pos[j].refy = incoming_geometry_buf[ii++];
                         c.pos[j].refz = incoming_geometry_buf[ii++];
@@ -949,8 +945,8 @@ public:
                     c.L_min = incoming_geometry_buf[ii++];
                 }
             } else {
-                // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly.
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
                     ghost_cells[i].copy_values_from(mapped_cells[i], CopyDataOption.grid);
                 }
@@ -967,8 +963,8 @@ public:
     void exchange_flowstate_phase0(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
                 // interaction with the other MPI process.
                 //
@@ -978,20 +974,20 @@ public:
                 // and over in gas_state.d
                 // @nogc void copy_values_from(ref const(GasState) other) 
                 //
-                auto gmodel = dest_blk.myConfig.gmodel;
+                auto gmodel = this_blk.myConfig.gmodel;
                 size_t nspecies = gmodel.n_species();
                 size_t nmodes = gmodel.n_modes();
                 size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
                 if (incoming_flowstate_buf.length < ne) { incoming_flowstate_buf.length = ne; }
                 //
                 // Post non-blocking receive for geometry data that we expect to receive later
-                // from the src_blk MPI process.
-                incoming_flowstate_tag = make_mpi_tag(src_blk.id, src_face, 0);
-                MPI_Irecv(incoming_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
+                // from the other_blk MPI process.
+                incoming_flowstate_tag = make_mpi_tag(other_blk.id, other_face, 0);
+                MPI_Irecv(incoming_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
                           incoming_flowstate_tag, MPI_COMM_WORLD, &incoming_flowstate_request);
             } else {
-                // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly
                 // in the final phase.
             }
         } else { // not mpi_parallel
@@ -1005,8 +1001,8 @@ public:
     void exchange_flowstate_phase1(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
-                // The source block is in another MPI process, go fetch the data via messages.
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
+                // The other block is in another MPI process, go fetch the data via messages.
                 // For this particular GhostCellEffect, we are expecting somewhat symmetric
                 // interaction with the other MPI process.
                 //
@@ -1044,7 +1040,7 @@ public:
                 //     quality = other.quality;
                 // }
                 //
-                auto gmodel = dest_blk.myConfig.gmodel;
+                auto gmodel = this_blk.myConfig.gmodel;
                 size_t nspecies = gmodel.n_species();
                 size_t nmodes = gmodel.n_modes();
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
@@ -1052,10 +1048,10 @@ public:
                 //
                 // Blocking send of this block's flow data
                 // to the corresponding non-blocking receive that was posted
-                // at in src_blk MPI process.
+                // in the other MPI process.
                 size_t ne = ghost_cells.length * (nmodes*3 + nspecies + 23);
                 if (outgoing_flowstate_buf.length < ne) { outgoing_flowstate_buf.length = ne; }
-                outgoing_flowstate_tag = make_mpi_tag(dest_blk.id, destination_face, 0);
+                outgoing_flowstate_tag = make_mpi_tag(blk.id, which_boundary, 0);
                 size_t ii = 0;
                 foreach (c; outgoing_mapped_cells) {
                     FlowState fs = c.fs;
@@ -1088,11 +1084,11 @@ public:
                     outgoing_flowstate_buf[ii++] = fs.k_t;
                     outgoing_flowstate_buf[ii++] = to!double(fs.S);
                 }
-                MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, src_blk_rank,
+                MPI_Send(outgoing_flowstate_buf.ptr, to!int(ne), MPI_DOUBLE, other_blk_rank,
                          outgoing_flowstate_tag, MPI_COMM_WORLD);
             } else {
-                // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly
                 // in the final phase.
             }
         } else { // not mpi_parallel
@@ -1106,10 +1102,10 @@ public:
     void exchange_flowstate_phase2(double t, int gtl, int ftl)
     {
         version(mpi_parallel) {
-            if (find(GlobalConfig.localBlockIds, src_blk.id).empty) {
+            if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
                 // The source block is in another MPI process, go fetch the data via messages.
                 //
-                auto gmodel = dest_blk.myConfig.gmodel;
+                auto gmodel = this_blk.myConfig.gmodel;
                 size_t nspecies = gmodel.n_species();
                 size_t nmodes = gmodel.n_modes();
                 assert(outgoing_mapped_cells.length == ghost_cells.length,
@@ -1151,8 +1147,8 @@ public:
                     fs.S = to!int(incoming_flowstate_buf[ii++]);
                 }
             } else {
-                // The source block happens to be in this MPI process so
-                // we know that we can just access the source-cell data directly.
+                // The other block happens to be in this MPI process so
+                // we know that we can just access the cell data directly.
                 foreach (i; 0 .. ghost_cells.length) {
                     ghost_cells[i].fs.copy_values_from(mapped_cells[i].fs);
                 }
