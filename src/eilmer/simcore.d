@@ -268,7 +268,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
                 auto mygce1 = cast(GhostCellMappedCellCopy)gce;
-                if (mygce1) { mygce1.exchange_geometry_phase1(); }
+                if (mygce1) { mygce1.exchange_geometry_phase2(); }
                 auto mygce2 = cast(GhostCellFullFaceCopy)gce;
                 if (mygce2) { mygce2.exchange_geometry_phase2(); }
             }
