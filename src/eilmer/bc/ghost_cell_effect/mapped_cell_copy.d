@@ -292,8 +292,8 @@ public:
 			outgoing_ncells_list ~= nc;
 			outgoing_block_list ~= dest_blk_id;
 			outgoing_rank_list ~= GlobalConfig.mpi_rank_for_block[dest_blk_id];
-			outgoing_geometry_tag_list ~= make_mpi_tag(to!int(dest_blk_id), 99, 1);
-			outgoing_flowstate_tag_list ~= make_mpi_tag(to!int(dest_blk_id), 99, 2);
+			outgoing_geometry_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 1);
+			outgoing_flowstate_tag_list ~= make_mpi_tag(to!int(blk.id), 99, 2);
 		    }
 		}
 		n_outgoing = outgoing_block_list.length;
@@ -488,9 +488,6 @@ public:
         version(mpi_parallel) {
 	    // Prepare to exchange geometry data for the boundary cells.
 	    foreach (i; 0 .. n_incoming) {
-		debug{
-		    writeln("post read ", i, " for geometry blk.id ", blk.id);
-		}
 		// To match .copy_values_from(mapped_cells[i], CopyDataOption.grid) as defined in fvcell.d.
                 size_t ne = incoming_ncells_list[i] * (blk.myConfig.n_grid_time_levels * 5 + 4);
                 if (incoming_geometry_buf_list[i].length < ne) { incoming_geometry_buf_list[i].length = ne; }
@@ -531,9 +528,6 @@ public:
                     buf[ii++] = c.kLength;
                     buf[ii++] = c.L_min;
                 }
-		debug{
-		    writeln("blocking send ", i, " for geometry blk.id ", blk.id);
-		}
                 MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
                          outgoing_geometry_tag_list[i], MPI_COMM_WORLD);
 	    }
@@ -550,9 +544,6 @@ public:
 	    foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-		debug{
-		    writeln("wait for read ", i, " for geometry blk.id ", blk.id);
-		}
 		MPI_Wait(&incoming_geometry_request_list[i], &incoming_geometry_status_list[i]);
 		auto buf = incoming_geometry_buf_list[i];
                 size_t ii = 0;
@@ -587,9 +578,6 @@ public:
 	    size_t nspecies = gmodel.n_species();
 	    size_t nmodes = gmodel.n_modes();
 	    foreach (i; 0 .. n_incoming) {
-		debug{
-		    writeln("post read ", i, " for flowstate blk.id ", blk.id);
-		}
                 // Exchange FlowState data for the boundary cells.
                 // To match the function over in flowstate.d
                 // void copy_values_from(in FlowState other)
@@ -655,9 +643,6 @@ public:
                     buf[ii++] = fs.k_t;
                     buf[ii++] = to!double(fs.S);
                 }
-		debug{
-		    writeln("blocking send ", i, " for flowstate blk.id ", blk.id);
-		}
                 MPI_Send(buf.ptr, to!int(ne), MPI_DOUBLE, outgoing_rank_list[i],
                          outgoing_flowstate_tag_list[i], MPI_COMM_WORLD);
 	    }
@@ -677,9 +662,6 @@ public:
 	    foreach (i; 0 .. n_incoming) {
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-		debug{
-		    writeln("wait for request ", i, " for flowstate blk.id ", blk.id);
-		}
 		MPI_Wait(&incoming_flowstate_request_list[i], &incoming_flowstate_status_list[i]);
 		auto buf = incoming_flowstate_buf_list[i];
                 size_t ii = 0;
