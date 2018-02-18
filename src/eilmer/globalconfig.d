@@ -542,6 +542,7 @@ final class GlobalConfig {
 // at the lower levels of the code without having to guard them with memory barriers.
 class LocalConfig {
 public:
+    bool in_mpi_context;
     int universe_blk_id;
     string grid_format;
     string flow_format;
@@ -639,6 +640,7 @@ public:
 
     this(int universe_blk_id) 
     {
+	in_mpi_context = GlobalConfig.in_mpi_context;
         this.universe_blk_id = universe_blk_id;
         grid_format = GlobalConfig.grid_format;
         flow_format = GlobalConfig.flow_format;
