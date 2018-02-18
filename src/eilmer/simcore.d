@@ -215,30 +215,32 @@ void init_simulation(int tindx, int nextLoadsIndx,
     foreach (myblk; localFluidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy)gce;
-                if (mygce1) { mygce1.set_up_cell_mapping_phase0(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
-                if (mygce2) { mygce2.set_up_cell_mapping_phase0(); }
+                auto mygce = cast(GhostCellMappedCellCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping(); }
             }
         }
     }
     foreach (myblk; localFluidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy)gce;
-                if (mygce1) { mygce1.set_up_cell_mapping_phase1(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
-                if (mygce2) { mygce2.set_up_cell_mapping_phase1(); }
+                auto mygce = cast(GhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase0(); }
             }
         }
     }
     foreach (myblk; localFluidBlocks) {
         foreach (bc; myblk.bc) {
             foreach (gce; bc.preReconAction) {
-                auto mygce1 = cast(GhostCellMappedCellCopy)gce;
-                if (mygce1) { mygce1.set_up_cell_mapping_phase2(); }
-                auto mygce2 = cast(GhostCellFullFaceCopy)gce;
-                if (mygce2) { mygce2.set_up_cell_mapping_phase2(); }
+                auto mygce = cast(GhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase1(); }
+            }
+        }
+    }
+    foreach (myblk; localFluidBlocks) {
+        foreach (bc; myblk.bc) {
+            foreach (gce; bc.preReconAction) {
+                auto mygce = cast(GhostCellFullFaceCopy)gce;
+                if (mygce) { mygce.set_up_cell_mapping_phase2(); }
             }
         }
     }
