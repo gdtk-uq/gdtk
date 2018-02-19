@@ -760,15 +760,35 @@ void integrate_in_time(double target_time_as_requested)
                 // We also compute the residual information and write to screen
                 auto wallClock2 = 1.0e-3*(Clock.currTime() - wall_clock_start).total!"msecs"();
                 compute_Linf_residuals(Linf_residuals);
-                auto writer2 = appender!string();
-                formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
-                               step, wallClock2);
-                formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
-                               Linf_residuals.mass, Linf_residuals.momentum.x,
-                               Linf_residuals.momentum.y, Linf_residuals.total_energy);
-                writeln(writer2.data);
+                version(mpi_parallel) {
+                    // Reduce residual values across MPI tasks.
+                    double my_local_value = Linf_residuals.mass;
+                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                    Linf_residuals.mass = my_local_value;
+                    my_local_value = Linf_residuals.momentum.x;
+                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                    Linf_residuals.momentum.refx = my_local_value;
+                    my_local_value = Linf_residuals.momentum.y;
+                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                    Linf_residuals.momentum.refy = my_local_value;
+                    my_local_value = Linf_residuals.momentum.z;
+                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                    Linf_residuals.momentum.refz = my_local_value;
+                    my_local_value = Linf_residuals.total_energy;
+                    MPI_Allreduce(MPI_IN_PLACE, &my_local_value, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+                    Linf_residuals.total_energy = my_local_value;
+                }
+                if (GlobalConfig.is_master_task) {
+                    auto writer2 = appender!string();
+                    formattedWrite(writer2, "RESIDUALS: step= %7d WC= %.8f ",
+                                   step, wallClock2);
+                    formattedWrite(writer2, "MASS: %10.6e X-MOM: %10.6e Y-MOM: %10.6e ENERGY: %10.6e",
+                                   Linf_residuals.mass, Linf_residuals.momentum.x,
+                                   Linf_residuals.momentum.y, Linf_residuals.total_energy);
+                    writeln(writer2.data);
+                    stdout.flush();
+                }
             }
-            stdout.flush();
             version(mpi_parallel) { MPI_Barrier(MPI_COMM_WORLD); }
         }
 
