@@ -72,6 +72,20 @@ extern(C) int get_vtx(T, string MTname)(lua_State* L)
     return pushVector3(L, *vtx);
 }
 
+extern(C) int set_vtx(lua_State* L)
+{
+    int narg = lua_gettop(L);
+    auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
+    size_t i = to!size_t(luaL_checkint(L, 2));
+    // Note that we expect 0 <= i < niv
+    size_t j = 0; if (narg > 3) { j = to!size_t(luaL_checkint(L, 3)); }
+    size_t k = 0; if (narg > 4) { k = to!size_t(luaL_checkint(L, 4)); }
+	Vector3* vtx = checkVector3(L, narg);
+	Vector3* grid_vtx = grid[i,j,k];
+	grid_vtx.set(*vtx);
+    return 0;
+}
+
 extern(C) int subgrid(lua_State* L)
 {
     int narg = lua_gettop(L);
@@ -523,6 +537,8 @@ void registerStructuredGrid(lua_State* L)
     lua_setfield(L, -2, "get_nkv");
     lua_pushcfunction(L, &get_vtx!(StructuredGrid, StructuredGridMT));
     lua_setfield(L, -2, "get_vtx");
+	lua_pushcfunction(L, &set_vtx);
+    lua_setfield(L, -2, "set_vtx");
     lua_pushcfunction(L, &subgrid);
     lua_setfield(L, -2, "subgrid");
     lua_pushcfunction(L, &get_boundary_grid);
