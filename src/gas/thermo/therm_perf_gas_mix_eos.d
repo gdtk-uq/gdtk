@@ -30,6 +30,13 @@ import gas.thermo.cea_thermo_curves;
 import util.lua;
 import util.lua_service;
 
+// These bracket limits are conservative limits that
+// are used when we fail to bracket the temperature using
+// a nearby guess based on the temperature at the previous
+// timestep.
+immutable double T_bracket_low = 20.0; // K
+immutable double T_bracket_high = 100000.0; // K
+
 /++
   ThermallyPerfectGasMixEOS is a caloric equation of state.
 
@@ -65,26 +72,39 @@ public:
         // value that gives this target energy.
         double e_tgt = Q.u;
         // delT is the initial guess for a bracket size.
-        // We set this quite agressivley at 10 K hoping to
+        // We set this quite agressivley at 100 K hoping to
         // keep the number of iterations required to a small
         // value. In general, we are taking small timesteps
         // so the value of temperature from the previous step
         // should not change too much. If it does, there should
         // be enough robustness in the bracketing and
         // the function-solving method to handle this.
-        double delT = 10.0;
+        double delT = 100.0;
         double T1 = fmax(Q.T - delT/2, T_MIN);
         double T2 = T1 + delT;
 
-        if ( bracket(T1, T2, e_tgt, Q, T_MIN) == -1 ) {
-            string msg = "The 'bracket' function failed to find temperature values\n";
-            msg ~= "that bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
-            msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
-            msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
-            msg ~= format("The target energy value was: %12.6f\n", e_tgt);
-            msg ~= format("The GasState is currently:\n");
-            msg ~= Q.toString() ~ "\n";
-            throw new Exception(msg);
+        if (bracket(T1, T2, e_tgt, Q, T_MIN) == -1) {
+            // We have a fall back if our aggressive search failed.
+            // We apply a very conservative range:
+            T1 = T_bracket_low;
+            T2 = T_bracket_high;
+            if (bracket(T1, T2, e_tgt, Q, T_MIN) == -1) {
+                string msg = "The 'bracket' function failed to find temperature values\n";
+                msg ~= "that bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
+                msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
+                msg ~= format("The initial temperature guess was: %12.6f\n", Tsave);
+                msg ~= format("The target energy value was: %12.6f\n", e_tgt);
+                msg ~= format("The bracket limits were: low=%12.6f  high=%12.6f\n", T_bracket_low, T_bracket_high);
+                Q.T = 20.0;
+                update_energy(Q);
+                msg ~= format("Energy at 20.0: %12.6f\n", Q.u);
+                Q.T = 100000.0;
+                update_energy(Q);
+                msg ~= format("Energy at 100000.0: %12.6f\n", Q.u);
+                msg ~= format("The GasState is currently:\n");
+                msg ~= Q.toString() ~ "\n";
+                throw new Exception(msg);
+            }
         }
         try {
             Q.T = solve(T1, T2, TOL, e_tgt, Q);
