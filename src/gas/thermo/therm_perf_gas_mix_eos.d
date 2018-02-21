@@ -65,8 +65,8 @@ public:
     {
         double Tsave = Q.T; // Keep a copy for diagnostics purpose.
         // We'll adjust the temperature estimate until the energy is within TOL Joules.
-        // Surely 1/100 of a Joule is sufficient precision when we are talking of megaJoules.
-        double TOL = 1.0e-2;
+        // Surely 1/1000 of a Joule is sufficient precision when we are talking of megaJoules.
+        double TOL = 1.0e-3;
         // The "target" energy is the value we will iterate to find.
         // We search (via a numerical method) for the temperature
         // value that gives this target energy.
