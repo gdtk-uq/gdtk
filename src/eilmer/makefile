@@ -19,9 +19,9 @@ DMD ?= dmd
 NVCC ?= nvcc
 GPP ?= g++
 
-# TARGET options are debug, fast, profile
+# FLAVOUR options are debug, fast, profile
 # Flags for each compiler will be determined on this option.
-TARGET ?= fast
+FLAVOUR ?= fast
 
 PLATFORM ?= linux
 WITH_SSS ?= 0
@@ -177,13 +177,13 @@ BUILD_DIR := ../../build
 REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
 ifeq ($(DMD), dmd)
-    ifeq ($(TARGET), debug)
+    ifeq ($(FLAVOUR), debug)
         DFLAGS := -w -g -debug
     endif
-    ifeq ($(TARGET), profile)
+    ifeq ($(FLAVOUR), profile)
         DFLAGS := -profile -w -O -release -inline -boundscheck=off
     endif
-    ifeq ($(TARGET), fast)
+    ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
@@ -193,26 +193,26 @@ ifeq ($(DMD), dmd)
     endif
 endif
 ifeq ($(DMD), ldmd2)
-    ifeq ($(TARGET), debug)
+    ifeq ($(FLAVOUR), debug)
         DFLAGS := -w -g -debug
     endif
-    ifeq ($(TARGET), profile)
+    ifeq ($(FLAVOUR), profile)
         DFLAGS := -profile -w -O -release -inline -boundscheck=off
     endif
-    ifeq ($(TARGET), fast)
+    ifeq ($(FLAVOUR), fast)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
 endif
 ifeq ($(DMD), gdc)
-    ifeq ($(TARGET), debug)
+    ifeq ($(FLAVOUR), debug)
         DFLAGS := -Wall -Og -g
     endif
-    ifeq ($(TARGET), profile)
+    ifeq ($(FLAVOUR), profile)
         DFLAGS := -Wall -O2 -frelease -fno-debug
     endif
-    ifeq ($(TARGET), fast)
+    ifeq ($(FLAVOUR), fast)
         DFLAGS := -Wall -O2 -frelease -fno-debug
     endif
     OF := -o
@@ -242,7 +242,7 @@ endif
 tarball: install
 	- rm dgd-for-mech4480.tgz
 	hg archive -p dgd dgd-for-mech4480.tar
-	cd ../geom; make TARGET=$(TARGET) INSTALL_DIR=$(INSTALL_DIR) install
+	cd ../geom; make INSTALL_DIR=$(INSTALL_DIR) install
 	tar -C $(INSTALL_DIR)/.. -r dgdinst -f dgd-for-mech4480.tar
 	gzip dgd-for-mech4480.tar
 	mv dgd-for-mech4480.tar.gz dgd-for-mech4480.tgz
