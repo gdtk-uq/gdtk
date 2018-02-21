@@ -180,7 +180,12 @@ function FlowState:new(o)
       local gm = getGasModel()
       local nsp = gm:nSpecies()
       local names = {}
-      for i = 0, nsp-1 do names[#names+1] = gm:speciesName(i) end
+      for i = 0, nsp-1 do
+         local spName = gm:speciesName(i)
+         spName = string.gsub(spName, '_plus', '+')
+         spName = string.gsub(spName, '_minus', '-')
+         names[#names+1] = spName
+      end
       local nmodes = gm:nModes()
       FlowState.gm = gm
       FlowState.nSpecies = nsp
