@@ -115,7 +115,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     FVInterface iface_neighbour;
     FVCell cell_toprght, cell_botrght, cell, top_cell_R1, top_cell_R2, bot_cell_R1, bot_cell_R2, cell_R1, cell_R2;
     Vector3 temp_vel, unit_d, u_lft, u_rght, ns, tav; 
-    double U_plus_a, rho, shock_detect, temp1, temp2, ws1, ws2, rho_lft, rho_rght,  p_lft, p_rght, M, rho_recon_top, rho_recon_bottom;
+    double rho, shock_detect, temp1, temp2, ws1, ws2, rho_lft, rho_rght,  p_lft, p_rght, M, rho_recon_top, rho_recon_bottom;
     Vector3[4] interface_ws;
     double[4] w;
     int interpolation_order = blk.myConfig.shock_fitting_interpolation_order;
@@ -138,7 +138,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     // inflow is a reference to a duplicated flow state, it should be treated as read-only (do not alter)
     auto constFluxEffect = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     auto inflow = constFluxEffect.fstate;
-    U_plus_a = sqrt(dot(inflow.vel, inflow.vel)) + inflow.gas.a; // inflow gas wave speed
+    double U_plus_a = geom.abs(inflow.vel) + inflow.gas.a; // inflow gas wave speed
     // #####-------------------------- SHOCK SEARCH --------------------------##### //
     // First update all the WEST boundary vertex velocities
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
@@ -309,14 +309,26 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                     if (M <= 1.0) w[jOffSet] = ((M+1)*(M+1)+(M+1)*abs(M+1))/8.0;
                     else w[jOffSet] = M;
                 }
-                if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face") // south boundary vertex has no bottom neighbour
-                  w[1] = 0.0, interface_ws[1].clear();
-                if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face") // north boundary vertex has no top neighbour
-                  w[0] = 0.0, interface_ws[0].clear();
+                if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face") {
+		    // south boundary vertex has no bottom neighbour
+		    w[1] = 0.0;
+		    interface_ws[1].clear();
+		}
+                if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face") {
+		    // north boundary vertex has no top neighbour
+		    w[0] = 0.0;
+		    interface_ws[0].clear();
+		}
                 // now that we have the surrounding interface velocities, let's combine them to approximate the central vertex velocity
-                if (abs(w[0]) < 1.0e-10 && abs(w[1]) < 1.0e-10) w[0] = 1.0, w[1] = 1.0; // prevents a division by zero. Reverts back to unweighted average
-                temp_vel =  (w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] ); // this is the vertex velocity, 80% for stability               
-                if (abs(temp_vel) > U_plus_a) { // safety catch: if an extreme velocity has been assigned let's just limit vel to  u+a
+                if (abs(w[0]) < 1.0e-10 && abs(w[1]) < 1.0e-10) {
+		    w[0] = 1.0;
+		    w[1] = 1.0;
+		    // prevents a division by zero. Reverts back to unweighted average
+		}
+		// this is the vertex velocity, 80% for stability               
+                temp_vel =  (w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] );
+                if (geom.abs(temp_vel) > U_plus_a) {
+		    // safety catch: if an extreme velocity has been assigned let's just limit vel to  u+a
                     temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), 0.0);
                 }
                 
@@ -338,7 +350,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                 vtx =  blk.get_vtx(i,j,k);
                 vtx_right = blk.get_vtx(i+1,j,k);
                 Vector3 delta = vtx.pos[0] - vtx_right.pos[0];
-                distance[i] = abs(delta) + distance[i+1];
+                distance[i] = geom.abs(delta) + distance[i+1];
             }
             double west_distance = distance[blk.imin];
             for (size_t i = blk.imax; i >= blk.imin; --i) {

@@ -89,7 +89,7 @@ protected:
         foreach (i; 1 .. N+1) {
             p1 = underlying_path(dt * i);
             Vector3 dp = p1 - p0;
-            L += abs(dp);
+            L += geom.abs(dp);
             arc_length_vector ~= L;
             p0 = p1;
         }
@@ -130,7 +130,7 @@ private:
     {
         // "t" is underlying_t
         Vector3 dpdt = underlying_path.dpdt(t);
-        return abs(dpdt)/arc_length_vector[$-1];
+        return geom.abs(dpdt)/arc_length_vector[$-1];
     }
     double d2_arc_f_dt2(double t) const
     {

@@ -61,16 +61,16 @@ public:
         double ca_mag, cb_mag, theta;
 
         L = 0.0;
-        ca = a - c; ca_mag = abs(ca);
-        cb = b - c; cb_mag = abs(cb);
-        if ( fabs(ca_mag - cb_mag) > 1.0e-5 ) {
+        ca = a - c; ca_mag = geom.abs(ca);
+        cb = b - c; cb_mag = geom.abs(cb);
+        if (fabs(ca_mag - cb_mag) > 1.0e-5) {
             throw new Error(text("Arc.evaluate(): radii do not match ca=",ca," cb=",cb));
         }
         // First vector in plane.
         tangent1 = Vector3(ca); tangent1.normalize(); 
         // Compute unit normal to plane of all three points.
         n = cross(ca, cb);
-        if ( abs(n) > 0.0 ) {
+        if (geom.abs(n) > 0.0) {
             n.normalize();
         } else {
             throw new Error(text("Arc.evaluate(): cannot find plane of three points."));
@@ -83,7 +83,7 @@ public:
         cb_local = cb;
         Vector3 zero = Vector3(0.0,0.0,0.0);
         cb_local.transform_to_local_frame(tangent1, tangent2, n, zero);
-        if ( fabs(cb_local.z) > 1.0e-6 ) {
+        if (fabs(cb_local.z) > 1.0e-6) {
             throw new Error(text("Arc.evaluate(): problem with transformation cb_local=", cb_local));
         }
         // Angle of the final point on the arc is in the range -pi < th <= +pi.
@@ -106,7 +106,7 @@ class Arc3 : Arc {
     this(in Vector3 a, in Vector3 m, in Vector3 b)
     {
         Vector3 n = cross(m - a, m - b); // normal to plane of arc
-        if (abs(n) <= 1.0e-11) {
+        if (geom.abs(n) <= 1.0e-11) {
             throw new Error(text("Arc3: Points appear colinear.",
                                  " a=", to!string(a),
                                  " m=", to!string(m),
@@ -130,7 +130,7 @@ class Arc3 : Arc {
         Vector3 c = mid_am + s_am * bisect_am;
         Vector3 c_check = mid_mb + s_mb * bisect_mb;
         Vector3 delc = c_check - this.c;
-        if (abs(delc) > 1.0e-9) {
+        if (geom.abs(delc) > 1.0e-9) {
             throw new Error(text("Arc3: Points inconsistent centre estimates.",
                                  " c=", to!string(this.c),
                                  " c_check=", to!string(c_check)));

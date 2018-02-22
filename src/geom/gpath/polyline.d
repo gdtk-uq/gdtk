@@ -66,7 +66,7 @@ public:
                 old_p = d[i];
                 d[i] = 0.25 * (6.0 * p[i] - d[i-1] - d[i+1]);
                 Vector3 diff = d[i] - old_p;
-                max_diff = fmax(max_diff, abs(diff));
+                max_diff = fmax(max_diff, geom.abs(diff));
             } // end foreach i
             if ( max_diff < tolerance ) break;
         } // end foreach j

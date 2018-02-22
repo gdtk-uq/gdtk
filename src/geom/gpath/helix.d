@@ -51,7 +51,7 @@ public:
         a1 = axis0 + dot(c,zdsh)*zdsh;
         r0 = dot(b,xdsh);
         Vector3 a1c = c - dot(c,zdsh)*zdsh;
-        r1 = abs(a1c);
+        r1 = geom.abs(a1c);
         Vector3 origin = Vector3(0.0, 0.0, 0.0);
         a1c.transform_to_local_frame(xdsh, ydsh, zdsh, origin);
         theta01 = atan2(a1c.y, a1c.x);

@@ -87,7 +87,7 @@ public:
         foreach (i; 1 .. n+1) {
             p1 = this.opCall(ta + dt * i);
             dp = p1 - p0;
-            L += abs(dp);
+            L += geom.abs(dp);
             p0 = p1;
         }
         return L;
@@ -106,7 +106,7 @@ public:
         foreach (i; 1 .. n+1) {
             p1 = this.opCall(dt * i);
             dp = p1 - p0;
-            L += abs(dp);
+            L += geom.abs(dp);
             p0 = p1;
             if( L > length ) {
                 t = dt * i;

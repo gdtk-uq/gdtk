@@ -355,11 +355,11 @@ class Grid {
     void find_nearest_cell_centre(ref const(Vector3) p, ref size_t nearestCell, ref double minDist)
     {
         Vector3 dp = cell_barycentre(0); dp -= p;
-        double d = abs(dp);
+        double d = geom.abs(dp);
         minDist = d; nearestCell = 0;
         foreach (i; 1 .. ncells) {
             dp = cell_barycentre(i); dp -= p;
-            d = abs(dp);
+            d = geom.abs(dp);
             if (d < minDist) { minDist = d; nearestCell = i; }
         }
     } // end find_nearest_cell_centre
