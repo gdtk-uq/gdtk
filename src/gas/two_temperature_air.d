@@ -12,6 +12,8 @@ import std.stdio;
 import std.string;
 import std.algorithm : canFind;
 
+import util.lua;
+import util.lua_service;
 import gas.gas_model;
 import gas.gas_state;
 import gas.physical_constants;
@@ -27,8 +29,24 @@ static string[] molecularSpeciesNames = ["N2", "O2", "NO", "N2+", "O2+", "NO+"];
 class TwoTemperatureAir : GasModel {
 public:
     int[] molecularSpecies;
-    this(string model, string[] species)
+    this(lua_State* L)
     {
+        getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
+        _n_species = to!uint(_species_names.length);
+        _n_modes = 1;
+        string model;
+        if (_n_species == 5) {
+            model = "5-species";
+        }
+        else if (_n_species == 7) {
+            model = "7-species";
+        }
+        else if (_n_species == 11) {
+            model = "11-species";
+        }
+        else {
+            throw new Error("");
+        }
         // For each of the cases, 5-, 7- and 11-species, we know which species
         // must be supplied, however, we don't know what order the user will
         // hand them to us. So we do a little dance below in which we check
@@ -36,22 +54,12 @@ public:
         // appropriate properties.
         switch (model) {
         case "5-species":
-            if (species.length != 5) {
-                string errMsg = "You have selected the 5-species 2-T air model but have not supplied 5 species.\n";
-                errMsg ~= format("Instead, you have supplied %d species.\n", species.length);
-                errMsg ~= "The valid species for the 5-species 2-T air model are:\n";
-                errMsg ~= "   'N', 'O', 'N2', 'O2', 'NO'\n";
-                throw new Error(errMsg);
-            }
-            _n_species = 5;
-            _n_modes = 1;
-            _species_names.length = 5;
             _mol_masses.length = 5;
             bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true];
-            foreach (isp, sp; species) {
+            foreach (isp, sp; _species_names) {
                 if (sp in validSpecies) {
-                    _species_names[isp] = sp;
                     _mol_masses[isp] = __mol_masses[sp];
+                    validSpecies.remove(sp);
                 }
                 else {
                     string errMsg = "The species you supplied is not part of the 5-species 2-T air model,\n";
@@ -65,22 +73,25 @@ public:
             create_species_reverse_lookup();
             break;
         case "7-species":
-            throw new Error("Two temperature air not available presently with 7 species.");
-            /*
-            _n_species = 7;
-            _n_modes = 1;
-            _species_names.length = 7;
             _mol_masses.length = 7;
-            _species_names[0] = "N"; _mol_masses[0] = 14.0067e-3;
-            _species_names[1] = "O"; _mol_masses[1] = 0.01599940; 
-            _species_names[2] = "N2"; _mol_masses[2] = 28.0134e-3; 
-            _species_names[3] = "O2"; _mol_masses[3] = 0.03199880;
-            _species_names[4] = "NO"; _mol_masses[4] = 0.03000610;
-            _species_names[5] = "NO+"; _mol_masses[5] = 30.0055514e-3;
-            _species_names[6] = "e-"; _mol_masses[6] = 0.000548579903e-3;
+            bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true,
+                                         "NO+":true, "e-":true];
+            foreach (isp, sp; _species_names) {
+                if (sp in validSpecies) {
+                    _mol_masses[isp] = __mol_masses[sp];
+                    validSpecies.remove(sp);
+                }
+                else {
+                    string errMsg = "The species you supplied is not part of the 7-species 2-T air model,\n";
+                    errMsg ~= "or you have supplied a duplicate species.\n";
+                    errMsg ~= format("The error occurred for supplied species: %s\n", sp);
+                    errMsg ~= "The valid species for the 7-species 2-T air model are:\n";
+                    errMsg ~= "   'N', 'O', 'N2', 'O2', 'NO', 'NO+', 'e-'\n";
+                    throw new Error(errMsg);
+                }
+            }
             create_species_reverse_lookup();
             break;
-            */
         case "11-species":
             throw new Error("Two temperature air not available presently with 11 species.");
             /*
@@ -162,10 +173,10 @@ public:
             _Delta_22[isp].length = _n_species;
             _alpha[isp].length = _n_species; 
             foreach (jsp; 0 .. isp+1) {
-                string key = _species_names[isp] ~ "-" ~ _species_names[jsp];
+                string key = _species_names[isp] ~ ":" ~ _species_names[jsp];
                 if (!(key in A_11)) {
-                    // Just reverser the order, eg. N2-O2 --> O2-N2
-                    key = _species_names[jsp] ~ "-" ~ _species_names[isp];
+                    // Just reverse the order, eg. N2:O2 --> O2:N2
+                    key = _species_names[jsp] ~ ":" ~ _species_names[isp];
                 }
                 _A_11[isp][jsp] = A_11[key];
                 _B_11[isp][jsp] = B_11[key];
@@ -600,6 +611,7 @@ private:
 version(two_temperature_air_test) {
     int main()
     {
+        /*
         auto gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
         auto Q = new GasState(5, 1);
         
@@ -614,8 +626,9 @@ version(two_temperature_air_test) {
         gm.update_thermo_from_rhou(Q);
         
         writeln(Q);
-
+        */
         return 0;
+
                                         
     }
 }
@@ -709,42 +722,85 @@ static this()
          [  0.2350750e+01,  0.5864300e-03, -0.3131650e-07,  0.6049510e-12, -0.4055670e-17,  0.9764000e+04,  0.14026e+02 ], // 25000 -- 30000 K
          ];
 
+    thermoCoeffs["NO+"] = 
+        [
+         [  0.3668506e+01, -0.1154458e-02,  0.2175561e-05, -0.4822747e-09, -0.2784791e-12,  0.1180340e+06,  0.37852e+01 ],
+         [  0.2888549e+01,  0.1521712e-02, -0.5753124e-06,  0.1005108e-09, -0.6604429e-14,  0.1181920e+06,  0.51508e+01 ],
+         [  0.2214170e+01,  0.1776060e-02, -0.4303860e-06,  0.4173770e-10, -0.1282890e-14,  0.1181920e+06,  0.83904e+01 ],
+         [ -0.3324050e+01,  0.2441960e-02, -0.1905720e-06,  0.6858000e-11, -0.9911240e-16,  0.1181920e+06, -0.11079e+02 ],
+         [ -0.4348760e+01,  0.2401210e-02, -0.1445990e-06,  0.3381320e-11, -0.2825510e-16,  0.1181920e+06,  0.65896e+02 ]
+         ];
+
+    thermoCoeffs["e-"] = 
+        [
+         [  0.2500000e+01,            0.0,            0.0,            0.0,            0.0, -0.7453750e+03, -0.11734e+02],
+         [  0.2500000e+01,            0.0,            0.0,            0.0,            0.0, -0.7453750e+03, -0.11734e+02],
+         [  0.2508e+01   , -0.6332e-05   ,  0.1364e-08   , -0.1094e-12   ,  0.2934e-17   , -0.7450000e+03, -0.11734e+02],
+         [  0.250010e+01 , -0.311281e-09 ,  0.357207e-13 , -0.1603670e-17,  0.250707e-22 , -0.7450000e+03, -0.11734e+02],
+         [  0.250010e+01 ,  0.301577e-09 , -0.226204e-13 ,  0.667344e-18 , -0.689169e-23 , -0.7450000e+03, -0.11734e+02] 
+         ];
+        
+
     // Parameters for collision integrals
     // Collision cross-section Omega_11
-    A_11["N2-N2"]   =  0.0; B_11["N2-N2"]   = -0.0112; C_11["N2-N2"]   = -0.1182; D_11["N2-N2"]   =  4.8464;
-    A_11["O2-N2"]   =  0.0; B_11["O2-N2"]   = -0.0465; C_11["O2-N2"]   =  0.5729; D_11["O2-N2"]   =  1.6185; 
-    A_11["O2-O2"]   =  0.0; B_11["O2-O2"]   = -0.0410; C_11["O2-O2"]   =  0.4977; D_11["O2-O2"]   =  1.8302;
-    A_11["N-N2"]    =  0.0; B_11["N-N2"]    = -0.0194; C_11["N-N2"]    =  0.0119; D_11["N-N2"]    =  4.1055; 
-    A_11["N-O2"]    =  0.0; B_11["N-O2"]    = -0.0179; C_11["N-O2"]    =  0.0152; D_11["N-O2"]    =  3.9996; 
-    A_11["N-N"]     =  0.0; B_11["N-N"]     = -0.0033; C_11["N-N"]     = -0.0572; D_11["N-N"]     =  5.0452;
-    A_11["O-N2"]    =  0.0; B_11["O-N2"]    = -0.0139; C_11["O-N2"]    = -0.0825; D_11["O-N2"]    =  4.5785;
-    A_11["O-O2"]    =  0.0; B_11["O-O2"]    = -0.0226; C_11["O-O2"]    =  0.1300; D_11["O-O2"]    =  3.3363;
-    A_11["O-N"]     =  0.0; B_11["O-N"]     =  0.0048; C_11["O-N"]     = -0.4195; D_11["O-N"]     =  5.7774;
-    A_11["O-O"]     =  0.0; B_11["O-O"]     = -0.0034; C_11["O-O"]     = -0.0572; D_11["O-O"]     =  4.9901;
-    A_11["NO-N2"]   =  0.0; B_11["NO-N2"]   = -0.0291; C_11["NO-N2"]   =  0.2324; D_11["NO-N2"]   =  3.2082; 
-    A_11["NO-O2"]   =  0.0; B_11["NO-O2"]   = -0.0438; C_11["NO-O2"]   =  0.5352; D_11["NO-O2"]   =  1.7252;
-    A_11["NO-N"]    =  0.0; B_11["NO-N"]    = -0.0185; C_11["NO-N"]    =  0.0118; D_11["NO-N"]    =  4.0590;
-    A_11["NO-O"]    =  0.0; B_11["NO-O"]    = -0.0179; C_11["NO-O"]    =  0.0152; D_11["NO-O"]    =  3.9996; 
-    A_11["NO-NO"]   =  0.0; B_11["NO-NO"]   = -0.0364; C_11["NO-NO"]   =  0.3825; D_11["NO-NO"]   =  2.4718;
+    A_11["N2:N2"]   =  0.0;    B_11["N2:N2"]   = -0.0112; C_11["N2:N2"]   =  -0.1182; D_11["N2:N2"]   =    4.8464;
+    A_11["O2:N2"]   =  0.0;    B_11["O2:N2"]   = -0.0465; C_11["O2:N2"]   =   0.5729; D_11["O2:N2"]   =    1.6185; 
+    A_11["O2:O2"]   =  0.0;    B_11["O2:O2"]   = -0.0410; C_11["O2:O2"]   =   0.4977; D_11["O2:O2"]   =    1.8302;
+    A_11["N:N2"]    =  0.0;    B_11["N:N2"]    = -0.0194; C_11["N:N2"]    =   0.0119; D_11["N:N2"]    =    4.1055; 
+    A_11["N:O2"]    =  0.0;    B_11["N:O2"]    = -0.0179; C_11["N:O2"]    =   0.0152; D_11["N:O2"]    =    3.9996; 
+    A_11["N:N"]     =  0.0;    B_11["N:N"]     = -0.0033; C_11["N:N"]     =  -0.0572; D_11["N:N"]     =    5.0452;
+    A_11["O:N2"]    =  0.0;    B_11["O:N2"]    = -0.0139; C_11["O:N2"]    =  -0.0825; D_11["O:N2"]    =    4.5785;
+    A_11["O:O2"]    =  0.0;    B_11["O:O2"]    = -0.0226; C_11["O:O2"]    =   0.1300; D_11["O:O2"]    =    3.3363;
+    A_11["O:N"]     =  0.0;    B_11["O:N"]     =  0.0048; C_11["O:N"]     =  -0.4195; D_11["O:N"]     =    5.7774;
+    A_11["O:O"]     =  0.0;    B_11["O:O"]     = -0.0034; C_11["O:O"]     =  -0.0572; D_11["O:O"]     =    4.9901;
+    A_11["NO:N2"]   =  0.0;    B_11["NO:N2"]   = -0.0291; C_11["NO:N2"]   =   0.2324; D_11["NO:N2"]   =    3.2082; 
+    A_11["NO:O2"]   =  0.0;    B_11["NO:O2"]   = -0.0438; C_11["NO:O2"]   =   0.5352; D_11["NO:O2"]   =    1.7252;
+    A_11["NO:N"]    =  0.0;    B_11["NO:N"]    = -0.0185; C_11["NO:N"]    =   0.0118; D_11["NO:N"]    =    4.0590;
+    A_11["NO:O"]    =  0.0;    B_11["NO:O"]    = -0.0179; C_11["NO:O"]    =   0.0152; D_11["NO:O"]    =    3.9996; 
+    A_11["NO:NO"]   =  0.0;    B_11["NO:NO"]   = -0.0364; C_11["NO:NO"]   =   0.3825; D_11["NO:NO"]   =    2.4718;
+    A_11["NO+:N2"]  =  0.0;    B_11["NO+:N2"]  =     0.0; C_11["NO+:N2"]  =  -0.4000; D_11["NO+:N2"]  =    6.8543;
+    A_11["NO+:O2"]  =  0.0;    B_11["NO+:O2"]  =     0.0; C_11["NO+:O2"]  =  -0.4000; D_11["NO+:O2"]  =    6.8543;
+    A_11["NO+:N"]   =  0.0;    B_11["NO+:N"]   =     0.0; C_11["NO+:N"]   =  -0.4000; D_11["NO+:N"]   =    6.8543;
+    A_11["NO+:O"]   =  0.0;    B_11["NO+:O"]   =     0.0; C_11["NO+:O"]   =  -0.4000; D_11["NO+:O"]   =    6.8543;
+    A_11["NO+:NO"]  =  0.0;    B_11["NO+:NO"]  = -0.0047; C_11["NO+:NO"]  =  -0.0551; D_11["NO+:NO"]  =    4.8737;
+    A_11["NO+:NO+"] =  0.0;    B_11["NO+:NO+"] =     0.0; C_11["NO+:NO+"] =  -2.0000; D_11["NO+:NO+"] =   23.8237;
+    A_11["e-:N2"]   =  0.1147; B_11["e-:N2"]   = -2.8945; C_11["e-:N2"]   =  24.5080; D_11["e-:N2"]   =  -67.3691;
+    A_11["e-:O2"]   =  0.0241; B_11["e-:O2"]   = -0.3467; C_11["e-:O2"]   =   1.3887; D_11["e-:O2"]   =   -0.0110;
+    A_11["e-:N"]    =  0.0;    B_11["e-:N"]    =     0.0; C_11["e-:N"]    =      0.0; D_11["e-:N"]    =    1.6094;
+    A_11["e-:O"]    =  0.0164; B_11["e-:O"]    = -0.2431; C_11["e-:O"]    =   1.1231; D_11["e-:O"]    =   -1.5561;
+    A_11["e-:NO"]   = -0.2202; B_11["e-:NO"]   =  5.2265; C_11["e-:NO"]   = -40.5659; D_11["e-:NO"]   =  104.7126;
+    A_11["e-:NO+"]  =  0.0;    B_11["e-:NO+"]  =     0.0; C_11["e-:NO+"]  =  -2.0000; D_11["e-:NO+"]  =   23.8237;
+    A_11["e-:e-"]   =  0.0;    B_11["e-:e-"]   =     0.0; C_11["e-:e-"]   =  -2.0000; D_11["e-:e-"]   =   23.8237;    
+
     // Collision cross-section Omega_22
-    A_22["N2-N2"]   =  0.0; B_22["N2-N2"]   = -0.0203; C_22["N2-N2"]   =  0.0683; D_22["N2-N2"]   =  4.0900;
-    A_22["O2-N2"]   =  0.0; B_22["O2-N2"]   = -0.0558; C_22["O2-N2"]   =  0.7590; D_22["O2-N2"]   =  0.8955;
-    A_22["O2-O2"]   =  0.0; B_22["O2-O2"]   = -0.0485; C_22["O2-O2"]   =  0.6475; D_22["O2-O2"]   =  1.2607;
-    A_22["N-N2"]    =  0.0; B_22["N-N2"]    = -0.0190; C_22["N-N2"]    =  0.0239; D_22["N-N2"]    =  4.1782; 
-    A_22["N-O2"]    =  0.0; B_22["N-O2"]    = -0.0203; C_22["N-O2"]    =  0.0703; D_22["N-O2"]    =  3.8818;
-    A_22["N-N"]     =  0.0; B_22["N-N"]     = -0.0118; C_22["N-N"]     = -0.0960; D_22["N-N"]     =  4.3252;
-    A_22["O-N2"]    =  0.0; B_22["O-N2"]    = -0.0169; C_22["O-N2"]    = -0.0143; D_22["O-N2"]    =  4.4195;
-    A_22["O-O2"]    =  0.0; B_22["O-O2"]    = -0.0247; C_22["O-O2"]    =  0.1783; D_22["O-O2"]    =  3.2517;
-    A_22["O-N"]     =  0.0; B_22["O-N"]     =  0.0065; C_22["O-N"]     = -0.4467; D_22["O-N"]     =  6.0426;
-    A_22["O-O"]     =  0.0; B_22["O-O"]     = -0.0207; C_22["O-O"]     =  0.0780; D_22["O-O"]     =  3.5658;
-    A_22["NO-N2"]   =  0.0; B_22["NO-N2"]   = -0.0385; C_22["NO-N2"]   =  0.4226; D_22["NO-N2"]   =  2.4507;
-    A_22["NO-O2"]   =  0.0; B_22["NO-O2"]   = -0.0522; C_22["NO-O2"]   =  0.7045; D_22["NO-O2"]   =  1.0738;
-    A_22["NO-N"]    =  0.0; B_22["NO-N"]    = -0.0196; C_22["NO-N"]    =  0.0478; D_22["NO-N"]    =  4.0321;
-    A_22["NO-O"]    =  0.0; B_22["NO-O"]    = -0.0203; C_22["NO-O"]    =  0.0703; D_22["NO-O"]    =  3.8818;
-    A_22["NO-NO"]   =  0.0; B_22["NO-NO"]   = -0.-453; C_22["NO-NO"]   =  0.5624; D_22["NO-NO"]   =  1.7669;
-
-
-    
+    A_22["N2:N2"]   =  0.0;    B_22["N2:N2"]   = -0.0203; C_22["N2:N2"]   =   0.0683; D_22["N2:N2"]   =   4.0900;
+    A_22["O2:N2"]   =  0.0;    B_22["O2:N2"]   = -0.0558; C_22["O2:N2"]   =   0.7590; D_22["O2:N2"]   =   0.8955;
+    A_22["O2:O2"]   =  0.0;    B_22["O2:O2"]   = -0.0485; C_22["O2:O2"]   =   0.6475; D_22["O2:O2"]   =   1.2607;
+    A_22["N:N2"]    =  0.0;    B_22["N:N2"]    = -0.0190; C_22["N:N2"]    =   0.0239; D_22["N:N2"]    =   4.1782; 
+    A_22["N:O2"]    =  0.0;    B_22["N:O2"]    = -0.0203; C_22["N:O2"]    =   0.0703; D_22["N:O2"]    =   3.8818;
+    A_22["N:N"]     =  0.0;    B_22["N:N"]     = -0.0118; C_22["N:N"]     =  -0.0960; D_22["N:N"]     =   4.3252;
+    A_22["O:N2"]    =  0.0;    B_22["O:N2"]    = -0.0169; C_22["O:N2"]    =  -0.0143; D_22["O:N2"]    =   4.4195;
+    A_22["O:O2"]    =  0.0;    B_22["O:O2"]    = -0.0247; C_22["O:O2"]    =   0.1783; D_22["O:O2"]    =   3.2517;
+    A_22["O:N"]     =  0.0;    B_22["O:N"]     =  0.0065; C_22["O:N"]     =  -0.4467; D_22["O:N"]     =   6.0426;
+    A_22["O:O"]     =  0.0;    B_22["O:O"]     = -0.0207; C_22["O:O"]     =   0.0780; D_22["O:O"]     =   3.5658;
+    A_22["NO:N2"]   =  0.0;    B_22["NO:N2"]   = -0.0385; C_22["NO:N2"]   =   0.4226; D_22["NO:N2"]   =   2.4507;
+    A_22["NO:O2"]   =  0.0;    B_22["NO:O2"]   = -0.0522; C_22["NO:O2"]   =   0.7045; D_22["NO:O2"]   =   1.0738;
+    A_22["NO:N"]    =  0.0;    B_22["NO:N"]    = -0.0196; C_22["NO:N"]    =   0.0478; D_22["NO:N"]    =   4.0321;
+    A_22["NO:O"]    =  0.0;    B_22["NO:O"]    = -0.0203; C_22["NO:O"]    =   0.0703; D_22["NO:O"]    =   3.8818;
+    A_22["NO:NO"]   =  0.0;    B_22["NO:NO"]   = -0.0453; C_22["NO:NO"]   =   0.5624; D_22["NO:NO"]   =   1.7669;
+    A_22["NO+:N2"]  =  0.0;    B_22["NO+:N2"]  =     0.0; C_22["NO+:N2"]  =  -0.4000; D_22["NO+:N2"]  =   6.7760;
+    A_22["NO+:O2"]  =  0.0;    B_22["NO+:O2"]  =     0.0; C_22["NO+:O2"]  =  -0.4000; D_22["NO+:O2"]  =   6.7760;
+    A_22["NO+:N"]   =  0.0;    B_22["NO+:N"]   =     0.0; C_22["NO+:N"]   =  -0.4000; D_22["NO+:N"]   =   6.7760;
+    A_22["NO+:O"]   =  0.0;    B_22["NO+:O"]   =     0.0; C_22["NO+:O"]   =  -0.4000; D_22["NO+:O"]   =   6.7760;
+    A_22["NO+:NO"]  =  0.0;    B_22["NO+:NO"]  =     0.0; C_22["NO+:NO"]  =  -0.4000; D_22["NO+:NO"]  =   6.7760;
+    A_22["NO+:NO+"] =  0.0;    B_22["NO+:NO+"] =     0.0; C_22["NO+:NO+"] =  -2.0000; D_22["NO+:NO+"] =  24.3602;
+    A_22["e-:N2"]   =  0.1147; B_22["e-:N2"]   = -2.8945; C_22["e-:N2"]   =  24.5080; D_22["e-:N2"]   = -67.3691;
+    A_22["e-:O2"]   =  0.0241; B_22["e-:O2"]   = -0.3467; C_22["e-:O2"]   =   1.3887; D_22["e-:O2"]   =  -0.0110; // NOTE, low T range
+    A_22["e-:N"]    =  0.0;    B_22["e-:N"]    =     0.0; C_22["e-:N"]    =      0.0; D_22["e-:N"]    =   1.6094;
+    A_22["e-:O"]    =  0.0164; B_22["e-:O"]    = -0.2431; C_22["e-:O"]    =   1.1231; D_22["e-:O"]    =  -1.5561; // NOTE, low T range
+    A_22["e-:NO"]   = -0.2202; B_22["e-:NO"]   =  5.2265; C_22["e-:NO"]   = -40.5659; D_22["e-:NO"]   = 104.7126; // NOTE, low T range
+    A_22["e-:NO+"]  =  0.0;    B_22["e-:NO+"]  =     0.0; C_22["e-:NO+"]  =  -2.0000; D_22["e-:NO+"]  =  24.3061;
+    A_22["e-:e-"]   =  0.0;    B_22["e-:e-"]   =     0.0; C_22["e-:e-"]   =  -2.0000; D_22["e-:e-"]   =  24.3061;
 
 }
 
