@@ -58,8 +58,11 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     case FluxCalculator.ausmdv:
         ausmdv(Lft, Rght, IFace, myConfig.gmodel);
         break;
-    case FluxCalculator.adaptive:
-        adaptive_flux(Lft, Rght, IFace, myConfig);
+    case FluxCalculator.adaptive_efm_ausmdv:
+        adaptive_efm_ausmdv(Lft, Rght, IFace, myConfig);
+        break;
+    case FluxCalculator.adaptive_hlle_ausmdv:
+        adaptive_hlle_ausmdv(Lft, Rght, IFace, myConfig);
         break;
     case FluxCalculator.ausm_plus_up:
         ausm_plus_up(Lft, Rght, IFace, myConfig.M_inf, myConfig.gmodel);
@@ -467,8 +470,8 @@ void exxef(double sn, ref double exx, ref double ef)
 } // end exxef
 
 
-void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
-// This adaptive flux calculator uses uses the Equilibrium Flux Method.
+void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses uses the Equilibrium Flux Method
 // near shocks and AUSMDV away from shocks, however, we really don't want
 // EFM to be used across interfaces with strong shear.
 // EFM should still be able to do it's work as we really needed it for the
@@ -481,12 +484,31 @@ void adaptive_flux(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, r
     double shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
     double shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
     bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
-    if ( (Lft.S == 1 || Rght.S == 1) && shear_is_small ) {
+    if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
         efmflx(Lft, Rght, IFace, myConfig.gmodel);
     } else {
         ausmdv(Lft, Rght, IFace, myConfig.gmodel);
     }
 } // end adaptive_flux()
+
+
+void adaptive_hlle_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, ref LocalConfig myConfig)
+// This adaptive flux calculator uses uses the HLLE flux calculator
+// near shocks and AUSMDV away from shocks.
+//
+// The actual work is passed off to the original flux calculation functions.
+{
+    double sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
+    double shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
+    double shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
+    bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
+    if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
+        hlle(Lft, Rght, IFace, myConfig.gmodel);
+    } else {
+        ausmdv(Lft, Rght, IFace, myConfig.gmodel);
+    }
+} // end adaptive_flux()
+
 
 void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
                   double M_inf, GasModel gmodel)

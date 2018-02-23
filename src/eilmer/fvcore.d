@@ -167,7 +167,8 @@ enum FluxCalculator {
     ausmdv, // Wada and Liou's flux calculator AIAA Paper 94-0083
     efm, // Mike Macrossan's EFM flux calculation
     ausm_plus_up, // Liou's 2006 all-speed flux calculator
-    adaptive, // EFM near shocks, AUSMDV otherwise
+    adaptive_efm_ausmdv, // EFM near shocks, AUSMDV otherwise
+    adaptive_hlle_ausmdv, // HLLE near shocks
     hlle // MHD HLLE approximate Riemann solver
 }
 
@@ -177,7 +178,8 @@ string flux_calculator_name(FluxCalculator fcalc)
     case FluxCalculator.ausmdv: return "ausmdv";
     case FluxCalculator.efm: return "efm";
     case FluxCalculator.ausm_plus_up: return "ausm_plus_up";
-    case FluxCalculator.adaptive: return "adaptive";
+    case FluxCalculator.adaptive_efm_ausmdv: return "adaptive_efm_ausmdv";
+    case FluxCalculator.adaptive_hlle_ausmdv: return "adaptive_hlle_ausmdv";
     case FluxCalculator.hlle: return "hlle";
     }
 }
@@ -188,7 +190,9 @@ FluxCalculator flux_calculator_from_name(string name)
     case "ausmdv": return FluxCalculator.ausmdv;
     case "efm": return FluxCalculator.efm;
     case "ausm_plus_up": return FluxCalculator.ausm_plus_up;
-    case "adaptive": return FluxCalculator.adaptive;
+    case "adaptive_efm_ausmdv": return FluxCalculator.adaptive_efm_ausmdv;
+    case "adaptive": return FluxCalculator.adaptive_efm_ausmdv;
+    case "adaptive_hlle_ausmdv": return FluxCalculator.adaptive_hlle_ausmdv;
     case "hlle": return FluxCalculator.hlle;
     default:
         string msg = text("Invalid flux calculator name:", name);

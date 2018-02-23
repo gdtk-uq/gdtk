@@ -1042,7 +1042,8 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
-    if (GlobalConfig.flux_calculator == FluxCalculator.adaptive) {
+    if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
+	GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_ausmdv) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.detect_shock_points(); }
         }
@@ -1539,7 +1540,8 @@ void gasdynamic_explicit_increment_with_moving_grid()
     }
     // We've put this detector step here because it needs the ghost-cell data
     // to be current, as it should be just after a call to apply_convective_bc().
-    if (GlobalConfig.flux_calculator == FluxCalculator.adaptive) {
+    if (GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
+	GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_ausmdv) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
             if (blk.active) { blk.detect_shock_points(); }
         }
