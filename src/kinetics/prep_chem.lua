@@ -319,6 +319,7 @@ function main()
    for i, sp in ipairs(species) do
       species[sp] = i-1
    end
+
    -- Transform reactions internally
    dofile(inFname)
    for i,r in ipairs(reactions) do

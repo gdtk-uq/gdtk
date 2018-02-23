@@ -111,17 +111,6 @@ function ecModelToLuaStr(ec)
    return "{}"
 end
 
-function transformSpeciesStr(sp)
-   if string.match(sp, '+') then
-      return string.gsub(sp, '+', '_plus')
-   end
-   if sp == 'e-' then
-      return 'e_minus'
-   end
-   -- In all other cases return string unaltered
-   return sp
-end
-
 -- lexical elements for parsing the whole reaction string
 -- get common elements from lex_elems.lua
 for k,v in pairs(lex_elems) do
@@ -308,7 +297,6 @@ function transformReaction(t, species, suppressWarnings)
    for _,p in ipairs(rs[1]) do
       if type(p) == 'table' then
 	 coeff = tonumber(p[1]) or 1
-	 p[2] = transformSpeciesStr(p[2])
 	 if p[2] == "M" then
 	    anonymousCollider = true
 	 else 
@@ -349,7 +337,6 @@ function transformReaction(t, species, suppressWarnings)
    for _,p in ipairs(rs[3]) do
       if type(p) == 'table' then
 	 coeff = tonumber(p[1]) or 1
-	 p[2] = transformSpeciesStr(p[2])
 	 if p[2] == "M" then
 	    anonymousCollider = true
 	 else 
@@ -426,7 +413,7 @@ function transformReaction(t, species, suppressWarnings)
       -- Next look at the special cases
       if t.efficiencies then
 	 for k,v in pairs(t.efficiencies) do
-	    sp = transformSpeciesStr(k) 
+	    sp = k
 	    if not species[sp] then
 		  if not suppressWarnings then
 		     print("WARNING: One of the species given in the efficiencies list")
