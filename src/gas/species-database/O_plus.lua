@@ -1,19 +1,19 @@
-db.O_plus = {}
-db.O_plus.atomicConstituents = {O=1,}
-db.O_plus.charge = 1
-db.O_plus.M = {
+db['O+'] = {}
+db['O+'].atomicConstituents = {O=1,}
+db['O+'].charge = 1
+db['O+'].M = {
    value = 15.9988514e-3,
    units = 'kg/mol',
    description = 'molecular mass',
    reference = 'CEA2::therm.inp'
 }
-db.O_plus.gamma = {
+db['O+'].gamma = {
    value = 1.66666667,
    units = 'non-dimensional',
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'monatomic gas'
 }
-db.O_plus.ceaThermoCoeffs = {
+db['O+'].ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {
       T_lower = 298.15,
@@ -62,6 +62,6 @@ db.O_plus.ceaThermoCoeffs = {
    },
 }
 -- No CEA transport data, just use O
-db.O_plus.ceaViscosity = db.O.ceaViscosity
-db.O_plus.ceaThermCond = db.O.ceaThermCond 
+db['O+'].ceaViscosity = db.O.ceaViscosity
+db['O+'].ceaThermCond = db.O.ceaThermCond 
 

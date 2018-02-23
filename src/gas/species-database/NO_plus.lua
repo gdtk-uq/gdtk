@@ -1,13 +1,13 @@
-db.NO_plus = {}
-db.NO_plus.atomicConstituents = {O=1,N=1,}
-db.NO_plus.charge = 1
-db.NO_plus.M = {
+db['NO+'] = {}
+db['NO+'].atomicConstituents = {O=1,N=1,}
+db['NO+'].charge = 1
+db['NO+'].M = {
    value = 30.0055514e-3,
    units = 'kg/mol',
    description = 'molecular mass',
    reference = 'CEA2::thermo.inp'
 }
-db.NO_plus.ceaThermoCoeffs = {
+db['NO+'].ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {
       T_lower = 298.15,
@@ -56,5 +56,5 @@ db.NO_plus.ceaThermoCoeffs = {
    },
 }
 -- No CEA transport data for NO+, just use NO
-db.NO_plus.ceaViscosity = db.NO.ceaViscosity  
-db.NO_plus.ceaThermCond = db.NO.ceaThermCond  
+db['NO+'].ceaViscosity = db.NO.ceaViscosity  
+db['NO+'].ceaThermCond = db.NO.ceaThermCond  

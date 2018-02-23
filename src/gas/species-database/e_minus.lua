@@ -1,13 +1,13 @@
-db.e_minus = {}
-db.e_minus.atomicConstituents = {}
-db.e_minus.charge = -1
-db.e_minus.M = {
+db['e-'] = {}
+db['e-'].atomicConstituents = {}
+db['e-'].charge = -1
+db['e-'].M = {
    value = 0.000548579903e-3,
    units = 'kg/mol',
    description = 'molecular mass',
    reference = 'CEA2::therm.inp'
 }
-db.e_minus.gamma = {
+db['e-'].gamma = {
    value = 1.667, 
    units = 'non-dimensional',
    description = '(ideal) ratio of specific heats at room temperature',
@@ -17,7 +17,7 @@ db.e_minus.gamma = {
 -- as given by CEA (which makes sense because there is no
 -- internal energy storage in an electron), so we can just
 -- use one range.
-db.e_minus.ceaThermoCoeffs = {
+db['e-'].ceaThermoCoeffs = {
    nsegments = 1,
    segment0 = {
       T_lower = 298.15,

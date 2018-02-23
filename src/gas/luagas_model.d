@@ -614,9 +614,6 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
     lua_pushnil(L);
     while (lua_next(L, idx) != 0) {
         string key = to!string(lua_tostring(L, -2));
-        // transform key if it is an ion (contains '+') or en electron
-        key = key.replace("+", "_plus");
-        key = key.replace("-", "_minus");
         auto isp = gm.species_index(key);
         if (isp == -1) {
             string errMsg = format("Species name used in %s table does not exist: %s\n", tabName, key);
@@ -634,11 +631,7 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
         vals[] = 0.0;
     // 3. Now find those values that we have explicitly set
     foreach (isp; 0 .. gm.n_species()) {
-        string spName = gm.species_name(isp);
-        // transform name if its is an ion or electron
-        spName = spName.replace("_plus", "+");
-        spName = spName.replace("_minus", "-");
-        lua_getfield(L, -1, toStringz(spName));
+        lua_getfield(L, -1, toStringz(gm.species_name(isp)));
         if ( lua_isnumber(L, -1) ) {
             vals[isp] = lua_tonumber(L, -1);
         }
@@ -646,7 +639,7 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
             vals[isp] = 0.0;
         }
         else {
-            string errMsg = format("The value for species '%s' in the %s table is not a number.\n", spName, tabName);
+            string errMsg = format("The value for species '%s' in the %s table is not a number.\n", gm.species_name(isp), tabName);
             lua_pop(L, 1);
             throw new LuaInputException(errMsg);
         }
@@ -1007,7 +1000,7 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_setfield(L, idx, "k");
 
     lua_newtable(L);
-    foreach ( int i, k; Q.k_modes ) {
+    foreach (int i, k; Q.k_modes) {
         lua_pushnumber(L, k); lua_rawseti(L, -2, i+1);
     }
     lua_setfield(L, idx, "k_modes");
@@ -1016,11 +1009,9 @@ void setGasStateInTable(lua_State* L, GasModel gm, int idx, const(GasState) Q)
     lua_setfield(L, idx, "sigma");
 
     lua_newtable(L);
-    foreach ( int i, mf; Q.massf ) {
+    foreach (int i, mf; Q.massf) {
         lua_pushnumber(L, mf);
         string spName = gm.species_name(i);
-        spName = spName.replace("_plus", "+");
-        spName = spName.replace("_minus", "-");
         lua_setfield(L, -2, toStringz(spName));
     }
     lua_setfield(L, idx, "massf");

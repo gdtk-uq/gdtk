@@ -50,27 +50,33 @@ public:
         _R.length = _n_species;
         _mol_masses.length = _n_species;
         foreach (isp; 0 .. _n_species) {
-            lua_getglobal(L, _species_names[isp].toStringz);
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, _species_names[isp].toStringz);
             _mol_masses[isp] = getDouble(L, -1, "M");
             _R[isp] = R_universal/_mol_masses[isp];
+            lua_pop(L, 1);
             lua_pop(L, 1);
         }
         // 1b. Gather L-J parameters
         _LJ_sigmas.length = _n_species;
         _LJ_epsilons.length = _n_species;
         foreach (isp; 0 .. _n_species) {
-            lua_getglobal(L, _species_names[isp].toStringz);
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, _species_names[isp].toStringz);
             _LJ_sigmas[isp] = getDouble(L, -1, "sigma");
             _LJ_epsilons[isp] = getDouble(L, -1, "epsilon");
+            lua_pop(L, 1);
             lua_pop(L, 1);
         }
         // 2. Set the p-v-T EOS
         _pgMixEOS = new PerfectGasMixEOS(_R);
         // 3. Set the e-v-T EOS (which in this case is an e-T relationship only)
         foreach ( isp; 0.._n_species ) {
-            lua_getglobal(L, _species_names[isp].toStringz);
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, _species_names[isp].toStringz);
             lua_getfield(L, -1, "thermoCoeffs");
             _curves ~= createCEAThermo(L, _R[isp]);
+            lua_pop(L, 1);
             lua_pop(L, 1);
             lua_pop(L, 1);
         }
@@ -78,7 +84,8 @@ public:
         // 4. Set the viscosity model
         Viscosity[] vms;
         foreach ( isp; 0.._n_species ) {
-            lua_getglobal(L, _species_names[isp].toStringz);
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, _species_names[isp].toStringz);
             lua_getfield(L, -1, "viscosity");
             lua_getfield(L, -1, "model");
             string model = to!string(luaL_checkstring(L, -1));
@@ -97,12 +104,14 @@ public:
             }
             lua_pop(L, 1);
             lua_pop(L, 1);
+            lua_pop(L, 1);
         }
         _viscModel = new WilkeMixingViscosity(vms, _mol_masses);
         // 5. Set the thermal conductivity model
         ThermalConductivity[] tcms;
         foreach (isp; 0.._n_species ) {
-            lua_getglobal(L, _species_names[isp].toStringz);
+            lua_getglobal(L, "db");
+            lua_getfield(L, -1, _species_names[isp].toStringz);
             lua_getfield(L, -1, "thermal_conductivity");
             lua_getfield(L, -1, "model");
             string model = to!string(luaL_checkstring(L, -1));
@@ -119,6 +128,7 @@ public:
                 errMsg ~= format("This error occurred for species %d when constructing the thermally perfect gas mix.\n");
                 throw new Error(errMsg);
             }
+            lua_pop(L, 1);
             lua_pop(L, 1);
             lua_pop(L, 1);
         }

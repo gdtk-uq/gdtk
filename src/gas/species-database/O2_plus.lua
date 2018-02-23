@@ -1,19 +1,19 @@
-db.O2_plus = {}
-db.O2_plus.atomicConstituents = {O=2,}
-db.O2_plus.charge = 1
-db.O2_plus.M = {
+db['O2+'] = {}
+db['O2+'].atomicConstituents = {O=2,}
+db['O2+'].charge = 1
+db['O2+'].M = {
    value = 31.9982514e-3,
    units = 'kg/mol',
    description = 'molecular mass',
    reference = 'CEA2::thermo.inp'
 }
-db.O2_plus.gamma = {
+db['O2+'].gamma = {
    value = 1.40000000,
    units = 'non-dimensional',
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'diatomic molecule at low temperatures, gamma = 7/5'
 }
-db.O2_plus.ceaThermoCoeffs = {
+db['O2+'].ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {
       T_lower = 298.15,
@@ -62,6 +62,6 @@ db.O2_plus.ceaThermoCoeffs = {
    },
 }
 -- No transport properties in CEA, just set to O2
-db.O2_plus.ceaViscosity = db.O2.ceaViscosity
-db.O2_plus.ceaThermCond = db.O2.ceaThermCond
+db['O2+'].ceaViscosity = db.O2.ceaViscosity
+db['O2+'].ceaThermCond = db.O2.ceaThermCond
 

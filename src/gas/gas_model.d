@@ -1070,7 +1070,7 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         gm = new IdealDissociatingGas(L);
         break;
     case "TwoTemperatureAir":
-        gm = new TwoTemperatureAir("5-species", ["N2", "O2", "N", "O", "NO"]);
+        gm = new TwoTemperatureAir(L);
         break;
     case "TwoTemperatureNitrogen":
         gm = new TwoTemperatureNitrogen();

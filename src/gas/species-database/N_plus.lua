@@ -1,19 +1,19 @@
-db.N_plus = {}
-db.N_plus.atomicConstituents = {N=1}
-db.N_plus.charge = 1
-db.N_plus.M = {
+db['N+'] = {}
+db['N+'].atomicConstituents = {N=1}
+db['N+'].charge = 1
+db['N+'].M = {
    value = 14.0061514e-3,
    units = 'kg/mol',
    description = 'molecular mass',
    reference = 'CEA2::thermo.inp'
 }
-db.N_plus.gamma =  {
+db['N+'].gamma =  {
    value = 1.641, 
    units = 'non-dimensional',
    description = '(ideal) ratio of specific heats at room temperature',
    reference = 'Cp/Cv from CEA2 at room temperature'
 }
-db.N_plus.ceaThermoCoeffs = {
+db['N+'].ceaThermoCoeffs = {
    nsegments = 3,
    segment0 = {
       T_lower  = 298.15,
@@ -63,7 +63,7 @@ db.N_plus.ceaThermoCoeffs = {
    reference="from CEA2::thermo.inp"
 }
 -- No CEA transport data for N+, just use N
-db.N_plus.ceaViscosity = db.N.ceaViscosity 
-db.N_plus.ceaThermCond = db.N.ceaThermCond 
+db['N+'].ceaViscosity = db.N.ceaViscosity 
+db['N+'].ceaThermCond = db.N.ceaThermCond 
 
 

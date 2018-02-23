@@ -139,7 +139,7 @@ function writeCeaThermoCoeffs(f, sp, db, optsTable)
          t.origin = "CEA"
       end
    end
-   f:write(string.format("%s.thermoCoeffs = {\n", sp))
+   f:write(string.format("db['%s'].thermoCoeffs = {\n", sp))
    f:write(string.format("  origin = '%s',\n", t.origin))
    f:write(string.format("  nsegments = %d, \n", t.nsegments))
    for i=0,t.nsegments-1 do
@@ -169,7 +169,7 @@ function writeCeaTransCoeffs(f, sp, db, name, key)
       db[sp][secName] = db.default[secName]
    end
    t = db[sp][secName]
-   f:write(string.format("%s.%s = {\n", sp, key))
+   f:write(string.format("db['%s'].%s = {\n", sp, key))
    f:write("   model = 'CEA',\n")
    f:write(string.format("   nsegments = %d,\n", t.nsegments))
    for i=0,t.nsegments-1 do
@@ -192,26 +192,27 @@ function writeThermPerfGas(f, species, db, optsTable)
       f:write(string.format("'%s', ", sp))
    end
    f:write("}\n\n")
+   f:write("db = {}\n")
    for _,sp in ipairs(species) do
-      f:write(string.format("%s = {}\n", sp))
-      f:write(string.format("%s.M = %.8f\n", sp, db[sp].M.value))
+      f:write(string.format("db['%s'] = {}\n", sp))
+      f:write(string.format("db['%s'].M = %.8f\n", sp, db[sp].M.value))
       sigma = db.default.sigma.value
       if db[sp].sigma then
 	 sigma = db[sp].sigma.value
       end
-      f:write(string.format("%s.sigma = %.8f\n", sp, sigma))
+      f:write(string.format("db['%s'].sigma = %.8f\n", sp, sigma))
       epsilon = db.default.epsilon.value
       if db[sp].epsilon then
 	 epsilon = db[sp].epsilon.value
       end
-      f:write(string.format("%s.epsilon = %.8f\n", sp, epsilon))
+      f:write(string.format("db['%s'].epsilon = %.8f\n", sp, epsilon))
       writeCeaThermoCoeffs(f, sp, db, optsTable)
       -- Our preference is to use CEA transport properties where available,
       -- however we intercept on 'air' as a special case and use the
       -- the Sutherland model because CEA do not have a curve fit
       -- form for the transport properties of air.
       if ( sp == 'air' ) then
-	 f:write("air.viscosity = {\n")
+	 f:write("db['air'].viscosity = {\n")
 	 f:write("   model = 'Sutherland',\n");
 	 f:write(string.format("   mu_ref = %.8e,\n", db['air'].sutherlandVisc.mu_ref))
 	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandVisc.T_ref))
@@ -221,7 +222,7 @@ function writeThermPerfGas(f, species, db, optsTable)
 	 writeCeaTransCoeffs(f, sp, db, "Viscosity", "viscosity")
       end
       if ( sp == 'air' ) then 
-	 f:write("air.thermal_conductivity = {\n")
+	 f:write("db['air'].thermal_conductivity = {\n")
 	 f:write("   model = 'Sutherland',\n")
 	 f:write(string.format("   k_ref = %.8e,\n", db['air'].sutherlandThermCond.k_ref))
 	 f:write(string.format("   T_ref = %.8f,\n", db['air'].sutherlandThermCond.T_ref))
@@ -372,8 +373,7 @@ function parseSpeciesList(fname)
       tks = split_string(line)
       if tks[1] ~= '#' then
 	 spSymbol = tks[3]
-	 spEntry = string.match(tks[1], "(.+)%.lua")
-	 spMap[spSymbol] = spEntry
+	 spMap[spSymbol] = true
       end
    end
    f:close()
@@ -385,7 +385,9 @@ function prepareGasFile(inpFname, outFname)
    dofile(inpFname)
    -- Convert species names to database entries
    spNames = {}
-   for _,sp in ipairs(species) do spNames[#spNames+1] = sp end
+   for _,sp in ipairs(species) do
+      spNames[#spNames+1] = sp
+   end
    -- Locate species list and parse
    listName = dir.."species-list.txt"
    spMap = parseSpeciesList(listName)
@@ -395,7 +397,7 @@ function prepareGasFile(inpFname, outFname)
 	 print("Exiting without doing anything.")
 	 os.exit(1)
       end
-      species[i] = spMap[sp]
+      species[i] = sp
    end
    -- Check we have all the species
    for _,sp in ipairs(species) do
