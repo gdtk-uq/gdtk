@@ -819,7 +819,7 @@ public:
             if (find(GlobalConfig.localBlockIds, other_blk.id).empty) {
                 // The other block is in another MPI process, go fetch the data via messages.
                 // Once complete, copy the data back into the local context.
-		MPI_Wait(&incoming_cell_ids_request, &incoming_cell_ids_status);
+                MPI_Wait(&incoming_cell_ids_request, &incoming_cell_ids_status);
                 size_t ne = ghost_cells.length;
                 outgoing_mapped_cell_ids.length = ne;
                 foreach (i; 0 .. ne) { outgoing_mapped_cell_ids[i] = to!size_t(incoming_cell_ids_buf[i]); }
@@ -929,7 +929,7 @@ public:
                 //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-		MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
+                MPI_Wait(&incoming_geometry_request, &incoming_geometry_status);
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
                     foreach (j; 0 .. this_blk.myConfig.n_grid_time_levels) {
@@ -1113,7 +1113,7 @@ public:
                 //
                 // Wait for non-blocking receive to complete.
                 // Once complete, copy the data back into the local context.
-		MPI_Wait(&incoming_flowstate_request, &incoming_flowstate_status);
+                MPI_Wait(&incoming_flowstate_request, &incoming_flowstate_status);
                 size_t ii = 0;
                 foreach (c; ghost_cells) {
                     FlowState fs = c.fs;

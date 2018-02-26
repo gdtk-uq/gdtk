@@ -108,7 +108,7 @@ void main(string[] args) {
                "max-wall-clock", &maxWallClock,
                "epsilon", &EPSILON,
                "mu", &MU,
-	       "omega", &OMEGA, 
+               "omega", &OMEGA, 
                "eta", &ETA,
                "verification", &withFiniteDiffVerification,
                "help", &helpWanted
@@ -295,37 +295,37 @@ void main(string[] args) {
         
     foreach (bndary; myblk.bc) {
         if (designSurfaces.canFind(bndary.group)) {
-	    // gather boundary vertices
+            // gather boundary vertices
             size_t[] vtx_id_list;
             foreach(face; bndary.faces) {
                 foreach(vtx; face.vtx) {
                     if (vtx_id_list.canFind(vtx.id) == false) {
                         bndary.vertices ~= vtx;
                         bndary.surfacePoints ~= Vector3(vtx.pos[0].refx, vtx.pos[0].refy, vtx.pos[0].refz);
-			vtx_id_list ~= vtx.id;
-			myblk.boundaryVtxIndexList ~= vtx.id;
+                        vtx_id_list ~= vtx.id;
+                        myblk.boundaryVtxIndexList ~= vtx.id;
                     }
                 }
             }
-	    
-	    
+            
+            
             // compute bezier control points
             bndary.nCntrlPts = nCntrlPtsList[bndary.group];
-	    bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.nCntrlPts, bndary.ts);
+            bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.nCntrlPts, bndary.ts);
             ndvars += bndary.nCntrlPts*2;
         }
-	else {
-	    size_t[] vtx_id_list;
+        else {
+            size_t[] vtx_id_list;
             foreach(face; bndary.faces) {
                 foreach(vtx; face.vtx) {
                     if (vtx_id_list.canFind(vtx.id) == false) {
                         bndary.vertices ~= vtx;
-			vtx_id_list ~= vtx.id;
-			myblk.boundaryVtxIndexList ~= vtx.id;
+                        vtx_id_list ~= vtx.id;
+                        myblk.boundaryVtxIndexList ~= vtx.id;
                     }
                 }
             }
-	}
+        }
     }
 
     size_t nvertices = myblk.vertices.length;
@@ -333,42 +333,42 @@ void main(string[] args) {
     dXdD_T = new Matrix(ndvars, nvertices*ndim);
     foreach (bndary; myblk.bc) {
         if (designSurfaces.canFind(bndary.group)) {
-	    foreach (i; 0 .. bndary.bezier.B.length) {
-		// could loop over all x, y, z coordinates here -- for now just use y-coordinates
-		foreach(otherBndary; myblk.bc) {
-		    foreach(j, vtx; otherBndary.vertices) {
-			    vtx.pos[1].refx = vtx.pos[0].x;
-			    vtx.pos[1].refy = vtx.pos[0].y;
-			    vtx.pos[2].refx = vtx.pos[0].x;
-			    vtx.pos[2].refy = vtx.pos[0].y;
-		    }
-		}
-		size_t gtl;
-		auto P0 = bndary.bezier.B[i].y;
-		double dP = ETA;
-		gtl = 1;
-		bndary.bezier.B[i].refy = P0 + dP;
-		foreach(j, vtx; bndary.vertices) {
-		    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
-		    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
-		}
-		inverse_distance_weighting(myblk, gtl);
-		gtl = 2;
-		bndary.bezier.B[i].refy = P0 - dP;
-		foreach(j, vtx; bndary.vertices) {
-		    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
-		    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
-		}
-		inverse_distance_weighting(myblk, gtl);
-		foreach(j, vtx; myblk.vertices) {
-		    dXdD_T[i*ndim, j*ndim] = 0.0;
-		    dXdD_T[i*ndim, j*ndim+1] = 0.0;
-		    dXdD_T[i*ndim+1, j*ndim] = (vtx.pos[1].x - vtx.pos[2].x)/(2.0*dP);
-		    dXdD_T[i*ndim+1, j*ndim+1] = (vtx.pos[1].y - vtx.pos[2].y)/(2.0*dP);
-		}
-		bndary.bezier.B[i].refy = P0;
-	    }
-	}
+            foreach (i; 0 .. bndary.bezier.B.length) {
+                // could loop over all x, y, z coordinates here -- for now just use y-coordinates
+                foreach(otherBndary; myblk.bc) {
+                    foreach(j, vtx; otherBndary.vertices) {
+                            vtx.pos[1].refx = vtx.pos[0].x;
+                            vtx.pos[1].refy = vtx.pos[0].y;
+                            vtx.pos[2].refx = vtx.pos[0].x;
+                            vtx.pos[2].refy = vtx.pos[0].y;
+                    }
+                }
+                size_t gtl;
+                auto P0 = bndary.bezier.B[i].y;
+                double dP = ETA;
+                gtl = 1;
+                bndary.bezier.B[i].refy = P0 + dP;
+                foreach(j, vtx; bndary.vertices) {
+                    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+                    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+                }
+                inverse_distance_weighting(myblk, gtl);
+                gtl = 2;
+                bndary.bezier.B[i].refy = P0 - dP;
+                foreach(j, vtx; bndary.vertices) {
+                    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+                    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+                }
+                inverse_distance_weighting(myblk, gtl);
+                foreach(j, vtx; myblk.vertices) {
+                    dXdD_T[i*ndim, j*ndim] = 0.0;
+                    dXdD_T[i*ndim, j*ndim+1] = 0.0;
+                    dXdD_T[i*ndim+1, j*ndim] = (vtx.pos[1].x - vtx.pos[2].x)/(2.0*dP);
+                    dXdD_T[i*ndim+1, j*ndim+1] = (vtx.pos[1].y - vtx.pos[2].y)/(2.0*dP);
+                }
+                bndary.bezier.B[i].refy = P0;
+            }
+        }
     }
 
     // ------------------------------
@@ -412,30 +412,30 @@ void main(string[] args) {
         myblk.sync_vertices_from_underlying_grid(0);
 
         foreach (bndary; myblk.bc) {
-	    if (designSurfaces.canFind(bndary.group)) {
-		foreach (i; 0 .. bndary.bezier.B.length) {
-		    writeln("computing finite difference gradient for variable ", i+1, " out of ", bndary.bezier.B.length, " variables");
-		    // could loop over all x, y, z coordinates here -- for now just use y-coordinates
-		    auto P0 = bndary.bezier.B[i].refy;
-		    double dP = ETA;                
-		    bndary.bezier.B[i].refy = P0 + dP;
-		    J0 = finite_difference_grad(jobName, last_tindx, myblk, bndary, p_target);
-		    bndary.bezier.B[i].refy = P0 - dP;
-		    J1 = finite_difference_grad(jobName, last_tindx, myblk, bndary, p_target);
-		    finiteDiffGradients ~= (J0 - J1)/(2.0*dP);
-		    bndary.bezier.B[i].refy = P0;
-		}
-	    }
-	}
+            if (designSurfaces.canFind(bndary.group)) {
+                foreach (i; 0 .. bndary.bezier.B.length) {
+                    writeln("computing finite difference gradient for variable ", i+1, " out of ", bndary.bezier.B.length, " variables");
+                    // could loop over all x, y, z coordinates here -- for now just use y-coordinates
+                    auto P0 = bndary.bezier.B[i].refy;
+                    double dP = ETA;                
+                    bndary.bezier.B[i].refy = P0 + dP;
+                    J0 = finite_difference_grad(jobName, last_tindx, myblk, bndary, p_target);
+                    bndary.bezier.B[i].refy = P0 - dP;
+                    J1 = finite_difference_grad(jobName, last_tindx, myblk, bndary, p_target);
+                    finiteDiffGradients ~= (J0 - J1)/(2.0*dP);
+                    bndary.bezier.B[i].refy = P0;
+                }
+            }
+        }
         writeln("finite difference gradients = ", finiteDiffGradients);
-	foreach (bndary; myblk.bc) {
-	    if (designSurfaces.canFind(bndary.group)) {
-		foreach (i; 0 .. bndary.bezier.B.length) {
-		    double err = ((adjointGradients[i*2+1] - finiteDiffGradients[i])/finiteDiffGradients[i]) * 100.0;
-		    writeln("% error for variable ", i+1, ": ", abs(err));
-		}
-	    }
-	}
+        foreach (bndary; myblk.bc) {
+            if (designSurfaces.canFind(bndary.group)) {
+                foreach (i; 0 .. bndary.bezier.B.length) {
+                    double err = ((adjointGradients[i*2+1] - finiteDiffGradients[i])/finiteDiffGradients[i]) * 100.0;
+                    writeln("% error for variable ", i+1, ": ", abs(err));
+                }
+            }
+        }
     }
     writeln("Simulation complete.");
 }
@@ -443,22 +443,22 @@ void main(string[] args) {
 double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, BoundaryCondition bndary, double[] p_target) {
     size_t gtl = 1;
     foreach(otherBndary; blk.bc) {
-	foreach(j, vtx; otherBndary.vertices) {
-	    vtx.pos[1].refx = vtx.pos[0].x;
-	    vtx.pos[1].refy = vtx.pos[0].y;
-	    vtx.pos[2].refx = vtx.pos[0].x;
-	    vtx.pos[2].refy = vtx.pos[0].y;
-	}
+        foreach(j, vtx; otherBndary.vertices) {
+            vtx.pos[1].refx = vtx.pos[0].x;
+            vtx.pos[1].refy = vtx.pos[0].y;
+            vtx.pos[2].refx = vtx.pos[0].x;
+            vtx.pos[2].refy = vtx.pos[0].y;
+        }
     }
     foreach(j, vtx; bndary.vertices) {
-	vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
-	vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+        vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+        vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
     }
     inverse_distance_weighting(blk, gtl);
 
     foreach(j, vtx; blk.vertices) {
-	vtx.pos[0].refx = vtx.pos[gtl].x;
-	vtx.pos[0].refy = vtx.pos[gtl].y;
+        vtx.pos[0].refx = vtx.pos[gtl].x;
+        vtx.pos[0].refy = vtx.pos[gtl].y;
     }
 
     // save mesh
@@ -1105,7 +1105,7 @@ void compute_perturbed_flux(FluidBlock blk, FVCell[] cell_list, FVInterface[] if
         }
     }
     else { // unstructured grid
-	// compute new gradients for all cells in the stencil
+        // compute new gradients for all cells in the stencil
         if (blk.myConfig.interpolation_order > 1) {
             foreach(c; cell_list) {
                 c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);

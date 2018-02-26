@@ -310,25 +310,25 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                     else w[jOffSet] = M;
                 }
                 if (j == blk.jmin && blk.bc[Face.south].type != "exchange_over_full_face") {
-		    // south boundary vertex has no bottom neighbour
-		    w[1] = 0.0;
-		    interface_ws[1].clear();
-		}
+                    // south boundary vertex has no bottom neighbour
+                    w[1] = 0.0;
+                    interface_ws[1].clear();
+                }
                 if (j == blk.jmax+1 && blk.bc[Face.north].type != "exchange_over_full_face") {
-		    // north boundary vertex has no top neighbour
-		    w[0] = 0.0;
-		    interface_ws[0].clear();
-		}
+                    // north boundary vertex has no top neighbour
+                    w[0] = 0.0;
+                    interface_ws[0].clear();
+                }
                 // now that we have the surrounding interface velocities, let's combine them to approximate the central vertex velocity
                 if (abs(w[0]) < 1.0e-10 && abs(w[1]) < 1.0e-10) {
-		    w[0] = 1.0;
-		    w[1] = 1.0;
-		    // prevents a division by zero. Reverts back to unweighted average
-		}
-		// this is the vertex velocity, 80% for stability               
+                    w[0] = 1.0;
+                    w[1] = 1.0;
+                    // prevents a division by zero. Reverts back to unweighted average
+                }
+                // this is the vertex velocity, 80% for stability               
                 temp_vel =  (w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] );
                 if (geom.abs(temp_vel) > U_plus_a) {
-		    // safety catch: if an extreme velocity has been assigned let's just limit vel to  u+a
+                    // safety catch: if an extreme velocity has been assigned let's just limit vel to  u+a
                     temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), 0.0);
                 }
                 

@@ -134,13 +134,13 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, int
                 myBez.B[i].refz = d[3*i - 1];
             }
         }
-	// Populate ts vector with all the t-values associated with the data points.
-	ts[0] = 0.0;
-	foreach (i; 1 .. points.length-1) {
+        // Populate ts vector with all the t-values associated with the data points.
+        ts[0] = 0.0;
+        foreach (i; 1 .. points.length-1) {
             myBez.closestDistance(points[i], t);
-	    ts[i] = t;
+            ts[i] = t;
         }
-	ts[$-1] = 1.0;
+        ts[$-1] = 1.0;
         return myBez;
     }
     // Otherwise, we failed in the optimiser.

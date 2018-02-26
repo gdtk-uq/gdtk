@@ -21,6 +21,6 @@ void main()
         writeln(p.x, " ", p.y);
     }
     foreach (t; ts) {
-	writeln(t);
+        writeln(t);
     }
 }

@@ -111,7 +111,7 @@ void main(string[] args)
     Tuple!(int,int)[] blockLoads;
     blockLoads.length = GlobalConfig.nFluidBlocks;
     foreach (iblk, blk; globalFluidBlocks) {
-	int ncells = to!int(globalFluidBlocks[iblk].ncells_expected);
+        int ncells = to!int(globalFluidBlocks[iblk].ncells_expected);
         blockLoads[iblk] = tuple(to!int(iblk), ncells);
     }
     sort!("a[1] > b[1]")(blockLoads);
@@ -123,7 +123,7 @@ void main(string[] args)
     auto f = File(fName, "w");
     f.writeln("# indx mpiTask");
     foreach (blkId, taskId; taskIds) {
-	f.writefln("%4d %4d", blkId, taskId);
+        f.writefln("%4d %4d", blkId, taskId);
     }
     writeln("Done.");
 }
@@ -131,7 +131,7 @@ void main(string[] args)
 
 
 void distributeBlocksToTasks(int nTasks, Tuple!(int,int)[] blockLoads,
-			     int[][] taskMap, int[] taskLoads, int[] taskIds)
+                             int[][] taskMap, int[] taskLoads, int[] taskIds)
 {
     taskLoads.length = nTasks;
     taskLoads[] = 0;
@@ -146,7 +146,7 @@ void distributeBlocksToTasks(int nTasks, Tuple!(int,int)[] blockLoads,
         auto iMin = taskLoads.minIndex;
         taskLoads[iMin] += blkLoad;
         taskMap[iMin] ~= blkId;
-	taskIds[blkId] = to!int(iMin); 
+        taskIds[blkId] = to!int(iMin); 
     }
 
 }

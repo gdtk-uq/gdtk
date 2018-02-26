@@ -161,14 +161,14 @@ public:
         Vector3 ptOnPath;
         // Handle the special cases of being right at the end points.
         if (tL == 0.0) {
-	    t = 0.0;
+            t = 0.0;
         }
         else if (tR == 1.0) {
             t = 1.0;
         }
-	else {
-	    t = 0.5*(tL+tR);
-	}
+        else {
+            t = 0.5*(tL+tR);
+        }
         ptOnPath = opCall(t);
         return distance_between(p, ptOnPath);
     } // end closestDistance

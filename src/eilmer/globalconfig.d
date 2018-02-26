@@ -197,15 +197,15 @@ EtaStrategy etaStrategyFromName(string name)
     case "adaptive": return EtaStrategy.adaptive;
     case "adaptive_capped": return EtaStrategy.adaptive_capped;
     default:
-	string errMsg = "The selected 'eta_strategy' is unavailable.\n";
-	errMsg ~= format("You selected: '%s'\n", name);
-	errMsg ~= "The available strategies are: \n";
-	errMsg ~= "   'constant'\n";
-	errMsg ~= "   'geometric'\n";
-	errMsg ~= "   'adaptive'\n";
-	errMsg ~= "   'adaptive_capped'\n";
-	errMsg ~= "Check your selection or its spelling in the input file.\n";
-	throw new Error(errMsg);
+        string errMsg = "The selected 'eta_strategy' is unavailable.\n";
+        errMsg ~= format("You selected: '%s'\n", name);
+        errMsg ~= "The available strategies are: \n";
+        errMsg ~= "   'constant'\n";
+        errMsg ~= "   'geometric'\n";
+        errMsg ~= "   'adaptive'\n";
+        errMsg ~= "   'adaptive_capped'\n";
+        errMsg ~= "Check your selection or its spelling in the input file.\n";
+        throw new Error(errMsg);
     }
 } // end etaStrategyFromName()
 
@@ -640,7 +640,7 @@ public:
 
     this(int universe_blk_id) 
     {
-	in_mpi_context = GlobalConfig.in_mpi_context;
+        in_mpi_context = GlobalConfig.in_mpi_context;
         this.universe_blk_id = universe_blk_id;
         grid_format = GlobalConfig.grid_format;
         flow_format = GlobalConfig.flow_format;
@@ -1400,9 +1400,9 @@ void configCheckPoint4()
 {
     // the adjoint solver shouldn't apply diffuse_bcs_on_init_flag
     version(adjoint) {
-	GlobalConfig.n_grid_time_levels = 3;
+        GlobalConfig.n_grid_time_levels = 3;
         if (GlobalConfig.diffuseWallBCsOnInit) {
-	    GlobalConfig.diffuseWallBCsOnInit = false;
+            GlobalConfig.diffuseWallBCsOnInit = false;
             writeln("Warning diffuse_bcs_on_init_flag set to false for adjoint solver.");
         }
     } 

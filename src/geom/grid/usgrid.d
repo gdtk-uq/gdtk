@@ -404,40 +404,40 @@ public:
     // Input is one or more arrays of points that define a closed region.
     {
         super(Grid_t.unstructured_grid, 2, new_label);
-	// Copy the boundary boints into the grid's vertex list,
-	// making sure that the start-point of each new boundary-vertex list
-	// coincides with the end-point of the previous boundary-vertex list.
-	if (distance_between(bPoints[0][0], bPoints[$-1][$-1]) > tol) {
-	    string msg = "Beginning point and end point do not coincide: " ~
-		to!string(bPoints[0][0]) ~ " " ~ to!string(bPoints[$-1][$-1]);
-	    throw new Error(msg);
-	}
-	foreach (i, bpa; bPoints) {
-	    size_t[] face_id_list;
-	    int[] outsign_list;
-	    if (i == 0) { vertices ~= Vector3(bpa[0]); }
-	    foreach (j; 1 .. bpa.length) {
-		vertices ~= Vector3(bpa[j]);
-		size_t[] vtx_id_list = [vertices.length-1, vertices.length-2];
-		faceIndices[makeFaceTag(vtx_id_list)] = faces.length; // before new face
-		faces ~= new USGFace(vtx_id_list);
-		face_id_list ~= faces.length-1;
-		outsign_list ~= 1; // always pointing out for a counter-clockwise vertex order 
-	    }
-	    boundaries ~= new BoundaryFaceSet("bndry-"~to!string(i), face_id_list, outsign_list);
-	    if (i > 0) {
-		if (distance_between(bPoints[i][0], bPoints[i-1][$-1]) > tol) {
-		    string msg = "Beginning point for segment[" ~ to!string(i) ~ "] and end point " ~
-			"for segment [" ~ to!string(i-1) ~ "] do not coincide: " ~
-			to!string(bPoints[i][0]) ~ " " ~ to!string(bPoints[i-1][$-1]);
-		    throw new Error(msg);
-		}
-	    }
-	}
-	// At this point, we should have a closed region defined by its bounding points and faces.
-	// Need to fill in interior points, faces and cells.
-	paver2d.fill_interior(vertices, faces, cells);
-	// Should also be able to use any other algorithm, such as an advancing-front method.
+        // Copy the boundary boints into the grid's vertex list,
+        // making sure that the start-point of each new boundary-vertex list
+        // coincides with the end-point of the previous boundary-vertex list.
+        if (distance_between(bPoints[0][0], bPoints[$-1][$-1]) > tol) {
+            string msg = "Beginning point and end point do not coincide: " ~
+                to!string(bPoints[0][0]) ~ " " ~ to!string(bPoints[$-1][$-1]);
+            throw new Error(msg);
+        }
+        foreach (i, bpa; bPoints) {
+            size_t[] face_id_list;
+            int[] outsign_list;
+            if (i == 0) { vertices ~= Vector3(bpa[0]); }
+            foreach (j; 1 .. bpa.length) {
+                vertices ~= Vector3(bpa[j]);
+                size_t[] vtx_id_list = [vertices.length-1, vertices.length-2];
+                faceIndices[makeFaceTag(vtx_id_list)] = faces.length; // before new face
+                faces ~= new USGFace(vtx_id_list);
+                face_id_list ~= faces.length-1;
+                outsign_list ~= 1; // always pointing out for a counter-clockwise vertex order 
+            }
+            boundaries ~= new BoundaryFaceSet("bndry-"~to!string(i), face_id_list, outsign_list);
+            if (i > 0) {
+                if (distance_between(bPoints[i][0], bPoints[i-1][$-1]) > tol) {
+                    string msg = "Beginning point for segment[" ~ to!string(i) ~ "] and end point " ~
+                        "for segment [" ~ to!string(i-1) ~ "] do not coincide: " ~
+                        to!string(bPoints[i][0]) ~ " " ~ to!string(bPoints[i-1][$-1]);
+                    throw new Error(msg);
+                }
+            }
+        }
+        // At this point, we should have a closed region defined by its bounding points and faces.
+        // Need to fill in interior points, faces and cells.
+        paver2d.fill_interior(vertices, faces, cells);
+        // Should also be able to use any other algorithm, such as an advancing-front method.
         niv = vertices.length; njv = 1; nkv = 1;
     } // end construction via paving in 2D
     

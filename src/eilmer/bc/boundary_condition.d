@@ -100,11 +100,11 @@ public:
 
     FVVertex[] vertices;
     version(adjoint) {
-	Bezier bezier;
-	double[] ts;
-	int nCntrlPts;
-	Vector3[] surfacePoints;
-	//FVVertex[] vertices;
+        Bezier bezier;
+        double[] ts;
+        int nCntrlPts;
+        Vector3[] surfacePoints;
+        //FVVertex[] vertices;
     }
 
 private:
