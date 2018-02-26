@@ -96,20 +96,27 @@ void main()
     auto P5P0 = new Arc3(P5, M1, P0);   size_t n5 = 30;         string BC5 = "inflow-boundary";
 
 
-    //construct the list of boundary points:
+    // construct the list of boundary points:
     Vector3[] boundary_points = construct_boundary([P0P1, P1P2, P2P3, P3P4, P4P5, P5P0],
                                             [n0, n1, n2, n3, n4, n5]);
 
-    //construct the boundary condition sets:
+    // construct the boundary condition sets:
     BoundaryFaceSet[] boundaries = construct_boundary_faces([BC0, BC1, BC2, BC3, BC4, BC5], 
                                                         [n0, n1, n2, n3, n4, n5]);
 
 
-    //use the paver constructor to make an unstructured grid:
+    // use the old paver constructor to make an unstructured grid:
     auto grid = new UnstructuredGrid(boundary_points, boundaries, "PavedGrid1");
     grid.write_to_vtk_file("paved_grid.vtk");
-
-}
+    
+    // use the new paver constructor to make an unstructured grid.
+    Vector3[][] bndryArray;
+    bndryArray ~= construct_boundary([P0P1, P1P2], [n0, n1]);
+    bndryArray ~= construct_boundary([P2P3, P3P4], [n2, n3]);
+    bndryArray ~= construct_boundary([P4P5, P5P0], [n4, n5]);
+    auto grid2 = new UnstructuredGrid(bndryArray, "PavedGrid2");
+    grid2.write_to_vtk_file("paved_grid2.vtk");
+} // end main()
     
 
 

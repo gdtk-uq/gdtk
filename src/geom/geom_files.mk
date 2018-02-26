@@ -38,6 +38,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/grid/sgrid.d \
 	$(GEOM_DIR)/grid/usgrid.d \
 	$(GEOM_DIR)/grid/paver.d \
+	$(GEOM_DIR)/grid/paver2d.d \
 	$(GEOM_DIR)/misc/package.d \
 	$(GEOM_DIR)/misc/univariatefunctions.d \
 	$(GEOM_DIR)/misc/svg.d \

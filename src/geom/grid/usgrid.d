@@ -18,7 +18,8 @@ import std.math;
 import gzip;
 
 import geom;
-import paver;
+import paver: PavedGrid, POINT_LIST, FACE_LIST, CELL_LIST;
+import paver2d;
 
 //-----------------------------------------------------------------
 // For the USGCell types, we will have only the linear elements,
@@ -380,8 +381,69 @@ public:
         super(Grid_t.unstructured_grid, dimensions, label);
     }
 
+    this(const UnstructuredGrid other, const string new_label="")
+    {
+        super(Grid_t.unstructured_grid, other.dimensions,
+              ((new_label == "")? other.label : new_label));
+        nvertices = other.nvertices;
+        ncells = other.ncells;
+        nfaces = other.nfaces;
+        nboundaries = other.nboundaries;
+        foreach(v; other.vertices) { vertices ~= Vector3(v); }
+        foreach(f; other.faces) {
+            faceIndices[makeFaceTag(f.vtx_id_list)] = faces.length;
+            faces ~= new USGFace(f);
+        }
+        foreach(c; other.cells) { cells ~= new USGCell(c); }
+        foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
+        niv = vertices.length; njv = 1; nkv = 1;
+    } // end constructor from another
+
+    this(const Vector3[][] bPoints, const string new_label="", double tol=1.0e-9)
+    // Construction via paving with (mostly) quadrilateral cells.
+    // Input is one or more arrays of points that define a closed region.
+    {
+        super(Grid_t.unstructured_grid, 2, new_label);
+	// Copy the boundary boints into the grid's vertex list,
+	// making sure that the start-point of each new boundary-vertex list
+	// coincides with the end-point of the previous boundary-vertex list.
+	if (distance_between(bPoints[0][0], bPoints[$-1][$-1]) > tol) {
+	    string msg = "Beginning point and end point do not coincide: " ~
+		to!string(bPoints[0][0]) ~ " " ~ to!string(bPoints[$-1][$-1]);
+	    throw new Error(msg);
+	}
+	foreach (i, bpa; bPoints) {
+	    size_t[] face_id_list;
+	    int[] outsign_list;
+	    if (i == 0) { vertices ~= Vector3(bpa[0]); }
+	    foreach (j; 1 .. bpa.length) {
+		vertices ~= Vector3(bpa[j]);
+		size_t[] vtx_id_list = [vertices.length-1, vertices.length-2];
+		faceIndices[makeFaceTag(vtx_id_list)] = faces.length; // before new face
+		faces ~= new USGFace(vtx_id_list);
+		face_id_list ~= faces.length-1;
+		outsign_list ~= 1; // always pointing out for a counter-clockwise vertex order 
+	    }
+	    boundaries ~= new BoundaryFaceSet("bndry-"~to!string(i), face_id_list, outsign_list);
+	    if (i > 0) {
+		if (distance_between(bPoints[i][0], bPoints[i-1][$-1]) > tol) {
+		    string msg = "Beginning point for segment[" ~ to!string(i) ~ "] and end point " ~
+			"for segment [" ~ to!string(i-1) ~ "] do not coincide: " ~
+			to!string(bPoints[i][0]) ~ " " ~ to!string(bPoints[i-1][$-1]);
+		    throw new Error(msg);
+		}
+	    }
+	}
+	// At this point, we should have a closed region defined by its bounding points and faces.
+	// Need to fill in interior points, faces and cells.
+	paver2d.fill_interior(vertices, faces, cells);
+	// Should also be able to use any other algorithm, such as an advancing-front method.
+        niv = vertices.length; njv = 1; nkv = 1;
+    } // end construction via paving in 2D
+    
     this(const Vector3[] boundary, BoundaryFaceSet[] in_boundaries, const string new_label="")
-    //Paved Grid Constructor by Heather Muir, 2016.
+    // Paved Grid Constructor by Heather Muir, 2016.
+    // Deprecated in 2018. We will use the constructor above.
     {
         double[][] boundary_points;
         foreach(p; boundary){
@@ -415,25 +477,7 @@ public:
             }
         }
         niv = vertices.length; njv = 1; nkv = 1;
-    } //end paved grid constructor
-
-    this(const UnstructuredGrid other, const string new_label="")
-    {
-        super(Grid_t.unstructured_grid, other.dimensions,
-              ((new_label == "")? other.label : new_label));
-        nvertices = other.nvertices;
-        ncells = other.ncells;
-        nfaces = other.nfaces;
-        nboundaries = other.nboundaries;
-        foreach(v; other.vertices) { vertices ~= Vector3(v); }
-        foreach(f; other.faces) {
-            faceIndices[makeFaceTag(f.vtx_id_list)] = faces.length;
-            faces ~= new USGFace(f);
-        }
-        foreach(c; other.cells) { cells ~= new USGCell(c); }
-        foreach(b; other.boundaries) { boundaries ~= new BoundaryFaceSet(b); }
-        niv = vertices.length; njv = 1; nkv = 1;
-    } // end constructor from another
+    } //end Heather's paved grid constructor
 
     this(const StructuredGrid sg, const string new_label="")
     {
