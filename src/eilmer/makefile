@@ -34,6 +34,11 @@ TECPLOT_BIN_VERSION_STR = tecplot_unavailable
 ifneq ($(TECPLOT_BIN_DIR), unavailable)
     TECPLOT_BIN_VERSION_STR = with_tecplot_binary
 endif
+TECPLOT_FILES := 
+ifneq ($(TECPLOT_BIN_DIR), unavailable)
+    TECPLOT_FILES += tecio.d tecplot_writer.d
+endif
+
 
 
 PROGRAMS := e4shared 
@@ -76,11 +81,6 @@ EILMER_FILES := simcore.d fileutil.d json_helper.d \
 		postprocess.d flowsolution.d luaflowsolution.d grid_motion.d \
 		block_moving_grid.d history.d loads.d special_block_init.d \
 		mass_diffusion.d
-
-ifneq ($(TECPLOT_BIN_DIR), unavailable)
-    EILMER_FILES += tecio.d tecplot_writer.d
-endif
-
 
 BC_FILES := bc/package.d \
 	bc/boundary_condition.d \
@@ -359,7 +359,7 @@ e4shared: main.d $(EILMER_FILES) \
 		main_with_rev_string.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
+		$(GASDYN_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) $(DLINKFLAGS)
 
 e4mpi: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
