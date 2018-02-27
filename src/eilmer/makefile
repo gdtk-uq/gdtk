@@ -361,18 +361,6 @@ e4shared: main.d $(EILMER_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(DLINKFLAGS)
 
-e4shared_w_tecio: main.d $(EILMER_FILES) \
-	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
-	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
-	$(GASDYN_FILES) $(NM_LUA_FILES)
-	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > main_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4shared_w_tecio \
-		main_with_rev_string.d $(EILMER_FILES) \
-		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
-		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
-		$(GASDYN_FILES) $(NM_LUA_FILES) tecplot_writer.d ../extern/tecio/tecio.d $(DLINKFLAGS) -L/home/gollan/opt/tecplot-2017/360ex_2017r1/bin/libtecio.so -L/home/gollan/opt/tecplot-2017/360ex_2017r1/bin/sys/libstdc++.so.6
-
-
 e4mpi: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) \
