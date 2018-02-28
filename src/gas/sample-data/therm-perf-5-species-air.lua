@@ -1,10 +1,11 @@
 species = {'N2', 'O2', 'NO', 'N', 'O', }
 
-N2 = {}
-N2.M = 0.0280134
-N2.sigma = 3.621
-N2.epsilon = 97.530
-N2.viscosity = {
+db = {}
+db.N2 = {}
+db.N2.M = 0.0280134
+db.N2.sigma = 3.621
+db.N2.epsilon = 97.530
+db.N2.viscosity = {
    model = 'CEA',
    nsegments = 3,
    segment0 = {
@@ -32,7 +33,7 @@ N2.viscosity = {
       D = -0.53503838,
     },
 }
-N2.thermal_conductivity = {
+db.N2.thermal_conductivity = {
    model = 'CEA',
    nsegments = 3,
    segment0 = {
@@ -60,7 +61,7 @@ N2.thermal_conductivity = {
       D = -14.517761,
     },
 }
-N2.thermoCoeffs = {
+db.N2.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -108,11 +109,11 @@ N2.thermoCoeffs = {
     },
   },
 }
-O2 = {}
-O2.M = 0.0319988
-O2.sigma = 3.458
-O2.epsilon = 107.400
-O2.viscosity = {
+db.O2 = {}
+db.O2.M = 0.0319988
+db.O2.sigma = 3.458
+db.O2.epsilon = 107.400
+db.O2.viscosity = {
    model = 'CEA',
    nsegments = 3,
    segment0 = {
@@ -140,7 +141,7 @@ O2.viscosity = {
       D = 0.9093178,
    },
 }
-O2.thermal_conductivity = {
+db.O2.thermal_conductivity = {
    model = 'CEA',
    nsegments = 3,
    segment0 = {
@@ -168,7 +169,7 @@ O2.thermal_conductivity = {
       D = 20.342043,
     },
 }
-O2.thermoCoeffs = {
+db.O2.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -216,11 +217,11 @@ O2.thermoCoeffs = {
     },
    }
 }
-NO = {}
-NO.M = 0.0300061
-NO.sigma = 3.621
-NO.epsilon = 97.530
-NO.viscosity = {
+db.NO = {}
+db.NO.M = 0.0300061
+db.NO.sigma = 3.621
+db.NO.epsilon = 97.530
+db.NO.viscosity = {
    model = 'CEA',
    nsegments = 3,
    segment0 = {
@@ -248,7 +249,7 @@ NO.viscosity = {
       D = 0.2651645,
     },
 }
-NO.thermal_conductivity = {
+db.NO.thermal_conductivity = {
    model = 'CEA',
    nsegments = 3,
    segment0 = {
@@ -276,7 +277,7 @@ NO.thermal_conductivity = {
       D = 20.928749,
     }
 }
-NO.thermoCoeffs = {
+db.NO.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -324,11 +325,11 @@ NO.thermoCoeffs = {
     },
   },
 }
-N = {}
-N.M = 0.0140067
-N.sigma = 3.298 
-N.epsilon = 71.400 
-N.viscosity = {
+db.N = {}
+db.N.M = 0.0140067
+db.N.sigma = 3.298 
+db.N.epsilon = 71.400 
+db.N.viscosity = {
    model = 'CEA',
    nsegments = 2,
    segment0 = {
@@ -348,7 +349,7 @@ N.viscosity = {
       D = -0.55811716,
     },
 }
-N.thermal_conductivity = {
+db.N.thermal_conductivity = {
    model = 'CEA',
    nsegments = 2,
    segment0 = {
@@ -368,7 +369,7 @@ N.thermal_conductivity = {
       D = 0.24048513,
     },
 }
-N.thermoCoeffs = {
+db.N.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
@@ -416,11 +417,11 @@ N.thermoCoeffs = {
     },
   },
 }
-O = {}
-O.M = 0.0159994
-O.sigma = 2.750
-O.epsilon = 80.000
-O.viscosity = {
+db.O = {}
+db.O.M = 0.0159994
+db.O.sigma = 2.750
+db.O.epsilon = 80.000
+db.O.viscosity = {
    model = 'CEA',
    nsegments = 2,
    segment0 = {
@@ -440,7 +441,7 @@ O.viscosity = {
       D = -0.18001077,
    },
 }
-O.thermal_conductivity = {
+db.O.thermal_conductivity = {
    model = 'CEA',
    nsegments = 2,
    segment0 = {
@@ -460,7 +461,7 @@ O.thermal_conductivity = {
       D = 0.48644232,
     },
 }
-O.thermoCoeffs = {
+db.O.thermoCoeffs = {
    nsegments = 3,
    segment0 = {
     T_upper = 1000,
