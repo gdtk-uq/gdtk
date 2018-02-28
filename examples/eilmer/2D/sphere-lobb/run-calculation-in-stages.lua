@@ -26,7 +26,8 @@ function prepare_case_file(stageIdx)
       return
    end
    -- for all other cases setup from previous case
-   f:write(format("oldSoln_jobname = '%s'\n", jobName))
+   f:write("useOldSoln = true\n")
+   f:write(format("oldSoln_jobName = '%s'\n", jobName))
    f:write(format("oldSoln_dir = '../stage-%d'\n", stageIdx-1))
    -- Grab final tindx from previous simulation
    os.execute("tail -1 stage-" .. stageIdx-1 .. "/" .. jobName .. ".times > tmp")
