@@ -14,6 +14,7 @@ import std.string;
 import std.conv;
 import std.math;
 import std.array;
+import core.memory;
 import std.algorithm : reduce;
 import nm.bbla;
 
@@ -216,7 +217,7 @@ void decompILU0(SMatrix a)
  * This implements Algorithm 10.5 in Saad (2003)
  */
 
-void decompILUp(SMatrix a, int p)
+void decompILUp(SMatrix a, int k)
 {
     // NB. This pre-conditioner uses a sparse matrix, however some stored entries will be zero,
     // this is a result of entries starting as non-zero in the original matrix, and then becoming
@@ -232,25 +233,39 @@ void decompILUp(SMatrix a, int p)
             else lev[i,j] = 0;
         }
     }
-    
-    // factorise matrix
+
+    // symbolic phase
     foreach ( i; 1 .. n ) { // Begin from 2nd row
-        foreach ( k; 0 .. i ) {
-            if (lev[i,k] <= p && a[k,k] != 0.0) {
-                if (abs(a[i,k]/a[k,k]) > ESSENTIALLY_ZERO) a[i,k] = a[i,k]/a[k,k];
-                foreach (j; k+1 .. n) {
-                    if (abs(a[i,j] - a[i,k]*a[k,j]) > ESSENTIALLY_ZERO) a[i,j] = a[i,j] - a[i,k]*a[k,j];
-                    if (lev[i,j] > lev[i,k] + lev[k,j] + 1) {
-                        lev[i,j] = lev[i,k] + lev[k,j] +1;
-                    } // end if
-                } // end for
+        foreach ( p; 0 .. i ) {
+            if (lev[i,p] <= k) {
+                foreach ( j ; p..n) {
+                    lev[i,j] = fmin(lev[i,j], lev[i,p]+lev[p,j]+1 );
+                } // end foreach
             } // end if
-        } // end for
-        foreach(k; 0 .. n) {
-            if (lev[i,k] > p && abs(a[i,k]) > ESSENTIALLY_ZERO) a[i,k] = 0.0;
-        } // end for
+        } // end foreach
+    } // end foreach
+    foreach ( i; 0 .. n ) { // Begin from 2nd row
+            foreach ( j; 0 .. n ) { // Begin from 2nd row
+                if (lev[i,j] > k) lev[i,j] = -1;
+            }
     }
+    
+    // modify a matrix nonzero pattern
+    foreach ( i; 0..n) {
+        foreach ( j; 0..n) {
+            if (lev[i,j] > 0 && a[i,j] < ESSENTIALLY_ZERO) a[i,j] = 0.0; 
+        }
+    }
+
+    // clear the fill level matrix from memory
+    destroy(lev);
+    GC.minimize();
+    
+    // factorise phase (using ILU0 algorithm on new sparsity pattern)
+    decompILU0(a);
 }
+
+
 
 void solve(SMatrix LU, double[] b)
 {
@@ -812,13 +827,15 @@ version(smla_test) {
                                 [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
                                 [0, 3, 6, 10, 12, 16]);
 
+        assert(approxEqualMatrix(s, sol0), failedUnitTest());
+        /*
         // As a result of the note in decompILUp() we don't expect an exact match of the SMatrix classes
         foreach ( i; 0 .. 5) {
             foreach ( j; 0 .. 5) {
                 assert(approxEqual(s[i,j], sol0[i,j]), failedUnitTest());
             }
         }
-
+        */
         // test for ILU(p=2)
         s = new SMatrix([1., 1., 4., 2., 4., 1., 2., 1., 8., 2., 4., 1., 3., 6., 2., 1.],
                         [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
@@ -828,12 +845,16 @@ version(smla_test) {
         auto sol1 = new SMatrix([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., -7.5, 0.4, 0.2, 3., 3., 1.5, -0.4, 4., -27.5],
                                 [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
                                 [0, 3, 6, 11, 14, 19]);
+        
+        assert(approxEqualMatrix(s, sol1), failedUnitTest());
+        /*
         // As a result of the note in decompILUp() we don't expect an exact match of the SMatrix classes
         foreach ( i; 0 .. 5) {
             foreach ( j; 0 .. 5) {
                 assert(approxEqual(s[i,j], sol1[i,j]), failedUnitTest());
             }
         }
+        */
         // Test GMRES on Faires and Burden problem.
 
         auto g = new SMatrix();
