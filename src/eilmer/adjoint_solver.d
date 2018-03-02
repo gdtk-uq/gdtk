@@ -1372,7 +1372,7 @@ double[] adjoint_solver(SMatrix globalJacobianT, double[] dJdV, FluidBlock blk, 
 
     // compute ILU[p] for preconditioning
     SMatrix m = new SMatrix(globalJacobianT);
-    auto M = decompILUp(m, 6);
+    decompILUp(m, 6);
 
     // compute reference norm
     multiply(globalJacobianT, psi0, residVec);
@@ -1383,7 +1383,7 @@ double[] adjoint_solver(SMatrix globalJacobianT, double[] dJdV, FluidBlock blk, 
     
     while (nIter < maxOuterIters) {
         // compute psi
-        rpcGMRES(globalJacobianT, M, dJdV, psi0, psiN, maxInnerIters, residTol, gws);
+        rpcGMRES(globalJacobianT, m, dJdV, psi0, psiN, maxInnerIters, residTol, gws);
             
         // compute new norm
         normNew = 0.0;
