@@ -13,9 +13,11 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.math;
+import std.array;
 import std.algorithm : reduce;
-
 import nm.bbla;
+
+immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
 /**
  * References used in this module:
@@ -106,32 +108,31 @@ public:
             }
         }
 
-        // if the new entry is 0.0
-        if (c == 0.0) return aa[0];
-
         // If we get here, we tried to assign to a zero value,
         // so to add the entry we will need to shuffle all the elements
-        // shuffle ia entries
-        foreach ( j; row+1 .. ia.length ) this.ia[j] += 1;
-        // shuffle aa, ja entries
-        foreach ( j; ia[row] .. ia[row+1] ) {
-            if ( col == 0 || col < ja[j] || j == ia[row+1]-1) {
-                // make space for the new entry
-                aa.length += 1; ja.length += 1;
-                // shuffle all entries after new entry by 1 position
-                for (size_t i=aa.length-1; i > j; i--) { 
-                    aa[i] = aa[i-1];
-                    ja[i] = ja[i-1];
-                }
-                // fill in new entry
-                this.aa[j] = c; this.ja[j] = col;
+        // WARNING: this code will happily add a zero to the sparse matrix;
+        //          onus is on any user using this object to prevent
+        //          unnecessary assingment of 0 values.
+        
+        // shuffle aa, ja, ia entries
+        if ( col > ja[ia[row+1]-1] ) { // if the new entry occurs after all currently stored columns in the row
+            aa.insertInPlace(ia[row+1], c);
+            ja.insertInPlace(ia[row+1], col);
+            foreach ( k; row+1 .. ia.length ) this.ia[k] += 1;
+            return aa[ia[row+1]];
+        }
+        foreach ( j; ia[row] .. ia[row+1] ) { // else handle all other scenarios in a generic manner
+            if ( col < ja[j] ) {
+                aa.insertInPlace(j, c);
+                ja.insertInPlace(j, col);
+                foreach ( k; row+1 .. ia.length ) this.ia[k] += 1;
                 return aa[j];
             }
         }
         // if we get here, something has gone wrong
         throw new Error("ERROR: An error occured while assigning a value to an entry in the sparse matrix.");
     }
-    
+
     override string toString() {
         string s = "SMatrix[\n";
         foreach (row; 0 .. ia.length-1) {
@@ -222,33 +223,23 @@ void decompILUp(SMatrix a, int p)
     // zero during the factorisation.
 
     size_t n = a.ia.length-1;
+    Matrix lev = new Matrix(n, n); // fill levels
 
-    double[] aa; size_t[] ja; size_t[] ia;
-    SMatrix lev = new SMatrix(aa, ja, ia); // fill levels
     // assign initial fill levels
     foreach ( i; 0 .. n ) { 
-        bool first_entry_in_row_stored = false;
-        foreach ( j; 0 .. n ) {
-            if (a[i,j] < 1.0e-16) {
-                lev.aa ~= n-1;
-                lev.ja ~= j;
-                if (!first_entry_in_row_stored) {
-                    lev.ia ~= lev.aa.length-1;
-                    first_entry_in_row_stored = true;
-                }
-            }
-            else continue; // we set lev[i,j] = 0
+        foreach ( j; 0 .. n ) { 
+            if (a[i,j] == 0.0) lev[i,j] = n-1;
+            else lev[i,j] = 0;
         }
     }
-    lev.ia ~= lev.aa.length;
-   
+    
     // factorise matrix
     foreach ( i; 1 .. n ) { // Begin from 2nd row
         foreach ( k; 0 .. i ) {
             if (lev[i,k] <= p && a[k,k] != 0.0) {
-                a[i,k] = a[i,k]/a[k,k];
+                if (abs(a[i,k]/a[k,k]) > ESSENTIALLY_ZERO) a[i,k] = a[i,k]/a[k,k];
                 foreach (j; k+1 .. n) {
-                    a[i,j] = a[i,j] - a[i,k]*a[k,j];
+                    if (abs(a[i,j] - a[i,k]*a[k,j]) > ESSENTIALLY_ZERO) a[i,j] = a[i,j] - a[i,k]*a[k,j];
                     if (lev[i,j] > lev[i,k] + lev[k,j] + 1) {
                         lev[i,j] = lev[i,k] + lev[k,j] +1;
                     } // end if
@@ -256,7 +247,7 @@ void decompILUp(SMatrix a, int p)
             } // end if
         } // end for
         foreach(k; 0 .. n) {
-            if (lev[i,k] > p) a[i,k] = 0.0;
+            if (lev[i,k] > p && abs(a[i,k]) > ESSENTIALLY_ZERO) a[i,k] = 0.0;
         } // end for
     }
 }
@@ -898,15 +889,16 @@ version(smla_test) {
         }
 
         // This example tests the addition of values to zero-entries
-        auto z = new SMatrix([3., 4., 5., 6., 7., 3., 1., 4., 7.],
-                             [0, 2, 3, 0, 1, 1, 2, 0, 3],
-                             [0, 3, 5, 7, 9]);
+        auto z = new SMatrix([1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.],
+                             [0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3],
+                             [0, 3, 6, 9, 12]);
+        z[0,3] = 99.0;
         z[1,2] = 99.0;
-        z[2,0] = 99.0;
-        z[2,3] = 99.0;
-        auto w = new SMatrix([3., 4., 5., 6., 7., 99., 99., 3., 1., 99., 4., 7.],
-                             [0, 2, 3, 0, 1, 2, 0, 1, 2, 3, 0, 3],
-                             [0, 3, 6, 10, 12]);
+        z[2,1] = 99.0;
+        z[3,0] = 99.0;
+        auto w = new SMatrix([1., 2., 3., 99., 4., 5., 99., 6., 7., 99., 8., 9., 99., 10., 11., 12.],
+                             [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+                             [0, 4, 8, 12, 16]);
         assert(approxEqualMatrix(z, w), failedUnitTest());
         return 0;
     }
