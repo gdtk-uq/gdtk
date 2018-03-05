@@ -108,14 +108,6 @@ void main()
     // use the old paver constructor to make an unstructured grid:
     auto grid = new UnstructuredGrid(boundary_points, boundaries, "PavedGrid1");
     grid.write_to_vtk_file("paved_grid.vtk");
-    
-    // use the new paver constructor to make an unstructured grid.
-    Vector3[][] bndryArray;
-    bndryArray ~= construct_boundary([P0P1, P1P2], [n0, n1]);
-    bndryArray ~= construct_boundary([P2P3, P3P4], [n2, n3]);
-    bndryArray ~= construct_boundary([P4P5, P5P0], [n4, n5]);
-    auto grid2 = new UnstructuredGrid(bndryArray, "PavedGrid2");
-    grid2.write_to_vtk_file("paved_grid2.vtk");
 } // end main()
     
 

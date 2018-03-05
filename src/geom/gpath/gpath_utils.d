@@ -13,6 +13,18 @@ import std.range : iota;
 import geom;
 import nm.nelmin;
 
+
+Vector3[] discretize_path(const Path pth, size_t niv,
+                          const(UnivariateFunction) clusterf)
+{
+    // First, set up clustered parameter values.
+    double[] r = clusterf.distribute_parameter_values(niv);
+    // Now, accumulate points, one at a time.
+    Vector3[] points;
+    foreach (i; 0 .. niv) { points ~= pth(r[i]); }
+    return points;
+} // end discretize_path()
+
 void readPointsFromFile(string fileName, ref Vector3[] points)
 {
     auto f = File(fileName, "r");

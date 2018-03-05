@@ -20,7 +20,7 @@ DEMO_PROGRAMS := vector3_demo gpath_demo surface_demo volume_demo \
 	luageom_demo luagpath_demo luasurface_demo luavolume_demo \
 	luaunifunction_demo \
 	sgrid_demo luasgrid_demo usgrid_demo luausgrid_demo \
-	paver_demo svg_demo sketch_demo luasketch_demo \
+	paver_demo paver2d_demo svg_demo sketch_demo luasketch_demo \
 	gpath_utils_demo
 
 include geom_files.mk
@@ -251,5 +251,9 @@ luausgrid_demo: luawrap/luausgrid_demo.d $(GEOM_FILES) $(NM_FILES) $(GZIP_FILES)
 
 paver_demo: grid/paver_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
 	dmd $(DFLAGS) grid/paver_demo.d $(OF)paver_demo \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+paver2d_demo: grid/paver2d_demo.d $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES)
+	dmd $(DFLAGS) grid/paver2d_demo.d $(OF)paver2d_demo \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(DLINKFLAGS)
 
