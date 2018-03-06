@@ -74,8 +74,9 @@ struct Vector3 {
         return this;
     }
 
-    @nogc ref Vector3 set(double x, double y, double z)
+    @nogc ref Vector3 set(double x, double y, double z=0.0)
     // Convenience function for setting the components of an existing object.
+    // Note that we may supply just the x,y coordinates.
     {
         _p[0] = x; _p[1] = y; _p[2] = z;
         return this;
@@ -342,6 +343,19 @@ struct Vector3 {
         return this;
     }
 
+    /**
+     * Alternative implementation for rotation in (x,y)-plane.
+     */
+    @nogc ref Vector3 rotate2d(double dtheta)
+    {
+        double x = _p[0];
+        double y = _p[1];
+        double sn = sin(dtheta);
+        double cs = cos(dtheta);
+        _p[0] = x*cs - y*sn;
+        _p[1] = y*cs + x*sn;
+        return this;
+    }
 } // end class Vector3
 
 /**
@@ -512,6 +526,13 @@ version(vector3_test) {
                failedUnitTest());
         h.transform_to_global_frame(n, t1, t2);
         assert(approxEqualVectors(h, h_ref), failedUnitTest());
+
+        Vector3 a45 = Vector3(cos(PI/4),sin(PI/4));
+        Vector3 a60 = Vector3(cos(PI/3),sin(PI/3));
+        assert(approxEqualVectors(a45.rotate2d(15.0*PI/180), a60), failedUnitTest());
+        Vector3 a30 = Vector3(cos(PI/6),sin(PI/6));
+        assert(approxEqualVectors(a30.rotate2d(30.0*PI/180), a60), failedUnitTest());
+               
         return 0;
     }
 } // end vector3_test

@@ -6,6 +6,7 @@
 
 module paver2d;
 
+import std.stdio;
 import geom;
 
 void fill_interior(ref Vector3[] vertices, ref USGFace[] faces, ref USGCell[] cells)
@@ -14,5 +15,5 @@ void fill_interior(ref Vector3[] vertices, ref USGFace[] faces, ref USGCell[] ce
     // The discretized boundary is already stored in the vertices array and
     // the faces on the boundary are already present in the faces array.
     // Ther are no cells at this point.
-    assert(0, "[TODO] Finish code");
+    writeln("[TODO] Finish code");
 } // end fill_interior()

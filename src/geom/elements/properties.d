@@ -207,6 +207,18 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 } // end xyplane_quad_cell_properties()
 
 @nogc
+double xyplane_quad_squareness(ref const(Vector3) p0, ref const(Vector3) p1,
+                               ref const(Vector3) p2, ref const(Vector3) p3)
+{ 
+    Vector3 centroid;
+    double xyplane_area, iLen, jLen, minLen;
+    xyplane_quad_cell_properties(p0, p1, p2, p3, centroid, xyplane_area, iLen, jLen, minLen);
+    double perimeter = distance_between(p0, p1) + distance_between(p1, p2) +
+        distance_between(p2, p3) + distance_between(p3, p0);
+    return 16*xyplane_area/(perimeter^^2);
+}
+
+@nogc
 void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                                       ref const(Vector3) p2,
                                       ref Vector3 centroid, ref double xyplane_area,
@@ -700,6 +712,27 @@ bool inside_xy_quad(ref const(Vector3) p0, ref const(Vector3) p1,
     return (count_on_left == 4);
 } // end inside_xy_quad()
 
+@nogc
+int winding_number(Vector3[] vertices, ref const(Vector3) p)
+// Returns a zero winding number if point p is outside the closed polygon
+// defined by the vertices.
+// The closing segment is from vertices[$-1] to vertices[0].
+{
+    int wn = 0;
+    Vector3 pr = Vector3(p.x+1.0, p.y);
+    foreach (i; 0 .. vertices.length) {
+        // Look at each segment of the polygon.
+        Vector3* a = (i == 0) ? &(vertices[$-1]) : &(vertices[i-1]);
+        Vector3* b = &(vertices[i]);
+        if (on_left_of_xy_line(p, pr, *b) &&
+            !on_left_of_xy_line(p, pr, *a) &&
+            on_left_of_xy_line(*a, *b, p) ) { ++wn; }
+        if (!on_left_of_xy_line(p, pr, *b) &&
+            on_left_of_xy_line(p, pr, *a) &&
+            !on_left_of_xy_line(*a, *b, p) ) { --wn; }
+    }
+    return wn;
+} // end winding_number()
 
 // Functions for 3D cells.
 
@@ -837,7 +870,9 @@ version(properties_test) {
         assert(inside_xy_triangle(p0, p1, p2, d), failedUnitTest());
         assert(!inside_xy_triangle(p0, p1, p2, e), failedUnitTest());
         assert(inside_xy_quad(p0, p1, p2, p3, d), failedUnitTest());
+        assert(winding_number(poly, d) != 0, failedUnitTest());
         assert(!inside_xy_quad(p0, p1, p2, p3, e), failedUnitTest());
+        assert(winding_number(poly, e) == 0, failedUnitTest());
 
         p0 = Vector3(0.0, 0.0, 1.0);
         p1 = Vector3(1.0, 0.0, 1.0);
