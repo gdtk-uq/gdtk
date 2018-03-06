@@ -93,7 +93,7 @@ public:
             create_species_reverse_lookup();
             break;
         case "11-species":
-            _mol_masses.length = 7;
+            _mol_masses.length = 11;
             bool[string] validSpecies = ["N":true, "O":true, "N2":true, "O2":true, "NO":true,
                                          "NO+":true, "e-":true,
                                          "N+":true, "O+":true, "N2+":true, "O2+":true];
