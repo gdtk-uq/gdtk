@@ -800,7 +800,6 @@ function FluidBlockArray(t)
 	    if jb == t.njb then
 	       bcList[north] = t.bcList[north]
 	    end
-	    print("Calling FluidBlock...")
 	    local new_block = FluidBlock:new{grid=subgrid, omegaz=t.omegaz,
                                              initialState=t.initialState, bcList=bcList}
 	    blockArray[ib][jb] = new_block
@@ -1575,7 +1574,44 @@ function write_mpimap_file(fileName)
    f:close()
 end
 
+function perform_spatial_gradient_consistency_check()
+   if config.dimensions == 3 then
+      if config.spatial_deriv_calc == "divergence" then
+	 print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' for 3D simulations.")
+	 config.spatial_deriv_calc = "least_squares"
+	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
+	 config.spatial_deriv_locn = "faces"
+      end
+      if config.spatial_deriv_locn == "vertices" then
+	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares in 3D simulations.")
+      end
+   end
+
+   -- Search for any unstructured grids. If present, we need to ensure that least-squares
+   -- gradient estimation is selected.
+   unstructuredGridsPresent = false
+   for _,blk in ipairs(fluidBlocks) do
+      if blk.grid:get_type() == "unstructured_grid" then
+	 unstructuredGridsPresent = true
+	 break
+      end
+   end
+
+   if unstructuredGridsPresent then
+      if config.spatial_deriv_calc == "divergence" then
+	 print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' because unstructured grids detected.")
+	 config.spatial_deriv_calc = "least_squares"
+	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
+	 config.spatial_deriv_locn = "faces"
+      end
+       if config.spatial_deriv_locn == "vertices" then
+	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
+      end
+   end
+end
+
 function build_job_files(job)
+   perform_spatial_gradient_consistency_check()
    print("Build job files for ", job)
    write_config_file(job .. ".config")
    write_control_file(job .. ".control")
