@@ -17,7 +17,8 @@
 config.title = "Schetz's Mach 4 laminar flow over a flat plate"
 print(config.title)
 config.viscous = true
-config.spatial_deriv_calc = "least_squares"
+config.spatial_deriv_calc = "divergence"
+config.spatial_deriv_locn = "vertices"
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
 config.max_time = 10.0e-3
