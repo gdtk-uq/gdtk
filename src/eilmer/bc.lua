@@ -434,6 +434,8 @@ BoundaryCondition = {
    is_configured = false,
    ghost_cell_data_available = true,
    convective_flux_computed_in_bc = false,
+   is_design_surface = false,
+   num_cntrl_pts = 0,
    preReconAction = {},
    postConvFluxAction = {},
    preSpatialDerivActionAtBndryFaces = {},
@@ -464,6 +466,8 @@ function BoundaryCondition:tojson()
 			      tostring(self.ghost_cell_data_available))
    str = str .. string.format('        "convective_flux_computed_in_bc": %s, \n',
 			      tostring(self.convective_flux_computed_in_bc))
+   str = str .. string.format('        "is_design_surface": %s, \n', tostring(self.is_design_surface))
+   str = str .. string.format('        "num_cntrl_pts": %s, \n', tostring(self.num_cntrl_pts))
    str = str .. '        "pre_recon_action": [\n'
    for i,effect in ipairs(self.preReconAction) do
       str = str .. effect:tojson()
@@ -503,7 +507,7 @@ WallBC_WithSlip = BoundaryCondition:new()
 WallBC_WithSlip.type = "wall_with_slip"
 function WallBC_WithSlip:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"label", "group"})
+   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_WithSlip constructor.")
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
@@ -521,7 +525,7 @@ function WallBC_NoSlip_FixedT:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"Twall", "wall_function", 
 				      "catalytic_type", "wall_massf_composition",
-				      "label", "group"})
+				      "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -551,7 +555,7 @@ function WallBC_ThermionicEmission:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
                   "Twall_iterations", "Twall_subiterations",
-                  "catalytic_type", "wall_massf_composition","label", "group"})
+                  "catalytic_type", "wall_massf_composition","label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_ThermionicEmission constructor.")
    o = BoundaryCondition.new(self, o)
    if o.emissivity < 0.4 or o.phi < 0.5 then
@@ -589,7 +593,7 @@ function WallBC_NoSlip_Adiabatic:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"wall_function",
 				      "catalytic_type", "wall_massf_composition",
-				      "label", "group"})
+				      "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -615,7 +619,7 @@ WallBC_TranslatingSurface_FixedT = BoundaryCondition:new()
 WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
 function WallBC_TranslatingSurface_FixedT:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"v_trans", "T_wall", "label", "group"})
+   local flag = checkAllowedNames(o, {"v_trans", "T_wall", "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_TranslatingSurface_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -642,7 +646,7 @@ WallBC_TranslatingSurface_Adiabatic = BoundaryCondition:new()
 WallBC_TranslatingSurface_Adiabatic.type = "wall_translating_surface_adiabatic"
 function WallBC_TranslatingSurface_Adiabatic:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"v_trans", "label", "group"})
+   local flag = checkAllowedNames(o, {"v_trans", "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_TranslatingSurface_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -667,7 +671,7 @@ WallBC_RotatingSurface_FixedT = BoundaryCondition:new()
 WallBC_RotatingSurface_FixedT.type = "wall_rotating_surface_fixed_t"
 function WallBC_RotatingSurface_FixedT:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group"})
+   local flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_RotatingSurface_FixedT constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -701,7 +705,7 @@ WallBC_RotatingSurface_Adiabatic = BoundaryCondition:new()
 WallBC_RotatingSurface_Adiabatic.type = "wall_rotating_surface_adiabatic"
 function WallBC_RotatingSurface_Adiabatic:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group"})
+   local flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_RotatingSurface_Adiabatic constructor.")
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
@@ -912,7 +916,7 @@ UserDefinedBC = BoundaryCondition:new()
 UserDefinedBC.type = "user_defined"
 function UserDefinedBC:new(o)
    o = o or {}
-   local flag = checkAllowedNames(o, {"fileName", "filename", "label", "group"})
+   local flag = checkAllowedNames(o, {"fileName", "filename", "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to UserDefinedBC constructor.")
    o = BoundaryCondition.new(self, o)
    o.fileName = o.fileName or o.filename
@@ -927,7 +931,7 @@ WallBC_AdjacentToSolid.type = "wall_adjacent_to_solid"
 function WallBC_AdjacentToSolid:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
-				      "label", "group"})
+				      "label", "group", "is_design_surface", "num_cntrl_pts"})
    assert(flag, "Invalid name for item supplied to WallBC_AdjacentToSolid constructor.")
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = true

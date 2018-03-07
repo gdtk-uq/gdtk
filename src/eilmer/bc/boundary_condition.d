@@ -46,6 +46,8 @@ BoundaryCondition make_BC_from_json(JSONValue jsonData, int blk_id, int boundary
     newBC.is_wall_with_viscous_effects = getJSONbool(jsonData, "is_wall_with_viscous_effects", true);
     newBC.ghost_cell_data_available = getJSONbool(jsonData, "ghost_cell_data_available", true);
     newBC.convective_flux_computed_in_bc = getJSONbool(jsonData, "convective_flux_computed_in_bc", false);
+    newBC.is_design_surface = getJSONbool(jsonData, "is_design_surface", false);
+    newBC.num_cntrl_pts = getJSONint(jsonData, "num_cntrl_pts", 0);
     // Assemble list of preReconAction effects
     auto preReconActions = jsonData["pre_recon_action"].array;
     foreach ( jsonObj; preReconActions ) {
@@ -90,6 +92,8 @@ public:
     string group;
     // Nature of the boundary condition that may be checked 
     // by other parts of the CFD code.
+    bool is_design_surface = false;
+    int num_cntrl_pts = 0;
     bool is_wall_with_viscous_effects = true;
     bool ghost_cell_data_available = true;
     bool convective_flux_computed_in_bc = false;
@@ -97,7 +101,7 @@ public:
     FVInterface[] faces;
     FVCell[] ghostcells;
     int[] outsigns;
-
+    
     FVVertex[] vertices;
     version(shape_sensitivity) {
         Bezier bezier;
@@ -167,6 +171,8 @@ public:
         repr ~= "\", is_wall_with_viscous_effects= " ~ to!string(is_wall_with_viscous_effects);
         repr ~= ", ghost_cell_data_available= " ~ to!string(ghost_cell_data_available);
         repr ~= ", convective_flux_computed_in_bc= " ~ to!string(convective_flux_computed_in_bc);
+        repr ~= ", is_design_surface= " ~ to!string(is_design_surface);
+        repr ~= ", num_cntrl_pts= " ~ to!string(num_cntrl_pts);
         if ( preReconAction.length > 0 ) {
             repr ~= ", preReconAction=[" ~ to!string(preReconAction[0]);
             foreach (i; 1 .. preReconAction.length) {

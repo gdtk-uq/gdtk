@@ -164,13 +164,6 @@ void main(string[] args) {
     writeln("DELTA = ", DELTA);
 
     
-    // identify design surfaces (user input -- hard-coded for now)
-    string[] designSurfaces;
-    designSurfaces ~= "design";
-    int[string] nCntrlPtsList;
-    nCntrlPtsList["design"] = 4; 
-    size_t ndvars = 4; // number of design variables
-
     // --------------
     // --------------
     // ADJOINT SOLVER
@@ -266,7 +259,7 @@ void main(string[] args) {
     // --------------------------------------
     double[] dJdV; // const function sensitivity
     dJdV.length = myblk.cells.length*np;
-    cost_function_sensitivity(dJdV, myblk, np, EPSILON, MU, designSurfaces);
+    cost_function_sensitivity(dJdV, myblk, np, EPSILON, MU);
 
     // ------------------------
     // 1.e solve adjoint system 
@@ -305,9 +298,9 @@ void main(string[] args) {
     string[] NonFixedBoundaryList;
     NonFixedBoundaryList ~= "outflow";
     //NonFixedBoundaryList ~= "symmetry";
-    
+    size_t ndvars = 0;
     foreach (bndary; myblk.bc) {
-        if (designSurfaces.canFind(bndary.group)) {
+        if (bndary.is_design_surface) {
 	    // gather boundary vertices
             size_t[] vtx_id_list;
             foreach(face; bndary.faces) {
@@ -347,9 +340,8 @@ void main(string[] args) {
             }
 	  
             // compute bezier control points
-            bndary.nCntrlPts = nCntrlPtsList[bndary.group];
-	    bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.nCntrlPts, bndary.ts);
-	    //ndvars += bndary.nCntrlPts;
+            ndvars += bndary.num_cntrl_pts;
+            bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.num_cntrl_pts, bndary.ts);
         }
 	else {
 	    size_t[] vtx_id_list;
@@ -372,8 +364,10 @@ void main(string[] args) {
     dRdD_T = new Matrix(ndvars, myblk.cells.length*np);
 
     foreach (bndary; myblk.bc) {
-        if (designSurfaces.canFind(bndary.group)) {
-	    foreach (i; 0 .. ndvars) {
+        writeln(bndary.is_design_surface);
+        if (bndary.is_design_surface) {
+            writeln(bndary.num_cntrl_pts);
+            foreach (i; 0 .. bndary.num_cntrl_pts) {
                 int gtl; int ftl; double P0; double dP;
                 // initialise all positions
 		foreach(otherBndary; myblk.bc) {
@@ -497,8 +491,8 @@ void main(string[] args) {
         myblk.sync_vertices_from_underlying_grid(0);
 
         foreach (bndary; myblk.bc) {
-	    if (designSurfaces.canFind(bndary.group)) {
-		foreach (i; 0 .. ndvars) {
+	    if (bndary.is_design_surface) {
+		foreach (i; 0 .. bndary.num_cntrl_pts) {
                     double err;
 		    if (i == 0) {
                         double J;
@@ -1169,7 +1163,7 @@ double cost_function(BoundaryCondition bndary, int gtl) {
     return J;
 }
 
-void cost_function_sensitivity(ref double[] dJdV, FluidBlock blk, size_t np, double EPSILON, double MU, string[] designSurfaces) {
+void cost_function_sensitivity(ref double[] dJdV, FluidBlock blk, size_t np, double EPSILON, double MU) {
     // for the moment we just have a hard-coded cost function    
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
