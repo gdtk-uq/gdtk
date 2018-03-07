@@ -1,15 +1,12 @@
-/** adjoint_gradient.d
+/** shape_sensitivity_calc.d
  * 
- * Code to compute shape sensitivities via a discrete adjoint method.
- * Solvers/Calculators included:
- * 1. adjoint variable solver.
- * 2. mesh sensitivity calculators:
- * 2.1 sensitivity of cell residuals w.r.t. mesh point perturbations,
- * 2.2 sensitivity of mesh points w.r.t. design variable perturbations.
- * 3. gradient calculator to compute the shape sensitivities.
+ * Eilmer4 shape sensitivity calculator code, core coordination functions.
+ *
+ * Note: This is the first attempt at 'production' code.
+ * Some test implementations began on 2017-09-18.
  *
  * Author: Kyle D.
- * Date: 2017-09-18
+ * Date: 2018-03-07
  *
 **/
 
@@ -71,7 +68,7 @@ void main(string[] args) {
     // -------------------------------------------       
 
     init_adjoint_dir();
-    writeln("Eilmer compressible-flow simulation code -- adjoint solver:");
+    writeln("Eilmer shape sensitivity calculator code:");
     writeln("Revision: PUT_REVISION_STRING_HERE");
     version(mpi_parallel) {
         assert(0, "Adjoint solver is not MPI parallel, yet.");
@@ -82,11 +79,6 @@ void main(string[] args) {
     msg       ~= "           [--max-cpus=<int>]          defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
     msg       ~= "           [--max-wall-clock=<int>]    in seconds\n";
-    msg       ~= "           [--epsilon=<double>]    flow Jacobian perturbation parameter\n";
-    msg       ~= "           [--mu=<double>]         flow Jacobian perturbation parameter\n";
-    msg       ~= "           [--omega=<double>]      residual/cost function sensitivity perturbation parameter \n";
-    msg       ~= "           [--eta=<double>]        finite-difference verification perturbation parameter\n";
-    msg       ~= "           [--verification=<bool>] enables gradient verification against brute-force finite-difference gradients   \n";
     msg       ~= "           [--help]                    writes this message\n";
     if ( args.length < 2 ) {
         writeln("Too few arguments.");
@@ -96,22 +88,12 @@ void main(string[] args) {
     string jobName = "";
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
-    double EPSILON = 1.0e-04;
-    double MU = 1.0e-04;
-    double OMEGA = 1.0e-04;
-    double ETA = 1.0e-04;
-    bool withFiniteDiffVerification = true;
     bool helpWanted = false;
     try {
         getopt(args,
                "job", &jobName,
                "max-cpus", &maxCPUs,
                "max-wall-clock", &maxWallClock,
-               "epsilon", &EPSILON,
-               "mu", &MU,
-	       "omega", &OMEGA, 
-               "eta", &ETA,
-               "verification", &withFiniteDiffVerification,
                "help", &helpWanted
                );
     } catch (Exception e) {
@@ -140,12 +122,6 @@ void main(string[] args) {
     writefln("Initialising simulation from tindx: %d", last_tindx);
     init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
 
-    writeln("Finite Difference Parameters:");
-    writeln("EPSILON  = ", EPSILON);
-    writeln("MU  = ", MU);
-    writeln("OMEGA = ", OMEGA);
-    writeln("ETA = ", ETA);
-    
     // perform some config checks
     if ( GlobalConfig.interpolation_order > 1 &&
          GlobalConfig.suppress_reconstruction_at_boundaries == false) {
@@ -174,6 +150,20 @@ void main(string[] args) {
         blk.write_underlying_grid(fileName);
     }
 
+    GradientMethod gradientMethod = GlobalConfig.sscOptions.gradientMethod;
+    bool gradientVerification = GlobalConfig.sscOptions.gradientVerification;
+    double EPSILON = GlobalConfig.sscOptions.epsilon;
+    double MU = GlobalConfig.sscOptions.mu;
+    double ETA = GlobalConfig.sscOptions.eta;
+    double DELTA = GlobalConfig.sscOptions.delta;
+
+    writeln("Finite Difference Parameters:");
+    writeln("EPSILON  = ", EPSILON);
+    writeln("MU  = ", MU);
+    writeln("ETA = ", ETA);
+    writeln("DELTA = ", DELTA);
+
+    
     // identify design surfaces (user input -- hard-coded for now)
     string[] designSurfaces;
     designSurfaces ~= "design";
@@ -397,7 +387,7 @@ void main(string[] args) {
                 evalRHS(0.0, 0, 0, with_k_omega, myblk);
                 // store origianl value, and compute perturbation
                 P0 = bndary.bezier.B[i].y;
-                dP = OMEGA; //max(OMEGA*abs(P0), 1.0e-10);
+                dP = ETA; //max(OMEGA*abs(P0), 1.0e-10);
 
                 // perturb design variable +ve
                 gtl = 1; ftl = 1;
@@ -497,7 +487,7 @@ void main(string[] args) {
     // Finite difference verification
     // -----------------------------------------------------
 
-    if (withFiniteDiffVerification) {
+    if (gradientVerification) {
         double[] finiteDiffGradients; double J1; double J0;
         
         // read original grid in
@@ -529,7 +519,7 @@ void main(string[] args) {
                         }
                     }
 		    auto P0 = bndary.bezier.B[i].refy;
-                    double dP = ETA; //max(ETA*abs(P0), 1.0e-10);                
+                    double dP = DELTA; //max(ETA*abs(P0), 1.0e-10);                
 		    bndary.bezier.B[i].refy = P0 + dP;
                     varID = "p-y-" ~ to!string(i);
 		    J0 = finite_difference_grad(jobName, last_tindx, myblk, bndary, NonFixedBoundaryList, varID);
@@ -1220,12 +1210,12 @@ void cost_function_sensitivity(ref double[] dJdV, FluidBlock blk, size_t np, dou
 double[] adjoint_solver(SMatrix globalJacobianT, double[] dJdV, SMatrix foJac, SMatrix m, FluidBlock blk, size_t np) {
     size_t ncells = blk.cells.length;
     // restarted-GMRES settings
-    int maxInnerIters = 85;
+    int maxInnerIters = GlobalConfig.sscOptions.gmresRestartInterval;
     int maxOuterIters = 1000;
     int nIter = 0;
     double normRef = 0.0;
     double normNew = 0.0;
-    double residTol = 1.0e-16;
+    double residTol = GlobalConfig.sscOptions.stopOnRelativeGlobalResidual;
     double[] psi0;
     double[] psiN;
     foreach(i; 0..np*ncells) psi0 ~= 1.0;

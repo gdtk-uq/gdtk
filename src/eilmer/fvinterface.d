@@ -66,9 +66,9 @@ public:
     double[] jy; // diffusive mass flux in y
     double[] jz; // diffusive mass flux in z
     //
-    // Rowan's implicit solver workspace.
-    version(adjoint) {
-    double[][] dFdU;
+    // Shape sensitivity calculator workspace.
+    version(shape_sensitivity) {
+        double[][] dFdU;
     }
 private:
     LocalConfig myConfig;
@@ -97,7 +97,7 @@ public:
         jx.length = n_species;
         jy.length = n_species;
         jz.length = n_species;
-        version(adjoint) {
+        version(shape_sensitivity) {
             dFdU.length = 5; // number of conserved variables
             foreach (ref a; dFdU) a.length = 5;
             foreach (i; 0..dFdU.length) {

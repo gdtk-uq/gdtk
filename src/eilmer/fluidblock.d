@@ -82,15 +82,15 @@ public:
     FlowState Rght;
 
     // list of vertex id's that makeup the fluidblock boundary
+    // (used in the grid deformation methods in conjunction with
+    // the shape sensitivity calculator).
     size_t[] boundaryVtxIndexList;
 
-    // adjoint solver workspace.
-    version(adjoint) {
+    // Shape sensitivity calculator workspace.
+    version(shape_sensitivity) {
         // Compressed Row Storage information for the transpose Jacobian 
         double[][] aa;
         size_t[][] ja;
-        // list of vertex id's that makeup the fluidblock boundary
-        //size_t[] boundaryVtxIndexList;
     }
     
     version(steady_state)

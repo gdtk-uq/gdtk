@@ -103,8 +103,8 @@ public:
                           // value for all of the update stages.
     // Data for computing residuals.
     double rho_at_start_of_step, rE_at_start_of_step;
-    // adjoint solver workspace.
-    version(adjoint) {
+    // Shape sensitivity calculator workspace.
+    version(shape_sensitivity) {
         FVCell[] jacobian_cell_stencil;
         FVInterface[] jacobian_face_stencil;
     }

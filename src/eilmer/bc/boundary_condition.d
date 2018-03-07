@@ -99,7 +99,7 @@ public:
     int[] outsigns;
 
     FVVertex[] vertices;
-    version(adjoint) {
+    version(shape_sensitivity) {
         Bezier bezier;
         double[] ts;
         int nCntrlPts;

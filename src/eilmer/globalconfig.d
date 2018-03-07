@@ -131,6 +131,48 @@ struct SolidDomainLooseUpdateOptions {
     double perturbationSize = 1.0e-2;
 }
 
+version(shape_sensitivity) {
+enum GradientMethod { adjoint, finite_difference }
+string gradientMethodName(GradientMethod i)
+{
+    final switch (i) {
+    case GradientMethod.adjoint: return "adjoint";
+    case GradientMethod.finite_difference: return "finite_difference";
+    }
+} // end gradientMethodName()
+
+GradientMethod gradientMethodFromName(string name)
+{
+    switch (name) {
+    case "adjoint": return GradientMethod.adjoint;
+    case "finite_difference": return GradientMethod.finite_difference;
+    default:
+        string errMsg = "The selected 'gradient_method' is unavailable.\n";
+        errMsg ~= format("You selected: '%s'\n", name);
+        errMsg ~= "The available strategies are: \n";
+        errMsg ~= "   'adjoint'\n";
+        errMsg ~= "   'finite_difference'\n";
+        errMsg ~= "Check your selection or its spelling in the input file.\n";
+        throw new Error(errMsg);
+    }
+} // end gradientMethodFromName()
+
+struct ShapeSensitivityCalculatorOptions {
+    GradientMethod gradientMethod = GradientMethod.adjoint;
+    bool gradientVerification = true;
+    // finite difference parameters
+    double epsilon = 1.0e-04; // flow sensitivity perturbation
+    double mu = 1.0e-04; // flow sensitivity threshold
+    double eta = 1.0e-04; // residual sensitivity perturbation
+    double delta = 1.0e-04; // finite difference gradient perturbation
+    // GMRES parameters
+    int gmresRestartInterval = 85;
+    double stopOnRelativeGlobalResidual = 1.0e-16;
+}
+ 
+} // end version(shape_sensitivity)
+
+
 class BlockZone {
     // Note that these data are not shared across threads
     // because we will want to access them frequently at the lower levels of the code.
@@ -529,6 +571,10 @@ final class GlobalConfig {
         static SteadyStateSolverOptions sssOptions;
     }
 
+    version (shape_sensitivity) {
+        static ShapeSensitivityCalculatorOptions sscOptions;
+    }
+
     ~this()
     {
         lua_close(master_lua_State);
@@ -638,6 +684,10 @@ public:
         SteadyStateSolverOptions sssOptions;
     }
 
+    version (shape_sensitivity) {
+        ShapeSensitivityCalculatorOptions sscOptions;
+    }
+
     this(int universe_blk_id) 
     {
         in_mpi_context = GlobalConfig.in_mpi_context;
@@ -741,6 +791,9 @@ public:
         //
         version (steady_state) {
             sssOptions = GlobalConfig.sssOptions;
+        }
+        version (shape_sensitivity) {
+            sscOptions = GlobalConfig.sscOptions;
         }
     } // end constructor
 
@@ -1099,7 +1152,32 @@ void read_config_file()
     GlobalConfig.sdluOptions.perturbationSize = 
         getJSONdouble(sdluOptions, "perturbation_size", GlobalConfig.sdluOptions.perturbationSize);
     
-
+    version (shape_sensitivity) {
+    auto sscOptions = jsonData["shape_sensitivity_calculator_options"];
+    { 
+        auto mySaveValue = GlobalConfig.sscOptions.gradientMethod;
+        try {
+            string name = sscOptions["gradient_method"].str;
+            GlobalConfig.sscOptions.gradientMethod = gradientMethodFromName(name);
+        } catch (Exception e) {
+            GlobalConfig.sscOptions.gradientMethod = mySaveValue;
+        }
+    }
+    GlobalConfig.sscOptions.gradientVerification = getJSONbool(sscOptions, "gradient_verification", GlobalConfig.sscOptions.gradientVerification);
+    GlobalConfig.sscOptions.epsilon =
+        getJSONdouble(sscOptions, "epsilon", GlobalConfig.sscOptions.epsilon);
+    GlobalConfig.sscOptions.mu =
+        getJSONdouble(sscOptions, "mu", GlobalConfig.sscOptions.mu);
+    GlobalConfig.sscOptions.eta =
+        getJSONdouble(sscOptions, "eta", GlobalConfig.sscOptions.eta);
+    GlobalConfig.sscOptions.delta =
+        getJSONdouble(sscOptions, "delta", GlobalConfig.sscOptions.delta);
+    GlobalConfig.sscOptions.gmresRestartInterval = 
+        getJSONint(sscOptions, "gmres_restart_interval", GlobalConfig.sscOptions.gmresRestartInterval);
+    GlobalConfig.sscOptions.stopOnRelativeGlobalResidual = 
+        getJSONdouble(sscOptions, "stop_on_relative_global_residual", GlobalConfig.sscOptions.stopOnRelativeGlobalResidual);
+    }
+    
     // Now, configure blocks that make up the flow domain.
     //
     // This is done in phases.  The blocks need valid references to LocalConfig objects
@@ -1295,7 +1373,7 @@ void read_control_file()
     GlobalConfig.sssOptions.writeLoadsCount = 
         getJSONint(sssOptions, "write_loads_count", GlobalConfig.sssOptions.writeLoadsCount);
     }
-
+    
     // Propagate new values to the local copies of config.
     foreach (localConfig; dedicatedConfig) {
         localConfig.update_control_parameters();
@@ -1398,12 +1476,12 @@ void configCheckPoint3()
 
 void configCheckPoint4()
 {
-    // the adjoint solver shouldn't apply diffuse_bcs_on_init_flag
-    version(adjoint) {
+    // the shape sensitivity calculator shouldn't apply diffuse_bcs_on_init_flag
+    version(shape_sensitivity) {
         GlobalConfig.n_grid_time_levels = 3;
         if (GlobalConfig.diffuseWallBCsOnInit) {
             GlobalConfig.diffuseWallBCsOnInit = false;
-            writeln("Warning diffuse_bcs_on_init_flag set to false for adjoint solver.");
+            writeln("Warning diffuse_bcs_on_init_flag set to false for shape sensitivity calculator.");
         }
     } 
     return;

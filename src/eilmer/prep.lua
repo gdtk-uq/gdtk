@@ -97,6 +97,40 @@ sssOptionsHidden = { -- hidden from user
 SteadyStateSolver = {}
 setmetatable(SteadyStateSolver, sssOptionsHidden)
 
+-- Storage for shape sensitivity calculator settings
+sscOptionsHidden = { -- hidden from user
+   -- set defaults here
+   gradient_method = "adjoint";
+   gradient_verification = true;
+   -- finite difference parameters
+   epsilon = 1.0e-04;
+   mu = 1.0e-04; 
+   eta = 1.0e-04; 
+   delta = 1.0e-04;
+   -- GMRES parameters
+   gmres_restart_interval = 85;
+   stop_on_relative_global_residual = 1.0e-16;
+   
+   __index = function (t, k) 
+      return sscOptionsHidden[k]
+   end,
+   __newindex = function (t, k, v)
+      if sscOptionsHidden[k] == nil then
+	 print(string.format("The field '%s' cannot be set in 'ShapeSensitivityCalculator' table.", k))
+      else
+	 sscOptionsHidden[k] = v
+      end
+   end,
+   __call = function (_, t)
+      for k, v in pairs(t) do
+	 sscOptionsHidden.__newindex(t, k, v)
+      end
+   end
+}
+
+ShapeSensitivityCalculator = {}
+setmetatable(ShapeSensitivityCalculator, sscOptionsHidden)
+
 -- Storage for solid domain loose update settings
 sdluOptionsHidden = { -- hidden from user
    -- set defaults here
@@ -1441,6 +1475,18 @@ function write_config_file(fileName)
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
    f:write(string.format('"wall_temperature_on_init": %.18e,\n', config.wall_temperature_on_init));
 
+   f:write('"shape_sensitivity_calculator_options" : {\n')
+   f:write(string.format('   "gradient_method": "%s",\n', ShapeSensitivityCalculator.gradient_method))
+   f:write(string.format('   "gradient_verification": %s,\n', tostring(ShapeSensitivityCalculator.gradient_verification)))
+   f:write(string.format('   "epsilon": %.18e,\n', ShapeSensitivityCalculator.epsilon))
+   f:write(string.format('   "mu": %.18e,\n', ShapeSensitivityCalculator.mu))
+   f:write(string.format('   "eta": %.18e,\n', ShapeSensitivityCalculator.eta))
+   f:write(string.format('   "delta": %.18e,\n', ShapeSensitivityCalculator.delta))
+   f:write(string.format('   "gmres_restart_interval": %d,\n', ShapeSensitivityCalculator.gmres_restart_interval))
+   f:write(string.format('   "stop_on_relative_global_residual": %.18e\n', ShapeSensitivityCalculator.stop_on_relative_global_residual))
+   -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
+   f:write('},\n')
+   
    f:write(string.format('"block_marching": %s,\n',
 			 tostring(config.block_marching)))
    f:write(string.format('"nib": %d,\n', config.nib))

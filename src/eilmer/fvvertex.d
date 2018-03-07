@@ -32,7 +32,7 @@ public:
     FlowState[] cloud_fs; // References to flow states at those points.
     WLSQGradWorkspace ws_grad;
     LSQInterpGradients gradients; // needed for the MLP limiter
-    version(adjoint) {
+    version(shape_sensitivity) {
         FVCell[] jacobian_cell_stencil;
         FVInterface[] jacobian_face_stencil;
     }
