@@ -834,9 +834,9 @@ void compute_perturbed_flux(FluidBlock blk, size_t orderOfJacobian, FVCell[] cel
             sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
         }
         iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
-        if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) continue;
-        if ((i == imax+1) && (sblk.bc[Face.east].convective_flux_computed_in_bc == true)) continue;
-        compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
+        if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) {} // do nothing
+        else if ((i == imax+1) && (sblk.bc[Face.east].convective_flux_computed_in_bc == true)) {} // do nothing
+        else compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
         
         iface = iface_list[1]; 
         i = ijk[0] + 1; j = ijk[1]; k = ijk[2];
@@ -854,9 +854,9 @@ void compute_perturbed_flux(FluidBlock blk, size_t orderOfJacobian, FVCell[] cel
             sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, sblk.Lft, sblk.Rght);
         }
         iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
-        if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) continue;
-        if ((i == imax+1) && (sblk.bc[Face.east].convective_flux_computed_in_bc == true)) continue;
-        compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
+        if ((i == imin) && (sblk.bc[Face.west].convective_flux_computed_in_bc == true)) {} // do nothing
+        else if ((i == imax+1) && (sblk.bc[Face.east].convective_flux_computed_in_bc == true)) {} // do nothing
+        else compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
         
         // North-facing interfaces
         iface = iface_list[2]; 
@@ -875,9 +875,9 @@ void compute_perturbed_flux(FluidBlock blk, size_t orderOfJacobian, FVCell[] cel
             sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
         }
         iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
-        if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) continue;
-        if ((j == jmax+1) && (sblk.bc[Face.north].convective_flux_computed_in_bc == true)) continue;
-        compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
+        if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) {} // do nothing
+        else if ((j == jmax+1) && (sblk.bc[Face.north].convective_flux_computed_in_bc == true)) {} // do nothing
+        else compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
         
         iface = iface_list[3]; 
         i = ijk[0]; j = ijk[1]; k = ijk[2];
@@ -895,9 +895,9 @@ void compute_perturbed_flux(FluidBlock blk, size_t orderOfJacobian, FVCell[] cel
             sblk.one_d.interp_both(iface, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, sblk.Lft, sblk.Rght);
         }
         iface.fs.copy_average_values_from(sblk.Lft, sblk.Rght);
-        if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) continue;
-        if ((j == jmax+1) && (sblk.bc[Face.north].convective_flux_computed_in_bc == true)) continue;
-        compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
+        if ((j == jmin) && (sblk.bc[Face.south].convective_flux_computed_in_bc == true)) {} // do nothing
+        else if ((j == jmax+1) && (sblk.bc[Face.north].convective_flux_computed_in_bc == true)) {} // do nothing
+        else compute_interface_flux(sblk.Lft, sblk.Rght, iface, sblk.myConfig, sblk.omegaz);
     }
     else { // unstructured grid
         if (orderOfJacobian > 1) {
