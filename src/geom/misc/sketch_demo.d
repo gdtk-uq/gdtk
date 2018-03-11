@@ -10,13 +10,18 @@
 import std.stdio;
 import geom;
 
-void main()
+void main(string[] args)
 {
-    // string renderer = "svg";
-    string renderer = "xplotter";
+    string renderer = "svg"; // other is "xplotter"
+    if (args.length > 1) { renderer = args[1]; }
     writeln("Begin demonstration of the geometric rendering with ", renderer);
+    //
     auto s = new Sketch(renderer, "xyortho");
-    s.canvas.set(0.0,0.0,120.0,120.0);
+    switch(renderer) {
+    case "svg": s.canvas.set(0.0,0.0,120.0,120.0); break;
+    case "xplotter": s.canvas.set(0.0,0.0,200.0,200.0); break;
+    default: s.canvas.set(0.0,0.0,120.0,120.0);
+    }
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     auto a = Vector3(2.0, 0.0);
     auto b = Vector3(1.0, 1.0);
@@ -38,6 +43,11 @@ void main()
     s.render(my_patch);
     s.finish();
     //
+    switch(renderer) {
+    case "svg": s.canvas.set(0.0,0.0,120.0,120.0); break;
+    case "xplotter": s.canvas.set(0.0,0.0,200.0,200.0); break;
+    default: s.canvas.set(0.0,0.0,120.0,120.0);
+    }
     s.start("test2.svg");
     s.viewport.set(0.0,0.0,120.0,120.0);
     s.line(Vector3(0.0,0.0), Vector3(90.0,120.0));
@@ -54,13 +64,17 @@ void main()
               Vector3(80.0,100.0), Vector3(40.0,100.0));
     s.setLineWidth(0.01);
     s.dotlabel(Vector3(70.0,20.0), "a");
-    s.setLineWidth(0.1);
+    s.setLineWidth(0.5);
     s.polygon([Vector3(60,10), Vector3(95,10), Vector3(95,50), Vector3(60,50)],
               true, true, true);
     s.finish();
     //
     s = new Sketch(renderer, "isometric");
-    s.canvas.set(0.0,0.0,120.0,120.0);
+    switch(renderer) {
+    case "svg": s.canvas.set(0.0,0.0,120.0,120.0); break;
+    case "xplotter": s.canvas.set(0.0,0.0,200.0,200.0); break;
+    default: s.canvas.set(0.0,0.0,120.0,120.0);
+    }
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     // Turn the world around so we view from the original -z axis.
     s.look_at(Vector3(0.0,0.0,-1.0), Vector3(0.0,0.0,0.0), Vector3(0.0,1.0,0.0));

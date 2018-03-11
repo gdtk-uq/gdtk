@@ -51,6 +51,10 @@ public:
     string renderer_name;
     SVGContext svg;
     int xplotter_handle;
+    double current_line_width;
+    string current_bgcolourname;
+    string current_pencolourname;
+    string current_fillcolourname;
     string projection_name;
     string title;
     string description;
@@ -115,10 +119,53 @@ public:
             break;
         default: throw new Exception("other projections unimplemented");
         }
-        canvas.set(0.0, 0.0, 120.0, 120.0); // reasonable size (in mm) for a drawing in SVG
+        // Set a reasonable size (in mm) for the canvas.
+        switch(renderer_name) {
+        case "svg":
+            canvas.set(0.0, 0.0, 120.0, 120.0);
+            break;
+        case "xplotter":
+            canvas.set(0.0, 0.0, 200.0, 200.0);
+            string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
+                                       to!int(canvas.height*dpi/25.4));
+            // We shall use the old/traditional GNU-libplot calls,
+            // since we are just working in a single thread.
+            pl_parampl("BITMAPSIZE", cast(void*)toStringz(bitmapsize));
+            pl_parampl("VANISH_ON_DELETE", cast(void*)toStringz("yes"));
+            pl_parampl("USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
+            // Create an X Plotter with the specified parameters.
+            if ((xplotter_handle = pl_newpl("X", stdin, stdout, stderr)) < 0) {
+                throw new Error("Couldn't create X Plotter.");
+            }
+            break;
+        default:
+            throw new Exception("oops, invalid render name " ~ renderer_name);
+        }
         viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
+        current_line_width = 1.0; // Line thickness in mm.
+        current_bgcolourname = "white";
+        current_pencolourname = "black";
+        current_fillcolourname = "yellow";
     } // end this
 
+    ~this()
+    {
+        // Cleanup
+        switch(renderer_name) {
+        case "svg":
+            // Do nothing
+            break;
+        case "xplotter":
+            pl_selectpl(0); // Select default Plotter.
+            if (pl_deletepl(xplotter_handle) < 0) {
+                throw new Error("Couldn't delete Plotter\n");
+            }
+            break;
+        default:
+            // Do nothing
+        }
+    }
+    
     override string toString()
     {
         string str = "Sketch(";
@@ -194,27 +241,20 @@ public:
             svg.open(file_name);
             break;
         case "xplotter":
-            string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
-                                       to!int(canvas.height*dpi/25.4));
-            // We shall use the old/traditional GLU libplot calls.
-            pl_parampl("BITMAPSIZE", cast(void*)toStringz(bitmapsize));
-            pl_parampl("VANISH_ON_DELETE", cast(void*)toStringz("no"));
-            pl_parampl("USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
-            // Create an X Plotter with the specified parameters.
-            if ((xplotter_handle = pl_newpl("X", stdin, stdout, stderr)) < 0) {
-                throw new Error("Couldn't create X Plotter.");
-            }
             pl_selectpl(xplotter_handle);
-            if (pl_openpl() < 0) {
-                throw new Error("Couldn't open X Plotter.");
-            }
-            pl_fspace(0.0, 0.0, canvas.width, canvas.height); // Specify user coordinate system.
-            pl_flinewidth(1.0); // Line thickness in mm.
-            pl_filltype(1); // Objects will be filled.
-            pl_bgcolorname ("white"); // Background color for the window.
+            if (pl_openpl() < 0) { throw new Error("Couldn't open X Plotter."); }
+            // Specify the canvas coordinate system, starting at (0,0) bottom-left.
+            pl_fspace(0.0, 0.0, canvas.width, canvas.height);
+            current_line_width = 1.0; // Line thickness in mm.
+            current_bgcolourname = "white";
+            current_pencolourname = "black";
+            current_fillcolourname = "yellow";
+            pl_flinewidth(current_line_width);
+            pl_filltype(0); // Objects, by default, will not be filled.
+            pl_bgcolorname (toStringz(current_bgcolourname));
+            pl_pencolorname(toStringz(current_pencolourname));
+            pl_fillcolorname(toStringz(current_fillcolourname));
             pl_erase();
-            pl_pencolorname("black");
-            pl_fillcolorname("yellow");
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -228,13 +268,9 @@ public:
             svg.close();
             break;
         case "xplotter":
-            if (pl_closepl() < 0) {
-                throw new Error("Couldn't close X Plotter.");
-            }
-            pl_selectpl(0); // Select default Plotter.
-            if (pl_deletepl(xplotter_handle) < 0) {
-                throw new Error("Couldn't delete Plotter\n");
-            }
+            if (pl_closepl() < 0) { throw new Error("Couldn't close X Plotter."); }
+            writeln("Rendering finished; press ENTER to continue.");
+            string junk_text = readln();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -244,6 +280,7 @@ public:
     void setLineWidth(double width)
     // Sets line width, in units appropriate to the renderer.
     {
+        current_line_width = width;
         switch(renderer_name) {
         case "svg":
             svg.setLineWidth(width); // in mm
@@ -259,6 +296,7 @@ public:
 
     void setLineColour(string colour)
     {
+        current_pencolourname = colour;
         switch(renderer_name) {
         case "svg":
             svg.setLineColour(colour);
@@ -274,6 +312,7 @@ public:
 
     void setFillColour(string colour)
     {
+        current_fillcolourname = colour;
         switch(renderer_name) {
         case "svg":
             svg.setFillColour(colour);
@@ -290,13 +329,14 @@ public:
 
     void clearFillColour()
     {
+        current_fillcolourname = "none";
         switch(renderer_name) {
         case "svg":
             svg.clearFillColour();
             break;
         case "xplotter":
             pl_filltype(0); // Objects will not be filled.
-            pl_fillcolorname("white");
+            pl_fillcolorname("none");
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -377,6 +417,7 @@ public:
             break;
         case "xplotter":
             pl_fline(x0, y0, x1, y1); // [TODO] dashed
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -401,11 +442,15 @@ public:
             svg.polyline(xlist, ylist, dashed);
             break;
         case "xplotter":
+            pl_filltype(0);
+            pl_flinewidth(current_line_width);
+            pl_endpath();
             foreach (i; 1 .. xlist.length) {
                 pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
                 // [TODO] dashed
             }
             pl_endpath();
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -430,12 +475,32 @@ public:
             svg.polygon(xlist, ylist, fill, stroke, dashed);
             break;
         case "xplotter":
-            pl_fmove(xlist[0], ylist[0]);
-            foreach (i; 1 .. xlist.length) {
-                pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
-                // [TODO] dashed, stroke/fill
+            if (fill) {
+                // pl_pencolorname(toStringz(current_fillcolourname));
+                pl_filltype(1);
+                pl_endpath();
+                pl_fmove(xlist[0], ylist[0]);
+                foreach (i; 1 .. xlist.length) {
+                    pl_fcont(xlist[i], ylist[i]);
+                }
+                pl_closepath();
+                pl_endpath();
+                pl_filltype(0);
+                // pl_pencolorname(toStringz(current_pencolourname));
             }
-            pl_closepath();
+            if (stroke) {
+                pl_filltype(0);
+                pl_flinewidth(current_line_width);
+                pl_endpath();
+                pl_fmove(xlist[0], ylist[0]);
+                foreach (i; 1 .. xlist.length) {
+                    pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+                    // [TODO] dashed
+                }
+                pl_closepath();
+                pl_endpath();
+            }
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -455,8 +520,11 @@ public:
             svg.arc(x0, y0, x1, y1, xc, yc, dashed);
             break;
         case "xplotter":
+            pl_filltype(0);
+            pl_flinewidth(current_line_width);
             pl_farc(xc, yc, x0, y0, x1, y1); // [TODO] dashed
             pl_endpath();
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -474,7 +542,21 @@ public:
             svg.circle(xc, yc, r, fill, stroke, dashed);
             break;
         case "xplotter":
-            pl_fcircle(xc, yc, r); // [TODO] dashed, stroke/filled
+            if (fill) {
+                pl_pencolorname(toStringz(current_fillcolourname));
+                pl_filltype(1);
+                pl_fcircle(xc, yc, r);
+                pl_endpath();
+                pl_filltype(0);
+                pl_pencolorname(toStringz(current_pencolourname));
+            }
+            if (stroke) {
+                pl_filltype(0);
+                pl_flinewidth(current_line_width);
+                pl_fcircle(xc, yc, r); // [TODO] dashed
+                pl_endpath();
+            }
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -503,8 +585,11 @@ public:
             svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
             break;
         case "xplotter":
+            pl_filltype(0);
+            pl_flinewidth(current_line_width);
             pl_fbezier3(x0, y0, x1, y1, x2, y2, x3, y3); // [TODO] dashed
             pl_endpath();
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -528,6 +613,7 @@ public:
             break;
         case "xplotter":
             // [TODO]
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -548,6 +634,7 @@ public:
             break;
         case "xplotter":
             // [TODO]
+            pl_flushpl();
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
