@@ -70,7 +70,6 @@ end
 config.interpolation_order = xOrder
 config.gasdynamic_update_scheme = "predictor-corrector"
 config.flux_calculator = fluxCalc
-config.spatial_deriv_calc = derivCalc
 config.udf_source_terms = true
 config.udf_source_terms_file = 'udf-source-terms.lua'
 config.dt_init = 1.0e-6
