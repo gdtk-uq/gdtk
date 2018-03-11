@@ -187,7 +187,7 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lplot -L-llua -L-ldl
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -203,7 +203,7 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lplot -L-llua -L-ldl
 endif
 ifeq ($(DMD), gdc)
     ifeq ($(FLAVOUR), debug)
@@ -216,7 +216,7 @@ ifeq ($(DMD), gdc)
         DFLAGS := -Wall -O2 -frelease -fno-debug
     endif
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -ldl -lcurl
+    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -lplot -ldl -lcurl
 endif
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 

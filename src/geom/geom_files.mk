@@ -42,6 +42,7 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/misc/package.d \
 	$(GEOM_DIR)/misc/univariatefunctions.d \
 	$(GEOM_DIR)/misc/svg.d \
+	$(GEOM_DIR)/misc/libplot.d \
 	$(GEOM_DIR)/misc/sketch.d
 
 GEOM_LUAWRAP_FILES := \

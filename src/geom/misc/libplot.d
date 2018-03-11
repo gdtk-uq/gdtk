@@ -260,7 +260,7 @@ int pl_fellarc (double xc, double yc, double x0, double y0, double x1, double y1
 int pl_fellarcrel (double dxc, double dyc, double dx0, double dy0, double dx1, double dy1);
 int pl_fellipse (double x, double y, double rx, double ry, double angle);
 int pl_fellipserel (double dx, double dy, double rx, double ry, double angle);
-int pl_flinedash (int n, const double *dashes, double offset);
+int pl_flinedash (int n, const(double)* dashes, double offset);
 int pl_fline (double x0, double y0, double x1, double y1);
 int pl_flinerel (double dx0, double dy0, double dx1, double dy1);
 int pl_flinewidth (double size);

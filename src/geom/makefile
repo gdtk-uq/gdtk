@@ -49,7 +49,7 @@ LUAD_FILES := $(wildcard $(LUAD_DIR)/luad/*.d) \
 
 DFLAGS := -w -unittest -g -I..
 OF := -of
-DLINKFLAGS := -L-ldl
+DLINKFLAGS := -L-lplot -L-ldl
 
 DFLAGS_LUA := -w -g -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)

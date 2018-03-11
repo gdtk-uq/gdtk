@@ -9,22 +9,26 @@
  * Author(s):
  *     Peter J.
  * Version:
- *     2016-08-10 Let's start over with just the 2D SVG renderer
+ * 2016-08-10 Let's start over with just the 2D SVG renderer
  *     but keep in mind that we'll want to be able to use Tcl/Tk,
  *     Cairo and OpenGL, eventually.
- *
+ * 2018-03-11 Add an X render, provided by GNU libplot.
  */
 
 module geom.misc.sketch;
 
 import std.conv;
 import std.stdio;
+import core.stdc.stdio: stdin, stdout, stderr;
 import std.math;
 import std.string;
 import std.algorithm;
 
 import svg;
+import libplot;
 import geom;
+
+const double dpi = 90.0;  // Expected screen resolution.
 
 struct Extents{
     double x0, x1, y0, y1;
@@ -38,7 +42,7 @@ struct Extents{
     } 
 }
 
-string[] renderers = ["svg", "tcltk", "cairo", "opengl"];
+string[] renderers = ["svg", "xplotter"];
 string[] projections = ["xyortho", "isometric", "oblique"];
 
 class Sketch {
@@ -46,6 +50,7 @@ public:
     // We have some state and configuration data.
     string renderer_name;
     SVGContext svg;
+    int xplotter_handle;
     string projection_name;
     string title;
     string description;
@@ -87,7 +92,6 @@ public:
         } else {
             throw new Exception("Unknown projection: " ~ projection_name);
         }
-        assert(this.renderer_name == "svg", "other renderers unimplemented"); // FIX-ME
         set_to_identity(proj_mat);
         set_to_identity(view_mat); // consistent with default view
         switch (this.projection_name) {
@@ -111,7 +115,7 @@ public:
             break;
         default: throw new Exception("other projections unimplemented");
         }
-        canvas.set(0.0, 0.0, 120.0, 120.0); // reasonable size for a drawing in SVG
+        canvas.set(0.0, 0.0, 120.0, 120.0); // reasonable size (in mm) for a drawing in SVG
         viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
     } // end this
 
@@ -189,6 +193,29 @@ public:
             svg = new SVGContext(canvas.width, canvas.height, "mm", title, description);
             svg.open(file_name);
             break;
+        case "xplotter":
+            string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
+                                       to!int(canvas.height*dpi/25.4));
+            // We shall use the old/traditional GLU libplot calls.
+            pl_parampl("BITMAPSIZE", cast(void*)toStringz(bitmapsize));
+            pl_parampl("VANISH_ON_DELETE", cast(void*)toStringz("no"));
+            pl_parampl("USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
+            // Create an X Plotter with the specified parameters.
+            if ((xplotter_handle = pl_newpl("X", stdin, stdout, stderr)) < 0) {
+                throw new Error("Couldn't create X Plotter.");
+            }
+            pl_selectpl(xplotter_handle);
+            if (pl_openpl() < 0) {
+                throw new Error("Couldn't open X Plotter.");
+            }
+            pl_fspace(0.0, 0.0, canvas.width, canvas.height); // Specify user coordinate system.
+            pl_flinewidth(1.0); // Line thickness in mm.
+            pl_filltype(1); // Objects will be filled.
+            pl_bgcolorname ("white"); // Background color for the window.
+            pl_erase();
+            pl_pencolorname("black");
+            pl_fillcolorname("yellow");
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -199,6 +226,15 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.close();
+            break;
+        case "xplotter":
+            if (pl_closepl() < 0) {
+                throw new Error("Couldn't close X Plotter.");
+            }
+            pl_selectpl(0); // Select default Plotter.
+            if (pl_deletepl(xplotter_handle) < 0) {
+                throw new Error("Couldn't delete Plotter\n");
+            }
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -212,6 +248,9 @@ public:
         case "svg":
             svg.setLineWidth(width); // in mm
             break;
+        case "xplotter":
+            pl_flinewidth(width); // Line thickness in mm.
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -223,6 +262,9 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.setLineColour(colour);
+            break;
+        case "xplotter":
+            pl_pencolorname(toStringz(colour));
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -236,6 +278,10 @@ public:
         case "svg":
             svg.setFillColour(colour);
             break;
+        case "xplotter":
+            pl_filltype(1); // Objects will be filled.
+            pl_fillcolorname(toStringz(colour));
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -247,6 +293,10 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.clearFillColour();
+            break;
+        case "xplotter":
+            pl_filltype(0); // Objects will not be filled.
+            pl_fillcolorname("white");
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -260,6 +310,9 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.setDashArray(dashLength, gapLength); // in mm
+            break;
+        case "xplotter":
+            // [TODO]
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -287,6 +340,8 @@ public:
         case "svg":
             svg.begin_group(id, opacity);
             break;
+        case "xplotter":
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -298,6 +353,8 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.end_group();
+            break;
+        case "xplotter":
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -317,6 +374,9 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.line(x0, y0, x1, y1, dashed);
+            break;
+        case "xplotter":
+            pl_fline(x0, y0, x1, y1); // [TODO] dashed
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -340,6 +400,13 @@ public:
         case "svg":
             svg.polyline(xlist, ylist, dashed);
             break;
+        case "xplotter":
+            foreach (i; 1 .. xlist.length) {
+                pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+                // [TODO] dashed
+            }
+            pl_endpath();
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -362,6 +429,14 @@ public:
         case "svg":
             svg.polygon(xlist, ylist, fill, stroke, dashed);
             break;
+        case "xplotter":
+            pl_fmove(xlist[0], ylist[0]);
+            foreach (i; 1 .. xlist.length) {
+                pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+                // [TODO] dashed, stroke/fill
+            }
+            pl_closepath();
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -379,6 +454,10 @@ public:
         case "svg":
             svg.arc(x0, y0, x1, y1, xc, yc, dashed);
             break;
+        case "xplotter":
+            pl_farc(xc, yc, x0, y0, x1, y1); // [TODO] dashed
+            pl_endpath();
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -393,6 +472,9 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.circle(xc, yc, r, fill, stroke, dashed);
+            break;
+        case "xplotter":
+            pl_fcircle(xc, yc, r); // [TODO] dashed, stroke/filled
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -420,6 +502,10 @@ public:
         case "svg":
             svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
             break;
+        case "xplotter":
+            pl_fbezier3(x0, y0, x1, y1, x2, y2, x3, y3); // [TODO] dashed
+            pl_endpath();
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -440,6 +526,9 @@ public:
         case "svg":
             svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
             break;
+        case "xplotter":
+            // [TODO]
+            break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
@@ -456,6 +545,9 @@ public:
         switch(renderer_name) {
         case "svg":
             svg.dotlabel(xp, yp, label, anchor, dotSize, fontSize, colour, fontFamily);
+            break;
+        case "xplotter":
+            // [TODO]
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);

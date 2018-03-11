@@ -12,8 +12,10 @@ import geom;
 
 void main()
 {
-    writeln("Begin demonstration of the geometric rendering.");
-    auto s = new Sketch("svg", "xyortho");
+    // string renderer = "svg";
+    string renderer = "xplotter";
+    writeln("Begin demonstration of the geometric rendering with ", renderer);
+    auto s = new Sketch(renderer, "xyortho");
     s.canvas.set(0.0,0.0,120.0,120.0);
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     auto a = Vector3(2.0, 0.0);
@@ -57,7 +59,7 @@ void main()
               true, true, true);
     s.finish();
     //
-    s = new Sketch("svg", "isometric");
+    s = new Sketch(renderer, "isometric");
     s.canvas.set(0.0,0.0,120.0,120.0);
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     // Turn the world around so we view from the original -z axis.
