@@ -188,9 +188,9 @@ function parseChemkinFileForReactions(f)
    end
 
    while inReactionsSection do
-      line = f:read("*line")
+      local line = f:read("*line")
       if not line then
-	 print("End of file encountered before reaching end of 'REACTIONCS' section.")
+	 print("End of file encountered before reaching end of 'REACTIONS' section.")
 	 print("Exiting.")
 	 os.exit(1)
       end
@@ -206,55 +206,57 @@ function parseChemkinFileForReactions(f)
       -- 3. a line marking a DUPLICATE reaction
       -- 4. a comment line
 
-      -- Break apart line and throw away anything with a comment, then reassemble.
-      iC = -1
-      for i,tk in ipairs(tks) do
-	 if tk:sub(1,1) == "!" then
-	    iC = i -- index of comment start
-	    break
-	 end
-      end
-      if iC > 0 then
-	 line = ""
-	 for i=1,iC-1 do
-	    line = line .. tks[i] .. "  "
-	 end
-      end
-      
-      -- Attempt to parse a reaction string
-      reac = parseMechanismWithRate(line)
-      if reac then
-	 reactions[#reactions+1] = {}
-	 reactions[#reactions].mechanism = trim(reac[1])
-	 reactions[#reactions].forwardRate = reac[#reac]
-      else
-	 -- We really should find a line with extra info
-	 -- about the earlier reaction line
-	 reacInfo = split(line, "/")
-	 if reacInfo then
-	    reacInfo[#reacInfo] = nil
-	    -- Remove any tokens after a comment is found.
-	    iC = -1
-	    for i,tk in ipairs(reacInfo) do
-	       if tk:sub(1,1) == "!" then
-		  iC = i
-		  break
-	       end
-	    end
-	    if iC > 0 then
-	       for i=iC,#reacInfo do
-		  table.remove(reacInfo)
-	       end
-	    end
+      -- Look for complete comment line first and ignore, so only proceed if not comment line.
+      if line:sub(1,1) ~= "!" then
+         -- Break apart line and throw away anything with a comment, then reassemble.
+         iC = -1
+         for i,tk in ipairs(tks) do
+            if tk:sub(1,1) == "!" then
+               iC = i -- index of comment start
+               break
+            end
+         end
+         if iC > 0 then
+            line = ""
+            for i=1,iC-1 do
+               line = line .. tks[i] .. "  "
+            end
+         end
 
-	    if not reactions[#reactions].extraInfo then
-	       reactions[#reactions].extraInfo = reacInfo
-	    else
-	       for _,entry in ipairs(reacInfo) do
-		  reactions[#reactions].extraInfo[#(reactions[#reactions].extraInfo)+1] = entry
-	       end
-	    end
-	 end
+         -- Attempt to parse a reaction string
+         reac = parseMechanismWithRate(line)
+         if reac then
+            reactions[#reactions+1] = {}
+            reactions[#reactions].mechanism = trim(reac[1])
+            reactions[#reactions].forwardRate = reac[#reac]
+            reactions[#reactions].extraInfo = {}
+         else
+            -- We really should find a line with extra info
+            -- about the earlier reaction line
+            reacInfo = split(line, "/")
+
+            if type(reacInfo) == 'table' then
+               reacInfo[#reacInfo] = nil
+               -- Remove any tokens after a comment is found.
+               iC = -1
+               for i,tk in ipairs(reacInfo) do
+                  if tk:sub(1,1) == "!" then
+                     iC = i
+                     break
+                  end
+               end
+               if iC > 0 then
+                  for i=iC,#reacInfo do
+                     table.remove(reacInfo)
+                  end
+               end
+
+               for _,entry in ipairs(reacInfo) do
+                  reactions[#reactions].extraInfo[#(reactions[#reactions].extraInfo)+1] = entry
+               end
+
+            end
+         end
       end
    end
    return reactions
@@ -373,6 +375,7 @@ function main()
    end
    speciesStr = speciesStr .. "}\n"
    tmpFile:write(speciesStr)
+   tmpFile:write("options = {database='prefer-grimech'}\n")
    tmpFile:close()
    cmd = string.format("prep-gas gas-tmp.inp %s", outGasFile)
    os.execute(cmd)
