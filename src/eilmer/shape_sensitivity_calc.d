@@ -54,6 +54,12 @@ import grid_deform;
 
 enum ghost_cell_start_id = 1_000_000_000;
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
+// some data objects used in forming the Jacobian
+immutable size_t MAX_PERTURBED_INTERFACES = 40;
+FVCell cellOrig;
+FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
+FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
+FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
 
 string adjointDir = "adjoint";
 
@@ -176,8 +182,7 @@ void main(string[] args) {
     // --------------
 
     FluidBlock myblk = localFluidBlocks[0]; // currently only compatible with single block simulations
-    size_t orderOfJacobian = myblk.myConfig.interpolation_order;
-    
+        
     // set the number of primitive variables
     size_t ndim = GlobalConfig.dimensions;
     bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
@@ -190,12 +195,12 @@ void main(string[] args) {
         if (with_k_omega) np = 7; // density, velocity(x,y,z), pressure, tke, omega
         else np = 5; // density, velocity(x,y,z), pressure, tke, omega
     }
-    
+
     // -----------------------------
     // Build transpose Flow Jacobian
     //------------------------------
     SMatrix L = new SMatrix();    
-    build_flow_jacobian(L, myblk, ndim, np, orderOfJacobian, EPSILON, MU);
+    build_flow_jacobian(L, myblk, ndim, np, myblk.myConfig.interpolation_order, EPSILON, MU); // orderOfJacobian=interpolation_order
 
     // -----------------------------
     // Build 1st order Flow Jacobian
@@ -208,7 +213,7 @@ void main(string[] args) {
     //------------------------------------------
     SMatrix L1D = new SMatrix();
     build_flow_jacobian(L1D, myblk, ndim, np, 0, EPSILON, MU); // orderOfJacobian=0
-
+    
     // ----------------------------------
     // Construct cost function sensitvity
     // ----------------------------------
@@ -540,16 +545,10 @@ void construct_flow_jacobian(FluidBlock blk, size_t ndim, size_t np, size_t orde
      ++/
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
-    
-    // some data objects used in forming the Jacobian
-    immutable size_t MAX_PERTURBED_INTERFACES = 40; 
-
-    FVCell cellOrig; FVCell cellL; FVCell cellR;
-    FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
-    FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
-    FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
+    // initialise some variables used in the finite difference perturbation
     double h; double diff;
 
+    // initialise objects
     cellOrig = new FVCell(dedicatedConfig[blk.id]);
     foreach(i; 0..MAX_PERTURBED_INTERFACES) {
         ifaceOrig[i] = new FVInterface(dedicatedConfig[blk.id], false);
@@ -592,19 +591,13 @@ void construct_flow_jacobian(FluidBlock blk, size_t ndim, size_t np, size_t orde
                     }
                     double JacEntry = volInv * integral;
                     
-                    if (JacEntry != 0.0) {
-                        if (ip == 0 && jp == 0) {
-                            //writef("%d ", c.id);
-                            count += 1;
-                        }
-                        //writeln("col: ", I, ", row: ", J, ", p-cell: ", cell.id, ", e-cell: ", c.id, ", ip: ", ip, ", jp: ", jp, ", val: ", JacEntry);
+                    if (abs(JacEntry) > ESSENTIALLY_ZERO) {
                         blk.aa[J] ~= JacEntry;
-                        blk.ja[J] ~= I; //J;
+                        blk.ja[J] ~= I;
                     }
                 }
             }
         }
-        //writef(" total effected cells: %d cell in stencil: %d \n", count, cell.jacobian_stencil.length);
         // clear the interface flux Jacobian entries
         foreach (iface; cell.jacobian_face_stencil) {
             foreach (i; 0..iface.dFdU.length) {
@@ -797,7 +790,6 @@ void compute_perturbed_flux(FluidBlock blk, size_t orderOfJacobian, FVCell[] cel
      WARNING: this method should resemble the convective, and viscous flux routines found in the flow solver.
      
      ++/
-
     foreach(iface; iface_list) iface.F.clear_values();
 
     // Applies BCs for entire block -- could be more efficient
@@ -941,53 +933,52 @@ void compute_perturbed_flux(FluidBlock blk, size_t orderOfJacobian, FVCell[] cel
                     break;
                 } // end switch
             } // end foreach c
-        } // end if interpolation_order > 1
-
-        // Fill in gradients for ghost cells so that left- and right- cells at all faces,
-        // including those along block boundaries, have the latest gradient values.
-        foreach (bcond; blk.bc) {
-            bool found_mapped_cell_bc = false;
-            foreach (gce; bcond.preReconAction) {
-                auto mygce = cast(GhostCellMappedCellCopy)gce;
-                if (mygce && !blk.myConfig.in_mpi_context) {
-                    found_mapped_cell_bc = true;
-                    // There is a mapped-cell backing the ghost cell, so we can copy its gradients.
+            
+            // Fill in gradients for ghost cells so that left- and right- cells at all faces,
+            // including those along block boundaries, have the latest gradient values.
+            foreach (bcond; blk.bc) {
+                bool found_mapped_cell_bc = false;
+                foreach (gce; bcond.preReconAction) {
+                    auto mygce = cast(GhostCellMappedCellCopy)gce;
+                    if (mygce && !blk.myConfig.in_mpi_context) {
+                        found_mapped_cell_bc = true;
+                        // There is a mapped-cell backing the ghost cell, so we can copy its gradients.
+                        foreach (i, f; bcond.faces) {
+                            // Only FVCell objects in an unstructured-grid are expected to have
+                            // precomputed gradients.  There will be an initialized reference
+                            // in the FVCell object of a structured-grid block, so we need to
+                            // test and avoid copying from such a reference.
+                            auto mapped_cell_grad = mygce.get_mapped_cell(i).gradients;
+                            if (bcond.outsigns[i] == 1) {
+                                if (mapped_cell_grad) {
+                                    f.right_cell.gradients.copy_values_from(mapped_cell_grad);
+                                } else {
+                                    // Fall back to looking over the face for suitable gradient data.
+                                    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+                                }
+                            } else {
+                                if (mapped_cell_grad) {
+                                    f.left_cell.gradients.copy_values_from(mapped_cell_grad);
+                                } else {
+                                    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+                                }
+                            }
+                        } // end foreach f
+                    } // end if (mygce)
+                } // end foreach gce
+                if (!found_mapped_cell_bc) {
+                    // There are no other cells backing the ghost cells on this boundary.
+                    // Fill in ghost-cell gradients from the other side of the face.
                     foreach (i, f; bcond.faces) {
-                        // Only FVCell objects in an unstructured-grid are expected to have
-                        // precomputed gradients.  There will be an initialized reference
-                        // in the FVCell object of a structured-grid block, so we need to
-                        // test and avoid copying from such a reference.
-                        auto mapped_cell_grad = mygce.get_mapped_cell(i).gradients;
                         if (bcond.outsigns[i] == 1) {
-                            if (mapped_cell_grad) {
-                                f.right_cell.gradients.copy_values_from(mapped_cell_grad);
-                            } else {
-                                // Fall back to looking over the face for suitable gradient data.
-                                f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-                            }
+                            f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
                         } else {
-                            if (mapped_cell_grad) {
-                                f.left_cell.gradients.copy_values_from(mapped_cell_grad);
-                            } else {
-                                f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-                            }
+                            f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
                         }
                     } // end foreach f
-                } // end if (mygce)
-            } // end foreach gce
-            if (!found_mapped_cell_bc) {
-                // There are no other cells backing the ghost cells on this boundary.
-                // Fill in ghost-cell gradients from the other side of the face.
-                foreach (i, f; bcond.faces) {
-                    if (bcond.outsigns[i] == 1) {
-                        f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-                    } else {
-                        f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-                    }
-                } // end foreach f
-            } // end if !found_mapped_cell_bc
-        } // end foreach bcond
-        
+                } // end if !found_mapped_cell_bc
+            } // end foreach bcond
+        } // end if interpolation_order > 1
         // compute flux
         foreach(iface; iface_list) {
             auto ublk = cast(UFluidBlock) blk;
@@ -1286,8 +1277,11 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega, FluidBlo
 }
 
    
-void build_flow_jacobian(SMatrix L, FluidBlock blk, size_t ndim, size_t np, size_t orderOfJacobian, double EPSILON, double MU) {
-
+void build_flow_jacobian(SMatrix L, FluidBlock blk, size_t ndim, size_t np, int orderOfJacobian, double EPSILON, double MU) {
+    
+    // temporarily switch the interpolation order of the config object to that of the Jacobian 
+    blk.myConfig.interpolation_order = orderOfJacobian;
+    
     // build jacobian stencils
     if (GlobalConfig.viscous) construct_viscous_flow_jacobian_stencils(blk, orderOfJacobian);
     else construct_inviscid_flow_jacobian_stencils(blk, orderOfJacobian);
@@ -1314,6 +1308,8 @@ void build_flow_jacobian(SMatrix L, FluidBlock blk, size_t ndim, size_t np, size
         cell.jacobian_face_stencil = [];
     }
 
+    // reset interpolation order
+    blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }
 
 
@@ -1324,9 +1320,7 @@ void build_flow_jacobian(SMatrix L, FluidBlock blk, size_t ndim, size_t np, size
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
-
-void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, double MU, size_t orderOfJacobian=1) {
-
+void sss_preconditioner_initialisation(FluidBlock blk) {
     if (blk.grid_type == Grid_t.structured_grid) {
         auto sblk = cast(SFluidBlock) blk;
         foreach ( cell; blk.cells) {
@@ -1347,13 +1341,6 @@ void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, 
         }
     }
     
-    // some data objects used in forming the preconditioner
-    immutable size_t MAX_PERTURBED_INTERFACES = 10; FVCell cellOrig;
-    FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
-    FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
-    FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
-    double h; double diff;
-
     // initialise objects
     cellOrig = new FVCell(dedicatedConfig[blk.id]);
     foreach(i; 0..MAX_PERTURBED_INTERFACES) {
@@ -1361,7 +1348,16 @@ void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, 
         ifacePp[i] = new FVInterface(dedicatedConfig[blk.id], false);
         ifacePm[i] = new FVInterface(dedicatedConfig[blk.id], false);
     }
+}
 
+void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, double MU, int orderOfJacobian=1) {
+
+    // temporarily switch the interpolation order of the config object to that of the Jacobian 
+    blk.myConfig.interpolation_order = orderOfJacobian;
+
+    // initialise some variables used in the finite difference perturbation
+    double h; double diff;
+    
     // compute diagonal of 1st order Jacobian (w.r.t. primitive variables)
     foreach(cell; blk.cells) {
         // 0th perturbation: rho
@@ -1404,4 +1400,7 @@ void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, 
         aa[cell.id*np+2] *= 1.0/cell.fs.gas.rho;
         aa[cell.id*np+3] *= cell.fs.gas.p/(cell.fs.gas.rho * cell.fs.gas.u); // ratio of specific heats minus 1
     }
+    
+    // reset interpolation order to the global setting
+    blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }
