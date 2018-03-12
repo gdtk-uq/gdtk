@@ -4,7 +4,9 @@
  * These are the user-callable functions for sketching geometric elements
  * while preparing the data for a flow simulation.  They are modelled on 
  * the capabilities of the SVG renderer but work in the geometric space
- * of the flow simulation.
+ * of the flow simulation, where the units of lengths are metres.  
+ * The "canvas" referred to below is a virtual canvas, where the units 
+ * of lengths are millimetres.
  *
  * Author(s):
  *     Peter J.
@@ -67,7 +69,7 @@ public:
     //        |               |
     //     (x0,y0)---------(x1,y0)
     //
-    Extents canvas; // canvas- or device-space in mm or pixels, depending on renderer
+    Extents canvas; // Virtual-canvas or device-space in mm.
     Extents viewport; // view coordinates in metres (following projection)
     double[4][4] proj_mat; // projection matrix, as per OpenGL description
     double[4][4] view_mat; // for when we want to view the model differently
@@ -121,12 +123,19 @@ public:
         default: throw new Exception("other projections unimplemented");
         }
         // Set a reasonable size (in mm) for the canvas.
+        canvas.set(0.0, 0.0, 120.0, 120.0);
+        viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
+        current_line_width = 0.25; // Line thickness in mm.
+        current_bgcolourname = "white";
+        current_pencolourname = "black";
+        current_fillcolourname = "yellow";
         switch(renderer_name) {
         case "svg":
-            canvas.set(0.0, 0.0, 120.0, 120.0);
+            // We're good for now, since we'll just be writing to a file
+            // for each SVG plot.
             break;
         case "xplotter":
-            canvas.set(0.0, 0.0, 200.0, 200.0);
+            // We need to get the Xplotter started up.
             string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
                                        to!int(canvas.height*dpi/25.4));
             // We shall use the old/traditional GNU-libplot calls,
@@ -142,11 +151,6 @@ public:
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
         }
-        viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
-        current_line_width = 1.0; // Line thickness in mm.
-        current_bgcolourname = "white";
-        current_pencolourname = "black";
-        current_fillcolourname = "yellow";
     } // end this
 
     ~this()
@@ -244,9 +248,10 @@ public:
         case "xplotter":
             pl_selectpl(xplotter_handle);
             if (pl_openpl() < 0) { throw new Error("Couldn't open X Plotter."); }
-            // Specify the canvas coordinate system, starting at (0,0) bottom-left.
+            // Specify the virtual-canvas coordinate system,
+            // starting at (0,0) bottom-left.
             pl_fspace(0.0, 0.0, canvas.width, canvas.height);
-            current_line_width = 1.0; // Line thickness in mm.
+            current_line_width = 0.5; // Line thickness in mm.
             current_bgcolourname = "white";
             current_pencolourname = "black";
             current_fillcolourname = "yellow";
@@ -283,15 +288,15 @@ public:
     }
 
     void setLineWidth(double width)
-    // Sets line width, in units appropriate to the renderer.
+    // Sets line width in mm on our virtual canvas.
     {
         current_line_width = width;
         switch(renderer_name) {
         case "svg":
-            svg.setLineWidth(width); // in mm
+            svg.setLineWidth(width); // SVG canvas was set up in mm.
             break;
         case "xplotter":
-            pl_flinewidth(width); // Line thickness in mm.
+            pl_flinewidth(width);
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -367,13 +372,13 @@ public:
     double toCanvasX(double x)
     // Map from user-space to canvas-space.
     {
-        return canvas.x0 + (x - viewport.x0)/(viewport.width)*canvas.width;
+        return canvas.x0 + (x - viewport.x0)/viewport.width*canvas.width;
     }
 
     double toCanvasY(double y)
     // Map from user-space to canvas-space.
     {
-        return canvas.y0 + (y - viewport.y0)/(viewport.height)*canvas.height;
+        return canvas.y0 + (y - viewport.y0)/viewport.height*canvas.height;
     }
 
     void begin_group(string id="", double opacity=1.0)
@@ -553,6 +558,7 @@ public:
                 bool stroke=true, bool dashed=false)
     {
         // This is a purely 2D xy-plane function.
+        // r is in mm on the canvas.
         double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
         switch(renderer_name) {
         case "svg":
@@ -636,8 +642,24 @@ public:
             svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
             break;
         case "xplotter":
-            // [TODO]
+            pl_pencolorname(toStringz(colour));
+            // Convert font size from points to virtual-canvas millimetres.
+            double fontHeight = fontSize/72.0*25.4;
+            pl_ftextangle(angle);
+            pl_fmove(xp, yp);
+            pl_fontname(toStringz(fontFamily));
+            pl_ffontsize(fontHeight);
+            int horizJust, vertJust;
+            switch (anchor) {
+            case "start": horizJust = 'l'; vertJust = 'x'; break;
+            case "middle": horizJust = 'c'; vertJust = 'x'; break;
+            case "end": horizJust = 'r'; vertJust = 'x'; break;
+            default:
+                horizJust = 'l'; vertJust = 'x';
+            }
+            pl_alabel(horizJust, vertJust, toStringz(textString));
             pl_flushpl();
+            pl_pencolorname(toStringz(current_pencolourname));
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -648,6 +670,8 @@ public:
     void dotlabel(const Vector3 p, string label="", 
                   string anchor="middle", double dotSize=2.0,
                   int fontSize=10, string colour="black", string fontFamily="sanserif")
+    // dotSize is already in virtual-canvas mm
+    // fontSize is in points
     {
         Vector3 p_tmp = Vector3(p); double w_p = 1.0;
         apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
@@ -657,8 +681,29 @@ public:
             svg.dotlabel(xp, yp, label, anchor, dotSize, fontSize, colour, fontFamily);
             break;
         case "xplotter":
-            // [TODO]
+            pl_pencolorname(toStringz(colour));
+            pl_fillcolorname(toStringz(colour));
+            pl_fcircle(xp, yp, dotSize/2);
+            if (label.length > 0) {
+                // Convert font size from points to virtual-canvas millimetres.
+                double fontHeight = fontSize/72.0*25.4;
+                pl_ftextangle(0.0);
+                pl_fmove(xp, yp+0.75*dotSize);
+                pl_fontname(toStringz(fontFamily));
+                pl_ffontsize(fontHeight);
+                int horizJust, vertJust;
+                switch (anchor) {
+                case "start": horizJust = 'l'; vertJust = 'x'; break;
+                case "middle": horizJust = 'c'; vertJust = 'x'; break;
+                case "end": horizJust = 'r'; vertJust = 'x'; break;
+                default:
+                    horizJust = 'l'; vertJust = 'x';
+                }
+                pl_alabel(horizJust, vertJust, toStringz(label));
+            }
             pl_flushpl();
+            pl_pencolorname(toStringz(current_pencolourname));
+            pl_fillcolorname(toStringz(current_fillcolourname));
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);

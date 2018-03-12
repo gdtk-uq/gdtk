@@ -17,11 +17,7 @@ void main(string[] args)
     writeln("Begin demonstration of the geometric rendering with ", renderer);
     //
     auto s = new Sketch(renderer, "xyortho");
-    switch(renderer) {
-    case "svg": s.canvas.set(0.0,0.0,120.0,120.0); break;
-    case "xplotter": s.canvas.set(0.0,0.0,200.0,200.0); break;
-    default: s.canvas.set(0.0,0.0,120.0,120.0);
-    }
+    s.canvas.set(0.0,0.0,120.0,120.0);
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     auto a = Vector3(2.0, 0.0);
     auto b = Vector3(1.0, 1.0);
@@ -43,11 +39,7 @@ void main(string[] args)
     s.render(my_patch);
     s.finish();
     //
-    switch(renderer) {
-    case "svg": s.canvas.set(0.0,0.0,120.0,120.0); break;
-    case "xplotter": s.canvas.set(0.0,0.0,200.0,200.0); break;
-    default: s.canvas.set(0.0,0.0,120.0,120.0);
-    }
+    s.canvas.set(0.0,0.0,120.0,120.0);
     s.start("test2.svg");
     s.viewport.set(0.0,0.0,120.0,120.0);
     s.line(Vector3(0.0,0.0), Vector3(90.0,120.0));
@@ -70,11 +62,7 @@ void main(string[] args)
     s.finish();
     //
     s = new Sketch(renderer, "isometric");
-    switch(renderer) {
-    case "svg": s.canvas.set(0.0,0.0,120.0,120.0); break;
-    case "xplotter": s.canvas.set(0.0,0.0,200.0,200.0); break;
-    default: s.canvas.set(0.0,0.0,120.0,120.0);
-    }
+    s.canvas.set(0.0,0.0,120.0,120.0);
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     // Turn the world around so we view from the original -z axis.
     s.look_at(Vector3(0.0,0.0,-1.0), Vector3(0.0,0.0,0.0), Vector3(0.0,1.0,0.0));
