@@ -61,6 +61,7 @@ config.gasdynamic_update_scheme = 'euler'
 config.flux_calculator = 'ausm_plus_up'
 config.viscous = true
 config.spatial_deriv_calc = 'divergence'
+config.spatial_deriv_locn = 'faces'
 config.max_time = 1.0 
 config.max_step = 10000000
 config.dt_init = 1.0e-5
