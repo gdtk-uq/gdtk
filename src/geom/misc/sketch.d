@@ -55,6 +55,7 @@ public:
     string current_bgcolourname;
     string current_pencolourname;
     string current_fillcolourname;
+    int current_greylevel = 0x8000; // 50% of 0xffff
     string projection_name;
     string title;
     string description;
@@ -250,7 +251,11 @@ public:
             current_pencolourname = "black";
             current_fillcolourname = "yellow";
             pl_flinewidth(current_line_width);
-            pl_filltype(0); // Objects, by default, will not be filled.
+            pl_joinmod(toStringz("round"));
+            pl_capmod(toStringz("round"));
+            pl_pentype(1);
+            pl_linemod(toStringz("solid"));
+            pl_filltype(current_greylevel);
             pl_bgcolorname (toStringz(current_bgcolourname));
             pl_pencolorname(toStringz(current_pencolourname));
             pl_fillcolorname(toStringz(current_fillcolourname));
@@ -318,7 +323,7 @@ public:
             svg.setFillColour(colour);
             break;
         case "xplotter":
-            pl_filltype(1); // Objects will be filled.
+            pl_filltype(current_greylevel);
             pl_fillcolorname(toStringz(colour));
             break;
         default:
@@ -335,7 +340,6 @@ public:
             svg.clearFillColour();
             break;
         case "xplotter":
-            pl_filltype(0); // Objects will not be filled.
             pl_fillcolorname("none");
             break;
         default:
@@ -381,6 +385,7 @@ public:
             svg.begin_group(id, opacity);
             break;
         case "xplotter":
+            // not applicable
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -395,6 +400,7 @@ public:
             svg.end_group();
             break;
         case "xplotter":
+            // not applicable
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -416,7 +422,14 @@ public:
             svg.line(x0, y0, x1, y1, dashed);
             break;
         case "xplotter":
-            pl_fline(x0, y0, x1, y1); // [TODO] dashed
+            pl_filltype(0); pl_pentype(1);
+            pl_flinewidth(current_line_width);
+            if (dashed) {
+                pl_linemod(toStringz("longdashed"));
+            } else {
+                pl_linemod(toStringz("solid"));
+            }
+            pl_fline(x0, y0, x1, y1);
             pl_flushpl();
             break;
         default:
@@ -442,14 +455,16 @@ public:
             svg.polyline(xlist, ylist, dashed);
             break;
         case "xplotter":
-            pl_filltype(0);
+            pl_filltype(0); pl_pentype(1);
             pl_flinewidth(current_line_width);
-            pl_endpath();
+            if (dashed) {
+                pl_linemod(toStringz("longdashed"));
+            } else {
+                pl_linemod(toStringz("solid"));
+            }
             foreach (i; 1 .. xlist.length) {
                 pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
-                // [TODO] dashed
             }
-            pl_endpath();
             pl_flushpl();
             break;
         default:
@@ -476,30 +491,28 @@ public:
             break;
         case "xplotter":
             if (fill) {
-                // pl_pencolorname(toStringz(current_fillcolourname));
-                pl_filltype(1);
-                pl_endpath();
-                pl_fmove(xlist[0], ylist[0]);
-                foreach (i; 1 .. xlist.length) {
-                    pl_fcont(xlist[i], ylist[i]);
-                }
-                pl_closepath();
-                pl_endpath();
+                pl_filltype(current_greylevel);
+            } else {
                 pl_filltype(0);
-                // pl_pencolorname(toStringz(current_pencolourname));
             }
             if (stroke) {
-                pl_filltype(0);
+                pl_pentype(1);
                 pl_flinewidth(current_line_width);
-                pl_endpath();
-                pl_fmove(xlist[0], ylist[0]);
-                foreach (i; 1 .. xlist.length) {
-                    pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
-                    // [TODO] dashed
-                }
-                pl_closepath();
-                pl_endpath();
+            } else {
+                pl_pentype(0);
             }
+            if (dashed) {
+                pl_linemod(toStringz("longdashed"));
+            } else {
+                pl_linemod(toStringz("solid"));
+            }
+            pl_fmove(xlist[0], ylist[0]);
+            foreach (i; 1 .. xlist.length) {
+                pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+            }
+            pl_fline(xlist[0], ylist[0], xlist[$-1], ylist[$-1]);
+            pl_closepath();
+            pl_endpath();
             pl_flushpl();
             break;
         default:
@@ -520,10 +533,14 @@ public:
             svg.arc(x0, y0, x1, y1, xc, yc, dashed);
             break;
         case "xplotter":
-            pl_filltype(0);
+            pl_filltype(0); pl_pentype(1);
             pl_flinewidth(current_line_width);
-            pl_farc(xc, yc, x0, y0, x1, y1); // [TODO] dashed
-            pl_endpath();
+            if (dashed) {
+                pl_linemod(toStringz("longdashed"));
+            } else {
+                pl_linemod(toStringz("solid"));
+            }
+            pl_farc(xc, yc, x0, y0, x1, y1);
             pl_flushpl();
             break;
         default:
@@ -543,19 +560,22 @@ public:
             break;
         case "xplotter":
             if (fill) {
-                pl_pencolorname(toStringz(current_fillcolourname));
-                pl_filltype(1);
-                pl_fcircle(xc, yc, r);
-                pl_endpath();
+                pl_filltype(current_greylevel);
+            } else {
                 pl_filltype(0);
-                pl_pencolorname(toStringz(current_pencolourname));
             }
             if (stroke) {
-                pl_filltype(0);
+                pl_pentype(1);
                 pl_flinewidth(current_line_width);
-                pl_fcircle(xc, yc, r); // [TODO] dashed
-                pl_endpath();
+            } else {
+                pl_pentype(0);
             }
+            if (dashed) {
+                pl_linemod(toStringz("longdashed"));
+            } else {
+                pl_linemod(toStringz("solid"));
+            }
+            pl_fcircle(xc, yc, r);
             pl_flushpl();
             break;
         default:
@@ -585,10 +605,14 @@ public:
             svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
             break;
         case "xplotter":
-            pl_filltype(0);
+            pl_filltype(0); pl_pentype(1);
             pl_flinewidth(current_line_width);
-            pl_fbezier3(x0, y0, x1, y1, x2, y2, x3, y3); // [TODO] dashed
-            pl_endpath();
+            if (dashed) {
+                pl_linemod(toStringz("longdashed"));
+            } else {
+                pl_linemod(toStringz("solid"));
+            }
+            pl_fbezier3(x0, y0, x1, y1, x2, y2, x3, y3);
             pl_flushpl();
             break;
         default:
