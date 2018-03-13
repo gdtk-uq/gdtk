@@ -1,8 +1,8 @@
 -- sketch-domain.lua
 -- Called by the user input script to make a sketch of the flow domain for sphere-heat-transfer.
 -- PJ, 2016-08-31
-s = Sketch:new{renderer="svg", projection="xyortho"}
-s:set{canvas={0.0,0.0,120.0,120.0}, viewport={-0.020,-0.005,0.010,0.025}}
+s = Sketch:new{renderer="svg", projection="xyortho", canvas_mm={0.0,0.0,120.0,120.0}}
+s:set{viewport={-0.020,-0.005,0.010,0.025}}
 
 s:start{file_name="sphere.svg"}
 s:text{point=Vector3:new{x=-0.007,y=0.022}, text="flow domain for sphere", font_size=16}

@@ -1,8 +1,8 @@
 -- sketch-domain-extended.lua
 -- Called by the user input script to make a sketch of the flow domain.
 -- PJ, 2016-09-24
-s = Sketch:new{renderer="svg", projection="xyortho"}
-s:set{canvas={0.0,0.0,120.0,120.0}, viewport={-0.5,-0.5,2.5,2.5}}
+s = Sketch:new{renderer="svg", projection="xyortho", canvas_mm={0.0,0.0,120.0,120.0}}
+s:set{viewport={-0.5,-0.5,2.5,2.5}}
 
 s:start{file_name="conepe.svg"}
 s:text{point=Vector3:new{x=1.0,y=2.2},

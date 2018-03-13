@@ -1,8 +1,8 @@
 -- sketch-domain.lua
 -- Called by the user input script to make a sketch of the flow domain.
 -- PJ, 2017-01-07, adapted from cone20 case
-s = Sketch:new{renderer="svg", projection="xyortho"}
-s:set{canvas={0.0,0.0,120.0,120.0}, viewport={-0.7,-0.4,2.2,2.5}}
+s = Sketch:new{renderer="svg", projection="xyortho", canvas_mm={0.0,0.0,120.0,120.0}}
+s:set{viewport={-0.7,-0.4,2.2,2.5}}
 
 s:start{file_name="odw.svg"}
 s:text{point=Vector3:new{x=0.75,y=2.2},

@@ -1,8 +1,8 @@
 -- sketch-domain.lua
 -- Called by the user input script to make a sketch of the flow domain for Sawada's sphere.
 -- PJ, 2016-08-31
-s = Sketch:new{renderer="svg", projection="xyortho"}
-s:set{canvas={0.0,0.0,120.0,120.0}, viewport={-0.090,-0.020,0.060,0.130}}
+s = Sketch:new{renderer="svg", projection="xyortho", canvas_mm={0.0,0.0,120.0,120.0}}
+s:set{viewport={-0.090,-0.020,0.060,0.130}}
 
 s:start{file_name="sphere.svg"}
 s:text{point=Vector3:new{x=-0.010,y=0.110}, text="flow domain for sphere", font_size=16}
