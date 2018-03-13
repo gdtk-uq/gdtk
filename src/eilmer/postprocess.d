@@ -560,7 +560,9 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                         while (found == 1) { // while we have a cell in the domain
                             writeln("\n#########################");
                             writeln("ib = ", ib, "idx = ", idx);
-                            Vector3 vlocal = Vector3(soln.flowBlocks[ib]["vel.x", idx],soln.flowBlocks[ib]["vel.y", idx],soln.flowBlocks[ib]["vel.z", idx]);
+                            Vector3 vlocal = Vector3(soln.flowBlocks[ib]["vel.x", idx],
+                                                     soln.flowBlocks[ib]["vel.y", idx],
+                                                     soln.flowBlocks[ib]["vel.z", idx]);
                             // SliceNormal[ip] = Vector3(1,10,10); //Testcases
                             // SliceNormal[ip] = unit(SliceNormal[ip]); //Testcases
                             // Vector3 vlocal = Vector3(2000,0,0); //Testcases
@@ -575,7 +577,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 
                             // calculate local Mach number and angle
                             double alocal = soln.flowBlocks[ib]["a", idx];
-                            double Mlocal = alocal/abs(vlocal);
+                            double Mlocal = alocal/geom.abs(vlocal);
                             double MachAngle;
 
                             // check if flow is supersonic
@@ -587,7 +589,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                             }
 
                             // double MachAngle = 0.4712; //Testcases
-                            writeln("MachAngle: ", MachAngle, ", MachAngle: ", asin(sqrt(1.4*287.05*soln.flowBlocks[ib]["T", idx])/abs(vlocal)));
+                            writeln("MachAngle: ", MachAngle, ", MachAngle: ",
+                                    asin(sqrt(1.4*287.05*soln.flowBlocks[ib]["T", idx])/geom.abs(vlocal)));
 
                             Vector3 P2 = P1+(SliceNormal[ip]*coneSliceDist);
                             writeln("P2 Distance: ", dot(SliceNormal[ip],P2)+sliceConst);
@@ -600,29 +603,32 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 
                             // calculate angle in between the slice and the velocity vector 
                             Vector3 SliceVec = P2-P0;
-                            double beta = acos(dot(SliceVec,dStream)/(abs(SliceVec)*abs(dStream)));
-                            writeln("dot ", dot(SliceVec,dStream), ", abs(SliceVec) ", abs(SliceVec), ", abs(dStream) ", abs(dStream));
+                            double beta = acos(dot(SliceVec,dStream)/(geom.abs(SliceVec)*geom.abs(dStream)));
+                            writeln("dot ", dot(SliceVec,dStream), ", abs(SliceVec) ",
+                                    geom.abs(SliceVec), ", abs(dStream) ", geom.abs(dStream));
                             writeln("\nbeta: ", beta, " , MachAngle: ", MachAngle);
 
                             // Check if the slice intersects the Mach cone
                             if (beta > MachAngle) {
                                 writeln("Specified slice doesn't intersect the Mach cone"); 
                                 writeln("Locus Point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
-                                writeln("Slice Normal: ", SliceNormal[ip].x, ", ", SliceNormal[ip].y, ", ", SliceNormal[ip].z);
+                                writeln("Slice Normal: ", SliceNormal[ip].x, ", ",
+                                        SliceNormal[ip].y, ", ", SliceNormal[ip].z);
                                 writeln("Direction: ", direct);
                                 break; 
                             }
 
-                            // P2 is closer to P0 than P1, need to calculate the Mach cone at the new position
-                            // Project vector P0P2 onto the streamline
+                            // P2 is closer to P0 than P1, need to calculate the Mach cone
+                            // at the new position.
+                            // Project vector P0P2 onto the streamline.
                             dStream = unit(dStream);
                             Vector3 SliceVecProj = dot(SliceVec,dStream)*dStream;
                             Vector3 P3 = P0+SliceVecProj;
 
                             // Calculate radius of the Mach cone at the new point
-                            double rCone = tan(MachAngle)*abs(SliceVecProj);
+                            double rCone = tan(MachAngle)*geom.abs(SliceVecProj);
                             Vector3 P2P3 = P3-P2;
-                            double dP2P3 = abs(P2P3);
+                            double dP2P3 = geom.abs(P2P3);
                             double dP2P4 = sqrt(rCone^^2-dP2P3^^2);
                             writeln("rCone ", rCone, ", dP2P3 ", dP2P3, ", dP2P4 ", dP2P4);
                             writeln("P2P3*dStream = ", dot(P2P3,dStream));
@@ -635,18 +641,20 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 
                             // Calculate direction and length of the wave segment
                             Vector3 Wave = P4-P0;
-                            distance += direct*abs(Wave);
+                            distance += direct*geom.abs(Wave);
 
                             writeln("P0: ", P0.x, ", ", P0.y, ", ", P0.z);
                             writeln("P1: ", P1.x, ", ", P1.y, ", ", P1.z);
-                            writeln("SliceNormal: ", SliceNormal[ip].x, ", ", SliceNormal[ip].y, ", ", SliceNormal[ip].z);
+                            writeln("SliceNormal: ", SliceNormal[ip].x, ", ",
+                                    SliceNormal[ip].y, ", ", SliceNormal[ip].z);
                             writeln("ConeSliceDist: ", coneSliceDist);
                             writeln("P2: ", P2.x, ", ", P2.y, ", ", P2.z);
                             writeln("P3: ", P3.x, ", ", P3.y, ", ", P3.z);
                             writeln("P4: ", P4.x, ", ", P4.y, ", ", P4.z);
                             writeln("P4 Distance: ", dot(P4,SliceNormal[ip])+sliceConst);
-                            double WaveAngle = acos(dot(Wave,dStream)/(abs(Wave)*abs(dStream)));
-                            writeln("dot ", dot(Wave,dStream), ", abs(Wave) ", abs(Wave), ", abs(dStream) ", abs(dStream));
+                            double WaveAngle = acos(dot(Wave,dStream)/(geom.abs(Wave)*geom.abs(dStream)));
+                            writeln("dot ", dot(Wave,dStream), ", abs(Wave) ",
+                                    geom.abs(Wave), ", abs(dStream) ", geom.abs(dStream));
                             writeln("Wave, SliceVec", Wave, ", ", SliceVec);
                             writeln("\nWave Angle: ", WaveAngle, ", MachAngle: ", MachAngle);
 
