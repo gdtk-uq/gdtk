@@ -37,7 +37,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                   string addVarsStr, string luaRefSoln,
                   bool vtkxmlFlag, bool binary_format, bool tecplotBinaryFlag, bool tecplotAsciiFlag,
                   string outputFileName, string sliceListStr,
-                  string surfaceListStr, string extractStreamStr,
+                  string surfaceListStr, string extractStreamStr, string trackWaveStr,
                   string extractLineStr, string computeLoadsOnGroupStr,
                   string probeStr, string outputFormat,
                   string normsStr, string regionStr,
@@ -483,6 +483,193 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
             } // end for each xp.length
         } // end foreach tindx
     } // end if streamlineStr
+    //
+    if (trackWaveStr.length > 0) {
+        writeln("Tracking a wave through the flow solution.");
+        // The output may go to a user-specified file, or stdout.
+        File outFile;
+        if (outputFileName.length > 0) {
+            outFile = File(outputFileName, "w");
+            writeln("Output will be sent to File: ", outputFileName);
+        } else {
+            outFile = stdout;
+        }
+        trackWaveStr = trackWaveStr.strip();
+        trackWaveStr = trackWaveStr.replaceAll(regex("\""), "");
+        double[] xp, yp, zp;
+        Vector3[] SliceNormal;
+        // Extract starting point coordinates and normal vector of the slice
+        foreach(pointAndNormal; trackWaveStr.split(";")) {
+            auto items = pointAndNormal.split(",");
+            xp ~= to!double(items[0]);
+            yp ~= to!double(items[1]);
+            zp ~= to!double(items[2]);
+
+            if (items.length == 6) {
+                SliceNormal ~= Vector3(to!double(items[3]),to!double(items[4]),to!double(items[5]));
+            } else {
+                // if no normal vector is given assume a plane parallel to x-y
+                SliceNormal ~= Vector3(0.0,0.0,1.0);
+            }
+            SliceNormal[$-1] = unit(SliceNormal[$-1]);
+        }
+        double stepSize = 1e-06; // set a temporal step size
+        double xInit, yInit, zInit;
+        foreach (tindx; tindx_list_to_plot) {
+            writeln("  tindx= ", tindx);
+            auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
+            soln.add_aux_variables(addVarsList);
+            if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
+            outFile.writeln("# xWavePos ", "yWavePos ", "zWavePos ", "relDistance ",
+                            soln.flowBlocks[0].variable_names_as_string());
+            foreach (ip; 0 .. xp.length) {
+                outFile.writeln("# wave locus point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
+                auto identity = soln.find_enclosing_cell(xp[ip], yp[ip], zp[ip]);
+                size_t ib = identity[0]; size_t idx = identity[1]; size_t found = identity[2];
+                writeln("Starting cell for point ", ip+1, ": ", ib, ", ", idx);
+                if (found == 0) { // out of domain bounds
+                    writeln("User defined point not in solution domain bounds");
+                    break;
+                }
+                else { // store initial cell data
+                    xInit = soln.flowBlocks[ib]["pos.x", idx];
+                    yInit = soln.flowBlocks[ib]["pos.y", idx];
+                    zInit = soln.flowBlocks[ib]["pos.z", idx];
+                    xInit = xp[ip];
+                    yInit = yp[ip];
+                    zInit = zp[ip];
+                    outFile.writeln(xInit, " ", yInit, " ", zInit, " ",
+                                    soln.flowBlocks[ib].values_as_string(idx));
+                }
+                size_t ibInit = ib; size_t idxInit = idx;
+                // we need to travel both forward (direction = 1) and backward (direction = -1)
+                int[] direction = [-1, 1];
+                double min = 1e-6;
+                foreach (direct; direction) {
+                    // In every slice there are two waves emanating from every one point
+                    // writeln("direct: ", direct); //Testcases
+                    foreach (dir; direction) {
+                        found = 1;
+                        // writeln("dir: ", dir); //Testcases
+                        Vector3 P0 = Vector3(xInit,yInit,zInit);
+                        // Vector3 P0 = Vector3(0,0,0); //Testcases
+                        double distance = 0.0; // relative distance along streamline
+                        outFile.writeln("# New Wave");
+                        writeln("ib = ", ib, "idx = ", idx);
+                        ib = ibInit; idx = idxInit;
+                        while (found == 1) { // while we have a cell in the domain
+                            writeln("\n#########################");
+                            writeln("ib = ", ib, "idx = ", idx);
+                            Vector3 vlocal = Vector3(soln.flowBlocks[ib]["vel.x", idx],soln.flowBlocks[ib]["vel.y", idx],soln.flowBlocks[ib]["vel.z", idx]);
+                            // SliceNormal[ip] = Vector3(1,10,10); //Testcases
+                            // SliceNormal[ip] = unit(SliceNormal[ip]); //Testcases
+                            // Vector3 vlocal = Vector3(2000,0,0); //Testcases
+                            writeln("V ", vlocal);
+                            Vector3 dStream = vlocal*direct*stepSize;
+                            Vector3 P1 = P0 + dStream; 
+
+                            // define slice as n1*x+n2*y+n3*z+sliceConst = 0
+                            double sliceConst = -dot(SliceNormal[ip],P0); 
+                            double coneSliceDist = abs(dot(SliceNormal[ip],P1)+sliceConst);
+                            writeln("ConeSliceDist: ", coneSliceDist);
+
+                            // calculate local Mach number and angle
+                            double alocal = soln.flowBlocks[ib]["a", idx];
+                            double Mlocal = alocal/abs(vlocal);
+                            double MachAngle;
+
+                            // check if flow is supersonic
+                            if (Mlocal >= 1) {
+                                MachAngle = asin(1/Mlocal);
+                            } else {
+                                writeln("Subsonic flow encountered");
+                                break;
+                            }
+
+                            // double MachAngle = 0.4712; //Testcases
+                            writeln("MachAngle: ", MachAngle, ", MachAngle: ", asin(sqrt(1.4*287.05*soln.flowBlocks[ib]["T", idx])/abs(vlocal)));
+
+                            Vector3 P2 = P1+(SliceNormal[ip]*coneSliceDist);
+                            writeln("P2 Distance: ", dot(SliceNormal[ip],P2)+sliceConst);
+
+                            // check if Point2 is on the specified slice if not flip normal vector
+                            if (abs(dot(SliceNormal[ip],P2)+sliceConst) >= 1e-16) {
+                                P2 = P1-(SliceNormal[ip]*coneSliceDist);
+                                writeln("P2 Distance: ", dot(SliceNormal[ip],P2)+sliceConst);
+                            }
+
+                            // calculate angle in between the slice and the velocity vector 
+                            Vector3 SliceVec = P2-P0;
+                            double beta = acos(dot(SliceVec,dStream)/(abs(SliceVec)*abs(dStream)));
+                            writeln("dot ", dot(SliceVec,dStream), ", abs(SliceVec) ", abs(SliceVec), ", abs(dStream) ", abs(dStream));
+                            writeln("\nbeta: ", beta, " , MachAngle: ", MachAngle);
+
+                            // Check if the slice intersects the Mach cone
+                            if (beta > MachAngle) {
+                                writeln("Specified slice doesn't intersect the Mach cone"); 
+                                writeln("Locus Point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
+                                writeln("Slice Normal: ", SliceNormal[ip].x, ", ", SliceNormal[ip].y, ", ", SliceNormal[ip].z);
+                                writeln("Direction: ", direct);
+                                break; 
+                            }
+
+                            // P2 is closer to P0 than P1, need to calculate the Mach cone at the new position
+                            // Project vector P0P2 onto the streamline
+                            dStream = unit(dStream);
+                            Vector3 SliceVecProj = dot(SliceVec,dStream)*dStream;
+                            Vector3 P3 = P0+SliceVecProj;
+
+                            // Calculate radius of the Mach cone at the new point
+                            double rCone = tan(MachAngle)*abs(SliceVecProj);
+                            Vector3 P2P3 = P3-P2;
+                            double dP2P3 = abs(P2P3);
+                            double dP2P4 = sqrt(rCone^^2-dP2P3^^2);
+                            writeln("rCone ", rCone, ", dP2P3 ", dP2P3, ", dP2P4 ", dP2P4);
+                            writeln("P2P3*dStream = ", dot(P2P3,dStream));
+
+                            Vector3 SliceVec2 = cross(SliceVec,SliceNormal[ip]);
+                            SliceVec2 = unit(SliceVec2);
+                            writeln("SliceVec2: ", SliceVec2);
+                            writeln("P4 = ", P2, " + ", dir, " * ", dP2P4, " * ", SliceVec2);
+                            Vector3 P4 = P2+(dir*dP2P4*SliceVec2);
+
+                            // Calculate direction and length of the wave segment
+                            Vector3 Wave = P4-P0;
+                            distance += direct*abs(Wave);
+
+                            writeln("P0: ", P0.x, ", ", P0.y, ", ", P0.z);
+                            writeln("P1: ", P1.x, ", ", P1.y, ", ", P1.z);
+                            writeln("SliceNormal: ", SliceNormal[ip].x, ", ", SliceNormal[ip].y, ", ", SliceNormal[ip].z);
+                            writeln("ConeSliceDist: ", coneSliceDist);
+                            writeln("P2: ", P2.x, ", ", P2.y, ", ", P2.z);
+                            writeln("P3: ", P3.x, ", ", P3.y, ", ", P3.z);
+                            writeln("P4: ", P4.x, ", ", P4.y, ", ", P4.z);
+                            writeln("P4 Distance: ", dot(P4,SliceNormal[ip])+sliceConst);
+                            double WaveAngle = acos(dot(Wave,dStream)/(abs(Wave)*abs(dStream)));
+                            writeln("dot ", dot(Wave,dStream), ", abs(Wave) ", abs(Wave), ", abs(dStream) ", abs(dStream));
+                            writeln("Wave, SliceVec", Wave, ", ", SliceVec);
+                            writeln("\nWave Angle: ", WaveAngle, ", MachAngle: ", MachAngle);
+
+                            identity = soln.find_enclosing_cell(P4.x, P4.y, P4.z);
+                            if (identity[0] == ib && identity[1] == idx) {
+                                // did not step outside current cell
+                                stepSize = stepSize*2.0; found = identity[2];
+                                writeln("Increasing Step size");
+                            } else {
+                                ib = identity[0]; idx = identity[1]; found = identity[2];
+                                if (found == 1) {
+                                    outFile.writeln(P4.x, " ", P4.y, " ", P4.z, " ", distance, " ",
+                                                    soln.flowBlocks[ib].values_as_string(idx));
+                                }
+                                P0 = P4;
+                                stepSize = 1e-06;
+                            } // end else
+                         } // end while
+                    } // end foreach wave direction
+                } // end foreach direction
+            } // end for each xp.length
+        } // end foreach tindx
+    } // end if trackWaveStr
     //
     if (extractLineStr.length > 0) {
         writeln("Extracting data along a straight line between end points.");

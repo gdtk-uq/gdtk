@@ -103,6 +103,7 @@ int main(string[] args)
     msg       ~= "         [--slice-list=\"blk-range,i-range,j-range,k-range;...\"]\n";
     msg       ~= "         [--surface-list=\"blk,surface-id;...\"]\n";
     msg       ~= "         [--extract-streamline=\"x,y,z;...\"]        streamline locus points\n";
+    msg       ~= "         [--track-wave=\"x,y,z(,nx,ny,nz);..\"]      track wave from given point in given plane, default is n=(0,0,1)\n";
     msg       ~= "         [--extract-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line in flow blocks\n";
     msg       ~= "         [--extract-solid-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line in solid blocks\n";
     msg       ~= "         [--compute-loads-on-group=\"\"]    group tag\n";
@@ -149,6 +150,7 @@ int main(string[] args)
     string sliceListStr = "";
     string surfaceListStr = "";
     string extractStreamStr = "";
+    string trackWaveStr = "";
     string extractLineStr = "";
     string extractSolidLineStr = "";
     string computeLoadsOnGroupStr = "";
@@ -185,6 +187,7 @@ int main(string[] args)
                "slice-list", &sliceListStr,
                "surface-list", &surfaceListStr,
                "extract-streamline", &extractStreamStr,
+               "track-wave", &trackWaveStr,
                "extract-line", &extractLineStr,
                "extract-solid-line", &extractSolidLineStr,
                "compute-loads-on-group", &computeLoadsOnGroupStr,
@@ -405,6 +408,7 @@ int main(string[] args)
                 writeln("  sliceListStr: ", sliceListStr);
                 writeln("  surfaceListStr: ", surfaceListStr);
                 writeln("  extractStreamStr: ", extractStreamStr);
+                writeln("  trackWaveStr: ", trackWaveStr);
                 writeln("  extractLineStr: ", extractLineStr);
                 writeln("  extractSolidLineStr: ", extractSolidLineStr);
                 writeln("  computeLoadsOnGroupStr: ", computeLoadsOnGroupStr);
@@ -417,7 +421,7 @@ int main(string[] args)
                          addVarsStr, luaRefSoln,
                          vtkxmlFlag, binaryFormat, tecplotBinaryFlag, tecplotAsciiFlag,
                          outputFileName, sliceListStr, surfaceListStr,
-                         extractStreamStr, extractLineStr, computeLoadsOnGroupStr,
+                         extractStreamStr, trackWaveStr, extractLineStr, computeLoadsOnGroupStr,
                          probeStr, outputFormat, normsStr, regionStr, extractSolidLineStr);
             if (verbosityLevel > 0) { writeln("Done postprocessing."); }
         } // end NOT mpi_parallel
