@@ -12,12 +12,11 @@ import geom;
 
 void main(string[] args)
 {
-    string renderer = "svg"; // other is "xplotter"
+    string renderer = "svg"; // other is "xplot"
     if (args.length > 1) { renderer = args[1]; }
     writeln("Begin demonstration of the geometric rendering with ", renderer);
     //
-    auto s = new Sketch(renderer, "xyortho");
-    s.canvas.set(0.0,0.0,120.0,120.0);
+    auto s = new Sketch(renderer, "xyortho", [0.0,0.0,120.0,120.0]);
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     auto a = Vector3(2.0, 0.0);
     auto b = Vector3(1.0, 1.0);
@@ -39,7 +38,6 @@ void main(string[] args)
     s.render(my_patch);
     s.finish();
     //
-    s.canvas.set(0.0,0.0,120.0,120.0);
     s.start("test2.svg");
     s.viewport.set(0.0,0.0,120.0,120.0);
     s.line(Vector3(0.0,0.0), Vector3(90.0,120.0));
@@ -61,8 +59,7 @@ void main(string[] args)
               true, true, true);
     s.finish();
     //
-    s = new Sketch(renderer, "isometric");
-    s.canvas.set(0.0,0.0,120.0,120.0);
+    s = new Sketch(renderer, "isometric", [0.0,0.0,120.0,120.0]);
     s.viewport.set(-2.0,-2.0,2.0,2.0);
     // Turn the world around so we view from the original -z axis.
     s.look_at(Vector3(0.0,0.0,-1.0), Vector3(0.0,0.0,0.0), Vector3(0.0,1.0,0.0));

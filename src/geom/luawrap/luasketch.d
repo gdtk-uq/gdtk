@@ -63,7 +63,28 @@ extern(C) int newSketch(lua_State* L)
     lua_pop(L, 1);
     if (projection_name == "") { projection_name = "xyortho"; }
     //
-    auto my_sketch = new Sketch(renderer_name, projection_name);
+    double x0 = 0.0; double y0 = 0.0;
+    double x1 = 120.0; double y1 = 120.0;
+    lua_getfield(L, 1, "canvas_mm"); // optional field
+    if (!lua_isnil(L, -1)) {
+        if (lua_istable(L, -1)) {
+            lua_rawgeti(L, -1, 1);
+            if (lua_isnumber(L, -1)) { x0 = to!double(lua_tonumber(L, -1)); }
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 2);
+            if (lua_isnumber(L, -1)) { y0 = to!double(lua_tonumber(L, -1)); }
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 3);
+            if (lua_isnumber(L, -1)) { x1 = to!double(lua_tonumber(L, -1)); }
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 4);
+            if (lua_isnumber(L, -1)) { y1 = to!double(lua_tonumber(L, -1)); }
+            lua_pop(L, 1);
+        }
+    }
+    lua_pop(L, 1); // dispose of canvas item
+    //
+    auto my_sketch = new Sketch(renderer_name, projection_name, [x0, y0, x1, y1]);
     sketchStore ~= pushObj!(Sketch, SketchMT)(L, my_sketch);
     return 1;
 } // end newSketch()
@@ -170,10 +191,14 @@ extern(C) int setSketch(lua_State* L)
     }
     lua_pop(L, 1); // dispose of dash_array item
     //
+    /+
+     We set the canvas corners above, in the Sketch constructor.
+     They should remain fixed.
+
     lua_getfield(L, 1, "canvas");
     if (!lua_isnil(L, -1)) {
-        double x0 = 0.0; double y0 = 120.0;
-        double x1 = 0.0; double y1 = 120.0;
+        double x0 = 0.0; double y0 = 0.0;
+        double x1 = 120.0; double y1 = 120.0;
         if (lua_istable(L, -1)) {
             lua_rawgeti(L, -1, 1);
             if (lua_isnumber(L, -1)) { x0 = to!double(lua_tonumber(L, -1)); }
@@ -194,6 +219,7 @@ extern(C) int setSketch(lua_State* L)
         }
     }
     lua_pop(L, 1); // dispose of canvas item
+    +/
     //
     lua_getfield(L, 1, "viewport");
     if (!lua_isnil(L, -1)) {

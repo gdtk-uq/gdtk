@@ -6,7 +6,7 @@
  * the capabilities of the SVG renderer but work in the geometric space
  * of the flow simulation, where the units of lengths are metres.  
  * The "canvas" referred to below is a virtual canvas, where the units 
- * of lengths are millimetres.
+ * of lengths are millimetres. 
  *
  * Author(s):
  *     Peter J.
@@ -44,7 +44,7 @@ struct Extents{
     } 
 }
 
-string[] renderers = ["svg", "xplotter"];
+string[] renderers = ["svg", "xplot"];
 string[] projections = ["xyortho", "isometric", "oblique"];
 
 class Sketch {
@@ -52,12 +52,12 @@ public:
     // We have some state and configuration data.
     string renderer_name;
     SVGContext svg;
-    int xplotter_handle;
-    double current_line_width;
-    string current_bgcolourname;
-    string current_pencolourname;
-    string current_fillcolourname;
-    int current_greylevel = 0x8000; // 50% of 0xffff
+    int xplot_handle;
+    double xplot_line_width = 0.25; // Line thickness in mm.
+    string xplot_bgcolourname = "white";
+    string xplot_pencolourname = "black";
+    string xplot_fillcolourname = "yellow";
+    int xplot_greylevel = 0x8000; // 50% of 0xffff
     string projection_name;
     string title;
     string description;
@@ -87,7 +87,8 @@ public:
     Vector3 up = Vector3(0.0, 1.0, 0.0);
 
 public:
-    this(string renderer_name="svg", string projection_name="xyortho")
+    this(string renderer_name="svg", string projection_name="xyortho",
+         double[] canvas_mm = [0.0, 0.0, 120.0, 120.0])
     {
         if (!find(renderers, renderer_name).empty) { 
             this.renderer_name = renderer_name;
@@ -122,19 +123,16 @@ public:
             break;
         default: throw new Exception("other projections unimplemented");
         }
-        // Set a reasonable size (in mm) for the canvas.
-        canvas.set(0.0, 0.0, 120.0, 120.0);
-        viewport.set(0.0, 0.0, 1.0, 1.0); // unit space because we don't yet know better
-        current_line_width = 0.25; // Line thickness in mm.
-        current_bgcolourname = "white";
-        current_pencolourname = "black";
-        current_fillcolourname = "yellow";
+        // Set corner positions (in mm) for the canvas.
+        canvas.set(canvas_mm[0], canvas_mm[1], canvas_mm[2], canvas_mm[3]);
+        // For the model coordinates, assume unit space because we don't yet know better.
+        viewport.set(0.0, 0.0, 1.0, 1.0);
         switch(renderer_name) {
         case "svg":
             // We're good for now, since we'll just be writing to a file
             // for each SVG plot.
             break;
-        case "xplotter":
+        case "xplot":
             // We need to get the Xplotter started up.
             string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
                                        to!int(canvas.height*dpi/25.4));
@@ -144,7 +142,7 @@ public:
             pl_parampl("VANISH_ON_DELETE", cast(void*)toStringz("yes"));
             pl_parampl("USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
             // Create an X Plotter with the specified parameters.
-            if ((xplotter_handle = pl_newpl("X", stdin, stdout, stderr)) < 0) {
+            if ((xplot_handle = pl_newpl("X", stdin, stdout, stderr)) < 0) {
                 throw new Error("Couldn't create X Plotter.");
             }
             break;
@@ -160,9 +158,9 @@ public:
         case "svg":
             // Do nothing
             break;
-        case "xplotter":
+        case "xplot":
             pl_selectpl(0); // Select default Plotter.
-            if (pl_deletepl(xplotter_handle) < 0) {
+            if (pl_deletepl(xplot_handle) < 0) {
                 throw new Error("Couldn't delete Plotter\n");
             }
             break;
@@ -245,25 +243,25 @@ public:
             svg = new SVGContext(canvas.width, canvas.height, "mm", title, description);
             svg.open(file_name);
             break;
-        case "xplotter":
-            pl_selectpl(xplotter_handle);
+        case "xplot":
+            pl_selectpl(xplot_handle);
             if (pl_openpl() < 0) { throw new Error("Couldn't open X Plotter."); }
             // Specify the virtual-canvas coordinate system,
             // starting at (0,0) bottom-left.
             pl_fspace(0.0, 0.0, canvas.width, canvas.height);
-            current_line_width = 0.5; // Line thickness in mm.
-            current_bgcolourname = "white";
-            current_pencolourname = "black";
-            current_fillcolourname = "yellow";
-            pl_flinewidth(current_line_width);
+            xplot_line_width = 0.5; // Line thickness in mm.
+            xplot_bgcolourname = "white";
+            xplot_pencolourname = "black";
+            xplot_fillcolourname = "yellow";
+            pl_flinewidth(xplot_line_width);
             pl_joinmod(toStringz("round"));
             pl_capmod(toStringz("round"));
             pl_pentype(1);
             pl_linemod(toStringz("solid"));
-            pl_filltype(current_greylevel);
-            pl_bgcolorname (toStringz(current_bgcolourname));
-            pl_pencolorname(toStringz(current_pencolourname));
-            pl_fillcolorname(toStringz(current_fillcolourname));
+            pl_filltype(xplot_greylevel);
+            pl_bgcolorname (toStringz(xplot_bgcolourname));
+            pl_pencolorname(toStringz(xplot_pencolourname));
+            pl_fillcolorname(toStringz(xplot_fillcolourname));
             pl_erase();
             break;
         default:
@@ -277,7 +275,7 @@ public:
         case "svg":
             svg.close();
             break;
-        case "xplotter":
+        case "xplot":
             if (pl_closepl() < 0) { throw new Error("Couldn't close X Plotter."); }
             writeln("Rendering finished; press ENTER to continue.");
             string junk_text = readln();
@@ -290,12 +288,12 @@ public:
     void setLineWidth(double width)
     // Sets line width in mm on our virtual canvas.
     {
-        current_line_width = width;
+        xplot_line_width = width;
         switch(renderer_name) {
         case "svg":
             svg.setLineWidth(width); // SVG canvas was set up in mm.
             break;
-        case "xplotter":
+        case "xplot":
             pl_flinewidth(width);
             break;
         default:
@@ -306,12 +304,12 @@ public:
 
     void setLineColour(string colour)
     {
-        current_pencolourname = colour;
+        xplot_pencolourname = colour;
         switch(renderer_name) {
         case "svg":
             svg.setLineColour(colour);
             break;
-        case "xplotter":
+        case "xplot":
             pl_pencolorname(toStringz(colour));
             break;
         default:
@@ -322,13 +320,13 @@ public:
 
     void setFillColour(string colour)
     {
-        current_fillcolourname = colour;
+        xplot_fillcolourname = colour;
         switch(renderer_name) {
         case "svg":
             svg.setFillColour(colour);
             break;
-        case "xplotter":
-            pl_filltype(current_greylevel);
+        case "xplot":
+            pl_filltype(xplot_greylevel);
             pl_fillcolorname(toStringz(colour));
             break;
         default:
@@ -339,12 +337,12 @@ public:
 
     void clearFillColour()
     {
-        current_fillcolourname = "none";
+        xplot_fillcolourname = "none";
         switch(renderer_name) {
         case "svg":
             svg.clearFillColour();
             break;
-        case "xplotter":
+        case "xplot":
             pl_fillcolorname("none");
             break;
         default:
@@ -360,7 +358,7 @@ public:
         case "svg":
             svg.setDashArray(dashLength, gapLength); // in mm
             break;
-        case "xplotter":
+        case "xplot":
             // [TODO]
             break;
         default:
@@ -389,7 +387,7 @@ public:
         case "svg":
             svg.begin_group(id, opacity);
             break;
-        case "xplotter":
+        case "xplot":
             // not applicable
             break;
         default:
@@ -404,7 +402,7 @@ public:
         case "svg":
             svg.end_group();
             break;
-        case "xplotter":
+        case "xplot":
             // not applicable
             break;
         default:
@@ -426,9 +424,9 @@ public:
         case "svg":
             svg.line(x0, y0, x1, y1, dashed);
             break;
-        case "xplotter":
+        case "xplot":
             pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(current_line_width);
+            pl_flinewidth(xplot_line_width);
             if (dashed) {
                 pl_linemod(toStringz("longdashed"));
             } else {
@@ -459,9 +457,9 @@ public:
         case "svg":
             svg.polyline(xlist, ylist, dashed);
             break;
-        case "xplotter":
+        case "xplot":
             pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(current_line_width);
+            pl_flinewidth(xplot_line_width);
             if (dashed) {
                 pl_linemod(toStringz("longdashed"));
             } else {
@@ -494,15 +492,15 @@ public:
         case "svg":
             svg.polygon(xlist, ylist, fill, stroke, dashed);
             break;
-        case "xplotter":
+        case "xplot":
             if (fill) {
-                pl_filltype(current_greylevel);
+                pl_filltype(xplot_greylevel);
             } else {
                 pl_filltype(0);
             }
             if (stroke) {
                 pl_pentype(1);
-                pl_flinewidth(current_line_width);
+                pl_flinewidth(xplot_line_width);
             } else {
                 pl_pentype(0);
             }
@@ -537,9 +535,9 @@ public:
         case "svg":
             svg.arc(x0, y0, x1, y1, xc, yc, dashed);
             break;
-        case "xplotter":
+        case "xplot":
             pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(current_line_width);
+            pl_flinewidth(xplot_line_width);
             if (dashed) {
                 pl_linemod(toStringz("longdashed"));
             } else {
@@ -564,15 +562,15 @@ public:
         case "svg":
             svg.circle(xc, yc, r, fill, stroke, dashed);
             break;
-        case "xplotter":
+        case "xplot":
             if (fill) {
-                pl_filltype(current_greylevel);
+                pl_filltype(xplot_greylevel);
             } else {
                 pl_filltype(0);
             }
             if (stroke) {
                 pl_pentype(1);
-                pl_flinewidth(current_line_width);
+                pl_flinewidth(xplot_line_width);
             } else {
                 pl_pentype(0);
             }
@@ -610,9 +608,9 @@ public:
         case "svg":
             svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
             break;
-        case "xplotter":
+        case "xplot":
             pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(current_line_width);
+            pl_flinewidth(xplot_line_width);
             if (dashed) {
                 pl_linemod(toStringz("longdashed"));
             } else {
@@ -641,7 +639,7 @@ public:
         case "svg":
             svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
             break;
-        case "xplotter":
+        case "xplot":
             pl_pencolorname(toStringz(colour));
             // Convert font size from points to virtual-canvas millimetres.
             double fontHeight = fontSize/72.0*25.4;
@@ -659,7 +657,7 @@ public:
             }
             pl_alabel(horizJust, vertJust, toStringz(textString));
             pl_flushpl();
-            pl_pencolorname(toStringz(current_pencolourname));
+            pl_pencolorname(toStringz(xplot_pencolourname));
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
@@ -680,7 +678,7 @@ public:
         case "svg":
             svg.dotlabel(xp, yp, label, anchor, dotSize, fontSize, colour, fontFamily);
             break;
-        case "xplotter":
+        case "xplot":
             pl_pencolorname(toStringz(colour));
             pl_fillcolorname(toStringz(colour));
             pl_fcircle(xp, yp, dotSize/2);
@@ -702,8 +700,8 @@ public:
                 pl_alabel(horizJust, vertJust, toStringz(label));
             }
             pl_flushpl();
-            pl_pencolorname(toStringz(current_pencolourname));
-            pl_fillcolorname(toStringz(current_fillcolourname));
+            pl_pencolorname(toStringz(xplot_pencolourname));
+            pl_fillcolorname(toStringz(xplot_fillcolourname));
             break;
         default:
             throw new Exception("oops, invalid render name " ~ renderer_name);
