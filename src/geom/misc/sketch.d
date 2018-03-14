@@ -44,21 +44,23 @@ struct Extents{
     } 
 }
 
-string[] renderers = ["svg", "xplot"];
-string[] projections = ["xyortho", "isometric", "oblique"];
+enum Renderer {svg, xplot}
+enum Projection {xyortho, isometric, oblique}
+string[] rendererNames = ["svg", "xplot"];
+string[] projectionNames = ["xyortho", "isometric", "oblique"];
 
 class Sketch {
 public:
     // We have some state and configuration data.
-    string renderer_name;
+    Renderer myRenderer = Renderer.svg;
     SVGContext svg;
-    int xplot_handle;
+    plPlotter* myXplotter;
     double xplot_line_width = 0.25; // Line thickness in mm.
     string xplot_bgcolourname = "white";
     string xplot_pencolourname = "black";
     string xplot_fillcolourname = "yellow";
     int xplot_greylevel = 0x8000; // 50% of 0xffff
-    string projection_name;
+    Projection myProjection = Projection.xyortho;
     string title;
     string description;
     // Rendering canvas and viewport into user-space
@@ -90,23 +92,32 @@ public:
     this(string renderer_name="svg", string projection_name="xyortho",
          double[] canvas_mm = [0.0, 0.0, 120.0, 120.0])
     {
-        if (!find(renderers, renderer_name).empty) { 
-            this.renderer_name = renderer_name;
+        if (!find(rendererNames, renderer_name).empty) {
+            switch (renderer_name) {
+            case "svg": myRenderer = Renderer.svg; break;
+            case "xplot": myRenderer = Renderer.xplot; break;
+            default: myRenderer = Renderer.svg;
+            }
         } else {
             throw new Exception("Unknown renderer: " ~ renderer_name);
         }
-        if (!find(projections, projection_name).empty) {
-            this.projection_name = projection_name;
+        if (!find(projectionNames, projection_name).empty) {
+            switch (projection_name) {
+            case "xyortho": myProjection = Projection.xyortho; break;
+            case "isometric": myProjection = Projection.isometric; break;
+            case "oblique": myProjection = Projection.oblique; break;
+            default: myProjection = Projection.xyortho;
+            }
         } else {
             throw new Exception("Unknown projection: " ~ projection_name);
         }
         set_to_identity(proj_mat);
         set_to_identity(view_mat); // consistent with default view
-        switch (this.projection_name) {
-        case "xyortho":
+        final switch (myProjection) {
+        case Projection.xyortho:
             proj_mat[2][2] = 0.0; // x,y unchanged, z eliminated
             break;
-        case "isometric":
+        case Projection.isometric:
             double cos30 = cos(30.0/180.0*PI);
             double sin30 = sin(30.0/180.0*PI);
             proj_mat[0][0] =  cos30; proj_mat[0][1] = 0.0; proj_mat[0][2] = -cos30; proj_mat[0][3] = 0.0;
@@ -114,66 +125,56 @@ public:
             proj_mat[2][0] =    0.0; proj_mat[2][1] = 0.0; proj_mat[2][2] =    0.0; proj_mat[2][3] = 0.0;
             proj_mat[3][0] =    0.0; proj_mat[3][1] = 0.0; proj_mat[3][2] =    0.0; proj_mat[3][3] = 1.0;
             break;
-        case "oblique":
+        case Projection.oblique:
             double zfactor = 1.0/(2.0*sqrt(2.0));
             proj_mat[0][0] =  1.0; proj_mat[0][1] = 0.0; proj_mat[0][2] = -zfactor; proj_mat[0][3] = 0.0;
             proj_mat[1][0] =  0.0; proj_mat[1][1] = 1.0; proj_mat[1][2] = -zfactor; proj_mat[1][3] = 0.0;
             proj_mat[2][0] =  0.0; proj_mat[2][1] = 0.0; proj_mat[2][2] =      0.0; proj_mat[2][3] = 0.0;
             proj_mat[3][0] =  0.0; proj_mat[3][1] = 0.0; proj_mat[3][2] =      0.0; proj_mat[3][3] = 1.0;
-            break;
-        default: throw new Exception("other projections unimplemented");
         }
         // Set corner positions (in mm) for the canvas.
         canvas.set(canvas_mm[0], canvas_mm[1], canvas_mm[2], canvas_mm[3]);
         // For the model coordinates, assume unit space because we don't yet know better.
         viewport.set(0.0, 0.0, 1.0, 1.0);
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             // We're good for now, since we'll just be writing to a file
             // for each SVG plot.
             break;
-        case "xplot":
+        case Renderer.xplot:
             // We need to get the Xplotter started up.
+            plPlotterParams* params = pl_newplparams();
             string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
                                        to!int(canvas.height*dpi/25.4));
-            // We shall use the old/traditional GNU-libplot calls,
-            // since we are just working in a single thread.
-            pl_parampl("BITMAPSIZE", cast(void*)toStringz(bitmapsize));
-            pl_parampl("VANISH_ON_DELETE", cast(void*)toStringz("yes"));
-            pl_parampl("USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
+            pl_setplparam(params, "BITMAPSIZE", cast(void*)toStringz(bitmapsize));
+            pl_setplparam(params, "VANISH_ON_DELETE", cast(void*)toStringz("yes"));
+            pl_setplparam(params, "USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
             // Create an X Plotter with the specified parameters.
-            if ((xplot_handle = pl_newpl("X", stdin, stdout, stderr)) < 0) {
+            if ((myXplotter = pl_newpl_r("X", stdin, stdout, stderr, params)) == null) {
                 throw new Error("Couldn't create X Plotter.");
             }
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
         }
     } // end this
 
     ~this()
     {
         // Cleanup
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             // Do nothing
             break;
-        case "xplot":
-            pl_selectpl(0); // Select default Plotter.
-            if (pl_deletepl(xplot_handle) < 0) {
-                throw new Error("Couldn't delete Plotter\n");
+        case Renderer.xplot:
+            if (pl_deletepl_r(myXplotter) < 0) {
+                throw new Error("Couldn't delete X Plotter\n");
             }
-            break;
-        default:
-            // Do nothing
         }
     }
     
     override string toString()
     {
         string str = "Sketch(";
-        str ~= "renderer=\""~renderer_name~"\"";
-        str ~= ", projection=\""~projection_name~"\"";
+        str ~= "renderer=\""~rendererNames[myRenderer]~"\"";
+        str ~= ", projection=\""~projectionNames[myProjection]~"\"";
         str ~= ", eye=" ~ to!string(eye);
         str ~= ", centre=" ~ to!string(centre);
         str ~= ", up=" ~ to!string(up);
@@ -234,138 +235,116 @@ public:
         view_mat[1][3] = -(dot(centre,ynew));
         view_mat[2][3] = -(dot(centre,znew));
         view_mat[3][0] = 0.0; view_mat[3][1] = 0.0; view_mat[3][2] = 0.0; view_mat[3][3] = 1.0;
-    } // end look_at
+    } // end look_at()
     
     void start(string file_name="sketch.svg")
     {
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg = new SVGContext(canvas.width, canvas.height, "mm", title, description);
             svg.open(file_name);
             break;
-        case "xplot":
-            pl_selectpl(xplot_handle);
-            if (pl_openpl() < 0) { throw new Error("Couldn't open X Plotter."); }
+        case Renderer.xplot:
+            if (pl_openpl_r(myXplotter) < 0) { throw new Error("Couldn't open X Plotter."); }
             // Specify the virtual-canvas coordinate system,
             // starting at (0,0) bottom-left.
-            pl_fspace(0.0, 0.0, canvas.width, canvas.height);
+            pl_fspace_r(myXplotter, 0.0, 0.0, canvas.width, canvas.height);
             xplot_line_width = 0.5; // Line thickness in mm.
             xplot_bgcolourname = "white";
             xplot_pencolourname = "black";
             xplot_fillcolourname = "yellow";
-            pl_flinewidth(xplot_line_width);
-            pl_joinmod(toStringz("round"));
-            pl_capmod(toStringz("round"));
-            pl_pentype(1);
-            pl_linemod(toStringz("solid"));
-            pl_filltype(xplot_greylevel);
-            pl_bgcolorname (toStringz(xplot_bgcolourname));
-            pl_pencolorname(toStringz(xplot_pencolourname));
-            pl_fillcolorname(toStringz(xplot_fillcolourname));
-            pl_erase();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_flinewidth_r(myXplotter, xplot_line_width);
+            pl_joinmod_r(myXplotter, toStringz("round"));
+            pl_capmod_r(myXplotter, toStringz("round"));
+            pl_pentype_r(myXplotter, 1);
+            pl_linemod_r(myXplotter, toStringz("solid"));
+            pl_filltype_r(myXplotter, xplot_greylevel);
+            pl_bgcolorname_r(myXplotter, toStringz(xplot_bgcolourname));
+            pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
+            pl_fillcolorname_r(myXplotter, toStringz(xplot_fillcolourname));
+            pl_erase_r(myXplotter);
         }
-    }
+    } // end start()
 
     void finish()
     {
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.close();
             break;
-        case "xplot":
-            if (pl_closepl() < 0) { throw new Error("Couldn't close X Plotter."); }
+        case Renderer.xplot:
+            if (pl_closepl_r(myXplotter) < 0) { throw new Error("Couldn't close X Plotter."); }
             writeln("Rendering finished; press ENTER to continue.");
             string junk_text = readln();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
         }
-    }
+    } // end finish()
 
     void setLineWidth(double width)
     // Sets line width in mm on our virtual canvas.
     {
         xplot_line_width = width;
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.setLineWidth(width); // SVG canvas was set up in mm.
             break;
-        case "xplot":
-            pl_flinewidth(width);
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+        case Renderer.xplot:
+            pl_flinewidth_r(myXplotter, width);
         }
         return;
-    }
+    } // end setLineWidth()
 
     void setLineColour(string colour)
     {
         xplot_pencolourname = colour;
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.setLineColour(colour);
             break;
-        case "xplot":
-            pl_pencolorname(toStringz(colour));
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+        case Renderer.xplot:
+            pl_pencolorname_r(myXplotter, toStringz(colour));
         }
         return;
-    }
+    } // end setLineColour()
 
     void setFillColour(string colour)
     {
         xplot_fillcolourname = colour;
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.setFillColour(colour);
             break;
-        case "xplot":
-            pl_filltype(xplot_greylevel);
-            pl_fillcolorname(toStringz(colour));
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+        case Renderer.xplot:
+            pl_filltype_r(myXplotter, xplot_greylevel);
+            pl_fillcolorname_r(myXplotter, toStringz(colour));
         }
         return;
-    }
+    } // end setFillColour()
 
     void clearFillColour()
     {
         xplot_fillcolourname = "none";
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.clearFillColour();
             break;
-        case "xplot":
-            pl_fillcolorname("none");
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+        case Renderer.xplot:
+            pl_fillcolorname_r(myXplotter, "none");
         }
         return;
-    }
+    } // end clearFillColour()
 
     void setDashArray(double dashLength=2.0, double gapLength=2.0)
     // Sets length of dashes and gaps, in units appropriate to the renderer.
     {
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.setDashArray(dashLength, gapLength); // in mm
             break;
-        case "xplot":
+        case Renderer.xplot:
             // [TODO]
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
         }
         return;
-    }
+    } // end setDashArray()
 
     double toCanvasX(double x)
     // Map from user-space to canvas-space.
@@ -383,30 +362,24 @@ public:
     // id needs to be a unique identifier string, if supplied
     // opacity is in range 0.0, 1.0
     {
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.begin_group(id, opacity);
             break;
-        case "xplot":
+        case Renderer.xplot:
             // not applicable
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
         }
         return;
     }
 
     void end_group()
     {
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.end_group();
             break;
-        case "xplot":
+        case Renderer.xplot:
             // not applicable
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
         }
         return;
     }
@@ -420,26 +393,24 @@ public:
         apply_transform("projection", p0tmp, w0); apply_transform("projection", p1tmp, w1);
         auto x0 = toCanvasX(p0tmp.x); auto y0 = toCanvasY(p0tmp.y);
         auto x1 = toCanvasX(p1tmp.x); auto y1 = toCanvasY(p1tmp.y);
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.line(x0, y0, x1, y1, dashed);
             break;
-        case "xplot":
-            pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(xplot_line_width);
+        case Renderer.xplot:
+            pl_filltype_r(myXplotter, 0);
+            pl_pentype_r(myXplotter, 1);
+            pl_flinewidth_r(myXplotter, xplot_line_width);
             if (dashed) {
-                pl_linemod(toStringz("longdashed"));
+                pl_linemod_r(myXplotter, toStringz("longdashed"));
             } else {
-                pl_linemod(toStringz("solid"));
+                pl_linemod_r(myXplotter, toStringz("solid"));
             }
-            pl_fline(x0, y0, x1, y1);
-            pl_flushpl();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_fline_r(myXplotter, x0, y0, x1, y1);
+            pl_flushpl_r(myXplotter);
         }
         return;
-    }
+    } // end line()
 
     void polyline(const Vector3[] pa, bool dashed=false)
     {
@@ -453,28 +424,26 @@ public:
         foreach(p; ptmp) {
             xlist ~= toCanvasX(p.x); ylist ~= toCanvasY(p.y);
         }
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.polyline(xlist, ylist, dashed);
             break;
-        case "xplot":
-            pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(xplot_line_width);
+        case Renderer.xplot:
+            pl_filltype_r(myXplotter, 0);
+            pl_pentype_r(myXplotter, 1);
+            pl_flinewidth_r(myXplotter, xplot_line_width);
             if (dashed) {
-                pl_linemod(toStringz("longdashed"));
+                pl_linemod_r(myXplotter, toStringz("longdashed"));
             } else {
-                pl_linemod(toStringz("solid"));
+                pl_linemod_r(myXplotter, toStringz("solid"));
             }
             foreach (i; 1 .. xlist.length) {
-                pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+                pl_fline_r(myXplotter, xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
             }
-            pl_flushpl();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_flushpl_r(myXplotter);
         }
         return;
-    }
+    } // end polyline()
 
     void polygon(const Vector3[] pa, bool fill=true, bool stroke=true, bool dashed=false)
     {
@@ -488,41 +457,38 @@ public:
         foreach(p; ptmp) {
             xlist ~= toCanvasX(p.x); ylist ~= toCanvasY(p.y);
         }
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.polygon(xlist, ylist, fill, stroke, dashed);
             break;
-        case "xplot":
+        case Renderer.xplot:
             if (fill) {
-                pl_filltype(xplot_greylevel);
+                pl_filltype_r(myXplotter, xplot_greylevel);
             } else {
-                pl_filltype(0);
+                pl_filltype_r(myXplotter, 0);
             }
             if (stroke) {
-                pl_pentype(1);
-                pl_flinewidth(xplot_line_width);
+                pl_pentype_r(myXplotter, 1);
+                pl_flinewidth_r(myXplotter, xplot_line_width);
             } else {
-                pl_pentype(0);
+                pl_pentype_r(myXplotter, 0);
             }
             if (dashed) {
-                pl_linemod(toStringz("longdashed"));
+                pl_linemod_r(myXplotter, toStringz("longdashed"));
             } else {
-                pl_linemod(toStringz("solid"));
+                pl_linemod_r(myXplotter, toStringz("solid"));
             }
-            pl_fmove(xlist[0], ylist[0]);
+            pl_fmove_r(myXplotter, xlist[0], ylist[0]);
             foreach (i; 1 .. xlist.length) {
-                pl_fline(xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+                pl_fline_r(myXplotter, xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
             }
-            pl_fline(xlist[0], ylist[0], xlist[$-1], ylist[$-1]);
-            pl_closepath();
-            pl_endpath();
-            pl_flushpl();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_fline_r(myXplotter, xlist[0], ylist[0], xlist[$-1], ylist[$-1]);
+            pl_closepath_r(myXplotter);
+            pl_endpath_r(myXplotter);
+            pl_flushpl_r(myXplotter);
         }
         return;
-    }
+    } // end polyline()
 
     void arc(const Vector3 p0, const Vector3 p1, const Vector3 pc,
              bool dashed=false)
@@ -531,26 +497,24 @@ public:
         double x0 = toCanvasX(p0.x); double y0 = toCanvasY(p0.y);
         double x1 = toCanvasX(p1.x); double y1 = toCanvasY(p1.y);
         double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.arc(x0, y0, x1, y1, xc, yc, dashed);
             break;
-        case "xplot":
-            pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(xplot_line_width);
+        case Renderer.xplot:
+            pl_filltype_r(myXplotter, 0);
+            pl_pentype_r(myXplotter, 1);
+            pl_flinewidth_r(myXplotter, xplot_line_width);
             if (dashed) {
-                pl_linemod(toStringz("longdashed"));
+                pl_linemod_r(myXplotter, toStringz("longdashed"));
             } else {
-                pl_linemod(toStringz("solid"));
+                pl_linemod_r(myXplotter, toStringz("solid"));
             }
-            pl_farc(xc, yc, x0, y0, x1, y1);
-            pl_flushpl();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_farc_r(myXplotter, xc, yc, x0, y0, x1, y1);
+            pl_flushpl_r(myXplotter);
         }
         return;
-    }
+    } // end arc()
 
     void circle(const Vector3 pc, double r, bool fill=true,
                 bool stroke=true, bool dashed=false)
@@ -558,35 +522,32 @@ public:
         // This is a purely 2D xy-plane function.
         // r is in mm on the canvas.
         double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.circle(xc, yc, r, fill, stroke, dashed);
             break;
-        case "xplot":
+        case Renderer.xplot:
             if (fill) {
-                pl_filltype(xplot_greylevel);
+                pl_filltype_r(myXplotter, xplot_greylevel);
             } else {
-                pl_filltype(0);
+                pl_filltype_r(myXplotter, 0);
             }
             if (stroke) {
-                pl_pentype(1);
-                pl_flinewidth(xplot_line_width);
+                pl_pentype_r(myXplotter, 1);
+                pl_flinewidth_r(myXplotter, xplot_line_width);
             } else {
-                pl_pentype(0);
+                pl_pentype_r(myXplotter, 0);
             }
             if (dashed) {
-                pl_linemod(toStringz("longdashed"));
+                pl_linemod_r(myXplotter, toStringz("longdashed"));
             } else {
-                pl_linemod(toStringz("solid"));
+                pl_linemod_r(myXplotter, toStringz("solid"));
             }
-            pl_fcircle(xc, yc, r);
-            pl_flushpl();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_fcircle_r(myXplotter, xc, yc, r);
+            pl_flushpl_r(myXplotter);
         }
         return;
-    }
+    } // end circle()
 
     void bezier3(const Vector3 p0, const Vector3 p1,
                  const Vector3 p2, const Vector3 p3,
@@ -604,26 +565,24 @@ public:
         double x1 = toCanvasX(p1tmp.x); double y1 = toCanvasY(p1tmp.y);
         double x2 = toCanvasX(p2tmp.x); double y2 = toCanvasY(p2tmp.y);
         double x3 = toCanvasX(p3tmp.x); double y3 = toCanvasY(p3tmp.y);
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
             break;
-        case "xplot":
-            pl_filltype(0); pl_pentype(1);
-            pl_flinewidth(xplot_line_width);
+        case Renderer.xplot:
+            pl_filltype_r(myXplotter, 0);
+            pl_pentype_r(myXplotter, 1);
+            pl_flinewidth_r(myXplotter, xplot_line_width);
             if (dashed) {
-                pl_linemod(toStringz("longdashed"));
+                pl_linemod_r(myXplotter, toStringz("longdashed"));
             } else {
-                pl_linemod(toStringz("solid"));
+                pl_linemod_r(myXplotter, toStringz("solid"));
             }
-            pl_fbezier3(x0, y0, x1, y1, x2, y2, x3, y3);
-            pl_flushpl();
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_fbezier3_r(myXplotter, x0, y0, x1, y1, x2, y2, x3, y3);
+            pl_flushpl_r(myXplotter);
         }
         return;
-    }
+    } // end bezier()
 
     void text(const Vector3 p, string textString,
               const double angle=0.0, // angle (in degrees) of text line wrt x-axis in canvas system
@@ -635,18 +594,18 @@ public:
         double w_p = 1.0; double w_dir = 1.0; double w_n = 1.0;
         apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
         double xp = toCanvasX(p_tmp.x); double yp = toCanvasY(p_tmp.y);
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
             break;
-        case "xplot":
-            pl_pencolorname(toStringz(colour));
+        case Renderer.xplot:
+            pl_pencolorname_r(myXplotter, toStringz(colour));
             // Convert font size from points to virtual-canvas millimetres.
             double fontHeight = fontSize/72.0*25.4;
-            pl_ftextangle(angle);
-            pl_fmove(xp, yp);
-            pl_fontname(toStringz(fontFamily));
-            pl_ffontsize(fontHeight);
+            pl_ftextangle_r(myXplotter, angle);
+            pl_fmove_r(myXplotter, xp, yp);
+            pl_fontname_r(myXplotter, toStringz(fontFamily));
+            pl_ffontsize_r(myXplotter, fontHeight);
             int horizJust, vertJust;
             switch (anchor) {
             case "start": horizJust = 'l'; vertJust = 'x'; break;
@@ -655,15 +614,12 @@ public:
             default:
                 horizJust = 'l'; vertJust = 'x';
             }
-            pl_alabel(horizJust, vertJust, toStringz(textString));
-            pl_flushpl();
-            pl_pencolorname(toStringz(xplot_pencolourname));
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_alabel_r(myXplotter, horizJust, vertJust, toStringz(textString));
+            pl_flushpl_r(myXplotter);
+            pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
         }
         return;
-    }
+    } // end text()
 
     void dotlabel(const Vector3 p, string label="", 
                   string anchor="middle", double dotSize=2.0,
@@ -674,21 +630,21 @@ public:
         Vector3 p_tmp = Vector3(p); double w_p = 1.0;
         apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
         double xp = toCanvasX(p_tmp.x); double yp = toCanvasY(p_tmp.y);
-        switch(renderer_name) {
-        case "svg":
+        final switch(myRenderer) {
+        case Renderer.svg:
             svg.dotlabel(xp, yp, label, anchor, dotSize, fontSize, colour, fontFamily);
             break;
-        case "xplot":
-            pl_pencolorname(toStringz(colour));
-            pl_fillcolorname(toStringz(colour));
-            pl_fcircle(xp, yp, dotSize/2);
+        case Renderer.xplot:
+            pl_pencolorname_r(myXplotter, toStringz(colour));
+            pl_fillcolorname_r(myXplotter, toStringz(colour));
+            pl_fcircle_r(myXplotter, xp, yp, dotSize/2);
             if (label.length > 0) {
                 // Convert font size from points to virtual-canvas millimetres.
                 double fontHeight = fontSize/72.0*25.4;
-                pl_ftextangle(0.0);
-                pl_fmove(xp, yp+0.75*dotSize);
-                pl_fontname(toStringz(fontFamily));
-                pl_ffontsize(fontHeight);
+                pl_ftextangle_r(myXplotter, 0.0);
+                pl_fmove_r(myXplotter, xp, yp+0.75*dotSize);
+                pl_fontname_r(myXplotter, toStringz(fontFamily));
+                pl_ffontsize_r(myXplotter, fontHeight);
                 int horizJust, vertJust;
                 switch (anchor) {
                 case "start": horizJust = 'l'; vertJust = 'x'; break;
@@ -697,17 +653,14 @@ public:
                 default:
                     horizJust = 'l'; vertJust = 'x';
                 }
-                pl_alabel(horizJust, vertJust, toStringz(label));
+                pl_alabel_r(myXplotter, horizJust, vertJust, toStringz(label));
             }
-            pl_flushpl();
-            pl_pencolorname(toStringz(xplot_pencolourname));
-            pl_fillcolorname(toStringz(xplot_fillcolourname));
-            break;
-        default:
-            throw new Exception("oops, invalid render name " ~ renderer_name);
+            pl_flushpl_r(myXplotter);
+            pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
+            pl_fillcolorname_r(myXplotter, toStringz(xplot_fillcolourname));
         }
         return;
-    }
+    } // end dotlabel()
     
     // ----------------------------------------------------------------------
     // The following methods should be independent of the particular renderer.
