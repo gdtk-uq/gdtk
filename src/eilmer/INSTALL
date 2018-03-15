@@ -11,6 +11,10 @@ To build eilmer, you will require:
   + A D compiler (The DMD compiler is a good choice)
   + readline development package
   + ncurses development package
+  + plotutils development package:
+      ++ libplot-dev on Debian/Ubuntu
+      ++ plotutils-devel on RedHat/CentOS/Fedora
+      ++ or BYO install of plotutils (Notes at bottom of this document)
 
 To build the MPI version, you will need openmpi and its development packages
 installed. No other flavour of MPI is supported presently:
@@ -111,6 +115,51 @@ If you see share library problems at run time, this likely means that
 you have not correctly configured your LD_LIBRARY_PATH. Check what its
 value and see that it is as you expect:
    > echo $LD_LIBRARY_PATH
+
+
+BYO Plotutils
+-------------
+If you have difficulty finding a plotutils development package for your
+system or you are on a system where you don't have admin privileges
+to install the package, then it's possible to do a local install of
+plotutils and build eilmer using that local install. The steps
+are listed here:
+
+1. Download plotutils as source:
+
+   > wget https://mirror.aarnet.edu.au/pub/gnu/plotutils/plotutils-2.6.tar.gz
+
+2. Unpack
+
+   > tar -zxvf plotutils-2.6.tar.gz
+
+3. Build and install
+   We'll configure the package to install in your local area under
+   `$HOME/opt/plotutils-2.6`.
+
+   > cd plotutils-2.6
+   > ./configure --prefix=$HOME/opt/plotutils-2.6
+   > make
+   > make install
+
+   That completes the build and install of plotutils in a local area.
+
+4. Compiling eilmer using the local plotutils
+
+   > cd
+   > cd dgd/src/eilmer
+   > LIBRARY_PATH=$HOME/opt/plotutils-2.6/lib make install
+
+If you recompile eilmer often, you might want to set that `LIBRARY_PATH`
+variable permanently in your environment setup scripts. Then you
+would only need to type `make install`.
+
+If you encounter compiling errors in the plotutils package, then
+you will need to make the changes described in Section 5.d. of:
+http://www.libpng.org/pub/png/src/libpng-1.2.x-to-1.4.x-summary.txt
+
+Those changes are made to the source file `libplot/z_write.c`.
+
 
 
    
