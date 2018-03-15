@@ -42,8 +42,17 @@ GEOM_D_FILES := \
 	$(GEOM_DIR)/misc/package.d \
 	$(GEOM_DIR)/misc/univariatefunctions.d \
 	$(GEOM_DIR)/misc/svg.d \
-	$(GEOM_DIR)/misc/libplot.d \
 	$(GEOM_DIR)/misc/sketch.d
+
+# Look for the static library libplot
+LIBPLOT := $(strip $(wildcard /usr/lib/libplot.a) \
+                   $(wildcard $(LIBRARY_PATH)/libplot.a))
+LIBPLOT_VERSION_STR :=
+ifneq ($(LIBPLOT), "")
+    LIBPLOT_VERSION_STR := with_libplot
+    GEOM_D_FILES := $(GEOM_D_FILES) $(GEOM_DIR)/misc/libplot.d
+endif
+
 
 GEOM_LUAWRAP_FILES := \
 	$(GEOM_DIR)/luawrap/package.d \

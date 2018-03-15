@@ -27,7 +27,9 @@ import std.string;
 import std.algorithm;
 
 import svg;
-import libplot;
+version(with_libplot) {
+    import libplot;
+}
 import geom;
 
 const double dpi = 90.0;  // Expected screen resolution.
@@ -54,12 +56,14 @@ public:
     // We have some state and configuration data.
     Renderer myRenderer = Renderer.svg;
     SVGContext svg;
-    plPlotter* myXplotter;
-    double xplot_line_width = 0.25; // Line thickness in mm.
-    string xplot_bgcolourname = "white";
-    string xplot_pencolourname = "black";
-    string xplot_fillcolourname = "yellow";
-    int xplot_greylevel = 0x8000; // 50% of 0xffff
+    version(with_libplot) {
+        plPlotter* myXplotter;
+        double xplot_line_width = 0.25; // Line thickness in mm.
+        string xplot_bgcolourname = "white";
+        string xplot_pencolourname = "black";
+        string xplot_fillcolourname = "yellow";
+        int xplot_greylevel = 0x8000; // 50% of 0xffff
+    }
     Projection myProjection = Projection.xyortho;
     string title;
     string description;
@@ -142,16 +146,20 @@ public:
             // for each SVG plot.
             break;
         case Renderer.xplot:
-            // We need to get the Xplotter started up.
-            plPlotterParams* params = pl_newplparams();
-            string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
-                                       to!int(canvas.height*dpi/25.4));
-            pl_setplparam(params, "BITMAPSIZE", cast(void*)toStringz(bitmapsize));
-            pl_setplparam(params, "VANISH_ON_DELETE", cast(void*)toStringz("yes"));
-            pl_setplparam(params, "USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
-            // Create an X Plotter with the specified parameters.
-            if ((myXplotter = pl_newpl_r("X", stdin, stdout, stderr, params)) == null) {
-                throw new Error("Couldn't create X Plotter.");
+            version(with_libplot) {
+                // We need to get the Xplotter started up.
+                plPlotterParams* params = pl_newplparams();
+                string bitmapsize = format("%dx%d", to!int(canvas.width*dpi/25.4),
+                                           to!int(canvas.height*dpi/25.4));
+                pl_setplparam(params, "BITMAPSIZE", cast(void*)toStringz(bitmapsize));
+                pl_setplparam(params, "VANISH_ON_DELETE", cast(void*)toStringz("yes"));
+                pl_setplparam(params, "USE_DOUBLE_BUFFERING", cast(void*)toStringz("yes"));
+                // Create an X Plotter with the specified parameters.
+                if ((myXplotter = pl_newpl_r("X", stdin, stdout, stderr, params)) == null) {
+                    throw new Error("Couldn't create X Plotter.");
+                }
+            } else {
+                throw new Exception("You asked for xplot renderer but libplot is not included.");
             }
         }
     } // end this
@@ -164,8 +172,10 @@ public:
             // Do nothing
             break;
         case Renderer.xplot:
-            if (pl_deletepl_r(myXplotter) < 0) {
-                throw new Error("Couldn't delete X Plotter\n");
+            version(with_libplot) {
+                if (pl_deletepl_r(myXplotter) < 0) {
+                    throw new Error("Couldn't delete X Plotter\n");
+                }
             }
         }
     }
@@ -245,24 +255,26 @@ public:
             svg.open(file_name);
             break;
         case Renderer.xplot:
-            if (pl_openpl_r(myXplotter) < 0) { throw new Error("Couldn't open X Plotter."); }
-            // Specify the virtual-canvas coordinate system,
-            // starting at (0,0) bottom-left.
-            pl_fspace_r(myXplotter, 0.0, 0.0, canvas.width, canvas.height);
-            xplot_line_width = 0.5; // Line thickness in mm.
-            xplot_bgcolourname = "white";
-            xplot_pencolourname = "black";
-            xplot_fillcolourname = "yellow";
-            pl_flinewidth_r(myXplotter, xplot_line_width);
-            pl_joinmod_r(myXplotter, toStringz("round"));
-            pl_capmod_r(myXplotter, toStringz("round"));
-            pl_pentype_r(myXplotter, 1);
-            pl_linemod_r(myXplotter, toStringz("solid"));
-            pl_filltype_r(myXplotter, xplot_greylevel);
-            pl_bgcolorname_r(myXplotter, toStringz(xplot_bgcolourname));
-            pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
-            pl_fillcolorname_r(myXplotter, toStringz(xplot_fillcolourname));
-            pl_erase_r(myXplotter);
+            version(with_libplot) {
+                if (pl_openpl_r(myXplotter) < 0) { throw new Error("Couldn't open X Plotter."); }
+                // Specify the virtual-canvas coordinate system,
+                // starting at (0,0) bottom-left.
+                pl_fspace_r(myXplotter, 0.0, 0.0, canvas.width, canvas.height);
+                xplot_line_width = 0.5; // Line thickness in mm.
+                xplot_bgcolourname = "white";
+                xplot_pencolourname = "black";
+                xplot_fillcolourname = "yellow";
+                pl_flinewidth_r(myXplotter, xplot_line_width);
+                pl_joinmod_r(myXplotter, toStringz("round"));
+                pl_capmod_r(myXplotter, toStringz("round"));
+                pl_pentype_r(myXplotter, 1);
+                pl_linemod_r(myXplotter, toStringz("solid"));
+                pl_filltype_r(myXplotter, xplot_greylevel);
+                pl_bgcolorname_r(myXplotter, toStringz(xplot_bgcolourname));
+                pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
+                pl_fillcolorname_r(myXplotter, toStringz(xplot_fillcolourname));
+                pl_erase_r(myXplotter);
+            }
         }
     } // end start()
 
@@ -273,9 +285,11 @@ public:
             svg.close();
             break;
         case Renderer.xplot:
-            if (pl_closepl_r(myXplotter) < 0) { throw new Error("Couldn't close X Plotter."); }
-            writeln("Rendering finished; press ENTER to continue.");
-            string junk_text = readln();
+            version(with_libplot) {
+                if (pl_closepl_r(myXplotter) < 0) { throw new Error("Couldn't close X Plotter."); }
+                writeln("Rendering finished; press ENTER to continue.");
+                string junk_text = readln();
+            }
         }
     } // end finish()
 
@@ -288,7 +302,9 @@ public:
             svg.setLineWidth(width); // SVG canvas was set up in mm.
             break;
         case Renderer.xplot:
-            pl_flinewidth_r(myXplotter, width);
+            version(with_libplot) {
+                pl_flinewidth_r(myXplotter, width);
+            }
         }
         return;
     } // end setLineWidth()
@@ -301,7 +317,9 @@ public:
             svg.setLineColour(colour);
             break;
         case Renderer.xplot:
-            pl_pencolorname_r(myXplotter, toStringz(colour));
+            version(with_libplot) {
+                pl_pencolorname_r(myXplotter, toStringz(colour));
+            }
         }
         return;
     } // end setLineColour()
@@ -314,8 +332,10 @@ public:
             svg.setFillColour(colour);
             break;
         case Renderer.xplot:
-            pl_filltype_r(myXplotter, xplot_greylevel);
-            pl_fillcolorname_r(myXplotter, toStringz(colour));
+            version(with_libplot) {
+                pl_filltype_r(myXplotter, xplot_greylevel);
+                pl_fillcolorname_r(myXplotter, toStringz(colour));
+            }
         }
         return;
     } // end setFillColour()
@@ -328,7 +348,9 @@ public:
             svg.clearFillColour();
             break;
         case Renderer.xplot:
-            pl_fillcolorname_r(myXplotter, "none");
+            version(with_libplot) {
+                pl_fillcolorname_r(myXplotter, "none");
+            }
         }
         return;
     } // end clearFillColour()
@@ -341,7 +363,9 @@ public:
             svg.setDashArray(dashLength, gapLength); // in mm
             break;
         case Renderer.xplot:
+            version(with_libplot) {
             // [TODO]
+            }
         }
         return;
     } // end setDashArray()
@@ -398,16 +422,18 @@ public:
             svg.line(x0, y0, x1, y1, dashed);
             break;
         case Renderer.xplot:
-            pl_filltype_r(myXplotter, 0);
-            pl_pentype_r(myXplotter, 1);
-            pl_flinewidth_r(myXplotter, xplot_line_width);
-            if (dashed) {
-                pl_linemod_r(myXplotter, toStringz("longdashed"));
-            } else {
-                pl_linemod_r(myXplotter, toStringz("solid"));
+            version(with_libplot) {
+                pl_filltype_r(myXplotter, 0);
+                pl_pentype_r(myXplotter, 1);
+                pl_flinewidth_r(myXplotter, xplot_line_width);
+                if (dashed) {
+                    pl_linemod_r(myXplotter, toStringz("longdashed"));
+                } else {
+                    pl_linemod_r(myXplotter, toStringz("solid"));
+                }
+                pl_fline_r(myXplotter, x0, y0, x1, y1);
+                pl_flushpl_r(myXplotter);
             }
-            pl_fline_r(myXplotter, x0, y0, x1, y1);
-            pl_flushpl_r(myXplotter);
         }
         return;
     } // end line()
@@ -429,18 +455,20 @@ public:
             svg.polyline(xlist, ylist, dashed);
             break;
         case Renderer.xplot:
-            pl_filltype_r(myXplotter, 0);
-            pl_pentype_r(myXplotter, 1);
-            pl_flinewidth_r(myXplotter, xplot_line_width);
-            if (dashed) {
-                pl_linemod_r(myXplotter, toStringz("longdashed"));
-            } else {
-                pl_linemod_r(myXplotter, toStringz("solid"));
+            version(with_libplot) {
+                pl_filltype_r(myXplotter, 0);
+                pl_pentype_r(myXplotter, 1);
+                pl_flinewidth_r(myXplotter, xplot_line_width);
+                if (dashed) {
+                    pl_linemod_r(myXplotter, toStringz("longdashed"));
+                } else {
+                    pl_linemod_r(myXplotter, toStringz("solid"));
+                }
+                foreach (i; 1 .. xlist.length) {
+                    pl_fline_r(myXplotter, xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+                }
+                pl_flushpl_r(myXplotter);
             }
-            foreach (i; 1 .. xlist.length) {
-                pl_fline_r(myXplotter, xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
-            }
-            pl_flushpl_r(myXplotter);
         }
         return;
     } // end polyline()
@@ -462,30 +490,32 @@ public:
             svg.polygon(xlist, ylist, fill, stroke, dashed);
             break;
         case Renderer.xplot:
-            if (fill) {
-                pl_filltype_r(myXplotter, xplot_greylevel);
-            } else {
-                pl_filltype_r(myXplotter, 0);
+            version(with_libplot) {
+                if (fill) {
+                    pl_filltype_r(myXplotter, xplot_greylevel);
+                } else {
+                    pl_filltype_r(myXplotter, 0);
+                }
+                if (stroke) {
+                    pl_pentype_r(myXplotter, 1);
+                    pl_flinewidth_r(myXplotter, xplot_line_width);
+                } else {
+                    pl_pentype_r(myXplotter, 0);
+                }
+                if (dashed) {
+                    pl_linemod_r(myXplotter, toStringz("longdashed"));
+                } else {
+                    pl_linemod_r(myXplotter, toStringz("solid"));
+                }
+                pl_fmove_r(myXplotter, xlist[0], ylist[0]);
+                foreach (i; 1 .. xlist.length) {
+                    pl_fline_r(myXplotter, xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
+                }
+                pl_fline_r(myXplotter, xlist[0], ylist[0], xlist[$-1], ylist[$-1]);
+                pl_closepath_r(myXplotter);
+                pl_endpath_r(myXplotter);
+                pl_flushpl_r(myXplotter);
             }
-            if (stroke) {
-                pl_pentype_r(myXplotter, 1);
-                pl_flinewidth_r(myXplotter, xplot_line_width);
-            } else {
-                pl_pentype_r(myXplotter, 0);
-            }
-            if (dashed) {
-                pl_linemod_r(myXplotter, toStringz("longdashed"));
-            } else {
-                pl_linemod_r(myXplotter, toStringz("solid"));
-            }
-            pl_fmove_r(myXplotter, xlist[0], ylist[0]);
-            foreach (i; 1 .. xlist.length) {
-                pl_fline_r(myXplotter, xlist[i-1], ylist[i-1], xlist[i], ylist[i]);
-            }
-            pl_fline_r(myXplotter, xlist[0], ylist[0], xlist[$-1], ylist[$-1]);
-            pl_closepath_r(myXplotter);
-            pl_endpath_r(myXplotter);
-            pl_flushpl_r(myXplotter);
         }
         return;
     } // end polyline()
@@ -502,16 +532,18 @@ public:
             svg.arc(x0, y0, x1, y1, xc, yc, dashed);
             break;
         case Renderer.xplot:
-            pl_filltype_r(myXplotter, 0);
-            pl_pentype_r(myXplotter, 1);
-            pl_flinewidth_r(myXplotter, xplot_line_width);
-            if (dashed) {
-                pl_linemod_r(myXplotter, toStringz("longdashed"));
-            } else {
-                pl_linemod_r(myXplotter, toStringz("solid"));
+            version(with_libplot) {
+                pl_filltype_r(myXplotter, 0);
+                pl_pentype_r(myXplotter, 1);
+                pl_flinewidth_r(myXplotter, xplot_line_width);
+                if (dashed) {
+                    pl_linemod_r(myXplotter, toStringz("longdashed"));
+                } else {
+                    pl_linemod_r(myXplotter, toStringz("solid"));
+                }
+                pl_farc_r(myXplotter, xc, yc, x0, y0, x1, y1);
+                pl_flushpl_r(myXplotter);
             }
-            pl_farc_r(myXplotter, xc, yc, x0, y0, x1, y1);
-            pl_flushpl_r(myXplotter);
         }
         return;
     } // end arc()
@@ -527,24 +559,26 @@ public:
             svg.circle(xc, yc, r, fill, stroke, dashed);
             break;
         case Renderer.xplot:
-            if (fill) {
-                pl_filltype_r(myXplotter, xplot_greylevel);
-            } else {
-                pl_filltype_r(myXplotter, 0);
+            version(with_libplot) {
+                if (fill) {
+                    pl_filltype_r(myXplotter, xplot_greylevel);
+                } else {
+                    pl_filltype_r(myXplotter, 0);
+                }
+                if (stroke) {
+                    pl_pentype_r(myXplotter, 1);
+                    pl_flinewidth_r(myXplotter, xplot_line_width);
+                } else {
+                    pl_pentype_r(myXplotter, 0);
+                }
+                if (dashed) {
+                    pl_linemod_r(myXplotter, toStringz("longdashed"));
+                } else {
+                    pl_linemod_r(myXplotter, toStringz("solid"));
+                }
+                pl_fcircle_r(myXplotter, xc, yc, r);
+                pl_flushpl_r(myXplotter);
             }
-            if (stroke) {
-                pl_pentype_r(myXplotter, 1);
-                pl_flinewidth_r(myXplotter, xplot_line_width);
-            } else {
-                pl_pentype_r(myXplotter, 0);
-            }
-            if (dashed) {
-                pl_linemod_r(myXplotter, toStringz("longdashed"));
-            } else {
-                pl_linemod_r(myXplotter, toStringz("solid"));
-            }
-            pl_fcircle_r(myXplotter, xc, yc, r);
-            pl_flushpl_r(myXplotter);
         }
         return;
     } // end circle()
@@ -570,16 +604,18 @@ public:
             svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
             break;
         case Renderer.xplot:
-            pl_filltype_r(myXplotter, 0);
-            pl_pentype_r(myXplotter, 1);
-            pl_flinewidth_r(myXplotter, xplot_line_width);
-            if (dashed) {
-                pl_linemod_r(myXplotter, toStringz("longdashed"));
-            } else {
-                pl_linemod_r(myXplotter, toStringz("solid"));
+            version(with_libplot) {
+                pl_filltype_r(myXplotter, 0);
+                pl_pentype_r(myXplotter, 1);
+                pl_flinewidth_r(myXplotter, xplot_line_width);
+                if (dashed) {
+                    pl_linemod_r(myXplotter, toStringz("longdashed"));
+                } else {
+                    pl_linemod_r(myXplotter, toStringz("solid"));
+                }
+                pl_fbezier3_r(myXplotter, x0, y0, x1, y1, x2, y2, x3, y3);
+                pl_flushpl_r(myXplotter);
             }
-            pl_fbezier3_r(myXplotter, x0, y0, x1, y1, x2, y2, x3, y3);
-            pl_flushpl_r(myXplotter);
         }
         return;
     } // end bezier()
@@ -599,24 +635,26 @@ public:
             svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
             break;
         case Renderer.xplot:
-            pl_pencolorname_r(myXplotter, toStringz(colour));
-            // Convert font size from points to virtual-canvas millimetres.
-            double fontHeight = fontSize/72.0*25.4;
-            pl_ftextangle_r(myXplotter, angle);
-            pl_fmove_r(myXplotter, xp, yp);
-            pl_fontname_r(myXplotter, toStringz(fontFamily));
-            pl_ffontsize_r(myXplotter, fontHeight);
-            int horizJust, vertJust;
-            switch (anchor) {
-            case "start": horizJust = 'l'; vertJust = 'x'; break;
-            case "middle": horizJust = 'c'; vertJust = 'x'; break;
-            case "end": horizJust = 'r'; vertJust = 'x'; break;
-            default:
-                horizJust = 'l'; vertJust = 'x';
+            version(with_libplot) {
+                pl_pencolorname_r(myXplotter, toStringz(colour));
+                // Convert font size from points to virtual-canvas millimetres.
+                double fontHeight = fontSize/72.0*25.4;
+                pl_ftextangle_r(myXplotter, angle);
+                pl_fmove_r(myXplotter, xp, yp);
+                pl_fontname_r(myXplotter, toStringz(fontFamily));
+                pl_ffontsize_r(myXplotter, fontHeight);
+                int horizJust, vertJust;
+                switch (anchor) {
+                case "start": horizJust = 'l'; vertJust = 'x'; break;
+                case "middle": horizJust = 'c'; vertJust = 'x'; break;
+                case "end": horizJust = 'r'; vertJust = 'x'; break;
+                default:
+                    horizJust = 'l'; vertJust = 'x';
+                }
+                pl_alabel_r(myXplotter, horizJust, vertJust, toStringz(textString));
+                pl_flushpl_r(myXplotter);
+                pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
             }
-            pl_alabel_r(myXplotter, horizJust, vertJust, toStringz(textString));
-            pl_flushpl_r(myXplotter);
-            pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
         }
         return;
     } // end text()
@@ -635,29 +673,31 @@ public:
             svg.dotlabel(xp, yp, label, anchor, dotSize, fontSize, colour, fontFamily);
             break;
         case Renderer.xplot:
-            pl_pencolorname_r(myXplotter, toStringz(colour));
-            pl_fillcolorname_r(myXplotter, toStringz(colour));
-            pl_fcircle_r(myXplotter, xp, yp, dotSize/2);
-            if (label.length > 0) {
-                // Convert font size from points to virtual-canvas millimetres.
-                double fontHeight = fontSize/72.0*25.4;
-                pl_ftextangle_r(myXplotter, 0.0);
-                pl_fmove_r(myXplotter, xp, yp+0.75*dotSize);
-                pl_fontname_r(myXplotter, toStringz(fontFamily));
-                pl_ffontsize_r(myXplotter, fontHeight);
-                int horizJust, vertJust;
-                switch (anchor) {
-                case "start": horizJust = 'l'; vertJust = 'x'; break;
-                case "middle": horizJust = 'c'; vertJust = 'x'; break;
-                case "end": horizJust = 'r'; vertJust = 'x'; break;
-                default:
-                    horizJust = 'l'; vertJust = 'x';
+            version(with_libplot) {
+                pl_pencolorname_r(myXplotter, toStringz(colour));
+                pl_fillcolorname_r(myXplotter, toStringz(colour));
+                pl_fcircle_r(myXplotter, xp, yp, dotSize/2);
+                if (label.length > 0) {
+                    // Convert font size from points to virtual-canvas millimetres.
+                    double fontHeight = fontSize/72.0*25.4;
+                    pl_ftextangle_r(myXplotter, 0.0);
+                    pl_fmove_r(myXplotter, xp, yp+0.75*dotSize);
+                    pl_fontname_r(myXplotter, toStringz(fontFamily));
+                    pl_ffontsize_r(myXplotter, fontHeight);
+                    int horizJust, vertJust;
+                    switch (anchor) {
+                    case "start": horizJust = 'l'; vertJust = 'x'; break;
+                    case "middle": horizJust = 'c'; vertJust = 'x'; break;
+                    case "end": horizJust = 'r'; vertJust = 'x'; break;
+                    default:
+                        horizJust = 'l'; vertJust = 'x';
+                    }
+                    pl_alabel_r(myXplotter, horizJust, vertJust, toStringz(label));
                 }
-                pl_alabel_r(myXplotter, horizJust, vertJust, toStringz(label));
+                pl_flushpl_r(myXplotter);
+                pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
+                pl_fillcolorname_r(myXplotter, toStringz(xplot_fillcolourname));
             }
-            pl_flushpl_r(myXplotter);
-            pl_pencolorname_r(myXplotter, toStringz(xplot_pencolourname));
-            pl_fillcolorname_r(myXplotter, toStringz(xplot_fillcolourname));
         }
         return;
     } // end dotlabel()
