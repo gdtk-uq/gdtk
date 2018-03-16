@@ -39,6 +39,7 @@ void main(string[] args) {
     int nfns; // number of functions (objective/constraints)
     int nrsps; // number of expected responses
     int ndvars; // number of design variables
+    double[] fneval; // function evaluation values
     double[] dvars; // design variable values
     double[] gvars; // gradients of design variables
     string dakotaInFileName = "params.in";
@@ -70,7 +71,7 @@ void main(string[] args) {
     // also, I assume this value will either be:
     //          1          (return the ojective function evaluation), or
     //          nvars      (return objective function gradients), or
-    //          1 + nvars  ( return objective function evaluation, and gradients)
+    //          1 + nvars  (return objective function evaluation, and gradients)
     {
         auto lineContent = f.readln().strip();
         auto tokens = lineContent.split();
@@ -82,5 +83,19 @@ void main(string[] args) {
     }
     // finished reading DAKOTA input file
     
-    writeln(computeObjFns, ", ",  computeObjGrads, ", ", dvars);
+    // execute flow solver if objective function evaluations are needed
+    if (computeObjFns) {
+        assert(exists(runFlowSolverCmd), "e4sss execution bash file not present");
+        string cmd = "bash " ~ runFlowSolverCmd;
+        auto output = executeShell(cmd);
+    }
+    // execute shape sensitivity calculator if gradients are needed
+    if (computeObjGrads) {
+        assert(exists(runGradSolverCmd), "e4ssc execution bash file not present");
+        string cmd = "bash " ~ runGradSolverCmd;
+        auto output = executeShell(cmd);
+    }
+
+    // check DAKOTA results file exists
+    assert(exists(dakotaResultFileName), "DAKOTA results.out file not found");
 }
