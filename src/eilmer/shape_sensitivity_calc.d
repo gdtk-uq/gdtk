@@ -83,6 +83,7 @@ void main(string[] args) {
 
     string msg = "Usage:                              Comment:\n";
     msg       ~= "e4ssc      [--job=<string>]            name of job\n";
+    msg       ~= "           [--no-gradients=<bool>]     \n";
     msg       ~= "           [--max-cpus=<int>]          defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine\n";
     msg       ~= "           [--max-wall-clock=<int>]    in seconds\n";
@@ -93,12 +94,14 @@ void main(string[] args) {
         exit(1);
     }
     string jobName = "";
+    bool noGradients = false;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool helpWanted = false;
     try {
         getopt(args,
                "job", &jobName,
+               "no-gradients", &noGradients,
                "max-cpus", &maxCPUs,
                "max-wall-clock", &maxWallClock,
                "help", &helpWanted
@@ -175,14 +178,28 @@ void main(string[] args) {
         blk.write_underlying_grid(fileName);
     }
 
+    FluidBlock myblk = localFluidBlocks[0]; // currently only compatible with single block simulations
+    
+    // -----------------------------
+    // -----------------------------
+    // OBJECTIVE FUNCTION EVALUATION
+    //------------------------------
+    // -----------------------------
+    double objFnEval;
+    foreach (bndary; myblk.bc) {
+        if (bndary.group == "design") objFnEval = cost_function(bndary, 0); // assume gtl = 0
+    }
+    writeln("objective fn evaluation: ", objFnEval);
+    write_objective_fn_to_file("results.out", objFnEval);
+    
+    if (noGradients) return;
+        
     // --------------
     // --------------
     // ADJOINT SOLVER
     //---------------
     // --------------
 
-    FluidBlock myblk = localFluidBlocks[0]; // currently only compatible with single block simulations
-        
     // set the number of primitive variables
     size_t ndim = GlobalConfig.dimensions;
     bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
@@ -415,7 +432,7 @@ void main(string[] args) {
     dot(dRdD_T, psi, adjointGradients);    
     foreach(i; 0..ndvars) adjointGradients[i] = dJdD[i] - adjointGradients[i];
     writeln("adjoint gradients = ", adjointGradients);
-
+    write_gradients_to_file("results.out", adjointGradients);
     // clear the sensitivity matrices from memory
     //destroy(globaldRdXT);
     destroy(dRdD_T);
@@ -477,6 +494,20 @@ void main(string[] args) {
 	}
     }
     writeln("Simulation complete.");
+}
+
+void write_objective_fn_to_file(string fileName, double objFnEval) {
+    auto outFile = File(fileName, "w");
+    outFile.writef("%.16e f\n", objFnEval); 
+}
+
+void write_gradients_to_file(string fileName, double[] grad) {
+    auto outFile = File(fileName, "a");
+    outFile.writef("[ ");
+    foreach( i; 0..grad.length ) {
+        outFile.writef("%.16e ", grad[i]);
+    }
+    outFile.writef(" ]\n"); 
 }
 
 double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, BoundaryCondition bndary, string[] NonFixedBoundaryList, string varID) {
