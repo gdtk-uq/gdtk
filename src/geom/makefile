@@ -49,10 +49,19 @@ LUAD_FILES := $(wildcard $(LUAD_DIR)/luad/*.d) \
 
 DFLAGS := -w -unittest -g -I..
 OF := -of
-DLINKFLAGS := -L-lplot -L-ldl
+DLINKFLAGS :=
+ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
+    DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
+    DLINKFLAGS := $(DLINKFLAGS) -L-lplot
+endif
+DLINKFLAGS := $(DLINKFLAGS) -L-ldl
 
 DFLAGS_LUA := -w -g -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
+ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
+    DFLAGS_LUA := $(DFLAGS_LUA) -version=$(LIBPLOT_VERSION_STR)
+    DLINKFLAGS_LUA := $(DLINKFLAGS_LUA) -L-lplot
+endif
 
 # ----------------------------------------------------------------------
 # Here begins the list of targets, starting with the top-level actions.
@@ -60,6 +69,8 @@ DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
 # The default target is test, because that is most likely your interest
 # if you are invoking this makefile from within the gas models directory.
 # ----------------------------------------------------------------------
+play:
+	@echo "Found $(LIBPLOT)"
 
 test: $(TEST_PROGRAMS)
 	tclsh geom-package-test.tcl

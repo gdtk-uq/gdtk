@@ -50,6 +50,7 @@ endif
 
 ifeq ($(WITH_SSC),1)
     PROGRAMS += e4ssc
+    PROGRAMS += e4opt
 endif
 
 ifeq ($(WITH_MPI),1)
@@ -187,7 +188,12 @@ ifeq ($(DMD), dmd)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lplot -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH)
+    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
+        DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
+        DLINKFLAGS := $(DLINKFLAGS) -L-lplot
+    endif
+    DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-ldl
     ifneq ($(TECPLOT_BIN_DIR), unavailable)
         DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
     endif
@@ -203,7 +209,15 @@ ifeq ($(DMD), ldmd2)
         DFLAGS := -w -O -release -inline -boundscheck=off
     endif
     OF := -of
-    DLINKFLAGS := -L-L$(LIBLUAPATH) -L-lplot -L-llua -L-ldl
+    DLINKFLAGS := -L-L$(LIBLUAPATH)
+    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
+        DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
+        DLINKFLAGS := $(DLINKFLAGS) -L-lplot
+    endif
+    DLINKFLAGS := $(DLINKFLAGS) -L-llua -L-ldl
+    ifneq ($(TECPLOT_BIN_DIR), unavailable)
+        DLINKFLAGS += -L$(TECPLOT_BIN_DIR)/libtecio.so -L$(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
+    endif
 endif
 ifeq ($(DMD), gdc)
     ifeq ($(FLAVOUR), debug)
@@ -216,7 +230,15 @@ ifeq ($(DMD), gdc)
         DFLAGS := -Wall -O2 -frelease -fno-debug
     endif
     OF := -o
-    DLINKFLAGS := -L$(LIBLUAPATH) $(LIBLUA) -lplot -ldl -lcurl
+    DLINKFLAGS := -L$(LIBLUAPATH)
+    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
+        DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
+        DLINKFLAGS := $(DLINKFLAGS) -lplot
+    endif
+    DLINKFLAGS := $(DLINKFLAGS) $(LIBLUA) -ldl -lcurl
+    ifneq ($(TECPLOT_BIN_DIR), unavailable)
+        DLINKFLAGS += $(TECPLOT_BIN_DIR)/libtecio.so $(TECPLOT_BIN_DIR)/sys/libstdc++.so.6
+    endif
 endif
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
 
@@ -392,6 +414,10 @@ e4ssc: shape_sensitivity_calc.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
+
+e4opt: optdriver.d /
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' optdriver.d > optdriver_with_rev_string.d
+	$(DMD)  $(OF)e4opt optdriver_with_rev_string.d
 
 e4loadbalance: loadbalance.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
