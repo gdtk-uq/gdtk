@@ -296,13 +296,13 @@ public:
     void setLineWidth(double width)
     // Sets line width in mm on our virtual canvas.
     {
-        xplot_line_width = width;
         final switch(myRenderer) {
         case Renderer.svg:
             svg.setLineWidth(width); // SVG canvas was set up in mm.
             break;
         case Renderer.xplot:
             version(with_libplot) {
+                xplot_line_width = width;
                 pl_flinewidth_r(myXplotter, width);
             }
         }
@@ -311,13 +311,13 @@ public:
 
     void setLineColour(string colour)
     {
-        xplot_pencolourname = colour;
         final switch(myRenderer) {
         case Renderer.svg:
             svg.setLineColour(colour);
             break;
         case Renderer.xplot:
             version(with_libplot) {
+                xplot_pencolourname = colour;
                 pl_pencolorname_r(myXplotter, toStringz(colour));
             }
         }
@@ -326,13 +326,13 @@ public:
 
     void setFillColour(string colour)
     {
-        xplot_fillcolourname = colour;
         final switch(myRenderer) {
         case Renderer.svg:
             svg.setFillColour(colour);
             break;
         case Renderer.xplot:
             version(with_libplot) {
+                xplot_fillcolourname = colour;
                 pl_filltype_r(myXplotter, xplot_greylevel);
                 pl_fillcolorname_r(myXplotter, toStringz(colour));
             }
@@ -342,13 +342,13 @@ public:
 
     void clearFillColour()
     {
-        xplot_fillcolourname = "none";
         final switch(myRenderer) {
         case Renderer.svg:
             svg.clearFillColour();
             break;
         case Renderer.xplot:
             version(with_libplot) {
+                xplot_fillcolourname = "none";
                 pl_fillcolorname_r(myXplotter, "none");
             }
         }

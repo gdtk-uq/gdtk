@@ -188,7 +188,7 @@ ifeq ($(DMD), dmd)
     endif
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH)
-    ifneq ($(LIBPLOT_VERSION_STR), "")
+    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
@@ -209,7 +209,7 @@ ifeq ($(DMD), ldmd2)
     endif
     OF := -of
     DLINKFLAGS := -L-L$(LIBLUAPATH)
-    ifneq ($(LIBPLOT_VERSION_STR), "")
+    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -L-lplot
     endif
@@ -230,7 +230,7 @@ ifeq ($(DMD), gdc)
     endif
     OF := -o
     DLINKFLAGS := -L$(LIBLUAPATH)
-    ifneq ($(LIBPLOT_VERSION_STR), "")
+    ifeq ($(findstring with_libplot,$(LIBPLOT_VERSION_STR)), with_libplot)
         DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
         DLINKFLAGS := $(DLINKFLAGS) -lplot
     endif

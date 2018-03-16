@@ -50,7 +50,7 @@ LUAD_FILES := $(wildcard $(LUAD_DIR)/luad/*.d) \
 DFLAGS := -w -unittest -g -I..
 OF := -of
 DLINKFLAGS :=
-ifneq ($(LIBPLOT_VERSION_STR), "")
+ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
     DFLAGS := $(DFLAGS) -version=$(LIBPLOT_VERSION_STR)
     DLINKFLAGS := $(DLINKFLAGS) -L-lplot
 endif
@@ -58,7 +58,7 @@ DLINKFLAGS := $(DLINKFLAGS) -L-ldl
 
 DFLAGS_LUA := -w -g -I.. -I$(LUAD_DIR)
 DLINKFLAGS_LUA := -L-L$(LIBLUAPATH) -L-llua $(DLINKFLAGS)
-ifneq ($(LIBPLOT_VERSION_STR), "")
+ifeq ($(findstring libplot,$(LIBPLOT_VERSION_STR)), libplot)
     DFLAGS_LUA := $(DFLAGS_LUA) -version=$(LIBPLOT_VERSION_STR)
     DLINKFLAGS_LUA := $(DLINKFLAGS_LUA) -L-lplot
 endif

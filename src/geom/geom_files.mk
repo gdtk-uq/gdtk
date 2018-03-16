@@ -48,7 +48,8 @@ GEOM_D_FILES := \
 LIBPLOT := $(strip $(wildcard /usr/lib/libplot.a) \
                    $(wildcard $(LIBRARY_PATH)/libplot.a))
 LIBPLOT_VERSION_STR :=
-ifneq ($(LIBPLOT), "")
+ifeq ($(findstring libplot,$(LIBPLOT)), libplot)
+    $(warning Found libplot:$(LIBPLOT).)
     LIBPLOT_VERSION_STR := with_libplot
     GEOM_D_FILES := $(GEOM_D_FILES) $(GEOM_DIR)/misc/libplot.d
 endif
