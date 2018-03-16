@@ -526,7 +526,6 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 outFile.writeln("# wave locus point: ", xp[ip], ", ", yp[ip], ", ", zp[ip]);
                 auto identity = soln.find_enclosing_cell(xp[ip], yp[ip], zp[ip]);
                 size_t ib = identity[0]; size_t idx = identity[1]; size_t found = identity[2];
-                writeln("Starting cell for point ", ip+1, ": ", ib, ", ", idx);
                 if (found == 0) { // out of domain bounds
                     writeln("User defined point not in solution domain bounds");
                     break;
@@ -547,37 +546,26 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                 double min = 1e-6;
                 foreach (direct; direction) {
                     // In every slice there are two waves emanating from every one point
-                    // writeln("direct: ", direct); //Testcases
                     foreach (dir; direction) {
                         found = 1;
-                        // writeln("dir: ", dir); //Testcases
                         Vector3 P0 = Vector3(xInit,yInit,zInit);
-                        // Vector3 P0 = Vector3(0,0,0); //Testcases
                         double distance = 0.0; // relative distance along streamline
                         outFile.writeln("# New Wave");
-                        writeln("ib = ", ib, "idx = ", idx);
                         ib = ibInit; idx = idxInit;
                         while (found == 1) { // while we have a cell in the domain
-                            writeln("\n#########################");
-                            writeln("ib = ", ib, "idx = ", idx);
                             Vector3 vlocal = Vector3(soln.flowBlocks[ib]["vel.x", idx],
                                                      soln.flowBlocks[ib]["vel.y", idx],
                                                      soln.flowBlocks[ib]["vel.z", idx]);
-                            // SliceNormal[ip] = Vector3(1,10,10); //Testcases
-                            // SliceNormal[ip] = unit(SliceNormal[ip]); //Testcases
-                            // Vector3 vlocal = Vector3(2000,0,0); //Testcases
-                            writeln("V ", vlocal);
                             Vector3 dStream = vlocal*direct*stepSize;
                             Vector3 P1 = P0 + dStream; 
 
                             // define slice as n1*x+n2*y+n3*z+sliceConst = 0
                             double sliceConst = -dot(SliceNormal[ip],P0); 
                             double coneSliceDist = abs(dot(SliceNormal[ip],P1)+sliceConst);
-                            writeln("ConeSliceDist: ", coneSliceDist);
 
                             // calculate local Mach number and angle
                             double alocal = soln.flowBlocks[ib]["a", idx];
-                            double Mlocal = alocal/geom.abs(vlocal);
+                            double Mlocal = geom.abs(vlocal)/alocal;
                             double MachAngle;
 
                             // check if flow is supersonic
@@ -588,25 +576,16 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                                 break;
                             }
 
-                            // double MachAngle = 0.4712; //Testcases
-                            writeln("MachAngle: ", MachAngle, ", MachAngle: ",
-                                    asin(sqrt(1.4*287.05*soln.flowBlocks[ib]["T", idx])/geom.abs(vlocal)));
-
                             Vector3 P2 = P1+(SliceNormal[ip]*coneSliceDist);
-                            writeln("P2 Distance: ", dot(SliceNormal[ip],P2)+sliceConst);
 
                             // check if Point2 is on the specified slice if not flip normal vector
                             if (abs(dot(SliceNormal[ip],P2)+sliceConst) >= 1e-16) {
                                 P2 = P1-(SliceNormal[ip]*coneSliceDist);
-                                writeln("P2 Distance: ", dot(SliceNormal[ip],P2)+sliceConst);
                             }
 
                             // calculate angle in between the slice and the velocity vector 
                             Vector3 SliceVec = P2-P0;
                             double beta = acos(dot(SliceVec,dStream)/(geom.abs(SliceVec)*geom.abs(dStream)));
-                            writeln("dot ", dot(SliceVec,dStream), ", abs(SliceVec) ",
-                                    geom.abs(SliceVec), ", abs(dStream) ", geom.abs(dStream));
-                            writeln("\nbeta: ", beta, " , MachAngle: ", MachAngle);
 
                             // Check if the slice intersects the Mach cone
                             if (beta > MachAngle) {
@@ -630,33 +609,16 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                             Vector3 P2P3 = P3-P2;
                             double dP2P3 = geom.abs(P2P3);
                             double dP2P4 = sqrt(rCone^^2-dP2P3^^2);
-                            writeln("rCone ", rCone, ", dP2P3 ", dP2P3, ", dP2P4 ", dP2P4);
-                            writeln("P2P3*dStream = ", dot(P2P3,dStream));
 
                             Vector3 SliceVec2 = cross(SliceVec,SliceNormal[ip]);
                             SliceVec2 = unit(SliceVec2);
-                            writeln("SliceVec2: ", SliceVec2);
-                            writeln("P4 = ", P2, " + ", dir, " * ", dP2P4, " * ", SliceVec2);
                             Vector3 P4 = P2+(dir*dP2P4*SliceVec2);
 
                             // Calculate direction and length of the wave segment
                             Vector3 Wave = P4-P0;
                             distance += direct*geom.abs(Wave);
 
-                            writeln("P0: ", P0.x, ", ", P0.y, ", ", P0.z);
-                            writeln("P1: ", P1.x, ", ", P1.y, ", ", P1.z);
-                            writeln("SliceNormal: ", SliceNormal[ip].x, ", ",
-                                    SliceNormal[ip].y, ", ", SliceNormal[ip].z);
-                            writeln("ConeSliceDist: ", coneSliceDist);
-                            writeln("P2: ", P2.x, ", ", P2.y, ", ", P2.z);
-                            writeln("P3: ", P3.x, ", ", P3.y, ", ", P3.z);
-                            writeln("P4: ", P4.x, ", ", P4.y, ", ", P4.z);
-                            writeln("P4 Distance: ", dot(P4,SliceNormal[ip])+sliceConst);
                             double WaveAngle = acos(dot(Wave,dStream)/(geom.abs(Wave)*geom.abs(dStream)));
-                            writeln("dot ", dot(Wave,dStream), ", abs(Wave) ",
-                                    geom.abs(Wave), ", abs(dStream) ", geom.abs(dStream));
-                            writeln("Wave, SliceVec", Wave, ", ", SliceVec);
-                            writeln("\nWave Angle: ", WaveAngle, ", MachAngle: ", MachAngle);
 
                             identity = soln.find_enclosing_cell(P4.x, P4.y, P4.z);
                             if (identity[0] == ib && identity[1] == idx) {
