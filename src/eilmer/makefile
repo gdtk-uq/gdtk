@@ -50,6 +50,7 @@ endif
 
 ifeq ($(WITH_SSC),1)
     PROGRAMS += e4ssc
+    PROGRAMS += e4opt
 endif
 
 ifeq ($(WITH_MPI),1)
@@ -413,6 +414,10 @@ e4ssc: shape_sensitivity_calc.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
+
+e4opt: optdriver.d /
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' optdriver.d > optdriver_with_rev_string.d
+	$(DMD)  $(OF)e4opt optdriver_with_rev_string.d
 
 e4loadbalance: loadbalance.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
