@@ -137,19 +137,37 @@ quads[6] = CoonsPatch:new{p01=pnts.n, p11=pnts.o, p10=pnts.i, p00=pnts.h}
 quads[7] = CoonsPatch:new{p01=pnts.o, p11=pnts.p, p10=pnts.j, p00=pnts.i}
 quads[8] = CoonsPatch:new{p01=pnts.p, p11=pnts.q, p10=pnts.k, p00=pnts.j}
 
+-- Set calculation size
+fullRes = false
 -- Basic discretization for a block.
-nx = 25; ny = 25
+if fullRes then
+   nx = 25; ny = 25 -- Han's full resolution
+else
+   nx = 15; ny = 15 -- cut-down exercise
+end
 -- Numbers of blocks within block arrays.
 nib = {}; njb = {}
-nib[0] =  7; njb[0] = 6
-nib[1] = 14; njb[1] = 6
-nib[2] =  7; njb[2] = 6
-nib[3] =  6; njb[3] = 6
-nib[4] =  7; njb[4] = 4
-nib[5] = 14; njb[5] = 4
-nib[6] =  7; njb[6] = 4
-nib[7] =  6; njb[7] = 4
-nib[8] =  2; njb[8] = 4
+if fullRes then -- Han's full resolution
+   nib[0] =  7; njb[0] = 6
+   nib[1] = 14; njb[1] = 6
+   nib[2] =  7; njb[2] = 6
+   nib[3] =  6; njb[3] = 6
+   nib[4] =  7; njb[4] = 4
+   nib[5] = 14; njb[5] = 4
+   nib[6] =  7; njb[6] = 4
+   nib[7] =  6; njb[7] = 4
+   nib[8] =  2; njb[8] = 4
+else -- cut-down exercise
+   nib[0] =  4; njb[0] = 3
+   nib[1] =  7; njb[1] = 3
+   nib[2] =  4; njb[2] = 3
+   nib[3] =  3; njb[3] = 3
+   nib[4] =  4; njb[4] = 2
+   nib[5] =  7; njb[5] = 2
+   nib[6] =  4; njb[6] = 2
+   nib[7] =  3; njb[7] = 2
+   nib[8] =  1; njb[8] = 2
+end
 
 -- Grid clustering
 clb = RobertsFunction:new{end0=true,end1=false,beta=1.3}
@@ -177,17 +195,17 @@ end
 blks = {}
 for i=0,8 do
    blks[i] = FluidBlockArray{grid=grids[i], nib=nib[i], njb=njb[i], 
-                             initialState=initial, bcList=bcLists[0],
-                             label=blkLabels[0]}
+                             initialState=initial, bcList=bcLists[i],
+                             label=blkLabels[i]}
 end
 identifyBlockConnections()
 
 -- Do a little more setting of global data.
-config.gasdynamic_update_scheme = "classic-rk3"
+config.gasdynamic_update_scheme = "predictor-corrector"
 config.viscous = true
 config.flux_calculator = "adaptive"
 config.max_time = 4.0e-4  -- seconds
-config.max_step = 250
+config.max_step = 2500000
 config.dt_init = 1.0e-10
 -- config.dt_max = 1.0e-9
 config.cfl_value = 1.0
