@@ -1814,6 +1814,14 @@ public:
                 }
             }
         }
+        foreach (cell; cells) {
+            cell.encode_conserved(0, 0, omegaz);
+            // Even though the following call appears redundant at this point,
+            // fills in some gas properties such as Prandtl number that is
+            // needed for both the cfd_check and the BaldwinLomax turbulence model.
+            cell.decode_conserved(0, 0, omegaz);
+        }
+        set_cell_dt_chem(-1.0);
     } // end propagate_inflow_data_west_to_east()
 
     override void convective_flux_phase0()

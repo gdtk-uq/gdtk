@@ -489,17 +489,18 @@ void march_over_blocks()
         foreach (j; 0 .. njb) {
             foreach (k; 0 .. nkb) {
                 gasBlockArray[i-2][j][k].active = false;
-                auto blk = gasBlockArray[i][j][k]; // our newly active block
-                blk.active = true;
-                if (GlobalConfig.propagate_inflow_data) {
+                gasBlockArray[i][j][k].active = true;
+            }
+        }
+        if (GlobalConfig.propagate_inflow_data) {
+            exchange_ghost_cell_boundary_data(sim_time, 0, 0);
+            foreach (j; 0 .. njb) {
+                foreach (k; 0 .. nkb) {
+                    auto blk = gasBlockArray[i][j][k]; // our newly active block
                     // Get upstream flow data into ghost cells
                     blk.applyPreReconAction(sim_time, 0, 0);
                     // and propagate it across the domain.
                     blk.propagate_inflow_data_west_to_east();
-                    // [TODO] 2018-01-24 PJ, Something to consider.
-                    // Now that we have moved some of the ghost-cell-effect
-                    // out of the apply_structured_grid for FullFaceCopy,
-                    // do we need to manually exchange data at this point?
                 }
             }
         }
