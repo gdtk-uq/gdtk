@@ -101,18 +101,11 @@ public:
     ConservedQuantities maxRate, residuals;
     double normAcc, dotAcc;
     size_t nvars;
-    double[] FU, dU, r0, x0;
-    // outer iterations 
-    double[] v_outer, w_outer, z_outer;
-    double[] g0_outer, g1_outer;
-    Matrix Q1_outer;
-    //double[] g0_outer, g1_outer, h_outer, hR_outer;
-    Matrix V_outer, Z_outer, W_outer;
-    // H0_outer, H1_outer, Gamma_outer, Q0_outer, Q1_outer;
-    // inner iterations 
-    double[] v_inner, w_inner;
-    double[] g0_inner, g1_inner, h_inner, hR_inner;
-    Matrix V_inner, W_inner, H0_inner, H1_inner, Gamma_inner, Q0_inner, Q1_inner;
+    double[] FU, dU, r0, x0, Dinv;
+    double[] v, w;
+    double[] g0, g1;
+    Matrix Q1;
+    Matrix V;
     }
 
     this(int id, Grid_t grid_type, size_t ncells, string label)
@@ -622,35 +615,19 @@ public:
         dU.length = n; dU[] = 0.0;
         r0.length = n;
         x0.length = n;
-        v_outer.length = n;
-        w_outer.length = n;
-        z_outer.length = n;
-        g0_outer.length = mOuter+1;
-        g1_outer.length = mOuter+1;
+        Dinv.length = n;
+        v.length = n;
+        w.length = n;
+        g0.length = mOuter+1;
+        g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
         //hR_outer.length = mOuter+1;
-        V_outer = new Matrix(n, mOuter+1);
-        W_outer = new Matrix(n, mOuter+1);
-        Z_outer = new Matrix(n, mOuter+1);
+        V = new Matrix(n, mOuter+1);
         //H0_outer = new Matrix(mOuter+1, mOuter);
         //H1_outer = new Matrix(mOuter+1, mOuter);
         //Gamma_outer = new Matrix(mOuter+1, mOuter+1);
         //Q0_outer = new Matrix(mOuter+1, mOuter+1);
-        Q1_outer = new Matrix(mOuter+1, mOuter+1);
-
-        v_inner.length = n;
-        w_inner.length = n;
-        g0_inner.length = mInner+1;
-        g1_inner.length = mInner+1;
-        h_inner.length = mInner+1;
-        hR_inner.length = mInner+1;
-        V_inner = new Matrix(n, mInner+1);
-        W_inner = new Matrix(n, mInner+1);
-        H0_inner = new Matrix(mInner+1, mInner);
-        H1_inner = new Matrix(mInner+1, mInner);
-        Gamma_inner = new Matrix(mInner+1, mInner+1);
-        Q0_inner = new Matrix(mInner+1, mInner+1);
-        Q1_inner = new Matrix(mInner+1, mInner+1);
+        Q1 = new Matrix(mOuter+1, mOuter+1);
     }
     }
 } // end class FluidBlock
