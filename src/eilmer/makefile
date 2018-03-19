@@ -255,6 +255,8 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer $
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp prep.lua $(BUILD_DIR)/bin
 	cp $(LUA_MODULES) $(BUILD_DIR)/lib
+	cp e4console.tcl $(BUILD_DIR)/bin
+	chmod +x $(BUILD_DIR)/bin/e4console.tcl
 ifneq "$(SHARE_FILES)" ""
 	cp $(SHARE_FILES) $(BUILD_DIR)/share
 endif
