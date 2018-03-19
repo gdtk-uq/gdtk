@@ -395,22 +395,22 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) $(DLINKFLAGS) -L-lmpi
 
-e4sss: steadystate_solver.d $(EILMER_FILES) \
+e4sss: steadystate_solver.d shape_sensitivity.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > steadystate_solver_with_rev_string.d
-	$(DMD) -version=steady_state $(DFLAGS) $(OF)e4sss \
-		steadystate_solver_with_rev_string.d $(EILMER_FILES) \
+	$(DMD) -version=steady_state -version=shape_sensitivity $(DFLAGS) $(OF)e4sss \
+		steadystate_solver_with_rev_string.d shape_sensitivity.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
 
-e4ssc: shape_sensitivity_calc.d $(EILMER_FILES) \
+e4ssc: shape_sensitivity_calc.d shape_sensitivity.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' shape_sensitivity_calc.d > shape_sensitivity_calc_with_rev_string.d
 	$(DMD) -version=shape_sensitivity $(DFLAGS) $(OF)e4ssc \
-		shape_sensitivity_calc_with_rev_string.d $(EILMER_FILES) \
+		shape_sensitivity_calc_with_rev_string.d shape_sensitivity.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \
 		$(DLINKFLAGS)
