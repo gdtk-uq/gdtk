@@ -50,7 +50,7 @@ Bezier optimiseBezierPoints(string fileName, int nCtrlPts, ref double[] ts, int 
     return myBez;
 }
 
-Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, int dim=2)
+Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, double tol=1.0e-06, int max_steps=10000, int dim=2)
 {
     double t;
     // Check that there are more data points than
@@ -133,7 +133,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, int
     // Make the initial perturbations 1/100th of the arc length.
     double dp = myBez.length()/100.0;
     dx[] = dp;
-    auto success = minimize!fMin(d, f_min, n_fe, n_restart, dx, 1.0e-6, 10000);
+    auto success = minimize!fMin(d, f_min, n_fe, n_restart, dx, tol, max_steps);
     if (success) {
         foreach (i; 1 .. nCtrlPts-1) {
             if (dim == 2) {

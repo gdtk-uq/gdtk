@@ -164,7 +164,10 @@ void main(string[] args) {
     double MU = GlobalConfig.sscOptions.mu; // flow Jacobian
     double ETA = GlobalConfig.sscOptions.eta; // residual sensitivity
     double DELTA = GlobalConfig.sscOptions.delta; // finite-difference gradient
-
+    // bezier curve parameters
+    double bezier_curve_tolerance = GlobalConfig.sscOptions.tolBezierCurveFit;
+    int bezier_curve_max_steps = GlobalConfig.sscOptions.maxStepsBezierCurveFit;
+    
     writeln("----------------");
     writeln("Running With Perturbation Parameters:");
     writeln("EPSILON  = ", EPSILON);
@@ -308,7 +311,7 @@ void main(string[] args) {
             }
             // compute bezier control points
             ndvars += bndary.num_cntrl_pts;
-            bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.num_cntrl_pts, bndary.ts);
+            bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.num_cntrl_pts, bndary.ts, bezier_curve_tolerance, bezier_curve_max_steps);
         }
 	else {
 	    size_t[] vtx_id_list;

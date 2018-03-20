@@ -110,6 +110,9 @@ sscOptionsHidden = { -- hidden from user
    -- GMRES parameters
    gmres_restart_interval = 85;
    stop_on_relative_global_residual = 1.0e-16;
+   -- Bezier curve fit parameters
+   tol_bezier_curve_fit = 1.0e-06;
+   max_steps_bezier_curve_fit = 10000;
    
    __index = function (t, k) 
       return sscOptionsHidden[k]
@@ -1482,7 +1485,9 @@ function write_config_file(fileName)
    f:write(string.format('   "eta": %.18e,\n', ShapeSensitivityCalculator.eta))
    f:write(string.format('   "delta": %.18e,\n', ShapeSensitivityCalculator.delta))
    f:write(string.format('   "gmres_restart_interval": %d,\n', ShapeSensitivityCalculator.gmres_restart_interval))
-   f:write(string.format('   "stop_on_relative_global_residual": %.18e\n', ShapeSensitivityCalculator.stop_on_relative_global_residual))
+   f:write(string.format('   "stop_on_relative_global_residual": %.18e,\n', ShapeSensitivityCalculator.stop_on_relative_global_residual))
+   f:write(string.format('   "tol_bezier_curve_fit": %.18e,\n', ShapeSensitivityCalculator.tol_bezier_curve_fit))
+   f:write(string.format('   "max_steps_bezier_curve_fit": %d\n', ShapeSensitivityCalculator.max_steps_bezier_curve_fit))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('},\n')
    
