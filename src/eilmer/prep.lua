@@ -1490,7 +1490,7 @@ function write_config_file(fileName)
    f:write(string.format('   "stop_on_relative_global_residual": %.18e,\n', ShapeSensitivityCalculator.stop_on_relative_global_residual))
    f:write(string.format('   "tol_bezier_curve_fit": %.18e,\n', ShapeSensitivityCalculator.tol_bezier_curve_fit))
    f:write(string.format('   "max_steps_bezier_curve_fit": %d,\n', ShapeSensitivityCalculator.max_steps_bezier_curve_fit))
-   f:write(string.format('   "user_defined_objective_file": %s\n', tostring(ShapeSensitivityCalculator.user_defined_objective_file)))
+   f:write(string.format('   "user_defined_objective_file": "%s"\n', tostring(ShapeSensitivityCalculator.user_defined_objective_file)))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('},\n')
    
