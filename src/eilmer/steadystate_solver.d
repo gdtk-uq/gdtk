@@ -1247,6 +1247,8 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     H0.zeros();
     H1.zeros();
 
+    double dtInv = 1.0/dt;
+
     // Set up preconditioner (or set to 1.0 if not using one)
     if (usePreconditioner) {
         foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1254,6 +1256,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
             double mu = 1.0e-6;
             sss_preconditioner(blk, nConserved, blk.Dinv, epsilon, mu, 1);
             foreach (k; 0 .. blk.Dinv.length) {
+                blk.Dinv[k] += dtInv; 
                 blk.Dinv[k] = 1.0/blk.Dinv[k];
             }
         }
@@ -1305,15 +1308,15 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         // 2a. Begin iterations
         foreach (j; 0 .. m) {
             iterCount = j+1;
-            // Prepare 'w' with (I/dt)v term;
+            // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 double dtInv = 1.0/dt;
                 foreach (k; 0 .. blk.nvars) {
-                    blk.w[k] = dtInv*blk.v[k];
+                    blk.w[k] = dtInv*blk.Dinv[k]*blk.v[k];
                 }
             }
             
-            // Evaluate J(D^-1)v and place in v
+            // Evaluate J(P^-1)v and place in v
             try {
                 evalJacobianVecProd(pseudoSimTime, sigma);
             }

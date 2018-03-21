@@ -100,21 +100,21 @@ setmetatable(SteadyStateSolver, sssOptionsHidden)
 -- Storage for shape sensitivity calculator settings
 sscOptionsHidden = { -- hidden from user
    -- set defaults here
-   gradient_method = "adjoint";
-   gradient_verification = true;
+   gradient_method = "adjoint",
+   gradient_verification = true,
    -- finite difference parameters
-   epsilon = 1.0e-04;
-   mu = 1.0e-04; 
-   eta = 1.0e-04; 
-   delta = 1.0e-04;
+   epsilon = 1.0e-04,
+   mu = 1.0e-04, 
+   eta = 1.0e-04, 
+   delta = 1.0e-04,
    -- GMRES parameters
-   gmres_restart_interval = 85;
-   stop_on_relative_global_residual = 1.0e-16;
+   gmres_restart_interval = 85,
+   stop_on_relative_global_residual = 1.0e-16,
    -- Bezier curve fit parameters
-   tol_bezier_curve_fit = 1.0e-06;
-   max_steps_bezier_curve_fit = 10000;
+   tol_bezier_curve_fit = 1.0e-06,
+   max_steps_bezier_curve_fit = 10000,
    -- user-defined file
-   user_defined_objective_file = "dummy-obj-file.lua"
+   user_defined_objective_file = "dummy-obj-file.lua",
    
    __index = function (t, k) 
       return sscOptionsHidden[k]
@@ -1490,7 +1490,7 @@ function write_config_file(fileName)
    f:write(string.format('   "stop_on_relative_global_residual": %.18e,\n', ShapeSensitivityCalculator.stop_on_relative_global_residual))
    f:write(string.format('   "tol_bezier_curve_fit": %.18e,\n', ShapeSensitivityCalculator.tol_bezier_curve_fit))
    f:write(string.format('   "max_steps_bezier_curve_fit": %d,\n', ShapeSensitivityCalculator.max_steps_bezier_curve_fit))
-   f:write(string.format('   "user_defined_objective_file": %s\n', tostring(ShapeSensitvityCalculator.user_defined_objective_file))
+   f:write(string.format('   "user_defined_objective_file": %s\n', tostring(ShapeSensitivityCalculator.user_defined_objective_file)))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('},\n')
    
