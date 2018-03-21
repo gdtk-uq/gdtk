@@ -168,6 +168,9 @@ void main(string[] args) {
     double bezier_curve_tolerance = GlobalConfig.sscOptions.tolBezierCurveFit;
     int bezier_curve_max_steps = GlobalConfig.sscOptions.maxStepsBezierCurveFit;
     
+    // Initialise Lua state for calling user-defined objective function.
+    initLuaStateForUserDefinedObjFunc();
+
     writeln("----------------");
     writeln("Running With Perturbation Parameters:");
     writeln("EPSILON  = ", EPSILON);

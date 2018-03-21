@@ -171,6 +171,7 @@ struct ShapeSensitivityCalculatorOptions {
     // bezier curve fit parameters
     double tolBezierCurveFit = 1.0e-06;
     int maxStepsBezierCurveFit = 10000;
+    string userDefinedObjectiveFile = "";
 }
  
 } // end version(shape_sensitivity)
@@ -1183,7 +1184,7 @@ void read_config_file()
         getJSONdouble(sscOptions, "tol_bezier_curve_fit", GlobalConfig.sscOptions.tolBezierCurveFit);
     GlobalConfig.sscOptions.maxStepsBezierCurveFit =
         getJSONint(sscOptions, "max_steps_bezier_curve_fit", GlobalConfig.sscOptions.maxStepsBezierCurveFit);
-
+    GlobalConfig.sscOptions.userDefinedObjectiveFile = sscOptions["user_defined_objective_file"].str;
     }
     
     // Now, configure blocks that make up the flow domain.

@@ -113,6 +113,8 @@ sscOptionsHidden = { -- hidden from user
    -- Bezier curve fit parameters
    tol_bezier_curve_fit = 1.0e-06;
    max_steps_bezier_curve_fit = 10000;
+   -- user-defined file
+   user_defined_objective_file = "dummy-obj-file.lua"
    
    __index = function (t, k) 
       return sscOptionsHidden[k]
@@ -1487,7 +1489,8 @@ function write_config_file(fileName)
    f:write(string.format('   "gmres_restart_interval": %d,\n', ShapeSensitivityCalculator.gmres_restart_interval))
    f:write(string.format('   "stop_on_relative_global_residual": %.18e,\n', ShapeSensitivityCalculator.stop_on_relative_global_residual))
    f:write(string.format('   "tol_bezier_curve_fit": %.18e,\n', ShapeSensitivityCalculator.tol_bezier_curve_fit))
-   f:write(string.format('   "max_steps_bezier_curve_fit": %d\n', ShapeSensitivityCalculator.max_steps_bezier_curve_fit))
+   f:write(string.format('   "max_steps_bezier_curve_fit": %d,\n', ShapeSensitivityCalculator.max_steps_bezier_curve_fit))
+   f:write(string.format('   "user_defined_objective_file": %s\n', tostring(ShapeSensitvityCalculator.user_defined_objective_file))
    -- Note, also, no comma on last entry in JSON object. (^^^: Look up one line and check!)
    f:write('},\n')
    

@@ -7,8 +7,13 @@ import std.stdio;
 import std.math;
 import std.process;
 import std.algorithm;
+import std.string;
 
 import nm.smla;
+
+import util.lua;
+import util.lua_service;
+
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
@@ -37,6 +42,7 @@ FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
 FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
 FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
 
+private lua_State* L; // module-local Lua interpreter
 
 double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, BoundaryCondition bndary, string[] NonFixedBoundaryList, string varID) {
     size_t gtl = 1;
@@ -962,4 +968,27 @@ void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, 
     
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
+}
+
+void initLuaStateForUserDefinedObjFunc()
+{
+    L = init_lua_State();
+    doLuaFile(L, GlobalConfig.sscOptions.userDefinedObjectiveFile);
+}
+
+double objectiveFunctionEvaluation()
+{
+    lua_getglobal(L, "objective_function");
+    int numberArgs = 0;
+    int numberResults = 1;
+    if (lua_pcall(L, numberArgs, numberResults, 0) != 0) {
+        luaL_error(L, "error running user-defined 'objective_function' in file: %s\n", GlobalConfig.sscOptions.userDefinedObjectiveFile.toStringz);
+    }
+    // Now assume a double is sitting at top of stack
+    if (!lua_isnumber(L, -1)) {
+         luaL_error(L, "error in return from user-defined 'objective_function' in file: %s\n A single float value was expected.", GlobalConfig.sscOptions.userDefinedObjectiveFile.toStringz);
+    }
+    double val = luaL_checknumber(L, -1);
+    lua_settop(L, 0);
+    return val;
 }
