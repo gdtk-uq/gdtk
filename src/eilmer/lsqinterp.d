@@ -492,7 +492,7 @@ public:
     } // end compute_lsq_gradients()
 
     
-    void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig, size_t gtl)
+    void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig, size_t gtl=0)
    {
         size_t dimensions = myConfig.dimensions;
         double a, b, U, phi, h, denom, numer, s;

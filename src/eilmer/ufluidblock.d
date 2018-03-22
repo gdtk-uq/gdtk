@@ -953,7 +953,7 @@ public:
         // At this point, we should have all gradient values up to date and we are now ready
         // to reconstruct field values and compute the convective fluxes.
         foreach (f; faces) {
-            lsq.interp_both(f, gtl, Lft, Rght); // gtl assumed 0
+            lsq.interp_both(f, gtl, Lft, Rght);
             f.fs.copy_average_values_from(Lft, Rght);
             compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
         } // end foreach face
