@@ -16,6 +16,7 @@ import fvinterface;
 import fvcell;
 
 immutable size_t cloud_nmax = 33;
+immutable double ESSENTIALLY_ZERO = 1.0e-50;
 
 class LSQInterpWorkspace {
 public:
@@ -225,7 +226,7 @@ public:
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            if (abs("~gname~"[0]) > 0.0 || abs("~gname~"[1]) > 0.0 || abs("~gname~"[2]) > 0.0) {
+            if (abs("~gname~"[0]) > ESSENTIALLY_ZERO || abs("~gname~"[1]) > ESSENTIALLY_ZERO || abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
             foreach (i, f; cell_cloud[0].iface) {
                 double dx = f.pos.x - cell_cloud[0].pos[0].x; 
                 double dy = f.pos.y - cell_cloud[0].pos[0].y; 
@@ -233,11 +234,11 @@ public:
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) b += "~gname~"[2] * dz; 
                 b = sgn(b) * (fabs(b) + w);
-                if (b > 0.0) {
+                if (b >  ESSENTIALLY_ZERO) {
                     a = "~qMaxname~" - U;
                     phi = min(phi, a/b);
                 }
-                else if (b < 0.0) {
+                else if (b <  ESSENTIALLY_ZERO) {
                     a = "~qMinname~" - U;
                     phi = min(phi, a/b);
                 }
@@ -506,7 +507,7 @@ public:
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            if (abs("~gname~"[0]) > 0.0 || abs("~gname~"[1]) > 0.0 || abs("~gname~"[2]) > 0.0) {
+            if (abs("~gname~"[0]) > ESSENTIALLY_ZERO || abs("~gname~"[1]) > ESSENTIALLY_ZERO || abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
                 foreach (i, f; cell_cloud[0].iface) {
                     double dx = f.pos.x - cell_cloud[0].pos[0].x; 
                     double dy = f.pos.y - cell_cloud[0].pos[0].y; 
@@ -514,14 +515,16 @@ public:
                     b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                     if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
                     b = sgn(b) * (fabs(b) + w); 
-                    if (b > 0.0) a = "~qMaxname~" - U; 
-                    else if (b < 0.0) a = "~qMinname~" - U; 
-                    numer = (a*a + eps)*b + 2.0*b*b*a;
-                    denom = a*a + 2.0*b*b + a*b + eps;
-                    s = (1.0/b) * (numer/denom);                    
+                    if ( fabs(b) > ESSENTIALLY_ZERO) {
+                        if (b > ESSENTIALLY_ZERO) a = "~qMaxname~" - U; 
+                        else if (b < ESSENTIALLY_ZERO) a = "~qMinname~" - U; 
+                        numer = (a*a + eps)*b + 2.0*b*b*a;
+                        denom = a*a + 2.0*b*b + a*b + eps;
+                        s = (1.0/b) * (numer/denom);                    
+                    }
+                    else s = 1.0;
                     phi = min(phi, s);
-                    if (b == 0.0) phi = 1.0;
-                }
+               }
             }
             "~limFactorname~" = phi;
             }
