@@ -169,7 +169,7 @@ void main(string[] args) {
     int bezier_curve_max_steps = GlobalConfig.sscOptions.maxStepsBezierCurveFit;
     
     // Initialise Lua state for calling user-defined objective function.
-    initLuaStateForUserDefinedObjFunc();
+    //initLuaStateForUserDefinedObjFunc();
 
     writeln("----------------");
     writeln("Running With Perturbation Parameters:");

@@ -492,14 +492,14 @@ public:
     } // end compute_lsq_gradients()
 
     
-   void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig, size_t gtl)
    {
         size_t dimensions = myConfig.dimensions;
         double a, b, U, phi, h, denom, numer, s;
         immutable double w = 1.0e-12;
         immutable double K = 0.3;
-        if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[0]);  
-        else h = sqrt(cell_cloud[0].volume[0]);
+        if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[gtl]);  
+        else h = sqrt(cell_cloud[0].volume[gtl]);
         double eps = (K*h) * (K*h) * (K*h);
         // The following function to be used at compile time.
         string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
@@ -509,9 +509,9 @@ public:
             phi = 1.0;
             if (abs("~gname~"[0]) > ESSENTIALLY_ZERO || abs("~gname~"[1]) > ESSENTIALLY_ZERO || abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
                 foreach (i, f; cell_cloud[0].iface) {
-                    double dx = f.pos.x - cell_cloud[0].pos[0].x; 
-                    double dy = f.pos.y - cell_cloud[0].pos[0].y; 
-                    double dz = f.pos.z - cell_cloud[0].pos[0].z;
+                    double dx = f.pos.x - cell_cloud[0].pos[gtl].x; 
+                    double dy = f.pos.y - cell_cloud[0].pos[gtl].y; 
+                    double dz = f.pos.z - cell_cloud[0].pos[gtl].z;
                     b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                     if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
                     b = sgn(b) * (fabs(b) + w); 

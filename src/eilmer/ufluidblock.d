@@ -860,7 +860,7 @@ public:
         throw new FlowSolverException(msg);
     }
 
-    override void convective_flux_phase0()
+    override void convective_flux_phase0(size_t gtl=0)
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
@@ -892,14 +892,14 @@ public:
                         c.gradients.barth_limit(c.cell_cloud, c.ws, myConfig);
                         break;
                     case UnstructuredLimiter.venkat:
-                        c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig);
+                        c.gradients.venkat_limit(c.cell_cloud, c.ws, myConfig, gtl);
                         break;
                 } // end switch
             } // end foreach c
         } // end if interpolation_order > 1
     } // end convective_flux-phase0()
 
-    override void convective_flux_phase1()
+    override void convective_flux_phase1(size_t gtl=0)
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {
@@ -953,7 +953,7 @@ public:
         // At this point, we should have all gradient values up to date and we are now ready
         // to reconstruct field values and compute the convective fluxes.
         foreach (f; faces) {
-            lsq.interp_both(f, 0, Lft, Rght); // gtl assumed 0
+            lsq.interp_both(f, gtl, Lft, Rght); // gtl assumed 0
             f.fs.copy_average_values_from(Lft, Rght);
             compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
         } // end foreach face

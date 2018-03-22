@@ -494,7 +494,7 @@ void compute_perturbed_flux(FluidBlock blk, size_t orderOfJacobian, FVCell[] cel
                     c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
                     break;
                 case UnstructuredLimiter.venkat:
-                    c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig);
+                    c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
                     break;
                 } // end switch
             } // end foreach c
@@ -811,12 +811,12 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega, FluidBlo
     // doing the Frechet derivative, so we'll only search for shock points
     // at ftl = 0, which is when the F(U) evaluation is made.
     if ( ftl == 0 && (GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
-		      GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv)) {
+		      GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_ausmdv)) {
         blk.detect_shock_points();
     }
     
-    blk.convective_flux_phase0();
-    blk.convective_flux_phase1();
+    blk.convective_flux_phase0(gtl);
+    blk.convective_flux_phase1(gtl);
     blk.applyPostConvFluxAction(pseudoSimTime, gtl, ftl);
     if (GlobalConfig.viscous) {
         blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, gtl, ftl);

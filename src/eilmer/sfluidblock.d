@@ -1824,7 +1824,7 @@ public:
         set_cell_dt_chem(-1.0);
     } // end propagate_inflow_data_west_to_east()
 
-    override void convective_flux_phase0()
+    override void convective_flux_phase0(size_t gtl=0)
     // Compute the flux from data on either-side of the interface.
     {
         // Barring exceptions at the block boundaries, the general process is:
@@ -1914,7 +1914,7 @@ public:
         return;
     } // end convective_flux()
 
-    override void convective_flux_phase1()
+    override void convective_flux_phase1(size_t gtl=0)
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.
