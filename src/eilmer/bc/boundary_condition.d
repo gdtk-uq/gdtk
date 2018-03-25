@@ -116,33 +116,6 @@ private:
     FlowState _Lft, _Rght;
 
 public:
-    this(int id, int boundary, bool isWallWithViscousEffects=true,
-         bool ghostCellDataAvailable=true, double _emissivity=0.0)
-    {
-        blk = globalFluidBlocks[id];  // pick the relevant block out of the collection
-        which_boundary = boundary;
-        type = "";
-        group = "";
-        is_wall_with_viscous_effects = isWallWithViscousEffects;
-        ghost_cell_data_available = ghostCellDataAvailable;
-        emissivity = _emissivity;
-        auto gm = GlobalConfig.gmodel_master;
-        _Lft = new FlowState(gm);
-        _Rght = new FlowState(gm);
-    }
-    ~this()
-    {
-        if (myL != null) lua_close(myL);
-    }
-    void post_bc_construction()
-    {
-        foreach (gce; preReconAction) gce.post_bc_construction();
-        foreach (bfe; postConvFluxAction) bfe.post_bc_construction();
-        foreach (bie; preSpatialDerivActionAtBndryFaces) bie.post_bc_construction();
-        foreach (bce; preSpatialDerivActionAtBndryCells) bce.post_bc_construction();
-        foreach (bfe; postDiffFluxAction) bfe.post_bc_construction();
-    }
-
     // Action lists.
     // The BoundaryCondition is called at four stages in a global timestep.
     // Those stages are:
@@ -162,6 +135,44 @@ public:
     BoundaryInterfaceEffect[] preSpatialDerivActionAtBndryFaces;
     BoundaryCellEffect[] preSpatialDerivActionAtBndryCells;
     BoundaryFluxEffect[] postDiffFluxAction;
+    // In block-marching, we will want to temporarily change the down-stream
+    // boundary from connected to ExtrapolateCopy.
+    // The following saved-XXX-Action variables are places to save the original
+    // boundary-condition actions while the temporary actions are in use.
+    GhostCellEffect[] savedPreReconAction;
+    BoundaryFluxEffect[] savedPostConvFluxAction;
+    BoundaryInterfaceEffect[] savedPreSpatialDerivActionAtBndryFaces;
+    BoundaryCellEffect[] savedPreSpatialDerivActionAtBndryCells;
+    BoundaryFluxEffect[] savedPostDiffFluxAction;
+
+    this(int id, int boundary, bool isWallWithViscousEffects=true,
+         bool ghostCellDataAvailable=true, double _emissivity=0.0)
+    {
+        blk = globalFluidBlocks[id];  // pick the relevant block out of the collection
+        which_boundary = boundary;
+        type = "";
+        group = "";
+        is_wall_with_viscous_effects = isWallWithViscousEffects;
+        ghost_cell_data_available = ghostCellDataAvailable;
+        emissivity = _emissivity;
+        auto gm = GlobalConfig.gmodel_master;
+        _Lft = new FlowState(gm);
+        _Rght = new FlowState(gm);
+    }
+
+    ~this()
+    {
+        if (myL != null) lua_close(myL);
+    }
+
+    void post_bc_construction()
+    {
+        foreach (gce; preReconAction) gce.post_bc_construction();
+        foreach (bfe; postConvFluxAction) bfe.post_bc_construction();
+        foreach (bie; preSpatialDerivActionAtBndryFaces) bie.post_bc_construction();
+        foreach (bce; preSpatialDerivActionAtBndryCells) bce.post_bc_construction();
+        foreach (bfe; postDiffFluxAction) bfe.post_bc_construction();
+    }
 
     override string toString() const
     {
@@ -210,8 +221,39 @@ public:
         }
         repr ~= ")";
         return to!string(repr);
+    } // end toString()
+
+    final void pushExtrapolateCopyAction()
+    {
+        // First, save original boundary-condition actions.
+        savedPreReconAction = preReconAction.dup();
+        preReconAction.length = 0;
+        savedPostConvFluxAction = postConvFluxAction.dup();
+        postConvFluxAction.length = 0;
+        savedPreSpatialDerivActionAtBndryFaces = preSpatialDerivActionAtBndryFaces.dup();
+        preSpatialDerivActionAtBndryFaces.length = 0;
+        savedPreSpatialDerivActionAtBndryCells = preSpatialDerivActionAtBndryCells.dup();
+        preSpatialDerivActionAtBndryCells.length = 0;
+        savedPostDiffFluxAction = postDiffFluxAction.dup();
+        postDiffFluxAction.length = 0;
+        // Then, make the one action that we need to have a simple outflow.
+        preReconAction ~= new GhostCellExtrapolateCopy(blk.id, which_boundary, 0);
     }
 
+    final void restoreOriginalActions()
+    {
+        preReconAction = savedPreReconAction.dup();
+        savedPreReconAction.length = 0;
+        postConvFluxAction = savedPostConvFluxAction.dup();
+        savedPostConvFluxAction.length = 0;
+        preSpatialDerivActionAtBndryFaces = savedPreSpatialDerivActionAtBndryFaces.dup();
+        savedPreSpatialDerivActionAtBndryFaces.length = 0;
+        preSpatialDerivActionAtBndryCells = savedPreSpatialDerivActionAtBndryCells.dup();
+        savedPreSpatialDerivActionAtBndryCells.length = 0;
+        postDiffFluxAction = savedPostDiffFluxAction.dup();
+        savedPostDiffFluxAction.length = 0;
+    }
+    
     final void applyPreReconAction(double t, int gtl, int ftl)
     {
         foreach ( gce; preReconAction ) gce.apply(t, gtl, ftl);

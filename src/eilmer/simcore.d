@@ -476,6 +476,15 @@ void march_over_blocks()
             }
         }
     }
+    // Set the downstream boundary condition to simple outflow.
+    foreach (j; 0 .. njb) {
+        foreach (k; 0 .. nkb) {
+            gasBlockArray[1][j][k].bc[Face.east].pushExtrapolateCopyAction();
+        }
+    }
+    //
+    // Share the max_time for the overall calculation into smaller portions,
+    // one for each block-slice.
     double time_slice = GlobalConfig.max_time / (nib - 1);
     // At most, we want to write out a set of solution files, only at the end
     // of integrating in time for each pair of block-slices.
@@ -486,10 +495,16 @@ void march_over_blocks()
     integrate_in_time(sim_time+time_slice);
     // Now, move along one block in i-direction at a time and do the rest.
     foreach (i; 2 .. nib) {
+        // Deactivate the old-upstream slice, activate the new slice of blocks.
+        // Restore boundary connections between currently-active upstream
+        // and downstream block slices and set downstream boundary condition
+        // for newly active slice to a simple outflow.
         foreach (j; 0 .. njb) {
             foreach (k; 0 .. nkb) {
                 gasBlockArray[i-2][j][k].active = false;
+                gasBlockArray[i-1][j][k].bc[Face.east].restoreOriginalActions();
                 gasBlockArray[i][j][k].active = true;
+                gasBlockArray[i][j][k].bc[Face.east].pushExtrapolateCopyAction();
             }
         }
         if (GlobalConfig.propagate_inflow_data) {
