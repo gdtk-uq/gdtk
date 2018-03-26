@@ -1,6 +1,7 @@
 # file        : symbol   : name  
 air.lua       : air      : air
 Ar.lua        : Ar       : argon
+Ar_plus.lua   : Ar+      : argon ion
 C.lua         : C        : carbon
 C2H.lua       : C2H      : ethynyl
 C2H2.lua      : C2H2     : ethyne
@@ -30,6 +31,7 @@ CO.lua        : CO       : carbon monoxide
 CO2.lua       : CO2      : carbon dioxide
 e_minus.lua   : e-       : electron
 H.lua         : H        : monatomic hydrogen
+H_plus.lua    : H+       : hydrogen ion (proton)
 H2.lua        : H2       : diatomic hydrogen
 H2CC.lua      : H2CC     : vinylidene
 H2CN.lua      : H2CN     : methyleneaminyl radical
