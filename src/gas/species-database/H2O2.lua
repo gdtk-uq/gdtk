@@ -13,6 +13,18 @@ db.H2O2.gamma = {
    description = 'ratio of specific heats at room temperature (= Cp/(Cp - R))',
    reference = 'using Cp evaluated from CEA2 coefficients at T=300.0 K'
 }
+db.H2O2.sigma = {
+   value = 3.458,
+   units = 'Angstrom',
+   description = 'Lennard-Jones potential distance',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
+db.H2O2.epsilon = {
+   value = 107.400,
+   units = 'K',
+   description = 'Lennard-Jones potential well depth.',
+   reference = 'GRI-Mech 3.0 transport file.'
+}
 db.H2O2.ceaThermoCoeffs = {
    nsegments = 2,
    segment0 = {

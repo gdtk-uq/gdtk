@@ -174,7 +174,7 @@ function validateReaction(t)
    return true
 end
 
-local Species2 = lpeg.Ct(lpeg.Ct((lpeg.C(Element) * lpeg.C(Number^0) * lpeg.C(PM^0) * Solid^0))^1)
+local Species2 = lpeg.Ct(lpeg.R("az")^0 * lpeg.Ct((lpeg.C(Element) * lpeg.C(Number^0) * (PM + Star + (Underscore * (S_letter + ElecLevel)))^0))^1)
 Species2G = lpeg.P{ Species2 }
 
 function checkEquationBalances(r, rnumber)

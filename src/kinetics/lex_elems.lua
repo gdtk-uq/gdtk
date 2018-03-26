@@ -27,10 +27,11 @@ Number = Scientific + Decimal
 Space = S(" \n\t")^0
 Underscore = S("_")
 Element = ((R("AZ") * R("az")^0) + P("e"))
-Solid = P("S")
+S_letter = P("S")
+Star = P("*")
 ElecLevel = (R("az", "AZ", "09"))^-3 -- ^-3 says to match at most 3 occurrences
 PM = S("+-")
-Species = C(((Element * Digit^0)^1 * PM^0)^1 * (Underscore * (Solid + ElecLevel))^0)
+Species = C( R("az")^0 * (Element * Digit^0)^1 * (PM + Star + (Underscore * (S_letter + ElecLevel)))^0 )
 Tilde = P("~")
 Dash = P("-") * Space
 Comma = Space * P(",") * Space
@@ -39,7 +40,7 @@ Colon = P(":") * Space
 Open = "(" * Space
 Close = Space * ")" * Space
 FArrow = C(P("=>")) * Space
-FRArrow = C(P("<=>")) * Space
+FRArrow = C(P("<=>") + P("=")) * Space
 Equals = C(P("=")) * Space
 Plus = P("+") * Space
 

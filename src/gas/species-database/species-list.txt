@@ -8,11 +8,13 @@ C2H3.lua      : C2H3     : ethenyl radical
 C2H4.lua      : C2H4     : ethene
 C2H5.lua      : C2H5     : ethyl radical
 C2H6.lua      : C2H6     : ethane
+C3H6.lua      : C3H6     : propene
 C3H7.lua      : C3H7     : isopropyl radical
 C3H8.lua      : C3H8     : propane
 CH.lua	      : CH       : methylidyne
 CH2.lua       : CH2      : methylene
 CH2_S.lua     : CH2_S    : methylene single state CH2(S)
+CH2_star.lua  : CH2*     : methylene single state (alias for CH2(S))
 CH2CHO.lua    : CH2CHO   : acetaldehyde
 CH2CO.lua     : CH2CO    : ethenone
 CH2O.lua      : CH2O     : formaldehyde
@@ -29,23 +31,24 @@ CO2.lua       : CO2      : carbon dioxide
 e_minus.lua   : e-       : electron
 H.lua         : H        : monatomic hydrogen
 H2.lua        : H2       : diatomic hydrogen
+H2CC.lua      : H2CC     : vinylidene
 H2CN.lua      : H2CN     : methyleneaminyl radical
+H2O.lua       : H2O      : water
+H2O2.lua      : H2O2     : hydrogen peroxide
 HCN.lua       : HCN      : hydrogen cyanide
 HCNN.lua      : HCNN     : hydrogen diazocarbene
 HCNO.lua      : HCNO     : isocyanic acid (1)
 HCO.lua       : HCO      : aldehyde
 HCCO.lua      : HCCO     : ethynyloxy radical
 HCCOH.lua     : HCCOH    : ethynol
-He.lua        : He       : helium
 HI.lua        : HI       : hydrogen iodide
-H2O.lua       : H2O      : water
-H2O2.lua      : H2O2     : hydrogen peroxide
 HNCO.lua      : HNCO     : isocyanic acid (2)
 HNO.lua       : HNO      : nitroxyl
 HNO2.lua      : HNO2     : nitrous acid
 HNO3.lua      : HNO3     : nitric acid
 HO2.lua       : HO2      : hydroperoxyl
 HOCN.lua      : HOCN     : cyanic acid
+He.lua        : He       : helium
 I2.lua        : I2       : iodine
 Kr.lua        : Kr       : krypton
 N.lua         : N        : monatomic nitrogen
@@ -68,3 +71,5 @@ O2_plus.lua   : O2+      : singly-ionized molecular oxygen
 O3.lua        : O3       : ozone
 OH.lua        : OH       : hydroxyl radical
 SF6.lua       : SF6      : sulphur hexafluorane
+aC3H5.lua     : aC3H5    : allyl
+nC3H7.lua     : nC3H7    : CH3-CH2-CH2*
