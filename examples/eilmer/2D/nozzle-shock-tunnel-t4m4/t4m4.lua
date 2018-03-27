@@ -57,8 +57,6 @@ print("Species mass fractions at throat, according to CEA gas model")
 for k, v in pairs(state6.ceaSavedData.massf) do
    print(string.format("massf[%s] = %g", k, v))
 end
-p_dump = 0.1*state7.p -- something low, relative to the expected exit pressure
-initial = FlowState:new{p=p_dump, T=300.0}
 
 print "Building grid."
 -- Coordinates are from the nenzfr file Bezier-control-pts-t4-m4.data.
@@ -105,13 +103,13 @@ exp_grid = StructuredGrid:new{psurface=exp_region, niv=601, njv=41,
 			      cfList={west=y_cf, east=y_cf,
 				      south=x_cf, north=x_cf}}
 -- Divide the full domain into many blocks, mainly in the axial direction.
-throat_blk = FluidBlockArray{grid=throat_grid, initialState=initial, label="throat",
+throat_blk = FluidBlockArray{grid=throat_grid, initialState=inflow, label="throat",
 			     bcList={west=InFlowBC_Supersonic:new{flowState=inflow},
 				     north=WallBC_NoSlip_FixedT:new{Twall=300.0}}, 
 			     nib=1, njb=2}
-exp_blk = FluidBlockArray{grid=exp_grid, initialState=initial, label="expansion",
+exp_blk = FluidBlockArray{grid=exp_grid, initialState=inflow, label="expansion",
 			  bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
-				  east=OutFlowBC_FixedP:new{p_outside=p_dump}}, 
+				  east=OutFlowBC_Simple:new{}}, 
 			  nib=30, njb=2}
 identifyBlockConnections()
 
@@ -125,4 +123,4 @@ config.dt_init = 1.0e-9
 config.block_marching = true
 config.nib = 31
 config.njb = 2
-config.propagate_inflow_data = false
+config.propagate_inflow_data = true
