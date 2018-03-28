@@ -214,14 +214,15 @@ void main(string[] args) {
     //------------------------------
     // -----------------------------
     double objFnEval;
-    foreach (bndary; myblk.bc) {
-        if (bndary.group == "design") objFnEval = cost_function(bndary, 0); // assume gtl = 0
+    if (returnObjFcnFlag) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.group == "design") objFnEval = cost_function(bndary, 0); // assume gtl = 0
+        }
+        writeln("objective fn evaluation: ", objFnEval);
+        write_objective_fn_to_file("results.out", objFnEval);
+        
+        return; // --return-objective-function
     }
-    writeln("objective fn evaluation: ", objFnEval);
-    write_objective_fn_to_file("results.out", objFnEval);
-    
-    if (returnObjFcnFlag) return; // --return-objective-function
-    
     // ----------------------------
     // ----------------------------
     // SHAPE SENSITIVITY CALCULATOR

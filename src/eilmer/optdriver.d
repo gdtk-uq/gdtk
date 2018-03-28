@@ -77,8 +77,8 @@ void main(string[] args) {
         auto tokens = lineContent.split();
         nrsps = to!int(tokens[0]);
         if ( nrsps == 1) { computeObjFns = true; computeObjGrads = false; }
-        else if ( nrsps == ndvars) { computeObjFns = false; computeObjGrads = true; }
-        else if ( nrsps == 1+ndvars) { computeObjFns = true; computeObjGrads = true; }
+        else if ( nrsps == 2) { computeObjFns = false; computeObjGrads = true; }
+        else if ( nrsps == 3) { computeObjFns = true; computeObjGrads = true; }
         else assert(0, "No requested response data in DAKOTA input file");
     }
     // finished reading DAKOTA input file
@@ -105,11 +105,15 @@ void main(string[] args) {
     }
 
     // copy work-dir to init-sol
-    string clearInitSolDirCmd = "rm -r ../init-sol/*";
+    string clearInitSolDirCmd = "rm -r ../init-sol/*";                                                          
     auto clearInitSolDirOutput = executeShell(clearInitSolDirCmd);
 
     string cpyThisDirToInitSolCmd = "cp -r * ../init-sol/";
     auto cpyThisDirToInitSolOutput = executeShell(cpyThisDirToInitSolCmd);
+
+    // remove DAKOTA files from init-sol directory
+    string rmDakotaFilesFromInitSolDirCmd = "rm ../init-sol/params.in ../init-sol/results.out";
+    auto rmDakotaFilesFromInitSolDirOutput = executeShell(rmDakotaFilesFromInitSolDirCmd);
     
     // check DAKOTA results file exists
     assert(exists(dakotaResultFileName), "DAKOTA results.out file not found");
