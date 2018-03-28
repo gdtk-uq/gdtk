@@ -303,11 +303,11 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     bool residualsUpToDate = false;
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
-    if (usePreconditioner) {
+    //if (usePreconditioner) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             sss_preconditioner_initialisation(blk); 
         }
-    }
+        //}
 
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
@@ -1135,7 +1135,8 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     size_t OMEGA = omegaIdx;
 
     double resid;
-
+    
+    int interpOrderSave = GlobalConfig.interpolation_order;
     // Presently, just do one block
     int maxIters = GlobalConfig.sssOptions.maxOuterIterations;
     // We add 1 because the user thinks of "re"starts, so they
@@ -1249,24 +1250,6 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
 
     double dtInv = 1.0/dt;
 
-    // Set up preconditioner (or set to 1.0 if not using one)
-    if (usePreconditioner) {
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            double epsilon = 1.0e-6;
-            double mu = 1.0e-6;
-            sss_preconditioner(blk, nConserved, blk.Dinv, epsilon, mu, 1);
-            foreach (k; 0 .. blk.Dinv.length) {
-                blk.Dinv[k] += dtInv; 
-                blk.Dinv[k] = 1.0/blk.Dinv[k];
-            }
-        }
-    }
-    else {
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.Dinv[] = 1.0;
-        }
-    }
-
     // We'll scale r0 against these max rates of change.
     // r0 = b - A*x0
     // Taking x0 = [0] (as is common) gives r0 = b = FU
@@ -1300,6 +1283,23 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         }
     }
 
+    // Form approximate D.
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.Dinv[] = 1.0;
+    }
+    if (usePreconditioner) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.set_interpolation_order(1);
+            evalJacobianVecProd(pseudoSimTime, sigma);
+            blk.v[] += dtInv;
+            foreach (k; 0 .. blk.nvars) {
+                blk.Dinv[k] = blk.V[k,0]/blk.v[k];
+                blk.v[k] = blk.V[k,0];
+            }
+            blk.set_interpolation_order(interpOrderSave);
+        }
+    }
+
     // Compute tolerance
     auto outerTol = eta*beta;
 
@@ -1326,6 +1326,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                 writeln("Retrying evalJacobian: sigma= ", sigmaHalf);
                 evalJacobianVecProd(pseudoSimTime, sigmaHalf);
             }
+
             // Now we can complete calculation of w
             foreach (blk; parallel(localFluidBlocks,1)) {
                 foreach (k; 0 .. blk.nvars)  blk.w[k] += blk.v[k];

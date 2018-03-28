@@ -16,6 +16,7 @@ import util.lua;
 import util.lua_service;
 
 import nm.smla;
+import nm.luabbla;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
@@ -31,6 +32,8 @@ import grid_deform;
 import fvcore;
 import fileutil;
 import geom;
+import geom.luawrap;
+import lua_helper;
 import simcore;
 import fluxcalc;
 import user_defined_source_terms;
@@ -972,6 +975,54 @@ void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, 
 void initLuaStateForUserDefinedObjFunc()
 {
     L = init_lua_State();
+    registerVector3(L);
+    registerBBLA(L);
+    // Load some Lua modules using 'require'.
+    // There is no convenient C API expression to do the equivalent of "require"
+    luaL_dostring(L, "require 'lua_helper'");
+    // Set some globally available constants for the Lua state.
+    lua_pushnumber(L, GlobalConfig.nFluidBlocks);
+    lua_setglobal(L, "nFluidBlocks");
+    lua_pushnumber(L, n_ghost_cell_layers);
+    lua_setglobal(L, "nGhostCellLayers");
+    // Give the user a table that holds information about
+    // all of the blocks in the full simulation.
+    // Note that not all of these blocks may be fully present
+    // in an MPI-parallel simulation.
+    lua_newtable(L);
+    foreach (int i, blk; globalFluidBlocks) {
+        lua_newtable(L);
+        lua_pushnumber(L, blk.cells.length);
+        lua_setfield(L, -2, "nCells");
+        lua_pushnumber(L, blk.vertices.length);
+        lua_setfield(L, -2, "nVertices");
+        if ( blk.grid_type == Grid_t.structured_grid ) {
+            auto sblk = cast(SFluidBlock) blk;
+            assert(sblk !is null, "Oops, this should be an SFluidBlock object.");
+            lua_pushnumber(L, sblk.nicell);
+            lua_setfield(L, -2, "niCells");
+            lua_pushnumber(L, sblk.njcell);
+            lua_setfield(L, -2, "njCells");
+            lua_pushnumber(L, sblk.nkcell);
+            lua_setfield(L, -2, "nkCells");
+            lua_pushnumber(L, sblk.imin);
+            lua_setfield(L, -2, "vtxImin");
+            lua_pushnumber(L, sblk.imax+1);
+            lua_setfield(L, -2, "vtxImax");
+            lua_pushnumber(L, sblk.jmin);
+            lua_setfield(L, -2, "vtxJmin");
+            lua_pushnumber(L, sblk.jmax+1);
+            lua_setfield(L, -2, "vtxJmax");
+            lua_pushnumber(L, sblk.kmin);
+            lua_setfield(L, -2, "vtxKmin");
+            lua_pushnumber(L, sblk.kmax+1);
+            lua_setfield(L, -2, "vtxKmax");
+        }
+        lua_rawseti(L, -2, i);
+    }
+    lua_setglobal(L, "blockData");
+    //
+    setSampleHelperFunctions(L);
     doLuaFile(L, GlobalConfig.sscOptions.userDefinedObjectiveFile);
 }
 
