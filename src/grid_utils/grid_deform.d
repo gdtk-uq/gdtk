@@ -13,7 +13,7 @@ import std.math;
 import std.algorithm;
 import geom;
 
-void inverse_distance_weighting(FluidBlock blk, string[] NonFixedBoundaryList, size_t gtl) {
+void inverse_distance_weighting(FluidBlock blk, size_t gtl, string[] NonFixedBoundaryList=[]) {
     
     // we assume the boundary vertices have already been perturbed, and have their new positions stored at the current gtl.
     // now we compute perturbed internal vertices
@@ -26,8 +26,8 @@ void inverse_distance_weighting(FluidBlock blk, string[] NonFixedBoundaryList, s
                     ds.refx = vtxs.pos[gtl].x - vtxs.pos[0].x;
                     ds.refy = vtxs.pos[gtl].y - vtxs.pos[0].y;
                     double r; double w;
-                    double dx = vtxi.pos[0].x - vtxs.pos[gtl].x; 
-                    double dy = vtxi.pos[0].y - vtxs.pos[gtl].y; 
+                    double dx = vtxi.pos[0].x - vtxs.pos[0].x; 
+                    double dy = vtxi.pos[0].y - vtxs.pos[0].y; 
                     r = sqrt(dx*dx + dy*dy);
                     w = 1.0 / (r*r);
                     numer_sum[0] += ds.x * w; numer_sum[1] += ds.y * w;
