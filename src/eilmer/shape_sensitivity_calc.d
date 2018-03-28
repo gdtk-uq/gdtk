@@ -53,17 +53,6 @@ import bc;
 import grid_deform;
 import shape_sensitivity;
 
-/*
-enum ghost_cell_start_id = 1_000_000_000;
-immutable double ESSENTIALLY_ZERO = 1.0e-50;
-// some data objects used in forming the Jacobian
-immutable size_t MAX_PERTURBED_INTERFACES = 40;
-FVCell cellOrig;
-FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
-FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
-FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
-*/
-
 string adjointDir = "adjoint";
 
 void init_adjoint_dir()
@@ -84,27 +73,37 @@ void main(string[] args) {
         assert(0, "Adjoint solver is not MPI parallel, yet.");
     }
 
-    string msg = "Usage:                              Comment:\n";
+    string msg = "Usage:                                    Comment:\n";
     msg       ~= "e4ssc      [--job=<string>]            name of job\n";
-    msg       ~= "           [--no-gradients=<bool>]     \n";
-    msg       ~= "           [--max-cpus=<int>]          defaults to ";
-    msg       ~= to!string(totalCPUs) ~" on this machine\n";
-    msg       ~= "           [--max-wall-clock=<int>]    in seconds\n";
-    msg       ~= "           [--help]                    writes this message\n";
+    msg       ~= "           [--prep]                               \n";
+    msg       ~= "           [--return-objective-function]          \n";
+    msg       ~= "           [--parameterise-surfaces               \n";
+    msg       ~= "           [--grid-update]                        \n";
+    msg       ~= "           [--verification]                       \n";
+    msg       ~= "           [--max-cpus=<int>]           defaults to ";
+    msg       ~= to!string(totalCPUs) ~" on this machine            \n";
+    msg       ~= "           [--max-wall-clock=<int>]     in seconds\n";
+    msg       ~= "           [--help]            writes this message\n";
     if ( args.length < 2 ) {
         writeln("Too few arguments.");
         write(msg);
         exit(1);
     }
     string jobName = "";
-    bool noGradients = false;
+    bool returnObjFcnFlag = false;
+    bool parameteriseSurfacesFlag = false;
+    bool gridUpdateFlag = false;
+    bool verificationFlag = false;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool helpWanted = false;
     try {
         getopt(args,
                "job", &jobName,
-               "no-gradients", &noGradients,
+               "return-objective-function", &returnObjFcnFlag,
+               "parameterise-surfaces", &parameteriseSurfacesFlag,
+               "grid-update", &gridUpdateFlag,
+               "verification", &verificationFlag,
                "max-cpus", &maxCPUs,
                "max-wall-clock", &maxWallClock,
                "help", &helpWanted
@@ -158,7 +157,7 @@ void main(string[] args) {
     
     // set some global config values
     GradientMethod gradientMethod = GlobalConfig.sscOptions.gradientMethod;
-    bool gradientVerification = GlobalConfig.sscOptions.gradientVerification;
+    //bool gradientVerification = GlobalConfig.sscOptions.gradientVerification;
     // finite-difference perturbation parameters
     double EPSILON = GlobalConfig.sscOptions.epsilon; // flow Jacobian
     double MU = GlobalConfig.sscOptions.mu; // flow Jacobian
@@ -171,14 +170,11 @@ void main(string[] args) {
     // Initialise Lua state for calling user-defined objective function.
     //initLuaStateForUserDefinedObjFunc();
 
-    writeln("----------------");
-    writeln("Running With Perturbation Parameters:");
-    writeln("EPSILON  = ", EPSILON);
-    writeln("MU  = ", MU);
-    writeln("ETA = ", ETA);
-    writeln("DELTA = ", DELTA);
-    writeln("----------------");
-    
+    FluidBlock myblk = localFluidBlocks[0]; // currently only compatible with single block simulations
+    // number of design variables
+    size_t ndvars = 0;
+    size_t ndim = GlobalConfig.dimensions;
+
     // save a copy of the original mesh for later use
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.sync_vertices_to_underlying_grid(0);
@@ -186,9 +182,32 @@ void main(string[] args) {
         auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
         blk.write_underlying_grid(fileName);
     }
-
-    FluidBlock myblk = localFluidBlocks[0]; // currently only compatible with single block simulations
     
+
+    // -----------------------------
+    // -----------------------------
+    // GEOMETRY PARAMETERISATION
+    // -----------------------------
+    // -----------------------------
+    if (parameteriseSurfacesFlag) {
+        parameteriseSurfaces(myblk, ndvars, ndim, bezier_curve_tolerance, bezier_curve_max_steps);    
+        writeBezierCntrlPtsToDakotaFile(myblk, ndvars, jobName);
+        return; // --parameterise-surfaces complete
+    }
+    
+    // -----------------------------
+    // -----------------------------
+    // Grid Update
+    // -----------------------------
+    // -----------------------------
+    Vector3[] design_variables;
+    if (gridUpdateFlag) {
+        parameteriseSurfaces(myblk, ndvars, ndim, bezier_curve_tolerance, bezier_curve_max_steps);
+        prepForMeshPerturbation(myblk);
+        gridUpdate(myblk, design_variables, jobName);
+        return; // --grid-update complete
+    }
+
     // -----------------------------
     // -----------------------------
     // OBJECTIVE FUNCTION EVALUATION
@@ -201,16 +220,19 @@ void main(string[] args) {
     writeln("objective fn evaluation: ", objFnEval);
     write_objective_fn_to_file("results.out", objFnEval);
     
-    if (noGradients) return;
-        
-    // --------------
+    if (returnObjFcnFlag) return; // --return-objective-function
+    
+    // ----------------------------
+    // ----------------------------
+    // SHAPE SENSITIVITY CALCULATOR
+    // -----------------------------
+    // ----------------------------
+    
     // --------------
     // ADJOINT SOLVER
     //---------------
-    // --------------
-
+    
     // set the number of primitive variables
-    size_t ndim = GlobalConfig.dimensions;
     bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
     size_t np; size_t nb = 0; 
     if (GlobalConfig.dimensions == 2) {
@@ -264,72 +286,11 @@ void main(string[] args) {
     destroy(L1D);
     GC.minimize();
 
-    // ----------------------------
-    // ----------------------------
-    // SHAPE SENSITIVITY CALCULATOR
-    // -----------------------------
-    // ----------------------------
-
-    // ----------------------------
-    // Compute residual sensitivity
-    // ----------------------------
-
-    string[] NonFixedBoundaryList;
-    NonFixedBoundaryList ~= "outflow";
-    size_t ndvars = 0;
-    foreach (bndary; myblk.bc) {
-        if (bndary.is_design_surface) {
-	    // gather boundary vertices
-            size_t[] vtx_id_list;
-            foreach(face; bndary.faces) {
-                foreach(i, vtx; face.vtx) {
-                    if (i == 0) {
-			bndary.vertices ~= vtx;
-			bndary.surfacePoints ~= Vector3(vtx.pos[0].refx, vtx.pos[0].refy, vtx.pos[0].refz);
-                        vtx_id_list ~= vtx.id;
-			myblk.boundaryVtxIndexList ~= vtx.id;
-		    }
-		    else if (i > 0 && vtx_id_list.canFind(vtx.id) == false) {
-			// currently assume points in x-order
-			FVVertex vtx0 = bndary.vertices[$-1];
-			if (vtx.pos[0].x > vtx0.pos[0].x) {
-			    bndary.vertices ~= vtx;
-			    bndary.surfacePoints ~= Vector3(vtx.pos[0].refx, vtx.pos[0].refy, vtx.pos[0].refz);
-                            vtx_id_list ~= vtx.id;
-			    myblk.boundaryVtxIndexList ~= vtx.id;
-			}
-			else {
-			    bndary.vertices ~= vtx0;
-			    bndary.surfacePoints ~= Vector3(vtx0.pos[0].refx, vtx0.pos[0].refy, vtx0.pos[0].refz);
-                            vtx_id_list ~= vtx0.id;
-			    myblk.boundaryVtxIndexList ~= vtx0.id;
-
-			    bndary.vertices[i-1] = vtx;
-			    bndary.surfacePoints[i-1] = Vector3(vtx.pos[0].refx, vtx.pos[0].refy, vtx.pos[0].refz);
-                            vtx_id_list[i-1] = vtx.id;
-			    myblk.boundaryVtxIndexList[i-1] = vtx.id;
-			}
-		    }
-                }
-            }
-            // compute bezier control points
-            ndvars += bndary.num_cntrl_pts;
-            bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.num_cntrl_pts, bndary.ts, bezier_curve_tolerance, bezier_curve_max_steps);
-        }
-	else {
-	    size_t[] vtx_id_list;
-            foreach(face; bndary.faces) {
-                foreach(vtx; face.vtx) {
-                    if (vtx_id_list.canFind(vtx.id) == false) {
-                        bndary.vertices ~= vtx;
-			vtx_id_list ~= vtx.id;
-			if (NonFixedBoundaryList.canFind(bndary.group) == false) myblk.boundaryVtxIndexList ~= vtx.id;
-                    }
-                }
-            }
-	}
-    }
-
+    // ------------------------------
+    // RESIDUAL/OBJECTIVE SENSITIVITY
+    // ------------------------------
+    parameteriseSurfaces(myblk, ndvars, ndim, bezier_curve_tolerance, bezier_curve_max_steps);    
+    prepForMeshPerturbation(myblk);
     size_t ncells = myblk.cells.length;
     double[] dJdD;
     dJdD.length = ndvars;
@@ -338,8 +299,92 @@ void main(string[] args) {
 
     foreach (bndary; myblk.bc) {
         if (bndary.is_design_surface) {
-            foreach (i; 0 .. bndary.num_cntrl_pts) {
-                int gtl; int ftl; double P0; double dP;
+            foreach (i; 1 .. bndary.num_cntrl_pts-1) {
+                int gtl; int ftl; double Jp; double Jm; string varID; double P0; double dP;
+
+                // x
+                // initialise all positions
+		foreach(otherBndary; myblk.bc) {
+		    foreach(j, vtx; otherBndary.vertices) {
+			    vtx.pos[1].refx = vtx.pos[0].x;
+			    vtx.pos[1].refy = vtx.pos[0].y;
+			    vtx.pos[2].refx = vtx.pos[0].x;
+			    vtx.pos[2].refy = vtx.pos[0].y;
+		    }
+		}
+                evalRHS(0.0, 0, 0, with_k_omega, myblk);
+                // store origianl value, and compute perturbation
+                P0 = bndary.bezier.B[i].x;
+                dP = ETA; //max(OMEGA*abs(P0), 1.0e-10);
+
+                // perturb design variable +ve
+                gtl = 1; ftl = 1;
+                bndary.bezier.B[i].refx = P0 + dP;
+
+                // update design surface
+                foreach(j, vtx; bndary.vertices) {
+                    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+                    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+                }
+
+                // perturb mesh, and compute new geometry
+		inverse_distance_weighting(myblk, gtl);
+		myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
+                if ((myblk.grid_type == Grid_t.unstructured_grid) &&
+                        (myblk.myConfig.interpolation_order > 1)) { 
+                        auto myUBlock = cast(UFluidBlock) myblk;
+                        myUBlock.compute_least_squares_setup(gtl);
+                }
+                // compute perturbed flux
+                myblk.clear_fluxes_of_conserved_quantities();
+                evalRHS(0.0, ftl, gtl, with_k_omega, myblk);
+                foreach (otherBndary; myblk.bc) {
+                    if (otherBndary.group == "design") Jp = cost_function(otherBndary, gtl);
+                }
+		writef("perturbed %d J(D, Q(D) = %.16f , h = %.16f \n", i, Jp, dP);
+
+                // perturb design variable -ve
+                gtl = 2; ftl = 2;
+		bndary.bezier.B[i].refx = P0 - dP;
+
+                // update design variable
+                foreach(j, vtx; bndary.vertices) {
+                    vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+                    vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
+                }
+
+                // perturb mesh, and compute new geometry
+		inverse_distance_weighting(myblk, gtl);
+		myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
+                if ((myblk.grid_type == Grid_t.unstructured_grid) &&
+                    (myblk.myConfig.interpolation_order > 1)) { 
+                    auto myUBlock = cast(UFluidBlock) myblk;
+                    myUBlock.compute_least_squares_setup(gtl);
+                }
+                
+                // compute perturbed flux
+                myblk.clear_fluxes_of_conserved_quantities();
+                evalRHS(0.0, ftl, gtl, with_k_omega, myblk);
+                foreach (otherBndary; myblk.bc) {
+                    if (otherBndary.group == "design") Jm = cost_function(otherBndary, gtl);
+                }
+		writef("perturbed %d J(D, Q(D) = %.16f , h = %.16f \n", i, Jm, dP);
+
+                // compute cost function sensitivity
+                dJdD[ndim*(i-1)] = (Jp-Jm)/(2.0*dP);
+		
+                // compute residual sensitivity
+                foreach(j, cell; myblk.cells) {
+		    dRdD_T[ndim*(i-1), j*np] = (cell.dUdt[1].mass - cell.dUdt[2].mass)/(2.0*dP);
+		    dRdD_T[ndim*(i-1), j*np+1] = (cell.dUdt[1].momentum.x - cell.dUdt[2].momentum.x)/(2.0*dP);
+		    dRdD_T[ndim*(i-1), j*np+2] = (cell.dUdt[1].momentum.y - cell.dUdt[2].momentum.y)/(2.0*dP);
+		    dRdD_T[ndim*(i-1), j*np+3] = (cell.dUdt[1].total_energy - cell.dUdt[2].total_energy)/(2.0*dP);
+		}
+
+                // restore design variable
+                bndary.bezier.B[i].refx = P0;
+
+                // y
                 // initialise all positions
 		foreach(otherBndary; myblk.bc) {
 		    foreach(j, vtx; otherBndary.vertices) {
@@ -359,14 +404,13 @@ void main(string[] args) {
                 bndary.bezier.B[i].refy = P0 + dP;
 
                 // update design surface
-                double grad;
                 foreach(j, vtx; bndary.vertices) {
                     vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
                     vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
                 }
 
                 // perturb mesh, and compute new geometry
-		inverse_distance_weighting(myblk, NonFixedBoundaryList, gtl);
+		inverse_distance_weighting(myblk, gtl);
 		myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
                 if ((myblk.grid_type == Grid_t.unstructured_grid) &&
                         (myblk.myConfig.interpolation_order > 1)) { 
@@ -376,7 +420,6 @@ void main(string[] args) {
                 // compute perturbed flux
                 myblk.clear_fluxes_of_conserved_quantities();
                 evalRHS(0.0, ftl, gtl, with_k_omega, myblk);
-                double Jp;
                 foreach (otherBndary; myblk.bc) {
                     if (otherBndary.group == "design") Jp = cost_function(otherBndary, gtl);
                 }
@@ -393,7 +436,7 @@ void main(string[] args) {
                 }
 
                 // perturb mesh, and compute new geometry
-		inverse_distance_weighting(myblk, NonFixedBoundaryList, gtl);
+		inverse_distance_weighting(myblk, gtl);
 		myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
                 if ((myblk.grid_type == Grid_t.unstructured_grid) &&
                     (myblk.myConfig.interpolation_order > 1)) { 
@@ -404,21 +447,20 @@ void main(string[] args) {
                 // compute perturbed flux
                 myblk.clear_fluxes_of_conserved_quantities();
                 evalRHS(0.0, ftl, gtl, with_k_omega, myblk);
-                double Jm;
                 foreach (otherBndary; myblk.bc) {
                     if (otherBndary.group == "design") Jm = cost_function(otherBndary, gtl);
                 }
 		writef("perturbed %d J(D, Q(D) = %.16f , h = %.16f \n", i, Jm, dP);
 
                 // compute cost function sensitivity
-                dJdD[i] = (Jp-Jm)/(2.0*dP);
+                dJdD[ndim*(i-1)+1] = (Jp-Jm)/(2.0*dP);
 		
                 // compute residual sensitivity
                 foreach(j, cell; myblk.cells) {
-		    dRdD_T[i, j*np] = (cell.dUdt[1].mass - cell.dUdt[2].mass)/(2.0*dP);
-		    dRdD_T[i, j*np+1] = (cell.dUdt[1].momentum.x - cell.dUdt[2].momentum.x)/(2.0*dP);
-		    dRdD_T[i, j*np+2] = (cell.dUdt[1].momentum.y - cell.dUdt[2].momentum.y)/(2.0*dP);
-		    dRdD_T[i, j*np+3] = (cell.dUdt[1].total_energy - cell.dUdt[2].total_energy)/(2.0*dP);
+		    dRdD_T[ndim*(i-1)+1, j*np] = (cell.dUdt[1].mass - cell.dUdt[2].mass)/(2.0*dP);
+		    dRdD_T[ndim*(i-1)+1, j*np+1] = (cell.dUdt[1].momentum.x - cell.dUdt[2].momentum.x)/(2.0*dP);
+		    dRdD_T[ndim*(i-1)+1, j*np+2] = (cell.dUdt[1].momentum.y - cell.dUdt[2].momentum.y)/(2.0*dP);
+		    dRdD_T[ndim*(i-1)+1, j*np+3] = (cell.dUdt[1].total_energy - cell.dUdt[2].total_energy)/(2.0*dP);
 		}
 
                 // restore design variable
@@ -451,28 +493,24 @@ void main(string[] args) {
     // -----------------------------------------------------
     // Finite difference verification
     // -----------------------------------------------------
-
-    if (gradientVerification) {
+    if (verificationFlag) {
         double[] finiteDiffGradients; double J1; double J0;
         
-        // read original grid in
-        ensure_directory_is_present(make_path_name!"grid-original"(0));
-        string gridFileName = make_file_name!"grid-original"(jobName, myblk.id, 0, gridFileExt = "gz");
-        myblk.read_new_underlying_grid(gridFileName);
-        myblk.sync_vertices_from_underlying_grid(0);
-
+        // save a copy of the original mesh for later use
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.sync_vertices_to_underlying_grid(0);
+            ensure_directory_is_present(make_path_name!"grid-original"(0));
+            auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
+            blk.write_underlying_grid(fileName);
+        }
+        
         foreach (bndary; myblk.bc) {
 	    if (bndary.is_design_surface) {
-		foreach (i; 0 .. bndary.num_cntrl_pts) {
-                    double err;
-		    if (i == 0) {
-                        double J;
-                        foreach (otherBndary; myblk.bc) {
-                            if (otherBndary.group == "design") J = cost_function(otherBndary, 0);
-                        }
-                        writef("Original J(D, Q(D) = %.16f \n", J);
-                    }
-		    writeln("computing finite difference gradient for variable ", i+1, " out of ", ndvars, " variables");
+		foreach (i; 1 .. bndary.num_cntrl_pts-1) {
+                    double dP = DELTA; //max(ETA*abs(P0), 1.0e-10);                
+                    double err; double P0;
+                    // x
+		    writeln("computing finite difference gradient for variable ", i*ndim-1, " out of ", ndvars, " variables");
 		    // could loop over all x, y, z coordinates here -- for now just use y-coordinates
 		    string varID;
                     foreach(otherBndary; myblk.bc) {
@@ -483,39 +521,49 @@ void main(string[] args) {
                             vtx.pos[2].refy = vtx.pos[0].y;
                         }
                     }
-		    auto P0 = bndary.bezier.B[i].refy;
-                    double dP = DELTA; //max(ETA*abs(P0), 1.0e-10);                
-		    bndary.bezier.B[i].refy = P0 + dP;
+		    P0 = bndary.bezier.B[i].refx;
+                    bndary.bezier.B[i].refx = P0 + dP;
+                    varID = "p-x-" ~ to!string(i);
+		    J0 = finite_difference_grad(jobName, last_tindx, myblk, bndary, varID);
+		    writef("perturbed J(D, Q(D) = %.16f , h = %.16f \n", J0, dP);
+		    bndary.bezier.B[i].refx = P0 - dP;
+                    varID = "m-x-" ~ to!string(i);
+		    J1 = finite_difference_grad(jobName, last_tindx, myblk, bndary, varID);
+		    finiteDiffGradients ~= (J0 - J1)/(2.0*dP);
+		    bndary.bezier.B[i].refx = P0;
+                    writef("perturbed J(D, Q(D) = %.16f , h = %.16f \n", J1, dP);
+
+                    err = ((adjointGradients[ndim*i-2] - finiteDiffGradients[ndim*i-2])/finiteDiffGradients[ndim*i-2]) * 100.0;
+		    writeln("finite-difference gradient for variable ", ndim*i-1, ": ", finiteDiffGradients[ndim*i-2], ", % error: ", abs(err));
+
+                    // y
+		    writeln("computing finite difference gradient for variable ", i*ndim, " out of ", ndvars, " variables");
+		    // could loop over all x, y, z coordinates here -- for now just use y-coordinates
+                    foreach(otherBndary; myblk.bc) {
+                        foreach(j, vtx; otherBndary.vertices) {
+                            vtx.pos[1].refx = vtx.pos[0].x;
+                            vtx.pos[1].refy = vtx.pos[0].y;
+                            vtx.pos[2].refx = vtx.pos[0].x;
+                            vtx.pos[2].refy = vtx.pos[0].y;
+                        }
+                    }
+		    P0 = bndary.bezier.B[i].refy;
+                    bndary.bezier.B[i].refy = P0 + dP;
                     varID = "p-y-" ~ to!string(i);
-		    J0 = finite_difference_grad(jobName, last_tindx, myblk, bndary, NonFixedBoundaryList, varID);
+		    J0 = finite_difference_grad(jobName, last_tindx, myblk, bndary, varID);
 		    writef("perturbed J(D, Q(D) = %.16f , h = %.16f \n", J0, dP);
 		    bndary.bezier.B[i].refy = P0 - dP;
                     varID = "m-y-" ~ to!string(i);
-		    J1 = finite_difference_grad(jobName, last_tindx, myblk, bndary, NonFixedBoundaryList, varID);
+		    J1 = finite_difference_grad(jobName, last_tindx, myblk, bndary, varID);
 		    finiteDiffGradients ~= (J0 - J1)/(2.0*dP);
 		    bndary.bezier.B[i].refy = P0;
                     writef("perturbed J(D, Q(D) = %.16f , h = %.16f \n", J1, dP);
 
-                    err = ((adjointGradients[i] - finiteDiffGradients[i])/finiteDiffGradients[i]) * 100.0;
-		    writeln("finite-difference gradient for variable ", i+1, ": ", finiteDiffGradients[i], ", % error: ", abs(err));
+                    err = ((adjointGradients[ndim*i-1] - finiteDiffGradients[ndim*i-1])/finiteDiffGradients[ndim*i-1]) * 100.0;
+		    writeln("finite-difference gradient for variable ", ndim*i, ": ", finiteDiffGradients[ndim*i-1], ", % error: ", abs(err));
                 }
 	    }
 	}
     }
     writeln("Simulation complete.");
 }
-
-void write_objective_fn_to_file(string fileName, double objFnEval) {
-    auto outFile = File(fileName, "w");
-    outFile.writef("%.16e f\n", objFnEval); 
-}
-
-void write_gradients_to_file(string fileName, double[] grad) {
-    auto outFile = File(fileName, "a");
-    outFile.writef("[ ");
-    foreach( i; 0..grad.length ) {
-        outFile.writef("%.16e ", grad[i]);
-    }
-    outFile.writef(" ]\n"); 
-}
-

@@ -8,12 +8,14 @@ import std.math;
 import std.process;
 import std.algorithm;
 import std.string;
-
-import nm.smla;
+import std.file;
+import std.parallelism;
+import std.conv;
 
 import util.lua;
 import util.lua_service;
 
+import nm.smla;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
@@ -44,19 +46,16 @@ FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
 
 private lua_State* L; // module-local Lua interpreter
 
-double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, BoundaryCondition bndary, string[] NonFixedBoundaryList, string varID) {
+double finite_difference_grad(string jobName, int last_tindx, FluidBlock blk, BoundaryCondition bndary, string varID, string[] NonFixedBoundaryList=[]) {
     size_t gtl = 1;
-    double grad;
-    grad = (bndary.vertices[$-1].pos[1].y - bndary.vertices[0].pos[0].y)/(bndary.vertices[$-1].pos[0].x - bndary.vertices[0].pos[0].x);
     foreach(j, vtx; bndary.vertices) {
 	vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
 	vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
     }
-    inverse_distance_weighting(blk, NonFixedBoundaryList, gtl);
+    inverse_distance_weighting(blk, gtl);
 
     foreach(j, vtx; blk.vertices) {
-        //writef("%d %.16f %.16f \n", vtx.id, vtx.pos[0].x, vtx.pos[0].y);
-	vtx.pos[0].refx = vtx.pos[gtl].x;
+    	vtx.pos[0].refx = vtx.pos[gtl].x;
 	vtx.pos[0].refy = vtx.pos[gtl].y;
     }
 
@@ -991,4 +990,217 @@ double objectiveFunctionEvaluation()
     double val = luaL_checknumber(L, -1);
     lua_settop(L, 0);
     return val;
+}
+
+void parameteriseSurfaces(FluidBlock blk, ref size_t ndvars, size_t ndim, double tol, int max_steps) {
+    foreach (bndary; blk.bc) {
+        if (bndary.is_design_surface) {
+            // some arrays used in ordering the boundary vertice points
+            Vector3[] pts_ordered;
+            Vector3[] pts_unordered;
+            size_t[double] pos_array; // used to identify where the point is in the unordered list
+            size_t[] vtx_id_list;
+            double[] x_pos_array;
+            foreach(face; bndary.faces) {
+                foreach(i, vtx; face.vtx) {
+                    if (vtx_id_list.canFind(vtx.id) == false) {
+                        pts_unordered ~= Vector3(vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z);
+                        x_pos_array ~= vtx.pos[0].refx;
+                        vtx_id_list ~= vtx.id;
+                        pos_array[vtx.pos[0].x] = pts_unordered.length-1;
+                    }
+                }
+            }
+            
+            // order points in ascending x-position (WARNING: it is assumed that, for a given boundary,  each x-coordinate is unique).
+            x_pos_array.sort();
+            foreach(i; x_pos_array) pts_ordered ~= pts_unordered[pos_array[i]];
+            bndary.surfacePoints ~= pts_ordered;
+            
+            // compute bezier control points
+            ndvars += (bndary.num_cntrl_pts-2) * ndim; // do not include first and last point
+            bndary.bezier = optimiseBezierPoints(bndary.surfacePoints, bndary.num_cntrl_pts, bndary.ts, tol, max_steps);
+        }
+    }
+}
+
+void writeBezierCntrlPtsToDakotaFile(FluidBlock blk, size_t ndvars, string jobName) {
+    // write subset of bezier control points out to DAKOTA input script
+    string dakota_input_filename = jobName ~ ".in";
+    string pathToDakotaInputFile = "../" ~ dakota_input_filename;
+    if (exists(pathToDakotaInputFile)) {
+        string error_msg = format("DAKOTA input file already exists. Please remove the .in file before proceeding");
+        throw new FlowSolverException(error_msg);
+    }
+    string dakota_input_tmplt_filename = jobName ~ ".tmplt";
+    string pathToDakotaInputTmpltFile = "../" ~ dakota_input_tmplt_filename;
+    if (!exists(pathToDakotaInputTmpltFile)) {
+        string error_msg = format("DAKOTA input template file does not exist.");
+        throw new FlowSolverException(error_msg);
+    }
+    
+    // generate design variable information string
+    string designVariableInputContent;
+    designVariableInputContent ~= "    continuous_design = " ~ to!string(ndvars) ~ "\n";
+    designVariableInputContent ~= "    initial_point    ";
+    foreach( bndary; blk.bc ) {
+        if (bndary.is_design_surface) {
+            foreach ( i; 1..bndary.bezier.B.length-1) designVariableInputContent ~= format!"%.16e    %.16e    "(bndary.bezier.B[i].x, bndary.bezier.B[i].y);
+        }
+    }
+    designVariableInputContent ~= " \n"; 
+    designVariableInputContent ~= "    descriptors    ";
+    foreach( bndary; blk.bc ) {
+        if (bndary.is_design_surface) {
+            foreach ( i; 1..bndary.bezier.B.length-1) {
+                string descriptor;
+                // x-variable
+                descriptor = "'" ~ bndary.group ~ "_x" ~ to!string(i) ~ "'";
+                designVariableInputContent ~= descriptor ~ "    ";
+                // y-variable
+                descriptor = "'" ~ bndary.group ~ "_y" ~ to!string(i) ~ "'";
+                designVariableInputContent ~= descriptor ~ "    ";
+            }
+        }
+    }
+    designVariableInputContent ~= " \n"; 
+    
+    auto fR = File(pathToDakotaInputTmpltFile, "r");
+    auto fW = File(pathToDakotaInputFile, "w");
+    
+    while (!fR.eof) {
+        auto line = fR.readln().strip();
+        if (line == "variables") {
+            fW.writeln(line);
+            fW.writef(designVariableInputContent);
+        }
+        else fW.writeln(line);
+    }
+}
+
+void prepForMeshPerturbation(FluidBlock blk) {
+    // prepare arrays for mesh perturbation
+    foreach (bndary; blk.bc) {
+        if (bndary.is_design_surface) {
+            // some arrays used in ordering the boundary vertice points
+            FVVertex[] vtx_ordered;
+            FVVertex[] vtx_unordered;
+            size_t[double] pos_array; // used to identify where the point is in the unordered list
+            size_t[] vtx_id_list;
+            double[] x_pos_array;
+            foreach(face; bndary.faces) {
+                foreach(i, vtx; face.vtx) {
+                    if (vtx_id_list.canFind(vtx.id) == false) {
+                        blk.boundaryVtxIndexList ~= vtx.id;
+                        vtx_unordered ~= vtx;
+                        x_pos_array ~= vtx.pos[0].refx;
+                        vtx_id_list ~= vtx.id;
+                        pos_array[vtx.pos[0].x] = vtx_unordered.length-1;
+                    }
+                }
+            }
+            
+            // order points in ascending x-position (WARNING: it is assumed that, for a given boundary,  each x-coordinate is unique).
+            x_pos_array.sort();
+            foreach(i; x_pos_array) vtx_ordered ~= vtx_unordered[pos_array[i]];
+            bndary.vertices ~= vtx_ordered;
+        }
+        else {
+            size_t[] vtx_id_list;
+            foreach(face; bndary.faces) {
+                foreach(vtx; face.vtx) {
+                    if (vtx_id_list.canFind(vtx.id) == false) {
+                        bndary.vertices ~= vtx;
+                        vtx_id_list ~= vtx.id;
+                        blk.boundaryVtxIndexList ~= vtx.id;
+                    }
+                }
+            }
+        }
+    }
+    
+
+}
+
+void readBezierCntrlPtsFromDakotaFile(FluidBlock blk, ref Vector3[] design_variables) {
+    // read in new control points
+    auto f = File("params.in", "r");
+    auto line = f.readln().strip;// read first line & do nothing 
+    auto tokens = line.split();
+    foreach (bndary; blk.bc) {
+        if (bndary.is_design_surface) {
+            foreach ( i; 1..bndary.bezier.B.length-1) {
+                Vector3 pt;
+                // x-variable
+                line = f.readln().strip;
+                tokens = line.split();
+                pt.refx = to!double(tokens[0]);
+                // y-variable
+                line = f.readln().strip;
+                tokens = line.split();
+                pt.refy = to!double(tokens[0]);
+                // z-variable
+                pt.refz = 0.0;
+                design_variables ~= pt;
+            }
+        }
+    }
+}
+
+void gridUpdate(FluidBlock blk, ref Vector3[] design_variables, string jobName) {
+    readBezierCntrlPtsFromDakotaFile(blk, design_variables);
+    // assign new control points
+    // initialise all positions
+    foreach(otherBndary; blk.bc) {
+        foreach(j, vtx; otherBndary.vertices) {
+            vtx.pos[1].refx = vtx.pos[0].x;
+            vtx.pos[1].refy = vtx.pos[0].y;
+            vtx.pos[2].refx = vtx.pos[0].x;
+            vtx.pos[2].refy = vtx.pos[0].y;
+        }
+    }
+    
+    foreach( bndary; blk.bc ) {
+        if (bndary.is_design_surface) {
+            foreach ( i; 1..bndary.bezier.B.length-1) {
+                // x-variable
+                bndary.bezier.B[i].refx = design_variables[i-1].x;
+                
+                // y-variable
+                bndary.bezier.B[i].refy = design_variables[i-1].y;
+            }
+            
+            foreach(j, vtx; bndary.vertices) {
+                vtx.pos[1].refx = bndary.bezier(bndary.ts[j]).x;
+                vtx.pos[1].refy = bndary.bezier(bndary.ts[j]).y;
+            }
+        }
+    }
+    
+    inverse_distance_weighting(blk, 1);
+
+    foreach(j, vtx; blk.vertices) {
+        vtx.pos[0].refx = vtx.pos[1].x;
+        vtx.pos[0].refy = vtx.pos[1].y;
+    }
+
+    // save mesh
+    blk.sync_vertices_to_underlying_grid(0);
+    ensure_directory_is_present(make_path_name!"grid"(0));
+    auto fileName = make_file_name!"grid"(jobName, blk.id, 0, gridFileExt = "gz");
+    blk.write_underlying_grid(fileName);
+}
+
+void write_objective_fn_to_file(string fileName, double objFnEval) {
+    auto outFile = File(fileName, "w");
+    outFile.writef("%.16e f\n", objFnEval); 
+}
+
+void write_gradients_to_file(string fileName, double[] grad) {
+    auto outFile = File(fileName, "a");
+    outFile.writef("[ ");
+    foreach( i; 0..grad.length ) {
+        outFile.writef("%.16e ", grad[i]);
+    }
+    outFile.writef(" ]\n"); 
 }

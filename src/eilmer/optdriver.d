@@ -82,6 +82,14 @@ void main(string[] args) {
         else assert(0, "No requested response data in DAKOTA input file");
     }
     // finished reading DAKOTA input file
+
+    // get the latest mesh
+    string getInitGridCmd = "cp -r ../init-sol/* .";
+    auto getInitGridOutput = executeShell(getInitGridCmd);
+    
+    // perturb mesh
+    string perturbMeshCmd = "bash perturb_mesh.sh" ;
+    auto perturbMeshOutput = executeShell(perturbMeshCmd);
     
     // execute flow solver if objective function evaluations are needed
     if (computeObjFns) {
@@ -96,6 +104,13 @@ void main(string[] args) {
         auto output = executeShell(cmd);
     }
 
+    // copy work-dir to init-sol
+    string clearInitSolDirCmd = "rm -r ../init-sol/*";
+    auto clearInitSolDirOutput = executeShell(clearInitSolDirCmd);
+
+    string cpyThisDirToInitSolCmd = "cp -r * ../init-sol/";
+    auto cpyThisDirToInitSolOutput = executeShell(cpyThisDirToInitSolCmd);
+    
     // check DAKOTA results file exists
     assert(exists(dakotaResultFileName), "DAKOTA results.out file not found");
 }
