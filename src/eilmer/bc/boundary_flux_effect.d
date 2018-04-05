@@ -31,6 +31,8 @@ import flowstate;
 import gas;
 import bc;
 import flowgradients;
+import nm.ridder;
+import nm.bracketing;
 
 BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int boundary)
 {
@@ -354,7 +356,8 @@ public:
                         cell = blk.get_cell(i,j,k);
                         IFace = cell.iface[Face.south];
                         double dn = distance_between(cell.pos[0], IFace.pos);
-                        solve_for_wall_temperature(cell, IFace, dn, false);
+                        // Negative for SOUTH face
+                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, false);
                     } // end j loop
                 } // end k loop
                 break;
@@ -368,7 +371,8 @@ public:
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Flux equations
                         // Energy balance by solving for the wall surface temperature
-                        solve_for_wall_temperature(cell, IFace, dn, false);
+                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, false);
+                        //printf("Wall temperature = %.4g K\n", IFace.fs.gas.T);
 
                     } // end j loop
                 } // end k loop
@@ -380,7 +384,7 @@ public:
         } // end apply_structured_grid()
     }
 
-    void solve_for_wall_temperature(const FVCell cell, FVInterface IFace, double dn, bool outwardNormal)
+    double solve_for_wall_temperature_and_energy_flux(const FVCell cell, FVInterface IFace, double dn, bool outwardNormal)
     // Iteratively converge on wall temp
     {
         auto gmodel = blk.myConfig.gmodel; 
@@ -390,7 +394,14 @@ public:
         double Twall_prev = IFace.fs.gas.T;
         double Twall_prev_backup = IFace.fs.gas.T;
         double q_total, q_total_prev, q_total_prev_backup = 0.0;
-        // int iteration_check, subiteration_check = 0;
+        int iteration_check, subiteration_check = 0;
+
+  //      // Ridder method stuff
+		//int max_try = 50;
+  //      double factor = 0.05;
+  //      double T1 = 400; double T2 = 600; 
+  //      double T1_min = 80; double T2_max = 50000.0;
+  //      double Ttol = 0.001;
 
         // IFace orientation
         double nx = IFace.n.x; double ny = IFace.n.y; double nz = IFace.n.z;
@@ -491,23 +502,34 @@ public:
                 grad.T[0] = dTdnx;
                 grad.T[1] = dTdny;
                 grad.T[2] = dTdnz;
-                //iteration_check = 1;
+                iteration_check = 1;
                 break;
             }
 
             // What wall temperature would reach radiative equilibrium at current q_total
             if (ThermionicEmissionActive == 0){
                 Twall = pow( q_total / ( emissivity * SB_sigma ), 0.25 );
-            } else {
+            //} else { // Using in-built Ridder method
+
+            //	if (q_total == 0.0) {
+            //		// Do nothing
+            //		printf("Hello :)");
+            //	} else {
+            //		Twall = update_Twall_from_heat_flux(q_total);
+            //	}
+            //}
+            } else { // Homemade Newtons method
                 Twall_0 = Twall_prev;
                 foreach (Twall_subiteration_count; 0 .. Twall_subiterations) {
+                    //printf("Twall_subiteration_count = %.0f\n", Twall_subiteration_count);
                     f_rad = emissivity*SB_sigma*Twall_0*Twall_0*Twall_0*Twall_0;
-                    f_thermionic = phi/Qe*Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0));
+                    //f_thermionic = phi/Qe*Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0));
+                    f_thermionic = Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0))/Qe*(phi + 2*kb*Twall_0);
                     f_drv = f_rad*4/Twall_0 + Ar*exp(-phi/(kb*Twall_0))/(Qe*kb)*
                         (phi*(phi + 2*kb*Twall_0) + 2*kb*Twall_0*(phi + 3*kb*Twall_0));
                     Twall_1 = Twall_0 - (f_rad + f_thermionic - q_total)/f_drv;
                     if (fabs((Twall_1 - Twall_0))/Twall_0 <= 0.001) {
-                        //subiteration_check = 1;
+                        subiteration_check = 1;
                         break;
                     }
                     Twall_0 = Twall_1;
@@ -515,6 +537,7 @@ public:
                 Twall = Twall_1;
                 //printf("\n");
             }
+
             // Determine new guess as a weighted average so we don't take too much of a step.
             Twall = f_relax * Twall + ( 1.0 - f_relax ) * Twall_prev;
             Twall_prev_backup = Twall_prev;
@@ -522,16 +545,51 @@ public:
             q_total_prev_backup = q_total_prev;
             q_total_prev = q_total;
         }
-        //if (iteration_check == 0){
-        //    printf("Iteration's didn't converge\n");
-        //    printf("Increase Twall_iterations from default 200 value\n");
-        //    printf("\n");
-        //} else if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
-        //    printf("Subiteration's didn't converge\n");
-        //    printf("Increase Twall_subiterations from default 20 value\n");
-        //    printf("\n");
-        //}
-        return;
-    } // end solve_for_wall_temperature()
+        if (iteration_check == 0){
+            printf("Iteration's didn't converge\n");
+            printf("Increase Twall_iterations from default 200 value\n");
+            printf("\n");
+        }
+
+        if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
+            printf("Subiteration's didn't converge\n");
+            printf("Increase Twall_subiterations from default 20 value\n");
+            printf("\n");
+        }
+        return q_total;
+    } // end solve_for_wall_temperature_and_energy_flux()
+
+    //const double update_Twall_from_heat_flux(double q_total, double Ttol = 0.001)
+    //{
+    //    //Uses Ridders Method
+    //	// Set up zero functions for Ridder method
+    //    auto f_rad = delegate(double Twall_0)
+    //    	{
+    //    		return emissivity*SB_sigma*Twall_0*Twall_0*Twall_0*Twall_0;
+    //    	};
+
+    //    auto f_thermionic = delegate(double Twall_0)
+    //    	{
+    //    		return Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0))/Qe*(phi + 2*kb*Twall_0);
+    //    	};
+
+    //    auto zeroEnergyBalance_T = delegate(double Twall_0)
+    //        {
+    //            return q_total - f_rad(Twall_0) - f_thermionic(Twall_0);
+    //        };
+
+    //    int max_try = 50;
+    //    double factor = 0.05;
+    //    //double T1 = 400; double T2 = 600; 
+    //    double T1_min = 80; double T2_max = 50000.0;
+    //    // Use Ridder method
+    //    //int bracketFlag = bracket!zeroEnergyBalance_T(T1,T2,T1_min,T2_max,max_try,factor);
+    //    //if (bracketFlag == -1) throw new Exception(format("bracketing getTemperature failed at q_total: %s, q_rad: %s, q_thermionic: %s, bracket: [%s, %s]", q_total, f_rad, f_thermionic, T1, T2));
+    //    double Twall = solve!zeroEnergyBalance_T(T1_min,T2_max, Ttol);
+    //    assert(!isNaN(Twall), format("Twall is NaN at q_total: %s, q_rad: %s, q_thermionic: %s", q_total, f_rad, f_thermionic));
+
+    //    return Twall;
+    //}
+
 } // end class BIE_EnergyBalanceThermionic
 
