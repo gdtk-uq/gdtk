@@ -15,6 +15,7 @@ import std.format;
 import std.stdio;
 import std.math;
 import std.algorithm;
+import nm.bbla;
 import geom;
 import gas;
 import kinetics;
@@ -112,6 +113,9 @@ public:
         // during construction of the external portion of the flow Jacobian.  
         size_t[] idList;
         double[] aa;
+        // block-diagonal contribution to Jacobian used in steady-state solver pre-conditioner
+        Matrix dPrimitive;
+        Matrix dConservative;
     }
 
 private:

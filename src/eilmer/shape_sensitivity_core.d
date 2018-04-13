@@ -1894,7 +1894,7 @@ void write_gradients_to_file(string fileName, double[] grad) {
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
-void sss_preconditioner_initialisation(FluidBlock blk) {
+void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
     if (blk.grid_type == Grid_t.structured_grid) {
         auto sblk = cast(SFluidBlock) blk;
         foreach ( cell; blk.cells) {
@@ -1915,6 +1915,11 @@ void sss_preconditioner_initialisation(FluidBlock blk) {
         }
     }
     // initialise objects
+    blk.transform = new Matrix(nConservative, nConservative);
+    foreach( cell; blk.cells) {
+        cell.dPrimitive = new Matrix(nConservative, nConservative);
+        cell.dConservative = new Matrix(nConservative, nConservative);
+    }
     cellOrig = new FVCell(blk.myConfig);
     foreach(i; 0..MAX_PERTURBED_INTERFACES) {
         ifaceOrig[i] = new FVInterface(blk.myConfig, false);
@@ -1923,9 +1928,7 @@ void sss_preconditioner_initialisation(FluidBlock blk) {
     }
 }
 
-// dedicatedConfig[blk.id]
-
-void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, double MU, int orderOfJacobian=1) {
+void sss_preconditioner(FluidBlock blk, size_t np, double EPSILON, double MU, int orderOfJacobian=1) {
 
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     blk.myConfig.interpolation_order = orderOfJacobian;
@@ -1948,14 +1951,12 @@ void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, 
         double volInv = 1.0 / cell.volume[0];
         for ( size_t ip = 0; ip < np; ++ip ) {
             for ( size_t jp = 0; jp < np; ++jp ) {
-                if ( ip == jp) {
-                    integral = 0.0;
-                    foreach(fi, iface; cell.iface) {
-                        integral -= cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
-                    }
-                    double entry = volInv * integral;                    
-                    aa[cell.id*np+jp] = entry;
+                integral = 0.0;
+                foreach(fi, iface; cell.iface) {
+                    integral -= cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                 }
+                double entry = volInv * integral;                    
+                cell.dPrimitive[ip,jp] = entry;
             }
         }
         // clear the interface flux Jacobian entries
@@ -1967,13 +1968,34 @@ void sss_preconditioner(FluidBlock blk, size_t np, double[] aa, double EPSILON, 
             }
         }
     }
-
+    
     // multiply by transform matrix diagonal (transforming primitive to conservative form)
     foreach ( cell; blk.cells) {
-        aa[cell.id*np] *= 1.0;
-        aa[cell.id*np+1] *= 1.0/cell.fs.gas.rho;
-        aa[cell.id*np+2] *= 1.0/cell.fs.gas.rho;
-        aa[cell.id*np+3] *= cell.fs.gas.p/(cell.fs.gas.rho * cell.fs.gas.u); // ratio of specific heats minus 1
+        // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
+        double gamma = cell.fs.gas.p/(cell.fs.gas.rho * cell.fs.gas.u); // ratio of specific heats minus 1
+
+        // first row
+        blk.transform[0,0] = 1.0;
+        blk.transform[0,1] = 0.0;
+        blk.transform[0,2] = 0.0;
+        blk.transform[0,3] = 0.0;
+        // second row
+        blk.transform[1,0] = -cell.fs.vel.x/cell.fs.gas.rho;
+        blk.transform[1,1] = 1.0/cell.fs.gas.rho;
+        blk.transform[1,2] = 0.0;
+        blk.transform[1,3] = 0.0;
+        // third row
+        blk.transform[2,0] = -cell.fs.vel.y/cell.fs.gas.rho;
+        blk.transform[2,1] = 0.0;
+        blk.transform[2,2] = 1.0/cell.fs.gas.rho;
+        blk.transform[2,3] = 0.0;
+        // fourth row
+        blk.transform[3,0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
+        blk.transform[3,1] = -cell.fs.vel.x*(gamma-1);
+        blk.transform[3,2] = -cell.fs.vel.y*(gamma-1);
+        blk.transform[3,3] = gamma-1.0;
+
+        dot(cell.dPrimitive, blk.transform, cell.dConservative);
     }
     
     // reset interpolation order to the global setting

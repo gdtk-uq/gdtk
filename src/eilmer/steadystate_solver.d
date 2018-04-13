@@ -305,7 +305,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
     //if (usePreconditioner) {
         foreach (blk; parallel(localFluidBlocks,1)) {
-            sss_preconditioner_initialisation(blk); 
+            sss_preconditioner_initialisation(blk, nConserved); 
         }
         //}
 
