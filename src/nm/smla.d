@@ -165,9 +165,10 @@ bool approxEqualMatrix(SMatrix a, SMatrix b)
 
 void multiply(SMatrix a, double[] b, double[] c)
 in {
-    assert(a.ia.length-1 == b.length);
-    assert(b.length == c.length);
-}
+    assert(a.ia.length-1 == c.length);
+    // Some faith is given that the user provides an appropriate length
+    // input vector b, since in CRS we cannot easily determine the number of columns.
+ }
 body {
     size_t k0, k1;
     foreach ( i; 0 .. a.ia.length-1 ) {
