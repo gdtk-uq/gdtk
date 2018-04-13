@@ -105,8 +105,13 @@ public:
     double rho_at_start_of_step, rE_at_start_of_step;
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
+        // stencil of effected cells & faces used in forming the flow Jacobian
         FVCell[] jacobian_cell_stencil;
         FVInterface[] jacobian_face_stencil;
+        // arrays used to temporarily store data intended for the neighbouring block
+        // during construction of the external portion of the flow Jacobian.  
+        size_t[] idList;
+        double[] aa;
     }
 
 private:

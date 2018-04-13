@@ -411,7 +411,7 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_FILES) $(UTIL_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' shape_sensitivity_calc.d > shape_sensitivity_calc_with_rev_string.d
-	$(DMD) -version=shape_sensitivity $(DFLAGS) $(OF)e4ssc \
+	$(DMD) -version=shape_sensitivity -version=steady_state $(DFLAGS) $(OF)e4ssc \
 		shape_sensitivity_calc_with_rev_string.d shape_sensitivity_core.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES)  \

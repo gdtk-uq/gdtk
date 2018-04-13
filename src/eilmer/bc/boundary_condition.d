@@ -101,14 +101,21 @@ public:
     FVInterface[] faces;
     FVCell[] ghostcells;
     int[] outsigns;
-    
+
+    // list of vertices along boundary, used for the mesh perturbation stage of the
+    // shape sensitivity calculator.
     FVVertex[] vertices;
     version(shape_sensitivity) {
+        // Bezier curve parameterisation data objects
         Bezier bezier;
         double[] ts;
         int nCntrlPts;
         Vector3[] surfacePoints;
-        //FVVertex[] vertices;
+        // When forming the block local Jacobian matrices for parallel execution of the shape sensitivity calculator,
+        // we need to have copies of the neighbour block cells and interfaces that are effected
+        // by perturbations in the parent block. We will reference the objects in these arrays by their global ids.
+        FVCell[size_t] neighbour_block_cells;
+        FVInterface[size_t] neighbour_block_faces;
     }
 
 private:

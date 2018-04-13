@@ -69,6 +69,10 @@ public:
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
         double[][] dFdU;
+        // arrays used to temporarily store data intended for the neighbouring block
+        // during construction of the external portion of the flow Jacobian.  
+        size_t[] idList;
+        double[] aa;
     }
 private:
     LocalConfig myConfig;

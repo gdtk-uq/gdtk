@@ -10,6 +10,7 @@ import std.math;
 import std.json;
 import util.lua;
 import nm.bbla;
+import nm.smla;
 import util.lua_service;
 import gas.luagas_model;
 import geom;
@@ -88,9 +89,28 @@ public:
 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
-        // Compressed Row Storage information for the transpose Jacobian 
+        // arrays used to temporarily store data during construction of the flow Jacobian transpose 
         double[][] aa;
         size_t[][] ja;
+        // local effects matrix for flow Jacobian transpose.
+        // dimensions: [# local cells x # primitive vars] X [# local cells x # primitive vars]
+        SMatrix JlocT;
+        // external effects matrix for flow Jacobian transpose.
+        // dimensions: [# local boundary cells x # primitive vars] X [# global cells x # primitive vars]
+        SMatrix JextT;
+        // Matrix used in preconditioning (low order, local, flow Jacobian).
+        SMatrix P;
+        // objective function senstivity w.r.t primitive variables
+        double[] f;
+        // adjoint variables
+        double[] psi;
+        // residual sensitivity w.r.t. design variables (transposed)
+        Matrix rT;           
+        // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
+        double[] rTdotPsi;
+        // These arrays and matrices are directly tied to using the
+        // GMRES iterative solver (use some directly from steady-state solver).
+        double[] Z, z, wext, zext;
     }
     
     version(steady_state)
