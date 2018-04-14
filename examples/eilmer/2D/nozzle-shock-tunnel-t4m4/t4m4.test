@@ -1,0 +1,82 @@
+# t4m4.test
+# Functional test for axisymmetric T4 Mach 4 nozzle flow, block-marching version.
+# This is Wilson's Mach 7 flight condition at q of 50 kPa.
+#
+# Peter J, 2018-04-14
+
+package require tcltest 2.0
+namespace import ::tcltest::*
+configure -verbose {start body error}
+
+test prep {Prepare input files.} -body {
+    if [info exists env(DGD_REPO)] {
+        set dgd_repo $env(DGD_REPO)
+    } else {
+        set dgd_repo [file join $env(HOME) dgd]
+    }
+    set here [pwd]
+    if {![file exists [file join $here cea-lut-air.lua]]} {
+        file copy [file join $dgd_repo src gas sample-data cea-lut-air-version-test.lua] \
+            [file join $here cea-lut-air.lua]
+    }
+    if {![file exists cea-air13species-gas-model.lua]} {
+        file copy [file join $dgd_repo src gas sample-data cea-air13species-gas-model.lua] \
+            $here
+    }
+    exec e4shared --prep --job=t4m4  > LOGFILE_PREP
+} -result {} -returnCodes {0}
+
+test run {Run block-marching simulation.} -body {
+    exec e4shared --run --job=t4m4 --verbosity=1 --max-cpus=4  > LOGFILE_MAIN
+} -result {} -returnCodes {0}
+
+test post {Extract flow data at exit.} -body {
+    exec e4shared --post --job=t4m4 --tindx-plot=last --add-vars="mach,pitot,total-p,total-h" \
+        --output-file=nozzle-exit.data --extract-line="0.5114,0,0,0.5114,0.044,0,20" > LOGFILE_POST
+} -result {} -returnCodes {0}
+
+proc is_within_tolerance {v v_ref tol} {
+    return [expr abs($v - $v_ref) < ($tol * $v_ref)]
+}
+
+proc mean {data} {
+    set sum 0.0
+    foreach v $data { set sum [expr $sum + $v] }
+    return [expr $sum / [llength $data]]
+}
+
+test exit-condition {The nozzle exit conditions 444K, 1997m/s, 0.125kg/m**3.} -body {
+    # The reference values were extracted from the solution data file
+    # nozzle-exit-eilmer3.data as it was computed with nenzfr/Eilmer3.
+    #
+    # We'll check the data in the exit-plane profile.
+    set result_flags {}
+    set fp [open nozzle-exit.data r]
+    set contents [read $fp]
+    close $fp  
+    #  
+    # Select only particular columns of the exit profile data.
+    set T_list {}
+    set vel_list {}
+    set density_list {}
+    foreach line [split $contents "\n"] {
+        set line [string trim $line]
+        if {[string first "#" $line] >= 0} continue
+        set values [split $line]
+        if {[llength $values] < 20} break
+        set ypos [lindex $values 1]
+        if {$ypos > 0.044} break
+        lappend T_list [lindex $values 19]
+        lappend vel_list [lindex $values 5]
+        lappend density_list [lindex $values 4]
+    }
+    #
+    # The values should be within 1% of those expected.
+    lappend result_flags \
+        [is_within_tolerance [mean $T_list] 443.7 0.01] \
+        [is_within_tolerance [mean $vel_list] 1996.6 0.01] \
+        [is_within_tolerance [mean $density_list] 0.1252 0.01]
+    set result_flags
+} -result {1 1 1}
+
+cleanupTests
