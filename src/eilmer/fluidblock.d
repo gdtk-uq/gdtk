@@ -89,6 +89,8 @@ public:
 
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
+        // local objective function evaluation
+        double locObjFcn;
         // arrays used to temporarily store data during construction of the flow Jacobian transpose 
         double[][] aa;
         size_t[][] ja;

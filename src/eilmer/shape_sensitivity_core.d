@@ -1144,7 +1144,6 @@ void rpcGMRES_solve(size_t nPrimitive) {
             copy(Q1, Q0);
             // Get residual
             resid = fabs(g1[j+1]);
-            writef("global residual: %.16e \n",  resid);
             // DEBUG:
             //      writefln("OUTER: restart-count= %d iteration= %d, resid= %e", r, j, resid);
             if ( resid <= outerTol ) {
@@ -1171,6 +1170,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) blk.psi[k] += blk.x0[k];
         }
+        writef("global residual: %.16e \n",  resid);
         if ( resid <= outerTol || r+1 == maxRestarts ) {
             // DEBUG:  writefln("resid= %e outerTol= %e  r+1= %d  maxRestarts= %d", resid, outerTol, r+1, maxRestarts);
             // DEBUG:  writefln("Breaking restart loop.");
@@ -1534,11 +1534,11 @@ double objectiveFunctionEvaluation()
 }
 */
 
-double objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface",) {
+double objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
 
     double ObjFcn = 0.0;    
     foreach (myblk; parallel(localFluidBlocks,1)) {
-        double locObjFcn = 0.0;
+        myblk.locObjFcn = 0.0;
         foreach (bndary; myblk.bc) {
             if (bndary.group == bndaryForSurfaceIntergral) {
                 foreach (i, f; bndary.faces) {
@@ -1549,12 +1549,12 @@ double objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral
                     } else {
                         cell = f.right_cell;
                     }
-                    locObjFcn += cell.fs.gas.p*f.area[gtl]*f.n.x;
+                    myblk.locObjFcn += cell.fs.gas.p*f.area[gtl]*f.n.x;
                 }
             }
         }
-        ObjFcn += locObjFcn;
     }
+    foreach ( myblk; localFluidBlocks) ObjFcn += myblk.locObjFcn;
     return abs(ObjFcn);
 }
 
@@ -1580,7 +1580,7 @@ void form_objective_function_sensitivity(FluidBlock blk, size_t np, double EPSIL
 		} else {
 		    cell = f.right_cell;
 		}
-                // for current objectrive function only perturbations in pressure have any effect
+                // for current objective function only perturbations in pressure have any effect
                 origValue = cell.fs.gas.p;
                 h = (abs(cell.fs.gas.p) + MU) * EPSILON;
                 cell.fs.gas.p = origValue + h;
