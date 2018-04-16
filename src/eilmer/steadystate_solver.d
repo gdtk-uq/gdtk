@@ -42,7 +42,7 @@ import user_defined_source_terms;
 import conservedquantities;
 import postprocess : readTimesFile;
 import loads;
-import shape_sensitivity : sss_preconditioner_initialisation, sss_preconditioner;
+//import shape_sensitivity : sss_preconditioner_initialisation, sss_preconditioner;
 
 static int fnCount = 0;
 static shared bool with_k_omega;
@@ -304,9 +304,9 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
     //if (usePreconditioner) {
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            sss_preconditioner_initialisation(blk, nConserved); 
-        }
+    //        foreach (blk; parallel(localFluidBlocks,1)) {
+    //        sss_preconditioner_initialisation(blk, nConserved); 
+    //    }
         //}
 
     // We only do a pre-step phase if we are starting from scratch.
@@ -965,15 +965,15 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
         int cellCount = 0;
         foreach (cell; blk.cells) {
             cell.U[1].copy_values_from(cell.U[0]);
-            cell.U[1].mass += sigma*blk.maxRate.mass*blk.Dinv[cellCount+MASS]*blk.v[cellCount+MASS];
-            cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.Dinv[cellCount+X_MOM]*blk.v[cellCount+X_MOM];
-            cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.Dinv[cellCount+Y_MOM]*blk.v[cellCount+Y_MOM];
+            cell.U[1].mass += sigma*blk.maxRate.mass*blk.zed[cellCount+MASS];
+            cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.zed[cellCount+X_MOM];
+            cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.zed[cellCount+Y_MOM];
             if ( blk.myConfig.dimensions == 3 )
-                cell.U[1].momentum.refz += sigma*blk.maxRate.momentum.z*blk.Dinv[cellCount+Z_MOM]*blk.v[cellCount+Z_MOM];
-            cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.Dinv[cellCount+TOT_ENERGY]*blk.v[cellCount+TOT_ENERGY];
+                cell.U[1].momentum.refz += sigma*blk.maxRate.momentum.z*blk.zed[cellCount+Z_MOM];
+            cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.zed[cellCount+TOT_ENERGY];
             if ( local_with_k_omega ) {
-                cell.U[1].tke += sigma*blk.maxRate.tke*blk.Dinv[cellCount+TKE]*blk.v[cellCount+TKE];
-                cell.U[1].omega += sigma*blk.maxRate.omega*blk.Dinv[cellCount+OMEGA]*blk.v[cellCount+OMEGA];
+                cell.U[1].tke += sigma*blk.maxRate.tke*blk.zed[cellCount+TKE];
+                cell.U[1].omega += sigma*blk.maxRate.omega*blk.zed[cellCount+OMEGA];
             }
             cell.decode_conserved(0, 1, 0.0);
             cellCount += nConserved;
@@ -984,15 +984,15 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
         bool local_with_k_omega = with_k_omega;
         int cellCount = 0;
         foreach (cell; blk.cells) {
-            blk.v[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
-            blk.v[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
-            blk.v[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
+            blk.zed[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
+            blk.zed[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
+            blk.zed[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
             if ( blk.myConfig.dimensions == 3 )
-                blk.v[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma*blk.maxRate.momentum.z);
-            blk.v[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
+                blk.zed[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma*blk.maxRate.momentum.z);
+            blk.zed[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
             if ( local_with_k_omega ) {
-                blk.v[cellCount+TKE] = (-cell.dUdt[1].tke - blk.FU[cellCount+TKE])/(sigma*blk.maxRate.tke);
-                blk.v[cellCount+OMEGA] = (-cell.dUdt[1].omega - blk.FU[cellCount+OMEGA])/(sigma*blk.maxRate.omega);
+                blk.zed[cellCount+TKE] = (-cell.dUdt[1].tke - blk.FU[cellCount+TKE])/(sigma*blk.maxRate.tke);
+                blk.zed[cellCount+OMEGA] = (-cell.dUdt[1].omega - blk.FU[cellCount+OMEGA])/(sigma*blk.maxRate.omega);
             }
             cellCount += nConserved;
         }
@@ -1122,7 +1122,8 @@ void evalJacobianVecProd(FluidBlock blk, double pseudoSimTime, double sigma)
 
 */
 
-void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner, ref double residual, ref int nRestarts)
+void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
+                    ref double residual, ref int nRestarts)
 {
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
@@ -1284,6 +1285,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     }
 
     // Form approximate D.
+    /*
     foreach (blk; parallel(localFluidBlocks,1)) {
         blk.Dinv[] = 1.0;
     }
@@ -1299,6 +1301,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
             blk.set_interpolation_order(interpOrderSave);
         }
     }
+    */
 
     // Compute tolerance
     auto outerTol = eta*beta;
@@ -1308,11 +1311,14 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         // 2a. Begin iterations
         foreach (j; 0 .. m) {
             iterCount = j+1;
+            foreach (blk; parallel(localFluidBlocks,1)) {
+                blk.zed[] = blk.v[];
+            }
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 double dtInv = 1.0/dt;
                 foreach (k; 0 .. blk.nvars) {
-                    blk.w[k] = dtInv*blk.Dinv[k]*blk.v[k];
+                    blk.w[k] = dtInv*blk.v[k];
                 }
             }
             
@@ -1324,12 +1330,16 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                 // Retry with sigma half as small.
                 double sigmaHalf = 0.5*sigma;
                 writeln("Retrying evalJacobian: sigma= ", sigmaHalf);
+                // Re-prepare 'z'
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    blk.zed[] = blk.v[];
+                }
                 evalJacobianVecProd(pseudoSimTime, sigmaHalf);
             }
 
             // Now we can complete calculation of w
             foreach (blk; parallel(localFluidBlocks,1)) {
-                foreach (k; 0 .. blk.nvars)  blk.w[k] += blk.v[k];
+                foreach (k; 0 .. blk.nvars)  blk.w[k] += blk.zed[k];
             }
             // The remainder of the algorithm looks a lot like any standard
             // GMRES implementation (for example, see smla.d)

@@ -125,7 +125,7 @@ public:
     size_t nvars;
     Matrix transform;
     double[] FU, dU, Dinv, r0, x0;
-    double[] v, w;
+    double[] v, w, zed;
     double[] g0, g1;
     Matrix Q1;
     Matrix V;
@@ -641,6 +641,7 @@ public:
         Dinv.length = n;
         v.length = n;
         w.length = n;
+        zed.length = n;
         g0.length = mOuter+1;
         g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
