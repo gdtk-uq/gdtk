@@ -718,47 +718,19 @@ void compute_perturbed_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian
             
             // Fill in gradients for ghost cells so that left- and right- cells at all faces,
             // including those along block boundaries, have the latest gradient values.
+            // Note that we DO NOT copy gradients from neighbour blocks even if the boundary
+            // has a mapped cell, this is due to efficiency, and block-parallel formation reasons.
+            // So we just use the fall back for all boundary conditions.
             foreach (bcond; blk.bc) {
-                bool found_mapped_cell_bc = false;
-                foreach (gce; bcond.preReconAction) {
-                    auto mygce = cast(GhostCellMappedCellCopy)gce;
-                    if (mygce && !blk.myConfig.in_mpi_context) {
-                        found_mapped_cell_bc = true;
-                        // There is a mapped-cell backing the ghost cell, so we can copy its gradients.
-                        foreach (i, f; bcond.faces) {
-                            // Only FVCell objects in an unstructured-grid are expected to have
-                            // precomputed gradients.  There will be an initialized reference
-                            // in the FVCell object of a structured-grid block, so we need to
-                            // test and avoid copying from such a reference.
-                            auto mapped_cell_grad = mygce.get_mapped_cell(i).gradients;
-                            if (bcond.outsigns[i] == 1) {
-                                if (mapped_cell_grad) {
-                                    f.right_cell.gradients.copy_values_from(mapped_cell_grad);
-                                } else {
-                                    // Fall back to looking over the face for suitable gradient data.
-                                    f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-                                }
-                            } else {
-                                if (mapped_cell_grad) {
-                                    f.left_cell.gradients.copy_values_from(mapped_cell_grad);
-                                } else {
-                                    f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-                                }
-                            }
-                        } // end foreach f
-                    } // end if (mygce)
-                } // end foreach gce
-                if (!found_mapped_cell_bc) {
-                    // There are no other cells backing the ghost cells on this boundary.
-                    // Fill in ghost-cell gradients from the other side of the face.
-                    foreach (i, f; bcond.faces) {
-                        if (bcond.outsigns[i] == 1) {
-                            f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
-                        } else {
-                            f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
-                        }
-                    } // end foreach f
-                } // end if !found_mapped_cell_bc
+                // There are no other cells backing the ghost cells on this boundary.
+                // Fill in ghost-cell gradients from the other side of the face.
+                foreach (i, f; bcond.faces) {
+                    if (bcond.outsigns[i] == 1) {
+                        f.right_cell.gradients.copy_values_from(f.left_cell.gradients);
+                    } else {
+                        f.left_cell.gradients.copy_values_from(f.right_cell.gradients);
+                    }
+                } // end foreach f
             } // end foreach bcond
         } // end if interpolation_order > 1
         // compute flux
