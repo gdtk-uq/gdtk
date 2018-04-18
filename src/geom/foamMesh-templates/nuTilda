@@ -20,31 +20,23 @@ internalField   uniform 0;
 
 boundaryField
 {
-    inlet
+    i-00
     {
         type                fixedValue;
         value               uniform 0;
     }
-
-    outlet      
+    o-00      
     {
         type                inletOutlet;  // preferred option for nuTilda at outlet
         inletValue          uniform 0;
         value               uniform 0;
     }
-
-    upperWall
+    w-00
     {
         type                fixedValue;
         value               uniform 0;
     }
-
-    lowerWall
-    {
-        type                fixedValue;
-        value               uniform 0;
-    }
-    symmetry
+    s-00
     {
         type            symmetry;
     }
@@ -52,11 +44,11 @@ boundaryField
     {
         type            empty;
     }
-    wedge-top
+    wedge-front
     {
         type            wedge;
     }
-    wedge-bottom
+    wedge-rear
     {
         type            wedge;
     }

@@ -21,26 +21,20 @@ internalField   uniform 0; // Can be kept at 0 for incompressible simulations.
 
 boundaryField
 {
-    inlet
+    i-00
     {
         type            fixedValue;
         value           uniform 0;
     }
-    outlet
+    o-00
     {
         type            zeroGradient;
     }
-
-    upperWall
+    w-00
     {
         type            zeroGradient;
     }
-
-    lowerWall
-    {
-        type            zeroGradient;
-    }
-    symmetry
+    s-00
     {
         type            symmetry;
     }
@@ -48,11 +42,11 @@ boundaryField
     {
         type            empty;
     }
-    wedge-top
+    wedge-front
     {
         type            wedge;
     }
-    wedge-bottom
+    wedge-rear
     {
         type            wedge;
     }

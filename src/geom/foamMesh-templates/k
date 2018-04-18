@@ -20,31 +20,23 @@ internalField   uniform 0;
 
 boundaryField
 {
-    inlet
+    i-00
     {
         type                fixedValue;
         value               uniform 2e-6;
     }
-
-    outlet
+    o-00
     {
         type                inletOutlet; // preferred setting for turbulence at outlet
         inletValue          uniform 0;
         value               uniform 0;
     }
-
-    upperWall
+    w-00
     {
         type                fixedValue;
         value               uniform 0;
     }
-
-    lowerWall
-    {
-        type                fixedValue;
-        value               uniform 0;
-    }
-    symmetry
+    s-00
     {
         type            symmetry;
     }

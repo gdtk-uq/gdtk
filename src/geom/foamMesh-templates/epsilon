@@ -24,21 +24,21 @@ internalField   uniform $epsilon_value;
 
 boundaryField
 {
-    inlet       
+    i-00       
     {
         type            fixedValue;
         value           uniform $epsilon_value;
     }
-    outlet
+    o-00
     {
         type            zeroGradient;
     }
-    upperWall
+    w-00
     {
         type            epsilonWallFunction;
         value           uniform $epsilon_value;
     }
-    symmetry
+    s-00
     {
         type            symmetry;
     }
@@ -46,11 +46,11 @@ boundaryField
     {
         type            empty;
     }
-    wedge-top
+    wedge-front
     {
         type            wedge;
     }
-    wedge-bottom
+    wedge-rear
     {
         type            wedge;
     }
