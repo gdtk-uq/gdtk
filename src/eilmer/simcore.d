@@ -277,7 +277,7 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // Now that we know the ghost-cell locations, we can set up the least-squares subproblems
     // for reconstruction prior to convective flux calculation for the unstructured-grid blocks.
     foreach (myblk; localFluidBlocks) {
-        if ((myblk.grid_type == Grid_t.unstructured_grid) && (myblk.myConfig.interpolation_order > 1)) {
+        if (myblk.grid_type == Grid_t.unstructured_grid) {
             auto myUBlock = cast(UFluidBlock) myblk;
             myUBlock.compute_least_squares_setup(0);
         }

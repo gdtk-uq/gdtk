@@ -671,7 +671,9 @@ public:
         }
         // The LSQ linear model for the flow field reconstruction is fitted using 
         // information on the locations of the points. 
-        foreach (c; cells) { compute_least_squares_setup_for_cell(c, gtl, true); }
+        if (myConfig.interpolation_order > 1) {
+            foreach (c; cells) { compute_least_squares_setup_for_cell(c, gtl, true); }
+        }
     } // end compute_least_squares_setup()
 
     void compute_least_squares_setup_for_cell(FVCell c, int gtl, bool allowCloudToExpand)
