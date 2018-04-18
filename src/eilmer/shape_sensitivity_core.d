@@ -1305,13 +1305,13 @@ void writeBezierCntrlPtsToDakotaFile(Vector3[] design_variables, size_t ndvars, 
     string designVariableInputContent;
     designVariableInputContent ~= "    continuous_design = " ~ to!string(ndvars) ~ "\n";
     designVariableInputContent ~= "    initial_point    ";
-    foreach ( i; 0..design_variables.length) designVariableInputContent ~= format!"%.16e    "(design_variables[i].y);
+    foreach ( i; 0..design_variables.length) designVariableInputContent ~= format!"%.16e    %.16e    "(design_variables[i].x, design_variables[i].y);
     designVariableInputContent ~= " \n"; 
     designVariableInputContent ~= "    descriptors    ";
     foreach ( i; 0..design_variables.length) {
                 string descriptor;
                 // y-variable
-                descriptor = "'" ~ "design_var" ~ "_y" ~ to!string(i) ~ "'";
+                descriptor = "'" ~ "design_var" ~ "_x" ~ to!string(i) ~ "'" ~ "    " ~ "'" ~ "design_var" ~ "_y" ~ to!string(i) ~ "'";
                 designVariableInputContent ~= descriptor ~ "    ";
     }
 
