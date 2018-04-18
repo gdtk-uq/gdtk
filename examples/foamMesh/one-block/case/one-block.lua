@@ -22,7 +22,7 @@ grid0 = StructuredGrid:new{psurface=quad0, niv=nxcells+1, njv=nycells+1}
 
 -- Define OpenFoam block (a "grid" with labels)
 blk0 = FoamBlock:new{grid=grid0,
-		     bndry_labels={west="i-00", south="w-00", east="o-00"}}
+		     bndry_labels={west="i-00", south="w-00", east="o-00", north="w-01"}}
 
 
 
