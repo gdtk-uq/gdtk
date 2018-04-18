@@ -85,33 +85,45 @@ function FoamBlock:new(o)
    if (o.grid == nil) then
       error("A 'grid' object must be supplied to FoamBlock:new().")
    end
-   if (o.grid:get_dimensions() ~= 2) then
-      errMsg = "The 'grid' object supplied to FoamBlock:new() must be a 2D grid.\n"
-      error(errMsg)
-   end
+   --if (o.grid:get_dimensions() ~= 2) then
+   --   errMsg = "The 'grid' object supplied to FoamBlock:new() must be a 2D grid.\n"
+   --   error(errMsg)
+   --end
    if (o.grid:get_type() ~= "structured_grid") then
       errMsg = "The 'grid' object supplied to FoamBlock:new() must be a structured grid.\n"
       error(errMsg)
    end
-   -- Construct a slab or wedge, as appropriate
-   if (axisymmetric) then
-      newGrid = o.grid:makeWedgeGrid{dtheta=dtheta, symmetric=true}
+   if (o.grid:get_dimensions() == 2) then
+      -- Construct a slab or wedge, as appropriate
+      if (axisymmetric) then
+         newGrid = o.grid:makeWedgeGrid{dtheta=dtheta, symmetric=true}
+      else
+         newGrid = o.grid:makeSlabGrid{dz=dz}
+      end
+   elseif (o.grid:get_dimensions() == 3) then
+         newGrid = o.grid
    else
-      newGrid = o.grid:makeSlabGrid{dz=dz}
+      errMsg = "The 'grid' object supplied to FoamBlock:new() must be a 2D or 3D grid.\n"
+      error(errMsg)
    end
    -- and then convert to unstructured
    o.ugrid = UnstructuredGrid:new{sgrid=newGrid}
 
    -- Now look over the boundary labels.
    checkBndryLabels(o.bndry_labels)
-   -- Add "top", "bottom" labels
-   if (axisymmetric) then
-      o.bndry_labels.top = "wedge-front"
-      o.bndry_labels.bottom = "wedge-rear"
+   -- Add "top", "bottom" labels for 2-D
+   if (o.grid:get_dimensions() == 2) then
+      if (axisymmetric) then
+         o.bndry_labels.top = "wedge-front"
+         o.bndry_labels.bottom = "wedge-rear"
+      else
+         o.bndry_labels.top = "FrontAndBack"
+         o.bndry_labels.bottom = "FrontAndBack"
+      end
    else
-      o.bndry_labels.top = "FrontAndBack"
-      o.bndry_labels.bottom = "FrontAndBack"
-   end
+      o.bndry_labels.top = "top"
+      o.bndry_labels.bottom = "bottom"
+   end 
    -- Populate the unset bndry_labels with the defaults
    for _,face in ipairs({"north", "east", "south", "west"}) do
       o.bndry_labels[face] = o.bndry_labels[face] or "unassigned"
