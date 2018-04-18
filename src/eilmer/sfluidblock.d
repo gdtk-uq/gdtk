@@ -987,8 +987,8 @@ public:
                             if (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares) {
                                 face.cloud_pos = [&(face.pos), &(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
-                            face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
-                                             F.fs, G.fs, H.fs, I.fs, J.fs];
+                                face.cloud_fs = [face.fs, A.fs, B.fs, C.fs, D.fs, E.fs,
+                                                 F.fs, G.fs, H.fs, I.fs, J.fs];
                             } else {
                                 face.cloud_pos = [&(A.pos), &(B.pos), &(C.pos), &(D.pos), &(E.pos[gtl]), 
                                                   &(F.pos), &(G.pos), &(H.pos), &(I.pos), &(J.pos[gtl])];
