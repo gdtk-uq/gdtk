@@ -93,8 +93,8 @@ public:
     ConservedQuantities Q; // source (or production) terms
     // for unstructured grids, we may be doing high-order reconstruction
     LSQInterpWorkspace ws;
-    LSQInterpGradients gradients; // we only need these workspaces for the unstrusctured
-                                  // solver, they are instantiated in ublock.d
+    LSQInterpGradients gradients; // we only need these workspaces for the unstructured
+                                  // solver, they are instantiated in ufluidblock.d
     // Terms for loose-coupling of radiation.
     double Q_rad_org;
     double f_rad_org;

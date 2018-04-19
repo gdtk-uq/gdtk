@@ -605,7 +605,7 @@ public:
         return;
     } // end bind_interfaces_vertices_and_cells()
 
-    override void compute_primary_cell_geometric_data(int gtl)
+    override void compute_primary_cell_geometric_data(size_t gtl)
     // Compute cell and interface geometric properties.
     {
         size_t i, j, k;
@@ -620,6 +620,8 @@ public:
         }
         //
         // Propagate cross-cell lengths into the ghost cells.
+        // *Assuming* that the grid is not changing rapidly toward the wall,
+        // we can extrapolate the cell geometry into the halo of ghost cells.
         // 25-Feb-2014
         // Jason Qin and Paul Petrie-Repar have identified the lack of exact symmetry in
         // the reconstruction process at the wall as being a cause of the leaky wall
@@ -741,10 +743,14 @@ public:
                 }
             }
         } // end if dimensions == 3
+    } // end compute_primary_cell_geometric_data()
+
+    override void compute_least_squares_setup(size_t gtl)
+    {
+        // Update the least-squares geometric weights and the workspaces, if appropriate.
+        // The weights should be calculated when the grid is initialised or moved.
+        // They are needed for flow gradient calculations that feed into the viscous fluxes.
         if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
-            // Update the least-squares geometric weights and the workspaces, if appropriate.
-            // The weights should be calculated when the grid is initialised or moved.
-            // They are needed for flow gradient calculations that feed into the viscous fluxes.
             if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
                     iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
@@ -755,7 +761,7 @@ public:
                 }
             }
         }
-    } // end compute_primary_cell_geometric_data()
+    } // end compute_least_squares_setup()
 
     void store_references_for_derivative_calc(size_t gtl)
     {

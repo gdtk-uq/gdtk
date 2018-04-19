@@ -274,14 +274,12 @@ void init_simulation(int tindx, int nextLoadsIndx,
             }
         }
     }
-    // Now that we know the ghost-cell locations, we can set up the least-squares subproblems
-    // for reconstruction prior to convective flux calculation for the unstructured-grid blocks.
-    foreach (myblk; localFluidBlocks) {
-        if (myblk.grid_type == Grid_t.unstructured_grid) {
-            auto myUBlock = cast(UFluidBlock) myblk;
-            myUBlock.compute_least_squares_setup(0);
-        }
-    }
+    //
+    // Now that we know the ghost-cell locations, we can set up the least-squares subproblems for
+    // 1. reconstruction prior to convective flux calculation for the unstructured-grid blocks
+    // 2. calculation of flow gradients for the viscous fluxes with least-squares gradients.
+    foreach (myblk; localFluidBlocks) { myblk.compute_least_squares_setup(0); }
+    //
     // We can apply a special initialisation to the flow field, if requested.
     if (GlobalConfig.diffuseWallBCsOnInit) {
         writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
@@ -723,11 +721,7 @@ void integrate_in_time(double target_time_as_requested)
             foreach (blk; localFluidBlocksBySize) {
                 if (blk.active) {
                     blk.compute_primary_cell_geometric_data(0);
-                    if ((blk.grid_type == Grid_t.unstructured_grid) &&
-                        (blk.myConfig.interpolation_order > 1)) { 
-                        auto myUBlock = cast(UFluidBlock) blk;
-                        myUBlock.compute_least_squares_setup(0);
-                    }
+                    blk.compute_least_squares_setup(0);
                 } // end if active
             } // end foreach blk
         }
@@ -1528,11 +1522,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
         predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
         // recalculate cell geometry with new vertex positions @ gtl = 1
         blk.compute_primary_cell_geometric_data(gtl+1);
-        if ((blk.grid_type == Grid_t.unstructured_grid) &&
-            (blk.myConfig.interpolation_order > 1)) { 
-            auto myUBlock = cast(UFluidBlock) blk;
-            myUBlock.compute_least_squares_setup(gtl+1);
-        }
+        blk.compute_least_squares_setup(gtl+1);
         // determine interface velocities using GCL for gtl = 1
         set_gcl_interface_properties(sblk, gtl+1, dt_global);
     }
@@ -1678,11 +1668,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
                 predict_vertex_positions(sblk, GlobalConfig.dimensions, dt_global, gtl);
                 // recalculate cell geometry with new vertex positions
                 blk.compute_primary_cell_geometric_data(gtl+1);
-                if ((blk.grid_type == Grid_t.unstructured_grid) &&
-                    (blk.myConfig.interpolation_order > 1)) { 
-                    auto myUBlock = cast(UFluidBlock) blk;
-                    myUBlock.compute_least_squares_setup(gtl+1);
-                }
+                blk.compute_least_squares_setup(gtl+1);
                 // grid remains at pos[gtl=1], thus let's use old interface velocities
                 // thus no need to set_gcl_interface_properties(blk, 2, dt_global);
             }

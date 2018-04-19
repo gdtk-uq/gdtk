@@ -607,7 +607,7 @@ public:
         } // end switch (myConfig.spatial_deriv_locn)
     } // end init_grid_and_flow_arrays()
     
-    override void compute_primary_cell_geometric_data(int gtl)
+    override void compute_primary_cell_geometric_data(size_t gtl)
     {
         if (myConfig.dimensions == 2) {
             foreach (c; cells) { c.update_2D_geometric_data(gtl, myConfig.axisymmetric); }
@@ -653,12 +653,13 @@ public:
         } // end foreach bndry
     } // end compute_primary_cell_geometric_data()
 
-    void compute_least_squares_setup(int gtl)
+    override void compute_least_squares_setup(size_t gtl)
     {
+        // Update the least-squares geometric weights and the workspaces, if appropriate.
+        // The weights should be calculated when the grid is initialised or moved.
+        //
         if (myConfig.viscous && (myConfig.spatial_deriv_calc == SpatialDerivCalc.least_squares)) {
             // LSQ weights are used in the calculation of flow gradients for the viscous terms.
-            // At this point in the initialisation stage, the domain cells, and the ghost cells, all
-            // have the correct cell centre values -- hence we can now compute the lsq weights.
             if (myConfig.spatial_deriv_locn == SpatialDerivLocn.faces) {
                 foreach(iface; faces) {
                     iface.grad.set_up_workspace_leastsq(iface.cloud_pos, iface.pos, false, iface.ws_grad);
@@ -669,26 +670,22 @@ public:
                 }
             }
         }
-        // The LSQ linear model for the flow field reconstruction is fitted using 
-        // information on the locations of the points. 
+        // The LSQ linear model for the flow field reconstruction is fitted using information
+        // on the locations of the points.
+        // This model is used later, as part of the convective flux calculation.
         if (myConfig.interpolation_order > 1) {
-            foreach (c; cells) { compute_least_squares_setup_for_cell(c, gtl, true); }
+            foreach (c; cells) {
+                try {
+                    c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
+                } catch (Exception e) {
+                    writefln("In compute_least_squares_setup()," ~
+                             " we have failed to assemble and invert normal matrix for cell id=%d",
+                             c.id);
+                    throw e;
+                }
+            }
         }
     } // end compute_least_squares_setup()
-
-    void compute_least_squares_setup_for_cell(FVCell c, int gtl, bool allowCloudToExpand)
-    // In the unstructured-grid context, set up the least-squares workspace for a cell
-    // so that spatial derivatives can be computed in later flow-field reconstructions.
-    {
-        try {
-            c.ws.assemble_and_invert_normal_matrix(c.cell_cloud, myConfig.dimensions, gtl);
-        } catch (Exception e) {
-            writefln("In compute_least_squares_setup_for_cell()," ~
-                     " we have failed to assemble and invert normal matrix for cell id=%d",
-                     c.id);
-            throw e;
-        }
-    } // end compute_least_squares_setup_for_cell()
 
     override void sync_vertices_from_underlying_grid(size_t gtl=0)
     {

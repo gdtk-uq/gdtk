@@ -836,11 +836,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
-            if ((myblk.grid_type == Grid_t.unstructured_grid) &&
-                (myblk.myConfig.interpolation_order > 1)) { 
-                auto myUBlock = cast(UFluidBlock) myblk;
-                myUBlock.compute_least_squares_setup(gtl);
-            }
+            myblk.compute_least_squares_setup(gtl);
         }
 
         evalRHS(0.0, ftl, gtl, with_k_omega);
@@ -856,11 +852,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
-            if ((myblk.grid_type == Grid_t.unstructured_grid) &&
-                (myblk.myConfig.interpolation_order > 1)) { 
-                auto myUBlock = cast(UFluidBlock) myblk;
-                myUBlock.compute_least_squares_setup(gtl);
-            }
+            myblk.compute_least_squares_setup(gtl);
         }
         
         evalRHS(0.0, ftl, gtl, with_k_omega);
