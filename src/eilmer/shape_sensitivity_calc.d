@@ -171,8 +171,10 @@ void main(string[] args) {
     double bezierCurveFitTol = GlobalConfig.sscOptions.tolBezierCurveFit;
     int bezierCurveFitMaxSteps = GlobalConfig.sscOptions.maxStepsBezierCurveFit;
     // order of flow Jacobian used in preconditioning
-    int order_of_preconditioner = 0;
-    
+    int orderOfPreconditioningMatrix = 0;
+    bool inviscidPreconditioningMatrix = true;
+    bool viscousConfigSave = GlobalConfig.viscous; 
+        
     // some global variables
     size_t nDesignVars = 0;
     Vector3[] designVars;
@@ -258,15 +260,22 @@ void main(string[] args) {
         myblk.JextT = new SMatrix();
         form_external_flow_jacobian_block_phase1(myblk.JextT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPSILON, MU); // orderOfJacobian=interpolation_order
     }
+    
+    if (inviscidPreconditioningMatrix)
+        { GlobalConfig.viscous = false; }
 
     foreach (myblk; parallel(localFluidBlocks,1)) {
         myblk.P = new SMatrix();
-        if (order_of_preconditioner == 0) // block-diagonal of a first order flow Jacobian (TODO: something isn't quite right for the new parallel implementation)
+        if (orderOfPreconditioningMatrix == 0) // block-diagonal of a first order flow Jacobian (TODO: something isn't quite right for the new parallel implementation)
             form_local_flow_jacobian_block(myblk.P, myblk, nPrimitive, 0, EPSILON, MU); // orderOfJacobian=0
         else // first order flow Jacobian
             form_local_flow_jacobian_block(myblk.P, myblk, nPrimitive, 1, EPSILON, MU); // orderOfJacobian=1
         decompILU0(myblk.P);
     }
+
+    if (inviscidPreconditioningMatrix)
+        { GlobalConfig.viscous = viscousConfigSave; }
+
 
     // Surface intergal objective functions can be computed in parallel with a reduction process across blocks to gather the final value,
     // however the sensitivity w.r.t to primitive variables cannot be computed in parallel, since we are only computing a single objective calue (for example drag).
