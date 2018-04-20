@@ -280,15 +280,6 @@ void init_simulation(int tindx, int nextLoadsIndx,
     // 2. calculation of flow gradients for the viscous fluxes with least-squares gradients.
     foreach (myblk; localFluidBlocks) { myblk.compute_least_squares_setup(0); }
     //
-    // We can apply a special initialisation to the flow field, if requested.
-    if (GlobalConfig.diffuseWallBCsOnInit) {
-        writeln("Applying special initialisation to blocks: wall BCs being diffused into domain.");
-        writefln("%d passes of the near-wall flow averaging operation will be performed.", GlobalConfig.nInitPasses);
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            diffuseWallBCsIntoBlock(blk, GlobalConfig.nInitPasses, GlobalConfig.initTWall);
-        }
-    }
-    //
     version (gpu_chem) {
         initGPUChem();
     }

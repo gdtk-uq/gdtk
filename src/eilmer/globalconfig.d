@@ -1488,10 +1488,6 @@ void configCheckPoint4()
     // the shape sensitivity calculator shouldn't apply diffuse_bcs_on_init_flag
     version(shape_sensitivity) {
         GlobalConfig.n_grid_time_levels = 3;
-        if (GlobalConfig.diffuseWallBCsOnInit) {
-            GlobalConfig.diffuseWallBCsOnInit = false;
-            writeln("Warning diffuse_bcs_on_init_flag set to false for shape sensitivity calculator.");
-        }
     } 
     return;
 }
