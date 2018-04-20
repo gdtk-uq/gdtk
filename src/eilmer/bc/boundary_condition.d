@@ -109,7 +109,6 @@ public:
         // Bezier curve parameterisation data objects
         Bezier bezier;
         double[] ts;
-        int nCntrlPts;
         Vector3[] surfacePoints;
         // When forming the block local Jacobian matrices for parallel execution of the shape sensitivity calculator,
         // we need to have copies of the neighbour block cells and interfaces that are effected

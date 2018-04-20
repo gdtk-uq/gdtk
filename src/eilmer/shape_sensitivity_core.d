@@ -5,7 +5,7 @@
  * Author: Kyle D.
 **/
 
-module shape_sensitivity;
+module shape_sensitivity_core;
 
 import core.memory;
 import std.stdio;
@@ -818,7 +818,8 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
     return codeStr;
 }
 
-void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref double[] g, size_t nDesignVars, size_t nPrimitive, bool with_k_omega, double ETA) {
+void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref double[] g, size_t nPrimitive, bool with_k_omega, double ETA) {
+    size_t nDesignVars = design_variables.length;
     foreach ( i; 0..nDesignVars) {
         //evalRHS(0.0, 0, 0, with_k_omega, myblk);
         int gtl; int ftl; double objFcnEvalP; double objFcnEvalM; string varID; double P0; double dP;
@@ -832,7 +833,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         design_variables[i].refy = P0 + dP;
         
         // perturb grid
-        gridUpdate(true, false, nDesignVars, design_variables, gtl);
+        gridUpdate(true, false, design_variables, gtl);
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
@@ -848,7 +849,7 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
         design_variables[i].refy = P0 - dP;
         
         // perturb grid
-        gridUpdate(true, false, nDesignVars, design_variables, gtl);
+        gridUpdate(true, false, design_variables, gtl);
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
@@ -1278,7 +1279,76 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
     }
 }
 
-void writeBezierCntrlPtsToDakotaFile(Vector3[] design_variables, size_t ndvars, string jobName) {
+void writeBezierDataToFile()
+{
+    // TODO: Think about if we have more than one design surface.
+    foreach ( myblk; localFluidBlocks) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.is_design_surface) {
+                string fileName = "blk" ~ to!string(myblk.id) ~ ".bezier";
+                if (exists(fileName)) {
+                    string error_msg = format(".bezier files already exist. Please remove before proceeding.");
+                    throw new FlowSolverException(error_msg);
+                }
+                auto outFile = File(fileName, "a");
+                foreach ( point; bndary.bezier.B) {
+                    outFile.writef("%.16e %.16e %.16e \n", point.x, point.y, point.z);
+                }
+                foreach( t; bndary.ts ) {
+                    outFile.writef("%.16e \n", t);
+                }
+            } // end if
+        } // end foreach bndary
+    } // end foreach myblk
+} // end writeBexierDataToFile
+
+void readBezierDataFromFile(ref Vector3[] designVars)
+{
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        collect_boundary_vertices(myblk);
+    }
+    
+    // TODO: Think about if we have more than one design surface.
+    foreach ( myblk; localFluidBlocks) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.is_design_surface) {
+                string fileName = "blk" ~ to!string(myblk.id) ~ ".bezier";
+                if (!exists(fileName)) {
+                    string error_msg = format(".bezier file does not exist");
+                    throw new FlowSolverException(error_msg);
+                }
+                auto fR = File(fileName, "r");
+                //while (!fR.eof) {
+                Vector3[] bezPts;
+                foreach ( i; 0..bndary.num_cntrl_pts) {
+                    auto line = fR.readln().strip();
+                    auto tokens = line.split();
+                    Vector3 pt;
+                    pt.refx = to!double(tokens[0]); pt.refy = to!double(tokens[1]); pt.refz = to!double(tokens[2]);
+                    bezPts ~= pt;
+                }
+                bndary.bezier = new Bezier(bezPts);
+                foreach ( i; 0..bndary.vertices.length) {
+                    auto line = fR.readln().strip();
+                    auto tokens = line.split();
+                    bndary.ts ~= to!double(tokens[0]);
+                    //}
+                }
+                if (designVars.length < 1) {
+                    foreach ( i; 1..bndary.bezier.B.length-1) {
+                        Vector3 dvar;
+                        dvar.refx = bndary.bezier.B[i].x;
+                        dvar.refy = bndary.bezier.B[i].y;
+                        designVars ~= dvar;
+                    }
+                }
+            } // end if
+        } // end foreach bndary
+    } // end foreach myblk
+} // end readBezierDataFromFile
+
+void writeDesignVarsToDakotaFile(Vector3[] design_variables, string jobName) {
+    size_t ndvars = design_variables.length;
     // write subset of bezier control points out to DAKOTA input script
     string dakota_input_filename = jobName ~ ".in";
     string pathToDakotaInputFile = "../" ~ dakota_input_filename;
@@ -1294,6 +1364,7 @@ void writeBezierCntrlPtsToDakotaFile(Vector3[] design_variables, size_t ndvars, 
     }
     
     // generate design variable information string
+    
     string designVariableInputContent;
     designVariableInputContent ~= "    continuous_design = " ~ to!string(ndvars) ~ "\n";
     designVariableInputContent ~= "    initial_point    ";
@@ -1322,7 +1393,7 @@ void writeBezierCntrlPtsToDakotaFile(Vector3[] design_variables, size_t ndvars, 
     }
 }
 
-void readBezierCntrlPtsFromDakotaFile(size_t nDesignVars, ref Vector3[] design_variables) {
+void readDesignVarsFromDakotaFile(size_t nDesignVars, ref Vector3[] design_variables) {
     // read in new control points
     auto f = File("params.in", "r");
     auto line = f.readln().strip;// read first line & do nothing 
@@ -1378,8 +1449,9 @@ double finite_difference_grad(string jobName, int last_tindx, string varID) {
     return J;
 }
 
-void compute_design_sensitivities_with_finite_differences(string jobName, int last_tindx, Vector3[] design_variables, size_t nDesignVars, double[] adjointGradients, double DELTA) {
+void compute_design_sensitivities_with_finite_differences(string jobName, int last_tindx, Vector3[] design_variables,  double[] adjointGradients, double DELTA) {
 
+    size_t nDesignVars = design_variables.length;
     double[] finiteDiffGradients;
     
     // save a copy of the original mesh for later use
@@ -1402,7 +1474,7 @@ void compute_design_sensitivities_with_finite_differences(string jobName, int la
         design_variables[i].refy = P0 + dP;
 
         // perturb grid
-        gridUpdate(false, false, nDesignVars, design_variables, 1, jobName);
+        gridUpdate(false, false, design_variables, 1, jobName);
 
         // run simulation
         varID = "p-y-" ~ to!string(i);
@@ -1412,7 +1484,7 @@ void compute_design_sensitivities_with_finite_differences(string jobName, int la
         design_variables[i].refy = P0 - dP;
 
         // perturb grid
-        gridUpdate(false, false, nDesignVars, design_variables, 1, jobName);
+        gridUpdate(false, false, design_variables, 1, jobName);
         
         // run simulation
         varID = "m-y-" ~ to!string(i);
@@ -1625,134 +1697,127 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
 }
 
 
-void parameteriseSurfaces(bool parameteriseSurfacesFlag, ref Vector3[] design_variables, ref size_t ndvars, double tol, int max_steps) {
-    // collect boundary vertices for each design surface
+void parameterise_design_surfaces(ref Vector3[] designVars, double surfaceFitTol, int surfaceFitMaxSteps)
+{
+    // make block local collections of the vertices that define block boundaries
+    // note that block boundaries that make up a design surface will have vertices in order of x-position
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        collect_boundary_vertices(myblk);
+    }
+
+    // make block local collections of the vertex coordinates used in parameterising the surface
     foreach (myblk; parallel(localFluidBlocks,1)) {
         foreach (bndary; myblk.bc) {
             if (bndary.is_design_surface) {
-                // some arrays used in ordering the boundary vertice points
-                size_t[] vtx_id_list;
-                foreach(face; bndary.faces) {
-                    foreach(i, vtx; face.vtx) {
-                        if (vtx_id_list.canFind(vtx.id) == false) {
-                            bndary.surfacePoints ~= Vector3(vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z);
-                            vtx_id_list ~= vtx.id;
-                        }
-                    }
-                }
-            }
-        }
-    }
+                size_t[] listOfAddedVtxIds;
+                foreach(vtx; bndary.vertices) {
+                    bndary.surfacePoints ~= Vector3(vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); // gtl = 0
+                } //end foreach vtx
+            } // end if
+        } // end for each bndary
+    } // end foreach blk
 
-    // collect all surface points for each design surface in a global array
-    Vector3[] globalSurfacePoints;
-    double[] ts;
-    Vector3[] pts_ordered;
-    Vector3[] pts_unordered;
-    size_t[string] pos_array; // used to identify where the point is in the unordered list
-    double[] x_pos_array;
-    string[] idx_list;
-    Bezier bezier;
-    int num_cntrl_pts;
+    // make global collection of the vertices that define boundaries flagged as design surfaces
+    // becareful of shared vertices: we make sure each added point has a unique x-coordinate
+    Vector3[] globalSurfacePoints; double[] ts;
+    Vector3[] surfacePtsUnordered;
+    size_t[string] origPosId; // used to identify where the point is in the unordered list
+    double[] xPosition; string[] listOfAddedXPosIdxs;
+    Bezier bezier; int nCntrlPts;
     foreach (myblk; localFluidBlocks) {
         foreach (bndary; myblk.bc) {
             if (bndary.is_design_surface) {
-                num_cntrl_pts = bndary.num_cntrl_pts;
-                foreach (pt; bndary.surfacePoints) {
-                    string idx = to!string(pt.x);
-                    if (idx_list.canFind(idx)) {} // do nothing
-                    else {
-                        pts_unordered ~= pt;
-                        x_pos_array ~= pt.x;
-                        pos_array[idx] = pts_unordered.length-1;
-                        idx_list ~= idx;
-                    } // end else
-                } // end foreach bndary.surfacePoints
+                nCntrlPts = bndary.num_cntrl_pts;
+                foreach (point; bndary.surfacePoints) {
+                    string xPosIdx = to!string(point.x);
+                    if (!listOfAddedXPosIdxs.canFind(xPosIdx)) {
+                        surfacePtsUnordered ~= point;
+                        xPosition ~= point.x;
+                        origPosId[xPosIdx] = surfacePtsUnordered.length-1;
+                        listOfAddedXPosIdxs ~= xPosIdx;
+                    } // end if
+                } // end foreach point
+            } // end if
+        } // end foreach bndary
+    } // end foreach blk
+    // for the bezier optimisation we need the array order by x-position
+    xPosition.sort();
+    foreach(x; xPosition) globalSurfacePoints ~= surfacePtsUnordered[origPosId[to!string(x)]];
+    bezier = optimiseBezierPoints(globalSurfacePoints, nCntrlPts, ts, surfaceFitTol, surfaceFitMaxSteps);
+    // first and last control points are not design variables
+    foreach ( i; 1..bezier.B.length-1) {
+        designVars ~= bezier.B[i];
+    }
+
+    // transmit global bezier to all relevant blocks
+    // copy bezier curve object to each design surface boundary, along with relevant portion of the ts array
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.is_design_surface) {
+                bndary.bezier = bezier;
+                double xi = bndary.vertices[0].pos[0].x;
+                double xf = bndary.vertices[$-1].pos[0].x;
+                size_t idxi; size_t idxf;
+                foreach (i, t; ts ) {
+                    if ( abs(globalSurfacePoints[i].x - xi) < ESSENTIALLY_ZERO) idxi = i;
+                    else if ( abs(globalSurfacePoints[i].x - xf) < ESSENTIALLY_ZERO) idxf = i;
+                    else {} //do nothing
+                } // foreach (ts)
+                bndary.ts.length = ts[idxi..idxf+1].length;
+                bndary.ts[] = ts[idxi..idxf+1];
             } // end if
         } // end foreach blk.bc
-    } // end foreach localFluidBlocks
-    x_pos_array.sort();
-    foreach(i; x_pos_array) pts_ordered ~= pts_unordered[pos_array[to!string(i)]];
-    globalSurfacePoints.length = pts_ordered.length;
-    globalSurfacePoints[] = pts_ordered[];
-    // perform bezier curve fit
-    bezier = optimiseBezierPoints(globalSurfacePoints, num_cntrl_pts, ts, tol, max_steps);
-    foreach ( i; 1..bezier.B.length-1) {
-        design_variables ~= bezier.B[i];
-    }
-    ndvars = design_variables.length;
-    if (parameteriseSurfacesFlag) return;
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        prepForMeshPerturbation(myblk, bezier, globalSurfacePoints, ts);
-    }
- } // end parameteriseSurfaces()
+    } // end foreach blk
 
-
-
-void prepForMeshPerturbation(FluidBlock blk, Bezier bezier, Vector3[] globalSurfacePoints, double[] ts) {
-    // prepare arrays for mesh perturbation
-    foreach (bndary; blk.bc) {
-        if ( bndary.type == "exchange_using_mapped_cells") {} // do nothing
-        else if (bndary.is_design_surface) {
-            // some arrays used in ordering the boundary vertice points
-            FVVertex[] vtx_ordered;
-            FVVertex[] vtx_unordered;
-            size_t[double] pos_array; // used to identify where the point is in the unordered list
-            size_t[] vtx_id_list;
-            double[] x_pos_array;
-            foreach(face; bndary.faces) {
-                foreach(i, vtx; face.vtx) {
-                    if (vtx_id_list.canFind(vtx.id) == false) {
-                        blk.boundaryVtxIndexList ~= vtx.id;
-                        vtx_unordered ~= vtx;
-                        x_pos_array ~= vtx.pos[0].refx;
-                        vtx_id_list ~= vtx.id;
-                        pos_array[vtx.pos[0].x] = vtx_unordered.length-1;
-                    }
-                }
-            }
-            
-            // order points in ascending x-position (WARNING: it is assumed that, for a given boundary,  each x-coordinate is unique).
-            x_pos_array.sort();
-            foreach(i; x_pos_array) vtx_ordered ~= vtx_unordered[pos_array[i]];
-            bndary.vertices ~= vtx_ordered;
-        }
-        else {
-            size_t[] vtx_id_list;
-            foreach(face; bndary.faces) {
-                foreach(vtx; face.vtx) {
-                    if (vtx_id_list.canFind(vtx.id) == false) {
-                        bndary.vertices ~= vtx;
-                        vtx_id_list ~= vtx.id;
-                        blk.boundaryVtxIndexList ~= vtx.id;
-                    }
-                }
-            }
-        }
-    }
+    // All of the pieces are now in place for perturbing the mesh.
     
-    // copy bezier curve object to each design surface boundary, along with relevant portion of the ts array
+} // end parameterise_design_surfaces
+
+void collect_boundary_vertices(FluidBlock blk)
+{
+    // make a block local collection of the vertices along domain boundaries
     foreach (bndary; blk.bc) {
-        if (bndary.is_design_surface) {
-            bndary.bezier = bezier;
-            double xi = bndary.vertices[0].pos[0].x;
-            double xf = bndary.vertices[$-1].pos[0].x;
-            size_t idxi; size_t idxf;
-            foreach (i, t; ts ) {
-                if ( abs(globalSurfacePoints[i].x - xi) < ESSENTIALLY_ZERO) idxi = i;
-                else if ( abs(globalSurfacePoints[i].x - xf) < ESSENTIALLY_ZERO) idxf = i;
-                else {} //do nothing
-            } // foreach (ts)
-            bndary.ts.length = ts[idxi..idxf+1].length;
-            bndary.ts[] = ts[idxi..idxf+1];
+        if ( bndary.type != "exchange_using_mapped_cells") {
+            if (bndary.is_design_surface) { // we need to order the vertices by x-position
+                FVVertex[] vtxOrdered; FVVertex[] vtxUnordered;
+                size_t[string] origPosId; // used to identify where the point is in the unordered list
+                double[] xPosition; size_t[] listOfAddedVtxIds;
+                foreach(face; bndary.faces) {
+                    foreach(vtx; face.vtx) {
+                        if (!listOfAddedVtxIds.canFind(vtx.id)) {
+                            blk.boundaryVtxIndexList ~= vtx.id;
+                            vtxUnordered ~= vtx;
+                            xPosition ~= vtx.pos[0].x;
+                            listOfAddedVtxIds ~= vtx.id;
+                            string xPosIdx = to!string(vtx.pos[0].x);
+                            origPosId[xPosIdx] = vtxUnordered.length-1;
+                        } // end if
+                    } // foreach vtx
+                } // end foreach face
+                
+                // order points in ascending x-position (WARNING: it is assumed that, for a given design surface boundary, each x-coordinate is unique).
+                xPosition.sort();
+                foreach(x; xPosition) vtxOrdered ~= vtxUnordered[origPosId[to!string(x)]];
+                bndary.vertices ~= vtxOrdered;
+            } else { // we don't need the vertices in any particular order
+                size_t[] listOfAddedVtxIds;
+                foreach(face; bndary.faces) {
+                    foreach(vtx; face.vtx) {
+                        if (!listOfAddedVtxIds.canFind(vtx.id)) {
+                            bndary.vertices ~= vtx;
+                            listOfAddedVtxIds ~= vtx.id;
+                            blk.boundaryVtxIndexList ~= vtx.id;
+                        } // end if
+                    } // end foreach vtx
+                } // end foreach face
+            } // end else
         } // end if
-    } // end foreach blk.bc
-} // end prepMeshForPerturbation
+    } // end foreach bndary
+} // end collect_boundary_vertices
 
-
-
-void gridUpdate(bool doNotWriteGridToFile, bool readDesignVarsFromFile, size_t nDesignVars, ref Vector3[] design_variables, size_t gtl, string jobName = "") {
-    if (readDesignVarsFromFile) readBezierCntrlPtsFromDakotaFile(nDesignVars, design_variables);
+void gridUpdate(bool doNotWriteGridToFile, bool readDesignVarsFromFile, ref Vector3[] designVars, size_t gtl, string jobName = "") {
+    size_t nDesignVars = designVars.length;
+    if (readDesignVarsFromFile) readDesignVarsFromDakotaFile(nDesignVars, designVars);
     // assign new control points
     // initialise all positions
     Vector3[] bndaryVtxInitPos;
@@ -1774,7 +1839,7 @@ void gridUpdate(bool doNotWriteGridToFile, bool readDesignVarsFromFile, size_t n
             if (bndary.is_design_surface) {
                 foreach ( i; 1..bndary.bezier.B.length-1) {
                     // y-variable
-                    bndary.bezier.B[i].refy = design_variables[i-1].y;
+                    bndary.bezier.B[i].refy = designVars[i-1].y;
                 }
                 
                 foreach(j, vtx; bndary.vertices) {

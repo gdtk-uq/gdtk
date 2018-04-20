@@ -53,7 +53,7 @@ import onedinterp;
 import lsqinterp;
 import bc;
 import grid_deform;
-import shape_sensitivity;
+import shape_sensitivity_core;
 
 string adjointDir = "adjoint";
 void init_adjoint_dir()
@@ -140,25 +140,6 @@ void main(string[] args) {
     writefln("Initialising simulation from tindx: %d", last_tindx);
     // TODO: MPI implementation (we can't assume threadsPerMPITask = 1)
     init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
-
-    // perform some config checks
-    if ( GlobalConfig.interpolation_order > 1 &&
-         GlobalConfig.suppress_reconstruction_at_boundaries == false) {
-        writeln("WARNING:");
-        writeln("   suppress_reconstruction_at_boundaries is set to false.");
-        writeln("   This setting should be true when using the shape sensitivity calculator.");
-        writeln("   Its use will likely cause errorneous values for boundary fluxes.");
-        writeln("   Continuing with simulation anyway.");
-        writeln("END WARNING.");
-    }
-    if (GlobalConfig.diffuseWallBCsOnInit) {
-        writeln("WARNING:");
-        writeln("   diffuse_wall_bcs_on_init is set to true.");
-        writeln("   This setting must be false when using the shape sensitivity calculator.");
-        writeln("   Its use will likely cause errorneous values for gradients.");
-        writeln("   Continuing with simulation anyway.");
-        writeln("END WARNING.");
-    }
     
     // set some global config values specified in user input lua script
     GradientMethod gradientMethod = GlobalConfig.sscOptions.gradientMethod;
@@ -176,7 +157,7 @@ void main(string[] args) {
     bool viscousConfigSave = GlobalConfig.viscous; 
         
     // some global variables
-    size_t nDesignVars = 0;
+    //size_t nDesignVars = 0;
     Vector3[] designVars;
     bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
     
@@ -190,8 +171,9 @@ void main(string[] args) {
     // -----------------------------
     // -----------------------------
     if (parameteriseSurfacesFlag) {
-        parameteriseSurfaces(parameteriseSurfacesFlag, designVars, nDesignVars, bezierCurveFitTol, bezierCurveFitMaxSteps);
-        writeBezierCntrlPtsToDakotaFile(designVars, nDesignVars, jobName);
+        parameterise_design_surfaces(designVars, bezierCurveFitTol, bezierCurveFitMaxSteps);
+        writeDesignVarsToDakotaFile(designVars, jobName);
+        writeBezierDataToFile();
         return; // --parameterise-surfaces complete
     }
     
@@ -202,8 +184,8 @@ void main(string[] args) {
     // -----------------------------
     // -----------------------------
     if (gridUpdateFlag) {
-        parameteriseSurfaces(parameteriseSurfacesFlag, designVars, nDesignVars, bezierCurveFitTol, bezierCurveFitMaxSteps);
-        gridUpdate(false, false, nDesignVars, designVars, 1, jobName); // gtl=1
+        readBezierDataFromFile(designVars);
+        gridUpdate(false, false, designVars, 1, jobName); // gtl=1
         return; // --grid-update complete
     }
     
@@ -304,27 +286,30 @@ void main(string[] args) {
     // ------------------------------------------------------
     // RESIDUAL/OBJECTIVE SENSITIVITY W.R.T. DESIGN VARIABLES
     // ------------------------------------------------------
-    parameteriseSurfaces(parameteriseSurfacesFlag, designVars, nDesignVars, bezierCurveFitTol, bezierCurveFitMaxSteps);    
-
+    if (verificationFlag) parameterise_design_surfaces(designVars, bezierCurveFitTol, bezierCurveFitMaxSteps);    
+    else readBezierDataFromFile(designVars);
+        
     // objective function sensitivity w.r.t. design variables
     double[] g;
-    g.length = nDesignVars;
+    g.length = designVars.length;
     foreach (myblk; localFluidBlocks) {
         size_t nLocalCells = myblk.cells.length;
+        size_t nDesignVars = designVars.length;
         myblk.rT = new Matrix(nDesignVars, nLocalCells*nPrimitive);
     }
 
-    compute_design_variable_partial_derivatives(designVars, g, nDesignVars, nPrimitive, with_k_omega, ETA);
+    compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega, ETA);
 
     // ---------------------
     // COMPUTE SENSITIVITIES
     // ---------------------
     foreach (myblk; parallel(localFluidBlocks,1)) {
+        size_t nDesignVars = designVars.length;
         myblk.rTdotPsi.length = nDesignVars;
         dot(myblk.rT, myblk.psi, myblk.rTdotPsi);
     }
     double[] adjointGradients;
-    adjointGradients.length = nDesignVars;
+    adjointGradients.length = designVars.length;
     adjointGradients[] = 0.0;
     foreach (myblk; localFluidBlocks) adjointGradients[] += myblk.rTdotPsi[];
     adjointGradients[] = g[] - adjointGradients[];
@@ -340,7 +325,7 @@ void main(string[] args) {
     // ------------
     // VERIFICATION
     // ------------
-    if (verificationFlag) compute_design_sensitivities_with_finite_differences(jobName, last_tindx, designVars, nDesignVars, adjointGradients, DELTA);
+    if (verificationFlag) compute_design_sensitivities_with_finite_differences(jobName, last_tindx, designVars, adjointGradients, DELTA);
 
     writeln("Simulation complete.");
 }
