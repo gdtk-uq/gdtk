@@ -2,9 +2,10 @@
  * bbla.d
  * Bare-bones linear algebra functions.
  *
- * Author: Peter J.
+ * Author: Peter J. and Rowan G.
  * Version: 2014-06-28, just enough to get our CFD code going.
  *          2015-05-30, added least-squares solver
+ *          2018-04-21, added Crout's reduction for LU decomposition
  */
 
 module nm.bbla;
@@ -770,6 +771,141 @@ version(bbla_test) {
         assert(approxEqualMatrix(xx, expected_xx), failedUnitTest());
         return 0;
     }
+}
+
+/**
+ * Use Crout's reduction to form an LU decomposition.
+ *
+ * This code is adapted from Section 2.3 in Press et al. (2007).
+ * The code in Numerical Recipes, 3rd edition is written for
+ * C++ and makes use of classes. The implementation does not use
+ * classes, just functions.
+ *
+ * Press et al. (2007)
+ * Numerical Recipes: The Art of Scientific Computing, 3rd edition
+ * Cambridge University Press, Cambridge, UK
+ */
+
+void LUDecomp(Matrix a, ref int[] pivot, double verySmallValue=1.0e-40)
+in {
+    assert(a.nrows == a.ncols, "require a square matrix");
+    assert(pivot.length == a.nrows, "pivot array wrongly sized");
+}
+body {
+    int iMax;
+    double largest, tmp;
+    double[] vv;
+    
+    int n = to!int(a.nrows);
+    vv.length = n;
+
+    foreach (i; 0 .. n) {
+        largest = 0.0;
+        foreach (j; 0 .. n) {
+            tmp = fabs(a[i,j]);
+            if (tmp > largest)
+                largest = tmp;
+        }
+        if (largest == 0.0)
+            throw new Exception("Singular matrix in LUDecompCrout");
+        vv[i] = 1.0/largest; // saves the scaling
+    }
+
+    foreach (k; 0 .. n) {
+        largest = 0.0;
+        foreach (i; k .. n) {
+            tmp = vv[i]*fabs(a[i,k]);
+            if (tmp > largest) {
+                largest = tmp;
+                iMax = i;
+            }
+        }
+        if (k != iMax) { // if we need to interchange rows
+            foreach (j; 0 .. n) {
+                tmp = a[iMax,j];
+                a[iMax,j] = a[k,j];
+                a[k,j] = tmp;
+            }
+            vv[iMax] = vv[k];
+        }
+        pivot[k] = iMax;
+        if (a[k,k] == 0.0) a[k,k] = verySmallValue;
+        foreach (i; k+1 .. n) {
+            a[i,k] /= a[k,k];
+            tmp = a[i,k];
+            foreach (j; k+1 .. n) {
+                a[i,j] -= tmp*a[k,j];
+            }
+        } 
+    }
+}
+
+void LUSolve(Matrix a, int[] pivot, double[] b, ref double[] x)
+in {
+    assert(a.nrows == a.ncols, "require a square matrix");
+    assert(pivot.length == a.nrows, "pivot array wrongly sized");
+    assert(b.length == a.nrows, "b array wrongly sized");
+    assert(x.length == a.nrows, "x array wrongly sized");
+}
+body {
+    int ii, ip, n;
+    ii = 0;
+    double sum;
+    n = to!int(a.nrows);
+
+    x[] = b[];
+    
+    foreach (i; 0 .. n) {
+        ip = pivot[i];
+        sum = x[ip];
+        x[ip] = x[i];
+        if (ii != 0) {
+            foreach (j; ii-1 .. i) {
+                sum -= a[i,j]*x[j];
+            }
+        }
+        else if (sum != 0.0) {
+            ii = i + 1;
+        }
+        x[i] = sum;
+    }
+    
+    for (int i = n-1; i >= 0; i--) {
+        sum = x[i];
+        foreach (j; i+1 .. n) sum -= a[i,j]*x[j];
+        x[i] = sum / a[i,i];
+    }
+}
+
+version(bbla_test) {
+    int test_Crout_decomp_and_solve() {
+        auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
+                             [2.0,  2.0,  3.0,  2.0],
+                             [4.0, -3.0,  0.0,  1.0],
+                             [6.0,  1.0, -6.0, -5.0]]);
+        double[] b = [0.0, -2.0, -7.0, 6.0];
+        int[] pivot;
+        pivot.length = 4;
+        double[] x;
+        x.length = 4;
+
+        LUDecomp(A, pivot);
+        LUSolve(A, pivot, b, x);
+        
+        // Reset A since it was converted to LU format.
+        A = new Matrix([[0.0,  2.0,  0.0,  1.0],
+                             [2.0,  2.0,  3.0,  2.0],
+                             [4.0, -3.0,  0.0,  1.0],
+                             [6.0,  1.0, -6.0, -5.0]]);
+
+        double[] Ax;
+        Ax.length = 4;
+        dot(A, x, Ax);
+
+        assert(approxEqual(b, Ax), failedUnitTest());
+
+        return 0;
+    }
 
     int main() {
         if ( test_basic_operations() != 0 )
@@ -780,7 +916,11 @@ version(bbla_test) {
             return 1;
         if ( test_lsqsolve() != 0 )
             return 1;
+        if ( test_Crout_decomp_and_solve() != 0 )
+            return 1;
 
         return 0;
     }
+
+
 }
