@@ -39,7 +39,7 @@ function eos_derivatives(gas0, gmodel, tol)
    gas1.rho = rho0
    local du = u0 * tol
    gas1.u = u0 + du
-   gmodel:updateThermoFromRHOE(gas1)
+   gmodel:updateThermoFromRHOU(gas1)
    local dpdu = (gas1.p - p0)/du
    --
    return dpdrho, dpdu
