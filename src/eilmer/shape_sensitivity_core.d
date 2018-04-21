@@ -1393,26 +1393,34 @@ void writeDesignVarsToDakotaFile(Vector3[] design_variables, string jobName) {
     }
 }
 
-void readDesignVarsFromDakotaFile(size_t nDesignVars, ref Vector3[] design_variables) {
-    // read in new control points
+void readDesignVarsFromDakotaFile(ref Vector3[] design_variables)
+{
+    // read in new control points (note we should have pre-filled the design variables array with the original points)
     auto f = File("params.in", "r");
     auto line = f.readln().strip;// read first line & do nothing 
     auto tokens = line.split();
-    foreach ( i; 0..nDesignVars) {
-        Vector3 pt;
-        // x-variable
+    foreach ( i; 0..design_variables.length) {
+	// x-variable
         line = f.readln().strip;
         tokens = line.split();
-        pt.refx = to!double(tokens[0]);
+        design_variables[i].refx = to!double(tokens[0]);
         // y-variable
         line = f.readln().strip;
         tokens = line.split();
-        pt.refy = to!double(tokens[0]);
-        // z-variable
-        pt.refz = 0.0;
-        design_variables ~= pt;
+        design_variables[i].refy = to!double(tokens[0]);
     }
-}
+    // assign design variables to bezier curve
+    foreach ( myblk; localFluidBlocks) {
+	foreach ( bndary; myblk.bc) {
+	    if ( bndary.is_design_surface) {
+		foreach ( i; 1..bndary.bezier.B.length-1) {
+		    bndary.bezier.B[i].refx = design_variables[i-1].x;
+		    bndary.bezier.B[i].refy = design_variables[i-1].y;
+		} // end foreach i
+	    } // end if
+	} // end foreach bndary
+    } // end foreach myblk
+} // end readDesignVarsFromDakotaFile
 
 double finite_difference_grad(string jobName, int last_tindx, string varID) {    
     // run simulation
@@ -1817,7 +1825,6 @@ void collect_boundary_vertices(FluidBlock blk)
 
 void gridUpdate(bool doNotWriteGridToFile, bool readDesignVarsFromFile, ref Vector3[] designVars, size_t gtl, string jobName = "") {
     size_t nDesignVars = designVars.length;
-    if (readDesignVarsFromFile) readDesignVarsFromDakotaFile(nDesignVars, designVars);
     // assign new control points
     // initialise all positions
     Vector3[] bndaryVtxInitPos;
@@ -1909,7 +1916,7 @@ void write_gradients_to_file(string fileName, double[] grad) {
     auto outFile = File(fileName, "a");
     outFile.writef("[ ");
     foreach( i; 0..grad.length ) {
-        outFile.writef("%.16e ", grad[i]);
+        outFile.writef("%16.e %.16e ", 0.0, grad[i]);
     }
     outFile.writef(" ]\n"); 
 }

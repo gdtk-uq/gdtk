@@ -184,8 +184,11 @@ void main(string[] args) {
     // -----------------------------
     // -----------------------------
     if (gridUpdateFlag) {
+	// fill-in bezier curve with previous bezier points
         readBezierDataFromFile(designVars);
-        gridUpdate(false, false, designVars, 1, jobName); // gtl=1
+	// update bezier curve with new design variables
+	readDesignVarsFromDakotaFile(designVars);
+	gridUpdate(false, false, designVars, 1, jobName); // gtl=1
         return; // --grid-update complete
     }
     
@@ -287,8 +290,10 @@ void main(string[] args) {
     // RESIDUAL/OBJECTIVE SENSITIVITY W.R.T. DESIGN VARIABLES
     // ------------------------------------------------------
     if (verificationFlag) parameterise_design_surfaces(designVars, bezierCurveFitTol, bezierCurveFitMaxSteps);    
-    else readBezierDataFromFile(designVars);
-        
+    else { 
+	readBezierDataFromFile(designVars);
+        readDesignVarsFromDakotaFile(designVars);
+    }
     // objective function sensitivity w.r.t. design variables
     double[] g;
     g.length = designVars.length;
