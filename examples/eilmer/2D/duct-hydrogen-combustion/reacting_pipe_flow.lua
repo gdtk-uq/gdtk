@@ -5,6 +5,7 @@
 -- as used by Fabs in the hydrogen-combustion test case. 
 --
 -- PJ 2016-03-19 adapted from reacting-pipe-flow.py for Eilmer3
+--    2018-04-21 updated to use current gas model and reaction calls
 --
 -- Invoke with the command line:
 -- $ e4shared --custom-post --script-file=reacting_pipe_flow.lua
@@ -17,7 +18,7 @@ sample_header = "# x(m) rho(kg/m**3) p(Pa) T(degK) e(J/kg) v(m/s) "..
 
 function sample_data(x, v, gas, dt_suggest)
    return string.format("%g %g %g %g %g %g %g %g %g ",
-			x, gas.rho, gas.p, gas.T[1], gas.e[1],
+			x, gas.rho, gas.p, gas.T, gas.u,
 			v, gas.massf["OH"], gas.massf["H2O"], dt_suggest)
 end
 
@@ -28,20 +29,20 @@ function eos_derivatives(gas0, gmodel, tol)
    copyValues(gas0, gas1)
    local p0 = gas0.p
    local rho0 = gas0.rho
-   local e0 = gas0.e[1]
+   local u0 = gas0.u
    --
    local drho = rho0 * tol
    gas1.rho = rho0 + drho
-   gmodel:updateThermoFromRHOE(gas1)
+   gmodel:updateThermoFromRHOU(gas1)
    local dpdrho = (gas1.p - p0)/drho
    --
    gas1.rho = rho0
-   local de = e0 * tol
-   gas1.e[1] = e0 + de
+   local du = u0 * tol
+   gas1.u = u0 + du
    gmodel:updateThermoFromRHOE(gas1)
-   local dpde = (gas1.p - p0)/de
+   local dpdu = (gas1.p - p0)/du
    --
-   return dpdrho, dpde
+   return dpdrho, dpdu
 end
 
 ------------------------------------------------------------------
@@ -52,7 +53,6 @@ print("# Reacting pipe flow -- Bittker-Scullin test case 3.")
 print(sample_header)
 
 -- Gas model setup
--- nsp, nmodes, gmodel = setGasModel("h2-o2-n2-9sp.lua")
 gmodel = GasModel:new{"h2-o2-n2-9sp.lua"}
 nsp = gmodel:nSpecies()
 nmodes = gmodel:nModes()
@@ -65,19 +65,15 @@ local gas0 = GasState:new{gmodel}
 gas0.p = 96.87e3 -- Pa
 local x = 0.0 -- m  (inlet of pipe)
 local v = 4551.73 -- m/s
-gas0.T[1] = 1559.0 -- degree K
+gas0.T = 1559.0 -- degree K
 molefInit = {O2=0.1480, N2=0.5562, H2=0.2958}
-massfInit = gmodel:molef2massf(molefInit)
-for i=1, nsp do
-   local name = gmodel:speciesName(i)
-   gas0.massf[name] = massfInit[name]
-end
+gas0.massf = gmodel:molef2massf(molefInit)
 gmodel:updateThermoFromPT(gas0)
 local dt_suggest = 1.0e-8  -- suggested starting time-step for chemistry updater
 print(sample_data(x, v, gas0, dt_suggest))
 
 print("# Start reactions...")
-chemUpdate = ChemistryUpdate:new{filename="h2-o2-n2-9sp-18r.lua", gasmodel=gmodel}
+local chemUpdate = ChemistryUpdate:new{filename="h2-o2-n2-9sp-18r.lua", gasmodel=gmodel}
 local t = 0 -- time is in seconds
 local t_final = 22.0e-6
 local t_inc = 0.05e-6
@@ -85,54 +81,54 @@ local nsteps = math.floor(t_final / t_inc)
 for j=1, nsteps do
    -- At the start of the step...
    local rho = gas0.rho
-   local T = gas0.T[1]
+   local T = gas0.T
    local p = gas0.p
-   local e = gas0.e[1]
+   local u = gas0.u
    --
    -- Do the chemical increment.
    local gas1 = GasState:new{gmodel} -- make the new one as a clone
    copyValues(gas0, gas1)
-   dt_suggest = chemUpdate(gas1, t_inc, dt_suggest, gmodel)
-   gmodel:updateThermoFromRHOE(gas1)
+   dt_suggest = chemUpdate:updateState(gas1, t_inc, dt_suggest, gmodel)
+   gmodel:updateThermoFromRHOU(gas1)
    --
-   local de_chem = gas1.e[1] - e
+   local du_chem = gas1.u - u
    local dp_chem = gas1.p - p
-   if debug then print("# de_chem=", de_chem, "dp_chem=", dp_chem) end
+   if debug then print("# du_chem=", du_chem, "dp_chem=", dp_chem) end
    --
    if do_gas_dynamic_accommodation then
       -- Do the gas-dynamic accommodation after the chemical change.
-      local Etot = e + 0.5*v*v
-      local dfdr, dfde = eos_derivatives(gas1, gmodel)
-      if debug then print("# dfdr=", dfdr, "dfde=", dfde) end
+      local Etot = u + 0.5*v*v
+      local dfdr, dfdu = eos_derivatives(gas1, gmodel)
+      if debug then print("# dfdr=", dfdr, "dfdu=", dfdu) end
       --[[ The Python code used a linear solve to get the accommodation increments.
 	 A = np.array([ [v,      rho,        0.0, 0.0  ],
                       [0.0,    rho*v,      1.0, 0.0  ],
                       [v*Etot, rho*Etot+p, 0.0, rho*v],
-                      [dfdr,   0.0,       -1.0, dfde ] ]);
-        b = np.array([0.0, -dp_chem, -rho*v*de_chem, 0.0])
+                      [dfdr,   0.0,       -1.0, dfdu ] ]);
+        b = np.array([0.0, -dp_chem, -rho*v*du_chem, 0.0])
         dq = np.linalg.solve(A,b)
-        drho, dv, dp_gda, de_gda = dq
+        drho, dv, dp_gda, du_gda = dq
       --]]
       -- The Lua code computes the accommodation increments explicitly,
       -- using expressions from Maxima.
-      local denom = rho*rho*v*v - dfdr*rho*rho - dfde*p
-      local drho = (dp_chem - de_chem*dfde)*rho*rho / denom
-      local dv = -(dp_chem - de_chem*dfde)*rho*v / denom
-      local dp_gda = -(de_chem*dfde*rho*rho*v*v - dfdr*dp_chem*rho*rho 
-			  - dfde*dp_chem*p) / denom
-      local de_gda = -(de_chem*rho*rho*v*v - de_chem*dfdr*rho*rho - dp_chem*p) / denom
+      local denom = rho*rho*v*v - dfdr*rho*rho - dfdu*p
+      local drho = (dp_chem - du_chem*dfdu)*rho*rho / denom
+      local dv = -(dp_chem - du_chem*dfdu)*rho*v / denom
+      local dp_gda = -(du_chem*dfdu*rho*rho*v*v - dfdr*dp_chem*rho*rho 
+			  - dfdu*dp_chem*p) / denom
+      local du_gda = -(du_chem*rho*rho*v*v - du_chem*dfdr*rho*rho - dp_chem*p) / denom
       if debug then 
-	 print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "de_gda=", de_gda)
+	 print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "du_gda=", de_gda)
 	 print("# residuals=", v*drho + rho*dv, rho*v*dv + dp_gda + dp_chem,
-	       v*Etot*drho + (rho*Etot+p)*dv + rho*v*de_gda + rho*v*de_chem,
-	       dfdr*drho - dp_gda + dfde*de_gda)
+	       v*Etot*drho + (rho*Etot+p)*dv + rho*v*du_gda + rho*v*du_chem,
+	       dfdr*drho - dp_gda + dfdu*du_gda)
       end
       -- Add the accommodation increments.
       gas1.rho = gas0.rho + drho
       v1 = v + dv
       p1_check = gas1.p + dp_gda
-      gas1.e[1] = gas1.e[1] + de_gda
-      gmodel:updateThermoFromRHOE(gas1)
+      gas1.u = gas1.u + du_gda
+      gmodel:updateThermoFromRHOU(gas1)
       if debug then
 	 print("# At new point for step ", j, ": gas1.p=", gas1.p, "p1_check=", p1_check, 
 	       "rel_error=", math.abs(gas1.p-p1_check)/p1_check)
