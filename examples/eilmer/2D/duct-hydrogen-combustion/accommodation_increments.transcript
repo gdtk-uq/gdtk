@@ -1,38 +1,38 @@
 
-Maxima 5.32.1 http://maxima.sourceforge.net
-using Lisp GNU Common Lisp (GCL) GCL 2.6.10 (a.k.a. GCL)
+Maxima 5.37.2 http://maxima.sourceforge.net
+using Lisp GNU Common Lisp (GCL) GCL 2.6.12
 Distributed under the GNU Public License. See the file COPYING.
 Dedicated to the memory of William Schelter.
 The function bug_report() provides bug reporting information.
 (%i1) batch("accommodation_increments.mac")
 
-read and interpret file: #p/home/peterj/work/eilmer4/2D/bittker-hydrogen-combustion/accommodation_increments.mac
+read and interpret file: #p/home/peterj/work/eilmer4/2D/duct-hydrogen-combustion/accommodation_increments.mac
 (%i2) eq1:rho*dv+v*drho = 0
 (%o2)                         drho v + dv rho = 0
 (%i3) eq2:dp_gda+rho*v*dv = -dp_chem
 (%o3)                    dv rho v + dp_gda = - dp_chem
-(%i4) eq3:rho*v*de_gda+(p+rho*Etot)*dv+v*Etot*drho = -rho*v*de_chem
-(%o4)  de_gda rho v + drho Etot v + dv (Etot rho + p) = - de_chem rho v
-(%i5) eq4:dfde*de_gda-dp_gda+dfdr*drho = 0
-(%o5)                dfdr drho - dp_gda + de_gda dfde = 0
-(%i6) solve([eq1,eq2,eq3,eq4],[drho,dv,dp_gda,de_gda])
+(%i4) eq3:rho*v*du_gda+(rho*Etot+p)*dv+v*Etot*drho = -rho*v*du_chem
+(%o4)  du_gda rho v + drho Etot v + dv (p + Etot rho) = - du_chem rho v
+(%i5) eq4:dfdu*du_gda-dp_gda+dfdr*drho = 0
+(%o5)                dfdu du_gda + dfdr drho - dp_gda = 0
+(%i6) soln:solve([eq1,eq2,eq3,eq4],[drho,dv,dp_gda,du_gda])
                                            2
-               (dp_chem - de_chem dfde) rho
+               (dp_chem - dfdu du_chem) rho
 (%o6) [[drho = -----------------------------, 
                   2  2           2
-               rho  v  - dfdr rho  - dfde p
-       (dp_chem - de_chem dfde) rho v
+               rho  v  - dfdr rho  - dfdu p
+       (dp_chem - dfdu du_chem) rho v
 dv = - ------------------------------, 
            2  2           2
-        rho  v  - dfdr rho  - dfde p
-                           2  2                   2
-           de_chem dfde rho  v  - dfdr dp_chem rho  - dfde dp_chem p
-dp_gda = - ---------------------------------------------------------, 
-                            2  2           2
-                         rho  v  - dfdr rho  - dfde p
-                      2  2                   2
-           de_chem rho  v  - de_chem dfdr rho  - dp_chem p
-de_gda = - -----------------------------------------------]]
-                       2  2           2
-                    rho  v  - dfdr rho  - dfde p
+        rho  v  - dfdr rho  - dfdu p
+                                                2                   2  2
+           (- dfdu dp_chem p) - dfdr dp_chem rho  + dfdu du_chem rho  v
+dp_gda = - -------------------------------------------------------------, 
+                              2  2           2
+                           rho  v  - dfdr rho  - dfdu p
+                                           2              2  2
+           (- dp_chem p) - dfdr du_chem rho  + du_chem rho  v
+du_gda = - ---------------------------------------------------]]
+                         2  2           2
+                      rho  v  - dfdr rho  - dfdu p
 (%o6)                    accommodation_increments.mac

@@ -7,6 +7,6 @@
 
 eq1: v*drho + rho*dv = 0;
 eq2: rho*v*dv + dp_gda = -dp_chem;
-eq3: v*Etot*drho + (rho*Etot+p)*dv + rho*v*de_gda = -rho*v*de_chem;
-eq4: dfdr*drho - dp_gda + dfde*de_gda = 0;
-soln: solve([eq1, eq2, eq3, eq4], [drho, dv, dp_gda, de_gda]);
+eq3: v*Etot*drho + (rho*Etot+p)*dv + rho*v*du_gda = -rho*v*du_chem;
+eq4: dfdr*drho - dp_gda + dfdu*du_gda = 0;
+soln: solve([eq1, eq2, eq3, eq4], [drho, dv, dp_gda, du_gda]);
