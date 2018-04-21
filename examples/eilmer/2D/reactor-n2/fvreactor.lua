@@ -5,7 +5,7 @@
 gm = GasModel:new{"nitrogen-2sp.lua"}
 chemUpdate = ChemistryUpdate:new{filename="chem.lua", gasmodel=gm}
 
-Q = gm:createGasState()
+Q = GasState:new{gm}
 Q.p = 1.0e5 -- Pa
 Q.T = 4000.0 -- degree K
 molef = {N2=2/3, N=1/3}
