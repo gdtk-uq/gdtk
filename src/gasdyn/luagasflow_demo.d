@@ -24,7 +24,7 @@ void main()
     registergasflowFunctions(L);
     string test_code = `
 print("Try out gasflow functions.")
--- Initialise an ideal gas model
+-- Initialise a gas model for reacting air in chemical equilibrium.
 gm = GasModel:new{'../gas/sample-data/cea-air13species-gas-model.lua'}
 state1 = GasState:new{gm}
 state1.p = 125.0e3; state1.T = 300.0
