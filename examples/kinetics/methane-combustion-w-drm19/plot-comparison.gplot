@@ -1,0 +1,8 @@
+set term postscript eps enhanced "Times" 25
+set output "drm19-fixed-volume-reactor.eps"
+set title "DRM19 methane scheme in fixed volume reactor:\np = 1 atm, T = 2000 K"
+set xlabel "time, ms"
+set ylabel "temperature, K"
+set key bottom font ",25"
+plot 'eilmer3-result-for-comparison.data' u ($1*1000):4 t 'eilmer3' w l lw 2, \
+     'output.data' u ($1*1000):4 t 'eilmer4' w l lw 2
