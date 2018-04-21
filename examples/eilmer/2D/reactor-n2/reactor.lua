@@ -28,8 +28,8 @@ setHistoryPoint{ib=0, i=0, j=0}
 config.max_time = 2.0e-4
 config.max_step = 100000
 config.dt_init = 1.0e-6
-config.dt_history = 1.0e-6
-config.dt_plot = 1.0e-5
+config.dt_history = 5.0e-6
+config.dt_plot = 50.0e-6
 config.fixed_time_step = true
 
 
