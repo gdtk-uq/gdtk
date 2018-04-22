@@ -43,7 +43,7 @@ import user_defined_source_terms;
 import conservedquantities;
 import postprocess : readTimesFile;
 import loads;
-//import shape_sensitivity : sss_preconditioner_initialisation, sss_preconditioner;
+import shape_sensitivity_core : sss_preconditioner_initialisation, sss_preconditioner;
 
 static int fnCount = 0;
 static shared bool with_k_omega;
@@ -314,11 +314,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
     bool residualsUpToDate = false;
     bool finalStep = false;
     bool usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
-    //if (usePreconditioner) {
-    //        foreach (blk; parallel(localFluidBlocks,1)) {
-    //        sss_preconditioner_initialisation(blk, nConserved); 
-    //    }
-        //}
+    if (usePreconditioner) {
+        writeln("Initialising memory.");
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            sss_preconditioner_initialisation(blk, nConserved); 
+        }
+    }
+    // Set usePreconditioner to false for pre-steps AND first-order steps.
+    usePreconditioner = false;
 
     // We only do a pre-step phase if we are starting from scratch.
     if ( snapshotStart == 0 ) {
@@ -572,12 +575,14 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
             eta = eta0;
             tau = tau0;
             sigma = sigma0;
+            usePreconditioner = false;
         }
         else {
             foreach (blk; parallel(localFluidBlocks,1)) blk.set_interpolation_order(interpOrderSave);
             eta = eta1;
             tau = tau1;
             sigma = sigma1;
+            usePreconditioner = GlobalConfig.sssOptions.usePreconditioner;
         }
 
         foreach (attempt; 0 .. maxNumberAttempts) {
@@ -1040,99 +1045,6 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-/*
-void evalRHS(FluidBlock blk, double pseudoSimTime, int ftl)
-{
-    bool local_with_k_omega = with_k_omega;
-    // We don't want to get a false function count by counting
-    // function calls for separate blocks, so only add to
-    // count if this is the first block.
-    if ( blk.id == 0 ) fnCount++; 
-
-    blk.clear_fluxes_of_conserved_quantities();
-    foreach (cell; blk.cells) cell.clear_source_vector();
-    // We do NOT do boundary conditions, since these are fixed
-    // during the preconditioner.
-    //    exchange_ghost_cell_boundary_data(pseudoSimTime, 0, ftl);
-    //    blk.applyPreReconAction(pseudoSimTime, 0, ftl);
-    blk.convective_flux_phase0();
-    blk.convective_flux_phase1();
-    //    blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);
-    if (GlobalConfig.viscous) {
-        //  blk.applyPreSpatialDerivAction(pseudoSimTime, 0, ftl);
-        blk.flow_property_spatial_derivatives(0); 
-        blk.estimate_turbulence_viscosity();
-        blk.viscous_flux();
-        blk.applyPostDiffFluxAction(pseudoSimTime, 0, ftl);
-    }
-
-    foreach (i, cell; blk.cells) {
-        cell.add_inviscid_source_vector(0, 0.0);
-        if (blk.myConfig.viscous) {
-            cell.add_viscous_source_vector(local_with_k_omega);
-        }
-        if (blk.myConfig.udf_source_terms) {
-            addUDFSourceTermsToCell(blk.myL, cell, 0, 
-                                    pseudoSimTime, blk.myConfig.gmodel);
-        }
-        cell.time_derivatives(0, ftl, local_with_k_omega);
-    }
-}
-*/
-
-/*
-
-void evalJacobianVecProd(FluidBlock blk, double pseudoSimTime, double sigma)
-{
-    bool local_with_k_omega = with_k_omega;
-    // Make a stack-local copy of conserved quantities info
-    size_t nConserved = nConservedQuantities;
-    size_t MASS = massIdx;
-    size_t X_MOM = xMomIdx;
-    size_t Y_MOM = yMomIdx;
-    size_t Z_MOM = zMomIdx;
-    size_t TOT_ENERGY = totEnergyIdx;
-    size_t TKE = tkeIdx;
-    size_t OMEGA = omegaIdx;
-
-    // We perform a Frechet derivative to evaluate J*v
-    blk.clear_fluxes_of_conserved_quantities();
-    foreach (cell; blk.cells) cell.clear_source_vector();
-    int cellCount = 0;
-    foreach (cell; blk.cells) {
-        cell.U[1].copy_values_from(cell.U[0]);
-        cell.U[1].mass += sigma*blk.maxRate.mass*blk.v_inner[cellCount+MASS];
-        cell.U[1].momentum.refx += sigma*blk.maxRate.momentum.x*blk.v_inner[cellCount+X_MOM];
-        cell.U[1].momentum.refy += sigma*blk.maxRate.momentum.y*blk.v_inner[cellCount+Y_MOM];
-        if ( blk.myConfig.dimensions == 3 ) 
-            cell.U[1].momentum.refz += sigma*blk.maxRate.momentum.z*blk.v_inner[cellCount+Z_MOM];
-        cell.U[1].total_energy += sigma*blk.maxRate.total_energy*blk.v_inner[cellCount+TOT_ENERGY];
-        if ( local_with_k_omega ) {
-            cell.U[1].tke += sigma*blk.maxRate.tke*blk.v_inner[cellCount+TKE];
-            cell.U[1].omega += sigma*blk.maxRate.omega*blk.v_inner[cellCount+OMEGA];
-        }
-        cell.decode_conserved(0, 1, 0.0);
-        cellCount += nConserved;
-    }
-    evalRHS(blk, pseudoSimTime, 1);
-    cellCount = 0;
-    foreach (cell; blk.cells) {
-        blk.v_inner[cellCount+MASS] = (-cell.dUdt[1].mass - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
-        blk.v_inner[cellCount+X_MOM] = (-cell.dUdt[1].momentum.x - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
-        blk.v_inner[cellCount+Y_MOM] = (-cell.dUdt[1].momentum.y - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
-        if ( blk.myConfig.dimensions == 3 )
-            blk.v_inner[cellCount+Z_MOM] = (-cell.dUdt[1].momentum.z - blk.FU[cellCount+Z_MOM])/(sigma*blk.maxRate.momentum.z);
-        blk.v_inner[cellCount+TOT_ENERGY] = (-cell.dUdt[1].total_energy - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
-        if ( local_with_k_omega ) {
-            blk.v_inner[cellCount+TKE] = (-cell.dUdt[1].tke - blk.FU[cellCount+TKE])/(sigma*blk.maxRate.tke);
-            blk.v_inner[cellCount+OMEGA] = (-cell.dUdt[1].omega - blk.FU[cellCount+OMEGA])/(sigma*blk.maxRate.omega);
-        }
-        cellCount += nConserved;
-    }
-}
-
-*/
-
 void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
                     ref double residual, ref int nRestarts)
 {
@@ -1295,25 +1207,6 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         }
     }
 
-    // Form approximate D.
-    /*
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.Dinv[] = 1.0;
-    }
-    if (usePreconditioner) {
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.set_interpolation_order(1);
-            evalJacobianVecProd(pseudoSimTime, sigma);
-            blk.v[] += dtInv;
-            foreach (k; 0 .. blk.nvars) {
-                blk.Dinv[k] = blk.V[k,0]/blk.v[k];
-                blk.v[k] = blk.V[k,0];
-            }
-            blk.set_interpolation_order(interpOrderSave);
-        }
-    }
-    */
-
     // Compute tolerance
     auto outerTol = eta*beta;
 
@@ -1322,31 +1215,40 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         // 2a. Begin iterations
         foreach (j; 0 .. m) {
             iterCount = j+1;
-            foreach (blk; parallel(localFluidBlocks,1)) {
-                blk.zed[] = blk.v[];
+            if (usePreconditioner) {
+                bool savedViscousFlag = GlobalConfig.viscous;
+                GlobalConfig.viscous = false;
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    if (r == 0 && j == 0) {
+                        blk.myConfig.viscous = false;
+                        sss_preconditioner(blk, nConserved, dt, 1.0e-6, 1.0e-6);
+                        blk.myConfig.viscous = savedViscousFlag;
+                    }
+                    int cellCount = 0;
+                    double[] tmp;
+                    tmp.length = nConserved;
+                    foreach (cell; blk.cells) {
+                        LUSolve(cell.dConservative, cell.pivot,
+                                blk.v[cellCount..cellCount+nConserved], tmp);
+                        blk.zed[cellCount..cellCount+nConserved] = tmp[];
+                        cellCount += nConserved;
+                    }
+                }
+                GlobalConfig.viscous = savedViscousFlag;
+            }
+            else {
+                foreach (blk; parallel(localFluidBlocks,1)) {
+                    blk.zed[] = blk.v[];
+                }
             }
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 double dtInv = 1.0/dt;
-                foreach (k; 0 .. blk.nvars) {
-                    blk.w[k] = dtInv*blk.v[k];
-                }
+                blk.w[] = dtInv*blk.zed[];
             }
             
-            // Evaluate J(P^-1)v and place in v
-            try {
-                evalJacobianVecProd(pseudoSimTime, sigma);
-            }
-            catch (FlowSolverException e) {
-                // Retry with sigma half as small.
-                double sigmaHalf = 0.5*sigma;
-                writeln("Retrying evalJacobian: sigma= ", sigmaHalf);
-                // Re-prepare 'z'
-                foreach (blk; parallel(localFluidBlocks,1)) {
-                    blk.zed[] = blk.v[];
-                }
-                evalJacobianVecProd(pseudoSimTime, sigmaHalf);
-            }
+            // Evaluate Jz and place in z
+            evalJacobianVecProd(pseudoSimTime, sigma);
 
             // Now we can complete calculation of w
             foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1432,13 +1334,28 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.V, blk.nvars, m, blk.g1, blk.dU);
+            nm.bbla.dot(blk.V, blk.nvars, m, blk.g1, blk.zed);
         }
+        
         if (usePreconditioner) {
             foreach(blk; parallel(localFluidBlocks,1)) {
-                foreach (k; 0 .. blk.nvars) blk.dU[k] *= blk.Dinv[k];
+                int cellCount = 0;
+                double[] tmp;
+                tmp.length = nConserved;
+                foreach (cell; blk.cells) {
+                    LUSolve(cell.dConservative, cell.pivot,
+                            blk.zed[cellCount..cellCount+nConserved], tmp);
+                    blk.dU[cellCount..cellCount+nConserved] = tmp[];
+                    cellCount += nConserved;
+                }
             }
         }
+        else {
+            foreach(blk; parallel(localFluidBlocks,1)) {
+                blk.dU[] = blk.zed[];
+            }
+        }
+        
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) blk.dU[k] += blk.x0[k];
         }

@@ -1933,7 +1933,7 @@ void write_gradients_to_file(string fileName, double[] grad) {
 void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
     if (blk.grid_type == Grid_t.structured_grid) {
         auto sblk = cast(SFluidBlock) blk;
-        foreach ( cell; blk.cells) {
+        foreach (cell; blk.cells) {
             cell.jacobian_cell_stencil ~= cell;
             size_t[3] ijk = sblk.cell_id_to_ijk_indices(cell.id);
             size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
@@ -1945,27 +1945,27 @@ void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
         }
     }
     else { // unstructured_grid
-        foreach( cell; blk.cells) {
+        foreach (cell; blk.cells) {
             cell.jacobian_cell_stencil ~= cell;
             foreach ( face; cell.iface) cell.jacobian_face_stencil ~= face;
         }
     }
     // initialise objects
     blk.transform = new Matrix(nConservative, nConservative);
-    foreach( cell; blk.cells) {
+    foreach (cell; blk.cells) {
         cell.dPrimitive = new Matrix(nConservative, nConservative);
         cell.dConservative = new Matrix(nConservative, nConservative);
+        cell.pivot.length = nConservative;
     }
     cellOrig = new FVCell(blk.myConfig);
-    foreach(i; 0..MAX_PERTURBED_INTERFACES) {
+    foreach (i; 0..MAX_PERTURBED_INTERFACES) {
         ifaceOrig[i] = new FVInterface(blk.myConfig, false);
         ifacePp[i] = new FVInterface(blk.myConfig, false);
         ifacePm[i] = new FVInterface(blk.myConfig, false);
     }
 }
 
-void sss_preconditioner(FluidBlock blk, size_t np, double EPSILON, double MU, int orderOfJacobian=1) {
-
+void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, double MU, int orderOfJacobian=1) {
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     blk.myConfig.interpolation_order = orderOfJacobian;
 
@@ -2006,7 +2006,7 @@ void sss_preconditioner(FluidBlock blk, size_t np, double EPSILON, double MU, in
     }
     
     // multiply by transform matrix diagonal (transforming primitive to conservative form)
-    foreach ( cell; blk.cells) {
+    foreach (cell; blk.cells) {
         // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
         double gamma = cell.fs.gas.p/(cell.fs.gas.rho * cell.fs.gas.u); // ratio of specific heats minus 1
 
@@ -2031,7 +2031,16 @@ void sss_preconditioner(FluidBlock blk, size_t np, double EPSILON, double MU, in
         blk.transform[3,2] = -cell.fs.vel.y*(gamma-1);
         blk.transform[3,3] = gamma-1.0;
 
+        
         dot(cell.dPrimitive, blk.transform, cell.dConservative);
+
+        double dtInv = 1.0/dt;
+        foreach (i; 0 .. np) {
+            cell.dConservative[i,i] += dtInv;
+        }
+
+        // Get an LU decomposition ready for repeated solves.
+        LUDecomp(cell.dConservative, cell.pivot);
     }
     
     // reset interpolation order to the global setting

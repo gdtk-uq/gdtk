@@ -116,6 +116,7 @@ public:
         // block-diagonal contribution to Jacobian used in steady-state solver pre-conditioner
         Matrix dPrimitive;
         Matrix dConservative;
+        int[] pivot;
     }
 
 private:
