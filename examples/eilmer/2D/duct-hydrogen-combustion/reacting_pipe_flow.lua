@@ -1,10 +1,11 @@
 -- reacting_pipe_flow.lua
 --
 -- Combustion in a supersonic stream of constant cross-section.
--- This is set up to approximate the Bittker-Scullin case 3
--- as used by Fabs in the hydrogen-combustion test case. 
+-- This is set up to approximate the Bittker-Scullin case 3,
+-- as used by Fabian Zander in the hydrogen-combustion test case. 
 --
--- PJ 2016-03-19 adapted from reacting-pipe-flow.py for Eilmer3
+-- PJ 2011-06-21 first version written for Eilmer3 test case
+--    2016-03-19 adapted from reacting-pipe-flow.py for Eilmer3
 --    2018-04-21 updated to use current gas model and reaction calls
 --
 -- Invoke with the command line:
@@ -48,7 +49,6 @@ end
 ------------------------------------------------------------------
 -- Start the main script...
 debug = false
-do_gas_dynamic_accommodation = true
 print("# Reacting pipe flow -- Bittker-Scullin test case 3.")
 print(sample_header)
 
@@ -73,7 +73,8 @@ local dt_suggest = 1.0e-8  -- suggested starting time-step for chemistry updater
 print(sample_data(x, v, gas0, dt_suggest))
 
 print("# Start reactions...")
-local chemUpdate = ChemistryUpdate:new{filename="h2-o2-n2-9sp-18r.lua", gasmodel=gmodel}
+local chemUpdate = ChemistryUpdate:new{filename="h2-o2-n2-9sp-18r.lua",
+                                       gasmodel=gmodel}
 local t = 0 -- time is in seconds
 local t_final = 22.0e-6
 local t_inc = 0.05e-6
@@ -95,47 +96,38 @@ for j=1, nsteps do
    local dp_chem = gas1.p - p
    if debug then print("# du_chem=", du_chem, "dp_chem=", dp_chem) end
    --
-   if do_gas_dynamic_accommodation then
-      -- Do the gas-dynamic accommodation after the chemical change.
-      local Etot = u + 0.5*v*v
-      local dfdr, dfdu = eos_derivatives(gas1, gmodel)
-      if debug then print("# dfdr=", dfdr, "dfdu=", dfdu) end
-      --[[ The Python code used a linear solve to get the accommodation increments.
-	 A = np.array([ [v,      rho,        0.0, 0.0  ],
-                      [0.0,    rho*v,      1.0, 0.0  ],
-                      [v*Etot, rho*Etot+p, 0.0, rho*v],
-                      [dfdr,   0.0,       -1.0, dfdu ] ]);
-        b = np.array([0.0, -dp_chem, -rho*v*du_chem, 0.0])
-        dq = np.linalg.solve(A,b)
-        drho, dv, dp_gda, du_gda = dq
-      --]]
-      -- The Lua code computes the accommodation increments explicitly,
-      -- using expressions from Maxima.
-      local denom = rho*rho*v*v - dfdr*rho*rho - dfdu*p
-      local drho = (dp_chem - du_chem*dfdu)*rho*rho / denom
-      local dv = -(dp_chem - du_chem*dfdu)*rho*v / denom
-      local dp_gda = -(du_chem*dfdu*rho*rho*v*v - dfdr*dp_chem*rho*rho 
-			  - dfdu*dp_chem*p) / denom
-      local du_gda = -(du_chem*rho*rho*v*v - du_chem*dfdr*rho*rho - dp_chem*p) / denom
-      if debug then 
-	 print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "du_gda=", de_gda)
-	 print("# residuals=", v*drho + rho*dv, rho*v*dv + dp_gda + dp_chem,
-	       v*Etot*drho + (rho*Etot+p)*dv + rho*v*du_gda + rho*v*du_chem,
-	       dfdr*drho - dp_gda + dfdu*du_gda)
-      end
-      -- Add the accommodation increments.
-      gas1.rho = gas0.rho + drho
-      v1 = v + dv
-      p1_check = gas1.p + dp_gda
-      gas1.u = gas1.u + du_gda
-      gmodel:updateThermoFromRHOU(gas1)
-      if debug then
-	 print("# At new point for step ", j, ": gas1.p=", gas1.p, "p1_check=", p1_check, 
-	       "rel_error=", math.abs(gas1.p-p1_check)/p1_check)
-      end
-   else
-      -- Don't do the gas-dynamic accommodation.
-      v1 = v
+   -- Do the gas-dynamic accommodation after the chemical change.
+   local Etot = u + 0.5*v*v
+   local dfdr, dfdu = eos_derivatives(gas1, gmodel)
+   if debug then print("# dfdr=", dfdr, "dfdu=", dfdu) end
+   --[=[ Linear solve to get the accommodation increments.
+      [v,      rho,        0.0, 0.0  ]   [drho  ]   [0.0           ]
+      [0.0,    rho*v,      1.0, 0.0  ] * [dv    ] = [-dp_chem      ]
+      [v*Etot, rho*Etot+p, 0.0, rho*v]   [dp_gda]   [-rho*v*du_chem]
+      [dfdr,   0.0,       -1.0, dfdu ]   [du_gda]   [0.0           ]
+   --]=]
+   -- Compute the accommodation increments using expressions from Maxima.
+   local denom = rho*rho*v*v - dfdr*rho*rho - dfdu*p
+   local drho = (dp_chem - du_chem*dfdu)*rho*rho / denom
+   local dv = -(dp_chem - du_chem*dfdu)*rho*v / denom
+   local dp_gda = -(du_chem*dfdu*rho*rho*v*v - dfdr*dp_chem*rho*rho 
+                       - dfdu*dp_chem*p) / denom
+   local du_gda = -(du_chem*rho*rho*v*v - du_chem*dfdr*rho*rho - dp_chem*p) / denom
+   if debug then 
+      print("# drho=", drho, "dv=", dv, "dp_gda=", dp_gda, "du_gda=", de_gda)
+      print("# residuals=", v*drho + rho*dv, rho*v*dv + dp_gda + dp_chem,
+            v*Etot*drho + (rho*Etot+p)*dv + rho*v*du_gda + rho*v*du_chem,
+            dfdr*drho - dp_gda + dfdu*du_gda)
+   end
+   -- Add the accommodation increments.
+   gas1.rho = gas0.rho + drho
+   v1 = v + dv
+   p1_check = gas1.p + dp_gda
+   gas1.u = gas1.u + du_gda
+   gmodel:updateThermoFromRHOU(gas1)
+   if debug then
+      print("# At new point for step ", j, ": gas1.p=", gas1.p, "p1_check=", p1_check, 
+            "rel_error=", math.abs(gas1.p-p1_check)/p1_check)
    end
    -- Have now finished the chemical and gas-dynamic update.
    t = t + t_inc

@@ -119,17 +119,13 @@ for j=1, nsteps do
    local Etot = u + 0.5*v*v
    local dfdr, dfdu = eos_derivatives(gas1, gmodel)
    if debug then print("# dfdr=", dfdr, "dfdu=", dfdu) end
-   --[[ The Python code used a linear solve to get the accommodation increments.
-      A = np.array([ [v,      rho,        0.0, 0.0  ],
-                     [0.0,    rho*v,      1.0, 0.0  ],
-                     [v*Etot, rho*Etot+p, 0.0, rho*v],
-                     [dfdr,   0.0,       -1.0, dfdu ] ]);
-      b = np.array([0.0, -dp_chem, -rho*v*du_chem, 0.0])
-      dq = np.linalg.solve(A,b)
-      drho, dv, dp_gda, du_gda = dq
-   --]]
-   -- Compute the accommodation increments explicitly,
-   -- using expressions from Maxima.
+   --[=[ Linear solve to get the accommodation increments.
+      [v,      rho,        0.0, 0.0  ]   [drho  ]   [0.0           ]
+      [0.0,    rho*v,      1.0, 0.0  ] * [dv    ] = [-dp_chem      ]
+      [v*Etot, rho*Etot+p, 0.0, rho*v]   [dp_gda]   [-rho*v*du_chem]
+      [dfdr,   0.0,       -1.0, dfdu ]   [du_gda]   [0.0           ]
+   --]=]
+   -- Compute the accommodation increments using expressions from Maxima.
    local denom = rho*rho*v*v - dfdr*rho*rho - dfdu*p
    local drho = (dp_chem - du_chem*dfdu)*rho*rho / denom
    local dv = -(dp_chem - du_chem*dfdu)*rho*v / denom
