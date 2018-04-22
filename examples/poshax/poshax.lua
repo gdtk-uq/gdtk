@@ -13,16 +13,25 @@
 --
 -------------------------------------------------------------------------
 print("Initialise a gas model.")
-gmodel = GasModel:new{"nitrogen-2sp.lua"}
-chemUpdate = ChemistryUpdate:new{filename="nitrogen-chemistry.lua", gasmodel=gmodel}
-
+if false then
+   print("    nitrogen 2 species 2 reactions")
+   gmodel = GasModel:new{"nitrogen-2sp.lua"}
+   chemUpdate = ChemistryUpdate:new{filename="nitrogen-chemistry.lua", gasmodel=gmodel}
+   state1 = GasState:new{gmodel}
+   state1.p = 133.3 -- Pa
+   state1.T = 300.0 -- degree K
+   state1.massf = {N2=1, N=0}
+else
+   print("    air 5species Gupta-et-al 6 reactions")
+   gmodel = GasModel:new{"air-5sp.lua"}
+   chemUpdate = ChemistryUpdate:new{filename="air-chemistry.lua", gasmodel=gmodel}
+   -- The example here matches the case discussed on page 63 of the thesis.
+   state1 = GasState:new{gmodel}
+   state1.p = 133.3 -- Pa
+   state1.T = 300.0 -- degree K
+   state1.massf = {N2=0.78, O2=0.22}
+end
 print("Free stream conditions, before the shock.")
--- The example here matches the case discussed on page 63 of the thesis.
-state1 = GasState:new{gmodel}
-state1.p = 133.3 -- Pa
-state1.T = 300.0 -- degree K
-molef = {N2=1, N=0}
-state1.massf = gmodel:molef2massf(molef)
 gmodel:updateThermoFromPT(state1)
 gmodel:updateSoundSpeed(state1)
 print("state1:"); printValues(state1)
@@ -86,7 +95,7 @@ local dt_suggest = 1.0e-8  -- suggested starting time-step for chemistry updater
 print(sample_data(x, v, gas0, dt_suggest))
 --
 local t = 0 -- time of drift is in seconds
-local t_final = 50.0e-6 -- User-selected drift time, s
+local t_final = 500.0e-6 -- User-selected drift time, s
 local t_inc = 0.05e-6 -- User-selected time steps, s
 local nsteps = math.floor(t_final / t_inc)
 --
