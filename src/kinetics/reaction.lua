@@ -174,7 +174,10 @@ function validateReaction(t)
    return true
 end
 
-local Species2 = lpeg.Ct(lpeg.R("az")^0 * lpeg.Ct((lpeg.C(Element) * lpeg.C(Number^0) * (PM + Star + (Underscore * (S_letter + ElecLevel)))^0))^1)
+--local Species2 = lpeg.Ct(lpeg.R("ad","fz")^0 * lpeg.Ct((lpeg.C(Element) * lpeg.C(Number^0) * (PM + Star + (Underscore * (S_letter + ElecLevel)))^0))^1)
+local Species2 = lpeg.Ct( 
+   (lpeg.R("ad","fz")^0 * lpeg.Ct((lpeg.C(Element) * lpeg.C(Digit^0)))^1)^1 * (lpeg.C(PM) + (Underscore * (S_letter + ElecLevel)))^0
+)
 Species2G = lpeg.P{ Species2 }
 
 function checkEquationBalances(r, rnumber)
@@ -186,25 +189,28 @@ function checkEquationBalances(r, rnumber)
       if type(p) == 'table' then
 	 local coeff = tonumber(p[1]) or 1
 	 if p[2] ~= "M" then
-	    -- break species into elements
+	    -- break species into elements and charge
 	    local ets = lpeg.match(Species2, p[2])
 	    for _,et in ipairs(ets) do
-	       local e = et[1]
-	       local ne = tonumber(et[2]) or 1
-	       -- collate the element counts
-	       if e ~= "e" then -- don't add electron to mass balance
-                  if elem[e] then
-		      elem[e] = elem[e] + coeff*ne
-	          else
-		      elem[e] = coeff*ne
-	          end
+               if type(et) == 'table' then
+                  local e = et[1]
+                  local ne = tonumber(et[2]) or 1
+                  -- collate the element counts
+                  if e ~= "e" then -- don't add electron to mass balance
+                     if elem[e] then
+                        elem[e] = elem[e] + coeff*ne
+                     else
+                        elem[e] = coeff*ne
+                     end
+                  end
+               else
+                  -- collate the charge counts
+                  if et == "+" then
+                     charge = charge + coeff*1
+                  elseif et == "-" then
+                     charge = charge - coeff*1
+                  end
                end
-	       -- collate the charge counts
-	       if et[3] == "+" then
-		  charge = charge + coeff*1
-	       elseif et[3] == "-" then
-		  charge = charge - coeff*1
-	       end
 	    end
 	 end
       end
@@ -215,25 +221,28 @@ function checkEquationBalances(r, rnumber)
       if type(p) == 'table' then
 	 local coeff = tonumber(p[1]) or 1
 	 if p[2] ~= "M" then
-	    -- break species into elements
+	    -- break species into elements and charge
 	    local ets = lpeg.match(Species2, p[2])
 	    for _,et in ipairs(ets) do
-	       local e = et[1]
-	       local ne = tonumber(et[2]) or 1
-	       -- collate the element counts
-	       if e ~= "e" then -- don't add mass of electron to mass balance
-	       	  if elem[e] then
-		      elem[e] = elem[e] - coeff*ne
-	          else
-		      elem[e] = -coeff*ne
-	          end
-	       end		  
-	       -- collate the charge counts
-	       if et[3] == "+" then
-		  charge = charge - coeff*1
-	       elseif et[3] == "-" then
-		  charge = charge + coeff*1
-	       end
+               if type(et) == 'table' then
+                  local e = et[1]
+                  local ne = tonumber(et[2]) or 1
+                  -- collate the element counts
+                  if e ~= "e" then -- don't add mass of electron to mass balance
+                     if elem[e] then
+                        elem[e] = elem[e] - coeff*ne
+                     else
+                        elem[e] = -coeff*ne
+                     end
+                  end	
+               else 
+                  -- collate the charge counts
+                  if et == "+" then
+                     charge = charge - coeff*1
+                  elseif et == "-" then
+                     charge = charge + coeff*1
+                  end
+               end
 	    end
 	 end
       end
