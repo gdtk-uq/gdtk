@@ -1587,14 +1587,8 @@ function perform_spatial_gradient_consistency_check()
       if config.spatial_deriv_calc == "divergence" then
 	 print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' for 3D simulations.")
 	 config.spatial_deriv_calc = "least_squares"
-	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
-	 config.spatial_deriv_locn = "faces"
-      end
-      if config.spatial_deriv_locn == "vertices" then
-	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares in 3D simulations.")
       end
    end
-
    -- Search for any unstructured grids. If present, we need to ensure that least-squares
    -- gradient estimation is selected.
    unstructuredGridsPresent = false
@@ -1609,11 +1603,6 @@ function perform_spatial_gradient_consistency_check()
       if config.spatial_deriv_calc == "divergence" then
 	 print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' because unstructured grids detected.")
 	 config.spatial_deriv_calc = "least_squares"
-	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
-	 config.spatial_deriv_locn = "faces"
-      end
-       if config.spatial_deriv_locn == "vertices" then
-	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
       end
    end
 end
