@@ -97,6 +97,7 @@ SBlock2UBlock(blk)
 config.interpolation_order = 2
 config.print_count = 1
 config.unstructured_limiter = "venkat"
+config.extrema_clipping = false
 SteadyStateSolver{
    use_preconditioning = false,
    -- sigma = 1.0e-6, -- presently it's computed internally
