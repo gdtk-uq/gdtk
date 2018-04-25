@@ -1583,14 +1583,8 @@ function write_mpimap_file(fileName)
 end
 
 function perform_spatial_gradient_consistency_check()
-   if config.dimensions == 3 then
-      if config.spatial_deriv_calc == "divergence" then
-	 print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' for 3D simulations.")
-	 config.spatial_deriv_calc = "least_squares"
-      end
-   end
-   -- Search for any unstructured grids. If present, we need to ensure that least-squares
-   -- gradient estimation is selected.
+   -- Not all spatial gradient options are available, depending on the type of grid.
+   -- First, search for any unstructured grids, since these are the most restricted.
    unstructuredGridsPresent = false
    for _,blk in ipairs(fluidBlocks) do
       if blk.grid:get_type() == "unstructured_grid" then
@@ -1598,11 +1592,23 @@ function perform_spatial_gradient_consistency_check()
 	 break
       end
    end
-
    if unstructuredGridsPresent then
       if config.spatial_deriv_calc == "divergence" then
 	 print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' because unstructured grids detected.")
 	 config.spatial_deriv_calc = "least_squares"
+      end
+      if config.spatial_deriv_locn == "vertices" then
+	 print("NOTE: config.spatial_deriv_locn is being set to 'faces' when using least squares.")
+	 config.spatial_deriv_locn = "faces"
+      end
+   else
+      -- Only structured grids are present.
+      -- 2D structured grids have all options available.
+      if config.dimensions == 3 then
+         if config.spatial_deriv_calc == "divergence" then
+            print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' for 3D simulations.")
+            config.spatial_deriv_calc = "least_squares"
+         end
       end
    end
 end
