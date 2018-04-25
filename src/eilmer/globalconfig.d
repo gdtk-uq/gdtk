@@ -471,6 +471,14 @@ final class GlobalConfig {
     // The amount by which to increment the viscous factor during soft-start.
     shared static double viscous_factor_increment = 0.01;
     shared static double viscous_delay = 0.0;
+    //
+    // When things go wrong with the least-squares estimates of flow gradients
+    // it might make the flow-solver updates more stable if the consequent shear
+    // stresses were limited to physically-more-reasonable values.
+    // Also, for leading edged of sharp plates, the continuum model leads to
+    // unreasonably large shear stresses that cannot be true in the physical world.
+    shared static double shear_stress_relative_limit = 0.25;
+    //
     shared static MassDiffusionModel mass_diffusion_model = MassDiffusionModel.none;
     static MassDiffusion massDiffusion;
     shared static bool constant_lewis_number = false;
@@ -644,6 +652,7 @@ public:
     bool include_ghost_cells_in_spatial_deriv_clouds;
     bool suppress_reconstruction_at_boundaries;
     double viscous_factor;
+    double shear_stress_relative_limit;
     MassDiffusionModel mass_diffusion_model;
     MassDiffusion massDiffusion;
     bool constant_lewis_number;
@@ -747,6 +756,7 @@ public:
             GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds;
         suppress_reconstruction_at_boundaries =
             GlobalConfig.suppress_reconstruction_at_boundaries;
+        shear_stress_relative_limit = GlobalConfig.shear_stress_relative_limit;
         viscous_factor = GlobalConfig.viscous_factor;
         mass_diffusion_model = GlobalConfig.mass_diffusion_model;
         constant_lewis_number = GlobalConfig.constant_lewis_number;
@@ -1000,6 +1010,7 @@ void read_config_file()
     mixin(update_bool("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(update_double("viscous_delay", "viscous_delay"));
     mixin(update_double("viscous_factor_increment", "viscous_factor_increment"));
+    mixin(update_double("shear_stress_relative_limit", "shear_stress_relative_limit"));
     mixin(update_enum("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(update_bool("constant_lewis_number", "constant_lewis_number"));
     mixin(update_double("lewis_number", "lewis_number"));
@@ -1021,6 +1032,7 @@ void read_config_file()
         writeln("  suppress_reconstruction_at_boundaries: ", GlobalConfig.suppress_reconstruction_at_boundaries);
         writeln("  viscous_delay: ", GlobalConfig.viscous_delay);
         writeln("  viscous_factor_increment: ", GlobalConfig.viscous_factor_increment);
+        writeln("  shear_stress_relative_limit: ", GlobalConfig.shear_stress_relative_limit);
         writeln("  mass_diffusion_model: ", massDiffusionModelName(GlobalConfig.mass_diffusion_model));
         writeln("  constant_lewis_number: ", GlobalConfig.constant_lewis_number);
         writeln("  lewis_number: ", GlobalConfig.lewis_number);

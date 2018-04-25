@@ -145,6 +145,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_bool_field("suppress_reconstruction_at_boundaries", "suppress_reconstruction_at_boundaries"));
     mixin(get_double_field("viscous_factor_increment", "viscous_factor_increment"));
     mixin(get_double_field("viscous_delay", "viscous_delay"));
+    mixin(get_double_field("shear_stress_relative_limit", "shear_stress_relative_limit"));
     mixin(get_double_field("viscous_signal_factor", "viscous_signal_factor"));
     mixin(get_enum_field("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(get_bool_field("constant_lewis_number", "constant_lewis_number"));
@@ -294,6 +295,7 @@ extern(C) int configGet(lua_State* L)
     case "suppress_reconstruction_at_boundaries": lua_pushboolean(L, GlobalConfig.suppress_reconstruction_at_boundaries); break;
     case "viscous_factor_increment": lua_pushnumber(L, GlobalConfig.viscous_factor_increment); break;
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
+    case "shear_stress_relative_limit": lua_pushnumber(L, GlobalConfig.shear_stress_relative_limit); break;
     case "viscous_signal_factor": lua_pushnumber(L, GlobalConfig.viscous_signal_factor); break;
     case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;
     case "constant_lewis_number": lua_pushboolean(L, GlobalConfig.constant_lewis_number); break;
@@ -377,7 +379,8 @@ extern(C) int configSetFromValue(lua_State *L)
     // we'd like to warn the user.
     if ( lua_isnil(L, 3) ) {
         writeln("WARNING: -----------------------------------------------------------------------------");
-        writeln(format("WARNING: You tried to set the configuration option '%s' with a nil value. It has been ignored.", to!string(luaL_checkstring(L, 2))));
+        writeln(format("WARNING: You tried to set the configuration option '%s' with a nil value."~
+                       " It has been ignored.", to!string(luaL_checkstring(L, 2))));
         writeln("WARNING: -----------------------------------------------------------------------------");
     }
     // We aren't interested in the table because we have

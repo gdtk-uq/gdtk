@@ -15,7 +15,7 @@ import std.stdio;
 
 import std.conv;
 import std.format;
-import std.math: sqrt, fmin;
+import std.math: sqrt, fmin, fabs, copysign;
 import geom;
 import gas;
 import fvcore;
@@ -323,6 +323,19 @@ public:
         double k_eff = viscous_factor * (k_laminar + fs.k_t);
         double mu_eff = viscous_factor * (mu_laminar + fs.mu_t);
         double lmbda = -2.0/3.0 * mu_eff;
+        //
+        double local_pressure;
+        if (left_cell && right_cell) {
+            local_pressure = 0.5*(left_cell.fs.gas.p+right_cell.fs.gas.p);
+        } else if (left_cell) {
+            local_pressure = left_cell.fs.gas.p;
+        } else if (right_cell) {
+            local_pressure = right_cell.fs.gas.p;
+        } else {
+            assert(0, "Oops, don't seem to have a cell available.");
+        }
+        double shear_stress_limit = myConfig.shear_stress_relative_limit * local_pressure;
+        double heat_transfer_limit = (mu_eff > 0.0) ? k_eff/mu_eff*shear_stress_limit : 0.0;
 
         // We separate diffusion based on laminar or turbulent
         // and treat the differently.
@@ -441,6 +454,17 @@ public:
             tau_wy = mu_effective * grad.omega[1]; 
             if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
         }
+        // Apply limits to the component values.
+        tau_xx = copysign(fmin(fabs(tau_xx),shear_stress_limit), tau_xx);
+        tau_yy = copysign(fmin(fabs(tau_yy),shear_stress_limit), tau_yy);
+        tau_zz = copysign(fmin(fabs(tau_zz),shear_stress_limit), tau_zz);
+        tau_xy = copysign(fmin(fabs(tau_xy),shear_stress_limit), tau_xy);
+        tau_xz = copysign(fmin(fabs(tau_xz),shear_stress_limit), tau_xz);
+        tau_yz = copysign(fmin(fabs(tau_yz),shear_stress_limit), tau_yz);
+        qx = copysign(fmin(fabs(qx),heat_transfer_limit), qx);
+        qy = copysign(fmin(fabs(qy),heat_transfer_limit), qy);
+        qz = copysign(fmin(fabs(qz),heat_transfer_limit), qz);
+        //
         // Combine into fluxes: store as the dot product (F.n).
         double nx = n.x;
         double ny = n.y;

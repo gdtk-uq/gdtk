@@ -1438,6 +1438,7 @@ function write_config_file(fileName)
    f:write(string.format('"suppress_reconstruction_at_boundaries": %s,\n',
 			 tostring(config.suppress_reconstruction_at_boundaries)))
    f:write(string.format('"viscous_delay": %.18e,\n', config.viscous_delay))
+   f:write(string.format('"shear_stress_relative_limit": %.18e,\n', config.shear_stress_relative_limit))
    f:write(string.format('"mass_diffusion_model": "%s",\n',
 			 string.lower(config.mass_diffusion_model)))
    f:write(string.format('"constant_lewis_number": %s,\n', tostring(config.constant_lewis_number)))
