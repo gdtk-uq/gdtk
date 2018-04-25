@@ -103,7 +103,7 @@ public:
                 msg ~= format("Energy at 100000.0: %12.6f\n", Q.u);
                 msg ~= format("The GasState is currently:\n");
                 msg ~= Q.toString() ~ "\n";
-                throw new Exception(msg);
+                throw new GasModelException(msg);
             }
         }
         try {
@@ -118,7 +118,7 @@ public:
             msg ~= Q.toString() ~ "\n";
             msg ~= "The message from the solve function is:\n";
             msg ~= e.msg;
-            throw new Exception(msg);
+            throw new GasModelException(msg);
         }
     }
 private:
@@ -153,7 +153,7 @@ private:
                 int max_try=50, double factor=1.6)
     {
         if ( x1 == x2 ) {
-            throw new Exception("Bad initial range given to bracket.");
+            throw new GasModelException("Bad initial range given to bracket.");
         }
         double f1 = zeroFun(x1, e_tgt, Q);
         double f2 = zeroFun(x2, e_tgt, Q);
@@ -203,7 +203,7 @@ private:
             // Supplied bracket does not encompass zero of the function.
             string msg = "Root must be bracketed by x1 and x2\n";
             msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
-            throw new Exception(msg);
+            throw new GasModelException(msg);
         }
         double c = b;
         double fc = fb;
@@ -265,7 +265,7 @@ private:
             }
             fb = zeroFun(b, e_tgt, Q);      
         }
-        throw new Exception("Maximum number of iterations exceeded in solve (therm_perf_gas_mix)");
+        throw new GasModelException("Maximum number of iterations exceeded in solve.");
     } // end solve()
 } // end class ThermallyPerfectGasMixEOS
 
