@@ -120,12 +120,9 @@ function FoamBlock:new(o)
          o.bndry_labels.top = "FrontAndBack"
          o.bndry_labels.bottom = "FrontAndBack"
       end
-   else
-      o.bndry_labels.top = "top"
-      o.bndry_labels.bottom = "bottom"
    end 
    -- Populate the unset bndry_labels with the defaults
-   for _,face in ipairs({"north", "east", "south", "west"}) do
+   for _,face in ipairs({"north", "east", "south", "west","top","bottom"}) do
       o.bndry_labels[face] = o.bndry_labels[face] or "unassigned"
    end
    -- Add the unique boundary labels to the global collection

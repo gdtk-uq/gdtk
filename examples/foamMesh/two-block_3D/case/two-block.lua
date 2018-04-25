@@ -30,7 +30,8 @@ vol0 = TFIVolume:new{vertices={a0,b0,e0,d0,a1,b1,e1,d1}}
 vol1 = TFIVolume:new{vertices={b0,c0,f0,e0,b1,c1,f1,e1}}
 
 -- Define 2D grid on patch, clustering can be added if desired
-nxcells = 10; nycells = 5; nzcells = 3
+nxcells = 10; nycells = 10; nzcells = 3
+
 grid0 = StructuredGrid:new{pvolume=vol0, niv=nxcells+1, njv=nycells+1, nkv=nzcells+1}
 grid1 = StructuredGrid:new{pvolume=vol1, niv=nxcells+1, njv=nycells+1, nkv=nzcells+1}
 
