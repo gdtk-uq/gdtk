@@ -1235,7 +1235,12 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
             outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
         }
         // write cell connectivity
-        size_t size = ncells + 4*ncells; // TODO: only for quads, need to generalise
+        size_t connections = 0;
+        foreach ( cell; blk.cells) {
+            connections += cell.iface.length;
+        }
+        size_t size = ncells + connections; // TODO: only for quads, need to generalise
+
         outFile.writef("CELLS %d %d \n", ncells, size);
         foreach(i, cell; ublk.grid.cells) {
             outFile.writef("%d ", cell.vtx_id_list.length);
