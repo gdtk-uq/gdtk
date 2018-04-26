@@ -574,6 +574,9 @@ final class GlobalConfig {
     shared static bool udfSolidSourceTerms = false;
     shared static string udfSolidSourceTermsFile = "dummy-solid-source-terms.txt";
 
+    // Delay activation of Thermionic Emission BC
+    shared static double thermionic_emission_bc_time_delay = 0.0;
+
     // Parameters related to the gpu chemistry mode
     version (gpu_chem) {
         static GPUChem gpuChem;
@@ -691,6 +694,8 @@ public:
     bool include_quality;
     ThermochemicalReactor thermochemUpdate;
 
+    double thermionic_emission_bc_time_delay;
+
     int verbosity_level;
 
     version (steady_state) {
@@ -800,6 +805,8 @@ public:
         if (GlobalConfig.reacting) {
             thermochemUpdate = init_thermochemical_reactor(gmodel, GlobalConfig.reactions_file, GlobalConfig.energy_exchange_file);
         }
+        //
+        thermionic_emission_bc_time_delay = GlobalConfig.thermionic_emission_bc_time_delay;
         //
         verbosity_level = GlobalConfig.verbosity_level;
         //
@@ -1099,6 +1106,7 @@ void read_config_file()
     mixin(update_bool("save_intermediate_results", "save_intermediate_results"));
     mixin(update_string("boundary_group_for_loads", "boundary_group_for_loads"));
     mixin(update_bool("compute_loads", "compute_loads"));
+    mixin(update_double("thermionic_emission_bc_time_delay", "thermionic_emission_bc_time_delay"));
     if (GlobalConfig.verbosity_level > 1) {
         writeln("  diffuse_wall_bcs_on_init: ", GlobalConfig.diffuseWallBCsOnInit);
         writeln("  number_init_passes: ", GlobalConfig.nInitPasses);
@@ -1112,6 +1120,7 @@ void read_config_file()
         writeln("  save_intermediate_results: ", GlobalConfig.save_intermediate_results);
         writeln("  boundary_group_for_loads: ", GlobalConfig.boundary_group_for_loads);
         writeln("  compute_loads: ", GlobalConfig.compute_loads);
+        writeln("  thermionic_emission_bc_time_delay: ", GlobalConfig.thermionic_emission_bc_time_delay);
     }
 
     configCheckPoint4();

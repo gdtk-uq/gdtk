@@ -1480,6 +1480,8 @@ function write_config_file(fileName)
    f:write(string.format('"number_init_passes": %d,\n', config.number_init_passes))
    f:write(string.format('"wall_temperature_on_init": %.18e,\n', config.wall_temperature_on_init));
 
+   f:write(string.format('"thermionic_emission_bc_time_delay": %.18e,\n', config.thermionic_emission_bc_time_delay))
+
    f:write('"shape_sensitivity_calculator_options" : {\n')
    f:write(string.format('   "gradient_method": "%s",\n', ShapeSensitivityCalculator.gradient_method))
    f:write(string.format('   "gradient_verification": %s,\n', tostring(ShapeSensitivityCalculator.gradient_verification)))

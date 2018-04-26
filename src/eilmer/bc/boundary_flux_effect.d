@@ -331,6 +331,9 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
+        if (t < blk.myConfig.thermionic_emission_bc_time_delay){
+            return;
+        }
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         if ( emissivity <= 0.0 || emissivity > 1.0 ) {
             // Check if emissivity value is valid
@@ -346,20 +349,21 @@ public:
             FVInterface IFace;
             size_t i, j, k;
             FVCell cell;
-        
-            switch(which_boundary){
-            case Face.south:
-                j = blk.jmin;
+
+            final switch (which_boundary) {
+            case Face.north:
+                j = blk.jmax;
                 for (k = blk.kmin; k <= blk.kmax; ++k) {
                     for (i = blk.imin; i <= blk.imax; ++i) {
                         // Set cell/face properties
                         cell = blk.get_cell(i,j,k);
-                        IFace = cell.iface[Face.south];
+                        IFace = cell.iface[Face.east];
                         double dn = distance_between(cell.pos[0], IFace.pos);
-                        // Negative for SOUTH face
-                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, false);
-                    } // end j loop
-                } // end k loop
+                        // Flux equations
+                        // Energy balance by solving for the wall surface temperature
+                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                    } // end i loop
+                } // end for k
                 break;
             case Face.east:
                 i = blk.imax;
@@ -371,20 +375,68 @@ public:
                         double dn = distance_between(cell.pos[0], IFace.pos);
                         // Flux equations
                         // Energy balance by solving for the wall surface temperature
-                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn, false);
-                        //printf("Wall temperature = %.4g K\n", IFace.fs.gas.T);
-
+                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
                     } // end j loop
-                } // end k loop
+                } // end for k
                 break;
-            default:
-                throw new Error("WallBC_ThermionicEmission only implemented for SOUTH face.");
+            case Face.south:
+                j = blk.jmin;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (i = blk.imin; i <= blk.imax; ++i) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.south];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Negative for SOUTH face
+                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                    } // end i loop
+                } // end for k
+                break;
+            case Face.west:
+                i = blk.imin;
+                for (k = blk.kmin; k <= blk.kmax; ++k) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.south];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Negative for WEST face
+                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                    } // end j loop
+                } // end for k
+                break;
+            case Face.top:
+                k = blk.kmax;
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.east];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Flux equations
+                        // Energy balance by solving for the wall surface temperature
+                        IFace.F.total_energy = solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                    } // end j loop
+                } // end for i
+                break;
+            case Face.bottom:
+                k = blk.kmin;
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    for (j = blk.jmin; j <= blk.jmax; ++j) {
+                        // Set cell/face properties
+                        cell = blk.get_cell(i,j,k);
+                        IFace = cell.iface[Face.south];
+                        double dn = distance_between(cell.pos[0], IFace.pos);
+                        // Negative for BOTTOM face
+                        IFace.F.total_energy = -1*solve_for_wall_temperature_and_energy_flux(cell, IFace, dn);
+                    } // end j loop
+                } // end for i
+                break;
             } // end switch which_boundary
-            // Start by making bounds of SOUTH FACE work    
         } // end apply_structured_grid()
     }
 
-    double solve_for_wall_temperature_and_energy_flux(const FVCell cell, FVInterface IFace, double dn, bool outwardNormal)
+    double solve_for_wall_temperature_and_energy_flux(const FVCell cell, FVInterface IFace, double dn)
     // Iteratively converge on wall temp
     {
         auto gmodel = blk.myConfig.gmodel; 
@@ -395,13 +447,6 @@ public:
         double Twall_prev_backup = IFace.fs.gas.T;
         double q_total, q_total_prev, q_total_prev_backup = 0.0;
         int iteration_check, subiteration_check = 0;
-
-  //      // Ridder method stuff
-		//int max_try = 50;
-  //      double factor = 0.05;
-  //      double T1 = 400; double T2 = 600; 
-  //      double T1_min = 80; double T2_max = 50000.0;
-  //      double Ttol = 0.001;
 
         // IFace orientation
         double nx = IFace.n.x; double ny = IFace.n.y; double nz = IFace.n.z;
@@ -472,22 +517,9 @@ public:
             // Don't nest pow functions. It is very slow....
             q_total = pow(qx*qx + qy*qy + qz*qz, 0.5);
 
-            if (outwardNormal) {
-                q_total = -q_total;
-            }
-
             // If we reach our tolerance value, we break. Tolerance based off heat loads
             // as it is very susceptible to minor changes in Twall
             if ( fabs((q_total - q_total_prev)/q_total) < tolerance) {
-                //printf("Convergence reached\n");
-                //   printf("Twall = %.4g\n", Twall);
-                //   printf("Calculated q_rad out = %.4g\n", pow(Twall,4)*emissivity*SB_sigma);
-                //   printf("cell.fs.gas.T = %.4g\n", cell.fs.gas.T);
-                //   printf("q_total = %.4g\n", q_total);
-                //   printf("q_total_prev = %.4g\n", q_total_prev);
-                //   printf("dTdn = %.4g\n", dTdn);
-                //   printf("k = %.4g\n", k_eff);
-                //   printf("\n");
                 // Update your wall temp with your final value
                 IFace.fs.gas.T = Twall;
                 IFace.fs.gas.p = cell.fs.gas.p;
@@ -509,15 +541,6 @@ public:
             // What wall temperature would reach radiative equilibrium at current q_total
             if (ThermionicEmissionActive == 0){
                 Twall = pow( q_total / ( emissivity * SB_sigma ), 0.25 );
-            //} else { // Using in-built Ridder method
-
-            //	if (q_total == 0.0) {
-            //		// Do nothing
-            //		printf("Hello :)");
-            //	} else {
-            //		Twall = update_Twall_from_heat_flux(q_total);
-            //	}
-            //}
             } else { // Homemade Newtons method
                 Twall_0 = Twall_prev;
                 foreach (Twall_subiteration_count; 0 .. Twall_subiterations) {
@@ -546,16 +569,14 @@ public:
             q_total_prev = q_total;
         }
         if (iteration_check == 0){
-            printf("Iteration's didn't converge\n");
-            printf("Increase Twall_iterations from default 200 value\n");
-            printf("\n");
+            printf("Iteration's didn't converge. Don't trust this solution. Keep running until this message disappears\n");
         }
 
-        if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
-            printf("Subiteration's didn't converge\n");
-            printf("Increase Twall_subiterations from default 20 value\n");
-            printf("\n");
-        }
+        //if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
+        //    printf("Subiteration's didn't converge\n");
+        //    printf("Increase Twall_subiterations from default 20 value\n");
+        //    printf("\n");
+        //}
         return q_total;
     } // end solve_for_wall_temperature_and_energy_flux()
 

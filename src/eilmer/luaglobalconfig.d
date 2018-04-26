@@ -207,6 +207,8 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_string_field("udf_solid_source_terms_file", "udfSolidSourceTermsFile"));
     mixin(get_bool_field("udf_solid_source_terms", "udfSolidSourceTerms"));
+    //
+    mixin(get_double_field("thermionic_emission_bc_time_delay", "thermionic_emission_bc_time_delay"));
 
     // Look for unused keys. These are unsupported keys that the user
     // has supplied. Give a warning.
@@ -357,6 +359,8 @@ extern(C) int configGet(lua_State* L)
     case "udf_solid_source_terms_file": lua_pushstring(L, GlobalConfig.udfSolidSourceTermsFile.toStringz); break;
     case "udf_solid_source_terms": lua_pushboolean(L, GlobalConfig.udfSolidSourceTerms); break;
         //
+    case "thermionic_emission_bc_time_delay": lua_pushnumber(L, GlobalConfig.thermionic_emission_bc_time_delay); break;
+        //       
     default: lua_pushnil(L);
     }
     return 1;
