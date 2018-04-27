@@ -39,7 +39,11 @@ function error_in_velocity(p3p4)
 end
 --
 dofile("secant.lua")
-p3p4 = secant(error_in_velocity, 0.1, 0.11, 1.0e-3)
+p3p4, err = secant(error_in_velocity, 0.1, 0.11, 1.0e-3)
+if err then
+   print("Secant iteration for pressure ratio failed.")
+   print("error message is:", err)
+end
 print("From secant solve: p3/p4=", p3p4)
 print("Expanded driver gas:")
 p3 = p3p4*states[4].p
