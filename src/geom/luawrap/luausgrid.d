@@ -259,7 +259,11 @@ extern(C) int usg_joinGrid(lua_State* L)
         string errMsg = "Error in UnstructuredGrid:joinGrid(). other grid not an UnstructuredGrid.";
         luaL_error(L, errMsg.toStringz);
     }
-    master.joinGrid(other);
+    int openFoamDimensions = 3;
+    if (narg == 3) { 
+        openFoamDimensions = luaL_checkint(L, 3);
+    }
+    master.joinGrid(other, 1.0e-6, 1.0e-9, openFoamDimensions);
     lua_settop(L, 1); // We leave the master grid at stack position 1
     return 1;
 } // end usg_joinGrid()

@@ -1752,7 +1752,7 @@ public:
     } // end write_openFoam_polyMesh()
     
     UnstructuredGrid joinGrid(const UnstructuredGrid other,
-                              double relTol=1.0e-6, double absTol=1.0e-9)
+                              double relTol=1.0e-6, double absTol=1.0e-9, int openFoamDimensions=3)
     {
         // We consider *this as the "master" grid and will join
         // a copy of the unique bits of the other grid to it.
@@ -1767,9 +1767,11 @@ public:
         assert(other.ncells == other.cells.length, "wrong number of cells in other grid");
         //
         // Merge the unique points from the other grid and keep a record of where we put them.
-        //
         size_t[] new_vtx_ids;
-        new_vtx_ids.length = other.vertices.length;
+        // switch between searching entire grid and only vtx located on grid boundaries
+        if (false) {
+        // Search all vtx in grid
+        new_vtx_ids.length = other.vertices.length;  
         foreach (i, vtx; other.vertices) {
             bool found = false;
             size_t jsave;
@@ -1790,6 +1792,67 @@ public:
             }
         }
         nvertices = vertices.length;
+        } else {
+        // Search only vertices on boundaries
+        // Collect vertices on boundaries that need to be compared.
+        size_t[] vtx_ids_boundary;
+        foreach (i,b; boundaries) {
+            // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5 and mutiples) can be skipped 
+            if (openFoamDimensions == 2  && ( (i%6)==4  || (i%6)==5) ) { continue; }  
+            foreach (j,f; b.face_id_list) {
+                vtx_ids_boundary ~= faces[f].vtx_id_list;
+            }
+        }
+        // Sort resulting array and remove duplicates
+        vtx_ids_boundary.length -= vtx_ids_boundary.sort().uniq().copy(vtx_ids_boundary).length;
+        size_t[] vtx_ids_other_boundary;
+        foreach (i,b; other.boundaries) {
+            // for OpenFOAM 2-D meshes the top and bottom boundaries (index 4 and 5) can be skipped 
+            if (openFoamDimensions == 2 && (i == 4 || i == 5)) { continue; } 
+            foreach (f; b.face_id_list) {
+                vtx_ids_other_boundary ~= other.faces[f].vtx_id_list;
+            }
+        }
+        // Sort resulting array and remove duplicates
+        vtx_ids_other_boundary.length -= vtx_ids_other_boundary.sort().uniq().copy(vtx_ids_other_boundary).length;
+        //
+        // Compare vertics on boundaries and add them to master grid if new. 
+        new_vtx_ids.length = other.vertices.length;
+        foreach (i; vtx_ids_other_boundary) {
+            bool found = false;
+            size_t jsave;
+            Vector3 vtx;
+            vtx = other.vertices[i];
+            foreach (j; vtx_ids_boundary) {
+                Vector3 v;
+                v = vertices[j];
+                if (approxEqualVectors(v, vtx, relTol, absTol)) {
+                    found = true;
+                    jsave = j; // remember where we found it
+                    break;
+                }
+            }
+            if (!found) {
+                // We have a new vertex for the master grid.
+                vertices ~= vtx;
+                new_vtx_ids[i] = vertices.length - 1;
+            } else {
+                // This vertex was already in master grid.
+                new_vtx_ids[i] = jsave;
+            }
+        }
+        //
+        // Add internal vertices from other to master grid
+        foreach (i, vtx; other.vertices) {
+            if ( !canFind(vtx_ids_other_boundary, i)) { 
+               // We have a new vertex for the master grid.
+               vertices ~= vtx;
+               new_vtx_ids[i]= vertices.length - 1;
+            }
+        }
+        nvertices = vertices.length;
+        //
+        }
         //
         // Make sure that we have a full dictionary of the faces in the master-grid,
         // in preparation for merging the other collection of faces.
@@ -1953,6 +2016,5 @@ public:
     } // end writeStats()
                 
 } // end class UnstructuredGrid
-
 
 

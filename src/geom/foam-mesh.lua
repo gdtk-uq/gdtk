@@ -7,6 +7,7 @@
 -- Global settings
 turbulence_model = "none" -- Options are: "S-A" and "k-epsilon"
 axisymmetric = false
+openFoamDimensions = 2
 dtheta = 0.2
 dz = 0.2
 
@@ -102,6 +103,7 @@ function FoamBlock:new(o)
       end
    elseif (o.grid:get_dimensions() == 3) then
          newGrid = o.grid
+         openFoamDimensions = 3
    else
       errMsg = "The 'grid' object supplied to FoamBlock:new() must be a 2D or 3D grid.\n"
       error(errMsg)
@@ -413,7 +415,9 @@ function main(verbosityLevel)
       if (vrbLvl >= 2) then
 	 print("Joining blk ", ib, " to master mesh.")
       end
-      myMesh:joinGrid(blks[ib].ugrid)
+      -- joinGrid and pass openFoamDimensions. For 2-D this excludes top and 
+      -- bottom boundaries when searching for ways to join grids. 
+      myMesh:joinGrid(blks[ib].ugrid,openFoamDimensions)
    end
    if (vrbLvl >= 1) then
       print("   DONE: Joining all grids together.")
