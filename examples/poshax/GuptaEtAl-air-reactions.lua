@@ -24,7 +24,7 @@
 -- -------
 -- 2016-01-19 : Updated by RJG for use with Dlang project
 
-NO_SPECIES = 5
+NO_SPECIES = 7
 
 -- Currently two schemes are available in this file using 
 -- the WITH_IONIZATION flag. If 'false' then the first
