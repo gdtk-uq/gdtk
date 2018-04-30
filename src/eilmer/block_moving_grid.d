@@ -172,6 +172,7 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                     pyramid_properties(p7, p6, p5, p4, centroid_hex, sub_centroid, sub_volume);
                     volume += sub_volume; 
                     pyramid_properties(p0, p1, p2, p3, centroid_hex, sub_centroid, sub_volume);
+                    volume += sub_volume; 
                     // 
                     IFace = blk.get_ifj(i,j,k);         
                     averaged_ivel = (vtx0.vel[0] + vtx1.vel[0] + vtx2.vel[0] + vtx3.vel[0]) / 4.0;
