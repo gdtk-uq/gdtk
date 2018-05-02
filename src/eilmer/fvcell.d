@@ -948,13 +948,24 @@ public:
                 fs.gas.T = T_save;
             }
         } catch(ThermochemicalReactorUpdateException err) {
-            string msg = format("caught %s", err.msg);
-            msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
-            msg ~= format("This cell is located at: %s\n", pos[0]);
-            msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
-            msg ~= format("The cell's id is: %d\n", id);
-            msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
-            throw new FlowSolverException(msg);
+            // It's probably worth one more try but setting dt_chem = -1.0 to give
+            // the ODE solver a fresh chance to find a good timestep.
+            dt_chem = -1.0;
+            try {
+                 myConfig.thermochemUpdate(fs.gas, dt, dt_chem, dt_therm, params);
+                 if (myConfig.ignition_zone_active) {
+                     // Restore actual gas temperature
+                     fs.gas.T = T_save;
+                 }
+            } catch(ThermochemicalReactorUpdateException err) {
+                string msg = format("caught %s", err.msg);
+                msg ~= format("The thermochemical_increment() failed for cell: %d\n", id);
+                msg ~= format("This cell is located at: %s\n", pos[0]);
+                msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
+                msg ~= format("The cell's id is: %d\n", id);
+                msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+                throw new FlowSolverException(msg);
+            }
         }
 
         // The update only changes mass fractions; we need to impose
