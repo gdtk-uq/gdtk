@@ -139,6 +139,7 @@ extern(C) int configSetFromTable(lua_State* L)
     //
     mixin(get_bool_field("viscous", "viscous"));
     mixin(get_bool_field("use_viscosity_from_cells", "use_viscosity_from_cells"));
+    mixin(get_bool_field("spatial_deriv_from_many_points", "spatial_deriv_from_many_points"));
     mixin(get_enum_field("spatial_deriv_calc", "spatial_deriv_calc", "spatial_deriv_calc_from_name"));
     mixin(get_enum_field("spatial_deriv_locn", "spatial_deriv_locn", "spatial_deriv_locn_from_name"));
     mixin(get_bool_field("include_ghost_cells_in_spatial_deriv_clouds", "include_ghost_cells_in_spatial_deriv_clouds"));
@@ -291,6 +292,7 @@ extern(C) int configGet(lua_State* L)
         //
     case "viscous": lua_pushboolean(L, GlobalConfig.viscous); break;
     case "use_viscosity_from_cells": lua_pushboolean(L, GlobalConfig.use_viscosity_from_cells); break;
+    case "spatial_deriv_from_many_points": lua_pushboolean(L, GlobalConfig.spatial_deriv_from_many_points); break;
     case "spatial_deriv_calc": lua_pushstring(L, spatial_deriv_calc_name(GlobalConfig.spatial_deriv_calc).toStringz); break;
     case "spatial_deriv_locn": lua_pushstring(L, spatial_deriv_locn_name(GlobalConfig.spatial_deriv_locn).toStringz); break;
     case "include_ghost_cells_in_spatial_deriv_clouds": lua_pushboolean(L, GlobalConfig.include_ghost_cells_in_spatial_deriv_clouds); break;

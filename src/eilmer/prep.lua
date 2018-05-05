@@ -1431,6 +1431,7 @@ function write_config_file(fileName)
 
    f:write(string.format('"viscous": %s,\n', tostring(config.viscous)))
    f:write(string.format('"use_viscosity_from_cells": %s,\n', tostring(config.use_viscosity_from_cells)))
+   f:write(string.format('"spatial_deriv_from_many_points": %s,\n', tostring(config.spatial_deriv_from_many_points)))
    f:write(string.format('"spatial_deriv_calc": "%s",\n', config.spatial_deriv_calc))
    f:write(string.format('"spatial_deriv_locn": "%s",\n', config.spatial_deriv_locn))
    f:write(string.format('"include_ghost_cells_in_spatial_deriv_clouds": %s,\n',
@@ -1612,6 +1613,12 @@ function perform_spatial_gradient_consistency_check()
             print("NOTE: config.spatial_deriv_calc is being set to 'least_squares' for 3D simulations.")
             config.spatial_deriv_calc = "least_squares"
          end
+      end
+   end
+   if not config.spatial_deriv_from_many_points then
+      if config.spatial_deriv_locn == "vertices" then
+         print("NOTE: config.spatial_deriv_location is being set to 'faces' for 2-point derivatives.")
+         config.spatial_deriv_locn = "faces"
       end
    end
 end

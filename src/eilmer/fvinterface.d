@@ -337,171 +337,246 @@ public:
         double shear_stress_limit = myConfig.shear_stress_relative_limit * local_pressure;
         double heat_transfer_limit = (mu_eff > 0.0) ? k_eff/mu_eff*shear_stress_limit : 0.0;
 
-        // We separate diffusion based on laminar or turbulent
-        // and treat the differently.
-        if (myConfig.turbulence_model != TurbulenceModel.none) {
-            double Sc_t = myConfig.turbulence_schmidt_number;
-            double D_t = fs.mu_t / (fs.gas.rho * Sc_t);
+        if (myConfig.spatial_deriv_from_many_points) {
+            // Viscous fluxes are constructed with gradients from many points.
+            // The alternative, below, is just to use two points.
+            //
+            // We separate diffusion based on laminar or turbulent
+            // and treat the differently.
+            if (myConfig.turbulence_model != TurbulenceModel.none) {
+                double Sc_t = myConfig.turbulence_schmidt_number;
+                double D_t = fs.mu_t / (fs.gas.rho * Sc_t);
 
-            foreach (isp; 0 .. n_species) {
-                jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
-                jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
-                jz[isp] = -fs.gas.rho * D_t * grad.massf[isp][2];
-            }
-        }
-        else { // apply molecular diffusion instead of turbulence in laminar flows
-            if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-                myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
                 foreach (isp; 0 .. n_species) {
-                    jx[isp] *= viscous_factor;
-                    jy[isp] *= viscous_factor;
-                    jz[isp] *= viscous_factor;
+                    jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
+                    jy[isp] = -fs.gas.rho * D_t * grad.massf[isp][1];
+                    jz[isp] = -fs.gas.rho * D_t * grad.massf[isp][2];
                 }
             }
-        }
-        double tau_xx = 0.0;
-        double tau_yy = 0.0;
-        double tau_zz = 0.0;
-        double tau_xy = 0.0;
-        double tau_xz = 0.0;
-        double tau_yz = 0.0;
-        if (myConfig.dimensions == 3) {
-            double dudx = grad.vel[0][0];
-            double dudy = grad.vel[0][1];
-            double dudz = grad.vel[0][2];
-            double dvdx = grad.vel[1][0];
-            double dvdy = grad.vel[1][1];
-            double dvdz = grad.vel[1][2];
-            double dwdx = grad.vel[2][0];
-            double dwdy = grad.vel[2][1];
-            double dwdz = grad.vel[2][2];
-            // 3-dimensional planar stresses.
-            tau_xx = 2.0*mu_eff*dudx + lmbda*(dudx + dvdy + dwdz);
-            tau_yy = 2.0*mu_eff*dvdy + lmbda*(dudx + dvdy + dwdz);
-            tau_zz = 2.0*mu_eff*dwdz + lmbda*(dudx + dvdy + dwdz);
-            tau_xy = mu_eff * (dudy + dvdx);
-            tau_xz = mu_eff * (dudz + dwdx);
-            tau_yz = mu_eff * (dvdz + dwdy);
-        } else {
-            // 2D
-            double dudx = grad.vel[0][0];
-            double dudy = grad.vel[0][1];
-            double dvdx = grad.vel[1][0];
-            double dvdy = grad.vel[1][1];
-            if (myConfig.axisymmetric) {
-                // Viscous stresses at the mid-point of the interface.
-                // Axisymmetric terms no longer include the radial multiplier
-                // as that has been absorbed into the interface area calculation.
-                double ybar = Ybar;
-                if (ybar > 1.0e-10) { // something very small for a cell height
-                    tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy + fs.vel.y / ybar);
-                    tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy + fs.vel.y / ybar);
-                } else {
-                    tau_xx = 0.0;
-                    tau_yy = 0.0;
+            else { // apply molecular diffusion instead of turbulence in laminar flows
+                if (myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                    myConfig.massDiffusion.update_mass_fluxes(fs, grad, jx, jy, jz);
+                    foreach (isp; 0 .. n_species) {
+                        jx[isp] *= viscous_factor;
+                        jy[isp] *= viscous_factor;
+                        jz[isp] *= viscous_factor;
+                    }
                 }
+            }
+            double tau_xx = 0.0;
+            double tau_yy = 0.0;
+            double tau_zz = 0.0;
+            double tau_xy = 0.0;
+            double tau_xz = 0.0;
+            double tau_yz = 0.0;
+            if (myConfig.dimensions == 3) {
+                double dudx = grad.vel[0][0];
+                double dudy = grad.vel[0][1];
+                double dudz = grad.vel[0][2];
+                double dvdx = grad.vel[1][0];
+                double dvdy = grad.vel[1][1];
+                double dvdz = grad.vel[1][2];
+                double dwdx = grad.vel[2][0];
+                double dwdy = grad.vel[2][1];
+                double dwdz = grad.vel[2][2];
+                // 3-dimensional planar stresses.
+                tau_xx = 2.0*mu_eff*dudx + lmbda*(dudx + dvdy + dwdz);
+                tau_yy = 2.0*mu_eff*dvdy + lmbda*(dudx + dvdy + dwdz);
+                tau_zz = 2.0*mu_eff*dwdz + lmbda*(dudx + dvdy + dwdz);
                 tau_xy = mu_eff * (dudy + dvdx);
+                tau_xz = mu_eff * (dudz + dwdx);
+                tau_yz = mu_eff * (dvdz + dwdy);
             } else {
-                // 2-dimensional-planar stresses.
-                tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy);
-                tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy);
-                tau_xy = mu_eff * (dudy + dvdx);
+                // 2D
+                double dudx = grad.vel[0][0];
+                double dudy = grad.vel[0][1];
+                double dvdx = grad.vel[1][0];
+                double dvdy = grad.vel[1][1];
+                if (myConfig.axisymmetric) {
+                    // Viscous stresses at the mid-point of the interface.
+                    // Axisymmetric terms no longer include the radial multiplier
+                    // as that has been absorbed into the interface area calculation.
+                    double ybar = Ybar;
+                    if (ybar > 1.0e-10) { // something very small for a cell height
+                        tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy + fs.vel.y / ybar);
+                        tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy + fs.vel.y / ybar);
+                    } else {
+                        tau_xx = 0.0;
+                        tau_yy = 0.0;
+                    }
+                    tau_xy = mu_eff * (dudy + dvdx);
+                } else {
+                    // 2-dimensional-planar stresses.
+                    tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy);
+                    tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy);
+                    tau_xy = mu_eff * (dudy + dvdx);
+                }
             }
-        }
-        // Thermal conductivity (NOTE: q is total energy flux)
-        double qx = k_eff * grad.T[0];
-        double qy = k_eff * grad.T[1];
-        double qz = k_eff * grad.T[2];
-        if (myConfig.turbulence_model != TurbulenceModel.none ||
-            myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
-            foreach (isp; 0 .. n_species) {
-                double h = gmodel.enthalpy(fs.gas, to!int(isp));
-                qx -= jx[isp] * h;
-                qy -= jy[isp] * h;
-                qz -= jz[isp] * h;
+            // Thermal conductivity (NOTE: q is total energy flux)
+            double qx = k_eff * grad.T[0];
+            double qy = k_eff * grad.T[1];
+            double qz = k_eff * grad.T[2];
+            if (myConfig.turbulence_model != TurbulenceModel.none ||
+                myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
+                foreach (isp; 0 .. n_species) {
+                    double h = gmodel.enthalpy(fs.gas, to!int(isp));
+                    qx -= jx[isp] * h;
+                    qy -= jy[isp] * h;
+                    qz -= jz[isp] * h;
+                }
+                // [TODO] Rowan, modal enthalpies ?
             }
-            // [TODO] Rowan, modal enthalpies ?
-        }
-        double tau_kx = 0.0;
-        double tau_ky = 0.0;
-        double tau_kz = 0.0;
-        double tau_wx = 0.0;
-        double tau_wy = 0.0;
-        double tau_wz = 0.0;
-        if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
-             !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
-            // Turbulence contribution to the shear stresses.
-            tau_xx -= 2.0/3.0 * fs.gas.rho * fs.tke;
-            tau_yy -= 2.0/3.0 * fs.gas.rho * fs.tke;
-            if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.tke; }
-            // Turbulence contribution to heat transfer.
-            double sigma_star = 0.6;
-            double mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
-            // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-            mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-            qx += mu_effective * grad.tke[0];
-            qy += mu_effective * grad.tke[1];
-            if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
-            // Turbulence transport of the turbulence properties themselves.
-            tau_kx = mu_effective * grad.tke[0]; 
-            tau_ky = mu_effective * grad.tke[1];
-            if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
-            double sigma = 0.5;
-            mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
-            // Apply a limit on mu_effective in the same manner as that applied to mu_t.
-            mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
-            tau_wx = mu_effective * grad.omega[0]; 
-            tau_wy = mu_effective * grad.omega[1]; 
-            if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
-        }
-        // Apply limits to the component values.
-        tau_xx = copysign(fmin(fabs(tau_xx),shear_stress_limit), tau_xx);
-        tau_yy = copysign(fmin(fabs(tau_yy),shear_stress_limit), tau_yy);
-        tau_zz = copysign(fmin(fabs(tau_zz),shear_stress_limit), tau_zz);
-        tau_xy = copysign(fmin(fabs(tau_xy),shear_stress_limit), tau_xy);
-        tau_xz = copysign(fmin(fabs(tau_xz),shear_stress_limit), tau_xz);
-        tau_yz = copysign(fmin(fabs(tau_yz),shear_stress_limit), tau_yz);
-        qx = copysign(fmin(fabs(qx),heat_transfer_limit), qx);
-        qy = copysign(fmin(fabs(qy),heat_transfer_limit), qy);
-        qz = copysign(fmin(fabs(qz),heat_transfer_limit), qz);
-        //
-        // Combine into fluxes: store as the dot product (F.n).
-        double nx = n.x;
-        double ny = n.y;
-        double nz = n.z;
-        // In some cases, the shear and heat fluxes have been previously
-        // computed by the wall functions in the boundary condition call.
-        if (use_wall_function_shear_and_heat_flux) {
-            // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
-            // [TODO] As per Jason's recommendation, we need to do something 
-            // to correct for corner cells. 
-            // [TODO] Currently implemented for 2D; need to extend to 3D.
-            F.momentum.refx -= tau_xx*nx + tau_wall_x;
-            F.momentum.refy -= tau_yy*ny + tau_wall_y;
-            F.momentum.refz -= tau_zz*nz + tau_wall_z;
-            F.total_energy -=
-                tau_xx*fs.vel.x*nx + tau_yy*fs.vel.y*ny + tau_zz*fs.vel.z*nz +
-                tau_wall_x*fs.vel.x + tau_wall_y*fs.vel.y + tau_wall_z*fs.vel.z + q;
-        }
-        else { // proceed with locally computed shear and heat flux
-            // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
-            F.momentum.refx -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
-            F.momentum.refy -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
-            F.momentum.refz -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
-            F.total_energy -=
-                (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
-                (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
-                (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
-        } // end if (use_wall_function_shear_and_heat_flux)
-        // [TODO] Rowan, Modal energy flux?
-        if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-            F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
-            F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
-        }
-        if (myConfig.turbulence_model != TurbulenceModel.none ||
-            myConfig.mass_diffusion_model != MassDiffusionModel.none) {
-            foreach (isp; 0 .. n_species) {
-                F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+            double tau_kx = 0.0;
+            double tau_ky = 0.0;
+            double tau_kz = 0.0;
+            double tau_wx = 0.0;
+            double tau_wy = 0.0;
+            double tau_wz = 0.0;
+            if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
+                 !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
+                // Turbulence contribution to the shear stresses.
+                tau_xx -= 2.0/3.0 * fs.gas.rho * fs.tke;
+                tau_yy -= 2.0/3.0 * fs.gas.rho * fs.tke;
+                if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.tke; }
+                // Turbulence contribution to heat transfer.
+                double sigma_star = 0.6;
+                double mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
+                // Apply a limit on mu_effective in the same manner as that applied to mu_t.
+                mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
+                qx += mu_effective * grad.tke[0];
+                qy += mu_effective * grad.tke[1];
+                if (myConfig.dimensions == 3) { qz += mu_effective * grad.tke[2]; }
+                // Turbulence transport of the turbulence properties themselves.
+                tau_kx = mu_effective * grad.tke[0]; 
+                tau_ky = mu_effective * grad.tke[1];
+                if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
+                double sigma = 0.5;
+                mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
+                // Apply a limit on mu_effective in the same manner as that applied to mu_t.
+                mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
+                tau_wx = mu_effective * grad.omega[0]; 
+                tau_wy = mu_effective * grad.omega[1]; 
+                if (myConfig.dimensions == 3) { tau_wz = mu_effective * grad.omega[2]; } 
+            }
+            // Apply limits to the component values.
+            tau_xx = copysign(fmin(fabs(tau_xx),shear_stress_limit), tau_xx);
+            tau_yy = copysign(fmin(fabs(tau_yy),shear_stress_limit), tau_yy);
+            tau_zz = copysign(fmin(fabs(tau_zz),shear_stress_limit), tau_zz);
+            tau_xy = copysign(fmin(fabs(tau_xy),shear_stress_limit), tau_xy);
+            tau_xz = copysign(fmin(fabs(tau_xz),shear_stress_limit), tau_xz);
+            tau_yz = copysign(fmin(fabs(tau_yz),shear_stress_limit), tau_yz);
+            qx = copysign(fmin(fabs(qx),heat_transfer_limit), qx);
+            qy = copysign(fmin(fabs(qy),heat_transfer_limit), qy);
+            qz = copysign(fmin(fabs(qz),heat_transfer_limit), qz);
+            //
+            // Combine into fluxes: store as the dot product (F.n).
+            double nx = n.x;
+            double ny = n.y;
+            double nz = n.z;
+            // In some cases, the shear and heat fluxes have been previously
+            // computed by the wall functions in the boundary condition call.
+            if (use_wall_function_shear_and_heat_flux) {
+                // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
+                // [TODO] As per Jason's recommendation, we need to do something 
+                // to correct for corner cells. 
+                // [TODO] Currently implemented for 2D; need to extend to 3D.
+                F.momentum.refx -= tau_xx*nx + tau_wall_x;
+                F.momentum.refy -= tau_yy*ny + tau_wall_y;
+                F.momentum.refz -= tau_zz*nz + tau_wall_z;
+                F.total_energy -=
+                    tau_xx*fs.vel.x*nx + tau_yy*fs.vel.y*ny + tau_zz*fs.vel.z*nz +
+                    tau_wall_x*fs.vel.x + tau_wall_y*fs.vel.y + tau_wall_z*fs.vel.z + q;
+            }
+            else { // proceed with locally computed shear and heat flux
+                // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
+                F.momentum.refx -= tau_xx*nx + tau_xy*ny + tau_xz*nz;
+                F.momentum.refy -= tau_xy*nx + tau_yy*ny + tau_yz*nz;
+                F.momentum.refz -= tau_xz*nx + tau_yz*ny + tau_zz*nz;
+                F.total_energy -=
+                    (tau_xx*fs.vel.x + tau_xy*fs.vel.y + tau_xz*fs.vel.z + qx)*nx +
+                    (tau_xy*fs.vel.x + tau_yy*fs.vel.y + tau_yz*fs.vel.z + qy)*ny +
+                    (tau_xz*fs.vel.x + tau_yz*fs.vel.y + tau_zz*fs.vel.z + qz)*nz;
+            } // end if
+            // [TODO] Rowan, Modal energy flux?
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                F.tke -= tau_kx * nx + tau_ky * ny + tau_kz * nz;
+                F.omega -= tau_wx * nx + tau_wy * ny + tau_wz * nz;
+            }
+            if (myConfig.turbulence_model != TurbulenceModel.none ||
+                myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                foreach (isp; 0 .. n_species) {
+                    F.massf[isp] += jx[isp]*nx + jy[isp]*ny + jz[isp]*nz;
+                }
+            }
+        } // end of viscous-flux calculation with gradients from many points
+        else {
+            // Compute viscous fluxes with gradients come just from two points,
+            // as suggested by Paul Petrie-Repar long ago.
+            double x0, x1, y0, y1, z0, z1;
+            double velx0, velx1, vely0, vely1, velz0, velz1, T0, T1;
+            if (left_cell && right_cell) {
+                x0 = left_cell.pos[0].x; x1 = right_cell.pos[0].x;
+                y0 = left_cell.pos[0].y; y1 = right_cell.pos[0].y;
+                z0 = left_cell.pos[0].z; z1 = right_cell.pos[0].z;
+                velx0 = left_cell.fs.vel.x; velx1 = right_cell.fs.vel.x;
+                vely0 = left_cell.fs.vel.y; vely1 = right_cell.fs.vel.y;
+                velz0 = left_cell.fs.vel.z; velz1 = right_cell.fs.vel.z;
+                T0 = left_cell.fs.gas.T; T1 = right_cell.fs.gas.T;
+            } else if (left_cell) {
+                x0 = left_cell.pos[0].x; x1 = pos.x;
+                y0 = left_cell.pos[0].y; y1 = pos.y;
+                z0 = left_cell.pos[0].z; z1 = pos.z;
+                velx0 = left_cell.fs.vel.x; velx1 = fs.vel.x;
+                vely0 = left_cell.fs.vel.y; vely1 = fs.vel.y;
+                velz0 = left_cell.fs.vel.z; velz1 = fs.vel.z;
+                T0 = left_cell.fs.gas.T; T1 = fs.gas.T;
+            } else if (right_cell) {
+                x0 = pos.x; x1 = right_cell.pos[0].x;
+                y0 = pos.y; y1 = right_cell.pos[0].y;
+                z0 = pos.z; z1 = right_cell.pos[0].z;
+                velx0 = fs.vel.x; velx1 = right_cell.fs.vel.x;
+                vely0 = fs.vel.y; vely1 = right_cell.fs.vel.y;
+                velz0 = fs.vel.z; velz1 = right_cell.fs.vel.z;
+                T0 = fs.gas.T; T1 = right_cell.fs.gas.T;
+            } else {
+                assert(0, "Oops, don't seem to have a cell available.");
+            }
+            // Distance in direction of face normal is what we will use
+            // in the finite-difference approximation.
+            double del = (x1-x0)*n.x + (y1-y0)*n.y;
+            if (myConfig.dimensions == 3) { del += (z1-z0)*n.z; } 
+            double dvelxdn = (velx1 - velx0)/del;
+            double dvelydn = (vely1 - vely0)/del;
+            double dvelzdn = (myConfig.dimensions == 3) ? (velz1 - velz0)/del : 0.0;
+            double dTdn = (T1 - T0)/del;
+            if (use_wall_function_shear_and_heat_flux) {
+                assert(0, "Oops, not implemented.");
+            }
+            else { // proceed with locally computed shear and heat flux
+                double tau_x = mu_eff * dvelxdn;
+                double tau_y = mu_eff * dvelydn;
+                double tau_z = mu_eff * dvelzdn;
+                double qn = k_eff * dTdn;
+                tau_x = copysign(fmin(fabs(tau_x),shear_stress_limit), tau_x);
+                tau_y = copysign(fmin(fabs(tau_y),shear_stress_limit), tau_y);
+                tau_z = copysign(fmin(fabs(tau_z),shear_stress_limit), tau_z);
+                qn = copysign(fmin(fabs(qn),heat_transfer_limit), qn);
+                // Mass flux -- NO CONTRIBUTION, unless there's diffusion (below)
+                F.momentum.refx -= tau_x;
+                F.momentum.refy -= tau_y;
+                F.momentum.refz -= tau_z;
+                F.total_energy -= qn;
+            } // end if (use_wall_function_shear_and_heat_flux)
+            // [TODO] Rowan, Modal energy flux?
+            if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
+                double tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
+                double tau_wn = 0.0;
+                F.tke -= tau_kn;
+                F.omega -= tau_wn;
+            }
+            if (myConfig.turbulence_model != TurbulenceModel.none ||
+                myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                assert(0, "Oops, not implemented.");
             }
         }
     } // end viscous_flux_calc()
