@@ -17,12 +17,10 @@
 
     "configurations": [
         {
-            "name": "error-noconfig",
-            "preBuildCommands": [
-                "echo Error'('$PACKAGE_DIR/dub.json')': This is an unconfigured dub.json, you must configure it by running gen/setup.sh from the mpi package root or use the '\"'noLibs'\"' configuration for mpi",
-                "test 1 -eq 0"
-            ],
-            "libs": ["error-noconfig"]
+            "name": "with-libs",
+            "dflags-gdc": ["-pthread", "-Wl,-rpath", "-Wl,/usr/lib/openmpi/lib", "-Wl,--enable-new-dtags", "-L/usr/lib/openmpi/lib", "-lmpi",],
+            "lflags-dmd": ["-lpthread", "-rpath", "/usr/lib/openmpi/lib", "--enable-new-dtags", "-L/usr/lib/openmpi/lib", "-lmpi",],
+            "lflags-ldc": ["-lpthread", "-rpath", "/usr/lib/openmpi/lib", "--enable-new-dtags", "-L/usr/lib/openmpi/lib", "-lmpi",]
         },
         {
             "name": "noLibs"

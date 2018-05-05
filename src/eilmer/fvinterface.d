@@ -572,12 +572,15 @@ public:
             } else if (right_cell_is_interior) {
                 veln_face = veln0;
             }
+            double ke0 = 0.5*(velx0^^2 + vely0^^2 + velz0^^2);
+            double ke1 = 0.5*(velx1^^2 + vely1^^2 + velz1^^2);
             // Derivatives normal to face.
-            double dvelxdn = (velx1 - velx0)/deln;
+            double dvelxdn = (velx1 - velx0)/deln; // gradient of momentum per mass
             double dvelydn = (vely1 - vely0)/deln;
             double dvelzdn = (myConfig.dimensions == 3) ? (velz1 - velz0)/deln : 0.0;
-            double dvelndn = (veln1 - veln0)/deln; // velocity dilatation
-            double dTdn = (T1 - T0)/deln;
+            double dkedn = (ke1 - ke0)/deln; // gradient of kinetic energy per mass
+            double dTdn = (T1 - T0)/deln; // gradient of temperature
+            double dvelndn = (veln1 - veln0)/deln; // for velocity dilatation
             //
             // Finally, compute the actual fluxes.
             //
@@ -588,7 +591,7 @@ public:
                 double tau_x = mu_eff * dvelxdn;
                 double tau_y = mu_eff * dvelydn;
                 double tau_z = mu_eff * dvelzdn;
-                double qn = k_eff*dTdn + lmbda*dvelndn*veln_face;
+                double qn = k_eff*dTdn + mu_eff*dkedn + lmbda*dvelndn*veln_face;
                 tau_x = copysign(fmin(fabs(tau_x),shear_stress_limit), tau_x);
                 tau_y = copysign(fmin(fabs(tau_y),shear_stress_limit), tau_y);
                 tau_z = copysign(fmin(fabs(tau_z),shear_stress_limit), tau_z);
