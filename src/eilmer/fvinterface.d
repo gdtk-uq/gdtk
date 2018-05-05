@@ -50,6 +50,12 @@ public:
     // Adjoining cells.
     FVCell left_cell;      // interface normal points out of this adjoining cell
     FVCell right_cell;     // interface normal points into this adjoining cell
+    // The following flags will be set later, when cells are assigned.
+    // Active cells are considered interior to block; ghost cells exterior.
+    // The unstructured-grid will only set the flag true as interior cells are attached,
+    // so a false default value will be handy to indicate a ghost cell.
+    bool left_cell_is_interior = false;
+    bool right_cell_is_interior = false;
     //
     // Flow
     FlowState fs;          // Flow properties
@@ -307,13 +313,13 @@ public:
         if (myConfig.use_viscosity_from_cells) {
             // Emulate Eilmer3 behaviour by using the viscous transport coefficients
             // from the cells either side of the interface.
-            if (left_cell && right_cell) {
+            if (left_cell_is_interior && right_cell_is_interior) {
                 k_laminar = 0.5*(left_cell.fs.gas.k+right_cell.fs.gas.k);
                 mu_laminar = 0.5*(left_cell.fs.gas.mu+right_cell.fs.gas.mu);
-            } else if (left_cell) {
+            } else if (left_cell_is_interior) {
                 k_laminar = left_cell.fs.gas.k;
                 mu_laminar = left_cell.fs.gas.mu;
-            } else if (right_cell) {
+            } else if (right_cell_is_interior) {
                 k_laminar = right_cell.fs.gas.k;
                 mu_laminar = right_cell.fs.gas.mu;
             } else {
@@ -325,11 +331,11 @@ public:
         double lmbda = -2.0/3.0 * mu_eff;
         //
         double local_pressure;
-        if (left_cell && right_cell) {
+        if (left_cell_is_interior && right_cell_is_interior) {
             local_pressure = 0.5*(left_cell.fs.gas.p+right_cell.fs.gas.p);
-        } else if (left_cell) {
+        } else if (left_cell_is_interior) {
             local_pressure = left_cell.fs.gas.p;
-        } else if (right_cell) {
+        } else if (right_cell_is_interior) {
             local_pressure = right_cell.fs.gas.p;
         } else {
             assert(0, "Oops, don't seem to have a cell available.");
@@ -514,7 +520,7 @@ public:
             // as suggested by Paul Petrie-Repar long ago.
             double x0, x1, y0, y1, z0, z1;
             double velx0, velx1, vely0, vely1, velz0, velz1, T0, T1;
-            if (left_cell && right_cell) {
+            if (left_cell_is_interior && right_cell_is_interior) {
                 x0 = left_cell.pos[0].x; x1 = right_cell.pos[0].x;
                 y0 = left_cell.pos[0].y; y1 = right_cell.pos[0].y;
                 z0 = left_cell.pos[0].z; z1 = right_cell.pos[0].z;
@@ -522,7 +528,7 @@ public:
                 vely0 = left_cell.fs.vel.y; vely1 = right_cell.fs.vel.y;
                 velz0 = left_cell.fs.vel.z; velz1 = right_cell.fs.vel.z;
                 T0 = left_cell.fs.gas.T; T1 = right_cell.fs.gas.T;
-            } else if (left_cell) {
+            } else if (left_cell_is_interior) {
                 x0 = left_cell.pos[0].x; x1 = pos.x;
                 y0 = left_cell.pos[0].y; y1 = pos.y;
                 z0 = left_cell.pos[0].z; z1 = pos.z;
@@ -530,7 +536,7 @@ public:
                 vely0 = left_cell.fs.vel.y; vely1 = fs.vel.y;
                 velz0 = left_cell.fs.vel.z; velz1 = fs.vel.z;
                 T0 = left_cell.fs.gas.T; T1 = fs.gas.T;
-            } else if (right_cell) {
+            } else if (right_cell_is_interior) {
                 x0 = pos.x; x1 = right_cell.pos[0].x;
                 y0 = pos.y; y1 = right_cell.pos[0].y;
                 z0 = pos.z; z1 = right_cell.pos[0].z;
@@ -576,9 +582,10 @@ public:
             }
             if (myConfig.turbulence_model != TurbulenceModel.none ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none) {
+                // Mass diffusion done separately.
                 assert(0, "Oops, not implemented.");
             }
-        }
+        } // end of viscous-flux calculation with gradients from two points
     } // end viscous_flux_calc()
 
 } // end of class FV_Interface

@@ -535,10 +535,16 @@ public:
                     if (i == imin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.west;
-                    }
-                    if (i == imax+1) {
+                        IFace.left_cell_is_interior = false;
+                        IFace.right_cell_is_interior = true;
+                    } else if (i == imax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.east;
+                        IFace.left_cell_is_interior = true;
+                        IFace.right_cell_is_interior = false;
+                    } else {
+                        IFace.left_cell_is_interior = true;
+                        IFace.right_cell_is_interior = true;
                     }
                 } // i loop
             } // j loop
@@ -568,10 +574,16 @@ public:
                     if (j == jmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.south;
-                    }
-                    if (j == jmax+1) {
+                        IFace.left_cell_is_interior = false;
+                        IFace.right_cell_is_interior = true;
+                    } else if (j == jmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.north;
+                        IFace.left_cell_is_interior = true;
+                        IFace.right_cell_is_interior = false;
+                    } else {
+                        IFace.left_cell_is_interior = true;
+                        IFace.right_cell_is_interior = true;
                     }
                 } // j loop
             } // i loop
@@ -594,10 +606,16 @@ public:
                     if (k == kmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.bottom;
-                    }
-                    if (k == kmax+1) {
+                        IFace.left_cell_is_interior = false;
+                        IFace.right_cell_is_interior = true;
+                    } else if (k == kmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.top;
+                        IFace.left_cell_is_interior = true;
+                        IFace.right_cell_is_interior = false;
+                    } else {
+                        IFace.left_cell_is_interior = true;
+                        IFace.right_cell_is_interior = true;
                     }
                 } // for k
             } // j loop

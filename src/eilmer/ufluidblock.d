@@ -224,6 +224,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.left_cell = c;
+                        my_face.left_cell_is_interior = true;
                     }
                 } else {
                     if (my_face.right_cell) {
@@ -232,6 +233,7 @@ public:
                         throw new FlowSolverException(msg);
                     } else {
                         my_face.right_cell = c;
+                        my_face.right_cell_is_interior = true;
                     }
                 }
             }
