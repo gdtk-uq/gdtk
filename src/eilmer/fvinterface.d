@@ -518,6 +518,8 @@ public:
         else {
             // Compute viscous fluxes with gradients come just from two points,
             // as suggested by Paul Petrie-Repar long ago.
+            //
+            // First, select the 2 points.
             double x0, x1, y0, y1, z0, z1;
             double velx0, velx1, vely0, vely1, velz0, velz1, T0, T1;
             if (left_cell_is_interior && right_cell_is_interior) {
@@ -549,12 +551,36 @@ public:
             }
             // Distance in direction of face normal is what we will use
             // in the finite-difference approximation.
-            double del = (x1-x0)*n.x + (y1-y0)*n.y;
-            if (myConfig.dimensions == 3) { del += (z1-z0)*n.z; } 
-            double dvelxdn = (velx1 - velx0)/del;
-            double dvelydn = (vely1 - vely0)/del;
-            double dvelzdn = (myConfig.dimensions == 3) ? (velz1 - velz0)/del : 0.0;
-            double dTdn = (T1 - T0)/del;
+            double nx = n.x;
+            double ny = n.y;
+            double nz = n.z;
+            // Distance between points, in face-normal direction.
+            double deln = (x1-x0)*nx + (y1-y0)*ny;
+            // Velocity in face-normal direction.
+            double veln0 = velx0*nx + vely0*ny;
+            double veln1 = velx1*nx + vely1*ny;
+            if (myConfig.dimensions == 3) {
+                deln += (z1-z0)*nz;
+                veln0 += velz0*nz;
+                veln1 += velz1*nz;
+            } 
+            double veln_face;
+            if (left_cell_is_interior && right_cell_is_interior) {
+                veln_face = 0.5*(veln0+veln1);
+            } else if (left_cell_is_interior) {
+                veln_face = veln1;
+            } else if (right_cell_is_interior) {
+                veln_face = veln0;
+            }
+            // Derivatives normal to face.
+            double dvelxdn = (velx1 - velx0)/deln;
+            double dvelydn = (vely1 - vely0)/deln;
+            double dvelzdn = (myConfig.dimensions == 3) ? (velz1 - velz0)/deln : 0.0;
+            double dvelndn = (veln1 - veln0)/deln; // velocity dilatation
+            double dTdn = (T1 - T0)/deln;
+            //
+            // Finally, compute the actual fluxes.
+            //
             if (use_wall_function_shear_and_heat_flux) {
                 assert(0, "Oops, not implemented.");
             }
@@ -562,7 +588,7 @@ public:
                 double tau_x = mu_eff * dvelxdn;
                 double tau_y = mu_eff * dvelydn;
                 double tau_z = mu_eff * dvelzdn;
-                double qn = k_eff * dTdn;
+                double qn = k_eff*dTdn + lmbda*dvelndn*veln_face;
                 tau_x = copysign(fmin(fabs(tau_x),shear_stress_limit), tau_x);
                 tau_y = copysign(fmin(fabs(tau_y),shear_stress_limit), tau_y);
                 tau_z = copysign(fmin(fabs(tau_z),shear_stress_limit), tau_z);
