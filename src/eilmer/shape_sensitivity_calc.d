@@ -270,13 +270,6 @@ void main(string[] args) {
     
     if (inviscidPreconditioningMatrix)
         { GlobalConfig.viscous = viscousConfigSave; }
-
-    foreach (myblk; localFluidBlocks) {
-        foreach (cell; myblk.cells) {
-            writeln(cell.dPrimitive);
-        }
-    }
-    foreach (myblk; localFluidBlocks) writeln(myblk.P);
     
     // Surface intergal objective functions can be computed in parallel with a reduction process across blocks to gather the final value,
     // however the sensitivity w.r.t to primitive variables cannot be computed in parallel, since we are only computing a single objective calue (for example drag).
