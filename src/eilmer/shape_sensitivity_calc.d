@@ -233,8 +233,14 @@ void main(string[] args) {
     exchange_ghost_cell_boundary_data(0.0, 0, 0); // pseudoSimTime = 0.0; gtl = 0; ftl = 0
     
     foreach (myblk; parallel(localFluidBlocks,1)) {
+        myblk.applyPreReconAction(0.0, 0, 0);
+        myblk.applyPostConvFluxAction(0.0, 0, 0);
+        myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+        myblk.applyPostDiffFluxAction(0.0, 0, 0);
+        
         myblk.JlocT = new SMatrix();
         form_local_flow_jacobian_block(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPSILON, MU);
+        jacobian_bndary_correction(myblk, myblk.JlocT, nPrimitive, EPSILON, MU, myblk.myConfig.interpolation_order);        
     }
     
     foreach (myblk; parallel(localFluidBlocks,1)) {
@@ -251,17 +257,27 @@ void main(string[] args) {
 
     foreach (myblk; parallel(localFluidBlocks,1)) {
         myblk.P = new SMatrix();
-        if (orderOfPreconditioningMatrix == 0) // block-diagonal of a first order flow Jacobian (TODO: something isn't quite right for the new parallel implementation)
+        if (orderOfPreconditioningMatrix == 0) { // block-diagonal of a first order flow Jacobian (TODO: something isn't quite right for the new parallel implementation)
             form_local_flow_jacobian_block(myblk.P, myblk, nPrimitive, 0, EPSILON, MU); // orderOfJacobian=0
-        else // first order flow Jacobian
+            jacobian_bndary_correction(myblk, myblk.P, nPrimitive, EPSILON, MU, 0);
+        }
+        else { // first order flow Jacobian {
             form_local_flow_jacobian_block(myblk.P, myblk, nPrimitive, 1, EPSILON, MU); // orderOfJacobian=1
+            jacobian_bndary_correction(myblk, myblk.P, nPrimitive, EPSILON, MU, 1);
+        }
         decompILU0(myblk.P);
     }
-
+    
     if (inviscidPreconditioningMatrix)
         { GlobalConfig.viscous = viscousConfigSave; }
 
-
+    foreach (myblk; localFluidBlocks) {
+        foreach (cell; myblk.cells) {
+            writeln(cell.dPrimitive);
+        }
+    }
+    foreach (myblk; localFluidBlocks) writeln(myblk.P);
+    
     // Surface intergal objective functions can be computed in parallel with a reduction process across blocks to gather the final value,
     // however the sensitivity w.r.t to primitive variables cannot be computed in parallel, since we are only computing a single objective calue (for example drag).
     // TODO: think about how this will effect user-defined objective functions
