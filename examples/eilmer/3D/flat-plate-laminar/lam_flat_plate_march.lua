@@ -18,9 +18,10 @@ config.title = "Schetz's Mach 4 laminar flow over a flat plate 3D"
 print(config.title)
 config.dimensions = 3
 config.viscous = true
+config.spatial_deriv_from_many_points = false -- Indeed, only 2-point difference.
 config.flux_calculator = "ausmdv"
 config.gasdynamic_update_scheme = "euler"
-config.max_time = 2.4e-3  -- will allow 3 flow lengths   
+config.max_time = 10.0e-3  -- will allow lots more than 3 flow lengths   
 config.dt_plot =  config.max_time
 config.dt_history = 1.0e-5
 config.max_step = 300000
@@ -72,7 +73,7 @@ cflist = {edge01=clusterx, edge12=clustery_e, edge32=clusterx, edge03=clustery_w
 	  edge45=clusterx, edge56=clustery_e, edge76=clusterx, edge47=clustery_w,
 	  edge04=clusterz, edge15=clusterz,   edge26=clusterz, edge37=clusterz}
 vol = TFIVolume:new{vertices={p000,p100,p110,p010,p001,p101,p111,p011}}
-grd = StructuredGrid:new{pvolume=vol, cfList=cflist, niv=221, njv=193, nkv=3}
+grd = StructuredGrid:new{pvolume=vol, cfList=cflist, niv=221, njv=193, nkv=5}
 
 -- Assemble the block from the grid and boundary data.
 bcList={north=WallBC_NoSlip_FixedT:new{Twall=300.0},
