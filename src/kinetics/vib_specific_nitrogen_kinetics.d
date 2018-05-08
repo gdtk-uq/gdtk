@@ -23,7 +23,7 @@ import gas;
 import gas.vib_specific_nitrogen;
 import kinetics.thermochemical_reactor;
 
-final class VibSpecificNitrogenRelaxtion : ThermochemicalReactor {
+final class VibSpecificNitrogenRelaxation : ThermochemicalReactor {
     
     this(string fname, GasModel gmodel)
     {
