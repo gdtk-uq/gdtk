@@ -190,7 +190,7 @@ private:
         ghostCell.fs.vel.refy = getNumberFromTable(L, tblIdx, "vely", false, 0.0);
         ghostCell.fs.vel.refz = getNumberFromTable(L, tblIdx, "velz", false, 0.0);
         ghostCell.fs.tke = getNumberFromTable(L, tblIdx, "tke", false, 0.0);
-        ghostCell.fs.omega = getNumberFromTable(L, tblIdx, "omega", false, 0.0);
+        ghostCell.fs.omega = getNumberFromTable(L, tblIdx, "omega", false, 1.0);
     }
 
     void callGhostCellUDF(double t, int gtl, int ftl, size_t i, size_t j, size_t k,
