@@ -2302,12 +2302,11 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
 
     // boundary correction
     jacobian_bndary_correction_for_sss_preconditioner(blk, np, EPSILON, MU, orderOfJacobian);
-        
-    // multiply by transform matrix diagonal (transforming primitive to conservative form)
+    auto gmodel = blk.myConfig.gmodel;
+    // multiply by transform matrix (transforming primitive to conservative form)
     foreach (cell; blk.cells) {
         // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
-        double gamma = cell.fs.gas.p/(cell.fs.gas.rho * cell.fs.gas.u); // ratio of specific heats minus 1
-
+        double gamma = gmodel.gamma(cell.fs.gas);
         // first row
         blk.transform[0,0] = 1.0;
         blk.transform[0,1] = 0.0;
