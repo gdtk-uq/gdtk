@@ -90,6 +90,9 @@ function FoamBlock:new(o)
    --   errMsg = "The 'grid' object supplied to FoamBlock:new() must be a 2D grid.\n"
    --   error(errMsg)
    --end
+   if (o.bndry_labels == nil) then
+      o.bndry_labels = {}  -- create empty list for cases where block doesn't have outwards facing faces. 
+   end
    if (o.grid:get_type() ~= "structured_grid") then
       errMsg = "The 'grid' object supplied to FoamBlock:new() must be a structured grid.\n"
       error(errMsg)
