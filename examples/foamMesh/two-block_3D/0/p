@@ -1,0 +1,64 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.4.0                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      p;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -2 0 0 0 0];  // Note: This are units for incompressible flow simulation. Here P_sim = P_actual / rho
+
+internalField   uniform 0; // Can be kept at 0 for incompressible simulations. 
+
+boundaryField
+{
+    i-00
+    {
+        type            fixedValue;
+        value           uniform 0;
+    }
+    o-00
+    {
+        type            zeroGradient;
+    }
+    w-00
+    {
+        type            zeroGradient;
+    }
+    w-01
+    {
+        type            zeroGradient;
+    }
+    w-02
+    {
+        type            zeroGradient;
+    }
+    s-00
+    {
+        type            symmetry;
+    }
+    frontAndBack
+    {
+        type            empty;
+    }
+    wedge-front
+    {
+        type            wedge;
+    }
+    wedge-rear
+    {
+        type            wedge;
+    }
+}
+
+
+// ************************************************************************* //
