@@ -772,25 +772,29 @@ function FluidBlockArray(t)
    end
    local blockArray = {} -- will be a multi-dimensional array indexed as [i][j][k]
    local blockCollection = {} -- will be a single-dimensional array
+   local nic_remaining = nic_total
+   local i0 = 0
    for ib = 1, t.nib do
       blockArray[ib] = {}
-      local i0 = (ib-1) * dnic
-      local my_dnic = dnic
+      local nic = math.floor(nic_remaining/(t.nib-ib+1))
       if (ib == t.nib) then
-	 -- Last block has to pick up remaining cells.
-	 my_dnic = nic_total - i0
+         -- On last block, just use what's left
+         nic = nic_remaining
       end
+      nic_remaining = nic_remaining - nic
+      local njc_remaining = njc_total
+      local j0 = 0
       for jb = 1, t.njb do
-	 local j0 = (jb-1) * dnjc
-	 local my_dnjc = dnjc
+         local njc = math.floor(njc_remaining/(t.njb-jb+1))
 	 if (jb == t.njb) then
-	    my_dnjc = njc_total - j0
+	    njc = njc_remaining
 	 end
+         njc_remaining = njc_remaining - njc
 	 if config.dimensions == 2 then
 	    -- 2D flow
-	    -- print("making subblock id=", #blockCollection) -- DEBUG
-	    -- print("  i0=", i0, "my_dnic+1=", my_dnic+1, "j0=", j0, "my_dnjc+1=", my_dnjc+1) -- DEBUG
-	    local subgrid = t.grid:subgrid(i0,my_dnic+1,j0,my_dnjc+1)
+            print("ib=", ib, "jb= ", jb)
+            print("i0= ", i0, " nic= ", nic, " j0= ", j0, " njc= ", njc)
+	    local subgrid = t.grid:subgrid(i0,nic+1,j0,njc+1)
 	    local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			    south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new()}
 	    if ib == 1 then
@@ -812,13 +816,20 @@ function FluidBlockArray(t)
 	 else
 	    -- 3D flow, need one more level in the array
 	    blockArray[ib][jb] = {}
+            local nkc_remaining = nkc_total
+            local k0 = 0
 	    for kb = 1, t.nkb do
-	       local k0 = (kb-1) * dnkc
-	       local my_dnkc = dnkc
-	       if (kb == t.nkb) then
-		  my_dnkc = nkc_total - k0
-	       end
-	       local subgrid = t.grid:subgrid(i0,my_dnic+1,j0,my_dnjc+1,k0,my_dnkc+1)
+               local nkc = math.floor(nkc_remaining/(t.nkb-kb+1))
+               if (kb == t.nkb) then
+                  nkc = nkc_remaining
+               end
+               nkc_remaining = nkc_remaining - nkc
+               j0 = j0 + nkc
+	       local subgrid = t.grid:subgrid(i0,nic+1,j0,njc+1,k0,nkc+1)
+               -- Prepare i0, j0, k0 for next iteration
+               i0 = i0 + nic 
+               j0 = j0 + njc
+               k0 = k0 + nkc
 	       local bcList = {north=WallBC_WithSlip:new(), east=WallBC_WithSlip:new(),
 			       south=WallBC_WithSlip:new(), west=WallBC_WithSlip:new(),
 			       top=WallBC_WithSlip:new(), bottom=WallBC_WithSlip:new()}
@@ -845,9 +856,15 @@ function FluidBlockArray(t)
                                                 bcList=bcList}
 	       blockArray[ib][jb][kb] = new_block
 	       blockCollection[#blockCollection+1] = new_block
+               -- Prepare k0 at end of loop, ready for next iteration
+               k0 = k0 + nkc
 	    end -- kb loop
 	 end -- dimensions
+         -- Prepare j0 at end of loop, ready for next iteration
+         j0 = j0 + njc
       end -- jb loop
+      -- Prepare i0 at end of loop, ready for next iteration
+      i0 = i0 + nic
    end -- ib loop
    -- Make the inter-subblock connections
    if #blockCollection > 1 then
