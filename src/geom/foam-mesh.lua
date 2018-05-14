@@ -271,7 +271,8 @@ function runCreatePatchDict()
    if (vrbLvl >= 1) then
       print("Running OpenFOAM command: createPatchDict.")
    end
-   os.execute("createPatch -overwrite")
+   local flag = os.execute("createPatch -overwrite")
+   assert((flag == 0),"Cannot find command createPatch, check that OpenFOAM environment has been loaded.")
    if (vrbLvl >= 1) then
       print("   DONE: Running OpenFOAM command: createPatch.")
    end
@@ -294,7 +295,8 @@ function runCreatePatchDict_empty()
    if (vrbLvl >= 1) then
       print("Running OpenFOAM command: createPatchDict.")
    end
-   os.execute("createPatch -overwrite")
+   local flag = os.execute("createPatch -overwrite")
+   assert((flag == 0),"Cannot find command createPatch, check that OpenFOAM environment has been loaded.")
    if (vrbLvl >= 1) then
       print("   DONE: Running OpenFOAM command: createPatch.")
    end
@@ -368,7 +370,8 @@ function runRenumberMesh()
          print("   Run manually once /0 is set-up.")
       end
    else
-      os.execute("renumberMesh -overwrite -noZero")
+      local flag = os.execute("renumberMesh -overwrite -noZero")
+      assert((flag == 0),"Cannot find command renumberMesh, check that OpenFOAM environment has been loaded.")
       if (vrbLvl >= 1) then
          print("   DONE: Running OpenFOAM command: renumberMesh.")
       end      
@@ -379,7 +382,8 @@ function runCheckMesh()
    if (vrbLvl >= 1) then
       print("Running OpenFOAM command: checkMesh.")
    end
-   os.execute("checkMesh")
+   local flag = os.execute("checkMesh")
+   assert((flag == 0),"Cannot find command checkMesh, check that OpenFOAM environment has been loaded.")
    if (vrbLvl >= 1) then
       print("   DONE: Running OpenFOAM command: checkMesh.")
    end
