@@ -9,7 +9,7 @@ turbulenceModel = "none" -- Options are: "S-A" and "k-epsilon"
 axisymmetric = false
 compressible = false  -- Options are: "true" and "false". Set dimensions for initial conditions
 openFoamDimensions = 2
-dtheta = 0.2
+dtheta = 0.01 -- reduced to approx 1 degree
 dz = 0.2
 
 turbulenceModelList = {
@@ -268,7 +268,7 @@ function writeCreatePatchDict(grid, blks)
 	 bType = "empty"
       end
       if label == "wedge-front" or label == "wedge-rear" then
-	 bType = "wedge"
+	 bType = "symmetry"
       end
       if label == "unassigned" then
 	 bType = "unassigned"
@@ -858,13 +858,13 @@ function writeStandardBC(f)
       if label == "wedge-front" then
          f:write("    wedge-front \n")
          f:write("    { \n")
-         f:write("    wedge;\n")
+         f:write("    symmetry;\n")
          f:write("    }\n")
       end
       if label == "wedge-rear" then
          f:write("    wedge-rear \n")
          f:write("    { \n")
-         f:write("    wedge;\n")
+         f:write("    symmetry;\n")
          f:write("    }\n")
       end
       if label == "unassigned" then
