@@ -5,11 +5,62 @@
 -- Date: 2017-07-03
 
 -- Global settings
-turbulence_model = "none" -- Options are: "S-A" and "k-epsilon"
+turbulenceModel = "none" -- Options are: "S-A" and "k-epsilon"
 axisymmetric = false
+compressible = false  -- Options are: "true" and "false". Set dimensions for initial conditions
 openFoamDimensions = 2
 dtheta = 0.2
 dz = 0.2
+
+turbulenceModelList = {
+   "none", -- if not specified
+   "S-A", -- for Spallart-Allmaras
+   "k-epsilon", -- for k-epsilon model
+}
+
+function checkTurbulenceModel(turbulenceModel)
+   local labelOK = false
+   for _,allowed in ipairs(turbulenceModelList) do
+      if (turbulenceModel == allowed) then
+	    labelOK = true
+      end
+   end
+   -- If labelOK is still false at end, then this particular
+   -- label was badly formed.
+   if not labelOK then
+      print(string.format("The turbulence_model '%s' is not allowed.", turbulenceModel))
+      print("Allowed turbulence models are:")
+      for _,allowed in ipairs(turbulenceModelList) do
+         print(allowed)
+      end
+      os.exit(1)
+   end
+end
+
+compressibleList = {
+    true,
+    false
+}
+
+function checkCompressible(compressible,compressibleList)
+   local labelOK = false
+   for _,allowed in ipairs(compressibleList) do
+      if (compressible == allowed) then
+	    labelOK = true
+      end
+   end
+   -- If labelOK is still false at end, then this particular
+   -- label was badly formed.
+   if not labelOK then
+      print(string.format("The compressible '%s' is not allowed.", compressible))
+      print("Allowed turbulence models are:")
+      for _,allowed in ipairs(compressibleList) do
+         print(allowed)
+      end
+      os.exit(1)
+   end
+end
+
 
 faceMap = {
    north=0,
@@ -304,7 +355,7 @@ end
 
 
 
-function writeNoughtDir()
+function writeNoughtDir_old()  -- copy existing templates
    if (vrbLvl >= 1) then
       print("Creating templates.")
    end
@@ -330,11 +381,11 @@ function writeNoughtDir()
    -- Now copy required template files in place.
    foamTmpltDir = os.getenv("DGD").."/share/foamMesh-templates"
    filesToCopy = {"p", "U"}
-   if turbulence_model == "S-A" then
+   if turbulenceModel == "S-A" then
       filesToCopy[#filesToCopy+1] = "nut"
       filesToCopy[#filesToCopy+1] = "nuTilda"
    end
-   if turbulence_model == "k-epsilon" then
+   if turbulenceModel == "k-epsilon" then
       filesToCopy[#filesToCopy+1] = "k"
       filesToCopy[#filesToCopy+1] = "epsilon"
    end
@@ -345,6 +396,480 @@ function writeNoughtDir()
    if (vrbLvl >= 1) then
       print("   DONE: Creating templates.")
    end
+end
+
+function writeNoughtDir()  -- create to suit patch types
+   if (vrbLvl >= 1) then
+      print("Creating initial & boundary condition templates.")
+   end
+   -- Check if 0 exists.
+   retVal = os.execute("test -d 0")
+   if retVal == 0 then
+      -- 0/ already exists.
+      -- We don't want to override this, so we'll place the template
+      -- files in 0_temp
+      dirName = "0_temp"
+   else
+      -- 0/ does not exist
+      -- So we'll create it and place template files in there.
+      dirName = "0"
+   end
+   retVal = os.execute("test -d "..dirName)
+   if retVal ~= 0 then
+      os.execute("mkdir "..dirName)
+   end
+   if (vrbLvl >= 1) then
+      print("   Templates will go in: ", dirName)
+   end
+   -- Now create the appropriate files.
+   write_p_file()
+   write_U_file()
+   if turbulenceModel == "S-A" then
+      write_nut_file()
+      write_nuTilda_file()
+   end
+   if turbulenceModel == "k-epsilon" then
+      write_k_file()
+      write_epsilon_file()
+   end
+   if (vrbLvl >= 1) then
+      print("   DONE: Creating templates.")
+   end
+end
+
+
+function write_p_file()
+   if (vrbLvl >= 1) then
+      print("   Writing p file.")
+   end
+   fname = string.format("%s/p",dirName)
+   f = assert(io.open(fname, 'w'))
+   writeFoamHeader(f)
+   f:write("    class       volScalarField;\n")
+   f:write('    location    "0";\n')
+   f:write("    object      p;\n")
+   f:write("}\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:write("\n")
+   if (compressible == true) then
+      f:write("dimensions      [1 -1 -2 0 0 0 0];\n")
+   elseif (compressible == false) then
+      f:write("dimensions      [0 2 -2 0 0 0 0];\n")
+   else
+      print('Incorrect setting for compressible')
+   end
+   f:write("\n")
+   f:write("internalField   uniform 0; \n")
+   f:write("\n")
+   f:write("boundaryField \n")
+   f:write("{ \n")
+   -- now go through globalBndryLabels list
+   for label,_ in pairs(globalBndryLabels) do
+      writeStandardBC(f)
+      labelPrefix = string.sub(label, 1, 2)
+      if labelPrefix == "i-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    fixedValue;\n")
+         f:write("        value   uniform 0;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "o-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "w-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "s-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    symmetry;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "p-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+   end
+   f:write("}\n")
+   f:write("\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:close()
+  if (vrbLvl >= 1) then
+      print("      DONE: Writing p file.")
+   end
+end
+
+function write_U_file()
+   if (vrbLvl >= 1) then
+      print("   Writing U file.")
+   end
+   fname = string.format("%s/U",dirName)
+   f = assert(io.open(fname, 'w'))
+   writeFoamHeader(f)
+   f:write("    class       volVectorField;\n")
+   f:write('    location    "0";\n')
+   f:write("    object      U;\n")
+   f:write("}\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:write("\n")
+   f:write("dimensions      [0 1 -1 0 0 0 0];\n")
+   f:write("\n")
+   f:write("internalField   uniform (0 0 0); \n")
+   f:write("\n")
+   f:write("boundaryField \n")
+   f:write("{ \n")
+   -- now go through globalBndryLabels list
+   for label,_ in pairs(globalBndryLabels) do
+      writeStandardBC(f)
+      labelPrefix = string.sub(label, 1, 2)
+      if labelPrefix == "i-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    fixedValue;\n")
+         f:write("        value   uniform (0 0 0);\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "o-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "w-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    noSlip;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "s-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    symmetry;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "p-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+   end
+   f:write("}\n")
+   f:write("\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:close()
+  if (vrbLvl >= 1) then
+      print("      DONE: Writing U file.")
+   end
+end
+
+
+function write_nut_file()
+   if (vrbLvl >= 1) then
+      print("   Writing nut file.")
+   end
+   fname = string.format("%s/nut",dirName)
+   f = assert(io.open(fname, 'w'))
+   writeFoamHeader(f)
+   f:write("    class       volScalarField;\n")
+   f:write('    location    "0";\n')
+   f:write("    object      nut;\n")
+   f:write("}\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:write("\n")
+   f:write("dimensions      [0 2 -1 0 0 0 0];\n")
+   f:write("\n")
+   f:write("internalField   uniform 0.1; \n")
+   f:write("\n")
+   f:write("boundaryField \n")
+   f:write("{ \n")
+   -- now go through globalBndryLabels list
+   for label,_ in pairs(globalBndryLabels) do
+      writeStandardBC(f)
+      labelPrefix = string.sub(label, 1, 2)
+      if labelPrefix == "i-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    fixedValue;\n")
+         f:write("        value   uniform 0.1;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "o-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "w-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    nutUSpaldingWallFunction;;\n")
+         f:write("        value   uniform 0;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "s-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    symmetry;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "p-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+   end
+   f:write("}\n")
+   f:write("\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:close()
+  if (vrbLvl >= 1) then
+      print("      DONE: Writing nut file.")
+   end
+end
+
+function write_nuTilda_file()
+   if (vrbLvl >= 1) then
+      print("   Writing nuTilda file.")
+   end
+   fname = string.format("%s/nuTilda",dirName)
+   f = assert(io.open(fname, 'w'))
+   writeFoamHeader(f)
+   f:write("    class       volScalarField;\n")
+   f:write('    location    "0";\n')
+   f:write("    object      nuTilda;\n")
+   f:write("}\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:write("\n")
+   f:write("dimensions      [0 2 -1 0 0 0 0];\n")
+   f:write("\n")
+   f:write("internalField   uniform 0; \n")
+   f:write("\n")
+   f:write("boundaryField \n")
+   f:write("{ \n")
+   -- now go through globalBndryLabels list
+   for label,_ in pairs(globalBndryLabels) do
+      writeStandardBC(f)
+      labelPrefix = string.sub(label, 1, 2)
+      if labelPrefix == "i-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    fixedValue;\n")
+         f:write("        value   uniform 0;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "o-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "w-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    fixedValue;\n")
+         f:write("        value   uniform 0;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "s-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    symmetry;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "p-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+   end
+   f:write("}\n")
+   f:write("\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:close()
+  if (vrbLvl >= 1) then
+      print("      DONE: Writing nuTilda file.")
+   end
+end
+
+function write_k_file()
+   if (vrbLvl >= 1) then
+      print("   Writing k file.")
+   end
+   fname = string.format("%s/k",dirName)
+   f = assert(io.open(fname, 'w'))
+   writeFoamHeader(f)
+   f:write("    class       volScalarField;\n")
+   f:write('    location    "0";\n')
+   f:write("    object      k;\n")
+   f:write("}\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:write("\n")
+   f:write("dimensions      [0 2 -2 0 0 0 0];\n")
+   f:write("\n")
+   f:write("internalField   uniform 1; \n")
+   f:write("\n")
+   f:write("boundaryField \n")
+   f:write("{ \n")
+   -- now go through globalBndryLabels list
+   for label,_ in pairs(globalBndryLabels) do
+      writeStandardBC(f)
+      labelPrefix = string.sub(label, 1, 2)
+      if labelPrefix == "i-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    fixedValue;\n")
+         f:write("        value   uniform 1;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "o-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "w-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    kqRWallFunction;;\n")
+         f:write("        value   uniform 1;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "s-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    symmetry;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "p-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+   end
+   f:write("}\n")
+   f:write("\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:close()
+  if (vrbLvl >= 1) then
+      print("      DONE: Writing k file.")
+   end
+end
+
+function write_epsilon_file()
+   if (vrbLvl >= 1) then
+      print("   Writing epsilon file.")
+   end
+   fname = string.format("%s/epsilon",dirName)
+   f = assert(io.open(fname, 'w'))
+   writeFoamHeader(f)
+   f:write("    class       volScalarField;\n")
+   f:write('    location    "0";\n')
+   f:write("    object      epsilon;\n")
+   f:write("}\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:write("\n")
+   f:write("dimensions      [0 2 -3 0 0 0 0];\n")
+   f:write("\n")
+   f:write("internalField   uniform 1; \n")
+   f:write("\n")
+   f:write("boundaryField \n")
+   f:write("{ \n")
+   -- now go through globalBndryLabels list
+   for label,_ in pairs(globalBndryLabels) do
+      writeStandardBC(f)
+      labelPrefix = string.sub(label, 1, 2)
+      if labelPrefix == "i-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    fixedValue;\n")
+         f:write("        value   uniform 1;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "o-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "w-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    epsilonWallFunction;\n")
+         f:write("        value   uniform 1;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "s-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    symmetry;\n")
+         f:write("    }\n")
+      end
+      if labelPrefix == "p-" then
+         f:write(string.format("    %s\n", label))
+         f:write("    { \n")
+         f:write("        type    zeroGradient;\n")
+         f:write("    }\n")
+      end
+   end
+   f:write("}\n")
+   f:write("\n")
+   f:write("// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n")
+   f:close()
+  if (vrbLvl >= 1) then
+      print("      DONE: Writing epsilon file.")
+   end
+end
+
+function writeFoamHeader(f)
+   f:write(string.format("// Auto-generated by foamMesh on %s\n", os.date("%d-%b-%Y at %X")))
+   f:write("/*--------------------------------*- C++ -*----------------------------------*\ \n")
+   f:write("| =========                 |                                                 | \n")
+   f:write("| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           | \n")
+   f:write("|  \\    /   O peration     | Version:  2.4.0                                 | \n")
+   f:write("|   \\  /    A nd           | Web:      www.OpenFOAM.org                      | \n")
+   f:write("|    \\/     M anipulation  |                                                 | \n")
+   f:write("\*---------------------------------------------------------------------------*/ \n")
+   f:write("FoamFile \n")
+   f:write("{\n")
+   f:write("    version     2.0;\n")
+   f:write("    format      ascii;\n")
+end
+
+function writeStandardBC(f)
+      if label == "FrontAndBack" then
+         f:write("    frontAndBack \n")
+         f:write("    { \n")
+         f:write("    empty,\n")
+         f:write("    }\n")
+      end
+      if label == "wedge-front" then
+         f:write("    wedge-front \n")
+         f:write("    { \n")
+         f:write("    wedge;\n")
+         f:write("    }\n")
+      end
+      if label == "wedge-rear" then
+         f:write("    wedge-rear \n")
+         f:write("    { \n")
+         f:write("    wedge;\n")
+         f:write("    }\n")
+      end
+      if label == "unassigned" then
+         -- do nothing
+      end
 end
 
 function writeMesh()
@@ -412,6 +937,10 @@ function main(verbosityLevel)
    if #blks == 0 then
       error("WARNING: No FoamBlocks were defined.")
    end
+
+   -- Check that global settings are correct
+   checkTurbulenceModel(turbulenceModel)
+   checkCompressible(compressible,compressibleList)
    
    -- Join all grids together.
    if (vrbLvl >= 1) then
