@@ -28,6 +28,7 @@ WITH_SSS ?= 0
 WITH_SSC ?= 0
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
+DEBUG_CHEM ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -241,6 +242,10 @@ ifeq ($(DMD), gdc)
     endif
 endif
 DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DIR)
+
+ifeq ($(DEBUG_CHEM),1)
+    DFLAGS += -version=debug_chem
+endif
 
 default: $(PROGRAMS)
 	@echo "Source code revision string $(REVISION_STRING)"

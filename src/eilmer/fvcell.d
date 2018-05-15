@@ -941,6 +941,15 @@ public:
             params[0]=fs.omega;
         }
 
+        // Take a copy of dt_chem since it will be modified during the update.
+        // The copy is useful to print to the screen if there's a failure of the
+        // chemistry update.
+        double dt_chem_save = dt_chem;
+
+        version(debug_chem) {
+            GasState savedGasState = new GasState(fs.gas);
+        }
+
         try {
             myConfig.thermochemUpdate(fs.gas, dt, dt_chem, dt_therm, params);
             if (myConfig.ignition_zone_active) {
@@ -963,7 +972,12 @@ public:
                 msg ~= format("This cell is located at: %s\n", pos[0]);
                 msg ~= format("This cell is located in block: %d\n", myConfig.universe_blk_id);
                 msg ~= format("The cell's id is: %d\n", id);
-                msg ~= format("The gas state after the failed update is:\n   fs.gas %s", fs.gas);
+                msg ~= format("The flow timestep is: %12.6e\n", dt);
+                msg ~= format("The initial attempted dt_chem is: %12.6e\n", dt_chem_save);
+                version(debug_chem) {
+                    msg ~= format("The gas state BEFORE the failed update was:\n %s", savedGasState);
+                }
+                msg ~= format("The gas state AFTER the failed update is:\n   fs.gas %s", fs.gas);
                 throw new FlowSolverException(msg);
             }
         }
