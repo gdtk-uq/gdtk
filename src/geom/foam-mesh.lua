@@ -6,7 +6,8 @@
 
 -- Global settings
 turbulenceModel = "none" -- Options are: "S-A" and "k-epsilon"
-axisymmetric = false
+axisymmetric = false -- Options are: "true" and "false".
+collapseEdges = false -- Options are: "true" and "false".
 compressible = false  -- Options are: "true" and "false". Set dimensions for initial conditions
 openFoamDimensions = 2
 dtheta = 0.01 -- reduced to approx 1 degree
@@ -965,7 +966,9 @@ function main(verbosityLevel)
    writeCreatePatchDict(myMesh, blks)
    runCreatePatchDict()
    if (axisymmetric) then
-      runCollapseEdges()
+      if (collapseEdges) then
+         runCollapseEdges()
+      end
    end
    runCreatePatchDict_empty()  -- required to remove empty patches
    runRenumberMesh()
