@@ -991,6 +991,7 @@ import gas.two_temperature_air;
 import gas.two_temperature_nitrogen;
 import gas.vib_specific_nitrogen;
 import gas.fuel_air_mix;
+import gas.equilibrium_gas;
 import gas.steam : Steam;
 import core.stdc.stdlib : exit;
 
@@ -1078,6 +1079,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "FuelAirMix":
         gm = new FuelAirMix(L);
+        break;
+    case "EquilibriumGas":
+        gm = new EquilibriumGas(L);
         break;
     case "Steam":
         gm = new Steam();

@@ -147,7 +147,7 @@ public:
 
     override string toString() const
     {
-        return "";
+        return "ThermallyPerfectGas(species=[TODO])";
     }
 
     override void update_thermo_from_pT(GasState Q) 
@@ -376,7 +376,7 @@ private:
     WilkeMixingThermCond _thermCondModel;
     // Working array space
     double[] _Cp, _Cv, _h, _s;
-} // end class Ideal_gas
+} // end class ThermallyPerfectGas
 
 
 version(therm_perf_gas_test) {

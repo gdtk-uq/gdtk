@@ -11,7 +11,7 @@ DEMO_PROGRAMS := gas_model_demo ideal_gas_demo co2_model_demo co2_sw_model_demo 
 	sf6_model_demo luagas_model_demo univariate_lut_demo build_tree 
 TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test \
 	gas_model_test ideal_gas_test cea_gas_test powers_aslam_gas_test \
-	ideal_dissociating_gas_test fuel_air_mix_test \
+	ideal_dissociating_gas_test fuel_air_mix_test equilibrium_gas_test \
 	perf_gas_mix_eos_test sutherland_therm_cond_test sutherland_viscosity_test \
 	wilke_mixing_therm_cond_test wilke_mixing_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_mix_eos_test very_viscous_air_test \
@@ -245,6 +245,10 @@ ideal_dissociating_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 fuel_air_mix_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+equilibrium_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 

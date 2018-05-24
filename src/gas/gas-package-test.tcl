@@ -68,6 +68,14 @@ test steam-test {Testing steam.d} -body {
     exec ./steam_test
 } -result {} -returnCodes {0}
 
+#test fuel_air_mix-test {Testing fuel_air_mix.d} -body {
+#    exec ./fuel_air_mix_test
+#} -result {} -returnCodes {0}
+
+test equilibrium-gas-test {Testing equilibrium_gas.d} -body {
+    exec ./equilibrium_gas_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"
