@@ -63,7 +63,6 @@ public:
     }
     override void update_temperature(ref GasState Q)
     {
-        debug { writeln("Enter update_temperature"); }
         double Tsave = Q.T; // Keep a copy for diagnostics purpose.
         // We'll adjust the temperature estimate until the energy is within TOL Joules.
         // Surely 1/1000 of a Joule is sufficient precision when we are talking of megaJoules.
@@ -84,7 +83,6 @@ public:
         double T1 = fmax(Q.T - delT/2, T_MIN);
         double T2 = T1 + delT;
 
-        debug { writeln("attempt to bracket temperature"); }
         if (bracket(T1, T2, e_tgt, Q, T_MIN) == -1) {
             // We have a fall back if our aggressive search failed.
             // We apply a very conservative range:
@@ -108,11 +106,8 @@ public:
                 throw new GasModelException(msg);
             }
         }
-        debug { writeln("attempt to solve temperature"); }
         try {
-            debug { writeln("T1:", T1, " T2:", T2, " TOL:", TOL, " e_tgt:", e_tgt, " Q:", Q); }
             Q.T = solve(T1, T2, TOL, e_tgt, Q);
-            debug { writeln("on return from solve, Q.T=", Q.T); }
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find temperature\n";
@@ -125,7 +120,6 @@ public:
             msg ~= e.msg;
             throw new GasModelException(msg);
         }
-        debug { writeln("leave update_temperature"); }
     } // end update_temperature()
 private:
     double[] _R;
@@ -197,16 +191,15 @@ private:
      */
     double solve(double x1, double x2, double tol, double e_tgt, ref GasState Q) 
     {
-        debug { writeln("enter solve"); }
-        const int ITMAX = 100;           // maximum allowed number of iterations
+        const int ITMAX = 100;           // Maximum allowed number of iterations
         const double EPS=double.epsilon; // Machine floating-point precision
         double a = x1;
         double b = x2;
         double fa = zeroFun(a, e_tgt, Q);
         double fb = zeroFun(b, e_tgt, Q);
-        if ( abs(fa) == 0.0 ) return a;
-        if ( abs(fb) == 0.0 ) return b;
-        if ( fa * fb > 0.0 ) {
+        if (abs(fa) == 0.0) { return a; }
+        if (abs(fb) == 0.0) { return b; }
+        if (fa * fb > 0.0) {
             // Supplied bracket does not encompass zero of the function.
             string msg = "Root must be bracketed by x1 and x2\n";
             msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
@@ -214,14 +207,17 @@ private:
         }
         double c = b;
         double fc = fb;
-        for ( int iter=0; iter<ITMAX; iter++ ) {
-            double d, e, tol1, xm;
-            if ( (fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0) ) {
+        // Define d, e outside the loop body so that
+        // they don't get initialized to nan each pass.
+        double d, e;
+        foreach (iter; 0 .. ITMAX) {
+            if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
+                // On first pass fc==fb and we expect to enter here.
                 c = a;
                 fc = fa;
                 e = d = b-a;
             }
-            if ( abs(fc) < abs(fb) ) {
+            if (abs(fc) < abs(fb)) {
                 a = b;
                 b = c;
                 c = a;
@@ -229,59 +225,52 @@ private:
                 fb = fc;
                 fc = fa;
             }
-            tol1 = 2.0*EPS*abs(b)+0.5*tol;  // Convergence check
-            xm = 0.5*(c-b);
-            debug { writeln("about to check convergence to leave xm=", xm, " tol1=", tol1, " fb=", fb, " b=", b); }
-            // [TODO] Ask Rowan if we really want to check abs(xm) or some difference?
-            if ( abs(xm) <= tol1 || fb == 0.0 ) {
-                // if converged let's return the best estimate
-                debug { writeln("about to return with best estimate b=", b); }
+            // Convergence check
+            double tol1 = 2.0*EPS*abs(b)+0.5*tol;
+            double xm = 0.5*(c-b);
+            if (abs(xm) <= tol1 || fb == 0.0) {
+                // If converged, let's return the best estimate
                 return b;
             }
-            debug { writeln("have not left, e=", e, " tol1=", tol1, " fa=", fa, " fb=", fb); }
-            if ( abs(e) >= tol1 && abs(fa) > abs(fb) ) {
-                double p, q, r, s;
-                debug { writeln("Attempt inverse quadratic interpolation"); }
-                s = fb/fa;         // Attempt inverse quadratic interpolation for new bound
-                if ( a == c ) {
+            if (abs(e) >= tol1 && abs(fa) > abs(fb)) {
+                // Attempt inverse quadratic interpolation for new bound
+                double p, q;
+                double s = fb/fa;
+                if (a == c) {
                     p = 2.0*xm*s;
                     q = 1.0-s;
-                }
-                else {
+                } else {
                     q = fa/fc;
-                    r = fb/fc;
+                    double r = fb/fc;
                     p = s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
                     q = (q-1.0)*(r-1.0)*(s-1.0);
                 }
-                debug { writeln("Check interpolation"); }
-                if ( p > 0.0 )
-                    q = -q;    // Check whether quadratic interpolation is in bounds
+                // Check whether quadratic interpolation is in bounds
+                if (p > 0.0) { q = -q; }
                 p = abs(p);
                 double min1 = 3.0*xm*q-abs(tol1*q);
                 double min2 = abs(e*q);
-                if (2.0*p < (min1 < min2 ? min1 : min2) ) {
-                    e = d;     // Accept interpolation
+                if (2.0*p < (min1 < min2 ? min1 : min2)) {
+                    // Accept interpolation
+                    e = d;
                     d = p/q;
-                }
-                else {
-                    d = xm;  // else Interpolation failed, use bisection
+                } else {
+                    // Interpolation failed, use bisection
+                    d = xm;
                     e = d;
                 }
-                debug { writeln("end inverse quadratic interpolation"); }
-            }
-            else {
-                debug { writeln("Bounds decreasing too slowly, use bisection xm=", xm, " d=", d); }
-                d = xm;   // Bounds decreasing too slowly, use bisection
+            } else {
+                // Bounds decreasing too slowly, use bisection
+                d = xm;
                 e = d;
-                debug { writeln("end bisection"); }
             }
-            debug { writeln("Move last guess to a, b=", b, " fb=", fb); }
-            a = b;       // Move last guess to a
+            // Move last guess to a
+            a = b;
             fa = fb;
-            debug { writeln("evaluate new trial root d=", d, " b=", b, " tol1=", tol1, " xm=", xm); }
-            if ( abs(d) > tol1 )  // Evaluate new trial root
+            // Evaluate new trial root
+            if (abs(d) > tol1) {
                 b += d;
-            else {
+            } else {
                 b += copysign(tol1, xm);
             }
             fb = zeroFun(b, e_tgt, Q);      

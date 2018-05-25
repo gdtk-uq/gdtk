@@ -29,16 +29,16 @@ import std.algorithm;
  *    b, a point near the root.
  */
 double solve(alias f)(double x1, double x2, double tol=1.0e-9) 
-    if ( is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float) ) {
+    if (is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float)) {
         const int ITMAX = 100;           // maximum allowed number of iterations
         const double EPS=double.epsilon; // Machine floating-point precision
         double a = x1;
         double b = x2;
         double fa = f(a);
         double fb = f(b);
-        if ( abs(fa) == 0.0 ) return a;
-        if ( abs(fb) == 0.0 ) return b;
-        if ( fa * fb > 0.0 ) {
+        if (abs(fa) == 0.0) { return a; }
+        if (abs(fb) == 0.0) { return b; }
+        if (fa * fb > 0.0) {
             // Supplied bracket does not encompass zero of the function.
             string msg = "Root must be bracketed by x1 and x2\n";
             msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
@@ -46,14 +46,17 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
         }
         double c = b;
         double fc = fb;
-        for ( int iter=0; iter<ITMAX; iter++ ) {
-            double d, e, tol1, xm;
-            if ( (fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0) ) {
+        // Define d, e outside the loop body so that
+        // they don't get initialized to nan each pass.
+        double d, e;
+        foreach (iter; 0 .. ITMAX) {
+            if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
+                // On first pass fc==fb and we expect to enter here.
                 c = a;
                 fc = fa;
                 e = d = b-a;
             }
-            if ( abs(fc) < abs(fb) ) {
+            if (abs(fc) < abs(fb)) {
                 a = b;
                 b = c;
                 c = a;
@@ -61,51 +64,58 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
                 fb = fc;
                 fc = fa;
             }
-            tol1 = 2.0*EPS*abs(b)+0.5*tol;  // Convergence check
-            xm = 0.5*(c-b);
-            if ( abs(xm) <= tol1 || fb == 0.0 ) return b;   // if converged let's return the best estimate
-            if ( abs(e) >= tol1 && abs(fa) > abs(fb) ) {
-                double p, q, r, s;
-                s = fb/fa;         // Attempt inverse quadratic interpolation for new bound
+            // Convergence check
+            double tol1 = 2.0*EPS*abs(b)+0.5*tol;
+            double xm = 0.5*(c-b);
+            if (abs(xm) <= tol1 || fb == 0.0) {
+                // If converged, let's return the best estimate
+                return b;
+            }
+            if (abs(e) >= tol1 && abs(fa) > abs(fb)) {
+                // Attempt inverse quadratic interpolation for new bound
+                double p, q;
+                double s = fb/fa;
                 if ( a == c ) {
                     p = 2.0*xm*s;
                     q = 1.0-s;
-                }
-                else {
+                } else {
                     q = fa/fc;
-                    r = fb/fc;
+                    double r = fb/fc;
                     p = s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
                     q = (q-1.0)*(r-1.0)*(s-1.0);
                 }
-                if ( p > 0.0 )
-                    q = -q;    // Check whether quadratic interpolation is in bounds
+                // Check whether quadratic interpolation is in bounds
+                if (p > 0.0) { q = -q; }
                 p = abs(p);
                 double min1 = 3.0*xm*q-abs(tol1*q);
                 double min2 = abs(e*q);
                 if (2.0*p < (min1 < min2 ? min1 : min2) ) {
-                    e = d;     // Accept interpolation
+                    // Accept interpolation
+                    e = d;
                     d = p/q;
-                }
-                else {
-                    d = xm;  // else Interpolation failed, use bisection
+                } else {
+                    // Interpolation failed, use bisection
+                    d = xm;
                     e = d;
                 }
-            }
-            else {
-                d = xm;   // Bounds decreasing too slowly, use bisection
+            } else {
+                // Bounds decreasing too slowly, use bisection
+                d = xm;
                 e = d;
             }
-            a = b;       // Move last guess to a
+            // Move last guess to a
+            a = b;
             fa = fb;
-            if ( abs(d) > tol1 )  // Evaluate new trial root
+            // Evaluate new trial root
+            if (abs(d) > tol1) {
                 b += d;
-            else {
+            } else {
                 b += copysign(tol1, xm);
             }
             fb = f(b);      
         }
         throw new Exception("Maximum number of iterations exceeded in brent.d");
-    }
+    } // end solve()
 
 
 version(brent_test) {
