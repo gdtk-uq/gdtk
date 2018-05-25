@@ -4,8 +4,8 @@
 --   2015-03-10: ported from Eilmer3
 --   2018-04-14: refreshed
 --
-config.job_title = "Nitrogen reactor -- recombination driven."
-print(config.job_title)
+config.title = "Nitrogen reactor -- recombination driven."
+print(config.title)
 config.dimensions = 2
 --
 setGasModel('nitrogen-2sp.lua')
