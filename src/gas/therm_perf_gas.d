@@ -36,6 +36,7 @@ import gas.diffusion.wilke_mixing_therm_cond;
 class ThermallyPerfectGas: GasModel {
 public:
     this(lua_State* L)
+    // Construct the model from parameters that are contained in a Lua interpreter.
     {
         getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
         _n_species = cast(uint) _species_names.length;
@@ -99,7 +100,8 @@ public:
                 break;
             default:
                 string errMsg = format("The viscosity model '%s' is not available.\n", model);
-                errMsg ~= format("This error occurred for species %d when constructing the thermally perfect gas mix.\n");
+                errMsg ~= format("This error occurred for species %d when constructing "
+                                 ~"the thermally perfect gas mix.\n", isp);
                 throw new Error(errMsg);
             }
             lua_pop(L, 1);
@@ -124,8 +126,10 @@ public:
                 tcms ~=  createSutherlandThermalConductivity(L);
                 break;
             default:
-                string errMsg = format("The thermal conductivity model '%s' is not available.\n", model);
-                errMsg ~= format("This error occurred for species %d when constructing the thermally perfect gas mix.\n");
+                string errMsg = format("The thermal conductivity model '%s' "
+                                       ~"is not available.\n", model);
+                errMsg ~= format("This error occurred for species %d when constructing "
+                                 ~"the thermally perfect gas mix.\n", isp);
                 throw new Error(errMsg);
             }
             lua_pop(L, 1);
@@ -134,16 +138,15 @@ public:
         }
         _thermCondModel = new WilkeMixingThermCond(tcms, _mol_masses);
         create_species_reverse_lookup();
-    }
+    } // end constructor using Lua interpreter
 
     this(in string fname)
     {
         auto L = init_lua_State();
         doLuaFile(L, fname);
         this(L);
-        lua_close(L);
-        create_species_reverse_lookup();
-    }
+        lua_close(L); // We no longer need the Lua interpreter.
+    } // end constructor from a Lua file
 
     override string toString() const
     {
@@ -157,7 +160,9 @@ public:
     }
     override void update_thermo_from_rhou(GasState Q)
     {
+        debug { writeln("about to call _tpgMixEOS.update_temperature"); }
         _tpgMixEOS.update_temperature(Q);
+        debug { writeln("about to call _pgMixEOS.update_pressure"); }
         _pgMixEOS.update_pressure(Q);
     }
     override void update_thermo_from_rhoT(GasState Q)
@@ -383,11 +388,21 @@ version(therm_perf_gas_test) {
     int main() {
         import util.msg_service;
 
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+        //
+        debug { writeln("Begin."); }
         auto gm = new ThermallyPerfectGas("sample-data/therm-perf-5-species-air.lua");
+        writeln("DEBUG have gas model");
         auto gd = new GasState(5, 0);
+        writeln("DEBUG have GasState");
         assert(approxEqual(3.621, gm.LJ_sigmas[0]), failedUnitTest());
         assert(approxEqual(97.530, gm.LJ_epsilons[0]), failedUnitTest());
-               
+
+        debug { writeln("about to try update_thermo_from_pT"); }
         gd.p = 1.0e6;
         gd.T = 2000.0;
         gd.massf = [0.2, 0.2, 0.2, 0.2, 0.2];
@@ -395,24 +410,28 @@ version(therm_perf_gas_test) {
         assert(approxEqual(11801825.6, gd.u, 1.0e-6), failedUnitTest());
         assert(approxEqual(1.2840117, gd.rho, 1.0e-6), failedUnitTest());
 
+        debug { writeln("about to try update_thermo_from_rhou"); }
         gd.rho = 2.0;
         gd.u = 14.0e6;
         gm.update_thermo_from_rhou(gd);
         assert(approxEqual(3373757.4, gd.p, 1.0e-6), failedUnitTest());
         assert(approxEqual(4331.944, gd.T, 1.0e-6), failedUnitTest());
     
+        debug { writeln("about to try update_thermo_from_rhoT"); }
         gd.T = 10000.0;
         gd.rho = 1.5;
         gm.update_thermo_from_rhoT(gd);
         assert(approxEqual(5841068.3, gd.p, 1.0e-6), failedUnitTest());
         assert(approxEqual(20340105.9, gd.u, 1.0e-6), failedUnitTest());
 
+        debug { writeln("about to try update_thermo_from_rhop"); }
         gd.rho = 10.0;
         gd.p = 5.0e6;
         gm.update_thermo_from_rhop(gd);
         assert(approxEqual(11164648.5, gd.u, 1.0e-6), failedUnitTest());
         assert(approxEqual(1284.012, gd.T, 1.0e-6), failedUnitTest());
 
+        debug { writeln("about to try update_thermo_from_ps"); }
         gd.p = 1.0e6;
         double s = 10000.0;
         gm.update_thermo_from_ps(gd, s);
@@ -420,6 +439,7 @@ version(therm_perf_gas_test) {
         assert(approxEqual(12313952.52, gd.u, 1.0e-6), failedUnitTest());
         assert(approxEqual(1.00309, gd.rho, 1.0e-6), failedUnitTest());
 
+        debug { writeln("about to try update_thermo_from_hs"); }
         s = 11000.0;
         double h = 17.0e6;
         gm.update_thermo_from_hs(gd, h, s);
@@ -428,6 +448,7 @@ version(therm_perf_gas_test) {
         assert(approxEqual(0.4603513, gd.rho, 1.0e-6), failedUnitTest());
         assert(approxEqual(945271.84, gd.p, 1.0e-4), failedUnitTest());
 
+        debug { writeln("about to try update_trans_coeffs"); }
         gd.T = 4000.0;
         gm.update_trans_coeffs(gd);
         assert(approxEqual(0.00012591, gd.mu, 1.0e-6), failedUnitTest());
@@ -435,6 +456,7 @@ version(therm_perf_gas_test) {
         
         // [TODO]
         // entropy, enthalpy and sound speed tests
+        debug { writeln("Done with tests."); }
         return 0;
     }
 }

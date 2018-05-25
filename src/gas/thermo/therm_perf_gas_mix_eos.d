@@ -63,6 +63,7 @@ public:
     }
     override void update_temperature(ref GasState Q)
     {
+        debug { writeln("Enter update_temperature"); }
         double Tsave = Q.T; // Keep a copy for diagnostics purpose.
         // We'll adjust the temperature estimate until the energy is within TOL Joules.
         // Surely 1/1000 of a Joule is sufficient precision when we are talking of megaJoules.
@@ -83,6 +84,7 @@ public:
         double T1 = fmax(Q.T - delT/2, T_MIN);
         double T2 = T1 + delT;
 
+        debug { writeln("attempt to bracket temperature"); }
         if (bracket(T1, T2, e_tgt, Q, T_MIN) == -1) {
             // We have a fall back if our aggressive search failed.
             // We apply a very conservative range:
@@ -106,8 +108,11 @@ public:
                 throw new GasModelException(msg);
             }
         }
+        debug { writeln("attempt to solve temperature"); }
         try {
+            debug { writeln("T1:", T1, " T2:", T2, " TOL:", TOL, " e_tgt:", e_tgt, " Q:", Q); }
             Q.T = solve(T1, T2, TOL, e_tgt, Q);
+            debug { writeln("on return from solve, Q.T=", Q.T); }
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find temperature\n";
@@ -120,7 +125,8 @@ public:
             msg ~= e.msg;
             throw new GasModelException(msg);
         }
-    }
+        debug { writeln("leave update_temperature"); }
+    } // end update_temperature()
 private:
     double[] _R;
     CEAThermo[] _curves;
@@ -191,6 +197,7 @@ private:
      */
     double solve(double x1, double x2, double tol, double e_tgt, ref GasState Q) 
     {
+        debug { writeln("enter solve"); }
         const int ITMAX = 100;           // maximum allowed number of iterations
         const double EPS=double.epsilon; // Machine floating-point precision
         double a = x1;
@@ -224,9 +231,17 @@ private:
             }
             tol1 = 2.0*EPS*abs(b)+0.5*tol;  // Convergence check
             xm = 0.5*(c-b);
-            if ( abs(xm) <= tol1 || fb == 0.0 ) return b;   // if converged let's return the best estimate
+            debug { writeln("about to check convergence to leave xm=", xm, " tol1=", tol1, " fb=", fb, " b=", b); }
+            // [TODO] Ask Rowan if we really want to check abs(xm) or some difference?
+            if ( abs(xm) <= tol1 || fb == 0.0 ) {
+                // if converged let's return the best estimate
+                debug { writeln("about to return with best estimate b=", b); }
+                return b;
+            }
+            debug { writeln("have not left, e=", e, " tol1=", tol1, " fa=", fa, " fb=", fb); }
             if ( abs(e) >= tol1 && abs(fa) > abs(fb) ) {
                 double p, q, r, s;
+                debug { writeln("Attempt inverse quadratic interpolation"); }
                 s = fb/fa;         // Attempt inverse quadratic interpolation for new bound
                 if ( a == c ) {
                     p = 2.0*xm*s;
@@ -238,6 +253,7 @@ private:
                     p = s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
                     q = (q-1.0)*(r-1.0)*(s-1.0);
                 }
+                debug { writeln("Check interpolation"); }
                 if ( p > 0.0 )
                     q = -q;    // Check whether quadratic interpolation is in bounds
                 p = abs(p);
@@ -251,13 +267,18 @@ private:
                     d = xm;  // else Interpolation failed, use bisection
                     e = d;
                 }
+                debug { writeln("end inverse quadratic interpolation"); }
             }
             else {
+                debug { writeln("Bounds decreasing too slowly, use bisection xm=", xm, " d=", d); }
                 d = xm;   // Bounds decreasing too slowly, use bisection
                 e = d;
+                debug { writeln("end bisection"); }
             }
+            debug { writeln("Move last guess to a, b=", b, " fb=", fb); }
             a = b;       // Move last guess to a
             fa = fb;
+            debug { writeln("evaluate new trial root d=", d, " b=", b, " tol1=", tol1, " xm=", xm); }
             if ( abs(d) > tol1 )  // Evaluate new trial root
                 b += d;
             else {

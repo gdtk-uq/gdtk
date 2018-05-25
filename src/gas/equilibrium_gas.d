@@ -40,18 +40,20 @@ import kinetics.reaction;
 
 class EquilibriumGas: ThermallyPerfectGas {
 public:
-    this(lua_State *L) {
+    this(lua_State *L)
+    // Construct model from parameters contained in a Lua interpreter.
+    {
         super(L); 
     } // end constructor
 
     this(in string fname)
+    // Construct model from a Lua script file.
     {
         auto L = init_lua_State();
         doLuaFile(L, fname);
         this(L);
         lua_close(L);
-        create_species_reverse_lookup();
-    }
+    } // end constructor
 
     override string toString() const
     {
