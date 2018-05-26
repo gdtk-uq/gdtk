@@ -1,5 +1,8 @@
 NM_DIR ?= .
-NM_FILES := $(NM_DIR)/bbla.d \
+NM_FILES := $(NM_DIR)/package.d \
+	$(NM_DIR)/number.d \
+	$(NM_DIR)/complex.d \
+	$(NM_DIR)/bbla.d \
 	$(NM_DIR)/bracketing.d \
 	$(NM_DIR)/brent.d \
 	$(NM_DIR)/gaussquad.d \

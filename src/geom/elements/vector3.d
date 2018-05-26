@@ -442,7 +442,7 @@ void cross_product(double ax, double ay, double az, double bx, double by, double
 }
 
 /**
- * Returns true is all of the components of two vectors are approximately equal.
+ * Returns true if all of the components of two vectors are approximately equal.
  */
 @nogc
 bool approxEqualVectors(in Vector3 v1, in Vector3 v2,

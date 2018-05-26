@@ -25,7 +25,7 @@ TEST_PROGRAMS := bbla_test \
 	newtoncotes_test \
 	ridder_test \
 	brent_test \
-	rungekutta_test \
+	rungekutta_test rungekutta_complex_test \
 	smla_test \
 	rsla_test \
 	luabbla_test
@@ -100,6 +100,10 @@ ridder_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rungekutta_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+rungekutta_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=rungekutta_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 brent_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d

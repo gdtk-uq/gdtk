@@ -9,10 +9,12 @@ namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
 set module_names [list bbla bracketing gaussquad linesearch newtoncotes \
-		      ridder brent rungekutta rsla smla]
+		      ridder brent \
+                      rungekutta rungekutta_complex \
+                      rsla smla]
 
 foreach name $module_names {
-    test $name-test "Testing $name.d" \
+    test ${name}_test "Testing $name.d" \
 	-body "exec [join [list ./ $name _test] {}]" \
 	-result {} -returnCodes {0}
 }
