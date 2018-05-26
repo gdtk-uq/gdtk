@@ -30,6 +30,7 @@ config.title = "Inifinite cylinder in nitrogen flow, M = 6.5"
 
 nsp, nmodes, gm = setGasModel("two-temp-n2.lua")
 config.reacting = true
+config.reactions_file = "VT-relaxation-time-selection.lua"
 
 -- Set flow conditions
 M_inf = 6.5
