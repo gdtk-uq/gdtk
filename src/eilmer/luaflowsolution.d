@@ -128,7 +128,6 @@ extern(C) int newFlowSolution(lua_State* L)
     return 1;
 } // end newFlowSolution()
 
-
 extern(C) int find_enclosing_cell_from_lua(lua_State* L)
 {
     auto fsol = checkFlowSolution(L, 1);
@@ -402,6 +401,13 @@ extern(C) int find_nearest_cell_centre_from_lua(lua_State* L)
     return 1; // Just the table of indices is left on the stack.
 } // end find_nearest_cell_centre_from_lua()
 
+extern(C) int get_sim_time(lua_State* L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    lua_settop(L, 0);
+    lua_pushnumber(L, fsol.sim_time);
+    return 1;
+}
 
 extern(C) int get_nic(lua_State* L)
 {
@@ -738,20 +744,43 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "find_enclosing_cells_along_line");
     lua_pushcfunction(L, &find_nearest_cell_centre_from_lua);
     lua_setfield(L, -2, "find_nearest_cell_centre");
+    lua_pushcfunction(L, &get_sim_time);
+    lua_setfield(L, -2, "sim_time");
     lua_pushcfunction(L, &get_nic);
     lua_setfield(L, -2, "get_nic");
+    // Alias get_nic == nic
+    lua_pushcfunction(L, &get_nic);
+    lua_setfield(L, -2, "nic");
     lua_pushcfunction(L, &get_njc);
     lua_setfield(L, -2, "get_njc");
+    // Alias get_njc == njc
+    lua_pushcfunction(L, &get_njc);
+    lua_setfield(L, -2, "njc");
     lua_pushcfunction(L, &get_nkc);
     lua_setfield(L, -2, "get_nkc");
+    // Alias get_nkc == nkc
+    lua_pushcfunction(L, &get_nkc);
+    lua_setfield(L, -2, "nkc");
     lua_pushcfunction(L, &get_vtx_pos);
     lua_setfield(L, -2, "get_vtx");
+    // Alias get_vtx == vtx
+    lua_pushcfunction(L, &get_vtx_pos);
+    lua_setfield(L, -2, "vtx");
     lua_pushcfunction(L, &get_var_names);
     lua_setfield(L, -2, "get_var_names");
+    // Alias get_var_names == var_names
+    lua_pushcfunction(L, &get_var_names);
+    lua_setfield(L, -2, "var_names");
     lua_pushcfunction(L, &get_cell_data);
     lua_setfield(L, -2, "get_cell_data");
+    // Alias get_cell_data == cell_data
+    lua_pushcfunction(L, &get_cell_data);
+    lua_setfield(L, -2, "cell_data");
     lua_pushcfunction(L, &get_sgrid);
     lua_setfield(L, -2, "get_sgrid");
+    // Alias get_sgrid == sgrid
+    lua_pushcfunction(L, &get_sgrid);
+    lua_setfield(L, -2, "sgrid");
     // Make class visible
     lua_setglobal(L, FlowSolutionMT.toStringz);
 } // end registerFlowSolution()

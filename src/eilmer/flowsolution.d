@@ -384,6 +384,7 @@ public:
                 _data[i].length = nvariables;
                 fin.rawRead(_data[i]);
             }
+            fin.close();
             break;
         default:
             string[] tokens;
@@ -441,6 +442,7 @@ public:
                     _data[i][ivar] = to!double(tokens[ivar]);
                 }
             } // foreach i
+            byLine.range.f.close();
         } // end switch flow_format
         foreach (i; 0 .. variableNames.length) { variableIndex[variableNames[i]] = i; }
         // Fill boundary group list

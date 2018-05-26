@@ -581,6 +581,7 @@ public:
                 } // foreach i
             } // foreach j
         } // foreach k
+        byLine.range.f.close();
     } // end read_grid_from_gzip_file()
 
     override void read_from_raw_binary_file(string fileName, double scale=1.0)
