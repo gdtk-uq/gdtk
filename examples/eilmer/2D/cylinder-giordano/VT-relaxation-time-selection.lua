@@ -1,2 +1,2 @@
-relaxation_time = "Millikan-White"
+relaxation_time = "Blackman"
 
