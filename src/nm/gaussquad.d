@@ -9,6 +9,8 @@
 
 module nm.gaussquad;
 import std.math;
+import nm.complex;
+import nm.number;
 
 // Rule coefficients computed by Maxima. 
 // See the scripts in directory ./notes
@@ -36,15 +38,17 @@ double[] ws4 = [3.4785484513745385738e-1, 6.5214515486254614263e-1,
  * Returns: 
  *     integral of f(x) from a to b.
  */
-double apply_gauss_rule(alias f)(double a, double b, double[] xs, double[] ws)
-    if ( is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float) )
+number apply_gauss_rule(alias f)(number a, number b, double[] xs, double[] ws)
+    if ( is(typeof(f(0.0)) == double) ||
+         is(typeof(f(0.0)) == float)  ||
+         is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
-    double xmid = 0.5 * (b + a);
-    double xrange2 = 0.5 * (b - a);
+    number xmid = 0.5 * (b + a);
+    number xrange2 = 0.5 * (b - a);
     size_t N = xs.length;
-    double result = 0.0;
+    number result = 0.0;
     foreach(i; 0 .. N) {
-        double x = xmid + xs[i] * xrange2; // transform from range -1.0 +1.0
+        number x = xmid + xs[i] * xrange2; // transform from range -1.0 +1.0
         result += ws[i] * f(x);
     }
     return xrange2 * result;
@@ -61,14 +65,16 @@ double apply_gauss_rule(alias f)(double a, double b, double[] xs, double[] ws)
  * Returns: 
  *     integral of f(x) from a to b.
  */
-double integrate(alias f)(double a, double b, double tol=1.0e-5)
-    if ( is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float) )
+number integrate(alias f)(number a, number b, double tol=1.0e-5)
+    if ( is(typeof(f(0.0)) == double) ||
+         is(typeof(f(0.0)) == float)  ||
+         is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
-    double I3 = apply_gauss_rule!f(a, b, xs3, ws3);
-    double I4 = apply_gauss_rule!f(a, b, xs4, ws4);
-    double I;
+    number I3 = apply_gauss_rule!f(a, b, xs3, ws3);
+    number I4 = apply_gauss_rule!f(a, b, xs4, ws4);
+    number I;
     if ( abs(I4 - I3) > tol ) {
-        double mid = 0.5 * (a + b);
+        number mid = 0.5 * (a + b);
         I = integrate!f(a, mid, tol/2.0) + integrate!f(mid, b, tol/2.0);
     } else {
         I = I4;
@@ -78,11 +84,12 @@ double integrate(alias f)(double a, double b, double tol=1.0e-5)
 
 version(gaussquad_test) {
     import util.msg_service;
+    import std.conv;
     int main() {
-        double fun1(double x) { return abs(x) < 1.0 ? sqrt(1.0 - x*x): 0.0; }
-        double fun2(double x) { return 1.0 / (1.0 + x * x); }
-        assert(approxEqual(PI/4, integrate!fun1(0.0, 1.0), 1.0e-6), failedUnitTest()); 
-        assert(approxEqual(PI/4, integrate!fun2(0.0, 1.0), 1.0e-6), failedUnitTest());
+        number fun1(number x) { return abs(x) < to!number(1.0) ? sqrt(1.0 - x*x): to!number(0.0); }
+        number fun2(number x) { return 1.0 / (1.0 + x * x); }
+        assert(approxEqualNumbers(to!number(PI/4), integrate!fun1(to!number(0.0), to!number(1.0)), 1.0e-6), failedUnitTest()); 
+        assert(approxEqualNumbers(to!number(PI/4), integrate!fun2(to!number(0.0), to!number(1.0)), 1.0e-6), failedUnitTest());
         
         return 0;
     }

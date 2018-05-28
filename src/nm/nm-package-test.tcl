@@ -8,7 +8,7 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
-set module_names [list bbla bracketing bracketing_complex gaussquad linesearch newtoncotes \
+set module_names [list bbla bracketing bracketing_complex gaussquad gaussquad_complex linesearch newtoncotes \
 		      ridder \
                       brent brent_complex \
                       rungekutta rungekutta_complex \
