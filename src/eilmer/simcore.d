@@ -421,9 +421,11 @@ void write_solution_files()
         }
     }
     // Update times file, connecting the tindx value to sim_time.
-    auto writer = appender!string();
-    formattedWrite(writer, "%04d %.18e %.18e\n", current_tindx, sim_time, dt_global);
-    append(GlobalConfig.base_file_name ~ ".times", writer.data);
+    if (GlobalConfig.is_master_task) {
+        auto writer = appender!string();
+        formattedWrite(writer, "%04d %.18e %.18e\n", current_tindx, sim_time, dt_global);
+        append(GlobalConfig.base_file_name ~ ".times", writer.data);
+    }
 } // end write_solution_files()
 
 void march_over_blocks()
