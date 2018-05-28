@@ -9,6 +9,8 @@
 
 module nm.linesearch;
 import std.stdio;
+import nm.complex;
+import nm.number;
 
 /**
  * Returns the bracket xL,xR containing the minimum of the function f.
@@ -19,15 +21,16 @@ import std.stdio;
  *     tol: the final size of the bracket.
  *          It should not be set too small.
  */
-void minimize(alias f)(ref double a, ref double b, double tol=1.0e-4)
-    if ( is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float) )
+void minimize(alias f)(ref number a, ref number b, double tol=1.0e-4)
+    if ( is(typeof(f(0.0)) == double) ||
+         is(typeof(f(0.0)) == float)  ||
+         is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
-    double r = 0.618034;
-    double xL = a + (1-r)*(b-a);
-    double xR = a + r*(b-a);
-    double FL = f(xL);
-    double FR = f(xR);
-
+    number r = 0.618034;
+    number xL = a + (1-r)*(b-a);
+    number xR = a + r*(b-a);
+    number FL = f(xL);
+    number FR = f(xR);
     while ( (xR - xL) > tol ) {
         if ( FR > FL ) {
             b = xR;
@@ -53,15 +56,15 @@ version(linesearch_test) {
     import std.math;
     import util.msg_service;
     int main() {
-        double fdemo(double x) {
+        number fdemo(number x) {
             return exp(x) + 2.0 - cos(x);
         }
-        double a = -3;
-        double b = 1;
+        number a = -3;
+        number b = 1;
         minimize!fdemo(a, b, 1.0e-6);
-        double xminimum = -0.588534;
-        assert(abs(a - xminimum) < 1.0e-4, failedUnitTest());
-        assert(abs(b - xminimum) < 1.0e-4, failedUnitTest());
+        number xminimum = -0.588534;
+        assert(fabs(a - xminimum) < 1.0e-4, failedUnitTest());
+        assert(fabs(b - xminimum) < 1.0e-4, failedUnitTest());
 
         return 0;
     }

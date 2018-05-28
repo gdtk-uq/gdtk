@@ -21,7 +21,7 @@ DEMO_PROGRAMS := ridder_demo \
 TEST_PROGRAMS := bbla_test \
 	bracketing_test bracketing_complex_test \
 	gaussquad_test gaussquad_complex_test \
-	linesearch_test \
+	linesearch_test linesearch_complex_test \
 	newtoncotes_test \
 	ridder_test \
 	brent_test brent_complex_test \
@@ -96,6 +96,10 @@ gaussquad_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 linesearch_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+linesearch_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=linesearch_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 newtoncotes_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
