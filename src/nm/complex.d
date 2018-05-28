@@ -18,6 +18,17 @@
 */
 module nm.complex;
 
+
+version(complex_numbers) {
+    // PJ's 2018-05-28 hack to avoid compiler problems for most users.
+    //
+    // We include the body of this file, only if we really are building the
+    // complex_numbers verion of the code because we wish to avoid
+    // the internal compiler error that seems to happen for DMD v2.76+ compilers
+    // when optimization is requested.
+    // Look toward the end of this file for the brief section for the build
+    // assuming double_numbers.  There we only need the simple structure definition.
+
 import std.traits;
 import std.math;
 import std.conv;
@@ -96,7 +107,6 @@ if (is(R : double) && is(I : double))
     assert(g.re == 3);
     assert(g.im == 4.0L);
 }
-
 
 /** A complex number parametrised by a type `T`, which must be either
     `float`, `double` or `real`.
@@ -1400,4 +1410,20 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 {
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
+}
+
+// end of version(complex_numbers)  
+
+} else {
+    // Presume that we are building for double_numbers
+    // and we do not need all the complex numbers machinery,
+    // just enough to define Complex!double
+struct Complex(T)
+if (isFloatingPoint!T)
+{
+    T re;
+    T im;
+}
+
+// end double_numbers version
 }
