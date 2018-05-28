@@ -11,6 +11,8 @@
 module nm.ridder;
 import std.math;
 import std.algorithm;
+import nm.complex;
+import nm.number;
 
 /**
  * Locate a root of f(x) by subdividing the original range,
@@ -25,15 +27,17 @@ import std.algorithm;
  * Returns:
  *    x, a point near the root.
  */
-double solve(alias f)(double x1, double x2, double tol=1.0e-9) 
-    if ( is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float) )
+number solve(alias f)(number x1, number x2, double tol=1.0e-9) 
+    if ( is(typeof(f(0.0)) == double) ||
+         is(typeof(f(0.0)) == float)  ||
+         is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
-    double x3, f3;
-    double x4 = x1; // So that g++ doesn't warn on maybe unitialized.
-    double f4, eps;
+    number x3, f3;
+    number x4 = x1; // So that g++ doesn't warn on maybe unitialized.
+    number f4, eps;
 
-    double f1 = f(x1); 
-    double f2 = f(x2);
+    number f1 = f(x1); 
+    number f2 = f(x2);
     if ( abs(f1) == 0.0 ) return x1;
     if ( abs(f2) == 0.0 ) return x2;
     if ( x1 == x2 ) {
@@ -72,17 +76,18 @@ double solve(alias f)(double x1, double x2, double tol=1.0e-9)
 
 version(ridder_test) {
     import util.msg_service;
+    import std.conv;
     int main() {
-        double test_fun_1(double x) {
+        number test_fun_1(number x) {
             return pow(x,3) + pow(x,2) - 3*x - 3;
         }
-        double test_fun_2(double x, double a) {
+        number test_fun_2(number x, number a) {
             return a*x + sin(x) - exp(x);
         }
-        assert(abs(solve!test_fun_1(1, 2) - 1.732051) < 1.0e-5, failedUnitTest());
-        double my_a = 3.0;
-        auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
-        assert(abs(solve!test_fun_3(0, 1) - 0.3604217) < 1.0e-5, failedUnitTest());
+        assert(fabs(solve!test_fun_1(1, 2) - 1.732051) < 1.0e-5, failedUnitTest());
+        number my_a = 3.0;
+        auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
+        assert(fabs(solve!test_fun_3(0, 1) - 0.3604217) < 1.0e-5, failedUnitTest());
 
         return 0;
     }

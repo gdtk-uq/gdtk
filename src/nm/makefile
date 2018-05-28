@@ -23,7 +23,7 @@ TEST_PROGRAMS := bbla_test \
 	gaussquad_test gaussquad_complex_test \
 	linesearch_test linesearch_complex_test \
 	newtoncotes_test newtoncotes_complex_test \
-	ridder_test \
+	ridder_test ridder_complex_test \
 	brent_test brent_complex_test \
 	rungekutta_test rungekutta_complex_test \
 	smla_test \
@@ -112,6 +112,10 @@ newtoncotes_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 ridder_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+ridder_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=ridder_test -version=complex_number \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rungekutta_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
