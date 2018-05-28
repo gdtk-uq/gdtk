@@ -17,6 +17,9 @@
     Kyle Damm, 2018
 */
 module nm.complex;
+import std.traits;
+import std.math;
+import std.conv;
 
 
 version(complex_numbers) {
@@ -28,10 +31,6 @@ version(complex_numbers) {
     // when optimization is requested.
     // Look toward the end of this file for the brief section for the build
     // assuming double_numbers.  There we only need the simple structure definition.
-
-import std.traits;
-import std.math;
-import std.conv;
 
 /** Helper function that returns a _complex number with the specified
     real and imaginary parts.
