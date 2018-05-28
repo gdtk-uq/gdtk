@@ -14,11 +14,13 @@ import std.conv;
 import std.algorithm;
 import std.math;
 import std.exception;
+import nm.complex;
+import nm.number;
 
 class Matrix {
     size_t _nrows;
     size_t _ncols;
-    double[][] _data;
+    number[][] _data;
 
     this(size_t n) {
         _nrows = n;
@@ -41,7 +43,7 @@ class Matrix {
                 _data[row][col] = other._data[row][col];
     }
 
-    this(in double[] vec, string orient="column") 
+    this(in number[] vec, string orient="column") 
     {
         if ( orient == "column" ) {
             this(vec.length, 1);
@@ -53,20 +55,20 @@ class Matrix {
     }
 
     this(in float[] vec, string orient="column") {
-        double[] my_vec;
+        number[] my_vec;
         my_vec.length = vec.length;
         foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i]; 
         this(my_vec, orient);
     }
 
     this(in int[] vec, string orient="column") {
-        double[] my_vec;
+        number[] my_vec;
         my_vec.length = vec.length;
         foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i]; 
         this(my_vec, orient);
     }
 
-    this(in double[][] other) {
+    this(in number[][] other) {
         this(other.length, other[0].length);
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
@@ -90,16 +92,16 @@ class Matrix {
     @property const size_t nrows() { return _nrows; }
     @property const size_t ncols() { return _ncols; }
 
-    const double opIndex(size_t row, size_t col) {
+    const number opIndex(size_t row, size_t col) {
         return _data[row][col];
     }
 
-    ref double opIndexAssign(double c, size_t row, size_t col) {
+    ref number opIndexAssign(number c, size_t row, size_t col) {
         _data[row][col] = c;
         return _data[row][col];
     }
 
-    ref double opIndexOpAssign(string op)(double c, size_t row, size_t col)
+    ref number opIndexOpAssign(string op)(number c, size_t row, size_t col)
         if ( op == "+" || op == "-" || op == "*" || op == "/" )
     {
         static if ( op == "+" )
@@ -151,7 +153,45 @@ class Matrix {
         return result;
     }
 
+    Matrix opBinary(string op)(Complex!double rhs)
+        if ( op == "+" || op == "-" || op == "*" || op == "/" )
+    {
+        Matrix result = new Matrix(_nrows, _ncols);
+        foreach(row; 0 .. _nrows) {
+            foreach(col; 0 .. _ncols) {
+                static if ( op == "+" ) {
+                    result._data[row][col] = _data[row][col] + rhs;
+                } else if ( op == "-" ) {
+                    result._data[row][col] = _data[row][col] - rhs;
+                } else if ( op == "*" ) {
+                    result._data[row][col] = _data[row][col] * rhs;
+                } else if ( op == "/" ) {
+                    result._data[row][col] = _data[row][col] / rhs;
+                }
+            }
+        }
+        return result;
+    }
+
     Matrix opBinaryRight(string op)(double lhs)
+        if ( op == "+" || op == "-" || op == "*" )
+    {
+        Matrix result = new Matrix(_nrows, _ncols);
+        foreach(row; 0 .. _nrows) {
+            foreach(col; 0 .. _ncols) {
+                static if ( op == "+" ) {
+                    result._data[row][col] = lhs + _data[row][col];
+                } else if ( op == "-" ) {
+                    result._data[row][col] = lhs - _data[row][col];
+                } else if ( op == "*" ) {
+                    result._data[row][col] = lhs * _data[row][col];
+                }
+            }
+        }
+        return result;
+    }
+
+    Matrix opBinaryRight(string op)(Complex!double lhs)
         if ( op == "+" || op == "-" || op == "*" )
     {
         Matrix result = new Matrix(_nrows, _ncols);
@@ -188,14 +228,14 @@ class Matrix {
         swap(_data[i1], _data[i2]);
     }
 
-    double[] getColumn(size_t col) {
-        double[] my_column;
+    number[] getColumn(size_t col) {
+        number[] my_column;
         my_column.length = nrows;
         foreach(row; 0 .. nrows) my_column[row] = _data[row][col];
         return my_column;
     }
 
-    double[] getRow(size_t row) {
+    number[] getRow(size_t row) {
         return _data[row].dup;
     }
 
@@ -229,14 +269,14 @@ class Matrix {
     void zeros()
     {
         foreach (ref row; _data) {
-            row[] = 0.0;
+            foreach( idx; 0..row.length) row[idx] = 0.0;
         }
     }
 
     void eye()
     {
         foreach (i, ref row; _data) {
-            row[] = 0.0;
+            foreach ( idx; 0..row.length) row[idx] = 0.0;
             row[i] = 1.0;
         }
     }
@@ -251,7 +291,7 @@ bool approxEqualMatrix(in Matrix a, in Matrix b)
     bool is_equal = true;
     foreach(row; 0 .. a.nrows) {
         foreach(col; 0 .. a.ncols) {
-            if ( !approxEqual(a[row,col], b[row,col]) ) {
+            if ( !approxEqualNumbers(a[row,col], b[row,col]) ) {
                 is_equal = false;
                 break;
             }
@@ -265,7 +305,7 @@ Matrix zeros(size_t rows, size_t cols)
     Matrix my_matrix = new Matrix(rows, cols);
     foreach(row; 0 .. rows) {
         foreach(col; 0 .. cols) {
-            my_matrix[row,col] = 0.0;
+            my_matrix[row,col] = to!number(0.0);
         }
     }
     return my_matrix;
@@ -276,7 +316,7 @@ Matrix eye(size_t n)
     Matrix ident_matrix = new Matrix(n);
     foreach(row; 0 .. n) {
         foreach(col; 0 .. n) {
-            ident_matrix[row,col] = (row == col) ? 1.0 : 0.0;
+            ident_matrix[row,col] = (row == col) ? to!number(1.0) : to!number(0.0);
         }
     }
     return ident_matrix;
@@ -410,7 +450,7 @@ in {
 body {
     foreach(row; 0 .. aRow) {
         foreach(col; 0 .. bCol) {
-            c[row,col] = 0.0;
+            c[row,col] = to!number(0.0);
             foreach(i; 0 .. aCol) {
                 c[row,col] += a[row,i] * b[i,col];
             }
@@ -419,7 +459,7 @@ body {
 }
 
 
-void dot(in Matrix a, double[] b, double[] c)
+void dot(in Matrix a, number[] b, number[] c)
 in {
     assert(a.ncols == b.length);
     assert(a.nrows == c.length);
@@ -427,7 +467,7 @@ in {
 body {
     size_t nrows = a.nrows;
     size_t ncols = a.ncols;
-    c[] = 0.0;
+    foreach( idx; 0..c.length) c[idx] = 0.0;
     foreach(row; 0 .. nrows) {
         foreach(col; 0 .. ncols) {
             c[row] += a[row,col] * b[col];
@@ -435,7 +475,7 @@ body {
     }
 }
 
-void dot(in Matrix a, size_t aRow, size_t aCol, double[] b, double[] c)
+void dot(in Matrix a, size_t aRow, size_t aCol, number[] b, number[] c)
 in {
     assert(aRow <= a.nrows);
     assert(aCol <= a.ncols);
@@ -443,7 +483,7 @@ in {
     assert(aRow <= c.length);
 }
 body {
-    c[] = 0.0;
+    foreach( idx; 0..c.length) c[idx] = 0.0;
     foreach(row; 0 .. aRow) {
         foreach(col; 0 .. aCol) {
             c[row] += a[row,col] * b[col];
@@ -468,14 +508,15 @@ body {
 
 version(bbla_test) {
     import util.msg_service;
+    import std.conv;
     int test_basic_operations() {
         Matrix a = eye(3);
         assert(approxEqualMatrix(a, new Matrix([[1,0,0],[0,1,0],[0,0,1]])),
                failedUnitTest());
         Matrix b = zeros(2,3);
         Matrix c = transpose(b);
-        b[1,2] = 99.0;
-        c[0,0] = 1.0; c[1,1] = 1.0;
+        b[1,2] = to!number(99.0);
+        c[0,0] = to!number(1.0); c[1,1] = to!number(1.0);
         assert(approxEqualMatrix(b, new Matrix([[0,0,0],[0,0,99]])),
                failedUnitTest());
         assert(approxEqualMatrix(c, new Matrix([[1,0],[0,1],[0,0]])),
@@ -529,12 +570,12 @@ void gaussJordanElimination(ref Matrix c, double very_small_value=1.0e-16)
         }
         if ( p != j ) c.swapRows(p,j);
         // Scale row j to get unity on the diagonal.
-        double cjj = c[j,j];
+        number cjj = c[j,j];
         foreach(col; 0 .. c.ncols) c[j,col] /= cjj;
         // Do the elimination to get zeros in all off diagonal values in column j.
         foreach(i; 0 .. c.nrows) {
             if ( i == j ) continue;
-            double cij = c[i,j];
+            number cij = c[i,j];
             foreach(col; 0 .. c.ncols) c[i,col] -= cij * c[j,col]; 
         }
     } // end foreach j
@@ -554,7 +595,7 @@ version(bbla_test) {
         assert(approxEqualMatrix(Ab, new Matrix([[1,0,0,0,-0.5],[0,1.0,0,0,1],
                                              [0,0,1,0,1.0/3],[0,0,0,1,-2.0]])),
                failedUnitTest());
-        double[] x = Ab.getColumn(4);
+        number[] x = Ab.getColumn(4);
         Matrix new_rhs = dot(Aonly, new Matrix(x));
         assert(approxEqualMatrix(new_rhs, bonly), failedUnitTest());
         Matrix residual = new_rhs - b;
@@ -603,7 +644,7 @@ size_t[2][] decomp(ref Matrix c, double very_small_value=1.0e-16)
         // Do the elimination to get zeros in column j, below the diagonal.
         // Don't disturb the previous multipliers stored in columns to the left.
         foreach(i; j+1 .. c.nrows) {
-            double multiplier = c[i,j]/c[j,j];
+            number multiplier = c[i,j]/c[j,j];
             foreach(col; j .. c.ncols) c[i,col] -= multiplier * c[j,col];
             c[i,j] = multiplier; // Save in the newly-zeroed spot.
         }
@@ -635,7 +676,7 @@ void solve(in Matrix c, ref Matrix rhs, in size_t[2][] permuteList)
     // Forward elimination, using the stored multipliers.
     foreach(i; 1 .. nrows) {
         foreach(j; 0 .. i) {
-            double multiplier = c[i,j];
+            number multiplier = c[i,j];
             foreach(col; 0 .. rhs.ncols) rhs[i,col] -= multiplier * rhs[j,col];
         }
     }
@@ -643,7 +684,7 @@ void solve(in Matrix c, ref Matrix rhs, in size_t[2][] permuteList)
     foreach(col; 0 .. rhs.ncols) {
         rhs[nrows-1, col] /= c[nrows-1,nrows-1];
         for (int i = to!int(nrows-2); i >= 0; --i) {
-            double my_sum = rhs[i,col];
+            number my_sum = rhs[i,col];
             foreach(j; i+1 .. nrows) my_sum -= c[i,j] * rhs[j,col];
             rhs[i,col] = my_sum/c[i,i];
         }
@@ -663,19 +704,19 @@ Matrix inverse(in Matrix a)
     return x;
 }
 
-void upperSolve(in Matrix U, double[] b)
+void upperSolve(in Matrix U, number[] b)
 {
     int n = to!int(U.nrows);
     // Back subsitution
     b[n-1] /= U[n-1,n-1];
     for ( int i = to!int(n-2); i >= 0; --i ) {
-        double sum = b[i];
+        number sum = b[i];
         foreach (j; i+1 .. n) sum -= U[i,j] * b[j];
         b[i] = sum/U[i,i];
     }
 }
 
-void upperSolve(in Matrix U, int n, double[] b)
+void upperSolve(in Matrix U, int n, number[] b)
 in {
     assert(n <= U.nrows);
     assert(n <= U.ncols);
@@ -685,7 +726,7 @@ body {
     // Back subsitution
     b[n-1] /= U[n-1,n-1];
     for ( int i = to!int(n-2); i >= 0; --i ) {
-        double sum = b[i];
+        number sum = b[i];
         foreach (j; i+1 .. n) sum -= U[i,j] * b[j];
         b[i] = sum/U[i,i];
     }
@@ -793,8 +834,8 @@ in {
 }
 body {
     int iMax;
-    double largest, tmp;
-    double[] vv;
+    number largest, tmp;
+    number[] vv;
     
     int n = to!int(a.nrows);
     vv.length = n;
@@ -829,7 +870,7 @@ body {
             vv[iMax] = vv[k];
         }
         pivot[k] = iMax;
-        if (a[k,k] == 0.0) a[k,k] = verySmallValue;
+        if (a[k,k] == 0.0) a[k,k] = to!number(verySmallValue);
         foreach (i; k+1 .. n) {
             a[i,k] /= a[k,k];
             tmp = a[i,k];
@@ -840,7 +881,7 @@ body {
     }
 }
 
-void LUSolve(Matrix a, int[] pivot, double[] b, ref double[] x)
+void LUSolve(Matrix a, int[] pivot, number[] b, ref number[] x)
 in {
     assert(a.nrows == a.ncols, "require a square matrix");
     assert(pivot.length == a.nrows, "pivot array wrongly sized");
@@ -850,10 +891,10 @@ in {
 body {
     int ii, ip, n;
     ii = 0;
-    double sum;
+    number sum;
     n = to!int(a.nrows);
 
-    x[] = b[];
+    foreach( idx; 0..x.length) x[idx] = b[idx];
     
     foreach (i; 0 .. n) {
         ip = pivot[i];
@@ -883,10 +924,10 @@ version(bbla_test) {
                              [2.0,  2.0,  3.0,  2.0],
                              [4.0, -3.0,  0.0,  1.0],
                              [6.0,  1.0, -6.0, -5.0]]);
-        double[] b = [0.0, -2.0, -7.0, 6.0];
+        number[] b = [to!number(0.0), to!number(-2.0), to!number(-7.0), to!number(6.0)];
         int[] pivot;
         pivot.length = 4;
-        double[] x;
+        number[] x;
         x.length = 4;
 
         LUDecomp(A, pivot);
@@ -898,11 +939,11 @@ version(bbla_test) {
                              [4.0, -3.0,  0.0,  1.0],
                              [6.0,  1.0, -6.0, -5.0]]);
 
-        double[] Ax;
+        number[] Ax;
         Ax.length = 4;
         dot(A, x, Ax);
 
-        assert(approxEqual(b, Ax), failedUnitTest());
+        assert(approxEqualNumbers(b, Ax), failedUnitTest());
 
         return 0;
     }

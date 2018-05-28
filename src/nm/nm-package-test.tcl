@@ -8,12 +8,16 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
-set module_names [list bbla bracketing bracketing_complex gaussquad gaussquad_complex \
-                      linesearch linesearch_complex newtoncotes newtoncotes_complex \
+set module_names [list bbla bbla_complex \
+                      bracketing bracketing_complex \
+                      gaussquad gaussquad_complex \
+                      linesearch linesearch_complex \
+                      newtoncotes newtoncotes_complex \
 		      ridder ridder_complex \
                       brent brent_complex \
                       rungekutta rungekutta_complex \
-                      rsla rsla_complex smla]
+                      rsla rsla_complex \
+                      smla smla_complex]  
 
 foreach name $module_names {
     test ${name}_test "Testing $name.d" \

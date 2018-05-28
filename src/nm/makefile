@@ -18,7 +18,7 @@ DEMO_PROGRAMS := ridder_demo \
 	gaussquad_demo \
 	bbla_demo 
 
-TEST_PROGRAMS := bbla_test \
+TEST_PROGRAMS := bbla_test bbla_complex_test \
 	bracketing_test bracketing_complex_test \
 	gaussquad_test gaussquad_complex_test \
 	linesearch_test linesearch_complex_test \
@@ -26,7 +26,7 @@ TEST_PROGRAMS := bbla_test \
 	ridder_test ridder_complex_test \
 	brent_test brent_complex_test \
 	rungekutta_test rungekutta_complex_test \
-	smla_test \
+	smla_test smla_complex_test \
 	rsla_test rsla_complex_test \
 	luabbla_test
 
@@ -74,9 +74,13 @@ clean:
 $(LIBLUA):
 	cd $(LUA); make linux local
 
-bbla_test: bbla.d $(UTIL_DIR)/msg_service.d
+bbla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
-		bbla.d $(UTIL_DIR)/msg_service.d
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+bbla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=bbla_test -version=complex_numbers \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 bracketing_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
@@ -138,6 +142,10 @@ smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
+smla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=smla_test -version=complex_numbers \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
 rsla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
@@ -146,9 +154,9 @@ rsla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=rsla_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
-luabbla_test: luabbla.d bbla.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
+luabbla_test: luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)
 	dmd -of$@ -debug -g -w -version=$@ \
-		luabbla.d bbla.d $(UTIL_FILES) $(DLINKFLAGS)
+		luabbla.d bbla.d complex.d number.d $(UTIL_FILES) $(DLINKFLAGS)
 
 # Some demo targets. These are left over from the early days of development.
 # They should continue to work and provide a minimal example of how to get
