@@ -15,6 +15,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.traits;
+import core.memory : GC;
 import util.lua;
 import util.lua_service;
 import globalconfig;
@@ -127,6 +128,15 @@ extern(C) int newFlowSolution(lua_State* L)
     flowSolutionStore ~= pushObj!(FlowSolution, FlowSolutionMT)(L, fsol);
     return 1;
 } // end newFlowSolution()
+
+// Do NOT try to use a FlowSolution object after calling close() on it.
+extern(C) int closeFlowSolution(lua_State *L)
+{
+    auto fsol = checkFlowSolution(L, 1);
+    fsol.releaseMemory();
+    GC.collect();
+    return 0;
+}
 
 extern(C) int find_enclosing_cell_from_lua(lua_State* L)
 {
@@ -738,6 +748,8 @@ void registerFlowSolution(lua_State* L)
     lua_setfield(L, -2, "new");
     lua_pushcfunction(L, &toStringObj!(FlowSolution, FlowSolutionMT));
     lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, &closeFlowSolution);
+    lua_setfield(L, -2, "close");
     lua_pushcfunction(L, &find_enclosing_cell_from_lua);
     lua_setfield(L, -2, "find_enclosing_cell");
     lua_pushcfunction(L, &find_enclosing_cells_along_line_from_lua);

@@ -116,6 +116,17 @@ public:
         sim_time = flowBlocks[0].sim_time;
     } // end constructor
 
+    // This method is used to free up memory. The object shell still remains,
+    // but all of its internals have been deallocated. You should not attempt
+    // to use the object after calling this method. This method is designed
+    // to be called via the Lua wrapper. It is for callers who know what they
+    // are doing with the objects underneath.
+    void releaseMemory()
+    {
+        destroy(flowBlocks);
+        destroy(gridBlocks);
+    }
+
     override string toString()
     {
         string str = "FlowSolution(";
