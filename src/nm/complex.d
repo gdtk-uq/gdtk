@@ -227,7 +227,7 @@ if (isFloatingPoint!T)
     // https://forum.dlang.org/post/p1qa9n$2hje$1@digitalmars.com
     // http://www.angelcode.com/angelscript/sdk/docs/manual/doc_script_class_ops.html
 
-    // this = complex (complexify addition)
+    // this = complex (KD, 2018)
     int opCmp(Complex!double z) const
     {
         auto diff = re - z.re;
@@ -239,7 +239,7 @@ if (isFloatingPoint!T)
             return 1;
     }
 
-    // this = numeric (complexify addition)
+    // this = numeric (KD, 2018)
     int opCmp(double z) const
     {
         auto diff = re - z.re;
@@ -398,7 +398,7 @@ if (isFloatingPoint!T)
         return this;
     }
 
-    // complex ^^= complex (complexify addition)
+    // complex ^^= complex
     // same as pow(Complex!double z, Complex!double w)
     ref Complex opOpAssign(string op, C)(C w)
         if (op == "^^" && is(C R == Complex!R))
@@ -413,7 +413,7 @@ if (isFloatingPoint!T)
         return this;
     }
 
-    // removed (complexify addition)
+    // removed (KD, 2018)
     /*
       ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
@@ -447,7 +447,7 @@ if (isFloatingPoint!T)
         return this;
     }
 
-    // complex ^^= real (complexify addition)
+    // complex ^^= real (KD, 2018)
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
@@ -460,7 +460,7 @@ if (isFloatingPoint!T)
         return this;
     }
 
-    // removed (complexify addition)
+    // removed (KD, 2018)
     /*
     ref Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
@@ -474,7 +474,7 @@ if (isFloatingPoint!T)
     }
     */
 
-    // complex ^^= int (complexify addition)
+    // complex ^^= int (KD, 2018)
     // same as pow(Complex!double z, int w)
     ref Complex opOpAssign(string op, U)(U l)
         if (op == "^^" && isIntegral!U)
@@ -489,7 +489,7 @@ if (isFloatingPoint!T)
         return this;
     }
 
-    // removed (complexify addition)
+    // removed (KD, 2018)
     /*
     ref Complex opOpAssign(string op, U)(U i)
         if (op == "^^" && isIntegral!U)
@@ -771,7 +771,7 @@ if (is(T R == Complex!R))
     assert(z1 == z2);
 }
 
-// std.math library function overloads (complexify addition)
+// std.math library function overloads (KD, 2018)
 @nogc
 bool isNaN(Complex!double z) @safe pure nothrow
 {
@@ -1036,9 +1036,9 @@ Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow
         return complex(1.0e6); // TODO: throw error.
 }
 
-// end of overloaded function additions
+// end of overloaded function additions (KD, 2018)
 
-// removed (complexify addition)
+// removed (KD, 2018)
 /**
    Params: z = A complex number.
    Returns: The absolute value (or modulus) of `z`.
@@ -1162,7 +1162,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     assert(approxEqual(z.im, 1.0L, real.epsilon));
 }
 
-// removed (complexify addition)
+// removed (KD, 2018)
 /**
     Trigonometric functions on complex numbers.
 
@@ -1293,7 +1293,7 @@ deprecated
     }
 }
 
-// removed (complexify addition)
+// removed (KD, 2018)
 /**
     Params: z = A complex number.
     Returns: The square root of `z`.
