@@ -18,11 +18,15 @@ module nm.bracketing;
 import std.math;
 import std.algorithm;
 import std.stdio; // for debugging writes
+import nm.complex;
+import nm.number;
 
-int bracket(alias f)(ref double x1, ref double x2,
-                     double x1_min = -1.0e99, double x2_max = +1.0e99,
-                     int max_try=50, double factor=1.6)
-    if (is(typeof(f(0.0)) == double) || is(typeof(f(0.0)) == float))
+int bracket(alias f)(ref number x1, ref number x2,
+                     number x1_min = -1.0e99, number x2_max = +1.0e99,
+                     int max_try=50, number factor=1.6)
+    if (is(typeof(f(0.0)) == double) ||
+        is(typeof(f(0.0)) == float)  ||
+        is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
     if (x1 == x2) {
         throw new Exception("Bad initial range given to bracket.");
@@ -30,11 +34,11 @@ int bracket(alias f)(ref double x1, ref double x2,
     // We assume that x1 < x2.
     if (x1 > x2) { swap(x1, x2); }
     if (x1_min > x2_max) { swap(x1_min, x2_max); }
-    double f1 = f(x1);
-    double f2 = f(x2);
+    number f1 = f(x1);
+    number f2 = f(x2);
     for (int i = 0; i < max_try; ++i) {
         if (f1*f2 < 0.0) return 0; // we have success
-        if (abs(f1) < abs(f2)) {
+        if (fabs(f1) < fabs(f2)) {
             x1 += factor * (x1 - x2);
             //prevent the bracket from being expanded beyond a specified domain
             x1 = fmax(x1_min, x1);
@@ -51,15 +55,16 @@ int bracket(alias f)(ref double x1, ref double x2,
 
 version(bracketing_test) {
     import util.msg_service;
+    import std.conv;
     int main() {
-        double test_fun_2(double x, double a) {
+        number test_fun_2(number x, number a) {
             return a*x + sin(x) - exp(x);
         }
-        double my_a = 3.0;
-        auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); };
-        double x1 = 0.4;
-        double x2 = 0.5;
-        assert(bracket!test_fun_3(x1, x2) == 0, failedUnitTest());
+        number my_a = 3.0;
+        auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
+        number x1 = 0.4;
+        number x2 = 0.5;
+        assert(bracket!test_fun_3(x1, x2) == to!number(0), failedUnitTest());
 
         return 0;
     }

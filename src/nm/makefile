@@ -19,7 +19,7 @@ DEMO_PROGRAMS := ridder_demo \
 	bbla_demo 
 
 TEST_PROGRAMS := bbla_test \
-	bracketing_test \
+	bracketing_test bracketing_complex_test \
 	gaussquad_test \
 	linesearch_test \
 	newtoncotes_test \
@@ -80,6 +80,10 @@ bbla_test: bbla.d $(UTIL_DIR)/msg_service.d
 
 bracketing_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+bracketing_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=bracketing_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 gaussquad_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
