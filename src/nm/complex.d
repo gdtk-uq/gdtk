@@ -863,8 +863,9 @@ Complex!double sin(Complex!double z) @safe pure nothrow
 Complex!double cos(Complex!double z) @safe pure nothrow 
 {
     Complex!double i = complex(0, 1);
-    return (exp(z*i) - exp(-z*i))/(2.0);
-}
+    double a = z.re; double b = z.im;
+    return std.math.cos(a) * std.math.cosh(b) - i*std.math.sin(a)*std.math.sinh(b);
+ }
 
 @nogc
 Complex!double tan(Complex!double z) @safe pure nothrow 
