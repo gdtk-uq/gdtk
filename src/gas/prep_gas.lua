@@ -195,6 +195,12 @@ function writeThermPerfGas(f, species, db, optsTable)
    f:write("db = {}\n")
    for _,sp in ipairs(species) do
       f:write(string.format("db['%s'] = {}\n", sp))
+      f:write(string.format("db['%s'].atomicConstituents = { ", sp))
+      for k,v in pairs(db[sp].atomicConstituents) do
+         f:write(string.format("%s=%d, ", k, v))
+      end
+      f:write("}\n")
+      f:write(string.format("db['%s'].charge = %d\n", sp, db[sp].charge))
       f:write(string.format("db['%s'].M = %.8f\n", sp, db[sp].M.value))
       sigma = db.default.sigma.value
       if db[sp].sigma then
