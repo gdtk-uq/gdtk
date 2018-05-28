@@ -9,7 +9,7 @@ namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
 set module_names [list bbla bracketing bracketing_complex gaussquad gaussquad_complex \
-                      linesearch linesearch_complex newtoncotes \
+                      linesearch linesearch_complex newtoncotes newtoncotes_complex \
 		      ridder \
                       brent brent_complex \
                       rungekutta rungekutta_complex \
