@@ -149,7 +149,10 @@ linesearch_demo: linesearch_demo.d linesearch.d
 	dmd -g linesearch_demo.d linesearch.d
 
 nelmin_demo: nelmin_demo.d nelmin.d
-	dmd -g nelmin_demo.d nelmin.d
+	dmd -g nelmin_demo.d nelmin.d complex.d number.d
+
+nelmin_complex_demo: nelmin_demo.d nelmin.d
+	dmd -g nelmin_demo.d nelmin.d complex.d number.d -version=complex_numbers
 
 rungekutta_demo: rungekutta_demo.d rungekutta.d
 	dmd -g rungekutta_demo.d rungekutta.d
