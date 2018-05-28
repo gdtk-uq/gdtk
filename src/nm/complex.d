@@ -17,10 +17,6 @@
     Kyle Damm, 2018
 */
 module nm.complex;
-import std.traits;
-import std.math;
-import std.conv;
-
 
 version(complex_numbers) {
     // PJ's 2018-05-28 hack to avoid compiler problems for most users.
@@ -49,6 +45,11 @@ version(complex_numbers) {
         be `Complex!double`.  Otherwise, the return type is
         deduced using $(D std.traits.CommonType!(R, I)).
 */
+
+import std.traits;
+import std.math;
+import std.conv;
+
 auto complex(R)(R re)  @safe pure nothrow @nogc
 if (is(R : double))
 {
@@ -1418,6 +1419,9 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     // Presume that we are building for double_numbers
     // and we do not need all the complex numbers machinery,
     // just enough to define Complex!double
+
+import std.traits;    
+
 struct Complex(T)
 if (isFloatingPoint!T)
 {
