@@ -27,7 +27,7 @@ TEST_PROGRAMS := bbla_test \
 	brent_test brent_complex_test \
 	rungekutta_test rungekutta_complex_test \
 	smla_test \
-	rsla_test \
+	rsla_test rsla_complex_test \
 	luabbla_test
 
 LUA := ../../extern/lua-5.1.4
@@ -140,6 +140,10 @@ smla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 rsla_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
+		$(NM_FILES) $(UTIL_DIR)/msg_service.d
+
+rsla_complex_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=rsla_test -version=complex_numbers \
 		$(NM_FILES) $(UTIL_DIR)/msg_service.d
 
 luabbla_test: luabbla.d bbla.d $(UTIL_FILES) $(LIBLUA) $(UTIL_FILES)

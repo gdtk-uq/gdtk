@@ -13,7 +13,7 @@ set module_names [list bbla bracketing bracketing_complex gaussquad gaussquad_co
 		      ridder ridder_complex \
                       brent brent_complex \
                       rungekutta rungekutta_complex \
-                      rsla smla]
+                      rsla rsla_complex smla]
 
 foreach name $module_names {
     test ${name}_test "Testing $name.d" \

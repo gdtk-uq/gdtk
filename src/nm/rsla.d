@@ -11,15 +11,17 @@ import std.math;
 import std.format;
 import std.conv;
 import std.stdio;
+import nm.complex;
+import nm.number;
 
 @nogc
-double normInf(size_t N, size_t NDIM)(ref double[2*NDIM][NDIM] c)
+number normInf(size_t N, size_t NDIM)(ref number[2*NDIM][NDIM] c)
 // Return the max-absolute-row-sum of an augmented matrix c = [A|b]
 // We are concerned with a measure of A only.
 {
-    double norm = 0.0;
+    number norm = 0.0;
     foreach (i; 0 .. N) {
-        double rowsum = 0.0;
+        number rowsum = 0.0;
         foreach (j; 0 .. N) { rowsum += fabs(c[i][j]); }
         norm = fmax(rowsum, norm);
     }
@@ -28,7 +30,7 @@ double normInf(size_t N, size_t NDIM)(ref double[2*NDIM][NDIM] c)
 
 @nogc
 int computeInverse(size_t N, size_t NDIM)
-    (ref double[2*NDIM][NDIM] c, double very_small_value=1.0e-16)
+    (ref number[2*NDIM][NDIM] c, double very_small_value=1.0e-16)
 // Perform Gauss-Jordan elimination on an augmented matrix.
 // c = [A|b] such that the mutated matrix becomes [I|x]
 // where x is the solution vector(s) to A.x = b
@@ -46,16 +48,16 @@ int computeInverse(size_t N, size_t NDIM)
         assert(false, "Zero dimension linear system doesn't make sense.");
     }
     static if (N == 1) {
-        double det = c[0][0];
+        number det = c[0][0];
         if (abs(det) <= very_small_value) return -1; // singular
         c[0][1] = 1.0/det; // inverse
         c[0][0] = 1.0; // identity
     }
     static if (N == 2) {
-        double det = c[0][0]*c[1][1] - c[0][1]*c[1][0];
+        number det = c[0][0]*c[1][1] - c[0][1]*c[1][0];
         if (abs(det) <= very_small_value) return -1; // singular
         // compute inverse directly
-        double one_over_det = 1.0/det;
+        number one_over_det = 1.0/det;
         c[0][2] =  c[1][1]*one_over_det; c[0][3] = -c[0][1]*one_over_det;
         c[1][2] = -c[1][0]*one_over_det; c[1][3] =  c[0][0]*one_over_det;
         // overwrite original elements with identity
@@ -63,12 +65,12 @@ int computeInverse(size_t N, size_t NDIM)
         c[1][0] = 0.0; c[1][1] = 1.0;
     }
     static if (N == 3) {
-        double det = c[0][0]*(c[1][1]*c[2][2] - c[1][2]*c[2][1])
+        number det = c[0][0]*(c[1][1]*c[2][2] - c[1][2]*c[2][1])
             - c[0][1]*(c[1][0]*c[2][2] - c[1][2]*c[2][0])
             + c[0][2]*(c[1][0]*c[2][1] - c[1][1]*c[2][0]);
         if (abs(det) <= very_small_value) return -1; // singular
         // compute inverse directly
-        double one_over_det = 1.0/det;
+        number one_over_det = 1.0/det;
         c[0][3] = (c[1][1]*c[2][2] - c[1][2]*c[2][1])*one_over_det;
         c[0][4] = (c[0][2]*c[2][1] - c[0][1]*c[2][2])*one_over_det;
         c[0][5] = (c[0][1]*c[1][2] - c[0][2]*c[1][1])*one_over_det;
@@ -93,16 +95,16 @@ int computeInverse(size_t N, size_t NDIM)
             if (abs(c[p][j]) <= very_small_value) return -1; // singular
             if ( p != j ) { // Swap rows
                 foreach(col; 0 .. 2*N) {
-                    double tmp = c[p][col]; c[p][col] = c[j][col]; c[j][col] = tmp;
+                    number tmp = c[p][col]; c[p][col] = c[j][col]; c[j][col] = tmp;
                 }
             }
             // Scale row j to get unity on the diagonal.
-            double cjj = c[j][j];
+            number cjj = c[j][j];
             foreach(col; 0 .. 2*N) c[j][col] /= cjj;
             // Do the elimination to get zeros in all off diagonal values in column j.
             foreach(i; 0 .. N) {
                 if ( i == j ) continue;
-                double cij = c[i][j];
+                number cij = c[i][j];
                 foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
             }
         } // end foreach j
@@ -111,7 +113,7 @@ int computeInverse(size_t N, size_t NDIM)
 } // end computeInverse()()
 
 int computeInverseDebug(size_t N, size_t NDIM)
-    (ref double[2*NDIM][NDIM] c, double very_small_value=1.0e-16)
+    (ref number[2*NDIM][NDIM] c, double very_small_value=1.0e-16)
 // Perform Gauss-Jordan elimination on an augmented matrix.
 // c = [A|b] such that the mutated matrix becomes [I|x]
 // where x is the solution vector(s) to A.x = b
@@ -122,7 +124,7 @@ int computeInverseDebug(size_t N, size_t NDIM)
 // This debug version gives more information.
 {
     assert(NDIM >= N, "Inadequate size of dimension for matrix");
-    double[2*N][N] csave;
+    number[2*N][N] csave;
     foreach(j; 0 .. N) {
         foreach(col; 0 .. 2*N) csave[j][col] = c[j][col];
     }
@@ -141,16 +143,16 @@ int computeInverseDebug(size_t N, size_t NDIM)
         }
         if ( p != j ) { // Swap rows
             foreach(col; 0 .. 2*N) {
-                double tmp = c[p][col]; c[p][col] = c[j][col]; c[j][col] = tmp;
+                number tmp = c[p][col]; c[p][col] = c[j][col]; c[j][col] = tmp;
             }
         }
         // Scale row j to get unity on the diagonal.
-        double cjj = c[j][j];
+        number cjj = c[j][j];
         foreach(col; 0 .. 2*N) c[j][col] /= cjj;
         // Do the elimination to get zeros in all off diagonal values in column j.
         foreach(i; 0 .. N) {
             if ( i == j ) continue;
-            double cij = c[i][j];
+            number cij = c[i][j];
             foreach(col; 0 .. 2*N) c[i][col] -= cij * c[j][col]; 
         }
     } // end foreach j
@@ -159,7 +161,7 @@ int computeInverseDebug(size_t N, size_t NDIM)
 
 @nogc
 void solveWithInverse(size_t N, size_t NDIM)
-    (ref double[2*NDIM][NDIM] c, ref double[NDIM] rhs, ref double[NDIM] x)
+    (ref number[2*NDIM][NDIM] c, ref number[NDIM] rhs, ref number[NDIM] x)
 // Multiply right-hand-side by the inverse part of the augmented matrix.
 // Augmented matrix is assumed to be c=[I|Ainv]
 {
@@ -192,18 +194,19 @@ void solveWithInverse(size_t N, size_t NDIM)
 
 version(rsla_test) {
     import util.msg_service;
+    import std.conv;
     int main() {
-        double[8][4] A = [[0.0,  2.0,  0.0,  1.0,  1.0, 0.0, 0.0, 0.0],
-                          [2.0,  2.0,  3.0,  2.0,  0.0, 1.0, 0.0, 0.0],
-                          [4.0, -3.0,  0.0,  1.0,  0.0, 0.0, 1.0, 0.0],
-                          [6.0,  1.0, -6.0, -5.0,  0.0, 0.0, 0.0, 1.0]];
-        assert(approxEqual(normInf!(4,4)(A), 18.0), failedUnitTest());
+        number[8][4] A = [[to!number(0.0),  to!number(2.0),  to!number(0.0),  to!number(1.0),  to!number(1.0), to!number(0.0), to!number(0.0), to!number(0.0)],
+                          [to!number(2.0),  to!number(2.0),  to!number(3.0),  to!number(2.0),  to!number(0.0), to!number(1.0), to!number(0.0), to!number(0.0)],
+                          [to!number(4.0), to!number(-3.0),  to!number(0.0),  to!number(1.0),  to!number(0.0), to!number(0.0), to!number(1.0), to!number(0.0)],
+                          [to!number(6.0),  to!number(1.0), to!number(-6.0), to!number(-5.0),  to!number(0.0), to!number(0.0), to!number(0.0), to!number(1.0)]];
+        assert(approxEqualNumbers(normInf!(4,4)(A), to!number(18.0)), failedUnitTest());
         computeInverse!(4,4)(A);
-        double[4] b = [0.0, -2.0, -7.0, 6.0];
-        double[4] x;
+        number[4] b = [to!number(0.0), to!number(-2.0), to!number(-7.0), to!number(6.0)];
+        number[4] x;
         solveWithInverse!(4,4)(A, b, x);
-        assert(approxEqual(x[0], -0.5) && approxEqual(x[1], 1.0) &&
-               approxEqual(x[2], 1.0/3) && approxEqual(x[3], -2.0), failedUnitTest());
+        assert(approxEqualNumbers(x[0], to!number(-0.5)) && approxEqualNumbers(x[1], to!number(1.0)) &&
+               approxEqualNumbers(x[2], to!number(1.0/3)) && approxEqualNumbers(x[3], to!number(-2.0)), failedUnitTest());
 
         // Try same workspace with a smaller 2x2 system.
         x[0] = -0.5; x[1] = 1.0;
@@ -211,11 +214,11 @@ version(rsla_test) {
         A[1][0] = 2.0; A[1][1] = 2.0; A[1][2] = 0.0; A[1][3] = 1.0;
         b[0] = A[0][0]*x[0] + A[0][1]*x[1];
         b[1] = A[1][0]*x[0] + A[1][1]*x[1];
-               assert(approxEqual(normInf!(2,4)(A), 4.0), failedUnitTest());
+        assert(approxEqualNumbers(normInf!(2,4)(A), to!number(4.0)), failedUnitTest());
         computeInverse!(2,4)(A);
         x[0] = 0.0; x[1] = 0.0;
         solveWithInverse!(2,4)(A, b, x);
-        assert(approxEqual(x[0], -0.5) && approxEqual(x[1], 1.0), failedUnitTest());
+        assert(approxEqualNumbers(x[0], to!number(-0.5)) && approxEqualNumbers(x[1], to!number(1.0)), failedUnitTest());
 
         // and again, with a 3x3 system.
         x[0] = -0.5; x[1] = 1.0; x[2] = 1.0/3;
@@ -228,11 +231,11 @@ version(rsla_test) {
         b[0] = A[0][0]*x[0] + A[0][1]*x[1] + A[0][2]*x[2];
         b[1] = A[1][0]*x[0] + A[1][1]*x[1] + A[1][2]*x[2];
         b[2] = A[2][0]*x[0] + A[2][1]*x[1] + A[2][2]*x[2];
-               assert(approxEqual(normInf!(3,4)(A), 7.0), failedUnitTest());
+        assert(approxEqualNumbers(normInf!(3,4)(A), to!number(7.0)), failedUnitTest());
         computeInverse!(3,4)(A);
         x[0] = 0.0; x[1] = 0.0; x[2] = 0.0;
         solveWithInverse!(3,4)(A, b, x);
-        assert(approxEqual(x[0], -0.5) && approxEqual(x[1], 1.0) && approxEqual(x[2], 1.0/3),
+        assert(approxEqualNumbers(x[0], to!number(-0.5)) && approxEqualNumbers(x[1], to!number(1.0)) && approxEqualNumbers(x[2], to!number(1.0/3)),
                failedUnitTest());
 
         return 0;
