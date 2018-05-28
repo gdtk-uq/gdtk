@@ -1,5 +1,5 @@
 db.CH4 = {}
-db.CH4.atomic_constituents = {C=1,H=4,}
+db.CH4.atomicConstituents = {C=1,H=4,}
 db.CH4.charge = 0
 db.CH4.M = {
    value = 16.0424600e-3,

@@ -1,5 +1,5 @@
 db.H2CC = {}
-db.H2CC.atomic_constituents = {H=2,C=2,}
+db.H2CC.atomicConstituents = {H=2,C=2,}
 db.H2CC.charge = 0
 db.H2CC.M = {
    value = 26.0372800e-3,

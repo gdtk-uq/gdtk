@@ -1,5 +1,5 @@
 db.CH2O = {}
-db.CH2O.atomic_constituents = {C=1,H=2,O=1}
+db.CH2O.atomicConstituents = {C=1,H=2,O=1}
 db.CH2O.charge = 0
 db.CH2O.M = {
    value = 30.025980e-3,
