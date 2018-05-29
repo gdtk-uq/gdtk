@@ -7,14 +7,12 @@
  * Version: 2014-Jun-15, adapted from the mech2700 class example
  *          2014-Jul-09, preallocate work arrays and pass them in.
  *          2018-May-26, work with double or complex numbers
- *
+ *          2018-May-30, accept the type of the dependent variables as a parameter
  */
 
 module nm.rungekutta;
 
 import std.math;
-import nm.number;
-import nm.complex;
 
 /**
  * Allocate workspace arrays for the ODE stepper.
@@ -22,13 +20,13 @@ import nm.complex;
  * To avoid the allocation of the intermediate arrays at every update,
  * we get the user to preallocate them with this function.
  */
-number[][] allocate_rk45_workspace(uint n)
+T[][] allocate_rk45_workspace(T)(uint n)
 {
-    number[][] workspace_arrays;
+    T[][] workspace_arrays;
     workspace_arrays.length = 7;
-    foreach(ref vect; workspace_arrays) vect.length = n;
+    foreach(ref vect; workspace_arrays) { vect.length = n; }
     return workspace_arrays;
-} // end allocate_rk45_workspace()
+}
 
 /**
  * Steps the set of ODEs by the Runge-Kutta-Fehlberg method.
@@ -48,24 +46,24 @@ number[][] allocate_rk45_workspace(uint n)
  * Returns:
  *     the final value of the dependent variable
  */
-double rkf45_step(alias f)(double t0, double h, number[] y0,
-                           ref number[] y1, ref number[] err,
-                           ref number[][] work_arrays)
+double rkf45_step(alias f, T)(double t0, double h, T[] y0, ref T[] y1, ref T[] err,
+                              ref T[][] work_arrays)
     if (is(typeof(f(0.0, [0.0,])) == double[]) ||
+        is(typeof(f(0.0, [0.0,])) == float[]) ||
         is(typeof(f(0.0, [Complex!double(0.0),Complex!double(0.0)])) == Complex!double[]))
 {
     // Assuming a system of equations, we need arrays for the intermediate data.
     size_t n = y0.length;
-    number[] k1 = work_arrays[1];
+    T[] k1 = work_arrays[1];
     if ( k1.length != y0.length ) {
         throw new Exception("Array lengths don't match the workspace and.");
     }
-    number[] k2 = work_arrays[2];
-    number[] k3 = work_arrays[3]; 
-    number[] k4 = work_arrays[4];
-    number[] k5 = work_arrays[5];
-    number[] k6 = work_arrays[6];
-    number[] ytmp = work_arrays[0];
+    T[] k2 = work_arrays[2];
+    T[] k3 = work_arrays[3]; 
+    T[] k4 = work_arrays[4];
+    T[] k5 = work_arrays[5];
+    T[] k6 = work_arrays[6];
+    T[] ytmp = work_arrays[0];
     // Build up the sample point information as per the text book descriptions.
     // We assign the result of intermediate array expressions to ytmp
     // because that's needed for D.
@@ -103,6 +101,8 @@ double rkf45_step(alias f)(double t0, double h, number[] y0,
 version(rungekutta_test) {
     import util.msg_service;
     import std.conv;
+    import nm.number;
+    import nm.complex;
     int main() {
         number[] testSystem1(double t, number[] x)
         {
@@ -121,8 +121,8 @@ version(rungekutta_test) {
         number[] x0=[to!number(0.0), to!number(0.0), to!number(0.0)];
         number[] x1=x0.dup;
         number[] err=x0.dup;
-        auto work = allocate_rk45_workspace(3);
-        double t1 = rkf45_step!(testSystem1)(0.0, 0.2, x0, x1, err, work);
+        auto work = allocate_rk45_workspace!number(3);
+        double t1 = rkf45_step!(testSystem1, number)(0.0, 0.2, x0, x1, err, work);
         assert(approxEqualNumbers(x1, solution1(t1), 1.0e-5), failedUnitTest());
 
         return 0;
