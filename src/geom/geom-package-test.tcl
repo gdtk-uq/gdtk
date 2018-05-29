@@ -15,10 +15,17 @@ set module_names [list vector3 vector3_complex \
                       properties properties_complex \
 		      line line_complex \
                       arc arc_complex \
-                      bezier helix polyline \
-		      coonspatch aopatch \
-		      tfivolume sweptsurfacevolume slabvolume wedgevolume \
-		      sgrid \
+                      bezier bezier_complex \
+                      helix helix_complex \
+                      polyline polyline_complex \
+		      coonspatch coonspatch_complex \
+                      aopatch aopatch_complex \
+		      tfivolume tfivolume_complex \
+                      sweptsurfacevolume sweptsurfacevolume_complex \
+                      wedgevolume wedgevolume_complex \
+                      slabvolume slabvolume_complex \
+		      sgrid sgrid_complex \
+		      usgrid usgrid_complex \
 		      univariatefunctions svg ]
 
 foreach name $module_names {

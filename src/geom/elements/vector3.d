@@ -183,6 +183,19 @@ struct Vector3 {
         return result;
     }
 
+    version(complex_number) {
+        // Experiment with retaining the double version.
+        Vector3 opBinary(string op)(in double rhs) const
+            if (op == "*")
+        {
+            Vector3 result;
+            result._p[0] = this._p[0] * rhs;
+            result._p[1] = this._p[1] * rhs;
+            result._p[2] = this._p[2] * rhs;
+            return result;
+        }
+    }
+
     Vector3 opBinaryRight(string op)(in number lhs) const
         if (op == "*")
     {
@@ -193,6 +206,19 @@ struct Vector3 {
         return result;
     }
 
+    version(complex_number) {
+        // Experiment with retaining the double version.
+        Vector3 opBinaryRight(string op)(in double lhs) const
+            if (op == "*")
+        {
+            Vector3 result;
+            result._p[0] = this._p[0] * lhs;
+            result._p[1] = this._p[1] * lhs;
+            result._p[2] = this._p[2] * lhs;
+            return result;
+        }
+    }
+    
     Vector3 opBinary(string op)(in number rhs) const
         if (op == "/")
     {

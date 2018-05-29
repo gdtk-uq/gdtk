@@ -30,7 +30,7 @@ public:
     }
     override Vector3 opCall(double t) const 
     {
-        return to!number((1.0-t))*p0 + to!number(t)*p1;
+        return to!number(1.0-t)*p0 + to!number(t)*p1;
     }
     override Vector3 dpdt(double t) const 
     {
