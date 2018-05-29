@@ -828,6 +828,12 @@ Complex!double pow(double z, Complex!double w) @safe pure nothrow
 @nogc
 Complex!double fabs(Complex!double z) @safe pure nothrow 
 {
+    // The standard library abs() function does not satisfy analyticity, hence will not yield correct sensitivity
+    // information when used in the flow solver. Below is an implementation that imposes analyticity, referenced from
+    // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000).
+    // A thorough explanation of the reasoning behind this implementation is provided in Martins' thesis,
+    // A Coupled-Adjoint Method For High-Fidelity Aero-Structural Optimization (pg. 42, 2003).
+    
     double x = z.re;
     if ( x < 0.0)
         return -z;
