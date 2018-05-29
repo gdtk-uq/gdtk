@@ -11,7 +11,7 @@ configure -verbose {pass start body error}
 set module_names [list bbla bbla_complex \
                       bracketing bracketing_complex \
                       gaussquad gaussquad_complex \
-                      linesearch linesearch_complex \
+                      linesearch \
                       newtoncotes newtoncotes_complex \
 		      ridder ridder_complex \
                       brent brent_complex \
