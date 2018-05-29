@@ -76,10 +76,11 @@ version(line_test) {
         auto pth = new Line(Vector3(0.0,1.0), Vector3(1.0,1.0));
         auto ps = Vector3(0.5,0.5);
         auto dir = Vector3(0.0,1.0);
-        number t;
+        double t;
         auto found = pth.intersect2D(ps, dir, t);
         assert(found, failedUnitTest()); // "intersect2D not found on Line"
-        assert(approxEqualNumbers(t,0.5), failedUnitTest()); // "intersect2D parametric location on Line"
+        // intersect2D parametric location on Line
+        assert(approxEqual(t,0.5), failedUnitTest());
         return 0;
     }
 } // end line_test

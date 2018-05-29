@@ -851,7 +851,7 @@ version(properties_test) {
     int main() {
         Vector3 bb0 = Vector3(1.0, 1.0, 1.0);
         Vector3 bb1 = Vector3(2.0, 2.0, 2.0);
-        Vector3 p = 0.5*(bb0 + bb1);
+        Vector3 p = to!number(0.5)*(bb0 + bb1);
         assert(inside_bounding_box(p, bb0, bb1, 3), failedUnitTest());
         p += Vector3(0.0, 0.0, 1.0);
         assert(!inside_bounding_box(p, bb0, bb1, 3), failedUnitTest());
@@ -886,14 +886,14 @@ version(properties_test) {
         Vector3 centroid, n, t1, t2;
         number area;
         triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
-        assert(approxEqual(area, 0.5), failedUnitTest());
+        assert(approxEqualNumbers(area, to!number(0.5)), failedUnitTest());
         assert(approxEqualVectors(centroid, Vector3(2.0/3,1.0/3,1.0)), failedUnitTest());
         assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), failedUnitTest());
         assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
         assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), failedUnitTest());
 
         quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
-        assert(approxEqual(area, 1.0), failedUnitTest());
+        assert(approxEqualNumbers(area, to!number(1.0)), failedUnitTest());
         assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0)), failedUnitTest());
         assert(approxEqualVectors(n, Vector3(0.0,0.0,1.0)), failedUnitTest());
         assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
@@ -910,7 +910,7 @@ version(properties_test) {
         number volume;
         tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
         assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), failedUnitTest());
-        assert(approxEqual(volume, cos(radians(30))*0.5*dz/3), failedUnitTest());
+        assert(approxEqualNumbers(volume, to!number(cos(radians(30))*0.5*dz/3)), failedUnitTest());
 
         // Build a wedge with the same equilateral-triangle base.
         Vector3 incz = Vector3(0, 0, -1.0);
@@ -919,7 +919,7 @@ version(properties_test) {
         Vector3 p5 = p2 + incz;
         wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
         assert(approxEqualVectors(centroid, Vector3(dx,0.5,-0.5)), failedUnitTest());
-        assert(approxEqual(volume, cos(radians(30))*0.5*1.0), failedUnitTest());
+        assert(approxEqualNumbers(volume, to!number(cos(radians(30))*0.5*1.0)), failedUnitTest());
 
         // Pyramid
         p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
@@ -927,7 +927,7 @@ version(properties_test) {
         p4 = Vector3(0.5,0.5,1); // peak
         pyramid_properties(p0, p1, p2, p3, p4, centroid, volume);
         assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0/4)), failedUnitTest());
-        assert(approxEqual(volume, 1.0/3), failedUnitTest());
+        assert(approxEqualNumbers(volume, to!number(1.0/3)), failedUnitTest());
 
         // Simple cube for the hex cell.
         p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
@@ -938,7 +938,7 @@ version(properties_test) {
         hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, centroid, volume,
                             iLen, jLen, kLen);
         assert(approxEqualVectors(centroid, Vector3(0.5,0.5,0.5)), failedUnitTest());
-        assert(approxEqual(volume, 1.0), failedUnitTest());
+        assert(approxEqualNumbers(volume, to!number(1.0)), failedUnitTest());
 
         d = Vector3(0.65, 0.0, 0.0);
         e = Vector3(0.65, -0.1, 0.0);

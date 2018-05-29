@@ -86,12 +86,12 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
 version(projection_test) {
     import util.msg_service;
     int main() {
-        number t_intersection;
+        double t_intersection;
         bool foundIntersection = intersect2D(Vector3(0.0,1.0), Vector3(1.0,1.0),
                                              Vector3(0.5,0.5), Vector3(0.0,1.0),
                                              t_intersection);
         assert(foundIntersection, failedUnitTest());
-        assert(approxEqualNumbers(t_intersection, to!number(0.5)), failedUnitTest());
+        assert(approxEqual(t_intersection, 0.5), failedUnitTest());
 
         // Projection onto a plane.
         Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c

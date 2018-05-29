@@ -11,8 +11,11 @@ namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
 set module_names [list vector3 vector3_complex \
-                      projection properties \
-		      line arc bezier helix polyline \
+                      projection projection_complex \
+                      properties properties_complex \
+		      line line_complex \
+                      arc arc_complex \
+                      bezier helix polyline \
 		      coonspatch aopatch \
 		      tfivolume sweptsurfacevolume slabvolume wedgevolume \
 		      sgrid \

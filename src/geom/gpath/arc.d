@@ -108,7 +108,7 @@ class Arc3 : Arc {
     this(in Vector3 a, in Vector3 m, in Vector3 b)
     {
         Vector3 n = cross(m - a, m - b); // normal to plane of arc
-        if (geom.abs(n) <= 1.0e-11) {
+        if (geom.abs(n).re <= 1.0e-11) {
             throw new Error(text("Arc3: Points appear colinear.",
                                  " a=", to!string(a),
                                  " m=", to!string(m),
@@ -175,10 +175,10 @@ version(arc_test) {
         auto pth = new Arc3(Vector3(0.0,1.0), Vector3(0.5,1.2), Vector3(1.0,1.0));
         auto ps = Vector3(0.5,0.5);
         auto dir = Vector3(0.0,1.0);
-        number t;
+        double t;
         auto found = pth.intersect2D(ps, dir, t, 10);
         assert(found, failedUnitTest()); // intersect2D not found on Arc3
-        assert(approxEqualNumbers(t,0.5), failedUnitTest()); // intersect2D parametric location on Arc3
+        assert(approxEqual(t,0.5), failedUnitTest()); // intersect2D parametric location on Arc3
         return 0;
     }
 } // end arc_test
