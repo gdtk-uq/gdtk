@@ -15,6 +15,8 @@ import std.stdio;
 import std.format;
 import std.math;
 import gzip;
+import nm.complex;
+import nm.number;
 
 import geom;
 
@@ -672,9 +674,9 @@ public:
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
-                    xyz[0] = this[i,j,k].x;
-                    xyz[1] = this[i,j,k].y;
-                    xyz[2] = this[i,j,k].z;
+                    xyz[0] = this[i,j,k].x.re;
+                    xyz[1] = this[i,j,k].y.re;
+                    xyz[2] = this[i,j,k].z.re;
                     f.rawWrite(xyz);
                 }
             }
@@ -696,7 +698,7 @@ public:
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
                     f.writefln("%.18e %.18e %.18e", 
-                               this[i,j,k].x, this[i,j,k].y, this[i,j,k].z);
+                               this[i,j,k].x.re, this[i,j,k].y.re, this[i,j,k].z.re);
                 }
             }
         }
@@ -843,8 +845,8 @@ public:
         foreach (j; 0 ..njv) {
             foreach (i; 0 .. niv) {
                 if (symmetric) {
-                    *(newg[i,j,0]) = *(this[i,j,0]) - 0.5*dz;
-                    *(newg[i,j,1]) = *(this[i,j,0]) + 0.5*dz;
+                    *(newg[i,j,0]) = *(this[i,j,0]) - to!number(0.5)*dz;
+                    *(newg[i,j,1]) = *(this[i,j,0]) + to!number(0.5)*dz;
                 } else {
                     *(newg[i,j,0]) = *(this[i,j,0]);
                     *(newg[i,j,1]) = *(this[i,j,0]) + dz;
@@ -870,17 +872,17 @@ public:
                 // We want to rotate the point about the x-axis, according to the right-hand rule.
                 // Angles are measured from the y-axis, positive as we swing around toward the z-axis.
                 // Refer to PJ's workbook page 36, 2017-07-01
-                double r = sqrt((p0.y)^^2 + (p0.z)^^2);
-                double theta0 = atan2(p0.z, p0.y);
+                double r = sqrt((p0.y)^^2 + (p0.z)^^2).re;
+                double theta0 = atan2(p0.z, p0.y).re;
                 if (symmetric) {
                     double theta1 = theta0-0.5*dtheta;
-                    newg[i,j,0].set(p0.x, r*cos(theta1), r*sin(theta1));
+                    newg[i,j,0].set(p0.x.re, r*cos(theta1), r*sin(theta1));
                     theta1 = theta0+0.5*dtheta;
-                    newg[i,j,1].set(p0.x, r*cos(theta1), r*sin(theta1));
+                    newg[i,j,1].set(p0.x.re, r*cos(theta1), r*sin(theta1));
                 } else {
                     *(newg[i,j,0]) = *p0;
                     double theta1 = theta0+dtheta;
-                    newg[i,j,1].set(p0.x, r*cos(theta1), r*sin(theta1));
+                    newg[i,j,1].set(p0.x.re, r*cos(theta1), r*sin(theta1));
                 }
             }
         }

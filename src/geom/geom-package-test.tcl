@@ -10,7 +10,8 @@ package require tcltest 2.0
 namespace import ::tcltest::*
 configure -verbose {pass start body error}
 
-set module_names [list vector3 projection properties \
+set module_names [list vector3 vector3_complex \
+                      projection properties \
 		      line arc bezier helix polyline \
 		      coonspatch aopatch \
 		      tfivolume sweptsurfacevolume slabvolume wedgevolume \
@@ -18,12 +19,12 @@ set module_names [list vector3 projection properties \
 		      univariatefunctions svg ]
 
 foreach name $module_names {
-    test $name-test "Testing $name.d" \
+    test ${name}_test "Testing $name.d" \
 	-body "exec [join [list ./ $name _test] {}]" \
 	-result {} -returnCodes {0}
 }
 
-# test bbla-test {Testing bbla.d} -body {
+# test bbla_test {Testing bbla.d} -body {
 #     exec ./bbla_test
 # } -result {} -returnCodes {0}
 

@@ -7,7 +7,8 @@ INSTALL_DIR ?= $(HOME)/dgdinst
 BUILD_DIR := ../../build
 REVISION_STRING := $(shell hg identify --id --num --branch --tags)
 
-TEST_PROGRAMS := vector3_test projection_test properties_test\
+TEST_PROGRAMS := vector3_test vector3_complex_test \
+	projection_test properties_test\
 	line_test arc_test bezier_test helix_test polyline_test \
 	coonspatch_test aopatch_test \
 	tfivolume_test sweptsurfacevolume_test \
@@ -37,7 +38,9 @@ NM_DIR := ../nm
 NM_FILES := $(NM_DIR)/ridder.d \
 	$(NM_DIR)/bbla.d \
 	$(NM_DIR)/linesearch.d \
-	$(NM_DIR)/nelmin.d
+	$(NM_DIR)/nelmin.d \
+	$(NM_DIR)/complex.d \
+	$(NM_DIR)/number.d
 
 LUA_DIR := ../../extern/lua-5.1.4
 LIBLUA := $(LUA_DIR)/lib/liblua.a
@@ -117,6 +120,10 @@ foamMesh: foamMesh.d $(LIBLUA) $(GEOM_FILES) $(GEOM_LUA_FILES) $(GZIP_FILES) $(N
 
 vector3_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
 	dmd -of$@ -debug -g -w -version=$@ \
+		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
+
+vector3_complex_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d
+	dmd -of$@ -debug -g -w -version=vector3_test -version=complex_numbers \
 		$(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d $(DLINKFLAGS)
 
 projection_test: $(GEOM_D_FILES) $(GZIP_FILES) $(NM_FILES) $(UTIL_DIR)/msg_service.d

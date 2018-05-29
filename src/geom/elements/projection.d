@@ -5,6 +5,9 @@
 module geom.elements.projection;
 
 import std.math;
+import std.conv;
+import nm.complex;
+import nm.number;
 import geom.elements.vector3;
 
 @nogc
@@ -22,12 +25,12 @@ bool intersect2D(const Vector3 p0, const Vector3 p1, const Vector3 ps, const Vec
 //     false, if the lines are parallel
 // See PJ's workbook page 34, 2017-06-24 for notation and derivation.
 {
-    double delx = p1.x-p0.x;
-    double dely = p1.y-p0.y;
-    double denom = delx*d.y - dely*d.x;
-    double segmentSize = fabs(delx)+fabs(dely);
+    number delx = p1.x-p0.x;
+    number dely = p1.y-p0.y;
+    number denom = delx*d.y - dely*d.x;
+    number segmentSize = fabs(delx)+fabs(dely);
     if (fabs(denom) < 1.0e-16*segmentSize) { return false; } // d is parallel to line segment
-    t = ((ps.x-p0.x)*d.y - (ps.y-p0.y)*d.x)/denom;
+    t = ((ps.x-p0.x)*d.y - (ps.y-p0.y)*d.x).re/denom.re;
     return true;
 } // end intersect2D()
 
@@ -48,10 +51,10 @@ int project_onto_plane(ref Vector3 q, ref const(Vector3) qr,
 
     // Define a plane Ax + By + Cz = D using the corners of the triangle abc.
     Vector3 N = cross(a-c, b-c); // N = Vector3(A, B, C)
-    double D = dot(a, N);
+    number D = dot(a, N);
 
-    double numer = D - dot(q, N);
-    double denom = dot(qr, N);
+    number numer = D - dot(q, N);
+    number denom = dot(qr, N);
 
     double tol = 1.0e-12;  // floating point tolerance
     if ( fabs(denom) < tol ) {
@@ -67,13 +70,13 @@ int project_onto_plane(ref Vector3 q, ref const(Vector3) qr,
 } // end project_onto_plane()
 
 /// Map space so that a neutral plane wraps onto a cylinder of radius H.
-ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, double H)
+ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, number H)
 {
     // The axis of the hypothetical cylinder coincides with the x-axis thus
     // H is also the distance of the neutral plane above the x-axis.
     // For Hannes Wojciak and Paul Petrie-Repar's turbomachinery grids.
     if ( H > 0.0 ) {
-        double theta = p.y / H;
+        number theta = p.y / H;
         p.set(p.x, p.z*sin(theta), p.z*cos(theta));
     }
     return p;
@@ -83,12 +86,12 @@ ref Vector3 map_neutral_plane_to_cylinder(ref Vector3 p, double H)
 version(projection_test) {
     import util.msg_service;
     int main() {
-        double t_intersection;
+        number t_intersection;
         bool foundIntersection = intersect2D(Vector3(0.0,1.0), Vector3(1.0,1.0),
                                              Vector3(0.5,0.5), Vector3(0.0,1.0),
                                              t_intersection);
         assert(foundIntersection, failedUnitTest());
-        assert(approxEqual(t_intersection, 0.5), failedUnitTest());
+        assert(approxEqualNumbers(t_intersection, to!number(0.5)), failedUnitTest());
 
         // Projection onto a plane.
         Vector3 a = Vector3(1.0, 0.0, 0.0); // plane through a,b,c
@@ -101,7 +104,7 @@ version(projection_test) {
 
         // projection onto a cylinder.
         Vector3 myp = Vector3(1.0, 1.0, 1.0);
-        map_neutral_plane_to_cylinder(myp, 1.0);
+        map_neutral_plane_to_cylinder(myp, to!number(1.0));
         assert(approxEqualVectors(myp, Vector3(1.0, sin(1.0), cos(1.0))), failedUnitTest());
         return 0;
     }

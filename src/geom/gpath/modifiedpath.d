@@ -6,6 +6,9 @@ module geom.gpath.modifiedpath;
 import std.conv;
 import std.math;
 
+import nm.complex;
+import nm.number;
+
 import geom.elements;
 import geom.gpath.path;
 
@@ -25,12 +28,13 @@ public:
     override Vector3 dpdt(double t) const
     {
         double tdsh = underlying_t(t);
-        return underlying_path.dpdt(tdsh)*d_underlying_t_dt(tdsh);
+        return underlying_path.dpdt(tdsh)*to!number(d_underlying_t_dt(tdsh));
     }
     override Vector3 d2pdt2(double t) const
     {
         double tdsh = underlying_t(t);
-        return underlying_path.d2pdt2(tdsh)*pow(d_underlying_t_dt(tdsh), 2) + underlying_path.dpdt(tdsh)*d2_underlying_t_dt2(tdsh);
+        return underlying_path.d2pdt2(tdsh)*to!number(pow(d_underlying_t_dt(tdsh),2)) +
+            underlying_path.dpdt(tdsh)*to!number(d2_underlying_t_dt2(tdsh));
     }
     abstract override string toString() const
     {
@@ -89,7 +93,7 @@ protected:
         foreach (i; 1 .. N+1) {
             p1 = underlying_path(dt * i);
             Vector3 dp = p1 - p0;
-            L += geom.abs(dp);
+            L += geom.abs(dp).re;
             arc_length_vector ~= L;
             p0 = p1;
         }
@@ -97,8 +101,8 @@ protected:
     override double underlying_t(double t) const
     {
         // The incoming parameter value, t, is proportional to arc_length fraction.
-        if (t <= 0.0) return 0.0;
-        if (t >= 1.0) return 1.0;
+        if (t <= 0.0) { return 0.0; }
+        if (t >= 1.0) { return 1.0; }
         // Do a reverse look-up from the arc_length fraction to the original t parameter
         // of the underlying Path.
         double L_target = t * arc_length_vector[$-1];
@@ -130,14 +134,14 @@ private:
     {
         // "t" is underlying_t
         Vector3 dpdt = underlying_path.dpdt(t);
-        return geom.abs(dpdt)/arc_length_vector[$-1];
+        return geom.abs(dpdt).re / arc_length_vector[$-1];
     }
     double d2_arc_f_dt2(double t) const
     {
         // "t" is underlying_t
         //chain rule on d_arc_f_dt
         Vector3 dpdt = underlying_path.dpdt(t);
-        return dot(unit(dpdt),underlying_path.d2pdt2(t))/arc_length_vector[$-1];
+        return dot(unit(dpdt),underlying_path.d2pdt2(t)).re / arc_length_vector[$-1];
     }
 } // end class ArcLengthParameterizedPath
 
@@ -180,7 +184,7 @@ protected:
     }
     override double d2_underlying_t_dt2(double t) const
     {
-        return 0;
+        return 0.0;
     }
 } // end class SubRangedPath
 

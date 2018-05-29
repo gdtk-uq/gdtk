@@ -16,6 +16,8 @@ import std.algorithm;
 import std.format;
 import std.math;
 import gzip;
+import nm.complex;
+import nm.number;
 
 import geom;
 import paver: PavedGrid, POINT_LIST, FACE_LIST, CELL_LIST;
@@ -447,7 +449,7 @@ public:
     {
         double[][] boundary_points;
         foreach(p; boundary){
-            boundary_points ~= [p._p[0], p._p[1], p._p[2]];
+            boundary_points ~= [p._p[0].re, p._p[1].re, p._p[2].re];
         }
         PavedGrid grid = new PavedGrid(boundary_points);
         super(Grid_t.unstructured_grid, grid.dimensions,
@@ -893,21 +895,21 @@ public:
             auto p0 = vertices[vtx_id_list[0]];
             auto p1 = vertices[vtx_id_list[1]];
             auto p2 = vertices[vtx_id_list[2]];
-            varea = 0.5 * cross(p1-p0, p2-p0);
+            varea = to!number(0.5) * cross(p1-p0, p2-p0);
             break;
         default:
             Vector3 pmid = Vector3(0,0,0);
             foreach (vid; vtx_id_list) { pmid += vertices[vid]; }
-            pmid /= nv;
+            pmid /= to!number(nv);
             // Compute the vector area is triangle sections.
             foreach (i; 0 .. nv-1) {
                 auto p0 = vertices[vtx_id_list[i]];
                 auto p1 = vertices[vtx_id_list[i+1]];
-                varea += 0.5 * cross(p1-p0, pmid-p0);
+                varea += to!number(0.5) * cross(p1-p0, pmid-p0);
             }
             auto p0 = vertices[vtx_id_list[nv-1]];
             auto p1 = vertices[vtx_id_list[0]];
-            varea += 0.5 * cross(p1-p0, pmid-p0);
+            varea += to!number(0.5) * cross(p1-p0, pmid-p0);
         }
         return varea;
     } // end vectorAreaOfFacet
@@ -916,7 +918,7 @@ public:
     {
         Vector3 varea = Vector3(0,0,0);
         foreach (j, fid; c.face_id_list) {
-            varea += c.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
+            varea += to!number(c.outsign_list[j]) * vectorAreaOfFacet(faces[fid].vtx_id_list);
         }
         return varea;
     } // end vectorAreaOfCell
@@ -1196,7 +1198,7 @@ public:
                 // a counter-clockwise cycle when viewed from outside of the cell.
                 // We expect negative volumes for the pyramid having the cell's
                 // midpoint as its apex.
-                Vector3 vmid = 0.25*( *(v[0]) + *(v[1]) + *(v[2]) + *(v[3]) );
+                Vector3 vmid = to!number(0.25)*( *(v[0]) + *(v[1]) + *(v[2]) + *(v[3]) );
                 onLeft = (tetragonal_dipyramid_volume(*(v[0]), *(v[1]), *(v[2]), *(v[3]),
                                                       vmid, cell_centroid) < 0.0);
                 break;
@@ -1227,7 +1229,7 @@ public:
             // define the face normal. Whether a face points out of or into a cell
             // will be determined and remembered when we add the face to the cell.
             Vector3 centroid;
-            double volume;
+            number volume;
             compute_cell_properties(i, centroid, volume);
             if (dimensions == 2) {
                 switch(cell.cell_type) {
@@ -1359,7 +1361,7 @@ public:
         Vector3 varea = Vector3(0,0,0);
         foreach (b; boundaries) {
             foreach (j, fid; b.face_id_list) {
-                varea += b.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
+                varea += to!number(b.outsign_list[j]) * vectorAreaOfFacet(faces[fid].vtx_id_list);
             }
         }  
         double relTol=1.0e-9; double absTol=1.0e-9;
@@ -1428,7 +1430,7 @@ public:
         fout.rawWrite(buf5);
         double[3] xyz;
         foreach (v; vertices) {
-            xyz[0] = v.x; xyz[1] = v.y; xyz[2] = v.z;
+            xyz[0] = v.x.re; xyz[1] = v.y.re; xyz[2] = v.z.re;
             fout.rawWrite(xyz);
         }
         foreach (f; faces) { f.rawWrite(fout); }
@@ -2003,7 +2005,7 @@ public:
         Vector3 varea = Vector3(0,0,0);
         foreach (b; boundaries) {
             foreach (j, fid; b.face_id_list) {
-                varea += b.outsign_list[j] * vectorAreaOfFacet(faces[fid].vtx_id_list);
+                varea += to!number(b.outsign_list[j]) * vectorAreaOfFacet(faces[fid].vtx_id_list);
             }
         }  
         if (!approxEqualVectors(varea, Vector3(0,0,0), relTol, absTol)) {

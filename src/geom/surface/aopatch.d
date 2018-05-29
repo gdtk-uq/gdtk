@@ -6,6 +6,9 @@ import std.conv;
 import std.math;
 import std.stdio;
 
+import nm.complex;
+import nm.number;
+
 import geom.elements;
 import geom.gpath;
 import geom.surface.coonspatch;
@@ -124,10 +127,10 @@ public:
         double local_r = (r - dr * ix_coarse) / dr;
         double local_s = (s - ds * iy_coarse) / ds;
         // BiLinear interpolation for each component.
-        Vector3 p = (1.0 - local_r) * (1.0 - local_s) * _bgmesh[ix_coarse][iy_coarse] +
-            (1.0 - local_r) * local_s * _bgmesh[ix_coarse][iy_coarse + 1] +
-            local_r * (1.0 - local_s) * _bgmesh[ix_coarse + 1][iy_coarse] +
-            local_r * local_s * _bgmesh[ix_coarse + 1][iy_coarse + 1];
+        Vector3 p = to!number((1.0-local_r)*(1.0-local_s)) * _bgmesh[ix_coarse][iy_coarse] +
+            to!number((1.0-local_r)*local_s) * _bgmesh[ix_coarse][iy_coarse + 1] +
+            to!number(local_r*(1.0-local_s)) * _bgmesh[ix_coarse + 1][iy_coarse] +
+            to!number(local_r*local_s) * _bgmesh[ix_coarse + 1][iy_coarse + 1];
         return p;
     } // end opCall()
 
@@ -175,18 +178,18 @@ private:
             foreach (ix; 1 .. _nx) {
                 foreach (iy; 1 .. _ny) {
                     // Save the old position.
-                    double x_old = _bgmesh[ix][iy].x;
-                    double y_old = _bgmesh[ix][iy].y;
+                    double x_old = _bgmesh[ix][iy].x.re;
+                    double y_old = _bgmesh[ix][iy].y.re;
                     // Calculate the partial derivatives.
-                    double dxdXi = (_bgmesh[ix+1][iy].x - _bgmesh[ix-1][iy].x) / (2.0 * dXi);
-                    double dxdEta = (_bgmesh[ix][iy+1].x - _bgmesh[ix][iy-1].x) / (2.0 * dEta);
-                    double d2xdXidEta = ((_bgmesh[ix+1][iy+1].x - _bgmesh[ix-1][iy+1].x) -
-                                         (_bgmesh[ix+1][iy-1].x - _bgmesh[ix-1][iy-1].x)) / 
+                    double dxdXi = (_bgmesh[ix+1][iy].x.re - _bgmesh[ix-1][iy].x.re) / (2.0 * dXi);
+                    double dxdEta = (_bgmesh[ix][iy+1].x.re - _bgmesh[ix][iy-1].x.re) / (2.0 * dEta);
+                    double d2xdXidEta = ((_bgmesh[ix+1][iy+1].x.re - _bgmesh[ix-1][iy+1].x.re) -
+                                         (_bgmesh[ix+1][iy-1].x.re - _bgmesh[ix-1][iy-1].x.re)) / 
                         (4.0 * dXi * dEta);
-                    double dydXi = (_bgmesh[ix+1][iy].y - _bgmesh[ix-1][iy].y) / (2.0 * dXi);
-                    double dydEta = (_bgmesh[ix][iy+1].y - _bgmesh[ix][iy-1].y) / (2.0 * dEta);
-                    double d2ydXidEta = ((_bgmesh[ix+1][iy+1].y - _bgmesh[ix-1][iy+1].y) -
-                                         (_bgmesh[ix+1][iy-1].y - _bgmesh[ix-1][iy-1].y)) / 
+                    double dydXi = (_bgmesh[ix+1][iy].y.re - _bgmesh[ix-1][iy].y.re) / (2.0 * dXi);
+                    double dydEta = (_bgmesh[ix][iy+1].y.re - _bgmesh[ix][iy-1].y.re) / (2.0 * dEta);
+                    double d2ydXidEta = ((_bgmesh[ix+1][iy+1].y.re - _bgmesh[ix-1][iy+1].y.re) -
+                                         (_bgmesh[ix+1][iy-1].y.re - _bgmesh[ix-1][iy-1].y.re)) / 
                         (4.0 * dXi * dEta);
                     // Calculate intermediate quantities
                     double B = dxdXi * dydEta + dxdEta * dydXi;
@@ -197,19 +200,19 @@ private:
                     double g11 = dxdXi * dxdXi + dydXi * dydXi;
                     double g22 = dxdEta * dxdEta + dydEta * dydEta;
                     // Update the node position.
-                    double numer = Ax + g22 * dEta2 * (_bgmesh[ix+1][iy].x + _bgmesh[ix-1][iy].x) +
-                        g11 * dXi2 * (_bgmesh[ix][iy+1].x + _bgmesh[ix][iy-1].x);
+                    double numer = Ax + g22 * dEta2 * (_bgmesh[ix+1][iy].x.re + _bgmesh[ix-1][iy].x.re) +
+                        g11 * dXi2 * (_bgmesh[ix][iy+1].x.re + _bgmesh[ix][iy-1].x.re);
                     double denom = 2.0 * (g22 * dEta2 + g11 * dXi2);
                     _bgmesh[ix][iy].refx = numer / denom;
 
-                    numer = Ay + g22 * dEta2 * (_bgmesh[ix+1][iy].y + _bgmesh[ix-1][iy].y) +
-                        g11 * dXi2 * (_bgmesh[ix][iy+1].y + _bgmesh[ix][iy-1].y);
+                    numer = Ay + g22 * dEta2 * (_bgmesh[ix+1][iy].y.re + _bgmesh[ix-1][iy].y.re) +
+                        g11 * dXi2 * (_bgmesh[ix][iy+1].y.re + _bgmesh[ix][iy-1].y.re);
                     denom = 2.0 * (g22 * dEta2 + g11 * dXi2);
                     _bgmesh[ix][iy].refy = numer / denom;
-                    double dx = fabs(_bgmesh[ix][iy].x - x_old);
-                    double dy = fabs(_bgmesh[ix][iy].y - y_old);
-                    if ( dx > largest_x_move ) largest_x_move = dx;
-                    if ( dy > largest_y_move ) largest_y_move = dy;
+                    double dx = fabs(_bgmesh[ix][iy].x - x_old).re;
+                    double dy = fabs(_bgmesh[ix][iy].y - y_old).re;
+                    if (dx > largest_x_move) largest_x_move = dx;
+                    if (dy > largest_y_move) largest_y_move = dy;
                     // writefln("Iteration %d node[%d, %d] x,y(%f, %f)\n",
                     //          count, ix, iy, _bgmesh[ix][iy].x, _bgmesh[ix][iy].y);
                 } //iy loop

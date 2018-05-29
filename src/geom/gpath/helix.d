@@ -5,6 +5,8 @@ module geom.gpath.helix;
 
 import std.conv;
 import std.math;
+import nm.complex;
+import nm.number;
 
 import geom.elements;
 import geom.gpath.path;
@@ -49,12 +51,12 @@ public:
         ydsh = cross(zdsh,xdsh);
         a0 = axis0 + dot(b,zdsh)*zdsh;
         a1 = axis0 + dot(c,zdsh)*zdsh;
-        r0 = dot(b,xdsh);
+        r0 = dot(b,xdsh).re;
         Vector3 a1c = c - dot(c,zdsh)*zdsh;
-        r1 = geom.abs(a1c);
+        r1 = geom.abs(a1c).re;
         Vector3 origin = Vector3(0.0, 0.0, 0.0);
         a1c.transform_to_local_frame(xdsh, ydsh, zdsh, origin);
-        theta01 = atan2(a1c.y, a1c.x);
+        theta01 = atan2(a1c.y.re, a1c.x.re);
     }
     this(ref const(Helix) other)
     {
@@ -71,7 +73,8 @@ public:
     {
         double r = r0*(1.0-t) + r1*t;
         double theta = theta01 * t;
-        Vector3 p = r*cos(theta)*xdsh + r*sin(theta)*ydsh + a0*(1.0-t) + a1*t;
+        Vector3 p = to!number(r*cos(theta))*xdsh + to!number(r*sin(theta))*ydsh +
+            a0*to!number(1.0-t) + a1*to!number(t);
         return p;
     }
     override string toString() const

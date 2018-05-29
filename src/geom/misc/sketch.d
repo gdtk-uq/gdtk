@@ -26,6 +26,9 @@ import std.math;
 import std.string;
 import std.algorithm;
 
+import nm.complex;
+import nm.number;
+
 import svg;
 version(with_libplot) {
     import libplot;
@@ -213,7 +216,7 @@ public:
     void apply_transform(string transform_name, ref Vector3 p, ref double w)
     {
         double[4] ph; // homogeneous coordinate representation
-        ph[0] = p.x; ph[1] = p.y; ph[2] = p.z; ph[3] = w;
+        ph[0] = p.x.re; ph[1] = p.y.re; ph[2] = p.z.re; ph[3] = w;
         switch (transform_name) {
         case "view":
             matrix_vector_multiply(view_mat, ph);
@@ -238,12 +241,12 @@ public:
         Vector3 znew = (eye - centre).normalize();
         Vector3 xnew = (cross(up, znew)).normalize();
         Vector3 ynew = (cross(znew, xnew)).normalize();
-        view_mat[0][0] = xnew.x; view_mat[0][1] = xnew.y; view_mat[0][2] = xnew.z;
-        view_mat[1][0] = ynew.x; view_mat[1][1] = ynew.y; view_mat[1][2] = ynew.z;
-        view_mat[2][0] = znew.x; view_mat[2][1] = znew.y; view_mat[2][2] = znew.z;
-        view_mat[0][3] = -(dot(centre,xnew));
-        view_mat[1][3] = -(dot(centre,ynew));
-        view_mat[2][3] = -(dot(centre,znew));
+        view_mat[0][0] = xnew.x.re; view_mat[0][1] = xnew.y.re; view_mat[0][2] = xnew.z.re;
+        view_mat[1][0] = ynew.x.re; view_mat[1][1] = ynew.y.re; view_mat[1][2] = ynew.z.re;
+        view_mat[2][0] = znew.x.re; view_mat[2][1] = znew.y.re; view_mat[2][2] = znew.z.re;
+        view_mat[0][3] = -(dot(centre,xnew).re);
+        view_mat[1][3] = -(dot(centre,ynew).re);
+        view_mat[2][3] = -(dot(centre,znew).re);
         view_mat[3][0] = 0.0; view_mat[3][1] = 0.0; view_mat[3][2] = 0.0; view_mat[3][3] = 1.0;
     } // end look_at()
     
@@ -415,8 +418,8 @@ public:
         double w0 = 1.0; double w1 = 1.0;
         apply_transform("view", p0tmp, w0); apply_transform("view", p1tmp, w1);
         apply_transform("projection", p0tmp, w0); apply_transform("projection", p1tmp, w1);
-        auto x0 = toCanvasX(p0tmp.x); auto y0 = toCanvasY(p0tmp.y);
-        auto x1 = toCanvasX(p1tmp.x); auto y1 = toCanvasY(p1tmp.y);
+        auto x0 = toCanvasX(p0tmp.x.re); auto y0 = toCanvasY(p0tmp.y.re);
+        auto x1 = toCanvasX(p1tmp.x.re); auto y1 = toCanvasY(p1tmp.y.re);
         final switch(myRenderer) {
         case Renderer.svg:
             svg.line(x0, y0, x1, y1, dashed);
@@ -448,7 +451,7 @@ public:
         }           
         double[] xlist, ylist;
         foreach(p; ptmp) {
-            xlist ~= toCanvasX(p.x); ylist ~= toCanvasY(p.y);
+            xlist ~= toCanvasX(p.x.re); ylist ~= toCanvasY(p.y.re);
         }
         final switch(myRenderer) {
         case Renderer.svg:
@@ -483,7 +486,7 @@ public:
         }           
         double[] xlist, ylist;
         foreach(p; ptmp) {
-            xlist ~= toCanvasX(p.x); ylist ~= toCanvasY(p.y);
+            xlist ~= toCanvasX(p.x.re); ylist ~= toCanvasY(p.y.re);
         }
         final switch(myRenderer) {
         case Renderer.svg:
@@ -524,9 +527,9 @@ public:
              bool dashed=false)
     {
         // This is a purely 2D xy-plane function.
-        double x0 = toCanvasX(p0.x); double y0 = toCanvasY(p0.y);
-        double x1 = toCanvasX(p1.x); double y1 = toCanvasY(p1.y);
-        double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
+        double x0 = toCanvasX(p0.x.re); double y0 = toCanvasY(p0.y.re);
+        double x1 = toCanvasX(p1.x.re); double y1 = toCanvasY(p1.y.re);
+        double xc = toCanvasX(pc.x.re); double yc = toCanvasY(pc.y.re);
         final switch(myRenderer) {
         case Renderer.svg:
             svg.arc(x0, y0, x1, y1, xc, yc, dashed);
@@ -553,7 +556,7 @@ public:
     {
         // This is a purely 2D xy-plane function.
         // r is in mm on the canvas.
-        double xc = toCanvasX(pc.x); double yc = toCanvasY(pc.y);
+        double xc = toCanvasX(pc.x.re); double yc = toCanvasY(pc.y.re);
         final switch(myRenderer) {
         case Renderer.svg:
             svg.circle(xc, yc, r, fill, stroke, dashed);
@@ -595,10 +598,10 @@ public:
         apply_transform("view", p2tmp, w2); apply_transform("view", p3tmp, w3);
         apply_transform("projection", p0tmp, w0); apply_transform("projection", p1tmp, w1);
         apply_transform("projection", p2tmp, w2); apply_transform("projection", p3tmp, w3);
-        double x0 = toCanvasX(p0tmp.x); double y0 = toCanvasY(p0tmp.y);
-        double x1 = toCanvasX(p1tmp.x); double y1 = toCanvasY(p1tmp.y);
-        double x2 = toCanvasX(p2tmp.x); double y2 = toCanvasY(p2tmp.y);
-        double x3 = toCanvasX(p3tmp.x); double y3 = toCanvasY(p3tmp.y);
+        double x0 = toCanvasX(p0tmp.x.re); double y0 = toCanvasY(p0tmp.y.re);
+        double x1 = toCanvasX(p1tmp.x.re); double y1 = toCanvasY(p1tmp.y.re);
+        double x2 = toCanvasX(p2tmp.x.re); double y2 = toCanvasY(p2tmp.y.re);
+        double x3 = toCanvasX(p3tmp.x.re); double y3 = toCanvasY(p3tmp.y.re);
         final switch(myRenderer) {
         case Renderer.svg:
             svg.bezier3(x0, y0, x1, y1, x2, y2, x3, y3, dashed);
@@ -629,7 +632,7 @@ public:
         Vector3 p_tmp = Vector3(p);
         double w_p = 1.0; double w_dir = 1.0; double w_n = 1.0;
         apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
-        double xp = toCanvasX(p_tmp.x); double yp = toCanvasY(p_tmp.y);
+        double xp = toCanvasX(p_tmp.x.re); double yp = toCanvasY(p_tmp.y.re);
         final switch(myRenderer) {
         case Renderer.svg:
             svg.text(xp, yp, textString, angle, anchor, fontSize, colour, fontFamily);
@@ -667,7 +670,7 @@ public:
     {
         Vector3 p_tmp = Vector3(p); double w_p = 1.0;
         apply_transform("view", p_tmp, w_p); apply_transform("projection", p_tmp, w_p);
-        double xp = toCanvasX(p_tmp.x); double yp = toCanvasY(p_tmp.y);
+        double xp = toCanvasX(p_tmp.x.re); double yp = toCanvasY(p_tmp.y.re);
         final switch(myRenderer) {
         case Renderer.svg:
             svg.dotlabel(xp, yp, label, anchor, dotSize, fontSize, colour, fontFamily);
@@ -753,14 +756,14 @@ public:
         begin_group(); // Keep tic marks together
         line(p0, p1);
         foreach(i; 0 .. n+1) {
-            Vector3 p = p0 + i*dp;
+            Vector3 p = p0 + to!number(i)*dp;
             Vector3 p2 = p+dpTic;
             line(p, p2);
         }
         end_group();
         // Label the tic marks
         foreach(i; 0 .. n+1) {
-            Vector3 p = p0 + i*dp;
+            Vector3 p = p0 + to!number(i)*dp;
             Vector3 p3 = p+dpText;
             double value = vmin + i*vtic;
             string myText = format(numberFormat, value);

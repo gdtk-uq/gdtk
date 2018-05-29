@@ -6,6 +6,9 @@ import std.conv;
 import std.math;
 
 import nm.bbla;
+import nm.complex;
+import nm.number;
+
 import geom.elements;
 import geom.gpath.path;
 
@@ -15,7 +18,7 @@ class Polynomial : Path {
     // Momar Hughes, 4th-year thesis, October 2015
 public:
     Vector3[] P; // array of control points to interpolate
-    double[] C; // array of coefficients
+    number[] C; // array of coefficients
         
     this(in Vector3[] P)
     {
@@ -28,7 +31,7 @@ public:
         this.P = P.dup();
         evaluate_coefficients();
     }
-    this(in double[] C,double x0,double x1)
+    this(in number[] C, double x0, double x1)
     {
         if (C.length == 0) {
             throw new Error(text("Polynomial() No coefficients provided."));
@@ -38,14 +41,14 @@ public:
         this.P[0] = evaluate_polynomial(x0);
         this.P[1] = evaluate_polynomial(x1);
     }
-    this(in Vector3[] P,in double[] C)
+    this(in Vector3[] P,in number[] C)
     {
         if (C.length == 0) {
             throw new Error(text("Polynomial() No coefficients provided."));
         } // end if
         this.C = C.dup();
         foreach(point;P){
-            if(point.y != evaluate_polynomial(point.x).y){
+            if(point.y != evaluate_polynomial(point.x.re).y){
                 throw new Error(text("Polynomial() points and coefficients do not match."));
             } // end if
         } // end foreach
@@ -63,15 +66,15 @@ public:
     override Vector3 opCall(double t) const
     {
         // Evaluate P(t)
-        double xt = P[0].x + t*(P[$-1].x-P[0].x);
-        return evaluate_polynomial(xt);
+        number xt = P[0].x + to!number(t)*(P[$-1].x-P[0].x);
+        return evaluate_polynomial(xt.re);
     } // end opCall()
     override Vector3 dpdt(double t) const
     {
         // Evaluate P(t)
-        double xt;
-        xt = P[0].x + t*(P[$-1].x-P[0].x);
-        return derivative_polynomial(xt);
+        number xt;
+        xt = P[0].x + to!number(t)*(P[$-1].x-P[0].x);
+        return derivative_polynomial(xt.re);
     }
     override string toString() const
     {
@@ -102,20 +105,20 @@ protected:
     
     Vector3 evaluate_polynomial(double x) const
     {
-        double y=0.0;
+        number y=0.0;
         foreach(i;0 .. C.length){
             y += C[i] * x^^i;
         } // end foreach
-        return Vector3(x,y);
+        return Vector3(to!number(x),y);
     } // end evaluate_polynomial ()
 
     Vector3 derivative_polynomial(double x) const
     {
-        double dy=0.0;
+        number dy=0.0;
         foreach(i;0 .. C.length){
             dy += C[i] * i * x^^(i-1);
         } // end foreach
-        return Vector3(1.0,dy);
+        return Vector3(to!number(1.0),dy);
     } // end evaluate_polynomial ()
 
 } // end class Polynomial

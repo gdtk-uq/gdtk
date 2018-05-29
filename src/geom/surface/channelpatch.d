@@ -3,6 +3,8 @@
 module geom.surface.channelpatch;
 
 import std.conv;
+import nm.complex;
+import nm.number;
 
 import geom.elements;
 import geom.gpath;
@@ -49,7 +51,7 @@ public:
     {
         auto bridge_path = make_bridging_path(r);
         Vector3 p = bridge_path(s);
-        if ( pure2D ) p.refz = 0.0;
+        if (pure2D) { p.refz = 0.0; }
         return p;
     }
 
@@ -63,14 +65,14 @@ public:
     {
         Vector3 cAr = cA(r); 
         Vector3 cBr = cB(r);
-        if ( pure2D ) { cAr.refz = 0.0; cBr.refz = 0.0; }
-        if ( ruled ) {
+        if (pure2D) { cAr.refz = 0.0; cBr.refz = 0.0; }
+        if (ruled) {
             // Bridge with a straight line for a ruled surface.
             return new Line(cAr, cBr);
         } else {
             // Bridge with a Bezier3 path that is normal to both defining curves.
             Vector3 pBminuspA = cBr - cAr;
-            double L = abs(pBminuspA);
+            double L = abs(pBminuspA).re;
             Vector3 dcArdt = cA.dpdt(r);
             Vector3 dcBrdt = cB.dpdt(r);
             // Out-of-plane vectors
@@ -80,9 +82,9 @@ public:
             Vector3 nA = cross(oopvA, dcArdt).normalize();
             Vector3 nB = cross(dcBrdt, oopvB).normalize();
             // Intermediate control points for the cubic Bezier.
-            Vector3 p1 = cAr + L/3.0*nA;
-            Vector3 p2 = cBr + L/3.0*nB;
-            if ( pure2D ) { p1.refz = 0.0; p2.refz = 0.0; }
+            Vector3 p1 = cAr + to!number(L/3.0)*nA;
+            Vector3 p2 = cBr + to!number(L/3.0)*nB;
+            if (pure2D) { p1.refz = 0.0; p2.refz = 0.0; }
             return new Bezier([cAr, p1, p2, cBr]);
         }
     } // end make_bridging_path()

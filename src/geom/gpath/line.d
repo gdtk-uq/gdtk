@@ -3,8 +3,10 @@
 
 module geom.gpath.line;
 
+import std.math;
 import std.conv: to;
-import std.math: fabs, approxEqual;
+import nm.complex;
+import nm.number;
 
 import geom.elements;
 import geom.gpath.path;
@@ -28,7 +30,7 @@ public:
     }
     override Vector3 opCall(double t) const 
     {
-        return (1.0-t)*p0 + t*p1;
+        return to!number((1.0-t))*p0 + to!number(t)*p1;
     }
     override Vector3 dpdt(double t) const 
     {
@@ -49,12 +51,12 @@ public:
     override double partial_length(double ta, double tb) const
     {
         Vector3 dp = p1 - p0;
-        return fabs(tb - ta) * abs(dp);
+        return fabs(tb - ta) * geom.abs(dp).re;
     }
     override Vector3 point_from_length(double length, out double t) const
     {
         Vector3 dp = p1 - p0;
-        t = length/(abs(dp));
+        t = length/(geom.abs(dp).re);
         return this.opCall(t);
     }
 } // end class Line
@@ -74,10 +76,10 @@ version(line_test) {
         auto pth = new Line(Vector3(0.0,1.0), Vector3(1.0,1.0));
         auto ps = Vector3(0.5,0.5);
         auto dir = Vector3(0.0,1.0);
-        double t;
+        number t;
         auto found = pth.intersect2D(ps, dir, t);
         assert(found, failedUnitTest()); // "intersect2D not found on Line"
-        assert(approxEqual(t,0.5), failedUnitTest()); // "intersect2D parametric location on Line"
+        assert(approxEqualNumbers(t,0.5), failedUnitTest()); // "intersect2D parametric location on Line"
         return 0;
     }
 } // end line_test

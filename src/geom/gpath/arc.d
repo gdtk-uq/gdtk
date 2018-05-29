@@ -7,6 +7,8 @@ import std.conv;
 import std.math;
 
 import nm.bbla;
+import nm.complex;
+import nm.number;
 import geom.elements;
 import geom.gpath.path;
 
@@ -61,8 +63,8 @@ public:
         double ca_mag, cb_mag, theta;
 
         L = 0.0;
-        ca = a - c; ca_mag = geom.abs(ca);
-        cb = b - c; cb_mag = geom.abs(cb);
+        ca = a - c; ca_mag = geom.abs(ca).re;
+        cb = b - c; cb_mag = geom.abs(cb).re;
         if (fabs(ca_mag - cb_mag) > 1.0e-5) {
             throw new Error(text("Arc.evaluate(): radii do not match ca=",ca," cb=",cb));
         }
@@ -87,7 +89,7 @@ public:
             throw new Error(text("Arc.evaluate(): problem with transformation cb_local=", cb_local));
         }
         // Angle of the final point on the arc is in the range -pi < th <= +pi.
-        theta = atan2(cb_local.y, cb_local.x);
+        theta = atan2(cb_local.y.re, cb_local.x.re);
         // The length of the circular arc.
         L = theta * cb_mag;
         // Move the second point around the arc in the local xy-plane.
@@ -114,9 +116,10 @@ class Arc3 : Arc {
         }
         // The centre of the circle lies along the bisector of am and 
         // the bisector of mb.
-        Vector3 mid_am = 0.5 * (a + m);
+        number half = 0.5;
+        Vector3 mid_am = half * (a + m);
         Vector3 bisect_am = cross(n, a - m);
-        Vector3 mid_mb = 0.5 * (b + m);
+        Vector3 mid_mb = half * (b + m);
         Vector3 bisect_mb = cross(n, b - m);
         // Solve least-squares problem to get s_am, s_mb.
         auto amatrix = new Matrix([[bisect_am.x, bisect_mb.x],
@@ -125,8 +128,8 @@ class Arc3 : Arc {
         Vector3 diff_mid = mid_mb - mid_am;
         auto rhs = new Matrix([diff_mid.x, diff_mid.y, diff_mid.z], "column");
         auto s_values = lsqsolve(amatrix, rhs);
-        double s_am = s_values[0,0];
-        double s_mb = s_values[1,0];
+        number s_am = s_values[0,0];
+        number s_mb = s_values[1,0];
         Vector3 c = mid_am + s_am * bisect_am;
         Vector3 c_check = mid_mb + s_mb * bisect_mb;
         Vector3 delc = c_check - this.c;
@@ -172,10 +175,10 @@ version(arc_test) {
         auto pth = new Arc3(Vector3(0.0,1.0), Vector3(0.5,1.2), Vector3(1.0,1.0));
         auto ps = Vector3(0.5,0.5);
         auto dir = Vector3(0.0,1.0);
-        double t;
+        number t;
         auto found = pth.intersect2D(ps, dir, t, 10);
         assert(found, failedUnitTest()); // intersect2D not found on Arc3
-        assert(approxEqual(t,0.5), failedUnitTest()); // intersect2D parametric location on Arc3
+        assert(approxEqualNumbers(t,0.5), failedUnitTest()); // intersect2D parametric location on Arc3
         return 0;
     }
 } // end arc_test

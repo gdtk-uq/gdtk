@@ -21,6 +21,8 @@ import geom.gpath.arc;
 import geom.gpath.bezier;
 import geom.gpath.polyline;
 import geom.surface;
+import nm.complex;
+import nm.number;
 import nm.bbla;
 import nm.linesearch;
 
@@ -37,16 +39,16 @@ public:
         if ( t+dt > 1.0 ) {
             // t is close to the t=1.0 boundary, use a one-sided difference.
             Vector3 pminus1 = this.opCall(t-dt);
-            derivative = (p0 - pminus1) / dt;
+            derivative = (p0 - pminus1) / to!number(dt);
         } else if ( t-dt < 0.0 ) {
             // s is close to the s=0 boundary, use a one-sided difference.
             Vector3 pplus1 = this.opCall(t+dt);
-            derivative = (pplus1 - p0) / dt;
+            derivative = (pplus1 - p0) / to!number(dt);
         } else {
             // Not near a boundary, use central-difference.
             Vector3 pminus1 = this.opCall(t-dt);
             Vector3 pplus1 = this.opCall(t+dt);
-            derivative = (pplus1 - pminus1) / (2.0 * dt);
+            derivative = (pplus1 - pminus1) / to!number(2.0 * dt);
         }
         return derivative;
     }
@@ -60,17 +62,17 @@ public:
             // t is close to the t=1.0 boundary, use a one-sided difference.
             Vector3 pminus1 = this.opCall(t-dt);
             Vector3 pminus2 = this.opCall(t-2*dt);
-            derivative = (p0 - 2*pminus1 + pminus2) / pow(dt,2);
+            derivative = (p0 - to!number(2)*pminus1 + pminus2) / to!number(dt*dt);
         } else if ( t-dt < 0.0 ) {
             // s is close to the s=0 boundary, use a one-sided difference.
             Vector3 pplus1 = this.opCall(t+dt);
             Vector3 pplus2 = this.opCall(t+2*dt);
-            derivative = (pplus2 - 2*pplus1 + p0) / pow(dt,2);
+            derivative = (pplus2 - to!number(2)*pplus1 + p0) / to!number(dt*dt);
         } else {
             // Not near a boundary, use central-difference.
             Vector3 pminus1 = this.opCall(t-dt);
             Vector3 pplus1 = this.opCall(t+dt);
-            derivative = (pplus1 - 2*p0 + pminus1) / pow(dt,2);
+            derivative = (pplus1 - to!number(2)*p0 + pminus1) / to!number(dt*dt);
         }
         return derivative;
     }
@@ -87,7 +89,7 @@ public:
         foreach (i; 1 .. n+1) {
             p1 = this.opCall(ta + dt * i);
             dp = p1 - p0;
-            L += geom.abs(dp);
+            L += geom.abs(dp).re;
             p0 = p1;
         }
         return L;
@@ -106,7 +108,7 @@ public:
         foreach (i; 1 .. n+1) {
             p1 = this.opCall(dt * i);
             dp = p1 - p0;
-            L += geom.abs(dp);
+            L += geom.abs(dp).re;
             p0 = p1;
             if( L > length ) {
                 t = dt * i;
@@ -162,11 +164,9 @@ public:
         // Handle the special cases of being right at the end points.
         if (tL == 0.0) {
             t = 0.0;
-        }
-        else if (tR == 1.0) {
+        } else if (tR == 1.0) {
             t = 1.0;
-        }
-        else {
+        } else {
             t = 0.5*(tL+tR);
         }
         ptOnPath = opCall(t);

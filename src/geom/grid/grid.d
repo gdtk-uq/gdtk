@@ -12,6 +12,9 @@ import std.stdio;
 import std.conv;
 import std.algorithm;
 import std.format;
+import nm.complex;
+import nm.number;
+
 import geom;
 
 //-----------------------------------------------------------------
@@ -113,9 +116,9 @@ class Grid {
     abstract Grid get_boundary_grid(size_t boundary_indx);
     abstract size_t[] get_list_of_boundary_cells(size_t boundary_indx);
     
-    void compute_cell_properties(size_t indx, ref Vector3 centroid, ref double volume)
+    void compute_cell_properties(size_t indx, ref Vector3 centroid, ref number volume)
     {
-        double iLen, jLen, kLen, Lmin;
+        number iLen, jLen, kLen, Lmin;
         size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
 
         if (dimensions == 2) {
@@ -225,8 +228,7 @@ class Grid {
         Vector3 cbc = Vector3(0.0, 0.0, 0.0);
         size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
         foreach(vtx_id; vtx_ids) { cbc += vertices[vtx_id]; }
-        double one_over_n_vtx = 1.0 / vtx_ids.length;
-        cbc *= one_over_n_vtx;
+        cbc *= to!number(1.0/vtx_ids.length);
         return cbc;
     } // end cell_barycentre()
 
@@ -236,7 +238,7 @@ class Grid {
     // determine the bin index cautiously.
     int get_bin_ix(ref const(Vector3) p)
     {
-        double dx = p.x - bb0.x;
+        double dx = p.x.re - bb0.x.re;
         int ix = to!int(dx/deltax);
         ix = max(0, min(nbx-1, ix));
         return ix;
@@ -244,7 +246,7 @@ class Grid {
     
     int get_bin_iy(ref const(Vector3) p)
     {
-        double dy = p.y - bb0.y;
+        double dy = p.y.re - bb0.y.re;
         int iy = to!int(dy/deltay);
         iy = max(0, min(nby-1, iy));
         return iy;
@@ -254,7 +256,7 @@ class Grid {
     {
         int iz = 0;
         if (dimensions == 3) {
-            double dz = p.z - bb0.z;
+            double dz = p.z.re - bb0.z.re;
             iz = to!int(dz/deltaz);
             iz = max(0, min(nbz-1, iz));
         }
@@ -276,13 +278,13 @@ class Grid {
         bb0 = p; bb1 = p;
         foreach (i; 1 .. nvertices) {
             p = vertices[i];
-            bb0.set(fmin(p.x, bb0.x), fmin(p.y, bb0.y), fmin(p.z, bb0.z));
-            bb1.set(fmax(p.x, bb1.x), fmax(p.y, bb1.y), fmax(p.z, bb1.z));
+            bb0.set(fmin(p.x.re, bb0.x.re), fmin(p.y.re, bb0.y.re), fmin(p.z.re, bb0.z.re));
+            bb1.set(fmax(p.x.re, bb1.x.re), fmax(p.y.re, bb1.y.re), fmax(p.z.re, bb1.z.re));
         }
         // Sizes of the bins.
-        deltax = (bb1.x - bb0.x)/nbx;
-        deltay = (bb1.y - bb0.y)/nby;
-        deltaz = (bb1.z - bb0.z)/nbz;
+        deltax = (bb1.x.re - bb0.x.re)/nbx;
+        deltay = (bb1.y.re - bb0.y.re)/nby;
+        deltaz = (bb1.z.re - bb0.z.re)/nbz;
         // Now, set up the array of bins and sort the cells into those bins.
         bins.length = nbx;
         foreach (ix; 0 .. nbx) {
@@ -355,11 +357,11 @@ class Grid {
     void find_nearest_cell_centre(ref const(Vector3) p, ref size_t nearestCell, ref double minDist)
     {
         Vector3 dp = cell_barycentre(0); dp -= p;
-        double d = geom.abs(dp);
+        double d = geom.abs(dp).re;
         minDist = d; nearestCell = 0;
         foreach (i; 1 .. ncells) {
             dp = cell_barycentre(i); dp -= p;
-            d = geom.abs(dp);
+            d = geom.abs(dp).re;
             if (d < minDist) { minDist = d; nearestCell = i; }
         }
     } // end find_nearest_cell_centre

@@ -9,6 +9,9 @@ import std.stdio: File;
 import std.string;
 
 import nm.bbla;
+import nm.complex;
+import nm.number;
+
 import geom.elements;
 import geom.gpath.path;
 import geom.gpath.line;
@@ -59,12 +62,12 @@ public:
         // Apply Gauss-Seidel iteration until
         // the internal weight points converge.
         Vector3 old_p;
-        double max_diff;
+        number max_diff;
         foreach (j; 1 .. 50) {
             max_diff = 0.0;
             foreach (i; 1 .. m) {
                 old_p = d[i];
-                d[i] = 0.25 * (6.0 * p[i] - d[i-1] - d[i+1]);
+                d[i] = to!number(0.25) * (to!number(6.0) * p[i] - d[i-1] - d[i+1]);
                 Vector3 diff = d[i] - old_p;
                 max_diff = fmax(max_diff, geom.abs(diff));
             } // end foreach i
@@ -76,8 +79,8 @@ public:
         Path[] seg;
         foreach (i; 0 ..  m) {
             p03[0] = p[i];
-            p03[1] = (2.0 * d[i] + d[i+1]) / 3.0;
-            p03[2] = (d[i] + 2.0 * d[i+1]) / 3.0;
+            p03[1] = (to!number(2.0) * d[i] + d[i+1]) / to!number(3.0);
+            p03[2] = (d[i] + to!number(2.0) * d[i+1]) / to!number(3.0);
             p03[3] = p[i+1];
             seg ~= new Bezier(p03);
         }
@@ -99,9 +102,9 @@ public:
             auto tokens = line.strip().split();
             if (tokens.length == 0) continue; // ignore blank lines
             if (tokens[0] == "#") continue; // ignore comment lines
-            double x = to!double(tokens[0]);
-            double y = 0.0; if (tokens.length > 1) { y = to!double(tokens[1]); }
-            double z = 0.0; if (tokens.length > 2) { z = to!double(tokens[2]); }
+            number x = to!double(tokens[0]);
+            number y = 0.0; if (tokens.length > 1) { y = to!double(tokens[1]); }
+            number z = 0.0; if (tokens.length > 2) { z = to!double(tokens[2]); }
             points ~= Vector3(x, y, z);
         }
         this(points);

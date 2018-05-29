@@ -12,6 +12,8 @@ import std.string;
 import std.range : iota;
 import geom;
 import nm.nelmin;
+import nm.complex;
+import nm.number;
 
 
 Vector3[] discretize_path(const Path pth, size_t niv,
@@ -32,9 +34,9 @@ void readPointsFromFile(string fileName, ref Vector3[] points)
         auto tokens = line.strip().split();
         if (tokens.length == 0) continue; // ignore blank lines
         if (tokens[0] == "#") continue; // ignore comment lines
-        double x = to!double(tokens[0]);
-        double y = (tokens.length > 1) ? to!double(tokens[1]) : 0.0;
-        double z = (tokens.length > 2) ? to!double(tokens[2]) : 0.0;
+        number x = to!double(tokens[0]);
+        number y = (tokens.length > 1) ? to!double(tokens[1]) : 0.0;
+        number z = (tokens.length > 2) ? to!double(tokens[2]) : 0.0;
         points ~= Vector3(x, y, z);
     }
     f.close();
@@ -50,7 +52,8 @@ Bezier optimiseBezierPoints(string fileName, int nCtrlPts, ref double[] ts, int 
     return myBez;
 }
 
-Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, double tol=1.0e-06, int max_steps=10000, int dim=2)
+Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts,
+                            double tol=1.0e-06, int max_steps=10000, int dim=2)
 {
     double t;
     // Check that there are more data points than
@@ -79,7 +82,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, dou
     // Add end point as final contrl point.
     bezPts ~= points[$-1];
     Bezier myBez = new Bezier(bezPts);
-    double[] d;
+    number[] d;
     if (dim == 2)
         d.length = 2*(nCtrlPts-2);
     else
@@ -100,7 +103,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, dou
     // --------------------------------------------------------------------
     // Build cost function to be minimised.
     // --------------------------------------------------------------------
-    double fMin(double[] d)
+    number fMin(number[] d)
     {
         // Adjust Bezier points based on supplied design values 'd'
         foreach (i; 1 .. nCtrlPts-1) {
@@ -115,7 +118,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, dou
             }
         }
         // Evaluate error between data points and Bezier curve
-        double err = 0.0;
+        number err = 0.0;
         foreach (p; points) {
             err += myBez.closestDistance(p, t);
         }
@@ -126,12 +129,12 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts, dou
     // -----------------------------------------------------------------
     // Optimise placement of control points using Nelder-Mead minimiser
     // -----------------------------------------------------------------
-    double f_min;
+    number f_min;
     int n_fe, n_restart;
-    double[] dx;
+    number[] dx;
     dx.length = d.length;
     // Make the initial perturbations 1/100th of the arc length.
-    double dp = myBez.length()/100.0;
+    number dp = myBez.length()/100.0;
     dx[] = dp;
     auto success = minimize!fMin(d, f_min, n_fe, n_restart, dx, tol, max_steps);
     if (success) {

@@ -4,6 +4,8 @@ module geom.surface.meshpatch;
 
 import std.conv;
 import std.algorithm;
+import nm.complex;
+import nm.number;
 
 import geom.elements;
 import geom.gpath;
@@ -28,7 +30,7 @@ public:
         njv = grid.njv;
         mesh.length = niv;
         foreach(i; 0 .. niv) {
-            foreach (j; 0 .. njv) mesh[i] ~= *grid[i,j];
+            foreach (j; 0 .. njv) { mesh[i] ~= *grid[i,j]; }
         }
         p00 = mesh[0][0];
         p10 = mesh[niv-1][0];
@@ -42,7 +44,7 @@ public:
         njv = grid[0].length;
         mesh.length = niv;
         foreach(i; 0 .. niv) {
-            foreach (j; 0 .. njv) mesh[i] ~= grid[i][j];
+            foreach (j; 0 .. njv) { mesh[i] ~= grid[i][j]; }
         }
         p00 = grid[0][0];
         p10 = grid[niv-1][0];
@@ -56,7 +58,7 @@ public:
         njv = other.njv;
         mesh.length = niv;
         foreach(i; 0 .. niv) {
-            foreach (j; 0 .. njv) mesh[i] ~= other.mesh[i][j];
+            foreach (j; 0 .. njv) { mesh[i] ~= other.mesh[i][j]; }
         }
         p00 = other.p00;
         p10 = other.p10;
@@ -82,10 +84,10 @@ public:
         double local_r = (r - dr * i) / dr;
         double local_s = (s - ds * j) / ds;
         // BiLinear interpolation.
-        Vector3 p = (1.0 - local_r) * (1.0 - local_s) * mesh[i][j] +
-            (1.0 - local_r) * local_s * mesh[i][j+1] +
-            local_r * (1.0 - local_s) * mesh[i+1][j] +
-            local_r * local_s * mesh[i+1][j+1];
+        Vector3 p = to!number((1.0-local_r)*(1.0-local_s)) * mesh[i][j] +
+            to!number((1.0-local_r)*local_s) * mesh[i][j+1] +
+            to!number(local_r*(1.0-local_s)) * mesh[i+1][j] +
+            to!number(local_r*local_s) * mesh[i+1][j+1];
         return p;
     }
 

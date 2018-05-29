@@ -5,6 +5,9 @@ module geom.volume.wedgevolume;
 import std.conv;
 import std.math;
 import std.stdio;
+import nm.complex;
+import nm.number;
+
 import geom.elements;
 import geom.gpath;
 import geom.surface;
@@ -70,10 +73,10 @@ private:
         // We want to rotate the point about the x-axis, according to the right-hand rule.
         // Angles are measured from the y-axis, positive as we swing around toward the z-axis.
         // Refer to PJ's workbook page 36, 2017-07-01
-        double r = sqrt((p0.y)^^2 + (p0.z)^^2);
-        double theta0 = atan2(p0.z, p0.y);
+        double r = sqrt((p0.y.re)^^2 + (p0.z.re)^^2);
+        double theta0 = atan2(p0.z.re, p0.y.re);
         double theta1 = theta0+theta;
-        return Vector3(p0.x, r*cos(theta1), r*sin(theta1));
+        return Vector3(p0.x.re, r*cos(theta1), r*sin(theta1));
     } // end sweep_through_arc()
 } // end WedgeVolume
 

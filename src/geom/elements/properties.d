@@ -4,8 +4,11 @@
 module geom.elements.properties;
 
 import std.math;
+import std.conv;
 import geom.elements.nomenclature;
 import geom.elements.vector3;
+import nm.complex;
+import nm.number;
 
 @nogc
 bool inside_bounding_box(ref const(Vector3) p,
@@ -45,16 +48,16 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                          ref const(Vector3) p2,
                          ref Vector3 centroid,
                          ref Vector3 n, ref Vector3 t1, ref Vector3 t2,
-                         ref double area,
+                         ref number area,
                          double tol=1.0e-12, double area_tol=1.0e-20)
 {
     centroid.set((p0.x + p1.x + p2.x)/3.0,
                  (p0.y + p1.y + p2.y)/3.0,
                  (p0.z + p1.z + p2.z)/3.0);
     // Compute areas via the cross products.
-    double p01x=p1.x-p0.x; double p01y=p1.y-p0.y; double p01z=p1.z-p0.z;
-    double p02x=p2.x-p0.x; double p02y=p2.y-p0.y; double p02z=p2.z-p0.z;
-    double vector_area_x; double vector_area_y; double vector_area_z;
+    number p01x=p1.x-p0.x; number p01y=p1.y-p0.y; number p01z=p1.z-p0.z;
+    number p02x=p2.x-p0.x; number p02y=p2.y-p0.y; number p02z=p2.z-p0.z;
+    number vector_area_x; number vector_area_y; number vector_area_z;
     // Vector3 vector_area = 0.5 * cross(p1-p0, p2-p0);
     cross_product(p01x, p01y, p01z, p02x, p02y, p02z,
                   vector_area_x, vector_area_y, vector_area_z);
@@ -68,7 +71,7 @@ void triangle_properties(ref const(Vector3) p0, ref const(Vector3) p1,
         // Tangent unit-vectors: 
         // t1 is parallel to side01
         // t2 is normal to n and t1
-        double abs_p01 = sqrt(p01x^^2 + p01y^^2 + p01z^^2);
+        number abs_p01 = sqrt(p01x^^2 + p01y^^2 + p01z^^2);
         // t1 = unit(p1-p0);
         t1.set(p01x/abs_p01, p01y/abs_p01, p01z/abs_p01);
         // t2 = unit(cross(n, t1)); // Calling unit() to tighten up the magnitude.
@@ -94,7 +97,7 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                      ref const(Vector3) p2, ref const(Vector3) p3,
                      ref Vector3 centroid,
                      ref Vector3 n, ref Vector3 t1, ref Vector3 t2,
-                     ref double area,
+                     ref number area,
                      double tol=1.0e-12, double area_tol=1.0e-20)
 {
     centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
@@ -102,13 +105,13 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                  0.25*(p0.z + p1.z + p2.z + p3.z));
     // Compute areas via the cross products.
     // Vector3 vector_area = 0.25 * cross(p1-p0+p2-p3, p3-p0+p2-p1);
-    double p01x = p1.x-p0.x+p2.x-p3.x;
-    double p01y = p1.y-p0.y+p2.y-p3.y;
-    double p01z = p1.z-p0.z+p2.z-p3.z;
-    double p03x = p3.x-p0.x+p2.x-p1.x;
-    double p03y = p3.y-p0.y+p2.y-p1.y;
-    double p03z = p3.z-p0.z+p2.z-p1.z;
-    double vector_area_x, vector_area_y, vector_area_z;
+    number p01x = p1.x-p0.x+p2.x-p3.x;
+    number p01y = p1.y-p0.y+p2.y-p3.y;
+    number p01z = p1.z-p0.z+p2.z-p3.z;
+    number p03x = p3.x-p0.x+p2.x-p1.x;
+    number p03y = p3.y-p0.y+p2.y-p1.y;
+    number p03z = p3.z-p0.z+p2.z-p1.z;
+    number vector_area_x, vector_area_y, vector_area_z;
     cross_product(p01x, p01y, p01z, p03x, p03y, p03z,
                   vector_area_x, vector_area_y, vector_area_z);
     vector_area_x *= 0.25; vector_area_y *= 0.25; vector_area_z *= 0.25;
@@ -137,7 +140,7 @@ void quad_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 @nogc
 void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
                      ref Vector3 n, ref Vector3 t1, ref Vector3 t2,
-                     ref double area,
+                     ref number area,
                      double tol=1.0e-12, double area_tol=1.0e-20)
 {
     quad_properties(p[0], p[1], p[2], p[3], centroid, n, t1, t2, area, tol, area_tol);
@@ -146,8 +149,8 @@ void quad_properties(ref const(Vector3)[] p, ref Vector3 centroid,
 @nogc
 void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                                   ref const(Vector3) p2, ref const(Vector3) p3,
-                                  ref Vector3 centroid, ref double xyplane_area,
-                                  ref double iLen, ref double jLen, ref double minLen)
+                                  ref Vector3 centroid, ref number xyplane_area,
+                                  ref number iLen, ref number jLen, ref number minLen)
 // Cell layout goes back to cns4u notation.
 // C-----B     3-----2
 // |     |     |     |    j
@@ -156,33 +159,33 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 // D-----A     0-----1    O-->i
 {
     // These are the corners.
-    double xA = p1.x; double yA = p1.y;
-    double xB = p2.x; double yB = p2.y;
-    double xC = p3.x; double yC = p3.y;
-    double xD = p0.x; double yD = p0.y;
+    number xA = p1.x; number yA = p1.y;
+    number xB = p2.x; number yB = p2.y;
+    number xC = p3.x; number yC = p3.y;
+    number xD = p0.x; number yD = p0.y;
     //
     xyplane_area = 0.5 * ((xB + xA) * (yB - yA) + (xC + xB) * (yC - yB) +
                           (xD + xC) * (yD - yC) + (xA + xD) * (yA - yD));
     //
-    double x = 1.0 / (xyplane_area * 6.0) * 
+    number x = 1.0 / (xyplane_area * 6.0) * 
         ((yB - yA) * (xA * xA + xA * xB + xB * xB) + 
          (yC - yB) * (xB * xB + xB * xC + xC * xC) +
          (yD - yC) * (xC * xC + xC * xD + xD * xD) + 
          (yA - yD) * (xD * xD + xD * xA + xA * xA));
-    double y = -1.0 / (xyplane_area * 6.0) * 
+    number y = -1.0 / (xyplane_area * 6.0) * 
         ((xB - xA) * (yA * yA + yA * yB + yB * yB) + 
          (xC - xB) * (yB * yB + yB * yC + yC * yC) +
          (xD - xC) * (yC * yC + yC * yD + yD * yD) + 
          (xA - xD) * (yD * yD + yD * yA + yA * yA));
-    centroid.set(x, y, 0.0);
+    centroid.set(x, y, to!number(0.0));
     //
     // Check cell length scale using North and East boundaries.
     // Also, save the minimum length for later use in the CFL checking routine.
-    double dxN = xC - xB; double dyN = yC - yB;
-    double dxE = xA - xB; double dyE = yA - yB;
-    double lengthN = sqrt(dxN * dxN + dyN * dyN);
-    double lengthE = sqrt(dxE * dxE + dyE * dyE);
-    double length_cross = xyplane_area / fmax(lengthN, lengthE); 
+    number dxN = xC - xB; number dyN = yC - yB;
+    number dxE = xA - xB; number dyE = yA - yB;
+    number lengthN = sqrt(dxN * dxN + dyN * dyN);
+    number lengthE = sqrt(dxE * dxE + dyE * dyE);
+    number length_cross = xyplane_area / fmax(lengthN, lengthE); 
     // estimate of minimum width of cell
     minLen = fmin(lengthN, lengthE);
     if (length_cross < minLen) minLen = length_cross;
@@ -190,16 +193,16 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     // Record the cell widths in the i- and j-index directions.
     // The widths are measured between corresponding midpoints of the bounding interfaces.
     // This data is used by the high-order reconstruction.
-    double xN = 0.5 * (xC + xB);
-    double yN = 0.5 * (yC + yB);
-    double xS = 0.5 * (xD + xA);
-    double yS = 0.5 * (yD + yA);
-    double xE = 0.5 * (xA + xB);
-    double yE = 0.5 * (yA + yB);
-    double xW = 0.5 * (xD + xC);
-    double yW = 0.5 * (yD + yC);
-    double dx = xN - xS;
-    double dy = yN - yS;
+    number xN = 0.5 * (xC + xB);
+    number yN = 0.5 * (yC + yB);
+    number xS = 0.5 * (xD + xA);
+    number yS = 0.5 * (yD + yA);
+    number xE = 0.5 * (xA + xB);
+    number yE = 0.5 * (yA + yB);
+    number xW = 0.5 * (xD + xC);
+    number yW = 0.5 * (yD + yC);
+    number dx = xN - xS;
+    number dy = yN - yS;
     jLen = sqrt(dx * dx + dy * dy);
     dx = xE - xW;
     dy = yE - yW;
@@ -207,13 +210,13 @@ void xyplane_quad_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 } // end xyplane_quad_cell_properties()
 
 @nogc
-double xyplane_quad_squareness(ref const(Vector3) p0, ref const(Vector3) p1,
+number xyplane_quad_squareness(ref const(Vector3) p0, ref const(Vector3) p1,
                                ref const(Vector3) p2, ref const(Vector3) p3)
 { 
     Vector3 centroid;
-    double xyplane_area, iLen, jLen, minLen;
+    number xyplane_area, iLen, jLen, minLen;
     xyplane_quad_cell_properties(p0, p1, p2, p3, centroid, xyplane_area, iLen, jLen, minLen);
-    double perimeter = distance_between(p0, p1) + distance_between(p1, p2) +
+    number perimeter = distance_between(p0, p1) + distance_between(p1, p2) +
         distance_between(p2, p3) + distance_between(p3, p0);
     return 16*xyplane_area/(perimeter^^2);
 }
@@ -221,8 +224,8 @@ double xyplane_quad_squareness(ref const(Vector3) p0, ref const(Vector3) p1,
 @nogc
 void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                                       ref const(Vector3) p2,
-                                      ref Vector3 centroid, ref double xyplane_area,
-                                      ref double iLen, ref double jLen, ref double minLen)
+                                      ref Vector3 centroid, ref number xyplane_area,
+                                      ref number iLen, ref number jLen, ref number minLen)
 // p2
 //  |\
 //  | \
@@ -230,21 +233,21 @@ void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) 
 // p0--p1  counter-clockwise cycle when looking down at the x,y-plane
 {
     // These are the corners.
-    double x0 = p0.x; double y0 = p0.y;
-    double x1 = p1.x; double y1 = p1.y;
-    double x2 = p2.x; double y2 = p2.y;
+    number x0 = p0.x; number y0 = p0.y;
+    number x1 = p1.x; number y1 = p1.y;
+    number x2 = p2.x; number y2 = p2.y;
     //
     xyplane_area = 0.5*((x1+x0)*(y1-y0) + (x2+x1)*(y2-y1) + (x0+x2)*(y0-y2));
     //
-    double x = 1.0/(xyplane_area*6.0) * 
+    number x = 1.0/(xyplane_area*6.0) * 
         ((y1-y0)*(x0*x0 + x0*x1 + x1*x1) + 
          (y2-y1)*(x1*x1 + x1*x2 + x2*x2) +
          (y0-y2)*(x2*x2 + x2*x0 + x0*x0));
-    double y = -1.0/(xyplane_area*6.0) * 
+    number y = -1.0/(xyplane_area*6.0) * 
         ((x1-x0)*(y0*y0 + y0*y1 + y1*y1) + 
          (x2-x1)*(y1*y1 + y1*y2 + y2*y2) +
          (x0-x2)*(y2*y2 + y2*y0 + y0*y0));
-    centroid.set(x, y, 0.0);
+    centroid.set(x, y, to!number(0.0));
     //
     // Also, save the minimum length for later use in the CFL checking routine.
     minLen = sqrt(xyplane_area);
@@ -260,23 +263,23 @@ void xyplane_triangle_cell_properties(ref const(Vector3) p0, ref const(Vector3) 
 // p0->p1->p2->p0 gives a positive volume.
 
 @nogc
-double tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
+number tetrahedron_volume(ref const(Vector3) p0, ref const(Vector3) p1,
                           ref const(Vector3) p2, ref const(Vector3) p3)
 {
     // Was return dot(p3-p0, cross(p1-p0, p2-p0)) / 6.0;
     // Now, expand up to components to avoid allocation.
-    double dx01=p1.x-p0.x; double dy01=p1.y-p0.y; double dz01=p1.z-p0.z;
-    double dx02=p2.x-p0.x; double dy02=p2.y-p0.y; double dz02=p2.z-p0.z;
-    double cx, cy, cz;
+    number dx01=p1.x-p0.x; number dy01=p1.y-p0.y; number dz01=p1.z-p0.z;
+    number dx02=p2.x-p0.x; number dy02=p2.y-p0.y; number dz02=p2.z-p0.z;
+    number cx, cy, cz;
     cross_product(dx01, dy01, dz01, dx02, dy02, dz02, cx, cy, cz);
-    double dx03=p3.x-p0.x; double dy03=p3.y-p0.y; double dz03=p3.z-p0.z;
+    number dx03=p3.x-p0.x; number dy03=p3.y-p0.y; number dz03=p3.z-p0.z;
     return dot_product(dx03, dy03, dz03, cx, cy, cz) / 6.0;
 } // end tetrahedron_volume()
 
 @nogc
 void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                             ref const(Vector3) p2, ref const(Vector3) p3,
-                            ref Vector3 centroid, ref double volume)
+                            ref Vector3 centroid, ref number volume)
 // Variant without L_min calculation.
 {
     centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
@@ -287,7 +290,7 @@ void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 
 @nogc
 void tetrahedron_properties(ref const(Vector3)[] p,
-                            ref Vector3 centroid, ref double volume)
+                            ref Vector3 centroid, ref number volume)
 {
     tetrahedron_properties(p[0], p[1], p[2], p[3], centroid, volume);
 }
@@ -295,14 +298,14 @@ void tetrahedron_properties(ref const(Vector3)[] p,
 @nogc
 void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                             ref const(Vector3) p2, ref const(Vector3) p3,
-                            ref Vector3 centroid, ref double volume, ref double L_min)
+                            ref Vector3 centroid, ref number volume, ref number L_min)
 // Variant including L_min calculation.
 {
     centroid.set(0.25*(p0.x + p1.x + p2.x + p3.x),
                  0.25*(p0.y + p1.y + p2.y + p3.y),
                  0.25*(p0.z + p1.z + p2.z + p3.z));
     volume = tetrahedron_volume(p0, p1, p2, p3);
-    double third = 1.0/3.0;
+    number third = 1.0/3.0;
     L_min = pow(volume, third);
     Vector3 pmid = Vector3(third*(p0.x+p1.x+p2.x), third*(p0.y+p1.y+p2.y), third*(p0.z+p1.z+p2.z));
     L_min = fmin(L_min, 2.0*distance_between(pmid, centroid));
@@ -316,7 +319,7 @@ void tetrahedron_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 
 @nogc
 void tetrahedron_properties(ref const(Vector3)[] p,
-                            ref Vector3 centroid, ref double volume, ref double L_min)
+                            ref Vector3 centroid, ref number volume, ref number L_min)
 {
     tetrahedron_properties(p[0], p[1], p[2], p[3], centroid, volume, L_min);
 }
@@ -330,7 +333,7 @@ double verySmallVolume = 1.0e-20;
 
 
 @nogc
-double tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1, 
+number tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1, 
                                    ref const(Vector3) p2, ref const(Vector3) p3, 
                                    ref const(Vector3) pb, ref const(Vector3) pc)
 // J. Grandy (1997) Efficient Computation of Volume of Hexahedral Cells UCRL-ID-128886.
@@ -341,18 +344,18 @@ double tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 // towards it from pc will result in a positive volume.
 // A negative volume indicates that the cycle is clockwise when looking from pc.
 {
-    // double volume = dot(pc-pb, cross(p1-p0+p2-p3, p3-p0+p2-p1)) / 12.0;
-    double p01x = 0.5*(p1.x-p0.x+p2.x-p3.x);
-    double p01y = 0.5*(p1.y-p0.y+p2.y-p3.y);
-    double p01z = 0.5*(p1.z-p0.z+p2.z-p3.z);
-    double p03x = 0.5*(p3.x-p0.x+p2.x-p1.x);
-    double p03y = 0.5*(p3.y-p0.y+p2.y-p1.y);
-    double p03z = 0.5*(p3.z-p0.z+p2.z-p1.z);
-    double vector_area_x, vector_area_y, vector_area_z;
+    // number volume = dot(pc-pb, cross(p1-p0+p2-p3, p3-p0+p2-p1)) / 12.0;
+    number p01x = 0.5*(p1.x-p0.x+p2.x-p3.x);
+    number p01y = 0.5*(p1.y-p0.y+p2.y-p3.y);
+    number p01z = 0.5*(p1.z-p0.z+p2.z-p3.z);
+    number p03x = 0.5*(p3.x-p0.x+p2.x-p1.x);
+    number p03y = 0.5*(p3.y-p0.y+p2.y-p1.y);
+    number p03z = 0.5*(p3.z-p0.z+p2.z-p1.z);
+    number vector_area_x, vector_area_y, vector_area_z;
     cross_product(p01x, p01y, p01z, p03x, p03y, p03z,
                   vector_area_x, vector_area_y, vector_area_z);
-    double bcx = pc.x-pb.x; double bcy = pc.y-pb.y; double bcz = pc.z-pb.z;
-    double volume = dot_product(bcx,bcy,bcz,vector_area_x,vector_area_y,vector_area_z)/3.0;
+    number bcx = pc.x-pb.x; number bcy = pc.y-pb.y; number bcz = pc.z-pb.z;
+    number volume = dot_product(bcx,bcy,bcz,vector_area_x,vector_area_y,vector_area_z)/3.0;
     return volume;
 } // end tetragonal_dipyramid_volume()
 
@@ -360,7 +363,7 @@ double tetragonal_dipyramid_volume(ref const(Vector3) p0, ref const(Vector3) p1,
 void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                         ref const(Vector3) p2, ref const(Vector3) p3,
                         ref const(Vector3) p4, 
-                        ref Vector3 centroid, ref double volume)
+                        ref Vector3 centroid, ref number volume)
 {
     // p0-p1-p2-p3 is the quadrilateral base, p4 is the peak.
     // cycle of base vertices is counterclockwise, viewed from p4.
@@ -372,7 +375,7 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
             0.25*(p0.z+p1.z+p2.z+p3.z));
     //
     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
-    double tet_volume; Vector3 tet_centroid;
+    number tet_volume; Vector3 tet_centroid;
     tetrahedron_properties(p0, p1, pmB, p4, tet_centroid, tet_volume);
     volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p1, p2, pmB, p4, tet_centroid, tet_volume);
@@ -390,7 +393,7 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 
 @nogc
 void pyramid_properties(ref const(Vector3)[] p,
-                        ref Vector3 centroid, ref double volume)
+                        ref Vector3 centroid, ref number volume)
 {
     pyramid_properties(p[0], p[1], p[2], p[3], p[4], centroid, volume);
 }
@@ -399,7 +402,7 @@ void pyramid_properties(ref const(Vector3)[] p,
 void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                         ref const(Vector3) p2, ref const(Vector3) p3,
                         ref const(Vector3) p4, 
-                        ref Vector3 centroid, ref double volume, ref double L_min)
+                        ref Vector3 centroid, ref number volume, ref number L_min)
 {
     // p0-p1-p2-p3 is the quadrilateral base, p4 is the peak.
     // cycle of base vertices is counterclockwise, viewed from p4.
@@ -411,7 +414,7 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
             0.25*(p0.z+p1.z+p2.z+p3.z));
     //
     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
-    double tet_volume; Vector3 tet_centroid;
+    number tet_volume; Vector3 tet_centroid;
     tetrahedron_properties(p0, p1, pmB, p4, tet_centroid, tet_volume);
     volume += tet_volume; tet_centroid *= tet_volume; moment.add(tet_centroid);
     tetrahedron_properties(p1, p2, pmB, p4, tet_centroid, tet_volume);
@@ -440,7 +443,7 @@ void pyramid_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 
 @nogc
 void pyramid_properties(ref const(Vector3)[] p,
-                        ref Vector3 centroid, ref double volume, ref double L_min)
+                        ref Vector3 centroid, ref number volume, ref number L_min)
 {
     pyramid_properties(p[0], p[1], p[2], p[3], p[4], centroid, volume, L_min);
 }
@@ -449,7 +452,7 @@ void pyramid_properties(ref const(Vector3)[] p,
 void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                       ref const(Vector3) p2, ref const(Vector3) p3,
                       ref const(Vector3) p4, ref const(Vector3) p5, 
-                      ref Vector3 centroid, ref double volume)
+                      ref Vector3 centroid, ref number volume)
 {
     // Use the average of the vertex points to get a rough centroid of the wedge.
     centroid.set(1.0/6.0*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x),
@@ -457,7 +460,7 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                  1.0/6.0*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z));
     // Split the wedge into three pyramids and two tetrahedra
     // using this centroid as the peak of each sub-volume.
-    double sub_volume; Vector3 sub_centroid;
+    number sub_volume; Vector3 sub_centroid;
     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
     pyramid_properties(p3, p5, p2, p0, centroid, sub_centroid, sub_volume);
     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
@@ -478,7 +481,7 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 
 @nogc
 void wedge_properties(ref const(Vector3)[] p,
-                      ref Vector3 centroid, ref double volume)
+                      ref Vector3 centroid, ref number volume)
 {
     wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume);
 }
@@ -487,7 +490,7 @@ void wedge_properties(ref const(Vector3)[] p,
 void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                       ref const(Vector3) p2, ref const(Vector3) p3,
                       ref const(Vector3) p4, ref const(Vector3) p5, 
-                      ref Vector3 centroid, ref double volume, ref double L_min)
+                      ref Vector3 centroid, ref number volume, ref number L_min)
 {
     // Use the average of the vertex points to get a rough centroid of the wedge.
     centroid.set(1.0/6.0*(p0.x+p1.x+p2.x+p3.x+p4.x+p5.x),
@@ -495,7 +498,7 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                  1.0/6.0*(p0.z+p1.z+p2.z+p3.z+p4.z+p5.z));
     // Split the wedge into three pyramids and two tetrahedra
     // using this centroid as the peak of each sub-volume.
-    double sub_volume; Vector3 sub_centroid;
+    number sub_volume; Vector3 sub_centroid;
     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
     pyramid_properties(p3, p5, p2, p0, centroid, sub_centroid, sub_volume);
     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
@@ -529,7 +532,7 @@ void wedge_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 
 @nogc
 void wedge_properties(ref const(Vector3)[] p,
-                      ref Vector3 centroid, ref double volume, ref double L_min)
+                      ref Vector3 centroid, ref number volume, ref number L_min)
 {
     wedge_properties(p[0], p[1], p[2], p[3], p[4], p[5], centroid, volume, L_min);
 }
@@ -539,8 +542,8 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
                          ref const(Vector3) p2, ref const(Vector3) p3,
                          ref const(Vector3) p4, ref const(Vector3) p5,
                          ref const(Vector3) p6, ref const(Vector3) p7,
-                         ref Vector3 centroid, ref double volume,
-                         ref double iLen, ref double jLen, ref double kLen)
+                         ref Vector3 centroid, ref number volume,
+                         ref number iLen, ref number jLen, ref number kLen)
 {
     // PJ 10-Sep-2012
     // When computing the volume of Rolf's thin, warped cells, we have to do 
@@ -581,7 +584,7 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     // Lengths between mid-points of faces.
     // Note that we are assuming that the hexahedron is not very skewed
     // when we later use these values as the widths of the hex cell.
-    double dx, dy, dz;
+    number dx, dy, dz;
     dx = pmE.x - pmW.x; dy = pmE.y - pmW.y; dz = pmE.z - pmW.z;
     iLen = sqrt(dx^^2 + dy^^2 + dz^^2);
     dx = pmN.x - pmS.x; dy = pmN.y - pmS.y; dz = pmN.z - pmS.z;
@@ -591,7 +594,7 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
     // writeln("Single hexahedron divided into six tetragonal dipyramids.");
     // J. Grandy (1997) Efficient Computation of Volume of Hexahedral Cells UCRL-ID-128886.
     // Base of each dipyramid is specified clockwise from the outside.
-    double sub_volume; Vector3 sub_centroid;
+    number sub_volume; Vector3 sub_centroid;
     volume = 0.0; Vector3 moment = Vector3(0.0, 0.0, 0.0);
     pyramid_properties(p6, p7, p3, p2, centroid, sub_centroid, sub_volume);
     volume += sub_volume; sub_centroid *= sub_volume; moment.add(sub_centroid);
@@ -625,8 +628,8 @@ void hex_cell_properties(ref const(Vector3) p0, ref const(Vector3) p1,
 
 @nogc
 void hex_cell_properties(ref const(Vector3)[] p,
-                         ref Vector3 centroid, ref double volume,
-                         ref double iLen, ref double jLen, ref double kLen)
+                         ref Vector3 centroid, ref number volume,
+                         ref number iLen, ref number jLen, ref number kLen)
 {
     hex_cell_properties(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
                         centroid, volume, iLen, jLen, kLen);
@@ -640,9 +643,9 @@ int inside_triangle(ref const(Vector3) p, ref const(Vector3) a,
                     ref const(Vector3) b, ref const(Vector3) c)
 {
     Vector3 n = cross(a-c, b-c); n.normalize(); // normal to plane of triangle
-    double area1 = 0.5 * dot(cross(p-a, p-b), n); // projected area of triangle pab
-    double area2 = 0.5 * dot(cross(p-b, p-c), n);
-    double area3 = 0.5 * dot(cross(p-c, p-a), n);
+    number area1 = 0.5 * dot(cross(p-a, p-b), n); // projected area of triangle pab
+    number area2 = 0.5 * dot(cross(p-b, p-c), n);
+    number area3 = 0.5 * dot(cross(p-c, p-a), n);
     // Only a point inside the triangle will have all areas positive.
     if ( area1 > 0.0 && area2 > 0.0 && area3 > 0.0 ) return 1;
     // However, the point may be damned close to an edge but
@@ -766,7 +769,7 @@ bool inside_pyramid(ref const(Vector3) p0, ref const(Vector3) p1,
 // was adapted from the inside_hexagon function, below.
 {
     // Mid-points of quadrilateral base.
-    Vector3 pmid = 0.25*(p3+p2+p1+p0);
+    Vector3 pmid = to!number(0.25)*(p3+p2+p1+p0);
     // Test the volume of the single pyramid.
     if (tetragonal_dipyramid_volume(p3, p2, p1, p0, pmid, p) > 0.0) return false; // Bottom
     // If we arrive here, we haven't determined that the point is outside...
@@ -793,9 +796,10 @@ bool inside_wedge(ref const(Vector3) p0, ref const(Vector3) p1,
 // is outside the cell and we may say so without further testing.
 {
     // Mid-points of quadrilateral faces.
-    Vector3 pmA = 0.25*(p0+p3+p4+p1);
-    Vector3 pmB = 0.25*(p2+p1+p4+p5);
-    Vector3 pmC = 0.25*(p0+p2+p5+p3);
+    number quarter = 0.25;
+    Vector3 pmA = quarter*(p0+p3+p4+p1);
+    Vector3 pmB = quarter*(p2+p1+p4+p5);
+    Vector3 pmC = quarter*(p0+p2+p5+p3);
     // Test the volume of each pyramid.
     if (tetragonal_dipyramid_volume(p0, p3, p4, p1, pmA, p) > 0.0) return false;
     if (tetragonal_dipyramid_volume(p2, p1, p4, p5, pmB, p) > 0.0) return false;
@@ -823,12 +827,13 @@ bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
 // is outside the cell and we may say so without further testing.
 {
     // Mid-points of faces.
-    Vector3 pmN = 0.25*(p3+p2+p6+p7);
-    Vector3 pmE = 0.25*(p1+p2+p6+p5);
-    Vector3 pmS = 0.25*(p0+p1+p5+p4);
-    Vector3 pmW = 0.25*(p0+p3+p7+p4);
-    Vector3 pmT = 0.25*(p4+p5+p6+p7);
-    Vector3 pmB = 0.25*(p0+p1+p2+p3);
+    number quarter = 0.25;
+    Vector3 pmN = quarter*(p3+p2+p6+p7);
+    Vector3 pmE = quarter*(p1+p2+p6+p5);
+    Vector3 pmS = quarter*(p0+p1+p5+p4);
+    Vector3 pmW = quarter*(p0+p3+p7+p4);
+    Vector3 pmT = quarter*(p4+p5+p6+p7);
+    Vector3 pmB = quarter*(p0+p1+p2+p3);
     // Test the volume of each pyramid.
     if (tetragonal_dipyramid_volume(p2, p3, p7, p6, pmN, p) > 0.0) return false; // North
     if (tetragonal_dipyramid_volume(p1, p2, p6, p5, pmE, p) > 0.0) return false; // East
@@ -879,7 +884,7 @@ version(properties_test) {
         p2 = Vector3(1.0, 1.0, 1.0);
         p3 = Vector3(0.0, 1.0, 1.0);
         Vector3 centroid, n, t1, t2;
-        double area;
+        number area;
         triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
         assert(approxEqual(area, 0.5), failedUnitTest());
         assert(approxEqualVectors(centroid, Vector3(2.0/3,1.0/3,1.0)), failedUnitTest());
@@ -902,7 +907,7 @@ version(properties_test) {
         double dL = cos(radians(30));
         double dz = sqrt(dL*dL - dx*dx);
         p3 = Vector3(dx, 0.5, dz);
-        double volume;
+        number volume;
         tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
         assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), failedUnitTest());
         assert(approxEqual(volume, cos(radians(30))*0.5*dz/3), failedUnitTest());
@@ -929,7 +934,7 @@ version(properties_test) {
         p2 = Vector3(1,1,0); p3 = Vector3(0,1,0);
         p4 = Vector3(0,0,1); p5 = Vector3(1,0,1);
         Vector3 p6 = Vector3(1,1,1); Vector3 p7 = Vector3(0,1,1);
-        double iLen, jLen, kLen;
+        number iLen, jLen, kLen;
         hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, centroid, volume,
                             iLen, jLen, kLen);
         assert(approxEqualVectors(centroid, Vector3(0.5,0.5,0.5)), failedUnitTest());
