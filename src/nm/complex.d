@@ -1037,20 +1037,9 @@ Complex!double atan(Complex!double z) @safe pure nothrow
 @nogc
 Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow 
 {
-    // TODO: This method is UNTESTED.
-    double ESSENTIALLY_ZERO = 1.0e-50; double y = z.re; double x = w.re;
-    if ( x > ESSENTIALLY_ZERO )
-        return atan(z/w);
-    else if ( x < ESSENTIALLY_ZERO && y >= ESSENTIALLY_ZERO ) 
-        return atan(z/w) + to!double(PI);
-    else if ( x < ESSENTIALLY_ZERO && y < ESSENTIALLY_ZERO )
-        return atan(z/w) - to!double(PI);
-    else if ( std.math.abs(x) <= ESSENTIALLY_ZERO && y > ESSENTIALLY_ZERO )
-        return complex(to!double(PI)/2.0);
-    else if ( std.math.abs(x) <= ESSENTIALLY_ZERO && y < ESSENTIALLY_ZERO )
-        return complex(to!double(-PI)/2.0);
-    else
-        return complex(1.0e6); // TODO: throw error.
+    // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000).
+    // correction of denominator/numerator from http://wiki.tcl.tk/1547
+    return atan(z/w);
 }
 
 // end of overloaded function additions (KD, 2018)
