@@ -17,7 +17,8 @@ set module_names [list bbla bbla_complex \
                       brent brent_complex \
                       rungekutta rungekutta_complex \
                       rsla rsla_complex \
-                      smla smla_complex]  
+                      smla smla_complex \
+                     complex_number]  
 
 foreach name $module_names {
     test ${name}_test "Testing $name.d" \
