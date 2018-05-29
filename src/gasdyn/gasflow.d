@@ -117,7 +117,7 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
         return [f1, f2];
     };
     // Augmented matrix for the linear equation coefficients.
-    Matrix Ab = new Matrix(2, 3);
+    Matrix!double Ab = new Matrix!double(2, 3);
     double rho_delta = 1.0; double T_delta = 1.0;
     //
     // Update the estimates for rho,T using the Newton-Raphson method.
@@ -711,7 +711,7 @@ double[5] taylor_maccoll_odes(double[5] z, double theta,
     double u=z[3]; double p=z[4];
     // Assume gas_state is current.
     // Assemble linear system for determining the derivatives wrt theta.
-    auto A = zeros(5,6); // Augmented matrix with rhs in last column.
+    auto A = zeros!double(5,6); // Augmented matrix with rhs in last column.
     double[2] derivs = EOS_derivatives(gas_state, gm);
     double drhodp = derivs[0]; double drhodu = derivs[1];
     A[0,0] = V_theta; A[0,2] = rho; A[0,5] = -2.0*rho*V_r - rho*V_theta/tan(theta);
@@ -719,7 +719,7 @@ double[5] taylor_maccoll_odes(double[5] z, double theta,
     A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0;
     A[3,0] = -p/(rho^^2); A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0; A[3,4] = 1.0/rho;
     A[4,0] = 1.0; A[4,3] = -drhodu; A[4,4] = -drhodp;
-    gaussJordanElimination(A);
+    gaussJordanElimination!double(A);
     double[5] dzdtheta =  A.getColumn(5);
     return dzdtheta;
 }

@@ -309,7 +309,7 @@ void main(string[] args) {
     foreach (myblk; localFluidBlocks) {
         size_t nLocalCells = myblk.cells.length;
         size_t nDesignVars = designVars.length;
-        myblk.rT = new Matrix(nDesignVars, nLocalCells*nPrimitive);
+        myblk.rT = new Matrix!double(nDesignVars, nLocalCells*nPrimitive);
     }
 
     compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega, ETA);

@@ -17,10 +17,10 @@ import std.exception;
 import nm.complex;
 import nm.number;
 
-class Matrix {
+class Matrix(T) {
     size_t _nrows;
     size_t _ncols;
-    number[][] _data;
+    T[][] _data;
 
     this(size_t n) {
         _nrows = n;
@@ -43,7 +43,7 @@ class Matrix {
                 _data[row][col] = other._data[row][col];
     }
 
-    this(in number[] vec, string orient="column") 
+    this(in T[] vec, string orient="column") 
     {
         if ( orient == "column" ) {
             this(vec.length, 1);
@@ -55,20 +55,20 @@ class Matrix {
     }
 
     this(in float[] vec, string orient="column") {
-        number[] my_vec;
+        T[] my_vec;
         my_vec.length = vec.length;
         foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i]; 
         this(my_vec, orient);
     }
 
     this(in int[] vec, string orient="column") {
-        number[] my_vec;
+        T[] my_vec;
         my_vec.length = vec.length;
         foreach(i; 0 .. my_vec.length) my_vec[i] = vec[i]; 
         this(my_vec, orient);
     }
 
-    this(in number[][] other) {
+    this(in T[][] other) {
         this(other.length, other[0].length);
         foreach(row; 0 .. _nrows)
             foreach(col; 0 .. _ncols)
@@ -92,16 +92,16 @@ class Matrix {
     @property const size_t nrows() { return _nrows; }
     @property const size_t ncols() { return _ncols; }
 
-    const number opIndex(size_t row, size_t col) {
+    const T opIndex(size_t row, size_t col) {
         return _data[row][col];
     }
 
-    ref number opIndexAssign(number c, size_t row, size_t col) {
+    ref T opIndexAssign(T c, size_t row, size_t col) {
         _data[row][col] = c;
         return _data[row][col];
     }
 
-    ref number opIndexOpAssign(string op)(number c, size_t row, size_t col)
+    ref T opIndexOpAssign(string op)(T c, size_t row, size_t col)
         if ( op == "+" || op == "-" || op == "*" || op == "/" )
     {
         static if ( op == "+" )
@@ -115,12 +115,12 @@ class Matrix {
         return _data[row][col];
     }
 
-    Matrix opBinary(string op)(in Matrix rhs)
+    Matrix!T opBinary(string op)(in Matrix rhs)
         if ( op == "+" || op == "-" )
     {
         enforce(_nrows == rhs._nrows && _ncols == rhs._ncols,
                 "incompatible matrices");
-        Matrix result = new Matrix(_nrows, _ncols);
+        Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
                 static if ( op == "+" ) {
@@ -133,10 +133,10 @@ class Matrix {
         return result;
     }
 
-    Matrix opBinary(string op)(double rhs)
+    Matrix!T opBinary(string op)(double rhs)
         if ( op == "+" || op == "-" || op == "*" || op == "/" )
     {
-        Matrix result = new Matrix(_nrows, _ncols);
+        Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
                 static if ( op == "+" ) {
@@ -153,10 +153,10 @@ class Matrix {
         return result;
     }
 
-    Matrix opBinary(string op)(Complex!double rhs)
+    Matrix!T opBinary(string op)(Complex!double rhs)
         if ( op == "+" || op == "-" || op == "*" || op == "/" )
     {
-        Matrix result = new Matrix(_nrows, _ncols);
+        Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
                 static if ( op == "+" ) {
@@ -173,10 +173,10 @@ class Matrix {
         return result;
     }
 
-    Matrix opBinaryRight(string op)(double lhs)
+    Matrix!T opBinaryRight(string op)(double lhs)
         if ( op == "+" || op == "-" || op == "*" )
     {
-        Matrix result = new Matrix(_nrows, _ncols);
+        Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
                 static if ( op == "+" ) {
@@ -191,10 +191,10 @@ class Matrix {
         return result;
     }
 
-    Matrix opBinaryRight(string op)(Complex!double lhs)
+    Matrix!T opBinaryRight(string op)(Complex!double lhs)
         if ( op == "+" || op == "-" || op == "*" )
     {
-        Matrix result = new Matrix(_nrows, _ncols);
+        Matrix!T result = new Matrix!T(_nrows, _ncols);
         foreach(row; 0 .. _nrows) {
             foreach(col; 0 .. _ncols) {
                 static if ( op == "+" ) {
@@ -210,7 +210,7 @@ class Matrix {
     }
 
     override string toString() {
-        string s = "Matrix[";
+        string s = "Matrix["; // [TODO] add string form of type T here
         foreach(row; 0 .. _nrows) {
             s ~= "[";
             foreach(col; 0 .. _ncols) {
@@ -228,19 +228,19 @@ class Matrix {
         swap(_data[i1], _data[i2]);
     }
 
-    number[] getColumn(size_t col) {
-        number[] my_column;
+    T[] getColumn(size_t col) {
+        T[] my_column;
         my_column.length = nrows;
-        foreach(row; 0 .. nrows) my_column[row] = _data[row][col];
+        foreach(row; 0 .. nrows) { my_column[row] = _data[row][col]; }
         return my_column;
     }
 
-    number[] getRow(size_t row) {
+    T[] getRow(size_t row) {
         return _data[row].dup;
     }
 
     // Maybe there is a way of using built-in slices here.
-    Matrix sliceDup(size_t row0, size_t row1, size_t col0, size_t col1)
+    Matrix!T sliceDup(size_t row0, size_t row1, size_t col0, size_t col1)
     {
         enforce((row0 < row1) && (row1 <= this._nrows) &&
                 (col0 < col1) && (col1 <= this._ncols),
@@ -254,7 +254,7 @@ class Matrix {
         return sub_matrix;
     }
 
-    void sliceAssign(double c, size_t row0, size_t row1, size_t col0, size_t col1)
+    void sliceAssign(T c, size_t row0, size_t row1, size_t col0, size_t col1)
     {
         enforce((row0 < row1) && (row1 <= this._nrows) &&
                 (col0 < col1) && (col1 <= this._ncols),
@@ -269,25 +269,25 @@ class Matrix {
     void zeros()
     {
         foreach (ref row; _data) {
-            foreach( idx; 0..row.length) row[idx] = 0.0;
+            foreach(idx; 0..row.length) { row[idx] = to!T(0.0); }
         }
     }
 
     void eye()
     {
         foreach (i, ref row; _data) {
-            foreach ( idx; 0..row.length) row[idx] = 0.0;
-            row[i] = 1.0;
+            foreach (idx; 0..row.length) { row[idx] = to!T(0.0); }
+            row[i] = to!T(1.0);
         }
     }
 
 } // end class Matrix
 
 
-bool approxEqualMatrix(in Matrix a, in Matrix b)
+bool approxEqualMatrix(T)(in Matrix!T a, in Matrix!T b)
 {
-    if ( a.nrows != b.nrows ) return false;
-    if ( a.ncols != b.ncols ) return false;
+    if (a.nrows != b.nrows) return false;
+    if (a.ncols != b.ncols) return false;
     bool is_equal = true;
     foreach(row; 0 .. a.nrows) {
         foreach(col; 0 .. a.ncols) {
@@ -300,31 +300,31 @@ bool approxEqualMatrix(in Matrix a, in Matrix b)
     return is_equal;
 }
 
-Matrix zeros(size_t rows, size_t cols)
+Matrix!T zeros(T)(size_t rows, size_t cols)
 {
-    Matrix my_matrix = new Matrix(rows, cols);
+    Matrix!T my_matrix = new Matrix!T(rows, cols);
     foreach(row; 0 .. rows) {
         foreach(col; 0 .. cols) {
-            my_matrix[row,col] = to!number(0.0);
+            my_matrix[row,col] = to!T(0.0);
         }
     }
     return my_matrix;
 }
 
-Matrix eye(size_t n)
+Matrix!T eye(T)(size_t n)
 {
-    Matrix ident_matrix = new Matrix(n);
+    Matrix!T ident_matrix = new Matrix!T(n);
     foreach(row; 0 .. n) {
         foreach(col; 0 .. n) {
-            ident_matrix[row,col] = (row == col) ? to!number(1.0) : to!number(0.0);
+            ident_matrix[row,col] = (row == col) ? to!T(1.0) : to!T(0.0);
         }
     }
     return ident_matrix;
 }
 
-Matrix transpose(in Matrix other)
+Matrix!T transpose(T)(in Matrix!T other)
 {
-    Matrix my_matrix = new Matrix(other.ncols, other.nrows);
+    Matrix!T my_matrix = new Matrix!T(other.ncols, other.nrows);
     foreach(row; 0 .. other.nrows) {
         foreach(col; 0 .. other.ncols) {
             my_matrix[col,row] = other[row,col];
@@ -333,19 +333,19 @@ Matrix transpose(in Matrix other)
     return my_matrix;
 }
 
-Matrix hstack(in Matrix[] matrixList)
+Matrix!T hstack(T)(in Matrix!T[] matrixList)
 {
     bool consistent = true;
     size_t nrows = matrixList[0].nrows;
     size_t ncols = 0;
     foreach(mat; matrixList) {
         ncols += mat.ncols;
-        if ( nrows != mat.nrows ) consistent = false;
+        if (nrows != mat.nrows) consistent = false;
     }
-    if ( !consistent ) {
+    if (!consistent) {
         throw new Error("Matrices need to have the same number of rows");
     }
-    Matrix result = new Matrix(nrows, ncols);
+    Matrix!T result = new Matrix!T(nrows, ncols);
     size_t colStart = 0;
     foreach(mat; matrixList) {
         foreach(row; 0 .. mat.nrows) {
@@ -358,19 +358,19 @@ Matrix hstack(in Matrix[] matrixList)
     return result;
 }
 
-Matrix vstack(in Matrix[] matrixList)
+Matrix!T vstack(T)(in Matrix!T[] matrixList)
 {
     bool consistent = true;
     size_t ncols = matrixList[0].ncols;
     size_t nrows = 0;
     foreach(mat; matrixList) {
         nrows += mat.nrows;
-        if ( ncols != mat.ncols ) consistent = false;
+        if (ncols != mat.ncols) consistent = false;
     }
-    if ( !consistent ) {
+    if (!consistent) {
         throw new Error("Matrices need to have the same number of columns");
     }
-    Matrix result = new Matrix(nrows, ncols);
+    Matrix!T result = new Matrix!T(nrows, ncols);
     size_t rowStart = 0;
     foreach(mat; matrixList) {
         foreach(row; 0 .. mat.nrows) {
@@ -383,14 +383,14 @@ Matrix vstack(in Matrix[] matrixList)
     return result;
 }
 
-Matrix dot(in Matrix a, in Matrix b)
+Matrix!T dot(T)(in Matrix!T a, in Matrix!T b)
 {
-    if ( a.ncols != b.nrows ) {
+    if (a.ncols != b.nrows) {
         throw new Exception("incompatible matrices for dot product");
     }
     size_t nrows = a.nrows;
     size_t ncols = b.ncols;
-    Matrix c = zeros(nrows, ncols);
+    Matrix!T c = zeros!T(nrows, ncols);
     foreach(row; 0 .. nrows) {
         foreach(col; 0 .. ncols) {
             foreach(i; 0 .. a.ncols) {
@@ -401,7 +401,7 @@ Matrix dot(in Matrix a, in Matrix b)
     return c;
 }
 
-void dot(in Matrix a, in Matrix b, ref Matrix c)
+void dot(T)(in Matrix!T a, in Matrix!T b, ref Matrix!T c)
 in {
     assert(a.ncols == b.nrows);
     assert(a.nrows == c.nrows);
@@ -436,9 +436,9 @@ body {
  *   2. matrix c is only changed where the the new reuls is
  *      computed based on the supplied row and column range.
  */
-void dot(in Matrix a, size_t aRow, size_t aCol,
-         in Matrix b, size_t bCol,
-         ref Matrix c)
+void dot(T)(in Matrix!T a, size_t aRow, size_t aCol,
+            in Matrix!T b, size_t bCol,
+            ref Matrix!T c)
 in {
     assert(aRow <= a.nrows);
     assert(aCol <= a.ncols);
@@ -448,10 +448,10 @@ in {
     assert(bCol <= c.ncols);
 }
 body {
-    foreach(row; 0 .. aRow) {
-        foreach(col; 0 .. bCol) {
+    foreach (row; 0 .. aRow) {
+        foreach (col; 0 .. bCol) {
             c[row,col] = to!number(0.0);
-            foreach(i; 0 .. aCol) {
+            foreach (i; 0 .. aCol) {
                 c[row,col] += a[row,i] * b[i,col];
             }
         }
@@ -459,7 +459,7 @@ body {
 }
 
 
-void dot(in Matrix a, number[] b, number[] c)
+void dot(T)(in Matrix!T a, T[] b, T[] c)
 in {
     assert(a.ncols == b.length);
     assert(a.nrows == c.length);
@@ -467,15 +467,15 @@ in {
 body {
     size_t nrows = a.nrows;
     size_t ncols = a.ncols;
-    foreach( idx; 0..c.length) c[idx] = 0.0;
-    foreach(row; 0 .. nrows) {
-        foreach(col; 0 .. ncols) {
+    foreach (idx; 0..c.length) c[idx] = 0.0;
+    foreach (row; 0 .. nrows) {
+        foreach (col; 0 .. ncols) {
             c[row] += a[row,col] * b[col];
         }
     }
 }
 
-void dot(in Matrix a, size_t aRow, size_t aCol, number[] b, number[] c)
+void dot(T)(in Matrix!T a, size_t aRow, size_t aCol, T[] b, T[] c)
 in {
     assert(aRow <= a.nrows);
     assert(aCol <= a.ncols);
@@ -483,16 +483,16 @@ in {
     assert(aRow <= c.length);
 }
 body {
-    foreach( idx; 0..c.length) c[idx] = 0.0;
-    foreach(row; 0 .. aRow) {
-        foreach(col; 0 .. aCol) {
+    foreach (idx; 0..c.length) c[idx] = 0.0;
+    foreach (row; 0 .. aRow) {
+        foreach (col; 0 .. aCol) {
             c[row] += a[row,col] * b[col];
         }
     }
 }
 
 
-void copy(in Matrix src, ref Matrix tgt)
+void copy(T)(in Matrix!T src, ref Matrix!T tgt)
 in {
     assert(src.nrows == tgt.nrows);
     assert(src.ncols == tgt.ncols);
@@ -510,38 +510,38 @@ version(bbla_test) {
     import util.msg_service;
     import std.conv;
     int test_basic_operations() {
-        Matrix a = eye(3);
-        assert(approxEqualMatrix(a, new Matrix([[1,0,0],[0,1,0],[0,0,1]])),
+        Matrix!number a = eye!number(3);
+        assert(approxEqualMatrix!number(a, new Matrix!number([[1,0,0],[0,1,0],[0,0,1]])),
                failedUnitTest());
-        Matrix b = zeros(2,3);
-        Matrix c = transpose(b);
+        Matrix!number b = zeros!number(2,3);
+        Matrix!number c = transpose!number(b);
         b[1,2] = to!number(99.0);
         c[0,0] = to!number(1.0); c[1,1] = to!number(1.0);
-        assert(approxEqualMatrix(b, new Matrix([[0,0,0],[0,0,99]])),
+        assert(approxEqualMatrix!number(b, new Matrix!number([[0,0,0],[0,0,99]])),
                failedUnitTest());
-        assert(approxEqualMatrix(c, new Matrix([[1,0],[0,1],[0,0]])),
+        assert(approxEqualMatrix!number(c, new Matrix!number([[1,0],[0,1],[0,0]])),
                failedUnitTest());
 
-        Matrix e = new Matrix([1.0, 2.0, 3.0]);
-        assert(approxEqualMatrix(e, new Matrix([[1],[2],[3]])),
+        Matrix!number e = new Matrix!number([1.0, 2.0, 3.0]);
+        assert(approxEqualMatrix!number(e, new Matrix!number([[1],[2],[3]])),
                failedUnitTest());
-        Matrix e2 = new Matrix([1, 2, 3], "row");
-        assert(approxEqualMatrix(e2, new Matrix([[1,2,3]])),
+        Matrix!number e2 = new Matrix!number([1, 2, 3], "row");
+        assert(approxEqualMatrix!number(e2, new Matrix!number([[1,2,3]])),
                failedUnitTest());
         
-        Matrix f = new Matrix([[1.0,2.0,3.0],[4.0,5.0,6.0]]);
-        Matrix g = dot(f,c);
-        assert(approxEqualMatrix(g, new Matrix([[1,2],[4,5]])),
+        Matrix!number f = new Matrix!number([[1.0,2.0,3.0],[4.0,5.0,6.0]]);
+        Matrix!number g = dot!number(f,c);
+        assert(approxEqualMatrix!number(g, new Matrix!number([[1,2],[4,5]])),
                failedUnitTest());
         g.zeros();
-        assert(approxEqualMatrix(g, new Matrix([[0,0],[0,0]])).
+        assert(approxEqualMatrix!number(g, new Matrix!number([[0,0],[0,0]])).
                failedUnitTest());
-        dot(f, c, g);
-        assert(approxEqualMatrix(g, new Matrix([[1,2],[4,5]])),
+        dot!number(f, c, g);
+        assert(approxEqualMatrix!number(g, new Matrix!number([[1,2],[4,5]])),
                failedUnitTest());
 
         g.eye();
-        assert(approxEqualMatrix(g, new Matrix([[1,0],[0,1]])),
+        assert(approxEqualMatrix!number(g, new Matrix!number([[1,0],[0,1]])),
                failedUnitTest());
 
         return 0;
@@ -554,7 +554,7 @@ version(bbla_test) {
  * c = [A|b] such that the mutated matrix becomes [I|x]
  * where x is the solution vector(s) to A.x = b
  */
-void gaussJordanElimination(ref Matrix c, double very_small_value=1.0e-16)
+void gaussJordanElimination(T)(ref Matrix!T c, double very_small_value=1.0e-16)
 {
     if (c.ncols < c.nrows) {
         throw new Exception("too few columns supplied");
@@ -563,43 +563,43 @@ void gaussJordanElimination(ref Matrix c, double very_small_value=1.0e-16)
         // Select pivot.
         size_t p = j;
         foreach(i; j+1 .. c.nrows) {
-            if ( abs(c[i,j]) > abs(c[p,j]) ) p = i;
+            if (abs(c[i,j]) > abs(c[p,j])) p = i;
         }
-        if ( abs(c[p,j]) < very_small_value ) {
+        if (abs(c[p,j]) < very_small_value) {
             throw new Exception("matrix is essentially singular");
         }
-        if ( p != j ) c.swapRows(p,j);
+        if (p != j) { c.swapRows(p,j); }
         // Scale row j to get unity on the diagonal.
         number cjj = c[j,j];
-        foreach(col; 0 .. c.ncols) c[j,col] /= cjj;
+        foreach (col; 0 .. c.ncols) { c[j,col] /= cjj; }
         // Do the elimination to get zeros in all off diagonal values in column j.
-        foreach(i; 0 .. c.nrows) {
-            if ( i == j ) continue;
-            number cij = c[i,j];
-            foreach(col; 0 .. c.ncols) c[i,col] -= cij * c[j,col]; 
+        foreach (i; 0 .. c.nrows) {
+            if (i == j) continue;
+            T cij = c[i,j];
+            foreach (col; 0 .. c.ncols) { c[i,col] -= cij * c[j,col]; } 
         }
     } // end foreach j
 } // end gaussJordanElimination()
 
 version(bbla_test) {
     int test_elimination() {
-        Matrix A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-                               [2.0,  2.0,  3.0,  2.0],
-                               [4.0, -3.0,  0.0,  1.0],
-                               [6.0,  1.0, -6.0, -5.0]]);
-        Matrix b = new Matrix([0.0, -2.0, -7.0, 6.0], "column");
-        Matrix Ab = hstack([A,b]);
-        Matrix Aonly = Ab.sliceDup(0, 4, 0, 4);
-        Matrix bonly = Ab.sliceDup(0, 4, 4, 5);
-        gaussJordanElimination(Ab);
-        assert(approxEqualMatrix(Ab, new Matrix([[1,0,0,0,-0.5],[0,1.0,0,0,1],
-                                             [0,0,1,0,1.0/3],[0,0,0,1,-2.0]])),
+        Matrix!number A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
+                                             [2.0,  2.0,  3.0,  2.0],
+                                             [4.0, -3.0,  0.0,  1.0],
+                                             [6.0,  1.0, -6.0, -5.0]]);
+        Matrix!number b = new Matrix!number([0.0, -2.0, -7.0, 6.0], "column");
+        Matrix!number Ab = hstack!number([A,b]);
+        Matrix!number Aonly = Ab.sliceDup(0, 4, 0, 4);
+        Matrix!number bonly = Ab.sliceDup(0, 4, 4, 5);
+        gaussJordanElimination!number(Ab);
+        assert(approxEqualMatrix!number(Ab, new Matrix!number([[1,0,0,0,-0.5],[0,1.0,0,0,1],
+                                                               [0,0,1,0,1.0/3],[0,0,0,1,-2.0]])),
                failedUnitTest());
         number[] x = Ab.getColumn(4);
-        Matrix new_rhs = dot(Aonly, new Matrix(x));
-        assert(approxEqualMatrix(new_rhs, bonly), failedUnitTest());
-        Matrix residual = new_rhs - b;
-        assert(approxEqualMatrix(residual, new Matrix([0,0,0,0])), failedUnitTest());
+        Matrix!number new_rhs = dot!number(Aonly, new Matrix!number(x));
+        assert(approxEqualMatrix!number(new_rhs, bonly), failedUnitTest());
+        Matrix!number residual = new_rhs - b;
+        assert(approxEqualMatrix!number(residual, new Matrix!number([0,0,0,0])), failedUnitTest());
 
         return 0;
     }
@@ -621,31 +621,31 @@ version(bbla_test) {
  *     we need to keep a record of the row permutations
  *     to be passed into the solve function.
  */
-size_t[2][] decomp(ref Matrix c, double very_small_value=1.0e-16)
+size_t[2][] decomp(T)(ref Matrix!T c, double very_small_value=1.0e-16)
 {
     if (c.ncols != c.nrows) {
         throw new Exception("require a square matrix");
     }
     size_t[2][] permuteList;
 
-    foreach(j; 0 .. c.nrows) {
+    foreach (j; 0 .. c.nrows) {
         // Select pivot.
         size_t p = j;
-        foreach(i; j+1 .. c.nrows) {
-            if ( abs(c[i,j]) > abs(c[p,j]) ) p = i;
+        foreach (i; j+1 .. c.nrows) {
+            if (abs(c[i,j]) > abs(c[p,j])) { p = i; }
         }
-        if ( abs(c[p,j]) < very_small_value ) {
+        if (abs(c[p,j]) < very_small_value) {
             throw new Exception("matrix is essentially singular");
         }
-        if ( p != j ) {
+        if (p != j) {
             c.swapRows(p,j);
             permuteList ~= [p,j];
         }
         // Do the elimination to get zeros in column j, below the diagonal.
         // Don't disturb the previous multipliers stored in columns to the left.
-        foreach(i; j+1 .. c.nrows) {
-            number multiplier = c[i,j]/c[j,j];
-            foreach(col; j .. c.ncols) c[i,col] -= multiplier * c[j,col];
+        foreach (i; j+1 .. c.nrows) {
+            T multiplier = c[i,j]/c[j,j];
+            foreach (col; j .. c.ncols) { c[i,col] -= multiplier * c[j,col]; }
             c[i,j] = multiplier; // Save in the newly-zeroed spot.
         }
     } // end foreach j
@@ -663,60 +663,60 @@ size_t[2][] decomp(ref Matrix c, double very_small_value=1.0e-16)
  *         on return, these are the solution vectors.
  *     permuteList: list of row-permutation pairs from the first stage.
  */
-void solve(in Matrix c, ref Matrix rhs, in size_t[2][] permuteList)
+void solve(T)(in Matrix!T c, ref Matrix!T rhs, in size_t[2][] permuteList)
 {
     size_t nrows = c.nrows;
     if (rhs.ncols < 1 || rhs.nrows != nrows) {
         throw new Exception("invalid right-hand side");
     }
     // Get the right-hand side rows into final order.
-    foreach(rowPair; permuteList) {
+    foreach (rowPair; permuteList) {
         rhs.swapRows(rowPair[0], rowPair[1]);
     }
     // Forward elimination, using the stored multipliers.
-    foreach(i; 1 .. nrows) {
-        foreach(j; 0 .. i) {
-            number multiplier = c[i,j];
-            foreach(col; 0 .. rhs.ncols) rhs[i,col] -= multiplier * rhs[j,col];
+    foreach (i; 1 .. nrows) {
+        foreach (j; 0 .. i) {
+            T multiplier = c[i,j];
+            foreach (col; 0 .. rhs.ncols) { rhs[i,col] -= multiplier * rhs[j,col]; }
         }
     }
     // Back substitution to obtain the solution vector(s).
-    foreach(col; 0 .. rhs.ncols) {
+    foreach (col; 0 .. rhs.ncols) {
         rhs[nrows-1, col] /= c[nrows-1,nrows-1];
         for (int i = to!int(nrows-2); i >= 0; --i) {
-            number my_sum = rhs[i,col];
-            foreach(j; i+1 .. nrows) my_sum -= c[i,j] * rhs[j,col];
+            T my_sum = rhs[i,col];
+            foreach (j; i+1 .. nrows) { my_sum -= c[i,j] * rhs[j,col]; }
             rhs[i,col] = my_sum/c[i,i];
         }
     }
 } // end solve()
 
-Matrix inverse(in Matrix a)
+Matrix!T inverse(T)(in Matrix!T a)
 {
     auto n = a.nrows;
-    if ( n != a.ncols && n == 0 ) {
+    if (n != a.ncols && n == 0) {
         throw new Exception("matrix should be square and not empty");
     }
-    auto c = new Matrix(a);
-    auto perm = decomp(c);
-    auto x = eye(n);
-    solve(c, x, perm);
+    auto c = new Matrix!T(a);
+    auto perm = decomp!T(c);
+    auto x = eye!T(n);
+    solve!T(c, x, perm);
     return x;
 }
 
-void upperSolve(in Matrix U, number[] b)
+void upperSolve(T)(in Matrix!T U, T[] b)
 {
     int n = to!int(U.nrows);
     // Back subsitution
     b[n-1] /= U[n-1,n-1];
-    for ( int i = to!int(n-2); i >= 0; --i ) {
-        number sum = b[i];
-        foreach (j; i+1 .. n) sum -= U[i,j] * b[j];
+    for (int i = to!int(n-2); i >= 0; --i) {
+        T sum = b[i];
+        foreach (j; i+1 .. n) { sum -= U[i,j] * b[j]; }
         b[i] = sum/U[i,i];
     }
 }
 
-void upperSolve(in Matrix U, int n, number[] b)
+void upperSolve(T)(in Matrix!T U, int n, number[] b)
 in {
     assert(n <= U.nrows);
     assert(n <= U.ncols);
@@ -725,9 +725,9 @@ in {
 body {
     // Back subsitution
     b[n-1] /= U[n-1,n-1];
-    for ( int i = to!int(n-2); i >= 0; --i ) {
-        number sum = b[i];
-        foreach (j; i+1 .. n) sum -= U[i,j] * b[j];
+    for (int i = to!int(n-2); i >= 0; --i) {
+        T sum = b[i];
+        foreach (j; i+1 .. n) { sum -= U[i,j] * b[j]; }
         b[i] = sum/U[i,i];
     }
 }
@@ -735,20 +735,21 @@ body {
 
 version(bbla_test) {
     int test_decomp_and_inverse() {
-        auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-                             [2.0,  2.0,  3.0,  2.0],
-                             [4.0, -3.0,  0.0,  1.0],
-                             [6.0,  1.0, -6.0, -5.0]]);
-        auto b = new Matrix([0.0, -2.0, -7.0, 6.0], "column");
-        auto c = new Matrix(A);
-        auto perm = decomp(c);
-        auto x = new Matrix(b);
-        solve(c, x, perm);
-        auto residual = b - dot(A,x);
-        assert(approxEqualMatrix(residual, new Matrix([0,0,0,0])), failedUnitTest());
+        auto A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
+                                    [2.0,  2.0,  3.0,  2.0],
+                                    [4.0, -3.0,  0.0,  1.0],
+                                    [6.0,  1.0, -6.0, -5.0]]);
+        auto b = new Matrix!number([0.0, -2.0, -7.0, 6.0], "column");
+        auto c = new Matrix!number(A);
+        auto perm = decomp!number(c);
+        auto x = new Matrix!number(b);
+        solve!number(c, x, perm);
+        auto residual = b - dot!number(A,x);
+        assert(approxEqualMatrix!number(residual, new Matrix!number([0,0,0,0])),
+               failedUnitTest());
 
-        auto y = inverse(A);
-        assert(approxEqualMatrix(dot(A,y), eye(4)), failedUnitTest());
+        auto y = inverse!number(A);
+        assert(approxEqualMatrix!number(dot!number(A,y), eye!number(4)), failedUnitTest());
 
         return 0;
     }
@@ -769,7 +770,7 @@ version(bbla_test) {
  *     ncols2 may be larger than 1 so that several right-hand-sides
  *     can be solved in one sitting.
  */
-Matrix lsqsolve(const Matrix c, const Matrix rhs)
+Matrix!T lsqsolve(T)(const Matrix!T c, const Matrix!T rhs)
 {
     size_t m = c.ncols; // number of unknowns
     size_t N = c.nrows; // number of linear constraint equations
@@ -777,8 +778,8 @@ Matrix lsqsolve(const Matrix c, const Matrix rhs)
         throw new Error(text("too few constraints N=", N, " m=", m));
     }
     // Prepare the normal equations A.x = b
-    Matrix a = zeros(m, m);
-    Matrix x = zeros(m, rhs.ncols);
+    Matrix!T a = zeros!T(m, m);
+    Matrix!T x = zeros!T(m, rhs.ncols);
     foreach (k; 0 .. m) {
         foreach (j; 0 .. m) {
             foreach (i; 0 .. N) { a[k,j] += c[i,k]*c[i,j]; }
@@ -788,28 +789,28 @@ Matrix lsqsolve(const Matrix c, const Matrix rhs)
         }
     }
     // Solve using decomposition and solve for the usual mxm linear system.
-    auto perm = decomp(a);
-    solve(a, x, perm);
+    auto perm = decomp!T(a);
+    solve!T(a, x, perm);
     return x;
-} // end lsqsolve()
+} // end lsqsolve()()
 
 version(bbla_test) {
     int test_lsqsolve() {
-        auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-                             [2.0,  2.0,  3.0,  2.0],
-                             [4.0,  4.0,  6.0,  4.0],
-                             [4.0, -3.0,  0.0,  1.0],
-                             [4.0, -3.0,  0.0,  1.0],
-                             [6.0,  1.0, -6.0, -5.0]]);
-        auto b = new Matrix([[ 0.0],
-                             [-2.0],
-                             [-4.0],
-                             [-7.0],
-                             [-7.0],
-                             [ 6.0]]);
-        auto xx = lsqsolve(A, b);
-        auto expected_xx = new Matrix([-0.5, 1, 1.0/3, -2], "column");
-        assert(approxEqualMatrix(xx, expected_xx), failedUnitTest());
+        auto A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
+                                    [2.0,  2.0,  3.0,  2.0],
+                                    [4.0,  4.0,  6.0,  4.0],
+                                    [4.0, -3.0,  0.0,  1.0],
+                                    [4.0, -3.0,  0.0,  1.0],
+                                    [6.0,  1.0, -6.0, -5.0]]);
+        auto b = new Matrix!number([[ 0.0],
+                                    [-2.0],
+                                    [-4.0],
+                                    [-7.0],
+                                    [-7.0],
+                                    [ 6.0]]);
+        auto xx = lsqsolve!number(A, b);
+        auto expected_xx = new Matrix!number([-0.5, 1, 1.0/3, -2], "column");
+        assert(approxEqualMatrix!number(xx, expected_xx), failedUnitTest());
         return 0;
     }
 }
@@ -827,7 +828,7 @@ version(bbla_test) {
  * Cambridge University Press, Cambridge, UK
  */
 
-void LUDecomp(Matrix a, ref int[] pivot, double verySmallValue=1.0e-40)
+void LUDecomp(T)(Matrix!T a, ref int[] pivot, double verySmallValue=1.0e-40)
 in {
     assert(a.nrows == a.ncols, "require a square matrix");
     assert(pivot.length == a.nrows, "pivot array wrongly sized");
@@ -835,7 +836,7 @@ in {
 body {
     int iMax;
     number largest, tmp;
-    number[] vv;
+    T[] vv;
     
     int n = to!int(a.nrows);
     vv.length = n;
@@ -844,8 +845,7 @@ body {
         largest = 0.0;
         foreach (j; 0 .. n) {
             tmp = fabs(a[i,j]);
-            if (tmp > largest)
-                largest = tmp;
+            if (tmp > largest) { largest = tmp; }
         }
         if (largest == 0.0)
             throw new Exception("Singular matrix in LUDecompCrout");
@@ -870,7 +870,7 @@ body {
             vv[iMax] = vv[k];
         }
         pivot[k] = iMax;
-        if (a[k,k] == 0.0) a[k,k] = to!number(verySmallValue);
+        if (a[k,k] == 0.0) { a[k,k] = to!number(verySmallValue); }
         foreach (i; k+1 .. n) {
             a[i,k] /= a[k,k];
             tmp = a[i,k];
@@ -881,7 +881,7 @@ body {
     }
 }
 
-void LUSolve(Matrix a, int[] pivot, number[] b, ref number[] x)
+void LUSolve(T)(Matrix!T a, int[] pivot, number[] b, ref number[] x)
 in {
     assert(a.nrows == a.ncols, "require a square matrix");
     assert(pivot.length == a.nrows, "pivot array wrongly sized");
@@ -891,10 +891,10 @@ in {
 body {
     int ii, ip, n;
     ii = 0;
-    number sum;
+    T sum;
     n = to!int(a.nrows);
 
-    foreach( idx; 0..x.length) x[idx] = b[idx];
+    foreach (idx; 0..x.length) { x[idx] = b[idx]; }
     
     foreach (i; 0 .. n) {
         ip = pivot[i];
@@ -904,8 +904,7 @@ body {
             foreach (j; ii-1 .. i) {
                 sum -= a[i,j]*x[j];
             }
-        }
-        else if (sum != 0.0) {
+        } else if (sum != 0.0) {
             ii = i + 1;
         }
         x[i] = sum;
@@ -913,31 +912,31 @@ body {
     
     for (int i = n-1; i >= 0; i--) {
         sum = x[i];
-        foreach (j; i+1 .. n) sum -= a[i,j]*x[j];
+        foreach (j; i+1 .. n) { sum -= a[i,j]*x[j]; }
         x[i] = sum / a[i,i];
     }
 }
 
 version(bbla_test) {
     int test_Crout_decomp_and_solve() {
-        auto A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-                             [2.0,  2.0,  3.0,  2.0],
-                             [4.0, -3.0,  0.0,  1.0],
-                             [6.0,  1.0, -6.0, -5.0]]);
+        auto A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
+                                    [2.0,  2.0,  3.0,  2.0],
+                                    [4.0, -3.0,  0.0,  1.0],
+                                    [6.0,  1.0, -6.0, -5.0]]);
         number[] b = [to!number(0.0), to!number(-2.0), to!number(-7.0), to!number(6.0)];
         int[] pivot;
         pivot.length = 4;
         number[] x;
         x.length = 4;
 
-        LUDecomp(A, pivot);
-        LUSolve(A, pivot, b, x);
+        LUDecomp!number(A, pivot);
+        LUSolve!number(A, pivot, b, x);
         
         // Reset A since it was converted to LU format.
-        A = new Matrix([[0.0,  2.0,  0.0,  1.0],
-                             [2.0,  2.0,  3.0,  2.0],
-                             [4.0, -3.0,  0.0,  1.0],
-                             [6.0,  1.0, -6.0, -5.0]]);
+        A = new Matrix!number([[0.0,  2.0,  0.0,  1.0],
+                               [2.0,  2.0,  3.0,  2.0],
+                               [4.0, -3.0,  0.0,  1.0],
+                               [6.0,  1.0, -6.0, -5.0]]);
 
         number[] Ax;
         Ax.length = 4;

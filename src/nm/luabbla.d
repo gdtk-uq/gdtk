@@ -18,15 +18,15 @@ immutable string MatrixMT = "Matrix"; // Name of Matrix metatable
 
 // A place to hang on to references to objects that are pushed into the Lua domain.
 // We don't want the D garbage collector to get rid of them too early.
-static const(Matrix)[] matrixStore;
+static const(Matrix!double)[] matrixStore;
 
-Matrix checkMatrix(lua_State *L, int index)
+Matrix!double checkMatrix(lua_State *L, int index)
 {
-    return checkObj!(Matrix, MatrixMT)(L, index);
+    return checkObj!(Matrix!double, MatrixMT)(L, index);
 }
 
 /**
- * This function implements the constructor for a Matrix
+ * This function implements the constructor for a Matrix!double
  * in the Lua interface.
  *
  * Construction of a Matrix in Lua will look like any of the following:
@@ -58,8 +58,8 @@ extern(C) int newMatrix(lua_State *L)
     if ( !lua_isnil(L, -1) ) {
         int n = luaL_checkint(L, -1);
         lua_pop(L, 1);
-        auto mat = new Matrix(n);
-        matrixStore ~= pushObj!(Matrix, MatrixMT)(L, mat);
+        auto mat = new Matrix!double(n);
+        matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, mat);
         return 1;
     }
     lua_pop(L, 1);
@@ -80,8 +80,8 @@ extern(C) int newMatrix(lua_State *L)
         int ncols = luaL_checkint(L, -1);
         lua_pop(L, 1);
 
-        auto mat = new Matrix(nrows, ncols);
-        matrixStore ~=  pushObj!(Matrix, MatrixMT)(L, mat);
+        auto mat = new Matrix!double(nrows, ncols);
+        matrixStore ~=  pushObj!(Matrix!double, MatrixMT)(L, mat);
         return 1;
     }
     lua_pop(L, 1);
@@ -89,14 +89,14 @@ extern(C) int newMatrix(lua_State *L)
     // Look for matrix constructor: Matrix:new{other=...}
     lua_getfield(L, 1, "other");
     if ( !lua_isnil(L, -1) ) {
-        Matrix a = checkMatrix(L, -1);
-        if ( a is null ) {
+        Matrix!double a = checkMatrix(L, -1);
+        if (a is null) {
             string errMsg = "Error in Matrix:new{} constructor.\n";
             errMsg ~= "You have used the 'other' keyword argument but have not supplied a valid Matrix object.\n";
             throw new Error(errMsg);
         }
-        auto mat = new Matrix(a);
-        matrixStore ~= pushObj!(Matrix, MatrixMT)(L, mat);
+        auto mat = new Matrix!double(a);
+        matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, mat);
         return 1;
     }
     lua_pop(L, 1);
@@ -132,8 +132,8 @@ extern(C) int newMatrix(lua_State *L)
     string orient = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);
 
-    auto mat = new Matrix(vec, orient);
-    matrixStore ~= pushObj!(Matrix, MatrixMT)(L, mat);
+    auto mat = new Matrix!double(vec, orient);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, mat);
     return 1;
 }
 
@@ -176,7 +176,7 @@ extern(C) int add(lua_State *L)
     auto M = checkMatrix(L, 1);
     auto rhs = checkMatrix(L, 2);
     auto result = M + rhs;
-    matrixStore ~= pushObj!(Matrix, MatrixMT)(L, result);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, result);
     return 1;
 }
 
@@ -185,7 +185,7 @@ extern(C) int subtract(lua_State *L)
     auto M = checkMatrix(L, 1);
     auto rhs = checkMatrix(L, 2);
     auto result = M - rhs;
-    matrixStore ~= pushObj!(Matrix, MatrixMT)(L, result);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, result);
     return 1;
 }
 
@@ -215,8 +215,8 @@ extern(C) int zeros(lua_State *L)
 {
     size_t nrows = luaL_checkint(L, 1);
     size_t ncols = luaL_checkint(L, 2);
-    auto M = nm.bbla.zeros(nrows, ncols);
-    matrixStore ~= pushObj!(Matrix, MatrixMT)(L, M);
+    auto M = nm.bbla.zeros!double(nrows, ncols);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, M);
     return 1;
 
 }
@@ -224,8 +224,8 @@ extern(C) int zeros(lua_State *L)
 extern(C) int eye(lua_State *L)
 {
     size_t n = luaL_checkint(L, 1);
-    auto I = nm.bbla.eye(n);
-    matrixStore ~= pushObj!(Matrix, MatrixMT)(L, I);
+    auto I = nm.bbla.eye!double(n);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, I);
     return 1;
 
 }
@@ -234,7 +234,7 @@ extern(C) int transpose(lua_State *L)
 {
     auto other = checkMatrix(L, 1);
     auto M = nm.bbla.transpose(other);
-    matrixStore ~= pushObj!(Matrix, MatrixMT)(L, M);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, M);
     return 1;
 }
 
@@ -246,11 +246,11 @@ extern(C) int solve(lua_State *L)
     // a simple result to the equation A x = b.
     auto A = checkMatrix(L, 1);
     auto b = checkMatrix(L, 2);
-    auto c = new Matrix(A);
-    auto perm = decomp(c);
-    auto x = new Matrix(b);
-    nm.bbla.solve(c, x, perm);
-    matrixStore ~= pushObj!(Matrix, MatrixMT)(L, x);
+    auto c = new Matrix!double(A);
+    auto perm = decomp!double(c);
+    auto x = new Matrix!double(b);
+    nm.bbla.solve!double(c, x, perm);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, x);
     return 1;
 }
 

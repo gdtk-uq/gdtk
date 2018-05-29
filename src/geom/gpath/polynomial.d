@@ -31,7 +31,7 @@ public:
         this.P = P.dup();
         evaluate_coefficients();
     }
-    this(in number[] C, double x0, double x1)
+    this(in number[] C, number x0, number x1)
     {
         if (C.length == 0) {
             throw new Error(text("Polynomial() No coefficients provided."));
@@ -48,7 +48,7 @@ public:
         } // end if
         this.C = C.dup();
         foreach(point;P){
-            if(point.y != evaluate_polynomial(point.x.re).y){
+            if(point.y != evaluate_polynomial(point.x).y){
                 throw new Error(text("Polynomial() points and coefficients do not match."));
             } // end if
         } // end foreach
@@ -67,14 +67,14 @@ public:
     {
         // Evaluate P(t)
         number xt = P[0].x + to!number(t)*(P[$-1].x-P[0].x);
-        return evaluate_polynomial(xt.re);
+        return evaluate_polynomial(xt);
     } // end opCall()
     override Vector3 dpdt(double t) const
     {
         // Evaluate P(t)
         number xt;
         xt = P[0].x + to!number(t)*(P[$-1].x-P[0].x);
-        return derivative_polynomial(xt.re);
+        return derivative_polynomial(xt);
     }
     override string toString() const
     {
@@ -89,30 +89,30 @@ protected:
     void evaluate_coefficients()
     {
         size_t n = P.length;
-        auto A = new Matrix(n);
-        auto b = new Matrix(n,1);
+        auto A = new Matrix!number(n);
+        auto b = new Matrix!number(n,1);
         foreach(i;0 .. n){
             b[i,0] = P[i].y;
             foreach(j;0 .. n){
                 A[i,j] = P[i].x^^j;
             } // end foreach
         } // end foreach
-        auto x = lsqsolve(A,b);
+        auto x = lsqsolve!number(A,b);
         foreach(i;0 .. n){
             C ~= x[i,0];
         } // end foreach
     } // end evaluate_coefficients ()
     
-    Vector3 evaluate_polynomial(double x) const
+    Vector3 evaluate_polynomial(number x) const
     {
         number y=0.0;
         foreach(i;0 .. C.length){
             y += C[i] * x^^i;
         } // end foreach
-        return Vector3(to!number(x),y);
+        return Vector3(x,y);
     } // end evaluate_polynomial ()
 
-    Vector3 derivative_polynomial(double x) const
+    Vector3 derivative_polynomial(number x) const
     {
         number dy=0.0;
         foreach(i;0 .. C.length){

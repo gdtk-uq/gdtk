@@ -311,11 +311,11 @@ body {
     x.length = n;
     g_old.length = m+1;
     g.length = m+1;
-    auto H = new Matrix(m+1, m);
+    auto H = new Matrix!number(m+1, m);
     H.zeros();
-    auto Hold = new Matrix(m+1, m);
-    auto Gamma = new Matrix(m+1, m+1);
-    auto V = new Matrix(n, m+1);
+    auto Hold = new Matrix!number(m+1, m);
+    auto Gamma = new Matrix!number(m+1, m+1);
+    auto V = new Matrix!number(n, m+1);
 
     // 1. Compute r0, beta, v1
     multiply(A, x0, Ax0);
@@ -406,15 +406,15 @@ body {
     v.length = n;
     w.length = n;
     x.length = n;
-    auto V = new Matrix(n, m+1);
-    auto H0 = new Matrix(m+1, m); H0.zeros();
-    auto H1 = new Matrix(m+1, m); H1.zeros();
-    auto Gamma = new Matrix(m+1, m+1); Gamma.eye();
-    auto Q0 = new Matrix(m+1, m+1);
-    auto Q1 = new Matrix(m+1, m+1);
+    auto V = new Matrix!number(n, m+1);
+    auto H0 = new Matrix!number(m+1, m); H0.zeros();
+    auto H1 = new Matrix!number(m+1, m); H1.zeros();
+    auto Gamma = new Matrix!number(m+1, m+1); Gamma.eye();
+    auto Q0 = new Matrix!number(m+1, m+1);
+    auto Q1 = new Matrix!number(m+1, m+1);
     number[] g0, g1;
-    g0.length = m+1; foreach( idx; 0..g0.length) g0[idx] = 0.0;
-    g1.length = m+1; foreach( idx; 0..g1.length) g1[idx] = 0.0;
+    g0.length = m+1; foreach(idx; 0..g0.length) { g0[idx] = 0.0; }
+    g1.length = m+1; foreach(idx; 0..g1.length) { g1[idx] = 0.0; }
     number[] h, hR;
     h.length = m+1;
     hR.length = m+1;
@@ -510,7 +510,7 @@ body {
 struct GMRESWorkSpace {
     size_t n, m;
     number[] Ax0, r0, v, w, Pv, g0, g1, h, hR;
-    Matrix V, H0, H1, Gamma, Q0, Q1;
+    Matrix!number V, H0, H1, Gamma, Q0, Q1;
 
     this(size_t n, int maxIters) {
         this.n = n;
@@ -526,12 +526,12 @@ struct GMRESWorkSpace {
         this.h.length = m+1;
         this.hR.length = m+1;
         // Allocate matrices
-        this.V = new Matrix(n, m+1);
-        this.H0 = new Matrix(m+1, m); 
-        this.H1 = new Matrix(m+1, m); 
-        this.Gamma = new Matrix(m+1, m+1); 
-        this.Q0 = new Matrix(m+1, m+1);
-        this.Q1 = new Matrix(m+1, m+1);
+        this.V = new Matrix!number(n, m+1);
+        this.H0 = new Matrix!number(m+1, m); 
+        this.H1 = new Matrix!number(m+1, m); 
+        this.Gamma = new Matrix!number(m+1, m+1); 
+        this.Q0 = new Matrix!number(m+1, m+1);
+        this.Q1 = new Matrix!number(m+1, m+1);
     }
 }
 
@@ -666,12 +666,12 @@ body {
     foreach( idx; 0..x0_inner.length) x0_inner[idx] = 0.0;
     g_old.length = mOuter+1;
     g.length = mOuter+1;
-    auto H = new Matrix(mOuter+1, mOuter);
+    auto H = new Matrix!number(mOuter+1, mOuter);
     H.zeros();
-    auto Hold = new Matrix(mOuter+1, mOuter);
-    auto Gamma = new Matrix(mOuter+1, mOuter+1);
-    auto V = new Matrix(n, mOuter+1);
-    auto Z = new Matrix(n, mOuter+1);
+    auto Hold = new Matrix!number(mOuter+1, mOuter);
+    auto Gamma = new Matrix!number(mOuter+1, mOuter+1);
+    auto V = new Matrix!number(n, mOuter+1);
+    auto Z = new Matrix!number(n, mOuter+1);
 
     // 1. Compute r0, beta, v1
     multiply(A, x0, Ax0);

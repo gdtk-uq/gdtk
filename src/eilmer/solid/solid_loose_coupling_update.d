@@ -22,20 +22,20 @@ import solid_udf_source_terms;
 // Working space for update.
 // Declared here as globals for this module.
 
-Matrix r0;
-Matrix v;
-Matrix vi;
-Matrix wj;
-Matrix dX; 
+Matrix!double r0;
+Matrix!double v;
+Matrix!double vi;
+Matrix!double wj;
+Matrix!double dX; 
 double[] h;
 double[] hR;
 double[] g0;
 double[] g1;
-Matrix H0;
-Matrix H1;
-Matrix Gamma;
-Matrix Q0;
-Matrix Q1;
+Matrix!double H0;
+Matrix!double H1;
+Matrix!double Gamma;
+Matrix!double Q0;
+Matrix!double Q1;
 
 void initSolidLooseCouplingUpdate()
 {
@@ -44,30 +44,30 @@ void initSolidLooseCouplingUpdate()
     foreach (sblk; solidBlocks) {
         ncells += sblk.activeCells.length;
     }
-    r0 = new Matrix(ncells, 1);
-    v = new Matrix(ncells, m+1);
-    vi = new Matrix(ncells, 1);
-    wj = new Matrix(ncells, 1);
-    dX = new Matrix(ncells, 1);
+    r0 = new Matrix!double(ncells, 1);
+    v = new Matrix!double(ncells, m+1);
+    vi = new Matrix!double(ncells, 1);
+    wj = new Matrix!double(ncells, 1);
+    dX = new Matrix!double(ncells, 1);
     g0.length = m+1;
     g1.length = m+1;
     h.length = m+1;
     hR.length = m+1;
-    H0 = new Matrix(m+1, m);
-    H1 = new Matrix(m+1, m);
-    Gamma = new Matrix(m+1, m+1);
-    Q0 = new Matrix(m+1, m+1);
-    Q1 = new Matrix(m+1, m+1);
+    H0 = new Matrix!double(m+1, m);
+    H1 = new Matrix!double(m+1, m);
+    Gamma = new Matrix!double(m+1, m+1);
+    Q0 = new Matrix!double(m+1, m+1);
+    Q1 = new Matrix!double(m+1, m+1);
 }
 
-Matrix eval_dedts(Matrix eip1, int ftl, double sim_time)
+Matrix!double eval_dedts(Matrix!double eip1, int ftl, double sim_time)
 // Evaulates the energy derivatives of all the cells in the solid block and puts them into an array (Matrix object)
 // Evaluates derivative when cell energy is "eip1" 
  
 // Returns: Matrix of doubles
 { 
     auto n = eip1.nrows;
-    Matrix ret = zeros(n, 1); // array that will be returned (empty - to be populated)
+    Matrix!double ret = zeros!double(n, 1); // array that will be returned (empty - to be populated)
     foreach (sblk; parallel(solidBlocks, 1)) {
         if (!sblk.active) continue;
         sblk.applyPreSpatialDerivAction(sim_time, ftl);
@@ -101,7 +101,7 @@ Matrix eval_dedts(Matrix eip1, int ftl, double sim_time)
 }
 
 
-Matrix e_vec(int ftl)
+Matrix!double e_vec(int ftl)
 // Puts energies from desired ftl into an array (Matrix object) 
 
 // Returns: Matrix of doubles
@@ -113,7 +113,7 @@ Matrix e_vec(int ftl)
         }
     } 
     auto len = test1.length; 
-    Matrix ret = zeros(len, 1); 
+    Matrix!double ret = zeros!double(len, 1); 
     int count = 0;
     foreach (entry; test1){ 
         ret[count, 0] = entry; 
@@ -122,7 +122,7 @@ Matrix e_vec(int ftl)
     return ret;
 } 
 
-Matrix F(Matrix eip1, Matrix ei, double dt_global, double sim_time) 
+Matrix!double F(Matrix!double eip1, Matrix!double ei, double dt_global, double sim_time) 
 // Function for which root needs to be found (for Newton's method)
 // Re-arranged implicit euler equation 
 
@@ -132,20 +132,20 @@ Matrix F(Matrix eip1, Matrix ei, double dt_global, double sim_time)
 }
 
   
-Matrix copy_vec(Matrix mat)  
+Matrix!double copy_vec(Matrix!double mat)  
 // Copies an original vector to a new vector (i.e. leaves original untouched) 
 
 // Returns: Matrix of doubles
 {
     auto n = mat.nrows; 
-    auto cop = zeros(n, 1); 
+    auto cop = zeros!double(n, 1); 
     foreach(i; 0 .. n){
         cop[i, 0] = mat[i, 0];
     }
     return cop; 
 } 
 
-double norm(Matrix vec)
+double norm(Matrix!double vec)
 // Calculates the euclidean norm of a vector 
 
 // Returns: double
@@ -159,17 +159,17 @@ double norm(Matrix vec)
     return ret; 
 } 
 
-Matrix Jac(Matrix Yip1, Matrix Yi, double dt, double sim_time)
+Matrix!double Jac(Matrix!double Yip1, Matrix!double Yi, double dt, double sim_time)
 // Jacobian of F 
 
 // Returns: Matrix of doubles
 { 
     double eps = GlobalConfig.sdluOptions.perturbationSize;
     auto n = Yip1.nrows;
-    auto ret = eye(n);
-    Matrix Fout;
-    Matrix Fin = F(Yip1, Yi, dt, sim_time);
-    Matrix cvec;
+    auto ret = eye!double(n);
+    Matrix!double Fout;
+    Matrix!double Fin = F(Yip1, Yi, dt, sim_time);
+    Matrix!double cvec;
     foreach(i;0 .. n){ 
         cvec = copy_vec(Yip1);
         cvec[i, 0] += eps; 
@@ -182,7 +182,7 @@ Matrix Jac(Matrix Yip1, Matrix Yi, double dt, double sim_time)
 }
 
 
-void GMRES(Matrix A, Matrix b, Matrix x0, Matrix xm)
+void GMRES(Matrix!double A, Matrix!double b, Matrix!double x0, Matrix!double xm)
 // Executes GMRES_step, can be used to repeat GMRES steps checking for multiple iterations, otherwise relatively useless 
 
 // Returns: Matrix of doubles
@@ -195,7 +195,7 @@ void GMRES(Matrix A, Matrix b, Matrix x0, Matrix xm)
     foreach (i; 0 .. xmV.length) xm[i,0] = xmV[i];
 }
 
-void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
+void GMRES_step(Matrix!double A, Matrix!double b, Matrix!double x0, double[] xm, double tol)
 // Takes a single GMRES step using Arnoldi 
 // Minimisation problem is solved using Least Squares via Gauss Jordan (see function below) 
 
@@ -212,7 +212,7 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
     g0[] = 0.0;
     g1[] = 0.0;
     // r0 = b - A*x0
-    dot(A, x0, r0);
+    dot!double(A, x0, r0);
     foreach (i; 0 .. r0.nrows) r0[i,0] = b[i,0] - r0[i,0];
     double beta = norm(r0);  
     g0[0] = beta;
@@ -221,11 +221,11 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
     foreach (i; 0 .. r0.nrows) v[i,0] = r0[i,0]/beta;
     foreach (i; 0 .. v.nrows) vi[i,0] = v[i,0];
     double hjp1j;
-    Matrix y; 
+    Matrix!double y; 
     double hij;
     foreach (j; 0 .. m) {
         iterCount = j+1;
-        dot(A, vi, wj);
+        dot!double(A, vi, wj);
         foreach (i; 0 .. j+1) {
             hij = 0.0;
             foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
@@ -246,7 +246,7 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
             foreach (i; 0 .. j+1) h[i] = H0[i,j];
             // Rotate column by previous rotations
             // stored in Q0
-            nm.bbla.dot(Q0, j+1, j+1, h, hR);
+            nm.bbla.dot!double(Q0, j+1, j+1, h, hR);
             // Place column back in H
             foreach (i; 0 .. j+1) H0[i,j] = hR[i];
         }
@@ -266,7 +266,7 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
             copy(Gamma, Q1);
         }
         else {
-            nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+            nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
         }
         // Prepare for next step
         copy(H1, H0);
@@ -284,32 +284,32 @@ void GMRES_step(Matrix A, Matrix b, Matrix x0, double[] xm, double tol)
     
     // At end H := R up to row m
     //        g := gm up to row m
-    upperSolve(H1, m, g1);
-    nm.bbla.dot(v, v.nrows(), m, g1, xm);
+    upperSolve!double(H1, m, g1);
+    nm.bbla.dot!double(v, v.nrows(), m, g1, xm);
     foreach (k; 0 .. xm.length) xm[k] += x0[k,0];
     return;
 }
 
-Matrix lsq_gmres(Matrix A, Matrix b)
+Matrix!double lsq_gmres(Matrix!double A, Matrix!double b)
 // Solves the minimisation problem using least squares and direct solution (Gauss Jordan elimination)
 
 // Returns: Matrix of doubles
 {
-    auto Ht = transpose(A); 
-    auto c = hstack([dot(Ht, A), dot(Ht, b)]);
-    gaussJordanElimination(c);  
+    auto Ht = transpose!double(A); 
+    auto c = hstack!double([dot!double(Ht, A), dot!double(Ht, b)]);
+    gaussJordanElimination!double(c);  
     auto nr = c.nrows;
     return arr_2_vert_vec(c.getColumn(nr));
 }
 
-Matrix arr_2_vert_vec(double[] arr) 
+Matrix!double arr_2_vert_vec(double[] arr) 
 // Takes an array (i.e. D equivalent of a python list) and converts it into a vertical Matrix 
 // E.g. [1, 2, 3] --> Matrix[[1], [2], [3]]
 
 // Returns: Matrix of doubles
 {
     auto len = arr.length;
-    auto ret = zeros(len, 1);
+    auto ret = zeros!double(len, 1);
     foreach(i; 0 .. len){
         ret[i, 0] = arr[i];
     }
@@ -317,7 +317,7 @@ Matrix arr_2_vert_vec(double[] arr)
 }
 
 
-void post(Matrix eip1, Matrix dei)
+void post(Matrix!double eip1, Matrix!double dei)
 // Does the post processing of an implicit method step 
 
 // Returns: none
@@ -365,8 +365,8 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     auto Fkp1 = F(Xkp1, ei, dt_global, sim_time); // done so that fabs(normfk - normfkp1) satisfied
     int count = 0;
     int maxCount = GlobalConfig.sdluOptions.maxNewtonIterations;
-    Matrix Jk;
-    Matrix mFk; // e.g. minusFk --> mFk
+    Matrix!double Jk;
+    Matrix!double mFk; // e.g. minusFk --> mFk
     while(fabs(norm(Fk) - norm(Fkp1)) > eps){ 
         count += 1; 
         if (count != 1){
@@ -387,7 +387,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 
     }                                           
     eip1 = Xkp1;
-    Matrix dei = eip1 - ei;
+    Matrix!double dei = eip1 - ei;
     Fk = Fkp1;
     post(eip1, dei); // post processing incl. writing solns for e, de and updating T.
     writeln("== End Step ==");

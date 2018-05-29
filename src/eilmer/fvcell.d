@@ -114,8 +114,8 @@ public:
         size_t[] idList;
         double[] aa;
         // block-diagonal contribution to Jacobian used in steady-state solver pre-conditioner
-        Matrix dPrimitive;
-        Matrix dConservative;
+        Matrix!double dPrimitive;
+        Matrix!double dConservative;
         int[] pivot;
     }
 

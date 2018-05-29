@@ -53,11 +53,11 @@ double[] g0;
 double[] g1;
 double[] h;
 double[] hR;
-Matrix H0;
-Matrix H1;
-Matrix Gamma;
-Matrix Q0;
-Matrix Q1;
+Matrix!double H0;
+Matrix!double H1;
+Matrix!double Gamma;
+Matrix!double Q0;
+Matrix!double Q1;
 
 void main(string[] args)
 {
@@ -856,11 +856,11 @@ void allocate_global_workspace()
     g1.length = mOuter+1;
     h.length = mOuter+1;
     hR.length = mOuter+1;
-    H0 = new Matrix(mOuter+1, mOuter);
-    H1 = new Matrix(mOuter+1, mOuter);
-    Gamma = new Matrix(mOuter+1, mOuter+1);
-    Q0 = new Matrix(mOuter+1, mOuter+1);
-    Q1 = new Matrix(mOuter+1, mOuter+1);
+    H0 = new Matrix!double(mOuter+1, mOuter);
+    H1 = new Matrix!double(mOuter+1, mOuter);
+    Gamma = new Matrix!double(mOuter+1, mOuter+1);
+    Q0 = new Matrix!double(mOuter+1, mOuter+1);
+    Q1 = new Matrix!double(mOuter+1, mOuter+1);
 }
 
 double determine_initial_dt(double cflInit)

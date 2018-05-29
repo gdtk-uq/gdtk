@@ -107,7 +107,7 @@ public:
         // adjoint variables
         double[] psi;
         // residual sensitivity w.r.t. design variables (transposed)
-        Matrix rT;           
+        Matrix!double rT;           
         // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
         double[] rTdotPsi;
         // These arrays and matrices are directly tied to using the
@@ -123,12 +123,12 @@ public:
     ConservedQuantities maxRate, residuals;
     double normAcc, dotAcc;
     size_t nvars;
-    Matrix transform;
+    Matrix!double transform;
     double[] FU, dU, Dinv, r0, x0;
     double[] v, w, zed;
     double[] g0, g1;
-    Matrix Q1;
-    Matrix V;
+    Matrix!double Q1;
+    Matrix!double V;
     }
 
     this(int id, Grid_t grid_type, size_t ncells, string label)
@@ -647,12 +647,12 @@ public:
         g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
         //hR_outer.length = mOuter+1;
-        V = new Matrix(n, mOuter+1);
-        //H0_outer = new Matrix(mOuter+1, mOuter);
-        //H1_outer = new Matrix(mOuter+1, mOuter);
-        //Gamma_outer = new Matrix(mOuter+1, mOuter+1);
-        //Q0_outer = new Matrix(mOuter+1, mOuter+1);
-        Q1 = new Matrix(mOuter+1, mOuter+1);
+        V = new Matrix!double(n, mOuter+1);
+        //H0_outer = new Matrix!double(mOuter+1, mOuter);
+        //H1_outer = new Matrix!double(mOuter+1, mOuter);
+        //Gamma_outer = new Matrix!double(mOuter+1, mOuter+1);
+        //Q0_outer = new Matrix!double(mOuter+1, mOuter+1);
+        Q1 = new Matrix!double(mOuter+1, mOuter+1);
     }
     }
 } // end class FluidBlock

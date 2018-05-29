@@ -59,11 +59,11 @@ double[] g0;
 double[] g1;
 double[] h;
 double[] hR;
-Matrix H0;
-Matrix H1;
-Matrix Gamma;
-Matrix Q0;
-Matrix Q1;
+Matrix!double H0;
+Matrix!double H1;
+Matrix!double Gamma;
+Matrix!double Q0;
+Matrix!double Q1;
 
 private lua_State* L; // module-local Lua interpreter
 
@@ -1108,8 +1108,8 @@ void rpcGMRES_solve(size_t nPrimitive) {
         blk.w.length = n;
         blk.wext.length = n;
         blk.z.length = n;
-        blk.V = new Matrix(n, m+1);
-        blk.Q1 = new Matrix(m+1, m+1);
+        blk.V = new Matrix!double(n, m+1);
+        blk.Q1 = new Matrix!double(m+1, m+1);
         blk.g0.length = m+1;
         blk.g1.length = m+1;
     }    
@@ -1119,11 +1119,11 @@ void rpcGMRES_solve(size_t nPrimitive) {
     g1.length = m+1;
     h.length = m+1;
     hR.length = m+1;
-    H0 = new Matrix(m+1, m);
-    H1 = new Matrix(m+1, m);
-    Gamma = new Matrix(m+1, m+1);
-    Q0 = new Matrix(m+1, m+1);
-    Q1 = new Matrix(m+1, m+1);
+    H0 = new Matrix!double(m+1, m);
+    H1 = new Matrix!double(m+1, m);
+    Gamma = new Matrix!double(m+1, m+1);
+    Q0 = new Matrix!double(m+1, m+1);
+    Q1 = new Matrix!double(m+1, m+1);
     
     // Initialise some global arrays and matrices that have already been allocated
     g0[] = 0.0;
@@ -2126,10 +2126,10 @@ void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
         }
     }
     // initialise objects
-    blk.transform = new Matrix(nConservative, nConservative);
+    blk.transform = new Matrix!double(nConservative, nConservative);
     foreach (cell; blk.cells) {
-        cell.dPrimitive = new Matrix(nConservative, nConservative);
-        cell.dConservative = new Matrix(nConservative, nConservative);
+        cell.dPrimitive = new Matrix!double(nConservative, nConservative);
+        cell.dConservative = new Matrix!double(nConservative, nConservative);
         cell.pivot.length = nConservative;
     }
     cellOrig = new FVCell(blk.myConfig);

@@ -739,13 +739,13 @@ double[] taylor_maccoll_odes(double[] z, double theta, double g=1.4)
     double rho=z[0]; double V_r=z[1]; double V_theta=z[2];
     double h=z[3]; double p=z[4];
     // Assemble linear system for determining the derivatives wrt theta.
-    auto A = zeros(5,6); // Augmented matrix with rhs in last column.
+    auto A = zeros!double(5,6); // Augmented matrix with rhs in last column.
     A[0,0] = V_theta; A[0,2] = rho; A[0,5] = -2.0*rho*V_r - rho*V_theta/tan(theta);
     A[1,1] = 1.0; A[1,5] = V_theta;
     A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0;
     A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0;
     A[4,0] = h*(g-1)/g; A[4,3] = rho*(g-1)/g; A[4,4] = -1.0;
-    gaussJordanElimination(A);
+    gaussJordanElimination!double(A);
     double[] dzdtheta =  A.getColumn(5);
     return dzdtheta;
 }
