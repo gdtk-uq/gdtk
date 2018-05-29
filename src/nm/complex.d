@@ -1047,10 +1047,15 @@ Complex!double atan(Complex!double z) @safe pure nothrow
 @nogc
 Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow 
 {
-    // TODO: FIX-ME - unit test fails (KD May 2018)
-    // An Automated Method for Sensitivity Analysis using Complex Variables (Martins et al, 2000).
-    // correction of denominator/numerator from http://wiki.tcl.tk/1547
-    return atan(w/z);
+    // ref.: https://www.medcalc.org/manual/atan2_function.php
+    double really_small_value = 1.0e-50;
+    if (w.re > really_small_value) return atan(z/w); 
+    else if (w.re < really_small_value && z.re >= really_small_value) return atan(z/w) + complex(to!double(PI));
+    else if (w.re < really_small_value && z.re < really_small_value) return atan(z/w) - complex(to!double(PI));
+    else if (abs(w.re) < really_small_value && z.re > really_small_value) return complex(to!double(PI/2.0));
+    else if (abs(w.re) < really_small_value && z.re < really_small_value) return complex(to!double(-PI/2.0));
+    else
+        { Complex!double errorValue; return errorValue; } // TODO: When z.re && w.re are both 0.0 atan2 is not defined. For now we send back NaN. Should think about returning something more useful.
 }
 
 // end of overloaded function additions (KD, 2018)
@@ -1570,10 +1575,9 @@ version(complex_number_test) {
 
         // atan2(Complex, Complex)
         // cmath has no atan2 function, reference result taken from WolframAlpha
-        //result = complex(2.70088, 0.548252); 
-        //Complex!double catan2 = atan2(z, w);
-        //writeln(catan2);
-        //assert(approxEqualNumbers(catan2, result), failedUnitTest());
+        result = complex(2.70088, 0.548252); 
+        Complex!double catan2 = atan2(z, w);
+        assert(approxEqualNumbers(catan2, result), failedUnitTest());
         
         // Natural log test
         result = complex(1.2824746787307684, -1.2315037123408519);
