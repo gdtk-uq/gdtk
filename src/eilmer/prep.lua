@@ -1258,7 +1258,7 @@ function mpiDistributeBlocks(nTasks, option)
       print(string.format("Ideal cell partitioning   \t = %d cells/proc", totalCells/mpiProcessors))
       print(string.format("Smallest partition factor \t = %.3f", minmpiLoads/(totalCells/mpiProcessors)))
       print(string.format("Largest partition factor  \t = %.3f", maxmpiLoads/(totalCells/mpiProcessors)))
-      
+
    else
       error('Did not select one of "uniform" or "loadbalance". for mpiDistributeBlocks') 
    end
