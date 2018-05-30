@@ -82,6 +82,7 @@ private:
 
 version(wedgevolume_test) {
     import util.msg_service;
+    import std.stdio;
     int main() {
         Vector3[8] p;
         p[0] = Vector3(0.0, 0.1, 0.0);
@@ -95,6 +96,27 @@ version(wedgevolume_test) {
         // expect p0.x=0.1 p0.y=0.2 and have set t=0.5, dtheta=0.1
         assert(approxEqualVectors(d, Vector3(0.1, 0.2*cos(0.05), 0.2*sin(0.05))),
                failedUnitTest());
-        return 0;
+
+        // complex step derivative test
+        version(complex_numbers) {
+            // Complex Step
+            number hIm = complex(0.0, 1.0e-20); // complex step-size
+            p[1].refy += hIm; // perturb point in complex plane
+            ParametricSurface my_perturbed_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
+            auto my_perturbed_box = new WedgeVolume(my_perturbed_face, to!number(0.1));
+            double derivCmplx = my_perturbed_box.p[5].y.im/hIm.im;
+            
+            // return p vector to original state
+            p[1] = Vector3(1.0, 0.1, 0.0);
+            
+            // Real Step
+            double hRe = 1.0e-04; // real step-size
+            p[1].refy += hRe; // perturb point in real plane
+            my_perturbed_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
+            my_perturbed_box = new WedgeVolume(my_perturbed_face, to!number(0.1));
+            double derivReal = (my_perturbed_box.p[5].y.re-my_box.p[5].y.re)/hRe;
+            assert(std.math.approxEqual(derivCmplx, derivReal), failedUnitTest());
+        }    
+    return 0;
     }
 } // end wedgevolume_test
