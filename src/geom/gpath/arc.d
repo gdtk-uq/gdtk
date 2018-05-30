@@ -120,31 +120,25 @@ class Arc3 : Arc {
         Vector3 mid_am = half * (a + m);
         Vector3 bisect_am = cross(n, a - m);
         Vector3 mid_mb = half * (b + m);
-        Vector3 bisect_mb = cross(n, b - m);
+        Vector3 bisect_mb = cross(n, m - b);
         // Solve least-squares problem to get s_am, s_mb.
-        auto amatrix = new Matrix!number([[bisect_am.x, bisect_mb.x],
-                                          [bisect_am.y, bisect_mb.y],
-                                          [bisect_am.z, bisect_mb.z]]);
+        auto amatrix = new Matrix!number([[bisect_am.x, -bisect_mb.x],
+                                          [bisect_am.y, -bisect_mb.y],
+                                          [bisect_am.z, -bisect_mb.z]]);
         Vector3 diff_mid = mid_mb - mid_am;
         auto rhs = new Matrix!number([diff_mid.x, diff_mid.y, diff_mid.z], "column");
         auto s_values = lsqsolve!number(amatrix, rhs);
-        debug {
-            import std.stdio;
-            writeln("amatrix=", amatrix);
-            writeln("rhs=", rhs);
-            writeln("s_values=", s_values);
-        }
         number s_am = s_values[0,0];
         number s_mb = s_values[1,0];
-        Vector3 myc = mid_am + s_am * bisect_am;
+        Vector3 c = mid_am + s_am * bisect_am;
         Vector3 c_check = mid_mb + s_mb * bisect_mb;
-        Vector3 delc = c_check - myc;
-        if (geom.abs(delc) > 1.0e-9) {
+        Vector3 delc = c_check - c;
+        if (geom.abs(delc).re > 1.0e-9) {
             throw new Error(text("Arc3: Points inconsistent centre estimates.",
-                                 " c=", to!string(myc),
+                                 " c=", to!string(c),
                                  " c_check=", to!string(c_check)));
         }
-        super(a, b, myc);
+        super(a, b, c);
         this.m = m;
     }
     this(ref const(Arc3) other)
