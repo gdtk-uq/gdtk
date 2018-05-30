@@ -102,10 +102,71 @@ version(projection_test) {
         int flag =  project_onto_plane(q, qr, a, b, c);
         assert(approxEqualVectors(q, Vector3(1.0,1.0,0.0)), failedUnitTest());
 
+        // Projection onto a plane - complex step derivative test
+        version(complex_numbers) {
+            // store original projected point q
+            Vector3 q0 = Vector3(q);
+            // reset q vector
+            q = Vector3(0.0, 0.0, 1.0); // start point
+            
+            // Complex Step
+            number hIm = complex(0.0, 1.0e-20); // complex step-size
+            qr.refz += hIm; // perturb in complex plane
+            flag =  project_onto_plane(q, qr, a, b, c);
+            double[3] qDerivCmplx;
+            qDerivCmplx[0] = q.x.im/hIm.im;
+            qDerivCmplx[1] = q.y.im/hIm.im;
+            qDerivCmplx[2] = q.z.im/hIm.im;
+
+            // reset q & qr vectors
+            qr = Vector3(3.0, 3.0, -3.0); // direction
+            q = Vector3(0.0, 0.0, 1.0); // start point
+                        
+            // Real Step
+            double hRe = 1.0e-06; // real step-size
+            qr.refz += hRe; // perturb in real plane
+            flag =  project_onto_plane(q, qr, a, b, c);
+            double[3] qDerivReal;
+            qDerivReal[0] = (q.x.re-q0.x.re)/hRe;
+            qDerivReal[1] = (q.y.re-q0.y.re)/hRe;
+            qDerivReal[2] = (q.z.re-q0.z.re)/hRe;
+            
+            foreach( idx; 0..3) assert(std.math.approxEqual(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
+        }
+        
+        
         // projection onto a cylinder.
         Vector3 myp = Vector3(1.0, 1.0, 1.0);
         map_neutral_plane_to_cylinder(myp, to!number(1.0));
         assert(approxEqualVectors(myp, Vector3(1.0, sin(1.0), cos(1.0))), failedUnitTest());
+
+        // projection onto a cylinder - complex step derivative test
+        version(complex_numbers) {
+            // store original projected point myp
+            Vector3 myp0 = Vector3(myp);
+            
+            // reset myp vector
+            myp = Vector3(1.0, 1.0, 1.0); // start point
+            
+            // Complex Step 
+            myp.refz += hIm; // perturb in complex plane, reuse hIm
+            map_neutral_plane_to_cylinder(myp, to!number(1.0));
+            qDerivCmplx[0] = myp.x.im/hIm.im;
+            qDerivCmplx[1] = myp.y.im/hIm.im;
+            qDerivCmplx[2] = myp.z.im/hIm.im;
+
+            // reset myp vector
+            myp = Vector3(1.0, 1.0, 1.0); // start point
+                        
+            // Real Step
+            myp.refz += hRe; // perturb in real plane, reuse hRe
+            map_neutral_plane_to_cylinder(myp, to!number(1.0));
+            qDerivReal[0] = (myp.x.re-myp0.x.re)/hRe;
+            qDerivReal[1] = (myp.y.re-myp0.y.re)/hRe;
+            qDerivReal[2] = (myp.z.re-myp0.z.re)/hRe;
+            foreach( idx; 0..3) assert(std.math.approxEqual(qDerivCmplx[idx], qDerivReal[idx]), failedUnitTest());
+        }
+
         return 0;
     }
 } // end projection_test
