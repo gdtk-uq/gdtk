@@ -287,9 +287,10 @@ struct Vector3 {
             this._p[0] = this._p[1] = this._p[2] = 0.0;
         }
         // Flush small components to zero.
-        if (fabs(this._p[0]) < 1.0e-14) { this._p[0] = 0.0; }
-        if (fabs(this._p[1]) < 1.0e-14) { this._p[1] = 0.0; }
-        if (fabs(this._p[2]) < 1.0e-14) { this._p[2] = 0.0; }
+        if (fabs(this._p[0].re) < 1.0e-30 && fabs(this._p[0].im) < 1.0e-30 ) { this._p[0] = 0.0; }
+        if (fabs(this._p[1].re) < 1.0e-30 && fabs(this._p[1].im) < 1.0e-30) { this._p[1] = 0.0; }
+        if (fabs(this._p[2].re) < 1.0e-30 && fabs(this._p[2].im) < 1.0e-30) { this._p[2] = 0.0; }
+        
         return this;
     }
 
