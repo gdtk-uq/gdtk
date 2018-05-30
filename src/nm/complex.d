@@ -1047,15 +1047,10 @@ Complex!double atan(Complex!double z) @safe pure nothrow
 @nogc
 Complex!double atan2(Complex!double z, Complex!double w) @safe pure nothrow 
 {
-    // ref.: https://www.medcalc.org/manual/atan2_function.php
-    double really_small_value = 1.0e-50;
-    if (w.re > really_small_value) return atan(z/w); 
-    else if (w.re < really_small_value && z.re >= really_small_value) return atan(z/w) + complex(to!double(PI));
-    else if (w.re < really_small_value && z.re < really_small_value) return atan(z/w) - complex(to!double(PI));
-    else if (abs(w.re) < really_small_value && z.re > really_small_value) return complex(to!double(PI/2.0));
-    else if (abs(w.re) < really_small_value && z.re < really_small_value) return complex(to!double(-PI/2.0));
-    else
-        { Complex!double errorValue; return errorValue; } // TODO: When z.re && w.re are both 0.0 atan2 is not defined. For now we send back NaN. Should think about returning something more useful.
+    // ref.: https://www.medcalc.org/manual/atan2_function.php - extension of this method to complex numbers proves problematic.
+    // Below implementation provided from WolframAlpha
+    Complex!double i = complex(0.0, 1.0);
+    return -i * log( ((w+i*z))/(sqrt((z*z+w*w))) );
 }
 
 // end of overloaded function additions (KD, 2018)
@@ -1452,7 +1447,7 @@ version(complex_number_test) {
         Complex!double  z = complex(1.2, -3.4);
         Complex!double  w = complex(-5.3, 1.0); 
         double p = 5.1;
-        
+              
         // opCmp tests
         // Complex Cmp Complex
         assert( (z > w), failedUnitTest());
