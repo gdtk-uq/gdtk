@@ -148,6 +148,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("viscous_delay", "viscous_delay"));
     mixin(get_double_field("shear_stress_relative_limit", "shear_stress_relative_limit"));
     mixin(get_double_field("viscous_signal_factor", "viscous_signal_factor"));
+    mixin(get_double_field("turbulent_signal_factor", "turbulent_signal_factor"));
     mixin(get_enum_field("mass_diffusion_model", "mass_diffusion_model", "massDiffusionModelFromName"));
     mixin(get_bool_field("constant_lewis_number", "constant_lewis_number"));
     mixin(get_double_field("lewis_number", "lewis_number"));
@@ -301,6 +302,7 @@ extern(C) int configGet(lua_State* L)
     case "viscous_delay": lua_pushnumber(L, GlobalConfig.viscous_delay); break;
     case "shear_stress_relative_limit": lua_pushnumber(L, GlobalConfig.shear_stress_relative_limit); break;
     case "viscous_signal_factor": lua_pushnumber(L, GlobalConfig.viscous_signal_factor); break;
+    case "turbulent_signal_factor": lua_pushnumber(L, GlobalConfig.turbulent_signal_factor); break;
     case "mass_diffusion_model": lua_pushstring(L, massDiffusionModelName(GlobalConfig.mass_diffusion_model).toStringz); break;
     case "constant_lewis_number": lua_pushboolean(L, GlobalConfig.constant_lewis_number); break;
     case "lewis_number": lua_pushnumber(L, GlobalConfig.lewis_number); break;

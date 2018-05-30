@@ -542,6 +542,7 @@ final class GlobalConfig {
     shared static bool stringent_cfl = false; 
     // If true, assume the worst with respect to cell geometry and wave speed.
     shared static double viscous_signal_factor = 1.0; // can reduce the viscous influence in CFL condition
+    shared static double turbulent_signal_factor = 1.0; // can reduce the turbulent omega influence in CFL condition   
     shared static int cfl_count = 10;  // steps between checking time step size
     shared static bool fixed_time_step = false; // set true to fix dt_allow
 
@@ -665,6 +666,7 @@ public:
 
     bool stringent_cfl;
     double viscous_signal_factor;
+    double turbulent_signal_factor;
 
     bool separate_update_for_viscous_terms;
     bool separate_update_for_k_omega_source;
@@ -772,6 +774,7 @@ public:
         //
         stringent_cfl = GlobalConfig.stringent_cfl;
         viscous_signal_factor = GlobalConfig.viscous_signal_factor;
+        turbulent_signal_factor = GlobalConfig.turbulent_signal_factor;
         //
         separate_update_for_viscous_terms = GlobalConfig.separate_update_for_viscous_terms;
         separate_update_for_k_omega_source = GlobalConfig.separate_update_for_k_omega_source;
@@ -826,6 +829,7 @@ public:
     {
         stringent_cfl = GlobalConfig.stringent_cfl;
         viscous_signal_factor = GlobalConfig.viscous_signal_factor;
+        turbulent_signal_factor = GlobalConfig.turbulent_signal_factor;
     }
 } // end class LocalConfig
 
@@ -1313,6 +1317,7 @@ void read_control_file()
     mixin(update_double("cfl_value", "cfl_value"));
     mixin(update_bool("stringent_cfl", "stringent_cfl"));
     mixin(update_double("viscous_signal_factor", "viscous_signal_factor"));
+    mixin(update_double("turbulent_signal_factor", "turbulent_signal_factor"));
     mixin(update_bool("fixed_time_step", "fixed_time_step"));
     mixin(update_int("print_count", "print_count"));
     mixin(update_int("cfl_count", "cfl_count"));
@@ -1329,6 +1334,7 @@ void read_control_file()
         writeln("  cfl_value: ", GlobalConfig.cfl_value);
         writeln("  stringent_cfl: ", GlobalConfig.stringent_cfl);
         writeln("  viscous_signal_factor: ", GlobalConfig.viscous_signal_factor);
+        writeln("  turbulent_signal_factor: ", GlobalConfig.turbulent_signal_factor);
         writeln("  fixed_time_step: ", GlobalConfig.fixed_time_step);
         writeln("  print_count: ", GlobalConfig.print_count);
         writeln("  cfl_count: ", GlobalConfig.cfl_count);

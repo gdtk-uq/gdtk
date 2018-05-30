@@ -1018,7 +1018,7 @@ public:
     double signal_frequency()
     // Remember to use stringent_cfl=true for unstructured-grid.
     {
-        double signal; // Signal speed is something like a frequency, with units 1/s.
+        double signal, turbulent_signal; // Signal speed is something like a frequency, with units 1/s.
         //
         // Check the convective/wave-driven time step limit first,
         // then add a component to ensure viscous stability.
@@ -1070,8 +1070,10 @@ public:
         }
         bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega && 
                              !myConfig.separate_update_for_k_omega_source);
-        // [TODO] Think about scale factor to turn this component down/off.
-        if (with_k_omega) { signal = fmax(signal, 1.0*fs.omega); }
+        if (with_k_omega) { 
+            turbulent_signal = myConfig.turbulent_signal_factor*fs.omega;
+            signal = fmax(signal, turbulent_signal); 
+        }
         //
         return signal;
     } // end signal_frequency()
