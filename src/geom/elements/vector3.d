@@ -287,10 +287,16 @@ struct Vector3 {
             this._p[0] = this._p[1] = this._p[2] = 0.0;
         }
         // Flush small components to zero.
-        if (fabs(this._p[0].re) < 1.0e-30 && fabs(this._p[0].im) < 1.0e-30 ) { this._p[0] = 0.0; }
-        if (fabs(this._p[1].re) < 1.0e-30 && fabs(this._p[1].im) < 1.0e-30) { this._p[1] = 0.0; }
-        if (fabs(this._p[2].re) < 1.0e-30 && fabs(this._p[2].im) < 1.0e-30) { this._p[2] = 0.0; }
-        
+        const double small = 1.0e-30;
+        version(complex_numbers) {
+            if (fabs(this._p[0].re) < small && fabs(this._p[0].im) < small) { this._p[0] = 0.0; }
+            if (fabs(this._p[1].re) < small && fabs(this._p[1].im) < small) { this._p[1] = 0.0; }
+            if (fabs(this._p[2].re) < small && fabs(this._p[2].im) < small) { this._p[2] = 0.0; }
+        } else {
+            if (fabs(this._p[0]) < small) { this._p[0] = 0.0; }
+            if (fabs(this._p[1]) < small) { this._p[1] = 0.0; }
+            if (fabs(this._p[2]) < small) { this._p[2] = 0.0; }
+        }
         return this;
     }
 
