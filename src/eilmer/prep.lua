@@ -1226,27 +1226,39 @@ function mpiDistributeBlocks(nTasks, option)
    elseif option == "loadbalance" or option == "load-balance" then
       -- Load-balance procedure first sorts the blocks by size...
       local blksNcells = {}
+      local totalCells = 0
       for i=1,nBlocks do
-	 local blk = fluidBlocks[i]
-	 blksNcells[i] = {i, blk.grid:get_ncells()}
-      end
+         local blk = fluidBlocks[i]
+         blksNcells[i] = {i, blk.grid:get_ncells()}
+         -- Add the total number of cells in the grid as we go
+         totalCells = totalCells + blksNcells[i][2]      end
       table.sort(blksNcells, function (a,b) return a[2] > b[2] end)
       -- ...then distributes the blocks to the tasks,
       -- biggest block first into the task with the smallest load.
       local taskLoads = {}
       for i=1,nTasks do taskLoads[i] = 0 end
       for _,v in pairs(blksNcells) do
-	 local ib = v[1]; local ncells = v[2]
-	 -- Add the block to the task with smallest load.
-	 local indxSmallest = 1; local smallestLoad = taskLoads[1]
-	 for i=2,#taskLoads do
-	    if taskLoads[i] < smallestLoad then
-	       indxSmallest = i; smallestLoad = taskLoads[i]
-	    end
-	 end
-	 mpiTaskList[ib] = indxSmallest-1 -- MPI task ids start from zero
-	 taskLoads[indxSmallest] = taskLoads[indxSmallest] + ncells
+         local ib = v[1]; local ncells = v[2]
+         -- Add the block to the task with smallest load.
+         local indxSmallest = 1; local smallestLoad = taskLoads[1]
+         for i=2,#taskLoads do
+         if taskLoads[i] < smallestLoad then
+            indxSmallest = i; smallestLoad = taskLoads[i]
+         end
       end
+      mpiTaskList[ib] = indxSmallest-1 -- MPI task ids start from zero
+      taskLoads[indxSmallest] = taskLoads[indxSmallest] + ncells
+      end
+
+      local maxmpiLoads = (math.max(unpack(taskLoads)))
+      local minmpiLoads = (math.min(unpack(taskLoads)))
+      local mpiProcessors = math.max(unpack(mpiTaskList)) + 1
+      print("Load balancing - Distribute blocks to CPUs") 
+      print(string.format("Number of processors   \t \t = %d", mpiProcessors))
+      print(string.format("Ideal cell partitioning   \t = %d cells/proc", totalCells/mpiProcessors))
+      print(string.format("Smallest partition factor \t = %.3f", minmpiLoads/(totalCells/mpiProcessors)))
+      print(string.format("Largest partition factor  \t = %.3f", maxmpiLoads/(totalCells/mpiProcessors)))
+      
    else
       error('Did not select one of "uniform" or "loadbalance". for mpiDistributeBlocks') 
    end
