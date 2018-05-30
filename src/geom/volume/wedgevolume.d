@@ -17,10 +17,10 @@ import geom.volume.parametricvolume;
 class WedgeVolume : ParametricVolume {
 public:
     ParametricSurface face0123; // The bottom surface.
-    double dtheta; // The angle through which points from the bottom surface will be swept.
+    number dtheta; // The angle through which points from the bottom surface will be swept.
     Vector3[8] p; // Corner points for the defined volume.
 
-    this(const ParametricSurface face0123, double dtheta)
+    this(const ParametricSurface face0123, number dtheta)
     {
         this.face0123 = face0123.dup();
         this.dtheta = dtheta;
@@ -68,15 +68,15 @@ public:
     } // end toString
 
 private:
-    Vector3 sweep_through_arc(const Vector3 p0, double theta) const
+    Vector3 sweep_through_arc(const Vector3 p0, number theta) const
     {
         // We want to rotate the point about the x-axis, according to the right-hand rule.
         // Angles are measured from the y-axis, positive as we swing around toward the z-axis.
         // Refer to PJ's workbook page 36, 2017-07-01
-        double r = sqrt((p0.y.re)^^2 + (p0.z.re)^^2);
-        double theta0 = atan2(p0.z.re, p0.y.re);
-        double theta1 = theta0+theta;
-        return Vector3(p0.x.re, r*cos(theta1), r*sin(theta1));
+        number r = sqrt((p0.y)^^2 + (p0.z)^^2);
+        number theta0 = atan2(p0.z, p0.y);
+        number theta1 = theta0+theta;
+        return Vector3(p0.x, r*cos(theta1), r*sin(theta1));
     } // end sweep_through_arc()
 } // end WedgeVolume
 
@@ -89,7 +89,7 @@ version(wedgevolume_test) {
         p[2] = Vector3(1.0, 1.1, 0.0);
         p[3] = Vector3(0.0, 1.1, 0.0);
         ParametricSurface my_face = new CoonsPatch(p[0], p[1], p[2], p[3]);
-        auto my_box = new WedgeVolume(my_face, 0.1);
+        auto my_box = new WedgeVolume(my_face, to!number(0.1));
         auto d = my_box(0.1, 0.1, 0.5);
         // writeln("my_box=", my_box, " d=", d);
         // expect p0.x=0.1 p0.y=0.2 and have set t=0.5, dtheta=0.1
