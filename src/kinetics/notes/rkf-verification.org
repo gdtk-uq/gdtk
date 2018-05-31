@@ -73,7 +73,7 @@ are equal at $C_0$, then the analytical solution is:
 import std.stdio;
 import std.conv;
 import std.math;
-import ridder;
+import nm.ridder;
 
 void main()
 {
@@ -92,7 +92,7 @@ void main()
 
     double C0 = 7.0;
     double C1 = 7.15;
-    double C_HI = solve!zeroFun(C0, C1);
+    double C_HI = solve!(zeroFun,double)(C0, C1);
     writefln("%16.16f", C_HI);
 }
 #+END_SRC

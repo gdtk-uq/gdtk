@@ -190,7 +190,7 @@ public:
             return s - s_guess;
         };
 
-        if ( bracket!zeroFun(T1, T2) == -1 ) {
+        if ( bracket!(zeroFun,double)(T1, T2) == -1 ) {
             string msg = "The 'bracket' function failed to find temperature values\n";
             msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_ps().\n";
             msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
@@ -201,7 +201,7 @@ public:
             T1 = T_MIN;
         
         try {
-            Q.T = solve!zeroFun(T1, T2, TOL);
+            Q.T = solve!(zeroFun,double)(T1, T2, TOL);
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find temperature\n";
@@ -236,7 +236,7 @@ public:
             return h - h_guess;
         };
 
-        if ( bracket!zeroFun(T1, T2) == -1 ) {
+        if ( bracket!(zeroFun,double)(T1, T2) == -1 ) {
             string msg = "The 'bracket' function failed to find temperature values\n";
             msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
             msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
@@ -247,7 +247,7 @@ public:
             T1 = T_MIN;
         
         try {
-            Q.T = solve!zeroFun(T1, T2, TOL);
+            Q.T = solve!(zeroFun,double)(T1, T2, TOL);
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find temperature\n";
@@ -275,7 +275,7 @@ public:
             return s - s_guess;
         };
 
-        if ( bracket!zeroFun2(p1, p2) == -1 ) {
+        if ( bracket!(zeroFun2,double)(p1, p2) == -1 ) {
             string msg = "The 'bracket' function failed to find pressure values\n";
             msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
             msg ~= format("The final values are: p1 = %12.6f and p2 = %12.6f\n", p1, p2);
@@ -286,7 +286,7 @@ public:
             p1 = 1.0;
         
         try {
-            Q.p = solve!zeroFun2(p1, p2, TOL);
+            Q.p = solve!(zeroFun2,double)(p1, p2, TOL);
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find pressure\n";

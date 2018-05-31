@@ -7,7 +7,8 @@
 
 import std.stdio;
 import gas.gas_model;
-import std.datetime;
+import gas.gas_state;
+import std.datetime.stopwatch: StopWatch;
 
 void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes using CO2 Span Wagner...");
@@ -30,7 +31,7 @@ void main() {
     for(int i = 0; i != ncycles; i++) gm.update_thermo_from_ps(gd,s);
     sw.stop();
     gm.update_sound_speed(gd);
-    long t_eval_ps = sw.peek().usecs;
+    long t_eval_ps = sw.peek.total!"usecs";
     writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.T);
     writefln("rho= %.8f, e= %.8f, a= %.8f, s=%.8f", gd.rho, gd.u, gd.a, s); 
     writeln("------------------------------------------");
@@ -39,7 +40,7 @@ void main() {
     sw.start();
     for(int i = 0; i != ncycles; i++) gm.update_thermo_from_rhou(gd);
     sw.stop();
-    long t_lut = sw.peek().usecs - t_eval_ps;
+    long t_lut = sw.peek.total!"usecs" - t_eval_ps;
     gm.update_sound_speed(gd);
     writefln("R= %.8f, pressure= %.16f, temperature= %.8f", gm.R(gd), gd.p, gd.T);
     writefln("rho= %.8f, e= %.8f, a= %.8f", gd.rho, gd.u, gd.a); 

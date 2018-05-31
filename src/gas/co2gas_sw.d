@@ -573,9 +573,9 @@ private:
         double factor = 0.05;
         double T1 = 400; double T2 = 600; 
         double T1_min = 80; double T2_max = 50000.0;
-        int bracketFlag = bracket!zeroSpecificEnergy_T(T1,T2,T1_min,T2_max,max_try,factor);
+        int bracketFlag = bracket!(zeroSpecificEnergy_T,double)(T1,T2,T1_min,T2_max,max_try,factor);
         if (bracketFlag == -1) throw new Exception(format("bracketing getTemperature failed at e: %s, rho: %s, bracket: [%s, %s]", e, rho, T1, T2));
-        double T = solve!zeroSpecificEnergy_T(T1,T2, Ttol);
+        double T = solve!(zeroSpecificEnergy_T,double)(T1,T2, Ttol);
         assert(!isNaN(T), format("T is NaN at rho: %s, e: %s", rho, e));
         return T;
     }
@@ -638,7 +638,7 @@ private:
             {
                 return P - updatePressure_rhoT(rho, T);
             };
-        double T = solve!zeroPressure_T(Tbracket[0], Tbracket[1], tol);
+        double T = solve!(zeroPressure_T,double)(Tbracket[0], Tbracket[1], tol);
         assert(!isNaN(T), format("T is NaN at P: %s, rho: %s", P, rho));
         return T;
     }
@@ -649,7 +649,7 @@ private:
             {
             return P - updatePressure_rhoT(rho, T);
             };
-        double rho = solve!zeroPressure_rho(bracket[0], bracket[1], tol);
+        double rho = solve!(zeroPressure_rho,double)(bracket[0], bracket[1], tol);
         assert(!isNaN(rho), format("rho is NaN at P: %s, T: %s"));
         return rho;
     }      
@@ -807,7 +807,7 @@ private:
         double T_max;
         if (rho < 10) T_max = 1.1*p/rho/_Rgas; //if low density, Temperature may be high -- need to extend bracket
         else T_max = 6000;
-        double T = solve!zeroPressure_T(80,max(T_max,6000), tol);
+        double T = solve!(zeroPressure_T,double)(80,max(T_max,6000), tol);
         assert(!isNaN(T), format("T is NaN, P: %s, rho: %s", p, rho));
         return T;
     } 
@@ -822,7 +822,7 @@ private:
             {
                 return s - getEntropy_prho(P, rho,T);
             };
-        return solve!zeroEntropy_rho(0.009,1600,0.0001);
+        return solve!(zeroEntropy_rho,double)(0.009,1600,0.0001);
     }
 
 
@@ -833,7 +833,7 @@ private:
             {
                 return updateEnthalpy_rhoT(rho, T) - h;
             };
-        return solve!zeroEnthalpy_T(80,4000,tol);
+        return solve!(zeroEnthalpy_T,double)(80,4000,tol);
     }
     
     const double getEntropy_hrho(double h, double rho, ref double T)
@@ -846,7 +846,7 @@ private:
         auto zeroEntropy_rho = delegate(double rho){
             return getEntropy_hrho(h,rho,T)-s;
         };
-        return solve!zeroEntropy_rho(0.0009,1600,0.0001);
+        return solve!(zeroEntropy_rho,double)(0.0009,1600,0.0001);
     }
 
     const double get_d_alphar_d_delta(double tau, double delta) {
@@ -909,7 +909,7 @@ private:
             {
             return rho - getrho_satvap(T);
             };
-        return solve!zeroRhosatvap_T(bracket[0],bracket[1],tol);
+        return solve!(zeroRhosatvap_T,double)(bracket[0],bracket[1],tol);
     }
 
     const double getrho_satliq(double T)
@@ -927,7 +927,7 @@ private:
             {
                 return rho - getrho_satliq(T);
             };
-        return solve!zeroRhosatliq_T(bracket[0],bracket[1],tol);
+        return solve!(zeroRhosatliq_T,double)(bracket[0],bracket[1],tol);
     }
 
 } // end class CO2GasSW

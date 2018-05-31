@@ -233,7 +233,7 @@ private:
         //writeln("first guess at e: ", e);
         auto getPressure_T = delegate (double T){return updatePressure_rhoT(rho, T) - P;};
         double[2] e_bracket = [updateEnergy_rhoT(rho, Tbracket[0]), updateEnergy_rhoT(rho, Tbracket[1])];
-        double T = solve!getPressure_T(Tbracket[0], Tbracket[1],tol);
+        double T = solve!(getPressure_T,double)(Tbracket[0], Tbracket[1],tol);
         double e = updateEnergy_rhoT(rho, T);
         string errorString = "P: " ~ to!string(P) ~ ", rho: " ~ to!string(rho);
         assert(!isNaN(e), errorString);
@@ -243,7 +243,7 @@ private:
         //when temperature is close to  critical temperature be very careful
         //assert(T > 305, "Temperature too low and close to critical point (305K)");
         auto getPressure_rho = delegate (double rho){return updatePressure_rhoT(rho, T) - P;};
-        double rho = solve!getPressure_rho(bracket[0], bracket[1], tol);
+        double rho = solve!(getPressure_rho,double)(bracket[0], bracket[1], tol);
         string errorString = "P: " ~ to!string(P) ~ ", T: " ~ to!string(T);
         assert(!isNaN(rho), errorString);
         return rho;

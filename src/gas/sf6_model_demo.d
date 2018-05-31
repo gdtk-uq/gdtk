@@ -7,6 +7,7 @@
 
 import std.stdio;
 import gas.gas_model;
+import gas.gas_state;
 
 void main() {
     writeln("Begin demonstration of using the gasmodel and Gas_data classes using SF6...");

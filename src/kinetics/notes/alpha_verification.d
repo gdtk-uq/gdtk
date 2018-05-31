@@ -38,7 +38,7 @@ void main()
 
     double C0 = 7.0;
     double C1 = 7.15;
-    double C_HI = solve!zeroFun(C0, C1);
+    double C_HI = solve!(zeroFun,double)(C0, C1);
     writefln("Analytical Solution = %16.16f", C_HI);
 
     //============================== Numerical ==================================
