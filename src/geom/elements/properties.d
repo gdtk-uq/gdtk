@@ -879,10 +879,16 @@ version(properties_test) {
         assert(!inside_xy_quad(p0, p1, p2, p3, e), failedUnitTest());
         assert(winding_number(poly, e) == 0, failedUnitTest());
 
+        // Set up a simple triangle for which we can easily compute
+        // the properties by hand.
+        //      p2
+        //    / |
+        //   /  |
+        // p0---p1
+        double alpha = 1.0;
         p0 = Vector3(0.0, 0.0, 1.0);
-        p1 = Vector3(1.0, 0.0, 1.0);
-        p2 = Vector3(1.0, 1.0, 1.0);
-        p3 = Vector3(0.0, 1.0, 1.0);
+        p1 = Vector3(alpha, 0.0, 1.0);
+        p2 = Vector3(alpha, alpha, 1.0);
         Vector3 centroid, n, t1, t2;
         number area;
         triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
@@ -892,44 +898,50 @@ version(properties_test) {
         assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
         assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), failedUnitTest());
 
-        // triangle properties - complex derivative test
         version(complex_numbers) {
-            // store original properties
-            Vector3 centroid0 = Vector3(centroid);
-            Vector3 n0 = Vector3(n);
-            Vector3 t10 = Vector3(t1);
-            Vector3 t20 = Vector3(t2);
-            number area0 = area;
-            
-            // complex step
-            Complex!double hIm = complex(0.0, 1.0e-20); // complex step-size
-            p1.refy += hIm; // perturb in complex plane
-            triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
-            double[4] derivCmplx;
-            derivCmplx[0] = centroid.y.im/hIm.im;
-            derivCmplx[1] = t1.y.im/hIm.im; 
-            derivCmplx[2] = t2.x.im/hIm.im;
-            derivCmplx[3] = area.im/hIm.im;
-
-            // reset p1 point
-            p1 = Vector3(1.0, 0.0, 1.0);
-            
-            // real step
-            double hRe = 1.0e-08; // real step-size
-            p1.refy += hRe; // perturb in real plane
-            triangle_properties(p0, p1, p2, centroid, n, t1, t2, area);
-            double[4] derivReal;
-            derivReal[0] = (centroid.y.re-centroid0.y.re)/hRe;
-            derivReal[1] = (t1.y.re-t10.y.re)/hRe; 
-            derivReal[2] = (t2.x.re-t20.x.re)/hRe;
-            derivReal[3] = (area.re-area0.re)/hRe;
-            
-            foreach( idx; 0..4) assert(std.math.approxEqual(derivCmplx[idx], derivReal[idx]), failedUnitTest());
-
-            // reset p1
-            p1 = Vector3(1.0, 0.0, 1.0);
+            // triangle properties - complex derivative test
+            double h = 1.0e-20;
+            number ih = complex(0,h);
+            number zero = 0.0;
+            number one = 1.0;
+            auto p0_dash = Vector3(zero, zero, one);
+            auto p1_dash = Vector3(alpha+ih, zero, one);
+            auto p2_dash = Vector3(alpha+ih, alpha+ih, one);
+            Vector3 centroid_dash, n_dash, t1_dash, t2_dash;
+            number area_dash;
+            triangle_properties(p0_dash, p1_dash, p2_dash, centroid_dash,
+                                n_dash, t1_dash, t2_dash, area_dash);
+            number darea = area_dash - area;
+            double darea_da = darea.im / h;
+            Vector3 dcentroid = centroid_dash - centroid;
+            Vector3 dcentroid_da = Vector3(dcentroid.x.im/h, dcentroid.y.im/h, dcentroid.z.im/h);
+            Vector3 dn = n_dash - n;
+            Vector3 dn_da = Vector3(dn.x.im/h, dn.y.im/h, dn.z.im/h);
+            Vector3 dt1 = t1_dash - t1;
+            Vector3 dt1_da = Vector3(dt1.x.im/h, dt1.y.im/h, dt1.z.im/h);
+            Vector3 dt2 = t2_dash - t2;
+            Vector3 dt2_da = Vector3(dt2.x.im/h, dt2.y.im/h, dt2.z.im/h);
+            assert(approxEqualVectors(dcentroid_da, Vector3(2.0/3.0*alpha, 1.0/3.0*alpha, 0.0)),
+                   failedUnitTest());
+            // Because a change in alpha does not change the orientation of the triangle,
+            // we expect the unit vectors to have zero sensitivity.
+            // [TODO] It would probably be good to set up another case in which alpha
+            // does change the orientation of the triangle.
+            assert(approxEqualVectors(dn_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
+            assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
+            assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
+            // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
+            assert(approxEqual(darea_da, alpha), failedUnitTest());
         }
-        
+
+        // Set up a simple quadrilateral for which we can easily compute
+        // the properties by hand.
+        // p3---p2
+        // |    |
+        // |    |
+        // p0---p1
+        // For the quadrilateral, we reuse the triangle points but need a fourth point.
+        p3 = Vector3(0.0, alpha, 1.0);
         quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
         assert(approxEqualNumbers(area, to!number(1.0)), failedUnitTest());
         assert(approxEqualVectors(centroid, Vector3(0.5,0.5,1.0)), failedUnitTest());
@@ -939,33 +951,7 @@ version(properties_test) {
 
         // quad properties - complex derivative test
         version(complex_numbers) {
-            // store original properties
-            centroid0 = Vector3(centroid);
-            n0 = Vector3(n);
-            t10 = Vector3(t1);
-            t20 = Vector3(t2);
-            area0 = area;
-            
-            // complex step
-            p1.refy += hIm; // perturb in complex plane, reuse hIm
-            quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
-            derivCmplx[0] = centroid.y.im/hIm.im;
-            derivCmplx[1] = t1.y.im/hIm.im; 
-            derivCmplx[2] = t2.x.im/hIm.im;
-            derivCmplx[3] = area.im/hIm.im;
-
-            // reset p1 point
-            p1 = Vector3(1.0, 0.0, 1.0);
-            
-            // real step
-            p1.refy += hRe; // perturb in real plane, reuse hRe
-            quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
-            derivReal[0] = (centroid.y.re-centroid0.y.re)/hRe;
-            derivReal[1] = (t1.y.re-t10.y.re)/hRe; 
-            derivReal[2] = (t2.x.re-t20.x.re)/hRe;
-            derivReal[3] = (area.re-area0.re)/hRe;
-
-            foreach( idx; 0..4) assert(std.math.approxEqual(derivCmplx[idx], derivReal[idx]), failedUnitTest());
+            // [TODO]
         }
         
         // Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
@@ -983,34 +969,7 @@ version(properties_test) {
 
         // tetrahedron properties - complex derivative test
         version(complex_numbers) {
-            // store original properties
-            centroid0 = Vector3(centroid);
-            number volume0 = volume;
-            
-            // complex step
-            p2.refy += hIm; // perturb in complex plane, reuse hIm
-            tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
-            derivCmplx[0] = centroid.x.im/hIm.im;
-            derivCmplx[1] = centroid.y.im/hIm.im;
-            derivCmplx[2] = centroid.z.im/hIm.im;
-            derivCmplx[3] = volume.im/hIm.im;
-
-            // reset p2 point
-            p2 = Vector3(0.0, 1.0, 0.0);
-        
-            // real step
-            p2.refy += hRe; // perturb in real plane, reuse hRe
-            tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
-            derivReal[0] = (centroid.x.re-centroid0.x.re)/hRe;
-            derivReal[1] = (centroid.y.re-centroid0.y.re)/hRe;
-            derivReal[2] = (centroid.z.re-centroid0.z.re)/hRe;
-            derivReal[3] = (volume.re-volume0.re)/hRe;
-
-            foreach( idx; 0..4) assert(std.math.approxEqual(derivCmplx[idx], derivReal[idx]), failedUnitTest());
-
-            // reset p2 point
-            p2 = Vector3(0.0, 1.0, 0.0);
-        
+            // [TODO]
         }
         
         // Build a wedge with the same equilateral-triangle base.
@@ -1024,30 +983,7 @@ version(properties_test) {
 
         // wedge properties - complex derivative test
         version(complex_numbers) {
-            // store original properties
-            centroid0 = Vector3(centroid);
-            volume0 = volume;
-            
-            // complex step
-            p2.refy += hIm; // perturb in complex plane, reuse hIm
-            wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
-            derivCmplx[0] = centroid.x.im/hIm.im;
-            derivCmplx[1] = centroid.y.im/hIm.im;
-            derivCmplx[2] = centroid.z.im/hIm.im;
-            derivCmplx[3] = volume.im/hIm.im;
-
-            // reset p2 point
-            p2 = Vector3(0.0, 1.0, 0.0);
-        
-            // real step
-            p2.refy += hRe; // perturb in real plane, reuse hRe
-            wedge_properties(p0, p1, p2, p3, p4, p5, centroid, volume);
-            derivReal[0] = (centroid.x.re-centroid0.x.re)/hRe;
-            derivReal[1] = (centroid.y.re-centroid0.y.re)/hRe;
-            derivReal[2] = (centroid.z.re-centroid0.z.re)/hRe;
-            derivReal[3] = (volume.re-volume0.re)/hRe;
-
-            foreach( idx; 0..4) assert(std.math.approxEqual(derivCmplx[idx], derivReal[idx]), failedUnitTest());
+            // [TODO]
         }
 
         
@@ -1061,30 +997,7 @@ version(properties_test) {
 
         // pyramid properties - complex derivative test
         version(complex_numbers) {
-            // store original properties
-            centroid0 = Vector3(centroid);
-            volume0 = volume;
-            
-            // complex step
-            p2.refy += hIm; // perturb in complex plane, reuse hIm
-            pyramid_properties(p0, p1, p2, p3, p4, centroid, volume);
-            derivCmplx[0] = centroid.x.im/hIm.im;
-            derivCmplx[1] = centroid.y.im/hIm.im;
-            derivCmplx[2] = centroid.z.im/hIm.im;
-            derivCmplx[3] = volume.im/hIm.im;
-
-            // reset p2 point
-            p2 =  Vector3(1,1,0);
-        
-            // real step
-            p2.refy += hRe; // perturb in real plane, reuse hRe
-            pyramid_properties(p0, p1, p2, p3, p4, centroid, volume);
-            derivReal[0] = (centroid.x.re-centroid0.x.re)/hRe;
-            derivReal[1] = (centroid.y.re-centroid0.y.re)/hRe;
-            derivReal[2] = (centroid.z.re-centroid0.z.re)/hRe;
-            derivReal[3] = (volume.re-volume0.re)/hRe;
-
-            foreach( idx; 0..4) assert(std.math.approxEqual(derivCmplx[idx], derivReal[idx]), failedUnitTest());
+            // [TODO]
         }
         
         // Simple cube for the hex cell.
@@ -1100,32 +1013,7 @@ version(properties_test) {
 
         // Simple cube for the hex cell properties - complex derivative test
         version(complex_numbers) {
-            // store original properties
-            centroid0 = Vector3(centroid);
-            volume0 = volume;
-            
-            // complex step
-            p2.refy += hIm; // perturb in complex plane, reuse hIm
-            hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, centroid, volume,
-                            iLen, jLen, kLen);
-            derivCmplx[0] = centroid.x.im/hIm.im;
-            derivCmplx[1] = centroid.y.im/hIm.im;
-            derivCmplx[2] = centroid.z.im/hIm.im;
-            derivCmplx[3] = volume.im/hIm.im;
-
-            // reset p2 point
-            p2 =  Vector3(1,1,0);
-        
-            // real step
-            p2.refy += hRe; // perturb in real plane, reuse hRe
-            hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, centroid, volume,
-                            iLen, jLen, kLen);
-            derivReal[0] = (centroid.x.re-centroid0.x.re)/hRe;
-            derivReal[1] = (centroid.y.re-centroid0.y.re)/hRe;
-            derivReal[2] = (centroid.z.re-centroid0.z.re)/hRe;
-            derivReal[3] = (volume.re-volume0.re)/hRe;
-
-            foreach( idx; 0..4) assert(std.math.approxEqual(derivCmplx[idx], derivReal[idx]), failedUnitTest());
+            // [TODO]
         }
 
         
