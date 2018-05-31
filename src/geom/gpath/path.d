@@ -76,12 +76,12 @@ public:
         }
         return derivative;
     }
-    double partial_length(double ta, double tb) const
+    number partial_length(double ta, double tb) const
     {
         if( tb < ta ) {
             double tmp = ta; ta = tb; tb = tmp;
         }
-        double L = 0.0;
+        number L = 0.0;
         int n = 100;
         double dt = (tb - ta) / n;
         Vector3 p0 = this.opCall(ta);
@@ -89,18 +89,18 @@ public:
         foreach (i; 1 .. n+1) {
             p1 = this.opCall(ta + dt * i);
             dp = p1 - p0;
-            L += geom.abs(dp).re;
+            L += geom.abs(dp);
             p0 = p1;
         }
         return L;
     }
-    double length() const
+    number length() const
     {
         return partial_length(0.0, 1.0);
     }
-    Vector3 point_from_length(double length, out double t) const
+    Vector3 point_from_length(number length, out double t) const
     {
-        double L = 0.0;
+        number L = 0.0;
         int n = 1000;
         double dt = 1.0 / n;
         Vector3 p0 = this.opCall(0.0);
@@ -108,9 +108,9 @@ public:
         foreach (i; 1 .. n+1) {
             p1 = this.opCall(dt * i);
             dp = p1 - p0;
-            L += geom.abs(dp).re;
+            L += geom.abs(dp);
             p0 = p1;
-            if( L > length ) {
+            if(L > length) {
                 t = dt * i;
                 return p1;
             }
@@ -158,7 +158,7 @@ public:
         double tL = 0.0;
         double tR = 1.0;
         double tol = 1.0e-6;
-        minimize!distanceToPoint(tL, tR, tol);
+        minimize!(distanceToPoint,double)(tL, tR, tol);
 
         Vector3 ptOnPath;
         // Handle the special cases of being right at the end points.

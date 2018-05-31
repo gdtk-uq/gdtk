@@ -33,7 +33,7 @@ public:
     }
     override Vector3 opCall(double t) const 
     {
-        double L;
+        number L;
         Vector3 p;
         evaluate_position_and_length(t, p, L);
         return p;
@@ -46,25 +46,25 @@ public:
     {
         return "Arc";
     }
-    override double length() const
+    override number length() const
     {
         // Returns the geometric length.
-        double L;
+        number L;
         Vector3 p;
         evaluate_position_and_length(1.0, p, L);
         return L;
     }
     
-    void evaluate_position_and_length(in double t, out Vector3 loc, out double L) const
+    void evaluate_position_and_length(in double t, out Vector3 loc, out number L) const
     {
         // Both the position of the point and the length of the full arc are evaluated
         // using mostly the same process of transforming to the plane local to the arc.
         Vector3 ca, cb, tangent1, tangent2, n, cb_local;
-        double ca_mag, cb_mag, theta;
+        number ca_mag, cb_mag, theta;
 
         L = 0.0;
-        ca = a - c; ca_mag = geom.abs(ca).re;
-        cb = b - c; cb_mag = geom.abs(cb).re;
+        ca = a - c; ca_mag = geom.abs(ca);
+        cb = b - c; cb_mag = geom.abs(cb);
         if (fabs(ca_mag - cb_mag) > 1.0e-5) {
             throw new Error(text("Arc.evaluate(): radii do not match ca=",ca," cb=",cb));
         }
@@ -83,18 +83,18 @@ public:
         // the calculation of the point along the arc in 
         // the local xy-plane, with ca along the x-axis.
         cb_local = cb;
-        Vector3 zero = Vector3(0.0,0.0,0.0);
-        cb_local.transform_to_local_frame(tangent1, tangent2, n, zero);
+        Vector3 zerov = Vector3(0.0,0.0,0.0);
+        cb_local.transform_to_local_frame(tangent1, tangent2, n, zerov);
         if (fabs(cb_local.z) > 1.0e-6) {
             throw new Error(text("Arc.evaluate(): problem with transformation cb_local=", cb_local));
         }
         // Angle of the final point on the arc is in the range -pi < th <= +pi.
-        theta = atan2(cb_local.y.re, cb_local.x.re);
+        theta = atan2(cb_local.y, cb_local.x);
         // The length of the circular arc.
         L = theta * cb_mag;
         // Move the second point around the arc in the local xy-plane.
         theta *= t;
-        loc.set(cos(theta)*cb_mag, sin(theta)*cb_mag, 0.0);
+        loc.set(cos(theta)*cb_mag, sin(theta)*cb_mag, to!number(0.0));
         // Transform back to global xyz coordinates
         // and remember to add the centre coordinates.
         loc.transform_to_global_frame(tangent1, tangent2, n, c);
@@ -162,6 +162,7 @@ class Arc3 : Arc {
 version(arc_test) {
     import util.msg_service;
     int main() {
+        // Some simple evaluations.
         auto a = Vector3([2.0, 2.0, 0.0]);
         auto b = Vector3([1.0, 2.0, 1.0]);
         auto c = Vector3([1.0, 2.0, 0.0]);
@@ -172,13 +173,44 @@ version(arc_test) {
         auto adb = new Arc3(a, d, b);
         assert(approxEqualVectors(d, adb(0.5)), "Arc3");
         //
+        // Set up an intersection that should be found on Line
         auto pth = new Arc3(Vector3(0.0,1.0), Vector3(0.5,1.2), Vector3(1.0,1.0));
         auto ps = Vector3(0.5,0.5);
         auto dir = Vector3(0.0,1.0);
         double t;
         auto found = pth.intersect2D(ps, dir, t, 10);
-        assert(found, failedUnitTest()); // intersect2D not found on Arc3
-        assert(approxEqual(t,0.5), failedUnitTest()); // intersect2D parametric location on Arc3
+        assert(found, failedUnitTest());
+        // intersect2D parametric location on Arc3
+        assert(approxEqual(t,0.5), failedUnitTest());
+        //
+        version(complex_numbers) {
+            // Try out the complex derivative evaluation.
+            auto pc = Vector3(0.0, 0.0);
+            double alpha = 1.0;
+            auto pa = Vector3(0.0, alpha);
+            auto pb = Vector3(alpha, 0.0);
+            auto arc0 = new Arc(pa, pb, pc);
+            double h = 1.0e-20;
+            number ih = complex(0,h);
+            number zero = 0.0;
+            auto pa_dash = Vector3(zero, alpha+ih);
+            auto pb_dash = Vector3(alpha+ih, zero);
+            auto arc1 = new Arc(pa_dash, pb_dash, pc);
+            // import std.stdio;
+            // writeln("arc0=", arc0, " arc1=", arc1);
+            // writeln("arc0(0.5)=", arc0(0.5), " arc1(0.5)=", arc1(0.5));
+            // What we want to compute is the sensitivity
+            // of the midpoint of the arc with respect to alpha.
+            auto dpmid = arc1(0.5) - arc0(0.5);
+            double dpmid_da_x = dpmid.x.im / h;
+            double dpmid_da_y = dpmid.y.im / h;
+            double dpmid_da_z = dpmid.z.im / h;
+            // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
+            assert(approxEqual(dpmid_da_x,1.0/sqrt(2.0)), failedUnitTest());
+            assert(approxEqual(dpmid_da_y,1.0/sqrt(2.0)), failedUnitTest());
+            assert(approxEqual(dpmid_da_z,0.0), failedUnitTest());
+        }
+        //
         return 0;
     }
 } // end arc_test

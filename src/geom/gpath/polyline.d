@@ -155,10 +155,12 @@ private:
     void reset_breakpoints()
     {
         // Set up the parameter breakpoints based on cumulative length.
-        t_values[0] = segments[0].length();
-        foreach (i; 1 .. segments.length) t_values[i] = t_values[i-1] + segments[i].length(); 
+        t_values[0] = segments[0].length().re;
+        foreach (i; 1 .. segments.length) {
+            t_values[i] = t_values[i-1] + segments[i].length().re;
+        }
         double L_total = t_values[$-1];
-        foreach (i; 0 .. segments.length) t_values[i] /= L_total; 
+        foreach (i; 0 .. segments.length) { t_values[i] /= L_total; }
     } // end reset_breakpoints()
 } // end class Polyline
 
