@@ -1228,8 +1228,8 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                     double[] tmp;
                     tmp.length = nConserved;
                     foreach (cell; blk.cells) {
-                        LUSolve(cell.dConservative, cell.pivot,
-                                blk.v[cellCount..cellCount+nConserved], tmp);
+                        LUSolve!double(cell.dConservative, cell.pivot,
+                                       blk.v[cellCount..cellCount+nConserved], tmp);
                         blk.zed[cellCount..cellCount+nConserved] = tmp[];
                         cellCount += nConserved;
                     }
@@ -1305,7 +1305,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                 copy(Gamma, Q1);
             }
             else {
-                nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+                nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
 
             // Prepare for next step
@@ -1330,11 +1330,11 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
 
         // At end H := R up to row m
         //        g := gm up to row m
-        upperSolve(H1, to!int(m), g1);
+        upperSolve!double(H1, to!int(m), g1);
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.V, blk.nvars, m, blk.g1, blk.zed);
+            nm.bbla.dot!double(blk.V, blk.nvars, m, blk.g1, blk.zed);
         }
         
         if (usePreconditioner) {
@@ -1343,8 +1343,8 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                 double[] tmp;
                 tmp.length = nConserved;
                 foreach (cell; blk.cells) {
-                    LUSolve(cell.dConservative, cell.pivot,
-                            blk.zed[cellCount..cellCount+nConserved], tmp);
+                    LUSolve!double(cell.dConservative, cell.pivot,
+                                   blk.zed[cellCount..cellCount+nConserved], tmp);
                     blk.dU[cellCount..cellCount+nConserved] = tmp[];
                     cellCount += nConserved;
                 }

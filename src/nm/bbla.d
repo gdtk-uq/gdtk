@@ -839,7 +839,7 @@ in {
 }
 body {
     int iMax;
-    number largest, tmp;
+    T largest, tmp;
     T[] vv;
     
     int n = to!int(a.nrows);
@@ -874,7 +874,7 @@ body {
             vv[iMax] = vv[k];
         }
         pivot[k] = iMax;
-        if (a[k,k] == 0.0) { a[k,k] = to!number(verySmallValue); }
+        if (a[k,k] == 0.0) { a[k,k] = to!T(verySmallValue); }
         foreach (i; k+1 .. n) {
             a[i,k] /= a[k,k];
             tmp = a[i,k];
@@ -885,7 +885,7 @@ body {
     }
 }
 
-void LUSolve(T)(Matrix!T a, int[] pivot, number[] b, ref number[] x)
+void LUSolve(T)(Matrix!T a, int[] pivot, T[] b, ref T[] x)
 in {
     assert(a.nrows == a.ncols, "require a square matrix");
     assert(pivot.length == a.nrows, "pivot array wrongly sized");

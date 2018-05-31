@@ -1251,7 +1251,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
                 // Extract final column in H
                 foreach (i; 0 .. j+1) h[i] = H0[i,j];
                 // Rotate column by previous rotations (stored in Q0)
-                nm.bbla.dot(Q0, j+1, j+1, h, hR);
+                nm.bbla.dot!double(Q0, j+1, j+1, h, hR);
                 // Place column back in H
                 foreach (i; 0 .. j+1) H0[i,j] = hR[i];
             }
@@ -1263,14 +1263,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
             Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
             Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
             // Apply rotations
-            nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
-            nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+            nm.bbla.dot!double(Gamma, j+2, j+2, H0, j+1, H1);
+            nm.bbla.dot!double(Gamma, j+2, j+2, g0, g1);
             // Accumulate Gamma rotations in Q.
             if ( j == 0 ) {
                 copy(Gamma, Q1);
             }
             else {
-                nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+                nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
             // Prepare for next step
             copy(H1, H0);
@@ -1292,14 +1292,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
             m = maxIters;
         // At end H := R up to row m
         //        g := gm up to row m
-        upperSolve(H1, to!int(m), g1);
+        nm.bbla.upperSolve!double(H1, to!int(m), g1);
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot(blk.V, blk.nvars, m, blk.g1, blk.psi);
+            nm.bbla.dot!double(blk.V, blk.nvars, m, blk.g1, blk.psi);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
-            solve(blk.P, blk.psi);
+            nm.smla.solve(blk.P, blk.psi);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
             foreach (k; 0 .. blk.nvars) blk.psi[k] += blk.x0[k];
@@ -1343,11 +1343,11 @@ void rpcGMRES_solve(size_t nPrimitive) {
         }
         // 2. local product
         foreach (blk; parallel(localFluidBlocks,1)) {
-            multiply(blk.JlocT, blk.x0, blk.r0);
+            nm.smla.multiply(blk.JlocT, blk.x0, blk.r0);
         }
         // 3. external product
         foreach (blk; parallel(localFluidBlocks,1)) {
-            multiply(blk.JextT, blk.Z, blk.wext);
+            nm.smla.multiply(blk.JextT, blk.Z, blk.wext);
         }
         // 4. sum the two contributions
         foreach (blk; parallel(localFluidBlocks,1)) {
@@ -2329,7 +2329,7 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
         blk.transform[3,3] = gamma-1.0;
 
         
-        dot(cell.dPrimitive, blk.transform, cell.dConservative);
+        nm.bbla.dot!double(cell.dPrimitive, blk.transform, cell.dConservative);
 
         double dtInv = 1.0/dt;
         foreach (i; 0 .. np) {
@@ -2337,7 +2337,7 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
         }
 
         // Get an LU decomposition ready for repeated solves.
-        LUDecomp(cell.dConservative, cell.pivot);
+        nm.bbla.LUDecomp!double(cell.dConservative, cell.pivot);
     }
     
     // reset interpolation order to the global setting
