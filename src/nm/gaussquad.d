@@ -9,6 +9,7 @@
 
 module nm.gaussquad;
 import std.math;
+import nm.complex;
 
 // Rule coefficients computed by Maxima. 
 // See the scripts in directory ./notes
@@ -83,7 +84,6 @@ T integrate(alias f, T)(T a, T b, double tol=1.0e-5)
 version(gaussquad_test) {
     import util.msg_service;
     import std.conv;
-    import nm.complex;
     import nm.number;
     int main() {
         number fun1(number x) { return abs(x) < to!number(1.0) ? sqrt(1.0 - x*x): to!number(0.0); }

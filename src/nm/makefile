@@ -12,7 +12,7 @@ include nm_files.mk
 
 DEMO_PROGRAMS := ridder_demo \
 	linesearch_demo \
-	nelmin_demo \
+	nelmin_demo nelmin_complex_demo \
 	rungekutta_demo \
 	newtoncotes_demo \
 	gaussquad_demo \
@@ -166,26 +166,26 @@ complex_number_test: $(NM_FILES) $(UTIL_DIR)/msg_service.d
 # They should continue to work and provide a minimal example of how to get
 # going with particular modules.
 
-ridder_demo: ridder_demo.d ridder.d bracketing.d
-	dmd -g ridder_demo.d ridder.d bracketing.d
+ridder_demo: ridder_demo.d ridder.d bracketing.d complex.d
+	dmd -g ridder_demo.d ridder.d bracketing.d complex.d
 
-linesearch_demo: linesearch_demo.d linesearch.d
-	dmd -g linesearch_demo.d linesearch.d
+linesearch_demo: linesearch_demo.d linesearch.d complex.d
+	dmd -g linesearch_demo.d linesearch.d complex.d
 
-nelmin_demo: nelmin_demo.d nelmin.d
+nelmin_demo: nelmin_demo.d nelmin.d complex.d number.d
 	dmd -g nelmin_demo.d nelmin.d complex.d number.d
 
-nelmin_complex_demo: nelmin_demo.d nelmin.d
-	dmd -g nelmin_demo.d nelmin.d complex.d number.d -version=complex_numbers
+nelmin_complex_demo: nelmin_demo.d nelmin.d complex.d number.d
+	dmd -of$@ -g nelmin_demo.d nelmin.d complex.d number.d -version=complex_numbers
 
-rungekutta_demo: rungekutta_demo.d rungekutta.d
-	dmd -g rungekutta_demo.d rungekutta.d
+rungekutta_demo: rungekutta_demo.d rungekutta.d complex.d
+	dmd -g rungekutta_demo.d rungekutta.d complex.d
 
-newtoncotes_demo: newtoncotes_demo.d newtoncotes.d
-	dmd -g newtoncotes_demo.d newtoncotes.d
+newtoncotes_demo: newtoncotes_demo.d newtoncotes.d complex.d
+	dmd -g newtoncotes_demo.d newtoncotes.d complex.d
 
-gaussquad_demo: gaussquad_demo.d gaussquad.d
-	dmd -g gaussquad_demo.d gaussquad.d
+gaussquad_demo: gaussquad_demo.d gaussquad.d complex.d
+	dmd -g gaussquad_demo.d gaussquad.d complex.d
 
-bbla_demo: bbla_demo.d bbla.d
-	dmd -g bbla_demo.d bbla.d
+bbla_demo: bbla_demo.d bbla.d complex.d
+	dmd -g bbla_demo.d bbla.d complex.d

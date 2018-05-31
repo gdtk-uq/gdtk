@@ -8,6 +8,7 @@
  */
 module nm.newtoncotes;
 import std.math;
+import nm.complex;
 
 /**
  * Apply Newton-Cotes 5- and 3-point quadrature rules to the segment [a,b].
@@ -47,7 +48,6 @@ T integrate(alias f, T)(T a, T b, double tol=1.0e-5)
 version(newtoncotes_test) {
     import util.msg_service;
     import std.conv;
-    import nm.complex;
     import nm.number;
     int main() {
         const number one = 1.0;

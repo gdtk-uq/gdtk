@@ -13,6 +13,7 @@
 module nm.rungekutta;
 
 import std.math;
+import nm.complex;
 
 /**
  * Allocate workspace arrays for the ODE stepper.
@@ -102,7 +103,6 @@ version(rungekutta_test) {
     import util.msg_service;
     import std.conv;
     import nm.number;
-    import nm.complex;
     int main() {
         number[] testSystem1(double t, number[] x)
         {

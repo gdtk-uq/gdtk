@@ -17,6 +17,7 @@
 module nm.bracketing;
 import std.math;
 import std.algorithm;
+import nm.complex;
 
 int bracket(alias f, T)(ref T x1, ref T x2,
                         T x1_min = -1.0e38, T x2_max = +1.0e38,
@@ -53,7 +54,6 @@ int bracket(alias f, T)(ref T x1, ref T x2,
 version(bracketing_test) {
     import util.msg_service;
     import std.conv;
-    import nm.complex;
     import nm.number;
     int main() {
         number test_fun_2(number x, number a) {

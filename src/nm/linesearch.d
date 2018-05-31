@@ -8,6 +8,7 @@
 */
 
 module nm.linesearch;
+import nm.complex;
 
 /**
  * Returns the bracket xL,xR containing the minimum of the function f.
@@ -51,7 +52,6 @@ void minimize(alias f, T)(ref T a, ref T b, double tol=1.0e-4)
 version(linesearch_test) {
     import std.math;
     import util.msg_service;
-    import nm.complex;
     import nm.number;
     int main() {
         number fdemo(number x) {

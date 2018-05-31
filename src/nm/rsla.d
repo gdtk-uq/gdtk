@@ -11,6 +11,7 @@ import std.math;
 import std.format;
 import std.conv;
 import std.stdio;
+import nm.complex;
 
 @nogc
 T normInf(size_t N, size_t NDIM, size_t NDIM2, T)(ref T[NDIM2][NDIM] c)
@@ -192,8 +193,6 @@ void solveWithInverse(size_t N, size_t NDIM, size_t NDIM2, T)
 
 version(rsla_test) {
     import util.msg_service;
-    import std.conv;
-    import nm.complex;
     import nm.number;
     int main() {
         number[8][4] A = [[to!number(0.0),  to!number(2.0),  to!number(0.0),  to!number(1.0),

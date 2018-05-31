@@ -13,6 +13,7 @@ module nm.brent;
 import std.string;
 import std.math;
 import std.algorithm;
+import nm.complex;
 
 /**
  * Locate a root of f(x) known to lie between x1 and x2. The method
@@ -125,7 +126,6 @@ T solve(alias f, T)(T x1, T x2, double tol=1.0e-9)
 version(brent_test) {
     import util.msg_service;
     import std.conv;
-    import nm.complex;
     import nm.number;
     int main() {
         number test_fun_1(number x) {

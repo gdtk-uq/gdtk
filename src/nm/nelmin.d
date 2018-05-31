@@ -33,6 +33,7 @@ module nm.nelmin;
 import std.conv;
 import std.math;
 import std.stdio;
+import nm.complex;
 
 //-----------------------------------------------------------------------
 // The public face of the minimizer...
