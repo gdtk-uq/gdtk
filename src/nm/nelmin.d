@@ -33,8 +33,6 @@ module nm.nelmin;
 import std.conv;
 import std.math;
 import std.stdio;
-import nm.complex;
-import nm.number;
 
 //-----------------------------------------------------------------------
 // The public face of the minimizer...
@@ -64,20 +62,20 @@ import nm.number;
  *     n_fe      : the number of function evaluations and
  *     n_restart : the number of restarts (with scale reduction).
  */
-bool minimize(alias f)(ref number[] x, 
-                       out number f_min, 
-                       out int n_fe, 
-                       out int n_restart,
-                       number[] dx, 
-                       in double tol=1.0e-6, 
-                       in int max_fe=300, 
-                       in int n_check=20,
-                       in double delta=0.001,
-                       in double Kreflect=1.0,
-                       in double Kextend=2.0,
-                       in double Kcontract=0.5)
-    if ( is(typeof(f([0.0,0.0])) == double) ||
-         is(typeof(f([to!number(0.0),to!number(0.0)])) == Complex!double))
+bool minimize(alias f, T)(ref T[] x, 
+                          out T f_min, 
+                          out int n_fe, 
+                          out int n_restart,
+                          T[] dx, 
+                          in double tol=1.0e-6, 
+                          in int max_fe=300, 
+                          in int n_check=20,
+                          in double delta=0.001,
+                          in double Kreflect=1.0,
+                          in double Kextend=2.0,
+                          in double Kcontract=0.5)
+    if (is(typeof(f([0.0,0.0])) == double) ||
+        is(typeof(f([Complex!double(0.0),Complex!double(0.0)])) == Complex!double))
 {
     bool converged = false;
     n_fe = 0;
@@ -93,8 +91,8 @@ bool minimize(alias f)(ref number[] x,
     // Set up the vertices about the user-specified vertex, x,
     // and the set of step-sizes dx.
     // f is a user-specified objective function f(x).
-    number[][] vertex_list = new number[][N+1];
-    number[] f_list = new number[N+1];
+    T[][] vertex_list = new T[][N+1];
+    T[] f_list = new T[N+1];
     foreach (i; 0 .. N+1) {
         auto p = x.dup;
         if ( i > 0 ) p[i-1] += dx[i-1];
@@ -109,7 +107,7 @@ bool minimize(alias f)(ref number[] x,
     int lowest(int exclude=-1) 
     {
         int indx;
-        number lowest_f_value;
+        T lowest_f_value;
         if ( exclude == 0 ) indx = 1; else indx = 0;
         lowest_f_value = f_list[indx];
         for ( int i = 0; i <= N;  ++i ) {
@@ -126,7 +124,7 @@ bool minimize(alias f)(ref number[] x,
     int highest(int exclude=-1) 
     {
         int indx;
-        number highest_f_value;
+        T highest_f_value;
         if ( exclude == 0 ) indx = 1; else indx = 0;
         highest_f_value = f_list[indx];
         for ( int i = 0; i <= N;  ++i ) {
@@ -140,17 +138,17 @@ bool minimize(alias f)(ref number[] x,
     }
 
     // Returns the standard deviation of the vertex fn values.
-    number std_dev() 
+    T std_dev() 
     {
         int i;
-        number sum = 0.0;
+        T sum = 0.0;
         for ( i = 0; i <= N; ++i ) {
             sum += f_list[i];
         }
-        number mean = sum / (N + 1);
+        T mean = sum / (N + 1);
         sum = 0.0;
         for ( i = 0; i <= N; ++i ) {
-            number diff = f_list[i] - mean;
+            T diff = f_list[i] - mean;
             sum += diff * diff;
         }
         return sqrt(sum / N);
@@ -160,7 +158,7 @@ bool minimize(alias f)(ref number[] x,
     void rescale(double ratio)
     {
         foreach ( idx; 0..dx.length) dx[idx] *= ratio;
-        number[] p = vertex_list[lowest()].dup; // save to use below
+        T[] p = vertex_list[lowest()].dup; // save to use below
         foreach (i; 0 .. N+1) {
             vertex_list[i][] = p.dup;
             if ( i >= 1 ) vertex_list[i][i-1] += dx[i-1];
@@ -171,9 +169,9 @@ bool minimize(alias f)(ref number[] x,
     }
 
     // Returns the centroid of all vertices excluding the one specified.
-    number[] centroid(int exclude=-1)
+    T[] centroid(int exclude=-1)
     {
-        number[] xmid = new number[N];
+        T[] xmid = new T[N];
         foreach(ref elem; xmid) elem = 0.0;
         foreach (i; 0 .. N+1) {
             if (i == exclude ) continue;
@@ -186,10 +184,10 @@ bool minimize(alias f)(ref number[] x,
     // Contract the simplex about the vertex i_con.    
     void contract_about_one_point(int i_con)
     {
-        number[] p_con = vertex_list[i_con].dup;
+        T[] p_con = vertex_list[i_con].dup;
         foreach (i; 0 .. N+1) {
             if ( i == i_con ) continue;
-            number[] p = vertex_list[i].dup;
+            T[] p = vertex_list[i].dup;
             foreach( idx; 0..p.length) p[idx] = 0.5 * (p[idx] + p_con[idx]);
             f_list[i] = f(p);
             n_fe += 1;
@@ -201,11 +199,11 @@ bool minimize(alias f)(ref number[] x,
     bool test_for_minimum(int i_min, double delta)
     {
         bool is_minimum = true;  // Assume it is true and test for failure.
-        number f_min = f_list[i_min];
-        number f_p;
+        T f_min = f_list[i_min];
+        T f_p;
         for ( int j = 0; j < N; ++j ) {
             // Check either side of the minimum, perturbing one coordinate at a time.
-            number[] p = vertex_list[i_min].dup;
+            T[] p = vertex_list[i_min].dup;
             p[j] += dx[j] * delta;
             f_p = f(p);
             n_fe += 1;
@@ -218,7 +216,7 @@ bool minimize(alias f)(ref number[] x,
         return is_minimum;
     }
 
-    void replace_vertex(int i, number[] p, number fp)
+    void replace_vertex(int i, T[] p, T fp)
     {
         vertex_list[i] = p.dup;
         f_list[i] = fp;
@@ -232,26 +230,26 @@ bool minimize(alias f)(ref number[] x,
         // The new point will be inserted into the simplex (in place).
         int i_low = lowest();
         int i_high = highest();
-        number[] x_high = vertex_list[i_high].dup;
-        number f_high = f_list[i_high];
+        T[] x_high = vertex_list[i_high].dup;
+        T f_high = f_list[i_high];
         // Centroid of simplex excluding worst point.
-        number[] x_mid = centroid(i_high);
-        number f_mid = f(x_mid);
+        T[] x_mid = centroid(i_high);
+        T f_mid = f(x_mid);
         n_fe += 1;
 
         // First, try moving away from worst point by
         // reflection through centroid
-        number[] x_refl = x_mid.dup;
+        T[] x_refl = x_mid.dup;
         foreach( idx; 0..x_refl.length) x_refl[idx] = (1.0+Kreflect) * x_mid[idx] - Kreflect * x_high[idx];
-        number f_refl = f(x_refl);
+        T f_refl = f(x_refl);
         n_fe += 1;
 
         if ( f_refl < f_mid ) {
             // The reflection through the centroid is good,
             // try to extend in the same direction.
-            number[] x_ext = x_mid.dup;
+            T[] x_ext = x_mid.dup;
             foreach( idx; 0..x_ext.length) x_ext[idx] = Kextend * x_refl[idx] + (1.0-Kextend) * x_mid[idx];
-            number f_ext = f(x_ext);
+            T f_ext = f(x_ext);
             n_fe += 1;
             if ( f_ext < f_refl ) {
                 // Keep the extension because it's best.
@@ -272,9 +270,9 @@ bool minimize(alias f)(ref number[] x,
             if ( count <= 1 ) {
                 // Not too many points are higher than the original reflection.
                 // Try a contraction on the reflection-side of the centroid.
-                number[] x_con = x_mid.dup;
+                T[] x_con = x_mid.dup;
                 foreach( idx; 0..x_con.length) x_con[idx] = (1.0-Kcontract) * x_mid[idx] + Kcontract * x_high[idx];
-                number f_con = f(x_con);
+                T f_con = f(x_con);
                 n_fe += 1;
                 if ( f_con < f_high ) {
                     // At least we haven't gone uphill; accept.

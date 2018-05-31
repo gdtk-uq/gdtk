@@ -8,7 +8,6 @@
 */
 
 module nm.linesearch;
-import std.stdio;
 
 /**
  * Returns the bracket xL,xR containing the minimum of the function f.
@@ -19,15 +18,16 @@ import std.stdio;
  *     tol: the final size of the bracket.
  *          It should not be set too small.
  */
-void minimize(alias f)(ref double a, ref double b, double tol=1.0e-4)
+void minimize(alias f, T)(ref T a, ref T b, double tol=1.0e-4)
     if (is(typeof(f(0.0)) == double) ||
-        is(typeof(f(0.0)) == float))
+        is(typeof(f(0.0)) == float) ||
+        is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
-    double r = 0.618034;
-    double xL = a + (1-r)*(b-a);
-    double xR = a + r*(b-a);
-    double FL = f(xL);
-    double FR = f(xR);
+    T r = 0.618034;
+    T xL = a + (1-r)*(b-a);
+    T xR = a + r*(b-a);
+    T FL = f(xL);
+    T FR = f(xR);
     while ((xR - xL) > tol) {
         if (FR > FL) {
             b = xR;
@@ -42,7 +42,6 @@ void minimize(alias f)(ref double a, ref double b, double tol=1.0e-4)
             xR = a + r*(b-a);
             FR = f(xR);
         }
-        //writeln("xL=", xL, " xR=", xR, " FL=", FL, " FR=", FR);
     }
     a = xL;
     b = xR;
@@ -52,14 +51,16 @@ void minimize(alias f)(ref double a, ref double b, double tol=1.0e-4)
 version(linesearch_test) {
     import std.math;
     import util.msg_service;
+    import nm.complex;
+    import nm.number;
     int main() {
-        double fdemo(double x) {
+        number fdemo(number x) {
             return exp(x) + 2.0 - cos(x);
         }
-        double a = -3;
-        double b = 1;
-        minimize!fdemo(a, b, 1.0e-6);
-        double xminimum = -0.588534;
+        number a = -3;
+        number b = 1;
+        minimize!(fdemo,number)(a, b, 1.0e-6);
+        number xminimum = -0.588534;
         assert(fabs(a - xminimum) < 1.0e-4, failedUnitTest());
         assert(fabs(b - xminimum) < 1.0e-4, failedUnitTest());
 

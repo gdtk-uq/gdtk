@@ -14,8 +14,6 @@ import std.conv;
 import std.algorithm;
 import std.math;
 import std.exception;
-import nm.complex;
-import nm.number;
 
 class Matrix(T) {
     size_t _nrows;
@@ -153,24 +151,26 @@ class Matrix(T) {
         return result;
     }
 
-    Matrix!T opBinary(string op)(Complex!double rhs)
-        if ( op == "+" || op == "-" || op == "*" || op == "/" )
-    {
-        Matrix!T result = new Matrix!T(_nrows, _ncols);
-        foreach(row; 0 .. _nrows) {
-            foreach(col; 0 .. _ncols) {
-                static if ( op == "+" ) {
-                    result._data[row][col] = _data[row][col] + rhs;
-                } else if ( op == "-" ) {
-                    result._data[row][col] = _data[row][col] - rhs;
-                } else if ( op == "*" ) {
-                    result._data[row][col] = _data[row][col] * rhs;
-                } else if ( op == "/" ) {
-                    result._data[row][col] = _data[row][col] / rhs;
+    version(complex_numbers) {
+        Matrix!T opBinary(string op)(Complex!double rhs)
+            if ( op == "+" || op == "-" || op == "*" || op == "/" )
+        {
+            Matrix!T result = new Matrix!T(_nrows, _ncols);
+            foreach(row; 0 .. _nrows) {
+                foreach(col; 0 .. _ncols) {
+                    static if ( op == "+" ) {
+                        result._data[row][col] = _data[row][col] + rhs;
+                    } else if ( op == "-" ) {
+                        result._data[row][col] = _data[row][col] - rhs;
+                    } else if ( op == "*" ) {
+                        result._data[row][col] = _data[row][col] * rhs;
+                    } else if ( op == "/" ) {
+                        result._data[row][col] = _data[row][col] / rhs;
+                    }
                 }
             }
+            return result;
         }
-        return result;
     }
 
     Matrix!T opBinaryRight(string op)(double lhs)
@@ -191,22 +191,24 @@ class Matrix(T) {
         return result;
     }
 
-    Matrix!T opBinaryRight(string op)(Complex!double lhs)
-        if ( op == "+" || op == "-" || op == "*" )
-    {
-        Matrix!T result = new Matrix!T(_nrows, _ncols);
-        foreach(row; 0 .. _nrows) {
-            foreach(col; 0 .. _ncols) {
-                static if ( op == "+" ) {
-                    result._data[row][col] = lhs + _data[row][col];
-                } else if ( op == "-" ) {
-                    result._data[row][col] = lhs - _data[row][col];
-                } else if ( op == "*" ) {
-                    result._data[row][col] = lhs * _data[row][col];
+    version(complex_numbers) {
+        Matrix!T opBinaryRight(string op)(Complex!double lhs)
+            if ( op == "+" || op == "-" || op == "*" )
+        {
+            Matrix!T result = new Matrix!T(_nrows, _ncols);
+            foreach(row; 0 .. _nrows) {
+                foreach(col; 0 .. _ncols) {
+                    static if ( op == "+" ) {
+                        result._data[row][col] = lhs + _data[row][col];
+                    } else if ( op == "-" ) {
+                        result._data[row][col] = lhs - _data[row][col];
+                    } else if ( op == "*" ) {
+                        result._data[row][col] = lhs * _data[row][col];
+                    }
                 }
             }
+            return result;
         }
-        return result;
     }
 
     override string toString() {
@@ -450,7 +452,7 @@ in {
 body {
     foreach (row; 0 .. aRow) {
         foreach (col; 0 .. bCol) {
-            c[row,col] = to!number(0.0);
+            c[row,col] = to!T(0.0);
             foreach (i; 0 .. aCol) {
                 c[row,col] += a[row,i] * b[i,col];
             }
@@ -509,6 +511,8 @@ body {
 version(bbla_test) {
     import util.msg_service;
     import std.conv;
+    import nm.complex;
+    import nm.number;
     int test_basic_operations() {
         Matrix!number a = eye!number(3);
         assert(approxEqualMatrix!number(a, new Matrix!number([[1,0,0],[0,1,0],[0,0,1]])),
@@ -570,7 +574,7 @@ void gaussJordanElimination(T)(ref Matrix!T c, double very_small_value=1.0e-16)
         }
         if (p != j) { c.swapRows(p,j); }
         // Scale row j to get unity on the diagonal.
-        number cjj = c[j,j];
+        T cjj = c[j,j];
         foreach (col; 0 .. c.ncols) { c[j,col] /= cjj; }
         // Do the elimination to get zeros in all off diagonal values in column j.
         foreach (i; 0 .. c.nrows) {
@@ -716,7 +720,7 @@ void upperSolve(T)(in Matrix!T U, T[] b)
     }
 }
 
-void upperSolve(T)(in Matrix!T U, int n, number[] b)
+void upperSolve(T)(in Matrix!T U, int n, T[] b)
 in {
     assert(n <= U.nrows);
     assert(n <= U.ncols);

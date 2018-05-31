@@ -22,7 +22,7 @@ void main() {
     writeln("Example 1 is from Gerald and Wheatley, p. 45");
     writeln("Solve f(x) = x^3 + x^2 - 3x -3 = 0 with initial ",
             "guesses of x0 = 1 and x1 = 2.");
-    writeln("Final result x = ", solve!(test_fun_1)(1, 2));
+    writeln("Final result x = ", solve!(test_fun_1,double)(1, 2));
     writeln("Gerald and Wheatley report x = 1.732051");
     writeln();
     //
@@ -32,14 +32,14 @@ void main() {
             "guesses of x0 = 0 and x1 = 1.");
     double my_a = 3.0;
     auto test_fun_3 = delegate (double x) { return test_fun_2(x, my_a); }; 
-    writeln("Final result x = ", solve!test_fun_3(0, 1));
+    writeln("Final result x = ", solve!(test_fun_3,double)(0, 1));
     writeln("Gerald and Wheatley report x = 0.3604217");
     writeln();
     //
     writeln("Bracket a root of the second example.");
     double x1 = 0.4;
     double x2 = 0.5;
-    int result_flag = bracket!test_fun_3(x1, x2);
+    int result_flag = bracket!(test_fun_3,double)(x1, x2);
     writeln("result_flag=", result_flag, " x1=", x1, " x2=", x2);
     writeln("Done.");
 }

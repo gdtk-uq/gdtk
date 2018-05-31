@@ -69,7 +69,7 @@ void main() {
     number[] dx;
     number fx;
     int nfe, nres;
-    bool conv_flag = minimize!testFunction1(x, fx, nfe, nres, dx);
+    bool conv_flag = minimize!(testFunction1,number)(x, fx, nfe, nres, dx);
     writeln("x = ", x, " fx = ", fx);
     writeln("convergence-flag = ", conv_flag);
     writeln("number-of-fn-evaluations = ", nfe);
@@ -79,7 +79,7 @@ void main() {
     writeln("test 2: Example 3.3 in Olsson and Nelson f(0.811,-0.585)=-67.1");
     number[] x2 = [to!number(0.0), to!number(0.0)];
     number[] dx2 = [to!number(0.5), to!number(0.5)];
-    conv_flag = minimize!testFunction2(x2, fx, nfe, nres, dx2, 1.0e-4);
+    conv_flag = minimize!(testFunction2,number)(x2, fx, nfe, nres, dx2, 1.0e-4);
     writeln("x = ", x2, " fx = ", fx);
     writeln("convergence-flag = ", conv_flag);
     writeln("number-of-fn-evaluations = ", nfe);
@@ -90,7 +90,7 @@ void main() {
     writeln("f(1.801, -1.842, -0.463, -1.205)=0.0009");
     number[] x3 = [to!number(1.0), to!number(1.0), to!number(-0.5), to!number(-2.5)];
     number[] dx3 = [to!number(0.1), to!number(0.1), to!number(0.1), to!number(0.1)];
-    conv_flag = minimize!testFunction3(x3, fx, nfe, nres, dx3, 1.0e-9, 800);
+    conv_flag = minimize!(testFunction3,number)(x3, fx, nfe, nres, dx3, 1.0e-9, 800);
     writeln("x = ", x3, " fx = ", fx);
     writeln("convergence-flag = ", conv_flag);
     writeln("number-of-fn-evaluations = ", nfe);

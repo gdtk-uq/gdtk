@@ -13,8 +13,7 @@ module nm.brent;
 import std.string;
 import std.math;
 import std.algorithm;
-import nm.complex;
-import nm.number;
+
 /**
  * Locate a root of f(x) known to lie between x1 and x2. The method
  * is guaranteed to converge (according to Brent) given the initial 
@@ -30,17 +29,17 @@ import nm.number;
  * Returns:
  *    b, a point near the root.
  */
-number solve(alias f)(number x1, number x2, double tol=1.0e-9) 
+T solve(alias f, T)(T x1, T x2, double tol=1.0e-9) 
     if (is(typeof(f(0.0)) == double) ||
         is(typeof(f(0.0)) == float) ||
         is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
     const int ITMAX = 100;           // maximum allowed number of iterations
     const double EPS=double.epsilon; // Machine floating-point precision
-    number a = x1;
-    number b = x2;
-    number fa = f(a);
-    number fb = f(b);
+    T a = x1;
+    T b = x2;
+    T fa = f(a);
+    T fb = f(b);
     if (abs(fa) == 0.0) { return a; }
     if (abs(fb) == 0.0) { return b; }
     if (fa * fb > 0.0) {
@@ -49,11 +48,11 @@ number solve(alias f)(number x1, number x2, double tol=1.0e-9)
         msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
         throw new Exception(msg);
     }
-    number c = b;
-    number fc = fb;
+    T c = b;
+    T fc = fb;
     // Define d, e outside the loop body so that
     // they don't get initialized to nan each pass.
-    number d, e;
+    T d, e;
     foreach (iter; 0 .. ITMAX) {
         if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
             // On first pass fc==fb and we expect to enter here.
@@ -70,30 +69,30 @@ number solve(alias f)(number x1, number x2, double tol=1.0e-9)
             fc = fa;
         }
         // Convergence check
-        number tol1 = 2.0*EPS*abs(b)+0.5*tol;
-        number xm = 0.5*(c-b);
+        T tol1 = 2.0*EPS*abs(b)+0.5*tol;
+        T xm = 0.5*(c-b);
         if (abs(xm) <= tol1 || fb == 0.0) {
             // If converged, let's return the best estimate
             return b;
         }
         if (abs(e) >= tol1 && abs(fa) > abs(fb)) {
             // Attempt inverse quadratic interpolation for new bound
-            number p, q;
-            number s = fb/fa;
+            T p, q;
+            T s = fb/fa;
             if ( a == c ) {
                 p = 2.0*xm*s;
                 q = 1.0-s;
             } else {
                 q = fa/fc;
-                number r = fb/fc;
+                T r = fb/fc;
                 p = s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
                 q = (q-1.0)*(r-1.0)*(s-1.0);
             }
             // Check whether quadratic interpolation is in bounds
             if (p > 0.0) { q = -q; }
             p = abs(p);
-            number min1 = 3.0*xm*q-abs(tol1*q);
-            number min2 = abs(e*q);
+            T min1 = 3.0*xm*q-abs(tol1*q);
+            T min2 = abs(e*q);
             if (2.0*p < (min1 < min2 ? min1 : min2) ) {
                 // Accept interpolation
                 e = d;
@@ -126,6 +125,8 @@ number solve(alias f)(number x1, number x2, double tol=1.0e-9)
 version(brent_test) {
     import util.msg_service;
     import std.conv;
+    import nm.complex;
+    import nm.number;
     int main() {
         number test_fun_1(number x) {
             return pow(x,3) + pow(x,2) - 3*x - 3;
@@ -133,11 +134,11 @@ version(brent_test) {
         number test_fun_2(number x, number a) {
             return a*x + sin(x) - exp(x);
         }
-        assert(fabs(solve!test_fun_1(to!number(1), to!number(2)) - 1.732051) < 1.0e-5,
+        assert(fabs(solve!(test_fun_1,number)(to!number(1), to!number(2)) - 1.732051) < 1.0e-5,
                failedUnitTest());
         number my_a = 3.0;
         auto test_fun_3 = delegate (number x) { return test_fun_2(x, my_a); };
-        assert(fabs(solve!test_fun_3(to!number(0), to!number(1)) - 0.3604217) < 1.0e-5,
+        assert(fabs(solve!(test_fun_3,number)(to!number(0), to!number(1)) - 0.3604217) < 1.0e-5,
                failedUnitTest());
 
         return 0;

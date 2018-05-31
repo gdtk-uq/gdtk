@@ -9,8 +9,6 @@
 
 module nm.gaussquad;
 import std.math;
-import nm.complex;
-import nm.number;
 
 // Rule coefficients computed by Maxima. 
 // See the scripts in directory ./notes
@@ -38,17 +36,17 @@ double[] ws4 = [3.4785484513745385738e-1, 6.5214515486254614263e-1,
  * Returns: 
  *     integral of f(x) from a to b.
  */
-number apply_gauss_rule(alias f)(number a, number b, double[] xs, double[] ws)
+T apply_gauss_rule(alias f, T)(T a, T b, double[] xs, double[] ws)
     if ( is(typeof(f(0.0)) == double) ||
          is(typeof(f(0.0)) == float)  ||
          is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
-    number xmid = 0.5 * (b + a);
-    number xrange2 = 0.5 * (b - a);
+    T xmid = 0.5 * (b + a);
+    T xrange2 = 0.5 * (b - a);
     size_t N = xs.length;
-    number result = 0.0;
+    T result = 0.0;
     foreach(i; 0 .. N) {
-        number x = xmid + xs[i] * xrange2; // transform from range -1.0 +1.0
+        T x = xmid + xs[i] * xrange2; // transform from range -1.0 +1.0
         result += ws[i] * f(x);
     }
     return xrange2 * result;
@@ -65,17 +63,17 @@ number apply_gauss_rule(alias f)(number a, number b, double[] xs, double[] ws)
  * Returns: 
  *     integral of f(x) from a to b.
  */
-number integrate(alias f)(number a, number b, double tol=1.0e-5)
+T integrate(alias f, T)(T a, T b, double tol=1.0e-5)
     if ( is(typeof(f(0.0)) == double) ||
          is(typeof(f(0.0)) == float)  ||
          is(typeof(f(Complex!double(0.0))) == Complex!double))
 {
-    number I3 = apply_gauss_rule!f(a, b, xs3, ws3);
-    number I4 = apply_gauss_rule!f(a, b, xs4, ws4);
-    number I;
+    T I3 = apply_gauss_rule!(f,T)(a, b, xs3, ws3);
+    T I4 = apply_gauss_rule!(f,T)(a, b, xs4, ws4);
+    T I;
     if ( abs(I4 - I3) > tol ) {
-        number mid = 0.5 * (a + b);
-        I = integrate!f(a, mid, tol/2.0) + integrate!f(mid, b, tol/2.0);
+        T mid = 0.5 * (a + b);
+        I = integrate!(f,T)(a, mid, tol/2.0) + integrate!(f,T)(mid, b, tol/2.0);
     } else {
         I = I4;
     }
@@ -85,6 +83,8 @@ number integrate(alias f)(number a, number b, double tol=1.0e-5)
 version(gaussquad_test) {
     import util.msg_service;
     import std.conv;
+    import nm.complex;
+    import nm.number;
     int main() {
         number fun1(number x) { return abs(x) < to!number(1.0) ? sqrt(1.0 - x*x): to!number(0.0); }
         number fun2(number x) { return 1.0 / (1.0 + x * x); }

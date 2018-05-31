@@ -31,8 +31,8 @@ void main() {
     writeln("Begin Newton-Cotes integration demonstration...");
     double a = 0.0; 
     double b = 1.0;
-    double pi4_1 = integrate!fun1(a, b);
-    double pi4_2 = integrate!fun2(a, b);
+    double pi4_1 = integrate!(fun1,double)(a, b);
+    double pi4_2 = integrate!(fun2,double)(a, b);
     writefln("Estimates of pi/4: %s %s", pi4_1, pi4_2);
     writefln("errors: %s %s", PI/4 - pi4_1, PI/4 - pi4_2);
     writefln("number of function calls: %s %s", count1, count2);

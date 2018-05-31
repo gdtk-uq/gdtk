@@ -103,7 +103,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts,
     // --------------------------------------------------------------------
     // Build cost function to be minimised.
     // --------------------------------------------------------------------
-    number fMin(number[] d)
+    number funMin(number[] d)
     {
         // Adjust Bezier points based on supplied design values 'd'
         foreach (i; 1 .. nCtrlPts-1) {
@@ -136,7 +136,7 @@ Bezier optimiseBezierPoints(Vector3[] points, int nCtrlPts, ref double[] ts,
     // Make the initial perturbations 1/100th of the arc length.
     number dp = myBez.length()/100.0;
     dx[] = dp;
-    auto success = minimize!fMin(d, f_min, n_fe, n_restart, dx, tol, max_steps);
+    bool success = nm.nelmin.minimize!(funMin,number)(d, f_min, n_fe, n_restart, dx, tol, max_steps);
     if (success) {
         foreach (i; 1 .. nCtrlPts-1) {
             if (dim == 2) {
