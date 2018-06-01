@@ -1,5 +1,20 @@
--- An example of a clipped cavity, as found in
--- Sections 2.1.9 and 2.1.10 of the OpenFOAM manual.
+-- An example showing the usage of foamMesh.
+-- Here a grid is generated consisting of 9 blocks arranged in a rectangle.
+--
+--                BC=w-00
+--          d0----d1----d2----d3
+--          |  b6 |  b7 |  b8 |
+--          |     |     |     |
+--          c0----c1----c2----c3
+--          |  b3 |  b4 |  b5 |
+--  BC=i-00 |     |     |     |   BC=o-00  
+--          b0----b1----b2----b3
+--          |  b0 |  b1 |  b3 |
+--          |     |     |     |
+--          a0----a1----a2----a3
+--                BC=w-00
+-- 
+-- Test case to show that linking of all faces works.
 --
 -- Authors: IJ and RJG
 -- Date: 2017-06-29

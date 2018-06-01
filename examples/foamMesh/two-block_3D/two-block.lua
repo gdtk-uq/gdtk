@@ -1,4 +1,22 @@
--- This example builds a unit square and converts it to a wedge.
+-- An example showing the usage of foamMesh.
+-- Here a grid consisting of two 3-D blocks is generated.
+-- The grid consists of a cube and a second block that flares outwards in all 
+-- directions. The diagram below shows the frontal view. The rear wall has the 
+-- same shape, but point labels are of form a1, b1, ...
+--
+--             BC=w-01   -f0
+--                    --   |
+--          d0----e0-      |
+--          |  b0 |    b1  | 
+--  BC=i-00 |     |        |   BC=o-00  
+--          a0----b0-      |
+--                    --   |
+--            BC=w-00    -c0
+-- 
+-- Test case to show that linking of all faces works correctly in 3-D
+--
+-- Authors: IJ
+-- Date: 2018-04-01
 
 -- Corners of blocks
 a0 = Vector3:new{x=0.0, y=0.0, z=0.0}

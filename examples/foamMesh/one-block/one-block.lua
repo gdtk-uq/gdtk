@@ -1,4 +1,18 @@
--- This example builds a unit square and converts it to a wedge.
+-- An example showing the usage of foamMesh.
+-- Here an axi-symmetric mesh consisting of a single axis is generated 
+--
+--
+--
+--             BC=w-01
+--           c--------d
+--           |        |
+--  BC=i-00  |   b0   |  BC=o-00
+--           |        |
+--      -----a--------b----- Axis of Rotation
+--             BC=w-00
+--
+-- Authors: IJ and RJG
+-- Date: 2017-06-29
 
 axisymmetric = true
 -- Corners of blocks

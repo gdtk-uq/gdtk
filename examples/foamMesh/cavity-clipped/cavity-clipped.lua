@@ -1,6 +1,16 @@
 -- An example of a clipped cavity, as found in
 -- Sections 2.1.9 and 2.1.10 of the OpenFOAM manual.
 --
+--             BC=w-01
+--          f-----g-----h
+--          |  b3 |  b4 |
+--  BC=w-00 |     |     | BC=w-00  
+--          c-----d-----e
+--          |  b0 |
+--          |     |
+--          a-----b
+--          BC=w-00
+--
 -- Authors: IJ and RJG
 -- Date: 2017-06-29
 
