@@ -30,17 +30,17 @@ immutable double ESSENTIALLY_ZERO = 1.0e-50;
  * SIAM, Philaldelphia
  */
 
-number dot(number[] a, number[] b)
+T dot(T)(T[] a, T[] b)
 {
     assert(a.length == b.length);
-    number sum = 0.0;
+    T sum = 0.0;
     foreach (i; 0 .. a.length) sum += a[i]*b[i];
     return sum;
 }
 
-number norm2(number[] vec)
+T norm2(T)(T[] vec)
 {
-    auto ssquares = reduce!((a,b) => a + b * b)(to!number(0.0), vec);
+    auto ssquares = reduce!((a,b) => a + b * b)(to!T(0.0), vec);
     return sqrt(ssquares);
 }
 
@@ -53,15 +53,15 @@ number norm2(number[] vec)
  * sparse matrices rely on the representation of the data.
  *
  */
-class SMatrix {
+class SMatrix(T) {
 public:
-    number[] aa;
+    T[] aa;
     size_t[] ja;
     size_t[] ia;
 
     this() {}
 
-    this(number[] aa, size_t[] ja, size_t[] ia)
+    this(T[] aa, size_t[] ja, size_t[] ia)
     {
         this.aa = aa.dup;
         this.ja = ja.dup;
@@ -73,7 +73,7 @@ public:
         this(other.aa, other.ja, other.ia);
     }
 
-    void addRow(number[] ai, size_t[] ji) 
+    void addRow(T[] ai, size_t[] ji) 
     {
         if ( ia.length == 0 )
             ia ~= 0;
@@ -82,7 +82,7 @@ public:
         ia ~= aa.length; // Now ia is already ready for next addition.
     }
 
-    void scaleRow(size_t row, number scaleFactor)
+    void scaleRow(size_t row, T scaleFactor)
     {
         assert(row < ia.length-1);
         foreach (j; ia[row] .. ia[row+1]) {
@@ -90,7 +90,7 @@ public:
         }
     }
 
-    const number opIndex(size_t row, size_t col)
+    const T opIndex(size_t row, size_t col)
     {
         // We need to search the given row to see if an entry
         // is present in the given column.
@@ -99,11 +99,11 @@ public:
                 return aa[j];
         }
         // else search failed, so we have a 0.0 entry
-        return to!number(0.0);
+        return to!T(0.0);
     }
     
     // We now allow assingment to zero entries.
-    ref number opIndexAssign(number c, size_t row, size_t col) {
+    ref T opIndexAssign(T c, size_t row, size_t col) {
         foreach ( j; ia[row] .. ia[row+1] ) {
             if ( ja[j] == col ) {
                 aa[j] = c;
@@ -149,9 +149,9 @@ public:
         s ~= "]";
         return s;
     }
-}
+} // end class SMatrix
 
-bool approxEqualMatrix(SMatrix a, SMatrix b)
+bool approxEqualMatrix(T)(SMatrix!T a, SMatrix!T b)
 {
     if ( a.aa.length != b.aa.length ) return false;
     if ( a.ia.length != b.ia.length ) return false;
@@ -165,7 +165,7 @@ bool approxEqualMatrix(SMatrix a, SMatrix b)
     return true;
 }
 
-void multiply(SMatrix a, number[] b, number[] c)
+void multiply(T)(SMatrix!T a, T[] b, T[] c)
 in {
     assert(a.ia.length-1 == c.length);
     // Some faith is given that the user provides an appropriate length
@@ -192,7 +192,7 @@ body {
  * This implements Algorithm 10.4 in Saad (2003)
  */
 
-void decompILU0(SMatrix a)
+void decompILU0(T)(SMatrix!T a)
 {
     size_t n = a.ia.length-1;
     foreach ( i; 1 .. n ) { // Begin from 2nd row
@@ -220,7 +220,7 @@ void decompILU0(SMatrix a)
  * This implements Algorithm 10.5 in Saad (2003)
  */
 
-void decompILUp(SMatrix a, int k)
+void decompILUp(T)(SMatrix!T a, int k)
 {
     // NB. This pre-conditioner uses a sparse matrix, however some stored entries will be zero,
     // this is a result of entries starting as non-zero in the original matrix, and then becoming
@@ -244,7 +244,9 @@ void decompILUp(SMatrix a, int k)
         foreach ( p; 0 .. i ) {
             if (lev[i][p] <= k) {
                 foreach ( j ; p..n) {
-                    if (lev[i][j] > ESSENTIALLY_ZERO && lev[i][j] > (lev[i][p]+lev[p][j]+1) ) lev[i][j] = lev[i][p]+lev[p][j]+1;
+                    if (lev[i][j] > ESSENTIALLY_ZERO && lev[i][j] > (lev[i][p]+lev[p][j]+1) ) {
+                        lev[i][j] = lev[i][p]+lev[p][j]+1;
+                    }
                 } // end foreach
             } // end if
         } // end foreach
@@ -253,7 +255,7 @@ void decompILUp(SMatrix a, int k)
     // modify a matrix nonzero pattern
     foreach ( i; 0..n) {
         foreach ( j; 0..n) {
-            if (lev[i][j] <= k && abs(a[i,j]) < ESSENTIALLY_ZERO) a[i,j] = to!number(0.0); 
+            if (lev[i][j] <= k && abs(a[i,j]) < ESSENTIALLY_ZERO) { a[i,j] = to!T(0.0); } 
         }
     }
     
@@ -262,12 +264,12 @@ void decompILUp(SMatrix a, int k)
     GC.minimize();
     
     // factorise phase (using ILU0 algorithm on new sparsity pattern)
-    decompILU0(a);
+    decompILU0!T(a);
 }
 
 
 
-void solve(SMatrix LU, number[] b)
+void solve(T)(SMatrix!T LU, T[] b)
 {
     int n = to!int(LU.ia.length-1);
     assert(b.length == n);
@@ -276,14 +278,14 @@ void solve(SMatrix LU, number[] b)
         foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
             // Only work up to i
             if ( j >= i ) break;
-            number multiplier = LU[i,j];
+            T multiplier = LU[i,j];
             b[i] -= multiplier * b[j];
         }
     }
     // Back substitution
     b[n-1] /= LU[n-1,n-1];
     for ( int i = to!int(n-2); i >= 0; --i ) {
-        number sum = b[i];
+        T sum = b[i];
         foreach ( j; LU.ja[LU.ia[i] .. LU.ia[i+1]] ) {
             // Only work with j >= i+1
             if ( j <= i ) continue;
@@ -293,7 +295,7 @@ void solve(SMatrix LU, number[] b)
     }
 }
 
-number[] gmres(SMatrix A, number[] b, number[] x0, int m)
+T[] gmres(T)(SMatrix!T A, T[] b, T[] x0, int m)
 in {
     assert(A.ia.length-1 == b.length);
     assert(b.length == x0.length);
@@ -303,7 +305,7 @@ body {
     immutable double ZERO_TOL = 1.0e-15;
     // 0. Allocate working matrices and vectors
     size_t n = b.length;
-    number[] Ax0, r0, v, w, g_old, g, x;
+    T[] Ax0, r0, v, w, g_old, g, x;
     Ax0.length = n;
     r0.length = n;
     v.length = n;
@@ -311,11 +313,11 @@ body {
     x.length = n;
     g_old.length = m+1;
     g.length = m+1;
-    auto H = new Matrix!number(m+1, m);
+    auto H = new Matrix!T(m+1, m);
     H.zeros();
-    auto Hold = new Matrix!number(m+1, m);
-    auto Gamma = new Matrix!number(m+1, m+1);
-    auto V = new Matrix!number(n, m+1);
+    auto Hold = new Matrix!T(m+1, m);
+    auto Gamma = new Matrix!T(m+1, m+1);
+    auto V = new Matrix!T(n, m+1);
 
     // 1. Compute r0, beta, v1
     multiply(A, x0, Ax0);
@@ -356,7 +358,7 @@ body {
     g_old[0] = beta;
     copy(H, Hold);
     foreach (i; 0 .. m) {
-        number c_i, s_i, denom;
+        T c_i, s_i, denom;
         denom = sqrt(H[i,i]*H[i,i] + H[i+1,i]*H[i+1,i]);
         s_i = H[i+1,i]/denom; 
         c_i = H[i,i]/denom;
@@ -375,13 +377,13 @@ body {
     auto gm = g[0 .. m];
     // At end H := R
     //        g := gm
-    upperSolve(R, gm);
+    upperSolve!T(R, gm);
     auto Vm = V.sliceDup(0, n, 0, m);
-    nm.bbla.dot(Vm, gm, x);
+    nm.bbla.dot!T(Vm, gm, x);
 
     foreach (i; 0 .. n) x[i] += x0[i];
 
-    multiply(A, x, Ax0);
+    multiply!T(A, x, Ax0);
     foreach (i; 0 .. n) {
         r0[i] = b[i] - Ax0[i];
     }
@@ -389,7 +391,7 @@ body {
     return x.dup();
 }
 
-number[] gmres2(SMatrix A, number[] b, number[] x0, int maxIters, double residTol)
+T[] gmres2(T)(SMatrix!T A, T[] b, T[] x0, int maxIters, double residTol)
 in {
     assert(A.ia.length-1 == b.length);
     assert(b.length == x0.length);
@@ -400,27 +402,27 @@ body {
     // 0. Allocate working matrices and vectors
     size_t n = b.length;
     size_t m = maxIters;
-    number[] Ax0, r0, v, w, x;
+    T[] Ax0, r0, v, w, x;
     Ax0.length = n;
     r0.length = n;
     v.length = n;
     w.length = n;
     x.length = n;
-    auto V = new Matrix!number(n, m+1);
-    auto H0 = new Matrix!number(m+1, m); H0.zeros();
-    auto H1 = new Matrix!number(m+1, m); H1.zeros();
-    auto Gamma = new Matrix!number(m+1, m+1); Gamma.eye();
-    auto Q0 = new Matrix!number(m+1, m+1);
-    auto Q1 = new Matrix!number(m+1, m+1);
-    number[] g0, g1;
+    auto V = new Matrix!T(n, m+1);
+    auto H0 = new Matrix!T(m+1, m); H0.zeros();
+    auto H1 = new Matrix!T(m+1, m); H1.zeros();
+    auto Gamma = new Matrix!T(m+1, m+1); Gamma.eye();
+    auto Q0 = new Matrix!T(m+1, m+1);
+    auto Q1 = new Matrix!T(m+1, m+1);
+    T[] g0, g1;
     g0.length = m+1; foreach(idx; 0..g0.length) { g0[idx] = 0.0; }
     g1.length = m+1; foreach(idx; 0..g1.length) { g1[idx] = 0.0; }
-    number[] h, hR;
+    T[] h, hR;
     h.length = m+1;
     hR.length = m+1;
 
     // 1. Compute r0, beta, v1
-    multiply(A, x0, Ax0);
+    multiply!T(A, x0, Ax0);
     foreach (i; 0 .. n) {
         r0[i] = b[i] - Ax0[i];
     }
@@ -437,7 +439,7 @@ body {
         multiply(A, v, w);
         foreach (i; 0 .. j+1) {
             v = V.getColumn(i);
-            H0[i,j] = dot(w, v);
+            H0[i,j] = dot!T(w, v);
             foreach (k; 0 .. n) {
                 w[k] -= H0[i,j]*v[k]; 
             }
@@ -454,27 +456,27 @@ body {
             // Extract final column in H
             foreach (i; 0 .. j+1) h[i] = H0[i,j];
             // Rotate column by previous rotations (stored in Q0)
-            nm.bbla.dot(Q0, j+1, j+1, h, hR);
+            nm.bbla.dot!T(Q0, j+1, j+1, h, hR);
             // Place column back in H
             foreach (i; 0 .. j+1) H0[i,j] = hR[i];
         }
         // Now form new Gamma
         Gamma.eye();
-        number c_j, s_j, denom;
+        T c_j, s_j, denom;
         denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
         s_j = H0[j+1,j]/denom; 
         c_j = H0[j,j]/denom;
         Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
         Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
         // Apply rotations
-        nm.bbla.dot(Gamma, j+2, j+2, H0, j+1, H1);
-        nm.bbla.dot(Gamma, j+2, j+2, g0, g1);
+        nm.bbla.dot!T(Gamma, j+2, j+2, H0, j+1, H1);
+        nm.bbla.dot!T(Gamma, j+2, j+2, g0, g1);
         // Accumulate Gamma rotations in Q.
         if ( j == 0 ) {
             copy(Gamma, Q1);
         }
         else {
-            nm.bbla.dot(Gamma, j+2, j+2, Q0, j+2, Q1);
+            nm.bbla.dot!T(Gamma, j+2, j+2, Q0, j+2, Q1);
         }
         // Get residual
         resid = fabs(g1[j+1]).re;
@@ -493,13 +495,13 @@ body {
     auto gm = g1[0 .. m];
     // At end H := R
     //        g := gm
-    upperSolve(R, gm);
+    upperSolve!T(R, gm);
     auto Vm = V.sliceDup(0, n, 0, m);
-    nm.bbla.dot(Vm, gm, x);
+    nm.bbla.dot!T(Vm, gm, x);
 
     foreach (i; 0 .. n) x[i] += x0[i];
 
-    multiply(A, x, Ax0);
+    multiply!T(A, x, Ax0);
     foreach (i; 0 .. n) {
         r0[i] = b[i] - Ax0[i];
     }
@@ -507,10 +509,10 @@ body {
     return x.dup();
 }
 
-struct GMRESWorkSpace {
+struct GMRESWorkSpace(T) {
     size_t n, m;
-    number[] Ax0, r0, v, w, Pv, g0, g1, h, hR;
-    Matrix!number V, H0, H1, Gamma, Q0, Q1;
+    T[] Ax0, r0, v, w, Pv, g0, g1, h, hR;
+    Matrix!T V, H0, H1, Gamma, Q0, Q1;
 
     this(size_t n, int maxIters) {
         this.n = n;
@@ -526,12 +528,12 @@ struct GMRESWorkSpace {
         this.h.length = m+1;
         this.hR.length = m+1;
         // Allocate matrices
-        this.V = new Matrix!number(n, m+1);
-        this.H0 = new Matrix!number(m+1, m); 
-        this.H1 = new Matrix!number(m+1, m); 
-        this.Gamma = new Matrix!number(m+1, m+1); 
-        this.Q0 = new Matrix!number(m+1, m+1);
-        this.Q1 = new Matrix!number(m+1, m+1);
+        this.V = new Matrix!T(n, m+1);
+        this.H0 = new Matrix!T(m+1, m); 
+        this.H1 = new Matrix!T(m+1, m); 
+        this.Gamma = new Matrix!T(m+1, m+1); 
+        this.Q0 = new Matrix!T(m+1, m+1);
+        this.Q1 = new Matrix!T(m+1, m+1);
     }
 }
 
@@ -548,15 +550,15 @@ struct GMRESWorkSpace {
  *    residTol =  stop iterations when residual below this tolerance
  *    gws =       pre-allocated workspace
  */
-void rpcGMRES(SMatrix A, SMatrix P, number[] b, number[] x0, number[] x,
-              int maxIters, double residTol, ref GMRESWorkSpace gws)
+void rpcGMRES(T)(SMatrix!T A, SMatrix!T P, T[] b, T[] x0, T[] x,
+              int maxIters, double residTol, ref GMRESWorkSpace!T gws)
 in {
     assert(A.ia.length-1 == b.length);
     assert(b.length == x0.length);
     assert(maxIters >= 1);
 }
 body {
-    double resid;
+    T resid;
     size_t n = b.length;
     size_t m = maxIters;
     // 0. Initialise the values in some of the pre-allocated storage
@@ -567,7 +569,7 @@ body {
     gws.Gamma.eye();
 
     // 1. Compute r0, beta, v1
-    multiply(A, x0, gws.Ax0);
+    multiply!T(A, x0, gws.Ax0);
     foreach (i; 0 .. n) {
         gws.r0[i] = b[i] - gws.Ax0[i];
     }
@@ -583,8 +585,8 @@ body {
     // 2. Do 'm' iterations of update
     foreach (j; 0 .. m) {
         gws.Pv[] = gws.v[];
-        solve(P, gws.Pv);
-        multiply(A, gws.Pv, gws.w);
+        solve!T(P, gws.Pv);
+        multiply!T(A, gws.Pv, gws.w);
         foreach (i; 0 .. j+1) {
             foreach (k; 0 .. n ) gws.v[k] = gws.V[k,i]; // Extract column 'i'
             gws.H0[i,j] = dot(gws.w, gws.v);
@@ -602,7 +604,7 @@ body {
             // Extract final column in H
             foreach (i; 0 .. j+1) gws.h[i] = gws.H0[i,j];
             // Rotate column by previous rotations (stored in Q0)
-            nm.bbla.dot(gws.Q0, j+1, j+1, gws.h, gws.hR);
+            nm.bbla.dot!T(gws.Q0, j+1, j+1, gws.h, gws.hR);
             // Place column back in H
             foreach (i; 0 .. j+1) gws.H0[i,j] = gws.hR[i];
         }
@@ -614,17 +616,17 @@ body {
         gws.Gamma[j,j] = c_j; gws.Gamma[j,j+1] = s_j;
         gws.Gamma[j+1,j] = -s_j; gws.Gamma[j+1,j+1] = c_j;
         // Apply rotations
-        nm.bbla.dot(gws.Gamma, j+2, j+2, gws.H0, j+1, gws.H1);
-        nm.bbla.dot(gws.Gamma, j+2, j+2, gws.g0, gws.g1);
+        nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.H0, j+1, gws.H1);
+        nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.g0, gws.g1);
         // Accumulate Gamma rotations in Q.
         if ( j == 0 ) {
             copy(gws.Gamma, gws.Q1);
         }
         else {
-            nm.bbla.dot(gws.Gamma, j+2, j+2, gws.Q0, j+2, gws.Q1);
+            nm.bbla.dot!T(gws.Gamma, j+2, j+2, gws.Q0, j+2, gws.Q1);
         }
         // Get residual
-        resid = fabs(gws.g1[j+1]).re;
+        resid = fabs(gws.g1[j+1]);
         if ( resid <= residTol ) {
             m = j+1;
             break;
@@ -638,14 +640,14 @@ body {
 
     // At end H := R up to row m
     //        g := gm up to row m
-    upperSolve(gws.H1, to!int(m), gws.g1);
-    nm.bbla.dot(gws.V, n, m, gws.g1, x);
-    solve(P, x);
+    upperSolve!T(gws.H1, to!int(m), gws.g1);
+    nm.bbla.dot!T(gws.V, n, m, gws.g1, x);
+    solve!T(P, x);
 
     foreach (i; 0 .. n) x[i] += x0[i];
 }
 
-number[] fGMRES(SMatrix A, SMatrix P, number[] b, number[] x0, int mOuter, int mInner)
+T[] fGMRES(T)(SMatrix!T A, SMatrix!T P, T[] b, T[] x0, int mOuter, int mInner)
 in {
     assert(A.ia.length-1 == b.length);
     assert(b.length == x0.length);
@@ -655,7 +657,7 @@ body {
     immutable double ZERO_TOL = 1.0e-15;
     // 0. Allocate working matrices and vectors
     size_t n = b.length;
-    number[] Ax0, r0, v, w, g_old, g, x, z, x0_inner;
+    T[] Ax0, r0, v, w, g_old, g, x, z, x0_inner;
     Ax0.length = n;
     r0.length = n;
     v.length = n;
@@ -666,15 +668,15 @@ body {
     foreach( idx; 0..x0_inner.length) x0_inner[idx] = 0.0;
     g_old.length = mOuter+1;
     g.length = mOuter+1;
-    auto H = new Matrix!number(mOuter+1, mOuter);
+    auto H = new Matrix!T(mOuter+1, mOuter);
     H.zeros();
-    auto Hold = new Matrix!number(mOuter+1, mOuter);
-    auto Gamma = new Matrix!number(mOuter+1, mOuter+1);
-    auto V = new Matrix!number(n, mOuter+1);
-    auto Z = new Matrix!number(n, mOuter+1);
+    auto Hold = new Matrix!T(mOuter+1, mOuter);
+    auto Gamma = new Matrix!T(mOuter+1, mOuter+1);
+    auto V = new Matrix!T(n, mOuter+1);
+    auto Z = new Matrix!T(n, mOuter+1);
 
     // 1. Compute r0, beta, v1
-    multiply(A, x0, Ax0);
+    multiply!T(A, x0, Ax0);
     foreach (i; 0 .. n) {
         r0[i] = b[i] - Ax0[i];
     }
@@ -687,10 +689,10 @@ body {
 
     // 2. Do 'mOuter' iterations of update
     foreach (j; 0 .. mOuter) {
-        z = gmres(P, v, x0_inner, mInner);
+        z = gmres!T(P, v, x0_inner, mInner);
         // Save z vector in Z
         foreach (k; 0 .. n ) Z[k,j] = z[k];
-        multiply(A, z, w);
+        multiply!T(A, z, w);
         foreach (i; 0 .. j+1) {
             v = V.getColumn(i);
             H[i,j] = dot(w, v);
@@ -715,15 +717,15 @@ body {
     g_old[0] = beta;
     copy(H, Hold);
     foreach (i; 0 .. mOuter) {
-        number c_i, s_i, denom;
+        T c_i, s_i, denom;
         denom = sqrt(H[i,i]*H[i,i] + H[i+1,i]*H[i+1,i]);
         s_i = H[i+1,i]/denom; 
         c_i = H[i,i]/denom;
         Gamma.eye();
         Gamma[i,i] = c_i; Gamma[i,i+1] = s_i;
         Gamma[i+1,i] = -s_i; Gamma[i+1,i+1] = c_i;
-        nm.bbla.dot(Gamma, Hold, H);
-        nm.bbla.dot(Gamma, g_old, g);
+        nm.bbla.dot!T(Gamma, Hold, H);
+        nm.bbla.dot!T(Gamma, g_old, g);
         // Get Qold and g_old ready for next step
         g_old[] = g[];
         copy(H, Hold);
@@ -734,9 +736,9 @@ body {
     auto gm = g[0 .. mOuter];
     // At end H := R
     //        g := gm
-    upperSolve(R, gm);
+    upperSolve!T(R, gm);
     auto Zm = Z.sliceDup(0, n, 0, mOuter);
-    nm.bbla.dot(Zm, gm, x);
+    nm.bbla.dot!T(Zm, gm, x);
 
     foreach (i; 0 .. n) x[i] += x0[i];
 
@@ -749,12 +751,13 @@ version(smla_test) {
     import util.msg_service;
     int main() {
         // This example matrix is from Saad (2003), Sec. 3.4
-        auto a = new SMatrix([to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.), to!number(6.), to!number(7.), to!number(8.),
-                              to!number(9.), to!number(10.), to!number(11.), to!number(12.)],
-                             [0, 3, 0, 1, 3, 0, 2, 3, 4, 2, 3, 4],
-                             [0, 2, 5, 9, 11, 12]);
+        auto a = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(4.),
+                                     to!number(5.), to!number(6.), to!number(7.), to!number(8.),
+                                     to!number(9.), to!number(10.), to!number(11.), to!number(12.)],
+                                    [0, 3, 0, 1, 3, 0, 2, 3, 4, 2, 3, 4],
+                                    [0, 2, 5, 9, 11, 12]);
         // Test construction of matrix row by row
-        auto b = new SMatrix();
+        auto b = new SMatrix!number();
         b.addRow([to!number(1.), to!number(2.)], [0, 3]);
         b.addRow([to!number(3.), to!number(4.), to!number(5.)], [0, 1, 3]);
         b.addRow([to!number(6.), to!number(7.), to!number(8.), to!number(9.)], [0, 2, 3, 4]);
@@ -772,14 +775,14 @@ version(smla_test) {
         }
         // Test decompILU0
         // This example matrix and decomposition is from Gerard and Wheatley, 6th ed, Sec. 2.4
-        auto d = new SMatrix();
+        auto d = new SMatrix!number();
         d.addRow([to!number(-4.), to!number(2.)], [0, 1]);
         d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [0, 1, 2]);
         d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [1, 2, 3]);
         d.addRow([to!number(1.), to!number(-4.), to!number(1.)], [2, 3, 4]);
         d.addRow([to!number(2.), to!number(-4.)], [3, 4]);
         decompILU0(d);
-        auto dLU = new SMatrix();
+        auto dLU = new SMatrix!number();
         dLU.addRow([to!number(-4.), to!number(2.)], [0, 1]);
         dLU.addRow([to!number(-0.25), to!number(-3.5), to!number(1.)], [0, 1, 2]);
         dLU.addRow([to!number(-0.2857), to!number(-3.7143), to!number(1.)], [1, 2, 3]);
@@ -789,7 +792,7 @@ version(smla_test) {
         // Test solve.
         // Let's give the ILU(0) method a triangular matrix that is can solve exactly.
         // This example is taken from Faires and Burden (1993), Sec. 6.6, example 3. 
-        auto e = new SMatrix();
+        auto e = new SMatrix!number();
         e.addRow([to!number(2.), to!number(-1.)], [0, 1]);
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
         e.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
@@ -803,7 +806,7 @@ version(smla_test) {
         }
         // Now let's see how we go at an approximate solve by using a non-triangular matrix.
         // This is example 2.2 from Gerard and Wheatley, 6th edition
-        auto f = new SMatrix();
+        auto f = new SMatrix!number();
         f.addRow([to!number(3.), to!number(2.), to!number(-1.), to!number(2.)], [0, 1, 2, 3]);
         f.addRow([to!number(1.), to!number(4.), to!number(2.)], [0, 1, 3]);
         f.addRow([to!number(2.), to!number(1.), to!number(2.), to!number(-1.)], [0, 1, 2, 3]);
@@ -817,17 +820,18 @@ version(smla_test) {
         }
         
         // Let's test the ILU(p) method
-        SMatrix s = new SMatrix([to!number(1.), to!number(1.), to!number(4.), to!number(2.), to!number(4.),
-                                 to!number(1.), to!number(2.), to!number(1.), to!number(8.), to!number(2.),
-                                 to!number(4.), to!number(1.), to!number(3.), to!number(6.), to!number(2.), to!number(1.)],
-                                [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
-                                [0, 3, 6, 10, 12, 16]);
+        auto s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
+                                     to!number(4.), to!number(1.), to!number(2.), to!number(1.),
+                                     to!number(8.), to!number(2.), to!number(4.), to!number(1.),
+                                     to!number(3.), to!number(6.), to!number(2.), to!number(1.)],
+                                    [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
+                                    [0, 3, 6, 10, 12, 16]);
         int p;
 	/*
         // test for ILU(p=0)
         p = 0;
         decompILUp(s, p);
-        auto sol0 = new SMatrix([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., 0.4, 0.2, 3., 1.5, -0.4, -12.5],
+        auto sol0 = new SMatrix!number([1., 1., 4., 2., 4., 1., 2., -0.5, 10., 2., 0.4, 0.2, 3., 1.5, -0.4, -12.5],
                                 [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
                                 [0, 3, 6, 10, 12, 16]);
 
@@ -841,19 +845,22 @@ version(smla_test) {
         }
         */
         // test for ILU(p=2)
-        s = new SMatrix([to!number(1.), to!number(1.), to!number(4.), to!number(2.), to!number(4.), to!number(1.),
-                         to!number(2.), to!number(1.), to!number(8.), to!number(2.), to!number(4.), to!number(1.),
-                         to!number(3.), to!number(6.), to!number(2.), to!number(1.)],
-                        [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
-                        [0, 3, 6, 10, 12, 16]);
+        s = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
+                                to!number(4.), to!number(1.), to!number(2.), to!number(1.),
+                                to!number(8.), to!number(2.), to!number(4.), to!number(1.),
+                                to!number(3.), to!number(6.), to!number(2.), to!number(1.)],
+                               [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 2, 3, 0, 1, 2, 4],
+                               [0, 3, 6, 10, 12, 16]);
         p = 2;
         decompILUp(s, p);
-        auto sol1 = new SMatrix([to!number(1.), to!number(1.), to!number(4.), to!number(2.), to!number(4.), to!number(1.),
-                                 to!number(2.), to!number(-0.5), to!number(10.), to!number(2.), to!number(-7.5), to!number(0.4),
-                                 to!number(0.2), to!number(3.), to!number(3.), to!number(1.5), to!number(-0.4), to!number(4.), to!number(-27.5)],
-                                [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
-                                [0, 3, 6, 11, 14, 19]);
-	assert(approxEqualMatrix(s, sol1), failedUnitTest());
+        auto sol1 = new SMatrix!number([to!number(1.), to!number(1.), to!number(4.), to!number(2.),
+                                        to!number(4.), to!number(1.), to!number(2.), to!number(-0.5),
+                                        to!number(10.), to!number(2.), to!number(-7.5), to!number(0.4),
+                                        to!number(0.2), to!number(3.), to!number(3.), to!number(1.5),
+                                        to!number(-0.4), to!number(4.), to!number(-27.5)],
+                                       [0, 1, 4, 1, 2, 4, 0, 1, 2, 3, 4, 2, 3, 4, 0, 1, 2, 3, 4],
+                                       [0, 3, 6, 11, 14, 19]);
+	assert(approxEqualMatrix!number(s, sol1), failedUnitTest());
         /*
         // As a result of the note in decompILUp() we don't expect an exact match of the SMatrix classes
         foreach ( i; 0 .. 5) {
@@ -864,7 +871,7 @@ version(smla_test) {
         */
         // Test GMRES on Faires and Burden problem.
 
-        auto g = new SMatrix();
+        auto g = new SMatrix!number();
         g.addRow([to!number(2.), to!number(-1.)], [0, 1]);
         g.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [0, 1, 2]);
         g.addRow([to!number(-1.), to!number(2.), to!number(-1.)], [1, 2, 3]);
@@ -873,12 +880,12 @@ version(smla_test) {
         number[] x0 = [to!number(1.2), to!number(0.8), to!number(0.9), to!number(1.1)];
 
         
-        auto x = gmres(g, B1, x0, 4);
+        auto x = gmres!number(g, B1, x0, 4);
         foreach (i; 0 .. x.length) {
             assert(approxEqualNumbers(x[i], B_exp[i]), failedUnitTest());
         }
         
-        x = gmres2(g, B1, x0, 5, 1.0e-10);
+        x = gmres2!number(g, B1, x0, 5, 1.0e-10);
         foreach (i; 0 .. x.length) {
             assert(approxEqualNumbers(x[i], B_exp[i]), failedUnitTest());
         }
@@ -887,51 +894,52 @@ version(smla_test) {
         // This time we expect the exact answer. Earlier we only used
         // an incomplete LU factorisation and so the result was
         // only approximate.
-        auto h = new SMatrix();
+        auto h = new SMatrix!number();
         h.addRow([to!number(3.), to!number(2.), to!number(-1.), to!number(2.)], [0, 1, 2, 3]);
         h.addRow([to!number(1.), to!number(4.), to!number(2.)], [0, 1, 3]);
         h.addRow([to!number(2.), to!number(1.), to!number(2.), to!number(-1.)], [0, 1, 2, 3]);
         h.addRow([to!number(1.), to!number(1.), to!number(-1.), to!number(3.)], [0, 1, 2, 3]);
-        auto Ph = new SMatrix(h);
-        decompILU0(Ph);
+        auto Ph = new SMatrix!number(h);
+        decompILU0!number(Ph);
         number[] C1 = [to!number(2.), to!number(2.), to!number(0.), to!number(0.)];
         x0 = [to!number(0.2), to!number(0.5), to!number(-1.1), to!number(-0.6)];
         int maxIters = 5;
-        auto gws = GMRESWorkSpace(x0.length, maxIters);
-        rpcGMRES(h, Ph, C1, x0, x, maxIters, 1.0e-15, gws);
+        auto gws = GMRESWorkSpace!number(x0.length, maxIters);
+        rpcGMRES!number(h, Ph, C1, x0, x, maxIters, 1.0e-15, gws);
         number[] C1_exp = [to!number(0.273), to!number(0.773), to!number(-1.0), to!number(-0.682)];
 
         foreach (i; 0 .. x.length) {
             assert(approxEqualNumbers(x[i], C1_exp[i]), failedUnitTest());
         }
 
-        auto Pi = new SMatrix();
+        auto Pi = new SMatrix!number();
         Pi.addRow([to!number(1.),], [0]);
         Pi.addRow([to!number(1.),], [1]);
         Pi.addRow([to!number(1.),], [2]);
         Pi.addRow([to!number(1.),], [3]);
 
-        x = fGMRES(h, Pi, C1, x0, 5, 3);
+        x = fGMRES!number(h, Pi, C1, x0, 5, 3);
         foreach (i; 0 .. x.length) {
             assert(approxEqualNumbers(x[i], C1_exp[i]), failedUnitTest());
         }
 
         // This example tests the addition of values to zero-entries
-        auto z = new SMatrix([to!number(1.), to!number(2.), to!number(3.), to!number(4.), to!number(5.),
-                              to!number(6.), to!number(7.), to!number(8.), to!number(9.), to!number(10.),
-                              to!number(11.), to!number(12.)],
-                             [0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3],
-                             [0, 3, 6, 9, 12]);
+        auto z = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(4.),
+                                     to!number(5.), to!number(6.), to!number(7.), to!number(8.),
+                                     to!number(9.), to!number(10.), to!number(11.), to!number(12.)],
+                                    [0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3],
+                                    [0, 3, 6, 9, 12]);
         z[0,3] = to!number(99.0);
         z[1,2] = to!number(99.0);
         z[2,1] = to!number(99.0);
         z[3,0] = to!number(99.0);
-        auto w = new SMatrix([to!number(1.), to!number(2.), to!number(3.), to!number(99.), to!number(4.),
-                              to!number(5.), to!number(99.), to!number(6.), to!number(7.), to!number(99.),
-                              to!number(8.), to!number(9.), to!number(99.), to!number(10.), to!number(11.), to!number(12.)],
-                             [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
-                             [0, 4, 8, 12, 16]);
-        assert(approxEqualMatrix(z, w), failedUnitTest());
+        auto w = new SMatrix!number([to!number(1.), to!number(2.), to!number(3.), to!number(99.),
+                                     to!number(4.), to!number(5.), to!number(99.), to!number(6.),
+                                     to!number(7.), to!number(99.), to!number(8.), to!number(9.),
+                                     to!number(99.), to!number(10.), to!number(11.), to!number(12.)],
+                                    [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+                                    [0, 4, 8, 12, 16]);
+        assert(approxEqualMatrix!number(z, w), failedUnitTest());
         return 0;
     }
 }

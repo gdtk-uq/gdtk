@@ -124,7 +124,8 @@ string computeBndaryVariableDerivatives(string varName, string posInArray, bool 
     return codeStr;
 }
 
-void jacobian_bndary_correction(FluidBlock blk, ref SMatrix L, size_t np, double EPSILON, double MU, int orderOfJacobian) {
+void jacobian_bndary_correction(FluidBlock blk, ref SMatrix!double L, size_t np,
+                                double EPSILON, double MU, int orderOfJacobian) {
 
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     blk.myConfig.interpolation_order = orderOfJacobian;
@@ -289,11 +290,14 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
     } // end foreach blk.bc
 } // end form_external_flow_jacobian_block_phase0()
 
-void form_external_flow_jacobian_block_phase1(ref SMatrix A, FluidBlock blk, size_t np, int orderOfJacobian, double EPSILON, double MU) {
-    // In this phase we first reach across and grab the external effects from the neighbour blocks. We then make a record of what cells in the
-    // block are on the boundary, and then finally loop through all cells in the block filling our the external effects matrix used in the
-    // domain decomposition Jacobian. Note that this matrix has rows of 0 for non-boundary cells, these are stored in CRS by storing a 0
-    // as the initial row value.
+void form_external_flow_jacobian_block_phase1(ref SMatrix!double A, FluidBlock blk, size_t np,
+                                              int orderOfJacobian, double EPSILON, double MU) {
+    // In this phase we first reach across and grab the external effects from the neighbour blocks.
+    // We then make a record of what cells in the block are on the boundary, and then finally
+    // loop through all cells in the block filling our the external effects matrix used in the
+    // domain decomposition Jacobian.
+    // Note that this matrix has rows of 0 for non-boundary cells,
+    // these are stored in CRS by storing a 0 as the initial row value.
     
     size_t nDim = GlobalConfig.dimensions;
     // retrieve neighbour data (not MPI compatible)
@@ -387,7 +391,8 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix A, FluidBlock blk, siz
     } // end for each blk.cells
 } // end form_external_flow_jacobian_block_phase1()
 
-void form_local_flow_jacobian_block(ref SMatrix A, FluidBlock blk, size_t nPrimitive, int orderOfJacobian, double EPSILON, double MU) {
+void form_local_flow_jacobian_block(ref SMatrix!double A, FluidBlock blk, size_t nPrimitive,
+                                    int orderOfJacobian, double EPSILON, double MU) {
     // construct internal flow Jacobian matrix used in the domain decomposition Jacobian.
 
     size_t nDim = GlobalConfig.dimensions;
@@ -424,7 +429,8 @@ void form_local_flow_jacobian_block(ref SMatrix A, FluidBlock blk, size_t nPrimi
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }
 
-void construct_flow_jacobian(FVCell cell, FVInterface face, FluidBlock blk, size_t ndim, size_t np, size_t orderOfJacobian, double EPSILON, double MU) {
+void construct_flow_jacobian(FVCell cell, FVInterface face, FluidBlock blk, size_t ndim, size_t np,
+                             size_t orderOfJacobian, double EPSILON, double MU) {
     /++
      + computes and stores a block local transpose Jacobian in  Compressed
      Row Storage (CSR) format.     
@@ -627,8 +633,9 @@ void construct_inviscid_flow_jacobian_stencils(FluidBlock blk, size_t orderOfJac
             size_t[] cell_ids;
             size_t[] face_ids;
             
-            if (blk.grid_type == Grid_t.structured_grid) throw new FlowSolverException("Shape Sensitivity Calculator not implemented for structured grids, yet.");
-            else { // unstructured grid
+            if (blk.grid_type == Grid_t.structured_grid) {
+                throw new FlowSolverException("Shape Sensitivity Calculator not implemented for structured grids, yet.");
+            } else { // unstructured grid
                 foreach(cell; pcell.cell_cloud) {
                     // collect faces
                     foreach(face; cell.iface) {
@@ -690,8 +697,9 @@ void construct_viscous_flow_jacobian_stencils(FluidBlock blk, size_t orderOfJaco
         size_t[] cell_ids;
         size_t[] face_ids;
 
-        if (blk.grid_type == Grid_t.structured_grid) throw new FlowSolverException("Shape Sensitivity Calculator not implemented for structured grids, yet.");
-        else { // unstructured grid
+        if (blk.grid_type == Grid_t.structured_grid) {
+            throw new FlowSolverException("Shape Sensitivity Calculator not implemented for structured grids, yet.");
+        } else { // unstructured grid
             foreach(cell; pcell.cell_cloud) {
                 // collect faces
                 foreach(face; cell.iface) {

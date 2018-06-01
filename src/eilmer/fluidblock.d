@@ -96,12 +96,12 @@ public:
         size_t[][] ja;
         // local effects matrix for flow Jacobian transpose.
         // dimensions: [# local cells x # primitive vars] X [# local cells x # primitive vars]
-        SMatrix JlocT;
+        SMatrix!double JlocT;
         // external effects matrix for flow Jacobian transpose.
         // dimensions: [# local boundary cells x # primitive vars] X [# global cells x # primitive vars]
-        SMatrix JextT;
+        SMatrix!double JextT;
         // Matrix used in preconditioning (low order, local, flow Jacobian).
-        SMatrix P;
+        SMatrix!double P;
         // objective function senstivity w.r.t primitive variables
         double[] f;
         // adjoint variables
