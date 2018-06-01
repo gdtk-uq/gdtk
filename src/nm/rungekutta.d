@@ -47,11 +47,12 @@ T[][] allocate_rk45_workspace(T)(uint n)
  * Returns:
  *     the final value of the dependent variable
  */
-double rkf45_step(alias f, T)(double t0, double h, T[] y0, ref T[] y1, ref T[] err,
+T rkf45_step(alias f, T)(T t0, T h, T[] y0, ref T[] y1, ref T[] err,
                               ref T[][] work_arrays)
     if (is(typeof(f(0.0, [0.0,])) == double[]) ||
         is(typeof(f(0.0, [0.0,])) == float[]) ||
-        is(typeof(f(0.0, [Complex!double(0.0),Complex!double(0.0)])) == Complex!double[]))
+        is(typeof(f(Complex!double(0.0), [Complex!double(0.0),Complex!double(0.0)]))
+           == Complex!double[]))
 {
     // Assuming a system of equations, we need arrays for the intermediate data.
     size_t n = y0.length;
@@ -104,14 +105,14 @@ version(rungekutta_test) {
     import std.conv;
     import nm.number;
     int main() {
-        number[] testSystem1(double t, number[] x)
+        number[] testSystem1(number t, number[] x)
         {
             number dx0dt =  -8.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 12.0;
             number dx1dt = -17.0/3.0*x[0] -  4.0/3.0*x[1] +     x[2] + 29.0;
             number dx2dt = -35.0/3.0*x[0] + 14.0/3.0*x[1] - 2.0*x[2] + 48.0;
             return [dx0dt, dx1dt, dx2dt];
         }
-        number[] solution1(double t)
+        number[] solution1(number t)
         {
             number x = exp(-3.0*t)/6.0*(6.0-50.0*exp(t)+10.0*exp(2.0*t)+34.0*exp(3.0*t));
             number y = exp(-3.0*t)/6.0*(12.0-125.0*exp(t)+40.0*exp(2.0*t)+73.0*exp(3.0*t));
@@ -122,7 +123,9 @@ version(rungekutta_test) {
         number[] x1=x0.dup;
         number[] err=x0.dup;
         auto work = allocate_rk45_workspace!number(3);
-        double t1 = rkf45_step!(testSystem1, number)(0.0, 0.2, x0, x1, err, work);
+        number t0 = 0.0;
+        number h = 0.2;
+        number t1 = rkf45_step!(testSystem1, number)(t0, h, x0, x1, err, work);
         assert(approxEqualNumbers(x1, solution1(t1), 1.0e-5), failedUnitTest());
 
         return 0;
