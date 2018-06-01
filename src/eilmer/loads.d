@@ -19,6 +19,7 @@ import std.algorithm;
 import std.format;
 import std.parallelism;
 import std.math;
+import std.conv;
 
 import fvcore;
 import globalconfig;
@@ -38,6 +39,12 @@ import bc;
 
 string loadsDir = "loads";
 
+void init_current_tindx_dir(int current_loads_tindx)
+{
+    string dirName = format("%s/t%04d", loadsDir, current_loads_tindx);
+    ensure_directory_is_present(dirName);
+}
+
 void init_loads_times_file()
 {
     string fname = loadsDir ~ "/" ~ GlobalConfig.base_file_name ~ "-loads.times";
@@ -51,6 +58,7 @@ void update_loads_times_file(double sim_time, int current_loads_tindx)
 }
 
 void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
+    init_current_tindx_dir(current_loads_tindx);
     foreach (blk; localFluidBlocks) {
         if (blk.active) {
             final switch (blk.grid_type) {
@@ -68,10 +76,10 @@ void write_boundary_loads_to_file(double sim_time, int current_loads_tindx) {
     } // end foreach
 } // end write_boundary_loads_to_file()
 
-string generate_boundary_load_file(int current_loads_tindx, double sim_time, string group)
+string generate_boundary_load_file(int blkid, int current_loads_tindx, double sim_time, string group)
 {
     // generate data file -- naming format tindx_groupname.dat
-    string fname = format("%s/t%04d-%s.dat", loadsDir, current_loads_tindx, group);
+    string fname = format("%s/t%04d/b%04d.t%04d.%s.dat", loadsDir, current_loads_tindx, blkid, current_loads_tindx, group);
     // check if file exists already, if not create file
     if (!exists(fname)) {
         auto f = File(fname, "w");
@@ -87,7 +95,7 @@ void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads
 {
     foreach (bndary; blk.bc) {
         if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
-            string fname = generate_boundary_load_file(current_loads_tindx, sim_time, bndary.group);
+            string fname = generate_boundary_load_file(blk.id, current_loads_tindx, sim_time, bndary.group);
             foreach (i, iface; bndary.faces) {
                 // cell width normal to surface
                 double w = (bndary.outsigns[i] == 1) ? iface.left_cell.L_min : iface.right_cell.L_min;
@@ -100,7 +108,7 @@ void apply_unstructured_grid(UFluidBlock blk, double sim_time, int current_loads
 void apply_structured_grid(SFluidBlock blk, double sim_time, int current_loads_tindx) {
     foreach (bndary; blk.bc) {
         if (canFind(bndary.group, GlobalConfig.boundary_group_for_loads)) {
-            string fname = generate_boundary_load_file(current_loads_tindx, sim_time, bndary.group);
+            string fname = generate_boundary_load_file(blk.id, current_loads_tindx, sim_time, bndary.group);
             size_t i, j, k;
             FVCell cell;
             FVInterface IFace;
