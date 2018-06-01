@@ -911,16 +911,11 @@ version(properties_test) {
             number area_dash;
             triangle_properties(p0_dash, p1_dash, p2_dash, centroid_dash,
                                 n_dash, t1_dash, t2_dash, area_dash);
-            number darea = area_dash - area;
-            double darea_da = darea.im / h;
-            Vector3 dcentroid = centroid_dash - centroid;
-            Vector3 dcentroid_da = Vector3(dcentroid.x.im/h, dcentroid.y.im/h, dcentroid.z.im/h);
-            Vector3 dn = n_dash - n;
-            Vector3 dn_da = Vector3(dn.x.im/h, dn.y.im/h, dn.z.im/h);
-            Vector3 dt1 = t1_dash - t1;
-            Vector3 dt1_da = Vector3(dt1.x.im/h, dt1.y.im/h, dt1.z.im/h);
-            Vector3 dt2 = t2_dash - t2;
-            Vector3 dt2_da = Vector3(dt2.x.im/h, dt2.y.im/h, dt2.z.im/h);
+            double darea_da = area_dash.im / h;
+            Vector3 dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
+            Vector3 dn_da = Vector3(n_dash.x.im/h, n_dash.y.im/h, n_dash.z.im/h);
+            Vector3 dt1_da = Vector3(t1_dash.x.im/h, t1_dash.y.im/h, t1_dash.z.im/h);
+            Vector3 dt2_da = Vector3(t2_dash.x.im/h, t2_dash.y.im/h, t2_dash.z.im/h);
             assert(approxEqualVectors(dcentroid_da, Vector3(2.0/3.0*alpha, 1.0/3.0*alpha, 0.0)),
                    failedUnitTest());
             // Because a change in alpha does not change the orientation of the triangle,
@@ -949,9 +944,27 @@ version(properties_test) {
         assert(approxEqualVectors(t1, Vector3(1.0,0.0,0.0)), failedUnitTest());
         assert(approxEqualVectors(t2, Vector3(0.0,1.0,0.0)), failedUnitTest());
 
-        // quad properties - complex derivative test
         version(complex_numbers) {
-            // [TODO]
+            // quad properties - complex derivative test
+            auto p3_dash = Vector3(zero, alpha+ih, one);
+            quad_properties(p0_dash, p1_dash, p2_dash, p3_dash, centroid_dash,
+                            n_dash, t1_dash, t2_dash, area_dash);
+            darea_da = area_dash.im / h;
+            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
+            dn_da = Vector3(n_dash.x.im/h, n_dash.y.im/h, n_dash.z.im/h);
+            dt1_da = Vector3(t1_dash.x.im/h, t1_dash.y.im/h, t1_dash.z.im/h);
+            dt2_da = Vector3(t2_dash.x.im/h, t2_dash.y.im/h, t2_dash.z.im/h);
+            assert(approxEqualVectors(dcentroid_da, Vector3(0.5*alpha, 0.5*alpha, 0.0)),
+                   failedUnitTest());
+            // Because a change in alpha does not change the orientation of the triangle,
+            // we expect the unit vectors to have zero sensitivity.
+            // [TODO] It would probably be good to set up another case in which alpha
+            // does change the orientation of the triangle.
+            assert(approxEqualVectors(dn_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
+            assert(approxEqualVectors(dt1_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
+            assert(approxEqualVectors(dt2_da, Vector3(0.0, 0.0, 0.0)), failedUnitTest());
+            // Since, for this triangle, area = 0.5*alpha^^2, we expect darea/dalpha = alpha
+            assert(approxEqual(darea_da, 2.0*alpha), failedUnitTest());
         }
         
         // Build tetrahedron with equilateral triangle (side 1.0) base on xy plane.
@@ -966,13 +979,26 @@ version(properties_test) {
         tetrahedron_properties(p0, p1, p2, p3, centroid, volume);
         assert(approxEqualVectors(centroid, Vector3(dx,0.5,0.25*dz)), failedUnitTest());
         assert(approxEqualNumbers(volume, to!number(cos(radians(30))*0.5*dz/3)), failedUnitTest());
-
+        
         // tetrahedron properties - complex derivative test
         version(complex_numbers) {
-            // [TODO]
+            number volume_dash;
+            // Build regular tetrahedron with equal edge lengths (edge length equal to alpha).
+            p0_dash = Vector3(zero, zero, zero);
+            p1_dash = Vector3(alpha+ih, zero, zero);
+            p2_dash = Vector3((alpha+ih)*cos(radians(60)), (alpha+ih)*sin(radians(60)), zero);
+            p3_dash = Vector3(0.5*(alpha+ih), 0.5*(alpha+ih)*tan(to!number(radians(30))), (alpha+ih)*(sqrt(6.0)/3.0));
+            tetrahedron_properties(p0_dash, p1_dash, p2_dash, p3_dash, centroid_dash, volume_dash);
+            double dvol_da = volume_dash.im/h;
+            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
+            assert(approxEqual(dvol_da, alpha^^2/(2.0*sqrt(2.0))), failedUnitTest());
+            assert(approxEqualVectors(dcentroid_da, Vector3(3.0/8.0+0.25*cos(radians(60)), 1.0/4.0*sin(radians(60))+1.0/8.0*tan(radians(30)), sqrt(6.0)/12.0)), failedUnitTest());
         }
-        
+
         // Build a wedge with the same equilateral-triangle base.
+        p0 = Vector3(0, 0, 0);
+        p1 = Vector3(cos(radians(30)), sin(radians(30)), 0.0);
+        p2 = Vector3(0.0, 1.0, 0.0);
         Vector3 incz = Vector3(0, 0, -1.0);
         p3 = p0 + incz;
         Vector3 p4 = p1 + incz;
@@ -983,9 +1009,19 @@ version(properties_test) {
 
         // wedge properties - complex derivative test
         version(complex_numbers) {
-            // [TODO]
+            // Build a wedge with an equilateral-triangle base (edge length equal to alpha).
+            p0_dash = Vector3(zero, zero, zero);
+            p1_dash = Vector3(alpha+ih, zero, zero);
+            p2_dash = Vector3((alpha+ih)*cos(radians(60)), (alpha+ih)*sin(radians(60)), zero);
+            p3_dash = p0_dash + incz;
+            auto p4_dash = p1_dash + incz;
+            auto p5_dash = p2_dash + incz;
+            wedge_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, centroid_dash, volume_dash);
+            dvol_da = volume_dash.im/h;
+            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
+            assert(approxEqual(dvol_da, alpha*sin(radians(60))), failedUnitTest());
+            assert(approxEqualVectors(dcentroid_da, Vector3((1.0/3.0)*(1.0+cos(radians(60))), (1.0/3.0)*sin(radians(60)), 0.0)), failedUnitTest());
         }
-
         
         // Pyramid
         p0 = Vector3(0,0,0); p1 = Vector3(1,0,0);
@@ -997,7 +1033,14 @@ version(properties_test) {
 
         // pyramid properties - complex derivative test
         version(complex_numbers) {
-            // [TODO]
+            p0_dash = Vector3(zero,zero,zero); p1_dash = Vector3(alpha+ih,zero,zero);
+            p2_dash = Vector3(alpha+ih,alpha+ih,zero); p3_dash = Vector3(zero,alpha+ih,zero);
+            p4_dash = Vector3(0.5,0.5,1); // peak
+            pyramid_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, centroid_dash, volume_dash);
+            dvol_da = volume_dash.im/h;
+            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
+            assert(approxEqual(dvol_da, 2.0*alpha/3.0), failedUnitTest());
+            // [TODO] centroid sensitivity
         }
         
         // Simple cube for the hex cell.
@@ -1013,9 +1056,17 @@ version(properties_test) {
 
         // Simple cube for the hex cell properties - complex derivative test
         version(complex_numbers) {
-            // [TODO]
+            p0_dash = Vector3(0,0,0); p1_dash = Vector3(alpha+ih,zero,zero);
+            p2_dash = Vector3(alpha+ih,alpha+ih,zero); p3_dash = Vector3(zero,alpha+ih,zero);
+            p4_dash = Vector3(zero,zero,alpha+ih); p5_dash = Vector3(alpha+ih,zero,alpha+ih);
+            auto p6_dash = Vector3(alpha+ih,alpha+ih,alpha+ih); auto p7_dash = Vector3(zero,alpha+ih,alpha+ih);
+            hex_cell_properties(p0_dash, p1_dash, p2_dash, p3_dash, p4_dash, p5_dash, p6_dash, p7_dash, centroid_dash, volume_dash,
+                            iLen, jLen, kLen);
+            dvol_da = volume_dash.im/h;
+            dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
+            assert(approxEqual(dvol_da, 3.0*alpha^^2), failedUnitTest());
+            assert(approxEqualVectors(dcentroid_da, Vector3(0.5, 0.5, 0.5)), failedUnitTest());
         }
-
         
         d = Vector3(0.65, 0.0, 0.0);
         e = Vector3(0.65, -0.1, 0.0);
