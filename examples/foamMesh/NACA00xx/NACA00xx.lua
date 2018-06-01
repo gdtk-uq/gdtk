@@ -44,17 +44,24 @@ function foil(t)
    -- function that return x/y positon along profiles as a function
    -- of paramter t, which start at t=0 at bottom rear, t=0.5 at leading
    -- edge and and finishes as t=1 at top rear.
-   if t < 0.5 then
-      x = 1.-2*t
-      sign = -1
-   else
-      x = (t-0.5)*2
-      sign = 1
-   end
    -- calculate y from NACA polynominal with last value adjusted to close trailing edge.
-   y = 5*thickness * ( 0.2969*x^0.5 - 0.1260*x - 0.3516*x^2 + 0.2843*x^3 - 0.1036*x^4)
-   y = y * sign -- set sign for top/bottom surface.
-   --print("t,x,y",t,x,y)
+   LE=0.005
+   if t < 0.5-LE then -- do lower edge
+      x = 1.-2*t
+      y = -5*thickness * ( 0.2969*x^0.5 - 0.1260*x - 0.3516*x^2 + 0.2843*x^3 - 0.1036*x^4)
+   elseif t > 0.5+LE then -- do upper edge
+      x = (t-0.5)*2
+      y = 5*thickness * ( 0.2969*x^0.5 - 0.1260*x - 0.3516*x^2 + 0.2843*x^3 - 0.1036*x^4)
+   else
+      -- to get good clustering at the leading edge we can approximate the tip by a circle 
+      r = 1.1019 *thickness^2
+      xL = 1.-2*(0.5-LE)
+      yL = -5*thickness * ( 0.2969*xL^0.5 - 0.1260*xL - 0.3516*xL^2 + 0.2843*xL^3 - 0.1036*xL^4)
+      theta_start = math.atan(yL/(r-xL))
+      t = (t-(0.5-LE))/LE -- re-dscretise t to suit circle
+      y = r *     math.sin(theta_start + t* math.abs(theta_start))
+      x = r *(1 - math.cos(theta_start + t*math.abs(theta_start)))
+   end
    return {x=x, y=y}
 end
 --and finally we can create a paths and normalise them with respct to path length
@@ -185,6 +192,13 @@ volume[16] = SweptSurfaceVolume:new{face0123=surf[16], edge04=Line:new{p0=Vector
 nx0=61; nx1=30 
 ny0=40
 nz0=50; nz1=20
+
+-- set up refining function
+N_refine = 1
+nx0 = math.ceil(N_refine*nx0); nx1 = math.ceil(N_refine*nx1)
+ny0 = math.ceil(N_refine*ny0)
+nz0 = math.ceil(N_refine*nz0); nz1 = math.ceil(N_refine*nz1)
+
 -- Define Custer Functions.
 cfr0 = RobertsFunction:new{end0=true, end1=false, beta=1.02}
 cfr1 = RobertsFunction:new{end0=false, end1=true, beta=1.02}
