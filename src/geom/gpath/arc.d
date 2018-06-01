@@ -201,10 +201,9 @@ version(arc_test) {
             // writeln("arc0(0.5)=", arc0(0.5), " arc1(0.5)=", arc1(0.5));
             // What we want to compute is the sensitivity
             // of the midpoint of the arc with respect to alpha.
-            auto dpmid = arc1(0.5) - arc0(0.5);
-            double dpmid_da_x = dpmid.x.im / h;
-            double dpmid_da_y = dpmid.y.im / h;
-            double dpmid_da_z = dpmid.z.im / h;
+            double dpmid_da_x = arc1(0.5).x.im / h;
+            double dpmid_da_y = arc1(0.5).y.im / h;
+            double dpmid_da_z = arc1(0.5).z.im / h;
             // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
             assert(approxEqual(dpmid_da_x,1.0/sqrt(2.0)), failedUnitTest());
             assert(approxEqual(dpmid_da_y,1.0/sqrt(2.0)), failedUnitTest());

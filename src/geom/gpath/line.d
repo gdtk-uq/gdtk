@@ -97,10 +97,9 @@ version(line_test) {
             auto line1 = new Line(p0, p1_dash);
             // What we want to compute is the sensitivity
             // of the midpoint with respect to alpha.
-            auto dpmid = line1(0.5) - line0(0.5);
-            double dpmid_da_x = dpmid.x.im / h;
-            double dpmid_da_y = dpmid.y.im / h;
-            double dpmid_da_z = dpmid.z.im / h;
+            double dpmid_da_x = line1(0.5).x.im / h;
+            double dpmid_da_y = line1(0.5).y.im / h;
+            double dpmid_da_z = line1(0.5).z.im / h;
             // import std.stdio;
             // writeln("dpmid_da x:", dpmid_da_x, " y:", dpmid_da_y, " z:", dpmid_da_z);
             assert(approxEqual(dpmid_da_x,0.5), failedUnitTest());
