@@ -174,6 +174,23 @@ if (isFloatingPoint!T)
         put(w, "i");
     }
 
+    // Construct from a string, assuming that we only ever want to set real part.
+    // Note that to!T is not @nogc, so we put it before the other constructors.
+    // PJ 2018-06-02
+    this(S : string)(S s)
+    {
+        re = to!T(s);
+        im = 0;
+    }
+    // Assignment operator
+    // this = string
+    ref Complex opAssign(S : string)(S s)
+    {
+        re = to!T(s);
+        im = 0;
+        return this;
+    }
+
 @safe pure nothrow @nogc:
 
     /** Construct a complex number with the specified real and
@@ -200,7 +217,7 @@ if (isFloatingPoint!T)
         re = r;
         im = 0;
     }
-
+    
     // ASSIGNMENT OPERATORS
 
     // this = complex
@@ -1442,7 +1459,26 @@ version(complex_number_test) {
     import util.msg_service;
     import nm.number;
     int main() {
-        // NB. complex number reference solutions from Python 2.7.12 cmath library.
+        // Try the various constructors and assignments.
+        // PJ 2018-06-02
+        Complex!double za = Complex!double("1.0");
+        assert(za.re == 1.0, failedUnitTest());
+        assert(za.im == 0.0, failedUnitTest());
+        Complex!double zb = to!(Complex!double)("2.0");
+        assert(zb.re == 2.0, failedUnitTest());
+        assert(zb.im == 0.0, failedUnitTest());
+        Complex!double zc = 3.0;
+        assert(zc.re == 3.0, failedUnitTest());
+        assert(zc.im == 0.0, failedUnitTest());
+        Complex!double zd = 4;
+        assert(zd.re == 4.0, failedUnitTest());
+        assert(zd.im == 0.0, failedUnitTest());
+        Complex!double ze = "5.0";
+        assert(ze.re == 5.0, failedUnitTest());
+        assert(ze.im == 0.0, failedUnitTest());
+        
+        // complex number reference solutions from Python 2.7.12 cmath library.
+        //
         // define some test values
         Complex!double  z = complex(1.2, -3.4);
         Complex!double  w = complex(-5.3, 1.0); 
