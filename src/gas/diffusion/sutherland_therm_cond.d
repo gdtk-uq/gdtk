@@ -9,6 +9,8 @@
 module gas.diffusion.sutherland_therm_cond;
 
 import std.math;
+import nm.complex;
+import nm.number;
 import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.therm_cond;
@@ -27,7 +29,7 @@ import util.msg_service;
    Returns:
      The thermal conductivity in W/(m.K)
 +/
-pure double sutherland_thermal_conductivity(double T, double T_ref, double k_ref, double S)
+pure number sutherland_thermal_conductivity(number T, double T_ref, double k_ref, double S)
 in {
     assert(T > 0.0, brokenPreCondition("temperature", __LINE__, __FILE__));
     assert(T_ref > 0.0, brokenPreCondition("T_ref", __LINE__, __FILE__));
@@ -37,7 +39,7 @@ out(result) {
     assert(result > 0.0, brokenPostCondition("thermal conductivity", __LINE__, __FILE__));
 }
 body{
-    double k = k_ref*sqrt(T/T_ref)*(T/T_ref)*(T_ref + S)/(T + S);
+    number k = k_ref*sqrt(T/T_ref)*(T/T_ref)*(T_ref + S)/(T + S);
     return k;
 }
 
@@ -59,7 +61,7 @@ public:
     override SutherlandThermCond dup() const {
         return new SutherlandThermCond(this);
     }
-    override double eval(ref const(GasState) Q, double T) const {
+    override number eval(ref const(GasState) Q, number T) const {
         return sutherland_thermal_conductivity(T, _T_ref, _k_ref, _S);
     }
 
@@ -78,19 +80,21 @@ SutherlandThermCond createSutherlandThermalConductivity(lua_State* L)
 }
 
 version(sutherland_therm_cond_test) {
+    import std.conv;
     int main() {
-        double T = 300.0;
+        number T = 300.0;
         double T_ref = 273.0; 
         double k_ref = 0.0241;
         double S = 194.0;
-        assert(approxEqual(sutherland_thermal_conductivity(T, T_ref, k_ref, S), 0.0262449, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(sutherland_thermal_conductivity(T, T_ref, k_ref, S), to!number(0.0262449),
+                                  1.0e-6), failedUnitTest());
 
         auto tcm = new SutherlandThermCond(T_ref, k_ref, S);
         auto gd = new GasState(1, 0);
         gd.T = 300.0;
         gd.k = 0.0;
         tcm.update_thermal_conductivity(gd);
-        assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), failedUnitTest());
 
         return 0;
     }

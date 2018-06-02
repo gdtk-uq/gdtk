@@ -9,12 +9,18 @@
 module gas.diffusion.viscosity;
 
 import std.string;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.sutherland_viscosity;
-import gas.diffusion.cea_viscosity;
+version(complex_numbers) {
+    // do nothing here
+} else {
+    import gas.diffusion.cea_viscosity;
+}
 
 
 interface Viscosity {
@@ -23,7 +29,7 @@ interface Viscosity {
     {
         Q.mu = eval(Q);
     }
-    double eval(in GasState Q);
+    number eval(in GasState Q);
 }
 
 /**
@@ -39,17 +45,29 @@ Viscosity createViscosityModel(lua_State *L)
     Viscosity vm;
     auto model = getString(L, -1, "model");
     
-    switch ( model ) {
-    case "Sutherland":
-        vm = createSutherlandViscosity(L);
-        break;
-    case "CEA":
-        vm = createCEAViscosity(L);
-        break;
-    default:
-        string errMsg = format("The requested Viscosity model '%s' is not available.", model);
-        throw new Error(errMsg);
+    version(complex_numbers) {
+        // Limited number of options.
+        switch ( model ) {
+        case "Sutherland":
+            vm = createSutherlandViscosity(L);
+            break;
+        default:
+            string errMsg = format("The requested Viscosity model '%s' is not available.", model);
+            throw new Error(errMsg);
+        }
+    } else {
+        // All options for double_numbers.
+        switch ( model ) {
+        case "Sutherland":
+            vm = createSutherlandViscosity(L);
+            break;
+        case "CEA":
+            vm = createCEAViscosity(L);
+            break;
+        default:
+            string errMsg = format("The requested Viscosity model '%s' is not available.", model);
+            throw new Error(errMsg);
+        }
     }
-    
     return vm;
 }

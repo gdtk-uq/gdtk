@@ -22,6 +22,8 @@ import std.conv;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
 
 class IdealGas: GasModel {
 public:
@@ -108,12 +110,12 @@ public:
         Q.u = _Cv*Q.T;
     }
     
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
         update_thermo_from_pT(Q);
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         Q.T = h / _Cp;
         Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
@@ -138,32 +140,32 @@ public:
         throw new Exception("not implemented");
     }
     */
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return _Cv;
+        return to!number(_Cv);
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
-        return _Cp;
+        return to!number(_Cp);
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         return R*Q.T;
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return R_universal/_mol_masses[0];
+        return to!number(R_universal/_mol_masses[0]);
     }
-    override @nogc double internal_energy(in GasState Q) const
+    override @nogc number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
@@ -203,22 +205,31 @@ version(ideal_gas_test) {
         gd.p = 1.0e5;
         gd.T = 300.0;
         gd.massf[0] = 1.0;
-        assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), failedUnitTest());
+        assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4), failedUnitTest());
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 1, failedUnitTest());
-        assert(approxEqual(gd.p, 1.0e5, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.p, to!number(1.0e5), 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6), failedUnitTest());
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
-        assert(approxEqual(gd.rho, 1.16109, 1.0e-4), failedUnitTest());
-        assert(approxEqual(gd.u, 215314.0, 1.0e-4), failedUnitTest());
-        assert(approxEqual(gd.a, 347.241, 1.0e-4), failedUnitTest());
+        assert(approxEqualNumbers(gd.rho, to!number(1.16109), 1.0e-4), failedUnitTest());
+        assert(approxEqualNumbers(gd.u, to!number(215314.0), 1.0e-4), failedUnitTest());
+        assert(approxEqualNumbers(gd.a, to!number(347.241), 1.0e-4), failedUnitTest());
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), failedUnitTest());
-        assert(approxEqual(gd.k, 0.0262449, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), failedUnitTest());
 
+        version(complex_numbers) {
+            // Check du/dT = Cv
+            number u0 = gd.u; // copy unperturbed value, but we don't really need it
+            double h = 1.0e-20;
+            gd.T += complex(0.0,h);
+            gm.update_thermo_from_rhoT(gd);
+            double myCv = gd.u.im/h;
+            assert(approxEqual(myCv, gm.dudT_const_v(gd).re), failedUnitTest());
+        }
         return 0;
     }
 }

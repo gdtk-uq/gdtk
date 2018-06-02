@@ -1,3 +1,11 @@
+# gas_files.mk
+#
+# We list the source files that are needed to build the gas models package.
+#
+# Note that, for the complex_numbers flavour of the code, only a limited
+# number of source files have been complexified.
+# As at 2018-06-02, only the ideal gas model has been complexified.
+
 GAS_DIR ?= .
 GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/co2gas.d \
@@ -24,12 +32,20 @@ GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/ideal_air_fortran.o \
 	$(GAS_DIR)/steam.d
 
+GAS_MODEL_COMPLEX_FILES := $(GAS_DIR)/package.d \
+	$(GAS_DIR)/gas_model.d \
+	$(GAS_DIR)/gas_state.d \
+	$(GAS_DIR)/ideal_gas.d \
+	$(GAS_DIR)/physical_constants.d
+
 THERMO_FILES := \
 	$(GAS_DIR)/thermo/cea_thermo_curves.d \
 	$(GAS_DIR)/thermo/evt_eos.d \
 	$(GAS_DIR)/thermo/perf_gas_mix_eos.d \
 	$(GAS_DIR)/thermo/pvt_eos.d \
 	$(GAS_DIR)/thermo/therm_perf_gas_mix_eos.d
+
+THERMO_COMPLEX_FILES :=
 
 DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/cea_therm_cond.d \
@@ -41,6 +57,13 @@ DIFFUSION_FILES := \
 	$(GAS_DIR)/diffusion/wilke_mixing_therm_cond.d \
 	$(GAS_DIR)/diffusion/wilke_mixing_viscosity.d
 
+DIFFUSION_COMPLEX_FILES := \
+	$(GAS_DIR)/diffusion/therm_cond.d \
+	$(GAS_DIR)/diffusion/viscosity.d \
+	$(GAS_DIR)/diffusion/sutherland_therm_cond.d \
+	$(GAS_DIR)/diffusion/sutherland_viscosity.d
+
 GAS_FILES := $(GAS_MODEL_FILES) $(THERMO_FILES) $(DIFFUSION_FILES)
+GAS_COMPLEX_FILES := $(GAS_MODEL_COMPLEX_FILES) $(THERMO_COMPLEX_FILES) $(DIFFUSION_COMPLEX_FILES)
 
 GAS_LUA_FILES := $(GAS_DIR)/luagas_model.d

@@ -7,40 +7,50 @@ module gas.gas_state;
 
 import std.conv;
 import std.math : isFinite;
+import nm.complex;
+import nm.number;
 
 import gas.gas_model;
-import gas.cea_gas;
+version(complex_numbers) {
+    // cea_gas not complexified
+} else {
+    import gas.cea_gas;
+}
 
 class GasState {
 public:
     /// Thermodynamic properties.
-    double rho;  /// density, kg/m**3
-    double p;    /// presure, Pa
-    double p_e;  /// electron pressure
-    double a;    /// sound speed, m/s
+    number rho;  /// density, kg/m**3
+    number p;    /// presure, Pa
+    number p_e;  /// electron pressure
+    number a;    /// sound speed, m/s
     // For a gas in thermal equilibrium, all of the internal energies
     // are bundled together into u and are represented by a single
     // temperature T.
-    double T;    /// temperature, K
-    double u;    /// specific thermal energy, J/kg
+    number T;    /// temperature, K
+    number u;    /// specific thermal energy, J/kg
     // For a gas in thermal nonequilibrium, the internal energies are
     // stored unbundled, with u being the trans-rotational thermal energy.
     // The array length will be determined by the specific model and,
     // to get the total internal energy,
     // the gas-dynamics part of the code will need to sum the array elements.
-    double[] u_modes;  /// specific internal energies for thermal nonequilibrium model, J/kg
-    double[] T_modes;  /// temperatures for internal energies for thermal nonequilibrium, K
+    number[] u_modes;  /// specific internal energies for thermal nonequilibrium model, J/kg
+    number[] T_modes;  /// temperatures for internal energies for thermal nonequilibrium, K
     /// Transport properties
-    double mu;   /// viscosity, Pa.s
-    double k;  /// thermal conductivity for a single temperature gas, W/(m.K)
-    double[] k_modes;  /// thermal conductivities for the nonequilibrium model, W/(m.K)
-    double sigma;    /// electrical conductivity, S/m
+    number mu;   /// viscosity, Pa.s
+    number k;  /// thermal conductivity for a single temperature gas, W/(m.K)
+    number[] k_modes;  /// thermal conductivities for the nonequilibrium model, W/(m.K)
+    number sigma;    /// electrical conductivity, S/m
     /// Composition
-    double[] massf;  /// species mass fractions
-    double quality;  /// vapour quality
-    // A place to hang on to some CEA data, so that it can be called up
-    // in CEAGas methods that don't have access to the original CEA output file.
-    CEASavedData* ceaSavedData; 
+    number[] massf;  /// species mass fractions
+    number quality;  /// vapour quality
+    version(complex_numbers) {
+        // cea_gas not complexified
+    } else {
+        // A place to hang on to some CEA data, so that it can be called up
+        // in CEAGas methods that don't have access to the original CEA output file.
+        CEASavedData* ceaSavedData;
+    }
 
     this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
@@ -48,13 +58,21 @@ public:
         u_modes.length = n_modes;
         T_modes.length = n_modes;
         k_modes.length = n_modes;
-        if (includeSavedData) { ceaSavedData = new CEASavedData; }
+        version(complex_numbers) {
+            // cea_gas not complexified
+        } else {
+            if (includeSavedData) { ceaSavedData = new CEASavedData; }
+        }
     }
 
     this(GasModel gm)
     {
         this(gm.n_species, gm.n_modes);
-        if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
+        version(complex_numbers) {
+            // cea_gas not complexified
+        } else {
+            if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
+        }
     }
 
     this(GasModel gm, in double p_init, in double T_init, in double[] T_modes_init,
@@ -78,7 +96,11 @@ public:
         }
         quality = quality_init;
         sigma = sigma_init;
-        if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
+        version(complex_numbers) {
+            // cea_gas not complexified
+        } else {
+            if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
+        }
         // Now, evaluate the rest of the properties using the gas model.
         gm.update_thermo_from_pT(this);
         gm.update_sound_speed(this);
@@ -111,8 +133,12 @@ public:
         sigma = other.sigma;
         massf = other.massf.dup;
         quality = other.quality;
-        if (other.ceaSavedData !is null) {
-            ceaSavedData = new CEASavedData(*(other.ceaSavedData));
+        version(complex_numbers) {
+            // cea_gas not complexified
+        } else {
+            if (other.ceaSavedData !is null) {
+                ceaSavedData = new CEASavedData(*(other.ceaSavedData));
+            }
         }
     }
 
@@ -200,39 +226,39 @@ public:
         double RHOMIN = 0.0;
         double TMIN = 1.0;
         bool is_data_valid = true;
-        if (!(isFinite(rho)) || rho < 1.01 * RHOMIN) {
+        if (!(isFinite(rho.re)) || rho < 1.01 * RHOMIN) {
             // if (print_message) writeln("Density invalid: ", rho);
             is_data_valid = false;
         }
-        if (!isFinite(T) || T < 1.01 * TMIN) {
+        if (!isFinite(T.re) || T < 1.01 * TMIN) {
             // if (print_message) writeln("Temperature invalid: ", T);
             is_data_valid = false;
         }
         auto nmodes = u_modes.length;
         foreach(imode; 0 .. nmodes) {
-            if (!isFinite(T_modes[imode]) || T_modes[imode] < 1.01 * TMIN) {
+            if (!isFinite(T_modes[imode].re) || T_modes[imode] < 1.01 * TMIN) {
                 // if (print_message) writeln("Temperature[", imode, "] invalid: ", T_modes[imode]);
                 is_data_valid = false;
             }
-            if ( !isFinite(u_modes[imode]) ) {
+            if ( !isFinite(u_modes[imode].re) ) {
                 // if (print_message) writeln("Energy[", imode, "] invalid: ", u_modes[imode]);
                 is_data_valid = false;
             }
         }
-        if (!isFinite(p)) {
+        if (!isFinite(p.re)) {
             // if (print_message) writeln("Total pressure invalid: ", p);
             is_data_valid = false;
         }
-        if (!isFinite(p_e)) {
+        if (!isFinite(p_e.re)) {
             // if (print_message) writeln("Electron pressure invalid: ", p_e);
             is_data_valid = false;
         }
-        if (!isFinite(a)) {
+        if (!isFinite(a.re)) {
             // if (print_message) writeln("Sound speed invalid: ", a);
             is_data_valid = false;
         }
-        double f_sum = 0.0; foreach(elem; massf) f_sum += elem;
-        if (f_sum < 0.99 || f_sum > 1.01 || !isFinite(f_sum)) {
+        number f_sum = 0.0; foreach(elem; massf) f_sum += elem;
+        if (f_sum < 0.99 || f_sum > 1.01 || !isFinite(f_sum.re)) {
             // if (print_message) writeln("Mass fraction sum bad: ", f_sum);
             is_data_valid = false;
         }
@@ -261,4 +287,3 @@ public:
         return to!string(repr);
     }
 } // end class GasState
-

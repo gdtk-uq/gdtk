@@ -18,6 +18,7 @@
  *          2015--2016, lots of experiments
  *          2017-01-06, introduce ChemicalReactor base class
  *          2017-11-10, move ThermochemicalReactor to its own module in kinetics package
+ *          2018-06-02, adapted to complex numbers for Kyle
  */
 
 module gas.gas_model;
@@ -26,13 +27,15 @@ import std.conv;
 import std.math;
 import std.stdio;
 import std.string;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import util.lua_service;
 import util.msg_service;
 import gas.gas_state;
 import gas.physical_constants;
-import gas.cea_gas;
+// import gas.cea_gas;
 
 immutable double SMALL_MOLE_FRACTION = 1.0e-15;
 immutable double MIN_MASS_FRACTION = 1.0e-30;
@@ -75,67 +78,67 @@ public:
     abstract void update_thermo_from_rhou(GasState Q);
     abstract void update_thermo_from_rhoT(GasState Q);
     abstract void update_thermo_from_rhop(GasState Q);
-    abstract void update_thermo_from_ps(GasState Q, double s);
-    abstract void update_thermo_from_hs(GasState Q, double h, double s);
+    abstract void update_thermo_from_ps(GasState Q, number s);
+    abstract void update_thermo_from_hs(GasState Q, number h, number s);
     abstract void update_sound_speed(GasState Q);
     abstract void update_trans_coeffs(GasState Q);
     // const void update_diff_coeffs(ref GasState Q) {}
 
     // Methods to be overridden.
-    abstract double dudT_const_v(in GasState Q); 
-    abstract double dhdT_const_p(in GasState Q); 
-    abstract double dpdrho_const_T(in GasState Q); 
-    abstract double gas_constant(in GasState Q);
-    abstract double internal_energy(in GasState Q);
-    abstract double enthalpy(in GasState Q);
-    double enthalpy(in GasState Q, int isp)
+    abstract number dudT_const_v(in GasState Q); 
+    abstract number dhdT_const_p(in GasState Q); 
+    abstract number dpdrho_const_T(in GasState Q); 
+    abstract number gas_constant(in GasState Q);
+    abstract number internal_energy(in GasState Q);
+    abstract number enthalpy(in GasState Q);
+    number enthalpy(in GasState Q, int isp)
     {
         // For the single-species gases, provide a default implementation
         // but we need to be careful to override this for multi-component gases.
         return enthalpy(Q);
     }
-    abstract double entropy(in GasState Q);
-    double entropy(in GasState Q, int isp)
+    abstract number entropy(in GasState Q);
+    number entropy(in GasState Q, int isp)
     {
         // For the single-species gases, provide a default implementation
         // but we need to be carefule to override this for multi-component gases.
         return entropy(Q);
     }
 
-    double gibbs_free_energy(GasState Q, int isp)
+    number gibbs_free_energy(GasState Q, int isp)
     {
-        double h = enthalpy(Q, isp);
-        double s = entropy(Q, isp);
-        double g = h - Q.T*s;
+        number h = enthalpy(Q, isp);
+        number s = entropy(Q, isp);
+        number g = h - Q.T*s;
         return g;
     }
     
-    final double Cv(in GasState Q) { return dudT_const_v(Q); }
-    final double Cp(in GasState Q) { return dhdT_const_p(Q); }
-    final double R(in GasState Q)  { return gas_constant(Q); }
-    final double gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
-    final double molecular_mass(in GasState Q) 
+    final number Cv(in GasState Q) { return dudT_const_v(Q); }
+    final number Cp(in GasState Q) { return dhdT_const_p(Q); }
+    final number R(in GasState Q)  { return gas_constant(Q); }
+    final number gamma(in GasState Q) { return Cp(Q)/Cv(Q); }
+    final number molecular_mass(in GasState Q) 
     in {
         assert(Q.massf.length == _mol_masses.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
         return mixture_molecular_mass(Q.massf, _mol_masses);
     }
-    final void massf2molef(in GasState Q, double[] molef) 
+    final void massf2molef(in GasState Q, number[] molef) 
     in {
         assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
         gas.gas_model.massf2molef(Q.massf, _mol_masses, molef);
     }
-    final void molef2massf(in double[] molef, GasState Q) 
+    final void molef2massf(in number[] molef, GasState Q) 
     in {
         assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
     }
     body {
         gas.gas_model.molef2massf(molef, _mol_masses, Q.massf);
     }
-    final void massf2conc(in GasState Q, double[] conc) 
+    final void massf2conc(in GasState Q, number[] conc) 
     in {
         assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
     }
@@ -145,7 +148,7 @@ public:
             if ( conc[i] < MIN_MOLES ) conc[i] = 0.0;
         }
     }
-    final void conc2massf(in double[] conc, GasState Q) 
+    final void conc2massf(in number[] conc, GasState Q) 
     in {
         assert(Q.massf.length == conc.length, brokenPreCondition("Inconsisten array lengths."));
     }
@@ -167,7 +170,7 @@ protected:
     double[] _LJ_epsilons;
 } // end class GasModel
 
-@nogc void scale_mass_fractions(ref double[] massf, double tolerance=0.0,
+@nogc void scale_mass_fractions(ref number[] massf, double tolerance=0.0,
                                 double assert_error_tolerance=0.1)
 {
     auto my_nsp = massf.length;
@@ -178,9 +181,9 @@ protected:
         massf[0] = 1.0;
     } else {
         // Multiple species, do the full job.
-        double massf_sum = 0.0;
+        number massf_sum = 0.0;
         foreach(isp; 0 .. my_nsp) {
-            massf[isp] = massf[isp] >= 0.0 ? massf[isp] : 0.0;
+            massf[isp] = massf[isp] >= 0.0 ? massf[isp] : to!number(0.0);
             massf_sum += massf[isp];
         }
         assert(fabs(massf_sum - 1.0) < assert_error_tolerance,
@@ -192,53 +195,65 @@ protected:
     return;
 } // end scale_mass_fractions()
 
-@nogc pure double mass_average(in GasState Q, in double[] phi)
+@nogc pure number mass_average(in GasState Q, in number[] phi)
 in {
     assert(Q.massf.length == phi.length, "Inconsistent array lengths.");
 }
 body {
-    double result = 0.0;
+    number result = 0.0;
     foreach ( i; 0..Q.massf.length ) result += Q.massf[i] * phi[i];
     return result;
 }
 
-@nogc pure double mole_average(in double[] molef, in double[] phi)
+@nogc pure number mole_average(in number[] molef, in number[] phi)
 in {
     assert(molef.length == phi.length, "Inconsistent array lengths.");
 }
 body {
-    double result = 0.0;
+    number result = 0.0;
     foreach ( i; 0..molef.length ) result += molef[i] * phi[i];
     return result;
 }
+version(complex_numbers) {
+    // We want to retain the flavour with double numbers.
+    @nogc pure number mole_average(in number[] molef, in double[] phi)
+        in {
+            assert(molef.length == phi.length, "Inconsistent array lengths.");
+        }
+    body {
+        number result = 0.0;
+        foreach ( i; 0..molef.length ) result += molef[i] * phi[i];
+        return result;
+    }
+}
 
-@nogc pure double mixture_molecular_mass(in double[] massf, in double[] mol_masses)
+@nogc pure number mixture_molecular_mass(in number[] massf, in double[] mol_masses)
 in {
     assert(massf.length == mol_masses.length, "Inconsistent array lengths.");
 }
 body {
-    double M_inv = 0.0;
+    number M_inv = 0.0;
     foreach (i; 0 .. massf.length) M_inv += massf[i] / mol_masses[i];
     return 1.0/M_inv;
 }
 
-@nogc void massf2molef(in double[] massf, in double[] mol_masses, double[] molef)
+@nogc void massf2molef(in number[] massf, in double[] mol_masses, number[] molef)
 in {
     assert(massf.length == mol_masses.length, "Inconsistent array lengths.");
     assert(massf.length == molef.length, "Inconsistent array lengths.");
 }
 body {
-    double mixMolMass = mixture_molecular_mass(massf, mol_masses);
+    number mixMolMass = mixture_molecular_mass(massf, mol_masses);
     foreach ( i; 0..massf.length ) molef[i] = massf[i] * mixMolMass / mol_masses[i];
 }
 
-@nogc void molef2massf(in double[] molef, in double[] mol_masses, double[] massf)
+@nogc void molef2massf(in number[] molef, in double[] mol_masses, number[] massf)
 in {
     assert(massf.length == mol_masses.length, "Inconsistent array lengths.");
     assert(massf.length == molef.length, "Inconsistent array lengths.");
 }
 body {
-    double mixMolMass = mole_average(molef, mol_masses);
+    number mixMolMass = mole_average(molef, mol_masses);
     foreach ( i; 0..massf.length ) massf[i] = molef[i] * mol_masses[i] / mixMolMass;
 }
 
@@ -269,25 +284,25 @@ immutable MAX_STEPS = 30;
 
 void update_thermo_state_pT(GasModel gmodel, GasState Q)
 {
-    double drho, rho_old, rho_new, e_old, e_new, de;
-    double drho_sign, de_sign;
-    double Cv_eff, R_eff, T_old;
-    double fp_old, fT_old, fp_new, fT_new;
-    double dfp_drho, dfT_drho, dfp_de, dfT_de, det;
+    number drho, rho_old, rho_new, e_old, e_new, de;
+    number drho_sign, de_sign;
+    number Cv_eff, R_eff, T_old;
+    number fp_old, fT_old, fp_new, fT_new;
+    number dfp_drho, dfT_drho, dfp_de, dfT_de, det;
     int converged, count;
 
-    double p_given = Q.p;
-    double T_given = Q.T;
+    number p_given = Q.p;
+    number T_given = Q.T;
     // When using single-sided finite-differences on the
     // curve-fit EOS functions, we really cannot expect 
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
  
-    double fT_tol = 1.0e-6 * T_given;
-    double fp_tol = 1.0e-6 * p_given;
-    double fp_tol_fail = 0.02 * p_given;
-    double fT_tol_fail = 0.02 * T_given;
+    number fT_tol = 1.0e-6 * T_given;
+    number fp_tol = 1.0e-6 * p_given;
+    number fp_tol_fail = 0.02 * p_given;
+    number fT_tol_fail = 0.02 * T_given;
 
     Q.rho = 1.0; // kg/m**3
     Q.u = 2.0e5; // J/kg
@@ -437,20 +452,20 @@ void update_thermo_state_pT(GasModel gmodel, GasState Q)
 void update_thermo_state_rhoT(GasModel gmodel, GasState Q)  
 {
     // This method can be applied to single-species models only
-    double e_old, e_new, de, tmp, de_sign;
-    double Cv_eff, T_old;
-    double dfT_de, fT_old, fT_new;
+    number e_old, e_new, de, tmp, de_sign;
+    number Cv_eff, T_old;
+    number dfT_de, fT_old, fT_new;
     int converged, count;
 
-    double rho_given = Q.rho;
-    double T_given = Q.T;
+    number rho_given = Q.rho;
+    number T_given = Q.T;
     // When using single-sided finite-differences on the
     // curve-fit EOS functions, we really cannot expect 
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
-    double fT_tol = 1.0e-6 * T_given;
-    double fT_tol_fail = 0.02 * T_given;
+    number fT_tol = 1.0e-6 * T_given;
+    number fT_tol_fail = 0.02 * T_given;
 
     // Get an idea of the gas properties by calling the original
     // equation of state with some dummy values for density
@@ -579,20 +594,20 @@ void update_thermo_state_rhoT(GasModel gmodel, GasState Q)
 
 void update_thermo_state_rhop(GasModel gmodel, GasState Q)
 {
-    double e_old, e_new, de, dedp, tmp, de_sign;
-    double p_old;
-    double dfp_de, fp_old, fp_new;
+    number e_old, e_new, de, dedp, tmp, de_sign;
+    number p_old;
+    number dfp_de, fp_old, fp_new;
     int converged, count;
 
-    double rho_given = Q.rho;
-    double p_given = Q.p;
+    number rho_given = Q.rho;
+    number p_given = Q.p;
     // When using single-sided finite-differences on the
     // curve-fit EOS functions, we really cannot expect 
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
-    double fp_tol = 1.0e-6 * p_given;
-    double fp_tol_fail = 0.02 * p_given;
+    number fp_tol = 1.0e-6 * p_given;
+    number fp_tol_fail = 0.02 * p_given;
 
     // Get an idea of the gas properties by calling the original
     // equation of state with some dummy values for density
@@ -720,22 +735,22 @@ void update_thermo_state_rhop(GasModel gmodel, GasState Q)
     }
 }
 
-void update_thermo_state_ps(GasModel gmodel, GasState Q, double s) 
+void update_thermo_state_ps(GasModel gmodel, GasState Q, number s) 
 {
-    double T_old, T_new, dT, tmp, dT_sign;
-    double dfs_dT, fs_old, fs_new;
+    number T_old, T_new, dT, tmp, dT_sign;
+    number dfs_dT, fs_old, fs_new;
     int converged, count;
 
-    double s_given = s;
-    double p_given = Q.p;
+    number s_given = s;
+    number p_given = Q.p;
    
     // When using single-sided finite-differences on the
     // curve-fit EOS functions, we really cannot expect 
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
-    double fs_tol = 1.0e-6 * s_given;
-    double fs_tol_fail = 0.02 * s_given;
+    number fs_tol = 1.0e-6 * s_given;
+    number fs_tol_fail = 0.02 * s_given;
 
     // Guess the thermo state assuming that T is a good guess.
     T_old = Q.T;
@@ -748,7 +763,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
         throw new GasModelException(msg);
     }
     ////**** Need to check this is the correct method - is called 2 more times*****/////
-    double s_old = gmodel.entropy(Q);   
+    number s_old = gmodel.entropy(Q);   
     fs_old = s_given - s_old;
     // Perturb T to get a derivative estimate
     T_new = T_old * 1.001;
@@ -762,7 +777,7 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
         msg ~= to!string(caughtException);
         throw new GasModelException(msg);
     }
-    double s_new = gmodel.entropy(Q);
+    number s_new = gmodel.entropy(Q);
     fs_new = s_given - s_new;
     dfs_dT = (fs_new - fs_old)/(T_new - T_old);
     // At the start of iteration, we want *_old to be the best guess.
@@ -832,31 +847,31 @@ void update_thermo_state_ps(GasModel gmodel, GasState Q, double s)
     }
 }
 
-void update_thermo_state_hs(GasModel gmodel, GasState Q, double h, double s)
+void update_thermo_state_hs(GasModel gmodel, GasState Q, number h, number s)
 {
-double dp, p_old, p_new, T_old, T_new, dT;
-    double dp_sign, dT_sign;
-    double fh_old, fs_old, fh_new, fs_new;
-    double dfh_dp, dfs_dp, dfh_dT, dfs_dT, det;
+    number dp, p_old, p_new, T_old, T_new, dT;
+    number dp_sign, dT_sign;
+    number fh_old, fs_old, fh_new, fs_new;
+    number dfh_dp, dfs_dp, dfh_dT, dfs_dT, det;
     int converged, count;
 
-    double h_given = h;
-    double s_given = s;
+    number h_given = h;
+    number s_given = s;
     // When using single-sided finite-differences on the
     // curve-fit EOS functions, we really cannot expect 
     // much more than 0.1% tolerance here.
     // However, we want a tighter tolerance so that the starting values
     // don't get shifted noticeably.
-    double fh_tol = 1.0e-6 * h_given;
-    double fs_tol = 1.0e-6 * s_given;
-    double fh_tol_fail = 0.02 * h_given;
-    double fs_tol_fail = 0.02 * s_given;
+    number fh_tol = 1.0e-6 * h_given;
+    number fs_tol = 1.0e-6 * s_given;
+    number fh_tol_fail = 0.02 * h_given;
+    number fs_tol_fail = 0.02 * s_given;
 
     // Use current gas state as guess
     p_old = Q.p;
     T_old = Q.T;
-    double h_new = gmodel.enthalpy(Q);
-    double s_new = gmodel.entropy(Q);
+    number h_new = gmodel.enthalpy(Q);
+    number s_new = gmodel.entropy(Q);
     fh_old = h_given - h_new;
     fs_old = s_given - s_new;
 
@@ -973,26 +988,30 @@ double dp, p_old, p_new, T_old, T_new, dT;
 //----------------------------------------------------------------------------------------
 
 // Utility function to construct specific gas models needs to know about
-// all of the gas-model modules.
-import gas.ideal_gas;
-import gas.cea_gas;
-import gas.therm_perf_gas;
-import gas.very_viscous_air;
-import gas.co2gas;
-import gas.co2gas_sw;
-import gas.sf6virial;
-import gas.uniform_lut;
-import gas.adaptive_lut_CEA;
-import gas.ideal_air_proxy;
-import gas.powers_aslam_gas;
-import gas.two_temperature_reacting_argon;
-import gas.ideal_dissociating_gas;
-import gas.two_temperature_air;
-import gas.two_temperature_nitrogen;
-import gas.vib_specific_nitrogen;
-import gas.fuel_air_mix;
-import gas.equilibrium_gas;
-import gas.steam : Steam;
+// all of the gas-model modules that are in play.
+version(complex_numbers) {
+    import gas.ideal_gas;
+} else {
+    import gas.ideal_gas;
+    import gas.cea_gas;
+    import gas.therm_perf_gas;
+    import gas.very_viscous_air;
+    import gas.co2gas;
+    import gas.co2gas_sw;
+    import gas.sf6virial;
+    import gas.uniform_lut;
+    import gas.adaptive_lut_CEA;
+    import gas.ideal_air_proxy;
+    import gas.powers_aslam_gas;
+    import gas.two_temperature_reacting_argon;
+    import gas.ideal_dissociating_gas;
+    import gas.two_temperature_air;
+    import gas.two_temperature_nitrogen;
+    import gas.vib_specific_nitrogen;
+    import gas.fuel_air_mix;
+    import gas.equilibrium_gas;
+    import gas.steam : Steam;
+}
 import core.stdc.stdlib : exit;
 
 
@@ -1028,68 +1047,81 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         throw new GasModelException(msg);
     }
     GasModel gm;
-    switch (gas_model_name) {
-    case "IdealGas":
-        gm = new IdealGas(L);
-        break;
-    case "CEAGas":
-        gm = new CEAGas(L);
-        break;
-    case "ThermallyPerfectGas":
-        gm = new ThermallyPerfectGas(L);
-        break;
-    case "VeryViscousAir":
-        gm = new VeryViscousAir(L);
-        break;
-    case "CO2Gas":
-        gm = new CO2Gas(L);
-        break;
-    case "CO2GasSW":
-        gm = new CO2GasSW(L);
-        break;
-    case "SF6Virial":
-        gm = new SF6Virial(L);
-        break;
-    case "look-up table":  
-        gm = new  UniformLUT(L);
-        break;
-    case "CEA adaptive look-up table":
-        gm = new AdaptiveLUT(L);
-        break;
-    case "IdealAirProxy":
-        gm = new IdealAirProxy(); // no further config in the Lua file
-        break;
-    case "PowersAslamGas":
-        gm = new PowersAslamGas(L);
-        break;
-    case "TwoTemperatureReactingArgon":
-        gm = new TwoTemperatureReactingArgon(L);
-        break;
-    case "IdealDissociatingGas":
-        gm = new IdealDissociatingGas(L);
-        break;
-    case "TwoTemperatureAir":
-        gm = new TwoTemperatureAir(L);
-        break;
-    case "TwoTemperatureNitrogen":
-        gm = new TwoTemperatureNitrogen();
-        break;
-    case "VibSpecificNitrogen":
-        gm = new VibSpecificNitrogen();
-        break;
-    case "FuelAirMix":
-        gm = new FuelAirMix(L);
-        break;
-    case "EquilibriumGas":
-        gm = new EquilibriumGas(L);
-        break;
-    case "Steam":
-        gm = new Steam();
-        break;
-    default:
-        string errMsg = format("The gas model '%s' is not available.", gas_model_name);
-        throw new Error(errMsg);
-    }
+    version(complex_numbers) {
+        // Limited number of options.
+        switch (gas_model_name) {
+        case "IdealGas":
+            gm = new IdealGas(L);
+            break;
+        default:
+            string errMsg = format("The gas model '%s' is not available.", gas_model_name);
+            throw new Error(errMsg);
+        }
+    } else {
+        // All options for double_numbers.
+        switch (gas_model_name) {
+        case "IdealGas":
+            gm = new IdealGas(L);
+            break;
+        case "CEAGas":
+            gm = new CEAGas(L);
+            break;
+        case "ThermallyPerfectGas":
+            gm = new ThermallyPerfectGas(L);
+            break;
+        case "VeryViscousAir":
+            gm = new VeryViscousAir(L);
+            break;
+        case "CO2Gas":
+            gm = new CO2Gas(L);
+            break;
+        case "CO2GasSW":
+            gm = new CO2GasSW(L);
+            break;
+        case "SF6Virial":
+            gm = new SF6Virial(L);
+            break;
+        case "look-up table":  
+            gm = new  UniformLUT(L);
+            break;
+        case "CEA adaptive look-up table":
+            gm = new AdaptiveLUT(L);
+            break;
+        case "IdealAirProxy":
+            gm = new IdealAirProxy(); // no further config in the Lua file
+            break;
+        case "PowersAslamGas":
+            gm = new PowersAslamGas(L);
+            break;
+        case "TwoTemperatureReactingArgon":
+            gm = new TwoTemperatureReactingArgon(L);
+            break;
+        case "IdealDissociatingGas":
+            gm = new IdealDissociatingGas(L);
+            break;
+        case "TwoTemperatureAir":
+            gm = new TwoTemperatureAir(L);
+            break;
+        case "TwoTemperatureNitrogen":
+            gm = new TwoTemperatureNitrogen();
+            break;
+        case "VibSpecificNitrogen":
+            gm = new VibSpecificNitrogen();
+            break;
+        case "FuelAirMix":
+            gm = new FuelAirMix(L);
+            break;
+        case "EquilibriumGas":
+            gm = new EquilibriumGas(L);
+            break;
+        case "Steam":
+            gm = new Steam();
+            break;
+        default:
+            string errMsg = format("The gas model '%s' is not available.", gas_model_name);
+            throw new Error(errMsg);
+        }
+    } // end version double_numbers
     lua_close(L);
     return gm;
 } // end init_gas_model()
@@ -1105,8 +1137,8 @@ version(gas_model_test) {
         auto gd = new GasState(2, 1);
         gd.massf[0] = 0.8;
         gd.massf[1] = 0.2;
-        double[] phi = [9.0, 16.0];
-        assert(approxEqual(10.4, mass_average(gd, phi), 1.0e-6));
+        number[] phi = [to!number(9.0), to!number(16.0)];
+        assert(approxEqualNumbers(to!number(10.4), mass_average(gd, phi), 1.0e-6));
         
         // Iterative methods test using idealgas single species model
         // These assume IdealGas class is working properly
@@ -1123,32 +1155,32 @@ version(gas_model_test) {
         }
 
         gd = new GasState(gm, 100.0e3, 300.0);
-        assert(approxEqual(gm.R(gd), 287.086, 1.0e-4), "gas constant");
+        assert(approxEqualNumbers(gm.R(gd), to!number(287.086), 1.0e-4), "gas constant");
         assert(gm.n_modes == 0, "number of energy modes");
         assert(gm.n_species == 1, "number of species");
-        assert(approxEqual(gd.p, 1.0e5), "pressure");
-        assert(approxEqual(gd.T, 300.0, 1.0e-6), "static temperature");
-        assert(approxEqual(gd.massf[0], 1.0, 1.0e-6), "massf[0]");
+        assert(approxEqualNumbers(gd.p, to!number(1.0e5)), "pressure");
+        assert(approxEqualNumbers(gd.T, to!number(300.0), 1.0e-6), "static temperature");
+        assert(approxEqualNumbers(gd.massf[0], to!number(1.0), 1.0e-6), "massf[0]");
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
-        assert(approxEqual(gd.rho, 1.16109, 1.0e-4), "density");
-        assert(approxEqual(gd.u, 215314.0, 1.0e-4), "internal energy");
-        assert(approxEqual(gd.a, 347.241, 1.0e-4), "sound speed");
+        assert(approxEqualNumbers(gd.rho, to!number(1.16109), 1.0e-4), "density");
+        assert(approxEqualNumbers(gd.u, to!number(215314.0), 1.0e-4), "internal energy");
+        assert(approxEqualNumbers(gd.a, to!number(347.241), 1.0e-4), "sound speed");
         gm.update_trans_coeffs(gd);
-        assert(approxEqual(gd.mu, 1.84691e-05, 1.0e-6), "viscosity");
-        assert(approxEqual(gd.k, 0.0262449, 1.0e-6), "conductivity");
+        assert(approxEqualNumbers(gd.mu, to!number(1.84691e-05), 1.0e-6), "viscosity");
+        assert(approxEqualNumbers(gd.k, to!number(0.0262449), 1.0e-6), "conductivity");
 
         // Select arbitrary energy and density and establish a set of 
         // variables that are thermodynamically consistent
-        double e_given = 1.0e7;
-        double rho_given = 2.0;
+        number e_given = 1.0e7;
+        number rho_given = 2.0;
         auto Q = new GasState(gm);
         Q.u = e_given;
         Q.rho = rho_given;
         gm.update_thermo_from_rhou(Q);
-        double p_given = Q.p;
-        double T_given = Q.T;
+        number p_given = Q.p;
+        number T_given = Q.T;
         
         // Initialise the same state from the different property combinations
         // Test pT iterative update
@@ -1156,34 +1188,42 @@ version(gas_model_test) {
         Q.T = T_given;
         update_thermo_state_pT(gm, Q); 
         // Determine correct entropy/enthalpy for updates that use them
-        double s_given = gm.entropy(Q); 
-        double h_given = gm.enthalpy(Q);
-        assert(approxEqual(Q.rho, rho_given, 1.0e-6),  failedUnitTest());
-        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
+        number s_given = gm.entropy(Q); 
+        number h_given = gm.enthalpy(Q);
+        assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6),  failedUnitTest());
+        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
         // Test rhoT iterative update
         Q.rho = rho_given;
         Q.T = T_given;
         update_thermo_state_rhoT(gm, Q);
-        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.p, p_given, 1.0e-6),  failedUnitTest());
+        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.p, p_given, 1.0e-6),  failedUnitTest());
         // Test rhop iterative update
         Q.rho = rho_given;
         Q.p = p_given;
-        assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.T, T_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
         // Test  ps iterative update
         Q.p = p_given;
         update_thermo_state_ps(gm, Q, s_given); 
-        assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.T, T_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6), failedUnitTest());
         // Test hs iterative update
-        assert(approxEqual(Q.T, T_given, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.u, e_given, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.rho, rho_given, 1.0e-6), failedUnitTest());
-        assert(approxEqual(Q.p, p_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.T, T_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.u, e_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.rho, rho_given, 1.0e-6), failedUnitTest());
+        assert(approxEqualNumbers(Q.p, p_given, 1.0e-6), failedUnitTest());
 
-        // Try 
+        version(complex_numbers) {
+            // Check du/dT = Cv
+            number u0 = Q.u;
+            double h = 1.0e-20;
+            Q.T += complex(0.0,h);
+            update_thermo_state_rhoT(gm, Q);
+            double myCv = Q.u.im/h;
+            assert(approxEqual(myCv, gm.dudT_const_v(Q).re), failedUnitTest());
+        }
         return 0;
     }
 }

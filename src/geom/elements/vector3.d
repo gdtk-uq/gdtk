@@ -107,6 +107,7 @@ struct Vector3 {
     }
 
     version(complex_numbers) {
+        // We want to retain the flavour with double numbers.
         @nogc ref Vector3 set(double x, double y, double z=0.0)
         // Convenience function for setting the components of an existing object.
         // Note that we may supply just the x,y coordinates.

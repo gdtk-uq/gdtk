@@ -9,12 +9,18 @@
 module gas.diffusion.therm_cond;
 
 import std.string;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.sutherland_therm_cond;
-import gas.diffusion.cea_therm_cond;
+version(complex_numbers) {
+    // do nothing here
+} else {
+    import gas.diffusion.cea_therm_cond;
+}
 
 interface ThermalConductivity {
     ThermalConductivity dup() const;
@@ -25,7 +31,7 @@ interface ThermalConductivity {
             Q.k_modes[imode] = eval(Q, Q.T_modes[imode]);
         }
     }
-    double eval(ref const(GasState) Q, double T);
+    number eval(ref const(GasState) Q, number T);
 }
 
 /**
@@ -41,17 +47,29 @@ ThermalConductivity createThermalConductivityModel(lua_State *L)
     ThermalConductivity tcm;
     auto model = getString(L, -1, "model");
     
-    switch ( model ) {
-    case "Sutherland":
-        tcm = createSutherlandThermalConductivity(L);
-        break;
-    case "CEA":
-        tcm = createCEAThermalConductivity(L);
-        break;
-    default:
-        string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
-        throw new Error(errMsg);
+    version(complex_numbers) {
+        // Limited number of options.
+        switch ( model ) {
+        case "Sutherland":
+            tcm = createSutherlandThermalConductivity(L);
+            break;
+        default:
+            string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
+            throw new Error(errMsg);
+        }
+    } else {
+        // All options for double_numbers.
+        switch ( model ) {
+        case "Sutherland":
+            tcm = createSutherlandThermalConductivity(L);
+            break;
+        case "CEA":
+            tcm = createCEAThermalConductivity(L);
+            break;
+        default:
+            string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
+            throw new Error(errMsg);
+        }
     }
-    
     return tcm;
 }

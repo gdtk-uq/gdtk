@@ -24,8 +24,12 @@ test gas-model-test {Testing gas_model.d} -body {
     exec ./gas_model_test
 } -result {} -returnCodes {0}
 
-test ideal-gas-test {Testing ideal_gas.d} -body {
-    exec ./ideal_gas_test
+test gas-model-complex-test {Testing gas_model.d} -body {
+    exec ./gas_model_complex_test
+} -result {} -returnCodes {0}
+
+test ideal-gas-complex-test {Testing ideal_gas.d} -body {
+    exec ./ideal_gas_complex_test
 } -result {} -returnCodes {0}
 
 #test cea-gas-test {Testing cea_gas.d} -body {
