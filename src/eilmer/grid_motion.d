@@ -26,6 +26,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "setVtxVelocitiesForDomain");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForBlock);
     lua_setglobal(L, "setVtxVelocitiesForBlock");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesForRotatingBlock);
+    lua_setglobal(L, "setVtxVelocitiesForRotatingBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocity);
     lua_setglobal(L, "setVtxVelocity");
 }
@@ -85,6 +87,56 @@ extern(C) int luafn_setVtxVelocitiesForBlock(lua_State* L)
            accuracy.
         */
         vtx.vel[0] = *vel;
+    }
+    // In case, the user gave use more return values than
+    // we used, just set the lua stack to empty and let
+    // the lua garbage collector do its thing.
+    lua_settop(L, 0);
+    return 0;
+}
+
+/**
+ * Sets the velocity of an entire block, for the case
+ * that the block is rotating about an axis with direction 
+ * (0 0 1) located at a point defined by vector (x y 0).
+ *
+ * setVtxVelocitiesRotatingBlock(blkId, omega, vector3)
+ *      Sets rotational speed omega (rad/s) for rotation about 
+ *      (0 0 1) axis defined by Vector3.
+ *
+ * setVtxVelocitiesRotatingBlock(blkId, omega)
+ *      Sets rotational speed omega (rad/s) for rotation about 
+ *      Z-axis.
+ */
+extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
+{
+    // Expect two/three arguments: 1. a block id
+    //                             2. a float object
+    //                             3. a vector (optional) 
+    int narg = lua_gettop(L);
+    auto blkId = lua_tointeger(L, 1);
+    double omega = lua_tonumber(L, 2);
+    double velx, vely;
+
+    if ( narg == 2 ) {
+        // assume rotation about Z-axis 
+        foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
+            velx = - omega * vtx.pos[0].y;
+            vely =   omega * vtx.pos[0].x;
+            vtx.vel[0] = Vector3(velx, vely, 0.);
+        }
+    }
+    else if ( narg == 3 ) {
+        auto axis = checkVector3(L, 3);
+        foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
+            velx = - omega * (vtx.pos[0].y - axis.y);
+            vely =   omega * (vtx.pos[0].x - axis.x);
+            vtx.vel[0] = Vector3(velx, vely, 0.);
+        }
+    }
+    else {
+        string errMsg = "ERROR: Too few arguments passed to luafn: setVtxVelocitiesRotatingBlock()\n";
+        luaL_error(L, errMsg.toStringz);
     }
     // In case, the user gave use more return values than
     // we used, just set the lua stack to empty and let
