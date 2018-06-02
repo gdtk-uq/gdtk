@@ -35,7 +35,6 @@ import util.lua_service;
 import util.msg_service;
 import gas.gas_state;
 import gas.physical_constants;
-// import gas.cea_gas;
 
 immutable double SMALL_MOLE_FRACTION = 1.0e-15;
 immutable double MIN_MASS_FRACTION = 1.0e-30;

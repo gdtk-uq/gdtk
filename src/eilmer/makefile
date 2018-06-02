@@ -29,6 +29,7 @@ WITH_SSC ?= 0
 WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
 DEBUG_CHEM ?= 0
+WITH_COMPLEX_NUMBERS ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -70,19 +71,31 @@ ifeq ($(WITH_CUDA_GPU_CHEM),1)
     SHARE_FILES += alpha_qss_kernel_cuda_tmplt.cu libcudakernel.so
 endif
 
+ifeq ($(WITH_COMPLEX_NUMBERS),1)
+    PROGRAMS += e4complex
+endif
+
 DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo fluidblock_demo \
 	luaflowstate_demo luaglobalconfig_demo
 
-EILMER_FILES := simcore.d fileutil.d json_helper.d \
-		fvcore.d fvcell.d fvvertex.d fvinterface.d \
-		fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d \
-		conservedquantities.d flowstate.d luaflowstate.d \
-		globalconfig.d luaglobalconfig.d globaldata.d \
-		fluidblock.d sfluidblock.d ufluidblock.d \
-		lua_helper.d user_defined_source_terms.d gas_solid_interface.d \
-		postprocess.d flowsolution.d luaflowsolution.d grid_motion.d \
-		block_moving_grid.d history.d loads.d special_block_init.d \
-		mass_diffusion.d
+EILMER_CORE_FILES := simcore.d \
+	fileutil.d json_helper.d \
+	fvcore.d fvcell.d fvvertex.d fvinterface.d \
+	fluxcalc.d onedinterp.d flowgradients.d lsqinterp.d \
+	conservedquantities.d flowstate.d \
+	globalconfig.d globaldata.d \
+	fluidblock.d sfluidblock.d ufluidblock.d \
+	gas_solid_interface.d \
+	flowsolution.d grid_motion.d \
+	block_moving_grid.d history.d loads.d special_block_init.d \
+	mass_diffusion.d
+
+EILMER_LUA_FILES := luaglobalconfig.d lua_helper.d \
+	luaflowsolution.d luaflowstate.d user_defined_source_terms.d 
+
+EILMER_EXTRA_FILES := postprocess.d 
+
+EILMER_FILES := $(EILMER_CORE_FILES) $(EILMER_LUA_FILES) $(EILMER_EXTRA_FILES)
 
 BC_FILES := bc/package.d \
 	bc/boundary_condition.d \
@@ -291,6 +304,7 @@ clean:
 	- rm test-grid.txt.gz test-flow.txt.gz trace.log trace.def
 	- rm -r plot/ flow/ grid/
 	- rm main_with_rev_string.d
+	- rm main_complex_with_rev_string.d
 	- rm steadystate_solver_with_rev_string.d
 	- rm shape_sensitivity_calc_with_rev_string.d
 	- rm mpi_main_with_rev_string.d e4mpi loadbalance_with_rev_string.d
@@ -389,6 +403,20 @@ e4shared: main.d $(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) $(DLINKFLAGS)
+
+# The complex_numbers flavour of the code is just a bare-bones simulator.
+# It has no Lua services or fancy gas models.
+e4complex: main.d $(EILMER_CORE_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_COMPLEX_FILES) \
+	$(GZIP_FILES) $(NM_FILES) $(UTIL_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main_complex.d > main_complex_with_rev_string.d
+	$(DMD) $(DFLAGS) $(OF)e4complex -version=complex_numbers \
+		-version=$(TECPLOT_BIN_VERSION_STR) \
+		main_complex_with_rev_string.d $(EILMER_CORE_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_COMPLEX_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(TECPLOT_FILES) $(DLINKFLAGS)
 
 e4mpi: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) $(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
