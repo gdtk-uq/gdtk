@@ -6,6 +6,9 @@
 
 module kinetics.thermochemical_reactor;
 
+import nm.complex;
+import nm.number;
+
 import gas;
 import gas.therm_perf_gas;
 import gas.powers_aslam_gas;
@@ -51,7 +54,7 @@ public:
     // some information about the local flow state beyond the usual gas state.
     abstract void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref double[] params);
+                         ref number[] params);
     
     // We will need to access this referenced model from the Lua functions
     // so it needs to be public.

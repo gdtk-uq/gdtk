@@ -10,6 +10,9 @@
 
 module gas.thermo.perf_gas_mix_eos;
 
+import nm.complex;
+import nm.number;
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.thermo.pvt_eos;
@@ -31,7 +34,7 @@ public:
       are up-to-date in GasState Q.
     +/
     @nogc override void update_pressure(ref GasState Q) const {
-        double Rmix = mass_average(Q, _R);
+        number Rmix = mass_average(Q, _R);
         Q.p = Q.rho*Rmix*Q.T;
     }
 
@@ -40,7 +43,7 @@ public:
       are up-to-date in GasState Q.
     +/
     @nogc override void update_density(ref GasState Q) const {
-        double Rmix = mass_average(Q, _R);
+        number Rmix = mass_average(Q, _R);
         Q.rho = Q.p/(Rmix*Q.T);
     }
 
@@ -49,7 +52,7 @@ public:
       are up-to-date in GasState Q.
     +/
     @nogc override void update_temperature(ref GasState Q) const {
-        double Rmix = mass_average(Q, _R);
+        number Rmix = mass_average(Q, _R);
         Q.T = Q.p/(Rmix*Q.rho);
     }
 

@@ -12,6 +12,8 @@ import std.stdio;
 import std.string;
 import std.math;
 import std.algorithm;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import gas;
@@ -115,11 +117,11 @@ final class ChemistryUpdate : ThermochemicalReactor {
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref double[] params)
+                         ref number[] params)
     {
         _Qinit.copy_values_from(Q);
         _gmodel.massf2conc(Q, _conc0);
-        double uTotal = _gmodel.internal_energy(Q);
+        number uTotal = _gmodel.internal_energy(Q);
 
         // 0. Evaluate the rate constants. 
         //    It helps to have these computed before doing other setup work.
@@ -298,8 +300,8 @@ chemistry update.";
 private:
     // Some memory workspace
     GasState _Qinit;
-    double[] _conc0;
-    double[] _concOut;
+    number[] _conc0;
+    number[] _concOut;
 } // end class ChemistryUpdate
 
 /++
@@ -322,7 +324,7 @@ public:
     {
         _rmech = rmech;
     }
-    abstract ResultOfStep opCall(double[] y0, double h, double[] yOut, ref double hSuggest);
+    abstract ResultOfStep opCall(number[] y0, double h, number[] yOut, ref double hSuggest);
 private:
     ReactionMechanism _rmech;
 }
@@ -365,7 +367,7 @@ public:
         _k6.length = _ndim;
     }
 
-    override ResultOfStep opCall(double[] y0, double h, double[] yOut, ref double hSuggest)
+    override ResultOfStep opCall(number[] y0, double h, number[] yOut, ref double hSuggest)
     {
         // 0. Set up the constants associated with the update formula
         // We place them in here for visibility reasons... no one else
@@ -379,25 +381,25 @@ public:
         
         // 1. Apply the formula to evaluate intermediate points
         _rmech.eval_rates(y0, _k1);
-        _yTmp[] = y0[] + h*(a21*_k1[]);
+        foreach (i; 0 .. _yTmp.length) { _yTmp[i] = y0[i] + h*(a21*_k1[i]); }
 
         _rmech.eval_rates(_yTmp, _k2);
-        _yTmp[] = y0[] + h*(a31*_k1[] + a32*_k2[]);
+        foreach (i; 0 .. _yTmp.length) { _yTmp[i] = y0[i] + h*(a31*_k1[i] + a32*_k2[i]); }
 
         _rmech.eval_rates(_yTmp, _k3);
-        _yTmp[] = y0[] + h*(a41*_k1[] + a42*_k2[] + a43*_k3[]);
+        foreach (i; 0 .. _yTmp.length) { _yTmp[i] = y0[i] + h*(a41*_k1[i] + a42*_k2[i] + a43*_k3[i]); }
 
         _rmech.eval_rates(_yTmp, _k4);
-        _yTmp[] = y0[] + h*(a51*_k1[] + a52*_k2[] + a53*_k3[] + a54*_k4[]);
+        foreach (i; 0 .. _yTmp.length) { _yTmp[i] = y0[i] + h*(a51*_k1[i] + a52*_k2[i] + a53*_k3[i] + a54*_k4[i]); }
 
         _rmech.eval_rates(_yTmp, _k5);
-        _yTmp[] = y0[] + h*(a61*_k1[] + a62*_k2[] + a63*_k3[] + a64*_k4[] + a65*_k5[]);
+        foreach (i; 0 .. _yTmp.length) { _yTmp[i] = y0[i] + h*(a61*_k1[i] + a62*_k2[i] + a63*_k3[i] + a64*_k4[i] + a65*_k5[i]); }
 
         _rmech.eval_rates(_yTmp, _k6);
         
         // 2. Compute new value and error esimate
-        yOut[] = y0[] + h*(b51*_k1[] + b53*_k3[] + b54*_k4[] + b56*_k6[]);
-        _yErr[] = yOut[] - (y0[] + h*(b41*_k1[] + b43*_k3[] + b44*_k4[] + b45*_k5[] + b46*_k6[]));
+        foreach (i; 0 .. yOut.length) { yOut[i] = y0[i] + h*(b51*_k1[i] + b53*_k3[i] + b54*_k4[i] + b56*_k6[i]); }
+        foreach (i; 0 .. _yErr.length) { _yErr[i] = yOut[i] - (y0[i] + h*(b41*_k1[i] + b43*_k3[i] + b44*_k4[i] + b45*_k5[i] + b46*_k6[i])); }
 
         // 3. Lastly, use error estimate as a means to suggest
         //    a new timestep.
@@ -409,8 +411,8 @@ public:
         double rtol = _tolerance;
 
         foreach ( i; 0.._ndim ) {
-            sk = atol + rtol*max(fabs(y0[i]), fabs(yOut[i]));
-            err += (_yErr[i]/sk)*(_yErr[i]/sk);
+            sk = atol + rtol*max(fabs(y0[i].re), fabs(yOut[i].re));
+            err += (_yErr[i].re/sk)*(_yErr[i].re/sk);
         }
         err = sqrt(err/_ndim);
         // Now use error as an estimate for new step size
@@ -443,8 +445,8 @@ public:
 private:
     int _ndim;
     double _tolerance;
-    double[] _yTmp, _yErr;
-    double[] _k1, _k2, _k3, _k4, _k5, _k6;
+    number[] _yTmp, _yErr;
+    number[] _k1, _k2, _k3, _k4, _k5, _k6;
 }
 
 /++
@@ -493,7 +495,7 @@ public:
         _alphabar.length = _ndim;
     }
 
-    override ResultOfStep opCall(double[] y0, double h, double[] yOut, ref double hSuggest)
+    override ResultOfStep opCall(number[] y0, double h, number[] yOut, ref double hSuggest)
     {
         // 1. Predictor Step
         _rmech.eval_split_rates(y0, _q0, _L0);
@@ -548,36 +550,36 @@ private:
     double _delta;
     int _max_iter;
     immutable double _ZERO_EPS = 1.0e-50;
-    double[] _yTmp, _yp, _yp0,  _yc, _q0, _L0, _p0, _pp, _qtilda, _pbar, _qp, _Lp, _alpha, _alphabar;
+    number[] _yTmp, _yp, _yp0,  _yc, _q0, _L0, _p0, _pp, _qtilda, _pbar, _qp, _Lp, _alpha, _alphabar;
 
     // Private functions.
-    void p_on_y(double[] L, double[] y, double[] p_y) {
+    void p_on_y(number[] L, number[] y, number[] p_y) {
         foreach( i; 0.._ndim) 
             p_y[i] = L[i] / (y[i] + _ZERO_EPS);
         return;
     }
 
-    void alpha_compute(double[] p, double[] alpha, double h) {
+    void alpha_compute(number[] p, number[] alpha, double h) {
         foreach ( i; 0.._ndim ) {
-            double r = 1.0/(p[i]*h+_ZERO_EPS);  // ZERO_EPS prevents division by 0 
+            number r = 1.0/(p[i]*h+_ZERO_EPS);  // ZERO_EPS prevents division by 0 
             alpha[i] = (180.0*r*r*r+60.0*r*r+11.0*r+1.0)/(360.0*r*r*r+60.0*r*r+12.0*r+1.0);
         }
     }
 
-    void update_conc(double[] yTmp, double[] y0, double[] q, double[] p, double[] alpha, double h) {
+    void update_conc(number[] yTmp, number[] y0, number[] q, number[] p, number[] alpha, double h) {
         foreach ( i; 0.._ndim )
             yTmp[i] = y0[i] + (h*(q[i]-p[i]*y0[i]))/(1.0+alpha[i]*h*p[i]);
     }
 
-    bool test_converged(in double[] yc, in double[] yp, double h) {
+    bool test_converged(in number[] yc, in number[] yp, double h) {
         bool passesTest = true;
         double test = 0.0;
         foreach ( i; 0.._ndim ) {
             if ( yc[i] < _ZERO_EPS )
                 continue;
-            test = fabs(yc[i] - yp[i]);
+            test = fabs(yc[i].re - yp[i].re);
             // +delta from Qureshi and Prosser (2007)
-            if ( test >= (_eps1 * (yc[i] + _delta)) ) {
+            if ( test >= (_eps1 * (yc[i].re + _delta)) ) {
                 passesTest = false;
                 break; // no need to continue testing remaining species
             }
@@ -585,7 +587,7 @@ private:
         return passesTest;
     }
 
-    double step_suggest(double h, double[] yc, double[] yp)
+    double step_suggest(double h, number[] yc, number[] yp)
     {
         double test = 0.0;
         double sigma = 0.0;
@@ -594,7 +596,7 @@ private:
         foreach (i; 0.._ndim) {
             if ( yc[i] < _ZERO_EPS )
                 continue;
-            test = fabs( yc[i] - yp[i]) / (_eps2*(yc[i]+ _delta));
+            test = fabs( yc[i].re - yp[i].re) / (_eps2*(yc[i].re+ _delta));
             if ( test > sigma )
                 sigma = test;
         }

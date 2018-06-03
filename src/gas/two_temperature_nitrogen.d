@@ -13,6 +13,8 @@ module gas.two_temperature_nitrogen;
 import std.math;
 import std.conv;
 import std.stdio;
+import nm.complex;
+import nm.number;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -66,12 +68,12 @@ public:
         Q.u_modes[0] = (_R_N2*_theta_N2)/(exp(_theta_N2/Q.T_modes[0]) - 1.0);
     }
 
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         throw new GasModelException("update_thermo_from_ps not implemented in TwoTemperatureNitrogen.");
     }
 
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new GasModelException("update_thermo_from_hs not implemented in TwoTemperatureNitrogen.");
     }
@@ -88,53 +90,53 @@ public:
         // Constants are from Wright et al.
         // For details see Daniel Potter's PhD thesis.
         double kB = Boltzmann_constant;
-        double T = Q.T;
-        double expnt = _A_22*(log(T))^^2 + _B_22*log(T) + _C_22;
-        double pi_sig2_Omega_22 = exp(_D_22)*pow(T, expnt) * 1.0e-20; // Ang^2 --> m^2
-        double Delta_22 = (16./5)*sqrt(2.0*_mu/(PI*kB*T))*pi_sig2_Omega_22;
+        number T = Q.T;
+        number expnt = _A_22*(log(T))^^2 + _B_22*log(T) + _C_22;
+        number pi_sig2_Omega_22 = exp(_D_22)*pow(T, expnt) * 1.0e-20; // Ang^2 --> m^2
+        number Delta_22 = (16./5)*sqrt(2.0*_mu/(to!double(PI)*kB*T))*pi_sig2_Omega_22;
         Q.mu = _m / Delta_22;
         
-        double k_trans = (15./4)*kB*(1./(alpha*Delta_22));
+        number k_trans = (15./4)*kB*(1./(alpha*Delta_22));
         // Compute k_rot as function of T
         expnt = _A_11*(log(T))^^2 + _B_11*log(T) + _C_11;
-        double pi_sig2_Omega_11 = exp(_D_11)*pow(T, expnt) * 1.0e-20; // Ang^2 --> m^2
-        double Delta_11 = (8./3)*sqrt(2.0*_mu/(PI*kB*T))*pi_sig2_Omega_11;
-        double k_rot = kB*(1./Delta_11);
+        number pi_sig2_Omega_11 = exp(_D_11)*pow(T, expnt) * 1.0e-20; // Ang^2 --> m^2
+        number Delta_11 = (8./3)*sqrt(2.0*_mu/(to!double(PI)*kB*T))*pi_sig2_Omega_11;
+        number k_rot = kB*(1./Delta_11);
         Q.k = k_trans + k_rot;
         // Compute k_vib as function of Tv
-        double Tv = Q.T_modes[0];
-        double Cvv_R = (_theta_N2/(2.0*Tv)/(sinh(_theta_N2/(2.0*Tv))))^^2;
+        number Tv = Q.T_modes[0];
+        number Cvv_R = (_theta_N2/(2.0*Tv)/(sinh(_theta_N2/(2.0*Tv))))^^2;
         expnt = _A_11*(log(Tv))^^2 + _B_11*log(Tv) + _C_11;
         pi_sig2_Omega_11 = exp(_D_11)*pow(Tv, expnt) * 1.0e-20; // Ang^2 --> m^2
-        Delta_11 = (8./3)*sqrt(2.0*_mu/(PI*kB*Tv))*pi_sig2_Omega_11;
+        Delta_11 = (8./3)*sqrt(2.0*_mu/(to!double(PI)*kB*Tv))*pi_sig2_Omega_11;
         Q.k_modes[0] = kB*(Cvv_R/Delta_11);
     }
 
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return (5./2.)*_R_N2;
+        return to!number((5./2.)*_R_N2);
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
-        return (7./2.)*_R_N2;
+        return to!number((7./2.)*_R_N2);
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
         return _R_N2*Q.T;
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return _R_N2;
+        return to!number(_R_N2);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u + Q.u_modes[0]; // all internal energy
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + Q.u_modes[0] + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         throw new GasModelException("entropy not implemented in TwoTemperatureNitrogen.");
     }

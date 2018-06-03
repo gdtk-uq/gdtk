@@ -21,14 +21,18 @@ module gas.thermo.therm_perf_gas_mix_eos;
 import std.math;
 import std.stdio;
 import std.string;
+import std.conv;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
+import util.lua;
+import util.lua_service;
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.physical_constants;
 import gas.thermo.evt_eos;
 import gas.thermo.cea_thermo_curves;
-import util.lua;
-import util.lua_service;
 
 // These bracket limits are conservative limits that
 // are used when we fail to bracket the temperature using
@@ -63,14 +67,14 @@ public:
     }
     override void update_temperature(ref GasState Q)
     {
-        double Tsave = Q.T; // Keep a copy for diagnostics purpose.
+        number Tsave = Q.T; // Keep a copy for diagnostics purpose.
         // We'll adjust the temperature estimate until the energy is within TOL Joules.
         // Surely 1/1000 of a Joule is sufficient precision when we are talking of megaJoules.
         double TOL = 1.0e-3;
         // The "target" energy is the value we will iterate to find.
         // We search (via a numerical method) for the temperature
         // value that gives this target energy.
-        double e_tgt = Q.u;
+        number e_tgt = Q.u;
         // delT is the initial guess for a bracket size.
         // We set this quite agressivley at 100 K hoping to
         // keep the number of iterations required to a small
@@ -79,16 +83,20 @@ public:
         // should not change too much. If it does, there should
         // be enough robustness in the bracketing and
         // the function-solving method to handle this.
-        double delT = 100.0;
-        double T1 = fmax(Q.T - delT/2, T_MIN);
-        double T2 = T1 + delT;
+        number delT = 100.0;
+        version(complex_numbers) {
+            number T1 = nm.complex.fmax(Q.T - 0.5*delT, to!number(T_MIN));
+        } else {
+            double T1 = std.math.fmax(Q.T - 0.5*delT, T_MIN);
+        }
+        number T2 = T1 + delT;
 
-        if (bracket(T1, T2, e_tgt, Q, T_MIN) == -1) {
+        if (bracket(T1, T2, e_tgt, Q, to!number(T_MIN)) == -1) {
             // We have a fall back if our aggressive search failed.
             // We apply a very conservative range:
             T1 = T_bracket_low;
             T2 = T_bracket_high;
-            if (bracket(T1, T2, e_tgt, Q, T_MIN) == -1) {
+            if (bracket(T1, T2, e_tgt, Q, to!number(T_MIN)) == -1) {
                 string msg = "The 'bracket' function failed to find temperature values\n";
                 msg ~= "that bracketed the zero function in ThermallyPerfectGasMixEOS.eval_temperature().\n";
                 msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
@@ -125,7 +133,7 @@ private:
     double[] _R;
     CEAThermo[] _curves;
     // Private working arrays
-    double[] _energy;
+    number[] _energy;
 
     //--------------------------------------------------------------------------------
     // Bracketing and solve functions copied in from nm/bracketing.d and nm/brent.d
@@ -140,7 +148,7 @@ private:
     import std.math;
     import std.algorithm;
 
-    double zeroFun(double T, double e_tgt, ref GasState Q)
+    number zeroFun(number T, number e_tgt, ref GasState Q)
     // Helper function for update_temperature.
     {
         Q.T = T;
@@ -148,25 +156,33 @@ private:
         return e_tgt - Q.u;
     }
 
-    int bracket(ref double x1, ref double x2, double e_tgt, ref GasState Q,
-                double x1_min = -1.0e99, double x2_max = +1.0e99,
+    int bracket(ref number x1, ref number x2, number e_tgt, ref GasState Q,
+                number x1_min = -1.0e99, number x2_max = +1.0e99,
                 int max_try=50, double factor=1.6)
     {
         if ( x1 == x2 ) {
             throw new GasModelException("Bad initial range given to bracket.");
         }
-        double f1 = zeroFun(x1, e_tgt, Q);
-        double f2 = zeroFun(x2, e_tgt, Q);
+        number f1 = zeroFun(x1, e_tgt, Q);
+        number f2 = zeroFun(x2, e_tgt, Q);
         for ( int i = 0; i < max_try; ++i ) {
             if ( f1*f2 < 0.0 ) return 0; // we have success
             if ( abs(f1) < abs(f2) ) {
                 x1 += factor * (x1 - x2);
                 //prevent the bracket from being expanded beyond a specified domain
-                x1 = fmax(x1_min, x1);
+                version(complex_numbers) {
+                    x1 = nm.complex.fmax(x1_min, x1);
+                } else {
+                    x1 = std.math.fmax(x1_min, x1);
+                }
                 f1 = zeroFun(x1, e_tgt, Q);
             } else {
                 x2 += factor * (x2 - x1);
-                x2 = fmin(x2_max, x2);
+                version(complex_numbers) {
+                    x2 = nm.complex.fmin(x2_max, x2);
+                } else {
+                    x2 = std.math.fmin(x2_max, x2);
+                }
                 f2 = zeroFun(x2, e_tgt, Q);
             }
         }
@@ -189,14 +205,14 @@ private:
      * Returns:
      *    b, a point near the root.
      */
-    double solve(double x1, double x2, double tol, double e_tgt, ref GasState Q) 
+    number solve(number x1, number x2, double tol, number e_tgt, ref GasState Q) 
     {
         const int ITMAX = 100;           // Maximum allowed number of iterations
         const double EPS=double.epsilon; // Machine floating-point precision
-        double a = x1;
-        double b = x2;
-        double fa = zeroFun(a, e_tgt, Q);
-        double fb = zeroFun(b, e_tgt, Q);
+        number a = x1;
+        number b = x2;
+        number fa = zeroFun(a, e_tgt, Q);
+        number fb = zeroFun(b, e_tgt, Q);
         if (abs(fa) == 0.0) { return a; }
         if (abs(fb) == 0.0) { return b; }
         if (fa * fb > 0.0) {
@@ -205,11 +221,11 @@ private:
             msg ~= format("x1=%g f(x1)=%g x2=%g f(x2)=%g\n", x1, fa, x2, fb); 
             throw new GasModelException(msg);
         }
-        double c = b;
-        double fc = fb;
+        number c = b;
+        number fc = fb;
         // Define d, e outside the loop body so that
         // they don't get initialized to nan each pass.
-        double d, e;
+        number d, e;
         foreach (iter; 0 .. ITMAX) {
             if ((fb > 0.0 && fc > 0.0) || (fb < 0.0 && fc < 0.0)) {
                 // On first pass fc==fb and we expect to enter here.
@@ -226,30 +242,30 @@ private:
                 fc = fa;
             }
             // Convergence check
-            double tol1 = 2.0*EPS*abs(b)+0.5*tol;
-            double xm = 0.5*(c-b);
+            number tol1 = 2.0*EPS*abs(b)+0.5*tol;
+            number xm = 0.5*(c-b);
             if (abs(xm) <= tol1 || fb == 0.0) {
                 // If converged, let's return the best estimate
                 return b;
             }
             if (abs(e) >= tol1 && abs(fa) > abs(fb)) {
                 // Attempt inverse quadratic interpolation for new bound
-                double p, q;
-                double s = fb/fa;
+                number p, q;
+                number s = fb/fa;
                 if (a == c) {
                     p = 2.0*xm*s;
                     q = 1.0-s;
                 } else {
                     q = fa/fc;
-                    double r = fb/fc;
+                    number r = fb/fc;
                     p = s*(2.0*xm*q*(q-r)-(b-a)*(r-1.0));
                     q = (q-1.0)*(r-1.0)*(s-1.0);
                 }
                 // Check whether quadratic interpolation is in bounds
                 if (p > 0.0) { q = -q; }
                 p = abs(p);
-                double min1 = 3.0*xm*q-abs(tol1*q);
-                double min2 = abs(e*q);
+                number min1 = 3.0*xm*q-abs(tol1*q);
+                number min2 = abs(e*q);
                 if (2.0*p < (min1 < min2 ? min1 : min2)) {
                     // Accept interpolation
                     e = d;
@@ -271,7 +287,11 @@ private:
             if (abs(d) > tol1) {
                 b += d;
             } else {
-                b += copysign(tol1, xm);
+                version(complex_numbers) {
+                    b += nm.complex.copysign(tol1, xm);
+                } else {
+                    b += std.math.copysign(tol1, xm);
+                }
             }
             fb = zeroFun(b, e_tgt, Q);      
         }

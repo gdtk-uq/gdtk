@@ -16,12 +16,14 @@ import std.math;
 import std.algorithm;
 import std.string;
 import std.conv;
+import nm.complex;
+import nm.number;
+import util.lua;
+import util.lua_service;
 
 import gas.gas_model;
 import gas.gas_state;
 import gas.physical_constants;
-import util.lua;
-import util.lua_service;
 
 /* Output from the CEA lookuptable is : 
    {cv_hat, cv, R_hat, cp_hat, gamma_hat, mu, k }  */
@@ -159,7 +161,7 @@ public:
         }
         lua_pop(L, 1); // pop data table off.
         
-        _mol_masses ~= s_molecular_weight(0); 
+        _mol_masses ~= s_molecular_weight(0).re; 
   
     } // End constructor  
 
@@ -187,7 +189,7 @@ public:
     } 
     
     void determine_interpolants(const GasState Q, ref int ir, ref int ie,
-                                ref double lrfrac, ref double efrac) const
+                                ref number lrfrac, ref number efrac) const
     {
         if ( Q.rho <= 0.0) {
             string msg;
@@ -198,9 +200,9 @@ public:
         }
 
         // Find the enclosing cell
-        double logrho = log10(Q.rho);
-        ir = cast(int)((logrho - _lrmin) / _dlr);
-        ie = cast (int)((Q.u - _emin) / _de);
+        double logrho = log10(Q.rho.re);
+        ir = to!int((logrho - _lrmin) / _dlr);
+        ie = to!int((Q.u.re - _emin) / _de);
 
         // Make sure that we don't try to access data outside the
         // actual arrays.
@@ -214,7 +216,7 @@ public:
         efrac  = (Q.u - (_emin +ie* _de)) / _de;
     
         // Limit the extrapolation to small distances.
-        const double EXTRAP_MARGIN = 0.2;
+        const number EXTRAP_MARGIN = 0.2;
         lrfrac = max(lrfrac, -EXTRAP_MARGIN);
         lrfrac = min(lrfrac, 1.0+EXTRAP_MARGIN);
         efrac = max(efrac, -EXTRAP_MARGIN);
@@ -223,7 +225,7 @@ public:
 
     override void update_thermo_from_rhou(GasState Q) const
     {
-        double efrac, lrfrac, Cv_eff, R_eff, g_eff;
+        number efrac, lrfrac, Cv_eff, R_eff, g_eff;
         int    ir, ie;
    
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
@@ -270,8 +272,8 @@ public:
 
     override void update_trans_coeffs(GasState Q) const
     {
-        double efrac, lrfrac;
-        double mu_eff, k_eff;
+        number efrac, lrfrac;
+        number mu_eff, k_eff;
         int ir, ie;
 
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
@@ -303,11 +305,11 @@ public:
        }
     */
 
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     { 
-        double efrac, lrfrac;
+        number efrac, lrfrac;
         int    ir, ie;
-        double Cv_actual;
+        number Cv_actual;
 
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
@@ -325,11 +327,11 @@ public:
         return Cv_actual;
     }
 
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
-        double efrac, lrfrac;
+        number efrac, lrfrac;
         int ir, ie;
-        double Cv_actual, R_eff;
+        number Cv_actual, R_eff;
 
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
@@ -352,11 +354,11 @@ public:
         return (Cv_actual + R_eff);
     }
 
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        double efrac, lrfrac;
+        number efrac, lrfrac;
         int    ir, ie;
-        double R_eff;
+        number R_eff;
 
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
         catch (Exception caughtException) {
@@ -374,7 +376,7 @@ public:
         return R_eff;
     }
 
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         // This method should never be called expecting quality data
         // because the LUT gas doesn not keep the species information.
@@ -390,24 +392,24 @@ public:
     }
 
 
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         // This method assumes that the internal energy,
         // pressure and density are up-to-date in the
         // GasData object. Then enthalpy is computed
         // from definition.
 
-        double h = Q.u + Q.p/Q.rho;
+        number h = Q.u + Q.p/Q.rho;
         return h;
     }
 
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
-        double s;
+        number s;
 
         if ( with_entropy ==1 ) {
             int ir, ie;
-            double lrfrac, efrac;
+            number lrfrac, efrac;
 
             try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
             catch (Exception caughtException) {
@@ -417,20 +419,20 @@ public:
                 msg ~= to!string(caughtException);
                 throw new Exception(msg);
             }
-            double Cv_eff = (1.0 - efrac) * (1.0 - lrfrac) * _Cv_hat[ie][ir] +
+            number Cv_eff = (1.0 - efrac) * (1.0 - lrfrac) * _Cv_hat[ie][ir] +
                 efrac         * (1.0 - lrfrac) * _Cv_hat[ie+1][ir] +
                 efrac         * lrfrac         * _Cv_hat[ie+1][ir+1] +
                 (1.0 - efrac) * lrfrac         * _Cv_hat[ie][ir+1];
-            double R_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _R_hat[ie][ir] +
+            number R_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _R_hat[ie][ir] +
                 efrac         * (1.0 - lrfrac) * _R_hat[ie+1][ir] +
                 efrac         * lrfrac         * _R_hat[ie+1][ir+1] +
                 (1.0 - efrac) * lrfrac         * _R_hat[ie][ir+1];
-            double Cp_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _Cp_hat[ie][ir] +
+            number Cp_eff  = (1.0 - efrac) * (1.0 - lrfrac) * _Cp_hat[ie][ir] +
                 efrac         * (1.0 - lrfrac) * _Cp_hat[ie+1][ir] +
                 efrac         * lrfrac         * _Cp_hat[ie+1][ir+1] +
                 (1.0 - efrac) * lrfrac         * _Cp_hat[ie][ir+1];
-            double T = Q.u / Cv_eff;
-            double p = Q.rho*R_eff*T;
+            number T = Q.u / Cv_eff;
+            number p = Q.rho*R_eff*T;
             s = _s1 + Cp_eff*log(T/_T1) - R_eff*log(p/_p1); 
         }
         else {
@@ -440,16 +442,16 @@ public:
             writeln( "Using an ideal gas model" );
             int ie = 0; // coldest
             int ir = _irsteps - 1; // quite dense 
-            double R = _R_hat[ie][ir]; // J/kg/deg-K
-            double Cp = R + _Cv_hat[ie][ir];
-            const double T1 = 300.0; // degrees K: This value and the next was type constexpr
-            const double p1 = 100.0e3; // Pa
+            number R = _R_hat[ie][ir]; // J/kg/deg-K
+            number Cp = R + _Cv_hat[ie][ir];
+            const number T1 = 300.0; // degrees K: This value and the next was type constexpr
+            const number p1 = 100.0e3; // Pa
             s = Cp * log(Q.T/T1) - R * log(Q.p/p1);
         } 
         return s;
     }
 
-    double s_molecular_weight(int isp) const
+    number s_molecular_weight(int isp) const
     { 
         // This method is not very meaningful for an equilibrium
         // gas.  The molecular weight is best obtained from
@@ -464,19 +466,19 @@ public:
     
         int ie = 0; // coldest
         int ir = _irsteps -1; // quite dense    
-        double Rgas = _R_hat[ie][ir]; // J/kg/deg-K
+        number Rgas = _R_hat[ie][ir]; // J/kg/deg-K
 
         /* Eilmer3 converts these values to kg/kmol - I am keeping in SI units
          * immutable R_universal_kmol = R_universal * 1000;
-         * double M = R_universal_kmol / Rgas; */
+         * number M = R_universal_kmol / Rgas; */
 
-        double M = R_universal / Rgas;    
+        number M = R_universal / Rgas;    
         return M;
     }
 
     override void update_sound_speed(GasState Q) const
     {
-        double efrac, lrfrac, Cv_eff, R_eff, g_eff;
+        number efrac, lrfrac, Cv_eff, R_eff, g_eff;
         int    ir, ie;
    
         try { determine_interpolants(Q, ir, ie, lrfrac, efrac); }
@@ -521,11 +523,11 @@ public:
     {
         update_thermo_state_rhop(this, Q);
     } 
-    override void update_thermo_from_ps(GasState Q, double s) 
+    override void update_thermo_from_ps(GasState Q, number s) 
     {
         update_thermo_state_ps(this, Q, s);
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) 
+    override void update_thermo_from_hs(GasState Q, number h, number s) 
     {
         update_thermo_state_hs(this, Q, h, s);
     }
@@ -535,7 +537,7 @@ public:
     // Factor for computing forward difference derivatives
     immutable double Epsilon = 1.0e-6;
 
-    override double dpdrho_const_T(in GasState Q)
+    override number dpdrho_const_T(in GasState Q)
     {
         // Cannot be directly computed from look up table
         // Apply forward finite difference in calling update from p, rho
@@ -544,15 +546,15 @@ public:
         Q_temp.copy_values_from(Q);
 
         // Save values for derivative calculation
-        double p = Q_temp.p;
-        double rho = Q_temp.rho;
-        double h = Epsilon * rho; // Step size for varying rho
-        double rho_step = rho + h; // Define a small step size
+        number p = Q_temp.p;
+        number rho = Q_temp.rho;
+        number h = Epsilon * rho; // Step size for varying rho
+        number rho_step = rho + h; // Define a small step size
         Q_temp.rho = rho_step; // Modify density slightly
 
         // Evaluate gas state due to perturbed rho, holding constant T
         this.update_thermo_from_rhoT(Q_temp);
-        double p_step = Q_temp.p;
+        number p_step = Q_temp.p;
         return ( (p_step - p) / h);
      }
 
@@ -597,32 +599,32 @@ version(uniform_lut_test)
 
         // An arbitrary state was defined for 'Air', massf=1, in CEA2
         // using the utility cea2_gas.py
-        double p_given = 1.0e6; // Pa
-        double T_given = 1.0e3; // K
-        double rho_given = 3.4837; // kg/m^^3
+        number p_given = 1.0e6; // Pa
+        number T_given = 1.0e3; // K
+        number rho_given = 3.4837; // kg/m^^3
         // CEA uses a reference temperature of 298K (Eilmer uses 0K) so the
         // temperature was offset by amount e_offset 
-        double e_CEA =  456600; // J/kg
-        double e_offset = 303949.904; // J/kg
-        double e_given = e_CEA + e_offset; // J/kg
-        double h_CEA = 743650; // J/kg
-        double h_given = h_CEA + e_offset; // J/kg 
-        double a_given = 619.2; // m/s
-        double s_given = 7475.7; // J(kg.K)
-        double R_given = 287.036; // J/(kg.K)
-        double gamma_given = 1.3866;
-        double Cp_given = 1141; // J/(kg.K)
-        double mu_given = 4.3688e-05; // Pa.s
-        double k_given = 0.0662; // W/(m.K)
-        double Cv_given = e_given / T_given; // J/(kg.K)
+        number e_CEA =  456600; // J/kg
+        number e_offset = 303949.904; // J/kg
+        number e_given = e_CEA + e_offset; // J/kg
+        number h_CEA = 743650; // J/kg
+        number h_given = h_CEA + e_offset; // J/kg 
+        number a_given = 619.2; // m/s
+        number s_given = 7475.7; // J(kg.K)
+        number R_given = 287.036; // J/(kg.K)
+        number gamma_given = 1.3866;
+        number Cp_given = 1141; // J/(kg.K)
+        number mu_given = 4.3688e-05; // Pa.s
+        number k_given = 0.0662; // W/(m.K)
+        number Cv_given = e_given / T_given; // J/(kg.K)
                 
         auto Q = new GasState(gm, p_given, T_given);
         // Return values not stored in the GasState
-        double Cv = gm.dudT_const_v(Q);
-        double Cp = gm.dhdT_const_p(Q);
-        double R = gm.gas_constant(Q);
-        double h = gm.enthalpy(Q);
-        double s = gm.entropy(Q);
+        number Cv = gm.dudT_const_v(Q);
+        number Cp = gm.dhdT_const_p(Q);
+        number R = gm.gas_constant(Q);
+        number h = gm.enthalpy(Q);
+        number s = gm.entropy(Q);
 
         assert(gm.n_modes == 0, failedUnitTest());
         assert(gm.n_species == 1, failedUnitTest());

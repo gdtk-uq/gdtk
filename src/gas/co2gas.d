@@ -4,25 +4,33 @@
  *
  * Author: Jonathan H.
  * Version: 2015-07-27: initial cut, to explore options.
+ * PJ 2018-06-03
+ * We make the signatures compatible with complex numbers but
+ * we do not actually pass the complex values through to
+ * Jonathan's functions.
  */
 
 module gas.co2gas;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
-import gas.diffusion.sutherland_viscosity;
-import gas.diffusion.sutherland_therm_cond;
 import std.math;
 import std.stdio;
 import std.string;
 import std.file;
 import std.json;
 import std.conv;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import util.msg_service;
 import core.stdc.stdlib : exit;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
+import gas.diffusion.sutherland_viscosity;
+import gas.diffusion.sutherland_therm_cond;
+
 
 class CO2Gas: GasModel {
 public:
@@ -33,8 +41,12 @@ public:
         _species_names ~= "CO2";
         _mol_masses ~= 0.04401121121333065;// value for sea-level air
         create_species_reverse_lookup();
+        version(complex_numbers) {
+            throw new Error("Do not use with complex numbers.");
+        }
     }
-        //NOT EXACTLY SURE HOW TO DEAL WITH THIS PART YET -- I am pretty sure it is used for selecting a certain gas model
+    //NOT EXACTLY SURE HOW TO DEAL WITH THIS PART YET --
+    // I (Jonathan) am pretty sure it is used for selecting a certain gas model
     this(lua_State *L) {
         this();
         // Bring table to TOS
@@ -90,40 +102,35 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        Q.rho = updateRho_PT(Q.p, Q.T);
-        Q.u = updateEnergy_rhoT(Q.rho, Q.T);
+        Q.rho = updateRho_PT(Q.p.re, Q.T.re);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        Q.T = updateTemperature_rhou(Q.rho, Q.u);
-        Q.p = updatePressure_rhoT(Q.rho,Q.T);
+        Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
+        Q.p = updatePressure_rhoT(Q.rho.re,Q.T.re);
     }
     override void update_thermo_from_rhoT(GasState Q) const//DONE
     {
-        Q.p = updatePressure_rhoT(Q.rho, Q.T);
-        Q.u = updateEnergy_rhoT(Q.rho, Q.u);
-
+        Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.u.re);
     }
-
-
     override void update_thermo_from_rhop(GasState Q) const
     {
-        Q.u = updateEnergy_Prho(Q.p, Q.rho);//might want to fix the order that this solves in
-        Q.T = updateTemperature_rhou(Q.rho, Q.u);
-        
+        Q.u = updateEnergy_Prho(Q.p.re, Q.rho.re );//might want to fix the order that this solves in
+        Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
     }
-    
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
     override void update_sound_speed(GasState Q) const
     {
-        Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T);
+        Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
     }
     override void update_trans_coeffs(GasState Q) const
     {
@@ -135,32 +142,32 @@ public:
         throw new Exception("not implemented");
     }
     */
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return get_de_dT(Q.rho,Q.T);
+        return to!number(get_de_dT(Q.rho.re, Q.T.re));
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         return R*Q.T;
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return R_universal/_mol_masses[0];
+        return to!number(R_universal/_mol_masses[0]);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }

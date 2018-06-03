@@ -21,16 +21,20 @@
 module gas.diffusion.wilke_mixing_therm_cond;
 
 import std.math;
+import nm.complex;
+import nm.number;
+import util.msg_service;
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.therm_cond;
-import util.msg_service;
 
 class WilkeMixingThermCond : ThermalConductivity {
 public:
     this(in ThermalConductivity[] tcms, in double[] mol_masses)
     in {
-        assert(tcms.length == mol_masses.length, brokenPreCondition("tcms.length and mol_masses.length", __LINE__, __FILE__));
+        assert(tcms.length == mol_masses.length,
+               brokenPreCondition("tcms.length and mol_masses.length", __LINE__, __FILE__));
     }
     body {
         foreach (tcm; tcms) {
@@ -60,7 +64,7 @@ public:
         return new WilkeMixingThermCond(this);
     }
 
-    override double eval(ref const(GasState) Q, double T) {
+    override number eval(ref const(GasState) Q, number T) {
         // 1. Evaluate the mole fractions
         massf2molef(Q.massf, _mol_masses, _x);
         // 2. Calculate the component viscosities
@@ -70,14 +74,14 @@ public:
         // 3. Calculate interaction potentials
         for ( auto i = 0; i < Q.massf.length; ++i ) {
             for ( auto j = 0; j < Q.massf.length; ++j ) {
-                double numer = pow((1.0 + sqrt(_k[i]/_k[j])*pow(_mol_masses[j]/_mol_masses[i], 0.25)), 2.0);
-                double denom = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
+                number numer = pow((1.0 + sqrt(_k[i]/_k[j])*pow(_mol_masses[j]/_mol_masses[i], 0.25)), 2.0);
+                number denom = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
                 _phi[i][j] = numer/denom;
             }
         }
         // 4. Apply mixing formula
-        double sum;
-        double k = 0.0;
+        number sum;
+        number k = 0.0;
         for ( auto i = 0; i < Q.massf.length; ++i ) {
             if ( _x[i] < SMALL_MOLE_FRACTION ) continue;
             sum = 0.0;
@@ -94,9 +98,9 @@ private:
     ThermalConductivity[] _tcms; // component viscosity models
     double[] _mol_masses; // component molecular weights
     // Working array space
-    double[] _x;
-    double[] _k;
-    double[][] _phi;
+    number[] _x;
+    number[] _k;
+    number[][] _phi;
 }
 
 
@@ -106,7 +110,7 @@ version(wilke_mixing_therm_cond_test) {
         import std.stdio;
         import gas.diffusion.sutherland_therm_cond;
         // Placeholder test. Redo with CEA curves.
-        double T = 300.0;
+        number T = 300.0;
         auto tcm_N2 = new SutherlandThermCond(273.0, 0.0242, 150.0);
         auto tcm_O2 = new SutherlandThermCond(273.0, 0.0244, 240.0);
         auto tcm = new WilkeMixingThermCond([tcm_N2, tcm_O2], [28.0e-3, 32.0e-3]);

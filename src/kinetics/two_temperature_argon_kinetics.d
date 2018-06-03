@@ -15,8 +15,10 @@
 module kinetics.two_temperature_argon_kinetics;
 
 import std.stdio : writeln;
-import std.math : exp, log, pow, sqrt, PI;
+import std.math;
 import std.conv : to;
+import nm.complex;
+import nm.number;
 
 import gas;
 import util.lua;
@@ -49,68 +51,68 @@ final class UpdateArgonFrac : ThermochemicalReactor {
     
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref double[] params)
+                         ref number[] params)
     {
         if (Q.T > 3000.0) {
-        //writeln("Running a single step of the chemistry update");
+            //writeln("Running a single step of the chemistry update");
 
-        double m_Ar = 6.6335209e-26; //mass of argon (kg)
-        double m_e = 9.10938e-31; //mass of electron (kg)
+            double m_Ar = 6.6335209e-26; //mass of argon (kg)
+            double m_e = 9.10938e-31; //mass of electron (kg)
         
-        double Kb = Boltzmann_constant;
-        double Av = Avogadro_number;
+            double Kb = Boltzmann_constant;
+            double Av = Avogadro_number;
         
-        double alpha;
+            number alpha;
 
-        double n_e;
-        double n_Ar;
-        double kfA;
-        double kfe;
-        double krA;
-        double kre;
+            number n_e;
+            number n_Ar;
+            number kfA;
+            number kfe;
+            number krA;
+            number kre;
 
-        double ne_dot_A;
-        double ne_dot_e; 
-        double ne_dot;
+            number ne_dot_A;
+            number ne_dot_e; 
+            number ne_dot;
 
-        double Q_ea; 
-        double Q_ei;
+            number Q_ea; 
+            number Q_ei;
 
-        double v_ea;
-        double v_ei;
+            number v_ea;
+            number v_ei;
 
-        double u_trans_ionisation;
-        double u_trans_ionisation_heavy;
-        double u_trans_ionisation_electron;
-        double u_trans_collisions;
+            number u_trans_ionisation;
+            number u_trans_ionisation_heavy;
+            number u_trans_ionisation_electron;
+            number u_trans_collisions;
 
-        double _chem_dt = 1.0e-11;
-        int NumberSteps = to!int(tInterval/_chem_dt + 1);
-        if (NumberSteps == 0) {NumberSteps = 1;}
-        _chem_dt = tInterval/NumberSteps;
-        //writeln("_chem_dt = ", _chem_dt);
-        //alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+            double _chem_dt = 1.0e-11;
+            int NumberSteps = to!int(tInterval/_chem_dt + 1);
+            if (NumberSteps == 0) {NumberSteps = 1;}
+            _chem_dt = tInterval/NumberSteps;
+            //writeln("_chem_dt = ", _chem_dt);
+            //alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
 
-        //Determine the current number densities
-        n_e = Q.rho/_mol_masses[2]*Q.massf[2]*Av; // number density of electrons
-        n_Ar = Q.rho/_mol_masses[0]*Q.massf[0]*Av; // number density of Ar
-        alpha = n_e/(n_e + n_Ar);
+            //Determine the current number densities
+            n_e = Q.rho/_mol_masses[2]*Q.massf[2]*Av; // number density of electrons
+            n_Ar = Q.rho/_mol_masses[0]*Q.massf[0]*Av; // number density of Ar
+            alpha = n_e/(n_e + n_Ar);
 
-        double orig_n = n_e + n_Ar;
-        double n_sum;
+            number orig_n = n_e + n_Ar;
+            number n_sum;
 
-        double internal_energy_initial = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
+            number internal_energy_initial = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
 
-        //writeln("mass fraction electrons = ", Q.massf[2]);
+            //writeln("mass fraction electrons = ", Q.massf[2]);
 
-        //writeln("n_e = ", n_e);
-        //writeln("n_Ar = ", n_Ar);
+            //writeln("n_e = ", n_e);
+            //writeln("n_Ar = ", n_Ar);
 
-        //writeln("theta_A1star = ", _theta_A1star);
-        //writeln("theta_ion = ", _theta_ion);
-        //writeln("theta_A1star - theta_ion", _theta_A1star-_theta_ion);
-        //writeln("number of steps = ", NumberSteps);
-        for (int number = 1; number <= NumberSteps; ++number) { // This is a simple euler integration...
+            //writeln("theta_A1star = ", _theta_A1star);
+            //writeln("theta_ion = ", _theta_ion);
+            //writeln("theta_A1star - theta_ion", _theta_A1star-_theta_ion);
+            //writeln("number of steps = ", NumberSteps);
+            for (int number = 1; number <= NumberSteps; ++number) { // This is a simple euler integration...
                 //writeln("number = ", number);
                 //CHEMISTRY PART----------------------------------------------------------------------------------
                 //Determine the current rate coefficients
@@ -147,85 +149,86 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 //Come to this conceptually. 
 
                 if (alpha <= _ion_tol) {
-                        Q.T_modes[0] = _T_modes_ref;
-                        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
+                    Q.T_modes[0] = _T_modes_ref;
+                    Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
                 } else {
-                        Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion - ne_dot_e*Kb*_theta_ion*_chem_dt/Q.rho;
-                        Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
+                    Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion - ne_dot_e*Kb*_theta_ion*_chem_dt/Q.rho;
+                    Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
                 }
 
                 Q.u = internal_energy_initial - Q.u_modes[0];
                 Q.T = 2.0/3.0*Q.u/_Rgas;
 
                 if (n_e <= 0.0) { // if the number densities of electrons go below zero, then force this to not occur and update thermo.
-                        Q.u = internal_energy_initial;
-                        Q.u_modes[0] = 0.0;
-                        //mass
-                        n_Ar = orig_n;
-                        n_e = 0.0;
-                        alpha = n_e/(n_e + n_Ar);
-                        //energy
-                        //temperature
-                        Q.T =  2.0/3.0*Q.u/_Rgas;
-                        Q.T_modes[0] = _T_modes_ref;
+                    Q.u = internal_energy_initial;
+                    Q.u_modes[0] = 0.0;
+                    //mass
+                    n_Ar = orig_n;
+                    n_e = 0.0;
+                    alpha = n_e/(n_e + n_Ar);
+                    //energy
+                    //temperature
+                    Q.T =  2.0/3.0*Q.u/_Rgas;
+                    Q.T_modes[0] = _T_modes_ref;
                 } else {
-                n_sum = orig_n/(n_e + n_Ar);
+                    n_sum = orig_n/(n_e + n_Ar);
 
-                n_e = n_e*n_sum;
-                n_Ar = n_Ar*n_sum;
-                //THERMAL RELAXATION PART----------------------------------------------------------------------------------
-                //find the collision cross sectional area
+                    n_e = n_e*n_sum;
+                    n_Ar = n_Ar*n_sum;
+                    //THERMAL RELAXATION PART----------------------------------------------------------------------------------
+                    //find the collision cross sectional area
 
-                if (alpha > _ion_tol) { // no thermal relaxation if below ion tolerance
-                if (Q.T_modes[0] < 1.0e4) {
-                        Q_ea = (0.39 - 0.551e-4*Q.T_modes[0] + 0.595e-8*pow(Q.T_modes[0],2))*1.0e-20;
-                } else if (Q.T_modes[0]<1.0e5) {
-                        Q_ea = (-0.35 + 0.775e-4*Q.T_modes[0])*1.0e-20;
-                } else {
-                        Q_ea = (-0.35 + 0.775e-4*50000)*1.0e-20;
-                        //writeln("Q.u = ", Q.u);
-                        //writeln("Q.u_modes[0] = ", Q.u_modes[0]);
-                        //writeln("Q.T = ", Q.T);
-                        //writeln("Q.T_modes[0] = ", Q.T_modes[0]);
-                        ////writeln("u_trans_ionisation = ", u_trans_ionisation);
-                        //writeln("ne_dot ", ne_dot);
-                        //writeln("Q.rho = ", Q.rho);
-                        //writeln("kfA = ", kfA);
-                        //writeln("kfe = ", kfe);
-                        //writeln("krA = ", krA);
-                        //writeln("kre = ", kre);
-          //            writeln("number = ", number);
-                        //throw new GasModelException("Electron Temperature Too high for collision cross section model");
-                }
+                    if (alpha > _ion_tol) { // no thermal relaxation if below ion tolerance
+                        if (Q.T_modes[0] < 1.0e4) {
+                            Q_ea = (0.39 - 0.551e-4*Q.T_modes[0] + 0.595e-8*pow(Q.T_modes[0],2))*1.0e-20;
+                        } else if (Q.T_modes[0]<1.0e5) {
+                            Q_ea = (-0.35 + 0.775e-4*Q.T_modes[0])*1.0e-20;
+                        } else {
+                            Q_ea = (-0.35 + 0.775e-4*50000)*1.0e-20;
+                            //writeln("Q.u = ", Q.u);
+                            //writeln("Q.u_modes[0] = ", Q.u_modes[0]);
+                            //writeln("Q.T = ", Q.T);
+                            //writeln("Q.T_modes[0] = ", Q.T_modes[0]);
+                            ////writeln("u_trans_ionisation = ", u_trans_ionisation);
+                            //writeln("ne_dot ", ne_dot);
+                            //writeln("Q.rho = ", Q.rho);
+                            //writeln("kfA = ", kfA);
+                            //writeln("kfe = ", kfe);
+                            //writeln("krA = ", krA);
+                            //writeln("kre = ", kre);
+                            //            writeln("number = ", number);
+                            //throw new GasModelException("Electron Temperature Too high for collision cross section model");
+                        }
 
-                Q_ei = 1.95e-10*pow(Q.T_modes[0],-2)*log(1.53e8*pow(Q.T_modes[0],3)/(n_e/1.0e6));
-                if (Q_ei < 0.0) {Q_ei = 0.0;}
+                        Q_ei = 1.95e-10*pow(Q.T_modes[0],-2)*log(1.53e8*pow(Q.T_modes[0],3)/(n_e/1.0e6));
+                        if (Q_ei < 0.0) {Q_ei = 0.0;}
 
-                //find the collision frequencies
-                v_ea = (1-alpha)*Q.rho/m_Ar*sqrt(8*Kb*Q.T_modes[0]/PI/m_e)*Q_ea; //electron-Ar collisions
-                v_ei = alpha*Q.rho/m_Ar*sqrt(8*Kb*Q.T_modes[0]/PI/m_e)*Q_ei; //electron-Ar+ collisions
+                        //find the collision frequencies
+                        v_ea = (1-alpha)*Q.rho/m_Ar*sqrt(8*Kb*Q.T_modes[0]/to!double(PI)/m_e)*Q_ea; //electron-Ar collisions
+                        v_ei = alpha*Q.rho/m_Ar*sqrt(8*Kb*Q.T_modes[0]/to!double(PI)/m_e)*Q_ei; //electron-Ar+ collisions
 
-                //update the energy of each state
-                u_trans_collisions    = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.T-Q.T_modes[0])*_chem_dt/Q.rho;// energy transferred to electron mode through collisions
-                //writeln("u_trans_collisions = ", u_trans_collisions);
-                Q.u -= u_trans_collisions;
-                Q.u_modes[0] += u_trans_collisions;
+                        //update the energy of each state
+                        u_trans_collisions = 3*n_e*m_e/m_Ar*(v_ea+v_ei)*Kb*(Q.T-Q.T_modes[0])*_chem_dt/Q.rho;
+                        // energy transferred to electron mode through collisions
+                        //writeln("u_trans_collisions = ", u_trans_collisions);
+                        Q.u -= u_trans_collisions;
+                        Q.u_modes[0] += u_trans_collisions;
 
-                //update thermo properties based on energy transfer
-                Q.T = 2.0/3.0*Q.u/_Rgas;
-                Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
+                        //update thermo properties based on energy transfer
+                        Q.T = 2.0/3.0*Q.u/_Rgas;
+                        Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
 
-                } // end if alpha > ion tol
+                    } // end if alpha > ion tol
                 } // end if statement regarding number density of electrons
 
-        }
+            }
 
-        //convert back to mass fractions //Density has not changed since finite volume cell with  no flux
-        Q.massf[0] = n_Ar/Av/Q.rho*_mol_masses[0];
-        Q.massf[1] = n_e/Av/Q.rho*_mol_masses[1]; //number density of Argon+ is the same as electron number density
-        Q.massf[2] = n_e/Av/Q.rho*_mol_masses[2];
+            //convert back to mass fractions //Density has not changed since finite volume cell with  no flux
+            Q.massf[0] = n_Ar/Av/Q.rho*_mol_masses[0];
+            Q.massf[1] = n_e/Av/Q.rho*_mol_masses[1]; //number density of Argon+ is the same as electron number density
+            Q.massf[2] = n_e/Av/Q.rho*_mol_masses[2];
 
-        if ((Q.massf[0] + Q.massf[1] + Q.massf[2]) < 0.5) {
+            if ((Q.massf[0] + Q.massf[1] + Q.massf[2]) < 0.5) {
                 writeln("mass fraction sum = ", Q.massf[0] + Q.massf[1] + Q.massf[2]);
                 writeln("Q.u = ", Q.u);
                 writeln("Q.u_modes[0] = ", Q.u_modes[0]);
@@ -244,16 +247,16 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 writeln("NumberSteps = ", NumberSteps);
                 writeln("tInterval = ", tInterval);
                 throw new GasModelException("mass fraction far from 1...");
-                } 
+            } 
 
-        // Since the internal energy and density in the (isolated) reactor is fixed,
-        // we need to evaluate the new temperature, pressure, etc.
+            // Since the internal energy and density in the (isolated) reactor is fixed,
+            // we need to evaluate the new temperature, pressure, etc.
 
-        if (Q.T_modes[0] < 0) {
+            if (Q.T_modes[0] < 0) {
                 throw new GasModelException("T_modes is negative!!!!!");
-        }
-        _gmodel.update_thermo_from_rhou(Q);
-        _gmodel.update_sound_speed(Q);  
+            }
+            _gmodel.update_thermo_from_rhou(Q);
+            _gmodel.update_sound_speed(Q);  
         } // end if
     }
 

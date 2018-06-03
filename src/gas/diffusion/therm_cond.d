@@ -16,11 +16,8 @@ import util.lua_service;
 import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.sutherland_therm_cond;
-version(complex_numbers) {
-    // do nothing here
-} else {
-    import gas.diffusion.cea_therm_cond;
-}
+import gas.diffusion.cea_therm_cond;
+
 
 interface ThermalConductivity {
     ThermalConductivity dup() const;
@@ -47,29 +44,16 @@ ThermalConductivity createThermalConductivityModel(lua_State *L)
     ThermalConductivity tcm;
     auto model = getString(L, -1, "model");
     
-    version(complex_numbers) {
-        // Limited number of options.
-        switch ( model ) {
-        case "Sutherland":
-            tcm = createSutherlandThermalConductivity(L);
-            break;
-        default:
-            string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
-            throw new Error(errMsg);
-        }
-    } else {
-        // All options for double_numbers.
-        switch ( model ) {
-        case "Sutherland":
-            tcm = createSutherlandThermalConductivity(L);
-            break;
-        case "CEA":
-            tcm = createCEAThermalConductivity(L);
-            break;
-        default:
-            string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
-            throw new Error(errMsg);
-        }
+    switch ( model ) {
+    case "Sutherland":
+        tcm = createSutherlandThermalConductivity(L);
+        break;
+    case "CEA":
+        tcm = createCEAThermalConductivity(L);
+        break;
+    default:
+        string errMsg = format("The requested ThermalConductivity model '%s' is not available.", model);
+        throw new Error(errMsg);
     }
     return tcm;
 }

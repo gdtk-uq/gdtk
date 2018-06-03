@@ -8,15 +8,19 @@
 
 module gas.diffusion.cea_therm_cond;
 
+import std.math;
+import std.stdio;
+import std.string;
+import std.conv;
+import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
+import util.lua;
+import util.lua_service;
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.therm_cond;
-import std.math;
-import util.lua;
-import util.lua_service;
-import core.stdc.stdlib : exit;
-import std.stdio;
-import std.string;
 
 struct CEAThermCondCurve
 {
@@ -40,16 +44,16 @@ public:
         D = params["D"];
     }
 
-    double eval(double T) const
+    number eval(number T) const
     {
         if ( T < T_lower )
             throw new Exception("temperature value lower than T_lower in CEAThermCondCurve:eval()");
         if ( T > T_upper )
             throw new Exception("temperature value greater than T_upper in CEAThermCondCurve:eval()");
-        double log_k = A*log(T) + B/T + C/(T*T) + D;
+        number log_k = A*log(T) + B/T + C/(T*T) + D;
 
         /* CEA value is in microWatts/(cm.K), so convert to SI units of W/(m.K). */
-        double k = exp(log_k)*1.0e-4;
+        number k = exp(log_k)*1.0e-4;
         return k;
     }
 }
@@ -83,14 +87,14 @@ public:
     {
         return new CEAThermalConductivity(this);
     }
-    override double eval(ref const(GasState) Q, double T) const
+    override number eval(ref const(GasState) Q, number T) const
     {
         // At the limits of the curve, extrapolate value as a constant.
         if ( T < _T_lowest ) {
-            return _curves[0].eval(_T_lowest);
+            return _curves[0].eval(to!number(_T_lowest));
         }
         if ( T > _T_highest ) {
-            return _curves[$-1].eval(_T_highest);
+            return _curves[$-1].eval(to!number(_T_highest));
         }
         // Search for curve segment and evaluate
         foreach ( c; _curves ) {

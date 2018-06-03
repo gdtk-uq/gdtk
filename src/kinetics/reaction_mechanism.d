@@ -10,6 +10,8 @@ import std.stdio;
 import std.algorithm;
 import std.math;
 import std.conv;
+import nm.complex;
+import nm.number;
 
 import gas;
 import util.lua;
@@ -43,20 +45,20 @@ public:
     
     final void eval_rate_constants(GasState Q)
     {
-        double T_save = Q.T;
+        number T_save = Q.T;
         if ( Q.T < _T_lower_limit ) { Q.T = _T_lower_limit; }
         if ( Q.T > _T_upper_limit ) { Q.T = _T_upper_limit; }
         foreach ( ref r; _reactions ) r.eval_rate_constants(Q);
-        // Always reset Q.T[0] on exit
+        // Always reset Q.T on exit
         Q.T = T_save;
     }
 
-    final void eval_rates(in double[] conc, double[] rates)
+    final void eval_rates(in number[] conc, number[] rates)
     {
         eval_split_rates(conc, _q, _L);
         foreach ( isp; 0..conc.length ) rates[isp] = _q[isp] - _L[isp];
     }
-    final void eval_split_rates(in double[] conc, double[] q, double[] L)
+    final void eval_split_rates(in number[] conc, number[] q, number[] L)
     {
         foreach ( ref r; _reactions ) r.eval_rates(conc);
         foreach ( isp; 0..conc.length ) {
@@ -70,15 +72,15 @@ public:
             }
         }
     }
-    final double k_f(int ir)
+    final number k_f(int ir)
     {
         return _reactions[ir].k_f;
     }
-    final double k_b(int ir)
+    final number k_b(int ir)
     {
         return _reactions[ir].k_b;
     }
-    final double rate(int ir, int isp)
+    final number rate(int ir, int isp)
     {
         return _reactions[ir].production(isp) - _reactions[ir].loss(isp);
     }
@@ -110,7 +112,7 @@ public:
      + Integrating Chemically Reacting Systems.
      + PhD Thesis, The University of Michigan
      +/ 
-    final double estimateStepSize(in double[] conc)
+    final double estimateStepSize(in number[] conc)
     {
         immutable double MUCH_LARGER_FACTOR = 10000.0;
         immutable double ZERO_EPS = 1.0e-50;
@@ -134,11 +136,11 @@ public:
                     // In the end, it's only an estimate so it shouldn't matter much.
                     // (hopefully).
                     // The value should be 1/p_i, so that is....
-                    dt = c/(_L[isp] + ZERO_EPS);
+                    dt = c.re/(_L[isp].re + ZERO_EPS);
                     //writefln("Mott's dt= %e ", dt);
                 }
                 else {
-                    dt = fabs( c / (_q[isp] - _L[isp]) );
+                    dt = fabs( c.re / (_q[isp].re - _L[isp].re) );
                     //writefln("Young and Boris dt= %e", dt);
                 }
                 min_dt = min(min_dt, dt);
@@ -157,8 +159,8 @@ private:
     Reaction[] _reactions;
     // Working array space
     bool _work_arrays_initialised = false;
-    double[] _q;
-    double[] _L;
+    number[] _q;
+    number[] _L;
     double _T_lower_limit;
     double _T_upper_limit;
 }

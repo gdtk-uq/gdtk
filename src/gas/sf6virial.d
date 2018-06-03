@@ -4,15 +4,14 @@
  *
  * Author: Jonathan H.
  * Version: 2015-08-25: initial cut, to explore options.
+ * PJ 2018-06-03
+ * We make the signatures compatible with complex numbers but
+ * we do not actually pass the complex values through to
+ * Jonathan's functions.
  */
 
 module gas.sf6virial;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
-import gas.diffusion.sutherland_viscosity;
-import gas.diffusion.sutherland_therm_cond;
 import std.math;
 import std.stdio;
 import std.string;
@@ -23,7 +22,15 @@ import util.lua;
 import util.lua_service;
 import util.msg_service;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
 import nm.ridder;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
+import gas.diffusion.sutherland_viscosity;
+import gas.diffusion.sutherland_therm_cond;
 
 class SF6Virial:GasModel {
 public:
@@ -34,8 +41,12 @@ public:
         _species_names ~= "SF6";
         _mol_masses ~= 0.146055;// value for sea-level air
         create_species_reverse_lookup();
+        version(complex_numbers) {
+            throw new Error("Do not use with complex numbers.");
+        }
     }
-        //NOT EXACTLY SURE HOW TO DEAL WITH THIS PART YET -- I am pretty sure it is used for selecting a certain gas model
+    // NOT EXACTLY SURE HOW TO DEAL WITH THIS PART YET --
+    // I (Jonathan) am pretty sure it is used for selecting a certain gas model
     this(lua_State *L) {
         this();
         // Bring table to TOS
@@ -91,35 +102,35 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        Q.rho = updateRho_PT(Q.p, Q.T);
-        Q.u = updateEnergy_rhoT(Q.rho, Q.T);
+        Q.rho = updateRho_PT(Q.p.re, Q.T.re);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        Q.T = updateTemperature_rhou(Q.rho, Q.u);
-        Q.p = updatePressure_rhoT(Q.rho,Q.T);
+        Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
+        Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
     }
-    override void update_thermo_from_rhoT(GasState Q) const//DONE
+    override void update_thermo_from_rhoT(GasState Q) const //DONE
     {
-        Q.p = updatePressure_rhoT(Q.rho, Q.T);
-        Q.u = updateEnergy_rhoT(Q.rho, Q.u);
+        Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.u.re);
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
-        Q.u = updateEnergy_Prho(Q.p, Q.rho);//might want to fix the order that this solves in
-        Q.T = updateTemperature_rhou(Q.rho, Q.u);
+        Q.u = updateEnergy_Prho(Q.p.re, Q.rho.re);//might want to fix the order that this solves in
+        Q.T = updateTemperature_rhou(Q.rho.re, Q.u.re);
     }
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
     override void update_sound_speed(GasState Q) const
     {
-        Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T);
+        Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
     }
     override void update_trans_coeffs(GasState Q) const
     {
@@ -131,32 +142,32 @@ public:
         throw new Exception("not implemented");
     }
     */
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return get_de_dT(Q.rho,Q.T);
+        return to!number(get_de_dT(Q.rho.re, Q.T.re));
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         return R*Q.T;
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return R_universal/_mol_masses[0];
+        return to!number(R_universal/_mol_masses[0]);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
@@ -182,15 +193,16 @@ private:
     double _S_k = 194.0; // degrees K
     
     //define some functions that will be available to the functions in the private area    
-    const double updatePressure_rhoT(double rho, double T){
+    double updatePressure_rhoT(double rho, double T) const
+    {
         double v = 1/rho; //equation is in specific volume
         double sum = 0;
         for(int i = 2; i != 6; i++) sum += (_a[i] + _b[i]*T + _c[i]*exp(-_k*T/_Tc))/(v - _d)^^i;
         return _Rgas*T/(v - _d) + sum;
-        
-   }
+    }
 
-   const double updateEnergy_rhoT(double rho, double T){
+    double updateEnergy_rhoT(double rho, double T) const
+    {
         //From 1995 paper Kyle Anderson & Dimitri Mavriplis
         double v = 1/rho;
         double integralcv0 = (_G[1]-_Rgas)*(T - _T0) + 0.5*_G[2]*(T^^2 - _T0^^2) + 1.0/3.0*_G[3]*(T^^3 - _T0^^3)
@@ -198,25 +210,30 @@ private:
         double integralDensity = 0;
         for(int i = 2; i != 6; i++) integralDensity += (_a[i] + (1 + _k*T/_Tc)*_c[i]*exp(-_k*T/_Tc))/(i - 1)/(v - _d)^^(i - 1);
         return integralcv0 + integralDensity + _u0;
-   }
-   const double updateTemperature_rhou(double rho, double e, int maxIterations = 100, double Ttol = 0.1){
+    }
+    double updateTemperature_rhou(double rho, double e, int maxIterations = 100, double Ttol = 0.1) const
+    {
         double T = 400; // first approximation using totally ideal gas not possible because we don't know pressure;
         for(int i = 0; i != maxIterations; i++){
-                double deltaT = (updateEnergy_rhoT(rho,T)-e)/get_de_dT(rho,T);
-                /* writeln("deltaT: ", deltaT);
-                writeln("Energy(T): ", getSpecificEnergy(rho,T,gas)-e);
-                writeln("dE/dT: ", get_de_dT(rho,T,gas)); */
-                if (abs(deltaT) < Ttol){
-                        //writeln("tolerance for T met");
-                        break;
-                }
-                T -= deltaT;
-                if (i == maxIterations) throw new Exception(format("Newton-Cotes reached max iterations when calculating T from rho = %s, e = %s", rho, e));
-                }
+            double deltaT = (updateEnergy_rhoT(rho,T)-e)/get_de_dT(rho,T);
+            /* writeln("deltaT: ", deltaT);
+               writeln("Energy(T): ", getSpecificEnergy(rho,T,gas)-e);
+               writeln("dE/dT: ", get_de_dT(rho,T,gas)); */
+            if (abs(deltaT) < Ttol){
+                //writeln("tolerance for T met");
+                break;
+            }
+            T -= deltaT;
+            if (i == maxIterations) {
+                throw new Exception(format("Newton-Cotes reached max iterations when calculating T from rho = %s, e = %s",
+                                           rho, e));
+            }
+        }
         assert(!isNaN(T), format("Newton-Cotes failed when calculating T from rho = %s, e = %s", rho, e));
         return T;
-   }
-   const double get_de_dT(double rho, double T) {
+    }
+    double get_de_dT(double rho, double T) const
+    {
         //Gets derivative of specific energy w.r.t. Temperature for evaluating T as a function of e, rho based on Newton's method
         //conveniently de_dT is c_V
         //From 1995 paper Kyle Anderson & Dimitri Mavriplis
@@ -225,10 +242,11 @@ private:
         double departureFunction = 0;
         for(int i = 2; i != 6; i++) departureFunction += _c[i]/(i-1)/(v-_d)^^(i-1)*-(_k/_Tc)^^2*T*exp(-_k*T/_Tc);
         return cv0 + departureFunction;
-        
-   }
-   const double updateEnergy_Prho(double P, double rho, double[2] Tbracket = [300, 1300], double tol = 0.001){
-        //double e = min(max(getSpecificEnergy(rho,P/rho/_Rgas,Gas),_u0*0.6),2.5e6);//estimate energy based on temperature, don't go too high or too low
+    }
+    double updateEnergy_Prho(double P, double rho, double[2] Tbracket = [300, 1300], double tol = 0.001) const
+    {
+        //double e = min(max(getSpecificEnergy(rho,P/rho/_Rgas,Gas),_u0*0.6),2.5e6);
+        //estimate energy based on temperature, don't go too high or too low
         //writeln("Temperature guess", P/rho/_Rgas);
         //writeln("first guess at e: ", e);
         auto getPressure_T = delegate (double T){return updatePressure_rhoT(rho, T) - P;};
@@ -238,8 +256,10 @@ private:
         string errorString = "P: " ~ to!string(P) ~ ", rho: " ~ to!string(rho);
         assert(!isNaN(e), errorString);
         
-        return e;}
-   const double updateRho_PT(double P, double T, double[2] bracket = [2, 1000], double tol = 0.1){
+        return e;
+    }
+    double updateRho_PT(double P, double T, double[2] bracket = [2, 1000], double tol = 0.1) const
+    {
         //when temperature is close to  critical temperature be very careful
         //assert(T > 305, "Temperature too low and close to critical point (305K)");
         auto getPressure_rho = delegate (double rho){return updatePressure_rhoT(rho, T) - P;};
@@ -247,31 +267,32 @@ private:
         string errorString = "P: " ~ to!string(P) ~ ", T: " ~ to!string(T);
         assert(!isNaN(rho), errorString);
         return rho;
-   }
-   const double updatePressure_rhoe(double rho, double e){
-           double T = updateTemperature_rhou(rho, e);
-         return updatePressure_rhoT(rho, T);}
-   
-   const double updatePressure_Trho(double T, double rho){
-   return updatePressure_rhoT(rho, T);}//just a re-casting of the same function
-      
-   const double updateSoundSpeed_rhoT(double rho, double T) {
+    }
+    double updatePressure_rhoe(double rho, double e) const
+    {
+        double T = updateTemperature_rhou(rho, e);
+        return updatePressure_rhoT(rho, T);
+    }
+    double updatePressure_Trho(double T, double rho) const
+    {
+        return updatePressure_rhoT(rho, T);
+    }
+    double updateSoundSpeed_rhoT(double rho, double T) const
+    {
         double v = 1.0/rho;
         double dP_dv = -_Rgas*T/(v-_d)^^2;
         double dP_dT = _Rgas/(v - _d);
         for(int i = 2; i != 6; i++) {
-                dP_dv += -i*(v-_d)^^(-i - 1)*(_a[i] + _b[i]*T + _c[i]*exp(-_k*T/_Tc));
-                dP_dT += (_b[i] + _c[i]*_k/_Tc*exp(-_k*T/_Tc))/(v-_d)^^i;
-                }
+            dP_dv += -i*(v-_d)^^(-i - 1)*(_a[i] + _b[i]*T + _c[i]*exp(-_k*T/_Tc));
+            dP_dT += (_b[i] + _c[i]*_k/_Tc*exp(-_k*T/_Tc))/(v-_d)^^i;
+        }
         double dP_drho = -dP_dv/rho/rho;
         double cV = get_de_dT(rho, T);
         //writefln("rho: %f, T: %f, dP_drho: %f, dP_dT: %f", rho, T, dP_drho, dP_dT);
         assert(dP_drho + dP_dT ^^2 * T/rho^^2/cV > 0, 
-                format("Tried to square root negative number while calculating sound speed, rho = %s, T = %s",rho, T));
+               format("Tried to square root negative number while calculating sound speed, rho = %s, T = %s",rho, T));
         return  sqrt(dP_drho + dP_dT ^^2 * T/rho^^2/cV);
-        }
-
-
+    }
 } // end class SF6
 
 unittest {//need to write these properly

@@ -28,6 +28,8 @@ import std.stdio;
 import std.math;
 import std.string;
 import std.conv;
+import nm.complex;
+import nm.number;
 
 import gas.physical_constants;
 import gas.gas_model;
@@ -2384,6 +2386,9 @@ public:
         _species_names ~= "H2O";
         _mol_masses ~= 0.018015257;// value from International Steam Table (Wanger W.,2008)
         create_species_reverse_lookup();        
+        version(complex_numbers) {
+            throw new Error("Do not use with complex numbers.");
+        }
     } // end constructor
 
     override string toString() const
@@ -2393,22 +2398,22 @@ public:
 
     override void update_thermo_from_pT(GasState Q) 
     {
-        Q.rho = _IAPWS.Density(Q.p,Q.T,Q.quality);
-        Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
-        Q.u = _IAPWS.SpecificInternalEnergy(Q.p,Q.T,Q.quality);
-        Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
-        Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality);
+        Q.rho = _IAPWS.Density(Q.p.re, Q.T.re, Q.quality.re);
+        Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+        Q.u = _IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re);
+        Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+        Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
     }
 
     override void update_thermo_from_rhou(GasState Q)
     {
         if (Q.quality == 1) {
-            double[2] pT = getpT_from_rhou(Q.rho, Q.u);
+            double[2] pT = getpT_from_rhou(Q.rho.re, Q.u.re);
             Q.p = pT[0];
             Q.T = pT[1];
-            Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
-            Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
-            Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality); 
+            Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+            Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+            Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re); 
         }
         else {
             assert(0, "Not in gas IAPWS-Region2, implement me");
@@ -2425,64 +2430,64 @@ public:
         assert(0, "Implement me");
     }
     
-    override void update_thermo_from_ps(GasState Q, double s)
+    override void update_thermo_from_ps(GasState Q, number s)
     { 
         if(Q.quality==1) {
-            Q.T = getT_from_ps(Q.p, Q.T, s);
-            Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
-            Q.u = _IAPWS.SpecificInternalEnergy(Q.p,Q.T,Q.quality);
-            Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
-            Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality);
+            Q.T = getT_from_ps(Q.p.re, Q.T.re, s.re);
+            Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
+            Q.u = _IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re);
+            Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+            Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
         }
         else {
             assert(0, "Not in IAPWS-Region2, implement me");
         }
     }
     
-    override void update_thermo_from_hs(GasState Q, double h, double s)
+    override void update_thermo_from_hs(GasState Q, number h, number s)
     {
         assert(0, "Implement me");
     }
     
     override void update_sound_speed(GasState Q)
     {
-        Q.a = _IAPWS.SoundSpeed(Q.p,Q.T,Q.quality);
+        Q.a = _IAPWS.SoundSpeed(Q.p.re, Q.T.re, Q.quality.re);
     }
 
     override void update_trans_coeffs(GasState Q)
     {
-        Q.mu = _IAPWS.DynamicViscosity(Q.p,Q.T,Q.quality);
-        Q.k = _IAPWS.ThermalConductivity(Q.p,Q.T,Q.quality);
+        Q.mu = _IAPWS.DynamicViscosity(Q.p.re, Q.T.re, Q.quality.re);
+        Q.k = _IAPWS.ThermalConductivity(Q.p.re, Q.T.re, Q.quality.re);
     }
 
-    override double dudT_const_v(in GasState Q)
+    override number dudT_const_v(in GasState Q)
     {
-        return _IAPWS.SpecificIsochoricHeatCapacity(Q.p,Q.T,Q.quality);
+        return to!number(_IAPWS.SpecificIsochoricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
     }
-    override double dhdT_const_p(in GasState Q)
+    override number dhdT_const_p(in GasState Q)
     {
-        return _IAPWS.SpecificIsobaricHeatCapacity(Q.p,Q.T,Q.quality);
+        return to!number(_IAPWS.SpecificIsobaricHeatCapacity(Q.p.re, Q.T.re, Q.quality.re));
     }
-    override double dpdrho_const_T(in GasState Q)
+    override number dpdrho_const_T(in GasState Q)
     {
         //no defined function for this
-        return 0.0;
+        return to!number(0.0);
     }
-    override double gas_constant(in GasState Q)
+    override number gas_constant(in GasState Q)
     {
-        return 461.526; /// specific gas constant[J/kg/K]
+        return to!number(461.526); /// specific gas constant[J/kg/K]
     }
-    override double internal_energy(in GasState Q)
+    override number internal_energy(in GasState Q)
     {
-        return _IAPWS.SpecificInternalEnergy(Q.p,Q.T,Q.quality);
+        return to!number(_IAPWS.SpecificInternalEnergy(Q.p.re, Q.T.re, Q.quality.re));
     }
-    override double enthalpy(in GasState Q)
+    override number enthalpy(in GasState Q)
     {
-        return _IAPWS.SpecificEnthalpy(Q.p,Q.T,Q.quality);
+        return to!number(_IAPWS.SpecificEnthalpy(Q.p.re, Q.T.re, Q.quality.re));
     }
-    override double entropy(in GasState Q)
+    override number entropy(in GasState Q)
     {
-        return _IAPWS.SpecificEntropy(Q.p,Q.T,Q.quality);
+        return to!number(_IAPWS.SpecificEntropy(Q.p.re, Q.T.re, Q.quality.re));
     }
 } // end class Steam
 

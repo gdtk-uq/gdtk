@@ -21,16 +21,20 @@
 module gas.diffusion.wilke_mixing_viscosity;
 
 import std.math;
+import nm.complex;
+import nm.number;
+import util.msg_service;
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.diffusion.viscosity;
-import util.msg_service;
 
 class WilkeMixingViscosity : Viscosity {
 public:
     this(in Viscosity[] vms, in double[] mol_masses)
     in {
-        assert(vms.length == mol_masses.length, brokenPreCondition("vms.length and mol_masses.length", __LINE__, __FILE__));
+        assert(vms.length == mol_masses.length,
+               brokenPreCondition("vms.length and mol_masses.length", __LINE__, __FILE__));
     }
     body {
         foreach (v; vms) {
@@ -60,7 +64,7 @@ public:
         return new WilkeMixingViscosity(this);
     }
 
-    override double eval(in GasState Q) {
+    override number eval(in GasState Q) {
 
         // 1. Evaluate the mole fractions
         massf2molef(Q.massf, _mol_masses, _x);
@@ -71,14 +75,14 @@ public:
         // 3. Calculate interaction potentials
         for ( auto i = 0; i < Q.massf.length; ++i ) {
             for ( auto j = 0; j < Q.massf.length; ++j ) {
-                double numer = pow((1.0 + sqrt(_mu[i]/_mu[j])*pow(_mol_masses[j]/_mol_masses[i], 0.25)), 2.0);
-                double denom = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
+                number numer = pow((1.0 + sqrt(_mu[i]/_mu[j])*pow(_mol_masses[j]/_mol_masses[i], 0.25)), 2.0);
+                number denom = sqrt(8.0 + 8.0*_mol_masses[i]/_mol_masses[j]);
                 _phi[i][j] = numer/denom;
             }
         }
         // 4. Apply mixing formula
-        double sum;
-        double mu = 0.0;
+        number sum;
+        number mu = 0.0;
         for ( auto i = 0; i < Q.massf.length; ++i ) {
             if ( _x[i] < SMALL_MOLE_FRACTION ) continue;
             sum = 0.0;
@@ -95,16 +99,16 @@ private:
     Viscosity[] _vms; // component viscosity models
     double[] _mol_masses; // component molecular weights
     // Working array space
-    double[] _x;
-    double[] _mu;
-    double[][] _phi;
+    number[] _x;
+    number[] _mu;
+    number[][] _phi;
 }
 
 version(wilke_mixing_viscosity_test) {
     int main() {
         import gas.diffusion.sutherland_viscosity;
         // Placeholder test. Redo with CEA curves.
-        double T = 300.0;
+        number T = 300.0;
         auto vm_N2 = new SutherlandViscosity(273.0, 1.663e-5, 107.0);
         auto vm_O2 = new SutherlandViscosity(273.0, 1.919e-5, 139.0);
         auto vm = new WilkeMixingViscosity([vm_N2, vm_O2], [28.0e-3, 32.0e-3]);

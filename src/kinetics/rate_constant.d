@@ -11,6 +11,9 @@ import std.math;
 import std.algorithm;
 import std.typecons;
 import std.string;
+import nm.complex;
+import nm.number;
+
 import util.lua;
 import util.lua_service;
 import gas;
@@ -22,7 +25,7 @@ import gas;
 
 interface RateConstant {
     RateConstant dup();
-    double eval(in GasState Q);
+    number eval(in GasState Q);
 }
 
 /++
@@ -63,9 +66,9 @@ public:
     {
         return new ArrheniusRateConstant(_A, _n, _C);
     }
-    override double eval(in GasState Q)
+    override number eval(in GasState Q)
     {
-        double T = Q.T;
+        number T = Q.T;
         return _A*pow(T, _n)*exp(-_C/T);
     }
 private:
@@ -73,12 +76,12 @@ private:
 }
 
 
-double thirdBodyConcentration(in GasState Q, Tuple!(int, double)[] efficiencies, GasModel gmodel)
+number thirdBodyConcentration(in GasState Q, Tuple!(int, double)[] efficiencies, GasModel gmodel)
 {
-    double val = 0.0;
+    number val = 0.0;
     foreach (e; efficiencies) {
         int isp = e[0];
-        double eff = e[1];
+        number eff = e[1];
         val += eff * (Q.massf[isp]*Q.rho/gmodel.mol_masses[isp]);
     }
     return val;
@@ -111,11 +114,11 @@ public:
     {
         return new LHRateConstant(_kInf, _k0, _efficiencies, _gmodel);
     }
-    override double eval(in GasState Q)
+    override number eval(in GasState Q)
     {
-        double M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
-        double kInf = _kInf.eval(Q);
-        double k0 = _k0.eval(Q);
+        number M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
+        number kInf = _kInf.eval(Q);
+        number k0 = _k0.eval(Q);
         return k0*kInf*M/(k0*M + kInf);
     }
 private:
@@ -126,8 +129,8 @@ private:
 
 class TroeRateConstant : RateConstant {
 public:
-    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, double Fcent,  bool Fcent_supplied,
-         double a, double T1, double T2, double T3, bool T2_supplied,
+    this(ArrheniusRateConstant kInf, ArrheniusRateConstant k0, number Fcent,  bool Fcent_supplied,
+         number a, number T1, number T2, number T3, bool T2_supplied,
          Tuple!(int, double)[] efficiencies, GasModel gmodel)
     {
         _kInf = kInf.dup();
@@ -187,15 +190,15 @@ public:
                                     _a, _T1, _T2, _T3, _T2_supplied,
                                     _efficiencies, _gmodel);
     }
-    override double eval(in GasState Q)
+    override number eval(in GasState Q)
     {
         immutable double essentially_zero = 1.0e-30;
-        double M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
-        double kInf = _kInf.eval(Q);
-        double k0 = _k0.eval(Q);
-        double p_r = k0*M/kInf;
-        double log_p_r = log10(max(p_r, essentially_zero));
-        double T = Q.T;
+        number M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
+        number kInf = _kInf.eval(Q);
+        number k0 = _k0.eval(Q);
+        number p_r = k0*M/kInf;
+        number log_p_r = log10(fmax(p_r, essentially_zero));
+        number T = Q.T;
         
         if ( !_Fcent_supplied ) {
             _Fcent = (1.0 - _a)*exp(-T/_T3) + _a*exp(-T/_T1);
@@ -204,22 +207,22 @@ public:
             }
         }
 
-        double log_F_cent = log10(max(_Fcent, essentially_zero));
-        double c = -0.4 - 0.67*log_F_cent;
-        double n = 0.75 - 1.27*log_F_cent;
+        number log_F_cent = log10(fmax(_Fcent, essentially_zero));
+        number c = -0.4 - 0.67*log_F_cent;
+        number n = 0.75 - 1.27*log_F_cent;
         double d = 0.14;
 
-        double numer = log_p_r + c; 
-        double denom = n - d*numer;
-        double frac = numer/denom;
-        double log_F = log_F_cent / (1.0 + frac*frac);
-        double F = pow(10,log_F);
+        number numer = log_p_r + c; 
+        number denom = n - d*numer;
+        number frac = numer/denom;
+        number log_F = log_F_cent / (1.0 + frac*frac);
+        number F = pow(10,log_F);
 
         return F*k0*kInf*M/(k0*M + kInf);
     }
 private:
     ArrheniusRateConstant _kInf, _k0;
-    double _Fcent, _a, _T1, _T2, _T3;
+    number _Fcent, _a, _T1, _T2, _T3;
     bool _Fcent_supplied, _T2_supplied;
     Tuple!(int, double)[] _efficiencies;
     GasModel _gmodel;
@@ -275,18 +278,18 @@ public:
     {
         return new YRRateConstant(_kInf, _k0, _a, _b, _c, _efficiencies, _gmodel);
     }
-    override double eval(in GasState Q)
+    override number eval(in GasState Q)
     {
         immutable double essentially_zero = 1.0e-30;
-        double M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
-        double kInf = _kInf.eval(Q);
-        double k0 = _k0.eval(Q);
-        double p_r = k0*M/kInf;
-        double log_p_r = log(p_r);
-        double T = Q.T;
+        number M = thirdBodyConcentration(Q, _efficiencies, _gmodel);
+        number kInf = _kInf.eval(Q);
+        number k0 = _k0.eval(Q);
+        number p_r = k0*M/kInf;
+        number log_p_r = log(p_r);
+        number T = Q.T;
 
-        double Fc = _a*exp(-_b/T) + (1.0 - _a)*exp(-_c/T);
-        double xt = 1.0/(1.0 + log_p_r*log_p_r);
+        number Fc = _a*exp(-_b/T) + (1.0 - _a)*exp(-_c/T);
+        number xt = 1.0/(1.0 + log_p_r*log_p_r);
 
         return kInf*(p_r/(1.0 + p_r))*Fc*xt;
     }
@@ -325,9 +328,9 @@ public:
     {
         return new Park2TRateConstant(_A, _n, _C, _s);
     }
-    override double eval(in GasState Q)
+    override number eval(in GasState Q)
     {
-        double T = pow(Q.T, _s)*pow(Q.T_modes[0], 1.0 - _s);
+        number T = pow(Q.T, _s)*pow(Q.T_modes[0], 1.0 - _s);
         return _A*pow(T, _n)*exp(-_C/T);
     }
 

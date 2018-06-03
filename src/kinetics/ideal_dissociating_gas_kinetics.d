@@ -15,7 +15,9 @@
 
 module kinetics.ideal_dissociating_gas_kinetics;
 
-import std.math : exp, fabs, fmax, fmin;
+import std.math;
+import nm.complex;
+import nm.number;
 
 import gas;
 import util.lua;
@@ -47,54 +49,54 @@ final class UpdateIDG : ThermochemicalReactor {
     
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref double[] params)
+                         ref number[] params)
     {
         // In the isolated reactor, density and internal energy remain constant.
         // Dissociation fraction and temperature may/will change.
         //
         // Initial state.
-        double alpha0 = Q.massf[1];
-        double T0 = Q.T;
+        number alpha0 = Q.massf[1];
+        number T0 = Q.T;
         //
         // The IDG rate equations as functions.
         // See PJ workbook page 48, 23-Apr-2017
-        double X(double alpha, double T)
+        number X(number alpha, number T)
         {
             return (2.0*_C1*T^^_n1*alpha + _C2*T^^_n2*(1.0-alpha)) / _W;
         }
-        double f1(double alpha, double T, double rho)
+        number f1(number alpha, number T, number rho)
         // This is the time derivative d(alpha)/dt.
         {
             return rho*X(alpha,T)*((1.0-alpha)*exp(-_T_d/T) - rho*alpha*alpha/_rho_d);
         }
         // The nonlinear constraint functions for the backward-Euler update.
         // See PJ's following workbook, page 4, 23-Apr-2017.
-        double g1(double alpha1, double T1, double rho)
+        number g1(number alpha1, number T1, number rho)
         {
             return alpha1 - alpha0 - tInterval*f1(alpha1, T1, rho);
         }
-        double f2(double alpha1, double T1, double u)
+        number f2(number alpha1, number T1, number u)
         {
             return u - _Rnn*alpha1*_T_d - _Rnn*3.0*T1;
         }
         // Updated state, initially guessed as the same.
-        double alpha1 = alpha0;
-        double T1 = T0;
+        number alpha1 = alpha0;
+        number T1 = T0;
         foreach (i; 0 .. 30) {
-            double g1_nominal = g1(alpha1, T1, Q.rho);
-            double f2_nominal = f2(alpha1, T1, Q.u);
+            number g1_nominal = g1(alpha1, T1, Q.rho);
+            number f2_nominal = f2(alpha1, T1, Q.u);
             // Derivatives for the linear equations of the Newton update.
             // See again PJ's workbook, page 4, 23-Apr-2017.
-            double df2da1 = -_Rnn*_T_d;
-            double df2dT1 = -3.0*_Rnn;
-            double del_alpha = (alpha1 > 0.5) ? -0.001: 0.001;
-            double dg1da1 = (g1(alpha1+del_alpha, T1, Q.rho) - g1_nominal)/del_alpha;
-            double del_T = fmax(0.01*T1, 10.0);
-            double dg1dT1 = (g1(alpha1, T1+del_T, Q.rho) - g1_nominal)/del_T;
+            number df2da1 = -_Rnn*_T_d;
+            number df2dT1 = -3.0*_Rnn;
+            number del_alpha = (alpha1 > 0.5) ? -0.001: 0.001;
+            number dg1da1 = (g1(alpha1+del_alpha, T1, Q.rho) - g1_nominal)/del_alpha;
+            number del_T = fmax(0.01*T1, 10.0);
+            number dg1dT1 = (g1(alpha1, T1+del_T, Q.rho) - g1_nominal)/del_T;
             // Solve the linear equations for the increments
-            double determinant = df2da1*dg1dT1 - dg1da1*df2dT1;
-            double dalpha1 = (-f2_nominal*dg1dT1 + g1_nominal*df2dT1)/determinant;
-            double dT1 = (-df2da1*g1_nominal + dg1da1*f2_nominal)/determinant;
+            number determinant = df2da1*dg1dT1 - dg1da1*df2dT1;
+            number dalpha1 = (-f2_nominal*dg1dT1 + g1_nominal*df2dT1)/determinant;
+            number dT1 = (-df2da1*g1_nominal + dg1da1*f2_nominal)/determinant;
             alpha1 += dalpha1;
             alpha1 = fmax(0.0, fmin(alpha1, 1.0));
             T1 += dT1;

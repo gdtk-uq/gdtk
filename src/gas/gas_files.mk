@@ -2,10 +2,6 @@
 #
 # We list the source files that are needed to build the gas models package.
 #
-# Note that, for the complex_numbers flavour of the code, only a limited
-# number of source files have been complexified.
-# As at 2018-06-02, only the ideal gas model has been complexified.
-
 GAS_DIR ?= .
 GAS_MODEL_FILES := $(GAS_DIR)/package.d \
 	$(GAS_DIR)/co2gas.d \

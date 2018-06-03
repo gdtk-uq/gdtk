@@ -3,14 +3,14 @@
  * Ideal-air gas model, implemented in fortran, for use in the CFD codes.
  *
  * Author: Peter J. and Rowan G.
- * Version: 2016-12-27: initial cut, to explore mixed-language binding.
+ * Version: 
+ * 2016-12-27: initial cut, to explore mixed-language binding.
+ * 2018-06-03: Adapted to accept complex numbers but not pass them through.
+ *             We assume that the Fortran side is only coded for double numbers. 
  */
 
 module gas.ideal_air_proxy;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
 import std.math;
 import std.stdio;
 import std.string;
@@ -18,6 +18,12 @@ import std.file;
 import std.json;
 import std.conv;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
 
 extern(C) {
     void iaf_init();
@@ -58,6 +64,9 @@ public:
         _mol_masses.length = 1;
         _mol_masses[0] = iaf_mol_mass(1); // Fortran array index starts at 1
         create_species_reverse_lookup();
+        version(complex_numbers) {
+            throw new Error("Do not use with complex numbers.");
+        }
     }
 
     override string toString() const
@@ -78,68 +87,144 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const 
-    {
-        iaf_update_thermo_from_pT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
-    }
-    override void update_thermo_from_rhou(GasState Q) const
-    {
-        iaf_update_thermo_from_rhou(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
-    }
-    override void update_thermo_from_rhoT(GasState Q) const
-    {
-        iaf_update_thermo_from_rhoT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
-    }
-    override void update_thermo_from_rhop(GasState Q) const
-    {
-        iaf_update_thermo_from_rhop(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
-    }
-    override void update_thermo_from_ps(GasState Q, double s) const
-    {
-        iaf_update_thermo_from_ps(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &s);
-    }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
-    {
-        iaf_update_thermo_from_hs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &h, &s);
-    }
-    override void update_sound_speed(GasState Q) const
-    {
-        iaf_update_sound_speed(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.a));
-    }
-    override void update_trans_coeffs(GasState Q)
-    {
-        iaf_update_trans_coeffs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.mu), &(Q.k));
-    }
-    override double dudT_const_v(in GasState Q) const
-    {
-        return iaf_get_Cv(); // May need something more general for a more complex gas.
-    }
-    override double dhdT_const_p(in GasState Q) const
-    {
-        return iaf_get_Cp();
-    }
-    override double dpdrho_const_T(in GasState Q) const
-    {
-        double R = iaf_get_Rgas();
-        return R*Q.T;
-    }
-    override double gas_constant(in GasState Q) const
-    {
-        return iaf_get_Rgas();
-    }
-    override double internal_energy(in GasState Q) const
-    {
-        return Q.u;
-    }
-    override double enthalpy(in GasState Q) const
-    {
-        return Q.u + Q.p/Q.rho;
-    }
-    override double entropy(in GasState Q) const
-    {
-        double p = Q.p;
-        double T = Q.T;
-        return iaf_entropy(&p, &T);
+    version(complex_numbers) {
+        override void update_thermo_from_pT(GasState Q) const 
+        {
+            double p = Q.p.re;
+            double T = Q.T.re;
+            double rho = Q.rho.re;
+            double u = Q.u.re;
+            double[1] massf;
+            iaf_update_thermo_from_pT(&p, &T, &rho, &u, massf.ptr);
+            Q.p = to!number(p);
+            Q.T = to!number(T);
+            Q.rho = to!number(rho);
+            Q.u = to!number(u);
+            Q.massf[0] = to!number(massf[0]);
+        }
+        override void update_thermo_from_rhou(GasState Q) const
+        {
+            // [TODO] iaf_update_thermo_from_rhou(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
+        }
+        override void update_thermo_from_rhoT(GasState Q) const
+        {
+            // [TODO] iaf_update_thermo_from_rhoT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
+        }
+        override void update_thermo_from_rhop(GasState Q) const
+        {
+            // [TODO] iaf_update_thermo_from_rhop(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
+        }
+        override void update_thermo_from_ps(GasState Q, number s) const
+        {
+            // [TODO] iaf_update_thermo_from_ps(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &s);
+        }
+        override void update_thermo_from_hs(GasState Q, number h, number s) const
+        {
+            // [TODO] iaf_update_thermo_from_hs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &h, &s);
+        }
+        override void update_sound_speed(GasState Q) const
+        {
+            // [TODO] iaf_update_sound_speed(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.a));
+        }
+        override void update_trans_coeffs(GasState Q)
+        {
+            // [TODO] iaf_update_trans_coeffs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.mu), &(Q.k));
+        }
+        override number dudT_const_v(in GasState Q) const
+        {
+            return to!number(iaf_get_Cv()); // May need something more general for a more complex gas.
+        }
+        override number dhdT_const_p(in GasState Q) const
+        {
+            return to!number(iaf_get_Cp());
+        }
+        override number dpdrho_const_T(in GasState Q) const
+        {
+            double R = iaf_get_Rgas();
+            return R*Q.T;
+        }
+        override number gas_constant(in GasState Q) const
+        {
+            return to!number(iaf_get_Rgas());
+        }
+        override number internal_energy(in GasState Q) const
+        {
+            return Q.u;
+        }
+        override number enthalpy(in GasState Q) const
+        {
+            return Q.u + Q.p/Q.rho;
+        }
+        override number entropy(in GasState Q) const
+        {
+            double p = Q.p.re;
+            double T = Q.T.re;
+            return to!number(iaf_entropy(&p, &T));
+        }
+    } else {
+        override void update_thermo_from_pT(GasState Q) const 
+        {
+            iaf_update_thermo_from_pT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
+        }
+        override void update_thermo_from_rhou(GasState Q) const
+        {
+            iaf_update_thermo_from_rhou(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
+        }
+        override void update_thermo_from_rhoT(GasState Q) const
+        {
+            iaf_update_thermo_from_rhoT(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
+        }
+        override void update_thermo_from_rhop(GasState Q) const
+        {
+            iaf_update_thermo_from_rhop(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr);
+        }
+        override void update_thermo_from_ps(GasState Q, double s) const
+        {
+            iaf_update_thermo_from_ps(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &s);
+        }
+        override void update_thermo_from_hs(GasState Q, double h, double s) const
+        {
+            iaf_update_thermo_from_hs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &h, &s);
+        }
+        override void update_sound_speed(GasState Q) const
+        {
+            iaf_update_sound_speed(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.a));
+        }
+        override void update_trans_coeffs(GasState Q)
+        {
+            iaf_update_trans_coeffs(&(Q.p), &(Q.T), &(Q.rho), &(Q.u), Q.massf.ptr, &(Q.mu), &(Q.k));
+        }
+        override double dudT_const_v(in GasState Q) const
+        {
+            return iaf_get_Cv(); // May need something more general for a more complex gas.
+        }
+        override double dhdT_const_p(in GasState Q) const
+        {
+            return iaf_get_Cp();
+        }
+        override double dpdrho_const_T(in GasState Q) const
+        {
+            double R = iaf_get_Rgas();
+            return R*Q.T;
+        }
+        override double gas_constant(in GasState Q) const
+        {
+            return iaf_get_Rgas();
+        }
+        override double internal_energy(in GasState Q) const
+        {
+            return Q.u;
+        }
+        override double enthalpy(in GasState Q) const
+        {
+            return Q.u + Q.p/Q.rho;
+        }
+        override double entropy(in GasState Q) const
+        {
+            double p = Q.p;
+            double T = Q.T;
+            return iaf_entropy(&p, &T);
+        }
     }
 } // end class IdealAirProxy
 

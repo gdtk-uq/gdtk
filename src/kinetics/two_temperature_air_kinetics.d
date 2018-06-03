@@ -14,8 +14,11 @@ import std.stdio;
 import std.conv;
 import std.string;
 import std.math;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
+
 import gas;
 import gas.two_temperature_air;
 import kinetics.thermochemical_reactor;
@@ -51,7 +54,7 @@ final class TwoTemperatureAirKinetics : ThermochemicalReactor {
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref double[] params)
+                         ref number[] params)
     {
         
         double dummyDouble;
@@ -78,11 +81,11 @@ private:
     TwoTemperatureAir _airModel;
     GasState _Qinit, _Q0;
     ChemistryUpdate _chemUpdate;
-    double _eTotal;
+    number _eTotal;
     double _c2 = 1.0;
-    double _T_sh, _Tv_sh;
+    number _T_sh, _Tv_sh;
     double[] _A;
-    double[] _molef;
+    number[] _molef;
     double[] _particleMass;
     double[][] _mu;
     int[][] _reactionsByMolecule;
@@ -282,55 +285,55 @@ private:
         dtSuggest = dtSave;
     }
 
-    double evalRelaxationTime(GasState Q, int isp)
+    number evalRelaxationTime(GasState Q, int isp)
     {
-        double tauInv = 0.0;
+        number tauInv = 0.0;
         foreach (csp; 0 .. _airModel.n_species) {
             // We exclude electrons in the vibrational relaxation time.
             if (_airModel.species_name(csp) == "e-") {
                 continue;
             }
             // 1. Compute Millikan-White value for each interaction
-            double pTau = exp(_A[isp] * (pow(Q.T, -1./3) - 0.015*pow(_mu[isp][csp], 0.25)) - 18.42);
-            double pCollider = _molef[csp]*Q.p/P_atm;
-            double tau = pTau/pCollider;
+            number pTau = exp(_A[isp] * (pow(Q.T, -1./3) - 0.015*pow(_mu[isp][csp], 0.25)) - 18.42);
+            number pCollider = _molef[csp]*Q.p/P_atm;
+            number tau = pTau/pCollider;
             tauInv += 1.0/tau;
         }
-        double tauMW = 1.0/tauInv;
+        number tauMW = 1.0/tauInv;
         // 2. Compute Park value for high-temperature correction
         double k = Boltzmann_constant;
-        double nd = Q.p/(k*Q.T); // 1/m^3
+        number nd = Q.p/(k*Q.T); // 1/m^3
         nd *= 1.0e-6; // convert 1/m^3 --> 1/cm^3
-        double c = sqrt(8*k*Q.T/(PI*_particleMass[isp]));
+        number c = sqrt(8*k*Q.T/(to!double(PI)*_particleMass[isp]));
         c *= 100.0; // convert m/s --> cm/s
         double sigmaDash = 3.0e-17; // cm^2
-        double sigma = sigmaDash*((50000.0/Q.T)^^2); // cm^2
-        double tauP = 1.0/(nd*c*sigma);
+        number sigma = sigmaDash*((50000.0/Q.T)^^2); // cm^2
+        number tauP = 1.0/(nd*c*sigma);
         // 3. Combine M-W and Park values.
-        double tauV = tauMW + tauP;
+        number tauV = tauMW + tauP;
         // 4. Correct Landau-Teller at high temperatures by
         //    modifying tau.
-        double s = 3.5*exp(-5000.0/_T_sh);
+        number s = 3.5*exp(-5000.0/_T_sh);
         tauInv = (1.0/tauV)*(pow(fabs((_T_sh - Q.T_modes[0])/(_T_sh - _Tv_sh)), s-1.0));
         return 1.0/tauInv;
     }
 
-    double evalRate(GasState Q)
+    number evalRate(GasState Q)
     {
-        double rate = 0.0;
+        number rate = 0.0;
         foreach (isp; _airModel.molecularSpecies) {
             // Vibrational energy exchange via collisions.
-            double tau = evalRelaxationTime(Q, isp);
-            double evStar = _airModel.vibEnergy(Q.T, isp);
-            double ev = _airModel.vibEnergy(Q.T_modes[0], isp);
+            number tau = evalRelaxationTime(Q, isp);
+            number evStar = _airModel.vibEnergy(Q.T, isp);
+            number ev = _airModel.vibEnergy(Q.T_modes[0], isp);
             rate += Q.massf[isp] * (evStar - ev)/tau;
             // Vibrational energy change due to chemical reactions.
-            double chemRate = 0.0;
+            number chemRate = 0.0;
             foreach (ir; _reactionsByMolecule[isp]) {
                 chemRate += _chemUpdate.rmech.rate(ir, isp);
             }
             chemRate *= _airModel.mol_masses[isp]; // convert mol/m^3/s --> kg/m^3/s
-            double Ds = _c2*ev;
+            number Ds = _c2*ev;
             rate += Q.massf[isp]*chemRate*Ds;
         }
         return rate;
@@ -346,45 +349,45 @@ private:
         immutable double b51=37./378., b53=250./621., b54=125./594., b56=512./1771.,
             b41=2825./27648., b43=18575./48384., b44=13525./55296., b45=277./14336., b46=1.0/4.0;
 
-        double k1 = evalRate(Q);
+        number k1 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a21*k1);
         Q.u = _eTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
 
-        double k2 = evalRate(Q);
+        number k2 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a31*k1 + a32*k2);
         Q.u = _eTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
 
-        double k3 = evalRate(Q);
+        number k3 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a41*k1 + a42*k2 + a43*k3);
         Q.u = _eTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
 
-        double k4 = evalRate(Q);
+        number k4 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a51*k1 + a52*k2 + a53*k3 + a54*k4);
         Q.u = _eTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
 
-        double k5 = evalRate(Q);
+        number k5 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(a61*k1 + a62*k2 + a63*k3 + a64*k4 + a65*k5);
         Q.u = _eTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
 
-        double k6 = evalRate(Q);
+        number k6 = evalRate(Q);
         Q.u_modes[0] = _Q0.u_modes[0] + h*(b51*k1 + b53*k3 + b54*k4 + b56*k6);
         Q.u = _eTotal - Q.u_modes[0];
         _airModel.update_thermo_from_rhou(Q);
 
         // Compute error estimate.
-        double errEst = Q.u_modes[0] - (_Q0.u_modes[0] + h*(b41*k1 + b43*k3 + b44*k4 + b45*k5 + b46*k6));
+        number errEst = Q.u_modes[0] - (_Q0.u_modes[0] + h*(b41*k1 + b43*k3 + b44*k4 + b45*k5 + b46*k6));
 
         // And use error estimate as a means to suggest a new timestep.
         double atol = _energyAbsTolerance;
         double rtol = _energyRelTolerance;
-        double sk = atol + rtol*fmax(fabs(_Q0.u_modes[0]), fabs(Q.u_modes[0]));
-        double err = errEst/sk;
-// Now use error as an estimate for new step size
+        double sk = atol + rtol*fmax(fabs(_Q0.u_modes[0].re), fabs(Q.u_modes[0].re));
+        double err = errEst.re/sk;
+        // Now use error as an estimate for new step size
         double scale = 0.0;
         const double maxscale = 10.0;
         const double minscale = 0.2;
@@ -415,7 +418,6 @@ static double[string] A_MW; // A parameter in Millikan-White expression
 
 static this()
 {
-    
     // Gnoffo et al. Table 1
     A_MW["N2"] = 220.0;
     A_MW["O2"] = 129.0;
@@ -423,7 +425,5 @@ static this()
     A_MW["N2+"] = 220.0;
     A_MW["O2+"] = 129.0;
     A_MW["NO+"] = 168.0;
-
-    
 }
 

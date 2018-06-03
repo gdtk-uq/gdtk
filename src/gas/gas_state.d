@@ -11,11 +11,7 @@ import nm.complex;
 import nm.number;
 
 import gas.gas_model;
-version(complex_numbers) {
-    // cea_gas not complexified
-} else {
-    import gas.cea_gas;
-}
+import gas.cea_gas;
 
 class GasState {
 public:
@@ -44,13 +40,9 @@ public:
     /// Composition
     number[] massf;  /// species mass fractions
     number quality;  /// vapour quality
-    version(complex_numbers) {
-        // cea_gas not complexified
-    } else {
-        // A place to hang on to some CEA data, so that it can be called up
-        // in CEAGas methods that don't have access to the original CEA output file.
-        CEASavedData* ceaSavedData;
-    }
+    // A place to hang on to some CEA data, so that it can be called up
+    // in CEAGas methods that don't have access to the original CEA output file.
+    CEASavedData* ceaSavedData;
 
     this(uint n_species, uint n_modes, bool includeSavedData=false)
     {
@@ -58,21 +50,13 @@ public:
         u_modes.length = n_modes;
         T_modes.length = n_modes;
         k_modes.length = n_modes;
-        version(complex_numbers) {
-            // cea_gas not complexified
-        } else {
-            if (includeSavedData) { ceaSavedData = new CEASavedData; }
-        }
+        if (includeSavedData) { ceaSavedData = new CEASavedData; }
     }
 
     this(GasModel gm)
     {
         this(gm.n_species, gm.n_modes);
-        version(complex_numbers) {
-            // cea_gas not complexified
-        } else {
-            if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
-        }
+        if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
     }
 
     this(GasModel gm, in double p_init, in double T_init, in double[] T_modes_init,
@@ -96,11 +80,7 @@ public:
         }
         quality = quality_init;
         sigma = sigma_init;
-        version(complex_numbers) {
-            // cea_gas not complexified
-        } else {
-            if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
-        }
+        if (cast(CEAGas)gm) { ceaSavedData = new CEASavedData; }
         // Now, evaluate the rest of the properties using the gas model.
         gm.update_thermo_from_pT(this);
         gm.update_sound_speed(this);
@@ -133,12 +113,8 @@ public:
         sigma = other.sigma;
         massf = other.massf.dup;
         quality = other.quality;
-        version(complex_numbers) {
-            // cea_gas not complexified
-        } else {
-            if (other.ceaSavedData !is null) {
-                ceaSavedData = new CEASavedData(*(other.ceaSavedData));
-            }
+        if (other.ceaSavedData !is null) {
+            ceaSavedData = new CEASavedData(*(other.ceaSavedData));
         }
     }
 

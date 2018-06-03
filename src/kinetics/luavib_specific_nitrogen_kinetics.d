@@ -8,6 +8,8 @@ module kinetics.luavib_specific_nitrogen_kinetics;
 import std.stdio;
 import std.conv;
 import std.string;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import util.lua_service;
@@ -70,7 +72,7 @@ extern(C) int updateNitrogenStates(lua_State *L)
    
     // We need a dummy array of empty extra params
     // for the function signature
-    double[] params;
+    number[] params;
     // and dummy dtChemSuggest and dtThermSuggest
     double dtChemSuggest = 0.0;
     double dtThermSuggest = 0.0;

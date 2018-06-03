@@ -13,24 +13,27 @@ import std.math;
 import std.string;
 import std.typecons;
 import std.algorithm;
+import nm.complex;
+import nm.number;
+
 import util.lua;
 import util.lua_service;
 import gas;
 import util.msg_service;
 import kinetics.rate_constant;
 
-double compute_equilibrium_constant(GasModel gmodel, GasState Q,
+number compute_equilibrium_constant(GasModel gmodel, GasState Q,
                                     in int[] participants, in double[] nu)
 {
     Q.p = P_atm; // need to evaluate Gibbs energy at standard state.
-    double dG = 0.0;
-    double nuSum = 0.0;
+    number dG = 0.0;
+    number nuSum = 0.0;
     foreach ( isp; participants ) {
         dG += nu[isp] * gmodel.gibbs_free_energy(Q, isp) * gmodel.mol_masses()[isp];
         nuSum += nu[isp];
     }
-    double K_p = exp(-dG/(R_universal*Q.T));
-    double K_c = K_p*pow(P_atm/(R_universal*Q.T), nuSum);
+    number K_p = exp(-dG/(R_universal*Q.T));
+    number K_c = K_p*pow(P_atm/(R_universal*Q.T), nuSum);
     return K_c;
 }
 
@@ -41,9 +44,9 @@ double compute_equilibrium_constant(GasModel gmodel, GasState Q,
 class Reaction
 {
 public:
-    @property double k_f() const { return _k_f; }
-    @property double k_b() const { return _k_b; }
-    @property double K_eq() const { return _K_eq; }
+    @property number k_f() const { return _k_f; }
+    @property number k_b() const { return _k_b; }
+    @property number K_eq() const { return _K_eq; }
     @property ref int[] participants() { return _participants; }
     
     this(RateConstant forward, RateConstant backward, GasModel gmodel)
@@ -86,7 +89,7 @@ public:
                 if (_gmodel.n_modes >= 1) {
                     _Qw.T = Q.T;
                     _Qw.T_modes[] = Q.T;
-                    double kf_eq = eval_forward_rate_constant(_Qw);
+                    number kf_eq = eval_forward_rate_constant(_Qw);
                     _k_b = kf_eq/(_K_eq + EPS);
                 }
                 else {
@@ -109,34 +112,34 @@ public:
         }
     }
 
-    final void eval_rates(in double[] conc)
+    final void eval_rates(in number[] conc)
     {
         _w_f = eval_forward_rate(conc);
         _w_b = eval_backward_rate(conc);
     }
 
-    abstract double production(int isp) const;
-    abstract double loss(int isp) const;
+    abstract number production(int isp) const;
+    abstract number loss(int isp) const;
 
 protected:
-    abstract double eval_forward_rate(in double[] conc);
-    abstract double eval_backward_rate(in double[] conc);
+    abstract number eval_forward_rate(in number[] conc);
+    abstract number eval_backward_rate(in number[] conc);
             
 private:
     RateConstant _forward, _backward;
-    double _k_f, _k_b; // Storage of computed rate constants
-    double _K_eq; // Equilibrium constant based on concentration
+    number _k_f, _k_b; // Storage of computed rate constants
+    number _K_eq; // Equilibrium constant based on concentration
     bool _compute_kf_then_kb = true;
-    double _w_f, _w_b; // Storage of computed rates of change
+    number _w_f, _w_b; // Storage of computed rates of change
     GasModel _gmodel;
     GasState _Qw; // a GasState for temporary working
     int[] _participants; // Storage of indices of species that
                          // participate in this reaction
-    double eval_forward_rate_constant(in GasState Q)
+    number eval_forward_rate_constant(in GasState Q)
     {
         return _forward.eval(Q);
     }
-    double eval_backward_rate_constant(in GasState Q)
+    number eval_backward_rate_constant(in GasState Q)
     {
         return _backward.eval(Q);
     }
@@ -210,43 +213,43 @@ public:
         _Qw.T = Q.T;
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
-    override double production(int isp) const
+    override number production(int isp) const
     {
         if ( _nu[isp] >  0.0 )
             return _nu[isp]*_w_f;
         else if ( _nu[isp] < 0.0 )
             return -_nu[isp]*_w_b;
         else
-            return 0.0;
+            return to!number(0.0);
     }
     
-    override double loss(int isp) const
+    override number loss(int isp) const
     {
         if ( _nu[isp] > 0.0 ) 
             return _nu[isp]*_w_b;
         else if ( _nu[isp] < 0.0 )
             return -_nu[isp]*_w_f;
         else 
-            return 0.0;
+            return to!number(0.0);
     }
 protected:
-    override double eval_forward_rate(in double[] conc)
+    override number eval_forward_rate(in number[] conc)
     {
-        double val = _k_f;
+        number val = _k_f;
         foreach ( ref r; _reactants ) {
             int isp = r[0];
-            double coeff = r[1];
+            number coeff = r[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
     }
 
-    override double eval_backward_rate(in double[] conc)
+    override number eval_backward_rate(in number[] conc)
     {
-        double val = _k_b;
+        number val = _k_b;
         foreach ( ref p; _products ) {
             int isp = p[0];
-            double coeff = p[1];
+            number coeff = p[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
@@ -325,46 +328,46 @@ public:
         _Qw.T = Q.T;
         _K_eq = compute_equilibrium_constant(_gmodel, _Qw, _participants, _nu);
     }
-    override double production(int isp) const
+    override number production(int isp) const
     {
         if ( _nu[isp] >  0.0 )
             return _nu[isp]*_w_f;
         else if ( _nu[isp] < 0.0 )
             return -_nu[isp]*_w_b;
         else
-            return 0.0;
+            return to!number(0.0);
     }
     
-    override double loss(int isp) const
+    override number loss(int isp) const
     {
         if ( _nu[isp] > 0.0 ) 
             return _nu[isp]*_w_b;
         else if ( _nu[isp] < 0.0 )
             return -_nu[isp]*_w_f;
         else 
-            return 0.0;
+            return to!number(0.0);
     }
 protected:
-    override double eval_forward_rate(in double[] conc)
+    override number eval_forward_rate(in number[] conc)
     {
         // eval_forward_rate() needs to be called before
         // eval_backward_rate() so that _anaonymousColliderTerm is up-to-date.
         computeAnonymousColliderTerm(conc);
-        double val = _k_f*_anonymousColliderTerm;
+        number val = _k_f*_anonymousColliderTerm;
         foreach ( ref r; _reactants ) {
             int isp = r[0];
-            double coeff = r[1];
+            number coeff = r[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
     }
 
-    override double eval_backward_rate(in double[] conc)
+    override number eval_backward_rate(in number[] conc)
     {
-        double val = _k_b*_anonymousColliderTerm;
+        number val = _k_b*_anonymousColliderTerm;
         foreach ( ref p; _products ) {
             int isp = p[0];
-            double coeff = p[1];
+            number coeff = p[1];
             val *= pow(conc[isp], coeff);
         }
         return val;
@@ -375,9 +378,9 @@ private:
     Tuple!(int, double)[] _products;
     double[] _nu;
     Tuple!(int, double)[] _efficiencies;
-    double _anonymousColliderTerm;
+    number _anonymousColliderTerm;
 
-    void computeAnonymousColliderTerm(in double[] conc)
+    void computeAnonymousColliderTerm(in number[] conc)
     {
         _anonymousColliderTerm = 0.0;
         foreach ( ref c; _efficiencies ) {

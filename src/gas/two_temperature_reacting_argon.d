@@ -14,11 +14,6 @@
 
 module gas.two_temperature_reacting_argon;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
-import gas.diffusion.viscosity;
-import gas.diffusion.therm_cond;
 import std.math;
 import std.stdio;
 import std.string;
@@ -28,6 +23,14 @@ import std.conv;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
+import gas.diffusion.viscosity;
+import gas.diffusion.therm_cond;
 
 // First, the basic gas model.
 
@@ -76,7 +79,7 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         Q.rho = Q.p/(_Rgas*(Q.T + alpha*Q.T_modes[0]));
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha<=_ion_tol) {
@@ -88,7 +91,7 @@ public:
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         Q.T = 2.0/3.0*Q.u/_Rgas;
         if (alpha <= _ion_tol) {
             Q.T_modes[0] = _T_modes_ref;
@@ -101,7 +104,7 @@ public:
 
     override void update_thermo_from_rhoT(GasState Q) const
     {
-        double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);     //Q.rho*_Rgas*Q.T;
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha <= _ion_tol) {
@@ -114,7 +117,7 @@ public:
 
     override void update_thermo_from_rhop(GasState Q) const
     {
-        double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         Q.T = Q.p/Q.rho/_Rgas - alpha*Q.T_modes[0];
         // Assume Q.T_modes[0] is set independently, and correct.
         Q.u = 3.0/2.0*_Rgas*Q.T;
@@ -125,17 +128,17 @@ public:
             Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
         }
     }
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         throw new GasModelException("update_thermo_from_ps not implemented in TwoTemperatureReactingArgon.");
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new GasModelException("update_thermo_from_hs not implemented in TwoTemperatureReactingArgon.");
     }
     override void update_sound_speed(GasState Q) const
     {
-        double _gamma = dhdT_const_p(Q)/dudT_const_v(Q);
+        number _gamma = dhdT_const_p(Q)/dudT_const_v(Q);
         Q.a = sqrt(_gamma*_Rgas*Q.T);
         //[TODO] update the _Cv and _Cp properties to be dependant on alpha...
     }
@@ -146,33 +149,33 @@ public:
         Q.k = 0.0;
         Q.k_modes[0] = 0.0;
     }
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         return 3.0/2.0*_Rgas*(1+alpha) + alpha-_Rgas*alpha*(1-alpha)/(2-alpha)*pow((3.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
-        double alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         return 5.0/2.0*_Rgas*(1+alpha) + _Rgas/2*alpha*(1-pow(alpha,2))*pow((5.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
         return _Rgas*Q.T; //TODO (Daniel) Check this
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return _Rgas;
+        return to!number(_Rgas);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         throw new GasModelException("entropy not implemented in TwoTemperatureReactingArgon.");
     }
@@ -220,15 +223,15 @@ version(two_temperature_reacting_argon_test) {
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
-        double my_rho = 1.0e5 / (208.0 * 300.0);
+        number my_rho = 1.0e5 / (208.0 * 300.0);
         assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
 
-        double my_Cv = gm.dudT_const_v(gd);
-        double my_u = my_Cv*300.0; 
+        number my_Cv = gm.dudT_const_v(gd);
+        number my_u = my_Cv*300.0; 
         assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
 
-        double my_Cp = gm.dhdT_const_p(gd);
-        double my_a = sqrt(my_Cp/my_Cv*208.0*300.0);
+        number my_Cp = gm.dhdT_const_p(gd);
+        number my_a = sqrt(my_Cp/my_Cv*208.0*300.0);
         assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
 
         gm.update_trans_coeffs(gd);

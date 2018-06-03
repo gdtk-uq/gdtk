@@ -9,9 +9,6 @@
 
 module gas.very_viscous_air;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
 import std.math;
 import std.stdio;
 import std.string;
@@ -19,8 +16,14 @@ import std.file;
 import std.json;
 import std.conv;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
 import util.msg_service;
 import util.lua;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
 
 class VeryViscousAir: GasModel {
 public:
@@ -102,11 +105,11 @@ public:
         Q.u = _Cv*Q.T;
     }
     
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
@@ -124,32 +127,32 @@ public:
         throw new Exception("not implemented");
     }
     */
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return _Cv;
+        return to!number(_Cv);
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
-        return _Cp;
+        return to!number(_Cp);
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         return R*Q.T;
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return _Rgas;
+        return to!number(_Rgas);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }

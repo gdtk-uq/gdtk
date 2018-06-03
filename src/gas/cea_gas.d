@@ -16,9 +16,6 @@
 
 module gas.cea_gas;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
 import std.math;
 import std.stdio;
 import std.string;
@@ -32,6 +29,12 @@ import std.format;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
 
 
 struct CEASavedData {
@@ -125,6 +128,10 @@ public:
             auto copy_trans = executeShell("cp " ~ ceaTransFile ~ " .");
             runCEAProgram("trans", false);
         }
+        //
+        version(complex_numbers) {
+            throw new Error("Do not use with complex numbers.");
+        }
     } // end constructor
     
     this(lua_State *L) {
@@ -209,11 +216,11 @@ public:
         throw new Exception("CEAGas update_thermo_from_rhop not implemented.");
     }
     
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
-        callCEA(Q, 0.0, s, "ps", false);
+        callCEA(Q, 0.0, s.re, "ps", false);
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new Exception("CEAGas update_thermo_from_hs not implemented.");
     }
@@ -232,33 +239,33 @@ public:
     // It is assumed that you have previously called an update function
     // so that the values sitting in the CEAGas object are relevant.
 
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return Q.ceaSavedData.Cp - Q.ceaSavedData.Rgas;
+        return to!number(Q.ceaSavedData.Cp - Q.ceaSavedData.Rgas);
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
-        return Q.ceaSavedData.Cp;
+        return to!number(Q.ceaSavedData.Cp);
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
         return Q.ceaSavedData.Rgas * Q.T;
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return Q.ceaSavedData.Rgas;
+        return to!number(Q.ceaSavedData.Rgas);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
-        return Q.ceaSavedData.h;
+        return to!number(Q.ceaSavedData.h);
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
-        return Q.ceaSavedData.s;
+        return to!number(Q.ceaSavedData.s);
     }
 
 private:

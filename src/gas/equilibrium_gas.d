@@ -9,6 +9,20 @@
 
 module gas.equilibrium_gas;
 
+import std.math;
+import std.stdio;
+import std.string;
+import std.file;
+import std.json;
+import std.conv;
+import util.lua;
+import util.lua_service;
+import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
+import nm.bracketing;
+import nm.brent; 
+
 import gas.gas_model;
 import gas.gas_state;
 import gas.physical_constants;
@@ -22,17 +36,7 @@ import gas.diffusion.cea_viscosity;
 import gas.diffusion.cea_therm_cond;
 import gas.diffusion.wilke_mixing_viscosity;
 import gas.diffusion.wilke_mixing_therm_cond;
-import std.math;
-import std.stdio;
-import std.string;
-import std.file;
-import std.json;
-import std.conv;
-import util.lua;
-import util.lua_service;
-import core.stdc.stdlib : exit;
-import nm.bracketing;
-import nm.brent; 
+
 import kinetics.reaction_mechanism;
 import kinetics.reaction;
 
@@ -79,7 +83,7 @@ public:
     {
         super.update_thermo_from_rhop(Q); // [TODO] replace with Hugh's functions
     }
-    override void update_thermo_from_ps(GasState Q, double s)
+    override void update_thermo_from_ps(GasState Q, number s)
     {
         super.update_thermo_from_ps(Q, s);// [TODO] replace with Hugh's functions
     }

@@ -12,6 +12,9 @@ import std.math;
 import std.stdio;
 import core.stdc.stdlib : exit;
 import std.string;
+import std.conv;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 
@@ -23,11 +26,14 @@ public:
     double R;
     double[9] a;
 
+    // Postblit constructor (Alexandrescu Section 7.1.3.4) so that
+    // the copy of the struct can become completely independent of 
+    // its source.
     this(this)
     {
         a = a.dup;
     }
-    double eval_Cp(double T) const
+    number eval_Cp(number T) const
     {
         
         if ( T < T_lower ) 
@@ -35,27 +41,27 @@ public:
         if ( T > T_upper )
             throw new Exception("temperature value greater than T_upper in CEAThermoCurve.eval_Cp()");
         
-        double Cp_on_R = a[0]/(T*T) + a[1]/T + a[2] + a[3]*T;
+        number Cp_on_R = a[0]/(T*T) + a[1]/T + a[2] + a[3]*T;
         Cp_on_R += a[4]*T*T + a[5]*T*T*T + a[6]*T*T*T*T;
         return R*Cp_on_R;
     }
-    double eval_h(double T) const
+    number eval_h(number T) const
     {
         if ( T < T_lower ) 
             throw new Exception("temperature value lower than T_lower in CEAThermoCurve.eval_h()");
         if ( T > T_upper )
             throw new Exception("temperature value greater than T_upper in CEAThermoCurve.eval_h()");
-        double h_on_RT = -a[0]/(T*T) + a[1]/T * log(T) + a[2] + a[3]*T/2.0;
+        number h_on_RT = -a[0]/(T*T) + a[1]/T * log(T) + a[2] + a[3]*T/2.0;
         h_on_RT +=  a[4]*T*T/3.0 + a[5]*T*T*T/4.0 + a[6]*T*T*T*T/5.0 + a[7]/T;
         return R*T*h_on_RT;
     }
-    double eval_s(double T) const
+    number eval_s(number T) const
     {
         if ( T < T_lower ) 
             throw new Exception("temperature value lower than T_lower in CEAThermoCurve.eval_s()");
         if ( T > T_upper )
             throw new Exception("temperature value greater than T_upper in CEAThermoCurve.eval_s()");
-        double s_on_R = -a[0]/(2.0*T*T) - a[1]/T + a[2]*log(T) + a[3]*T;
+        number s_on_R = -a[0]/(2.0*T*T) - a[1]/T + a[2]*log(T) + a[3]*T;
         s_on_R += a[4]*T*T/2.0 + a[5]*T*T*T/3.0 + a[6]*T*T*T*T/4.0 + a[8];
         return R*s_on_R;
     }
@@ -91,7 +97,7 @@ public:
     {
         return new CEAThermo(this);
     }
-    double eval_Cp(double T) const
+    number eval_Cp(number T) const
     {
         /* We don't try to any fancy extrapolation
            off the ends of the curves. Beyond the range
@@ -99,10 +105,10 @@ public:
            the end of the range.
         */
         if ( T < _T_lowest ) {
-            return _curves[0].eval_Cp(_T_lowest);
+            return _curves[0].eval_Cp(to!number(_T_lowest));
         }
         if ( T > _T_highest ) {
-            return _curves[$-1].eval_Cp(_T_highest);
+            return _curves[$-1].eval_Cp(to!number(_T_highest));
         }
         // Search for appropriate curve segment and evaluate.
         foreach ( c; _curves ) {
@@ -112,7 +118,7 @@ public:
         // We should never reach this point.
         throw new Exception("CEAThermo.eval_Cp(): we should never have reached this point.");
     }
-    double eval_h(double T) const
+    number eval_h(number T) const
     {
         /* We don't try any fancy extrapolation beyond the limits
            of the curves. We will simply take Cp as constant and
@@ -120,15 +126,15 @@ public:
            enthalpy that is contributed beyond the temperature range.
         */
         if ( T < _T_lowest ) {
-            double h_lowest = _curves[0].eval_h(_T_lowest);
-            double Cp_lowest = _curves[0].eval_Cp(_T_lowest);
-            double h = h_lowest - Cp_lowest*(_T_lowest - T);
+            number h_lowest = _curves[0].eval_h(to!number(_T_lowest));
+            number Cp_lowest = _curves[0].eval_Cp(to!number(_T_lowest));
+            number h = h_lowest - Cp_lowest*(_T_lowest - T);
             return h;
         }
         if ( T > _T_highest ) {
-            double h_highest = _curves[$-1].eval_h(_T_highest);
-            double Cp_highest = _curves[$-1].eval_Cp(_T_highest);
-            double h = h_highest + Cp_highest*(T - _T_highest);
+            number h_highest = _curves[$-1].eval_h(to!number(_T_highest));
+            number Cp_highest = _curves[$-1].eval_Cp(to!number(_T_highest));
+            number h = h_highest + Cp_highest*(T - _T_highest);
             return h;
         }
         // Search for appropriate curve segment and evaluate.
@@ -142,7 +148,7 @@ public:
         throw new Exception("CEAThermo.eval_h(): we should never have reached this point.");
         */
     }
-    double eval_s(double T) const
+    number eval_s(number T) const
     {
         /* We don't try any fancy extrapolation beyond the limits
            of the curves. We will simply take Cp as constant and
@@ -150,15 +156,15 @@ public:
            entropy that is contributed beyond the temperature range.
         */
         if ( T < _T_lowest ) {
-            double s_lowest = _curves[0].eval_s(_T_lowest);
-            double Cp_lowest = _curves[0].eval_Cp(_T_lowest);
-            double s = s_lowest - Cp_lowest*log(_T_lowest/T);
+            number s_lowest = _curves[0].eval_s(to!number(_T_lowest));
+            number Cp_lowest = _curves[0].eval_Cp(to!number(_T_lowest));
+            number s = s_lowest - Cp_lowest*log(_T_lowest/T);
             return s;
         }
         if ( T > _T_highest ) {
-            double s_highest = _curves[$-1].eval_s(_T_highest);
-            double Cp_highest = _curves[$-1].eval_Cp(_T_highest);
-            double s = s_highest + Cp_highest*(T/_T_highest);
+            number s_highest = _curves[$-1].eval_s(to!number(_T_highest));
+            number Cp_highest = _curves[$-1].eval_Cp(to!number(_T_highest));
+            number s = s_highest + Cp_highest*(T/_T_highest);
             return s;
         }
         // Search for appropriate curve segment and evaluate.

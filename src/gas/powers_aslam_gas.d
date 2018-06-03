@@ -16,11 +16,6 @@
 
 module gas.powers_aslam_gas;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
-import gas.diffusion.viscosity;
-import gas.diffusion.therm_cond;
 import std.math;
 import std.stdio;
 import std.string;
@@ -30,6 +25,14 @@ import std.conv;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
+import nm.complex;
+import nm.number;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
+import gas.diffusion.viscosity;
+import gas.diffusion.therm_cond;
 
 // The basic gas model.
 
@@ -103,12 +106,12 @@ public:
         Q.u = _Cv*Q.T - Q.massf[1]*_q;
     }
     
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         Q.T = _T1 * exp((1.0/_Cp)*((s - _s1) + _Rgas * log(Q.p/_p1)));
         update_thermo_from_pT(Q);
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         Q.T = h / _Cp;
         Q.p = _p1 * exp((1.0/_Rgas)*(_s1 - s + _Cp*log(Q.T/_T1)));
@@ -124,32 +127,32 @@ public:
         Q.mu = 0.0;
         Q.k = 0.0;
     }
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return _Cv;
+        return to!number(_Cv);
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
-        return _Cp;
+        return to!number(_Cp);
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         return R*Q.T;
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return _Rgas;
+        return to!number(_Rgas);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         return _s1 + _Cp * log(Q.T/_T1) - _Rgas * log(Q.p/_p1);
     }
@@ -198,13 +201,13 @@ version(powers_aslam_gas_test) {
 
         gm.update_thermo_from_pT(gd);
         gm.update_sound_speed(gd);
-        double my_rho = 1.0e5 / (287.0 * 300.0);
+        number my_rho = 1.0e5 / (287.0 * 300.0);
         assert(approxEqual(gd.rho, my_rho, 1.0e-4), failedUnitTest());
-        double my_Cv = gm.dudT_const_v(gd);
-        double my_u = my_Cv*300.0 - 0.25*300000.0; 
+        number my_Cv = gm.dudT_const_v(gd);
+        number my_u = my_Cv*300.0 - 0.25*300000.0; 
         assert(approxEqual(gd.u, my_u, 1.0e-3), failedUnitTest());
-        double my_Cp = gm.dhdT_const_p(gd);
-        double my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
+        number my_Cp = gm.dhdT_const_p(gd);
+        number my_a = sqrt(my_Cp/my_Cv*287.0*300.0);
         assert(approxEqual(gd.a, my_a, 1.0e-3), failedUnitTest());
         gm.update_trans_coeffs(gd);
         assert(approxEqual(gd.mu, 0.0, 1.0e-6), failedUnitTest());

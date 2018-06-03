@@ -14,12 +14,6 @@
 module gas.vib_specific_nitrogen;
 
 import std.algorithm.iteration;
-
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
-import gas.diffusion.viscosity;
-import gas.diffusion.therm_cond;
 import std.math;
 import std.stdio;
 import std.string;
@@ -29,6 +23,16 @@ import std.conv;
 import util.lua;
 import util.lua_service;
 import core.stdc.stdlib : exit;
+
+import nm.complex;
+import nm.number;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
+import gas.diffusion.viscosity;
+import gas.diffusion.therm_cond;
+
 
 immutable int N_VIB_LEVELS = 10;
 
@@ -57,7 +61,7 @@ public:
         Q.rho = Q.p/(_R_N2*Q.T);
         
         foreach (imode; 0 .. _n_modes) {
-             Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
+            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
         }
         Q.u = 2.5 * _R_N2 * Q.T;
         
@@ -66,9 +70,9 @@ public:
     {
         Q.T = 0.4 * Q.u * (1/_R_N2);
         Q.p = Q.rho * _R_N2 * Q.T;
-        Q.T_modes[0] = compute_Tvib(Q, 300.0, 1000.0, 1e-4);
+        Q.T_modes[0] = compute_Tvib(Q, to!number(300.0), to!number(1000.0), 1.0e-4);
         foreach (i; 1 .. N_VIB_LEVELS) {
-                Q.T_modes[i] = Q.T_modes[0];
+            Q.T_modes[i] = Q.T_modes[0];
         }       
 
     }
@@ -78,7 +82,7 @@ public:
         Q.u = 2.5 * _R_N2 * Q.T;
         
         foreach (imode; 0 .. _n_modes) {
-             Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
+            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode);
         }
 
     }
@@ -88,28 +92,28 @@ public:
         Q.T = Q.p / (Q.rho * _R_N2);
         Q.u = 2.5 * _R_N2 * Q.T;
         foreach (imode; 0 .. _n_modes) {
-             Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode); 
+            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * vib_energy(imode); 
         }
-        Q.T_modes[0] = compute_Tvib(Q, 300.0, 1000.0, 1e-4);
+        Q.T_modes[0] = compute_Tvib(Q, to!number(300.0), to!number(1000.0), 1.0e-4);
         foreach (i; 1 .. N_VIB_LEVELS) {
-                Q.T_modes[i] = Q.T_modes[0];
+            Q.T_modes[i] = Q.T_modes[0];
         }       
     }
     
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:update_thermo_from_ps NOT IMPLEMENTED.");
 
     }
 
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:update_thermo_from_hs NOT IMPLEMENTED.");
 
     }
     override void update_sound_speed(GasState Q) const
     {
-        Q.a = (_gamma * _R_N2 * Q.T)^^0.5; 
+        Q.a = sqrt(_gamma * _R_N2 * Q.T); 
     }
     override void update_trans_coeffs(GasState Q)
     {
@@ -117,31 +121,31 @@ public:
         Q.mu = 0.0;
         Q.k = 0.0;
     }
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return _R_N2/(_gamma - 1.0);
+        return to!number(_R_N2/(_gamma - 1.0));
     }
-    override double dhdT_const_p(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:dhdT_const_p NOT IMPLEMENTED.");
     }
-    override double dpdrho_const_T(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:dpdrho_const_T NOT IMPLEMENTED.");
     }
-    override double gas_constant(in GasState Q) const
+    override number gas_constant(in GasState Q) const
     {
-        return _R_N2;
+        return to!number(_R_N2);
     }
-    override double internal_energy(in GasState Q) const
+    override number internal_energy(in GasState Q) const
     {
         return Q.u + sum(Q.u_modes);
     }
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
         return Q.u + sum(Q.u_modes) + Q.p/Q.rho;
     }
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
         throw new Error("ERROR: VibSpecificNitrogen:entropy NOT IMPLEMENTED.");
     }
@@ -163,31 +167,31 @@ private:
         return e;
      }
      
-     double boltzmann_eq(double Tf1) const
+     number boltzmann_eq(number Tf1) const
      {
-        double summ = 0;
+        number summ = 0;
         
         foreach(ej; 0 .. N_VIB_LEVELS) {
-             summ += exp(-vib_energy(ej) / (kB*Tf1));
+            summ += exp(-vib_energy(ej) / (kB*Tf1));
         }        
-        double ei = vib_energy(0);
-        double temp_func = (exp(-ei/(kB*Tf1)) / summ);
+        number ei = vib_energy(0);
+        number temp_func = (exp(-ei/(kB*Tf1)) / summ);
         return temp_func;   
      }
      
-     double compute_Tvib(GasState Q, double x0, double x1, double tol) const
+     number compute_Tvib(GasState Q, number x0, number x1, double tol) const
      {
         //this method (secant) is used to compute Tf1
-        double init_x0 = x0;
-        double init_x1 = x1;
-        double fx0 = boltzmann_eq(x0) - Q.massf[0];
-        double fx1 = boltzmann_eq(x1) - Q.massf[0];
-        double max_it = 100; 
+        number init_x0 = x0;
+        number init_x1 = x1;
+        number fx0 = boltzmann_eq(x0) - Q.massf[0];
+        number fx1 = boltzmann_eq(x1) - Q.massf[0];
+        int max_it = 100; 
         
         foreach(n; 0 .. max_it) {
             if (abs(fx1) < tol) {return x1;}
         
-            double x2 = ((x0*fx1) - (x1*fx0)) / (fx1 - fx0);
+            number x2 = ((x0*fx1) - (x1*fx0)) / (fx1 - fx0);
             x0 = x1;
             x1 = x2;
             fx0 = fx1;
@@ -233,9 +237,8 @@ version(vib_specific_nitrogen_test) {
         assert(approxEqual(Q.k, 0.0, 1.0e-6), failedUnitTest());
         
         gm.update_sound_speed(Q);
-        double my_a = (gamma * R_N2 * 300.0)^^0.5;
+        double my_a = sqrt(gamma * R_N2 * 300.0);
         assert(approxEqual(Q.a, my_a, 1.0e-6), failedUnitTest());
-        //assert(approxEqual(1.0,2.0,1.0e-6), failedUnitTest()); //fail on purpose for check
         
         return 0;
     }

@@ -4,15 +4,14 @@
  *
  * Author: Jonathan H.
  * Version: 2015-09-17: initial cut, to explore options. Incorporated additional functions for extrapolation
+ * PJ 2018-06-03
+ * We make the signatures compatible with complex numbers but
+ * we do not actually pass the complex values through to
+ * Jonathan's functions.
  */
 
 module gas.co2gas_sw;
 
-import gas.gas_model;
-import gas.gas_state;
-import gas.physical_constants;
-import gas.diffusion.sutherland_viscosity;
-import gas.diffusion.sutherland_therm_cond;
 import std.math;
 import std.algorithm;
 import std.stdio;
@@ -24,10 +23,19 @@ import util.lua;
 import util.lua_service;
 import util.msg_service;
 import core.stdc.stdlib : exit;
+
+import nm.complex;
+import nm.number;
 import nm.ridder;
 import nm.bracketing;
 import nm.tree_patch;
 import nm.univariate_lut;
+
+import gas.gas_model;
+import gas.gas_state;
+import gas.physical_constants;
+import gas.diffusion.sutherland_viscosity;
+import gas.diffusion.sutherland_therm_cond;
 
 class CO2GasSW: GasModel {
 public:
@@ -39,6 +47,9 @@ public:
         _species_names ~= "CO2";
         _mol_masses ~= 0.04401121121333065;// value for CO2
         create_species_reverse_lookup();
+        version(complex_numbers) {
+            throw new Error("Do not use with complex numbers.");
+        }
     }
         
     this(lua_State *L) {
@@ -119,15 +130,15 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
-        Q.rho = updateRho_PT(Q.p, Q.T);
-        Q.u = updateEnergy_rhoT(Q.rho, Q.T);
+        Q.rho = updateRho_PT(Q.p.re, Q.T.re);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
 
     override void update_thermo_from_rhou(GasState Q) const
     {
         if (lookup_rhoeFlag){
             //following line assumes that both T and P trees constructed with same bounds
-            double[2] uv = get_uv_rhoe(Q.rho, Q.u,
+            double[2] uv = get_uv_rhoe(Q.rho.re, Q.u.re,
                                        T_rhoe_Tree.X_min,
                                        T_rhoe_Tree.X_max,
                                        T_rhoe_Tree.Y_min,
@@ -136,44 +147,44 @@ public:
             Q.p = P_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
         }
         else{
-            Q.T = updateTemperature_rhoe(Q.rho, Q.u);
-            Q.p = updatePressure_rhoT(Q.rho,Q.T);
+            Q.T = updateTemperature_rhoe(Q.rho.re, Q.u.re);
+            Q.p = updatePressure_rhoT(Q.rho.re,Q.T.re);
         }
     }
 
     override void update_thermo_from_rhoT(GasState Q) const//DONE
     {
-        Q.p = updatePressure_rhoT(Q.rho, Q.T);
-        Q.u = updateEnergy_rhoT(Q.rho, Q.T);
+        Q.p = updatePressure_rhoT(Q.rho.re, Q.T.re);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
 
     override void update_thermo_from_rhop(GasState Q) const
     {
-        Q.T = updateT_Prho(Q.p, Q.rho);
-        Q.u = updateEnergy_rhoT(Q.rho, Q.T);
+        Q.T = updateT_Prho(Q.p.re, Q.rho.re);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
     
-    override void update_thermo_from_ps(GasState Q, double s) const
+    override void update_thermo_from_ps(GasState Q, number s) const
     {
-        Q.rho = getRho_EntropyP(s,Q.p, Q.T);//Q.T is modified by function
-        Q.u = updateEnergy_rhoT(Q.rho, Q.T);
+        Q.rho = getRho_EntropyP(s.re, Q.p.re, Q.T.re);//Q.T is modified by function
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
 
-    override void update_thermo_from_hs(GasState Q, double h, double s) const
+    override void update_thermo_from_hs(GasState Q, number h, number s) const
     {
         if (lookup_hsFlag) {
-            Q.rho = rho_sh_Tree.search(s,h).interpolateF(s,h);
-            Q.T = T_sh_Tree.search(s,h).interpolateF(s,h);}
+            Q.rho = rho_sh_Tree.search(s.re,h.re).interpolateF(s.re,h.re);
+            Q.T = T_sh_Tree.search(s.re,h.re).interpolateF(s.re,h.re);}
         else {
-            Q.rho = getRho_sh(s,h, Q.T);
+            Q.rho = getRho_sh(s.re, h.re, Q.T.re);
         }
-        Q.u = updateEnergy_rhoT(Q.rho, Q.T);
+        Q.u = updateEnergy_rhoT(Q.rho.re, Q.T.re);
     }
 
     override void update_sound_speed(GasState Q) const
     {
         if (lookup_rhoeFlag){
-            double[2] uv = get_uv_rhoe(Q.rho, Q.u,
+            double[2] uv = get_uv_rhoe(Q.rho.re, Q.u.re,
                                        a_rhoe_Tree.X_min,
                                        a_rhoe_Tree.X_max,
                                        a_rhoe_Tree.Y_min,
@@ -181,7 +192,7 @@ public:
             Q.a = a_rhoe_Tree.search(uv[0], uv[1]).interpolateF(uv[0], uv[1]);
         }       
         else {
-            Q.a = updateSoundSpeed_rhoT(Q.rho, Q.T);
+            Q.a = updateSoundSpeed_rhoT(Q.rho.re, Q.T.re);
         }
     }
     override void update_trans_coeffs(GasState Q) const
@@ -194,39 +205,39 @@ public:
         throw new Exception("not implemented");
     }
     */
-    override double dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
-        return get_de_dT(Q.rho,Q.T);
+        return to!number(get_de_dT(Q.rho.re, Q.T.re));
     }
     
-    override double dhdT_const_p(in GasState Q) const
-    {
-        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
-    }
-    
-    override double dpdrho_const_T(in GasState Q) const
+    override number dhdT_const_p(in GasState Q) const
     {
         throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
     
-    override double gas_constant(in GasState Q) const
+    override number dpdrho_const_T(in GasState Q) const
     {
-        return _Rgas;
+        throw new Exception(format("Not implemented: line=%d, file=%s\n", __LINE__, __FILE__));
     }
     
-    override double internal_energy(in GasState Q) const
+    override number gas_constant(in GasState Q) const
+    {
+        return to!number(_Rgas);
+    }
+    
+    override number internal_energy(in GasState Q) const
     {
         return Q.u;
     }
     
-    override double enthalpy(in GasState Q) const
+    override number enthalpy(in GasState Q) const
     {
-        return updateEnthalpy_rhoT_original(Q.rho, Q.T);
+        return to!number(updateEnthalpy_rhoT_original(Q.rho.re, Q.T.re));
     }
     
-    override double entropy(in GasState Q) const
+    override number entropy(in GasState Q) const
     {
-        return updateEntropy_rhoT(Q.rho, Q.T);
+        return to!number(updateEntropy_rhoT(Q.rho.re, Q.T.re));
     }
     //------A function that re-maps the rho, T domain according to the liquid-vapour line------------
     //placed in public so it is available for building Tables

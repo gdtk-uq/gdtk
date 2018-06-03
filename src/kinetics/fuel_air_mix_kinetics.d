@@ -14,8 +14,11 @@
 module kinetics.fuel_air_mix_kinetics;
 
 import std.stdio : writeln;
-import std.math : fabs, fmin;
-import std.algorithm : min;
+import std.math;
+import std.algorithm;
+import std.conv;
+import nm.complex;
+import nm.number;
 
 import gas;
 import util.lua;
@@ -117,11 +120,11 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         _sRatio=num/denom;
     }
 
-    void get_massf(GasState gas, ref double[3] Ys)
+    void get_massf(GasState gas, ref number[3] Ys)
     {
         // pass Ys by ref required to fill local variable
         // initialization required in case of cumulative sum below
-        Ys=[0.0,0.0,0.0];
+        Ys=[to!number(0.0), to!number(0.0), to!number(0.0)];
         int i=0;
         if (_n_fuel > 1) {
             foreach (isp; 0 .. _n_fuel) {
@@ -150,25 +153,25 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
         }
     }
 
-    double get_omegaDotF(double omega, double[3] Ys)
+    number get_omegaDotF(number omega, number[3] Ys)
     {
         return -1.0 * _A_edm / _tau_edm * min(Ys[0],Ys[1]/_sRatio,_B_edm*Ys[2]/(1.0+_sRatio));
     }
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
-                         ref double[] params)
+                         ref number[] params)
     {
         double local_dt_global=tInterval;
-        double omega = params[0];
+        number omega = params[0];
         _tau_edm=1.0/(_beta_star*omega);
-        double _omega_dot_F = 0.0;
-        double omega_dot_O = 0.0;
-        double omega_dot_P = 0.0;
-        double[] rates; // for laminar= "no-model" combustion
+        number _omega_dot_F = 0.0;
+        number omega_dot_O = 0.0;
+        number omega_dot_P = 0.0;
+        number[] rates; // for laminar= "no-model" combustion
         rates.length = _n_species;
         //writeln(rmech.) 
-        double[3] _Y_s;
+        number[3] _Y_s;
         if(_n_reacting > 3){
             get_massf(Q,_Y_s);
             //writeln("species massf ",_Y_s);
@@ -177,16 +180,16 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             //writeln("nu F x W F = ",_nuF_WF);
             //writeln("nu  x W  = ",_nu_W);
             if(_laminar_limit){
-                double[] conc;
+                number[] conc;
                 conc.length=_n_species; 
                 rmech.eval_rate_constants(Q);  
                 _gmodel.massf2conc(Q,conc);
                 writeln("concentration ",conc);
                 rmech.eval_rates(conc,rates); 
                 writeln("laminar RR (1/s)= ",rates);
-                double[] lamRR; //in kg/(m^3 . s)
+                number[] lamRR; //in kg/(m^3 . s)
                 lamRR.length=rates.length;
-                double sumLamRR=0.0;
+                number sumLamRR=0.0;
                 foreach (isp; 0 .. _n_species) {
                     lamRR[isp]= _gmodel.mol_masses[isp]/Q.rho* rates[isp];
                     sumLamRR=sumLamRR+lamRR[isp];
@@ -200,7 +203,7 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             foreach (isp; 0 .. _n_reacting) { //don't account for inert species
                 Q.massf[isp]=Q.massf[isp] + local_dt_global * (_nu_W[isp])/ _nuF_WF* _omega_dot_F;
             }
-            //double sum=0.0;
+            //number sum=0.0;
             //foreach(isp;0.._n_species){
                 //sum=sum+Q.massf[isp];                                 
             //}
@@ -211,16 +214,16 @@ final class MixingLimitedUpdate : ThermochemicalReactor {
             _Y_s[2]=Q.massf[2];
             _omega_dot_F = get_omegaDotF(omega,_Y_s);   // units 1/s in here 
             if(_laminar_limit) {
-                double[] conc;
+                number[] conc;
                 conc.length=_n_species; 
                 rmech.eval_rate_constants(Q);  
                 _gmodel.massf2conc(Q,conc);
                 writeln("concentration ",conc);
                 rmech.eval_rates(conc,rates); 
                 writeln("laminar RR (1/s)= ",rates);
-                double[] lamRR; //in kg/(m^3 . s)
+                number[] lamRR; //in kg/(m^3 . s)
                 lamRR.length=rates.length;
-                double sumLamRR=0.0;
+                number sumLamRR=0.0;
                 foreach (isp; 0 .. _n_species) {
                     lamRR[isp]= _gmodel.mol_masses[isp]/Q.rho* rates[isp];
                     sumLamRR=sumLamRR+lamRR[isp];
@@ -250,7 +253,7 @@ private:
     // EDM model constants
     double _A_edm=4.0; 
     double _B_edm=0.5;
-    double _tau_edm;
+    number _tau_edm;
     // boolean for use of laminar reaction rate limit
     bool _laminar_limit=false;
     static immutable _beta_star=0.09;

@@ -8,15 +8,17 @@
 
 module kinetics.two_temperature_nitrogen_kinetics;
 
-import std.math : exp, pow;
+import std.math;
 import std.conv;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import util.lua_service;
 import gas;
 import kinetics.thermochemical_reactor;
 
-alias RelaxTimeFunc = double function(double, double);
+alias RelaxTimeFunc = number function(number, number);
 
 final class VibRelaxNitrogen : ThermochemicalReactor {
     this(string fname, GasModel gmodel)
@@ -39,23 +41,22 @@ final class VibRelaxNitrogen : ThermochemicalReactor {
             _relaxTimeCalc = &MWRelaxationTime;
             break;
         }
-
-    }
+    } // end constructor
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref double[] params)
+                         ref number[] params)
     {
-        double tau = _relaxTimeCalc(Q.T, Q.p);
+        number tau = _relaxTimeCalc(Q.T, Q.p);
         // Find the total internal energy in the gas
-        double uTotal = Q.u + Q.u_modes[0];
+        number uTotal = Q.u + Q.u_modes[0];
         // Find the vib energy at equilibrium with T
         _Q_eq.T = Q.T;
         _Q_eq.T_modes[0] = Q.T;
         _Q_eq.p = Q.p;
         _gmodel.update_thermo_from_pT(_Q_eq);
-        double u_v_eq = _Q_eq.u_modes[0];
-        double u_v = Q.u_modes[0];
+        number u_v_eq = _Q_eq.u_modes[0];
+        number u_v = Q.u_modes[0];
         Q.u_modes[0] = u_v_eq + (u_v - u_v_eq)*exp(-tInterval/tau);
         Q.u = uTotal - Q.u_modes[0];
         _gmodel.update_thermo_from_rhou(Q);
@@ -67,21 +68,21 @@ private:
     RelaxTimeFunc _relaxTimeCalc;
 }
 
-double BlackmanRelaxationTime(double T, double p)
+number BlackmanRelaxationTime(number T, number p)
 {
     double A = 7.12e-9;
     double B = 124.07;
-    double pAtm = p/P_atm;
-    double tau = (A/pAtm)*exp(124.07/pow(T, 1./3.));
+    number pAtm = p/P_atm;
+    number tau = (A/pAtm)*exp(124.07/pow(T, 1./3.));
     return tau;
 }
 
-double MWRelaxationTime(double T, double p)
+number MWRelaxationTime(number T, number p)
 {
     double a = 221.0;
     double b = 0.0290;
-    double pAtm = p/P_atm;
-    double pTau = exp(a*(pow(T, -1./3.) - b) - 18.42);
-    double tau = pTau/pAtm;
+    number pAtm = p/P_atm;
+    number pTau = exp(a*(pow(T, -1./3.) - b) - 18.42);
+    number tau = pTau/pAtm;
     return tau;
 }

@@ -15,7 +15,9 @@
 
 module kinetics.powers_aslam_kinetics;
 
-import std.math : exp;
+import std.math;
+import nm.complex;
+import nm.number;
 
 import gas;
 import util.lua;
@@ -41,12 +43,12 @@ final class UpdateAB : ThermochemicalReactor {
     
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
-                         ref double[] params)
+                         ref number[] params)
     {
         if (Q.T > _Ti) {
             // We are above the ignition point, proceed with reaction.
-            double massfA = Q.massf[0];
-            double massfB = Q.massf[1];
+            number massfA = Q.massf[0];
+            number massfB = Q.massf[1];
             // This gas has a very simple reaction scheme that can be integrated explicitly.
             massfA = massfA*exp(-_alpha*tInterval);
             massfB = 1.0 - massfA;

@@ -14,6 +14,8 @@ import std.string;
 import std.conv : to;
 import util.lua;
 import util.lua_service;
+import nm.complex;
+import nm.number;
 import nm.brent; 
 import nm.bracketing;
 import core.stdc.stdlib : exit;
@@ -138,6 +140,10 @@ public:
         }
         _thermCondModel = new WilkeMixingThermCond(tcms, _mol_masses);
         create_species_reverse_lookup();
+        //
+        version(complex_numbers) {
+            throw new Error("Do not use with complex numbers.");
+        }
     } // end constructor using Lua interpreter
 
     this(in string fname)
@@ -173,24 +179,24 @@ public:
         _pgMixEOS.update_temperature(Q);
         _tpgMixEOS.update_energy(Q);
     }
-    override void update_thermo_from_ps(GasState Q, double s)
+    override void update_thermo_from_ps(GasState Q, number s)
     {
         double TOL = 1.0e-6;
-        double delT = 100.0;
-        double T1 = Q.T;
+        number delT = 100.0;
+        number T1 = Q.T;
         // It's possible that T is 'nan' if it's never been set, so:
         if ( isNaN(T1) )
             T1 = 300.0; // Just set at some value to get started.
-        double Tsave = T1;
-        double T2 = T1 + delT;
+        number Tsave = T1;
+        number T2 = T1 + delT;
 
-        auto zeroFun = delegate (double T) {
+        auto zeroFun = delegate (number T) {
             Q.T = T;
-            double s_guess = entropy(Q);
+            number s_guess = entropy(Q);
             return s - s_guess;
         };
 
-        if ( bracket!(zeroFun,double)(T1, T2) == -1 ) {
+        if ( bracket!(zeroFun,number)(T1, T2) == -1 ) {
             string msg = "The 'bracket' function failed to find temperature values\n";
             msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_ps().\n";
             msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
@@ -201,7 +207,7 @@ public:
             T1 = T_MIN;
         
         try {
-            Q.T = solve!(zeroFun,double)(T1, T2, TOL);
+            Q.T = solve!(zeroFun,number)(T1, T2, TOL);
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find temperature\n";
@@ -217,26 +223,26 @@ public:
         _tpgMixEOS.update_energy(Q);
         _pgMixEOS.update_density(Q);
     }
-    override void update_thermo_from_hs(GasState Q, double h, double s)
+    override void update_thermo_from_hs(GasState Q, number h, number s)
     {
         // We do this in two stages.
         // First, from enthalpy we compute temperature.
         double TOL = 1.0e-6;
-        double delT = 100.0;
-        double T1 = Q.T;
+        number delT = 100.0;
+        number T1 = Q.T;
         // It's possible that T is 'nan' if it's never been set, so:
         if ( isNaN(T1) )
             T1 = 300.0; // Just set at some value to get started.
-        double Tsave = T1;
-        double T2 = T1 + delT;
+        number Tsave = T1;
+        number T2 = T1 + delT;
 
-        auto zeroFun = delegate (double T) {
+        auto zeroFun = delegate (number T) {
             Q.T = T;
-            double h_guess = enthalpy(Q);
+            number h_guess = enthalpy(Q);
             return h - h_guess;
         };
 
-        if ( bracket!(zeroFun,double)(T1, T2) == -1 ) {
+        if ( bracket!(zeroFun,number)(T1, T2) == -1 ) {
             string msg = "The 'bracket' function failed to find temperature values\n";
             msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
             msg ~= format("The final values are: T1 = %12.6f and T2 = %12.6f\n", T1, T2);
@@ -247,7 +253,7 @@ public:
             T1 = T_MIN;
         
         try {
-            Q.T = solve!(zeroFun,double)(T1, T2, TOL);
+            Q.T = solve!(zeroFun,number)(T1, T2, TOL);
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find temperature\n";
@@ -264,18 +270,18 @@ public:
         // Second, we can iterate to find the pressure that gives
         // correct entropy.
         TOL = 1.0e-3;
-        double delp = 1000.0;
-        double p1 = Q.p;
-        double psave = p1;
-        double p2 = p1 + delp;
+        number delp = 1000.0;
+        number p1 = Q.p;
+        number psave = p1;
+        number p2 = p1 + delp;
 
-        auto zeroFun2 = delegate (double p) {
+        auto zeroFun2 = delegate (number p) {
             Q.p = p;
-            double s_guess = entropy(Q);
+            number s_guess = entropy(Q);
             return s - s_guess;
         };
 
-        if ( bracket!(zeroFun2,double)(p1, p2) == -1 ) {
+        if ( bracket!(zeroFun2,number)(p1, p2) == -1 ) {
             string msg = "The 'bracket' function failed to find pressure values\n";
             msg ~= "that bracketed the zero function in ThermallyPerfectGas.update_thermo_from_hs().\n";
             msg ~= format("The final values are: p1 = %12.6f and p2 = %12.6f\n", p1, p2);
@@ -286,7 +292,7 @@ public:
             p1 = 1.0;
         
         try {
-            Q.p = solve!(zeroFun2,double)(p1, p2, TOL);
+            Q.p = solve!(zeroFun2,number)(p1, p2, TOL);
         }
         catch ( Exception e ) {
             string msg = "There was a problem iterating to find pressure\n";
@@ -323,49 +329,49 @@ public:
         throw new Exception("not implemented");
     }
     */
-    override double dudT_const_v(in GasState Q)
+    override number dudT_const_v(in GasState Q)
     {
         // Noting that Cv = Cp - R
-        foreach ( i; 0.._n_species ) _Cv[i] = _curves[i].eval_Cp(Q.T) - _R[i];
+        foreach ( i; 0.._n_species ) { _Cv[i] = _curves[i].eval_Cp(Q.T) - _R[i]; }
         return mass_average(Q, _Cv);
     }
-    override double dhdT_const_p(in GasState Q)
+    override number dhdT_const_p(in GasState Q)
     {
-        foreach ( i; 0.._n_species ) _Cp[i] = _curves[i].eval_Cp(Q.T);
+        foreach ( i; 0.._n_species ) { _Cp[i] = _curves[i].eval_Cp(Q.T); }
         return mass_average(Q, _Cp);
     }
-    override double dpdrho_const_T(in GasState Q)
+    override number dpdrho_const_T(in GasState Q)
     {
-        double R = gas_constant(Q);
+        number R = gas_constant(Q);
         return R*Q.T;
     }
-    override double gas_constant(in GasState Q)
+    override number gas_constant(in GasState Q)
     {
         return mass_average(Q, _R);
     }
-    override double internal_energy(in GasState Q)
+    override number internal_energy(in GasState Q)
     {
         return Q.u;
     }
-    override double enthalpy(in GasState Q)
+    override number enthalpy(in GasState Q)
     {
         foreach ( isp; 0.._n_species) {
             _h[isp] = _curves[isp].eval_h(Q.T);
         }
         return mass_average(Q, _h);
     }
-    override double enthalpy(in GasState Q, int isp)
+    override number enthalpy(in GasState Q, int isp)
     {
         return _curves[isp].eval_h(Q.T);
     }
-    override double entropy(in GasState Q)
+    override number entropy(in GasState Q)
     {
         foreach ( isp; 0.._n_species ) {
             _s[isp] = _curves[isp].eval_s(Q.T) - _R[isp]*log(Q.p/P_atm);
         }
         return mass_average(Q, _s);
     }
-    override double entropy(in GasState Q, int isp)
+    override number entropy(in GasState Q, int isp)
     {
         return _curves[isp].eval_s(Q.T);
     }
@@ -378,7 +384,7 @@ private:
     WilkeMixingViscosity _viscModel;
     WilkeMixingThermCond _thermCondModel;
     // Working array space
-    double[] _Cp, _Cv, _h, _s;
+    number[] _Cp, _Cv, _h, _s;
 } // end class ThermallyPerfectGas
 
 
@@ -423,14 +429,14 @@ version(therm_perf_gas_test) {
         assert(approxEqual(1284.012, gd.T, 1.0e-6), failedUnitTest());
 
         gd.p = 1.0e6;
-        double s = 10000.0;
+        number s = 10000.0;
         gm.update_thermo_from_ps(gd, s);
         assert(approxEqual(2560.118, gd.T, 1.0e-6), failedUnitTest());
         assert(approxEqual(12313952.52, gd.u, 1.0e-6), failedUnitTest());
         assert(approxEqual(1.00309, gd.rho, 1.0e-6), failedUnitTest());
 
         s = 11000.0;
-        double h = 17.0e6;
+        number h = 17.0e6;
         gm.update_thermo_from_hs(gd, h, s);
         assert(approxEqual(5273.103, gd.T, 1.0e-6), failedUnitTest());
         assert(approxEqual(14946629.7, gd.u, 1.0e-6), failedUnitTest());
