@@ -88,6 +88,10 @@ test cea-thermo-curves-test {Testing thermo/cea_thermo_curves.d} -body {
     exec ./cea_thermo_curves_test
 } -result {} -returnCodes {0}
 
+test cea-thermo-curves-complex-test {Testing thermo/cea_thermo_curves_complex.d} -body {
+    exec ./cea_thermo_curves_complex_test
+} -result {} -returnCodes {0}
+
 test perf-gas-mix-eos-test {Testing thermo/perf_gas_mix_eos.d} -body {
     exec ./perf_gas_mix_eos_test
 } -result {} -returnCodes {0}

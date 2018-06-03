@@ -169,6 +169,11 @@ cea_thermo_curves_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES)
 	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
+cea_thermo_curves_complex_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	$(DMD) $(OF)$@ -debug -g -w -version=cea_thermo_curves_test -version=complex_numbers \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+
 gas_model_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)

@@ -216,6 +216,7 @@ CEAThermo createCEAThermo(lua_State* L, double R)
 
 version(cea_thermo_curves_test) {
     int main() {
+
         import util.msg_service;
         // 1. Test a segment (CEAThermoCurve) on its own.
         auto curve = CEAThermoCurve();
@@ -225,7 +226,8 @@ version(cea_thermo_curves_test) {
         curve.a[0] = 5.475181050e+08; curve.a[1] = -3.107574980e+05; curve.a[2] = 6.916782740e+01;
         curve.a[3] = -6.847988130e-03; curve.a[4] = 3.827572400e-07; curve.a[5] = -1.098367709e-11;
         curve.a[6] = 1.277986024e-16; curve.a[7] = 2.550585618e+06; curve.a[8] = -5.848769753e+02;
-        assert(approxEqual(2022.9958, curve.eval_Cp(7500.0), 1.0e-6), failedUnitTest());
+        number T = 7500.0;
+        assert(approxEqual(2022.9958, curve.eval_Cp(T).re, 1.0e-6), failedUnitTest());
         // 2. Test full curve
         auto L = init_lua_State();
         doLuaFile(L, "sample-data/O-thermo.lua");
@@ -233,10 +235,22 @@ version(cea_thermo_curves_test) {
         double R = 8.31451/0.0159994;
         auto oThermo = createCEAThermo(L, R);
         lua_close(L);
-        assert(approxEqual(1328.627, oThermo.eval_Cp(500.0), 1.0e-6), failedUnitTest());
-        assert(approxEqual(20030794.683, oThermo.eval_h(3700.0), 1.0e-6), failedUnitTest());
-        assert(approxEqual(14772.717, oThermo.eval_s(10000.0), 1.0e-3), failedUnitTest());
-
+        T = 500.0;
+        assert(approxEqual(1328.627, oThermo.eval_Cp(T).re, 1.0e-6), failedUnitTest());
+        T = 3700.0;
+        assert(approxEqual(20030794.683, oThermo.eval_h(T).re, 1.0e-6), failedUnitTest());
+        T = 10000.0;
+        assert(approxEqual(14772.717, oThermo.eval_s(T).re, 1.0e-3), failedUnitTest());
+        
+        version(complex_numbers) {
+            // Try out the complex derivative evaluation
+            double h = 1.0e-20;
+            T = complex(3700.0, h);
+            number enthalpy = oThermo.eval_h(T);
+            double Cp_cd = enthalpy.im / h;
+            number Cp_eval = oThermo.eval_Cp(T);
+            assert(approxEqual(Cp_cd, Cp_eval.re, 1.0e-6), failedUnitTest());
+        }
         return 0;
     }
 }
