@@ -173,17 +173,17 @@ gas_model_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-gas_model_complex_test: $(GAS_COMPLEX_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+gas_model_complex_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=gas_model_test -version=complex_numbers \
-		$(GAS_COMPLEX_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 ideal_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
-ideal_gas_complex_test: $(GAS_COMPLEX_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+ideal_gas_complex_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=ideal_gas_test -version=complex_numbers \
-		$(GAS_COMPLEX_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+		$(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 cea_gas_test: $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
