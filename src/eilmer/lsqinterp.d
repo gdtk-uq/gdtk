@@ -6,7 +6,10 @@ import std.math;
 import std.stdio;
 import std.algorithm;
 import std.conv;
+import nm.complex;
+import nm.number;
 import nm.rsla;
+
 import geom;
 import gas;
 import fvcore;
@@ -22,7 +25,7 @@ class LSQInterpWorkspace {
 public:
     // A place to hold the intermediate results for computing
     // the least-squares model as a weighted sum of the flow data.
-    double[cloud_nmax] wx, wy, wz; 
+    number[cloud_nmax] wx, wy, wz; 
 
     this()
     {
@@ -38,7 +41,7 @@ public:
     {
         auto np = cell_cloud.length;
         assert(np <= cloud_nmax, "Too many points in cloud.");
-        double[cloud_nmax] dx, dy, dz;
+        number[cloud_nmax] dx, dy, dz;
         foreach (i; 1 .. np) {
             dx[i] = cell_cloud[i].pos[gtl].x - cell_cloud[0].pos[gtl].x;
             dy[i] = cell_cloud[i].pos[gtl].y - cell_cloud[0].pos[gtl].y;
@@ -50,10 +53,10 @@ public:
         }           
         // Prepare the normal matrix for the cloud and invert it.
         if (dimensions == 3) {
-            double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
-            double xx = 0.0; double xy = 0.0; double xz = 0.0;
-            double yy = 0.0; double yz = 0.0;
-            double zz = 0.0;
+            number[6][3] xTx; // normal matrix, augmented to give 6 entries per row
+            number xx = 0.0; number xy = 0.0; number xz = 0.0;
+            number yy = 0.0; number yz = 0.0;
+            number zz = 0.0;
             foreach (i; 1 .. np) {
                 xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; xz += dx[i]*dz[i];
                 yy += dy[i]*dy[i]; yz += dy[i]*dz[i]; zz += dz[i]*dz[i];
@@ -64,8 +67,8 @@ public:
             xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
             xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
             xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
-            double very_small_value = 1.0e-16*(normInf!(3,3)(xTx))^^3;
-            if (0 != computeInverse!(3,3)(xTx, very_small_value)) {
+            double very_small_value = 1.0e-16*(normInf!(3,3,6,number)(xTx).re)^^3;
+            if (0 != computeInverse!(3,3,6,number)(xTx, very_small_value)) {
                 throw new FlowSolverException("Failed to invert LSQ normal matrix");
                 // Assume that the rows are linearly dependent 
                 // because the sample points are colinear.
@@ -79,8 +82,8 @@ public:
             }
         } else {
             // dimensions == 2
-            double[4][2] xTx; // normal matrix, augmented to give 4 entries per row
-            double xx = 0.0; double xy = 0.0; double yy = 0.0;
+            number[4][2] xTx; // normal matrix, augmented to give 4 entries per row
+            number xx = 0.0; number xy = 0.0; number yy = 0.0;
             foreach (i; 1 .. np) {
                 xx += dx[i]*dx[i]; xy += dx[i]*dy[i]; yy += dy[i]*dy[i];
             }
@@ -88,8 +91,8 @@ public:
             xTx[1][0] =  xy; xTx[1][1] =  yy;
             xTx[0][2] = 1.0; xTx[0][3] = 0.0;
             xTx[1][2] = 0.0; xTx[1][3] = 1.0;
-            double very_small_value = 1.0e-16*(normInf!(2,2)(xTx))^^2;
-            if (0 != computeInverse!(2,2)(xTx, very_small_value)) {
+            double very_small_value = 1.0e-16*(normInf!(2,2,4,number)(xTx).re)^^2;
+            if (0 != computeInverse!(2,2,4,number)(xTx, very_small_value)) {
                 throw new FlowSolverException("Failed to invert LSQ normal matrix");
                 // Assume that the rows are linearly dependent 
                 // because the sample points are colinear.
@@ -109,36 +112,36 @@ class LSQInterpGradients {
     // to the Left and Right sides of interfaces.
     // We need to hold onto their gradients within cells.
 public:
-    double[3] velx, vely, velz;
-    double[3] Bx, By, Bz, psi;
-    double[3] tke, omega;
-    double[3][] massf;
-    double[3] rho, p;
-    double[3] T, u;
-    double[3][] T_modes, u_modes;
+    number[3] velx, vely, velz;
+    number[3] Bx, By, Bz, psi;
+    number[3] tke, omega;
+    number[3][] massf;
+    number[3] rho, p;
+    number[3] T, u;
+    number[3][] T_modes, u_modes;
 
-    double velxPhi, velyPhi, velzPhi;
-    double BxPhi, ByPhi, BzPhi, psiPhi;
-    double tkePhi, omegaPhi;
-    double[] massfPhi;
-    double rhoPhi, pPhi;
-    double TPhi, uPhi;
-    double[] T_modesPhi, u_modesPhi;
+    number velxPhi, velyPhi, velzPhi;
+    number BxPhi, ByPhi, BzPhi, psiPhi;
+    number tkePhi, omegaPhi;
+    number[] massfPhi;
+    number rhoPhi, pPhi;
+    number TPhi, uPhi;
+    number[] T_modesPhi, u_modesPhi;
 
-    double velxMax, velyMax, velzMax;
-    double BxMax, ByMax, BzMax, psiMax;
-    double tkeMax, omegaMax;
-    double[] massfMax;
-    double rhoMax, pMax;
-    double TMax, uMax;
-    double[] T_modesMax, u_modesMax;
-    double velxMin, velyMin, velzMin;
-    double BxMin, ByMin, BzMin, psiMin;
-    double tkeMin, omegaMin;
-    double[] massfMin;
-    double rhoMin, pMin;
-    double TMin, uMin;
-    double[] T_modesMin, u_modesMin;
+    number velxMax, velyMax, velzMax;
+    number BxMax, ByMax, BzMax, psiMax;
+    number tkeMax, omegaMax;
+    number[] massfMax;
+    number rhoMax, pMax;
+    number TMax, uMax;
+    number[] T_modesMax, u_modesMax;
+    number velxMin, velyMin, velzMin;
+    number BxMin, ByMin, BzMin, psiMin;
+    number tkeMin, omegaMin;
+    number[] massfMin;
+    number rhoMin, pMin;
+    number TMin, uMin;
+    number[] T_modesMin, u_modesMin;
 
     this(size_t nsp, size_t nmodes)
     {
@@ -218,7 +221,7 @@ public:
     void barth_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
     {
         size_t dimensions = myConfig.dimensions;
-        double a, b, U, phi;
+        number a, b, U, phi;
         immutable double w = 1.0e-12;
         // The following function to be used at compile time.
         string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
@@ -228,9 +231,9 @@ public:
             phi = 1.0;
             if (abs("~gname~"[0]) > ESSENTIALLY_ZERO || abs("~gname~"[1]) > ESSENTIALLY_ZERO || abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
             foreach (i, f; cell_cloud[0].iface) {
-                double dx = f.pos.x - cell_cloud[0].pos[0].x; 
-                double dy = f.pos.y - cell_cloud[0].pos[0].y; 
-                double dz = f.pos.z - cell_cloud[0].pos[0].z;
+                number dx = f.pos.x - cell_cloud[0].pos[0].x; 
+                number dy = f.pos.y - cell_cloud[0].pos[0].y; 
+                number dz = f.pos.z - cell_cloud[0].pos[0].z;
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) b += "~gname~"[2] * dz; 
                 b = sgn(b) * (fabs(b) + w);
@@ -317,7 +320,7 @@ public:
         // i.e. it uses the MLP approach, and the Van Leer limiting function
         // as outlined in the NASA publication on VULCAN's unstructured solver [White et al 2017]
         size_t dimensions = myConfig.dimensions;
-        double eps, a, b, U, phi, h, denom, numer, s;
+        number eps, a, b, U, phi, h, denom, numer, s;
         immutable double w = 1.0e-12;
         if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[0]);  
         else h = sqrt(cell_cloud[0].volume[0]);
@@ -329,9 +332,9 @@ public:
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
             foreach (i, vtx; cell_cloud[0].vtx) {
-                double dx = vtx.pos[0].x - cell_cloud[0].pos[0].x; 
-                double dy = vtx.pos[0].y - cell_cloud[0].pos[0].y; 
-                double dz = vtx.pos[0].z - cell_cloud[0].pos[0].z;
+                number dx = vtx.pos[0].x - cell_cloud[0].pos[0].x; 
+                number dy = vtx.pos[0].y - cell_cloud[0].pos[0].y; 
+                number dz = vtx.pos[0].z - cell_cloud[0].pos[0].z;
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
                 b = sgn(b) * (fabs(b) + w); 
@@ -419,7 +422,7 @@ public:
         string codeForGradients(string qname, string gname, string qMaxname, string qMinname)
         {
             string code = "{
-                double q0 = cell_cloud[0].fs."~qname~";
+                number q0 = cell_cloud[0].fs."~qname~";
                 "~qMaxname~" = q0;
                 "~qMinname~" = q0;
                 foreach (i; 1 .. np) {
@@ -495,12 +498,12 @@ public:
     void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig, size_t gtl=0)
    {
         size_t dimensions = myConfig.dimensions;
-        double a, b, U, phi, h, denom, numer, s;
+        number a, b, U, phi, h, denom, numer, s;
         immutable double w = 1.0e-12;
         immutable double K = 0.3;
         if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[gtl]);  
         else h = sqrt(cell_cloud[0].volume[gtl]);
-        double eps = (K*h) * (K*h) * (K*h);
+        number eps = (K*h) * (K*h) * (K*h);
         // The following function to be used at compile time.
         string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
         {
@@ -509,9 +512,9 @@ public:
             phi = 1.0;
             if (abs("~gname~"[0]) > ESSENTIALLY_ZERO || abs("~gname~"[1]) > ESSENTIALLY_ZERO || abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
                 foreach (i, f; cell_cloud[0].iface) {
-                    double dx = f.pos.x - cell_cloud[0].pos[gtl].x; 
-                    double dy = f.pos.y - cell_cloud[0].pos[gtl].y; 
-                    double dz = f.pos.z - cell_cloud[0].pos[gtl].z;
+                    number dx = f.pos.x - cell_cloud[0].pos[gtl].x; 
+                    number dy = f.pos.y - cell_cloud[0].pos[gtl].y; 
+                    number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
                     b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                     if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
                     b = sgn(b) * (fabs(b) + w); 
@@ -601,12 +604,12 @@ public:
         string codeForGradients(string qname, string gname, string qMaxname, string qMinname)
         {
             string code = "{
-                double q0 = cell_cloud[0].fs."~qname~";
+                number q0 = cell_cloud[0].fs."~qname~";
                 "~qMaxname~" = q0;
                 "~qMinname~" = q0;
                 "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
                 foreach (i; 1 .. np) {
-                    double dq = cell_cloud[i].fs."~qname~" - q0;
+                    number dq = cell_cloud[i].fs."~qname~" - q0;
                     "~gname~"[0] += ws.wx[i] * dq;
                     "~gname~"[1] += ws.wy[i] * dq;
                     if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }
@@ -701,16 +704,16 @@ public:
         myConfig.interpolation_order = order;
     }
 
-    @nogc double clip_to_limits(double q, double A, double B)
+    @nogc number clip_to_limits(number q, number A, number B)
     // Returns q if q is between the values A and B, else
     // it returns the closer limit of the range [A,B].
     {
-        double lower_limit = fmin(A, B);
-        double upper_limit = fmax(A, B);
+        number lower_limit = fmin(A, B);
+        number upper_limit = fmax(A, B);
         return fmin(upper_limit, fmax(lower_limit, q));
     } // end clip_to_limits()
 
-    @nogc void min_mod_limit(ref double a, ref double b)
+    @nogc void min_mod_limit(ref number a, ref number b)
     // A rough slope limiter.
     {
         if (a * b < 0.0) {
@@ -721,11 +724,11 @@ public:
         b = a;
     }
 
-    @nogc void van_albada_limit(ref double a, ref double b)
+    @nogc void van_albada_limit(ref number a, ref number b)
     // A smooth slope limiter.
     {
         immutable double eps = 1.0e-12;
-        double s = (a*b + fabs(a*b))/(a*a + b*b + eps);
+        number s = (a*b + fabs(a*b))/(a*a + b*b + eps);
         a *= s;
         b *= s;
     }
@@ -753,13 +756,13 @@ public:
             LSQInterpWorkspace wsL = cL0.ws;
             LSQInterpWorkspace wsR = cR0.ws;
             // vector from left-cell-centre to face midpoint
-            double dLx = IFace.pos.x - cL0.pos[gtl].x;
-            double dLy = IFace.pos.y - cL0.pos[gtl].y;
-            double dLz = IFace.pos.z - cL0.pos[gtl].z;
-            double dRx = IFace.pos.x - cR0.pos[gtl].x;
-            double dRy = IFace.pos.y - cR0.pos[gtl].y;
-            double dRz = IFace.pos.z - cR0.pos[gtl].z;
-            double[3] mygradL, mygradR;
+            number dLx = IFace.pos.x - cL0.pos[gtl].x;
+            number dLy = IFace.pos.y - cL0.pos[gtl].y;
+            number dLz = IFace.pos.z - cL0.pos[gtl].z;
+            number dRx = IFace.pos.x - cR0.pos[gtl].x;
+            number dRy = IFace.pos.y - cR0.pos[gtl].y;
+            number dRz = IFace.pos.z - cR0.pos[gtl].z;
+            number[3] mygradL, mygradR;
             //
             // Always reconstruct in the global frame of reference -- for now
             //
@@ -767,15 +770,15 @@ public:
             string codeForReconstruction(string qname, string gname, string tname, string lname)
             {
                 string code = "{
-                double qL0 = cL0.fs."~qname~";
-                double qMinL = qL0;
-                double qMaxL = qL0;
+                number qL0 = cL0.fs."~qname~";
+                number qMinL = qL0;
+                number qMaxL = qL0;
                 mygradL[0] = cL0.gradients."~gname~"[0];
                 mygradL[1] = cL0.gradients."~gname~"[1];
                 mygradL[2] = cL0.gradients."~gname~"[2];
-                double qR0 = cR0.fs."~qname~";
-                double qMinR = qR0;
-                double qMaxR = qR0;
+                number qR0 = cR0.fs."~qname~";
+                number qMinR = qR0;
+                number qMaxR = qR0;
                 mygradR[0] = cR0.gradients."~gname~"[0];
                 mygradR[1] = cR0.gradients."~gname~"[1];
                 mygradR[2] = cR0.gradients."~gname~"[2];
@@ -801,8 +804,8 @@ public:
                         break;
                     }
                 }
-                double qL = qL0 + dLx*mygradL[0] + dLy*mygradL[1];
-                double qR = qR0 + dRx*mygradR[0] + dRy*mygradR[1];
+                number qL = qL0 + dLx*mygradL[0] + dLy*mygradL[1];
+                number qR = qR0 + dRx*mygradR[0] + dRy*mygradR[1];
                 if (myConfig.dimensions == 3) {
                     qL += dLz*mygradL[2];
                     qR += dRz*mygradR[2];

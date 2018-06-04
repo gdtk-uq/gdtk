@@ -16,6 +16,9 @@ import std.array;
 import std.format;
 import std.stdio;
 import std.math;
+import nm.complex;
+import nm.number;
+
 import json_helper;
 import gzip;
 import geom;
@@ -29,25 +32,25 @@ public:
     GasState gas;  // gas state
     Vector3 vel;   // flow velocity, m/s
     Vector3 B;     // magnetic field strength
-    double psi;    // divergence cleaning parameter
-    double divB;   // divergence of the magnetic field
-    double tke;    // turbulent kinetic energy 0.5(u'^2+v'^2+w'^2)
-    double omega;  // turbulence 'frequency' in k-omega model
-    double mu_t;   // turbulence viscosity
-    double k_t;    // turbulence thermal-conductivity
+    number psi;    // divergence cleaning parameter
+    number divB;   // divergence of the magnetic field
+    number tke;    // turbulent kinetic energy 0.5(u'^2+v'^2+w'^2)
+    number omega;  // turbulence 'frequency' in k-omega model
+    number mu_t;   // turbulence viscosity
+    number k_t;    // turbulence thermal-conductivity
     int S;         // shock indicator, value 0 or 1
 
     this(GasModel gm,
-         in double p_init,
-         in double T_init,
-         in double[] T_modes_init,
+         in number p_init,
+         in number T_init,
+         in number[] T_modes_init,
          in Vector3 vel_init,
-         in double[] massf_init=[1.0,],
-         in double quality_init=1.0,
+         in number[] massf_init=[to!number(1.0),],
+         in number quality_init=1.0,
          in Vector3 B_init=Vector3(0.0,0.0,0.0),
-         in double psi_init=0.0, in double divB_init=1.0,
-         in double tke_init=0.0, in double omega_init=1.0,
-         in double mu_t_init=0.0, in double k_t_init=0.0,
+         in number psi_init=0.0, in number divB_init=1.0,
+         in number tke_init=0.0, in number omega_init=1.0,
+         in number mu_t_init=0.0, in number k_t_init=0.0,
          in int S_init=0)
     {
         gas = new GasState(gm, p_init, T_init, T_modes_init,
@@ -110,21 +113,21 @@ public:
 
     this(in JSONValue json_data, GasModel gm)
     {
-        double p = getJSONdouble(json_data, "p", 100.0e3);
-        double T = getJSONdouble(json_data, "T", 300.0e3);
-        double[] T_modes;
+        number p = getJSONdouble(json_data, "p", 100.0e3);
+        number T = getJSONdouble(json_data, "T", 300.0e3);
+        number[] T_modes;
         foreach(i; 0 .. gm.n_modes) { T_modes ~= T; }
         T_modes = getJSONdoublearray(json_data, "T_modes", []);
-        double[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
-        double quality = getJSONdouble(json_data, "quality", 1.0);
+        number[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
+        number quality = getJSONdouble(json_data, "quality", 1.0);
         gas = new GasState(gm, p, T, T_modes, massf, quality);
-        double velx = getJSONdouble(json_data, "velx", 0.0);
-        double vely = getJSONdouble(json_data, "vely", 0.0);
-        double velz = getJSONdouble(json_data, "velz", 0.0);
+        number velx = getJSONdouble(json_data, "velx", 0.0);
+        number vely = getJSONdouble(json_data, "vely", 0.0);
+        number velz = getJSONdouble(json_data, "velz", 0.0);
         vel.set(velx,vely,velz);
-        double Bx = getJSONdouble(json_data, "Bx", 0.0);
-        double By = getJSONdouble(json_data, "By", 0.0);
-        double Bz = getJSONdouble(json_data, "Bz", 0.0);
+        number Bx = getJSONdouble(json_data, "Bx", 0.0);
+        number By = getJSONdouble(json_data, "By", 0.0);
+        number Bz = getJSONdouble(json_data, "Bz", 0.0);
         B.set(Bx,By,Bz);
         psi = getJSONdouble(json_data, "psi", 0.0);
         divB = getJSONdouble(json_data, "divB", 0.0);

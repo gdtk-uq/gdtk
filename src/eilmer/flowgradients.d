@@ -14,7 +14,10 @@ module flowgradients;
 import std.math;
 import std.stdio;
 import std.conv;
+import nm.complex;
+import nm.number;
 import nm.rsla;
+
 import geom;
 import gas;
 import flowstate;
@@ -31,7 +34,7 @@ class WLSQGradWorkspace {
 public:
     // A place to hold the intermediate results for computing
     // the least-squares model as a weighted sum of the flow data.
-    double[cloud_nmax] wx, wy, wz; 
+    number[cloud_nmax] wx, wy, wz; 
     bool compute_about_mid;
     size_t loop_init; // starting index for loops:
     // 0=compute_about_mid, 1=compute_about_[0]
@@ -55,15 +58,15 @@ public:
 class FlowGradients {
     // Spatial derivatives of the flow quantities
 public:
-    double[3][3] vel; 
+    number[3][3] vel; 
     // velocity derivatives stored as a second-order tensor
     // [[du/dx du/dy du/dz]
     //  [dv/dx dv/dy dv/dz]
     //  [dw/dx dw/dy dw/dz]]
-    double[3][] massf; // mass fraction derivatives
-    double[3] T; // Temperature derivatives
-    double[3] tke; // turbulence kinetic energy
-    double[3] omega; // pseudo vorticity for k-omega turbulence
+    number[3][] massf; // mass fraction derivatives
+    number[3] T; // Temperature derivatives
+    number[3] tke; // turbulence kinetic energy
+    number[3] omega; // pseudo vorticity for k-omega turbulence
 private:
     LocalConfig myConfig;
 
@@ -105,7 +108,7 @@ public:
     }
 
     @nogc
-    void scale_values_by(double factor)
+    void scale_values_by(number factor)
     {
         foreach (i; 0 .. 3) { vel[i][] *= factor; } 
         foreach (isp; 0 .. massf.length) { massf[isp][] *= factor; } 
@@ -154,18 +157,18 @@ public:
         size_t n = cloud_pos.length;
         // Compute our own estimate of *twice* the area in xy plane here.
         // Start with the contribution from the final segment of the bounding contour.
-        double areaxy = (cloud_pos[0].x + cloud_pos[n-1].x) *
+        number areaxy = (cloud_pos[0].x + cloud_pos[n-1].x) *
             (cloud_pos[0].y - cloud_pos[n-1].y);
         // Accumulate the contributions from the other segments.
         foreach (i; 0 .. n-1) {
             areaxy += (cloud_pos[i+1].x + cloud_pos[i].x) *
                 (cloud_pos[i+1].y - cloud_pos[i].y);
         }
-        double area_inv = 1.0 / areaxy;
+        number area_inv = 1.0 / areaxy;
         //
         // Apply the divergence theorem to flow variables, generating code for each.
         //
-        double gradient_x, gradient_y;
+        number gradient_x, gradient_y;
         string codeForGradients(string qname)
         {
             string code = "
@@ -236,7 +239,7 @@ public:
         assert(ws, "We are missing the workspace!");
         size_t n = cloud_pos.length;
         assert(n <= cloud_nmax, "Too many points in cloud.");
-        double[cloud_nmax] weights2;
+        number[cloud_nmax] weights2;
         ws.compute_about_mid = compute_about_mid;
         size_t loop_init;
         if (compute_about_mid) {
@@ -257,18 +260,18 @@ public:
         // For the "faces" spatial location we are expecting the primary point
         // (i.e. the face at which we are calculating the gradients) to be in
         // the first cloud position. 
-        double x0 = pos.x; double y0 = pos.y; double z0 = pos.z;
+        number x0 = pos.x; number y0 = pos.y; number z0 = pos.z;
         if (myConfig.dimensions == 2) {
             foreach (i; loop_init .. n) {
-                double dx = cloud_pos[i].x - x0;
-                double dy = cloud_pos[i].y - y0;
+                number dx = cloud_pos[i].x - x0;
+                number dy = cloud_pos[i].y - y0;
                 weights2[i] = 1.0/(dx*dx+dy*dy);
             }
         } else { //3D
             foreach (i; loop_init .. n) {
-                double dx = cloud_pos[i].x - x0;
-                double dy = cloud_pos[i].y - y0;
-                double dz = cloud_pos[i].z - z0;
+                number dx = cloud_pos[i].x - x0;
+                number dy = cloud_pos[i].y - y0;
+                number dz = cloud_pos[i].z - z0;
                 weights2[i] = 1.0/(dx*dx+dy*dy+dz*dz);
             }
         }
@@ -282,14 +285,14 @@ public:
         } else { // else use the primary point (assumed to be in cloud position 0)
             x0 = cloud_pos[0].x; y0 = cloud_pos[0].y; z0 = cloud_pos[0].z;
         }
-        double[cloud_nmax] dx, dy, dz;
+        number[cloud_nmax] dx, dy, dz;
         //
         // Assemble and invert the normal matrix.
         // We'll reuse the resulting inverse for each flow-field quantity.
         if (myConfig.dimensions == 3) {
-            double[6][3] xTx; // normal matrix, augmented to give 6 entries per row
-            double xx = 0.0; double xy = 0.0; double xz = 0.0;
-            double yy = 0.0; double yz = 0.0; double zz = 0.0;
+            number[6][3] xTx; // normal matrix, augmented to give 6 entries per row
+            number xx = 0.0; number xy = 0.0; number xz = 0.0;
+            number yy = 0.0; number yz = 0.0; number zz = 0.0;
             foreach (i; loop_init .. n) {
                 dx[i] = cloud_pos[i].x - x0;
                 dy[i] = cloud_pos[i].y - y0;
@@ -307,8 +310,8 @@ public:
             xTx[0][3] = 1.0; xTx[0][4] = 0.0; xTx[0][5] = 0.0;
             xTx[1][3] = 0.0; xTx[1][4] = 1.0; xTx[1][5] = 0.0;
             xTx[2][3] = 0.0; xTx[2][4] = 0.0; xTx[2][5] = 1.0;
-            double very_small_value = 1.0e-16*(normInf!(3,3)(xTx))^^3;
-            if (0 != computeInverse!(3,3)(xTx, very_small_value)) {
+            double very_small_value = 1.0e-16*(normInf!(3,3,6,number)(xTx).re)^^3;
+            if (0 != computeInverse!(3,3,6,number)(xTx, very_small_value)) {
                 throw new FlowSolverException("Failed to invert LSQ normal matrix");
                 // Assume that the rows are linearly dependent 
                 // because the sample points are coplanar or colinear.
@@ -324,8 +327,8 @@ public:
             }
         } else {
             // dimensions == 2
-            double[4][2] xTx; // normal matrix, augmented to give 4 entries per row
-            double xx = 0.0; double xy = 0.0; double yy = 0.0;
+            number[4][2] xTx; // normal matrix, augmented to give 4 entries per row
+            number xx = 0.0; number xy = 0.0; number yy = 0.0;
             foreach (i; loop_init .. n) {
                 dx[i] = cloud_pos[i].x - x0;
                 dy[i] = cloud_pos[i].y - y0;
@@ -337,8 +340,8 @@ public:
             xTx[1][0] = xy; xTx[1][1] = yy;
             xTx[0][2] = 1.0; xTx[0][3] = 0.0;
             xTx[1][2] = 0.0; xTx[1][3] = 1.0;
-            double very_small_value = 1.0e-16*(normInf!(2,2)(xTx))^^2;
-            if (0 != computeInverse!(2,2)(xTx, very_small_value)) {
+            double very_small_value = 1.0e-16*(normInf!(2,2,4,number)(xTx).re)^^2;
+            if (0 != computeInverse!(2,2,4,number)(xTx, very_small_value)) {
                 throw new FlowSolverException("Failed to invert LSQ normal matrix");
                 // Assume that the rows are linearly dependent 
                 // because the sample points are colinear.
@@ -362,7 +365,7 @@ public:
         size_t n = ws.n;
         size_t dimensions = myConfig.dimensions;
         //
-        double q0;
+        number q0;
         string codeForGradients(string qname, string gname)
         {
             string code = "
@@ -375,7 +378,7 @@ public:
             }
             "~gname~"[0] = 0.0; "~gname~"[1] = 0.0; "~gname~"[2] = 0.0;
             foreach (i; loop_init .. n) {
-                double dq = cloud_fs[i]."~qname~" - q0;
+                number dq = cloud_fs[i]."~qname~" - q0;
                 "~gname~"[0] += ws.wx[i] * dq;
                 "~gname~"[1] += ws.wy[i] * dq;
                 if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }

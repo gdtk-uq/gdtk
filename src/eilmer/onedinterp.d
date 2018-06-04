@@ -6,6 +6,9 @@
  
 import std.math;
 import std.stdio;
+import nm.complex;
+import nm.number;
+
 import gas;
 import fvcore;
 import globalconfig;
@@ -20,15 +23,15 @@ class OneDInterpolator {
 private:
     // The following variables must be set to appropriate values
     // by xxxx_prepare() before their use in interp_xxxx_scalar().
-    double aL0;
-    double aR0;
-    double lenL0_;
-    double lenR0_;
-    double two_over_lenL0_plus_lenL1;
-    double two_over_lenR0_plus_lenL0;
-    double two_over_lenR1_plus_lenR0;
-    double two_lenL0_plus_lenL1;
-    double two_lenR0_plus_lenR1;
+    number aL0;
+    number aR0;
+    number lenL0_;
+    number lenR0_;
+    number two_over_lenL0_plus_lenL1;
+    number two_over_lenR0_plus_lenL0;
+    number two_over_lenR1_plus_lenR0;
+    number two_lenL0_plus_lenL1;
+    number two_lenR0_plus_lenR1;
     LocalConfig myConfig;
 
 public:
@@ -47,7 +50,7 @@ public:
         myConfig.interpolation_order = order;
     }
 
-    @nogc void both_prepare(double lenL1, double lenL0, double lenR0, double lenR1)
+    @nogc void both_prepare(number lenL1, number lenL0, number lenR0, number lenR1)
     // Set up intermediate data that depends only on the cell geometry.
     // It will remain constant when reconstructing the different scalar fields
     // over the same set of cells.
@@ -63,19 +66,19 @@ public:
         two_lenR0_plus_lenR1 = (2.0*lenR0 + lenR1);
     } // end both_prepare()
 
-    @nogc double clip_to_limits(double q, double A, double B)
+    @nogc number clip_to_limits(number q, number A, number B)
     // Returns q if q is between the values A and B, else
     // it returns the closer limit of the range [A,B].
     {
-        double lower_limit = fmin(A, B);
-        double upper_limit = fmax(A, B);
+        number lower_limit = fmin(A, B);
+        number upper_limit = fmax(A, B);
         return fmin(upper_limit, fmax(lower_limit, q));
     } // end clip_to_limits()
 
-    @nogc void interp_both_scalar(double qL1, double qL0, double qR0, double qR1,
-                                  ref double qL, ref double qR)
+    @nogc void interp_both_scalar(number qL1, number qL0, number qR0, number qR1,
+                                  ref number qL, ref number qR)
     {
-        double delLminus, del, delRplus, sL, sR;
+        number delLminus, del, delRplus, sL, sR;
         // Set up differences and limiter values.
         delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
         del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
@@ -102,7 +105,7 @@ public:
         }
     } // end of interp_both_scalar()
 
-    @nogc void left_prepare(double lenL1, double lenL0, double lenR0)
+    @nogc void left_prepare(number lenL1, number lenL0, number lenR0)
     {
         lenL0_ = lenL0;
         lenR0_ = lenR0;
@@ -112,9 +115,9 @@ public:
         two_lenL0_plus_lenL1 = (2.0*lenL0 + lenL1);
     } // end left_prepare()
 
-    @nogc void interp_left_scalar(double qL1, double qL0, double qR0, ref double qL)
+    @nogc void interp_left_scalar(number qL1, number qL0, number qR0, ref number qL)
     {
-        double delLminus, del, sL;
+        number delLminus, del, sL;
         delLminus = (qL0 - qL1) * two_over_lenL0_plus_lenL1;
         del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         if (myConfig.apply_limiter) {
@@ -129,7 +132,7 @@ public:
         }
     } // end of interp_left_scalar()
 
-    @nogc void right_prepare(double lenL0, double lenR0, double lenR1)
+    @nogc void right_prepare(number lenL0, number lenR0, number lenR1)
     {
         lenL0_ = lenL0;
         lenR0_ = lenR0;
@@ -139,9 +142,9 @@ public:
         two_lenR0_plus_lenR1 = (2.0*lenR0 + lenR1);
     } // end right_prepare()
 
-    @nogc void interp_right_scalar(double qL0, double qR0, double qR1, ref double qR)
+    @nogc void interp_right_scalar(number qL0, number qR0, number qR1, ref number qR)
     {
-        double del, delRplus, sR;
+        number del, delRplus, sR;
         del = (qR0 - qL0) * two_over_lenR0_plus_lenL0;
         delRplus = (qR1 - qR0) * two_over_lenR1_plus_lenR0;
         if (myConfig.apply_limiter) {
@@ -160,8 +163,8 @@ public:
     // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_both(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
-                     double cL1Length, double cL0Length, 
-                     double cR0Length, double cR1Length, 
+                     number cL1Length, number cL0Length, 
+                     number cR0Length, number cR1Length, 
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
@@ -331,7 +334,7 @@ public:
     // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_left(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0, ref FVCell cR0,
-                     double cL1Length, double cL0Length, double cR0Length,
+                     number cL1Length, number cL0Length, number cR0Length,
                      ref FlowState Lft, ref FlowState Rght)
     {
         auto gmodel = myConfig.gmodel;
@@ -445,7 +448,7 @@ public:
     // cannot use @nogc because the GasModel methods may allocate internal data
     void interp_right(ref FVInterface IFace,
                       ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
-                      double cL0Length, double cR0Length, double cR1Length,
+                      number cL0Length, number cR0Length, number cR1Length,
                       ref FlowState Lft, ref FlowState Rght)
     // Reconstruct flow properties at an interface from cells L0,R0,R1.
     //

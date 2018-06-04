@@ -15,6 +15,8 @@ import std.format;
 import std.stdio;
 import std.math;
 import std.algorithm;
+import nm.complex;
+import nm.number;
 import nm.bbla;
 import geom;
 import gas;
@@ -57,21 +59,21 @@ public:
     double dt_chem; // acceptable time step for finite-rate chemistry
     double dt_therm; // acceptable time step for thermal relaxation
     bool in_turbulent_zone; // if true, we will keep the turbulence viscosity
-    double base_qdot; // base-level of heat addition to cell, W/m**3
+    number base_qdot; // base-level of heat addition to cell, W/m**3
     // Geometry
     Vector3[] pos; // Centre x,y,z-coordinates for time-levels, m,m,m
-    double iLength; // length in the i-index direction
-    double jLength; // length in the j-index direction
-    double kLength; // length in the k-index direction
-    double L_min;   // minimum length scale for cell
+    number iLength; // length in the i-index direction
+    number jLength; // length in the j-index direction
+    number kLength; // length in the k-index direction
+    number L_min;   // minimum length scale for cell
     // Connections
     FVInterface[] iface;  // references to defining interfaces of cell
     double[] outsign; // +1.0 if iface is outward-facing; -1.0 for an inward-facing iface
     FVVertex[] vtx;  // references to vertices for quad (2D) and hexahedral (3D) cells
     FVCell[] cell_cloud; // references to neighbouring cells
     // More geometry
-    double[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
-    double[] areaxy; // (x,y)-plane area for time-levels, m**2
+    number[] volume; // Cell volume for time-levels (per unit depth or radian in 2D), m**3
+    number[] areaxy; // (x,y)-plane area for time-levels, m**2
     // Flow
     // Although most do, some boundary conditions will not fill in
     // valid flow state data for the ghost cell. The following flag
@@ -96,14 +98,14 @@ public:
     LSQInterpGradients gradients; // we only need these workspaces for the unstructured
                                   // solver, they are instantiated in ufluidblock.d
     // Terms for loose-coupling of radiation.
-    double Q_rad_org;
-    double f_rad_org;
-    double Q_rE_rad; // Rate of energy addition to cell via radiation.
-    double Q_rE_rad_save; // Presently, the radiation source term is calculated
+    number Q_rad_org;
+    number f_rad_org;
+    number Q_rE_rad; // Rate of energy addition to cell via radiation.
+    number Q_rE_rad_save; // Presently, the radiation source term is calculated
                           // at the first update stage.  We need to retain that
                           // value for all of the update stages.
     // Data for computing residuals.
-    double rho_at_start_of_step, rE_at_start_of_step;
+    number rho_at_start_of_step, rE_at_start_of_step;
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
         // stencil of effected cells & faces used in forming the flow Jacobian
@@ -112,10 +114,10 @@ public:
         // arrays used to temporarily store data intended for the neighbouring block
         // during construction of the external portion of the flow Jacobian.  
         size_t[] idList;
-        double[] aa;
+        number[] aa;
         // block-diagonal contribution to Jacobian used in steady-state solver pre-conditioner
-        Matrix!double dPrimitive;
-        Matrix!double dConservative;
+        Matrix!number dPrimitive;
+        Matrix!number dConservative;
         int[] pivot;
     }
 
@@ -133,9 +135,9 @@ public:
         auto gmodel = myConfig.gmodel;
         int n_species = gmodel.n_species;
         int n_modes = gmodel.n_modes;
-        double T = 300.0;
-        double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
+        number T = 300.0;
+        number[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= to!number(300.0); }
+        fs = new FlowState(gmodel, to!number(100.0e3), T, T_modes, Vector3(0.0,0.0,0.0));
         foreach(i; 0 .. myConfig.n_flow_time_levels) {
             U ~= new ConservedQuantities(n_species, n_modes);
             dUdt ~= new ConservedQuantities(n_species, n_modes);
@@ -246,7 +248,7 @@ public:
 
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
-        double vol, xyplane_area;
+        number vol, xyplane_area;
         switch (vtx.length) {
         case 3:
             xyplane_triangle_cell_properties(vtx[0].pos[gtl], vtx[1].pos[gtl], vtx[2].pos[gtl],
@@ -344,7 +346,7 @@ public:
     // Note that the position data is read into grid_time_level 0.
     {
         Vector3 new_pos;
-        double new_volume;
+        number new_volume;
         scan_cell_data_from_string(buffer, new_pos, new_volume, fs,
                                    Q_rad_org, f_rad_org, Q_rE_rad,
                                    dt_chem, dt_therm,
@@ -360,7 +362,7 @@ public:
     // Note that the position data is read into grid_time_level 0.
     {
         Vector3 new_pos;
-        double new_volume;
+        number new_volume;
         raw_binary_to_cell_data(fin, new_pos, new_volume, fs,
                                 Q_rad_org, f_rad_org, Q_rE_rad,
                                 dt_chem, dt_therm,
@@ -396,7 +398,7 @@ public:
     {
         ConservedQuantities myU = U[ftl];
         bool with_k_omega = (myConfig.turbulence_model == TurbulenceModel.k_omega);
-        double myrho = fs.gas.rho;
+        number myrho = fs.gas.rho;
         // Mass per unit volume.
         myU.mass = myrho;
         // Momentum per unit volume.
@@ -406,8 +408,8 @@ public:
         myU.psi = fs.psi;
         myU.divB = fs.divB;
         // Total Energy / unit volume
-        double u = myConfig.gmodel.internal_energy(fs.gas);
-        double ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
+        number u = myConfig.gmodel.internal_energy(fs.gas);
+        number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y+fs.vel.z*fs.vel.z);
         if (with_k_omega) {
             myU.tke = fs.gas.rho * fs.tke;
             myU.omega = fs.gas.rho * fs.omega;
@@ -418,7 +420,7 @@ public:
             myU.total_energy = fs.gas.rho*(u + ke);
         }
         if (myConfig.MHD) {
-            double me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
+            number me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z);
             myU.total_energy += me;
         }
         // Other internal energies: energy in mode per unit volume.
@@ -431,10 +433,10 @@ public:
             // We do this last because the gas models don't know anything
             // about rotating frames and we don't want to mess their
             // energy calculations around.
-            double rho = fs.gas.rho;
-            double x = pos[gtl].x;
-            double y = pos[gtl].y;
-            double rsq = x*x + y*y;
+            number rho = fs.gas.rho;
+            number x = pos[gtl].x;
+            number y = pos[gtl].y;
+            number rsq = x*x + y*y;
             // The conserved quantity is rothalpy. I = E - (u**2)/2
             // where rotating frame velocity  u = omegaz * r.
             myU.total_energy -= rho*0.5*omegaz*omegaz*rsq;
@@ -469,9 +471,9 @@ public:
             }
             throw new FlowSolverException("Bad cell, give up.");
         }
-        double rho = myU.mass;
+        number rho = myU.mass;
         fs.gas.rho = rho; // This is limited to nonnegative and finite values.
-        double dinv = 1.0 / rho;
+        number dinv = 1.0 / rho;
         // Velocities from momenta.
         fs.vel.set(myU.momentum.x*dinv, myU.momentum.y*dinv, myU.momentum.z*dinv);
         // Magnetic field.
@@ -479,24 +481,24 @@ public:
         fs.psi = myU.psi;
         fs.divB = myU.divB;
         // Divide up the total energy per unit volume.
-        double rE;
+        number rE;
         if (omegaz != 0.0) {
             // Rotating frame.
             // The conserved quantity is rothalpy so we need to convert
             // back to enthalpy to do the rest of the decode.
-            double x = pos[gtl].x;
-            double y = pos[gtl].y;
-            double rsq = x*x + y*y;
+            number x = pos[gtl].x;
+            number y = pos[gtl].y;
+            number rsq = x*x + y*y;
             rE = myU.total_energy + rho*0.5*omegaz*omegaz*rsq;
         } else {
             // Non-rotating frame.
             rE = myU.total_energy;
         }
-        double ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
-        double me = 0.0;
+        number ke = 0.5*(fs.vel.x*fs.vel.x + fs.vel.y*fs.vel.y + fs.vel.z*fs.vel.z);
+        number me = 0.0;
         if ( myConfig.MHD ) { me = 0.5*(fs.B.x*fs.B.x + fs.B.y*fs.B.y + fs.B.z*fs.B.z); }
         // Internal energy is what remains.
-        double u;
+        number u;
         if (with_k_omega) {
             if (allow_k_omega_update) {
                 fs.tke = myU.tke * dinv;
@@ -513,7 +515,7 @@ public:
         }
         if (gmodel.n_modes > 0) {
             foreach(imode; 0 .. gmodel.n_modes) { fs.gas.u_modes[imode] = myU.energies[imode] * dinv; } 
-            double u_other = 0.0; foreach(ei; fs.gas.u_modes) { u_other += ei; }
+            number u_other = 0.0; foreach(ei; fs.gas.u_modes) { u_other += ei; }
             fs.gas.u = u - u_other;
         } else {
             fs.gas.u = u;
@@ -551,15 +553,15 @@ public:
     //       1: End of stage-1.
     //       2: End of stage-2.
     {
-        double vol_inv = 1.0 / volume[gtl]; // Cell volume (inverted).
+        number vol_inv = 1.0 / volume[gtl]; // Cell volume (inverted).
     
         // Time-derivative for Mass/unit volume.
-        double integral = 0.0;
+        number integral = 0.0;
         foreach(i; 0 .. iface.length) { integral -= outsign[i]*iface[i].F.mass*iface[i].area[gtl]; }
         dUdt[ftl].mass = vol_inv*integral + Q.mass;
 
         // Time-derivative for Momentum/unit volume.
-        double integralx = 0.0; double integraly = 0.0; double integralz = 0.0;
+        number integralx = 0.0; number integraly = 0.0; number integralz = 0.0;
         foreach(i; 0 .. iface.length) {
             integralx -= outsign[i]*iface[i].F.momentum.x*iface[i].area[gtl];
             integraly -= outsign[i]*iface[i].F.momentum.y*iface[i].area[gtl];
@@ -839,7 +841,7 @@ public:
         ConservedQuantities U0 = U[0];
         ConservedQuantities U1 = U[1];
         double gamma_1 = 1.0;
-        double vr = volume[0] / volume[1];
+        number vr = volume[0] / volume[1];
         U1.mass = vr*(U0.mass + dt*gamma_1*dUdt0.mass);
         U1.momentum.set(vr*(U0.momentum.x + dt*gamma_1*dUdt0.momentum.x),
                         vr*(U0.momentum.y + dt*gamma_1*dUdt0.momentum.y),
@@ -878,10 +880,10 @@ public:
         ConservedQuantities dUdt1 = dUdt[1];
         ConservedQuantities U0 = U[0];
         ConservedQuantities U2 = U[2];
-        double gamma_2 = 0.5;
-        double gamma_1 = 0.5;
-        double v_old = volume[0];
-        double vol_inv = 1.0 / volume[2];
+        number gamma_2 = 0.5;
+        number gamma_1 = 0.5;
+        number v_old = volume[0];
+        number vol_inv = 1.0 / volume[2];
         gamma_1 *= volume[0]; gamma_2 *= volume[1]; // Roll-in the volumes for convenience below. 
         //
         U2.mass = vol_inv * (v_old * U0.mass + dt * (gamma_1 * dUdt0.mass + gamma_2 * dUdt1.mass));
@@ -923,7 +925,7 @@ public:
     // and the other thermochemical properties.
     {
         if (!fr_reactions_allowed || fs.gas.T <= myConfig.T_frozen) return;
-        double T_save = fs.gas.T;
+        number T_save = fs.gas.T;
         if (myConfig.ignition_zone_active) {
             // When active, replace gas temperature with an effective ignition temperature
             foreach(zone; myConfig.ignition_zones) {
@@ -934,7 +936,7 @@ public:
         // The extra parameters are intended for some special gas and kinetics models,
         // such as JJ Hoste's mixing-limited fuel-air model.
         // Most gas models and reaction schemes will just ignore the params array.
-        double[] params;
+        number[] params;
         if ((cast(FuelAirMix) myConfig.gmodel) !is null) {
             // for this gas model thermochemical reactor we need turbulence info
             params.length=1; 
@@ -1018,21 +1020,21 @@ public:
     double signal_frequency()
     // Remember to use stringent_cfl=true for unstructured-grid.
     {
-        double signal, turbulent_signal; // Signal speed is something like a frequency, with units 1/s.
+        number signal, turbulent_signal; // Signal speed is something like a frequency, with units 1/s.
         //
         // Check the convective/wave-driven time step limit first,
         // then add a component to ensure viscous stability.
         // Note: MHD seems to only works if stringent_cfl is used.
         if (myConfig.stringent_cfl || myConfig.MHD) {
             // Ignoring flow and index directions, make the worst case assumptions.
-            double u_mag_sq = (fs.vel.x)^^2 + (fs.vel.y)^^2;
+            number u_mag_sq = (fs.vel.x)^^2 + (fs.vel.y)^^2;
             if (myConfig.dimensions == 3) { u_mag_sq += (fs.vel.z)^^2; }
-            double u_mag = sqrt(u_mag_sq);
+            number u_mag = sqrt(u_mag_sq);
             if (myConfig.MHD) {
                 // MHD signal speed
-                double B_mag_sq = (fs.B.x)^^2 + (fs.B.y)^^2 + (fs.B.z)^^2;
-                double ca2 = B_mag_sq / fs.gas.rho;
-                double cfast = sqrt(ca2 + (fs.gas.a)^^2);
+                number B_mag_sq = (fs.B.x)^^2 + (fs.B.y)^^2 + (fs.B.z)^^2;
+                number ca2 = B_mag_sq / fs.gas.rho;
+                number cfast = sqrt(ca2 + (fs.gas.a)^^2);
                 signal = (u_mag + cfast) / L_min;
             } else {
                 // Hydrodynamics only
@@ -1044,15 +1046,15 @@ public:
             //
             // Get the local normal velocities by rotating the local frame of reference.
             // Also, compute the velocity magnitude and recall the minimum length.
-            double un_N = fabs(fs.vel.dot(iface[Face.north].n));
-            double un_E = fabs(fs.vel.dot(iface[Face.east].n));
+            number un_N = fabs(fs.vel.dot(iface[Face.north].n));
+            number un_E = fabs(fs.vel.dot(iface[Face.east].n));
             // just in case we are given a non-hex cell
             size_t third_face = min(Face.top, iface.length-1);
-            double un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : 0.0;
-            double signalN = (un_N + fs.gas.a) / jLength; signal = signalN;
-            double signalE = (un_E + fs.gas.a) / iLength; signal = fmax(signal, signalE);
+            number un_T = (myConfig.dimensions == 3) ? fabs(fs.vel.dot(iface[third_face].n)) : to!number(0.0);
+            number signalN = (un_N + fs.gas.a) / jLength; signal = signalN;
+            number signalE = (un_E + fs.gas.a) / iLength; signal = fmax(signal, signalE);
             if (myConfig.dimensions == 3) {
-                double signalT = (un_T + fs.gas.a) / kLength; signal = fmax(signal, signalT);
+                number signalT = (un_T + fs.gas.a) / kLength; signal = fmax(signal, signalT);
             }
         }
         if (myConfig.viscous && (fs.gas.mu > 10.0e-23)) {
@@ -1060,10 +1062,10 @@ public:
             // See Swanson, Turkel and White (1991)
             // This factor is not included if viscosity is zero.
             auto gmodel = myConfig.gmodel;
-            double gam_eff = gmodel.gamma(fs.gas);
+            number gam_eff = gmodel.gamma(fs.gas);
             // Need to sum conductivities for thermal nonequilibrium.
-            double k_total = fs.gas.k; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
-            double Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
+            number k_total = fs.gas.k; foreach(k_value; fs.gas.k_modes) { k_total += k_value; }
+            number Prandtl = fs.gas.mu * gmodel.Cp(fs.gas) / k_total;
             signal += 4.0 * myConfig.viscous_factor * (fs.gas.mu + fs.mu_t)
                 * gam_eff / (Prandtl * fs.gas.rho)
                 * 1.0/(L_min^^2) * myConfig.viscous_signal_factor;
@@ -1075,7 +1077,7 @@ public:
             signal = fmax(signal, turbulent_signal); 
         }
         //
-        return signal;
+        return signal.re;
     } // end signal_frequency()
 
     @nogc
@@ -1136,11 +1138,11 @@ public:
             fs.k_t = 0.0;
             return;
         }
-        double S_bar_squared;
+        number S_bar_squared;
         double C_lim = 0.875;
         double beta_star = 0.09;
 
-        double dudx, dudy, dvdx, dvdy;
+        number dudx, dudy, dvdx, dvdy;
         final switch (myConfig.spatial_deriv_locn) {
         case SpatialDerivLocn.vertices:
             mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
@@ -1158,7 +1160,7 @@ public:
             // 2D cartesian or 2D axisymmetric
             if ( myConfig.axisymmetric ) {
                 // 2D axisymmetric
-                double v_over_y = fs.vel.y / pos[0].y;
+                number v_over_y = fs.vel.y / pos[0].y;
                 S_bar_squared = dudx*dudx + dvdy*dvdy + v_over_y*v_over_y
                     - 4.0/9.0 * (dudx + dvdy + v_over_y)
                     * (dudx + dvdy + v_over_y)
@@ -1171,7 +1173,7 @@ public:
             }
         } else {
             // 3D cartesian
-            double dudz, dvdz, dwdx, dwdy, dwdz;
+            number dudz, dvdz, dwdx, dwdy, dwdz;
             final switch (myConfig.spatial_deriv_locn) {
             case SpatialDerivLocn.vertices:
                 mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
@@ -1194,9 +1196,9 @@ public:
                 + 0.5 * (dvdz + dwdy) * (dvdz + dwdy);
         }
         S_bar_squared = fmax(0.0, S_bar_squared);
-        double omega_t = fmax(fs.omega, C_lim*sqrt(2.0*S_bar_squared/beta_star));
+        number omega_t = fmax(fs.omega, C_lim*sqrt(2.0*S_bar_squared/beta_star));
         fs.mu_t = fs.gas.rho * fs.tke / omega_t;
-        double Pr_t = myConfig.turbulence_prandtl_number;
+        number Pr_t = myConfig.turbulence_prandtl_number;
         fs.k_t = gmodel.Cp(fs.gas) * fs.mu_t / Pr_t;
     } // end turbulence_viscosity_k_omega()
 
@@ -1205,17 +1207,17 @@ public:
         // Do not update k_omega properties if we are in laminar block
         if ( !in_turbulent_zone ) return;
 
-        double DrtkeDt_perturbTke, DromegaDt_perturbTke;
-        double DrtkeDt_perturbOmega, DromegaDt_perturbOmega;
-        double DGkDzetak, DGkDzetaw, DGwDzetak, DGwDzetaw;
-        double DfkDk, DfkDw, DfwDk, DfwDw;
-        double Gk, Gw;
-        double delta_rtke, delta_romega;
-        double tke, omega;
-        double tke_current, omega_current;
-        double tke_updated, omega_updated;
-        double DrtkeDt_current, DromegaDt_current;
-        double DrtkeDt_updated, DromegaDt_updated;
+        number DrtkeDt_perturbTke, DromegaDt_perturbTke;
+        number DrtkeDt_perturbOmega, DromegaDt_perturbOmega;
+        number DGkDzetak, DGkDzetaw, DGwDzetak, DGwDzetaw;
+        number DfkDk, DfkDw, DfwDk, DfwDw;
+        number Gk, Gw;
+        number delta_rtke, delta_romega;
+        number tke, omega;
+        number tke_current, omega_current;
+        number tke_updated, omega_updated;
+        number DrtkeDt_current, DromegaDt_current;
+        number DrtkeDt_updated, DromegaDt_updated;
         double perturbFactor = 1.01;  // Perturbation factor for perturbation
         // analysis to get derivatives
         double tol = 1.0e-6;          // Tolerance for the Newton-solve loop
@@ -1296,7 +1298,7 @@ public:
         } // End of Newton-solve loop for implicit update scheme
     } // end update_k_omega_properties()
 
-    void k_omega_time_derivatives(ref double Q_rtke, ref double Q_romega, double tke, double omega) 
+    void k_omega_time_derivatives(ref number Q_rtke, ref number Q_romega, number tke, number omega) 
     // Compute k-omega source terms.
     //
     // Production and Dissipation expressions for turbulence kinetic energy
@@ -1314,16 +1316,16 @@ public:
             Q_romega = 0.0;
             return;
         }
-        double dudx, dudy, dvdx, dvdy;
-        double dtkedx, dtkedy, domegadx, domegady;
+        number dudx, dudy, dvdx, dvdy;
+        number dtkedx, dtkedy, domegadx, domegady;
         double alpha = 0.52;
         double beta_0 = 0.0708;
-        double beta;
+        number beta;
         double beta_star = 0.09;
-        double P_K, D_K, P_W, D_W;
-        double cross_diff;
+        number P_K, D_K, P_W, D_W;
+        number cross_diff;
         double sigma_d = 0.0;
-        double WWS, X_w, f_beta;
+        number WWS, X_w, f_beta;
         final switch (myConfig.spatial_deriv_locn) {
         case SpatialDerivLocn.vertices:
             mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
@@ -1349,7 +1351,7 @@ public:
             // 2D cartesian or 2D axisymmetric
             if ( myConfig.axisymmetric ) {
                 // 2D axisymmetric
-                double v_over_y = fs.vel.y / pos[0].y;
+                number v_over_y = fs.vel.y / pos[0].y;
                 // JP.Nap correction from 03-May-2007 (-v_over_y in parentheses)
                 // P_K -= 0.6667 * mu_t * v_over_y * (dudx+dvdy-v_over_y);
                 // Wilson Chan correction to JP Nap's version (13 Dec 2008)
@@ -1370,8 +1372,8 @@ public:
             cross_diff = dtkedx * domegadx + dtkedy * domegady ;
         } else {
             // 3D cartesian
-            double dudz, dvdz, dwdx, dwdy, dwdz;
-            double dtkedz, domegadz;
+            number dudz, dvdz, dwdx, dwdy, dwdz;
+            number dtkedz, domegadz;
             final switch (myConfig.spatial_deriv_locn) {
             case SpatialDerivLocn.vertices:
                 mixin(avg_over_vtx_list("grad.vel[0][2]", "dudz"));
@@ -1428,8 +1430,8 @@ public:
             // Apply a final limit on the rate of tke production, related to the local thermodynamic energy
             double dt = dt_global;
             double deltaT = myConfig.tke_production_limit_in_kelvins;
-            double Cv = myConfig.gmodel.Cv(fs.gas);
-            double maxRateBasedOnLimit = fs.gas.rho*Cv*deltaT/dt;
+            number Cv = myConfig.gmodel.Cv(fs.gas);
+            number maxRateBasedOnLimit = fs.gas.rho*Cv*deltaT/dt;
             Q_rtke = fmin(maxRateBasedOnLimit, Q_rtke);
         }
     } // end k_omega_time_derivatives()
@@ -1462,11 +1464,11 @@ public:
     {
         if (omegaz != 0.0) {
             // Rotating frame.
-            double rho = fs.gas.rho;
-            double x = pos[gtl].x;
-            double y = pos[gtl].y;
-            double wx = fs.vel.x;
-            double wy = fs.vel.y;
+            number rho = fs.gas.rho;
+            number x = pos[gtl].x;
+            number y = pos[gtl].y;
+            number wx = fs.vel.x;
+            number wy = fs.vel.y;
             // Coriolis and centrifugal forces contribute to momenta.
             Q.momentum.refx += rho * (omegaz*omegaz*x + 2.0*omegaz*wy);
             Q.momentum.refy += rho * (omegaz*omegaz*y - 2.0*omegaz*wx);
@@ -1499,9 +1501,9 @@ public:
     {
         if (myConfig.axisymmetric) {
             // For viscous, axisymmetric flow:
-            double v_over_y = fs.vel.y / pos[0].y;
-            double dudx; 
-            double dvdy; 
+            number v_over_y = fs.vel.y / pos[0].y;
+            number dudx; 
+            number dvdy; 
             final switch (myConfig.spatial_deriv_locn) {
             case SpatialDerivLocn.vertices:
                 mixin(avg_over_vtx_list("grad.vel[0][0]", "dudx"));
@@ -1511,12 +1513,12 @@ public:
                 mixin(avg_over_iface_list("grad.vel[0][0]", "dudx"));
                 mixin(avg_over_iface_list("grad.vel[1][1]", "dvdy"));
             } // end switch (myConfig.spatial_deriv_locn)
-            double mu; mixin(avg_over_iface_list("fs.gas.mu", "mu"));
-            double mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));
+            number mu; mixin(avg_over_iface_list("fs.gas.mu", "mu"));
+            number mu_t; mixin(avg_over_iface_list("fs.mu_t", "mu_t"));
             mu += mu_t;
             mu *= myConfig.viscous_factor;
-            double lmbda = -2.0/3.0 * mu;
-            double tau_00 = 2.0 * mu * v_over_y + lmbda * (dudx + dvdy + v_over_y);
+            number lmbda = -2.0/3.0 * mu;
+            number tau_00 = 2.0 * mu * v_over_y + lmbda * (dudx + dvdy + v_over_y);
             // Y-Momentum; viscous stress contribution from the front and Back interfaces.
             // Note that these quantities are approximated at the
             // mid-point of the cell face and so should never be
@@ -1525,7 +1527,7 @@ public:
         } // end if ( myConfig.axisymmetric )
 
         if (with_k_omega) {
-            double Q_tke = 0.0; double Q_omega = 0.0;
+            number Q_tke = 0.0; number Q_omega = 0.0;
             if ( in_turbulent_zone ) {
                 this.k_omega_time_derivatives(Q_tke, Q_omega, fs.tke, fs.omega);
             }
@@ -1539,7 +1541,7 @@ public:
             //        the user to enforce.
             // Estimate electron pressure gradient as average of all vertices then
             // use approximation for work done on electrons: u dot div(pe)
-            // double udivpe, dpedx, dpedy, dpedz;
+            // number udivpe, dpedx, dpedy, dpedz;
             // if ( myConfig.dimensions == 2 ) {
             //  mixin(avg_over_vtx_list("grad.pe.x", "dpedx"));
             //  mixin(avg_over_vtx_list("grad.pe.y", "dpedy"));
@@ -1556,22 +1558,22 @@ public:
         return;
     } // end add_viscous_source_vector()
 
-    double calculate_wall_Reynolds_number(int which_boundary, GasModel gmodel)
+    number calculate_wall_Reynolds_number(int which_boundary, GasModel gmodel)
     // [TODO] unstructured-grid adaption to be done, however,
     // this function is not presently used because we have not ported the
     // writing of boundary flow and heat-transfer conditions.
     {
         FVInterface IFace = iface[which_boundary];
         gmodel.update_thermo_from_rhoT(IFace.fs.gas); // Note that we adjust IFace here.
-        double a_wall = IFace.fs.gas.a;
-        double cell_width = 0.0;
+        number a_wall = IFace.fs.gas.a;
+        number cell_width = 0.0;
         if ( which_boundary == Face.east || which_boundary == Face.west )
             cell_width = iLength;
         else if ( which_boundary == Face.north || which_boundary == Face.south )
             cell_width = jLength;
         else if ( which_boundary == Face.top || which_boundary == Face.bottom )
             cell_width = kLength;
-        double Re_wall = IFace.fs.gas.rho * a_wall * cell_width / IFace.fs.gas.mu;
+        number Re_wall = IFace.fs.gas.rho * a_wall * cell_width / IFace.fs.gas.mu;
         return Re_wall;
     } // end calculate_wall_Reynolds_number()
 
@@ -1583,7 +1585,7 @@ public:
         Q_rad_org = Q_rE_rad;
         // 2. Compute the scaling factor based on local gas properties
         // NOTE: - The idea is that f_rad_org is proportional to actual value
-        double T = fs.gas.T;
+        number T = fs.gas.T;
         if ( Q_rad_org <= 0.0 ) {
             // This cell is a net emitter
             f_rad_org = fs.gas.rho * pow(T, 4);
@@ -1596,8 +1598,8 @@ public:
     void rescale_Q_rE_rad() 
     {
         // 1. Compute the current scaling factor based on local gas properties
-        double T = fs.gas.T;
-        double f_rad_new = 1.0;
+        number T = fs.gas.T;
+        number f_rad_new = 1.0;
         if ( Q_rad_org <= 0.0 ) {
             // This cell is a net emitter
             f_rad_new = fs.gas.rho * pow(T, 4);
@@ -1615,11 +1617,11 @@ public:
         Q_rE_rad = 0.0;
     } // end reset_Q_rad_to_zero()
 
-    double rad_scaling_ratio() 
+    number rad_scaling_ratio() 
     {
         // 1. Compute the current scaling factor based on local gas properties
-        double T = fs.gas.T;
-        double f_rad = 1.0;
+        number T = fs.gas.T;
+        number f_rad = 1.0;
         if ( Q_rE_rad <= 0.0 ) {
             // This cell is a net emitter
             f_rad = fs.gas.rho * pow(T, 4);
@@ -1638,38 +1640,43 @@ public:
 // Other input and output functions should delegate their work to these functions.
 //--------------------------------------------------------------------------------
 
-string cell_data_as_string(ref const(Vector3) pos, double volume, ref const(FlowState) fs,
-                           double Q_rad_org, double f_rad_org, double Q_rE_rad,
+string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(FlowState) fs,
+                           number Q_rad_org, number f_rad_org, number Q_rE_rad,
                            double dt_chem, double dt_therm,
                            bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
 {
     // We'll treat this function as the master definition of the data format.
-    auto writer = appender!string();
-    formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-                   pos.x, pos.y, pos.z, volume, fs.gas.rho,
-                   fs.vel.x, fs.vel.y, fs.vel.z);
-    if (MHD) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB); }
-    if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
-    if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
-    formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
-    formattedWrite(writer, " %.18e", fs.gas.k);
-    foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue); } 
-    formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
-    if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
-    formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
-    foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); } 
-    if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
-    formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.T); 
-    foreach (imode; 0 .. fs.gas.u_modes.length) {
-        formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode], fs.gas.T_modes[imode]);
-    }
-    if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); } 
-    return writer.data;
+    version(complex_numbers) {
+        throw new Error("[TODO] Need to implement.");
+    } else {
+        // version double_numbers
+        auto writer = appender!string();
+        formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
+                       pos.x, pos.y, pos.z, volume, fs.gas.rho,
+                       fs.vel.x, fs.vel.y, fs.vel.z);
+        if (MHD) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x, fs.B.y, fs.B.z, fs.divB); }
+        if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi); }
+        if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality); }
+        formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p, fs.gas.a, fs.gas.mu);
+        formattedWrite(writer, " %.18e", fs.gas.k);
+        foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue); } 
+        formattedWrite(writer, " %.18e %.18e %d", fs.mu_t, fs.k_t, fs.S);
+        if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org, f_rad_org, Q_rE_rad); }
+        formattedWrite(writer, " %.18e %.18e", fs.tke, fs.omega);
+        foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue); } 
+        if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
+        formattedWrite(writer, " %.18e %.18e", fs.gas.u, fs.gas.T); 
+        foreach (imode; 0 .. fs.gas.u_modes.length) {
+            formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode], fs.gas.T_modes[imode]);
+        }
+        if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
+        return writer.data;
+    } // end version double_numbers
 } // end cell_data_as_string()
 
 void cell_data_to_raw_binary(ref File fout,
-                             ref const(Vector3) pos, double volume, ref const(FlowState) fs,
-                             double Q_rad_org, double f_rad_org, double Q_rE_rad,
+                             ref const(Vector3) pos, number volume, ref const(FlowState) fs,
+                             number Q_rad_org, number f_rad_org, number Q_rE_rad,
                              double dt_chem, double dt_therm,
                              bool include_quality, bool MHD, bool divergence_cleaning,
                              bool radiation)
@@ -1680,177 +1687,191 @@ void cell_data_to_raw_binary(ref File fout,
     // 2017-09-02:
     // Change to using all double values so that the FlowSolution reader becomes simpler.
     //
-    // Fixed-length buffers to hold data for sending.
-    double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
-    //
-    dbl4[0] = pos.x; dbl4[1] = pos.y; dbl4[2] = pos.z; dbl4[3] = volume;
-    fout.rawWrite(dbl4);
-    dbl4[0] = fs.gas.rho; dbl4[1] = fs.vel.x; dbl4[2] = fs.vel.y; dbl4[3] = fs.vel.z;
-    fout.rawWrite(dbl4);
-    if (MHD) {
-        dbl4[0] = fs.B.x; dbl4[1] = fs.B.y; dbl4[2] = fs.B.z; dbl4[3] = fs.divB;
+    version(complex_numbers) {
+        throw new Error("[TODO] Need to implement.");
+    } else {
+        // version double_numbers
+        // Fixed-length buffers to hold data for sending.
+        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
+        //
+        dbl4[0] = pos.x; dbl4[1] = pos.y; dbl4[2] = pos.z; dbl4[3] = volume;
         fout.rawWrite(dbl4);
-    }
-    if (MHD && divergence_cleaning) { dbl1[0] = fs.psi; fout.rawWrite(dbl1); }
-    if (include_quality) { dbl1[0] = fs.gas.quality; fout.rawWrite(dbl1); }
-    dbl4[0] = fs.gas.p; dbl4[1] = fs.gas.a; dbl4[2] = fs.gas.mu; dbl4[3] = fs.gas.k;
-    fout.rawWrite(dbl4);
-    foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue; fout.rawWrite(dbl1); } 
-    dbl2[0] = fs.mu_t; dbl2[1] = fs.k_t; fout.rawWrite(dbl2);
-    dbl1[0] = to!double(fs.S); fout.rawWrite(dbl1);
-    if (radiation) {
-        dbl3[0] = Q_rad_org; dbl3[1] = f_rad_org; dbl3[2] = Q_rE_rad;
-        fout.rawWrite(dbl3);
-    }
-    dbl2[0] = fs.tke; dbl2[1] = fs.omega; fout.rawWrite(dbl2);
-    fout.rawWrite(fs.gas.massf); 
-    if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); } 
-    dbl2[0] = fs.gas.u; dbl2[1] = fs.gas.T; fout.rawWrite(dbl2); 
-    foreach (imode; 0 .. fs.gas.u_modes.length) {
-        dbl2[0] = fs.gas.u_modes[imode]; dbl2[1] = fs.gas.T_modes[imode];
-        fout.rawWrite(dbl2);
-    }
-    if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); } 
-    return;
+        dbl4[0] = fs.gas.rho; dbl4[1] = fs.vel.x; dbl4[2] = fs.vel.y; dbl4[3] = fs.vel.z;
+        fout.rawWrite(dbl4);
+        if (MHD) {
+            dbl4[0] = fs.B.x; dbl4[1] = fs.B.y; dbl4[2] = fs.B.z; dbl4[3] = fs.divB;
+            fout.rawWrite(dbl4);
+        }
+        if (MHD && divergence_cleaning) { dbl1[0] = fs.psi; fout.rawWrite(dbl1); }
+        if (include_quality) { dbl1[0] = fs.gas.quality; fout.rawWrite(dbl1); }
+        dbl4[0] = fs.gas.p; dbl4[1] = fs.gas.a; dbl4[2] = fs.gas.mu; dbl4[3] = fs.gas.k;
+        fout.rawWrite(dbl4);
+        foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue; fout.rawWrite(dbl1); } 
+        dbl2[0] = fs.mu_t; dbl2[1] = fs.k_t; fout.rawWrite(dbl2);
+        dbl1[0] = to!double(fs.S); fout.rawWrite(dbl1);
+        if (radiation) {
+            dbl3[0] = Q_rad_org; dbl3[1] = f_rad_org; dbl3[2] = Q_rE_rad;
+            fout.rawWrite(dbl3);
+        }
+        dbl2[0] = fs.tke; dbl2[1] = fs.omega; fout.rawWrite(dbl2);
+        fout.rawWrite(fs.gas.massf); 
+        if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); } 
+        dbl2[0] = fs.gas.u; dbl2[1] = fs.gas.T; fout.rawWrite(dbl2); 
+        foreach (imode; 0 .. fs.gas.u_modes.length) {
+            dbl2[0] = fs.gas.u_modes[imode]; dbl2[1] = fs.gas.T_modes[imode];
+            fout.rawWrite(dbl2);
+        }
+        if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
+        return;
+    } // end version double_numbers
 } // end cell_data_to_raw_binary()
 
 void scan_cell_data_from_string(string buffer,
-                                ref Vector3 pos, ref double volume, ref FlowState fs,
-                                ref double Q_rad_org, ref double f_rad_org, ref double Q_rE_rad,
+                                ref Vector3 pos, ref number volume, ref FlowState fs,
+                                ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
                                 ref double dt_chem, ref double dt_therm,
                                 bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
 {
     // This function needs to be kept consistent with cell_data_as_string() above.
-    auto items = split(buffer);
-    pos.refx = to!double(items.front); items.popFront();
-    pos.refy = to!double(items.front); items.popFront();
-    pos.refz = to!double(items.front); items.popFront();
-    volume = to!double(items.front); items.popFront();
-    fs.gas.rho = to!double(items.front); items.popFront();
-    fs.vel.refx = to!double(items.front); items.popFront();
-    fs.vel.refy = to!double(items.front); items.popFront();
-    fs.vel.refz = to!double(items.front); items.popFront();
-    if (MHD) {
-        fs.B.refx = to!double(items.front); items.popFront();
-        fs.B.refy = to!double(items.front); items.popFront();
-        fs.B.refz = to!double(items.front); items.popFront();
-        fs.divB = to!double(items.front); items.popFront();
-        if (divergence_cleaning) {
-            fs.psi = to!double(items.front); items.popFront();
+    version(complex_numbers) {
+        throw new Error("[TODO] Need to implement.");
+    } else {
+        // version double_numbers
+        auto items = split(buffer);
+        pos.refx = to!double(items.front); items.popFront();
+        pos.refy = to!double(items.front); items.popFront();
+        pos.refz = to!double(items.front); items.popFront();
+        volume = to!double(items.front); items.popFront();
+        fs.gas.rho = to!double(items.front); items.popFront();
+        fs.vel.refx = to!double(items.front); items.popFront();
+        fs.vel.refy = to!double(items.front); items.popFront();
+        fs.vel.refz = to!double(items.front); items.popFront();
+        if (MHD) {
+            fs.B.refx = to!double(items.front); items.popFront();
+            fs.B.refy = to!double(items.front); items.popFront();
+            fs.B.refz = to!double(items.front); items.popFront();
+            fs.divB = to!double(items.front); items.popFront();
+            if (divergence_cleaning) {
+                fs.psi = to!double(items.front); items.popFront();
+            } else {
+                fs.psi = 0.0;
+            }
         } else {
-            fs.psi = 0.0;
+            fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
         }
-    } else {
-        fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
-    }
-    if (include_quality) {
-        fs.gas.quality = to!double(items.front); items.popFront();
-    } else {
-        fs.gas.quality = 1.0;
-    }
-    fs.gas.p = to!double(items.front); items.popFront();
-    fs.gas.a = to!double(items.front); items.popFront();
-    fs.gas.mu = to!double(items.front); items.popFront();
-    fs.gas.k = to!double(items.front); items.popFront();
-    foreach(i; 0 .. fs.gas.k_modes.length) {
-        fs.gas.k_modes[i] = to!double(items.front); items.popFront();
-    }
-    fs.mu_t = to!double(items.front); items.popFront();
-    fs.k_t = to!double(items.front); items.popFront();
-    // In the usual format for the flow data, the shock detector appears as an int.
-    // In profile files, the same value may appear as a double.
-    try {
-        fs.S = to!int(items.front);
-    } catch(Exception e) {
+        if (include_quality) {
+            fs.gas.quality = to!double(items.front); items.popFront();
+        } else {
+            fs.gas.quality = 1.0;
+        }
+        fs.gas.p = to!double(items.front); items.popFront();
+        fs.gas.a = to!double(items.front); items.popFront();
+        fs.gas.mu = to!double(items.front); items.popFront();
+        fs.gas.k = to!double(items.front); items.popFront();
+        foreach(i; 0 .. fs.gas.k_modes.length) {
+            fs.gas.k_modes[i] = to!double(items.front); items.popFront();
+        }
+        fs.mu_t = to!double(items.front); items.popFront();
+        fs.k_t = to!double(items.front); items.popFront();
+        // In the usual format for the flow data, the shock detector appears as an int.
+        // In profile files, the same value may appear as a double.
         try {
-            fs.S = to!int(to!double(items.front));
-        } catch(Exception e2) {
-            throw new FlowSolverException("Couldn't get a reasonable value for shock detector.");
+            fs.S = to!int(items.front);
+        } catch(Exception e) {
+            try {
+                fs.S = to!int(to!double(items.front));
+            } catch(Exception e2) {
+                throw new FlowSolverException("Couldn't get a reasonable value for shock detector.");
+            }
         }
-    }
-    items.popFront();
-    if (radiation) {
-        Q_rad_org = to!double(items.front); items.popFront();
-        f_rad_org = to!double(items.front); items.popFront();
-        Q_rE_rad = to!double(items.front); items.popFront();
-    } else {
-        Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-    }
-    fs.tke = to!double(items.front); items.popFront();
-    fs.omega = to!double(items.front); items.popFront();
-    foreach(i; 0 .. fs.gas.massf.length) {
-        fs.gas.massf[i] = to!double(items.front); items.popFront();
-    }
-    if (fs.gas.massf.length > 1) {
-        dt_chem = to!double(items.front); items.popFront();
-    }
-    fs.gas.u = to!double(items.front); items.popFront();
-    fs.gas.T = to!double(items.front); items.popFront();
-    foreach(i; 0 .. fs.gas.u_modes.length) {
-        fs.gas.u_modes[i] = to!double(items.front); items.popFront();
-        fs.gas.T_modes[i] = to!double(items.front); items.popFront();
-    }
-    if (fs.gas.u_modes.length > 0) {
-        dt_therm = to!double(items.front); items.popFront(); 
-    }
+        items.popFront();
+        if (radiation) {
+            Q_rad_org = to!double(items.front); items.popFront();
+            f_rad_org = to!double(items.front); items.popFront();
+            Q_rE_rad = to!double(items.front); items.popFront();
+        } else {
+            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+        }
+        fs.tke = to!double(items.front); items.popFront();
+        fs.omega = to!double(items.front); items.popFront();
+        foreach(i; 0 .. fs.gas.massf.length) {
+            fs.gas.massf[i] = to!double(items.front); items.popFront();
+        }
+        if (fs.gas.massf.length > 1) {
+            dt_chem = to!double(items.front); items.popFront();
+        }
+        fs.gas.u = to!double(items.front); items.popFront();
+        fs.gas.T = to!double(items.front); items.popFront();
+        foreach(i; 0 .. fs.gas.u_modes.length) {
+            fs.gas.u_modes[i] = to!double(items.front); items.popFront();
+            fs.gas.T_modes[i] = to!double(items.front); items.popFront();
+        }
+        if (fs.gas.u_modes.length > 0) {
+            dt_therm = to!double(items.front); items.popFront(); 
+        }
+    } // end version double_numbers
 } // end scan_values_from_string()
 
 void raw_binary_to_cell_data(ref File fin,
-                             ref Vector3 pos, ref double volume, ref FlowState fs,
-                             ref double Q_rad_org, ref double f_rad_org, ref double Q_rE_rad,
+                             ref Vector3 pos, ref number volume, ref FlowState fs,
+                             ref number Q_rad_org, ref number f_rad_org, ref number Q_rE_rad,
                              ref double dt_chem, ref double dt_therm,
                              bool include_quality, bool MHD, bool divergence_cleaning,
                              bool radiation)
 {
     // This function needs to be kept consistent with cell_data_to_raw_binary() above.
     //
-    // Fixed-length buffers to hold data for sending.
-    double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
-    fin.rawRead(dbl4);
-    pos.set(dbl4[0], dbl4[1], dbl4[2]);
-    volume = dbl4[3];
-    fin.rawRead(dbl4);
-    fs.gas.rho = dbl4[0];
-    fs.vel.set(dbl4[1], dbl4[2], dbl4[3]);
-    if (MHD) {
+    version(complex_numbers) {
+        throw new Error("[TODO] Need to implement.");
+    } else {
+        // Fixed-length buffers to hold data for sending.
+        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
         fin.rawRead(dbl4);
-        fs.B.set(dbl4[0], dbl4[1], dbl4[2]);
-        fs.divB = dbl4[3];
-        if (divergence_cleaning) {
-            fin.rawRead(dbl1); fs.psi = dbl1[0];
+        pos.set(dbl4[0], dbl4[1], dbl4[2]);
+        volume = dbl4[3];
+        fin.rawRead(dbl4);
+        fs.gas.rho = dbl4[0];
+        fs.vel.set(dbl4[1], dbl4[2], dbl4[3]);
+        if (MHD) {
+            fin.rawRead(dbl4);
+            fs.B.set(dbl4[0], dbl4[1], dbl4[2]);
+            fs.divB = dbl4[3];
+            if (divergence_cleaning) {
+                fin.rawRead(dbl1); fs.psi = dbl1[0];
+            } else {
+                fs.psi = 0.0;
+            }
         } else {
-            fs.psi = 0.0;
+            fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
         }
-    } else {
-        fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
-    }
-    if (include_quality) {
-        fin.rawRead(dbl1); fs.gas.quality = dbl1[0];
-    } else {
-        fs.gas.quality = 1.0;
-    }
-    fin.rawRead(dbl4);
-    fs.gas.p = dbl4[0]; fs.gas.a = dbl4[1]; fs.gas.mu = dbl4[2]; fs.gas.k = dbl4[3];
-    foreach(i; 0 .. fs.gas.k_modes.length) {
-        fin.rawRead(dbl1); fs.gas.k_modes[i] = dbl1[0];
-    }
-    fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
-    fin.rawRead(dbl1); fs.S = to!int(dbl1[0]);
-    if (radiation) {
-        fin.rawRead(dbl3);
-        Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];
-    } else {
-        Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
-    }
-    fin.rawRead(dbl2); fs.tke = dbl2[0]; fs.omega = dbl2[1];
-    fin.rawRead(fs.gas.massf);
-    if (fs.gas.massf.length > 1) { fin.rawRead(dbl1); dt_chem = dbl1[0]; }
-    fin.rawRead(dbl2);
-    fs.gas.u = dbl2[0]; fs.gas.T = dbl2[1];
-    foreach(i; 0 .. fs.gas.u_modes.length) {
-        fin.rawRead(dbl2); fs.gas.u_modes[i] = dbl2[0]; fs.gas.T_modes[i] = dbl2[1];
-    }
-    if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
+        if (include_quality) {
+            fin.rawRead(dbl1); fs.gas.quality = dbl1[0];
+        } else {
+            fs.gas.quality = 1.0;
+        }
+        fin.rawRead(dbl4);
+        fs.gas.p = dbl4[0]; fs.gas.a = dbl4[1]; fs.gas.mu = dbl4[2]; fs.gas.k = dbl4[3];
+        foreach(i; 0 .. fs.gas.k_modes.length) {
+            fin.rawRead(dbl1); fs.gas.k_modes[i] = dbl1[0];
+        }
+        fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
+        fin.rawRead(dbl1); fs.S = to!int(dbl1[0]);
+        if (radiation) {
+            fin.rawRead(dbl3);
+            Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];
+        } else {
+            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+        }
+        fin.rawRead(dbl2); fs.tke = dbl2[0]; fs.omega = dbl2[1];
+        fin.rawRead(fs.gas.massf);
+        if (fs.gas.massf.length > 1) { fin.rawRead(dbl1); dt_chem = dbl1[0]; }
+        fin.rawRead(dbl2);
+        fs.gas.u = dbl2[0]; fs.gas.T = dbl2[1];
+        foreach(i; 0 .. fs.gas.u_modes.length) {
+            fin.rawRead(dbl2); fs.gas.u_modes[i] = dbl2[0]; fs.gas.T_modes[i] = dbl2[1];
+        }
+        if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
+    } // end version double_numbers
 } // end raw_binary_to_cell_data()
 
 string[] variable_list_for_cell(ref GasModel gmodel, bool include_quality,

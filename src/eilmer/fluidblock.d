@@ -9,6 +9,8 @@ import std.stdio;
 import std.math;
 import std.json;
 import util.lua;
+import nm.complex;
+import nm.number;
 import nm.bbla;
 import nm.smla;
 import util.lua_service;
@@ -54,12 +56,12 @@ public:
     //
     double omegaz; // Angular velocity (in rad/s) of the rotating frame.
                    // There is only one component, about the z-axis.
-    double mass_residual, energy_residual; // monitor these for steady state
+    number mass_residual, energy_residual; // monitor these for steady state
     Vector3 mass_residual_loc, energy_residual_loc; // locations of worst case
     ConservedQuantities Linf_residuals;
-    double c_h, divB_damping_length; //divergence cleaning parameters for MHD
+    number c_h, divB_damping_length; //divergence cleaning parameters for MHD
     int mncell;                 // number of monitor cells
-    double[] initial_T_value; // for monitor cells to check against
+    number[] initial_T_value; // for monitor cells to check against
     //
     // Collections of cells, vertices and faces are held as arrays of references.
     // These allow us to conveniently work through the items via foreach statements.
@@ -90,29 +92,29 @@ public:
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
         // local objective function evaluation
-        double locObjFcn;
+        number locObjFcn;
         // arrays used to temporarily store data during construction of the flow Jacobian transpose 
-        double[][] aa;
+        number[][] aa;
         size_t[][] ja;
         // local effects matrix for flow Jacobian transpose.
         // dimensions: [# local cells x # primitive vars] X [# local cells x # primitive vars]
-        SMatrix!double JlocT;
+        SMatrix!number JlocT;
         // external effects matrix for flow Jacobian transpose.
         // dimensions: [# local boundary cells x # primitive vars] X [# global cells x # primitive vars]
-        SMatrix!double JextT;
+        SMatrix!number JextT;
         // Matrix used in preconditioning (low order, local, flow Jacobian).
-        SMatrix!double P;
+        SMatrix!number P;
         // objective function senstivity w.r.t primitive variables
-        double[] f;
+        number[] f;
         // adjoint variables
-        double[] psi;
+        number[] psi;
         // residual sensitivity w.r.t. design variables (transposed)
-        Matrix!double rT;           
+        Matrix!number rT;           
         // local dot product of the residual sensitivity w.r.t. design variables (transposed) with the adjoint variables
-        double[] rTdotPsi;
+        number[] rTdotPsi;
         // These arrays and matrices are directly tied to using the
         // GMRES iterative solver (use some directly from steady-state solver).
-        double[] Z, z, wext, zext;
+        number[] Z, z, wext, zext;
     }
     
     version(steady_state)
@@ -121,14 +123,14 @@ public:
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
     ConservedQuantities maxRate, residuals;
-    double normAcc, dotAcc;
+    number normAcc, dotAcc;
     size_t nvars;
-    Matrix!double transform;
-    double[] FU, dU, Dinv, r0, x0;
-    double[] v, w, zed;
-    double[] g0, g1;
-    Matrix!double Q1;
-    Matrix!double V;
+    Matrix!number transform;
+    number[] FU, dU, Dinv, r0, x0;
+    number[] v, w, zed;
+    number[] g0, g1;
+    Matrix!number Q1;
+    Matrix!number V;
     }
 
     this(int id, Grid_t grid_type, size_t ncells, string label)
@@ -300,11 +302,11 @@ public:
         foreach (iface; faces) {
             auto cL = iface.left_cell;
             auto cR = iface.right_cell;
-            double uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
-            double uR = cR.fs.vel.x * iface.n.x + cR.fs.vel.y * iface.n.y + cR.fs.vel.z * iface.n.z;
-            double aL = cL.fs.gas.a;
-            double aR = cR.fs.gas.a;
-            double a_min = fmin(aL, aR);
+            number uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
+            number uR = cR.fs.vel.x * iface.n.x + cR.fs.vel.y * iface.n.y + cR.fs.vel.z * iface.n.z;
+            number aL = cL.fs.gas.a;
+            number aR = cR.fs.gas.a;
+            number a_min = fmin(aL, aR);
             iface.fs.S = ((uR - uL) / a_min < tol);
         }
         // Finally, mark cells as shock points if any of their interfaces are shock points.
@@ -482,7 +484,7 @@ public:
         energy_residual = 0.0;
         energy_residual_loc.clear();
         foreach(FVCell cell; cells) {
-            double local_residual = (cell.fs.gas.rho - cell.rho_at_start_of_step) / cell.fs.gas.rho;
+            number local_residual = (cell.fs.gas.rho - cell.rho_at_start_of_step) / cell.fs.gas.rho;
             local_residual = fabs(local_residual);
             if ( local_residual > mass_residual ) {
                 mass_residual = local_residual;
@@ -531,12 +533,12 @@ public:
         foreach(FVCell cell; cells) {
             // Search for the minimum length scale and the maximum CFL value in the block.
             if (first) {
-                min_L_for_block = cell.L_min;
+                min_L_for_block = cell.L_min.re;
                 cfl_local = cell.signal_frequency() * dt_current;
                 cfl_max = cfl_local;
                 first = false;
             } else {
-                min_L_for_block = fmin(cell.L_min, min_L_for_block);
+                min_L_for_block = fmin(cell.L_min.re, min_L_for_block);
                 cfl_local = cell.signal_frequency() * dt_current;
                 cfl_max = fmax(cfl_local, cfl_max);
             }
@@ -647,12 +649,12 @@ public:
         g1.length = mOuter+1;
         //h_outer.length = mOuter+1;
         //hR_outer.length = mOuter+1;
-        V = new Matrix!double(n, mOuter+1);
-        //H0_outer = new Matrix!double(mOuter+1, mOuter);
-        //H1_outer = new Matrix!double(mOuter+1, mOuter);
-        //Gamma_outer = new Matrix!double(mOuter+1, mOuter+1);
-        //Q0_outer = new Matrix!double(mOuter+1, mOuter+1);
-        Q1 = new Matrix!double(mOuter+1, mOuter+1);
+        V = new Matrix!number(n, mOuter+1);
+        //H0_outer = new Matrix!number(mOuter+1, mOuter);
+        //H1_outer = new Matrix!number(mOuter+1, mOuter);
+        //Gamma_outer = new Matrix!number(mOuter+1, mOuter+1);
+        //Q0_outer = new Matrix!number(mOuter+1, mOuter+1);
+        Q1 = new Matrix!number(mOuter+1, mOuter+1);
     }
     }
 } // end class FluidBlock

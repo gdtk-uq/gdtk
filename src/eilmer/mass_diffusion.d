@@ -12,6 +12,8 @@ module mass_diffusion;
 
 import std.math;
 import std.stdio;
+import nm.complex;
+import nm.number;
 
 import gas.gas_model;
 import gas.physical_constants;
@@ -41,7 +43,7 @@ MassDiffusionModel massDiffusionModelFromName(string name)
 }
 
 interface MassDiffusion {
-    void update_mass_fluxes(const FlowState fs, const FlowGradients grad, double[] jx, double[] jy, double[] jz);
+    void update_mass_fluxes(const FlowState fs, const FlowGradients grad, number[] jx, number[] jy, number[] jz);
 }
 
 MassDiffusion initMassDiffusion(GasModel gmodel, MassDiffusionModel mass_diffusion_model, bool withConstantLewisNumber, double Lewis)
@@ -103,12 +105,12 @@ class FicksFirstLaw : MassDiffusion {
             }
         }
     }
-    void update_mass_fluxes(const FlowState fs, const FlowGradients grad, double[] jx, double[] jy, double[] jz)
+    void update_mass_fluxes(const FlowState fs, const FlowGradients grad, number[] jx, number[] jy, number[] jz)
     {
         _gmodel.massf2molef(fs.gas, _molef);
         if (_withConstantLewisNumber) {
-            double Cp = _gmodel.Cp(fs.gas);
-            double alpha = fs.gas.k/(fs.gas.rho*Cp);
+            number Cp = _gmodel.Cp(fs.gas);
+            number alpha = fs.gas.k/(fs.gas.rho*Cp);
             foreach (isp; 0 .. _nsp) _D_avg[isp] = alpha/_Le;
         }
         else {
@@ -122,9 +124,9 @@ class FicksFirstLaw : MassDiffusion {
         }
         if (_withMassFluxCorrection) {
             // Correction as suggested by Sutton and Gnoffo, 1998  
-            double sum_x = 0.0;
-            double sum_y = 0.0;
-            double sum_z = 0.0;
+            number sum_x = 0.0;
+            number sum_y = 0.0;
+            number sum_z = 0.0;
             foreach (isp; 0 .. _nsp) {
                 sum_x += jx[isp];
                 sum_y += jy[isp];
@@ -144,12 +146,12 @@ private:
     bool _withMassFluxCorrection;
     bool _withConstantLewisNumber;
     double _Le = 1.0;
-    double[][] _sigma;
-    double[][] _eps;
-    double[][] _D;
-    double[][] _M;
-    double[] _D_avg;
-    double[] _molef;
+    number[][] _sigma;
+    number[][] _eps;
+    number[][] _D;
+    number[][] _M;
+    number[] _D_avg;
+    number[] _molef;
     // coefficients for diffusion collision integral calculation
     double _a = 1.06036;
     double _b = 0.15610;
@@ -160,7 +162,7 @@ private:
     double _g = 1.76474;
     double _h = 3.89411;
 
-    void computeBinaryDiffCoeffs(double T, double p)
+    void computeBinaryDiffCoeffs(number T, number p)
     {
         // Expression from:
         // Reid et al.
@@ -168,8 +170,8 @@ private:
         foreach (isp; 0 .. _nsp) {
             foreach (jsp; 0 .. _nsp) {
                 if (isp == jsp) continue;
-                double T_star = T/_eps[isp][jsp];
-                double omega = _a/(pow(T_star, _b));
+                number T_star = T/_eps[isp][jsp];
+                number omega = _a/(pow(T_star, _b));
                 omega += _c/(exp(_d*T_star));
                 omega += _e/(exp(_f*T_star));
                 omega += _g/(exp(_h*T_star));
@@ -184,7 +186,7 @@ private:
     void computeAvgDiffCoeffs()
     {
         foreach (isp; 0 .. _nsp) {
-            double sum = 0.0;
+            number sum = 0.0;
             foreach (jsp; 0 .. _nsp) {
                 if (isp == jsp) continue;
                 // The following two if-statements should generally catch the

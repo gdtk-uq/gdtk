@@ -19,6 +19,8 @@ import std.algorithm;
 import std.typecons;
 import std.datetime;
 import std.parallelism;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import util.lua_service;

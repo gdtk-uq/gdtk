@@ -15,7 +15,10 @@ import std.stdio;
 
 import std.conv;
 import std.format;
-import std.math: sqrt, fmin, fabs, copysign;
+import std.math;
+import nm.complex;
+import nm.number;
+
 import geom;
 import gas;
 import fvcore;
@@ -38,9 +41,9 @@ public:
     // Geometry
     Vector3 pos;           // position of the (approx) midpoint
     Vector3 gvel;          // grid velocity at interface, m/s
-    double Ybar;           // Y-coordinate of the mid-point
-    double length;         // Interface length in the x,y-plane
-    double[] area;         // Area m**2 for each grid-time-level.
+    number Ybar;           // Y-coordinate of the mid-point
+    number length;         // Interface length in the x,y-plane
+    number[] area;         // Area m**2 for each grid-time-level.
                            // Area per radian in axisymmetric geometry
     Vector3 n;             // Direction cosines for unit normal
     Vector3 t1;            // tangent vector 1 (aka p)
@@ -60,25 +63,25 @@ public:
     // Flow
     FlowState fs;          // Flow properties
     ConservedQuantities F; // Flux conserved quantity per unit area
-    double tau_wall_x, tau_wall_y, tau_wall_z; // shear at face (used by wall-function BCs)
-    double q;              // heat-flux across face (used by wall-function BCs)
+    number tau_wall_x, tau_wall_y, tau_wall_z; // shear at face (used by wall-function BCs)
+    number q;              // heat-flux across face (used by wall-function BCs)
     //
     // Viscous-flux-related quantities.
     FlowGradients grad;
     WLSQGradWorkspace ws_grad;
     Vector3*[] cloud_pos; // Positions of flow points for gradients calculation.
     FlowState[] cloud_fs; // References to flow states at those points.
-    double[] jx; // diffusive mass flux in x
-    double[] jy; // diffusive mass flux in y
-    double[] jz; // diffusive mass flux in z
+    number[] jx; // diffusive mass flux in x
+    number[] jy; // diffusive mass flux in y
+    number[] jz; // diffusive mass flux in z
     //
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
-        double[][] dFdU;
+        number[][] dFdU;
         // arrays used to temporarily store data intended for the neighbouring block
         // during construction of the external portion of the flow Jacobian.  
         size_t[] idList;
-        double[] aa;
+        number[] aa;
     }
 private:
     LocalConfig myConfig;
@@ -95,9 +98,9 @@ public:
         auto gmodel = myConfig.gmodel;
         int n_species = gmodel.n_species;
         int n_modes = gmodel.n_modes;
-        double T = 300.0;
-        double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
-        fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
+        number T = 300.0;
+        number[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= to!number(300.0); }
+        fs = new FlowState(gmodel, to!number(100.0e3), T, T_modes, Vector3(0.0,0.0,0.0));
         F = new ConservedQuantities(n_species, n_modes);
         F.clear_values();
         grad = new FlowGradients(myConfig);
@@ -242,15 +245,15 @@ public:
 
     void update_2D_geometric_data(size_t gtl, bool axisymmetric)
     {
-        double xA = vtx[0].pos[gtl].x;
-        double yA = vtx[0].pos[gtl].y;
-        double xB = vtx[1].pos[gtl].x;
-        double yB = vtx[1].pos[gtl].y;
-        double LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
+        number xA = vtx[0].pos[gtl].x;
+        number yA = vtx[0].pos[gtl].y;
+        number xB = vtx[1].pos[gtl].x;
+        number yB = vtx[1].pos[gtl].y;
+        number LAB = sqrt((xB - xA) * (xB - xA) + (yB - yA) * (yB - yA));
         // Direction cosines for the unit normal and two tangential directions.
         if (LAB > 1.0e-12) {
             // normal is purely in the xy-plane
-            n.set((yB-yA)/LAB, -(xB-xA)/LAB, 0.0);
+            n.set((yB-yA)/LAB, -(xB-xA)/LAB, to!number(0.0));
             t2 = Vector3(0.0, 0.0, 1.0);
             t1 = cross(n, t2);
             length = LAB; // Length in the XY-plane.
@@ -268,7 +271,7 @@ public:
         } else {
             area[gtl] = LAB; // Assume unit depth in the Z-direction.
         }
-        pos = (vtx[0].pos[gtl] + vtx[1].pos[gtl])/2.0;
+        pos = to!number(0.5)*(vtx[0].pos[gtl] + vtx[1].pos[gtl]);
     } // end update_2D_geometric_data()
 
     void update_3D_geometric_data(size_t gtl)
@@ -296,7 +299,7 @@ public:
     {
         grad.copy_values_from(vtx[0].grad);
         foreach (i; 1 .. vtx.length) grad.accumulate_values_from(vtx[i].grad);
-        grad.scale_values_by(1.0/to!double(vtx.length));
+        grad.scale_values_by(to!number(1.0/vtx.length));
     } // end average_vertex_deriv_values()
 
     //@nogc
@@ -308,8 +311,8 @@ public:
         auto gmodel = myConfig.gmodel;
         size_t n_species = gmodel.n_species;
         double viscous_factor = myConfig.viscous_factor;
-        double k_laminar = fs.gas.k;
-        double mu_laminar = fs.gas.mu;
+        number k_laminar = fs.gas.k;
+        number mu_laminar = fs.gas.mu;
         if (myConfig.use_viscosity_from_cells) {
             // Emulate Eilmer3 behaviour by using the viscous transport coefficients
             // from the cells either side of the interface.
@@ -326,11 +329,11 @@ public:
                 assert(0, "Oops, don't seem to have a cell available.");
             }
         }
-        double k_eff = viscous_factor * (k_laminar + fs.k_t);
-        double mu_eff = viscous_factor * (mu_laminar + fs.mu_t);
-        double lmbda = -2.0/3.0 * mu_eff;
+        number k_eff = viscous_factor * (k_laminar + fs.k_t);
+        number mu_eff = viscous_factor * (mu_laminar + fs.mu_t);
+        number lmbda = -2.0/3.0 * mu_eff;
         //
-        double local_pressure;
+        number local_pressure;
         if (left_cell_is_interior && right_cell_is_interior) {
             local_pressure = 0.5*(left_cell.fs.gas.p+right_cell.fs.gas.p);
         } else if (left_cell_is_interior) {
@@ -340,8 +343,8 @@ public:
         } else {
             assert(0, "Oops, don't seem to have a cell available.");
         }
-        double shear_stress_limit = myConfig.shear_stress_relative_limit * local_pressure;
-        double heat_transfer_limit = (mu_eff > 0.0) ? k_eff/mu_eff*shear_stress_limit : 0.0;
+        number shear_stress_limit = myConfig.shear_stress_relative_limit * local_pressure;
+        number heat_transfer_limit = (mu_eff > 0.0) ? k_eff/mu_eff*shear_stress_limit : to!number(0.0);
 
         if (myConfig.spatial_deriv_from_many_points) {
             // Viscous fluxes are constructed with gradients from many points.
@@ -351,7 +354,7 @@ public:
             // and treat the differently.
             if (myConfig.turbulence_model != TurbulenceModel.none) {
                 double Sc_t = myConfig.turbulence_schmidt_number;
-                double D_t = fs.mu_t / (fs.gas.rho * Sc_t);
+                number D_t = fs.mu_t / (fs.gas.rho * Sc_t);
 
                 foreach (isp; 0 .. n_species) {
                     jx[isp] = -fs.gas.rho * D_t * grad.massf[isp][0];
@@ -369,22 +372,22 @@ public:
                     }
                 }
             }
-            double tau_xx = 0.0;
-            double tau_yy = 0.0;
-            double tau_zz = 0.0;
-            double tau_xy = 0.0;
-            double tau_xz = 0.0;
-            double tau_yz = 0.0;
+            number tau_xx = 0.0;
+            number tau_yy = 0.0;
+            number tau_zz = 0.0;
+            number tau_xy = 0.0;
+            number tau_xz = 0.0;
+            number tau_yz = 0.0;
             if (myConfig.dimensions == 3) {
-                double dudx = grad.vel[0][0];
-                double dudy = grad.vel[0][1];
-                double dudz = grad.vel[0][2];
-                double dvdx = grad.vel[1][0];
-                double dvdy = grad.vel[1][1];
-                double dvdz = grad.vel[1][2];
-                double dwdx = grad.vel[2][0];
-                double dwdy = grad.vel[2][1];
-                double dwdz = grad.vel[2][2];
+                number dudx = grad.vel[0][0];
+                number dudy = grad.vel[0][1];
+                number dudz = grad.vel[0][2];
+                number dvdx = grad.vel[1][0];
+                number dvdy = grad.vel[1][1];
+                number dvdz = grad.vel[1][2];
+                number dwdx = grad.vel[2][0];
+                number dwdy = grad.vel[2][1];
+                number dwdz = grad.vel[2][2];
                 // 3-dimensional planar stresses.
                 tau_xx = 2.0*mu_eff*dudx + lmbda*(dudx + dvdy + dwdz);
                 tau_yy = 2.0*mu_eff*dvdy + lmbda*(dudx + dvdy + dwdz);
@@ -394,15 +397,15 @@ public:
                 tau_yz = mu_eff * (dvdz + dwdy);
             } else {
                 // 2D
-                double dudx = grad.vel[0][0];
-                double dudy = grad.vel[0][1];
-                double dvdx = grad.vel[1][0];
-                double dvdy = grad.vel[1][1];
+                number dudx = grad.vel[0][0];
+                number dudy = grad.vel[0][1];
+                number dvdx = grad.vel[1][0];
+                number dvdy = grad.vel[1][1];
                 if (myConfig.axisymmetric) {
                     // Viscous stresses at the mid-point of the interface.
                     // Axisymmetric terms no longer include the radial multiplier
                     // as that has been absorbed into the interface area calculation.
-                    double ybar = Ybar;
+                    number ybar = Ybar;
                     if (ybar > 1.0e-10) { // something very small for a cell height
                         tau_xx = 2.0 * mu_eff * dudx + lmbda * (dudx + dvdy + fs.vel.y / ybar);
                         tau_yy = 2.0 * mu_eff * dvdy + lmbda * (dudx + dvdy + fs.vel.y / ybar);
@@ -419,25 +422,25 @@ public:
                 }
             }
             // Thermal conductivity (NOTE: q is total energy flux)
-            double qx = k_eff * grad.T[0];
-            double qy = k_eff * grad.T[1];
-            double qz = k_eff * grad.T[2];
+            number qx = k_eff * grad.T[0];
+            number qy = k_eff * grad.T[1];
+            number qz = k_eff * grad.T[2];
             if (myConfig.turbulence_model != TurbulenceModel.none ||
                 myConfig.mass_diffusion_model != MassDiffusionModel.none ) {
                 foreach (isp; 0 .. n_species) {
-                    double h = gmodel.enthalpy(fs.gas, to!int(isp));
+                    number h = gmodel.enthalpy(fs.gas, to!int(isp));
                     qx -= jx[isp] * h;
                     qy -= jy[isp] * h;
                     qz -= jz[isp] * h;
                 }
                 // [TODO] Rowan, modal enthalpies ?
             }
-            double tau_kx = 0.0;
-            double tau_ky = 0.0;
-            double tau_kz = 0.0;
-            double tau_wx = 0.0;
-            double tau_wy = 0.0;
-            double tau_wz = 0.0;
+            number tau_kx = 0.0;
+            number tau_ky = 0.0;
+            number tau_kz = 0.0;
+            number tau_wx = 0.0;
+            number tau_wy = 0.0;
+            number tau_wz = 0.0;
             if ( myConfig.turbulence_model == TurbulenceModel.k_omega &&
                  !(myConfig.axisymmetric && (Ybar <= 1.0e-10)) ) {
                 // Turbulence contribution to the shear stresses.
@@ -445,8 +448,8 @@ public:
                 tau_yy -= 2.0/3.0 * fs.gas.rho * fs.tke;
                 if (myConfig.dimensions == 3) { tau_zz -= 2.0/3.0 * fs.gas.rho * fs.tke; }
                 // Turbulence contribution to heat transfer.
-                double sigma_star = 0.6;
-                double mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
+                number sigma_star = 0.6;
+                number mu_effective = fs.gas.mu + sigma_star * fs.gas.rho * fs.tke / fs.omega;
                 // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                 mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
                 qx += mu_effective * grad.tke[0];
@@ -456,7 +459,7 @@ public:
                 tau_kx = mu_effective * grad.tke[0]; 
                 tau_ky = mu_effective * grad.tke[1];
                 if (myConfig.dimensions == 3) { tau_kz = mu_effective * grad.tke[2]; }
-                double sigma = 0.5;
+                number sigma = 0.5;
                 mu_effective = fs.gas.mu + sigma * fs.gas.rho * fs.tke / fs.omega;
                 // Apply a limit on mu_effective in the same manner as that applied to mu_t.
                 mu_effective = fmin(mu_effective, myConfig.max_mu_t_factor * fs.gas.mu);
@@ -476,9 +479,9 @@ public:
             qz = copysign(fmin(fabs(qz),heat_transfer_limit), qz);
             //
             // Combine into fluxes: store as the dot product (F.n).
-            double nx = n.x;
-            double ny = n.y;
-            double nz = n.z;
+            number nx = n.x;
+            number ny = n.y;
+            number nz = n.z;
             // In some cases, the shear and heat fluxes have been previously
             // computed by the wall functions in the boundary condition call.
             if (use_wall_function_shear_and_heat_flux) {
@@ -520,8 +523,8 @@ public:
             // as suggested by Paul Petrie-Repar long ago.
             //
             // First, select the 2 points.
-            double x0, x1, y0, y1, z0, z1;
-            double velx0, velx1, vely0, vely1, velz0, velz1, T0, T1;
+            number x0, x1, y0, y1, z0, z1;
+            number velx0, velx1, vely0, vely1, velz0, velz1, T0, T1;
             if (left_cell_is_interior && right_cell_is_interior) {
                 x0 = left_cell.pos[0].x; x1 = right_cell.pos[0].x;
                 y0 = left_cell.pos[0].y; y1 = right_cell.pos[0].y;
@@ -551,20 +554,20 @@ public:
             }
             // Distance in direction of face normal is what we will use
             // in the finite-difference approximation.
-            double nx = n.x;
-            double ny = n.y;
-            double nz = n.z;
+            number nx = n.x;
+            number ny = n.y;
+            number nz = n.z;
             // Distance between points, in face-normal direction.
-            double deln = (x1-x0)*nx + (y1-y0)*ny;
+            number deln = (x1-x0)*nx + (y1-y0)*ny;
             // Velocity in face-normal direction.
-            double veln0 = velx0*nx + vely0*ny;
-            double veln1 = velx1*nx + vely1*ny;
+            number veln0 = velx0*nx + vely0*ny;
+            number veln1 = velx1*nx + vely1*ny;
             if (myConfig.dimensions == 3) {
                 deln += (z1-z0)*nz;
                 veln0 += velz0*nz;
                 veln1 += velz1*nz;
             } 
-            double veln_face;
+            number veln_face;
             if (left_cell_is_interior && right_cell_is_interior) {
                 veln_face = 0.5*(veln0+veln1);
             } else if (left_cell_is_interior) {
@@ -572,15 +575,15 @@ public:
             } else if (right_cell_is_interior) {
                 veln_face = veln0;
             }
-            double ke0 = 0.5*(velx0^^2 + vely0^^2 + velz0^^2);
-            double ke1 = 0.5*(velx1^^2 + vely1^^2 + velz1^^2);
+            number ke0 = 0.5*(velx0^^2 + vely0^^2 + velz0^^2);
+            number ke1 = 0.5*(velx1^^2 + vely1^^2 + velz1^^2);
             // Derivatives normal to face.
-            double dvelxdn = (velx1 - velx0)/deln; // gradient of momentum per mass
-            double dvelydn = (vely1 - vely0)/deln;
-            double dvelzdn = (myConfig.dimensions == 3) ? (velz1 - velz0)/deln : 0.0;
-            double dkedn = (ke1 - ke0)/deln; // gradient of kinetic energy per mass
-            double dTdn = (T1 - T0)/deln; // gradient of temperature
-            double dvelndn = (veln1 - veln0)/deln; // for velocity dilatation
+            number dvelxdn = (velx1 - velx0)/deln; // gradient of momentum per mass
+            number dvelydn = (vely1 - vely0)/deln;
+            number dvelzdn = (myConfig.dimensions == 3) ? (velz1 - velz0)/deln : to!number(0.0);
+            number dkedn = (ke1 - ke0)/deln; // gradient of kinetic energy per mass
+            number dTdn = (T1 - T0)/deln; // gradient of temperature
+            number dvelndn = (veln1 - veln0)/deln; // for velocity dilatation
             //
             // Finally, compute the actual fluxes.
             //
@@ -588,10 +591,10 @@ public:
                 assert(0, "Oops, not implemented.");
             }
             else { // proceed with locally computed shear and heat flux
-                double tau_x = mu_eff * dvelxdn;
-                double tau_y = mu_eff * dvelydn;
-                double tau_z = mu_eff * dvelzdn;
-                double qn = k_eff*dTdn + mu_eff*dkedn + lmbda*dvelndn*veln_face;
+                number tau_x = mu_eff * dvelxdn;
+                number tau_y = mu_eff * dvelydn;
+                number tau_z = mu_eff * dvelzdn;
+                number qn = k_eff*dTdn + mu_eff*dkedn + lmbda*dvelndn*veln_face;
                 tau_x = copysign(fmin(fabs(tau_x),shear_stress_limit), tau_x);
                 tau_y = copysign(fmin(fabs(tau_y),shear_stress_limit), tau_y);
                 tau_z = copysign(fmin(fabs(tau_z),shear_stress_limit), tau_z);
@@ -604,8 +607,8 @@ public:
             } // end if (use_wall_function_shear_and_heat_flux)
             // [TODO] Rowan, Modal energy flux?
             if (myConfig.turbulence_model == TurbulenceModel.k_omega) {
-                double tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
-                double tau_wn = 0.0;
+                number tau_kn = 0.0; // [TODO] PJ, 2018-05-05, talk to Wilson
+                number tau_wn = 0.0;
                 F.tke -= tau_kn;
                 F.omega -= tau_wn;
             }

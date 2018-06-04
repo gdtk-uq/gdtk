@@ -11,6 +11,9 @@ module fluxcalc;
 import std.math;
 import std.stdio;
 import std.conv;
+import nm.complex;
+import nm.number;
+
 import geom;
 import gas;
 import flowstate;
@@ -85,9 +88,9 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
 
     if (omegaz != 0.0) {
         // Rotating frame.
-        double x = IFace.pos.x;
-        double y = IFace.pos.y;
-        double rsq = x*x + y*y;
+        number x = IFace.pos.x;
+        number y = IFace.pos.y;
+        number rsq = x*x + y*y;
         // The conserved quantity is rothalpy,
         // so we need to take -(u**2)/2 off the total energy flux.
         // Note that rotating frame velocity u = omegaz * r.
@@ -95,7 +98,7 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     }
     // Transform fluxes back from interface frame of reference to local frame of reference.
     // Flux of Total Energy
-    double v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z; 
+    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z; 
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
     // Flux of momentum: Add component for interface velocity then
     // rotate back to the global frame of reference.
@@ -113,13 +116,13 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
 void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs, 
                                     ref LocalConfig myConfig)
 {
-    double rho = fs.gas.rho;
-    double vn = fs.vel.x;
-    double vt1 = fs.vel.y;
-    double vt2 = fs.vel.z;
-    double p = fs.gas.p;
-    double u = myConfig.gmodel.internal_energy(fs.gas);
-    double ke = 0.5 * (vn*vn + vt1*vt1 + vt2*vt2); // Kinetic energy per unit volume.
+    number rho = fs.gas.rho;
+    number vn = fs.vel.x;
+    number vt1 = fs.vel.y;
+    number vt2 = fs.vel.z;
+    number p = fs.gas.p;
+    number u = myConfig.gmodel.internal_energy(fs.gas);
+    number ke = 0.5 * (vn*vn + vt1*vt1 + vt2*vt2); // Kinetic energy per unit volume.
     //
     // Fluxes (quantity / unit time / unit area)
     F.mass = rho * vn; // The mass flux is relative to the moving interface.
@@ -136,7 +139,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
 {
     ConservedQuantities F = IFace.F;
     // Record velocity to restore fs at end.
-    double vx = fs.vel.x; double vy = fs.vel.y; double vz = fs.vel.z; 
+    number vx = fs.vel.x; number vy = fs.vel.y; number vz = fs.vel.z; 
     // Transform to interface frame of reference.
     // Beware: fs.vel is changed here and restored below.
     fs.vel.refx -= IFace.gvel.x; fs.vel.refy -= IFace.gvel.y; fs.vel.refz -= IFace.gvel.z; 
@@ -147,9 +150,9 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     set_flux_vector_in_local_frame(IFace.F, fs, myConfig);
     if (omegaz != 0.0) {
         // Rotating frame.
-        double x = IFace.pos.x;
-        double y = IFace.pos.y;
-        double rsq = x*x + y*y;
+        number x = IFace.pos.x;
+        number y = IFace.pos.y;
+        number rsq = x*x + y*y;
         // The conserved quantity is rothalpy,
         // so we need to take -(u**2)/2 off the total energy flux.
         // Note that rotating frame velocity u = omegaz * r.
@@ -157,7 +160,7 @@ void set_flux_vector_in_global_frame(ref FVInterface IFace, ref FlowState fs,
     }
     //
     // Transform fluxes back from interface frame of reference to local frame of reference.
-    double v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
+    number v_sqr = IFace.gvel.x*IFace.gvel.x + IFace.gvel.y*IFace.gvel.y + IFace.gvel.z*IFace.gvel.z;
     F.total_energy += 0.5 * F.mass * v_sqr + F.momentum.dot(IFace.gvel);
     F.momentum += F.mass * IFace.gvel;
     //
@@ -181,41 +184,41 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
 {
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
-    double rL = Lft.gas.rho;
-    double pL = Lft.gas.p;
-    double pLrL = pL / rL;
-    double uL = Lft.vel.x;
-    double vL = Lft.vel.y;
-    double wL = Lft.vel.z;
-    double eL = gmodel.internal_energy(Lft.gas);
-    double aL = Lft.gas.a;
-    double keL = 0.5*(uL*uL + vL*vL + wL*wL);
-    double HL = eL + pLrL + keL + Lft.tke;
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number pLrL = pL / rL;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5*(uL*uL + vL*vL + wL*wL);
+    number HL = eL + pLrL + keL + Lft.tke;
     //
-    double rR = Rght.gas.rho;
-    double pR = Rght.gas.p;
-    double pRrR = pR / rR;
-    double uR = Rght.vel.x;
-    double vR = Rght.vel.y;
-    double wR = Rght.vel.z;
-    double eR = gmodel.internal_energy(Rght.gas);
-    double aR = Rght.gas.a;
-    double keR = 0.5*(uR*uR + vR*vR + wR*wR);
-    double HR = eR + pRrR + keR + Rght.tke;
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number pRrR = pR / rR;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5*(uR*uR + vR*vR + wR*wR);
+    number HR = eR + pRrR + keR + Rght.tke;
     //
     // This is the main part of the flux calculator.
     // Weighting parameters (eqn 32) for velocity splitting.
-    double alphaL = 2.0 * pLrL / (pLrL + pRrR);
-    double alphaR = 2.0 * pRrR / (pLrL + pRrR);
+    number alphaL = 2.0 * pLrL / (pLrL + pRrR);
+    number alphaR = 2.0 * pRrR / (pLrL + pRrR);
     // Common sound speed (eqn 33) and Mach numbers.
-    double am = fmax(aL, aR);
-    double ML = uL / am;
-    double MR = uR / am;
+    number am = fmax(aL, aR);
+    number ML = uL / am;
+    number MR = uR / am;
     // Left state: 
     // pressure splitting (eqn 34) 
     // and velocity splitting (eqn 30)
-    double pLplus, uLplus;
-    double duL = 0.5 * (uL + fabs(uL));
+    number pLplus, uLplus;
+    number duL = 0.5 * (uL + fabs(uL));
     if (fabs(ML) <= 1.0) {
         pLplus = pL * (ML + 1.0) * (ML + 1.0) * (2.0 - ML) * 0.25;
         uLplus = alphaL * ((uL + am) * (uL + am) / (4.0 * am) - duL) + duL;
@@ -226,8 +229,8 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     // Right state: 
     // pressure splitting (eqn 34) 
     // and velocity splitting (eqn 31)
-    double pRminus, uRminus;
-    double duR = 0.5 * (uR - fabs(uR));
+    number pRminus, uRminus;
+    number duR = 0.5 * (uR - fabs(uR));
     if (fabs(MR) <= 1.0) {
         pRminus = pR * (MR - 1.0) * (MR - 1.0) * (2.0 + MR) * 0.25;
         uRminus = alphaR * (-(uR - am) * (uR - am) / (4.0 * am) - duR) + duR;
@@ -237,20 +240,20 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     }
     // Mass Flux (eqn 29)
     // The mass flux is relative to the moving interface.
-    double ru_half = uLplus * rL + uRminus * rR;
+    number ru_half = uLplus * rL + uRminus * rR;
     // Pressure flux (eqn 34)
-    double p_half = pLplus + pRminus;
+    number p_half = pLplus + pRminus;
     // Momentum flux: normal direction
     // Compute blending parameter s (eqn 37),
     // the momentum flux for AUSMV (eqn 21) and AUSMD (eqn 21)
     // and blend (eqn 36).
-    double dp = pL - pR;
+    number dp = pL - pR;
     const double K_SWITCH = 10.0;
     dp = K_SWITCH * fabs(dp) / fmin(pL, pR);
-    double s = 0.5 * fmin(1.0, dp);
-    double ru2_AUSMV = uLplus * rL * uL + uRminus * rR * uR;
-    double ru2_AUSMD = 0.5 * (ru_half * (uL + uR) - fabs(ru_half) * (uR - uL));
-    double ru2_half = (0.5 + s) * ru2_AUSMV + (0.5 - s) * ru2_AUSMD;
+    number s = 0.5 * fmin(1.0, dp);
+    number ru2_AUSMV = uLplus * rL * uL + uRminus * rR * uR;
+    number ru2_AUSMD = 0.5 * (ru_half * (uL + uR) - fabs(ru_half) * (uR - uL));
+    number ru2_half = (0.5 + s) * ru2_AUSMV + (0.5 - s) * ru2_AUSMD;
     //
     // Assemble components of the flux vector.
     ConservedQuantities F = IFace.F;
@@ -286,7 +289,7 @@ void ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
     bool caseA = ((uL - aL) < 0.0) && ((uR - aR) > 0.0);
     bool caseB = ((uL + aL) < 0.0) && ((uR + aR) > 0.0);
     //
-    double d_ua = 0.0;
+    number d_ua = 0.0;
     if (caseA && !caseB) { d_ua = C_EFIX * ((uR - aR) - (uL - aL)); }
     if (caseB && !caseA) { d_ua = C_EFIX * ((uR + aR) - (uL + aL)); }
     //
@@ -331,17 +334,17 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
 {
     // Local variable names reflect the names used in the original FORTRAN code by MNM.
     const double PHI = 1.0;
-    double vnL, vpL, vnR, vpR, vqL, vqR;
-    double rtL, cmpL, rtR, cmpR;
-    double hvsqL, hvsqR;
-    double wL, wR, dL, dR;
-    double rhoL, rhoR, presL, presR, tR, tL;
-    double eL, eR, hL, hR;
-    double snL, snR, exL, exR, efL, efR;
-    double fmsL, fmsR;
-    double cv, cp, con, gam, Rgas;
-    double cvL, cvR, RgasL, RgasR;
-    double rLsqrt, rRsqrt, alpha;
+    number vnL, vpL, vnR, vpR, vqL, vqR;
+    number rtL, cmpL, rtR, cmpR;
+    number hvsqL, hvsqR;
+    number wL, wR, dL, dR;
+    number rhoL, rhoR, presL, presR, tR, tL;
+    number eL, eR, hL, hR;
+    number snL, snR, exL, exR, efL, efR;
+    number fmsL, fmsR;
+    number cv, cp, con, gam, Rgas;
+    number cvL, cvR, RgasL, RgasR;
+    number rLsqrt, rRsqrt, alpha;
     int statusf;
     //
     // Calculate Constants
@@ -435,7 +438,7 @@ void efmflx(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel
 } // end efmflx()
 
 @nogc
-void exxef(double sn, ref double exx, ref double ef)
+void exxef(number sn, ref number exx, ref number ef)
 /** \brief Compute exp(-x**2) and erf(x) with a polynomial approximation.
  *
  * \param sn   : IN  : x
@@ -443,7 +446,7 @@ void exxef(double sn, ref double exx, ref double ef)
  * \param &ef  : OUT : erf(x)  error function
  */
 {
-    double snsq, ef1, y;
+    number snsq, ef1, y;
     //
     const double P = 0.327591100;
     const double A1 = 0.254829592;
@@ -480,9 +483,9 @@ void adaptive_efm_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface IF
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    double sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
-    double shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
-    double shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
+    number sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
+    number shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
+    number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
     bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
     if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
         efmflx(Lft, Rght, IFace, myConfig.gmodel);
@@ -498,9 +501,9 @@ void adaptive_hlle_ausmdv(in FlowState Lft, in FlowState Rght, ref FVInterface I
 //
 // The actual work is passed off to the original flux calculation functions.
 {
-    double sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
-    double shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
-    double shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
+    number sound_speed = 0.5 * (Lft.gas.a + Rght.gas.a);
+    number shear_y = fabs(Lft.vel.y - Rght.vel.y) / sound_speed;
+    number shear_z = fabs(Lft.vel.z - Rght.vel.z) / sound_speed;
     bool shear_is_small = fmax(shear_y, shear_z) <= myConfig.shear_tolerance;
     if ((Lft.S == 1 || Rght.S == 1) && shear_is_small) {
         hlle(Lft, Rght, IFace, myConfig.gmodel);
@@ -532,115 +535,115 @@ void ausm_plus_up(in FlowState Lft, in FlowState Rght, ref FVInterface IFace,
 // This code: W. Y. K. Chan & P. A. Jacobs
 {
     // Some helper functions
-    @nogc double M1plus(double M) { return 0.5*(M + fabs(M)); }
-    @nogc double M1minus(double M) { return 0.5*(M - fabs(M)); }
-    @nogc double M2plus(double M) { return 0.25*(M + 1.0)*(M + 1.0); }
-    @nogc double M2minus(double M) { return -0.25*(M - 1.0)*(M - 1.0); } 
-    @nogc double M4plus(double M, double beta) {
+    @nogc number M1plus(number M) { return 0.5*(M + fabs(M)); }
+    @nogc number M1minus(number M) { return 0.5*(M - fabs(M)); }
+    @nogc number M2plus(number M) { return 0.25*(M + 1.0)*(M + 1.0); }
+    @nogc number M2minus(number M) { return -0.25*(M - 1.0)*(M - 1.0); } 
+    @nogc number M4plus(number M, number beta) {
         if ( fabs(M) >= 1.0 ) {
             return M1plus(M);
         } else {
-            double M2p = M2plus(M);
-            double M2m = M2minus(M);
+            number M2p = M2plus(M);
+            number M2m = M2minus(M);
             return M2p*(1.0 - 16.0*beta*M2m);
         }
     }
-    @nogc double M4minus(double M, double beta) {
+    @nogc number M4minus(number M, number beta) {
         if ( fabs(M) >= 1.0 ) {
             return M1minus(M);
         } else {
-            double M2p = M2plus(M);
-            double M2m = M2minus(M);
+            number M2p = M2plus(M);
+            number M2m = M2minus(M);
             return M2m*(1.0 + 16.0*beta*M2p);
         }
     }
-    @nogc double P5plus(double M, double alpha) {
+    @nogc number P5plus(number M, number alpha) {
         if ( fabs(M) >= 1.0 ) {
             return (1.0/M)*M1plus(M);
         } else {
-            double M2p = M2plus(M);
-            double M2m = M2minus(M);
+            number M2p = M2plus(M);
+            number M2m = M2minus(M);
             return M2p*((2.0 - M) - 16.0*alpha*M*M2m);
         }
     }
-    @nogc double P5minus(double M, double alpha) {
+    @nogc number P5minus(number M, number alpha) {
         if ( fabs(M) >= 1.0 ) {
             return (1.0/M)*M1minus(M);
         } else {
-            double M2p = M2plus(M);
-            double M2m = M2minus(M);
+            number M2p = M2plus(M);
+            number M2m = M2minus(M);
             return M2m*((-2.0 - M) + 16.0*alpha*M*M2p);
         }
     }
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
-    double rL = Lft.gas.rho;
-    double pL = Lft.gas.p;
-    double uL = Lft.vel.x;
-    double vL = Lft.vel.y;
-    double wL = Lft.vel.z;
-    double eL = gmodel.internal_energy(Lft.gas);
-    double aL = Lft.gas.a;
-    double keL = 0.5 * (uL * uL + vL * vL + wL * wL);
-    double HL = eL + pL/rL + keL + Lft.tke;
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5 * (uL * uL + vL * vL + wL * wL);
+    number HL = eL + pL/rL + keL + Lft.tke;
     //
-    double rR = Rght.gas.rho;
-    double pR = Rght.gas.p;
-    double uR = Rght.vel.x;
-    double vR = Rght.vel.y;
-    double wR = Rght.vel.z;
-    double eR = gmodel.internal_energy(Rght.gas);
-    double aR = Rght.gas.a;
-    double keR = 0.5 * (uR * uR + vR * vR + wR * wR);
-    double HR = eR + pR/rR + keR + Rght.tke;
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5 * (uR * uR + vR * vR + wR * wR);
+    number HR = eR + pR/rR + keR + Rght.tke;
     //
     // This is the main part of the flux calculator.
     //
     // Interface sound speed (eqns 28 & 30). 
     // An approximation is used instead of these equations as
     // suggested by Liou in his paper (see line below eqn 69).
-    double a_half = 0.5 * (aR + aL);
+    number a_half = 0.5 * (aR + aL);
     // Left and right state Mach numbers (eqn 69).
-    double ML = uL / a_half;
-    double MR = uR / a_half;
+    number ML = uL / a_half;
+    number MR = uR / a_half;
     // Mean local Mach number (eqn 70).
-    double MbarSq = (uL*uL + uR*uR) / (2.0 * a_half *a_half);
+    number MbarSq = (uL*uL + uR*uR) / (2.0 * a_half *a_half);
     // Reference Mach number (eqn 71).
-    double M0Sq = fmin(1.0, fmax(MbarSq, M_inf));
+    number M0Sq = fmin(1.0, fmax(MbarSq, M_inf));
      // Some additional parameters.
-    double fa = sqrt(M0Sq) * (2.0 - sqrt(M0Sq));   // eqn 72
-    double alpha = 0.1875 * (-4.0 + 5 * fa * fa);  // eqn 76
-    double beta = 0.125;                           // eqn 76
+    number fa = sqrt(M0Sq) * (2.0 - sqrt(M0Sq));   // eqn 72
+    number alpha = 0.1875 * (-4.0 + 5 * fa * fa);  // eqn 76
+    number beta = 0.125;                           // eqn 76
     // Left state: 
     // M4plus(ML)
     // P5plus(ML)
-    double M4plus_ML = M4plus(ML, beta);
-    double P5plus_ML = P5plus(ML, alpha);
+    number M4plus_ML = M4plus(ML, beta);
+    number P5plus_ML = P5plus(ML, alpha);
     // Right state: 
     // M4minus(MR)
     // P5minus(MR)
-    double M4minus_MR = M4minus(MR, beta);
-    double P5minus_MR = P5minus(MR, alpha);
+    number M4minus_MR = M4minus(MR, beta);
+    number P5minus_MR = P5minus(MR, alpha);
     // Pressure diffusion modification for 
     // mass flux (eqn 73) and pressure flux (eqn 75).
     const double KP = 0.25;
     const double KU = 0.75;
     const double SIGMA = 1.0;
-    double r_half = 0.5*(rL + rR);
-    double Mp = -KP / fa * fmax((1.0 - SIGMA * MbarSq), 0.0) * (pR - pL) / (r_half*a_half*a_half);
-    double Pu = -KU * P5plus_ML * P5minus_MR * (rL + rR) * fa * a_half * (uR - uL);
+    number r_half = 0.5*(rL + rR);
+    number Mp = -KP / fa * fmax((1.0 - SIGMA * MbarSq), 0.0) * (pR - pL) / (r_half*a_half*a_half);
+    number Pu = -KU * P5plus_ML * P5minus_MR * (rL + rR) * fa * a_half * (uR - uL);
     // Mass Flux (eqns 73 & 74).
-    double M_half = M4plus_ML + M4minus_MR + Mp;
-    double ru_half = a_half * M_half;
+    number M_half = M4plus_ML + M4minus_MR + Mp;
+    number ru_half = a_half * M_half;
     if ( M_half > 0.0 ) {
        ru_half *= rL;
     } else {
        ru_half *= rR;
     }
     // Pressure flux (eqn 75).
-    double p_half = P5plus_ML*pL + P5minus_MR*pR + Pu;
+    number p_half = P5plus_ML*pL + P5minus_MR*pR + Pu;
     // Momentum flux: normal direction
-    double ru2_half;
+    number ru2_half;
     if (ru_half >= 0.0) {
         ru2_half = ru_half * uL;
     } else {
@@ -681,97 +684,97 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
 // Author D. M. Bond
 // Port to D by PJ, 2014-07-24
 {
-    @nogc double SAFESQRT(double x) { return (fabs(x)>1.0e-14) ? sqrt(x) : 0.0; }
+    @nogc number SAFESQRT(number x) { return (fabs(x)>1.0e-14) ? sqrt(x) : to!number(0.0); }
     // Unpack the flow-state vectors for either side of the interface.
     // Store in work vectors, those quantities that will be neede later.
-    double rL = Lft.gas.rho;
-    double pL = Lft.gas.p;
-    double uL = Lft.vel.x;
-    double vL = Lft.vel.y;
-    double wL = Lft.vel.z;
-    double BxL = Lft.B.x;
-    double ByL = Lft.B.y;
-    double BzL = Lft.B.z;
-    double rR = Rght.gas.rho;
-    double pR = Rght.gas.p;
-    double uR = Rght.vel.x;
-    double vR = Rght.vel.y;
-    double wR = Rght.vel.z;
-    double BxR = Rght.B.x;
-    double ByR = Rght.B.y;
-    double BzR = Rght.B.z;
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number BxL = Lft.B.x;
+    number ByL = Lft.B.y;
+    number BzL = Lft.B.z;
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number BxR = Rght.B.x;
+    number ByR = Rght.B.y;
+    number BzR = Rght.B.z;
     //
     // Derive the gas "constants" from the local conditions.
-    double cvL = gmodel.Cv(Lft.gas);
-    double RgasL = gmodel.R(Lft.gas);
-    double cvR = gmodel.Cv(Rght.gas);
-    double RgasR = gmodel.R(Rght.gas);
-    double rLsqrt = sqrt(rL);
-    double rRsqrt = sqrt(rR);
-    double alpha = rLsqrt / (rLsqrt + rRsqrt);
-    double cv = alpha * cvL + (1.0 - alpha) * cvR;
-    double Rgas = alpha * RgasL + (1.0 - alpha) * RgasR;
-    double cp = cv + Rgas;
-    double gam = cp / cv;
+    number cvL = gmodel.Cv(Lft.gas);
+    number RgasL = gmodel.R(Lft.gas);
+    number cvR = gmodel.Cv(Rght.gas);
+    number RgasR = gmodel.R(Rght.gas);
+    number rLsqrt = sqrt(rL);
+    number rRsqrt = sqrt(rR);
+    number alpha = rLsqrt / (rLsqrt + rRsqrt);
+    number cv = alpha * cvL + (1.0 - alpha) * cvR;
+    number Rgas = alpha * RgasL + (1.0 - alpha) * RgasR;
+    number cp = cv + Rgas;
+    number gam = cp / cv;
     //
     // Compute Roe Average State (currently simple average)
-    double rho = 0.5*(rL+rR);
-    double p   = 0.5*(pL+pR);
-    double u   = 0.5*(uL+uR);
+    number rho = 0.5*(rL+rR);
+    number p   = 0.5*(pL+pR);
+    number u   = 0.5*(uL+uR);
     //v   = 0.5*(vL+vR);
     //w   = 0.5*(wL+wR);
-    double Bx  = 0.5*(BxL+BxR);
-    double By  = 0.5*(ByL+ByR);
-    double Bz  = 0.5*(BzL+BzR);
+    number Bx  = 0.5*(BxL+BxR);
+    number By  = 0.5*(ByL+ByR);
+    number Bz  = 0.5*(BzL+BzR);
     //
     // Compute Eigenvalues of Roe Matrix
     //u2=u*u;
     //v2=v*v;
     //w2=w*w;
     //uu=u2+v2+w2;
-    double a2 = gam*p/rho;
-    double Bx2 = Bx*Bx;
-    double Bt2 = By*By + Bz*Bz;
-    double BB = Bx2 + Bt2;
-    double ca2 = Bx2/rho;
-    double alf = a2+BB/rho;
-    double als = SAFESQRT(alf*alf-4.0*a2*ca2);
-    double cf2 = 0.5*(alf+als);
-    double cf = sqrt(cf2);
-    double wp = u+cf;
-    double wm = u-cf;
+    number a2 = gam*p/rho;
+    number Bx2 = Bx*Bx;
+    number Bt2 = By*By + Bz*Bz;
+    number BB = Bx2 + Bt2;
+    number ca2 = Bx2/rho;
+    number alf = a2+BB/rho;
+    number als = SAFESQRT(alf*alf-4.0*a2*ca2);
+    number cf2 = 0.5*(alf+als);
+    number cf = sqrt(cf2);
+    number wp = u+cf;
+    number wm = u-cf;
     //
     // Compute the Jump in Conserved Variables between L and R
-    double BxL2 = BxL*BxL;
-    double BtL2 = ByL*ByL + BzL*BzL;
-    double BBL = BxL2 + BtL2;
-    double ptL = pL + 0.5*BBL;
-    double uL2 = uL*uL;
-    double uuL = uL2 + vL*vL + wL*wL;
-    double aL2 = gam*pL/rL;
-    double caL2 = BxL2/rL;
-    double alfL = aL2+BBL/rL;
-    double alsL = SAFESQRT(alfL*alfL-4.0*aL2*caL2);
-    double cfL2 = 0.5*(alfL+alsL);
-    double cfL = sqrt(cfL2);
+    number BxL2 = BxL*BxL;
+    number BtL2 = ByL*ByL + BzL*BzL;
+    number BBL = BxL2 + BtL2;
+    number ptL = pL + 0.5*BBL;
+    number uL2 = uL*uL;
+    number uuL = uL2 + vL*vL + wL*wL;
+    number aL2 = gam*pL/rL;
+    number caL2 = BxL2/rL;
+    number alfL = aL2+BBL/rL;
+    number alsL = SAFESQRT(alfL*alfL-4.0*aL2*caL2);
+    number cfL2 = 0.5*(alfL+alsL);
+    number cfL = sqrt(cfL2);
     //wpL = uL+cfL;
-    double wmL = uL-cfL;
-    double BxR2 = BxR*BxR;
-    double BtR2 = ByR*ByR + BzR*BzR;
-    double BBR = BxR2 + BtR2;
-    double ptR = pR + 0.5*BBR;
-    double uR2 = uR*uR;
-    double uuR = uR2 + vR*vR + wR*wR;
-    double aR2 = gam*pR/rR;
-    double caR2 = BxR2/rR;
-    double alfR = aR2+BBR/rR;
-    double alsR = SAFESQRT(alfR*alfR-4.0*aR2*caR2);
-    double cfR2 = 0.5*(alfR+alsR);
-    double cfR = sqrt(cfR2);
-    double wpR = uR+cfR;
+    number wmL = uL-cfL;
+    number BxR2 = BxR*BxR;
+    number BtR2 = ByR*ByR + BzR*BzR;
+    number BBR = BxR2 + BtR2;
+    number ptR = pR + 0.5*BBR;
+    number uR2 = uR*uR;
+    number uuR = uR2 + vR*vR + wR*wR;
+    number aR2 = gam*pR/rR;
+    number caR2 = BxR2/rR;
+    number alfR = aR2+BBR/rR;
+    number alsR = SAFESQRT(alfR*alfR-4.0*aR2*caR2);
+    number cfR2 = 0.5*(alfR+alsR);
+    number cfR = sqrt(cfR2);
+    number wpR = uR+cfR;
     //wmR = uR-cfR;
 
-    double[8] dU;
+    number[8] dU;
     dU[0] = rR - rL;
     dU[1] = rR*uR - rL*uL;
     dU[2] = rR*vR - rL*vL;
@@ -781,28 +784,28 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
     dU[6] = BzR - BzL;
     dU[7] = (pR - pL)/(gam-1.0) + 0.5*(rR*uuR+BBR) - 0.5*(rL*uuL+BBL);
     //
-    double bl = fmin(wmL, wm);
-    double br = fmax(wpR, wp);
-    double blm = fmin(bl, 0.0);
-    double brp = fmax(br, 0.0);
-    double fmassL = rL*uL;
-    double fmassR = rR*uR;
-    double fmomxL = rL*uL2 - BxL2 + ptL;
-    double fmomxR = rR*uR2 - BxR2 + ptR;
-    double fmomyL = rL*uL*vL - BxL*ByL;
-    double fmomyR = rR*uR*vR - BxR*ByR;
-    double fmomzL = rL*uL*wL - BxL*BzL;
-    double fmomzR = rR*uR*wR - BxR*BzR;
-    double fBxL = 0.0;
-    double fBxR = 0.0;
-    double fByL = uL*ByL - vL*BxL;
-    double fByR = uR*ByR - vR*BxR;
-    double fBzL = uL*BzL - wL*BxL;
-    double fBzR = uR*BzR - wR*BxR;
-    double fenergyL = (pL/(gam-1.0)+0.5*(rL*uuL+BBL)+ptL)*uL - (uL*BxL+vL*ByL+wL*BzL)*BxL;
-    double fenergyR = (pR/(gam-1.0)+0.5*(rR*uuR+BBR)+ptR)*uR - (uR*BxR+vR*ByR+wR*BzR)*BxR;
-    double iden = 1.0/(brp - blm);
-    double fac1 = brp*blm;
+    number bl = fmin(wmL, wm);
+    number br = fmax(wpR, wp);
+    number blm = fmin(bl, 0.0);
+    number brp = fmax(br, 0.0);
+    number fmassL = rL*uL;
+    number fmassR = rR*uR;
+    number fmomxL = rL*uL2 - BxL2 + ptL;
+    number fmomxR = rR*uR2 - BxR2 + ptR;
+    number fmomyL = rL*uL*vL - BxL*ByL;
+    number fmomyR = rR*uR*vR - BxR*ByR;
+    number fmomzL = rL*uL*wL - BxL*BzL;
+    number fmomzR = rR*uR*wR - BxR*BzR;
+    number fBxL = 0.0;
+    number fBxR = 0.0;
+    number fByL = uL*ByL - vL*BxL;
+    number fByR = uR*ByR - vR*BxR;
+    number fBzL = uL*BzL - wL*BxL;
+    number fBzR = uR*BzR - wR*BxR;
+    number fenergyL = (pL/(gam-1.0)+0.5*(rL*uuL+BBL)+ptL)*uL - (uL*BxL+vL*ByL+wL*BzL)*BxL;
+    number fenergyR = (pR/(gam-1.0)+0.5*(rR*uuR+BBR)+ptR)*uR - (uR*BxR+vR*ByR+wR*BzR)*BxR;
+    number iden = 1.0/(brp - blm);
+    number fac1 = brp*blm;
     //
     ConservedQuantities F = IFace.F;
     F.mass = (brp*fmassL - blm*fmassR + fac1*dU[0])*iden;

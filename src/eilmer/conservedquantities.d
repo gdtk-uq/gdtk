@@ -10,21 +10,23 @@ module conservedquantities;
 
 import std.string;
 import std.conv;
+import nm.complex;
+import nm.number;
 import geom;
 import gas;
 
 class ConservedQuantities {
 public:
-    double mass;         // density, kg/m**3
+    number mass;         // density, kg/m**3
     Vector3 momentum;    // momentum/unit volume
     Vector3 B;           // magnetic field, Tesla
-    double total_energy; // total energy
-    double[] massf;      // mass fractions of species
-    double[] energies;   // modal energies (mode 0 is usually transrotational)
-    double psi;          // divergence cleaning parameter for MHD
-    double divB;         // divergence of the magnetic field
-    double tke;          // turbulent kinetic energy
-    double omega;        // omega from k-omega turbulence model
+    number total_energy; // total energy
+    number[] massf;      // mass fractions of species
+    number[] energies;   // modal energies (mode 0 is usually transrotational)
+    number psi;          // divergence cleaning parameter for MHD
+    number divB;         // divergence of the magnetic field
+    number tke;          // turbulent kinetic energy
+    number omega;        // omega from k-omega turbulence model
 
     this(int n_species, int n_modes)
     {
