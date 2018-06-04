@@ -322,8 +322,8 @@ public:
         size_t dimensions = myConfig.dimensions;
         number eps, a, b, U, phi, h, denom, numer, s;
         immutable double w = 1.0e-12;
-        if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[0]);  
-        else h = sqrt(cell_cloud[0].volume[0]);
+        if (myConfig.dimensions == 3) h = cell_cloud[0].volume[gtl]^^(1.0/3.0); // cbrt  
+        else h = sqrt(cell_cloud[0].volume[gtl]);
         eps = 1.0e-12;
         // The following function to be used at compile time.
         string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
@@ -501,7 +501,7 @@ public:
         number a, b, U, phi, h, denom, numer, s;
         immutable double w = 1.0e-12;
         immutable double K = 0.3;
-        if (myConfig.dimensions == 3) h =  cbrt(cell_cloud[0].volume[gtl]);  
+        if (myConfig.dimensions == 3) h = cell_cloud[0].volume[gtl]^^(1.0/3.0); // cbrt  
         else h = sqrt(cell_cloud[0].volume[gtl]);
         number eps = (K*h) * (K*h) * (K*h);
         // The following function to be used at compile time.
