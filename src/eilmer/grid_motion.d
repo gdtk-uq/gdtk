@@ -29,6 +29,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "setVtxVelocitiesForBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForRotatingBlock);
     lua_setglobal(L, "setVtxVelocitiesForRotatingBlock");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesByCorners);
+    lua_setglobal(L, "setVtxVelocitiesByCorners");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesByCornersReg);
     lua_setglobal(L, "setVtxVelocitiesByCornersReg");
     lua_pushcfunction(L, &luafn_setVtxVelocity);
@@ -147,6 +149,132 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     lua_settop(L, 0);
     return 0;
 }
+
+/**
+ * Sets the velocity of vertices in a block based on
+ * specified corner velocities. The velocity of any cell 
+ * is estimated using decomposition of the quad into 4x 
+ * triangles and then calculates velocities using barycentric 
+ * interpolation within the respective triangles. 
+ * Works for clustered grids.
+ *
+ *   p3-----p2
+ *   |      |
+ *   |      |
+ *   p0-----p1
+ *
+ * This function can be called for 2-D structured and
+ * extruded 3-D grids only. The following calls are allowed:
+ *
+ * setVtxVelocitiesByCorners(blkId, p0vel, p1vel, p2vel, p3vel)
+ *   Sets the velocity vectors for block with corner velocities 
+ *   specified by four corner velocities. This works for both 
+ *   2-D and 3- meshes. In 3-D a uniform velocity is applied 
+ *   in k direction.
+ */
+
+extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
+{
+    // Expect five/nine arguments: 1. a block id
+    //                             2-5. corner velocities for 2-D motion
+    //                             6-9. corner velocities for full 3-D motion 
+    //                                  (optional)
+    int narg = lua_gettop(L);
+    auto blkId = lua_tointeger(L, 1);
+    auto blk = cast(SFluidBlock) globalFluidBlocks[blkId];
+    // get corner velocities
+    auto p00vel = checkVector3(L, 2);
+    auto p10vel = checkVector3(L, 3);
+    auto p11vel = checkVector3(L, 4);
+    auto p01vel = checkVector3(L, 5);  
+    // get coordinates for corner points
+    size_t  k = blk.kmin;
+    Vector3 p00 = blk.get_vtx(blk.imin,blk.jmin,k).pos[0];
+    Vector3 p10 = blk.get_vtx(blk.imax+1,blk.jmin,k).pos[0];
+    Vector3 p11 = blk.get_vtx(blk.imax+1,blk.jmax+1,k).pos[0];
+    Vector3 p01 = blk.get_vtx(blk.imin,blk.jmax+1,k).pos[0];
+
+    size_t i, j;
+    Vector3 centroidVel = 0.25 * ( *p00vel + *p10vel + *p01vel + *p11vel);
+    Vector3 centroid, n, pos, Coords;
+    double area;
+    // get centroid location
+    quad_properties(p00, p10, p11, p01, centroid,  n, n, n, area);
+
+    if ( narg == 5 ) {
+        if (blk.myConfig.dimensions == 2) {
+            // deal with 2-D meshes
+            k = blk.kmin;
+            for (j = blk.jmin; j <= blk.jmax+1; ++j) {
+                for (i = blk.imin; i <= blk.imax+1; ++i) {
+                    // get position of current point                    
+                    pos = blk.get_vtx(i,j,k).pos[0];
+                    //writeln("pos",pos);
+
+                    // find baricentric ccordinates, always keep p0 at centroid
+                    // sequentially try the different triangles.
+                    // try south triangle
+                    P_barycentricCoords(pos, centroid, p00, p10, Coords);
+                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                        blk.get_vtx(i,j,k).vel[0] = Coords.x * centroidVel 
+                            + Coords.y * *p00vel + Coords.z * *p10vel;
+                        //writeln("Vel-S",  Coords.x * centroidVel 
+                        //    + Coords.y * *p00vel + Coords.z * *p10vel,i,j);
+                        continue;
+                    }
+                    // try east triangle
+                    P_barycentricCoords(pos, centroid, p10, p11, Coords);
+                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                        blk.get_vtx(i,j,k).vel[0] = Coords.x * centroidVel 
+                            + Coords.y * *p10vel + Coords.z * *p11vel;
+                        //writeln("Vel-E",  Coords.x * centroidVel 
+                        //    + Coords.y * *p10vel + Coords.z * *p11vel,i,j);
+                        continue;
+                    }
+                    // try north triangle
+                    P_barycentricCoords(pos, centroid, p11, p01, Coords);
+                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                        blk.get_vtx(i,j,k).vel[0] = Coords.x * centroidVel 
+                            + Coords.y * *p11vel + Coords.z * *p01vel;
+                        //writeln("Vel-N",  Coords.x * centroidVel 
+                        //    + Coords.y * *p11vel + Coords.z * *p01vel,i,j);
+                        continue;
+                    }
+                    // try west triangle
+                    P_barycentricCoords(pos, centroid, p01, p00, Coords);
+                    if ((Coords.x <= 0 ) || (Coords.y >= 0 && Coords.z >= 0)) {
+                        blk.get_vtx(i,j,k).vel[0] = Coords.x * centroidVel 
+                            + Coords.y * *p01vel + Coords.z * *p00vel;
+                        //writeln("Vel-W",  Coords.x * centroidVel 
+                        //    + Coords.y * *p01vel + Coords.z * *p00vel,i,j);
+                        continue;
+                    }
+                    // One of the 4 continue statements should have acted by now. 
+                    writeln("Pos", pos, p00, p10, p11, p01);
+                    writeln("Cell-indices",i,j,k);
+                    string errMsg = "ERROR: Barycentric Calculation failed 
+                                     in luafn: setVtxVelocitiesByCorners()\n";
+                    luaL_error(L, errMsg.toStringz);
+                }
+            }
+        }
+        else { // deal with 3-D meshesv (assume constant properties wrt k index)
+            writeln("Aaah How did I get here?");
+
+        }
+    }
+    else {
+        string errMsg = "ERROR: Wrong number of arguments passed to luafn: setVtxVelocitiesByCorners()\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // In case, the user gave use more return values than
+    // we used, just set the lua stack to empty and let
+    // the lua garbage collector do its thing.
+    lua_settop(L, 0);
+    return 0;
+}
+
+
 
 /**
  * Sets the velocity of vertices in a block based on
@@ -276,7 +404,7 @@ extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
         }
     }
     else {
-        string errMsg = "ERROR: Wrong number of arguments passed to luafn: setVtxVelocitiesByCorners()\n";
+        string errMsg = "ERROR: Wrong number of arguments passed to luafn: setVtxVelocitiesByCornersReg()\n";
         luaL_error(L, errMsg.toStringz);
     }
     // In case, the user gave use more return values than
