@@ -29,8 +29,8 @@ void setGridMotionHelperFunctions(lua_State *L)
     lua_setglobal(L, "setVtxVelocitiesForBlock");
     lua_pushcfunction(L, &luafn_setVtxVelocitiesForRotatingBlock);
     lua_setglobal(L, "setVtxVelocitiesForRotatingBlock");
-    lua_pushcfunction(L, &luafn_setVtxVelocitiesByCorners);
-    lua_setglobal(L, "setVtxVelocitiesByCorners");
+    lua_pushcfunction(L, &luafn_setVtxVelocitiesByCornersReg);
+    lua_setglobal(L, "setVtxVelocitiesByCornersReg");
     lua_pushcfunction(L, &luafn_setVtxVelocity);
     lua_setglobal(L, "setVtxVelocity");
 }
@@ -152,27 +152,29 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
  * Sets the velocity of vertices in a block based on
  * specified corner velocities. The velocity of any cell 
  * is estimated using interpolation based on cell indices. 
- * Note, for clustered blocks or blocks with curved edges 
- * this can lead to distortion.
+ * This should only be used for blocks with regular spacing.
+ * On clustered grids deformation of the mesh occurs.
+ *
+ *   p3-----p2
+ *   |      |
+ *   |      |
+ *   p0-----p1
  *
  * This function can be called for structured 
  * grids only. The following calls are allowed:
  *
- * setVtxVelocitiesByCorners(blkId, p00vel, p10vel, p01vel, p11vel)
+ * setVtxVelocitiesByCornersReg(blkId, p0vel, p1vel, p2vel, p3vel)
  *   Sets the velocity vectors for block with corner velocities 
  *   specified by four corner velocities. This works for both 
  *   2-D and 3- meshes. In 3-D a uniform velocity is applied 
  *   in k direction.
  * 
- * setVtxVelocitiesByCorners(blkId, p000vel, p100vel, p010vel, p110vel, 
- *                       p001vel, p101vel, p011vel, p111vel)
- * (eqivalent to)
- * setVtxVelocitiesByCorners(blkId, p0vel, p1vel, p3vel, p2vel, 
- *                       p4vel, p5vel, p7vel, p6vel)
+ * setVtxVelocitiesByCornersReg(blkId, p0vel, p1vel, p2vel, p3vel, 
+ *                                  p4vel, p5vel, p6vel, p7vel)
  *   As above but suitable for 3-D meshes with eight specified 
  *   velocities.
  */
-extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
+extern(C) int luafn_setVtxVelocitiesByCornersReg(lua_State* L)
 {
     // Expect five/nine arguments: 1. a block id
     //                             2-5. corner velocities for 2-D motion
@@ -187,8 +189,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     // get corner velocities
     auto p00vel = checkVector3(L, 2);
     auto p10vel = checkVector3(L, 3);
-    auto p01vel = checkVector3(L, 4);
-    auto p11vel = checkVector3(L, 5);  
+    auto p11vel = checkVector3(L, 4);
+    auto p01vel = checkVector3(L, 5);  
 
     if ( narg == 5 ) {
         if (blk.myConfig.dimensions == 2) {
@@ -249,8 +251,8 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
         // get corner velocities
         auto p001vel = checkVector3(L, 6);
         auto p101vel = checkVector3(L, 7);
-        auto p011vel = checkVector3(L, 8);
-        auto p111vel = checkVector3(L, 9);  
+        auto p111vel = checkVector3(L, 8);
+        auto p011vel = checkVector3(L, 9);  
         for (j = blk.jmin; j <= blk.jmax+1; ++j) {
             // find velocity along west and east edge (four times)
             v = to!double(j-blk.jmin) / to!double(blk.jmax+1-blk.jmin); 
