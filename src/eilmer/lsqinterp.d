@@ -236,7 +236,7 @@ public:
                 number dz = f.pos.z - cell_cloud[0].pos[0].z;
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) b += "~gname~"[2] * dz; 
-                b = sgn(b) * (fabs(b) + w);
+                b = copysign(b, ((fabs(b) + w)));
                 if (b >  ESSENTIALLY_ZERO) {
                     a = "~qMaxname~" - U;
                     phi = min(phi, a/b);
@@ -314,7 +314,7 @@ public:
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
 
-    void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig, size_t gtl=0)
     {
         // The implementation of the MLP limiter follows the implementation in VULCAN
         // i.e. it uses the MLP approach, and the Van Leer limiting function
@@ -337,7 +337,7 @@ public:
                 number dz = vtx.pos[0].z - cell_cloud[0].pos[0].z;
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
-                b = sgn(b) * (fabs(b) + w); 
+                b = copysign(b, ((fabs(b) + w))); 
                 if (b > 0.0) a = 0.5*(vtx.gradients."~qMaxname~" - U); 
                 else if (b < 0.0) a = 0.5*(vtx.gradients."~qMinname~" - U); 
                 numer = b*abs(a) + a*abs(b);
@@ -517,7 +517,7 @@ public:
                     number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
                     b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                     if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
-                    b = sgn(b) * (fabs(b) + w); 
+                    b = copysign(b, ((fabs(b) + w))); 
                     if ( fabs(b) > ESSENTIALLY_ZERO) {
                         if (b > ESSENTIALLY_ZERO) a = "~qMaxname~" - U; 
                         else if (b < ESSENTIALLY_ZERO) a = "~qMinname~" - U; 
