@@ -332,9 +332,9 @@ public:
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
             foreach (i, vtx; cell_cloud[0].vtx) {
-                number dx = vtx.pos[0].x - cell_cloud[0].pos[0].x; 
-                number dy = vtx.pos[0].y - cell_cloud[0].pos[0].y; 
-                number dz = vtx.pos[0].z - cell_cloud[0].pos[0].z;
+                number dx = vtx.pos[gtl].x - cell_cloud[0].pos[gtl].x; 
+                number dy = vtx.pos[gtl].y - cell_cloud[0].pos[gtl].y; 
+                number dz = vtx.pos[gtl].z - cell_cloud[0].pos[gtl].z;
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
                 b = copysign(b, ((fabs(b) + w))); 
