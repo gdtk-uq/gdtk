@@ -135,9 +135,9 @@ public:
         auto gmodel = myConfig.gmodel;
         int n_species = gmodel.n_species;
         int n_modes = gmodel.n_modes;
-        number T = 300.0;
-        number[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= to!number(300.0); }
-        fs = new FlowState(gmodel, to!number(100.0e3), T, T_modes, Vector3(0.0,0.0,0.0));
+        double T = 300.0;
+        double[] T_modes; foreach(i; 0 .. n_modes) { T_modes ~= 300.0; }
+        fs = new FlowState(gmodel, 100.0e3, T, T_modes, Vector3(0.0,0.0,0.0));
         foreach(i; 0 .. myConfig.n_flow_time_levels) {
             U ~= new ConservedQuantities(n_species, n_modes);
             dUdt ~= new ConservedQuantities(n_species, n_modes);

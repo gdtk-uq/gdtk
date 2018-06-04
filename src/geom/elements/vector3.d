@@ -390,6 +390,19 @@ struct Vector3 {
         _p[1] = Rmatrix[3]*old_p0 + Rmatrix[4]*old_p1 + Rmatrix[5]*old_p2;
         _p[2] = Rmatrix[6]*old_p0 + Rmatrix[7]*old_p1 + Rmatrix[8]*old_p2;
     }
+    version(complex_numbers) {
+        // Retain the flavour with double numbers in the matrix.
+        @nogc void apply_matrix_transform(ref const(double[]) Rmatrix)
+        {
+            // Write out the matrix multiplication, long-hand.
+            number old_p0 = _p[0];
+            number old_p1 = _p[1];
+            number old_p2 = _p[2];
+            _p[0] = Rmatrix[0]*old_p0 + Rmatrix[1]*old_p1 + Rmatrix[2]*old_p2;
+            _p[1] = Rmatrix[3]*old_p0 + Rmatrix[4]*old_p1 + Rmatrix[5]*old_p2;
+            _p[2] = Rmatrix[6]*old_p0 + Rmatrix[7]*old_p1 + Rmatrix[8]*old_p2;
+        }
+    }
 
     /**
      * Compute mirror-image location for plane defined by point and normal.

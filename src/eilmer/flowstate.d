@@ -41,16 +41,16 @@ public:
     int S;         // shock indicator, value 0 or 1
 
     this(GasModel gm,
-         in number p_init,
-         in number T_init,
-         in number[] T_modes_init,
+         in double p_init,
+         in double T_init,
+         in double[] T_modes_init,
          in Vector3 vel_init,
-         in number[] massf_init=[to!number(1.0),],
-         in number quality_init=1.0,
+         in double[] massf_init=[1.0,],
+         in double quality_init=1.0,
          in Vector3 B_init=Vector3(0.0,0.0,0.0),
-         in number psi_init=0.0, in number divB_init=1.0,
-         in number tke_init=0.0, in number omega_init=1.0,
-         in number mu_t_init=0.0, in number k_t_init=0.0,
+         in double psi_init=0.0, in double divB_init=1.0,
+         in double tke_init=0.0, in double omega_init=1.0,
+         in double mu_t_init=0.0, in double k_t_init=0.0,
          in int S_init=0)
     {
         gas = new GasState(gm, p_init, T_init, T_modes_init,
@@ -68,8 +68,8 @@ public:
 
     this(in FlowState other, GasModel gm)
     {
-        gas = new GasState(gm, other.gas.p, other.gas.T, other.gas.T_modes,
-                           other.gas.massf, other.gas.quality); 
+        gas = new GasState(gm);
+        gas.copy_values_from(other.gas);
         vel = other.vel;
         B = other.B;
         psi = other.psi;
@@ -113,21 +113,21 @@ public:
 
     this(in JSONValue json_data, GasModel gm)
     {
-        number p = getJSONdouble(json_data, "p", 100.0e3);
-        number T = getJSONdouble(json_data, "T", 300.0e3);
-        number[] T_modes;
+        double p = getJSONdouble(json_data, "p", 100.0e3);
+        double T = getJSONdouble(json_data, "T", 300.0e3);
+        double[] T_modes;
         foreach(i; 0 .. gm.n_modes) { T_modes ~= T; }
         T_modes = getJSONdoublearray(json_data, "T_modes", []);
-        number[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
-        number quality = getJSONdouble(json_data, "quality", 1.0);
+        double[] massf = getJSONdoublearray(json_data, "massf", [1.0,]);
+        double quality = getJSONdouble(json_data, "quality", 1.0);
         gas = new GasState(gm, p, T, T_modes, massf, quality);
-        number velx = getJSONdouble(json_data, "velx", 0.0);
-        number vely = getJSONdouble(json_data, "vely", 0.0);
-        number velz = getJSONdouble(json_data, "velz", 0.0);
+        double velx = getJSONdouble(json_data, "velx", 0.0);
+        double vely = getJSONdouble(json_data, "vely", 0.0);
+        double velz = getJSONdouble(json_data, "velz", 0.0);
         vel.set(velx,vely,velz);
-        number Bx = getJSONdouble(json_data, "Bx", 0.0);
-        number By = getJSONdouble(json_data, "By", 0.0);
-        number Bz = getJSONdouble(json_data, "Bz", 0.0);
+        double Bx = getJSONdouble(json_data, "Bx", 0.0);
+        double By = getJSONdouble(json_data, "By", 0.0);
+        double Bz = getJSONdouble(json_data, "Bz", 0.0);
         B.set(Bx,By,Bz);
         psi = getJSONdouble(json_data, "psi", 0.0);
         divB = getJSONdouble(json_data, "divB", 0.0);
@@ -216,14 +216,15 @@ public:
             k_t += other.k_t;
             S += other.S;
         }
-        vel /= n;
-        B /= n;
-        psi /= n;
-        divB /= n;
-        tke /= n;
-        omega /= n;
-        mu_t /= n;
-        k_t /= n;
+        number scale = 1.0/to!number(n);
+        vel *= scale;
+        B *= scale;
+        psi *= scale;
+        divB *= scale;
+        tke *= scale;
+        omega *= scale;
+        mu_t *= scale;
+        k_t *= scale;
         S = (S > 0) ? 1 : 0;
     } // end copy_average_values_from()
 
@@ -290,7 +291,7 @@ public:
             writeln("Velocity too high ", vel);
             is_data_valid = false;
         }
-        if (!isFinite(tke)) {
+        if (!isFinite(tke.re)) {
             writeln("Turbulence KE invalid number ", tke);
             is_data_valid = false;
         }
@@ -310,7 +311,7 @@ public:
             writeln("Temperature above maximum ", gas.T);
             is_data_valid = false;
         }
-        if (!isFinite(omega)) {
+        if (!isFinite(omega.re)) {
             writeln("Turbulence frequency invalid number ", omega);
             is_data_valid = false;
         }
@@ -374,17 +375,17 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                     // [TODO] provide better calculation using geom module.
                     // For the moment, it doesn't matter greatly because the solver 
                     // will compute it's own approximations
-                    auto pos = 0.25*(p000 + p100 + p110 + p010);
-                    double volume = 0.0; 
+                    auto pos = to!number(0.25)*(p000 + p100 + p110 + p010);
+                    number volume = 0.0; 
                     if (GlobalConfig.dimensions == 3) {
                         Vector3 p001 = *grid[i,j,k+1];
                         Vector3 p101 = *grid[i+1,j,k+1];
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
-                        pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+                        pos = to!number(0.5)*pos + to!number(0.125)*(p001 + p101 + p111 + p011);
                     }
                     cell_data_to_raw_binary(outfile, pos, volume, fs,
-                                            0.0, 0.0, 0.0, -1.0, -1.0,
+                                            to!number(0.0), to!number(0.0), to!number(0.0), -1.0, -1.0,
                                             GlobalConfig.include_quality,
                                             GlobalConfig.MHD,
                                             GlobalConfig.divergence_cleaning,
@@ -423,17 +424,18 @@ void write_initial_flow_file(string fileName, ref StructuredGrid grid,
                     // [TODO] provide better calculation using geom module.
                     // For the moment, it doesn't matter greatly because the solver 
                     // will compute it's own approximations
-                    auto pos = 0.25*(p000 + p100 + p110 + p010);
-                    double volume = 0.0; 
+                    auto pos = to!number(0.25)*(p000 + p100 + p110 + p010);
+                    number volume = 0.0; 
                     if (GlobalConfig.dimensions == 3) {
                         Vector3 p001 = *grid[i,j,k+1];
                         Vector3 p101 = *grid[i+1,j,k+1];
                         Vector3 p111 = *grid[i+1,j+1,k+1];
                         Vector3 p011 = *grid[i,j+1,k+1];
-                        pos = 0.5*pos + 0.125*(p001 + p101 + p111 + p011);
+                        pos = to!number(0.5)*pos + to!number(0.125)*(p001 + p101 + p111 + p011);
                     }
                     outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-                                                               0.0, 0.0, 0.0, -1.0, -1.0,
+                                                               to!number(0.0), to!number(0.0), to!number(0.0),
+                                                               -1.0, -1.0,
                                                                GlobalConfig.include_quality,
                                                                GlobalConfig.MHD,
                                                                GlobalConfig.divergence_cleaning,
@@ -478,10 +480,11 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
         foreach (i; 0 .. ncells) {
             Vector3 pos = Vector3(0.0, 0.0, 0.0);
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
-            pos /= grid.cells[i].vtx_id_list.length;
-            double volume = 0.0; 
+            pos /= to!number(grid.cells[i].vtx_id_list.length);
+            number volume = 0.0; 
             cell_data_to_raw_binary(outfile, pos, volume, fs,
-                                    0.0, 0.0, 0.0, -1.0, -1.0,
+                                    to!number(0.0), to!number(0.0), to!number(0.0),
+                                    -1.0, -1.0,
                                     GlobalConfig.include_quality,
                                     GlobalConfig.MHD,
                                     GlobalConfig.divergence_cleaning,
@@ -509,10 +512,11 @@ void write_initial_flow_file(string fileName, ref UnstructuredGrid grid,
         foreach (i; 0 .. ncells) {
             Vector3 pos = Vector3(0.0, 0.0, 0.0);
             foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
-            pos /= grid.cells[i].vtx_id_list.length;
-            double volume = 0.0; 
+            pos /= to!number(grid.cells[i].vtx_id_list.length);
+            number volume = 0.0; 
             outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-                                                       0.0, 0.0, 0.0, -1.0, -1.0,
+                                                       to!number(0.0), to!number(0.0), to!number(0.0),
+                                                       -1.0, -1.0,
                                                        GlobalConfig.include_quality,
                                                        GlobalConfig.MHD,
                                                        GlobalConfig.divergence_cleaning,
@@ -556,7 +560,8 @@ public:
                 // Assume that we have a line of data rather than variable names.
                 fstate ~= new FlowState(GlobalConfig.gmodel_master);
                 pos ~= Vector3();
-                double volume, Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm;
+                number volume, Q_rad_org, f_rad_org, Q_rE_rad;
+                double dt_chem, dt_therm;
                 scan_cell_data_from_string(text, pos[$-1], volume, fstate[$-1],
                                            Q_rad_org, f_rad_org, Q_rE_rad, dt_chem, dt_therm,
                                            GlobalConfig.include_quality, GlobalConfig.MHD,
@@ -580,20 +585,20 @@ public:
         case "xyz-to-xyz":
             // 2D or 3D, closest match on all components of position.
             // In 2D all z-components are supposed to be zero (and so, not matter).
-            dx = my_pos.x - other_pos.x;
-            dy = my_pos.y - other_pos.y;
-            dz = my_pos.z - other_pos.z;
+            dx = my_pos.x.re - other_pos.x.re;
+            dy = my_pos.y.re - other_pos.y.re;
+            dz = my_pos.z.re - other_pos.z.re;
             distance = sqrt(dx*dx + dy*dy + dz*dz);
             break; 
         case "xyA-to-xyA":
             // 2D or 3D; don't care about z-component of position.
-            dx = my_pos.x - other_pos.x;
-            dy = my_pos.y - other_pos.y;
+            dx = my_pos.x.re - other_pos.x.re;
+            dy = my_pos.y.re - other_pos.y.re;
             distance = sqrt(dx^^2 + dy^^2);
             break;
         case "AyA-to-AyA":
             // 2D or 3D; only care about the y-component of position.
-            dy = my_pos.y - other_pos.y;
+            dy = my_pos.y.re - other_pos.y.re;
             distance = fabs(dy);
             break;
         case "xy-to-xR":
@@ -601,9 +606,9 @@ public:
             // a radial profile in a 3D simulation, considering the x-component
             // of the position of the ghost cells when computing distance and
             // picking the nearest point in the profile.
-            dx = my_pos.x - other_pos.x;
-            other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
-            my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
+            dx = my_pos.x.re - other_pos.x.re;
+            other_r = sqrt(other_pos.y.re^^2 + other_pos.z.re^^2);
+            my_r = sqrt(my_pos.y.re^^2 + my_pos.z.re^^2);
             dr = my_r - other_r;
             distance = sqrt(dx*dx + dr*dr);
             break;
@@ -612,8 +617,8 @@ public:
             // a radial profile in a 3D simulation, ignoring the x-component
             // of the position of the ghost cells when computing distance and
             // picking the nearest point in the profile.
-            other_r = sqrt(other_pos.y^^2 + other_pos.z^^2);
-            my_r = sqrt(my_pos.y^^2 + my_pos.z^^2);
+            other_r = sqrt(other_pos.y.re^^2 + other_pos.z.re^^2);
+            my_r = sqrt(my_pos.y.re^^2 + my_pos.z.re^^2);
             dr = my_r - other_r;
             distance = fabs(dr);
             break;
@@ -655,11 +660,11 @@ public:
         case "xy-to-xR": goto case "Ay-to-AR";
         case "Ay-to-AR":
             // We are assuming that the original 2D simulation had y>0.
-            double r = sqrt(my_pos.y^^2 + my_pos.z^^2);
-            double vel_yz = sqrt(fs.vel.y^^2 + fs.vel.z^^2);
+            double r = sqrt(my_pos.y.re^^2 + my_pos.z.re^^2);
+            double vel_yz = sqrt(fs.vel.y.re^^2 + fs.vel.z.re^^2);
             double vely_sign = (fs.vel.y < 0.0) ? -1.0 : 1.0;
-            fs.vel.refy = vely_sign * vel_yz * my_pos.y / r;
-            fs.vel.refz = vely_sign * vel_yz * my_pos.z / r;
+            fs.vel.refy = vely_sign * vel_yz * my_pos.y.re / r;
+            fs.vel.refz = vely_sign * vel_yz * my_pos.z.re / r;
             break;
         default: 
             throw new FlowSolverException(format("Invalid match option: \"%s\".", posMatch));
