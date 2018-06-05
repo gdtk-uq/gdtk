@@ -1646,11 +1646,31 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
                            bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
 {
     // We'll treat this function as the master definition of the data format.
+    auto writer = appender!string();
     version(complex_numbers) {
-        throw new Error("[TODO] Need to implement.");
+        // For complex_numbers, we presently write out only the real parts.
+        // [TODO] Maybe we should write full complex numbers.
+        formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
+                       pos.x.re, pos.y.re, pos.z.re, volume.re, fs.gas.rho.re,
+                       fs.vel.x.re, fs.vel.y.re, fs.vel.z.re);
+        if (MHD) { formattedWrite(writer, " %.18e %.18e %.18e %.18e", fs.B.x.re, fs.B.y.re, fs.B.z.re, fs.divB.re); }
+        if (MHD && divergence_cleaning) { formattedWrite(writer, " %.18e", fs.psi.re); }
+        if (include_quality) { formattedWrite(writer, " %.18e", fs.gas.quality.re); }
+        formattedWrite(writer, " %.18e %.18e %.18e", fs.gas.p.re, fs.gas.a.re, fs.gas.mu.re);
+        formattedWrite(writer, " %.18e", fs.gas.k.re);
+        foreach (kvalue; fs.gas.k_modes) { formattedWrite(writer, " %.18e", kvalue.re); } 
+        formattedWrite(writer, " %.18e %.18e %d", fs.mu_t.re, fs.k_t.re, fs.S);
+        if (radiation) { formattedWrite(writer, " %.18e %.18e %.18e", Q_rad_org.re, f_rad_org.re, Q_rE_rad.re); }
+        formattedWrite(writer, " %.18e %.18e", fs.tke.re, fs.omega.re);
+        foreach (massfvalue; fs.gas.massf) { formattedWrite(writer, " %.18e", massfvalue.re); } 
+        if (fs.gas.massf.length > 1) { formattedWrite(writer, " %.18e", dt_chem); } 
+        formattedWrite(writer, " %.18e %.18e", fs.gas.u.re, fs.gas.T.re); 
+        foreach (imode; 0 .. fs.gas.u_modes.length) {
+            formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode].re, fs.gas.T_modes[imode].re);
+        }
+        if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
     } else {
         // version double_numbers
-        auto writer = appender!string();
         formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
                        pos.x, pos.y, pos.z, volume, fs.gas.rho,
                        fs.vel.x, fs.vel.y, fs.vel.z);
@@ -1670,8 +1690,8 @@ string cell_data_as_string(ref const(Vector3) pos, number volume, ref const(Flow
             formattedWrite(writer, " %.18e %.18e", fs.gas.u_modes[imode], fs.gas.T_modes[imode]);
         }
         if (fs.gas.u_modes.length > 0) { formattedWrite(writer, " %.18e", dt_therm); }
-        return writer.data;
     } // end version double_numbers
+    return writer.data;
 } // end cell_data_as_string()
 
 void cell_data_to_raw_binary(ref File fout,
@@ -1688,7 +1708,39 @@ void cell_data_to_raw_binary(ref File fout,
     // Change to using all double values so that the FlowSolution reader becomes simpler.
     //
     version(complex_numbers) {
-        throw new Error("[TODO] Need to implement.");
+        // For complex_numbers, we presently write out only the real parts.
+        // [TODO] Maybe we should write full complex numbers.
+        // Fixed-length buffers to hold data for sending.
+        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
+        //
+        dbl4[0] = pos.x.re; dbl4[1] = pos.y.re; dbl4[2] = pos.z.re; dbl4[3] = volume.re;
+        fout.rawWrite(dbl4);
+        dbl4[0] = fs.gas.rho.re; dbl4[1] = fs.vel.x.re; dbl4[2] = fs.vel.y.re; dbl4[3] = fs.vel.z.re;
+        fout.rawWrite(dbl4);
+        if (MHD) {
+            dbl4[0] = fs.B.x.re; dbl4[1] = fs.B.y.re; dbl4[2] = fs.B.z.re; dbl4[3] = fs.divB.re;
+            fout.rawWrite(dbl4);
+        }
+        if (MHD && divergence_cleaning) { dbl1[0] = fs.psi.re; fout.rawWrite(dbl1); }
+        if (include_quality) { dbl1[0] = fs.gas.quality.re; fout.rawWrite(dbl1); }
+        dbl4[0] = fs.gas.p.re; dbl4[1] = fs.gas.a.re; dbl4[2] = fs.gas.mu.re; dbl4[3] = fs.gas.k.re;
+        fout.rawWrite(dbl4);
+        foreach (kvalue; fs.gas.k_modes) { dbl1[0] = kvalue.re; fout.rawWrite(dbl1); } 
+        dbl2[0] = fs.mu_t.re; dbl2[1] = fs.k_t.re; fout.rawWrite(dbl2);
+        dbl1[0] = to!double(fs.S); fout.rawWrite(dbl1);
+        if (radiation) {
+            dbl3[0] = Q_rad_org.re; dbl3[1] = f_rad_org.re; dbl3[2] = Q_rE_rad.re;
+            fout.rawWrite(dbl3);
+        }
+        dbl2[0] = fs.tke.re; dbl2[1] = fs.omega.re; fout.rawWrite(dbl2);
+        foreach (mf; fs.gas.massf) { dbl1[0] = mf.re; fout.rawWrite(dbl1); } 
+        if (fs.gas.massf.length > 1) { dbl1[0] = dt_chem; fout.rawWrite(dbl1); } 
+        dbl2[0] = fs.gas.u.re; dbl2[1] = fs.gas.T.re; fout.rawWrite(dbl2); 
+        foreach (imode; 0 .. fs.gas.u_modes.length) {
+            dbl2[0] = fs.gas.u_modes[imode].re; dbl2[1] = fs.gas.T_modes[imode].re;
+            fout.rawWrite(dbl2);
+        }
+        if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
     } else {
         // version double_numbers
         // Fixed-length buffers to hold data for sending.
@@ -1722,8 +1774,8 @@ void cell_data_to_raw_binary(ref File fout,
             fout.rawWrite(dbl2);
         }
         if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
-        return;
     } // end version double_numbers
+    return;
 } // end cell_data_to_raw_binary()
 
 void scan_cell_data_from_string(string buffer,
@@ -1733,11 +1785,83 @@ void scan_cell_data_from_string(string buffer,
                                 bool include_quality, bool MHD, bool divergence_cleaning, bool radiation)
 {
     // This function needs to be kept consistent with cell_data_as_string() above.
+    auto items = split(buffer);
     version(complex_numbers) {
-        throw new Error("[TODO] Need to implement.");
+        // For complex_numbers, we presently set only the real parts.
+        // [TODO] Maybe we should read full complex numbers.
+        pos.refx = Complex!double(items.front); items.popFront();
+        pos.refy = Complex!double(items.front); items.popFront();
+        pos.refz = Complex!double(items.front); items.popFront();
+        volume = Complex!double(items.front); items.popFront();
+        fs.gas.rho = Complex!double(items.front); items.popFront();
+        fs.vel.refx = Complex!double(items.front); items.popFront();
+        fs.vel.refy = Complex!double(items.front); items.popFront();
+        fs.vel.refz = Complex!double(items.front); items.popFront();
+        if (MHD) {
+            fs.B.refx = Complex!double(items.front); items.popFront();
+            fs.B.refy = Complex!double(items.front); items.popFront();
+            fs.B.refz = Complex!double(items.front); items.popFront();
+            fs.divB = Complex!double(items.front); items.popFront();
+            if (divergence_cleaning) {
+                fs.psi = Complex!double(items.front); items.popFront();
+            } else {
+                fs.psi = 0.0;
+            }
+        } else {
+            fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
+        }
+        if (include_quality) {
+            fs.gas.quality = Complex!double(items.front); items.popFront();
+        } else {
+            fs.gas.quality = 1.0;
+        }
+        fs.gas.p = Complex!double(items.front); items.popFront();
+        fs.gas.a = Complex!double(items.front); items.popFront();
+        fs.gas.mu = Complex!double(items.front); items.popFront();
+        fs.gas.k = Complex!double(items.front); items.popFront();
+        foreach(i; 0 .. fs.gas.k_modes.length) {
+            fs.gas.k_modes[i] = Complex!double(items.front); items.popFront();
+        }
+        fs.mu_t = Complex!double(items.front); items.popFront();
+        fs.k_t = Complex!double(items.front); items.popFront();
+        // In the usual format for the flow data, the shock detector appears as an int.
+        // In profile files, the same value may appear as a double.
+        try {
+            fs.S = to!int(items.front);
+        } catch(Exception e) {
+            try {
+                fs.S = to!int(to!double(items.front));
+            } catch(Exception e2) {
+                throw new FlowSolverException("Couldn't get a reasonable value for shock detector.");
+            }
+        }
+        items.popFront();
+        if (radiation) {
+            Q_rad_org = Complex!double(items.front); items.popFront();
+            f_rad_org = Complex!double(items.front); items.popFront();
+            Q_rE_rad = Complex!double(items.front); items.popFront();
+        } else {
+            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+        }
+        fs.tke = Complex!double(items.front); items.popFront();
+        fs.omega = Complex!double(items.front); items.popFront();
+        foreach(i; 0 .. fs.gas.massf.length) {
+            fs.gas.massf[i] = Complex!double(items.front); items.popFront();
+        }
+        if (fs.gas.massf.length > 1) {
+            dt_chem = to!double(items.front); items.popFront();
+        }
+        fs.gas.u = Complex!double(items.front); items.popFront();
+        fs.gas.T = Complex!double(items.front); items.popFront();
+        foreach(i; 0 .. fs.gas.u_modes.length) {
+            fs.gas.u_modes[i] = Complex!double(items.front); items.popFront();
+            fs.gas.T_modes[i] = Complex!double(items.front); items.popFront();
+        }
+        if (fs.gas.u_modes.length > 0) {
+            dt_therm = to!double(items.front); items.popFront(); 
+        }
     } else {
         // version double_numbers
-        auto items = split(buffer);
         pos.refx = to!double(items.front); items.popFront();
         pos.refy = to!double(items.front); items.popFront();
         pos.refz = to!double(items.front); items.popFront();
