@@ -652,7 +652,7 @@ public:
                 foreach (i; 0 .. niv) {
                     writer = appender!string();
                     formattedWrite(writer, "%.18e %.18e %.18e\n", 
-                                   this[i,j,k].x, this[i,j,k].y, this[i,j,k].z);
+                                   this[i,j,k].x.re, this[i,j,k].y.re, this[i,j,k].z.re);
                     f.compress(writer.data);
                 }
             }

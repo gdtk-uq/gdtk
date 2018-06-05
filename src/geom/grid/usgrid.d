@@ -1401,7 +1401,7 @@ public:
         fout.compress(format("dimensions: %d\n", dimensions));
         fout.compress(format("vertices: %d\n", nvertices));
         foreach (v; vertices) {
-            fout.compress(format("%.18e %.18e %.18e\n", v.x, v.y, v.z));
+            fout.compress(format("%.18e %.18e %.18e\n", v.x.re, v.y.re, v.z.re));
         }
         fout.compress(format("faces: %d\n", nfaces));
         foreach (f; faces) { fout.compress(f.toIOString ~ "\n"); }
@@ -1448,7 +1448,7 @@ public:
         f.writeln("");
         f.writeln("DATASET UNSTRUCTURED_GRID");
         f.writefln("POINTS %d float", nvertices);
-        foreach (v; vertices) { f.writefln("%.18e %.18e %.18e", v.x, v.y, v.z); }
+        foreach (v; vertices) { f.writefln("%.18e %.18e %.18e", v.x.re, v.y.re, v.z.re); }
         f.writeln("");
         int n_ints = 0; // number of integers to describe connections
         foreach (c; cells) { n_ints += 1 + c.vtx_id_list.length; }
@@ -1490,9 +1490,9 @@ public:
         f.writefln("NPOIN= %d", nvertices);
         foreach (i, v; vertices) {
             if (dimensions == 3) {
-                f.writefln("%.18e %.18e %.18e %d", v.x/scale, v.y/scale, v.z/scale, i);
+                f.writefln("%.18e %.18e %.18e %d", v.x.re/scale, v.y.re/scale, v.z.re/scale, i);
             } else {
-                f.writefln("%.18e %.18e %d", v.x/scale, v.y/scale, i);
+                f.writefln("%.18e %.18e %d", v.x.re/scale, v.y.re/scale, i);
             }
         }
         f.writeln("");
@@ -1635,7 +1635,7 @@ public:
         f.writeln(" object    points;");
         f.writeln("}");
         f.writefln("%d\n(", vertices.length);
-        foreach (i,v; vertices) { f.writefln(" (%.18e %.18e %.18e)", v.x, v.y, v.z); }
+        foreach (i,v; vertices) { f.writefln(" (%.18e %.18e %.18e)", v.x.re, v.y.re, v.z.re); }
         f.writeln(")");
         f.close();
         //
