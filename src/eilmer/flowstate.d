@@ -250,32 +250,32 @@ public:
     {
         auto writer = appender!string();
         formattedWrite(writer, "{");
-        formattedWrite(writer, "\"p\": %.18e", gas.p);
-        formattedWrite(writer, ", \"T\": %.18e", gas.T);
+        formattedWrite(writer, "\"p\": %.18e", gas.p.re);
+        formattedWrite(writer, ", \"T\": %.18e", gas.T.re);
         // zero or more T_modes
         formattedWrite(writer, ", \"T_modes\": [");
-        if (gas.T_modes.length > 0) { formattedWrite(writer, " %.18e", gas.T_modes[0]); }
-        foreach (i; 1 .. gas.T_modes.length) { formattedWrite(writer, ", %.18e", gas.T_modes[i]); }
+        if (gas.T_modes.length > 0) { formattedWrite(writer, " %.18e", gas.T_modes[0].re); }
+        foreach (i; 1 .. gas.T_modes.length) { formattedWrite(writer, ", %.18e", gas.T_modes[i].re); }
         // one or more mass fractions
         formattedWrite(writer, "]");
-        formattedWrite(writer, ", \"massf\": [ %.18e", gas.massf[0]);
+        formattedWrite(writer, ", \"massf\": [ %.18e", gas.massf[0].re);
         foreach (i; 1 .. gas.massf.length) {
-            formattedWrite(writer, ", %.18e", gas.massf[i]);
+            formattedWrite(writer, ", %.18e", gas.massf[i].re);
         }
         formattedWrite(writer, "]");
-        formattedWrite(writer, ", \"quality\": %.18e", gas.quality);
-        formattedWrite(writer, ", \"velx\": %.18e", vel.x);
-        formattedWrite(writer, ", \"vely\": %.18e", vel.y);
-        formattedWrite(writer, ", \"velz\": %.18e", vel.z);
-        formattedWrite(writer, ", \"Bx\": %.18e", B.x);
-        formattedWrite(writer, ", \"By\": %.18e", B.y);
-        formattedWrite(writer, ", \"Bz\": %.18e", B.z);
-        formattedWrite(writer, ", \"psi\": %.18e", psi);
-        formattedWrite(writer, ", \"divB\": %.18e", divB);
-        formattedWrite(writer, ", \"tke\": %.18e", tke);
-        formattedWrite(writer, ", \"omega\": %.18e", omega);
-        formattedWrite(writer, ", \"mu_t\": %.18e", mu_t);
-        formattedWrite(writer, ", \"k_t\": %.18e", k_t);
+        formattedWrite(writer, ", \"quality\": %.18e", gas.quality.re);
+        formattedWrite(writer, ", \"velx\": %.18e", vel.x.re);
+        formattedWrite(writer, ", \"vely\": %.18e", vel.y.re);
+        formattedWrite(writer, ", \"velz\": %.18e", vel.z.re);
+        formattedWrite(writer, ", \"Bx\": %.18e", B.x.re);
+        formattedWrite(writer, ", \"By\": %.18e", B.y.re);
+        formattedWrite(writer, ", \"Bz\": %.18e", B.z.re);
+        formattedWrite(writer, ", \"psi\": %.18e", psi.re);
+        formattedWrite(writer, ", \"divB\": %.18e", divB.re);
+        formattedWrite(writer, ", \"tke\": %.18e", tke.re);
+        formattedWrite(writer, ", \"omega\": %.18e", omega.re);
+        formattedWrite(writer, ", \"mu_t\": %.18e", mu_t.re);
+        formattedWrite(writer, ", \"k_t\": %.18e", k_t.re);
         formattedWrite(writer, ", \"S\": %d", S);
         formattedWrite(writer, "}");
         return writer.data;
