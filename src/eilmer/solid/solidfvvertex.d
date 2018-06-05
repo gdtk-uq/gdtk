@@ -7,16 +7,18 @@
 
 module solidfvvertex;
 
+import nm.complex;
+import nm.number;
 import geom;
 
 class SolidFVVertex {
 public:
     size_t id;
     Vector3 pos;
-    double areaxy;
-    double dTdx;
-    double dTdy;
+    number areaxy;
+    number dTdx;
+    number dTdy;
     Vector3[] cloud_pos;
-    double*[] cloud_T;
+    number*[] cloud_T;
 
 }

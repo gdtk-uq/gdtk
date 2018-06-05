@@ -11,6 +11,8 @@ import std.stdio;
 import std.array;
 import std.format;
 import std.json;
+import nm.complex;
+import nm.number;
 
 import json_helper;
 import geom;
@@ -65,12 +67,12 @@ public:
 
 }
 
-double updateEnergy(ref SolidProps sp, double T)
+number updateEnergy(ref SolidProps sp, number T)
 {
     return sp.rho*sp.Cp*T;
 }
 
-double updateTemperature(ref SolidProps sp, double e)
+number updateTemperature(ref SolidProps sp, number e)
 {
     return e/(sp.rho*sp.Cp);
 }
@@ -84,8 +86,8 @@ void writeInitialSolidFile(string fileName, ref StructuredGrid grid,
     auto nkc = grid.nkv - 1;
     if (GlobalConfig.dimensions == 2) nkc = 1;
 
-    double T = initTemperature;
-    double e = updateEnergy(sp, T);
+    number T = initTemperature;
+    number e = updateEnergy(sp, T);
 
     string cellDataToString(size_t i, size_t j, size_t k)
     {
@@ -108,7 +110,7 @@ void writeInitialSolidFile(string fileName, ref StructuredGrid grid,
         // Should match SolidFVCell.writeValuesToString()
         auto writer = appender!string();
         formattedWrite(writer, "%.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e %.18e",
-                       pos.x, pos.y, pos.z, volume, e, T,
+                       pos.x.re, pos.y.re, pos.z.re, volume.re, e.re, T.re,
                        sp.rho, sp.Cp, sp.k,
                        sp.k11, sp.k12, sp.k13,
                        sp.k21, sp.k22, sp.k23,

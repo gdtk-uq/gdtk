@@ -6,6 +6,8 @@ import std.string;
 import std.format;
 import util.lua;
 import std.math;
+import nm.complex;
+import nm.number;
 
 import simcore;
 import json_helper;
@@ -389,14 +391,14 @@ public:
     void computeBoundaryFlux(SolidFVCell Lft, SolidFVCell Rght, SolidFVInterface IFace, double kL, double kR)
     {
         Vector3 LI, IR;
-        double dL, dR;
-        double kL_dL, kR_dR;
-        double T, q;
+        number dL, dR;
+        number kL_dL, kR_dR;
+        number T, q;
         
         LI = IFace.pos - Lft.pos;
         IR = Rght.pos - IFace.pos;
-        dL = fabs(dot(LI, IFace.n));
-        dR = fabs(dot(IR, IFace.n));
+        dL = fabs(dot(LI, IFace.n).re);
+        dR = fabs(dot(IR, IFace.n).re);
         kL_dL = kL/dL;
         kR_dR = kR/dR;
 

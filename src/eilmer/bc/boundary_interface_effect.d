@@ -13,6 +13,8 @@ import std.string;
 import std.conv;
 import std.stdio;
 import std.math;
+import nm.complex;
+import nm.number;
 
 import geom;
 import json_helper;
@@ -1125,10 +1127,10 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
         BoundaryCondition bc = blk.bc[which_boundary];
         foreach (i, f; bc.faces) {
             if (bc.outsigns[i] == 1) {
-                double d0 = distance_between(f.left_cell.pos[gtl], f.pos);
+                number d0 = distance_between(f.left_cell.pos[gtl], f.pos);
                 f.fs.omega = ideal_omega_at_wall(f.left_cell, d0);
             } else {
-                double d0 = distance_between(f.right_cell.pos[gtl], f.pos);
+                number d0 = distance_between(f.right_cell.pos[gtl], f.pos);
                 f.fs.omega = ideal_omega_at_wall(f.right_cell, d0);
             }
             f.fs.tke = 0.0;
@@ -1151,7 +1153,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.north];
-                    double d0 = distance_between(cell.pos[gtl], IFace.pos);
+                    number d0 = distance_between(cell.pos[gtl], IFace.pos);
                     FlowState fs = IFace.fs;
                     fs.tke = 0.0;
                     fs.omega = ideal_omega_at_wall(cell, d0);
@@ -1164,7 +1166,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.east];
-                    double d0 = distance_between(cell.pos[gtl], IFace.pos);
+                    number d0 = distance_between(cell.pos[gtl], IFace.pos);
                     FlowState fs = IFace.fs;
                     fs.tke = 0.0;
                     fs.omega = ideal_omega_at_wall(cell, d0);
@@ -1177,7 +1179,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                 for (i = blk.imin; i <= blk.imax; ++i) {
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.south];
-                    double d0 = distance_between(cell.pos[gtl], IFace.pos);
+                    number d0 = distance_between(cell.pos[gtl], IFace.pos);
                     FlowState fs = IFace.fs;
                     fs.tke = 0.0;
                     fs.omega = ideal_omega_at_wall(cell, d0);
@@ -1190,7 +1192,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.west];
-                    double d0 = distance_between(cell.pos[gtl], IFace.pos);
+                    number d0 = distance_between(cell.pos[gtl], IFace.pos);
                     FlowState fs = IFace.fs;
                     fs.tke = 0.0;
                     fs.omega = ideal_omega_at_wall(cell, d0);
@@ -1203,7 +1205,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.top];
-                    double d0 = distance_between(cell.pos[gtl], IFace.pos);
+                    number d0 = distance_between(cell.pos[gtl], IFace.pos);
                     FlowState fs = IFace.fs;
                     fs.tke = 0.0;
                     fs.omega = ideal_omega_at_wall(cell, d0);
@@ -1216,7 +1218,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     cell = blk.get_cell(i,j,k);
                     IFace = cell.iface[Face.bottom];
-                    double d0 = distance_between(cell.pos[gtl], IFace.pos);
+                    number d0 = distance_between(cell.pos[gtl], IFace.pos);
                     FlowState fs = IFace.fs;
                     fs.tke = 0.0;
                     fs.omega = ideal_omega_at_wall(cell, d0);
@@ -1227,7 +1229,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
     } // end apply()
 
     @nogc
-    double ideal_omega_at_wall(in FVCell cell, double d0)
+    number ideal_omega_at_wall(in FVCell cell, number d0)
     // As recommended by Wilson Chan, we use Menter's correction
     // for omega values at the wall. This appears as Eqn A12 in 
     // Menter's paper.
@@ -1239,7 +1241,7 @@ class BIE_WallKOmega : BoundaryInterfaceEffect {
     {
         auto wall_gas = cell.fs.gas;
         // Note: d0 is half_cell_width_at_wall.
-        double nu = wall_gas.mu / wall_gas.rho;
+        number nu = wall_gas.mu / wall_gas.rho;
         double beta1 = 0.075;
         return 10 * (6 * nu) / (beta1 * d0 * d0);
     }
@@ -1406,13 +1408,13 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         auto gmodel = blk.myConfig.gmodel; 
         //
         // Compute recovery factor
-        double cp = gmodel.Cp(cell.fs.gas); 
-        double Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
-        double gas_constant = gmodel.R(cell.fs.gas);
-        double recovery = pow(Pr, (1.0/3.0));
+        number cp = gmodel.Cp(cell.fs.gas); 
+        number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
+        number gas_constant = gmodel.R(cell.fs.gas);
+        number recovery = pow(Pr, (1.0/3.0));
         // Compute tangent velocity at nearest interior point and wall interface
-        double du, vt1_2_angle;
-        double cell_tangent0, cell_tangent1, face_tangent0, face_tangent1;
+        number du, vt1_2_angle;
+        number cell_tangent0, cell_tangent1, face_tangent0, face_tangent1;
         Vector3 cellVel = cell.fs.vel;
         Vector3 faceVel = IFace.fs.vel;
         cellVel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); 
@@ -1430,7 +1432,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             du = sqrt( pow((cell_tangent0-face_tangent0),2.0) + pow((cell_tangent1-face_tangent1),2.0) );
         }
         // Compute wall gas properties from either ...
-        double T_wall, rho_wall;
+        number T_wall, rho_wall;
         if ( _isFixedTWall ) {
             // ... user-specified wall temperature, or ... 
             T_wall = IFace.fs.gas.T; 
@@ -1449,12 +1451,12 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         // Compute wall shear stess (and heat flux for fixed temperature wall) 
         // using the surface stress tensor. This provides initial values to solve
         // for tau_wall and q_wall iteratively
-        double wall_dist = distance_between(cell.pos[0], IFace.pos);
-        double dudy = du / wall_dist;
-        double mu_lam_wall = IFace.fs.gas.mu;
-        double mu_lam = cell.fs.gas.mu;
-        double tau_wall_old = mu_lam_wall * dudy;
-        double dT, dTdy, k_lam_wall, q_wall_old;
+        number wall_dist = distance_between(cell.pos[0], IFace.pos);
+        number dudy = du / wall_dist;
+        number mu_lam_wall = IFace.fs.gas.mu;
+        number mu_lam = cell.fs.gas.mu;
+        number tau_wall_old = mu_lam_wall * dudy;
+        number dT, dTdy, k_lam_wall, q_wall_old;
         if ( _isFixedTWall ) {
             dT = fabs( cell.fs.gas.T - IFace.fs.gas.T );
             dTdy = dT / wall_dist;
@@ -1468,8 +1470,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         double C_mu = 0.09;
         size_t counter = 0; 
         double tolerance = 1.0e-10;
-        double diff_tau = 100.0;
-        double diff_q;
+        number diff_tau = 100.0;
+        number diff_q;
         if ( _isFixedTWall ) {
             diff_q = 100.0;
         } else {
@@ -1477,10 +1479,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             // will only check for diff_tau for adiabatic wall cases
             diff_q = tolerance / 10.0; 
         }
-        double tau_wall = 0.0; double q_wall = 0.0;
-        double u_tau = 0.0; double u_plus = 0.0;
-        double Gam = 0.0; double Beta = 0.0; double Q = 0.0; double Phi = 0.0;
-        double y_plus_white = 0.0; double y_plus = 0.0;
+        number tau_wall = 0.0; number q_wall = 0.0;
+        number u_tau = 0.0; number u_plus = 0.0;
+        number Gam = 0.0; number Beta = 0.0; number Q = 0.0; number Phi = 0.0;
+        number y_plus_white = 0.0; number y_plus = 0.0;
         //
         // Iteratively solve for the wall-function corrected shear stress
         // (and heat flux for fixed temperature walls)
@@ -1538,7 +1540,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 IFace.tau_wall_y = -1.0 * reverse_flag0 * tau_wall * IFace.n.x;
                 IFace.tau_wall_z = 0.0;
             } else {
-                local_tau_wall = Vector3(0.0, -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle),
+                local_tau_wall = Vector3(to!number(0.0),
+                                         -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle),
                                          -1.0 * reverse_flag1 * tau_wall * sin(vt1_2_angle));
             }
             if (_isFixedTWall) {
@@ -1552,7 +1555,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 IFace.tau_wall_y = reverse_flag0 * tau_wall * IFace.n.x;
                 IFace.tau_wall_z = 0.0;
             } else {
-                local_tau_wall = Vector3(0.0, reverse_flag0 * tau_wall * cos(vt1_2_angle),
+                local_tau_wall = Vector3(to!number(0.0),
+                                         reverse_flag0 * tau_wall * cos(vt1_2_angle),
                                          reverse_flag1 * tau_wall * sin(vt1_2_angle));
             }
             if ( _isFixedTWall ) {
@@ -1568,21 +1572,21 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             IFace.tau_wall_z = local_tau_wall.z;
         }
         // Turbulence model boundary conditions (Eq 15 & 14)
-        double y_white_y_plus = 2.0 * y_plus_white * kappa*sqrt(Gam)/Q
+        number y_white_y_plus = 2.0 * y_plus_white * kappa*sqrt(Gam)/Q
                 * pow((1.0 - pow(2.0*Gam*u_plus-Beta,2.0)/(Q*Q)), 0.5);
-        double mu_coeff = 1.0 + y_white_y_plus
+        number mu_coeff = 1.0 + y_white_y_plus
                 - kappa*exp(-1.0*kappa*B) * (1.0 + kappa*u_plus + kappa*u_plus*kappa*u_plus/2.0)
                 - mu_lam/mu_lam_wall;
-        double mu_t = mu_lam_wall * mu_coeff;
+        number mu_t = mu_lam_wall * mu_coeff;
         // omega (Eq 19 - 21)
-        double omega_i = 6.0*mu_lam_wall / (0.075*rho_wall*wall_dist*wall_dist);
-        double omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
-        double omega = sqrt(omega_i*omega_i + omega_o*omega_o);
+        number omega_i = 6.0*mu_lam_wall / (0.075*rho_wall*wall_dist*wall_dist);
+        number omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
+        number omega = sqrt(omega_i*omega_i + omega_o*omega_o);
         // tke (Eq 22)
         assert(cell.fs.gas.rho > 0.0, "density not positive");
         assert(mu_t > 0.0, "mu_t not greater than zero");
         assert(omega > 0.0, "omega not greater than zero");
-        double tke = omega * mu_t / cell.fs.gas.rho;
+        number tke = omega * mu_t / cell.fs.gas.rho;
         // Assign updated values of tke and omega to IFace.fs for later copying
         // to boundary cells.
         IFace.fs.tke = tke;

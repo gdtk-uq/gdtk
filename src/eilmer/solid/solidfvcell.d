@@ -13,6 +13,8 @@ import std.conv;
 import std.string;
 import std.array;
 import std.format;
+import nm.complex;
+import nm.number;
 import geom;
 import fvcore;
 import solidfvinterface;
@@ -25,18 +27,18 @@ class SolidFVCell {
 public:
     size_t id;
     // Cell properties
-    double volume;
-    double areaxy;
+    number volume;
+    number areaxy;
     Vector3 pos;
     // Cell material properties
     SolidProps sp;
     // Cell state
-    double T;
-    double[] e;
-    double[] dedt;
-    double de_prev;
+    number T;
+    number[] e;
+    number[] dedt;
+    number de_prev;
     // Cell source term
-    double Q;
+    number Q;
     // Connections
     SolidFVInterface[] iface;
     SolidFVVertex[] vtx;
@@ -102,8 +104,8 @@ public:
             IFb = iface[Face.bottom];
         }
         // Cell volume (inverted).
-        double volInv = 1.0 / volume;
-        double integral;
+        number volInv = 1.0 / volume;
+        number integral;
         
         // Sum up fluxes (of form q.n)
         integral = -IFe.flux * IFe.area - IFn.flux * IFn.area

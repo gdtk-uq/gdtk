@@ -9,6 +9,8 @@ import std.stdio;
 import std.math;
 import std.file;
 import std.algorithm;
+import nm.complex;
+import nm.number;
 version(mpi_parallel) {
     import mpi;
     import mpi.util;
@@ -458,11 +460,11 @@ public:
                 FVCell closest_cell = localFluidBlocks[0].cells[0];
                 Vector3 cellpos = closest_cell.pos[0];
                 Vector3 dp = cellpos - mypos;
-                double min_distance = geom.abs(dp);
+                double min_distance = geom.abs(dp).re;
                 foreach (blk; localFluidBlocks) {
                     foreach (cell; blk.cells) {
                         dp = cell.pos[0] - mypos;
-                        double distance = geom.abs(dp);
+                        double distance = geom.abs(dp).re;
                         if (distance < min_distance) {
                             closest_cell = cell;
                             min_distance = distance;

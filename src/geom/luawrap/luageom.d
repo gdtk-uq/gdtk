@@ -15,10 +15,12 @@
 
 module geom.luawrap.luageom;
 
-import util.lua;
 import std.stdio;
 import std.string;
 import std.conv;
+import nm.complex;
+import nm.number;
+import util.lua;
 import util.lua_service;
 import geom;
 
@@ -351,7 +353,7 @@ extern(C) int quadProperties(lua_State* L)
         Vector3 n;
         Vector3 t1;
         Vector3 t2;
-        double area;
+        number area;
         quad_properties(p0, p1, p2, p3, centroid, n, t1, t2, area);
 
         lua_newtable(L); // anonymous table { }
@@ -412,8 +414,8 @@ extern(C) int hexCellProperties(lua_State* L)
         lua_settop(L, 0); // clear stack
 
         Vector3 centroid;
-        double volume;
-        double iLen, jLen, kLen;
+        number volume;
+        number iLen, jLen, kLen;
         hex_cell_properties(p0, p1, p2, p3, p4, p5, p6, p7, 
                             centroid, volume, iLen, jLen, kLen);
 

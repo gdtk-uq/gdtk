@@ -12,9 +12,12 @@ import globaldata;
 import solidblock; 
 import solidfvcell;  
 import std.stdio; 
-import std.parallelism; 
-import nm.bbla;
+import std.parallelism;
 import std.math;
+import std.conv;
+import nm.complex;
+import nm.number;
+import nm.bbla;
 import solidprops; 
 import std.datetime; 
 import solid_udf_source_terms;
@@ -22,20 +25,20 @@ import solid_udf_source_terms;
 // Working space for update.
 // Declared here as globals for this module.
 
-Matrix!double r0;
-Matrix!double v;
-Matrix!double vi;
-Matrix!double wj;
-Matrix!double dX; 
-double[] h;
-double[] hR;
-double[] g0;
-double[] g1;
-Matrix!double H0;
-Matrix!double H1;
-Matrix!double Gamma;
-Matrix!double Q0;
-Matrix!double Q1;
+Matrix!number r0;
+Matrix!number v;
+Matrix!number vi;
+Matrix!number wj;
+Matrix!number dX; 
+number[] h;
+number[] hR;
+number[] g0;
+number[] g1;
+Matrix!number H0;
+Matrix!number H1;
+Matrix!number Gamma;
+Matrix!number Q0;
+Matrix!number Q1;
 
 void initSolidLooseCouplingUpdate()
 {
@@ -44,30 +47,30 @@ void initSolidLooseCouplingUpdate()
     foreach (sblk; solidBlocks) {
         ncells += sblk.activeCells.length;
     }
-    r0 = new Matrix!double(ncells, 1);
-    v = new Matrix!double(ncells, m+1);
-    vi = new Matrix!double(ncells, 1);
-    wj = new Matrix!double(ncells, 1);
-    dX = new Matrix!double(ncells, 1);
+    r0 = new Matrix!number(ncells, 1);
+    v = new Matrix!number(ncells, m+1);
+    vi = new Matrix!number(ncells, 1);
+    wj = new Matrix!number(ncells, 1);
+    dX = new Matrix!number(ncells, 1);
     g0.length = m+1;
     g1.length = m+1;
     h.length = m+1;
     hR.length = m+1;
-    H0 = new Matrix!double(m+1, m);
-    H1 = new Matrix!double(m+1, m);
-    Gamma = new Matrix!double(m+1, m+1);
-    Q0 = new Matrix!double(m+1, m+1);
-    Q1 = new Matrix!double(m+1, m+1);
+    H0 = new Matrix!number(m+1, m);
+    H1 = new Matrix!number(m+1, m);
+    Gamma = new Matrix!number(m+1, m+1);
+    Q0 = new Matrix!number(m+1, m+1);
+    Q1 = new Matrix!number(m+1, m+1);
 }
 
-Matrix!double eval_dedts(Matrix!double eip1, int ftl, double sim_time)
+Matrix!number eval_dedts(Matrix!number eip1, int ftl, double sim_time)
 // Evaulates the energy derivatives of all the cells in the solid block and puts them into an array (Matrix object)
 // Evaluates derivative when cell energy is "eip1" 
  
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 { 
     auto n = eip1.nrows;
-    Matrix!double ret = zeros!double(n, 1); // array that will be returned (empty - to be populated)
+    Matrix!number ret = zeros!number(n, 1); // array that will be returned (empty - to be populated)
     foreach (sblk; parallel(solidBlocks, 1)) {
         if (!sblk.active) continue;
         sblk.applyPreSpatialDerivAction(sim_time, ftl);
@@ -101,19 +104,19 @@ Matrix!double eval_dedts(Matrix!double eip1, int ftl, double sim_time)
 }
 
 
-Matrix!double e_vec(int ftl)
+Matrix!number e_vec(int ftl)
 // Puts energies from desired ftl into an array (Matrix object) 
 
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 {
-    double[] test1;
+    number[] test1;
     foreach (sblk; solidBlocks){ 
         foreach(scell; sblk.activeCells){
             test1 ~= scell.e[ftl];
         }
     } 
     auto len = test1.length; 
-    Matrix!double ret = zeros!double(len, 1); 
+    Matrix!number ret = zeros!number(len, 1); 
     int count = 0;
     foreach (entry; test1){ 
         ret[count, 0] = entry; 
@@ -122,57 +125,57 @@ Matrix!double e_vec(int ftl)
     return ret;
 } 
 
-Matrix!double F(Matrix!double eip1, Matrix!double ei, double dt_global, double sim_time) 
+Matrix!number F(Matrix!number eip1, Matrix!number ei, double dt_global, double sim_time) 
 // Function for which root needs to be found (for Newton's method)
 // Re-arranged implicit euler equation 
 
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 {
     return eip1 - ei - dt_global*eval_dedts(eip1, 1, sim_time); // lets get rid of dedt_vec... 
 }
 
   
-Matrix!double copy_vec(Matrix!double mat)  
+Matrix!number copy_vec(Matrix!number mat)  
 // Copies an original vector to a new vector (i.e. leaves original untouched) 
 
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 {
     auto n = mat.nrows; 
-    auto cop = zeros!double(n, 1); 
+    auto cop = zeros!number(n, 1); 
     foreach(i; 0 .. n){
         cop[i, 0] = mat[i, 0];
     }
     return cop; 
 } 
 
-double norm(Matrix!double vec)
+number norm(Matrix!number vec)
 // Calculates the euclidean norm of a vector 
 
-// Returns: double
+// Returns: number
 {
     auto n = vec.nrows;
-    double total = 0; 
+    number total = 0; 
     foreach(i;0 .. n){      
         total += pow(vec[i,0],2);
     }
-    double ret = pow(total, 0.5);
+    number ret = pow(total, 0.5);
     return ret; 
 } 
 
-Matrix!double Jac(Matrix!double Yip1, Matrix!double Yi, double dt, double sim_time)
+Matrix!number Jac(Matrix!number Yip1, Matrix!number Yi, double dt, double sim_time)
 // Jacobian of F 
 
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 { 
     double eps = GlobalConfig.sdluOptions.perturbationSize;
     auto n = Yip1.nrows;
-    auto ret = eye!double(n);
-    Matrix!double Fout;
-    Matrix!double Fin = F(Yip1, Yi, dt, sim_time);
-    Matrix!double cvec;
+    auto ret = eye!number(n);
+    Matrix!number Fout;
+    Matrix!number Fin = F(Yip1, Yi, dt, sim_time);
+    Matrix!number cvec;
     foreach(i;0 .. n){ 
         cvec = copy_vec(Yip1);
-        cvec[i, 0] += eps; 
+        cvec[i, 0] += std.conv.to!number(eps); 
         Fout = F(cvec, Yi, dt, sim_time); 
         foreach(j; 0 .. n){
             ret[j, i] = (Fout[j, 0] - Fin[j, 0])/(eps);               
@@ -182,20 +185,20 @@ Matrix!double Jac(Matrix!double Yip1, Matrix!double Yi, double dt, double sim_ti
 }
 
 
-void GMRES(Matrix!double A, Matrix!double b, Matrix!double x0, Matrix!double xm)
+void GMRES(Matrix!number A, Matrix!number b, Matrix!number x0, Matrix!number xm)
 // Executes GMRES_step, can be used to repeat GMRES steps checking for multiple iterations, otherwise relatively useless 
 
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 {    
     double tol = GlobalConfig.sdluOptions.toleranceGMRESSolve;
-    double[] xmV;
+    number[] xmV;
     xmV.length = xm.nrows;
     foreach (i; 0 .. xmV.length) xmV[i] = xm[i,0];
     GMRES_step(A, b, x0, xmV, tol);
     foreach (i; 0 .. xmV.length) xm[i,0] = xmV[i];
 }
 
-void GMRES_step(Matrix!double A, Matrix!double b, Matrix!double x0, double[] xm, double tol)
+void GMRES_step(Matrix!number A, Matrix!number b, Matrix!number x0, number[] xm, double tol)
 // Takes a single GMRES step using Arnoldi 
 // Minimisation problem is solved using Least Squares via Gauss Jordan (see function below) 
 
@@ -205,27 +208,27 @@ void GMRES_step(Matrix!double A, Matrix!double b, Matrix!double x0, double[] xm,
     int m = GlobalConfig.sdluOptions.maxGMRESIterations;
     int maxIters = m;
     int iterCount;
-    double residual;
+    number residual;
     H0.zeros();
     H1.zeros();
     Q0.zeros();
-    g0[] = 0.0;
-    g1[] = 0.0;
+    foreach (ref elem; g0) { elem = 0.0; }
+    foreach (ref elem; g1) { elem = 0.0; }
     // r0 = b - A*x0
-    dot!double(A, x0, r0);
+    dot!number(A, x0, r0);
     foreach (i; 0 .. r0.nrows) r0[i,0] = b[i,0] - r0[i,0];
-    double beta = norm(r0);  
+    number beta = norm(r0);  
     g0[0] = beta;
-    double residTol = tol*beta;
+    number residTol = tol*beta;
     v.zeros();
     foreach (i; 0 .. r0.nrows) v[i,0] = r0[i,0]/beta;
     foreach (i; 0 .. v.nrows) vi[i,0] = v[i,0];
-    double hjp1j;
-    Matrix!double y; 
-    double hij;
+    number hjp1j;
+    Matrix!number y; 
+    number hij;
     foreach (j; 0 .. m) {
         iterCount = j+1;
-        dot!double(A, vi, wj);
+        dot!number(A, vi, wj);
         foreach (i; 0 .. j+1) {
             hij = 0.0;
             foreach (k; 0 .. wj.nrows) hij += wj[k,0] * v[k,i];
@@ -246,13 +249,13 @@ void GMRES_step(Matrix!double A, Matrix!double b, Matrix!double x0, double[] xm,
             foreach (i; 0 .. j+1) h[i] = H0[i,j];
             // Rotate column by previous rotations
             // stored in Q0
-            nm.bbla.dot!double(Q0, j+1, j+1, h, hR);
+            nm.bbla.dot!number(Q0, j+1, j+1, h, hR);
             // Place column back in H
             foreach (i; 0 .. j+1) H0[i,j] = hR[i];
         }
         // Now form new Gamma
         Gamma.eye();
-        double c_j, s_j, denom;
+        number c_j, s_j, denom;
         denom = sqrt(H0[j,j]*H0[j,j] + H0[j+1,j]*H0[j+1,j]);
         s_j = H0[j+1,j]/denom; 
         c_j = H0[j,j]/denom;
@@ -266,7 +269,7 @@ void GMRES_step(Matrix!double A, Matrix!double b, Matrix!double x0, double[] xm,
             copy(Gamma, Q1);
         }
         else {
-            nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
+            nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
         }
         // Prepare for next step
         copy(H1, H0);
@@ -284,32 +287,32 @@ void GMRES_step(Matrix!double A, Matrix!double b, Matrix!double x0, double[] xm,
     
     // At end H := R up to row m
     //        g := gm up to row m
-    upperSolve!double(H1, m, g1);
-    nm.bbla.dot!double(v, v.nrows(), m, g1, xm);
+    upperSolve!number(H1, m, g1);
+    nm.bbla.dot!number(v, v.nrows(), m, g1, xm);
     foreach (k; 0 .. xm.length) xm[k] += x0[k,0];
     return;
 }
 
-Matrix!double lsq_gmres(Matrix!double A, Matrix!double b)
+Matrix!number lsq_gmres(Matrix!number A, Matrix!number b)
 // Solves the minimisation problem using least squares and direct solution (Gauss Jordan elimination)
 
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 {
-    auto Ht = transpose!double(A); 
-    auto c = hstack!double([dot!double(Ht, A), dot!double(Ht, b)]);
-    gaussJordanElimination!double(c);  
+    auto Ht = transpose!number(A); 
+    auto c = hstack!number([dot!number(Ht, A), dot!number(Ht, b)]);
+    gaussJordanElimination!number(c);  
     auto nr = c.nrows;
     return arr_2_vert_vec(c.getColumn(nr));
 }
 
-Matrix!double arr_2_vert_vec(double[] arr) 
+Matrix!number arr_2_vert_vec(number[] arr) 
 // Takes an array (i.e. D equivalent of a python list) and converts it into a vertical Matrix 
 // E.g. [1, 2, 3] --> Matrix[[1], [2], [3]]
 
-// Returns: Matrix of doubles
+// Returns: Matrix of numbers
 {
     auto len = arr.length;
-    auto ret = zeros!double(len, 1);
+    auto ret = zeros!number(len, 1);
     foreach(i; 0 .. len){
         ret[i, 0] = arr[i];
     }
@@ -317,7 +320,7 @@ Matrix!double arr_2_vert_vec(double[] arr)
 }
 
 
-void post(Matrix!double eip1, Matrix!double dei)
+void post(Matrix!number eip1, Matrix!number dei)
 // Does the post processing of an implicit method step 
 
 // Returns: none
@@ -325,7 +328,7 @@ void post(Matrix!double eip1, Matrix!double dei)
     int i = 0;
     foreach (sblk; solidBlocks){ 
         foreach(scell; sblk.activeCells){
-            double eicell = eip1[i, 0];
+            number eicell = eip1[i, 0];
             scell.e[0] = eicell;
             scell.de_prev = dei[i, 0];
             scell.T = updateTemperature(scell.sp, eicell); //not necesary? 
@@ -353,7 +356,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
         }
     }
     double eps = GlobalConfig.sdluOptions.toleranceNewtonUpdate;
-    double omega = 0.01;
+    number omega = 0.01;
     
     auto ei = e_vec(0); 
     // retrieving guess
@@ -365,8 +368,8 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
     auto Fkp1 = F(Xkp1, ei, dt_global, sim_time); // done so that fabs(normfk - normfkp1) satisfied
     int count = 0;
     int maxCount = GlobalConfig.sdluOptions.maxNewtonIterations;
-    Matrix!double Jk;
-    Matrix!double mFk; // e.g. minusFk --> mFk
+    Matrix!number Jk;
+    Matrix!number mFk; // e.g. minusFk --> mFk
     while(fabs(norm(Fk) - norm(Fkp1)) > eps){ 
         count += 1; 
         if (count != 1){
@@ -387,7 +390,7 @@ void solid_domains_backward_euler_update(double sim_time, double dt_global)
 
     }                                           
     eip1 = Xkp1;
-    Matrix!double dei = eip1 - ei;
+    Matrix!number dei = eip1 - ei;
     Fk = Fkp1;
     post(eip1, dei); // post processing incl. writing solns for e, de and updating T.
     writeln("== End Step ==");

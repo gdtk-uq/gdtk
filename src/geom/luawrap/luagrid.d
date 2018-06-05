@@ -16,6 +16,8 @@ module geom.luawrap.luagrid;
 
 import std.conv;
 import std.string;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import util.lua_service;
@@ -57,7 +59,7 @@ extern(C) int cellVolume(T, string MTname)(lua_State *L)
 {
     auto grid = checkObj!(T, MTname)(L, 1);
     size_t indx = to!size_t(luaL_checkint(L, 2));
-    double volume;
+    number volume;
     Vector3 centroid;
     grid.compute_cell_properties(indx, centroid, volume);
     lua_pushnumber(L, volume);

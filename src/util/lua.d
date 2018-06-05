@@ -1,5 +1,8 @@
 module util.lua;
 
+import nm.complex;
+void lua_pushnumber(lua_State* L, Complex!double n) { lua_pushnumber(L, n.re); }
+
 extern (C):
 const LUA_REGISTRYINDEX = -10000;
 const LUA_GLOBALSINDEX = -10002;
@@ -9,8 +12,6 @@ const LUA_TNIL = 0;
 const LUA_TBOOLEAN = 1;
 const LUA_TTABLE = 5;
 const LUA_TFUNCTION = 6;
-
-
 
 struct lua_State {}
 alias int function(lua_State* L) lua_CFunction;

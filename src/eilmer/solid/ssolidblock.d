@@ -12,6 +12,8 @@ import std.conv;
 import std.format;
 import std.array;
 import std.math;
+import nm.complex;
+import nm.number;
 import std.json;
 import util.lua;
 import json_helper;
@@ -377,12 +379,12 @@ public:
     void calcVolumes2D()
     {
         size_t i, j;
-        double xA, yA, xB, yB, xC, yC, xD, yD;
-        double xN, yN, xS, yS, xE, yE, xW, yW;
-        double vol, max_vol, min_vol, xyarea;
-        double dx, dy, dxN, dyN, dxE, dyE;
-        double lengthN, lengthE, length_max, length_min, length_cross;
-        double max_aspect, aspect_ratio;
+        number xA, yA, xB, yB, xC, yC, xD, yD;
+        number xN, yN, xS, yS, xE, yE, xW, yW;
+        number vol, max_vol, min_vol, xyarea;
+        number dx, dy, dxN, dyN, dxE, dyE;
+        number lengthN, lengthE, length_max, length_min, length_cross;
+        number max_aspect, aspect_ratio;
         SolidFVCell cell, source_cell, target_cell;
 
         // Cell layout
@@ -446,8 +448,8 @@ public:
     {
         SolidFVInterface iface;
         size_t i, j;
-        double xA, xB, yA, yB, xC, yC;
-        double LAB, LBC;
+        number xA, xB, yA, yB, xC, yC;
+        number LAB, LBC;
 
         // East-facing interfaces.
         for (i = imin; i <= imax+1; ++i) {
@@ -677,8 +679,8 @@ public:
         size_t i, j, k;
         SolidFVInterface IFace;
         SolidFVVertex vtx1, vtx2;
-        double dTdx, dTdy;
-        double qx, qy;
+        number dTdx, dTdy;
+        number qx, qy;
         // East-facing interfaces
         for ( j = jmin; j <= jmax; ++j ) {
             for ( i = imin; i <= imax + 1; ++i ) {
@@ -734,21 +736,21 @@ void gradients_T_div(SolidFVVertex vtx)
     // We can work with *twice* the area since it will cancel with
     // factor of 1/2 that appears in the contour integral.
     // Start with the contribution from the final segment of the bounding contour.
-    double areaxy = (vtx.cloud_pos[0].x + vtx.cloud_pos[n-1].x) *
+    number areaxy = (vtx.cloud_pos[0].x + vtx.cloud_pos[n-1].x) *
         (vtx.cloud_pos[0].y - vtx.cloud_pos[n-1].y);
     // Accumulate the contributions from the other segments.
     foreach (i; 0 .. n-1) {
         areaxy += (vtx.cloud_pos[i+1].x + vtx.cloud_pos[i].x) *
             (vtx.cloud_pos[i+1].y - vtx.cloud_pos[i].y);
     }
-    double areaInv = 1.0 / areaxy;
+    number areaInv = 1.0 / areaxy;
 
     // Apply the divergence theorem to flow properties.
     //
     // Start with the contribution from the final segment of the bounding contour.
-    double gradient_x = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
+    number gradient_x = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
         (vtx.cloud_pos[0].y - vtx.cloud_pos[n-1].y);
-    double gradient_y = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
+    number gradient_y = (*(vtx.cloud_T[0]) + *(vtx.cloud_T[n-1])) *
         (vtx.cloud_pos[0].x - vtx.cloud_pos[n-1].x);
     // Accumulate the contributions from the other segments.
     foreach (i; 0 .. n-1) {

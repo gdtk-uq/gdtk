@@ -13,6 +13,7 @@ module nm.bbla;
 import std.conv;
 import std.algorithm;
 import std.math;
+import nm.complex;
 import std.exception;
 
 class Matrix(T) {

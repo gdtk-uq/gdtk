@@ -17,6 +17,8 @@ module bc.user_defined_effects;
 
 import std.string;
 import std.stdio;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import gas.gas_model;
@@ -173,7 +175,7 @@ private:
                     // trigger some bad behaviour rather than
                     // one value to 1.0 and have the calculation
                     // proceed but not follow the users' intent.
-                    ghostCell.fs.gas.massf[] = 0.0;
+                    foreach (ref mf; ghostCell.fs.gas.massf) { mf = 0.0; }
                 }
             }
             lua_pop(L, 1);

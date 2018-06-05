@@ -259,13 +259,13 @@ The value should be a number.`;
 
 string pushGasVar(string var)
 {
-    return `lua_pushnumber(L, fs.gas.` ~ var ~ `.re);
+    return `lua_pushnumber(L, fs.gas.` ~ var ~ `);
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
 
 string pushGasVar(string var_in_D, string var_in_Lua)
 {
-    return `lua_pushnumber(L, fs.gas.` ~ var_in_D ~ `.re);
+    return `lua_pushnumber(L, fs.gas.` ~ var_in_D ~ `);
 lua_setfield(L, tblIdx, "` ~ var_in_Lua ~`");`;
 }
 
@@ -273,24 +273,24 @@ string pushGasVarArray(string var)
 {
     return `lua_newtable(L);
 foreach (i, val; fs.gas.` ~ var ~ `) {
-    lua_pushnumber(L, val.re); lua_rawseti(L, -2,to!int(i+1));
+    lua_pushnumber(L, val); lua_rawseti(L, -2,to!int(i+1));
 }
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
 
 string pushFSVar(string var)
 {
-return `lua_pushnumber(L, fs.` ~ var ~ `.re);
+return `lua_pushnumber(L, fs.` ~ var ~ `);
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
 
 string pushFSVecVar(string var)
 {
-return `lua_pushnumber(L, fs.`~var~`.x.re);
+return `lua_pushnumber(L, fs.`~var~`.x);
 lua_setfield(L, tblIdx, "`~var~`x");
-lua_pushnumber(L, fs.`~var~`.y.re);
+lua_pushnumber(L, fs.`~var~`.y);
 lua_setfield(L, tblIdx, "`~var~`y");
-lua_pushnumber(L, fs.`~var~`.z.re);
+lua_pushnumber(L, fs.`~var~`.z);
 lua_setfield(L, tblIdx, "`~var~`z");`;
 }
 
@@ -308,7 +308,7 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     // -- massf as key-val table
     lua_newtable(L);
     foreach (int isp, mf; fs.gas.massf) {
-        lua_pushnumber(L, mf.re);
+        lua_pushnumber(L, mf);
         lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
     }
     lua_setfield(L, tblIdx, "massf");
@@ -539,9 +539,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         }
                         // Now grab flow state via Lua function call
                         lua_pushvalue(L, 3);
-                        lua_pushnumber(L, pos.x.re);
-                        lua_pushnumber(L, pos.y.re);
-                        lua_pushnumber(L, pos.z.re);
+                        lua_pushnumber(L, pos.x);
+                        lua_pushnumber(L, pos.y);
+                        lua_pushnumber(L, pos.z);
                         if (lua_pcall(L, 3, 1, 0) != 0) {
                             string errMsg = "Error in Lua function call for setting FlowState\n";
                             errMsg ~= "as a function of position (x, y, z).\n";
@@ -610,9 +610,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         }
                         // Now grab flow state via Lua function call
                         lua_pushvalue(L, 3);
-                        lua_pushnumber(L, pos.x.re);
-                        lua_pushnumber(L, pos.y.re);
-                        lua_pushnumber(L, pos.z.re);
+                        lua_pushnumber(L, pos.x);
+                        lua_pushnumber(L, pos.y);
+                        lua_pushnumber(L, pos.z);
                         if (lua_pcall(L, 3, 1, 0) != 0) {
                             string errMsg = "Error in Lua function call for setting FlowState\n";
                             errMsg ~= "as a function of position (x, y, z).\n";
@@ -697,9 +697,9 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 number volume = 0.0; 
                 // Now grab flow state via Lua function call
                 lua_pushvalue(L, 3);
-                lua_pushnumber(L, pos.x.re);
-                lua_pushnumber(L, pos.y.re);
-                lua_pushnumber(L, pos.z.re);
+                lua_pushnumber(L, pos.x);
+                lua_pushnumber(L, pos.y);
+                lua_pushnumber(L, pos.z);
                 if (lua_pcall(L, 3, 1, 0) != 0) {
                     string errMsg = "Error in Lua function call for setting FlowState\n";
                     errMsg ~= "as a function of position (x, y, z).\n";
@@ -751,9 +751,9 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 number volume = 0.0; 
                 // Now grab flow state via Lua function call
                 lua_pushvalue(L, 3);
-                lua_pushnumber(L, pos.x.re);
-                lua_pushnumber(L, pos.y.re);
-                lua_pushnumber(L, pos.z.re);
+                lua_pushnumber(L, pos.x);
+                lua_pushnumber(L, pos.y);
+                lua_pushnumber(L, pos.z);
                 if (lua_pcall(L, 3, 1, 0) != 0) {
                     string errMsg = "Error in Lua function call for setting FlowState\n";
                     errMsg ~= "as a function of position (x, y, z).\n";

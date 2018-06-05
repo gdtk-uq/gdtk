@@ -13,6 +13,8 @@ import std.format;
 import std.stdio;
 import std.conv;
 import std.string;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import util.lua_service;
@@ -207,7 +209,7 @@ extern(C) int writeInitialSolidFileFromLua(lua_State* L)
             }
             lua_pop(L, 1);
         }
-        double T, e;
+        number T, e;
         if ( lua_isfunction(L, 3) ) {
             // Now grab temperature via Lua function call
             lua_pushvalue(L, 3);

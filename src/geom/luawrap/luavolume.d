@@ -13,6 +13,8 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.uni;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import geom;
@@ -305,7 +307,7 @@ extern(C) int newWedgeVolume(lua_State* L)
     double dtheta = to!double(luaL_checknumber(L, -1));
     lua_pop(L, 1);
     // Construct the actual surface.
-    auto wedgev = new WedgeVolume(face0123, dtheta);
+    auto wedgev = new WedgeVolume(face0123, to!number(dtheta));
     volumeStore ~= pushObj!(WedgeVolume, WedgeVolumeMT)(L, wedgev);
     return 1;
 } // end newWedgeVolume()

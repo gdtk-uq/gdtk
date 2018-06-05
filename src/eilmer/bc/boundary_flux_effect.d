@@ -14,6 +14,8 @@ import std.json;
 import std.string;
 import std.conv;
 import std.math;
+import nm.complex;
+import nm.number;
 
 import geom;
 import json_helper;
@@ -196,8 +198,8 @@ public:
     FlowState fstate;
 
 private:
-    double[] _massf;
-    double _e, _rho, _p, _u, _v;
+    number[] _massf;
+    number _e, _rho, _p, _u, _v;
     FlowState _fstate;
     int _nsp;
    
@@ -240,7 +242,7 @@ public:
     {
         FVInterface IFace;
         size_t i, j, k;
-        double _u_rel, _v_rel;
+        number _u_rel, _v_rel;
         auto blk = cast(SFluidBlock) this.blk;
         assert(blk !is null, "Oops, this should be an SFluidBlock object.");
 
@@ -440,23 +442,23 @@ public:
     // Iteratively converge on wall temp
     {
         auto gmodel = blk.myConfig.gmodel; 
-        double dT, dTdn, dTdnx, dTdny, dTdnz, qx, qy, qz, k_eff, k_lam_wall, h, q_cond, Twall;
+        number dT, dTdn, dTdnx, dTdny, dTdnz, qx, qy, qz, k_eff, k_lam_wall, h, q_cond, Twall;
         double f_relax = 0.05;
         double tolerance = 1.0e-3; 
-        double Twall_prev = IFace.fs.gas.T;
-        double Twall_prev_backup = IFace.fs.gas.T;
-        double q_total, q_total_prev, q_total_prev_backup = 0.0;
+        number Twall_prev = IFace.fs.gas.T;
+        number Twall_prev_backup = IFace.fs.gas.T;
+        number q_total, q_total_prev, q_total_prev_backup = 0.0;
         int iteration_check, subiteration_check = 0;
 
         // IFace orientation
-        double nx = IFace.n.x; double ny = IFace.n.y; double nz = IFace.n.z;
+        number nx = IFace.n.x; number ny = IFace.n.y; number nz = IFace.n.z;
         // IFace properties.
         FlowGradients grad = IFace.grad;
 
         // Mass diffusion things
-        double[] jx; // diffusive mass flux in x
-        double[] jy; // diffusive mass flux in y
-        double[] jz; // diffusive mass flux in z
+        number[] jx; // diffusive mass flux in x
+        number[] jy; // diffusive mass flux in y
+        number[] jz; // diffusive mass flux in z
         size_t n_species = gmodel.n_species;
         double viscous_factor = blk.myConfig.viscous_factor;
         // Mass diffusion
@@ -468,7 +470,7 @@ public:
         // to avoid memory allocations, I think.
 
         // Newton method to find Twall when thermionic active
-        double f_rad, f_thermionic, f_drv, Twall_1, Twall_0;
+        number f_rad, f_thermionic, f_drv, Twall_1, Twall_0;
 
         // Electron creation
 
@@ -577,7 +579,7 @@ public:
         //    printf("Increase Twall_subiterations from default 20 value\n");
         //    printf("\n");
         //}
-        return q_total;
+        return q_total.re;
     } // end solve_for_wall_temperature_and_energy_flux()
 
     //const double update_Twall_from_heat_flux(double q_total, double Ttol = 0.001)
