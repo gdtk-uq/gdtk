@@ -29,6 +29,8 @@ import std.math;
 import std.string;
 import std.stdio;
 import std.algorithm;
+import nm.complex;
+import nm.number;
 import nm.bbla;
 import nm.bracketing;
 import nm.ridder;
@@ -37,7 +39,7 @@ import gas;
 import gas.cea_gas;
 
 
-double[] shock_ideal(const(GasState) state1, double Vs, GasState state2, GasModel gm)
+number[] shock_ideal(const(GasState) state1, number Vs, GasState state2, GasModel gm)
 /**
  * Computes post-shock conditions in the shock frame, assuming ideal gas.
  *
@@ -52,10 +54,10 @@ double[] shock_ideal(const(GasState) state1, double Vs, GasState state2, GasMode
  *   Vg in the lab frame.
  */
 {
-    double M1 = Vs / state1.a;
-    double V1 = Vs;
-    double gam = gm.gamma(state1);
-    double R = gm.R(state1);
+    number M1 = Vs / state1.a;
+    number V1 = Vs;
+    number gam = gm.gamma(state1);
+    number R = gm.R(state1);
     //
     state2.rho = state1.rho * (gam+1.0)*M1*M1 / (2.0+(gam-1.0)*M1*M1);
     state2.p = state1.p * (2.0*gam*M1*M1 - (gam-1.0)) / (gam+1.0);
@@ -63,12 +65,12 @@ double[] shock_ideal(const(GasState) state1, double Vs, GasState state2, GasMode
     gm.update_thermo_from_pT(state2);
     gm.update_sound_speed(state2);
     //
-    double V2 = state1.rho / state2.rho * V1;
-    double Vg = V1 - V2;
+    number V2 = state1.rho / state2.rho * V1;
+    number Vg = V1 - V2;
     return [V2, Vg];
 } // end shock_ideal()
 
-double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
+number[] normal_shock(const(GasState) state1, number Vs, GasState state2,
                       GasModel gm, double rho_tol=1.0e-6, double T_tol = 0.1)
 /**
  * Computes post-shock conditions in a shock-stationary frame.
@@ -88,8 +90,8 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
  */
 {
     // Initial guess via ideal gas relations.
-    double[] velocities = shock_ideal(state1, Vs, state2, gm);
-    double V2 = velocities[0]; double Vg = velocities[1];
+    number[] velocities = shock_ideal(state1, Vs, state2, gm);
+    number V2 = velocities[0]; number Vg = velocities[1];
     if (cast(CEAGas) gm !is null) {
         // The ideal gas estimate may have an unreasonably high value for temperature.
         // I vaguely recall Malcolm McIntosh had a correlation with shock velocity or 
@@ -101,24 +103,24 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
     }
     // We assume that state2 now contains a fair initial guess
     // and set up the target values for the Rankine-Hugoniot relations.
-    double V1 = Vs;
-    double momentum = state1.p + state1.rho * V1 * V1;
-    double total_enthalpy = gm.enthalpy(state1) + 0.5 * V1 * V1;
+    number V1 = Vs;
+    number momentum = state1.p + state1.rho * V1 * V1;
+    number total_enthalpy = gm.enthalpy(state1) + 0.5 * V1 * V1;
     //
-    auto Fvector = delegate(double rho2, double T2)
+    auto Fvector = delegate(number rho2, number T2)
     {
         // Constraint equations for state2 from the normal shock relations.
         // The correct post-shock values allow this vector to evaluate to zeros.
         state2.rho = rho2; state2.T = T2;
         gm.update_thermo_from_rhoT(state2);
         V2 = V1 * state1.rho / rho2; // mass conservation
-        double f1 = momentum - state2.p - state2.rho*V2*V2;
-        double f2 = total_enthalpy - gm.enthalpy(state2) - 0.5*V2*V2;
+        number f1 = momentum - state2.p - state2.rho*V2*V2;
+        number f2 = total_enthalpy - gm.enthalpy(state2) - 0.5*V2*V2;
         return [f1, f2];
     };
     // Augmented matrix for the linear equation coefficients.
-    Matrix!double Ab = new Matrix!double(2, 3);
-    double rho_delta = 1.0; double T_delta = 1.0;
+    Matrix!number Ab = new Matrix!number(2, 3);
+    number rho_delta = 1.0; number T_delta = 1.0;
     //
     // Update the estimates for rho,T using the Newton-Raphson method.
     //
@@ -129,18 +131,18 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
     // the requested tolerances.  If this happens, we just accept whatever final
     // iteration is computed.
     foreach (count; 0 .. 20) {
-        double rho_save = state2.rho;
-        double T_save = state2.T;
-        double[] f_save = Fvector(rho_save, T_save);
+        number rho_save = state2.rho;
+        number T_save = state2.T;
+        number[] f_save = Fvector(rho_save, T_save);
         // Use finite differences to compute the Jacobian.
-        double d_rho = rho_save * 0.01;
-        double d_T = T_save * 0.01;
-        double[] f_values = Fvector(rho_save + d_rho, T_save);
-        double df0drho = (f_values[0] - f_save[0]) / d_rho;
-        double df1drho = (f_values[1] - f_save[1]) / d_rho;
+        number d_rho = rho_save * 0.01;
+        number d_T = T_save * 0.01;
+        number[] f_values = Fvector(rho_save + d_rho, T_save);
+        number df0drho = (f_values[0] - f_save[0]) / d_rho;
+        number df1drho = (f_values[1] - f_save[1]) / d_rho;
         f_values = Fvector(rho_save, T_save + d_T);
-        double df0dT = (f_values[0] - f_save[0]) / d_T;
-        double df1dT = (f_values[1] - f_save[1]) / d_T;
+        number df0dT = (f_values[0] - f_save[0]) / d_T;
+        number df1dT = (f_values[1] - f_save[1]) / d_T;
         Ab[0,0] = df0drho; Ab[0,1] = df0dT; Ab[0,2] = -f_save[0];
         Ab[1,0] = df1drho; Ab[1,1] = df1dT; Ab[1,2] = -f_save[1];
         gaussJordanElimination(Ab);
@@ -163,7 +165,7 @@ double[] normal_shock(const(GasState) state1, double Vs, GasState state2,
 } // end normal_shock()
 
 
-double[] normal_shock_p2p1(const(GasState) state1, double p2p1,
+number[] normal_shock_p2p1(const(GasState) state1, number p2p1,
                            GasState state2, GasModel gm)
 /**
  * Computes post-shock conditions, using high-temperature gas properties
@@ -183,28 +185,28 @@ double[] normal_shock_p2p1(const(GasState) state1, double p2p1,
 {
     state2.copy_values_from(state1);
     // Initial guess via ideal gas relations.
-    double g = gm.gamma(state1);
-    double Ms = sqrt(1+(g+1)/2/g*(p2p1-1.0));
-    double V1ideal = Ms * state1.a;
-    double[] velocities;
+    number g = gm.gamma(state1);
+    number Ms = sqrt(1+(g+1)/2/g*(p2p1-1.0));
+    number V1ideal = Ms * state1.a;
+    number[] velocities;
     // Set up error function that will be zero when we have the correct shock speed.
-    auto error_in_p2p1 = delegate(double Vs) {
+    auto error_in_p2p1 = delegate(number Vs) {
         velocities = normal_shock(state1, Vs, state2, gm);
         return (state2.p/state1.p - p2p1)/p2p1;
     };
-    double vguess1 = V1ideal;
-    double vguess2 = 1.1 * V1ideal;
+    number vguess1 = V1ideal;
+    number vguess2 = 1.1 * V1ideal;
     if (bracket!error_in_p2p1(vguess1, vguess2) < 0) {
         throw new Exception("normal_shock_p2p1 could not bracket the shock velocity.");
     }
-    double V1 = solve!error_in_p2p1(vguess1, vguess2, 1.0e-6);
+    number V1 = solve!error_in_p2p1(vguess1, vguess2, 1.0e-6);
     velocities = normal_shock(state1, V1, state2, gm);
-    double V2 = velocities[0]; double Vg = velocities[1];
+    number V2 = velocities[0]; number Vg = velocities[1];
     return [V1, V2, Vg];
 } // end normal_shock_p2p1()
 
 
-double reflected_shock(const(GasState) state2, double Vg,
+number reflected_shock(const(GasState) state2, number Vg,
                        GasState state5, GasModel gm)
 /**
  * Computes state5 which has brought the gas to rest at the end of the shock tube.
@@ -219,35 +221,35 @@ double reflected_shock(const(GasState) state2, double Vg,
 {
     // As an initial guess, 
     // assume that we have a very strong shock in an ideal gas.
-    double gam = gm.gamma(state2);
-    double density_ratio = (gam+1.0)/(gam-1.0);
-    double Vr_a = Vg / density_ratio;
-    double[] velocities = normal_shock(state2, Vr_a+Vg, state5, gm);
-    double V5 = velocities[0]; 
+    number gam = gm.gamma(state2);
+    number density_ratio = (gam+1.0)/(gam-1.0);
+    number Vr_a = Vg / density_ratio;
+    number[] velocities = normal_shock(state2, Vr_a+Vg, state5, gm);
+    number V5 = velocities[0]; 
     // The objective function is the difference in speeds,
     // units are m/s.  A value of zero for this function means
     // that, as the shock propagates upstream with speed ur,
     // the processed test gas is left in the end of the tube
     // with a velocity of zero in the laboratory frame.
-    double f_a = V5 - Vr_a;
+    number f_a = V5 - Vr_a;
     //
     // Now, update this guess using the secant method.
     //
-    double Vr_b = 1.1 * Vr_a;
+    number Vr_b = 1.1 * Vr_a;
     velocities = normal_shock(state2, Vr_b+Vg, state5, gm); 
     V5 = velocities[0]; 
-    double f_b = V5 - Vr_b;
+    number f_b = V5 - Vr_b;
     if (abs(f_a) < abs(f_b)) {
         swap(f_a, f_b);
         swap(Vr_a, Vr_b);
     }
     int count = 0;
     while (abs(f_b) > 0.5 && count < 20) {
-        double slope = (f_b - f_a) / (Vr_b - Vr_a);
-        double Vr_c = Vr_b - f_b / slope;
+        number slope = (f_b - f_a) / (Vr_b - Vr_a);
+        number Vr_c = Vr_b - f_b / slope;
         velocities = normal_shock(state2, Vr_c+Vg, state5, gm);
         V5 = velocities[0];
-        double f_c = V5 - Vr_c;
+        number f_c = V5 - Vr_c;
         if (abs(f_c) < abs(f_b)) {
             Vr_b = Vr_c; f_b = f_c;
         } else {
@@ -265,7 +267,7 @@ double reflected_shock(const(GasState) state2, double Vg,
 } // end reflected_shock()
 
 
-double expand_from_stagnation(const(GasState) state0, double p_over_p0,
+number expand_from_stagnation(const(GasState) state0, number p_over_p0,
                               GasState state1, GasModel gm)
 /**
  * Given a stagnation condition state0, expand to a new pressure.
@@ -280,18 +282,18 @@ double expand_from_stagnation(const(GasState) state0, double p_over_p0,
 {
     state1.copy_values_from(state0);
     state1.p = state0.p * p_over_p0;
-    double s0 = gm.entropy(state0);
+    number s0 = gm.entropy(state0);
     gm.update_thermo_from_ps(state1, s0);
     // Matt McGilvray had a note about CEA giving bad entropy values
     // so we'll assert things are OK before proceeding.
     assert (abs(gm.entropy(state1) - s0)/abs(s0) < 0.001, "Bad entropy value.");
-    double static_enthalpy = gm.enthalpy(state1);
-    double total_enthalpy = gm.enthalpy(state0);
+    number static_enthalpy = gm.enthalpy(state1);
+    number total_enthalpy = gm.enthalpy(state0);
     // In case we are given a pressure-ratio of 1.0 and the noise in the
     // CEA calculations lead to a situation where the new static enthalpy
     // is just slightly larger than the total enthalpy value, we fall back
     // to a zero value for velocity.
-    double V = 0.0;
+    number V = 0.0;
     if (total_enthalpy > static_enthalpy) {
         V = sqrt(2.0*(total_enthalpy - static_enthalpy));
     }
@@ -299,7 +301,7 @@ double expand_from_stagnation(const(GasState) state0, double p_over_p0,
 } // end expand_from_stagnation()
 
 
-double expand_to_mach(const(GasState) state0, double mach,
+number expand_to_mach(const(GasState) state0, number mach,
                       GasState state1, GasModel gm)
 /**
  * Given a stagnation condition state0, expand to a given Mach number.
@@ -312,25 +314,26 @@ double expand_to_mach(const(GasState) state0, double mach,
  * Returns: the corresponding velocity (in m/s) of the expanded stream.
  */
 {
-    double total_enthalpy = gm.enthalpy(state0);
-    double s0 = gm.entropy(state0);
+    number total_enthalpy = gm.enthalpy(state0);
+    number s0 = gm.entropy(state0);
     state1.copy_values_from(state0);
-    double p_over_p0_guess1 = 1.0;
-    double p_over_p0_guess2 = 0.90;
+    number p_over_p0_guess1 = 1.0;
+    number p_over_p0_guess2 = 0.90;
     // [TODO] Could probably do better with ideal gas guess.
-    auto error_in_mach = delegate(double p_over_p0) {
-        double V = expand_from_stagnation(state0, p_over_p0, state1, gm);
-        double a = state1.a;
+    auto error_in_mach = delegate(number p_over_p0) {
+        number V = expand_from_stagnation(state0, p_over_p0, state1, gm);
+        number a = state1.a;
         return mach - V/a;
     };
-    if (bracket!error_in_mach(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6, 1.0) < 0) {
+    if (bracket!(error_in_mach, number)(p_over_p0_guess1, p_over_p0_guess2,
+                                        to!number(1.0e-6), to!number(1.0)) < 0) {
         throw new Exception("expand_to_mach() could not bracket the pressure ratio.");
     }
-    double p_over_p0 = solve!error_in_mach(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6);
+    number p_over_p0 = solve!(error_in_mach, number)(p_over_p0_guess1, p_over_p0_guess2, 1.0e-6);
     state1.p = state0.p * p_over_p0;
     gm.update_thermo_from_ps(state1, s0);
-    double static_enthalpy = gm.enthalpy(state1);
-    double V = 0.0;
+    number static_enthalpy = gm.enthalpy(state1);
+    number V = 0.0;
     if (total_enthalpy > static_enthalpy) {
         V = sqrt(2.0*(total_enthalpy - static_enthalpy));
     }
@@ -338,7 +341,7 @@ double expand_to_mach(const(GasState) state0, double mach,
 } // end expand_to_mach()
 
 
-void total_condition(const(GasState) state1, double V1, 
+void total_condition(const(GasState) state1, number V1, 
                      GasState state0, GasModel gm)
 /**
  * Given a free-stream condition and velocity,
@@ -352,28 +355,28 @@ void total_condition(const(GasState) state1, double V1,
  *   gm: gas model
  */
 {
-    double H1 = gm.enthalpy(state1) + 0.5*V1*V1;
-    double s1 = gm.entropy(state1);
+    number H1 = gm.enthalpy(state1) + 0.5*V1*V1;
+    number s1 = gm.entropy(state1);
     state0.copy_values_from(state1);
-    auto error_in_total_enthalpy = delegate(double x) {
+    auto error_in_total_enthalpy = delegate(number x) {
         // The enthalpy at the stagnation condition should match
         // the total enthalpy of the stream.
         state0.p = x * state1.p;
         gm.update_thermo_from_ps(state0, s1);
         return (H1 - gm.enthalpy(state0))/abs(H1);
     };
-    double x1 = 1.0; double x2 = 1.01;
+    number x1 = 1.0; number x2 = 1.01;
     // [TODO] could probably do better with an ideal gas guess
     if (bracket!error_in_total_enthalpy(x1, x2) < 0) {
         throw new Exception("total_condition() could not bracket the pressure ratio.");
     }
-    double x_total = solve!error_in_total_enthalpy(x1, x2, 1.0e-4);
+    number x_total = solve!error_in_total_enthalpy(x1, x2, 1.0e-4);
     state0.p = x_total * state1.p;
     gm.update_thermo_from_ps(state0, s1);
 } // end total_condition()
 
 
-void pitot_condition(const(GasState) state1, double V1, 
+void pitot_condition(const(GasState) state1, number V1, 
                      GasState state2pitot, GasModel gm)
 /**
  * Given a free-stream condition, compute the corresponding Pitot condition
@@ -389,8 +392,8 @@ void pitot_condition(const(GasState) state1, double V1,
     if (V1 > state1.a) {
         // Supersonic free-stream; process through a shock first.
         GasState state2 = new GasState(state1);
-        double[] velocities = normal_shock(state1, V1, state2, gm);
-        double V2 = velocities[0];
+        number[] velocities = normal_shock(state1, V1, state2, gm);
+        number V2 = velocities[0];
         total_condition(state2, V2, state2pitot, gm);
     } else {
         // Subsonic free-stream
@@ -399,7 +402,7 @@ void pitot_condition(const(GasState) state1, double V1,
 } // end pitot_condition()
 
 
-double steady_flow_with_area_change(const(GasState)state1, double V1, double A2_over_A1,
+number steady_flow_with_area_change(const(GasState)state1, number V1, number A2_over_A1,
                                     GasState state2, GasModel gm, double tol = 1.0e-4)
 /**
  * Given station 1 condition, velocity and area-ratio A2/A1,
@@ -417,19 +420,19 @@ double steady_flow_with_area_change(const(GasState)state1, double V1, double A2_
 {
     state2.copy_values_from(state1);
     gm.update_sound_speed(state2);
-    double M1 = abs(V1)/state2.a;
-    double V2 = V1;
+    number M1 = abs(V1)/state2.a;
+    number V2 = V1;
     if (abs(A2_over_A1 - 1.0) < 1.0e-6) { return V2; } // essentially no change
     //
     GasState total_cond = new GasState(state1);
     total_condition(state1, V1, total_cond, gm);
-    double p2p1_max = total_cond.p/state1.p;
-    double p2p1_min = 0.001;
+    number p2p1_max = total_cond.p/state1.p;
+    number p2p1_min = 0.001;
     // Establish a suitable bracket for the pressure ratio.
     // [TODO] When setting up the initial guess for pressure ratio,
     // we could probably do better with the ideal relation between M and A/Astar.
-    double p2p1_guess1;
-    double p2p1_guess2;
+    number p2p1_guess1;
+    number p2p1_guess2;
     if (M1 > 1.0) {
         if (A2_over_A1 > 1.0) {
             // For a supersonic expansion, we will see a drop in presure.
@@ -437,8 +440,8 @@ double steady_flow_with_area_change(const(GasState)state1, double V1, double A2_
             p2p1_guess2 = 1.0;
         } else {
             // For a supersonic compression, we will see a rise in pressure.
-            p2p1_guess1 = min(1.1, 1.0+0.1*(p2p1_max-1));
-            p2p1_guess2 = min(1.2, 1.0+0.9*(p2p1_max-1));
+            p2p1_guess1 = fmin(to!number(1.1), 1.0+0.1*(p2p1_max-1));
+            p2p1_guess2 = fmin(to!number(1.2), 1.0+0.9*(p2p1_max-1));
         }
     } else { // subsonic
         if (A2_over_A1 < 1.0) {
@@ -447,29 +450,29 @@ double steady_flow_with_area_change(const(GasState)state1, double V1, double A2_
             p2p1_guess2 = 1.0;
         } else {
             // Subsonic diffuser will decelerate to higher pressure.
-            p2p1_guess1 = min(1.1, 1.0+0.1*(p2p1_max-1));
-            p2p1_guess2 = min(1.2, 1.0+0.9*(p2p1_max-1));
+            p2p1_guess1 = fmin(to!number(1.1), 1.0+0.1*(p2p1_max-1));
+            p2p1_guess2 = fmin(to!number(1.2), 1.0+0.9*(p2p1_max-1));
         }
     }
     // Set up constraint data and the error-function to be given to the solver.
-    double H1 = gm.enthalpy(state1) + 0.5*V1*V1;
-    double mdot1 = state1.rho * V1; // assuming unit area at station 1
-    double s1 = gm.entropy(state1);
-    auto error_in_mass_flux = delegate(double p2p1) {
+    number H1 = gm.enthalpy(state1) + 0.5*V1*V1;
+    number mdot1 = state1.rho * V1; // assuming unit area at station 1
+    number s1 = gm.entropy(state1);
+    auto error_in_mass_flux = delegate(number p2p1) {
         // The mass flux should be the same at each station.
         state2.copy_values_from(state1);
         state2.p *= p2p1;
         gm.update_thermo_from_ps(state2, s1);
         V2 = sqrt(2*(H1 - gm.enthalpy(state2)));
-        double mdot2 = state2.rho * V2 * A2_over_A1;
-        double mdot_error = (mdot2 - mdot1)/abs(mdot1);
+        number mdot2 = state2.rho * V2 * A2_over_A1;
+        number mdot_error = (mdot2 - mdot1)/abs(mdot1);
         return mdot_error;
     };
-    if (bracket!error_in_mass_flux(p2p1_guess1, p2p1_guess2, p2p1_min, p2p1_max) < 0) {
+    if (bracket!(error_in_mass_flux,number)(p2p1_guess1, p2p1_guess2, p2p1_min, p2p1_max) < 0) {
         throw new Exception("steady_flow_with_area_change() could not bracket" ~
                             " the pressure ratio.");
     }
-    double p2p1 = solve!error_in_mass_flux(p2p1_guess1, p2p1_guess2, tol);
+    number p2p1 = solve!(error_in_mass_flux,number)(p2p1_guess1, p2p1_guess2, tol);
     state2.copy_values_from(state1);
     state2.p *= p2p1;
     gm.update_thermo_from_ps(state2, s1);
@@ -481,8 +484,8 @@ double steady_flow_with_area_change(const(GasState)state1, double V1, double A2_
 //------------------------------------------------------------------------
 // Finite-strength waves along characteristic lines.
 
-double finite_wave_dp(const(GasState) state1, double V1,
-                      string characteristic, double p2,
+number finite_wave_dp(const(GasState) state1, number V1,
+                      string characteristic, number p2,
                       GasState state2, GasModel gm, int steps=100)
 /**
  * Process the gas isentropically, following a characteristic line.
@@ -502,12 +505,12 @@ double finite_wave_dp(const(GasState) state1, double V1,
  * Returns: flow velocity after processing.
  */
 {
-    double V2 = V1;
-    double p1 = state1.p;
-    double s1 = gm.entropy(state1);
+    number V2 = V1;
+    number p1 = state1.p;
+    number s1 = gm.entropy(state1);
     //
-    double dV;
-    double dp = (p2 - state1.p)/steps;
+    number dV;
+    number dp = (p2 - state1.p)/steps;
     // Use more than the requested number of steps if p2 < dp, 
     // to prevent an overshoot into -ve pressure. (Chris James)
     while (p2 < abs(dp)) {
@@ -518,7 +521,7 @@ double finite_wave_dp(const(GasState) state1, double V1,
     gm.update_thermo_from_ps(state2, s1);        
     gm.update_sound_speed(state2);        
     foreach (i; 0 .. steps) {
-        double rhoa = state2.rho * state2.a;
+        number rhoa = state2.rho * state2.a;
         if (characteristic == "cminus") {
             dV = dp / rhoa;
         } else {
@@ -537,8 +540,8 @@ double finite_wave_dp(const(GasState) state1, double V1,
 } // end finite_wave_dp()
 
 
-double finite_wave_dv(const(GasState) state1, double V1,
-                      string characteristic, double V2_target,
+number finite_wave_dv(const(GasState) state1, number V1,
+                      string characteristic, number V2_target,
                       GasState state2, GasModel gm,
                       int steps=100, double Tmin=200.0)
 /**
@@ -565,14 +568,14 @@ double finite_wave_dv(const(GasState) state1, double V1,
  * Returns: flow velocity after processing.
  */
 {
-    double V2 = V1;
-    double dV = (V2_target - V1)/steps;
-    double s1 = gm.entropy(state1);
+    number V2 = V1;
+    number dV = (V2_target - V1)/steps;
+    number s1 = gm.entropy(state1);
     state2.copy_values_from(state1);
     gm.update_sound_speed(state2);
     foreach (i; 0 .. steps) {
-        double rhoa = state2.rho * state2.a;
-        double dp;
+        number rhoa = state2.rho * state2.a;
+        number dp;
         if (characteristic == "cminus") {
             dp = dV * rhoa;
         } else {
@@ -591,7 +594,7 @@ double finite_wave_dv(const(GasState) state1, double V1,
 //------------------------------------------------------------------------
 // Oblique shock relations
 
-double[] theta_oblique(const(GasState) state1, double V1, double beta,
+number[] theta_oblique(const(GasState) state1, number V1, number beta,
                        GasState state2, GasModel gm)
 /**
  * Compute the deflection angle and post-shock conditions given the shock wave angle.
@@ -608,23 +611,23 @@ double[] theta_oblique(const(GasState) state1, double V1, double beta,
  *   V2 is post-shock speed of gas in m/s
  */
 {
-    double V1_n = V1 * sin(beta);
-    double V_t = V1 * cos(beta);
+    number V1_n = V1 * sin(beta);
+    number V_t = V1 * cos(beta);
     state2.copy_values_from(state1);
     gm.update_sound_speed(state2);
-    double M1_n = V1 / state2.a; // normal Mach number coming into shock
+    number M1_n = V1 / state2.a; // normal Mach number coming into shock
     if (M1_n < 1.0) {
         throw new Exception(format("theta_oblique(): subsonic inflow M1_n=%e", M1_n));
     }
-    double[] velocities = normal_shock(state1, V1_n, state2, gm);
-    double V2_n = velocities[0]; double Vg_n = velocities[1]; 
-    double V2 = sqrt(V2_n * V2_n + V_t * V_t);
-    double theta = beta - atan2(V2_n, V_t);
+    number[] velocities = normal_shock(state1, V1_n, state2, gm);
+    number V2_n = velocities[0]; number Vg_n = velocities[1]; 
+    number V2 = sqrt(V2_n * V2_n + V_t * V_t);
+    number theta = beta - atan2(V2_n, V_t);
     return [theta, V2];
 } // end theta_oblique()
 
 
-double beta_oblique(const(GasState) state1, double V1, double theta,
+number beta_oblique(const(GasState) state1, number V1, number theta,
                     GasModel gm)
 /**
  * Compute the oblique shock wave angle given the deflection angle.
@@ -640,26 +643,26 @@ double beta_oblique(const(GasState) state1, double V1, double theta,
 {
     GasState state2 = new GasState(state1);
     gm.update_sound_speed(state2);
-    double M1 = V1 / state2.a;
-    double b1 = max(asin(1.0/M1), 1.1*theta);
-    double b2 = b1 * 1.05;
-    auto error_in_theta = delegate(double beta_guess) {
-        double[] shock_results = theta_oblique(state1, V1, beta_guess, state2, gm);
-        double theta_guess = shock_results[0]; double V2 = shock_results[1]; 
-        double error_value = theta_guess - theta;
+    number M1 = V1 / state2.a;
+    number b1 = max(asin(1.0/M1), 1.1*theta);
+    number b2 = b1 * 1.05;
+    auto error_in_theta = delegate(number beta_guess) {
+        number[] shock_results = theta_oblique(state1, V1, beta_guess, state2, gm);
+        number theta_guess = shock_results[0]; number V2 = shock_results[1]; 
+        number error_value = theta_guess - theta;
         return error_value;
     };
-    if (bracket!error_in_theta(b1, b2, asin(1.0/M1), PI/2) < 0) {
+    if (bracket!(error_in_theta,number)(b1, b2, to!number(asin(1.0/M1)), to!number(PI/2)) < 0) {
         throw new Exception("beta_oblique(): failed to converge on a shock-wave angle.");
     }
-    double beta_result = solve!error_in_theta(b1, b2, 1.0e-6);
+    number beta_result = solve!(error_in_theta,number)(b1, b2, 1.0e-6);
     return beta_result;
 }
 
 //------------------------------------------------------------------------
 // Taylor-Maccoll cone flow.
 
-double[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
+number[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
 /**
  * Compute equation-of-state derivatives at the specified state.
  *
@@ -670,34 +673,34 @@ double[2] EOS_derivatives(const(GasState) state_0, GasModel gm)
  * Returns: array of approximate derivatives [drho/dp, drho/du]
  */
 {
-    double rho_0 = state_0.rho;
+    number rho_0 = state_0.rho;
     // Choose relatively-small increments in energy (J/kg) and pressure (Pa).
-    double du = abs(state_0.u) * 0.01 + 1000.0;
-    double dp = state_0.p * 0.01 + 1000.0;
+    number du = abs(state_0.u) * 0.01 + 1000.0;
+    number dp = state_0.p * 0.01 + 1000.0;
     // We're actually going to work in changes of p and T.
     // The function name for Cv evaluation does look a bit odd,
     // in that the increment in internal energy with p constant
     // will not be constant volume.  However, what we really want
     // is the change in temperature for a change in internal energy.
-    double Cv = gm.dudT_const_v(state_0);
-    double dT = du/Cv;
+    number Cv = gm.dudT_const_v(state_0);
+    number dT = du/Cv;
     // Use finite-differences to get the partial derivative.
     GasState state_new = new GasState(state_0);
     state_new.p = state_0.p + dp;
     gm.update_thermo_from_pT(state_new);
-    double drhodp = (state_new.rho - rho_0) / dp;
+    number drhodp = (state_new.rho - rho_0) / dp;
     // and again, for the change in u, holding p constant.
     state_new.copy_values_from(state_0);
     state_new.p = state_0.p;
     state_new.T = state_0.T + dT;
     gm.update_thermo_from_pT(state_new);
-    double drhodu = (state_new.rho - rho_0) / du;
+    number drhodu = (state_new.rho - rho_0) / du;
     // Assume that these first-order differences will suffice.
     return [drhodp, drhodu];
 } // end EOS_derivatives()
 
 
-double[5] taylor_maccoll_odes(double[5] z, double theta,
+number[5] taylor_maccoll_odes(number[5] z, number theta,
                               const(GasState) gas_state, GasModel gm)
 {
     /**
@@ -707,24 +710,25 @@ double[5] taylor_maccoll_odes(double[5] z, double theta,
     We've packaged them formally so that we might one day use
     a more sophisticated ODE integrator requiring fewer steps.
     **/
-    double rho=z[0]; double V_r=z[1]; double V_theta=z[2];
-    double u=z[3]; double p=z[4];
+    number rho=z[0]; number V_r=z[1]; number V_theta=z[2];
+    number u=z[3]; number p=z[4];
     // Assume gas_state is current.
     // Assemble linear system for determining the derivatives wrt theta.
-    auto A = zeros!double(5,6); // Augmented matrix with rhs in last column.
-    double[2] derivs = EOS_derivatives(gas_state, gm);
-    double drhodp = derivs[0]; double drhodu = derivs[1];
+    auto A = zeros!number(5,6); // Augmented matrix with rhs in last column.
+    number[2] derivs = EOS_derivatives(gas_state, gm);
+    number drhodp = derivs[0]; number drhodu = derivs[1];
+    number one = 1.0;
     A[0,0] = V_theta; A[0,2] = rho; A[0,5] = -2.0*rho*V_r - rho*V_theta/tan(theta);
-    A[1,1] = 1.0; A[1,5] = V_theta;
-    A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = 1.0;
-    A[3,0] = -p/(rho^^2); A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = 1.0; A[3,4] = 1.0/rho;
-    A[4,0] = 1.0; A[4,3] = -drhodu; A[4,4] = -drhodp;
-    gaussJordanElimination!double(A);
-    double[5] dzdtheta =  A.getColumn(5);
+    A[1,1] = one; A[1,5] = V_theta;
+    A[2,1] = rho*V_r; A[2,2] = rho*V_theta; A[2,4] = one;
+    A[3,0] = -p/(rho^^2); A[3,1] = V_r; A[3,2] = V_theta; A[3,3] = one; A[3,4] = one/rho;
+    A[4,0] = one; A[4,3] = -drhodu; A[4,4] = -drhodp;
+    gaussJordanElimination!number(A);
+    number[5] dzdtheta =  A.getColumn(5);
     return dzdtheta;
 }
 
-double[2] theta_cone(const(GasState) state1, double V1, double beta,
+number[2] theta_cone(const(GasState) state1, number V1, number beta,
                      GasState state_c, GasModel gm)
 /**
  * Compute the cone-surface angle and conditions given the shock wave angle.
@@ -749,28 +753,29 @@ double[2] theta_cone(const(GasState) state1, double V1, double beta,
     //
     // Start at the point just downstream the oblique shock.
     GasState state2 = new GasState(state1);
-    double[] shock_results = theta_oblique(state1, V1, beta, state2, gm);
-    double theta_s = shock_results[0]; double V2 = shock_results[1];
+    number[] shock_results = theta_oblique(state1, V1, beta, state2, gm);
+    number theta_s = shock_results[0]; number V2 = shock_results[1];
     //
     // Initial conditions.
-    double dtheta = -0.5 * PI/180.0;  // fraction-of-a-degree steps
-    double theta = beta;
-    double V_r = V2 * cos(beta - theta_s);
-    double V_theta = -V2 * sin(beta - theta_s);
-    double rho = state2.rho; double u = state2.u; double p = state2.p;
+    number dtheta = -0.5 * PI/180.0;  // fraction-of-a-degree steps
+    number theta = beta;
+    number V_r = V2 * cos(beta - theta_s);
+    number V_theta = -V2 * sin(beta - theta_s);
+    number rho = state2.rho; number u = state2.u; number p = state2.p;
     //
     GasState gas_state = new GasState(state2);
     gas_state.rho = rho; gas_state.u = u;
     gm.update_thermo_from_rhou(gas_state);
     // For integrating across the shock layer, the state vector is:
-    double[5] z = [rho, V_r, V_theta, u, p];
-    double[5] z_old; double theta_old; double V_theta_old;
+    number[5] z = [rho, V_r, V_theta, u, p];
+    number[5] z_old; number theta_old; number V_theta_old;
     while (V_theta < 0.0) {
         // Keep a copy for linear interpolation at the end.
         z_old[] = z[]; theta_old = theta; V_theta_old = V_theta;
         // Do the update using a low-order method (Euler) for the moment.
-        double[5] dzdtheta = taylor_maccoll_odes(z, theta, gas_state, gm);
-        z[] += dtheta * dzdtheta[]; theta += dtheta;
+        number[5] dzdtheta = taylor_maccoll_odes(z, theta, gas_state, gm);
+        foreach (i; 0 .. z.length) { z[i] += dtheta * dzdtheta[i]; }
+        theta += dtheta;
         rho=z[0]; V_r=z[1]; V_theta=z[2]; u=z[3]; p=z[4];
         gas_state.rho = rho; gas_state.u = u;
         gm.update_thermo_from_rhou(gas_state);
@@ -778,10 +783,10 @@ double[2] theta_cone(const(GasState) state1, double V1, double beta,
     }
     // At this point, V_theta should have crossed zero so
     // we can linearly-interpolate the cone-surface conditions.
-    double frac = (0.0 - V_theta_old)/(V_theta - V_theta_old);
-    double[5] z_c;
-    z_c[] = z_old[]*(1.0-frac) + z[]*frac;
-    double theta_c = theta_old*(1.0-frac) + theta*frac;
+    number frac = (0.0 - V_theta_old)/(V_theta - V_theta_old);
+    number[5] z_c;
+    foreach (i; 0 .. z_c.length) { z_c[i] = z_old[i]*(1.0-frac) + z[i]*frac; }
+    number theta_c = theta_old*(1.0-frac) + theta*frac;
     // At the cone surface...
     rho=z_c[0]; V_r=z_c[1]; V_theta=z_c[2]; u=z_c[3]; p=z_c[4];
     state_c.rho = rho; state_c.u = u;
@@ -792,7 +797,7 @@ double[2] theta_cone(const(GasState) state1, double V1, double beta,
 } // end theta_cone()
 
 
-double beta_cone(const(GasState) state1, double V1, double theta, GasModel gm)
+number beta_cone(const(GasState) state1, number V1, number theta, GasModel gm)
 /**
  * Compute the conical shock wave angle given the cone-surface deflection angle.
  *
@@ -807,19 +812,19 @@ double beta_cone(const(GasState) state1, double V1, double theta, GasModel gm)
 {
     GasState state2 = new GasState(state1);
     gm.update_sound_speed(state2);
-    double M1 = V1 / state2.a;
-    double b1 = max(asin(1.0/M1), 1.1*theta); // to be stronger than a Mach wave
-    double b2 = b1 * 1.05;
-    auto error_in_theta = delegate(double beta_guess) {
-        double[2] shock_results = theta_cone(state1, V1, beta_guess, state2, gm);
-        double theta_guess = shock_results[0]; double V2 = shock_results[1]; 
-        double error_value = theta_guess - theta;
+    number M1 = V1 / state2.a;
+    number b1 = max(asin(1.0/M1), 1.1*theta); // to be stronger than a Mach wave
+    number b2 = b1 * 1.05;
+    auto error_in_theta = delegate(number beta_guess) {
+        number[2] shock_results = theta_cone(state1, V1, beta_guess, state2, gm);
+        number theta_guess = shock_results[0]; number V2 = shock_results[1]; 
+        number error_value = theta_guess - theta;
         return error_value;
     };
-    if (bracket!error_in_theta(b1, b2, asin(1.0/M1), PI/2) < 0) {
+    if (bracket!(error_in_theta,number)(b1, b2, to!number(asin(1.0/M1)), to!number(PI/2)) < 0) {
         throw new Exception("beta_cone(): failed to converge on a shock-wave angle.");
     }
-    double beta_result = solve!error_in_theta(b1, b2, 1.0e-6);
+    number beta_result = solve!(error_in_theta,number)(b1, b2, 1.0e-6);
     return beta_result;
 } // end beta_cone()
 

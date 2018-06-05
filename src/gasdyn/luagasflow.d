@@ -11,6 +11,8 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.algorithm;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import gas;
@@ -51,7 +53,7 @@ extern(C) int gasflow_normal_shock(lua_State* L)
         string errMsg = "Expected a number for Vs";
         luaL_error(L, errMsg.toStringz);
     }
-    double Vs = to!double(luaL_checknumber(L, 2));
+    number Vs = to!number(luaL_checknumber(L, 2));
     double rho_tol=1.0e-6; // default value
     if (lua_isnumber(L, 3)) {
         rho_tol = to!double(luaL_checknumber(L, 3));
@@ -61,7 +63,7 @@ extern(C) int gasflow_normal_shock(lua_State* L)
         T_tol = to!double(luaL_checknumber(L, 4));
     }
     //
-    double[] vel_results = normal_shock(state1, Vs, state2, gm, rho_tol, T_tol);
+    number[] vel_results = normal_shock(state1, Vs, state2, gm, rho_tol, T_tol);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state2, gm);
@@ -97,9 +99,9 @@ extern(C) int gasflow_normal_shock_p2p1(lua_State* L)
         string errMsg = "Expected a number for p2p1";
         luaL_error(L, errMsg.toStringz);
     }
-    double p2p1 = to!double(luaL_checknumber(L, 2));
+    number p2p1 = to!number(luaL_checknumber(L, 2));
     //
-    double[] vel_results = normal_shock_p2p1(state1, p2p1, state2, gm);
+    number[] vel_results = normal_shock_p2p1(state1, p2p1, state2, gm);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     lua_pushnumber(L, vel_results[0]); // V1
@@ -134,9 +136,9 @@ extern(C) int gasflow_reflected_shock(lua_State* L)
         string errMsg = "Expected a number for Vg";
         luaL_error(L, errMsg.toStringz);
     }
-    double Vg = to!double(luaL_checknumber(L, 2));
+    number Vg = to!number(luaL_checknumber(L, 2));
     //
-    double Vr = reflected_shock(state2, Vg, state5, gm);
+    number Vr = reflected_shock(state2, Vg, state5, gm);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state5, gm);
@@ -170,9 +172,9 @@ extern(C) int gasflow_expand_from_stagnation(lua_State* L)
         string errMsg = "Expected a number for p_over_p0";
         luaL_error(L, errMsg.toStringz);
     }
-    double p_over_p0 = to!double(luaL_checknumber(L, 2));
+    number p_over_p0 = to!number(luaL_checknumber(L, 2));
     //
-    double V = expand_from_stagnation(state0, p_over_p0, state1, gm);
+    number V = expand_from_stagnation(state0, p_over_p0, state1, gm);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state1, gm);
@@ -206,9 +208,9 @@ extern(C) int gasflow_expand_to_mach(lua_State* L)
         string errMsg = "Expected a number for mach";
         luaL_error(L, errMsg.toStringz);
     }
-    double mach = to!double(luaL_checknumber(L, 2));
+    number mach = to!number(luaL_checknumber(L, 2));
     //
-    double V = expand_to_mach(state0, mach, state1, gm);
+    number V = expand_to_mach(state0, mach, state1, gm);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state1, gm);
@@ -241,7 +243,7 @@ extern(C) int gasflow_total_condition(lua_State* L)
         string errMsg = "Expected a number for V1";
         luaL_error(L, errMsg.toStringz);
     }
-    double V1 = to!double(luaL_checknumber(L, 2));
+    number V1 = to!number(luaL_checknumber(L, 2));
     //
     total_condition(state1, V1, state0, gm);
     //
@@ -275,7 +277,7 @@ extern(C) int gasflow_pitot_condition(lua_State* L)
         string errMsg = "Expected a number for V1";
         luaL_error(L, errMsg.toStringz);
     }
-    double V1 = to!double(luaL_checknumber(L, 2));
+    number V1 = to!number(luaL_checknumber(L, 2));
     //
     pitot_condition(state1, V1, state2pitot, gm);
     //
@@ -312,18 +314,18 @@ extern(C) int gasflow_steady_flow_with_area_change(lua_State* L)
         string errMsg = "Expected a number for V1";
         luaL_error(L, errMsg.toStringz);
     }
-    double V1 = to!double(luaL_checknumber(L, 2));
+    number V1 = to!number(luaL_checknumber(L, 2));
     if (!lua_isnumber(L, 3)) {
         string errMsg = "Expected a number for A2_over_A1";
         luaL_error(L, errMsg.toStringz);
     }
-    double A2_over_A1 = to!double(luaL_checknumber(L, 3));
+    number A2_over_A1 = to!number(luaL_checknumber(L, 3));
     double tol=1.0e-4; // default value
     if (lua_isnumber(L, 4)) {
         tol = to!double(luaL_checknumber(L, 4));
     }
     //
-    double V2 = steady_flow_with_area_change(state1, V1, A2_over_A1, state2, gm, tol);
+    number V2 = steady_flow_with_area_change(state1, V1, A2_over_A1, state2, gm, tol);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state2, gm);
@@ -360,7 +362,7 @@ extern(C) int gasflow_finite_wave_dp(lua_State* L)
         string errMsg = "Expected a number for V1";
         luaL_error(L, errMsg.toStringz);
     }
-    double V1 = to!double(luaL_checknumber(L, 2));
+    number V1 = to!number(luaL_checknumber(L, 2));
     if (!lua_isstring(L, 3)) {
         string errMsg = "Expected a string for characteristic";
         luaL_error(L, errMsg.toStringz);
@@ -370,13 +372,13 @@ extern(C) int gasflow_finite_wave_dp(lua_State* L)
         string errMsg = "Expected a number for p2";
         luaL_error(L, errMsg.toStringz);
     }
-    double p2 = to!double(luaL_checknumber(L, 4));
+    number p2 = to!number(luaL_checknumber(L, 4));
     int steps = 100; // default value
     if (lua_isnumber(L, 5)) {
         steps = to!int(luaL_checkint(L, 5));
     }
     //
-    double V2 = finite_wave_dp(state1, V1, characteristic, p2, state2, gm, steps);
+    number V2 = finite_wave_dp(state1, V1, characteristic, p2, state2, gm, steps);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state2, gm);
@@ -415,7 +417,7 @@ extern(C) int gasflow_finite_wave_dv(lua_State* L)
         string errMsg = "Expected a number for V1";
         luaL_error(L, errMsg.toStringz);
     }
-    double V1 = to!double(luaL_checknumber(L, 2));
+    number V1 = to!number(luaL_checknumber(L, 2));
     if (!lua_isstring(L, 3)) {
         string errMsg = "Expected a string for characteristic";
         luaL_error(L, errMsg.toStringz);
@@ -425,7 +427,7 @@ extern(C) int gasflow_finite_wave_dv(lua_State* L)
         string errMsg = "Expected a number for V2_target";
         luaL_error(L, errMsg.toStringz);
     }
-    double V2_target = to!double(luaL_checknumber(L, 4));
+    number V2_target = to!number(luaL_checknumber(L, 4));
     int steps = 100; // default value
     if (lua_isnumber(L, 5)) {
         steps = to!int(luaL_checkint(L, 5));
@@ -435,7 +437,7 @@ extern(C) int gasflow_finite_wave_dv(lua_State* L)
         Tmin = to!double(luaL_checknumber(L, 6));
     }
     //
-    double V2 = finite_wave_dv(state1, V1, characteristic, V2_target,
+    number V2 = finite_wave_dv(state1, V1, characteristic, V2_target,
                                state2, gm, steps, Tmin);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
@@ -472,14 +474,14 @@ extern(C) int gasflow_theta_oblique(lua_State* L)
         string errMsg = "Expected a number for V1";
         luaL_error(L, errMsg.toStringz);
     }
-    double V1 = to!double(luaL_checknumber(L, 2));
+    number V1 = to!number(luaL_checknumber(L, 2));
     if (!lua_isnumber(L, 3)) {
         string errMsg = "Expected a number for beta";
         luaL_error(L, errMsg.toStringz);
     }
-    double beta = to!double(luaL_checknumber(L, 3));
+    number beta = to!number(luaL_checknumber(L, 3));
     //
-    double[] results = theta_oblique(state1, V1, beta, state2, gm);
+    number[] results = theta_oblique(state1, V1, beta, state2, gm);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     pushNewGasTable(L, state2, gm);
@@ -514,14 +516,14 @@ extern(C) int gasflow_beta_oblique(lua_State* L)
         string errMsg = "Expected a number for V1";
         luaL_error(L, errMsg.toStringz);
     }
-    double V1 = to!double(luaL_checknumber(L, 2));
+    number V1 = to!number(luaL_checknumber(L, 2));
     if (!lua_isnumber(L, 3)) {
         string errMsg = "Expected a number for theta";
         luaL_error(L, errMsg.toStringz);
     }
-    double theta = to!double(luaL_checknumber(L, 3));
+    number theta = to!number(luaL_checknumber(L, 3));
     //
-    double beta = beta_oblique(state1, V1, theta, gm);
+    number beta = beta_oblique(state1, V1, theta, gm);
     //
     lua_settop(L, 0); // clear the stack, in preparation for pushing results
     lua_pushnumber(L, beta);
