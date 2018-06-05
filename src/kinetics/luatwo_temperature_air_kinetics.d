@@ -8,6 +8,8 @@ module kinetics.luatwo_temperature_air_kinetics;
 import std.stdio;
 import std.conv;
 import std.string;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import util.lua_service;
@@ -94,7 +96,7 @@ extern(C) int updateTwoTempAirState(lua_State *L)
    
     // We need a dummy array of empty extra params
     // for the function signature
-    double[] params;
+    number[] params;
 
     try {
         twoTempAirKinetics(Q, tInterval, dtChemSuggest, dtThermSuggest, params);

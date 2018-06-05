@@ -8,6 +8,8 @@ module kinetics.luachemistry_update;
 import std.stdio;
 import std.conv;
 import std.string;
+import nm.complex;
+import nm.number;
 import util.lua;
 import util.lua_service;
 import gas;
@@ -101,7 +103,7 @@ extern(C) int updateState(lua_State* L)
     // Arg 4 is dtSuggest
     double dtChemSuggest = luaL_checknumber(L, 4);
     // Extra parameters are not considered, presently. PJ 2017-04-22
-    double[] params;
+    number[] params;
 
     try {
         double dummyDouble;

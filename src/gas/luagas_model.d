@@ -16,6 +16,7 @@ import std.string;
 import util.lua;
 import util.lua_service;
 import nm.complex;
+import nm.number;
 
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
@@ -229,7 +230,7 @@ extern(C) int thermoPS(lua_State* L)
         errMsg ~= "\nBailing out\n";
         throw new Error(errMsg);
     }
-    auto s = lua_tonumber(L, 3);
+    number s = lua_tonumber(L, 3);
     gm.update_thermo_from_ps(Q, s);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
@@ -240,8 +241,8 @@ extern(C) int thermoHS(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    auto h = lua_tonumber(L, 3);
-    auto s = lua_tonumber(L, 4);
+    number h = lua_tonumber(L, 3);
+    number s = lua_tonumber(L, 4);
     gm.update_thermo_from_hs(Q, h, s);
     setGasStateInTable(L, gm, 2, Q);
     return 0;
@@ -346,12 +347,11 @@ extern(C) int enthalpy(lua_State* L)
     }
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
-    double h;
+    number h;
     if ( narg >= 3 ) { // Call species-specific version
         int isp = luaL_checkint(L, 3);
         h = gm.enthalpy(Q, isp);
-    }
-    else { // Call total gas mix version
+    } else { // Call total gas mix version
         h = gm.enthalpy(Q);
     }
     lua_pushnumber(L, h);
@@ -374,12 +374,11 @@ extern(C) int entropy(lua_State* L)
     }
     if (cast(CEAGas) gm !is null) { gm.update_thermo_from_pT(Q); }
     int narg = lua_gettop(L);
-    double s;
+    number s;
     if ( narg >= 3 ) { // Call species-specific version
         int isp = luaL_checkint(L, 3);
         s = gm.entropy(Q, isp);
-    }
-    else {
+    } else {
         s = gm.entropy(Q);
     }
     lua_pushnumber(L, s);
@@ -401,7 +400,7 @@ extern(C) int gibbsFreeEnergy(lua_State* L)
         throw new Error(errMsg);
     }
     int narg = lua_gettop(L);
-    double G;
+    number G;
     int isp = luaL_checkint(L, 3);
     G = gm.gibbs_free_energy(Q, isp);
     lua_pushnumber(L, G);
@@ -500,7 +499,7 @@ extern(C) int massf2molef(lua_State* L)
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
     getGasStateFromTable(L, gm, 2, Q);
-    double[] molef; molef.length = gm.n_species;
+    number[] molef; molef.length = gm.n_species;
     gm.massf2molef(Q, molef);
     // Place molef in an array and leave at at
     // top-of-stack as a return to the caller.
@@ -516,12 +515,11 @@ extern(C) int molef2massf(lua_State* L)
 {
     int narg = lua_gettop(L);
     auto gm = checkGasModel(L, 1);
-    double[] molef;
+    number[] molef;
     molef.length = gm.n_species;
     if ( lua_istable(L, 2) ) {
         getSpeciesValsFromTable(L, gm, 2, molef, "molef");
-    }
-    else {
+    } else {
         string errMsg = "Error in call to molef2massf():\n";
         errMsg ~= "The value for 'molef' is not a table of key-val pairs.\n";
         lua_pop(L, 1);
@@ -559,14 +557,13 @@ extern(C) int massf2conc(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
     auto Q = new GasState(gm);
-    double[] conc; conc.length = gm.n_species;
+    number[] conc; conc.length = gm.n_species;
     int nargs = lua_gettop(L);
     if ( nargs == 2 ) { // Support for option 1.
         getGasStateFromTable(L, gm, 2, Q);
-    }
-    else {
-        double rho = luaL_checknumber(L, 2);
-        double[] massf; massf.length = gm.n_species;
+    } else {
+        number rho = luaL_checknumber(L, 2);
+        number[] massf; massf.length = gm.n_species;
         getSpeciesValsFromTable(L, gm, 3, massf, "massf");
         Q.rho = rho;
         Q.massf[] = massf[];
@@ -585,12 +582,11 @@ extern(C) int massf2conc(lua_State* L)
 extern(C) int conc2massf(lua_State* L)
 {
     auto gm = checkGasModel(L, 1);
-    double[] conc;
+    number[] conc;
     conc.length = gm.n_species();
     if ( lua_istable(L, 2) ) {
         getSpeciesValsFromTable(L, gm, 2, conc, "conc");
-    }
-    else {
+    } else {
         string errMsg = "Error in call to conc2massf():\n";
         errMsg ~= "The value for 'conc' is not a table of key-val pairs.\n";
         lua_pop(L, 1);
@@ -629,20 +625,19 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
     // 2. Now set all values to 0.0
     //    (then we'll correct that in the next step)
     //    [Or to 1.0 in the case of a n_species = 1]
-    if ( gm.n_species() == 1 )
+    if ( gm.n_species() == 1 ) {
         vals[0] = 1.0;
-    else 
+    } else {
         vals[] = 0.0;
+    }
     // 3. Now find those values that we have explicitly set
     foreach (isp; 0 .. gm.n_species()) {
         lua_getfield(L, -1, toStringz(gm.species_name(isp)));
         if ( lua_isnumber(L, -1) ) {
             vals[isp] = lua_tonumber(L, -1);
-        }
-        else if ( lua_isnil(L, -1) ) {
+        } else if ( lua_isnil(L, -1) ) {
             vals[isp] = 0.0;
-        }
-        else {
+        } else {
             string errMsg = format("The value for species '%s' in the %s table is not a number.\n", gm.species_name(isp), tabName);
             lua_pop(L, 1);
             throw new LuaInputException(errMsg);
@@ -660,7 +655,7 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
     foreach (i, v; dvals) { vals[i] = Complex!double(v, 0.0); }
 } // end getSpeciesValsFromTable()
 
-void checkAndScaleMassFractions(double[] massf, double tol)
+void checkAndScaleMassFractions(number[] massf, double tol)
 {
     auto massfSum = sum(massf);
     if ( fabs(massfSum - 1.0) > tol ) {
@@ -696,9 +691,8 @@ GasState makeNewGasState(GasModel gm)
     // take care with setting mass fraction values.
     if ( gm.n_species == 1 ) {
         Q.massf[0] = 1.0;
-    }
-    else {
-        Q.massf[] = 0.0;
+    } else {
+        foreach (ref mf; Q.massf) { mf = 0.0; }
     }
     return Q;
 }
@@ -727,11 +721,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "rho");
     if ( lua_isnumber(L, -1) ) {
         Q.rho = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'rho' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -741,11 +733,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "p");
     if ( lua_isnumber(L, -1) ) {
         Q.p = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'p' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -755,11 +745,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "T");
     if ( lua_isnumber(L, -1) ) {
         Q.T = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'T' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -769,11 +757,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "p_e");
     if ( lua_isnumber(L, -1) ) {
         Q.p_e = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'p_e' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -783,11 +769,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "a");
     if ( lua_isnumber(L, -1) ) {
         Q.a = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'a' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -797,11 +781,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "u");
     if ( lua_isnumber(L, -1) ) {
         Q.u = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'u' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -812,7 +794,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     if ( lua_istable(L, -1) ) {
         auto n = to!int(lua_objlen(L, -1));
         if ( n != Q.u_modes.length ) {
-            string errMsg = format("Wrong number of internal energy values in GasState table.\n Expected: %d, Given: %d\n", Q.u_modes.length, n);
+            string errMsg = format("Wrong number of internal energy values " ~
+                                   "in GasState table.\n Expected: %d, Given: %d\n",
+                                   Q.u_modes.length, n);
             lua_pop(L, 1);
             throw new Error(errMsg);
         }
@@ -820,19 +804,16 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
             lua_rawgeti(L, -1, i);
             if ( lua_isnumber(L, -1) ) {
                 Q.u_modes[i-1] = lua_tonumber(L, -1);
-            }
-            else {
+            } else {
                 string errMsg = format("The value for 'u_modes[%d]' is not a number.\n", i);
                 lua_pop(L, 1);
                 throw new Error(errMsg);
             }
             lua_pop(L, 1);
         }
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'u_modes' is not an array of numbers.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -843,7 +824,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     if ( lua_istable(L, -1) ) {
         auto n = to!int(lua_objlen(L, -1));
         if ( n != Q.T_modes.length ) {
-            string errMsg = format("Wrong number of internal temperature values in GasState table.\n Expected: %d, Given: %d\n", Q.T_modes.length, n);
+            string errMsg = format("Wrong number of internal temperature values " ~
+                                   " in GasState table.\n Expected: %d, Given: %d\n",
+                                   Q.T_modes.length, n);
             lua_pop(L, 1);
             throw new Error(errMsg);
         }
@@ -851,19 +834,16 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
             lua_rawgeti(L, -1, i);
             if ( lua_isnumber(L, -1) ) {
                 Q.T_modes[i-1] = lua_tonumber(L, -1);
-            }
-            else {
+            } else {
                 string errMsg = format("The value for 'T_modes[%d]' is not a number.\n", i);
                 lua_pop(L, 1);
                 throw new Error(errMsg);
             }
             lua_pop(L, 1);
         }
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'T_modes' is not an array of numbers.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -873,11 +853,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "mu");
     if ( lua_isnumber(L, -1) ) {
         Q.mu = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'mu' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -887,11 +865,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "k");
     if ( lua_isnumber(L, -1) ) {
         Q.k = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'k' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -902,7 +878,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     if ( lua_istable(L, -1) ) {
         auto n = to!int(lua_objlen(L, -1));
         if ( n != Q.k_modes.length ) {
-            string errMsg = format("Wrong number of internal thermal conductivity values in GasState table.\n Expected: %d, Given: %d\n", Q.k_modes.length, n);
+            string errMsg = format("Wrong number of internal thermal conductivity values " ~
+                                   "in GasState table.\n Expected: %d, Given: %d\n",
+                                   Q.k_modes.length, n);
             lua_pop(L, 1);
             throw new Error(errMsg);
         }
@@ -910,19 +888,16 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
             lua_rawgeti(L, -1, i);
             if ( lua_isnumber(L, -1) ) {
                 Q.k_modes[i-1] = lua_tonumber(L, -1);
-            }
-            else {
+            } else {
                 string errMsg = format("The value for 'k_modes[%d]' is not a number.\n", i);
                 lua_pop(L, 1);
                 throw new Error(errMsg);
             }
             lua_pop(L, 1);
         }
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'k_modes' is not an array of numbers.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -932,11 +907,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "sigma");
     if ( lua_isnumber(L, -1) ) {
         Q.sigma = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'sigma' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -948,11 +921,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
         int massfIdx = lua_gettop(L);
         getSpeciesValsFromTable(L, gm, massfIdx, Q.massf, "massf");
         checkAndScaleMassFractions(Q.massf, MASSF_ERROR_TOL);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'massf' is not a table of key-val pairs.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
@@ -962,11 +933,9 @@ void getGasStateFromTable(lua_State* L, GasModel gm, int idx, GasState Q)
     lua_getfield(L, idx, "quality");
     if ( lua_isnumber(L, -1) ) {
         Q.quality = lua_tonumber(L, -1);
-    }
-    else if ( lua_isnil(L, -1) ) {
+    } else if ( lua_isnil(L, -1) ) {
         // leave untouched
-    }
-    else {
+    } else {
         string errMsg = "The value for 'quality' is not a number.\n";
         lua_pop(L, 1);
         throw new Error(errMsg);
