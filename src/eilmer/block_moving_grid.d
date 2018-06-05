@@ -7,6 +7,8 @@ module block_moving_grid;
 import std.conv;
 import std.stdio;
 import std.math;
+import nm.complex;
+import nm.number;
 import std.json;
 import util.lua;
 import util.lua_service;
@@ -80,7 +82,7 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
                 // this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
                 // We choose to set the y and z directions to 0, but take an averaged value for the
                 // x-direction so as to not force the grid to be stationary, defeating the moving grid's purpose.
-                IFace.gvel.set(averaged_ivel.x, 0.0, 0.0);
+                IFace.gvel.set(averaged_ivel.x, to!number(0.0), to!number(0.0));
             }
             averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);           
             IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
@@ -93,7 +95,7 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
         FVVertex vtx0, vtx1, vtx2, vtx3;
         Vector3 p0, p1, p2, p3, p4, p5, p6, p7;
         Vector3 centroid_hex, sub_centroid;
-        double volume, sub_volume, temp2;
+        number volume, sub_volume, temp2;
         // loop over i-interfaces and compute interface velocity wif'.
         for (k = blk.kmin; k <= blk.kmax; ++k) {
             for (j = blk.jmin; j <= blk.jmax; ++j) {
@@ -272,9 +274,9 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     FVInterface iface_neighbour;
     FVCell cell_toprght, cell_botrght, cell, top_cell_R1, top_cell_R2, bot_cell_R1, bot_cell_R2, cell_R1, cell_R2;
     Vector3 temp_vel, unit_d, u_lft, u_rght, ns, tav; 
-    double rho, shock_detect, temp1, temp2, ws1, ws2, rho_lft, rho_rght,  p_lft, p_rght, M, rho_recon_top, rho_recon_bottom;
+    number rho, shock_detect, temp1, temp2, ws1, ws2, rho_lft, rho_rght, p_lft, p_rght, M, rho_recon_top, rho_recon_bottom;
     Vector3[4] interface_ws;
-    double[4] w;
+    number[4] w;
     int interpolation_order = blk.myConfig.shock_fitting_interpolation_order;
     immutable double SHOCK_DETECT_THRESHOLD =  0.2;
     immutable double VTX_VEL_SCALING_FACTOR = blk.myConfig.shock_fitting_scale_factor;
@@ -295,7 +297,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
     // inflow is a reference to a duplicated flow state, it should be treated as read-only (do not alter)
     auto constFluxEffect = cast(BFE_ConstFlux) blk.bc[Face.west].postConvFluxAction[0];
     auto inflow = constFluxEffect.fstate;
-    double U_plus_a = geom.abs(inflow.vel) + inflow.gas.a; // inflow gas wave speed
+    number U_plus_a = geom.abs(inflow.vel) + inflow.gas.a; // inflow gas wave speed
     // #####-------------------------- SHOCK SEARCH --------------------------##### //
     // First update all the WEST boundary vertex velocities
     for ( size_t k = blk.kmin; k <= krangemax; ++k ) {
@@ -386,7 +388,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
             }
             shock_detect = abs(inflow.gas.rho - rho)/fmax(inflow.gas.rho, rho);
             if (shock_detect < SHOCK_DETECT_THRESHOLD) { // no shock across boundary set vertex velocity to wave speed (u+a)
-                temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), 0.0);
+                temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), to!number(0.0));
             }
             else { // shock detected across boundary
                 // loop over cells which neighbour current vertex and calculate wave speed at interfaces
@@ -453,7 +455,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                     }
                     ns =  cell.iface[Face.west].n;      // normal to the shock front (taken to be WEST face normal of right cell)
                     ws1 = (rho_lft*dot(u_lft, ns) - rho_rght*dot(u_rght, ns))/(rho_lft - rho_rght);
-                    temp1 = sgn(p_rght - p_lft)/rho_lft; // just need the sign of p_rght - p_lft
+                    temp1 = sgn(p_rght.re - p_lft.re)/rho_lft; // just need the sign of p_rght - p_lft
                     temp2 =  sqrt(abs((p_rght - p_lft)/(1/rho_lft - 1/rho_rght)));
                     ws2 = dot(u_lft, ns) - temp1 * temp2;
                     interface_ws[jOffSet] = (0.5*ws1 + (1-0.5)*ws2)*ns;
@@ -486,7 +488,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                 temp_vel =  (w[0] * interface_ws[0] + w[1] * interface_ws[1]) / (w[0] + w[1] );
                 if (geom.abs(temp_vel) > U_plus_a) {
                     // safety catch: if an extreme velocity has been assigned let's just limit vel to  u+a
-                    temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), 0.0);
+                    temp_vel.set(inflow.vel.x + inflow.gas.a, -1.0*(inflow.vel.y+inflow.gas.a), to!number(0.0));
                 }
                 
             }
@@ -500,7 +502,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
         for ( size_t j = blk.jmin; j <= blk.jmax+1; ++j ) {
             Vector3 vel_max = blk.get_vtx(blk.imin, j, k).vel[0];
             // Set up a linear weighting on fraction of distance from east boundary back to west boundary.
-            double[300] distance;
+            number[300] distance;
             assert(300 > blk.imax+1, "my distance array is not big enough");
             distance[blk.imax+1] = 0.0;
             for (size_t i = blk.imax; i >= blk.imin; --i) {
@@ -509,7 +511,7 @@ void shock_fitting_vertex_velocities(SFluidBlock blk, int step, double sim_time)
                 Vector3 delta = vtx.pos[0] - vtx_right.pos[0];
                 distance[i] = geom.abs(delta) + distance[i+1];
             }
-            double west_distance = distance[blk.imin];
+            number west_distance = distance[blk.imin];
             for (size_t i = blk.imax; i >= blk.imin; --i) {
                 distance[i] /= west_distance;
             }
@@ -548,26 +550,26 @@ Vector3 weighting_function(Vector3 vel_max, size_t imax, size_t i) {
     return vel;
 }
 
-double scalar_reconstruction(double x1, double x2, double x3, double h1, double h2, double h3, double g1) {
+number scalar_reconstruction(number x1, number x2, number x3, number h1, number h2, number h3, number g1) {
     bool johnston_reconstruction = false;
     double eps = 1.0e-12;
-    double reconstructed_value;
+    number reconstructed_value;
     if (johnston_reconstruction) {
         // This is a special one sided reconstruction presented in Ian Johnston's thesis. 
-        double delta_theta = 2*(x2-x1)/(h1+h2);
-        double delta_cross = 2*(x3-x2)/(h2+h3);
-        double kappa = 0.0; // blending parameter
-        double s = (2*(delta_cross)*(delta_theta)+eps)/((delta_cross)*(delta_cross)+(delta_theta)*(delta_theta)+eps);
-        double delta_1 = s/2 * ((1-s*kappa)*delta_cross + (1+s*kappa)*delta_theta);
+        number delta_theta = 2*(x2-x1)/(h1+h2);
+        number delta_cross = 2*(x3-x2)/(h2+h3);
+        number kappa = 0.0; // blending parameter
+        number s = (2*(delta_cross)*(delta_theta)+eps)/((delta_cross)*(delta_cross)+(delta_theta)*(delta_theta)+eps);
+        number delta_1 = s/2 * ((1-s*kappa)*delta_cross + (1+s*kappa)*delta_theta);
         reconstructed_value =  x1 - (delta_1 * 0.5*h1);
     }
     else {
         // linear one-sided reconstruction function 
-        double delta = 2.0*(x2-x1)/(h1+h2);
-        double r = (x1-g1+eps)/(x2-x1+eps);
-        //double phi = (r*r + r)/(r*r+1); // van albada 1
-        //double phi = (2*r)/(r*r+1);        // van albada 2
-        double phi = (r + abs(r))/(1+abs(r));   // van leer
+        number delta = 2.0*(x2-x1)/(h1+h2);
+        number r = (x1-g1+eps)/(x2-x1+eps);
+        //number phi = (r*r + r)/(r*r+1); // van albada 1
+        //number phi = (2*r)/(r*r+1);        // van albada 2
+        number phi = (r + abs(r))/(1+abs(r));   // van leer
         reconstructed_value =  x1 - phi*(delta * 0.5*h1);
     }
     return reconstructed_value;

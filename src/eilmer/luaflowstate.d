@@ -18,6 +18,9 @@ import std.traits;
 import gzip;
 import util.lua;
 import util.lua_service;
+import nm.complex;
+import nm.number;
+
 import gas;
 import gas.luagas_model;
 import flowstate;
@@ -256,38 +259,38 @@ The value should be a number.`;
 
 string pushGasVar(string var)
 {
-    return `lua_pushnumber(L, fs.gas.` ~ var ~ `);
+    return `lua_pushnumber(L, fs.gas.` ~ var ~ `.re);
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
 
 string pushGasVar(string var_in_D, string var_in_Lua)
 {
-    return `lua_pushnumber(L, fs.gas.` ~ var_in_D ~ `);
+    return `lua_pushnumber(L, fs.gas.` ~ var_in_D ~ `.re);
 lua_setfield(L, tblIdx, "` ~ var_in_Lua ~`");`;
 }
 
 string pushGasVarArray(string var)
 {
     return `lua_newtable(L);
-foreach ( i, val; fs.gas.` ~ var ~ `) {
-    lua_pushnumber(L, val); lua_rawseti(L, -2,to!int(i+1));
+foreach (i, val; fs.gas.` ~ var ~ `) {
+    lua_pushnumber(L, val.re); lua_rawseti(L, -2,to!int(i+1));
 }
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
 
 string pushFSVar(string var)
 {
-return `lua_pushnumber(L, fs.` ~ var ~ `);
+return `lua_pushnumber(L, fs.` ~ var ~ `.re);
 lua_setfield(L, tblIdx, "` ~ var ~`");`;
 }
 
 string pushFSVecVar(string var)
 {
-return `lua_pushnumber(L, fs.`~var~`.x);
+return `lua_pushnumber(L, fs.`~var~`.x.re);
 lua_setfield(L, tblIdx, "`~var~`x");
-lua_pushnumber(L, fs.`~var~`.y);
+lua_pushnumber(L, fs.`~var~`.y.re);
 lua_setfield(L, tblIdx, "`~var~`y");
-lua_pushnumber(L, fs.`~var~`.z);
+lua_pushnumber(L, fs.`~var~`.z.re);
 lua_setfield(L, tblIdx, "`~var~`z");`;
 }
 
@@ -304,8 +307,8 @@ void pushFlowStateToTable(lua_State* L, int tblIdx, in FlowState fs, GasModel gm
     mixin(pushGasVar("quality"));
     // -- massf as key-val table
     lua_newtable(L);
-    foreach ( int isp, mf; fs.gas.massf ) {
-        lua_pushnumber(L, mf);
+    foreach (int isp, mf; fs.gas.massf) {
+        lua_pushnumber(L, mf.re);
         lua_setfield(L, -2, toStringz(gmodel.species_name(isp)));
     }
     lua_setfield(L, tblIdx, "massf");
@@ -526,7 +529,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         // For the moment, it doesn't matter greatly because the solver 
                         // will compute it's own approximations
                         auto pos = 0.25*(p000 + p100 + p110 + p010);
-                        double volume = 0.0; 
+                        number volume = 0.0; 
                         if (GlobalConfig.dimensions == 3) {
                             Vector3 p001 = *grid[i,j,k+1];
                             Vector3 p101 = *grid[i+1,j,k+1];
@@ -536,9 +539,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         }
                         // Now grab flow state via Lua function call
                         lua_pushvalue(L, 3);
-                        lua_pushnumber(L, pos.x);
-                        lua_pushnumber(L, pos.y);
-                        lua_pushnumber(L, pos.z);
+                        lua_pushnumber(L, pos.x.re);
+                        lua_pushnumber(L, pos.y.re);
+                        lua_pushnumber(L, pos.z.re);
                         if (lua_pcall(L, 3, 1, 0) != 0) {
                             string errMsg = "Error in Lua function call for setting FlowState\n";
                             errMsg ~= "as a function of position (x, y, z).\n";
@@ -556,7 +559,8 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                             luaL_error(L, errMsg.toStringz);
                         }
                         cell_data_to_raw_binary(outfile, pos, volume, fs,
-                                                0.0, 0.0, 0.0, -1.0, -1.0,
+                                                to!number(0.0), to!number(0.0), to!number(0.0),
+                                                -1.0, -1.0,
                                                 GlobalConfig.include_quality,
                                                 GlobalConfig.MHD,
                                                 GlobalConfig.divergence_cleaning,
@@ -596,7 +600,7 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         // For the moment, it doesn't matter greatly because the solver 
                         // will compute it's own approximations
                         auto pos = 0.25*(p000 + p100 + p110 + p010);
-                        auto volume = 0.0;
+                        number volume = 0.0;
                         if (GlobalConfig.dimensions == 3) {
                             Vector3 p001 = *grid[i,j,k+1];
                             Vector3 p101 = *grid[i+1,j,k+1];
@@ -606,9 +610,9 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                         }
                         // Now grab flow state via Lua function call
                         lua_pushvalue(L, 3);
-                        lua_pushnumber(L, pos.x);
-                        lua_pushnumber(L, pos.y);
-                        lua_pushnumber(L, pos.z);
+                        lua_pushnumber(L, pos.x.re);
+                        lua_pushnumber(L, pos.y.re);
+                        lua_pushnumber(L, pos.z.re);
                         if (lua_pcall(L, 3, 1, 0) != 0) {
                             string errMsg = "Error in Lua function call for setting FlowState\n";
                             errMsg ~= "as a function of position (x, y, z).\n";
@@ -626,7 +630,8 @@ extern(C) int write_initial_sg_flow_file_from_lua(lua_State* L)
                             luaL_error(L, errMsg.toStringz);
                         }
                         outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-                                                                   0.0, 0.0, 0.0, -1.0, -1.0,
+                                                                   to!number(0.0), to!number(0.0), to!number(0.0),
+                                                                   -1.0, -1.0,
                                                                    GlobalConfig.include_quality,
                                                                    GlobalConfig.MHD,
                                                                    GlobalConfig.divergence_cleaning,
@@ -689,12 +694,12 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 Vector3 pos = Vector3(0.0, 0.0, 0.0);
                 foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
                 pos /= grid.cells[i].vtx_id_list.length;
-                double volume = 0.0; 
+                number volume = 0.0; 
                 // Now grab flow state via Lua function call
                 lua_pushvalue(L, 3);
-                lua_pushnumber(L, pos.x);
-                lua_pushnumber(L, pos.y);
-                lua_pushnumber(L, pos.z);
+                lua_pushnumber(L, pos.x.re);
+                lua_pushnumber(L, pos.y.re);
+                lua_pushnumber(L, pos.z.re);
                 if (lua_pcall(L, 3, 1, 0) != 0) {
                     string errMsg = "Error in Lua function call for setting FlowState\n";
                     errMsg ~= "as a function of position (x, y, z).\n";
@@ -713,7 +718,8 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                     luaL_error(L, errMsg.toStringz);
                 }
                 cell_data_to_raw_binary(outfile, pos, volume, fs,
-                                        0.0, 0.0, 0.0, -1.0, -1.0,
+                                        to!number(0.0), to!number(0.0), to!number(0.0),
+                                        -1.0, -1.0,
                                         GlobalConfig.include_quality,
                                         GlobalConfig.MHD,
                                         GlobalConfig.divergence_cleaning,
@@ -742,12 +748,12 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                 Vector3 pos = Vector3(0.0, 0.0, 0.0);
                 foreach (id; grid.cells[i].vtx_id_list) { pos += grid.vertices[id]; }
                 pos /= grid.cells[i].vtx_id_list.length;
-                double volume = 0.0; 
+                number volume = 0.0; 
                 // Now grab flow state via Lua function call
                 lua_pushvalue(L, 3);
-                lua_pushnumber(L, pos.x);
-                lua_pushnumber(L, pos.y);
-                lua_pushnumber(L, pos.z);
+                lua_pushnumber(L, pos.x.re);
+                lua_pushnumber(L, pos.y.re);
+                lua_pushnumber(L, pos.z.re);
                 if (lua_pcall(L, 3, 1, 0) != 0) {
                     string errMsg = "Error in Lua function call for setting FlowState\n";
                     errMsg ~= "as a function of position (x, y, z).\n";
@@ -766,7 +772,8 @@ extern(C) int write_initial_usg_flow_file_from_lua(lua_State* L)
                     luaL_error(L, errMsg.toStringz);
                 }
                 outfile.compress(" " ~ cell_data_as_string(pos, volume, fs,
-                                                           0.0, 0.0, 0.0, -1.0, -1.0,
+                                                           to!number(0.0), to!number(0.0), to!number(0.0),
+                                                           -1.0, -1.0,
                                                            GlobalConfig.include_quality,
                                                            GlobalConfig.MHD,
                                                            GlobalConfig.divergence_cleaning,

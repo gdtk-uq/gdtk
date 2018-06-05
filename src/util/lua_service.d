@@ -14,6 +14,7 @@ import std.stdio;
 import std.string;
 import std.conv;
 import std.algorithm;
+import nm.complex;
 
 import util.lua;
 
@@ -126,6 +127,25 @@ void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out double[] values
     lua_pop(L, 1);
 }
 
+void getArrayOfDoubles(lua_State* L, int tblIdx, string key, out Complex!double[] values)
+{
+    values.length = 0;
+    lua_getfield(L, tblIdx, key.toStringz);
+    if ( !lua_istable(L, -1) ) {
+        string errMsg = format("A table of numbers was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
+    }
+    auto n = to!int(lua_objlen(L, -1));
+    foreach ( i; 1..n+1 ) {
+        lua_rawgeti(L, -1, i);
+        if ( lua_isnumber(L, -1) ) values ~= to!(Complex!double)(lua_tonumber(L, -1));
+        // Silently ignore anything that isn't a value.
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+}
+
 /**
  * Get array of numbers from index in Lua stack.
  */
@@ -159,6 +179,20 @@ void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out double
     }
     foreach (p; pList) {
         params[p] = getDouble(L, -1, p);
+    }
+    lua_pop(L, 1);
+} 
+
+void getAssocArrayOfDoubles(lua_State* L, string key, string[] pList, out Complex!double[string] params)
+{
+    lua_getfield(L, -1, key.toStringz);
+    if ( !lua_istable(L, -1) ) {
+        string errMsg = format("A table with key and values (doubles) was expected in field: %s", key);
+        lua_pop(L, 1);
+        throw new Error(errMsg);
+    }
+    foreach (p; pList) {
+        params[p] = Complex!double(getDouble(L, -1, p), 0.0);
     }
     lua_pop(L, 1);
 } 

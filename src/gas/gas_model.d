@@ -123,6 +123,7 @@ public:
     body {
         return mixture_molecular_mass(Q.massf, _mol_masses);
     }
+
     final void massf2molef(in GasState Q, number[] molef) 
     in {
         assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
@@ -130,6 +131,7 @@ public:
     body {
         gas.gas_model.massf2molef(Q.massf, _mol_masses, molef);
     }
+
     final void molef2massf(in number[] molef, GasState Q) 
     in {
         assert(Q.massf.length == molef.length, brokenPreCondition("Inconsistent array lengths."));
@@ -137,6 +139,7 @@ public:
     body {
         gas.gas_model.molef2massf(molef, _mol_masses, Q.massf);
     }
+
     final void massf2conc(in GasState Q, number[] conc) 
     in {
         assert(Q.massf.length == conc.length, brokenPreCondition("Inconsistent array lengths."));
@@ -147,6 +150,7 @@ public:
             if ( conc[i] < MIN_MOLES ) conc[i] = 0.0;
         }
     }
+
     final void conc2massf(in number[] conc, GasState Q) 
     in {
         assert(Q.massf.length == conc.length, brokenPreCondition("Inconsisten array lengths."));

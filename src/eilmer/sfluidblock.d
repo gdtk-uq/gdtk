@@ -15,6 +15,8 @@ import std.format;
 import std.string;
 import std.array;
 import std.math;
+import nm.complex;
+import nm.number;
 
 import util.lua;
 import json_helper;
@@ -1617,7 +1619,7 @@ public:
                 for (size_t i = imin; i <= imax+1; ++i) {
                     auto vtx = get_vtx(i,j);
                     auto src_vtx = grid[i-imin,j-jmin];
-                    vtx.pos[gtl].set(src_vtx.x, src_vtx.y, 0.0);
+                    vtx.pos[gtl].set(src_vtx.x, src_vtx.y, to!number(0.0));
                 } // for i
             } // for j
         }

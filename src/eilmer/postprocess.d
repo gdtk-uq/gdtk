@@ -21,6 +21,8 @@ import std.algorithm;
 import std.bitmanip;
 import std.stdint;
 import std.range;
+import nm.complex;
+import nm.number;
 import gzip;
 import fvcore;
 import fileutil;
@@ -549,7 +551,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     foreach (dir; direction) {
                         found = 1;
                         Vector3 P0 = Vector3(xInit,yInit,zInit);
-                        double distance = 0.0; // relative distance along streamline
+                        number distance = 0.0; // relative distance along streamline
                         outFile.writeln("# New Wave");
                         ib = ibInit; idx = idxInit;
                         while (found == 1) { // while we have a cell in the domain
@@ -560,13 +562,13 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                             Vector3 P1 = P0 + dStream; 
 
                             // define slice as n1*x+n2*y+n3*z+sliceConst = 0
-                            double sliceConst = -dot(SliceNormal[ip],P0); 
-                            double coneSliceDist = abs(dot(SliceNormal[ip],P1)+sliceConst);
+                            number sliceConst = -dot(SliceNormal[ip],P0); 
+                            number coneSliceDist = abs(dot(SliceNormal[ip],P1)+sliceConst);
 
                             // calculate local Mach number and angle
-                            double alocal = soln.flowBlocks[ib]["a", idx];
-                            double Mlocal = geom.abs(vlocal)/alocal;
-                            double MachAngle;
+                            number alocal = soln.flowBlocks[ib]["a", idx];
+                            number Mlocal = geom.abs(vlocal)/alocal;
+                            number MachAngle;
 
                             // check if flow is supersonic
                             if (Mlocal >= 1) {
@@ -585,7 +587,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
 
                             // calculate angle in between the slice and the velocity vector 
                             Vector3 SliceVec = P2-P0;
-                            double beta = acos(dot(SliceVec,dStream)/(geom.abs(SliceVec)*geom.abs(dStream)));
+                            number beta = acos(dot(SliceVec,dStream)/(geom.abs(SliceVec)*geom.abs(dStream)));
 
                             // Check if the slice intersects the Mach cone
                             if (beta > MachAngle) {
@@ -605,10 +607,10 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                             Vector3 P3 = P0+SliceVecProj;
 
                             // Calculate radius of the Mach cone at the new point
-                            double rCone = tan(MachAngle)*geom.abs(SliceVecProj);
+                            number rCone = tan(MachAngle)*geom.abs(SliceVecProj);
                             Vector3 P2P3 = P3-P2;
-                            double dP2P3 = geom.abs(P2P3);
-                            double dP2P4 = sqrt(rCone^^2-dP2P3^^2);
+                            number dP2P3 = geom.abs(P2P3);
+                            number dP2P4 = sqrt(rCone^^2-dP2P3^^2);
 
                             Vector3 SliceVec2 = cross(SliceVec,SliceNormal[ip]);
                             SliceVec2 = unit(SliceVec2);
@@ -618,9 +620,9 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                             Vector3 Wave = P4-P0;
                             distance += direct*geom.abs(Wave);
 
-                            double WaveAngle = acos(dot(Wave,dStream)/(geom.abs(Wave)*geom.abs(dStream)));
+                            number WaveAngle = acos(dot(Wave,dStream)/(geom.abs(Wave)*geom.abs(dStream)));
 
-                            identity = soln.find_enclosing_cell(P4.x, P4.y, P4.z);
+                            identity = soln.find_enclosing_cell(P4.x.re, P4.y.re, P4.z.re);
                             if (identity[0] == ib && identity[1] == idx) {
                                 // did not step outside current cell
                                 stepSize = stepSize*2.0; found = identity[2];
@@ -668,8 +670,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     errMsg ~= format("The problematic string is: %s\n", lineStr);
                     throw new Error(errMsg);
                 }
-                Vector3 p0 = Vector3(to!double(items[0]), to!double(items[1]), to!double(items[2]));
-                Vector3 p1 = Vector3(to!double(items[3]), to!double(items[4]), to!double(items[5]));
+                Vector3 p0 = Vector3(to!number(items[0]), to!number(items[1]), to!number(items[2]));
+                Vector3 p1 = Vector3(to!number(items[3]), to!number(items[4]), to!number(items[5]));
                 size_t n = to!size_t(items[6]);
                 auto count = soln.find_enclosing_cells_along_line(p0, p1, n, cells_found);
                 writeln("# Info: Found ", count, " cells from point ", p0, " to point ", p1);
@@ -707,8 +709,8 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
                     errMsg ~= format("The problematic string is: %s\n", lineStr);
                     throw new Error(errMsg);
                 }
-                Vector3 p0 = Vector3(to!double(items[0]), to!double(items[1]), to!double(items[2]));
-                Vector3 p1 = Vector3(to!double(items[3]), to!double(items[4]), to!double(items[5]));
+                Vector3 p0 = Vector3(to!number(items[0]), to!number(items[1]), to!number(items[2]));
+                Vector3 p1 = Vector3(to!number(items[3]), to!number(items[4]), to!number(items[5]));
                 size_t n = to!size_t(items[6]);
                 auto count = soln.find_enclosing_cells_along_line(p0, p1, n, cells_found);
                 writeln("# Info: Found ", count, " cells from point ", p0, " to point ", p1);
@@ -736,7 +738,7 @@ void post_process(string plotDir, bool listInfoFlag, string tindxPlot,
             auto soln = new FlowSolution(jobName, ".", tindx, GlobalConfig.nFluidBlocks);
             soln.add_aux_variables(addVarsList);
             if (luaRefSoln.length > 0) soln.subtract_ref_soln(luaRefSoln);
-            double Fx = 0.0; double Fy = 0.0; double Fz = 0.0; double F = 0.0; double q = 0.0;
+            number Fx = 0.0; number Fy = 0.0; number Fz = 0.0; number F = 0.0; number q = 0.0;
             foreach (blk_indx; 0..GlobalConfig.nFluidBlocks) {
                 foreach (boundary_indx; 0..soln.flowBlocks[blk_indx].bcGroups.length) {
                     auto surf_grid = soln.gridBlocks[blk_indx].get_boundary_grid(boundary_indx);
@@ -950,9 +952,9 @@ void write_VTU_file(BlockFlow flow, Grid grid, string fileName, bool binary_form
         fp.write(" format=\"ascii\">\n");
     }
     foreach (i; 0 .. grid.nvertices) {
-        float x = uflowz(grid[i].x);
-        float y = uflowz(grid[i].y);
-        float z = uflowz(grid[i].z);
+        float x = uflowz(grid[i].x.re);
+        float y = uflowz(grid[i].y.re);
+        float z = uflowz(grid[i].z.re);
         if (binary_format) {
             binary_data ~= nativeToBigEndian(x);
             binary_data ~= nativeToBigEndian(y);
@@ -1215,9 +1217,9 @@ void write_VTU_file(SBlockSolid solid, StructuredGrid grid, string fileName, boo
         foreach (j; 0 .. njv) {
             foreach (i; 0 .. niv) {
                 vtx_id[i][j][k] = vtx_number;
-                float x = uflowz(grid[i,j,k].x);
-                float y = uflowz(grid[i,j,k].y);
-                float z = uflowz(grid[i,j,k].z);
+                float x = uflowz(grid[i,j,k].x.re);
+                float y = uflowz(grid[i,j,k].y.re);
+                float z = uflowz(grid[i,j,k].z.re);
                 if (binary_format) {
                     binary_data ~= nativeToBigEndian(x);
                     binary_data ~= nativeToBigEndian(y);
@@ -1419,7 +1421,7 @@ void write_Tecplot_file(string jobName, string plotDir, FlowSolution soln, int t
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
-                    fp.writef(" %e", uflowz(grid[i,j,k].x));
+                    fp.writef(" %e", uflowz(grid[i,j,k].x.re));
                 }
                 fp.write("\n");
             }
@@ -1428,7 +1430,7 @@ void write_Tecplot_file(string jobName, string plotDir, FlowSolution soln, int t
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
-                    fp.writef(" %e", uflowz(grid[i,j,k].y));
+                    fp.writef(" %e", uflowz(grid[i,j,k].y.re));
                 }
                 fp.write("\n");
             }
@@ -1437,7 +1439,7 @@ void write_Tecplot_file(string jobName, string plotDir, FlowSolution soln, int t
         foreach (k; 0 .. nkv) {
             foreach (j; 0 .. njv) {
                 foreach (i; 0 .. niv) {
-                    fp.writef(" %e", uflowz(grid[i,j,k].z));
+                    fp.writef(" %e", uflowz(grid[i,j,k].z.re));
                 }
                 fp.write("\n");
             }
@@ -1448,7 +1450,7 @@ void write_Tecplot_file(string jobName, string plotDir, FlowSolution soln, int t
             foreach (k; 0 .. nkc) {
                 foreach (j; 0 .. njc) {
                     foreach (i; 0 .. nic) {
-                        fp.writef(" %e", uflowz(flow[var,i,j,k]));
+                        fp.writef(" %e", uflowz(flow[var,i,j,k].re));
                     }
                     fp.write("\n");
                 }

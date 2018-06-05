@@ -31,6 +31,8 @@ import std.file;
 import gzip;
 import fileutil;
 import util.lua;
+import nm.complex;
+import nm.number;
 import geom;
 import gas;
 import fvcore;
@@ -540,8 +542,8 @@ public:
             name = tr(name, " \t", "--", "s");
             massf_names ~= "massf[" ~ to!string(isp) ~ "]-" ~ to!string(name);
         }
-        double[] molef; // mole-fractions may be needed
-        double[] conc; // concentrations or number-densities may be needed
+        number[] molef; // mole-fractions may be needed
+        number[] conc; // concentrations or number-densities may be needed
         //
         // We assume a lot about the data that has been read in so,
         // we need to skip this function if all is not in place
@@ -658,7 +660,7 @@ public:
                     Q.massf[isp] = _data[i][variableIndex[massf_names[isp]]];
                 }
                 Q.p = p; Q.T = T;
-                double entropy = gmodel.entropy(Q);
+                double entropy = gmodel.entropy(Q).re;
                 _data[i] ~= entropy;
             }
             if (add_molef) {
@@ -667,7 +669,7 @@ public:
                 }
                 Q.p = p; Q.rho = rho; Q.T = T;
                 gmodel.massf2molef(Q, molef);
-                foreach (mf; molef) { _data[i] ~= mf; }
+                foreach (mf; molef) { _data[i] ~= mf.re; }
             }
             if (add_conc) {
                 foreach (isp; 0 .. Q.massf.length) {
@@ -675,7 +677,7 @@ public:
                 }
                 Q.p = p; Q.rho = rho; Q.T = T;
                 gmodel.massf2conc(Q, conc);
-                foreach (c; conc) { _data[i] ~= c; }
+                foreach (c; conc) { _data[i] ~= c.re; }
             }
         } // foreach i
     } // end add_aux_variables()

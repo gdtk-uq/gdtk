@@ -14,6 +14,8 @@ module gas_solid_interface;
 
 import std.stdio;
 import std.math;
+import nm.complex;
+import nm.number;
 
 import fvcell;
 import fvinterface;
@@ -23,9 +25,9 @@ import solidfvinterface;
 void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasIFaces,
                                   SolidFVCell[] solidCells, SolidFVInterface[] solidIFaces)
 {
-    double dxG, dyG, dnG, dxS, dyS, dnS;
-    double kG_dnG, kS_dnS, cosA, cosB;
-    double T, q;
+    number dxG, dyG, dnG, dxS, dyS, dnS;
+    number kG_dnG, kS_dnS, cosA, cosB;
+    number T, q;
 
     foreach ( i; 0 .. gasCells.length ) {
         cosA = gasIFaces[i].n.x;
@@ -49,7 +51,8 @@ void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasI
         gasIFaces[i].F.total_energy = q; // CHECK ME: might only work for
                                          // NORTH-SOUTH orientation.
                                          // Need to think about sign.
-        solidIFaces[i].T = T;
-        solidIFaces[i].flux = q;
+        // Note that we are not propagating complex numbers into solid domain.
+        solidIFaces[i].T = T.re;
+        solidIFaces[i].flux = q.re;
     }
 }

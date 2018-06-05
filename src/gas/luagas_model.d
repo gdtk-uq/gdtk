@@ -15,6 +15,8 @@ import std.conv;
 import std.string;
 import util.lua;
 import util.lua_service;
+import nm.complex;
+
 import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
 import kinetics.luatwo_temperature_air_kinetics;
@@ -609,8 +611,9 @@ extern(C) int conc2massf(lua_State* L)
 }
 
 void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
-                             double[] vals, string tabName)
+                             ref double[] vals, string tabName)
 {
+    assert(vals.length == gm.n_species(), "Array for species fractions wrong length.");
     // 1. Check all keys are valid species names.
     lua_pushnil(L);
     while (lua_next(L, idx) != 0) {
@@ -646,7 +649,16 @@ void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
         }
         lua_pop(L, 1);
     }
-}
+} // end getSpeciesValsFromTable()
+
+void getSpeciesValsFromTable(lua_State* L, GasModel gm, int idx,
+                             ref Complex!double[] vals, string tabName)
+{
+    assert(vals.length == gm.n_species(), "Array for species fractions wrong length.");
+    double[] dvals; dvals.length = gm.n_species();
+    getSpeciesValsFromTable(L, gm, idx, dvals, tabName);
+    foreach (i, v; dvals) { vals[i] = Complex!double(v, 0.0); }
+} // end getSpeciesValsFromTable()
 
 void checkAndScaleMassFractions(double[] massf, double tol)
 {

@@ -12,6 +12,8 @@ import std.stdio;
 import std.conv;
 import std.string;
 import util.lua;
+import nm.complex;
+import nm.number;
 
 import gas;
 import geom: gridTypeName, Grid_t;
@@ -129,33 +131,33 @@ extern(C) int luafn_sampleFluidFace(lua_State *L)
 void pushFluidCellToTable(lua_State* L, int tblIdx, ref const(FVCell) cell, 
                           size_t gtl, GasModel gmodel)
 {
-    lua_pushnumber(L, cell.pos[gtl].x); lua_setfield(L, tblIdx, "x");
-    lua_pushnumber(L, cell.pos[gtl].y); lua_setfield(L, tblIdx, "y");
-    lua_pushnumber(L, cell.pos[gtl].z); lua_setfield(L, tblIdx, "z");
-    lua_pushnumber(L, cell.volume[gtl]); lua_setfield(L, tblIdx, "vol");
+    lua_pushnumber(L, cell.pos[gtl].x.re); lua_setfield(L, tblIdx, "x");
+    lua_pushnumber(L, cell.pos[gtl].y.re); lua_setfield(L, tblIdx, "y");
+    lua_pushnumber(L, cell.pos[gtl].z.re); lua_setfield(L, tblIdx, "z");
+    lua_pushnumber(L, cell.volume[gtl].re); lua_setfield(L, tblIdx, "vol");
     pushFlowStateToTable(L, tblIdx, cell.fs, gmodel);
 } // end pushFluidCellToTable()
 
 void pushFluidFaceToTable(lua_State* L, int tblIdx, ref const(FVInterface) face, 
                           size_t gtl, GasModel gmodel)
 {
-    lua_pushnumber(L, face.pos.x); lua_setfield(L, tblIdx, "x");
-    lua_pushnumber(L, face.pos.y); lua_setfield(L, tblIdx, "y");
-    lua_pushnumber(L, face.pos.z); lua_setfield(L, tblIdx, "z");
-    lua_pushnumber(L, face.area[gtl]); lua_setfield(L, tblIdx, "area");
-    lua_pushnumber(L, face.n.x); lua_setfield(L, tblIdx, "nx");
-    lua_pushnumber(L, face.n.y); lua_setfield(L, tblIdx, "ny");
-    lua_pushnumber(L, face.n.z); lua_setfield(L, tblIdx, "nz");
-    lua_pushnumber(L, face.t1.x); lua_setfield(L, tblIdx, "t1x");
-    lua_pushnumber(L, face.t1.y); lua_setfield(L, tblIdx, "t1y");
-    lua_pushnumber(L, face.t1.z); lua_setfield(L, tblIdx, "t1z");
-    lua_pushnumber(L, face.t2.x); lua_setfield(L, tblIdx, "t2x");
-    lua_pushnumber(L, face.t2.y); lua_setfield(L, tblIdx, "t2y");
-    lua_pushnumber(L, face.t2.z); lua_setfield(L, tblIdx, "t2z");
-    lua_pushnumber(L, face.Ybar); lua_setfield(L, tblIdx, "Ybar");
-    lua_pushnumber(L, face.gvel.x); lua_setfield(L, tblIdx, "gvelx");
-    lua_pushnumber(L, face.gvel.y); lua_setfield(L, tblIdx, "gvely");
-    lua_pushnumber(L, face.gvel.z); lua_setfield(L, tblIdx, "gvelz");
+    lua_pushnumber(L, face.pos.x.re); lua_setfield(L, tblIdx, "x");
+    lua_pushnumber(L, face.pos.y.re); lua_setfield(L, tblIdx, "y");
+    lua_pushnumber(L, face.pos.z.re); lua_setfield(L, tblIdx, "z");
+    lua_pushnumber(L, face.area[gtl].re); lua_setfield(L, tblIdx, "area");
+    lua_pushnumber(L, face.n.x.re); lua_setfield(L, tblIdx, "nx");
+    lua_pushnumber(L, face.n.y.re); lua_setfield(L, tblIdx, "ny");
+    lua_pushnumber(L, face.n.z.re); lua_setfield(L, tblIdx, "nz");
+    lua_pushnumber(L, face.t1.x.re); lua_setfield(L, tblIdx, "t1x");
+    lua_pushnumber(L, face.t1.y.re); lua_setfield(L, tblIdx, "t1y");
+    lua_pushnumber(L, face.t1.z.re); lua_setfield(L, tblIdx, "t1z");
+    lua_pushnumber(L, face.t2.x.re); lua_setfield(L, tblIdx, "t2x");
+    lua_pushnumber(L, face.t2.y.re); lua_setfield(L, tblIdx, "t2y");
+    lua_pushnumber(L, face.t2.z.re); lua_setfield(L, tblIdx, "t2z");
+    lua_pushnumber(L, face.Ybar.re); lua_setfield(L, tblIdx, "Ybar");
+    lua_pushnumber(L, face.gvel.x.re); lua_setfield(L, tblIdx, "gvelx");
+    lua_pushnumber(L, face.gvel.y.re); lua_setfield(L, tblIdx, "gvely");
+    lua_pushnumber(L, face.gvel.z.re); lua_setfield(L, tblIdx, "gvelz");
     pushFlowStateToTable(L, tblIdx, face.fs, gmodel);
 } // end pushFluidFaceToTable()
 
@@ -181,24 +183,24 @@ extern(C) int luafn_sampleSolidCell(lua_State *L)
 
 void pushSolidCellToTable(lua_State* L, int tblIdx, ref const(SolidFVCell) cell)
 {
-    lua_pushnumber(L, cell.pos.x); lua_setfield(L, tblIdx, "x");
-    lua_pushnumber(L, cell.pos.y); lua_setfield(L, tblIdx, "y");
-    lua_pushnumber(L, cell.pos.z); lua_setfield(L, tblIdx, "z");
-    lua_pushnumber(L, cell.volume); lua_setfield(L, tblIdx, "vol");
-    lua_pushnumber(L, cell.T); lua_setfield(L, tblIdx, "T");
-    lua_pushnumber(L, cell.sp.rho); lua_setfield(L, tblIdx, "rho");
-    lua_pushnumber(L, cell.sp.Cp); lua_setfield(L, tblIdx, "Cp");
-    lua_pushnumber(L, cell.sp.k); lua_setfield(L, tblIdx, "k");
+    lua_pushnumber(L, cell.pos.x.re); lua_setfield(L, tblIdx, "x");
+    lua_pushnumber(L, cell.pos.y.re); lua_setfield(L, tblIdx, "y");
+    lua_pushnumber(L, cell.pos.z.re); lua_setfield(L, tblIdx, "z");
+    lua_pushnumber(L, cell.volume.re); lua_setfield(L, tblIdx, "vol");
+    lua_pushnumber(L, cell.T.re); lua_setfield(L, tblIdx, "T");
+    lua_pushnumber(L, cell.sp.rho.re); lua_setfield(L, tblIdx, "rho");
+    lua_pushnumber(L, cell.sp.Cp.re); lua_setfield(L, tblIdx, "Cp");
+    lua_pushnumber(L, cell.sp.k.re); lua_setfield(L, tblIdx, "k");
 
-    lua_pushnumber(L, cell.sp.k11); lua_setfield(L, tblIdx, "k11");
-    lua_pushnumber(L, cell.sp.k12); lua_setfield(L, tblIdx, "k12");
-    lua_pushnumber(L, cell.sp.k13); lua_setfield(L, tblIdx, "k13");
-    lua_pushnumber(L, cell.sp.k21); lua_setfield(L, tblIdx, "k21");
-    lua_pushnumber(L, cell.sp.k22); lua_setfield(L, tblIdx, "k22");
-    lua_pushnumber(L, cell.sp.k23); lua_setfield(L, tblIdx, "k23");
-    lua_pushnumber(L, cell.sp.k31); lua_setfield(L, tblIdx, "k31");
-    lua_pushnumber(L, cell.sp.k32); lua_setfield(L, tblIdx, "k32");
-    lua_pushnumber(L, cell.sp.k33); lua_setfield(L, tblIdx, "k33");
+    lua_pushnumber(L, cell.sp.k11.re); lua_setfield(L, tblIdx, "k11");
+    lua_pushnumber(L, cell.sp.k12.re); lua_setfield(L, tblIdx, "k12");
+    lua_pushnumber(L, cell.sp.k13.re); lua_setfield(L, tblIdx, "k13");
+    lua_pushnumber(L, cell.sp.k21.re); lua_setfield(L, tblIdx, "k21");
+    lua_pushnumber(L, cell.sp.k22.re); lua_setfield(L, tblIdx, "k22");
+    lua_pushnumber(L, cell.sp.k23.re); lua_setfield(L, tblIdx, "k23");
+    lua_pushnumber(L, cell.sp.k31.re); lua_setfield(L, tblIdx, "k31");
+    lua_pushnumber(L, cell.sp.k32.re); lua_setfield(L, tblIdx, "k32");
+    lua_pushnumber(L, cell.sp.k33.re); lua_setfield(L, tblIdx, "k33");
 
 } // end pushSolidCellToTable()
 

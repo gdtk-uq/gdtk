@@ -11,6 +11,8 @@ module special_block_init;
 
 import std.stdio;
 import std.algorithm.searching;
+import nm.complex;
+import nm.number;
 
 import globalconfig;
 import fluidblock;
@@ -100,14 +102,14 @@ void diffuseWallBCsIntoBlock(FluidBlock blk, int nPasses, double Twall)
         // Do the averaging
         foreach (cell; cellsInDiffusionZone.byValue()) {
             int nNbrCells = 0;
-            double T_avg = 0.0;
-            double velx_avg = 0.0;
-            double vely_avg = 0.0;
-            double velz_avg = 0.0;
-            double tke_avg = 0.0;
-            double omega_avg = 0.0;
-            double mu_t_avg = 0.0;
-            double k_t_avg = 0.0;
+            number T_avg = 0.0;
+            number velx_avg = 0.0;
+            number vely_avg = 0.0;
+            number velz_avg = 0.0;
+            number tke_avg = 0.0;
+            number omega_avg = 0.0;
+            number mu_t_avg = 0.0;
+            number k_t_avg = 0.0;
             foreach (face; cell.iface) {
                 if (face.is_on_boundary) continue;
                 if (face.left_cell.id == cell.id) {

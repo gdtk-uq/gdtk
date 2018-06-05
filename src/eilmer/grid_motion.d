@@ -8,6 +8,8 @@ import std.conv;
 
 import util.lua;
 import util.lua_service;
+import nm.complex;
+import nm.number;
 import nm.luabbla;
 import lua_helper;
 import fvcore;
@@ -50,9 +52,9 @@ extern(C) int luafn_getVtxPosition(lua_State *L)
     
     // Return the interesting bits as a table with entries x, y, z.
     lua_newtable(L);
-    lua_pushnumber(L, vtx.pos[0].x); lua_setfield(L, -2, "x");
-    lua_pushnumber(L, vtx.pos[0].y); lua_setfield(L, -2, "y");
-    lua_pushnumber(L, vtx.pos[0].z); lua_setfield(L, -2, "z");
+    lua_pushnumber(L, vtx.pos[0].x.re); lua_setfield(L, -2, "x");
+    lua_pushnumber(L, vtx.pos[0].y.re); lua_setfield(L, -2, "y");
+    lua_pushnumber(L, vtx.pos[0].z.re); lua_setfield(L, -2, "z");
     return 1;
 }
 
@@ -126,17 +128,17 @@ extern(C) int luafn_setVtxVelocitiesForRotatingBlock(lua_State* L)
     if ( narg == 2 ) {
         // assume rotation about Z-axis 
         foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
-            velx = - omega * vtx.pos[0].y;
-            vely =   omega * vtx.pos[0].x;
-            vtx.vel[0] = Vector3(velx, vely, 0.);
+            velx = - omega * vtx.pos[0].y.re;
+            vely =   omega * vtx.pos[0].x.re;
+            vtx.vel[0] = Vector3(velx, vely, 0.0);
         }
     }
     else if ( narg == 3 ) {
         auto axis = checkVector3(L, 3);
         foreach ( vtx; globalFluidBlocks[blkId].vertices ) {
-            velx = - omega * (vtx.pos[0].y - axis.y);
-            vely =   omega * (vtx.pos[0].x - axis.x);
-            vtx.vel[0] = Vector3(velx, vely, 0.);
+            velx = - omega * (vtx.pos[0].y.re - axis.y.re);
+            vely =   omega * (vtx.pos[0].x.re - axis.x.re);
+            vtx.vel[0] = Vector3(velx, vely, 0.0);
         }
     }
     else {
@@ -197,7 +199,7 @@ extern(C) int luafn_setVtxVelocitiesByCorners(lua_State* L)
     size_t i, j;
     Vector3 centroidVel = 0.25 * ( *p00vel + *p10vel + *p01vel + *p11vel);
     Vector3 centroid, n, pos, Coords;
-    double area;
+    number area;
     // get centroid location
     quad_properties(p00, p10, p11, p01, centroid,  n, n, n, area);
 
