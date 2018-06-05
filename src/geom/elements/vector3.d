@@ -58,7 +58,7 @@ struct Vector3 {
                 _p[1] = p1;
                 _p[2] = p2;
             }
-    }
+    } // end version complex_numbers
     
     @nogc this(in Vector3 other)
     {
@@ -115,7 +115,7 @@ struct Vector3 {
             _p[0] = x; _p[1] = y; _p[2] = z;
             return this;
         }
-    }
+    } // end version complex_numbers
     
     @nogc ref Vector3 clear()
     // Convenience function for setting-to-zero the components of an existing object.
@@ -184,8 +184,8 @@ struct Vector3 {
         return result;
     }
 
-    version(complex_number) {
-        // Experiment with retaining the double version.
+    version(complex_numbers) {
+        // Retain the double version.
         Vector3 opBinary(string op)(in double rhs) const
             if (op == "*")
         {
@@ -195,7 +195,7 @@ struct Vector3 {
             result._p[2] = this._p[2] * rhs;
             return result;
         }
-    }
+    } // end version complex_numbers
 
     Vector3 opBinaryRight(string op)(in number lhs) const
         if (op == "*")
@@ -207,8 +207,8 @@ struct Vector3 {
         return result;
     }
 
-    version(complex_number) {
-        // Experiment with retaining the double version.
+    version(complex_numbers) {
+        // Retain the double version.
         Vector3 opBinaryRight(string op)(in double lhs) const
             if (op == "*")
         {
@@ -218,7 +218,7 @@ struct Vector3 {
             result._p[2] = this._p[2] * lhs;
             return result;
         }
-    }
+    } // end version complex_numbers
     
     Vector3 opBinary(string op)(in number rhs) const
         if (op == "/")
@@ -229,6 +229,19 @@ struct Vector3 {
         result._p[2] = this._p[2] / rhs;
         return result;
     }
+
+    version(complex_numbers) {
+        // Retain the double version.
+        Vector3 opBinary(string op)(in double rhs) const
+            if (op == "/")
+        {
+            Vector3 result;
+            result._p[0] = this._p[0] / rhs;
+            result._p[1] = this._p[1] / rhs;
+            result._p[2] = this._p[2] / rhs;
+            return result;
+        }
+    } // end version complex_numbers
 
     // Assignment operators. (Alexandrescu Section 7.1.5.1)
     @nogc ref Vector3 opAssign(ref Vector3 rhs)
@@ -271,6 +284,23 @@ struct Vector3 {
         this._p[0] /= rhs; this._p[1] /= rhs; this._p[2] /= rhs;
         return this;
     }
+
+    version(complex_numbers) {
+        // Retain the double version.
+        @nogc ref Vector3 opOpAssign(string op)(in double rhs)
+            if (op == "*")
+        {
+            this._p[0] *= rhs; this._p[1] *= rhs; this._p[2] *= rhs;
+            return this;
+        }
+
+        @nogc ref Vector3 opOpAssign(string op)(in double rhs)
+            if (op == "/")
+        {
+            this._p[0] /= rhs; this._p[1] /= rhs; this._p[2] /= rhs;
+            return this;
+        }
+    } // end version complex_numbers
 
     // Other vector-specific operations.
 
@@ -579,15 +609,15 @@ version(vector3_test) {
         a.refy = 3.3;
         assert(a.y == 3.3 && d2.y == 99.0, failedUnitTest());
 
-        Vector3 e = a * to!number(2.0);
-        Vector3 f = to!number(3.0) * d;
+        Vector3 e = a * 2.0;
+        Vector3 f = 3.0 * d;
         assert(e.z == 6.0 && f.z == 9.0, failedUnitTest());
-        Vector3 g = d / to!number(3.0);
+        Vector3 g = d / 3.0;
         assert(g.z == 1.0, failedUnitTest());
 
         g += f;
         assert(g.z == 10.0, failedUnitTest());
-        g /= to!number(2.0);
+        g /= 2.0;
         assert(g.z == 5.0, failedUnitTest());
 
         a = Vector3(1.0, 0.0, 0.0);

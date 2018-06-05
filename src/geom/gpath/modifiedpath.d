@@ -28,13 +28,13 @@ public:
     override Vector3 dpdt(double t) const
     {
         double tdsh = underlying_t(t);
-        return underlying_path.dpdt(tdsh)*to!number(d_underlying_t_dt(tdsh));
+        return underlying_path.dpdt(tdsh) * d_underlying_t_dt(tdsh);
     }
     override Vector3 d2pdt2(double t) const
     {
         double tdsh = underlying_t(t);
-        return underlying_path.d2pdt2(tdsh)*to!number(pow(d_underlying_t_dt(tdsh),2)) +
-            underlying_path.dpdt(tdsh)*to!number(d2_underlying_t_dt2(tdsh));
+        return underlying_path.d2pdt2(tdsh) * pow(d_underlying_t_dt(tdsh),2) +
+            underlying_path.dpdt(tdsh) * d2_underlying_t_dt2(tdsh);
     }
     abstract override string toString() const
     {

@@ -127,10 +127,10 @@ public:
         double local_r = (r - dr * ix_coarse) / dr;
         double local_s = (s - ds * iy_coarse) / ds;
         // BiLinear interpolation for each component.
-        Vector3 p = to!number((1.0-local_r)*(1.0-local_s)) * _bgmesh[ix_coarse][iy_coarse] +
-            to!number((1.0-local_r)*local_s) * _bgmesh[ix_coarse][iy_coarse + 1] +
-            to!number(local_r*(1.0-local_s)) * _bgmesh[ix_coarse + 1][iy_coarse] +
-            to!number(local_r*local_s) * _bgmesh[ix_coarse + 1][iy_coarse + 1];
+        Vector3 p = (1.0-local_r)*(1.0-local_s) * _bgmesh[ix_coarse][iy_coarse] +
+            (1.0-local_r)*local_s * _bgmesh[ix_coarse][iy_coarse + 1] +
+            local_r*(1.0-local_s) * _bgmesh[ix_coarse + 1][iy_coarse] +
+            local_r*local_s * _bgmesh[ix_coarse + 1][iy_coarse + 1];
         return p;
     } // end opCall()
 

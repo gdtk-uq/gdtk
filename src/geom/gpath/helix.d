@@ -73,8 +73,7 @@ public:
     {
         double r = r0*(1.0-t) + r1*t;
         double theta = theta01 * t;
-        Vector3 p = to!number(r*cos(theta))*xdsh + to!number(r*sin(theta))*ydsh +
-            a0*to!number(1.0-t) + a1*to!number(t);
+        Vector3 p = r*cos(theta)*xdsh + r*sin(theta)*ydsh + a0*(1.0-t) + a1*t;
         return p;
     }
     override string toString() const

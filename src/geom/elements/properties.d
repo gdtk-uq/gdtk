@@ -769,7 +769,7 @@ bool inside_pyramid(ref const(Vector3) p0, ref const(Vector3) p1,
 // was adapted from the inside_hexagon function, below.
 {
     // Mid-points of quadrilateral base.
-    Vector3 pmid = to!number(0.25)*(p3+p2+p1+p0);
+    Vector3 pmid = 0.25*(p3+p2+p1+p0);
     // Test the volume of the single pyramid.
     if (tetragonal_dipyramid_volume(p3, p2, p1, p0, pmid, p) > 0.0) return false; // Bottom
     // If we arrive here, we haven't determined that the point is outside...
@@ -796,7 +796,7 @@ bool inside_wedge(ref const(Vector3) p0, ref const(Vector3) p1,
 // is outside the cell and we may say so without further testing.
 {
     // Mid-points of quadrilateral faces.
-    number quarter = 0.25;
+    double quarter = 0.25;
     Vector3 pmA = quarter*(p0+p3+p4+p1);
     Vector3 pmB = quarter*(p2+p1+p4+p5);
     Vector3 pmC = quarter*(p0+p2+p5+p3);
@@ -827,7 +827,7 @@ bool inside_hexahedron(ref const(Vector3) p0, ref const(Vector3) p1,
 // is outside the cell and we may say so without further testing.
 {
     // Mid-points of faces.
-    number quarter = 0.25;
+    double quarter = 0.25;
     Vector3 pmN = quarter*(p3+p2+p6+p7);
     Vector3 pmE = quarter*(p1+p2+p6+p5);
     Vector3 pmS = quarter*(p0+p1+p5+p4);
@@ -992,7 +992,10 @@ version(properties_test) {
             double dvol_da = volume_dash.im/h;
             dcentroid_da = Vector3(centroid_dash.x.im/h, centroid_dash.y.im/h, centroid_dash.z.im/h);
             assert(approxEqual(dvol_da, alpha^^2/(2.0*sqrt(2.0))), failedUnitTest());
-            assert(approxEqualVectors(dcentroid_da, Vector3(3.0/8.0+0.25*cos(radians(60)), 1.0/4.0*sin(radians(60))+1.0/8.0*tan(radians(30)), sqrt(6.0)/12.0)), failedUnitTest());
+            assert(approxEqualVectors(dcentroid_da, Vector3(3.0/8.0+0.25*cos(radians(60)),
+                                                            1.0/4.0*sin(radians(60))+1.0/8.0*tan(radians(30)),
+                                                            sqrt(6.0)/12.0)),
+                   failedUnitTest());
         }
 
         // Build a wedge with the same equilateral-triangle base.

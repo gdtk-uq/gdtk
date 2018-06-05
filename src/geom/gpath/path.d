@@ -39,16 +39,16 @@ public:
         if ( t+dt > 1.0 ) {
             // t is close to the t=1.0 boundary, use a one-sided difference.
             Vector3 pminus1 = this.opCall(t-dt);
-            derivative = (p0 - pminus1) / to!number(dt);
+            derivative = (p0 - pminus1) / dt;
         } else if ( t-dt < 0.0 ) {
             // s is close to the s=0 boundary, use a one-sided difference.
             Vector3 pplus1 = this.opCall(t+dt);
-            derivative = (pplus1 - p0) / to!number(dt);
+            derivative = (pplus1 - p0) / dt;
         } else {
             // Not near a boundary, use central-difference.
             Vector3 pminus1 = this.opCall(t-dt);
             Vector3 pplus1 = this.opCall(t+dt);
-            derivative = (pplus1 - pminus1) / to!number(2.0 * dt);
+            derivative = (pplus1 - pminus1) / (2.0 * dt);
         }
         return derivative;
     }
@@ -62,17 +62,17 @@ public:
             // t is close to the t=1.0 boundary, use a one-sided difference.
             Vector3 pminus1 = this.opCall(t-dt);
             Vector3 pminus2 = this.opCall(t-2*dt);
-            derivative = (p0 - to!number(2)*pminus1 + pminus2) / to!number(dt*dt);
+            derivative = (p0 - 2*pminus1 + pminus2) / (dt*dt);
         } else if ( t-dt < 0.0 ) {
             // s is close to the s=0 boundary, use a one-sided difference.
             Vector3 pplus1 = this.opCall(t+dt);
             Vector3 pplus2 = this.opCall(t+2*dt);
-            derivative = (pplus2 - to!number(2)*pplus1 + p0) / to!number(dt*dt);
+            derivative = (pplus2 - 2*pplus1 + p0) / (dt*dt);
         } else {
             // Not near a boundary, use central-difference.
             Vector3 pminus1 = this.opCall(t-dt);
             Vector3 pplus1 = this.opCall(t+dt);
-            derivative = (pplus1 - to!number(2)*p0 + pminus1) / to!number(dt*dt);
+            derivative = (pplus1 - 2*p0 + pminus1) / (dt*dt);
         }
         return derivative;
     }

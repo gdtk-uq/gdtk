@@ -756,14 +756,14 @@ public:
         begin_group(); // Keep tic marks together
         line(p0, p1);
         foreach(i; 0 .. n+1) {
-            Vector3 p = p0 + to!number(i)*dp;
+            Vector3 p = p0 + i*dp;
             Vector3 p2 = p+dpTic;
             line(p, p2);
         }
         end_group();
         // Label the tic marks
         foreach(i; 0 .. n+1) {
-            Vector3 p = p0 + to!number(i)*dp;
+            Vector3 p = p0 + i*dp;
             Vector3 p3 = p+dpText;
             double value = vmin + i*vtic;
             string myText = format(numberFormat, value);

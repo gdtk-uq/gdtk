@@ -68,7 +68,7 @@ protected:
         }
         C.length = n;
         foreach (i; 0 .. n){
-            C[i] = to!number(n) * (B[i+1] - B[i]);
+            C[i] = n*(B[i+1] - B[i]);
         }
         if ( n == 1 ) {
             D = [Vector3(0)];
@@ -76,7 +76,7 @@ protected:
         }
         D.length = n - 1;
         foreach (i; 0 .. n-1){
-            D[i] = to!number(n-1) * (C[i+1] - C[i]);
+            D[i] = (n-1)*(C[i+1] - C[i]);
         }
     }
     Vector3 deCasteljau(ref const(Vector3[]) B, double t) const
@@ -87,7 +87,7 @@ protected:
         Vector3[] Q = B.dup(); // work array will be overwritten
         foreach (k; 0 .. n_order) {
             foreach (i; 0 .. n_order-k) {
-                Q[i] = to!number(1.0 - t) * Q[i] + to!number(t) * Q[i+1];
+                Q[i] = (1.0-t)*Q[i] + t*Q[i+1];
             }
         }
         return Q[0];

@@ -82,8 +82,8 @@ public:
             Vector3 nA = cross(oopvA, dcArdt).normalize();
             Vector3 nB = cross(dcBrdt, oopvB).normalize();
             // Intermediate control points for the cubic Bezier.
-            Vector3 p1 = cAr + to!number(L/3.0)*nA;
-            Vector3 p2 = cBr + to!number(L/3.0)*nB;
+            Vector3 p1 = cAr + L/3.0*nA;
+            Vector3 p2 = cBr + L/3.0*nB;
             if (pure2D) { p1.refz = 0.0; p2.refz = 0.0; }
             return new Bezier([cAr, p1, p2, cBr]);
         }

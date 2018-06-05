@@ -228,7 +228,7 @@ class Grid {
         Vector3 cbc = Vector3(0.0, 0.0, 0.0);
         size_t[] vtx_ids = get_vtx_id_list_for_cell(indx);
         foreach(vtx_id; vtx_ids) { cbc += vertices[vtx_id]; }
-        cbc *= to!number(1.0/vtx_ids.length);
+        cbc *= 1.0/vtx_ids.length;
         return cbc;
     } // end cell_barycentre()
 

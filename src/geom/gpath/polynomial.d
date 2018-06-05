@@ -66,14 +66,14 @@ public:
     override Vector3 opCall(double t) const
     {
         // Evaluate P(t)
-        number xt = P[0].x + to!number(t)*(P[$-1].x-P[0].x);
+        number xt = P[0].x + t*(P[$-1].x-P[0].x);
         return evaluate_polynomial(xt);
     } // end opCall()
     override Vector3 dpdt(double t) const
     {
         // Evaluate P(t)
         number xt;
-        xt = P[0].x + to!number(t)*(P[$-1].x-P[0].x);
+        xt = P[0].x + t*(P[$-1].x-P[0].x);
         return derivative_polynomial(xt);
     }
     override string toString() const

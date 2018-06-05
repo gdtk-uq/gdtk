@@ -128,16 +128,9 @@ public:
         Vector3 pB = faces[Face.bottom](r,s);
         Vector3 pT = faces[Face.top](r,s);
         double omr = 1.0 - r; double oms = 1.0 - s; double omt = 1.0 - t;
-        Vector3 BigC = 
-            to!number(omr * oms * omt) * p[0] + to!number(omr * oms * t) * p[4] +
-            to!number(omr * s * omt) * p[3]   + to!number(omr * s * t) * p[7] +
-            to!number(r * oms * omt) * p[1]   + to!number(r * oms * t) * p[5] +
-            to!number(r * s * omt) * p[2]     + to!number(r * s * t) * p[6];
-        Vector3 p_rst = to!number(0.5) *
-            (to!number(omr) * pW + to!number(r) * pE +
-             to!number(oms) * pS + to!number(s) * pN +
-             to!number(omt) * pB + to!number(t) * pT)
-            - to!number(0.5) * BigC;
+        Vector3 BigC = (omr*oms*omt)*p[0] + (omr*oms*t)*p[4] + (omr*s*omt)*p[3] + (omr*s*t)*p[7] +
+            (r*oms*omt)*p[1] + (r*oms*t)*p[5] + (r*s*omt)*p[2] + (r*s*t)*p[6];
+        Vector3 p_rst = 0.5*(omr*pW + r*pE + oms*pS + s*pN + omt*pB + t*pT) - 0.5*BigC;
         return p_rst; 
     } // end opCall
 

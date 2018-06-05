@@ -845,8 +845,8 @@ public:
         foreach (j; 0 ..njv) {
             foreach (i; 0 .. niv) {
                 if (symmetric) {
-                    *(newg[i,j,0]) = *(this[i,j,0]) - to!number(0.5)*dz;
-                    *(newg[i,j,1]) = *(this[i,j,0]) + to!number(0.5)*dz;
+                    *(newg[i,j,0]) = *(this[i,j,0]) - 0.5*dz;
+                    *(newg[i,j,1]) = *(this[i,j,0]) + 0.5*dz;
                 } else {
                     *(newg[i,j,0]) = *(this[i,j,0]);
                     *(newg[i,j,1]) = *(this[i,j,0]) + dz;
