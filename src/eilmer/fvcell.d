@@ -1710,7 +1710,7 @@ void cell_data_to_raw_binary(ref File fout,
     version(complex_numbers) {
         // For complex_numbers, we presently write out only the real parts.
         // [TODO] Maybe we should write full complex numbers.
-        // Fixed-length buffers to hold data for sending.
+        // Fixed-length buffers to hold data for sending to binary file.
         double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
         //
         dbl4[0] = pos.x.re; dbl4[1] = pos.y.re; dbl4[2] = pos.z.re; dbl4[3] = volume.re;
@@ -1743,7 +1743,7 @@ void cell_data_to_raw_binary(ref File fout,
         if (fs.gas.u_modes.length > 0) { dbl1[0] = dt_therm; fout.rawWrite(dbl1); }
     } else {
         // version double_numbers
-        // Fixed-length buffers to hold data for sending.
+        // Fixed-length buffers to hold data for sending to binary file.
         double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
         //
         dbl4[0] = pos.x; dbl4[1] = pos.y; dbl4[2] = pos.z; dbl4[3] = volume;
@@ -1946,9 +1946,60 @@ void raw_binary_to_cell_data(ref File fin,
     // This function needs to be kept consistent with cell_data_to_raw_binary() above.
     //
     version(complex_numbers) {
-        throw new Error("[TODO] Need to implement.");
+        // For complex_numbers, we presently set only the real parts.
+        // [TODO] Maybe we should read full complex numbers.
+        // Fixed-length buffers to hold data while reading binary file.
+        double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
+        fin.rawRead(dbl4);
+        pos.set(dbl4[0], dbl4[1], dbl4[2]);
+        volume = dbl4[3];
+        fin.rawRead(dbl4);
+        fs.gas.rho = dbl4[0];
+        fs.vel.set(dbl4[1], dbl4[2], dbl4[3]);
+        if (MHD) {
+            fin.rawRead(dbl4);
+            fs.B.set(dbl4[0], dbl4[1], dbl4[2]);
+            fs.divB = dbl4[3];
+            if (divergence_cleaning) {
+                fin.rawRead(dbl1); fs.psi = dbl1[0];
+            } else {
+                fs.psi = 0.0;
+            }
+        } else {
+            fs.B.clear(); fs.psi = 0.0; fs.divB = 0.0;
+        }
+        if (include_quality) {
+            fin.rawRead(dbl1); fs.gas.quality = dbl1[0];
+        } else {
+            fs.gas.quality = 1.0;
+        }
+        fin.rawRead(dbl4);
+        fs.gas.p = dbl4[0]; fs.gas.a = dbl4[1]; fs.gas.mu = dbl4[2]; fs.gas.k = dbl4[3];
+        foreach(i; 0 .. fs.gas.k_modes.length) {
+            fin.rawRead(dbl1); fs.gas.k_modes[i] = dbl1[0];
+        }
+        fin.rawRead(dbl2); fs.mu_t = dbl2[0]; fs.k_t = dbl2[1];
+        fin.rawRead(dbl1); fs.S = to!int(dbl1[0]);
+        if (radiation) {
+            fin.rawRead(dbl3);
+            Q_rad_org = dbl3[0]; f_rad_org = dbl3[1]; Q_rE_rad = dbl3[2];
+        } else {
+            Q_rad_org = 0.0; f_rad_org = 0.0; Q_rE_rad = 0.0;
+        }
+        fin.rawRead(dbl2); fs.tke = dbl2[0]; fs.omega = dbl2[1];
+        foreach (i; 0 .. fs.gas.massf.length) {
+            fin.rawRead(dbl1); fs.gas.massf[i] = dbl1[0];
+        }
+        if (fs.gas.massf.length > 1) { fin.rawRead(dbl1); dt_chem = dbl1[0]; }
+        fin.rawRead(dbl2);
+        fs.gas.u = dbl2[0]; fs.gas.T = dbl2[1];
+        foreach(i; 0 .. fs.gas.u_modes.length) {
+            fin.rawRead(dbl2); fs.gas.u_modes[i] = dbl2[0]; fs.gas.T_modes[i] = dbl2[1];
+        }
+        if (fs.gas.u_modes.length > 0) { fin.rawRead(dbl1); dt_therm = dbl1[0]; }
     } else {
-        // Fixed-length buffers to hold data for sending.
+        // double_numbers
+        // Fixed-length buffers to hold data while reading binary file.
         double[1] dbl1; double[2] dbl2; double[3] dbl3; double[4] dbl4;
         fin.rawRead(dbl4);
         pos.set(dbl4[0], dbl4[1], dbl4[2]);
