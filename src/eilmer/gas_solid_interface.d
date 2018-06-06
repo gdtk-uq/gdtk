@@ -51,8 +51,7 @@ void computeFluxesAndTemperatures(int ftl, FVCell[] gasCells, FVInterface[] gasI
         gasIFaces[i].F.total_energy = q; // CHECK ME: might only work for
                                          // NORTH-SOUTH orientation.
                                          // Need to think about sign.
-        // Note that we are not propagating complex numbers into solid domain.
-        solidIFaces[i].T = T.re;
-        solidIFaces[i].flux = q.re;
+        solidIFaces[i].T = T;
+        solidIFaces[i].flux = q;
     }
 }
