@@ -464,7 +464,7 @@ e4mpi: main.d $(EILMER_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(OPENMPI_FILES) \
 		$(DLINKFLAGS) -L-lmpi
 
-e4sss: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
+e4sss: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -474,7 +474,7 @@ e4sss: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
 	$(DMD) $(DFLAGS) $(OF)e4sss \
 		-version=steady_state \
 		-version=shape_sensitivity \
-		steadystate_solver_with_rev_string.d shape_sensitivity_core.d \
+		steadystate_solver_with_rev_string.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
@@ -482,7 +482,7 @@ e4sss: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
 		$(DLINKFLAGS)
 
-e4sss_complex: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
+e4sss_complex: steadystate_solver.d steadystate_core.d shape_sensitivity_core.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -494,7 +494,7 @@ e4sss_complex: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
 		-version=complex_numbers \
 		-version=steady_state \
 		-version=shape_sensitivity \
-		steadystate_solver_complex_with_rev_string.d shape_sensitivity_core.d \
+		steadystate_solver_complex_with_rev_string.d steadystate_core.d shape_sensitivity_core.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
@@ -503,7 +503,7 @@ e4sss_complex: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
 		$(DLINKFLAGS)
 
-e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d $(EILMER_FILES) \
+e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d steadystate_core.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -511,9 +511,11 @@ e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d $(EILMER_FILES) \
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' shape_sensitivity_calc.d > \
 		shape_sensitivity_calc_with_rev_string.d
 	$(DMD) $(DFLAGS) $(OF)e4ssc \
-		-version=shape_sensitivity -version=steady_state \
+		-version=complex_numbers \
+		-version=shape_sensitivity \
+		-version=steady_state \
 		shape_sensitivity_calc_with_rev_string.d \
-		shape_sensitivity_core.d \
+		shape_sensitivity_core.d steadystate_core.d \
 		$(EILMER_FILES) \
 		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
