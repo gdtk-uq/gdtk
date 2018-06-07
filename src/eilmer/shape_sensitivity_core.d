@@ -26,6 +26,7 @@ import nm.luabbla;
 import nm.complex;
 import nm.number;
 
+import steadystate_core;
 import fluidblock;
 import sfluidblock;
 import ufluidblock;
@@ -1606,87 +1607,60 @@ void readDesignVarsFromDakotaFile(ref Vector3[] design_variables)
     } // end foreach myblk
 } // end readDesignVarsFromDakotaFile
 
-number finite_difference_grad(string jobName, int last_tindx, string varID) {    
-    // run simulation
-    string command = "bash run-flow-solver.sh";
-    auto output = executeShell(command);
-    
-    // store simulation diagnostics file
-    string commandCpy0 = "cp e4sss.diagnostics.dat adjoint/" ~ varID;
-    auto outputCpy0 = executeShell(commandCpy0);
+void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int maxCPUs, Vector3[] design_variables, double EPSILON) {
 
-    string commandCpy1 = "cp -r plot adjoint/plot-" ~ varID;
-    auto outputCpy1 = executeShell(commandCpy1);
-
-    // read perturbed solution
-    foreach (blk; localFluidBlocks) {
-        blk.read_solution(make_file_name!"flow"(jobName, blk.id, last_tindx, flowFileExt), false);
-    }
-    
-    // compute cost function
-    number J;
-    J = objective_function_evaluation();
-
-    // read original grid in
-    foreach (blk; localFluidBlocks) {
-        ensure_directory_is_present(make_path_name!"grid-original"(0));
-        string gridFileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-        blk.read_new_underlying_grid(gridFileName);
-        blk.sync_vertices_from_underlying_grid(0);
-    }
-    // clear old simulation files
-    string command0 = "bash clear.sh";
-    output = executeShell(command0);
-
-    return J;
-}
-
-void compute_design_sensitivities_with_finite_differences(string jobName, int last_tindx, Vector3[] design_variables,  number[] adjointGradients, double DELTA) {
-
+    writeln(" ");
+    writeln("------------------------------------------------------");
+    writeln("----EVALUATING DERIVATIVES VIA DIRECT COMPLEX STEP----");
+    writeln("------------------------------------------------------");
+    writeln(" ");
+        
     size_t nDesignVars = design_variables.length;
-    number[] finiteDiffGradients;
-    
-    // save a copy of the original mesh for later use
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.sync_vertices_to_underlying_grid(0);
-        ensure_directory_is_present(make_path_name!"grid-original"(0));
-        auto fileName = make_file_name!"grid-original"(jobName, blk.id, 0, gridFileExt = "gz");
-        blk.write_underlying_grid(fileName);
-    }
-    
+    double[] gradients;
+        
     foreach ( i; 0..nDesignVars) {
-        
-        number objFcnEvalP; number objFcnEvalM; string varID; number P0; number dP; number err;
-        
-        // store origianl value, and compute perturbation
-        P0 = design_variables[i].y;
-        dP = DELTA;
-        
-        // perturb design variable +ve
-        design_variables[i].refy = P0 + dP;
+        writeln("----- Computing Gradient for variable: ", i+1);
+        foreach (myblk; localFluidBlocks) {
+            ensure_directory_is_present(make_path_name!"grid"(0));
+            string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, gridFileExt = "gz");
+            myblk.read_new_underlying_grid(gridFileName);
+            myblk.sync_vertices_from_underlying_grid(0);
+        }
 
+        foreach (myblk; localFluidBlocks) {
+            myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, flowFileExt), false);
+        }
+        
+        // perturb design variable in complex plane
+        number P0 = design_variables[i].y; 
+        Complex!double h = complex(0.0, EPSILON); //  0 + iEPSILON
+        design_variables[i].refy = P0 + h;
+        
         // perturb grid
-        gridUpdate(false, false, design_variables, 1, jobName);
-
-        // run simulation
-        varID = "p-y-" ~ to!string(i);
-        objFcnEvalP = finite_difference_grad(jobName, last_tindx, varID);
-                
-        // perturb design variable -ve
-        design_variables[i].refy = P0 - dP;
-
-        // perturb grid
-        gridUpdate(false, false, design_variables, 1, jobName);
+        gridUpdate(true, false, design_variables, 1, jobName); // gtl = 1
+        foreach (myblk; localFluidBlocks) {
+            myblk.compute_primary_cell_geometric_data(0);
+        }
         
-        // run simulation
-        varID = "m-y-" ~ to!string(i);
-        objFcnEvalM = finite_difference_grad(jobName, last_tindx, varID);
+        // Additional memory allocation specific to steady-state solver
+        allocate_global_workspace();
+        foreach (myblk; localFluidBlocks) {
+            myblk.allocate_GMRES_workspace();
+        }
 
-        finiteDiffGradients ~= (objFcnEvalP - objFcnEvalM)/(2.0*dP); 
+        // run steady-state solver
+        iterate_to_steady_state(0, maxCPUs); // snapshotStart = 0
         
-        err = ((adjointGradients[i] - finiteDiffGradients[i])/finiteDiffGradients[i]) * 100.0;
-        writeln("finite-difference gradient for variable ", i+1, ": ", finiteDiffGradients[i], ", % error: ", abs(err));
+        // compute objective function gradient
+        number objFcn = objective_function_evaluation();
+        gradients ~= objFcn.im/EPSILON;
+
+        // return value to original state
+        design_variables[i].refy = P0;
     }
+
+    foreach ( i; 0..nDesignVars) writeln("gradient for variable ", i+1, ": ", gradients[i]);
+    writeln("simulation complete.");
 }
 
 /*
@@ -2077,13 +2051,15 @@ void gridUpdate(bool doNotWriteGridToFile, bool readDesignVarsFromFile, ref Vect
         inverse_distance_weighting(myblk, bndaryVtxInitPos, bndaryVtxNewPos, gtl);
     }
 
-    if (doNotWriteGridToFile) return;
+
     foreach (myblk; parallel(localFluidBlocks,1)) {
         foreach(j, vtx; myblk.vertices) {
             vtx.pos[0].refx = vtx.pos[gtl].x;
             vtx.pos[0].refy = vtx.pos[gtl].y;
         }
-        
+    }
+    if (doNotWriteGridToFile) return;
+    foreach (myblk; parallel(localFluidBlocks,1)) {
         // save mesh
         myblk.sync_vertices_to_underlying_grid(0);
         ensure_directory_is_present(make_path_name!"grid"(0));

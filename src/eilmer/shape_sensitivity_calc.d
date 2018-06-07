@@ -28,6 +28,8 @@ import std.process;
 import nm.smla;
 import nm.bbla;
 import nm.rsla;
+import nm.complex;
+import nm.number;
 
 import fluxcalc;
 import geom;
@@ -81,7 +83,7 @@ void main(string[] args) {
     msg       ~= "           [--return-objective-function]             \n";
     msg       ~= "           [--parameterise-surfaces                  \n";
     msg       ~= "           [--grid-update]                           \n";
-    msg       ~= "           [--verification]                          \n";
+    msg       ~= "           [--direct-method                          \n";
     msg       ~= "           [--max-cpus=<int>]              defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine               \n";
     msg       ~= "           [--max-wall-clock=<int>]        in seconds\n";
@@ -97,7 +99,7 @@ void main(string[] args) {
     bool returnObjFcnFlag = false;
     bool parameteriseSurfacesFlag = false;
     bool gridUpdateFlag = false;
-    bool verificationFlag = false;
+    bool directMethodFlag = false;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool helpWanted = false;
@@ -108,7 +110,7 @@ void main(string[] args) {
                "return-objective-function", &returnObjFcnFlag,
                "parameterise-surfaces", &parameteriseSurfacesFlag,
                "grid-update", &gridUpdateFlag,
-               "verification", &verificationFlag,
+               "direct-method", &directMethodFlag,
                "max-cpus", &maxCPUs,
                "max-wall-clock", &maxWallClock,
                "help", &helpWanted
@@ -139,7 +141,8 @@ void main(string[] args) {
     auto last_tindx = tindx_list[$-1];
     writefln("Initialising simulation from tindx: %d", last_tindx);
     // TODO: MPI implementation (we can't assume threadsPerMPITask = 1)
-    init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
+    if (directMethodFlag) init_simulation(0, 0, maxCPUs, 1, maxWallClock);
+    else init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
     
     // set some global config values specified in user input lua script
     GradientMethod gradientMethod = GlobalConfig.sscOptions.gradientMethod;
@@ -197,7 +200,7 @@ void main(string[] args) {
     // OBJECTIVE FUNCTION EVALUATION
     //------------------------------
     // -----------------------------
-    double objFnEval;
+    number objFnEval;
     if (returnObjFcnFlag) {
         objFnEval = objective_function_evaluation();
         writeln("objective fn evaluation: ", objFnEval);
@@ -206,7 +209,20 @@ void main(string[] args) {
         return; // --return-objective-function
     }
     
-    
+
+    // -------------------------------
+    // -------------------------------
+    // DIRECT COMPLEX STEP DERIVATIVES
+    // -------------------------------
+    // -------------------------------
+
+    if (directMethodFlag) {
+        parameterise_design_surfaces(designVars, bezierCurveFitTol, bezierCurveFitMaxSteps);
+        compute_direct_complex_step_derivatives(jobName, last_tindx, maxCPUs, designVars, EPSILON);
+        return; //
+        
+    }
+
     // ----------------------------
     // ----------------------------
     // SHAPE SENSITIVITY CALCULATOR
@@ -238,7 +254,7 @@ void main(string[] args) {
         myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
         myblk.applyPostDiffFluxAction(0.0, 0, 0);
         
-        myblk.JlocT = new SMatrix();
+        myblk.JlocT = new SMatrix!number();
         form_local_flow_jacobian_block(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPSILON, MU);
         jacobian_bndary_correction(myblk, myblk.JlocT, nPrimitive, EPSILON, MU, myblk.myConfig.interpolation_order);        
     }
@@ -248,7 +264,7 @@ void main(string[] args) {
     }
 
     foreach (myblk; parallel(localFluidBlocks,1)) {
-        myblk.JextT = new SMatrix();
+        myblk.JextT = new SMatrix!number();
         form_external_flow_jacobian_block_phase1(myblk.JextT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPSILON, MU); // orderOfJacobian=interpolation_order
     }
     
@@ -256,7 +272,7 @@ void main(string[] args) {
         { GlobalConfig.viscous = false; }
 
     foreach (myblk; parallel(localFluidBlocks,1)) {
-        myblk.P = new SMatrix();
+        myblk.P = new SMatrix!number();
         if (orderOfPreconditioningMatrix == 0) { // block-diagonal of a first order flow Jacobian (TODO: something isn't quite right for the new parallel implementation)
             form_local_flow_jacobian_block(myblk.P, myblk, nPrimitive, 0, EPSILON, MU); // orderOfJacobian=0
             jacobian_bndary_correction(myblk, myblk.P, nPrimitive, EPSILON, MU, 0);
@@ -298,18 +314,16 @@ void main(string[] args) {
     // ------------------------------------------------------
     // RESIDUAL/OBJECTIVE SENSITIVITY W.R.T. DESIGN VARIABLES
     // ------------------------------------------------------
-    if (verificationFlag) parameterise_design_surfaces(designVars, bezierCurveFitTol, bezierCurveFitMaxSteps);    
-    else { 
-	readBezierDataFromFile(designVars);
-        readDesignVarsFromDakotaFile(designVars);
-    }
+    readBezierDataFromFile(designVars);
+    readDesignVarsFromDakotaFile(designVars);
+    
     // objective function sensitivity w.r.t. design variables
-    double[] g;
+    number[] g;
     g.length = designVars.length;
     foreach (myblk; localFluidBlocks) {
         size_t nLocalCells = myblk.cells.length;
         size_t nDesignVars = designVars.length;
-        myblk.rT = new Matrix!double(nDesignVars, nLocalCells*nPrimitive);
+        myblk.rT = new Matrix!number(nDesignVars, nLocalCells*nPrimitive);
     }
 
     compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega, ETA);
@@ -322,9 +336,9 @@ void main(string[] args) {
         myblk.rTdotPsi.length = nDesignVars;
         dot(myblk.rT, myblk.psi, myblk.rTdotPsi);
     }
-    double[] adjointGradients;
+    number[] adjointGradients;
     adjointGradients.length = designVars.length;
-    adjointGradients[] = 0.0;
+    adjointGradients[] = to!number(0.0);
     foreach (myblk; localFluidBlocks) adjointGradients[] += myblk.rTdotPsi[];
     adjointGradients[] = g[] - adjointGradients[];
     writeln(adjointGradients);
@@ -335,11 +349,5 @@ void main(string[] args) {
         GC.minimize();
     }
     
-
-    // ------------
-    // VERIFICATION
-    // ------------
-    if (verificationFlag) compute_design_sensitivities_with_finite_differences(jobName, last_tindx, designVars, adjointGradients, DELTA);
-
     writeln("Simulation complete.");
 }
