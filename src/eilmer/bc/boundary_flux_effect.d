@@ -71,7 +71,6 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
                                  ThermionicEmissionActive, Twall_iterations, Twall_subiterations);
         break;
     case "update_energy_wall_normal_velocity":
-        writeln("yes made it into d-code");
         newBFE = new BFE_UpdateEnergyWallNormalVelocity(blk_id, boundary);
         break;
     default:
