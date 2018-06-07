@@ -70,6 +70,10 @@ BoundaryFluxEffect make_BFE_from_json(JSONValue jsonData, int blk_id, int bounda
         newBFE = new BFE_EnergyBalanceThermionic(blk_id, boundary, emissivity, Ar, phi,
                                  ThermionicEmissionActive, Twall_iterations, Twall_subiterations);
         break;
+    case "update_energy_wall_normal_velocity":
+        writeln("yes made it into d-code");
+        newBFE = new BFE_UpdateEnergyWallNormalVelocity(blk_id, boundary);
+        break;
     default:
         string errMsg = format("ERROR: The BoundaryFluxEffect type: '%s' is unknown.", bfeType);
         throw new Error(errMsg);
@@ -613,6 +617,88 @@ public:
 
     //    return Twall;
     //}
-
 } // end class BIE_EnergyBalanceThermionic
+
+
+/**
+ * BFE_UpdateEnergyWallNormalVelocity is a boundary Flux Effect 
+ * that can be called for moving walls that have a wall normal 
+ * velocity component.
+ * It operates by incrementing total_energy to correct for work 
+ * done on fluid by moving wall:
+ * total_energy += pressure * Wall_normal_velocity
+ *
+*/
+class BFE_UpdateEnergyWallNormalVelocity : BoundaryFluxEffect {
+public:
+    this(int id, int boundary)
+    {
+        // Don't need to do anything specific
+        super(id, boundary, "UpdateEnergyWallNormalVelocity");
+    }
+
+    override string toString() const 
+    {
+        return "BFE_UpdateEnergyWallNormalVelocity";
+    }
+
+    override void apply_unstructured_grid(double t, int gtl, int ftl)
+    {
+        throw new Error("BFE_UpdateEnergyWallNormalVelocity.apply_unstructured_grid() not yet implemented");
+    }
+    
+    override void apply_structured_grid(double t, int gtl, int ftl)
+    {
+        FVInterface IFace;
+        size_t i, j, k;
+        Vector3 nx,ny,nz;
+        nx.set(1,0,0); ny.set(0,1,0); nz.set(0,0,1);
+        auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
+
+        switch(which_boundary){
+        case Face.west:
+            i = blk.imin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    // get interface
+                    IFace = blk.get_cell(i,j,k).iface[Face.west];
+                    //writeln("Before: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
+                    
+                    // set correct energy and momentum flux
+                    IFace.F.total_energy = IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
+                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
+                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
+                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
+                    IFace.F.mass = 0.;
+                    //writeln("Pressure", IFace.fs.gas.p, "IFace.gvel",IFace.gvel);
+                    //writeln("After: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
+
+                } // end j loop
+            } // end k loop
+            break;
+        case Face.east:
+            i = blk.imax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (j = blk.jmin; j <= blk.jmax; ++j) {
+                    // get interface
+                    IFace = blk.get_cell(i,j,k).iface[Face.west];
+                    //writeln("Before: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
+
+                    // set correct energy and momentum flux
+                    IFace.F.total_energy = -IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
+                    IFace.F.momentum.refx = -IFace.fs.gas.p * dot(IFace.n, nx);
+                    IFace.F.momentum.refy = -IFace.fs.gas.p * dot(IFace.n, ny);
+                    IFace.F.momentum.refz = -IFace.fs.gas.p * dot(IFace.n, nz);
+                    IFace.F.mass = 0.;
+                    //writeln("Pressure", IFace.fs.gas.p, "IFace.gvel",IFace.gvel);
+                    //writeln("After: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
+                } // end j loop
+            } // end k loop
+            break;
+        default:
+            throw new Error("Const_Flux only implemented for EAST & WEST gas face.");
+        }
+    }
+} // end BFE_UpdateEnergyWallNormalVelocity
 

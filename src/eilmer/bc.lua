@@ -416,6 +416,13 @@ function EnergyBalanceThermionic:tojson()
    return str
 end
 
+UpdateEnergyWallNormalVelocity = BoundaryFluxEffect:new{}
+UpdateEnergyWallNormalVelocity.type = "update_energy_wall_normal_velocity"
+function UpdateEnergyWallNormalVelocity:tojson()
+   local str = string.format('          {"type" : "%s"}', self.type)
+   return str
+end
+
 -- Class for (complete) BoundaryCondition
 --
 -- BoundaryConditions consist of lists of actions to be done
@@ -508,7 +515,7 @@ WallBC_WithSlip.type = "wall_with_slip"
 function WallBC_WithSlip:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_WithSlip constructor.")
+   assert(flag, "Invalid name for item supplied to WallB1102C_WithSlip constructor.")
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
@@ -518,6 +525,29 @@ function WallBC_WithSlip:new(o)
    o.is_configured = true
    return o
 end
+
+-- Copy of WallBC_WithSlip for development/trialing of wall BCs 
+-- for moving mesh simulations for walls with normal velocity 
+WallBC_WithSlip2 = BoundaryCondition:new()
+WallBC_WithSlip2.type = "wall_with_slip2"
+function WallBC_WithSlip2:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   assert(flag, "Invalid name for item supplied to WallBC_WithSlip constructor.")
+   o = BoundaryCondition.new(self, o)
+   -- In a turbulence model sense, a slip wall is NOT a wall
+   -- We mean a wall where the speed of the gas matches the speed of the wall
+   o.is_wall_with_viscous_effects = false
+   o.convective_flux_computed_in_bc = true
+   o.setsFluxDirectly = false
+   o.ghost_cell_data_available = true
+   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.postConvFluxAction = { UpdateEnergyWallNormalVelocity:new()}
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new()}
+   o.is_configured = true
+   return o
+end
+
 
 WallBC_NoSlip_FixedT = BoundaryCondition:new()
 WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
