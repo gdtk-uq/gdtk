@@ -1633,7 +1633,13 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         
         // perturb design variable in complex plane
         number P0 = design_variables[i].y; 
-        Complex!double h = complex(0.0, EPSILON); //  0 + iEPSILON
+        number h;
+
+        version(complex_numbers)
+            h = complex(0.0, EPSILON); //  0 + iEPSILON
+        else
+            h = EPSILON; //  0 + iEPSILON
+
         design_variables[i].refy = P0 + h;
         
         // perturb grid
