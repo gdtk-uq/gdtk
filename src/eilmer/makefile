@@ -72,7 +72,8 @@ ifeq ($(WITH_CUDA_GPU_CHEM),1)
 endif
 
 ifeq ($(WITH_COMPLEX_NUMBERS),1)
-    PROGRAMS += e4complex
+    PROGRAMS += e4shared_complex
+    PROGRAMS += e4sss_complex
 endif
 
 DEMO_PROGRAMS := globalconfig_demo flowstate_demo fv_demo fluidblock_demo \
@@ -306,6 +307,7 @@ clean:
 	- rm main_with_rev_string.d
 	- rm main_complex_with_rev_string.d
 	- rm steadystate_solver_with_rev_string.d
+	- rm steadystate_solver_complex_with_rev_string.d	
 	- rm shape_sensitivity_calc_with_rev_string.d
 	- rm mpi_main_with_rev_string.d e4mpi loadbalance_with_rev_string.d
 	- rm dgd-for-mech4480.tgz
@@ -421,7 +423,7 @@ e4shared: main.d $(EILMER_FILES) \
 		$(GASDYN_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
 		$(DLINKFLAGS)
 
-e4complex: main.d $(EILMER_FILES) \
+e4shared_complex: main.d $(EILMER_FILES) \
 	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
 	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
 	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
@@ -429,7 +431,7 @@ e4complex: main.d $(EILMER_FILES) \
 	$(GASDYN_FILES) $(NM_LUA_FILES)
 	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' main.d > \
 		main_complex_with_rev_string.d
-	$(DMD) $(DFLAGS) $(OF)e4complex \
+	$(DMD) $(DFLAGS) $(OF)e4shared_complex \
 		-version=complex_numbers \
 		-version=$(TECPLOT_BIN_VERSION_STR) \
 		main_complex_with_rev_string.d \
@@ -478,6 +480,27 @@ e4sss: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
 		$(GAS_FILES) $(GZIP_FILES) \
 		$(UTIL_FILES) $(NM_FILES) $(KINETICS_FILES) \
 		$(GAS_LUA_FILES) $(KINETICS_LUA_FILES) $(NM_LUA_FILES) \
+		$(DLINKFLAGS)
+
+e4sss_complex: steadystate_solver.d shape_sensitivity_core.d $(EILMER_FILES) \
+	$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+	$(GAS_FILES) $(LIBLUA) $(GZIP_FILES) \
+	$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+	$(NM_FILES) $(UTIL_FILES) \
+	$(GASDYN_FILES) $(NM_LUA_FILES)
+	sed -e 's/PUT_REVISION_STRING_HERE/$(REVISION_STRING)/' steadystate_solver.d > \
+		steadystate_solver_complex_with_rev_string.d
+	$(DMD) $(DFLAGS) $(OF)e4sss_complex \
+		-version=complex_numbers \
+		-version=steady_state \
+		-version=shape_sensitivity \
+		steadystate_solver_complex_with_rev_string.d shape_sensitivity_core.d \
+		$(EILMER_FILES) \
+		$(BC_FILES) $(SOLID_FILES) $(GEOM_FILES) $(GRID_FILES) \
+		$(GAS_FILES) $(GZIP_FILES) \
+		$(UTIL_FILES) $(NM_FILES) \
+		$(KINETICS_FILES) $(GAS_LUA_FILES) $(KINETICS_LUA_FILES) \
+		$(GASDYN_FILES) $(NM_LUA_FILES) $(TECPLOT_FILES) \
 		$(DLINKFLAGS)
 
 e4ssc: shape_sensitivity_calc.d shape_sensitivity_core.d $(EILMER_FILES) \

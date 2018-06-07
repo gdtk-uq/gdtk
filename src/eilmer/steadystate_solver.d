@@ -30,6 +30,8 @@ import std.datetime;
 
 import nm.smla;
 import nm.bbla;
+import nm.complex;
+import nm.number;
 
 import special_block_init;
 import fluidblock;
@@ -49,15 +51,15 @@ static int fnCount = 0;
 static shared bool with_k_omega;
 
 // Module-local, global memory arrays and matrices
-double[] g0;
-double[] g1;
-double[] h;
-double[] hR;
-Matrix!double H0;
-Matrix!double H1;
-Matrix!double Gamma;
-Matrix!double Q0;
-Matrix!double Q1;
+number[] g0;
+number[] g1;
+number[] h;
+number[] hR;
+Matrix!number H0;
+Matrix!number H1;
+Matrix!number Gamma;
+Matrix!number Q0;
+Matrix!number Q1;
 
 void main(string[] args)
 {
@@ -856,11 +858,11 @@ void allocate_global_workspace()
     g1.length = mOuter+1;
     h.length = mOuter+1;
     hR.length = mOuter+1;
-    H0 = new Matrix!double(mOuter+1, mOuter);
-    H1 = new Matrix!double(mOuter+1, mOuter);
-    Gamma = new Matrix!double(mOuter+1, mOuter+1);
-    Q0 = new Matrix!double(mOuter+1, mOuter+1);
-    Q1 = new Matrix!double(mOuter+1, mOuter+1);
+    H0 = new Matrix!number(mOuter+1, mOuter);
+    H1 = new Matrix!number(mOuter+1, mOuter);
+    Gamma = new Matrix!number(mOuter+1, mOuter+1);
+    Q0 = new Matrix!number(mOuter+1, mOuter+1);
+    Q1 = new Matrix!number(mOuter+1, mOuter+1);
 }
 
 double determine_initial_dt(double cflInit)
@@ -1022,7 +1024,7 @@ string dot_over_blocks(string dot, string A, string B)
 foreach (blk; parallel(localFluidBlocks,1)) {
    blk.dotAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
-      blk.dotAcc += blk.`~A~`[k]*blk.`~B~`[k];
+      blk.dotAcc += blk.`~A~`[k].re*blk.`~B~`[k].re;
    }
 }
 `~dot~` = 0.0;
@@ -1036,7 +1038,7 @@ string norm2_over_blocks(string norm2, string blkMember)
 foreach (blk; parallel(localFluidBlocks,1)) {
    blk.normAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
-      blk.normAcc += blk.`~blkMember~`[k]*blk.`~blkMember~`[k];
+      blk.normAcc += blk.`~blkMember~`[k].re*blk.`~blkMember~`[k].re;
    }
 }
 `~norm2~` = 0.0;
@@ -1058,7 +1060,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     size_t TKE = tkeIdx;
     size_t OMEGA = omegaIdx;
 
-    double resid;
+    number resid;
     
     int interpOrderSave = GlobalConfig.interpolation_order;
     // Presently, just do one block
@@ -1119,13 +1121,13 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
             }
         }
     }
-    double maxMass = 0.0;
-    double maxMomX = 0.0;
-    double maxMomY = 0.0;
-    double maxMomZ = 0.0;
-    double maxEnergy = 0.0;
-    double maxTke = 0.0;
-    double maxOmega = 0.0;
+    number maxMass = 0.0;
+    number maxMomX = 0.0;
+    number maxMomY = 0.0;
+    number maxMomZ = 0.0;
+    number maxEnergy = 0.0;
+    number maxTke = 0.0;
+    number maxOmega = 0.0;
     foreach (blk; localFluidBlocks) {
         maxMass = fmax(maxMass, blk.maxRate.mass);
         maxMomX = fmax(maxMomX, blk.maxRate.momentum.x);
@@ -1145,7 +1147,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     if ( GlobalConfig.dimensions == 3 )
         maxMomZ = fmax(maxMomZ, minNonDimVal);
     maxEnergy = fmax(maxEnergy, minNonDimVal);
-    double maxMom = max(maxMomX, maxMomY, maxMomZ);
+    number maxMom = max(maxMomX, maxMomY, maxMomZ);
     if ( with_k_omega ) {
         maxTke = fmax(maxTke, minNonDimVal);
         maxOmega = fmax(maxOmega, minNonDimVal);
@@ -1167,8 +1169,8 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     mixin(norm2_over_blocks("unscaledNorm2", "FU"));
 
     // Initialise some arrays and matrices that have already been allocated
-    g0[] = 0.0;
-    g1[] = 0.0;
+    g0[] = to!number(0.0);
+    g1[] = to!number(0.0);
     H0.zeros();
     H1.zeros();
 
@@ -1179,7 +1181,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     // Taking x0 = [0] (as is common) gives r0 = b = FU
     foreach (blk; parallel(localFluidBlocks,1)) {
         bool local_with_k_omega = with_k_omega;
-        blk.x0[] = 0.0;
+        blk.x0[] = to!number(0.0);
         int cellCount = 0;
         foreach (cell; blk.cells) {
             blk.r0[cellCount+MASS] = -(1./blk.maxRate.mass)*blk.FU[cellCount+MASS];
@@ -1196,9 +1198,9 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         }
     }
     // Then compute v = r0/||r0||
-    double betaTmp;
+    number betaTmp;
     mixin(norm2_over_blocks("betaTmp", "r0"));
-    double beta = betaTmp;
+    number beta = betaTmp;
     g0[0] = beta;
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) {
@@ -1225,10 +1227,10 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                         blk.myConfig.viscous = savedViscousFlag;
                     }
                     int cellCount = 0;
-                    double[] tmp;
+                    number[] tmp;
                     tmp.length = nConserved;
                     foreach (cell; blk.cells) {
-                        LUSolve!double(cell.dConservative, cell.pivot,
+                        LUSolve!number(cell.dConservative, cell.pivot,
                                        blk.v[cellCount..cellCount+nConserved], tmp);
                         blk.zed[cellCount..cellCount+nConserved] = tmp[];
                         cellCount += nConserved;
@@ -1244,7 +1246,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
             // Prepare 'w' with (I/dt)(P^-1)v term;
             foreach (blk; parallel(localFluidBlocks,1)) {
                 double dtInv = 1.0/dt;
-                blk.w[] = dtInv*blk.zed[];
+                foreach (idx; 0..blk.w.length) blk.w[idx] = dtInv*blk.zed[idx];
             }
             
             // Evaluate Jz and place in z
@@ -1261,17 +1263,17 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                     // Extract column 'i'
                     foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i]; 
                 }
-                double H0_ij_tmp;
+                number H0_ij_tmp;
                 mixin(dot_over_blocks("H0_ij_tmp", "w", "v"));
-                double H0_ij = H0_ij_tmp;
+                number H0_ij = H0_ij_tmp;
                 H0[i,j] = H0_ij;
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k]; 
                 }
             }
-            double H0_jp1j_tmp;
+            number H0_jp1j_tmp;
             mixin(norm2_over_blocks("H0_jp1j_tmp", "w"));
-            double H0_jp1j = H0_jp1j_tmp;
+            number H0_jp1j = H0_jp1j_tmp;
             H0[j+1,j] = H0_jp1j;
         
             foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1305,7 +1307,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                 copy(Gamma, Q1);
             }
             else {
-                nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
+                nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
 
             // Prepare for next step
@@ -1330,20 +1332,20 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
 
         // At end H := R up to row m
         //        g := gm up to row m
-        upperSolve!double(H1, to!int(m), g1);
+        upperSolve!number(H1, to!int(m), g1);
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot!double(blk.V, blk.nvars, m, blk.g1, blk.zed);
+            nm.bbla.dot!number(blk.V, blk.nvars, m, blk.g1, blk.zed);
         }
         
         if (usePreconditioner) {
             foreach(blk; parallel(localFluidBlocks,1)) {
                 int cellCount = 0;
-                double[] tmp;
+                number[] tmp;
                 tmp.length = nConserved;
                 foreach (cell; blk.cells) {
-                    LUSolve!double(cell.dConservative, cell.pivot,
+                    LUSolve!number(cell.dConservative, cell.pivot,
                                    blk.zed[cellCount..cellCount+nConserved], tmp);
                     blk.dU[cellCount..cellCount+nConserved] = tmp[];
                     cellCount += nConserved;
@@ -1393,8 +1395,8 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
             }
         }
         // Re-initialise some vectors and matrices for restart
-        g0[] = 0.0;
-        g1[] = 0.0;
+        g0[] = to!number(0.0);
+        g1[] = to!number(0.0);
         H0.zeros();
         H1.zeros();
         // And set first residual entry
@@ -1442,7 +1444,7 @@ void max_residuals(ConservedQuantities residuals)
             blk.residuals.tke = fabs(blk.residuals.tke);
             blk.residuals.omega = fabs(blk.residuals.omega);
         }
-        double massLocal, xMomLocal, yMomLocal, zMomLocal, energyLocal, tkeLocal, omegaLocal;
+        number massLocal, xMomLocal, yMomLocal, zMomLocal, energyLocal, tkeLocal, omegaLocal;
         foreach (cell; blk.cells) {
             massLocal = cell.dUdt[0].mass;
             xMomLocal = cell.dUdt[0].momentum.x;

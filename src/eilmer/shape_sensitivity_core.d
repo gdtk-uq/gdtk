@@ -23,6 +23,8 @@ import util.lua_service;
 import nm.bbla;
 import nm.smla;
 import nm.luabbla;
+import nm.complex;
+import nm.number;
 
 import fluidblock;
 import sfluidblock;
@@ -55,15 +57,15 @@ FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
 FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
 
 // Module-local, global memory arrays and matrices for GMRES
-double[] g0;
-double[] g1;
-double[] h;
-double[] hR;
-Matrix!double H0;
-Matrix!double H1;
-Matrix!double Gamma;
-Matrix!double Q0;
-Matrix!double Q1;
+number[] g0;
+number[] g1;
+number[] h;
+number[] hR;
+Matrix!number H0;
+Matrix!number H1;
+Matrix!number Gamma;
+Matrix!number Q0;
+Matrix!number Q1;
 
 private lua_State* L; // module-local Lua interpreter
 
@@ -124,15 +126,15 @@ string computeBndaryVariableDerivatives(string varName, string posInArray, bool 
     return codeStr;
 }
 
-void jacobian_bndary_correction(FluidBlock blk, ref SMatrix!double L, size_t np,
+void jacobian_bndary_correction(FluidBlock blk, ref SMatrix!number L, size_t np,
                                 double EPSILON, double MU, int orderOfJacobian) {
 
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     blk.myConfig.interpolation_order = orderOfJacobian;
     
     // define, and initialise data structures
-    double h; double diff;
-    double[][] dRdq; double[][] dqdQ; double[][] Lext; double[] qp; double[] qm;
+    number h; number diff;
+    number[][] dRdq; number[][] dqdQ; number[][] Lext; number[] qp; number[] qm;
     qp.length = np;
     qm.length = np;
     dRdq.length = np; // number of conserved variables
@@ -186,15 +188,15 @@ void jacobian_bndary_correction(FluidBlock blk, ref SMatrix!double L, size_t np,
                 // 3rd perturbation: P
                 mixin(computeFluxFlowVariableDerivativesAroundCell("gas.p", "3", true));
                 
-                double integral;
-                double volInv = 1.0 / int_cell.volume[0];
+                number integral;
+                number volInv = 1.0 / int_cell.volume[0];
                 for ( size_t ip = 0; ip < np; ++ip ) {
                     for ( size_t jp = 0; jp < np; ++jp ) {
                     integral = 0.0;
                     foreach(fi, iface; int_cell.iface) {
                         integral -= int_cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                     }
-                    double entry = volInv * integral;                    
+                    number entry = volInv * integral;                    
                     dRdq[ip][jp] = entry;
                     }
                 }
@@ -290,7 +292,7 @@ void form_external_flow_jacobian_block_phase0(FluidBlock blk, size_t np, int ord
     } // end foreach blk.bc
 } // end form_external_flow_jacobian_block_phase0()
 
-void form_external_flow_jacobian_block_phase1(ref SMatrix!double A, FluidBlock blk, size_t np,
+void form_external_flow_jacobian_block_phase1(ref SMatrix!number A, FluidBlock blk, size_t np,
                                               int orderOfJacobian, double EPSILON, double MU) {
     // In this phase we first reach across and grab the external effects from the neighbour blocks.
     // We then make a record of what cells in the block are on the boundary, and then finally
@@ -346,7 +348,7 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix!double A, FluidBlock b
         if (bndary_cell_id_list.canFind(cell.id)) {
             size_t[size_t] pos_array; // position of unsorted array
             size_t[] idList;
-            double[] entries;
+            number[] entries;
             foreach (i, f; cell.iface) {
                 if (f.is_on_boundary) {
                     FVCell ghostcell;
@@ -375,7 +377,7 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix!double A, FluidBlock b
                 }
                 if (aaLen == A.aa.length) {
                     // no entries have been added for this row, for CRS we must store a dummy 0 entry
-                    A.aa ~= 0.0;
+                    A.aa ~= to!number(0.0);
                     A.ja ~= 0;
                 }
                 A.ia ~= A.aa.length;
@@ -383,7 +385,7 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix!double A, FluidBlock b
         }
         else { // internal cell (no entries are required this row, for CRS we must store a dummy 0 entry)
             for ( size_t ip = 0; ip < np; ++ip ) {
-                A.aa ~= 0.0;
+                A.aa ~= to!number(0.0);
                 A.ja ~= 0;
                 A.ia ~= A.aa.length;
             }
@@ -391,7 +393,7 @@ void form_external_flow_jacobian_block_phase1(ref SMatrix!double A, FluidBlock b
     } // end for each blk.cells
 } // end form_external_flow_jacobian_block_phase1()
 
-void form_local_flow_jacobian_block(ref SMatrix!double A, FluidBlock blk, size_t nPrimitive,
+void form_local_flow_jacobian_block(ref SMatrix!number A, FluidBlock blk, size_t nPrimitive,
                                     int orderOfJacobian, double EPSILON, double MU) {
     // construct internal flow Jacobian matrix used in the domain decomposition Jacobian.
 
@@ -440,7 +442,7 @@ void construct_flow_jacobian(FVCell cell, FVInterface face, FluidBlock blk, size
      TODO: turbulence, 3D
      ++/
     // initialise some variables used in the finite difference perturbation
-    double h; double diff;
+    number h; number diff;
 
     // initialise objects
     cellOrig = new FVCell(blk.myConfig);
@@ -468,15 +470,15 @@ void construct_flow_jacobian(FVCell cell, FVInterface face, FluidBlock blk, size
     //writef("perturbed cell: %d effected cells: ", cell.id);
     foreach(c; cell.jacobian_cell_stencil) {
         face.idList ~= blk.globalCellId(c.id);
-        double integral;
-        double volInv = 1.0 / c.volume[0];
+        number integral;
+        number volInv = 1.0 / c.volume[0];
         for ( size_t ip = 0; ip < np; ++ip ) {
             for ( size_t jp = 0; jp < np; ++jp ) {
                 integral = 0.0;
                 foreach(fi, iface; c.iface) {
                     integral -= c.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                 }
-                double JacEntry = volInv * integral;
+                number JacEntry = volInv * integral;
                 face.aa ~= JacEntry;
             }
         }
@@ -503,7 +505,7 @@ void construct_flow_jacobian(FluidBlock blk, size_t ndim, size_t np, size_t orde
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
     // initialise some variables used in the finite difference perturbation
-    double h; double diff;
+    number h; number diff;
 
     // initialise objects
     cellOrig = new FVCell(blk.myConfig);
@@ -536,8 +538,8 @@ void construct_flow_jacobian(FluidBlock blk, size_t ndim, size_t np, size_t orde
         //writef("perturbed cell: %d effected cells: ", cell.id);
         foreach(c; cell.jacobian_cell_stencil) {
             size_t I, J; // indices in Jacobian matrix
-            double integral;
-            double volInv = 1.0 / c.volume[0];
+            number integral;
+            number volInv = 1.0 / c.volume[0];
             for ( size_t ip = 0; ip < np; ++ip ) {
                 I = c.id*np + ip; // row index
                 for ( size_t jp = 0; jp < np; ++jp ) {
@@ -546,7 +548,7 @@ void construct_flow_jacobian(FluidBlock blk, size_t ndim, size_t np, size_t orde
                     foreach(fi, iface; c.iface) {
                         integral -= c.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                     }
-                    double JacEntry = volInv * integral;
+                    number JacEntry = volInv * integral;
                     
                     //if (abs(JacEntry) > ESSENTIALLY_ZERO) {
                     blk.aa[J] ~= JacEntry;
@@ -995,11 +997,11 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
     return codeStr;
 }
 
-void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref double[] g, size_t nPrimitive, bool with_k_omega, double ETA) {
+void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega, double ETA) {
     size_t nDesignVars = design_variables.length;
     foreach ( i; 0..nDesignVars) {
         //evalRHS(0.0, 0, 0, with_k_omega, myblk);
-        int gtl; int ftl; double objFcnEvalP; double objFcnEvalM; string varID; double P0; double dP;
+        int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number P0; number dP;
 
         // store origianl value, and compute perturbation
         P0 = design_variables[i].y;
@@ -1069,7 +1071,7 @@ string dot_over_blocks(string dot, string A, string B)
 foreach (blk; parallel(localFluidBlocks,1)) {
    blk.dotAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
-      blk.dotAcc += blk.`~A~`[k]*blk.`~B~`[k];
+      blk.dotAcc += blk.`~A~`[k].re*blk.`~B~`[k].re;
    }
 }
 `~dot~` = 0.0;
@@ -1083,7 +1085,7 @@ string norm2_over_blocks(string norm2, string blkMember)
 foreach (blk; parallel(localFluidBlocks,1)) {
    blk.normAcc = 0.0;
    foreach (k; 0 .. blk.nvars) {
-      blk.normAcc += blk.`~blkMember~`[k]*blk.`~blkMember~`[k];
+      blk.normAcc += blk.`~blkMember~`[k].re*blk.`~blkMember~`[k].re;
    }
 }
 `~norm2~` = 0.0;
@@ -1098,10 +1100,10 @@ void rpcGMRES_solve(size_t nPrimitive) {
     // restarted-GMRES settings
     size_t maxIters = GlobalConfig.sscOptions.gmresRestartInterval; // maxOuterIters
     size_t m = maxIters;
-    double outerTol = GlobalConfig.sscOptions.stopOnRelativeGlobalResidual;
+    number outerTol = GlobalConfig.sscOptions.stopOnRelativeGlobalResidual;
     size_t maxRestarts = 1000;
     size_t iterCount;
-    double resid;
+    number resid;
     size_t nRestarts;
     size_t r;
     // allocate GMRES arrays attached to the block objectcs
@@ -1116,8 +1118,8 @@ void rpcGMRES_solve(size_t nPrimitive) {
         blk.w.length = n;
         blk.wext.length = n;
         blk.z.length = n;
-        blk.V = new Matrix!double(n, m+1);
-        blk.Q1 = new Matrix!double(m+1, m+1);
+        blk.V = new Matrix!number(n, m+1);
+        blk.Q1 = new Matrix!number(m+1, m+1);
         blk.g0.length = m+1;
         blk.g1.length = m+1;
     }    
@@ -1127,24 +1129,24 @@ void rpcGMRES_solve(size_t nPrimitive) {
     g1.length = m+1;
     h.length = m+1;
     hR.length = m+1;
-    H0 = new Matrix!double(m+1, m);
-    H1 = new Matrix!double(m+1, m);
-    Gamma = new Matrix!double(m+1, m+1);
-    Q0 = new Matrix!double(m+1, m+1);
-    Q1 = new Matrix!double(m+1, m+1);
+    H0 = new Matrix!number(m+1, m);
+    H1 = new Matrix!number(m+1, m);
+    Gamma = new Matrix!number(m+1, m+1);
+    Q0 = new Matrix!number(m+1, m+1);
+    Q1 = new Matrix!number(m+1, m+1);
     
     // Initialise some global arrays and matrices that have already been allocated
-    g0[] = 0.0;
-    g1[] = 0.0;
+    g0[] = to!number(0.0);
+    g1[] = to!number(0.0);
     H0.zeros();
     H1.zeros();
 
-    double[] Z; // global array used in the matrix-vector product
+    number[] Z; // global array used in the matrix-vector product
     
     // 1. Evaluate r0, beta, v1
     // r0 = b - A*x0
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.x0[] = 1.0; 
+        blk.x0[] = to!number(1.0); 
     }
 
     // parallel matrix-vector product; Saad, Krylov Subspace Methods in Distributed Computing Environments
@@ -1175,9 +1177,9 @@ void rpcGMRES_solve(size_t nPrimitive) {
     }
     
     // Then compute v = r0/||r0||
-    double betaTmp;
+    number betaTmp;
     mixin(norm2_over_blocks("betaTmp", "r0"));
-    double beta = betaTmp;
+    number beta = betaTmp;
     g0[0] = beta;
     foreach (blk; parallel(localFluidBlocks,1)) {
         foreach (k; 0 .. blk.nvars) {
@@ -1234,17 +1236,17 @@ void rpcGMRES_solve(size_t nPrimitive) {
                     // Extract column 'i'
                     foreach (k; 0 .. blk.nvars ) blk.v[k] = blk.V[k,i]; 
                 }
-                double H0_ij_tmp;
+                number H0_ij_tmp;
                 mixin(dot_over_blocks("H0_ij_tmp", "w", "v"));
-                double H0_ij = H0_ij_tmp;
+                number H0_ij = H0_ij_tmp;
                 H0[i,j] = H0_ij;
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     foreach (k; 0 .. blk.nvars) blk.w[k] -= H0_ij*blk.v[k]; 
                 }
             }
-            double H0_jp1j_tmp;
+            number H0_jp1j_tmp;
             mixin(norm2_over_blocks("H0_jp1j_tmp", "w"));
-            double H0_jp1j = H0_jp1j_tmp;
+            number H0_jp1j = H0_jp1j_tmp;
             H0[j+1,j] = H0_jp1j;
         
             foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1259,7 +1261,7 @@ void rpcGMRES_solve(size_t nPrimitive) {
                 // Extract final column in H
                 foreach (i; 0 .. j+1) h[i] = H0[i,j];
                 // Rotate column by previous rotations (stored in Q0)
-                nm.bbla.dot!double(Q0, j+1, j+1, h, hR);
+                nm.bbla.dot!number(Q0, j+1, j+1, h, hR);
                 // Place column back in H
                 foreach (i; 0 .. j+1) H0[i,j] = hR[i];
             }
@@ -1271,14 +1273,14 @@ void rpcGMRES_solve(size_t nPrimitive) {
             Gamma[j,j] = c_j; Gamma[j,j+1] = s_j;
             Gamma[j+1,j] = -s_j; Gamma[j+1,j+1] = c_j;
             // Apply rotations
-            nm.bbla.dot!double(Gamma, j+2, j+2, H0, j+1, H1);
-            nm.bbla.dot!double(Gamma, j+2, j+2, g0, g1);
+            nm.bbla.dot!number(Gamma, j+2, j+2, H0, j+1, H1);
+            nm.bbla.dot!number(Gamma, j+2, j+2, g0, g1);
             // Accumulate Gamma rotations in Q.
             if ( j == 0 ) {
                 copy(Gamma, Q1);
             }
             else {
-                nm.bbla.dot!double(Gamma, j+2, j+2, Q0, j+2, Q1);
+                nm.bbla.dot!number(Gamma, j+2, j+2, Q0, j+2, Q1);
             }
             // Prepare for next step
             copy(H1, H0);
@@ -1300,11 +1302,11 @@ void rpcGMRES_solve(size_t nPrimitive) {
             m = maxIters;
         // At end H := R up to row m
         //        g := gm up to row m
-        nm.bbla.upperSolve!double(H1, to!int(m), g1);
+        nm.bbla.upperSolve!number(H1, to!int(m), g1);
         // In serial, distribute a copy of g1 to each block
         foreach (blk; localFluidBlocks) blk.g1[] = g1[];
         foreach (blk; parallel(localFluidBlocks,1)) {
-            nm.bbla.dot!double(blk.V, blk.nvars, m, blk.g1, blk.psi);
+            nm.bbla.dot!number(blk.V, blk.nvars, m, blk.g1, blk.psi);
         }
         foreach (blk; parallel(localFluidBlocks,1)) {
             nm.smla.solve(blk.P, blk.psi);
@@ -1374,8 +1376,8 @@ void rpcGMRES_solve(size_t nPrimitive) {
             }
         }
         // Re-initialise some vectors and matrices for restart
-        g0[] = 0.0;
-        g1[] = 0.0;
+        g0[] = to!number(0.0);
+        g1[] = to!number(0.0);
         H0.zeros();
         H1.zeros();
         // And set first residual entry
@@ -1604,7 +1606,7 @@ void readDesignVarsFromDakotaFile(ref Vector3[] design_variables)
     } // end foreach myblk
 } // end readDesignVarsFromDakotaFile
 
-double finite_difference_grad(string jobName, int last_tindx, string varID) {    
+number finite_difference_grad(string jobName, int last_tindx, string varID) {    
     // run simulation
     string command = "bash run-flow-solver.sh";
     auto output = executeShell(command);
@@ -1622,7 +1624,7 @@ double finite_difference_grad(string jobName, int last_tindx, string varID) {
     }
     
     // compute cost function
-    double J;
+    number J;
     J = objective_function_evaluation();
 
     // read original grid in
@@ -1639,10 +1641,10 @@ double finite_difference_grad(string jobName, int last_tindx, string varID) {
     return J;
 }
 
-void compute_design_sensitivities_with_finite_differences(string jobName, int last_tindx, Vector3[] design_variables,  double[] adjointGradients, double DELTA) {
+void compute_design_sensitivities_with_finite_differences(string jobName, int last_tindx, Vector3[] design_variables,  number[] adjointGradients, double DELTA) {
 
     size_t nDesignVars = design_variables.length;
-    double[] finiteDiffGradients;
+    number[] finiteDiffGradients;
     
     // save a copy of the original mesh for later use
     foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1654,7 +1656,7 @@ void compute_design_sensitivities_with_finite_differences(string jobName, int la
     
     foreach ( i; 0..nDesignVars) {
         
-        double objFcnEvalP; double objFcnEvalM; string varID; double P0; double dP; double err;
+        number objFcnEvalP; number objFcnEvalM; string varID; number P0; number dP; number err;
         
         // store origianl value, and compute perturbation
         P0 = design_variables[i].y;
@@ -1760,9 +1762,9 @@ double objectiveFunctionEvaluation()
 }
 */
 
-double objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
+number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
 
-    double ObjFcn = 0.0;    
+    number ObjFcn = 0.0;    
     foreach (myblk; parallel(localFluidBlocks,1)) {
         myblk.locObjFcn = 0.0;
         foreach (bndary; myblk.bc) {
@@ -1799,7 +1801,7 @@ void form_objective_function_sensitivity(FluidBlock blk, size_t np, double EPSIL
     foreach (bndary; blk.bc) {
         if (bndary.group == bndaryForSurfaceIntergral) {            
 	    foreach (i, f; bndary.faces) {
-		FVCell cell; double origValue; double ObjFcnM; double ObjFcnP; double h;
+		FVCell cell; number origValue; number ObjFcnM; number ObjFcnP; number h;
                 // collect interior cell
                 if (bndary.outsigns[i] == 1) {
 		    cell = f.left_cell;
@@ -1913,7 +1915,7 @@ void parameterise_design_surfaces(ref Vector3[] designVars, double surfaceFitTol
     Vector3[] globalSurfacePoints; double[] ts;
     Vector3[] surfacePtsUnordered;
     size_t[string] origPosId; // used to identify where the point is in the unordered list
-    double[] xPosition; string[] listOfAddedXPosIdxs;
+    number[] xPosition; string[] listOfAddedXPosIdxs;
     Bezier bezier; int nCntrlPts;
     foreach (myblk; localFluidBlocks) {
         foreach (bndary; myblk.bc) {
@@ -1946,8 +1948,8 @@ void parameterise_design_surfaces(ref Vector3[] designVars, double surfaceFitTol
         foreach (bndary; myblk.bc) {
             if (bndary.is_design_surface) {
                 bndary.bezier = bezier;
-                double xi = bndary.vertices[0].pos[0].x;
-                double xf = bndary.vertices[$-1].pos[0].x;
+                number xi = bndary.vertices[0].pos[0].x;
+                number xf = bndary.vertices[$-1].pos[0].x;
                 size_t idxi; size_t idxf;
                 foreach (i, t; ts ) {
                     if ( abs(globalSurfacePoints[i].x - xi) < ESSENTIALLY_ZERO) idxi = i;
@@ -1972,7 +1974,7 @@ void collect_boundary_vertices(FluidBlock blk)
             if (bndary.is_design_surface) { // we need to order the vertices by x-position
                 FVVertex[] vtxOrdered; FVVertex[] vtxUnordered;
                 size_t[string] origPosId; // used to identify where the point is in the unordered list
-                double[] xPosition; size_t[] listOfAddedVtxIds;
+                number[] xPosition; size_t[] listOfAddedVtxIds;
                 foreach(face; bndary.faces) {
                     foreach(vtx; face.vtx) {
                         if (!listOfAddedVtxIds.canFind(vtx.id)) {
@@ -2090,12 +2092,12 @@ void gridUpdate(bool doNotWriteGridToFile, bool readDesignVarsFromFile, ref Vect
     }
 }
 
-void write_objective_fn_to_file(string fileName, double objFnEval) {
+void write_objective_fn_to_file(string fileName, number objFnEval) {
     auto outFile = File(fileName, "w");
     outFile.writef("%.16e f\n", objFnEval); 
 }
 
-void write_gradients_to_file(string fileName, double[] grad) {
+void write_gradients_to_file(string fileName, number[] grad) {
     auto outFile = File(fileName, "a");
     outFile.writef("[ ");
     foreach( i; 0..grad.length ) {
@@ -2134,10 +2136,10 @@ void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
         }
     }
     // initialise objects
-    blk.transform = new Matrix!double(nConservative, nConservative);
+    blk.transform = new Matrix!number(nConservative, nConservative);
     foreach (cell; blk.cells) {
-        cell.dPrimitive = new Matrix!double(nConservative, nConservative);
-        cell.dConservative = new Matrix!double(nConservative, nConservative);
+        cell.dPrimitive = new Matrix!number(nConservative, nConservative);
+        cell.dConservative = new Matrix!number(nConservative, nConservative);
         cell.pivot.length = nConservative;
     }
     cellOrig = new FVCell(blk.myConfig);
@@ -2154,8 +2156,8 @@ void jacobian_bndary_correction_for_sss_preconditioner(FluidBlock blk, size_t np
     blk.myConfig.interpolation_order = orderOfJacobian;
     
     // define, and initialise data structures
-    double h; double diff;
-    double[][] dRdq; double[][] dqdQ; double[][] Lext; double[] qp; double[] qm;
+    number h; number diff;
+    number[][] dRdq; number[][] dqdQ; number[][] Lext; number[] qp; number[] qm;
     qp.length = np;
     qm.length = np;
     dRdq.length = np; // number of conserved variables
@@ -2209,15 +2211,15 @@ void jacobian_bndary_correction_for_sss_preconditioner(FluidBlock blk, size_t np
                 // 3rd perturbation: P
                 mixin(computeFluxFlowVariableDerivativesAroundCell("gas.p", "3", true));
                 
-                double integral;
-                double volInv = 1.0 / int_cell.volume[0];
+                number integral;
+                number volInv = 1.0 / int_cell.volume[0];
                 for ( size_t ip = 0; ip < np; ++ip ) {
                     for ( size_t jp = 0; jp < np; ++jp ) {
                     integral = 0.0;
                     foreach(fi, iface; int_cell.iface) {
                         integral -= int_cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                     }
-                    double entry = volInv * integral;                    
+                    number entry = volInv * integral;                    
                     dRdq[ip][jp] = entry;
                     }
                 }
@@ -2273,7 +2275,7 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
     blk.myConfig.interpolation_order = orderOfJacobian;
 
     // initialise some variables used in the finite difference perturbation
-    double h; double diff;
+    number h; number diff;
     
     // compute diagonal of 1st order Jacobian (w.r.t. primitive variables)
     foreach(cell; blk.cells) {
@@ -2286,15 +2288,15 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
         // 3rd perturbation: P
         mixin(computeFluxFlowVariableDerivativesAroundCell("gas.p", "3", true));
         
-        double integral;
-        double volInv = 1.0 / cell.volume[0];
+        number integral;
+        number volInv = 1.0 / cell.volume[0];
         for ( size_t ip = 0; ip < np; ++ip ) {
             for ( size_t jp = 0; jp < np; ++jp ) {
                 integral = 0.0;
                 foreach(fi, iface; cell.iface) {
                     integral -= cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                 }
-                double entry = volInv * integral;                    
+                number entry = volInv * integral;                    
                 cell.dPrimitive[ip,jp] = entry;
             }
         }
@@ -2314,22 +2316,22 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
     // multiply by transform matrix (transforming primitive to conservative form)
     foreach (cell; blk.cells) {
         // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
-        double gamma = gmodel.gamma(cell.fs.gas);
+        number gamma = gmodel.gamma(cell.fs.gas);
         // first row
-        blk.transform[0,0] = 1.0;
-        blk.transform[0,1] = 0.0;
-        blk.transform[0,2] = 0.0;
-        blk.transform[0,3] = 0.0;
+        blk.transform[0,0] = to!number(1.0);
+        blk.transform[0,1] = to!number(0.0);
+        blk.transform[0,2] = to!number(0.0);
+        blk.transform[0,3] = to!number(0.0);
         // second row
         blk.transform[1,0] = -cell.fs.vel.x/cell.fs.gas.rho;
         blk.transform[1,1] = 1.0/cell.fs.gas.rho;
-        blk.transform[1,2] = 0.0;
-        blk.transform[1,3] = 0.0;
+        blk.transform[1,2] = to!number(0.0);
+        blk.transform[1,3] = to!number(0.0);
         // third row
         blk.transform[2,0] = -cell.fs.vel.y/cell.fs.gas.rho;
-        blk.transform[2,1] = 0.0;
+        blk.transform[2,1] = to!number(0.0);
         blk.transform[2,2] = 1.0/cell.fs.gas.rho;
-        blk.transform[2,3] = 0.0;
+        blk.transform[2,3] = to!number(0.0);
         // fourth row
         blk.transform[3,0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
         blk.transform[3,1] = -cell.fs.vel.x*(gamma-1);
@@ -2337,15 +2339,15 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
         blk.transform[3,3] = gamma-1.0;
 
         
-        nm.bbla.dot!double(cell.dPrimitive, blk.transform, cell.dConservative);
+        nm.bbla.dot!number(cell.dPrimitive, blk.transform, cell.dConservative);
 
-        double dtInv = 1.0/dt;
+        number dtInv = 1.0/dt;
         foreach (i; 0 .. np) {
             cell.dConservative[i,i] += dtInv;
         }
 
         // Get an LU decomposition ready for repeated solves.
-        nm.bbla.LUDecomp!double(cell.dConservative, cell.pivot);
+        nm.bbla.LUDecomp!number(cell.dConservative, cell.pivot);
     }
     
     // reset interpolation order to the global setting

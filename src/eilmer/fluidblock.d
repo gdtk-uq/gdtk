@@ -123,7 +123,7 @@ public:
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
     ConservedQuantities maxRate, residuals;
-    number normAcc, dotAcc;
+    double normAcc, dotAcc;
     size_t nvars;
     Matrix!number transform;
     number[] FU, dU, Dinv, r0, x0;
@@ -638,7 +638,7 @@ public:
         nvars = n;
         // Now allocate arrays and matrices
         FU.length = n;
-        dU.length = n; dU[] = 0.0;
+        dU.length = n; dU[] = to!number(0.0);
         r0.length = n;
         x0.length = n;
         Dinv.length = n;
