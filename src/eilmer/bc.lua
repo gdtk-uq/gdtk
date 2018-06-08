@@ -539,7 +539,6 @@ function WallBC_WithSlip2:new(o)
    -- We mean a wall where the speed of the gas matches the speed of the wall
    o.is_wall_with_viscous_effects = false
    o.convective_flux_computed_in_bc = true
-   o.setsFluxDirectly = false
    o.ghost_cell_data_available = true
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.postConvFluxAction = { UpdateEnergyWallNormalVelocity:new()}

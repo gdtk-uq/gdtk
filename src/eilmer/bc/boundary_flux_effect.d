@@ -681,19 +681,79 @@ public:
             for (k = blk.kmin; k <= blk.kmax; ++k) {
                 for (j = blk.jmin; j <= blk.jmax; ++j) {
                     // get interface
-                    IFace = blk.get_cell(i,j,k).iface[Face.west];
+                    IFace = blk.get_cell(i,j,k).iface[Face.east];
                     //writeln("Before: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
 
                     // set correct energy and momentum flux
-                    IFace.F.total_energy = -IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
-                    IFace.F.momentum.refx = -IFace.fs.gas.p * dot(IFace.n, nx);
-                    IFace.F.momentum.refy = -IFace.fs.gas.p * dot(IFace.n, ny);
-                    IFace.F.momentum.refz = -IFace.fs.gas.p * dot(IFace.n, nz);
+                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
+                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
+                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
+                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
                     IFace.F.mass = 0.;
                     //writeln("Pressure", IFace.fs.gas.p, "IFace.gvel",IFace.gvel);
                     //writeln("After: Total energy:",IFace.F.total_energy, "X_mom", IFace.F.momentum.refx, "mass", IFace.F.mass);
                 } // end j loop
             } // end k loop
+            break;
+        case Face.south:
+            j = blk.jmin;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    // get interface
+                    IFace = blk.get_cell(i,j,k).iface[Face.south];
+                    // set correct energy and momentum flux
+                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
+                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
+                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
+                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
+                    IFace.F.mass = 0.;
+                } // end i loop
+            } // end k loop
+            break;
+        case Face.north:
+            j = blk.jmax;
+            for (k = blk.kmin; k <= blk.kmax; ++k) {
+                for (i = blk.imin; i <= blk.imax; ++i) {
+                    // get interface
+                    IFace = blk.get_cell(i,j,k).iface[Face.north];
+                    // set correct energy and momentum flux
+                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
+                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
+                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
+                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
+                    IFace.F.mass = 0.;
+                } // end i loop
+            } // end k loop
+            break;
+        case Face.bottom:
+            k = blk.kmin;
+            for (j = blk.jmin; j <= blk.jmax; ++j) {
+                for (i = blk.imin; i <= blk.imax; ++j) {
+                    // get interface
+                    IFace = blk.get_cell(i,j,k).iface[Face.bottom];
+                    // set correct energy and momentum flux
+                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
+                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
+                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
+                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
+                    IFace.F.mass = 0.;
+                } // end i loop
+            } // end j loop
+            break;
+        case Face.top:
+            k = blk.kmax;
+            for (j = blk.jmin; j <= blk.jmax; ++j) {
+                for (i = blk.imin; i <= blk.imax; ++j) {
+                    // get interface
+                    IFace = blk.get_cell(i,j,k).iface[Face.top];
+                    // set correct energy and momentum flux
+                    IFace.F.total_energy =  IFace.fs.gas.p * dot(IFace.n, IFace.gvel);
+                    IFace.F.momentum.refx = IFace.fs.gas.p * dot(IFace.n, nx);
+                    IFace.F.momentum.refy = IFace.fs.gas.p * dot(IFace.n, ny);
+                    IFace.F.momentum.refz = IFace.fs.gas.p * dot(IFace.n, nz);
+                    IFace.F.mass = 0.;
+                } // end i loop
+            } // end j loop
             break;
         default:
             throw new Error("Const_Flux only implemented for EAST & WEST gas face.");
