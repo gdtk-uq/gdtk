@@ -84,6 +84,7 @@ void main(string[] args) {
     msg       ~= "           [--parameterise-surfaces                  \n";
     msg       ~= "           [--grid-update]                           \n";
     msg       ~= "           [--direct-method                          \n";
+    msg       ~= "           [--verification                           \n";
     msg       ~= "           [--max-cpus=<int>]              defaults to ";
     msg       ~= to!string(totalCPUs) ~" on this machine               \n";
     msg       ~= "           [--max-wall-clock=<int>]        in seconds\n";
@@ -100,6 +101,7 @@ void main(string[] args) {
     bool parameteriseSurfacesFlag = false;
     bool gridUpdateFlag = false;
     bool directMethodFlag = false;
+    bool verificationFlag = false;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool helpWanted = false;
@@ -111,6 +113,7 @@ void main(string[] args) {
                "parameterise-surfaces", &parameteriseSurfacesFlag,
                "grid-update", &gridUpdateFlag,
                "direct-method", &directMethodFlag,
+               "verification", &verificationFlag,
                "max-cpus", &maxCPUs,
                "max-wall-clock", &maxWallClock,
                "help", &helpWanted
@@ -219,8 +222,7 @@ void main(string[] args) {
     if (directMethodFlag) {
         parameterise_design_surfaces(designVars, bezierCurveFitTol, bezierCurveFitMaxSteps);
         compute_direct_complex_step_derivatives(jobName, last_tindx, maxCPUs, designVars, EPSILON);
-        return; //
-        
+        return; //        
     }
 
     // ----------------------------
@@ -314,8 +316,11 @@ void main(string[] args) {
     // ------------------------------------------------------
     // RESIDUAL/OBJECTIVE SENSITIVITY W.R.T. DESIGN VARIABLES
     // ------------------------------------------------------
-    readBezierDataFromFile(designVars);
-    readDesignVarsFromDakotaFile(designVars);
+    if (verificationFlag) parameterise_design_surfaces(designVars, bezierCurveFitTol, bezierCurveFitMaxSteps);    
+    else { 
+	readBezierDataFromFile(designVars);
+        readDesignVarsFromDakotaFile(designVars);
+    }
     
     // objective function sensitivity w.r.t. design variables
     number[] g;
@@ -341,7 +346,7 @@ void main(string[] args) {
     adjointGradients[] = to!number(0.0);
     foreach (myblk; localFluidBlocks) adjointGradients[] += myblk.rTdotPsi[];
     adjointGradients[] = g[] - adjointGradients[];
-    writeln(adjointGradients);
+    foreach ( i; 0..adjointGradients.length) writef("gradient for variable %d: %.16f \n", i+1, adjointGradients[i]);
     write_gradients_to_file("results.out", adjointGradients);
     // clear some expensive data structures from memory
     foreach (myblk; parallel(localFluidBlocks,1)) {

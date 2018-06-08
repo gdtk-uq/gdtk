@@ -57,6 +57,13 @@ FVInterface[MAX_PERTURBED_INTERFACES] ifaceOrig;
 FVInterface[MAX_PERTURBED_INTERFACES] ifacePp;
 FVInterface[MAX_PERTURBED_INTERFACES] ifacePm;
 
+version(complex_numbers)
+{
+    Complex!double EPS = complex(0.0, 1.0e-20); //  0 + iEPSILON
+} else {
+    double EPS = 1.0; //  0 + iEPSILON
+}
+
 // Module-local, global memory arrays and matrices for GMRES
 number[] g0;
 number[] g1;
@@ -81,24 +88,9 @@ private lua_State* L; // module-local Lua interpreter
 string computeBndaryVariableDerivatives(string varName, string posInArray, bool includeThermoUpdate)
 {
     string codeStr;
-    codeStr ~= "h = (abs(int_cell.fs."~varName~") + MU) * EPSILON;";
     codeStr ~= "cellOrig.copy_values_from(int_cell, CopyDataOption.all);";
-    // ------------------ negative perturbation ------------------
-    codeStr ~= "int_cell.fs."~varName~" -= h;";
-    if ( includeThermoUpdate ) {
-        codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(int_cell.fs.gas);";
-    }
-    codeStr ~= "blk.applyPreReconAction(0.0, 0, 0);";
-    codeStr ~= "blk.applyPostConvFluxAction(0.0, 0, 0);";
-    codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
-    codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
-    codeStr ~= "qm[0] = cell.fs.gas.rho;";
-    codeStr ~= "qm[1] = cell.fs.vel.x;";
-    codeStr ~= "qm[2] = cell.fs.vel.y;";
-    codeStr ~= "qm[3] = cell.fs.gas.p;";
-    codeStr ~= "int_cell.copy_values_from(cellOrig, CopyDataOption.all);";
     // ------------------ positive perturbation ------------------
-    codeStr ~= "int_cell.fs."~varName~" += h;";
+    codeStr ~= "int_cell.fs."~varName~" += EPS;";
     if ( includeThermoUpdate ) {
         codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(int_cell.fs.gas);";
     }
@@ -116,14 +108,10 @@ string computeBndaryVariableDerivatives(string varName, string posInArray, bool 
     codeStr ~= "blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);";
     codeStr ~= "blk.applyPostDiffFluxAction(0.0, 0, 0);";
     // ------------------ compute interface flux derivatives ------------------
-    codeStr ~= "diff = qp[0] - qm[0];";
-    codeStr ~= "dqdQ[0][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = qp[1] - qm[1];";
-    codeStr ~= "dqdQ[1][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = qp[2] - qm[2];";
-    codeStr ~= "dqdQ[2][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = qp[3] - qm[3];";
-    codeStr ~= "dqdQ[3][" ~ posInArray ~ "] = diff/(2.0*h);";         
+    codeStr ~= "dqdQ[0][" ~ posInArray ~ "] = qp[0].im/(EPS.im);";
+    codeStr ~= "dqdQ[1][" ~ posInArray ~ "] = qp[1].im/(EPS.im);";
+    codeStr ~= "dqdQ[2][" ~ posInArray ~ "] = qp[2].im/(EPS.im);";
+    codeStr ~= "dqdQ[3][" ~ posInArray ~ "] = qp[3].im/(EPS.im);";         
     return codeStr;
 }
 
@@ -968,17 +956,9 @@ void compute_perturbed_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian
 string computeFluxFlowVariableDerivativesAroundCell(string varName, string posInArray, bool includeThermoUpdate)
 {
     string codeStr;
-    codeStr ~= "h = (abs(cell.fs."~varName~") + MU) * EPSILON;";
     codeStr ~= "cellOrig.copy_values_from(cell, CopyDataOption.all);";
-    // ------------------ negative perturbation ------------------
-    codeStr ~= "cell.fs."~varName~" -= h;";
-    if ( includeThermoUpdate ) {
-        codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
-    }
-    codeStr ~= "compute_perturbed_flux(cell, blk, orderOfJacobian, cell.jacobian_cell_stencil, cell.jacobian_face_stencil, ifacePm);"; 
-    codeStr ~= "cell.copy_values_from(cellOrig, CopyDataOption.all);";
     // ------------------ positive perturbation ------------------
-    codeStr ~= "cell.fs."~varName~" += h;";
+    codeStr ~= "cell.fs."~varName~" += EPS;";
     if ( includeThermoUpdate ) {
         codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);";
     }
@@ -986,14 +966,10 @@ string computeFluxFlowVariableDerivativesAroundCell(string varName, string posIn
     codeStr ~= "cell.copy_values_from(cellOrig, CopyDataOption.all);";
     // ------------------ compute interface flux derivatives ------------------
     codeStr ~= "foreach (i, iface; cell.jacobian_face_stencil) {";
-    codeStr ~= "diff = ifacePp[i].F.mass - ifacePm[i].F.mass;";
-    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = diff/(2.0*h);";         
-    codeStr ~= "diff = ifacePp[i].F.momentum.x - ifacePm[i].F.momentum.x;";
-    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = ifacePp[i].F.momentum.y - ifacePm[i].F.momentum.y;";
-    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = diff/(2.0*h);";
-    codeStr ~= "diff = ifacePp[i].F.total_energy - ifacePm[i].F.total_energy;";
-    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = diff/(2.0*h);";
+    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = ifacePp[i].F.mass.im/(EPS.im);";         
+    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = ifacePp[i].F.momentum.x.im/(EPS.im);";
+    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = ifacePp[i].F.momentum.y.im/(EPS.im);";
+    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = ifacePp[i].F.total_energy.im/(EPS.im);";
     codeStr ~= "}";
     return codeStr;
 }
@@ -1006,11 +982,10 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
 
         // store origianl value, and compute perturbation
         P0 = design_variables[i].y;
-        dP = ETA;
         
         // perturb design variable +ve
         gtl = 1; ftl = 1;
-        design_variables[i].refy = P0 + dP;
+        design_variables[i].refy = P0 + EPS;
         
         // perturb grid
         gridUpdate(true, false, design_variables, gtl);
@@ -1024,32 +999,16 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
                 
         objFcnEvalP = objective_function_evaluation(gtl);
         
-        // perturb design variable -ve
-        gtl = 2; ftl = 2;
-        design_variables[i].refy = P0 - dP;
-        
-        // perturb grid
-        gridUpdate(true, false, design_variables, gtl);
-        
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
-            myblk.compute_least_squares_setup(gtl);
-        }
-        
-        evalRHS(0.0, ftl, gtl, with_k_omega);
-        
-        objFcnEvalM = objective_function_evaluation(gtl);
-        
         // compute cost function sensitivity
-        g[i] = (objFcnEvalP-objFcnEvalM)/(2.0*dP);
+        g[i] = (objFcnEvalP.im)/(EPS.im);
 	
         // compute residual sensitivity
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, cell; myblk.cells) {
-                myblk.rT[i, j*nPrimitive] = (cell.dUdt[1].mass - cell.dUdt[2].mass)/(2.0*dP);
-                myblk.rT[i, j*nPrimitive+1] = (cell.dUdt[1].momentum.x - cell.dUdt[2].momentum.x)/(2.0*dP);
-                myblk.rT[i, j*nPrimitive+2] = (cell.dUdt[1].momentum.y - cell.dUdt[2].momentum.y)/(2.0*dP);
-                myblk.rT[i, j*nPrimitive+3] = (cell.dUdt[1].total_energy - cell.dUdt[2].total_energy)/(2.0*dP);
+                myblk.rT[i, j*nPrimitive] = to!number((cell.dUdt[1].mass.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+1] = to!number((cell.dUdt[1].momentum.x.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+2] = to!number((cell.dUdt[1].momentum.y.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+3] = to!number((cell.dUdt[1].total_energy.im)/(EPS.im));
             }
         }
         
@@ -1412,7 +1371,7 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
         outFile.writef("POINTS %d double \n", nvertices);
         // write grid data
         foreach(i, vtx; blk.vertices) {
-            outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z); 
+            outFile.writef("%.16f %.16f %.16f \n", vtx.pos[0].x.re, vtx.pos[0].y.re, vtx.pos[0].z.re); 
         }
         // write cell connectivity
         size_t connections = 0;
@@ -1440,25 +1399,25 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
         outFile.writef("SCALARS adjoint_density double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", blk.psi[np*i]);
+            outFile.writef("%.16f \n", blk.psi[np*i].re);
         }
 
         outFile.writef("SCALARS adjoint_velx double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", blk.psi[np*i+1]);
+            outFile.writef("%.16f \n", blk.psi[np*i+1].re);
         }
 
         outFile.writef("SCALARS adjoint_vely double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) {
-            outFile.writef("%.16f \n", blk.psi[np*i+2]);
+            outFile.writef("%.16f \n", blk.psi[np*i+2].re);
         }
 
         outFile.writef("SCALARS adjoint_pressure double \n");
         outFile.writef("LOOKUP_TABLE default \n");
         foreach(i; 0..ncells) { 
-            outFile.writef("%.16f \n", blk.psi[np*i+3]);
+            outFile.writef("%.16f \n", blk.psi[np*i+3].re);
         }
 
     }
@@ -1625,6 +1584,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, gridFileExt = "gz");
             myblk.read_new_underlying_grid(gridFileName);
             myblk.sync_vertices_from_underlying_grid(0);
+            myblk.compute_primary_cell_geometric_data(0);
         }
 
         foreach (myblk; localFluidBlocks) {
@@ -1633,14 +1593,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         
         // perturb design variable in complex plane
         number P0 = design_variables[i].y; 
-        number h;
-
-        version(complex_numbers)
-            h = complex(0.0, EPSILON); //  0 + iEPSILON
-        else
-            h = EPSILON; //  0 + iEPSILON
-
-        design_variables[i].refy = P0 + h;
+        design_variables[i].refy = P0 + EPS;
         
         // perturb grid
         gridUpdate(true, false, design_variables, 1, jobName); // gtl = 1
@@ -1659,13 +1612,13 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         
         // compute objective function gradient
         number objFcn = objective_function_evaluation();
-        gradients ~= objFcn.im/EPSILON;
+        gradients ~= objFcn.im/EPS.im;
 
         // return value to original state
         design_variables[i].refy = P0;
     }
 
-    foreach ( i; 0..nDesignVars) writeln("gradient for variable ", i+1, ": ", gradients[i]);
+    foreach ( i; 0..nDesignVars) writef("gradient for variable %d: %.16f \n", i+1, gradients[i]);
     writeln("simulation complete.");
 }
 
@@ -1790,12 +1743,9 @@ void form_objective_function_sensitivity(FluidBlock blk, size_t np, double EPSIL
 		}
                 // for current objective function only perturbations in pressure have any effect
                 origValue = cell.fs.gas.p;
-                h = (abs(cell.fs.gas.p) + MU) * EPSILON;
-                cell.fs.gas.p = origValue + h;
+                cell.fs.gas.p = origValue + EPS;
                 ObjFcnP = objective_function_evaluation();
-                cell.fs.gas.p = origValue - h;
-                ObjFcnM = objective_function_evaluation();
-                blk.f[cell.id*np + 3] = (ObjFcnP-ObjFcnM)/(2.0*h);
+                blk.f[cell.id*np + 3] = (ObjFcnP.im)/(EPS.im);
                 cell.fs.gas.p = origValue;
             }
         }
