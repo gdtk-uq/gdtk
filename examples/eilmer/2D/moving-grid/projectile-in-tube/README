@@ -1,0 +1,39 @@
+----------------------------------------------
+Simulation of Light Gas Gun
+----------------------------------------------
+:Author: Ingo JH Jahn
+:Date: 2018-06-07
+
+This directory contains an Eilmer example of simulating of 
+a gas reservoir expanding and thereby pushing a projectile 
+ahead. The simulation is based on the projectile-in-tube 
+example reported by XXXX and also used as the verification case for L1d3.
+
+There are two extra files required for this simulation to allow
+for the two-way coupling between the fluid (pressure acting on
+projectile) and projectile which accelerates and allows the 
+gas to expand. The first is "udf-process.lua" and it extracts 
+the total force acting on the projectile. It also calculates the 
+acceleration of the piston, which is used to obtain the 
+instantaneous projectile velocity. This velocity is then passed 
+to "grid-motion.lua", which sets the correct velocity for all 
+points in the grid. 
+Grid motion is specified for the block as a whole by setting 
+the velocity of the four corner points. 
+
+This example can be run in the usual manner:
+
+> ./prep.sh
+> ./run.sh
+> ./post.sh
+
+At the end, a series of VTK files are produced and placed in the
+plot/ subdirectory. You may then use Paraview to inspect the
+flow field and make an animation of the moving piston simulation.
+
+You can also extract a line data and plot that as an x-y line plot.
+To do that use:
+
+> ./extract-profile.sh
+
+
