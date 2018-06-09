@@ -269,49 +269,60 @@ public:
                 my_face.is_on_boundary = true;
                 my_face.bc_id = i; // note which boundary this face is on
                 int my_outsign = bndry.outsign_list[j];
-                // Make ghost-cell id values distinct from FVCell ids so that
-                // the warning/error messages are somewhat informative. 
-                FVCell ghost0 = new FVCell(myConfig, ghost_cell_start_id+ghost_cell_count);
-                ghost_cell_count++;
-                ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
                 bc[i].faces ~= my_face;
                 bc[i].outsigns ~= my_outsign;
-                bc[i].ghostcells ~= ghost0;
-                if (my_outsign == 1) {
-                    if (my_face.right_cell) {
-                        string msg = format("Already have cell %d attached to right-of-face %d."
-                                            ~" Attempt to add ghost cell %d.",
-                                            my_face.right_cell.id, my_face.id, ghost0.id);
-                        throw new FlowSolverException(msg);
+                if (bc[i].ghost_cell_data_available) {
+                    // Make ghost-cell id values distinct from FVCell ids so that
+                    // the warning/error messages are somewhat informative. 
+                    FVCell ghost0 = new FVCell(myConfig, ghost_cell_start_id+ghost_cell_count);
+                    ghost_cell_count++;
+                    ghost0.will_have_valid_flow = bc[i].ghost_cell_data_available;
+                    bc[i].ghostcells ~= ghost0;
+                    if (my_outsign == 1) {
+                        if (my_face.right_cell) {
+                            string msg = format("Already have cell %d attached to right-of-face %d."
+                                                ~" Attempt to add ghost cell %d.",
+                                                my_face.right_cell.id, my_face.id, ghost0.id);
+                            throw new FlowSolverException(msg);
+                        } else {
+                            my_face.right_cell = ghost0;
+                        }
                     } else {
-                        my_face.right_cell = ghost0;
+                        if (my_face.left_cell) {
+                            string msg = format("Already have cell %d attached to left-of-face %d."
+                                                ~" Attempt to add ghost cell %d.",
+                                                my_face.left_cell.id, my_face.id, ghost0.id);
+                            throw new FlowSolverException(msg);
+                        } else {
+                            my_face.left_cell = ghost0;
+                        }
                     }
-                } else {
-                    if (my_face.left_cell) {
-                        string msg = format("Already have cell %d attached to left-of-face %d."
-                                            ~" Attempt to add ghost cell %d.",
-                                            my_face.left_cell.id, my_face.id, ghost0.id);
-                        throw new FlowSolverException(msg);
-                    } else {
-                        my_face.left_cell = ghost0;
-                    }
-                }
-            }
-        }
+                } // end if (bc[i].ghost_cell_data_available
+            } // end foreach j
+        } // end foreach i
         // At this point, all faces should have either one finite-volume cell
         // or one ghost cell attached to each side -- check that this is true.
         foreach (f; faces) {
             bool ok = true;
             string msg = " ";
             if (f.is_on_boundary) {
-                if (f.left_cell && f.right_cell) {
-                    ok = true;
+                if (bc[f.bc_id].ghost_cell_data_available) {
+                    if (f.left_cell && f.right_cell) {
+                        ok = true;
+                    } else {
+                        ok = false;
+                        msg ~= "Boundary face does not have a cell attached to each side.";
+                    }
                 } else {
-                    ok = false;
-                    msg ~= "Boundary face does not have a cell attached to each side.";
+                    if ((f.left_cell is null) != (f.right_cell is null)) {
+                        ok = true;
+                    } else {
+                        ok = false;
+                        msg ~= "Boundary face does not have exactly one cell attached.";
+                    }
                 }
             } else {
-                // not on a boundary, should have one cell only per side.
+                // not on a boundary, should have one interior cell per side.
                 if (f.left_cell && f.right_cell) {
                     ok = true;
                 } else {
@@ -954,9 +965,17 @@ public:
         // At this point, we should have all gradient values up to date and we are now ready
         // to reconstruct field values and compute the convective fluxes.
         foreach (f; faces) {
-            lsq.interp_both(f, gtl, Lft, Rght);
-            f.fs.copy_average_values_from(Lft, Rght);
-            compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
+            if (f.left_cell && f.right_cell) {
+                lsq.interp_both(f, gtl, Lft, Rght);
+                f.fs.copy_average_values_from(Lft, Rght);
+                compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
+            } else if (f.right_cell) {
+                compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
+            } else if (f.left_cell) {
+                compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
+            } else {
+                assert(0, "oops, a face without attached cells");
+            }
         } // end foreach face
     } // end convective_flux-phase1()
 

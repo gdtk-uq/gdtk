@@ -25,18 +25,20 @@ import globalconfig;
 
 void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterface IFace,
                             ref LocalConfig myConfig, double omegaz=0.0)
-/** \brief Compute the inviscid fluxes (in 2D) across the cell interfaces.
+/** Compute the inviscid fluxes (in 1D) across the cell interfaces.
  *
  * This is the top-level function that calls the previously selected
- * flux calculator.
+ * flux calculator for open cell faces. i.e. those with cells either side.
  * Much of the detailed work is delegated.
  *
- * \param Lft    : reference to the LEFT flow state
- * \param Rght   : reference to the RIGHT flow state
- * \param IFace  : reference to the interface where the fluxes are to be stored
+ * Lft : reference to the LEFT FlowState
+ * Rght : reference to the RIGHT FlowState
+ * IFace : reference to the interface where the fluxes are to be stored
+ * myConfig : a block-local configuration object
+ * omegaz : angular speed of the block
  *
- * Note that the FlowState objects are tampered with, but should be put back right
- * by the end of the function. [TODO] check this assertion.
+ * Note that the FlowState objects, Lft and Rght, are tampered with.
+ * Be sure that you use copies if you care about their content.
  */
 {
     // Transform to interface frame of reference.
@@ -104,14 +106,101 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     // rotate back to the global frame of reference.
     F.momentum += F.mass * IFace.gvel;
     F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    // Also, transform the interface (grid) velocity and magnetic field.
+    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    return;
+} // end compute_interface_flux()
+
+void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
+                               ref LocalConfig myConfig, double omegaz=0.0)
+{
+    // Transform to interface frame of reference.
+    IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    Rght.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    // Also transform the magnetic field
+    if (myConfig.MHD) { Rght.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    // Compute the fluxes in the local frame of the interface,
+    // presuming that there is a right-running wave which processes the gas
+    // from the initial right-flow-state to that at the wall.
+    // Source of this calculation is the 1998 report on L1d, Report 13/98.
+    number vstar = IFace.gvel.x;
+    number aR = Rght.gas.a;
+    number vR = Rght.vel.x;
+    number g = myConfig.gmodel.gamma(Rght.gas);
+    // Riemann invariant across left-running wave.
+    number UbarR = vR - 2.0*aR/(g-1.0);
+    // Set up to compute pressure at wall, pstar.
+    number rhoR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number tmp = (vstar - UbarR)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
+    number pstar = pow(tmp, 2.0*g*(g-1.0));
+    // Fill in the fluxes.
+    ConservedQuantities F = IFace.F;
+    F.mass = 0.0;
+    F.momentum.set(pstar, 0.0, 0.0);
+    F.total_energy = pstar * vstar;
+    foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
+    foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
+    F.tke = 0.0;
+    F.omega = 0.0;
+    // [TODO] magnetic field.
+    F.B.set(0.0, 0.0, 0.0);
+    F.psi = 0.0;
+    F.divB = 0.0;
+    // Rotate back to the global frame of reference.
+    F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // Also, transform the interface (grid) velocity
     IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
     // and transform the magnetic field
-    if (myConfig.MHD) {
-        F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
-    }
+    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
     return;
-} // end compute_interface_flux()
+} // end compute_flux_at_left_wall()
+
+void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
+                                ref LocalConfig myConfig, double omegaz=0.0)
+{
+    // Transform to interface frame of reference.
+    IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    Lft.vel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
+    // Also transform the magnetic field
+    if (myConfig.MHD) { Lft.B.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2); }
+    // Compute the fluxes in the local frame of the interface,
+    // presuming that there is a right-running wave which processes the gas
+    // from the initial right-flow-state to that at the wall.
+    // Source of this calculation is the 1998 report on L1d, Report 13/98.
+    number vstar = IFace.gvel.x;
+    number aL = Lft.gas.a;
+    number vL = Lft.vel.x;
+    number g = myConfig.gmodel.gamma(Lft.gas);
+    // Riemann invariant across left-running wave.
+    number UbarL = vL + 2.0*aL/(g-1.0);
+    // Set up to compute pressure at wall, pstar.
+    number rhoL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number tmp = (UbarL - vstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
+    number pstar = pow(tmp, 2.0*g*(g-1.0));
+    // Fill in the fluxes.
+    ConservedQuantities F = IFace.F;
+    F.mass = 0.0;
+    F.momentum.set(-pstar, 0.0, 0.0);
+    F.total_energy = -pstar * vstar;
+    foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
+    foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
+    F.tke = 0.0;
+    F.omega = 0.0;
+    // [TODO] magnetic field.
+    F.B.set(0.0, 0.0, 0.0);
+    F.psi = 0.0;
+    F.divB = 0.0;
+    // Rotate back to the global frame of reference.
+    F.momentum.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    // Also, transform the interface (grid) velocity
+    IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
+    // and transform the magnetic field
+    if (myConfig.MHD) { F.B.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2); }
+    return;
+} // end  compute_flux_at_right_wall()
 
 void set_flux_vector_in_local_frame(ref ConservedQuantities F, ref FlowState fs, 
                                     ref LocalConfig myConfig)

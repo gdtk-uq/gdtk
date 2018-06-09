@@ -519,8 +519,9 @@ function WallBC_WithSlip:new(o)
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
+   o.ghost_cell_data_available = false
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = { InternalCopyThenReflect:new() }
+   o.preReconAction = {}
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o

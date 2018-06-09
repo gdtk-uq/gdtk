@@ -51,6 +51,9 @@ public:
     FVVertex[] vtx;        // references to vertices for line (2D) and quadrilateral (3D) faces
     //
     // Adjoining cells.
+    // These are references to either active cells or ghost cells.
+    // The reference may be nil if no cell has been assigned,
+    // maybe for a boundary without ghost cells.
     FVCell left_cell;      // interface normal points out of this adjoining cell
     FVCell right_cell;     // interface normal points into this adjoining cell
     // The following flags will be set later, when cells are assigned.

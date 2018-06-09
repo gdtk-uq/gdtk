@@ -526,27 +526,33 @@ public:
                         IFace.vtx ~= get_vtx(i,j+1,k);
                         IFace.vtx ~= get_vtx(i,j+1,k+1);
                         IFace.vtx ~= get_vtx(i,j,k+1);
-                        IFace.left_cell = get_cell(i-1,j,k);
-                        IFace.right_cell = get_cell(i,j,k);
                     } else {
                         IFace.vtx ~= get_vtx(i,j);
                         IFace.vtx ~= get_vtx(i,j+1);
-                        IFace.left_cell = get_cell(i-1,j);
-                        IFace.right_cell = get_cell(i,j);
                     }
                     if (i == imin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.west;
                         IFace.left_cell_is_interior = false;
                         IFace.right_cell_is_interior = true;
+                        if (bc[Face.west].ghost_cell_data_available) {
+                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
+                        }
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                     } else if (i == imax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.east;
                         IFace.left_cell_is_interior = true;
                         IFace.right_cell_is_interior = false;
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
+                        if (bc[Face.east].ghost_cell_data_available) {
+                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
+                        }
                     } else {
                         IFace.left_cell_is_interior = true;
                         IFace.right_cell_is_interior = true;
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i-1,j,k) : get_cell(i-1,j);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j);
                     }
                 } // i loop
             } // j loop
@@ -565,27 +571,33 @@ public:
                         IFace.vtx ~= get_vtx(i,j,k+1);
                         IFace.vtx ~= get_vtx(i+1,j,k+1);
                         IFace.vtx ~= get_vtx(i+1,j,k);
-                        IFace.left_cell = get_cell(i,j-1,k);
-                        IFace.right_cell = get_cell(i,j,k);
                     } else {
                         IFace.vtx ~= get_vtx(i+1,j);
                         IFace.vtx ~= get_vtx(i,j);
-                        IFace.left_cell = get_cell(i,j-1);
-                        IFace.right_cell = get_cell(i,j);
                     }
                     if (j == jmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.south;
                         IFace.left_cell_is_interior = false;
                         IFace.right_cell_is_interior = true;
+                        if (bc[Face.south].ghost_cell_data_available) {
+                            IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
+                        }
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j,k);
                     } else if (j == jmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.north;
                         IFace.left_cell_is_interior = true;
                         IFace.right_cell_is_interior = false;
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
+                        if (bc[Face.north].ghost_cell_data_available) {
+                            IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j,k);
+                        }
                     } else {
                         IFace.left_cell_is_interior = true;
                         IFace.right_cell_is_interior = true;
+                        IFace.left_cell = (myConfig.dimensions == 3) ? get_cell(i,j-1,k) : get_cell(i,j-1);
+                        IFace.right_cell = (myConfig.dimensions == 3) ? get_cell(i,j,k) : get_cell(i,j,k);
                     }
                 } // j loop
             } // i loop
@@ -603,21 +615,29 @@ public:
                     IFace.vtx ~= get_vtx(i+1,j,k);
                     IFace.vtx ~= get_vtx(i+1,j+1,k);
                     IFace.vtx ~= get_vtx(i,j+1,k);
-                    IFace.left_cell = get_cell(i,j,k-1);
-                    IFace.right_cell = get_cell(i,j,k);
                     if (k == kmin) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.bottom;
                         IFace.left_cell_is_interior = false;
                         IFace.right_cell_is_interior = true;
+                        if (bc[Face.bottom].ghost_cell_data_available) {
+                            IFace.left_cell = get_cell(i,j,k-1);
+                        }
+                        IFace.right_cell = get_cell(i,j,k);
                     } else if (k == kmax+1) {
                         IFace.is_on_boundary = true;
                         IFace.bc_id = Face.top;
                         IFace.left_cell_is_interior = true;
                         IFace.right_cell_is_interior = false;
+                        IFace.left_cell = get_cell(i,j,k-1);
+                        if (bc[Face.top].ghost_cell_data_available) {
+                            IFace.right_cell = get_cell(i,j,k);
+                        }
                     } else {
                         IFace.left_cell_is_interior = true;
                         IFace.right_cell_is_interior = true;
+                        IFace.left_cell = get_cell(i,j,k-1);
+                        IFace.right_cell = get_cell(i,j,k);
                     }
                 } // for k
             } // j loop
@@ -1880,7 +1900,13 @@ public:
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((i == imin) && (bc[Face.west].convective_flux_computed_in_bc == true)) continue;
                     if ((i == imax+1) && (bc[Face.east].convective_flux_computed_in_bc == true)) continue;
-                    compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                    if ((i == imin) && (bc[Face.west].ghost_cell_data_available == false)) {
+                        compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
+                    } else if ((i == imax+1) && (bc[Face.east].ghost_cell_data_available == false)) {
+                        compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                    } else {
+                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                    }
                 } // i loop
             } // j loop
         } // for k
@@ -1905,7 +1931,13 @@ public:
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((j == jmin) && (bc[Face.south].convective_flux_computed_in_bc == true)) continue;
                     if ((j == jmax+1) && (bc[Face.north].convective_flux_computed_in_bc == true)) continue;
-                    compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                    if ((j == jmin) && (bc[Face.south].ghost_cell_data_available == false)) {
+                        compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
+                    } else if ((j == jmax+1) && (bc[Face.north].ghost_cell_data_available == false)) {
+                        compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                    } else {
+                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                    }
                 } // j loop
             } // i loop
         } // for k
@@ -1933,7 +1965,13 @@ public:
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((k == kmin) && (bc[Face.bottom].convective_flux_computed_in_bc == true)) continue;
                     if ((k == kmax+1) && (bc[Face.top].convective_flux_computed_in_bc == true)) continue;
-                    compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                    if ((k == kmin) && (bc[Face.bottom].ghost_cell_data_available == false)) {
+                        compute_flux_at_left_wall(Rght, IFace, myConfig, omegaz);
+                    } else if ((k == kmax+1) && (bc[Face.top].ghost_cell_data_available == false)) {
+                        compute_flux_at_right_wall(Lft, IFace, myConfig, omegaz);
+                    } else {
+                        compute_interface_flux(Lft, Rght, IFace, myConfig, omegaz);
+                    }
                 } // for k 
             } // j loop
         } // i loop
