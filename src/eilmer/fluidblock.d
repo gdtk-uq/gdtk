@@ -302,12 +302,16 @@ public:
         foreach (iface; faces) {
             auto cL = iface.left_cell;
             auto cR = iface.right_cell;
-            number uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
-            number uR = cR.fs.vel.x * iface.n.x + cR.fs.vel.y * iface.n.y + cR.fs.vel.z * iface.n.z;
-            number aL = cL.fs.gas.a;
-            number aR = cR.fs.gas.a;
-            number a_min = fmin(aL, aR);
-            iface.fs.S = ((uR - uL) / a_min < tol);
+            if (cL && cR) {
+                number uL = cL.fs.vel.x * iface.n.x + cL.fs.vel.y * iface.n.y + cL.fs.vel.z * iface.n.z;
+                number uR = cR.fs.vel.x * iface.n.x + cR.fs.vel.y * iface.n.y + cR.fs.vel.z * iface.n.z;
+                number aL = cL.fs.gas.a;
+                number aR = cR.fs.gas.a;
+                number a_min = fmin(aL, aR);
+                iface.fs.S = ((uR - uL) / a_min < tol);
+            } else {
+                iface.fs.S = 0;
+            }
         }
         // Finally, mark cells as shock points if any of their interfaces are shock points.
         foreach (cell; cells) {
