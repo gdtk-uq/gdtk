@@ -13,49 +13,24 @@
 import core.stdc.stdlib : exit;
 import core.memory;
 import std.stdio;
-import std.file;
-import std.format;
 import std.conv;
 import std.parallelism;
 import std.algorithm;
 import std.getopt;
-import std.string;
-import std.array;
-import std.math;
-import std.datetime;
-import std.process;
 
 import nm.smla;
 import nm.bbla;
-import nm.rsla;
 import nm.complex;
 import nm.number;
 
-import fluxcalc;
-import geom;
-import fluidblock;
-import sfluidblock;
-import ufluidblock;
-import fvcell;
-import fvinterface;
-import fvvertex;
-import globaldata;
-import globalconfig;
-import simcore;
-import fvcore;
-import fileutil;
-import user_defined_source_terms;
-import conservedquantities;
-import postprocess;
-import loads;
-import gzip;
-import gas;
-import flowsolution;
-import onedinterp;
-import lsqinterp;
-import bc;
-import grid_deform;
 import shape_sensitivity_core;
+import fileutil;
+import globalconfig;
+import postprocess;
+import simcore;
+import geom;
+import globaldata;
+
 
 string adjointDir = "adjoint";
 void init_adjoint_dir()
