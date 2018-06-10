@@ -510,12 +510,12 @@ function BoundaryCondition:tojson()
    return str
 end
 
-WallBC_WithSlip = BoundaryCondition:new()
-WallBC_WithSlip.type = "wall_with_slip"
-function WallBC_WithSlip:new(o)
+WallBC_WithSlip0 = BoundaryCondition:new()
+WallBC_WithSlip0.type = "wall_with_slip"
+function WallBC_WithSlip0:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallB1102C_WithSlip constructor.")
+   assert(flag, "Invalid name for item supplied to WallBC_WithSlip0 constructor.")
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
@@ -555,7 +555,7 @@ WallBC_WithSlip3.type = "wall_with_slip"
 function WallBC_WithSlip3:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallB1102C_WithSlip constructor.")
+   assert(flag, "Invalid name for item supplied to WallBC_WithSlip3 constructor.")
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
@@ -566,6 +566,9 @@ function WallBC_WithSlip3:new(o)
    o.is_configured = true
    return o
 end
+
+-- Select the default slip-wall boundary condition flavour.
+WallBC_WithSlip = WallBC_WithSlip0
 
 
 WallBC_NoSlip_FixedT = BoundaryCondition:new()
