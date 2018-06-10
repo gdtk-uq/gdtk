@@ -519,9 +519,9 @@ function WallBC_WithSlip:new(o)
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
-   o.ghost_cell_data_available = false
+   o.ghost_cell_data_available = true
    o.is_wall_with_viscous_effects = false
-   o.preReconAction = {}
+   o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
@@ -544,6 +544,25 @@ function WallBC_WithSlip2:new(o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.postConvFluxAction = { UpdateEnergyWallNormalVelocity:new()}
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new()}
+   o.is_configured = true
+   return o
+end
+
+-- Another copy for trying out the new no-ghost-cell type of boundary condition
+-- that makes use of the one-sided flux calculators at walls.
+WallBC_WithSlip3 = BoundaryCondition:new()
+WallBC_WithSlip3.type = "wall_with_slip"
+function WallBC_WithSlip3:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   assert(flag, "Invalid name for item supplied to WallB1102C_WithSlip constructor.")
+   o = BoundaryCondition.new(self, o)
+   -- In a turbulence model sense, a slip wall is NOT a wall
+   -- We mean a wall where the speed of the gas matches the speed of the wall
+   o.ghost_cell_data_available = false
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = {}
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
