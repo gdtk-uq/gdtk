@@ -123,6 +123,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     // Compute the fluxes in the local frame of the interface,
     // presuming that there is a right-running wave which processes the gas
     // from the initial right-flow-state to that at the wall.
+    // See PJ workbook notes 2018-06-09.
     // Source of this calculation is the 1998 report on L1d, Report 13/98.
     number vstar = IFace.gvel.x;
     number aR = Rght.gas.a;
@@ -134,7 +135,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     number rhoR = Rght.gas.rho;
     number pR = Rght.gas.p;
     number tmp = (vstar - UbarR)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoR/pow(pR,1.0/g));
-    number pstar = pow(tmp, 2.0*g*(g-1.0));
+    number pstar = pow(tmp, 2.0*g/(g-1.0));
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;
@@ -168,6 +169,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     // Compute the fluxes in the local frame of the interface,
     // presuming that there is a right-running wave which processes the gas
     // from the initial right-flow-state to that at the wall.
+    // See PJ workbook notes 2018-06-09.
     // Source of this calculation is the 1998 report on L1d, Report 13/98.
     number vstar = IFace.gvel.x;
     number aL = Lft.gas.a;
@@ -179,12 +181,12 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     number rhoL = Lft.gas.rho;
     number pL = Lft.gas.p;
     number tmp = (UbarL - vstar)*(g-1.0)/(2.0*sqrt(g))*sqrt(rhoL/pow(pL,1.0/g));
-    number pstar = pow(tmp, 2.0*g*(g-1.0));
+    number pstar = pow(tmp, 2.0*g/(g-1.0));
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;
-    F.momentum.set(-pstar, 0.0, 0.0);
-    F.total_energy = -pstar * vstar;
+    F.momentum.set(pstar, 0.0, 0.0);
+    F.total_energy = pstar * vstar;
     foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
     foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
     F.tke = 0.0;
