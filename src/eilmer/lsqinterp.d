@@ -916,6 +916,38 @@ public:
             } // end switch thermo_interpolator
         } // end of high-order reconstruction
     } // end interp_both()
-    
+        
+    void interp_right(ref FVInterface IFace, size_t gtl, ref FlowState Rght)
+    // Interpolate the flow field quantities at the right-side of the interface,
+    // given information in right-cell attached to this interface.
+    {
+        auto gmodel = myConfig.gmodel;
+        auto nsp = gmodel.n_species;
+        auto nmodes = gmodel.n_modes;
+        FVCell cR0 = IFace.right_cell;
+        // Low-order reconstruction just copies data from adjacent FV_Cell.
+        // Even for high-order reconstruction, we depend upon this copy for
+        // the viscous-transport and diffusion coefficients.
+        Rght.copy_values_from(cR0.fs);
+        // [TODO] 2018-06-10 higher-order interpolation.
+        return;
+    }
+        
+    void interp_left(ref FVInterface IFace, size_t gtl, ref FlowState Lft)
+    // Interpolate the flow field quantities at the left-side of the interface,
+    // given information in the left-cell attached to this interface.
+    {
+        auto gmodel = myConfig.gmodel;
+        auto nsp = gmodel.n_species;
+        auto nmodes = gmodel.n_modes;
+        FVCell cL0 = IFace.left_cell;
+        // Low-order reconstruction just copies data from adjacent FV_Cell.
+        // Even for high-order reconstruction, we depend upon this copy for
+        // the viscous-transport and diffusion coefficients.
+        Lft.copy_values_from(cL0.fs);
+        // [TODO] 2018-06-10 higher-order interpolation.
+        return;
+    }
+
 } // end class LsqInterpolator
 

@@ -451,25 +451,27 @@ public:
             f.cloud_fs ~= f.fs;
             cell_cloud_face_ids ~= f.id;
             if (bc.outsigns[i] == 1) {
-                // store neighbour cell
+                // left cell should be interior
+                // store as a neighbour cell
                 f.cloud_pos ~= &(f.left_cell.pos[0]); // assume gtl = 0
                 f.cloud_fs ~= f.left_cell.fs;
                 cell_list~= f.left_cell.cell_cloud;
                 cell_cloud_cell_ids ~= f.left_cell.id;
                 // store ghost0
-                if (f.right_cell.will_have_valid_flow) {
+                if (f.right_cell && f.right_cell.will_have_valid_flow) {
                     f.cloud_pos ~= &(f.right_cell.pos[0]);
                     f.cloud_fs ~= f.right_cell.fs;
                     cell_cloud_cell_ids ~= f.right_cell.id;
                 }
             } else {
-                // store neighbour cell
+                // right_cell should be interior
+                // store as a neighbour cell
                 f.cloud_pos ~= &(f.right_cell.pos[0]); // assume gtl = 0
                 f.cloud_fs ~= f.right_cell.fs;
                 cell_list ~= f.right_cell.cell_cloud;
                 cell_cloud_cell_ids ~= f.right_cell.id;
                 // store ghost0
-                if (f.left_cell.will_have_valid_flow) { 
+                if (f.left_cell && f.left_cell.will_have_valid_flow) { 
                     f.cloud_pos ~= &(f.left_cell.pos[0]);
                     f.cloud_fs ~= f.left_cell.fs;
                     cell_cloud_cell_ids ~= f.left_cell.id;
@@ -482,12 +484,12 @@ public:
                         other_face.bc_id == bndary_idx &&
                         cell_cloud_face_ids.canFind(other_face.id) == false) {
                         // store left and right cell
-                        if (cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false) {
+                        if (other_face.left_cell && cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false) {
                             f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
                             f.cloud_fs ~= other_face.left_cell.fs;
                             cell_cloud_cell_ids ~= other_face.left_cell.id;
                         }
-                        if (cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false) {
+                        if (other_face.right_cell && cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false) {
                             f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
                             f.cloud_fs ~= other_face.right_cell.fs;
                             cell_cloud_cell_ids ~= other_face.right_cell.id;
@@ -503,12 +505,12 @@ public:
                         FVInterface other_face = faces[other_face_id];
                         if (other_face.is_on_boundary && cell_cloud_face_ids.canFind(other_face.id) == false) {
                             // store left and right cell
-                            if (cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false) {
+                            if (other_face.left_cell && cell_cloud_cell_ids.canFind(other_face.left_cell.id) == false) {
                                 f.cloud_pos ~= &(other_face.left_cell.pos[0]); // assume gtl = 0
                                 f.cloud_fs ~= other_face.left_cell.fs;
                                 cell_cloud_cell_ids ~= other_face.left_cell.id;
                             }
-                            if (cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false) {
+                            if (other_face.right_cell && cell_cloud_cell_ids.canFind(other_face.right_cell.id) == false) {
                                 f.cloud_pos ~= &(other_face.right_cell.pos[0]); // assume gtl = 0
                                 f.cloud_fs ~= other_face.right_cell.fs;
                                 cell_cloud_cell_ids ~= other_face.right_cell.id;
@@ -638,7 +640,11 @@ public:
         // the reconstruction process at the wall as being a cause of the leaky wall
         // boundary conditions.  Note that the symmetry is not consistent with the 
         // linear extrapolation used for the positions and volumes in Eilmer3.
-        foreach (bndry; grid.boundaries) {
+        // 2018-06-10: Maybe we can fix some of this by eliminating ghost-cells for
+        // boundary conditions that do not really have gas regions backing the
+        // ghost-cells.
+        foreach (i, bndry; grid.boundaries) {
+            if (bc[i].ghost_cell_data_available == false) { continue; }
             auto nf = bndry.face_id_list.length;
             foreach (j; 0 .. nf) {
                 auto my_face = faces[bndry.face_id_list[j]];
@@ -919,6 +925,8 @@ public:
             // Fill in gradients for ghost cells so that left- and right- cells at all faces,
             // including those along block boundaries, have the latest gradient values.
             foreach (bcond; bc) {
+                if (bcond.ghost_cell_data_available == false) { continue; }
+                // Proceed to do some work only if we have ghost cells in which to insert gradients.
                 bool found_mapped_cell_bc = false;
                 foreach (gce; bcond.preReconAction) {
                     auto mygce = cast(GhostCellMappedCellCopy)gce;
@@ -970,8 +978,12 @@ public:
                 f.fs.copy_average_values_from(Lft, Rght);
                 compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
             } else if (f.right_cell) {
+                lsq.interp_right(f, gtl, Rght);
+                f.fs.copy_values_from(Rght);
                 compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
             } else if (f.left_cell) {
+                lsq.interp_left(f, gtl, Lft);
+                f.fs.copy_values_from(Lft);
                 compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
             } else {
                 assert(0, "oops, a face without attached cells");
