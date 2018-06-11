@@ -527,6 +527,25 @@ function WallBC_WithSlip0:new(o)
    return o
 end
 
+-- Copy for trying out the new no-ghost-cell type of boundary condition
+-- that makes use of the one-sided flux calculators at walls.
+WallBC_WithSlip1 = BoundaryCondition:new()
+WallBC_WithSlip1.type = "wall_with_slip"
+function WallBC_WithSlip1:new(o)
+   o = o or {}
+   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   assert(flag, "Invalid name for item supplied to WallBC_WithSlip1 constructor.")
+   o = BoundaryCondition.new(self, o)
+   -- In a turbulence model sense, a slip wall is NOT a wall
+   -- We mean a wall where the speed of the gas matches the speed of the wall
+   o.ghost_cell_data_available = false
+   o.is_wall_with_viscous_effects = false
+   o.preReconAction = {}
+   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
+   o.is_configured = true
+   return o
+end
+
 -- Copy of WallBC_WithSlip for development/trialing of wall BCs 
 -- for moving mesh simulations for walls with normal velocity 
 WallBC_WithSlip2 = BoundaryCondition:new()
@@ -534,7 +553,7 @@ WallBC_WithSlip2.type = "wall_with_slip2"
 function WallBC_WithSlip2:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_WithSlip constructor.")
+   assert(flag, "Invalid name for item supplied to WallBC_WithSlip2 constructor.")
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
@@ -544,25 +563,6 @@ function WallBC_WithSlip2:new(o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.postConvFluxAction = { UpdateEnergyWallNormalVelocity:new()}
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new()}
-   o.is_configured = true
-   return o
-end
-
--- Another copy for trying out the new no-ghost-cell type of boundary condition
--- that makes use of the one-sided flux calculators at walls.
-WallBC_WithSlip3 = BoundaryCondition:new()
-WallBC_WithSlip3.type = "wall_with_slip"
-function WallBC_WithSlip3:new(o)
-   o = o or {}
-   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_WithSlip3 constructor.")
-   o = BoundaryCondition.new(self, o)
-   -- In a turbulence model sense, a slip wall is NOT a wall
-   -- We mean a wall where the speed of the gas matches the speed of the wall
-   o.ghost_cell_data_available = false
-   o.is_wall_with_viscous_effects = false
-   o.preReconAction = {}
-   o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new() }
    o.is_configured = true
    return o
 end
