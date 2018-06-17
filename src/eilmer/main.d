@@ -1,5 +1,5 @@
 /** main.d
- * Eilmer4 compressible-flow simulation code, top-level function.
+ * Eilmer 4.0 compressible-flow simulation code, top-level function.
  *
  * Author: Peter J. and Rowan G. 
  * First code: 2015-02-05
@@ -215,7 +215,7 @@ int main(string[] args)
         version(mpi_parallel) {
             MPI_Barrier(MPI_COMM_WORLD);
             if (GlobalConfig.is_master_task) {
-                writeln("Eilmer4 compressible-flow simulation code.");
+                writeln("Eilmer 4.0 compressible-flow simulation code.");
                 writeln("Revision: PUT_REVISION_STRING_HERE");
                 writefln("MPI-parallel, number of tasks %d", GlobalConfig.mpi_size);
             }
@@ -229,7 +229,7 @@ int main(string[] args)
             Thread.sleep(dur!("msecs")(100));
             MPI_Barrier(MPI_COMM_WORLD);
         } else {
-            writeln("Eilmer4 compressible-flow simulation code.");
+            writeln("Eilmer 4.0 compressible-flow simulation code.");
             writeln("Revision: PUT_REVISION_STRING_HERE");
             writeln("Shared-memory");
         }
