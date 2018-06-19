@@ -686,6 +686,12 @@ void integrate_in_time(double target_time_as_requested)
                 MPI_Allreduce(MPI_IN_PLACE, &my_c_h, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
                 GlobalConfig.c_h = my_c_h;
             }
+            // Now that we have a globally-reduced value, propagate that new value
+            // into the block-local config structure.
+            foreach (blk; localFluidBlocksBySize) {
+                if (!blk.active) continue;
+                blk.myConfig.c_h = GlobalConfig.c_h;
+            }
         } // end if (GlobalConfig.divergence_cleaning)
 
         // If using k-omega, we need to set mu_t and k_t BEFORE we call convective_update
