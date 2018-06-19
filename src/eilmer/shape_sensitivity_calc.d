@@ -123,7 +123,7 @@ void main(string[] args) {
     writefln("Initialising simulation from tindx: %d", last_tindx);
 
     // check some flag option compatibilities
-    assert(directMethodFlag == adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
+    assert(directMethodFlag != adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
     assert(verifyFlowJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     
     /* some global variables */    
@@ -227,6 +227,7 @@ void main(string[] args) {
         }
         
         writeln("Simulation complete.");
+        return;
     }
 
     /* Verify Flow Jacobian via Frechet Derivative */
