@@ -139,7 +139,7 @@ void compute_flux_at_left_wall(ref FlowState Rght, ref FVInterface IFace,
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;
-    F.momentum.set(pstar, 0.0, 0.0);
+    F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
     foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
@@ -185,7 +185,7 @@ void compute_flux_at_right_wall(ref FlowState Lft, ref FVInterface IFace,
     // Fill in the fluxes.
     ConservedQuantities F = IFace.F;
     F.mass = 0.0;
-    F.momentum.set(pstar, 0.0, 0.0);
+    F.momentum.set(pstar, to!number(0.0), to!number(0.0));
     F.total_energy = pstar * vstar;
     foreach (i; 0 .. F.massf.length) { F.massf[i] = 0.0; }
     foreach (i; 0 .. F.energies.length) { F.energies[i] = 0.0; }
