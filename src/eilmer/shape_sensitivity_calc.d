@@ -123,8 +123,11 @@ void main(string[] args) {
     writefln("Initialising simulation from tindx: %d", last_tindx);
 
     // check some flag option compatibilities
-    assert(directMethodFlag != adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
-    assert(verifyFlowJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
+    if (verifyFlowJacobianFlag)
+        assert(verifyFlowJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
+    else
+        assert(directMethodFlag != adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
+    
     
     /* some global variables */    
     bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
