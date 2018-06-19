@@ -1402,11 +1402,10 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
     //  Wall Function Boundary Conditions Inclding Heat Transfer
     //  and Compressibility.
     //  AIAA Journal, 42:6, pp. 1107--1114
-    // NOTE: IFace.fs will receive updated values of tke and omega for later copying
-    //       to boundary cells.
+    // NOTE: IFace.fs will receive updated values of tke and omega for later
+    //       copying to boundary cells.
     {
-        auto gmodel = blk.myConfig.gmodel; 
-        //
+        auto gmodel = blk.myConfig.gmodel;
         // Compute recovery factor
         number cp = gmodel.Cp(cell.fs.gas); 
         number Pr = cell.fs.gas.mu * cp / cell.fs.gas.k;
@@ -1449,8 +1448,8 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             rho_wall = IFace.fs.gas.rho;
         }
         // Compute wall shear stess (and heat flux for fixed temperature wall) 
-        // using the surface stress tensor. This provides initial values to solve
-        // for tau_wall and q_wall iteratively
+        // using the surface stress tensor. This provides initial values to
+        // solve for tau_wall and q_wall iteratively
         number wall_dist = distance_between(cell.pos[0], IFace.pos);
         number dudy = du / wall_dist;
         number mu_lam_wall = IFace.fs.gas.mu;
@@ -1468,64 +1467,78 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         double kappa = 0.4;
         double B = 5.5;
         double C_mu = 0.09;
-        size_t counter = 0; 
+        size_t counter_tau = 0; size_t counter_q = 0;
         double tolerance = 1.0e-10;
-        number diff_tau = 100.0;
-        number diff_q;
-        if ( _isFixedTWall ) {
-            diff_q = 100.0;
-        } else {
-            // Make diff_q smaller than tolerance so that while loop
-            // will only check for diff_tau for adiabatic wall cases
-            diff_q = tolerance / 10.0; 
-        }
+        number diff_tau = 100.0; number diff_q = 100.0;
         number tau_wall = 0.0; number q_wall = 0.0;
-        number u_tau = 0.0; number u_plus = 0.0;
-        number Gam = 0.0; number Beta = 0.0; number Q = 0.0; number Phi = 0.0;
-        number y_plus_white = 0.0; number y_plus = 0.0;
-        //
+        number u_tau = 0.0; number u_plus = 0.0; number Gam = 0.0;
+        number Beta = 0.0; number Q = 0.0; number Phi = 0.0;
+        number y_plus_white = 0.0; number y_plus = 0.0; number alpha = 0.0;
         // Iteratively solve for the wall-function corrected shear stress
         // (and heat flux for fixed temperature walls)
-        while ( diff_tau > tolerance || diff_q > tolerance) {
-            // Friction velocity and u+ (Eq 2)
-            u_tau = sqrt( tau_wall_old / rho_wall );
-            u_plus = du / u_tau;
-            // Gamma, Beta, Qm and Phi (Eq 7)
-            Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall); 
-            if (_isFixedTWall) {
-                Beta = q_wall_old * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
-            } else {
-                Beta = 0.0;
-            }
-            Q = sqrt(Beta*Beta + 4.0*Gam);
-            Phi = asin(-1.0 * Beta / Q);
-            // y+ defined by White and Christoph (Eq 9)
-            y_plus_white = exp((kappa/sqrt(Gam))*(asin((2.0*Gam*u_plus - Beta)/Q) - Phi))*exp(-1.0*kappa*B);
-            // Spalding's unified form for defining y+ (Eq 8)
-            y_plus = u_plus + y_plus_white - exp(-1.0*kappa*B) * ( 1.0 + kappa*u_plus
-                                                                       + pow((kappa*u_plus), 2.0) / 2.0
-                                                                       + pow((kappa*u_plus), 3.0) / 6.0 );
-            // Calculate an updated value for the wall shear stress and heat flux 
-            tau_wall = 1.0/rho_wall * pow(y_plus*mu_lam_wall/wall_dist, 2.0);
-            if (_isFixedTWall) {
+        while ( diff_q > tolerance ) {
+            counter_tau = 0; // Resets counter for tau_wall to zero
+            while ( diff_tau > tolerance ) {
+                // Friction velocity and u+ (Eq 2)
+                u_tau = sqrt( tau_wall_old / rho_wall );
+                u_plus = du / u_tau;
+                // Gamma, Beta, Qm and Phi (Eq 7)
+                Gam = recovery * u_tau * u_tau / (2.0 * cp * T_wall); 
+                if ( _isFixedTWall ) {
+                    Beta = q_wall_old * mu_lam_wall / (rho_wall*T_wall*k_lam_wall*u_tau);
+                } else {
+                    Beta = 0.0;
+                }
+                Q = sqrt(Beta*Beta + 4.0*Gam);
+                Phi = asin(-1.0 * Beta / Q);
+                // In the calculation of y+ defined by White and Christoph
+                // (Eq 9), the equation breaks down when the value of 
+                // asin((2.0*Gam*u_plus - Beta)/Q) goes larger than 1.0 or
+                // smaller than -1.0. For cases where we initialise the flow
+                // solution with high flow velocity, du (and hence u_plus)
+                // becomes large enough to exceed this limit. A limiter is
+                // therefore implemented here to help get past this initially
+                // large velocity gradient at the wall. Note that this limiter
+                // is not in Nichols and Nelson's paper. We set the limit to
+                // either a value just below 1.0, or just above -1.0, to avoid
+                // the calculation of y_white_y_plus (Eq. 15) from blowing up.
+                alpha = (2.0*Gam*u_plus - Beta)/Q;
+                if (alpha > 0.0) alpha = fmin(alpha, 1-1e-12);
+                else alpha = fmax(alpha, -1+1e-12);
+                // y+ defined by White and Christoph (Eq 9)
+                y_plus_white = exp((kappa/sqrt(Gam))*(asin(alpha) - Phi))*exp(-1.0*kappa*B);
+                // Spalding's unified form for defining y+ (Eq 8)
+                y_plus = u_plus + y_plus_white - exp(-1.0*kappa*B) * ( 1.0 + kappa*u_plus
+                                                                           + pow((kappa*u_plus), 2.0) / 2.0
+                                                                           + pow((kappa*u_plus), 3.0) / 6.0 );
+                // Calculate an updated value for the wall shear stress and heat flux 
+                tau_wall = 1.0/rho_wall * pow(y_plus*mu_lam_wall/wall_dist, 2.0);
+                // Difference between old and new tau_wall and q_wall. Update old value
+                diff_tau = fabs(tau_wall - tau_wall_old);
+                tau_wall_old += 0.25 * (tau_wall - tau_wall_old);
+                // Limit number of iteration loops to 1000.
+                counter_tau++;
+                if (counter_tau > 1000) break; 
+            } // End of "while ( diff_tau > tolerance )" loop
+            //
+            if ( _isFixedTWall ) {
+                // Compute Beta and q_wall values
                 Beta = (cell.fs.gas.T/T_wall - 1.0 + Gam*u_plus*u_plus) / u_plus;
                 q_wall = Beta * (rho_wall*T_wall*k_lam_wall*u_tau) / mu_lam_wall;
-            }
-            // Difference between old and new tau_wall and q_wall. Update old value
-            diff_tau = fabs(tau_wall - tau_wall_old);
-            tau_wall_old += 0.25 * (tau_wall - tau_wall_old);
-            if ( _isFixedTWall ) {
                 diff_q = fabs( q_wall - q_wall_old );
                 q_wall_old += 0.25 * (q_wall - q_wall_old);
-            }
-            // Set counter to limit number of times we iterate this loop
-            counter++;
-            if (counter > 500) break;
-        }
+            } else {
+                // For adiabatic wall cases, we just break out of the q_wall loop.
+                break; 
+            } 
+            // Limit number of iteration loops to 1000.
+            counter_q++;
+            if (counter_q > 1000) break; 
+        } // End of "while ( diff_q > tolerance )" loop
         //
-        // Store wall shear stress and heat flux to be used later to replace viscous stress 
-        // in flux calculations. Also, for wall shear stress, transform value back to the
-        // global frame of reference.
+        // Store wall shear stress and heat flux to be used later to replace viscous  
+        // stress in flux calculations. Also, for wall shear stress, transform value 
+        // back to the global frame of reference.
         double reverse_flag0 = 1.0; double reverse_flag1 = 1.0;
         Vector3 local_tau_wall;
         if ( blk.myConfig.dimensions == 2 ) {
@@ -1540,7 +1553,7 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
                 IFace.tau_wall_y = -1.0 * reverse_flag0 * tau_wall * IFace.n.x;
                 IFace.tau_wall_z = 0.0;
             } else {
-                local_tau_wall = Vector3(to!number(0.0),
+                local_tau_wall = Vector3(to!number(0.0), 
                                          -1.0 * reverse_flag0 * tau_wall * cos(vt1_2_angle),
                                          -1.0 * reverse_flag1 * tau_wall * sin(vt1_2_angle));
             }
@@ -1572,23 +1585,31 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
             IFace.tau_wall_z = local_tau_wall.z;
         }
         // Turbulence model boundary conditions (Eq 15 & 14)
+        // Note that the formulation of y_white_y_plus (Eq 15) is now directly
+        // affected by the limiter which was set earlier to help get past large
+        // velocity gradients at the wall for cases with initialised with high
+        // velocity in flow domain.
         number y_white_y_plus = 2.0 * y_plus_white * kappa*sqrt(Gam)/Q
-                * pow((1.0 - pow(2.0*Gam*u_plus-Beta,2.0)/(Q*Q)), 0.5);
+                * pow((1.0 - pow(alpha,2.0)), 0.5);
         number mu_coeff = 1.0 + y_white_y_plus
                 - kappa*exp(-1.0*kappa*B) * (1.0 + kappa*u_plus + kappa*u_plus*kappa*u_plus/2.0)
                 - mu_lam/mu_lam_wall;
+        // Limit the turbulent-to-laminar viscosity ratio to the global limit.
+        mu_coeff = fmin(mu_coeff, blk.myConfig.max_mu_t_factor);
+        // Compute turbulent viscosity; forcing mu_t to zero, if result is negative.
         number mu_t = mu_lam_wall * mu_coeff;
-        // omega (Eq 19 - 21)
+        if ( mu_t < 0.0 ) mu_t = 0.0;
+        // Compute omega (Eq 19 - 21)
         number omega_i = 6.0*mu_lam_wall / (0.075*rho_wall*wall_dist*wall_dist);
         number omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
         number omega = sqrt(omega_i*omega_i + omega_o*omega_o);
-        // tke (Eq 22)
+        // Compute tke (Eq 22)
         assert(cell.fs.gas.rho > 0.0, "density not positive");
         assert(mu_t > 0.0, "mu_t not greater than zero");
         assert(omega > 0.0, "omega not greater than zero");
         number tke = omega * mu_t / cell.fs.gas.rho;
-        // Assign updated values of tke and omega to IFace.fs for later copying
-        // to boundary cells.
+        // Assign updated values of tke and omega to IFace.fs for
+        // later copying to boundary cells.
         IFace.fs.tke = tke;
         IFace.fs.omega = omega;
         return;
