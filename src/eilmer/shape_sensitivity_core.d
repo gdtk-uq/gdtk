@@ -85,6 +85,32 @@ private lua_State* L; // module-local Lua interpreter
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
+void evalJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref number[] p) {
+    // Frechet derivative of Jv
+    double ih = 1.0e-20;
+    blk.clear_fluxes_of_conserved_quantities();
+    foreach (cell; blk.cells) cell.clear_source_vector();
+    int cellCount = 0;
+    foreach (cell; blk.cells) {
+        cell.fs.gas.rho += complex(0.0, ih)*v[cellCount+0];
+        cell.fs.vel.refx += complex(0.0, ih)*v[cellCount+1];
+        cell.fs.vel.refy += complex(0.0, ih)*v[cellCount+2];
+        cell.fs.gas.p += complex(0.0, ih)*v[cellCount+3];
+        blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
+        cellCount += nPrimitive;
+    }
+    
+    steadystate_core.evalRHS(0.0, 0);
+    cellCount = 0;
+    foreach (cell; blk.cells) {
+        p[cellCount+0] = cell.dUdt[0].mass.im/ih; // - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
+        p[cellCount+1] = cell.dUdt[0].momentum.x.im/ih; // - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
+        p[cellCount+2] = cell.dUdt[0].momentum.y.im/ih; // - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
+        p[cellCount+3] = cell.dUdt[0].total_energy.im/ih; // - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
+        cellCount += nPrimitive;
+    }
+}
+
 string computeBndaryVariableDerivatives(string varName, string posInArray, bool includeThermoUpdate)
 {
     string codeStr;

@@ -122,12 +122,9 @@ void main(string[] args) {
     else init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
     writefln("Initialising simulation from tindx: %d", last_tindx);
 
-    // Revert to adjoint method if more than one gradient evaluation method has been selected
-    if (directMethodFlag && adjointMethodFlag) directMethodFlag = false;
-    // or none...
-    if (!directMethodFlag && !adjointMethodFlag) adjointMethodFlag = true;
-    assert(directMethodFlag != adjointMethodFlag, "Error: More than one gradient evaluation method has been selected. Please select only one.");
-
+    // check some flag option compatibilities
+    assert(directMethodFlag == adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
+    assert(verifyFlowJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     
     /* some global variables */    
     bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
@@ -143,123 +140,6 @@ void main(string[] args) {
         return;        
     }
 
-    /* Verify Flow Jacobian via Frechet Derivative */
-    if (verifyFlowJacobianFlag) {
-
-        size_t nPrimitive; 
-        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
-        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
-        
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            // make sure ghost cells are filled before proceeding...
-            myblk.applyPreReconAction(0.0, 0, 0);
-            myblk.applyPostConvFluxAction(0.0, 0, 0);
-            myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
-            myblk.applyPostDiffFluxAction(0.0, 0, 0);
-            
-            myblk.JlocT = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order);
-        }
-        
-        
-        /* FRECHET DERIVATIVE TEST */
-        foreach (blk; localFluidBlocks) {
-            
-            double ih = 1.0e-20;
-            
-            number[] v;
-            v.length = blk.cells.length*nPrimitive;
-            //v[] = to!number(1.0);
-            
-            number maxRHO = 0.0;
-            number maxVELX = 0.0;
-            number maxVELY = 0.0;
-            number maxP = 0.0;
-            foreach ( i; 0..blk.cells.length) {
-                maxRHO = fmax(maxRHO, fabs(blk.cells[i].fs.gas.rho));
-                maxVELX = fmax(maxVELX, fabs(blk.cells[i].fs.vel.x));
-                maxVELY = fmax(maxVELY, fabs(blk.cells[i].fs.vel.y));
-                maxP = fmax(maxP, fabs(blk.cells[i].fs.gas.p));
-            }
-            foreach ( i; 0..blk.cells.length) {
-                v[i*nPrimitive] = maxRHO*i; 
-                v[i*nPrimitive+1] = maxVELX*i;
-                v[i*nPrimitive+2] = maxVELY*i;
-                v[i*nPrimitive+3] = maxP*i;
-            }
-            //normalise vector
-            number norm = 0.0;
-            foreach( i; 0..v.length) {
-                norm += v[i]*v[i];
-            }
-            norm = sqrt(norm);
-            foreach( i; 0..v.length) {
-                v[i] = v[i]/norm;
-            }
-            
-            number[] p1;
-            p1.length = blk.cells.length*nPrimitive;
-            number[] p2;
-            p2.length = blk.cells.length*nPrimitive;
-            
-            // explicit multiplication of Jv
-            foreach ( i; 0..blk.cells.length*nPrimitive) {
-                p1[i] = 0.0;
-                foreach ( j; 0..blk.cells.length*nPrimitive) {
-                    p1[i] += blk.JlocT[j,i]*v[j];
-                }
-            }
-            
-            // Frechet derivative of Jv
-            blk.clear_fluxes_of_conserved_quantities();
-            foreach (cell; blk.cells) cell.clear_source_vector();
-            int cellCount = 0;
-            foreach (cell; blk.cells) {
-                cell.fs.gas.rho += complex(0.0, ih)*v[cellCount+0];
-                cell.fs.vel.refx += complex(0.0, ih)*v[cellCount+1];
-                cell.fs.vel.refy += complex(0.0, ih)*v[cellCount+2];
-                cell.fs.gas.p += complex(0.0, ih)*v[cellCount+3];
-                blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
-                cellCount += nPrimitive;
-            }
-            
-            steadystate_core.evalRHS(0.0, 0);
-            cellCount = 0;
-            foreach (cell; blk.cells) {
-                p2[cellCount+0] = cell.dUdt[0].mass.im/ih; // - blk.FU[cellCount+MASS])/(sigma*blk.maxRate.mass);
-                p2[cellCount+1] = cell.dUdt[0].momentum.x.im/ih; // - blk.FU[cellCount+X_MOM])/(sigma*blk.maxRate.momentum.x);
-                p2[cellCount+2] = cell.dUdt[0].momentum.y.im/ih; // - blk.FU[cellCount+Y_MOM])/(sigma*blk.maxRate.momentum.y);
-                p2[cellCount+3] = cell.dUdt[0].total_energy.im/ih; // - blk.FU[cellCount+TOT_ENERGY])/(sigma*blk.maxRate.total_energy);
-                cellCount += nPrimitive;
-            }
-            
-            foreach (i; 0..blk.cells.length) {
-                writeln("-- 0 --");
-                writef("p1: %.16f  \n", p1[i*nPrimitive+0]);
-                writef("p2: %.16f  \n", p2[i*nPrimitive+0]);
-                writef("rel: %.16e  \n", (p1[i*nPrimitive+0]-p2[i*nPrimitive+0])/p2[i*nPrimitive+0]);
-                writeln("");
-                writeln("-- 1 --");
-                writef("p1: %.16f  \n", p1[i*nPrimitive+1]);
-                writef("p2: %.16f  \n", p2[i*nPrimitive+1]);
-                writef("rel: %.16e  \n", (p1[i*nPrimitive+1]-p2[i*nPrimitive+1])/p2[i*nPrimitive+1]);
-                writeln("");
-                writeln("-- 2 --");
-                writef("p1: %.16f  \n", p1[i*nPrimitive+2]);
-                writef("p2: %.16f  \n", p2[i*nPrimitive+2]);
-                writef("rel: %.16e  \n", (p1[i*nPrimitive+2]-p2[i*nPrimitive+2])/p2[i*nPrimitive+2]);
-                writeln("");
-                writeln("-- 3 --");
-                writef("p1: %.16f  \n", p1[i*nPrimitive+3]);
-                writef("p2: %.16f  \n", p2[i*nPrimitive+3]);
-                writef("rel: %.16e  \n", (p1[i*nPrimitive+3]-p2[i*nPrimitive+3])/p2[i*nPrimitive+3]);
-                writeln("");
-            }
-        }
-        return;
-    }
-
-    
     /* Evaluate Sensitivities via Discrete Adjoint Method */
     if (adjointMethodFlag) {
 
@@ -348,4 +228,77 @@ void main(string[] args) {
         
         writeln("Simulation complete.");
     }
+
+    /* Verify Flow Jacobian via Frechet Derivative */
+    if (verifyFlowJacobianFlag) {
+
+        /* Construct Flow Jacobian */
+        size_t nPrimitive; 
+        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
+        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
+        
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            // make sure ghost cells are filled before proceeding...
+            myblk.applyPreReconAction(0.0, 0, 0);
+            myblk.applyPostConvFluxAction(0.0, 0, 0);
+            myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+            myblk.applyPostDiffFluxAction(0.0, 0, 0);
+            
+            myblk.JlocT = new SMatrix!number();
+            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order);
+        }
+        
+        foreach (blk; localFluidBlocks) {
+
+            // compute directional vector
+            number[] v;
+            v.length = blk.cells.length*nPrimitive;
+            
+            foreach ( i; 0..blk.cells.length*nPrimitive) {
+                v[i] = i+1; // theoretically can be any vector.
+            }
+            
+            // normalise directional vector
+            number norm = 0.0;
+            foreach( i; 0..v.length) {
+                norm += v[i]*v[i];
+            }
+            norm = sqrt(norm);
+            foreach( i; 0..v.length) {
+                v[i] = v[i]/norm;
+            }
+
+            // result vectors
+            number[] p1;
+            p1.length = blk.cells.length*nPrimitive;
+            number[] p2;
+            p2.length = blk.cells.length*nPrimitive;
+            
+            // explicit multiplication of Jv (note we want to nultiply the Jacobian NOT transpose Jacobian by v)
+            foreach ( i; 0..blk.cells.length*nPrimitive) {
+                p1[i] = 0.0;
+                foreach ( j; 0..blk.cells.length*nPrimitive) {
+                    p1[i] += blk.JlocT[j,i]*v[j];
+                }
+            }
+            
+            // Frechet derivative of Jv
+            evalJacobianVecProd(blk, nPrimitive, v, p2);
+
+            string fileName = "flow_jacobian_test.output";
+            auto outFile = File(fileName, "w");
+            foreach( i; 0..v.length ) {
+                outFile.writef("%.16e    %.16f    %.16f \n", (p1[i]-p2[i])/p2[i], p1[i], p2[i]);
+            }
+                        
+            assert(approxEqualNumbers(p2, p1, 1.0e-14), "Flow Jacobian Test: FAILED.");
+            
+        }
+
+        writeln("Flow Jacobian Test: PASSED.");
+        return;
+    }
+
+    /* Program should terminate before here */
+    assert(0, "Oh dear. The Eilmer Shape Sensitivity Calculator executed correctly, however, nothing meaningful has been computed. Please check command line flags.");
 }
