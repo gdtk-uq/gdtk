@@ -73,53 +73,70 @@ int main(string[] args)
         GlobalConfig.in_mpi_context = false;
         GlobalConfig.is_master_task = true;
     }
-    //
-    string msg = "Usage:                               Comment:\n";
-    msg       ~= "e4shared [--job=<string>]            file names built from this string\n";
-    msg       ~= "         [--verbosity=<int>]         defaults to 0\n";
-    msg       ~= "\n";
-    msg       ~= "         [--prep]                    prepare config, grid and flow files\n";
-    msg       ~= "\n";
-    msg       ~= "         [--run]                     run the simulation over time\n";
-    msg       ~= "         [--tindx-start=<int>|last|9999]  defaults to 0\n";
-    msg       ~= "         [--next-loads-indx=<int>]   defaults to (final index + 1) of loads.times file\n";
-    msg       ~= "         [--max-cpus=<int>]          (e4shared only) defaults to ";
-    msg       ~= to!string(totalCPUs) ~" on this machine\n";
-    msg       ~= "         [--threads-per-mpi-task=<int>] (e4mpi only) defaults to 1\n";
-    msg       ~= "         [--max-wall-clock=<int>]    in seconds\n";
-    msg       ~= "         [--report-residuals]        include residual reporting in console output\n";
-    msg       ~= "\n";
-    msg       ~= "         [--post]                    post-process simulation data\n";
-    msg       ~= "         [--list-info]               report some details of this simulation\n";
-    msg       ~= "         [--tindx-plot=<int>|all|last|9999]  defaults to last\n";
-    msg       ~= "         [--add-vars=\"mach,pitot,total-h,total-p,entropy,molef,conc\"]\n";
-    msg       ~= "         [--ref-soln=<filename>]     Lua file for reference solution\n";
-    msg       ~= "         [--vtk-xml]                 produce XML VTK-format plot files\n";
-    msg       ~= "         [--binary-format]           use binary within the VTK-XML\n";
-    msg       ~= "         [--tecplot]                 write a binary szplt file in Tecplot format\n";
-    msg       ~= "         [--tecplot-ascii]           write an ASCII (text) file in Tecplot format\n";
-    msg       ~= "         [--plot-dir=<string>]       defaults to plot\n";
-    msg       ~= "         [--output-file=<string>]    defaults to stdout\n";
-    msg       ~= "         [--slice-list=\"blk-range,i-range,j-range,k-range;...\"]\n";
-    msg       ~= "         [--surface-list=\"blk,surface-id;...\"]\n";
-    msg       ~= "         [--extract-streamline=\"x,y,z;...\"]        streamline locus points\n";
-    msg       ~= "         [--track-wave=\"x,y,z(,nx,ny,nz);..\"]      track wave from given point in given plane, default is n=(0,0,1)\n";
-    msg       ~= "         [--extract-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line in flow blocks\n";
-    msg       ~= "         [--extract-solid-line=\"x0,y0,z0,x1,y1,z1,n;...\"]    sample along a line in solid blocks\n";
-    msg       ~= "         [--compute-loads-on-group=\"\"]    group tag\n";
-    msg       ~= "         [--probe=\"x,y,z;...\"]       locations to sample flow data\n";
-    msg       ~= "         [--output-format=<string>]  gnuplot|pretty\n";
-    msg       ~= "         [--norms=\"varName,varName,...\"] report L1,L2,Linf norms\n";
-    msg       ~= "         [--region=\"x0,y0,z0,x1,y1,z1\"]  limit norms calculation to a box\n";
-    msg       ~= "\n";
-    msg       ~= "         [--custom-post]             run custom post-processing script\n";
-    msg       ~= "         [--script-file=<string>]    defaults to post.lua\n";
-    msg       ~= "\n";
-    msg       ~= "         [--help]                    writes this message\n";
+    // We assemble the usage message as a multi-line string.
+    // Be careful when editing it and try to limit the line length
+    // to something that is likely to easily fit on a console,
+    // say 80 characters.
+    string usageMsg = "Usage: e4shared [OPTION]...
+Argument:                            Comment:
+--------------------------------------------------------------------------------
+  --job=<string>                     file names built from this string
+  --verbosity=<int>                  defaults to 0
+
+  --prep                             prepare config, grid and flow files
+
+  --run                              run the simulation over time
+  --tindx-start=<int>|last|9999      defaults to 0
+  --next-loads-indx=<int>            defaults to (final index + 1) of lines
+                                     found in the loads.times file
+  --max-cpus=<int>                   (e4shared) defaults to ";
+usageMsg ~= to!string(totalCPUs) ~" on this machine
+  --threads-per-mpi-task=<int>       (e4mpi) defaults to 1
+  --max-wall-clock=<int>             in seconds
+  --report-residuals                 include residuals in console output
+
+  --post                             post-process simulation data
+  --list-info                        report some details of this simulation
+  --tindx-plot=<int>|all|last|9999   defaults to last
+  --add-vars=\"mach,pitot\"            add variables to the flow solution data
+                                     (just for postprocessing)
+                                     Other variables include:
+                                     total-h, total-p, entropy, molef, conc 
+  --ref-soln=<filename>              Lua file for reference solution
+  --vtk-xml                          produce XML VTK-format plot files
+  --binary-format                    use binary within the VTK-XML
+  --tecplot                          write a binary szplt file for Tecplot
+  --tecplot-ascii                    write an ASCII (text) file for Tecplot
+  --plot-dir=<string>                defaults to plot
+  --output-file=<string>             defaults to stdout
+  --slice-list=\"blk-range,i-range,j-range,k-range;...\"
+                                     output one or more slices across
+                                     a structured-grid solution
+  --surface-list=\"blk,surface-id;...\"
+                                     output one or more surfaces as subgrids
+  --extract-streamline=\"x,y,z;...\"   streamline locus points
+  --track-wave=\"x,y,z(,nx,ny,nz);...\"
+                                     track wave from given point
+                                     in given plane, default is n=(0,0,1)
+  --extract-line=\"x0,y0,z0,x1,y1,z1,n;...\"
+                                     sample along a line in fluid domain
+  --extract-solid-line=\"x0,y0,z0,x1,y1,z1,n;...\"
+                                     sample along a line in solid domain
+  --compute-loads-on-group=\"\"        group tag
+  --probe=\"x,y,z;...\"                locations to sample flow data
+  --output-format=<string>           gnuplot|pretty
+  --norms=\"varName,varName,...\"      report L1,L2,Linf norms
+  --region=\"x0,y0,z0,x1,y1,z1\"       limit norms calculation to a box
+
+  --custom-post                      run custom post-processing script
+  --script-file=<string>             defaults to \"post.lua\"
+
+  --help                             writes this message
+--------------------------------------------------------------------------------";
     if ( args.length < 2 ) {
         if (GlobalConfig.is_master_task) {
             writeln("Too few arguments.");
-            write(msg);
+            writeln(usageMsg);
             stdout.flush();
         }
         exitFlag = 1;
@@ -205,7 +222,7 @@ int main(string[] args)
             writeln("Arguments not processed: ");
             args = args[1 .. $]; // Dispose of program name in first argument.
             foreach (myarg; args) writeln("    arg: ", myarg);
-            write(msg);
+            writeln(usageMsg);
             stdout.flush();
         }
         exitFlag = 1;
@@ -235,7 +252,7 @@ int main(string[] args)
         }
     }
     if (helpWanted) {
-        if (GlobalConfig.is_master_task) { write(msg); stdout.flush(); }
+        if (GlobalConfig.is_master_task) { writeln(usageMsg); stdout.flush(); }
         exitFlag = 0;
         return exitFlag;
     }
@@ -252,7 +269,7 @@ int main(string[] args)
             if (verbosityLevel > 0) { writeln("Begin preparation stage for a simulation."); }
             if (jobName.length == 0) {
                 writeln("Need to specify a job name.");
-                write(msg);
+                writeln(usageMsg);
                 exitFlag = 1;
                 return exitFlag;
             }
@@ -303,7 +320,7 @@ int main(string[] args)
     if (runFlag) {
         if (jobName.length == 0) {
             writeln("Need to specify a job name.");
-            write(msg);
+            writeln(usageMsg);
             exitFlag = 1;
             return exitFlag;
         }
@@ -383,7 +400,7 @@ int main(string[] args)
         } else { // NOT mpi_parallel
             if (jobName.length == 0) {
                 writeln("Need to specify a job name.");
-                write(msg);
+                writeln(usageMsg);
                 exitFlag = 1;
                 return exitFlag;
             }
