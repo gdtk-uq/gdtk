@@ -57,7 +57,7 @@ FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
 version(complex_numbers)
 {
-    Complex!double EPS = complex(0.0, 1.0e-20); //  0 + iEPSILON
+    Complex!double EPS = complex(0.0, 1.0e-18); //  0 + iEPSILON
 } else {
     double EPS = 1.0; //  0 + iEPSILON
 }
@@ -134,7 +134,7 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     return codeStr;
 }
 
-void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, int orderOfJacobian) {
+void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian) {
     // initialise some re-used data objects here
     number[][] dRdq; number[][] dqdQ; number[][] Aext; number[] qP;
     qP.length = np; dRdq.length = np; dqdQ.length = np; Aext.length = np; 
@@ -165,7 +165,7 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 mixin(computeGhostCellDerivatives("vel.refy", "2", false));
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "3", true));
-                
+
                 /* form dRdq */
                 
                 // TODO: Currently only works for nearest-neighbour reconstruction stencil. Think about the MLP limiter.
@@ -174,15 +174,26 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                     foreach ( face; bcells[0].iface) {
                         FVCell lftCell = face.left_cell;
                         FVCell rghtCell = face.right_cell;
-                        if (lftCell.id != bcells[0].id && lftCell.id != pcell.id && idList.canFind(lftCell.id) == false) bcells ~= lftCell; 
-                        if (rghtCell.id != bcells[0].id && rghtCell.id != pcell.id && idList.canFind(rghtCell.id) == false) bcells ~= rghtCell; 
+                        if (lftCell.id != bcells[0].id && idList.canFind(lftCell.id) == false && lftCell.id < ghost_cell_start_id) {
+                            bcells ~= lftCell;
+                            idList ~= lftCell.id;
+                        }
+                        if (rghtCell.id != bcells[0].id && idList.canFind(rghtCell.id) == false && rghtCell.id < ghost_cell_start_id) {
+                            bcells ~= rghtCell; 
+                            idList ~= rghtCell.id;
+                        }
                     }
                 }
                 
                 pcell.jacobian_cell_stencil ~= bcells;
+                size_t[] idList;
                 foreach ( bcell; bcells) {
-                    foreach ( face; bcell.iface)
-                        pcell.jacobian_face_stencil ~= face;
+                    foreach ( face; bcell.iface) {
+                        if ( idList.canFind(face.id) == false ) {
+                            pcell.jacobian_face_stencil ~= face;
+                            idList ~= face.id;
+                        }
+                    }
                 }
                 
                 // 0th perturbation: rho
@@ -193,7 +204,6 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
                 // 3rd perturbation: P
                 mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
-
                 foreach(bcell; pcell.jacobian_cell_stencil) {
                     number integral;
                     number volInv = 1.0 / bcell.volume[0];
@@ -207,6 +217,8 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                             dRdq[ip][jp] = entry;
                         }
                     }
+
+                    //writeln(dRdq);
                     
                     // perform matrix-matrix multiplication
                     for (size_t i = 0; i < np; i++) {
@@ -227,19 +239,17 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                             A[J,I] = A[J,I] + Aext[ip][jp];
                         }
                     }
+                }
                     
-                    
-                    // clear the interface flux Jacobian entries
-                    foreach (iface; pcell.jacobian_face_stencil) {
-                        foreach (i; 0..iface.dFdU.length) {
-                            foreach (j; 0..iface.dFdU[i].length) {
-                                iface.dFdU[i][j] = 0.0;
-                            }
+                // clear the interface flux Jacobian entries
+                foreach (iface; pcell.jacobian_face_stencil) {
+                    foreach (i; 0..iface.dFdU.length) {
+                        foreach (j; 0..iface.dFdU[i].length) {
+                            iface.dFdU[i][j] = 0.0;
                         }
                     }
-
                 }
-                 
+                
                 pcell.jacobian_cell_stencil = [];
                 pcell.jacobian_face_stencil = [];
             }
@@ -250,44 +260,86 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
  
 void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
 
-    FVCell[] refs_ordered; FVCell[] refs_unordered;
-    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
-    size_t[] cell_ids;
-
-    // clear the stencil arrays
-    pcell.jacobian_cell_stencil = [];
-    pcell.jacobian_face_stencil = [];
-
-    // collect faces
-    foreach(face; pcell.iface) {
-        pcell.jacobian_face_stencil ~= face;
-    }
-    
-    // for each effected face, add the neighbouring cells
-    foreach(face; pcell.jacobian_face_stencil) {
-        // collect (non-ghost) neighbour cells
-        if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
-            refs_unordered ~= face.left_cell;
-            pos_array[face.left_cell.id] = refs_unordered.length-1;
-            cell_ids ~= face.left_cell.id;
+    if (orderOfJacobian < 2) {
+        FVCell[] refs_ordered; FVCell[] refs_unordered;
+        size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
+        size_t[] cell_ids;
+        
+        // clear the stencil arrays
+        pcell.jacobian_cell_stencil = [];
+        pcell.jacobian_face_stencil = [];
+        
+        // collect faces
+        foreach(face; pcell.iface) {
+            pcell.jacobian_face_stencil ~= face;
         }
-        if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
-            refs_unordered ~= face.right_cell;
-            pos_array[face.right_cell.id] = refs_unordered.length-1;
-            cell_ids ~= face.right_cell.id;
+        
+        // for each effected face, add the neighbouring cells
+        foreach(face; pcell.jacobian_face_stencil) {
+            // collect (non-ghost) neighbour cells
+            if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+                refs_unordered ~= face.left_cell;
+                pos_array[face.left_cell.id] = refs_unordered.length-1;
+                cell_ids ~= face.left_cell.id;
+            }
+            if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+                refs_unordered ~= face.right_cell;
+                pos_array[face.right_cell.id] = refs_unordered.length-1;
+                cell_ids ~= face.right_cell.id;
+            }
+            else continue;
         }
-        else continue;
+        
+        // sort ids, and store sorted cell references
+        cell_ids.sort();
+        foreach(id; cell_ids) refs_ordered ~= refs_unordered[pos_array[id]];
+        pcell.jacobian_cell_stencil ~= refs_ordered;
     }
-    
-    // sort ids, and store sorted cell references
-    cell_ids.sort();
-    foreach(id; cell_ids) refs_ordered ~= refs_unordered[pos_array[id]];
-    pcell.jacobian_cell_stencil ~= refs_ordered;
-    
+    else {
+        FVCell[] refs_ordered; FVCell[] refs_unordered;
+        size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
+        size_t[] cell_ids; size_t[] face_ids;
+        
+        foreach(cell; pcell.cell_cloud) {
+            // collect faces
+            foreach(face; cell.iface) {
+                if (face_ids.canFind(face.id) == false) {
+                    pcell.jacobian_face_stencil ~= face;
+                    face_ids ~= face.id;
+                }
+            }
+        }
+        
+        // for each effected face, add the neighbouring cells
+        foreach(face; pcell.jacobian_face_stencil) {
+            // collect (non-ghost) neighbour cells
+            if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+                refs_unordered ~= face.left_cell;
+                pos_array[face.left_cell.id] = refs_unordered.length-1;
+                cell_ids ~= face.left_cell.id;
+            }
+            if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+                refs_unordered ~= face.right_cell;
+                pos_array[face.right_cell.id] = refs_unordered.length-1;
+                cell_ids ~= face.right_cell.id;
+            }
+            else continue;
+        }
+        
+        // finally sort ids, and store sorted cell references
+        cell_ids.sort();
+        foreach(id; cell_ids) {
+            refs_ordered ~= refs_unordered[pos_array[id]];
+        }
+        pcell.jacobian_cell_stencil ~= refs_ordered;            
+    }
 }
 
 void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian) {
 
+    // set the interpolation order to that of the Jacobian
+    blk.myConfig.interpolation_order = to!int(orderOfJacobian);
+    
     // initialise re-used objects here to prevent memory bloat
     cellSave = new FVCell(blk.myConfig);
     foreach(i; 0..MAX_PERTURBED_INTERFACES) ifaceP[i] = new FVInterface(blk.myConfig, false);
@@ -309,8 +361,10 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t 
     }
     A.ia ~= A.aa.length;
 
-    apply_boundary_conditions(A, blk, np, blk.myConfig.interpolation_order);
-    
+    apply_boundary_conditions(A, blk, np, orderOfJacobian);
+
+    // reset the interpolation order
+    blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }
 
 void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pcell, FluidBlock blk, size_t np, size_t orderOfJacobian) {
@@ -379,7 +433,32 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, FVCell[]
     
     foreach(iface; iface_list) iface.F.clear_values();
     foreach(iface; ifaceP_list) iface.F.clear_values();
-    
+
+    if (orderOfJacobian > 1) {
+        // TODO: add in missing MLP code. 
+        // compute gradients for reconstruction
+        foreach(c; cell_list) {
+            c.gradients.compute_lsq_values(c.cell_cloud, c.ws, blk.myConfig);
+            // It is more efficient to determine limiting factor here for some usg limiters.
+            final switch (blk.myConfig.unstructured_limiter) {
+            case UnstructuredLimiter.van_albada:
+                // do nothing now
+                break;
+            case UnstructuredLimiter.min_mod:
+                // do nothing now
+                break;
+            case UnstructuredLimiter.mlp:
+                c.gradients.mlp_limit(c.cell_cloud, c.ws, blk.myConfig);
+                break;
+            case UnstructuredLimiter.barth:
+                c.gradients.barth_limit(c.cell_cloud, c.ws, blk.myConfig);
+                    break;
+            case UnstructuredLimiter.venkat:
+                c.gradients.venkat_limit(c.cell_cloud, c.ws, blk.myConfig, 0);
+                break;
+            } // end switch
+        } // end foreach c
+    } // end if interpolation_order > 1
     // Convective flux update
     foreach(iface; iface_list) {
         auto ublk = cast(UFluidBlock) blk;
@@ -851,16 +930,25 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
             myblk.read_new_underlying_grid(gridFileName);
             myblk.sync_vertices_from_underlying_grid(0);
             myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
         }
     
         foreach (myblk; localFluidBlocks) {
             myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, flowFileExt), false);
+
+            foreach (cell; myblk.cells) {
+                cell.encode_conserved(0, 0, myblk.omegaz);
+                // Even though the following call appears redundant at this point,
+                // fills in some gas properties such as Prandtl number that is
+                // needed for both the cfd_check and the BaldwinLomax turbulence model.
+                cell.decode_conserved(0, 0, myblk.omegaz);
+            }
         }
         
         // perturb design variable in complex plane
         P0 = design_variables[i]; 
         design_variables[i] = P0 + EPS;
-    
+        
         // perturb grid
         gridUpdate(design_variables, 1); // gtl = 1
 
@@ -873,6 +961,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         
         foreach (myblk; localFluidBlocks) {
             myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
         }
 
         foreach (myblk; localFluidBlocks) {
@@ -927,7 +1016,7 @@ number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral
         foreach (i, cell; myblk.cells) myblk.locObjFcn += 0.5*(cell.fs.gas.p-to!number(p_target[i]))*(cell.fs.gas.p-to!number(p_target[i])); 
     }
     foreach ( myblk; localFluidBlocks) ObjFcn += myblk.locObjFcn;
-    return abs(ObjFcn);
+    return fabs(ObjFcn);
 }
 
 void form_objective_function_sensitivity(FluidBlock blk, size_t np, string bndaryForSurfaceIntergral = "objective_function_surface") {
@@ -1096,6 +1185,9 @@ void gridUpdate(number[] designVars, size_t gtl) {
         inverse_distance_weighting(myblk, bndaryVtxInitPos, bndaryVtxNewPos, gtl);
     }
 
+    foreach (myblk; localFluidBlocks) {
+        myblk.boundaryVtxIndexList = [];
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------

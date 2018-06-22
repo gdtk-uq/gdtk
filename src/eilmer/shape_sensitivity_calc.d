@@ -130,7 +130,7 @@ void main(string[] args) {
     
     
     /* some global variables */    
-    bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+    
     number[] designVars;
     designVars ~= to!number(0.347);
     designVars ~= to!number(0.6);
@@ -145,7 +145,7 @@ void main(string[] args) {
 
     /* Evaluate Sensitivities via Discrete Adjoint Method */
     if (adjointMethodFlag) {
-
+        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
         if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
         else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
@@ -235,7 +235,7 @@ void main(string[] args) {
 
     /* Verify Flow Jacobian via Frechet Derivative */
     if (verifyFlowJacobianFlag) {
-
+        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         /* Construct Flow Jacobian */
         size_t nPrimitive; 
         if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
@@ -292,10 +292,11 @@ void main(string[] args) {
             string fileName = "flow_jacobian_test.output";
             auto outFile = File(fileName, "w");
             foreach( i; 0..v.length ) {
-                outFile.writef("%.16e    %.16f    %.16f \n", (p1[i]-p2[i])/p2[i], p1[i], p2[i]);
+                size_t id = i/4;
+                outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
             }
                         
-            assert(approxEqualNumbers(p2, p1, 1.0e-14), "Flow Jacobian Test: FAILED.");
+            assert(approxEqualNumbers(p2, p1, 1.0e-10), "Flow Jacobian Test: FAILED.");
             
         }
 
