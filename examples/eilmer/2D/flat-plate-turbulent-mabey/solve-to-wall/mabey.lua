@@ -27,7 +27,7 @@ config.stringent_cfl = false -- true is more robust
 config.dt_init = 1.0e-9 -- only an initial guess, the simulation will take this over
 
 -- Gas model and flow conditions to match Mabey's data set 74021802
-nsp, nmodes = setGasModel('ideal-air-gas-model.lua')
+nsp, nmodes, gm = setGasModel('ideal-air-gas-model.lua')
 p_inf = 3.16e3  -- Pa
 u_inf = 712.9   -- m/s
 T_inf = 62.16   -- K
