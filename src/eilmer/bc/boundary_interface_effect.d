@@ -1594,18 +1594,18 @@ class BIE_WallFunction : BoundaryInterfaceEffect {
         number mu_coeff = 1.0 + y_white_y_plus
                 - kappa*exp(-1.0*kappa*B) * (1.0 + kappa*u_plus + kappa*u_plus*kappa*u_plus/2.0)
                 - mu_lam/mu_lam_wall;
-        // Limit the turbulent-to-laminar viscosity ratio to the global limit.
+        // Limit turbulent-to-laminar viscosity ratio between zero and the global limit.
+        if ( mu_coeff < 0.0 ) mu_coeff = 0.0;
         mu_coeff = fmin(mu_coeff, blk.myConfig.max_mu_t_factor);
         // Compute turbulent viscosity; forcing mu_t to zero, if result is negative.
         number mu_t = mu_lam_wall * mu_coeff;
-        if ( mu_t < 0.0 ) mu_t = 0.0;
         // Compute omega (Eq 19 - 21)
         number omega_i = 6.0*mu_lam_wall / (0.075*rho_wall*wall_dist*wall_dist);
         number omega_o = u_tau / (sqrt(C_mu)*kappa*wall_dist);
         number omega = sqrt(omega_i*omega_i + omega_o*omega_o);
         // Compute tke (Eq 22)
         assert(cell.fs.gas.rho > 0.0, "density not positive");
-        assert(mu_t > 0.0, "mu_t not greater than zero");
+        assert(mu_t >= 0.0, "mu_t lesser than zero");
         assert(omega > 0.0, "omega not greater than zero");
         number tke = omega * mu_t / cell.fs.gas.rho;
         // Assign updated values of tke and omega to IFace.fs for
