@@ -55,13 +55,6 @@ immutable size_t MAX_PERTURBED_INTERFACES = 40;
 FVCell cellSave;
 FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
-version(complex_numbers)
-{
-    Complex!double EPS = complex(0.0, 1.0e-18); //  0 + iEPSILON
-} else {
-    double EPS = 1.0; //  0 + iEPSILON
-}
-
 // Module-local, global memory arrays and matrices for GMRES
 number[] g0;
 number[] g1;
@@ -78,7 +71,7 @@ private lua_State* L; // module-local Lua interpreter
 /**********************/
 /* Frechet Derivative */
 /**********************/
-void evalJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref number[] p) {
+void evalJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref number[] p, number EPS) {
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
@@ -134,7 +127,7 @@ string computeGhostCellDerivatives(string varName, string posInArray, bool inclu
     return codeStr;
 }
 
-void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian) {
+void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS) {
     // initialise some re-used data objects here
     number[][] dRdq; number[][] dqdQ; number[][] Aext; number[] qP;
     qP.length = np; dRdq.length = np; dqdQ.length = np; Aext.length = np; 
@@ -335,7 +328,7 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
     }
 }
 
-void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian) {
+void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS) {
 
     // set the interpolation order to that of the Jacobian
     blk.myConfig.interpolation_order = to!int(orderOfJacobian);
@@ -349,7 +342,7 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t 
     number[][] aa; size_t[][] ja; size_t ia = 0;
     foreach(cell; blk.cells) {
         aa.length = np; ja.length = np;
-        compute_flow_jacobian_rows_for_cell(aa, ja, cell, blk, np, orderOfJacobian);
+        compute_flow_jacobian_rows_for_cell(aa, ja, cell, blk, np, orderOfJacobian, EPS);
         foreach (i; 0 .. np ) {
             A.aa ~= aa[i];
             A.ja ~= ja[i];
@@ -361,13 +354,13 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t 
     }
     A.ia ~= A.aa.length;
 
-    apply_boundary_conditions(A, blk, np, orderOfJacobian);
+    apply_boundary_conditions(A, blk, np, orderOfJacobian, EPS);
 
     // reset the interpolation order
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
 }
 
-void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pcell, FluidBlock blk, size_t np, size_t orderOfJacobian) {
+void compute_flow_jacobian_rows_for_cell(number[][] aa, size_t[][] ja, FVCell pcell, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS) {
 
     // 0th perturbation: rho
     mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
@@ -421,10 +414,10 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
     // ------------------ compute interface flux derivatives ------------------
     codeStr ~= "foreach (i, iface; pcell.jacobian_face_stencil) {";
-    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = ifaceP[i].F.mass.im/(EPS.im);";         
-    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = ifaceP[i].F.momentum.x.im/(EPS.im);";
-    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = ifaceP[i].F.momentum.y.im/(EPS.im);";
-    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = ifaceP[i].F.total_energy.im/(EPS.im);";
+    codeStr ~= "iface.dFdU[0][" ~ posInArray ~ "] = ifaceP[i].F.mass.im/EPS.im;";         
+    codeStr ~= "iface.dFdU[1][" ~ posInArray ~ "] = ifaceP[i].F.momentum.x.im/EPS.im;";
+    codeStr ~= "iface.dFdU[2][" ~ posInArray ~ "] = ifaceP[i].F.momentum.y.im/EPS.im;";
+    codeStr ~= "iface.dFdU[3][" ~ posInArray ~ "] = ifaceP[i].F.total_energy.im/EPS.im;";
     codeStr ~= "}";
     return codeStr;
 }
@@ -474,7 +467,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, FVCell[]
 }
 
 
-void compute_design_variable_partial_derivatives(number[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega) {
+void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref number[] g, size_t nPrimitive, bool with_k_omega, number EPS) {
     size_t nDesignVars = design_variables.length;
     int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number dP; number P0;
 
@@ -483,30 +476,23 @@ void compute_design_variable_partial_derivatives(number[] design_variables, ref 
         // perturb design variable +ve
         gtl = 1; ftl = 1;
         
+        //foreach (myblk; localFluidBlocls) {
+        //    foreach ( cell; myblk.cells ) { cell.copy_grid_level_to_level(0, gtl);
+        //     }
+        // }
+        
         // perturb design variable in complex plan
-        P0 = design_variables[i]; 
-        design_variables[i] = P0 + EPS;
+        P0 = design_variables[i].y; 
+        design_variables[i].refy = P0 + EPS;
         
         // perturb grid
         gridUpdate(design_variables, gtl);
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            myblk.sync_vertices_to_underlying_grid(gtl);
-            myblk.compute_primary_cell_geometric_data(gtl); // need to add in 2nd order effects
+            myblk.compute_primary_cell_geometric_data(gtl);
             myblk.compute_least_squares_setup(gtl);
         }
 
-        /*
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            foreach (cell; myblk.cells) {
-                writeln(cell.volume);
-                foreach (face; cell.iface) {
-                    writeln(face.n, ", ", face.t1, ", ", face.t2, ", ", face.area);
-                }
-            }
-        }
-        */
-        
         evalRHS(0.0, ftl, gtl, with_k_omega);
         
         objFcnEvalP = objective_function_evaluation(gtl);
@@ -517,26 +503,322 @@ void compute_design_variable_partial_derivatives(number[] design_variables, ref 
         // compute residual sensitivity
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach(j, cell; myblk.cells) {
-                myblk.rT[i, j*nPrimitive] = to!number((cell.dUdt[1].mass.im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+1] = to!number((cell.dUdt[1].momentum.x.im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+2] = to!number((cell.dUdt[1].momentum.y.im)/(EPS.im));
-                myblk.rT[i, j*nPrimitive+3] = to!number((cell.dUdt[1].total_energy.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive] = to!number((cell.dUdt[ftl].mass.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+1] = to!number((cell.dUdt[ftl].momentum.x.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+2] = to!number((cell.dUdt[ftl].momentum.y.im)/(EPS.im));
+                myblk.rT[i, j*nPrimitive+3] = to!number((cell.dUdt[ftl].total_energy.im)/(EPS.im));
             }
         }
         
         // restore design variable
-        design_variables[i] = P0;
+        design_variables[i].refy = P0;
+    }
+}
+
+/**************************/
+/*  OBJECTIVE FUNCTIONS   */
+/**************************/
+number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
+    number ObjFcn = 0.0;    
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        myblk.locObjFcn = 0.0;
+        foreach ( bndary; myblk.bc) {
+            if ( bndary.group == bndaryForSurfaceIntergral) {
+                foreach ( i, face; bndary.faces ) {
+                    FVCell cell;
+                    if (bndary.outsigns[i] == 1) {
+                        cell = face.left_cell;
+                    } else {
+                        cell = face.right_cell;
+                    }
+                    myblk.locObjFcn += cell.fs.gas.p*face.area[gtl]; 
+                }
+            }
+        }
+    }
+    foreach ( myblk; localFluidBlocks) ObjFcn += myblk.locObjFcn;
+    return fabs(ObjFcn);
+}
+
+void form_objective_function_sensitivity(FluidBlock blk, size_t np, number EPS, string bndaryForSurfaceIntergral = "objective_function_surface") {
+
+    // for now we have hard coded the pressure drag in the x-direction as the objective function
+    size_t nLocalCells = blk.cells.length;
+    blk.f.length = nLocalCells * np;
+
+    foreach(cell; blk.cells) {
+        for ( size_t ip = 0; ip < np; ++ip ) {
+            blk.f[cell.id*np + ip] = 0.0;
+        }
+    }
+    
+    foreach (cell; blk.cells) {
+        number origValue; number ObjFcnM; number ObjFcnP; number h;
+        // for current objective function only perturbations in pressure have any effect
+        origValue = cell.fs.gas.p;
+        cell.fs.gas.p = origValue + EPS;
+        ObjFcnP = objective_function_evaluation();
+        blk.f[cell.id*np + 3] = (ObjFcnP.im)/(EPS.im);
+        cell.fs.gas.p = origValue;
+    }
+    
+}
+
+/**********************************/
+/*  GRID PERTURBATION FUNCTIONs   */
+/**********************************/
+void fit_design_parameters_to_surface(ref Vector3[] designVars)
+{
+    // fitting tolerances
+    double tol = GlobalConfig.sscOptions.tolBezierCurveFit;
+    int maxSteps = GlobalConfig.sscOptions.maxStepsBezierCurveFit;
+    int nCntrlPts;
+    
+    // collect vertices along design surface (may cross multiple blocks)
+    Vector3[] orderedList; Vector3[] unorderedList;
+    size_t[string] origPosId; // used to identify where the point is in the unordered list
+    number[] xPosition;
+    foreach ( blk; localFluidBlocks ) {
+        size_t[] idList;
+        foreach ( bndary; blk.bc ) {
+            if (bndary.is_design_surface) {
+                nCntrlPts = bndary.num_cntrl_pts;
+                foreach ( face; bndary.faces) {
+                    foreach ( vtx; face.vtx) {
+                        // check x-position uniqueness
+                        bool uniqueXPos = true ;
+                        foreach ( i; 0..unorderedList.length) {
+                            number diff = abs(vtx.pos[0].x - xPosition[i]);
+                            if ( diff < ESSENTIALLY_ZERO) uniqueXPos = false;
+                        }
+                        if (uniqueXPos) {                   
+                            unorderedList ~= Vector3(vtx.pos[0].x, vtx.pos[0].y, vtx.pos[0].z);
+                            xPosition ~= vtx.pos[0].x;
+                            string xPosIdx = to!string(vtx.pos[0].x);
+                            origPosId[xPosIdx] = unorderedList.length-1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // order points in ascending x-position (WARNING: it is assumed that, for a given design surface boundary, each x-coordinate is unique).
+    xPosition.sort();
+    foreach(x; xPosition) orderedList ~= unorderedList[origPosId[to!string(x)]];
+
+    double[] ts;
+    Bezier bezier = optimiseBezierPoints(orderedList, nCntrlPts, ts, tol, maxSteps);
+    // first and last control points are not design variables
+    foreach ( i; 1..bezier.B.length-1) {
+        designVars ~= bezier.B[i];
+    }
+
+    // transmit global bezier to all relevant blocks
+    // copy bezier curve object to each design surface boundary, along with relevant portion of the ts array
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.is_design_surface) {
+                bndary.bezier = bezier;
+                number xi = bndary.faces[0].vtx[0].pos[0].x;
+                number xf = bndary.faces[0].vtx[0].pos[0].x;
+                foreach ( face; bndary.faces ) {
+                    foreach ( vtx; face.vtx ) {
+                        if (vtx.pos[0].x < xi) xi = vtx.pos[0].x;
+                        else if (vtx.pos[0].x > xf) xf = vtx.pos[0].x;
+                        else continue;
+                    }
+                }
+                size_t idxi; size_t idxf;
+                foreach (i, t; ts ) {
+                    if ( abs(orderedList[i].x - xi) < ESSENTIALLY_ZERO) idxi = i;
+                    else if ( abs(orderedList[i].x - xf) < ESSENTIALLY_ZERO) idxf = i;
+                    else {} //do nothing
+                } // foreach (ts)
+                bndary.ts.length = ts[idxi..idxf+1].length;
+                bndary.ts[] = ts[idxi..idxf+1];
+            } // end if
+        } // end foreach blk.bc
+    } // end foreach blk
+    writeBezierDataToFile();
+} // end parameterise_design_surfaces
+
+void gridUpdate(Vector3[] designVars, size_t gtl) {
+    size_t nDesignVars = designVars.length;
+    
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        foreach(j, vtx; myblk.vertices) {
+            vtx.pos[gtl].refx = vtx.pos[0].x;
+            vtx.pos[gtl].refy = vtx.pos[0].y;
+        }
+    }
+
+    Vector3[] bndaryVtxInitPos;
+    foreach (myblk; localFluidBlocks) {
+        size_t[] idList;
+        foreach(bndary; myblk.bc) {
+            foreach( face; bndary.faces) {
+                foreach ( vtx; face.vtx) {
+                    if (idList.canFind(vtx.id) == false) {
+                        bndaryVtxInitPos ~= vtx.pos[0];
+                        myblk.boundaryVtxIndexList ~= vtx.id;
+                    }
+                }
+            }
+        }
+    }
+
+    foreach (myblk; localFluidBlocks) {
+        foreach( bndary; myblk.bc ) {
+                if (bndary.is_design_surface) {
+                    foreach ( i; 1..bndary.bezier.B.length-1) {
+                        // y-variable
+                        bndary.bezier.B[i].refy = designVars[i-1].y;
+                    }
+                    
+                    foreach(j, vtx; bndary.vertices) {
+                        version(complex_numbers) vtx.pos[gtl].refx = complex(vtx.pos[gtl].x.re, bndary.bezier(bndary.ts[j]).x.im);
+                        version(complex_numbers) vtx.pos[gtl].refy = complex(vtx.pos[gtl].y.re, bndary.bezier(bndary.ts[j]).y.im);
+                    }
+                }
+        }
+    }
+    
+    Vector3[] bndaryVtxNewPos;
+    foreach (myblk; localFluidBlocks) {
+        size_t[] idList;
+        foreach(bndary; myblk.bc) {
+            foreach( face; bndary.faces) {
+                foreach ( vtx; face.vtx) {
+                    if (idList.canFind(vtx.id) == false) {
+                        bndaryVtxNewPos ~= vtx.pos[gtl];
+                    }
+                }
+            }
+        }
+    }
+    
+    foreach (myblk; localFluidBlocks) {
+        inverse_distance_weighting(myblk, bndaryVtxInitPos, bndaryVtxNewPos, gtl);
+    }
+
+    foreach (myblk; localFluidBlocks) {
+        myblk.boundaryVtxIndexList = [];
+    }
+}
+
+void collect_boundary_vertices(FluidBlock blk)
+{
+    // make a block local collection of the vertices along domain boundaries
+    foreach (bndary; blk.bc) {
+        if ( bndary.type != "exchange_using_mapped_cells") {
+            if (bndary.is_design_surface) { // we need to order the vertices by x-position
+                FVVertex[] vtxOrdered; FVVertex[] vtxUnordered;
+                size_t[string] origPosId; // used to identify where the point is in the unordered list
+                number[] xPosition; size_t[] listOfAddedVtxIds;
+                foreach(face; bndary.faces) {
+                    foreach(vtx; face.vtx) {
+                        if (!listOfAddedVtxIds.canFind(vtx.id)) {
+                            blk.boundaryVtxIndexList ~= vtx.id;
+                            vtxUnordered ~= vtx;
+                            xPosition ~= vtx.pos[0].x;
+                            listOfAddedVtxIds ~= vtx.id;
+                            string xPosIdx = to!string(vtx.pos[0].x);
+                            origPosId[xPosIdx] = vtxUnordered.length-1;
+                        } // end if
+                    } // foreach vtx
+                } // end foreach face
+                
+                // order points in ascending x-position (WARNING: it is assumed that, for a given design surface boundary, each x-coordinate is unique).
+                xPosition.sort();
+                foreach(x; xPosition) vtxOrdered ~= vtxUnordered[origPosId[to!string(x)]];
+                bndary.vertices ~= vtxOrdered;
+            } else { // we don't need the vertices in any particular order
+                size_t[] listOfAddedVtxIds;
+                foreach(face; bndary.faces) {
+                    foreach(vtx; face.vtx) {
+                        if (!listOfAddedVtxIds.canFind(vtx.id)) {
+                            bndary.vertices ~= vtx;
+                            listOfAddedVtxIds ~= vtx.id;
+                            blk.boundaryVtxIndexList ~= vtx.id;
+                        } // end if
+                    } // end foreach vtx
+                } // end foreach face
+            } // end else
+        } // end if
+    } // end foreach bndary
+} // end collect_boundary_vertices
+
+
+/*************************/
+/*  EVALUATE RHS @ gtl   */
+/*************************/
+void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
+{
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.clear_fluxes_of_conserved_quantities();
+        foreach (cell; blk.cells) cell.clear_source_vector();
+    }
+    
+    exchange_ghost_cell_boundary_data(pseudoSimTime, gtl, ftl);
+    
+    foreach (blk; localFluidBlocks) {
+        blk.applyPreReconAction(pseudoSimTime, gtl, ftl);
+    }
+    
+    // We don't want to switch between flux calculator application while
+    // doing the Frechet derivative, so we'll only search for shock points
+    // at ftl = 0, which is when the F(U) evaluation is made.
+    if ( ftl == 0 && (GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
+		      GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_ausmdv)) {
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.detect_shock_points();
+        }
+    }
+
+     foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.convective_flux_phase0(gtl);
+    }
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.convective_flux_phase1(gtl);
+    }
+    foreach (blk; localFluidBlocks) {
+        blk.applyPostConvFluxAction(pseudoSimTime, gtl, ftl);
+    }
+    if (GlobalConfig.viscous) {
+        foreach (blk; localFluidBlocks) {
+            blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, gtl, ftl);
+        }
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            blk.flow_property_spatial_derivatives(gtl); 
+            blk.estimate_turbulence_viscosity();
+            blk.viscous_flux();
+        }
+        foreach (blk; localFluidBlocks) {
+            blk.applyPostDiffFluxAction(pseudoSimTime, gtl, ftl);
+        }
+    }
+
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        bool local_with_k_omega = with_k_omega;
+        foreach (i, cell; blk.cells) {
+            cell.add_inviscid_source_vector(gtl, 0.0);
+            if (blk.myConfig.viscous) {
+                cell.add_viscous_source_vector(local_with_k_omega);
+            }
+            if (blk.myConfig.udf_source_terms) {
+                addUDFSourceTermsToCell(blk.myL, cell, gtl, 
+                                        pseudoSimTime, blk.myConfig.gmodel);
+            }
+            cell.time_derivatives(gtl, ftl, local_with_k_omega);
+        }
     }
 }
 
 
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//                                   GMRES FUNCTIONS
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
+/**********************/
+/*  GMRES FUNCTIONS   */
+/**********************/
 string dot_over_blocks(string dot, string A, string B)
 {
     return `
@@ -565,8 +847,6 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 `~norm2~` = sqrt(`~norm2~`);`;
 
 }
-
-
 
 void rpcGMRES_solve(size_t nPrimitive) {    
     // restarted-GMRES settings
@@ -836,13 +1116,75 @@ void rpcGMRES_solve(size_t nPrimitive) {
     writeln(nRestarts, " restarts.");
 }
 
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//                                   WRITE TO FILE FUNCTIONS
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
+/**********************/
+/*    IO FUNCTIONS    */
+/**********************/
+void writeBezierDataToFile()
+{
+    foreach ( myblk; localFluidBlocks) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.is_design_surface) {
+                string fileName = "blk" ~ to!string(myblk.id) ~ ".bezier";
+                if (exists(fileName)) {
+                    string error_msg = format(".bezier files already exist. Please remove before proceeding.");
+                    throw new FlowSolverException(error_msg);
+                }
+                auto outFile = File(fileName, "a");
+                foreach ( point; bndary.bezier.B) {
+                    outFile.writef("%.16e %.16e %.16e \n", point.x.re, point.y.re, point.z.re);
+                }
+                foreach( t; bndary.ts ) {
+                    outFile.writef("%.16e \n", t);
+                }
+            } 
+        } 
+    } 
+} // end writeBexierDataToFile
+
+void readBezierDataFromFile(ref Vector3[] designVars)
+{
+    foreach (myblk; parallel(localFluidBlocks,1)) {
+        collect_boundary_vertices(myblk);
+    }
+
+    foreach ( myblk; localFluidBlocks) {
+        foreach (bndary; myblk.bc) {
+            if (bndary.is_design_surface) {
+                string fileName = "blk" ~ to!string(myblk.id) ~ ".bezier";
+                if (!exists(fileName)) {
+                    string error_msg = format(".bezier file does not exist");
+                    throw new FlowSolverException(error_msg);
+                }
+                auto fR = File(fileName, "r");
+                //while (!fR.eof) {
+                Vector3[] bezPts;
+                foreach ( i; 0..bndary.num_cntrl_pts) {
+                    auto line = fR.readln().strip();
+                    auto tokens = line.split();
+                    Vector3 pt;
+                    pt.refx = to!number(tokens[0]); pt.refy = to!number(tokens[1]); pt.refz = to!number(tokens[2]);
+                    bezPts ~= pt;
+                }
+                bndary.bezier = new Bezier(bezPts);
+                foreach ( i; 0..bndary.vertices.length) {
+                    auto line = fR.readln().strip();
+                    auto tokens = line.split();
+                    bndary.ts ~= to!double(tokens[0]);
+                    //}
+                }
+                if (designVars.length < 1) {
+                    foreach ( i; 1..bndary.bezier.B.length-1) {
+                        Vector3 dvar;
+                        dvar.refx = bndary.bezier.B[i].x;
+                        dvar.refy = bndary.bezier.B[i].y;
+                        designVars ~= dvar;
+                    }
+                }
+            } // end if
+        } // end foreach bndary
+    } // end foreach myblk
+} // end readBezierDataFromFile
+
 void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) {
     size_t ncells = blk.cells.length;
     size_t nvertices = blk.vertices.length;
@@ -911,8 +1253,10 @@ void write_adjoint_variables_to_file(FluidBlock blk, size_t np, string jobName) 
     }
 }
 
-void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int maxCPUs, number[] design_variables) {
-
+/*****************************/
+/*  DIRECT GRADIENT METHOD   */
+/*****************************/
+void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int maxCPUs, Vector3[] design_variables, number EPS) {
     writeln(" ");
     writeln("------------------------------------------------------");
     writeln("----EVALUATING DERIVATIVES VIA DIRECT COMPLEX STEP----");
@@ -946,8 +1290,8 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         }
         
         // perturb design variable in complex plane
-        P0 = design_variables[i]; 
-        design_variables[i] = P0 + EPS;
+        P0 = design_variables[i].y; 
+        design_variables[i].refy = P0 + EPS;
         
         // perturb grid
         gridUpdate(design_variables, 1); // gtl = 1
@@ -980,223 +1324,26 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         
         // run steady-state solver
         iterate_to_steady_state(0, maxCPUs); // snapshotStart = 0
+        //GlobalConfig.report_residuals = true;
+        //sim_time = 0.0;
+        //integrate_in_time(GlobalConfig.max_time);
         
         // compute objective function gradient
         objFcn = objective_function_evaluation();
         gradients ~= objFcn.im/EPS.im;
         
         // return value to original state
-        design_variables[i] = P0;
+        design_variables[i].refy = P0;
     }
-    
-    writef("gradient for variable %d: %.16e \n", 1, gradients[0]);
-    writef("gradient for variable %d: %.16e \n", 2, gradients[1]);
-    writef("gradient for variable %d: %.16e \n", 3, gradients[2]);
+    foreach ( i; 0..nDesignVars) {
+        writef("gradient for variable %d: %.16e \n", i, gradients[i]);
+    }
     writeln("simulation complete.");
 }
 
-
-number objective_function_evaluation(int gtl=0, string bndaryForSurfaceIntergral = "objective_function_surface") {
-
-    
-    double[] p_target;
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        // target pressure distribution saved in file target.dat
-        auto file = File("target.dat", "r");
-        foreach(line; 0..myblk.cells.length) {
-            auto lineContent = file.readln().strip();
-            auto tokens = lineContent.split();
-            p_target ~= 1000.0; //myblk.cells[line].fs.gas.p.re*line; //to!double(tokens[8]);
-        }
-    }
-    
-    number ObjFcn = 0.0;    
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        myblk.locObjFcn = 0.0;
-        foreach (i, cell; myblk.cells) myblk.locObjFcn += 0.5*(cell.fs.gas.p-to!number(p_target[i]))*(cell.fs.gas.p-to!number(p_target[i])); 
-    }
-    foreach ( myblk; localFluidBlocks) ObjFcn += myblk.locObjFcn;
-    return fabs(ObjFcn);
-}
-
-void form_objective_function_sensitivity(FluidBlock blk, size_t np, string bndaryForSurfaceIntergral = "objective_function_surface") {
-
-    // for now we have hard coded the pressure drag in the x-direction as the objective function
-    size_t nLocalCells = blk.cells.length;
-    blk.f.length = nLocalCells * np;
-
-    foreach(cell; blk.cells) {
-        for ( size_t ip = 0; ip < np; ++ip ) {
-            blk.f[cell.id*np + ip] = 0.0;
-        }
-    }
-    
-    foreach (cell; blk.cells) {
-        number origValue; number ObjFcnM; number ObjFcnP; number h;
-        // for current objective function only perturbations in pressure have any effect
-        origValue = cell.fs.gas.p;
-        cell.fs.gas.p = origValue + EPS;
-        ObjFcnP = objective_function_evaluation();
-        blk.f[cell.id*np + 3] = (ObjFcnP.im)/(EPS.im);
-        cell.fs.gas.p = origValue;
-    }
-    
-}
-
-
-void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
-{
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.clear_fluxes_of_conserved_quantities();
-        foreach (cell; blk.cells) cell.clear_source_vector();
-    }
-    
-    exchange_ghost_cell_boundary_data(pseudoSimTime, gtl, ftl);
-    
-    foreach (blk; localFluidBlocks) {
-        blk.applyPreReconAction(pseudoSimTime, gtl, ftl);
-    }
-    
-    // We don't want to switch between flux calculator application while
-    // doing the Frechet derivative, so we'll only search for shock points
-    // at ftl = 0, which is when the F(U) evaluation is made.
-    if ( ftl == 0 && (GlobalConfig.flux_calculator == FluxCalculator.adaptive_efm_ausmdv ||
-		      GlobalConfig.flux_calculator == FluxCalculator.adaptive_hlle_ausmdv)) {
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.detect_shock_points();
-        }
-    }
-
-     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase0(gtl);
-    }
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase1(gtl);
-    }
-    foreach (blk; localFluidBlocks) {
-        blk.applyPostConvFluxAction(pseudoSimTime, gtl, ftl);
-    }
-    if (GlobalConfig.viscous) {
-        foreach (blk; localFluidBlocks) {
-            blk.applyPreSpatialDerivActionAtBndryFaces(pseudoSimTime, gtl, ftl);
-        }
-        foreach (blk; parallel(localFluidBlocks,1)) {
-            blk.flow_property_spatial_derivatives(gtl); 
-            blk.estimate_turbulence_viscosity();
-            blk.viscous_flux();
-        }
-        foreach (blk; localFluidBlocks) {
-            blk.applyPostDiffFluxAction(pseudoSimTime, gtl, ftl);
-        }
-    }
-
-    foreach (blk; parallel(localFluidBlocks,1)) {
-        bool local_with_k_omega = with_k_omega;
-        foreach (i, cell; blk.cells) {
-            cell.add_inviscid_source_vector(gtl, 0.0);
-            if (blk.myConfig.viscous) {
-                cell.add_viscous_source_vector(local_with_k_omega);
-            }
-            if (blk.myConfig.udf_source_terms) {
-                addUDFSourceTermsToCell(blk.myL, cell, gtl, 
-                                        pseudoSimTime, blk.myConfig.gmodel);
-            }
-            cell.time_derivatives(gtl, ftl, local_with_k_omega);
-        }
-    }
-}
-
-
-void gridUpdate(number[] designVars, size_t gtl) {
-    size_t nDesignVars = designVars.length;
-
-    foreach (myblk; parallel(localFluidBlocks,1)) {
-        foreach(j, vtx; myblk.vertices) {
-            vtx.pos[gtl].refx = vtx.pos[0].x;
-            vtx.pos[gtl].refy = vtx.pos[0].y;
-        }
-            }
-
-    Vector3[] bndaryVtxInitPos;
-    foreach (myblk; localFluidBlocks) {
-        size_t[] idList;
-        foreach(bndary; myblk.bc) {
-            foreach( face; bndary.faces) {
-                foreach ( vtx; face.vtx) {
-                    if (idList.canFind(vtx.id) == false) {
-                        bndaryVtxInitPos ~= vtx.pos[0];
-                        myblk.boundaryVtxIndexList ~= vtx.id;
-                    }
-                }
-            }
-        }
-    }
-                      
-    number y0 = 0.105;
-    number b = designVars[0];
-    number c = designVars[1];
-    number d = designVars[2];
-    number scale = 1.0;
-    number a = y0 - b*tanh(-d/scale);
-    
-    foreach (myblk; localFluidBlocks) {
-        size_t[] idList;
-        foreach(bndary; myblk.bc) {
-            if (bndary.is_design_surface) {
-                foreach( face; bndary.faces) {
-                    foreach ( vtx; face.vtx) {
-                        if (idList.canFind(vtx.id) == false) {
-                            vtx.pos[gtl].refx = vtx.pos[0].x;
-                            version(complex_numbers) vtx.pos[gtl].refy = complex(vtx.pos[0].y.re, (a + b*tanh((c*vtx.pos[0].x-d)/scale)).im);
-                            //vtx.pos[gtl].refy = a + b*tanh((c*vtx.pos[0].x-d)/scale);
-                            
-                            /*
-                            number xp = sqrt(vtx.pos[0].x^^2+(vtx.pos[0].y-y0)^^2);
-                            number yp = a + b*tanh((c*xp-d)/scale) - y0;
-                            number theta = to!number(PI)/4.0;
-
-                            vtx.pos[gtl].refx = xp*cos(theta) - yp*sin(theta);
-                            vtx.pos[gtl].refy = xp*sin(theta) + yp*cos(theta) + y0;
-                            */
-
-                            idList ~= vtx.id;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Vector3[] bndaryVtxNewPos;
-    foreach (myblk; localFluidBlocks) {
-        size_t[] idList;
-        foreach(bndary; myblk.bc) {
-            foreach( face; bndary.faces) {
-                foreach ( vtx; face.vtx) {
-                    if (idList.canFind(vtx.id) == false) {
-                        bndaryVtxNewPos ~= vtx.pos[gtl];
-                    }
-                }
-            }
-        }
-    }
-    
-    foreach (myblk; localFluidBlocks) {
-        inverse_distance_weighting(myblk, bndaryVtxInitPos, bndaryVtxNewPos, gtl);
-    }
-
-    foreach (myblk; localFluidBlocks) {
-        myblk.boundaryVtxIndexList = [];
-    }
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//                                   STEADY-STATE SOLVER PRECONDITIONER
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
+/*****************************************/
+/*  STEADY-STATE SOLVER PRECONDITIONER   */
+/*****************************************/
 void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
     /*
     if (blk.grid_type == Grid_t.structured_grid) {

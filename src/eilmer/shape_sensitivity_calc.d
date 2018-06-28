@@ -120,7 +120,6 @@ void main(string[] args) {
     // TODO: MPI implementation (we can't assume threadsPerMPITask = 1) here.
     if (directMethodFlag) init_simulation(0, 0, maxCPUs, 1, maxWallClock); // initialise tindx=0
     else init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
-    writefln("Initialising simulation from tindx: %d", last_tindx);
 
     // check some flag option compatibilities
     if (verifyFlowJacobianFlag)
@@ -130,16 +129,24 @@ void main(string[] args) {
     
     
     /* some global variables */    
+    Vector3[] designVars;
+    version(complex_numbers) number EPS = complex(0.0, GlobalConfig.sscOptions.epsilon); //  0 + iEPSILON
+    else number EPS = -1.0;
+    assert(EPS != -1.0, "Error: complex step size incorrectly set");
+    writeln("/* Complex Step Size: ", EPS.im, ", i */");
     
-    number[] designVars;
-    designVars ~= to!number(0.347);
-    designVars ~= to!number(0.6);
-    designVars ~= to!number(3.8);
-    size_t nDesignVars = designVars.length;
-
+    /* Geometry parameterisation */
+    if (parameteriseSurfacesFlag) {
+        fit_design_parameters_to_surface(designVars);
+        //writeDesignVarsToDakotaFile(designVars, jobName);
+        return; // --parameterise-surfaces complete
+    }
+    
+    
     /* Evaluate Sensitivities via Direct Complex Step */
     if (directMethodFlag) {
-        compute_direct_complex_step_derivatives(jobName, last_tindx, maxCPUs, designVars);
+        readBezierDataFromFile(designVars);
+        compute_direct_complex_step_derivatives(jobName, last_tindx, maxCPUs, designVars, EPS);
         return;        
     }
 
@@ -158,13 +165,14 @@ void main(string[] args) {
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
             
             myblk.JlocT = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order);
+            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+            //writeln(myblk.JlocT);
         }
               
         
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.P = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 0); // orderOfJacobian=0
+            local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 0, EPS); // orderOfJacobian=0
             decompILU0(myblk.P);
         }
         
@@ -172,15 +180,30 @@ void main(string[] args) {
         // however the sensitivity w.r.t to primitive variables cannot be computed in parallel, since we are only computing a single objective calue (for example drag).
         // TODO: think about how this will effect user-defined objective functions
         foreach (myblk; localFluidBlocks) {
-            form_objective_function_sensitivity(myblk, nPrimitive);
+            form_objective_function_sensitivity(myblk, nPrimitive, EPS);
+            //foreach( i; 0..myblk.f.length) writef("%.16f \n", myblk.f[i]);
         }
         
         // solve the adjoint system
+        /*
+        Matrix!number A = new Matrix!number(localFluidBlocks[0].cells.length*nPrimitive, localFluidBlocks[0].cells.length*nPrimitive);
+        foreach ( i; 0..localFluidBlocks[0].cells.length*nPrimitive) {
+            foreach ( j; 0..localFluidBlocks[0].cells.length*nPrimitive) {
+                A[i,j] = localFluidBlocks[0].JlocT[i,j];
+            }
+        }
+        Matrix!number Ainv = new Matrix!number(localFluidBlocks[0].cells.length*nPrimitive, localFluidBlocks[0].cells.length*nPrimitive);
+        writeln("begin computing inverse");
+        Ainv = inverse(A);
+        writeln("finished computing inverse");
+        number[] sol;
+        sol.length = localFluidBlocks[0].cells.length*nPrimitive; 
+        dot(Ainv, localFluidBlocks[0].f, sol);
+        */
         rpcGMRES_solve(nPrimitive);
         
         // Write out adjoint variables for visualisation 
         foreach (myblk; localFluidBlocks) {
-            //writeln(myblk.psi);
             write_adjoint_variables_to_file(myblk, nPrimitive, jobName);
         }
         
@@ -199,28 +222,29 @@ void main(string[] args) {
         
         // objective function sensitivity w.r.t. design variables
         number[] g;
-        g.length = nDesignVars;
+        readBezierDataFromFile(designVars);
+        g.length = designVars.length;
         foreach (myblk; localFluidBlocks) {
             size_t nLocalCells = myblk.cells.length;
-            myblk.rT = new Matrix!number(nDesignVars, nLocalCells*nPrimitive);
+            myblk.rT = new Matrix!number(designVars.length, nLocalCells*nPrimitive);
         }
-        
-        compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega);
+
+        compute_design_variable_partial_derivatives(designVars, g, nPrimitive, with_k_omega, EPS);
         
         // ---------------------
         // COMPUTE SENSITIVITIES
         // ---------------------
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            myblk.rTdotPsi.length = nDesignVars;
+            myblk.rTdotPsi.length = designVars.length;
             dot(myblk.rT, myblk.psi, myblk.rTdotPsi);
             //writeln(myblk.rT);
         }
         
         number[] adjointGradients;
-        adjointGradients.length = nDesignVars;
+        adjointGradients.length = designVars.length;
         foreach (myblk; localFluidBlocks) adjointGradients[] = myblk.rTdotPsi[];
         adjointGradients[] = g[] - adjointGradients[];
-        
+
         foreach ( i; 0..adjointGradients.length) writef("gradient for variable %d: %.16e \n", i+1, adjointGradients[i]);
         
         // clear some expensive data structures from memory
@@ -249,7 +273,7 @@ void main(string[] args) {
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
             
             myblk.JlocT = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order);
+            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
         }
         
         foreach (blk; localFluidBlocks) {
@@ -287,7 +311,7 @@ void main(string[] args) {
             }
             
             // Frechet derivative of Jv
-            evalJacobianVecProd(blk, nPrimitive, v, p2);
+            evalJacobianVecProd(blk, nPrimitive, v, p2, EPS);
 
             string fileName = "flow_jacobian_test.output";
             auto outFile = File(fileName, "w");
@@ -296,7 +320,7 @@ void main(string[] args) {
                 outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
             }
                         
-            assert(approxEqualNumbers(p2, p1, 1.0e-10), "Flow Jacobian Test: FAILED.");
+            assert(approxEqualNumbers(p2, p1, 1.0e-10, 1.0e-01), "Flow Jacobian Test: FAILED.");
             
         }
 
