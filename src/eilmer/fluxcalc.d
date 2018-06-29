@@ -75,6 +75,9 @@ void compute_interface_flux(ref FlowState Lft, ref FlowState Rght, ref FVInterfa
     case FluxCalculator.hlle:
         hlle(Lft, Rght, IFace, myConfig.gmodel);
         break;
+    case FluxCalculator.roe:
+        roe(Lft, Rght, IFace, myConfig.gmodel);
+        break;
     } // end switch
     ConservedQuantities F = IFace.F;
 
@@ -944,3 +947,152 @@ void hlle(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel g
         // F.energies[$-1] += F.mass * Rght.gas.p_e / Rght.gas.rho; [TODO]
     }
 } // end hlle()
+
+void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gmodel)
+// Philip Roe's flux calculator with entropy fix.
+// 
+// Particular implementation is the Roe-Pike Method from
+// E. F. Toro (2009)
+// Riemann Solvers and Numerical Methods for Fluid Dynamics, pg. 366.
+// with entropy fix from
+// M. J. Kermani & E. G. Plett (2001)
+// Modified Entropy Correction Formula for the Roe Scheme
+{
+    // Unpack the flow-state vectors for either side of the interface.
+    // Store in work vectors, those quantities that will be neede later.
+    number rL = Lft.gas.rho;
+    number pL = Lft.gas.p;
+    number pLrL = pL / rL;
+    number uL = Lft.vel.x;
+    number vL = Lft.vel.y;
+    number wL = Lft.vel.z;
+    number eL = gmodel.internal_energy(Lft.gas);
+    number aL = Lft.gas.a;
+    number keL = 0.5*(uL*uL + vL*vL + wL*wL);
+    number HL = eL + pLrL + keL + Lft.tke;
+    //
+    number rR = Rght.gas.rho;
+    number pR = Rght.gas.p;
+    number pRrR = pR / rR;
+    number uR = Rght.vel.x;
+    number vR = Rght.vel.y;
+    number wR = Rght.vel.z;
+    number eR = gmodel.internal_energy(Rght.gas);
+    number aR = Rght.gas.a;
+    number keR = 0.5*(uR*uR + vR*vR + wR*wR);
+    number HR = eR + pRrR + keR + Rght.tke;
+
+    // averaged gamma
+    number gL = gmodel.gamma(Lft.gas);
+    number gR = gmodel.gamma(Rght.gas);
+    number ghat = (gR+gL)/2.0;
+    
+    // intermediate state (eq. 11.118)
+    number rhat = sqrt(rL*rR);
+    number uhat = (sqrt(rL)*uL+sqrt(rR)*uR) / (sqrt(rL) + sqrt(rR));
+    number vhat = (sqrt(rL)*vL+sqrt(rR)*vR) / (sqrt(rL) + sqrt(rR));
+    number what = (sqrt(rL)*wL+sqrt(rR)*wR) / (sqrt(rL) + sqrt(rR));
+    number Hhat = (sqrt(rL)*HL+sqrt(rR)*HR) / (sqrt(rL) + sqrt(rR));
+    number ahat2 = (ghat-1.0)*(Hhat-0.5*(uhat*uhat+vhat*vhat+what*what));
+    number ahat = sqrt(ahat2);
+    
+    // eigenvalues at intermediate state (eq. 11.107)
+    number[5] lambda;
+    lambda[0] = uhat - ahat;
+    lambda[1] = uhat;
+    lambda[2] = uhat;
+    lambda[3] = uhat;
+    lambda[4] = uhat + ahat;
+
+    // Apply entropy fix to eigenvalues (eq. 11 with EPS2 from the Kermani & Plett paper)
+    foreach ( i; 0..5) {
+        number lambdaL = uL-aL;
+        number lambdaR = uR-aR;
+        number EPS = 2.0*fmax(0.0, (lambdaR - lambdaL));
+        if (fabs(lambda[i]) < EPS) lambda[i] = (lambda[i]*lambda[i]+EPS*EPS)/(2.0*EPS); 
+    }
+    
+    // eigenvectors at intermediate state (eq. 11.108)
+    number[5][5] K;
+    K[0][0] = 1.0;
+    K[0][1] = uhat-ahat;
+    K[0][2] = vhat;
+    K[0][3] = what;
+    K[0][4] = Hhat-uhat*ahat;
+
+    K[1][0] = 1.0;
+    K[1][1] = uhat;
+    K[1][2] = vhat;
+    K[1][3] = what;
+    K[1][4] = 0.5*(uhat*uhat+vhat*vhat+what*what);
+
+    K[2][0] = 0.0;
+    K[2][1] = 0.0;
+    K[2][2] = 1.0;
+    K[2][3] = 0.0;
+    K[2][4] = vhat;
+    
+    K[3][0] = 0.0;
+    K[3][1] = 0.0;
+    K[3][2] = 0.0;
+    K[3][3] = 1.0;
+    K[3][4] = what;
+
+    K[4][0] = 1.0;
+    K[4][1] = uhat+ahat;
+    K[4][2] = vhat;
+    K[4][3] = what;
+    K[4][4] = Hhat+uhat*ahat;
+
+    // wave strengths at intermediate state (eq. 11.113)
+    number[5] alpha;
+    alpha[0] = 1.0/(2.0 * ahat2) * ( (pR-pL) - rhat*ahat*(uR-uL) );
+    alpha[1] = (rR-rL) - (pR-pL)/ahat2;
+    alpha[2] = rhat*(vR-vL);
+    alpha[3] = rhat*(wR-wL);
+    alpha[4] = 1.0/(2.0 * ahat2) * ( (pR-pL) + rhat*ahat*(uR-uL) );
+    
+    // compute fluxes (eq. 11.29)
+    ConservedQuantities F = IFace.F;
+    size_t nsp = F.massf.length;
+    size_t nmodes = F.energies.length;
+
+    number FL; number FR;
+
+    // mass flux
+    FL = rL*uL;
+    FR = rR*uR;
+    F.mass = 0.5*(FL+FR);
+    foreach ( i; 0..5 ) F.mass -= 0.5*alpha[i]*fabs(lambda[i])*K[i][0];
+
+    // x-momentum flux;
+    FL = pL+rL*uL*uL;
+    FR = pR+rR*uR*uR;
+    F.momentum.refx = 0.5*(FL+FR);
+    foreach ( i; 0..5) F.momentum.refx -= 0.5*alpha[i]*fabs(lambda[i])*K[i][1];
+
+    // y-momentum flux;
+    FL = rL*uL*vL;
+    FR = rR*uR*vR;
+    F.momentum.refy = 0.5*(FL+FR);
+    foreach ( i; 0..5) F.momentum.refy -= 0.5*alpha[i]*fabs(lambda[i])*K[i][2];
+
+    // z-momentum flux;
+    FL = rL*uL*wR;
+    FR = rR*uR*wR;
+    F.momentum.refz = 0.5*(FL+FR);
+    foreach ( i; 0..5) F.momentum.refz -= 0.5*alpha[i]*fabs(lambda[i])*K[i][3];
+
+    // total energy flux
+    FL = (rL*eL + rL*(uL*uL+vL*vL+wL*wL)/2.0 + pL)*uL;
+    FR = (rR*eR + rR*(uR*uR+vR*vR+wR*wR)/2.0 + pR)*uR;
+    F.total_energy = 0.5*(FL+FR);
+    foreach ( i; 0..5) F.total_energy -= 0.5*alpha[i]*fabs(lambda[i])*K[i][4];
+
+    // remaining fluxes
+    // TODO: think about whether these are being handled correctly - currently just a carbon copy from the AUSMDV method.
+    F.tke = F.mass*Lft.tke;
+    F.omega = F.mass*Lft.omega;
+    foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*Lft.gas.massf[isp]; }
+    foreach (imode; 0 .. nmodes) { F.energies[imode] = F.mass*Lft.gas.u_modes[imode]; }
+} // end roe()
