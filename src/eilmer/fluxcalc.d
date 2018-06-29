@@ -1004,13 +1004,16 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
     lambda[3] = uhat;
     lambda[4] = uhat + ahat;
 
+    
     // Apply entropy fix to eigenvalues (eq. 11 with EPS2 from the Kermani & Plett paper)
     foreach ( i; 0..5) {
         number lambdaL = uL-aL;
         number lambdaR = uR-aR;
+        double eps = 1.0e-12;
         number EPS = 2.0*fmax(0.0, (lambdaR - lambdaL));
-        if (fabs(lambda[i]) < EPS) lambda[i] = (lambda[i]*lambda[i]+EPS*EPS)/(2.0*EPS); 
+        if (fabs(lambda[i]) < EPS) lambda[i] = (lambda[i]*lambda[i]+EPS*EPS)/(2.0*EPS + eps); 
     }
+    
     
     // eigenvectors at intermediate state (eq. 11.108)
     number[5][5] K;
