@@ -1,13 +1,12 @@
 --[[
-Collection of useful lua functions that can assist in simualtion set-up and 
-data manipulation.
+Lua functions that can assist in simulation set-up and data manipulation.
 
 Following functions are inluded:
 
-- table.save( tbl, filename) : function to store table tbl to filename.
+- table.save(tbl, filename) : function to store table tbl to filename.
     Usage: assert( table.save( tbl, "NAME.lua" ) == nil )
 
-- exportstring( s ) : functio to assist table.save()  
+- exportstring(s) : function to assist table.save()  
 
 - table.load(sfile) : function to load the table stored in string sfile.
     Tables created by table.save() are supported.
@@ -26,7 +25,7 @@ Update:
 module(..., package.seeall)
 
 --// The Save Function
-function table.save(  tbl,filename )
+function table.save( tbl, filename )
   local charS,charE = "   ","\n"
   local file,err = io.open( filename, "wb" )
   if err then return err end

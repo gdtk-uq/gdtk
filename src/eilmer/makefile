@@ -142,6 +142,9 @@ LUA_MODULES += $(UTIL_DIR)/lua_helper.lua
 NM_DIR := ../nm
 include $(NM_DIR)/nm_files.mk
 
+NML_DIR := ../nml
+include $(NML_DIR)/nml_files.mk
+
 GAS_DIR := ../gas
 include $(GAS_DIR)/gas_files.mk
 
@@ -274,6 +277,7 @@ install: $(PROGRAMS) $(LUA_MODULES) prep.lua prep-gas prep-chem chemkin2eilmer $
 	cp $(LUA_DIR)/bin/* $(BUILD_DIR)/bin
 	cp prep.lua $(BUILD_DIR)/bin
 	cp $(LUA_MODULES) $(BUILD_DIR)/lib
+	cp $(NML_LUA_MODULES) $(BUILD_DIR)/lib
 	cp e4console.tcl $(BUILD_DIR)/bin
 	chmod +x $(BUILD_DIR)/bin/e4console.tcl
 ifneq "$(SHARE_FILES)" ""
