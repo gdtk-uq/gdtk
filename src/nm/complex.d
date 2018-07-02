@@ -506,13 +506,8 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, U)(U l)
         if (op == "^^" && isIntegral!U)
     {
-        double L = to!double(l);
-        double a = this.re; double b = this.im;
-        double p = std.math.sqrt(a*a + b*b);
-        double logp = std.math.log(to!double(p));
-        double theta = arg(this); Complex!double i = complex(0.0, 1.0);
-        re = exp(logp*L+i*theta*L).re;
-        im = exp(logp*L+i*theta*L).im;
+        Complex!double p  = complex(this.re, this.im);
+        foreach ( i; 0..l-1) this *= p;
         return this;
     }
 
@@ -808,7 +803,16 @@ bool isNaN(Complex!double z) @safe pure nothrow
     else
         return false;
 }
-
+ 
+@nogc
+Complex!double pow(Complex!double z, int w) @safe pure nothrow
+{
+    Complex!double p  = complex(z.re, z.im);
+    foreach ( i; 0..w-1) z *= p;
+    
+    return z; 
+}
+        
 @nogc
 Complex!double pow(Complex!double z, Complex!double w) @safe pure nothrow
 {
@@ -1519,6 +1523,10 @@ version(complex_number_test) {
 
         // Complex^^int
         cpow = z^^(2);
+        assert(approxEqualNumbers(cpow, result), failedUnitTest());
+
+        // pow(complex, int)
+        cpow = pow(z, 2);
         assert(approxEqualNumbers(cpow, result), failedUnitTest());
 
         // pow(Double, Complex)
