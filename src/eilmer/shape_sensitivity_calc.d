@@ -127,7 +127,6 @@ void main(string[] args) {
     else
         assert(directMethodFlag != adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
     
-    
     /* some global variables */    
     Vector3[] designVars;
     version(complex_numbers) number EPS = complex(0.0, GlobalConfig.sscOptions.epsilon); //  0 + iEPSILON
@@ -156,7 +155,8 @@ void main(string[] args) {
         size_t nPrimitive; 
         if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
         else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
-        
+
+        /* Flow Jacobian */
         foreach (myblk; parallel(localFluidBlocks,1)) {
             // make sure ghost cells are filled before proceeding...
             myblk.applyPreReconAction(0.0, 0, 0);
@@ -166,48 +166,35 @@ void main(string[] args) {
             
             myblk.JlocT = new SMatrix!number();
             local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
-            //writeln(myblk.JlocT);
         }
               
-        
+
+        /* Preconditioner */
         foreach (myblk; parallel(localFluidBlocks,1)) {
+            bool viscousConfigSave = GlobalConfig.viscous;
+            GlobalConfig.viscous = false;
             myblk.P = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 0, EPS); // orderOfJacobian=0
+            local_flow_jacobian_transpose(myblk.P, myblk, nPrimitive, 1, EPS); // orderOfJacobian=0
             decompILU0(myblk.P);
+            GlobalConfig.viscous = viscousConfigSave;
         }
-        
+
+        /* Objective Function Sensitivity */
         // Surface intergal objective functions can be computed in parallel with a reduction process across blocks to gather the final value,
         // however the sensitivity w.r.t to primitive variables cannot be computed in parallel, since we are only computing a single objective calue (for example drag).
-        // TODO: think about how this will effect user-defined objective functions
         foreach (myblk; localFluidBlocks) {
             form_objective_function_sensitivity(myblk, nPrimitive, EPS);
-            //foreach( i; 0..myblk.f.length) writef("%.16f \n", myblk.f[i]);
         }
         
-        // solve the adjoint system
-        /*
-        Matrix!number A = new Matrix!number(localFluidBlocks[0].cells.length*nPrimitive, localFluidBlocks[0].cells.length*nPrimitive);
-        foreach ( i; 0..localFluidBlocks[0].cells.length*nPrimitive) {
-            foreach ( j; 0..localFluidBlocks[0].cells.length*nPrimitive) {
-                A[i,j] = localFluidBlocks[0].JlocT[i,j];
-            }
-        }
-        Matrix!number Ainv = new Matrix!number(localFluidBlocks[0].cells.length*nPrimitive, localFluidBlocks[0].cells.length*nPrimitive);
-        writeln("begin computing inverse");
-        Ainv = inverse(A);
-        writeln("finished computing inverse");
-        number[] sol;
-        sol.length = localFluidBlocks[0].cells.length*nPrimitive; 
-        dot(Ainv, localFluidBlocks[0].f, sol);
-        */
+        /* solve the adjoint system */
         rpcGMRES_solve(nPrimitive);
         
-        // Write out adjoint variables for visualisation 
+        /* Write out adjoint variables for visualisation */ 
         foreach (myblk; localFluidBlocks) {
             write_adjoint_variables_to_file(myblk, nPrimitive, jobName);
         }
         
-        // clear some expensive data structures from memory
+        /* clear some expensive data structures from memory */
         foreach (myblk; parallel(localFluidBlocks,1)) {
             destroy(myblk.JlocT);
             destroy(myblk.JextT);
@@ -215,7 +202,6 @@ void main(string[] args) {
             GC.minimize();
         }
         
-    
         // ------------------------------------------------------
         // RESIDUAL/OBJECTIVE SENSITIVITY W.R.T. DESIGN VARIABLES
         // ------------------------------------------------------
@@ -237,7 +223,6 @@ void main(string[] args) {
         foreach (myblk; parallel(localFluidBlocks,1)) {
             myblk.rTdotPsi.length = designVars.length;
             dot(myblk.rT, myblk.psi, myblk.rTdotPsi);
-            //writeln(myblk.rT);
         }
         
         number[] adjointGradients;
@@ -301,7 +286,7 @@ void main(string[] args) {
             p1.length = blk.cells.length*nPrimitive;
             number[] p2;
             p2.length = blk.cells.length*nPrimitive;
-            
+
             // explicit multiplication of Jv (note we want to nultiply the Jacobian NOT transpose Jacobian by v)
             foreach ( i; 0..blk.cells.length*nPrimitive) {
                 p1[i] = 0.0;
@@ -309,7 +294,7 @@ void main(string[] args) {
                     p1[i] += blk.JlocT[j,i]*v[j];
                 }
             }
-            
+
             // Frechet derivative of Jv
             evalJacobianVecProd(blk, nPrimitive, v, p2, EPS);
 

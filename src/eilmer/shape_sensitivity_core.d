@@ -162,7 +162,7 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
                 /* form dRdq */
                 
                 // TODO: Currently only works for nearest-neighbour reconstruction stencil. Think about the MLP limiter.
-                if (orderOfJacobian > 1) {
+                if (orderOfJacobian > 1 || GlobalConfig.viscous) {
                     size_t[] idList;
                     foreach ( face; bcells[0].iface) {
                         FVCell lftCell = face.left_cell;
@@ -253,7 +253,13 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
  
 void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
 
-    if (orderOfJacobian < 2) {
+    if (orderOfJacobian == 0) {
+        pcell.jacobian_cell_stencil ~= pcell; 
+        foreach(face; pcell.iface) {
+            pcell.jacobian_face_stencil ~= face;
+        }
+    }
+    else if (orderOfJacobian == 1 && GlobalConfig.viscous == false) {
         FVCell[] refs_ordered; FVCell[] refs_unordered;
         size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
         size_t[] cell_ids;
@@ -288,7 +294,7 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
         foreach(id; cell_ids) refs_ordered ~= refs_unordered[pos_array[id]];
         pcell.jacobian_cell_stencil ~= refs_ordered;
     }
-    else {
+    else { // 2nd order || viscous || 2nd order + viscous
         FVCell[] refs_ordered; FVCell[] refs_unordered;
         size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
         size_t[] cell_ids; size_t[] face_ids;
@@ -331,8 +337,9 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
 void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS) {
 
     // set the interpolation order to that of the Jacobian
-    blk.myConfig.interpolation_order = to!int(orderOfJacobian);
-    
+    if (orderOfJacobian < 2) blk.myConfig.interpolation_order = 1;
+    else blk.myConfig.interpolation_order = 2;    
+
     // initialise re-used objects here to prevent memory bloat
     cellSave = new FVCell(blk.myConfig);
     foreach(i; 0..MAX_PERTURBED_INTERFACES) ifaceP[i] = new FVInterface(blk.myConfig, false);
@@ -459,7 +466,41 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, FVCell[]
         iface.fs.copy_average_values_from(ublk.Lft, ublk.Rght);
         compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
     }
+
+    blk.applyPostConvFluxAction(0.0, 0, 0);
     
+    // Viscous flux update
+    if (GlobalConfig.viscous) {
+        // currently only for least-squares at faces
+        blk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+        
+        foreach(iface; iface_list) {
+            iface.grad.gradients_leastsq(iface.cloud_fs, iface.cloud_pos, iface.ws_grad); // blk.flow_property_spatial_derivatives(0); 
+        }
+        
+        final switch (blk.myConfig.turbulence_model) {
+        case TurbulenceModel.none:
+            foreach (cell; cell_list) cell.turbulence_viscosity_zero();
+            break;
+        case TurbulenceModel.baldwin_lomax:
+            throw new FlowSolverException("need to port baldwin_lomax_turbulence_model");
+        case TurbulenceModel.spalart_allmaras:
+            throw new FlowSolverException("Should implement Spalart-Allmaras some day.");
+        case TurbulenceModel.k_omega:
+            foreach (cell; cell_list) cell.turbulence_viscosity_k_omega();
+            break;
+        }
+        foreach (cell; cell_list) {
+            cell.turbulence_viscosity_factor(blk.myConfig.transient_mu_t_factor);
+            cell.turbulence_viscosity_limit(blk.myConfig.max_mu_t_factor);
+            cell.turbulence_viscosity_zero_if_not_in_zone();
+        }
+        foreach(iface; iface_list) {
+            iface.viscous_flux_calc();
+        }
+        //blk.applyPostDiffFluxAction(0.0, 0, 0);
+    }
+
     // copy perturbed flux
     foreach(i, iface; iface_list) {
         ifaceP_list[i].copy_values_from(iface, CopyDataOption.all);
