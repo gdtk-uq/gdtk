@@ -258,7 +258,8 @@ if (isFloatingPoint!T)
     int opCmp(Complex!double z) const
     {
         auto diff = re - z.re;
-        if (  std.math.fabs(diff) < 1.0e-50 )
+        auto epsilon = double.epsilon;
+        if (  std.math.fabs(diff) < epsilon )
             return 0;
         else if ( diff < 0 )
             return -1;
@@ -270,7 +271,8 @@ if (isFloatingPoint!T)
     int opCmp(double z) const
     {
         auto diff = re - z.re;
-        if (  std.math.fabs(diff) < 1.0e-50 )
+        auto epsilon = double.epsilon;
+        if (  std.math.fabs(diff) < epsilon )
             return 0;
         else if ( diff < 0 )
             return -1;
