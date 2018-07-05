@@ -11,7 +11,7 @@ fsol = FlowSolution:new{jobName="ramp", dir=".", tindx=5, nBlocks=nb}
 print("fsol=", fsol)
 
 -- Integrate the pressure force over the BOTTOM surface of the block.
-local force = Vector3:new(0.0, 0.0, 0.0)
+local force = Vector3:new{x=0.0, y=0.0, z=0.0}
 local ib = 1
 for i = 0, fsol:get_nic(ib)-1 do
    for j = 0, fsol:get_njc(ib)-1 do
