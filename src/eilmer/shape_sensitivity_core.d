@@ -418,6 +418,7 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     if ( includeThermoUpdate ) {
         codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(pcell.fs.gas);";
         codeStr ~= "blk.myConfig.gmodel.update_trans_coeffs(pcell.fs.gas);";
+        codeStr ~= "blk.myConfig.gmodel.update_sound_speed(pcell.fs.gas);";
     }
     codeStr ~= "compute_flux(pcell, blk, orderOfJacobian, pcell.jacobian_cell_stencil, pcell.jacobian_face_stencil, ifaceP);"; 
     codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
