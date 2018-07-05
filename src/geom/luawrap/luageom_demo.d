@@ -21,7 +21,7 @@ void main()
     string test_code = `
 -- Add some points and manipulate them.
 print("Test some constructors.")
-a = Vector3:new()
+a = Vector3:new{}
 print("a= ", a)
 b = Vector3:new{x=7.0, y=3.0, z=-2.5}
 print("b= ", b)

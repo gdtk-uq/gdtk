@@ -66,13 +66,19 @@ Vector3* checkVector3(lua_State *L, int index)
 extern(C) int newVector3(lua_State *L)
 {
     auto vec = Vector3(0.0, 0.0, 0.0);
-    lua_remove(L, 1); // remove first argument "this".
+    // On being called, we are expecting at least two arguments.
+    // The first will be a table being the prototype object "this"
+    // and the next will may a table with the arguments with which
+    // to set the data for our newly constructed point
+    // or it may be another Vector3 object.
     int narg = lua_gettop(L);
-    if ( narg == 1 ) {  // Could be a table or a single Vector3 object
-        if ( lua_istable(L, 1) ) {
+    if (narg == 2 && lua_istable(L, 1)) {
+        lua_remove(L, 1); // remove first argument "this".
+        // Could be a table or a single Vector3 object
+        if (lua_istable(L, 1)) {
             // If it has a length >= 1, then it's been populated array style.
             // This style of setting beats any fields that are present.
-            if ( lua_objlen(L, 1) >= 1 ) {
+            if (lua_objlen(L, 1) >= 1) {
                 // A single item may be a Vector3 object already.
                 lua_rawgeti(L, 1, 1);
                 vec = *checkVector3(L, -1);
@@ -93,7 +99,10 @@ extern(C) int newVector3(lua_State *L)
             vec = *checkVector3(L, -1);
         }
     } else {
-        // Just leave the zero-filled values.
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Vector3:new{x=number, y=number}; ";
+        errMsg ~= "maybe you tried Vector3.new{x=number, y=number}.";
+        luaL_error(L, errMsg.toStringz);
     } 
     // Regardless of how we filled in vec, we are now ready 
     // to place our new Vector3 on the stack as userdata.
