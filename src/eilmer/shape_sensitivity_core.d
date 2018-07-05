@@ -81,6 +81,7 @@ void evalJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref numb
         cell.fs.vel.refy += EPS*v[cellCount+2];
         cell.fs.gas.p += EPS*v[cellCount+3];
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
+        blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
         cellCount += nPrimitive;
     }    
     steadystate_core.evalRHS(0.0, 0);
@@ -416,6 +417,7 @@ string computeFluxDerivativesAroundCell(string varName, string posInArray, bool 
     codeStr ~= "pcell.fs."~varName~" += EPS;";
     if ( includeThermoUpdate ) {
         codeStr ~= "blk.myConfig.gmodel.update_thermo_from_rhop(pcell.fs.gas);";
+        codeStr ~= "blk.myConfig.gmodel.update_trans_coeffs(pcell.fs.gas);";
     }
     codeStr ~= "compute_flux(pcell, blk, orderOfJacobian, pcell.jacobian_cell_stencil, pcell.jacobian_face_stencil, ifaceP);"; 
     codeStr ~= "pcell.copy_values_from(cellSave, CopyDataOption.all);";
@@ -498,7 +500,7 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, FVCell[]
         foreach(iface; iface_list) {
             iface.viscous_flux_calc();
         }
-        //blk.applyPostDiffFluxAction(0.0, 0, 0);
+        blk.applyPostDiffFluxAction(0.0, 0, 0);
     }
 
     // copy perturbed flux
@@ -513,30 +515,44 @@ void compute_design_variable_partial_derivatives(Vector3[] design_variables, ref
     int gtl; int ftl; number objFcnEvalP; number objFcnEvalM; string varID; number dP; number P0;
 
     foreach (i; 0..nDesignVars) {
+        foreach (myblk; localFluidBlocks) {
+            ensure_directory_is_present(make_path_name!"grid"(0));
+            string gridFileName = make_file_name!"grid"("ramp", myblk.id, 0, gridFileExt = "gz");
+            myblk.read_new_underlying_grid(gridFileName);
+            myblk.sync_vertices_from_underlying_grid(0);
+            myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+        }
         
         // perturb design variable +ve
         gtl = 1; ftl = 1;
-        
-        //foreach (myblk; localFluidBlocls) {
-        //    foreach ( cell; myblk.cells ) { cell.copy_grid_level_to_level(0, gtl);
-        //     }
-        // }
         
         // perturb design variable in complex plan
         P0 = design_variables[i].y; 
         design_variables[i].refy = P0 + EPS;
         
         // perturb grid
-        gridUpdate(design_variables, gtl);
-        
+        gridUpdate(design_variables, 1);
+
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            myblk.compute_primary_cell_geometric_data(gtl);
-            myblk.compute_least_squares_setup(gtl);
+            foreach(j, vtx; myblk.vertices) {
+                vtx.pos[0].refx = vtx.pos[1].x;
+                vtx.pos[0].refy = vtx.pos[1].y;
+            }
         }
 
-        evalRHS(0.0, ftl, gtl, with_k_omega);
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+            
+            //foreach ( face; myblk.faces )
+            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
+        }
         
-        objFcnEvalP = objective_function_evaluation(gtl);
+        //evalRHS(0.0, ftl, 0, with_k_omega);
+        steadystate_core.evalRHS(0.0, ftl);
+        
+        objFcnEvalP = objective_function_evaluation(0);
         
         // compute cost function sensitivity
         g[i] = (objFcnEvalP.im)/(EPS.im);
@@ -718,6 +734,8 @@ void gridUpdate(Vector3[] designVars, size_t gtl) {
                     }
                     
                     foreach(j, vtx; bndary.vertices) {
+                        //vtx.pos[gtl].refx = bndary.bezier(bndary.ts[j]).x;
+                        //vtx.pos[gtl].refy = bndary.bezier(bndary.ts[j]).y;
                         version(complex_numbers) vtx.pos[gtl].refx = complex(vtx.pos[gtl].x.re, bndary.bezier(bndary.ts[j]).x.im);
                         version(complex_numbers) vtx.pos[gtl].refy = complex(vtx.pos[gtl].y.re, bndary.bezier(bndary.ts[j]).y.im);
                     }
@@ -1305,7 +1323,7 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
     writeln(" ");
         
     size_t nDesignVars = design_variables.length;
-    double[] gradients; number P0; number objFcn; 
+    double[] gradients; number P0; number objFcnP; number objFcnM; 
 
     foreach ( i; 0..nDesignVars) {
         writeln("----- Computing Gradient for variable: ", i);
@@ -1347,6 +1365,8 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         foreach (myblk; localFluidBlocks) {
             myblk.compute_primary_cell_geometric_data(0);
             myblk.compute_least_squares_setup(0);
+            //foreach ( face; myblk.faces )
+            //    foreach ( j; 0..face.cloud_pos.length) writef("%d    %.16f    %.16f \n", face.id, face.ws_grad.wx[j], face.ws_grad.wy[j]); 
         }
 
         foreach (myblk; localFluidBlocks) {
@@ -1370,8 +1390,14 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
         //integrate_in_time(GlobalConfig.max_time);
         
         // compute objective function gradient
-        objFcn = objective_function_evaluation();
-        gradients ~= objFcn.im/EPS.im;
+        objFcnP = objective_function_evaluation();
+        
+        // return value to original state
+        design_variables[i].refy = P0;
+        
+        // compute objective function gradient
+        objFcnM = objective_function_evaluation();
+        gradients ~= (objFcnP.im)/(EPS.im);
         
         // return value to original state
         design_variables[i].refy = P0;
@@ -1382,6 +1408,153 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
     writeln("simulation complete.");
 }
 
+/*
+void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int maxCPUs, Vector3[] design_variables, number EPS) {
+    writeln(" ");
+    writeln("------------------------------------------------------");
+    writeln("----EVALUATING DERIVATIVES VIA DIRECT COMPLEX STEP----");
+    writeln("------------------------------------------------------");
+    writeln(" ");
+        
+    size_t nDesignVars = design_variables.length;
+    double[] gradients; number P0; number objFcnP; number objFcnM; 
+
+    foreach ( i; 0..nDesignVars) {
+        writeln("----- Computing Gradient for variable: ", i);
+        foreach (myblk; localFluidBlocks) {
+            ensure_directory_is_present(make_path_name!"grid"(0));
+            string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, gridFileExt = "gz");
+            myblk.read_new_underlying_grid(gridFileName);
+            myblk.sync_vertices_from_underlying_grid(0);
+            myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+        }
+    
+        foreach (myblk; localFluidBlocks) {
+            myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, flowFileExt), false);
+
+            foreach (cell; myblk.cells) {
+                cell.encode_conserved(0, 0, myblk.omegaz);
+                // Even though the following call appears redundant at this point,
+                // fills in some gas properties such as Prandtl number that is
+                // needed for both the cfd_check and the BaldwinLomax turbulence model.
+                cell.decode_conserved(0, 0, myblk.omegaz);
+            }
+        }
+        
+        // perturb design variable in complex plane
+        P0 = design_variables[i].y; 
+        design_variables[i].refy = P0 + EPS.im;
+        
+        // perturb grid
+        gridUpdate(design_variables, 1); // gtl = 1
+
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            foreach(j, vtx; myblk.vertices) {
+                vtx.pos[0].refx = vtx.pos[1].x;
+                vtx.pos[0].refy = vtx.pos[1].y;
+            }
+        }
+        
+        foreach (myblk; localFluidBlocks) {
+            myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+        }
+
+        foreach (myblk; localFluidBlocks) {
+            // save mesh
+            myblk.sync_vertices_to_underlying_grid(0);
+            ensure_directory_is_present(make_path_name!"grid-p"(0));
+            auto fileName = make_file_name!"grid-p"(jobName, myblk.id, 0, gridFileExt = "gz");
+            myblk.write_underlying_grid(fileName);
+        }
+            
+        // Additional memory allocation specific to steady-state solver
+        allocate_global_workspace();
+        foreach (myblk; localFluidBlocks) {
+            myblk.allocate_GMRES_workspace();
+        }
+        
+        // run steady-state solver
+        iterate_to_steady_state(0, maxCPUs); // snapshotStart = 0
+        //GlobalConfig.report_residuals = true;
+        //sim_time = 0.0;
+        //integrate_in_time(GlobalConfig.max_time);
+        
+        // compute objective function gradient
+        objFcnP = objective_function_evaluation();
+                
+        // return value to original state
+        design_variables[i].refy = P0;
+
+
+        foreach (myblk; localFluidBlocks) {
+            ensure_directory_is_present(make_path_name!"grid"(0));
+            string gridFileName = make_file_name!"grid"(jobName, myblk.id, 0, gridFileExt = "gz");
+            myblk.read_new_underlying_grid(gridFileName);
+            myblk.sync_vertices_from_underlying_grid(0);
+            myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+        }
+    
+        foreach (myblk; localFluidBlocks) {
+            myblk.read_solution(make_file_name!"flow"(jobName, myblk.id, 0, flowFileExt), false);
+
+            foreach (cell; myblk.cells) {
+                cell.encode_conserved(0, 0, myblk.omegaz);
+                // Even though the following call appears redundant at this point,
+                // fills in some gas properties such as Prandtl number that is
+                // needed for both the cfd_check and the BaldwinLomax turbulence model.
+                cell.decode_conserved(0, 0, myblk.omegaz);
+            }
+        }
+        
+        // perturb design variable in complex plane
+        P0 = design_variables[i].y; 
+        design_variables[i].refy = P0 - EPS.im;
+        
+        // perturb grid
+        gridUpdate(design_variables, 1); // gtl = 1
+
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            foreach(j, vtx; myblk.vertices) {
+                vtx.pos[0].refx = vtx.pos[1].x;
+                vtx.pos[0].refy = vtx.pos[1].y;
+            }
+        }
+        
+        foreach (myblk; localFluidBlocks) {
+            myblk.compute_primary_cell_geometric_data(0);
+            myblk.compute_least_squares_setup(0);
+        }
+
+        foreach (myblk; localFluidBlocks) {
+            // save mesh
+            myblk.sync_vertices_to_underlying_grid(0);
+            ensure_directory_is_present(make_path_name!"grid-p"(0));
+            auto fileName = make_file_name!"grid-p"(jobName, myblk.id, 0, gridFileExt = "gz");
+            myblk.write_underlying_grid(fileName);
+        }
+        
+        // run steady-state solver
+        iterate_to_steady_state(0, maxCPUs); // snapshotStart = 0
+        //GlobalConfig.report_residuals = true;
+        //sim_time = 0.0;
+        //integrate_in_time(GlobalConfig.max_time);
+        
+        // compute objective function gradient
+        objFcnM = objective_function_evaluation();
+        gradients ~= (objFcnP.re-objFcnM.re)/(2.0*EPS.im);
+        
+        // return value to original state
+        design_variables[i].refy = P0;
+    }
+    foreach ( i; 0..nDesignVars) {
+        writef("gradient for variable %d: %.16e \n", i, gradients[i]);
+    }
+    writeln("simulation complete.");
+}
+*/
 /*****************************************/
 /*  STEADY-STATE SOLVER PRECONDITIONER   */
 /*****************************************/
