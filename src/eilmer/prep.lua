@@ -752,11 +752,22 @@ function FluidBlockArray(t)
    local flag = checkAllowedNames(t, {"grid", "initialState", "fillCondition",
 				      "active", "label", "omegaz", "bcList",
 				      "nib", "njb", "nkb"})
-   assert(flag, "Invalid name for item supplied to FluidBlockArray.")
-   assert(t.grid, "need to supply a grid")
-   assert(t.grid:get_type() == "structured_grid", "grid must be structured")
-   if t.initialState == nil then t.initialState = t.fillCondition end -- try old name
-   assert(t.initialState, "need to supply an initialState")
+   if not flag then
+      error("Invalid name for item supplied to FluidBlockArray.", 2)
+   end
+   if not t.grid then
+      error("You need to supply a grid to FluidBlockArray.", 2)
+   end
+   if (not t.grid.get_type) or t.grid:get_type() ~= "structured_grid" then
+      error("You need to supply a structured_grid to FluidBlockArray.", 2)
+   end
+   if not t.initialState then
+      -- try old name
+      t.initialState = t.fillCondition
+   end
+   if not t.initialState then
+      error("You need supply an initialState to FluidBlockArray.", 2)
+   end
    t.omegaz = t.omegaz or 0.0
    t.bcList = t.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
