@@ -203,16 +203,22 @@ FlowState = {
 }
 
 function FlowState:new(o)
+   local flag = type(self)=='table' and self.myType=='FlowState'
+   if not flag then
+      error("Make sure that you are using FlowState:new{} and not FlowState.new{}", 2)
+   end
    o = o or {}
    -- We limit the names of the entries so that the user does not supply items
    -- (such as density or energy) thinking that we will be setting the FlowState
    -- object using those values.
-   local flag =  checkAllowedNames(o, {"p", "T", "T_modes", "p_e",
-				       "quality", "massf",
-				       "velx", "vely", "velz",
-				       "Bx", "By", "Bz", "psi", "divB",
-				       "tke", "omega", "mu_t", "k_t", "S"})
-   assert(flag, "Invalid name for item supplied to FlowState constructor.")
+   flag =  checkAllowedNames(o, {"p", "T", "T_modes", "p_e",
+                                 "quality", "massf",
+                                 "velx", "vely", "velz",
+                                 "Bx", "By", "Bz", "psi", "divB",
+                                 "tke", "omega", "mu_t", "k_t", "S"})
+   if not flag then
+      error("Invalid name for item supplied to FlowState constructor.", 2)
+   end
    -- We want to make consistent values/calculations in the context
    -- of an initialized gas model, but we only want one such gas model and gas state.
    if FlowState.gm == nil then
@@ -284,7 +290,7 @@ function FlowState:new(o)
 	 end
       end
       if not(#o.T_modes == FlowState.nModes) then
-	 error(string.format("Wrong number of T_modes values: %d.", #o.T_modes))
+	 error(string.format("Wrong number of T_modes values: %d.", #o.T_modes), 2)
       end
       Q.T_modes = o.T_modes
    end
