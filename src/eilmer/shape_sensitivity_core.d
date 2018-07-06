@@ -82,6 +82,7 @@ void evalJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref numb
         cell.fs.gas.p += EPS*v[cellCount+3];
         blk.myConfig.gmodel.update_thermo_from_rhop(cell.fs.gas);
         blk.myConfig.gmodel.update_trans_coeffs(cell.fs.gas);
+        blk.myConfig.gmodel.update_sound_speed(cell.fs.gas);
         cellCount += nPrimitive;
     }    
     steadystate_core.evalRHS(0.0, 0);
@@ -689,8 +690,8 @@ void fit_design_parameters_to_surface(ref Vector3[] designVars)
                 }
                 size_t idxi; size_t idxf;
                 foreach (i, t; ts ) {
-                    if ( abs(orderedList[i].x - xi) < ESSENTIALLY_ZERO) idxi = i;
-                    else if ( abs(orderedList[i].x - xf) < ESSENTIALLY_ZERO) idxf = i;
+                    if ( fabs(orderedList[i].x - xi) < ESSENTIALLY_ZERO) idxi = i;
+                    else if ( fabs(orderedList[i].x - xf) < ESSENTIALLY_ZERO) idxf = i;
                     else {} //do nothing
                 } // foreach (ts)
                 bndary.ts.length = ts[idxi..idxf+1].length;
