@@ -1146,21 +1146,6 @@ function WallBC_AdjacentToSolid:new(o)
    return o
 end
 
--- Retain the old BC names as aliases, for now.
--- They are deprecated.
-allowOldBCNames = false
-if allowOldBCNames then
-   print("Old boundary condition names are available.")
-   SlipWallBC = WallBC_WithSlip
-   FixedTWallBC = WallBC_NoSlip_FixedT
-   AdiabaticWallBC = WallBC_NoSlip_Adiabatic
-   SupInBC = InFlowBC_Supersonic
-   ExtrapolateOutBC = OutFlowBC_Simple
-   FixedPTOutBC = OutFlowBC_FixedPT
-   FullFaceExchangeBC = ExchangeBC_FullFace
-   AdjacentToSolidBC = WallBC_AdjacentToSolid
-end
-
 -- ---------------------------------------------------------------------------
 -- Classes related to Solid blocks and boundary conditions
 
