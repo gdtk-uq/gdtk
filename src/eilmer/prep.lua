@@ -903,10 +903,16 @@ SolidBlock = {
 } -- end SSolidBlock
 
 function SolidBlock:new(o)
+   local flag = type(self)=='table' and self.myType=='SolidBlock'
+   if not flag then
+      error("Make sure that you are using SolidBlock:new{} and not SolidBlock.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"grid", "initTemperature", "active",
-				      "label", "bcList", "properties"})
-   assert(flag, "Invalid name for item supplied to SolidBlock constructor.")
+   flag = checkAllowedNames(o, {"grid", "initTemperature", "active",
+                                "label", "bcList", "properties"})
+   if not flag then
+      error("Invalid name for item supplied to SolidBlock constructor.", 2)
+   end
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new block for later construction of the config file.
@@ -915,16 +921,26 @@ function SolidBlock:new(o)
    o.id = #solidBlocks
    solidBlocks[#solidBlocks+1] = o
    -- Must have a grid and initial temperature
-   assert(o.grid, "need to supply a grid")
-   assert(o.grid:get_type() == "structured_grid", "grid must be structured") -- for the moment
-   assert(o.initTemperature, "need to supply an initTemperature")
-   assert(o.properties, "need to supply physical properties for the block")
+   if not o.grid then
+      error("You need to supply a grid to SolidBlock constructor.", 2)
+   end
+   if (not o.grid.get_type) or o.grid:get_type() ~= "structured_grid" then
+      error("You need to supply a structured_grid to SolidBlock constructor.", 2)
+   end
+   if not o.initTemperature then
+      error("You need to supply an initTemperature to SolidBlock constructor.", 2)
+   end
+   if not o.properties then
+      error("You need to supply physical properties for the block.", 2)
+   end
    if (type(o.properties) == 'table') then
       local flag2 = checkAllowedNames(o.properties, {"rho", "k", "Cp",
 						     "k11", "k12", "k13",
 						     "k21", "k22", "k23",
 						     "k31", "k32", "k33"})
-      assert(flag2, "Invalid name for item supplied in SolidBlock properties table.")
+      if not flag2 then
+         error("Invalid name for item supplied in SolidBlock properties table.", 2)
+      end
       -- Fill in the k values as 0.0 if not set.
       local kProps = {"k", "k11", "k12", "k13", "k21", "k22", "k23", "k31", "k32", "k33"}
       for _,kName in ipairs(kProps) do
@@ -1002,10 +1018,21 @@ function SolidBlockArray(t)
    local flag = checkAllowedNames(t, {"grid", "initTemperature", "active",
 				      "label", "bcList", "properties",
 				      "nib", "njb", "nkb"})
-   assert(flag, "Invalid name for item supplied to SolidBlockArray.")
-   assert(t.grid, "need to supply a 'grid'")
-   assert(t.initTemperature, "need to supply an 'initTemperature'")
-   assert(t.properties, "need to supply 'properties'")
+   if not flag then
+      error("Invalid name for item supplied to SolidBlockArray.", 2)
+   end
+   if not t.grid then
+      error("You need to supply a grid to SolidBlockArray.", 2)
+   end
+   if (not t.grid.get_type) or t.grid:get_type() ~= "structured_grid" then
+      error("You need to supply a structured_grid to SolidBlockArray.", 2)
+   end
+   if not t.initTemperature then
+      error("You need to supply an 'initTemperature' to SolidBlockArray.", 2)
+   end
+   if not t.properties then
+      error("You need to supply 'properties' to SolidBlockArray.", 2)
+   end
    t.bcList = t.bcList or {} -- boundary conditions
    for _,face in ipairs(faceList(config.dimensions)) do
       t.bcList[face] = t.bcList[face] or SolidAdiabaticBC:new{}
