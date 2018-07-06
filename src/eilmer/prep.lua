@@ -606,7 +606,7 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
    print("connectBlocks: blkA=", blkA.id, "faceA=", faceA, 
 	 "blkB=", blkB.id, "faceB=", faceB, "orientation=", orientation)
    if blkA.grid:get_type() ~= "structured_grid" or blkB.grid:get_type() ~= "structured_grid" then
-      error("connectBlocks() Works only for structured-grid blocks.")
+      error("connectBlocks() Works only for structured-grid blocks.", 2)
    end
    if blkA.myType == "FluidBlock" and blkB.myType == "FluidBlock" then
       blkA.bcList[faceA] = ExchangeBC_FullFace:new{otherBlock=blkB.id, otherFace=faceB,
@@ -627,7 +627,7 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 	 -- [TODO] Implement and handle other connection types.
 	 local msg = "The requested FluidBlock to SolidBlock connection is not available.\n"
 	 msg = msg .."FluidBlock-"..tostring(faceA).." :: SolidBlock-"..tostring(faceB)
-	 error(msg)
+	 error(msg, 2)
       end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "FluidBlock" then
        -- Presently, only handle faceA == SOUTH, faceB == NORTH
@@ -642,7 +642,7 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 	 -- [TODO] Implement and handle other connection types.
 	 local msg = "The requested SolidBlock to FluidBlock connection is not available.\n"
 	 msg = msg.."SolidBlock-"..tostring(faceA).." :: FluidBlock-"..tostring(faceB)
-	 error(msg)
+	 error(msg, 2)
       end
    elseif blkA.myType == "SolidBlock" and blkB.myType == "SolidBlock" then
       -- Presently only handle EAST-WEST and WEST-EAST connections
@@ -657,7 +657,7 @@ function connectBlocks(blkA, faceA, blkB, faceB, orientation)
 	 -- [TODO] Implement and handle other connection types for solid domains.
 	 local msg = "The requested SolidBlock to SolidBlock connection is not available.\n"
 	 msg = msg.."SolidBlock-"..tostring(faceA).." :: SolidBlock-"..tostring(faceB)
-	 error(msg)
+	 error(msg, 2)
       end
    end
 end
