@@ -513,9 +513,15 @@ end
 WallBC_WithSlip0 = BoundaryCondition:new()
 WallBC_WithSlip0.type = "wall_with_slip"
 function WallBC_WithSlip0:new(o)
+   local flag = type(self)=='table' and self.type=='wall_with_slip'
+   if not flag then
+      error("Make sure that you are using WallBC_WithSlip0:new{} and not WallBC_WithSlip0.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_WithSlip0 constructor.")
+   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_WithSlip0 constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
@@ -532,9 +538,15 @@ end
 WallBC_WithSlip1 = BoundaryCondition:new()
 WallBC_WithSlip1.type = "wall_with_slip"
 function WallBC_WithSlip1:new(o)
+   local flag = type(self)=='table' and self.type=='wall_with_slip'
+   if not flag then
+      error("Make sure that you are using WallBC_WithSlip1:new{} and not WallBC_WithSlip1.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_WithSlip1 constructor.")
+   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_WithSlip1 constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
@@ -551,9 +563,15 @@ end
 WallBC_WithSlip2 = BoundaryCondition:new()
 WallBC_WithSlip2.type = "wall_with_slip2"
 function WallBC_WithSlip2:new(o)
+   local flag = type(self)=='table' and self.type=='wall_with_slip2'
+   if not flag then
+      error("Make sure that you are using WallBC_WithSlip2:new{} and not WallBC_WithSlip2.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_WithSlip2 constructor.")
+   flag = checkAllowedNames(o, {"label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_WithSlip2 constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    -- In a turbulence model sense, a slip wall is NOT a wall
    -- We mean a wall where the speed of the gas matches the speed of the wall
@@ -574,11 +592,17 @@ WallBC_WithSlip = WallBC_WithSlip0
 WallBC_NoSlip_FixedT = BoundaryCondition:new()
 WallBC_NoSlip_FixedT.type = "wall_no_slip_fixed_t"
 function WallBC_NoSlip_FixedT:new(o)
+   local flag = type(self)=='table' and self.type=='wall_no_slip_fixed_t'
+   if not flag then
+      error("Make sure that you are using WallBC_NoSlip_FixedT:new{} and not WallBC_NoSlip_FixedT.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"Twall", "wall_function", 
-				      "catalytic_type", "wall_massf_composition",
-				      "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.")
+   flag = checkAllowedNames(o, {"Twall", "wall_function", 
+                                "catalytic_type", "wall_massf_composition",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_NoSlip_FixedT constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
@@ -604,11 +628,18 @@ end
 WallBC_ThermionicEmission = BoundaryCondition:new()
 WallBC_ThermionicEmission.type = "wall_thermionic_emission"
 function WallBC_ThermionicEmission:new(o)
+   local flag = type(self)=='table' and self.type=='wall_thermionic_emission'
+   if not flag then
+      error("Make sure that you are using WallBC_ThermionicEmission:new{} and not WallBC_ThermionicEmission.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
-                  "Twall_iterations", "Twall_subiterations",
-                  "catalytic_type", "wall_massf_composition","label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_ThermionicEmission constructor.")
+   flag = checkAllowedNames(o, {"emissivity", "Ar", "phi", "ThermionicEmissionActive",
+                                "Twall_iterations", "Twall_subiterations",
+                                "catalytic_type", "wall_massf_composition",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_ThermionicEmission constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    if o.emissivity < 0.4 or o.phi < 0.5 then
          print("");
@@ -642,11 +673,17 @@ end
 WallBC_NoSlip_Adiabatic = BoundaryCondition:new()
 WallBC_NoSlip_Adiabatic.type = "wall_no_slip_adiabatic"
 function WallBC_NoSlip_Adiabatic:new(o)
+   local flag = type(self)=='table' and self.type=='wall_no_slip_adiabatic'
+   if not flag then
+      error("Make sure that you are using WallBC_NoSlip_Adiabatic:new{} and not WallBC_NoSlip_Adiabatic.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"wall_function",
-				      "catalytic_type", "wall_massf_composition",
-				      "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.")
+   flag = checkAllowedNames(o, {"wall_function",
+                                "catalytic_type", "wall_massf_composition",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_NoSlip_Adiabatic constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new() }
@@ -670,15 +707,23 @@ end
 WallBC_TranslatingSurface_FixedT = BoundaryCondition:new()
 WallBC_TranslatingSurface_FixedT.type = "wall_translating_surface_fixed_t"
 function WallBC_TranslatingSurface_FixedT:new(o)
+   local flag = type(self)=='table' and self.type=='wall_translating_surface_fixed_t'
+   if not flag then
+      error("Make sure that you are using WallBC_TranslatingSurface_FixedT:new{} and not WallBC_TranslatingSurface_FixedT.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"v_trans", "T_wall", "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_TranslatingSurface_FixedT constructor.")
+   flag = checkAllowedNames(o, {"v_trans", "T_wall", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_TranslatingSurface_FixedT constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for v_trans
    if type(o.v_trans) == "table" then
       flag = checkAllowedNames(o.v_trans, {"x", "y", "z"})
-      assert(flag, "Table representing v_trans should have only named cartesian components.")
+      if not flag then
+         error("Table representing v_trans should have only named cartesian components.", 2)
+      end
    end
    o.v_trans.x = o.v_trans.x or 0.0
    o.v_trans.y = o.v_trans.y or 0.0
@@ -697,15 +742,23 @@ end
 WallBC_TranslatingSurface_Adiabatic = BoundaryCondition:new()
 WallBC_TranslatingSurface_Adiabatic.type = "wall_translating_surface_adiabatic"
 function WallBC_TranslatingSurface_Adiabatic:new(o)
+   local flag = type(self)=='table' and self.type=='wall_translating_surface_adiabatic'
+   if not flag then
+      error("Make sure that you are using WallBC_TranslatingSurface_Adiabatic:new{} and not WallBC_TranslatingSurface_Adiabatic.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"v_trans", "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_TranslatingSurface_Adiabatic constructor.")
+   flag = checkAllowedNames(o, {"v_trans", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_TranslatingSurface_Adiabatic constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for v_trans
    if type(o.v_trans) == "table" then
       flag = checkAllowedNames(o.v_trans, {"x", "y", "z"})
-      assert(flag, "Table representing v_trans should have only named cartesian components.")
+      if not flag then
+         error("Table representing v_trans should have only named cartesian components.", 2)
+      end
    end
    o.v_trans.x = o.v_trans.x or 0.0
    o.v_trans.y = o.v_trans.y or 0.0
@@ -722,22 +775,32 @@ end
 WallBC_RotatingSurface_FixedT = BoundaryCondition:new()
 WallBC_RotatingSurface_FixedT.type = "wall_rotating_surface_fixed_t"
 function WallBC_RotatingSurface_FixedT:new(o)
+   local flag = type(self)=='table' and self.type=='wall_rotating_surface_fixed_t'
+   if not flag then
+      error("Make sure that you are using WallBC_RotatingSurface_FixedT:new{} and not WallBC_RotatingSurface_FixedT.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_RotatingSurface_FixedT constructor.")
+   flag = checkAllowedNames(o, {"r_omega", "centre", "Twall", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_RotatingSurface_FixedT constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for r_omega and centre
    if type(o.r_omega) == "table" then
       flag = checkAllowedNames(o.r_omega, {"x", "y", "z"})
-      assert(flag, "Table representing r_omega should have only named cartesian components.")
+      if not flag then
+         error("Table representing r_omega should have only named cartesian components.", 2)
+      end
    end
    o.r_omega.x = o.r_omega.x or 0.0
    o.r_omega.y = o.r_omega.y or 0.0
    o.r_omega.z = o.r_omega.z or 0.0
    if type(o.centre) == "table" then
       flag = checkAllowedNames(o.centre, {"x", "y", "z"})
-      assert(flag, "Table representing centre should have only named cartesian components.")
+      if not flag then
+         error("Table representing centre should have only named cartesian components.", 2)
+      end
    end
    o.centre.x = o.centre.x or 0.0
    o.centre.y = o.centre.y or 0.0
@@ -756,22 +819,32 @@ end
 WallBC_RotatingSurface_Adiabatic = BoundaryCondition:new()
 WallBC_RotatingSurface_Adiabatic.type = "wall_rotating_surface_adiabatic"
 function WallBC_RotatingSurface_Adiabatic:new(o)
+   local flag = type(self)=='table' and self.type=='wall_rotating_surface_adiabatic'
+   if not flag then
+      error("Make sure that you are using WallBC_RotatingSurface_Adiabatic:new{} and not WallBC_RotatingSurface_Adiabatic.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_RotatingSurface_Adiabatic constructor.")
+   flag = checkAllowedNames(o, {"r_omega", "centre", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_RotatingSurface_Adiabatic constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.preReconAction = { InternalCopyThenReflect:new() }
    -- Fill in missing components for r_omega and centre
    if type(o.r_omega) == "table" then
       flag = checkAllowedNames(o.r_omega, {"x", "y", "z"})
-      assert(flag, "Table representing r_omega should have only named cartesian components.")
+      if not flag then
+         error("Table representing r_omega should have only named cartesian components.", 2)
+      end
    end
    o.r_omega.x = o.r_omega.x or 0.0
    o.r_omega.y = o.r_omega.y or 0.0
    o.r_omega.z = o.r_omega.z or 0.0
    if type(o.centre) == "table" then
       flag = checkAllowedNames(o.centre, {"x", "y", "z"})
-      assert(flag, "Table representing centre should have only named cartesian components.")
+      if not flag then
+         error("Table representing centre should have only named cartesian components.", 2)
+      end
    end
    o.centre.x = o.centre.x or 0.0
    o.centre.y = o.centre.y or 0.0
@@ -788,8 +861,15 @@ end
 InFlowBC_Supersonic = BoundaryCondition:new()
 InFlowBC_Supersonic.type = "inflow_supersonic"
 function InFlowBC_Supersonic:new(o)
-   local flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
-   assert(flag, "Invalid name for item supplied to InFlowBC_Supersonic constructor.")
+   local flag = type(self)=='table' and self.type=='inflow_supersonic'
+   if not flag then
+      error("Make sure that you are using InFlowBC_Supersonic:new{} and not InFlowBC_Supersonic.new{}", 2)
+   end
+   o = o or {}
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_Supersonic constructor.", 2)
+   end
    if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
@@ -802,9 +882,15 @@ end
 InFlowBC_StaticProfile = BoundaryCondition:new()
 InFlowBC_StaticProfile.type = "inflow_static_profile"
 function InFlowBC_StaticProfile:new(o)
+   local flag = type(self)=='table' and self.type=='inflow_static_profile'
+   if not flag then
+      error("Make sure that you are using InFlowBC_StaticProfile:new{} and not InFlowBC_StaticProfile.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"filename", "fileName", "match", "label", "group"})
-   assert(flag, "Invalid name for item supplied to InFlowBC_StaticProfile constructor.")
+   flag = checkAllowedNames(o, {"filename", "fileName", "match", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_StaticProfile constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.match = o.match or "xyz-to-xyz"
@@ -818,9 +904,15 @@ end
 InFlowBC_ConstFlux = BoundaryCondition:new()
 InFlowBC_ConstFlux.type = "inflow_const_flux"
 function InFlowBC_ConstFlux:new(o)
+   local flag = type(self)=='table' and self.type=='inflow_const_flux'
+   if not flag then
+      error("Make sure that you are using InFlowBC_ConstFlux:new{} and not InFlowBC_ConstFlux.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
-   assert(flag, "Invalid name for item supplied to InFlowBC_ConstFlux constructor.")
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_ConstFlux constructor.", 2)
+   end
    if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
@@ -835,9 +927,15 @@ end
 InFlowBC_ShockFitting = BoundaryCondition:new()
 InFlowBC_ShockFitting.type = "inflow_shock_fitting"
 function InFlowBC_ShockFitting:new(o)
+   local flag = type(self)=='table' and self.type=='inflow_shock_fitting'
+   if not flag then
+      error("Make sure that you are using InFlowBC_ShockFitting:new{} and not InFlowBC_ShockFitting.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
-   assert(flag, "Invalid name for item supplied to InFlowBC_ShockFitting constructor.")
+   flag = checkAllowedNames(o, {"flowState", "flowCondition", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_ShockFitting constructor.", 2)
+   end
    if o.flowState == nil then o.flowState = o.flowCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
@@ -852,12 +950,18 @@ end
 InFlowBC_FromStagnation = BoundaryCondition:new()
 InFlowBC_FromStagnation.type = "inflow_from_stagnation_condition"
 function InFlowBC_FromStagnation:new(o)
+   local flag = type(self)=='table' and self.type=='inflow_from_stagnation_condition'
+   if not flag then
+      error("Make sure that you are using InFlowBC_FromStagnation:new{} and not InFlowBC_FromStagnation.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"stagnationState", "stagCondition", "direction_type",
-				      "direction_x", "direction_y", "direction_z",
-				      "alpha", "mass_flux", "relax_factor",
-				      "label", "group"})
-   assert(flag, "Invalid name for item supplied to InFlowBC_FromStagnation constructor.")
+   flag = checkAllowedNames(o, {"stagnationState", "stagCondition", "direction_type",
+                                "direction_x", "direction_y", "direction_z",
+                                "alpha", "mass_flux", "relax_factor",
+                                "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to InFlowBC_FromStagnation constructor.", 2)
+   end
    if o.stagnationState == nil then o.stagnationState = o.stagCondition end -- look for old name 
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
@@ -877,9 +981,15 @@ end
 OutFlowBC_Simple = BoundaryCondition:new()
 OutFlowBC_Simple.type = "outflow_simple_extrapolate"
 function OutFlowBC_Simple:new(o)
+   local flag = type(self)=='table' and self.type=='outflow_simple_extrapolate'
+   if not flag then
+      error("Make sure that you are using OutFlowBC_Simple:new{} and not OutFlowBC_Simple.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"xOrder", "label", "group"})
-   assert(flag, "Invalid name for item supplied to OutFlowBC_Simple constructor.")
+   flag = checkAllowedNames(o, {"xOrder", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to OutFlowBC_Simple constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder} }
@@ -891,9 +1001,15 @@ end
 OutFlowBC_FixedP = BoundaryCondition:new()
 OutFlowBC_FixedP.type = "outflow_fixed_p"
 function OutFlowBC_FixedP:new(o)
+   local flag = type(self)=='table' and self.type=='outflow_fixed_p'
+   if not flag then
+      error("Make sure that you are using OutFlowBC_FixedP:new{} and not OutFlowBC_FixedP.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"xOrder", "p_outside", "label", "group"})
-   assert(flag, "Invalid name for item supplied to OutFlowBC_FixedP constructor.")
+   flag = checkAllowedNames(o, {"xOrder", "p_outside", "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to OutFlowBC_FixedP constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
@@ -906,10 +1022,16 @@ end
 OutFlowBC_FixedPT = BoundaryCondition:new()
 OutFlowBC_FixedPT.type = "outflow_fixed_p_and_t"
 function OutFlowBC_FixedPT:new(o)
+   local flag = type(self)=='table' and self.type=='outflow_fixed_p_and_t'
+   if not flag then
+      error("Make sure that you are using OutFlowBC_FixedPT:new{} and not OutFlowBC_FixedPT.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"xOrder", "p_outside", "T_outside",
-				      "label", "group"})
-   assert(flag, "Invalid name for item supplied to OutFlowBC_FixedPT constructor.")
+   flag = checkAllowedNames(o, {"xOrder", "p_outside", "T_outside",
+                                "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to OutFlowBC_FixedPT constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { ExtrapolateCopy:new{xOrder = o.xOrder},
@@ -922,11 +1044,17 @@ end
 ExchangeBC_FullFace = BoundaryCondition:new()
 ExchangeBC_FullFace.type = "exchange_over_full_face"
 function ExchangeBC_FullFace:new(o)
+   local flag = type(self)=='table' and self.type=='exchange_over_full_face'
+   if not flag then
+      error("Make sure that you are using ExchangeBC_FullFace:new{} and not ExchangeBC_FullFace.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
-				      "reorient_vector_quantities", "Rmatrix",
-				      "label", "group"})
-   assert(flag, "Invalid name for item supplied to ExchangeBC_FullFace constructor.")
+   flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
+                                "reorient_vector_quantities", "Rmatrix",
+                                "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to ExchangeBC_FullFace constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.preReconAction = { FullFaceCopy:new{otherBlock=o.otherBlock,
@@ -942,13 +1070,19 @@ end
 ExchangeBC_MappedCell = BoundaryCondition:new()
 ExchangeBC_MappedCell.type = "exchange_using_mapped_cells"
 function ExchangeBC_MappedCell:new(o)
+   local flag = type(self)=='table' and self.type=='exchange_using_mapped_cells'
+   if not flag then
+      error("Make sure that you are using ExchangeBC_MappedCell:new{} and not ExchangeBC_MappedCell.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", "filename",
-				      "transform_position", "c0", "n", "alpha", "delta",
-				      "list_mapped_cells",
-				      "reorient_vector_quantities", "Rmatrix",
-				      "label", "group"})
-   assert(flag, "Invalid name for item supplied to ExchangeBC_MappedCell constructor.")
+   flag = checkAllowedNames(o, {"cell_mapping_from_file", "fileName", "filename",
+                                "transform_position", "c0", "n", "alpha", "delta",
+                                "list_mapped_cells",
+                                "reorient_vector_quantities", "Rmatrix",
+                                "label", "group"})
+   if not flag then
+      error("Invalid name for item supplied to ExchangeBC_MappedCell constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = false
    o.fileName = o.fileName or o.filename
@@ -967,9 +1101,15 @@ end
 UserDefinedBC = BoundaryCondition:new()
 UserDefinedBC.type = "user_defined"
 function UserDefinedBC:new(o)
+   local flag = type(self)=='table' and self.type=='user_defined'
+   if not flag then
+      error("Make sure that you are using UserDefinedBC:new{} and not UserDefinedBC.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"fileName", "filename", "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to UserDefinedBC constructor.")
+   flag = checkAllowedNames(o, {"fileName", "filename", "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to UserDefinedBC constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.fileName = o.fileName or o.filename
    o.preReconAction = { UserDefinedGhostCell:new{fileName=o.fileName} }
@@ -981,10 +1121,16 @@ end
 WallBC_AdjacentToSolid = BoundaryCondition:new()
 WallBC_AdjacentToSolid.type = "wall_adjacent_to_solid"
 function WallBC_AdjacentToSolid:new(o)
+   local flag = type(self)=='table' and self.type=='wall_adjacent_to_solid'
+   if not flag then
+      error("Make sure that you are using WallBC_AdjacentToSolid:new{} and not WallBC_AdjacentToSolid.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
-				      "label", "group", "is_design_surface", "num_cntrl_pts"})
-   assert(flag, "Invalid name for item supplied to WallBC_AdjacentToSolid constructor.")
+   flag = checkAllowedNames(o, {"otherBlock", "otherFace", "orientation",
+                                "label", "group", "is_design_surface", "num_cntrl_pts"})
+   if not flag then
+      error("Invalid name for item supplied to WallBC_AdjacentToSolid constructor.", 2)
+   end
    o = BoundaryCondition.new(self, o)
    o.is_wall_with_viscous_effects = true
    o.preReconAction = { InternalCopyThenReflect:new() }
