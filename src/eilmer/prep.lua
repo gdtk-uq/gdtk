@@ -401,11 +401,17 @@ FluidBlock = {
 } -- end FluidBlock
 
 function FluidBlock:new(o)
+   local flag = type(self)=='table' and self.myType=='FluidBlock'
+   if not flag then
+      error("Make sure that you are using FluidBlock:new{} and not FluidBlock.new{}", 2)
+   end
    o = o or {}
-   local flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition", "active",
-				      "label", "omegaz", "bcList", "bcDict",
-				      "hcellList", "xforceList"})
-   assert(flag, "Invalid name for item supplied to FluidBlock constructor.")
+   flag = checkAllowedNames(o, {"grid", "initialState", "fillCondition", "active",
+                                "label", "omegaz", "bcList", "bcDict",
+                                "hcellList", "xforceList"})
+   if not flag then
+      error("Invalid name for item supplied to FluidBlock constructor.", 2)
+   end
    if o.initialState == nil then o.initialState = o.fillCondition end -- try old name
    setmetatable(o, self)
    self.__index = self
