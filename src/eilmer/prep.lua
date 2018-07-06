@@ -1115,7 +1115,9 @@ function setHistoryPoint(args)
    --  setHistoryPoint{ib=0, i=20, j=10, k=0}
    --
    local flag = checkAllowedNames(args, {"x", "y", "z", "ib", "i", "j", "k"})
-   assert(flag, "Invalid name for item supplied to setHistoryPoint.")
+   if not flag then
+      error("Invalid name for item supplied to setHistoryPoint.", 2)
+   end
    -- First look for x,y,z
    if (args.x) then
       local x = args.x
@@ -1138,7 +1140,7 @@ function setHistoryPoint(args)
       return
    end
    -- Still trying; look for integer indices.
-   if (args.j) then
+   if (args.j and args.ib) then
       local ib = args.ib
       local i = args.i
       local j = args.j
@@ -1150,7 +1152,9 @@ function setHistoryPoint(args)
       historyCells[#historyCells+1] = {ib=args.ib, i=cellId}
       return
    end
-   assert(args.ib and args.i, "No valid arguments found for setHistoryPoint.")
+   if not (args.ib and args.i) then
+      error("Could not identify cell for setHistoryPoint.", 2)
+   end
    historyCells[#historyCells+1] = {ib=args.ib, i=args.i}
    return
 end
@@ -1165,7 +1169,9 @@ function setSolidHistoryPoint(args)
    --  setSolidHistoryPoint{ib=0, i=20, j=10, k=0}
    --
    local flag = checkAllowedNames(args, {"x", "y", "z", "ib", "i", "j", "k"})
-   assert(flag, "Invalid name for item supplied to setSolidHistoryPoint.")
+   if not flag then
+      error("Invalid name for item supplied to setSolidHistoryPoint.", 2)
+   end
    -- First look for x,y,z
    if (args.x) then
       local x = args.x
@@ -1188,7 +1194,7 @@ function setSolidHistoryPoint(args)
       return
    end
    -- Still trying; look for integer indices.
-   if (args.j) then
+   if (args.j and args.ib) then
       local ib = args.ib
       local i = args.i
       local j = args.j
@@ -1200,7 +1206,9 @@ function setSolidHistoryPoint(args)
       solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=cellId}
       return
    end
-   assert(args.ib and args.i, "No valid arguments found for setSolidHistoryPoint.")
+   if not (args.ib and args.i) then
+      error("Could not identify cell for setSolidHistoryPoint.", 2)
+   end
    solidHistoryCells[#solidHistoryCells+1] = {ib=args.ib, i=args.i}
    return
 end
@@ -1310,7 +1318,7 @@ function mpiDistributeBlocks(nTasks, option)
       print(string.format("Largest partition factor  \t = %.3f", maxmpiLoads/(totalCells/mpiProcessors)))
 
    else
-      error('Did not select one of "uniform" or "loadbalance". for mpiDistributeBlocks') 
+      error('Did not select one of "uniform" or "loadbalance". for mpiDistributeBlocks', 2) 
    end
    return mpiTaskList
 end
@@ -1320,14 +1328,16 @@ end
 -- Classes for construction of zones.
 
 ReactionZone = {
-   p0 = Vector3:new{x=0.0, y=0.0, z=0.0},
-   p1 = Vector3:new{x=0.0, y=0.0, z=0.0},
+   p0 = nil,
+   p1 = nil
 }
 
 function ReactionZone:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"p0", "p1"})
-   assert(flag, "Invalid name for item supplied to ReactionZone constructor.")
+   if not flag then
+      error("Invalid name for item supplied to ReactionZone constructor.", 2)
+   end
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new zone, for later construction of the config file.
@@ -1335,21 +1345,27 @@ function ReactionZone:new(o)
    o.id = #(reactionZones)
    reactionZones[#(reactionZones)+1] = o
    -- Must have corners
-   assert(o.p0, "need to supply lower-left corner p0")
-   assert(o.p1, "need to supply upper-right corner p1")
+   if not o.p0 then
+      error("You need to supply lower-left corner p0", 2)
+   end
+   if not o.p1 then
+      error("You need to supply upper-right corner p1", 2)
+   end
    return o
 end
 
 IgnitionZone = {
-   p0 = Vector3:new{x=0.0, y=0.0, z=0.0},
-   p1 = Vector3:new{x=0.0, y=0.0, z=0.0},
-   T = 300.0 -- degrees K
+   p0 = nil,
+   p1 = nil,
+   T = nil -- degrees K
 }
 
 function IgnitionZone:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"p0", "p1", "T"})
-   assert(flag, "Invalid name for item supplied to IgnitionZone constructor.")
+   if not flag then
+      error("Invalid name for item supplied to IgnitionZone constructor.", 2)
+   end
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new zone, for later construction of the config file.
@@ -1357,21 +1373,29 @@ function IgnitionZone:new(o)
    o.id = #(ignitionZones)
    ignitionZones[#(ignitionZones)+1] = o
    -- Must have corners and temperature
-   assert(o.p0, "need to supply lower-left corner p0")
-   assert(o.p1, "need to supply upper-right corner p1")
-   assert(o.T, "need to supply ignition temperature T")
+   if not o.p0 then
+      error("You need to supply lower-left corner p0", 2)
+   end
+   if not o.p1 then
+      error("You need to supply upper-right corner p1", 2)
+   end
+   if not o.T then
+      error("You need to supply ignition temperature T", 2)
+   end
    return o
 end
 
 TurbulentZone = {
-   p0 = Vector3:new{x=0.0, y=0.0, z=0.0},
-   p1 = Vector3:new{x=0.0, y=0.0, z=0.0},
+   p0 = nil,
+   p1 = nil,
 }
 
 function TurbulentZone:new(o)
    o = o or {}
    local flag = checkAllowedNames(o, {"p0", "p1"})
-   assert(flag, "Invalid name for item supplied to TurbulentZone constructor.")
+   if not flag then
+      error("Invalid name for item supplied to TurbulentZone constructor.", 2)
+   end
    setmetatable(o, self)
    self.__index = self
    -- Make a record of the new zone, for later construction of the config file.
@@ -1379,8 +1403,12 @@ function TurbulentZone:new(o)
    o.id = #(turbulentZones)
    turbulentZones[#(turbulentZones)+1] = o
    -- Must have corners
-   assert(o.p0, "need to supply lower-left corner p0")
-   assert(o.p1, "need to supply upper-right corner p1")
+   if not o.p0 then
+      error("You need to supply lower-left corner p0", 2)
+   end
+   if not o.p1 then
+      error("You need to supply upper-right corner p1", 2)
+   end
    return o
 end
 
