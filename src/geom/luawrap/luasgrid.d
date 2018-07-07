@@ -128,6 +128,12 @@ extern(C) int find_nearest_cell_centre_sg(lua_State *L)
 {
     double x, y, z;
     int narg = lua_gettop(L); // assume narg == 2;
+    if (narg != 2) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected myGrid:find_nearest_cell_centre_sg{}; ";
+        errMsg ~= "maybe you tried myGrid:find_nearest_cell_centre_sg{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     auto grid = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
     lua_getfield(L, 2, "x");
     if ( !lua_isnil(L, -1) ) {
@@ -179,9 +185,15 @@ extern(C) int find_nearest_cell_centre_sg(lua_State *L)
  */
 extern(C) int newStructuredGrid(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected StructuredGrid:new{}; ";
+        errMsg ~= "maybe you tried StructuredGrid.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to StructuredGrid:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -341,9 +353,16 @@ extern(C) int newStructuredGrid(lua_State* L)
 extern(C) int makeSlabGrid(lua_State* L)
 {
     int narg = lua_gettop(L);
+    if (narg != 2) {
+        string errMsg = "Error in StructuredGrid:makeSlabGrid{}. ";
+        errMsg ~= "Expected a 2D StructuredGrid object. ";
+        errMsg ~= "Be sure to use myGrid:makeSlabGrid{} rather than myGrid.makeSlabGrid{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     auto grid2D = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
     if (grid2D is null || grid2D.nkv != 1) {
-        string errMsg = "Error in StructuredGrid:makeSlabGrid{}. expected a 2D StructuredGrid object.";
+        string errMsg = "Error in StructuredGrid:makeSlabGrid{}. ";
+        errMsg ~= "Expected a 2D StructuredGrid object.";
         luaL_error(L, errMsg.toStringz);
     }
     if ( narg < 2 || !lua_istable(L, 2) ) {
@@ -387,9 +406,16 @@ extern(C) int makeSlabGrid(lua_State* L)
 extern(C) int makeWedgeGrid(lua_State* L)
 {
     int narg = lua_gettop(L);
+    if (narg != 2) {
+        string errMsg = "Error in StructuredGrid:makeWedgeGrid{}. ";
+        errMsg ~= "Expected a 2D StructuredGrid object and a table. ";
+        errMsg ~= "Be sure to use myGrid:makeWedgeGrid{} rather than myGrid.makeWedgeGrid{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     auto grid2D = checkObj!(StructuredGrid, StructuredGridMT)(L, 1);
     if (grid2D is null || grid2D.nkv != 1) {
-        string errMsg = "Error in StructuredGrid:makeWedgeGrid{}. expected a 2D StructuredGrid object.";
+        string errMsg = "Error in StructuredGrid:makeWedgeGrid{}. ";
+        errMsg ~= "Expected a 2D StructuredGrid object.";
         luaL_error(L, errMsg.toStringz);
     }
     if ( narg < 2 || !lua_istable(L, 2) ) {

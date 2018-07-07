@@ -133,10 +133,16 @@ Vector3[] get8Vector3s(lua_State *L, string ctorName)
 
 extern(C) int newTFIVolume(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected TFIVolume:new{}; ";
+        errMsg ~= "maybe you tried TFIVolume.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor TFIVolume:new. " ~
+        string errMsg = "Error in constructor TFIVolume:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -168,7 +174,7 @@ extern(C) int newTFIVolume(lua_State* L)
     }
     lua_pop(L, 1);
     // If we make it here, there's been an error in construction.
-    string errMsg = "There's a problem in call to TFIVolume.new. " ~
+    string errMsg = "There's a problem in call to TFIVolume.new{}. " ~
         "Neither the set of 6 named surfaces nor a list of 8 vertices was found.";
     luaL_error(L, errMsg.toStringz);
     return 0;
@@ -189,10 +195,16 @@ extern(C) int newTFIVolume(lua_State* L)
 
 extern(C) int newSweptSurfaceVolume(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SweptSurfaceVolume:new{}; ";
+        errMsg ~= "maybe you tried SweptSurfaceVolume.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if (!lua_istable(L, 1)) {
-        string errMsg = "Error in constructor SweptSurfaceVolume:new. " ~
+        string errMsg = "Error in constructor SweptSurfaceVolume:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -204,7 +216,7 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
     lua_getfield(L, 1, "face0123");
     auto face0123 = checkSurface(L, -1);
     if (face0123 is null) {
-        string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find face0123.";
+        string errMsg = "Error in constructor SweptSurfaceVolume:new{}. Couldn't find face0123.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
@@ -212,7 +224,7 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
     lua_getfield(L, 1, "edge04");
     auto edge04 = checkPath(L, -1);
     if (edge04 is null) {
-        string errMsg = "Error in constructor SweptSurfaceVolume:new. Couldn't find edge04.";
+        string errMsg = "Error in constructor SweptSurfaceVolume:new{}. Couldn't find edge04.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
@@ -234,10 +246,16 @@ extern(C) int newSweptSurfaceVolume(lua_State* L)
 
 extern(C) int newSlabVolume(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SlabVolume:new{}; ";
+        errMsg ~= "maybe you tried SlabVolume.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if (!lua_istable(L, 1)) {
-        string errMsg = "Error in constructor SlabVolume:new. " ~
+        string errMsg = "Error in constructor SlabVolume:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -249,7 +267,7 @@ extern(C) int newSlabVolume(lua_State* L)
     lua_getfield(L, 1, "face0123");
     auto face0123 = checkSurface(L, -1);
     if (face0123 is null) {
-        string errMsg = "Error in constructor SlabVolume:new. Couldn't find face0123.";
+        string errMsg = "Error in constructor SlabVolume:new{}. Couldn't find face0123.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
@@ -257,7 +275,7 @@ extern(C) int newSlabVolume(lua_State* L)
     lua_getfield(L, 1, "dz");
     auto dz_ptr = checkVector3(L, -1);
     if (dz_ptr is null) {
-        string errMsg = "Error in constructor SlabVolume:new. Couldn't find dz.";
+        string errMsg = "Error in constructor SlabVolume:new{}. Couldn't find dz.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
@@ -279,10 +297,16 @@ extern(C) int newSlabVolume(lua_State* L)
 
 extern(C) int newWedgeVolume(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected WedgeVolume:new{}; ";
+        errMsg ~= "maybe you tried WedgeVolume.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if (!lua_istable(L, 1)) {
-        string errMsg = "Error in constructor WedgeVolume:new. " ~
+        string errMsg = "Error in constructor WedgeVolume:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -294,14 +318,14 @@ extern(C) int newWedgeVolume(lua_State* L)
     lua_getfield(L, 1, "face0123");
     auto face0123 = checkSurface(L, -1);
     if (face0123 is null) {
-        string errMsg = "Error in constructor WedgeVolume:new. Couldn't find face0123.";
+        string errMsg = "Error in constructor WedgeVolume:new{}. Couldn't find face0123.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     // Look for sweep angle, in radians.
     lua_getfield(L, 1, "dtheta");
     if (!lua_isnumber(L, -1)) {
-        string errMsg = "Error in constructor SlabVolume:new. Expected number for dtheta.";
+        string errMsg = "Error in constructor SlabVolume:new{}. Expected number for dtheta.";
         luaL_error(L, errMsg.toStringz);
     }
     double dtheta = to!double(luaL_checknumber(L, -1));
@@ -401,9 +425,15 @@ public:
 
 extern(C) int newLuaFnVolume(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected LuaFnVolume:new{}; ";
+        errMsg ~= "maybe you tried LuaFnVolume.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to LuaFnVolume:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -457,10 +487,16 @@ void getRSandT(lua_State* L, string ctorName,
 
 extern(C) int newSubRangedVolume(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SubRangedVolume:new{}; ";
+        errMsg ~= "maybe you tried SubRangedVolume.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor SubRangeVolume:new. " ~
+        string errMsg = "Error in constructor SubRangeVolume:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }

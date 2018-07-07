@@ -167,11 +167,17 @@ extern(C) int find_nearest_cell_centre_usg(lua_State *L)
  */
 extern(C) int newUnstructuredGrid(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
-        string errMsg = `Error in call to UnstructuredGrid:new{}.;
-A table containing arguments is expected, but no table was found.`;
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected UnstructuredGrid:new{}; ";
+        errMsg ~= "maybe you tried UnstructuredGrid.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to UnstructuredGrid:new{}.; ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["sgrid","new_label","filename","fileName","scale","fmt",

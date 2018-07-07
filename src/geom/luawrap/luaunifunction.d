@@ -63,11 +63,17 @@ extern(C) int copyUnivariateFunction(T, string MTname)(lua_State* L)
  */
 extern(C) int newLinearFunction(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
-        string errMsg = `Error in call to LinearFunction:new{}.;
-A table containing arguments is expected, but no table was found.`;
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected LinearFunction:new{}; ";
+        errMsg ~= "maybe you tried LinearFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to LinearFunction:new{}.; ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["t0", "t1"])) {
@@ -75,9 +81,9 @@ A table containing arguments is expected, but no table was found.`;
         luaL_error(L, errMsg.toStringz);
     }
     //
-    string errMsgTmplt = `Error in call to LinearFunction:new{}.
-A valid value for '%s' was not found in list of arguments.
-The value, if present, should be a number.`;
+    string errMsgTmplt = "Error in call to LinearFunction:new{}. ";
+    errMsgTmplt ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmplt ~= "The value, if present, should be a number.";
     double t0 = getNumberFromTable(L, 1, "t0", false, 0.0, true, format(errMsgTmplt, "t0"));
     double t1 = getNumberFromTable(L, 1, "t1", false, 1.0, true, format(errMsgTmplt, "t1"));
     auto f = new LinearFunction(t0, t1);
@@ -95,11 +101,17 @@ The value, if present, should be a number.`;
  */
 extern(C) int newRobertsFunction(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
-        string errMsg = `Error in call to RobertsFunction:new{}.;
-A table containing arguments is expected, but no table was found.`;
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected RobertsFunction:new{}; ";
+        errMsg ~= "maybe you tried RobertsFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
+        string errMsg = "Error in call to RobertsFunction:new{}. ";
+        errMsg ~= "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
     if (!checkAllowedNames(L, 1, ["end0", "end1", "beta"])) {
@@ -107,12 +119,12 @@ A table containing arguments is expected, but no table was found.`;
         luaL_error(L, errMsg.toStringz);
     }
      //
-    string errMsgTmpltNumber = `Error in call to RobertsFunction:new{}.
-A valid value for '%s' was not found in list of arguments.
-The value, if present, should be a number.`;
-    string errMsgTmpltBool = `Error in call to RobertsFunction:new{}.
-A valid value for '%s' was not found in list of arguments.
-The value, if present, should be boolean (true or false).`;
+    string errMsgTmpltNumber = "Error in call to RobertsFunction:new{}. ";
+    errMsgTmpltNumber ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltNumber ~= "The value, if present, should be a number.";
+    string errMsgTmpltBool = "Error in call to RobertsFunction:new{}. ";
+    errMsgTmpltBool ~= "A valid value for '%s' was not found in list of arguments. ";
+    errMsgTmpltBool ~= "The value, if present, should be boolean (true or false).";
     bool end0 = getBooleanFromTable(L, 1, "end0", false, false, true, format(errMsgTmpltBool, "end0"));
     bool end1 = getBooleanFromTable(L, 1, "end1", false, false, true, format(errMsgTmpltBool, "end1"));
     double beta = getNumberFromTable(L, 1, "beta", false, 1.0, true, format(errMsgTmpltNumber, "beta"));
@@ -174,9 +186,15 @@ public:
 
 extern(C) int newLuaFnUnivariateFunction(lua_State *L)
 {
-    lua_remove(L, 1); // remove first arugment "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected RobertsFunction:new{}; ";
+        errMsg ~= "maybe you tried RobertsFunction.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first arugment "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to LuaFnClustering:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -185,7 +203,7 @@ extern(C) int newLuaFnUnivariateFunction(lua_State *L)
         string errMsg = "Error in call to LuaFnUnivariateFunction:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
-     string fnName = "";
+    string fnName = "";
     lua_getfield(L, 1, toStringz("luaFnName"));
     if ( lua_isnil(L, -1) ) {
         string errMsg = "Error in call to LuaFnUnivariateFunction.new{}. No luaFnName entry found.";

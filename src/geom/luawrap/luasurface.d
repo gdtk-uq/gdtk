@@ -139,10 +139,16 @@ void getRandS(lua_State* L, string ctorName,
 
 extern(C) int newCoonsPatch(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected CoonsPatch:new{}; ";
+        errMsg ~= "maybe you tried CoonsPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor CoonPatch:new. " ~
+        string errMsg = "Error in constructor CoonPatch:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -176,7 +182,7 @@ extern(C) int newCoonsPatch(lua_State* L)
     }
     lua_pop(L, 1);
     // If we make it here, there's been an error in construction.
-    string errMsg = "There's a problem in call to CoonsPatch.new. " ~
+    string errMsg = "There's a problem in call to CoonsPatch.new{}. " ~
         "Neither a list of named paths ('north', 'east', 'south', 'west') " ~
         "nor a list of named corners ('p00', 'p10', 'p11', 'p01') were found.";
     luaL_error(L, errMsg.toStringz);
@@ -204,10 +210,16 @@ extern(C) int newCoonsPatch(lua_State* L)
  */
 extern(C) int newAOPatch(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected AOPatch:new{}; ";
+        errMsg ~= "maybe you tried AOPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor AOPatch:new. " ~
+        string errMsg = "Error in constructor AOPatch:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -215,7 +227,7 @@ extern(C) int newAOPatch(lua_State* L)
         string errMsg = "Error in call to AOPatch:new{}. Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
     }
-    string errMsgTmplt = "Error in call to AOPatch:new.\n";
+    string errMsgTmplt = "Error in call to AOPatch:new{}.\n";
     errMsgTmplt ~= "A valid value for '%s' is not found in arguments.\n";
     errMsgTmplt ~= "The value, if present, should be a number.";
     int nx = to!int(getNumberFromTable(L, 1, "nx", false, 10.0, true, format(errMsgTmplt, "nx")));
@@ -267,10 +279,16 @@ extern(C) int newAOPatch(lua_State* L)
 
 extern(C) int newChannelPatch(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected ChannelPatch:new{}; ";
+        errMsg ~= "maybe you tried ChannelPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor ChannelPatch:new. " ~
+        string errMsg = "Error in constructor ChannelPatch:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -282,14 +300,14 @@ extern(C) int newChannelPatch(lua_State* L)
     lua_getfield(L, 1, "south");
     auto south = checkPath(L, -1);
     if ( south is null ) {
-        string errMsg = "Error in constructor ChannelPatch:new. Couldn't find south Path.";
+        string errMsg = "Error in constructor ChannelPatch:new{}. Couldn't find south Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "north");
     auto north = checkPath(L, -1);
     if ( north is null ) {
-        string errMsg = "Error in constructor ChannelPatch:new. Couldn't find north Path.";
+        string errMsg = "Error in constructor ChannelPatch:new{}. Couldn't find north Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
@@ -341,10 +359,16 @@ extern(C) int make_bridging_path_ChannelPatch(lua_State* L)
 
 extern(C) int newSweptPathPatch(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SweptPathPatch:new{}; ";
+        errMsg ~= "maybe you tried SweptPathPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if (!lua_istable(L, 1)) {
-        string errMsg = "Error in constructor SweptPathPatch:new. " ~
+        string errMsg = "Error in constructor SweptPathPatch:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -356,14 +380,14 @@ extern(C) int newSweptPathPatch(lua_State* L)
     lua_getfield(L, 1, "west");
     auto west = checkPath(L, -1);
     if (west is null) {
-        string errMsg = "Error in constructor SweptPathPatch:new. Couldn't find west Path.";
+        string errMsg = "Error in constructor SweptPathPatch:new{}. Couldn't find west Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
     lua_getfield(L, 1, "south");
     auto south = checkPath(L, -1);
     if (south is null) {
-        string errMsg = "Error in constructor SweptPathPatch:new. Couldn't find south Path.";
+        string errMsg = "Error in constructor SweptPathPatch:new{}. Couldn't find south Path.";
         luaL_error(L, errMsg.toStringz);
     }
     lua_pop(L, 1);
@@ -388,10 +412,16 @@ extern(C) int newSweptPathPatch(lua_State* L)
 
 extern(C) int newMeshPatch(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected MeshPatch:new{}; ";
+        errMsg ~= "maybe you tried MeshPatch.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if ( !lua_istable(L, 1) ) {
-        string errMsg = "Error in constructor MeshPatch:new. " ~
+        string errMsg = "Error in constructor MeshPatch:new{}. " ~
             "A table with input parameters is expected as the first argument.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -403,7 +433,7 @@ extern(C) int newMeshPatch(lua_State* L)
     lua_getfield(L, 1, "sgrid");
     auto grid = checkStructuredGrid(L, -1);
     if ( grid is null ) {
-        string errMsg = "Error in constructor MeshPatch:new. " ~
+        string errMsg = "Error in constructor MeshPatch:new{}. " ~
             "Couldn't find StructuredGrid object in sgrid field.";
         luaL_error(L, errMsg.toStringz);
     }
@@ -502,9 +532,15 @@ public:
 
 extern(C) int newLuaFnSurface(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected LuaFnSurface:new{}; ";
+        errMsg ~= "maybe you tried LuaFnSurface.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to LuaFnSurface:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -548,8 +584,14 @@ extern(C) int newLuaFnSurface(lua_State* L)
  */
 extern(C) int newSubRangedSurface(lua_State* L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SubRangedSurface:new{}; ";
+        errMsg ~= "maybe you tried SubRangedSurface.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this"
-    
     if ( !lua_istable(L, 1) ) {
         string errMsg = `Error in constructor SubRangedSurface:new.
 A table with input parameters is expected as the first argument.`;
