@@ -1560,27 +1560,16 @@ void compute_direct_complex_step_derivatives(string jobName, int last_tindx, int
 /*****************************************/
 /*  STEADY-STATE SOLVER PRECONDITIONER   */
 /*****************************************/
+
+// NB. ONLY FOR UNSTRUCTURED SOLVER
+
 void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
-    /*
-    if (blk.grid_type == Grid_t.structured_grid) {
-        auto sblk = cast(SFluidBlock) blk;
-        foreach (cell; blk.cells) {
-            cell.jacobian_cell_stencil ~= cell;
-            size_t[3] ijk = sblk.cell_id_to_ijk_indices(cell.id);
-            size_t i = ijk[0]; size_t j = ijk[1]; size_t k = ijk[2]; 
-            // assume list of faces is in order: [i, i+1, j, j+1]
-            cell.jacobian_face_stencil ~= sblk.get_ifi(i, j, k);
-            cell.jacobian_face_stencil ~= sblk.get_ifi(i+1, j, k);
-            cell.jacobian_face_stencil ~= sblk.get_ifj(i, j, k);
-            cell.jacobian_face_stencil ~= sblk.get_ifj(i, j+1, k);
-        }
+
+    foreach (cell; blk.cells) {
+        cell.jacobian_cell_stencil ~= cell;
+        foreach ( face; cell.iface) cell.jacobian_face_stencil ~= face;
     }
-    else { // unstructured_grid
-        foreach (cell; blk.cells) {
-            cell.jacobian_cell_stencil ~= cell;
-            foreach ( face; cell.iface) cell.jacobian_face_stencil ~= face;
-        }
-    }
+
     // initialise objects
     blk.transform = new Matrix!number(nConservative, nConservative);
     foreach (cell; blk.cells) {
@@ -1592,43 +1581,31 @@ void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
     foreach (i; 0..MAX_PERTURBED_INTERFACES) {
         ifaceP[i] = new FVInterface(blk.myConfig, false);
     }
-    */
 }
 
-void jacobian_bndary_correction_for_sss_preconditioner(FluidBlock blk, size_t np, int orderOfJacobian) {
-    /*    
-    number[][] dRdq; number[][] dqdQ; number[][] Lext; number[] qP;
-    qP.length = np;
-    dRdq.length = np; // number of conserved variables
-    dqdQ.length = np; // number of conserved variables
-    Lext.length = np; // number of conserved variables
+void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS) {
+    // initialise some re-used data objects here
+    number[][] dRdq; number[][] dqdQ; number[][] Aext; number[] qP;
+    qP.length = np; dRdq.length = np; dqdQ.length = np; Aext.length = np; 
     foreach (ref a; dRdq) a.length = np;
     foreach (ref a; dqdQ) a.length = np;
-    foreach (ref a; Lext) a.length = np;
-    foreach (i; 0..np) {
-        foreach (j; 0..np) {
-            dRdq[i][j] = 0.0;
-            dqdQ[i][j] = 0.0;
-            Lext[i][j] = 0.0;
-        }
-    }
+    foreach (ref a; Aext) a.length = np;
 
-    foreach ( bndary; blk.bc) {
+    foreach ( bndary; blk.bc ) {
         if (bndary.type != "exchange_using_mapped_cells") {
-            foreach ( fj,f; bndary.faces) {
-                
-                // collect int and ext cells
-                FVCell int_cell;
-                FVCell pcell;
-                if (bndary.outsigns[fj] == 1) {
-                    int_cell = f.left_cell;
-                    pcell = f.right_cell;
+            foreach ( bi, bface; bndary.faces) {                
+                // collect interior boundary cells (bcells) and exterior ghost cell (pcell)
+                FVCell[] bcells; FVCell pcell;
+                if (bndary.outsigns[bi] == 1) {
+                    bcells ~= bface.left_cell;
+                    pcell = bface.right_cell;
                 } else {
-                    int_cell = f.right_cell;
-                    pcell = f.left_cell;
+                    bcells ~= bface.right_cell;
+                    pcell = bface.left_cell;
                 }
                 
-                // form dqdQ
+                /* form dqdQ - ghost cell derivatives */
+
                 // 0th perturbation: rho
                 mixin(computeGhostCellDerivatives("gas.rho", "0", true));
                 // 1st perturbation: u
@@ -1637,10 +1614,20 @@ void jacobian_bndary_correction_for_sss_preconditioner(FluidBlock blk, size_t np
                 mixin(computeGhostCellDerivatives("vel.refy", "2", false));
                 // 3rd perturbation: P
                 mixin(computeGhostCellDerivatives("gas.p", "3", true));
+
+                /* form dRdq */
                 
-                // form dRdq
-                pcell.jacobian_cell_stencil ~= int_cell;
-                foreach ( face; int_cell.iface) pcell.jacobian_face_stencil ~= face;
+                pcell.jacobian_cell_stencil ~= bcells;
+                size_t[] idList;
+                foreach ( bcell; bcells) {
+                    foreach ( face; bcell.iface) {
+                        if ( idList.canFind(face.id) == false ) {
+                            pcell.jacobian_face_stencil ~= face;
+                            idList ~= face.id;
+                        }
+                    }
+                }
+                
                 // 0th perturbation: rho
                 mixin(computeFluxDerivativesAroundCell("gas.rho", "0", true));
                 // 1st perturbation: u
@@ -1649,40 +1636,43 @@ void jacobian_bndary_correction_for_sss_preconditioner(FluidBlock blk, size_t np
                 mixin(computeFluxDerivativesAroundCell("vel.refy", "2", false));
                 // 3rd perturbation: P
                 mixin(computeFluxDerivativesAroundCell("gas.p", "3", true));
-                
-                number integral;
-                number volInv = 1.0 / int_cell.volume[0];
-                for ( size_t ip = 0; ip < np; ++ip ) {
-                    for ( size_t jp = 0; jp < np; ++jp ) {
-                    integral = 0.0;
-                    foreach(fi, iface; int_cell.iface) {
-                        integral -= int_cell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
+                foreach(bcell; pcell.jacobian_cell_stencil) {
+                    number integral;
+                    number volInv = 1.0 / bcell.volume[0];
+                    for ( size_t ip = 0; ip < np; ++ip ) {
+                        for ( size_t jp = 0; jp < np; ++jp ) {
+                            integral = 0.0;
+                            foreach(fi, iface; bcell.iface) {
+                                integral -= bcell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
+                            }
+                            number entry = volInv * integral;                    
+                            dRdq[ip][jp] = entry;
+                        }
                     }
-                    number entry = volInv * integral;                    
-                    dRdq[ip][jp] = entry;
+
+                    //writeln(dRdq);
+                    
+                    // perform matrix-matrix multiplication
+                    for (size_t i = 0; i < np; i++) {
+                        for (size_t j = 0; j < np; j++) {
+                            Aext[i][j] = 0;
+                            for (size_t k = 0; k < np; k++) {
+                                Aext[i][j] += dRdq[i][k]*dqdQ[k][j];
+                            }
+                        }
                     }
-                }
-                
-                // perform matrix-matrix multiplication
-                for (size_t i = 0; i < np; i++) {
-                    for (size_t j = 0; j < np; j++) {
-                        Lext[i][j] = 0;
-                        for (size_t k = 0; k < np; k++) {
-                            Lext[i][j] += dRdq[i][k]*dqdQ[k][j];
+                    
+                    // add correction to boundary entry in Jacobian
+                    size_t I, J;
+                    for ( size_t ip = 0; ip < np; ++ip ) {
+                        I = bcell.id*np + ip; // column index
+                        for ( size_t jp = 0; jp < np; ++jp ) {
+                            J = bcells[0].id*np + jp; // row index
+                            bcells[0].dPrimitive[ip,jp] = bcells[0].dPrimitive[ip,jp] + Aext[ip][jp];
                         }
                     }
                 }
-
-                // add correction to boundary entry in Jacobian
-                size_t I, J;
-                for ( size_t ip = 0; ip < np; ++ip ) {
-                    I = int_cell.id*np + ip; // column index
-                    for ( size_t jp = 0; jp < np; ++jp ) {
-                        J = int_cell.id*np + jp; // column index
-                        int_cell.dPrimitive[ip,jp] = int_cell.dPrimitive[ip,jp] + Lext[ip][jp];
-                    }
-                }
-                
+                    
                 // clear the interface flux Jacobian entries
                 foreach (iface; pcell.jacobian_face_stencil) {
                     foreach (i; 0..iface.dFdU.length) {
@@ -1692,32 +1682,21 @@ void jacobian_bndary_correction_for_sss_preconditioner(FluidBlock blk, size_t np
                     }
                 }
                 
-                // clear working matrices
-                foreach (i; 0..np) {
-                    foreach (j; 0..np) {
-                        dRdq[i][j] = 0.0;
-                        dqdQ[i][j] = 0.0;
-                        Lext[i][j] = 0.0;
-                    }
-                }
                 pcell.jacobian_cell_stencil = [];
                 pcell.jacobian_face_stencil = [];
             }
         }
     }
-    // reset interpolation order to the global setting
-    blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
-    */
 }
 
-void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, double MU, int orderOfJacobian=1) {
-    /*
-    // temporarily switch the interpolation order of the config object to that of the Jacobian 
-    blk.myConfig.interpolation_order = orderOfJacobian;
 
-    // initialise some variables used in the finite difference perturbation
-    number h; number diff;
+void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
+    // temporarily switch the interpolation order of the config object to that of the Jacobian 
+    version(complex_numbers) Complex!double EPS = complex(0.0, 1.0e-30);
+    else double EPS = 1.0;
     
+    blk.myConfig.interpolation_order = to!int(orderOfJacobian);
+
     // compute diagonal of 1st order Jacobian (w.r.t. primitive variables)
     foreach(pcell; blk.cells) {
         // 0th perturbation: rho
@@ -1752,7 +1731,8 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
     }
 
     // boundary correction
-    jacobian_bndary_correction_for_sss_preconditioner(blk, np, orderOfJacobian);
+    apply_boundary_conditions_for_sss_preconditioner(blk, np, orderOfJacobian, EPS);
+
     auto gmodel = blk.myConfig.gmodel;
     // multiply by transform matrix (transforming primitive to conservative form)
     foreach (cell; blk.cells) {
@@ -1786,12 +1766,11 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, double EPSILON, do
         foreach (i; 0 .. np) {
             cell.dConservative[i,i] += dtInv;
         }
-
+        
         // Get an LU decomposition ready for repeated solves.
         nm.bbla.LUDecomp!number(cell.dConservative, cell.pivot);
     }
     
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
-    */
 }

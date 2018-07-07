@@ -74,6 +74,7 @@ void main(string[] args) {
     bool directMethodFlag = false;
     bool adjointMethodFlag = true;
     bool verifyFlowJacobianFlag = false;
+    bool verifySSSPreconditionerFlag = false;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
     bool helpWanted = false;
@@ -87,6 +88,7 @@ void main(string[] args) {
                "direct-method", &directMethodFlag,
                "adjoint-method", &adjointMethodFlag,
                "verify-flow-jacobian", &verifyFlowJacobianFlag,
+               "verify-sss-preconditioner", &verifySSSPreconditionerFlag,
                "max-cpus", &maxCPUs,
                "max-wall-clock", &maxWallClock,
                "help", &helpWanted
@@ -124,6 +126,8 @@ void main(string[] args) {
     // check some flag option compatibilities
     if (verifyFlowJacobianFlag)
         assert(verifyFlowJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
+    else if (verifySSSPreconditionerFlag)
+        assert(verifySSSPreconditionerFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     else
         assert(directMethodFlag != adjointMethodFlag, "Error: Incompatible command line flags: direct-method & adjoint-method");
     
@@ -313,6 +317,68 @@ void main(string[] args) {
         return;
     }
 
+    /* Verify SSS preconditioner */
+    if (verifySSSPreconditionerFlag) {
+        size_t nPrimitive; 
+        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
+        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
+
+        // construct the flow Jacobian
+        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+
+        /* Construct Flow Jacobian */
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            // make sure ghost cells are filled before proceeding...
+            myblk.applyPreReconAction(0.0, 0, 0);
+            myblk.applyPostConvFluxAction(0.0, 0, 0);
+            myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+            myblk.applyPostDiffFluxAction(0.0, 0, 0);
+            
+            myblk.JlocT = new SMatrix!number();
+            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, 1, EPS);
+        }
+
+        
+        // form the diagonal blocks used in the preconditioner
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            sss_preconditioner_initialisation(myblk, nPrimitive);
+            sss_preconditioner(myblk, nPrimitive, 1.0e-06);
+        }
+
+
+        // compare diagonal blocks from both methods
+        foreach ( myblk; localFluidBlocks) {
+            foreach ( cell; myblk.cells) {
+                //writeln(cell.dPrimitive);
+            }
+            //writeln(myblk.JlocT);
+        }
+        
+        
+        string fileName = "sss_preconditioner_test.output";
+
+        
+        auto outFile = File(fileName, "w");
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            foreach( cell; myblk.cells ) {
+                size_t id = cell.id;
+                foreach ( i; 0..nPrimitive) {
+                    foreach ( j; 0..nPrimitive) {
+                        number p1 = myblk.JlocT[id*nPrimitive+j, id*nPrimitive+i];
+                        number p2 = cell.dPrimitive[i, j];
+                        outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1-p2)/p1), fabs(p1-p2), p1, p2);
+                    }
+                }
+            }
+        }
+        
+        //assert(approxEqualNumbers(p2, p1, 1.0e-10, 1.0e-01), "Steady-state Solver Preconditioner Test: FAILED.");
+        
+        writeln("Steady-state Solver Preconditioner Test: COMPLETE.");
+        return;
+    }
+
+    
     /* Program should terminate before here */
     assert(0, "Oh dear. The Eilmer Shape Sensitivity Calculator executed correctly, however, nothing meaningful has been computed. Please check command line flags.");
 }

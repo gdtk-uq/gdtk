@@ -1088,7 +1088,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     if (r == 0 && j == 0) {
                         blk.myConfig.viscous = false;
-                        sss_preconditioner(blk, nConserved, dt, 1.0e-6, 1.0e-6);
+                        sss_preconditioner(blk, nConserved, dt);
                         blk.myConfig.viscous = savedViscousFlag;
                     }
                     int cellCount = 0;
