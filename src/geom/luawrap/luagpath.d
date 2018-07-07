@@ -173,9 +173,15 @@ extern(C) int pathIntersect2D(T, string MTname)(lua_State* L)
  */
 extern(C) int newLine(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Line:new{p0=a, p1=b}; ";
+        errMsg ~= "maybe you tried Line.new{p0=a, p1=b}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Line:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -235,9 +241,15 @@ extern(C) int newLine(lua_State* L)
  */
 extern(C) int newArc(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Arc:new{p0=a, p1=b, centre=c}; ";
+        errMsg ~= "maybe you tried Arc.new{p0=a, p1=b, centre=c}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Arc:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -307,9 +319,15 @@ extern(C) int newArc(lua_State* L)
  */
 extern(C) int newArc3(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Arc3:new{p0=a, pmid=m, p1=b}; ";
+        errMsg ~= "maybe you tried Arc3.new{p0=a, pmid=m, p1=b}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Arc3:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -380,9 +398,15 @@ extern(C) int newArc3(lua_State* L)
  */
 extern(C) int newHelix(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Helix:new{table-of-args}; ";
+        errMsg ~= "maybe you tried Helix.new{table-of-args}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Helix:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -515,9 +539,15 @@ extern(C) int newHelix(lua_State* L)
  */
 extern(C) int newBezier(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Bezier:new{points={p0, p1, p2}}; ";
+        errMsg ~= "maybe you tried Bezier.new{points={p0, p1, p2}}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Bezier:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -576,9 +606,15 @@ extern(C) int newBezier(lua_State* L)
  */
 extern(C) int newPolyline(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Polyline:new{segments={path1, path2}}; ";
+        errMsg ~= "maybe you tried Polyline.new{segments={path1, path2}}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Polyline:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -636,9 +672,15 @@ extern(C) int newPolyline(lua_State* L)
  */
 extern(C) int newSpline(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Spline:new{points={p0, p1, p2, p3, p4}}; ";
+        errMsg ~= "maybe you tried Spline.new{points={p0, p1, p2, p3, p4}}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Spline:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -685,15 +727,21 @@ extern(C) int newSpline(lua_State* L)
  *
  * Example construction in Lua:
  * ---------------------------------
- * spl = Spline:new{filename="something.dat"}
+ * spl = Spline2:new{filename="something.dat"}
  * -- Expecting 3 numbers per line, space-separated.
  * ---------------------------------
  */
 extern(C) int newSpline2(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Spline2:new{filename=\"something.dat\"}; ";
+        errMsg ~= "maybe you tried Spline2.new{filename=\"something.dat\"}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to Spline2:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -806,9 +854,15 @@ public:
 
 extern(C) int newLuaFnPath(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected LuaFnPath:new{luaFnName=\"myLuaFunction\"}; ";
+        errMsg ~= "maybe you tried LuaFnPath.new{luaFnName=\"myLuaFunction\"}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to LuaFnPath:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -852,14 +906,20 @@ extern(C) int newLuaFnPath(lua_State* L)
  */
 extern(C) int newArcLengthParameterizedPath(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected ArcLengthParameterizedPath:new{}; ";
+        errMsg ~= "maybe you tried ArcLengthParameterizedPath.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to ArcLengthParameterizedPath:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
     }
-    if (!checkAllowedNames(L, 1, ["underlying_path"])) {
+    if ( !checkAllowedNames(L, 1, ["underlying_path"]) ) {
         string errMsg = "Error in call to ArcLengthParameterizedPath:new{}. " ~
             "Invalid name in table.";
         luaL_error(L, errMsg.toStringz);
@@ -899,9 +959,15 @@ extern(C) int newArcLengthParameterizedPath(lua_State* L)
  */
 extern(C) int newSubRangedPath(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected SubRangedPath:new{}; ";
+        errMsg ~= "maybe you tried SubRangedPath.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to SubRangedPath:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -981,9 +1047,15 @@ extern(C) int t1Path(T, string MTname)(lua_State* L)
  */
 extern(C) int newReversedPath(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected ReversedPath:new{}; ";
+        errMsg ~= "maybe you tried ReversedPath.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to ReversedPath:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -1026,9 +1098,15 @@ extern(C) int newReversedPath(lua_State* L)
  */
 extern(C) int newTranslatedPath(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected TranslatedPath:new{}; ";
+        errMsg ~= "maybe you tried TranslatedPath.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to TranslatedPath:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -1081,9 +1159,15 @@ extern(C) int newTranslatedPath(lua_State* L)
  */
 extern(C) int newMirrorImagePath(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected MirrorImagePath:new{}; ";
+        errMsg ~= "maybe you tried MirrorImagePath.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to MirrorImagePath:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
@@ -1142,9 +1226,15 @@ extern(C) int newMirrorImagePath(lua_State* L)
  */
 extern(C) int newRotatedAboutZAxisPath(lua_State* L)
 {
-    lua_remove(L, 1); // remove first argument "this"
     int narg = lua_gettop(L);
-    if ( narg == 0 || !lua_istable(L, 1) ) {
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected RotatedAboutZAxisPath:new{}; ";
+        errMsg ~= "maybe you tried RotatedAboutZAxisPath.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    lua_remove(L, 1); // remove first argument "this"
+    if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in call to RotatedAboutZAxisPath:new{}.; " ~
             "A table containing arguments is expected, but no table was found.";
         luaL_error(L, errMsg.toStringz);
