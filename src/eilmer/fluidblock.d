@@ -125,7 +125,7 @@ public:
     ConservedQuantities maxRate, residuals;
     double normAcc, dotAcc;
     size_t nvars;
-    Matrix!number transform;
+    Matrix!number Minv;
     number[] FU, dU, Dinv, r0, x0;
     number[] v, w, zed;
     number[] g0, g1;

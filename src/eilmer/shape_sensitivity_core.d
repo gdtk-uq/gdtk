@@ -71,7 +71,7 @@ private lua_State* L; // module-local Lua interpreter
 /**********************/
 /* Frechet Derivative */
 /**********************/
-void evalJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref number[] p, number EPS) {
+void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref number[] p, number EPS) {
     blk.clear_fluxes_of_conserved_quantities();
     foreach (cell; blk.cells) cell.clear_source_vector();
     int cellCount = 0;
@@ -95,6 +95,32 @@ void evalJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v, ref numb
         cellCount += nPrimitive;
     }
 }
+
+void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[] v, ref number[] p, number EPS) {
+    // We perform a Frechet derivative to evaluate J*D^(-1)v
+    blk.clear_fluxes_of_conserved_quantities();
+    foreach (cell; blk.cells) cell.clear_source_vector();
+    int cellCount = 0;
+    foreach (cell; blk.cells) {
+        cell.U[1].copy_values_from(cell.U[0]);
+        cell.U[1].mass += EPS*v[cellCount+0];
+        cell.U[1].momentum.refx += EPS*v[cellCount+1];
+        cell.U[1].momentum.refy += EPS*v[cellCount+2];
+        cell.U[1].total_energy += EPS*v[cellCount+3];
+        cell.decode_conserved(0, 1, 0.0);
+        cellCount += nConserved;
+    }
+    steadystate_core.evalRHS(0.0, 1);
+    cellCount = 0;
+    foreach (cell; blk.cells) {
+        p[cellCount+0] = cell.dUdt[1].mass.im/EPS.im;
+        p[cellCount+1] = cell.dUdt[1].momentum.x.im/EPS.im;
+        p[cellCount+2] = cell.dUdt[1].momentum.y.im/EPS.im;
+        p[cellCount+3] = cell.dUdt[1].total_energy.im/EPS.im;
+        cellCount += nConserved;
+    }
+}
+
 
 /***************************/
 /* FLOW JACOBIAN FUNCTIONS */
@@ -1571,7 +1597,7 @@ void sss_preconditioner_initialisation(FluidBlock blk, size_t nConservative) {
     }
 
     // initialise objects
-    blk.transform = new Matrix!number(nConservative, nConservative);
+    blk.Minv = new Matrix!number(nConservative, nConservative);
     foreach (cell; blk.cells) {
         cell.dPrimitive = new Matrix!number(nConservative, nConservative);
         cell.dConservative = new Matrix!number(nConservative, nConservative);
@@ -1738,31 +1764,31 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJaco
     foreach (cell; blk.cells) {
         // form transformation matrix (TODO: genearlise, currently only for 2D Euler/Laminar Navier-Stokes).
         number gamma = gmodel.gamma(cell.fs.gas);
-        // first row
-        blk.transform[0,0] = to!number(1.0);
-        blk.transform[0,1] = to!number(0.0);
-        blk.transform[0,2] = to!number(0.0);
-        blk.transform[0,3] = to!number(0.0);
+        // form inverse transformation matrix
+        blk.Minv[0,0] = to!number(1.0);
+        blk.Minv[0,1] = to!number(0.0);
+        blk.Minv[0,2] = to!number(0.0);
+        blk.Minv[0,3] = to!number(0.0);
         // second row
-        blk.transform[1,0] = -cell.fs.vel.x/cell.fs.gas.rho;
-        blk.transform[1,1] = 1.0/cell.fs.gas.rho;
-        blk.transform[1,2] = to!number(0.0);
-        blk.transform[1,3] = to!number(0.0);
+        blk.Minv[1,0] = -cell.fs.vel.x/cell.fs.gas.rho;
+        blk.Minv[1,1] = 1.0/cell.fs.gas.rho;
+        blk.Minv[1,2] = to!number(0.0);
+        blk.Minv[1,3] = to!number(0.0);
         // third row
-        blk.transform[2,0] = -cell.fs.vel.y/cell.fs.gas.rho;
-        blk.transform[2,1] = to!number(0.0);
-        blk.transform[2,2] = 1.0/cell.fs.gas.rho;
-        blk.transform[2,3] = to!number(0.0);
+        blk.Minv[2,0] = -cell.fs.vel.y/cell.fs.gas.rho;
+        blk.Minv[2,1] = to!number(0.0);
+        blk.Minv[2,2] = 1.0/cell.fs.gas.rho;
+        blk.Minv[2,3] = to!number(0.0);
         // fourth row
-        blk.transform[3,0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
-        blk.transform[3,1] = -cell.fs.vel.x*(gamma-1);
-        blk.transform[3,2] = -cell.fs.vel.y*(gamma-1);
-        blk.transform[3,3] = gamma-1.0;
-
+        blk.Minv[3,0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
+        blk.Minv[3,1] = -cell.fs.vel.x*(gamma-1);
+        blk.Minv[3,2] = -cell.fs.vel.y*(gamma-1);
+        blk.Minv[3,3] = gamma-1.0;
         
-        nm.bbla.dot!number(cell.dPrimitive, blk.transform, cell.dConservative);
+        //nm.bbla.dot!number(blk.M, cell.dPrimitive, blk.Tmp);
+        nm.bbla.dot!number(cell.dPrimitive, blk.Minv, cell.dConservative);
 
-        number dtInv = 1.0/dt;
+        number dtInv = 0.0; //1.0/dt;
         foreach (i; 0 .. np) {
             cell.dConservative[i,i] += dtInv;
         }

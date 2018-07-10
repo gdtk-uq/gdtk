@@ -300,7 +300,7 @@ void main(string[] args) {
             }
 
             // Frechet derivative of Jv
-            evalJacobianVecProd(blk, nPrimitive, v, p2, EPS);
+            evalPrimitiveJacobianVecProd(blk, nPrimitive, v, p2, EPS);
 
             string fileName = "flow_jacobian_test.output";
             auto outFile = File(fileName, "w");
@@ -322,11 +322,9 @@ void main(string[] args) {
         size_t nPrimitive; 
         if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
         else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
-
-        // construct the flow Jacobian
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
 
-        /* Construct Flow Jacobian */
+        /* Construct Flow Jacobian Transpose */
         foreach (myblk; parallel(localFluidBlocks,1)) {
             // make sure ghost cells are filled before proceeding...
             myblk.applyPreReconAction(0.0, 0, 0);
@@ -339,25 +337,15 @@ void main(string[] args) {
         }
 
         
-        // form the diagonal blocks used in the preconditioner
+        /* form the diagonal blocks used in the preconditioner */
         foreach (myblk; parallel(localFluidBlocks,1)) {
             sss_preconditioner_initialisation(myblk, nPrimitive);
             sss_preconditioner(myblk, nPrimitive, 1.0e-06);
         }
 
 
-        // compare diagonal blocks from both methods
-        foreach ( myblk; localFluidBlocks) {
-            foreach ( cell; myblk.cells) {
-                //writeln(cell.dPrimitive);
-            }
-            //writeln(myblk.JlocT);
-        }
-        
-        
-        string fileName = "sss_preconditioner_test.output";
-
-        
+        /* compare primitive diagonal blocks from both methods */
+        string fileName = "sss_preconditioner_test.output";        
         auto outFile = File(fileName, "w");
         foreach (myblk; parallel(localFluidBlocks,1)) {
             foreach( cell; myblk.cells ) {
@@ -372,12 +360,105 @@ void main(string[] args) {
             }
         }
         
-        //assert(approxEqualNumbers(p2, p1, 1.0e-10, 1.0e-01), "Steady-state Solver Preconditioner Test: FAILED.");
-        
-        writeln("Steady-state Solver Preconditioner Test: COMPLETE.");
-        return;
-    }
+        /* verify transformation matrix via Frechet derivative */
+        foreach (blk; localFluidBlocks) {
+            
+            // compute directional vector
+            number[] v;
+            v.length = blk.cells.length*nPrimitive;
+            
+            foreach ( i; 0..blk.cells.length*nPrimitive) {
+                v[i] = i+1; // theoretically can be any vector.
+            }
+            
+            // normalise directional vector
+            number norm = 0.0;
+            foreach( i; 0..v.length) {
+                norm += v[i]*v[i];
+            }
+            norm = sqrt(norm);
+            foreach( i; 0..v.length) {
+                v[i] = v[i]/norm;
+            }
+            
+            // result vectors
+            number[] p1;
+            p1.length = blk.cells.length*nPrimitive;
+            number[] p2;
+            p2.length = blk.cells.length*nPrimitive;
 
+            /* full 1st order conservative flow Jacobian via transformation from primitive flow Jacobian */
+            // transform primitive Jacobian to conservative Jacobian
+            Matrix!number Jloc;
+            Matrix!number Minv;
+            Jloc = new Matrix!number(nPrimitive*blk.cells.length, nPrimitive*blk.cells.length);
+            Minv = zeros!number(nPrimitive*blk.cells.length, nPrimitive*blk.cells.length);
+            
+            foreach ( cell; blk.cells ) {
+                auto gmodel = blk.myConfig.gmodel;
+                number gamma = gmodel.gamma(cell.fs.gas);
+                // form inverse transformation matrix
+                blk.Minv[0,0] = to!number(1.0);
+                blk.Minv[0,1] = to!number(0.0);
+                blk.Minv[0,2] = to!number(0.0);
+                blk.Minv[0,3] = to!number(0.0);
+                // second row
+                blk.Minv[1,0] = -cell.fs.vel.x/cell.fs.gas.rho;
+                blk.Minv[1,1] = 1.0/cell.fs.gas.rho;
+                blk.Minv[1,2] = to!number(0.0);
+                blk.Minv[1,3] = to!number(0.0);
+                // third row
+                blk.Minv[2,0] = -cell.fs.vel.y/cell.fs.gas.rho;
+                blk.Minv[2,1] = to!number(0.0);
+                blk.Minv[2,2] = 1.0/cell.fs.gas.rho;
+                blk.Minv[2,3] = to!number(0.0);
+                // fourth row
+                blk.Minv[3,0] = 0.5*(gamma-1.0)*(cell.fs.vel.x*cell.fs.vel.x+cell.fs.vel.y*cell.fs.vel.y);
+                blk.Minv[3,1] = -cell.fs.vel.x*(gamma-1);
+                blk.Minv[3,2] = -cell.fs.vel.y*(gamma-1);
+                blk.Minv[3,3] = gamma-1.0;
+                
+                size_t id = cell.id;
+                foreach ( i; 0..nPrimitive) {
+                    foreach ( j; 0..nPrimitive) {
+                        Minv[id*nPrimitive+i, id*nPrimitive+j] = blk.Minv[i, j];
+                    }
+                }
+            }
+
+            /* transformation */
+            for (size_t i = 0; i < nPrimitive*blk.cells.length; i++) {
+                for (size_t j = 0; j < nPrimitive*blk.cells.length; j++) {
+                    Jloc[i,j] = to!number(0.0);
+                    for (size_t k = 0; k < nPrimitive*blk.cells.length; k++) {
+                        Jloc[i,j] += blk.JlocT[k,i]*Minv[k,j]; // reverse i,k for Transpose
+                    }
+                }
+            }
+            
+            /* explicit multiplication of Jv */
+            foreach ( i; 0..blk.cells.length*nPrimitive) {
+                p1[i] = 0.0;
+                foreach ( j; 0..blk.cells.length*nPrimitive) {
+                    p1[i] += Jloc[i,j]*v[j];
+                }
+            }
+
+    
+            /* Frechet derivative of Jv */
+            evalConservativeJacobianVecProd(blk, nPrimitive, v, p2, EPS);
+            
+            fileName = "conservative_jacobian_test.output";
+            outFile = File(fileName, "w");
+            foreach( i; 0..v.length ) {
+                size_t id = i/4;
+                outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
+            }
+            
+            writeln("Steady-state Solver Preconditioner Test: COMPLETE.");
+            return;
+        }
+    }
     
     /* Program should terminate before here */
     assert(0, "Oh dear. The Eilmer Shape Sensitivity Calculator executed correctly, however, nothing meaningful has been computed. Please check command line flags.");
