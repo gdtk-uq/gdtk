@@ -1719,9 +1719,9 @@ void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np,
 void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJacobian=1) {
     // temporarily switch the interpolation order of the config object to that of the Jacobian 
     version(complex_numbers) Complex!double EPS = complex(0.0, 1.0e-30);
-    else double EPS = 1.0;
+    else double EPS;
     
-    blk.myConfig.interpolation_order = to!int(orderOfJacobian);
+    blk.myConfig.interpolation_order = 1;
 
     // compute diagonal of 1st order Jacobian (w.r.t. primitive variables)
     foreach(pcell; blk.cells) {
@@ -1785,16 +1785,15 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJaco
         blk.Minv[3,2] = -cell.fs.vel.y*(gamma-1);
         blk.Minv[3,3] = gamma-1.0;
         
-        //nm.bbla.dot!number(blk.M, cell.dPrimitive, blk.Tmp);
         nm.bbla.dot!number(cell.dPrimitive, blk.Minv, cell.dConservative);
-
-        number dtInv = 0.0; //1.0/dt;
+        number dtInv = 1.0/dt;
         foreach (i; 0 .. np) {
             cell.dConservative[i,i] += dtInv;
         }
         
         // Get an LU decomposition ready for repeated solves.
         nm.bbla.LUDecomp!number(cell.dConservative, cell.pivot);
+
     }
     
     // reset interpolation order to the global setting
