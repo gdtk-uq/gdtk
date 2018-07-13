@@ -46,11 +46,18 @@ Matrix!double checkMatrix(lua_State *L, int index)
 
 extern(C) int newMatrix(lua_State *L)
 {
+    int narg = lua_gettop(L);
+    if ( !(narg == 2 && lua_istable(L, 1)) ) {
+        // We did not get what we expected as arguments.
+        string errMsg = "Expected Matrix:new{}; ";
+        errMsg ~= "maybe you tried Matrix.new{}.";
+        luaL_error(L, errMsg.toStringz);
+    }
     lua_remove(L, 1); // remove first argument "this".
     if ( !lua_istable(L, 1) ) {
         string errMsg = "Error in Matrix:new{} constructor.\n";
         errMsg ~= "A table of keyword arguments is expected.\n";
-        throw new Error(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     
     // Look for square-matrix constructor: Matrix:new{n=...}
@@ -75,7 +82,7 @@ extern(C) int newMatrix(lua_State *L)
             string errMsg = "Error in Matrix:new{} constructor.\n";
             errMsg ~= "You have supplied an 'nrows' value but not a corresponding 'ncols' value.\n";
             errMsg ~= "The form of this constructor is Matrix:new{nrows=..., ncols=...}\n";
-            throw new Error(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         int ncols = luaL_checkint(L, -1);
         lua_pop(L, 1);
@@ -93,7 +100,7 @@ extern(C) int newMatrix(lua_State *L)
         if (a is null) {
             string errMsg = "Error in Matrix:new{} constructor.\n";
             errMsg ~= "You have used the 'other' keyword argument but have not supplied a valid Matrix object.\n";
-            throw new Error(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         auto mat = new Matrix!double(a);
         matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, mat);
@@ -118,7 +125,7 @@ extern(C) int newMatrix(lua_State *L)
         else {
             string errMsg = "Error in Matrix:new{} constructor.\n";
             errMsg ~= "One of the values in your 'vec' array is not a valid number.\n";
-            throw new Error(errMsg);
+            luaL_error(L, errMsg.toStringz);
         }
         lua_pop(L, 1);
     }
@@ -127,7 +134,7 @@ extern(C) int newMatrix(lua_State *L)
     if ( lua_isnil(L, -1) ) {
         string errMsg = "Error in Matrix:new{} constructor.\n";
         errMsg ~= "You supplied a 'vec' keyword argument, but no valid 'orient' argument.\n";
-        throw new Error(errMsg);
+        luaL_error(L, errMsg.toStringz);
     }
     string orient = to!string(luaL_checkstring(L, -1));
     lua_pop(L, 1);

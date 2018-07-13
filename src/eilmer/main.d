@@ -479,6 +479,7 @@ usageMsg ~= to!string(totalCPUs) ~" on this machine
             registerChemistryUpdate(L, LUA_GLOBALSINDEX);
             registeridealgasflowFunctions(L);
             registergasflowFunctions(L);
+            registerBBLA(L);
             if ( luaL_dofile(L, toStringz(scriptFile)) != 0 ) {
                 writeln("There was a problem in the user-supplied Lua script: ", scriptFile);
                 string errMsg = to!string(lua_tostring(L, -1));
