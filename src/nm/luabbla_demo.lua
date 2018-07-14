@@ -74,5 +74,8 @@ print("Ab=", Ab)
 print("Apply Gauss-Jordan elimination:")
 gaussJordan(Ab)
 print("Ab=", Ab)
+print("Extract inverse matrix:")
+Ainv = Ab:getSlice(0,4, 4,8)
+print("Ainv=", Ainv)
 
 print("Done.")

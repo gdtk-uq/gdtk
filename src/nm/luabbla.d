@@ -178,6 +178,31 @@ extern(C) int set(lua_State *L)
     return 0;
 }
 
+extern(C) int getSlice(lua_State *L)
+{
+    auto M = checkMatrix(L, 1);
+    int row0 = luaL_checkint(L, 2);
+    int row1 = luaL_checkint(L, 3);
+    int col0 = luaL_checkint(L, 4);
+    int col1 = luaL_checkint(L, 5);
+    if (row0 >= 0 && row0 < row1 && row1 <= M.nrows &&
+        col0 >= 0 && col0 < col1 && col1 <= M.ncols) {
+        auto mat = new Matrix!double(row1-row0, col1-col0);
+        foreach (i; row0 .. row1) {
+            foreach (j; col0 .. col1) {
+                mat[i-row0, j-col0] = M[i, j];
+            }
+        }
+        matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, mat);
+    } else {
+        lua_pushnil(L);
+        string errMsg = "Error in Matrix:getSlice() method.\n";
+        errMsg ~= "Something is wrong with the specified ranges.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    return 1;
+}
+
 extern(C) int add(lua_State *L)
 {
     auto M = checkMatrix(L, 1);
@@ -318,6 +343,8 @@ void registerBBLA(lua_State *L)
     lua_setfield(L, -2, "get");
     lua_pushcfunction(L, &set);
     lua_setfield(L, -2, "set");
+    lua_pushcfunction(L, &getSlice);
+    lua_setfield(L, -2, "getSlice");
     lua_pushcfunction(L, &add);
     lua_setfield(L, -2, "__add");
     lua_pushcfunction(L, &subtract);
