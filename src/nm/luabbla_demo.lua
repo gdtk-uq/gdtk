@@ -74,8 +74,14 @@ print("Ab=", Ab)
 print("Apply Gauss-Jordan elimination:")
 gaussJordan(Ab)
 print("Ab=", Ab)
+
 print("Extract inverse matrix:")
 Ainv = Ab:getSlice(0,4, 4,8)
 print("Ainv=", Ainv)
+print("Compute solution via dot product and compare:")
+x2 = Ainv:dot(b)
+print("x2=", x2)
+diff = x2 - x
+print("diff=", diff)
 
 print("Done.")

@@ -201,7 +201,7 @@ extern(C) int getSlice(lua_State *L)
         luaL_error(L, errMsg.toStringz);
     }
     return 1;
-}
+} // end getSlice()
 
 extern(C) int add(lua_State *L)
 {
@@ -221,13 +221,36 @@ extern(C) int subtract(lua_State *L)
     return 1;
 }
 
+extern(C) int dotProduct(lua_State *L)
+{
+    auto M = checkMatrix(L, 1); // this
+    auto other = checkMatrix(L, 2);
+    if (M.ncols == other.nrows) {
+        // We have consistent dimensions and can compute the dot product.
+        auto mat = new Matrix!double(M.nrows, other.ncols);
+        foreach (i; 0 .. M.nrows) {
+            foreach (j; 0 .. other.ncols) {
+                double v = 0.0;
+                foreach (k; 0 .. M.ncols) { v += M[i,k] * other[k,j]; }
+                mat[i, j] = v;
+            }
+        }
+        matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, mat);
+    } else {
+        lua_pushnil(L);
+        string errMsg = "Error in Matrix:dot() method. ";
+        errMsg ~= "Inconsistent dimensions.\n";
+        luaL_error(L, errMsg.toStringz);
+    }
+    return 1;
+} // end dotProduct()
+
 extern(C) int tostring(lua_State *L)
 {
     auto M = checkMatrix(L, 1);
     lua_pushstring(L, toStringz(M.toString()));
     return 1;
 }
-
 
 extern(C) int zerosMatrix(lua_State *L)
 {
@@ -349,6 +372,8 @@ void registerBBLA(lua_State *L)
     lua_setfield(L, -2, "__add");
     lua_pushcfunction(L, &subtract);
     lua_setfield(L, -2, "__sub");
+    lua_pushcfunction(L, &dotProduct);
+    lua_setfield(L, -2, "dot");
     lua_pushcfunction(L, &tostring);
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &zerosMatrix);
