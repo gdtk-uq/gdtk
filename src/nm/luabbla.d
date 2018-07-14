@@ -261,6 +261,44 @@ extern(C) int solve(lua_State *L)
     return 1;
 }
 
+extern(C) int hstack(lua_State *L)
+{
+    // We expect a single argument that is a table (array) of Matrix objects.
+    if (!lua_istable(L, 1)) {
+        string errMsg = "Error in call to hstack().; " ~
+            "An array of Matrix objects is expected, but no table was found.";
+        luaL_error(L, errMsg.toStringz);
+    }
+    // Expect Matrix objects at array positions within that table.
+    Matrix!double[] mList;
+    int position = 1;
+    while (true) {
+        lua_rawgeti(L, 1, position);
+        if (lua_isnil(L, -1)) { lua_pop(L, 1); break; }
+        auto m = checkMatrix(L, -1);
+        lua_pop(L, 1);
+        if (m is null) break;
+        mList ~= m;
+        ++position;
+    }
+    lua_pop(L, 1); // dispose of original table
+    if (mList.length == 0) {
+        string errMsg = "Error in call to hstack(). No valid Matrix objects found.";
+        luaL_error(L, errMsg.toStringz());
+    }
+    auto result = nm.bbla.hstack!double(mList);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, result);
+    return 1;
+} // end hstack()
+
+extern(C) int gaussJordan(lua_State *L)
+{
+    auto Ab = checkMatrix(L, 1);
+    nm.bbla.gaussJordanElimination!double(Ab);
+    return 0;
+}
+
+
 void registerBBLA(lua_State *L)
 {
     luaL_newmetatable(L, MatrixMT.toStringz);
@@ -301,6 +339,10 @@ void registerBBLA(lua_State *L)
     lua_setglobal(L, "transpose");
     lua_pushcfunction(L, &solve);
     lua_setglobal(L, "solve");
+    lua_pushcfunction(L, &hstack);
+    lua_setglobal(L, "hstack");
+    lua_pushcfunction(L, &gaussJordan);
+    lua_setglobal(L, "gaussJordan");
 
 }
 

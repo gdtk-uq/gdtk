@@ -8,12 +8,14 @@ print("Basic constructor resulting in nan values:")
 a = Matrix:new{n=4}
 assert(a:nrows() == 4)
 assert(a:ncols() == 4)
+print("Note that a Matrix is considered an array or rows.")
 print("a=", a)
 
 print("Simple constructor and set an element:")
 a:zeros()
 a:set(0,0, 5.0)
 assert(a:get(0,0) == 5.0)
+print("Note that indices start at zero.")
 print("a=", a)
 
 print("Some arithmetic:")
@@ -58,5 +60,19 @@ assert(math.abs(x:get(3,0) - -2.0) < 1.0e-6)
 print("A=", A)
 print("b=", b)
 print("x=", x)
+
+print("Stack some matrices horizontally:")
+a1 = eye(2)
+a2 = zeros(2, 2)
+a3 = eye(2)
+h = hstack{a1, a2, a3}
+print("h=", h)
+
+print("Build augmented matrix:")
+Ab = hstack{A, eye(4)}
+print("Ab=", Ab)
+print("Apply Gauss-Jordan elimination:")
+gaussJordan(Ab)
+print("Ab=", Ab)
 
 print("Done.")
