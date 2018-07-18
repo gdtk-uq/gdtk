@@ -237,9 +237,15 @@ void compute_and_store_loads(FVInterface iface, number cellWidthNormalToSurface,
                         +(tau_xz*l+tau_yz*m+sigma_z*n)*(tau_xz*l+tau_yz*m+sigma_z*n)
                         -sigma_wall*sigma_wall);
         // tau_wall directional cosines
-        l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
-        m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
-        n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
+        if (tau_wall == 0.0){
+            l_tau = l;
+            m_tau = m;
+            n_tau = n;
+        } else {
+            l_tau = 1.0/tau_wall * ((sigma_x - sigma_wall)*l+tau_xy*m+tau_xz*n);
+            m_tau = 1.0/tau_wall * (tau_xy*l+(sigma_y - sigma_wall)*m+tau_yz*n);
+            n_tau = 1.0/tau_wall * (tau_xz*l+tau_yz*m+(sigma_z-sigma_wall)*n);
+        }
         // compute y+
         nu_wall = mu_wall / rho_wall;
         u_star = sqrt(tau_wall / rho_wall);
