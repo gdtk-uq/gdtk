@@ -88,10 +88,10 @@ void evalPrimitiveJacobianVecProd(FluidBlock blk, size_t nPrimitive, number[] v,
     steadystate_core.evalRHS(0.0, 0);
     cellCount = 0;
     foreach (cell; blk.cells) {
-        p[cellCount+0] = cell.dUdt[0].mass.im/EPS.im; 
-        p[cellCount+1] = cell.dUdt[0].momentum.x.im/EPS.im;
-        p[cellCount+2] = cell.dUdt[0].momentum.y.im/EPS.im; 
-        p[cellCount+3] = cell.dUdt[0].total_energy.im/EPS.im;
+        p[cellCount+0] = -cell.dUdt[0].mass.im/EPS.im; 
+        p[cellCount+1] = -cell.dUdt[0].momentum.x.im/EPS.im;
+        p[cellCount+2] = -cell.dUdt[0].momentum.y.im/EPS.im; 
+        p[cellCount+3] = -cell.dUdt[0].total_energy.im/EPS.im;
         cellCount += nPrimitive;
     }
 }
@@ -113,10 +113,10 @@ void evalConservativeJacobianVecProd(FluidBlock blk, size_t nConserved, number[]
     steadystate_core.evalRHS(0.0, 1);
     cellCount = 0;
     foreach (cell; blk.cells) {
-        p[cellCount+0] = cell.dUdt[1].mass.im/EPS.im;
-        p[cellCount+1] = cell.dUdt[1].momentum.x.im/EPS.im;
-        p[cellCount+2] = cell.dUdt[1].momentum.y.im/EPS.im;
-        p[cellCount+3] = cell.dUdt[1].total_energy.im/EPS.im;
+        p[cellCount+0] = -cell.dUdt[1].mass.im/EPS.im;
+        p[cellCount+1] = -cell.dUdt[1].momentum.x.im/EPS.im;
+        p[cellCount+2] = -cell.dUdt[1].momentum.y.im/EPS.im;
+        p[cellCount+3] = -cell.dUdt[1].total_energy.im/EPS.im;
         cellCount += nConserved;
     }
 }
@@ -1672,7 +1672,7 @@ void apply_boundary_conditions_for_sss_preconditioner(FluidBlock blk, size_t np,
                                 integral -= bcell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                             }
                             number entry = volInv * integral;                    
-                            dRdq[ip][jp] = entry;
+                            dRdq[ip][jp] = -entry;
                         }
                     }
 
@@ -1743,7 +1743,7 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJaco
                     integral -= pcell.outsign[fi] * iface.dFdU[ip][jp] * iface.area[0]; // gtl=0
                 }
                 number entry = volInv * integral;                    
-                pcell.dPrimitive[ip,jp] = entry;
+                pcell.dPrimitive[ip,jp] = -entry;
             }
         }
         // clear the interface flux Jacobian entries
