@@ -247,8 +247,17 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                     }
                 }
 
-                if ( failedAttempt )
+                if ( failedAttempt ) {
+                    // return cell flow-states to their original state
+                    foreach (blk; parallel(localFluidBlocks,1)) {
+                        bool local_with_k_omega = with_k_omega;
+                        int cellCount = 0;
+                        foreach (cell; blk.cells) {
+                            cell.decode_conserved(0, 0, 0.0);
+                        }
+                    }
                     continue;
+		}
 
                 // If we get here, things are good. Put flow state into U[0]
                 // ready for next iteration.
@@ -492,8 +501,17 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
                 }
             }
 
-            if ( failedAttempt )
+            if ( failedAttempt ) {
+		// return cell flow-states to their original state
+		foreach (blk; parallel(localFluidBlocks,1)) {
+		    bool local_with_k_omega = with_k_omega;
+		    int cellCount = 0;
+		    foreach (cell; blk.cells) {
+			cell.decode_conserved(0, 0, 0.0);
+		    }
+		}
                 continue;
+	    }
 
             // If we get here, things are good. Put flow state into U[0]
             // ready for next iteration.
