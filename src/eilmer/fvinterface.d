@@ -240,7 +240,15 @@ public:
         repr ~= ", q=" ~ to!string(q);
         repr ~= ", F=" ~ to!string(F);
         repr ~= ", grad=" ~ to!string(grad);
-        repr ~= ", cloud_pos=" ~ to!string(cloud_pos);
+        repr ~= ", cloud_pos=[";
+        // Because the positions are held as pointers to Vector3 objects,
+        // we will get more interesting information by printing the objects
+        // that they point to.
+        foreach (i, vtxptr; cloud_pos) {
+            if (i > 0) { repr ~= ", "; }
+            repr ~= to!string(*vtxptr);
+        }
+        repr ~= "]";
         repr ~= ", cloud_fs=" ~ to!string(cloud_fs);
         repr ~= ")";
         return to!string(repr);
