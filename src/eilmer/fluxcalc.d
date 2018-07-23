@@ -1091,9 +1091,18 @@ void roe(in FlowState Lft, in FlowState Rght, ref FVInterface IFace, GasModel gm
     foreach ( i; 0..5) F.total_energy -= 0.5*alpha[i]*fabs(lambda[i])*K[i][4];
 
     // remaining fluxes
-    // TODO: think about whether these are being handled correctly - currently just a carbon copy from the AUSMDV method.
-    F.tke = F.mass*Lft.tke;
-    F.omega = F.mass*Lft.omega;
-    foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*Lft.gas.massf[isp]; }
-    foreach (imode; 0 .. nmodes) { F.energies[imode] = F.mass*Lft.gas.u_modes[imode]; }
+    if (F.mass >= 0.0) {
+        /* Wind is blowing from the left */
+        F.tke = F.mass*Lft.tke;
+        F.omega = F.mass*Lft.omega;
+        foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*Lft.gas.massf[isp]; }
+        foreach (imode; 0 .. nmodes) { F.energies[imode] = F.mass*Lft.gas.u_modes[imode]; }
+    } else {
+        /* Wind is blowing from the right */
+        F.tke = F.mass*Rght.tke;
+        F.omega = F.mass*Rght.omega;
+        foreach (isp; 0 .. nsp) { F.massf[isp] = F.mass*Rght.gas.massf[isp]; }
+        foreach (imode; 0 .. nmodes) { F.energies[imode] = F.mass*Rght.gas.u_modes[imode]; }
+    }
 } // end roe()
+
