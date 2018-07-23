@@ -11,6 +11,7 @@
 # terms. It is a transliteration of PJ's original work
 # done using Maxima.
 
+from __future__ import print_function
 from sympy import *
 from analytic_solution import *
 
@@ -26,7 +27,7 @@ fe_s = diff(e_s, t) - diff(k_s*diff(T_s, x), x) - diff(k_s*diff(T_s, y), y)
 if __name__ == '__main__':
     import re
     from sympy.utilities.codegen import codegen
-    print 'Generating manufactured source terms.'
+    print('Generating manufactured source terms.')
     [(f_name, f_code), (h_name, f_header)] = codegen(
         [("fe_s", fe_s)], "F95", "test", header=False)
     # Convert F95 to Lua code
@@ -62,7 +63,7 @@ if __name__ == '__main__':
     fout = open('udf-solid-source-terms.lua', 'w')
     fout.write(lua_text)
     fout.close()
-    print 'Done converting to Lua.'
+    print('Done converting to Lua.')
 
     
 

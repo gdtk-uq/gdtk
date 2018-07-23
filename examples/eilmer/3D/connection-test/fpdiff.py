@@ -7,8 +7,10 @@ Can be used as a stand-alone script or can be imported into a Python
 program for more extensive application.
 
 PJ, 28-Sep-02
+    23-Jul-2018 Updated to Python3
 """
 
+from __future__ import print_function
 import sys, os, string
 
 def count_differences(filenameA, filenameB, tolerance=1.0e-9, do_print=0):
@@ -47,20 +49,20 @@ def count_differences(filenameA, filenameB, tolerance=1.0e-9, do_print=0):
             try:
                 a = string.atof(itemA)
                 b = string.atof(itemB)
-            except ValueError, e:
+            except ValueError as e:
                 break
             if abs(a - b)/(0.5 * (abs(a) + abs(b)) + 1.0) > tolerance :
                 linediff += 1
         if linediff > 0 and do_print == 1:
-            print 'Difference at line', line_count
-            print 'fileA:', lineA
-            print 'fileB:', lineB
+            print('Difference at line', line_count)
+            print('fileA:', lineA)
+            print('fileB:', lineB)
         difference_count += linediff
     return difference_count
 
 
 def print_usage_message():
-    print 'Usage: fpdiff <fileA> <fileB> ?tol=<tolerance>? ?summary?'
+    print('Usage: fpdiff <fileA> <fileB> ?tol=<tolerance>? ?summary?')
 
 #-----------------------------------------------------------------------------    
 if __name__ == '__main__':
@@ -88,8 +90,8 @@ if __name__ == '__main__':
                 
         diff_count = count_differences(filenameA, filenameB, tolerance, 1)
         if print_summary:
-            print 'Found', diff_count, 'differences with tolerance', tolerance
+            print('Found', diff_count, 'differences with tolerance', tolerance)
     else:
-        print 'One file (at least) is invalid.'
+        print('One file (at least) is invalid.')
         print_usage_message()
         

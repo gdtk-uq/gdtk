@@ -11,6 +11,7 @@
 # terms. It is a transliteration of PJ's original work
 # done using Maxima.
 
+from __future__ import print_function
 from sympy import *
 from analytic_solution import *
 
@@ -55,7 +56,7 @@ fe = diff(rho*et, t) + diff(rho*u*et+p*u-u*tauxx-v*tauxy+qx, x) + diff(rho*v*et+
 if __name__ == '__main__':
     import re
     from sympy.utilities.codegen import codegen
-    print 'Generating manufactured source terms.'
+    print('Generating manufactured source terms.')
     [(f_name, f_code), (h_name, f_header)] = codegen(
         [("fmass", fmass), ("fxmom", fxmom), ("fymom", fymom), ("fe", fe)],
         "F95", "test", header=False)
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     fout = open('udf-source-terms.lua', 'w')
     fout.write(lua_text)
     fout.close()
-    print 'Done converting to Lua.'
+    print('Done converting to Lua.')
 
     
 

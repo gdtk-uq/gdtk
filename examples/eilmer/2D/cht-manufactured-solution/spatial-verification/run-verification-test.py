@@ -22,6 +22,7 @@
 #         All lua files based on analytic solution
 #         are now auto-generated.
 
+from __future__ import print_function
 import os
 import shutil
 from math import log, sqrt
@@ -76,7 +77,7 @@ def prepareCases(ncellsList):
 def runCases(ncellsList):
     cwd = os.getcwd()
     for ncells in ncellsList:
-        print "========= Working on grid: %dx%d ===========" % (ncells, 1.5*ncells)
+        print("========= Working on grid: %dx%d ===========" % (ncells, 1.5*ncells))
         subDir = "%dx%d" % (ncells, 1.5*ncells)
         os.chdir(subDir)
         cmd = "sh run.sh"

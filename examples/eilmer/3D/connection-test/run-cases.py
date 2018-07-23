@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import os, sys
 from fpdiff import count_differences
 
@@ -20,12 +21,12 @@ for fA in faces:
             # Prep stage
             val = os.system('e4shared --job=connection-test --prep')
             if val != 0:
-                print "Problem preparing case: ", fA, fB, ornt
+                print("Problem preparing case: ", fA, fB, ornt)
                 sys.exit(1)
             # Run stage
             val = os.system(RUN_CMD)
             if val != 0:
-                print "Problem running case: ", fA, fB, ornt
+                print("Problem running case: ", fA, fB, ornt)
                 sys.exit(1)
                 # Post-process stage
             probe_str = ""
@@ -36,7 +37,7 @@ for fA in faces:
             cmd = 'e4shared --job=connection-test --post --tindx-plot=last --probe="%s" --output-file=post.out' % probe_str[:-1]
             val = os.system(cmd)
             if val != 0:
-                print "Problem post-processing case: ", fA, fB, ornt
+                print("Problem post-processing case: ", fA, fB, ornt)
                 sys.exit(1)
             # Check if test passed
             val = count_differences('ref.out', 'post.out')

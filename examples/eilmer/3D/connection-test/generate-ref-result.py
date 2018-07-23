@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import os
 
@@ -18,7 +19,7 @@ for j in range(4):
 cmd = 'e4shared --job=reference --post --tindx-plot=last --probe="%s" --output-file=ref.out' % probe_str[:-1]
 os.system(cmd)
 
-print "Generated plane of reference data: ref.out"
+print("Generated plane of reference data: ref.out")
 
 
 

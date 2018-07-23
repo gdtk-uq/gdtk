@@ -6,6 +6,7 @@ Peter Blyton
     11 July 2011: Original implementation, rotate from x coord to normalised chord position.
 
 """
+from __future__ import print_function
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -48,5 +49,5 @@ def plot_surface_Mach():
 
 if __name__ == "__main__":
     plot_surface_Mach()
-    print "Surface Mach number plotted."
+    print("Surface Mach number plotted.")
 

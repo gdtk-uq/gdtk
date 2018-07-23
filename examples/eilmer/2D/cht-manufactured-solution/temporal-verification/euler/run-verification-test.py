@@ -22,6 +22,7 @@
 #         All lua files based on analytic solution
 #         are now auto-generated.
 
+from __future__ import print_function
 import os
 import shutil
 from math import log, sqrt
@@ -76,7 +77,7 @@ def prepareCases(dtList):
 def runCases(dtList):
     cwd = os.getcwd()
     for i, dt in enumerate(dtList):
-        print "========= Working on case %d: dt= %.3e ===========" % (i, dt)
+        print("========= Working on case %d: dt= %.3e ===========" % (i, dt))
         subDir = "dt-%d" % i
         os.chdir(subDir)
         cmd = "sh run.sh"

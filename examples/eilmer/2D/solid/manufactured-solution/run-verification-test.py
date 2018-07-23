@@ -16,6 +16,7 @@
 # Date: 2015-08-11
 # Place: UQ, Queensland, Australia
 
+from __future__ import print_function
 import os
 import shutil
 from math import log
@@ -65,7 +66,7 @@ def prepareCases(ncellsList):
 def runCases(ncellsList):
     cwd = os.getcwd()
     for ncells in ncellsList:
-        print "========= Working on grid: %dx%d ===========" % (ncells, ncells/2)
+        print("========= Working on grid: %dx%d ===========" % (ncells, ncells/2))
         subDir = "%dx%d" % (ncells, ncells/2)
         os.chdir(subDir)
         cmd = "sh run.sh"

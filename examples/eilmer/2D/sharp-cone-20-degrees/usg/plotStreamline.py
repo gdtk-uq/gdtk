@@ -28,7 +28,7 @@ with open('streamline.dat', 'r') as f:
     for line in data:
         dat = line.split()
         if (count>0 and dat[0] == '#'):
-            print line
+            print(line)
         if (count>1):
             x.append(float(dat[0]))
             p.append(float(dat[8]))
