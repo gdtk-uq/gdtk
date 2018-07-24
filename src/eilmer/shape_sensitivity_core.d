@@ -1791,9 +1791,9 @@ void sss_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJaco
             cell.dConservative[i,i] += dtInv;
         }
         
-        // Get an LU decomposition ready for repeated solves.
-        nm.bbla.LUDecomp!number(cell.dConservative, cell.pivot);
-
+        // Get an inverse ready for repeated solves.
+        Matrix!number tmp = nm.bbla.inverse(cell.dConservative);
+        cell.dConservative = tmp;
     }
     
     // reset interpolation order to the global setting

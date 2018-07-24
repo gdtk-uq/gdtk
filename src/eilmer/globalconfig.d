@@ -258,6 +258,8 @@ EtaStrategy etaStrategyFromName(string name)
 struct SteadyStateSolverOptions {
     int nConserved = 4;
     bool usePreconditioner = true;
+    bool useScaling = true;
+    bool useComplexMatVecEval = false;
     int nPreSteps = 10;
     int nTotalSteps = 100;
     int maxNumberAttempts = 3; // at taking a Newton step.
@@ -1349,6 +1351,8 @@ void read_control_file()
     version (steady_state) {
     auto sssOptions = jsonData["steady_state_solver_options"];
     GlobalConfig.sssOptions.usePreconditioner = getJSONbool(sssOptions, "use_preconditioner", GlobalConfig.sssOptions.usePreconditioner);
+    GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);
+    GlobalConfig.sssOptions.useComplexMatVecEval = getJSONbool(sssOptions, "use_complex_matvec_eval", GlobalConfig.sssOptions.useComplexMatVecEval);
     GlobalConfig.sssOptions.nPreSteps = 
         getJSONint(sssOptions, "number_pre_steps", GlobalConfig.sssOptions.nPreSteps);
     GlobalConfig.sssOptions.nTotalSteps = 

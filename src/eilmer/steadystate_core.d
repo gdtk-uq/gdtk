@@ -848,6 +848,14 @@ void evalRHS(double pseudoSimTime, int ftl)
 
 void evalJacobianVecProd(double pseudoSimTime, double sigma)
 {
+    if (GlobalConfig.sssOptions.useComplexMatVecEval)
+        evalComplexMatVecProd(pseudoSimTime, sigma);
+    else
+        evalRealMatVecProd(pseudoSimTime, sigma);
+}
+
+void evalRealMatVecProd(double pseudoSimTime, double sigma)
+{
     // Make a stack-local copy of conserved quantities info
     size_t nConserved = nConservedQuantities;
     size_t MASS = massIdx;
@@ -899,6 +907,65 @@ void evalJacobianVecProd(double pseudoSimTime, double sigma)
         }
     }
 }
+
+void evalComplexMatVecProd(double pseudoSimTime, double sigma)
+{
+    version(complex_numbers) {
+        // Make a stack-local copy of conserved quantities info
+        size_t nConserved = nConservedQuantities;
+        size_t MASS = massIdx;
+        size_t X_MOM = xMomIdx;
+        size_t Y_MOM = yMomIdx;
+        size_t Z_MOM = zMomIdx;
+        size_t TOT_ENERGY = totEnergyIdx;
+        size_t TKE = tkeIdx;
+        size_t OMEGA = omegaIdx;
+        
+        // We perform a Frechet derivative to evaluate J*D^(-1)v
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            bool local_with_k_omega = with_k_omega;
+            blk.clear_fluxes_of_conserved_quantities();
+            foreach (cell; blk.cells) cell.clear_source_vector();
+            int cellCount = 0;
+            foreach (cell; blk.cells) {
+                cell.U[1].copy_values_from(cell.U[0]);
+                cell.U[1].mass += complex(0.0, sigma*blk.maxRate.mass.re*blk.zed[cellCount+MASS].re);
+                cell.U[1].momentum.refx += complex(0.0, sigma*blk.maxRate.momentum.x.re*blk.zed[cellCount+X_MOM].re);
+                cell.U[1].momentum.refy += complex(0.0, sigma*blk.maxRate.momentum.y.re*blk.zed[cellCount+Y_MOM].re);
+                if ( blk.myConfig.dimensions == 3 )
+                    cell.U[1].momentum.refz += complex(0.0, sigma*blk.maxRate.momentum.z.re*blk.zed[cellCount+Z_MOM].re);
+                cell.U[1].total_energy += complex(0.0, sigma*blk.maxRate.total_energy.re*blk.zed[cellCount+TOT_ENERGY].re);
+                if ( local_with_k_omega ) {
+                    cell.U[1].tke += complex(0.0, sigma*blk.maxRate.tke.re*blk.zed[cellCount+TKE].re);
+                    cell.U[1].omega += complex(0.0, sigma*blk.maxRate.omega.re*blk.zed[cellCount+OMEGA].re);
+                }
+                cell.decode_conserved(0, 1, 0.0);
+                cellCount += nConserved;
+            }
+        }
+        evalRHS(pseudoSimTime, 1);
+        foreach (blk; parallel(localFluidBlocks,1)) {
+            bool local_with_k_omega = with_k_omega;
+            int cellCount = 0;
+            foreach (cell; blk.cells) {
+                blk.zed[cellCount+MASS] = -cell.dUdt[1].mass.im/(sigma*blk.maxRate.mass.re);
+                blk.zed[cellCount+X_MOM] = -cell.dUdt[1].momentum.x.im/(sigma*blk.maxRate.momentum.x.re);
+                blk.zed[cellCount+Y_MOM] = -cell.dUdt[1].momentum.y.im/(sigma*blk.maxRate.momentum.y.re);
+                if ( blk.myConfig.dimensions == 3 )
+                    blk.zed[cellCount+Z_MOM] = -cell.dUdt[1].momentum.z.im/(sigma*blk.maxRate.momentum.z.re);
+                blk.zed[cellCount+TOT_ENERGY] = -cell.dUdt[1].total_energy.im/(sigma*blk.maxRate.total_energy.re);
+                if ( local_with_k_omega ) {
+                    blk.zed[cellCount+TKE] = -cell.dUdt[1].tke.im/(sigma*blk.maxRate.tke.re);
+                    blk.zed[cellCount+OMEGA] = -cell.dUdt[1].omega.im/(sigma*blk.maxRate.omega.re);
+                }
+                cellCount += nConserved;
+            }
+        }
+    } else {
+        throw new Error("Oops. Steady-State Solver setting: useComplexMatVecEval is not compatible with real-number version of the code.");
+    }
+}
+
 
 
 string dot_over_blocks(string dot, string A, string B)
@@ -1037,17 +1104,32 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
     }
 
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.maxRate.mass = maxMass;
-        blk.maxRate.momentum.refx = maxMomX;
-        blk.maxRate.momentum.refy = maxMomY;
-        if ( blk.myConfig.dimensions == 3 )
+        if (GlobalConfig.sssOptions.useScaling) {
+            blk.maxRate.mass = maxMass;
+            blk.maxRate.momentum.refx = maxMomX;
+            blk.maxRate.momentum.refy = maxMomY;
+            if ( blk.myConfig.dimensions == 3 )
                 blk.maxRate.momentum.refz = maxMomZ;
-        blk.maxRate.total_energy = maxEnergy;
-        if ( with_k_omega ) {
-            blk.maxRate.tke = maxTke;
-            blk.maxRate.omega = maxOmega;
+            blk.maxRate.total_energy = maxEnergy;
+            if ( with_k_omega ) {
+                blk.maxRate.tke = maxTke;
+                blk.maxRate.omega = maxOmega;
+            }
+        }
+        else { // just scale by 1
+            blk.maxRate.mass = 1.0;
+            blk.maxRate.momentum.refx = 1.0;
+            blk.maxRate.momentum.refy = 1.0;
+            if ( blk.myConfig.dimensions == 3 )
+                blk.maxRate.momentum.refz = 1.0;
+            blk.maxRate.total_energy = 1.0;
+            if ( with_k_omega ) {
+                blk.maxRate.tke = 1.0; 
+                blk.maxRate.omega = 1.0; 
+            }
         }
     }
+    
     double unscaledNorm2;
     mixin(norm2_over_blocks("unscaledNorm2", "FU"));
 
@@ -1113,8 +1195,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                     number[] tmp;
                     tmp.length = nConserved;
                     foreach (cell; blk.cells) {
-                        LUSolve!number(cell.dConservative, cell.pivot,
-                                       blk.v[cellCount..cellCount+nConserved], tmp);
+                        nm.bbla.dot(cell.dConservative, blk.v[cellCount..cellCount+nConserved], tmp);
                         blk.zed[cellCount..cellCount+nConserved] = tmp[];
                         cellCount += nConserved;
                     }
@@ -1228,8 +1309,7 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
                 number[] tmp;
                 tmp.length = nConserved;
                 foreach (cell; blk.cells) {
-                    LUSolve!number(cell.dConservative, cell.pivot,
-                                   blk.zed[cellCount..cellCount+nConserved], tmp);
+                    nm.bbla.dot(cell.dConservative, blk.zed[cellCount..cellCount+nConserved], tmp);
                     blk.dU[cellCount..cellCount+nConserved] = tmp[];
                     cellCount += nConserved;
                 }

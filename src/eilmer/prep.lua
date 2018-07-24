@@ -45,6 +45,8 @@ applyGridproBoundaryConditions = gridpro.applyGridproBoundaryConditions
 sssOptionsHidden = { -- hidden from user
    -- set defaults here
    use_preconditioner = true,
+   use_scaling = true,
+   use_complex_matvec_eval = false,
    number_pre_steps = 10,
    number_total_steps = 100,
    max_number_attempts = 3,
@@ -1434,6 +1436,8 @@ function write_control_file(fileName)
    f:write(string.format('"halt_now": %d,\n', config.halt_now))
    f:write('"steady_state_solver_options" : {\n')
    f:write(string.format('   "use_preconditioner": %s,\n', tostring(SteadyStateSolver.use_preconditioner)))
+   f:write(string.format('   "use_scaling": %s,\n', tostring(SteadyStateSolver.use_scaling)))
+   f:write(string.format('   "use_complex_matvec_eval": %s,\n', tostring(SteadyStateSolver.use_complex_matvec_eval)))
    f:write(string.format('   "number_pre_steps": %d,\n', SteadyStateSolver.number_pre_steps))
    f:write(string.format('   "number_total_steps": %d,\n', SteadyStateSolver.number_total_steps))
    f:write(string.format('   "max_number_attempts": %d,\n', SteadyStateSolver.max_number_attempts))
