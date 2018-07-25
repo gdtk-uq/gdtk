@@ -336,10 +336,10 @@ public:
     override void apply_structured_grid(double t, int gtl, int ftl)
     {
         auto blk = cast(SFluidBlock) this.blk;
+        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         if (t < blk.myConfig.thermionic_emission_bc_time_delay){
             return;
         }
-        assert(blk !is null, "Oops, this should be an SFluidBlock object.");
         if ( emissivity <= 0.0 || emissivity > 1.0 ) {
             // Check if emissivity value is valid
             throw new Error("emissivity should be 0.0<e<=1.0\n");
@@ -450,11 +450,12 @@ public:
         double tolerance = 1.0e-3; 
         number Twall_prev = IFace.fs.gas.T;
         number Twall_prev_backup = IFace.fs.gas.T;
-        number q_total, q_total_prev, q_total_prev_backup = 0.0;
+        number q_total, q_total_prev, q_total_prev_backup = 1.0;
         int iteration_check, subiteration_check = 0;
 
         // IFace orientation
         number nx = IFace.n.x; number ny = IFace.n.y; number nz = IFace.n.z;
+
         // IFace properties.
         FlowGradients grad = IFace.grad;
 
@@ -522,8 +523,16 @@ public:
             // Don't nest pow functions. It is very slow....
             q_total = pow(qx*qx + qy*qy + qz*qz, 0.5);
 
+            if (q_total == 0.0){
+                // First couple of iterations after activating the Thermionic Emission
+                // will error without this 
+                q_total = 1.0;
+                q_total_prev = 0.0;
+            }
+
             // If we reach our tolerance value, we break. Tolerance based off heat loads
             // as it is very susceptible to minor changes in Twall
+
             if ( fabs((q_total - q_total_prev)/q_total) < tolerance) {
                 // Update your wall temp with your final value
                 IFace.fs.gas.T = Twall;
@@ -574,48 +583,12 @@ public:
             q_total_prev = q_total;
         }
         if (iteration_check == 0){
-            printf("Iteration's didn't converge. Don't trust this solution. Keep running until this message disappears\n");
+            printf("Iteration's didn't converge\n");
         }
 
-        //if (subiteration_check == 0 && ThermionicEmissionActive == 1) {
-        //    printf("Subiteration's didn't converge\n");
-        //    printf("Increase Twall_subiterations from default 20 value\n");
-        //    printf("\n");
-        //}
         return q_total.re;
     } // end solve_for_wall_temperature_and_energy_flux()
 
-    //const double update_Twall_from_heat_flux(double q_total, double Ttol = 0.001)
-    //{
-    //    //Uses Ridders Method
-    //	// Set up zero functions for Ridder method
-    //    auto f_rad = delegate(double Twall_0)
-    //    	{
-    //    		return emissivity*SB_sigma*Twall_0*Twall_0*Twall_0*Twall_0;
-    //    	};
-
-    //    auto f_thermionic = delegate(double Twall_0)
-    //    	{
-    //    		return Ar*Twall_0*Twall_0*exp(-phi/(kb*Twall_0))/Qe*(phi + 2*kb*Twall_0);
-    //    	};
-
-    //    auto zeroEnergyBalance_T = delegate(double Twall_0)
-    //        {
-    //            return q_total - f_rad(Twall_0) - f_thermionic(Twall_0);
-    //        };
-
-    //    int max_try = 50;
-    //    double factor = 0.05;
-    //    //double T1 = 400; double T2 = 600; 
-    //    double T1_min = 80; double T2_max = 50000.0;
-    //    // Use Ridder method
-    //    //int bracketFlag = bracket!zeroEnergyBalance_T(T1,T2,T1_min,T2_max,max_try,factor);
-    //    //if (bracketFlag == -1) throw new Exception(format("bracketing getTemperature failed at q_total: %s, q_rad: %s, q_thermionic: %s, bracket: [%s, %s]", q_total, f_rad, f_thermionic, T1, T2));
-    //    double Twall = solve!zeroEnergyBalance_T(T1_min,T2_max, Ttol);
-    //    assert(!isNaN(Twall), format("Twall is NaN at q_total: %s, q_rad: %s, q_thermionic: %s", q_total, f_rad, f_thermionic));
-
-    //    return Twall;
-    //}
 } // end class BIE_EnergyBalanceThermionic
 
 

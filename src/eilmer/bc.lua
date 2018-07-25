@@ -641,13 +641,6 @@ function WallBC_ThermionicEmission:new(o)
       error("Invalid name for item supplied to WallBC_ThermionicEmission constructor.", 2)
    end
    o = BoundaryCondition.new(self, o)
-   if o.emissivity < 0.4 or o.phi < 0.5 then
-         print("");
-         print("Solver may not converge for emissivity < 0.4, or phi < 0.5 eV");
-         print("Increase BC input Twall_iterations to > default 200 for low emissivity");
-         print("Increase BC input Twall_subiterations to > default 20 for low phi")
-         print("");
-   end
    o.preReconAction = { InternalCopyThenReflect:new() }
 
    o.preSpatialDerivActionAtBndryFaces = { CopyCellData:new(), ZeroVelocity:new(),
