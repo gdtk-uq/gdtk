@@ -69,6 +69,11 @@ reaction_mechanism_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILE
 		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
 		$(LIBLUA) $(DLINKFLAGS)
 
+two_temperature_argon_kinetics_test:  $(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	dmd -of$@ -debug -g -version=$@ \
+		$(KINETICS_FILES) $(GAS_FILES) $(UTIL_FILES) $(NM_FILES) \
+		$(LIBLUA) $(DLINKFLAGS)
+
 #--------------------------------------------------------------------------
 # Fortran bits
 
