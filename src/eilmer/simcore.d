@@ -1024,6 +1024,7 @@ void gasdynamic_explicit_increment_with_fixed_grid()
     shared double t0 = sim_time;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
         !GlobalConfig.separate_update_for_k_omega_source;
+    shared bool allow_high_order_interpolation = (sim_time >= GlobalConfig.interpolation_delay);
     // Set the time-step coefficients for the stages of the update scheme.
     shared double c2 = 1.0; // default for predictor-corrector update
     shared double c3 = 1.0; // default for predictor-corrector update
@@ -1073,10 +1074,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
         }
     }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-        if (blk.active) { blk.convective_flux_phase0(); }
+        if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-        if (blk.active) { blk.convective_flux_phase1(); }
+        if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1229,10 +1230,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.convective_flux_phase0(); }
+            if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.convective_flux_phase1(); }
+            if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1376,10 +1377,10 @@ void gasdynamic_explicit_increment_with_fixed_grid()
             }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.convective_flux_phase0(); }
+            if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.convective_flux_phase1(); }
+            if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1510,6 +1511,7 @@ void gasdynamic_explicit_increment_with_moving_grid()
     shared double t0 = sim_time;
     shared bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega) &&
         !GlobalConfig.separate_update_for_k_omega_source;
+    shared bool allow_high_order_interpolation = (sim_time >= GlobalConfig.interpolation_delay);
     // Set the time-step coefficients for the stages of the update scheme.
     shared double c2 = 1.0; // same for 1-stage or 2-stage update
     shared double c3 = 1.0; // ditto
@@ -1567,10 +1569,10 @@ void gasdynamic_explicit_increment_with_moving_grid()
         }
     }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-        if (blk.active) { blk.convective_flux_phase0(); }
+        if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, gtl); }
     }
     foreach (blk; parallel(localFluidBlocksBySize,1)) {
-        if (blk.active) { blk.convective_flux_phase1(); }
+        if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, gtl); }
     }
     if (GlobalConfig.apply_bcs_in_parallel) {
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
@@ -1708,10 +1710,12 @@ void gasdynamic_explicit_increment_with_moving_grid()
             if (sblk.active) { sblk.applyPostFluxAction(sim_time, ftl); }
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.convective_flux_phase0(); }
+            if (blk.active) { blk.convective_flux_phase0(allow_high_order_interpolation, 0); }
+            // FIX-ME PJ 2018-07-25 Should this be gtl rather than 0?
         }
         foreach (blk; parallel(localFluidBlocksBySize,1)) {
-            if (blk.active) { blk.convective_flux_phase1(); }
+            if (blk.active) { blk.convective_flux_phase1(allow_high_order_interpolation, 0); }
+            // FIX-ME PJ 2018-07-25 Should this be gtl rather than 0?
         }
         if (GlobalConfig.apply_bcs_in_parallel) {
             foreach (blk; parallel(localFluidBlocksBySize,1)) {

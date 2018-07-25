@@ -492,7 +492,9 @@ void compute_flux(FVCell pcell, FluidBlock blk, size_t orderOfJacobian, FVCell[]
     // Convective flux update
     foreach(iface; iface_list) {
         auto ublk = cast(UFluidBlock) blk;
-        ublk.lsq.interp_both(iface, 0, ublk.Lft, ublk.Rght); // gtl assumed 0
+        size_t gtl = 0;
+        bool allow_high_order_interpolation = true;
+        ublk.lsq.interp_both(iface, gtl, ublk.Lft, ublk.Rght, allow_high_order_interpolation);
         iface.fs.copy_average_values_from(ublk.Lft, ublk.Rght);
         compute_interface_flux(ublk.Lft, ublk.Rght, iface, ublk.myConfig, ublk.omegaz);
     }
@@ -863,11 +865,12 @@ void evalRHS(double pseudoSimTime, int ftl, int gtl, bool with_k_omega)
         }
     }
 
-     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase0(gtl);
+    bool allow_high_order_interpolation = true;
+    foreach (blk; parallel(localFluidBlocks,1)) {
+        blk.convective_flux_phase0(allow_high_order_interpolation, gtl);
     }
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase1(gtl);
+        blk.convective_flux_phase1(allow_high_order_interpolation, gtl);
     }
     foreach (blk; localFluidBlocks) {
         blk.applyPostConvFluxAction(pseudoSimTime, gtl, ftl);

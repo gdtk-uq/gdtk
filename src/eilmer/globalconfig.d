@@ -381,6 +381,9 @@ final class GlobalConfig {
     // cell centres for structured-grids and a linear model across a cloud of cell 
     // centres for unstructured-grids.
     shared static int interpolation_order = 2; 
+    // We have the option to start a calculation without high-order reconstruction
+    // and later activate it, presumably once the difficult flow has passed.
+    shared static double interpolation_delay = 0.0;
     // Default flow-data reconstruction includes interpolation of density 
     // and internal energy.  Other options for the thermodunamic properties
     // to be interpolated are pressure+temperature, density+temperature and
@@ -629,6 +632,7 @@ public:
     bool report_invalid_cells;
     FlowStateLimits flowstate_limits;
     int interpolation_order;
+    double interpolation_delay;
     InterpolateOption thermo_interpolator;
     bool allow_reconstruction_for_energy_modes;
     bool apply_limiter;
@@ -736,6 +740,7 @@ public:
         report_invalid_cells = GlobalConfig.report_invalid_cells;
         flowstate_limits = GlobalConfig.flowstate_limits;
         interpolation_order = GlobalConfig.interpolation_order;
+        interpolation_delay = GlobalConfig.interpolation_delay;
         thermo_interpolator = GlobalConfig.thermo_interpolator;
         allow_reconstruction_for_energy_modes = GlobalConfig.allow_reconstruction_for_energy_modes;
         apply_limiter = GlobalConfig.apply_limiter;
@@ -953,6 +958,7 @@ void read_config_file()
     mixin(update_bool("report_invalid_cells", "report_invalid_cells"));
     mixin(update_int("max_invalid_cells", "max_invalid_cells"));
     mixin(update_int("interpolation_order", "interpolation_order"));
+    mixin(update_double("interpolation_delay", "interpolation_delay"));
     mixin(update_enum("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(update_bool("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(update_bool("apply_limiter", "apply_limiter"));
@@ -998,6 +1004,7 @@ void read_config_file()
         writeln("  report_invalid_cells: ", GlobalConfig.report_invalid_cells);
         writeln("  max_invalid_cells: ", GlobalConfig.max_invalid_cells);
         writeln("  interpolation_order: ", GlobalConfig.interpolation_order);
+        writeln("  interpolation_delay: ", GlobalConfig.interpolation_delay);
         writeln("  thermo_interpolator: ", thermo_interpolator_name(GlobalConfig.thermo_interpolator));
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));

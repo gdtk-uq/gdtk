@@ -165,7 +165,8 @@ public:
                      ref FVCell cL1, ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
                      number cL1Length, number cL0Length, 
                      number cR0Length, number cR1Length, 
-                     ref FlowState Lft, ref FlowState Rght)
+                     ref FlowState Lft, ref FlowState Rght,
+                     bool allow_high_order_interpolation)
     {
         auto gmodel = myConfig.gmodel;
         auto nsp = gmodel.n_species;
@@ -178,7 +179,7 @@ public:
         // for some simulations we would like to have the boundaries to remain 1st order
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) return;
         // else apply higher-order interpolation to all faces
-        if (myConfig.interpolation_order > 1) {
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
             if (myConfig.interpolate_in_local_frame) {
                 // Paul Petrie-Repar and Jason Qin have noted that the velocity needs
@@ -335,7 +336,8 @@ public:
     void interp_left(ref FVInterface IFace,
                      ref FVCell cL1, ref FVCell cL0, ref FVCell cR0,
                      number cL1Length, number cL0Length, number cR0Length,
-                     ref FlowState Lft, ref FlowState Rght)
+                     ref FlowState Lft, ref FlowState Rght,
+                     bool allow_high_order_interpolation)
     {
         auto gmodel = myConfig.gmodel;
         auto nsp = gmodel.n_species;
@@ -348,7 +350,7 @@ public:
         // for some simulations we would like to have the boundaries to remain 1st order
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) return;
         // else apply higher-order interpolation to all faces
-        if (myConfig.interpolation_order > 1) {
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
             if (myConfig.interpolate_in_local_frame) {
                 // In the interface-local frame.
@@ -449,7 +451,8 @@ public:
     void interp_right(ref FVInterface IFace,
                       ref FVCell cL0, ref FVCell cR0, ref FVCell cR1,
                       number cL0Length, number cR0Length, number cR1Length,
-                      ref FlowState Lft, ref FlowState Rght)
+                      ref FlowState Lft, ref FlowState Rght,
+                      bool allow_high_order_interpolation)
     // Reconstruct flow properties at an interface from cells L0,R0,R1.
     //
     // This is essentially a one-dimensional interpolation process.  It needs only
@@ -466,7 +469,7 @@ public:
         // for some simulations we would like to have the boundaries to remain 1st order
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) return;
         // else apply higher-order interpolation to all faces
-        if (myConfig.interpolation_order > 1) {
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
             if (myConfig.interpolate_in_local_frame) {
                 // In the interface-local frame.

@@ -806,12 +806,14 @@ void evalRHS(double pseudoSimTime, int ftl)
             blk.detect_shock_points();
         }
     }
-    
+
+    size_t gtl = 0;
+    bool allow_high_order_interpolation = true;
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase0();
+        blk.convective_flux_phase0(allow_high_order_interpolation, gtl);
     }
     foreach (blk; parallel(localFluidBlocks,1)) {
-        blk.convective_flux_phase1();
+        blk.convective_flux_phase1(allow_high_order_interpolation, gtl);
     }
     foreach (blk; localFluidBlocks) {
         blk.applyPostConvFluxAction(pseudoSimTime, 0, ftl);

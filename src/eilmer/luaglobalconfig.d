@@ -116,6 +116,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_int_field("max_invalid_cells", "max_invalid_cells"));
     //
     mixin(get_int_field("interpolation_order", "interpolation_order"));
+    mixin(get_double_field("interpolation_delay", "interpolation_delay"));
     mixin(get_enum_field("thermo_interpolator", "thermo_interpolator", "thermo_interpolator_from_name"));
     mixin(get_bool_field("allow_reconstruction_for_energy_modes", "allow_reconstruction_for_energy_modes"));
     mixin(get_bool_field("apply_limiter", "apply_limiter"));
@@ -270,6 +271,7 @@ extern(C) int configGet(lua_State* L)
     case "max_invalid_cells": lua_pushnumber(L, GlobalConfig.max_invalid_cells); break;
         //
     case "interpolation_order": lua_pushnumber(L, GlobalConfig.interpolation_order); break;
+    case "interpolation_delay": lua_pushnumber(L, GlobalConfig.interpolation_delay); break;
     case "thermo_interpolator": lua_pushstring(L, thermo_interpolator_name(GlobalConfig.thermo_interpolator).toStringz); break;
     case "allow_reconstruction_for_energy_modes": lua_pushboolean(L, GlobalConfig.allow_reconstruction_for_energy_modes); break;
     case "apply_limiter": lua_pushboolean(L, GlobalConfig.apply_limiter); break;

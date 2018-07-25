@@ -1870,7 +1870,7 @@ public:
         set_cell_dt_chem(-1.0);
     } // end propagate_inflow_data_west_to_east()
 
-    override void convective_flux_phase0(size_t gtl=0)
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
     // Compute the flux from data on either-side of the interface.
     {
         // Barring exceptions at the block boundaries, the general process is:
@@ -1889,13 +1889,19 @@ public:
                     if ((i == imin) && (bc[Face.west].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
                     } else if ((i == imin+1) && (bc[Face.west].ghost_cell_data_available == false)) {
-                        one_d.interp_right(IFace, cL0, cR0, cR1, cL0.iLength, cR0.iLength, cR1.iLength, Lft, Rght);
+                        one_d.interp_right(IFace, cL0, cR0, cR1,
+                                           cL0.iLength, cR0.iLength, cR1.iLength,
+                                           Lft, Rght, allow_high_order_interpolation);
                     } else if ((i == imax) && (bc[Face.east].ghost_cell_data_available == false)) {
-                        one_d.interp_left(IFace, cL1, cL0, cR0, cL1.iLength, cL0.iLength, cR0.iLength, Lft, Rght);
+                        one_d.interp_left(IFace, cL1, cL0, cR0,
+                                          cL1.iLength, cL0.iLength, cR0.iLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     } else if ((i == imax+1) && (bc[Face.east].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
                     } else { // General symmetric reconstruction.
-                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1, cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength, Lft, Rght);
+                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1,
+                                          cL1.iLength, cL0.iLength, cR0.iLength, cR1.iLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((i == imin) && (bc[Face.west].convective_flux_computed_in_bc == true)) continue;
@@ -1920,13 +1926,19 @@ public:
                     if ((j == jmin) && (bc[Face.south].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
                     } else if ((j == jmin+1) && (bc[Face.south].ghost_cell_data_available == false)) {
-                        one_d.interp_right(IFace, cL0, cR0, cR1, cL0.jLength, cR0.jLength, cR1.jLength, Lft, Rght);
+                        one_d.interp_right(IFace, cL0, cR0, cR1,
+                                           cL0.jLength, cR0.jLength, cR1.jLength,
+                                           Lft, Rght, allow_high_order_interpolation);
                     } else if ((j == jmax) && (bc[Face.north].ghost_cell_data_available == false)) {
-                        one_d.interp_left(IFace, cL1, cL0, cR0, cL1.jLength, cL0.jLength, cR0.jLength, Lft, Rght);
+                        one_d.interp_left(IFace, cL1, cL0, cR0,
+                                          cL1.jLength, cL0.jLength, cR0.jLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     } else if ((j == jmax+1) && (bc[Face.north].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
                     } else { // General symmetric reconstruction.
-                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1, cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength, Lft, Rght);
+                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1,
+                                          cL1.jLength, cL0.jLength, cR0.jLength, cR1.jLength,
+                                          Lft, Rght, allow_high_order_interpolation);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((j == jmin) && (bc[Face.south].convective_flux_computed_in_bc == true)) continue;
@@ -1954,13 +1966,13 @@ public:
                     if ((k == kmin) && (bc[Face.bottom].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cR0.fs); Rght.copy_values_from(cR0.fs);
                     } else if ((k == kmin+1) && (bc[Face.bottom].ghost_cell_data_available == false)) {
-                        one_d.interp_right(IFace, cL0, cR0, cR1, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght);
+                        one_d.interp_right(IFace, cL0, cR0, cR1, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght, allow_high_order_interpolation);
                     } else if ((k == kmax) && (bc[Face.top].ghost_cell_data_available == false)) {
-                        one_d.interp_left(IFace, cL1, cL0, cR0, cL1.kLength, cL0.kLength, cR0.kLength, Lft, Rght);
+                        one_d.interp_left(IFace, cL1, cL0, cR0, cL1.kLength, cL0.kLength, cR0.kLength, Lft, Rght, allow_high_order_interpolation);
                     } else if ((k == kmax+1) && (bc[Face.top].ghost_cell_data_available == false)) {
                         Lft.copy_values_from(cL0.fs); Rght.copy_values_from(cL0.fs);
                     } else { // General symmetric reconstruction.
-                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1, cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght);
+                        one_d.interp_both(IFace, cL1, cL0, cR0, cR1, cL1.kLength, cL0.kLength, cR0.kLength, cR1.kLength, Lft, Rght, allow_high_order_interpolation);
                     }
                     IFace.fs.copy_average_values_from(Lft, Rght);
                     if ((k == kmin) && (bc[Face.bottom].convective_flux_computed_in_bc == true)) continue;
@@ -1978,7 +1990,7 @@ public:
         return;
     } // end convective_flux()
 
-    override void convective_flux_phase1(size_t gtl=0)
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
     // Compute the flux from data on either-side of the interface.
     // For the structured-grid block, there is nothing to do.
     // The unstructured-grid block needs to work in two phases.

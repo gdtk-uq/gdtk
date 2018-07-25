@@ -878,11 +878,11 @@ public:
         throw new FlowSolverException(msg);
     }
 
-    override void convective_flux_phase0(size_t gtl=0)
+    override void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0)
     // Compute gradients of flow quantities for higher-order reconstruction, if required.
     // To be used, later, in the convective flux calculation.
     {
-        if (myConfig.interpolation_order > 1) {
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
 
             // for the MLP limiter we need to first loop over the vertices
             if (myConfig.unstructured_limiter == UnstructuredLimiter.mlp) {
@@ -917,11 +917,11 @@ public:
         } // end if interpolation_order > 1
     } // end convective_flux-phase0()
 
-    override void convective_flux_phase1(size_t gtl=0)
+    override void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0)
     // Make use of the flow gradients to actually do the high-order reconstruction
     // and then compute fluxes of conserved quantities at all faces.
     {
-        if (myConfig.interpolation_order > 1) {
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // Fill in gradients for ghost cells so that left- and right- cells at all faces,
             // including those along block boundaries, have the latest gradient values.
             foreach (bcond; bc) {
@@ -974,15 +974,15 @@ public:
         // to reconstruct field values and compute the convective fluxes.
         foreach (f; faces) {
             if (f.left_cell && f.right_cell) {
-                lsq.interp_both(f, gtl, Lft, Rght);
+                lsq.interp_both(f, gtl, Lft, Rght, allow_high_order_interpolation);
                 f.fs.copy_average_values_from(Lft, Rght);
                 compute_interface_flux(Lft, Rght, f, myConfig, omegaz);
             } else if (f.right_cell) {
-                lsq.interp_right(f, gtl, Rght);
+                lsq.interp_right(f, gtl, Rght, allow_high_order_interpolation);
                 f.fs.copy_values_from(Rght);
                 compute_flux_at_left_wall(Rght, f, myConfig, omegaz);
             } else if (f.left_cell) {
-                lsq.interp_left(f, gtl, Lft);
+                lsq.interp_left(f, gtl, Lft, allow_high_order_interpolation);
                 f.fs.copy_values_from(Lft);
                 compute_flux_at_right_wall(Lft, f, myConfig, omegaz);
             } else {

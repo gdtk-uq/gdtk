@@ -733,7 +733,8 @@ public:
         b *= s;
     }
     
-    void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght)
+    void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght,
+                     bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the left- and right-side of the interface,
     // given information in both cells attached to this interface.
     {
@@ -750,7 +751,7 @@ public:
         // for some simulations we would like to have the boundaries to remain 1st order
         if (myConfig.suppress_reconstruction_at_boundaries && IFace.is_on_boundary) return;
         // else apply higher-order interpolation to all faces
-        if (myConfig.interpolation_order > 1) {
+        if (allow_high_order_interpolation && (myConfig.interpolation_order > 1)) {
             // High-order reconstruction for some properties.
             //
             LSQInterpWorkspace wsL = cL0.ws;
@@ -917,7 +918,8 @@ public:
         } // end of high-order reconstruction
     } // end interp_both()
         
-    void interp_right(ref FVInterface IFace, size_t gtl, ref FlowState Rght)
+    void interp_right(ref FVInterface IFace, size_t gtl, ref FlowState Rght,
+                      bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the right-side of the interface,
     // given information in right-cell attached to this interface.
     {
@@ -933,7 +935,8 @@ public:
         return;
     }
         
-    void interp_left(ref FVInterface IFace, size_t gtl, ref FlowState Lft)
+    void interp_left(ref FVInterface IFace, size_t gtl, ref FlowState Lft,
+                     bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the left-side of the interface,
     // given information in the left-cell attached to this interface.
     {

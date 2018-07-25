@@ -193,8 +193,8 @@ public:
     abstract double read_solution(string filename, bool overwrite_geometry_data);
     abstract void write_solution(string filename, double sim_time);
     abstract void propagate_inflow_data_west_to_east();
-    abstract void convective_flux_phase0(size_t gtl=0);
-    abstract void convective_flux_phase1(size_t gtl=0);
+    abstract void convective_flux_phase0(bool allow_high_order_interpolation, size_t gtl=0);
+    abstract void convective_flux_phase1(bool allow_high_order_interpolation, size_t gtl=0);
     
     void identify_reaction_zones(int gtl)
     // Set the reactions-allowed flag for cells in this block.
