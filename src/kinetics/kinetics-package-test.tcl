@@ -12,7 +12,6 @@ test chemistry-update-test {Testing chemistry_update.d} -body {
     exec ./chemistry_update_test
 } -result {} -returnCodes {0}
 
-
 test rate-constant-test {Testing rate_constant.d} -body {
     exec ./rate_constant_test
 } -result {} -returnCodes {0}
@@ -23,6 +22,10 @@ test reaction-test {Testing reaction.d} -body {
 
 test reaction-mechanism-test {Testing reaction_mechanism.d} -body {
     exec ./reaction_mechanism_test
+} -result {} -returnCodes {0}
+
+test two_temperature-argon-kinetics-test {Testing Daniel Smith's two-temperature argon reaction mechanism.} -body {
+    exec ./two_temperature_argon_kinetics_test
 } -result {} -returnCodes {0}
 
 puts ""

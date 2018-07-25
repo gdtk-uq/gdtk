@@ -5,7 +5,11 @@ PLATFORM ?= linux
 INSTALL_DIR ?= $(HOME)/e3bin
 BUILD_DIR ?= ../../build
 
-TEST_PROGRAMS := chemistry_update_test rate_constant_test reaction_test reaction_mechanism_test
+TEST_PROGRAMS := chemistry_update_test \
+		rate_constant_test \
+		reaction_test \
+		reaction_mechanism_test \
+		two_temperature_argon_kinetics_test
 
 UTIL_DIR := ../util
 include $(UTIL_DIR)/util_files.mk
@@ -42,6 +46,7 @@ test: $(TEST_PROGRAMS)
 clean:
 	- rm *.o
 	- rm $(TEST_PROGRAMS)
+	- rm two_temperature_argon_kinetics_test_results.data
 	- rm -r $(BUILD_DIR)/*
 	- cd $(LUA_DIR); make clean
 	- cd $(GAS_DIR); make clean; rm libgas.a
