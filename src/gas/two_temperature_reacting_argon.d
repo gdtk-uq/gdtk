@@ -153,13 +153,13 @@ public:
     {
         //number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         //return 3.0/2.0*_Rgas*(1+alpha) + alpha-_Rgas*alpha*(1-alpha)/(2-alpha)*pow((3.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
-        return 312.0;
+        return to!number(312.0);
     }
     override number dhdT_const_p(in GasState Q) const
     {
         //number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
         //return 5.0/2.0*_Rgas*(1+alpha) + _Rgas/2*alpha*(1-pow(alpha,2))*pow((5.0/2.0*Q.T+alpha*_theta_ion)/Q.T,2);
-        return 520.0;
+        return to!number(520.0);
     }
     override number dpdrho_const_T(in GasState Q) const
     {

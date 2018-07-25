@@ -83,7 +83,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number u_trans_ionisation_electron;
             number u_trans_collisions;
 
-            number chem_dt_start = _chem_dt;
+            double chem_dt_start = _chem_dt;
             int NumberSteps = to!int(tInterval/_chem_dt);
             if (NumberSteps == 0) {NumberSteps = 1;}
             _chem_dt = tInterval/NumberSteps;
