@@ -224,6 +224,31 @@ class IgnitionZone : BlockZone {
 }
 
 version(steady_state) {
+enum PreconditionMatrixType { block_diagonal, ilu }
+string preconditionMatrixTypeName(PreconditionMatrixType i)
+{
+    final switch (i) {
+    case PreconditionMatrixType.block_diagonal: return "block_diagonal";
+    case PreconditionMatrixType.ilu: return "ilu";
+    }
+} // end preconditionMatrixTypeName()
+
+PreconditionMatrixType preconditionMatrixTypeFromName(string name)
+{
+    switch (name) {
+    case "block_diagonal": return PreconditionMatrixType.block_diagonal;
+    case "ilu": return PreconditionMatrixType.ilu;
+    default:
+        string errMsg = "The selected 'preconditioner' is unavailable.\n";
+        errMsg ~= format("You selected: '%s'\n", name);
+        errMsg ~= "The available strategies are: \n";
+        errMsg ~= "   'block_diagonal'\n";
+        errMsg ~= "   'ilu'\n";
+        errMsg ~= "Check your selection or its spelling in the input file.\n";
+        throw new Error(errMsg);
+    }
+} // end preconditionMatrixTypeFromName()
+
 enum EtaStrategy { constant, geometric, adaptive, adaptive_capped }
 string etaStrategyName(EtaStrategy i)
 {
@@ -258,6 +283,8 @@ EtaStrategy etaStrategyFromName(string name)
 struct SteadyStateSolverOptions {
     int nConserved = 4;
     bool usePreconditioner = true;
+    int frozenPreconditionerCount = 1;
+    PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.block_diagonal;
     bool useScaling = true;
     bool useComplexMatVecEval = false;
     int nPreSteps = 10;
@@ -1358,6 +1385,16 @@ void read_control_file()
     version (steady_state) {
     auto sssOptions = jsonData["steady_state_solver_options"];
     GlobalConfig.sssOptions.usePreconditioner = getJSONbool(sssOptions, "use_preconditioner", GlobalConfig.sssOptions.usePreconditioner);
+    GlobalConfig.sssOptions.frozenPreconditionerCount = getJSONint(sssOptions, "frozen_preconditioner_count", GlobalConfig.sssOptions.frozenPreconditionerCount);
+    { 
+        auto mySaveValue = GlobalConfig.sssOptions.preconditionMatrixType;
+        try {
+            string name = sssOptions["precondition_matrix_type"].str;
+            GlobalConfig.sssOptions.preconditionMatrixType = preconditionMatrixTypeFromName(name);
+        } catch (Exception e) {
+            GlobalConfig.sssOptions.preconditionMatrixType = mySaveValue;
+        }
+    }
     GlobalConfig.sssOptions.useScaling = getJSONbool(sssOptions, "use_scaling", GlobalConfig.sssOptions.useScaling);
     GlobalConfig.sssOptions.useComplexMatVecEval = getJSONbool(sssOptions, "use_complex_matvec_eval", GlobalConfig.sssOptions.useComplexMatVecEval);
     GlobalConfig.sssOptions.nPreSteps = 

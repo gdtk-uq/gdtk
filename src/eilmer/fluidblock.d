@@ -122,6 +122,8 @@ public:
     // Work-space for steady-state solver
     // These arrays and matrices are directly tied to using the
     // GMRES iterative solver.
+    SMatrix!number JcT; // transposed Jacobian (w.r.t conserved variables)
+    SMatrix!number Jc; // Jacobian (w.r.t conserved variables)
     ConservedQuantities maxRate, residuals;
     double normAcc, dotAcc;
     size_t nvars;

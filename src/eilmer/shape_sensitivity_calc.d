@@ -246,28 +246,23 @@ void main(string[] args) {
         return;
     }
 
-    /* Verify Flow Jacobian via Frechet Derivative */
+    /* Verify Jacobian routines via Frechet Derivative */
     if (verifyFlowJacobianFlag) {
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
-        /* Construct Flow Jacobian */
         size_t nPrimitive; 
         if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
         else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
-        
+
+        // make sure ghost cells are filled
         foreach (myblk; parallel(localFluidBlocks,1)) {
-            // make sure ghost cells are filled before proceeding...
             myblk.applyPreReconAction(0.0, 0, 0);
             myblk.applyPostConvFluxAction(0.0, 0, 0);
             myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
             myblk.applyPostDiffFluxAction(0.0, 0, 0);
-            
-            myblk.JlocT = new SMatrix!number();
-            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
         }
-        
+                
         foreach (blk; localFluidBlocks) {
-
-            // compute directional vector
+            // compute arbitrary vector
             number[] v;
             v.length = blk.cells.length*nPrimitive;
             
@@ -275,7 +270,7 @@ void main(string[] args) {
                 v[i] = i+1; // theoretically can be any vector.
             }
             
-            // normalise directional vector
+            // normalise the vector
             number norm = 0.0;
             foreach( i; 0..v.length) {
                 norm += v[i]*v[i];
@@ -291,33 +286,60 @@ void main(string[] args) {
             number[] p2;
             p2.length = blk.cells.length*nPrimitive;
 
-            // explicit multiplication of Jv (note we want to nultiply the Jacobian NOT transpose Jacobian by v)
+            // form block diagonal precondition sub-matrices
+            GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.block_diagonal;
+            sss_preconditioner_initialisation(blk, nPrimitive);
+            sss_preconditioner(blk, nPrimitive, 1.0e+16);
+
+            // form 1st order Jacobian via ILU preconditioner routines
+            GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.ilu;
+            sss_preconditioner_initialisation(blk, nPrimitive);
+            sss_preconditioner(blk, nPrimitive, 1.0e+16);
+
+            // explicit multiplication of Jv
             foreach ( i; 0..blk.cells.length*nPrimitive) {
                 p1[i] = 0.0;
                 foreach ( j; 0..blk.cells.length*nPrimitive) {
-                    p1[i] += blk.JlocT[j,i]*v[j];
+                    p1[i] += blk.Jc[i,j]*v[j];
                 }
             }
 
             // Frechet derivative of Jv
-            evalPrimitiveJacobianVecProd(blk, nPrimitive, v, p2, EPS);
+            evalConservativeJacobianVecProd(blk, nPrimitive, v, p2, EPS);
 
-            string fileName = "flow_jacobian_test.output";
-            auto outFile = File(fileName, "w");
-            foreach( i; 0..v.length ) {
-                size_t id = i/4;
-                outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
+            // write out results for the 1st order Jacobian test
+            {
+                string fileName = "jacobian_test0.output";
+                auto outFile = File(fileName, "w");
+                foreach( i; 0..v.length ) {
+                    size_t id = i/4;
+                    outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
+                }
             }
-                        
-            assert(approxEqualNumbers(p2, p1, 1.0e-10, 1.0e-01), "Flow Jacobian Test: FAILED.");
-            
-        }
 
-        writeln("Flow Jacobian Test: PASSED.");
+            // write out results for testing the block-diagonal sub-matrices
+            {
+                string fileName = "jacobian_test1.output";
+                auto outFile = File(fileName, "w");
+                foreach (myblk; parallel(localFluidBlocks,1)) {
+                    foreach( cell; myblk.cells ) {
+                        size_t id = cell.id;
+                        foreach ( i; 0..nPrimitive) {
+                            foreach ( j; 0..nPrimitive) {
+                                number z1 = blk.Jc[id*nPrimitive+i, id*nPrimitive+j];
+                                number z2 = cell.dPrimitive[i, j];
+                                outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((z1-z2)/z1), fabs(z1-z2), z1, z2);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        writeln("Jacobian Test: COMPLETED");
         return;
     }
 
-    /* Steady-state solver preconditioner test */
+    /* Steady-state solver preconditioner routines test */
     if (verifySSSPreconditionerFlag) {
         size_t nPrimitive; 
         if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
@@ -341,22 +363,6 @@ void main(string[] args) {
         foreach (myblk; parallel(localFluidBlocks,1)) {
             sss_preconditioner_initialisation(myblk, nPrimitive);
             sss_preconditioner(myblk, nPrimitive, 1.0e+16);
-        }
-
-        // Compare the primitive Jacobian diagonal blocks with the full 1st order primitive Jacobian
-        string fileName = "sss_preconditioner_test_1.output";        
-        auto outFile = File(fileName, "w");
-        foreach (myblk; parallel(localFluidBlocks,1)) {
-            foreach( cell; myblk.cells ) {
-                size_t id = cell.id;
-                foreach ( i; 0..nPrimitive) {
-                    foreach ( j; 0..nPrimitive) {
-                        number p1 = myblk.JlocT[id*nPrimitive+j, id*nPrimitive+i];
-                        number p2 = cell.dPrimitive[i, j];
-                        outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1-p2)/p1), fabs(p1-p2), p1, p2);
-                    }
-                }
-            }
         }
         
         foreach (blk; localFluidBlocks) {
@@ -493,8 +499,8 @@ void main(string[] args) {
             // Frechet derivative of Jv
             evalConservativeJacobianVecProd(blk, nPrimitive, z, p2, EPS);
             
-            fileName = "sss_preconditioner_test_2.output";
-            outFile = File(fileName, "w");
+            string fileName = "sss_preconditioner_test.output";
+            auto outFile = File(fileName, "w");
             foreach( i; 0..v.length ) {
                 size_t id = i/4;
                     outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);

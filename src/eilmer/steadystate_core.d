@@ -209,7 +209,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         foreach ( preStep; -nPreSteps .. 0 ) {
             foreach (attempt; 0 .. maxNumberAttempts) {
                 try {
-                    rpcGMRES_solve(pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts);
+                    rpcGMRES_solve(preStep, pseudoSimTime, dt, eta0, sigma0, usePreconditioner, normOld, nRestarts);
                 }
                 catch (FlowSolverException e) {
                     writefln("Failed when attempting GMRES solve in pre-steps.");
@@ -464,7 +464,7 @@ void iterate_to_steady_state(int snapshotStart, int maxCPUs)
         foreach (attempt; 0 .. maxNumberAttempts) {
             failedAttempt = false;
             try {
-                rpcGMRES_solve(pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts);
+                rpcGMRES_solve(step, pseudoSimTime, dt, eta, sigma, usePreconditioner, normNew, nRestarts);
             }
             catch (FlowSolverException e) {
                 writefln("Failed when attempting GMRES solve in main steps.");
@@ -999,7 +999,7 @@ foreach (blk; localFluidBlocks) `~norm2~` += blk.normAcc;
 
 }
 
-void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
+void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, double sigma, bool usePreconditioner,
                     ref double residual, ref int nRestarts)
 {
     // Make a stack-local copy of conserved quantities info
@@ -1185,24 +1185,29 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         foreach (j; 0 .. m) {
             iterCount = j+1;
             if (usePreconditioner) {
-                bool savedViscousFlag = GlobalConfig.viscous;
-                GlobalConfig.viscous = false;
                 foreach (blk; parallel(localFluidBlocks,1)) {
-                    if (r == 0 && j == 0) {
-                        blk.myConfig.viscous = false;
+                    int n = GlobalConfig.sssOptions.frozenPreconditionerCount;
+                    // We compute the precondition matrix on the very first step after the start up steps
+                    // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
+                    if (r == 0 && j == 0 && (step%n == 0 || step == GlobalConfig.sssOptions.nStartUpSteps+1))
                         sss_preconditioner(blk, nConserved, dt);
-                        blk.myConfig.viscous = savedViscousFlag;
-                    }
-                    int cellCount = 0;
-                    number[] tmp;
-                    tmp.length = nConserved;
-                    foreach (cell; blk.cells) {
-                        nm.bbla.dot(cell.dConservative, blk.v[cellCount..cellCount+nConserved], tmp);
-                        blk.zed[cellCount..cellCount+nConserved] = tmp[];
-                        cellCount += nConserved;
-                    }
+                    final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+                        case PreconditionMatrixType.block_diagonal:
+                            int cellCount = 0;
+                            number[] tmp;
+                            tmp.length = nConserved;
+                            foreach (cell; blk.cells) { 
+                                nm.bbla.dot(cell.dConservative, blk.v[cellCount..cellCount+nConserved], tmp);
+                                blk.zed[cellCount..cellCount+nConserved] = tmp[];
+                                cellCount += nConserved;
+                            }
+                            break;
+                        case PreconditionMatrixType.ilu:
+                            blk.zed[] = blk.v[];
+                            nm.smla.solve(blk.P, blk.zed);
+                            break;
+                    } // end switch
                 }
-                GlobalConfig.viscous = savedViscousFlag;
             }
             else {
                 foreach (blk; parallel(localFluidBlocks,1)) {
@@ -1307,14 +1312,22 @@ void rpcGMRES_solve(double pseudoSimTime, double dt, double eta, double sigma, b
         
         if (usePreconditioner) {
             foreach(blk; parallel(localFluidBlocks,1)) {
-                int cellCount = 0;
-                number[] tmp;
-                tmp.length = nConserved;
-                foreach (cell; blk.cells) {
-                    nm.bbla.dot(cell.dConservative, blk.zed[cellCount..cellCount+nConserved], tmp);
-                    blk.dU[cellCount..cellCount+nConserved] = tmp[];
-                    cellCount += nConserved;
-                }
+                final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
+                case PreconditionMatrixType.block_diagonal:
+                    int cellCount = 0;
+                    number[] tmp;
+                    tmp.length = nConserved;
+                    foreach (cell; blk.cells) {
+                        nm.bbla.dot(cell.dConservative, blk.zed[cellCount..cellCount+nConserved], tmp);
+                        blk.dU[cellCount..cellCount+nConserved] = tmp[];
+                        cellCount += nConserved;
+                    }
+                    break;
+                case PreconditionMatrixType.ilu:
+                    blk.dU[] = blk.zed[];
+                    nm.smla.solve(blk.P, blk.dU);
+                    break;
+                } // end switch
             }
         }
         else {
