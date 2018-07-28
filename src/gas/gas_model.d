@@ -27,6 +27,7 @@ import std.conv;
 import std.math;
 import std.stdio;
 import std.string;
+import std.algorithm.searching : canFind;
 import nm.complex;
 import nm.number;
 
@@ -41,6 +42,10 @@ immutable double MIN_MASS_FRACTION = 1.0e-30;
 immutable double MIN_MOLES = 1.0e-30;
 immutable double T_MIN = 20.0; 
 immutable double MASSF_ERROR_TOL = 1.0e-6;
+
+immutable string[] equilibriumEnergyModeNames = ["equilibrium",
+                                                 "transrotational",
+                                                 "translational"];
 
 class GasModelException : Exception {
     this(string message, string file=__FILE__, size_t line=__LINE__,
@@ -59,14 +64,30 @@ public:
     @property ref double[] LJ_epsilons() { return _LJ_epsilons; }
     final string species_name(int i) const { return _species_names[i]; }
     final int species_index(string spName) const { return _species_indices.get(spName, -1); }
+    final string energy_mode_name(int i) const { return _energy_mode_names[i]; }
+    final int energy_mode_index(string modeName) const {
+        if (equilibriumEnergyModeNames.canFind(modeName)) {
+            return -1;
+        }
+        return _energy_mode_indices.get(modeName, -99);
+    }
 
     void create_species_reverse_lookup()
     {
         _species_indices.clear;
-        foreach ( int isp; 0 .. _n_species ) {
+        foreach (int isp; 0 .. _n_species) {
             _species_indices[_species_names[isp]] = isp;
         }
     }
+
+    void create_energy_mode_reverse_lookup()
+    {
+        _energy_mode_indices.clear;
+        foreach (int imode; 0 .. _n_modes) {
+            _energy_mode_indices[_energy_mode_names[imode]] = imode;
+        }
+    }
+
     // Methods to be overridden.
     //
     // Although the following methods are not intended to alter their
@@ -168,6 +189,8 @@ protected:
     uint _n_modes;
     string[] _species_names;
     int[string] _species_indices;
+    string[] _energy_mode_names;
+    int[string] _energy_mode_indices;
     double[] _mol_masses;
     double[] _LJ_sigmas;
     double[] _LJ_epsilons;

@@ -37,6 +37,9 @@ public:
         getArrayOfStrings(L, LUA_GLOBALSINDEX, "species", _species_names);
         _n_species = to!uint(_species_names.length);
         _n_modes = 1;
+        _energy_mode_names.length = 1;
+        _energy_mode_names[0] = "vibroelectronic";
+        create_energy_mode_reverse_lookup();
         string model;
         if (_n_species == 5) {
             model = "5-species";
