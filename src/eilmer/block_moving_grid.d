@@ -73,16 +73,18 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
             averaged_ivel = (vtx1.vel[0] + vtx2.vel[0]) / 2.0;
             if ( blk.myConfig.axisymmetric == false ) vol = 0.5 * cross( pos1, pos2 );
             else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) / 4.0 );
-            temp = vol / ( dt * IFace.area[0] );
             IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
-            averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);            
-            IFace.gvel.set(temp.z, averaged_ivel.y, averaged_ivel.z);
+            averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);  
             if ( blk.myConfig.axisymmetric && j == blk.jmin) {
                 // For axis symmetric cases the cells along the axis of symmetry have 0 interface area,
                 // this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
                 // We choose to set the y and z directions to 0, but take an averaged value for the
                 // x-direction so as to not force the grid to be stationary, defeating the moving grid's purpose.
                 IFace.gvel.set(averaged_ivel.x, to!number(0.0), to!number(0.0));
+            }
+            else {
+                temp = vol / ( dt * IFace.area[0] );
+                IFace.gvel.set(temp.z, averaged_ivel.y, averaged_ivel.z);
             }
             averaged_ivel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);           
             IFace.gvel.transform_to_global_frame(IFace.n, IFace.t1, IFace.t2);
