@@ -49,8 +49,12 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
             // Reference: D. Ambrosi, L. Gasparini and L. Vigenano
             // Full Potential and Euler solutions for transonic unsteady flow
             // Aeronautical Journal November 1994 Eqn 25
-            if ( blk.myConfig.axisymmetric == false ) vol = 0.5 * cross( pos1, pos2 );
-            else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) / 4.0 );
+            if (blk.myConfig.axisymmetric == false) {
+                vol = 0.5 * cross( pos1, pos2 );
+            }
+            else {
+                vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) / 4.0 );
+            }
             temp = vol / ( dt * IFace.area[0] );
             // temp is the interface velocity (W_if) from the GCL
             // interface area determined at gtl 0 since GCL formulation
@@ -71,11 +75,15 @@ int set_gcl_interface_properties(SFluidBlock blk, size_t gtl, double dt) {
             pos1 = vtx2.pos[gtl] - vtx1.pos[0];
             pos2 = vtx1.pos[gtl] - vtx2.pos[0];
             averaged_ivel = (vtx1.vel[0] + vtx2.vel[0]) / 2.0;
-            if ( blk.myConfig.axisymmetric == false ) vol = 0.5 * cross( pos1, pos2 );
-            else vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) / 4.0 );
+            if (blk.myConfig.axisymmetric == false) {
+                vol = 0.5 * cross( pos1, pos2 );
+            }
+            else {
+                vol = 0.5 * cross( pos1, pos2 ) * ( ( vtx1.pos[gtl].y + vtx1.pos[0].y + vtx2.pos[gtl].y + vtx2.pos[0].y ) / 4.0 );
+            }
             IFace.gvel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);
             averaged_ivel.transform_to_local_frame(IFace.n, IFace.t1, IFace.t2);  
-            if ( blk.myConfig.axisymmetric && j == blk.jmin) {
+            if (blk.myConfig.axisymmetric && j == blk.jmin && IFace.area[0] == 0.0) {
                 // For axis symmetric cases the cells along the axis of symmetry have 0 interface area,
                 // this is a problem for determining Wif, so we have to catch the NaN from dividing by 0.
                 // We choose to set the y and z directions to 0, but take an averaged value for the
