@@ -192,6 +192,7 @@ function writeThermPerfGas(f, species, db, optsTable)
       f:write(string.format("'%s', ", sp))
    end
    f:write("}\n\n")
+   f:write("energyModes = {'equilibrium'}")
    f:write("db = {}\n")
    for _,sp in ipairs(species) do
       f:write(string.format("db['%s'] = {}\n", sp))

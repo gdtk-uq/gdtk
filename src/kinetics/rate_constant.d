@@ -55,12 +55,14 @@ public:
         _A = A;
         _n = n;
         _C = C;
+        _rctIdx = -1;
     }
     this(lua_State* L)
     {
         _A = getDouble(L, -1, "A");
         _n = getDouble(L, -1, "n");
         _C = getDouble(L, -1, "C");
+        _rctIdx = getInt(L, -1, "rctIndex");
     }
     ArrheniusRateConstant dup()
     {
@@ -68,11 +70,12 @@ public:
     }
     override number eval(in GasState Q)
     {
-        number T = Q.T;
+        number T = (_rctIdx == -1) ? Q.T : Q.T_modes[_rctIdx];
         return _A*pow(T, _n)*exp(-_C/T);
     }
 private:
     double _A, _n, _C;
+    int _rctIdx;
 }
 
 

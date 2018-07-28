@@ -312,7 +312,7 @@ function main()
       inFname = arg[2]
       outFname = arg[3]
    end
-   -- Execute gas model file, just so we can get the list of species.
+   -- Execute gas model file, just so we can get the list of species and energy modes
    dofile(gmodelName)
    -- Now we'll make the species table give us reverse look up.
    -- For a given species name, we want its D (0-offset) index
@@ -320,11 +320,20 @@ function main()
       species[sp] = i-1
    end
 
+   if not energyModes then
+      energyModes = {}
+   end
+
+   for i, mode in ipairs(energyModes) do
+      energyModes[mode] = i-1
+   end
+   energyModes["translational"] = -1
+
    -- Transform reactions internally
    dofile(inFname)
    for i,r in ipairs(reactions) do
       r.number = i
-      reactions[i] = transformReaction(r, species, SUPPRESS_WARNINGS)
+      reactions[i] = transformReaction(r, species, energyModes, SUPPRESS_WARNINGS)
    end
    -- Now write out transformed results
    buildVerboseLuaFile(outFname)

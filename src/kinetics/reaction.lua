@@ -18,7 +18,7 @@ module(..., package.seeall)
 
 require 'lex_elems'
 
-function transformRateConstant(t, coeffs, anonymousCollider)
+function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
    local nc = 0
    for _,c in ipairs(coeffs) do
       nc = nc + c
@@ -36,6 +36,17 @@ function transformRateConstant(t, coeffs, anonymousCollider)
       m.A = t.A*convFactor
       m.n = t.n
       m.C = t.C
+      local rctIndex = -1
+      if t.rateControllingTemperature then
+         if energyModes[t.rateControllingTemperature] then
+            rctIndex = energyModes[t.rateControllingTemperature]
+         else
+            print("The supplied 'rateControllingTemperature' string is unknown: ", t.rateControllingTemperature)
+            print("Bailing out!")
+            os.exit(1)
+         end
+      end
+      m.rctIndex = rctIndex
    elseif m.model == 'Park' then
       m.A = t.A*convFactor
       m.n = t.n
@@ -74,7 +85,7 @@ end
 function rateConstantToLuaStr(rc)
    local str = ""
    if rc.model == 'Arrhenius' then
-      str = string.format("{model='Arrhenius', A=%16.12e, n=%f, C=%16.12e }", rc.A, rc.n, rc.C)
+      str = string.format("{model='Arrhenius', A=%16.12e, n=%f, C=%16.12e, rctIndex=%d}", rc.A, rc.n, rc.C, rc.rctIndex)
    elseif rc.model == 'Park' then
       str = string.format("{model='Park', A=%16.12e, n=%f, C=%16.12e, s=%f }", rc.A, rc.n, rc.C, rc.s)
    elseif rc.model == 'Lindemann-Hinshelwood' then
@@ -293,7 +304,7 @@ end
 --          efficiencies = {}
 -- }
 --
-function transformReaction(t, species, suppressWarnings)
+function transformReaction(t, species, energyModes, suppressWarnings)
    r = {}
    r.equation = t[1]
    r.type = "elementary"
@@ -379,12 +390,12 @@ function transformReaction(t, species, suppressWarnings)
    end
 
    if t.fr then
-      r.frc = transformRateConstant(t.fr, r.reacCoeffs, anonymousCollider)
+      r.frc = transformRateConstant(t.fr, r.reacCoeffs, anonymousCollider, energyModes)
    else
       r.frc = {model="fromEqConst"}
    end
    if t.br then
-      r.brc = transformRateConstant(t.br, r.prodCoeffs, anonymousCollider)
+      r.brc = transformRateConstant(t.br, r.prodCoeffs, anonymousCollider, energyModes)
    else
       r.brc = {model="fromEqConst"}
    end
