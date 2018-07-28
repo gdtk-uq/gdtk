@@ -294,10 +294,12 @@ private:
                 continue;
             }
             // 1. Compute Millikan-White value for each interaction
-            number pTau = exp(_A[isp] * (pow(Q.T, -1./3) - 0.015*pow(_mu[isp][csp], 0.25)) - 18.42);
-            number pCollider = _molef[csp]*Q.p/P_atm;
-            number tau = pTau/pCollider;
-            tauInv += 1.0/tau;
+            if (_molef[csp] >= SMALL_MOLE_FRACTION) {
+                number pTau = exp(_A[isp] * (pow(Q.T, -1./3) - 0.015*pow(_mu[isp][csp], 0.25)) - 18.42);
+                number pCollider = _molef[csp]*Q.p/P_atm;
+                number tau = pTau/pCollider;
+                tauInv += 1.0/tau;
+            }
         }
         number tauMW = 1.0/tauInv;
         // 2. Compute Park value for high-temperature correction
@@ -386,7 +388,7 @@ private:
         double atol = _energyAbsTolerance;
         double rtol = _energyRelTolerance;
         double sk = atol + rtol*fmax(fabs(_Q0.u_modes[0].re), fabs(Q.u_modes[0].re));
-        double err = errEst.re/sk;
+        double err = fabs(errEst.re/sk);
         // Now use error as an estimate for new step size
         double scale = 0.0;
         const double maxscale = 10.0;
