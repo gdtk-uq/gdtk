@@ -78,6 +78,36 @@ private:
     int _rctIdx;
 }
 
+class ArrheniusRateConstant2 : RateConstant {
+public:
+    this(double logA, double B, double C)
+    {
+        _logA = logA;
+        _B = B;
+        _C = C;
+        _rctIdx = -1;
+    }
+    this(lua_State* L)
+    {
+        _logA = getDouble(L, -1, "logA");
+        _B = getDouble(L, -1, "B");
+        _C = getDouble(L, -1, "C");
+        _rctIdx = getInt(L, -1, "rctIndex");
+    }
+    ArrheniusRateConstant2 dup()
+    {
+        return new ArrheniusRateConstant2(_logA, _B, _C);
+    }
+    override number eval(in GasState Q)
+    {
+        number T = (_rctIdx == -1) ? Q.T : Q.T_modes[_rctIdx];
+        return exp(_logA + _B*T - _C/T);
+    }
+private:
+    double _logA, _B, _C;
+    int _rctIdx;
+}
+
 
 number thirdBodyConcentration(in GasState Q, Tuple!(int, double)[] efficiencies, GasModel gmodel)
 {
@@ -355,6 +385,8 @@ RateConstant createRateConstant(lua_State* L, Tuple!(int, double)[] efficiencies
     switch (model) {
     case "Arrhenius":
         return new ArrheniusRateConstant(L);
+    case "Arrhenius2":
+        return new ArrheniusRateConstant2(L);
     case "Lindemann-Hinshelwood":
         return new LHRateConstant(L, efficiencies, gmodel);
     case "Troe":

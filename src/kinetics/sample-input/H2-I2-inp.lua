@@ -10,8 +10,8 @@ reaction = {}
 reaction[1] = {
   equation = "H2 + I2 <=> 2 HI",
   type = "elementary",
-  frc = {model='Arrhenius', A=1.930000000000e+08, n=0.000000, C=2.062000000000e+04 },
-  brc = {model='Arrhenius', A=5.470705805110e-07, n=0.000000, C=0.000000000000e+00 },
+  frc = {model='Arrhenius', A=1.930000000000e+08, n=0.000000, C=2.062000000000e+04, rctIndex=-1 },
+  brc = {model='Arrhenius', A=5.470705805110e-07, n=0.000000, C=0.000000000000e+00, rctIndex=-1 },
   ec = {},
   reacIdx = { 0, 1,},
   reacCoeffs = { 1, 1,},

@@ -47,6 +47,21 @@ function transformRateConstant(t, coeffs, anonymousCollider, energyModes)
          end
       end
       m.rctIndex = rctIndex
+      elseif m.model == 'Arrhenius' then
+      m.logA = t.logA
+      m.B = t.B
+      m.C = t.C
+      local rctIndex = -1
+      if t.rateControllingTemperature then
+         if energyModes[t.rateControllingTemperature] then
+            rctIndex = energyModes[t.rateControllingTemperature]
+         else
+            print("The supplied 'rateControllingTemperature' string is unknown: ", t.rateControllingTemperature)
+            print("Bailing out!")
+            os.exit(1)
+         end
+      end
+      m.rctIndex = rctIndex
    elseif m.model == 'Park' then
       m.A = t.A*convFactor
       m.n = t.n
@@ -86,6 +101,8 @@ function rateConstantToLuaStr(rc)
    local str = ""
    if rc.model == 'Arrhenius' then
       str = string.format("{model='Arrhenius', A=%16.12e, n=%f, C=%16.12e, rctIndex=%d}", rc.A, rc.n, rc.C, rc.rctIndex)
+   elseif rc.model == 'Arrhenius2' then
+      str = string.format("{model='Arrhenius2', logA=%16.12e, B=%16.12e, C=%16.12e, rctIndex=%d}", rc.logA, rc.B, rc.C, rc.rctIndex)
    elseif rc.model == 'Park' then
       str = string.format("{model='Park', A=%16.12e, n=%f, C=%16.12e, s=%f }", rc.A, rc.n, rc.C, rc.s)
    elseif rc.model == 'Lindemann-Hinshelwood' then
