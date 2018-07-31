@@ -87,25 +87,37 @@ public:
 
     override void update_thermo_from_pT(GasState Q) const 
     {
+        if (Q.T <= 0.0 || Q.p <= 0.0) {
+            string msg = "Temperature and/or pressure was negative for update_thermo_from_pT."; 
+            throw new GasModelException(msg);
+        }
         Q.rho = Q.p/(Q.T*_Rgas);
         Q.u = _Cv*Q.T;
     }
     override void update_thermo_from_rhou(GasState Q) const
     {
-        Q.T = Q.u/_Cv;
-        Q.p = Q.rho*_Rgas*Q.T;
-        if (Q.T <= 0.0 || Q.p <= 0.0) {
-            string msg = "Temperature and/or pressure went negative in IdealGas update."; 
+        if (Q.u <= 0.0 || Q.rho <= 0.0) {
+            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou."; 
             throw new GasModelException(msg);
         }
+        Q.T = Q.u/_Cv;
+        Q.p = Q.rho*_Rgas*Q.T;
     }
     override void update_thermo_from_rhoT(GasState Q) const
     {
+        if (Q.T <= 0.0 || Q.rho <= 0.0) {
+            string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
+            throw new GasModelException(msg);
+        }
         Q.p = Q.rho*_Rgas*Q.T;
         Q.u = _Cv*Q.T;
     }
     override void update_thermo_from_rhop(GasState Q) const
     {
+        if (Q.p <= 0.0 || Q.rho <= 0.0) {
+            string msg = "Pressure and/or density was negative for update_thermo_from_rhop."; 
+            throw new GasModelException(msg);
+        }
         Q.T = Q.p/(Q.rho*_Rgas);
         Q.u = _Cv*Q.T;
     }
@@ -123,6 +135,10 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
+        if (Q.T <= 0.0) {
+            string msg = "Temperature was negative for update_sound_speed."; 
+            throw new GasModelException(msg);
+        }
         Q.a = sqrt(_gamma*_Rgas*Q.T);
     }
     override void update_trans_coeffs(GasState Q)

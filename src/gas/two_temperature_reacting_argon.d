@@ -80,6 +80,10 @@ public:
     override void update_thermo_from_pT(GasState Q) const 
     {
         number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        if (Q.T <= 0.0 || Q.p <= 0.0) {
+            string msg = "Temperature and/or pressure was negative for update_thermo_from_pT."; 
+            throw new GasModelException(msg);
+        }
         Q.rho = Q.p/(_Rgas*(Q.T + alpha*Q.T_modes[0]));
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha<=_ion_tol) {
@@ -92,6 +96,10 @@ public:
     override void update_thermo_from_rhou(GasState Q) const
     {
         number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        if (Q.u <= 0.0 || Q.rho <= 0.0) {
+            string msg = "Internal energy and/or density was negative for update_thermo_from_rhou."; 
+            throw new GasModelException(msg);
+        }
         Q.T = 2.0/3.0*Q.u/_Rgas;
         if (alpha <= _ion_tol) {
             Q.T_modes[0] = _T_modes_ref;
@@ -105,6 +113,10 @@ public:
     override void update_thermo_from_rhoT(GasState Q) const
     {
         number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        if (Q.T <= 0.0 || Q.rho <= 0.0) {
+            string msg = "Temperature and/or density was negative for update_thermo_from_rhoT."; 
+            throw new GasModelException(msg);
+        }
         Q.p = Q.rho*_Rgas*(Q.T+alpha*Q.T_modes[0]);     //Q.rho*_Rgas*Q.T;
         Q.u = 3.0/2.0*_Rgas*Q.T;
         if (alpha <= _ion_tol) {
@@ -118,6 +130,10 @@ public:
     override void update_thermo_from_rhop(GasState Q) const
     {
         number alpha = (Q.massf[2]/_mol_masses[2]) / ((Q.massf[2]/_mol_masses[2])+(Q.massf[0]/_mol_masses[0]));
+        if (Q.p <= 0.0 || Q.rho <= 0.0) {
+            string msg = "Pressure and/or density was negative for update_thermo_from_rhop."; 
+            throw new GasModelException(msg);
+        }
         Q.T = Q.p/Q.rho/_Rgas - alpha*Q.T_modes[0];
         // Assume Q.T_modes[0] is set independently, and correct.
         Q.u = 3.0/2.0*_Rgas*Q.T;
@@ -138,6 +154,10 @@ public:
     }
     override void update_sound_speed(GasState Q) const
     {
+        if (Q.T <= 0.0) {
+            string msg = "Temperature was negative for update_sound_speed."; 
+            throw new GasModelException(msg);
+        }
         number _gamma = dhdT_const_p(Q)/dudT_const_v(Q);
         Q.a = sqrt(_gamma*_Rgas*Q.T);
         //[TODO] update the _Cv and _Cp properties to be dependant on alpha...
