@@ -161,36 +161,36 @@ public:
         size_t n = others.length;
         if (n == 0) throw new Error("Need to average from a nonempty array.");
         foreach(other; others) {
-            if ( this is other ) throw new Error("Must not include destination in source list.");
+            if ( this is other ) { throw new Error("Must not include destination in source list."); }
         }
         // Accumulate from a clean slate and then divide.
-        p = 0.0;
-        T = 0.0;
-        u = 0.0;
-        p_e = 0.0;
+        p = 0.0; T = 0.0; u = 0.0; p_e = 0.0; a = 0.0;
+        foreach(ref elem; u_modes) { elem = 0.0; }
         foreach(ref elem; T_modes) { elem = 0.0; }
+        mu = 0.0; k = 0.0;
+        foreach(ref elem; k_modes) { elem = 0.0; }
         sigma = 0.0;
         foreach(ref elem; massf) { elem = 0.0; }
         quality = 0.0;
         foreach(other; others) {
-            p += other.p;
-            T += other.T;
-            u += other.u;
-            p_e += other.p_e;
+            p += other.p; T += other.T; u += other.u; p_e += other.p_e; a += other.a;
+            foreach(i; 0 .. u_modes.length) { u_modes[i] += other.u_modes[i]; }
             foreach(i; 0 .. T_modes.length) { T_modes[i] += other.T_modes[i]; }
+            mu += other.mu; k += other.k;
+            foreach(i; 0 .. k_modes.length) { k_modes[i] += other.k_modes[i]; }
             sigma += other.sigma;
             foreach(i; 0 .. massf.length) { massf[i] += other.massf[i]; }
             quality += other.quality;
         }
-        p /= n;
-        T /= n;
-        u /= n;
-        p_e /= n;
+        p /= n; T /= n; u /= n; p_e /= n; a /= n;
         foreach(ref elem; T_modes) { elem /= n; }
+        foreach(ref elem; u_modes) { elem /= n; }
+        mu /= n; k /= n;
+        foreach(ref elem; k_modes) { elem /= n; }
         sigma /= n;
         foreach(ref elem; massf) { elem /= n; }
         quality /= n;
-        // Now, evaluate the rest of the properties using the gas model.
+        // Now, make the properties consistent using the gas model.
         gm.update_thermo_from_pT(this);
         gm.update_sound_speed(this);
         gm.update_trans_coeffs(this);
