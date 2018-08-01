@@ -101,7 +101,7 @@ extern(C) int configSetFromTable(lua_State* L)
     mixin(get_double_field("c_h","c_h"));
     mixin(get_double_field("divB_damping_length","divB_damping_length"));
     //
-    mixin(get_enum_field("strang_spliting", "strangSplitting", "strangSplittingModeFromName"));
+    mixin(get_enum_field("strang_splitting", "strangSplitting", "strangSplittingModeFromName"));
     mixin(get_enum_field("gasdynamic_update_scheme", "gasdynamic_update_scheme", "update_scheme_from_name"));
     mixin(get_enum_field("coupling_with_solid_domains", "coupling_with_solid_domains", "solidDomainCouplingFromName"));
     mixin(get_bool_field("solid_has_isotropic_properties", "solid_has_isotropic_properties"));
