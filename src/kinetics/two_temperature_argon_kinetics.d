@@ -18,6 +18,7 @@ import std.stdio : writeln;
 import std.format;
 import std.math;
 import std.conv : to;
+import std.algorithm;
 import nm.complex;
 import nm.number;
 
@@ -59,11 +60,6 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                          ref number[] params)
     {
         if (Q.T > 3000.0) {
-            double chem_dt_start = _chem_dt;
-            int NumberSteps = to!int(tInterval/_chem_dt);
-            if (NumberSteps == 0) {NumberSteps = 1;}
-            _chem_dt = tInterval/NumberSteps;
-            //
             // Determine the current number densities.
             number n_e = Q.rho/_mol_masses[2]*Q.massf[2]*_Av; // number density of electrons
             number n_Ar = Q.rho/_mol_masses[0]*Q.massf[0]*_Av; // number density of Ar
@@ -71,8 +67,11 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             number orig_n = n_e + n_Ar;
             number n_sum;
             number internal_energy_initial = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
-            // This is a simple euler integration...
-            foreach (j; 1 .. NumberSteps) {
+            //
+            // This is a simple euler integration with a number of steps over the full interval.
+            int nSteps = min(to!int(tInterval/_chem_dt), 1);
+            double dt = tInterval/nSteps;
+            foreach (j; 1 .. nSteps) {
                 // CHEMISTRY PART ---------------------------------------
                 // Determine the current rate coefficients
                 number kfA = 1.68e-26*Q.T*sqrt(Q.T)*(_theta_A1star/Q.T+2)*exp(-_theta_A1star/Q.T);
@@ -89,8 +88,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                 number ne_dot = ne_dot_A + ne_dot_e;
                 //
                 // Determine the new number densities (using a simple Euler update).
-                n_e += ne_dot*_chem_dt;
-                n_Ar -= ne_dot*_chem_dt;
+                n_e += ne_dot*dt;
+                n_Ar -= ne_dot*dt;
                 //
                 alpha = n_e/(n_e + n_Ar);
                 //
@@ -99,7 +98,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                     Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
                 } else {
                     Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion -
-                        ne_dot_e*_Kb*_theta_ion*_chem_dt/Q.rho;
+                        ne_dot_e*_Kb*_theta_ion*dt/Q.rho;
                     Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
                 }
                 //
@@ -145,7 +144,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         number v_ei = alpha*Q.rho/_m_Ar*sqrt(8*_Kb*Q.T_modes[0]/to!double(PI)/_m_e)*Q_ei;
                         // update the energy of each state
                         // energy transferred to electron mode through collisions
-                        number u_trans_collisions = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(Q.T-Q.T_modes[0])*_chem_dt/Q.rho;
+                        number u_trans_collisions = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(Q.T-Q.T_modes[0])*dt/Q.rho;
                         // writeln("u_trans_collisions = ", u_trans_collisions);
                         // Other energy states...
                         // number u_trans_ionisation;
@@ -158,8 +157,7 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
                     } // end if alpha > ion tol
                 } // end if statement regarding number density of electrons
-            }
-            _chem_dt = chem_dt_start; // return _chem_dt back to its original value
+            } // end foreach j
             //
             // Convert back to mass fractions.
             // Note that density has not changed since we are updating an isolated system.
