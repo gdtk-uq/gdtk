@@ -1491,6 +1491,7 @@ function write_config_file(fileName)
 			 tostring(config.axisymmetric)))
    f:write(string.format('"interpolation_order": %d,\n', config.interpolation_order))
    f:write(string.format('"interpolation_delay": %.18e,\n', config.interpolation_delay))
+   f:write(string.format('"strang_splitting": "%s",\n', config.strang_splitting))
    f:write(string.format('"gasdynamic_update_scheme": "%s",\n',
 			 config.gasdynamic_update_scheme))
    f:write(string.format('"coupling_with_solid_domains": "%s",\n',

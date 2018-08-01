@@ -57,6 +57,24 @@ static size_t totEnergyIdx;
 static size_t tkeIdx;
 static size_t omegaIdx;
 
+enum StrangSplittingMode { full_T_full_R, half_R_full_T_half_R }
+string strangSplittingModeName(StrangSplittingMode i)
+{
+    final switch(i) {
+    case StrangSplittingMode.full_T_full_R: return "full_T_full_R";
+    case StrangSplittingMode.half_R_full_T_half_R: return "half_R_full_T_half_R";
+    }
+}
+
+StrangSplittingMode strangSplittingModeFromName(string name)
+{
+    switch(name) {
+    case "full_T_full_R": return StrangSplittingMode.full_T_full_R;
+    case "half_R_full_T_half_R": return StrangSplittingMode.half_R_full_T_half_R;
+    default: return StrangSplittingMode.full_T_full_R;
+    }
+}
+
 // Symbolic names for turbulence models.
 enum TurbulenceModel { none, baldwin_lomax, k_omega, spalart_allmaras }
 string turbulence_model_name(TurbulenceModel i)
@@ -353,6 +371,9 @@ final class GlobalConfig {
     shared static GasdynamicUpdate gasdynamic_update_scheme = GasdynamicUpdate.pc;
     shared static size_t n_flow_time_levels = 3;
 
+    // Parameter controlling Strang-splitting mode when simulating reacting flows
+    shared static StrangSplittingMode strangSplitting = StrangSplittingMode.full_T_full_R;
+    
     // Parameters controlling solid domain update
     shared static SolidDomainCoupling coupling_with_solid_domains = SolidDomainCoupling.tight;
     shared static SolidDomainLooseUpdateOptions sdluOptions; 
@@ -944,6 +965,9 @@ void read_config_file()
         writeln("  dimensions: ", GlobalConfig.dimensions);
         writeln("  axisymmetric: ", GlobalConfig.axisymmetric);
     }
+
+    // Parameter controlling Strang splitting mode
+    mixin(update_enum("strang_splitting", "strangSplitting", "strangSplittingModeFromName"));
 
     // Parameters controlling convective update and size of storage arrays
     //

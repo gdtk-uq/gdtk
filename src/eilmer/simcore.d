@@ -709,7 +709,24 @@ void integrate_in_time(double target_time_as_requested)
         }
 
         // 2. Attempt a time step.
-        
+        // 2aa. Chemistry 1/2 step (if appropriate). 
+        if (GlobalConfig.strangSplitting == StrangSplittingMode.half_R_full_T_half_R) {
+            if (GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
+                double dt_flow = 0.5*dt_global;
+                version (gpu_chem) {
+                    GlobalConfig.gpuChem.thermochemical_increment(dt_flow);
+                    
+                } else { // without GPU accelerator
+                    foreach (blk; parallel(localFluidBlocksBySize,1)) {
+                        if (blk.active) {
+                            double local_dt_flow = dt_flow;
+                            foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt_flow); }
+                        }
+                    }
+                }
+            }
+        }
+
         // 2a. Moving Grid - let's start by calculating vertex velocties
         //     if GridMotion.none then set_grid_velocities to 0 m/s
         //     else moving grid vertex velocities will be set.
@@ -745,15 +762,17 @@ void integrate_in_time(double target_time_as_requested)
             // Call Nigel's update function here.
             solid_domains_backward_euler_update(sim_time, dt_global);
         }
-        // 2e. Chemistry step. 
+        // 2e. Chemistry step or 1/2 step (if appropriate). 
         if ( GlobalConfig.reacting && (sim_time > GlobalConfig.reaction_time_delay)) {
+            double dt_flow = (GlobalConfig.strangSplitting == StrangSplittingMode.full_T_full_R) ? dt_global : 0.5*dt_global;
             version (gpu_chem) {
-                GlobalConfig.gpuChem.thermochemical_increment(dt_global);
+                GlobalConfig.gpuChem.thermochemical_increment(dt_flow);
+
             } else { // without GPU accelerator
                 foreach (blk; parallel(localFluidBlocksBySize,1)) {
                     if (blk.active) {
-                        double local_dt_global = dt_global;
-                        foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt_global); }
+                        double local_dt_flow = dt_flow;
+                        foreach (cell; blk.cells) { cell.thermochemical_increment(local_dt_flow); }
                     }
                 }
             }
