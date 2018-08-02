@@ -224,12 +224,15 @@ public:
         number a, b, U, phi;
         immutable double w = 1.0e-12;
         // The following function to be used at compile time.
-        string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
+        string codeForLimits(string qname, string gname, string limFactorname,
+                             string qMaxname, string qMinname)
         {
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            if (abs("~gname~"[0]) > ESSENTIALLY_ZERO || abs("~gname~"[1]) > ESSENTIALLY_ZERO || abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
+            if (abs("~gname~"[0]) > ESSENTIALLY_ZERO ||
+                abs("~gname~"[1]) > ESSENTIALLY_ZERO ||
+                abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
             foreach (i, f; cell_cloud[0].iface) {
                 number dx = f.pos.x - cell_cloud[0].pos[0].x; 
                 number dy = f.pos.y - cell_cloud[0].pos[0].y; 
@@ -314,7 +317,8 @@ public:
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
 
-    void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig, size_t gtl=0)
+    void mlp_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+                   ref LocalConfig myConfig, size_t gtl=0)
     {
         // The implementation of the MLP limiter follows the implementation in VULCAN
         // i.e. it uses the MLP approach, and the Van Leer limiting function
@@ -326,7 +330,8 @@ public:
         else h = sqrt(cell_cloud[0].volume[gtl]);
         eps = 1.0e-12;
         // The following function to be used at compile time.
-        string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
+        string codeForLimits(string qname, string gname, string limFactorname,
+                             string qMaxname, string qMinname)
         {
             string code = "{
             U = cell_cloud[0].fs."~qname~";
@@ -415,11 +420,13 @@ public:
 
     void store_max_min_values_for_mlp_limiter(FVCell[] cell_cloud, ref LocalConfig myConfig)
     {
-        // the MLP limiter stores the maximum, and minimum flowstate values that surround a node, at the node
+        // the MLP limiter stores the maximum and minimum flowstate values
+        // that surround a node, at the node
         size_t dimensions = myConfig.dimensions;
         auto np = cell_cloud.length;
         // The following function to be used at compile time.
-        string codeForGradients(string qname, string gname, string qMaxname, string qMinname)
+        string codeForGradients(string qname, string gname,
+                                string qMaxname, string qMinname)
         {
             string code = "{
                 number q0 = cell_cloud[0].fs."~qname~";
@@ -453,7 +460,8 @@ public:
         if (nsp > 1) {
             // Multiple species.
             foreach (isp; 0 .. nsp) {
-                mixin(codeForGradients("gas.massf[isp]", "massf[isp]", "massfMax[isp]", "massfMin[isp]"));
+                mixin(codeForGradients("gas.massf[isp]", "massf[isp]",
+                                       "massfMax[isp]", "massfMin[isp]"));
             }
         } else {
             // Only one possible gradient value for a single species.
@@ -601,12 +609,14 @@ public:
         } // end switch thermo_interpolator
     } // end compute_lsq_gradients()
     
-    void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig)
+    void compute_lsq_values(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+                            ref LocalConfig myConfig)
     {
         size_t dimensions = myConfig.dimensions;
         auto np = cell_cloud.length;
         // The following function to be used at compile time.
-        string codeForGradients(string qname, string gname, string qMaxname, string qMinname)
+        string codeForGradients(string qname, string gname,
+                                string qMaxname, string qMinname)
         {
             string code = "{
                 number q0 = cell_cloud[0].fs."~qname~";
@@ -645,7 +655,8 @@ public:
         if (nsp > 1) {
             // Multiple species.
             foreach (isp; 0 .. nsp) {
-                mixin(codeForGradients("gas.massf[isp]", "massf[isp]", "massfMax[isp]", "massfMin[isp]"));
+                mixin(codeForGradients("gas.massf[isp]", "massf[isp]",
+                                       "massfMax[isp]", "massfMin[isp]"));
             }
         } else {
             // Only one possible gradient value for a single species.
@@ -738,7 +749,8 @@ public:
         b *= s;
     }
     
-    void interp_both(ref FVInterface IFace, size_t gtl, ref FlowState Lft, ref FlowState Rght,
+    void interp_both(ref FVInterface IFace, size_t gtl,
+                     ref FlowState Lft, ref FlowState Rght,
                      bool allow_high_order_interpolation)
     // Interpolate the flow field quantities at the left- and right-side of the interface,
     // given information in both cells attached to this interface.
@@ -773,7 +785,8 @@ public:
             // Always reconstruct in the global frame of reference -- for now
             //
             // x-velocity
-            string codeForReconstruction(string qname, string gname, string tname, string lname)
+            string codeForReconstruction(string qname, string gname,
+                                         string tname, string lname)
             {
                 string code = "{
                 number qL0 = cL0.fs."~qname~";
@@ -805,8 +818,12 @@ public:
                     case UnstructuredLimiter.barth:
                         goto case UnstructuredLimiter.venkat;
                     case UnstructuredLimiter.venkat:
-                        mygradL[0] *=  cL0.gradients."~lname~"; mygradL[1] *=  cL0.gradients."~lname~"; mygradL[2] *=  cL0.gradients."~lname~";
-                        mygradR[0] *=  cR0.gradients."~lname~"; mygradR[1] *=  cR0.gradients."~lname~"; mygradR[2] *=  cR0.gradients."~lname~";
+                        mygradL[0] *= cL0.gradients."~lname~";
+                        mygradL[1] *= cL0.gradients."~lname~";
+                        mygradL[2] *= cL0.gradients."~lname~";
+                        mygradR[0] *= cR0.gradients."~lname~";
+                        mygradR[1] *= cR0.gradients."~lname~";
+                        mygradR[2] *= cR0.gradients."~lname~";
                         break;
                     }
                 }
@@ -845,7 +862,8 @@ public:
             if (nsp > 1) {
                 // Multiple species.
                 foreach (isp; 0 .. nsp) {
-                    mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]", "gas.massf[isp]", "massfPhi[isp]"));
+                    mixin(codeForReconstruction("gas.massf[isp]", "massf[isp]",
+                                                "gas.massf[isp]", "massfPhi[isp]"));
                 }
                 try {
                     scale_mass_fractions(Lft.gas.massf); 
