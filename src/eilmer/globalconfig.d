@@ -446,6 +446,7 @@ final class GlobalConfig {
     // Allow the least-squares cloud of points (used to compute a cell-center gradient for
     // reconstruction in the unstructured solver) to grow.
     shared static bool use_extended_stencil = false;
+    shared static double venkat_K_value = 0.3;
     
     // Default flux calculator is the adaptive mix of ausmdv and efm.
     shared static FluxCalculator flux_calculator = FluxCalculator.adaptive_efm_ausmdv;
@@ -688,6 +689,7 @@ public:
     bool interpolate_in_local_frame;
     UnstructuredLimiter unstructured_limiter;
     bool use_extended_stencil;
+    double venkat_K_value;
     FluxCalculator flux_calculator;
     double shear_tolerance;
     double M_inf;
@@ -796,6 +798,7 @@ public:
         interpolate_in_local_frame = GlobalConfig.interpolate_in_local_frame;
         unstructured_limiter = GlobalConfig.unstructured_limiter;
         use_extended_stencil = GlobalConfig.use_extended_stencil;
+        venkat_K_value = GlobalConfig.venkat_K_value;
         flux_calculator = GlobalConfig.flux_calculator;
         shear_tolerance = GlobalConfig.shear_tolerance;
         M_inf = GlobalConfig.M_inf;
@@ -1017,6 +1020,7 @@ void read_config_file()
     mixin(update_bool("interpolate_in_local_frame", "interpolate_in_local_frame"));
     mixin(update_enum("unstructured_limiter", "unstructured_limiter", "unstructured_limiter_from_name"));
     mixin(update_bool("use_extended_stencil", "use_extended_stencil"));
+    mixin(update_double("venkat_K_value", "venkat_K_value"));
     mixin(update_enum("flux_calculator", "flux_calculator", "flux_calculator_from_name"));
     mixin(update_double("shear_tolerance", "shear_tolerance"));
     mixin(update_double("M_inf", "M_inf"));
@@ -1060,6 +1064,7 @@ void read_config_file()
         writeln("  apply_limiter: ", GlobalConfig.apply_limiter);
         writeln("  unstructured_limiter: ", unstructured_limiter_name(GlobalConfig.unstructured_limiter));
         writeln("  use_extended_stencil: ", GlobalConfig.use_extended_stencil);
+        writeln("  venkat_K_value: ", GlobalConfig.venkat_K_value);
         writeln("  extrema_clipping: ", GlobalConfig.extrema_clipping);
         writeln("  interpolate_in_local_frame: ", GlobalConfig.interpolate_in_local_frame);
         writeln("  flux_calculator: ", flux_calculator_name(GlobalConfig.flux_calculator));
