@@ -503,7 +503,8 @@ public:
     } // end compute_lsq_gradients()
 
     
-    void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws, ref LocalConfig myConfig, size_t gtl=0)
+    void venkat_limit(FVCell[] cell_cloud, ref LSQInterpWorkspace ws,
+                      ref LocalConfig myConfig, size_t gtl=0)
    {
         size_t dimensions = myConfig.dimensions;
         number a, b, U, phi, h, denom, numer, s;
@@ -516,7 +517,8 @@ public:
         }
         number eps = (K*h) * (K*h) * (K*h);
         // The following function to be used at compile time.
-        string codeForLimits(string qname, string gname, string limFactorname, string qMaxname, string qMinname)
+        string codeForLimits(string qname, string gname, string limFactorname,
+                             string qMaxname, string qMinname)
         {
             string code = "{
             U = cell_cloud[0].fs."~qname~";
