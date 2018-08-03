@@ -114,8 +114,9 @@ class Matrix(T) {
         return _data[row][col];
     }
 
+    // Element-by-element operations.
     Matrix!T opBinary(string op)(in Matrix rhs)
-        if ( op == "+" || op == "-" )
+        if ( op == "+" || op == "-" || op == "*" || op == "/"  )
     {
         enforce(_nrows == rhs._nrows && _ncols == rhs._ncols,
                 "incompatible matrices");
@@ -126,6 +127,10 @@ class Matrix(T) {
                     result._data[row][col] = _data[row][col] + rhs._data[row][col];
                 } else if ( op == "-" ) {
                     result._data[row][col] = _data[row][col] - rhs._data[row][col];
+                } else if ( op == "*" ) {
+                    result._data[row][col] = _data[row][col] * rhs._data[row][col];
+                } else if ( op == "/" ) {
+                    result._data[row][col] = _data[row][col] / rhs._data[row][col];
                 }
             }
         }
@@ -276,6 +281,13 @@ class Matrix(T) {
         }
     }
 
+    void ones()
+    {
+        foreach (ref row; _data) {
+            foreach(idx; 0..row.length) { row[idx] = to!T(1.0); }
+        }
+    }
+
     void eye()
     {
         foreach (i, ref row; _data) {
@@ -309,6 +321,17 @@ Matrix!T zeros(T)(size_t rows, size_t cols)
     foreach(row; 0 .. rows) {
         foreach(col; 0 .. cols) {
             my_matrix[row,col] = to!T(0.0);
+        }
+    }
+    return my_matrix;
+}
+
+Matrix!T ones(T)(size_t rows, size_t cols)
+{
+    Matrix!T my_matrix = new Matrix!T(rows, cols);
+    foreach(row; 0 .. rows) {
+        foreach(col; 0 .. cols) {
+            my_matrix[row,col] = to!T(1.0);
         }
     }
     return my_matrix;

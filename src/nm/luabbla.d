@@ -221,6 +221,33 @@ extern(C) int subtract(lua_State *L)
     return 1;
 }
 
+extern(C) int multiply(lua_State *L)
+{
+    auto M = checkMatrix(L, 1);
+    auto rhs = checkMatrix(L, 2);
+    auto result = M * rhs;
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, result);
+    return 1;
+}
+
+extern(C) int divide(lua_State *L)
+{
+    auto M = checkMatrix(L, 1);
+    auto rhs = checkMatrix(L, 2);
+    auto result = M / rhs;
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, result);
+    return 1;
+}
+
+extern(C) int scale(lua_State *L)
+{
+    auto M = checkMatrix(L, 1);
+    double rhs = luaL_checknumber(L, 2);
+    auto result = M * rhs;
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, result);
+    return 1;
+}
+
 extern(C) int dotProduct(lua_State *L)
 {
     auto M = checkMatrix(L, 1); // this
@@ -259,6 +286,13 @@ extern(C) int zerosMatrix(lua_State *L)
     return 0;
 }
 
+extern(C) int onesMatrix(lua_State *L)
+{
+    auto M = checkMatrix(L, 1);
+    M.ones();
+    return 0;
+}
+
 extern(C) int eyeMatrix(lua_State *L)
 {
     auto M = checkMatrix(L, 1);
@@ -271,6 +305,16 @@ extern(C) int zeros(lua_State *L)
     size_t nrows = luaL_checkint(L, 1);
     size_t ncols = luaL_checkint(L, 2);
     auto M = nm.bbla.zeros!double(nrows, ncols);
+    matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, M);
+    return 1;
+
+}
+
+extern(C) int ones(lua_State *L)
+{
+    size_t nrows = luaL_checkint(L, 1);
+    size_t ncols = luaL_checkint(L, 2);
+    auto M = nm.bbla.ones!double(nrows, ncols);
     matrixStore ~= pushObj!(Matrix!double, MatrixMT)(L, M);
     return 1;
 
@@ -372,12 +416,20 @@ void registerBBLA(lua_State *L)
     lua_setfield(L, -2, "__add");
     lua_pushcfunction(L, &subtract);
     lua_setfield(L, -2, "__sub");
+    lua_pushcfunction(L, &multiply);
+    lua_setfield(L, -2, "__mul");
+    lua_pushcfunction(L, &divide);
+    lua_setfield(L, -2, "__div");
+    lua_pushcfunction(L, &scale);
+    lua_setfield(L, -2, "scale");
     lua_pushcfunction(L, &dotProduct);
     lua_setfield(L, -2, "dot");
     lua_pushcfunction(L, &tostring);
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, &zerosMatrix);
     lua_setfield(L, -2, "zeros");
+    lua_pushcfunction(L, &onesMatrix);
+    lua_setfield(L, -2, "ones");
     lua_pushcfunction(L, &eyeMatrix);
     lua_setfield(L, -2, "eye");
 
@@ -385,6 +437,8 @@ void registerBBLA(lua_State *L)
 
     lua_pushcfunction(L, &zeros);
     lua_setglobal(L, "zeros");
+    lua_pushcfunction(L, &ones);
+    lua_setglobal(L, "ones");
     lua_pushcfunction(L, &eye);
     lua_setglobal(L, "eye");
     lua_pushcfunction(L, &transpose);
