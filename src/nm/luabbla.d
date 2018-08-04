@@ -154,7 +154,7 @@ extern(C) int nrows(lua_State *L)
 extern(C) int ncols(lua_State *L)
 {
     auto mat = checkMatrix(L, 1);
-    lua_pushinteger(L, mat.nrows);
+    lua_pushinteger(L, mat.ncols);
     return 1;
 }
 
