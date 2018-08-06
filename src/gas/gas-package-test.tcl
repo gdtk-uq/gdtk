@@ -80,6 +80,10 @@ test equilibrium-gas-test {Testing equilibrium_gas.d} -body {
     exec ./equilibrium_gas_test
 } -result {} -returnCodes {0}
 
+test pseudo-species-gas-test {Testing pseudo_species_gas.d} -body {
+    exec ./pseudo_species_gas_test
+} -result {} -returnCodes {0}
+
 puts "-------------------------------------"
 puts "   thermo/ tests"
 puts "-------------------------------------"

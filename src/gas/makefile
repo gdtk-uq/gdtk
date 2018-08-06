@@ -17,7 +17,8 @@ TEST_PROGRAMS := cea_therm_cond_test cea_thermo_curves_test cea_viscosity_test \
 	therm_perf_gas_test therm_perf_gas_mix_eos_test very_viscous_air_test \
 	co2gas_sw_test uniform_lut_test adaptive_lut_CEA_test ideal_air_proxy_test \
         two_temperature_reacting_argon_test steam_test \
-	gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test
+	gas_model_complex_test ideal_gas_complex_test cea_thermo_curves_complex_test \
+	pseudo_species_gas_test
 
 LUA := ../../extern/lua-5.1.4
 LIBLUA := $(LUA)/lib/liblua.a
@@ -267,6 +268,10 @@ equilibrium_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
 steam_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
+	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
+		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
+
+pseudo_species_gas_test: $(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(LIBLUA)
 	$(DMD) $(OF)$@ -debug -g -w -version=$@ \
 		$(GAS_FILES) $(KINETICS_FILES) $(UTIL_FILES) $(NM_FILES) $(DLINKFLAGS)
 
