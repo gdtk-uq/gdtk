@@ -73,7 +73,8 @@ void main(string[] args) {
     bool updateGridFlag = false;
     bool directMethodFlag = false;
     bool adjointMethodFlag = true;
-    bool verifyFlowJacobianFlag = false;
+    bool verifyPrimitiveJacobianFlag = false;
+    bool verifyConservativeJacobianFlag = false;
     bool verifySSSPreconditionerFlag = false;
     int maxCPUs = totalCPUs;
     int maxWallClock = 5*24*3600; // 5 days default
@@ -87,7 +88,8 @@ void main(string[] args) {
                "update-grid", &updateGridFlag,
                "direct-method", &directMethodFlag,
                "adjoint-method", &adjointMethodFlag,
-               "verify-flow-jacobian", &verifyFlowJacobianFlag,
+               "verify-primitive-jacobian", &verifyPrimitiveJacobianFlag,
+               "verify-conservative-jacobian", &verifyConservativeJacobianFlag,
                "verify-sss-preconditioner", &verifySSSPreconditionerFlag,
                "max-cpus", &maxCPUs,
                "max-wall-clock", &maxWallClock,
@@ -124,8 +126,8 @@ void main(string[] args) {
     else init_simulation(last_tindx, 0, maxCPUs, 1, maxWallClock);
 
     // check some flag option compatibilities
-    if (verifyFlowJacobianFlag)
-        assert(verifyFlowJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
+    if (verifyPrimitiveJacobianFlag || verifyConservativeJacobianFlag)
+        assert(verifyPrimitiveJacobianFlag != adjointMethodFlag && verifyConservativeJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     else if (verifySSSPreconditionerFlag)
         assert(verifySSSPreconditionerFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     else
@@ -246,8 +248,90 @@ void main(string[] args) {
         return;
     }
 
-    /* Verify Jacobian routines via Frechet Derivative */
-    if (verifyFlowJacobianFlag) {
+    /* Verify Primitive Jacobian routines via Frechet Derivative */
+    if (verifyPrimitiveJacobianFlag) {
+        bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
+        size_t nPrimitive; 
+        if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
+        else nPrimitive = 5;                               // density, velocity(x,y,z), pressure
+        
+        // form 1st order Jacobian via adjoint routines
+        foreach (myblk; parallel(localFluidBlocks,1)) {
+            // make sure ghost cells are filled
+            myblk.applyPreReconAction(0.0, 0, 0);
+            myblk.applyPostConvFluxAction(0.0, 0, 0);
+            myblk.applyPreSpatialDerivActionAtBndryFaces(0.0, 0, 0);
+            myblk.applyPostDiffFluxAction(0.0, 0, 0);
+
+            myblk.JlocT = new SMatrix!number();
+            local_flow_jacobian_transpose(myblk.JlocT, myblk, nPrimitive, myblk.myConfig.interpolation_order, EPS);
+        }
+                
+        foreach (blk; localFluidBlocks) {
+            // compute arbitrary vector
+            number[] v;
+            v.length = blk.cells.length*nPrimitive;
+            
+            foreach ( i; 0..blk.cells.length*nPrimitive) {
+                v[i] = i+1; // theoretically can be any vector.
+            }
+            
+            // normalise the vector
+            number norm = 0.0;
+            foreach( i; 0..v.length) {
+                norm += v[i]*v[i];
+            }
+            norm = sqrt(norm);
+            foreach( i; 0..v.length) {
+                v[i] = v[i]/norm;
+            }
+
+            // result vectors
+            number[] p1;
+            p1.length = blk.cells.length*nPrimitive;
+            number[] p2;
+            p2.length = blk.cells.length*nPrimitive;
+
+            // transpose the transposed primitive Jacpboan
+            auto Jloc = new SMatrix!number();
+            Jloc.ia ~= 0;
+            foreach (i; 0..nPrimitive*blk.cells.length) {
+                foreach (j; 0..nPrimitive*blk.cells.length) {
+                    if (fabs(blk.JlocT[j,i]) > 1.0e-50) {
+                        Jloc.aa ~= blk.JlocT[j,i];
+                        Jloc.ja ~= j;
+                    }
+                }
+                Jloc.ia ~= Jloc.aa.length;
+            }
+            
+            // explicit multiplication of Jv
+            foreach ( i; 0..blk.cells.length*nPrimitive) {
+                p1[i] = 0.0;
+                foreach ( j; 0..blk.cells.length*nPrimitive) {
+                    p1[i] += Jloc[i,j]*v[j];
+                }
+            }
+
+            // Frechet derivative of Jv
+            evalPrimitiveJacobianVecProd(blk, nPrimitive, v, p2, EPS);
+
+            // write out results for the 1st order Jacobian test
+            {
+                string fileName = "primitive_jacobian_test.output";
+                auto outFile = File(fileName, "w");
+                foreach( i; 0..v.length ) {
+                    size_t id = i/4;
+                    outFile.writef("%d    %.16e    %.16e    %.16f    %.16f \n", id, fabs((p1[i]-p2[i])/p1[i]), fabs(p1[i]-p2[i]), p1[i], p2[i]);
+                }
+            }
+        }
+        writeln("Primitive Jacobian Test: COMPLETED");
+        return;
+    }
+
+    /* Verify conservative Jacobian routines via Frechet Derivative */
+    if (verifyConservativeJacobianFlag) {
         bool with_k_omega = (GlobalConfig.turbulence_model == TurbulenceModel.k_omega);
         size_t nPrimitive; 
         if (GlobalConfig.dimensions == 2) nPrimitive = 4;  // density, velocity(x,y), pressure
@@ -286,13 +370,13 @@ void main(string[] args) {
             number[] p2;
             p2.length = blk.cells.length*nPrimitive;
 
-            // form block diagonal precondition sub-matrices
-            GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.block_diagonal;
-            sss_preconditioner_initialisation(blk, nPrimitive);
-            sss_preconditioner(blk, nPrimitive, 1.0e+16);
-
             // form 1st order Jacobian via ILU preconditioner routines
             GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.ilu;
+            sss_preconditioner_initialisation(blk, nPrimitive);
+            sss_preconditioner(blk, nPrimitive, 1.0e+16);
+            
+            // form block diagonal precondition sub-matrices
+            GlobalConfig.sssOptions.preconditionMatrixType = PreconditionMatrixType.block_diagonal;
             sss_preconditioner_initialisation(blk, nPrimitive);
             sss_preconditioner(blk, nPrimitive, 1.0e+16);
 
@@ -309,7 +393,7 @@ void main(string[] args) {
 
             // write out results for the 1st order Jacobian test
             {
-                string fileName = "jacobian_test0.output";
+                string fileName = "conservative_jacobian_test0.output";
                 auto outFile = File(fileName, "w");
                 foreach( i; 0..v.length ) {
                     size_t id = i/4;
@@ -319,7 +403,7 @@ void main(string[] args) {
 
             // write out results for testing the block-diagonal sub-matrices
             {
-                string fileName = "jacobian_test1.output";
+                string fileName = "convervative_jacobian_test1.output";
                 auto outFile = File(fileName, "w");
                 foreach (myblk; parallel(localFluidBlocks,1)) {
                     foreach( cell; myblk.cells ) {
@@ -335,7 +419,7 @@ void main(string[] args) {
                 }
             }
         }
-        writeln("Jacobian Test: COMPLETED");
+        writeln("Conservative Jacobian Test: COMPLETED");
         return;
     }
 
