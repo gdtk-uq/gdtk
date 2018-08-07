@@ -13,7 +13,7 @@
 module gas.pseudo_species_gas;
 
 import std.algorithm.iteration : sum;
-import std.math : sqrt;
+import std.math;
 import std.stdio;
 import std.string;
 import std.conv : to;
@@ -149,7 +149,7 @@ public:
         // For the present, only inviscid simulations are valid.
         Q.mu = 0.0;
         Q.k = 0.0;
-        Q.k_modes[] = 0.0;
+        Q.k_modes[] = to!number(0.0);
     }
 
         override number dudT_const_v(in GasState Q) const
