@@ -302,6 +302,7 @@ struct SteadyStateSolverOptions {
     int nConserved = 4;
     bool usePreconditioner = true;
     int frozenPreconditionerCount = 1;
+    int startPreconditioning = 1;
     PreconditionMatrixType preconditionMatrixType = PreconditionMatrixType.block_diagonal;
     bool useScaling = true;
     bool useComplexMatVecEval = false;
@@ -1415,6 +1416,7 @@ void read_control_file()
     auto sssOptions = jsonData["steady_state_solver_options"];
     GlobalConfig.sssOptions.usePreconditioner = getJSONbool(sssOptions, "use_preconditioner", GlobalConfig.sssOptions.usePreconditioner);
     GlobalConfig.sssOptions.frozenPreconditionerCount = getJSONint(sssOptions, "frozen_preconditioner_count", GlobalConfig.sssOptions.frozenPreconditionerCount);
+    GlobalConfig.sssOptions.startPreconditioning = getJSONint(sssOptions, "start_preconditioning", GlobalConfig.sssOptions.startPreconditioning);
     { 
         auto mySaveValue = GlobalConfig.sssOptions.preconditionMatrixType;
         try {

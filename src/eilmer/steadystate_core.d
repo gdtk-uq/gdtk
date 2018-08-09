@@ -1184,12 +1184,12 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
         // 2a. Begin iterations
         foreach (j; 0 .. m) {
             iterCount = j+1;
-            if (usePreconditioner) {
+            if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
                 foreach (blk; parallel(localFluidBlocks,1)) {
                     int n = GlobalConfig.sssOptions.frozenPreconditionerCount;
                     // We compute the precondition matrix on the very first step after the start up steps
                     // We then only update the precondition matrix once per GMRES call on every nth flow solver step. 
-                    if (r == 0 && j == 0 && (step%n == 0 || step == GlobalConfig.sssOptions.nStartUpSteps+1))
+                    if (r == 0 && j == 0 && (step == GlobalConfig.sssOptions.startPreconditioning || step%n == 0 || step == GlobalConfig.sssOptions.nStartUpSteps+1))
                         sss_preconditioner(blk, nConserved, dt);
                     final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                         case PreconditionMatrixType.block_diagonal:
@@ -1310,7 +1310,7 @@ void rpcGMRES_solve(int step, double pseudoSimTime, double dt, double eta, doubl
             nm.bbla.dot!number(blk.V, blk.nvars, m, blk.g1, blk.zed);
         }
         
-        if (usePreconditioner) {
+        if (usePreconditioner && step >= GlobalConfig.sssOptions.startPreconditioning) {
             foreach(blk; parallel(localFluidBlocks,1)) {
                 final switch (GlobalConfig.sssOptions.preconditionMatrixType) {
                 case PreconditionMatrixType.block_diagonal:
