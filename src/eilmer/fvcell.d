@@ -108,6 +108,7 @@ public:
     number rho_at_start_of_step, rE_at_start_of_step;
     // Shape sensitivity calculator workspace.
     version(shape_sensitivity) {
+        number[][] dQdU;
         // stencil of effected cells & faces used in forming the flow Jacobian
         FVCell[] jacobian_cell_stencil;
         FVInterface[] jacobian_face_stencil;
@@ -144,6 +145,15 @@ public:
         }
         Q = new ConservedQuantities(n_species, n_modes);
         Q.clear_values();
+        version(shape_sensitivity) {
+            dQdU.length = 5; // number of conserved variables
+            foreach (ref a; dQdU) a.length = 5;
+            foreach (i; 0..dQdU.length) {
+                foreach (j; 0..dQdU[i].length) {
+                    dQdU[i][j] = 0.0;
+                }
+            }
+        }
     }
 
     @nogc
