@@ -33,9 +33,8 @@ public:
     {
         auto nPseudoSpecies = getInt(L, LUA_GLOBALSINDEX, "number_pseudo_species");
         _n_species = cast(uint) nPseudoSpecies;
-        _n_modes = _n_species;
+        _n_modes = 0;
         _species_names.length = _n_species;
-        _energy_mode_names.length = _n_species;
 
         lua_getfield(L, LUA_GLOBALSINDEX, "pseudo_species");
         foreach (isp; 0 .. _n_species) {
@@ -49,7 +48,6 @@ public:
             _species_names[isp] = _pseudoSpecies[$-1].name();
         }
         lua_pop(L, 1);
-        _energy_mode_names[] = _species_names[];
     }
 
     override string toString() const
@@ -152,7 +150,7 @@ public:
         Q.k_modes[] = to!number(0.0);
     }
 
-        override number dudT_const_v(in GasState Q) const
+    override number dudT_const_v(in GasState Q) const
     {
         return to!number(_R_N2/(_gamma - 1.0));
     }
@@ -182,11 +180,23 @@ public:
     }
 
 private:
-    double _R_N2 = 296.805; // gas constant for N2
-    double _M_N2 = 0.0280134;
-    double _gamma = 7./5.; // ratio of specific heats.
-
+    int _nLumpedSpecies;
+    double[] _R;
+    double[] _DOF;
+    double[] _massfLumpedSpecies;
+    int[][] _lumpedSpecies;
     PseudoSpecies[] _pseudoSpecies;
+
+    void sumMassfInLumpedSpecies(GasState Q)
+    {
+        foreach (isp; _nLumpedSpecies) {
+            _lumpedMassf[isp] = 0.0;
+            foreach (pseudoSpeciesIdx; _lumpedSpecies[isp]) {
+                _lumpedMassf[isp] += Q.massf[pseudoSpeciesIdx];
+            }
+        }
+    }
+    
 }
 
 version(pseudo_species_gas_test) {
