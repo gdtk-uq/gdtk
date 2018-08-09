@@ -18,9 +18,9 @@ import std.stdio : writeln;
 import std.format;
 import std.math;
 import std.conv : to;
-import std.algorithm;
 import nm.complex;
 import nm.number;
+import nm.bbla;
 
 import gas;
 import util.lua;
@@ -51,130 +51,227 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         _theta_A1star = 135300.0;
         _ion_tol = getDouble(L, -1, "ion_tol");
         _chem_dt = getDouble(L, -1, "chem_dt");
+        _integration_method = "RK4"; //TODO CHANGE THIS SO THAT IT CAN BE ALTERED IN THE INPUT LUA SCRIPT
+        _Newton_Raphson_tol = 1.0e-6; //getDouble(L, -1, "Newton_Raphson_tol"); [TODO] Change this to come from lua input script
         lua_pop(L, 1); // dispose of the table
         lua_close(L);
     }
     
+    Matrix!double F(Matrix!double y, GasState Q)
+    {
+        auto y_dash = new Matrix!double([[0.0],
+                                         [0.0]]);
+
+        number Q_ea;
+        number Q_ei;
+
+        number v_ea;
+        number v_ei;
+
+        //unpack dependant variables
+        number n_e = y[0,0];
+        number n_Ar = _n_total-n_e;        
+        Q.u = y[1,0];
+        Q.u_modes[0] = _u_total-Q.u;
+
+        //reconstruct the flow state from state vector
+        if (n_e <= 0.0) {
+            // Do not let the number of electrons go negative.
+            // Force the numbers back to something physically realizable.
+            Q.u = _u_total;
+            Q.u_modes[0] = 0.0;
+            //mass
+            n_Ar = _n_total;
+            n_e = 0.0;
+            //energy
+            //temperature
+            Q.T =  2.0/3.0*Q.u/_Rgas;
+            Q.T_modes[0] = _T_modes_ref;
+        }
+        
+        //Must update the mass fractions before updating the gas state from rho and u...
+        Q.massf[0] = n_Ar/_Av/Q.rho*_mol_masses[0];
+        Q.massf[1] = n_e/_Av/Q.rho*_mol_masses[1];
+        Q.massf[2] = n_e/_Av/Q.rho*_mol_masses[2];// Number density of Argon+ is the same as electron number density.       
+        _gmodel.update_thermo_from_rhou(Q);
+        _gmodel.update_sound_speed(Q);
+
+        //Convenient variables
+        number alpha = n_e/(_n_total);
+        number Te = Q.T_modes[0];
+        number T = Q.T;
+
+        //=====================================================================
+        //rate constants
+        number kfA = 1.68e-26*T*sqrt(T)*(_theta_A1star/T+2)*exp(-_theta_A1star/T);
+        number kfe = 3.75e-22*Te*sqrt(Te)*(_theta_A1star/Te+2)*exp(-_theta_A1star/Te);
+        number krA = 5.8e-49*(_theta_A1star/T+2)*exp((_theta_ion-_theta_A1star)/T);
+        number kre = 1.29e-44*(_theta_A1star/Te+2)*exp((_theta_ion-_theta_A1star)/Te);
+
+        //determine the current rate of ionisation
+        number n_dot_A = kfA*pow(n_Ar,2) - krA*n_Ar*pow(n_e,2);       //production rate of electrons due to argon collisions
+        number n_dot_e = kfe*n_Ar*n_e - kre*pow(n_e,3);       //production rate of electrons due to electron collisions
+        number n_dot = n_dot_A + n_dot_e; //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ (1) (2)
+
+        y_dash[0,0] = n_dot;
+
+        //Energy moving to electronic mode due to reactions:
+        number alpha_dot = n_dot/_n_total;
+        number u_dot_reac = 3.0/2.0*_Rgas*alpha_dot*Te+alpha_dot*_Rgas*_theta_ion;
+        if (alpha > _ion_tol) {u_dot_reac -= n_dot_e*_Kb*_theta_ion/Q.rho;}
+
+        //=====================================================================
+        //now need temperatures...
+        if (alpha > _ion_tol) {
+
+            //calculate Qea
+            if (Te < 1.0e4) {
+                    Q_ea = (0.39 - 0.551e-4*Te + 0.595e-8*pow(Te,2))*1.0e-20;
+            } else if (Te<1.0e5) {
+                    Q_ea = (-0.35 + 0.775e-4*Te)*1.0e-20;
+            } else {
+                    Q_ea = (-0.35 + 0.775e-4*50000)*1.0e-20;
+            }
+
+            //Calculate Q_ei
+            Q_ei = 1.95e-10*pow(Te,-2)*log(1.53e8*pow(Te,3)/(n_e/1.0e6));
+            if (Q_ei < 0.0) {Q_ei = 0.0;}
+
+            //find the collision frequencies
+            v_ea = (1.0-alpha)*Q.rho/_m_Ar*sqrt(8*_Kb*Te/PI/_m_e)*Q_ea; //electron-Ar collisions
+            v_ei = alpha*Q.rho/_m_Ar*sqrt(8*_Kb*Te/PI/_m_e)*Q_ei; //electron-Ar+ collisions
+
+            alpha_dot = n_dot/(n_e+n_Ar);
+            number u_dot = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(T-Te)/Q.rho;// energy transferred to electron mode through collisions ///THIS NEEDS TO ALSO ACCOUNT FOR energy absorbed due to ionisation as well
+
+            y_dash[1,0] = - u_dot - u_dot_reac;
+        } else {
+            y_dash[1,0] = 0.0 - u_dot_reac;            
+        }
+        return y_dash;
+    }
+
+    Matrix!double BackEuler_F(Matrix!double y, Matrix!double y_prev, GasState Q){
+        auto output = y_prev - y + _chem_dt*F(y, Q);
+        return output;
+    }
+
+    Matrix!double Jacobian(Matrix!double y, Matrix!double y_prev, Matrix!double h, GasState Q){
+
+        auto J = new Matrix!double([[0.0,0.0],
+                                    [0.0,0.0]]);
+        auto in1 = new Matrix!double([[y[0,0] + h[0,0]],[y[1,0]]]);
+        auto col1 = (BackEuler_F(in1,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[0,0];
+        auto in3 = new Matrix!double([[y[0,0]],[y[1,0] + h[1,0]]]);
+        auto col2 = (BackEuler_F(in1,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[1,0];
+
+        J[0,0] = col1[0,0]; J[0,1] = col1[1,0]; J[1,0] = col2[0,0]; J[1,1] = col2[1,0];
+        return J;
+    }
+
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest, 
                          ref number[] params)
     {
+
         if (Q.T > 3000.0) {
+            double chem_dt_start = _chem_dt;
+            int NumberSteps = to!int(tInterval/_chem_dt);
+            if (NumberSteps == 0) {NumberSteps = 1;}
+            _chem_dt = tInterval/NumberSteps;
+            //
             // Determine the current number densities.
             number n_e = Q.rho/_mol_masses[2]*Q.massf[2]*_Av; // number density of electrons
             number n_Ar = Q.rho/_mol_masses[0]*Q.massf[0]*_Av; // number density of Ar
             number alpha = n_e/(n_e + n_Ar);
-            number orig_n = n_e + n_Ar;
-            number n_sum;
-            number internal_energy_initial = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
-            //
-            // This is a simple euler integration with a number of steps over the full interval.
-            int nSteps = min(to!int(tInterval/_chem_dt), 1);
-            double dt = tInterval/nSteps;
-            foreach (j; 1 .. nSteps) {
-                // CHEMISTRY PART ---------------------------------------
-                // Determine the current rate coefficients
-                number kfA = 1.68e-26*Q.T*sqrt(Q.T)*(_theta_A1star/Q.T+2)*exp(-_theta_A1star/Q.T);
-                number kfe = 3.75e-22*Q.T_modes[0]*sqrt(Q.T_modes[0])*
-                    (_theta_A1star/Q.T_modes[0]+2)*exp(-_theta_A1star/Q.T_modes[0]);
-                number krA = 5.8e-49*(_theta_A1star/Q.T+2)*exp((_theta_ion-_theta_A1star)/Q.T);
-                number kre = 1.29e-44*(_theta_A1star/Q.T_modes[0]+2)*exp((_theta_ion-_theta_A1star)/Q.T_modes[0]);
-                //
-                // Determine the current rate of ionisation.
-                // Production rate of electrons due to argon collisions.
-                number ne_dot_A = kfA*pow(n_Ar,2) - krA*n_Ar*pow(n_e,2);
-                // Production rate of electrons due to electron collisions.
-                number ne_dot_e = kfe*n_Ar*n_e - kre*pow(n_e,3);
-                number ne_dot = ne_dot_A + ne_dot_e;
-                //
-                // Determine the new number densities (using a simple Euler update).
-                n_e += ne_dot*dt;
-                n_Ar -= ne_dot*dt;
-                //
-                alpha = n_e/(n_e + n_Ar);
-                //
-                if (alpha <= _ion_tol) {
-                    Q.T_modes[0] = _T_modes_ref;
-                    Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion;
-                } else {
-                    Q.u_modes[0] = 3.0/2.0*_Rgas*alpha*Q.T_modes[0] + alpha*_Rgas*_theta_ion -
-                        ne_dot_e*_Kb*_theta_ion*dt/Q.rho;
-                    Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
+            _n_total = n_e + n_Ar;
+            _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
+            //writeln("_u_total = ", _u_total);
+
+            auto y = new Matrix!double([[n_e],
+                                        [Q.u]]);
+            auto y_prev = y;
+            number norm_error;
+            
+            //Initialise variables for RK4
+            auto k1 = zeros!double(2,1);
+            auto k2_in = zeros!double(2,1);
+            auto k2 = zeros!double(2,1);
+            auto k3_in = zeros!double(2,1);
+            auto k3 = zeros!double(2,1);
+            auto k4_in = zeros!double(2,1);
+            auto k4 = zeros!double(2,1);
+
+            for (int number = 1; number <= NumberSteps; ++number) {
+                if (_integration_method == "Forward_Euler") {
+                    y = y + _chem_dt*F(y, Q);
+                } else if (_integration_method == "Backward_Euler"){
+                    auto h = new Matrix!double([[1.0e20],[1.0e3]]); 
+                    //This while loop iterates the equation until it reaches the next value of y[].
+                    // This is a newton Raphson Solver for the next value of y[]
+                    do {
+                        writeln("y = ", y);
+                        writeln("h = ", h);
+                        auto J = Jacobian(y,y_prev,h,Q); 
+                        writeln("J = ", J);                     
+                        auto J_inv = inverse!double(J);
+                        y = y - dot!double(J_inv,BackEuler_F(y,y_prev,Q));
+                        auto error = BackEuler_F(y,y_prev,Q);
+                        norm_error = sqrt(pow(error[0,0],2) + pow(error[1,0],2));
+                    } while (norm_error < _Newton_Raphson_tol);
+
+                    y_prev = y;
+                } else if (_integration_method == "RK4"){
+                    k1 = _chem_dt*F(y, Q);
+
+                    k2_in = y + k1/2.0;
+                    k2 = _chem_dt*F(k2_in, Q);
+
+                    k3_in = y+k2/2.0;
+                    k3 = _chem_dt*F(k3_in, Q);
+
+                    k4_in = y+k3;
+                    k4 = _chem_dt*F(k4_in, Q);
+
+                    y = y + 1.0/6.0*(k1+2.0*k2+2.0*k3+k4);
                 }
-                //
-                Q.u = internal_energy_initial - Q.u_modes[0];
-                Q.T = 2.0/3.0*Q.u/_Rgas;
-                //
-                if (n_e <= 0.0) {
-                    // Do not let the number of electrons go negative.
-                    // Force the numbers back to something physically realizable.
-                    Q.u = internal_energy_initial;
-                    Q.u_modes[0] = 0.0;
-                    //mass
-                    n_Ar = orig_n;
-                    n_e = 0.0;
-                    alpha = n_e/(n_e + n_Ar);
-                    //energy
-                    //temperature
-                    Q.T =  2.0/3.0*Q.u/_Rgas;
-                    Q.T_modes[0] = _T_modes_ref;
-                } else {
-                    // Positive electron numbers; proceed with relaxation process.
-                    n_sum = orig_n/(n_e + n_Ar);
-                    n_e = n_e*n_sum;
-                    n_Ar = n_Ar*n_sum;
-                    // THERMAL RELAXATION PART
-                    // find the collision cross sectional area
-                    if (alpha > _ion_tol) {
-                        // There is no thermal relaxation if below ion tolerance.
-                        number Q_ea; 
-                        if (Q.T_modes[0] < 1.0e4) {
-                            Q_ea = (0.39 - 0.551e-4*Q.T_modes[0] + 0.595e-8*pow(Q.T_modes[0],2))*1.0e-20;
-                        } else if (Q.T_modes[0]<1.0e5) {
-                            Q_ea = (-0.35 + 0.775e-4*Q.T_modes[0])*1.0e-20;
-                        } else {
-                            Q_ea = (-0.35 + 0.775e-4*50000)*1.0e-20;
-                        }
-                        number Q_ei = 1.95e-10*pow(Q.T_modes[0],-2)*log(1.53e8*pow(Q.T_modes[0],3)/(n_e/1.0e6));
-                        if (Q_ei < 0.0) { Q_ei = 0.0; }
-                        // Find the collision frequencies.
-                        // electron-Ar collisions
-                        number v_ea = (1-alpha)*Q.rho/_m_Ar*sqrt(8*_Kb*Q.T_modes[0]/to!double(PI)/_m_e)*Q_ea;
-                        // electron-Ar+ collisions
-                        number v_ei = alpha*Q.rho/_m_Ar*sqrt(8*_Kb*Q.T_modes[0]/to!double(PI)/_m_e)*Q_ei;
-                        // update the energy of each state
-                        // energy transferred to electron mode through collisions
-                        number u_trans_collisions = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(Q.T-Q.T_modes[0])*dt/Q.rho;
-                        // writeln("u_trans_collisions = ", u_trans_collisions);
-                        // Other energy states...
-                        // number u_trans_ionisation;
-                        // number u_trans_ionisation_heavy;
-                        // number u_trans_ionisation_electron;
-                        Q.u -= u_trans_collisions;
-                        Q.u_modes[0] += u_trans_collisions;
-                        // update thermo properties based on energy transfer
-                        Q.T = 2.0/3.0*Q.u/_Rgas;
-                        Q.T_modes[0] = (Q.u_modes[0]/alpha-_Rgas*_theta_ion)*2.0/3.0/_Rgas;
-                    } // end if alpha > ion tol
-                } // end if statement regarding number density of electrons
-            } // end foreach j
-            //
-            // Convert back to mass fractions.
-            // Note that density has not changed since we are updating an isolated system.
+            }
+
+            //Unpack the results
+            n_e = y[0,0];
+            Q.u = y[1,0];
+
+            //reconstruct the flow state
+            n_Ar = _n_total - n_e;
+            Q.u_modes[0] = _u_total-Q.u;    
+
+            if (n_e <= 0.0) {
+                // Do not let the number of electrons go negative.
+                // Force the numbers back to something physically realizable.
+                Q.u = _u_total;
+                Q.u_modes[0] = 0.0;
+                //mass
+                n_Ar = _n_total;
+                n_e = 0.0;
+                alpha = n_e/(n_e + n_Ar);
+                //energy
+                //temperature
+                Q.T =  2.0/3.0*Q.u/_Rgas;
+                Q.T_modes[0] = _T_modes_ref;
+            }
+            
+            //Must update the mass fractions before updating the gas state from rho and u...
             Q.massf[0] = n_Ar/_Av/Q.rho*_mol_masses[0];
-            // Number density of Argon+ is the same as electron number density.
             Q.massf[1] = n_e/_Av/Q.rho*_mol_masses[1];
-            Q.massf[2] = n_e/_Av/Q.rho*_mol_masses[2];
-            //
-            // Since the internal energy and density in the (isolated) reactor is fixed,
-            // we need to evaluate the new temperature, pressure, etc.
+            Q.massf[2] = n_e/_Av/Q.rho*_mol_masses[2];// Number density of Argon+ is the same as electron number density.       
             _gmodel.update_thermo_from_rhou(Q);
-            _gmodel.update_sound_speed(Q);  
-        } // end if Q.T > 3000.0
+            _gmodel.update_sound_speed(Q);
+
+            _chem_dt = chem_dt_start; // return _chem_dt back to its original value\
+        }
     } // end opCall()
     
 private:
-    // Reaction rate constant
     double[] _mol_masses;
     double _ion_tol;
     double _T_modes_ref;
@@ -186,6 +283,11 @@ private:
     double _Rgas;
     double _theta_ion;
     double _theta_A1star;
+    string _integration_method;
+    double _Newton_Raphson_tol;
+public:
+    number _n_total;
+    number _u_total;
 
 } // end class UpdateAB
 
@@ -220,21 +322,43 @@ version(two_temperature_argon_kinetics_test) {
         double alpha;
         double new_vel; 
 
+        //This is my own condition (Daniel Smith Condition 1 Experimental Campaign 1)
         //pre-shock conditions
-        double rho1 = 0.03334;
-        double T1 = 260.4;
-        double p1 = 180.6;
-        double u1 = 5.7e3;
-        double M1 = 18.96;
+        //==============================
+        //double rho1 = 0.03334;
+        //double T1 = 260.4;
+        //double p1 = 180.6;
+        //double u1 = 5.7e3;
+        //double M1 = 18.96;
+
+        ////inital gas properties
+        //auto GS = new GasState(3, 1);
+        //GS.p = p1*449.6;
+        //GS.T = T1*113.33;
+        //GS.T_modes[0] = 10000;
+        //GS.massf[0] = 1.0; GS.massf[1] = 0.0; GS.massf[2] = 0.0;
+        //double vel = 1436; // m/s
+        //double x = 0.0;
+        //==============================
+
+        //This is the benchmark case presented in the paper
+        //pre-shock conditions
+        //==============================
+        double rho1 = 0.0213657;
+        double T1 = 300;
+        double p1 = 1333.22;
+        double u1 = 6.1e3;
+        double M1 = 18.91;
 
         //inital gas properties
         auto GS = new GasState(3, 1);
-        GS.p = p1*449.6;
-        GS.T = T1*113.33;
+        GS.p = p1*446.735124;
+        GS.T = T1* 112.620756;
         GS.T_modes[0] = 10000;
         GS.massf[0] = 1.0; GS.massf[1] = 0.0; GS.massf[2] = 0.0;
-        double vel = 1436; // m/s
+        double vel = 1548.98; // m/s
         double x = 0.0;
+        //==============================
 
         double e_new;
 
@@ -244,7 +368,7 @@ version(two_temperature_argon_kinetics_test) {
 
         // some time stepping information
         double maxtime = 4.0e-6; // max time for the simulation
-        double dt = 1.0e-10;//1.312e-11; // time step for chemistry update
+        double dt = 1.0e-9;//1.312e-11; // time step for chemistry update
         int maxsteps = to!int(maxtime/dt + 1); // number of steps in which to iterate through
         int printfreq = maxsteps/10;
         int writefreq = maxsteps/1000;
