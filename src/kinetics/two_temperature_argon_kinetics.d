@@ -57,9 +57,9 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         lua_close(L);
     }
     
-    Matrix!double F(Matrix!double y, GasState Q)
+    Matrix!number F(Matrix!number y, GasState Q)
     {
-        auto y_dash = new Matrix!double([[0.0],
+        auto y_dash = new Matrix!number([[0.0],
                                          [0.0]]);
 
         number Q_ea;
@@ -138,8 +138,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             if (Q_ei < 0.0) {Q_ei = 0.0;}
 
             //find the collision frequencies
-            v_ea = (1.0-alpha)*Q.rho/_m_Ar*sqrt(8*_Kb*Te/PI/_m_e)*Q_ea; //electron-Ar collisions
-            v_ei = alpha*Q.rho/_m_Ar*sqrt(8*_Kb*Te/PI/_m_e)*Q_ei; //electron-Ar+ collisions
+            v_ea = (1.0-alpha)*Q.rho/_m_Ar*sqrt(8*_Kb*Te/to!number(PI)/_m_e)*Q_ea; //electron-Ar collisions
+            v_ei = alpha*Q.rho/_m_Ar*sqrt(8*_Kb*Te/to!number(PI)/_m_e)*Q_ei; //electron-Ar+ collisions
 
             alpha_dot = n_dot/(n_e+n_Ar);
             number u_dot = 3*n_e*_m_e/_m_Ar*(v_ea+v_ei)*_Kb*(T-Te)/Q.rho;// energy transferred to electron mode through collisions ///THIS NEEDS TO ALSO ACCOUNT FOR energy absorbed due to ionisation as well
@@ -151,18 +151,19 @@ final class UpdateArgonFrac : ThermochemicalReactor {
         return y_dash;
     }
 
-    Matrix!double BackEuler_F(Matrix!double y, Matrix!double y_prev, GasState Q){
+    Matrix!number BackEuler_F(Matrix!number y, Matrix!number y_prev, GasState Q)
+    {
         auto output = y_prev - y + _chem_dt*F(y, Q);
         return output;
     }
 
-    Matrix!double Jacobian(Matrix!double y, Matrix!double y_prev, Matrix!double h, GasState Q){
+    Matrix!number Jacobian(Matrix!number y, Matrix!number y_prev, Matrix!number h, GasState Q){
 
-        auto J = new Matrix!double([[0.0,0.0],
+        auto J = new Matrix!number([[0.0,0.0],
                                     [0.0,0.0]]);
-        auto in1 = new Matrix!double([[y[0,0] + h[0,0]],[y[1,0]]]);
+        auto in1 = new Matrix!number([[y[0,0] + h[0,0]],[y[1,0]]]);
         auto col1 = (BackEuler_F(in1,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[0,0];
-        auto in3 = new Matrix!double([[y[0,0]],[y[1,0] + h[1,0]]]);
+        auto in3 = new Matrix!number([[y[0,0]],[y[1,0] + h[1,0]]]);
         auto col2 = (BackEuler_F(in1,y_prev, Q) - BackEuler_F(y, y_prev, Q))/h[1,0];
 
         J[0,0] = col1[0,0]; J[0,1] = col1[1,0]; J[1,0] = col2[0,0]; J[1,1] = col2[1,0];
@@ -188,25 +189,25 @@ final class UpdateArgonFrac : ThermochemicalReactor {
             _u_total = 3.0/2.0*_Rgas*(Q.T+alpha*Q.T_modes[0])+alpha*_Rgas*_theta_ion;
             //writeln("_u_total = ", _u_total);
 
-            auto y = new Matrix!double([[n_e],
+            auto y = new Matrix!number([[n_e],
                                         [Q.u]]);
             auto y_prev = y;
             number norm_error;
             
             //Initialise variables for RK4
-            auto k1 = zeros!double(2,1);
-            auto k2_in = zeros!double(2,1);
-            auto k2 = zeros!double(2,1);
-            auto k3_in = zeros!double(2,1);
-            auto k3 = zeros!double(2,1);
-            auto k4_in = zeros!double(2,1);
-            auto k4 = zeros!double(2,1);
+            auto k1 = zeros!number(2,1);
+            auto k2_in = zeros!number(2,1);
+            auto k2 = zeros!number(2,1);
+            auto k3_in = zeros!number(2,1);
+            auto k3 = zeros!number(2,1);
+            auto k4_in = zeros!number(2,1);
+            auto k4 = zeros!number(2,1);
 
-            for (int number = 1; number <= NumberSteps; ++number) {
+            foreach (n; 1 .. NumberSteps) {
                 if (_integration_method == "Forward_Euler") {
                     y = y + _chem_dt*F(y, Q);
                 } else if (_integration_method == "Backward_Euler"){
-                    auto h = new Matrix!double([[1.0e20],[1.0e3]]); 
+                    auto h = new Matrix!number([[1.0e20],[1.0e3]]); 
                     //This while loop iterates the equation until it reaches the next value of y[].
                     // This is a newton Raphson Solver for the next value of y[]
                     do {
@@ -214,8 +215,8 @@ final class UpdateArgonFrac : ThermochemicalReactor {
                         writeln("h = ", h);
                         auto J = Jacobian(y,y_prev,h,Q); 
                         writeln("J = ", J);                     
-                        auto J_inv = inverse!double(J);
-                        y = y - dot!double(J_inv,BackEuler_F(y,y_prev,Q));
+                        auto J_inv = inverse!number(J);
+                        y = y - dot!number(J_inv,BackEuler_F(y,y_prev,Q));
                         auto error = BackEuler_F(y,y_prev,Q);
                         norm_error = sqrt(pow(error[0,0],2) + pow(error[1,0],2));
                     } while (norm_error < _Newton_Raphson_tol);
