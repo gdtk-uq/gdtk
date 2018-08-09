@@ -127,7 +127,7 @@ void main(string[] args) {
 
     // check some flag option compatibilities
     if (verifyPrimitiveJacobianFlag || verifyConservativeJacobianFlag)
-        assert(verifyPrimitiveJacobianFlag != adjointMethodFlag && verifyConservativeJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
+        assert(verifyPrimitiveJacobianFlag != adjointMethodFlag || verifyConservativeJacobianFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     else if (verifySSSPreconditionerFlag)
         assert(verifySSSPreconditionerFlag != adjointMethodFlag, "Error: Incompatible command line flags: verify-flow-jacobian & adjoint-method");
     else
