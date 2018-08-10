@@ -230,9 +230,9 @@ public:
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            if (abs("~gname~"[0]) > ESSENTIALLY_ZERO ||
-                abs("~gname~"[1]) > ESSENTIALLY_ZERO ||
-                abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
+            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
             foreach (i, f; cell_cloud[0].iface) {
                 number dx = f.pos.x - cell_cloud[0].pos[0].x; 
                 number dy = f.pos.y - cell_cloud[0].pos[0].y; 
@@ -242,11 +242,11 @@ public:
                 b = copysign(b, ((fabs(b) + w)));
                 if (b >  ESSENTIALLY_ZERO) {
                     a = "~qMaxname~" - U;
-                    phi = min(phi, a/b);
+                    phi = fmin(phi, a/b);
                 }
                 else if (b <  ESSENTIALLY_ZERO) {
                     a = "~qMinname~" - U;
-                    phi = min(phi, a/b);
+                    phi = fmin(phi, a/b);
                 }
             }
             }
@@ -345,10 +345,10 @@ public:
                 b = copysign(b, ((fabs(b) + w))); 
                 if (b > 0.0) a = 0.5*(vtx.gradients."~qMaxname~" - U); 
                 else if (b < 0.0) a = 0.5*(vtx.gradients."~qMinname~" - U); 
-                numer = b*abs(a) + a*abs(b);
-                denom = abs(a) + abs(b) + eps;
+                numer = b*fabs(a) + a*fabs(b);
+                denom = fabs(a) + fabs(b) + eps;
                 s = (1.0/b) * (numer/denom);                    
-                phi = min(phi, s);
+                phi = fmin(phi, s);
                 if (b == 0.0) phi = 1.0;
             }
             "~limFactorname~" = phi;
@@ -433,8 +433,8 @@ public:
                 "~qMaxname~" = q0;
                 "~qMinname~" = q0;
                 foreach (i; 1 .. np) {
-                    "~qMaxname~" = max("~qMaxname~", cell_cloud[i].fs."~qname~");
-                    "~qMinname~" = min("~qMinname~", cell_cloud[i].fs."~qname~");
+                    "~qMaxname~" = fmax("~qMaxname~", cell_cloud[i].fs."~qname~");
+                    "~qMinname~" = fmin("~qMinname~", cell_cloud[i].fs."~qname~");
                 }
                 }
                 ";
@@ -523,9 +523,9 @@ public:
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            if (abs("~gname~"[0]) > ESSENTIALLY_ZERO ||
-                abs("~gname~"[1]) > ESSENTIALLY_ZERO ||
-                abs("~gname~"[2]) > ESSENTIALLY_ZERO) {
+            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
                 foreach (i, f; cell_cloud[0].iface) {
                     number dx = f.pos.x - cell_cloud[0].pos[gtl].x; 
                     number dy = f.pos.y - cell_cloud[0].pos[gtl].y; 
@@ -541,7 +541,7 @@ public:
                     } else {
                         s = 1.0;
                     }
-                    phi = min(phi, s);
+                    phi = fmin(phi, s);
                }
             }
             "~limFactorname~" = phi;
@@ -630,8 +630,8 @@ public:
                     "~gname~"[0] += ws.wx[i] * dq;
                     "~gname~"[1] += ws.wy[i] * dq;
                     if (dimensions == 3) { "~gname~"[2] += ws.wz[i] * dq; }
-                    "~qMaxname~" = max("~qMaxname~", cell_cloud[i].fs."~qname~");
-                    "~qMinname~" = min("~qMinname~", cell_cloud[i].fs."~qname~");
+                    "~qMaxname~" = fmax("~qMaxname~", cell_cloud[i].fs."~qname~");
+                    "~qMinname~" = fmin("~qMinname~", cell_cloud[i].fs."~qname~");
                 }
                 }
                 ";
