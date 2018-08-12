@@ -19,6 +19,7 @@ import util.lua;
 import util.lua_service;
 
 import gas.gas_state;
+import gas.physical_constants : electron_volt_energy, Avogadro_number;
 
 
 class PseudoSpecies {
@@ -47,6 +48,8 @@ public:
     {
         super(L);
         _energy = to!number(getDouble(L, -1, "energy"));
+        // convert to J/kg
+        _energy *= (electron_volt_energy*Avogadro_number)/_mol_mass; 
     }
 
     override number energy(in GasState Q) const { return _energy; }

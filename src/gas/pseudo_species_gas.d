@@ -63,10 +63,12 @@ public:
     override void update_thermo_from_pT(GasState Q)
     {
         auto R_mix = gas_constant(Q);
+        writeln("R_mix= ", R_mix);
         Q.rho = Q.p/(R_mix*Q.T);
 
         auto uNoneq = energyInNoneq(Q);
         auto Cv_mix = Cv(Q);
+        writeln("Cv_mix= ", Cv_mix, " uNoneq= ", uNoneq);
         Q.u = Cv_mix*Q.T + uNoneq;
     }
 
@@ -169,7 +171,7 @@ private:
     number energyInNoneq(GasState Q) const {
         number uNoneq = 0.0;
         foreach (isp; 0 .. _n_species) {
-            uNoneq += (Avogadro_number/_mol_masses[isp]) * Q.massf[isp] * _pseudoSpecies[isp].energy(Q);
+            uNoneq += Q.massf[isp] * _pseudoSpecies[isp].energy(Q);
         }
         return uNoneq;
     }
@@ -190,6 +192,15 @@ version(pseudo_species_gas_test) {
         doLuaFile(L, "sample-data/pseudo-species-3-components.lua");
         auto gm = new PseudoSpeciesGas(L);
         auto gd = new GasState(3, 3);
+
+        gd.massf[1] = 0.20908519640652;
+        gd.massf[2] = 0.12949211438053;
+        gd.massf[0] = 1.0 - (gd.massf[1] + gd.massf[2]);
+
+        gd.p = 101325.0;
+        gd.T = 7000.0;
+
+        gm.update_thermo_from_pT(gd);
 
         return 0;
     }
