@@ -45,7 +45,10 @@ public:
             }
             _pseudoSpecies ~= createPseudoSpecies(L);
             lua_pop(L, 1);
-            _species_names[isp] = _pseudoSpecies[$-1].name();
+            _species_names[isp] = _pseudoSpecies[$-1].name;
+            _mol_masses ~= _pseudoSpecies[$-1].mol_mass;
+            _R ~= R_universal/_pseudoSpecies[$-1].mol_mass;
+            _dof ~= _pseudoSpecies[$-1].DOF;
         }
         lua_pop(L, 1);
     }
@@ -57,69 +60,41 @@ public:
         return to!string(repr);
     }
 
-    override void update_thermo_from_pT(GasState Q) const
+    override void update_thermo_from_pT(GasState Q)
     {
-        // THINK ABOUT: PM/RJG
-        // We will need to generalise this expression when we have more than one regular species.
-        // For the present, assume we are working with N2.
-        Q.rho = Q.p/(_R_N2*Q.T);
+        auto R_mix = gas_constant(Q);
+        Q.rho = Q.p/(R_mix*Q.T);
 
-        // THINK ABOUT: PM/RJG
-        // We will need to generalise this expression when we have more than one regular species.
-        // For the present, assume we are working with N2.
-        foreach (imode; 0 .. _n_modes) {
-            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * _pseudoSpecies[imode].energy(Q);
-        }
-        
-        // THINK ABOUT: PM/RJG
-        // We will need to generalise this expression when we have more than one regular species.
-        // For the present, assume we are working with N2.
-        Q.u = 2.5*_R_N2*Q.T;
+        auto uNoneq = energyInNoneq(Q);
+        auto Cv_mix = Cv(Q);
+        Q.u = Cv_mix*Q.T + uNoneq;
     }
 
-    override void update_thermo_from_rhou(GasState Q) const
+    override void update_thermo_from_rhou(GasState Q)
     {
-        // THINK ABOUT: PM/RJG
-        // We will need to generalise this expression when we have more than one regular species.
-        // For the present, assume we are working with N2.
-        Q.T = Q.u/(2.5*_R_N2);
-        Q.p = Q.rho*_R_N2*Q.T;
-
-        // THINK ABOUT: PM/RJG
-        // Presently, I have not filled in T_modes. It should not be needed anywhere else in the
-        // simulation and it seems expensive to do this calculation if it isn't needed.
-        // So we just assign Q.T to all modes.
-        Q.T_modes[] = Q.T;
+        auto uNoneq = energyInNoneq(Q);
+        auto Cv_mix = Cv(Q);
+        Q.T = (Q.u - uNoneq)/Cv_mix; 
+        auto R_mix = gas_constant(Q);
+        Q.p = Q.rho*R_mix*Q.T;
     }
 
-    override void update_thermo_from_rhoT(GasState Q) const
+    override void update_thermo_from_rhoT(GasState Q)
     {
-        // THINK ABOUT: PM/RJG
-        // We will need to generalise this expression when we have more than one regular species.
-        // For the present, assume we are working with N2.
-        Q.p = Q.rho*_R_N2*Q.T;
-        Q.u = 2.5*_R_N2*Q.T;
-        
-        // THINK ABOUT: PM/RJG
-        // Here we assume we know something about the temperatures in each mode
-        foreach (imode; 0 .. _n_modes) {
-            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * _pseudoSpecies[imode].energy(Q);
-        }
+        auto R_mix = gas_constant(Q);
+        Q.p = Q.rho*R_mix*Q.T;
+        auto uNoneq = energyInNoneq(Q);
+        auto Cv_mix = Cv(Q);
+        Q.u = Cv_mix*Q.T + uNoneq;
     }
 
-    override void update_thermo_from_rhop(GasState Q) const
+    override void update_thermo_from_rhop(GasState Q)
     {
-        // THINK ABOUT: PM/RJG
-        // We will need to generalise this expression when we have more than one regular species.
-        // For the present, assume we are working with N2.
-        Q.T = Q.p/(Q.rho*_R_N2);
-        Q.u = 2.5*_R_N2*Q.T;
-
-        /// THINK ABOUT: PM/RJG
-        // Here we assume we know something about the temperatures in each mode
-        foreach (imode; 0 .. _n_modes) {
-            Q.u_modes[imode] = (Avogadro_number/_M_N2) * Q.massf[imode] * _pseudoSpecies[imode].energy(Q);
-        }
+        auto R_mix = gas_constant(Q);
+        Q.T = Q.p/(Q.rho*R_mix);
+        auto uNoneq = energyInNoneq(Q);
+        auto Cv_mix = Cv(Q);
+        Q.u = Cv_mix*Q.T + uNoneq;
     }
 
     override void update_thermo_from_ps(GasState Q, number s)
@@ -134,10 +109,10 @@ public:
 
     override void update_sound_speed(GasState Q)
     {
-        // THINK ABOUT: PM/RJG
-        // We will need to generalise this expression when we have more than one regular species.
-        // For the present, assume we are working with N2.
-        Q.a = sqrt(_gamma*_R_N2*Q.T);
+        auto R_mix = gas_constant(Q);
+        auto Cv_mix = Cv(Q);
+        auto gamma_mix = (R_mix/Cv_mix) + 1;
+        Q.a = sqrt(gamma_mix*R_mix*Q.T);
     }
 
     override void update_trans_coeffs(GasState Q)
@@ -147,16 +122,19 @@ public:
         // For the present, only inviscid simulations are valid.
         Q.mu = 0.0;
         Q.k = 0.0;
-        Q.k_modes[] = to!number(0.0);
     }
 
     override number dudT_const_v(in GasState Q) const
     {
-        return to!number(_R_N2/(_gamma - 1.0));
+        number Cv = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            Cv += Q.massf[isp] * (_dof[isp]/2.0) * _R[isp];
+        }
+        return Cv;
     }
     override number dhdT_const_p(in GasState Q) const
     {
-        throw new Error("ERROR: PseudoSpeciesGas:dhdT_const_p NOT IMPLEMENTED.");
+        return gas_constant(Q) + dudT_const_v(Q);
     }
     override number dpdrho_const_T(in GasState Q) const
     {
@@ -164,7 +142,11 @@ public:
     }
     override number gas_constant(in GasState Q) const
     {
-        return to!number(_R_N2);
+        number R_mix = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            R_mix += Q.massf[isp]*_R[isp];
+        }
+        return R_mix;
     }
     override number internal_energy(in GasState Q) const
     {
@@ -180,23 +162,17 @@ public:
     }
 
 private:
-    int _nLumpedSpecies;
-    double[] _R;
-    double[] _DOF;
-    double[] _massfLumpedSpecies;
-    int[][] _lumpedSpecies;
     PseudoSpecies[] _pseudoSpecies;
+    double[] _R;
+    int[] _dof;
 
-    void sumMassfInLumpedSpecies(GasState Q)
-    {
-        foreach (isp; _nLumpedSpecies) {
-            _lumpedMassf[isp] = 0.0;
-            foreach (pseudoSpeciesIdx; _lumpedSpecies[isp]) {
-                _lumpedMassf[isp] += Q.massf[pseudoSpeciesIdx];
-            }
+    number energyInNoneq(GasState Q) const {
+        number uNoneq = 0.0;
+        foreach (isp; 0 .. _n_species) {
+            uNoneq += (Avogadro_number/_mol_masses[isp]) * Q.massf[isp] * _pseudoSpecies[isp].energy(Q);
         }
+        return uNoneq;
     }
-    
 }
 
 version(pseudo_species_gas_test) {

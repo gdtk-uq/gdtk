@@ -11,18 +11,24 @@ pseudo_species = {}
 pseudo_species[0] = {
    name = "N2_first_level",
    type = "single_state",
+   M = 0.0280134,
+   DOF_base_mode = 5,
    energy = 0.0
 }
 
 pseudo_species[1] = {
    name = "N2_second_level",
    type = "single_state",
+   M = 0.0280134,
+   DOF_base_mode = 5,
    energy = 3.6
 }
 
 pseudo_species[2] = {
    name = "N2_third_level",
    type = "single_state",
+   M = 0.0280134,
+   DOF_base_mode = 5,
    energy = 4.2
 }
 

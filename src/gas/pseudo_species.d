@@ -21,25 +21,37 @@ import util.lua_service;
 import gas.gas_state;
 
 
-interface PseudoSpecies {
-    string name();
-    number energy(in GasState Q) const;
+class PseudoSpecies {
+    @property string name() const { return _name; }
+    @property double mol_mass() const { return _mol_mass; }
+    @property int DOF() const { return _dof; }
+
+    this(lua_State *L)
+    {
+        _name = getString(L, -1, "name");
+        _mol_mass = getDouble(L, -1, "M");
+        _dof = getInt(L, -1, "DOF_base_mode");
+    }
+
+    abstract number energy(in GasState Q) const;
+
+private:
+    string _name;
+    double _mol_mass;
+    int _dof;
 }
 
 class SingleStatePseudoSpecies : PseudoSpecies {
 public:
     this(lua_State *L)
     {
-        _name = getString(L, -1, "name");
+        super(L);
         _energy = to!number(getDouble(L, -1, "energy"));
     }
 
-    string name() { return _name; }
-
-    number energy(in GasState Q) const { return _energy; }
+    override number energy(in GasState Q) const { return _energy; }
 
 private:
-    string _name;
     number _energy;
 }
 
