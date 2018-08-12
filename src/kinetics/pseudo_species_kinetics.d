@@ -9,44 +9,68 @@
 
 module kinetics.pseudo_species_kinetics;
 
+import std.stdio;
+import std.conv : to;
+import std.string;
+import std.math;
+
 import nm.complex;
 import nm.number;
-
+import util.lua;
+import util.lua_service;
 import gas;
 import gas.pseudo_species_gas;
+
 import kinetics.thermochemical_reactor;
 
 final class PseudoSpeciesKinetics : ThermochemicalReactor {
 public:
-    this(GasModel gmodel)
+    @property size_t nReactions() const { return _mech.nReactions(); }
+
+    this(lua_State* L, GasModel gmodel)
     {
         super(gmodel);
         _psGmodel = cast(PseudoSpeciesGas) gmodel;
-        
+        _mech = createSSRMechanism(L, gmodel);
+        _conc.length = gmodel.n_species;
+        _dcdt.length = gmodel.n_species;
     }
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[] params)
     {
-        // [TODO] write update of interval tInterval
+        _psGmodel.massf2conc(Q, _conc);
+        int nSteps = 100;
+        double dt = tInterval/nSteps;
+        _mech.evalRateConstants(Q);
+        foreach (step; 0 .. nSteps) {
+            _mech.evalRates(_conc, _dcdt);
+            foreach (isp; 0 .. _conc.length) {
+                _conc[isp] = _conc[isp] + dt*_dcdt[isp];
+            }
+        }
+        _psGmodel.conc2massf(_conc, Q); 
     }
 
 private:
-    
+    PseudoSpeciesGas _psGmodel;
+    StateSpecificReactionMechanism _mech;
+    number[] _conc;
+    number[] _dcdt;
 }
 
 // --------------------------------------------------------------
 // Class to provide rates of pseudo-species population changes
 // --------------------------------------------------------------
 
-class StateSpecificKineticMechanism {
+class StateSpecificReactionMechanism {
 public:
     @property size_t nReactions() const { return _reactions.length; }
 
     this(StateSpecificReaction[] reactions) 
     {
-        foreach (ref reac; reactions) {
+        foreach (reac; reactions) {
             _reactions ~= reac.dup();
         }
     }
@@ -60,8 +84,11 @@ public:
 
     void evalRates(in number[] conc, number[] rates)
     {
-        rates[] = to!number(0.0);
+        foreach (isp; 0 .. rates.length) {
+            rates[isp] = to!number(0.0);
+        }
         foreach (ir, ref reac; _reactions) {
+            reac.evalRates(conc);
             foreach (isp; reac.participants) {
                 rates[isp] += reac.rateOfChange(isp);
             }
@@ -75,12 +102,17 @@ private:
 StateSpecificReactionMechanism createSSRMechanism(lua_State *L, GasModel gmodel)
 {
     StateSpecificReaction[] reactions;
-    auto nReactions = to!int(lua_objlen(L, -1));
+    
+    int nReactions = getInt(L, LUA_GLOBALSINDEX, "number_of_reactions");
+
+    lua_getglobal(L, "reaction");
     foreach (i; 0 .. nReactions) {
+        writeln("Reading reaction: ", i);
         lua_rawgeti(L, -1, i);
-        reactions ~= creationSSReaction(L);
+        reactions ~= createSSReaction(L);
         lua_pop(L, 1);
     }
+    lua_pop(L, 1);
     return new StateSpecificReactionMechanism(reactions);
 }
 
@@ -96,40 +128,44 @@ class StateSpecificReaction {
     @property number k_b() const { return _k_b; }
     @property ref int[] participants() { return _participants; }
 
-    this(lua_State *L)
+    this() {}
+
+    this(lua_State* L)
     {
         lua_getfield(L, -1, "frc");
-        _forward = createSSRateConstant(L);
+        _forwardRateConstant = createSSRateConstant(L);
         lua_pop(L, 1);
 
-        lua_getfield(L, -1, "frc");
-        _backward = createSSRateConstant(L);
+        lua_getfield(L, -1, "brc");
+        _backwardRateConstant = createSSRateConstant(L);
         lua_pop(L, 1);
     }
+
+    abstract StateSpecificReaction dup();
 
     void evalRateConstants(GasState Q)
     {
-        _forwardRateConstant.eval(Q);
-        _backwardRateConstant.eval(Q);
-            
+        _k_f = _forwardRateConstant.eval(Q);
+        _k_b = _backwardRateConstant.eval(Q);
     }
 
-    final void evalRates(GasState Q)
+    final void evalRates(in number[] conc)
     {
-        // [TODO] Compute concentrations.
-        
+        writeln("conc= ", conc);
         evalForwardRateOfChange(conc);
-        evalBackwardRateofChange(conc);
+        evalBackwardRateOfChange(conc);
     }
 
     abstract number rateOfChange(int isp);
 
 protected:
-    abstract void evalForwardRateOfChange(conc);
-    abstract void evalBackwardRateOfChange(conc);
+    abstract void evalForwardRateOfChange(in number[] conc);
+    abstract void evalBackwardRateOfChange(in number[] conc);
 
 private:
     int[] _participants;
+    StateSpecificRateConstant _forwardRateConstant;
+    StateSpecificRateConstant _backwardRateConstant;
     number _k_f;
     number _k_b;
     number _w_f;
@@ -138,7 +174,16 @@ private:
 
 class DissociationByAtom : StateSpecificReaction {
 public:
-    this(lua_State *L)
+    this(StateSpecificRateConstant forward, StateSpecificRateConstant backward,
+         int[] participants, int molecule_idx, int atom_idx)
+    {
+        _forwardRateConstant = forward.dup();
+        _backwardRateConstant = backward.dup();
+        _participants = participants.dup();
+        _moleculeIdx = molecule_idx;
+        _atomIdx = atom_idx;
+    }
+    this(lua_State* L)
     {
         super(L);
         _moleculeIdx = getInt(L, -1, "molecule_idx");
@@ -146,11 +191,19 @@ public:
         _participants = [_moleculeIdx, _atomIdx];
     }
 
+    override DissociationByAtom dup()
+    {
+        return new DissociationByAtom(_forwardRateConstant, _backwardRateConstant, _participants,
+                                      _moleculeIdx, _atomIdx);
+    }
+
     override number rateOfChange(int isp) {
         if (isp == _moleculeIdx) {
-            return _w_b - w_f_;
+            writeln("molc: ", _w_b - _w_f);
+            return _w_b - _w_f;
         }
         else if (isp == _atomIdx) {
+            writeln("atom: ", 2*(_w_f - _w_b));
             return 2*(_w_f - _w_b);
         }
         else {
@@ -159,17 +212,19 @@ public:
     }
     
 protected:
-    override number evalForwardRateOfChange(in number[] conc)
+    override void evalForwardRateOfChange(in number[] conc)
     {
         // e.g. N2(v=0) + N(4s) <=> N(4s) + N(4s) + N(4s)
         //      w_f = k_f * [N2] * [N]
         _w_f = _k_f*conc[_moleculeIdx]*conc[_atomIdx];
+        writeln("w_f= ", _w_f);
     }
-    override number evalBackwardRateOfChange(in number[] conc)
+    override void evalBackwardRateOfChange(in number[] conc)
     {
         // e.g. N2(v=0) + N(4s) <=> N(4s) + N(4s) + N(4s)
         //      w_b = k_b * [N] * [N] * [N]
-        _w_b = _k_b*conc[_atomIdx]*conc[_atomIdx]*[_atomIdx];
+        _w_b = _k_b*conc[_atomIdx]*conc[_atomIdx]*conc[_atomIdx];
+        writeln("w_b= ", _w_b);
     }
 
 private:
@@ -244,3 +299,47 @@ StateSpecificRateConstant createSSRateConstant(lua_State* L)
     }
 }
 
+version(pseudo_species_kinetics_test) {
+    int main()
+    {
+        import util.msg_service;
+        
+        // Set up gas model
+        auto L = init_lua_State();
+        doLuaFile(L, "../gas/sample-data/pseudo-species-3-components.lua");
+        auto gm = new PseudoSpeciesGas(L);
+        auto gd = new GasState(3, 3);
+        gd.massf[1] = 0.20908519640652;
+        gd.massf[2] = 0.12949211438053;
+        gd.massf[0] = 1.0 - (gd.massf[1] + gd.massf[2]);
+        gd.p = 101325.0;
+        gd.T = 7000.0;
+        gm.update_thermo_from_pT(gd);
+        lua_close(L);
+
+        // Set up kinetics object
+        auto L2 = init_lua_State();
+        writeln("Parsing kinetics file.");
+        doLuaFile(L2, "sample-input/state-specific-N2-diss.lua");
+        
+        PseudoSpeciesKinetics psk = new PseudoSpeciesKinetics(L2, gm);
+
+        writeln("Gas state BEFORE update: ", gd);
+
+        double tInterval = 1.0e-9;
+        double dtChemSuggest = -1.0;
+        double dtThermSuggest = -1.0;
+        number[] params;
+        
+        psk(gd, 1.0e-6, dtChemSuggest, dtThermSuggest, params);
+        
+        writeln("Gas state AFTER update: ", gd);
+        // Apply thermo constraint.
+        //gm.update_thermo_from_rhou(gd);
+
+        //writeln("Gas state AFTER update: ", gd);
+        
+        return 0;
+
+    }
+}
