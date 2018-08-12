@@ -48,7 +48,9 @@ public:
         number T_save = Q.T;
         if ( Q.T < _T_lower_limit ) { Q.T = _T_lower_limit; }
         if ( Q.T > _T_upper_limit ) { Q.T = _T_upper_limit; }
-        foreach ( ref r; _reactions ) r.eval_rate_constants(Q);
+        foreach ( ref r; _reactions ) {
+            r.eval_rate_constants(Q);
+        }
         // Always reset Q.T on exit
         Q.T = T_save;
     }
@@ -56,7 +58,9 @@ public:
     final void eval_rates(in number[] conc, number[] rates)
     {
         eval_split_rates(conc, _q, _L);
-        foreach ( isp; 0..conc.length ) rates[isp] = _q[isp] - _L[isp];
+        foreach ( isp; 0..conc.length ) {
+            rates[isp] = _q[isp] - _L[isp];
+        }
     }
     final void eval_split_rates(in number[] conc, number[] q, number[] L)
     {

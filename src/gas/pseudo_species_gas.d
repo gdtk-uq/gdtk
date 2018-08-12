@@ -51,6 +51,7 @@ public:
             _dof ~= _pseudoSpecies[$-1].DOF;
         }
         lua_pop(L, 1);
+        create_species_reverse_lookup();
     }
 
     override string toString() const
@@ -63,12 +64,10 @@ public:
     override void update_thermo_from_pT(GasState Q)
     {
         auto R_mix = gas_constant(Q);
-        writeln("R_mix= ", R_mix);
         Q.rho = Q.p/(R_mix*Q.T);
 
         auto uNoneq = energyInNoneq(Q);
         auto Cv_mix = Cv(Q);
-        writeln("Cv_mix= ", Cv_mix, " uNoneq= ", uNoneq);
         Q.u = Cv_mix*Q.T + uNoneq;
     }
 

@@ -4,7 +4,7 @@
 -- Demo file for defining pseudo-species components in a 
 -- pseudo-species gas model.
 
-number_pseudo_species = 3
+number_pseudo_species = 2
 
 pseudo_species = {}
 

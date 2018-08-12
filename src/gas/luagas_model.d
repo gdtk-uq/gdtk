@@ -22,6 +22,7 @@ import kinetics.luareaction_mechanism;
 import kinetics.luachemistry_update;
 import kinetics.luatwo_temperature_air_kinetics;
 import kinetics.luavib_specific_nitrogen_kinetics;
+import kinetics.luapseudo_species_kinetics;
 
 import gas.gas_model;
 import gas.gas_state;
@@ -1213,6 +1214,7 @@ version(gas_calc) {
         registerChemistryUpdate(L, LUA_GLOBALSINDEX);
         registerTwoTemperatureAirKinetics(L, LUA_GLOBALSINDEX);
         registerVibSpecNitrogenKinetics(L, LUA_GLOBALSINDEX);
+        registerPseudoSpeciesKinetics(L, LUA_GLOBALSINDEX);
         // Pass on command line args to user's scripts.
         lua_newtable(L);
         int argIdx = 1;

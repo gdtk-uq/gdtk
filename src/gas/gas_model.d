@@ -1038,6 +1038,7 @@ import gas.uniform_lut;
 import gas.adaptive_lut_CEA;
 import gas.ideal_air_proxy;
 import gas.powers_aslam_gas;
+import gas.pseudo_species_gas;
 import gas.two_temperature_reacting_argon;
 import gas.ideal_dissociating_gas;
 import gas.two_temperature_air;
@@ -1115,6 +1116,9 @@ GasModel init_gas_model(string file_name="gas-model.lua")
         break;
     case "PowersAslamGas":
         gm = new PowersAslamGas(L);
+        break;
+    case "PseudoSpeciesGas":
+        gm = new PseudoSpeciesGas(L);
         break;
     case "TwoTemperatureReactingArgon":
         gm = new TwoTemperatureReactingArgon(L);

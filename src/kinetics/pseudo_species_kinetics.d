@@ -9,6 +9,7 @@
 
 module kinetics.pseudo_species_kinetics;
 
+import core.stdc.stdlib : exit;
 import std.stdio;
 import std.conv : to;
 import std.string;
@@ -26,6 +27,19 @@ import kinetics.thermochemical_reactor;
 final class PseudoSpeciesKinetics : ThermochemicalReactor {
 public:
     @property size_t nReactions() const { return _mech.nReactions(); }
+
+    this(string fileName, GasModel gmodel)
+    {
+        super(gmodel);
+        _psGmodel = cast(PseudoSpeciesGas) gmodel;
+        auto L = init_lua_State();
+        doLuaFile(L, fileName);
+        _mech = createSSRMechanism(L, gmodel);
+        lua_close(L);
+        _conc.length = gmodel.n_species;
+        _dcdt.length = gmodel.n_species;
+        
+    }
 
     this(lua_State* L, GasModel gmodel)
     {
@@ -107,7 +121,6 @@ StateSpecificReactionMechanism createSSRMechanism(lua_State *L, GasModel gmodel)
 
     lua_getglobal(L, "reaction");
     foreach (i; 0 .. nReactions) {
-        writeln("Reading reaction: ", i);
         lua_rawgeti(L, -1, i);
         reactions ~= createSSReaction(L);
         lua_pop(L, 1);
@@ -151,7 +164,6 @@ class StateSpecificReaction {
 
     final void evalRates(in number[] conc)
     {
-        writeln("conc= ", conc);
         evalForwardRateOfChange(conc);
         evalBackwardRateOfChange(conc);
     }
@@ -199,11 +211,9 @@ public:
 
     override number rateOfChange(int isp) {
         if (isp == _moleculeIdx) {
-            writeln("molc: ", _w_b - _w_f);
             return _w_b - _w_f;
         }
         else if (isp == _atomIdx) {
-            writeln("atom: ", 2*(_w_f - _w_b));
             return 2*(_w_f - _w_b);
         }
         else {
@@ -217,14 +227,12 @@ protected:
         // e.g. N2(v=0) + N(4s) <=> N(4s) + N(4s) + N(4s)
         //      w_f = k_f * [N2] * [N]
         _w_f = _k_f*conc[_moleculeIdx]*conc[_atomIdx];
-        writeln("w_f= ", _w_f);
     }
     override void evalBackwardRateOfChange(in number[] conc)
     {
         // e.g. N2(v=0) + N(4s) <=> N(4s) + N(4s) + N(4s)
         //      w_b = k_b * [N] * [N] * [N]
         _w_b = _k_b*conc[_atomIdx]*conc[_atomIdx]*conc[_atomIdx];
-        writeln("w_b= ", _w_b);
     }
 
 private:
@@ -308,12 +316,11 @@ version(pseudo_species_kinetics_test) {
         auto L = init_lua_State();
         doLuaFile(L, "../gas/sample-data/pseudo-species-3-components.lua");
         auto gm = new PseudoSpeciesGas(L);
-        auto gd = new GasState(3, 3);
-        gd.massf[1] = 0.20908519640652;
-        gd.massf[2] = 0.12949211438053;
-        gd.massf[0] = 1.0 - (gd.massf[1] + gd.massf[2]);
-        gd.p = 101325.0;
-        gd.T = 7000.0;
+        auto gd = new GasState(2, 0);
+        gd.massf[0] = 0.2;
+        gd.massf[1] = 0.8;
+        gd.p = 1.0e5;
+        gd.T = 4000.0;
         gm.update_thermo_from_pT(gd);
         lua_close(L);
 
@@ -326,7 +333,7 @@ version(pseudo_species_kinetics_test) {
 
         writeln("Gas state BEFORE update: ", gd);
 
-        double tInterval = 1.0e-9;
+        double tInterval = 1.0e-6;
         double dtChemSuggest = -1.0;
         double dtThermSuggest = -1.0;
         number[] params;
