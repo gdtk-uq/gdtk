@@ -1,4 +1,4 @@
-number_of_reactions = 1
+number_of_reactions = 2
 
 reaction = {}
 reaction[0]={

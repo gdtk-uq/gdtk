@@ -37,7 +37,6 @@ for sp,eV in pairs(Evib_eV) do
    print("Q.massf",sp,Q.massf[sp])
 end
 
-
 gm:updateThermoFromPT(Q)
 
 chemUpdate = PseudoSpeciesKinetics:new{reactionsFile='state-specific-N2-diss.lua', gasModel=gm}
