@@ -14,9 +14,11 @@ import std.stdio;
 import std.conv : to;
 import std.string;
 import std.math;
+import std.algorithm;
 
 import nm.complex;
 import nm.number;
+import nm.smla;
 import util.lua;
 import util.lua_service;
 import gas;
@@ -37,8 +39,15 @@ public:
         _mech = createSSRMechanism(L, gmodel);
         lua_close(L);
         _conc.length = gmodel.n_species;
-        _dcdt.length = gmodel.n_species;
-        
+        _conc0.length = gmodel.n_species;
+        _negFy.length = gmodel.n_species;
+        _dconc.length = gmodel.n_species;
+        _dconc0.length = gmodel.n_species;
+        _rates.length = gmodel.n_species;
+        _Jac = new SMatrix!number();
+        _mech.initJacobian(_Jac, gmodel.n_species);
+        _ILU0 = new SMatrix!number(_Jac);
+        _gws = GMRESWorkSpace!number(gmodel.n_species, _max_iterations);
     }
 
     this(lua_State* L, GasModel gmodel)
@@ -47,31 +56,100 @@ public:
         _psGmodel = cast(PseudoSpeciesGas) gmodel;
         _mech = createSSRMechanism(L, gmodel);
         _conc.length = gmodel.n_species;
-        _dcdt.length = gmodel.n_species;
+        _conc0.length = gmodel.n_species;
+        _negFy.length = gmodel.n_species;
+        _dconc.length = gmodel.n_species;
+        _dconc0.length = gmodel.n_species;
+        _rates.length = gmodel.n_species;
+        _Jac = new SMatrix!number();
+        _mech.initJacobian(_Jac, gmodel.n_species);
+        _ILU0 = new SMatrix!number(_Jac);
+        _gws = GMRESWorkSpace!number(gmodel.n_species, _max_iterations);
     }
 
     override void opCall(GasState Q, double tInterval,
                          ref double dtChemSuggest, ref double dtThermSuggest,
                          ref number[] params)
     {
-        _psGmodel.massf2conc(Q, _conc);
-        int nSteps = 100;
-        double dt = tInterval/nSteps;
+        _psGmodel.massf2conc(Q, _conc0);
+        foreach (i; 0 .. _conc.length) {
+            _conc[i] = _conc0[i];
+        }
         _mech.evalRateConstants(Q);
-        foreach (step; 0 .. nSteps) {
-            _mech.evalRates(_conc, _dcdt);
-            foreach (isp; 0 .. _conc.length) {
-                _conc[isp] = _conc[isp] + dt*_dcdt[isp];
+        foreach (i; 0 .. _dconc.length) {
+            _dconc[i] = to!number(0.0);
+        }
+        int stepCount = 0;
+        foreach (step; 0 .. _max_steps) {
+            stepCount++;
+            // 1. Evaluate negF(Y)
+            _mech.evalRates(_conc, _rates);
+            foreach (i; 0 .. _rates.length) {
+                _negFy[i] = -1.0*(_conc[i] - _conc0[i] - tInterval*_rates[i]);
             }
+            // 2. Evaluate dfdY
+            _mech.evalJacobian(_conc, _Jac);
+            // 3. Form Jacobian as [I - dt*dfdy];
+            _Jac.scale(to!number(-1.0*tInterval));
+            // 3a. Add I on diagonal.
+            foreach (isp; 0 .. _conc.length) {
+                _Jac[isp,isp] = _Jac[isp,isp] + 1.0;
+            }
+            // 4. Compute dY
+            // 4a. Compute ILU0 preconditioner.
+            foreach (i; 0 .. _Jac.aa.length) {
+                _ILU0.aa[i] = _Jac.aa[i];
+            }
+            decompILU0!number(_ILU0);
+            // 4b. Use right-preconditioned GMRES to solve for dY
+            //     Use previous _dconc as guess.
+            foreach (i; 0 .. _dconc.length) {
+                _dconc0[i] = _dconc[i];
+            }
+            rpcGMRES(_Jac, _ILU0, _negFy, _dconc0, _dconc,
+                     _max_iterations, _GMRES_tol, _gws);
+            // 5. Y_new = Y_old + dY
+            foreach (i; 0 .. _conc.length) {
+                _conc[i] = _conc[i] + _dconc[i];
+            }
+            // 6. Check for convergence.
+            // [TODO] PM: We may need a more sophisticated convergence
+            //            check. For the moment, I'm just checking
+            //            for small changes in dY.
+            double largestChange = 0.0;
+            foreach (i; 0 .. _dconc.length) {
+                if (fabs(_dconc[i].re) > largestChange) {
+                    largestChange = fabs(_dconc[i].re);
+                }
+            }
+            if (largestChange < _Newton_tol) {
+                break;
+            }
+        }
+        if (stepCount == _max_steps) {
+            string excMsg = "Newton steps failed to converge in pseudo_species_kinetics.d\n";
+            excMsg ~= format("Number of steps: %d\n", _max_steps);
+            throw new ThermochemicalReactorUpdateException(excMsg);
         }
         _psGmodel.conc2massf(_conc, Q); 
     }
 
 private:
+    int _max_steps = 10;
+    int _max_iterations = 30; // in matrix solve
+    double _Newton_tol = 1.0e-9;
+    double _GMRES_tol = 1.0e-15;
     PseudoSpeciesGas _psGmodel;
     StateSpecificReactionMechanism _mech;
     number[] _conc;
-    number[] _dcdt;
+    number[] _conc0;
+    number[] _negFy;
+    number[] _dconc;
+    number[] _dconc0;
+    number[] _rates;
+    SMatrix!number _Jac;
+    SMatrix!number _ILU0;
+    GMRESWorkSpace!number _gws;
 }
 
 // --------------------------------------------------------------
@@ -105,6 +183,47 @@ public:
             reac.evalRates(conc);
             foreach (isp; reac.participants) {
                 rates[isp] += reac.rateOfChange(isp);
+            }
+        }
+    }
+
+    void initJacobian(SMatrix!number Jac, int nSpecies)
+    {
+        foreach (isp; 0 .. nSpecies) {
+            bool[size_t] columnEntries;
+            foreach (jsp; 0 .. nSpecies) {
+                foreach (ir, reac; _reactions) {
+                    if (reac.participants.canFind(isp) && 
+                        reac.participants.canFind(jsp)) {
+                        columnEntries[jsp] = true;
+                    }
+                }
+            }
+            size_t[] ji = columnEntries.keys.dup();
+            sort(ji);
+            number[] ai;
+            foreach (i; 0 .. ji.length) {
+                ai ~= to!number(0.0);
+            }
+            Jac.addRow(ai, ji);
+        }
+    }
+
+    void evalJacobian(in number[] conc, SMatrix!number Jac)
+    {
+        foreach (ref reac; _reactions) {
+            reac.evalJacobianEntries(conc);
+        }
+        
+        Jac.scale(to!number(0.0));
+        foreach (isp; 0 .. to!int(conc.length)) {
+            foreach (jsp; 0 .. to!int(conc.length)) {
+                foreach (reac; _reactions) {
+                    if (reac.participants.canFind(isp) && 
+                        reac.participants.canFind(jsp)) {
+                        Jac[isp,jsp] = Jac[isp,jsp] + reac.getJacobianEntry(isp, jsp);
+                    }
+                }
             }
         }
     }
@@ -170,6 +289,10 @@ class StateSpecificReaction {
 
     abstract number rateOfChange(int isp);
 
+    abstract void evalJacobianEntries(in number[] conc);
+
+    abstract number getJacobianEntry(int isp, int jsp);
+
 protected:
     abstract void evalForwardRateOfChange(in number[] conc);
     abstract void evalBackwardRateOfChange(in number[] conc);
@@ -220,7 +343,41 @@ public:
             return to!number(0.0);
         }
     }
+
+    override void evalJacobianEntries(in number[] conc)
+    {
+        _dwf_dmolc = _k_f*conc[_atomIdx];
+        _dwf_datom = _k_f*conc[_moleculeIdx];
+        _dwb_datom = 3*_k_b*conc[_atomIdx]*conc[_atomIdx];
+    }
     
+    override number getJacobianEntry(int isp, int jsp)
+    {
+        if (isp == _moleculeIdx) {
+            if (jsp == _moleculeIdx) {
+                return -_dwf_dmolc;
+            }
+            else if (jsp == _atomIdx) {
+                return _dwb_datom - _dwf_datom;
+            }
+            else {
+                return to!number(0.0);
+            }
+        }
+        else if (isp == _atomIdx) {
+            if (jsp == _moleculeIdx) {
+                return 2*_dwf_dmolc;
+            }
+            else if (jsp == _atomIdx) {
+                return 2*(_dwf_datom - _dwb_datom);
+            }
+            else {
+                return to!number(0.0);
+            }
+        }
+        return to!number(0.0);
+    }
+
 protected:
     override void evalForwardRateOfChange(in number[] conc)
     {
@@ -237,7 +394,10 @@ protected:
 
 private:
     int _moleculeIdx;
-    int _atomIdx; 
+    int _atomIdx;
+    number _dwf_dmolc;
+    number _dwf_datom;
+    number _dwb_datom;
 }
 
 StateSpecificReaction createSSReaction(lua_State *L)

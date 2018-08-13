@@ -90,6 +90,12 @@ public:
         }
     }
 
+    void scale(T scaleFactor) {
+        foreach (ref elem; aa) {
+            elem *= scaleFactor;
+        }
+    }
+
     const T opIndex(size_t row, size_t col)
     {
         // We need to search the given row to see if an entry
