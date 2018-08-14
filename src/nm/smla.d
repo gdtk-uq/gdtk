@@ -188,6 +188,66 @@ body {
 }
 
 /**
+ * Compute B = A^t for CSR matrix A, CSR matrix B (square matrices only)
+ *
+ * Based on scipy implementation (ported from C++)
+ * https://github.com/scipy/scipy/blob/3b36a574dc657d1ca116f6e230be694f3de31afc/scipy/sparse/sparsetools/csr.h#L376
+ *
+ * Input Arguments:
+ *   int    n_row         - number of rows in A
+ *   int    n_col         - number of columns in A
+ *   array  Ap[n_row+1]   - row pointer
+ *   array  Aj[nnz(A)]    - column indices
+ *   array  Ax[nnz(A)]    - nonzeros
+ *
+ * Output Arguments:
+ *   array  Bp[n_col+1] - column pointer
+ *   array  Bj[nnz(A)]  - row indices
+ *   array  Bx[nnz(A)]  - nonzeros
+ * 
+ */
+void transpose(T)(const size_t[] Aia, const size_t[] Aja, const T[] Aaa,
+                  size_t[] Bia, size_t[] Bja, T[] Baa)
+{
+    size_t n_row = Aia.length-1;
+    size_t n_col = Aia.length-1;
+    const size_t nnz = Aia[n_row];
+
+    // compute number of non-zero entries per column of A 
+    Bia[0..$-1] = 0;
+
+    for (size_t n = 0; n < nnz; n++){            
+        Bia[Aja[n]]++;
+    }
+
+    //cumsum the nnz per column to get Bia[]
+    for(size_t col = 0, cumsum = 0; col < n_col; col++){     
+        size_t temp  = Bia[col];
+        Bia[col] = cumsum;
+        cumsum += temp;
+    }
+    Bia[n_col] = nnz; 
+
+    for(size_t row = 0; row < n_row; row++){
+        for(size_t jj = Aia[row]; jj < Aia[row+1]; jj++){
+            size_t col  = Aja[jj];
+            size_t dest = Bia[col];
+
+            Bja[dest] = row;
+            Baa[dest] = Aaa[jj];
+
+            Bia[col]++;
+        }
+    }  
+
+    for(size_t col = 0, last = 0; col <= n_col; col++){
+        size_t temp  = Bia[col];
+        Bia[col] = last;
+        last    = temp;
+    }
+}
+
+/**
  * An ILU(0) decomposition.
  *
  * This algorithm changes the matrix a in place leaving
