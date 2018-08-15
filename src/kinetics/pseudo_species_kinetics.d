@@ -131,7 +131,7 @@ public:
             excMsg ~= format("Number of steps: %d\n", _max_steps);
             throw new ThermochemicalReactorUpdateException(excMsg);
         }
-        _psGmodel.conc2massf(_conc, Q); 
+        _psGmodel.conc2massf(_conc, Q);
     }
 
 private:
@@ -160,7 +160,7 @@ class StateSpecificReactionMechanism {
 public:
     @property size_t nReactions() const { return _reactions.length; }
 
-    this(StateSpecificReaction[] reactions) 
+    this(StateSpecificReaction[] reactions)
     {
         foreach (reac; reactions) {
             _reactions ~= reac.dup();
@@ -193,7 +193,7 @@ public:
             bool[size_t] columnEntries;
             foreach (jsp; 0 .. nSpecies) {
                 foreach (ir, reac; _reactions) {
-                    if (reac.participants.canFind(isp) && 
+                    if (reac.participants.canFind(isp) &&
                         reac.participants.canFind(jsp)) {
                         columnEntries[jsp] = true;
                     }
@@ -214,18 +214,12 @@ public:
         foreach (ref reac; _reactions) {
             reac.evalJacobianEntries(conc);
         }
-        
-        Jac.scale(to!number(0.0));
-        foreach (isp; 0 .. to!int(conc.length)) {
-            foreach (jsp; 0 .. to!int(conc.length)) {
-                foreach (reac; _reactions) {
-                    if (reac.participants.canFind(isp) && 
-                        reac.participants.canFind(jsp)) {
-                        Jac[isp,jsp] = Jac[isp,jsp] + reac.getJacobianEntry(isp, jsp);
-                    }
+
+        Jac.scale(to!number(0.0)); // initialize the Jacobian at 0.
+            // Now add contribution of each reaction to the Jacobian
+            foreach (reac; _reactions) {
+                    reac.getJacobianEntry(Jac);
                 }
-            }
-        }
     }
 
 private:
@@ -235,7 +229,7 @@ private:
 StateSpecificReactionMechanism createSSRMechanism(lua_State *L, GasModel gmodel)
 {
     StateSpecificReaction[] reactions;
-    
+
     int nReactions = getInt(L, LUA_GLOBALSINDEX, "number_of_reactions");
 
     lua_getglobal(L, "reaction");
@@ -252,7 +246,7 @@ StateSpecificReactionMechanism createSSRMechanism(lua_State *L, GasModel gmodel)
 // Classes to provide behaviour dependent on reaction type.
 // Reactions include:
 //   + DissociationByAtom
-//   + [TODO] DissociationByMolecule 
+//   + [TODO] DissociationByMolecule
 // --------------------------------------------------------------
 
 class StateSpecificReaction {
@@ -291,7 +285,7 @@ class StateSpecificReaction {
 
     abstract void evalJacobianEntries(in number[] conc);
 
-    abstract number getJacobianEntry(int isp, int jsp);
+    abstract void getJacobianEntry(ref SMatrix!number Jac);
 
 protected:
     abstract void evalForwardRateOfChange(in number[] conc);
@@ -350,32 +344,17 @@ public:
         _dwf_datom = _k_f*conc[_moleculeIdx];
         _dwb_datom = 3*_k_b*conc[_atomIdx]*conc[_atomIdx];
     }
-    
-    override number getJacobianEntry(int isp, int jsp)
+
+    override void getJacobianEntry(ref SMatrix!number Jac) // [TODO] change the name of this method (UpdateJacobian?)
     {
-        if (isp == _moleculeIdx) {
-            if (jsp == _moleculeIdx) {
-                return -_dwf_dmolc;
-            }
-            else if (jsp == _atomIdx) {
-                return _dwb_datom - _dwf_datom;
-            }
-            else {
-                return to!number(0.0);
-            }
-        }
-        else if (isp == _atomIdx) {
-            if (jsp == _moleculeIdx) {
-                return 2*_dwf_dmolc;
-            }
-            else if (jsp == _atomIdx) {
-                return 2*(_dwf_datom - _dwb_datom);
-            }
-            else {
-                return to!number(0.0);
-            }
-        }
-        return to!number(0.0);
+        // Contribution of reaction :
+        //      molecule + atom <=> atom + atom + atom
+        // on the jacobian
+        Jac[_moleculeIdx,_moleculeIdx] = Jac[_moleculeIdx,_moleculeIdx] -_dwf_dmolc;
+        Jac[_moleculeIdx,_atomIdx] = Jac[_moleculeIdx,_atomIdx] + _dwb_datom - _dwf_datom;
+        Jac[_atomIdx,_moleculeIdx] = Jac[_atomIdx,_moleculeIdx] + 2*_dwf_dmolc;
+        Jac[_atomIdx,_atomIdx] = Jac[_atomIdx,_atomIdx] + 2*(_dwf_datom - _dwb_datom);
+
     }
 
 protected:
@@ -400,12 +379,248 @@ private:
     number _dwb_datom;
 }
 
+class Collision2B2B : StateSpecificReaction {
+  // Collision 2-bodies-2-bodies
+  // r0 + r1 -> p0 + p1
+
+public:
+    this(StateSpecificRateConstant forward, StateSpecificRateConstant backward,
+         int[] participants, int[] reactants_idx, int[] products_idx)
+    {
+        _forwardRateConstant = forward.dup();
+        _backwardRateConstant = backward.dup();
+        _participants = participants.dup();
+        _reactants_idx = reactants_idx;
+        _products_idx = products_idx;
+    }
+    this(lua_State* L)
+    {
+        super(L);
+        getArrayOfInts(L, -1, "reactants_idx", _reactants_idx);
+        getArrayOfInts(L, -1, "products_idx", _products_idx);
+        _participants = _reactants_idx ~ _products_idx; // concatenate indices of reactants and products
+    }
+
+    override Collision2B2B dup()
+    {
+        return new Collision2B2B(_forwardRateConstant, _backwardRateConstant, _participants,
+                                 _reactants_idx, _products_idx);
+    }
+
+    override number rateOfChange(int isp) {
+        if ((isp == _reactants_idx[0]) | (isp == _reactants_idx[1])) {
+            return (_w_b - _w_f);
+        }
+        else if ((isp == _products_idx[0]) | (isp == _products_idx[1])) {
+            return (_w_f - _w_b);
+        }
+        else {
+            return to!number(0.0);
+        }
+    }
+
+    override void evalJacobianEntries(in number[] conc)
+    {
+        // Let's call R the rate of progress of the 2-body-2-body reaction
+        // nr0, nr1, np0, np1 are reactants and products density number [m^-3]
+        // R = kf*nr0*nr1-kb*np0*np1 [m^3/s]
+        // Let's compute the element, dR/dnr0, dR/dnr1, dR/dnp0, dR/dnp1
+        _dRdnr0 = _k_f*conc[_reactants_idx[1]];
+        _dRdnr1 = _k_f*conc[_reactants_idx[0]];
+        _dRdnp0 = -_k_b*conc[_products_idx[1]];
+        _dRdnp1 = -_k_b*conc[_products_idx[0]];
+    }
+
+    override void getJacobianEntry(ref SMatrix!number Jac)
+    {
+
+        int r0 = _reactants_idx[0];
+        int r1 = _reactants_idx[1];
+        int p0 = _products_idx[0];
+        int p1 = _products_idx[1];
+
+        // r0 + r1 -> p0 + p1 contributes to Jacobian[isp, jsp] with
+        // (isp, jsp) = (r0,r0), (r0,r1), (r0,p0), (r0,p1),
+        //              (r1,r0), (r1,r1), (r1,p0), (r1,p1)
+        Jac[r0,r0] = Jac[r0,r0] - _dRdnr0;
+        Jac[r0,r1] = Jac[r0,r1] - _dRdnr1;
+        Jac[r0,p0] = Jac[r0,p0] - _dRdnp0;
+        Jac[r0,p1] = Jac[r0,p1] - _dRdnp1;
+        Jac[r1,r0] = Jac[r1,r0] - _dRdnr0;
+        Jac[r1,r1] = Jac[r1,r1] - _dRdnr1;
+        Jac[r1,p0] = Jac[r1,p0] - _dRdnp0;
+        Jac[r1,p1] = Jac[r1,p1] - _dRdnp1;
+
+        // ... and (isp, jsp) = (p0,r0), (p0,r1), (p0,p0), (p0,p1),
+        //                      (p1,r0), (p1,r1), (p1,p0), (p1,p1)
+        Jac[p0,r0] = Jac[p0,r0] + _dRdnr0;
+        Jac[p0,r1] = Jac[p0,r1] + _dRdnr1;
+        Jac[p0,p0] = Jac[p0,p0] + _dRdnp0;
+        Jac[p0,p1] = Jac[p0,p1] + _dRdnp1;
+        Jac[p1,r0] = Jac[p1,r0] + _dRdnr0;
+        Jac[p1,r1] = Jac[p1,r1] + _dRdnr1;
+        Jac[p1,p0] = Jac[p1,p0] + _dRdnp0;
+        Jac[p1,p1] = Jac[p1,p1] + _dRdnp1;
+    }
+
+protected:
+    override void evalForwardRateOfChange(in number[] conc)
+    {
+        // e.g. r0 + r1 <=> p0 + p1
+        //      w_f = k_f * [r0] * [r1]
+        _w_f = _k_f*conc[_reactants_idx[0]]*conc[_reactants_idx[1]];
+    }
+    override void evalBackwardRateOfChange(in number[] conc)
+    {
+        // e.g. r0 + r1 <=> p0 + p1
+        //      w_b = k_b * [p0] * [p1]
+        _w_b = _k_b*conc[_products_idx[0]]*conc[_products_idx[1]];
+    }
+
+private:
+    int[] _reactants_idx;
+    int[] _products_idx;
+    number _dRdnr0; // derivative of rate of change with density number of r0
+    number _dRdnr1; // derivative of rate of change with density number of r1
+    number _dRdnp0; // derivative of rate of change with density number of p0
+    number _dRdnp1; // derivative of rate of change with density number of p1
+}
+
+
+
+class Collision2B3B : StateSpecificReaction {
+  // Collision 2-bodies-2-bodies
+  // r0 + r1 -> p0 + p1 + p2
+
+public:
+    this(StateSpecificRateConstant forward, StateSpecificRateConstant backward,
+         int[] participants, int[] reactants_idx, int[] products_idx)
+    {
+        _forwardRateConstant = forward.dup();
+        _backwardRateConstant = backward.dup();
+        _participants = participants.dup();
+        _reactants_idx = reactants_idx;
+        _products_idx = products_idx;
+    }
+    this(lua_State* L)
+    {
+        super(L);
+        getArrayOfInts(L, -1, "reactants_idx", _reactants_idx);
+        getArrayOfInts(L, -1, "products_idx", _products_idx);
+        _participants = _reactants_idx ~ _products_idx; // concatenate indices of reactants and products
+        writeln(_participants); // TODO to be removed
+    }
+
+    override Collision2B3B dup()
+    {
+        return new Collision2B3B(_forwardRateConstant, _backwardRateConstant, _participants,
+                                 _reactants_idx, _products_idx);
+    }
+
+    override number rateOfChange(int isp) {
+        if ((isp == _reactants_idx[0]) | (isp == _reactants_idx[1])) {
+            return (_w_b - _w_f);
+        }
+        else if ((isp == _products_idx[0]) | (isp == _products_idx[1]) | (isp == _products_idx[2])) {
+            return (_w_f - _w_b);
+        }
+        else {
+            return to!number(0.0);
+        }
+    }
+
+    override void evalJacobianEntries(in number[] conc)
+    {
+        // Let's call R the rate of change (sometimes called rate of progress)
+        // of the 2-body-3-body reaction
+        // nr0, nr1, np0, np1, np2 are reactants and products density number [m^-3]
+        // R = kf*nr0*nr1-kb*np0*np1*np2 [m^3/s]
+        // Let's compute the element, dR/dnr0, dR/dnr1, dR/dnp0, dR/dnp1, dR/dnp2
+        _dRdnr0 = _k_f*conc[_reactants_idx[1]];
+        _dRdnr1 = _k_f*conc[_reactants_idx[0]];
+        _dRdnp0 = -_k_b*conc[_products_idx[1]]*conc[_products_idx[2]];
+        _dRdnp1 = -_k_b*conc[_products_idx[0]]*conc[_products_idx[2]];
+        _dRdnp2 = -_k_b*conc[_products_idx[0]]*conc[_products_idx[1]];
+    }
+
+    override void getJacobianEntry(ref SMatrix!number Jac)
+    {
+
+        int r0 = _reactants_idx[0];
+        int r1 = _reactants_idx[1];
+        int p0 = _products_idx[0];
+        int p1 = _products_idx[1];
+        int p2 = _products_idx[2];
+
+        // r0 + r1 -> p0 + p1 + p2 contributes to Jacobian[isp, jsp] with
+        // (isp, jsp) = (r0,r0), (r0,r1), (r0,p0), (r0,p1), (r0,p2),
+        //              (r1,r0), (r1,r1), (r1,p0), (r1,p1), (r1,p2)
+        Jac[r0,r0] = Jac[r0,r0] - _dRdnr0;
+        Jac[r0,r1] = Jac[r0,r1] - _dRdnr1;
+        Jac[r0,p0] = Jac[r0,p0] - _dRdnp0;
+        Jac[r0,p1] = Jac[r0,p1] - _dRdnp1;
+        Jac[r0,p2] = Jac[r0,p2] - _dRdnp2;
+        Jac[r1,r0] = Jac[r1,r0] - _dRdnr0;
+        Jac[r1,r1] = Jac[r1,r1] - _dRdnr1;
+        Jac[r1,p0] = Jac[r1,p0] - _dRdnp0;
+        Jac[r1,p1] = Jac[r1,p1] - _dRdnp1;
+        Jac[r1,p2] = Jac[r1,p2] - _dRdnp2;
+
+        // ... and (isp, jsp) = (p0,r0), (p0,r1), (p0,p0), (p0,p1), (p0,p2)
+        //                      (p1,r0), (p1,r1), (p1,p0), (p1,p1), (p1,p2)
+        //                      (p2,r0), (p2,r1), (p2,p0), (p2,p1), (p2,p2)
+        Jac[p0,r0] = Jac[p0,r0] + _dRdnr0;
+        Jac[p0,r1] = Jac[p0,r1] + _dRdnr1;
+        Jac[p0,p0] = Jac[p0,p0] + _dRdnp0;
+        Jac[p0,p1] = Jac[p0,p1] + _dRdnp1;
+        Jac[p0,p2] = Jac[p0,p2] + _dRdnp2;
+        Jac[p1,r0] = Jac[p1,r0] + _dRdnr0;
+        Jac[p1,r1] = Jac[p1,r1] + _dRdnr1;
+        Jac[p1,p0] = Jac[p1,p0] + _dRdnp0;
+        Jac[p1,p1] = Jac[p1,p1] + _dRdnp1;
+        Jac[p1,p2] = Jac[p1,p2] + _dRdnp2;
+        Jac[p2,r0] = Jac[p2,r0] + _dRdnr0;
+        Jac[p2,r1] = Jac[p2,r1] + _dRdnr1;
+        Jac[p2,p0] = Jac[p2,p0] + _dRdnp0;
+        Jac[p2,p1] = Jac[p2,p1] + _dRdnp1;
+        Jac[p2,p2] = Jac[p2,p2] + _dRdnp2;
+    }
+
+protected:
+    override void evalForwardRateOfChange(in number[] conc)
+    {
+        // e.g. r0 + r1 <=> p0 + p1 + p2
+        //      w_f = k_f * [r0] * [r1]
+        _w_f = _k_f*conc[_reactants_idx[0]]*conc[_reactants_idx[1]];
+    }
+    override void evalBackwardRateOfChange(in number[] conc)
+    {
+        // e.g. r0 + r1 <=> p0 + p1 + p2
+        //      w_b = k_b * [p0] * [p1] * [p2]
+        _w_b = _k_b*conc[_products_idx[0]]*conc[_products_idx[1]]*conc[_products_idx[2]];
+    }
+
+private:
+    int[] _reactants_idx;
+    int[] _products_idx;
+    number _dRdnr0;
+    number _dRdnr1;
+    number _dRdnp0;
+    number _dRdnp1;
+    number _dRdnp2;
+}
+
+
 StateSpecificReaction createSSReaction(lua_State *L)
 {
     auto type = getString(L, -1, "type");
     switch (type) {
     case "dissociation-by-atom":
         return new DissociationByAtom(L);
+    case "collision-2B-2B":
+        return new Collision2B2B(L);
+    case "collision-2B-3B":
+        return new Collision2B3B(L);
     case "dissociation-by-molecule":
         throw new Error("NOT IMPLEMENTED: 'dissociation-by-molecule'");
     default:
@@ -471,7 +686,7 @@ version(pseudo_species_kinetics_test) {
     int main()
     {
         import util.msg_service;
-        
+
         // Set up gas model
         auto L = init_lua_State();
         doLuaFile(L, "../gas/sample-data/pseudo-species-3-components.lua");
@@ -488,7 +703,7 @@ version(pseudo_species_kinetics_test) {
         auto L2 = init_lua_State();
         writeln("Parsing kinetics file.");
         doLuaFile(L2, "sample-input/state-specific-N2-diss.lua");
-        
+
         PseudoSpeciesKinetics psk = new PseudoSpeciesKinetics(L2, gm);
 
         writeln("Gas state BEFORE update: ", gd);
@@ -497,15 +712,15 @@ version(pseudo_species_kinetics_test) {
         double dtChemSuggest = -1.0;
         double dtThermSuggest = -1.0;
         number[] params;
-        
+
         psk(gd, 1.0e-6, dtChemSuggest, dtThermSuggest, params);
-        
+
         writeln("Gas state AFTER update: ", gd);
         // Apply thermo constraint.
         //gm.update_thermo_from_rhou(gd);
 
         //writeln("Gas state AFTER update: ", gd);
-        
+
         return 0;
 
     }
