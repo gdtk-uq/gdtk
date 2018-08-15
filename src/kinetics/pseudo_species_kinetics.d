@@ -180,10 +180,10 @@ public:
             rates[isp] = to!number(0.0);
         }
         foreach (ir, ref reac; _reactions) {
-            reac.evalRates(conc);
-            foreach (isp; reac.participants) {
-                rates[isp] += reac.rateOfChange(isp);
-            }
+            reac.evalRates(conc); // evaluate kf and kb
+            // Call the method rateOfChange which compute the contribution of
+            // the current reaction on the net production rate dni/dt
+            reac.rateOfChange(rates); // evaluate dni/dt (RHS of the ODE)
         }
     }
 
@@ -216,10 +216,10 @@ public:
         }
 
         Jac.scale(to!number(0.0)); // initialize the Jacobian at 0.
-            // Now add contribution of each reaction to the Jacobian
-            foreach (reac; _reactions) {
-                    reac.getJacobianEntry(Jac);
-                }
+        // Now add contribution of each reaction to the Jacobian
+        foreach (reac; _reactions) {
+                reac.getJacobianEntry(Jac);
+            }
     }
 
 private:
@@ -281,7 +281,7 @@ class StateSpecificReaction {
         evalBackwardRateOfChange(conc);
     }
 
-    abstract number rateOfChange(int isp);
+    abstract void rateOfChange(ref number[] rates);
 
     abstract void evalJacobianEntries(in number[] conc);
 
@@ -326,16 +326,11 @@ public:
                                       _moleculeIdx, _atomIdx);
     }
 
-    override number rateOfChange(int isp) {
-        if (isp == _moleculeIdx) {
-            return _w_b - _w_f;
-        }
-        else if (isp == _atomIdx) {
-            return 2*(_w_f - _w_b);
-        }
-        else {
-            return to!number(0.0);
-        }
+    override void rateOfChange(ref number[] rates) {
+        // Store net rate of species i in rates[i]
+        number w = _w_f - _w_b; // rate of progress
+        rates[_moleculeIdx] = -1*w;
+        rates[_atomIdx] = 2*w;
     }
 
     override void evalJacobianEntries(in number[] conc)
@@ -350,7 +345,7 @@ public:
         // Contribution of reaction :
         //      molecule + atom <=> atom + atom + atom
         // on the jacobian
-        Jac[_moleculeIdx,_moleculeIdx] = Jac[_moleculeIdx,_moleculeIdx] -_dwf_dmolc;
+        Jac[_moleculeIdx,_moleculeIdx] = Jac[_moleculeIdx,_moleculeIdx] - _dwf_dmolc;
         Jac[_moleculeIdx,_atomIdx] = Jac[_moleculeIdx,_atomIdx] + _dwb_datom - _dwf_datom;
         Jac[_atomIdx,_moleculeIdx] = Jac[_atomIdx,_moleculeIdx] + 2*_dwf_dmolc;
         Jac[_atomIdx,_atomIdx] = Jac[_atomIdx,_atomIdx] + 2*(_dwf_datom - _dwb_datom);
@@ -407,16 +402,13 @@ public:
                                  _reactants_idx, _products_idx);
     }
 
-    override number rateOfChange(int isp) {
-        if ((isp == _reactants_idx[0]) | (isp == _reactants_idx[1])) {
-            return (_w_b - _w_f);
-        }
-        else if ((isp == _products_idx[0]) | (isp == _products_idx[1])) {
-            return (_w_f - _w_b);
-        }
-        else {
-            return to!number(0.0);
-        }
+    override void rateOfChange(ref number[] rates) {
+        // Store net rate of species i in rates[i]
+        number w = _w_f - _w_b;
+        rates[_reactants_idx[0]] = -1*w;
+        rates[_reactants_idx[1]] = -1*w;
+        rates[_products_idx[0]] = w;
+        rates[_products_idx[1]] = w;
     }
 
     override void evalJacobianEntries(in number[] conc)
@@ -508,7 +500,6 @@ public:
         getArrayOfInts(L, -1, "reactants_idx", _reactants_idx);
         getArrayOfInts(L, -1, "products_idx", _products_idx);
         _participants = _reactants_idx ~ _products_idx; // concatenate indices of reactants and products
-        writeln(_participants); // TODO to be removed
     }
 
     override Collision2B3B dup()
@@ -517,21 +508,19 @@ public:
                                  _reactants_idx, _products_idx);
     }
 
-    override number rateOfChange(int isp) {
-        if ((isp == _reactants_idx[0]) | (isp == _reactants_idx[1])) {
-            return (_w_b - _w_f);
-        }
-        else if ((isp == _products_idx[0]) | (isp == _products_idx[1]) | (isp == _products_idx[2])) {
-            return (_w_f - _w_b);
-        }
-        else {
-            return to!number(0.0);
-        }
+    override void rateOfChange(ref number[] rates) {
+        // Store net rate of species i in rates[i]
+        number w = _w_f - _w_b;
+        rates[_reactants_idx[0]] = -1*w;
+        rates[_reactants_idx[1]] = -1*w;
+        rates[_products_idx[0]] = w;
+        rates[_products_idx[1]] = w;
+        rates[_products_idx[2]] = w;
     }
 
     override void evalJacobianEntries(in number[] conc)
     {
-        // Let's call R the rate of change (sometimes called rate of progress)
+        // Let's call R the rate of progress
         // of the 2-body-3-body reaction
         // nr0, nr1, np0, np1, np2 are reactants and products density number [m^-3]
         // R = kf*nr0*nr1-kb*np0*np1*np2 [m^3/s]

@@ -1,6 +1,7 @@
 number_of_reactions = 2
 
 test = "dissociation-by-atom"
+--test = "collision-2B-3B"
 
 if test == "dissociation-by-atom" then
 
@@ -21,8 +22,8 @@ reaction[1]={
 	brc={model='Arrhenius', A=2.320000000000e+09, n=-1.500000, C=0.000000000000e+00},
 	label=r1,
 	type="dissociation-by-atom",
-        molecule_idx = 2,
-        atom_idx = 0
+    molecule_idx = 2,
+    atom_idx = 0
 }
 
 elseif test == "collision-2B-3B" then
