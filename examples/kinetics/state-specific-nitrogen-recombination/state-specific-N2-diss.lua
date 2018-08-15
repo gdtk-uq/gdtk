@@ -1,7 +1,7 @@
 number_of_reactions = 2
 
-test = "dissociation-by-atom"
---test = "collision-2B-3B"
+--test = "dissociation-by-atom"
+test = "collision-2B-3B"
 
 if test == "dissociation-by-atom" then
 

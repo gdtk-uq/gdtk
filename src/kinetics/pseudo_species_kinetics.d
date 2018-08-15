@@ -329,8 +329,8 @@ public:
     override void rateOfChange(ref number[] rates) {
         // Store net rate of species i in rates[i]
         number w = _w_f - _w_b; // rate of progress
-        rates[_moleculeIdx] = -1*w;
-        rates[_atomIdx] = 2*w;
+        rates[_moleculeIdx] = rates[_moleculeIdx] - w;
+        rates[_atomIdx] = rates[_atomIdx] + 2*w;
     }
 
     override void evalJacobianEntries(in number[] conc)
@@ -405,10 +405,10 @@ public:
     override void rateOfChange(ref number[] rates) {
         // Store net rate of species i in rates[i]
         number w = _w_f - _w_b;
-        rates[_reactants_idx[0]] = -1*w;
-        rates[_reactants_idx[1]] = -1*w;
-        rates[_products_idx[0]] = w;
-        rates[_products_idx[1]] = w;
+        rates[_reactants_idx[0]] = rates[_reactants_idx[0]] - w;
+        rates[_reactants_idx[1]] = rates[_reactants_idx[1]] - w;
+        rates[_products_idx[0]] = rates[_products_idx[0]] + w;
+        rates[_products_idx[1]] = rates[_products_idx[1]] + w;
     }
 
     override void evalJacobianEntries(in number[] conc)
@@ -511,11 +511,11 @@ public:
     override void rateOfChange(ref number[] rates) {
         // Store net rate of species i in rates[i]
         number w = _w_f - _w_b;
-        rates[_reactants_idx[0]] = -1*w;
-        rates[_reactants_idx[1]] = -1*w;
-        rates[_products_idx[0]] = w;
-        rates[_products_idx[1]] = w;
-        rates[_products_idx[2]] = w;
+        rates[_reactants_idx[0]] = rates[_reactants_idx[0]] - w;
+        rates[_reactants_idx[1]] = rates[_reactants_idx[1]] - w;
+        rates[_products_idx[0]] = rates[_products_idx[0]] + w;
+        rates[_products_idx[1]] = rates[_products_idx[1]] + w;
+        rates[_products_idx[2]] = rates[_products_idx[2]] + w;
     }
 
     override void evalJacobianEntries(in number[] conc)
