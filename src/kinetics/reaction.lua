@@ -107,21 +107,21 @@ function rateConstantToLuaStr(rc)
       str = string.format("{model='Park', A=%16.12e, n=%f, C=%16.12e, s=%f }", rc.A, rc.n, rc.C, rc.s)
    elseif rc.model == 'Lindemann-Hinshelwood' then
       str = "{model='Lindemann-Hinshelwood',\n"
-      str = str .. string.format(" kInf={A=%16.12e, n=%f, C=%16.12e},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
-      str = str .. string.format(" k0={A=%16.12e, n=%f, C=%16.12e}\n", rc.k0.A, rc.k0.n, rc.k0.C)
+      str = str .. string.format("   kInf={A=%16.12e, n=%f, C=%16.12e, rctIndex=-1},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
+      str = str .. string.format("   k0={A=%16.12e, n=%f, C=%16.12e, rctIndex=-1}\n", rc.k0.A, rc.k0.n, rc.k0.C)
       str = str .. "}"
    elseif rc.model == 'Troe' then
       str = "{model='Troe',\n"
-      str = str .. string.format(" kInf={A=%16.12e, n=%f, C=%16.12e},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
-      str = str .. string.format(" k0={A=%16.12e, n=%f, C=%16.12e},\n", rc.k0.A, rc.k0.n, rc.k0.C)
+      str = str .. string.format("   kInf={A=%16.12e, n=%f, C=%16.12e, rctIndex=-1},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
+      str = str .. string.format("   k0={A=%16.12e, n=%f, C=%16.12e, rctIndex=-1},\n", rc.k0.A, rc.k0.n, rc.k0.C)
       for k,v in pairs(rc.Troe) do
 	 str = str .. string.format(" %s=%16.12e, ", k, v)
       end
       str = str .. "\n}"
    elseif rc.model == 'Yungster-Rabinowitz' then
       str = "{model='Yungster-Rabinowitz',\n"
-      str = str .. string.format(" kInf={A=%16.12e, n=%f, C=%16.12e},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
-      str = str .. string.format(" k0={A=%16.12e, n=%f, C=%16.12e},\n", rc.k0.A, rc.k0.n, rc.k0.C)
+      str = str .. string.format("   kInf={A=%16.12e, n=%f, C=%16.12e, rctIndex=-1},\n", rc.kInf.A, rc.kInf.n, rc.kInf.C)
+      str = str .. string.format("   k0={A=%16.12e, n=%f, C=%16.12e, rctIndex=-1},\n", rc.k0.A, rc.k0.n, rc.k0.C)
       for k,v in pairs(rc.YR) do
 	 str = str .. string.format(" %s=%16.12e, ", k, v)
       end
