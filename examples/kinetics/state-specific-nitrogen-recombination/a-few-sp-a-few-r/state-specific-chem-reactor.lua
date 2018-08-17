@@ -39,7 +39,7 @@ end
 
 gm:updateThermoFromPT(Q)
 
-chemUpdate = PseudoSpeciesKinetics:new{reactionsFile='state-specific-N2-diss.lua', gasModel=gm}
+chemUpdate = PseudoSpeciesKinetics:new{reactionsFile='state-specific-N2-diss-VT.lua', gasModel=gm}
 
 tFinal = 200.0e-6 -- s
 t = 0.0

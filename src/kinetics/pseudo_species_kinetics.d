@@ -45,6 +45,7 @@ public:
         _dconc0.length = gmodel.n_species;
         _rates.length = gmodel.n_species;
         _Jac = new SMatrix!number();
+        _max_iterations = _psGmodel.n_species;
         _mech.initJacobian(_Jac, gmodel.n_species);
         _ILU0 = new SMatrix!number(_Jac);
         _gws = GMRESWorkSpace!number(gmodel.n_species, _max_iterations);
@@ -62,6 +63,7 @@ public:
         _dconc0.length = gmodel.n_species;
         _rates.length = gmodel.n_species;
         _Jac = new SMatrix!number();
+        _max_iterations = _psGmodel.n_species;
         _mech.initJacobian(_Jac, gmodel.n_species);
         _ILU0 = new SMatrix!number(_Jac);
         _gws = GMRESWorkSpace!number(gmodel.n_species, _max_iterations);
