@@ -51,7 +51,7 @@ import user_defined_source_terms;
 enum ghost_cell_start_id = 1_000_000_000;
 immutable double ESSENTIALLY_ZERO = 1.0e-50;
 // some data objects used in forming the Jacobian
-immutable size_t MAX_PERTURBED_INTERFACES = 40;
+immutable size_t MAX_PERTURBED_INTERFACES = 80;
 FVCell cellSave;
 FVInterface[MAX_PERTURBED_INTERFACES] ifaceP;
 
@@ -322,6 +322,54 @@ void apply_boundary_conditions(ref SMatrix!number A, FluidBlock blk, size_t np, 
     }
 }
 
+void approximate_residual_stencil(FVCell pcell, size_t orderOfJacobian) {
+    // used for the steady-state preconditioner (always first order)
+    FVCell[] refs_ordered; FVCell[] refs_unordered;
+    size_t[size_t] pos_array; // used to identify where the cell is in the unordered list
+    size_t[] cell_ids;
+        
+    // clear the stencil arrays
+    pcell.jacobian_cell_stencil = [];
+    pcell.jacobian_face_stencil = [];
+
+    size_t[] face_ids;
+    // collect faces
+    foreach(face; pcell.iface) {
+        pcell.jacobian_face_stencil ~= face;
+        face_ids ~= face.id;
+    }
+    
+    // for each effected face, add the neighbouring cells
+    foreach(face; pcell.jacobian_face_stencil) {
+        // collect (non-ghost) neighbour cells
+        if (cell_ids.canFind(face.left_cell.id) == false && face.left_cell.id < ghost_cell_start_id) {
+            refs_unordered ~= face.left_cell;
+            pos_array[face.left_cell.id] = refs_unordered.length-1;
+            cell_ids ~= face.left_cell.id;
+        }
+        if (cell_ids.canFind(face.right_cell.id) == false && face.right_cell.id < ghost_cell_start_id) {
+            refs_unordered ~= face.right_cell;
+            pos_array[face.right_cell.id] = refs_unordered.length-1;
+            cell_ids ~= face.right_cell.id;
+        }
+        else continue;
+    }
+    
+    // we collect the outer most faces as well to capture the viscous effects on the 1st order stencil
+    foreach (cell; refs_unordered) {
+        foreach (face; cell.iface) {
+            if( face_ids.canFind(face.id) == false) {
+                pcell.jacobian_face_stencil ~= face;
+                face_ids ~= face.id;
+            }
+        }
+    }
+    
+    // sort ids, and store sorted cell references
+    cell_ids.sort();
+    foreach(id; cell_ids) refs_ordered ~= refs_unordered[pos_array[id]];
+    pcell.jacobian_cell_stencil ~= refs_ordered;
+}
  
 void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
 
@@ -339,10 +387,12 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
         // clear the stencil arrays
         pcell.jacobian_cell_stencil = [];
         pcell.jacobian_face_stencil = [];
-        
+
+        size_t[] face_ids;
         // collect faces
         foreach(face; pcell.iface) {
             pcell.jacobian_face_stencil ~= face;
+            face_ids ~= face.id;
         }
         
         // for each effected face, add the neighbouring cells
@@ -359,6 +409,16 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
                 cell_ids ~= face.right_cell.id;
             }
             else continue;
+        }
+
+        // finally collect the faces of the outer most cells for simulations that use source terms (i.e. axisymmetric)
+        foreach(cell; refs_unordered) {
+            foreach(face; cell.iface) {
+                if (face_ids.canFind(face.id) == false) {
+                    pcell.jacobian_face_stencil ~= face;
+                    face_ids ~= face.id;
+                }
+            }
         }
         
         // sort ids, and store sorted cell references
@@ -397,7 +457,7 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
             else continue;
         }
 
-        // finally collect the faces of the outer most cells
+        // finally collect the faces of the outer most cells for simulations that use source terms (i.e. axisymmetric)
         foreach(cell; refs_unordered) {
             foreach(face; cell.iface) {
                  if (face_ids.canFind(face.id) == false) {
@@ -416,7 +476,7 @@ void residual_stencil(FVCell pcell, size_t orderOfJacobian) {
     }
 }
 
-void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool transformToConserved = false) {
+void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t np, size_t orderOfJacobian, number EPS, bool preconditionMatrix = false, bool transformToConserved = false) {
 
     // set the interpolation order to that of the Jacobian
     if (orderOfJacobian < 2) blk.myConfig.interpolation_order = 1;
@@ -426,7 +486,10 @@ void local_flow_jacobian_transpose(ref SMatrix!number A, FluidBlock blk, size_t 
     cellSave = new FVCell(blk.myConfig);
     foreach(i; 0..MAX_PERTURBED_INTERFACES) ifaceP[i] = new FVInterface(blk.myConfig, false);
 
-    foreach (cell; blk.cells) residual_stencil(cell, orderOfJacobian);
+    if (preconditionMatrix)
+        foreach (cell; blk.cells) approximate_residual_stencil(cell, orderOfJacobian);
+    else
+        foreach (cell; blk.cells) residual_stencil(cell, orderOfJacobian);
 
     number[][] aa; size_t[][] ja; size_t ia = 0;
     foreach(cell; blk.cells) {
@@ -1813,19 +1876,13 @@ void ilu_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJaco
     blk.P.ja = [];
     blk.P.ia = [];
         
-    local_flow_jacobian_transpose(blk.JcT, blk, np, 1, EPS, true);
+    local_flow_jacobian_transpose(blk.JcT, blk, np, 1, EPS, true, true);
     /* transpose */
-    blk.P.ia ~= 0;
-    foreach (i; 0..np*blk.cells.length) {
-        foreach (j; 0..np*blk.cells.length) {
-            if (fabs(blk.JcT[j,i]) > 1.0e-50) {
-                blk.P.aa ~= blk.JcT[j,i];
-                blk.P.ja ~= j;
-            }
-        }
-        blk.P.ia ~= blk.P.aa.length;
-    }
-    
+    blk.P.ia.length = blk.JcT.ia.length;
+    blk.P.ja.length = blk.JcT.ja.length;
+    blk.P.aa.length = blk.JcT.aa.length;
+    nm.smla.transpose(blk.JcT.ia, blk.JcT.ja, blk.JcT.aa, blk.P.ia, blk.P.ja, blk.P.aa);
+
     number dtInv = 1.0/dt;
     foreach (i; 0 .. np*blk.cells.length) {
         blk.P[i,i] = blk.P[i,i] + dtInv;
@@ -1835,8 +1892,9 @@ void ilu_preconditioner(FluidBlock blk, size_t np, double dt, size_t orderOfJaco
     
     
     /* perform ILU0 decomposition */
-    decompILU0(blk.P);
-    //decompILUp(blk.P, 2);
+    int level_of_fill_in = GlobalConfig.sssOptions.iluFill;
+    if (level_of_fill_in == 0) decompILU0(blk.P);
+    else decompILUp(blk.P, level_of_fill_in);
         
     // reset interpolation order to the global setting
     blk.myConfig.interpolation_order = GlobalConfig.interpolation_order;
