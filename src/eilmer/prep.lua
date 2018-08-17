@@ -47,6 +47,7 @@ sssOptionsHidden = { -- hidden from user
    use_preconditioner = true,
    frozen_preconditioner_count = 1,
    start_preconditioning = 1,
+   ilu_fill = 0,
    precondition_matrix_type = "block_diagonal",
    use_scaling = true,
    use_complex_matvec_eval = false,
@@ -1441,6 +1442,7 @@ function write_control_file(fileName)
    f:write(string.format('   "use_preconditioner": %s,\n', tostring(SteadyStateSolver.use_preconditioner)))
    f:write(string.format('   "frozen_preconditioner_count": %d,\n', SteadyStateSolver.frozen_preconditioner_count))
    f:write(string.format('   "start_preconditioning": %d,\n', SteadyStateSolver.start_preconditioning))
+   f:write(string.format('   "ilu_fill": %d,\n', SteadyStateSolver.ilu_fill))
    f:write(string.format('   "precondition_matrix_type": "%s",\n', SteadyStateSolver.precondition_matrix_type))
    f:write(string.format('   "use_scaling": %s,\n', tostring(SteadyStateSolver.use_scaling)))
    f:write(string.format('   "use_complex_matvec_eval": %s,\n', tostring(SteadyStateSolver.use_complex_matvec_eval)))
