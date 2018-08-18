@@ -239,7 +239,7 @@ public:
                 number dz = f.pos.z - cell_cloud[0].pos[0].z;
                 b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                 if (myConfig.dimensions == 3) b += "~gname~"[2] * dz; 
-                b = copysign(b, ((fabs(b) + w)));
+                b = copysign(((fabs(b) + w)), b);
                 if (b >  ESSENTIALLY_ZERO) {
                     a = "~qMaxname~" - U;
                     phi = fmin(phi, a/b);
@@ -342,12 +342,12 @@ public:
                     number dz = vtx.pos[gtl].z - cell_cloud[0].pos[gtl].z;
                     a = "~gname~"[0] * dx + "~gname~"[1] * dy;
                     if (myConfig.dimensions == 3) a += "~gname~"[2] * dz;
-                    a = copysign(a, ((fabs(a) + eps))); 
+                    a = copysign(((fabs(a) + eps)), a); 
                     if (fabs(a) > ESSENTIALLY_ZERO) {
                         b = (a > 0.0) ? vtx.gradients."~qMaxname~" - U: vtx.gradients."~qMinname~" - U;
                         numer = b*fabs(a) + a*fabs(b);
                         denom = fabs(a) + fabs(b) + eps;
-                        s = (1.0/a) * (numer/denom);                    
+                        s = (1.0/a) * (numer/denom);          
                     } else {
                         s = 1.0;
                     }
@@ -535,7 +535,7 @@ public:
                     number dz = f.pos.z - cell_cloud[0].pos[gtl].z;
                     b = "~gname~"[0] * dx + "~gname~"[1] * dy;
                     if (myConfig.dimensions == 3) { b += "~gname~"[2] * dz; }
-                    b = copysign(b, ((fabs(b) + w))); 
+                    b = copysign(((fabs(b) + w)), b); 
                     if (fabs(b) > ESSENTIALLY_ZERO) {
                         a = (b > 0.0) ? "~qMaxname~" - U: "~qMinname~" - U;
                         numer = (a*a + eps)*b + 2.0*b*b*a;
