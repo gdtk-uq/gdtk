@@ -176,9 +176,19 @@ private:
                 omega += _e/(exp(_f*T_star));
                 omega += _g/(exp(_h*T_star));
 
+                // PJ 2018-08-18 write the calculation differently
+                number denom = p/P_atm;
+                denom *= sqrt(_M[isp][jsp]);
+                denom *= _sigma[isp][jsp]*_sigma[isp][jsp];
+                denom *= omega;
+                number numer = 0.00266*sqrt(T*T*T);
+                numer *= 1.0e-4; // cm^2/s --> m^2/s
+                _D[isp][jsp] = numer/denom;
+                /+
                 _D[isp][jsp] = 1.0/(p/P_atm)/sqrt(_M[isp][jsp])/(_sigma[isp][jsp]*_sigma[isp][jsp])/omega;
                 _D[isp][jsp] *= 0.00266*sqrt(T*T*T);
                 _D[isp][jsp] *= 1.0e-4; // cm^2/s --> m^2/s
+                +/
             }
         }
     }

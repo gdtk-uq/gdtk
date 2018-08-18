@@ -105,11 +105,13 @@ void init_simulation(int tindx, int nextLoadsIndx,
     read_config_file();  // most of the configuration is in here
     read_control_file(); // some of the configuration is in here
     //
-    FloatingPointControl fpctrl;
-    // Enable hardware exceptions for division by zero, overflow to infinity,
-    // invalid operations, and uninitialized floating-point variables.
-    // Copied from https://dlang.org/library/std/math/floating_point_control.html
-    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    version(enable_fp_exceptions) {
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    }
     //
     if (GlobalConfig.grid_format == "rawbinary") { gridFileExt = "bin"; }
     if (GlobalConfig.flow_format == "rawbinary") { flowFileExt = "bin"; }
@@ -527,11 +529,13 @@ void march_over_blocks()
 
 void integrate_in_time(double target_time_as_requested)
 {
-    FloatingPointControl fpctrl;
-    // Enable hardware exceptions for division by zero, overflow to infinity,
-    // invalid operations, and uninitialized floating-point variables.
-    // Copied from https://dlang.org/library/std/math/floating_point_control.html
-    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    version(enable_fp_exceptions) {
+        FloatingPointControl fpctrl;
+        // Enable hardware exceptions for division by zero, overflow to infinity,
+        // invalid operations, and uninitialized floating-point variables.
+        // Copied from https://dlang.org/library/std/math/floating_point_control.html
+        fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+    }
     //
     ConservedQuantities Linf_residuals = new ConservedQuantities(GlobalConfig.gmodel_master.n_species,
                                                                  GlobalConfig.gmodel_master.n_modes);

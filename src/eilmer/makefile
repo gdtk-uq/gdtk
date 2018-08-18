@@ -30,6 +30,7 @@ WITH_OPENCL_GPU_CHEM ?= 0
 WITH_CUDA_GPU_CHEM ?= 0
 DEBUG_CHEM ?= 0
 WITH_COMPLEX_NUMBERS ?= 0
+WITH_FPE ?= 0
 
 TECPLOT_BIN_DIR ?= unavailable
 TECPLOT_BIN_VERSION_STR = tecplot_unavailable
@@ -262,6 +263,10 @@ DFLAGS += -I.. -I$(NM_DIR) -I$(UTIL_DIR) -I$(GEOM_DIR) -I$(GRID_DIR) -I$(GZIP_DI
 
 ifeq ($(DEBUG_CHEM),1)
     DFLAGS += -version=debug_chem
+endif
+
+ifeq ($(WITH_FPE),1)
+    DFLAGS += -version=enable_fp_exceptions
 endif
 
 default: $(PROGRAMS)
