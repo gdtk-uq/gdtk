@@ -324,11 +324,8 @@ public:
         // i.e. it uses the MLP approach, and the Van Leer limiting function
         // as outlined in the NASA publication on VULCAN's unstructured solver [White et al 2017]
         size_t dimensions = myConfig.dimensions;
-        number eps, a, b, U, phi, h, denom, numer, s;
-        immutable double w = 1.0e-12;
-        if (myConfig.dimensions == 3) h = cell_cloud[0].volume[gtl]^^(1.0/3.0); // cbrt  
-        else h = sqrt(cell_cloud[0].volume[gtl]);
-        eps = 1.0e-12;
+        number a, b, U, phi, denom, numer, s;
+        immutable double eps = 1.0e-12;
         // The following function to be used at compile time.
         string codeForLimits(string qname, string gname, string limFactorname,
                              string qMaxname, string qMinname)
@@ -336,20 +333,26 @@ public:
             string code = "{
             U = cell_cloud[0].fs."~qname~";
             phi = 1.0;
-            foreach (i, vtx; cell_cloud[0].vtx) {
-                number dx = vtx.pos[gtl].x - cell_cloud[0].pos[gtl].x; 
-                number dy = vtx.pos[gtl].y - cell_cloud[0].pos[gtl].y; 
-                number dz = vtx.pos[gtl].z - cell_cloud[0].pos[gtl].z;
-                b = "~gname~"[0] * dx + "~gname~"[1] * dy;
-                if (myConfig.dimensions == 3) b += "~gname~"[2] * dz;
-                b = copysign(b, ((fabs(b) + w))); 
-                if (b > 0.0) a = 0.5*(vtx.gradients."~qMaxname~" - U); 
-                else if (b < 0.0) a = 0.5*(vtx.gradients."~qMinname~" - U); 
-                numer = b*fabs(a) + a*fabs(b);
-                denom = fabs(a) + fabs(b) + eps;
-                s = (1.0/b) * (numer/denom);                    
-                phi = fmin(phi, s);
-                if (b == 0.0) phi = 1.0;
+            if (fabs("~gname~"[0]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[1]) > ESSENTIALLY_ZERO ||
+                fabs("~gname~"[2]) > ESSENTIALLY_ZERO) {
+                foreach (i, vtx; cell_cloud[0].vtx) {
+                    number dx = vtx.pos[gtl].x - cell_cloud[0].pos[gtl].x; 
+                    number dy = vtx.pos[gtl].y - cell_cloud[0].pos[gtl].y; 
+                    number dz = vtx.pos[gtl].z - cell_cloud[0].pos[gtl].z;
+                    a = "~gname~"[0] * dx + "~gname~"[1] * dy;
+                    if (myConfig.dimensions == 3) a += "~gname~"[2] * dz;
+                    a = copysign(a, ((fabs(a) + eps))); 
+                    if (fabs(a) > ESSENTIALLY_ZERO) {
+                        b = (a > 0.0) ? vtx.gradients."~qMaxname~" - U: vtx.gradients."~qMinname~" - U;
+                        numer = b*fabs(a) + a*fabs(b);
+                        denom = fabs(a) + fabs(b) + eps;
+                        s = (1.0/a) * (numer/denom);                    
+                    } else {
+                        s = 1.0;
+                    }
+                    phi = fmin(phi, s);
+                }
             }
             "~limFactorname~" = phi;
             }
